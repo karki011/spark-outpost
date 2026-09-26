@@ -71,7 +71,21 @@ export function useProjectActions(toaster: Toaster, onRestored: (projectId: stri
     await refresh(client);
   };
 
+  const reorder = async (projectIds: readonly string[]) => {
+    patchProjects(client, (list) => [
+      ...projectIds.flatMap((id) => list.filter((entry) => entry.id === id)),
+      ...list.filter((entry) => !projectIds.includes(entry.id)),
+    ]);
+    try {
+      await projectsApi.order([...projectIds]);
+    } catch (error) {
+      toaster.show({ text: message(error) });
+      await client.invalidateQueries({ queryKey: projectKeys.all });
+    }
+  };
+
   return {
+    reorder: (projectIds: readonly string[]) => void reorder(projectIds),
     rename: (project: Project, name: string) => void rename(project, name),
     remove: (project: Project) => void remove(project),
   };

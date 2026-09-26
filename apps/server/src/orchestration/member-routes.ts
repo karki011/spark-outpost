@@ -1,7 +1,7 @@
 import { agentLabel, nextCrewName, type AgentPick, type AgentRole } from '@spark-outpost/contracts';
 import { insertDecision, usedNames } from '../persistence/orchestrations.ts';
 import { namedFiles } from './context.ts';
-import { plansFirst, reviewsAfter } from './depth.ts';
+import { plansFirst, reviewWanted } from './depth.ts';
 import { callJev, type JevCall } from './jev-calls.ts';
 import { buildRouteQuestions, parseRouteAnswers, type RouteSlot } from './jev-questions.ts';
 import { planShape, routeArchitect } from './architect-route.ts';
@@ -70,7 +70,7 @@ async function planRoutes(s: Session): Promise<JevCall | null> {
   const slots = builderSpans(s.flow.steps, groups).flatMap(
     (span) => slotFor(s, 'builder', span[0]!, span) ?? [],
   );
-  if (reviewsAfter(s.flow.depth)) {
+  if (reviewWanted(s.flow)) {
     const critic = slotFor(s, 'critic', 0);
     if (critic) slots.push(critic);
   }

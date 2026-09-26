@@ -2,7 +2,9 @@ import { Router, type Request } from 'express';
 import {
   ATTACHMENT_TEXT_MAX_BYTES,
   attachProjectFileRequestSchema,
+  conversationOrderRequestSchema,
   createProjectRequestSchema,
+  projectOrderRequestSchema,
   removedProjectSchema,
   updateProjectRequestSchema,
 } from '@spark-outpost/contracts';
@@ -15,7 +17,14 @@ import { listProjectFiles } from '../projects/project-files.ts';
 import { projectPolicy, readProjectFile } from '../projects/project-fs.ts';
 import { PathRefusedError, type PathPolicy, type RefusalReason } from '../projects/path-policy.ts';
 import { removeProject, restoreProject } from '../projects/project-removal.ts';
-import { createProject, getProject, listProjects, updateProject } from '../projects/projects.ts';
+import {
+  createProject,
+  getProject,
+  listProjects,
+  orderProjectChats,
+  orderProjects,
+  updateProject,
+} from '../projects/projects.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
 
 export interface ProjectRouteDeps {
@@ -77,6 +86,18 @@ export function projectRoutes({ db, workspaceId }: ProjectRouteDeps): Router {
     const { rootPath } = parseBody(createProjectRequestSchema, req);
     const { project, created } = await createProject(db, workspaceId, rootPath);
     res.status(created ? 201 : 200).json(project);
+  });
+
+  router.put('/projects/order', async (req, res) => {
+    const { projectIds } = parseBody(projectOrderRequestSchema, req);
+    await orderProjects(db, workspaceId, projectIds);
+    res.status(204).end();
+  });
+
+  router.put('/projects/:id/chat-order', async (req, res) => {
+    const { conversationIds } = parseBody(conversationOrderRequestSchema, req);
+    await orderProjectChats(db, workspaceId, paramId(req), conversationIds);
+    res.status(204).end();
   });
 
   router.post('/projects/restore', async (req, res) => {

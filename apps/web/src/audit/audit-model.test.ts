@@ -143,6 +143,16 @@ describe('labels', () => {
     expect(
       entrySummary(
         entry({
+          direction: 'harness',
+          kind: 'check',
+          method: 'check/run',
+          payload: { command: 'npm test', outcome: 'timed_out' },
+        }),
+      ),
+    ).toBe('npm test · timed out');
+    expect(
+      entrySummary(
+        entry({
           kind: 'error',
           method: 'fs/read_text_file',
           payload: { error: { message: 'no' } },

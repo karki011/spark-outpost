@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
+import { readFakeSession } from './fake-acp-sessions.ts';
 
 export const FAKE_PLAN_FILES = ['src/dates.ts', 'src/divider.tsx', 'src/turns.ts'];
 
@@ -38,8 +39,11 @@ export async function architect(turn: RoleTurn): Promise<acp.StopReason> {
   const large =
     turn.text.includes('#parallel') && !turn.text.includes('#small') ? '\nLarge: 2, 3' : '';
   const notes = '\n\nNotes for Builders:\nsrc/dates.ts exports formatDay(date: Date): string.';
+  const chains = turn.text.includes('#chains')
+    ? '\n\nStep 1 · Files: src/dates.ts · Depends on: none\nStep 2 · Files: src/divider.tsx · Depends on: 1\nStep 3 · Files: src/turns.ts · Depends on: none\nChain A: steps 1-2\nChain B: step 3'
+    : '';
   await turn.say(
-    `Plan ready with ${entries.length} steps.${edited ? ` Edited: ${edited}` : ''}${notes}${hint}${large}`,
+    `Plan ready with ${entries.length} steps.${edited ? ` Edited: ${edited}` : ''}${chains}${notes}${hint}${large}`,
   );
   return 'end_turn';
 }
@@ -53,12 +57,22 @@ export async function scout(turn: RoleTurn): Promise<acp.StopReason> {
   return 'end_turn';
 }
 
+function priorPrompts(sessionId: string): number {
+  try {
+    return readFakeSession(sessionId).prompts.length - 1;
+  } catch {
+    return 0;
+  }
+}
+
 export async function critic(turn: RoleTurn): Promise<acp.StopReason> {
   const concerns = turn.text.includes('#concerns');
+  const reviewed = `Reviews in this session: ${priorPrompts(turn.sessionId) + 1}.\n`;
   await turn.say(
-    concerns
-      ? 'Findings:\n- The divider test is missing\nVerdict: concerns'
-      : 'Findings:\n- The change matches the plan\nVerdict: looks good',
+    reviewed +
+      (concerns
+        ? 'Findings:\n- The divider test is missing\nVerdict: concerns'
+        : 'Findings:\n- The change matches the plan\nVerdict: looks good'),
   );
   return 'end_turn';
 }
@@ -118,7 +132,9 @@ async function failWhenAsked(turn: RoleTurn, step: string): Promise<void> {
 
 function targetFile(turn: RoleTurn, line: string): string {
   const named = /(src\/[\w.]+)/.exec(line)?.[1];
-  const ownFile = turn.text.includes('#parallel') && !turn.text.includes('#collide');
+  const ownFile =
+    (turn.text.includes('#parallel') || turn.text.includes('#chains')) &&
+    !turn.text.includes('#collide');
   return ownFile && named ? named : 'notes.txt';
 }
 
@@ -190,14 +206,37 @@ async function buildStep(
   if (turn.text.includes('#slowbuild') || turn.text.includes(`#slowstep ${step}`)) {
     for (;;) await sleep(50, turn.signal);
   }
+  if (turn.text.includes(`#sleepstep ${step}`)) await sleep(1_500, turn.signal);
   if (marked) await turn.say(`Step ${step} done.\n`);
   return null;
 }
 
+export async function fixChecks(turn: RoleTurn): Promise<acp.StopReason> {
+  const target = join(turn.cwd, 'fixed.txt');
+  const toolCallId = 'fix-checks';
+  await turn.update({
+    sessionUpdate: 'tool_call',
+    toolCallId,
+    title: 'Write fixed.txt',
+    kind: 'edit',
+    status: 'pending',
+  });
+  await turn.client.request(acp.methods.client.fs.writeTextFile, {
+    sessionId: turn.sessionId,
+    path: target,
+    content: 'fixed\n',
+  });
+  await turn.update({ sessionUpdate: 'tool_call_update', toolCallId, status: 'completed' });
+  const earlier = priorPrompts(turn.sessionId);
+  await turn.say(`Fixed the checks after ${earlier} earlier prompts in this session.`);
+  return 'end_turn';
+}
+
 export function roleFor(text: string): ((turn: RoleTurn) => Promise<acp.StopReason>) | null {
   if (text.includes('Role: Architect.')) return architect;
-  if (text.includes('Role: Critic.')) return critic;
+  if (text.includes('Role: Critic.') || text.includes('Review the next change')) return critic;
   if (text.includes('Role: Scout.')) return scout;
+  if (text.includes('## Failing checks')) return fixChecks;
   if (text.includes('#build')) return builder;
   return null;
 }

@@ -34,6 +34,8 @@ export function intakeRecord(orchestration: Orchestration): IntakeRecord | null 
     complexity: numberOr(answer.complexity),
     complexityConfidence: numberOr(confidences.complexity),
     depthNote: note?.reason ?? null,
+    intent: typeof answer.intent === 'string' ? answer.intent : null,
+    intentConfidence: numberOr(confidences.intent),
   };
 }
 

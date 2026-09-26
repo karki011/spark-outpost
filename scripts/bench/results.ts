@@ -51,6 +51,8 @@ export interface IntakeRecord {
   complexity: number | null;
   complexityConfidence: number | null;
   depthNote: string | null;
+  intent?: string | null;
+  intentConfidence?: number | null;
 }
 
 export interface ArchitectRecord {
@@ -83,6 +85,7 @@ export interface Routing {
   intake?: IntakeRecord | null;
   architect?: ArchitectRecord | null;
   parallel?: ParallelRecord | null;
+  checks?: string[];
 }
 
 export interface CellResult {

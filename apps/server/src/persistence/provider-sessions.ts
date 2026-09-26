@@ -178,6 +178,7 @@ export const SESSION_CLOSE_REASONS = {
   idle: 'idle',
   archived: 'chat archived',
   evicted: 'too many open sessions',
+  orchestrationDone: 'orchestration finished',
 } as const;
 
 export interface SweepLimits {
@@ -241,4 +242,39 @@ export async function conversationWorkdirs(
     [conversationId],
   );
   return rows.map((row) => row.workdir);
+}
+
+export async function handOverSession(
+  db: Db,
+  conversationId: string,
+  fromKey: string,
+  toKey: string,
+): Promise<boolean> {
+  return withTransaction(db, async (client) => {
+    await client.query(
+      `UPDATE provider_sessions SET closed_at = now(), close_reason = $3
+       WHERE conversation_id = $1 AND agent_key = $2 AND closed_at IS NULL`,
+      [conversationId, toKey, 'replaced'],
+    );
+    const { rowCount } = await client.query(
+      `UPDATE provider_sessions SET agent_key = $3
+       WHERE conversation_id = $1 AND agent_key = $2 AND closed_at IS NULL`,
+      [conversationId, fromKey, toKey],
+    );
+    return (rowCount ?? 0) > 0;
+  });
+}
+
+export async function closeKeyedSessions(
+  db: Queryable,
+  conversationId: string,
+  keyPrefix: string,
+  reason: string,
+): Promise<number> {
+  const { rowCount } = await db.query(
+    `UPDATE provider_sessions SET closed_at = now(), close_reason = $3
+     WHERE conversation_id = $1 AND starts_with(agent_key, $2) AND closed_at IS NULL`,
+    [conversationId, keyPrefix, reason],
+  );
+  return rowCount ?? 0;
 }

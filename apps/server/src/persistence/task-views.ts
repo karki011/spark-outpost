@@ -1,4 +1,7 @@
 import {
+  checkBodySchema,
+  checkLine,
+  failingChecks,
   mergeCostSource,
   taskList,
   taskRunSchema,
@@ -145,6 +148,43 @@ async function approvalEvents(db: Queryable, taskId: string): Promise<TaskListEv
   }));
 }
 
+const CHECK_OUTPUT_SHOWN = 1_500;
+
+function checkOutput(tails: readonly string[]): string | undefined {
+  const text = tails
+    .map((tail) => tail.trim())
+    .filter(Boolean)
+    .join('\n\n');
+  if (!text) return undefined;
+  return text.length > CHECK_OUTPUT_SHOWN ? `…${text.slice(-CHECK_OUTPUT_SHOWN)}` : text;
+}
+
+async function checkEvents(db: Queryable, taskId: string): Promise<TaskListEvent[]> {
+  const { rows } = await db.query<{ version: number; body: unknown }>(
+    `SELECT version, body FROM run_artifacts WHERE task_id = $1 AND kind = 'check'
+     ORDER BY version`,
+    [taskId],
+  );
+  return rows.flatMap((row) => {
+    const parsed = checkBodySchema.safeParse(row.body);
+    if (!parsed.success) return [];
+    const body = parsed.data;
+    const output = checkOutput(failingChecks(body).map((result) => result.outputTail));
+    const notes = body.results.flatMap((result) => (result.note ? [result.note] : []));
+    return [
+      {
+        id: String(row.version),
+        kind: 'check' as const,
+        runId: body.runId,
+        label: checkLine(body),
+        state: body.status === 'failed' ? ('failed' as const) : ('done' as const),
+        detail: `round ${body.round}${notes.length > 0 ? ` · ${notes.join(' ')}` : ''}`,
+        ...(output ? { output } : {}),
+      },
+    ];
+  });
+}
+
 function sumOrNull(values: readonly (number | null)[]): number | null {
   const known = values.filter((value): value is number => value !== null);
   return known.length > 0 ? known.reduce((total, value) => total + value, 0) : null;
@@ -158,12 +198,8 @@ async function overview(
 ): Promise<TaskOverview> {
   const plan = await latestPlan(db, row.id);
   const listRuns: readonly TaskListRun[] = runs;
-  const items = taskList(
-    { status: row.status, links },
-    listRuns,
-    await approvalEvents(db, row.id),
-    plan,
-  );
+  const events = [...(await approvalEvents(db, row.id)), ...(await checkEvents(db, row.id))];
+  const items = taskList({ status: row.status, links }, listRuns, events, plan);
   return {
     id: row.id,
     conversationId: row.conversation_id,

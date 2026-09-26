@@ -12,6 +12,7 @@ function chat(overrides: Partial<ConversationSummary> = {}): ConversationSummary
     archivedAt: null,
     pinnedAt: null,
     pinnedOrder: null,
+    projectOrder: null,
     unread: false,
     needsInput: false,
     attention: null,

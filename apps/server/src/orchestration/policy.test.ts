@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type JevIntake } from '@spark-outpost/contracts';
 import { activeTime, exceededLimit, extendLimits } from './budget.ts';
 import { asksForPlan, asksForRetry, asksToKeep, autoContinueOption } from './checkpoint-policy.ts';
-import { chooseDepth, ONE_SPOT_REASON, refineDepth, ruleDepth, trustedRisk } from './depth.ts';
+import {
+  chooseDepth,
+  ONE_SPOT_REASON,
+  refineDepth,
+  reviewIntent,
+  reviewWanted,
+  ruleDepth,
+  trustedRisk,
+} from './depth.ts';
 import { oneTierUp, strongerEffort, tierLadder, topTier } from './tiers.ts';
 
 const jev = (
@@ -22,6 +30,23 @@ const jev = (
   confidence: 0.8,
   routeConfidence: 0.9,
   confidences: { risk: riskConfidence },
+});
+
+describe('review requests', () => {
+  it('keeps a Critic when Jev reads the intent as review at 0.5 or more, in Do mode only', () => {
+    const review = (confidence: number): JevIntake => ({
+      ...jev('execute', 'edits'),
+      intent: 'review',
+      confidences: { intent: confidence },
+    });
+    expect(reviewIntent('do', review(0.5))).toBe(true);
+    expect(reviewIntent('do', review(0.49))).toBe(false);
+    expect(reviewIntent('ask', review(0.9))).toBe(false);
+    expect(reviewIntent('do', jev('execute', 'edits'))).toBe(false);
+    expect(reviewWanted({ depth: 'execute', reviewIntent: true })).toBe(true);
+    expect(reviewWanted({ depth: 'direct', reviewIntent: true })).toBe(false);
+    expect(reviewWanted({ depth: 'plan_execute_review', reviewIntent: false })).toBe(true);
+  });
 });
 
 describe('depth fallback', () => {

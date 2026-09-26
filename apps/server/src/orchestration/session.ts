@@ -4,9 +4,11 @@ import {
   ORCHESTRATION_TOOL_CALL_LIMIT,
   type AgentRole,
   type BudgetLimit,
+  type CheckBody,
   type PlanEntry,
 } from '@spark-outpost/contracts';
 import type { IntakeResult } from '../advisor/intake-recorder.ts';
+import type { ProjectChecks } from '../checks/project-checks.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import {
   loadOrchestration,
@@ -20,6 +22,7 @@ import type { RunInput } from '../workflow/run-input.ts';
 import type { BudgetLimits } from './budget.ts';
 import type { ArchitectNotes, ResearchNote } from './context.ts';
 import type { JevAccess } from './jev-calls.ts';
+import type { ReviewQueue } from './reviews.ts';
 import type { JevPick, MemberRoute, RouteContext } from './routing.ts';
 import type { Slots } from './slots.ts';
 import type { FlowState } from './transitions.ts';
@@ -47,6 +50,7 @@ export interface MemberResult {
   steps: number[];
   ticked: number[];
   tools: string[];
+  copyRunId?: string;
 }
 
 export interface Session {
@@ -83,6 +87,11 @@ export interface Session {
   slots: Slots;
   groups: number;
   parallelNoted: boolean;
+  git: boolean;
+  checks: ProjectChecks | null;
+  checkRounds: number;
+  checkBodies: CheckBody[];
+  reviews: ReviewQueue | null;
 }
 
 export function baseLimits(deps: OrchestratorDeps): BudgetLimits {

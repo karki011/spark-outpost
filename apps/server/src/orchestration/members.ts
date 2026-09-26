@@ -21,6 +21,7 @@ import {
 import { plansFirst } from './depth.ts';
 import { labelFor, nameFor, recordRoute, resolveRoute } from './member-routes.ts';
 import { markPlanStep, stepTicker } from './plan-progress.ts';
+import { chainsFromReply, stepNotesFromReply, withFilesLines } from './chains.ts';
 import { largeFromReply, parallelFromReply } from './parallel.ts';
 import type { ParallelVerdicts } from './parallel-choice.ts';
 import { decideParallel } from './parallel-jev.ts';
@@ -47,6 +48,14 @@ export interface Place {
   group?: string;
   key?: string;
   copy?: (name: string) => { branch: string; prepare: (runId: string) => Promise<void> };
+  reuse?: { runId: string; branch: string };
+}
+
+export interface MemberOptions {
+  record?: boolean;
+  prompt?: string;
+  followUp?: string;
+  attempt?: number;
 }
 
 function usesInPlace(s: Session, spawn: Spawn, place: Place | null): boolean {
@@ -61,12 +70,14 @@ function modeFor(s: Session, role: AgentRole): RunMode {
 }
 
 const PLAN_LINE = /^\s*(?:\d+[.)]|[-*])\s+(.+\S)\s*$/;
+const HINT_ITEM =
+  /^(?:step\s*\d+\b.*\b(?:files?|depends)\b|chain\s+[\w-]+[^:]*:|large\s*:|parallel\s*:|notes for builders)/i;
 
 export function stepsFromText(text: string): string[] {
   return text
     .split('\n')
     .map((line) => PLAN_LINE.exec(line)?.[1])
-    .filter((step): step is string => step !== undefined)
+    .filter((step): step is string => step !== undefined && !HINT_ITEM.test(step))
     .slice(0, 12);
 }
 
@@ -106,7 +117,13 @@ async function promptFor(s: Session, spawn: Spawn): Promise<string> {
     findings: spawn.reason === 'retry' ? s.findings : [],
     research: s.research,
     ...(spawn.conflict ? { conflict: spawn.conflict } : {}),
+    ...(spawn.checkFailures ? { checkFailures: spawn.checkFailures } : {}),
   });
+}
+
+export function resumeKeyFor(s: Session, role: AgentRole, name: string): string | null {
+  if (!s.taskId || (role !== 'builder' && role !== 'critic')) return null;
+  return `${s.taskId}:${role}:${name}`;
 }
 
 interface Counted {
@@ -147,11 +164,19 @@ interface Naming {
   name: string;
 }
 
+interface RouteExtra {
+  parallelGroup?: string;
+  copy?: string;
+  resumeKey?: string;
+  followUp?: string;
+  worktreeRun?: string;
+}
+
 function storedRoute(
   route: MemberRoute,
   name: string,
   planStep: string | null,
-  extra: { parallelGroup?: string; copy?: string } = {},
+  extra: RouteExtra = {},
 ) {
   return {
     name,
@@ -231,6 +256,25 @@ export async function ensureParentSnapshot(s: Session): Promise<void> {
   await takeSnapshot(s.deps.db, s.lease.runId, root);
 }
 
+function routeExtra(
+  s: Session,
+  spawn: Spawn,
+  name: string,
+  place: Place | null,
+  branch: string | null,
+  options: MemberOptions,
+): RouteExtra {
+  const resumeKey = resumeKeyFor(s, spawn.role, name);
+  const followUp = options.followUp ?? spawn.followUp;
+  return {
+    ...(place?.group ? { parallelGroup: place.group } : {}),
+    ...(branch ? { copy: branch } : {}),
+    ...(resumeKey ? { resumeKey } : {}),
+    ...(followUp ? { followUp } : {}),
+    ...(place?.reuse ? { worktreeRun: place.reuse.runId } : {}),
+  };
+}
+
 async function runChild(
   s: Session,
   spawn: Spawn,
@@ -238,9 +282,11 @@ async function runChild(
   { label, name }: Naming,
   announce: Announce,
   place: Place | null,
+  options: MemberOptions,
 ): Promise<MemberResult> {
   const mode = modeFor(s, spawn.role);
-  const copy = place?.copy?.(name) ?? null;
+  const copy = place?.reuse ? null : (place?.copy?.(name) ?? null);
+  const branch = place?.reuse?.branch ?? copy?.branch ?? null;
   const stepText = spanOf(spawn)
     .map((index) => s.flow.steps[index] ?? '')
     .filter(Boolean)
@@ -248,8 +294,9 @@ async function runChild(
   const planStep = spawn.role === 'builder' || place ? stepText || null : null;
   if (mode === 'do') await ensureParentSnapshot(s);
   const attempt =
+    options.attempt ??
     [...s.results].filter((r) => r.role === spawn.role && r.stepIndex === spawn.stepIndex).length +
-    1;
+      1;
   const lease = await insertChildRun(
     s.deps.db,
     {
@@ -262,11 +309,8 @@ async function runChild(
       model: route.pick.model,
       effort: route.pick.effort,
       mode,
-      prompt: await promptFor(s, spawn),
-      route: storedRoute(route, name, planStep, {
-        ...(place?.group ? { parallelGroup: place.group } : {}),
-        ...(copy ? { copy: copy.branch } : {}),
-      }),
+      prompt: options.prompt ?? (await promptFor(s, spawn)),
+      route: storedRoute(route, name, planStep, routeExtra(s, spawn, name, place, branch, options)),
     },
     s.deps.leaseSeconds,
   );
@@ -300,6 +344,7 @@ async function runChild(
       steps,
       ticked: [...ticker.ticked],
       tools: counted.tools,
+      ...(place?.reuse ? { copyRunId: place.reuse.runId } : {}),
     };
   } finally {
     s.control.signal.removeEventListener('abort', cancel);
@@ -327,10 +372,18 @@ async function afterArchitect(s: Session, result: MemberResult): Promise<string[
   return plan.entries.map((entry) => entry.content);
 }
 
-async function afterCritic(s: Session, result: MemberResult, route: MemberRoute) {
+export interface ReviewOutcome {
+  verdict: ReturnType<typeof reviewVerdict>;
+  findings: string[];
+}
+
+async function afterCritic(
+  s: Session,
+  result: MemberResult,
+  route: MemberRoute,
+): Promise<ReviewOutcome> {
   const verdict = result.outcome === 'succeeded' ? reviewVerdict(result.text) : 'unclear';
   const findings = reviewFindings(result.text);
-  s.findings = verdict === 'concerns' ? findings : [];
   await mergeRoute(s.deps.db, result.runId, { verdict });
   if (s.taskId) {
     const body = {
@@ -352,7 +405,7 @@ async function afterCritic(s: Session, result: MemberResult, route: MemberRoute)
       },
     });
   }
-  return verdict;
+  return { verdict, findings };
 }
 
 export interface MemberOutcome {
@@ -360,14 +413,36 @@ export interface MemberOutcome {
   steps?: string[];
   groups?: number[][];
   large?: number[];
+  lanes?: number[][];
   parallel?: ParallelVerdicts;
   verdict?: ReturnType<typeof reviewVerdict>;
+  review?: ReviewOutcome;
+}
+
+async function afterPlan(s: Session, result: MemberResult): Promise<MemberOutcome> {
+  const planned = await afterArchitect(s, result);
+  const notes = stepNotesFromReply(result.text, planned.length);
+  const steps = withFilesLines(planned, notes);
+  s.architectNotes = architectNotes(result.text, readFiles(result.tools));
+  const groups = parallelFromReply(result.text, steps.length);
+  const large = largeFromReply(result.text, steps.length);
+  const chains = { chains: chainsFromReply(result.text, steps.length), depends: notes.depends };
+  const decision = await decideParallel(s, steps, groups, large, chains, result.runId);
+  return {
+    result,
+    steps,
+    groups,
+    large,
+    lanes: decision.lanes,
+    ...(decision.verdicts ? { parallel: decision.verdicts } : {}),
+  };
 }
 
 export async function runMember(
   s: Session,
   spawn: Spawn,
   place: Place | null = null,
+  options: MemberOptions = {},
 ): Promise<MemberOutcome> {
   const resolved = await resolveRoute(s, spawn);
   const { route } = resolved;
@@ -383,8 +458,8 @@ export async function runMember(
   };
   const result = usesInPlace(s, spawn, place)
     ? await runInPlace(s, spawn, route, naming, announce)
-    : await runChild(s, spawn, route, naming, announce, place);
-  s.results.push(result);
+    : await runChild(s, spawn, route, naming, announce, place, options);
+  if (options.record !== false) s.results.push(result);
   if (result.outcome === 'lease_lost') return { result };
   if (spawn.role === 'builder' && result.outcome !== 'succeeded') {
     const open = result.steps.find((index) => !result.ticked.includes(index)) ?? spawn.stepIndex;
@@ -393,14 +468,11 @@ export async function runMember(
   if (spawn.role === 'scout' && place && result.outcome === 'succeeded') {
     s.research.push({ name, step: s.flow.steps[spawn.stepIndex] ?? '', text: result.text });
   }
-  if (spawn.role === 'architect' && result.outcome === 'succeeded') {
-    const steps = await afterArchitect(s, result);
-    s.architectNotes = architectNotes(result.text, readFiles(result.tools));
-    const groups = parallelFromReply(result.text, steps.length);
-    const large = largeFromReply(result.text, steps.length);
-    const parallel = await decideParallel(s, steps, groups, large, result.runId);
-    return { result, steps, groups, large, ...(parallel ? { parallel } : {}) };
+  if (spawn.role === 'architect' && result.outcome === 'succeeded') return afterPlan(s, result);
+  if (spawn.role === 'critic') {
+    const review = await afterCritic(s, result, route);
+    if (options.record !== false) s.findings = review.verdict === 'concerns' ? review.findings : [];
+    return { result, verdict: review.verdict, review };
   }
-  if (spawn.role === 'critic') return { result, verdict: await afterCritic(s, result, route) };
   return { result };
 }

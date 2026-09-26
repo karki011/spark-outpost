@@ -6,7 +6,7 @@ import {
 } from '@spark-outpost/contracts';
 import { ASK_AT, gate } from '../advisor/gate.ts';
 import { asksForRetry } from './checkpoint-policy.ts';
-import { reviewsAfter } from './depth.ts';
+import { reviewWanted } from './depth.ts';
 import { nextOpenStep } from './parallel.ts';
 import { spanOf } from './spans.ts';
 import type { AgentOutcome, FlowEvent, FlowState } from './transitions.ts';
@@ -44,12 +44,12 @@ export function ruleTransition(state: FlowState, outcome: AgentOutcome): Transit
   }
   return {
     status: 'done',
-    next: reviewsAfter(state.depth) && !state.reviewed ? 'review' : 'finish',
+    next: reviewWanted(state) && !state.reviewed ? 'review' : 'finish',
   };
 }
 
 export function wantsConfirm(state: FlowState, next: TransitionNext, confidence: number | null) {
-  const unplannedReview = next === 'review' && !reviewsAfter(state.depth);
+  const unplannedReview = next === 'review' && !reviewWanted(state);
   if (next !== 'retry_up' && !unplannedReview) return false;
   return asksForRetry(state.level, confidence);
 }

@@ -69,10 +69,19 @@ async function insertProject(
   root: string,
 ): Promise<ProjectRow> {
   const inserted = await client.query<ProjectRow>(
-    `INSERT INTO projects (id, workspace_id, name, root_path, created_at, command_allowlist)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO projects
+       (id, workspace_id, name, root_path, created_at, command_allowlist, check_commands)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT DO NOTHING RETURNING ${PROJECT_COLUMNS}`,
-    [project.id, workspaceId, project.name, root, project.createdAt, project.commandAllowlist],
+    [
+      project.id,
+      workspaceId,
+      project.name,
+      root,
+      project.createdAt,
+      project.commandAllowlist,
+      project.checkCommands ?? null,
+    ],
   );
   if (inserted.rows[0]) return inserted.rows[0];
   const { rows } = await client.query<ProjectRow>(

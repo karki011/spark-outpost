@@ -10,6 +10,7 @@ export const projectSchema = z.object({
   displayPath: z.string(),
   createdAt: z.string(),
   commandAllowlist: z.array(z.string()),
+  checkCommands: z.array(z.string()).nullable().optional(),
 });
 export type Project = z.infer<typeof projectSchema>;
 
@@ -20,6 +21,11 @@ export type CreateProjectRequest = z.infer<typeof createProjectRequestSchema>;
 
 export const PROJECT_NAME_MAX = 100;
 export const projectNameSchema = z.string().trim().min(1).max(PROJECT_NAME_MAX);
+
+export const projectOrderRequestSchema = z.object({
+  projectIds: z.array(z.uuid()).min(1).max(500),
+});
+export type ProjectOrderRequest = z.infer<typeof projectOrderRequestSchema>;
 
 export const projectLinkSchema = z.object({
   conversationId: z.uuid(),

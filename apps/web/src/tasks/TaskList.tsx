@@ -105,6 +105,11 @@ function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[]
           {agentLine(item)}
           {item.detail ? ` · ${item.detail}` : ''}
           {numbers ? ` · ${numbers}` : ''}
+          {item.output && (
+            <pre className="ti-out" tabIndex={0} aria-label="Check output">
+              {item.output}
+            </pre>
+          )}
         </div>
       )}
     </li>

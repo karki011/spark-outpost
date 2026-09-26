@@ -36,13 +36,21 @@ import {
 } from './checkpoint.ts';
 import { asksToKeep, autoContinueOption } from './checkpoint-policy.ts';
 import { namedFiles } from './context.ts';
-import { chooseDepth, refineDepth, ruleDepth, trustedRisk } from './depth.ts';
+import {
+  chooseDepth,
+  intakeDepthNote,
+  refineDepth,
+  reviewIntent,
+  ruleDepth,
+  trustedRisk,
+} from './depth.ts';
 import { finalText } from './final-message.ts';
 import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
 import { cleanupCopies, runGroup } from './group.ts';
 import { judge } from './judge.ts';
+import { buildAndLand } from './land.ts';
+import { collectedReview } from './reviews.ts';
 import { sequentialReason } from './parallel.ts';
-import { runMember } from './members.ts';
 import { markPlanStep, markPlanSteps, statusAfterJudging } from './plan-progress.ts';
 import { escalate, ruleCriticPick, type RouteContext } from './routing.ts';
 import { Slots } from './slots.ts';
@@ -55,6 +63,8 @@ import {
   type Session,
 } from './session.ts';
 import { spentUsd, waitedMs } from '../persistence/orchestrations.ts';
+import { closeKeyedSessions, SESSION_CLOSE_REASONS } from '../persistence/provider-sessions.ts';
+import { projectChecks } from '../checks/project-checks.ts';
 import { initialFlow, nextStep, type FlowAction, type FlowEvent } from './transitions.ts';
 
 function jevTimeout(deps: OrchestratorDeps): number {
@@ -216,7 +226,12 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       return ask(s, action);
     case 'spawn': {
       if (action.role !== 'scout') await ensureTask(s);
-      const { result, steps, groups, large, parallel, verdict } = await runMember(s, action);
+      if (action.role === 'critic' && s.reviews && s.reviews.size > 0) {
+        const collected = await collectedReview(s);
+        if (collected) return collected;
+      }
+      const outcome = await buildAndLand(s, action);
+      const { result, steps, groups, large, lanes, parallel, verdict } = outcome;
       if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
       await publish(s);
       if (result.error === APPROVAL_TIMEOUT_MESSAGE) throw new CheckpointTimeout();
@@ -230,6 +245,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
         ...(steps ? { steps } : {}),
         ...(groups && groups.length > 0 ? { groups } : {}),
         ...(large && large.length > 0 ? { large } : {}),
+        ...(lanes && lanes.length > 1 ? { lanes } : {}),
         ...(parallel ? { parallel } : {}),
         ...(result.ticked.length > 0 ? { ticked: result.ticked } : {}),
         ...(verdict ? { verdict } : {}),
@@ -237,7 +253,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
     }
     case 'spawn_group':
       await ensureTask(s);
-      return runGroup(s, action.stepIndexes);
+      return runGroup(s, action.stepIndexes, action.lanes ?? []);
     case 'judge':
       return judge(s, action.role);
     case 'wrap_up': {
@@ -262,7 +278,7 @@ async function finish(
   reason: string | null,
 ) {
   const verdict = s.results.some((result) => result.role === 'critic') ? s.flow.verdict : null;
-  const text = finalText(s.results, verdict, s.findings, s.message !== null);
+  const text = finalText(s.results, verdict, s.findings, s.message !== null, s.checkBodies);
   await publish(s, { phase: 'finished', error: status === 'failed' ? reason : null });
   if (text) {
     if (!s.message) {
@@ -307,9 +323,9 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       namedFiles([input.userRequest]).length,
       intake.body.jev,
     );
-    if (depth.reason) {
-      await noteIntakeDepth(deps.db, lease.runId, { depth: depth.depth, reason: depth.reason });
-    }
+    const review = reviewIntent(mode, intake.body.jev);
+    const note = intakeDepthNote(depth, review);
+    if (note) await noteIntakeDepth(deps.db, lease.runId, { depth: depth.depth, reason: note });
     const limits = baseLimits(deps);
     const root = input.projectRoots[0];
     const worktrees = mode === 'do' && root !== undefined && (await isGitWorkTree(root));
@@ -338,7 +354,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
           : null,
       route: routeContext(input, intake, risk),
       intake,
-      flow: initialFlow(depth.depth, risk, input.level, worktrees),
+      flow: initialFlow(depth.depth, risk, input.level, worktrees, review),
       routes: new Map(),
       planned: new Map(),
       plannedCalled: false,
@@ -363,6 +379,14 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       slots: new Slots(deps.parallelLimit ?? ORCHESTRATION_PARALLEL_LIMIT),
       groups: 0,
       parallelNoted: false,
+      git: worktrees,
+      checks:
+        mode === 'do' && root !== undefined
+          ? await projectChecks(deps.db, lease.runId, root)
+          : null,
+      checkRounds: 0,
+      checkBodies: [],
+      reviews: null,
     };
     session = s;
     budgetTimer = setInterval(
@@ -378,8 +402,22 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     await failSafely(append, error);
   } finally {
     if (budgetTimer) clearInterval(budgetTimer);
-    if (session) await cleanupCopies(session).catch(() => undefined);
+    if (session) await settleSession(session);
     control.dispose();
+  }
+}
+
+async function settleSession(s: Session): Promise<void> {
+  for (const abort of s.members.values()) abort();
+  await s.reviews?.collect().catch(() => undefined);
+  await cleanupCopies(s).catch(() => undefined);
+  if (s.taskId) {
+    await closeKeyedSessions(
+      s.deps.db,
+      s.input.identity.threadId,
+      `key:${s.taskId}:`,
+      SESSION_CLOSE_REASONS.orchestrationDone,
+    ).catch(() => undefined);
   }
 }
 

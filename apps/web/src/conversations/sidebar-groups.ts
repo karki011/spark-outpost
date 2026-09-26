@@ -25,6 +25,12 @@ function comparePinned(a: ConversationSummary, b: ConversationSummary): number {
   return (a.pinnedOrder ?? 0) - (b.pinnedOrder ?? 0) || b.pinnedAt.localeCompare(a.pinnedAt);
 }
 
+function compareInProject(a: ConversationSummary, b: ConversationSummary): number {
+  const pinned = comparePinned(a, b);
+  if (pinned || a.pinnedAt) return pinned;
+  return (a.projectOrder ?? 0) - (b.projectOrder ?? 0);
+}
+
 export function pinnedFirst(chats: readonly ConversationSummary[]): ConversationSummary[] {
   return chats.toSorted(comparePinned);
 }
@@ -63,7 +69,10 @@ export function activeGroups(
     (bucket ?? loose).push(chat);
   }
   return {
-    groups: projects.map((project) => ({ project, chats: byProject.get(project.id) ?? [] })),
+    groups: projects.map((project) => ({
+      project,
+      chats: (byProject.get(project.id) ?? []).toSorted(compareInProject),
+    })),
     loose,
   };
 }

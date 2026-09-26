@@ -57,7 +57,9 @@ const summaryQuery = `
     ARRAY(
       SELECT cp.project_id::text FROM conversation_projects cp
       WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at
-    ) AS project_ids
+    ) AS project_ids,
+    (SELECT cp.sort_order FROM conversation_projects cp
+     WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at LIMIT 1) AS project_order
   FROM conversations c
   LEFT JOIN LATERAL (
     SELECT id, status, error, finished_at FROM runs

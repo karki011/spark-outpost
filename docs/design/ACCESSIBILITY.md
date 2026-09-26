@@ -82,7 +82,7 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
 | UI entrances and exits last 150–250ms. Nothing in the UI chrome runs longer than 250ms.                                                                              | Motion |
 | Use an ease-out curve (`--out`).                                                                                                                                     | Motion |
-| No overshoot. `--spring` is reserved for the delight zones: Agent TV and the offline screen.                                                                        | Motion |
+| No overshoot. `--spring` is reserved for the delight zones: Agent TV, the offline screen, and the small drag-and-drop reactions in the sidebar.                    | Motion |
 | Popovers and menus scale from the edge nearest their trigger (`transform-origin`).                                                                                   | Motion |
 | Reduced motion means fade, not fly: transforms are dropped, opacity fades stay, and decorative loops stop.                                                          | Motion, WCAG 2.3.3 |
 | Animate `transform` and `opacity` only, never `width`, `height`, `left` or `top`.                                                                                   | Motion |
@@ -99,6 +99,8 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 ## Known exceptions and follow-ups
 
 - **Delight zones:** Agent TV and the offline screen keep springs, longer loops and the `ow-poke` animation of `left`. Under reduced motion, their loops stop.
+- **Sidebar drag and drop:** the lifted card tilts slightly, its blob wiggles when the drop target changes, the card bounces a little when it lands in a new project, and that project's header pulses. Each reaction stays under 250ms and uses transform and opacity only. Under reduced motion the card only fades and the header only glows.
+- **Drag handles:** every draggable chat and project has a Move button that starts a keyboard drag. Arrow keys choose the spot, Space or Enter drops, and Escape cancels. A live region announces each step.
 - **Scout mascot:** the hop and squish springs play only when the mascot is poked or happy.
 - **Theme switch:** the circular reveal (650ms, `theme/reveal.ts`) runs longer than 250ms and doesn't use ease-out. It is skipped under reduced motion.
 - **Spinners:** they keep rotating under reduced motion because they show progress.

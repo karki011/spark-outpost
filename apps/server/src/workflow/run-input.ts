@@ -123,7 +123,8 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             r.parent_run_id, r.prompt AS run_prompt, r.role AS run_role,
             r.route->>'name' AS run_name,
             r.route->>'resumeKey' AS resume_key, r.route->>'followUp' AS follow_up,
-            (SELECT w.path FROM run_worktrees w WHERE w.run_id = r.id) AS worktree_path,
+            (SELECT w.path FROM run_worktrees w
+             WHERE w.run_id = COALESCE((r.route->>'worktreeRun')::uuid, r.id)) AS worktree_path,
             c.title_source,
             pc.method, pc.model, pc.effort, pc.models,
             ARRAY(

@@ -12,9 +12,10 @@ export interface ProjectRow {
   root_path: string;
   created_at: Date;
   command_allowlist: string[];
+  check_commands: string[] | null;
 }
 
-export const PROJECT_COLUMNS = 'id, name, root_path, created_at, command_allowlist';
+export const PROJECT_COLUMNS = 'id, name, root_path, created_at, command_allowlist, check_commands';
 
 export class ProjectNotFoundError extends Error {
   constructor() {
@@ -36,6 +37,7 @@ export function toProject(row: ProjectRow, home: string): Project {
     displayPath: displayPath(row.root_path, home),
     createdAt: row.created_at.toISOString(),
     commandAllowlist: row.command_allowlist,
+    checkCommands: row.check_commands,
   };
 }
 
@@ -49,7 +51,7 @@ export async function realHome(): Promise<string> {
 
 export async function listProjects(db: Queryable, workspaceId: string): Promise<Project[]> {
   const { rows } = await db.query<ProjectRow>(
-    `SELECT ${PROJECT_COLUMNS} FROM projects WHERE workspace_id = $1 ORDER BY lower(name), created_at`,
+    `SELECT ${PROJECT_COLUMNS} FROM projects WHERE workspace_id = $1 ORDER BY sort_order NULLS LAST, lower(name), created_at`,
     [workspaceId],
   );
   const home = await realHome();
@@ -96,6 +98,7 @@ export async function createProject(
 export interface ProjectChange {
   name?: string | undefined;
   commandAllowlist?: readonly string[] | undefined;
+  checkCommands?: readonly string[] | null | undefined;
 }
 
 export async function updateProject(
@@ -106,11 +109,51 @@ export async function updateProject(
 ): Promise<Project> {
   const { rows } = await db.query<ProjectRow>(
     `UPDATE projects
-     SET name = COALESCE($3, name), command_allowlist = COALESCE($4, command_allowlist)
+     SET name = COALESCE($3, name), command_allowlist = COALESCE($4, command_allowlist),
+         check_commands = CASE WHEN $5 THEN $6::text[] ELSE check_commands END
      WHERE id = $1 AND workspace_id = $2
      RETURNING ${PROJECT_COLUMNS}`,
-    [id, workspaceId, change.name ?? null, change.commandAllowlist ?? null],
+    [
+      id,
+      workspaceId,
+      change.name ?? null,
+      change.commandAllowlist ?? null,
+      change.checkCommands !== undefined,
+      change.checkCommands ?? null,
+    ],
   );
   if (!rows[0]) throw new ProjectNotFoundError();
   return toProject(rows[0], await realHome());
+}
+
+export async function orderProjects(
+  db: Queryable,
+  workspaceId: string,
+  projectIds: readonly string[],
+): Promise<void> {
+  await db.query(
+    `UPDATE projects p SET sort_order = ordered.position
+     FROM unnest($2::uuid[]) WITH ORDINALITY AS ordered (id, position)
+     WHERE p.id = ordered.id AND p.workspace_id = $1`,
+    [workspaceId, projectIds],
+  );
+}
+
+export async function orderProjectChats(
+  db: Queryable,
+  workspaceId: string,
+  projectId: string,
+  conversationIds: readonly string[],
+): Promise<void> {
+  const { rowCount } = await db.query(
+    'SELECT 1 FROM projects WHERE id = $1 AND workspace_id = $2',
+    [projectId, workspaceId],
+  );
+  if (!rowCount) throw new ProjectNotFoundError();
+  await db.query(
+    `UPDATE conversation_projects cp SET sort_order = ordered.position
+     FROM unnest($2::uuid[]) WITH ORDINALITY AS ordered (id, position)
+     WHERE cp.project_id = $1 AND cp.conversation_id = ordered.id`,
+    [projectId, conversationIds],
+  );
 }

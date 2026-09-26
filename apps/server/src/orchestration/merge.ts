@@ -17,12 +17,13 @@ import {
 import { askCard, CheckpointTimeout, mergeConflictCard } from './checkpoint.ts';
 import { runMember } from './members.ts';
 import { conflictLine } from './parallel.ts';
-import { markPlanStep } from './plan-progress.ts';
+import { markPlanSteps } from './plan-progress.ts';
 import type { Session } from './session.ts';
 import type { AgentOutcome } from './transitions.ts';
 
 export interface Finished {
   stepIndex: number;
+  steps: number[];
   runId: string;
   name: string;
   record: WorktreeRecord & { resultCommit: string };
@@ -154,7 +155,7 @@ export async function mergeCopies(s: Session, copies: readonly Finished[]): Prom
     await markMerged(s.deps.db, copy.runId);
     results.set(copy.stepIndex, outcome);
     if (outcome === 'succeeded') {
-      await markPlanStep(s, copy.stepIndex, 'completed', copy.runId);
+      await markPlanSteps(s, copy.steps, 'completed', copy.runId);
     }
     const changed = await gitChanges(root, baseCommit, resultCommit);
     merged.push({

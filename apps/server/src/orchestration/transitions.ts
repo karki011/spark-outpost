@@ -13,17 +13,25 @@ import {
   type TransitionStatus,
 } from '@spark-outpost/contracts';
 import { asksForPlan } from './checkpoint-policy.ts';
-import { plansFirst, reviewsAfter } from './depth.ts';
+import { reviewWanted } from './depth.ts';
 import {
-  batchGroups,
-  batchRanges,
-  batchSteps,
-  groupMembers,
-  isResearchStep,
-  nextOpenStep,
-} from './parallel.ts';
+  ask,
+  finish,
+  first,
+  firstAgent,
+  laneOf,
+  spawn,
+  spawnGroup,
+  spawnLanes,
+  spawnStep,
+  startBuilding,
+  withDone,
+  withStepDone,
+  wrapUp,
+} from './flow-steps.ts';
+import { batchGroups, batchRanges, batchSteps, nextOpenStep } from './parallel.ts';
 import { chooseGroups, type ParallelVerdicts } from './parallel-choice.ts';
-import { carriedSteps, openSpan, spanOf } from './spans.ts';
+import { openSpan } from './spans.ts';
 import { stopsForUser, wantsConfirm, type Transition } from './transition-choice.ts';
 
 export const MAX_PLAN_EDITS = 3;
@@ -40,6 +48,8 @@ export interface Spawn {
   reason: SpawnReason;
   conflict?: string;
   carry?: number[] | undefined;
+  followUp?: string;
+  checkFailures?: string;
 }
 
 export type FlowAction =
@@ -52,7 +62,7 @@ export type FlowAction =
       blocked?: boolean;
     }
   | ({ type: 'spawn' } & Spawn)
-  | { type: 'spawn_group'; stepIndexes: number[] }
+  | { type: 'spawn_group'; stepIndexes: number[]; lanes?: number[][] }
   | { type: 'judge'; role: AgentRole; stepIndex: number }
   | { type: 'wrap_up' }
   | { type: 'revert' }
@@ -72,6 +82,7 @@ export type FlowEvent =
       groups?: readonly number[][];
       large?: readonly number[];
       parallel?: ParallelVerdicts;
+      lanes?: readonly number[][];
       ticked?: readonly number[];
       verdict?: ReviewVerdict;
     }
@@ -93,6 +104,7 @@ export type FlowEvent =
 export interface GroupResult {
   stepIndex: number;
   outcome: AgentOutcome;
+  ticked?: readonly number[];
 }
 
 export interface FlowState {
@@ -115,6 +127,9 @@ export interface FlowState {
   completed: number[];
   worktrees: boolean;
   lastGroup: number[] | null;
+  lanes: number[][];
+  ranges: number[][] | null;
+  reviewIntent: boolean;
 }
 
 export interface FlowResult {
@@ -127,6 +142,7 @@ export function initialFlow(
   risk: Risk,
   level: InvolvementLevel,
   worktrees = false,
+  reviewIntent = false,
 ): FlowState {
   return {
     depth,
@@ -148,115 +164,10 @@ export function initialFlow(
     completed: [],
     worktrees,
     lastGroup: null,
+    lanes: [],
+    ranges: null,
+    reviewIntent,
   };
-}
-
-const PHASE_FOR_ROLE: Record<AgentRole, OrchestrationPhase> = {
-  scout: 'scouting',
-  architect: 'planning',
-  builder: 'building',
-  critic: 'reviewing',
-};
-
-function spawn(state: FlowState, next: Omit<Spawn, 'note'> & { note?: string | null }): FlowResult {
-  const full: Spawn = { ...next, note: next.note ?? null };
-  return {
-    state: {
-      ...state,
-      phase: PHASE_FOR_ROLE[full.role],
-      last: full,
-      lastGroup: null,
-      waitingFor: null,
-    },
-    action: { type: 'spawn', ...full },
-  };
-}
-
-function spawnGroup(state: FlowState, stepIndexes: number[]): FlowResult {
-  const stepIndex = stepIndexes[0]!;
-  return {
-    state: {
-      ...state,
-      phase: 'building',
-      stepIndex,
-      last: { ...first('builder', stepIndex), note: null },
-      lastGroup: stepIndexes,
-      waitingFor: null,
-    },
-    action: { type: 'spawn_group', stepIndexes },
-  };
-}
-
-function spawnStep(state: FlowState, stepIndex: number): FlowResult {
-  const members = groupMembers(
-    state.groups,
-    state.completed,
-    state.steps,
-    stepIndex,
-    state.worktrees,
-  );
-  const solo = members.length <= 1 && !isResearchStep(state.steps[stepIndex] ?? '');
-  if (!solo) return spawnGroup(state, members.length > 0 ? members : [stepIndex]);
-  const groups = state.worktrees ? state.groups : [];
-  const carry = carriedSteps(state.steps, groups, state.completed, stepIndex);
-  return spawn(
-    { ...state, stepIndex },
-    { ...first('builder', stepIndex), ...(carry.length > 1 ? { carry } : {}) },
-  );
-}
-
-function withDone(state: FlowState, steps: readonly number[]): FlowState {
-  const added = steps.filter((step) => !state.completed.includes(step));
-  return added.length > 0 ? { ...state, completed: [...state.completed, ...added] } : state;
-}
-
-function withStepDone(state: FlowState): FlowState {
-  if (state.last?.role !== 'builder') return state;
-  const span = spanOf(state.last);
-  return { ...withDone(state, span), stepIndex: Math.max(state.stepIndex, ...span) };
-}
-
-function ask(
-  state: FlowState,
-  kind: FlowCheckpoint,
-  reason: string,
-  suggestion: TransitionNext | null = null,
-  fromJev = false,
-): FlowResult {
-  return {
-    state: { ...state, phase: 'waiting', waitingFor: kind, suggestion },
-    action: { type: 'ask', kind, reason, suggestion, fromJev },
-  };
-}
-
-function finish(
-  state: FlowState,
-  status: 'succeeded' | 'failed' | 'cancelled',
-  reason: string | null = null,
-): FlowResult {
-  return {
-    state: { ...state, phase: 'finished', waitingFor: null },
-    action: { type: 'finish', status, reason },
-  };
-}
-
-function wrapUp(state: FlowState): FlowResult {
-  return { state: { ...state, waitingFor: null }, action: { type: 'wrap_up' } };
-}
-
-function firstAgent(state: FlowState): FlowResult {
-  if (state.depth === 'direct') return spawn(state, first('scout', 0));
-  if (plansFirst(state.depth)) return spawn(state, first('architect', 0));
-  const steps = state.steps.length > 0 ? state.steps : [''];
-  return spawn({ ...state, steps }, first('builder', 0));
-}
-
-function first(role: AgentRole, stepIndex: number): Omit<Spawn, 'note'> {
-  return { role, stepIndex, escalate: false, reason: 'first' };
-}
-
-function startBuilding(state: FlowState): FlowResult {
-  return spawnStep({ ...state, completed: [] }, 0);
 }
 
 function planned(
@@ -265,12 +176,22 @@ function planned(
   hinted: readonly number[][],
   large: readonly number[],
   verdicts: ParallelVerdicts | null,
-) {
+  lanes: readonly (readonly number[])[],
+): FlowState {
   const kept = raw.map((step) => step.trim()).filter(Boolean);
+  if (state.worktrees && lanes.length > 1) {
+    return {
+      ...state,
+      steps: kept,
+      groups: [],
+      lanes: lanes.map((lane) => [...lane]),
+      ranges: kept.map((_, index) => [index]),
+    };
+  }
   const steps = batchSteps(kept);
   const worth = chooseGroups(kept, hinted, large, verdicts).groups;
   const groups = batchGroups(worth, batchRanges(kept.length));
-  return { ...state, steps: steps.length > 0 ? steps : [''], groups };
+  return { ...state, steps: steps.length > 0 ? steps : [''], groups, lanes: [], ranges: null };
 }
 
 function review(state: FlowState): FlowResult {
@@ -278,7 +199,7 @@ function review(state: FlowState): FlowResult {
 }
 
 function afterWork(state: FlowState): FlowResult {
-  if (reviewsAfter(state.depth) && !state.reviewed) return review(state);
+  if (reviewWanted(state) && !state.reviewed) return review(state);
   return wrapUp(state);
 }
 
@@ -309,21 +230,33 @@ function groupDone(state: FlowState, event: Extract<FlowEvent, { type: 'group_do
   if (event.results.some((result) => result.outcome === 'cancelled')) {
     return finish(state, 'cancelled', 'Stopped.');
   }
-  const succeeded = event.results.filter((result) => result.outcome === 'succeeded');
-  const completed = [
-    ...state.completed,
-    ...succeeded.map((result) => result.stepIndex).filter((i) => !state.completed.includes(i)),
-  ];
+  const spanFor = (head: number) => {
+    const lane = laneOf(state, head);
+    return lane
+      ? lane.filter((index) => index >= head && !state.completed.includes(index))
+      : [head];
+  };
+  const done = event.results.flatMap((result) =>
+    result.outcome === 'succeeded' ? spanFor(result.stepIndex) : (result.ticked ?? []),
+  );
+  const completed = [...state.completed, ...done.filter((i) => !state.completed.includes(i))];
   const failed = event.results
     .filter((result) => result.outcome === 'failed')
     .map((result) => result.stepIndex)
     .sort((a, b) => a - b);
-  const stepIndex = failed[0] ?? Math.max(...event.results.map((result) => result.stepIndex));
+  const stepIndex =
+    failed[0] ?? Math.max(...event.results.flatMap((result) => spanFor(result.stepIndex)));
+  const open =
+    failed[0] === undefined ? [] : spanFor(failed[0]).filter((i) => !completed.includes(i));
   const next: FlowState = {
     ...state,
     completed,
     stepIndex,
-    last: { ...first('builder', stepIndex), note: null },
+    last: {
+      ...first('builder', stepIndex),
+      note: null,
+      ...(open.length > 1 ? { carry: open } : {}),
+    },
     lastGroup: null,
   };
   if (failed.length === 0) return follow(next, 'next_step');
@@ -390,6 +323,7 @@ function agentDone(
       event.groups ?? [],
       event.large ?? [],
       event.parallel ?? null,
+      event.lanes ?? [],
     );
     if (asksForPlan(state.level, state.risk)) return ask(next, 'plan', 'Approve the plan.');
     return startBuilding(next);
@@ -409,8 +343,11 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
   const option = event.optionId;
   if (event.kind === 'budget') {
     if (option === CHECKPOINT_OPTION.continueBudget && state.lastGroup) {
+      const resumed = { ...state, exceeded: null };
+      const lanes = spawnLanes(resumed, state.lastGroup[0]!);
+      if (lanes) return lanes;
       const open = state.lastGroup.filter((index) => !state.completed.includes(index));
-      if (open.length > 0) return spawnGroup({ ...state, exceeded: null }, open);
+      if (open.length > 0) return spawnGroup(resumed, open);
     }
     if (option === CHECKPOINT_OPTION.continueBudget && state.last) {
       const span = openSpan(state.last, state.completed);

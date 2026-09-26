@@ -77,6 +77,22 @@ describe('renaming a project', () => {
     expect((await get('/api/projects').expect(200)).body).toEqual([renamed.body]);
   });
 
+  it('sets, clears and validates the check commands', async () => {
+    const appRepo = await project(folders.app);
+    const path = `/api/projects/${appRepo.id}`;
+    const set = await send('patch', path, { checkCommands: ['npm test', ' pnpm lint '] });
+    expect(set.status).toBe(200);
+    expect(set.body.checkCommands).toEqual(['npm test', 'pnpm lint']);
+    const off = await send('patch', path, { checkCommands: [] }).expect(200);
+    expect(off.body.checkCommands).toEqual([]);
+    const renamed = await send('patch', path, { name: 'App' }).expect(200);
+    expect(renamed.body.checkCommands).toEqual([]);
+    const detect = await send('patch', path, { checkCommands: null }).expect(200);
+    expect(detect.body.checkCommands).toBeNull();
+    await send('patch', path, { checkCommands: ['a', 'b', 'c', 'd', 'e', 'f'] }).expect(400);
+    await send('patch', path, { checkCommands: ['   '] }).expect(400);
+  });
+
   it('rejects blank, long, empty and unknown requests', async () => {
     const appRepo = await project(folders.app);
     const path = `/api/projects/${appRepo.id}`;

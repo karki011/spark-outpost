@@ -119,6 +119,7 @@ describe('projects', () => {
       displayPath: root,
       createdAt: expect.any(String),
       commandAllowlist: [],
+      checkCommands: null,
     });
     const again = await post('/api/projects', { rootPath: root }).expect(200);
     expect(again.body).toEqual(project);

@@ -182,11 +182,22 @@ export async function gitDiffSince(
   root: string,
   snapshot: string,
 ): Promise<{ stats: FileStat[]; patch: string }> {
-  const current = await workingTree(root);
-  const range = ['--no-renames', '--relative', snapshot, current];
+  return gitDiffBetween(root, snapshot, await workingTree(root));
+}
+
+export async function gitDiffBetween(
+  root: string,
+  from: string,
+  to: string,
+): Promise<{ stats: FileStat[]; patch: string }> {
+  const range = ['--no-renames', '--relative', from, to];
   const [numstat, patch] = await Promise.all([
     git(root, ['diff', '--numstat', ...range]),
     git(root, ['diff', ...range]),
   ]);
   return { stats: parseNumstat(numstat), patch };
+}
+
+export async function commitTree(root: string, commit: string): Promise<string> {
+  return (await git(root, ['rev-parse', `${commit}^{tree}`])).trim();
 }

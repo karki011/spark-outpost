@@ -52,6 +52,7 @@ export const conversationSummarySchema = z.object({
   archivedAt: z.string().nullable(),
   pinnedAt: z.string().nullable(),
   pinnedOrder: z.number().int().nullable().default(null),
+  projectOrder: z.number().int().nullable().default(null),
   unread: z.boolean(),
   needsInput: z.boolean(),
   attention: conversationAttentionSchema.nullable().default(null),
@@ -75,10 +76,13 @@ export const updateConversationRequestSchema = z
   });
 export type UpdateConversationRequest = z.infer<typeof updateConversationRequestSchema>;
 
-export const pinnedOrderRequestSchema = z.object({
+export const conversationOrderRequestSchema = z.object({
   conversationIds: z.array(z.uuid()).min(1).max(500),
 });
-export type PinnedOrderRequest = z.infer<typeof pinnedOrderRequestSchema>;
+export type ConversationOrderRequest = z.infer<typeof conversationOrderRequestSchema>;
+
+export const pinnedOrderRequestSchema = conversationOrderRequestSchema;
+export type PinnedOrderRequest = ConversationOrderRequest;
 
 export const activityStepSchema = z.object({ name: z.string(), done: z.boolean() });
 export type ActivityStep = z.infer<typeof activityStepSchema>;

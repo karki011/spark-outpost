@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { runModeSchema, type RunMode } from './approvals.ts';
 import { categorySchema } from './categories.ts';
 
-export const protocolDirectionSchema = z.enum(['to_agent', 'from_agent']);
+export const protocolDirectionSchema = z.enum(['to_agent', 'from_agent', 'harness']);
 export type ProtocolDirection = z.infer<typeof protocolDirectionSchema>;
 
 export const protocolEntryKindSchema = z.enum([
@@ -11,6 +11,7 @@ export const protocolEntryKindSchema = z.enum([
   'error',
   'notification',
   'stderr',
+  'check',
 ]);
 export type ProtocolEntryKind = z.infer<typeof protocolEntryKindSchema>;
 

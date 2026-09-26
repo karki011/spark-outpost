@@ -8,6 +8,7 @@ import {
   type ParallelChoice,
   type ParallelVerdicts,
 } from './parallel-choice.ts';
+import { chooseLanes } from './chains.ts';
 import type { Session } from './session.ts';
 import { stepFiles } from './step-files.ts';
 import { STEP_CHARACTERS } from './jev-questions.ts';
@@ -23,7 +24,21 @@ function groupsLine(groups: readonly number[][]): string {
   return groups.length === 0 ? 'none' : groups.map(stepList).join('; ');
 }
 
-export function parallelSummary(choice: ParallelChoice): string {
+function chainsLine(lanes: readonly number[][]): string {
+  return lanes
+    .map((lane) => (lane.length === 1 ? `step ${lane[0]! + 1}` : stepList(lane)))
+    .join(' | ');
+}
+
+export function parallelSummary(choice: ParallelChoice, lanes: readonly number[][] = []): string {
+  if (lanes.length > 1) {
+    const { asked, agreed } = agreement(choice);
+    const jev =
+      asked === 0
+        ? 'Jev was not sure of any pair'
+        : `Jev agreed with the rules on ${agreed} of ${asked}`;
+    return `Chains in parallel: ${chainsLine(lanes)} · ${jev}`;
+  }
   const chosen = `Parallel: ${groupsLine(choice.groups)}`;
   const same = groupsLine(choice.groups) === groupsLine(choice.rulesGroups);
   const rules = same
@@ -42,15 +57,26 @@ function verdictsOf(call: JevCall | null, count: number): ParallelVerdicts | nul
   return parseParallelAnswers(count, call.response);
 }
 
+export interface ArchitectChains {
+  chains: readonly number[][];
+  depends: readonly (number[] | null)[];
+}
+
+export interface ParallelDecision {
+  verdicts: ParallelVerdicts | null;
+  lanes: number[][];
+}
+
 export async function decideParallel(
   s: Session,
   raw: readonly string[],
   hinted: readonly number[][],
   large: readonly number[],
+  architect: ArchitectChains,
   architectRunId: string,
-): Promise<ParallelVerdicts | null> {
+): Promise<ParallelDecision> {
   const steps = raw.map((step) => step.trim()).filter(Boolean);
-  if (!s.flow.worktrees || steps.length < 2) return null;
+  if (!s.flow.worktrees || steps.length < 2) return { verdicts: null, lanes: [] };
   const call = s.jev
     ? await callJev(
         s.jev,
@@ -60,6 +86,14 @@ export async function decideParallel(
     : null;
   const verdicts = verdictsOf(call, steps.length);
   const choice = chooseGroups(steps, hinted, large, verdicts);
+  const lanes = chooseLanes({
+    steps,
+    chains: architect.chains,
+    depends: architect.depends,
+    large,
+    independent: verdicts?.independent ?? [],
+    sizes: verdicts?.large ?? [],
+  });
   const byJev = choice.decided.some((group) => group.source === 'jev');
   await insertDecision(s.deps.db, {
     runId: s.lease.runId,
@@ -71,7 +105,7 @@ export async function decideParallel(
     inputTokens: call?.usage?.inputTokens ?? null,
     costUsd: call?.usage?.costUsd ?? null,
     body: {
-      summary: parallelSummary(choice),
+      summary: parallelSummary(choice, lanes),
       applied: byJev ? 'jev' : 'rules',
       gate: null,
       jevError: call?.error ?? null,
@@ -84,11 +118,12 @@ export async function decideParallel(
         pairs: choice.pairs,
         sizes: choice.sizes,
         agreement: agreement(choice),
+        chains: { architect: architect.chains, depends: architect.depends, lanes },
       },
       state: call?.asked?.state ?? null,
       questions: call?.asked?.questions ?? null,
       answers: call?.response?.answers ?? null,
     },
   });
-  return verdicts;
+  return { verdicts, lanes };
 }

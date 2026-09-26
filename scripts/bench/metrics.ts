@@ -52,8 +52,8 @@ export async function agentUsage(db: Db, runId: string): Promise<AgentUsage[]> {
      FROM runs WHERE id = $1 OR parent_run_id = $1 ORDER BY created_at`,
     [runId],
   );
-  const children = rows.filter((row) => row.parent_run_id === runId);
-  return (children.length > 0 ? children : rows).map(toUsage);
+  const members = rows.filter((row) => row.parent_run_id === runId || row.role !== null);
+  return (members.length > 0 ? members : rows).map(toUsage);
 }
 
 export function routingOf(orchestration: Orchestration | null): Routing | null {

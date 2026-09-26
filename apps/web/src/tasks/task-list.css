@@ -253,6 +253,23 @@
   white-space: pre-wrap;
 }
 
+.ti-out {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--code);
+  color: var(--text);
+  font:
+    11.5px/1.5 'Geist Mono',
+    ui-monospace,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .ti-more {
   padding: 0 8px 10px 34px;
   font-size: 12px;

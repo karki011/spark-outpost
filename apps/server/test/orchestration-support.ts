@@ -68,7 +68,15 @@ const launch = {
   args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 
-function fakeAgent(id: 'claude' | 'codex', models: typeof CLAUDE_MODELS): Provider {
+function sessionEnv(store: string | undefined): Record<string, string> {
+  if (!store) return {};
+  return {
+    FAKE_ACP_SESSION_STORE: store,
+    FAKE_ACP_SESSION_CAPABILITIES: JSON.stringify({ resume: {}, close: {} }),
+  };
+}
+
+function fakeAgent(id: 'claude' | 'codex', models: typeof CLAUDE_MODELS, store?: string): Provider {
   return createAcpProvider({
     definition: { ...agentDefinitions[id], conversationMode: 'read-only' },
     launch,
@@ -76,6 +84,7 @@ function fakeAgent(id: 'claude' | 'codex', models: typeof CLAUDE_MODELS): Provid
     env: {
       ...(process.env as Record<string, string>),
       FAKE_ACP_MODELS: JSON.stringify(models.map((model) => [model.id, model.label])),
+      ...sessionEnv(store),
     },
   });
 }
@@ -92,6 +101,7 @@ export interface Scenario {
   scope?: string;
   scopeConfidence?: number;
   complexity?: number;
+  intent?: string;
 }
 
 export const SCENARIOS: readonly Scenario[] = [
@@ -186,7 +196,10 @@ export interface JevScript {
 function intakeAnswers(scenario: Scenario): Answers {
   const second = scenario.depth === 'plan_execute_review' ? 'plan_execute' : 'execute';
   return {
-    intent: choice(scenario.mode === 'ask' ? 'question' : 'bug_fix', scenario.confidence),
+    intent: choice(
+      scenario.intent ?? (scenario.mode === 'ask' ? 'question' : 'bug_fix'),
+      scenario.confidence,
+    ),
     complexity: score(scenario.complexity ?? 1),
     risk: score(RISKS.indexOf(scenario.risk)),
     depth: choice(scenario.depth, scenario.confidence, second),
@@ -280,7 +293,7 @@ export interface Harness {
 export function startOrchestrator(
   t: TestDb,
   fetcher: typeof fetch | null,
-  options: { budget?: { activeLimitMs?: number; toolCallLimit?: number } } = {},
+  options: { budget?: { activeLimitMs?: number; toolCallLimit?: number }; sessions?: string } = {},
 ): Harness {
   const intake = fetcher
     ? createIntakeRecorder({
@@ -293,8 +306,8 @@ export function startOrchestrator(
   const worker = startWorker({
     db: t.db,
     providers: new Map<string, Provider>([
-      ['claude', fakeAgent('claude', CLAUDE_MODELS)],
-      ['codex', fakeAgent('codex', CODEX_MODELS)],
+      ['claude', fakeAgent('claude', CLAUDE_MODELS, options.sessions)],
+      ['codex', fakeAgent('codex', CODEX_MODELS, options.sessions)],
     ]),
     leaseSeconds: 30,
     concurrency: 8,

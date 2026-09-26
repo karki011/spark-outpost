@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import {
   CHECKPOINT_OPTION,
+  checkBodySchema,
+  checkLine,
   type Approval,
   type InvolvementLevel,
   type Orchestration,
@@ -184,6 +186,22 @@ async function collect(
     jevCostUsd: orchestration?.totals.jevCostUsd ?? 0,
     jevCalls: orchestration?.totals.jevCalls ?? 0,
     asked,
-    routing: routingOf(orchestration),
+    routing: withChecks(routingOf(orchestration), await checkLines(db, orchestration)),
   };
+}
+
+async function checkLines(db: BenchEnv['t']['db'], orchestration: Orchestration | null) {
+  if (!orchestration?.taskId) return [];
+  const { rows } = await db.query<{ body: unknown }>(
+    `SELECT body FROM run_artifacts WHERE task_id = $1 AND kind = 'check' ORDER BY version`,
+    [orchestration.taskId],
+  );
+  return rows.flatMap((row) => {
+    const body = checkBodySchema.safeParse(row.body);
+    return body.success ? [checkLine(body.data)] : [];
+  });
+}
+
+function withChecks(routing: Routing | null, checks: string[]): Routing | null {
+  return routing && checks.length > 0 ? { ...routing, checks } : routing;
 }

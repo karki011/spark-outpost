@@ -1,6 +1,7 @@
 import {
   planBodySchema,
   type ArtifactKind,
+  type CheckBody,
   type PlanBody,
   type PlanVersion,
   type ReviewBody,
@@ -12,7 +13,7 @@ export interface ArtifactWrite {
   taskId: string;
   kind: ArtifactKind;
   version: number;
-  body: PlanBody | ReviewBody;
+  body: PlanBody | ReviewBody | CheckBody;
   overwrite: boolean;
   supersedesPrevious: boolean;
   sourceRunId?: string;

@@ -12,9 +12,10 @@ import { clockTime, entrySummary, jsonTokens } from './audit-model.ts';
 import { BadgeView, runBadge, type ChainChecks } from './ChainBadge.tsx';
 
 const DIRECTIONS: { id: ProtocolDirection | 'all'; label: string }[] = [
-  { id: 'all', label: 'Both directions' },
+  { id: 'all', label: 'All entries' },
   { id: 'to_agent', label: 'To agent' },
   { id: 'from_agent', label: 'From agent' },
+  { id: 'harness', label: 'Harness checks' },
 ];
 
 function Json({ value }: { value: unknown }) {
@@ -33,10 +34,22 @@ function Json({ value }: { value: unknown }) {
   );
 }
 
+const DIRECTION_ARROWS: Record<ProtocolLogEntry['direction'], string> = {
+  to_agent: '→',
+  from_agent: '←',
+  harness: '•',
+};
+
+const DIRECTION_TITLES: Record<ProtocolLogEntry['direction'], string> = {
+  to_agent: 'To agent',
+  from_agent: 'From agent',
+  harness: 'Harness',
+};
+
 function LogRow({ entry, broken }: { entry: ProtocolLogEntry; broken: boolean }) {
   const [open, setOpen] = useState(false);
   const rawId = useId();
-  const arrow = entry.direction === 'to_agent' ? '→' : '←';
+  const arrow = DIRECTION_ARROWS[entry.direction];
   return (
     <li className={open ? 'lrow open' : 'lrow'}>
       <button
@@ -47,10 +60,7 @@ function LogRow({ entry, broken }: { entry: ProtocolLogEntry; broken: boolean })
         onClick={() => setOpen(!open)}
       >
         <span className="lt">{clockTime(entry.at)}</span>
-        <span
-          className={`ldir ${entry.direction}`}
-          title={entry.direction === 'to_agent' ? 'To agent' : 'From agent'}
-        >
+        <span className={`ldir ${entry.direction}`} title={DIRECTION_TITLES[entry.direction]}>
           {arrow}
         </span>
         <span className="ls">

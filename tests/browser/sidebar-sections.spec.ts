@@ -142,6 +142,8 @@ test('long titles scroll on hover and keyboard focus, short ones stay still', as
 
   await row(page, 'Short one').locator('.row-open').focus();
   await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Move Short one' })).toBeFocused();
+  await page.keyboard.press('Tab');
   await page.keyboard.press('Tab');
   await expect(row(page, LONG_TITLE).locator('.row-open')).toBeFocused();
   await expect(long).toHaveAttribute('data-marquee', 'true');

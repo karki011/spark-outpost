@@ -96,3 +96,28 @@ export function plansFirst(depth: Depth): boolean {
 export function reviewsAfter(depth: Depth): boolean {
   return depth === 'plan_execute_review';
 }
+
+export interface ReviewShape {
+  depth: Depth;
+  reviewIntent: boolean;
+}
+
+export function reviewWanted(state: ReviewShape): boolean {
+  return reviewsAfter(state.depth) || (state.reviewIntent && state.depth !== 'direct');
+}
+
+export const REVIEW_INTENT_CONFIDENCE = 0.5;
+export const REVIEW_INTENT_REASON =
+  'Jev reads the request as a review, so a Critic reviews each change as it lands.';
+
+export function reviewIntent(mode: RunMode, jev: JevIntake | null): boolean {
+  if (mode !== 'do' || jev?.intent !== 'review') return false;
+  return (jev.confidences.intent ?? jev.confidence) >= REVIEW_INTENT_CONFIDENCE;
+}
+
+export function intakeDepthNote(depth: DepthChoice, review: boolean): string | null {
+  const extra = review && !reviewWanted({ depth: depth.depth, reviewIntent: false });
+  const wanted = extra && reviewWanted({ depth: depth.depth, reviewIntent: true });
+  const parts = [depth.reason, wanted ? REVIEW_INTENT_REASON : null].filter(Boolean);
+  return parts.length > 0 ? parts.join(' ') : null;
+}

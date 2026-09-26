@@ -59,6 +59,13 @@ export const projectsApi = {
       method: 'POST',
       body: JSON.stringify(removed),
     }),
+  order: (projectIds: string[]): Promise<null> =>
+    request(z.null(), '/projects/order', { method: 'PUT', body: JSON.stringify({ projectIds }) }),
+  orderChats: (projectId: string, conversationIds: string[]): Promise<null> =>
+    request(z.null(), `/projects/${projectId}/chat-order`, {
+      method: 'PUT',
+      body: JSON.stringify({ conversationIds }),
+    }),
   git: (projectId: string): Promise<ProjectGit> =>
     request(projectGitSchema, `/projects/${projectId}/git`),
   folders: (path: string | null): Promise<FolderListing> =>

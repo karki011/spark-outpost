@@ -115,6 +115,19 @@ export function PinIcon() {
   return <StrokeIcon path="M12 17v5M9 3h6l-1 6 4 4H6l4-4z" />;
 }
 
+export function GripIcon() {
+  return (
+    <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" aria-hidden="true">
+      <circle cx="2" cy="2" r="1.1" />
+      <circle cx="6" cy="2" r="1.1" />
+      <circle cx="2" cy="6" r="1.1" />
+      <circle cx="6" cy="6" r="1.1" />
+      <circle cx="2" cy="10" r="1.1" />
+      <circle cx="6" cy="10" r="1.1" />
+    </svg>
+  );
+}
+
 export function DotsIcon() {
   return (
     <svg

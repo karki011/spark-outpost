@@ -5,8 +5,8 @@ import './chat-row.css';
 import './chat-menu.css';
 import './sidebar-layout.css';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { AnimatePresence } from 'motion/react';
+import { SortableContext } from '@dnd-kit/sortable';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
@@ -24,12 +24,14 @@ import { ChatMenu } from './ChatMenu.tsx';
 import type { MenuAnchor } from './MenuShell.tsx';
 import { ChatRow } from './ChatRow.tsx';
 import { ChatRows } from './ChatRows.tsx';
+import { SidebarDndContext } from './SidebarDnd.tsx';
 import { FoldSection } from './FoldSection.tsx';
 import { LooseChats } from './LooseChats.tsx';
 import { ProjectGroup } from './ProjectGroup.tsx';
 import { ProjectMenu } from './ProjectMenu.tsx';
 import { attention, isRunning, needsInput } from './row-state.ts';
 import { activeGroups, historyGroups, movedOrder, pinnedSiblings } from './sidebar-groups.ts';
+import { NO_PROJECT, chatLayout, groupOf, listIn, pinnedIn, LOOSE } from './sidebar-order.ts';
 import {
   isNewChatShortcut,
   LIST_PANEL_ID,
@@ -42,9 +44,10 @@ import { SidebarCollapseButton, useSidebarLayout } from './sidebar-layout.tsx';
 import { SidebarResizer } from './SidebarResizer.tsx';
 import { ToastHost } from './Toast.tsx';
 import { useChatActions } from './use-chat-actions.ts';
-import { NO_PROJECT, useChatDrag, type Point } from './use-chat-drag.ts';
 import { useProjectActions } from './use-project-actions.ts';
+import { useSidebarDnd, type Point } from './use-sidebar-dnd.ts';
 import { useSidebarFolds } from './use-sidebar-folds.ts';
+import { projectDragId } from './sidebar-dnd-geometry.ts';
 import { useToast } from './use-toast.ts';
 
 const SEARCH_DELAY_MS = 180;
@@ -161,20 +164,28 @@ export function ConversationList({
     layout?.closeDrawer();
   };
 
-  const drag = useChatDrag({
-    listRef,
-    onDrop: (chatId, target) => {
-      const chat = byId.get(chatId);
-      if (chat) actions.move(chat, target === NO_PROJECT ? null : target);
+  const grouped = activeGroups(visible, projectList);
+  const projectById = new Map(projectList.map((project) => [project.id, project]));
+  const dnd = useSidebarDnd({
+    layout: chatLayout(grouped),
+    projectIds: projectList.map((project) => project.id),
+    chatTitle: (id) => byId.get(id)?.title ?? 'Chat',
+    projectName: (id) => projectById.get(id)?.name ?? 'the project',
+    onChatDrop: (drop) => {
+      const chat = byId.get(drop.chatId);
+      const group = groupOf(drop.to);
+      if (chat) actions.drop(chat, group === NO_PROJECT ? null : group, drop.order);
     },
+    onProjectsDrop: projectActions.reorder,
     onHold: (chatId, point) => {
       const row = listRef.current?.querySelector<HTMLElement>(`[data-chat="${chatId}"]`);
       if (row) setMenu({ chatId, anchor: anchorFor(row, point) });
     },
   });
-  const over = drag.drag?.over ?? null;
+  const over = dnd.overGroup;
   const overFolded = over !== null && over !== NO_PROJECT && !folds.isOpen(over);
   const openFold = folds.open;
+  const canDrag = tab === 'active' && !searching;
 
   useEffect(() => {
     if (!over || !overFolded) return;
@@ -221,17 +232,16 @@ export function ConversationList({
     setRenamingId(null);
   };
 
-  const renderRow = (chat: ConversationSummary, onReorderEnd?: () => void) => (
+  const renderRow = (chat: ConversationSummary, sortable: boolean) => (
     <ChatRow
       key={chat.id}
       chat={chat}
       selected={chat.id === selectedId}
       renaming={chat.id === renamingId}
-      dragging={drag.drag?.chatId === chat.id}
+      sortable={sortable}
+      settling={dnd.busy}
       flash={chat.id === actions.flashId}
-      onOpen={() => {
-        if (!drag.consumeClick()) openChat(chat.id);
-      }}
+      onOpen={() => openChat(chat.id)}
       onMenu={(element, point) => setMenu({ chatId: chat.id, anchor: anchorFor(element, point) })}
       onRename={(title) => {
         setRenamingId(null);
@@ -239,19 +249,42 @@ export function ConversationList({
       }}
       onRestore={() => actions.archive(chat, false)}
       onDelete={() => actions.remove(chat)}
-      onDragStart={(event) => drag.start(event, chat.id, chat.title)}
-      onReorderEnd={onReorderEnd}
     />
   );
 
-  const renderRows = (rows: readonly ConversationSummary[]) => (
-    <ChatRows chats={rows} renderRow={renderRow} onReorder={actions.reorderPinned} />
+  const rowsIn = (container: string) =>
+    (dnd.layout[container] ?? []).flatMap((id) => {
+      const chat = byId.get(id);
+      return chat ? [chat] : [];
+    });
+
+  const renderRows = (
+    id: string,
+    rows: readonly ConversationSummary[],
+    { sortable, enabled }: { sortable: boolean; enabled: boolean },
+  ) => (
+    <ChatRows
+      key={id}
+      id={id}
+      chats={rows}
+      sortable={sortable}
+      renderRow={(chat) => renderRow(chat, canDrag && enabled)}
+    />
   );
 
   const renderActive = () => {
-    const { groups, loose } = activeGroups(visible, projectList);
-    const shownGroups = searching ? groups.filter((group) => group.chats.length > 0) : groups;
-    const nothing = searching && shownGroups.length === 0 && loose.length === 0;
+    const blocks = dnd.projectIds.flatMap((id) => {
+      const project = projectById.get(id);
+      if (!project) return [];
+      const pinned = rowsIn(pinnedIn(id));
+      const rest = rowsIn(listIn(id));
+      return [{ project, pinned, rest, count: pinned.length + rest.length }];
+    });
+    const shownBlocks = searching ? blocks.filter((block) => block.count > 0) : blocks;
+    const loosePinned = rowsIn(pinnedIn(NO_PROJECT));
+    const looseRest = rowsIn(LOOSE);
+    const looseCount = loosePinned.length + looseRest.length;
+    const nothing = searching && shownBlocks.length === 0 && looseCount === 0;
     if (nothing) return <p className="pempty wide">No active chats match “{search.trim()}”.</p>;
     return (
       <>
@@ -270,31 +303,40 @@ export function ConversationList({
             <PlusIcon />
           </button>
         </div>
-        {shownGroups.map(({ project, chats: rows }) => (
-          <ProjectGroup
-            key={project.id}
-            project={project}
-            count={rows.length}
-            open={searching || folds.isOpen(project.id)}
-            over={over === project.id}
-            searching={searching}
-            renaming={renamingProjectId === project.id}
-            onToggle={() => folds.toggle(project.id)}
-            onNewChat={() => onNewInProject(project.id)}
-            onMenu={(element) =>
-              setProjectMenu({ projectId: project.id, anchor: anchorFor(element, null) })
-            }
-            onRename={(name) => {
-              setRenamingProjectId(null);
-              if (name) projectActions.rename(project, name);
-            }}
-          >
-            {renderRows(rows)}
-          </ProjectGroup>
-        ))}
-        {(!searching || loose.length > 0) && (
+        <SortableContext items={shownBlocks.map((block) => projectDragId(block.project.id))}>
+          {shownBlocks.map(({ project, pinned, rest, count }) => {
+            const open = searching || folds.isOpen(project.id);
+            return (
+              <ProjectGroup
+                key={project.id}
+                project={project}
+                count={count}
+                open={open}
+                over={over === project.id}
+                landed={dnd.landed?.group === project.id}
+                sortable={canDrag}
+                searching={searching}
+                renaming={renamingProjectId === project.id}
+                onToggle={() => folds.toggle(project.id)}
+                onNewChat={() => onNewInProject(project.id)}
+                onMenu={(element) =>
+                  setProjectMenu({ projectId: project.id, anchor: anchorFor(element, null) })
+                }
+                onRename={(name) => {
+                  setRenamingProjectId(null);
+                  if (name) projectActions.rename(project, name);
+                }}
+              >
+                {renderRows(pinnedIn(project.id), pinned, { sortable: true, enabled: open })}
+                {renderRows(listIn(project.id), rest, { sortable: true, enabled: open })}
+              </ProjectGroup>
+            );
+          })}
+        </SortableContext>
+        {(!searching || looseCount > 0) && (
           <LooseChats
-            chats={loose}
+            pinned={loosePinned}
+            unpinned={looseRest}
             empty={
               chats.length === 0
                 ? 'No chats yet. Start one with New chat.'
@@ -330,12 +372,22 @@ export function ConversationList({
           open={searching || folds.isOpen(key)}
           onToggle={() => folds.toggle(key)}
         >
-          <ul className="rows">{group.chats.map((chat) => renderRow(chat))}</ul>
+          <ul className="rows">{group.chats.map((chat) => renderRow(chat, false))}</ul>
         </FoldSection>
       );
     });
   };
 
+  const activeChat = dnd.active?.type === 'chat' ? (byId.get(dnd.active.chatId) ?? null) : null;
+  const draggedProject =
+    dnd.active?.type === 'project' ? projectById.get(dnd.active.projectId) : undefined;
+  const activeProject = draggedProject
+    ? {
+        project: draggedProject,
+        count:
+          rowsIn(pinnedIn(draggedProject.id)).length + rowsIn(listIn(draggedProject.id)).length,
+      }
+    : null;
   const menuChat = menu ? byId.get(menu.chatId) : undefined;
   const siblings =
     menuChat?.pinnedAt && !menuChat.archivedAt ? pinnedSiblings(chats, menuChat) : [];
@@ -373,32 +425,23 @@ export function ConversationList({
             {conversations.error.message}
           </p>
         )}
-        <div
-          ref={listRef}
-          id={LIST_PANEL_ID}
-          role="tabpanel"
-          aria-label={tab === 'active' ? 'Active chats' : 'Archived chats'}
-          className={`list${drag.drag ? ' dragging' : ''}`}
-          aria-busy={searching && results.isFetching}
-        >
-          <div key={tab} className="list-in">
-            {tab === 'active' ? renderActive() : renderHistory()}
+        <SidebarDndContext dnd={dnd} chat={activeChat} project={activeProject}>
+          <div
+            ref={listRef}
+            id={LIST_PANEL_ID}
+            role="tabpanel"
+            aria-label={tab === 'active' ? 'Active chats' : 'Archived chats'}
+            className={`list${dnd.active ? ' dragging' : ''}`}
+            aria-busy={searching && results.isFetching}
+          >
+            <div key={tab} className="list-in">
+              {tab === 'active' ? renderActive() : renderHistory()}
+            </div>
           </div>
-        </div>
+        </SidebarDndContext>
         <ToastHost toaster={toaster} />
       </div>
       <SidebarResizer />
-      {drag.drag &&
-        createPortal(
-          <div
-            className="drag-ghost"
-            style={{ transform: `translate(${drag.drag.x + 12}px, ${drag.drag.y + 10}px)` }}
-            aria-hidden="true"
-          >
-            {drag.drag.title}
-          </div>,
-          document.body,
-        )}
       {menu && menuChat && (
         <ChatMenu
           chat={menuChat}

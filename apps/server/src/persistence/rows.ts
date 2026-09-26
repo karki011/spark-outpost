@@ -70,6 +70,7 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   archived_at: Date | null;
   pinned_at: Date | null;
   pinned_order: number | null;
+  project_order: number | null;
   unread: boolean;
   needs_input: boolean;
   title_source: string;
@@ -162,6 +163,7 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
     archivedAt: iso(row.archived_at),
     pinnedAt: iso(row.pinned_at),
     pinnedOrder: row.pinned_order,
+    projectOrder: row.project_order,
     unread: row.unread,
     needsInput: row.needs_input,
     attention: row.needs_input ? toAttention(row) : null,

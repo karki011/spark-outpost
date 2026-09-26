@@ -109,18 +109,15 @@ describe('parallel Builders', () => {
   it('runs independent steps in their own copies and merges both back cleanly', async () => {
     const { orchestration, asked, runId } = await run('#parallel', answerEverything, 'balanced');
     expect(orchestration.status).toBe('succeeded');
-    expect(orchestration.crew.map((member) => member.name)).toEqual([
-      'Sketch',
-      'Bolt',
-      'Rivet',
-      'Tack',
-      'Hawk',
-    ]);
-    const [rivet, tack] = orchestration.crew.slice(2, 4);
+    const workers = orchestration.crew.filter((member) => member.role !== 'critic');
+    expect(workers.map((member) => member.name)).toEqual(['Sketch', 'Bolt', 'Rivet', 'Tack']);
+    const reviews = orchestration.crew.filter((member) => member.role === 'critic');
+    expect(reviews.map((member) => member.name)).toEqual(['Hawk', 'Hawk', 'Hawk']);
+    const [rivet, tack] = workers.slice(2, 4);
     expect(rivet?.parallelGroup).toBe('g1');
     expect(tack?.parallelGroup).toBe('g1');
     expect(rivet?.copy).toMatch(/^spark\/[0-9a-f]{8}\/rivet$/);
-    expect(orchestration.crew[1]?.parallelGroup).toBeNull();
+    expect(workers[1]?.parallelGroup).toBeNull();
 
     expect(await readFile(join(root, 'src/dates.ts'), 'utf8')).toBe('step 1\n');
     expect(await readFile(join(root, 'src/divider.tsx'), 'utf8')).toBe('step 2\n');
@@ -199,9 +196,15 @@ describe('merge conflicts', () => {
       choose(CHECKPOINT_OPTION.reconcile),
     );
     expect(orchestration.status).toBe('succeeded');
-    const names = orchestration.crew.map((member) => member.name);
-    expect(names).toEqual(['Sketch', 'Bolt', 'Rivet', 'Tack', 'Chip', 'Hawk']);
-    const chip = orchestration.crew[4]!;
+    const workers = orchestration.crew.filter((member) => member.role !== 'critic');
+    expect(workers.map((member) => member.name)).toEqual([
+      'Sketch',
+      'Bolt',
+      'Rivet',
+      'Tack',
+      'Chip',
+    ]);
+    const chip = workers[4]!;
     expect(chip.copy ?? null).toBeNull();
     expect(chip.parallelGroup ?? null).toBeNull();
     expect(chip.mode).toBe('do');

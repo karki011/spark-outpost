@@ -7,6 +7,7 @@ import type {
   UpdateConversationRequest,
 } from '@spark-outpost/contracts';
 import { api, queryKeys } from '../api/client.ts';
+import { projectsApi } from '../api/projects.ts';
 import { movedProjectIds } from './sidebar-groups.ts';
 import type { Toaster } from './use-toast.ts';
 
@@ -118,15 +119,25 @@ export function useChatActions({
     }
   };
 
-  const move = async (chat: ConversationSummary, target: string | null) => {
+  const move = async (chat: ConversationSummary, target: string | null): Promise<boolean> => {
     const previous = chat.projectIds;
     const next = movedProjectIds(previous, target);
-    if (next.join() === previous.join()) return;
-    if (!(await setProjects(chat, next))) return;
+    if (next.join() === previous.join()) return true;
+    if (!(await setProjects(chat, next))) return false;
     toaster.show({
       text: target ? `Moved to ${projectName(target)}` : `Removed from ${projectName(previous[0])}`,
       undo: () => void setProjects({ ...chat, projectIds: next }, previous),
     });
+    return true;
+  };
+
+  const saveProjectOrder = async (projectId: string, ids: readonly string[]) => {
+    try {
+      await projectsApi.orderChats(projectId, [...ids]);
+    } catch (error) {
+      toaster.show({ text: message(error) });
+      void refreshLists(client);
+    }
   };
 
   const reorderPinned = async (ids: readonly string[]) => {
@@ -137,6 +148,19 @@ export function useChatActions({
       toaster.show({ text: message(error) });
       void refreshLists(client);
     }
+  };
+
+  const drop = async (
+    chat: ConversationSummary,
+    target: string | null,
+    order: readonly string[] | null,
+  ) => {
+    const moving = (chat.projectIds[0] ?? null) !== target;
+    if (order && chat.pinnedAt) void reorderPinned(order);
+    const projectOrder = order && !chat.pinnedAt && target ? order : null;
+    projectOrder?.forEach((id, index) => patchSummaries(client, id, { projectOrder: index + 1 }));
+    if (moving && !(await move(chat, target))) return;
+    if (target && projectOrder) await saveProjectOrder(target, projectOrder);
   };
 
   const archive = async (chat: ConversationSummary, archived: boolean) => {
@@ -199,6 +223,8 @@ export function useChatActions({
     },
     reorderPinned: (ids: readonly string[]) => void reorderPinned(ids),
     move: (chat: ConversationSummary, target: string | null) => void move(chat, target),
+    drop: (chat: ConversationSummary, target: string | null, order: readonly string[] | null) =>
+      void drop(chat, target, order),
     archive: (chat: ConversationSummary, archived: boolean) => void archive(chat, archived),
     remove,
   };

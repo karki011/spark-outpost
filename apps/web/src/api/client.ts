@@ -140,6 +140,7 @@ function draftConversation(id: string, settings: ChatSettings): ConversationDeta
       archivedAt: null,
       pinnedAt: null,
       pinnedOrder: null,
+      projectOrder: null,
       unread: false,
       needsInput: false,
       attention: null,

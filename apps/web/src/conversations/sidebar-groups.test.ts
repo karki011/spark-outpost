@@ -28,6 +28,7 @@ const chat = (id: string, extra: Partial<ConversationSummary> = {}): Conversatio
   archivedAt: null,
   pinnedAt: null,
   pinnedOrder: null,
+  projectOrder: null,
   unread: false,
   needsInput: false,
   attention: null,
@@ -68,6 +69,20 @@ describe('activeGroups', () => {
       [],
     );
     expect(result.loose.map((c) => c.id)).toEqual(['d', 'b', 'a', 'c']);
+  });
+  it('orders unpinned project chats by their manual order, unordered ones first', () => {
+    const web = project('web', 'web-apps');
+    const inWeb = { projectIds: ['web'] };
+    const result = activeGroups(
+      [
+        chat('a', { ...inWeb, projectOrder: 2 }),
+        chat('b', { ...inWeb, projectOrder: 1 }),
+        chat('c', inWeb),
+        chat('d', { ...inWeb, pinnedAt: '2026-09-26T00:00:00.000Z', projectOrder: 3 }),
+      ],
+      [web],
+    );
+    expect(result.groups[0]!.chats.map((c) => c.id)).toEqual(['d', 'c', 'b', 'a']);
   });
 });
 

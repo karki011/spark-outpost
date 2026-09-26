@@ -146,6 +146,10 @@ function updateSummary(payload: Record<string, unknown>): string | null {
 export function entrySummary(entry: ProtocolLogEntry): string {
   const payload = record(entry.payload) ?? {};
   if (entry.kind === 'stderr') return text(payload.text) ?? 'stderr output';
+  if (entry.kind === 'check') {
+    const outcome = text(payload.outcome)?.replace('_', ' ') ?? 'ran';
+    return `${text(payload.command) ?? 'check'} · ${outcome}`;
+  }
   if (entry.truncated) return `${entry.method ?? entry.kind} · truncated`;
   if (entry.kind === 'error') {
     const message = text(record(payload.error)?.message);

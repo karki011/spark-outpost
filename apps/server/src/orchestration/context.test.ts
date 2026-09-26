@@ -6,6 +6,9 @@ import {
   architectNotes,
   architectPrompt,
   builderPrompt,
+  checkFailureText,
+  checkFixFollowUp,
+  criticFollowUp,
   criticPrompt,
   namedFiles,
   readFiles,
@@ -36,11 +39,13 @@ describe('context assembly', () => {
 
       Record your plan with your plan or todo tool as 2 to 6 concrete, ordered steps. End each step with "Files: a.ts, b.ts" listing only the files that step creates or changes, not files it only reads or imports from. Then reply with a short summary of the plan.
 
-      Independent steps can run at the same time. If two or more consecutive steps change different files and need nothing from each other, end your reply with one line such as "Parallel: 2, 3" naming those step numbers; separate several groups with ";". Leave out any step that needs an earlier step's result. A step that only reads or researches starts with "Research:".
+      After the summary, list every step on its own line, numbered as in your plan, with the files it creates or changes and the earlier steps it needs, for example "Step 3 · Files: src/csv.ts, test/csv.test.ts · Depends on: 1" or "Step 1 · Files: src/a.ts · Depends on: none".
 
-      Parallel steps only get their own Builders when each takes more than about 20 seconds. Add a line such as "Large: 2, 3" naming the steps you expect to take that long; smaller steps run together in one Builder.
+      Independent work runs at the same time, each chain in its own copy of the repo. If the steps form independent chains that change different files and need nothing from each other, name each chain on its own line, such as "Chain A: steps 1-3" and "Chain B: steps 4-6". A step that needs more than one chain comes after them and belongs to no chain. A step that only reads or researches starts with "Research:".
 
-      After the summary, write a "Notes for Builders:" line followed by what the Builders need so they do not re-read the files you read: exact signatures, import lines and short excerpts, each with its file path. Keep the notes under 3,000 characters.
+      A chain of one step only gets its own Builder when it takes more than about 20 seconds. Add a line such as "Large: 2, 3" naming the single steps you expect to take that long.
+
+      Finally, write a "Notes for Builders:" line followed by what the Builders need so they do not re-read the files you read: exact signatures, import lines and short excerpts, each with its file path. Keep the notes under 3,000 characters.
 
       ## Request
       Move date handling
@@ -201,6 +206,51 @@ describe('context assembly', () => {
     expect(prompt).toContain(`[cut at ${PATCH_LIMIT} characters]`);
     expect(prompt).toContain('## Check results\nNo checks ran.');
     expect(prompt.length).toBeLessThan(PATCH_LIMIT + 2_000);
+  });
+
+  it('names the Builder whose change the Critic reviews and keeps follow-ups short', () => {
+    const review = {
+      changes: [{ path: 'src/csv.ts', additions: 3, deletions: 0 }],
+      patch: '+export const csv = 1;',
+      checks: ['- `npm test` passed'],
+      subject: { name: 'Rivet', steps: [3, 4] },
+    };
+    const prompt = criticPrompt({ request: 'r', plan, ...review });
+    expect(prompt).toContain(
+      "## Change under review\nRivet's change for steps 4, 5. Other Builders may still be working; review only this diff.",
+    );
+    const followUp = criticFollowUp(review);
+    expect(followUp.startsWith('Review the next change the same way')).toBe(true);
+    expect(followUp).not.toContain('## Request');
+    expect(followUp).toContain('## Check results\n- `npm test` passed');
+  });
+
+  it('marks own steps on their first line when steps carry a Files line', () => {
+    const prompt = builderPrompt({
+      request: 'r',
+      plan: ['Add csv\nFiles: src/csv.ts', 'Add tests\nFiles: test/csv.test.ts'],
+      stepIndex: 1,
+      earlierChanges: [],
+      note: null,
+      findings: [],
+    });
+    expect(prompt).toContain(
+      '1. Add csv\n   Files: src/csv.ts\n2. Add tests  <- your step\n   Files: test/csv.test.ts',
+    );
+  });
+
+  it('turns failing checks into a short fix request with the end of each output', () => {
+    const failures = checkFailureText([
+      { command: 'npm test', outcome: 'failed', exitCode: 1, outputTail: `${'x'.repeat(5000)}END` },
+      { command: 'npm run lint', outcome: 'timed_out', exitCode: null, outputTail: '' },
+    ]);
+    expect(failures).toContain('`npm test` exited 1:');
+    expect(failures).toContain('END');
+    expect(failures).toContain('`npm run lint` timed out:\n```text\n(no output)\n```');
+    expect(failures.length).toBeLessThan(3_200);
+    const followUp = checkFixFollowUp(failures);
+    expect(followUp.startsWith("Role: Builder. The project's checks failed")).toBe(true);
+    expect(followUp).toContain('## Failing checks\n`npm test` exited 1:');
   });
 
   it('finds the files a plan names', () => {

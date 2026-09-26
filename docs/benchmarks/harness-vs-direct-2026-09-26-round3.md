@@ -327,3 +327,23 @@ One repeat for most cells, one fixture, one provider. Wall time varied by up to 
 3. **Send review requests to the Critic.** When Jev's intent is review at 0.5 or more, keep a review step even at `execute` depth. R1 shows that an explicit "review this change" gets no reviewer today.
 4. **Keep the Architect gate.** Consider rewording the Architect route question (it only plans and reads), since Jev's confidence stayed near 0.33; until it rises, the call is a record rather than a decision.
 5. **Harder tasks, more repeats.** Sonnet passes every hidden check here. The next set needs larger multi-module changes or long-horizon work, with 3 or more repeats, before pass rates can justify the harness's planning cost.
+
+## Round 4 (September 26, 2026)
+
+Harness only, one run each, same runner and fixture, fresh scratch repos, Full auto. The harness now runs the project's checks after each Builder (`npm test` here), gives a Builder a resumed fix turn when they fail, reviews each Builder's diff as it lands when a review is wanted, keeps a Critic for review requests at `execute` depth, and plans in dependency chains. Live spend: about $1.11 of the $2 cap. The first three runs predate two bench fixes: it did not record check results, and when a run had both an in-place Builder and a child (the Critic), it counted only the child, so the second R1's Builder cost is estimated at $0.13. Both are fixed.
+
+| Run | Depth | Crew | Chains | Checks | Critic | Pass | Wall | Cost | Round 3 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| P1 | plan_execute (Jev 0.90) | Sonnet Architect, Bolt and Rivet · Sonnet in parallel copies | steps 1–3 and 4–6 | not recorded | no (no review asked) | pass | 89.3 s | $0.376 | 93.8 s, $0.28, one Builder |
+| R1 #1 | execute | Bolt · Sonnet | – | not recorded | no: intent not review at 0.5 | pass | 55.7 s | $0.127 | 56.7 s, $0.127 |
+| R1 #2 | execute + review (intent review 0.54) | Bolt · Sonnet, Hawk · Codex 6 Sol | – | `npm test` passed in 0.5 s | yes, $0.015 | pass | 138.7 s | ≈$0.14 | – |
+| R1 #3 | execute (intent review 0.46) | Bolt · Sonnet | – | `npm test` passed in 0.5 s | no | pass | 65.4 s | $0.113 | – |
+| H1 | plan_execute (rules) | Opus Architect, Bolt · Sonnet | none (one chain) | not recorded | no | pass | 79.4 s | $0.354 | 94.2 s, $0.332 |
+
+- **Chains fired.** P1's Architect wrote per-step `Files:` and `Depends on:` lines and two chains; each chain got its own Builder in its own worktree (Rivet 36.7 s, Bolt 27.9 s, overlapping), both merged cleanly, and the hidden checks passed. Jev's pair nouls agreed with the rules on 2 of 3 and did not merge the chains. The run cost $0.10 more than round 3's single carrying Builder (two cold Builders instead of one) and took about the same wall time, because the Sonnet Architect took 48 s. Parallel chains pay off only when each chain is long; P1's chains are 30 s each.
+- **`Files:` lines are reliable now.** Every step in P1 and H1 carried its files from the reply's step lines, so the verb heuristic was not needed.
+- **The review-intent Critic depends on a coin flip.** Jev's intent for R1 was `review` all three times, at 0.54 once and 0.46 once (and below 0.5 in #1). At 0.54 the Critic ran on Codex (the diff plus the check results) for $0.015 but took most of the 139 s wall time. At 0.46 no Critic ran.
+- **Checks never failed live**, so the resumed fix turn was exercised only by the DB and browser tests with the fake agent. The fixture's tests take 0.5 s, so checks added little time.
+- **Sample size.** One run per cell; treat cost and time differences under about 1.3× as noise.
+
+Recommendations: split into parallel chains only when the Architect marks the chains large (or Jev's size noul says so), since two cold Builders cost more than one warm one on short chains; consider 0.45 for the review-intent threshold or asking Jev a direct "is this a review request?" noul; bound the Critic's wall time (Codex took over a minute on R1 #2); and write a hard task whose visible tests fail after a naive change, so the check-and-fix loop is measured live.

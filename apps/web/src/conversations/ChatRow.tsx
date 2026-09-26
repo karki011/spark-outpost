@@ -1,25 +1,27 @@
 import { useRef, useState, type MouseEvent, type PointerEvent } from 'react';
-import { motion, Reorder, useDragControls } from 'motion/react';
+import { motion } from 'motion/react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { categoryLabel, type ConversationSummary } from '@spark-outpost/contracts';
-import { DotsIcon, PinIcon, RestoreIcon, TrashIcon } from '../ui/icons.tsx';
+import { DotsIcon, GripIcon, PinIcon, RestoreIcon, TrashIcon } from '../ui/icons.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { recencyLabel } from './recency.ts';
 import { rowState, type RowTone } from './row-state.ts';
 import { RowTitle, useMarquee } from './RowTitle.tsx';
+import { pointerStart } from './sidebar-dnd-geometry.ts';
 
 interface ChatRowProps {
   chat: ConversationSummary;
   selected: boolean;
   renaming: boolean;
-  dragging: boolean;
+  sortable: boolean;
+  settling: boolean;
   flash: boolean;
   onOpen: () => void;
   onMenu: (element: HTMLElement, point: { x: number; y: number } | null) => void;
   onRename: (title: string | null) => void;
   onRestore: () => void;
   onDelete: () => void;
-  onDragStart: (event: PointerEvent<HTMLElement>) => void;
-  onReorderEnd?: (() => void) | undefined;
 }
 
 function StatusMark({ tone }: { tone: RowTone }) {
@@ -115,21 +117,34 @@ function HistoryActions({
 }
 
 export function ChatRow(props: ChatRowProps) {
-  const { chat, selected, renaming, dragging, flash, onOpen, onMenu, onRename, onReorderEnd } =
-    props;
-  const controls = useDragControls();
+  const { chat, selected, renaming, sortable, settling, flash, onOpen, onMenu, onRename } = props;
+  const history = chat.archivedAt !== null;
+  const draggable = sortable && !renaming && !history;
+  const {
+    setNodeRef,
+    setActivatorNodeRef,
+    attributes,
+    listeners,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: chat.id,
+    data: { type: 'chat', chatId: chat.id, pinned: chat.pinnedAt !== null },
+    disabled: !draggable,
+  });
   const marquee = useMarquee(chat.title);
   const state = rowState(chat, selected);
   const [firstTone] = useState(state.tone);
-  const history = chat.archivedAt !== null;
   const classes = [
     'row',
     `st-${state.tone}`,
     selected ? 'active' : '',
-    dragging ? 'dragging' : '',
+    isDragging ? 'placeholder' : '',
     flash ? 'flash' : '',
     chat.pinnedAt ? 'pinned' : '',
   ].filter(Boolean);
+  const pointerListeners = pointerStart(listeners, draggable);
 
   const openMenuAt = (event: MouseEvent<HTMLElement>) => {
     event.preventDefault();
@@ -138,7 +153,9 @@ export function ChatRow(props: ChatRowProps) {
   };
 
   const rootProps = {
+    ref: setNodeRef,
     className: classes.join(' '),
+    style: { transform: CSS.Translate.toString(transform), transition: transition },
     'data-chat': chat.id,
     onContextMenu: renaming ? undefined : openMenuAt,
     onPointerEnter: (event: PointerEvent<HTMLElement>) => {
@@ -173,7 +190,7 @@ export function ChatRow(props: ChatRowProps) {
             if (event.currentTarget.matches(':focus-visible')) marquee.start();
           }}
           onBlur={marquee.stop}
-          onPointerDown={history ? undefined : props.onDragStart}
+          {...pointerListeners}
         >
           <span
             key={state.tone}
@@ -204,25 +221,18 @@ export function ChatRow(props: ChatRowProps) {
                 <PinIcon />
               </span>
             )}
-            {onReorderEnd && (
-              <span
-                className="rgrip"
-                aria-hidden="true"
-                title="Drag to reorder"
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  controls.start(event);
-                }}
+            {draggable && (
+              <button
+                type="button"
+                ref={setActivatorNodeRef}
+                className="icon-btn rgrip"
+                title="Drag to move"
+                {...attributes}
+                {...listeners}
+                aria-label={`Move ${chat.title}`}
               >
-                <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">
-                  <circle cx="2" cy="2" r="1.1" />
-                  <circle cx="6" cy="2" r="1.1" />
-                  <circle cx="2" cy="6" r="1.1" />
-                  <circle cx="6" cy="6" r="1.1" />
-                  <circle cx="2" cy="10" r="1.1" />
-                  <circle cx="6" cy="10" r="1.1" />
-                </svg>
-              </span>
+                <GripIcon />
+              </button>
             )}
             <button
               type="button"
@@ -239,24 +249,13 @@ export function ChatRow(props: ChatRowProps) {
     </>
   );
 
-  if (onReorderEnd) {
-    return (
-      <Reorder.Item
-        as="li"
-        value={chat.id}
-        dragListener={false}
-        dragControls={controls}
-        transition={reveal}
-        onDragEnd={onReorderEnd}
-        {...rootProps}
-      >
-        {content}
-      </Reorder.Item>
-    );
-  }
-
   return (
-    <motion.li layout="position" initial={false} transition={reveal} {...rootProps}>
+    <motion.li
+      layout={settling ? false : 'position'}
+      initial={false}
+      transition={reveal}
+      {...rootProps}
+    >
       {content}
     </motion.li>
   );

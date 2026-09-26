@@ -11,6 +11,7 @@ import {
   type WorktreeRecord,
 } from '../persistence/worktrees.ts';
 import type { Db } from '../persistence/db.ts';
+import { commitTree } from '../projects/snapshot.ts';
 import {
   addWorktree,
   branchName,
@@ -23,13 +24,14 @@ import {
 } from '../projects/worktrees.ts';
 import { APPROVAL_TIMEOUT_MESSAGE } from '../workflow/approval-gate.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
+import { land, treeOf } from './land.ts';
 import { ensureParentSnapshot, runMember, type Place } from './members.ts';
 import { mergeCopies, type Finished } from './merge.ts';
 import { isResearchStep } from './parallel.ts';
 import { markPlanSteps } from './plan-progress.ts';
 import { nameFor } from './member-routes.ts';
 import { publish, routeKey, type MemberResult, type Session } from './session.ts';
-import type { AgentOutcome, FlowEvent, GroupResult } from './transitions.ts';
+import type { AgentOutcome, FlowEvent, GroupResult, Spawn } from './transitions.ts';
 
 interface Copies {
   root: string;
@@ -39,6 +41,7 @@ interface Copies {
 
 interface Ran {
   stepIndex: number;
+  steps: number[];
   role: AgentRole;
   result: MemberResult;
 }
@@ -84,9 +87,28 @@ function roleOf(s: Session, stepIndex: number): AgentRole {
   return isResearchStep(s.flow.steps[stepIndex] ?? '') ? 'scout' : 'builder';
 }
 
+async function landMember(
+  s: Session,
+  spawn: Spawn,
+  first: MemberResult,
+  place: Place,
+  mainTree: string | null,
+): Promise<MemberResult> {
+  const record = await getWorktree(s.deps.db, first.runId);
+  const landed = await land(s, spawn, first, {
+    cwd: record?.path ?? s.input.projectRoots[0]!,
+    before: record ? await commitTree(record.repoRoot, record.baseCommit) : mainTree,
+    place,
+    copy: record ? first.name : null,
+    copyRunId: record?.runId ?? null,
+  });
+  return { ...landed.result, ticked: landed.ticked };
+}
+
 async function runOne(
   s: Session,
   stepIndex: number,
+  lane: readonly number[] | null,
   group: string,
   copies: Copies | null,
 ): Promise<Ran> {
@@ -95,10 +117,15 @@ async function runOne(
     group,
     ...(copies && role === 'builder' ? { copy: copyFor(s, copies) } : {}),
   };
-  const { result } = await limited(s, () =>
-    runMember(s, { role, stepIndex, escalate: false, note: null, reason: 'first' }, place),
-  );
-  return { stepIndex, role, result };
+  const carry = lane && lane.length > 1 ? [...lane] : undefined;
+  const spawn: Spawn = { role, stepIndex, escalate: false, note: null, reason: 'first', carry };
+  const result = await limited(s, async () => {
+    const mainTree =
+      role === 'builder' && !copies ? await treeOf(s, s.input.projectRoots[0]!) : null;
+    const { result: first } = await runMember(s, spawn, place);
+    return role === 'builder' ? landMember(s, spawn, first, place, mainTree) : first;
+  });
+  return { stepIndex, steps: lane ? [...lane] : [stepIndex], role, result };
 }
 
 export async function removeCopy(db: Db, record: WorktreeRecord): Promise<void> {
@@ -128,7 +155,7 @@ export async function cleanOrphanedCopies(db: Db): Promise<number> {
 }
 
 async function finishCopy(s: Session, ran: Ran): Promise<Finished | null> {
-  const record = await getWorktree(s.deps.db, ran.result.runId);
+  const record = await getWorktree(s.deps.db, ran.result.copyRunId ?? ran.result.runId);
   if (!record) return null;
   const target = worktreePath(record.repoRoot, record.runId);
   const resultCommit = await commitWorktree(
@@ -141,7 +168,8 @@ async function finishCopy(s: Session, ran: Ran): Promise<Finished | null> {
   await saveResult(s.deps.db, record.runId, resultCommit);
   return {
     stepIndex: ran.stepIndex,
-    runId: ran.result.runId,
+    steps: ran.steps,
+    runId: record.runId,
     name: ran.result.name,
     record: { ...record, resultCommit },
   };
@@ -172,18 +200,28 @@ async function settleGroup(s: Session, ran: readonly Ran[]): Promise<FlowEvent> 
   }
   const merged = await mergeCopies(s, finished);
   merged.results.forEach((outcome, stepIndex) => outcomes.set(stepIndex, outcome));
-  return { type: 'group_done', results: toResults(outcomes), stopped: merged.stopped };
+  return { type: 'group_done', results: toResults(outcomes, ran), stopped: merged.stopped };
 }
 
 async function markDone(s: Session, item: Ran): Promise<void> {
-  await markPlanSteps(s, [item.stepIndex], 'completed', item.result.runId);
+  await markPlanSteps(s, item.steps, 'completed', item.result.runId);
 }
 
-function toResults(outcomes: ReadonlyMap<number, AgentOutcome>): GroupResult[] {
-  return [...outcomes].map(([stepIndex, outcome]) => ({ stepIndex, outcome }));
+function toResults(
+  outcomes: ReadonlyMap<number, AgentOutcome>,
+  ran: readonly Ran[] = [],
+): GroupResult[] {
+  return [...outcomes].map(([stepIndex, outcome]) => {
+    const ticked = ran.find((item) => item.stepIndex === stepIndex)?.result.ticked ?? [];
+    return { stepIndex, outcome, ...(ticked.length > 0 ? { ticked } : {}) };
+  });
 }
 
-export async function runGroup(s: Session, stepIndexes: readonly number[]): Promise<FlowEvent> {
+export async function runGroup(
+  s: Session,
+  stepIndexes: readonly number[],
+  lanes: readonly (readonly number[])[] = [],
+): Promise<FlowEvent> {
   s.groups += 1;
   const group = `g${s.groups}`;
   const builders = stepIndexes.filter((index) => !isResearchStep(s.flow.steps[index] ?? ''));
@@ -195,8 +233,9 @@ export async function runGroup(s: Session, stepIndexes: readonly number[]): Prom
     }
     await markPlanSteps(s, stepIndexes, 'in_progress', s.lease.runId);
     await publish(s);
+    const laneFor = (head: number) => lanes.find((lane) => lane[0] === head) ?? null;
     const settled = await Promise.allSettled(
-      stepIndexes.map((stepIndex) => runOne(s, stepIndex, group, copies)),
+      stepIndexes.map((stepIndex) => runOne(s, stepIndex, laneFor(stepIndex), group, copies)),
     );
     const rejected = settled.find((item) => item.status === 'rejected');
     if (rejected) throw rejected.reason;

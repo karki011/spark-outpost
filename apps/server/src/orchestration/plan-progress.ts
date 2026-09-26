@@ -9,18 +9,23 @@ import type { FlowAction, FlowEvent } from './transitions.ts';
 
 export type StepStatus = Exclude<PlanStatus, 'pending'>;
 
-export function entriesForStep(entries: readonly PlanEntry[], stepIndex: number): number[] {
+export function entriesForStep(
+  entries: readonly PlanEntry[],
+  stepIndex: number,
+  ranges: readonly (readonly number[])[] | null = null,
+): number[] {
   const kept = entries.flatMap((entry, index) => (entry.content.trim() ? [index] : []));
-  const batch = batchRanges(kept.length)[stepIndex] ?? [];
-  return batch.map((position) => kept[position]!);
+  const batch = (ranges ?? batchRanges(kept.length))[stepIndex] ?? [];
+  return batch.flatMap((position) => (kept[position] === undefined ? [] : [kept[position]!]));
 }
 
 export function markStep(
   entries: readonly PlanEntry[],
   stepIndex: number,
   status: StepStatus,
+  ranges: readonly (readonly number[])[] | null = null,
 ): PlanEntry[] {
-  const targets = new Set(entriesForStep(entries, stepIndex));
+  const targets = new Set(entriesForStep(entries, stepIndex, ranges));
   return entries.map((entry, index) => (targets.has(index) ? { ...entry, status } : entry));
 }
 
@@ -119,7 +124,7 @@ async function writeSteps(
 ): Promise<void> {
   if (!s.taskId || s.plan.length === 0) return;
   const entries = changes.reduce<PlanEntry[]>(
-    (current, [stepIndex, status]) => markStep(current, stepIndex, status),
+    (current, [stepIndex, status]) => markStep(current, stepIndex, status, s.flow.ranges),
     s.plan,
   );
   s.plan = entries;
