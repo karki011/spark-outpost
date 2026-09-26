@@ -1,0 +1,342 @@
+.wf {
+  margin: 0 0 14px;
+  padding: 12px 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+.wf-h {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.wf-h b {
+  font-weight: 600;
+}
+.wf-h span {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.wf-grid {
+  position: relative;
+  --wf-label: 150px;
+}
+.wf-row {
+  display: grid;
+  grid-template-columns: var(--wf-label) 1fr;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+}
+.wf-lab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.wf-lab span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wf-track {
+  position: relative;
+  height: 100%;
+  border-bottom: 1px dashed var(--line);
+}
+.wf-bar {
+  position: absolute;
+  top: 8px;
+  display: flex;
+  align-items: center;
+  height: 16px;
+  min-width: 4px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--bc);
+  transform-origin: left;
+  animation: wf-in 0.25s var(--out) both;
+}
+@keyframes wf-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+.wf-bar span {
+  padding: 0 6px;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--accent-ink);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 35%);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wf-bar.live {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--bc) 0 6px,
+    color-mix(in srgb, var(--bc) 60%, transparent) 6px 12px
+  );
+}
+.wf-ov {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--wf-label) + 10px);
+  right: 0;
+  pointer-events: none;
+}
+.wf-gap {
+  position: absolute;
+  top: -4px;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--warn) 18%, transparent) 0 5px,
+    transparent 5px 10px
+  );
+  border-left: 1.5px dashed var(--warn);
+  border-right: 1.5px dashed var(--warn);
+}
+.wf-gap span {
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--panel);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--warn);
+  white-space: nowrap;
+}
+.wf-axis {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+.wf-axis div {
+  position: relative;
+  height: 16px;
+}
+.wf-axis i {
+  position: absolute;
+  transform: translateX(-50%);
+  font:
+    normal 12px 'Geist Mono',
+    monospace;
+  color: var(--faint);
+}
+.wf-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.wf-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.wf-legend .sw {
+  width: 14px;
+  height: 8px;
+  border-radius: 2px;
+}
+.wf-legend .sw.wait {
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--warn) 40%, transparent) 0 3px,
+    transparent 3px 6px
+  );
+  box-shadow: inset 0 0 0 1px var(--warn);
+}
+.lf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 4px 0 10px;
+}
+.lf select,
+.lf-q {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 13px;
+  color: var(--text);
+}
+.lf select {
+  max-width: 100%;
+}
+.lf-q {
+  flex: 1;
+  min-width: 170px;
+}
+.lf select:focus-visible,
+.lf-q:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.lbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.lcount {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.llist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lrow {
+  border-bottom: 1px solid var(--line);
+}
+.lrow-h {
+  display: grid;
+  grid-template-columns: 92px 16px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: left;
+  transition: background 0.15s;
+}
+.lrow-h:hover {
+  background: var(--raise);
+}
+.lrow-h:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.lrow-h .lt {
+  font:
+    12px 'Geist Mono',
+    monospace;
+  color: var(--faint);
+}
+.ldir {
+  color: var(--faint);
+  text-align: center;
+}
+.ldir.from_agent {
+  color: var(--accent-text);
+}
+.lrow-h .ls {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lrow-h svg {
+  color: var(--faint);
+  transition: transform 0.2s var(--out);
+}
+.lrow.open .lrow-h svg {
+  transform: rotate(90deg);
+}
+.ltype {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--raise);
+  font:
+    500 12px 'Geist Mono',
+    monospace;
+  color: var(--muted);
+}
+.ltype.error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.ltype.stderr {
+  background: color-mix(in srgb, var(--warn) 15%, transparent);
+  color: var(--warn);
+}
+.lraw {
+  padding: 0 6px 12px 124px;
+}
+.lraw pre {
+  max-height: 360px;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  background: var(--code);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font:
+    12px/1.55 'Geist Mono',
+    ui-monospace,
+    monospace;
+  color: var(--muted);
+}
+.j-key {
+  color: var(--text);
+}
+.j-string {
+  color: var(--accent-text);
+}
+.j-number {
+  color: var(--warn);
+}
+.j-literal {
+  color: var(--danger);
+}
+.lhash {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 6px;
+  font:
+    12px 'Geist Mono',
+    monospace;
+  color: var(--faint);
+}
+.lhash .bad {
+  color: var(--danger);
+}
+.lmore {
+  margin-top: 12px;
+}
+@media (max-width: 700px) {
+  .wf-grid,
+  .wf-axis {
+    --wf-label: 96px;
+  }
+  .wf-axis {
+    grid-template-columns: 96px 1fr;
+  }
+  .lrow-h {
+    grid-template-columns: 16px minmax(0, 1fr) 14px;
+  }
+  .lrow-h .lt {
+    display: none;
+  }
+  .lraw {
+    padding-left: 6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wf-bar {
+    animation: none;
+  }
+}

@@ -1,0 +1,135 @@
+.done-wrap {
+  text-align: center;
+  padding-top: 6px;
+}
+.done-hero {
+  position: relative;
+  width: 96px;
+  margin: 0 auto 6px;
+}
+.done-hero .scout {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+.done-halo {
+  position: absolute;
+  inset: -22px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--accent) 28%, transparent) 0%,
+    transparent 68%
+  );
+  animation: halo 3.2s ease-in-out infinite;
+}
+@keyframes halo {
+  50% {
+    transform: scale(1.12);
+    opacity: 0.7;
+  }
+}
+.done-wrap h2 {
+  margin-top: 12px;
+}
+.done-wrap .lede {
+  margin-bottom: 0;
+}
+.wave {
+  display: inline-block;
+  transform-origin: 70% 80%;
+  animation: hand-wave 1.6s ease-in-out 0.6s 2;
+}
+@keyframes hand-wave {
+  15%,
+  45% {
+    transform: rotate(16deg);
+  }
+  30%,
+  60% {
+    transform: rotate(-8deg);
+  }
+  75% {
+    transform: rotate(0);
+  }
+}
+.done-list {
+  list-style: none;
+  padding: 6px;
+  margin: 22px auto 0;
+  max-width: 440px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+.done-list li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+.done-list li:hover {
+  background: var(--raise);
+}
+.done-list li + li {
+  border-top: 1px solid var(--line);
+}
+.done-ic {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.done-text {
+  min-width: 0;
+}
+.done-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.done-title b {
+  font-weight: 600;
+}
+.done-title .tag-default {
+  margin-left: 4px;
+}
+.done-list small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 1px;
+}
+.theme-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+}
+.theme-dot i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.tools-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--faint);
+}
+@media (prefers-reduced-motion: reduce) {
+  .done-halo,
+  .wave {
+    animation: none;
+  }
+}

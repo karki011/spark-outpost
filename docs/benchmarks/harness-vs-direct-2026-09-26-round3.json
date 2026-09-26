@@ -1,0 +1,2201 @@
+{
+  "version": 1,
+  "date": "2026-09-26-round3",
+  "budgetUsd": 4,
+  "spentUsd": 3.303046198,
+  "stoppedForBudget": false,
+  "settings": {
+    "direct": "One claude agent (Sonnet 5, medium effort) in Do mode, no orchestrator, no Jev.",
+    "harness": "Full orchestrator on Auto routing with Jev intake (now with the scope question), Jev-picked Architect behind the routing gate, Jev parallel nouls after the plan, per-agent model routing, Architect / Builders / Critic as the depth requires.",
+    "level": "full-auto (tool approvals that still ask are auto-denied and recorded)",
+    "fixture": "Ledger Lite, a 6-module TypeScript project tested with node --test (scripts/bench/fixture)."
+  },
+  "results": [
+    {
+      "task": "P1",
+      "mode": "direct",
+      "repeat": 1,
+      "runId": "01a0debf-0e7f-76d4-a2f1-b5dc3b2d9b98",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:24:18.162Z",
+      "wallMs": 52808,
+      "activeMs": 52808,
+      "agents": [
+        {
+          "role": "agent",
+          "name": null,
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 26,
+          "outputTokens": 4828,
+          "cachedReadTokens": 283063,
+          "cachedWriteTokens": 17396,
+          "costUsd": 0.17606,
+          "costSource": "reported",
+          "durationMs": 52545,
+          "toolCalls": 12,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 12,
+      "retries": 0,
+      "agentCostUsd": 0.17606,
+      "jevCostUsd": 0,
+      "jevCalls": 0,
+      "costUsd": 0.17606,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 17,
+          "pass": 17,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 4,
+          "pass": 4,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/csv.ts",
+            "src/dates.ts",
+            "src/reminders.ts",
+            "src/report.ts",
+            "test/csv.test.ts",
+            "test/reminders.test.ts"
+          ],
+          "added": 128,
+          "removed": 0
+        }
+      },
+      "routing": null
+    },
+    {
+      "task": "P1",
+      "mode": "harness",
+      "repeat": 1,
+      "runId": "01a0debf-e374-751b-8af9-5a54678c3b99",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:25:12.684Z",
+      "wallMs": 93830,
+      "activeMs": 93830,
+      "agents": [
+        {
+          "role": "architect",
+          "name": "Sketch",
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "high",
+          "status": "succeeded",
+          "inputTokens": 10,
+          "outputTokens": 4501,
+          "cachedReadTokens": 76887,
+          "cachedWriteTokens": 22483,
+          "costUsd": 0.152152,
+          "costSource": "reported",
+          "durationMs": 46691,
+          "toolCalls": 7,
+          "parallelGroup": null
+        },
+        {
+          "role": "builder",
+          "name": "Bolt",
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 12,
+          "outputTokens": 4498,
+          "cachedReadTokens": 126334,
+          "cachedWriteTokens": 15575,
+          "costUsd": 0.134805,
+          "costSource": "reported",
+          "durationMs": 44759,
+          "toolCalls": 13,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 20,
+      "retries": 0,
+      "agentCostUsd": 0.286957,
+      "jevCostUsd": 0.00024393600000000002,
+      "jevCalls": 5,
+      "costUsd": 0.287200936,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 17,
+          "pass": 17,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 4,
+          "pass": 4,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/csv.ts",
+            "src/dates.ts",
+            "src/reminders.ts",
+            "src/report.ts",
+            "test/csv.test.ts",
+            "test/reminders.test.ts"
+          ],
+          "added": 132,
+          "removed": 0
+        }
+      },
+      "routing": {
+        "depth": "plan_execute",
+        "depthSource": "jev",
+        "risk": "multi-file",
+        "decisions": [
+          {
+            "kind": "intake",
+            "role": null,
+            "summary": "plan → execute · multi-file",
+            "applied": "jev",
+            "confidence": 0.9,
+            "jevStatus": "answered",
+            "costUsd": 0.000080766
+          },
+          {
+            "kind": "route",
+            "role": "architect",
+            "summary": "Sketch · Architect · Sonnet 5 · high · Auto would have used Haiku 4.5 · high",
+            "applied": "rules",
+            "confidence": 0.32,
+            "jevStatus": "answered",
+            "costUsd": 0.000035238
+          },
+          {
+            "kind": "parallel",
+            "role": null,
+            "summary": "Parallel: none · same as the rules · Jev agreed with the rules on 3 of 4",
+            "applied": "jev",
+            "confidence": null,
+            "jevStatus": "answered",
+            "costUsd": 0.000045948
+          },
+          {
+            "kind": "route",
+            "role": "builder",
+            "summary": "Bolt · Builder · Sonnet 5 · medium · Auto would have used Sonnet 5 · high",
+            "applied": "rules",
+            "confidence": 0.59,
+            "jevStatus": "answered",
+            "costUsd": 0.000035742000000000004
+          },
+          {
+            "kind": "transition",
+            "role": "builder",
+            "summary": "done · next finish",
+            "applied": "rules",
+            "confidence": 0.77,
+            "jevStatus": "answered",
+            "costUsd": 0.000046242
+          }
+        ],
+        "intake": {
+          "scope": "few_modules",
+          "scopeConfidence": 0.97,
+          "complexity": 2,
+          "complexityConfidence": 1,
+          "depthNote": null
+        },
+        "architect": {
+          "pick": {
+            "model": "sonnet",
+            "effort": "high"
+          },
+          "routedBy": "rules",
+          "rule": "short plan",
+          "rulePick": {
+            "model": "sonnet",
+            "effort": "high"
+          },
+          "jevPick": {
+            "model": "haiku",
+            "effort": "high"
+          },
+          "gate": "fallback",
+          "confidence": 0.32
+        },
+        "parallel": {
+          "chosen": [],
+          "rulesGroups": [],
+          "asked": 4,
+          "agreed": 3,
+          "applied": "jev",
+          "jevStatus": "answered"
+        }
+      }
+    },
+    {
+      "task": "D1",
+      "mode": "direct",
+      "repeat": 1,
+      "runId": "01a0dec1-58fc-71f7-a5e2-ef101cf3317e",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:26:48.308Z",
+      "wallMs": 46728,
+      "activeMs": 46728,
+      "agents": [
+        {
+          "role": "agent",
+          "name": null,
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 20,
+          "outputTokens": 3678,
+          "cachedReadTokens": 203948,
+          "cachedWriteTokens": 13689,
+          "costUsd": 0.13376,
+          "costSource": "reported",
+          "durationMs": 46467,
+          "toolCalls": 14,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 14,
+      "retries": 0,
+      "agentCostUsd": 0.13376,
+      "jevCostUsd": 0,
+      "jevCalls": 0,
+      "costUsd": 0.13376,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 13,
+          "pass": 13,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 5,
+          "pass": 5,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/cleanup.ts",
+            "src/ledger.ts",
+            "test/cleanup.test.ts",
+            "test/ledger.test.ts"
+          ],
+          "added": 66,
+          "removed": 10
+        }
+      },
+      "routing": null
+    },
+    {
+      "task": "D1",
+      "mode": "harness",
+      "repeat": 1,
+      "runId": "01a0dec2-1e44-7779-a371-d3c4f8768e45",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:27:38.809Z",
+      "wallMs": 47475,
+      "activeMs": 47475,
+      "agents": [
+        {
+          "role": "builder",
+          "name": "Bolt",
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 16,
+          "outputTokens": 4049,
+          "cachedReadTokens": 161763,
+          "cachedWriteTokens": 14214,
+          "costUsd": 0.131126,
+          "costSource": "reported",
+          "durationMs": 46324,
+          "toolCalls": 14,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 14,
+      "retries": 0,
+      "agentCostUsd": 0.131126,
+      "jevCostUsd": 0.00011571,
+      "jevCalls": 2,
+      "costUsd": 0.13124170999999998,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 14,
+          "pass": 14,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 5,
+          "pass": 5,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/cleanup.ts",
+            "src/ledger.ts",
+            "test/cleanup.test.ts",
+            "test/ledger.test.ts"
+          ],
+          "added": 75,
+          "removed": 10
+        }
+      },
+      "routing": {
+        "depth": "execute",
+        "depthSource": "rules",
+        "risk": "multi-file",
+        "decisions": [
+          {
+            "kind": "intake",
+            "role": null,
+            "summary": "plan → execute · multi-file → execute: The request names its 4 files, so one Builder works from it without an Architect.",
+            "applied": "rules",
+            "confidence": 0.82,
+            "jevStatus": "answered",
+            "costUsd": 0.000076146
+          },
+          {
+            "kind": "route",
+            "role": "builder",
+            "summary": "Bolt · Builder · Sonnet 5 · medium · Auto would have used Sonnet 5 · medium",
+            "applied": "rules",
+            "confidence": 0.8,
+            "jevStatus": "not_asked",
+            "costUsd": null
+          },
+          {
+            "kind": "transition",
+            "role": "builder",
+            "summary": "done · next finish",
+            "applied": "rules",
+            "confidence": 0.62,
+            "jevStatus": "answered",
+            "costUsd": 0.000039564
+          }
+        ],
+        "intake": {
+          "scope": "few_modules",
+          "scopeConfidence": 0.99,
+          "complexity": 1.98,
+          "complexityConfidence": 0.97,
+          "depthNote": "The request names its 4 files, so one Builder works from it without an Architect."
+        },
+        "architect": null,
+        "parallel": null
+      }
+    },
+    {
+      "task": "R1",
+      "mode": "direct",
+      "repeat": 1,
+      "runId": "01a0dec2-dd9f-75ad-b45d-a2e2d1cdf44f",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:28:27.800Z",
+      "wallMs": 73147,
+      "activeMs": 73147,
+      "agents": [
+        {
+          "role": "agent",
+          "name": null,
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 12,
+          "outputTokens": 6416,
+          "cachedReadTokens": 121921,
+          "cachedWriteTokens": 14396,
+          "costUsd": 0.147505,
+          "costSource": "reported",
+          "durationMs": 72889,
+          "toolCalls": 7,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 7,
+      "retries": 0,
+      "agentCostUsd": 0.147505,
+      "jevCostUsd": 0,
+      "jevCalls": 0,
+      "costUsd": 0.147505,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 12,
+          "pass": 12,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 4,
+          "pass": 4,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/money.ts",
+            "test/money.test.ts"
+          ],
+          "added": 38,
+          "removed": 2
+        }
+      },
+      "routing": null
+    },
+    {
+      "task": "R1",
+      "mode": "harness",
+      "repeat": 1,
+      "runId": "01a0dec4-0924-7193-b012-228a227058b0",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:29:44.464Z",
+      "wallMs": 56742,
+      "activeMs": 56742,
+      "agents": [
+        {
+          "role": "builder",
+          "name": "Bolt",
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 12,
+          "outputTokens": 5014,
+          "cachedReadTokens": 117585,
+          "cachedWriteTokens": 12942,
+          "costUsd": 0.126803,
+          "costSource": "reported",
+          "durationMs": 55563,
+          "toolCalls": 6,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 6,
+      "retries": 0,
+      "agentCostUsd": 0.126803,
+      "jevCostUsd": 0.00011919600000000002,
+      "jevCalls": 2,
+      "costUsd": 0.126922196,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 11,
+          "pass": 11,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 4,
+          "pass": 4,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/money.ts",
+            "test/money.test.ts"
+          ],
+          "added": 29,
+          "removed": 2
+        }
+      },
+      "routing": {
+        "depth": "execute",
+        "depthSource": "rules",
+        "risk": "edits",
+        "decisions": [
+          {
+            "kind": "intake",
+            "role": null,
+            "summary": "plan → execute · edits",
+            "applied": "rules",
+            "confidence": 0.43,
+            "jevStatus": "answered",
+            "costUsd": 0.000075054
+          },
+          {
+            "kind": "route",
+            "role": "builder",
+            "summary": "Bolt · Builder · Sonnet 5 · medium · Auto would have used Sonnet 5 · high",
+            "applied": "rules",
+            "confidence": 0.36,
+            "jevStatus": "not_asked",
+            "costUsd": null
+          },
+          {
+            "kind": "transition",
+            "role": "builder",
+            "summary": "done · next finish",
+            "applied": "rules",
+            "confidence": 0.56,
+            "jevStatus": "answered",
+            "costUsd": 0.000044142000000000005
+          }
+        ],
+        "intake": {
+          "scope": "one_module",
+          "scopeConfidence": 0.57,
+          "complexity": 1.98,
+          "complexityConfidence": 0.98,
+          "depthNote": null
+        },
+        "architect": null,
+        "parallel": null
+      }
+    },
+    {
+      "task": "H4",
+      "mode": "direct",
+      "repeat": 1,
+      "runId": "01a0dec4-ec95-76aa-bb9b-f4b0ea26ff6c",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:30:42.702Z",
+      "wallMs": 72757,
+      "activeMs": 72757,
+      "agents": [
+        {
+          "role": "agent",
+          "name": null,
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 12,
+          "outputTokens": 6274,
+          "cachedReadTokens": 116886,
+          "cachedWriteTokens": 14490,
+          "costUsd": 0.145476,
+          "costSource": "reported",
+          "durationMs": 72572,
+          "toolCalls": 7,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 7,
+      "retries": 0,
+      "agentCostUsd": 0.145476,
+      "jevCostUsd": 0,
+      "jevCalls": 0,
+      "costUsd": 0.145476,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 10,
+          "pass": 10,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 5,
+          "pass": 5,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/invoice.ts",
+            "test/invoice.test.ts"
+          ],
+          "added": 49,
+          "removed": 1
+        }
+      },
+      "routing": null
+    },
+    {
+      "task": "H4",
+      "mode": "harness",
+      "repeat": 1,
+      "runId": "01a0dec6-0f05-721b-a547-ec574deee3d2",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:31:57.054Z",
+      "wallMs": 52391,
+      "activeMs": 52391,
+      "agents": [
+        {
+          "role": "builder",
+          "name": "Bolt",
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 16,
+          "outputTokens": 4953,
+          "cachedReadTokens": 163141,
+          "cachedWriteTokens": 13413,
+          "costUsd": 0.137198,
+          "costSource": "reported",
+          "durationMs": 51260,
+          "toolCalls": 7,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 7,
+      "retries": 0,
+      "agentCostUsd": 0.137198,
+      "jevCostUsd": 0.00011297999999999999,
+      "jevCalls": 2,
+      "costUsd": 0.13731098,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 10,
+          "pass": 10,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 5,
+          "pass": 5,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/invoice.ts",
+            "test/invoice.test.ts"
+          ],
+          "added": 60,
+          "removed": 1
+        }
+      },
+      "routing": {
+        "depth": "execute",
+        "depthSource": "rules",
+        "risk": "edits",
+        "decisions": [
+          {
+            "kind": "intake",
+            "role": null,
+            "summary": "execute · edits",
+            "applied": "rules",
+            "confidence": 0.63,
+            "jevStatus": "answered",
+            "costUsd": 0.00007539
+          },
+          {
+            "kind": "route",
+            "role": "builder",
+            "summary": "Bolt · Builder · Sonnet 5 · medium · Auto would have used Sonnet 5 · high",
+            "applied": "rules",
+            "confidence": 0.77,
+            "jevStatus": "not_asked",
+            "costUsd": null
+          },
+          {
+            "kind": "transition",
+            "role": "builder",
+            "summary": "done · next finish",
+            "applied": "rules",
+            "confidence": 0.63,
+            "jevStatus": "answered",
+            "costUsd": 0.000037590000000000004
+          }
+        ],
+        "intake": {
+          "scope": "one_module",
+          "scopeConfidence": 0.38,
+          "complexity": 1.89,
+          "complexityConfidence": 0.88,
+          "depthNote": null
+        },
+        "architect": null,
+        "parallel": null
+      }
+    },
+    {
+      "task": "H5",
+      "mode": "direct",
+      "repeat": 1,
+      "runId": "01a0dec6-e0e8-7707-aa05-85314a341664",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:32:50.787Z",
+      "wallMs": 29984,
+      "activeMs": 29984,
+      "agents": [
+        {
+          "role": "agent",
+          "name": null,
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 12,
+          "outputTokens": 3116,
+          "cachedReadTokens": 109098,
+          "cachedWriteTokens": 11149,
+          "costUsd": 0.098999,
+          "costSource": "reported",
+          "durationMs": 29919,
+          "toolCalls": 7,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 7,
+      "retries": 0,
+      "agentCostUsd": 0.098999,
+      "jevCostUsd": 0,
+      "jevCalls": 0,
+      "costUsd": 0.098999,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 15,
+          "pass": 15,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 5,
+          "pass": 5,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/dates.ts",
+            "test/schedule.test.ts"
+          ],
+          "added": 88,
+          "removed": 0
+        }
+      },
+      "routing": null
+    },
+    {
+      "task": "H5",
+      "mode": "harness",
+      "repeat": 1,
+      "runId": "01a0dec7-5c91-730f-91e9-f1b9bd2f1a88",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:33:22.442Z",
+      "wallMs": 33779,
+      "activeMs": 33779,
+      "agents": [
+        {
+          "role": "builder",
+          "name": "Bolt",
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 16,
+          "outputTokens": 3706,
+          "cachedReadTokens": 156170,
+          "cachedWriteTokens": 13181,
+          "costUsd": 0.122445,
+          "costSource": "reported",
+          "durationMs": 32549,
+          "toolCalls": 9,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 9,
+      "retries": 0,
+      "agentCostUsd": 0.122445,
+      "jevCostUsd": 0.000111636,
+      "jevCalls": 2,
+      "costUsd": 0.122556636,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 15,
+          "pass": 15,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 5,
+          "pass": 5,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/dates.ts",
+            "test/schedule.test.ts"
+          ],
+          "added": 93,
+          "removed": 0
+        }
+      },
+      "routing": {
+        "depth": "execute",
+        "depthSource": "jev",
+        "risk": "edits",
+        "decisions": [
+          {
+            "kind": "intake",
+            "role": null,
+            "summary": "execute · edits",
+            "applied": "jev",
+            "confidence": 0.9,
+            "jevStatus": "answered",
+            "costUsd": 0.00007602000000000001
+          },
+          {
+            "kind": "route",
+            "role": "builder",
+            "summary": "Bolt · Builder · Sonnet 5 · medium · Auto would have used Sonnet 5 · medium",
+            "applied": "jev",
+            "confidence": 0.81,
+            "jevStatus": "not_asked",
+            "costUsd": null
+          },
+          {
+            "kind": "transition",
+            "role": "builder",
+            "summary": "done · next finish",
+            "applied": "rules",
+            "confidence": 0.49,
+            "jevStatus": "answered",
+            "costUsd": 0.000035616
+          }
+        ],
+        "intake": {
+          "scope": "one_module",
+          "scopeConfidence": 0.36,
+          "complexity": 1.74,
+          "complexityConfidence": 0.74,
+          "depthNote": null
+        },
+        "architect": null,
+        "parallel": null
+      }
+    },
+    {
+      "task": "D2",
+      "mode": "direct",
+      "repeat": 1,
+      "runId": "01a0dec8-1922-751c-b25e-42c1a2661ede",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:34:10.706Z",
+      "wallMs": 35936,
+      "activeMs": 35936,
+      "agents": [
+        {
+          "role": "agent",
+          "name": null,
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 14,
+          "outputTokens": 2942,
+          "cachedReadTokens": 135513,
+          "cachedWriteTokens": 12046,
+          "costUsd": 0.106139,
+          "costSource": "reported",
+          "durationMs": 35778,
+          "toolCalls": 7,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 7,
+      "retries": 0,
+      "agentCostUsd": 0.106139,
+      "jevCostUsd": 0,
+      "jevCalls": 0,
+      "costUsd": 0.106139,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 14,
+          "pass": 14,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 5,
+          "pass": 5,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "data/ledger.json",
+            "src/cleanup.ts",
+            "test/cleanup.test.ts"
+          ],
+          "added": 80,
+          "removed": 12
+        }
+      },
+      "routing": null
+    },
+    {
+      "task": "D2",
+      "mode": "harness",
+      "repeat": 1,
+      "runId": "01a0dec8-ab78-717e-944e-8d599e41619f",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:34:48.176Z",
+      "wallMs": 109899,
+      "activeMs": 109899,
+      "agents": [
+        {
+          "role": "architect",
+          "name": "Sketch",
+          "provider": "claude",
+          "model": "opus[1m]",
+          "effort": "high",
+          "status": "succeeded",
+          "inputTokens": 12,
+          "outputTokens": 4426,
+          "cachedReadTokens": 63411,
+          "cachedWriteTokens": 16238,
+          "costUsd": 0.23285,
+          "costSource": "reported",
+          "durationMs": 46280,
+          "toolCalls": 8,
+          "parallelGroup": null
+        },
+        {
+          "role": "builder",
+          "name": "Bolt",
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 12,
+          "outputTokens": 2071,
+          "cachedReadTokens": 116042,
+          "cachedWriteTokens": 11547,
+          "costUsd": 0.092316,
+          "costSource": "reported",
+          "durationMs": 25430,
+          "toolCalls": 6,
+          "parallelGroup": null
+        },
+        {
+          "role": "critic",
+          "name": "Hawk",
+          "provider": "codex",
+          "model": "gpt-6-sol",
+          "effort": "high",
+          "status": "succeeded",
+          "inputTokens": 2152,
+          "outputTokens": 350,
+          "cachedReadTokens": 18816,
+          "cachedWriteTokens": 0,
+          "costUsd": 0.00393,
+          "costSource": "estimated",
+          "durationMs": 34779,
+          "toolCalls": 9,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 23,
+      "retries": 0,
+      "agentCostUsd": 0.329096,
+      "jevCostUsd": 0.000260904,
+      "jevCalls": 6,
+      "costUsd": 0.329356904,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 12,
+          "pass": 12,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 5,
+          "pass": 5,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "data/ledger.json",
+            "src/cleanup.ts",
+            "test/cleanup.test.ts"
+          ],
+          "added": 63,
+          "removed": 12
+        }
+      },
+      "routing": {
+        "depth": "plan_execute_review",
+        "depthSource": "rules",
+        "risk": "destructive",
+        "decisions": [
+          {
+            "kind": "intake",
+            "role": null,
+            "summary": "plan → execute · destructive",
+            "applied": "rules",
+            "confidence": 0.35,
+            "jevStatus": "answered",
+            "costUsd": 0.000076482
+          },
+          {
+            "kind": "route",
+            "role": "architect",
+            "summary": "Sketch · Architect · Opus 5.5 · high · Auto would have used Haiku 4.5 · high",
+            "applied": "rules",
+            "confidence": null,
+            "jevStatus": "answered",
+            "costUsd": 0.000030954
+          },
+          {
+            "kind": "parallel",
+            "role": null,
+            "summary": "Parallel: none · same as the rules · Jev agreed with the rules on 1 of 1",
+            "applied": "jev",
+            "confidence": null,
+            "jevStatus": "answered",
+            "costUsd": 0.000036456000000000005
+          },
+          {
+            "kind": "route",
+            "role": "builder",
+            "summary": "Bolt · Builder · Sonnet 5 · medium · Auto would have used Sonnet 5 · high",
+            "applied": "rules",
+            "confidence": 0.52,
+            "jevStatus": "answered",
+            "costUsd": 0.00004011
+          },
+          {
+            "kind": "transition",
+            "role": "builder",
+            "summary": "done · next review",
+            "applied": "rules",
+            "confidence": 0.79,
+            "jevStatus": "answered",
+            "costUsd": 0.000039816
+          },
+          {
+            "kind": "route",
+            "role": "critic",
+            "summary": "Hawk · Critic · 6 Sol · high · Auto would have used 6 Luna · medium",
+            "applied": "rules",
+            "confidence": 0.26,
+            "jevStatus": "not_asked",
+            "costUsd": null
+          },
+          {
+            "kind": "transition",
+            "role": "critic",
+            "summary": "done · next finish",
+            "applied": "rules",
+            "confidence": 0.88,
+            "jevStatus": "answered",
+            "costUsd": 0.000037086000000000004
+          }
+        ],
+        "intake": {
+          "scope": "few_modules",
+          "scopeConfidence": 0.96,
+          "complexity": 1.98,
+          "complexityConfidence": 0.98,
+          "depthNote": null
+        },
+        "architect": {
+          "pick": {
+            "model": "opus[1m]",
+            "effort": "high"
+          },
+          "routedBy": "rules",
+          "rule": "destructive",
+          "rulePick": {
+            "model": "opus[1m]",
+            "effort": "high"
+          },
+          "jevPick": {
+            "model": "haiku",
+            "effort": "high"
+          },
+          "gate": null,
+          "confidence": null
+        },
+        "parallel": {
+          "chosen": [],
+          "rulesGroups": [],
+          "asked": 1,
+          "agreed": 1,
+          "applied": "jev",
+          "jevStatus": "answered",
+          "steps": [
+            {
+              "text": "Add cleanLedger in src/cleanup.ts",
+              "reads": [],
+              "changes": [
+                "src/cleanup.ts"
+              ]
+            },
+            {
+              "text": "Add tests in test/cleanup.test.ts",
+              "reads": [],
+              "changes": [
+                "test/cleanup.test.ts"
+              ]
+            },
+            {
+              "text": "Run cleanLedger on data/ledger.json and overwrite it",
+              "reads": [
+                "data/ledger.json"
+              ],
+              "changes": []
+            }
+          ],
+          "pairs": [
+            {
+              "steps": [
+                0,
+                1
+              ],
+              "rules": true,
+              "noul": 0.81,
+              "independent": true
+            },
+            {
+              "steps": [
+                1,
+                2
+              ],
+              "rules": false,
+              "noul": 0.55,
+              "independent": false
+            }
+          ],
+          "sizes": [
+            {
+              "step": 0,
+              "rules": false,
+              "noul": 0.54,
+              "large": false
+            },
+            {
+              "step": 1,
+              "rules": false,
+              "noul": 0.68,
+              "large": false
+            },
+            {
+              "step": 2,
+              "rules": false,
+              "noul": 0.26,
+              "large": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "task": "H1",
+      "mode": "direct",
+      "repeat": 1,
+      "runId": "01a0deca-604a-7033-a070-5182229acac2",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:36:40.003Z",
+      "wallMs": 58633,
+      "activeMs": 58633,
+      "agents": [
+        {
+          "role": "agent",
+          "name": null,
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 30,
+          "outputTokens": 4949,
+          "cachedReadTokens": 312664,
+          "cachedWriteTokens": 13997,
+          "costUsd": 0.169381,
+          "costSource": "reported",
+          "durationMs": 58526,
+          "toolCalls": 14,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 14,
+      "retries": 0,
+      "agentCostUsd": 0.169381,
+      "jevCostUsd": 0,
+      "jevCalls": 0,
+      "costUsd": 0.169381,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 7,
+          "pass": 7,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 3,
+          "pass": 3,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/invoice.ts",
+            "src/money.ts"
+          ],
+          "added": 10,
+          "removed": 4
+        }
+      },
+      "routing": null
+    },
+    {
+      "task": "H1",
+      "mode": "harness",
+      "repeat": 1,
+      "runId": "01a0decb-4c21-71a6-9cfd-e159f543c834",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:37:40.380Z",
+      "wallMs": 94248,
+      "activeMs": 94248,
+      "agents": [
+        {
+          "role": "architect",
+          "name": "Sketch",
+          "provider": "claude",
+          "model": "opus[1m]",
+          "effort": "high",
+          "status": "succeeded",
+          "inputTokens": 10,
+          "outputTokens": 5118,
+          "cachedReadTokens": 54102,
+          "cachedWriteTokens": 11064,
+          "costUsd": 0.203324,
+          "costSource": "reported",
+          "durationMs": 46501,
+          "toolCalls": 11,
+          "parallelGroup": null
+        },
+        {
+          "role": "builder",
+          "name": "Bolt",
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 14,
+          "outputTokens": 3944,
+          "cachedReadTokens": 143855,
+          "cachedWriteTokens": 14615,
+          "costUsd": 0.128895,
+          "costSource": "reported",
+          "durationMs": 45636,
+          "toolCalls": 13,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 24,
+      "retries": 0,
+      "agentCostUsd": 0.33221900000000004,
+      "jevCostUsd": 0.000201978,
+      "jevCalls": 5,
+      "costUsd": 0.33242097800000003,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 10,
+          "pass": 10,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 3,
+          "pass": 3,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/invoice.ts",
+            "src/money.ts",
+            "test/invoice.test.ts",
+            "test/money.test.ts"
+          ],
+          "added": 32,
+          "removed": 7
+        }
+      },
+      "routing": {
+        "depth": "plan_execute",
+        "depthSource": "rules",
+        "risk": "multi-file",
+        "decisions": [
+          {
+            "kind": "intake",
+            "role": null,
+            "summary": "execute · multi-file",
+            "applied": "rules",
+            "confidence": 0.27,
+            "jevStatus": "answered",
+            "costUsd": 0.000074802
+          },
+          {
+            "kind": "route",
+            "role": "architect",
+            "summary": "Sketch · Architect · Opus 5.5 · high · Auto would have used Sonnet 5 · high",
+            "applied": "rules",
+            "confidence": 0.34,
+            "jevStatus": "answered",
+            "costUsd": 0.000027258000000000002
+          },
+          {
+            "kind": "parallel",
+            "role": null,
+            "summary": "Parallel: none · same as the rules · Jev agreed with the rules on 1 of 1",
+            "applied": "rules",
+            "confidence": null,
+            "jevStatus": "answered",
+            "costUsd": 0.000032298
+          },
+          {
+            "kind": "route",
+            "role": "builder",
+            "summary": "Bolt · Builder · Sonnet 5 · medium · Auto would have used Sonnet 5 · high",
+            "applied": "rules",
+            "confidence": 0.72,
+            "jevStatus": "answered",
+            "costUsd": 0.000028224
+          },
+          {
+            "kind": "transition",
+            "role": "builder",
+            "summary": "done · next finish",
+            "applied": "rules",
+            "confidence": 0.62,
+            "jevStatus": "answered",
+            "costUsd": 0.000039396
+          }
+        ],
+        "intake": {
+          "scope": "codebase",
+          "scopeConfidence": 0.23,
+          "complexity": 1.62,
+          "complexityConfidence": 0.61,
+          "depthNote": null
+        },
+        "architect": {
+          "pick": {
+            "model": "opus[1m]",
+            "effort": "high"
+          },
+          "routedBy": "rules",
+          "rule": "unsure",
+          "rulePick": {
+            "model": "opus[1m]",
+            "effort": "high"
+          },
+          "jevPick": {
+            "model": "sonnet",
+            "effort": "high"
+          },
+          "gate": "fallback",
+          "confidence": 0.34
+        },
+        "parallel": {
+          "chosen": [],
+          "rulesGroups": [],
+          "asked": 1,
+          "agreed": 1,
+          "applied": "rules",
+          "jevStatus": "answered",
+          "steps": [
+            {
+              "text": "Add half-away-from-zero rounding helper in money.ts and use it in parseCents",
+              "reads": [
+                "money.ts"
+              ],
+              "changes": []
+            },
+            {
+              "text": "Route roundTo and totalCents in invoice.ts through the helper",
+              "reads": [
+                "invoice.ts"
+              ],
+              "changes": []
+            },
+            {
+              "text": "Add regression tests for half-cent and negative rounding",
+              "reads": [],
+              "changes": []
+            }
+          ],
+          "pairs": [
+            {
+              "steps": [
+                0,
+                1
+              ],
+              "rules": false,
+              "noul": 0.15,
+              "independent": false
+            },
+            {
+              "steps": [
+                1,
+                2
+              ],
+              "rules": false,
+              "noul": 0.54,
+              "independent": false
+            }
+          ],
+          "sizes": [
+            {
+              "step": 0,
+              "rules": false,
+              "noul": 0.45,
+              "large": false
+            },
+            {
+              "step": 1,
+              "rules": false,
+              "noul": 0.44,
+              "large": false
+            },
+            {
+              "step": 2,
+              "rules": false,
+              "noul": 0.58,
+              "large": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "task": "H3",
+      "mode": "direct",
+      "repeat": 1,
+      "runId": "01a0decc-c231-7488-9456-8a382a9ce2f9",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:39:16.139Z",
+      "wallMs": 71186,
+      "activeMs": 71186,
+      "agents": [
+        {
+          "role": "agent",
+          "name": null,
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 16,
+          "outputTokens": 7077,
+          "cachedReadTokens": 168605,
+          "cachedWriteTokens": 16760,
+          "costUsd": 0.173051,
+          "costSource": "reported",
+          "durationMs": 70924,
+          "toolCalls": 11,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 11,
+      "retries": 0,
+      "agentCostUsd": 0.173051,
+      "jevCostUsd": 0,
+      "jevCalls": 0,
+      "costUsd": 0.173051,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 15,
+          "pass": 15,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 6,
+          "pass": 6,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "README.md",
+            "src/storage.ts",
+            "test/storage.test.ts"
+          ],
+          "added": 175,
+          "removed": 0
+        }
+      },
+      "routing": null
+    },
+    {
+      "task": "H3",
+      "mode": "harness",
+      "repeat": 1,
+      "runId": "01a0decd-de27-77f3-9365-e2c6abeb7264",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:40:28.831Z",
+      "wallMs": 59956,
+      "activeMs": 59956,
+      "agents": [
+        {
+          "role": "builder",
+          "name": "Bolt",
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 14,
+          "outputTokens": 6099,
+          "cachedReadTokens": 143843,
+          "cachedWriteTokens": 15560,
+          "costUsd": 0.153526,
+          "costSource": "reported",
+          "durationMs": 58913,
+          "toolCalls": 9,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 9,
+      "retries": 0,
+      "agentCostUsd": 0.153526,
+      "jevCostUsd": 0.00012133800000000002,
+      "jevCalls": 2,
+      "costUsd": 0.153647338,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 21,
+          "pass": 21,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 6,
+          "pass": 6,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "README.md",
+            "src/storage.ts",
+            "test/storage.test.ts"
+          ],
+          "added": 184,
+          "removed": 0
+        }
+      },
+      "routing": {
+        "depth": "execute",
+        "depthSource": "rules",
+        "risk": "edits",
+        "decisions": [
+          {
+            "kind": "intake",
+            "role": null,
+            "summary": "plan → execute · edits",
+            "applied": "rules",
+            "confidence": 0.76,
+            "jevStatus": "answered",
+            "costUsd": 0.00008206800000000001
+          },
+          {
+            "kind": "route",
+            "role": "builder",
+            "summary": "Bolt · Builder · Sonnet 5 · medium · Auto would have used Sonnet 5 · high",
+            "applied": "rules",
+            "confidence": 0.75,
+            "jevStatus": "not_asked",
+            "costUsd": null
+          },
+          {
+            "kind": "transition",
+            "role": "builder",
+            "summary": "done · next finish",
+            "applied": "rules",
+            "confidence": 0.68,
+            "jevStatus": "answered",
+            "costUsd": 0.00003927
+          }
+        ],
+        "intake": {
+          "scope": "few_modules",
+          "scopeConfidence": 0.62,
+          "complexity": 1.99,
+          "complexityConfidence": 0.99,
+          "depthNote": null
+        },
+        "architect": null,
+        "parallel": null
+      }
+    },
+    {
+      "task": "P1",
+      "mode": "direct",
+      "repeat": 2,
+      "runId": "01a0decf-76d4-7151-ad6d-68ad401b1deb",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:42:13.446Z",
+      "wallMs": 247206,
+      "activeMs": 247206,
+      "agents": [
+        {
+          "role": "agent",
+          "name": null,
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 18,
+          "outputTokens": 6745,
+          "cachedReadTokens": 202695,
+          "cachedWriteTokens": 17956,
+          "costUsd": 0.181375,
+          "costSource": "reported",
+          "durationMs": 247131,
+          "toolCalls": 17,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 17,
+      "retries": 0,
+      "agentCostUsd": 0.181375,
+      "jevCostUsd": 0,
+      "jevCalls": 0,
+      "costUsd": 0.181375,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 17,
+          "pass": 17,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 4,
+          "pass": 4,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/csv.ts",
+            "src/dates.ts",
+            "src/reminders.ts",
+            "src/report.ts",
+            "test/csv.test.ts",
+            "test/reminders.test.ts"
+          ],
+          "added": 127,
+          "removed": 0
+        }
+      },
+      "routing": null
+    },
+    {
+      "task": "P1",
+      "mode": "harness",
+      "repeat": 2,
+      "runId": "01a0ded3-4243-7497-ad04-5430a6c7ddf5",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:46:22.141Z",
+      "wallMs": 93768,
+      "activeMs": 93768,
+      "agents": [
+        {
+          "role": "architect",
+          "name": "Sketch",
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "high",
+          "status": "succeeded",
+          "inputTokens": 12,
+          "outputTokens": 3583,
+          "cachedReadTokens": 104786,
+          "cachedWriteTokens": 12629,
+          "costUsd": 0.10914,
+          "costSource": "reported",
+          "durationMs": 36540,
+          "toolCalls": 8,
+          "parallelGroup": null
+        },
+        {
+          "role": "builder",
+          "name": "Bolt",
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 14,
+          "outputTokens": 5807,
+          "cachedReadTokens": 161313,
+          "cachedWriteTokens": 18753,
+          "costUsd": 0.167642,
+          "costSource": "reported",
+          "durationMs": 54891,
+          "toolCalls": 17,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 25,
+      "retries": 0,
+      "agentCostUsd": 0.27678200000000003,
+      "jevCostUsd": 0.000257334,
+      "jevCalls": 5,
+      "costUsd": 0.277039334,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 17,
+          "pass": 17,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 4,
+          "pass": 4,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "src/csv.ts",
+            "src/dates.ts",
+            "src/reminders.ts",
+            "src/report.ts",
+            "test/csv.test.ts",
+            "test/reminders.test.ts"
+          ],
+          "added": 128,
+          "removed": 0
+        }
+      },
+      "routing": {
+        "depth": "plan_execute",
+        "depthSource": "jev",
+        "risk": "multi-file",
+        "decisions": [
+          {
+            "kind": "intake",
+            "role": null,
+            "summary": "plan → execute · multi-file",
+            "applied": "jev",
+            "confidence": 0.92,
+            "jevStatus": "answered",
+            "costUsd": 0.000080766
+          },
+          {
+            "kind": "route",
+            "role": "architect",
+            "summary": "Sketch · Architect · Sonnet 5 · high · Auto would have used Sonnet 5 · high",
+            "applied": "rules",
+            "confidence": 0.35,
+            "jevStatus": "answered",
+            "costUsd": 0.000035238
+          },
+          {
+            "kind": "parallel",
+            "role": null,
+            "summary": "Parallel: none · same as the rules · Jev agreed with the rules on 3 of 5",
+            "applied": "jev",
+            "confidence": null,
+            "jevStatus": "answered",
+            "costUsd": 0.000058254
+          },
+          {
+            "kind": "route",
+            "role": "builder",
+            "summary": "Bolt · Builder · Sonnet 5 · medium · Auto would have used Sonnet 5 · high",
+            "applied": "rules",
+            "confidence": 0.56,
+            "jevStatus": "answered",
+            "costUsd": 0.00003591000000000001
+          },
+          {
+            "kind": "transition",
+            "role": "builder",
+            "summary": "done · next finish",
+            "applied": "rules",
+            "confidence": 0.74,
+            "jevStatus": "answered",
+            "costUsd": 0.000047166
+          }
+        ],
+        "intake": {
+          "scope": "few_modules",
+          "scopeConfidence": 0.98,
+          "complexity": 2,
+          "complexityConfidence": 0.99,
+          "depthNote": null
+        },
+        "architect": {
+          "pick": {
+            "model": "sonnet",
+            "effort": "high"
+          },
+          "routedBy": "rules",
+          "rule": "short plan",
+          "rulePick": {
+            "model": "sonnet",
+            "effort": "high"
+          },
+          "jevPick": {
+            "model": "sonnet",
+            "effort": "high"
+          },
+          "gate": "fallback",
+          "confidence": 0.35
+        },
+        "parallel": {
+          "chosen": [],
+          "rulesGroups": [],
+          "asked": 5,
+          "agreed": 3,
+          "applied": "jev",
+          "jevStatus": "answered",
+          "steps": [
+            {
+              "text": "CSV export: src/csv.ts",
+              "reads": [
+                "src/csv.ts"
+              ],
+              "changes": []
+            },
+            {
+              "text": "Add reportCsv to src/report.ts",
+              "reads": [],
+              "changes": [
+                "src/report.ts"
+              ]
+            },
+            {
+              "text": "Tests for CSV export",
+              "reads": [],
+              "changes": []
+            },
+            {
+              "text": "Add daysBetween to src/dates.ts",
+              "reads": [],
+              "changes": [
+                "src/dates.ts"
+              ]
+            },
+            {
+              "text": "Payment reminders: src/reminders.ts",
+              "reads": [
+                "src/reminders.ts"
+              ],
+              "changes": []
+            },
+            {
+              "text": "Tests for payment reminders",
+              "reads": [],
+              "changes": []
+            }
+          ],
+          "pairs": [
+            {
+              "steps": [
+                0,
+                1
+              ],
+              "rules": false,
+              "noul": 0.13,
+              "independent": false
+            },
+            {
+              "steps": [
+                1,
+                2
+              ],
+              "rules": false,
+              "noul": 0.18,
+              "independent": false
+            },
+            {
+              "steps": [
+                2,
+                3
+              ],
+              "rules": false,
+              "noul": 0.91,
+              "independent": true
+            },
+            {
+              "steps": [
+                3,
+                4
+              ],
+              "rules": false,
+              "noul": 0.78,
+              "independent": true
+            },
+            {
+              "steps": [
+                4,
+                5
+              ],
+              "rules": false,
+              "noul": 0.19,
+              "independent": false
+            }
+          ],
+          "sizes": [
+            {
+              "step": 0,
+              "rules": true,
+              "noul": 0.46,
+              "large": true
+            },
+            {
+              "step": 1,
+              "rules": false,
+              "noul": 0.29,
+              "large": false
+            },
+            {
+              "step": 2,
+              "rules": false,
+              "noul": 0.62,
+              "large": false
+            },
+            {
+              "step": 3,
+              "rules": true,
+              "noul": 0.28,
+              "large": true
+            },
+            {
+              "step": 4,
+              "rules": false,
+              "noul": 0.47,
+              "large": false
+            },
+            {
+              "step": 5,
+              "rules": false,
+              "noul": 0.65,
+              "large": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "task": "T1",
+      "mode": "direct",
+      "repeat": 1,
+      "runId": "01a0ded4-ba73-748f-a148-728a07abf19d",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:47:58.436Z",
+      "wallMs": 10739,
+      "activeMs": 10739,
+      "agents": [
+        {
+          "role": "agent",
+          "name": null,
+          "provider": "claude",
+          "model": "sonnet",
+          "effort": "medium",
+          "status": "succeeded",
+          "inputTokens": 6,
+          "outputTokens": 807,
+          "cachedReadTokens": 47617,
+          "cachedWriteTokens": 7911,
+          "costUsd": 0.050512,
+          "costSource": "reported",
+          "durationMs": 10453,
+          "toolCalls": 4,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 4,
+      "retries": 0,
+      "agentCostUsd": 0.050512,
+      "jevCostUsd": 0,
+      "jevCalls": 0,
+      "costUsd": 0.050512,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 7,
+          "pass": 7,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "README.md",
+            "src/greet.ts"
+          ],
+          "added": 2,
+          "removed": 2
+        }
+      },
+      "routing": null
+    },
+    {
+      "task": "T1",
+      "mode": "harness",
+      "repeat": 1,
+      "runId": "01a0ded5-11c7-72ee-bc03-e4beb05ac1ec",
+      "status": "succeeded",
+      "error": null,
+      "startedAt": "2026-09-26T17:48:20.793Z",
+      "wallMs": 10650,
+      "activeMs": 10650,
+      "agents": [
+        {
+          "role": "builder",
+          "name": "Bolt",
+          "provider": "claude",
+          "model": "haiku",
+          "effort": "low",
+          "status": "succeeded",
+          "inputTokens": 26,
+          "outputTokens": 946,
+          "cachedReadTokens": 35847,
+          "cachedWriteTokens": 6692,
+          "costUsd": 0.022989,
+          "costSource": "reported",
+          "durationMs": 9321,
+          "toolCalls": 4,
+          "parallelGroup": null
+        }
+      ],
+      "toolCalls": 4,
+      "retries": 0,
+      "agentCostUsd": 0.022989,
+      "jevCostUsd": 0.00010218600000000001,
+      "jevCalls": 2,
+      "costUsd": 0.023091186,
+      "asked": [],
+      "verification": {
+        "passed": true,
+        "reasons": [],
+        "suite": {
+          "tests": 7,
+          "pass": 7,
+          "fail": 0
+        },
+        "hidden": {
+          "tests": 2,
+          "pass": 2,
+          "fail": 0
+        },
+        "outOfScope": [],
+        "diff": {
+          "files": [
+            "README.md",
+            "src/greet.ts"
+          ],
+          "added": 2,
+          "removed": 2
+        }
+      },
+      "routing": {
+        "depth": "execute",
+        "depthSource": "jev",
+        "risk": "edits",
+        "decisions": [
+          {
+            "kind": "intake",
+            "role": null,
+            "summary": "execute · edits",
+            "applied": "jev",
+            "confidence": 1,
+            "jevStatus": "answered",
+            "costUsd": 0.000070938
+          },
+          {
+            "kind": "route",
+            "role": "builder",
+            "summary": "Bolt · Builder · Haiku 4.5 · low · Auto would have used Haiku 4.5 · low",
+            "applied": "jev",
+            "confidence": 0.92,
+            "jevStatus": "not_asked",
+            "costUsd": null
+          },
+          {
+            "kind": "transition",
+            "role": "builder",
+            "summary": "done · next finish",
+            "applied": "rules",
+            "confidence": 0.79,
+            "jevStatus": "answered",
+            "costUsd": 0.000031248
+          }
+        ],
+        "intake": {
+          "scope": "few_modules",
+          "scopeConfidence": 0.46,
+          "complexity": 0.83,
+          "complexityConfidence": 0.72,
+          "depthNote": null
+        },
+        "architect": null,
+        "parallel": null
+      }
+    }
+  ]
+}

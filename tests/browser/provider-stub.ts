@@ -1,0 +1,56 @@
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { jevAnswers, type StubRequest } from './jev-stub.ts';
+import { REJECTED_KEY_MARKER, STUB_PORT } from './stub-config.ts';
+
+const anthropicModels = {
+  data: [
+    { id: 'claude-opus-5-5', display_name: 'Claude Opus 5.5' },
+    { id: 'claude-sonnet-5', display_name: 'Claude Sonnet 5' },
+    { id: 'claude-haiku-4-5', display_name: 'Claude Haiku 4.5' },
+  ],
+};
+
+const openaiModels = { data: [{ id: 'gpt-5-codex' }, { id: 'gpt-5' }, { id: 'gpt-5-mini' }] };
+
+const typesafeModels = {
+  models: [
+    { name: 'jev-latest', description: 'Latest stable Jev', release_date: '2026-01-01' },
+    { name: 'jev-preview', description: 'Newest Jev build', release_date: '2026-01-01' },
+  ],
+};
+
+function send(res: ServerResponse, status: number, body: unknown) {
+  res.writeHead(status, { 'content-type': 'application/json' });
+  res.end(JSON.stringify(body));
+}
+
+async function systemOne(req: IncomingMessage, res: ServerResponse) {
+  let text = '';
+  for await (const chunk of req) text += String(chunk);
+  send(res, 200, {
+    model: 'jev-stub',
+    answers: jevAnswers(JSON.parse(text) as StubRequest),
+    usage: { input_tokens: text.length / 4, output_tokens: 0 },
+  });
+}
+
+function credential(req: IncomingMessage): string {
+  return String(req.headers['x-api-key'] ?? req.headers.authorization ?? '');
+}
+
+const server = createServer((req, res) => {
+  const path = (req.url ?? '').split('?')[0];
+  if (path === '/health') return send(res, 200, { ok: true });
+  if (credential(req).includes(REJECTED_KEY_MARKER))
+    return send(res, 401, { error: 'invalid key' });
+  if (path === '/anthropic/v1/models') return send(res, 200, anthropicModels);
+  if (path === '/anthropic/v1/messages' && req.method === 'POST') {
+    return send(res, 200, { model: 'claude-opus-5-5', content: [{ type: 'text', text: 'OK' }] });
+  }
+  if (path === '/openai/v1/models') return send(res, 200, openaiModels);
+  if (path === '/typesafe/v1/models') return send(res, 200, typesafeModels);
+  if (path === '/typesafe/v1/systemone' && req.method === 'POST') return void systemOne(req, res);
+  return send(res, 404, { error: 'not found' });
+});
+
+server.listen(STUB_PORT, '127.0.0.1');

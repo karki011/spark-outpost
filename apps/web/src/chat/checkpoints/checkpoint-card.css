@@ -1,0 +1,126 @@
+.ck .ck-lead {
+  color: var(--text);
+  font-weight: 500;
+}
+.ck .ck-plan {
+  margin: 10px 14px 0;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: var(--panel);
+}
+.ck-choices {
+  padding-bottom: 0;
+}
+.ck-foot {
+  padding-top: 8px;
+}
+.ck-note {
+  margin: 12px 14px 0;
+}
+.ck-note .inp {
+  display: block;
+  min-height: 64px;
+  padding: 9px 12px;
+  font:
+    13px/1.5 'Geist',
+    system-ui,
+    sans-serif;
+  resize: vertical;
+  background: var(--panel);
+}
+.ck-note-acts {
+  display: flex;
+  gap: 6px;
+  padding: 8px 0 14px;
+}
+.ck-files {
+  list-style: none;
+  margin: 10px 14px 0;
+  padding: 0;
+  font-size: 12.5px;
+}
+.ck-view {
+  margin: 6px 14px 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--accent-text);
+}
+.ck-view:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ck-files li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  min-width: 0;
+}
+.ck-files code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ck-change {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ck-change.added {
+  color: var(--accent-text);
+}
+.ck-change.deleted {
+  color: var(--danger);
+}
+.ck-said {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.appr.ck.flash {
+  animation: ck-flash 1.1s var(--out);
+}
+@keyframes ck-flash {
+  0%,
+  40% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 30%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .appr.ck.flash {
+    animation: none;
+  }
+}
+.ck-conflicts {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+.ck-conflicts > li + li {
+  margin-top: 10px;
+}
+.ck-sides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+.ck-side {
+  min-width: 0;
+}
+.ck-side-h {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.ck-diff {
+  margin: 0;
+  padding: 8px;
+  overflow-x: auto;
+  font-size: 12px;
+  background: var(--code);
+  border-radius: var(--r-sm);
+}
+.ck-auto {
+  font-variant-numeric: tabular-nums;
+}

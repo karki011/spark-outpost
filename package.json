@@ -1,0 +1,45 @@
+{
+  "name": "spark-outpost",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @spark-outpost/server --filter @spark-outpost/web dev",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:source && pnpm a11y:contrast --quiet && pnpm acp:coverage && pnpm test",
+    "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:source": "tsx scripts/check-source.ts",
+    "a11y:contrast": "tsx scripts/contrast-audit.ts",
+    "test": "vitest run --project unit",
+    "test:db": "vitest run --project db",
+    "test:live": "vitest run --project live",
+    "test:browser": "playwright test",
+    "db:setup": "bash infra/local/setup.sh",
+    "db:up": "bash infra/local/up.sh",
+    "db:stop": "bash infra/local/stop.sh",
+    "db:migrate": "pnpm --filter @spark-outpost/server db:migrate",
+    "tasks": "tsx scripts/tasks.ts",
+    "acp:coverage": "tsx scripts/acp-coverage.ts",
+    "bench:harness": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/bench-harness.ts"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.13.6",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.12.0",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.1",
+    "zod": "^4.6.5"
+  }
+}

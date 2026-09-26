@@ -1,0 +1,132 @@
+.composer-wrap {
+  padding: 0 16px 16px;
+}
+
+.composer-error {
+  max-width: 700px;
+  margin: 0 auto 8px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.composer {
+  position: relative;
+  max-width: 700px;
+  margin: 0 auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+  background: var(--panel);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s var(--out);
+}
+
+.composer:focus-within {
+  border-color: var(--muted);
+}
+
+:root[data-input='keyboard'] .composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.composer textarea {
+  display: block;
+  width: 100%;
+  resize: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 12px 14px 4px;
+}
+
+.comp-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px 8px;
+}
+
+.hint {
+  margin-left: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--faint);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.composer:focus-within .hint,
+.hint.shown {
+  opacity: 1;
+}
+
+.send {
+  flex-shrink: 0;
+  margin-left: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+  transition:
+    opacity 0.2s,
+    transform 0.2s var(--out),
+    background 0.2s;
+}
+
+.send:disabled {
+  opacity: 0.25;
+}
+
+.send:not(:disabled):hover {
+  transform: scale(1.06);
+}
+
+.send:not(:disabled):active {
+  transform: scale(0.92);
+}
+
+.send.busy {
+  position: relative;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.send.busy:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  transform: none;
+}
+.send.busy .stop-ring {
+  position: absolute;
+  inset: 0;
+  animation: stop-spin 1.1s linear infinite;
+}
+.send.busy .stop-ring circle {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 22 66;
+}
+@keyframes stop-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .send.busy .stop-ring {
+    animation: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .hint {
+    display: none;
+  }
+}

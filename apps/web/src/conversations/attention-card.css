@@ -1,0 +1,87 @@
+.attn-card {
+  margin: 0 2px 8px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--warn) 13%, transparent);
+}
+
+.attn-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  text-align: left;
+  transition: background 0.2s;
+}
+
+.attn-btn:hover,
+.attn-list button:hover {
+  background: color-mix(in srgb, var(--warn) 9%, transparent);
+}
+
+.attn-ava {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.attn-ava.stack > * + * {
+  margin-left: -9px;
+}
+
+.attn-ava .ask {
+  margin: 0 7px;
+}
+
+.attn-txt {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.attn-txt b,
+.attn-txt small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attn-txt b {
+  font-weight: 500;
+}
+
+.attn-txt small {
+  font-size: 12px;
+  color: var(--warn);
+}
+
+.attn-chev {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: rotate 0.2s var(--out);
+}
+
+.attn-chev.open {
+  rotate: 90deg;
+}
+
+.attn-list {
+  margin: 0;
+  padding: 0 4px 4px;
+  list-style: none;
+}
+
+.attn-list button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px;
+  border-radius: calc(var(--r-sm) - 2px);
+  font-size: 12.5px;
+  text-align: left;
+  transition: background 0.2s;
+}

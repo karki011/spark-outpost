@@ -1,0 +1,116 @@
+import type { ReactNode } from 'react';
+import { motion } from 'motion/react';
+import { reveal } from '../ui/transitions.tsx';
+import './tools.css';
+
+export interface Connector {
+  id: string;
+  name: string;
+  description: string;
+  icon: ReactNode;
+}
+
+function ToolIcon({ children }: { children: ReactNode }) {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+export const connectors: Connector[] = [
+  {
+    id: 'jira',
+    name: 'Jira',
+    description: 'Read and update tickets, and link them to chats.',
+    icon: (
+      <ToolIcon>
+        <path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" />
+        <path d="M10 9v6" />
+      </ToolIcon>
+    ),
+  },
+  {
+    id: 'github',
+    name: 'GitHub',
+    description: 'Open pull requests, read diffs, and check CI.',
+    icon: (
+      <ToolIcon>
+        <circle cx="6" cy="5" r="2" />
+        <circle cx="6" cy="19" r="2" />
+        <circle cx="18" cy="7" r="2" />
+        <path d="M6 7v10M18 9c0 5-7 3-7 8" />
+      </ToolIcon>
+    ),
+  },
+  {
+    id: 'linear',
+    name: 'Linear',
+    description: 'Pull issues into chats and move them through a cycle.',
+    icon: (
+      <ToolIcon>
+        <circle cx="12" cy="12" r="9" />
+        <path d="m8 12 3 3 5-6" />
+      </ToolIcon>
+    ),
+  },
+  {
+    id: 'slack',
+    name: 'Slack',
+    description: 'Read threads you share and post updates back.',
+    icon: (
+      <ToolIcon>
+        <path d="M5 9h14M5 15h14M10 4 8 20M16 4l-2 16" />
+      </ToolIcon>
+    ),
+  },
+];
+
+export function ConnectorGrid() {
+  return (
+    <ul className="cgrid">
+      {connectors.map((connector, index) => (
+        <motion.li
+          key={connector.id}
+          className="ccard"
+          initial={{ opacity: 0, y: 14, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ ...reveal, delay: index * 0.07 }}
+          whileHover={{ y: -3 }}
+        >
+          <div className="top">
+            <span className="plogo">{connector.icon}</span>
+            <b>{connector.name}</b>
+          </div>
+          <p>{connector.description}</p>
+          <div className="row2">
+            <span className="soon">Coming soon</span>
+          </div>
+        </motion.li>
+      ))}
+    </ul>
+  );
+}
+
+export function ToolsStep() {
+  return (
+    <>
+      <h2 id="onbTitle">Bring in your tools</h2>
+      <p className="lede">
+        Connectors will let Spark read tickets, pull requests, and threads when you ask it to. They
+        aren't ready yet, so there's nothing to connect today. Here's what's coming.
+      </p>
+      <ConnectorGrid />
+    </>
+  );
+}

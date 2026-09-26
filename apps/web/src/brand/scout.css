@@ -1,0 +1,160 @@
+.scout {
+  overflow: visible;
+  --sc-a: var(--accent);
+  --sc-b: var(--warn);
+  --sc-eye: var(--scout-eye);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.scout .sc-hop,
+.scout .sc-body {
+  transform-box: view-box;
+}
+.scout .sc-body {
+  transform-origin: 32px 58px;
+  animation: sc-breathe 3.4s ease-in-out infinite;
+}
+@keyframes sc-breathe {
+  50% {
+    transform: scale(1.03, 0.97);
+  }
+}
+.scout .sc-eye {
+  fill: var(--sc-eye);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sc-blink 4.8s infinite;
+  transition: opacity 0.2s;
+}
+.scout .sc-eye:nth-of-type(2) {
+  animation-delay: 0.04s;
+}
+@keyframes sc-blink {
+  0%,
+  91%,
+  97%,
+  100% {
+    transform: scaleY(1);
+  }
+  94% {
+    transform: scaleY(0.1);
+  }
+}
+.scout .sc-look {
+  transition: transform 0.2s var(--out);
+}
+.scout .sc-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sc-twinkle 3s ease-in-out infinite;
+}
+@keyframes sc-twinkle {
+  50% {
+    transform: rotate(45deg) scale(0.78);
+    opacity: 0.8;
+  }
+}
+.scout .sc-ant {
+  transform-box: view-box;
+  transform-origin: 38px 19px;
+}
+.scout .sc-happy,
+.scout .sc-sleep {
+  fill: none;
+  stroke: var(--sc-eye);
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.scout .sc-cheeks {
+  fill: var(--sc-b);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.scout.working .sc-spark {
+  animation: sc-spin 0.9s linear infinite;
+  filter: drop-shadow(0 0 3px var(--sc-b));
+}
+@keyframes sc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.scout.working .sc-look {
+  animation: sc-scan 2.2s ease-in-out infinite;
+}
+@keyframes sc-scan {
+  0%,
+  100% {
+    transform: translate(-1.8px, -1px);
+  }
+  50% {
+    transform: translate(1.8px, -1px);
+  }
+}
+.scout.alert .sc-ant {
+  animation: sc-wiggle 0.45s ease-in-out infinite;
+}
+@keyframes sc-wiggle {
+  50% {
+    transform: rotate(-12deg);
+  }
+}
+.scout.alert .sc-spark {
+  animation: sc-ping 0.9s ease-in-out infinite;
+}
+@keyframes sc-ping {
+  50% {
+    transform: scale(1.4);
+  }
+}
+.scout.alert .sc-eye {
+  animation: none;
+  transform: scaleY(1.12);
+}
+.scout.happy .sc-eye,
+.scout.sleep .sc-eye {
+  opacity: 0;
+}
+.scout.happy .sc-happy,
+.scout.sleep .sc-sleep {
+  opacity: 1;
+}
+.scout.happy .sc-cheeks {
+  opacity: 0.55;
+}
+.scout.happy .sc-hop {
+  animation: sc-hop 0.55s var(--spring) 2;
+}
+@keyframes sc-hop {
+  40% {
+    transform: translateY(-6px);
+  }
+}
+.scout.sad .sc-eye {
+  animation: none;
+  transform: translateY(2px) scaleY(0.62);
+}
+.scout.sad .sc-spark {
+  animation: none;
+  opacity: 0.35;
+}
+.scout.sad .sc-ant {
+  transform: rotate(18deg);
+}
+.scout.sleep .sc-spark {
+  animation: none;
+  opacity: 0.4;
+}
+.scout.poke .sc-body {
+  animation: sc-squish 0.5s var(--spring);
+}
+@keyframes sc-squish {
+  30% {
+    transform: scale(1.14, 0.84);
+  }
+  60% {
+    transform: scale(0.94, 1.07);
+  }
+}

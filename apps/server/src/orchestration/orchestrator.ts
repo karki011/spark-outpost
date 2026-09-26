@@ -1,0 +1,445 @@
+import {
+  CHECKPOINT_OPTION,
+  ORCHESTRATION_PARALLEL_LIMIT,
+  type AgentPick,
+} from '@spark-outpost/contracts';
+import { adviceBody } from '../advisor/advice-body.ts';
+import { intakeRequest, recordIntake, type IntakeResult } from '../advisor/intake-recorder.ts';
+import { insertAdvice, loadIntakeContext, noteIntakeDepth } from '../persistence/advice.ts';
+import { newId } from '../persistence/ids.ts';
+import type { Lease } from '../persistence/jobs.ts';
+import { insertOrchestration } from '../persistence/orchestrations.ts';
+import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
+import { taskForWorkingRun } from '../persistence/tasks.ts';
+import { revertRun, runChanges } from '../projects/run-changes.ts';
+import { isGitWorkTree } from '../projects/snapshot.ts';
+import { startControl, type Append } from '../workflow/agent-turn.ts';
+import { APPROVAL_TIMEOUT_MESSAGE } from '../workflow/approval-gate.ts';
+import { closeMessage } from '../workflow/execute-run.ts';
+import { runEvents } from '../workflow/run-events.ts';
+import { loadRunInput, type RunInput } from '../workflow/run-input.ts';
+import { activeTime, exceededLimit, extendLimits, usedAndAllowed } from './budget.ts';
+import {
+  acceptCard,
+  askCard,
+  budgetCard,
+  CheckpointTimeout,
+  clarifiedRequest,
+  agentQuestion,
+  clarifyCard,
+  needsInputCard,
+  clarifyDepths,
+  depthFromClarify,
+  planCard,
+  retryCard,
+  type CheckpointCard,
+} from './checkpoint.ts';
+import { asksToKeep, autoContinueOption } from './checkpoint-policy.ts';
+import { namedFiles } from './context.ts';
+import { chooseDepth, refineDepth, ruleDepth, trustedRisk } from './depth.ts';
+import { finalText } from './final-message.ts';
+import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
+import { cleanupCopies, runGroup } from './group.ts';
+import { judge } from './judge.ts';
+import { sequentialReason } from './parallel.ts';
+import { runMember } from './members.ts';
+import { markPlanStep, markPlanSteps, statusAfterJudging } from './plan-progress.ts';
+import { escalate, ruleCriticPick, type RouteContext } from './routing.ts';
+import { Slots } from './slots.ts';
+import {
+  baseLimits,
+  publish,
+  routeKey,
+  save,
+  type OrchestratorDeps,
+  type Session,
+} from './session.ts';
+import { spentUsd, waitedMs } from '../persistence/orchestrations.ts';
+import { initialFlow, nextStep, type FlowAction, type FlowEvent } from './transitions.ts';
+
+function jevTimeout(deps: OrchestratorDeps): number {
+  const own = deps.intake?.deps.timeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS;
+  return Math.min(own, deps.jevTimeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS);
+}
+
+async function decideIntake(
+  deps: OrchestratorDeps,
+  input: RunInput,
+  append: Append,
+): Promise<IntakeResult> {
+  if (deps.intake) {
+    return recordIntake({ ...deps.intake.deps, timeoutMs: jevTimeout(deps) }, input, append);
+  }
+  const context = await loadIntakeContext(deps.db, input.workspaceId, input.identity.threadId);
+  const body = adviceBody(intakeRequest(input, context), { status: 'not_connected' });
+  await insertAdvice(deps.db, input.identity.runId, body);
+  return { body, context, outcome: { status: 'not_connected' } };
+}
+
+function routeContext(
+  input: RunInput,
+  intake: IntakeResult,
+  risk: RouteContext['risk'],
+): RouteContext {
+  return {
+    routing: intake.context.routing,
+    chat: {
+      provider: input.provider,
+      model: input.settings.model,
+      modelLabel: input.settings.modelLabel,
+      effort: input.settings.effort,
+    },
+    candidates: intake.context.candidates,
+    risk,
+    level: input.level,
+  };
+}
+
+async function ensureTask(s: Session): Promise<void> {
+  if (s.taskId || s.flow.depth === 'direct') return;
+  const joined = await taskForWorkingRun(s.deps.db, s.lease.runId, s.input.userRequest);
+  s.taskId = joined.task.taskId;
+  await s.append(runEvents.activity('task', 'task', { taskId: s.taskId, opened: joined.opened }));
+}
+
+function lastPick(s: Session): AgentPick | null {
+  const builder = s.routes.get(routeKey('builder', s.flow.stepIndex));
+  return builder?.pick ?? null;
+}
+
+async function cardFor(
+  s: Session,
+  action: Extract<FlowAction, { type: 'ask' }>,
+): Promise<CheckpointCard> {
+  if (action.kind === 'clarify') {
+    const response = s.intake.outcome.status === 'answered' ? s.intake.outcome.response : null;
+    return clarifyCard(clarifyDepths(response, s.flow.depth), action.reason);
+  }
+  if (action.kind === 'plan') return planCard(s.plan, s.planVersion, action.reason);
+  if (action.kind === 'needs_input') {
+    const last = s.results.at(-1);
+    return needsInputCard(last?.name ?? 'The agent', action.blocked ?? false, last?.text ?? '');
+  }
+  if (action.kind === 'retry') {
+    const previous = s.routes.get(routeKey('builder', s.flow.stepIndex));
+    const to =
+      action.suggestion === 'review'
+        ? ruleCriticPick(s.route)
+        : previous
+          ? escalate(s.route, previous).pick
+          : null;
+    return retryCard(action.suggestion, lastPick(s), to, action.reason);
+  }
+  if (action.kind === 'accept') {
+    const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
+    return acceptCard(changes.files, action.reason);
+  }
+  const usage = await budgetUsage(s);
+  const limit = s.budgetHit ?? 'time';
+  const { used, allowed } = usedAndAllowed(limit, usage, s.limits);
+  return budgetCard(limit, used, allowed, action.reason);
+}
+
+async function budgetUsage(s: Session) {
+  const waited = await waitedMs(s.deps.db, s.lease.runId);
+  return {
+    activeMs: activeTime(Date.now() - s.startedAt, waited),
+    toolCalls: s.toolCalls,
+    costUsd: await spentUsd(s.deps.db, s.lease.runId),
+  };
+}
+
+async function checkBudget(s: Session): Promise<void> {
+  if (s.budgetHit || s.members.size === 0) return;
+  const usage = await budgetUsage(s);
+  await save(s, { activeMs: usage.activeMs });
+  const limit = exceededLimit(usage, s.limits);
+  if (!limit) return;
+  s.budgetHit = limit;
+  await save(s, { exceeded: limit });
+  for (const abort of s.members.values()) abort();
+}
+
+function withAutoOption(
+  s: Session,
+  action: Extract<FlowAction, { type: 'ask' }>,
+  card: CheckpointCard,
+): CheckpointCard {
+  const text = action.kind === 'needs_input' ? (s.results.at(-1)?.text ?? '') : '';
+  const autoOption = autoContinueOption({
+    kind: action.kind,
+    fromJev: action.fromJev,
+    agentAsked: agentQuestion(text) !== null,
+  });
+  return { ...card, payload: { ...card.payload, autoOption } };
+}
+
+async function ask(s: Session, action: Extract<FlowAction, { type: 'ask' }>): Promise<FlowEvent> {
+  const card = withAutoOption(s, action, await cardFor(s, action));
+  const answer = await askCard(s, card);
+  if (answer.type === 'stopped') return { type: 'stopped' };
+  if (answer.type === 'timeout') throw new CheckpointTimeout();
+  if (action.kind === 'clarify') {
+    const rules = ruleDepth(s.input.mode ?? 'chat', s.flow.risk);
+    const depth = depthFromClarify(card, answer.optionId, rules);
+    if (answer.optionId === CHECKPOINT_OPTION.answer && answer.note) clarify(s, answer.note);
+    if (depth) await save(s, { depthSource: depthSourceOf(answer.optionId) });
+    return { type: 'clarified', depth };
+  }
+  if (action.kind === 'budget' && answer.optionId === 'continue') {
+    s.limits = extendLimits(s.limits, await budgetUsage(s), s.baseLimits);
+    s.budgetHit = null;
+    await save(s, {
+      activeLimitMs: s.limits.activeLimitMs,
+      toolCallLimit: s.limits.toolCallLimit,
+      costCapUsd: s.limits.costCapUsd,
+      exceeded: null,
+    });
+  }
+  return { type: 'answered', kind: action.kind, optionId: answer.optionId, note: answer.note };
+}
+
+function depthSourceOf(optionId: string): 'rules' | 'user' {
+  const byRules =
+    optionId === CHECKPOINT_OPTION.clarifyRules || optionId === CHECKPOINT_OPTION.answer;
+  return byRules ? 'rules' : 'user';
+}
+
+function clarify(s: Session, answer: string): void {
+  const request = clarifiedRequest(s.input.userRequest, answer);
+  s.input = { ...s.input, userRequest: request, prompt: clarifiedRequest(s.input.prompt, answer) };
+}
+
+async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null> {
+  switch (action.type) {
+    case 'ask':
+      return ask(s, action);
+    case 'spawn': {
+      if (action.role !== 'scout') await ensureTask(s);
+      const { result, steps, groups, large, parallel, verdict } = await runMember(s, action);
+      if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
+      await publish(s);
+      if (result.error === APPROVAL_TIMEOUT_MESSAGE) throw new CheckpointTimeout();
+      if (s.budgetHit && s.control.reason() === null)
+        return { type: 'budget_exceeded', limit: s.budgetHit, ticked: result.ticked };
+      return {
+        type: 'agent_done',
+        role: action.role,
+        outcome: result.outcome,
+        error: result.error,
+        ...(steps ? { steps } : {}),
+        ...(groups && groups.length > 0 ? { groups } : {}),
+        ...(large && large.length > 0 ? { large } : {}),
+        ...(parallel ? { parallel } : {}),
+        ...(result.ticked.length > 0 ? { ticked: result.ticked } : {}),
+        ...(verdict ? { verdict } : {}),
+      };
+    }
+    case 'spawn_group':
+      await ensureTask(s);
+      return runGroup(s, action.stepIndexes);
+    case 'judge':
+      return judge(s, action.role);
+    case 'wrap_up': {
+      const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true).catch(
+        () => null,
+      );
+      const files = changes?.files.length ?? 0;
+      return { type: 'wrapped', filesChanged: files, asksToKeep: asksToKeep(s.flow.level, files) };
+    }
+    case 'revert':
+      await revertRun(s.deps.db, s.input.workspaceId, s.lease.runId, true);
+      return { type: 'reverted' };
+    case 'finish':
+      await finish(s, action.status, action.reason);
+      return null;
+  }
+}
+
+async function finish(
+  s: Session,
+  status: 'succeeded' | 'failed' | 'cancelled',
+  reason: string | null,
+) {
+  const verdict = s.results.some((result) => result.role === 'critic') ? s.flow.verdict : null;
+  const text = finalText(s.results, verdict, s.findings, s.message !== null);
+  await publish(s, { phase: 'finished', error: status === 'failed' ? reason : null });
+  if (text) {
+    if (!s.message) {
+      s.message = { id: newId(), text: '' };
+      await s.append(runEvents.textStart(s.message.id));
+    }
+    await s.append(runEvents.textContent(s.message.id, text));
+    s.message.text += text;
+  }
+  if (s.message) {
+    await closeMessage(s.append, { messageId: s.message.id, text: s.message.text }, true);
+  }
+  const identity = s.input.identity;
+  if (status === 'succeeded') {
+    await s.append(runEvents.finished(identity), { transition: { status: 'succeeded' } });
+  } else if (status === 'cancelled') {
+    await s.append(runEvents.cancelled(identity), { transition: { status: 'cancelled' } });
+  } else {
+    const message = reason ?? 'The orchestration stopped.';
+    const code = s.budgetHit ? 'budget_exceeded' : 'orchestration_failed';
+    await s.append(runEvents.error(message, code), {
+      transition: { status: 'failed', error: message },
+    });
+  }
+}
+
+export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise<void> {
+  const input = await loadRunInput(deps.db, lease.runId);
+  const append: Append = (event, options) => appendRunEvent(deps.db, lease, event, options);
+  const control = startControl(deps, lease);
+  let budgetTimer: NodeJS.Timeout | null = null;
+  let session: Session | null = null;
+  try {
+    await append(runEvents.started(input.identity), { transition: { status: 'running' } });
+    const intake = await decideIntake(deps, input, append);
+    const mode = input.mode ?? 'chat';
+    const risk = trustedRisk(mode, intake.body.jev);
+    const intakeGate = intake.body.gate?.decision ?? null;
+    const depth = refineDepth(
+      chooseDepth(mode, risk, intake.body.jev, intakeGate),
+      risk,
+      namedFiles([input.userRequest]).length,
+      intake.body.jev,
+    );
+    if (depth.reason) {
+      await noteIntakeDepth(deps.db, lease.runId, { depth: depth.depth, reason: depth.reason });
+    }
+    const limits = baseLimits(deps);
+    const root = input.projectRoots[0];
+    const worktrees = mode === 'do' && root !== undefined && (await isGitWorkTree(root));
+    await insertOrchestration(deps.db, {
+      runId: lease.runId,
+      depth: depth.depth,
+      depthSource: depth.source,
+      risk,
+      routing: intake.context.routing,
+      activeLimitMs: limits.activeLimitMs,
+      toolCallLimit: limits.toolCallLimit,
+      costCapUsd: limits.costCapUsd,
+    });
+    const s: Session = {
+      deps,
+      lease,
+      input,
+      append,
+      control,
+      jev:
+        deps.intake && intake.context.jevModel
+          ? {
+              deps: { ...deps.intake.deps, timeoutMs: jevTimeout(deps) },
+              model: intake.context.jevModel,
+            }
+          : null,
+      route: routeContext(input, intake, risk),
+      intake,
+      flow: initialFlow(depth.depth, risk, input.level, worktrees),
+      routes: new Map(),
+      planned: new Map(),
+      plannedCalled: false,
+      plan: [],
+      planVersion: null,
+      taskId: null,
+      inPlaceUsed: false,
+      snapshotTaken: false,
+      message: null,
+      results: [],
+      findings: [],
+      toolCalls: 0,
+      limits,
+      baseLimits: limits,
+      startedAt: Date.now(),
+      budgetHit: null,
+      members: new Map(),
+      checkpoints: 0,
+      names: new Map(),
+      research: [],
+      architectNotes: null,
+      slots: new Slots(deps.parallelLimit ?? ORCHESTRATION_PARALLEL_LIMIT),
+      groups: 0,
+      parallelNoted: false,
+    };
+    session = s;
+    budgetTimer = setInterval(
+      () => void checkBudget(s).catch(() => undefined),
+      deps.budgetPollMs ?? 1000,
+    );
+    await drive(
+      s,
+      intakeGate === 'ask' && mode === 'do' ? 'ask' : intakeGate === 'act' ? 'act' : 'fallback',
+    );
+  } catch (error) {
+    if (error instanceof LeaseLostError || control.reason() === 'lease_lost') return;
+    await failSafely(append, error);
+  } finally {
+    if (budgetTimer) clearInterval(budgetTimer);
+    if (session) await cleanupCopies(session).catch(() => undefined);
+    control.dispose();
+  }
+}
+
+async function drive(s: Session, intake: 'act' | 'ask' | 'fallback'): Promise<void> {
+  let result = nextStep(s.flow, { type: 'start', intake });
+  for (;;) {
+    s.flow = result.state;
+    await noteSequential(s);
+    if (result.action.type === 'finish') {
+      await perform(s, result.action);
+      return;
+    }
+    await save(s);
+    let event: FlowEvent | null;
+    try {
+      event =
+        s.control.signal.aborted && s.control.reason() === 'cancelled'
+          ? { type: 'stopped' }
+          : await perform(s, result.action);
+    } catch (error) {
+      if (!(error instanceof CheckpointTimeout)) throw error;
+      await finish(s, 'failed', APPROVAL_TIMEOUT_MESSAGE);
+      return;
+    }
+    if (!event) return;
+    if (s.control.reason() === 'cancelled' && event.type !== 'stopped') event = { type: 'stopped' };
+    result = nextStep(s.flow, event);
+    await recordStepOutcome(s, event, result.action);
+  }
+}
+
+async function noteSequential(s: Session): Promise<void> {
+  if (s.flow.worktrees || s.flow.groups.length === 0 || s.parallelNoted) return;
+  const note = sequentialReason(s.flow.groups, s.flow.steps);
+  if (!note) return;
+  s.parallelNoted = true;
+  await save(s, { parallelNote: note });
+}
+
+async function recordStepOutcome(s: Session, event: FlowEvent, action: FlowAction) {
+  const last = s.results.at(-1);
+  const status = statusAfterJudging(event, action, last);
+  if (!last || !status) return;
+  if (status === 'completed') {
+    await markPlanSteps(s, last.steps, status, last.runId);
+    return;
+  }
+  const open = last.steps.find((index) => !last.ticked.includes(index)) ?? last.stepIndex;
+  await markPlanStep(s, open, status, last.runId);
+}
+
+async function failSafely(append: Append, error: unknown): Promise<void> {
+  console.error('Orchestration failed', error);
+  const message =
+    'The orchestration stopped with an unexpected error. Nothing after the last completed step was changed.';
+  try {
+    await append(runEvents.error(message, 'orchestration_failed'), {
+      transition: { status: 'failed', error: message },
+    });
+  } catch (appendError) {
+    if (!(appendError instanceof LeaseLostError)) throw appendError;
+  }
+}

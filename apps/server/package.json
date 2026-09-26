@@ -1,0 +1,36 @@
+{
+  "name": "@spark-outpost/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently --names api,worker --prefix-colors cyan,magenta \"pnpm dev:api\" \"pnpm dev:worker\"",
+    "dev:api": "node --watch --env-file-if-exists=../../.local/credentials.env --import tsx src/api/main.ts",
+    "dev:worker": "node --watch --env-file-if-exists=../../.local/credentials.env --import tsx src/workflow/main.ts",
+    "db:migrate": "node --env-file-if-exists=../../.local/credentials.env --import tsx src/persistence/migrate-cli.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@agentclientprotocol/claude-agent-acp": "0.81.2",
+    "@agentclientprotocol/codex-acp": "1.13.1",
+    "@agentclientprotocol/sdk": "1.5.0",
+    "@napi-rs/keyring": "^2.1.0",
+    "@spark-outpost/contracts": "workspace:*",
+    "diff": "^9.0.0",
+    "express": "^5.2.1",
+    "node-pty": "1.1.0",
+    "pg": "^8.23.0",
+    "uuid": "^14.0.2",
+    "ws": "^8.21.3",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
+    "@types/ws": "^8.18.1",
+    "concurrently": "^10.0.5",
+    "supertest": "^7.3.0",
+    "tsx": "^4.23.15"
+  }
+}

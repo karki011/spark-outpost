@@ -1,0 +1,199 @@
+.dv {
+  --dv-add: color-mix(in srgb, var(--success) 11%, transparent);
+  --dv-add-edge: color-mix(in srgb, var(--success) 14%, transparent);
+  --dv-add-word: color-mix(in srgb, var(--success) 30%, transparent);
+  --dv-remove: color-mix(in srgb, var(--danger) 10%, transparent);
+  --dv-remove-edge: color-mix(in srgb, var(--danger) 13%, transparent);
+  --dv-remove-word: color-mix(in srgb, var(--danger) 28%, transparent);
+  min-width: 0;
+}
+
+.dv-badge {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dv-wrap {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.dv-wrap:hover {
+  color: var(--text);
+  background: var(--raise);
+}
+
+.dv-wrap[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--raise);
+}
+
+.dv-body {
+  margin: 6px 14px 0;
+  max-height: 420px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--r-sm);
+  background: var(--code);
+}
+
+.dv-body:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dv-body table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font:
+    12px/1.55 'Geist Mono',
+    ui-monospace,
+    monospace;
+  color: var(--code-foreground);
+}
+
+.dv-body.wrap table {
+  width: 100%;
+}
+
+.dv-row td {
+  vertical-align: top;
+}
+
+.dv-n {
+  position: sticky;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  padding: 0 6px;
+  text-align: right;
+  color: var(--faint);
+  background: var(--code);
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+}
+
+.dv-n:first-child {
+  left: 0;
+}
+
+.dv-n + .dv-n {
+  left: 40px;
+  box-shadow: inset -1px 0 0 var(--line);
+}
+
+.dv-m {
+  width: 18px;
+  padding: 0 2px 0 8px;
+  color: var(--faint);
+  user-select: none;
+}
+
+.dv-c {
+  width: 100%;
+  padding: 0 14px 0 0;
+  white-space: pre;
+}
+
+.dv-body.wrap .dv-c {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.dv-row.add .dv-c,
+.dv-row.add .dv-m {
+  background: var(--dv-add);
+}
+
+.dv-row.add .dv-n {
+  background-image: linear-gradient(var(--dv-add-edge), var(--dv-add-edge));
+}
+
+.dv-row.add .dv-m {
+  color: var(--success);
+}
+
+.dv-row.remove .dv-c,
+.dv-row.remove .dv-m {
+  background: var(--dv-remove);
+}
+
+.dv-row.remove .dv-n {
+  background-image: linear-gradient(var(--dv-remove-edge), var(--dv-remove-edge));
+}
+
+.dv-row.remove .dv-m {
+  color: var(--danger);
+}
+
+.dv-row.add .dv-w {
+  border-radius: 3px;
+  background: var(--dv-add-word);
+}
+
+.dv-row.remove .dv-w {
+  border-radius: 3px;
+  background: var(--dv-remove-word);
+}
+
+.dv-row:first-child td {
+  padding-top: 6px;
+}
+
+.dv-row:last-child td {
+  padding-bottom: 6px;
+}
+
+.dv-fold td {
+  padding: 0;
+  background: color-mix(in srgb, var(--raise) 70%, transparent);
+}
+
+.dv-fold button {
+  position: sticky;
+  left: 0;
+  padding: 3px 12px;
+  font:
+    12px/1.5 'Geist',
+    system-ui,
+    sans-serif;
+  text-align: left;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+
+.dv-fold button:hover,
+.dv-fold button:focus-visible {
+  color: var(--text);
+}
+
+@media (max-width: 640px) {
+  .dv-body {
+    max-height: 360px;
+  }
+
+  .dv-n {
+    width: 32px;
+    min-width: 32px;
+    max-width: 32px;
+    padding: 0 4px;
+  }
+
+  .dv-n + .dv-n {
+    left: 32px;
+  }
+}

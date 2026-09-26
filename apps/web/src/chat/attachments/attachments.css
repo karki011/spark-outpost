@@ -1,0 +1,271 @@
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 10px 0;
+}
+.chips:empty {
+  display: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 4px 4px 4px 10px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font-size: 13px;
+  color: var(--text);
+}
+.chip small {
+  color: var(--faint);
+  white-space: nowrap;
+}
+.chip svg {
+  color: var(--muted);
+}
+
+.att-chip {
+  min-width: 0;
+  padding-left: 8px;
+}
+.att-name {
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.att-chip.failed {
+  background: var(--danger-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 35%, transparent);
+}
+.att-chip.failed small,
+.att-chip.failed > svg {
+  color: var(--danger);
+}
+.att-chip.failed small {
+  white-space: normal;
+}
+
+.chip-x {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  transition: background 0.15s;
+}
+.chip-x:hover {
+  background: var(--line);
+  color: var(--text);
+}
+.chip-x .xic {
+  width: 11px;
+  height: 11px;
+}
+.chip-x .xic,
+.lightbox-x .xic {
+  color: inherit;
+}
+
+.chip-slot {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  transform-origin: left center;
+}
+
+.att-tile {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.att-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+.att-tile .chip-x {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--panel);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 1px 3px color-mix(in srgb, var(--text) 14%, transparent);
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+.att-tile:hover .chip-x,
+.att-tile .chip-x:focus-visible,
+.att-tile.uploading .chip-x {
+  opacity: 1;
+}
+@media (hover: none) {
+  .att-tile .chip-x {
+    opacity: 1;
+  }
+}
+.att-veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+}
+
+.att-ring {
+  transform: rotate(-90deg);
+}
+.att-ring circle {
+  fill: none;
+  stroke-width: 2.4;
+}
+.att-ring-track {
+  stroke: var(--line);
+}
+.att-ring-fill {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.2s var(--out);
+}
+
+.composer-notice:empty {
+  display: none;
+}
+.composer-notice {
+  margin: 0;
+  padding: 8px 14px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.msg-atts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 82%;
+}
+.msg-att-img {
+  width: 120px;
+  height: 90px;
+  padding: 0;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--raise);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.msg-att-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.msg-att-file {
+  padding-right: 10px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.msg-att-file:hover {
+  background: var(--line);
+}
+
+.lightbox {
+  max-width: min(92vw, 1200px);
+  max-height: 92vh;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+  color: var(--text);
+  overflow: visible;
+}
+.lightbox::backdrop {
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(4px);
+}
+.lightbox[open] {
+  animation: rise 0.2s var(--out);
+}
+.lightbox figure {
+  margin: 0;
+  min-width: 240px;
+}
+.lightbox img {
+  display: block;
+  margin: 0 auto;
+  max-width: min(92vw, 1200px);
+  max-height: calc(92vh - 44px);
+  border-radius: var(--r) var(--r) 0 0;
+  object-fit: contain;
+}
+.lightbox figcaption {
+  padding: 10px 52px 10px 14px;
+  font-size: 13px;
+}
+.lightbox figcaption a {
+  color: var(--muted);
+}
+.lightbox-x {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--panel);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  pointer-events: none;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  backdrop-filter: blur(3px);
+}
+.drop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  border: 2px dashed color-mix(in srgb, var(--accent) 60%, var(--line));
+  border-radius: var(--r);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  text-align: center;
+}
+.drop-card strong {
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+.drop-card span {
+  font-size: 13px;
+  color: var(--muted);
+}

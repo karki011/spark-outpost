@@ -1,0 +1,191 @@
+import { agentLabel, nextCrewName, type AgentPick, type AgentRole } from '@spark-outpost/contracts';
+import { insertDecision, usedNames } from '../persistence/orchestrations.ts';
+import { namedFiles } from './context.ts';
+import { plansFirst, reviewsAfter } from './depth.ts';
+import { callJev, type JevCall } from './jev-calls.ts';
+import { buildRouteQuestions, parseRouteAnswers, type RouteSlot } from './jev-questions.ts';
+import { planShape, routeArchitect } from './architect-route.ts';
+import {
+  criticProvider,
+  escalate,
+  intakePickFor,
+  pickFromRoute,
+  routeCritic,
+  routeWorker,
+  type JevPick,
+  type MemberRoute,
+} from './routing.ts';
+import { routeKey, type Session } from './session.ts';
+import { builderSpans } from './spans.ts';
+import type { Spawn } from './transitions.ts';
+
+const ARCHITECT_WORK = 'Read the code and write the step-by-step plan; no edits.';
+
+function slotFor(
+  s: Session,
+  role: AgentRole,
+  stepIndex: number,
+  span: readonly number[] = [stepIndex],
+): RouteSlot | null {
+  const provider = role === 'critic' ? criticProvider(s.route) : s.route.chat.provider;
+  const candidate = s.route.candidates.find((option) => option.provider === provider);
+  if (!candidate) return null;
+  const step =
+    role === 'builder'
+      ? span.map((index) => s.flow.steps[index] ?? '').join('\n')
+      : role === 'architect'
+        ? ARCHITECT_WORK
+        : null;
+  return { key: routeKey(role, stepIndex).replace(':', '_'), role, step: step || null, candidate };
+}
+
+async function askRoutes(s: Session, slots: readonly RouteSlot[]): Promise<JevCall | null> {
+  if (slots.length === 0 || !s.jev) return null;
+  const call = await callJev(
+    s.jev,
+    () => buildRouteQuestions(s.input.userRequest, slots),
+    s.control.signal,
+  );
+  if (call.status !== 'answered' || !call.response) return call;
+  try {
+    const picks = parseRouteAnswers(slots, call.response);
+    for (const slot of slots) {
+      const pick = picks.get(slot.key);
+      const [role, step] = slot.key.split('_') as [AgentRole, string];
+      s.planned.set(
+        routeKey(role, Number(step)),
+        pick ? pickFromRoute(slot.candidate.provider, slot.candidate, pick) : null,
+      );
+    }
+    return call;
+  } catch (error) {
+    return { ...call, status: 'failed', error: (error as Error).message };
+  }
+}
+
+async function planRoutes(s: Session): Promise<JevCall | null> {
+  if (s.plannedCalled) return null;
+  s.plannedCalled = true;
+  const groups = s.flow.worktrees ? s.flow.groups : [];
+  const slots = builderSpans(s.flow.steps, groups).flatMap(
+    (span) => slotFor(s, 'builder', span[0]!, span) ?? [],
+  );
+  if (reviewsAfter(s.flow.depth)) {
+    const critic = slotFor(s, 'critic', 0);
+    if (critic) slots.push(critic);
+  }
+  return askRoutes(s, slots);
+}
+
+async function jevPickFor(
+  s: Session,
+  spawn: Spawn,
+): Promise<{ jev: JevPick | null; call: JevCall | null }> {
+  const key = routeKey(spawn.role, spawn.stepIndex);
+  if (
+    spawn.role === 'scout' ||
+    (spawn.role === 'builder' && !plansFirst(s.flow.depth) && spawn.stepIndex === 0)
+  ) {
+    const response = s.intake.outcome.status === 'answered' ? s.intake.outcome.response : null;
+    return { jev: intakePickFor(s.route, s.route.chat.provider, response), call: null };
+  }
+  let call: JevCall | null = null;
+  if (spawn.role === 'builder' && plansFirst(s.flow.depth)) call = await planRoutes(s);
+  if (spawn.role === 'critic' && !s.planned.has(key)) {
+    const slot = slotFor(s, 'critic', 0);
+    call = slot ? await askRoutes(s, [slot]) : null;
+  }
+  return { jev: s.planned.get(key) ?? null, call };
+}
+
+export interface ResolvedRoute {
+  route: MemberRoute;
+  summary: string;
+  call: JevCall | null;
+  fresh: boolean;
+  rulePick?: AgentPick;
+}
+
+async function architectRoute(s: Session): Promise<ResolvedRoute> {
+  const slot = slotFor(s, 'architect', 0);
+  const call = slot ? await askRoutes(s, [slot]) : null;
+  const jev = s.planned.get(routeKey('architect', 0)) ?? null;
+  const shape = planShape(namedFiles([s.input.userRequest]).length, s.intake.body.jev);
+  const route = routeArchitect(s.route, shape, jev);
+  return { route, summary: route.rule, call, fresh: true, rulePick: route.rulePick };
+}
+
+export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRoute> {
+  const key = routeKey(spawn.role, spawn.stepIndex);
+  const previous = s.routes.get(key);
+  if (previous && spawn.escalate) {
+    const route = escalate(s.route, previous);
+    return { route, summary: 'one tier up', call: null, fresh: false };
+  }
+  if (previous && spawn.reason !== 'first') {
+    return { route: previous, summary: spawn.reason, call: null, fresh: false };
+  }
+  if (spawn.role === 'architect') return architectRoute(s);
+  const { jev, call } = await jevPickFor(s, spawn);
+  const route = spawn.role === 'critic' ? routeCritic(s.route, jev) : routeWorker(s.route, jev);
+  return { route, summary: route.routedBy, call, fresh: true };
+}
+
+export async function nameFor(s: Session, role: AgentRole, key: string): Promise<string> {
+  const known = s.names.get(key);
+  if (known) return known;
+  const stored = s.taskId ? await usedNames(s.deps.db, s.taskId, role) : [];
+  const own = [...s.names].filter(([owner]) => owner.startsWith(`${role}:`)).map(([, n]) => n);
+  const name = nextCrewName(role, [...stored, ...own]);
+  s.names.set(key, name);
+  return name;
+}
+
+export function labelFor(role: AgentRole, pick: AgentPick, name: string): string {
+  return agentLabel(role, pick.modelLabel ?? pick.model, pick.effort, name);
+}
+
+export async function recordRoute(
+  s: Session,
+  spawn: Spawn,
+  resolved: ResolvedRoute,
+  childRunId: string,
+  name: string,
+): Promise<void> {
+  const { route, call } = resolved;
+  const applied =
+    route.routedBy === 'jev' ? 'jev' : route.routedBy === 'pinned' ? 'pinned' : 'rules';
+  const label = labelFor(spawn.role, route.pick, name);
+  const wouldUse = route.autoWouldUse
+    ? ` · Auto would have used ${route.autoWouldUse.modelLabel ?? route.autoWouldUse.model} · ${route.autoWouldUse.effort}`
+    : '';
+  await insertDecision(s.deps.db, {
+    runId: s.lease.runId,
+    purpose: 'route',
+    childRunId,
+    role: spawn.role,
+    stepIndex: spawn.stepIndex,
+    jevStatus: call?.status ?? (s.jev ? 'not_asked' : 'not_connected'),
+    inputTokens: call?.usage?.inputTokens ?? null,
+    costUsd: call?.usage?.costUsd ?? null,
+    body: {
+      summary: `${label}${wouldUse}`,
+      applied,
+      gate: route.gate,
+      jevError: call?.error ?? null,
+      latencyMs: call?.latencyMs ?? null,
+      answer: {
+        pick: route.pick,
+        routedBy: route.routedBy,
+        autoWouldUse: route.autoWouldUse,
+        reason: spawn.reason,
+        escalated: spawn.escalate,
+        rule: resolved.summary,
+        ...(resolved.rulePick ? { rulePick: resolved.rulePick } : {}),
+      },
+      state: call?.asked?.state ?? null,
+      questions: call?.asked?.questions ?? null,
+      answers: call?.response?.answers ?? null,
+    },
+  });
+}

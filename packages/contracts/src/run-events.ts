@@ -1,0 +1,35 @@
+import { EventType, type Event as AgUiEvent } from '@ag-ui/core';
+import { EventSchema } from '@ag-ui/core/schemas';
+import { APPROVAL_DECIDED, APPROVAL_REQUESTED } from './approvals.ts';
+
+export { EventType };
+export type RunEvent = AgUiEvent;
+
+export interface StoredRunEvent {
+  seq: number;
+  event: RunEvent;
+}
+
+export function parseRunEvent(value: unknown): RunEvent | null {
+  const result = EventSchema.safeParse(value);
+  return result.success ? (result.data as RunEvent) : null;
+}
+
+export function isTerminalRunEvent(event: RunEvent): boolean {
+  return event.type === EventType.RUN_FINISHED || event.type === EventType.RUN_ERROR;
+}
+
+export const TASK_ACTIVITY_TYPES: readonly string[] = ['task', 'plan', 'link', 'advice'];
+
+export function isTaskActivity(event: RunEvent): boolean {
+  return (
+    event.type === EventType.ACTIVITY_SNAPSHOT && TASK_ACTIVITY_TYPES.includes(event.activityType)
+  );
+}
+
+export function isApprovalEvent(event: RunEvent): boolean {
+  return (
+    event.type === EventType.CUSTOM &&
+    (event.name === APPROVAL_REQUESTED || event.name === APPROVAL_DECIDED)
+  );
+}

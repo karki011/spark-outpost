@@ -1,0 +1,29 @@
+# Spark Outpost design kit
+
+## What's inside
+
+- `mockup/spark-outpost-mockup.html`: the full interactive prototype. It has onboarding, Home, Chats, Tickets, Settings, themes, the Blob Scout logo, and the provider mascots. Open it in any browser. It needs internet only for the Geist font; without it, it falls back to your system font.
+- `mockup/BLOBATAR-LICENSE.txt`: MIT license for blobatar 2.7.0, which is bundled into the mockup for the provider and user mascots.
+- `logo/`: Blob Scout logo files.
+  - `blob-scout-mark.svg`: full color
+  - `blob-scout-app-icon.svg`: 1024 × 1024 app icon
+  - `blob-scout-favicon.svg`: browser tab, with a thicker antenna for small sizes
+  - `blob-scout-mark-black.svg`, `blob-scout-mark-white.svg`: one color, with the eyes cut out
+  - `blob-scout-lockup-dark.svg`, `blob-scout-lockup-light.svg`: mark with the "spark outpost" wordmark
+  - `blob-scout-logo-guide.html`: the logo guide, with moods, colors, and usage rules
+- `ux/spark-outpost-ux-flow.md`: the complete UX flow and interaction spec.
+- `ACCESSIBILITY.md`: the WCAG 2.2 AA colour, typography, focus, target and motion rules, and how `pnpm a11y:contrast` checks them.
+- `accessibility-report.html`: per-theme contrast ratios before and after the AA pass, with swatches and pass/fail status.
+
+## Tips
+
+- The mockup saves your onboarding and theme in the browser. To see onboarding again, use Settings, then Profile, then Replay onboarding.
+- To see the error states, paste an API key containing "bad", or try Codex's local CLI (it fails the first time).
+- The lockup SVGs set the wordmark as live text in Bricolage Grotesque. Convert it to outlines in Figma or Illustrator before sharing widely.
+- The UX spec uses Mermaid diagrams. They render on GitHub and in most Markdown viewers.
+
+## Colors
+
+- Glacier `#2BB39A`
+- Spark `#F2B54A`
+- Eyes and icon background `#0C0F12`

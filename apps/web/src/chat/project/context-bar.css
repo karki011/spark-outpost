@@ -1,0 +1,202 @@
+.ctxbar-wrap {
+  position: relative;
+  max-width: 700px;
+  margin: 0 auto -12px;
+  padding: 0 12px;
+}
+
+.ctxbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px 6px 16px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: var(--r) var(--r) 0 0;
+  background: var(--raise);
+  font-size: 12.5px;
+}
+
+.ctx-repo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  color: var(--text);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.ctx-repo.unset {
+  color: var(--muted);
+}
+.ctx-repo:hover,
+.ctx-repo[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  color: var(--text);
+}
+.ctx-repo svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.ctx-repo .chev {
+  color: var(--faint);
+  transform: rotate(90deg);
+  transition: transform 0.2s var(--out);
+}
+.ctx-repo[aria-expanded='true'] .chev {
+  transform: rotate(-90deg);
+}
+.ctx-name {
+  min-width: 0;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.ctx-repo.unset .ctx-name {
+  font-weight: 400;
+}
+
+.ctx-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 4px 6px;
+  color: var(--muted);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+.ctx-branch svg {
+  flex-shrink: 0;
+  color: var(--faint);
+}
+.ctx-branch-name {
+  min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ctxbar-wrap + .composer {
+  z-index: 1;
+}
+
+.mpop.repopop {
+  left: 12px;
+  width: 340px;
+}
+.repopop .mopt > span:not(.mi) {
+  flex: 1;
+  min-width: 0;
+}
+.repopop .mopt[aria-pressed='true'] .tick {
+  opacity: 1;
+  transform: none;
+}
+.repo-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.repo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px 6px 10px;
+  border-radius: var(--r-sm);
+}
+.repo-row:hover,
+.repo-row:focus-within {
+  background: var(--raise);
+}
+.repo-row .mi {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.repo-row:hover .mi,
+.repo-row:focus-within .mi {
+  background: var(--panel);
+}
+.repo-text {
+  flex: 1;
+  min-width: 0;
+}
+.repo-text b {
+  display: block;
+  font-weight: 500;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.repo-text small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.repo-tag {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 12px;
+}
+.repo-act {
+  flex-shrink: 0;
+  padding: 3px 6px;
+  border-radius: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+.repo-row:hover .repo-act,
+.repo-act:focus-visible {
+  opacity: 1;
+}
+.repo-act:hover {
+  background: var(--line);
+  color: var(--text);
+}
+.repo-sep {
+  margin: 6px 4px;
+  border-top: 1px solid var(--line);
+}
+.repopop .repo-note {
+  margin-top: 6px;
+  padding: 8px 10px 4px;
+  border-top: 1px solid var(--line);
+}
+@media (hover: none) {
+  .repo-act {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .ctx-name {
+    max-width: 150px;
+  }
+  .ctx-branch-name {
+    max-width: 110px;
+  }
+}

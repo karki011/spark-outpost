@@ -1,0 +1,330 @@
+.mpicker,
+.ctxwrap,
+.plus-wrap {
+  position: static;
+}
+.mpicker {
+  margin-left: auto;
+  min-width: 0;
+}
+.mbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 5px 8px 5px 10px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  min-width: 0;
+  transition: background 0.15s;
+}
+.mbtn:hover,
+.mbtn[aria-expanded='true'] {
+  background: var(--raise);
+}
+.mbtn .mname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+.mbtn .chev {
+  color: var(--faint);
+  transform: rotate(90deg);
+  transition: transform 0.2s var(--out);
+}
+.mbtn[aria-expanded='true'] .chev {
+  transform: rotate(-90deg);
+}
+.meter {
+  display: inline-flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 11px;
+}
+.meter i {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--line);
+  transition: background 0.2s;
+}
+.meter i.on {
+  background: var(--accent);
+}
+.mpop {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: 300px;
+  max-width: calc(100vw - 20px);
+  max-height: min(560px, calc(100vh - 160px));
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+  transform-origin: bottom right;
+  transform: scale(0.94) translateY(6px);
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition:
+    transform 0.15s var(--out),
+    opacity 0.15s,
+    visibility 0s 0.15s;
+}
+.mpop.open {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  transition:
+    transform 0.2s var(--out),
+    opacity 0.15s;
+}
+.mpop.left {
+  left: 0;
+  right: auto;
+  width: 240px;
+  transform-origin: bottom left;
+}
+.switch-note {
+  margin: 0;
+  padding: 8px 10px 4px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.mgroup {
+  padding: 8px 10px 4px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.mempty {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.mopt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  text-align: left;
+  transition: background 0.15s;
+}
+.mopt:hover {
+  background: var(--raise);
+}
+.mopt[aria-disabled='true'] {
+  cursor: default;
+  color: var(--muted);
+}
+.mopt > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.mopt b {
+  display: block;
+  font-weight: 500;
+  font-size: 14px;
+}
+.mopt small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mopt .tick {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--accent-text);
+  opacity: 0;
+  transform: scale(0.4);
+  transition:
+    opacity 0.2s,
+    transform 0.2s var(--out);
+}
+.mopt[aria-checked='true'] .tick {
+  opacity: 1;
+  transform: none;
+}
+.mopt > span.mi {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.eff-note {
+  font-size: 12px;
+  color: var(--faint);
+  padding: 8px 6px 2px;
+  margin: 0;
+}
+.mpop-error {
+  margin: 6px;
+  font-size: 12.5px;
+  color: var(--danger);
+}
+.warnrow small {
+  color: var(--warn);
+}
+.ctxbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  margin-left: 2px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  transition:
+    background 0.15s,
+    color 0.2s;
+}
+.ctxbtn:hover,
+.ctxbtn[aria-expanded='true'] {
+  background: var(--raise);
+  color: var(--text);
+}
+.ctxbtn svg {
+  transform: rotate(-90deg);
+}
+.ring-bg {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2.6;
+}
+.ring-fg {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-dasharray: 50.27;
+  stroke-dashoffset: 50.27;
+  transition:
+    stroke-dashoffset 0.25s var(--out),
+    stroke 0.2s;
+}
+.ctxbtn[data-level='warm'] .ring-fg {
+  stroke: var(--warn);
+}
+.ctxbtn[data-level='hot'] .ring-fg {
+  stroke: var(--danger);
+}
+.ctxbtn[data-level='hot'] {
+  color: var(--danger);
+}
+.ctxpop {
+  width: 300px;
+  padding: 14px;
+}
+.ctx-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ctx-h b {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ctx-h span {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ctx-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--raise);
+  overflow: hidden;
+}
+.ctx-bar i {
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform 0.25s var(--out);
+}
+.ctx-legend {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+.ctx-legend div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.ctx-legend b {
+  margin-left: auto;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.ctx-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+.ctx-legend .used {
+  background: var(--accent);
+}
+.ctx-legend .free i {
+  background: var(--raise);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.ctx-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.ctx-note.warm {
+  color: var(--warn);
+}
+.ctx-note.hot {
+  color: var(--danger);
+}
+.ctx-foot {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.icon-btn.attach {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  transition: background 0.15s;
+}
+.icon-btn.attach:hover,
+.icon-btn.attach[aria-expanded='true'] {
+  background: var(--raise);
+  color: var(--text);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mpop,
+  .mpop.open {
+    transition: opacity 0.15s var(--out);
+    transform: none;
+  }
+}

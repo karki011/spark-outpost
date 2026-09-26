@@ -1,0 +1,14 @@
+.md,
+.dv {
+  --code-foreground: var(--text);
+  --code-background: transparent;
+  --code-token-comment: var(--faint);
+  --code-token-keyword: var(--accent-text);
+  --code-token-constant: color-mix(in srgb, var(--warn) 85%, var(--text));
+  --code-token-string: color-mix(in srgb, var(--accent) 45%, var(--text));
+  --code-token-string-expression: color-mix(in srgb, var(--accent) 45%, var(--text));
+  --code-token-function: color-mix(in srgb, var(--warn) 55%, var(--accent-text));
+  --code-token-parameter: var(--muted);
+  --code-token-punctuation: var(--muted);
+  --code-token-link: var(--accent-text);
+}

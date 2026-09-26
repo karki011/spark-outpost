@@ -1,0 +1,27 @@
+export const SECRET_FILE_PATTERNS: readonly string[] = [
+  '.env',
+  '.env.*',
+  'id_rsa',
+  'id_rsa.pub',
+  'id_ed25519',
+  'id_ed25519.pub',
+  'id_ecdsa',
+  'id_ecdsa.pub',
+  'id_dsa',
+  'id_dsa.pub',
+  '.npmrc',
+  '.netrc',
+  '.pgpass',
+  '.pypirc',
+  '.git-credentials',
+  'credential',
+  'credential.*',
+  'credentials',
+  'credentials.*',
+  '*.pem',
+  '*.key',
+  '*.p12',
+  '*.pfx',
+];
+
+export const SECRET_FILE_EXCEPTIONS: readonly string[] = ['.env.example'];

@@ -1,0 +1,262 @@
+.ic {
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.ic .ok {
+  color: var(--accent-text);
+}
+
+.ic.spin {
+  width: 12px;
+  height: 12px;
+  margin: 2px;
+}
+
+.ic.dia::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--warn);
+  transform: rotate(45deg);
+}
+
+.ic.pend::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid var(--faint);
+}
+
+.ic.errdot {
+  width: 13px;
+  height: 13px;
+  margin: 1.5px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: var(--panel);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.hxic {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  background: var(--raise);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.mb {
+  width: 16px;
+  height: 16px;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.mb svg {
+  overflow: visible;
+}
+
+.wp-waits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wp-wait {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 10px 12px 2px;
+  padding: 10px 13px;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--warn) 11%, transparent);
+  animation: rise 0.2s var(--out) both;
+}
+
+.wp-wait > span:not(.ic) {
+  flex: 1;
+  min-width: 0;
+}
+
+.wp-wait .btn {
+  flex-shrink: 0;
+  padding: 5px 11px;
+  font-size: 12px;
+}
+
+.wp-wait b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.wp-wait small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.tlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tgroup {
+  margin: 4px 0 4px -2px;
+  padding-left: 8px;
+  border-left: 2px solid var(--line);
+}
+
+.tgroup-h {
+  display: block;
+  padding: 2px 0;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.tdone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% + 16px);
+  padding: 6px 8px;
+  margin: 0 -8px 2px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  color: var(--faint);
+  transition: color 0.2s;
+}
+
+.tdone:hover {
+  color: var(--text);
+}
+
+.tdone .chev,
+.hist-btn .chev {
+  transition: transform 0.2s var(--out);
+}
+
+.tdone[aria-expanded='true'] .chev,
+.hist-btn[aria-expanded='true'] .chev {
+  transform: rotate(90deg);
+}
+
+.titem {
+  margin: 0 -8px;
+  border-radius: var(--r-sm);
+  animation: rise 0.2s var(--out) both;
+}
+
+.ti-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border-radius: inherit;
+  text-align: left;
+  transition: background 0.2s;
+}
+
+.ti-row:hover {
+  background: var(--raise);
+}
+
+.titem.active {
+  background: var(--accent-soft);
+}
+
+.titem.active .ti-row:hover {
+  background: transparent;
+}
+
+.titem.active .ti-t {
+  font-weight: 500;
+}
+
+.titem.failed .ti-t {
+  color: var(--danger);
+}
+
+.titem.pending .ti-t,
+.titem.done .ti-t {
+  color: var(--muted);
+}
+
+.ti-t {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.ti-t.cmd,
+.wp-wait b.cmd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font:
+    12px/1.5 'Geist Mono',
+    ui-monospace,
+    monospace;
+}
+
+.ti-tag {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.ti-tag.ok {
+  color: var(--muted);
+  background: var(--raise);
+}
+
+.ti-tag.bad {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.ti-av {
+  flex: 0 0 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.ti-full {
+  display: block;
+  margin-bottom: 4px;
+  font:
+    12px/1.5 'Geist Mono',
+    ui-monospace,
+    monospace;
+  color: var(--text);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.ti-more {
+  padding: 0 8px 10px 34px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+  animation: rise 0.2s var(--out) both;
+}

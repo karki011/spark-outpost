@@ -1,0 +1,64 @@
+.side-new {
+  order: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 8px 2px 0;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  transition: background 0.15s;
+}
+
+.side-new:hover {
+  background: var(--raise);
+}
+
+.side-new svg {
+  color: var(--muted);
+}
+
+.side-new > span:not(.keys) {
+  flex: 1;
+  text-align: left;
+}
+
+.side-top b {
+  flex: 1;
+  padding-left: 6px;
+  font-weight: 600;
+}
+
+.app.resizing .side,
+.app.resizing .main {
+  transition: none;
+}
+
+.app.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.side-resize {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.view:has(.side-resize:hover) > .main,
+.view:has(.side-resize:focus-visible) > .main,
+.view:has(.side.dragging) > .main {
+  border-left-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+}
+
+.side-resize:focus-visible {
+  outline: none;
+}

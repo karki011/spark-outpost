@@ -1,0 +1,327 @@
+import {
+  PERMISSION_DO,
+  UNTITLED_CONVERSATION,
+  titleFromMessage,
+  type InvolvementLevel,
+  type RunMode,
+  type ConversationDetail,
+  type ConversationSummary,
+  type SendMessageRequest,
+  type SendMessageResponse,
+} from '@spark-outpost/contracts';
+import { activityFromEvents, type StepEventRow } from './activity.ts';
+import { conversationAdvice } from './advice.ts';
+import { conversationOrchestrations } from './orchestrations.ts';
+import { pendingApprovalsForConversation } from './approvals.ts';
+import { attachmentsForMessages, linkAttachments } from './attachments.ts';
+import { resolveChatSettings } from './chat-settings.ts';
+import { withTransaction, type Db, type Queryable } from './db.ts';
+import { newId } from './ids.ts';
+import { taskForNewRun } from './tasks.ts';
+import { taskOverviews } from './task-views.ts';
+import { conversationUsage } from './usage.ts';
+import {
+  toConversationSummary,
+  toMessage,
+  toRun,
+  type ConversationSummaryRow,
+  type MessageRow,
+  type RunRow,
+} from './rows.ts';
+
+const LOCAL_WORKSPACE_SLUG = 'local';
+
+const summaryQuery = `
+  SELECT c.id, c.title, c.updated_at, c.archived_at, c.pinned_at, c.pinned_order, c.title_source,
+    COALESCE(
+      (SELECT cr.category FROM runs cr
+       WHERE cr.conversation_id = c.id AND cr.parent_run_id IS NULL
+         AND cr.category IS NOT NULL AND cr.category <> 'chat'
+       ORDER BY cr.created_at DESC LIMIT 1),
+      (SELECT cr.category FROM runs cr
+       WHERE cr.conversation_id = c.id AND cr.parent_run_id IS NULL AND cr.category = 'chat'
+       LIMIT 1)
+    ) AS category,
+    r.id AS latest_run_id, r.status AS latest_run_status, r.error AS latest_run_error,
+    CASE WHEN r.status = 'running' THEN (
+      SELECT e.payload->>'stepName' FROM run_events e
+      WHERE e.run_id = r.id AND e.type = 'STEP_STARTED' ORDER BY e.seq DESC LIMIT 1
+    ) END AS latest_run_step,
+    COALESCE(
+      r.status = 'succeeded' AND r.finished_at > COALESCE(c.last_read_at, '-infinity'::timestamptz),
+      false
+    ) AS unread,
+    COALESCE(r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL, false) AS needs_input,
+    p.pending_id, p.pending_kind, p.pending_title, p.pending_command, p.pending_paths,
+    p.pending_agent, p.pending_member, p.pending_asker, p.pending_provider,
+    ARRAY(
+      SELECT cp.project_id::text FROM conversation_projects cp
+      WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at
+    ) AS project_ids
+  FROM conversations c
+  LEFT JOIN LATERAL (
+    SELECT id, status, error, finished_at FROM runs
+    WHERE conversation_id = c.id AND parent_run_id IS NULL ORDER BY created_at DESC LIMIT 1
+  ) r ON true
+  LEFT JOIN LATERAL (
+    SELECT a.id AS pending_id, a.kind AS pending_kind, a.title AS pending_title,
+      a.payload->>'command' AS pending_command, a.payload->'paths' AS pending_paths,
+      CASE WHEN ar.parent_run_id IS NOT NULL THEN ar.route->>'name' END AS pending_agent,
+      m.name AS pending_member, a.payload->'checkpoint'->>'agent' AS pending_asker,
+      COALESCE(m.provider, ar.provider) AS pending_provider
+    FROM approvals a
+    JOIN runs ar ON ar.id = a.run_id
+    LEFT JOIN LATERAL (
+      SELECT mr.route->>'name' AS name, mr.provider FROM runs mr
+      WHERE mr.parent_run_id = r.id AND mr.route->>'name' IS NOT NULL
+        AND mr.role = CASE a.kind WHEN 'plan' THEN 'architect' WHEN 'accept' THEN 'builder' END
+      ORDER BY mr.created_at DESC LIMIT 1
+    ) m ON true
+    WHERE a.status = 'pending' AND (ar.id = r.id OR ar.parent_run_id = r.id)
+    ORDER BY a.created_at, a.id LIMIT 1
+  ) p ON true`;
+
+function likePattern(search: string): string {
+  return `%${search.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+}
+
+export class ConversationNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Conversation ${id} was not found.`);
+  }
+}
+
+export class MessageConflictError extends Error {
+  constructor(id: string) {
+    super(`Message ${id} already exists with different content or conversation.`);
+  }
+}
+
+export async function ensureLocalWorkspace(db: Queryable): Promise<string> {
+  const { rows } = await db.query<{ id: string }>(
+    `INSERT INTO workspaces (id, slug, name) VALUES ($1, $2, 'Local')
+     ON CONFLICT (slug) DO UPDATE SET slug = EXCLUDED.slug
+     RETURNING id`,
+    [newId(), LOCAL_WORKSPACE_SLUG],
+  );
+  return rows[0]!.id;
+}
+
+export async function listConversations(
+  db: Queryable,
+  workspaceId: string,
+  search = '',
+): Promise<ConversationSummary[]> {
+  const text = search.trim();
+  const { rows } = await db.query<ConversationSummaryRow>(
+    `${summaryQuery} WHERE c.workspace_id = $1
+       AND EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
+       AND ($2 = '' OR c.title ILIKE $3 OR EXISTS (
+         SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.content ILIKE $3
+       ))
+     ORDER BY c.pinned_at DESC NULLS LAST, c.updated_at DESC LIMIT 500`,
+    [workspaceId, text, likePattern(text)],
+  );
+  return rows.map(toConversationSummary);
+}
+
+export async function getSummary(db: Queryable, id: string): Promise<ConversationSummary | null> {
+  const { rows } = await db.query<ConversationSummaryRow>(`${summaryQuery} WHERE c.id = $1`, [id]);
+  return rows[0] ? toConversationSummary(rows[0]) : null;
+}
+
+async function insertConversation(db: Queryable, workspaceId: string, id: string): Promise<void> {
+  await db.query(
+    `INSERT INTO conversations (id, workspace_id, title) VALUES ($1, $2, $3)
+     ON CONFLICT (id) DO NOTHING`,
+    [id, workspaceId, UNTITLED_CONVERSATION],
+  );
+}
+
+export async function createConversation(
+  db: Queryable,
+  workspaceId: string,
+  id: string,
+): Promise<ConversationSummary> {
+  await insertConversation(db, workspaceId, id);
+  const summary = await getSummary(db, id);
+  if (!summary) throw new ConversationNotFoundError(id);
+  return summary;
+}
+
+export async function pruneEmptyConversations(db: Queryable, workspaceId: string): Promise<void> {
+  await db.query(
+    `DELETE FROM conversations c WHERE c.workspace_id = $1
+       AND c.updated_at < now() - interval '1 day'
+       AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)`,
+    [workspaceId],
+  );
+}
+
+export async function getConversationDetail(
+  db: Queryable,
+  id: string,
+): Promise<ConversationDetail | null> {
+  const conversation = await getSummary(db, id);
+  if (!conversation) return null;
+  const [messages, runs, steps, settings] = await Promise.all([
+    db.query<MessageRow>(
+      'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at, id',
+      [id],
+    ),
+    db.query<RunRow>('SELECT * FROM runs WHERE conversation_id = $1 ORDER BY created_at', [id]),
+    db.query<StepEventRow>(
+      `SELECT e.run_id, e.type, e.payload->>'stepName' AS name FROM run_events e
+       JOIN runs r ON r.id = e.run_id
+       WHERE r.conversation_id = $1 AND e.type IN ('STEP_STARTED', 'STEP_FINISHED')
+       ORDER BY e.run_id, e.seq`,
+      [id],
+    ),
+    resolveChatSettings(db, id),
+  ]);
+  const tasks = await taskOverviews(db, id);
+  const approvals = await pendingApprovalsForConversation(db, id);
+  const advice = await conversationAdvice(db, id);
+  const orchestrations = await conversationOrchestrations(db, id);
+  const attachments = await attachmentsForMessages(
+    db,
+    messages.rows.map((message) => message.id),
+  );
+  const allRuns = runs.rows.map(toRun);
+  const detailRuns = allRuns.filter((run) => !run.parentRunId);
+  return {
+    conversation,
+    messages: messages.rows.map((message) => toMessage(message, attachments.get(message.id))),
+    runs: detailRuns,
+    activity: activityFromEvents(steps.rows),
+    settings,
+    usageTotals: { ...conversationUsage(allRuns), advisors: advice.usage },
+    tasks,
+    approvals,
+    advice: advice.byRun,
+    orchestrations,
+  };
+}
+
+export interface RunTarget {
+  provider: string;
+  model?: string | null;
+  effort?: string | null;
+  permission?: string | null;
+  level?: InvolvementLevel | null;
+}
+
+async function runMode(
+  db: Queryable,
+  conversationId: string,
+  permission: string | null,
+): Promise<RunMode> {
+  const { rows } = await db.query<{ linked: boolean }>(
+    'SELECT EXISTS (SELECT 1 FROM conversation_projects WHERE conversation_id = $1) AS linked',
+    [conversationId],
+  );
+  if (!rows[0]?.linked) return 'chat';
+  return permission === PERMISSION_DO ? 'do' : 'ask';
+}
+
+export type SendMessageInput = Omit<SendMessageRequest, 'attachmentIds'> & {
+  attachmentIds?: readonly string[];
+};
+
+export async function sendUserMessage(
+  db: Db,
+  conversationId: string,
+  request: SendMessageInput,
+  target: RunTarget,
+  workspaceId?: string,
+): Promise<SendMessageResponse> {
+  return withTransaction(db, async (client) => {
+    if (workspaceId) await insertConversation(client, workspaceId, conversationId);
+    const conversation = await client.query<{ title: string }>(
+      'SELECT title FROM conversations WHERE id = $1 FOR UPDATE',
+      [conversationId],
+    );
+    const current = conversation.rows[0];
+    if (!current) throw new ConversationNotFoundError(conversationId);
+
+    const inserted = await client.query<MessageRow>(
+      `INSERT INTO messages (id, conversation_id, role, content) VALUES ($1, $2, 'user', $3)
+       ON CONFLICT (id) DO NOTHING RETURNING *`,
+      [request.id, conversationId, request.content],
+    );
+
+    if (!inserted.rows[0]) {
+      return existingSend(client, conversationId, request);
+    }
+
+    const attachments = await linkAttachments(
+      client,
+      conversationId,
+      request.id,
+      request.attachmentIds ?? [],
+    );
+    const runId = newId();
+    const task = await taskForNewRun(client, conversationId);
+    const mode = await runMode(client, conversationId, target.permission ?? null);
+    const run = await client.query<RunRow>(
+      `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
+         task_id, plan_version, mode, level)
+       VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10) RETURNING *`,
+      [
+        runId,
+        conversationId,
+        request.id,
+        target.provider,
+        target.model ?? null,
+        target.effort ?? null,
+        task?.taskId ?? null,
+        task?.planVersion ?? null,
+        mode,
+        mode === 'do' ? (target.level ?? null) : null,
+      ],
+    );
+    await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [
+      newId(),
+      runId,
+    ]);
+    const title =
+      current.title === UNTITLED_CONVERSATION
+        ? titleFromMessage(request.content || attachments.map((file) => file.name).join(', '))
+        : current.title;
+    await client.query(
+      'UPDATE conversations SET title = $2, updated_at = now(), archived_at = NULL WHERE id = $1',
+      [conversationId, title],
+    );
+    await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);
+    return { message: toMessage(inserted.rows[0], attachments), run: toRun(run.rows[0]!) };
+  });
+}
+
+async function existingSend(
+  db: Queryable,
+  conversationId: string,
+  request: SendMessageInput,
+): Promise<SendMessageResponse> {
+  const message = await db.query<MessageRow>('SELECT * FROM messages WHERE id = $1', [request.id]);
+  const existing = message.rows[0];
+  if (
+    !existing ||
+    existing.conversation_id !== conversationId ||
+    existing.content !== request.content
+  ) {
+    throw new MessageConflictError(request.id);
+  }
+  const attachments = (await attachmentsForMessages(db, [request.id])).get(request.id) ?? [];
+  const requested = new Set(request.attachmentIds ?? []);
+  if (
+    attachments.length !== requested.size ||
+    attachments.some((attachment) => !requested.has(attachment.id))
+  ) {
+    throw new MessageConflictError(request.id);
+  }
+  const run = await db.query<RunRow>(
+    'SELECT * FROM runs WHERE user_message_id = $1 AND parent_run_id IS NULL',
+    [request.id],
+  );
+  return { message: toMessage(existing, attachments), run: toRun(run.rows[0]!) };
+}

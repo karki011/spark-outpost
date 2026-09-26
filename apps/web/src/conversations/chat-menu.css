@@ -1,0 +1,166 @@
+.ctx {
+  position: fixed;
+  z-index: 60;
+  min-width: 212px;
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 5px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+  animation: sb-menuin 0.15s var(--out);
+}
+
+.ctx-page.in {
+  animation: sb-pagein 0.2s var(--out);
+}
+
+.ctx button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  text-align: left;
+}
+
+.ctx button > span:first-of-type {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ctx button:hover:not(:disabled),
+.ctx button:focus-visible {
+  background: var(--raise);
+}
+
+.ctx button:disabled {
+  opacity: 0.45;
+}
+
+.ctx button svg {
+  color: var(--muted);
+}
+
+.ctx .lab {
+  margin: 0;
+  padding: 6px 8px 4px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.ctx-note {
+  margin: 0;
+  padding: 6px 8px 8px;
+  max-width: 250px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.ctx-note b {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.ctx hr {
+  margin: 5px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.ctx .danger,
+.ctx .danger svg {
+  color: var(--danger);
+}
+
+.ctx .danger:hover:not(:disabled),
+.ctx .danger:focus-visible {
+  background: var(--danger-soft);
+}
+
+.ctx .back {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.ctx .tk,
+.ctx .tk svg {
+  display: grid;
+  color: var(--accent-text);
+}
+
+.ctx .sub-chev svg {
+  color: var(--faint);
+}
+
+.toasts {
+  position: relative;
+}
+
+.toast {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 9px 12px 11px;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--text);
+  color: var(--panel);
+  font-size: 13px;
+}
+
+.toast span {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.toast button {
+  font-weight: 600;
+  color: var(--panel);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.toast .tbar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  animation: sb-shrink 5s linear forwards;
+}
+
+.toast .tbar.paused {
+  animation-play-state: paused;
+}
+
+@keyframes sb-menuin {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes sb-pagein {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+@keyframes sb-shrink {
+  to {
+    transform: scaleX(0);
+  }
+}

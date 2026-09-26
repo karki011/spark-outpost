@@ -1,0 +1,231 @@
+import {
+  mergeCostSource,
+  taskList,
+  taskRunSchema,
+  taskSummary,
+  type CostSource,
+  type RunMode,
+  type RunStatus,
+  type TaskDetail,
+  type TaskLink,
+  type TaskListRun,
+  type TaskOverview,
+  type TaskRun,
+  type TaskStatus,
+  type ApprovalStatus,
+  type TaskItemState,
+  type TaskListEvent,
+  type AgentRole,
+} from '@spark-outpost/contracts';
+import { latestPlan, planVersions } from './artifacts.ts';
+import type { Queryable } from './db.ts';
+import { taskLinks } from './tasks.ts';
+
+interface TaskRow {
+  id: string;
+  conversation_id: string;
+  title: string;
+  status: TaskStatus;
+  created_at: Date;
+  closed_at: Date | null;
+}
+
+interface TaskRunRow {
+  id: string;
+  task_id: string;
+  provider: string;
+  model: string | null;
+  effort: string | null;
+  status: RunStatus;
+  plan_version: number | null;
+  tokens: number | null;
+  cost_usd: string | null;
+  cost_source: CostSource | null;
+  mode: RunMode | null;
+  duration_ms: number | null;
+  created_at: Date;
+  request: string;
+  label: string | null;
+  step: string | null;
+  role: AgentRole | null;
+  name: string | null;
+  group_key: string | null;
+}
+
+type TaskRunView = TaskRun &
+  Pick<TaskRunRow, 'request' | 'label' | 'step' | 'role' | 'name'> & { group: string | null };
+
+const runsQuery = `
+  SELECT r.id, r.task_id, r.provider, COALESCE(r.used_model, r.model) AS model,
+    COALESCE(r.used_effort, r.effort) AS effort, r.status, r.plan_version,
+    COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS tokens,
+    r.cost_usd, r.cost_source, r.mode, r.duration_ms, r.created_at, m.content AS request,
+    CASE WHEN r.parent_run_id IS NOT NULL THEN r.agent_label END AS label,
+    CASE WHEN r.parent_run_id IS NOT NULL THEN r.route->>'planStep' END AS step,
+    r.role, r.route->>'name' AS name,
+    r.parent_run_id || ':' || (r.route->>'parallelGroup') AS group_key
+  FROM runs r JOIN messages m ON m.id = r.user_message_id
+  WHERE r.task_id = ANY($1::uuid[])
+    AND NOT (r.role IS NULL AND EXISTS (SELECT 1 FROM runs c WHERE c.parent_run_id = r.id))
+  ORDER BY r.created_at, r.id`;
+
+function toTaskRun(row: TaskRunRow): TaskRunView {
+  return {
+    id: row.id,
+    provider: row.provider,
+    model: row.model,
+    effort: row.effort,
+    status: row.status,
+    planVersion: row.plan_version,
+    tokens: row.tokens,
+    costUsd: row.cost_usd === null ? null : Number(row.cost_usd),
+    costSource: row.cost_usd === null ? null : (row.cost_source ?? 'reported'),
+    mode: row.mode,
+    durationMs: row.duration_ms,
+    createdAt: row.created_at.toISOString(),
+    request: row.request,
+    label: row.label,
+    step: row.step,
+    role: row.role,
+    name: row.name,
+    group: row.group_key,
+  };
+}
+
+interface ApprovalEventRow {
+  id: string;
+  run_id: string;
+  kind: string;
+  title: string;
+  status: ApprovalStatus;
+  option_name: string | null;
+  full_paths: string[] | null;
+}
+
+const APPROVAL_STATES: Record<ApprovalStatus, TaskItemState> = {
+  pending: 'waiting',
+  allowed: 'done',
+  denied: 'failed',
+  cancelled: 'failed',
+  expired: 'failed',
+};
+
+const DECISIONS: Record<ApprovalStatus, string> = {
+  pending: 'Waiting for you',
+  allowed: 'Allowed',
+  denied: 'Denied',
+  cancelled: 'Cancelled',
+  expired: 'Expired',
+};
+
+function approvalDecision(row: ApprovalEventRow): string {
+  const decision = DECISIONS[row.status];
+  return row.option_name ? `${decision}: ${row.option_name}` : decision;
+}
+
+async function approvalEvents(db: Queryable, taskId: string): Promise<TaskListEvent[]> {
+  const { rows } = await db.query<ApprovalEventRow>(
+    `SELECT a.id, a.run_id, a.kind, a.title, a.status, a.payload->'fullPaths' AS full_paths,
+       (SELECT o->>'name' FROM jsonb_array_elements(a.options) o
+        WHERE o->>'optionId' = a.decision_option_id LIMIT 1) AS option_name
+     FROM approvals a JOIN runs r ON r.id = a.run_id
+     WHERE r.task_id = $1 AND (a.status = 'pending' OR a.decided_by IN ('user', 'auto'))
+     ORDER BY a.created_at`,
+    [taskId],
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    kind: 'waiting',
+    runId: row.run_id,
+    state: APPROVAL_STATES[row.status],
+    ...(row.full_paths?.length ? { hint: row.full_paths.join('\n') } : {}),
+    ...(row.kind === 'execute' ? { command: true } : {}),
+    ...(row.status === 'pending' ? {} : { detail: approvalDecision(row) }),
+    label: row.status === 'pending' ? `Waiting for you: ${row.title}` : row.title,
+  }));
+}
+
+function sumOrNull(values: readonly (number | null)[]): number | null {
+  const known = values.filter((value): value is number => value !== null);
+  return known.length > 0 ? known.reduce((total, value) => total + value, 0) : null;
+}
+
+async function overview(
+  db: Queryable,
+  row: TaskRow,
+  runs: readonly TaskRunView[],
+  links: readonly TaskLink[],
+): Promise<TaskOverview> {
+  const plan = await latestPlan(db, row.id);
+  const listRuns: readonly TaskListRun[] = runs;
+  const items = taskList(
+    { status: row.status, links },
+    listRuns,
+    await approvalEvents(db, row.id),
+    plan,
+  );
+  return {
+    id: row.id,
+    conversationId: row.conversation_id,
+    title: row.title,
+    status: row.status,
+    createdAt: row.created_at.toISOString(),
+    closedAt: row.closed_at?.toISOString() ?? null,
+    runIds: runs.map((run) => run.id),
+    planVersion: plan?.version ?? null,
+    items,
+    summary: taskSummary(items, listRuns),
+    costUsd: sumOrNull(runs.map((run) => run.costUsd)),
+    costSource: runs.reduce<TaskOverview['costSource']>(
+      (source, run) => mergeCostSource(source ?? null, run.costSource ?? null),
+      null,
+    ),
+    tokens: sumOrNull(runs.map((run) => run.tokens)),
+  };
+}
+
+async function loadRuns(db: Queryable, taskIds: readonly string[]) {
+  const { rows } = await db.query<TaskRunRow>(runsQuery, [taskIds]);
+  const byTask = new Map<string, TaskRunView[]>();
+  for (const row of rows) {
+    const runs = byTask.get(row.task_id) ?? [];
+    runs.push(toTaskRun(row));
+    byTask.set(row.task_id, runs);
+  }
+  return byTask;
+}
+
+export async function taskOverviews(
+  db: Queryable,
+  conversationId: string,
+): Promise<TaskOverview[]> {
+  const { rows } = await db.query<TaskRow>(
+    'SELECT * FROM tasks WHERE conversation_id = $1 ORDER BY created_at, id',
+    [conversationId],
+  );
+  if (rows.length === 0) return [];
+  const ids = rows.map((row) => row.id);
+  const [runs, links] = await Promise.all([loadRuns(db, ids), taskLinks(db, ids)]);
+  return Promise.all(
+    rows.map((row) => overview(db, row, runs.get(row.id) ?? [], links.get(row.id) ?? [])),
+  );
+}
+
+export async function getTaskDetail(db: Queryable, taskId: string): Promise<TaskDetail | null> {
+  const { rows } = await db.query<TaskRow>('SELECT * FROM tasks WHERE id = $1', [taskId]);
+  const row = rows[0];
+  if (!row) return null;
+  const [runs, links, versions] = await Promise.all([
+    loadRuns(db, [taskId]),
+    taskLinks(db, [taskId]),
+    planVersions(db, taskId),
+  ]);
+  const taskRuns = runs.get(taskId) ?? [];
+  const taskLinkList = links.get(taskId) ?? [];
+  return {
+    ...(await overview(db, row, taskRuns, taskLinkList)),
+    runs: taskRuns.map((run) => taskRunSchema.parse(run)),
+    planVersions: versions,
+    links: taskLinkList,
+  };
+}

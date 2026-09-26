@@ -1,0 +1,29 @@
+.chg {
+  margin: 0 0 14px;
+}
+
+.chg h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.chg-rev {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--raise);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--faint);
+}
+
+.chg-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}

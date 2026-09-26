@@ -1,0 +1,40 @@
+.keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.keys kbd {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--raise);
+  box-shadow: inset 0 -1px 0 var(--line);
+  color: color-mix(in srgb, var(--muted) 70%, var(--text));
+  font:
+    500 11.5px/1 ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+.tooltip .keys {
+  margin-left: 6px;
+}
+
+.tooltip .keys kbd {
+  background: color-mix(in srgb, var(--panel) 16%, transparent);
+  box-shadow: none;
+  color: var(--panel);
+}
+
+@media (hover: none), (max-width: 640px) {
+  .keys.key-hint {
+    display: none;
+  }
+}

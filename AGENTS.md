@@ -1,0 +1,89 @@
+# AGENTS.md — Spark Outpost
+
+Instructions for humans and coding agents working in Spark Outpost.
+
+## Product and stack
+
+- Build a local-first, provider-agnostic workflow application. Cloud hosting is a future direction, not a reason to add unused infrastructure today.
+- Use a pnpm workspace monorepo, TypeScript, React with Vite, and Node.js with Express.
+- Use local PostgreSQL with versioned schema migrations. Keep database access in the backend.
+- Start with the local web interface. Electron is the preferred desktop shell after the web milestone; it stays a thin wrapper around the unchanged web app and Node service. A Rust backend is not required.
+- Use React state for UI interactions, TanStack Query for cached API data, and AG-UI events for live run updates. Give each piece of state one clear owner.
+- Coding agents connect through ACP. CopilotKit is not adopted for phases 0–1; if evaluated later, verify the exact integration license and do not introduce a paid runtime requirement implicitly.
+- The harness owns workflow state, execution policy, budgets, cancellation, recovery, and verification. Jev is an optional decision service; providers execute through explicit adapters.
+- Use A2A where independent agent communication is needed. Do not wrap every internal function or worker in a protocol without a current need.
+- Agents operate within authorized boundaries. Approval checkpoints are enforced by the backend; model recommendations cannot grant authority.
+
+Read `docs/product/PLAN.md` for product direction and `docs/architecture/PROTOCOL_ALIGNMENT.md` before persistence or agent integration changes. Keep protocol support claims tied to pinned SDK versions and passing contract tests.
+
+## Design principles
+
+- Follow YAGNI, KISS, and DRY: implement what is needed, keep it understandable, and avoid duplicated knowledge.
+- Design for today's actual caller. Do not introduce speculative APIs, registries, configuration, or extension systems.
+- Abstract around knowledge, side effects, volatility, or a useful test seam that exists today. One caller is enough when the boundary has a concrete purpose.
+- Prefer a small meaningful interface over chains of pass-through wrappers.
+- Keep decisions pure where practical. Put filesystem, network, process, and clock effects at the edges.
+- Make dependencies explicit. Validate external inputs at trust boundaries, including API requests, provider events, tool results, and persisted records.
+- Treat agent output and retrieved content as data, not execution authority.
+- Prefer clear names, small functions, and explicit control flow over clever or compressed expressions.
+- Reduce needless nesting, redundant logic, and pass-through abstractions. Preserve useful boundaries and test seams.
+
+## Organization and duplication
+
+- Organize code by feature and responsibility. Keep related implementation and tests easy to find.
+- Keep applications under `apps/`, shared packages under `packages/`, infrastructure under `infra/`, and architecture and decisions under `docs/`.
+- Create directories and packages only when they have an actual implementation purpose. Do not scaffold empty abstractions.
+- Keep handwritten source and test files at or below 500 lines. Split by coherent responsibility before exceeding the limit; do not compress code to fit.
+- Do not manually split generated files, lockfiles, or vendor code to satisfy the source-file limit. Keep them separate from handwritten code.
+- When the same UI pattern appears more than twice, extract a shared component. For repeated non-UI behavior, extract a shared function or module.
+- Share the repeated behavior or knowledge, not merely similar syntax. Do not combine unrelated behavior into a configurable catch-all component.
+- Keep shared code at the narrowest scope that serves its actual callers.
+- Frontend code may import shared contracts, but must not import database access, credentials, or provider execution internals.
+
+## Interface conventions
+
+- Follow the design kit in `docs/design/`. Use the shared semantic colors in `apps/web/public/theme.css`; do not hard-code palette colors in feature styles. Load the saved theme before React mounts.
+- Keep onboarding and Integrations on the same connection components and query cache. Show only supported connection methods and backend-reported status.
+- Use shared outline icons, restrained accent colors and visible keyboard focus; preserve mounted conversations when changing appearance.
+
+## Changes and refactoring
+
+- Make small, coherent changes. Preserve security, data integrity, accessibility, and all requested behavior.
+- Refactor only when today's change benefits. Do not broaden a task into unrelated cleanup.
+- Preserve observable behavior during refactoring, including errors, side effects, evaluation order, and public contracts, except for the approved behavior change.
+- Do not trade readability for fewer lines.
+- Preserve mounted UI state, focus, and scroll position during streaming and background refreshes.
+- Keep workflow execution independent of the HTTP request or UI connection that observes it. A disconnected progress stream is not a cancellation request.
+
+## No explanatory code comments
+
+- In every mode, add no explanatory code comments, including in tests.
+- Do not add docblocks that merely explain implementation.
+- Use clear names, small functions, and explicit control flow instead.
+- Preserve required license notices and machine-consumed directives. Record any newly required exception and its reason in the completion record.
+- Put design rationale in the PR description, completion summary, or appropriate documentation.
+
+## Testing and review
+
+- Test observable behavior and meaningful edge cases. Avoid tests that only mirror the implementation.
+- Run checks appropriate to the changed behavior. Report what ran and what remains unverified.
+- For execution and persistence changes, cover relevant cancellation, restart recovery, duplicate requests, stale events, and failure cases.
+- For UI changes, verify relevant keyboard, focus, accessibility, streaming, and loading behavior.
+- Self-review gathers evidence; it is never the final independent verdict.
+- Keep provider claims, reviewer opinions, executable checks, and human acceptance distinct. Do not claim independent verification when none occurred.
+- Completion records identify the behavior changed, validation evidence, material limitations, and any required comment exception.
+
+## Repository maintenance
+
+- Keep this file concise and current. Update it when approved conventions change.
+- Document runnable development and verification commands as the repository is implemented; do not claim nonexistent commands or checks.
+- Keep secrets out of source control, logs, browser bundles, and agent-visible artifacts.
+
+## Task tracking and commands
+
+- Read `docs/KANBAN.md` before starting work; `docs/tasks/board.json` is the task source of truth.
+- Use `pnpm tasks move <ID> <status> "note"` to update progress and regenerate the board. Include acceptance evidence when marking done.
+- Run `pnpm test:db` for storage changes against an isolated PostgreSQL schema; it requires DATABASE_URL.
+- Run `pnpm check` for the foundation checks and `pnpm test:browser` for browser behavior.
+- Run `pnpm db:setup` once for the isolated native macOS PostgreSQL cluster, then `pnpm db:up`, `pnpm db:migrate` and `pnpm dev`. Stop only this cluster with `pnpm db:stop`; preserve `.local` data and ignored credentials. See `infra/local/README.md`.
+- Do not create or publish a remote repository, push, or deploy without user authorization.

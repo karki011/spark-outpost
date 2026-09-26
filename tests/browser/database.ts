@@ -1,0 +1,67 @@
+import { rmSync } from 'node:fs';
+import { CREW_CATALOG, FAKE_CODEX_STATE } from './stub-config.ts';
+import { createDb } from '../../apps/server/src/persistence/db.ts';
+import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
+
+export function testDatabaseUrl(): string {
+  const url = process.env.TEST_DATABASE_URL;
+  if (!url)
+    throw new Error('Browser tests need TEST_DATABASE_URL. Run pnpm db:setup and pnpm db:up.');
+  return url;
+}
+
+interface ResetOptions {
+  onboarded: boolean;
+  connected?: ('claude' | 'codex')[];
+  jev?: boolean;
+  catalog?: boolean;
+}
+
+const EFFORTS = ['low', 'medium', 'high'].map((id) => ({ id, label: id, description: null }));
+
+export async function resetTestDatabase({
+  onboarded,
+  connected = onboarded ? ['claude'] : [],
+  jev = false,
+  catalog = false,
+}: ResetOptions): Promise<void> {
+  rmSync(FAKE_CODEX_STATE, { force: true });
+  const db = createDb(testDatabaseUrl());
+  try {
+    await db.query(
+      'TRUNCATE jobs, run_events, messages, runs, conversations, projects, provider_connections, provider_capabilities, advisor_connections, profiles CASCADE',
+    );
+    if (!onboarded && connected.length === 0) return;
+    const workspaceId = await ensureLocalWorkspace(db);
+    await db.query(
+      `INSERT INTO profiles (workspace_id, display_name, default_provider, onboarding_completed_at)
+       VALUES ($1, 'Test User', $2, $3)`,
+      [workspaceId, connected[0] ?? null, onboarded ? new Date() : null],
+    );
+    for (const provider of connected) {
+      await db.query(
+        `INSERT INTO provider_connections
+           (workspace_id, provider, method, detail, models, model, permission, effort, verified_at)
+         VALUES ($1, $2, 'cli', $3, '[]', NULL, 'ask', 'high', now())`,
+        [workspaceId, provider, `${provider} test-fixture`],
+      );
+      if (!catalog) continue;
+      const models = CREW_CATALOG[provider];
+      await db.query(
+        `INSERT INTO provider_capabilities (workspace_id, provider, models, efforts, default_model)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [workspaceId, provider, JSON.stringify(models), JSON.stringify(EFFORTS), models[1]!.id],
+      );
+    }
+    if (jev) {
+      await db.query(
+        `INSERT INTO advisor_connections
+           (workspace_id, advisor, method, detail, models, model, verified_at)
+         VALUES ($1, 'jev', 'api_key', '…test', '[]', 'jev-latest', now())`,
+        [workspaceId],
+      );
+    }
+  } finally {
+    await db.end();
+  }
+}

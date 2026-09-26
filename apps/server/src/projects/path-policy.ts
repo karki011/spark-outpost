@@ -1,0 +1,162 @@
+import path from 'node:path';
+import { SECRET_FILE_EXCEPTIONS, SECRET_FILE_PATTERNS } from './secret-files.ts';
+
+export const PROJECT_READ_MAX_BYTES = 1024 * 1024;
+
+export type PathAccess = 'read' | 'write';
+
+export type RefusalReason =
+  | 'not absolute'
+  | 'outside the project'
+  | 'secret file'
+  | 'inside .git'
+  | 'not a file'
+  | 'larger than 1 MB';
+
+export class PathRefusedError extends Error {
+  constructor(
+    readonly requested: string,
+    readonly reason: RefusalReason,
+  ) {
+    super(`Refused ${requested} (${reason})`);
+  }
+}
+
+export interface ResolvedPath {
+  root: string;
+  absolute: string;
+  relative: string;
+}
+
+export interface ProjectRoot {
+  path: string;
+  ignore: readonly string[];
+}
+
+export interface PathPolicy {
+  roots: readonly ProjectRoot[];
+  realpath: (target: string) => Promise<string>;
+}
+
+export function parseSparkIgnore(text: string): string[] {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== '' && !line.startsWith('#') && !line.startsWith('!'));
+}
+
+function globToRegExp(glob: string): RegExp {
+  let source = '';
+  for (let index = 0; index < glob.length; index++) {
+    const char = glob[index]!;
+    if (char === '*' && glob[index + 1] === '*') {
+      const slash = glob[index + 2] === '/';
+      source += slash ? '(?:.*/)?' : '.*';
+      index += slash ? 2 : 1;
+    } else if (char === '*') source += '[^/]*';
+    else if (char === '?') source += '[^/]';
+    else source += char.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  }
+  return new RegExp(`^${source}$`);
+}
+
+function matchesIgnore(relative: string, pattern: string): boolean {
+  const trimmed = pattern.replace(/\/+$/, '');
+  if (trimmed === '') return false;
+  const segments = relative.split('/');
+  const anchored = trimmed.includes('/');
+  const regex = globToRegExp(trimmed.replace(/^\//, ''));
+  if (!anchored) return segments.some((segment) => regex.test(segment));
+  return segments.some((_, index) => regex.test(segments.slice(0, index + 1).join('/')));
+}
+
+const SECRET_NAME_PATTERNS = SECRET_FILE_PATTERNS.map(globToRegExp);
+
+function isSecretName(name: string): boolean {
+  const lower = name.toLowerCase();
+  if (SECRET_FILE_EXCEPTIONS.includes(lower)) return false;
+  return SECRET_NAME_PATTERNS.some((pattern) => pattern.test(lower));
+}
+
+export function isSecretPath(relative: string, ignore: readonly string[] = []): boolean {
+  const name = relative.split('/').pop() ?? '';
+  if (isSecretName(name)) return true;
+  return ignore.some((pattern) => matchesIgnore(relative, pattern));
+}
+
+export function relativeInside(root: string, target: string): string | null {
+  const relative = path.relative(root, target);
+  if (relative === '' || path.isAbsolute(relative)) return null;
+  if (relative === '..' || relative.startsWith(`..${path.sep}`)) return null;
+  return relative.split(path.sep).join('/');
+}
+
+export function refusalFor(
+  relative: string | null,
+  access: PathAccess,
+  ignore: readonly string[],
+): RefusalReason | null {
+  if (relative === null) return 'outside the project';
+  if (isSecretPath(relative, ignore)) return 'secret file';
+  if (access === 'write' && relative.split('/')[0] === '.git') return 'inside .git';
+  return null;
+}
+
+export function primaryRoot(policy: PathPolicy): string {
+  const first = policy.roots[0];
+  if (!first) throw new Error('A path policy needs at least one root.');
+  return first.path;
+}
+
+function isMissing(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException | null)?.code === 'ENOENT';
+}
+
+async function realTarget(policy: PathPolicy, target: string, access: PathAccess): Promise<string> {
+  try {
+    return await policy.realpath(target);
+  } catch (error) {
+    if (access === 'read' || !isMissing(error)) throw error;
+    const parent = path.dirname(target);
+    if (parent === target) throw error;
+    return path.join(await realTarget(policy, parent, access), path.basename(target));
+  }
+}
+
+function placeInRoots(
+  policy: PathPolicy,
+  requested: string,
+  target: string,
+  access: PathAccess,
+): { root: string; relative: string } {
+  let closest: { root: string; relative: string } | null = null;
+  for (const root of policy.roots) {
+    const relative = relativeInside(root.path, target);
+    if (relative === null) continue;
+    const reason = refusalFor(relative, access, root.ignore);
+    if (reason) throw new PathRefusedError(requested, reason);
+    if (!closest || root.path.length > closest.root.length) closest = { root: root.path, relative };
+  }
+  if (!closest) throw new PathRefusedError(requested, 'outside the project');
+  return closest;
+}
+
+export async function resolveProjectPath(
+  policy: PathPolicy,
+  requested: string,
+  access: PathAccess,
+): Promise<ResolvedPath> {
+  if (!path.isAbsolute(requested)) throw new PathRefusedError(requested, 'not absolute');
+  const lexical = path.resolve(requested);
+  placeInRoots(policy, requested, lexical, access);
+  const absolute = await realTarget(policy, lexical, access);
+  return { ...placeInRoots(policy, requested, absolute, access), absolute };
+}
+
+export function sliceLines(text: string, line?: number | null, limit?: number | null): string {
+  if (!line && !limit) return text;
+  const lines = text.split('\n');
+  const start = Math.max(1, line ?? 1) - 1;
+  const end = limit ? start + Math.max(0, limit) : lines.length;
+  return lines.slice(start, end).join('\n');
+}

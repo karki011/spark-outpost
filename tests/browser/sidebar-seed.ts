@@ -1,0 +1,139 @@
+import { randomUUID } from 'node:crypto';
+import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
+import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
+import { testDatabaseUrl } from './database.ts';
+
+export interface SeedApproval {
+  kind: string;
+  title: string;
+  command?: string;
+  paths?: string[];
+  checkpoint?: Record<string, unknown>;
+}
+
+export interface SeedChat {
+  title: string;
+  message?: string;
+  projectIds?: string[];
+  archived?: boolean;
+  unread?: boolean;
+  run?: { status: string; error?: string };
+  approval?: SeedApproval;
+  minutesAgo?: number;
+}
+
+const APPROVAL_OPTIONS = [
+  { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+  { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+];
+
+async function insertApproval(
+  db: Db,
+  run: { id: string; conversationId: string },
+  approval: SeedApproval,
+): Promise<void> {
+  const id = randomUUID();
+  const payload = {
+    command: approval.command ?? null,
+    cwd: null,
+    paths: approval.paths ?? [],
+    diffs: [],
+    truncated: false,
+    ...(approval.checkpoint ? { checkpoint: approval.checkpoint } : {}),
+  };
+  const toolCallId = `seed:${id}`;
+  const { rows } = await db.query<{ created_at: Date }>(
+    `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash, options,
+       status)
+     VALUES ($1, $2, $3, $4, $5, $6, 'sha256:seed', $7, 'pending')
+     RETURNING created_at`,
+    [
+      id,
+      run.id,
+      toolCallId,
+      approval.kind,
+      approval.title,
+      JSON.stringify(payload),
+      JSON.stringify(APPROVAL_OPTIONS),
+    ],
+  );
+  const requested = {
+    type: 'CUSTOM',
+    name: 'approval_requested',
+    value: {
+      id,
+      runId: run.id,
+      toolCallId,
+      kind: approval.kind,
+      title: approval.title,
+      payload,
+      payloadHash: 'sha256:seed',
+      options: APPROVAL_OPTIONS,
+      status: 'pending',
+      reason: null,
+      decisionOptionId: null,
+      scope: null,
+      decidedBy: null,
+      decidedAt: null,
+      createdAt: rows[0]!.created_at.toISOString(),
+      note: null,
+    },
+  };
+  const started = { type: 'RUN_STARTED', runId: run.id, threadId: run.conversationId };
+  await db.query(
+    `INSERT INTO run_events (run_id, seq, type, payload) VALUES ($1, 1, $2, $3), ($1, 2, $4, $5)`,
+    [run.id, started.type, JSON.stringify(started), requested.type, JSON.stringify(requested)],
+  );
+}
+
+export async function seedChats(chats: readonly SeedChat[]): Promise<string[]> {
+  const db = createDb(testDatabaseUrl());
+  try {
+    const workspaceId = await ensureLocalWorkspace(db);
+    const ids: string[] = [];
+    for (const chat of chats) {
+      const id = randomUUID();
+      const messageId = randomUUID();
+      const updated = new Date(Date.now() - (chat.minutesAgo ?? ids.length) * 60_000);
+      await db.query(
+        `INSERT INTO conversations (id, workspace_id, title, updated_at, archived_at, last_read_at)
+         VALUES ($1, $2, $3, $4, $5, CASE WHEN $6 THEN NULL ELSE now() END)`,
+        [
+          id,
+          workspaceId,
+          chat.title,
+          updated,
+          chat.archived ? updated : null,
+          chat.unread ?? false,
+        ],
+      );
+      await db.query(
+        `INSERT INTO messages (id, conversation_id, role, content) VALUES ($1, $2, 'user', $3)`,
+        [messageId, id, chat.message ?? chat.title],
+      );
+      for (const [position, projectId] of (chat.projectIds ?? []).entries()) {
+        await db.query(
+          `INSERT INTO conversation_projects (conversation_id, project_id, position)
+           VALUES ($1, $2, $3)`,
+          [id, projectId, position],
+        );
+      }
+      if (chat.run) {
+        const runId = randomUUID();
+        await db.query(
+          `INSERT INTO runs (id, conversation_id, user_message_id, provider, status, error,
+             started_at, finished_at)
+           VALUES ($1, $2, $3, 'fake', $4, $5, now(), CASE WHEN $6 THEN now() END)`,
+          [runId, id, messageId, chat.run.status, chat.run.error ?? null, chat.unread ?? false],
+        );
+        if (chat.approval) {
+          await insertApproval(db, { id: runId, conversationId: id }, chat.approval);
+        }
+      }
+      ids.push(id);
+    }
+    return ids;
+  } finally {
+    await db.end();
+  }
+}

@@ -1,0 +1,358 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    transform 0.2s var(--out),
+    background 0.2s,
+    opacity 0.2s,
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.btn.primary:hover:not(:disabled) {
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.btn.ghost {
+  color: var(--muted);
+}
+.btn.ghost:hover:not(:disabled) {
+  background: var(--raise);
+  color: var(--text);
+}
+.btn.line {
+  border: 1px solid var(--line);
+}
+.btn.line:hover:not(:disabled) {
+  border-color: var(--faint);
+}
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.btn.sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.field {
+  display: block;
+}
+.field > span {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.inp {
+  width: 100%;
+  padding: 11px 13px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  outline: none;
+  font-size: 15px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.inp:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.inp.big {
+  font-size: 18px;
+  padding: 13px 15px;
+}
+.inp.bad,
+.inp.bad:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+
+.seg {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--n, 4), 1fr);
+  padding: 3px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+.seg button {
+  position: relative;
+  z-index: 1;
+  padding: 5px 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+.seg button:not([aria-checked='true']):hover {
+  color: var(--text);
+}
+.seg button[aria-checked='true'] {
+  color: var(--text);
+  font-weight: 600;
+}
+.seg-ind {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / var(--n, 4));
+  border-radius: calc(var(--r-sm) - 2px);
+  background: color-mix(in srgb, var(--text) 12%, var(--panel));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--text) 16%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s var(--out);
+}
+.eff-note {
+  font-size: 12px;
+  color: var(--faint);
+  padding: 8px 2px 0;
+}
+
+.spin {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  border-top-color: var(--accent);
+  animation: rot 0.7s linear infinite;
+}
+@keyframes rot {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spk {
+  position: fixed;
+  z-index: 300;
+  border-radius: 50%;
+  pointer-events: none;
+  background: var(--accent);
+}
+.spk.star {
+  border-radius: 1px;
+}
+.spk.warm {
+  background: var(--warn);
+}
+
+@keyframes popin {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+@keyframes shake {
+  25% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+}
+.field-button {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 6px 30px 6px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.field-button:hover {
+  border-color: var(--line);
+}
+.rlist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.rrow:hover {
+  border-color: var(--faint);
+}
+.rrow[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.radio {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--faint);
+  margin-top: 2px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  transition: border-color 0.2s;
+}
+.radio::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: scale(0);
+  transition: transform 0.2s var(--out);
+}
+[aria-checked='true'] > .radio {
+  border-color: var(--accent);
+}
+[aria-checked='true'] > .radio::after {
+  transform: scale(1);
+}
+.rrow b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.rrow small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.choice-picker .field-button {
+  position: relative;
+}
+.choice-picker .field-value {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.choice-picker .field-button .chev {
+  position: absolute;
+  right: 10px;
+  color: var(--muted);
+  transform: rotate(90deg);
+  transition: transform 0.2s var(--out);
+}
+.choice-picker .field-button[aria-expanded='true'] .chev {
+  transform: rotate(-90deg);
+}
+.choice-menu {
+  position: fixed;
+  z-index: 120;
+  min-width: 220px;
+  overflow-y: auto;
+  padding: 5px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+  transform: scale(0.97);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 0.15s var(--out),
+    opacity 0.15s,
+    visibility 0s 0.15s;
+}
+.choice-menu.open {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    transform 0.2s var(--out),
+    opacity 0.15s;
+}
+.choice-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  text-align: left;
+}
+.choice-menu button:hover,
+.choice-menu button:focus-visible {
+  background: var(--raise);
+}
+.choice-menu button > span {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+.choice-menu b {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.choice-menu small {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.choice-menu .warn small {
+  color: var(--warn);
+}
+.choice-menu .tick {
+  flex-shrink: 0;
+  color: var(--accent-text);
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity 0.2s,
+    transform 0.2s var(--out);
+}
+.choice-menu [aria-checked='true'] .tick {
+  opacity: 1;
+  transform: none;
+}

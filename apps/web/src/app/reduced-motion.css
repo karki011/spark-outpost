@@ -1,0 +1,214 @@
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-property:
+      opacity, visibility, color, background-color, border-color, outline-color, box-shadow, fill,
+      stroke !important;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes grow {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes popin {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes tooltip-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes sb-viewin {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes sb-popin {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes sb-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes sb-menuin {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes sb-pagein {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes reconnect-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes aud-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes wf-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes appin {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes pagein {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes sparkin {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes tv-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes tv-zoom {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes tv-pop {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes tv-arrive {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes reconnect-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes sb-chkout {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes onbout {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes wave {
+    0%,
+    60%,
+    100% {
+      opacity: 0.5;
+    }
+    30% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes avatar-pop {
+  }
+  @keyframes shake {
+  }
+  @keyframes sb-shake {
+  }
+  @keyframes hand-wave {
+  }
+  @keyframes shimmer {
+  }
+  @keyframes row-marquee {
+  }
+  @keyframes sb-ripple {
+  }
+  @keyframes appr-ripple {
+  }
+  @keyframes tg-pulse {
+  }
+  @keyframes halo {
+  }
+  @keyframes glow {
+  }
+  @keyframes twinkle {
+  }
+  @keyframes drift {
+  }
+  @keyframes sc-breathe {
+  }
+  @keyframes sc-blink {
+  }
+  @keyframes sc-twinkle {
+  }
+  @keyframes sc-scan {
+  }
+  @keyframes sc-wiggle {
+  }
+  @keyframes sc-ping {
+  }
+  @keyframes sc-hop {
+  }
+  @keyframes sc-squish {
+  }
+  @keyframes offline-float {
+  }
+  @keyframes offline-sway {
+  }
+  @keyframes offline-zz {
+  }
+  @keyframes offline-orbit {
+  }
+  @keyframes offline-poked {
+  }
+  @keyframes offline-cheer {
+  }
+  @keyframes ow-roam {
+  }
+  @keyframes ow-hop {
+  }
+  @keyframes ow-poke-left {
+  }
+  @keyframes ow-poke-right {
+  }
+  @keyframes ow-bump {
+  }
+  @keyframes ow-cheer {
+  }
+  @keyframes tv-bob {
+  }
+  @keyframes tv-shake {
+  }
+  @keyframes tv-snooze {
+  }
+  @keyframes tv-ring {
+  }
+  @keyframes tv-dash {
+  }
+}

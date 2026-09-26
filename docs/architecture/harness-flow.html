@@ -1,0 +1,1511 @@
+<title>Spark Outpost Harness</title>
+<meta
+  name="description"
+  content="How the Jev-orchestrated harness routes work, where people stay in the loop, and what it records."
+/>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;650;750&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
+<style>
+  :root {
+    --canvas: #f7f6f2;
+    --surface: #fff;
+    --sunk: #efeee9;
+    --hover: #eae9e4;
+    --border: #dcded8;
+    --strong: #afb7b0;
+    --text: #242b29;
+    --muted: #5b6862;
+    --faint: #76817b;
+    --agent: #267257;
+    --agent-soft: #e0ece7;
+    --jev: #775ba4;
+    --jev-soft: #ece6f5;
+    --human: #895b20;
+    --human-soft: #f3e9d9;
+    --harness: #326b9a;
+    --harness-soft: #e3edf6;
+    --danger: #a5463d;
+    --off: #c9cdc6;
+    --display: 'Schibsted Grotesk', ui-sans-serif, system-ui, sans-serif;
+    --body: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      color-scheme: dark;
+      --canvas: #141618;
+      --surface: #1e2124;
+      --sunk: #181a1c;
+      --hover: #272b2f;
+      --border: #303539;
+      --strong: #495158;
+      --text: #e9edef;
+      --muted: #a1a9af;
+      --faint: #8a949b;
+      --agent: #6bddb7;
+      --agent-soft: #203832;
+      --jev: #c4b0e9;
+      --jev-soft: #2c2638;
+      --human: #edbf83;
+      --human-soft: #332b23;
+      --harness: #91bfea;
+      --harness-soft: #1f2c38;
+      --danger: #f0a397;
+      --off: #3a4045;
+    }
+  }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --canvas: #141618;
+    --surface: #1e2124;
+    --sunk: #181a1c;
+    --hover: #272b2f;
+    --border: #303539;
+    --strong: #495158;
+    --text: #e9edef;
+    --muted: #a1a9af;
+    --faint: #8a949b;
+    --agent: #6bddb7;
+    --agent-soft: #203832;
+    --jev: #c4b0e9;
+    --jev-soft: #2c2638;
+    --human: #edbf83;
+    --human-soft: #332b23;
+    --harness: #91bfea;
+    --harness-soft: #1f2c38;
+    --danger: #f0a397;
+    --off: #3a4045;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--canvas);
+    color: var(--text);
+    font: 15px/1.6 var(--body);
+    padding-inline: 16px;
+  }
+  main {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-block: 40px 64px;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--display);
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 {
+    font-size: clamp(30px, 4.6vw, 46px);
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+    font-weight: 750;
+  }
+  h2 {
+    font-size: 22px;
+    letter-spacing: -0.02em;
+    font-weight: 650;
+  }
+  h3 {
+    font-size: 16px;
+    font-weight: 650;
+  }
+  p {
+    margin: 0;
+  }
+  .lede {
+    max-width: 66ch;
+    color: var(--muted);
+    font-size: 17px;
+    margin-top: 14px;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-top: 22px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .d-harness {
+    background: var(--harness);
+  }
+  .d-jev {
+    background: var(--jev);
+  }
+  .d-agent {
+    background: var(--agent);
+  }
+  .d-human {
+    background: var(--human);
+    transform: rotate(45deg);
+    border-radius: 2px;
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 30px;
+  }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px 14px;
+    margin: 0;
+    background: var(--surface);
+    min-width: 0;
+  }
+  legend {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 6px;
+    font-weight: 600;
+  }
+  .seg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .seg input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .seg label {
+    font-size: 13px;
+    padding: 6px 11px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    color: var(--muted);
+    background: var(--canvas);
+  }
+  .seg input:checked + label {
+    background: var(--text);
+    color: var(--canvas);
+    border-color: var(--text);
+  }
+  .seg input:focus-visible + label {
+    outline: 2px solid var(--agent);
+    outline-offset: 2px;
+  }
+  .hint {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 8px;
+    min-height: 1.6em;
+  }
+  .stage-area {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 22px;
+    margin-top: 22px;
+    align-items: start;
+  }
+  .flow {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .node {
+    position: relative;
+    display: grid;
+    grid-template-columns: 34px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 11px 14px;
+    cursor: pointer;
+    transition:
+      opacity 0.2s,
+      border-color 0.2s,
+      background 0.2s;
+  }
+  .node:hover {
+    background: var(--hover);
+  }
+  .node:focus-visible {
+    outline: 2px solid var(--agent);
+    outline-offset: 2px;
+  }
+  .node[aria-pressed='true'] {
+    border-color: var(--text);
+    box-shadow: 0 0 0 1px var(--text);
+  }
+  .node.skip {
+    opacity: 0.42;
+  }
+  .node.skip .who {
+    text-decoration: line-through;
+  }
+  .node.live {
+    border-color: var(--agent);
+    background: var(--agent-soft);
+  }
+  .badge {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    font: 600 12px var(--mono);
+  }
+  .b-harness {
+    background: var(--harness-soft);
+    color: var(--harness);
+  }
+  .b-jev {
+    background: var(--jev-soft);
+    color: var(--jev);
+  }
+  .b-agent {
+    background: var(--agent-soft);
+    color: var(--agent);
+  }
+  .node strong {
+    display: block;
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .who {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .pick {
+    font: 500 12px var(--mono);
+    color: var(--muted);
+    text-align: right;
+    white-space: nowrap;
+  }
+  .gap {
+    height: 26px;
+    margin-left: 30px;
+    border-left: 2px solid var(--border);
+    position: relative;
+  }
+  .gap.on {
+    border-left-color: var(--strong);
+  }
+  .gate {
+    position: absolute;
+    left: -12px;
+    top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  .gate i {
+    width: 18px;
+    height: 18px;
+    transform: rotate(45deg);
+    border-radius: 3px;
+    border: 2px solid var(--human);
+    background: var(--canvas);
+    display: inline-block;
+    margin-left: 2px;
+  }
+  .gate.active i {
+    background: var(--human);
+  }
+  .gate span {
+    color: var(--human);
+    font-weight: 600;
+  }
+  .gate.inactive span {
+    color: var(--faint);
+    font-weight: 400;
+  }
+  .gate.inactive i {
+    border-color: var(--off);
+  }
+  .panel {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 16px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .panel .kicker {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .panel p {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 14px;
+    font-size: 13.5px;
+  }
+  .facts dt {
+    color: var(--muted);
+  }
+  .facts dd {
+    margin: 0;
+  }
+  .rec {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .rec li {
+    font: 12.5px/1.5 var(--mono);
+    background: var(--sunk);
+    border-radius: 8px;
+    padding: 7px 10px;
+    overflow-wrap: anywhere;
+  }
+  .rec b {
+    font-weight: 500;
+    color: var(--harness);
+  }
+  .you {
+    border-left: 3px solid var(--human);
+    background: var(--human-soft);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 12px;
+    font-size: 13.5px;
+  }
+  .you strong {
+    color: var(--human);
+  }
+  .run {
+    margin-top: 44px;
+  }
+  .run-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .btns {
+    display: flex;
+    gap: 8px;
+  }
+  button.act {
+    font: 500 13px var(--body);
+    padding: 8px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button.act.primary {
+    background: var(--agent);
+    border-color: var(--agent);
+    color: var(--canvas);
+  }
+  button.act:hover {
+    filter: brightness(1.05);
+  }
+  button.act:focus-visible {
+    outline: 2px solid var(--agent);
+    outline-offset: 2px;
+  }
+  button.act:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .ledger {
+    margin-top: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    overflow-x: auto;
+  }
+  .ledger table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 640px;
+  }
+  .ledger th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ledger td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .ledger tr:last-child td {
+    border-bottom: 0;
+  }
+  .ledger td:first-child {
+    font: 12px var(--mono);
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .ledger code {
+    font: 12px var(--mono);
+  }
+  .tag {
+    font: 500 11px var(--mono);
+    padding: 2px 7px;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+  .t-harness {
+    background: var(--harness-soft);
+    color: var(--harness);
+  }
+  .t-jev {
+    background: var(--jev-soft);
+    color: var(--jev);
+  }
+  .t-agent {
+    background: var(--agent-soft);
+    color: var(--agent);
+  }
+  .t-human {
+    background: var(--human-soft);
+    color: var(--human);
+  }
+  .waiting td {
+    background: var(--human-soft);
+  }
+  .decide {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  .empty {
+    padding: 18px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  section {
+    margin-top: 52px;
+  }
+  .matrix {
+    overflow-x: auto;
+    margin-top: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+  .matrix table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    min-width: 620px;
+  }
+  .matrix th,
+  .matrix td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+  .matrix tr:last-child td {
+    border-bottom: 0;
+  }
+  .matrix th {
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .matrix td.sel {
+    background: var(--human-soft);
+  }
+  .catalog {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .cat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .cat p {
+    font-size: 13.5px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .cat ul {
+    margin: 10px 0 0;
+    padding-left: 18px;
+    font-size: 13px;
+  }
+  .cat code {
+    font: 12px var(--mono);
+  }
+  .rules {
+    margin-top: 14px;
+    display: grid;
+    gap: 8px;
+    max-width: 78ch;
+  }
+  .rules p {
+    padding-left: 14px;
+    border-left: 2px solid var(--border);
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+  .rules strong {
+    color: var(--text);
+  }
+  footer {
+    margin-top: 44px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  @media (max-width: 820px) {
+    .controls,
+    .stage-area,
+    .catalog {
+      grid-template-columns: 1fr;
+    }
+    .panel {
+      position: static;
+    }
+    .pick {
+      display: none;
+    }
+    .node {
+      grid-template-columns: 34px 1fr;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none !important;
+    }
+  }
+</style>
+
+<main>
+  <h1>One request, a controlled path, a full record</h1>
+  <p class="lede">
+    Jev decides how much process each request needs and which model does each part. Agents do the
+    work. The harness enforces permissions, pauses at the checkpoints you choose, and records every
+    decision so you can see why something happened.
+  </p>
+  <div class="legend" aria-label="Legend">
+    <span><i class="dot d-harness"></i>Harness (fixed rules, storage)</span>
+    <span><i class="dot d-jev"></i>Jev (typed decisions with confidence)</span>
+    <span><i class="dot d-agent"></i>Agent (Claude or Codex doing the work)</span>
+    <span><i class="dot d-human"></i>You (a checkpoint)</span>
+  </div>
+
+  <div class="controls">
+    <fieldset>
+      <legend>Request</legend>
+      <div class="seg" id="scenarios"></div>
+      <p class="hint" id="scenario-hint"></p>
+    </fieldset>
+    <fieldset>
+      <legend>How involved you want to be</legend>
+      <div class="seg" id="levels"></div>
+      <p class="hint" id="level-hint"></p>
+    </fieldset>
+  </div>
+
+  <div class="stage-area">
+    <div class="flow" id="flow" aria-label="Harness stages"></div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+
+  <div class="run">
+    <div class="run-head">
+      <div>
+        <h2>Step through a run</h2>
+        <p class="hint">
+          Each row is a record the harness writes, in order. Checkpoints wait for your answer.
+        </p>
+      </div>
+      <div class="btns">
+        <button class="act primary" id="step" type="button">Next step</button>
+        <button class="act" id="all" type="button">Run to the next checkpoint</button>
+        <button class="act" id="reset" type="button">Reset</button>
+      </div>
+    </div>
+    <div class="ledger">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">By</th>
+            <th scope="col">Record</th>
+            <th scope="col">What it holds</th>
+          </tr>
+        </thead>
+        <tbody id="ledger"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <section aria-labelledby="hitl">
+    <h2 id="hitl">Where you stay in the loop</h2>
+    <p class="hint">
+      The highlighted column is your current setting. Stop works at every moment in every setting.
+    </p>
+    <div class="matrix"><table id="matrix"></table></div>
+  </section>
+
+  <section aria-labelledby="records">
+    <h2 id="records">Records we keep</h2>
+    <p class="hint">
+      All in Postgres, the source of truth. Nothing depends on the browser staying open, and
+      everything survives a restart.
+    </p>
+    <div class="catalog" id="catalog"></div>
+  </section>
+
+  <section aria-labelledby="rules">
+    <h2 id="rules">Rules that never bend</h2>
+    <div class="rules">
+      <p>
+        <strong>Jev chooses the path, never the permissions.</strong> Folders, mode, the allowlist
+        and budgets come from you and the fixed rules. A 0.99 confidence is still a guess, not a
+        grant.
+      </p>
+      <p>
+        <strong>Low confidence falls back.</strong> Below 0.5, or when Jev is unavailable, the fixed
+        rules decide and the record says so.
+      </p>
+      <p>
+        <strong>Evidence beats claims.</strong> What changed comes from git and our own receipts.
+        The agent's summary is shown next to it, labelled as its claim.
+      </p>
+      <p>
+        <strong>Nothing replays by itself.</strong> After a crash the run shows outcome unknown,
+        what changed so far, and a revert. You decide what happens next.
+      </p>
+      <p>
+        <strong>A review is an AI review.</strong> It is never labelled as verification. Checks you
+        run are recorded separately with their exit codes.
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    Spark Outpost harness design, September 26, 2026. Models shown are examples of Jev's tier
+    choices: Haiku for trivial work, Sonnet for normal fixes, Opus for planning and risky review.
+    Source: <code>docs/architecture/HARNESS_PLAN.md</code>.
+  </footer>
+</main>
+
+<script>
+  const STAGES = [
+    {
+      id: 'message',
+      n: '01',
+      kind: 'harness',
+      name: 'Save the request',
+      who: 'Harness',
+      what: 'Your message is saved and a run is queued. A worker picks it up, so the run keeps going if you close the tab.',
+      records: [
+        ['messages', 'your text, attachments, linked repos'],
+        ['runs', 'status queued, mode, parent run'],
+        ['run_events', 'RUN_STARTED'],
+      ],
+    },
+    {
+      id: 'intake',
+      n: 'J1',
+      kind: 'jev',
+      name: 'Intake',
+      who: 'Jev, one batched call',
+      what: 'Jev answers typed questions about the request in one call: intent, complexity, risk, whether untrusted content is trying to steer the agent, and how deep the work should go.',
+      records: [
+        ['decisions', 'questions, answers, probabilities, confidence'],
+        ['decisions', 'threshold used, applied / asked you / fell back to rules'],
+        ['usage', 'Jev tokens and cost, latency'],
+      ],
+      gate: { id: 'clarify', label: 'Clarify what you meant' },
+    },
+    {
+      id: 'route',
+      n: 'J2',
+      kind: 'jev',
+      name: 'Pick a model per subagent',
+      who: 'Jev, once per subagent',
+      what: 'For each piece of work Jev picks provider, model and effort. Simple work never reaches a frontier model. The answer is only used inside the limits you set.',
+      records: [['decisions', 'role, provider, model, effort, confidence']],
+    },
+    {
+      id: 'plan',
+      n: 'A1',
+      kind: 'agent',
+      name: 'Plan',
+      who: 'Planner subagent, read-only',
+      what: 'For bigger work a planner reads the repo and writes a plan with steps and how to check them. Every plan update is saved as a new version.',
+      records: [
+        ['runs', 'child run, role planner'],
+        ['run_artifacts', 'plan v1, v2, … entries with status and priority'],
+        ['run_events', 'steps and tool calls while reading'],
+      ],
+      gate: { id: 'plan', label: 'Approve the plan' },
+    },
+    {
+      id: 'work',
+      n: 'A2',
+      kind: 'agent',
+      name: 'Do the work',
+      who: 'Executor subagent',
+      what: 'The executor answers or edits. Before it starts, the harness takes a snapshot. Every edit and command passes the approval rules first; your mode and allowlist decide, never Jev.',
+      records: [
+        ['snapshots', 'git ref or file copies at start'],
+        ['approvals', 'exact payload and hash, your decision, scope'],
+        ['tool_calls', 'receipt: diff, command, exit code, output tail'],
+        ['fingerprints', 'file hashes before and after'],
+      ],
+      gate: { id: 'action', label: 'Approve edits and commands' },
+    },
+    {
+      id: 'check',
+      n: 'H1',
+      kind: 'harness',
+      name: 'Run checks',
+      who: 'Harness',
+      what: 'The project check command, for example pnpm test, runs through the same approval rules. Its exit code is recorded as evidence.',
+      records: [['run_artifacts', 'check: command, exit code, duration, output tail']],
+    },
+    {
+      id: 'judge',
+      n: 'J3',
+      kind: 'jev',
+      name: 'Judge and decide next',
+      who: 'Jev',
+      what: 'Jev scores the result against the plan and picks what happens next: finish, retry one tier up, ask for a review, or ask you.',
+      records: [['decisions', 'quality score, next step, confidence']],
+      gate: { id: 'next', label: 'Confirm a retry or escalation' },
+    },
+    {
+      id: 'review',
+      n: 'A3',
+      kind: 'agent',
+      name: 'Review',
+      who: 'Reviewer subagent, read-only, other provider',
+      what: 'A fresh read-only session checks the evidence and re-checks file fingerprints, so it cannot be fooled by files changing afterwards.',
+      records: [
+        ['runs', 'child run, role reviewer'],
+        ['run_artifacts', 'review: verdict, findings, reviewer model'],
+      ],
+    },
+    {
+      id: 'finish',
+      n: 'H2',
+      kind: 'harness',
+      name: 'Finish',
+      who: 'Harness',
+      what: "What changed is built from git and our receipts, next to the agent's own summary. Cost is added up per subagent and for Jev.",
+      records: [
+        ['run_artifacts', 'changes: files, additions, deletions, patch, agent claim'],
+        ['runs', 'final status, outcome'],
+        ['usage', 'totals per run, chat and provider'],
+      ],
+      gate: { id: 'accept', label: 'Keep, fix or revert' },
+    },
+  ];
+
+  const SCENARIOS = [
+    {
+      id: 'question',
+      label: 'Question in a repo',
+      text: '“What does parseDate do?”',
+      path: ['message', 'intake', 'route', 'work', 'finish'],
+      picks: { route: 'Sonnet · low', work: 'Ask mode, reads only' },
+      depth: 'direct',
+      risk: 'read-only',
+      conf: 0.94,
+    },
+    {
+      id: 'trivial',
+      label: 'Trivial fix',
+      text: '“Fix the typo in the README heading.”',
+      path: ['message', 'intake', 'route', 'work', 'check', 'judge', 'finish'],
+      picks: { route: 'Haiku · low', work: '1 file' },
+      depth: 'execute',
+      risk: 'edits',
+      conf: 0.92,
+    },
+    {
+      id: 'normal',
+      label: 'Normal fix',
+      text: '“The date divider shows the wrong day after midnight. Fix it and add a test.”',
+      path: ['message', 'intake', 'route', 'work', 'check', 'judge', 'finish'],
+      picks: { route: 'Sonnet · medium', work: '2 files' },
+      depth: 'execute',
+      risk: 'edits',
+      conf: 0.81,
+    },
+    {
+      id: 'complex',
+      label: 'Complex change',
+      text: '“Move date handling into one module and update every component.”',
+      path: [
+        'message',
+        'intake',
+        'route',
+        'plan',
+        'route',
+        'work',
+        'check',
+        'judge',
+        'review',
+        'finish',
+      ],
+      picks: {
+        route: 'Opus plan · Sonnet ×3',
+        plan: 'Opus · high',
+        work: '3 subtasks',
+        review: 'Codex · high',
+      },
+      depth: 'plan → execute → review',
+      risk: 'multi-file',
+      conf: 0.77,
+    },
+    {
+      id: 'risky',
+      label: 'Risky migration',
+      text: '“Rename the runs table column and migrate old rows.”',
+      path: [
+        'message',
+        'intake',
+        'route',
+        'plan',
+        'route',
+        'work',
+        'check',
+        'judge',
+        'review',
+        'finish',
+      ],
+      picks: {
+        route: 'Opus · high',
+        plan: 'Opus · high',
+        work: 'migration + code',
+        review: 'Codex · high',
+      },
+      depth: 'plan → execute → review',
+      risk: 'destructive',
+      conf: 0.71,
+    },
+  ];
+
+  const LEVELS = [
+    {
+      id: 'hands-on',
+      label: 'Hands-on',
+      hint: 'You approve the plan, every edit and every command.',
+    },
+    {
+      id: 'balanced',
+      label: 'Balanced',
+      hint: 'Edits and commands ask. Plans ask only for risky or multi-file work. Jev asks when unsure.',
+    },
+    {
+      id: 'hands-off',
+      label: 'Hands-off',
+      hint: 'Edits go through; commands outside the allowlist still ask. You see everything afterwards.',
+    },
+    {
+      id: 'auto',
+      label: 'Full auto',
+      hint: 'Nothing asks except pushing, deleting outside the repo, secrets and budgets. The harness answers the agent itself, so every action still gets a receipt and the run can be reverted.',
+    },
+  ];
+
+  const GATES = [
+    {
+      id: 'clarify',
+      name: 'Clarify what you meant',
+      when: 'Jev is unsure what you asked for',
+      rule: {
+        'hands-on': 'Below 0.75',
+        balanced: 'Below 0.6',
+        'hands-off': 'Below 0.5',
+        auto: 'Never; the fixed rules decide',
+      },
+    },
+    {
+      id: 'plan',
+      name: 'Approve the plan',
+      when: 'A planner ran',
+      rule: {
+        'hands-on': 'Always',
+        balanced: 'Multi-file or risky work',
+        'hands-off': 'Destructive work only',
+        auto: 'Never',
+      },
+    },
+    {
+      id: 'action',
+      name: 'Approve edits and commands',
+      when: 'The agent wants to change a file or run something',
+      rule: {
+        'hands-on': 'Every edit and command',
+        balanced: 'Every edit; commands not on the allowlist',
+        'hands-off': 'Commands not on the allowlist',
+        auto: 'Only pushing, deleting outside the repo, or touching secrets',
+      },
+    },
+    {
+      id: 'next',
+      name: 'Confirm a retry or escalation',
+      when: 'Jev wants to retry with a bigger model or send work back',
+      rule: {
+        'hands-on': 'Always',
+        balanced: 'When Jev is below 0.9',
+        'hands-off': 'Never; the retry limit still applies',
+        auto: 'Never; the retry limit still applies',
+      },
+    },
+    {
+      id: 'accept',
+      name: 'Keep, fix or revert',
+      when: 'The run changed files',
+      rule: {
+        'hands-on': 'Always',
+        balanced: 'Always',
+        'hands-off': 'Kept by default; revert stays available',
+        auto: 'Kept by default; revert stays available',
+      },
+    },
+    {
+      id: 'budget',
+      name: 'Continue past a budget',
+      when: 'Time, tool calls or cost ran out',
+      rule: { 'hands-on': 'Always', balanced: 'Always', 'hands-off': 'Always', auto: 'Always' },
+    },
+    {
+      id: 'stop',
+      name: 'Stop',
+      when: 'Any moment',
+      rule: {
+        'hands-on': 'Always available',
+        balanced: 'Always available',
+        'hands-off': 'Always available',
+        auto: 'Always available',
+      },
+    },
+  ];
+
+  const CATALOG = [
+    {
+      name: 'Runs and subagents',
+      table: 'runs',
+      what: 'One row per run and per subagent, linked by parent run and role.',
+      items: [
+        'status and outcome, including outcome unknown after a crash',
+        'mode, provider, model, effort',
+        'role: planner, executor, reviewer',
+        'timestamps and active time',
+      ],
+    },
+    {
+      name: 'Jev decisions',
+      table: 'decisions (run_artifacts: advice)',
+      what: 'Every routing, judging and escalation decision, including the ones the rules made instead.',
+      items: [
+        'the exact questions sent, with minimised input',
+        'answers, probabilities, confidence',
+        'threshold, and whether it was applied, asked you, or fell back',
+        'latency, tokens, cost',
+      ],
+    },
+    {
+      name: 'Your checkpoints',
+      table: 'approvals',
+      what: 'Every time the harness waited for you and what you chose.',
+      items: [
+        'the exact payload and its hash, so a changed request needs a new approval',
+        'options offered and the one you picked',
+        'scope: once, this run, or this project',
+        'who, when, and whether it expired or was cancelled',
+      ],
+    },
+    {
+      name: 'Tool receipts',
+      table: 'tool_calls',
+      what: 'What the agent actually did, from our side of the connection.',
+      items: [
+        'kind, title, files touched',
+        'diff, capped at 64 KB',
+        'command, exit code, last 8 KB of output',
+        'the approval it ran under',
+      ],
+    },
+    {
+      name: 'Run artifacts',
+      table: 'run_artifacts',
+      what: 'Things you open again later. Versioned, exportable as Markdown.',
+      items: [
+        'plan, every version with the history of changes',
+        'what changed: files, patch, agent claim',
+        'check results',
+        'review verdict and findings',
+      ],
+    },
+    {
+      name: 'Snapshots and fingerprints',
+      table: 'snapshots',
+      what: 'What makes revert and trustworthy review possible.',
+      items: [
+        'git ref of the working tree at start',
+        'copies of files outside git that the harness wrote',
+        'file hashes before and after each stage',
+      ],
+    },
+    {
+      name: 'Live activity',
+      table: 'run_events',
+      what: 'The stream you watch while the run works, kept for replay.',
+      items: [
+        'steps, text, tool calls, plan updates',
+        'approval requested and decided',
+        'errors, budget exhausted, stop',
+      ],
+    },
+    {
+      name: 'Usage',
+      table: 'runs + usage summary',
+      what: 'Cost you can see per reply, per chat and per provider.',
+      items: [
+        'input, output, cached and thinking tokens',
+        'cost as reported by the provider',
+        'context used per provider',
+        'Jev cost as its own line',
+      ],
+    },
+  ];
+
+  const $ = (s) => document.querySelector(s);
+  const state = {
+    scenario: 'normal',
+    level: 'balanced',
+    stage: 'intake',
+    cursor: 0,
+    waiting: null,
+  };
+  function store(k, v) {
+    try {
+      localStorage.setItem('harness:' + k, v);
+    } catch (e) {}
+  }
+  function load(k) {
+    try {
+      return localStorage.getItem('harness:' + k);
+    } catch (e) {
+      return null;
+    }
+  }
+  state.scenario = load('scenario') || state.scenario;
+  state.level = load('level') || state.level;
+  const scen = () => SCENARIOS.find((s) => s.id === state.scenario);
+  const level = () => LEVELS.find((l) => l.id === state.level);
+
+  function gateActive(id) {
+    const s = scen(),
+      l = state.level;
+    if (id === 'clarify')
+      return s.conf < { 'hands-on': 0.75, balanced: 0.6, 'hands-off': 0.5, auto: 0 }[l];
+    if (id === 'plan') {
+      if (!s.path.includes('plan')) return false;
+      if (l === 'hands-on') return true;
+      if (l === 'balanced') return s.risk === 'multi-file' || s.risk === 'destructive';
+      return s.risk === 'destructive' && l !== 'auto';
+    }
+    if (id === 'action') return s.risk !== 'read-only' && l !== 'auto';
+    if (id === 'next') {
+      if (!s.path.includes('judge')) return false;
+      if (l === 'hands-on') return true;
+      if (l === 'balanced') return s.conf < 0.9 && s.path.includes('review');
+      return false;
+    }
+    if (id === 'accept') {
+      if (s.risk === 'read-only') return false;
+      return l !== 'hands-off' && l !== 'auto';
+    }
+    return false;
+  }
+
+  function radios(el, items, name, current, onPick) {
+    el.innerHTML = '';
+    items.forEach((it) => {
+      const id = name + '-' + it.id;
+      const input = Object.assign(document.createElement('input'), {
+        type: 'radio',
+        name,
+        id,
+        value: it.id,
+        checked: it.id === current,
+      });
+      const lab = Object.assign(document.createElement('label'), {
+        htmlFor: id,
+        textContent: it.label,
+      });
+      input.addEventListener('change', () => onPick(it.id));
+      el.append(input, lab);
+    });
+  }
+
+  function renderFlow() {
+    const s = scen(),
+      flow = $('#flow');
+    flow.innerHTML = '';
+    STAGES.forEach((st, i) => {
+      const on = s.path.includes(st.id);
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'node' + (on ? '' : ' skip');
+      b.setAttribute('aria-pressed', String(state.stage === st.id));
+      b.dataset.stage = st.id;
+      const pick = s.picks[st.id] || (on ? '' : 'skipped');
+      b.innerHTML = `<span class="badge b-${st.kind}">${st.n}</span><span><strong>${st.name}</strong><span class="who">${st.who}</span></span><span class="pick">${pick}</span>`;
+      b.addEventListener('click', () => {
+        state.stage = st.id;
+        renderFlow();
+        renderPanel();
+      });
+      flow.append(b);
+      if (i < STAGES.length - 1) {
+        const g = document.createElement('div');
+        g.className = 'gap' + (on ? ' on' : '');
+        if (st.gate) {
+          const act = on && gateActive(st.gate.id);
+          g.innerHTML = `<span class="gate ${act ? 'active' : 'inactive'}"><i></i><span>${st.gate.label}${act ? '' : ' · skipped here'}</span></span>`;
+        }
+        flow.append(g);
+      }
+    });
+  }
+
+  function renderPanel() {
+    const st = STAGES.find((x) => x.id === state.stage),
+      s = scen(),
+      on = s.path.includes(st.id);
+    const gate = st.gate ? GATES.find((g) => g.id === st.gate.id) : null;
+    const act = gate && on && gateActive(gate.id);
+    $('#panel').innerHTML = `
+    <span class="kicker">${st.who}</span>
+    <h3>${st.name}${on ? '' : ' · not used for this request'}</h3>
+    <p>${st.what}</p>
+    <dl class="facts">
+      <dt>This request</dt><dd>${s.text}</dd>
+      <dt>Jev's depth</dt><dd>${s.depth}, confidence ${s.conf.toFixed(2)}</dd>
+      ${s.picks[st.id] ? `<dt>Choice here</dt><dd>${s.picks[st.id]}</dd>` : ''}
+    </dl>
+    <div><span class="kicker">Records written</span>
+      <ul class="rec">${st.records.map(([t, d]) => `<li><b>${t}</b> · ${d}</li>`).join('')}</ul></div>
+    ${gate ? `<div class="you"><strong>${gate.name}.</strong> ${act ? 'You will be asked here' : 'Not asked here'} with the ${level().label.toLowerCase()} setting: ${gate.rule[state.level].toLowerCase()}.</div>` : ''}`;
+  }
+
+  function script() {
+    const s = scen(),
+      rows = [];
+    let t = 0;
+    const at = (d) => {
+      t += d;
+      return '+' + t.toFixed(1) + 's';
+    };
+    rows.push({
+      t: at(0),
+      by: 'harness',
+      rec: 'runs',
+      txt: `queued · ${s.risk === 'read-only' ? 'Ask' : 'Do'} mode · ${s.path.includes('plan') ? 'orchestrated' : 'single agent'}`,
+    });
+    rows.push({
+      t: at(0.4),
+      by: 'jev',
+      rec: 'decisions',
+      txt: `intake · depth “${s.depth}” · risk ${s.risk} · injection 0.03 · confidence ${s.conf.toFixed(2)}`,
+    });
+    if (gateActive('clarify'))
+      rows.push({
+        t: at(0.1),
+        by: 'human',
+        rec: 'approvals',
+        txt: 'Did you mean the whole date module, or only the divider?',
+        gate: ['Whole module', 'Only the divider'],
+      });
+    rows.push({
+      t: at(0.3),
+      by: 'jev',
+      rec: 'decisions',
+      txt: `model · ${s.picks.plan ? 'planner ' + s.picks.plan : s.picks.route}`,
+    });
+    if (s.path.includes('plan')) {
+      rows.push({
+        t: at(9.5),
+        by: 'agent',
+        rec: 'run_artifacts',
+        txt: 'plan v1 · 5 entries · “Plan · 0 of 5 done”',
+      });
+      if (gateActive('plan'))
+        rows.push({
+          t: at(0.1),
+          by: 'human',
+          rec: 'approvals',
+          txt: 'Approve the plan before any edits?',
+          gate: ['Approve', 'Edit plan', 'Stop'],
+        });
+      rows.push({
+        t: at(0.3),
+        by: 'jev',
+        rec: 'decisions',
+        txt: 'model per subtask · Sonnet medium ×2 · Haiku low ×1',
+      });
+    }
+    if (s.risk !== 'read-only') {
+      rows.push({
+        t: at(0.2),
+        by: 'harness',
+        rec: 'snapshots',
+        txt: 'git ref 4f2a9c1 · 0 uncommitted files',
+      });
+      rows.push({
+        t: at(6.1),
+        by: 'agent',
+        rec: 'tool_calls',
+        txt: 'read src/chat/turns.ts · 212 lines',
+      });
+      if (gateActive('action') && state.level !== 'hands-off')
+        rows.push({
+          t: at(0.1),
+          by: 'human',
+          rec: 'approvals',
+          txt: 'Edit src/chat/turns.ts · +6 −2 · hash 9be1…',
+          gate: ['Allow', 'Allow for this run', 'Deny'],
+        });
+      else
+        rows.push({
+          t: at(0.1),
+          by: 'harness',
+          rec: 'approvals',
+          txt: `Edit src/chat/turns.ts · auto-approved by your ${level().label} setting`,
+        });
+      rows.push({
+        t: at(1.2),
+        by: 'agent',
+        rec: 'tool_calls',
+        txt: 'edit src/chat/turns.ts · +6 −2 · receipt saved',
+      });
+      if (state.level === 'auto')
+        rows.push({
+          t: at(0.1),
+          by: 'harness',
+          rec: 'approvals',
+          txt: 'Run pnpm test · auto-approved by your Full auto setting',
+        });
+      else
+        rows.push({
+          t: at(0.1),
+          by: 'human',
+          rec: 'approvals',
+          txt: 'Run pnpm test (not on the allowlist)',
+          gate: ['Allow', 'Always allow in this project', 'Deny'],
+        });
+      rows.push({
+        t: at(14.8),
+        by: 'harness',
+        rec: 'run_artifacts',
+        txt: 'check · pnpm test · exit 0 · 38.2s',
+      });
+      rows.push({
+        t: at(0.5),
+        by: 'jev',
+        rec: 'decisions',
+        txt: `judge · quality 4 of 5 · next “${s.path.includes('review') ? 'review' : 'finish'}” · confidence 0.88`,
+      });
+      if (gateActive('next'))
+        rows.push({
+          t: at(0.1),
+          by: 'human',
+          rec: 'approvals',
+          txt: 'Jev suggests a review by Codex · high effort',
+          gate: ['Review', 'Skip review'],
+        });
+      if (s.path.includes('review'))
+        rows.push({
+          t: at(11.3),
+          by: 'agent',
+          rec: 'run_artifacts',
+          txt: 'review · Codex · looks good · fingerprints match',
+        });
+      rows.push({
+        t: at(0.4),
+        by: 'harness',
+        rec: 'run_artifacts',
+        txt: 'changes · 2 files · +19 −4 · agent claim attached',
+      });
+      if (gateActive('accept'))
+        rows.push({
+          t: at(0.1),
+          by: 'human',
+          rec: 'approvals',
+          txt: 'Keep these changes?',
+          gate: ['Keep', 'Ask for a fix', 'Revert'],
+        });
+    } else {
+      rows.push({
+        t: at(5.8),
+        by: 'agent',
+        rec: 'tool_calls',
+        txt: 'read src/chat/dates.ts · grep parseDate · 3 matches',
+      });
+      rows.push({ t: at(3.2), by: 'agent', rec: 'run_events', txt: 'reply streamed · 142 words' });
+    }
+    rows.push({
+      t: at(0.2),
+      by: 'harness',
+      rec: 'runs',
+      txt: `succeeded · ${t.toFixed(1)}s active · cost $${(s.path.length * 0.0042).toFixed(3)} + Jev $0.0002`,
+    });
+    return rows;
+  }
+
+  function renderLedger() {
+    const rows = script(),
+      body = $('#ledger');
+    body.innerHTML = '';
+    if (state.cursor === 0) {
+      body.innerHTML =
+        '<tr><td colspan="4" class="empty">Press Next step to watch the records appear.</td></tr>';
+    }
+    rows.slice(0, state.cursor).forEach((r, i) => {
+      const tr = document.createElement('tr');
+      const waiting = r.gate && i === state.cursor - 1 && state.waiting !== null;
+      if (waiting) tr.className = 'waiting';
+      const by = { harness: 'Harness', jev: 'Jev', agent: 'Agent', human: 'You' }[r.by];
+      tr.innerHTML = `<td>${r.t}</td><td><span class="tag t-${r.by}">${by}</span></td><td><code>${r.rec}</code></td><td>${r.txt}${r.gate ? (waiting ? `<div class="decide">${r.gate.map((g) => `<button class="act" type="button" data-choice="${g}">${g}</button>`).join('')}</div>` : ` → <strong>${r.choice || r.gate[0]}</strong>`) : ''}</td>`;
+      body.append(tr);
+    });
+    body.querySelectorAll('[data-choice]').forEach((btn) =>
+      btn.addEventListener('click', () => {
+        rows[state.cursor - 1].choice = btn.dataset.choice;
+        chosen[state.cursor - 1] = btn.dataset.choice;
+        state.waiting = null;
+        renderLedger();
+      }),
+    );
+    rows.forEach((r, i) => {
+      if (chosen[i]) r.choice = chosen[i];
+    });
+    const done = state.cursor >= rows.length;
+    $('#step').disabled = done || state.waiting !== null;
+    $('#all').disabled = done || state.waiting !== null;
+  }
+  let chosen = {};
+  function advance() {
+    const rows = script();
+    if (state.waiting !== null || state.cursor >= rows.length) return false;
+    state.cursor++;
+    const r = rows[state.cursor - 1];
+    if (r.gate) state.waiting = state.cursor - 1;
+    return true;
+  }
+  $('#step').addEventListener('click', () => {
+    advance();
+    renderLedger();
+  });
+  $('#all').addEventListener('click', () => {
+    while (advance() && state.waiting === null) {}
+    renderLedger();
+  });
+  $('#reset').addEventListener('click', () => {
+    state.cursor = 0;
+    state.waiting = null;
+    chosen = {};
+    renderLedger();
+  });
+
+  function renderMatrix() {
+    const head = `<thead><tr><th scope="col">Checkpoint</th><th scope="col">When it can happen</th>${LEVELS.map((l) => `<th scope="col">${l.label}</th>`).join('')}</tr></thead>`;
+    const rows = GATES.map(
+      (g) =>
+        `<tr><td><strong>${g.name}</strong></td><td>${g.when}</td>${LEVELS.map((l) => `<td class="${l.id === state.level ? 'sel' : ''}">${g.rule[l.id]}</td>`).join('')}</tr>`,
+    ).join('');
+    $('#matrix').innerHTML = head + '<tbody>' + rows + '</tbody>';
+  }
+  function renderCatalog() {
+    $('#catalog').innerHTML = CATALOG.map(
+      (c) =>
+        `<article class="cat"><h3>${c.name}</h3><p><code>${c.table}</code> · ${c.what}</p><ul>${c.items.map((i) => `<li>${i}</li>`).join('')}</ul></article>`,
+    ).join('');
+  }
+  function renderAll() {
+    $('#scenario-hint').textContent = scen().text;
+    $('#level-hint').textContent = level().hint;
+    renderFlow();
+    renderPanel();
+    renderLedger();
+    renderMatrix();
+  }
+  radios($('#scenarios'), SCENARIOS, 'scenario', state.scenario, (id) => {
+    state.scenario = id;
+    store('scenario', id);
+    state.cursor = 0;
+    state.waiting = null;
+    chosen = {};
+    renderAll();
+  });
+  radios($('#levels'), LEVELS, 'level', state.level, (id) => {
+    state.level = id;
+    store('level', id);
+    state.cursor = 0;
+    state.waiting = null;
+    chosen = {};
+    renderAll();
+  });
+  renderCatalog();
+  renderAll();
+</script>

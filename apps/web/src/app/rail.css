@@ -1,0 +1,218 @@
+.rail {
+  position: relative;
+  width: 70px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 0 12px;
+  background: var(--rail);
+}
+
+.rail-logo {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 10px;
+  border-radius: 14px;
+  transition: background 0.2s;
+}
+
+.rail-logo:hover {
+  background: var(--raise);
+}
+
+.rail-ind {
+  position: absolute;
+  left: 7px;
+  top: 0;
+  width: 56px;
+  height: 52px;
+  border-radius: 13px;
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
+  pointer-events: none;
+  transition:
+    transform 0.25s var(--out),
+    opacity 0.2s;
+}
+
+.rail-ind::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 15px;
+  bottom: 15px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+
+.rail-btn {
+  position: relative;
+  z-index: 1;
+  width: 56px;
+  padding: 8px 0 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border-radius: 13px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.rail-btn svg {
+  transition:
+    transform 0.2s var(--out),
+    color 0.2s;
+}
+
+.rail-btn:hover {
+  color: var(--text);
+}
+
+.rail-btn:hover svg {
+  transform: translateY(-2px);
+}
+
+.rail-btn:active svg {
+  transform: scale(0.88);
+}
+
+.rail-btn[aria-current='page'] {
+  color: var(--text);
+}
+
+.rail-btn[aria-current='page'] svg {
+  color: var(--accent-text);
+}
+
+.rbadge {
+  position: absolute;
+  top: 3px;
+  right: 9px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--warn);
+  color: var(--warn-ink);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--rail);
+  animation: sb-popin 0.2s var(--out);
+}
+
+.rail-sp {
+  flex: 1;
+}
+
+.page {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 8px 8px 8px 0;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--r) + 4px);
+  animation: sb-viewin 0.25s var(--out);
+}
+
+.soon-page {
+  display: grid;
+  place-items: center;
+  padding: 40px 22px;
+  text-align: center;
+}
+
+.soon-in {
+  max-width: 420px;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.soon-page h2 {
+  margin: 8px 0 0;
+  font-size: 21px;
+  font-weight: 600;
+}
+
+.soon-page p {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+@keyframes sb-viewin {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (max-width: 640px) {
+  .rail {
+    position: fixed;
+    z-index: 18;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: flex-start;
+    gap: 0;
+    padding: 4px 6px env(safe-area-inset-bottom, 0px);
+    background: var(--rail);
+    border-top: 1px solid var(--line);
+  }
+
+  .rail-logo,
+  .rail-sp,
+  .rail-ind {
+    display: none;
+  }
+
+  .rail-btn {
+    flex: 1;
+    width: auto;
+  }
+
+  .rail-btn[aria-current='page']::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    width: 22px;
+    height: 3px;
+    margin-left: -11px;
+    border-radius: 0 0 3px 3px;
+    background: var(--accent);
+    animation: sb-popin 0.2s var(--out);
+  }
+
+  .rbadge {
+    right: calc(50% - 22px);
+  }
+
+  .app:has(> .rail) {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .page {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+}

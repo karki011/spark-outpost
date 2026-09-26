@@ -1,0 +1,12 @@
+[
+  { "category": "Rent", "amount": "$1,500.00" },
+  { "category": " food ", "amount": "$12.50" },
+  { "category": "misc", "amount": "$0.00" },
+  { "category": "Food", "amount": "$12.50" },
+  { "category": "food", "amount": "$13.00" },
+  { "category": "", "amount": "$4.00" },
+  { "amount": "$4.00" },
+  { "category": "refund", "amount": "-$5.00" },
+  { "category": "Refund", "amount": "-$5.00" },
+  { "category": "misc", "amount": "-$0.00" }
+]

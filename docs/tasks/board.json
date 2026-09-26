@@ -1,0 +1,355 @@
+{
+  "tasks": [
+    {
+      "id": "F-1",
+      "title": "Monorepo, tooling, and AGENTS.md source-rule checks",
+      "phase": "0",
+      "status": "done",
+      "acceptance": [
+        "pnpm check passes",
+        "Source rules flag comments and files over 500 lines"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "done",
+          "text": "pnpm check passes: prettier, eslint, tsc, source rules, 17 unit tests. Rule behavior covered by scripts/source-rules.test.ts."
+        }
+      ]
+    },
+    {
+      "id": "F-2",
+      "title": "Native local PostgreSQL cluster scripts",
+      "phase": "0",
+      "status": "done",
+      "acceptance": [
+        "db:setup, db:up, db:stop work on a fresh machine",
+        "Loopback only, SCRAM, credentials in ignored .local"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "done",
+          "text": "db:setup/up/stop/migrate verified on this Mac (Postgres 17.11). Needed LC_ALL fix, documented in infra/local/README.md."
+        }
+      ]
+    },
+    {
+      "id": "F-3",
+      "title": "Foundation schema and migration runner",
+      "phase": "0",
+      "status": "done",
+      "acceptance": [
+        "Migrations are plain SQL, applied once, guarded by an advisory lock",
+        "API and worker refuse to start with pending migrations"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "done",
+          "text": "0001_foundation.sql applied once; second db:migrate reports up to date. API and worker call assertMigrated at startup."
+        }
+      ]
+    },
+    {
+      "id": "F-4",
+      "title": "Event log with lease fencing, job queue, and expired-lease recovery",
+      "phase": "0",
+      "status": "done",
+      "acceptance": [
+        "Stale worker cannot append after losing its lease",
+        "Expired lease becomes outcome_unknown without automatic retry",
+        "Concurrent claims never take the same job"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "done",
+          "text": "queue.db.test.ts: 5 concurrent claims distinct; fenced append rejected after expiry (verified test fails when the check is removed); expired lease -> outcome_unknown, not reclaimed."
+        }
+      ]
+    },
+    {
+      "id": "F-5",
+      "title": "API: conversations, idempotent messages, cancel, SSE replay from cursor",
+      "phase": "0",
+      "status": "done",
+      "acceptance": [
+        "Duplicate message id returns the same run",
+        "Replay from Last-Event-ID has no duplicates",
+        "Disconnecting the stream does not cancel the run"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "done",
+          "text": "api.db.test.ts: ordered replay, Last-Event-ID resume without duplicates, 204 at end, host/origin/content-type guards, 400/404 validation. conversations.db.test.ts: duplicate send returns one run."
+        }
+      ]
+    },
+    {
+      "id": "F-6",
+      "title": "Worker with fake provider emitting AG-UI events",
+      "phase": "0",
+      "status": "done",
+      "acceptance": [
+        "Run streams steps and text",
+        "Cancel produces RUN_FINISHED cancelled",
+        "Provider failure produces RUN_ERROR"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "done",
+          "text": "worker.db.test.ts: success with persisted reply, cancel -> RUN_FINISHED cancelled, #fail -> RUN_ERROR."
+        }
+      ]
+    },
+    {
+      "id": "F-7",
+      "title": "Web chat slice: sidebar, thread, work log, composer, themes",
+      "phase": "0",
+      "status": "done",
+      "acceptance": [
+        "Theme applies before React mounts",
+        "Enter sends, Shift+Enter adds a line",
+        "Stop cancels the active run"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "done",
+          "text": "Checked in the browser pane: streaming steps and text, Stop button, sidebar status and title. Theme test passes."
+        }
+      ]
+    },
+    {
+      "id": "F-8",
+      "title": "Browser test: send, stream, reload without duplicates",
+      "phase": "0",
+      "status": "done",
+      "acceptance": [
+        "pnpm test:browser passes against the local stack"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "done",
+          "text": "pnpm test:browser cold start: 3 passed, exit 0, no leftover processes."
+        }
+      ]
+    },
+    {
+      "id": "F-9",
+      "title": "Authenticate UI, API, and stream with a per-launch token",
+      "phase": "0",
+      "status": "ready",
+      "acceptance": [
+        "Requests without the token are rejected",
+        "Token never reaches logs or agent-visible artifacts"
+      ],
+      "notes": []
+    },
+    {
+      "id": "F-10",
+      "title": "App-wide status stream for sidebar, Home, rail badge, favicon",
+      "phase": "1",
+      "status": "ready",
+      "acceptance": [
+        "Replaces list polling",
+        "Status for chats that are not open updates live"
+      ],
+      "notes": []
+    },
+    {
+      "id": "F-11",
+      "title": "ACP coverage spike with claude-agent-acp",
+      "phase": "spike",
+      "status": "done",
+      "acceptance": [
+        "Written checklist of ACP messages that arrive: diffs, permission requests, config options, usage"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "done",
+          "text": "Live spike against claude-agent-acp 0.81.2 and codex-acp 1.13.1: findings table in docs/architecture/ACP_AGENTS.md (config options, modes, permission flow, tool calls, usage, cancel under 60 ms). Found codex-acp read-only mode still writes /tmp without asking."
+        }
+      ]
+    },
+    {
+      "id": "F-12",
+      "title": "ACP client adapter in the worker, tested against a fake ACP agent over stdio",
+      "phase": "1",
+      "status": "review",
+      "acceptance": [
+        "Provider outputs map to AG-UI events as in PLAN.md section 11"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "review",
+          "text": "Chat path (no project folder) runs Claude and Codex over ACP: one process per run, private empty folder, chat mode forced, model and effort via config options, permissions declined with a visible step, cancel, readable errors. Checks: pnpm check 81 unit, test:db 37, test:browser 12, test:live 6 (both providers: context recall, blocked write, cancel under 6 s). Checked in the app with real Claude and Codex replies. Known gap: Codex can still write under /tmp."
+        }
+      ]
+    },
+    {
+      "id": "F-13",
+      "title": "Approval card and interrupt flow",
+      "phase": "1",
+      "status": "review",
+      "acceptance": [
+        "Backend enforces approval bound to action and revision",
+        "Denied permission prevents execution"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-26",
+          "status": "review",
+          "text": "M2 Do with approvals for Claude: 0015_approvals, decide() with four levels and always-ask list, approval gate with NOTIFY and 1 s poll, Stop cancels, 30 min timeout fails the run, recovery expires, payload-hash bound decisions, git and file snapshots with revert. Codex Do unavailable (live probe: commands never ask). Evidence: unit decide/ACP tests, approvals DB tests, approvals browser spec, live Claude test (edit allowed, ls allowed for run, git push denied, reverted). Needs independent review."
+        }
+      ]
+    },
+    {
+      "id": "F-14",
+      "title": "Port mockup: rail, Home, Blob Scout moods",
+      "phase": "4",
+      "status": "backlog",
+      "acceptance": [
+        "Matches docs/design/ux sections 5 and 6"
+      ],
+      "notes": []
+    },
+    {
+      "id": "F-15",
+      "title": "Port mockup: projects, search, archive, history in the sidebar",
+      "phase": "4",
+      "status": "backlog",
+      "acceptance": [
+        "Matches docs/design/ux section 7.1"
+      ],
+      "notes": []
+    },
+    {
+      "id": "F-16",
+      "title": "Port mockup: model picker and context ring from capability snapshots",
+      "phase": "2",
+      "status": "review",
+      "acceptance": [
+        "No provider-name branches in shared UI",
+        "Unknown usage shows unknown, not 0%"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "review",
+          "text": "Composer ported from the mockup: plus menu (attachments marked Soon), model picker with real models from each agent's capability snapshot (Claude: Default, Opus 5.5, Fable 5.1, Sonnet 5, Haiku 4.5; Codex: 6 Astra/Sol/Luna and older), effort segmented control and meter, permissions, per-chat settings, context ring from ACP usage_update. Checked live: picked Sonnet 5 and the reply confirmed it. Chat replies render Markdown (react-markdown, remark-gfm, remend, Shiki themed by tokens). Theme menu ported. check 87, test:db 40, test:browser 14."
+        }
+      ]
+    },
+    {
+      "id": "F-17",
+      "title": "Evaluate an AG-UI client agent with connect() for reconnects",
+      "phase": "1",
+      "status": "backlog",
+      "acceptance": [
+        "Decision recorded in PROTOCOL_ALIGNMENT.md"
+      ],
+      "notes": []
+    },
+    {
+      "id": "F-18",
+      "title": "Worker shutdown semantics for long-running provider processes",
+      "phase": "1",
+      "status": "backlog",
+      "acceptance": [
+        "Shutdown stops claiming and records honest outcomes"
+      ],
+      "notes": []
+    },
+    {
+      "id": "F-19",
+      "title": "CI workflow",
+      "phase": "0",
+      "status": "blocked",
+      "acceptance": [
+        "Needs an authorized remote repository"
+      ],
+      "notes": []
+    },
+    {
+      "id": "F-20",
+      "title": "Show the collapsed work log (\"Worked for Ns\") on finished runs",
+      "phase": "4",
+      "status": "backlog",
+      "acceptance": [
+        "Finished turns keep their steps one tap away, per docs/design/ux section 7.3"
+      ],
+      "notes": []
+    },
+    {
+      "id": "F-21",
+      "title": "Make Ctrl+C on pnpm dev stop every child process",
+      "phase": "0",
+      "status": "ready",
+      "acceptance": [
+        "No orphaned API, worker, or Vite process after stopping pnpm dev"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "ready",
+          "text": "pnpm 12's native wrapper did not forward Playwright's SIGTERM to Vite; tests now bypass pnpm, dev still uses it."
+        }
+      ]
+    },
+    {
+      "id": "F-22",
+      "title": "Onboarding flow from the mockup with real provider verification",
+      "phase": "1",
+      "status": "review",
+      "acceptance": [
+        "Matches docs/design mockup onboarding in all themes",
+        "API keys verified against the provider model list and stored only in the Keychain",
+        "CLI detection reports install and login problems",
+        "Browser tests cover the full flow, key hints, a rejected key, and a missing CLI"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "review",
+          "text": "Built from the mockup (4 steps; Tools and Sign in left out on purpose). pnpm check 33 unit, test:db 26, test:browser 6 pass. Checked by hand against the real Anthropic API (fake key gives 401) and a real missing claude CLI. Not yet checked: success with a real key or CLI; the user will test with their own key. Not ported yet: eyes following the typing caret, and descriptions on model cards."
+        }
+      ]
+    },
+    {
+      "id": "F-23",
+      "title": "Embedded terminal for CLI install and login",
+      "phase": "1",
+      "status": "review",
+      "acceptance": [
+        "Opens only after a failed CLI check, with the install command typed in but not run",
+        "Killed with its whole process tree on close, disconnect, shell exit, 10 min idle, 30 min cap, and server shutdown",
+        "Single-use token, required allowed origin, secrets stripped from the shell environment",
+        "Help hints for npm missing, npm permissions, install success, CLI not found"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-25",
+          "status": "review",
+          "text": "16 terminal unit tests, including a check that the close test fails if only the shell is killed; 7 browser tests; no leftover shells after runs. Not yet checked: a real npm install and claude login in the terminal (the user's run)."
+        },
+        {
+          "date": "2026-09-25",
+          "status": "review",
+          "text": "Follows omnigent's xterm.js patterns (Apache-2.0; reimplemented, nothing copied): fit, web-links (http/https only, noopener), WebGL with fallback and context-loss handling, OSC 52 clipboard writes blocked, binary I/O with server-side batching, resize dedupe, StrictMode-safe start, Mac line-editing keys, contrast 4.5 and white remapped on light themes. Differs on purpose: no reconnect, because the terminal is killed on disconnect. check 56 unit, test:db 27, test:browser 7 pass, no leftover shells."
+        },
+        {
+          "date": "2026-09-25",
+          "status": "review",
+          "text": "Smart flow: verification reports cli_missing or not_logged_in and the terminal starts on the matching step (install or claude auth login). Terminal closes and checks again by itself after a clean install or a successful login. Claude login verified for free with claude auth status (the test request is only a fallback). Parent Claude Code env vars stripped. Browser tests are hermetic (fake codex CLI, no host PATH). check 60, test:db 29, test:browser 7 pass."
+        }
+      ]
+    }
+  ]
+}

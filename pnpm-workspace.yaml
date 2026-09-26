@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+  - packages/*
+allowBuilds:
+  esbuild: true
+  node-pty: true
+patchedDependencies:
+  '@agentclientprotocol/codex-acp@1.13.1': patches/@agentclientprotocol__codex-acp@1.13.1.patch

@@ -1,0 +1,11 @@
+:root {
+  --panel-dur: 220ms;
+  --panel-ease: cubic-bezier(0.2, 0, 0, 1);
+  --panel-slide: 16px;
+}
+
+@keyframes panel-toggle-in {
+  from {
+    opacity: 0;
+  }
+}

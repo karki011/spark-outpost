@@ -1,0 +1,20 @@
+#!/bin/sh
+state="${FAKE_CODEX_STATE:?}"
+case "$1" in
+  --version) echo "codex-cli 0.99.0" ;;
+  login)
+    if [ "$2" = "status" ]; then
+      if [ -f "$state" ]; then echo "Logged in using ChatGPT"; exit 0; fi
+      echo "Not logged in"
+      exit 1
+    fi
+    touch "$state"
+    echo "Successfully logged in"
+    ;;
+  exec)
+    echo '{"type":"thread.started","thread_id":"fake"}'
+    echo '{"type":"item.completed","item":{"type":"agent_message","text":"OK"}}'
+    echo '{"type":"turn.completed","model":"gpt-5-codex"}'
+    ;;
+  *) echo "fake codex does not support: $*"; exit 2 ;;
+esac
