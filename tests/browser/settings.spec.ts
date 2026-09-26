@@ -29,7 +29,7 @@ test('settings opens from the sidebar and lets a CLI provider sign in again', as
   await expect(claude.locator('.xterm')).toHaveCount(0);
 
   await providers.getByRole('tab', { name: 'Appearance' }).click();
-  await expect(page.getByRole('dialog', { name: 'Appearance' }).locator('.tcard')).toHaveCount(7);
+  await expect(page.getByRole('dialog', { name: 'Appearance' }).locator('.tcard')).toHaveCount(10);
 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: 'Appearance' })).toHaveCount(0);

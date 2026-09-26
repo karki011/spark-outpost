@@ -3,6 +3,7 @@ import type { Project } from '@spark-outpost/contracts';
 import { FolderIcon, PlusIcon, XIcon } from '../../ui/icons.tsx';
 import { Tick } from '../composer/EffortOptions.tsx';
 import { AllowlistEditor } from './AllowlistEditor.tsx';
+import { BuildStyleControl } from './BuildStyleControl.tsx';
 import type { RepoRequest } from './use-chat-repos.ts';
 
 interface RepoMenuProps {
@@ -103,6 +104,7 @@ export function RepoMenu({
             ))}
           </ul>
           <AllowlistEditor project={linked[0]!} />
+          <BuildStyleControl project={linked[0]!} />
         </>
       )}
       {recent.length > 0 && <div className="mgroup">Recent</div>}

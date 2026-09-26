@@ -129,7 +129,7 @@ export interface TaskListRun {
 
 export interface TaskListEvent {
   id: string;
-  kind: 'waiting' | 'check' | 'review';
+  kind: 'waiting' | 'check' | 'review' | 'shortcut';
   label: string;
   state: TaskItemState;
   runId: string;

@@ -11,6 +11,7 @@ import {
   type WorktreeRecord,
 } from '../persistence/worktrees.ts';
 import type { Db } from '../persistence/db.ts';
+import { settleDepsPrep, startDepsPrep } from '../projects/deps-prep.ts';
 import { commitTree } from '../projects/snapshot.ts';
 import {
   addWorktree,
@@ -27,6 +28,14 @@ import { CheckpointTimeout } from './checkpoint.ts';
 import { land, treeOf } from './land.ts';
 import { ensureParentSnapshot, runMember, type Place } from './members.ts';
 import { mergeCopies, type Finished } from './merge.ts';
+import {
+  attributeShared,
+  copyFiles,
+  landGroup,
+  sharedBase,
+  type GroupBase,
+  type LandedLane,
+} from './group-landing.ts';
 import { isResearchStep } from './parallel.ts';
 import { markPlanSteps } from './plan-progress.ts';
 import { nameFor } from './member-routes.ts';
@@ -39,11 +48,14 @@ interface Copies {
   base: string;
 }
 
+type Layout = { kind: 'copies'; copies: Copies } | { kind: 'shared' } | { kind: 'main' };
+
 interface Ran {
   stepIndex: number;
   steps: number[];
   role: AgentRole;
   result: MemberResult;
+  reviewed: boolean;
 }
 
 async function prepareCopies(s: Session, group: string): Promise<Copies> {
@@ -73,6 +85,11 @@ function copyFor(s: Session, copies: Copies): NonNullable<Place['copy']> {
           baseCommit: copies.base,
         });
         await addWorktree(copies.root, target, branch, copies.base);
+        const project = path.join(target, path.relative(copies.top, copies.root));
+        startDepsPrep(s.deps.db, runId, copies.root, project, {
+          root: copies.root,
+          signal: s.control.signal,
+        });
       },
     };
   };
@@ -93,7 +110,7 @@ async function landMember(
   first: MemberResult,
   place: Place,
   mainTree: string | null,
-): Promise<MemberResult> {
+): Promise<{ result: MemberResult; reviewed: boolean }> {
   const record = await getWorktree(s.deps.db, first.runId);
   const landed = await land(s, spawn, first, {
     cwd: record?.path ?? s.input.projectRoots[0]!,
@@ -101,8 +118,9 @@ async function landMember(
     place,
     copy: record ? first.name : null,
     copyRunId: record?.runId ?? null,
+    review: record ? 'if_large' : 'now',
   });
-  return { ...landed.result, ticked: landed.ticked };
+  return { result: { ...landed.result, ticked: landed.ticked }, reviewed: landed.reviewed };
 }
 
 async function runOne(
@@ -110,25 +128,29 @@ async function runOne(
   stepIndex: number,
   lane: readonly number[] | null,
   group: string,
-  copies: Copies | null,
+  layout: Layout,
 ): Promise<Ran> {
   const role = roleOf(s, stepIndex);
   const place: Place = {
     group,
-    ...(copies && role === 'builder' ? { copy: copyFor(s, copies) } : {}),
+    ...(layout.kind === 'copies' && role === 'builder' ? { copy: copyFor(s, layout.copies) } : {}),
   };
   const carry = lane && lane.length > 1 ? [...lane] : undefined;
   const spawn: Spawn = { role, stepIndex, escalate: false, note: null, reason: 'first', carry };
-  const result = await limited(s, async () => {
+  const landed = await limited(s, async () => {
     const mainTree =
-      role === 'builder' && !copies ? await treeOf(s, s.input.projectRoots[0]!) : null;
+      role === 'builder' && layout.kind === 'main'
+        ? await treeOf(s, s.input.projectRoots[0]!)
+        : null;
     const { result: first } = await runMember(s, spawn, place);
-    return role === 'builder' ? landMember(s, spawn, first, place, mainTree) : first;
+    if (role !== 'builder' || layout.kind === 'shared') return { result: first, reviewed: false };
+    return landMember(s, spawn, first, place, mainTree);
   });
-  return { stepIndex, steps: lane ? [...lane] : [stepIndex], role, result };
+  return { stepIndex, steps: lane ? [...lane] : [stepIndex], role, ...landed };
 }
 
 export async function removeCopy(db: Db, record: WorktreeRecord): Promise<void> {
+  await settleDepsPrep(record.runId);
   await removeWorktree(record.repoRoot, worktreePath(record.repoRoot, record.runId), record.branch);
   await markRemoved(db, record.runId);
 }
@@ -179,7 +201,11 @@ function outcomeOf(result: MemberResult): AgentOutcome {
   return result.outcome === 'lease_lost' ? 'cancelled' : result.outcome;
 }
 
-async function settleGroup(s: Session, ran: readonly Ran[]): Promise<FlowEvent> {
+async function settleGroup(
+  s: Session,
+  ran: readonly Ran[],
+  landed: LandedLane[],
+): Promise<FlowEvent> {
   if (ran.some((item) => item.result.outcome === 'lease_lost')) throw new LeaseLostError(s.lease);
   if (ran.some((item) => item.result.error === APPROVAL_TIMEOUT_MESSAGE)) {
     throw new CheckpointTimeout();
@@ -195,8 +221,11 @@ async function settleGroup(s: Session, ran: readonly Ran[]): Promise<FlowEvent> 
   for (const item of ran) {
     if (item.result.outcome !== 'succeeded') continue;
     const copy = item.role === 'builder' ? await finishCopy(s, item) : null;
-    if (copy) finished.push(copy);
-    else await markDone(s, item);
+    if (copy) {
+      finished.push(copy);
+      const { repoRoot, baseCommit, resultCommit } = copy.record;
+      landed.push({ ...item, files: await copyFiles(repoRoot, baseCommit, resultCommit) });
+    } else await markDone(s, item);
   }
   const merged = await mergeCopies(s, finished);
   merged.results.forEach((outcome, stepIndex) => outcomes.set(stepIndex, outcome));
@@ -217,6 +246,22 @@ function toResults(
   });
 }
 
+function allSucceeded(event: FlowEvent): boolean {
+  return (
+    event.type === 'group_done' &&
+    !event.stopped &&
+    event.results.every((result) => result.outcome === 'succeeded')
+  );
+}
+
+async function copiesBase(copies: Copies): Promise<GroupBase> {
+  return {
+    root: copies.root,
+    commit: copies.base,
+    tree: await commitTree(copies.root, copies.base),
+  };
+}
+
 export async function runGroup(
   s: Session,
   stepIndexes: readonly number[],
@@ -225,8 +270,15 @@ export async function runGroup(
   s.groups += 1;
   const group = `g${s.groups}`;
   const builders = stepIndexes.filter((index) => !isResearchStep(s.flow.steps[index] ?? ''));
+  const shared = builders.length > 1 && lanes.length > 1 && s.lanePlacement === 'shared';
   try {
-    const copies = builders.length > 1 ? await prepareCopies(s, group) : null;
+    const base = shared ? await sharedBase(s, group) : null;
+    const layout: Layout =
+      builders.length < 2
+        ? { kind: 'main' }
+        : shared
+          ? { kind: 'shared' }
+          : { kind: 'copies', copies: await prepareCopies(s, group) };
     for (const stepIndex of stepIndexes) {
       const role = roleOf(s, stepIndex);
       await nameFor(s, role, routeKey(role, stepIndex));
@@ -235,7 +287,7 @@ export async function runGroup(
     await publish(s);
     const laneFor = (head: number) => lanes.find((lane) => lane[0] === head) ?? null;
     const settled = await Promise.allSettled(
-      stepIndexes.map((stepIndex) => runOne(s, stepIndex, laneFor(stepIndex), group, copies)),
+      stepIndexes.map((stepIndex) => runOne(s, stepIndex, laneFor(stepIndex), group, layout)),
     );
     const rejected = settled.find((item) => item.status === 'rejected');
     if (rejected) throw rejected.reason;
@@ -245,7 +297,18 @@ export async function runGroup(
         await markPlanSteps(s, [item.stepIndex], 'failed', item.result.runId);
       }
     }
-    return await settleGroup(s, ran);
+    const landed: LandedLane[] = [];
+    const event = await settleGroup(s, ran, landed);
+    if (event.type !== 'group_done' || event.stopped) return event;
+    if (event.results.some((result) => result.outcome === 'cancelled')) return event;
+    const complete = allSucceeded(event);
+    if (base) {
+      const builtLanes = ran.filter((item) => item.role === 'builder');
+      await landGroup(s, base, await attributeShared(s, base, builtLanes), complete);
+    } else if (layout.kind === 'copies') {
+      await landGroup(s, await copiesBase(layout.copies), landed, complete);
+    }
+    return event;
   } finally {
     await cleanupCopies(s);
     await publish(s).catch(() => undefined);

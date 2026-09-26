@@ -75,6 +75,46 @@ test('applies the saved theme before the app renders', async ({ page }) => {
   await expect(page.getByRole('menu', { name: 'Theme' })).toBeHidden();
 });
 
+test('the theme picker lists every theme and applies the newer ones', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  await page.getByRole('button', { name: 'Theme' }).click();
+  await expect(page.getByRole('menu', { name: 'Theme' }).getByRole('menuitemradio')).toHaveText([
+    'Match system',
+    'Graphite',
+    'Apricot',
+    'Void',
+    'Fjord',
+    'Moss',
+    'Lagoon',
+    'Plum',
+    'Sage',
+    'High contrast',
+  ]);
+  await page.keyboard.press('Escape');
+
+  const newer = [
+    { name: 'Lagoon', skin: 'lagoon', panel: '#fbfefe' },
+    { name: 'Plum', skin: 'plum', panel: '#1c1520' },
+    { name: 'Sage', skin: 'sage', panel: '#fbfcf8' },
+  ];
+  for (const { name, skin, panel } of newer) {
+    await page.getByRole('button', { name: 'Theme' }).click();
+    await page.getByRole('menuitemradio', { name }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-skin', skin);
+    const token = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--panel').trim(),
+    );
+    expect(token).toBe(panel);
+    await page.getByRole('button', { name: 'Theme' }).click();
+    await expect(page.getByRole('menuitemradio', { name })).toHaveAttribute('aria-checked', 'true');
+    await page.keyboard.press('Escape');
+  }
+
+  await page.reload();
+  expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('sage');
+});
+
 test('replies render Markdown safely', async ({ page }) => {
   const input = await newChat(page);
   await input.fill(

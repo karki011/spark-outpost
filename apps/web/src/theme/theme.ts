@@ -36,6 +36,24 @@ export const themes = [
     swatch: { accent: '#c7d96b', background: '#171b13' },
   },
   {
+    id: 'lagoon',
+    label: 'Lagoon',
+    description: 'Sea-glass light, teal accent',
+    swatch: { accent: '#0a7389', background: '#fbfefe' },
+  },
+  {
+    id: 'plum',
+    label: 'Plum',
+    description: 'Dusky plum, rose-gold accent',
+    swatch: { accent: '#e9ab8c', background: '#1c1520' },
+  },
+  {
+    id: 'sage',
+    label: 'Sage',
+    description: 'Soft sage, clay accent',
+    swatch: { accent: '#a85a2a', background: '#fbfcf8' },
+  },
+  {
     id: 'contrast',
     label: 'High contrast',
     description: 'Maximum legibility',

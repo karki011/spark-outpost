@@ -1,4 +1,6 @@
 import path from 'node:path';
+import type { BuildStyle } from '@spark-outpost/contracts';
+import { architectStyle, builderStyle, criticStyle } from './lean.ts';
 
 export const REQUEST_LIMIT = 8_000;
 export const HISTORY_TURNS = 6;
@@ -27,6 +29,7 @@ export interface ArchitectContext {
   repos: readonly string[];
   previousPlan: readonly string[];
   note: string | null;
+  buildStyle?: BuildStyle;
 }
 
 export interface ArchitectNotes {
@@ -46,6 +49,7 @@ export interface BuilderContext {
   research?: readonly ResearchNote[];
   conflict?: string;
   checkFailures?: string;
+  buildStyle?: BuildStyle;
 }
 
 export interface ResearchNote {
@@ -72,6 +76,11 @@ export interface CriticContext {
   patch: string;
   checks: readonly string[];
   subject?: ReviewSubject | null;
+  buildStyle?: BuildStyle;
+}
+
+function optional(text: string | null): string[] {
+  return text ? [text] : [];
 }
 
 function cap(text: string, limit: number): string {
@@ -127,9 +136,10 @@ export function architectPrompt(context: ArchitectContext): string {
     'Role: Architect. You plan; you do not change files. Read the linked repos as needed.',
     'Record your plan with your plan or todo tool as 2 to 6 concrete, ordered steps. End each step with "Files: a.ts, b.ts" listing only the files that step creates or changes, not files it only reads or imports from. Then reply with a short summary of the plan.',
     'After the summary, list every step on its own line, numbered as in your plan, with the files it creates or changes and the earlier steps it needs, for example "Step 3 · Files: src/csv.ts, test/csv.test.ts · Depends on: 1" or "Step 1 · Files: src/a.ts · Depends on: none".',
-    'Independent work runs at the same time, each chain in its own copy of the repo. If the steps form independent chains that change different files and need nothing from each other, name each chain on its own line, such as "Chain A: steps 1-3" and "Chain B: steps 4-6". A step that needs more than one chain comes after them and belongs to no chain. A step that only reads or researches starts with "Research:".',
-    'A chain of one step only gets its own Builder when it takes more than about 20 seconds. Add a line such as "Large: 2, 3" naming the single steps you expect to take that long.',
+    'Independent work runs at the same time, each chain with its own Builder. If the steps form independent chains that change different files and need nothing from each other, name each chain on its own line, such as "Chain A: steps 1-3" and "Chain B: steps 4-6". A step that needs more than one chain comes after them and belongs to no chain. A step that only reads or researches starts with "Research:".',
+    'A chain only gets its own Builder when it is large: two or more of its steps (or its only step) take more than about 20 seconds each, or it changes five or more files. Smaller chains are done in order by one Builder. Add a line such as "Large: 2, 3" naming the steps you expect to take that long.',
     'Finally, write a "Notes for Builders:" line followed by what the Builders need so they do not re-read the files you read: exact signatures, import lines and short excerpts, each with its file path. Keep the notes under 3,000 characters.',
+    ...optional(architectStyle(context.buildStyle ?? 'off')),
     section('Request', cap(context.request, REQUEST_LIMIT)),
     section('Earlier conversation', historyLines(context.history)),
     section('Repos', context.repos.map((repo) => `- ${path.basename(repo)}`).join('\n') || 'None.'),
@@ -219,6 +229,7 @@ export function builderPrompt(context: BuilderContext): string {
     parts.push(section('Failing checks', cap(context.checkFailures, CHECK_OUTPUT_LIMIT)));
   }
   if (context.note) parts.push(section('Note from the user', cap(context.note, NOTE_LIMIT)));
+  parts.push(...optional(builderStyle(context.buildStyle ?? 'off')));
   return parts.join('\n\n');
 }
 
@@ -264,6 +275,7 @@ export function criticPrompt(context: CriticContext): string {
   return [
     'Role: Critic. Review the change below; do not change files. This is an AI review, not verification.',
     VERDICT_RULE,
+    ...optional(criticStyle(context.buildStyle ?? 'off')),
     section('Request', cap(context.request, REQUEST_LIMIT)),
     section('Plan', context.plan.length > 0 ? numbered(context.plan) : 'No plan was made.'),
     ...reviewSections(context),
@@ -274,6 +286,7 @@ export function criticFollowUp(context: Omit<CriticContext, 'request' | 'plan'>)
   return [
     'Review the next change the same way; do not change files.',
     VERDICT_RULE,
+    ...optional(criticStyle(context.buildStyle ?? 'off')),
     ...reviewSections(context),
   ].join('\n\n');
 }

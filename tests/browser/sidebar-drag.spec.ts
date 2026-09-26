@@ -29,6 +29,8 @@ const block = (page: Page, name: string) =>
 const titles = (scope: Locator) => scope.locator('.row .tt');
 const projectNames = (page: Page) => sidebar(page).locator('.proj-head .nm');
 const announcer = (page: Page) => page.locator('[id^="DndLiveRegion"]');
+const slot = (scope: Locator) => scope.locator('.row.placeholder');
+const chatsBlock = (page: Page) => sidebar(page).locator('.cblock');
 
 function shownTitles(scope: Locator): Promise<string[]> {
   return scope.locator('.row').evaluateAll((rows) =>
@@ -37,6 +39,25 @@ function shownTitles(scope: Locator): Promise<string[]> {
       .sort((a, b) => a.y - b.y)
       .map((entry) => entry.text.trim()),
   );
+}
+
+async function expectGhost(page: Page, target: Locator) {
+  await expect(target).toHaveCount(1);
+  await expect(target).toBeVisible();
+  await expect
+    .poll(() => target.evaluate((node) => Number(getComputedStyle(node).opacity)))
+    .toBe(0.4);
+  await expect(target.locator('.tt')).toBeVisible();
+  const outlines = await sidebar(page)
+    .locator('.pblock, .cblock, .row')
+    .evaluateAll(
+      (nodes) =>
+        nodes.filter((node) => {
+          const style = getComputedStyle(node);
+          return style.outlineStyle !== 'none' || style.boxShadow !== 'none';
+        }).length,
+    );
+  expect(outlines).toBe(0);
 }
 
 async function createProject(page: Page, name: string): Promise<{ id: string; name: string }> {
@@ -77,7 +98,8 @@ test('drags a chat into a project at the placeholder with a lifted card', async 
   await pickUp(page, row(page, 'Loose idea'));
   await hoverOver(page, row(page, 'Beta'), 'top');
   await expect.poll(() => shownTitles(group)).toEqual(['Alpha', 'Loose idea', 'Beta']);
-  await expect(group.locator('.row.placeholder')).toContainText('Loose idea');
+  await expect(slot(group)).toContainText('Loose idea');
+  await expectGhost(page, slot(group));
   await expect(group).toHaveClass(/over/);
   const card = page.locator('.drag-card');
   await expect(card).toContainText('Loose idea');
@@ -107,6 +129,9 @@ test('reorders chats inside a project and reorders the projects', async ({ page 
 
   await pickUp(page, row(page, 'Third'));
   await hoverOver(page, row(page, 'First'), 'top');
+  await expect.poll(() => shownTitles(group)).toEqual(['Third', 'First', 'Second']);
+  await expect(slot(group)).toContainText('Third');
+  await expectGhost(page, slot(group));
   await page.mouse.up();
   await expect(titles(group)).toHaveText(['Third', 'First', 'Second']);
 
@@ -114,6 +139,19 @@ test('reorders chats inside a project and reorders the projects', async ({ page 
   await hoverOver(page, block(page, 'alpha').locator('.proj-head'), 'top');
   await expect(block(page, 'beta')).toHaveClass(/placeholder/);
   await expect(page.locator('.drag-card.project')).toContainText('beta');
+  const projectSlot = sidebar(page).locator('.pblock.placeholder');
+  await expect
+    .poll(() =>
+      sidebar(page)
+        .locator('.pblock')
+        .evaluateAll((blocks) =>
+          blocks
+            .toSorted((a, b) => a.getBoundingClientRect().y - b.getBoundingClientRect().y)
+            .findIndex((node) => node.classList.contains('placeholder')),
+        ),
+    )
+    .toBe(0);
+  await expect(projectSlot).toHaveCSS('opacity', '0.4');
   await page.mouse.up();
   await expect(projectNames(page)).toHaveText(['beta', 'alpha']);
 
@@ -141,6 +179,7 @@ test('moves chats and projects with the keyboard and announces each step', async
   await page.keyboard.press('ArrowUp');
   await page.keyboard.press('ArrowUp');
   await expect(announcer(page)).toContainText('Loose idea will move to zeta, position 1 of 1.');
+  await expectGhost(page, slot(block(page, 'zeta')));
   await page.keyboard.press('ArrowUp');
   await expect(announcer(page)).toContainText('Loose idea will move to web, position');
   await page.keyboard.press('Space');
@@ -164,6 +203,119 @@ test('moves chats and projects with the keyboard and announces each step', async
   await expect(projectNames(page)).toHaveText(['zeta', 'web']);
   await page.reload();
   await expect(projectNames(page)).toHaveText(['zeta', 'web']);
+});
+
+test('shows the ghost row inside an empty project and inside a folded project', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const docs = await createProject(page, 'docs');
+  const web = await createProject(page, 'web');
+  await seedChats([
+    { title: 'Web chat', projectIds: [web.id], minutesAgo: 2 },
+    { title: 'Loose idea', minutesAgo: 1 },
+  ]);
+  await page.reload();
+  const empty = block(page, docs.name);
+  await expect(empty.locator('.pempty')).toBeVisible();
+
+  await pickUp(page, row(page, 'Loose idea'));
+  await hoverOver(page, empty.locator('.proj-head'), 'bottom');
+  await expect(slot(empty)).toContainText('Loose idea');
+  await expect(empty.locator('.pempty')).toHaveCount(0);
+  await expectGhost(page, slot(empty));
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(slot(empty)).toHaveCount(0);
+
+  const folded = block(page, web.name);
+  await folded.locator('.proj-head').click();
+  await expect(folded).not.toHaveClass(/open/);
+  await pickUp(page, row(page, 'Loose idea'));
+  await hoverOver(page, folded.locator('.proj-head'), 'bottom');
+  await expect(folded).toHaveClass(/open/);
+  await expect(slot(folded)).toContainText('Loose idea');
+  await expectGhost(page, slot(folded));
+  await page.mouse.up();
+  await expect(titles(folded)).toHaveCount(2);
+  await expect(titles(folded)).toContainText(['Loose idea']);
+});
+
+test('drags a chat out of and into a project sideways', async ({ page }) => {
+  await page.goto('/');
+  const web = await createProject(page, 'web');
+  await seedChats([
+    { title: 'First', projectIds: [web.id], minutesAgo: 3 },
+    { title: 'Last', projectIds: [web.id], minutesAgo: 4 },
+    { title: 'Loose idea', minutesAgo: 1 },
+  ]);
+  await page.reload();
+  const group = block(page, web.name);
+  await expect(titles(group)).toHaveText(['First', 'Last']);
+
+  const from = await row(page, 'Last').boundingBox();
+  if (!from) throw new Error('Last is not visible.');
+  await pickUp(page, row(page, 'Last'));
+  await page.mouse.move(from.x + 8, from.y + from.height / 2 + 8, { steps: 6 });
+  await expect(slot(chatsBlock(page))).toContainText('Last');
+  await expect(sidebar(page).locator('.list')).toHaveAttribute('data-projection', 'out');
+  await expectGhost(page, slot(chatsBlock(page)));
+  await page.mouse.move(from.x + 48, from.y + from.height / 2 + 8, { steps: 6 });
+  await expect(slot(group)).toContainText('Last');
+  await page.mouse.move(from.x + 8, from.y + from.height / 2 + 8, { steps: 6 });
+  await expect(slot(chatsBlock(page))).toContainText('Last');
+  await page.mouse.up();
+  await expect(titles(group)).toHaveText(['First']);
+  await expect(titles(chatsBlock(page))).toContainText(['Last']);
+
+  const loose = await row(page, 'Loose idea').boundingBox();
+  if (!loose) throw new Error('Loose idea is not visible.');
+  await pickUp(page, row(page, 'Loose idea'));
+  await page.mouse.move(loose.x + 88, loose.y + loose.height / 2 + 8, { steps: 6 });
+  await expect(slot(group)).toContainText('Loose idea');
+  await expect(sidebar(page).locator('.list')).toHaveAttribute('data-projection', 'in');
+  await expectGhost(page, slot(group));
+  await page.mouse.up();
+  await expect(titles(group)).toHaveText(['First', 'Loose idea']);
+  await page.reload();
+  await expect(titles(block(page, web.name))).toHaveText(['First', 'Loose idea']);
+});
+
+test('moves a chat into and out of a project with the side arrow keys', async ({ page }) => {
+  await page.goto('/');
+  const web = await createProject(page, 'web-apps');
+  await seedChats([
+    { title: 'Web chat', projectIds: [web.id], minutesAgo: 2 },
+    { title: 'Loose idea', minutesAgo: 1 },
+  ]);
+  await page.reload();
+  const group = block(page, web.name);
+
+  const grip = sidebar(page).getByRole('button', { name: 'Move Loose idea' });
+  await grip.focus();
+  await page.keyboard.press('Space');
+  await expect(announcer(page)).toContainText('Picked up Loose idea. It is in Chats.');
+  await page.keyboard.press('ArrowRight');
+  await expect(announcer(page)).toContainText('Loose idea will move into web-apps.');
+  await expectGhost(page, slot(group));
+  await page.keyboard.press('ArrowLeft');
+  await expect(announcer(page)).toContainText('Loose idea will move out to Chats.');
+  await expectGhost(page, slot(chatsBlock(page)));
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Space');
+  await expect(announcer(page)).toContainText('Dropped Loose idea in web-apps, position 2 of 2.');
+  await expect(titles(group)).toHaveText(['Web chat', 'Loose idea']);
+
+  await grip.focus();
+  await page.keyboard.press('Space');
+  await page.keyboard.press('ArrowLeft');
+  await expect(announcer(page)).toContainText('Loose idea will move out to Chats.');
+  await page.keyboard.press('Enter');
+  await expect(announcer(page)).toContainText('Dropped Loose idea in Chats.');
+  await expect(titles(group)).toHaveText(['Web chat']);
+  await page.reload();
+  await expect(titles(block(page, web.name))).toHaveText(['Web chat']);
+  await expect(titles(chatsBlock(page))).toContainText(['Loose idea']);
 });
 
 test('reduced motion keeps the drag card still', async ({ page }) => {

@@ -45,10 +45,17 @@ export const reviewBodySchema = z.object({
   findings: z.array(z.string()),
   text: z.string(),
   label: z.literal('AI review'),
+  net: z.number().int().nonpositive().nullable().optional(),
 });
 export type ReviewBody = z.infer<typeof reviewBodySchema>;
 
-export const decisionKindSchema = z.enum(['intake', 'route', 'transition', 'parallel']);
+export const decisionKindSchema = z.enum([
+  'intake',
+  'route',
+  'transition',
+  'parallel',
+  'build_style',
+]);
 export type DecisionKind = z.infer<typeof decisionKindSchema>;
 
 export const decisionAppliedSchema = z.enum(['jev', 'rules', 'asked', 'pinned']);

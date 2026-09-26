@@ -7,6 +7,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragOverEvent,
   type Announcements,
   type DragStartEvent,
@@ -16,12 +17,14 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import {
   announcement,
   screenReaderInstructions,
+  shiftAnnouncement,
   type DragMoment,
 } from './sidebar-announcements.ts';
 import {
   dragData,
   sidebarCollision,
   sidebarKeyboardCoordinates,
+  SHIFT_STEP,
   type DragData,
 } from './sidebar-dnd-geometry.ts';
 import {
@@ -36,12 +39,14 @@ import {
   type DropTarget,
   type Layout,
 } from './sidebar-order.ts';
+import { projected, type Shift } from './sidebar-projection.ts';
 
 const HOLD_MS = 450;
 const TOUCH_SLOP = 8;
 const MOUSE_SLOP = 5;
 const LANDED_MS = 320;
 const SETTLE_MS = 300;
+const SHIFT_ZONE = 18;
 
 export interface Point {
   x: number;
@@ -52,6 +57,7 @@ interface SidebarDndOptions {
   layout: Layout;
   projectIds: readonly string[];
   chatTitle: (id: string) => string;
+  updatedAt: (id: string) => string;
   projectName: (id: string) => string;
   onChatDrop: (drop: ChatDrop) => void;
   onProjectsDrop: (projectIds: string[]) => void;
@@ -68,6 +74,18 @@ function dropTarget(over: Over | null, active: DragOverEvent['active']): DropTar
   return { kind: 'loose' };
 }
 
+interface Held {
+  before: Layout;
+  anchorX: number;
+  y: number;
+  shift: Shift;
+}
+
+function effectiveLayout(layout: Layout, chatId: string, over: Over | null): Layout {
+  const overData = dragData(over);
+  return overData?.type === 'chat' ? sorted(layout, chatId, overData.chatId) : layout;
+}
+
 function touchPoint(event: Event): Point | null {
   if (typeof TouchEvent === 'undefined' || !(event instanceof TouchEvent)) return null;
   const touch = event.touches[0] ?? event.changedTouches[0];
@@ -82,11 +100,18 @@ export function useSidebarDnd(options: SidebarDndOptions) {
   const [landed, setLanded] = useState<{ group: string; key: number } | null>(null);
   const [settling, setSettling] = useState(false);
   const [home, setHome] = useState<string | null>(null);
+  const [shift, setShift] = useState<Shift | null>(null);
   const start = useRef<Layout>(options.layout);
   const current = useRef({ layout: options.layout, projectIds: options.projectIds });
   const latest = useRef(options);
   const justMoved = useRef(false);
   const pending = useRef<DragOverEvent | null>(null);
+  const lastOver = useRef<DragOverEvent | null>(null);
+  const delta = useRef({ x: 0, y: 0 });
+  const anchorX = useRef(0);
+  const held = useRef<Held | null>(null);
+  const said = useRef<string | undefined>(undefined);
+  const shifted = useRef(false);
 
   useEffect(() => {
     latest.current = options;
@@ -118,6 +143,9 @@ export function useSidebarDnd(options: SidebarDndOptions) {
 
   const finish = () => {
     pending.current = null;
+    lastOver.current = null;
+    held.current = null;
+    setShift(null);
     setActive(null);
     setDragLayout(null);
     setDragProjects(null);
@@ -131,6 +159,9 @@ export function useSidebarDnd(options: SidebarDndOptions) {
     const { layout, projectIds } = latest.current;
     start.current = layout;
     current.current = { layout, projectIds };
+    delta.current = { x: 0, y: 0 };
+    anchorX.current = 0;
+    shifted.current = false;
     setActive(data);
     setDragLayout(layout);
     setDragProjects(projectIds);
@@ -150,14 +181,89 @@ export function useSidebarDnd(options: SidebarDndOptions) {
       justMoved.current = false;
       const waiting = pending.current;
       pending.current = null;
-      if (waiting) moveChat(waiting);
+      if (waiting && !held.current) moveChat(waiting);
     });
+    anchorX.current = delta.current.x;
+    shifted.current = false;
+    setShift(null);
     setLayout(placed(current.current.layout, data.chatId, next));
   };
 
+  const letGo = () => {
+    held.current = null;
+    setShift(null);
+  };
+
+  const shiftMessage = (chatId: string) => {
+    const container = containerOf(current.current.layout, chatId);
+    return shiftAnnouncement(
+      latest.current.chatTitle(chatId),
+      container ? groupOf(container) : null,
+      latest.current.projectName,
+    );
+  };
+
+  const shiftTo = (layout: Layout, chatId: string, direction: Shift) => {
+    setLayout(layout);
+    setShift(direction);
+    shifted.current = true;
+    said.current = shiftMessage(chatId);
+  };
+
+  const projectChat = (data: Extract<DragData, { type: 'chat' }>, event: DragMoveEvent) => {
+    const offset = event.delta.x - anchorX.current;
+    if (Math.abs(offset) < SHIFT_STEP) return;
+    const direction: Shift = offset > 0 ? 'in' : 'out';
+    const { layout, projectIds } = current.current;
+    const next = projected(
+      {
+        layout: effectiveLayout(layout, data.chatId, event.over),
+        chatId: data.chatId,
+        pinned: data.pinned,
+        projectIds,
+        updatedAt: latest.current.updatedAt,
+      },
+      direction,
+    );
+    if (!next) return;
+    held.current = { before: layout, anchorX: anchorX.current, y: event.delta.y, shift: direction };
+    shiftTo(next.layout, data.chatId, direction);
+  };
+
+  const followHeld = (hold: Held, data: Extract<DragData, { type: 'chat' }>, x: number) => {
+    const sign = hold.shift === 'in' ? 1 : -1;
+    if ((x - hold.anchorX) * sign >= SHIFT_STEP / 2) return;
+    held.current = null;
+    anchorX.current = hold.anchorX;
+    shiftTo(hold.before, data.chatId, hold.shift === 'in' ? 'out' : 'in');
+  };
+
+  const onDragMove = (event: DragMoveEvent) => {
+    delta.current = event.delta;
+    const data = dragData(event.active);
+    if (data?.type !== 'chat') return;
+    const hold = held.current;
+    if (!hold) {
+      projectChat(data, event);
+      return;
+    }
+    if (Math.abs(event.delta.y - hold.y) <= SHIFT_ZONE) {
+      followHeld(hold, data, event.delta.x);
+      return;
+    }
+    letGo();
+    anchorX.current = event.delta.x;
+    if (lastOver.current) moveChat(lastOver.current);
+  };
+
   const onDragOver = (event: DragOverEvent) => {
+    lastOver.current = event;
+    delta.current = event.delta;
     setOverSomething(event.over !== null);
     if (dragData(event.active)?.type !== 'chat') return;
+    const hold = held.current;
+    if (hold && event.over && Math.abs(event.delta.y - hold.y) <= SHIFT_ZONE) return;
+    if (hold) letGo();
     pending.current = null;
     if (!event.over) {
       setLayout(start.current);
@@ -182,7 +288,7 @@ export function useSidebarDnd(options: SidebarDndOptions) {
     }
     const overData = dragData(over);
     const end =
-      overData?.type === 'chat'
+      overData?.type === 'chat' && !held.current
         ? sorted(current.current.layout, data.chatId, overData.chatId)
         : current.current.layout;
     current.current = { ...current.current, layout: end };
@@ -231,7 +337,16 @@ export function useSidebarDnd(options: SidebarDndOptions) {
   );
   const announcements: Announcements = {
     onDragStart: ({ active: dragged }) => announce('start', { active: dragged, over: null }),
-    onDragOver: (args) => announce('over', args),
+    onDragMove: () => {
+      const text = said.current;
+      said.current = undefined;
+      return text;
+    },
+    onDragOver: (args) => {
+      const data = dragData(args.active);
+      if (shifted.current && data?.type === 'chat') return shiftMessage(data.chatId);
+      return announce('over', args);
+    },
     onDragEnd: (args) => announce('end', args),
     onDragCancel: (args) => announce('cancel', args),
   };
@@ -252,6 +367,7 @@ export function useSidebarDnd(options: SidebarDndOptions) {
         screenReaderInstructions,
       },
       onDragStart,
+      onDragMove,
       onDragOver,
       onDragEnd,
       onDragCancel,
@@ -262,6 +378,7 @@ export function useSidebarDnd(options: SidebarDndOptions) {
     overGroup: overSomething && group !== home ? group : null,
     leftHome: group !== null && group !== home,
     landed,
+    shift,
     busy: active !== null || settling,
   };
 }

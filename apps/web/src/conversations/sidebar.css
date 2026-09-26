@@ -255,20 +255,11 @@
 .pblock,
 .cblock {
   border-radius: var(--r-sm);
-  transition:
-    background 0.2s,
-    box-shadow 0.2s;
+  transition: background 0.2s;
 }
 
-.list.dragging .pblock,
-.list.dragging .cblock {
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-
-.pblock.over,
-.cblock.over {
-  background: var(--accent-soft) !important;
-  box-shadow: inset 0 0 0 1.5px var(--accent) !important;
+.pblock.over {
+  background: color-mix(in srgb, var(--accent-soft) 45%, transparent);
 }
 
 .cblock {

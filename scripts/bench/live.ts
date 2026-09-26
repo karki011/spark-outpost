@@ -5,8 +5,10 @@ import {
   checkLine,
   type Approval,
   type InvolvementLevel,
+  type BuildStyle,
   type Orchestration,
 } from '../../packages/contracts/src/index.ts';
+import type { LaneOptions } from '../../apps/server/src/orchestration/placement.ts';
 import { createIntakeRecorder } from '../../apps/server/src/advisor/intake-recorder.ts';
 import { orchestrate } from '../../apps/server/src/orchestration/orchestrator.ts';
 import type { OrchestratorDeps } from '../../apps/server/src/orchestration/session.ts';
@@ -25,7 +27,7 @@ import { linkedConversation } from '../../apps/server/test/approval-support.ts';
 import { seedConnections } from '../../apps/server/test/orchestration-live-support.ts';
 import { createTestDb, type TestDb } from '../../apps/server/test/support.ts';
 import { agentUsage, routingOf } from './metrics.ts';
-import type { AgentUsage, AskedItem, BenchMode, Routing } from './results.ts';
+import type { AgentUsage, AskedItem, BenchMode, LeanRecord, Routing } from './results.ts';
 
 export const BENCH_LEVEL: InvolvementLevel = 'full-auto';
 export const PINNED = { provider: 'claude', model: 'sonnet', effort: 'medium' } as const;
@@ -53,6 +55,7 @@ export interface LiveCell {
 export async function startBench(
   perRunCapUsd: number,
   runtime: AgentRuntime = 'acp',
+  lanes: LaneOptions = {},
 ): Promise<BenchEnv> {
   const t = await createTestDb();
   await seedConnections(t);
@@ -69,6 +72,7 @@ export async function startBench(
     approvalPollMs: 200,
     ...(runtime === 'acp' ? { intake } : {}),
     budget: { costCapUsd: perRunCapUsd },
+    lanes,
   };
   return { t, deps };
 }
@@ -126,9 +130,11 @@ export async function runLiveCell(
   repo: string,
   prompt: string,
   timeoutMs: number,
+  buildStyle: BuildStyle = 'off',
 ): Promise<LiveCell> {
   const { t } = env;
   const { conversationId } = await linkedConversation(t, repo);
+  await t.db.query('UPDATE projects SET build_style = $2 WHERE root_path = $1', [repo, buildStyle]);
   const routing = mode === 'harness' ? 'auto' : 'pinned';
   await t.db.query('UPDATE conversations SET model_routing = $2 WHERE id = $1', [
     conversationId,
@@ -186,8 +192,38 @@ async function collect(
     jevCostUsd: orchestration?.totals.jevCostUsd ?? 0,
     jevCalls: orchestration?.totals.jevCalls ?? 0,
     asked,
-    routing: withChecks(routingOf(orchestration), await checkLines(db, orchestration)),
+    routing: withLean(
+      withChecks(routingOf(orchestration), await checkLines(db, orchestration)),
+      await leanRecord(db, orchestration),
+    ),
   };
+}
+
+async function leanRecord(db: BenchEnv['t']['db'], orchestration: Orchestration | null) {
+  if (!orchestration?.taskId) return null;
+  const style = orchestration.decisions.find((decision) => decision.kind === 'build_style');
+  const { rows } = await db.query<{ kind: string; body: Record<string, unknown> }>(
+    `SELECT kind, body FROM run_artifacts WHERE task_id = $1 AND kind IN ('shortcuts', 'review')
+     ORDER BY version`,
+    [orchestration.taskId],
+  );
+  const shortcuts = rows
+    .filter((row) => row.kind === 'shortcuts')
+    .reduce((sum, row) => sum + ((row.body.entries as unknown[] | undefined)?.length ?? 0), 0);
+  const nets = rows
+    .filter((row) => row.kind === 'review' && typeof row.body.net === 'number')
+    .map((row) => row.body.net as number);
+  return {
+    chosen: (style?.answer.chosen as string | undefined) ?? 'off',
+    applied: style?.applied ?? null,
+    rule: (style?.answer.rule as string | undefined) ?? null,
+    shortcuts,
+    net: nets.length > 0 ? nets.reduce((sum, net) => sum + net, 0) : null,
+  };
+}
+
+function withLean(routing: Routing | null, lean: LeanRecord | null): Routing | null {
+  return routing && lean ? { ...routing, lean } : routing;
 }
 
 async function checkLines(db: BenchEnv['t']['db'], orchestration: Orchestration | null) {

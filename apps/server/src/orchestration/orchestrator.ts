@@ -49,6 +49,7 @@ import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
 import { cleanupCopies, runGroup } from './group.ts';
 import { judge } from './judge.ts';
 import { buildAndLand } from './land.ts';
+import { decideBuildStyle, projectBuildStyle, recordShortcuts } from './build-style.ts';
 import { collectedReview } from './reviews.ts';
 import { sequentialReason } from './parallel.ts';
 import { markPlanStep, markPlanSteps, statusAfterJudging } from './plan-progress.ts';
@@ -106,7 +107,9 @@ function routeContext(
 }
 
 async function ensureTask(s: Session): Promise<void> {
-  if (s.taskId || s.flow.depth === 'direct') return;
+  if (s.flow.depth === 'direct') return;
+  await decideBuildStyle(s);
+  if (s.taskId) return;
   const joined = await taskForWorkingRun(s.deps.db, s.lease.runId, s.input.userRequest);
   s.taskId = joined.task.taskId;
   await s.append(runEvents.activity('task', 'task', { taskId: s.taskId, opened: joined.opened }));
@@ -257,6 +260,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
     case 'judge':
       return judge(s, action.role);
     case 'wrap_up': {
+      await recordShortcuts(s).catch(() => null);
       const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true).catch(
         () => null,
       );
@@ -387,6 +391,11 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       checkRounds: 0,
       checkBodies: [],
       reviews: null,
+      projectStyle:
+        mode === 'do' && root !== undefined ? await projectBuildStyle(deps.db, lease.runId) : 'off',
+      buildStyle: 'off',
+      buildStyleDecided: false,
+      lanePlacement: null,
     };
     session = s;
     budgetTimer = setInterval(

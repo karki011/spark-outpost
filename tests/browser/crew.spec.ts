@@ -14,7 +14,18 @@ import {
 } from './crew-engine.ts';
 
 const SHOTS = process.env.ORCH_SCREENSHOTS ?? '';
-const THEMES = ['graphite', 'apricot', 'void', 'fjord', 'moss', 'contrast', 'system'];
+const THEMES = [
+  'graphite',
+  'apricot',
+  'void',
+  'fjord',
+  'moss',
+  'lagoon',
+  'plum',
+  'sage',
+  'contrast',
+  'system',
+];
 
 let repo: CrewRepo;
 

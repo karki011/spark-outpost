@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { Project } from '@spark-outpost/contracts';
 import { ChevronIcon, DotsIcon, FolderIcon, GripIcon, PlusIcon } from '../ui/icons.tsx';
 import { RenameInput } from './ChatRow.tsx';
+import { useSortableMotion } from './use-sortable-motion.ts';
 import { pointerStart, projectDragId } from './sidebar-dnd-geometry.ts';
 
 interface ProjectGroupProps {
@@ -38,6 +39,7 @@ export function ProjectGroup({
   children,
 }: ProjectGroupProps) {
   const bodyId = `pbody-${project.id}`;
+  const slide = useSortableMotion();
   const {
     setNodeRef,
     setActivatorNodeRef,
@@ -50,6 +52,7 @@ export function ProjectGroup({
     id: projectDragId(project.id),
     data: { type: 'project', projectId: project.id },
     disabled: { draggable: !sortable || renaming, droppable: false },
+    ...slide,
   });
   const draggable = sortable && !renaming;
   const classes = [

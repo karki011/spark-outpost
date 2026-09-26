@@ -1,9 +1,25 @@
+import { LEAN_TASKS } from './tasks-lean.ts';
 import { ROUND3_TASKS } from './tasks-round3.ts';
 
 export type BenchTaskId =
-  'T1' | 'T2' | 'T3' | 'T4' | 'T5' | 'H1' | 'H2' | 'H3' | 'H4' | 'H5' | 'D1' | 'D2' | 'R1' | 'P1';
+  | 'T1'
+  | 'T2'
+  | 'T3'
+  | 'T4'
+  | 'T5'
+  | 'H1'
+  | 'H2'
+  | 'H3'
+  | 'H4'
+  | 'H5'
+  | 'D1'
+  | 'D2'
+  | 'R1'
+  | 'P1'
+  | 'L1'
+  | 'L2';
 
-export type BenchSet = 'standard' | 'hard';
+export type BenchSet = 'standard' | 'hard' | 'lean';
 
 export interface BenchTask {
   id: BenchTaskId;
@@ -15,6 +31,7 @@ export interface BenchTask {
   prompt: string;
   allowed: readonly string[];
   suiteFailsBefore: boolean;
+  safety?: boolean;
 }
 
 const BASE_TASKS: readonly BenchTask[] = [
@@ -133,7 +150,7 @@ const BASE_TASKS: readonly BenchTask[] = [
   },
 ];
 
-export const TASKS: readonly BenchTask[] = [...BASE_TASKS, ...ROUND3_TASKS];
+export const TASKS: readonly BenchTask[] = [...BASE_TASKS, ...ROUND3_TASKS, ...LEAN_TASKS];
 
 export function taskById(id: string): BenchTask {
   const task = TASKS.find((candidate) => candidate.id === id.toUpperCase());

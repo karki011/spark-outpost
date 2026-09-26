@@ -8,6 +8,7 @@ import { reveal } from '../ui/transitions.tsx';
 import { recencyLabel } from './recency.ts';
 import { rowState, type RowTone } from './row-state.ts';
 import { RowTitle, useMarquee } from './RowTitle.tsx';
+import { useSortableMotion } from './use-sortable-motion.ts';
 import { pointerStart } from './sidebar-dnd-geometry.ts';
 
 interface ChatRowProps {
@@ -120,6 +121,7 @@ export function ChatRow(props: ChatRowProps) {
   const { chat, selected, renaming, sortable, settling, flash, onOpen, onMenu, onRename } = props;
   const history = chat.archivedAt !== null;
   const draggable = sortable && !renaming && !history;
+  const slide = useSortableMotion();
   const {
     setNodeRef,
     setActivatorNodeRef,
@@ -132,6 +134,7 @@ export function ChatRow(props: ChatRowProps) {
     id: chat.id,
     data: { type: 'chat', chatId: chat.id, pinned: chat.pinnedAt !== null },
     disabled: !draggable,
+    ...slide,
   });
   const marquee = useMarquee(chat.title);
   const state = rowState(chat, selected);

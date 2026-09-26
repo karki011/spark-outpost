@@ -1,7 +1,7 @@
 import { realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import type { Project } from '@spark-outpost/contracts';
+import { buildStyleSchema, type BuildStyle, type Project } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { FolderError, realDirectory } from './folders.ts';
@@ -13,9 +13,11 @@ export interface ProjectRow {
   created_at: Date;
   command_allowlist: string[];
   check_commands: string[] | null;
+  build_style: string;
 }
 
-export const PROJECT_COLUMNS = 'id, name, root_path, created_at, command_allowlist, check_commands';
+export const PROJECT_COLUMNS =
+  'id, name, root_path, created_at, command_allowlist, check_commands, build_style';
 
 export class ProjectNotFoundError extends Error {
   constructor() {
@@ -38,6 +40,7 @@ export function toProject(row: ProjectRow, home: string): Project {
     createdAt: row.created_at.toISOString(),
     commandAllowlist: row.command_allowlist,
     checkCommands: row.check_commands,
+    buildStyle: buildStyleSchema.catch('off').parse(row.build_style),
   };
 }
 
@@ -99,6 +102,7 @@ export interface ProjectChange {
   name?: string | undefined;
   commandAllowlist?: readonly string[] | undefined;
   checkCommands?: readonly string[] | null | undefined;
+  buildStyle?: BuildStyle | undefined;
 }
 
 export async function updateProject(
@@ -110,7 +114,8 @@ export async function updateProject(
   const { rows } = await db.query<ProjectRow>(
     `UPDATE projects
      SET name = COALESCE($3, name), command_allowlist = COALESCE($4, command_allowlist),
-         check_commands = CASE WHEN $5 THEN $6::text[] ELSE check_commands END
+         check_commands = CASE WHEN $5 THEN $6::text[] ELSE check_commands END,
+         build_style = COALESCE($7, build_style)
      WHERE id = $1 AND workspace_id = $2
      RETURNING ${PROJECT_COLUMNS}`,
     [
@@ -120,6 +125,7 @@ export async function updateProject(
       change.commandAllowlist ?? null,
       change.checkCommands !== undefined,
       change.checkCommands ?? null,
+      change.buildStyle ?? null,
     ],
   );
   if (!rows[0]) throw new ProjectNotFoundError();

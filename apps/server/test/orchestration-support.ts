@@ -19,6 +19,7 @@ import { decideApproval } from '../src/persistence/approvals.ts';
 import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { getRun } from '../src/persistence/runs.ts';
+import type { LaneOptions } from '../src/orchestration/placement.ts';
 import type { Provider } from '../src/providers/provider.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
@@ -187,6 +188,7 @@ export interface JevScript {
   scenario?: Scenario;
   architect?: ArchitectAnswer;
   parallel?: Record<string, number>;
+  buildStyle?: { choice: string; confidence: number };
   transition?: (
     state: Record<string, unknown>,
     offered: string[],
@@ -255,6 +257,11 @@ function transitionAnswers(
   };
 }
 
+function buildStyleAnswers(script: JevScript): Answers {
+  const pick = script.buildStyle ?? { choice: 'lean', confidence: 0.5 };
+  return { build_style: choice(pick.choice, pick.confidence) };
+}
+
 export function jevFetch(script: JevScript): typeof fetch {
   return async (_input, init) => {
     const body = JSON.parse(String(init?.body)) as {
@@ -269,11 +276,13 @@ export function jevFetch(script: JevScript): typeof fetch {
       SCENARIOS[0]!;
     const answers = body.questions.intent
       ? intakeAnswers(scenario)
-      : body.questions.status
-        ? transitionAnswers(script, body.state, body.questions)
-        : Object.keys(body.questions).some(isParallelKey)
-          ? parallelAnswers(script, body.questions)
-          : routeAnswers(script, body.questions);
+      : body.questions.build_style
+        ? buildStyleAnswers(script)
+        : body.questions.status
+          ? transitionAnswers(script, body.state, body.questions)
+          : Object.keys(body.questions).some(isParallelKey)
+            ? parallelAnswers(script, body.questions)
+            : routeAnswers(script, body.questions);
     return new Response(
       JSON.stringify({
         model: 'jev-test',
@@ -293,7 +302,11 @@ export interface Harness {
 export function startOrchestrator(
   t: TestDb,
   fetcher: typeof fetch | null,
-  options: { budget?: { activeLimitMs?: number; toolCallLimit?: number }; sessions?: string } = {},
+  options: {
+    budget?: { activeLimitMs?: number; toolCallLimit?: number };
+    sessions?: string;
+    lanes?: LaneOptions;
+  } = {},
 ): Harness {
   const intake = fetcher
     ? createIntakeRecorder({
@@ -317,6 +330,7 @@ export function startOrchestrator(
     budgetPollMs: 50,
     ...(intake ? { intake } : {}),
     ...(options.budget ? { budget: options.budget } : {}),
+    ...(options.lanes ? { lanes: options.lanes } : {}),
   });
   return {
     worker,

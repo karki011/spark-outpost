@@ -112,3 +112,25 @@ export async function worktreesForRuns(
   );
   return new Map(rows.map((row) => [row.run_id, { ...toRecord(row), name: row.name }]));
 }
+
+export interface DepsRecord {
+  method: 'clone' | 'copy' | 'offline_install' | 'skipped';
+  durationMs: number;
+  note: string | null;
+  waitedMs: number;
+}
+
+export async function saveDeps(db: Queryable, runId: string, deps: DepsRecord): Promise<void> {
+  await db.query(
+    `UPDATE run_worktrees SET deps_method = $2, deps_ms = $3, deps_note = $4, deps_waited_ms = $5
+     WHERE run_id = $1`,
+    [runId, deps.method, deps.durationMs, deps.note, deps.waitedMs],
+  );
+}
+
+export async function saveDepsWait(db: Queryable, runId: string, waitedMs: number): Promise<void> {
+  await db.query('UPDATE run_worktrees SET deps_waited_ms = $2 WHERE run_id = $1', [
+    runId,
+    waitedMs,
+  ]);
+}

@@ -36,8 +36,11 @@ export async function architect(turn: RoleTurn): Promise<acp.StopReason> {
   await turn.update({ sessionUpdate: 'plan', entries });
   const edited = /Change requested by the user\n(.+)/.exec(turn.text)?.[1];
   const hint = turn.text.includes('#parallelline') ? '\n\nParallel: 2, 3' : '';
+  const largeSteps = turn.text.includes('#chains') ? '1, 2, 3' : '2, 3';
   const large =
-    turn.text.includes('#parallel') && !turn.text.includes('#small') ? '\nLarge: 2, 3' : '';
+    turn.text.includes('#parallel') && !turn.text.includes('#small')
+      ? `\nLarge: ${largeSteps}`
+      : '';
   const notes = '\n\nNotes for Builders:\nsrc/dates.ts exports formatDay(date: Date): string.';
   const chains = turn.text.includes('#chains')
     ? '\n\nStep 1 · Files: src/dates.ts · Depends on: none\nStep 2 · Files: src/divider.tsx · Depends on: 1\nStep 3 · Files: src/turns.ts · Depends on: none\nChain A: steps 1-2\nChain B: step 3'
@@ -65,14 +68,23 @@ function priorPrompts(sessionId: string): number {
   }
 }
 
+function leanMarker(text: string): string {
+  return text.includes('## Build style: lean')
+    ? '// lean: fixed list; upgrade: load from config when asked\n'
+    : '';
+}
+
 export async function critic(turn: RoleTurn): Promise<acp.StopReason> {
   const concerns = turn.text.includes('#concerns');
   const reviewed = `Reviews in this session: ${priorPrompts(turn.sessionId) + 1}.\n`;
+  const lens = turn.text.includes('## Complexity (same review)')
+    ? '- notes.txt:L2: shrink: two lines say the same\nnet: -2 lines possible\n'
+    : '';
   await turn.say(
     reviewed +
       (concerns
-        ? 'Findings:\n- The divider test is missing\nVerdict: concerns'
-        : 'Findings:\n- The change matches the plan\nVerdict: looks good'),
+        ? `Findings:\n- The divider test is missing\n${lens}Verdict: concerns`
+        : `Findings:\n- The change matches the plan\n${lens}Verdict: looks good`),
   );
   return 'end_turn';
 }
@@ -194,7 +206,7 @@ async function buildStep(
     await turn.client.request(acp.methods.client.fs.writeTextFile, {
       sessionId: turn.sessionId,
       path: target,
-      content: `${before}step ${step}\n`,
+      content: `${before}step ${step}\n${leanMarker(turn.text)}`,
     });
     await turn.update({ sessionUpdate: 'tool_call_update', toolCallId, status: 'completed' });
   } catch {

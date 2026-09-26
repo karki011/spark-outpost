@@ -77,6 +77,14 @@ export interface ParallelRecord {
   sizes?: { step: number; rules: boolean; noul: number | null; large: boolean }[];
 }
 
+export interface LeanRecord {
+  chosen: string;
+  applied: string | null;
+  rule: string | null;
+  shortcuts: number;
+  net: number | null;
+}
+
 export interface Routing {
   depth: string;
   depthSource: string;
@@ -86,6 +94,7 @@ export interface Routing {
   architect?: ArchitectRecord | null;
   parallel?: ParallelRecord | null;
   checks?: string[];
+  lean?: LeanRecord;
 }
 
 export interface CellResult {
@@ -121,6 +130,8 @@ export interface BenchRun {
     harness: string;
     level: string;
     fixture: string;
+    buildStyle?: string;
+    lanes?: string;
   };
   results: CellResult[];
 }

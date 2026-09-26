@@ -41,6 +41,7 @@ function genericAnswer(key: string, question: StubQuestion, confidence: number):
   if (question.type === 'noul') return { type: 'noul', noul: UNSURE_NOUL.test(key) ? 0.5 : 0.04 };
   const offered = options(question);
   if (question.type === 'score') return score(Math.min(1, offered.length - 1), confidence);
+  if (key === 'build_style') return choice(offered.at(-1)!, confidence);
   const preferred: Record<string, string> = {
     intent: 'bug_fix',
     depth: 'execute',

@@ -2,7 +2,14 @@ import { z } from 'zod';
 
 export const PLAN_VERSION_CAP = 200;
 
-export const artifactKindSchema = z.enum(['plan', 'changes', 'check', 'review', 'advice']);
+export const artifactKindSchema = z.enum([
+  'plan',
+  'changes',
+  'check',
+  'review',
+  'advice',
+  'shortcuts',
+]);
 export type ArtifactKind = z.infer<typeof artifactKindSchema>;
 
 export const planPrioritySchema = z.enum(['high', 'medium', 'low']);

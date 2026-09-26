@@ -124,18 +124,33 @@ async function audit(s: Session, target: CheckTarget, result: CheckResult, root:
   ]);
 }
 
+const recordQueues = new Map<string, Promise<void>>();
+
+export function queueRecord(taskId: string, write: () => Promise<void>): Promise<void> {
+  const next = (recordQueues.get(taskId) ?? Promise.resolve()).then(write);
+  const settled = next.catch(() => undefined);
+  recordQueues.set(taskId, settled);
+  void settled.then(() => {
+    if (recordQueues.get(taskId) === settled) recordQueues.delete(taskId);
+  });
+  return next;
+}
+
 async function record(s: Session, body: CheckBody): Promise<void> {
-  if (!s.taskId) return;
-  const version = await nextArtifactVersion(s.deps.db, s.taskId, 'check');
-  await s.append(runEvents.activity('artifact:check', 'check', { version, body }), {
-    artifact: {
-      taskId: s.taskId,
-      kind: 'check',
-      body,
-      version,
-      overwrite: false,
-      supersedesPrevious: false,
-    },
+  const taskId = s.taskId;
+  if (!taskId) return;
+  await queueRecord(taskId, async () => {
+    const version = await nextArtifactVersion(s.deps.db, taskId, 'check');
+    await s.append(runEvents.activity('artifact:check', 'check', { version, body }), {
+      artifact: {
+        taskId,
+        kind: 'check',
+        body,
+        version,
+        overwrite: false,
+        supersedesPrevious: false,
+      },
+    });
   });
 }
 

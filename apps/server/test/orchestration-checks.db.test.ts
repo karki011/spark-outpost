@@ -7,6 +7,7 @@ import type { CheckBody } from '@spark-outpost/contracts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { createProject } from '../src/projects/projects.ts';
 import { REVIEW_INTENT_REASON } from '../src/orchestration/depth.ts';
+import type { LaneOptions } from '../src/orchestration/placement.ts';
 import {
   SCENARIOS,
   connectProviders,
@@ -53,9 +54,12 @@ afterEach(async () => {
   rmSync(store, { recursive: true, force: true });
 });
 
-function start(scenario: Scenario) {
+function start(scenario: Scenario, lanes?: LaneOptions) {
   const script: JevScript = { calls: [], scenario };
-  harness = startOrchestrator(t, jevFetch(script), { sessions: store });
+  harness = startOrchestrator(t, jevFetch(script), {
+    sessions: store,
+    ...(lanes ? { lanes } : {}),
+  });
 }
 
 async function configureChecks(commands: string[] | null): Promise<void> {
@@ -174,8 +178,10 @@ describe('checks after a Builder lands', () => {
 });
 
 describe('Critic alongside Builders and chains', () => {
-  it('gives each independent chain its own Builder and reviews each diff as it lands', async () => {
-    start(COMPLEX);
+  it('builds large chains in worktrees, checks the merged tree and reviews it once', async () => {
+    await writeFile(join(root, 'check.mjs'), "console.log('ok');\n");
+    await configureChecks(['node check.mjs']);
+    start(COMPLEX, { placement: 'worktree' });
     const scenario = { ...COMPLEX, text: `${COMPLEX.text} #parallel #chains #sleepstep 3` };
     const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
     const { orchestration } = await driveToEnd(t, conversationId, runId);
@@ -194,16 +200,30 @@ describe('Critic alongside Builders and chains', () => {
     );
     expect(new Set(builders.map((row) => row.route.parallelGroup))).toEqual(new Set(['g1']));
     expect(builders.every((row) => row.route.copy?.startsWith('spark/'))).toBe(true);
-    expect(critics.map((row) => row.route.name)).toEqual(['Hawk', 'Hawk']);
-    expect(critics[0]!.route.resumeKey).toBe(`${critics[0]!.task_id}:critic:Hawk`);
-    const rivet = builders.find((row) => row.route.name === 'Rivet')!;
-    expect(critics[0]!.created_at.getTime()).toBeLessThan(rivet.finished_at.getTime());
-
-    const { rows: criticIds } = await t.db.query<{ id: string }>(
-      `SELECT id FROM runs WHERE parent_run_id = $1 AND role = 'critic' ORDER BY created_at`,
+    expect(critics.map((row) => row.route.name)).toEqual(['Hawk']);
+    const lastBuilder = Math.max(...builders.map((row) => row.finished_at.getTime()));
+    expect(critics[0]!.created_at.getTime()).toBeGreaterThan(lastBuilder);
+    const { rows: prompts } = await t.db.query<{ prompt: string }>(
+      `SELECT prompt FROM runs WHERE parent_run_id = $1 AND role = 'critic'`,
       [runId],
     );
-    expect(await lastReply(criticIds[1]!.id)).toContain('Reviews in this session: 2.');
+    expect(prompts[0]!.prompt).toContain("Bolt and Rivet's change for steps 1, 2, 3.");
+    expect(prompts[0]!.prompt).toContain('src/turns.ts');
+
+    const bodies = await checkBodies();
+    const lanes = bodies.slice(0, 2).map((body) => [body.name, body.copy, body.status]);
+    expect(lanes.sort()).toEqual([
+      ['Bolt', 'Bolt', 'passed'],
+      ['Rivet', 'Rivet', 'passed'],
+    ]);
+    expect(bodies.slice(2).map((body) => [body.name, body.copy])).toEqual([
+      ['Bolt and Rivet', null],
+    ]);
+    const { rows: deps } = await t.db.query<{ deps_method: string | null }>(
+      'SELECT deps_method FROM run_worktrees WHERE orchestration_run_id = $1',
+      [runId],
+    );
+    expect(deps.map((row) => row.deps_method)).toEqual([null, null]);
 
     expect(await readFile(join(root, 'src/dates.ts'), 'utf8')).toBe('step 1\n');
     expect(await readFile(join(root, 'src/divider.tsx'), 'utf8')).toBe('step 2\n');
@@ -213,6 +233,9 @@ describe('Critic alongside Builders and chains', () => {
       [runId],
     );
     expect(decisions[0]?.summary).toContain('Chains in parallel: steps 1 and 2 | step 3');
+    expect(decisions[0]?.summary).toContain(
+      'Chains: split (rules; Jev did not answer on one Builder; rule: split) · worktrees (worktrees were requested;',
+    );
   });
 
   it('keeps a Critic when Jev reads the request as a review, even at execute depth', async () => {

@@ -19,6 +19,9 @@ export const THEMES = [
   'void',
   'fjord',
   'moss',
+  'lagoon',
+  'plum',
+  'sage',
   'contrast',
 ] as const;
 export type ThemeId = (typeof THEMES)[number];

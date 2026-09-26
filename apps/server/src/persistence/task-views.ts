@@ -1,5 +1,8 @@
 import {
   checkBodySchema,
+  shortcutsBodySchema,
+  shortcutsLine,
+  shortcutText,
   checkLine,
   failingChecks,
   mergeCostSource,
@@ -185,6 +188,30 @@ async function checkEvents(db: Queryable, taskId: string): Promise<TaskListEvent
   });
 }
 
+async function shortcutEvents(db: Queryable, taskId: string): Promise<TaskListEvent[]> {
+  const { rows } = await db.query<{ version: number; body: unknown }>(
+    `SELECT version, body FROM run_artifacts WHERE task_id = $1 AND kind = 'shortcuts'
+     ORDER BY version`,
+    [taskId],
+  );
+  return rows.flatMap((row) => {
+    const parsed = shortcutsBodySchema.safeParse(row.body);
+    if (!parsed.success) return [];
+    const body = parsed.data;
+    return [
+      {
+        id: String(row.version),
+        kind: 'shortcut' as const,
+        runId: body.runId,
+        label: shortcutsLine(body),
+        state: 'done' as const,
+        detail: `build style ${body.style}`,
+        output: body.entries.map(shortcutText).join('\n'),
+      },
+    ];
+  });
+}
+
 function sumOrNull(values: readonly (number | null)[]): number | null {
   const known = values.filter((value): value is number => value !== null);
   return known.length > 0 ? known.reduce((total, value) => total + value, 0) : null;
@@ -198,7 +225,11 @@ async function overview(
 ): Promise<TaskOverview> {
   const plan = await latestPlan(db, row.id);
   const listRuns: readonly TaskListRun[] = runs;
-  const events = [...(await approvalEvents(db, row.id)), ...(await checkEvents(db, row.id))];
+  const events = [
+    ...(await approvalEvents(db, row.id)),
+    ...(await checkEvents(db, row.id)),
+    ...(await shortcutEvents(db, row.id)),
+  ];
   const items = taskList({ status: row.status, links }, listRuns, events, plan);
   return {
     id: row.id,

@@ -4,6 +4,7 @@ import {
   chainsFromReply,
   chooseLanes,
   dependencies,
+  largeLane,
   lanesFromDependencies,
   stepNotesFromReply,
   withFilesLines,
@@ -70,20 +71,42 @@ describe('reading the Architect’s reply', () => {
 });
 
 describe('planning in chains', () => {
-  it('gives two independent feature chains their own lanes', () => {
+  it('gives two independent feature chains their own lanes only when they are large', () => {
     const notes = stepNotesFromReply(P1_REPLY, 6);
     const steps = withFilesLines(P1_STEPS, notes);
-    expect(
-      chooseLanes({
-        steps,
-        chains: chainsFromReply(P1_REPLY, 6),
-        depends: notes.depends,
-        large: [],
-      }),
-    ).toEqual([
+    const inputs = { steps, chains: chainsFromReply(P1_REPLY, 6), depends: notes.depends };
+    const lanes = [
       [0, 1, 2],
       [3, 4, 5],
-    ]);
+    ];
+    expect(chooseLanes({ ...inputs, large: [] })).toEqual([]);
+    expect(chooseLanes({ ...inputs, large: [0, 1, 3, 5] })).toEqual(lanes);
+    expect(chooseLanes({ ...inputs, large: [], split: 'any' })).toEqual(lanes);
+  });
+
+  it('counts a lane that changes five or more files as large', () => {
+    const steps = [
+      'Edit\nFiles: src/a.ts, src/b.ts, src/c.ts',
+      'Edit\nFiles: src/d.ts, src/e.ts',
+      'Edit\nFiles: src/f.ts',
+      'Edit\nFiles: src/g.ts',
+    ];
+    const inputs = {
+      steps,
+      chains: [
+        [0, 1],
+        [2, 3],
+      ],
+      depends: [null, null, null, null],
+    };
+    expect(largeLane({ ...inputs, large: [] }, [0, 1])).toBe(true);
+    expect(largeLane({ ...inputs, large: [] }, [2, 3])).toBe(false);
+    expect(
+      largeLane({ ...inputs, large: [2], sizes: [null, null, null, noulVerdict(0.9)] }, [2, 3]),
+    ).toBe(true);
+    expect(
+      largeLane({ ...inputs, large: [2, 3], sizes: [null, null, noulVerdict(0.1), null] }, [2, 3]),
+    ).toBe(false);
   });
 
   it('keeps shared setup before the lanes and a joining step after them', () => {
@@ -118,9 +141,9 @@ describe('planning in chains', () => {
       'Edit src/b.ts\nFiles: src/b.ts',
       'Edit src/c.ts\nFiles: src/c.ts',
     ];
-    const base = { steps, chains: [[0, 1], [2]], depends: [null, null, null], large: [] };
+    const base = { steps, chains: [[0, 1], [2]], depends: [null, null, null], large: [0, 1] };
     expect(chooseLanes(base)).toEqual([]);
-    expect(chooseLanes({ ...base, large: [2] })).toEqual([[0, 1], [2]]);
+    expect(chooseLanes({ ...base, large: [0, 1, 2] })).toEqual([[0, 1], [2]]);
     expect(chooseLanes({ ...base, sizes: [null, null, noulVerdict(0.95)] })).toEqual([[0, 1], [2]]);
   });
 

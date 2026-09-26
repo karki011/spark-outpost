@@ -5,6 +5,7 @@ import {
   type PlanBody,
   type PlanVersion,
   type ReviewBody,
+  type ShortcutsBody,
 } from '@spark-outpost/contracts';
 import type { StoredPlan } from '../tasks/plan-versions.ts';
 import type { DbClient, Queryable } from './db.ts';
@@ -13,7 +14,7 @@ export interface ArtifactWrite {
   taskId: string;
   kind: ArtifactKind;
   version: number;
-  body: PlanBody | ReviewBody | CheckBody;
+  body: PlanBody | ReviewBody | CheckBody | ShortcutsBody;
   overwrite: boolean;
   supersedesPrevious: boolean;
   sourceRunId?: string;

@@ -18,3 +18,4 @@ export * from './setup.ts';
 export * from './tasks.ts';
 export * from './terminal.ts';
 export * from './usage.ts';
+export * from './lean.ts';

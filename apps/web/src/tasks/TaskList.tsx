@@ -59,6 +59,10 @@ function decisionTag(item: TaskListItem): DecisionTag | null {
     : { text: 'Not allowed', tone: 'bad' };
 }
 
+function outputLabel(item: TaskListItem): string {
+  return item.id.startsWith('shortcut:') ? 'Deferred shortcuts' : 'Check output';
+}
+
 function fullText(item: TaskListItem): string {
   return item.hint ? `${item.label}\n${item.hint}` : item.label;
 }
@@ -106,7 +110,7 @@ function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[]
           {item.detail ? ` · ${item.detail}` : ''}
           {numbers ? ` · ${numbers}` : ''}
           {item.output && (
-            <pre className="ti-out" tabIndex={0} aria-label="Check output">
+            <pre className="ti-out" tabIndex={0} aria-label={outputLabel(item)}>
               {item.output}
             </pre>
           )}

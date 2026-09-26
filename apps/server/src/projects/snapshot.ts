@@ -189,8 +189,11 @@ export async function gitDiffBetween(
   root: string,
   from: string,
   to: string,
+  paths?: readonly string[],
 ): Promise<{ stats: FileStat[]; patch: string }> {
-  const range = ['--no-renames', '--relative', from, to];
+  if (paths && paths.length === 0) return { stats: [], patch: '' };
+  const only = paths ? ['--', ...paths.map((file) => `:(literal)${file}`)] : [];
+  const range = ['--no-renames', '--relative', from, to, ...only];
   const [numstat, patch] = await Promise.all([
     git(root, ['diff', '--numstat', ...range]),
     git(root, ['diff', ...range]),

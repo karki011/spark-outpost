@@ -23,6 +23,7 @@ import {
   type NewApproval,
 } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
+import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts';
 import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
 import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approval-waiters.ts';
@@ -259,6 +260,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
   const review = async (request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer> => {
     const what = subject(request);
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
+    if (request.kind === 'execute' && deps.copyOf) await awaitDepsPrep(deps.db, deps.runId);
     const covered =
       request.toolKind === FS_WRITE_TOOL_KIND &&
       request.paths.length > 0 &&

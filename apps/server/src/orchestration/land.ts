@@ -1,9 +1,10 @@
 import { failingChecks, type CheckBody } from '@spark-outpost/contracts';
 import { handOverSession } from '../persistence/provider-sessions.ts';
+import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { gitDiffBetween, workingTree } from '../projects/snapshot.ts';
 import { agentKey } from '../workflow/session-decision.ts';
 import { runChecks } from './checks.ts';
-import { checkFailureText, checkFixFollowUp } from './context.ts';
+import { checkFailureText, checkFixFollowUp, type ReviewSubject } from './context.ts';
 import { reviewWanted } from './depth.ts';
 import { resumeKeyFor, runMember, type MemberOutcome, type Place } from './members.ts';
 import { ReviewQueue } from './reviews.ts';
@@ -13,10 +14,15 @@ import type { FlowAction, Spawn } from './transitions.ts';
 
 export const CHECK_FIXES = 1;
 
+export const LANE_REVIEW_BYTES = 12_000;
+
+export type ReviewTiming = 'now' | 'if_large';
+
 export interface Landing {
   result: MemberResult;
   ticked: number[];
   checks: CheckBody | null;
+  reviewed: boolean;
 }
 
 export interface LandingSite {
@@ -25,6 +31,7 @@ export interface LandingSite {
   place: Place | null;
   copy: string | null;
   copyRunId: string | null;
+  review?: ReviewTiming;
 }
 
 export async function treeOf(s: Session, cwd: string): Promise<string | null> {
@@ -83,27 +90,37 @@ function reviewKey(spawn: Spawn): string {
   return spanOf(spawn).join(',');
 }
 
-async function queueReview(
-  s: Session,
-  spawn: Spawn,
-  result: MemberResult,
-  site: LandingSite,
-  checks: CheckBody | null,
-): Promise<void> {
-  if (!reviewWanted(s.flow) || s.flow.reviewed || site.before === null) return;
-  const after = await workingTree(site.cwd).catch(() => null);
-  if (!after) return;
-  const diff = await gitDiffBetween(site.cwd, site.before, after).catch(() => null);
-  if (!diff || diff.stats.length === 0) return;
+export interface DiffReview {
+  key: string;
+  subject: ReviewSubject;
+  cwd: string;
+  before: string;
+  paths?: readonly string[];
+  checks: CheckBody | null;
+  timing?: ReviewTiming;
+}
+
+export async function queueDiffReview(s: Session, review: DiffReview): Promise<boolean> {
+  if (!reviewWanted(s.flow) || s.flow.reviewed) return false;
+  const after = await workingTree(review.cwd).catch(() => null);
+  if (!after) return false;
+  const diff = await gitDiffBetween(review.cwd, review.before, after, review.paths).catch(
+    () => null,
+  );
+  if (!diff || diff.stats.length === 0) return false;
+  if (review.timing === 'if_large' && diff.patch.length <= LANE_REVIEW_BYTES) return false;
   s.reviews ??= new ReviewQueue(s);
   s.reviews.enqueue({
-    key: reviewKey(spawn),
-    subject: { name: result.name, steps: spanOf(spawn) },
+    key: review.key,
+    subject: review.subject,
     files: diff.stats,
     patch: diff.patch,
-    checks,
+    checks: review.checks,
   });
+  return true;
 }
+
+type Checked = Omit<Landing, 'reviewed'>;
 
 export async function land(
   s: Session,
@@ -111,11 +128,35 @@ export async function land(
   first: MemberResult,
   site: LandingSite,
 ): Promise<Landing> {
+  const checked = await checkAndFix(s, spawn, first, site);
+  const landed = checked.result.role === 'builder' && checked.result.outcome === 'succeeded';
+  if (!landed || site.before === null || !checked.changed) {
+    return { ...checked, reviewed: false };
+  }
+  const reviewed = await queueDiffReview(s, {
+    key: reviewKey(spawn),
+    subject: { name: checked.result.name, steps: spanOf(spawn) },
+    cwd: site.cwd,
+    before: site.before,
+    checks: checked.checks,
+    timing: site.review ?? 'now',
+  });
+  return { ...checked, reviewed };
+}
+
+export async function checkAndFix(
+  s: Session,
+  spawn: Spawn,
+  first: MemberResult,
+  site: LandingSite,
+): Promise<Checked & { changed: boolean }> {
   const ticked = new Set(first.ticked);
   if (first.role !== 'builder' || first.outcome !== 'succeeded') {
-    return { result: first, ticked: [...ticked], checks: null };
+    return { result: first, ticked: [...ticked], checks: null, changed: false };
   }
-  if (!(await changedSince(site))) return { result: first, ticked: [...ticked], checks: null };
+  if (!(await changedSince(site))) {
+    return { result: first, ticked: [...ticked], checks: null, changed: false };
+  }
   const target = (result: MemberResult) => ({
     runId: result.runId,
     name: result.name,
@@ -123,15 +164,17 @@ export async function land(
     copy: site.copy,
   });
   let last = first;
+  await awaitDepsPrep(s.deps.db, site.copyRunId);
   let checks = await runChecks(s, target(last));
   for (let fixes = 0; checks?.status === 'failed' && fixes < CHECK_FIXES; fixes += 1) {
     last = await fix(s, spawn, last, checks, site);
     last.ticked.forEach((index) => ticked.add(index));
-    if (last.outcome !== 'succeeded') return { result: last, ticked: [...ticked], checks };
+    if (last.outcome !== 'succeeded') {
+      return { result: last, ticked: [...ticked], checks, changed: true };
+    }
     checks = await runChecks(s, target(last));
   }
-  await queueReview(s, spawn, last, site, checks);
-  return { result: last, ticked: [...ticked], checks };
+  return { result: last, ticked: [...ticked], checks, changed: true };
 }
 
 export async function buildAndLand(

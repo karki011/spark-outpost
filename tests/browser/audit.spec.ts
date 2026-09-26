@@ -17,7 +17,18 @@ async function sendPlannedTask(page: Page) {
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 20_000 });
 }
 
-const THEMES = ['system', 'graphite', 'apricot', 'void', 'fjord', 'moss', 'contrast'];
+const THEMES = [
+  'system',
+  'graphite',
+  'apricot',
+  'void',
+  'fjord',
+  'moss',
+  'lagoon',
+  'plum',
+  'sage',
+  'contrast',
+];
 
 async function shot(page: Page, name: string) {
   if (!SHOTS) return;

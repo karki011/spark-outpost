@@ -3,7 +3,18 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
 
-const THEMES = ['light', 'graphite', 'apricot', 'void', 'fjord', 'moss', 'contrast'] as const;
+const THEMES = [
+  'light',
+  'graphite',
+  'apricot',
+  'void',
+  'fjord',
+  'moss',
+  'lagoon',
+  'plum',
+  'sage',
+  'contrast',
+] as const;
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const BLOCKING_IMPACTS = new Set(['serious', 'critical']);
 

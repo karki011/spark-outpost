@@ -112,7 +112,12 @@ describe('parallel Builders', () => {
     const workers = orchestration.crew.filter((member) => member.role !== 'critic');
     expect(workers.map((member) => member.name)).toEqual(['Sketch', 'Bolt', 'Rivet', 'Tack']);
     const reviews = orchestration.crew.filter((member) => member.role === 'critic');
-    expect(reviews.map((member) => member.name)).toEqual(['Hawk', 'Hawk', 'Hawk']);
+    expect(reviews.map((member) => member.name)).toEqual(['Hawk', 'Hawk']);
+    const { rows: prompts } = await t.db.query<{ prompt: string }>(
+      `SELECT prompt FROM runs WHERE parent_run_id = $1 AND role = 'critic' ORDER BY created_at`,
+      [runId],
+    );
+    expect(prompts.at(-1)?.prompt).toContain("Rivet and Tack's change for steps 2, 3.");
     const [rivet, tack] = workers.slice(2, 4);
     expect(rivet?.parallelGroup).toBe('g1');
     expect(tack?.parallelGroup).toBe('g1');
@@ -185,13 +190,17 @@ describe('merge conflicts', () => {
   }, 60_000);
 
   it('keeps the second Builder’s change when asked', async () => {
-    const { orchestration } = await run('#parallel #collide', choose(CHECKPOINT_OPTION.keepSecond));
+    const { orchestration, runId } = await run(
+      '#parallel #collide',
+      choose(CHECKPOINT_OPTION.keepSecond),
+    );
     expect(orchestration.status).toBe('succeeded');
     expect(await readFile(join(root, 'notes.txt'), 'utf8')).toBe('start\nstep 1\nstep 3\n');
+    await expectClean(runId);
   }, 60_000);
 
   it('asks a Builder to reconcile both changes in the main copy', async () => {
-    const { orchestration, asked } = await run(
+    const { orchestration, asked, runId } = await run(
       '#parallel #collide',
       choose(CHECKPOINT_OPTION.reconcile),
     );
@@ -214,6 +223,7 @@ describe('merge conflicts', () => {
     );
     const versions = await planVersions(t.db, orchestration.taskId!);
     expect(statuses(versions).at(-1)).toBe('completed completed completed');
+    await expectClean(runId);
   }, 60_000);
 
   it('stops the orchestration and cleans up when you choose Stop', async () => {

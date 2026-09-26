@@ -43,6 +43,9 @@ body[data-skin="apricot"]{--bg:#f6f1ed;--panel:#fffdfb;--raise:#f5eae1;--line:#e
 body[data-skin="void"]{--bg:#000;--panel:#07070a;--raise:#121218;--line:#1d1d26;--text:#eceaf6;--muted:#a2a0b9;--faint:#8f8da7;--accent:#9d8aff;--accent-ink:#130c33;--accent-soft:rgba(157,138,255,.13);--user:#17142c;--user-text:#eceaf6;--danger:#ff6b8a;--danger-soft:rgba(255,107,138,.11);--warn:#f5c26b;--code:#0b0b10;--line-strong:#62626d;--accent-text:#9d8aff;--warn-ink:#1b1300;--success:#6fdca0}
 body[data-skin="fjord"]{--bg:#edf1f5;--panel:#fff;--raise:#e9eef4;--line:#d7dfe8;--text:#132033;--muted:#405066;--faint:#536070;--accent:#2f6fe4;--accent-ink:#fff;--accent-soft:rgba(47,111,228,.1);--user:#2f6fe4;--user-text:#fff;--danger:#be2c30;--danger-soft:rgba(190,44,48,.09);--warn:#864800;--code:#f3f6fa;--r:10px;--r-sm:6px;--line-strong:#808890;--accent-text:#1c5ccf;--warn-ink:#fff;--success:#00763a}
 body[data-skin="moss"]{--bg:#11140e;--panel:#171b13;--raise:#20251a;--line:#2b3122;--text:#e9ecdf;--muted:#afb79f;--faint:#9da68d;--accent:#c7d96b;--accent-ink:#1a1f06;--accent-soft:rgba(199,217,107,.12);--user:#262c1b;--user-text:#e9ecdf;--danger:#f08a5d;--danger-soft:rgba(240,138,93,.11);--warn:#f0c05a;--code:#10130c;--line-strong:#6a7160;--accent-text:#c7d96b;--warn-ink:#1b1300;--success:#a9d67a}
+body[data-skin="lagoon"]{--bg:#e8f2f1;--panel:#fbfefe;--raise:#e1eeec;--line:#d0e2df;--text:#0f2427;--muted:#37555a;--faint:#455f63;--accent:#0a7389;--accent-ink:#fff;--accent-soft:rgba(10,115,137,.11);--user:#d6eef0;--user-text:#0f2427;--danger:#b7302f;--danger-soft:rgba(183,48,47,.09);--warn:#7f4c00;--code:#f0f7f6;--r:16px;--r-sm:10px;--line-strong:#728584;--accent-text:#00657a;--warn-ink:#fff;--success:#17713c}
+body[data-skin="plum"]{--bg:#150f17;--panel:#1c1520;--raise:#261d2b;--line:#322638;--text:#f2e9f0;--muted:#c0aebd;--faint:#ab99a9;--accent:#e9ab8c;--accent-ink:#2b130c;--accent-soft:rgba(233,171,140,.13);--user:#33212f;--user-text:#f2e9f0;--danger:#ff7a8a;--danger-soft:rgba(255,122,138,.11);--warn:#f2c46d;--code:#120d14;--r:18px;--r-sm:12px;--line-strong:#75667c;--accent-text:#efb89c;--warn-ink:#1d1400;--success:#86d4a6}
+body[data-skin="sage"]{--bg:#ecefe4;--panel:#fbfcf8;--raise:#e7ecdd;--line:#d8dfcc;--text:#1b2118;--muted:#4a5443;--faint:#596352;--accent:#a85a2a;--accent-ink:#fff;--accent-soft:rgba(168,90,42,.11);--user:#f1e0d6;--user-text:#1b2118;--danger:#b3263f;--danger-soft:rgba(179,38,63,.09);--warn:#7a4f00;--code:#f3f6ee;--r:20px;--r-sm:12px;--line-strong:#7a8370;--accent-text:#904a1f;--warn-ink:#fff;--success:#2c6e3a}
 body[data-skin="contrast"]{--bg:#fff;--panel:#fff;--raise:#f0f0f0;--line:#000;--text:#000;--muted:#2b2b2b;--faint:#4d4d4d;--accent:#0000e0;--accent-ink:#fff;--accent-soft:rgba(0,0,224,.08);--user:#000;--user-text:#fff;--danger:#b00000;--danger-soft:rgba(176,0,0,.07);--warn:#845400;--code:#f5f5f5;--r:4px;--r-sm:2px;--line-strong:#000;--accent-text:#0000e0;--warn-ink:#fff;--success:#006b1f}
 
 *,*::before,*::after{box-sizing:inherit}
@@ -558,7 +561,7 @@ body.entering .app{animation:appin .8s var(--out)}
 .rail-logo:hover{background:var(--raise)}
 /* ---- Blob Scout (logo with moods) ---- */
 .scout{overflow:visible;--sc-a:var(--accent);--sc-b:var(--warn);--sc-eye:#0c0f12;cursor:pointer;-webkit-tap-highlight-color:transparent}
-body[data-skin="contrast"] .scout,body[data-skin="fjord"] .scout{--sc-eye:#fff}
+body[data-skin="contrast"] .scout,body[data-skin="fjord"] .scout,body[data-skin="lagoon"] .scout{--sc-eye:#fff}
 .scout .sc-hop,.scout .sc-body{transform-box:view-box}
 .scout .sc-body{transform-origin:32px 58px;animation:sc-breathe 3.4s ease-in-out infinite}
 @keyframes sc-breathe{50%{transform:scale(1.03,.97)}}
@@ -1304,7 +1307,7 @@ const I={
 };
 
 /* ======================= Themes ======================= */
-const SKINS=[["auto","Match system","#8b95a3","#12161a"],["graphite","Graphite","#34c3a3","#12161a"],["apricot","Apricot","#c05600","#fffdfb"],["void","Void","#9d8aff","#000"],["fjord","Fjord","#2f6fe4","#fff"],["moss","Moss","#c7d96b","#171b13"],["contrast","High contrast","#0000e0","#fff"]];
+const SKINS=[["auto","Match system","#8b95a3","#12161a"],["graphite","Graphite","#34c3a3","#12161a"],["apricot","Apricot","#c05600","#fffdfb"],["void","Void","#9d8aff","#000"],["fjord","Fjord","#2f6fe4","#fff"],["moss","Moss","#c7d96b","#171b13"],["lagoon","Lagoon","#0a7389","#fbfefe"],["plum","Plum","#e9ab8c","#1c1520"],["sage","Sage","#a85a2a","#fbfcf8"],["contrast","High contrast","#0000e0","#fff"]];
 const pop=$("pop"),themeBtn=$("themeBtn");
 function applySkin(id,x,y){
   setTimeout(()=>{try{favMood="";appScoutMood()}catch(e){}},30);

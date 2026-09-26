@@ -1,6 +1,6 @@
 # Accessibility rules
 
-Spark Outpost targets **WCAG 2.2 AA** in every theme (Light, Graphite, Apricot, Void, Fjord, Moss, High contrast, and the system light and dark pair). This page lists the rules we enforce, where each one comes from, and how it is checked.
+Spark Outpost targets **WCAG 2.2 AA** in every theme (Light, Graphite, Apricot, Void, Fjord, Moss, Lagoon, Plum, Sage, High contrast, and the system light and dark pair). This page lists the rules we enforce, where each one comes from, and how it is checked.
 
 The per-theme before and after numbers are in [`accessibility-report.html`](accessibility-report.html).
 
@@ -46,6 +46,18 @@ Keep feature CSS on these tokens and never hard-code palette values (see `AGENTS
 
 Use `color: var(--accent-text)`, not `var(--accent)`, whenever accent colour is used for text or `currentColor` icons.
 
+### Lagoon, Plum and Sage
+
+These three themes follow Apricot's recipe: tinted surfaces instead of neutral grey, one confident accent, a rail that sits one step deeper than the canvas, and a raised tone between canvas and panel. Each block in `theme.css` defines every token itself, including `--scout-eye`, the scrollbar thumbs, `--r` and `--r-sm`, so nothing falls back to another theme's colours. The diff, Shiki code-token and terminal colours derive from these tokens.
+
+| Theme  | Mood                         | Canvas / rail / panel           | Accent (fill / text)  | Success / danger, hue gap |
+| ------ | ---------------------------- | ------------------------------- | --------------------- | ------------------------- |
+| Lagoon | Cool sea-glass light         | `#e8f2f1` / `#dae9e7` / `#fbfefe` | `#0a7389` / `#00657a` | `#17713c` / `#b7302f`, 126° |
+| Plum   | Dusky dark, rose-gold jewel  | `#150f17` / `#0e0a10` / `#1c1520` | `#e9ab8c` / `#efb89c` | `#86d4a6` / `#ff7a8a`, 143° |
+| Sage   | Soft warm-neutral, clay      | `#ecefe4` / `#e0e6d5` / `#fbfcf8` | `#a85a2a` / `#904a1f` | `#2c6e3a` / `#b3263f`, 131° |
+
+All three pass every pair in `pnpm a11y:contrast` with only the standard allowlist exempt.
+
 ### Automated check
 
 `pnpm a11y:contrast` (part of `pnpm check`) resolves the tokens for every theme from `apps/web/public/theme.css`, `chat/approvals/diff-view.css` and `chat/markdown/code-tokens.css`. It composites the translucent layers (`color-mix`, `rgba`), then checks 110 text and UI pairings plus one hue check per theme. It prints a table per theme and exits non-zero on any failure. The pairings are listed in `scripts/contrast/*-pairs.ts`. When a feature puts text on a new surface, add a pair for it.
@@ -55,7 +67,7 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 - `disabled.button-label` and `disabled.button-ghost`: disabled controls, exempt under WCAG 1.4.3.
 - `offline.zz`: the decorative, `aria-hidden` "z" glyphs on the offline mascot.
 
-`tests/browser/accessibility.spec.ts` runs axe-core on the main screens in all seven themes. It fails on any serious or critical `color-contrast` or `aria-*` violation.
+`tests/browser/accessibility.spec.ts` runs axe-core on the main screens in all ten themes. It fails on any serious or critical `color-contrast` or `aria-*` violation.
 
 ## Typography
 
@@ -99,8 +111,8 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 ## Known exceptions and follow-ups
 
 - **Delight zones:** Agent TV and the offline screen keep springs, longer loops and the `ow-poke` animation of `left`. Under reduced motion, their loops stop.
-- **Sidebar drag and drop:** the lifted card tilts slightly, its blob wiggles when the drop target changes, the card bounces a little when it lands in a new project, and that project's header pulses. Each reaction stays under 250ms and uses transform and opacity only. Under reduced motion the card only fades and the header only glows.
-- **Drag handles:** every draggable chat and project has a Move button that starts a keyboard drag. Arrow keys choose the spot, Space or Enter drops, and Escape cancels. A live region announces each step.
+- **Sidebar drag and drop:** the lifted copy of the row scales up slightly, its blob wiggles when the drop target changes, the card bounces a little when it lands in a new project, and that project's header pulses. The dragged row stays in the list as a faded ghost at the spot where it will land, and its neighbours slide apart in 200ms. Each reaction stays under 250ms and uses transform and opacity only. Under reduced motion the card only fades, the neighbours move without sliding, and the header only glows.
+- **Drag handles:** every draggable chat and project has a Move button that starts a keyboard drag. Up and down arrows choose the spot, right and left arrows move a chat into the project above or out to Chats, Space or Enter drops, and Escape cancels. A live region announces each step.
 - **Scout mascot:** the hop and squish springs play only when the mascot is poked or happy.
 - **Theme switch:** the circular reveal (650ms, `theme/reveal.ts`) runs longer than 250ms and doesn't use ease-out. It is skipped under reduced motion.
 - **Spinners:** they keep rotating under reduced motion because they show progress.

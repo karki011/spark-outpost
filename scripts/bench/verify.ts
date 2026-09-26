@@ -16,6 +16,7 @@ export interface DiffStat {
   files: string[];
   added: number;
   removed: number;
+  sourceAdded?: number;
 }
 
 export interface Precheck {
@@ -30,6 +31,7 @@ export interface Verification {
   hidden: TestCounts | null;
   outOfScope: string[];
   diff: DiffStat;
+  safety?: TestCounts | null;
 }
 
 export function parseTapCounts(output: string): TestCounts | null {
@@ -44,14 +46,18 @@ export function parseTapCounts(output: string): TestCounts | null {
   return { tests, pass, fail };
 }
 
+const TEST_PATH = /(?:^|\/)(?:test|tests|__tests__)\/|\.(?:test|spec)\.[jt]sx?$/;
+
 export function parseNumstat(output: string): DiffStat {
-  const stat: DiffStat = { files: [], added: 0, removed: 0 };
+  const stat: DiffStat = { files: [], added: 0, removed: 0, sourceAdded: 0 };
   for (const line of output.split('\n')) {
     const [added, removed, ...path] = line.split('\t');
     if (!added || !removed || path.length === 0) continue;
-    stat.files.push(path.join('\t'));
+    const file = path.join('\t');
+    stat.files.push(file);
     stat.added += Number(added) || 0;
     stat.removed += Number(removed) || 0;
+    if (!TEST_PATH.test(file)) stat.sourceAdded! += Number(added) || 0;
   }
   return stat;
 }
@@ -109,6 +115,7 @@ export async function nodeTests(cwd: string, pattern: string): Promise<TestCount
 
 const SUITE = 'test/**/*.test.ts';
 const HIDDEN = `${HIDDEN_DIR}/*.test.ts`;
+const SAFETY = `${HIDDEN_DIR}/safety*.test.ts`;
 
 export async function precheck(task: BenchTask, repo: TaskRepo): Promise<Precheck> {
   const suite = await nodeTests(repo.path, SUITE);
@@ -124,7 +131,10 @@ export async function verifyRepo(
   stageAll(repo.path);
   const diff = parseNumstat(stagedNumstat(repo));
   const suite = await nodeTests(repo.path, SUITE);
-  const hidden = await withHiddenChecks(task, repo.path, () => nodeTests(repo.path, HIDDEN));
+  const { hidden, safety } = await withHiddenChecks(task, repo.path, async () => ({
+    hidden: await nodeTests(repo.path, HIDDEN),
+    safety: task.safety ? await nodeTests(repo.path, SAFETY) : null,
+  }));
   const scope = outOfScope(diff.files, task.allowed);
   const judged = judgeVerification({
     precheck: before,
@@ -134,5 +144,5 @@ export async function verifyRepo(
     outOfScope: scope,
     diff,
   });
-  return { ...judged, suite, hidden, outOfScope: scope, diff };
+  return { ...judged, suite, hidden, outOfScope: scope, diff, ...(task.safety ? { safety } : {}) };
 }

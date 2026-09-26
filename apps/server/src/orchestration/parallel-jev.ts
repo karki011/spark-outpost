@@ -5,10 +5,14 @@ import {
   buildParallelQuestions,
   chooseGroups,
   parseParallelAnswers,
+  type NoulVerdict,
   type ParallelChoice,
   type ParallelVerdicts,
 } from './parallel-choice.ts';
 import { chooseLanes } from './chains.ts';
+import type { IntakeQuestions } from '../advisor/intake-questions.ts';
+import { chooseSplit, laneQuestions, parseLaneAnswers, type SplitDecision } from './lane-choice.ts';
+import { choosePlacement, type PlacementDecision } from './placement.ts';
 import type { Session } from './session.ts';
 import { stepFiles } from './step-files.ts';
 import { STEP_CHARACTERS } from './jev-questions.ts';
@@ -67,6 +71,37 @@ export interface ParallelDecision {
   lanes: number[][];
 }
 
+function withLaneQuestions(
+  asked: IntakeQuestions,
+  steps: readonly string[],
+  candidates: readonly number[][],
+): IntakeQuestions {
+  if (candidates.length < 2) return asked;
+  const lanes = laneQuestions(steps, candidates);
+  return {
+    state: { ...asked.state, chains: lanes.chains },
+    questions: { ...asked.questions, ...lanes.questions },
+  };
+}
+
+function verdictText(verdict: NoulVerdict | null): string {
+  return verdict ? `Jev ${verdict.noul.toFixed(2)}` : 'Jev did not answer';
+}
+
+export function laneSummary(
+  split: SplitDecision,
+  placement: PlacementDecision | null,
+  candidates: readonly number[][],
+): string | null {
+  if (candidates.length < 2) return null;
+  const splitRule = split.rule.length > 1 ? 'split' : 'one Builder';
+  const splitText = `${split.lanes.length > 1 ? 'split' : 'one Builder'} (${split.source}; ${verdictText(split.jev)} on one Builder; rule: ${splitRule})`;
+  if (!placement) return `Chains: ${splitText}`;
+  const where = placement.placement === 'shared' ? 'shared tree' : 'worktrees';
+  const rule = placement.rule.placement === 'shared' ? 'shared tree' : 'worktrees';
+  return `Chains: ${splitText} · ${where} (${placement.reason}; ${verdictText(placement.jev)} on sharing; rule: ${rule})`;
+}
+
 export async function decideParallel(
   s: Session,
   raw: readonly string[],
@@ -77,24 +112,50 @@ export async function decideParallel(
 ): Promise<ParallelDecision> {
   const steps = raw.map((step) => step.trim()).filter(Boolean);
   if (!s.flow.worktrees || steps.length < 2) return { verdicts: null, lanes: [] };
+  const base = { steps, chains: architect.chains, depends: architect.depends, large };
+  const candidates = chooseLanes({ ...base, split: 'any' });
   const call = s.jev
     ? await callJev(
         s.jev,
-        () => buildParallelQuestions(s.input.userRequest, steps),
+        () =>
+          withLaneQuestions(buildParallelQuestions(s.input.userRequest, steps), steps, candidates),
         s.control.signal,
       )
     : null;
+  const answered = call?.status === 'answered' ? call.response : null;
   const verdicts = verdictsOf(call, steps.length);
+  const laneVerdicts = parseLaneAnswers(answered);
   const choice = chooseGroups(steps, hinted, large, verdicts);
-  const lanes = chooseLanes({
-    steps,
-    chains: architect.chains,
-    depends: architect.depends,
-    large,
+  const withJev = {
+    ...base,
     independent: verdicts?.independent ?? [],
     sizes: verdicts?.large ?? [],
-  });
-  const byJev = choice.decided.some((group) => group.source === 'jev');
+  };
+  const split = chooseSplit(
+    chooseLanes({ ...withJev, split: 'any' }),
+    chooseLanes({ ...withJev, split: 'large' }),
+    laneVerdicts.oneBuilder,
+    s.deps.lanes?.split,
+  );
+  const lanes = split.lanes;
+  const placement =
+    lanes.length > 1
+      ? choosePlacement(
+          steps,
+          lanes,
+          {
+            answered: answered !== null && candidates.length > 1,
+            verdict: laneVerdicts.sameFolder,
+          },
+          s.deps.lanes?.placement,
+        )
+      : null;
+  s.lanePlacement = placement?.placement ?? null;
+  const byJev =
+    choice.decided.some((group) => group.source === 'jev') ||
+    split.source === 'jev' ||
+    placement?.source === 'jev';
+  const lanesText = laneSummary(split, placement, candidates);
   await insertDecision(s.deps.db, {
     runId: s.lease.runId,
     purpose: 'parallel',
@@ -105,7 +166,7 @@ export async function decideParallel(
     inputTokens: call?.usage?.inputTokens ?? null,
     costUsd: call?.usage?.costUsd ?? null,
     body: {
-      summary: parallelSummary(choice, lanes),
+      summary: [parallelSummary(choice, lanes), lanesText].filter(Boolean).join(' · '),
       applied: byJev ? 'jev' : 'rules',
       gate: null,
       jevError: call?.error ?? null,
@@ -118,7 +179,9 @@ export async function decideParallel(
         pairs: choice.pairs,
         sizes: choice.sizes,
         agreement: agreement(choice),
-        chains: { architect: architect.chains, depends: architect.depends, lanes },
+        chains: { architect: architect.chains, depends: architect.depends, candidates, lanes },
+        split,
+        ...(placement ? { placement } : {}),
       },
       state: call?.asked?.state ?? null,
       questions: call?.asked?.questions ?? null,

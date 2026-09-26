@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { buildStyleSchema } from './lean.ts';
 
 export const PROJECT_FILES_LIMIT = 50;
 export const CONVERSATION_PROJECTS_MAX = 8;
@@ -11,6 +12,7 @@ export const projectSchema = z.object({
   createdAt: z.string(),
   commandAllowlist: z.array(z.string()),
   checkCommands: z.array(z.string()).nullable().optional(),
+  buildStyle: buildStyleSchema.optional(),
 });
 export type Project = z.infer<typeof projectSchema>;
 

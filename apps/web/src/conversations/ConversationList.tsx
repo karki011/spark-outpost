@@ -47,7 +47,7 @@ import { useChatActions } from './use-chat-actions.ts';
 import { useProjectActions } from './use-project-actions.ts';
 import { useSidebarDnd, type Point } from './use-sidebar-dnd.ts';
 import { useSidebarFolds } from './use-sidebar-folds.ts';
-import { projectDragId } from './sidebar-dnd-geometry.ts';
+import { listSorting, projectDragId } from './sidebar-dnd-geometry.ts';
 import { useToast } from './use-toast.ts';
 
 const SEARCH_DELAY_MS = 180;
@@ -170,6 +170,7 @@ export function ConversationList({
     layout: chatLayout(grouped),
     projectIds: projectList.map((project) => project.id),
     chatTitle: (id) => byId.get(id)?.title ?? 'Chat',
+    updatedAt: (id) => byId.get(id)?.updatedAt ?? '',
     projectName: (id) => projectById.get(id)?.name ?? 'the project',
     onChatDrop: (drop) => {
       const chat = byId.get(drop.chatId);
@@ -303,9 +304,12 @@ export function ConversationList({
             <PlusIcon />
           </button>
         </div>
-        <SortableContext items={shownBlocks.map((block) => projectDragId(block.project.id))}>
+        <SortableContext
+          items={shownBlocks.map((block) => projectDragId(block.project.id))}
+          strategy={listSorting}
+        >
           {shownBlocks.map(({ project, pinned, rest, count }) => {
-            const open = searching || folds.isOpen(project.id);
+            const open = searching || folds.isOpen(project.id) || over === project.id;
             return (
               <ProjectGroup
                 key={project.id}
@@ -432,6 +436,7 @@ export function ConversationList({
             role="tabpanel"
             aria-label={tab === 'active' ? 'Active chats' : 'Archived chats'}
             className={`list${dnd.active ? ' dragging' : ''}`}
+            data-projection={dnd.shift ?? undefined}
             aria-busy={searching && results.isFetching}
           >
             <div key={tab} className="list-in">

@@ -203,3 +203,18 @@ export const CHIPS: Pair[] = [
     kind: 'text',
   },
 ];
+
+const DROP_TINT = 'color-mix(in srgb, var(--accent-soft) 45%, transparent)';
+const DROP_BASES = { canvas: 'var(--bg)', panel: 'var(--panel)' };
+const DROP_INKS = { text: 'var(--text)', muted: 'var(--muted)', faint: 'var(--faint)' };
+
+export const DROP_TARGET: Pair[] = Object.entries(DROP_BASES).flatMap(([surface, base]) =>
+  Object.entries(DROP_INKS).map(([ink, fg]) => ({
+    id: `drag.${ink}-on-target-${surface}`,
+    group: 'Sidebar drag target',
+    label: `${ink} in the tinted target project (${surface})`,
+    fg,
+    bg: [base, DROP_TINT],
+    kind: 'text' as const,
+  })),
+);

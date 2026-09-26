@@ -191,6 +191,96 @@
   --code: #10130c;
 }
 
+[data-skin='lagoon'] {
+  color-scheme: light;
+  --bg: #e8f2f1;
+  --rail: #dae9e7;
+  --panel: #fbfefe;
+  --raise: #e1eeec;
+  --line: #d0e2df;
+  --line-strong: #728584;
+  --text: #0f2427;
+  --muted: #37555a;
+  --faint: #455f63;
+  --accent: #0a7389;
+  --accent-ink: #fff;
+  --accent-text: #00657a;
+  --accent-soft: rgba(10, 115, 137, 0.11);
+  --user: #d6eef0;
+  --user-text: #0f2427;
+  --danger: #b7302f;
+  --danger-soft: rgba(183, 48, 47, 0.09);
+  --warn: #7f4c00;
+  --warn-ink: #fff;
+  --success: #17713c;
+  --code: #f0f7f6;
+  --scout-eye: #fff;
+  --scroll-thumb: color-mix(in srgb, var(--muted) 34%, transparent);
+  --scroll-thumb-hover: color-mix(in srgb, var(--muted) 58%, transparent);
+  --r: 16px;
+  --r-sm: 10px;
+}
+
+[data-skin='plum'] {
+  color-scheme: dark;
+  --bg: #150f17;
+  --rail: #0e0a10;
+  --panel: #1c1520;
+  --raise: #261d2b;
+  --line: #322638;
+  --line-strong: #75667c;
+  --text: #f2e9f0;
+  --muted: #c0aebd;
+  --faint: #ab99a9;
+  --accent: #e9ab8c;
+  --accent-ink: #2b130c;
+  --accent-text: #efb89c;
+  --accent-soft: rgba(233, 171, 140, 0.13);
+  --user: #33212f;
+  --user-text: #f2e9f0;
+  --danger: #ff7a8a;
+  --danger-soft: rgba(255, 122, 138, 0.11);
+  --warn: #f2c46d;
+  --warn-ink: #1d1400;
+  --success: #86d4a6;
+  --code: #120d14;
+  --scout-eye: #150f17;
+  --scroll-thumb: color-mix(in srgb, var(--muted) 42%, transparent);
+  --scroll-thumb-hover: color-mix(in srgb, var(--muted) 68%, transparent);
+  --r: 18px;
+  --r-sm: 12px;
+}
+
+[data-skin='sage'] {
+  color-scheme: light;
+  --bg: #ecefe4;
+  --rail: #e0e6d5;
+  --panel: #fbfcf8;
+  --raise: #e7ecdd;
+  --line: #d8dfcc;
+  --line-strong: #7a8370;
+  --text: #1b2118;
+  --muted: #4a5443;
+  --faint: #596352;
+  --accent: #a85a2a;
+  --accent-ink: #fff;
+  --accent-text: #904a1f;
+  --accent-soft: rgba(168, 90, 42, 0.11);
+  --user: #f1e0d6;
+  --user-text: #1b2118;
+  --danger: #b3263f;
+  --danger-soft: rgba(179, 38, 63, 0.09);
+  --warn: #7a4f00;
+  --warn-ink: #fff;
+  --success: #2c6e3a;
+  --code: #f3f6ee;
+  --scout-eye: #0c0f12;
+  --scroll-thumb: color-mix(in srgb, var(--muted) 34%, transparent);
+  --scroll-thumb-hover: color-mix(in srgb, var(--muted) 58%, transparent);
+  --r: 20px;
+  --r-sm: 12px;
+}
+
 [data-skin='contrast'] {
   color-scheme: light;
   --bg: #fff;

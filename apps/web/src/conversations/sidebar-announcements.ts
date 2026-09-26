@@ -18,7 +18,7 @@ export interface DragSnapshot {
 
 export const screenReaderInstructions: ScreenReaderInstructions = {
   draggable:
-    'To move this item, press Space or Enter. Use the up and down arrow keys to choose where it goes, then press Space or Enter to drop it, or Escape to cancel.',
+    'To move this item, press Space or Enter. Use the up and down arrow keys to choose where it goes, and the right or left arrow keys to move a chat into the project above or out to Chats. Then press Space or Enter to drop it, or Escape to cancel.',
 };
 
 type Over = { id: string | number; data: { current?: unknown } } | null;
@@ -75,4 +75,13 @@ export function announcement(
   if (moment === 'cancel') return `Cancelled. ${found.name} stayed in ${found.place}.`;
   if (!over) return `${found.name} is not over a drop area.`;
   return `${found.name} will move to ${found.place}.`;
+}
+
+export function shiftAnnouncement(
+  name: string,
+  group: string | null,
+  projectName: (id: string) => string,
+): string {
+  if (group === null || group === NO_PROJECT) return `${name} will move out to Chats.`;
+  return `${name} will move into ${projectName(group)}.`;
 }

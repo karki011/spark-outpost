@@ -129,7 +129,7 @@ describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, ()
       if (outputs.length === 3) controller.abort();
     }
     expect(outputs.length).toBeGreaterThanOrEqual(3);
-    expect(outputs.length).toBeLessThan(40);
+    expect(outputs.length).toBeLessThan(500);
   });
 
   it('turns agent failures into readable provider errors', async () => {

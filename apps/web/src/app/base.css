@@ -168,31 +168,56 @@ svg {
 }
 
 @supports not selector(::-webkit-scrollbar) {
-  :root[data-scrollbars='classic'] * {
+  :root * {
     scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) transparent;
+  }
+
+  :root[data-scrollbars='overlay'] * {
+    scrollbar-color: transparent transparent;
+  }
+
+  :root[data-scrollbars='overlay'] *:hover,
+  :root[data-scrollbars='overlay'] [data-scrolling] {
     scrollbar-color: var(--scroll-thumb) transparent;
   }
 }
 
-:root[data-scrollbars='classic'] ::-webkit-scrollbar {
+::-webkit-scrollbar {
   width: 10px;
   height: 10px;
   background: transparent;
 }
 
-:root[data-scrollbars='classic'] ::-webkit-scrollbar-track,
-:root[data-scrollbars='classic'] ::-webkit-scrollbar-corner {
+:root[data-scrollbars='overlay'] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
   background: transparent;
 }
 
-:root[data-scrollbars='classic'] ::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
   min-height: 32px;
   border: 3px solid transparent;
   border-radius: 999px;
   background: var(--scroll-thumb) padding-box;
 }
 
-:root[data-scrollbars='classic'] ::-webkit-scrollbar-thumb:hover {
+:root[data-scrollbars='overlay'] ::-webkit-scrollbar-thumb {
+  border-width: 2px;
+  background-color: transparent;
+}
+
+:root[data-scrollbars='overlay'] :hover::-webkit-scrollbar-thumb,
+:root[data-scrollbars='overlay'] [data-scrolling]::-webkit-scrollbar-thumb {
+  background-color: var(--scroll-thumb);
+}
+
+::-webkit-scrollbar-thumb:hover,
+:root[data-scrollbars='overlay'] ::-webkit-scrollbar-thumb:hover {
   border-width: 2px;
   background-color: var(--scroll-thumb-hover);
 }

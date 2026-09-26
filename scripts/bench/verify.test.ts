@@ -33,10 +33,11 @@ describe('parseTapCounts', () => {
 
 describe('parseNumstat', () => {
   it('sums added and removed lines and treats binary files as zero', () => {
-    expect(parseNumstat('3\t1\tsrc/a.ts\n-\t-\tlogo.png\n\n')).toEqual({
-      files: ['src/a.ts', 'logo.png'],
-      added: 3,
+    expect(parseNumstat('3\t1\tsrc/a.ts\n-\t-\tlogo.png\n2\t0\ttest/a.test.ts\n')).toEqual({
+      files: ['src/a.ts', 'logo.png', 'test/a.test.ts'],
+      added: 5,
       removed: 1,
+      sourceAdded: 3,
     });
   });
 });
@@ -118,6 +119,7 @@ describe('task fixtures', () => {
       const verification = await verifyRepo(task, repo, checks);
       expect(verification.reasons).toEqual([]);
       expect(verification.passed).toBe(true);
+      if (task.safety) expect(verification.safety?.fail).toBe(0);
     }, 30_000);
   }
 

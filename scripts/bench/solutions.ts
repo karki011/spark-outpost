@@ -2,6 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { append, replace } from './solution-edits.ts';
 import { HARD_SOLUTIONS } from './solutions-hard.ts';
+import { LEAN_SOLUTIONS } from './solutions-lean.ts';
 import { ROUND3_SOLUTIONS } from './solutions-round3.ts';
 import type { BenchTaskId } from './tasks.ts';
 
@@ -105,4 +106,5 @@ export const REFERENCE_SOLUTIONS: Record<BenchTaskId, (repo: string) => Promise<
   },
   ...HARD_SOLUTIONS,
   ...ROUND3_SOLUTIONS,
+  ...LEAN_SOLUTIONS,
 };

@@ -5,7 +5,18 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 
 const SHOTS = process.env.M2_SCREENSHOTS ?? '';
-const THEMES = ['graphite', 'apricot', 'void', 'fjord', 'moss', 'contrast', 'system'];
+const THEMES = [
+  'graphite',
+  'apricot',
+  'void',
+  'fjord',
+  'moss',
+  'lagoon',
+  'plum',
+  'sage',
+  'contrast',
+  'system',
+];
 
 let base = '';
 let appRoot = '';

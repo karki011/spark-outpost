@@ -4,6 +4,8 @@ import { isResearchStep, worthItsOwnBuilder } from './parallel.ts';
 import { dependsOn, stepFiles } from './step-files.ts';
 
 export const MAX_CHAIN_STEPS = 12;
+export const LARGE_LANE_STEPS = 2;
+export const LARGE_LANE_FILES = 5;
 
 export interface StepNotes {
   files: (string[] | null)[];
@@ -160,6 +162,7 @@ export interface LaneInputs {
   large: readonly number[];
   independent?: readonly (NoulVerdict | null)[];
   sizes?: readonly (NoulVerdict | null)[];
+  split?: 'large' | 'any';
 }
 
 function touchesOther(steps: readonly string[], a: readonly number[], b: readonly number[]) {
@@ -179,13 +182,31 @@ function jevSaysLinked(
   });
 }
 
+function stepWorth(inputs: LaneInputs, index: number): boolean {
+  const jev = inputs.sizes?.[index]?.value ?? null;
+  if (jev !== null && !isResearchStep(inputs.steps[index] ?? '')) return jev;
+  return worthItsOwnBuilder(inputs.steps[index] ?? '', index, inputs.large);
+}
+
+function stepLarge(inputs: LaneInputs, index: number): boolean {
+  const jev = inputs.sizes?.[index]?.value ?? null;
+  return jev ?? inputs.large.includes(index);
+}
+
+function laneFiles(steps: readonly string[], lane: readonly number[]): number {
+  return new Set(lane.flatMap((index) => stepFiles(steps[index] ?? '').changes)).size;
+}
+
+export function largeLane(inputs: LaneInputs, lane: readonly number[]): boolean {
+  const large = lane.filter((index) => stepLarge(inputs, index)).length;
+  if (large >= Math.min(LARGE_LANE_STEPS, lane.length)) return true;
+  return laneFiles(inputs.steps, lane) >= LARGE_LANE_FILES;
+}
+
 function worthALane(inputs: LaneInputs, lane: readonly number[]): boolean {
+  if (inputs.split !== 'any') return largeLane(inputs, lane);
   if (lane.length > 1) return true;
-  return lane.some((index) => {
-    const jev = inputs.sizes?.[index]?.value ?? null;
-    if (jev !== null && !isResearchStep(inputs.steps[index] ?? '')) return jev;
-    return worthItsOwnBuilder(inputs.steps[index] ?? '', index, inputs.large);
-  });
+  return lane.some((index) => stepWorth(inputs, index));
 }
 
 export function chooseLanes(inputs: LaneInputs): number[][] {

@@ -90,6 +90,7 @@ export class ReviewQueue {
       patch: request.patch,
       checks: checkLines(request.checks),
       subject: request.subject,
+      buildStyle: this.s.buildStyle,
     };
     const prompt = criticPrompt({
       request: this.s.input.userRequest,

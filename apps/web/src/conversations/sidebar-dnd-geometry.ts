@@ -106,10 +106,20 @@ export const sidebarCollision: CollisionDetection = (args) => {
   return pointerCollision(scoped);
 };
 
+export const SHIFT_STEP = 20;
+
+const SIDEWAYS: Record<string, number> = { ArrowRight: SHIFT_STEP, ArrowLeft: -SHIFT_STEP };
+
 export const sidebarKeyboardCoordinates: KeyboardCoordinateGetter = (
   event,
   { currentCoordinates, context: { active, collisionRect, droppableRects, droppableContainers } },
 ) => {
+  const sideways = SIDEWAYS[event.code];
+  if (sideways !== undefined) {
+    if (dragData(active)?.type !== 'chat') return undefined;
+    event.preventDefault();
+    return { x: currentCoordinates.x + sideways, y: currentCoordinates.y };
+  }
   const down = event.code === 'ArrowDown';
   if (!down && event.code !== 'ArrowUp') return undefined;
   event.preventDefault();

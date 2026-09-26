@@ -2,6 +2,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { buildStyleSchema } from '../packages/contracts/src/index.ts';
+import type { LaneOptions } from '../apps/server/src/orchestration/placement.ts';
 import { projectedCostUsd } from './bench/aggregate.ts';
 import { createTaskRepo } from './bench/fixture.ts';
 import { BENCH_LEVEL, PINNED, runLiveCell, startBench, stopBench } from './bench/live.ts';
@@ -27,8 +29,19 @@ const { values } = parseArgs({
     resume: { type: 'boolean', default: false },
     baseline: { type: 'string' },
     'report-only': { type: 'boolean', default: false },
+    'build-style': { type: 'string', default: 'off' },
+    placement: { type: 'string', default: 'jev' },
+    split: { type: 'string', default: 'jev' },
   },
 });
+
+const buildStyle = buildStyleSchema.parse(values['build-style']);
+const PLACEMENTS = ['jev', 'shared', 'worktree'] as const;
+const SPLITS = ['jev', 'large', 'any'] as const;
+const lanes: LaneOptions = {
+  placement: PLACEMENTS.find((option) => option === values.placement) ?? 'jev',
+  split: SPLITS.find((option) => option === values.split) ?? 'jev',
+};
 
 const out = resolve(values.out);
 const date = values.date;
@@ -58,6 +71,8 @@ async function initialRun(): Promise<BenchRun> {
       level: `${BENCH_LEVEL} (tool approvals that still ask are auto-denied and recorded)`,
       fixture:
         'Ledger Lite, a 6-module TypeScript project tested with node --test (scripts/bench/fixture).',
+      buildStyle,
+      lanes: `placement ${lanes.placement}, split ${lanes.split}`,
     },
     results: [],
   };
@@ -106,7 +121,7 @@ async function runCell(
   );
   const before = await precheck(task, repo);
   const startedAt = new Date().toISOString();
-  const live = await runLiveCell(env, mode, repo.path, task.prompt, CELL_TIMEOUT_MS);
+  const live = await runLiveCell(env, mode, repo.path, task.prompt, CELL_TIMEOUT_MS, buildStyle);
   const verification = await verifyRepo(task, repo, before);
   const agentCostUsd = live.agents.reduce((sum, agent) => sum + agent.costUsd, 0);
   return {
@@ -148,7 +163,7 @@ async function main(): Promise<void> {
   });
   const queue = pending(run, tasks, modes, Number(values.repeats));
   const runtime = process.env.SPARK_BENCH_RUNTIME === 'fake' ? 'fake' : 'acp';
-  const env = await startBench(PER_RUN_CAP_USD, runtime);
+  const env = await startBench(PER_RUN_CAP_USD, runtime, lanes);
   try {
     for (const { task, mode, repeat } of queue) {
       const projected = projectedCostUsd(run.results, task.id, mode, FALLBACK_COST_USD[mode]);

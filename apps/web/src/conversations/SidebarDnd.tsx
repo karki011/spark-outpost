@@ -13,10 +13,15 @@ import { CSS } from '@dnd-kit/utilities';
 import { useReducedMotion } from 'motion/react';
 import type { ReactNode } from 'react';
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
-import { FolderIcon } from '../ui/icons.tsx';
+import { ChevronIcon, FolderIcon } from '../ui/icons.tsx';
 import type { SidebarDnd } from './use-sidebar-dnd.ts';
 
 const EASE_OUT = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
+
+const keyboardGlide = (event: Event | null) =>
+  event instanceof KeyboardEvent ? `transform 200ms ${EASE_OUT}` : undefined;
+
+const stillGlide = () => undefined;
 
 const settle: DropAnimation = {
   duration: 200,
@@ -54,12 +59,13 @@ interface ChatCardProps {
 }
 
 function ChatCard({ chat, happy, moodKey }: ChatCardProps) {
+  const classes = ['drag-card', chat.projectIds[0] ? 'in-project' : '', happy ? 'happy' : ''];
   return (
-    <div className={`drag-card${happy ? ' happy' : ''}`}>
+    <div className={classes.filter(Boolean).join(' ')}>
       <span key={moodKey} className="dc-blob">
         <Blobatar
           name={`chat:${chat.id}`}
-          size={22}
+          size={16}
           animate="always"
           expression={happy ? expressions.happy : expressions.surprised}
           aria-hidden="true"
@@ -73,6 +79,7 @@ function ChatCard({ chat, happy, moodKey }: ChatCardProps) {
 function ProjectCard({ project, count }: { project: Project; count: number }) {
   return (
     <div className="drag-card project">
+      <ChevronIcon />
       <FolderIcon />
       <span className="dc-title">{project.name}</span>
       <span className="dc-count">{count || ''}</span>
@@ -98,6 +105,7 @@ export function SidebarDndContext({ dnd, chat, project, children }: SidebarDndPr
           className="drag-lift"
           modifiers={[restrictToWindowEdges]}
           dropAnimation={dropAnimation}
+          transition={reduced ? stillGlide : keyboardGlide}
           zIndex={70}
         >
           {chat && <ChatCard chat={chat} happy={dnd.leftHome} moodKey={dnd.overGroup ?? 'home'} />}

@@ -4,6 +4,7 @@ import {
   ORCHESTRATION_TOOL_CALL_LIMIT,
   type AgentRole,
   type BudgetLimit,
+  type BuildStyle,
   type CheckBody,
   type PlanEntry,
 } from '@spark-outpost/contracts';
@@ -25,6 +26,7 @@ import type { JevAccess } from './jev-calls.ts';
 import type { ReviewQueue } from './reviews.ts';
 import type { JevPick, MemberRoute, RouteContext } from './routing.ts';
 import type { Slots } from './slots.ts';
+import type { LaneOptions, LanePlacement } from './placement.ts';
 import type { FlowState } from './transitions.ts';
 
 export interface OrchestratorDeps extends ExecuteRunDeps {
@@ -34,6 +36,7 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   jevTimeoutMs?: number;
   parallelLimit?: number;
   agentSlots?: Slots;
+  lanes?: LaneOptions;
 }
 
 export interface MemberResult {
@@ -92,6 +95,10 @@ export interface Session {
   checkRounds: number;
   checkBodies: CheckBody[];
   reviews: ReviewQueue | null;
+  projectStyle: BuildStyle;
+  buildStyle: BuildStyle;
+  buildStyleDecided: boolean;
+  lanePlacement: LanePlacement | null;
 }
 
 export function baseLimits(deps: OrchestratorDeps): BudgetLimits {

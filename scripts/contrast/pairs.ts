@@ -1,5 +1,5 @@
 import { AGENT_TV, DIFF, OFFLINE } from './content-pairs.ts';
-import { ACCENT, CHIPS, FORMS, STATUS } from './interface-pairs.ts';
+import { ACCENT, CHIPS, DROP_TARGET, FORMS, STATUS } from './interface-pairs.ts';
 import { surfaceText, type HuePair, type Pair, type PairKind } from './pair-types.ts';
 
 export type { HuePair, Pair, PairKind };
@@ -28,6 +28,7 @@ export const PAIRS: Pair[] = [
   ...STATUS,
   ...FORMS,
   ...CHIPS,
+  ...DROP_TARGET,
   ...DIFF,
   ...OFFLINE,
   ...AGENT_TV,

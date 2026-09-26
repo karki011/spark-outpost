@@ -19,6 +19,7 @@ import {
   type ChangedFile,
 } from './context.ts';
 import { plansFirst } from './depth.ts';
+import { reviewNet, withBuilderStyle } from './lean.ts';
 import { labelFor, nameFor, recordRoute, resolveRoute } from './member-routes.ts';
 import { markPlanStep, stepTicker } from './plan-progress.ts';
 import { chainsFromReply, stepNotesFromReply, withFilesLines } from './chains.ts';
@@ -90,6 +91,7 @@ async function promptFor(s: Session, spawn: Spawn): Promise<string> {
       repos: s.input.projectRoots,
       previousPlan: s.plan.map((entry) => entry.content),
       note: spawn.note,
+      buildStyle: s.buildStyle,
     });
   }
   const plan = s.flow.steps.filter(Boolean);
@@ -104,6 +106,7 @@ async function promptFor(s: Session, spawn: Spawn): Promise<string> {
       changes: changes.files,
       patch: changes.patch,
       checks: [],
+      buildStyle: s.buildStyle,
     });
   }
   return builderPrompt({
@@ -118,6 +121,7 @@ async function promptFor(s: Session, spawn: Spawn): Promise<string> {
     research: s.research,
     ...(spawn.conflict ? { conflict: spawn.conflict } : {}),
     ...(spawn.checkFailures ? { checkFailures: spawn.checkFailures } : {}),
+    buildStyle: s.buildStyle,
   });
 }
 
@@ -212,6 +216,8 @@ async function runInPlace(
   const input = {
     ...s.input,
     mode,
+    prompt:
+      spawn.role === 'builder' ? withBuilderStyle(s.input.prompt, s.buildStyle) : s.input.prompt,
     settings: {
       ...s.input.settings,
       model: route.pick.model,
@@ -392,6 +398,7 @@ async function afterCritic(
       findings,
       text: result.text.slice(0, 64_000),
       label: 'AI review' as const,
+      ...(s.buildStyle === 'off' ? {} : { net: reviewNet(result.text) }),
     };
     const version = await nextArtifactVersion(s.deps.db, s.taskId, 'review');
     await s.append(runEvents.activity('artifact:review', 'review', { version, body }), {
