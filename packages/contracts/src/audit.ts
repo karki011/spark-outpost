@@ -131,6 +131,8 @@ export const auditRunSummarySchema = z.object({
   parentRunId: z.uuid().nullable().optional(),
   agentLabel: z.string().nullable().optional(),
   category: categorySchema.nullable().optional(),
+  fileReads: z.number().int().nullable().optional(),
+  rereads: z.number().int().nullable().optional(),
 });
 export type AuditRunSummary = z.infer<typeof auditRunSummarySchema>;
 

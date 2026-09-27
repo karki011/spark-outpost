@@ -30,6 +30,7 @@ export interface ArchitectContext {
   previousPlan: readonly string[];
   note: string | null;
   buildStyle?: BuildStyle;
+  workOrders?: boolean;
 }
 
 export interface ArchitectNotes {
@@ -50,6 +51,8 @@ export interface BuilderContext {
   conflict?: string;
   checkFailures?: string;
   buildStyle?: BuildStyle;
+  workOrder?: string | null;
+  checkCommands?: readonly string[];
 }
 
 export interface ResearchNote {
@@ -77,6 +80,7 @@ export interface CriticContext {
   checks: readonly string[];
   subject?: ReviewSubject | null;
   buildStyle?: BuildStyle;
+  contract?: string | null;
 }
 
 function optional(text: string | null): string[] {
@@ -131,6 +135,27 @@ function historyLines(history: readonly HistoryTurn[]): string {
     .join('\n\n');
 }
 
+const NOTES_RULE =
+  'Finally, write a "Notes for Builders:" line followed by what the Builders need so they do not re-read the files you read: exact signatures, import lines and short excerpts, each with its file path. Keep the notes under 3,000 characters.';
+
+const WORK_ORDER_RULE = [
+  'Finally, write one work order per step, or one per chain, so its Builder can start from what you already read instead of re-reading the code. Use a fenced block in exactly this shape:',
+  '```work-order',
+  'Steps: 1-2',
+  'Goal: one sentence',
+  'Change: src/a.ts, src/b.ts',
+  'Read: src/c.ts',
+  'Decisions:',
+  '- a decision or constraint the Builder must keep',
+  'Acceptance:',
+  '- a criterion a reviewer can check against the diff',
+  'Checks: the commands that must pass',
+  'Excerpt: src/c.ts:10-24',
+  'the exact lines you read, copied as they are',
+  '```',
+  'Change lists only the files the steps create or change; Read lists files the Builder only needs to look at. Put excerpts last, one "Excerpt: path:start-end" line each, and include only what the Builder needs: signatures, import lines and the code being changed. Keep each work order under 6,000 characters.',
+].join('\n');
+
 export function architectPrompt(context: ArchitectContext): string {
   const parts = [
     'Role: Architect. You plan; you do not change files. Read the linked repos as needed.',
@@ -138,7 +163,7 @@ export function architectPrompt(context: ArchitectContext): string {
     'After the summary, list every step on its own line, numbered as in your plan, with the files it creates or changes and the earlier steps it needs, for example "Step 3 · Files: src/csv.ts, test/csv.test.ts · Depends on: 1" or "Step 1 · Files: src/a.ts · Depends on: none".',
     'Independent work runs at the same time, each chain with its own Builder. If the steps form independent chains that change different files and need nothing from each other, name each chain on its own line, such as "Chain A: steps 1-3" and "Chain B: steps 4-6". A step that needs more than one chain comes after them and belongs to no chain. A step that only reads or researches starts with "Research:".',
     'A chain only gets its own Builder when it is large: two or more of its steps (or its only step) take more than about 20 seconds each, or it changes five or more files. Smaller chains are done in order by one Builder. Add a line such as "Large: 2, 3" naming the steps you expect to take that long. When you name chains, add "Parallel chains: yes" if separate Builders should do them at the same time, or "Parallel chains: no" if one Builder doing them in order is as good.',
-    'Finally, write a "Notes for Builders:" line followed by what the Builders need so they do not re-read the files you read: exact signatures, import lines and short excerpts, each with its file path. Keep the notes under 3,000 characters.',
+    context.workOrders === false ? NOTES_RULE : WORK_ORDER_RULE,
     ...optional(architectStyle(context.buildStyle ?? 'off')),
     section('Request', cap(context.request, REQUEST_LIMIT)),
     section('Earlier conversation', historyLines(context.history)),
@@ -175,6 +200,19 @@ function stepSections(context: BuilderContext, mine: readonly number[]): string[
   return parts;
 }
 
+export const EXPLORE_RULE =
+  'Start from the work order and its excerpts. Do not read files beyond the ones it lists unless the acceptance contract cannot be met otherwise. End your reply with one line: "Extra files read: none", or "Extra files read: " followed by each other file you read and why.';
+
+function checkSection(commands: readonly string[] | undefined): string[] {
+  if (!commands || commands.length === 0) return [];
+  return [
+    section(
+      'Checks the harness runs after you',
+      commands.map((command) => `- \`${command}\``).join('\n'),
+    ),
+  ];
+}
+
 const NOTES_LINE = /^[\s*_#>-]*notes for builders[\s*_]*:?[\s*_]*/im;
 const HINT_LINE = /^[\s*_#>-]*(?:parallel|large|chain\s+[\w-]+[^:\n]*)[\s*_]*:.*$/gim;
 const READ_TOOL = /^Read\b/;
@@ -201,12 +239,11 @@ function notesText(notes: ArchitectNotes): string {
 
 export function builderPrompt(context: BuilderContext): string {
   const mine = ownSteps(context);
-  const parts = [
-    mine.length > 1 ? CARRIED_STEPS : ONE_STEP,
-    section('Request', cap(context.request, REQUEST_LIMIT)),
-  ];
+  const parts = [mine.length > 1 ? CARRIED_STEPS : ONE_STEP];
+  if (context.workOrder) parts.push(section('Work order', context.workOrder), EXPLORE_RULE);
+  parts.push(section('Request', cap(context.request, REQUEST_LIMIT)));
   if (mine.length > 0) parts.push(...stepSections(context, mine));
-  if (context.architectNotes) {
+  if (context.architectNotes && !context.workOrder) {
     parts.push(section('Notes from the Architect', notesText(context.architectNotes)));
   }
   parts.push(section('Changed by earlier steps', changeLines(context.earlierChanges)));
@@ -229,8 +266,34 @@ export function builderPrompt(context: BuilderContext): string {
     parts.push(section('Failing checks', cap(context.checkFailures, CHECK_OUTPUT_LIMIT)));
   }
   if (context.note) parts.push(section('Note from the user', cap(context.note, NOTE_LIMIT)));
+  parts.push(...checkSection(context.checkCommands));
   parts.push(...optional(builderStyle(context.buildStyle ?? 'off')));
   return parts.join('\n\n');
+}
+
+export interface PlanApprovedContext {
+  plan: readonly string[];
+  steps: readonly number[];
+  checkCommands?: readonly string[];
+  note: string | null;
+  buildStyle?: BuildStyle;
+}
+
+export const PLAN_APPROVED = 'Plan approved; implement it now.';
+
+export function planApprovedFollowUp(context: PlanApprovedContext): string {
+  const markers =
+    context.steps.length > 1
+      ? ' When you finish a step, write "Step N done." on its own line, where N is its number in the plan.'
+      : '';
+  return [
+    `${PLAN_APPROVED} You are the Builder now and may change files. Work from what you already read and do not re-read a file unless it changed. Make the changes for your steps in plan order, then reply with what you changed.${markers}`,
+    'End your reply with one line: "Extra files read: none", or "Extra files read: " followed by each file you read in this turn and why.',
+    section('Plan', numbered(context.plan, context.steps)),
+    ...(context.note ? [section('Note from the user', cap(context.note, NOTE_LIMIT))] : []),
+    ...checkSection(context.checkCommands),
+    ...optional(builderStyle(context.buildStyle ?? 'off')),
+  ].join('\n\n');
 }
 
 export function scoutPrompt(context: ScoutContext): string {
@@ -259,6 +322,7 @@ function subjectLine(subject: ReviewSubject): string {
 function reviewSections(context: Omit<CriticContext, 'request' | 'plan'>): string[] {
   return [
     ...(context.subject ? [section('Change under review', subjectLine(context.subject))] : []),
+    ...(context.contract ? [section('Acceptance contract', context.contract)] : []),
     section('Files changed', changeLines(context.changes)),
     section(
       'Diff',
@@ -277,7 +341,9 @@ export function criticPrompt(context: CriticContext): string {
     VERDICT_RULE,
     ...optional(criticStyle(context.buildStyle ?? 'off')),
     section('Request', cap(context.request, REQUEST_LIMIT)),
-    section('Plan', context.plan.length > 0 ? numbered(context.plan) : 'No plan was made.'),
+    ...(context.contract
+      ? []
+      : [section('Plan', context.plan.length > 0 ? numbered(context.plan) : 'No plan was made.')]),
     ...reviewSections(context),
   ].join('\n\n');
 }

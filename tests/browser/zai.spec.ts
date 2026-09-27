@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { REJECTED_KEY_MARKER } from './stub-config.ts';
+import { openChats } from './navigation.ts';
 
 const ZAI_KEY = 'b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6.GlmTestTail';
 const NOTE = 'Uses your Z.ai API key and Z.ai billing; never your Claude account.';
@@ -11,7 +12,7 @@ test.beforeEach(async () => {
 });
 
 async function openProviders(page: Page) {
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
     .getByRole('dialog', { name: 'Profile' })

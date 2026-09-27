@@ -10,6 +10,7 @@ import {
   send,
   type CrewRepo,
 } from './crew-engine.ts';
+import { openChats } from './navigation.ts';
 
 let repo: CrewRepo;
 
@@ -89,7 +90,7 @@ test('after Revert, asks what went wrong with reasons and a comment', async ({ p
 });
 
 test('shows a quiet thumbs row under an answer', async ({ page }) => {
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await send(page, 'What does the divider component do?');
   await expect(page.locator('.md', { hasText: 'You wrote' })).toBeVisible({ timeout: 15_000 });

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -50,7 +51,7 @@ test('profile name changes save from settings', async ({ page }) => {
 });
 
 test('settings shows usage per provider', async ({ page }) => {
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Count my tokens');

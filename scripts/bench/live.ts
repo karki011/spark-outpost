@@ -9,6 +9,7 @@ import {
   type Orchestration,
 } from '../../packages/contracts/src/index.ts';
 import type { LaneOptions } from '../../apps/server/src/orchestration/placement.ts';
+import type { HandoffOptions } from '../../apps/server/src/orchestration/session.ts';
 import { createIntakeRecorder } from '../../apps/server/src/advisor/intake-recorder.ts';
 import { orchestrate } from '../../apps/server/src/orchestration/orchestrator.ts';
 import type { OrchestratorDeps } from '../../apps/server/src/orchestration/session.ts';
@@ -56,6 +57,7 @@ export async function startBench(
   perRunCapUsd: number,
   runtime: AgentRuntime = 'acp',
   lanes: LaneOptions = {},
+  handoff: HandoffOptions = {},
 ): Promise<BenchEnv> {
   const t = await createTestDb();
   await seedConnections(t);
@@ -73,6 +75,7 @@ export async function startBench(
     ...(runtime === 'acp' ? { intake } : {}),
     budget: { costCapUsd: perRunCapUsd },
     lanes,
+    handoff,
   };
   return { t, deps };
 }

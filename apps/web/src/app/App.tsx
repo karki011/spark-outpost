@@ -22,6 +22,7 @@ import { OfflineScreen } from './connection/OfflineScreen.tsx';
 import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { ComingSoon } from './ComingSoon.tsx';
 import { Rail, type AppView } from './Rail.tsx';
+import { readSavedView, saveView } from './saved-view.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
 import '../ui/controls.css';
 
@@ -30,7 +31,11 @@ function ChatShell({ entering }: { entering: boolean }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draftId, setDraftId] = useState(newDraftId);
   const [settings, setSettings] = useState<SettingsSection | null>(null);
-  const [view, setView] = useState<AppView>('chats');
+  const [view, setViewState] = useState<AppView>(readSavedView);
+  const setView = useCallback((next: AppView) => {
+    setViewState(next);
+    saveView(next);
+  }, []);
   const [homeDraft, setHomeDraft] = useState<{ id: string; seeded: boolean }>(() => ({
     id: newDraftId(),
     seeded: false,
@@ -183,6 +188,7 @@ export function App() {
   const [entering, setEntering] = useState(false);
 
   function handleOnboardingFinished() {
+    saveView('home');
     setEntering(true);
     setTimeout(() => setEntering(false), 250);
   }

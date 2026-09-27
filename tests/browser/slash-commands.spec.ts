@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 const AGENT_COMMANDS = {
   provider: 'claude',
@@ -20,7 +21,7 @@ async function chatWithHistory(page: Page) {
   await page.route('**/api/conversations/*/agent-commands', (route) =>
     route.fulfill({ json: AGENT_COMMANDS }),
   );
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Hello there');

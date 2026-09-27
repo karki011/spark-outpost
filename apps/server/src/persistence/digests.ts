@@ -13,6 +13,7 @@ import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
 
 const STALE_RUNNING_MS = 10 * 60_000;
+const UNFINISHED_AFTER_RUN_MS = 60_000;
 const STALE_MESSAGE = 'The digest did not finish. Try again.';
 
 interface DigestRow {
@@ -27,6 +28,7 @@ interface DigestRow {
   model_label: string | null;
   conversation_id: string | null;
   run_status: string | null;
+  run_finished_at: Date | null;
   cost_usd: string | null;
   cost_source: 'reported' | 'estimated' | null;
 }
@@ -36,10 +38,12 @@ function effectiveStatus(
   now: Date,
 ): { status: DigestStatus; error: string | null } {
   if (row.status !== 'running') return { status: row.status, error: row.error };
-  const ended =
-    row.run_status && ['failed', 'cancelled', 'outcome_unknown'].includes(row.run_status);
+  const runEnded =
+    row.run_status !== null && ['failed', 'cancelled', 'outcome_unknown'].includes(row.run_status);
+  const runEndedAt = row.run_finished_at ?? row.created_at;
+  const abandoned = runEnded && now.getTime() - runEndedAt.getTime() > UNFINISHED_AFTER_RUN_MS;
   const stale = now.getTime() - row.created_at.getTime() > STALE_RUNNING_MS;
-  return ended || stale
+  return abandoned || stale
     ? { status: 'failed', error: STALE_MESSAGE }
     : { status: 'running', error: null };
 }
@@ -70,7 +74,8 @@ export async function latestDigests(
 ): Promise<{ latest: Digest | null; lastReady: Digest | null }> {
   const { rows } = await db.query<DigestRow>(
     `SELECT d.id, d.status, d.created_at, d.finished_at, d.since, d.body, d.error, d.provider,
-       d.model_label, d.conversation_id, r.status AS run_status, r.cost_usd, r.cost_source
+       d.model_label, d.conversation_id, r.status AS run_status,
+       r.finished_at AS run_finished_at, r.cost_usd, r.cost_source
      FROM digests d LEFT JOIN runs r ON r.id = d.run_id
      WHERE d.workspace_id = $1
      ORDER BY d.created_at DESC LIMIT 20`,

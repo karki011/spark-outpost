@@ -7,6 +7,7 @@ import {
   type ReviewSubject,
 } from './context.ts';
 import { runMember } from './members.ts';
+import { contractFor } from './member-prompts.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
 import { publish, type MemberResult, type Session } from './session.ts';
 import type { FlowEvent } from './transitions.ts';
@@ -91,6 +92,7 @@ export class ReviewQueue {
       checks: checkLines(request.checks),
       subject: request.subject,
       buildStyle: this.s.buildStyle,
+      contract: contractFor(this.s, request.subject.steps),
     };
     const prompt = criticPrompt({
       request: this.s.input.userRequest,

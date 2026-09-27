@@ -13,6 +13,11 @@ export const CLARIFY_BELOW: Record<InvolvementLevel, number | null> = {
   'full-auto': null,
 };
 
+export function optionConfidence(topProbability: number, options: number): number {
+  if (options < 2) return 1;
+  return Math.min(1, Math.max(0, (options * topProbability - 1) / (options - 1)));
+}
+
 function decide(confidence: number, actAt: number, clarifyBelow: number | null) {
   if (confidence >= actAt) return 'act';
   if (confidence < ASK_AT) return 'fallback';

@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 export type Level = 'Hands-on' | 'Balanced' | 'Hands-off' | 'Full auto';
 
@@ -45,7 +46,7 @@ export async function crewChat(page: Page, repo: CrewRepo, level: Level): Promis
   const response = await page.request.post('/api/projects', { data: { rootPath: repo.root } });
   expect(response.ok()).toBe(true);
   const name = path.basename(repo.root);
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await page.locator('.ctx-repo').click();
   const menu = page.getByRole('dialog', { name: 'Project folders' });

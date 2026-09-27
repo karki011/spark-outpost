@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { fakeReply } from '../../apps/server/src/providers/fake.ts';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 const MAX_FRAME_GROWTH = 200;
 
@@ -109,7 +110,7 @@ test('a streaming reply follows the bottom, yields to the reader, and settles in
 }) => {
   test.setTimeout(90_000);
   const prompt = longPrompt();
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(prompt);

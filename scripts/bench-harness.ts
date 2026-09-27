@@ -34,6 +34,8 @@ const { values } = parseArgs({
     'build-style': { type: 'string', default: 'off' },
     placement: { type: 'string', default: 'jev' },
     split: { type: 'string', default: 'jev' },
+    'work-orders': { type: 'string', default: 'on' },
+    'plan-session': { type: 'string', default: 'on' },
     'no-ingest': { type: 'boolean', default: false },
   },
 });
@@ -44,6 +46,11 @@ const SPLITS = ['jev', 'large', 'any'] as const;
 const lanes: LaneOptions = {
   placement: PLACEMENTS.find((option) => option === values.placement) ?? 'jev',
   split: SPLITS.find((option) => option === values.split) ?? 'jev',
+};
+
+const handoff = {
+  workOrders: values['work-orders'] !== 'off',
+  planSession: values['plan-session'] !== 'off',
 };
 
 const out = resolve(values.out);
@@ -76,6 +83,7 @@ async function initialRun(): Promise<BenchRun> {
         'Ledger Lite, a 6-module TypeScript project tested with node --test (scripts/bench/fixture).',
       buildStyle,
       lanes: `placement ${lanes.placement}, split ${lanes.split}`,
+      handoff: `work orders ${handoff.workOrders ? 'on' : 'off'}, plan session ${handoff.planSession ? 'on' : 'off'}`,
     },
     results: [],
   };
@@ -166,7 +174,7 @@ async function main(): Promise<void> {
   });
   const queue = pending(run, tasks, modes, Number(values.repeats));
   const runtime = process.env.SPARK_BENCH_RUNTIME === 'fake' ? 'fake' : 'acp';
-  const env = await startBench(PER_RUN_CAP_USD, runtime, lanes);
+  const env = await startBench(PER_RUN_CAP_USD, runtime, lanes, handoff);
   try {
     for (const { task, mode, repeat } of queue) {
       const projected = projectedCostUsd(run.results, task.id, mode, FALLBACK_COST_USD[mode]);

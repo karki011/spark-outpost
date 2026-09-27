@@ -83,7 +83,7 @@ function intakeAnswers(request: StubRequest, task: string): Record<string, Answe
 
 function transitionAnswers(request: StubRequest, task: string): Record<string, Answer> {
   const offered = options(request.questions.next ?? { type: 'choice' });
-  const retrying = task.includes(RETRY_MARKER) && request.state.retriesLeft === 2;
+  const retrying = task.includes(RETRY_MARKER) && request.state.retriesLeft === 'several left';
   if (retrying && offered.includes('retry_up')) {
     return {
       status: choice('needs_more_work', JEV_STUB_CONFIDENCE),

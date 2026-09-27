@@ -155,7 +155,23 @@ describe('intake questions', () => {
       type: 'score',
       instructions:
         'If Claude handles `task`, how much reasoning effort does it need? Defaults: Opus 5.5 medium, Sonnet 5 high.',
-      criteria: ['Low: Quick', 'Medium: Balanced', 'High: Deep'],
+      criteria: [
+        {
+          effort: 'Low',
+          when: 'Routine work with an obvious approach: a small, well-understood change',
+          note: 'Quick',
+        },
+        {
+          effort: 'Medium',
+          when: 'Ordinary work with a few decisions: a focused feature, or a fix that needs some investigation',
+          note: 'Balanced',
+        },
+        {
+          effort: 'High',
+          when: 'Hard work: design across many files, a subtle bug, or a risky change that must be right first time',
+          note: 'Deep',
+        },
+      ],
     });
   });
 

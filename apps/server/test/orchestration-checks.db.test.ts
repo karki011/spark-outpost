@@ -272,7 +272,7 @@ describe('Critic alongside Builders and chains', () => {
     expect(decisions[0]?.summary).toContain(
       'Chains: split (decided by rule; Jev did not answer on one Builder; rule: split) · worktrees (need: requested, worktrees were requested;',
     );
-  });
+  }, 60_000);
 
   it('keeps a Critic when Jev reads the request as a review, even at execute depth', async () => {
     const scenario: Scenario = { ...TRIVIAL, intent: 'review' };

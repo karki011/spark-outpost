@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -46,16 +46,26 @@ async function collect(prompt: string, options: Partial<AgentSettings> = {}, sig
   return { outputs, text, error };
 }
 
-const runDirs = () => readdirSync(tmpdir()).filter((name) => name.startsWith('spark-outpost-run-'));
+async function inPrivateTmp<T>(work: () => Promise<T>): Promise<{ result: T; left: string[] }> {
+  const shared = process.env.TMPDIR;
+  const own = mkdtempSync(join(tmpdir(), 'acp-provider-test-'));
+  process.env.TMPDIR = own;
+  try {
+    const result = await work();
+    return { result, left: readdirSync(own) };
+  } finally {
+    if (shared === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = shared;
+    rmSync(own, { recursive: true, force: true });
+  }
+}
 
 describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, () => {
   it('streams steps and text, forces the safe mode, and applies model and effort', async () => {
-    const before = runDirs().length;
-    const { outputs, text, error } = await collect('Hi', {
-      model: 'nope',
-      modelLabel: 'Smart Two',
-      effort: 'high',
-    });
+    const { result, left } = await inPrivateTmp(() =>
+      collect('Hi', { model: 'nope', modelLabel: 'Smart Two', effort: 'high' }),
+    );
+    const { outputs, text, error } = result;
     expect(error).toBeNull();
     expect(outputs[0]).toMatchObject({
       kind: 'capabilities',
@@ -69,7 +79,7 @@ describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, ()
       { kind: 'step_finished', name: 'Recalled 1 earlier message' },
       { kind: 'step_started', name: THINKING_STEP },
       { kind: 'step_finished', name: THINKING_STEP },
-      { kind: 'step_started', name: 'Read context', tool: true },
+      { kind: 'step_started', name: 'Read context', tool: true, toolKind: 'read' },
       { kind: 'step_finished', name: 'Read context' },
     ]);
     expect(text).toContain('Hello there\n\nmode=read-only model=smart-2 effort=high');
@@ -85,7 +95,7 @@ describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, ()
         thought: null,
       },
     });
-    expect(runDirs().length).toBe(before);
+    expect(left).toEqual([]);
   });
 
   it('notes settings the agent does not offer instead of failing', async () => {

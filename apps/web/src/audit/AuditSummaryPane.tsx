@@ -168,8 +168,19 @@ export function AuditSummaryPane({ summary }: { summary: AuditSummary }) {
       />
       <AuditTable
         title="By run"
-        head={['#', 'Role', 'Model', 'Effort', 'Status', 'Tokens', 'Cost', 'Source', 'Time']}
-        numeric={[0, 5, 6, 8]}
+        head={[
+          '#',
+          'Role',
+          'Model',
+          'Effort',
+          'Status',
+          'Tokens',
+          'Cost',
+          'Source',
+          'Time',
+          'Reads',
+        ]}
+        numeric={[0, 5, 6, 8, 9]}
         rows={runs.map((run, index) => ({
           key: run.runId,
           cells: [
@@ -185,9 +196,16 @@ export function AuditSummaryPane({ summary }: { summary: AuditSummary }) {
             cost(run.costUsd, run.costSource),
             <SourceTag key="s" source={run.costUsd === null ? null : run.costSource} />,
             formatDuration(run.durationMs),
+            readsCell(run),
           ],
         }))}
       />
     </>
   );
+}
+
+function readsCell(run: AuditRunSummary): string {
+  if (run.fileReads === undefined || run.fileReads === null) return '—';
+  const rereads = run.rereads ? ` (${run.rereads} again)` : '';
+  return `${run.fileReads}${rereads}`;
 }

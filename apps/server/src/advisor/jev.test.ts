@@ -62,13 +62,13 @@ const answered = {
 };
 
 describe('askSystemOne', () => {
-  it('posts the state and questions once with the key and model', async () => {
+  it('posts the state and questions once with the key, pinning jev-latest to the tuned version', async () => {
     reply = () => ({ status: 200, body: answered });
     const response = await askSystemOne(options(), body, new AbortController().signal);
     expect(response.model).toBe('jev-1.13.0');
     expect(received).toHaveLength(1);
     expect(received[0]!.authorization).toBe(`Bearer ${FAKE_KEY}`);
-    expect(received[0]!.body).toEqual({ ...body, model: 'jev-latest' });
+    expect(received[0]!.body).toEqual({ ...body, model: 'jev-1.13.0' });
   });
 
   it.each([

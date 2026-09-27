@@ -2,25 +2,19 @@ import type { AgentRole, RunMode } from '@spark-outpost/contracts';
 import { latestPlan, nextArtifactVersion } from '../persistence/artifacts.ts';
 import { insertChildRun, markInPlaceMember, mergeRoute } from '../persistence/orchestrations.ts';
 import { requestCancel } from '../persistence/runs.ts';
-import { gitDiffSince } from '../projects/snapshot.ts';
-import { getSnapshot } from '../persistence/run-snapshots.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
 import { runAgentTurn, type RunControl } from '../workflow/agent-turn.ts';
 import { takeSnapshot } from '../workflow/do-run.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
-import {
-  architectNotes,
-  architectPrompt,
-  builderPrompt,
-  criticPrompt,
-  readFiles,
-  scoutPrompt,
-  type ChangedFile,
-} from './context.ts';
+import { architectNotes, readFiles } from './context.ts';
 import { plansFirst } from './depth.ts';
 import { reviewNet, withBuilderStyle } from './lean.ts';
 import { labelFor, nameFor, recordRoute, resolveRoute } from './member-routes.ts';
+import { promptFor } from './member-prompts.ts';
+import { choosePlanSession, planSessionCandidate } from './plan-session.ts';
+import { countOutput, counted, readRecord, type Counted } from './reads.ts';
+import { extraReadsFromReply, workOrdersFromReply } from './work-orders.ts';
 import { markPlanStep, recordsOwnPlan, stepTicker } from './plan-progress.ts';
 import { architectChains, stepNotesFromReply, withFilesLines } from './chains.ts';
 import { largeFromReply, parallelFromReply } from './parallel.ts';
@@ -31,19 +25,6 @@ import type { MemberRoute } from './routing.ts';
 import { fitToolLimit, publish, routeKey, type MemberResult, type Session } from './session.ts';
 import { spanOf } from './spans.ts';
 import type { Spawn } from './transitions.ts';
-
-export interface ChangeSummary {
-  files: ChangedFile[];
-  patch: string;
-}
-
-export async function changesSoFar(s: Session): Promise<ChangeSummary> {
-  const state = await getSnapshot(s.deps.db, s.input.workspaceId, s.lease.runId);
-  const snapshot = state?.snapshot;
-  if (!snapshot || snapshot.kind !== 'git' || !snapshot.ref) return { files: [], patch: '' };
-  const diff = await gitDiffSince(snapshot.root, snapshot.ref).catch(() => null);
-  return diff ? { files: diff.stats, patch: diff.patch } : { files: [], patch: '' };
-}
 
 export interface Place {
   group?: string;
@@ -82,67 +63,15 @@ export function stepsFromText(text: string): string[] {
     .slice(0, 12);
 }
 
-async function promptFor(s: Session, spawn: Spawn): Promise<string> {
-  const request = s.input.userRequest;
-  if (spawn.role === 'architect') {
-    return architectPrompt({
-      request,
-      history: s.input.history,
-      repos: s.input.projectRoots,
-      previousPlan: s.plan.map((entry) => entry.content),
-      note: spawn.note,
-      buildStyle: s.buildStyle,
-    });
-  }
-  const plan = s.flow.steps.filter(Boolean);
-  if (spawn.role === 'scout') {
-    return scoutPrompt({ request, plan, stepIndex: spawn.stepIndex });
-  }
-  const changes = await changesSoFar(s);
-  if (spawn.role === 'critic') {
-    return criticPrompt({
-      request,
-      plan: s.flow.steps.filter(Boolean),
-      changes: changes.files,
-      patch: changes.patch,
-      checks: [],
-      buildStyle: s.buildStyle,
-    });
-  }
-  return builderPrompt({
-    request,
-    plan: s.flow.steps.filter(Boolean),
-    stepIndex: spawn.stepIndex,
-    carry: spawn.carry,
-    architectNotes: s.architectNotes,
-    earlierChanges: changes.files,
-    note: spawn.note,
-    findings: spawn.reason === 'retry' ? s.findings : [],
-    research: s.research,
-    ...(spawn.conflict ? { conflict: spawn.conflict } : {}),
-    ...(spawn.checkFailures ? { checkFailures: spawn.checkFailures } : {}),
-    buildStyle: s.buildStyle,
-  });
-}
-
 export function resumeKeyFor(s: Session, role: AgentRole, name: string): string | null {
-  if (!s.taskId || (role !== 'builder' && role !== 'critic')) return null;
+  if (!s.taskId || role === 'scout') return null;
   return `${s.taskId}:${role}:${name}`;
 }
 
-interface Counted {
-  value: number;
-  tools: string[];
-}
-
-function counter(s: Session, counted: Counted, also?: (output: ProviderOutput) => void) {
+function counter(s: Session, total: Counted, also?: (output: ProviderOutput) => void) {
   return (output: ProviderOutput) => {
     also?.(output);
-    if (output.kind === 'step_started' && output.tool) {
-      counted.value += 1;
-      counted.tools.push(output.name);
-      s.toolCalls += 1;
-    }
+    if (countOutput(total, output)) s.toolCalls += 1;
   };
 }
 
@@ -228,12 +157,12 @@ async function runInPlace(
   };
   if (mode === 'do') s.snapshotTaken = true;
   await announce(s.lease.runId);
-  const counted: Counted = { value: 0, tools: [] };
+  const total = counted();
   const member = memberControl(s);
   s.members.set(s.lease.runId, member.abort);
   try {
     const result = await runAgentTurn(s.deps, s.lease, input, s.append, member.control, {
-      onOutput: counter(s, counted),
+      onOutput: counter(s, total),
     });
     if (result.messageId) s.message = { id: result.messageId, text: result.text };
     return {
@@ -244,12 +173,13 @@ async function runInPlace(
       outcome: result.outcome,
       error: result.error,
       text: result.text,
-      toolCalls: counted.value,
+      toolCalls: total.value,
       inPlace: true,
       name,
       steps: [0],
       ticked: [],
-      tools: counted.tools,
+      tools: total.tools,
+      reads: total.reads,
     };
   } finally {
     s.members.delete(s.lease.runId);
@@ -329,7 +259,7 @@ async function runChild(
   s.control.signal.addEventListener('abort', cancel, { once: true });
   if (copy) await copy.prepare(lease.runId);
   await announce(lease.runId);
-  const counted: Counted = { value: 0, tools: [] };
+  const total = counted();
   const steps = spanOf(spawn);
   const ticker = stepTicker(s, spawn.role === 'builder' ? steps : [], lease.runId);
   try {
@@ -337,7 +267,7 @@ async function runChild(
       s.deps,
       lease,
       {
-        onOutput: counter(s, counted, ticker.observe),
+        onOutput: counter(s, total, ticker.observe),
         backupAlsoFor: s.lease.runId,
         recordsPlan: recordsOwnPlan(s, spawn.role),
       },
@@ -352,12 +282,13 @@ async function runChild(
       outcome: result.outcome,
       error: result.error,
       text: result.text,
-      toolCalls: counted.value,
+      toolCalls: total.value,
       inPlace: false,
       name,
       steps,
       ticked: [...ticker.ticked],
-      tools: counted.tools,
+      tools: total.tools,
+      reads: total.reads,
       ...(place?.reuse ? { copyRunId: place.reuse.runId } : {}),
     };
   } finally {
@@ -439,13 +370,27 @@ export interface MemberOutcome {
   review?: ReviewOutcome;
 }
 
+async function recordReads(s: Session, spawn: Spawn, result: MemberResult): Promise<void> {
+  const builder = spawn.role === 'builder';
+  const record = readRecord(
+    result.reads ?? [],
+    builder ? (s.architectNotes?.files ?? null) : null,
+    builder ? extraReadsFromReply(result.text) : null,
+  );
+  await mergeRoute(s.deps.db, result.runId, record);
+}
+
 async function afterPlan(s: Session, result: MemberResult): Promise<MemberOutcome> {
   const planned = await afterArchitect(s, result);
   const notes = stepNotesFromReply(result.text, planned.length);
   const steps = withFilesLines(planned, notes);
   s.architectNotes = architectNotes(result.text, readFiles(result.tools));
+  s.plannedCount = steps.filter((step) => step.trim()).length;
+  s.workOrders =
+    s.deps.handoff?.workOrders === false ? [] : workOrdersFromReply(result.text, s.plannedCount);
   const groups = parallelFromReply(result.text, steps.length);
   const large = largeFromReply(result.text, steps.length);
+  s.largeSteps = large;
   const chains = architectChains(result.text, steps.length, notes.depends);
   const decision = await decideParallel(s, steps, groups, large, chains, result.runId);
   return {
@@ -464,11 +409,22 @@ export async function runMember(
   place: Place | null = null,
   options: MemberOptions = {},
 ): Promise<MemberOutcome> {
-  const resolved = await resolveRoute(s, spawn);
-  const { route } = resolved;
-  for (const stepIndex of spanOf(spawn)) s.routes.set(routeKey(spawn.role, stepIndex), route);
+  let resolved = await resolveRoute(s, spawn);
+  let memberOptions = options;
   const nameKey = routeKey(spawn.role, spawn.from ?? spawn.stepIndex);
   const name = await nameFor(s, spawn.role, place?.key ?? nameKey);
+  if (planSessionCandidate(s, spawn)) {
+    const placed = place ? (place.group ? 'group' : 'copy') : null;
+    const planned = await choosePlanSession(s, spawn, resolved.route, name, placed);
+    s.planSession = planned.choice;
+    resolved = { ...resolved, planSession: planned.choice };
+    if (planned.continued) {
+      resolved = { ...resolved, route: planned.continued.route };
+      memberOptions = { ...options, followUp: planned.continued.followUp };
+    }
+  }
+  const { route } = resolved;
+  for (const stepIndex of spanOf(spawn)) s.routes.set(routeKey(spawn.role, stepIndex), route);
   const naming = { label: labelFor(spawn.role, route.pick, name), name };
   const announce: Announce = async (runId) => {
     fitToolLimit(s, route.pick.provider);
@@ -480,9 +436,10 @@ export async function runMember(
   };
   const result = usesInPlace(s, spawn, place)
     ? await runInPlace(s, spawn, route, naming, announce)
-    : await runChild(s, spawn, route, naming, announce, place, options);
+    : await runChild(s, spawn, route, naming, announce, place, memberOptions);
   if (options.record !== false) s.results.push(result);
   if (result.outcome === 'lease_lost') return { result };
+  await recordReads(s, spawn, result);
   if (spawn.role === 'builder' && result.outcome !== 'succeeded') {
     const open = result.steps.find((index) => !result.ticked.includes(index)) ?? spawn.stepIndex;
     await markPlanStep(s, open, 'failed', result.runId);

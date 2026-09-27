@@ -21,6 +21,8 @@ const COLUMNS: readonly [string, (run: AuditRunSummary) => Cell][] = [
   ['cost_source', (run) => (run.costUsd === null ? 'not_reported' : run.costSource)],
   ['duration_ms', (run) => run.durationMs],
   ['tool_calls', (run) => run.toolCallCount],
+  ['file_reads', (run) => run.fileReads ?? null],
+  ['rereads', (run) => run.rereads ?? null],
 ];
 
 const FORMULA_START = /^[=+\-@\t\r]/;

@@ -26,6 +26,7 @@ import {
 import { routeKey, type Session } from './session.ts';
 import { builderSpans } from './spans.ts';
 import type { Spawn } from './transitions.ts';
+import type { PlanSessionChoice } from './plan-session.ts';
 
 const ARCHITECT_WORK = 'Read the code and write the step-by-step plan; no edits.';
 
@@ -124,6 +125,7 @@ export interface ResolvedRoute {
   fresh: boolean;
   rulePick?: AgentPick;
   session?: SessionChoice;
+  planSession?: PlanSessionChoice;
 }
 
 async function architectRoute(s: Session): Promise<ResolvedRoute> {
@@ -177,6 +179,10 @@ export async function nameFor(s: Session, role: AgentRole, key: string): Promise
   return name;
 }
 
+export function planSessionLine(choice: PlanSessionChoice): string {
+  return `${choice.same ? 'same session as the Architect' : 'fresh Builder'} (${choice.reason})`;
+}
+
 export function labelFor(role: AgentRole, pick: AgentPick, name: string): string {
   return agentLabel(role, pick.modelLabel ?? pick.model, pick.effort, name);
 }
@@ -207,6 +213,7 @@ export async function recordRoute(
     ? ` · Auto would have used ${route.autoWouldUse.modelLabel ?? route.autoWouldUse.model} · ${route.autoWouldUse.effort}`
     : '';
   const sessionNote = resolved.session ? ` · ${resolved.session.reason}` : '';
+  const planNote = resolved.planSession ? ` · ${planSessionLine(resolved.planSession)}` : '';
   await insertDecision(s.deps.db, {
     runId: s.lease.runId,
     purpose: 'route',
@@ -217,10 +224,11 @@ export async function recordRoute(
     inputTokens: call?.usage?.inputTokens ?? null,
     costUsd: call?.usage?.costUsd ?? null,
     body: {
-      summary: `${label}${wouldUse}${sessionNote}`,
+      summary: `${label}${wouldUse}${sessionNote}${planNote}`,
       applied,
       gate: route.gate,
       jevError: call?.error ?? null,
+      jevModel: call?.model ?? null,
       latencyMs: call?.latencyMs ?? null,
       answer: {
         pick: route.pick,
@@ -231,6 +239,7 @@ export async function recordRoute(
         rule: resolved.summary,
         ...(resolved.rulePick ? { rulePick: resolved.rulePick } : {}),
         ...(resolved.session ? { session: resolved.session } : {}),
+        ...(resolved.planSession ? { planSession: resolved.planSession } : {}),
         why: whyLine(why),
         tierSource: tierSourceOf(route.pick),
         ...(frontier ? { frontier } : {}),

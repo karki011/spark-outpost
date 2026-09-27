@@ -184,7 +184,11 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
           const name = describeTool(update.title);
           worked = true;
           openTools.set(update.toolCallId, name);
-          outputs.push({ kind: 'step_started', name, tool: true });
+          outputs.push(
+            update.kind
+              ? { kind: 'step_started', name, tool: true, toolKind: update.kind }
+              : { kind: 'step_started', name, tool: true },
+          );
           outputs.push(...links(toolTexts(update.content, update.rawOutput)));
           if (update.status === 'completed' || update.status === 'failed') {
             outputs.push(...finishTool(update.toolCallId, update.status === 'failed'));

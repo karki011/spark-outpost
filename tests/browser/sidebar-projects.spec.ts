@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { openChats } from './navigation.ts';
 
 let base = '';
 
@@ -41,7 +42,7 @@ async function openProjectMenu(page: Page, name: string) {
 }
 
 test('renames a project from its menu', async ({ page }) => {
-  await page.goto('/');
+  await openChats(page);
   await createProject(page, 'live-crew');
   await page.reload();
   const menu = await openProjectMenu(page, 'live-crew');
@@ -64,7 +65,7 @@ test('renames a project from its menu', async ({ page }) => {
 test('removes a project after one confirmation and undo brings its chats back', async ({
   page,
 }) => {
-  await page.goto('/');
+  await openChats(page);
   const project = await createProject(page, 'live-crew');
   await seedChats([{ title: 'Crew chat', projectIds: [project.id] }, { title: 'Loose chat' }]);
   await page.reload();
@@ -106,7 +107,7 @@ test('removes a project after one confirmation and undo brings its chats back', 
 test('the sidebar is wider, rows keep a gap, and the rail has a separator', async ({ page }) => {
   await seedChats([{ title: 'First chat' }, { title: 'Second chat' }, { title: 'Third chat' }]);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await openChats(page);
   expect((await sidebar(page).boundingBox())?.width).toBe(300);
 
   const rows = sidebar(page).locator('.cblock .row');

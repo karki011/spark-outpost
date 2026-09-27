@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 const FAKE_TITLE = 'Tidy the fake reply';
 
@@ -35,7 +36,7 @@ test('titles a chat from the agent after its first turn and shows the turn categ
   page,
 }) => {
   await resetTestDatabase({ onboarded: true, jev: true });
-  await page.goto('/');
+  await openChats(page);
   await newChat(page, '#title please tidy this');
 
   await expect(row(page, FAKE_TITLE)).toBeVisible();
@@ -53,7 +54,7 @@ test('titles a chat from the agent after its first turn and shows the turn categ
 
 test('a rename stops auto titles, and the menu can turn them back on', async ({ page }) => {
   await resetTestDatabase({ onboarded: true, jev: true });
-  await page.goto('/');
+  await openChats(page);
   await newChat(page, 'hello there');
   await expect(rowTitles(page)).toHaveText(['Bug fix · hello there']);
 
@@ -83,7 +84,7 @@ test('a rename stops auto titles, and the menu can turn them back on', async ({ 
 
 test('filters the sidebar by category with is:', async ({ page }) => {
   await resetTestDatabase({ onboarded: true, jev: true });
-  await page.goto('/');
+  await openChats(page);
   await newChat(page, '#title #debug the divider jumps');
   await newChat(page, 'fix the header typo');
   await expect(rowTitles(page)).toHaveCount(2);

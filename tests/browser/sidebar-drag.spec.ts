@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { openChats } from './navigation.ts';
 
 let base = '';
 
@@ -84,7 +85,7 @@ async function hoverOver(page: Page, target: Locator, edge: 'top' | 'bottom') {
 }
 
 test('drags a chat into a project at the placeholder with a lifted card', async ({ page }) => {
-  await page.goto('/');
+  await openChats(page);
   const project = await createProject(page, 'web');
   await seedChats([
     { title: 'Alpha', projectIds: [project.id], minutesAgo: 3 },
@@ -114,7 +115,7 @@ test('drags a chat into a project at the placeholder with a lifted card', async 
 });
 
 test('reorders chats inside a project and reorders the projects', async ({ page }) => {
-  await page.goto('/');
+  await openChats(page);
   const alpha = await createProject(page, 'alpha');
   const beta = await createProject(page, 'beta');
   await seedChats([
@@ -162,7 +163,7 @@ test('reorders chats inside a project and reorders the projects', async ({ page 
 });
 
 test('moves chats and projects with the keyboard and announces each step', async ({ page }) => {
-  await page.goto('/');
+  await openChats(page);
   const web = await createProject(page, 'web');
   await createProject(page, 'zeta');
   await seedChats([
@@ -188,7 +189,9 @@ test('moves chats and projects with the keyboard and announces each step', async
   await expect(grip).toBeFocused();
 
   await grip.press('Space');
+  await expect(announcer(page)).toContainText('Picked up Loose idea. It is in web');
   await page.keyboard.press('ArrowDown');
+  await expect(announcer(page)).toContainText('Loose idea will move');
   await page.keyboard.press('Escape');
   await expect(announcer(page)).toContainText('Cancelled. Loose idea stayed in web');
   await expect(titles(block(page, 'web'))).toContainText(['Loose idea']);
@@ -208,7 +211,7 @@ test('moves chats and projects with the keyboard and announces each step', async
 test('shows the ghost row inside an empty project and inside a folded project', async ({
   page,
 }) => {
-  await page.goto('/');
+  await openChats(page);
   const docs = await createProject(page, 'docs');
   const web = await createProject(page, 'web');
   await seedChats([
@@ -242,7 +245,7 @@ test('shows the ghost row inside an empty project and inside a folded project', 
 });
 
 test('drags a chat out of and into a project sideways', async ({ page }) => {
-  await page.goto('/');
+  await openChats(page);
   const web = await createProject(page, 'web');
   await seedChats([
     { title: 'First', projectIds: [web.id], minutesAgo: 3 },
@@ -282,7 +285,7 @@ test('drags a chat out of and into a project sideways', async ({ page }) => {
 });
 
 test('moves a chat into and out of a project with the side arrow keys', async ({ page }) => {
-  await page.goto('/');
+  await openChats(page);
   const web = await createProject(page, 'web-apps');
   await seedChats([
     { title: 'Web chat', projectIds: [web.id], minutesAgo: 2 },
@@ -302,12 +305,14 @@ test('moves a chat into and out of a project with the side arrow keys', async ({
   await expect(announcer(page)).toContainText('Loose idea will move out to Chats.');
   await expectGhost(page, slot(chatsBlock(page)));
   await page.keyboard.press('ArrowRight');
+  await expect(announcer(page)).toContainText('Loose idea will move into web-apps.');
   await page.keyboard.press('Space');
   await expect(announcer(page)).toContainText('Dropped Loose idea in web-apps, position 2 of 2.');
   await expect(titles(group)).toHaveText(['Web chat', 'Loose idea']);
 
   await grip.focus();
   await page.keyboard.press('Space');
+  await expect(announcer(page)).toContainText('Picked up Loose idea. It is in web-apps');
   await page.keyboard.press('ArrowLeft');
   await expect(announcer(page)).toContainText('Loose idea will move out to Chats.');
   await page.keyboard.press('Enter');
@@ -320,7 +325,7 @@ test('moves a chat into and out of a project with the side arrow keys', async ({
 
 test('reduced motion keeps the drag card still', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
+  await openChats(page);
   const project = await createProject(page, 'web');
   await seedChats([{ title: 'Loose idea' }]);
   await page.reload();

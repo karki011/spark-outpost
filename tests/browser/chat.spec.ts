@@ -1,12 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
 });
 
 async function newChat(page: Page) {
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await expect(input).toBeFocused();
@@ -66,7 +67,7 @@ test('Shift+Enter adds a line and Stop cancels the run', async ({ page }) => {
 
 test('applies the saved theme before the app renders', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('spark-outpost.theme', 'apricot'));
-  await page.goto('/');
+  await openChats(page);
   expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('apricot');
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await page.getByRole('button', { name: 'Theme' }).click();
@@ -82,7 +83,7 @@ test('applies the saved theme before the app renders', async ({ page }) => {
 });
 
 test('the theme picker lists every theme and applies the newer ones', async ({ page }) => {
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await page.getByRole('button', { name: 'Theme' }).click();
   await expect(page.getByRole('menu', { name: 'Theme' }).getByRole('menuitemradio')).toHaveText([

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 const PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGMwObwYiBggFAArKgZp8w3CnwAAAABJRU5ErkJggg==';
@@ -9,7 +10,7 @@ test.beforeEach(async () => {
 });
 
 async function newChat(page: Page) {
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await expect(input).toBeFocused();

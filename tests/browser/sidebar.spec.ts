@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { openChats } from './navigation.ts';
 
 let base = '';
 
@@ -48,7 +49,7 @@ test('search filters chats by title and message text', async ({ page }) => {
     { title: 'Tray icon states', message: 'Draw the offline badge' },
     { title: 'Worktree cleanup' },
   ]);
-  await page.goto('/');
+  await openChats(page);
   await expect(rowTitles(sidebar(page))).toHaveText([
     'Fix the date divider',
     'Tray icon states',
@@ -72,7 +73,7 @@ test('search filters chats by title and message text', async ({ page }) => {
 
 test('archives with undo and moves chats between the Active and History tabs', async ({ page }) => {
   await seedChats([{ title: 'Release notes' }, { title: 'Old spike', archived: true }]);
-  await page.goto('/');
+  await openChats(page);
   const tabs = sidebar(page).getByRole('tablist', { name: 'Chat lists' });
   await expect(tabs.getByRole('tab', { name: /Active/ })).toHaveText('Active 1');
   await expect(tabs.getByRole('tab', { name: /History/ })).toHaveText('History 1');
@@ -102,7 +103,7 @@ test('renames inline, pins to the top, and deletes after a confirmation with und
   page,
 }) => {
   await seedChats([{ title: 'Newest chat' }, { title: 'Second chat' }, { title: 'Third chat' }]);
-  await page.goto('/');
+  await openChats(page);
 
   await (await openMenu(page, 'Third chat')).getByRole('menuitem', { name: 'Rename' }).click();
   const name = sidebar(page).getByRole('textbox', { name: 'Chat name' });
@@ -149,7 +150,7 @@ test('drags a chat into a project and back out, with keyboard moves in the menu'
   page,
 }) => {
   await seedChats([{ title: 'Loose chat' }]);
-  await page.goto('/');
+  await openChats(page);
   const project = await createProject(page, 'web-apps');
   await page.reload();
   const group = sidebar(page).locator('.pblock', { hasText: project });
@@ -190,7 +191,7 @@ test('row states and the attention banner jump to the chat that needs input', as
     { title: 'Deploy the site', run: { status: 'awaiting_approval' } },
     { title: 'Mock fetch', run: { status: 'failed', error: 'Rate limit reached.' } },
   ]);
-  await page.goto('/');
+  await openChats(page);
   await expect(page.locator('.chat-title')).toHaveText('Current chat');
 
   await expect(row(page, 'Deploy the site')).toHaveClass(/st-asking/);
@@ -213,7 +214,7 @@ test('collapses the sidebar, remembers it, and opens a drawer on small screens',
   page,
 }) => {
   await seedChats([{ title: 'First chat' }, { title: 'Second chat' }]);
-  await page.goto('/');
+  await openChats(page);
   await sidebar(page).getByRole('button', { name: 'Hide sidebar' }).click();
   await expect(sidebar(page)).toHaveJSProperty('inert', true);
   await page.reload();

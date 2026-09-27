@@ -187,6 +187,7 @@ export async function decideParallel(
       applied: byJev ? 'jev' : 'rules',
       gate: null,
       jevError: call?.error ?? null,
+      jevModel: call?.model ?? null,
       latencyMs: call?.latencyMs ?? null,
       answer: {
         steps: steps.map((step) => ({ text: step.slice(0, STEP_CHARACTERS), ...stepFiles(step) })),

@@ -21,6 +21,7 @@ import { getConversationDetail, sendUserMessage } from '../src/persistence/conve
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import type { LaneOptions } from '../src/orchestration/placement.ts';
+import type { HandoffOptions } from '../src/orchestration/session.ts';
 import type { Provider } from '../src/providers/provider.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
@@ -298,7 +299,10 @@ export function jevFetch(script: JevScript): typeof fetch {
       SCENARIOS.find((candidate) => task.startsWith(candidate.text)) ??
       SCENARIOS[0]!;
     const answers = body.questions.intent
-      ? intakeAnswers(scenario)
+      ? {
+          ...intakeAnswers(scenario),
+          ...(body.questions.build_style ? buildStyleAnswers(script) : {}),
+        }
       : body.questions.build_style
         ? buildStyleAnswers(script)
         : body.questions.status
@@ -329,6 +333,7 @@ export function startOrchestrator(
     budget?: { activeLimitMs?: number; toolCallLimit?: number };
     sessions?: string;
     lanes?: LaneOptions;
+    handoff?: HandoffOptions;
   } = {},
 ): Harness {
   const intake = fetcher
@@ -354,6 +359,7 @@ export function startOrchestrator(
     ...(intake ? { intake } : {}),
     ...(options.budget ? { budget: options.budget } : {}),
     ...(options.lanes ? { lanes: options.lanes } : {}),
+    ...(options.handoff ? { handoff: options.handoff } : {}),
   });
   return {
     worker,

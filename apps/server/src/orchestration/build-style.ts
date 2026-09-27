@@ -1,34 +1,22 @@
 import {
-  buildStyleRank,
   buildStyleSchema,
-  BUILD_STYLES,
   DEFAULT_BUILD_STYLE,
   type BuildStyle,
   type Gate,
+  type JevStatus,
   type ShortcutsBody,
 } from '@spark-outpost/contracts';
+import type { JevOutcome } from '../advisor/advice-body.ts';
+import { allowedStyles } from '../advisor/build-style-question.ts';
 import { ACT_AT_DOWNGRADE, ASK_AT } from '../advisor/gate.ts';
-import {
-  MAX_TASK_CHARACTERS,
-  type IntakeQuestions,
-  type SystemOneResponse,
-} from '../advisor/intake-questions.ts';
+import type { SystemOneResponse } from '../advisor/intake-questions.ts';
 import { nextArtifactVersion } from '../persistence/artifacts.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { runEvents } from '../workflow/run-events.ts';
-import { callJev, type JevCall } from './jev-calls.ts';
 import { harvestShortcuts, ruleBuildStyle, type ProjectStyle, type StyleRule } from './lean.ts';
-import { changesSoFar } from './members.ts';
+import { changesSoFar } from './member-prompts.ts';
 import type { Session } from './session.ts';
-
-export const BUILD_STYLE_QUESTION = 'How lean should the code written for `task` be?';
-
-const STYLE_CRITERIA: Record<BuildStyle, string> = {
-  lean: 'Lean: build the smallest thing that fully meets `task`; it leaves room in how much to build',
-  lite: 'Lite: `task` explicitly asks for a complete, full-featured or polished version; build all of it',
-  off: 'Normal: `task` is not about writing code, or it asks for broad, thorough work that trimming would go against',
-};
 
 export const NO_PROJECT_STYLE: ProjectStyle = { style: 'off', source: 'project setting' };
 
@@ -49,19 +37,7 @@ export async function projectBuildStyle(db: Queryable, runId: string): Promise<P
   return { style, source: 'project setting' };
 }
 
-export function allowedStyles(project: BuildStyle): BuildStyle[] {
-  return BUILD_STYLES.filter((style) => buildStyleRank(style) <= buildStyleRank(project));
-}
-
-export function buildStyleQuestions(task: string, project: BuildStyle): IntakeQuestions {
-  const criteria = Object.fromEntries(
-    allowedStyles(project).map((style) => [style, STYLE_CRITERIA[style]]),
-  );
-  return {
-    state: { task: task.slice(0, MAX_TASK_CHARACTERS) },
-    questions: { build_style: { type: 'choice', instructions: BUILD_STYLE_QUESTION, criteria } },
-  };
-}
+export { allowedStyles };
 
 export interface StylePick {
   style: BuildStyle;
@@ -106,9 +82,32 @@ export function styleSummary(choice: StyleChoice, rule: StyleRule, pick: StylePi
   return `Build style ${choice.style} · rule would have used ${rule.style} (${rule.reason}) · ${jev}`;
 }
 
-async function askJev(s: Session, project: BuildStyle, rule: StyleRule): Promise<JevCall | null> {
-  if (rule.reason === 'not a code-changing turn') return null;
-  return callJev(s.jev, () => buildStyleQuestions(s.input.userRequest, project), s.control.signal);
+interface IntakeStyle {
+  status: JevStatus;
+  response: SystemOneResponse | null;
+  model: string | null;
+  error: string | null;
+}
+
+export function intakeStyle(outcome: JevOutcome): IntakeStyle {
+  if (outcome.status === 'not_connected') {
+    return { status: 'not_connected', response: null, model: null, error: null };
+  }
+  if (outcome.status !== 'answered') {
+    return { status: outcome.status, response: null, model: null, error: outcome.error };
+  }
+  const asked = outcome.response.answers.build_style !== undefined;
+  return {
+    status: asked ? 'not_asked' : 'failed',
+    response: outcome.response,
+    model: outcome.response.model,
+    error: asked ? null : 'Jev did not answer build_style.',
+  };
+}
+
+function styleAnswers(response: SystemOneResponse | null) {
+  const answer = response?.answers.build_style;
+  return answer ? { build_style: answer } : null;
 }
 
 export async function decideBuildStyle(s: Session): Promise<void> {
@@ -117,9 +116,8 @@ export async function decideBuildStyle(s: Session): Promise<void> {
   const { style: project, source } = s.projectStyle;
   if (project === 'off') return;
   const rule = ruleBuildStyle(project, s.input.mode, s.input.userRequest, source);
-  const call = await askJev(s, project, rule);
-  const pick =
-    call?.status === 'answered' && call.response ? parseStyleAnswer(call.response, project) : null;
+  const call = intakeStyle(s.intake.outcome);
+  const pick = call.response ? parseStyleAnswer(call.response, project) : null;
   const choice = chooseStyle(rule, pick, s);
   s.buildStyle = choice.style;
   await insertDecision(s.deps.db, {
@@ -128,15 +126,16 @@ export async function decideBuildStyle(s: Session): Promise<void> {
     childRunId: null,
     role: null,
     stepIndex: null,
-    jevStatus: call?.status ?? 'not_connected',
-    inputTokens: call?.usage?.inputTokens ?? null,
-    costUsd: call?.usage?.costUsd ?? null,
+    jevStatus: call.status,
+    inputTokens: null,
+    costUsd: null,
     body: {
       summary: styleSummary(choice, rule, pick),
       applied: choice.applied,
       gate: choice.gate,
-      jevError: call?.error ?? null,
-      latencyMs: call?.latencyMs ?? null,
+      jevError: call.error,
+      jevModel: call.model,
+      latencyMs: null,
       answer: {
         project,
         rule: rule.style,
@@ -145,9 +144,8 @@ export async function decideBuildStyle(s: Session): Promise<void> {
         confidence: pick?.confidence ?? null,
         chosen: choice.style,
       },
-      state: call?.asked?.state ?? null,
-      questions: call?.asked?.questions ?? null,
-      answers: call?.response?.answers ?? null,
+      reusedFrom: call.response ? 'intake' : null,
+      answers: styleAnswers(call.response),
     },
   });
 }

@@ -22,6 +22,7 @@ import {
   first,
   firstAgent,
   laneOf,
+  continueFollowUp,
   continueOrSpawn,
   incompleteLine,
   markedSpan,
@@ -36,7 +37,7 @@ import {
 } from './flow-steps.ts';
 import { batchGroups, batchRanges, batchSteps, firstOpenStep } from './parallel.ts';
 import { chooseGroups, type ParallelVerdicts } from './parallel-choice.ts';
-import { openSpan } from './spans.ts';
+import { openSpan, spanOf } from './spans.ts';
 import { stopsForUser, wantsConfirm, type Transition } from './transition-choice.ts';
 
 export const MAX_PLAN_EDITS = 3;
@@ -105,6 +106,7 @@ export type FlowEvent =
       rules: Transition;
       source: 'jev' | 'rules';
       confidence: number | null;
+      open?: readonly number[];
     }
   | { type: 'answered'; kind: FlowCheckpoint; optionId: string; note: string | null }
   | { type: 'wrapped'; filesChanged: number; asksToKeep: boolean }
@@ -303,6 +305,31 @@ function answerAgent(state: FlowState, note: string): FlowResult {
   );
 }
 
+function continueOpen(state: FlowState, open: readonly number[]): FlowResult | null {
+  const last = state.last;
+  if (last?.role !== 'builder' || state.retries >= MAX_REPAIR_RETRIES) return null;
+  const span = spanOf(last);
+  const reopened = span.filter((index) => open.includes(index));
+  const claimed = markedSpan(span, state.ticked).filter((index) => !reopened.includes(index));
+  const kept = state.completed.filter((index) => !reopened.includes(index));
+  const settled = withDone({ ...state, completed: kept }, claimed);
+  const left = span.filter((index) => !settled.completed.includes(index));
+  const [stepIndex] = left;
+  if (stepIndex === undefined) return null;
+  return spawn(
+    { ...settled, stepIndex, retries: state.retries + 1 },
+    {
+      role: 'builder',
+      stepIndex,
+      escalate: false,
+      reason: 'continue',
+      from: last.from ?? last.stepIndex,
+      followUp: continueFollowUp(left),
+      ...(left.length > 1 ? { carry: left } : {}),
+    },
+  );
+}
+
 function judged(state: FlowState, event: Extract<FlowEvent, { type: 'judged' }>): FlowResult {
   if (event.source === 'jev' && stopsForUser(event.status)) {
     return askUser(state, event.status, event.rules);
@@ -314,6 +341,8 @@ function judged(state: FlowState, event: Extract<FlowEvent, { type: 'judged' }>)
   if (exhausted && (next === 'retry_up' || event.status !== 'done')) {
     return ask(state, 'retry', `Stopped after ${MAX_REPAIR_RETRIES} retries.`, 'retry_up');
   }
+  const reopened = next === 'retry_up' || !event.open ? null : continueOpen(state, event.open);
+  if (reopened) return reopened;
   if (wantsConfirm(state, next, event.source === 'jev' ? event.confidence : null)) {
     const reason =
       next === 'retry_up' ? 'Jev suggests a retry one tier up.' : 'Jev suggests a review.';

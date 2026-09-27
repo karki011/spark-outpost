@@ -98,10 +98,13 @@ describe('Jev deciding parallelism', () => {
     expect(asked.state.steps).toMatchObject({ '2': { reads: ['src/percent.ts'] } });
   });
 
-  it('trusts a noul at 0.75 certainty either way', () => {
-    expect(noulVerdict(0.8)).toEqual({ noul: 0.8, confidence: 0.8, value: true });
+  it('trusts a noul at 0.75 or 0.25, confidence 0.5 on the two-option scale', () => {
+    expect(noulVerdict(0.8).value).toBe(true);
+    expect(noulVerdict(0.8).confidence).toBeCloseTo(0.6);
+    expect(noulVerdict(0.75).value).toBe(true);
     expect(noulVerdict(0.2).value).toBe(false);
-    expect(noulVerdict(0.6)).toEqual({ noul: 0.6, confidence: 0.6, value: null });
+    expect(noulVerdict(0.6).value).toBeNull();
+    expect(noulVerdict(0.6).confidence).toBeCloseTo(0.2);
     const response: SystemOneResponse = {
       model: 'jev',
       answers: { independent_1: { type: 'noul', noul: 0.1 }, large_2: { type: 'noul', noul: 0.9 } },

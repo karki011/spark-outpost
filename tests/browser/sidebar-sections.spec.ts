@@ -4,6 +4,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { openChats } from './navigation.ts';
 
 let base = '';
 
@@ -62,7 +63,7 @@ test('loose chats group by last activity below a divider, project chats stay fla
     { title: 'Old chat', minutesAgo: minutesSinceNoon(70) },
     { title: 'Old project chat', minutesAgo: minutesSinceNoon(70), projectIds: [project.id] },
   ]);
-  await page.goto('/');
+  await openChats(page);
   await expect(buckets(page)).toHaveCount(5);
   const labels = await buckets(page).evaluateAll((sections) =>
     sections.map((section) => section.getAttribute('aria-label')),
@@ -90,7 +91,7 @@ test('date buckets collapse, remember it, and open while searching', async ({ pa
     { title: 'Fresh idea', minutesAgo: 1 },
     { title: 'Yesterday chat', minutesAgo: minutesSinceNoon(1) },
   ]);
-  await page.goto('/');
+  await openChats(page);
   await expect(sidebar(page).getByRole('group', { name: 'Chats' })).toBeVisible();
   await expect(sidebar(page).locator('.cblock .sec-head', { hasText: 'Chats' })).toHaveCount(0);
 
@@ -125,7 +126,7 @@ test('long titles scroll on hover and keyboard focus, short ones stay still', as
     { title: 'Short one', minutesAgo: 1 },
     { title: LONG_TITLE, minutesAgo: 2 },
   ]);
-  await page.goto('/');
+  await openChats(page);
   const long = row(page, LONG_TITLE).locator('.tt');
   const short = row(page, 'Short one').locator('.tt');
   await expect(long).toHaveAttribute('data-truncated', 'true');
@@ -154,7 +155,7 @@ test('reduced motion keeps long titles still', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1280, height: 800 });
   await seedChats([{ title: LONG_TITLE }]);
-  await page.goto('/');
+  await openChats(page);
   const long = row(page, LONG_TITLE).locator('.tt');
   await expect(long).toHaveAttribute('data-truncated', 'true');
   await row(page, LONG_TITLE).hover();
@@ -165,7 +166,7 @@ test('reduced motion keeps long titles still', async ({ page }) => {
 test('⌘B, the sidebar button and the Chats rail button collapse and reopen', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await seedChats([{ title: 'First chat' }]);
-  await page.goto('/');
+  await openChats(page);
   const hide = sidebar(page).getByRole('button', { name: 'Hide sidebar' });
   const show = page.getByRole('main').getByRole('button', { name: 'Show sidebar' });
   await expect(hide).toHaveAttribute('aria-keyshortcuts', /^(Meta|Control)\+B$/);
@@ -203,7 +204,7 @@ test('⌘B, the sidebar button and the Chats rail button collapse and reopen', a
 
 test('the default width is 280px below 1240px', async ({ page }) => {
   await page.setViewportSize({ width: 1180, height: 800 });
-  await page.goto('/');
+  await openChats(page);
   expect((await sidebar(page).boundingBox())?.width).toBe(280);
 });
 
@@ -213,7 +214,7 @@ test('collapsing keeps the thread where it was and leaves one sidebar button', a
   await seedChats([
     { title: 'Long brief', message: brief.join('\n\n'), run: { status: 'succeeded' } },
   ]);
-  await page.goto('/');
+  await openChats(page);
   const thread = page.locator('.thread');
   await expect(thread).toContainText('Point 80 of the brief.');
   await thread.evaluate((element) => (element.scrollTop = 400));

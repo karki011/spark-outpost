@@ -1,4 +1,5 @@
 import type {
+  BuildStyle,
   IntakeAnswer,
   InvolvementLevel,
   ModelRouting,
@@ -39,6 +40,7 @@ export interface IntakeRequest {
   current: CurrentSettings;
   level: InvolvementLevel;
   routing: ModelRouting;
+  buildStyle?: BuildStyle;
 }
 
 export interface WorkSummary {

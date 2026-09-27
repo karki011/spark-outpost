@@ -1,3 +1,5 @@
+import { optionConfidence } from '../advisor/gate.ts';
+import { noulQuestion } from '../advisor/questions.ts';
 import {
   MAX_TASK_CHARACTERS,
   type IntakeQuestions,
@@ -7,7 +9,7 @@ import { STEP_CHARACTERS } from './jev-questions.ts';
 import { isResearchStep, planGroups, worthItsOwnBuilder, worthSplitting } from './parallel.ts';
 import { stepFiles } from './step-files.ts';
 
-export const NOUL_CERTAINTY = 0.75;
+export const NOUL_CERTAINTY = 0.5;
 export const INDEPENDENT_QUESTION = 'These steps can be done independently';
 export const LARGE_QUESTION = 'This step is large (≥20s of work)';
 
@@ -56,7 +58,7 @@ export interface ParallelChoice {
 }
 
 export function noulConfidence(noul: number): number {
-  return Math.max(noul, 1 - noul);
+  return optionConfidence(Math.max(noul, 1 - noul), 2);
 }
 
 export function noulVerdict(noul: number): NoulVerdict {
@@ -71,23 +73,21 @@ export function buildParallelQuestions(task: string, steps: readonly string[]): 
   const questions: IntakeQuestions['questions'] = {};
   steps.forEach((_, index) => {
     if (index + 1 < steps.length) {
-      questions[independentKey(index)] = {
-        type: 'noul',
-        instructions: `${INDEPENDENT_QUESTION}: \`steps.${index + 1}\` and \`steps.${index + 2}\` of \`task\`. Independent means neither needs the other's result and they do not change the same files, so two agents could do them at the same time.`,
-        criteria: {
-          yes: 'Two agents could do them at the same time without waiting for each other',
-          no: 'One needs the other’s result, or both change the same files',
+      questions[independentKey(index)] = noulQuestion(
+        `${INDEPENDENT_QUESTION}: \`steps.${index + 1}\` and \`steps.${index + 2}\` of \`task\`. Independent means neither needs the other's result and they do not change the same files, so two agents could do them at the same time.`,
+        {
+          true: 'Two agents could do them at the same time without waiting for each other',
+          false: 'One needs the other’s result, or both change the same files',
         },
-      };
+      );
     }
-    questions[largeKey(index)] = {
-      type: 'noul',
-      instructions: `${LARGE_QUESTION}: \`steps.${index + 1}\` of \`task\`. Large means a coding agent needs about 20 seconds or more to do it, for example editing several files or writing tests.`,
-      criteria: {
-        yes: 'It takes a coding agent 20 seconds or more',
-        no: 'It is a quick edit of a few lines',
+    questions[largeKey(index)] = noulQuestion(
+      `${LARGE_QUESTION}: \`steps.${index + 1}\` of \`task\`. Large means a coding agent needs about 20 seconds or more to do it, for example editing several files or writing tests.`,
+      {
+        true: 'It takes a coding agent 20 seconds or more',
+        false: 'It is a quick edit of a few lines',
       },
-    };
+    );
   });
   const state = {
     task: task.slice(0, MAX_TASK_CHARACTERS),

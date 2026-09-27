@@ -21,6 +21,8 @@ interface UsageRow {
   duration_ms: number | null;
   tool_call_count: number | null;
   parallel_group: string | null;
+  file_reads: number | null;
+  rereads: number | null;
 }
 
 function toUsage(row: UsageRow): AgentUsage {
@@ -40,6 +42,8 @@ function toUsage(row: UsageRow): AgentUsage {
     durationMs: row.duration_ms ?? 0,
     toolCalls: row.tool_call_count ?? 0,
     parallelGroup: row.parallel_group,
+    ...(row.file_reads === null ? {} : { fileReads: row.file_reads }),
+    ...(row.rereads === null ? {} : { rereads: row.rereads }),
   };
 }
 
@@ -48,7 +52,8 @@ export async function agentUsage(db: Db, runId: string): Promise<AgentUsage[]> {
     `SELECT id, parent_run_id, role, route->>'name' AS name, provider,
        COALESCE(used_model, model) AS model, COALESCE(used_effort, effort) AS effort, status,
        input_tokens, output_tokens, cached_read_tokens, cached_write_tokens, cost_usd,
-       cost_source, duration_ms, tool_call_count, route->>'parallelGroup' AS parallel_group
+       cost_source, duration_ms, tool_call_count, route->>'parallelGroup' AS parallel_group,
+       (route->>'fileReads')::int AS file_reads, (route->>'rereads')::int AS rereads
      FROM runs WHERE id = $1 OR parent_run_id = $1 ORDER BY created_at`,
     [runId],
   );

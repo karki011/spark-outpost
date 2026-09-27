@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { openChats } from './navigation.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
@@ -20,7 +21,7 @@ async function openMenu(page: Page, title: string) {
 
 test('New chat sits at the bottom of the sidebar and has a shortcut', async ({ page }) => {
   await seedChats([{ title: 'Old chat' }]);
-  await page.goto('/');
+  await openChats(page);
   await expect(page.locator('.chat-title')).toHaveText('Old chat');
   const button = sidebar(page).getByRole('button', { name: 'New chat', exact: true });
   const list = await sidebar(page).locator('.list').boundingBox();
@@ -37,7 +38,7 @@ test('New chat sits at the bottom of the sidebar and has a shortcut', async ({ p
 
 test('the sidebar resizes by drag and keyboard, remembers it, and resets', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
+  await openChats(page);
   const handle = page.getByRole('separator', { name: 'Resize sidebar' });
   const width = async () => Math.round((await sidebar(page).boundingBox())!.width);
   expect(await width()).toBe(300);
@@ -70,7 +71,7 @@ test('the sidebar resizes by drag and keyboard, remembers it, and resets', async
 
 test('pinned chats reorder from the menu and by dragging the grip', async ({ page }) => {
   await seedChats([{ title: 'Alpha' }, { title: 'Beta' }, { title: 'Gamma' }]);
-  await page.goto('/');
+  await openChats(page);
   for (const title of ['Gamma', 'Beta', 'Alpha']) {
     await (await openMenu(page, title)).getByRole('menuitem', { name: 'Pin' }).click();
   }

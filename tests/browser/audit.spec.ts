@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { seedAuditLog, tamperAuditLog } from './audit-seed.ts';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 const SHOTS = process.env.AUDIT_SCREENSHOTS;
 
@@ -9,7 +10,7 @@ test.beforeEach(async () => {
 });
 
 async function sendPlannedTask(page: Page) {
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');

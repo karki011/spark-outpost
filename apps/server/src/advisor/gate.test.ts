@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { InvolvementLevel, Risk } from '@spark-outpost/contracts';
-import { gate } from './gate.ts';
+import { gate, optionConfidence } from './gate.ts';
 
 const decide = (confidence: number, risk: Risk, level: InvolvementLevel) =>
   gate({ confidence }, risk, level).decision;
@@ -88,5 +88,16 @@ describe('confidence gate', () => {
     expect(gate({ confidence: 0.85 }, 'multi-file', 'full-auto', { readsOnly: true }).actAt).toBe(
       0.9,
     );
+  });
+});
+
+describe('confidence formula', () => {
+  it('is (n·p − 1) / (n − 1), as TypeSafe reports it for a Choice or Score', () => {
+    expect(optionConfidence(0.9, 3)).toBeCloseTo(0.85);
+    expect(optionConfidence(1 / 3, 3)).toBeCloseTo(0);
+    expect(optionConfidence(0.75, 2)).toBeCloseTo(0.5);
+    expect(optionConfidence(0.55, 10)).toBeCloseTo(0.5);
+    expect(optionConfidence(0.1, 4)).toBe(0);
+    expect(optionConfidence(1, 1)).toBe(1);
   });
 });

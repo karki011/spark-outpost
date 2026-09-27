@@ -124,3 +124,166 @@ The orchestrator (see [HARNESS_PLAN.md](HARNESS_PLAN.md#orchestrator-status-sept
 1. **Review (M6).** Offer review using Jev's `review` and `reviewer` answers when confidence is at least about 0.6. Otherwise use the rules. Advice never grants permission.
 2. **Route (opt-in).** Built as the chat's Auto option with the orchestrator; compare its outcomes with the rules before making it the default.
 3. **Later.** Retry 429 and 529 with backoff, and allow pinning `jev-1.13.0`.
+
+## Docs review 2026-09-27
+
+On September 27, 2026 we re-read the TypeSafe documentation in full: every page in https://docs.typesafe.ai/llms.txt (111 pages, the `.md` form of each), including all 18 cookbooks, the Jev 1.13 jaggedness page and both SDK references. We also read the live OpenAPI spec (https://api.typesafe.ai/openapi.json, version 0.2.0) and the agent skill (https://github.com/typesafe-ai/skills/blob/main/skills/typesafe-ai/SKILL.md). We then compared our code against the guidance. Where to use Jev next is in [JEV_OPPORTUNITIES.md](JEV_OPPORTUNITIES.md).
+
+### What has not changed since September 25
+
+- **Models.** There is no new model. `jev-latest` and `jev-preview` both still point to `jev-1.13.0`, and no preview build exists (https://docs.typesafe.ai/models). Several cookbooks were run on `jev-1.12`.
+- **Price.** Still $0.042 per million input tokens, and output is still free. There is no separate pricing page (`/pricing` returns 404), and no volume tiers or batch discount are listed.
+- **Question types.** Still only Choice, Score and Noul. There is no multi-label, ranking, extraction, embedding or generation primitive.
+- **Endpoints.** The OpenAPI spec lists only `POST /v1/systemone` and `GET /v1/models`. There is no batch, streaming, async, embeddings, caching or files endpoint.
+- **Request fields.** A request has only `state`, `model` and `questions`. There is no temperature (the self-consistency cookbooks say Jev runs "without a temperature setting"), no few-shot `examples` field, no weights, no calibration hints and no rationale or explanation output.
+  - The Python SDK's `extra_body={"beam_width": 4}` and a question `weight` are labelled as illustrative forward-compatibility examples, not real options (https://docs.typesafe.ai/sdk/python/usage#forward-compatibility).
+  - Examples and weights belong in the question itself (see below) and in our code.
+- **No docs changelog.** There are no `/changelog`, `/limits`, `/batching`, `/caching`, `/errors` or `/calibration` pages (all return 404). The only changelogs are the SDK ones:
+  - JS SDK 0.6.0 (September 15): Score criteria became an ordered list.
+  - Python SDK 0.7.0 to 0.7.2 (September 18 to 26): pydantic, `response_model`, an `http2` extra, and gateway examples.
+
+### New, or missed on September 25
+
+| Topic                       | What the docs say                                                                                                                                                                                                                                                                                                                                                                                      | Source                                                                                                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rate limits                 | 250,000 tokens per second and 1,200 requests per minute per account. These are "adjusting dynamically" and can change without notice. Going over either returns 429.                                                                                                                                                                                                                                   | https://docs.typesafe.ai/models                                                                                                                                           |
+| Concurrency in practice     | Cookbooks say a shared key starts rate limiting at "roughly eight" concurrent requests, and run 4 to 8 workers.                                                                                                                                                                                                                                                                                        | https://docs.typesafe.ai/cookbooks/entity_alignment, https://docs.typesafe.ai/cookbooks/autoresearch_feature_discovery                                                    |
+| Context budget              | 64k tokens for the state plus all questions. A second limit is new: 32k tokens for the state plus the single longest question. Accuracy falls as the state grows with irrelevant detail.                                                                                                                                                                                                               | https://docs.typesafe.ai/models, https://docs.typesafe.ai/model-jaggedness/jev-1.13                                                                                       |
+| Limits per question         | Up to 255 Choice options (one cookbook says it is reliable up to about 240). A Score takes 2 to 10 levels; an 11th level returns a server error. No maximum on questions per call: the docs show 38, 54 and 62 in one request.                                                                                                                                                                         | https://docs.typesafe.ai/api, https://docs.typesafe.ai/cookbooks/classification_using_confidence, https://docs.typesafe.ai/cookbooks/autoformat                           |
+| How confidence is computed  | For Choice and Score, `confidence = (n·p_max − 1) / (n − 1)`, where `n` is the number of options or levels. This is the formula in the Confidence page's explorer, and it matches every example response. So the same top probability gives a different confidence depending on how many options were offered. Noul has no confidence.                                                                 | https://docs.typesafe.ai/confidence                                                                                                                                       |
+| Latency                     | "Most queries complete in about 100 ms". The launch post says 70 to 500 ms end to end. Cookbooks measured 0.09 to 0.51 s, including 0.27 s for 13 questions on a 54k-character state. We measured 150 to 360 ms.                                                                                                                                                                                       | https://docs.typesafe.ai/concepts/how-to-build-with-system-one, https://typesafe.ai/blog/introducing-system-one-models-and-jev                                            |
+| Batching                    | Put every question on the same state in one call. The parallel-questions cookbook measured 13 questions in one call as 12.2× cheaper and 10× faster than 13 calls, with identical answers. The primitives page quotes this as 11.5× and 9.6×. Speculative questions whose answer only matters on some branches are "close to free".                                                                    | https://docs.typesafe.ai/cookbooks/parallel_questions, https://docs.typesafe.ai/patterns/fan-out                                                                          |
+| Structured questions        | `instructions`, Choice option descriptions, Score levels and Noul `true`/`false` criteria can all be objects or arrays, not only strings. This is how you give examples and boundaries: fields such as `what`, `not_for` and `examples` on each option or level. The field names are free text, and the model reads them.                                                                              | https://docs.typesafe.ai/primitives/advanced, https://docs.typesafe.ai/primitives/choice#structured-instructions-and-criteria                                             |
+| Multi-select and ranking    | For several labels that may all apply, ask one Noul per label or candidate, with the candidate as a structured field in `instructions` and a fixed question text. Rank by sorting the noul values. A Choice is relative (which one); per-candidate Nouls are absolute and can all come back low. Use both: the Choice picks, the Nouls decide whether to act at all.                                   | https://docs.typesafe.ai/primitives/noul#structured-instructions, https://docs.typesafe.ai/cookbooks/rerank_typesafe, https://docs.typesafe.ai/cookbooks/skill_suggestion |
+| Verifying a trace           | The building guide verifies an agent's tool-call trace with one Noul per fact ("Does `trace.tool_calls[1].arguments.unit` match `request.unit`?"), not one broad "is this correct?". The extraction cascade frames each check as "bad = true" and escalates when the **max** over the checks passes 0.7. In that cascade a holistic judge scored 0.56 where the per-field checks scored 0.95 and 0.85. | https://docs.typesafe.ai/concepts/how-to-build-with-system-one, https://docs.typesafe.ai/cookbooks/sde_cascade                                                            |
+| Known weak spots (jev-1.13) | Nine failure modes, last reviewed September 17: <br>• literal reading <br>• numbers and counting ("keep the arithmetic in code") <br>• dates <br>• indirection <br>• large irrelevant state <br>• adversarial content moves answers <br>• contradictory instructions and criteria <br>• no structural invariants between separately asked questions <br>• generation                                   | https://docs.typesafe.ai/model-jaggedness/jev-1.13                                                                                                                        |
+| Self-consistency            | Repeated calls are not bit-identical. The mean std-dev of a probability is about 0.01. The docs say to use abstention bands rather than repeated voting.                                                                                                                                                                                                                                               | https://docs.typesafe.ai/cookbooks/consistency_noul_cookbook, https://docs.typesafe.ai/cookbooks/consistency_choice_cookbook                                              |
+| Pin versions                | An alias moves when a release ships, so answers can change with no change on our side. Log the response's `model` field. If thresholds were tuned against a version, pin that version (`jev-1.13.0`, accepted even though `/v1/models` lists only aliases).                                                                                                                                            | https://docs.typesafe.ai/models#aliases                                                                                                                                   |
+| Errors and retries          | The SDKs retry 408, 429 and 5xx (including 529) twice by default:<br>• backoff starts at 500 ms and doubles up to 5 s, with 25% jitter<br>• they honour `retry-after` and `retry-after-ms` up to 60 s<br>• the timeout is per attempt (10 s default) with no total budget<br>Errors carry an `x-typesafe-request-id` header.                                                                           | https://docs.typesafe.ai/sdk/javascript/api/interfaces/RetryPolicy, https://docs.typesafe.ai/sdk/javascript/api/classes/APIError                                          |
+| Other routes                | Jev is also reachable through OpenRouter (`~typesafe/jev-latest`) and Vercel AI Gateway (`https://ai-gateway.vercel.sh/typesafe`). Either one adds a third party to the data path.                                                                                                                                                                                                                     | https://docs.typesafe.ai/sdk/python/usage#configuring-the-base-url                                                                                                        |
+| Data                        | Jev is not trained on requests. There is no per-account fine-tuning: you customise through `state`, `instructions` and `criteria`. Zero data retention is still enterprise-only. The Data Processing Agreement covers retention.                                                                                                                                                                       | https://docs.typesafe.ai/models#customizing-jev, https://docs.typesafe.ai/legal                                                                                           |
+| Language                    | English is the primary training language. Other languages are accepted but are less accurate.                                                                                                                                                                                                                                                                                                          | https://docs.typesafe.ai/models#language-support                                                                                                                          |
+| Harness use                 | The use-case map names "Harness Engineering": model routing, semantic context retrieval, LLM error detection and guardrails, and classifying reasoning traces. It also names "Universal Verification" of tool calls and traces.                                                                                                                                                                        | https://docs.typesafe.ai/concepts/use-case-map                                                                                                                            |
+| Docs defects                | The agent skill links a "Migration guide" at `/migrating-to-v1.md`, which returns 404. The autoformat cookbook gives its cost as both $0.0003 and $0.0015.                                                                                                                                                                                                                                             | SKILL.md, https://docs.typesafe.ai/cookbooks/autoformat                                                                                                                   |
+
+### Where our code goes against the docs
+
+Ordered by impact. Nothing here is fixed yet; this review changed docs only.
+
+1. **Our Noul criteria use the wrong keys.** The API's Noul `criteria` takes `true` and `false` (https://docs.typesafe.ai/api#noul, OpenAPI `NoulCriteria`). Every Noul we send uses `yes` and `no` instead:
+   - `review_existing`, `mechanical`, `vague` and `injection` in `advisor/intake-questions.ts`
+   - `independent_N` and `large_N` in `orchestration/parallel-choice.ts`
+   - `one_builder` and `same_folder` in `orchestration/lane-choice.ts`
+
+   The schema does not forbid extra keys, so the request passes validation and the descriptions are almost certainly ignored. Every Noul we have measured was therefore judged on its `instructions` alone. The fix is to rename the keys and re-run the live intake test to see how the answers move.
+
+2. **The resolved model version is not recorded.** We send `jev-latest`, and `callJev` records the alias we asked for (`access.model`), not the response's `model`. When the alias moves to a new version, every gate we tuned on `jev-1.13.0` silently shifts, and the analytics cannot tell the versions apart. The docs say to log `model` and to pin a version once thresholds are tuned. Store `response.model` on every `run_advice` row, and pin `jev-1.13.0` (the "Later" item under Next phases) until a new version has been measured.
+3. **Our confidence gates ignore how many options were offered.** Confidence is `(n·p − 1)/(n − 1)`, so one gate line means a different top probability for each option count:
+
+   | Options offered                  | Top probability needed for 0.5 | for 0.75 | for 0.9 |
+   | -------------------------------- | -----------------------------: | -------: | ------: |
+   | 2 (e.g. `provider`, some `next`) |                           0.75 |    0.875 |    0.95 |
+   | 3                                |                           0.67 |     0.83 |    0.93 |
+   | 4 (`depth`, `scope`, `status`)   |                           0.63 |     0.81 |    0.93 |
+   | 10 (`intent`)                    |                           0.55 |     0.78 |    0.91 |
+
+   Consequences:
+   - The "provider choice is a coin flip" reading was partly this formula at n = 2.
+   - The intake confidence (`intent` over 10 options against `depth` over 4) mixes scales.
+   - `next`, `build_style` and the route questions offer 2 to 4 options depending on the state, so the same gate is stricter or looser from call to call.
+
+   Gate on the top probability or on the margin to the runner-up (both are in `probabilities`), or keep option counts fixed per question. The agent skill adds: "If all you care about is choosing the best option, you just need to choose the option with the highest confidence".
+
+4. **Some questions are broad where the docs ask for atomic ones.**
+   - The transition asks "What should happen next?" and rates `quality` "judged from `reply`, `verdict` and the counts" (`jev-questions.ts`). Both hide several judgments in one answer. The docs call "Analyze … and determine the best course of action" a bad question, and the jaggedness page lists "hiding several judgments inside one question".
+   - The live run missed a half-done plan in exactly this spot: "done · next finish" at 0.60 (benchmarks/harness-e2e-live-2026-09-26.md, d #1).
+   - Replacement: one Noul per fact, with code choosing the next step. See opportunity 1.
+5. **Score levels describe degrees, not situations.** The docs say "Describe situations, not degrees", and each level is judged on its own without seeing its neighbours (https://docs.typesafe.ai/primitives/score#writing-good-levels).
+   - `QUALITY_CRITERIA` ("Poor: major gaps", "Fair: works with notable issues") and the effort Scores (the adapter's effort labels, "low", "medium", "high") are degree words.
+   - `risk` is ordered well, but it mixes two dimensions, how much changes and how destructive it is.
+   - `depth` is an ordered scale asked as a Choice.
+6. **Numbers are sent for Jev to reason about.** The jaggedness page says Jev is weak with numbers and counting, and to "keep the arithmetic in code" and pass named buckets.
+   - The transition state sends `stepsLeft`, `retriesLeft`, `findings`, `filesChanged` and `toolCalls`.
+   - `LARGE_QUESTION` asks about "≥20s of work".
+   - Model card lines carry prices and pass counts ("bench plan 10/10 ~$0.17").
+   - Code already enforces the limits through the offered options. Pass buckets ("no retries left", "checks failed") instead of raw counts, and keep price and pass-rate comparisons in code.
+7. **One question is framed in the negative.** The docs say a high value should mean yes, and warn against contradictory framing.
+   - `one_builder` asks whether one Builder "would be as good as parallel Builders", so a high value means "don't split". That is workable, but it is the negated form of the decision we act on, and the jaggedness page shows a question and its negation do not sum to 1.
+   - `vague` and `injection` are fine: yes means the thing we check for.
+8. **The docs on privacy are out of date.** The "Never sent: … file names and paths" line above is no longer true.
+   - Since harness round 3, the parallel batch sends each plan step's text unredacted (300 characters) plus its `changes` and `reads` file lists (`buildParallelQuestions`, `stepFiles`).
+   - Since round 7, the lane questions send each chain's changed files and its sensitive file names.
+   - The transition `reply` tail can still quote code.
+
+   Either redact the paths there too, or change the data-sent list, update the pinned tests and tell the user. See [JEV_OPPORTUNITIES.md](JEV_OPPORTUNITIES.md#risks) for how new uses would widen this.
+
+9. **The intake state carries an unused field.** Every intake sends `providers` (model ids per provider), but no question refers to it: the model options already carry the same ids. The docs say to send only the context the questions need.
+10. **We could batch more.**
+    - `build_style` is its own call on the same state (`task`) right after the intake, so it could join the intake batch as a speculative question.
+    - The Architect route could be asked speculatively in the intake too, with the provider's models as options.
+    - This would save one to two round trips (150 to 350 ms each) per planned turn. The docs say a second request is justified only when it needs an earlier answer to build its state or options.
+11. **We do not retry.** `askSystemOne` fails on the first 429 or 529, where the SDKs would retry twice with backoff. With the 3 s orchestration timeout there is room for one retry: when at least 1 s is left, honour `retry-after-ms`. Then fall back to the rules as today.
+12. **The injection noul is not a security boundary.** The docs say adversarial content can move Jev's answers, and the guardrails cookbook calls such a check "a filter, not a security boundary". We only record the injection answer, which is right. Keep it that way, and never use it to relax a check.
+
+### How confidence should be read
+
+The docs are consistent on these points:
+
+- Calibration holds across groups of answers, not for any one answer.
+- Low confidence means the options overlap, the question measures more than one thing, or the state lacks the evidence. It is a reason to ask or fall back, not a verdict.
+- Thresholds scale with the cost of a wrong action. The confidence-routing pattern uses a 0.6 floor, and 0.85 for a high-stakes action.
+- A Noul threshold is chosen per action: 0.5 when both errors cost the same, higher when a false yes is expensive, and lower when a missed yes is. Middle values go to review. The Noul page's example uses 0.2 and 0.8.
+- For a result built from several answers, use the weakest one (`min`), not the product. For "any serious problem" checks, use the `max` of the bad-is-true Nouls.
+- Validate thresholds by plotting confidence against accuracy on our own data. The Harness tab already draws Jev's confidence against the outcome score with the gate lines; it is the place to do this.
+
+Our `gate()` follows this shape: act, ask, or fall back, with stricter lines for riskier work. The gaps are points 3 and 4 above.
+
+## Fixes 2026-09-27
+
+These fix points 1, 2, 3, 5, 6, 10 and 11 of the docs review above, and add opportunity 1 of [JEV_OPPORTUNITIES.md](JEV_OPPORTUNITIES.md#1-did-the-builder-do-its-steps). Point 8 (file paths in the parallel and lane questions) is unchanged and waits for the user's decision.
+
+### Noul criteria keys (point 1)
+
+- Every Noul is built by `noulQuestion(instructions, { true, false })` in `apps/server/src/advisor/questions.ts`. Its type only accepts `true` and `false`, as in the API's `NoulCriteria` (OpenAPI 0.2.0). The intake (`review_existing`, `mechanical`, `vague`, `injection`), parallel (`independent_N`, `large_N`), lane (`one_builder`, `same_folder`) and new step-check Nouls all use it.
+- `apps/server/src/orchestration/noul-requests.test.ts` sends all of them through `askSystemOne` and asserts that every Noul's criteria keys are exactly `true` and `false`, and the exact JSON of `injection`.
+- **Live check** (one call, `jev-1.13.0`, 406 input tokens, about $0.00002, 485 ms). The state was `{ text: "Water boils at 100 °C at sea level." }`. Two Nouls had the same instructions ("Is `text` correct?") and descriptions that flip the meaning (true: "The text contains a factual error", false: "The text is factually correct"):
+
+  | Criteria keys          | Noul |
+  | ---------------------- | ---: |
+  | `yes` / `no` (before)  | 0.95 |
+  | `true` / `false` (now) | 0.75 |
+
+  With `yes`/`no` Jev answered the instructions alone (the sentence is correct, so 0.95). With `true`/`false` the same descriptions pulled the answer 0.20 toward the flipped meaning, so the descriptions are now read. It did not flip fully because the instructions and the criteria contradict each other on purpose here. Every Noul measured before today, including the injection results above, was judged on its instructions alone.
+
+### Model version (point 2)
+
+- Requests for `jev-latest` are sent as `jev-1.13.0` (`requestModel` in `advisor/jev.ts`), the version the gates were tuned on, as the models page recommends once thresholds are tuned. `jev-preview` or another explicit name is sent unchanged. The stored connection still says `jev-latest`.
+- Every advice record stores the version that answered (`response.model`): the intake body's `jevModel`, and `jevModel` in the body of every route, transition, parallel and build-style row. A failed call records the version it asked for.
+- `noteJevVersion` logs one warning per process for each answering version other than `jev-1.13.0`. Analytics do not show the version yet: that needs a contract and a UI change, so the version is only in the row bodies for now.
+
+### Confidence (point 3)
+
+- For Choice and Score we use the confidence Jev reports, which is `(n·p_max − 1)/(n − 1)` (confirmed again in the live call: a 3-option Choice at p = 1.0 reported 1.0). That formula already puts every option count on one scale: 0 means no better than an even guess among the options offered, 1 means certain. So a gate line means "this far from chance" whatever the option count, and we keep gating on it. The review's table shows what top probability each line needs per option count.
+- The one place we computed our own confidence did not follow it: the parallel and lane Nouls used `max(p, 1 − p)`. `noulConfidence` now applies the same formula with n = 2 (`optionConfidence` in `advisor/gate.ts`), and `NOUL_CERTAINTY` moved from 0.75 to 0.5 on that scale. Decisions are unchanged: a Noul is still trusted at 0.75 or more, or 0.25 or less.
+
+### Rate limits and retries (point 11)
+
+- `JevLimiter` (`advisor/jev-limiter.ts`) keeps at most 4 Jev calls in flight per process. Time spent waiting for a slot counts against the call's timeout.
+- A 429 or 529 is retried once. The wait is `retry-after-ms`, else `retry-after`, else 500 ms with 25% jitter, and the retry only happens when at least 1 s of the budget (3 s in orchestration, 10 s for the recorded intake) would be left. Otherwise, or when the retry also fails, the call fails as before and the rules decide.
+
+### Batching (point 10)
+
+`build_style` is no longer its own call. When a Do turn runs in a project with a build style, the intake batch asks it speculatively (`advisor/build-style-question.ts`), and `decideBuildStyle` reads that answer. Its `run_advice` row is `not_asked` with no tokens, like a route that reuses the intake's answer. Planned turns save one round trip.
+
+### Question phrasing (point 6)
+
+- Score levels describe situations: `quality` levels are `{ what, examples }` objects ("Only part of it was done: pieces the step asked for are missing or broken"), the effort Scores are `{ effort, when, note }` with a situation per level (for example "Routine work with an obvious approach"), and `complexity` levels no longer start with degree words. The meaning and order of every level are unchanged.
+- The transition state sends buckets instead of numbers: `stepsLeft` ("this was the last step", "one more step", "several more steps"), `retriesLeft` ("none left", "one left", "several left"), `findings` ("none", "a few", "many"), `filesChanged` ("none", "one file", "a few files", "many files") and `toolCalls` ("none", "a few", "many", "a great many"). The keys are the same; code still uses the numbers to decide which `next` options to offer.
+
+### Did the Builder do its steps? (opportunity 1)
+
+- After a Builder succeeds, the existing transition call also asks, for each step the markers would mark done: `step_not_done_N` ("Is there no sign in `reply` that `plan_step` was done?"), `step_left_N` (unfinished, skipped, failed or left for later) and `criterion_unmet_N_i` for up to three "Done when" items. The items come from the step's work order `acceptance` list; without a work order the step text is the contract. Every check is bad = true, and the step text and criteria sit in structured `instructions` with paths replaced by `[path]`. No new `state` fields are sent.
+- For each step the worst (highest) answer decides: 0.8 or more is open, 0.2 or less is done, anything between leaves the markers in charge. Jev can only reopen a step, never close one.
+- An open step continues the same Builder with the round-5 `continue` follow-up, the other steps of its span stay done, and the plan artifact shows the reopened steps in progress. Each such continuation uses one repair retry, so it cannot loop; with no retries left the markers decide as before.
+- The transition row records every step's worst answer and verdict (`answer.steps`, `answer.open`), and the summary adds "Jev: step 2 (0.86) not done".
+- This acts without a shadow period, which rule 7 of the opportunities file would ask for. Watch the transition rows for reopened steps that were in fact done.

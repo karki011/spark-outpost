@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { createDb } from '../../apps/server/src/persistence/db.ts';
 import { resetTestDatabase, testDatabaseUrl } from './database.ts';
 import { decorateLatestRun } from './home-seed.ts';
+import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
 
 const companion = (page: Page) => page.getByRole('button', { name: /^Status: / });
@@ -51,7 +52,7 @@ async function seedBusy() {
 test('the companion hides in an open chat and shows status on Home', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await seedBusy();
-  await page.goto('/');
+  await openChats(page);
   await expect(page.locator('.chat-title')).toBeVisible();
   await expect(companion(page)).toHaveCount(0);
 

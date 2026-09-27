@@ -21,6 +21,8 @@ export interface AgentUsage {
   durationMs: number;
   toolCalls: number;
   parallelGroup: string | null;
+  fileReads?: number;
+  rereads?: number;
 }
 
 export interface AskedItem {
@@ -132,6 +134,7 @@ export interface BenchRun {
     fixture: string;
     buildStyle?: string;
     lanes?: string;
+    handoff?: string;
   };
   results: CellResult[];
 }

@@ -92,10 +92,10 @@ test('first run goes through name, provider, defaults, and done, then opens the 
 
   await dialog(page).getByRole('button', { name: 'Open Spark Outpost' }).click();
   await expect(page.locator('.onb')).toHaveCount(0);
-  await expect(page.getByRole('navigation', { name: 'Chats' })).toBeVisible();
+  await expect(page.locator('#home-greet')).toBeVisible();
 
   await page.reload();
-  await expect(page.getByRole('navigation', { name: 'Chats' })).toBeVisible();
+  await expect(page.locator('#home-greet')).toBeVisible();
   await expect(page.locator('.onb')).toHaveCount(0);
 });
 

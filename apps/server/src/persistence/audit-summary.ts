@@ -43,6 +43,8 @@ interface RunAuditRow {
   log_entries: number;
   methods: string[];
   category: string | null;
+  file_reads: number | null;
+  rereads: number | null;
 }
 
 interface WaitRow {
@@ -83,6 +85,8 @@ function toRunSummary(row: RunAuditRow, approvalWaits: ApprovalWait[]): AuditRun
     parentRunId: row.parent_run_id,
     agentLabel: row.agent_label,
     category: categorySchema.safeParse(row.category).data ?? null,
+    ...(row.file_reads === null ? {} : { fileReads: row.file_reads }),
+    ...(row.rereads === null ? {} : { rereads: row.rereads }),
   };
 }
 
@@ -134,6 +138,7 @@ export async function conversationAuditRuns(
        r.cached_write_tokens, r.thought_tokens,
        COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS total_tokens,
        r.cost_usd::float8 AS cost_usd, r.cost_source,
+       (r.route->>'fileReads')::int AS file_reads, (r.route->>'rereads')::int AS rereads,
        r.protocol_log_pruned_at IS NOT NULL AS log_pruned,
        (SELECT count(*)::int FROM run_protocol_log l WHERE l.run_id = r.id) AS log_entries,
        ARRAY(SELECT DISTINCT l.method FROM run_protocol_log l

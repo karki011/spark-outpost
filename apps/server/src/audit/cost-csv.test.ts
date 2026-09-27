@@ -45,13 +45,18 @@ describe('cost CSV', () => {
     expect(lines[0]).toBe(
       'run_id,created_at,role,provider,model,effort,mode,status,input_tokens,output_tokens,' +
         'cached_read_tokens,cached_write_tokens,thinking_tokens,total_tokens,cost_usd,' +
-        'cost_source,duration_ms,tool_calls',
+        'cost_source,duration_ms,tool_calls,file_reads,rereads',
     );
     expect(lines[1]).toBe(
       `${first.runId},2026-09-26T10:00:00.000Z,Scout,codex,gpt-6-sol,high,ask,succeeded,` +
-        '1000,200,400,,50,1200,0.0032,estimated,1200,3',
+        '1000,200,400,,50,1200,0.0032,estimated,1200,3,,',
     );
     expect(lines[2]).toContain(',reported,');
+  });
+
+  it('adds the file reads and re-reads a crew member recorded', () => {
+    const csv = costCsv([run({ fileReads: 5, rereads: 2 })]);
+    expect(csv.split('\r\n')[1]).toMatch(/,3,5,2$/);
   });
 
   it('marks a run without a cost as not reported instead of guessing', () => {

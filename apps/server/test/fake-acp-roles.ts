@@ -28,7 +28,27 @@ function planStep(file: string, index: number, text: string): string {
   return `Update ${file} for step ${index + 1}${tag}`;
 }
 
+async function readTool(turn: RoleTurn, file: string, id: string): Promise<void> {
+  await turn.update({
+    sessionUpdate: 'tool_call',
+    toolCallId: id,
+    title: `Read \`${file}\``,
+    kind: 'read',
+    status: 'completed',
+  });
+}
+
+function workOrders(text: string): string {
+  if (!text.includes('#orders')) return '';
+  const orders = FAKE_PLAN_FILES.map(
+    (file, index) =>
+      `\n\n\`\`\`work-order\nSteps: ${index + 1}\nGoal: Update ${file} for step ${index + 1}\nChange: ${file}\nDecisions:\n- keep formatDay's signature\nAcceptance:\n- ${file} records step ${index + 1}\nChecks: npm test\nExcerpt: ${file}:1-2\nexport function formatDay(date: Date): string {\n  return date.toISOString();\n\`\`\``,
+  );
+  return orders.join('');
+}
+
 export async function architect(turn: RoleTurn): Promise<acp.StopReason> {
+  if (turn.text.includes('#orders')) await readTool(turn, 'src/dates.ts', 'plan-read-1');
   const entries = FAKE_PLAN_FILES.map((file, index) => ({
     content: planStep(file, index, turn.text),
     priority: index === 0 ? ('high' as const) : ('medium' as const),
@@ -48,7 +68,7 @@ export async function architect(turn: RoleTurn): Promise<acp.StopReason> {
     : '';
   const parallelChains = turn.text.includes('#parallelchains') ? '\nParallel chains: yes' : '';
   await turn.say(
-    `Plan ready with ${entries.length} steps.${edited ? ` Edited: ${edited}` : ''}${chains}${parallelChains}${notes}${hint}${large}`,
+    `Plan ready with ${entries.length} steps.${edited ? ` Edited: ${edited}` : ''}${chains}${parallelChains}${notes}${hint}${large}${workOrders(turn.text)}`,
   );
   return 'end_turn';
 }
@@ -184,6 +204,10 @@ async function ownTodos(turn: RoleTurn, steps: readonly { step: string }[]): Pro
 export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   if (turn.text.includes('## Conflicting changes to reconcile')) return reconcile(turn);
   const steps = ownSteps(turn.text);
+  if (turn.text.includes('#reads')) {
+    await readTool(turn, 'src/dates.ts', 'build-read-1');
+    await readTool(turn, 'src/extra.ts', 'build-read-2');
+  }
   if (turn.text.includes('#todos')) await ownTodos(turn, steps);
   const stopAfter = /#stopafter (\d+)/.exec(turn.text)?.[1];
   for (const { step, line } of steps) {
@@ -195,8 +219,13 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   const assumed = /assume the user means: (.+)/.exec(turn.text)?.[1];
   const built = steps.map(({ step }) => step).join(', ');
   const notes = turn.text.includes('## Notes from the Architect') ? ' Read the notes.' : '';
+  const order = turn.text.includes('## Work order') ? ' Had the work order.' : '';
   const heard = `${clarified ? ` Clarified: ${clarified}` : ''}${assumed ? ` Took it as: ${assumed}` : ''}`;
-  await turn.say(`Built step ${built}.${heard}${notes}`);
+  const planned = turn.text.includes('Plan approved; implement it now.')
+    ? ` Continued the plan after ${priorPrompts(turn.sessionId)} earlier prompts.`
+    : '';
+  const extra = turn.text.includes('#reads') ? '\nExtra files read: src/extra.ts (a helper)' : '';
+  await turn.say(`Built step ${built}.${heard}${notes}${order}${planned}${extra}`);
   return 'end_turn';
 }
 
@@ -275,6 +304,7 @@ async function continueSteps(turn: RoleTurn): Promise<acp.StopReason> {
 
 export function roleFor(text: string): ((turn: RoleTurn) => Promise<acp.StopReason>) | null {
   if (text.includes('You stopped before finishing')) return continueSteps;
+  if (text.includes('Plan approved; implement it now.')) return builder;
   if (text.includes('Role: Architect.')) return architect;
   if (text.includes('Role: Critic.') || text.includes('Review the next change')) return critic;
   if (text.includes('Role: Scout.')) return scout;

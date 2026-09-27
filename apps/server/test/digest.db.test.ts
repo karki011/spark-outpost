@@ -200,6 +200,36 @@ describe('home digest', () => {
     expect(result.digest?.error).toContain('#fail');
   });
 
+  it('waits for the worker to record a finished digest before calling it unfinished', async () => {
+    await connectClaude();
+    await chat('Fix the parser');
+    const started = await state(post('refresh'));
+    expect(started.digest?.status).toBe('running');
+    const digestRun = `id = (SELECT run_id FROM digests)`;
+
+    await t.db.query(`UPDATE runs SET status = 'failed', finished_at = now() WHERE ${digestRun}`);
+    expect((await state(post('open'))).digest?.status).toBe('running');
+
+    await t.db.query(
+      `UPDATE runs SET finished_at = now() - interval '2 minutes' WHERE ${digestRun}`,
+    );
+    expect((await state(post('open'))).digest).toMatchObject({
+      status: 'failed',
+      error: 'The digest did not finish. Try again.',
+    });
+  });
+
+  it('calls a digest unfinished when it has been running for over ten minutes', async () => {
+    await connectClaude();
+    await chat('Fix the parser');
+    await state(post('refresh'));
+    await t.db.query(`UPDATE digests SET created_at = created_at - interval '11 minutes'`);
+    expect((await state(post('open'))).digest).toMatchObject({
+      status: 'failed',
+      error: 'The digest did not finish. Try again.',
+    });
+  });
+
   it('rejects an unknown trigger', async () => {
     const response = await request(app)
       .post('/api/home/digest')

@@ -1,12 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'], catalog: true });
 });
 
 async function openModels(page: Page) {
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('dialog', { name: 'Profile' }).getByRole('tab', { name: 'Models' }).click();
   const dialog = page.getByRole('dialog', { name: 'Models' });

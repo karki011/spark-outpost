@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 const SHOTS = process.env.M2_SCREENSHOTS ?? '';
 const THEMES = [
@@ -48,7 +49,7 @@ async function shot(page: Page, name: string) {
 async function doChat(page: Page) {
   const response = await page.request.post('/api/projects', { data: { rootPath: appRoot } });
   expect(response.ok()).toBe(true);
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await page.locator('.ctx-repo').click();
   const menu = page.getByRole('dialog', { name: 'Project folders' });
@@ -236,6 +237,7 @@ test('Codex offers Do with its own copy and sandbox note', async ({ page }) => {
   await page.getByRole('button', { name: /^Model and effort/ }).click();
   const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
   await panel.getByRole('tab', { name: 'Codex' }).click();
+  await expect(panel.getByRole('tab', { name: 'Codex' })).toHaveAttribute('aria-selected', 'true');
   await panel.getByRole('tab', { name: /Permissions/ }).click();
   const codexDo = panel.getByRole('radio', { name: /^Do/ });
   await expect(codexDo).not.toHaveAttribute('aria-disabled', 'true');

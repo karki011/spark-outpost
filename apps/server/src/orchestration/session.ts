@@ -29,6 +29,8 @@ import type { JevPick, MemberRoute, RouteContext } from './routing.ts';
 import type { Slots } from './slots.ts';
 import type { LaneOptions, LanePlacement } from './placement.ts';
 import type { FlowState } from './transitions.ts';
+import type { PlanSessionChoice } from './plan-session.ts';
+import type { WorkOrder } from './work-orders.ts';
 
 export interface OrchestratorDeps extends ExecuteRunDeps {
   budget?: Partial<BudgetLimits>;
@@ -38,6 +40,12 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   parallelLimit?: number;
   agentSlots?: Slots;
   lanes?: LaneOptions;
+  handoff?: HandoffOptions;
+}
+
+export interface HandoffOptions {
+  workOrders?: boolean;
+  planSession?: boolean;
 }
 
 export interface MemberResult {
@@ -54,6 +62,7 @@ export interface MemberResult {
   steps: number[];
   ticked: number[];
   tools: string[];
+  reads?: string[];
   copyRunId?: string;
 }
 
@@ -101,6 +110,10 @@ export interface Session {
   buildStyleDecided: boolean;
   lanePlacement: LanePlacement | null;
   assumption: string | null;
+  workOrders?: WorkOrder[];
+  plannedCount?: number;
+  largeSteps?: number[];
+  planSession?: PlanSessionChoice | null;
 }
 
 export const COMMAND_READER_TOOL_CALL_LIMIT = 120;

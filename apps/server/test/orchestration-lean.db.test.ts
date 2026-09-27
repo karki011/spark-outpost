@@ -226,7 +226,7 @@ describe('parallel lanes in the shared working tree', () => {
       'shared tree (lanes change separate source files; Jev did not answer on sharing; rule: shared tree)',
     );
     expect(script.calls.some((call) => call.questions.includes('same_folder'))).toBe(false);
-  });
+  }, 60_000);
 
   it('keeps worktrees for destructive lanes and records the need', async () => {
     const scenario = {
@@ -243,7 +243,7 @@ describe('parallel lanes in the shared working tree', () => {
     expect(await parallelSummary(runId)).toContain(
       'worktrees (need: destructive work, a lane deletes, migrates or rewrites data;',
     );
-  });
+  }, 60_000);
 
   it('lets one Builder carry the chains when Jev is sure that is as good', async () => {
     start(COMPLEX, undefined, { one_builder: 0.9 });

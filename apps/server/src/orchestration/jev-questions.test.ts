@@ -83,6 +83,50 @@ describe('transition questions', () => {
     expect(redactPaths('see ./a/b.ts')).toBe('see [path]');
   });
 
+  it('sends counts as named buckets, never raw numbers', () => {
+    const asked = buildTransitionQuestions({
+      ...facts,
+      stepsLeft: 3,
+      retriesLeft: 1,
+      findings: 4,
+      filesChanged: 7,
+      toolCalls: 12,
+    });
+    expect(asked.state).toMatchObject({
+      stepsLeft: 'several more steps',
+      retriesLeft: 'one left',
+      findings: 'many',
+      filesChanged: 'many files',
+      toolCalls: 'many',
+    });
+    expect(buildTransitionQuestions(facts).state).toMatchObject({
+      stepsLeft: 'this was the last step',
+      retriesLeft: 'several left',
+      findings: 'none',
+      filesChanged: 'one file',
+      toolCalls: 'a few',
+    });
+    for (const value of Object.values(asked.state)) expect(typeof value).not.toBe('number');
+  });
+
+  it('describes quality and effort levels as situations, not degrees', () => {
+    const quality = buildTransitionQuestions(facts).questions.quality!.criteria as {
+      what: string;
+    }[];
+    expect(quality).toHaveLength(5);
+    const degrees = /\b(poor|fair|good|excellent|unusable|low|medium|high)\b/i;
+    for (const level of quality) expect(level.what).not.toMatch(degrees);
+    const routed = buildRouteQuestions('Fix it', [
+      { key: 'builder_0', role: 'builder', step: null, candidate },
+    ]);
+    const efforts = routed.questions.effort_builder_0!.criteria as {
+      effort: string;
+      when: string;
+    }[];
+    expect(efforts.map((level) => level.effort)).toEqual(['low', 'medium', 'high']);
+    for (const level of efforts) expect(level.when).not.toMatch(degrees);
+  });
+
   it('offers only the next steps that are possible', () => {
     expect(offeredNext(facts)).toEqual(['retry_up', 'review', 'finish']);
     expect(offeredNext({ ...facts, stepsLeft: 2, retriesLeft: 0, reviewed: true })).toEqual([

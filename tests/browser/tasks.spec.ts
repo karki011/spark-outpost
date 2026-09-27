@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 const PR_TITLE = 'spark-outpost/demo#42';
 
@@ -8,7 +9,7 @@ test.beforeEach(async () => {
 });
 
 async function sendPlannedTask(page: Page, content = 'Fix the date divider #plan') {
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(content);
@@ -70,7 +71,7 @@ test('a planned run shows a task card and the work panel with plan history and a
 
 test('a chit-chat reply has no task card and a follow-up joins the open task', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Just saying hello');

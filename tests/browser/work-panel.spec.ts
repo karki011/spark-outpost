@@ -10,6 +10,7 @@ import {
   type CrewRepo,
 } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 const SHOTS = process.env.FILES_SHOTS ?? '';
 
@@ -33,7 +34,7 @@ test('the work panel is wider by default, resizes from its edge and remembers th
 }) => {
   await resetTestDatabase({ onboarded: true });
   await page.setViewportSize({ width: 1400, height: 900 });
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
@@ -73,7 +74,7 @@ test('the work panel is wider by default, resizes from its edge and remembers th
 test('the work panel slides open and closed without moving the thread', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await page.setViewportSize({ width: 1600, height: 420 });
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');

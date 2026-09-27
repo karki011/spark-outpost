@@ -47,6 +47,29 @@ async function setRun(conversationId: string, status: string) {
   }
 }
 
+test('the app opens on Home and remembers the view the user chose', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedChats([{ title: 'Explain the checklist', run: { status: 'succeeded' } }]);
+  const rail = page.getByRole('navigation', { name: 'Main' });
+  await page.goto('/');
+  await expect(home(page)).toBeVisible();
+  await expect(rail.getByRole('button', { name: /^Home/ })).toHaveAttribute('aria-current', 'page');
+
+  await rail.getByRole('button', { name: /^Chats/ }).click();
+  await expect(page.getByRole('navigation', { name: 'Chats' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('navigation', { name: 'Chats' })).toBeVisible();
+  await expect(rail.getByRole('button', { name: /^Chats/ })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(home(page)).toHaveCount(0);
+
+  await page.evaluate(() => localStorage.setItem('spark-outpost.view', 'nowhere'));
+  await page.reload();
+  await expect(home(page)).toBeVisible();
+});
+
 test('the quiet Home greets by name and says nothing needs you', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await seedChats([{ title: 'Explain the checklist', run: { status: 'succeeded' } }]);

@@ -1,4 +1,5 @@
 import type { IntakeQuestions, SystemOneResponse } from '../advisor/intake-questions.ts';
+import { noulQuestion, type NoulQuestion } from '../advisor/questions.ts';
 import { noulVerdict, type NoulVerdict } from './parallel-choice.ts';
 import { laneChanges, sensitiveFiles, type LaneOptions } from './placement.ts';
 
@@ -30,28 +31,27 @@ export function laneQuestions(
   return {
     chains,
     questions: {
-      one_builder: {
-        type: 'noul',
-        instructions: `${ONE_BUILDER_QUESTION}: \`chains\` of \`task\`. Each extra Builder starts cold and has to read the code again, so parallel Builders only pay off when every chain is long.`,
-        criteria: {
-          yes: 'The chains are short; one Builder in sequence would finish about as soon for less',
-          no: 'Each chain is long enough that parallel Builders finish clearly sooner',
+      one_builder: noulQuestion(
+        `${ONE_BUILDER_QUESTION}: \`chains\` of \`task\`. Each extra Builder starts cold and has to read the code again, so parallel Builders only pay off when every chain is long.`,
+        {
+          true: 'The chains are short; one Builder in sequence would finish about as soon for less',
+          false: 'Each chain is long enough that parallel Builders finish clearly sooner',
         },
-      },
+      ),
       ...(sensitive ? { same_folder: sameFolderQuestion() } : {}),
     },
   };
 }
 
-function sameFolderQuestion(): Record<string, unknown> {
-  return {
-    type: 'noul',
-    instructions: `${SAME_FOLDER_QUESTION}: \`chains\` of \`task\`, each with the files it changes and any manifests, lockfiles or generated files among them. Sharing the folder is unsafe when one chain installs packages, regenerates files, reformats the whole project, or changes files the other reads.`,
-    criteria: {
-      yes: 'The chains change separate files and nothing they run touches the other’s files',
-      no: 'They could step on each other: shared manifests, installs, generated files or overlapping edits',
+function sameFolderQuestion(): NoulQuestion {
+  return noulQuestion(
+    `${SAME_FOLDER_QUESTION}: \`chains\` of \`task\`, each with the files it changes and any manifests, lockfiles or generated files among them. Sharing the folder is unsafe when one chain installs packages, regenerates files, reformats the whole project, or changes files the other reads.`,
+    {
+      true: 'The chains change separate files and nothing they run touches the other’s files',
+      false:
+        'They could step on each other: shared manifests, installs, generated files or overlapping edits',
     },
-  };
+  );
 }
 
 function verdict(response: SystemOneResponse | null, key: string): NoulVerdict | null {

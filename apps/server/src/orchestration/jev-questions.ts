@@ -17,6 +17,7 @@ import {
   type IntakeQuestions,
   type SystemOneResponse,
 } from '../advisor/intake-questions.ts';
+import { effortLevels } from '../advisor/questions.ts';
 
 export const STEP_CHARACTERS = 300;
 export const REPLY_CHARACTERS = 1_000;
@@ -40,10 +41,6 @@ export interface RoutePick {
   model: AdvisorOption | null;
   effort: string | null;
   confidence: number | null;
-}
-
-function describe(option: AdvisorOption): string {
-  return option.description ? `${option.label}: ${option.description}` : option.label;
 }
 
 export function buildRouteQuestions(task: string, slots: readonly RouteSlot[]): IntakeQuestions {
@@ -74,7 +71,7 @@ export function buildRouteQuestions(task: string, slots: readonly RouteSlot[]): 
           slot.candidate,
           `How much reasoning effort does \`work.${slot.key}\` need?`,
         ),
-        criteria: slot.candidate.efforts.map(describe),
+        criteria: effortLevels(slot.candidate.efforts),
       };
     }
   }
@@ -144,12 +141,57 @@ const NEXT_CRITERIA: Record<TransitionNext, string> = {
 };
 
 export const QUALITY_CRITERIA = [
-  'Unusable: wrong or missing',
-  'Poor: major gaps',
-  'Fair: works with notable issues',
-  'Good: minor issues only',
-  'Excellent: complete and careful',
+  {
+    what: 'The work was not done: the agent failed, changed nothing useful, or changed the wrong thing',
+    examples: [
+      'the reply reports an error it could not get past',
+      'the verdict rejects the change',
+    ],
+  },
+  {
+    what: 'Only part of it was done: pieces the step asked for are missing or broken',
+    examples: ['a function added but never called', 'the reply lists work it did not get to'],
+  },
+  {
+    what: 'It was done and works, but the reply or the review names problems that still need fixing',
+    examples: ['a failing edge case is mentioned', 'the verdict asks for changes'],
+  },
+  {
+    what: 'It was done and works; only small follow-ups remain, such as naming or one more test',
+    examples: ['the review has minor comments only'],
+  },
+  {
+    what: 'It was done completely and checked, and nothing is left to fix',
+    examples: ['the reply says checks pass and the review found nothing'],
+  },
 ];
+
+export function stepsLeftBucket(count: number): string {
+  if (count === 0) return 'this was the last step';
+  return count === 1 ? 'one more step' : 'several more steps';
+}
+
+export function retriesLeftBucket(count: number): string {
+  if (count === 0) return 'none left';
+  return count === 1 ? 'one left' : 'several left';
+}
+
+export function findingsBucket(count: number): string {
+  if (count === 0) return 'none';
+  return count <= 2 ? 'a few' : 'many';
+}
+
+export function filesChangedBucket(count: number): string {
+  if (count === 0) return 'none';
+  if (count === 1) return 'one file';
+  return count <= 5 ? 'a few files' : 'many files';
+}
+
+export function toolCallsBucket(count: number): string {
+  if (count === 0) return 'none';
+  if (count <= 10) return 'a few';
+  return count <= 40 ? 'many' : 'a great many';
+}
 
 export function offeredNext(facts: TransitionFacts): TransitionNext[] {
   return transitionNextSchema.options.filter((next) => {
@@ -169,12 +211,12 @@ export function buildTransitionQuestions(facts: TransitionFacts): IntakeQuestion
       step: facts.step ? redactPaths(facts.step).slice(0, STEP_CHARACTERS) : null,
       outcome: facts.outcome,
       reply: redactPaths(facts.reply).slice(-REPLY_CHARACTERS),
-      stepsLeft: facts.stepsLeft,
-      retriesLeft: facts.retriesLeft,
+      stepsLeft: stepsLeftBucket(facts.stepsLeft),
+      retriesLeft: retriesLeftBucket(facts.retriesLeft),
       verdict: facts.verdict,
-      findings: facts.findings,
-      filesChanged: facts.filesChanged,
-      toolCalls: facts.toolCalls,
+      findings: findingsBucket(facts.findings),
+      filesChanged: filesChangedBucket(facts.filesChanged),
+      toolCalls: toolCallsBucket(facts.toolCalls),
     },
     questions: {
       status: {
@@ -184,7 +226,8 @@ export function buildTransitionQuestions(facts: TransitionFacts): IntakeQuestion
       },
       quality: {
         type: 'score',
-        instructions: 'How good is the work, judged from `reply`, `verdict` and the counts?',
+        instructions:
+          'Which situation fits the work, judged from `reply`, `verdict`, `findings` and `filesChanged`?',
         criteria: QUALITY_CRITERIA,
       },
       next: {

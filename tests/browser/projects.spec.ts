@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 let base = '';
 let appRoot = '';
@@ -30,7 +31,7 @@ test.beforeEach(async () => {
 });
 
 async function newChat(page: Page) {
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
   await expect(input).toBeFocused();

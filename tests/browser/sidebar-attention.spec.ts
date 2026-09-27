@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedChats, type SeedApproval } from './sidebar-seed.ts';
+import { openChats } from './navigation.ts';
 
 const SHOTS = process.env.WAIT_SHOTS ?? '';
 
@@ -54,7 +55,7 @@ test('rows say whether a chat wants permission, input, or a review', async ({ pa
       minutesAgo: 60 + index,
     })),
   ]);
-  await page.goto('/');
+  await openChats(page);
   await expect(page.locator('.chat-title')).toHaveText('Current chat');
 
   await expect(row(page, 'Run the suite')).toHaveClass(/st-permission/);
@@ -100,7 +101,7 @@ test('the attention card jumps to the waiting card in that chat', async ({ page 
       approval: { kind: 'execute', title: 'Deploy', command: 'pnpm deploy' },
     },
   ]);
-  await page.goto('/');
+  await openChats(page);
   await expect(page.locator('.chat-title')).toHaveText('Current chat');
   await expect(page).toHaveTitle('(1) Spark Outpost');
 
@@ -121,7 +122,7 @@ test('several waiting chats open into a list, and each one jumps to its chat', a
     { title: 'Run the suite', run: { status: 'awaiting_approval' }, approval: runTests },
     { title: 'Pick a heading', run: { status: 'awaiting_approval' }, approval: question },
   ]);
-  await page.goto('/');
+  await openChats(page);
   const summary = sidebar(page).getByRole('button', { name: '2 chats need you' });
   await expect(summary).toHaveAttribute('aria-expanded', 'false');
   await summary.click();

@@ -45,7 +45,21 @@ describe('context assembly', () => {
 
       A chain only gets its own Builder when it is large: two or more of its steps (or its only step) take more than about 20 seconds each, or it changes five or more files. Smaller chains are done in order by one Builder. Add a line such as "Large: 2, 3" naming the steps you expect to take that long. When you name chains, add "Parallel chains: yes" if separate Builders should do them at the same time, or "Parallel chains: no" if one Builder doing them in order is as good.
 
-      Finally, write a "Notes for Builders:" line followed by what the Builders need so they do not re-read the files you read: exact signatures, import lines and short excerpts, each with its file path. Keep the notes under 3,000 characters.
+      Finally, write one work order per step, or one per chain, so its Builder can start from what you already read instead of re-reading the code. Use a fenced block in exactly this shape:
+      \`\`\`work-order
+      Steps: 1-2
+      Goal: one sentence
+      Change: src/a.ts, src/b.ts
+      Read: src/c.ts
+      Decisions:
+      - a decision or constraint the Builder must keep
+      Acceptance:
+      - a criterion a reviewer can check against the diff
+      Checks: the commands that must pass
+      Excerpt: src/c.ts:10-24
+      the exact lines you read, copied as they are
+      \`\`\`
+      Change lists only the files the steps create or change; Read lists files the Builder only needs to look at. Put excerpts last, one "Excerpt: path:start-end" line each, and include only what the Builder needs: signatures, import lines and the code being changed. Keep each work order under 6,000 characters.
 
       ## Request
       Move date handling

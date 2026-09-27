@@ -22,6 +22,7 @@ import { ModelList } from './ModelList.tsx';
 import { PermissionOptions } from './PermissionOptions.tsx';
 import { PickerNav, type PickerRow, type PickerSection } from './PickerNav.tsx';
 import { ProviderSwitch } from './ProviderSwitch.tsx';
+import { ExitingInert } from './ExitingInert.tsx';
 import { autoThisTurn, autoWouldHaveUsed } from '../../crew/auto-route.ts';
 import { buttonLabel, currentModel, selectableEfforts, shortLabel } from './model-options.ts';
 import './model-picker.css';
@@ -238,40 +239,42 @@ export function ModelPicker({
                   exit={{ opacity: 0, y: -10 * direction }}
                   transition={reveal}
                 >
-                  {activeSection === 'model' && setup && (
-                    <ModelList
-                      provider={setup}
-                      capabilities={capabilities}
-                      loading={queryFor(provider)?.isFetching ?? false}
-                      selected={model?.id ?? null}
-                      onSelect={(next) =>
-                        update.mutate(
-                          jevConnected ? { model: next, routing: 'pinned' } : { model: next },
-                        )
-                      }
-                      routing={settings.routing ?? 'pinned'}
-                      onAuto={jevConnected ? () => update.mutate({ routing: 'auto' }) : null}
-                      hint={hint}
-                    />
-                  )}
-                  {activeSection === 'effort' && (
-                    <EffortOptions
-                      efforts={efforts}
-                      selected={settings.effort}
-                      onSelect={(next) => update.mutate({ effort: next })}
-                    />
-                  )}
-                  {activeSection === 'permission' && setup && (
-                    <PermissionOptions
-                      provider={provider}
-                      choices={setup.permissions}
-                      selected={settings.permission}
-                      level={settings.level}
-                      hasRepos={hasRepos}
-                      onSelect={(next) => update.mutate({ permission: next })}
-                      onLevel={(next) => update.mutate({ level: next })}
-                    />
-                  )}
+                  <ExitingInert>
+                    {activeSection === 'model' && setup && (
+                      <ModelList
+                        provider={setup}
+                        capabilities={capabilities}
+                        loading={queryFor(provider)?.isFetching ?? false}
+                        selected={model?.id ?? null}
+                        onSelect={(next) =>
+                          update.mutate(
+                            jevConnected ? { model: next, routing: 'pinned' } : { model: next },
+                          )
+                        }
+                        routing={settings.routing ?? 'pinned'}
+                        onAuto={jevConnected ? () => update.mutate({ routing: 'auto' }) : null}
+                        hint={hint}
+                      />
+                    )}
+                    {activeSection === 'effort' && (
+                      <EffortOptions
+                        efforts={efforts}
+                        selected={settings.effort}
+                        onSelect={(next) => update.mutate({ effort: next })}
+                      />
+                    )}
+                    {activeSection === 'permission' && setup && (
+                      <PermissionOptions
+                        provider={provider}
+                        choices={setup.permissions}
+                        selected={settings.permission}
+                        level={settings.level}
+                        hasRepos={hasRepos}
+                        onSelect={(next) => update.mutate({ permission: next })}
+                        onLevel={(next) => update.mutate({ level: next })}
+                      />
+                    )}
+                  </ExitingInert>
                 </motion.div>
               </AnimatePresence>
             </div>

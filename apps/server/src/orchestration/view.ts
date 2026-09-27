@@ -31,6 +31,9 @@ export interface StoredRoute {
   parallelGroup?: string | null;
   copy?: string | null;
   sameProvider?: boolean;
+  fileReads?: number;
+  rereads?: number;
+  extraReads?: string;
 }
 
 export interface MemberRow {

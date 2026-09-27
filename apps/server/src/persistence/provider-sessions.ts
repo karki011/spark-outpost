@@ -254,6 +254,7 @@ export async function handOverSession(
   conversationId: string,
   fromKey: string,
   toKey: string,
+  settingsHash: string | null = null,
 ): Promise<boolean> {
   return withTransaction(db, async (client) => {
     await client.query(
@@ -262,9 +263,9 @@ export async function handOverSession(
       [conversationId, toKey, 'replaced'],
     );
     const { rowCount } = await client.query(
-      `UPDATE provider_sessions SET agent_key = $3
+      `UPDATE provider_sessions SET agent_key = $3, settings_hash = COALESCE($4, settings_hash)
        WHERE conversation_id = $1 AND agent_key = $2 AND closed_at IS NULL`,
-      [conversationId, fromKey, toKey],
+      [conversationId, fromKey, toKey, settingsHash],
     );
     return (rowCount ?? 0) > 0;
   });

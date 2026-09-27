@@ -2,6 +2,7 @@ import {
   adviceSummarySchema,
   CATEGORY_CONFIDENCE_FLOOR,
   type AdviceBody,
+  type BuildStyle,
   type Category,
   type RunEvent,
 } from '@spark-outpost/contracts';
@@ -19,7 +20,7 @@ import {
   parseIntakeAnswers,
   type IntakeQuestions,
 } from './intake-questions.ts';
-import { askSystemOne, JEV_TIMEOUT_MS, jevUsage } from './jev.ts';
+import { askSystemOne, JEV_TIMEOUT_MS, jevUsage, requestModel } from './jev.ts';
 
 type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
 
@@ -54,8 +55,9 @@ function failure(error: unknown): { status: 'failed' | 'timed_out'; error: strin
 export async function askJev(
   deps: IntakeDeps,
   request: IntakeRequest,
-  model: string,
+  alias: string,
 ): Promise<JevOutcome> {
+  const model = requestModel(alias);
   const apiKey = await deps.secrets.get('jev').catch(() => null);
   if (!apiKey) return { status: 'failed', error: MISSING_KEY, model, asked: null, latencyMs: null };
   let asked: IntakeQuestions | null = null;
@@ -76,7 +78,7 @@ export async function askJev(
     const intake = parseIntakeAnswers(request, asked, response);
     return {
       status: 'answered',
-      model,
+      model: response.model,
       asked,
       response,
       intake,
@@ -96,7 +98,11 @@ async function announce(append: Append, body: AdviceBody): Promise<void> {
   }
 }
 
-export function intakeRequest(input: RunInput, context: IntakeContext): IntakeRequest {
+export function intakeRequest(
+  input: RunInput,
+  context: IntakeContext,
+  buildStyle?: BuildStyle,
+): IntakeRequest {
   return {
     task: input.prompt,
     mode: input.mode ?? 'chat',
@@ -111,6 +117,7 @@ export function intakeRequest(input: RunInput, context: IntakeContext): IntakeRe
     },
     level: input.level,
     routing: context.routing,
+    ...(buildStyle ? { buildStyle } : {}),
   };
 }
 
@@ -130,9 +137,10 @@ export async function recordIntake(
   deps: IntakeDeps,
   input: RunInput,
   append: Append,
+  buildStyle?: BuildStyle,
 ): Promise<IntakeResult> {
   const context = await loadIntakeContext(deps.db, input.workspaceId, input.identity.threadId);
-  const request = intakeRequest(input, context);
+  const request = intakeRequest(input, context, buildStyle);
   const outcome = context.jevModel
     ? await askJev(deps, request, context.jevModel)
     : ({ status: 'not_connected' } as const);

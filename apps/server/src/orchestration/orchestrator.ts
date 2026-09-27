@@ -44,7 +44,9 @@ import { collectedReview } from './reviews.ts';
 import { sequentialReason } from './parallel.ts';
 import { markPlanStep, markPlanSteps, statusAfterJudging } from './plan-progress.ts';
 import type { RouteContext } from './routing.ts';
+import type { ProjectStyle } from './lean.ts';
 import { Slots } from './slots.ts';
+import { spanOf } from './spans.ts';
 import { baseLimits, publish, save, type OrchestratorDeps, type Session } from './session.ts';
 import { closeKeyedSessions, SESSION_CLOSE_REASONS } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
@@ -59,9 +61,11 @@ async function decideIntake(
   deps: OrchestratorDeps,
   input: RunInput,
   append: Append,
+  projectStyle: ProjectStyle,
 ): Promise<IntakeResult> {
   if (deps.intake) {
-    return recordIntake({ ...deps.intake.deps, timeoutMs: jevTimeout(deps) }, input, append);
+    const timeoutMs = jevTimeout(deps);
+    return recordIntake({ ...deps.intake.deps, timeoutMs }, input, append, projectStyle.style);
   }
   const context = await loadIntakeContext(deps.db, input.workspaceId, input.identity.threadId);
   const body = adviceBody(intakeRequest(input, context), { status: 'not_connected' });
@@ -217,8 +221,13 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
   let session: Session | null = null;
   try {
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
-    const intake = await decideIntake(deps, input, append);
     const mode = input.mode ?? 'chat';
+    const root = input.projectRoots[0];
+    const projectStyle =
+      mode === 'do' && root !== undefined
+        ? await projectBuildStyle(deps.db, lease.runId)
+        : NO_PROJECT_STYLE;
+    const intake = await decideIntake(deps, input, append, projectStyle);
     const risk = trustedRisk(mode, intake.body.jev);
     const intakeGate = intake.body.gate?.decision ?? null;
     const requestFiles = namedFiles([input.userRequest]).length;
@@ -246,7 +255,6 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       input.history.length === 0 &&
       isVagueRequest(input.userRequest, requestFiles, intake.body.jev);
     const limits = baseLimits(deps, input.provider);
-    const root = input.projectRoots[0];
     const worktrees = mode === 'do' && root !== undefined && (await isGitWorkTree(root));
     await insertOrchestration(deps.db, {
       runId: lease.runId,
@@ -306,10 +314,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       checkRounds: 0,
       checkBodies: [],
       reviews: null,
-      projectStyle:
-        mode === 'do' && root !== undefined
-          ? await projectBuildStyle(deps.db, lease.runId)
-          : NO_PROJECT_STYLE,
+      projectStyle,
       buildStyle: 'off',
       buildStyleDecided: false,
       lanePlacement: null,
@@ -399,12 +404,21 @@ async function noteSequential(s: Session): Promise<void> {
   await save(s, { parallelNote: note });
 }
 
+function reopenedSteps(event: FlowEvent, action: FlowAction): number[] {
+  if (event.type !== 'judged' || !event.open || event.open.length === 0) return [];
+  if (action.type !== 'spawn' || action.reason !== 'continue') return [];
+  return spanOf(action);
+}
+
 async function recordStepOutcome(s: Session, event: FlowEvent, action: FlowAction) {
   const last = s.results.at(-1);
   const status = statusAfterJudging(event, action, last);
   if (!last || !status) return;
   if (status === 'completed') {
-    await markPlanSteps(s, last.steps, status, last.runId);
+    const reopened = reopenedSteps(event, action);
+    const done = last.steps.filter((index) => !reopened.includes(index));
+    await markPlanSteps(s, done, status, last.runId);
+    if (reopened.length > 0) await markPlanSteps(s, reopened, 'in_progress', last.runId);
     return;
   }
   const open = last.steps.find((index) => !last.ticked.includes(index)) ?? last.stepIndex;

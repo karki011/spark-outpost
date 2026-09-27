@@ -2,7 +2,7 @@ import type { AdviceUsage, JevStatus } from '@spark-outpost/contracts';
 import { AdvisorError, AdvisorTimeoutError } from '../advisor/advice.ts';
 import type { IntakeQuestions, SystemOneResponse } from '../advisor/intake-questions.ts';
 import type { IntakeDeps } from '../advisor/intake-recorder.ts';
-import { askSystemOne, jevUsage } from '../advisor/jev.ts';
+import { askSystemOne, jevUsage, requestModel } from '../advisor/jev.ts';
 
 export const ORCHESTRATION_JEV_TIMEOUT_MS = 3_000;
 
@@ -37,7 +37,7 @@ export async function callJev(
   signal: AbortSignal,
 ): Promise<JevCall> {
   if (!access) return notConnected;
-  const base = { ...notConnected, model: access.model };
+  const base = { ...notConnected, model: requestModel(access.model) };
   const apiKey = await access.deps.secrets.get('jev').catch(() => null);
   if (!apiKey)
     return { ...base, status: 'failed', error: 'The Jev key is missing from the keychain.' };
@@ -59,6 +59,7 @@ export async function callJev(
     return {
       ...base,
       status: 'answered',
+      model: response.model,
       asked,
       response,
       latencyMs: Date.now() - startedAt,

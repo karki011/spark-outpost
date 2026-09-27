@@ -40,6 +40,7 @@ function priceOf(pick: AgentPick) {
 export function switchEstimate(
   session: ResumableSession,
   next: AgentPick,
+  outputTokens = EXPECTED_TURN_OUTPUT_TOKENS,
 ): { cacheLossUsd: number; savingUsd: number } | null {
   const before = priceOf(session.pick);
   const after = priceOf(next);
@@ -47,8 +48,7 @@ export function switchEstimate(
   const tokens = session.contextTokens;
   const cacheLossUsd =
     (tokens * (after.inputPerMillion - before.cachedInputPerMillion)) / 1_000_000;
-  const savingUsd =
-    (EXPECTED_TURN_OUTPUT_TOKENS * (before.outputPerMillion - after.outputPerMillion)) / 1_000_000;
+  const savingUsd = (outputTokens * (before.outputPerMillion - after.outputPerMillion)) / 1_000_000;
   return { cacheLossUsd: Math.max(0, cacheLossUsd), savingUsd };
 }
 

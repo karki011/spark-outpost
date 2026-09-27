@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
+import { openChats } from './navigation.ts';
 
 const SHOTS = process.env.FILES_SHOTS ?? '';
 
@@ -28,7 +29,7 @@ async function shot(page: Page, name: string) {
 async function editedChat(page: Page) {
   const response = await page.request.post('/api/projects', { data: { rootPath: appRoot } });
   expect(response.ok()).toBe(true);
-  await page.goto('/');
+  await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await page.locator('.ctx-repo').click();
   const menu = page.getByRole('dialog', { name: 'Project folders' });
