@@ -1,6 +1,6 @@
 # Routing plan
 
-> **Status: rollout step 1 (shadow) built on September 27, 2026.** The code scan (step 0), the two-stage Jev file ranking and the route question run for every Do task and are recorded next to the rule route (`run_advice` purposes `scan`, `rank` and `route_shadow`; the `routing_labels` view; `pnpm routing:labels`). The Builder still runs on the rules in `orchestration/routing.ts` and `risk-rules.ts`. Results: [routing-shadow-2026-09-27.md](../benchmarks/routing-shadow-2026-09-27.md).
+> **Status: rollout step 1 (shadow) built on September 27, 2026.** The code scan (step 0), the Jev file ranking and the route question run for every Do task and are recorded next to the rule route (`run_advice` purposes `scan`, `rank` and `route_shadow`; the `routing_labels` view; `pnpm routing:labels`). The Builder still runs on the rules in `orchestration/routing.ts` and `risk-rules.ts`. Results: [routing-shadow-2026-09-27.md](../benchmarks/routing-shadow-2026-09-27.md).
 
 This plan replaces keyword routing with a Jev decision that uses codebase evidence, and then checks the result before paying for a stronger model. It draws on six routers read in full, including their code, fixtures and studies.
 
@@ -44,7 +44,7 @@ Jev intake (built)            question · vague · review · destructive · cont
 Code scan (new, local)        identifiers → ripgrep → symbols → up to 255 candidate files
   │
   ▼
-Jev file ranking (new)        two-stage Choice: shortlist → rerank top files
+Jev file ranking (new)        one Choice over the candidates (the rerank was dropped)
   │
   ▼
 Policy in code                pin > destructive → top > budget > one candidate
@@ -115,7 +115,7 @@ Nothing reads file contents into the Jev state, and nothing runs project code (n
 2. **Search live with ripgrep:** which files contain them, and how often.
 3. **Look up the symbol cache:** where each name is defined, and how many files reference it (one file or 40).
 4. **Add git and workspace signals:** the user's uncommitted files, files changed together recently, churn, and which packages the matches fall in.
-5. **Rank:** the reference-graph score plus the matches, up to 255 candidate files. Jev's two-stage Choice then picks the top files (a shortlist, then a rerank).
+5. **Rank:** the reference-graph score plus the matches, up to 255 candidate files. Jev's Choice then orders the top files. A second rerank Choice was built and dropped: in the first live run it never changed the top file (see the shadow benchmark).
 
 Steps 1–4 are plain local code and cost no model tokens.
 

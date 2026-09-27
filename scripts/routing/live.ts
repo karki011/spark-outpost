@@ -25,6 +25,7 @@ const { values } = parseArgs({
     'run-cap': { type: 'string', default: '0.3' },
     'total-cap': { type: 'string', default: '2.6' },
     skip: { type: 'string', default: '0' },
+    'timeout-min': { type: 'string', default: '8' },
     check: { type: 'string', multiple: true, default: [] },
   },
 });
@@ -163,7 +164,7 @@ async function main() {
       });
       const chat = { conversationId, projectId, repo };
       const outcome = await sendApiTurn(client, chat, request, {
-        timeoutMs: 8 * 60_000,
+        timeoutMs: Number(values['timeout-min']) * 60_000,
         cancelAfterBuilderMs: null,
         builderStartedAt: async () => null,
       });

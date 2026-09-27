@@ -85,7 +85,7 @@ export class Api {
   }
 
   async cancel(runId: string): Promise<void> {
-    await this.call('POST', `/runs/${runId}/cancel`).catch(() => undefined);
+    await this.call('POST', `/runs/${runId}/cancel`, {}).catch(() => undefined);
   }
 
   async startFresh(conversationId: string): Promise<void> {
