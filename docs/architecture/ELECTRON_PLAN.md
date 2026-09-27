@@ -51,6 +51,32 @@ The code scan, worktrees and Ship all need git. The app detects it at startup an
 - **tree-sitter** (`web-tree-sitter` + `@vscode/tree-sitter-wasm`): WebAssembly, no rebuild for Electron.
 - **Postgres**: per-platform binaries, as above.
 
+### Isolation: the app you use vs the app you build
+
+The user works in the installed app every day while developing Spark Outpost. Nothing a dev build, a test or an agent does may touch the installed app's data. Each copy runs as its own **channel**:
+
+|                    | Installed app                           | Dev app (from a worktree)                             | Web dev stack (`pnpm dev`)        | Tests                 |
+| ------------------ | --------------------------------------- | ----------------------------------------------------- | --------------------------------- | --------------------- |
+| Name and app ID    | Spark Outpost                           | Spark Outpost Dev (own app ID, "DEV" badge, own icon) | –                                 | –                     |
+| Data folder        | `…/Application Support/Spark Outpost`   | `…/Application Support/Spark Outpost Dev`             | `.local/` in the checkout         | temp folders          |
+| Database           | bundled Postgres, own data dir and port | own bundled Postgres, own data dir and port           | `spark_outpost`                   | `spark_outpost_test*` |
+| API port and token | random, per launch                      | random, per launch                                    | configured port, per-launch token | per test              |
+| Keychain entries   | `Spark Outpost` service                 | `Spark Outpost Dev` service                           | dev service name                  | none (fake keys)      |
+| Link scheme        | `spark-outpost://`                      | `spark-outpost-dev://`                                | –                                 | –                     |
+| Updates            | auto-update                             | never                                                 | –                                 | –                     |
+
+Shared on purpose: the Claude and Codex CLI logins (the same accounts), and the user's repositories.
+
+Because both apps can work in the same repositories:
+
+- **Branches and worktrees are named per channel** (`spark/…` vs `spark-dev/…`), and each channel keeps its worktrees under its own data folder, so neither can remove or merge the other's.
+- **A repo busy in the other channel is detected** through a lock file in `.git/` naming the channel and run, so the dev app starts its task in a worktree instead of editing the same checkout.
+- **Live tests that change files** run only in throwaway repos or copies, as today.
+
+Testing with real data: the dev app can **import a copy** of the installed app's database (a one-way `pg_dump` → restore into the dev database), and it never writes back. API keys are not copied; the dev app asks for its own, or reads the installed app's keychain entries only after the user confirms.
+
+The rule for every new feature: anything that stores data, opens a port, names a branch or registers something with the OS takes its name from the channel.
+
 ## Decide when we package
 
 | Decision                                                     | Recommendation                                                                                                           |
