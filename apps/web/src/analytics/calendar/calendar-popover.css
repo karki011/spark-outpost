@@ -13,9 +13,10 @@
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
   transform-origin: top right;
   animation: an-cal-in 0.2s var(--out);
-  width: min(820px, calc(100vw - 24px));
+  width: max-content;
+  max-width: calc(100vw - 24px);
   max-height: min(560px, calc(100vh - 120px));
-  padding: 14px 16px 12px;
+  padding: 12px 12px 10px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -25,23 +26,23 @@
 .an-cal-body {
   display: flex;
   flex-wrap: nowrap;
-  gap: 16px;
+  gap: 12px;
 }
 
 .an-cal-presets {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 130px;
-  padding-right: 12px;
+  gap: 2px;
+  min-width: 108px;
+  padding-right: 10px;
   border-right: 1px solid var(--line);
 }
 
 .an-cal-preset {
-  padding: 7px 10px;
+  padding: 6px 8px;
   border-radius: var(--r-sm);
   color: var(--text);
-  font-size: 13px;
+  font-size: 12.5px;
   text-align: left;
   white-space: nowrap;
 }
@@ -72,12 +73,17 @@
   --rdp-range_end-background: var(--accent-soft);
   --rdp-range_end-color: var(--accent-ink);
   --rdp-range_end-date-background-color: var(--accent);
-  --rdp-nav_button-width: 32px;
-  --rdp-nav_button-height: 32px;
+  --rdp-nav_button-width: 28px;
+  --rdp-nav_button-height: 28px;
   --rdp-animation_duration: 0.2s;
   --rdp-months-gap: 20px;
+  --rdp-day-width: 34px;
+  --rdp-day-height: 34px;
+  --rdp-day_button-width: 32px;
+  --rdp-day_button-height: 32px;
+  --rdp-nav-height: 32px;
   color: var(--text);
-  font-size: 13.5px;
+  font-size: 13px;
 }
 
 .an-cal-grid .rdp-months {

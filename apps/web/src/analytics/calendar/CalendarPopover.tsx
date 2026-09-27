@@ -20,20 +20,6 @@ interface CalendarPopoverProps {
   id: string;
 }
 
-function useIsNarrow(breakpoint = 640): boolean {
-  const [narrow, setNarrow] = useState(
-    () => typeof matchMedia === 'function' && matchMedia(`(max-width: ${breakpoint}px)`).matches,
-  );
-  useEffect(() => {
-    if (typeof matchMedia !== 'function') return;
-    const media = matchMedia(`(max-width: ${breakpoint}px)`);
-    const onChange = () => setNarrow(media.matches);
-    media.addEventListener('change', onChange);
-    return () => media.removeEventListener('change', onChange);
-  }, [breakpoint]);
-  return narrow;
-}
-
 function focusableIn(container: HTMLElement): HTMLElement[] {
   return [
     ...container.querySelectorAll<HTMLElement>(
@@ -51,7 +37,6 @@ export function CalendarPopover({
   panelRef,
   id,
 }: CalendarPopoverProps) {
-  const narrow = useIsNarrow();
   const headingId = useId();
   const [draft, setDraft] = useState<DateRange | undefined>({
     from: parseIsoLocal(from),
@@ -132,11 +117,10 @@ export function CalendarPopover({
         </div>
         <DayPicker
           mode="range"
-          numberOfMonths={narrow ? 1 : 2}
           selected={draft}
           onSelect={setDraft}
           disabled={disabled}
-          defaultMonth={draft?.from ?? parseIsoLocal(today)}
+          defaultMonth={draft?.to ?? draft?.from ?? parseIsoLocal(today)}
           today={parseIsoLocal(today)}
           showOutsideDays
           fixedWeeks
