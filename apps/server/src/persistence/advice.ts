@@ -12,10 +12,9 @@ import {
 } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
 import { advisorEntry, catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
+import { reportedEfforts } from '../providers/efforts.ts';
 import { listModelStats } from './model-stats.ts';
 import type { Queryable } from './db.ts';
-
-const AGENT_DEFAULT = 'default';
 
 export async function insertAdvice(db: Queryable, runId: string, body: AdviceBody): Promise<void> {
   await db.query(
@@ -120,6 +119,7 @@ interface CandidateRow {
   models: ProviderModel[];
   capability_models: CapabilityOption[] | null;
   capability_efforts: CapabilityOption[] | null;
+  effort: string | null;
 }
 
 function toCandidate(row: CandidateRow & { provider: ProviderId }): AdvisorCandidate {
@@ -129,10 +129,7 @@ function toCandidate(row: CandidateRow & { provider: ProviderId }): AdvisorCandi
     reportedModels.length > 0
       ? reportedModels
       : row.models.map((model) => ({ ...model, description: null }));
-  const reportedEfforts = (row.capability_efforts ?? []).filter(
-    (effort) => effort.id !== AGENT_DEFAULT,
-  );
-  const efforts = reportedEfforts.length > 0 ? reportedEfforts : entry.efforts;
+  const efforts = reportedEfforts(row.provider, row.capability_efforts);
   return {
     provider: row.provider,
     name: entry.name,
@@ -146,6 +143,7 @@ export interface IntakeContext {
   jevModel: string | null;
   routing: ModelRouting;
   candidates: AdvisorCandidate[];
+  defaultEfforts: Readonly<Record<string, string>>;
 }
 
 export async function loadIntakeContext(
@@ -155,7 +153,7 @@ export async function loadIntakeContext(
 ): Promise<IntakeContext> {
   const [candidates, jev, conversation, stats] = await Promise.all([
     db.query<CandidateRow>(
-      `SELECT pc.provider, pc.models, cap.models AS capability_models,
+      `SELECT pc.provider, pc.models, pc.effort, cap.models AS capability_models,
          cap.efforts AS capability_efforts
        FROM provider_connections pc
        LEFT JOIN provider_capabilities cap
@@ -175,14 +173,16 @@ export async function loadIntakeContext(
     listModelStats(db),
   ]);
   const jevRow = jev.rows[0];
+  const known = candidates.rows.flatMap((row) => {
+    const provider = providerIdSchema.safeParse(row.provider);
+    return provider.success ? [{ ...row, provider: provider.data }] : [];
+  });
   return {
     jevModel: jevRow ? (jevRow.model ?? advisorEntry('jev').defaultModel) : null,
     routing: conversation.rows[0]?.model_routing ?? 'pinned',
-    candidates: candidates.rows.flatMap((row) => {
-      const provider = providerIdSchema.safeParse(row.provider);
-      if (!provider.success) return [];
-      const candidate = toCandidate({ ...row, provider: provider.data });
-      return [{ ...candidate, stats }];
-    }),
+    candidates: known.map((row) => ({ ...toCandidate(row), stats })),
+    defaultEfforts: Object.fromEntries(
+      known.flatMap((row) => (row.effort ? [[row.provider, row.effort]] : [])),
+    ),
   };
 }

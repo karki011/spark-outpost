@@ -63,7 +63,11 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await model.click();
   await page.getByRole('menuitemradio', { name: /Claude Sonnet 5/ }).click();
   await expect(model).toHaveText('Claude Sonnet 5');
-  await claudeCard(page).getByRole('radio', { name: 'Max' }).click();
+  const effort = claudeCard(page).getByRole('button', { name: 'Claude effort' });
+  await expect(effort).toHaveText('Medium');
+  await effort.click();
+  await page.getByRole('menuitemradio', { name: /^Max/ }).click();
+  await expect(effort).toHaveText('Max');
   const permission = claudeCard(page).getByRole('button', { name: 'Claude permission' });
   await permission.click();
   await expect(page.getByRole('menuitemradio', { name: /Skip all checks/ })).toHaveCount(0);

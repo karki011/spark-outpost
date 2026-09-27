@@ -1,6 +1,8 @@
 import type { AgentPick, ModelRouting, RouteSource, RouteTier } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
 import { selectableModels, tierOptions } from '../advisor/intake-questions.ts';
+import { cardFor } from '../model-cards/cards.ts';
+import { firstReportedEffort } from '../providers/efforts.ts';
 import {
   escalatedEffort,
   highEffort,
@@ -14,6 +16,7 @@ import {
 export interface RouteContext {
   routing: ModelRouting;
   chat: AgentPick;
+  providerEffort: string | null;
   candidates: readonly AdvisorCandidate[];
 }
 
@@ -70,7 +73,26 @@ export function jevTierPick(context: RouteContext, tier: RouteTier | null): Agen
   return option ? withModel(chatPick(context), option.model) : null;
 }
 
+export function builderEffort(context: RouteContext, pick: AgentPick): string | null {
+  const card = pick.model
+    ? cardFor({ id: pick.model, label: pick.modelLabel }, pick.provider)
+    : null;
+  return firstReportedEffort(
+    [context.providerEffort, context.chat.effort, card?.reasoning.defaultEffort],
+    effortIds(candidateFor(context, pick.provider)),
+  );
+}
+
 export function routeBuilder(
+  context: RouteContext,
+  facts: RouteFacts,
+  jevTier: RouteTier | null = null,
+): MemberRoute {
+  const route = routeMemberModel(context, facts, jevTier);
+  return { ...route, pick: { ...route.pick, effort: builderEffort(context, route.pick) } };
+}
+
+export function routeMemberModel(
   context: RouteContext,
   facts: RouteFacts,
   jevTier: RouteTier | null = null,

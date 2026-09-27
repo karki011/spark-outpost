@@ -113,7 +113,7 @@ describe('API key verification', () => {
       model: 'claude-opus-5-5',
       permission: 'ask',
       level: 'balanced',
-      effort: 'high',
+      effort: 'medium',
     });
     expect(JSON.stringify(body)).not.toContain(VALID_CLAUDE_KEY);
     const stored = await t.db.query('SELECT * FROM provider_connections');
