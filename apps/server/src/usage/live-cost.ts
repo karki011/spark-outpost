@@ -1,13 +1,9 @@
-import type { ProviderOutput } from '../providers/provider.ts';
+import type { ProviderOutput, UsageReadings } from '../providers/provider.ts';
 import { cardPriceFor, costAt, type ModelPrice } from './prices.ts';
 
 export interface LiveCost {
   observe(output: ProviderOutput): boolean;
   unreported(): number;
-}
-
-interface Call {
-  end: number;
 }
 
 const perToken = (usdPerMillion: number, tokens: number) => (tokens * usdPerMillion) / 1_000_000;
@@ -21,27 +17,22 @@ export function createLiveCost(
   let estimate = 0;
   let reported = false;
   let resumed = false;
-  let call: Call | null = null;
-  let toolFinished = false;
+  let last: number | null = null;
+  let callOpen = false;
 
   const startCall = (known: ModelPrice, used: number) => {
-    const carried = call ? (used >= call.end ? call.end : 0) : resumed ? used : 0;
-    estimate +=
-      perToken(known.cachedInputPerMillion, carried) +
-      perToken(known.inputPerMillion, used - carried);
-    call = { end: used };
-    toolFinished = false;
+    const carried = last === null ? (resumed ? used : 0) : Math.min(last, used);
+    const fresh = known.cacheWritePerMillion ?? known.inputPerMillion;
+    estimate += perToken(known.cachedInputPerMillion, carried) + perToken(fresh, used - carried);
   };
 
-  const context = (used: number): boolean => {
-    if (!price) return false;
-    if (call === null || toolFinished || used < call.end) {
-      startCall(price, used);
-      return true;
-    }
-    if (used === call.end) return false;
-    estimate += perToken(price.outputPerMillion, used - call.end);
-    call.end = used;
+  const context = (used: number, readings: UsageReadings): boolean => {
+    if (!price || used === last) return false;
+    const endsCall = readings === 'start_and_end' && callOpen && last !== null && used > last;
+    if (endsCall) estimate += perToken(price.outputPerMillion, used - last!);
+    else startCall(price, used);
+    callOpen = readings === 'start_and_end' && !endsCall;
+    last = used;
     return true;
   };
 
@@ -54,11 +45,8 @@ export function createLiveCost(
         case 'session_settings':
           price = resolvePrice(provider, output.model) ?? price;
           return false;
-        case 'step_finished':
-          if (output.tool) toolFinished = true;
-          return false;
         case 'usage':
-          if (output.costUsd === null) return context(output.contextUsed);
+          if (output.costUsd === null) return context(output.contextUsed, output.readings ?? 'end');
           reported = true;
           estimate = 0;
           return true;

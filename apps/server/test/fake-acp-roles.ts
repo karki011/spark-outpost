@@ -131,7 +131,7 @@ async function repeat(turn: RoleTurn): Promise<void> {
 
 async function spend(turn: RoleTurn): Promise<void> {
   for (let call = 0; ; call += 1) {
-    const context = 20_000 + call * 2_000;
+    const context = 2_000 + call * 2_000;
     await turn.update({ sessionUpdate: 'usage_update', used: context, size: 200_000 });
     await turn.update({ sessionUpdate: 'usage_update', used: context + 500, size: 200_000 });
     await readTool(turn, `src/part-${call}.ts`, `spend-${call}`);

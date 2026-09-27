@@ -109,10 +109,11 @@ describe('card prices', () => {
     expect(cardPriceFor('claude', 'sonnet')).toMatchObject({
       model: 'claude-sonnet-5',
       inputPerMillion: 2,
+      cacheWritePerMillion: 2.5,
       cacheOutsideInput: true,
     });
     expect(cardPriceFor('claude', 'opus[1m]')?.model).toBe('claude-opus-5-5');
-    expect(cardPriceFor('codex', 'gpt-6-sol/high')?.model).toBe('gpt-6-sol');
+    expect(cardPriceFor('codex', 'gpt-6-sol/high')).not.toHaveProperty('cacheWritePerMillion');
     expect(cardPriceFor('claude', 'unknown')).toBeNull();
     expect(cardPriceFor('claude', null)).toBeNull();
   });

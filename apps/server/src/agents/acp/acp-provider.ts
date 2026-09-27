@@ -158,7 +158,10 @@ async function runSession(
 }
 
 function asReported(definition: AgentDefinition, output: ProviderOutput): ProviderOutput {
-  if (output.kind === 'usage' && definition.estimatesCost) return { ...output, costUsd: null };
+  if (output.kind === 'usage') {
+    const readings = definition.usageReadings ? { readings: definition.usageReadings } : {};
+    return { ...output, ...readings, ...(definition.estimatesCost ? { costUsd: null } : {}) };
+  }
   if (output.kind === 'tokens' && definition.inputExcludesCache) {
     return { ...output, tokens: withCachedInput(output.tokens) };
   }

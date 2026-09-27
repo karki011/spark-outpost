@@ -8,19 +8,21 @@ const PRICE: ModelPrice = {
   model: 'claude-test',
   inputPerMillion: 2,
   cachedInputPerMillion: 0.2,
+  cacheWritePerMillion: 2.5,
   outputPerMillion: 10,
   cacheOutsideInput: true,
 };
 
 const known = (_provider: string, model: string | null) => (model === 'test' ? PRICE : null);
 
-const context = (used: number): ProviderOutput => ({
+const context = (used: number, readings?: 'start_and_end'): ProviderOutput => ({
   kind: 'usage',
   contextUsed: used,
   contextSize: 200_000,
   costUsd: null,
+  ...(readings ? { readings } : {}),
 });
-const toolDone: ProviderOutput = { kind: 'step_finished', name: 'Read a.ts', tool: true };
+const edge = (used: number) => context(used, 'start_and_end');
 
 function meter(outputs: readonly ProviderOutput[], model = 'test') {
   const live = createLiveCost('claude', model, known);
@@ -29,19 +31,19 @@ function meter(outputs: readonly ProviderOutput[], model = 'test') {
 }
 
 describe('live cost', () => {
-  it('prices each model call from the context it reads, cached after the first call', () => {
-    const cost = meter([
-      context(20_000),
-      context(20_500),
-      toolDone,
-      context(22_000),
-      context(22_300),
-    ]);
-    expect(cost).toBeCloseTo(0.04 + 0.005 + 0.0041 + 0.003 + 0.003, 6);
+  it('prices calls read at their start and end: context in, then output', () => {
+    const cost = meter([edge(20_000), edge(20_500), edge(22_000), edge(22_300)]);
+    expect(cost).toBeCloseTo(0.05 + 0.005 + 0.0041 + 0.00375 + 0.003, 6);
   });
 
-  it('counts a repeated context reading once', () => {
-    expect(meter([context(10_000), context(10_000)])).toBeCloseTo(0.02, 6);
+  it('prices calls read once after they finish as context in', () => {
+    const cost = meter([context(20_000), context(22_000)]);
+    expect(cost).toBeCloseTo(0.05 + 0.004 + 0.005, 6);
+  });
+
+  it('ignores a repeated reading and treats a shrunk context as a new call', () => {
+    const cost = meter([edge(10_000), edge(10_000), edge(10_400), edge(4_000)]);
+    expect(cost).toBeCloseTo(0.025 + 0.004 + 0.0008, 6);
   });
 
   it('prices a resumed session as cached from its first call', () => {
@@ -91,7 +93,7 @@ describe('live cost', () => {
       [{ kind: 'session_settings', model: 'test', effort: null, mode: null }, context(10_000)],
       'unknown',
     );
-    expect(cost).toBeCloseTo(0.02, 6);
+    expect(cost).toBeCloseTo(0.025, 6);
   });
 
   it('estimates nothing for a model without a price', () => {

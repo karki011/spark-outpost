@@ -81,6 +81,8 @@ export interface ProviderCapabilityReport {
   defaultModel: string | null;
 }
 
+export type UsageReadings = 'start_and_end' | 'end';
+
 export type ProviderOutput =
   | {
       kind: 'step_started';
@@ -98,7 +100,13 @@ export type ProviderOutput =
     }
   | { kind: 'text_delta'; delta: string }
   | { kind: 'capabilities'; report: ProviderCapabilityReport }
-  | { kind: 'usage'; contextUsed: number; contextSize: number; costUsd: number | null }
+  | {
+      kind: 'usage';
+      contextUsed: number;
+      contextSize: number;
+      costUsd: number | null;
+      readings?: UsageReadings;
+    }
   | { kind: 'tokens'; tokens: TokenUsage }
   | { kind: 'session_settings'; model: string | null; effort: string | null; mode: string | null }
   | { kind: 'plan'; entries: PlanEntry[] }

@@ -8,10 +8,12 @@ export interface ModelPrice {
   cachedInputPerMillion: number;
   outputPerMillion: number;
   cacheOutsideInput?: boolean;
+  cacheWritePerMillion?: number;
 }
 
 const ESTIMATED_PROVIDERS = new Set(['codex', 'zai']);
 const CACHE_OUTSIDE_INPUT = new Set(['claude', 'zai']);
+const BILLED_CACHE_WRITES = new Set(['claude']);
 
 export function cardPrice(card: ModelCard): ModelPrice | null {
   if (!card.price) return null;
@@ -22,6 +24,9 @@ export function cardPrice(card: ModelCard): ModelPrice | null {
     cachedInputPerMillion: card.price.cachedInputPerMillion,
     outputPerMillion: card.price.outputPerMillion,
     ...(CACHE_OUTSIDE_INPUT.has(card.provider) ? { cacheOutsideInput: true } : {}),
+    ...(BILLED_CACHE_WRITES.has(card.provider) && card.price.cacheWritePerMillion !== null
+      ? { cacheWritePerMillion: card.price.cacheWritePerMillion }
+      : {}),
   };
 }
 
@@ -58,11 +63,11 @@ export function costAt(price: ModelPrice, tokens: PricedTokens): number {
   const cached = price.cacheOutsideInput
     ? (tokens.cachedRead ?? 0)
     : Math.min(tokens.cachedRead ?? 0, tokens.input);
-  const uncached = price.cacheOutsideInput
-    ? tokens.input + (tokens.cachedWrite ?? 0)
-    : tokens.input - cached;
+  const written = price.cacheOutsideInput ? (tokens.cachedWrite ?? 0) : 0;
+  const uncached = price.cacheOutsideInput ? tokens.input : tokens.input - cached;
   const cost =
     uncached * price.inputPerMillion +
+    written * (price.cacheWritePerMillion ?? price.inputPerMillion) +
     cached * price.cachedInputPerMillion +
     tokens.output * price.outputPerMillion;
   return Math.round(cost) / 1_000_000;
