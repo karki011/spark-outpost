@@ -46,8 +46,13 @@ test('the old name is gone from the code and the README outside the alias', () =
       .filter(
         (line) => !(file === 'src/shop/index.ts' && /^export .* from '\.\/total\.ts'/.test(line)),
       )
-      .filter((line) => !(file === 'README.md' && /deprecated/i.test(line)))
-      .join('\n');
+      .join('\n')
+      .replace(
+        file === 'README.md'
+          ? /[^.]*\bcalcTotal\b[^.]*deprecated[^.]*|[^.]*deprecated[^.]*\bcalcTotal\b[^.]*/gis
+          : /$^/,
+        '',
+      );
     assert.doesNotMatch(text, /\bcalcTotal\b/, file);
   }
 });
