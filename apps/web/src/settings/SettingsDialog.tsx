@@ -77,14 +77,20 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
   const connected = setup.data?.providers.filter((provider) => provider.connection).length ?? 0;
   const title = SECTIONS.find((entry) => entry.id === section)?.label ?? '';
 
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape' && !event.defaultPrevented) onCloseRef.current();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  }, []);
 
   return (
     <motion.div
