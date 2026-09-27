@@ -6,7 +6,7 @@ import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -34,14 +34,14 @@ afterEach(async () => {
 const put = (path: string, body: unknown) =>
   request(app)
     .put(path)
-    .set('Host', HOST)
+    .set(LOCAL_HEADERS)
     .set('Origin', ORIGIN)
     .send(body as object);
 
 async function project(name: string): Promise<Project> {
   const response = await request(app)
     .post('/api/projects')
-    .set('Host', HOST)
+    .set(LOCAL_HEADERS)
     .set('Origin', ORIGIN)
     .send({ rootPath: join(base, name) })
     .expect(201);
@@ -59,19 +59,19 @@ async function chat(content: string, projectId: string): Promise<string> {
   );
   await request(app)
     .patch(`/api/conversations/${id}/settings`)
-    .set('Host', HOST)
+    .set(LOCAL_HEADERS)
     .send({ projectIds: [projectId] })
     .expect(200);
   return id;
 }
 
 async function projectNames(): Promise<string[]> {
-  const response = await request(app).get('/api/projects').set('Host', HOST).expect(200);
+  const response = await request(app).get('/api/projects').set(LOCAL_HEADERS).expect(200);
   return (response.body as Project[]).map((entry) => entry.name);
 }
 
 async function projectOrders(): Promise<Record<string, number | null>> {
-  const response = await request(app).get('/api/conversations').set('Host', HOST).expect(200);
+  const response = await request(app).get('/api/conversations').set(LOCAL_HEADERS).expect(200);
   const chats = response.body as ConversationSummary[];
   return Object.fromEntries(chats.map((entry) => [entry.title, entry.projectOrder]));
 }

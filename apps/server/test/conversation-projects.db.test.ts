@@ -14,7 +14,7 @@ import {
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { saveConnection } from '../src/persistence/setup.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -50,12 +50,12 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-const get = (path: string) => request(app).get(path).set('Host', HOST);
+const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
 
 async function project(folder: string): Promise<Project> {
   const response = await request(app)
     .post('/api/projects')
-    .set('Host', HOST)
+    .set(LOCAL_HEADERS)
     .set('Origin', ORIGIN)
     .send({ rootPath: folder });
   return response.body as Project;
@@ -64,7 +64,7 @@ async function project(folder: string): Promise<Project> {
 const patch = (conversationId: string, body: unknown) =>
   request(app)
     .patch(`/api/conversations/${conversationId}/settings`)
-    .set('Host', HOST)
+    .set(LOCAL_HEADERS)
     .send(body as object);
 
 async function linkedIds(conversationId: string): Promise<string[]> {
@@ -114,7 +114,11 @@ describe('conversation repos', () => {
     const [appRepo, libRepo] = await Promise.all([project(folders.app), project(folders.lib)]);
     const id = randomUUID();
     await patch(id, { projectIds: [appRepo.id, libRepo.id] }).expect(200);
-    await request(app).delete(`/api/projects/${appRepo.id}`).set('Host', HOST).send({}).expect(200);
+    await request(app)
+      .delete(`/api/projects/${appRepo.id}`)
+      .set(LOCAL_HEADERS)
+      .send({})
+      .expect(200);
     expect(await linkedIds(id)).toEqual([libRepo.id]);
   });
 

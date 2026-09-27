@@ -10,7 +10,7 @@ import { getRun } from '../src/persistence/runs.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { activityTypesOf, createTestDb, eventTypes, eventually, type TestDb } from './support.ts';
 
 const FAKE_JEV_KEY = 'fake-jev-key-for-db-tests';
@@ -170,13 +170,15 @@ describe('Jev intake recording', () => {
     expect(await activityTypesOf(t.db, runId)).toContain('advice');
 
     const app = createTestApp(t);
-    const detail = await request(app).get(`/api/conversations/${conversationId}`).set('Host', HOST);
+    const detail = await request(app)
+      .get(`/api/conversations/${conversationId}`)
+      .set(LOCAL_HEADERS);
     expect(detail.body.advice[runId]).toMatchObject({ jevStatus: 'answered', wouldApply: 'rules' });
     expect(detail.body.advice[runId].questions).toBeUndefined();
     expect(detail.body.usageTotals.advisors).toEqual([
       { advisor: 'jev', calls: 1, inputTokens: 1000, costUsd: 0.000042 },
     ]);
-    const summary = await request(app).get('/api/usage/summary').set('Host', HOST);
+    const summary = await request(app).get('/api/usage/summary').set(LOCAL_HEADERS);
     expect(summary.body.advisors.last30Days).toEqual([
       { advisor: 'jev', calls: 1, inputTokens: 1000, costUsd: 0.000042 },
     ]);
@@ -220,7 +222,9 @@ describe('Jev intake recording', () => {
     await finished(runId);
     expect(await activityTypesOf(t.db, runId)).not.toContain('advice');
     const app = createTestApp(t);
-    const detail = await request(app).get(`/api/conversations/${conversationId}`).set('Host', HOST);
+    const detail = await request(app)
+      .get(`/api/conversations/${conversationId}`)
+      .set(LOCAL_HEADERS);
     expect(detail.body.usageTotals.advisors).toEqual([]);
   });
 
@@ -244,7 +248,7 @@ describe('Jev intake recording', () => {
     await createConversation(t.db, t.workspaceId, id);
     const updated = await request(app)
       .patch(`/api/conversations/${id}/settings`)
-      .set('Host', HOST)
+      .set(LOCAL_HEADERS)
       .set('Origin', ORIGIN)
       .send({ routing: 'auto' })
       .expect(200);

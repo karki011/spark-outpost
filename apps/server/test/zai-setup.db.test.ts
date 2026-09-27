@@ -11,7 +11,7 @@ import {
   recordTokens,
   recordUsage,
 } from '../src/workflow/run-metadata.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 const ZAI_KEY = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6.ZaiSecretTail';
@@ -38,9 +38,9 @@ function jsonResponse(status: number, body: unknown): Response {
 function appWith(fetch: typeof globalThis.fetch) {
   const app = createTestApp(t, { fetch, secrets });
   const send = (method: 'post' | 'patch' | 'delete', path: string, body: object = {}) =>
-    request(app)[method](path).set('Host', HOST).set('Origin', ORIGIN).send(body);
+    request(app)[method](path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
   return {
-    get: (path: string) => request(app).get(path).set('Host', HOST),
+    get: (path: string) => request(app).get(path).set(LOCAL_HEADERS),
     send,
     async verify(body: object): Promise<{ events: VerifyEvent[]; raw: string }> {
       const response = await send('post', '/api/providers/zai/verify', body).expect(200);

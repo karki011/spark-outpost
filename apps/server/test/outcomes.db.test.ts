@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { outcomeReportSchema, outcomeResponseSchema } from '@spark-outpost/contracts';
 import { refreshOutcome } from '../src/outcomes/record.ts';
 import { sweepOutcomes } from '../src/outcomes/sweep.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import {
   seedAccept,
   seedCheck,
@@ -31,8 +31,8 @@ const noSample = { random: () => 0.99 };
 const refresh = (runId: string, options = {}) =>
   refreshOutcome(t.db, t.workspaceId, runId, { ...noSample, ...options });
 const put = (path: string, body: object) =>
-  request(app).put(path).set('Host', HOST).set('Origin', ORIGIN).send(body);
-const get = (path: string) => request(app).get(path).set('Host', HOST);
+  request(app).put(path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
+const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
 
 describe('outcome lifecycle', () => {
   it('records a kept change, asks once, and keeps feedback changeable', async () => {

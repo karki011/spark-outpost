@@ -1,3 +1,5 @@
+import { resolve } from 'node:path';
+import { DEV_API_TOKEN_FILE } from '@spark-outpost/contracts';
 import { loadConfig } from '../config.ts';
 import { ensureLocalWorkspace, pruneEmptyConversations } from '../persistence/conversations.ts';
 import { pruneUnlinkedAttachments } from '../persistence/attachments.ts';
@@ -18,8 +20,13 @@ import { probeCapabilities } from '../agents/acp/probe.ts';
 import { fakeCapabilities } from '../providers/fake.ts';
 import { AppEventFeed, listenForAppEvents } from './app-events.ts';
 import { createApp } from './app.ts';
+import { takeLaunchToken } from './launch-token.ts';
 import { RunEventHub } from './run-event-hub.ts';
 
+const apiToken = takeLaunchToken(
+  process.env,
+  resolve(import.meta.dirname, '../../../..', DEV_API_TOKEN_FILE),
+);
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.api });
 await assertMigrated(db);
@@ -61,6 +68,7 @@ const app = createApp({
   appEvents,
   port: config.API_PORT,
   allowedOrigins: config.ALLOWED_ORIGINS,
+  apiToken,
   outcomeSampleRate: config.OUTCOME_SAMPLE_RATE,
 });
 const outcomeSweep = startOutcomeSweep(db, workspaceId, {
@@ -73,6 +81,7 @@ const server = app.listen(config.API_PORT, config.API_HOST, () => {
 attachTerminalSockets(server, terminals, {
   port: config.API_PORT,
   allowedOrigins: config.ALLOWED_ORIGINS,
+  apiToken,
 });
 
 const shutdown = async () => {

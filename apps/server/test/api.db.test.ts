@@ -5,7 +5,7 @@ import { getRun } from '../src/persistence/runs.ts';
 import { usageSummarySchema } from '@spark-outpost/contracts';
 import { FAKE_COST_USD, FAKE_TOKENS, createFakeProvider } from '../src/providers/fake.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -31,8 +31,8 @@ afterEach(async () => {
 });
 
 const post = (path: string, body: object) =>
-  request(app).post(path).set('Host', HOST).set('Origin', ORIGIN).send(body);
-const get = (path: string) => request(app).get(path).set('Host', HOST);
+  request(app).post(path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
+const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
 
 function parseSse(text: string): { id: number; type: string }[] {
   return text
@@ -102,13 +102,13 @@ describe('request validation and local protection', () => {
     await request(app).get('/api/conversations').set('Host', 'evil.example:4318').expect(403);
     await request(app)
       .post('/api/conversations')
-      .set('Host', HOST)
+      .set(LOCAL_HEADERS)
       .set('Origin', 'https://evil.example')
       .send({ id: randomUUID() })
       .expect(403);
     await request(app)
       .post('/api/conversations')
-      .set('Host', HOST)
+      .set(LOCAL_HEADERS)
       .type('form')
       .send('id=1')
       .expect(415);
@@ -116,7 +116,7 @@ describe('request validation and local protection', () => {
 
   it('rejects invalid bodies and unknown conversations', async () => {
     await post('/api/conversations', { id: 'not-a-uuid' }).expect(400);
-    await request(app).get(`/api/conversations/${randomUUID()}`).set('Host', HOST).expect(404);
+    await request(app).get(`/api/conversations/${randomUUID()}`).set(LOCAL_HEADERS).expect(404);
     await post(`/api/conversations/${randomUUID()}/messages`, {
       id: randomUUID(),
       content: '  ',
@@ -129,7 +129,10 @@ describe('request validation and local protection', () => {
       id: randomUUID(),
       content: 'Draft the launch notes',
     }).expect(201);
-    const detail = await request(app).get(`/api/conversations/${id}`).set('Host', HOST).expect(200);
+    const detail = await request(app)
+      .get(`/api/conversations/${id}`)
+      .set(LOCAL_HEADERS)
+      .expect(200);
     expect(detail.body.conversation.title).toBe('Draft the launch notes');
   });
 

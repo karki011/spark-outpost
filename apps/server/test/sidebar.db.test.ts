@@ -6,7 +6,7 @@ import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -34,17 +34,17 @@ const api = {
   list: async (q?: string) => {
     const path =
       q === undefined ? '/api/conversations' : `/api/conversations?q=${encodeURIComponent(q)}`;
-    return (await request(app).get(path).set('Host', HOST).expect(200))
+    return (await request(app).get(path).set(LOCAL_HEADERS).expect(200))
       .body as ConversationSummary[];
   },
   patch: (id: string, body: object) =>
-    request(app).patch(`/api/conversations/${id}`).set('Host', HOST).send(body),
+    request(app).patch(`/api/conversations/${id}`).set(LOCAL_HEADERS).send(body),
   read: (id: string) =>
-    request(app).post(`/api/conversations/${id}/read`).set('Host', HOST).send({}),
+    request(app).post(`/api/conversations/${id}/read`).set(LOCAL_HEADERS).send({}),
   remove: (id: string) =>
-    request(app).delete(`/api/conversations/${id}`).set('Host', HOST).send({}),
+    request(app).delete(`/api/conversations/${id}`).set(LOCAL_HEADERS).send({}),
   settings: (id: string, body: object) =>
-    request(app).patch(`/api/conversations/${id}/settings`).set('Host', HOST).send(body),
+    request(app).patch(`/api/conversations/${id}/settings`).set(LOCAL_HEADERS).send(body),
 };
 
 async function chat(content: string): Promise<{ id: string; runId: string }> {
@@ -71,7 +71,7 @@ async function project(name: string): Promise<Project> {
   await mkdir(folder);
   const response = await request(app)
     .post('/api/projects')
-    .set('Host', HOST)
+    .set(LOCAL_HEADERS)
     .set('Origin', ORIGIN)
     .send({ rootPath: folder });
   return response.body as Project;
@@ -102,7 +102,7 @@ describe('search', () => {
     expect(await api.list('nothing like this')).toEqual([]);
     await request(app)
       .get(`/api/conversations?q=${'x'.repeat(201)}`)
-      .set('Host', HOST)
+      .set(LOCAL_HEADERS)
       .expect(400);
   });
 });

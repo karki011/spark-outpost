@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import type { Approval, BuildStyle } from '../../packages/contracts/src/index.ts';
+import {
+  API_TOKEN_HEADER,
+  type Approval,
+  type BuildStyle,
+} from '../../packages/contracts/src/index.ts';
 import { balancedChoice, type UserChoice } from './balanced.ts';
 import type { HarnessSetup } from './plan.ts';
 
@@ -39,12 +43,18 @@ export interface TurnOptions {
 }
 
 export class Api {
-  constructor(readonly base: string) {}
+  constructor(
+    readonly base: string,
+    private readonly token: string,
+  ) {}
 
   async call<T>(method: string, path: string, body?: unknown): Promise<T> {
     const response = await fetch(`${this.base}${path}`, {
       method,
-      headers: body === undefined ? {} : { 'content-type': 'application/json' },
+      headers: {
+        [API_TOKEN_HEADER]: this.token,
+        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+      },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     if (!response.ok) {

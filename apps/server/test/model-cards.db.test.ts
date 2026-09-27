@@ -8,7 +8,7 @@ import { saveCapabilities } from '../src/persistence/chat-settings.ts';
 import { createConversation } from '../src/persistence/conversations.ts';
 import { listModelStats } from '../src/persistence/model-stats.ts';
 import { saveConnection, updateProfile } from '../src/persistence/setup.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -39,7 +39,7 @@ async function connectCodex() {
 }
 
 const send = (method: 'get' | 'put' | 'post' | 'patch', path: string, body?: object) => {
-  const call = request(app)[method](path).set('Host', HOST).set('Origin', ORIGIN);
+  const call = request(app)[method](path).set(LOCAL_HEADERS).set('Origin', ORIGIN);
   return body ? call.send(body) : call;
 };
 

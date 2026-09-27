@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { VerifyEvent } from '@spark-outpost/contracts';
 import type { RunCommand } from '../src/setup/command.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 const VALID_CLAUDE_KEY = `sk-ant-api03-${'x'.repeat(24)}4f2a`;
@@ -39,9 +39,9 @@ const anthropicModels = {
 function appWith(options: { fetch?: typeof fetch; runCommand?: RunCommand } = {}) {
   const app = createTestApp(t, { ...options, secrets });
   const send = (method: 'post' | 'patch' | 'delete', path: string, body: object = {}) =>
-    request(app)[method](path).set('Host', HOST).set('Origin', ORIGIN).send(body);
+    request(app)[method](path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
   return {
-    get: (path: string) => request(app).get(path).set('Host', HOST),
+    get: (path: string) => request(app).get(path).set(LOCAL_HEADERS),
     send,
     async verify(provider: string, body: object): Promise<VerifyEvent[]> {
       const response = await send('post', `/api/providers/${provider}/verify`, body).expect(200);

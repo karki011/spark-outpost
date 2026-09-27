@@ -64,6 +64,7 @@ describe('secret files', () => {
     'certs/client.p12',
     'certs/client.PFX',
     '.env.example.local',
+    '.local/api-token',
   ])('refuses %s', (file) => {
     expect(isSecretPath(file)).toBe(true);
   });
