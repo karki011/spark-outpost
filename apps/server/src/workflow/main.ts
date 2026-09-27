@@ -1,4 +1,5 @@
 import { createIntakeRecorder } from '../advisor/intake-recorder.ts';
+import { createCodeScanner } from '../codescan/scanner.ts';
 import { loadConfig } from '../config.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { assertMigrated } from '../persistence/migrate.ts';
@@ -34,6 +35,7 @@ const worker = startWorker({
     openLimit: config.SESSION_OPEN_LIMIT,
   },
   concurrency: config.WORKER_CONCURRENCY,
+  codeScan: createCodeScanner(db),
   ...(config.ORCHESTRATION_COST_CAP_USD
     ? { budget: { costCapUsd: config.ORCHESTRATION_COST_CAP_USD } }
     : {}),

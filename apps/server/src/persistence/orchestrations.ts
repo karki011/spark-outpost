@@ -188,7 +188,7 @@ export async function insertChildRun(
 
 export interface NewDecision {
   runId: string;
-  purpose: 'route' | 'policy' | 'verify';
+  purpose: 'route' | 'policy' | 'verify' | 'scan';
   childRunId: string | null;
   role: AgentRole | null;
   stepIndex: number | null;
@@ -283,7 +283,8 @@ async function assemble(db: Queryable, rows: readonly OrchestrationRow[]) {
       [ids, CHECKPOINT_KINDS],
     ),
     db.query<DecisionRow & { run_id: string }>(
-      `SELECT * FROM run_advice WHERE run_id = ANY($1::uuid[]) ORDER BY created_at`,
+      `SELECT * FROM run_advice WHERE run_id = ANY($1::uuid[]) AND purpose <> 'scan'
+       ORDER BY created_at`,
       [ids],
     ),
   ]);

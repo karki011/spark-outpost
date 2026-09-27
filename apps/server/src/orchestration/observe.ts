@@ -58,7 +58,7 @@ function record(
   });
 }
 
-function track(s: Session, work: Promise<void>): void {
+export function track(s: Session, work: Promise<void>): void {
   const settled = work.catch((error: unknown) =>
     console.error('Could not record an observation', error),
   );

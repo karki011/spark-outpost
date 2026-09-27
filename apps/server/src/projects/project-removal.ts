@@ -52,6 +52,11 @@ export async function removeProject(
       [id],
     );
     await client.query('DELETE FROM projects WHERE id = $1', [id]);
+    await client.query(
+      `DELETE FROM code_index_projects WHERE root_path = $1
+       AND NOT EXISTS (SELECT 1 FROM projects WHERE root_path = $1)`,
+      [rows[0].root_path],
+    );
     return {
       project: toProject(rows[0], await realHome()),
       links: links.rows.map((row) => ({

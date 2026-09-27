@@ -47,6 +47,7 @@ import {
 import { initialFlow, nextStep, type FlowAction, type FlowEvent } from './transitions.ts';
 import type { MemberOutcome } from './members.ts';
 import { jevDiffsAllowed, observeBuilder, settleObservations } from './observe.ts';
+import { observeScan, startScan } from './observe-scan.ts';
 
 export const TASK_SESSION_CLOSED = 'task session closed';
 export const NEW_TASK_STARTED = 'a new task started';
@@ -245,6 +246,7 @@ async function finish(
 }
 
 export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise<void> {
+  const taskStartedAt = Date.now();
   const input = await loadRunInput(deps.db, lease.runId);
   const append: Append = (event, options) => appendRunEvent(deps.db, lease, event, options);
   const control = startControl(deps, lease);
@@ -255,6 +257,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const mode = input.mode ?? 'chat';
     const root = input.projectRoots[0];
     const doing = mode === 'do' && root !== undefined;
+    const scanning = doing ? startScan({ deps, input }, root, taskStartedAt) : null;
     const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
     const { intake, decisions } = await runIntake(deps, input, append, current);
     const answers = decisions.start === 'answer';
@@ -320,6 +323,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       jevDiffs: await jevDiffsAllowed(deps.db, input.workspaceId),
     };
     session = s;
+    observeScan(s, scanning);
     if (doing && !answers) {
       decideBuildStyle(s);
       await ensureTask(s, current);
