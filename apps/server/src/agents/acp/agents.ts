@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { InvolvementLevel, ProviderId } from '@spark-outpost/contracts';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
+import type { UsageReadings } from '../../providers/provider.ts';
 import { ZAI_EFFORTS, ZAI_MODELS, zaiLaunchEnvironment, zaiModelId } from './zai.ts';
 
 export interface AgentLaunch {
@@ -24,6 +25,7 @@ export interface AgentDefinition {
   usedModel?: (model: string | null) => string | null;
   estimatesCost?: boolean;
   inputExcludesCache?: boolean;
+  usageReadings?: UsageReadings;
   conversationMode: string;
   readsProjectFolders: boolean;
   conversationSessionMeta?: Record<string, unknown>;
@@ -107,6 +109,7 @@ function packageBin(packageName: string): AgentLaunch {
 
 const claudeSessions = {
   conversationMode: 'default',
+  usageReadings: 'start_and_end',
   readsProjectFolders: true,
   conversationSessionMeta: claudeSessionMeta([], []),
   projectSessionMeta: (extraRoots: readonly string[]) =>

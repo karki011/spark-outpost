@@ -278,7 +278,7 @@ export function startOrchestrator(
   t: TestDb,
   fetcher: typeof fetch | null,
   options: {
-    budget?: { activeLimitMs?: number; toolCallLimit?: number };
+    budget?: { activeLimitMs?: number; toolCallLimit?: number; costCapUsd?: number };
     sessions?: string;
     loopGuard?: OrchestratorDeps['loopGuard'];
     codeScan?: OrchestratorDeps['codeScan'];

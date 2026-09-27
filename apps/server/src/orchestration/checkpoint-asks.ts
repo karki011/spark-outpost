@@ -1,8 +1,8 @@
 import { CHECKPOINT_OPTION, type AgentPick } from '@spark-outpost/contracts';
-import { spentUsd, waitedMs } from '../persistence/orchestrations.ts';
 import { runChanges } from '../projects/run-changes.ts';
 import { runEvents } from '../workflow/run-events.ts';
-import { activeTime, extendLimits, usedAndAllowed } from './budget.ts';
+import { extendLimits, usedAndAllowed } from './budget.ts';
+import { budgetUsage } from './budget-check.ts';
 import {
   acceptCard,
   answerOrBuildCard,
@@ -52,15 +52,6 @@ async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
   const limit = s.budgetHit ?? 'time';
   const { used, allowed } = usedAndAllowed(limit, usage, s.limits);
   return budgetCard(limit, used, allowed, action.reason);
-}
-
-export async function budgetUsage(s: Session) {
-  const waited = await waitedMs(s.deps.db, s.lease.runId);
-  return {
-    activeMs: activeTime(Date.now() - s.startedAt, waited),
-    toolCalls: s.toolCalls,
-    costUsd: await spentUsd(s.deps.db, s.lease.runId),
-  };
 }
 
 function withAutoOption(action: Ask, card: CheckpointCard): CheckpointCard {

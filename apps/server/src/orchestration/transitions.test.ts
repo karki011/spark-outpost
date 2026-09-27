@@ -250,6 +250,20 @@ describe('checkpoints', () => {
     });
   });
 
+  it('runs the planned step unchanged when the budget ran out before it started', () => {
+    const [planned, spent] = run(flow(), [
+      { type: 'start', start: 'build' },
+      { type: 'budget_exceeded', limit: 'cost', unstarted: true },
+    ]);
+    const resumed = nextStep(spent!.state, {
+      type: 'answered',
+      kind: 'budget',
+      optionId: CHECKPOINT_OPTION.continueBudget,
+      note: null,
+    });
+    expect(resumed.action).toEqual(planned!.action);
+  });
+
   it('stops on Stop', () => {
     const [, stopped] = run(flow(), [{ type: 'start', start: 'build' }, { type: 'stopped' }]);
     expect(stopped!.action).toMatchObject({ type: 'finish', status: 'cancelled' });

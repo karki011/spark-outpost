@@ -75,7 +75,22 @@ interface CostInputs {
   cached_write_tokens: number | null;
 }
 
-export async function recordRunMetrics(db: Db, runId: string, metrics: RunMetrics): Promise<void> {
+function tokenEstimate(run: CostInputs): number | null {
+  if (run.input_tokens === null || run.output_tokens === null) return null;
+  return estimateCostUsd(run.provider, run.model, {
+    input: run.input_tokens,
+    output: run.output_tokens,
+    cachedRead: run.cached_read_tokens,
+    cachedWrite: run.cached_write_tokens,
+  });
+}
+
+export async function recordRunMetrics(
+  db: Db,
+  runId: string,
+  metrics: RunMetrics,
+  liveEstimateUsd = 0,
+): Promise<void> {
   const { rows } = await db.query<CostInputs>(
     `UPDATE runs SET duration_ms = $2, tool_call_count = $3 WHERE id = $1
      RETURNING provider, COALESCE(used_model, model) AS model, cost_usd, input_tokens,
@@ -83,15 +98,8 @@ export async function recordRunMetrics(db: Db, runId: string, metrics: RunMetric
     [runId, Math.round(metrics.durationMs), metrics.toolCallCount],
   );
   const run = rows[0];
-  if (!run || run.cost_usd !== null || run.input_tokens === null || run.output_tokens === null) {
-    return;
-  }
-  const estimate = estimateCostUsd(run.provider, run.model, {
-    input: run.input_tokens,
-    output: run.output_tokens,
-    cachedRead: run.cached_read_tokens,
-    cachedWrite: run.cached_write_tokens,
-  });
+  if (!run || run.cost_usd !== null) return;
+  const estimate = tokenEstimate(run) ?? (liveEstimateUsd > 0 ? liveEstimateUsd : null);
   if (estimate === null) return;
   await db.query(
     `UPDATE runs SET cost_usd = $2, cost_source = 'estimated' WHERE id = $1 AND cost_usd IS NULL`,

@@ -2,6 +2,7 @@ import { failingChecks, type CheckBody } from '@spark-outpost/contracts';
 import { CHECK_FIXES } from '../advisor/policy.ts';
 import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { workingTree } from '../projects/snapshot.ts';
+import { checkBudget } from './budget-check.ts';
 import { runChecks } from './checks.ts';
 import { checkFailureText } from './context.ts';
 import { runMember, type MemberOutcome, type Place } from './members.ts';
@@ -61,6 +62,7 @@ export async function checkAndFix(
   await awaitDepsPrep(s.deps.db, copyRunId);
   let checks = await runChecks(s, target(last));
   for (let fixes = 0; checks?.status === 'failed' && fixes < CHECK_FIXES; fixes += 1) {
+    if (s.control.signal.aborted || (await checkBudget(s))) break;
     last = await fix(s, checks, site);
     if (last.outcome !== 'succeeded') break;
     checks = await runChecks(s, target(last));

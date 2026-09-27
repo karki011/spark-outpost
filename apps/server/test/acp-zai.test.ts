@@ -156,7 +156,13 @@ describe('Z.ai provider against the fake agent', { timeout: 20_000 }, () => {
     );
     const usage = outputs.filter((output) => output.kind === 'usage');
     expect(usage).toEqual([
-      { kind: 'usage', contextUsed: 1_000, contextSize: 1_000_000, costUsd: null },
+      {
+        kind: 'usage',
+        contextUsed: 1_000,
+        contextSize: 1_000_000,
+        costUsd: null,
+        readings: 'start_and_end',
+      },
     ]);
   });
 

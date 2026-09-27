@@ -75,6 +75,7 @@ export interface Session {
   startedAt: number;
   budgetHit: BudgetLimit | null;
   members: Map<string, () => void>;
+  liveCost: Map<string, number>;
   checkpoints: number;
   git: boolean;
   checks: ProjectChecks | null;

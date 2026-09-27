@@ -55,6 +55,12 @@ function counter(s: Session, also?: (output: ProviderOutput) => void) {
   return { total, observe };
 }
 
+function liveCostOf(s: Session, runId: string): (usd: number) => void {
+  return (usd) => {
+    s.liveCost.set(runId, usd);
+  };
+}
+
 function memberControl(s: Session): {
   control: Pick<RunControl, 'signal' | 'reason' | 'stop'>;
   abort: () => void;
@@ -115,9 +121,11 @@ async function runInPlace(
   const { total, observe } = counter(s);
   const member = memberControl(s);
   s.members.set(s.lease.runId, member.abort);
+  if (s.budgetHit) member.abort();
   try {
     const result = await runAgentTurn(s.deps, s.lease, input, s.append, member.control, {
       onOutput: observe,
+      onLiveCost: liveCostOf(s, s.lease.runId),
     });
     if (result.messageId) s.message = { id: result.messageId, text: result.text };
     return {
@@ -134,6 +142,7 @@ async function runInPlace(
     };
   } finally {
     s.members.delete(s.lease.runId);
+    s.liveCost.delete(s.lease.runId);
   }
 }
 
@@ -203,6 +212,7 @@ async function runChild(
   const cancel = () => void requestCancel(s.deps.db, lease.runId).catch(() => undefined);
   s.members.set(lease.runId, cancel);
   s.control.signal.addEventListener('abort', cancel, { once: true });
+  if (s.control.signal.aborted || s.budgetHit) await requestCancel(s.deps.db, lease.runId);
   if (copy) await copy.prepare(lease.runId);
   fitToolLimit(s, route.pick.provider);
   await recordRoute(s, spawn.role, resolved, lease.runId, name);
@@ -217,6 +227,7 @@ async function runChild(
       lease,
       {
         onOutput: observe,
+        onLiveCost: liveCostOf(s, lease.runId),
         backupAlsoFor: s.lease.runId,
         recordsPlan: spawn.role === 'builder',
         ...(spawn.role === 'builder' ? { observeEdits: editObserver(s, lease.runId) } : {}),
@@ -239,6 +250,7 @@ async function runChild(
   } finally {
     s.control.signal.removeEventListener('abort', cancel);
     s.members.delete(lease.runId);
+    s.liveCost.delete(lease.runId);
     await mergeRoute(s.deps.db, lease.runId, { fileReads: total.reads.length }).catch(
       () => undefined,
     );

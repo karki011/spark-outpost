@@ -283,6 +283,12 @@ async function turn(
     await failure('error', 'unexpected status 401 Unauthorized');
     return 'end_turn';
   }
+  if (text.includes('#stubborn')) {
+    for (let index = 0; ; index++) {
+      await say(`word${index} `);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
   if (text.includes('#slow')) {
     for (let index = 0; ; index++) {
       await say(`word${index} `);
@@ -405,13 +411,16 @@ acp
   .onRequest(acp.methods.agent.session.prompt, async (ctx) => {
     const controller = new AbortController();
     pending.set(ctx.params.sessionId, controller);
+    const text = ctx.params.prompt.map((block) => (block.type === 'text' ? block.text : ''));
     try {
-      const text = ctx.params.prompt.map((block) => (block.type === 'text' ? block.text : ''));
       recordPrompt(ctx.params.sessionId, text.join(''));
       const stopReason = await turn(ctx.params, ctx.client, controller.signal);
       return { stopReason, usage: FAKE_USAGE };
     } catch (error) {
-      if (controller.signal.aborted) return { stopReason: 'cancelled' as const, usage: FAKE_USAGE };
+      if (controller.signal.aborted) {
+        const unmetered = text.join('').includes('#spend');
+        return { stopReason: 'cancelled' as const, ...(unmetered ? {} : { usage: FAKE_USAGE }) };
+      }
       throw error;
     }
   })

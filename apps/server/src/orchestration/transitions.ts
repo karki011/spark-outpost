@@ -66,7 +66,7 @@ export type FlowEvent =
   | { type: 'answered'; kind: CheckpointKind; optionId: string; note: string | null }
   | { type: 'wrapped'; filesChanged: number }
   | { type: 'reverted' }
-  | { type: 'budget_exceeded'; limit: BudgetLimit }
+  | { type: 'budget_exceeded'; limit: BudgetLimit; unstarted?: boolean }
   | { type: 'stopped' };
 
 export interface FlowState {
@@ -82,6 +82,7 @@ export interface FlowState {
   last: Spawn | null;
   waitingFor: CheckpointKind | null;
   exceeded: BudgetLimit | null;
+  resumeLast: boolean;
   open: string[];
   loop: string | null;
   verifier: boolean;
@@ -114,6 +115,7 @@ export function initialFlow(
     last: null,
     waitingFor: null,
     exceeded: null,
+    resumeLast: false,
     open: [],
     loop: null,
     verifier,
@@ -311,10 +313,10 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
   const option = event.optionId;
   if (event.kind === 'budget') {
     if (option === CHECKPOINT_OPTION.continueBudget && state.last) {
-      return spawn(
-        { ...state, exceeded: null },
-        { ...state.last, escalate: false, reason: 'resume' },
-      );
+      const next = state.resumeLast
+        ? { ...state.last, escalate: false, reason: 'resume' as const }
+        : state.last;
+      return spawn({ ...state, exceeded: null, resumeLast: false }, next);
     }
     const limit = (state.exceeded ?? 'time').replace('_', ' ');
     return stopReport(state, `Stopped: the ${limit} budget ran out.`);
@@ -388,7 +390,7 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
       return finish({ ...state, open: [] }, 'succeeded', 'Reverted the changes.');
     case 'budget_exceeded':
       return ask(
-        { ...state, exceeded: event.limit },
+        { ...state, exceeded: event.limit, resumeLast: event.unstarted !== true },
         'budget',
         `The ${event.limit.replace('_', ' ')} budget ran out.`,
       );

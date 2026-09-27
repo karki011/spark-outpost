@@ -142,6 +142,25 @@ describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, ()
     expect(outputs.length).toBeLessThan(500);
   });
 
+  it('stops an agent that keeps streaming after the cancel once the grace period ends', async () => {
+    const controller = new AbortController();
+    let count = 0;
+    let abortedAt = 0;
+    for await (const output of provider.run({
+      prompt: '#stubborn',
+      history: [],
+      settings,
+      signal: controller.signal,
+    })) {
+      if (output.kind === 'text_delta') count += 1;
+      if (count === 3 && abortedAt === 0) {
+        abortedAt = Date.now();
+        controller.abort();
+      }
+    }
+    expect(Date.now() - abortedAt).toBeLessThan(4_000);
+  }, 15_000);
+
   it('turns agent failures into readable provider errors', async () => {
     const crash = await collect('#crash');
     expect(crash.error).toBeInstanceOf(ProviderError);

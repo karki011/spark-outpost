@@ -25,6 +25,7 @@ import {
   recordUsage,
 } from './run-metadata.ts';
 import { createTaskRecorder } from './task-recorder.ts';
+import { createLiveCost } from '../usage/live-cost.ts';
 import { prepareTurnSession, type TurnSession } from './turn-session.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
 
@@ -88,6 +89,7 @@ export interface TurnOptions {
   backupAlsoFor?: string;
   recordsPlan?: boolean;
   observeEdits?: EditObserver | undefined;
+  onLiveCost?: (usd: number) => void;
 }
 
 export interface TurnResult {
@@ -123,6 +125,10 @@ export async function runAgentTurn(
     options.recordsPlan ?? true,
   );
   const startedAt = Date.now();
+  const live = createLiveCost(input.provider, input.settings.model);
+  const meter = (output: ProviderOutput) => {
+    if (live.observe(output)) options.onLiveCost?.(live.unreported());
+  };
   const audit = createAuditRecorder({
     write: (entries) => insertProtocolEntries(deps.db, lease, entries),
   });
@@ -132,10 +138,14 @@ export async function runAgentTurn(
     auditSettled = true;
     if (control.reason() === 'lease_lost') return audit.discard();
     await audit.close();
-    await recordRunMetrics(deps.db, lease.runId, {
-      durationMs: Date.now() - startedAt,
-      toolCallCount: audit.toolCallCount(),
-    }).catch((error: unknown) => console.error('Could not record run metrics', error));
+    const estimate = control.signal.aborted ? live.unreported() : 0;
+    options.onLiveCost?.(0);
+    await recordRunMetrics(
+      deps.db,
+      lease.runId,
+      { durationMs: Date.now() - startedAt, toolCallCount: audit.toolCallCount() },
+      estimate,
+    ).catch((error: unknown) => console.error('Could not record run metrics', error));
   };
 
   let messageId: string | null = null;
@@ -165,6 +175,10 @@ export async function runAgentTurn(
   });
   try {
     if (await isCancelRequested(deps.db, lease.runId)) control.stop('cancelled');
+    if (control.signal.aborted && control.reason() !== 'lease_lost') {
+      await settleAudit();
+      return result('cancelled');
+    }
     const provider = deps.providers.get(input.provider);
     if (!provider) throw new ProviderError(`Provider "${input.provider}" is not available.`);
     const approvals =
@@ -200,6 +214,7 @@ export async function runAgentTurn(
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(session ? { session: session.target } : {}),
     })) {
+      meter(output);
       if (control.signal.aborted) {
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
         if (output.kind === 'usage') {
