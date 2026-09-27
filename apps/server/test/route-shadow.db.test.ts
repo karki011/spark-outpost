@@ -1,3 +1,4 @@
+import { POLICY_VERSION } from '../src/advisor/policy.ts';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -99,7 +100,7 @@ describe('Jev routing in shadow mode', () => {
 
     expect(await rows(runId, 'scan')).toHaveLength(1);
     const [rank] = await rows(runId, 'rank');
-    expect(rank).toMatchObject({ jev_status: 'answered', policy_version: 'lean-2' });
+    expect(rank).toMatchObject({ jev_status: 'answered', policy_version: POLICY_VERSION });
     expect(rank?.body.answer).toMatchObject({ observation: true, skipped: null });
     expect((rank?.body.answer.predicted as string[])[0]).toBe('divider.ts');
 
