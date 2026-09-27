@@ -72,13 +72,14 @@ interface CostInputs {
   input_tokens: number | null;
   output_tokens: number | null;
   cached_read_tokens: number | null;
+  cached_write_tokens: number | null;
 }
 
 export async function recordRunMetrics(db: Db, runId: string, metrics: RunMetrics): Promise<void> {
   const { rows } = await db.query<CostInputs>(
     `UPDATE runs SET duration_ms = $2, tool_call_count = $3 WHERE id = $1
      RETURNING provider, COALESCE(used_model, model) AS model, cost_usd, input_tokens,
-       output_tokens, cached_read_tokens`,
+       output_tokens, cached_read_tokens, cached_write_tokens`,
     [runId, Math.round(metrics.durationMs), metrics.toolCallCount],
   );
   const run = rows[0];
@@ -89,6 +90,7 @@ export async function recordRunMetrics(db: Db, runId: string, metrics: RunMetric
     input: run.input_tokens,
     output: run.output_tokens,
     cachedRead: run.cached_read_tokens,
+    cachedWrite: run.cached_write_tokens,
   });
   if (estimate === null) return;
   await db.query(

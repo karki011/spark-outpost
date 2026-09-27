@@ -35,7 +35,7 @@ The price is $0.042 per million input tokens. Output tokens are free (https://do
 - **Sent to TypeSafe (S2 intake):**
   - the new message only, capped at 8,000 characters
   - the mode and whether any repo is linked
-  - the connected provider IDs with their model IDs, labels and descriptions, and effort levels
+  - the connected provider IDs with their model IDs, labels and descriptions, and effort levels. Since the model cards ([MODEL_CARDS.md](MODEL_CARDS.md)), a carded model's description is its card line (tier, speed, price, a vendor blurb and at most one aggregate benchmark stat, 160 characters at most), a provider is described by its card, and frontier models are left out unless allowed for that provider
   - the text of files attached to the new message, capped at 8,000 characters in total, only so Jev can judge whether that untrusted text tries to steer the agent (no file names)
   - later, for review decisions, a summary of the changes (counts, and whether a check ran)
 - **Sent to TypeSafe (orchestrator routing):** the new message again, and for each subagent its role and, for a Builder, its plan step (300 characters) with path-like words replaced by `[path]`.

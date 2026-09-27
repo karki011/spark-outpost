@@ -62,14 +62,15 @@ describe('price estimates', () => {
 
   it('prices the Codex models from the cited OpenAI price page and nothing else', () => {
     expect(PRICE_TABLE.source).toContain('https://developers.openai.com/api/docs/pricing');
-    expect(PRICE_TABLE.prices.map((price) => price.model)).toEqual([
-      'gpt-6-astra',
-      'gpt-6-sol',
-      'gpt-6-luna',
+    const codex = PRICE_TABLE.prices.filter((price) => price.provider === 'codex');
+    expect(codex.map((price) => price.model).sort()).toEqual([
+      'gpt-5.5',
+      'gpt-5.6-luna',
       'gpt-5.6-sol',
       'gpt-5.6-terra',
-      'gpt-5.6-luna',
-      'gpt-5.5',
+      'gpt-6-astra',
+      'gpt-6-luna',
+      'gpt-6-sol',
     ]);
     expect(priceFor('codex', 'gpt-6-sol')).toMatchObject({
       inputPerMillion: 2,
@@ -80,5 +81,25 @@ describe('price estimates', () => {
     expect(estimateCostUsd('codex', 'gpt-reserve', tokens)).toBeNull();
     expect(estimateCostUsd('codex', 'codex-auto-review', tokens)).toBeNull();
     expect(estimateCostUsd('claude', 'sonnet', tokens)).toBeNull();
+  });
+
+  it('prices GLM from the cited Z.ai page, with cache reads outside the input count', () => {
+    expect(PRICE_TABLE.source).toContain('https://docs.z.ai/guides/overview/pricing');
+    expect(PRICE_TABLE.prices.filter((price) => price.provider === 'zai')).toMatchObject([
+      { model: 'glm-5.3-flash', inputPerMillion: 0.15, cachedInputPerMillion: 0.03 },
+      {
+        model: 'glm-5.3',
+        inputPerMillion: 1.4,
+        cachedInputPerMillion: 0.26,
+        outputPerMillion: 4.4,
+      },
+    ]);
+    const tokens = { input: 1_000_000, output: 100_000, cachedRead: 2_000_000, cachedWrite: 0 };
+    expect(estimateCostUsd('zai', 'glm-5.3', tokens)).toBeCloseTo(1.4 + 2 * 0.26 + 0.44, 6);
+    expect(estimateCostUsd('zai', 'glm-5.3', { ...tokens, cachedWrite: 1_000_000 })).toBeCloseTo(
+      2.8 + 2 * 0.26 + 0.44,
+      6,
+    );
+    expect(estimateCostUsd('claude', 'glm-5.3', tokens)).toBeNull();
   });
 });

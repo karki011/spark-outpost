@@ -4,6 +4,8 @@ import { catalogEntry, type CatalogEntry } from '../providers/catalog.ts';
 import type { RunCommand } from './command.ts';
 import type { SecretStore } from './secrets.ts';
 import { locateCli, type ApiEndpoints } from './verify.ts';
+import { zaiFailureReason, zaiMessageRequest } from './zai-key.ts';
+import { zaiModelId } from '../agents/acp/zai.ts';
 
 export interface TestMessageDeps {
   run: RunCommand;
@@ -174,6 +176,44 @@ async function postJson(
   );
 }
 
+function keyedTestRequest(
+  entry: CatalogEntry,
+  key: string,
+  model: string,
+  deps: TestMessageDeps,
+): Promise<Response> {
+  if (entry.id === 'zai') {
+    const request = zaiMessageRequest(
+      deps.endpoints.zaiBaseUrl,
+      key,
+      zaiModelId(model) ?? model,
+      PROMPT,
+    );
+    return deps.endpoints.fetch(request, { signal: AbortSignal.timeout(API_TIMEOUT_MS) });
+  }
+  return entry.id === 'claude'
+    ? postJson(
+        deps,
+        `${deps.endpoints.anthropicBaseUrl}/v1/messages`,
+        { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+        {
+          model,
+          max_tokens: 16,
+          messages: [{ role: 'user', content: PROMPT }],
+        },
+      )
+    : postJson(
+        deps,
+        `${deps.endpoints.openaiBaseUrl}/v1/chat/completions`,
+        { authorization: `Bearer ${key}` },
+        {
+          model,
+          max_completion_tokens: 16,
+          messages: [{ role: 'user', content: PROMPT }],
+        },
+      );
+}
+
 async function testApiKey(
   entry: CatalogEntry,
   connection: ProviderConnection,
@@ -185,33 +225,15 @@ async function testApiKey(
   const startedAt = Date.now();
   let response: Response;
   try {
-    response =
-      entry.id === 'claude'
-        ? await postJson(
-            deps,
-            `${deps.endpoints.anthropicBaseUrl}/v1/messages`,
-            { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-            {
-              model: connection.model,
-              max_tokens: 16,
-              messages: [{ role: 'user', content: PROMPT }],
-            },
-          )
-        : await postJson(
-            deps,
-            `${deps.endpoints.openaiBaseUrl}/v1/chat/completions`,
-            { authorization: `Bearer ${key}` },
-            {
-              model: connection.model,
-              max_completion_tokens: 16,
-              messages: [{ role: 'user', content: PROMPT }],
-            },
-          );
+    response = await keyedTestRequest(entry, key, connection.model, deps);
   } catch {
     return failedWith(`couldn't reach ${entry.maker}. Check your internet connection.`);
   }
-  if (!response.ok) return failedWith(httpReason(entry, response.status));
   const payload = (await response.json().catch(() => null)) as { model?: unknown } | null;
+  if (!response.ok) {
+    const zai = entry.id === 'zai' ? zaiFailureReason(response.status, payload) : null;
+    return failedWith(zai ?? httpReason(entry, response.status));
+  }
   const model = typeof payload?.model === 'string' ? payload.model : connection.model;
   return answered(startedAt, model);
 }

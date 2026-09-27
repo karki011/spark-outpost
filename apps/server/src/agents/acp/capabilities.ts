@@ -1,5 +1,6 @@
 import type { NewSessionResponse, SessionConfigOption } from '@agentclientprotocol/sdk';
 import type { CapabilityChoice, ProviderCapabilityReport } from '../../providers/provider.ts';
+import type { AgentOffers } from './agents.ts';
 import { sessionOptions } from './legacy-options.ts';
 import { choices, findOption } from './session-config.ts';
 
@@ -44,4 +45,20 @@ export function capabilitiesFrom(
 
 export function sessionCapabilities(response: NewSessionResponse): ProviderCapabilityReport {
   return capabilitiesFrom(sessionOptions(response));
+}
+
+export function offeredCapabilities(
+  report: ProviderCapabilityReport,
+  offers: AgentOffers | undefined,
+): ProviderCapabilityReport {
+  if (!offers) return report;
+  const models = report.models.filter((choice) => offers.models.includes(choice.id));
+  const efforts = report.efforts.filter((choice) => offers.efforts.includes(choice.id));
+  return {
+    models,
+    efforts,
+    defaultModel: models.some((choice) => choice.id === report.defaultModel)
+      ? report.defaultModel
+      : (models[0]?.id ?? null),
+  };
 }

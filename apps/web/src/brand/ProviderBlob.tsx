@@ -6,6 +6,7 @@ import type { BlobExpression } from './blob-expression.ts';
 const PROVIDER_SEED: Record<ConnectableId, { name: string; hue: number }> = {
   claude: { name: 'claude', hue: 24 },
   codex: { name: 'codex-outpost', hue: 205 },
+  zai: { name: 'zai-glm', hue: 112 },
   jev: { name: 'jev-typesafe', hue: 318 },
 };
 

@@ -133,6 +133,23 @@ describe('conversation repos', () => {
   });
 });
 
+describe('recent repos', () => {
+  it('stamps each project with when it was last linked or used, keeping the list order', async () => {
+    const appRepo = await project(folders.app);
+    const docsRepo = await project(folders.docs);
+    const libRepo = await project(folders.lib);
+    const id = randomUUID();
+    await patch(id, { projectIds: [appRepo.id] }).expect(200);
+    await runRoots(id);
+    const list = (await get('/api/projects').expect(200)).body as Project[];
+    expect(list.map((entry) => entry.name)).toEqual(['app', 'docs', 'lib']);
+    const used = new Map(list.map((entry) => [entry.id, entry.lastUsedAt ?? '']));
+    expect(used.get(docsRepo.id)).toBe(docsRepo.createdAt);
+    expect(used.get(libRepo.id)).toBe(libRepo.createdAt);
+    expect(used.get(appRepo.id)! > libRepo.createdAt).toBe(true);
+  });
+});
+
 describe('new chats', () => {
   it('start with no repos, whatever the last chat used', async () => {
     const appRepo = await project(folders.app);

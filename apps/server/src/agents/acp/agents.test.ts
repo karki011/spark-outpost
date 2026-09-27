@@ -2,7 +2,15 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { agentDefinitions, claudeSessionMeta, secretReadRules } from './agents.ts';
+import {
+  CODEX_DO_MODE,
+  supportsDo,
+  HIDE_CLAUDE_AUTH,
+  agentDefinitions,
+  claudeSessionMeta,
+  secretReadRules,
+} from './agents.ts';
+import { zaiEnvironment, zaiModelId } from './zai.ts';
 
 type ClaudeOptions = {
   tools: string[];
@@ -76,7 +84,7 @@ describe('Claude session options', () => {
       disableBypassPermissionsMode: 'disable',
     });
     expect(options.allowDangerouslySkipPermissions).toBe(false);
-    expect(agentDefinitions.claude.doUnavailableReason).toBeUndefined();
+    expect(supportsDo(agentDefinitions.claude)).toBe(true);
   });
 });
 
@@ -98,19 +106,149 @@ describe('Codex launch', () => {
     });
   });
 
-  it('has no Do mode, because its sandboxed commands never ask', () => {
+  it('does Do in the patched ask-every-action mode, opening only the primary repo', () => {
+    expect(agentDefinitions.codex.doMode).toBe(CODEX_DO_MODE);
+    expect(agentDefinitions.codex.doPrimaryRootOnly).toBe(true);
     expect(agentDefinitions.codex.doSessionMeta).toBeUndefined();
-    expect(agentDefinitions.codex.doUnavailableReason).toMatch(/can't ask before each command/);
+    expect(supportsDo(agentDefinitions.codex)).toBe(true);
   });
 
-  it('runs a codex-acp whose read-only mode is a readOnly sandbox', () => {
+  describe('the codex-acp patch', () => {
     const require = createRequire(import.meta.url);
     const manifest = require.resolve('@agentclientprotocol/codex-acp/package.json');
     const source = readFileSync(join(dirname(manifest), 'dist/index.js'), 'utf8');
-    const start = source.indexOf('static ReadOnly = new _AgentMode(');
-    const mode = source.slice(start, source.indexOf(');', start));
-    expect(start).toBeGreaterThan(-1);
-    expect(mode).toContain('type: "readOnly"');
-    expect(mode).not.toContain('workspaceWrite');
+    const block = (marker: string) => {
+      const start = source.indexOf(marker);
+      expect(start).toBeGreaterThan(-1);
+      return source.slice(start, source.indexOf(');', start));
+    };
+
+    it('makes read-only a readOnly sandbox', () => {
+      const mode = block('static ReadOnly = new _AgentMode(');
+      expect(mode).toContain('type: "readOnly"');
+      expect(mode).not.toContain('workspaceWrite');
+    });
+
+    it('adds an ask-every-action mode: untrusted, user-reviewed, sandboxed without network', () => {
+      const mode = block('static AskEveryAction = new _AgentMode(');
+      expect(mode).toContain(`"${CODEX_DO_MODE}"`);
+      expect(mode).toContain('"untrusted"');
+      expect(mode).toContain('"user"');
+      expect(mode).toContain('type: "workspaceWrite"');
+      expect(mode).toContain('networkAccess: false');
+      expect(mode).toContain('excludeSlashTmp: true');
+      expect(source).toContain('_AgentMode.ReadOnly, _AgentMode.AskEveryAction,');
+    });
+
+    it('offers decline before cancel for commands and file changes', () => {
+      const commands = source.slice(
+        source.indexOf('function commandDecisionOptions(params) {'),
+        source.indexOf('function permissionOptionOrder('),
+      );
+      expect(commands).toContain('decisions.splice(');
+      expect(commands).toContain('"decline"');
+      const files = source.slice(
+        source.indexOf('function fileChangeDecisionOptions()'),
+        source.indexOf('function permissionProfileOptions()'),
+      );
+      expect(files.indexOf('ApprovalOptionId.Decline')).toBeGreaterThan(-1);
+      expect(files.indexOf('ApprovalOptionId.Decline')).toBeLessThan(
+        files.indexOf('ApprovalOptionId.Cancel'),
+      );
+    });
+  });
+});
+
+describe('Z.ai launch', () => {
+  const KEY = 'zai-unit-key.0123456789';
+  const parent = {
+    PATH: '/usr/bin:/bin',
+    HOME: '/Users/someone',
+    LANG: 'en_US.UTF-8',
+    LC_ALL: 'en_US.UTF-8',
+    ANTHROPIC_API_KEY: 'sk-ant-api03-parent',
+    ANTHROPIC_AUTH_TOKEN: 'parent-token',
+    ANTHROPIC_BASE_URL: 'https://api.anthropic.com',
+    ANTHROPIC_MODEL: 'claude-opus-5-5',
+    ANTHROPIC_CUSTOM_HEADERS: 'x-org: acme',
+    CLAUDE_CODE_OAUTH_TOKEN: 'parent-oauth',
+    CLAUDE_CODE_USE_BEDROCK: '1',
+    CLAUDE_CONFIG_DIR: '/Users/someone/.claude',
+    CLAUDE_SECURESTORAGE_CONFIG_DIR: '/Users/someone/.claude',
+    AWS_BEARER_TOKEN_BEDROCK: 'bedrock',
+    OPENAI_API_KEY: 'sk-proj-parent',
+    DATABASE_URL: 'postgres://user:pass@localhost/db',
+  };
+  const env = zaiEnvironment(parent, KEY, '/tmp/zai-config');
+
+  it('keeps none of the parent Anthropic, Claude or other credentials', () => {
+    expect(env).toMatchObject({
+      PATH: parent.PATH,
+      HOME: parent.HOME,
+      LANG: parent.LANG,
+      LC_ALL: parent.LC_ALL,
+    });
+    expect(env).not.toHaveProperty('ANTHROPIC_API_KEY');
+    expect(env).not.toHaveProperty('ANTHROPIC_MODEL');
+    expect(env).not.toHaveProperty('ANTHROPIC_CUSTOM_HEADERS');
+    expect(env).not.toHaveProperty('CLAUDE_CODE_OAUTH_TOKEN');
+    expect(env).not.toHaveProperty('CLAUDE_CODE_USE_BEDROCK');
+    expect(env).not.toHaveProperty('CLAUDE_SECURESTORAGE_CONFIG_DIR');
+    expect(env).not.toHaveProperty('AWS_BEARER_TOKEN_BEDROCK');
+    expect(env).not.toHaveProperty('OPENAI_API_KEY');
+    expect(env).not.toHaveProperty('DATABASE_URL');
+    expect(Object.values(env)).not.toContain('parent-token');
+  });
+
+  it('points Claude Code at Z.ai with the key, an isolated config dir and the documented settings', () => {
+    expect(env).toMatchObject({
+      ANTHROPIC_BASE_URL: 'https://api.z.ai/api/anthropic',
+      ANTHROPIC_AUTH_TOKEN: KEY,
+      CLAUDE_CONFIG_DIR: '/tmp/zai-config',
+      ANTHROPIC_DEFAULT_OPUS_MODEL: 'glm-5.3[1m]',
+      ANTHROPIC_DEFAULT_SONNET_MODEL: 'glm-5.3[1m]',
+      ANTHROPIC_DEFAULT_FABLE_MODEL: 'glm-5.3[1m]',
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: 'glm-5.3-flash[1m]',
+      ANTHROPIC_DEFAULT_OPUS_MODEL_NAME: 'GLM-5.3',
+      ANTHROPIC_DEFAULT_HAIKU_MODEL_NAME: 'GLM-5.3-Flash',
+      API_TIMEOUT_MS: '3000000',
+      CLAUDE_CODE_AUTO_COMPACT_WINDOW: '1000000',
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+    });
+    const anthropic = Object.keys(env).filter(
+      (name) => name.startsWith('ANTHROPIC_') && !name.startsWith('ANTHROPIC_DEFAULT_'),
+    );
+    expect(anthropic.sort()).toEqual(['ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL']);
+  });
+
+  it('runs claude-agent-acp with the subscription guard and the same hardening as Claude', () => {
+    const zai = agentDefinitions.zai;
+    expect(zai.launch().args.at(-1)).toBe(HIDE_CLAUDE_AUTH);
+    expect(agentDefinitions.claude.launch().args).not.toContain(HIDE_CLAUDE_AUTH);
+    expect(zai.conversationMode).toBe('default');
+    expect(zai.conversationSessionMeta).toEqual(agentDefinitions.claude.conversationSessionMeta);
+    expect(zai.projectSessionMeta?.(['/w'])).toEqual(
+      agentDefinitions.claude.projectSessionMeta?.(['/w']),
+    );
+    expect(zai.planSessionMeta?.([])).toEqual(agentDefinitions.claude.planSessionMeta?.([]));
+    expect(zai.doSessionMeta?.([])).toEqual(agentDefinitions.claude.doSessionMeta?.([]));
+    expect(optionsOf(zai.doSessionMeta?.([]))).toMatchObject({
+      settingSources: [],
+      allowDangerouslySkipPermissions: false,
+    });
+    expect(zai.conversationEnv).toBeUndefined();
+    expect(zai.estimatesCost).toBe(true);
+  });
+
+  it('records the GLM model behind each Claude Code model slot', () => {
+    expect(zaiModelId('opus')).toBe('glm-5.3');
+    expect(zaiModelId('sonnet')).toBe('glm-5.3');
+    expect(zaiModelId('haiku')).toBe('glm-5.3-flash');
+    expect(zaiModelId('glm-5.3-flash[1m]')).toBe('glm-5.3-flash');
+    expect(zaiModelId(null)).toBeNull();
+    expect(agentDefinitions.zai.offers).toEqual({
+      models: ['opus', 'haiku'],
+      efforts: ['low', 'high', 'max'],
+    });
   });
 });

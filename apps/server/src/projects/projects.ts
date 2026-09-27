@@ -14,6 +14,7 @@ export interface ProjectRow {
   command_allowlist: string[];
   check_commands: string[] | null;
   build_style: string;
+  last_used_at?: Date;
 }
 
 export const PROJECT_COLUMNS =
@@ -38,6 +39,7 @@ export function toProject(row: ProjectRow, home: string): Project {
     rootPath: row.root_path,
     displayPath: displayPath(row.root_path, home),
     createdAt: row.created_at.toISOString(),
+    ...(row.last_used_at ? { lastUsedAt: row.last_used_at.toISOString() } : {}),
     commandAllowlist: row.command_allowlist,
     checkCommands: row.check_commands,
     buildStyle: buildStyleSchema.catch('off').parse(row.build_style),
@@ -54,7 +56,14 @@ export async function realHome(): Promise<string> {
 
 export async function listProjects(db: Queryable, workspaceId: string): Promise<Project[]> {
   const { rows } = await db.query<ProjectRow>(
-    `SELECT ${PROJECT_COLUMNS} FROM projects WHERE workspace_id = $1 ORDER BY sort_order NULLS LAST, lower(name), created_at`,
+    `SELECT ${PROJECT_COLUMNS}, GREATEST(
+       created_at,
+       (SELECT max(cp.created_at) FROM conversation_projects cp WHERE cp.project_id = projects.id),
+       (SELECT max(r.created_at) FROM conversation_projects cp
+        JOIN runs r ON r.conversation_id = cp.conversation_id
+        WHERE cp.project_id = projects.id)
+     ) AS last_used_at
+     FROM projects WHERE workspace_id = $1 ORDER BY sort_order NULLS LAST, lower(name), created_at`,
     [workspaceId],
   );
   const home = await realHome();

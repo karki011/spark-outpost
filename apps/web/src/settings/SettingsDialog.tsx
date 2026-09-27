@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
+import { ModelsSection } from '../models/ModelsSection.tsx';
 import { ConnectorGrid } from '../onboarding/ToolsStep.tsx';
 import { ProviderList } from '../providers/ProviderList.tsx';
 import { ThemeCards } from '../theme/ThemeCards.tsx';
@@ -12,7 +13,7 @@ import { ProfileSection } from './ProfileSection.tsx';
 import '../onboarding/tools.css';
 import './settings.css';
 
-export type SettingsSection = 'profile' | 'ai' | 'usage' | 'tools' | 'look';
+export type SettingsSection = 'profile' | 'ai' | 'models' | 'usage' | 'tools' | 'look';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   {
@@ -29,6 +30,16 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
     id: 'ai',
     label: 'AI providers',
     icon: <path d="M12 3 13.6 10.4 21 12l-7.4 1.6L12 21l-1.6-7.4L3 12l7.4-1.6Z" />,
+  },
+  {
+    id: 'models',
+    label: 'Models',
+    icon: (
+      <>
+        <rect x="4" y="4" width="16" height="16" rx="2" />
+        <path d="M8 9h8M8 13h8M8 17h5" />
+      </>
+    ),
   },
   {
     id: 'usage',
@@ -178,6 +189,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                     <AutoContinueSetting seconds={setup.data.profile.autoContinueSeconds} />
                   </>
                 )}
+                {section === 'models' && <ModelsSection />}
                 {section === 'usage' && <UsageSection />}
                 {section === 'tools' && (
                   <>

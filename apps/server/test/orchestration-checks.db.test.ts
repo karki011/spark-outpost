@@ -4,12 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CheckBody } from '@spark-outpost/contracts';
+import { allowedForRun } from '../src/persistence/approvals.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { createProject } from '../src/projects/projects.ts';
 import { REVIEW_INTENT_REASON } from '../src/orchestration/depth.ts';
 import type { LaneOptions } from '../src/orchestration/placement.ts';
 import {
   SCENARIOS,
+  answerEverything,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -92,6 +94,14 @@ async function checkBodies(): Promise<CheckBody[]> {
   return rows.map((row) => row.body);
 }
 
+async function fixRunId(runId: string): Promise<string> {
+  const { rows } = await t.db.query<{ id: string }>(
+    `SELECT id FROM runs WHERE parent_run_id = $1 AND role = 'builder'`,
+    [runId],
+  );
+  return rows[0]!.id;
+}
+
 async function lastReply(runId: string): Promise<string> {
   const { rows } = await t.db.query<{ text: string }>(
     `SELECT string_agg(payload->>'delta', '' ORDER BY seq) AS text FROM run_events
@@ -165,6 +175,32 @@ describe('checks after a Builder lands', () => {
     const bodies = await checkBodies();
     expect(bodies.map((body) => body.status)).toEqual(['passed']);
     expect(await children(runId)).toEqual([]);
+  });
+
+  it('lets "Allow for this run" on a Builder edit cover the same Builder fixing its checks', async () => {
+    await writeFile(join(root, 'check.mjs'), FAILS_UNTIL_FIXED);
+    await configureChecks(['node check.mjs']);
+    start(TRIVIAL);
+    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'balanced');
+    const { asked } = await driveToEnd(t, conversationId, runId, (approval) => {
+      const decision = answerEverything(approval);
+      return decision && approval.kind === 'edit' ? { ...decision, scope: 'run' } : decision;
+    });
+    expect(asked.filter((approval) => approval.kind === 'edit')).toHaveLength(1);
+    const [fix] = await children(runId);
+    expect(fix?.route.resumeKey).toBeDefined();
+    const { rows } = await t.db.query<{ decided_by: string }>(
+      `SELECT a.decided_by FROM approvals a JOIN runs r ON r.id = a.run_id
+       WHERE r.parent_run_id = $1 AND a.kind = 'edit'`,
+      [runId],
+    );
+    expect(rows.map((row) => row.decided_by)).toEqual(['run_rule']);
+    expect(await readFile(join(root, 'fixed.txt'), 'utf8')).toBe('fixed\n');
+
+    const fixId = await fixRunId(runId);
+    expect(await allowedForRun(t.db, fixId)).toHaveLength(1);
+    await t.db.query(`UPDATE runs SET route = route || '{"name":"Rivet"}' WHERE id = $1`, [fixId]);
+    expect(await allowedForRun(t.db, fixId)).toEqual([]);
   });
 
   it('runs no checks when the project turns them off', async () => {

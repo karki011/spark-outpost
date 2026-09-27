@@ -42,7 +42,7 @@ import { nameFor } from './member-routes.ts';
 import { publish, routeKey, type MemberResult, type Session } from './session.ts';
 import type { AgentOutcome, FlowEvent, GroupResult, Spawn } from './transitions.ts';
 
-interface Copies {
+export interface Copies {
   root: string;
   top: string;
   base: string;
@@ -50,7 +50,7 @@ interface Copies {
 
 type Layout = { kind: 'copies'; copies: Copies } | { kind: 'shared' } | { kind: 'main' };
 
-interface Ran {
+export interface Ran {
   stepIndex: number;
   steps: number[];
   role: AgentRole;
@@ -58,7 +58,7 @@ interface Ran {
   reviewed: boolean;
 }
 
-async function prepareCopies(s: Session, group: string): Promise<Copies> {
+export async function prepareCopies(s: Session, group: string): Promise<Copies> {
   const root = s.input.projectRoots[0]!;
   await ensureParentSnapshot(s);
   await excludeSparkDir(root);
@@ -69,7 +69,7 @@ async function prepareCopies(s: Session, group: string): Promise<Copies> {
   return { root, top, base };
 }
 
-function copyFor(s: Session, copies: Copies): NonNullable<Place['copy']> {
+export function copyFor(s: Session, copies: Copies): NonNullable<Place['copy']> {
   return (name) => {
     const branch = branchName(s.taskId, name);
     return {
@@ -176,7 +176,7 @@ export async function cleanOrphanedCopies(db: Db): Promise<number> {
   return removeAll(db, await orphanedWorktrees(db));
 }
 
-async function finishCopy(s: Session, ran: Ran): Promise<Finished | null> {
+export async function finishCopy(s: Session, ran: Ran): Promise<Finished | null> {
   const record = await getWorktree(s.deps.db, ran.result.copyRunId ?? ran.result.runId);
   if (!record) return null;
   const target = worktreePath(record.repoRoot, record.runId);

@@ -1,4 +1,21 @@
 import { apiKeyHint, type ConnectableSetup, type ConnectionMethod } from '@spark-outpost/contracts';
+import { ExternalLinkIcon } from '../ui/icons.tsx';
+
+function LinkedHint({ text, link }: { text: string; link: ConnectableSetup['keyLink'] }) {
+  const at = link ? text.indexOf(link.text) : -1;
+  if (!link || at < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, at)}
+      <a className="key-link" href={link.url} target="_blank" rel="noopener noreferrer">
+        {link.text}
+        <ExternalLinkIcon />
+        <span className="sr-only"> (opens in a new tab)</span>
+      </a>
+      {text.slice(at + link.text.length)}
+    </>
+  );
+}
 
 interface MethodPanelProps {
   provider: ConnectableSetup;
@@ -70,7 +87,11 @@ export function MethodPanel({
         </button>
       </div>
       <div className={`hintline${hint.tone === 'neutral' ? '' : ` ${hint.tone}`}`}>
-        {hint.message}
+        {hint.tone === 'neutral' ? (
+          <LinkedHint text={hint.message} link={provider.keyLink} />
+        ) : (
+          hint.message
+        )}
       </div>
       <button
         type="button"

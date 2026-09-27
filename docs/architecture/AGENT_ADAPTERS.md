@@ -53,6 +53,16 @@ Paths below are shortened:
 - **Bypass.** `bypassPermissions` stays in the mode list unless `_meta.claudeCode.options.allowDangerouslySkipPermissions === false` (`:6266`) or settings disable it.
 - **Sandbox.** Claude's `sandbox` setting only restricts Bash and its child processes ([permissions: sandboxing](https://code.claude.com/docs/en/permissions#how-permissions-interact-with-sandboxing)). It doesn't affect Read, Glob or Grep. It doesn't matter while Bash is off.
 
+## Claude adapter against Z.ai (September 26)
+
+The Z.ai provider runs the same claude-agent-acp 0.81.2 (Claude Code 2.1.280) with a different environment. What the shipped code does with it:
+
+- **Environment.** The SDK query gets `{...process.env, ..._meta env, ...provider env}` (`CA/acp-agent.js:6358-6366`), so the process environment we build is what Claude Code sees. With `settingSources: []` no settings file can add an `env` block or `apiKeyHelper`.
+- **Model slots.** Claude Code 2.1.280 reads `ANTHROPIC_DEFAULT_{OPUS,SONNET,HAIKU,FABLE}_MODEL` plus `_NAME`, `_DESCRIPTION` and `_SUPPORTED_CAPABILITIES`. With the GLM mapping, a probe offered `default` ("Default (recommended)", GLM-5.3), `opus` and `sonnet` (both "GLM-5.3"), `haiku` ("GLM-5.3-Flash") and `claude-fable-5-1` ("Fable 5.1", an Anthropic model). Efforts were `default`, `low`, `medium`, `high`, `xhigh` and `max`. We keep `opus`, `haiku` and Low/High/Max, and map Fable to GLM-5.3 too so no Anthropic model id can reach Z.ai.
+- **Keychain.** The credential store name is `Claude Code-credentials` plus `-<sha256(config dir)[0:8]>` whenever `CLAUDE_CONFIG_DIR` is set and `CLAUDE_SECURESTORAGE_CONFIG_DIR` isn't (bundled CLI, `RL()` in the storage chunk). The isolated config dir therefore never finds the user's login item. `CLAUDE_SECURESTORAGE_CONFIG_DIR` is not inherited.
+- **`--hide-claude-auth`** (`CA/hide-claude-auth.js`). It hides the claude.ai login method and refuses a session or turn whose account would bill a claude.ai subscription. A bearer token (`ANTHROPIC_AUTH_TOKEN`) counts as a non-subscription credential, so Z.ai sessions pass.
+- **Probe.** `initialize` and `session/new` with the Z.ai environment and a dummy token opened no network connection (checked with `lsof` on the adapter's process tree) and wrote only `.claude.json`, `backups/` and `sessions/` into the config dir, no credentials.
+
 ## Codex adapter (codex-acp 1.13.1)
 
 | Question                      | Answer                                                                                                                                                                                                            | Source                                     |
@@ -156,6 +166,7 @@ Then set the mode to `default` (as today) and keep declining every permission re
 - Never `agent`: its auto-reviewer approves for the user.
 - Never `agent-full-access`.
 - Keep `web_search: 'disabled'` and `unified_exec: false`. Point `TMPDIR` at the run folder.
+- **Shipped (September 26):** our patch's `ask-every-action` mode (`untrusted`, user reviewer, `workspaceWrite` without network or `/tmp`, plus a `decline` option). Every command and patch asks. See [CODEX_DO.md](CODEX_DO.md). The notes below describe the unpatched modes.
 - Be aware: under `on-request`, **commands and edits inside the project run without a permission request**. So HARNESS_PLAN's "commands that always ask" can't be done with codex-acp's modes. The adapter fixes `approvalPolicy` per turn, and the old `untrusted` policy is deprecated.
 - If every command must ask, the choices are:
   - Codex execpolicy rules (`prefix_rule(..., decision="prompt")` in `~/.codex/rules`), which aren't verified through the adapter
@@ -198,3 +209,14 @@ Then set the mode to `default` (as today) and keep declining every permission re
 
 - Codex 1.13.1 with our patch, asked to run `ls` and create a file in a temp git repo: in `agent` mode both ran with no `session/request_permission`; in `read-only` mode `ls` ran unasked and only the write became a permission request (`edit`, offering `allow_once`, `allow_always`, `reject_once`). This confirms that commands can't be made to ask, so Codex Do is unavailable (HARNESS_PLAN, M2 status).
 - Claude 0.81.2 with `settings.permissions.ask: ['Bash', 'Edit', 'Write']` in `default` mode asked for an edit, for `ls` and for `git push`, each as one `session/request_permission`.
+
+## Verified live for Codex Do (September 26, patched)
+
+- Probe: 88 turns over raw ACP in scratch repos (details and the full table in [CODEX_DO.md](CODEX_DO.md)).
+  - `untrusted` with `workspaceWrite` asked before every command and patch.
+  - `on-request` ran reads unasked, including `cat .env` inside and outside the repo.
+  - Escalated commands run unsandboxed after a single approval.
+- `test/codex-do.live.test.ts` (`gpt-6-luna` · low, one small task per level) found every Codex tool call behind an approval receipt:
+  - Hands-on: 4 of 4 asked.
+  - Balanced: `ls`, `cat` and `git status` were allowed as safe reads, and the shell edit asked.
+  - Hands-off and Full auto ran in a worktree, all allowed by the level.

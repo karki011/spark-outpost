@@ -17,7 +17,7 @@ import { pairRenames } from './change-renames.ts';
 import { copyChanges, type Describe } from './copy-changes.ts';
 import { countChangedLines } from './line-counts.ts';
 import { relativeInside } from './path-policy.ts';
-import { readIfPresent } from './run-changes.ts';
+import { readIfPresent, snapshotSource, type SnapshotSource } from './run-changes.ts';
 import { gitChanges, gitFileAt } from './snapshot.ts';
 
 interface FileVersions {
@@ -68,20 +68,27 @@ function changeKind(before: Buffer | null, after: Buffer | null): RunChange['cha
   return before.equals(after) ? null : 'modified';
 }
 
-async function gitVersions(run: RunState, next: RunState | undefined): Promise<FileVersions[]> {
+async function gitVersions(
+  db: Queryable,
+  run: RunState,
+  next: RunState | undefined,
+): Promise<FileVersions[]> {
   const { root, ref } = run.snapshot;
   if (!ref) return [];
-  const until = next?.snapshot.ref ?? null;
-  const changes = await gitChanges(root, ref, until);
+  const source = await snapshotSource(db, run.runId, root);
+  const until = next?.snapshot.ref ?? source.end;
+  if (source.gone && !until) return [];
+  const gitRoot = source.gitRoot;
+  const changes = await gitChanges(gitRoot, ref, until);
   return Promise.all(
     changes.map(async (change) => ({
       change,
-      before: change.change === 'added' ? null : await gitFileAt(root, ref, change.path),
+      before: change.change === 'added' ? null : await gitFileAt(gitRoot, ref, change.path),
       after:
         change.change === 'deleted'
           ? null
           : until
-            ? await gitFileAt(root, until, change.path)
+            ? await gitFileAt(gitRoot, until, change.path)
             : await readIfPresent(path.join(root, change.path)),
     })),
   );
@@ -99,18 +106,31 @@ async function laterBackup(
   return { found: false, content: null };
 }
 
+async function currentContent(
+  source: SnapshotSource,
+  target: string,
+  relative: string,
+  before: Buffer | null,
+): Promise<Buffer | null> {
+  if (!source.gone) return readIfPresent(target);
+  return source.end ? gitFileAt(source.gitRoot, source.end, relative) : before;
+}
+
 async function backupVersions(
   db: Queryable,
   run: RunState,
   later: readonly RunState[],
 ): Promise<FileVersions[]> {
   const versions: FileVersions[] = [];
+  const source = await snapshotSource(db, run.runId, run.snapshot.root);
   for (const backup of await listBackups(db, run.runId)) {
     const relative = relativeInside(run.snapshot.root, backup.path);
     if (relative === null) continue;
     const before = backup.existed ? backup.content : null;
     const next = await laterBackup(db, later, backup.path);
-    const after = next.found ? next.content : await readIfPresent(backup.path);
+    const after = next.found
+      ? next.content
+      : await currentContent(source, backup.path, relative, before);
     const change = changeKind(before, after);
     if (change) versions.push({ change: { path: relative, change }, before, after });
   }
@@ -140,6 +160,7 @@ async function runFiles(
   const versions =
     run.snapshot.kind === 'git'
       ? await gitVersions(
+          db,
           run,
           sameRoot.find((other) => other.snapshot.kind === 'git'),
         )

@@ -45,6 +45,7 @@ export const reviewBodySchema = z.object({
   findings: z.array(z.string()),
   text: z.string(),
   label: z.literal('AI review'),
+  sameProvider: z.boolean().optional(),
   net: z.number().int().nonpositive().nullable().optional(),
 });
 export type ReviewBody = z.infer<typeof reviewBodySchema>;
@@ -108,6 +109,7 @@ export const crewMemberSchema = z.object({
   finishedAt: z.string().nullable(),
   parallelGroup: z.string().nullable().optional(),
   copy: z.string().nullable().optional(),
+  sameProvider: z.boolean().optional(),
 });
 export type CrewMember = z.infer<typeof crewMemberSchema>;
 

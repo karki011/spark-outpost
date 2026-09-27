@@ -58,6 +58,7 @@ describe('Jev connection', () => {
     expect(body.providers.map((provider: { id: string }) => provider.id)).toEqual([
       'claude',
       'codex',
+      'zai',
     ]);
     expect(body.advisors).toEqual([
       expect.objectContaining({

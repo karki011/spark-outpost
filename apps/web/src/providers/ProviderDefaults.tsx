@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import {
   INVOLVEMENT_LEVELS,
+  levelHint,
   type Choice,
   type ProviderConnection,
   type ProviderSetup,
@@ -9,16 +10,18 @@ import {
 } from '@spark-outpost/contracts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { Segmented } from '../ui/Segmented.tsx';
-import { cleanDescription } from '../chat/composer/model-options.ts';
+import { cleanDescription, optionLabel } from '../chat/composer/model-options.ts';
 import { ChoicePicker } from './ChoicePicker.tsx';
 
-const LEVEL_CHOICES: Choice[] = INVOLVEMENT_LEVELS.map((level) => ({
-  id: level.id,
-  label: level.label,
-  description: level.hint,
-  risky: false,
-  unavailableReason: null,
-}));
+function levelChoices(provider: string): Choice[] {
+  return INVOLVEMENT_LEVELS.map((level) => ({
+    id: level.id,
+    label: level.label,
+    description: levelHint(level, provider),
+    risky: false,
+    unavailableReason: null,
+  }));
+}
 
 interface ProviderDefaultsProps {
   provider: ProviderSetup;
@@ -43,7 +46,7 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
     connection.method === 'cli' && capabilities.data
       ? capabilities.data.models.map((model) => ({
           id: model.id,
-          label: model.label,
+          label: optionLabel(model, capabilities.data),
           description: cleanDescription(model) ?? '',
           risky: false,
           unavailableReason: null,
@@ -93,7 +96,7 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
         <dd>
           <ChoicePicker
             label={`${provider.name} involvement level`}
-            choices={LEVEL_CHOICES}
+            choices={levelChoices(provider.id)}
             value={connection.level}
             onChange={(id) => {
               const level = INVOLVEMENT_LEVELS.find((option) => option.id === id);

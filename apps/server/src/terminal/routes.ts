@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { createTerminalRequestSchema } from '@spark-outpost/contracts';
 import { BadRequestError, parseBody } from '../api/validation.ts';
+import { catalogEntry } from '../providers/catalog.ts';
 import type { TerminalSessions } from './sessions.ts';
 
 export function terminalRoutes(sessions: TerminalSessions): Router {
@@ -9,6 +10,10 @@ export function terminalRoutes(sessions: TerminalSessions): Router {
 
   router.post('/terminal/sessions', (req, res) => {
     const { provider, step } = parseBody(createTerminalRequestSchema, req);
+    const entry = catalogEntry(provider);
+    if (!entry.methods.includes('cli')) {
+      throw new BadRequestError(`${entry.name} has no CLI to set up. Connect it with an API key.`);
+    }
     res.status(201).json(sessions.create(provider, step));
   });
 

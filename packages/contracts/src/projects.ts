@@ -10,6 +10,7 @@ export const projectSchema = z.object({
   rootPath: z.string(),
   displayPath: z.string(),
   createdAt: z.string(),
+  lastUsedAt: z.string().optional(),
   commandAllowlist: z.array(z.string()),
   checkCommands: z.array(z.string()).nullable().optional(),
   buildStyle: buildStyleSchema.optional(),

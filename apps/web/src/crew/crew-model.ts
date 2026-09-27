@@ -25,9 +25,12 @@ export interface CrewAgent {
   costUsd: number | null;
   costSource: TotalCostSource | null;
   durationMs: number | null;
+  sameProvider?: boolean;
 }
 
-const HUES: Record<string, number> = { claude: 24, codex: 205, jev: 318 };
+export const SAME_PROVIDER_REVIEW = 'same provider, no cross-model review';
+
+const HUES: Record<string, number> = { claude: 24, codex: 205, zai: 112, jev: 318 };
 
 const EXPRESSIONS: Record<CrewState, BlobExpression> = {
   thinking: 'thinking',
@@ -69,10 +72,11 @@ export function isDispatcher(member: Pick<CrewAgent, 'role'>): boolean {
   return member.role === 'jev';
 }
 
-export function roleLabel(member: Pick<CrewAgent, 'role'>): string {
+export function roleLabel(member: Pick<CrewAgent, 'role' | 'sameProvider'>): string {
   if (member.role === 'jev') return 'Dispatcher';
   const role = agentRoleSchema.safeParse(member.role);
-  return role.success ? agentRoleLabel(role.data) : member.role;
+  const label = role.success ? agentRoleLabel(role.data) : member.role;
+  return member.sameProvider ? `${label} (${SAME_PROVIDER_REVIEW})` : label;
 }
 
 export function modelLabel(member: Pick<CrewAgent, 'role' | 'model' | 'effort'>): string {

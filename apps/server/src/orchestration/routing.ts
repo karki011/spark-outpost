@@ -7,7 +7,8 @@ import type {
   RouteSource,
 } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
-import { gate } from '../advisor/gate.ts';
+import { frontierGate, gate } from '../advisor/gate.ts';
+import { cardFor } from '../model-cards/cards.ts';
 import { selectableModels, type SystemOneResponse } from '../advisor/intake-questions.ts';
 import type { RoutePick } from './jev-questions.ts';
 import {
@@ -104,8 +105,20 @@ export function intakePickFor(
   };
 }
 
+function pickModel(pick: AgentPick) {
+  return { id: pick.model ?? '', label: pick.modelLabel ?? '' };
+}
+
 function tierOf(pick: AgentPick): number | null {
-  return modelTier({ id: pick.model ?? '', label: pick.modelLabel ?? '' });
+  return modelTier(pickModel(pick), pick.provider);
+}
+
+function outputPrice(pick: AgentPick): number | null {
+  return cardFor(pickModel(pick), pick.provider)?.price?.outputPerMillion ?? null;
+}
+
+export function isFrontierPick(pick: AgentPick): boolean {
+  return cardFor(pickModel(pick), pick.provider)?.tier === 'frontier';
 }
 
 export function notPricier(pick: AgentPick, baseline: AgentPick): boolean {
@@ -113,12 +126,29 @@ export function notPricier(pick: AgentPick, baseline: AgentPick): boolean {
   const tier = tierOf(pick);
   const baseTier = tierOf(baseline);
   if (tier === null || baseTier === null || tier > baseTier) return false;
+  const price = outputPrice(pick);
+  const basePrice = outputPrice(baseline);
+  if (tier === baseTier && price !== null && basePrice !== null && price > basePrice) return false;
   return effortRank(pick.effort) <= effortRank(baseline.effort);
 }
 
-function gated(context: RouteContext, jev: JevPick, baseline: AgentPick): Gate {
+export function routeGate(
+  context: RouteContext,
+  jev: JevPick,
+  baseline: AgentPick,
+  readsOnly = false,
+): Gate {
+  const confidence = { confidence: jev.confidence ?? 1 };
+  if (isFrontierPick(jev.pick)) return frontierGate(confidence, context.risk, context.level);
   const downgrade = notPricier(jev.pick, baseline);
-  return gate({ confidence: jev.confidence ?? 1 }, context.risk, context.level, { downgrade });
+  return gate(confidence, context.risk, context.level, {
+    downgrade,
+    ...(readsOnly ? { readsOnly } : {}),
+  });
+}
+
+function gated(context: RouteContext, jev: JevPick, baseline: AgentPick): Gate {
+  return routeGate(context, jev, baseline);
 }
 
 export function chatPick(context: RouteContext): AgentPick {
@@ -143,7 +173,7 @@ export function routeWorker(context: RouteContext, jev: JevPick | null): MemberR
 
 export function topTierPick(context: RouteContext, provider: string): AgentPick {
   const candidate = candidateFor(context, provider);
-  const top = candidate ? topTier(selectableModels(candidate)) : null;
+  const top = candidate ? topTier(selectableModels(candidate), provider) : null;
   const effort = highEffort(effortIds(candidate)) ?? 'high';
   if (!top) return { ...chatPick(context), provider, effort };
   return { provider, model: top.id, modelLabel: top.label, effort };
@@ -153,10 +183,15 @@ export function ruleCriticPick(context: RouteContext): AgentPick {
   const provider = criticProvider(context);
   const candidate = candidateFor(context, provider);
   const effort = highEffort(effortIds(candidate)) ?? 'high';
-  if (provider === context.chat.provider) return { ...chatPick(context), effort };
   const models = candidate ? selectableModels(candidate) : [];
-  const ladder = tierLadder(models);
-  const middle = ladder.find((model) => modelTier(model) === 1) ?? ladder.at(-1) ?? models[0];
+  if (provider === context.chat.provider) {
+    const stronger = oneTierUp(models, context.chat.model, provider);
+    if (!stronger) return { ...chatPick(context), effort };
+    return { provider, model: stronger.id, modelLabel: stronger.label, effort };
+  }
+  const ladder = tierLadder(models, provider);
+  const middle =
+    ladder.find((model) => modelTier(model, provider) === 1) ?? ladder.at(-1) ?? models[0];
   return { provider, model: middle?.id ?? null, modelLabel: middle?.label ?? null, effort };
 }
 
@@ -175,7 +210,7 @@ export function routeCritic(context: RouteContext, jev: JevPick | null): MemberR
 export function escalate(context: RouteContext, previous: MemberRoute): MemberRoute {
   const candidate = candidateFor(context, previous.pick.provider);
   const models = candidate ? selectableModels(candidate) : [];
-  const up = oneTierUp(models, previous.pick.model);
+  const up = oneTierUp(models, previous.pick.model, previous.pick.provider);
   const pick: AgentPick = up
     ? {
         ...previous.pick,

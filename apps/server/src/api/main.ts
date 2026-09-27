@@ -2,6 +2,7 @@ import { loadConfig } from '../config.ts';
 import { ensureLocalWorkspace, pruneEmptyConversations } from '../persistence/conversations.ts';
 import { pruneUnlinkedAttachments } from '../persistence/attachments.ts';
 import { pruneProtocolLog } from '../persistence/audit-log.ts';
+import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb } from '../persistence/db.ts';
 import { assertMigrated } from '../persistence/migrate.ts';
 import { listen } from '../persistence/notifications.ts';
@@ -25,28 +26,31 @@ const workspaceId = await ensureLocalWorkspace(db);
 await pruneEmptyConversations(db, workspaceId);
 await pruneUnlinkedAttachments(db, workspaceId);
 await pruneProtocolLog(db, config.AUDIT_RETENTION_DAYS);
+await seedModelStats(db);
 const hub = new RunEventHub();
 ensureSpawnHelperExecutable();
 const terminals = new TerminalSessions(loginShellSpawner());
 const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.notify(runId));
 
+const secrets = config.SECRET_STORE === 'memory' ? memorySecretStore() : keychainSecretStore();
 const app = createApp({
   db,
   hub,
   workspaceId,
-  secrets: config.SECRET_STORE === 'memory' ? memorySecretStore() : keychainSecretStore(),
+  secrets,
   endpoints: {
     anthropicBaseUrl: config.ANTHROPIC_BASE_URL,
     openaiBaseUrl: config.OPENAI_BASE_URL,
     typesafeBaseUrl: config.TYPESAFE_BASE_URL,
+    zaiBaseUrl: config.ZAI_BASE_URL,
     fetch,
   },
   runCommand,
   probeCapabilities: async (provider) => ({
     provider,
     ...(config.AGENT_RUNTIME === 'fake'
-      ? fakeCapabilities()
-      : await probeCapabilities(agentDefinitions[provider])),
+      ? fakeCapabilities(provider)
+      : await probeCapabilities(agentDefinitions[provider], { secrets })),
   }),
   loginShell: config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null,
   terminals,

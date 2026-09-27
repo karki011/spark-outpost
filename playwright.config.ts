@@ -18,13 +18,14 @@ const serverEnv = {
   API_PORT: String(API_PORT),
   ALLOWED_ORIGINS: `http://127.0.0.1:${WEB_PORT}`,
   SECRET_STORE: 'memory',
-  MEMORY_SECRETS: JSON.stringify({ jev: 'browser-test-jev-key' }),
+  MEMORY_SECRETS: JSON.stringify({ jev: 'browser-test-jev-key', zai: 'browser-test-zai-key' }),
   AGENT_RUNTIME: 'fake',
   FAKE_ACP_AGENT: path.resolve('apps/server/test/fake-acp-agent.ts'),
   FAKE_ACP_MODELS: JSON.stringify(FAKE_ACP_MODELS),
   ANTHROPIC_BASE_URL: `${STUB_URL}/anthropic`,
   OPENAI_BASE_URL: `${STUB_URL}/openai`,
   TYPESAFE_BASE_URL: `${STUB_URL}/typesafe`,
+  ZAI_BASE_URL: `${STUB_URL}/zai`,
 };
 
 const node = JSON.stringify(process.execPath);

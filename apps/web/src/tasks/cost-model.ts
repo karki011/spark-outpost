@@ -69,6 +69,8 @@ export interface CostInputs {
 }
 
 const TIERS: readonly (readonly [RegExp, number])[] = [
+  [/^glm-[\d.]+-flash/i, 0],
+  [/^glm-/i, 2],
   [/haiku|luna/i, 0],
   [/sonnet|\bsol\b|-sol/i, 1],
   [/opus|astra|fable/i, 2],

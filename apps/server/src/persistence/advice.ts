@@ -1,5 +1,6 @@
 import {
   adviceSummarySchema,
+  PERMISSION_DO,
   providerIdSchema,
   type AdviceBody,
   type AdviceSummary,
@@ -11,7 +12,8 @@ import {
   type ProviderModel,
 } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
-import { advisorEntry, catalogEntry } from '../providers/catalog.ts';
+import { advisorEntry, catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
+import { allowFrontier, listModelStats } from './model-stats.ts';
 import type { Queryable } from './db.ts';
 
 const AGENT_DEFAULT = 'default';
@@ -147,6 +149,7 @@ function toCandidate(row: CandidateRow & { provider: ProviderId }): AdvisorCandi
     name: entry.name,
     models: models.map(({ id, label, description }) => ({ id, label, description })),
     efforts: efforts.map(({ id, label, description }) => ({ id, label, description })),
+    doAvailable: isSelectablePermission(entry, PERMISSION_DO),
   };
 }
 
@@ -161,7 +164,7 @@ export async function loadIntakeContext(
   workspaceId: string,
   conversationId: string,
 ): Promise<IntakeContext> {
-  const [candidates, jev, conversation] = await Promise.all([
+  const [candidates, jev, conversation, frontier, stats] = await Promise.all([
     db.query<CandidateRow>(
       `SELECT pc.provider, pc.models, cap.models AS capability_models,
          cap.efforts AS capability_efforts
@@ -180,6 +183,8 @@ export async function loadIntakeContext(
       'SELECT model_routing FROM conversations WHERE id = $1',
       [conversationId],
     ),
+    allowFrontier(db, workspaceId),
+    listModelStats(db),
   ]);
   const jevRow = jev.rows[0];
   return {
@@ -187,7 +192,9 @@ export async function loadIntakeContext(
     routing: conversation.rows[0]?.model_routing ?? 'pinned',
     candidates: candidates.rows.flatMap((row) => {
       const provider = providerIdSchema.safeParse(row.provider);
-      return provider.success ? [toCandidate({ ...row, provider: provider.data })] : [];
+      if (!provider.success) return [];
+      const candidate = toCandidate({ ...row, provider: provider.data });
+      return [{ ...candidate, allowFrontier: frontier[provider.data] ?? false, stats }];
     }),
   };
 }

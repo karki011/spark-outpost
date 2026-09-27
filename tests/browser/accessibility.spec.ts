@@ -95,6 +95,14 @@ for (const theme of THEMES) {
     await settings.getByRole('tab', { name: 'Appearance' }).click();
     await expect(page.getByRole('dialog', { name: 'Appearance' })).toBeVisible();
     found.push(...(await blockingViolations(page, 'settings appearance')));
+    await page
+      .getByRole('dialog', { name: 'Appearance' })
+      .getByRole('tab', { name: 'Models' })
+      .click();
+    await expect(
+      page.getByRole('dialog', { name: 'Models' }).getByRole('switch').first(),
+    ).toBeVisible();
+    found.push(...(await blockingViolations(page, 'settings models')));
 
     expect(found).toEqual([]);
   });

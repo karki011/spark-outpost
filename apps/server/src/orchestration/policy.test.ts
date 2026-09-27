@@ -221,13 +221,9 @@ describe('model tiers', () => {
     { id: 'gpt-6-luna', label: '6 Luna' },
   ];
 
-  it('orders Haiku, Sonnet, Opus and the Codex equivalents', () => {
+  it('orders Haiku, Sonnet, Opus and the Codex equivalents, leaving frontier models off', () => {
     expect(tierLadder(claude).map((model) => model.id)).toEqual(['haiku', 'sonnet', 'opus[1m]']);
-    expect(tierLadder(codex).map((model) => model.id)).toEqual([
-      'gpt-6-luna',
-      'gpt-6-sol',
-      'gpt-6-astra',
-    ]);
+    expect(tierLadder(codex).map((model) => model.id)).toEqual(['gpt-6-luna', 'gpt-6-sol']);
     expect(topTier(claude)?.id).toBe('opus[1m]');
   });
 

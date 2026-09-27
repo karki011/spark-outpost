@@ -23,6 +23,7 @@ import { mergeDecision } from '../approvals/approval-events.ts';
 import {
   autoLabel,
   budgetLine,
+  checkpointQuestion,
   checkpointResult,
   checkpointTitle,
   offers,
@@ -431,7 +432,7 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
           <i className={pending ? 'appr-dia' : 'appr-dia still'} />
         </span>
         <span id={headingId}>
-          <b>{checkpointTitle(checkpoint)}</b> {checkpoint.question}
+          <b>{checkpointTitle(checkpoint)}</b> {checkpointQuestion(checkpoint)}
         </span>
       </div>
       {subtitle && <p className="ck-lead">{subtitle}</p>}

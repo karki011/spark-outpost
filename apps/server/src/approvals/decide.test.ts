@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
 import {
+  INSTALL_REASON,
   OUTSIDE_DELETE_REASON,
   OUTSIDE_WRITE_REASON,
   PUSH_REASON,
+  SAFE_READ_WHY,
   SECRET_REASON,
   decide,
   ruleFor,
@@ -153,5 +155,55 @@ describe('decide() refusals', () => {
       paths: ['/etc/passwd'],
     });
     expect(decide('full-auto', read, [], []).verdict).toBe('reject');
+  });
+});
+
+describe('decide() for read-only commands', () => {
+  it.each([
+    ['hands-on', 'ask'],
+    ['balanced', 'allow'],
+    ['hands-off', 'allow'],
+    ['full-auto', 'allow'],
+  ] as const)('safe reads inside the project in %s: %s', (level, verdict) => {
+    for (const command of ['ls -la', 'cat README.md', 'git status --short']) {
+      expect(decide(level, run(command), [], []).verdict).toBe(verdict);
+    }
+  });
+
+  it('says why a safe read was allowed', () => {
+    expect(decide('balanced', run('ls'), [], [])).toEqual({
+      verdict: 'allow',
+      by: 'level',
+      why: SAFE_READ_WHY,
+    });
+  });
+
+  it.each(LEVELS)('asks for reads of secret files and outside reads in %s', (level) => {
+    expect(decide(level, run('cat .env'), [], [])).toEqual({
+      verdict: 'ask',
+      reason: SECRET_REASON,
+    });
+    if (level !== 'full-auto') {
+      expect(decide(level, run('cat /etc/hosts'), [], []).verdict).toBe('ask');
+      expect(decide(level, run('grep -rn KEY .'), [], []).verdict).toBe('ask');
+    }
+  });
+});
+
+describe('decide() for package installs', () => {
+  it.each(LEVELS)('asks in %s, even when allowlisted or allowed for the run', (level) => {
+    const install = run('pnpm add left-pad');
+    const rules = [ruleFor(install)!];
+    expect(decide(level, install, rules, ['pnpm add'])).toEqual({
+      verdict: 'ask',
+      reason: INSTALL_REASON,
+    });
+  });
+
+  it('lets a lockfile-only install follow the level', () => {
+    expect(decide('full-auto', run('pnpm install --frozen-lockfile'), [], []).verdict).toBe(
+      'allow',
+    );
+    expect(decide('balanced', run('npm ci'), [], []).verdict).toBe('ask');
   });
 });

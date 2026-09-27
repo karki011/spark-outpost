@@ -2,11 +2,14 @@ import './permission-options.css';
 import {
   INVOLVEMENT_LEVELS,
   PERMISSION_DO,
+  doDisclosure,
+  levelHint,
   type Choice,
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
 
 interface PermissionOptionsProps {
+  provider: string | null;
   choices: Choice[];
   selected: string | null;
   level: InvolvementLevel | null;
@@ -16,6 +19,7 @@ interface PermissionOptionsProps {
 }
 
 export function PermissionOptions({
+  provider,
   choices,
   selected,
   level,
@@ -69,7 +73,7 @@ export function PermissionOptions({
               <i className="radio" />
               <span>
                 <b>{option.label}</b>
-                <small>{option.hint}</small>
+                <small>{levelHint(option, provider)}</small>
               </span>
             </button>
           ))}
@@ -79,7 +83,7 @@ export function PermissionOptions({
         {!hasRepos
           ? "This chat has no project folder, so it runs as a plain chat: your AI can't read or change files whichever you pick."
           : doing
-            ? "Commands aren't sandboxed. Pushing, deleting outside the repo, and secret files always ask, and you can revert the run."
+            ? doDisclosure(provider)
             : 'Ask reads the linked repos and never changes them.'}
       </p>
     </>

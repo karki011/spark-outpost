@@ -1,4 +1,6 @@
 import { agentLabel, nextCrewName, type AgentPick, type AgentRole } from '@spark-outpost/contracts';
+import { cardCategoryFor } from '../model-cards/categories.ts';
+import { frontierRecord, tierSourceOf, whyLine } from '../model-cards/why.ts';
 import { insertDecision, usedNames } from '../persistence/orchestrations.ts';
 import { namedFiles } from './context.ts';
 import { plansFirst, reviewWanted } from './depth.ts';
@@ -36,7 +38,18 @@ function slotFor(
       : role === 'architect'
         ? ARCHITECT_WORK
         : null;
-  return { key: routeKey(role, stepIndex).replace(':', '_'), role, step: step || null, candidate };
+  const jev = s.intake.body.jev;
+  const intent =
+    jev && jev.confidences.intent !== undefined && jev.confidences.intent >= 0.5
+      ? jev.intent
+      : null;
+  return {
+    key: routeKey(role, stepIndex).replace(':', '_'),
+    role,
+    step: step || null,
+    candidate,
+    category: cardCategoryFor(role, intent, s.route.risk),
+  };
 }
 
 async function askRoutes(s: Session, slots: readonly RouteSlot[]): Promise<JevCall | null> {
@@ -156,6 +169,17 @@ export async function recordRoute(
   const applied =
     route.routedBy === 'jev' ? 'jev' : route.routedBy === 'pinned' ? 'pinned' : 'rules';
   const label = labelFor(spawn.role, route.pick, name);
+  const why = {
+    pick: route.pick,
+    routedBy: route.routedBy,
+    jevPick: route.autoWouldUse,
+    gate: route.gate,
+    rule: resolved.summary,
+    candidate: s.route.candidates.find(
+      (candidate) => candidate.provider === (route.autoWouldUse ?? route.pick).provider,
+    ),
+  };
+  const frontier = frontierRecord(why);
   const wouldUse = route.autoWouldUse
     ? ` · Auto would have used ${route.autoWouldUse.modelLabel ?? route.autoWouldUse.model} · ${route.autoWouldUse.effort}`
     : '';
@@ -182,6 +206,9 @@ export async function recordRoute(
         escalated: spawn.escalate,
         rule: resolved.summary,
         ...(resolved.rulePick ? { rulePick: resolved.rulePick } : {}),
+        why: whyLine(why),
+        tierSource: tierSourceOf(route.pick),
+        ...(frontier ? { frontier } : {}),
       },
       state: call?.asked?.state ?? null,
       questions: call?.asked?.questions ?? null,

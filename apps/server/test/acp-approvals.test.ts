@@ -3,10 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
-import { CODEX_DO_UNAVAILABLE, agentDefinitions } from '../src/agents/acp/agents.ts';
+import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import type { ApprovalRequest } from '../src/approvals/decide.ts';
 import {
-  ProviderError,
   type GateAnswer,
   type PermissionGate,
   type ProviderOutput,
@@ -21,12 +20,6 @@ const claude = createAcpProvider({
   launch,
   cancelGraceMs: 2_000,
 });
-const codex = createAcpProvider({
-  definition: agentDefinitions.codex,
-  launch,
-  cancelGraceMs: 2_000,
-});
-
 let root: string;
 
 beforeAll(async () => {
@@ -177,14 +170,5 @@ describe('fs/write_text_file in Do mode', () => {
     expect(result.text).toContain('/tmp/elsewhere.txt=err:-32602');
     expect(requests).toHaveLength(0);
     expect(await readFile(join(root, '.env'), 'utf8')).toBe('TOKEN=abc');
-  });
-});
-
-describe('agents without Do support', () => {
-  it('stops a Codex Do run before starting, with the reason', async () => {
-    const { stub } = gate(allow);
-    const result = await run('#write', stub, { provider: codex });
-    expect(result.error).toBeInstanceOf(ProviderError);
-    expect((result.error as Error).message).toBe(CODEX_DO_UNAVAILABLE);
   });
 });

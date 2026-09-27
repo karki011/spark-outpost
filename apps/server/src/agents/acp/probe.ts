@@ -4,16 +4,18 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import * as acp from '@agentclientprotocol/sdk';
 import { ProviderError, type ProviderCapabilityReport } from '../../providers/provider.ts';
-import { childEnvironment } from '../../setup/environment.ts';
+import type { SecretStore } from '../../setup/secrets.ts';
 import type { AgentDefinition, AgentLaunch } from './agents.ts';
 import { startAgentProcess, type AgentProcess } from './agent-process.ts';
-import { sessionCapabilities } from './capabilities.ts';
+import { agentEnvironment } from './agent-env.ts';
+import { offeredCapabilities, sessionCapabilities } from './capabilities.ts';
 import { CLIENT_CAPABILITIES, CLIENT_INFO } from './client-info.ts';
 import { toProviderError } from './errors.ts';
 
 export interface ProbeOptions {
   launch?: AgentLaunch;
   env?: Record<string, string>;
+  secrets?: Pick<SecretStore, 'get'>;
   timeoutMs?: number;
 }
 
@@ -27,10 +29,8 @@ export async function probeCapabilities(
   let agent: AgentProcess | null = null;
   const timer = new AbortController();
   try {
-    agent = startAgentProcess(options.launch ?? definition.launch(), workdir, {
-      ...(options.env ?? childEnvironment(process.env)),
-      ...definition.conversationEnv?.(workdir),
-    });
+    const env = await agentEnvironment({ ...options, definition }, workdir);
+    agent = startAgentProcess(options.launch ?? definition.launch(), workdir, env);
     const running = agent;
     const read = acp.client(CLIENT_INFO).connectWith(running.stream, async (ctx) => {
       await ctx.request<acp.InitializeResponse, acp.InitializeRequest>(
@@ -46,7 +46,7 @@ export async function probeCapabilities(
         mcpServers: [],
         _meta: definition.conversationSessionMeta ?? null,
       });
-      return sessionCapabilities(session);
+      return offeredCapabilities(sessionCapabilities(session), definition.offers);
     });
     const timeout = delay(options.timeoutMs ?? DEFAULT_TIMEOUT_MS, undefined, {
       signal: timer.signal,

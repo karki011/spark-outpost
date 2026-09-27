@@ -65,6 +65,7 @@ describe('setup state', () => {
     expect(body.providers.map((provider: { id: string }) => provider.id)).toEqual([
       'claude',
       'codex',
+      'zai',
     ]);
     expect(
       body.providers.every((provider: { connection: unknown }) => provider.connection === null),

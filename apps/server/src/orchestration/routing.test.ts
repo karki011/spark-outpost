@@ -91,6 +91,14 @@ describe('the routing gate', () => {
     expect(routeCritic(alone, null).pick).toMatchObject({ provider: 'claude', effort: 'high' });
   });
 
+  it('gives a same-provider Critic the tier above the chat model', () => {
+    const alone = { ...context('auto'), candidates: [candidates[0]!] };
+    const pick = routeCritic(alone, null).pick;
+    expect(pick.provider).toBe('claude');
+    expect(pick.model).not.toBe(alone.chat.model);
+    expect(pick.effort).toBe('high');
+  });
+
   it('escalates the previous pick one tier up', () => {
     const first = routeWorker(
       context('auto'),

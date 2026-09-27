@@ -1,6 +1,7 @@
 import './crew-turn.css';
 import type { ReactNode } from 'react';
 import {
+  isCheckApproval,
   isTerminalRunStatus,
   type Approval,
   type ConversationDetail,
@@ -11,6 +12,7 @@ import {
 import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { crewTotals, totalsLine } from '../../crew/crew-model.ts';
 import { crewAgents, runAgent } from '../../crew/crew-projection.ts';
+import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from '../changes/FilesChanged.tsx';
 import { Markdown } from '../markdown/Markdown.tsx';
@@ -22,6 +24,7 @@ import {
   crewItems,
   groupParallel,
   lastAgentIndex,
+  mergeApprovals,
   mergeCheckpoints,
   type CrewItem,
 } from './crew-items.ts';
@@ -59,7 +62,8 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
     detail.approvals,
     liveApprovals,
   );
-  const items = groupParallel(crewItems(orchestration.crew, checkpoints));
+  const checkApprovals = mergeApprovals(detail.approvals, liveApprovals).filter(isCheckApproval);
+  const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals));
   const last = lastAgentIndex(items);
   const finished = isTerminalRunStatus(orchestration.status);
   const crewRunIds = [run.id, ...orchestration.crew.map((member) => member.runId)];
@@ -114,6 +118,16 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
       {items.map((item, index) => {
         if (item.kind === 'checkpoint') {
           return <CheckpointCard key={item.approval.id} approval={item.approval} />;
+        }
+        if (item.kind === 'approval') {
+          return (
+            <ApprovalCard
+              key={item.approval.id}
+              approval={item.approval}
+              provider={run.provider}
+              repo={repo}
+            />
+          );
         }
         if (item.kind === 'group') {
           const byRun = new Map(item.members.map((member) => [member.member.runId, member]));

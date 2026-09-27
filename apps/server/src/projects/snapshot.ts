@@ -58,13 +58,32 @@ export async function headCommit(root: string): Promise<string | null> {
   }
 }
 
+export const SNAPSHOT_PATHSPEC = ['.', ':(exclude,glob)**/node_modules/**'];
+
+const VANISHED_FILE = /No such file or directory|unable to index file|unable to stat/;
+
+export function isVanishedFileError(error: unknown): boolean {
+  const failure = error as { stderr?: unknown; message?: unknown };
+  return VANISHED_FILE.test(`${String(failure.stderr ?? '')}\n${String(failure.message ?? '')}`);
+}
+
+async function addAll(root: string, env: NodeJS.ProcessEnv): Promise<void> {
+  const add = () => git(root, ['add', '-A', '--', ...SNAPSHOT_PATHSPEC], env);
+  try {
+    await add();
+  } catch (error) {
+    if (!isVanishedFileError(error)) throw error;
+    await add();
+  }
+}
+
 export async function workingTree(root: string): Promise<string> {
   const scratch = await mkdtemp(path.join(tmpdir(), 'spark-outpost-index-'));
   const env = { GIT_INDEX_FILE: path.join(scratch, 'index') };
   try {
     const head = await headCommit(root);
     await git(root, head ? ['read-tree', head] : ['read-tree', '--empty'], env);
-    await git(root, ['add', '-A', '--', '.'], env);
+    await addAll(root, env);
     return (await git(root, ['write-tree'], env)).trim();
   } finally {
     await rm(scratch, { recursive: true, force: true });

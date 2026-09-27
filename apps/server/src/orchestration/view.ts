@@ -30,6 +30,7 @@ export interface StoredRoute {
   verdict?: ReviewVerdict | null;
   parallelGroup?: string | null;
   copy?: string | null;
+  sameProvider?: boolean;
 }
 
 export interface MemberRow {
@@ -86,6 +87,7 @@ export function toCrewMember(row: MemberRow): CrewMember {
     finishedAt: row.finished_at?.toISOString() ?? null,
     parallelGroup: route.parallelGroup ?? null,
     copy: route.copy ?? null,
+    ...(route.sameProvider ? { sameProvider: true } : {}),
   };
 }
 

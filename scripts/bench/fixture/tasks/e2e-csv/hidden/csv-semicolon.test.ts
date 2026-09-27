@@ -15,7 +15,10 @@ test('the CSV uses semicolons', () => {
 
 test('categories with a semicolon, quote or newline are quoted, commas are not', () => {
   assert.equal(entriesToCsv([{ category: 'a;b', cents: 1 }]), 'category;cents\n"a;b";1');
-  assert.equal(entriesToCsv([{ category: 'say "hi"', cents: 2 }]), 'category;cents\n"say ""hi""";2');
+  assert.equal(
+    entriesToCsv([{ category: 'say "hi"', cents: 2 }]),
+    'category;cents\n"say ""hi""";2',
+  );
   assert.equal(entriesToCsv([{ category: 'x,y', cents: 3 }]), 'category;cents\nx,y;3');
 });
 

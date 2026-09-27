@@ -115,6 +115,21 @@ describe('approval gate', () => {
     expect(events[1]!.options?.transition?.status).toBe('running');
   });
 
+  it('allows a read-only command inside the project at Balanced without asking', async () => {
+    const run = await doRun(t, root);
+    const { gate } = gateFor(run.runId);
+    const answer = await gate.review(commandRequest(root, 'ls -la'), new AbortController().signal);
+    expect(answer).toMatchObject({
+      allowed: true,
+      note: 'Allowed `ls -la` (a read-only command inside the project)',
+    });
+    const { rows } = await t.db.query(
+      `SELECT decided_by, status FROM approvals WHERE run_id = $1`,
+      [run.runId],
+    );
+    expect(rows).toEqual([{ decided_by: 'level', status: 'allowed' }]);
+  });
+
   it('denies with the reject option', async () => {
     const run = await doRun(t, root);
     const { answer } = await answerOnce(run, 'pnpm test', 'reject');
@@ -124,15 +139,15 @@ describe('approval gate', () => {
 
   it('remembers "Allow for this run" for the same command only', async () => {
     const run = await doRun(t, root);
-    await answerOnce(run, 'ls -la', 'allow', 'run');
+    await answerOnce(run, 'make build', 'allow', 'run');
     const { gate } = gateFor(run.runId);
     const signal = new AbortController().signal;
-    expect(await gate.review(commandRequest(root, 'ls  -la', 'call-2'), signal)).toMatchObject({
+    expect(await gate.review(commandRequest(root, 'make  build', 'call-2'), signal)).toMatchObject({
       allowed: true,
-      note: 'Allowed `ls -la` (allowed for this run)',
+      note: 'Allowed `make build` (allowed for this run)',
     });
     const controller = new AbortController();
-    const other = gate.review(commandRequest(root, 'ls src', 'call-3'), controller.signal);
+    const other = gate.review(commandRequest(root, 'make clean', 'call-3'), controller.signal);
     await pendingFor(run.runId);
     const { rows } = await t.db.query(
       `SELECT decided_by FROM approvals WHERE run_id = $1 ORDER BY created_at`,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CONVERSATION_PROJECTS_MAX } from '@spark-outpost/contracts';
-import { applyRepoChange, interleave, repoSummary } from './repo-list.ts';
+import { applyRepoChange, interleave, recentProjects, repoSummary } from './repo-list.ts';
 
 describe('repo list changes', () => {
   const ids = ['a', 'b', 'c'];
@@ -32,5 +32,25 @@ describe('repo helpers', () => {
 
   it('interleaves ranked lists so every repo shows its best matches first', () => {
     expect(interleave([['a1', 'a2', 'a3'], ['b1'], []])).toEqual(['a1', 'b1', 'a2', 'a3']);
+  });
+});
+
+describe('recent repos', () => {
+  const project = (id: string, createdAt: string, lastUsedAt?: string) => ({
+    id,
+    createdAt,
+    ...(lastUsedAt ? { lastUsedAt } : {}),
+  });
+
+  it('puts the most recently used or added folder first, skips linked ones, and caps the list', () => {
+    const projects = [
+      project('alpha', '2026-09-01T00:00:00.000Z', '2026-09-02T00:00:00.000Z'),
+      project('beta', '2026-09-03T00:00:00.000Z'),
+      project('gamma', '2026-09-01T00:00:00.000Z', '2026-09-20T00:00:00.000Z'),
+      project('zeta', '2026-09-25T00:00:00.000Z'),
+    ];
+    const ids = (list: { id: string }[]) => list.map((entry) => entry.id);
+    expect(ids(recentProjects(projects, new Set(), 5))).toEqual(['zeta', 'gamma', 'beta', 'alpha']);
+    expect(ids(recentProjects(projects, new Set(['gamma']), 2))).toEqual(['zeta', 'beta']);
   });
 });

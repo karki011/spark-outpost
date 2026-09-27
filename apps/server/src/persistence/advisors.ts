@@ -48,6 +48,7 @@ export async function listAdvisors(db: Queryable, workspaceId: string): Promise<
     cli: '',
     keyPrefix: entry.keyPrefix,
     keyHint: entry.keyHint,
+    keyLink: entry.keyLink,
     methods: ['api_key'],
     role: entry.role,
     connection: toConnection(rows.find((row) => row.advisor === entry.id)),

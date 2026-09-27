@@ -1,12 +1,14 @@
 import './approval-card.css';
 import { useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type {
-  Approval,
-  ApprovalDecidedValue,
-  ApprovalOption,
-  ApprovalScope,
-  Project,
+import {
+  commandSandboxNote,
+  isCheckApproval,
+  type Approval,
+  type ApprovalDecidedValue,
+  type ApprovalOption,
+  type ApprovalScope,
+  type Project,
 } from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
@@ -50,6 +52,7 @@ function fullPath(approval: Approval, shown: string): string | undefined {
 }
 
 function heading(approval: Approval): string {
+  if (isCheckApproval(approval)) return 'Run a check?';
   if (approval.kind === 'execute') return 'Run a command?';
   if (approval.kind === 'edit') {
     return approval.payload.paths.length > 1 ? 'Change these files?' : 'Change a file?';
@@ -58,6 +61,7 @@ function heading(approval: Approval): string {
 }
 
 function request(approval: Approval, agent: string) {
+  if (isCheckApproval(approval)) return 'Jev wants to run a project check.';
   if (approval.kind === 'execute') return `${agent} wants to run a command.`;
   if (approval.kind === 'edit') {
     const paths = approval.payload.paths;
@@ -175,7 +179,7 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
               .{' '}
             </>
           )}
-          Commands aren't sandboxed
+          {commandSandboxNote(provider)}
           {alwaysAsks ? '.' : ", and this one isn't on the project's allowlist yet."}
         </p>
       )}

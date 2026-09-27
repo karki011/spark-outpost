@@ -1,6 +1,10 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
-import { providerIdSchema, updateChatSettingsRequestSchema } from '@spark-outpost/contracts';
+import {
+  providerIdSchema,
+  updateChatSettingsRequestSchema,
+  type ProviderId,
+} from '@spark-outpost/contracts';
 import { withTransaction, type Db } from '../persistence/db.ts';
 import { createConversation } from '../persistence/conversations.ts';
 import {
@@ -23,7 +27,7 @@ import { BadRequestError, parseBody } from './validation.ts';
 export interface ChatSettingsDeps {
   db: Db;
   workspaceId: string;
-  probeCapabilities: (provider: 'claude' | 'codex') => Promise<CapabilitySnapshot>;
+  probeCapabilities: (provider: ProviderId) => Promise<CapabilitySnapshot>;
 }
 
 const idParam = z.uuid();

@@ -7,6 +7,7 @@ import type {
   ProviderId,
   UpdateChatSettingsRequest,
 } from '@spark-outpost/contracts';
+import { effectiveDefaultModel } from '../model-cards/cards.ts';
 import { catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
 import type { Queryable } from './db.ts';
 import { InvalidDefaultError } from './setup.ts';
@@ -197,7 +198,8 @@ export async function getCapabilities(
     provider,
     models: row.models,
     efforts: row.efforts,
-    defaultModel: row.default_model,
+    defaultModel: effectiveDefaultModel(provider, row.models, row.default_model),
+    agentDefaultModel: row.default_model,
     capturedAt: row.captured_at.toISOString(),
   };
 }

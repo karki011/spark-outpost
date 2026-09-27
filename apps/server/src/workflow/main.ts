@@ -14,12 +14,13 @@ const db = createDb(config.DATABASE_URL);
 await assertMigrated(db);
 
 const approvalWaiters = new ApprovalWaiters();
+const secrets =
+  config.SECRET_STORE === 'memory'
+    ? memorySecretStore(config.MEMORY_SECRETS)
+    : keychainSecretStore();
 const intake = createIntakeRecorder({
   db,
-  secrets:
-    config.SECRET_STORE === 'memory'
-      ? memorySecretStore(config.MEMORY_SECRETS)
-      : keychainSecretStore(),
+  secrets,
   fetch,
   baseUrl: config.TYPESAFE_BASE_URL,
 });
@@ -27,7 +28,7 @@ const worker = startWorker({
   db,
   approvalWaiters,
   intake,
-  providers: createProviders(config.AGENT_RUNTIME, config.FAKE_ACP_AGENT),
+  providers: createProviders(config.AGENT_RUNTIME, config.FAKE_ACP_AGENT, secrets),
   leaseSeconds: config.LEASE_SECONDS,
   sessionLimits: {
     idleMs: config.SESSION_IDLE_MINUTES * 60_000,

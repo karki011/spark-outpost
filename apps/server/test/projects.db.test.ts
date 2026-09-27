@@ -125,7 +125,7 @@ describe('projects', () => {
     const again = await post('/api/projects', { rootPath: root }).expect(200);
     expect(again.body).toEqual(project);
     const list = await get('/api/projects').expect(200);
-    expect(list.body).toEqual([project]);
+    expect(list.body).toEqual([{ ...project, lastUsedAt: project.createdAt }]);
   });
 
   it('refuses the disk root, the home folder, files, and missing folders', async () => {

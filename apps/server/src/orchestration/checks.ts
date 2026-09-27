@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { type CheckBody, type CheckResult, type CheckStatus } from '@spark-outpost/contracts';
+import {
+  CHECK_TOOL_CALL_PREFIX,
+  type CheckBody,
+  type CheckResult,
+  type CheckStatus,
+} from '@spark-outpost/contracts';
 import { redactValue } from '../audit/redact.ts';
 import type { CheckCommand } from '../checks/detect.ts';
 import { runsPackageScript, scriptsFingerprint } from '../checks/project-checks.ts';
@@ -27,7 +32,7 @@ export interface CheckTarget {
 
 function checkRequest(check: CheckCommand, target: CheckTarget, root: string): ApprovalRequest {
   return {
-    toolCallId: `check:${randomUUID()}`,
+    toolCallId: `${CHECK_TOOL_CALL_PREFIX}${randomUUID()}`,
     rpcId: null,
     kind: 'execute',
     toolKind: 'execute',

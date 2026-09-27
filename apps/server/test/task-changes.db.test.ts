@@ -8,12 +8,22 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { z } from 'zod';
 import {
   changedFileSchema,
+  runChangesSchema,
   taskChangesSchema,
   taskOverviewSchema,
   type TaskChanges,
 } from '@spark-outpost/contracts';
 import { getRun } from '../src/persistence/runs.ts';
+import { insertWorktree, saveResult } from '../src/persistence/worktrees.ts';
 import { backupBeforeEdit, snapshotRun } from '../src/projects/run-changes.ts';
+import {
+  addWorktree,
+  branchName,
+  commitWorktree,
+  groupBase,
+  removeWorktree,
+  worktreePath,
+} from '../src/projects/worktrees.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { createTestApp, HOST, ORIGIN } from './app-support.ts';
@@ -203,6 +213,60 @@ describe('task changes', () => {
     expect(result.runs.map((run) => run.files.map((file) => [file.oldText, file.newText]))).toEqual(
       [[['first\n', 'second\n']], [['second\n', 'third\n']]],
     );
+  });
+
+  it("serves a lane's changes from its refs after the worktree is removed", async () => {
+    const root = join(base, 'lanes');
+    await mkdir(root);
+    execFileSync('git', ['init', '-q', root]);
+    await writeFile(join(root, 'a.ts'), 'one\n');
+    execFileSync('git', ['-C', root, 'add', '.']);
+    execFileSync('git', [
+      '-C',
+      root,
+      '-c',
+      'user.name=t',
+      '-c',
+      'user.email=t@t',
+      'commit',
+      '-qm',
+      'a',
+    ]);
+    const { taskId, runs } = await twoRunTask();
+    const [lane, fix] = runs;
+    const copy = worktreePath(root, lane);
+    const branch = branchName(taskId, 'Bolt');
+    const baseCommit = await groupBase(root, 'g1');
+    await addWorktree(root, copy, branch, baseCommit);
+    await insertWorktree(t.db, {
+      runId: lane,
+      orchestrationRunId: lane,
+      repoRoot: root,
+      path: copy,
+      branch,
+      baseCommit,
+    });
+    await t.db.query(`UPDATE runs SET route = $2 WHERE id = $1`, [
+      fix,
+      JSON.stringify({ name: 'Bolt', worktreeRun: lane }),
+    ]);
+    await snapshotRun(t.db, lane, copy);
+    await writeFile(join(copy, 'a.ts'), 'one\ntwo\n');
+    await snapshotRun(t.db, fix, copy);
+    await writeFile(join(copy, 'fixed.txt'), 'fixed\n');
+    await saveResult(t.db, lane, await commitWorktree(root, copy, branch, baseCommit, lane));
+    await removeWorktree(root, copy, branch);
+
+    const own = runChangesSchema.parse((await get(`/api/runs/${fix}/changes`).expect(200)).body);
+    expect(own).toMatchObject({
+      revertible: false,
+      files: [{ path: 'fixed.txt', change: 'added' }],
+    });
+    const result = await changes(taskId);
+    const fixFiles = result.runs.find((run) => run.runId === fix)?.files;
+    expect(fixFiles?.map((file) => [file.path, file.newText])).toEqual([['fixed.txt', 'fixed\n']]);
+    const laneFiles = result.runs.find((run) => run.runId === lane)?.files;
+    expect(laneFiles?.map((file) => file.path).sort()).toEqual(['a.ts', 'fixed.txt']);
   });
 
   it('returns nothing for runs without changes and 404 for unknown tasks', async () => {

@@ -19,3 +19,4 @@ export * from './tasks.ts';
 export * from './terminal.ts';
 export * from './usage.ts';
 export * from './lean.ts';
+export * from './model-cards.ts';

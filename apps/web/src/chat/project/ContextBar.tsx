@@ -6,7 +6,7 @@ import { BranchIcon, ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
 import { FolderDialog } from './FolderDialog.tsx';
 import { RepoMenu } from './RepoMenu.tsx';
-import { repoSummary } from './repo-list.ts';
+import { recentProjects, repoSummary } from './repo-list.ts';
 import { useChatRepos, useProjectBranch, useProjects, type RepoRequest } from './use-chat-repos.ts';
 
 type RepoPopover = ReturnType<typeof usePopover<HTMLButtonElement, HTMLDivElement>>;
@@ -28,9 +28,7 @@ export function ContextBar({ conversationId, repos, popover }: ContextBarProps) 
   const primary = repos[0] ?? null;
   const branch = useProjectBranch(primary?.id ?? null);
   const linkedIds = new Set(repos.map((repo) => repo.id));
-  const recent = (projects.data ?? [])
-    .filter((project) => !linkedIds.has(project.id))
-    .slice(0, RECENT_LIMIT);
+  const recent = recentProjects(projects.data ?? [], linkedIds, RECENT_LIMIT);
   const names = repos.map((repo) => repo.name);
 
   const apply = (request: RepoRequest) => {

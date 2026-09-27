@@ -185,6 +185,12 @@ export function ShieldIcon() {
   return <StrokeIcon path="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6zM9 12l2 2 4-4" />;
 }
 
+export function ExternalLinkIcon() {
+  return (
+    <StrokeIcon path="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+  );
+}
+
 export function DownloadIcon() {
   return <StrokeIcon path="M12 4v12M7 11l5 5 5-5M5 20h14" />;
 }

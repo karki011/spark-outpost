@@ -3,10 +3,11 @@ import { isCheckpoint, type CheckpointApproval } from '../checkpoints/checkpoint
 
 type AgentItem = { kind: 'agent'; member: CrewMember; checkpoints: CheckpointApproval[] };
 
+type LooseItem =
+  { kind: 'checkpoint'; approval: CheckpointApproval } | { kind: 'approval'; approval: Approval };
+
 export type CrewItem =
-  | AgentItem
-  | { kind: 'checkpoint'; approval: CheckpointApproval }
-  | { kind: 'group'; group: string; members: AgentItem[] };
+  AgentItem | LooseItem | { kind: 'group'; group: string; members: AgentItem[] };
 
 const STATUS_RANK: Record<Approval['status'], number> = {
   pending: 0,
@@ -16,10 +17,9 @@ const STATUS_RANK: Record<Approval['status'], number> = {
   expired: 1,
 };
 
-export function mergeCheckpoints(...lists: readonly (readonly Approval[])[]): CheckpointApproval[] {
-  const byId = new Map<string, CheckpointApproval>();
+export function mergeApprovals(...lists: readonly (readonly Approval[])[]): Approval[] {
+  const byId = new Map<string, Approval>();
   for (const approval of lists.flat()) {
-    if (!isCheckpoint(approval)) continue;
     const known = byId.get(approval.id);
     if (!known || STATUS_RANK[approval.status] > STATUS_RANK[known.status]) {
       byId.set(approval.id, approval);
@@ -28,27 +28,35 @@ export function mergeCheckpoints(...lists: readonly (readonly Approval[])[]): Ch
   return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+export function mergeCheckpoints(...lists: readonly (readonly Approval[])[]): CheckpointApproval[] {
+  return mergeApprovals(...lists).filter(isCheckpoint);
+}
+
 export function crewItems(
   crew: readonly CrewMember[],
   checkpoints: readonly CheckpointApproval[],
+  runApprovals: readonly Approval[] = [],
 ): CrewItem[] {
   const runIds = new Set(crew.map((member) => member.runId));
   const own = (member: CrewMember) =>
     checkpoints.filter((approval) => approval.runId === member.runId);
-  const loose = checkpoints.filter((approval) => !runIds.has(approval.runId));
+  const loose: LooseItem[] = [
+    ...checkpoints
+      .filter((approval) => !runIds.has(approval.runId))
+      .map((approval) => ({ kind: 'checkpoint' as const, approval })),
+    ...runApprovals.map((approval) => ({ kind: 'approval' as const, approval })),
+  ].sort((a, b) => a.approval.createdAt.localeCompare(b.approval.createdAt));
   const items: CrewItem[] = [];
   let next = 0;
   for (const member of crew) {
     const start = member.startedAt;
-    while (start !== null && next < loose.length && loose[next]!.createdAt <= start) {
-      items.push({ kind: 'checkpoint', approval: loose[next]! });
+    while (start !== null && next < loose.length && loose[next]!.approval.createdAt <= start) {
+      items.push(loose[next]!);
       next += 1;
     }
     items.push({ kind: 'agent', member, checkpoints: own(member) });
   }
-  for (; next < loose.length; next += 1) {
-    items.push({ kind: 'checkpoint', approval: loose[next]! });
-  }
+  items.push(...loose.slice(next));
   return items;
 }
 

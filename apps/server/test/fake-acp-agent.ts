@@ -1,6 +1,7 @@
 import { Readable, Writable } from 'node:stream';
 import * as acp from '@agentclientprotocol/sdk';
 import { roleFor } from './fake-acp-roles.ts';
+import { CODEX_DO_TRIGGER, codexDoTurn } from './fake-codex-do.ts';
 import {
   createFakeSession,
   loadSessionAdvertised,
@@ -41,6 +42,7 @@ const select = (
 const configOptions = (): acp.SessionConfigOption[] => [
   select('mode', 'mode', [
     ['read-only', 'Ask first'],
+    ['ask-every-action', 'Ask every time'],
     ['agent', 'Agent'],
   ]),
   select('model', 'model', fakeModels),
@@ -156,6 +158,38 @@ async function leakSecrets(
   return 'end_turn';
 }
 
+const CREDENTIAL_NAMES = /ANTHROPIC|CLAUDE|OPENAI|AWS|_KEY$|TOKEN|SECRET/;
+
+async function reportEnvironment(
+  update: (value: acp.SessionUpdate) => Promise<void>,
+  say: (chunk: string) => Promise<void>,
+): Promise<acp.StopReason> {
+  const env = process.env;
+  const names = Object.keys(env)
+    .filter((name) => CREDENTIAL_NAMES.test(name))
+    .sort();
+  process.stderr.write(`env names ${names.join(',')}\n`);
+  await update({
+    sessionUpdate: 'usage_update',
+    used: 1_000,
+    size: 1_000_000,
+    cost: { amount: 1.23, currency: 'USD' },
+  });
+  await say(
+    JSON.stringify({
+      names,
+      baseUrl: env.ANTHROPIC_BASE_URL ?? null,
+      configDir: env.CLAUDE_CONFIG_DIR ?? null,
+      token: env.ANTHROPIC_AUTH_TOKEN ? 'set' : 'missing',
+      tokenLength: env.ANTHROPIC_AUTH_TOKEN?.length ?? 0,
+      opus: env.ANTHROPIC_DEFAULT_OPUS_MODEL ?? null,
+      haiku: env.ANTHROPIC_DEFAULT_HAIKU_MODEL ?? null,
+      timeout: env.API_TIMEOUT_MS ?? null,
+    }),
+  );
+  return 'end_turn';
+}
+
 async function turn(
   params: acp.PromptRequest,
   client: acp.AgentContext,
@@ -193,6 +227,7 @@ async function turn(
     await say(`dirs=${JSON.stringify(sessionDirectories)}`);
     return 'end_turn';
   }
+  if (text.includes('#env')) return reportEnvironment(update, say);
   if (text.includes('#caps')) {
     await say(JSON.stringify(clientCapabilities));
     return 'end_turn';
@@ -225,6 +260,9 @@ async function turn(
       await say(`word${index} `);
       await sleep(20, signal);
     }
+  }
+  if (text.includes(CODEX_DO_TRIGGER)) {
+    return codexDoTurn(text, sessionCwd, sessionId, client, (chunk) => say(chunk));
   }
   if (text.includes('#write')) {
     await update({

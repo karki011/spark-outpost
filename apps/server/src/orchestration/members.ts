@@ -174,6 +174,7 @@ interface RouteExtra {
   resumeKey?: string;
   followUp?: string;
   worktreeRun?: string;
+  sameProvider?: boolean;
 }
 
 function storedRoute(
@@ -316,7 +317,10 @@ async function runChild(
       effort: route.pick.effort,
       mode,
       prompt: options.prompt ?? (await promptFor(s, spawn)),
-      route: storedRoute(route, name, planStep, routeExtra(s, spawn, name, place, branch, options)),
+      route: storedRoute(route, name, planStep, {
+        ...routeExtra(s, spawn, name, place, branch, options),
+        ...(reviewsOwnProvider(s, spawn.role, route) ? { sameProvider: true } : {}),
+      }),
     },
     s.deps.leaseSeconds,
   );
@@ -383,6 +387,10 @@ export interface ReviewOutcome {
   findings: string[];
 }
 
+function reviewsOwnProvider(s: Session, role: AgentRole, route: MemberRoute): boolean {
+  return role === 'critic' && route.pick.provider === s.input.provider;
+}
+
 async function afterCritic(
   s: Session,
   result: MemberResult,
@@ -398,6 +406,7 @@ async function afterCritic(
       findings,
       text: result.text.slice(0, 64_000),
       label: 'AI review' as const,
+      ...(reviewsOwnProvider(s, 'critic', route) ? { sameProvider: true } : {}),
       ...(s.buildStyle === 'off' ? {} : { net: reviewNet(result.text) }),
     };
     const version = await nextArtifactVersion(s.deps.db, s.taskId, 'review');

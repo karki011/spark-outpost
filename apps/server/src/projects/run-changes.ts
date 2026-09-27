@@ -1,4 +1,4 @@
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   isTerminalRunStatus,
@@ -18,6 +18,7 @@ import {
   type FileBackup,
   type RunSnapshot,
 } from '../persistence/run-snapshots.ts';
+import { laneOfRun } from '../persistence/worktrees.ts';
 import { relativeInside } from './path-policy.ts';
 import { gitChanges, isGitWorkTree, revertGitChanges, takeGitSnapshot } from './snapshot.ts';
 
@@ -28,6 +29,29 @@ export class RunNotFoundError extends Error {
 }
 
 export class RevertConflictError extends Error {}
+
+export const REMOVED_FOLDER_REASON =
+  'The folder this run worked in was removed, so it cannot be reverted on its own.';
+
+export interface SnapshotSource {
+  gitRoot: string;
+  end: string | null;
+  gone: boolean;
+}
+
+export async function snapshotSource(
+  db: Queryable,
+  runId: string,
+  root: string,
+): Promise<SnapshotSource> {
+  const present = await access(root).then(
+    () => true,
+    () => false,
+  );
+  if (present) return { gitRoot: root, end: null, gone: false };
+  const lane = await laneOfRun(db, runId);
+  return { gitRoot: lane?.repoRoot ?? root, end: lane?.resultCommit ?? null, gone: true };
+}
 
 export async function snapshotRun(
   db: Queryable,
@@ -101,6 +125,14 @@ export async function runChanges(
   const { snapshot } = state;
   if (!snapshot) {
     return { revertible: false, revertedAt, files: [], reason: 'This run made no snapshot.' };
+  }
+  const source = await snapshotSource(db, runId, snapshot.root);
+  if (source.gone) {
+    const files =
+      snapshot.kind === 'git' && snapshot.ref && source.end
+        ? await gitChanges(source.gitRoot, snapshot.ref, source.end)
+        : [];
+    return { revertible: false, revertedAt, files, reason: REMOVED_FOLDER_REASON };
   }
   const files =
     snapshot.kind === 'git' && snapshot.ref

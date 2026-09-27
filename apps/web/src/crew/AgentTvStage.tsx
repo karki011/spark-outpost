@@ -19,6 +19,7 @@ import type { Packet } from './use-tv-events.ts';
 const PROVIDER_COLORS: Record<string, string> = {
   claude: 'var(--c-claude)',
   codex: 'var(--c-codex)',
+  zai: 'var(--c-zai)',
   jev: 'var(--c-jev)',
 };
 

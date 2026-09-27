@@ -59,6 +59,7 @@ export async function applySessionSettings(
   session: SessionHandle,
   definition: AgentDefinition,
   settings: AgentSettings,
+  mode: string = definition.conversationMode,
 ): Promise<AppliedSettings> {
   let configOptions = session.newSessionResponse.configOptions ?? [];
   let legacy = legacyOptions(session.newSessionResponse);
@@ -66,7 +67,7 @@ export async function applySessionSettings(
   let options = initial;
   const notes: string[] = [];
   const wishes: ConfigWish[] = [
-    { category: 'mode', value: definition.conversationMode },
+    { category: 'mode', value: mode },
     { category: 'model', value: settings.model, label: settings.modelLabel },
     { category: 'thought_level', value: settings.effort },
   ];

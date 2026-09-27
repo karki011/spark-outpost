@@ -82,6 +82,9 @@ export function setupRoutes(deps: SetupDeps): Router {
       return verifyApiKey(advisorEntry(advisor.data), request.apiKey, deps.endpoints);
     }
     const entry = catalogEntry(providerIdSchema.parse(id));
+    if (!entry.methods.includes(request.method)) {
+      throw new BadRequestError(`${entry.name} connects with an API key.`);
+    }
     return request.method === 'api_key'
       ? verifyApiKey(entry, request.apiKey, deps.endpoints)
       : verifyCli(entry, deps.runCommand, deps.loginShell);

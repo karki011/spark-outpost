@@ -1,0 +1,17 @@
+{
+  "src/dates.ts": ["addDays", "formatIsoDate"],
+  "src/greet.ts": ["greeting"],
+  "src/invoice.ts": [
+    "Invoice",
+    "LineItem",
+    "dueLabel",
+    "invoiceHeader",
+    "roundTo",
+    "subtotalCents",
+    "titleCase",
+    "totalCents"
+  ],
+  "src/ledger.ts": ["Entry", "averageCents", "categories", "totalFor"],
+  "src/money.ts": ["formatCents", "parseCents"],
+  "src/report.ts": ["categoryShare", "reportLine"]
+}

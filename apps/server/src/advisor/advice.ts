@@ -2,6 +2,7 @@ import type {
   IntakeAnswer,
   InvolvementLevel,
   ModelRouting,
+  ModelStat,
   ProviderId,
   RunMode,
 } from '@spark-outpost/contracts';
@@ -17,6 +18,9 @@ export interface AdvisorCandidate {
   name: string;
   models: AdvisorOption[];
   efforts: AdvisorOption[];
+  allowFrontier?: boolean;
+  doAvailable?: boolean;
+  stats?: readonly ModelStat[];
 }
 
 export interface CurrentSettings {

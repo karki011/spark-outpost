@@ -1,5 +1,6 @@
 import {
   agentRoleLabel,
+  type CardCategory,
   transitionNextSchema,
   transitionStatusSchema,
   type AgentRole,
@@ -9,7 +10,9 @@ import {
 } from '@spark-outpost/contracts';
 import { AdvisorError, type AdvisorCandidate, type AdvisorOption } from '../advisor/advice.ts';
 import {
+  effortInstructions,
   MAX_TASK_CHARACTERS,
+  modelOptionText,
   selectableModels,
   type IntakeQuestions,
   type SystemOneResponse,
@@ -30,6 +33,7 @@ export interface RouteSlot {
   role: AgentRole;
   step: string | null;
   candidate: AdvisorCandidate;
+  category?: CardCategory | null;
 }
 
 export interface RoutePick {
@@ -55,13 +59,21 @@ export function buildRouteQuestions(task: string, slots: readonly RouteSlot[]): 
       questions[`model_${slot.key}`] = {
         type: 'choice',
         instructions: `Which ${slot.candidate.name} model should do \`work.${slot.key}\`, one part of \`task\`? Prefer faster, cheaper models for simple parts and stronger models for complex or risky parts.`,
-        criteria: Object.fromEntries(models.map((model) => [model.id, describe(model)])),
+        criteria: Object.fromEntries(
+          models.map((model) => [
+            model.id,
+            modelOptionText(slot.candidate, model, slot.category ?? null),
+          ]),
+        ),
       };
     }
     if (slot.candidate.efforts.length > 1) {
       questions[`effort_${slot.key}`] = {
         type: 'score',
-        instructions: `How much reasoning effort does \`work.${slot.key}\` need?`,
+        instructions: effortInstructions(
+          slot.candidate,
+          `How much reasoning effort does \`work.${slot.key}\` need?`,
+        ),
         criteria: slot.candidate.efforts.map(describe),
       };
     }

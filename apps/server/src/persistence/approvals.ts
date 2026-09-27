@@ -269,8 +269,24 @@ export async function allowedForRun(
   runId: string,
 ): Promise<Pick<Approval, 'kind' | 'title' | 'payload'>[]> {
   const { rows } = await db.query<Pick<ApprovalRow, 'kind' | 'title' | 'payload'>>(
-    `SELECT kind, title, payload FROM approvals
-     WHERE run_id = $1 AND status = 'allowed' AND scope = 'run' ORDER BY created_at`,
+    `WITH me AS (
+       SELECT id, parent_run_id, role, route->>'name' AS name, route->>'resumeKey' AS resume_key
+       FROM runs WHERE id = $1
+     ),
+     same_member AS (
+       SELECT me.id FROM me
+       UNION
+       SELECT r.id FROM runs r JOIN me
+         ON me.parent_run_id IS NOT NULL AND me.resume_key IS NOT NULL
+        AND r.parent_run_id = me.parent_run_id AND r.route->>'resumeKey' = me.resume_key
+       UNION
+       SELECT r.id FROM runs r JOIN me
+         ON me.resume_key IS NOT NULL AND r.id = me.parent_run_id
+        AND r.role = me.role AND r.route->>'name' = me.name
+     )
+     SELECT kind, title, payload FROM approvals
+     WHERE run_id IN (SELECT id FROM same_member) AND status = 'allowed' AND scope = 'run'
+     ORDER BY created_at`,
     [runId],
   );
   return rows;

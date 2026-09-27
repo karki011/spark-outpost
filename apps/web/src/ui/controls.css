@@ -340,6 +340,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.choice-menu button:disabled small {
+  white-space: normal;
+}
 .choice-menu .warn small {
   color: var(--warn);
 }

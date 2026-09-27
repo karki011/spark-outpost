@@ -47,6 +47,9 @@ const server = createServer((req, res) => {
   if (path === '/anthropic/v1/messages' && req.method === 'POST') {
     return send(res, 200, { model: 'claude-opus-5-5', content: [{ type: 'text', text: 'OK' }] });
   }
+  if (path === '/zai/v1/messages' && req.method === 'POST') {
+    return send(res, 200, { model: 'glm-5.3-flash', content: [{ type: 'text', text: 'OK' }] });
+  }
   if (path === '/openai/v1/models') return send(res, 200, openaiModels);
   if (path === '/typesafe/v1/models') return send(res, 200, typesafeModels);
   if (path === '/typesafe/v1/systemone' && req.method === 'POST') return void systemOne(req, res);

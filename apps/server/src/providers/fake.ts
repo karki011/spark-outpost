@@ -10,6 +10,7 @@ import type {
 } from './provider.ts';
 import { ProviderError } from './provider.ts';
 import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
+import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
 
 export const FAKE_PROVIDER_NAME = 'fake';
 export const FAKE_FAILURE_TRIGGER = '#fail';
@@ -108,7 +109,8 @@ export function fakeProviderPlan(
   ];
 }
 
-export function fakeCapabilities(): ProviderCapabilityReport {
+export function fakeCapabilities(provider?: string): ProviderCapabilityReport {
+  if (provider === 'zai') return fakeZaiCapabilities();
   return {
     models: [
       { id: 'fake-fast', label: 'Fake Fast', description: 'Quick test replies' },
@@ -120,6 +122,22 @@ export function fakeCapabilities(): ProviderCapabilityReport {
       { id: 'high', label: 'High', description: 'Thinks longer' },
     ],
     defaultModel: 'fake-fast',
+  };
+}
+
+function fakeZaiCapabilities(): ProviderCapabilityReport {
+  return {
+    models: ZAI_MODELS.map((model) => ({
+      id: model.slot,
+      label: model.label,
+      description: model.description,
+    })),
+    efforts: ZAI_EFFORTS.map((id) => ({
+      id,
+      label: id.charAt(0).toUpperCase() + id.slice(1),
+      description: null,
+    })),
+    defaultModel: ZAI_MODELS[0]?.slot ?? null,
   };
 }
 

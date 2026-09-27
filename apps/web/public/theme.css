@@ -28,6 +28,7 @@
   --spring: cubic-bezier(0.3, 1.4, 0.5, 1);
   --c-claude: oklch(0.68 0.15 40);
   --c-codex: oklch(0.64 0.12 225);
+  --c-zai: oklch(0.66 0.14 115);
   --c-jev: oklch(0.62 0.2 330);
   --scroll-thumb: color-mix(in srgb, var(--muted) 34%, transparent);
   --scroll-thumb-hover: color-mix(in srgb, var(--muted) 58%, transparent);

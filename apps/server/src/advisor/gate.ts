@@ -3,6 +3,7 @@ import type { Gate, InvolvementLevel, Risk } from '@spark-outpost/contracts';
 export const ACT_AT = 0.9;
 export const ACT_AT_READ_ONLY = 0.75;
 export const ACT_AT_DOWNGRADE = 0.8;
+export const ACT_AT_FRONTIER = 0.95;
 export const ASK_AT = 0.5;
 
 export const CLARIFY_BELOW: Record<InvolvementLevel, number | null> = {
@@ -47,5 +48,21 @@ export function gate(
     actAt,
     askAt: ASK_AT,
     clarifyBelow,
+  };
+}
+
+export function frontierGate(
+  answer: { confidence: number },
+  risk: Risk,
+  level: InvolvementLevel,
+): Gate {
+  return {
+    decision: answer.confidence >= ACT_AT_FRONTIER ? 'act' : 'fallback',
+    confidence: answer.confidence,
+    risk,
+    level,
+    actAt: ACT_AT_FRONTIER,
+    askAt: ACT_AT_FRONTIER,
+    clarifyBelow: null,
   };
 }

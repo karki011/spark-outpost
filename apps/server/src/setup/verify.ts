@@ -8,6 +8,7 @@ import {
 import type { CatalogEntry } from '../providers/catalog.ts';
 import type { RunCommand } from './command.ts';
 import { modelSummary, parseModels } from './model-list.ts';
+import { ZAI_CHECK_MODEL, zaiFailureReason, zaiMessageRequest, zaiModels } from './zai-key.ts';
 
 export type VerifyStep =
   | { type: 'step_started'; label: string }
@@ -28,6 +29,7 @@ export interface ApiEndpoints {
   anthropicBaseUrl: string;
   openaiBaseUrl: string;
   typesafeBaseUrl: string;
+  zaiBaseUrl: string;
   fetch: typeof fetch;
 }
 
@@ -73,6 +75,13 @@ function failureMessage(entry: KeyedService, status: number): string {
   return `${entry.maker} responded with ${status}. Try again in a minute.`;
 }
 
+function checkRequest(entry: KeyedService, key: string, endpoints: ApiEndpoints): Request {
+  if (entry.id === 'zai') {
+    return zaiMessageRequest(endpoints.zaiBaseUrl, key, ZAI_CHECK_MODEL, 'Reply with OK.');
+  }
+  return modelsRequest(entry, key, endpoints);
+}
+
 async function listModels(
   entry: KeyedService,
   key: string,
@@ -80,7 +89,7 @@ async function listModels(
 ): Promise<ModelListResult> {
   let response: Response;
   try {
-    response = await endpoints.fetch(modelsRequest(entry, key, endpoints), {
+    response = await endpoints.fetch(checkRequest(entry, key, endpoints), {
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch {
@@ -89,9 +98,12 @@ async function listModels(
       message: `Couldn't reach ${entry.maker}. Check your internet connection, then try again.`,
     };
   }
-  if (!response.ok) return { ok: false, message: failureMessage(entry, response.status) };
   const payload: unknown = await response.json().catch(() => null);
-  return { ok: true, models: parseModels(entry.id, payload) };
+  if (!response.ok) {
+    const zai = entry.id === 'zai' ? zaiFailureReason(response.status, payload) : null;
+    return { ok: false, message: zai ?? failureMessage(entry, response.status) };
+  }
+  return { ok: true, models: entry.id === 'zai' ? zaiModels() : parseModels(entry.id, payload) };
 }
 
 export async function* verifyApiKey(

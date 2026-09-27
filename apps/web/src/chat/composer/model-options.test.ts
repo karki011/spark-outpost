@@ -6,6 +6,7 @@ import {
   currentModel,
   formatTokens,
   meterLevel,
+  optionLabel,
   selectableEfforts,
   shortLabel,
 } from './model-options.ts';
@@ -79,5 +80,17 @@ describe('composer model options', () => {
     expect(contextLevel(10)).toBe('ok');
     expect(contextLevel(60)).toBe('warm');
     expect(contextLevel(90)).toBe('hot');
+  });
+});
+
+describe('optionLabel', () => {
+  it('marks the effective default model, never the agent default alias', () => {
+    const capabilities = { defaultModel: 'gpt-6-sol' };
+    expect(optionLabel({ id: 'gpt-6-sol', label: '6 Sol' }, capabilities)).toBe('6 Sol (default)');
+    expect(optionLabel({ id: 'gpt-6-astra', label: '6 Astra' }, capabilities)).toBe('6 Astra');
+    expect(
+      optionLabel({ id: 'default', label: 'Default (recommended)' }, { defaultModel: 'default' }),
+    ).toBe('Default (recommended)');
+    expect(optionLabel({ id: 'gpt-6-sol', label: '6 Sol' }, undefined)).toBe('6 Sol');
   });
 });

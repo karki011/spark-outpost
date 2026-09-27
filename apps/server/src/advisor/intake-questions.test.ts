@@ -133,14 +133,22 @@ describe('intake questions', () => {
       'plan_execute',
       'plan_execute_review',
     ]);
-    expect(questions.provider!.criteria).toEqual({ claude: 'Claude', codex: 'Codex' });
-    expect(questions.model_claude!.criteria).toEqual({
-      opus: 'Opus 5.5: Best for complex tasks',
-      sonnet: 'Sonnet 5',
-    });
+    const providers = questions.provider!.criteria as Record<string, string>;
+    expect(providers.claude).toMatch(
+      /^Claude: can edit \(Do\), asks before every edit and command/,
+    );
+    expect(providers.codex).toMatch(/^Codex: read-only here \(no Do\)/);
+    const models = questions.model_claude!.criteria as Record<string, string>;
+    expect(Object.keys(models)).toEqual(['opus', 'sonnet']);
+    expect(models.opus).toMatch(/^Opus 5\.5: top tier, moderate, \$4\/\$20 per M; /);
+    expect(models.sonnet).toMatch(/^Sonnet 5: mid tier, fast, \$2\/\$10 per M; /);
+    for (const text of [...Object.values(providers), ...Object.values(models)]) {
+      expect(text.length).toBeLessThanOrEqual(160);
+    }
     expect(questions.effort_claude).toEqual({
       type: 'score',
-      instructions: 'If Claude handles `task`, how much reasoning effort does it need?',
+      instructions:
+        'If Claude handles `task`, how much reasoning effort does it need? Defaults: Opus 5.5 medium, Sonnet 5 high.',
       criteria: ['Low: Quick', 'Medium: Balanced', 'High: Deep'],
     });
   });
@@ -164,6 +172,41 @@ describe('intake questions', () => {
       candidates: [intakeRequest.candidates[0]!],
     });
     expect(questions.provider).toBeUndefined();
+  });
+
+  it('describes a model without a card by its adapter label and description', () => {
+    const { questions } = buildIntakeQuestions({
+      ...intakeRequest,
+      candidates: [
+        {
+          ...intakeRequest.candidates[0]!,
+          models: [
+            { id: 'sonnet', label: 'Sonnet 5', description: null },
+            { id: 'sonnet-next', label: 'Sonnet 6', description: 'Newer' },
+          ],
+        },
+      ],
+    });
+    expect((questions.model_claude!.criteria as Record<string, string>)['sonnet-next']).toBe(
+      'Sonnet 6: Newer',
+    );
+  });
+
+  it('offers frontier models only when they are allowed for that provider', () => {
+    const claude = {
+      ...intakeRequest.candidates[0]!,
+      models: [
+        { id: 'opus[1m]', label: 'Opus 5.5', description: null },
+        { id: 'claude-fable-5-1[1m]', label: 'Fable 5.1', description: null },
+      ],
+    };
+    const offered = (allowFrontier: boolean) =>
+      Object.keys(
+        buildIntakeQuestions({ ...intakeRequest, candidates: [{ ...claude, allowFrontier }] })
+          .questions.model_claude?.criteria ?? {},
+      );
+    expect(offered(false)).toEqual([]);
+    expect(offered(true)).toEqual(['opus[1m]', 'claude-fable-5-1[1m]']);
   });
 
   it('refuses to build questions with no connected provider', () => {

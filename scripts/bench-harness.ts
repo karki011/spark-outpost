@@ -11,6 +11,8 @@ import { renderHtml } from './bench/render-html.ts';
 import { preservedAnalysis, renderMarkdown } from './bench/render-md.ts';
 import { BENCH_MODES, type BenchMode, type BenchRun, type CellResult } from './bench/results.ts';
 import { TASKS, taskById, type BenchTask } from './bench/tasks.ts';
+import { ingestFiles } from './bench/ingest-files.ts';
+import { createDb } from '../apps/server/src/persistence/db.ts';
 import { precheck, verifyRepo } from './bench/verify.ts';
 
 const FALLBACK_COST_USD: Record<BenchMode, number> = { direct: 0.5, harness: 1 };
@@ -32,6 +34,7 @@ const { values } = parseArgs({
     'build-style': { type: 'string', default: 'off' },
     placement: { type: 'string', default: 'jev' },
     split: { type: 'string', default: 'jev' },
+    'no-ingest': { type: 'boolean', default: false },
   },
 });
 
@@ -188,6 +191,20 @@ async function main(): Promise<void> {
   }
   await writeOutputs(run);
   console.log(`Spent $${run.spentUsd.toFixed(3)}. Results in ${files.json}.`);
+  await ingestStats();
+}
+
+async function ingestStats(): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (values['no-ingest'] || !url) return;
+  const db = createDb(url);
+  try {
+    await ingestFiles(db, [files.json]);
+  } catch (error) {
+    console.log(`Model stats not recorded: ${(error as Error).message}`);
+  } finally {
+    await db.end();
+  }
 }
 
 await main();

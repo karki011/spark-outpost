@@ -37,6 +37,9 @@ async function openTile(page: Page, name: string) {
 async function openApiKeyTab(page: Page) {
   await openTile(page, 'Claude');
   await claudeCard(page).getByRole('tab', { name: 'API key' }).click();
+  await expect(
+    claudeCard(page).getByRole('link', { name: 'Claude Console (opens in a new tab)' }),
+  ).toHaveAttribute('href', 'https://platform.claude.com/settings/keys');
   return claudeCard(page).getByLabel('Claude API key');
 }
 
@@ -212,7 +215,7 @@ test('the only provider can be disconnected, and setup resumes at the provider s
 test('provider tiles start collapsed and open one at a time', async ({ page }) => {
   await enterName(page, 'Hazel');
   const heads = dialog(page).locator('.pc-head');
-  await expect(heads).toHaveCount(3);
+  await expect(heads).toHaveCount(4);
   for (const head of await heads.all())
     await expect(head).toHaveAttribute('aria-expanded', 'false');
 
@@ -232,7 +235,11 @@ test('Jev connects with an API key as optional routing and does not unlock chats
   const jev = dialog(page).locator('.pcard').filter({ hasText: 'Jev' });
   await expect(dialog(page).getByRole('heading', { name: 'Optional routing' })).toBeVisible();
   await openTile(page, 'Jev');
-  await expect(jev.getByRole('tab')).toHaveText(['API key']);
+  await expect(jev.getByRole('tab')).toHaveCount(0);
+  await expect(jev.getByRole('link', { name: /TypeSafe console/ })).toHaveAttribute(
+    'href',
+    'https://console.typesafe.ai/keys',
+  );
 
   const key = jev.getByLabel('Jev API key');
   await key.fill(`${REJECTED_KEY_MARKER}-typesafe-fixture-key`);

@@ -8,6 +8,7 @@ import type {
   SetupState,
   UpdateProfileRequest,
 } from '@spark-outpost/contracts';
+import { effectiveDefaultModel } from '../model-cards/cards.ts';
 import { catalog, catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
 import type { TestOutcome } from '../setup/test-message.ts';
 import type { VerifiedConnection } from '../setup/verify.ts';
@@ -105,6 +106,8 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     cli: entry.cli,
     keyPrefix: entry.keyPrefix,
     keyHint: entry.keyHint,
+    keyLink: entry.keyLink,
+    note: entry.note,
     methods: entry.methods,
     permissions: entry.permissions,
     efforts: entry.efforts,
@@ -170,7 +173,11 @@ export async function saveConnection(
   verified: VerifiedConnection,
 ): Promise<ProviderConnection> {
   const entry = catalogEntry(provider);
-  const defaultModel = verified.models[0]?.id ?? null;
+  const defaultModel = effectiveDefaultModel(
+    provider,
+    verified.models,
+    verified.models[0]?.id ?? null,
+  );
   const { rows } = await db.query<ConnectionRow>(
     `INSERT INTO provider_connections
        (workspace_id, provider, method, detail, models, model, permission, effort, verified_at, summary)

@@ -14,6 +14,7 @@ import {
   normalizeCommand,
   resolveCommandPath,
 } from './commands.ts';
+import { isPackageInstall, isSafeRead } from './command-kinds.ts';
 
 export interface RequestRoot {
   path: string;
@@ -39,7 +40,7 @@ export type RunRule =
   { kind: 'execute'; command: string } | { kind: 'edit' } | { kind: 'other'; title: string };
 
 export type Decision =
-  | { verdict: 'allow'; by: 'level' | 'run_rule' | 'allowlist' }
+  | { verdict: 'allow'; by: 'level' | 'run_rule' | 'allowlist'; why?: string }
   | { verdict: 'reject'; reason: string }
   | { verdict: 'ask'; reason: string | null };
 
@@ -49,6 +50,8 @@ export const PUSH_REASON = 'Pushing always asks';
 export const OUTSIDE_DELETE_REASON = 'Deleting outside the repo always asks';
 export const OUTSIDE_WRITE_REASON = 'Changing files outside the repo always asks';
 export const SECRET_REASON = 'Secret files always ask';
+export const INSTALL_REASON = 'Installing packages always asks';
+export const SAFE_READ_WHY = 'a read-only command inside the project';
 
 interface Placement {
   relative: string | null;
@@ -104,6 +107,7 @@ export function alwaysAskReason(request: ApprovalRequest): string | null {
     return OUTSIDE_DELETE_REASON;
   }
   if (touchesSecret(request)) return SECRET_REASON;
+  if (request.command && isPackageInstall(request.command)) return INSTALL_REASON;
   const writes = request.kind === 'edit' || request.toolKind === 'move';
   if (writes && request.paths.some((target) => outsideRoots(request, target))) {
     return OUTSIDE_WRITE_REASON;
@@ -144,6 +148,16 @@ function matchesRule(request: ApprovalRequest, rule: RunRule): boolean {
 
 const ASK: Decision = { verdict: 'ask', reason: null };
 
+function isSafeReadRequest(request: ApprovalRequest): boolean {
+  if (!request.command) return false;
+  return isSafeRead(request.command, {
+    cwd: commandCwd(request),
+    home: request.home,
+    inside: (target) =>
+      request.roots.some((root) => root.path === target) || !outsideRoots(request, target),
+  });
+}
+
 export function decide(
   level: InvolvementLevel,
   request: ApprovalRequest,
@@ -162,6 +176,9 @@ export function decide(
     return level === 'hands-off' ? { verdict: 'allow', by: 'level' } : ASK;
   }
   if (request.kind === 'execute') {
+    if (level !== 'hands-on' && isSafeReadRequest(request)) {
+      return { verdict: 'allow', by: 'level', why: SAFE_READ_WHY };
+    }
     const listed = request.command !== null && allowlistCovers(allowlist, request.command);
     return listed && level !== 'hands-on' ? { verdict: 'allow', by: 'allowlist' } : ASK;
   }

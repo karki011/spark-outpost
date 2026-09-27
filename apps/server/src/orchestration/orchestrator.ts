@@ -49,6 +49,7 @@ import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
 import { cleanupCopies, runGroup } from './group.ts';
 import { judge } from './judge.ts';
 import { buildAndLand } from './land.ts';
+import { buildInCopy, buildsInCopy } from './solo-copy.ts';
 import { decideBuildStyle, projectBuildStyle, recordShortcuts } from './build-style.ts';
 import { collectedReview } from './reviews.ts';
 import { sequentialReason } from './parallel.ts';
@@ -233,7 +234,9 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
         const collected = await collectedReview(s);
         if (collected) return collected;
       }
-      const outcome = await buildAndLand(s, action);
+      const outcome = buildsInCopy(s, action)
+        ? await buildInCopy(s, action)
+        : await buildAndLand(s, action);
       const { result, steps, groups, large, lanes, parallel, verdict } = outcome;
       if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
       await publish(s);

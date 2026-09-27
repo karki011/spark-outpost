@@ -287,11 +287,12 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       optionId: option?.optionId ?? null,
     });
     const why =
-      decision.by === 'allowlist'
+      decision.why ??
+      (decision.by === 'allowlist'
         ? 'on the project allowlist'
         : decision.by === 'run_rule'
           ? 'allowed for this run'
-          : `your ${involvementLevelLabel(deps.level)} setting`;
+          : `your ${involvementLevelLabel(deps.level)} setting`);
     return allow(request, `Allowed ${what} (${why})`);
   };
 

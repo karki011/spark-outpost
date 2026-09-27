@@ -3,6 +3,7 @@ import { useId } from 'react';
 import type { AdviceSummary, Category, Orchestration } from '@spark-outpost/contracts';
 import { CategoryChip } from '../../categories/CategoryChip.tsx';
 import { dispatchParts } from '../../crew/crew-projection.ts';
+import { whyLines } from '../../crew/why-lines.ts';
 import { adviceDetails } from '../AdviceLine.tsx';
 
 const ROUTING = { auto: 'models by Jev', pinned: 'pinned model' } as const;
@@ -23,9 +24,10 @@ export function DispatchLine({ orchestration, advice, category }: DispatchLinePr
     ROUTING[orchestration.routing],
     confidence === undefined ? null : confidence.toFixed(2),
   ].filter(Boolean);
-  const details = advice
-    ? adviceDetails(advice).filter((line) => !line.startsWith('Recorded only'))
-    : [];
+  const details = [
+    ...(advice ? adviceDetails(advice).filter((line) => !line.startsWith('Recorded only')) : []),
+    ...whyLines(orchestration),
+  ];
   return (
     <p className="jevline">
       <span

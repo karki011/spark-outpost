@@ -149,8 +149,8 @@ describe('chat settings', () => {
       level: 'balanced',
       routing: 'pinned',
     });
-    const codexDo = await send('patch', path, { permission: 'do' }).expect(400);
-    expect(codexDo.body.error).toMatch(/Codex can't ask before each command/);
+    const codexDo = await send('patch', path, { permission: 'do' }).expect(200);
+    expect(codexDo.body).toMatchObject({ provider: 'codex', permission: 'do' });
     const back = await send('patch', path, { provider: 'claude' }).expect(200);
     expect(back.body).toEqual({
       provider: 'claude',

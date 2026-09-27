@@ -1,4 +1,5 @@
 import {
+  isCheckApproval,
   isTerminalRunStatus,
   type Approval,
   type ConversationDetail,
@@ -72,11 +73,11 @@ function soloChild(run: Run, detail: ConversationDetail) {
   return { member, child };
 }
 
-function liveApprovals(stream: RunProjection, pending: Approval | null): readonly Approval[] {
-  if (!pending || stream.approvals.some((known) => known.id === pending.id)) {
-    return stream.approvals;
-  }
-  return [...stream.approvals, pending];
+function liveApprovals(stream: RunProjection, pending: readonly Approval[]): readonly Approval[] {
+  const extra = pending.filter(
+    (approval) => !stream.approvals.some((known) => known.id === approval.id),
+  );
+  return [...stream.approvals, ...extra];
 }
 
 function turnStatus(run: Run, stream: RunProjection, waiting: boolean) {
@@ -95,7 +96,11 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
   const leads = streamLeads(stream, finished);
   const active = stream.status === 'connecting' || stream.status === 'running';
   const working = !finished && active;
-  const pending = detail.orchestrations?.[run.id]?.pendingCheckpoint ?? null;
+  const pendingCheckpoint = detail.orchestrations?.[run.id]?.pendingCheckpoint ?? null;
+  const pendingChecks = detail.approvals.filter(
+    (approval) => approval.runId === run.id && isCheckApproval(approval),
+  );
+  const pending = pendingCheckpoint ? [pendingCheckpoint, ...pendingChecks] : pendingChecks;
   const approvals = finished ? [] : liveApprovals(stream, pending);
   const waiting = working && hasPending(approvals);
   const { state, label } = turnStatus(run, stream, waiting);

@@ -1,6 +1,6 @@
 # ACP agents
 
-How Spark Outpost runs Claude and Codex through the Agent Client Protocol, what the September 25, 2026 spike found, and the limits that remain.
+How Spark Outpost runs Claude, Codex and Z.ai (GLM) through the Agent Client Protocol, what the September 25, 2026 spike found, and the limits that remain.
 
 ## What runs today
 
@@ -63,10 +63,22 @@ Code: `apps/server/src/projects/`, `apps/server/src/persistence/conversation-pro
 A chat linked to a project runs in Do mode when its permission is Do (`overrides[provider].permission = 'do'`, with the involvement level in `.level`; defaults live on the provider connection and in Settings). The run records `runs.mode` (`chat`, `ask`, `do`) and `runs.level`. See [HARNESS_PLAN.md](HARNESS_PLAN.md#m2-status-september-26-2026) for the decision rules.
 
 - **Claude.** Same hardening as Ask, with `tools: ['Read','Glob','Grep','Edit','Write','Bash']` and `settings.permissions.ask: ['Bash','Edit','Write']`, so even read-only commands like `ls` reach `session/request_permission`. The mode stays `default` and the mode lock is unchanged; bypass stays disabled. The prompt note says the agent may change files and that a denied action must not be retried another way.
-- **Codex.** Unavailable. Live on September 26 with codex-acp 1.13.1 and our patch: `agent` mode ran `ls` and wrote a file with no permission request; the patched `read-only` mode ran `ls` unasked and only escalated the write. The picker, Settings and `PATCH …/settings` show the reason, and a Do run for Codex stops before the agent starts.
+- **Codex** (since September 26, [CODEX_DO.md](CODEX_DO.md)). Our codex-acp patch adds the mode `ask-every-action`:
+  - `approvalPolicy: "untrusted"` with approvals reviewed by the user
+  - a `workspaceWrite` sandbox with no network and no `/tmp`; the run's private `TMPDIR` stays writable
+  - a `decline` option on command and file-change requests, so a denied action lets Codex continue instead of ending its turn
+
+  A Do run sets that mode through `set_config_option` (`AgentDefinition.doMode`), and the mode lock stops the run if it changes. Live, every command, including `ls`, `cat` and `git status`, and every `apply_patch` reached `session/request_permission`, so `decide()` sees each action. Codex Do opens only the primary repo (`doPrimaryRootOnly`, because extra folders would become writable roots) and adds a step saying so. Codex Builders work in a git worktree at Hands-off and Full auto (`doWorktreeLevels`, `orchestration/solo-copy.ts`), and in place at Hands-on and Balanced.
+
+  Known gaps:
+  - Codex's sandbox reads the whole disk. We see and ask about commands that name a secret file, but not what a search or script reads.
+  - If Codex asks to escalate, one approval runs the command outside the sandbox, with network, and the request doesn't show it.
+  - The picker, Settings and the approval card say both.
+
 - **Permission requests** (`permission-request.ts`, `do-handlers.ts`): the tool kind, title, `rawInput.command`/`cwd`/`file_path`, diff content and locations become an approval request for the gate in `workflow/approval-gate.ts`. The harness answers `allow_once` or `reject_once` itself, stores every answer as an approval receipt with the JSON-RPC id and tool-call id (the link into the audit log), and adds an "Allowed …", "Denied: …" or "Cancelled: …" step. A request after Stop answers `cancelled`.
 - **`fs/write_text_file`** is advertised in Do only. The path policy runs first (secret files, `.git/`, outside the roots are refused), then the gate with the old and new text; an approved write creates missing folders. Neither real adapter calls it.
 - **Snapshots.** Before the prompt, the worker records a git snapshot of the primary repo (a commit under `refs/spark-outpost/runs/<runId>`, made from a temporary index) or, outside git, copies each file before an approved edit. "Revert to before this run" restores only files changed since then.
+- **Safe reads and installs** (`approvals/command-kinds.ts`, both providers). At Balanced and above, one simple read-only command runs without asking when every path is inside the project (see HARNESS_PLAN's involvement table). Package installs always ask, at every level, unless they only restore the lockfile (a frozen or offline install that adds no packages).
 - **Known gaps:** Claude's Bash runs unsandboxed after approval (the card says so). Git snapshots skip ignored files. Outside git, files changed by commands are not backed up.
 
 ## Chat settings, capabilities, and usage
@@ -84,6 +96,30 @@ A chat linked to a project runs in Do mode when its permission is Do (`overrides
   - The composer's context ring shows the current provider's last context reading, plus the chat totals and per-provider lines when more than one provider was used.
   - `GET /api/usage/summary` totals runs, cost, and tokens per provider for the last 30 days and all time. Settings shows them under Usage.
 - **Tests without real agents.** With `AGENT_RUNTIME=fake`, the API returns a fixed fake capability snapshot and the fake provider reports usage, so browser tests never start real agents.
+
+## Z.ai (GLM) (September 26, 2026)
+
+Z.ai is a third provider, `zai`, named "Z.ai (GLM)". It runs the same `claude-agent-acp` against Z.ai's Anthropic-compatible endpoint, so Claude Code is the agent and GLM is the model. The Z.ai docs we rely on are summarised in [GLM_NOTES.md](../reference/zai/GLM_NOTES.md).
+
+- **Connection.** API key only (`methods: ['api_key']`). The key is verified with one `POST {ZAI_BASE_URL}/v1/messages` to `glm-5.3-flash` with `max_tokens: 16` (Bearer auth), stored in the OS keychain as `zai:api_key` like the other keys, and shown masked (`…abcd`). The terminal and CLI verification refuse `zai`. Z.ai error codes are explained (1113 no balance or plan, 1302/1305 rate limit, 1308–1321 plan quota).
+- **Clean launch** (`agents/acp/zai.ts`, `agent-env.ts`). The worker reads the key from the secret store at run time and builds the environment from an allowlist (`PATH`, `HOME`, `USER`, `LOGNAME`, `SHELL`, `LANG`, `LC_*`, `TMPDIR`, `TERM`, `TZ`, CA and proxy variables), not from the server's environment. Nothing named `ANTHROPIC_*`, `CLAUDE_*`, `AWS_*` or `OPENAI_*` is inherited. It then sets:
+  - `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic` and `ANTHROPIC_AUTH_TOKEN=<key>`
+  - `ANTHROPIC_DEFAULT_{OPUS,SONNET,FABLE}_MODEL=glm-5.3[1m]` and `ANTHROPIC_DEFAULT_HAIKU_MODEL=glm-5.3-flash[1m]`, each with `_NAME` and `_DESCRIPTION`, so the picker and Jev see "GLM-5.3" and "GLM-5.3-Flash" with strengths and prices
+  - `API_TIMEOUT_MS=3000000`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW=1000000` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, as the Z.ai docs recommend
+  - `CLAUDE_CONFIG_DIR` set to an isolated, `0700` config home (`$TMPDIR/spark-outpost-zai-claude`). Claude Code then reads no `~/.claude` settings, plugins or `.credentials.json`, and its keychain item name gets a hash suffix of that directory, so the user's `Claude Code-credentials` login is never looked up. The directory is shared by Z.ai runs so session resume works.
+- **No fallback to the Claude login.** Besides the clean environment, `claude-agent-acp` runs with `--hide-claude-auth`, which refuses any session whose account would bill a claude.ai subscription.
+- **Same hardening as Claude.** The Z.ai definition reuses Claude's session options: `settingSources: []`, the secret-file deny rules, `allowDangerouslySkipPermissions: false`, bypass disabled, `blockReadsOutsideWorkingDirectories`, the `default` mode lock, and Do with `ask: ['Bash','Edit','Write']` through the approval gate.
+- **Models and effort.** The adapter offers `default`, `opus`, `sonnet`, `haiku` and `claude-fable-5-1`. `offers` keeps only `opus` (GLM-5.3) and `haiku` (GLM-5.3-Flash), and the efforts Low, High and Max (GLM-5.3 has only these levels; High is the default). The probe and each run's capability report are filtered the same way, and the probe with the key spends nothing.
+- **Cost and model records.** Claude Code's reported cost uses Anthropic prices, so a Z.ai run drops it (`estimatesCost`), and the run is priced from its tokens at the GLM rates with `cost_source: 'estimated'`. `used_model` records the GLM model (`glm-5.3`, `glm-5.3-flash`) instead of the adapter's slot name.
+- **Tests.** `agents.test.ts` checks the environment against a parent full of Anthropic, Claude, AWS and OpenAI credentials; `test/acp-zai.test.ts` runs the provider and the probe against the fake agent (`#env` reports variable names, never values) and checks that the key is in no output, protocol message or stderr record; `test/zai-setup.db.test.ts` covers verification, errors, test messages, defaults, disconnect and the cost estimate; `tests/browser/zai.spec.ts` connects Z.ai in Settings with the fake runtime.
+- **Fake runtime.** `createProviders('fake', FAKE_ACP_AGENT, secrets)` passes the worker's secret store, so a Z.ai `#build` turn still needs a stored key. The fake agent gets the ordinary test environment and the GLM model list (`FAKE_ACP_MODELS`), never the key. Browser tests seed the worker's `MEMORY_SECRETS` with a dummy `zai` key; `test/acp-zai.test.ts` runs a fake GLM Builder turn through the approval gate.
+- **Live test (September 26, with the user's key, GLM-5.3-Flash at low effort, in a scratch git repo):**
+  - The app's own verify and "Send test message" went to `https://api.z.ai/api/anthropic` (the default `ZAI_BASE_URL`); the test message was answered by `glm-5.3` in 1.5 s.
+  - Ask ("what does math.js do?") ran Find and Read and answered in 10.4 s. Do ("make hello.txt read 'hello, GLM'") asked once for "Write hello.txt", was allowed by the gate, and made exactly that edit in 10.3 s.
+  - Tokens: 3,490 in, 6,464 cache reads, 102 out for Ask; 6,287 in, 7,680 cache reads, 161 out for Do. Estimated cost $0.0020 in total. The adapter reported no usable cost (dropped as designed); `used_model` was `glm-5.3-flash`. Z.ai reports cache reads through the Anthropic protocol.
+  - The adapter and Claude Code processes had only these credential-like variables: `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic` and `CLAUDE_CONFIG_DIR` set to the isolated directory; no `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` or other `CLAUDE_*` login variables. The adapter ran with `--hide-claude-auth`.
+  - `lsof -i` on the adapter's process tree, sampled every 0.3 s, showed connections only to `api.z.ai` (8.221.126.63 and 240b:4002:109:2b8:5400::202a); none to Anthropic's 160.79.104.10 or 2607:6bc0::10.
+  - The isolated config dir held `.claude.json` (no account fields), backups, session transcripts and no `.credentials.json`; no file in it contained the key, no keychain item exists for it, and the key appeared in no protocol message or stderr line.
 
 ## Audit recording
 
@@ -105,7 +141,7 @@ S1a records what every agent run says over ACP, for the audit view (S1c).
   - `GET /api/conversations/:id/audit/export.jsonl`: a streamed download, one `run` line per run followed by its `log` lines
   - `GET /api/conversations/:id/audit/export.csv`: one row per run with role, model, effort, mode, tokens, `cost_usd`, and `cost_source` (`reported`, `estimated`, or `not_reported`). Cells that start like a spreadsheet formula are prefixed with `'`
 - **Summary run fields for the audit view (S1c):** `role` (derived from `runs.mode` until roles exist: Do is Builder, Ask and Chat are Scout), `runMode`, `userMessageId` (the turn), `startedAt`, `finishedAt`, `approvalWaits` (approvals decided by the user, Stop, timeout, or recovery, and pending ones), and the distinct logged `methods`
-- **Estimate prices.** `usage/prices.ts` holds OpenAI's Standard short-context rates for the Codex models (`gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`), from https://developers.openai.com/api/docs/pricing, checked 2026-09-26. Any other model stays unpriced, so it shows "cost not reported" instead of a guess
+- **Estimate prices.** `usage/prices.ts` holds OpenAI's Standard short-context rates for the Codex models (`gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`), from https://developers.openai.com/api/docs/pricing, and Z.ai's pay-as-you-go rates for `glm-5.3` and `glm-5.3-flash`, from https://docs.z.ai/guides/overview/pricing, both checked 2026-09-26. GLM usage comes through the Anthropic protocol, where input tokens exclude cache reads and writes, so those prices set `cacheOutsideInput`: input and cache writes at the input price plus cache reads at the cached price. Any other model stays unpriced, so it shows "cost not reported" instead of a guess
 - **Not recorded:** the capability probe's messages, stderr that arrives after the process is killed, and anything a provider does outside ACP. The fake provider records no protocol messages.
 
 ## Attachments
@@ -159,7 +195,7 @@ In a chat there is little to show: Claude's tools are off, so a Claude chat usua
   A live test confirmed that a write outside the sandbox is blocked. **Known gap:** Codex's file editor can still write under `/tmp` without asking. Closing this needs a real read-only sandbox from codex-acp, or the project-folder path with its own sandbox.
 
 - The user's global `~/.codex/config.toml` (for example `approval_policy = "never"`) does not loosen chats, because codex-acp sends its sandbox policy on every turn.
-- API-key connections are refused with a clear message. The adapters support `ANTHROPIC_API_KEY`, and `CODEX_API_KEY` or `OPENAI_API_KEY`, but that path isn't wired or tested yet.
+- API-key connections for Claude and Codex are refused with a clear message. The adapters support `ANTHROPIC_API_KEY`, and `CODEX_API_KEY` or `OPENAI_API_KEY`, but that path isn't wired or tested yet. Z.ai is the only key-only agent (below).
 
 ## Agent warnings and errors
 
@@ -175,9 +211,10 @@ In a chat there is little to show: Claude's tools are off, so a Claude chat usua
   - `test/acp-provider.test.ts`, which drives the real provider against `test/fake-acp-agent.ts` over stdio. It covers streaming, config, permission, cancel, crash, auth, and refusal cases.
   - `test/acp-project.test.ts`, which runs the fake agent in a project folder: `cwd`, advertised capabilities, reads with `line`/`limit`, refused reads (`..`, symlink escape, `.env`), declined writes, and a missing root.
   - `src/projects/path-policy.test.ts` for the path policy and `.sparkignore`.
-  - `src/approvals/decide.test.ts` for every involvement level, run rules, the allowlist and the always-ask list; `permission-request.test.ts` for the ACP mapping; `test/acp-approvals.test.ts`, which drives the fake agent in Do mode through allow, deny, cancel on Stop and approved, denied and refused `fs/write_text_file`.
+  - `src/approvals/decide.test.ts` for every involvement level, run rules, the allowlist and the always-ask list; `permission-request.test.ts` for the ACP mapping; `test/acp-approvals.test.ts`, which drives the fake agent in Do mode through allow, deny, cancel on Stop and approved, denied and refused `fs/write_text_file`; `src/approvals/command-kinds.test.ts` for safe reads and installs; `test/acp-codex-do.test.ts`, where the fake agent acts like Codex (`#codex`, `test/fake-codex-do.ts`: every command and patch asks with Codex's option ids, and `cancel` ends the turn) at all four levels.
 - `pnpm test:db` includes `test/approvals.db.test.ts` (the gate, run rules, the allowlist, decision races, payload hashes, Stop and the timeout) and `test/approval-runs.db.test.ts` (a worker run through the API decision, Stop while waiting, the timeout failing the run, crash recovery expiring approvals, and revert in and outside git).
-- `pnpm test:live` includes `test/approvals.live.test.ts`: Claude in a temp git repo edits a file, runs `ls` and tries `git push`, and the run is reverted.
+- `pnpm test:db` also includes `test/codex-crew.db.test.ts`: a Codex-only crew builds in place at Hands-on and Balanced, and in a merged and removed worktree at Hands-off and Full auto.
+- `pnpm test:live` includes `test/approvals.live.test.ts`: Claude in a temp git repo edits a file, runs `ls` and tries `git push`, and the run is reverted. `test/codex-do.live.test.ts` runs Codex Do (`gpt-6-luna` · low) at each level and checks that every Codex tool call has an approval receipt. Set `SPARK_LIVE_DIR` to keep its repos in a scratch folder.
 - The audit tests: unit tests for redaction, protocol entries, the hash chain, the recorder, and price estimates, and `test/acp-provider.test.ts` checks that every message is recorded in order with a secret in tool output redacted. `test/audit-log.db.test.ts` and `test/audit-api.db.test.ts` cover storage, paging, tamper detection, pruning, a worker run against the fake agent, the summary, and the export.
 - `pnpm test:db` covers run input: history, settings, and choosing the provider; `test/projects.db.test.ts` covers the folder picker, projects, file search, and project-file attachments.
 - `pnpm test:live` runs the installed Claude and Codex logins. Each provider gets:
@@ -219,7 +256,7 @@ Still open:
 
 ## Next
 
-1. **Codex Do**, once codex-acp offers a mode that asks before every command (or execpolicy `prompt` rules are verified through the adapter).
+1. **Codex Do upstream.** Ask codex-acp for an "ask for everything" mode and a continue-on-deny option, so our patch can go.
 2. **Elicitation.** Advertise `elicitation.form` and show `elicitation/create` as a card that answers `accept`, `decline`, or `cancel`. The spec forbids form mode for secrets.
 3. **Richer activity.** Show diffs and file locations from tool-call content, failed and cancelled steps, and the plan as a checklist.
 4. **Faster start:** ~~reuse ACP sessions with `session/resume` when the conversation hasn't changed~~ (done in M6, see HARNESS_PLAN.md). A warm agent process per provider (F-18) is still deferred: resume works across new processes, so it would only save process start.

@@ -7,6 +7,7 @@ import {
   CHECKPOINT_OPTION,
   clarifyOptionId,
   type Approval,
+  type ApprovalScope,
   type Depth,
   type InvolvementLevel,
   type Orchestration,
@@ -374,7 +375,9 @@ export async function startScenario(
   return { conversationId, runId: sent.run.id };
 }
 
-export type Answerer = (approval: Approval) => { optionId: string; note?: string } | null;
+export type Answerer = (
+  approval: Approval,
+) => { optionId: string; note?: string; scope?: ApprovalScope } | null;
 
 export const answerEverything: Answerer = (approval) => {
   if (approval.kind === 'clarify') return { optionId: clarifyOptionId(0) };

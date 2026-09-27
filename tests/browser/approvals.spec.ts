@@ -229,19 +229,37 @@ test('reverts an allowed edit after one confirmation', async ({ page }) => {
   expect(readFileSync(notes(), 'utf8')).toBe('Remember the milk\n');
 });
 
-test('Codex shows Do as unavailable with the reason', async ({ page }) => {
+test('Codex offers Do with its own copy and sandbox note', async ({ page }) => {
   await doChat(page);
   await page.getByRole('button', { name: /^Model and effort/ }).click();
   const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
   await panel.getByRole('tab', { name: 'Codex' }).click();
   await panel.getByRole('tab', { name: /Permissions/ }).click();
-  await expect(panel.getByRole('radio', { name: /^Do/ })).toHaveCount(1);
   const codexDo = panel.getByRole('radio', { name: /^Do/ });
-  await expect(codexDo).toHaveAttribute('aria-disabled', 'true');
-  await expect(codexDo).toContainText("Codex can't ask before each command yet");
-  await codexDo.click({ force: true });
-  await expect(panel.getByRole('radio', { name: /^Ask/ })).toHaveAttribute('aria-checked', 'true');
-  await shot(page, 'codex-unavailable');
+  await expect(codexDo).not.toHaveAttribute('aria-disabled', 'true');
+  await codexDo.click();
+  await expect(codexDo).toHaveAttribute('aria-checked', 'true');
+  const levels = panel.getByRole('radiogroup', { name: 'Involvement level' });
+  await expect(levels.getByRole('radio', { name: /^Hands-on/ })).toContainText(
+    'Codex asks before every command and every file change',
+  );
+  await expect(levels.getByRole('radio', { name: /^Balanced/ })).toContainText(
+    'Read-only commands in the project are answered for you',
+  );
+  await expect(levels.getByRole('radio', { name: /^Hands-off/ })).toContainText(
+    'separate git copy',
+  );
+  await expect(panel).toContainText("Codex's sandbox can read any file on this computer");
+  await shot(page, 'codex-do');
+  await page.keyboard.press('Escape');
+  await send(page, 'Run the tests #approve');
+  const approval = card(page, /Run a command\?/);
+  await expect(approval).toBeVisible({ timeout: 15_000 });
+  await expect(approval).toContainText("Runs in Codex's sandbox without network");
+  await approval.getByRole('button', { name: 'Deny', exact: true }).click();
+  await expect(page.locator('.md', { hasText: 'fake-run=denied' })).toBeVisible({
+    timeout: 15_000,
+  });
 });
 
 test('the approval card works on a phone and in every theme', async ({ page }) => {

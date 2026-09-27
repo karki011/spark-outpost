@@ -4,6 +4,8 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   CREW_REQUEST,
   agentBlock,
+  agentHead,
+  card,
   crewChat,
   crewRepo,
   resetCrew,
@@ -69,4 +71,48 @@ test('a failing check goes back to the Builder, and the work panel shows both ro
   await expect(work.getByRole('list', { name: 'Done' })).toContainText(
     /Checks passed for Bolt: .*check\.mjs passed/,
   );
+});
+
+test('Balanced: the check approval shows in the thread, Review jumps to it, and the fix turn reuses "Allow for this run"', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  writeFileSync(path.join(repo.root, 'check.mjs'), FAILS_UNTIL_FIXED);
+  await crewChat(page, repo, 'Balanced');
+  const command = `${process.execPath} check.mjs`;
+  await useChecks(page, [command]);
+  await send(page, `${CREW_REQUEST} #build #crew`);
+
+  const plan = card(page, /Approve the plan/);
+  await plan.getByRole('button', { name: 'Approve' }).click({ timeout: 30_000 });
+  const edit = card(page, /Change a file\?/).filter({
+    has: page.getByRole('button', { name: 'Deny' }),
+  });
+  await edit.getByRole('button', { name: 'Allow for this run' }).click({ timeout: 30_000 });
+
+  const check = card(page, /^Run a check\?/).filter({
+    has: page.getByRole('button', { name: 'Deny' }),
+  });
+  await expect(check).toBeVisible({ timeout: 30_000 });
+  await expect(check).toContainText(command);
+  await expect(agentHead(page, 'Jev')).toContainText('Waiting for you');
+  await expect(agentHead(page, 'Jev')).not.toContainText('Failed');
+
+  const waiting = panel(page).getByRole('list', { name: 'Waiting for you' });
+  await expect(waiting).toContainText('Run check');
+  await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
+  await waiting.getByRole('button', { name: 'Review' }).click();
+  await expect(check).toBeInViewport();
+  await expect(check).toHaveClass(/flash/);
+  await check.getByRole('button', { name: 'Allow', exact: true }).click();
+
+  const again = card(page, /^Run a check\?/).filter({
+    has: page.getByRole('button', { name: 'Deny' }),
+  });
+  await again.getByRole('button', { name: 'Allow', exact: true }).click({ timeout: 60_000 });
+  const keep = page.getByRole('group', { name: 'Keep these changes?', exact: true });
+  await expect(keep).toBeVisible({ timeout: 60_000 });
+  expect(repo.file('fixed.txt')).toBe('fixed\n');
+  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
 });

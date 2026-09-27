@@ -74,7 +74,7 @@ describe('renaming a project', () => {
       name: 'Main app',
       commandAllowlist: ['pnpm test'],
     });
-    expect((await get('/api/projects').expect(200)).body).toEqual([renamed.body]);
+    expect((await get('/api/projects').expect(200)).body).toMatchObject([renamed.body]);
   });
 
   it('sets, clears and validates the check commands', async () => {
@@ -113,7 +113,7 @@ describe('renaming a project', () => {
     await send('patch', path, { name: 'x'.repeat(PROJECT_NAME_MAX + 1) }).expect(400);
     await send('patch', path, {}).expect(400);
     await send('patch', `/api/projects/${randomUUID()}`, { name: 'Ghost' }).expect(404);
-    expect((await get('/api/projects').expect(200)).body).toEqual([appRepo]);
+    expect((await get('/api/projects').expect(200)).body).toMatchObject([appRepo]);
   });
 });
 
@@ -135,7 +135,7 @@ describe('removing and restoring a project', () => {
     expect(removed.links).toHaveLength(3);
     expect(await linkedIds(first)).toEqual([libRepo.id]);
     expect(await linkedIds(third)).toEqual([]);
-    expect((await get('/api/projects').expect(200)).body).toEqual([libRepo]);
+    expect((await get('/api/projects').expect(200)).body).toMatchObject([libRepo]);
     expect((await stat(folders.app)).isDirectory()).toBe(true);
 
     await link(third, [libRepo.id]);

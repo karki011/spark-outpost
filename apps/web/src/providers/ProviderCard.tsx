@@ -219,6 +219,9 @@ export function ProviderCard({
         {open && (
           <motion.div key="body" className="pc-collapse" {...fadeReveal}>
             <div className="pc-body">
+              {!isAdvisor(provider) && provider.note && (
+                <p className="prov-note">{provider.note}</p>
+              )}
               {isAdvisor(provider) && provider.connection && !changing ? (
                 <AdvisorSummary
                   advisor={provider}
@@ -265,30 +268,32 @@ export function ProviderCard({
                           </button>
                         </p>
                       )}
-                      <div
-                        className="methods"
-                        role="tablist"
-                        aria-label={`How to connect ${provider.name}`}
-                      >
-                        <span
-                          className="m-ind"
-                          style={{ transform: `translateX(${methodIndex * 100}%)` }}
-                          aria-hidden="true"
-                        />
-                        {provider.methods.map((m) => (
-                          <button
-                            key={m}
-                            type="button"
-                            role="tab"
-                            aria-selected={m === method}
-                            onClick={() => handleMethodChange(m)}
-                            disabled={verifying}
-                          >
-                            {m === 'cli' ? <TerminalIcon /> : <KeyIcon />}
-                            <span>{m === 'cli' ? 'Local CLI' : 'API key'}</span>
-                          </button>
-                        ))}
-                      </div>
+                      {provider.methods.length > 1 && (
+                        <div
+                          className="methods"
+                          role="tablist"
+                          aria-label={`How to connect ${provider.name}`}
+                        >
+                          <span
+                            className="m-ind"
+                            style={{ transform: `translateX(${methodIndex * 100}%)` }}
+                            aria-hidden="true"
+                          />
+                          {provider.methods.map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              role="tab"
+                              aria-selected={m === method}
+                              onClick={() => handleMethodChange(m)}
+                              disabled={verifying}
+                            >
+                              {m === 'cli' ? <TerminalIcon /> : <KeyIcon />}
+                              <span>{m === 'cli' ? 'Local CLI' : 'API key'}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <MethodPanel
                         provider={provider}
                         method={method}

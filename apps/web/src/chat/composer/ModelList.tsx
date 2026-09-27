@@ -1,6 +1,6 @@
 import type { ModelRouting, ProviderCapabilities, ProviderSetup } from '@spark-outpost/contracts';
 import { Tick } from './EffortOptions.tsx';
-import { cleanDescription } from './model-options.ts';
+import { cleanDescription, optionLabel } from './model-options.ts';
 
 interface ModelListProps {
   provider: ProviderSetup;
@@ -57,7 +57,7 @@ export function ModelList({
             onClick={() => onSelect(option.id)}
           >
             <span>
-              <b>{option.label}</b>
+              <b>{optionLabel(option, capabilities)}</b>
               {description && <small title={description}>{description}</small>}
             </span>
             <Tick />

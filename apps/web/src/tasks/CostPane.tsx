@@ -12,6 +12,7 @@ import { useModelNamer } from './model-names.ts';
 const PROVIDER_COLORS: Record<string, string> = {
   claude: 'var(--c-claude)',
   codex: 'var(--c-codex)',
+  zai: 'var(--c-zai)',
   jev: 'var(--c-jev)',
 };
 const TIER_SHARE = [36, 62, 100];

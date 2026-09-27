@@ -16,6 +16,7 @@ export const providerCapabilitiesSchema = z.object({
   models: z.array(capabilityOptionSchema),
   efforts: z.array(capabilityOptionSchema),
   defaultModel: z.string().nullable(),
+  agentDefaultModel: z.string().nullable().optional(),
   capturedAt: z.string(),
 });
 export type ProviderCapabilities = z.infer<typeof providerCapabilitiesSchema>;

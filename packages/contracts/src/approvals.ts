@@ -19,23 +19,69 @@ export interface InvolvementLevelInfo {
 }
 
 export const INVOLVEMENT_LEVELS: readonly InvolvementLevelInfo[] = [
-  { id: 'hands-on', label: 'Hands-on', hint: 'You approve every edit and every command.' },
+  {
+    id: 'hands-on',
+    label: 'Hands-on',
+    hint: 'You approve every edit and every command, even reads like ls or cat.',
+  },
   {
     id: 'balanced',
     label: 'Balanced',
-    hint: "Every edit asks. Commands ask unless they're on the project's allowlist.",
+    hint: "Every edit asks. Read-only commands in the project run; other commands ask unless they're on the project's allowlist.",
   },
   {
     id: 'hands-off',
     label: 'Hands-off',
-    hint: "Edits go through. Commands ask unless they're on the allowlist.",
+    hint: "Edits and read-only commands go through. Other commands ask unless they're on the allowlist.",
   },
   {
     id: 'full-auto',
     label: 'Full auto',
-    hint: 'Only pushing, deleting outside the repo, and secret files ask. Every action still gets a receipt.',
+    hint: 'Only pushing, deleting outside the repo, secret files and package installs ask. Every action still gets a receipt.',
   },
 ];
+
+export interface DoProviderNotes {
+  levels: Record<InvolvementLevel, string>;
+  disclosure: string;
+  commands: string;
+}
+
+export const DEFAULT_COMMAND_NOTE = "Commands aren't sandboxed";
+
+export const DEFAULT_DO_DISCLOSURE =
+  "Commands aren't sandboxed. Pushing, deleting outside the repo, secret files and package installs always ask, and you can revert the run.";
+
+export const DO_PROVIDER_NOTES: Readonly<Record<string, DoProviderNotes>> = {
+  codex: {
+    levels: {
+      'hands-on':
+        'Codex asks before every command and every file change, and each one comes to you.',
+      balanced:
+        'Codex asks before every command and file change. Read-only commands in the project are answered for you; the rest come to you.',
+      'hands-off':
+        "Codex works in a separate git copy that joins your files when it finishes. Commands that aren't read-only or allowlisted come to you.",
+      'full-auto':
+        "Codex works in a separate git copy. An allowed command may leave Codex's sandbox, reaching the network or files outside the repo.",
+    },
+    commands: "Runs in Codex's sandbox without network, unless Codex asked to leave it",
+    disclosure:
+      "Codex's sandbox can read any file on this computer. Spark Outpost asks before any command that names a secret file, but can't see what a search or script reads. Commands run without network; package installs always ask, and you can revert the run.",
+  },
+};
+
+export function levelHint(level: InvolvementLevelInfo, provider: string | null): string {
+  const note = provider ? DO_PROVIDER_NOTES[provider]?.levels[level.id] : undefined;
+  return note ? `${level.hint} ${note}` : level.hint;
+}
+
+export function commandSandboxNote(provider: string | null): string {
+  return (provider ? DO_PROVIDER_NOTES[provider]?.commands : undefined) ?? DEFAULT_COMMAND_NOTE;
+}
+
+export function doDisclosure(provider: string | null): string {
+  return (provider ? DO_PROVIDER_NOTES[provider]?.disclosure : undefined) ?? DEFAULT_DO_DISCLOSURE;
+}
 
 export function involvementLevelLabel(level: InvolvementLevel): string {
   return INVOLVEMENT_LEVELS.find((info) => info.id === level)?.label ?? level;
@@ -129,6 +175,12 @@ export const approvalSchema = z.object({
   autoContinueAt: z.string().nullable().optional(),
 });
 export type Approval = z.infer<typeof approvalSchema>;
+
+export const CHECK_TOOL_CALL_PREFIX = 'check:';
+
+export function isCheckApproval(approval: Pick<Approval, 'toolCallId'>): boolean {
+  return approval.toolCallId.startsWith(CHECK_TOOL_CALL_PREFIX);
+}
 
 export const APPROVAL_NOTE_MAX_LENGTH = 4000;
 

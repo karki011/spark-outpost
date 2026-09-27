@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { checkpoint } from '../../crew/test-orchestration.ts';
-import { crewItems, mergeCheckpoints } from '../crew/crew-items.ts';
+import { crewItems, mergeApprovals, mergeCheckpoints } from '../crew/crew-items.ts';
 import { member } from '../../crew/test-orchestration.ts';
 import {
   autoLabel,
   budgetLine,
+  checkpointQuestion,
   checkpointResult,
   checkpointTitle,
   isCheckpoint,
@@ -29,6 +30,16 @@ describe('checkpoint wording', () => {
     expect(checkpointTitle(payload)).toBe('Bolt needs your input');
     expect(waitingLabel(payload)).toBe('Answer Bolt');
     expect(checkpointTitle({ ...payload, agent: null })).toBe('Jev has a question');
+  });
+
+  it('does not repeat the title as the question', () => {
+    const keep = checkpoint({ kind: 'accept', question: 'Keep these changes?' }).payload
+      .checkpoint!;
+    expect(checkpointTitle(keep)).toBe('Keep these changes?');
+    expect(checkpointQuestion(keep)).toBeNull();
+    const plan = checkpoint({ kind: 'plan', question: 'Approve the plan before any edits?' })
+      .payload.checkpoint!;
+    expect(checkpointQuestion(plan)).toBe('Approve the plan before any edits?');
   });
 
   it('counts down the default answer from the server deadline', () => {
@@ -104,5 +115,22 @@ describe('checkpoints in the turn', () => {
     const items = crewItems([scout, builder, queued], mergeCheckpoints([plan, own]));
     expect(items.map((item) => item.kind)).toEqual(['agent', 'checkpoint', 'agent', 'agent']);
     expect(items[2]).toMatchObject({ kind: 'agent', checkpoints: [own] });
+  });
+
+  it('places check approvals between the agents by time', () => {
+    const builder = member({ startedAt: '2026-09-26T10:03:00.000Z' });
+    const fix = member({
+      runId: '00000000-0000-4000-8000-0000000000b4',
+      startedAt: '2026-09-26T10:06:00.000Z',
+    });
+    const check = {
+      ...checkpoint({ kind: 'plan' }),
+      id: '00000000-0000-4000-8000-0000000000c7',
+      toolCallId: 'check:1',
+      kind: 'execute' as const,
+      createdAt: '2026-09-26T10:05:00.000Z',
+    };
+    const items = crewItems([builder, fix], [], mergeApprovals([check], [check]));
+    expect(items.map((item) => item.kind)).toEqual(['agent', 'approval', 'agent']);
   });
 });

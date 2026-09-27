@@ -1,4 +1,4 @@
-import { CONVERSATION_PROJECTS_MAX } from '@spark-outpost/contracts';
+import { CONVERSATION_PROJECTS_MAX, type Project } from '@spark-outpost/contracts';
 
 export type RepoChange =
   | { type: 'add'; projectId: string }
@@ -33,4 +33,19 @@ export function interleave<T>(lists: readonly (readonly T[])[]): T[] {
     }
   }
   return merged;
+}
+
+function usedAt(project: Pick<Project, 'createdAt' | 'lastUsedAt'>): string {
+  return project.lastUsedAt ?? project.createdAt;
+}
+
+export function recentProjects<T extends Pick<Project, 'id' | 'createdAt' | 'lastUsedAt'>>(
+  projects: readonly T[],
+  linkedIds: ReadonlySet<string>,
+  limit: number,
+): T[] {
+  return projects
+    .filter((project) => !linkedIds.has(project.id))
+    .sort((a, b) => usedAt(b).localeCompare(usedAt(a)))
+    .slice(0, limit);
 }

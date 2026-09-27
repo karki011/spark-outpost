@@ -48,6 +48,10 @@ function joinWithAnd(items: string[]): string {
 
 export function modelSummary(provider: ConnectableId, models: ProviderModel[]): string {
   const count = `${models.length} ${models.length === 1 ? 'model is' : 'models are'} available`;
+  if (provider === 'zai') {
+    const labels = models.map((model) => model.label);
+    return `${joinWithAnd(labels)} ${labels.length === 1 ? 'is' : 'are'} available`;
+  }
   if (provider === 'claude') {
     const families = CLAUDE_FAMILIES.filter((family) =>
       models.some((model) => model.label.includes(family)),

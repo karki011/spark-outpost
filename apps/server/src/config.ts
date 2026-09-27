@@ -58,6 +58,7 @@ const configSchema = z.object({
   ANTHROPIC_BASE_URL: providerUrl.default('https://api.anthropic.com'),
   OPENAI_BASE_URL: providerUrl.default('https://api.openai.com'),
   TYPESAFE_BASE_URL: providerUrl.default('https://api.typesafe.ai'),
+  ZAI_BASE_URL: providerUrl.default('https://api.z.ai/api/anthropic'),
 });
 
 export type Config = z.infer<typeof configSchema>;

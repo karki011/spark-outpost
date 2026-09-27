@@ -5,6 +5,7 @@ import { AGENT_DEFAULT, shortLabel } from '../chat/composer/model-options.ts';
 
 const HOUR = 60 * 60 * 1000;
 const CLAUDE_ID = /^(?:claude-)?(opus|sonnet|haiku|fable)(?:-(\d+))?(?:-(\d+))?/i;
+const GLM_ID = /^glm-([\d.]+)(-flashx?)?$/i;
 
 export type ModelNamer = (provider: string, model: string | null) => string;
 
@@ -14,6 +15,8 @@ function capitalize(word: string): string {
 
 export function prettyModelId(model: string): string {
   const bare = model.replace(/\[[^\]]*\]$/, '');
+  const glm = GLM_ID.exec(bare);
+  if (glm) return `GLM-${glm[1]}${glm[2] ? `-${capitalize(glm[2].slice(1))}` : ''}`;
   const claude = CLAUDE_ID.exec(bare);
   if (claude) {
     const version = [claude[2], claude[3]].filter(Boolean).join('.');

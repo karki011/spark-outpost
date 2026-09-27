@@ -38,6 +38,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
       anthropicBaseUrl: 'https://anthropic.test',
       openaiBaseUrl: 'https://openai.test',
       typesafeBaseUrl: 'https://typesafe.test',
+      zaiBaseUrl: 'https://zai.test',
       fetch: options.fetch ?? (() => Promise.reject(new Error('Network disabled in tests'))),
     },
     runCommand: options.runCommand ?? (async () => notFound),

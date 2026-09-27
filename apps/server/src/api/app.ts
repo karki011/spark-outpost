@@ -4,6 +4,7 @@ import { attachmentRoutes } from './attachment-routes.ts';
 import { auditRoutes } from './audit-routes.ts';
 import { chatSettingsRoutes, type ChatSettingsDeps } from './chat-settings-routes.ts';
 import { conversationActionRoutes } from './conversation-action-routes.ts';
+import { modelCardRoutes } from './model-card-routes.ts';
 import { projectRoutes } from './project-routes.ts';
 import { apiRoutes, statusForError, type RouteDeps } from './routes.ts';
 import { localRequestGuard } from './security.ts';
@@ -32,6 +33,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));
   app.use('/api', approvalRoutes(options));
+  app.use('/api', modelCardRoutes(options));
   app.use('/api', terminalRoutes(options.terminals));
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found.' });

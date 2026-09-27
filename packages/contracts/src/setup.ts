@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { involvementLevelSchema } from './approvals.ts';
 
-export const providerIdSchema = z.enum(['claude', 'codex']);
+export const providerIdSchema = z.enum(['claude', 'codex', 'zai']);
 export type ProviderId = z.infer<typeof providerIdSchema>;
 
 export const advisorIdSchema = z.enum(['jev']);
@@ -28,6 +28,9 @@ export const choiceSchema = z.object({
 export type Choice = z.infer<typeof choiceSchema>;
 
 export const modelSchema = z.object({ id: z.string(), label: z.string() });
+
+export const keyLinkSchema = z.object({ text: z.string(), url: z.url() });
+export type KeyLink = z.infer<typeof keyLinkSchema>;
 export type ProviderModel = z.infer<typeof modelSchema>;
 
 export const connectionTestSchema = z.object({
@@ -68,6 +71,7 @@ const connectableSetupSchema = z.object({
   cli: z.string(),
   keyPrefix: z.string(),
   keyHint: z.string(),
+  keyLink: keyLinkSchema.nullable(),
   methods: z.array(connectionMethodSchema),
   connection: advisorConnectionSchema.nullable(),
 });
@@ -75,6 +79,7 @@ export type ConnectableSetup = z.infer<typeof connectableSetupSchema>;
 
 export const providerSetupSchema = connectableSetupSchema.extend({
   id: providerIdSchema,
+  note: z.string().nullable(),
   permissions: z.array(choiceSchema),
   efforts: z.array(choiceSchema),
   defaultEffort: z.string(),
@@ -167,10 +172,17 @@ export function apiKeyHint(
 ): KeyHint {
   const key = rawKey.trim();
   if (!key) return { tone: 'neutral', message: provider.keyHint, valid: false };
-  if (provider.id === 'codex' && key.startsWith('sk-ant-')) {
+  if ((provider.id === 'codex' || provider.id === 'zai') && key.startsWith('sk-ant-')) {
     return {
       tone: 'bad',
       message: 'This looks like an Anthropic key. Paste it under Claude instead.',
+      valid: false,
+    };
+  }
+  if (provider.id === 'zai' && key.startsWith('sk-')) {
+    return {
+      tone: 'bad',
+      message: 'This looks like an OpenAI key. Paste it under Codex instead.',
       valid: false,
     };
   }

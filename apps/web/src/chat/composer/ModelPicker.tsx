@@ -215,6 +215,7 @@ export function ModelPicker({
                   )}
                   {activeSection === 'permission' && setup && (
                     <PermissionOptions
+                      provider={provider}
                       choices={setup.permissions}
                       selected={settings.permission}
                       level={settings.level}

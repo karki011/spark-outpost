@@ -78,6 +78,22 @@ export async function markRemoved(db: Queryable, runId: string): Promise<void> {
   await db.query('UPDATE run_worktrees SET removed_at = now() WHERE run_id = $1', [runId]);
 }
 
+export interface RunLane {
+  repoRoot: string;
+  resultCommit: string | null;
+}
+
+export async function laneOfRun(db: Queryable, runId: string): Promise<RunLane | null> {
+  const { rows } = await db.query<Pick<WorktreeRow, 'repo_root' | 'result_commit'>>(
+    `SELECT w.repo_root, w.result_commit FROM runs r
+     JOIN run_worktrees w ON w.run_id = COALESCE((r.route->>'worktreeRun')::uuid, r.id)
+     WHERE r.id = $1`,
+    [runId],
+  );
+  const row = rows[0];
+  return row ? { repoRoot: row.repo_root, resultCommit: row.result_commit } : null;
+}
+
 export async function liveWorktrees(
   db: Queryable,
   orchestrationRunId: string,

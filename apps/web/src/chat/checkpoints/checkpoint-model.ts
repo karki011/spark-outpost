@@ -37,6 +37,10 @@ export function checkpointTitle(payload: CheckpointPayload): string {
   return TITLES[payload.kind];
 }
 
+export function checkpointQuestion(payload: CheckpointPayload): string | null {
+  return payload.question === checkpointTitle(payload) ? null : payload.question;
+}
+
 const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
   clarify: 'Answer Jev’s question',
   plan: 'Approve the plan',

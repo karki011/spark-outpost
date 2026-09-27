@@ -1,11 +1,11 @@
 import type { AgentPick, JevIntake, Risk, Scope } from '@spark-outpost/contracts';
-import { ASK_AT, gate } from '../advisor/gate.ts';
+import { ASK_AT } from '../advisor/gate.ts';
 import { selectableModels } from '../advisor/intake-questions.ts';
 import {
   candidateFor,
   chatPick,
   effortIds,
-  notPricier,
+  routeGate,
   topTierPick,
   type JevPick,
   type MemberRoute,
@@ -71,7 +71,7 @@ export function architectPick(context: RouteContext, rule: ArchitectRule): Agent
   const top = topTierPick(context, provider);
   if (!MIDDLE_RULES.includes(rule)) return top;
   const candidate = candidateFor(context, provider);
-  const middle = candidate ? middleTier(selectableModels(candidate)) : null;
+  const middle = candidate ? middleTier(selectableModels(candidate), provider) : null;
   return middle ? { ...top, model: middle.id, modelLabel: middle.label } : top;
 }
 
@@ -94,11 +94,7 @@ function autoRoute(
   const base = { rule, rulePick, autoWouldUse: jev?.pick ?? null };
   if (!jev) return { ...base, pick: rulePick, routedBy: 'fixed', gate: null };
   if (rule === 'destructive') return { ...base, pick: rulePick, routedBy: 'rules', gate: null };
-  const downgrade = notPricier(jev.pick, rulePick);
-  const decision = gate({ confidence: jev.confidence ?? 1 }, context.risk, context.level, {
-    downgrade,
-    readsOnly: true,
-  });
+  const decision = routeGate(context, jev, rulePick, true);
   return decision.decision === 'act'
     ? { ...base, pick: jev.pick, routedBy: 'jev', gate: decision }
     : { ...base, pick: rulePick, routedBy: 'rules', gate: decision };

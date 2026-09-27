@@ -75,12 +75,18 @@ export function runAgent(
     costUsd: member.costUsd,
     costSource: member.costSource,
     durationMs: member.durationMs,
+    ...(member.sameProvider ? { sameProvider: true } : {}),
   };
 }
 
 function jevState(orchestration: Orchestration, crew: readonly CrewAgent[]): CrewState {
   const crewWaiting = crew.some((agent) => agent.state === 'waiting');
-  if (orchestration.pendingCheckpoint || orchestration.phase === 'waiting' || crewWaiting) {
+  if (
+    orchestration.pendingCheckpoint ||
+    orchestration.phase === 'waiting' ||
+    orchestration.status === 'awaiting_approval' ||
+    crewWaiting
+  ) {
     return 'waiting';
   }
   if (orchestration.status === 'succeeded') return 'done';

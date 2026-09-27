@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { crewExpression, crewStateWord, crewTotals, headerMeta, totalsLine } from './crew-model.ts';
+import {
+  crewExpression,
+  crewStateWord,
+  crewTotals,
+  headerMeta,
+  roleLabel,
+  totalsLine,
+} from './crew-model.ts';
 import { crewAgents, dispatchParts, runAgent } from './crew-projection.ts';
 import { checkpoint, member, orchestration } from './test-orchestration.ts';
 
@@ -22,6 +29,12 @@ const decision = {
 };
 
 describe('crew agents', () => {
+  it("labels a Critic from the Builders' own provider", () => {
+    const own = runAgent(member({ role: 'critic', sameProvider: true }), orchestration());
+    expect(roleLabel(own)).toBe('Critic (same provider, no cross-model review)');
+    expect(roleLabel(runAgent(member({ role: 'critic' }), orchestration()))).toBe('Critic');
+  });
+
   it('names agents from the engine and shows the header meta once', () => {
     const builder = member({ name: 'Builder 2', agentLabel: 'Builder 2 · Sonnet 5 · medium' });
     const agent = runAgent(builder, orchestration());
@@ -103,6 +116,17 @@ describe('crew agents', () => {
       orchestration({ pendingCheckpoint: checkpoint({ kind: 'clarify' }) }),
     );
     expect(agents[0]).toMatchObject({ state: 'waiting', line: 'waiting on you' });
+  });
+
+  it('shows Jev waiting, not failed, while the run waits on a check approval', () => {
+    const building = orchestration({
+      status: 'awaiting_approval',
+      phase: 'building',
+      crew: [member({ status: 'succeeded' })],
+    });
+    const [jev] = crewAgents(building);
+    expect(jev).toMatchObject({ state: 'waiting', line: 'waiting on you' });
+    expect(crewStateWord(jev!.state)).toBe('Waiting for you');
   });
 
   it('describes the dispatch as complexity and depth, leaving the category to its chip', () => {

@@ -1,17 +1,18 @@
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
-import { childEnvironment } from '../../setup/environment.ts';
+import type { SecretStore } from '../../setup/secrets.ts';
 import {
   ProviderError,
   type Provider,
   type ProviderOutput,
   type ProviderTurn,
 } from '../../providers/provider.ts';
-import type { AgentDefinition, AgentLaunch } from './agents.ts';
+import { supportsDo, type AgentDefinition, type AgentLaunch } from './agents.ts';
 import { AgentExitedError, startAgentProcess, type AgentProcess } from './agent-process.ts';
+import { agentEnvironment } from './agent-env.ts';
 import { Channel } from './channel.ts';
 import {
   contextSteps,
@@ -22,6 +23,7 @@ import {
 import { failureError, toProviderError } from './errors.ts';
 import { declineInConversation } from './permissions.ts';
 import { applySessionSettings } from './apply-settings.ts';
+import { offeredCapabilities } from './capabilities.ts';
 import { CLIENT_INFO, clientCapabilities } from './client-info.ts';
 import { readTextFile, refuseWrite } from './fs-handlers.ts';
 import { reviewPermission, writeWithApproval, type DoWorkspace } from './do-handlers.ts';
@@ -44,6 +46,7 @@ export interface AcpProviderOptions {
   definition: AgentDefinition;
   launch?: AgentLaunch;
   env?: Record<string, string>;
+  secrets?: Pick<SecretStore, 'get'>;
   cancelGraceMs?: number;
 }
 
@@ -58,7 +61,7 @@ export function createAcpProvider(options: AcpProviderOptions): Provider {
 }
 
 async function* runTurn(options: AcpProviderOptions, turn: ProviderTurn) {
-  if (turn.settings.method === 'api_key') {
+  if (turn.settings.method === 'api_key' && !options.definition.keyEnvironment) {
     throw new ProviderError(
       `Chats through a ${options.definition.name} API key aren't supported yet. Reconnect ${options.definition.name} with the local CLI.`,
     );
@@ -86,7 +89,8 @@ async function runSession(
 ): Promise<void> {
   const { definition } = options;
   const mapper = createUpdateMapper(definition.name);
-  const push = (outputs: ProviderOutput[]) => outputs.forEach((output) => channel.push(output));
+  const push = (outputs: ProviderOutput[]) =>
+    outputs.forEach((output) => channel.push(asReported(definition, output)));
   let agent: AgentProcess | null = null;
   let scratch: string | null = null;
   let graceTimer: NodeJS.Timeout | null = null;
@@ -95,7 +99,8 @@ async function runSession(
   };
   signal.addEventListener('abort', onAbort, { once: true });
   try {
-    const roots = turn.projectRoots ?? [];
+    const linked = turn.projectRoots ?? [];
+    const roots = openedRoots(definition, turn, linked);
     const browsing = roots.length > 0 && definition.readsProjectFolders;
     const policy = browsing ? await openProject(definition, roots) : null;
     const workdir = turn.session?.workdir ?? null;
@@ -104,16 +109,10 @@ async function runSession(
     const home = workdir ?? scratch ?? tmpdir();
     const cwd = policy ? primaryRoot(policy) : home;
     const replay = replayFilter(turn.audit);
-    agent = startAgentProcess(
-      options.launch ?? definition.launch(),
-      cwd,
-      {
-        ...(options.env ?? childEnvironment(process.env)),
-        ...definition.conversationEnv?.(home, browsing),
-      },
-      replay.observer,
-    );
+    const env = await agentEnvironment(options, home, browsing);
+    agent = startAgentProcess(options.launch ?? definition.launch(), cwd, env, replay.observer);
     const notes = roots.length > 0 && !browsing ? [noFolderAccessNote(definition)] : [];
+    if (roots.length < linked.length) notes.push(primaryOnlyNote(definition, roots[0]!));
     const changing = policy !== null && turn.mode === 'do';
     if (changing) assertCanChange(definition, turn);
     const workspace = { cwd, policy, notes, changing, replay };
@@ -155,6 +154,17 @@ async function runSession(
   }
 }
 
+function asReported(definition: AgentDefinition, output: ProviderOutput): ProviderOutput {
+  if (output.kind === 'usage' && definition.estimatesCost) return { ...output, costUsd: null };
+  if (output.kind === 'capabilities') {
+    return { ...output, report: offeredCapabilities(output.report, definition.offers) };
+  }
+  if (output.kind === 'session_settings' && definition.usedModel) {
+    return { ...output, model: definition.usedModel(output.model) };
+  }
+  return output;
+}
+
 async function exitOr(agent: AgentProcess, error: unknown): Promise<unknown> {
   if (error instanceof ProviderError) return error;
   const exit = await Promise.race([
@@ -194,11 +204,21 @@ function sessionMeta(
   return (meta ?? definition.projectSessionMeta)?.(extraRoots(policy)) ?? null;
 }
 
+function openedRoots(
+  definition: AgentDefinition,
+  turn: ProviderTurn,
+  linked: readonly string[],
+): readonly string[] {
+  return turn.mode === 'do' && definition.doPrimaryRootOnly ? linked.slice(0, 1) : linked;
+}
+
+export function primaryOnlyNote(definition: AgentDefinition, primary: string): string {
+  return `${definition.name} changes only ${basename(primary)} in Do; the other linked repos aren't opened`;
+}
+
 function assertCanChange(definition: AgentDefinition, turn: ProviderTurn): void {
-  if (!definition.doSessionMeta) {
-    throw new ProviderError(
-      definition.doUnavailableReason ?? `${definition.name} can't make changes in Do mode yet.`,
-    );
+  if (!supportsDo(definition)) {
+    throw new ProviderError(`${definition.name} can't make changes in Do mode yet.`);
   }
   if (!turn.approvals) {
     throw new ProviderError('Do mode needs the approval gate, so the run was stopped.');
@@ -319,7 +339,8 @@ async function converse(
     const { session, continued } = opened;
     try {
       if (turn.session) push([sessionOutput(plan.request, opened, turn.session.freshReason)]);
-      const applied = await applySessionSettings(ctx, session, definition, turn.settings);
+      const mode = doing ? (definition.doMode ?? definition.conversationMode) : undefined;
+      const applied = await applySessionSettings(ctx, session, definition, turn.settings, mode);
       push([
         { kind: 'capabilities', report: applied.capabilities },
         { kind: 'session_settings', ...applied.current, mode: applied.mode },

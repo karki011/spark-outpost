@@ -26,6 +26,14 @@ export function buttonLabel(option: CapabilityOption): string {
   return shortLabel(option.label);
 }
 
+export function optionLabel(
+  option: Pick<CapabilityOption, 'id' | 'label'>,
+  capabilities: Pick<ProviderCapabilities, 'defaultModel'> | undefined,
+): string {
+  const marked = option.id !== AGENT_DEFAULT && option.id === capabilities?.defaultModel;
+  return marked ? `${option.label} (default)` : option.label;
+}
+
 export function selectableEfforts(
   capabilities: ProviderCapabilities | undefined,
 ): CapabilityOption[] {

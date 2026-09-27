@@ -4,13 +4,27 @@ import {
   depthSchema,
   riskSchema,
   scopeSchema,
+  type CardCategory,
   type Category,
   type Depth,
   type JevIntake,
   type Risk,
   type Scope,
 } from '@spark-outpost/contracts';
-import { AdvisorError, type AdvisorCandidate, type IntakeRequest } from './advice.ts';
+import {
+  AdvisorError,
+  type AdvisorCandidate,
+  type AdvisorOption,
+  type IntakeRequest,
+} from './advice.ts';
+import { cardFor, isFrontier, providerCard } from '../model-cards/cards.ts';
+import {
+  cardText,
+  effortNote,
+  providerText,
+  statFor,
+  usableStats,
+} from '../model-cards/card-text.ts';
 
 export const MAX_TASK_CHARACTERS = 8_000;
 export const MAX_UNTRUSTED_CHARACTERS = 8_000;
@@ -103,11 +117,38 @@ const effortKey = (candidate: AdvisorCandidate) => `effort_${candidate.provider}
 
 export function selectableModels(candidate: AdvisorCandidate) {
   const models = candidate.models.filter((model) => model.id !== AGENT_DEFAULT_MODEL);
-  return models.length > 0 ? models : candidate.models;
+  const named = models.length > 0 ? models : candidate.models;
+  if (candidate.allowFrontier) return named;
+  const withoutFrontier = named.filter((model) => !isFrontier(model, candidate.provider));
+  return withoutFrontier.length > 0 ? withoutFrontier : named;
 }
 
 function describe(option: { label: string; description: string | null }): string {
   return option.description ? `${option.label}: ${option.description}` : option.label;
+}
+
+export function modelOptionText(
+  candidate: AdvisorCandidate,
+  model: AdvisorOption,
+  category: CardCategory | null,
+  now: Date = new Date(),
+): string {
+  const card = cardFor(model, candidate.provider);
+  if (!card) return describe(model);
+  return cardText(card, statFor(usableStats(candidate.stats ?? [], now), card, category), now);
+}
+
+function providerOptionText(candidate: AdvisorCandidate): string {
+  const card = providerCard(candidate.provider);
+  return card ? providerText(card, candidate.doAvailable ?? card.doMode === 'yes') : candidate.name;
+}
+
+export function effortInstructions(candidate: AdvisorCandidate, question: string): string {
+  const cards = selectableModels(candidate).flatMap(
+    (model) => cardFor(model, candidate.provider) ?? [],
+  );
+  const note = effortNote(cards);
+  return note ? `${question} ${note}.` : question;
 }
 
 function choice(instructions: string, criteria: Record<string, string>) {
@@ -122,7 +163,9 @@ function routingQuestions(candidates: readonly AdvisorCandidate[]) {
   if (candidates.length > 1) {
     questions.provider = choice(
       'Which connected coding agent should handle `task`?',
-      Object.fromEntries(candidates.map((candidate) => [candidate.provider, candidate.name])),
+      Object.fromEntries(
+        candidates.map((candidate) => [candidate.provider, providerOptionText(candidate)]),
+      ),
     );
   }
   for (const candidate of candidates) {
@@ -130,13 +173,18 @@ function routingQuestions(candidates: readonly AdvisorCandidate[]) {
     if (models.length > 1) {
       questions[modelKey(candidate)] = choice(
         `If ${candidate.name} handles \`task\`, which model should it use? Prefer faster, cheaper models for simple work and stronger models for complex or risky work.`,
-        Object.fromEntries(models.map((model) => [model.id, describe(model)])),
+        Object.fromEntries(
+          models.map((model) => [model.id, modelOptionText(candidate, model, null)]),
+        ),
       );
     }
     if (candidate.efforts.length > 1) {
       questions[effortKey(candidate)] = {
         type: 'score',
-        instructions: `If ${candidate.name} handles \`task\`, how much reasoning effort does it need?`,
+        instructions: effortInstructions(
+          candidate,
+          `If ${candidate.name} handles \`task\`, how much reasoning effort does it need?`,
+        ),
         criteria: candidate.efforts.map(describe),
       };
     }

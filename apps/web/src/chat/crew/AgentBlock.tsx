@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from 'react';
-import type { Approval, Project } from '@spark-outpost/contracts';
+import { isCheckApproval, type Approval, type Project } from '@spark-outpost/contracts';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import {
   crewStateWord,
@@ -61,7 +61,10 @@ function AgentBody({ agent, steps, text, error, seconds, approvals, repo }: Body
     <>
       <WorkLog steps={[...steps]} state={state} seconds={seconds} />
       {approvals
-        .filter((approval) => approval.runId === agent.id && !isCheckpoint(approval))
+        .filter(
+          (approval) =>
+            approval.runId === agent.id && !isCheckpoint(approval) && !isCheckApproval(approval),
+        )
         .map((approval) => (
           <ApprovalCard
             key={approval.id}

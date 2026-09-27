@@ -49,3 +49,16 @@ describe('maskApiKey', () => {
     expect(maskApiKey('abcdefghijklmnop4f2a', 0)).toBe('…4f2a');
   });
 });
+
+describe('apiKeyHint for Z.ai', () => {
+  const zai = { id: 'zai' as const, name: 'Z.ai (GLM)', keyPrefix: '', keyHint: 'Find it.' };
+
+  it('accepts a Z.ai key and turns away Anthropic and OpenAI keys', () => {
+    expect(apiKeyHint(zai, 'a1b2c3d4e5f6a7b8c9d0.AbCdEfGhIjKlMnOp')).toMatchObject({
+      tone: 'good',
+      valid: true,
+    });
+    expect(apiKeyHint(zai, 'sk-ant-api03-xxxxxxxxxxxxxxxxxxxx').message).toContain('under Claude');
+    expect(apiKeyHint(zai, 'sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx').message).toContain('under Codex');
+  });
+});

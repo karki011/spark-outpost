@@ -148,7 +148,11 @@ export function ConnectedSummary({
                 : []),
               {
                 label: 'Change how it connects',
-                hint: isKey ? 'Use the local CLI or a new key' : 'Use an API key instead',
+                hint: !provider.methods.includes('cli')
+                  ? 'Use a new key'
+                  : isKey
+                    ? 'Use the local CLI or a new key'
+                    : 'Use an API key instead',
                 onSelect: onChange,
               },
               { label: 'Disconnect', danger: true, onSelect: onDisconnect },
