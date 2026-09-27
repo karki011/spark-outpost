@@ -68,3 +68,44 @@ test('settings shows usage per provider', async ({ page }) => {
   await expect(claude).toContainText('$0.004');
   await expect(dialog).toContainText('Claude reports its cost');
 });
+
+test('provider setting dropdowns return focus to their trigger after a keyboard choice', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile' })
+    .getByRole('tab', { name: /AI providers/ })
+    .click();
+  const providers = page.getByRole('dialog', { name: 'AI providers' });
+  const claude = providers.locator('.pcard').filter({ hasText: 'Claude' });
+  await claude.locator('.pc-head').click();
+  const rows = ['Claude permission', 'Claude involvement level', 'Claude effort'];
+  if ((await claude.getByRole('button', { name: 'Claude model' }).count()) > 0) {
+    rows.unshift('Claude model');
+  }
+
+  for (const row of rows) {
+    const trigger = claude.getByRole('button', { name: row });
+    await trigger.focus();
+    await page.keyboard.press('Enter');
+    const menu = page.getByRole('menu', { name: row });
+    await expect(menu.getByRole('menuitemradio', { checked: true })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    const saved = page.waitForResponse(
+      (response) => response.url().endsWith('/providers/claude/defaults') && response.ok(),
+    );
+    await page.keyboard.press('Enter');
+    await saved;
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(trigger).toBeFocused();
+
+    await page.keyboard.press('Enter');
+    await expect(menu.getByRole('menuitemradio', { checked: true })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await expect(trigger).toBeFocused();
+    await expect(providers).toBeVisible();
+  }
+});
