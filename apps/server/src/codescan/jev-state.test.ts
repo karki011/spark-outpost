@@ -26,7 +26,7 @@ function report(count: number): ScanReport {
     indexedFiles: 5443,
     partial: false,
     timings: {},
-    terms: { paths: [], fileNames: [], identifiers: ['Button'], phrases: [] },
+    terms: { paths: [], fileNames: [], identifiers: ['Button'], phrases: [], words: [] },
     candidates: Array.from({ length: count }, (_, index) => file(index)),
     summary: {
       packagesTouched: ['ui-components', 'web'],

@@ -21,6 +21,7 @@ import {
 import { evictBeyondCap, expireIndexes } from './retention.ts';
 import {
   cachedFiles,
+  countNameUse,
   deleteFiles,
   fileParserVersions,
   findIndexProject,
@@ -216,7 +217,9 @@ export async function indexProject(
   }
   await deleteFiles(db, project.id, plan.remove);
   await relabelFiles(db, project.id, relabelled(context, cached, selected));
-  if (!rebuilt && totals.parsed + plan.remove.length > 0) await pruneNames(db, project.id);
+  const changedRows = totals.parsed + totals.missing + plan.remove.length > 0;
+  if (!rebuilt && changedRows) await pruneNames(db, project.id);
+  if (changedRows) await countNameUse(db, project.id);
   await finishIndex(db, project.id, { commit, listedCount: listed.length, layout, history });
   await expireIndexes(db);
   await evictBeyondCap(db, project.id);

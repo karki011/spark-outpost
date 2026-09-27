@@ -22,6 +22,8 @@ CREATE TABLE code_index_names (
   project_id uuid NOT NULL REFERENCES code_index_projects (id) ON DELETE CASCADE,
   id integer NOT NULL,
   name text NOT NULL,
+  def_files integer NOT NULL DEFAULT 0 CHECK (def_files >= 0),
+  ref_files integer NOT NULL DEFAULT 0 CHECK (ref_files >= 0),
   PRIMARY KEY (project_id, id),
   UNIQUE (project_id, name)
 );

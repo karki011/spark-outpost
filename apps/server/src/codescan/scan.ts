@@ -3,7 +3,13 @@ import { workingChanges } from './git.ts';
 import { churnByFile, coChanged } from './history.ts';
 import { packageMatcher } from './layout.ts';
 import { ownersMatcher } from './owners.ts';
-import { rankFiles, type NodeFacts, type RankedFile } from './rank.ts';
+import {
+  rankFiles,
+  WIDELY_DEFINED,
+  type NameStats,
+  type NodeFacts,
+  type RankedFile,
+} from './rank.ts';
 import { searchText, type TextMatch } from './ripgrep.ts';
 import {
   definersOf,
@@ -12,7 +18,8 @@ import {
   nameIds,
   neighbours,
   pathsLike,
-  referenceCounts,
+  pathsWithWords,
+  nameStats,
   type ScanProject,
 } from './scan-store.ts';
 import { isSkipped } from './skip.ts';
@@ -22,6 +29,9 @@ export const CORE_SEEDS = 30;
 export const MAX_SEEDS = 300;
 const MAX_REFERENCED_IDS = 3000;
 const MAX_DEFINED_IDS = 1000;
+const MAX_STAT_IDS = 20_000;
+const SPECIFIC_MIN_FILES = 25;
+const SPECIFIC_SHARE = 0.01;
 const SUMMARY_TOP = 20;
 const MAX_UNCOMMITTED = 100;
 
@@ -55,9 +65,10 @@ interface Evidence {
   matches: Map<string, TextMatch>;
   uncommitted: Set<string>;
   pathHits: Set<string>;
+  pathWords: Map<string, number>;
   named: Map<string, number>;
   namedDefiners: Map<string, number[]>;
-  references: Map<number, number>;
+  nameStats: Map<number, NameStats>;
   facts: Map<string, NodeFacts>;
   coChange: Map<string, number>;
 }
@@ -77,9 +88,10 @@ function emptyEvidence(): Evidence {
     matches: new Map(),
     uncommitted: new Set(),
     pathHits: new Set(),
+    pathWords: new Map(),
     named: new Map(),
     namedDefiners: new Map(),
-    references: new Map(),
+    nameStats: new Map(),
     facts: new Map(),
     coChange: new Map(),
   };
@@ -114,11 +126,13 @@ async function gatherText(
 function topByEvidence(evidence: Evidence, limit: number): string[] {
   const weight = (path: string) =>
     (evidence.pathHits.has(path) ? 100 : 0) +
+    (evidence.pathWords.get(path) ?? 0) * 20 +
     (evidence.namedDefiners.has(path) ? 50 : 0) +
     (evidence.matches.get(path)?.terms.size ?? 0) * 5 +
     Math.log2(1 + (evidence.matches.get(path)?.count ?? 0));
   const paths = new Set([
     ...evidence.pathHits,
+    ...evidence.pathWords.keys(),
     ...evidence.namedDefiners.keys(),
     ...evidence.matches.keys(),
     ...evidence.uncommitted,
@@ -151,19 +165,21 @@ async function gatherSymbols(
   const project = evidence.project;
   if (!project) return;
   const variants = terms.identifiers.flatMap(nameVariants);
-  const [named, pathHits] = await Promise.all([
+  const [named, pathHits, pathWords] = await Promise.all([
     abortable(nameIds(db, project.id, variants), signal),
     abortable(pathsLike(db, project.id, [...terms.paths, ...terms.fileNames]), signal),
+    abortable(pathsWithWords(db, project.id, terms.words), signal),
   ]);
   evidence.named = named;
   evidence.pathHits = new Set(pathHits);
+  evidence.pathWords = pathWords;
   const ids = [...named.values()];
-  const [definers, references] = await Promise.all([
+  const [definers, stats] = await Promise.all([
     abortable(definersOf(db, project.id, ids), signal),
-    abortable(referenceCounts(db, project.id, ids), signal),
+    abortable(nameStats(db, project.id, ids), signal),
   ]);
   evidence.namedDefiners = definers;
-  evidence.references = references;
+  evidence.nameStats = stats;
   const core = topByEvidence(evidence, CORE_SEEDS);
   evidence.coChange = coChanged(project.history, new Set(core));
   const coChanged10 = [...evidence.coChange].sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -174,22 +190,57 @@ async function gatherSymbols(
     'facts',
     abortable(factsFor(db, project.id, seeds), signal),
   );
+  await expandNeighbours(db, project, evidence, core, seeds, timings, signal);
+}
+
+function specificCap(fileCount: number): number {
+  return Math.max(SPECIFIC_MIN_FILES, Math.round(fileCount * SPECIFIC_SHARE));
+}
+
+async function addNameStats(
+  db: Queryable,
+  project: ScanProject,
+  evidence: Evidence,
+  ids: readonly number[],
+  signal: AbortSignal,
+): Promise<void> {
+  const missing = ids.filter((id) => !evidence.nameStats.has(id)).slice(0, MAX_STAT_IDS);
+  const stats = await abortable(nameStats(db, project.id, missing), signal);
+  for (const [id, entry] of stats) evidence.nameStats.set(id, entry);
+}
+
+async function expandNeighbours(
+  db: Queryable,
+  project: ScanProject,
+  evidence: Evidence,
+  core: readonly string[],
+  seeds: readonly string[],
+  timings: Record<string, number>,
+  signal: AbortSignal,
+): Promise<void> {
   const coreFacts = core.flatMap((path) => evidence.facts.get(path) ?? []);
+  const referenced = unionIds(coreFacts, (entry) => entry.refIds, MAX_REFERENCED_IDS);
+  const defined = unionIds(coreFacts, (entry) => entry.defIds, MAX_DEFINED_IDS);
+  await timed(
+    timings,
+    'nameStats',
+    addNameStats(db, project, evidence, [...referenced, ...defined], signal),
+  );
+  const cap = specificCap(project.fileCount);
+  const stat = (id: number) => evidence.nameStats.get(id);
+  const specific = referenced.filter((id) => {
+    const entry = stat(id);
+    return entry !== undefined && entry.defFiles <= WIDELY_DEFINED && entry.refFiles <= cap;
+  });
+  const used = defined.filter((id) => (stat(id)?.refFiles ?? 0) > 0);
   const around = await timed(
     timings,
     'neighbours',
-    abortable(
-      neighbours(
-        db,
-        project.id,
-        unionIds(coreFacts, (entry) => entry.refIds, MAX_REFERENCED_IDS),
-        unionIds(coreFacts, (entry) => entry.defIds, MAX_DEFINED_IDS),
-        seeds,
-      ),
-      signal,
-    ),
+    abortable(neighbours(db, project.id, specific, used, seeds), signal),
   );
   for (const [path, facts] of around) evidence.facts.set(path, facts);
+  const allRefs = unionIds(evidence.facts.values(), (entry) => entry.refIds, MAX_STAT_IDS);
+  await timed(timings, 'edgeStats', addNameStats(db, project, evidence, allRefs, signal));
 }
 
 function summarise(evidence: Evidence, candidates: readonly RankedFile[]): ScanSummary {
@@ -197,17 +248,13 @@ function summarise(evidence: Evidence, candidates: readonly RankedFile[]): ScanS
   const layout = evidence.project?.layout;
   const ownersOf = ownersMatcher(layout?.owners ?? []);
   const owners = new Set(top.flatMap((file) => ownersOf(file.path)));
-  const definedIn = new Map<number, number>();
-  for (const ids of evidence.namedDefiners.values()) {
-    for (const id of ids) definedIn.set(id, (definedIn.get(id) ?? 0) + 1);
-  }
   return {
     packagesTouched: [...new Set(top.map((file) => file.package))],
     ownersTouched: owners.size,
     namedSymbols: [...evidence.named].map(([name, id]) => ({
       name,
-      definedIn: definedIn.get(id) ?? 0,
-      referencedBy: evidence.references.get(id) ?? 0,
+      definedIn: evidence.nameStats.get(id)?.defFiles ?? 0,
+      referencedBy: evidence.nameStats.get(id)?.refFiles ?? 0,
     })),
     uncommitted: evidence.uncommitted.size,
     instructions: layout?.instructions ?? [],
@@ -226,8 +273,10 @@ function report(
     facts: evidence.facts,
     matches: evidence.matches,
     pathHits: evidence.pathHits,
+    pathWords: evidence.pathWords,
     namedDefiners: new Map([...evidence.namedDefiners].map(([path, ids]) => [path, ids.length])),
     namedIds: new Set(evidence.named.values()),
+    nameStats: evidence.nameStats,
     uncommitted: evidence.uncommitted,
     coChange: evidence.coChange,
     churn: churnByFile(evidence.project?.history ?? []),

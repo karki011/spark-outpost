@@ -121,6 +121,19 @@ describe('rankFiles', () => {
     });
   });
 
+  it('lifts files whose paths contain words from the request', () => {
+    const ranked = rankFiles(
+      input({
+        matches: new Map([['src/other.ts', match(1, 'x')]]),
+        pathWords: new Map([['src/sidebar/sidebar-order.ts', 2]]),
+      }),
+    );
+    expect(ranked[0]).toMatchObject({
+      path: 'src/sidebar/sidebar-order.ts',
+      reasons: ['path words'],
+    });
+  });
+
   it('caps the candidate list', () => {
     const matches = new Map(
       Array.from({ length: 300 }, (_, index) => [`f${index}.ts`, match(1, 'x')] as const),

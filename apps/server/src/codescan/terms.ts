@@ -3,11 +3,13 @@ export interface RequestTerms {
   fileNames: string[];
   identifiers: string[];
   phrases: string[];
+  words: string[];
 }
 
 export const MAX_IDENTIFIERS = 12;
 export const MAX_PATHS = 8;
 export const MAX_PHRASES = 4;
+export const MAX_WORDS = 6;
 
 const QUOTED = /`([^`\n]{2,120})`|"([^"\n]{2,80})"|'([^'\n]{2,80})'|“([^”\n]{2,80})”/g;
 const PATH = /(?:^|[\s(`'"])((?:\.{0,2}\/)?[\w@.-]+(?:\/[\w@.[\]-]+)+\/?)/g;
@@ -20,6 +22,22 @@ const SCREAMING = /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/g;
 const KEBAB = /\b[a-z][a-z0-9]*(?:-[a-z0-9]+)+\b/g;
 const SINGLE_PASCAL = /(?<=[a-z,:;]\s+(?:the\s+|a\s+|an\s+)?)\b[A-Z][a-z0-9]{3,}\b/g;
 const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
+const WORD = /\b[a-z][a-z0-9]{3,}\b/g;
+const URL_TEXT = /\bhttps?:\/\/\S+/g;
+
+const PROSE_WORDS = new Set(
+  (
+    'about above across after again against also always another anything around because been ' +
+    'before being below between both broken change changes check component components could ' +
+    'does doing done each either else every everywhere existing file files first from have ' +
+    'into instead just keep like make many more most move much must need needs never only ' +
+    'other over please really remove rename replace same should show shows some still such ' +
+    'sure than that their them then there these they thing things this those through today ' +
+    'update used uses using very want when where which while will with without work works ' +
+    'would wrong your correct correctly properly support supports test tests add adds fix ' +
+    'fixes bug bugs issue new old page code ones'
+  ).split(' '),
+);
 const IS_FILE_NAME = new RegExp(`^${FILE_NAME.source}$`);
 
 const COMMON_WORDS = new Set([
@@ -89,11 +107,31 @@ function identifierTerms(text: string, terms: RequestTerms): void {
   }
 }
 
+function wordTerms(text: string, terms: RequestTerms): void {
+  const stripped = text
+    .replace(URL_TEXT, ' ')
+    .replace(QUOTED, ' ')
+    .replace(PATH, ' ')
+    .replace(FILE_NAME, ' ');
+  const covered = new Set(terms.identifiers.flatMap(words));
+  for (const word of stripped.match(WORD) ?? []) {
+    if (PROSE_WORDS.has(word) || COMMON_WORDS.has(word) || covered.has(word)) continue;
+    add(terms.words, word, MAX_WORDS);
+  }
+}
+
 export function extractTerms(request: string): RequestTerms {
-  const terms: RequestTerms = { paths: [], fileNames: [], identifiers: [], phrases: [] };
+  const terms: RequestTerms = {
+    paths: [],
+    fileNames: [],
+    identifiers: [],
+    phrases: [],
+    words: [],
+  };
   quotedTerms(request, terms);
   pathTerms(request, terms);
   identifierTerms(request, terms);
+  wordTerms(request, terms);
   return terms;
 }
 

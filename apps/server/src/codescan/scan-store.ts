@@ -1,7 +1,7 @@
 import type { Queryable } from '../persistence/db.ts';
 import type { Commit } from './git.ts';
 import type { ProjectLayout } from './layout.ts';
-import type { NodeFacts } from './rank.ts';
+import type { NameStats, NodeFacts } from './rank.ts';
 
 export const NEIGHBOUR_LIMIT = 600;
 export const PATH_MATCH_LIMIT = 40;
@@ -69,19 +69,18 @@ export async function definersOf(
   return new Map(rows.map((row) => [row.path, row.ids]));
 }
 
-export async function referenceCounts(
+export async function nameStats(
   db: Queryable,
   projectId: string,
   ids: readonly number[],
-): Promise<Map<number, number>> {
+): Promise<Map<number, NameStats>> {
   if (ids.length === 0) return new Map();
-  const { rows } = await db.query<{ id: number; files: number }>(
-    `SELECT n.id, count(f.path)::int AS files FROM unnest($2::int[]) AS n (id)
-     LEFT JOIN code_index_files f ON f.project_id = $1 AND f.ref_ids @> ARRAY[n.id]
-     GROUP BY n.id`,
+  const { rows } = await db.query<{ id: number; def_files: number; ref_files: number }>(
+    `SELECT id, def_files, ref_files FROM code_index_names
+     WHERE project_id = $1 AND id = ANY($2::int[])`,
     [projectId, ids],
   );
-  return new Map(rows.map((row) => [row.id, row.files]));
+  return new Map(rows.map((row) => [row.id, { defFiles: row.def_files, refFiles: row.ref_files }]));
 }
 
 export async function pathsLike(
@@ -100,6 +99,25 @@ export async function pathsLike(
     [projectId, fragments, PATH_MATCH_LIMIT],
   );
   return rows.map((row) => row.path);
+}
+
+export async function pathsWithWords(
+  db: Queryable,
+  projectId: string,
+  words: readonly string[],
+): Promise<Map<string, number>> {
+  if (words.length === 0) return new Map();
+  const { rows } = await db.query<{ path: string; words: number }>(
+    `SELECT f.path, count(*)::int AS words FROM unnest($2::text[]) AS q (word)
+     CROSS JOIN LATERAL (
+       SELECT path FROM code_index_files
+       WHERE project_id = $1 AND lower(path) LIKE '%' || q.word || '%'
+       ORDER BY position(q.word IN lower(substring(path FROM '[^/]*$'))) > 0 DESC, length(path)
+       LIMIT $3
+     ) f GROUP BY f.path`,
+    [projectId, words, PATH_MATCH_LIMIT],
+  );
+  return new Map(rows.map((row) => [row.path, row.words]));
 }
 
 interface FactRow {

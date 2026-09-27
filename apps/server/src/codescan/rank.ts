@@ -1,9 +1,10 @@
 import type { TextMatch } from './ripgrep.ts';
+import { isTestFile } from './test-pairs.ts';
 
 export const MAX_CANDIDATES = 255;
 export const DAMPING = 0.85;
 export const ITERATIONS = 30;
-const WIDELY_DEFINED = 5;
+export const WIDELY_DEFINED = 5;
 
 export interface NodeFacts {
   defIds: readonly number[];
@@ -13,12 +14,19 @@ export interface NodeFacts {
   hasTest: boolean;
 }
 
+export interface NameStats {
+  defFiles: number;
+  refFiles: number;
+}
+
 export interface RankInput {
   facts: ReadonlyMap<string, NodeFacts>;
   matches: ReadonlyMap<string, TextMatch>;
   pathHits: ReadonlySet<string>;
+  pathWords?: ReadonlyMap<string, number>;
   namedDefiners: ReadonlyMap<string, number>;
   namedIds: ReadonlySet<number>;
+  nameStats?: ReadonlyMap<number, NameStats>;
   uncommitted: ReadonlySet<string>;
   coChange: ReadonlyMap<string, number>;
   churn: ReadonlyMap<string, number>;
@@ -51,7 +59,8 @@ export function evidenceScore(input: RankInput, path: string): number {
   const named = input.namedDefiners.get(path) ?? 0;
   let score = 0;
   if (input.pathHits.has(path)) score += 10;
-  if (named > 0) score += 6 + 2 * (named - 1);
+  score += 3 * Math.min(input.pathWords?.get(path) ?? 0, 3);
+  if (named > 0) score += (6 + 2 * (named - 1)) * (isTestFile(path) ? 0.5 : 1);
   if (match) score += 2 * match.terms.size + Math.log2(1 + match.count);
   if (input.uncommitted.has(path)) score += 1.5;
   score += 0.5 * Math.min(input.coChange.get(path) ?? 0, 5);
@@ -64,6 +73,7 @@ function nodePaths(input: RankInput): string[] {
       ...input.facts.keys(),
       ...input.matches.keys(),
       ...input.pathHits,
+      ...(input.pathWords?.keys() ?? []),
       ...input.uncommitted,
       ...input.coChange.keys(),
     ]),
@@ -104,7 +114,12 @@ export function referenceEdges(paths: readonly string[], input: RankInput): Edge
     for (const id of input.facts.get(path)?.refIds ?? []) {
       const targets = definers.get(id);
       if (!targets) continue;
-      const weight = nameWeight(input.namedIds.has(id), targets.length, referrers.get(id) ?? 1);
+      const stats = input.nameStats?.get(id);
+      const weight = nameWeight(
+        input.namedIds.has(id),
+        stats?.defFiles ?? targets.length,
+        stats?.refFiles ?? referrers.get(id) ?? 1,
+      );
       for (const to of targets) {
         if (to !== from) weights.set(to, (weights.get(to) ?? 0) + weight);
       }
@@ -140,6 +155,7 @@ export function personalisedPageRank(edges: readonly Edge[][], personal: readonl
 function reasonsFor(input: RankInput, path: string, linked: boolean): string[] {
   const reasons: string[] = [];
   if (input.pathHits.has(path)) reasons.push('named path');
+  if (input.pathWords?.has(path)) reasons.push('path words');
   if (input.namedDefiners.has(path)) reasons.push('defines a named symbol');
   if (input.matches.has(path)) reasons.push('text match');
   if (input.uncommitted.has(path)) reasons.push('uncommitted');

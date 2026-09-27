@@ -24,10 +24,26 @@ describe('extractTerms', () => {
     expect(terms.identifiers).toEqual([]);
   });
 
+  it('keeps plain nouns as words to match against file paths', () => {
+    const terms = extractTerms(
+      'The sidebar order breaks when a pinned conversation is archived; fix it in date-picker',
+    );
+    expect(terms.words).toEqual([
+      'sidebar',
+      'order',
+      'breaks',
+      'pinned',
+      'conversation',
+      'archived',
+    ]);
+    expect(terms.identifiers).toEqual(['date-picker']);
+  });
+
   it('ignores URLs and plain prose', () => {
     const terms = extractTerms('see https://example.com/docs/page and make it faster please');
     expect(terms.paths).toEqual([]);
     expect(terms.identifiers).toEqual([]);
+    expect(terms.words).toEqual(['faster']);
   });
 
   it('caps the number of identifiers', () => {
@@ -61,6 +77,7 @@ describe('searchPatterns', () => {
       fileNames: [],
       identifiers: ['useChartData', 'line-chart'],
       phrases: ['Export CSV'],
+      words: [],
     });
     expect(patterns).toEqual([
       'useChartData',

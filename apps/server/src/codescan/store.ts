@@ -224,6 +224,22 @@ export async function pruneNames(db: Queryable, projectId: string): Promise<void
   );
 }
 
+export async function countNameUse(db: Queryable, projectId: string): Promise<void> {
+  await db.query(
+    `UPDATE code_index_names n SET def_files = c.defs, ref_files = c.refs
+     FROM (
+       SELECT id, sum(d)::int AS defs, sum(r)::int AS refs FROM (
+         SELECT unnest(def_ids) AS id, 1 AS d, 0 AS r FROM code_index_files WHERE project_id = $1
+         UNION ALL
+         SELECT unnest(ref_ids), 0, 1 FROM code_index_files WHERE project_id = $1
+       ) uses GROUP BY id
+     ) c
+     WHERE n.project_id = $1 AND n.id = c.id
+       AND (n.def_files, n.ref_files) IS DISTINCT FROM (c.defs, c.refs)`,
+    [projectId],
+  );
+}
+
 export interface FinishedIndex {
   commit: string | null;
   listedCount: number;
