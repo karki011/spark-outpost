@@ -16,9 +16,9 @@ import { runEvents } from '../workflow/run-events.ts';
 import { loadRunInput, type RunInput } from '../workflow/run-input.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
-import { exceededLimit } from './budget.ts';
+import { checkBudget } from './budget-check.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
-import { ask, assume, budgetUsage, intakeResponse } from './checkpoint-asks.ts';
+import { ask, assume, intakeResponse } from './checkpoint-asks.ts';
 import { assumptionLine, interpretations } from './clarify.ts';
 import { namedFiles } from './context.ts';
 import { decideIntake, rulesAnswer, type CurrentTask, type IntakeDecisions } from './intake.ts';
@@ -126,17 +126,6 @@ async function closeTaskSessions(s: Session, taskId: string, reason: string): Pr
   ).catch(() => undefined);
 }
 
-async function checkBudget(s: Session): Promise<void> {
-  if (s.budgetHit || s.members.size === 0) return;
-  const usage = await budgetUsage(s);
-  await save(s, { activeMs: usage.activeMs });
-  const limit = exceededLimit(usage, s.limits);
-  if (!limit) return;
-  s.budgetHit = limit;
-  await save(s, { exceeded: limit });
-  for (const abort of s.members.values()) abort();
-}
-
 async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEvent> {
   const { result } = outcome;
   observeBuilder(s, result);
@@ -160,6 +149,8 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
     case 'ask':
       return ask(s, action);
     case 'spawn': {
+      const hit = await checkBudget(s);
+      if (hit) return { type: 'budget_exceeded', limit: hit, unstarted: true };
       const copied = action.role === 'builder' && s.needsCopy;
       const outcome = copied ? await buildInCopy(s, action) : await buildAndLand(s, action);
       const { result } = outcome;
@@ -306,6 +297,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       startedAt: Date.now(),
       budgetHit: null,
       members: new Map(),
+      liveCost: new Map(),
       checkpoints: 0,
       git,
       checks: doing ? await projectChecks(deps.db, lease.runId, root) : null,
@@ -328,10 +320,9 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       decideBuildStyle(s);
       await ensureTask(s, current);
     }
-    budgetTimer = setInterval(
-      () => void checkBudget(s).catch(() => undefined),
-      deps.budgetPollMs ?? 1000,
-    );
+    budgetTimer = setInterval(() => {
+      if (s.members.size > 0) void checkBudget(s).catch(() => undefined);
+    }, deps.budgetPollMs ?? 1000);
     if (decisions.assume) {
       const [likely] = interpretations(intakeResponse(s));
       if (likely) await assume(s, likely);

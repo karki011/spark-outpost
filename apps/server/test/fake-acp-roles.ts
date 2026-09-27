@@ -129,6 +129,16 @@ async function repeat(turn: RoleTurn): Promise<void> {
   }
 }
 
+async function spend(turn: RoleTurn): Promise<void> {
+  for (let call = 0; ; call += 1) {
+    const context = 20_000 + call * 2_000;
+    await turn.update({ sessionUpdate: 'usage_update', used: context, size: 200_000 });
+    await turn.update({ sessionUpdate: 'usage_update', used: context + 500, size: 200_000 });
+    await readTool(turn, `src/part-${call}.ts`, `spend-${call}`);
+    await sleep(30, turn.signal);
+  }
+}
+
 async function write(turn: RoleTurn, file: string, line: string): Promise<boolean> {
   const target = join(turn.cwd, file);
   const before = await current(target);
@@ -173,10 +183,15 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
     );
   }
   if (turn.text.includes('#push')) await push(turn);
+  if (turn.text.includes('#spend')) await spend(turn);
   if (turn.text.includes('#slowbuild')) {
     for (;;) await sleep(50, turn.signal);
   }
   if (turn.text.includes('#todos')) await todos(turn, stopAfter);
+  if (turn.text.includes('#cost')) {
+    const cost = { amount: 0.2, currency: 'USD' };
+    await turn.update({ sessionUpdate: 'usage_update', used: 1_000, size: 200_000, cost });
+  }
   const clarified = /The user clarified: (.+)/.exec(turn.text)?.[1];
   const assumed = /assume the user means: (.+)/.exec(turn.text)?.[1];
   const heard = `${clarified ? ` Clarified: ${clarified}` : ''}${assumed ? ` Took it as: ${assumed}` : ''}`;

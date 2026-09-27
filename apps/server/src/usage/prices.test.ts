@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PRICE_TABLE, estimateCostUsd, priceFor, type ModelPrice } from './prices.ts';
+import { PRICE_TABLE, cardPriceFor, estimateCostUsd, priceFor, type ModelPrice } from './prices.ts';
 
 const table: ModelPrice[] = [
   {
@@ -101,5 +101,19 @@ describe('price estimates', () => {
       6,
     );
     expect(estimateCostUsd('claude', 'glm-5.3', tokens)).toBeNull();
+  });
+});
+
+describe('card prices', () => {
+  it('finds a price for any provider from the model cards, including aliases', () => {
+    expect(cardPriceFor('claude', 'sonnet')).toMatchObject({
+      model: 'claude-sonnet-5',
+      inputPerMillion: 2,
+      cacheOutsideInput: true,
+    });
+    expect(cardPriceFor('claude', 'opus[1m]')?.model).toBe('claude-opus-5-5');
+    expect(cardPriceFor('codex', 'gpt-6-sol/high')?.model).toBe('gpt-6-sol');
+    expect(cardPriceFor('claude', 'unknown')).toBeNull();
+    expect(cardPriceFor('claude', null)).toBeNull();
   });
 });

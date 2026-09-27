@@ -99,7 +99,8 @@ async function runSession(
   const onAbort = () => {
     graceTimer = setTimeout(() => agent?.kill(), options.cancelGraceMs ?? DEFAULT_CANCEL_GRACE_MS);
   };
-  signal.addEventListener('abort', onAbort, { once: true });
+  if (signal.aborted) onAbort();
+  else signal.addEventListener('abort', onAbort, { once: true });
   try {
     const linked = turn.projectRoots ?? [];
     const roots = openedRoots(definition, turn, linked);

@@ -1,5 +1,5 @@
 import type { ModelCard, TokenUsage } from '@spark-outpost/contracts';
-import { VENDOR_CARDS } from '../model-cards/cards.ts';
+import { VENDOR_CARDS, cardFor } from '../model-cards/cards.ts';
 
 export interface ModelPrice {
   provider: string;
@@ -11,7 +11,7 @@ export interface ModelPrice {
 }
 
 const ESTIMATED_PROVIDERS = new Set(['codex', 'zai']);
-const CACHE_OUTSIDE_INPUT = new Set(['zai']);
+const CACHE_OUTSIDE_INPUT = new Set(['claude', 'zai']);
 
 export function cardPrice(card: ModelCard): ModelPrice | null {
   if (!card.price) return null;
@@ -51,15 +51,10 @@ export function priceFor(
   return table.find((entry) => entry.provider === provider && entry.model === base) ?? null;
 }
 
-export function estimateCostUsd(
-  provider: string,
-  model: string | null,
-  tokens: Pick<TokenUsage, 'input' | 'output' | 'cachedRead'> &
-    Partial<Pick<TokenUsage, 'cachedWrite'>>,
-  table: readonly ModelPrice[] = PRICE_TABLE.prices,
-): number | null {
-  const price = priceFor(provider, model, table);
-  if (!price) return null;
+type PricedTokens = Pick<TokenUsage, 'input' | 'output' | 'cachedRead'> &
+  Partial<Pick<TokenUsage, 'cachedWrite'>>;
+
+export function costAt(price: ModelPrice, tokens: PricedTokens): number {
   const cached = price.cacheOutsideInput
     ? (tokens.cachedRead ?? 0)
     : Math.min(tokens.cachedRead ?? 0, tokens.input);
@@ -71,4 +66,20 @@ export function estimateCostUsd(
     cached * price.cachedInputPerMillion +
     tokens.output * price.outputPerMillion;
   return Math.round(cost) / 1_000_000;
+}
+
+export function estimateCostUsd(
+  provider: string,
+  model: string | null,
+  tokens: PricedTokens,
+  table: readonly ModelPrice[] = PRICE_TABLE.prices,
+): number | null {
+  const price = priceFor(provider, model, table);
+  return price ? costAt(price, tokens) : null;
+}
+
+export function cardPriceFor(provider: string, model: string | null): ModelPrice | null {
+  if (!model) return null;
+  const card = cardFor({ id: model.split('/')[0]! }, provider);
+  return card ? cardPrice(card) : null;
 }
