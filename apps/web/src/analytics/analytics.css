@@ -41,7 +41,7 @@
 }
 
 .an-range .seg {
-  width: 320px;
+  width: 460px;
   max-width: 100%;
   padding: 2px;
 }
@@ -49,6 +49,9 @@
 .an-range .seg button {
   padding: 4px 0;
   font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .an-range .seg-ind {
@@ -427,6 +430,12 @@
 
   .an-range .seg {
     width: 100%;
+  }
+
+  .an-range .seg button {
+    white-space: normal;
+    line-height: 1.2;
+    padding: 4px 2px;
   }
 
   .an-tabs {

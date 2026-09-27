@@ -4,6 +4,7 @@ import {
   addIsoDays,
   formatIsoLocal,
   formatRangeLabel,
+  formatShortRange,
   isCappedOut,
   isFutureIso,
   isoSpanDays,
@@ -45,5 +46,14 @@ describe('date math', () => {
   it('formats a human range label', () => {
     expect(formatRangeLabel('2026-09-01', '2026-09-27')).toBe('Sep 1 – Sep 27, 2026');
     expect(formatRangeLabel('2025-12-01', '2026-01-05')).toBe('Dec 1, 2025 – Jan 5, 2026');
+  });
+
+  it('shortens a range in the current year for the Custom segment', () => {
+    expect(formatShortRange('2026-09-14', '2026-09-27', '2026-09-27')).toBe('Sep 14 – 27');
+    expect(formatShortRange('2026-08-30', '2026-09-02', '2026-09-27')).toBe('Aug 30 – Sep 2');
+    expect(formatShortRange('2026-09-05', '2026-09-05', '2026-09-27')).toBe('Sep 5');
+    expect(formatShortRange('2025-12-30', '2026-01-02', '2026-09-27')).toBe(
+      formatRangeLabel('2025-12-30', '2026-01-02'),
+    );
   });
 });
