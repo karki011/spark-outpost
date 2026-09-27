@@ -232,7 +232,10 @@ async function expandNeighbours(
     const entry = stat(id);
     return entry !== undefined && entry.defFiles <= WIDELY_DEFINED && entry.refFiles <= cap;
   });
-  const used = defined.filter((id) => (stat(id)?.refFiles ?? 0) > 0);
+  const used = defined.filter((id) => {
+    const refFiles = stat(id)?.refFiles ?? 0;
+    return refFiles > 0 && refFiles <= cap;
+  });
   const around = await timed(
     timings,
     'neighbours',

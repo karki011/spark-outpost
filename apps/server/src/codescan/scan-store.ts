@@ -168,11 +168,17 @@ export async function neighbours(
 ): Promise<Map<string, NodeFacts>> {
   if (referenced.length === 0 && defined.length === 0) return new Map();
   const { rows } = await db.query<FactRow>(
-    `(SELECT ${FACT_COLUMNS} FROM code_index_files
-      WHERE project_id = $1 AND def_ids && $2::int[] AND NOT path = ANY($4::text[]) LIMIT $5)
-     UNION
-     (SELECT ${FACT_COLUMNS} FROM code_index_files
-      WHERE project_id = $1 AND ref_ids && $3::int[] AND NOT path = ANY($4::text[]) LIMIT $5)`,
+    `WITH defining AS MATERIALIZED (
+       SELECT path FROM code_index_files WHERE project_id = $1 AND def_ids && $2::int[]
+     ), referencing AS MATERIALIZED (
+       SELECT path FROM code_index_files WHERE project_id = $1 AND ref_ids && $3::int[]
+     ), picked AS (
+       (SELECT path FROM defining WHERE NOT path = ANY($4::text[]) LIMIT $5)
+       UNION
+       (SELECT path FROM referencing WHERE NOT path = ANY($4::text[]) LIMIT $5)
+     )
+     SELECT ${FACT_COLUMNS} FROM code_index_files
+     WHERE project_id = $1 AND path IN (SELECT path FROM picked)`,
     [projectId, referenced, defined, exclude, NEIGHBOUR_LIMIT / 2],
   );
   return toFacts(rows);
