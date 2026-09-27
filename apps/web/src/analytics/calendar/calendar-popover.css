@@ -167,28 +167,3 @@
     border-bottom: 1px solid var(--line);
   }
 }
-
-.an-range-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
-  background: var(--bg);
-  font-size: 13px;
-  color: var(--text);
-}
-
-.an-range-btn:hover {
-  border-color: var(--faint);
-}
-
-.an-range-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.an-range-btn[aria-expanded='true'] {
-  border-color: var(--accent);
-}

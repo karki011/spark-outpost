@@ -89,7 +89,13 @@ export type ProviderOutput =
       toolKind?: string;
       target?: string;
     }
-  | { kind: 'step_finished'; name: string }
+  | {
+      kind: 'step_finished';
+      name: string;
+      tool?: boolean;
+      toolKind?: string;
+      target?: string;
+    }
   | { kind: 'text_delta'; delta: string }
   | { kind: 'capabilities'; report: ProviderCapabilityReport }
   | { kind: 'usage'; contextUsed: number; contextSize: number; costUsd: number | null }

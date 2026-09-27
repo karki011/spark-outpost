@@ -58,13 +58,26 @@ export function describeTool(title: string): string {
 
 const TARGET_CHARS = 400;
 
+interface OpenTool {
+  name: string;
+  kind: string | null;
+  target: string | null;
+}
+
+type ToolCallUpdate = Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }>;
+
+function isEmptyInput(value: unknown): boolean {
+  if (Array.isArray(value)) return value.length === 0;
+  return typeof value === 'object' && value !== null && Object.keys(value).length === 0;
+}
+
 export function toolTarget(
   locations: readonly { path: string; line?: number | null }[] | null | undefined,
   rawInput: unknown,
 ): string | null {
   const paths = (locations ?? []).map((location) => `${location.path}:${location.line ?? ''}`);
   let input = '';
-  if (rawInput !== undefined && rawInput !== null) {
+  if (rawInput !== undefined && rawInput !== null && !isEmptyInput(rawInput)) {
     try {
       input = JSON.stringify(rawInput) ?? '';
     } catch {
@@ -132,7 +145,7 @@ function toolTexts(
 }
 
 export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
-  const openTools = new Map<string, string>();
+  const openTools = new Map<string, OpenTool>();
   const seenLinks = new Set<string>();
   let thinking = false;
   let lastMessageId: string | null = null;
@@ -149,12 +162,29 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
   };
 
   const finishTool = (id: string, failed = false): ProviderOutput[] => {
-    const name = openTools.get(id);
-    if (name === undefined) return [];
+    const open = openTools.get(id);
+    if (open === undefined) return [];
     openTools.delete(id);
-    const outputs: ProviderOutput[] = [{ kind: 'step_finished', name }];
-    if (failed) outputs.push(...noteSteps(FAILED_PREFIX + name));
+    const outputs: ProviderOutput[] = [
+      {
+        kind: 'step_finished',
+        name: open.name,
+        tool: true,
+        ...(open.kind ? { toolKind: open.kind } : {}),
+        ...(open.target ? { target: open.target } : {}),
+      },
+    ];
+    if (failed) outputs.push(...noteSteps(FAILED_PREFIX + open.name));
     return outputs;
+  };
+
+  const retarget = (update: ToolCallUpdate) => {
+    const open = openTools.get(update.toolCallId);
+    if (!open) return;
+    const title = update.title ? describeTool(update.title) : null;
+    open.target =
+      toolTarget(update.locations, update.rawInput) ??
+      (title && title !== open.name ? title : open.target);
   };
 
   const note = (name: string): ProviderOutput[] => [...stopThinking(), ...noteSteps(name)];
@@ -202,8 +232,8 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
           const outputs = [...stopThinking(), ...finishTool(update.toolCallId)];
           const name = describeTool(update.title);
           worked = true;
-          openTools.set(update.toolCallId, name);
           const target = toolTarget(update.locations, update.rawInput);
+          openTools.set(update.toolCallId, { name, kind: update.kind ?? null, target });
           outputs.push({
             kind: 'step_started',
             name,
@@ -218,6 +248,7 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
           return outputs;
         }
         case 'tool_call_update': {
+          retarget(update);
           const linked = links(toolTexts(update.content, update.rawOutput));
           if (update.status === 'completed' || update.status === 'failed') {
             return [...linked, ...finishTool(update.toolCallId, update.status === 'failed')];

@@ -10,24 +10,24 @@ Generated from `docs/tasks/board.json` by `pnpm tasks`. Do not edit by hand.
 - **F-18** Worker shutdown semantics for long-running provider processes _(phase 1)_
 - **F-20** Show the collapsed work log ("Worked for Ns") on finished runs _(phase 4)_
 
-## Ready (4)
+## Ready (3)
 
 - **F-9** Authenticate UI, API, and stream with a per-launch token _(phase 0)_ — 2026-09-27: Prioritised for the Electron plan (docs/architecture/ELECTRON_PLAN.md): today any local program can call the API; host and origin checks only stop web pages.
 - **F-10** App-wide status stream for sidebar, Home, rail badge, favicon _(phase 1)_
 - **F-21** Make Ctrl+C on pnpm dev stop every child process _(phase 0)_ — 2026-09-25: pnpm 12's native wrapper did not forward Playwright's SIGTERM to Vite; tests now bypass pnpm, dev still uses it.
-- **F-24** Apply pending migrations at startup, after a database backup _(phase 0)_ — 2026-09-27: Pending migrations crashed the dev API twice (502s). Needed for the Electron app, where users can't run pnpm db:migrate.
 
 ## In progress (0)
 
 _None_
 
-## Review (5)
+## Review (6)
 
 - **F-12** ACP client adapter in the worker, tested against a fake ACP agent over stdio _(phase 1)_ — 2026-09-25: Chat path (no project folder) runs Claude and Codex over ACP: one process per run, private empty folder, chat mode forced, model and effort via config options, permissions declined with a visible step, cancel, readable errors. Checks: pnpm check 81 unit, test:db 37, test:browser 12, test:live 6 (both providers: context recall, blocked write, cancel under 6 s). Checked in the app with real Claude and Codex replies. Known gap: Codex can still write under /tmp.
 - **F-13** Approval card and interrupt flow _(phase 1)_ — 2026-09-26: M2 Do with approvals for Claude: 0015_approvals, decide() with four levels and always-ask list, approval gate with NOTIFY and 1 s poll, Stop cancels, 30 min timeout fails the run, recovery expires, payload-hash bound decisions, git and file snapshots with revert. Codex Do unavailable (live probe: commands never ask). Evidence: unit decide/ACP tests, approvals DB tests, approvals browser spec, live Claude test (edit allowed, ls allowed for run, git push denied, reverted). Needs independent review.
 - **F-16** Port mockup: model picker and context ring from capability snapshots _(phase 2)_ — 2026-09-25: Composer ported from the mockup: plus menu (attachments marked Soon), model picker with real models from each agent's capability snapshot (Claude: Default, Opus 5.5, Fable 5.1, Sonnet 5, Haiku 4.5; Codex: 6 Astra/Sol/Luna and older), effort segmented control and meter, permissions, per-chat settings, context ring from ACP usage_update. Checked live: picked Sonnet 5 and the reply confirmed it. Chat replies render Markdown (react-markdown, remark-gfm, remend, Shiki themed by tokens). Theme menu ported. check 87, test:db 40, test:browser 14.
 - **F-22** Onboarding flow from the mockup with real provider verification _(phase 1)_ — 2026-09-25: Built from the mockup (4 steps; Tools and Sign in left out on purpose). pnpm check 33 unit, test:db 26, test:browser 6 pass. Checked by hand against the real Anthropic API (fake key gives 401) and a real missing claude CLI. Not yet checked: success with a real key or CLI; the user will test with their own key. Not ported yet: eyes following the typing caret, and descriptions on model cards.
 - **F-23** Embedded terminal for CLI install and login _(phase 1)_ — 2026-09-25: Smart flow: verification reports cli_missing or not_logged_in and the terminal starts on the matching step (install or claude auth login). Terminal closes and checks again by itself after a clean install or a successful login. Claude login verified for free with claude auth status (the test request is only a fallback). Parent Claude Code env vars stripped. Browser tests are hermetic (fake codex CLI, no host PATH). check 60, test:db 29, test:browser 7 pass.
+- **F-24** Apply pending migrations at startup, after a database backup _(phase 0)_ — 2026-09-27: Startup applies pending migrations under an advisory lock after a pg_dump backup to .local/backups (newest 5 kept); failures name the migration and backup. Evidence: apps/server/test/migrate-startup.db.test.ts (concurrent callers apply once, backup before apply, backup failure, migration failure message, pruning); real pg_dump verified against the test database.
 
 ## Blocked (1)
 

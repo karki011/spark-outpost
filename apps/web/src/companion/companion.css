@@ -27,28 +27,29 @@
   place-items: center;
   width: var(--cmp-size);
   height: var(--cmp-size);
-  border: 1px solid var(--line-strong);
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  background: var(--panel);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+  background: none;
   cursor: grab;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
-  transition:
-    border-color 0.2s var(--out),
-    box-shadow 0.2s var(--out);
 }
 
-.cmp-btn:hover {
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.22);
+.cmp-btn .cmp-scout {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
+  transition:
+    filter 0.2s var(--out),
+    scale 0.2s var(--out);
+}
+
+.cmp-btn:hover .cmp-scout {
+  filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.28));
+  scale: 1.06;
 }
 
 .cmp[data-dragging] .cmp-btn {
   cursor: grabbing;
-}
-
-.cmp[data-mood='alert'] .cmp-btn {
-  border-color: var(--warn);
 }
 
 .cmp[data-mood='alert'] .cmp-btn::after {
@@ -59,10 +60,6 @@
   border-radius: 50%;
   pointer-events: none;
   animation: cmp-pulse 2.4s var(--out) infinite;
-}
-
-.cmp[data-mood='sad'] .cmp-btn {
-  border-color: var(--danger);
 }
 
 .cmp-float {

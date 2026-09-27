@@ -35,6 +35,7 @@ export function Segmented({ ariaLabel, options, value, onChange }: SegmentedProp
           type="button"
           role="radio"
           aria-checked={option.id === value}
+          data-option={option.id}
           onClick={() => onChange(option.id)}
         >
           {option.label}

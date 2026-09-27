@@ -24,7 +24,7 @@ describe('ACP session update mapping', () => {
     expect(mapper.map(thought)).toEqual([{ kind: 'step_started', name: THINKING_STEP }]);
     expect(mapper.map(thought)).toEqual([]);
     expect(mapper.map(text('Hi'))).toEqual([
-      { kind: 'step_finished', name: THINKING_STEP },
+      expect.objectContaining({ kind: 'step_finished', name: THINKING_STEP }),
       { kind: 'text_delta', delta: 'Hi' },
     ]);
   });
@@ -50,9 +50,9 @@ describe('ACP session update mapping', () => {
     expect(
       mapper.map({ sessionUpdate: 'tool_call_update', toolCallId: 't', status: 'failed' }),
     ).toEqual([
-      { kind: 'step_finished', name: 'Preparing file…' },
+      expect.objectContaining({ kind: 'step_finished', name: 'Preparing file…' }),
       { kind: 'step_started', name: 'Failed: Preparing file…' },
-      { kind: 'step_finished', name: 'Failed: Preparing file…' },
+      expect.objectContaining({ kind: 'step_finished', name: 'Failed: Preparing file…' }),
     ]);
     expect(mapper.didWork()).toBe(true);
   });
@@ -79,7 +79,7 @@ describe('ACP session update mapping', () => {
     });
     expect(mapper.map(notice('warning'))).toEqual([
       { kind: 'step_started', name: 'Warning: Stream lost' },
-      { kind: 'step_finished', name: 'Warning: Stream lost' },
+      expect.objectContaining({ kind: 'step_finished', name: 'Warning: Stream lost' }),
     ]);
     expect(mapper.failure()).toBeNull();
     expect(mapper.map(notice('error'))).toEqual([]);
@@ -93,15 +93,15 @@ describe('ACP session update mapping', () => {
       mapper.map({ sessionUpdate: 'notice', severity, title });
     expect(notice('warning', 'Using HTTPS transport')).toEqual([
       { kind: 'step_started', name: 'Warning: Using HTTPS transport' },
-      { kind: 'step_finished', name: 'Warning: Using HTTPS transport' },
+      expect.objectContaining({ kind: 'step_finished', name: 'Warning: Using HTTPS transport' }),
     ]);
     expect(notice('error', 'Boom')).toEqual([
       { kind: 'step_started', name: 'Error: Boom' },
-      { kind: 'step_finished', name: 'Error: Boom' },
+      expect.objectContaining({ kind: 'step_finished', name: 'Error: Boom' }),
     ]);
     expect(notice('_vendor', 'Custom')).toEqual([
       { kind: 'step_started', name: 'Note: Custom' },
-      { kind: 'step_finished', name: 'Note: Custom' },
+      expect.objectContaining({ kind: 'step_finished', name: 'Note: Custom' }),
     ]);
     expect(mapper.failure()).toBeNull();
   });
@@ -137,7 +137,9 @@ describe('ACP session update mapping', () => {
     ).toEqual([
       { kind: 'commands', commands: [{ name: 'compact', description: 'Summarize', hint: null }] },
     ]);
-    expect(mapper.finish()).toEqual([{ kind: 'step_finished', name: 'Search' }]);
+    expect(mapper.finish()).toEqual([
+      expect.objectContaining({ kind: 'step_finished', name: 'Search' }),
+    ]);
     expect(mapper.finish()).toEqual([]);
   });
 
@@ -162,7 +164,7 @@ describe('ACP session update mapping', () => {
         ],
       }),
     ).toEqual([
-      { kind: 'step_finished', name: THINKING_STEP },
+      expect.objectContaining({ kind: 'step_finished', name: THINKING_STEP }),
       {
         kind: 'plan',
         entries: [
@@ -206,7 +208,7 @@ describe('ACP session update mapping', () => {
         title: 'o/r#13',
         source: 'tool_output',
       },
-      { kind: 'step_finished', name: 'gh pr create' },
+      expect.objectContaining({ kind: 'step_finished', name: 'gh pr create' }),
     ]);
     expect(mapper.map(link('https://github.com/o/r/pull/14', 'PR 14'))).toEqual([
       {
@@ -237,7 +239,7 @@ describe('ACP session update mapping', () => {
     const warning = 'Warning: Fake switched to agent mode';
     expect(mapper.map({ sessionUpdate: 'current_mode_update', currentModeId: 'agent' })).toEqual([
       { kind: 'step_started', name: warning },
-      { kind: 'step_finished', name: warning },
+      expect.objectContaining({ kind: 'step_finished', name: warning }),
     ]);
     expect(
       mapper.map({
@@ -288,7 +290,7 @@ describe('ACP session update mapping', () => {
     expect(mapper.didWork()).toBe(false);
     expect(mapper.clientAction('Declined: Write a.txt')).toEqual([
       { kind: 'step_started', name: 'Declined: Write a.txt', tool: true },
-      { kind: 'step_finished', name: 'Declined: Write a.txt' },
+      expect.objectContaining({ kind: 'step_finished', name: 'Declined: Write a.txt' }),
     ]);
     expect(mapper.didWork()).toBe(true);
   });
@@ -300,5 +302,39 @@ describe('ACP session update mapping', () => {
     expect(toolTarget(undefined, { command: 'ls' })).toBe('{"command":"ls"}');
     expect(toolTarget([], undefined)).toBeNull();
     expect(toolTarget(null, { text: 'x'.repeat(1_000) })).toHaveLength(400);
+  });
+
+  it('finishes a tool step with the input the agent sent after announcing it', () => {
+    const mapper = createUpdateMapper('Claude');
+    const announce = (id: string) =>
+      mapper.map({
+        sessionUpdate: 'tool_call',
+        toolCallId: id,
+        title: 'Terminal',
+        kind: 'execute',
+        status: 'pending',
+        rawInput: {},
+      });
+    const finish = (id: string, command: string) =>
+      mapper.map({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: id,
+        title: `\`${command}\``,
+        rawInput: { command },
+        status: 'completed',
+      });
+    expect(announce('a')).toContainEqual({
+      kind: 'step_started',
+      name: 'Terminal',
+      tool: true,
+      toolKind: 'execute',
+    });
+    expect(finish('a', 'ls')).toContainEqual({
+      kind: 'step_finished',
+      name: 'Terminal',
+      tool: true,
+      toolKind: 'execute',
+      target: '{"command":"ls"}',
+    });
   });
 });

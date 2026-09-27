@@ -362,7 +362,7 @@
       "id": "F-24",
       "title": "Apply pending migrations at startup, after a database backup",
       "phase": "0",
-      "status": "ready",
+      "status": "review",
       "acceptance": [
         "API and worker start cleanly after a pull that adds migrations, with no manual db:migrate",
         "A backup of the database is taken before any pending migration runs, and the last few are kept",
@@ -374,6 +374,11 @@
           "date": "2026-09-27",
           "status": "ready",
           "text": "Pending migrations crashed the dev API twice (502s). Needed for the Electron app, where users can't run pnpm db:migrate."
+        },
+        {
+          "date": "2026-09-27",
+          "status": "review",
+          "text": "Startup applies pending migrations under an advisory lock after a pg_dump backup to .local/backups (newest 5 kept); failures name the migration and backup. Evidence: apps/server/test/migrate-startup.db.test.ts (concurrent callers apply once, backup before apply, backup failure, migration failure message, pruning); real pg_dump verified against the test database."
         }
       ]
     }

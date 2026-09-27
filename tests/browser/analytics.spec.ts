@@ -15,8 +15,7 @@ async function openAnalytics(page: Page) {
 }
 
 async function openCalendar(page: Page) {
-  await page.getByRole('radio', { name: 'Custom' }).click();
-  await page.getByRole('button', { name: /–/ }).click();
+  await page.getByRole('radio', { name: /^Custom/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Choose a custom date range' });
   await expect(dialog).toBeVisible();
   return dialog;
@@ -130,7 +129,7 @@ test.describe('with three months of history', () => {
     await dayButton(dialog, 20).click();
     await dialog.getByRole('button', { name: 'Apply' }).click();
     await expect(dialog).toBeHidden();
-    const rangeButton = page.getByRole('button', { name: /–/ });
+    const rangeButton = page.getByRole('radio', { name: /^Custom: .*–/ });
     await expect(rangeButton).toContainText('5');
     await expect(rangeButton).toContainText('20');
   });
@@ -149,7 +148,7 @@ test.describe('with three months of history', () => {
     await page.keyboard.press('Enter');
     await dialog.getByRole('button', { name: 'Apply' }).click();
     await expect(dialog).toBeHidden();
-    const rangeButton = page.getByRole('button', { name: /–/ });
+    const rangeButton = page.getByRole('radio', { name: /^Custom: .*–/ });
     await expect(rangeButton).toContainText('5');
     await expect(rangeButton).toContainText('10');
   });
@@ -160,7 +159,7 @@ test.describe('with three months of history', () => {
     const dialog = await openCalendar(page);
     await dialog.getByRole('button', { name: 'Last 7 days' }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByRole('button', { name: /–/ })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /^Custom: .*–/ })).toBeVisible();
     await expect(main.getByRole('region', { name: 'Activity' }).locator('.an-sum')).toContainText(
       'turn',
     );
@@ -174,12 +173,12 @@ test.describe('with three months of history', () => {
     await expect(future.first()).toBeDisabled();
   });
 
-  test('Escape closes the calendar and returns focus to the range button', async ({ page }) => {
+  test('Escape closes the calendar and returns focus to Custom', async ({ page }) => {
     await openAnalytics(page);
     await openCalendar(page);
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog', { name: 'Choose a custom date range' })).toBeHidden();
-    await expect(page.getByRole('button', { name: /–/ })).toBeFocused();
+    await expect(page.getByRole('radio', { name: /^Custom/ })).toBeFocused();
   });
 
   test('fits a phone without horizontal page scroll', async ({ page }) => {
@@ -206,7 +205,9 @@ test('is honest about an empty workspace', async ({ page }) => {
     'Not enough data yet',
   );
   await page.getByRole('radio', { name: 'Custom' }).click();
-  await expect(page.getByRole('button', { name: /–/ })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Choose a custom date range' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('radio', { name: 'Custom' })).toBeFocused();
 });
 
 test('shows skeletons matching the layout on a cold load, then real data', async ({ page }) => {

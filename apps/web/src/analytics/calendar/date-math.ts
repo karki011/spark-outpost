@@ -99,3 +99,19 @@ export function formatRangeLabel(from: string, to: string): string {
   });
   return `${fromFmt.format(fromDate)} – ${toFmt.format(toDate)}`;
 }
+
+export function formatShortRange(from: string, to: string, todayIso: string): string {
+  const fromDate = parseIsoLocal(from);
+  const toDate = parseIsoLocal(to);
+  const thisYear = parseIsoLocal(todayIso).getFullYear();
+  if (fromDate.getFullYear() !== thisYear || toDate.getFullYear() !== thisYear) {
+    return formatRangeLabel(from, to);
+  }
+  const monthDay = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+  if (from === to) return monthDay.format(fromDate);
+  const sameMonth = fromDate.getMonth() === toDate.getMonth();
+  const end = sameMonth
+    ? new Intl.DateTimeFormat(undefined, { day: 'numeric' }).format(toDate)
+    : monthDay.format(toDate);
+  return `${monthDay.format(fromDate)} – ${end}`;
+}
