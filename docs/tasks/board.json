@@ -143,7 +143,7 @@
       "id": "F-9",
       "title": "Authenticate UI, API, and stream with a per-launch token",
       "phase": "0",
-      "status": "ready",
+      "status": "review",
       "acceptance": [
         "Requests without the token are rejected",
         "Token never reaches logs or agent-visible artifacts",
@@ -154,6 +154,11 @@
           "date": "2026-09-27",
           "status": "ready",
           "text": "Prioritised for the Electron plan (docs/architecture/ELECTRON_PLAN.md): today any local program can call the API; host and origin checks only stop web pages."
+        },
+        {
+          "date": "2026-09-27",
+          "status": "review",
+          "text": "Every API request, the app and run event streams, uploads and the terminal socket require X-Spark-Token (401 otherwise, SHA-256 + timingSafeEqual); host/origin checks stay first. Launchers pass SPARK_API_TOKEN (removed from the API env); pnpm dev writes .local/api-token (0600) and the Vite proxy injects the header, so the browser never holds it. Agents are denied api-token files. Evidence: unit 158 files/1182 tests, db 53/306 on spark_outpost_test_token, browser --workers=1 170 passed / 5 axe/titles timeouts that passed on rerun (31/31 incl. launch-token spec). Random port and Electron injection remain for the Electron work."
         }
       ]
     },
