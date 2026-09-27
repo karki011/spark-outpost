@@ -96,7 +96,7 @@ describe('renaming a project', () => {
   it('sets and validates the build style, keeping it through a rename', async () => {
     const appRepo = await project(folders.app);
     const path = `/api/projects/${appRepo.id}`;
-    expect(appRepo.buildStyle).toBe('off');
+    expect(appRepo.buildStyle).toBeUndefined();
     const lean = await send('patch', path, { buildStyle: 'lean' }).expect(200);
     expect(lean.body.buildStyle).toBe('lean');
     const renamed = await send('patch', path, { name: 'App' }).expect(200);

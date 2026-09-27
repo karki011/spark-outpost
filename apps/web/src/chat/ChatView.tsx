@@ -1,5 +1,6 @@
 import {
   EMPTY_CONVERSATION_USAGE,
+  type AgentCommand,
   type Attachment,
   type TaskOverview,
 } from '@spark-outpost/contracts';
@@ -28,6 +29,7 @@ import { DropOverlay } from './attachments/DropOverlay.tsx';
 import { useAttachments } from './attachments/use-attachments.ts';
 import { useFileDrop } from './attachments/use-file-drop.ts';
 import { Composer } from './Composer.tsx';
+import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
 import { Thread } from './Thread.tsx';
@@ -35,6 +37,7 @@ import { activeRun } from './turns.ts';
 
 const NO_REPOS: string[] = [];
 const NO_TASKS: TaskOverview[] = [];
+const NO_COMMANDS: AgentCommand[] = [];
 
 export interface OutgoingMessage {
   content: string;
@@ -72,7 +75,16 @@ export function ChatView({ conversationId }: { conversationId: string }) {
   const attachments = useAttachments();
   const drop = useFileDrop(attachments.add);
   const stop = useMutation({ mutationFn: api.cancelRun, onSuccess: refresh });
-  const startFresh = useMutation({ mutationFn: () => api.startFreshSession(conversationId) });
+  const startFresh = useMutation({
+    mutationFn: () => api.startFreshSession(conversationId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.agentCommands(conversationId) }),
+  });
+  const commands = useQuery({
+    queryKey: queryKeys.agentCommands(conversationId),
+    queryFn: () => api.getAgentCommands(conversationId),
+    enabled: (detail.data?.runs.length ?? 0) > 0,
+  });
 
   const running = activeRun(detail.data);
   const title = detail.data?.conversation.title ?? '';
@@ -156,6 +168,9 @@ export function ChatView({ conversationId }: { conversationId: string }) {
             if (running) stop.mutate(running.id);
           }}
           {...(openAudit ? { onAudit: openAudit } : {})}
+          onStartFresh={() => startFresh.mutate()}
+          agentCommands={commands.data?.commands ?? NO_COMMANDS}
+          agentName={providerName(commands.data?.provider ?? detail.data?.settings.provider ?? '')}
         />
         <DropOverlay visible={drop.dragging} />
       </main>

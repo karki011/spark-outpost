@@ -328,3 +328,26 @@
     transform: none;
   }
 }
+
+.mpop.slashpop {
+  width: 380px;
+}
+.slashpop .fname small {
+  direction: ltr;
+}
+.slashpop .slash-hint {
+  color: var(--muted);
+  font-weight: 400;
+}
+.slashpop .slash-source {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.slashpop .slash-detail {
+  margin: 0;
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}

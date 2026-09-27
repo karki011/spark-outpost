@@ -213,6 +213,7 @@ export async function runAgentTurn(
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
       await tasks.observe(output);
       if (output.kind === 'session') await session?.started(output);
+      if (output.kind === 'commands') await session?.commands(output.commands);
       if (output.kind === 'session_settings') {
         await recordSessionSettings(deps.db, lease.runId, output);
       }

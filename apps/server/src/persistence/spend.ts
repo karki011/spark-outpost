@@ -114,16 +114,22 @@ function jevSlice(jev: JevRow): ProviderTotals[] {
   ];
 }
 
-async function routedRuns(db: Queryable, workspaceId: string, since: Date): Promise<RoutedRun[]> {
+export async function routedRuns(
+  db: Queryable,
+  workspaceId: string,
+  since: Date,
+  until: Date | null = null,
+): Promise<RoutedRun[]> {
   const { rows } = await db.query<RoutedRow>(
     `SELECT r.provider, COALESCE(r.used_model, r.model) AS model,
        r.route->>'modelLabel' AS model_label, r.input_tokens, r.output_tokens,
        r.cached_read_tokens, r.cached_write_tokens
      FROM runs r JOIN conversations c ON c.id = r.conversation_id
      WHERE c.workspace_id = $1 AND r.created_at >= $2
+       AND ($3::timestamptz IS NULL OR r.created_at < $3)
        AND r.route->>'routedBy' = 'jev'
        AND r.input_tokens IS NOT NULL AND r.output_tokens IS NOT NULL`,
-    [workspaceId, since],
+    [workspaceId, since, until],
   );
   return rows.map((row) => ({
     provider: row.provider,
@@ -138,7 +144,7 @@ async function routedRuns(db: Queryable, workspaceId: string, since: Date): Prom
   }));
 }
 
-async function offeredModels(
+export async function offeredModels(
   db: Queryable,
   workspaceId: string,
 ): Promise<Map<string, TierModel[]>> {

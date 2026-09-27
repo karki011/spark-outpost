@@ -270,7 +270,7 @@ describe('Critic alongside Builders and chains', () => {
     );
     expect(decisions[0]?.summary).toContain('Chains in parallel: steps 1 and 2 | step 3');
     expect(decisions[0]?.summary).toContain(
-      'Chains: split (rules; Jev did not answer on one Builder; rule: split) · worktrees (worktrees were requested;',
+      'Chains: split (decided by rule; Jev did not answer on one Builder; rule: split) · worktrees (need: requested, worktrees were requested;',
     );
   });
 

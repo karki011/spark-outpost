@@ -2,6 +2,7 @@ import {
   buildStyleRank,
   buildStyleSchema,
   BUILD_STYLES,
+  DEFAULT_BUILD_STYLE,
   type BuildStyle,
   type Gate,
   type ShortcutsBody,
@@ -17,7 +18,7 @@ import type { Queryable } from '../persistence/db.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { callJev, type JevCall } from './jev-calls.ts';
-import { harvestShortcuts, ruleBuildStyle, type StyleRule } from './lean.ts';
+import { harvestShortcuts, ruleBuildStyle, type ProjectStyle, type StyleRule } from './lean.ts';
 import { changesSoFar } from './members.ts';
 import type { Session } from './session.ts';
 
@@ -29,8 +30,10 @@ const STYLE_CRITERIA: Record<BuildStyle, string> = {
   off: 'Normal: `task` is not about writing code, or it asks for broad, thorough work that trimming would go against',
 };
 
-export async function projectBuildStyle(db: Queryable, runId: string): Promise<BuildStyle> {
-  const { rows } = await db.query<{ build_style: string }>(
+export const NO_PROJECT_STYLE: ProjectStyle = { style: 'off', source: 'project setting' };
+
+export async function projectBuildStyle(db: Queryable, runId: string): Promise<ProjectStyle> {
+  const { rows } = await db.query<{ build_style: string | null }>(
     `SELECT p.build_style FROM runs r
      JOIN conversation_projects cp ON cp.conversation_id = r.conversation_id
      JOIN projects p ON p.id = cp.project_id
@@ -39,7 +42,11 @@ export async function projectBuildStyle(db: Queryable, runId: string): Promise<B
      LIMIT 1`,
     [runId],
   );
-  return buildStyleSchema.catch('off').parse(rows[0]?.build_style ?? 'off');
+  const row = rows[0];
+  if (!row) return NO_PROJECT_STYLE;
+  if (row.build_style === null) return { style: DEFAULT_BUILD_STYLE, source: 'default' };
+  const style = buildStyleSchema.catch(DEFAULT_BUILD_STYLE).parse(row.build_style);
+  return { style, source: 'project setting' };
 }
 
 export function allowedStyles(project: BuildStyle): BuildStyle[] {
@@ -107,9 +114,9 @@ async function askJev(s: Session, project: BuildStyle, rule: StyleRule): Promise
 export async function decideBuildStyle(s: Session): Promise<void> {
   if (s.buildStyleDecided) return;
   s.buildStyleDecided = true;
-  const project = s.projectStyle;
+  const { style: project, source } = s.projectStyle;
   if (project === 'off') return;
-  const rule = ruleBuildStyle(project, s.input.mode, s.input.userRequest);
+  const rule = ruleBuildStyle(project, s.input.mode, s.input.userRequest, source);
   const call = await askJev(s, project, rule);
   const pick =
     call?.status === 'answered' && call.response ? parseStyleAnswer(call.response, project) : null;

@@ -308,7 +308,7 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
     - Opus 5.5 for a Claude Architect
     - the chat's model for Builders
     - 6 Sol for a Codex Critic
-  - Destructive Architect routes keep the rule's top tier as today, so Jev's frontier pick is recorded but never applied there.
+  - Destructive Architect routes keep the rule's tier (top tier, or Sonnet for destructive work that names its files or a narrow scope, round 7), so Jev's frontier pick is recorded but never applied there.
   - Escalation (`oneTierUp`) never reaches frontier, even when the setting is on.
 - **Codex is read-only in our harness** (no Do, see the provider card). So a Codex frontier pick can only apply to the read-only roles: Scout, Architect and Critic. Builders never run on Codex, whatever the setting. In practice today that means the Critic (Codex reviews Claude work) and the Scout of a Codex Ask chat. An Architect runs only in Do orchestrations, which stay on Claude while Codex has no Do.
 - **Recorded like every other Jev decision.**

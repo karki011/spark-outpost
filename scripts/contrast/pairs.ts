@@ -1,5 +1,15 @@
+import { ANALYTICS } from './analytics-pairs.ts';
 import { AGENT_TV, DIFF, OFFLINE } from './content-pairs.ts';
-import { ACCENT, CHIPS, DROP_TARGET, FORMS, HOME, PROVIDERS, STATUS } from './interface-pairs.ts';
+import {
+  ACCENT,
+  CHIPS,
+  COMPANION,
+  DROP_TARGET,
+  FORMS,
+  HOME,
+  PROVIDERS,
+  STATUS,
+} from './interface-pairs.ts';
 import { surfaceText, type HuePair, type Pair, type PairKind } from './pair-types.ts';
 
 export type { HuePair, Pair, PairKind };
@@ -33,6 +43,8 @@ export const PAIRS: Pair[] = [
   ...DROP_TARGET,
   ...PROVIDERS,
   ...HOME,
+  ...COMPANION,
+  ...ANALYTICS,
   ...DIFF,
   ...OFFLINE,
   ...AGENT_TV,

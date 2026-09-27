@@ -41,11 +41,11 @@ Code:
 A chat can be linked to one or more project folders (repos) with `PATCH /api/conversations/:id/settings {projectIds}`. The list is ordered and the first repo is the primary one. Links live in `conversation_projects (conversation_id, project_id, position)`. Its runs are in Ask mode: the agent may read inside the folders but not change anything. See [agent adapters](AGENT_ADAPTERS.md) for what each adapter really does.
 
 - **Session (Claude).** `cwd` is the primary repo's real root; the agent process also starts there. The other repos go in `session/new.additionalDirectories` (absolute paths) only when `initialize` advertises `agentCapabilities.sessionCapabilities.additionalDirectories`. claude-agent-acp 0.81.2 advertises it. When an agent doesn't, the run keeps only the primary repo and adds a step such as "Claude can only open one repo per chat; using spark-outpost". If a root is gone, the run fails with a readable error naming it.
-- **Session (Codex).** codex-acp 1.13.1's `read-only` mode is really a workspace-write sandbox rooted at `cwd`. We patch it (`patches/@agentclientprotocol__codex-acp@1.13.1.patch`, the same change as upstream [codex-acp#480](https://github.com/agentclientprotocol/codex-acp/pull/480)) so `read-only` is a `readOnly` sandbox: no writes, no network, reads allowed. Codex project runs start in the primary repo with `shell_tool` on, and get the other repos as `additionalDirectories`, which stay read-only because the adapter only widens `workspaceWrite` policies. A unit test fails if the patch is missing. Known gap: Codex's sandbox can read the whole disk, including secret files, so our secret-file list doesn't bind Codex. Remove the patch when a codex-acp release includes #480.
+- **Session (Codex).** codex-acp 1.13.1's `read-only` mode is really a workspace-write sandbox rooted at `cwd`. We patch it (`patches/@agentclientprotocol__codex-acp@1.13.1.patch`, the same change as upstream [codex-acp#480](https://github.com/agentclientprotocol/codex-acp/pull/480)) so `read-only` is a `readOnly` sandbox: no writes, no network, reads allowed. Codex project runs start in the primary repo with `shell_tool` on, and get the other repos as `additionalDirectories`, which stay read-only because the adapter only widens `workspaceWrite` policies. A unit test fails if the patch is missing. Known gap: Codex's sandbox can read the whole disk, including secret files, so our secret-file list doesn't bind Codex. Remove this part of the patch when a codex-acp release includes #480; every patch part, its guard tests and the upgrade checklist are in [PATCHES.md](PATCHES.md).
 - **Prompt.** The chat-only note is replaced by a note listing every linked folder, marking the primary one, and saying the agent may read files in them but must not change files or read outside them. Codex runs keep the chat-only note.
 - **Client file system.** Only runs that read folders advertise `fs.readTextFile: true`; `writeTextFile` stays false.
   - `fs/read_text_file` goes through `projects/path-policy.ts` across all linked roots: absolute paths only, lexically and after `realpath` inside one of the roots (the closest root wins for nested repos, and every containing root's rules apply), secret files refused (the list in `projects/secret-files.ts`: `.env` and `.env.*` except `.env.example`, SSH keys `id_rsa`, `id_ed25519`, `id_ecdsa`, `id_dsa` and their `.pub` files, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `.npmrc`, `.netrc`, `.pgpass`, `.pypirc`, `.git-credentials`, `credential(s)` files, plus each root's `.sparkignore` entries), 1 MB cap. Relative paths resolve against the primary root. `line` (1-based) and `limit` are honoured. A read adds a "Read `relative/path`" step (prefixed with the repo name when several are linked); a refusal adds "Refused `path` (reason)" and answers `invalid_params`; a missing file answers `resource_not_found`.
-  - `fs/write_text_file` is always answered with an error and a "Declined: Write `path` (…)" step.
+  - `fs/write_text_file` isn't advertised, so a call is answered `method_not_found` (-32601) with a "Declined: Write `path` (…)" step.
 - **Permissions.** In Ask, requests are still declined with reject-once; in a project the step says "Ask mode only reads files; switch to Do to allow changes". The safe-mode lock is unchanged. Do mode is described below.
 - **How Claude reads.** claude-agent-acp 0.81.2 never calls `fs/read_text_file`; it reads the disk with its own tools. Project runs get `tools: ['Read', 'Glob', 'Grep']` in `default` mode, and every Claude session (chat or project) is hardened through `_meta.claudeCode.options`:
   - `settingSources: []`, so the repo's and user's hooks, `env` and `apiKeyHelper` aren't loaded
@@ -200,7 +200,7 @@ In a chat there is little to show: Claude's tools are off, so a Claude chat usua
 ## Agent warnings and errors
 
 - Spark Outpost declares ACP `session.notices` and the `sessionFailure` extension (`_meta.jetbrains.air`) at `initialize`. Without them, codex-acp sends warnings and errors as ordinary reply text, and a failed turn looked like a successful answer.
-- Warnings and info notices appear as steps in the work log, for example "Warning: Reconnecting... 2/5". An error notice fails the run with a readable message.
+- Notices appear as steps in the work log, for example "Warning: Reconnecting... 2/5" or "Error: …". As the session notices RFD requires, an `error` notice is advisory and never fails the run (changed September 27); a failure comes from the stop reason, a JSON-RPC error or `sessionFailure`. Neither pinned adapter sends `error` notices.
 - With the extension on, codex-acp records a terminal error without sending it, so the turn just ends. The provider therefore treats a turn that ends with no reply text as a failure: "{Agent} finished without a reply…", which suggests checking its login.
 - Seen on September 25, 2026: Codex's ChatGPT login began returning 401 from `chatgpt.com/backend-api/codex/responses`, for the user's own `codex` CLI as well. Running `codex logout && codex login` is the fix. It is not a Spark Outpost setting.
 
@@ -226,7 +226,7 @@ In a chat there is little to show: Claude's tools are off, so a Claude chat usua
 
 ## Known gaps against the ACP spec
 
-From a review of the v1 spec pages (prompt turn, content, elicitation, session modes, session config options, file system).
+From a review of the v1 spec pages (prompt turn, content, elicitation, session modes, session config options, file system). The September 27 compliance audit is in [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md).
 
 Handled:
 
@@ -243,11 +243,11 @@ Handled:
 Still open:
 
 - Persisted activity for finished runs marks every step done, so cancelled steps only show as not finished while the run is live.
-- `tool_call_update` title changes, tool-call `content` (diffs, terminals), `locations`, thought text, `available_commands_update`, and `plan_update`/`plan_removed` are ignored. Non-link content blocks in agent messages are dropped.
+- `tool_call_update` title changes, tool-call `content` (diffs, terminals), `locations`, thought text and `plan_update`/`plan_removed` are ignored. `available_commands_update` feeds the composer's `/` menu (see [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md#slash-commands)). Non-link content blocks in agent messages are dropped.
 
 ## Extensibility and other agents
 
-- Our `_meta` use follows the extensibility rules: vendor-namespaced keys in `clientCapabilities._meta` and `session/new._meta`, no custom methods, and no new root fields. `session.notices` is experimental in SDK 1.5.0, so keep the SDK version pinned. The run and the capability probe share `CLIENT_CAPABILITIES` and `CLIENT_INFO` from `client-info.ts`, so both advertise `sessionFailure` and notices.
+- Our `_meta` use follows the extensibility rules: vendor-namespaced keys in `clientCapabilities._meta` and `session/new._meta`, no custom methods, and no new root fields. `session.notices` is an unstable spec field in SDK 1.5.0 (not ours), so keep the SDK version pinned. The full audit is in [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md). The run and the capability probe share `CLIENT_CAPABILITIES` and `CLIENT_INFO` from `client-info.ts`, so both advertise `sessionFailure` and notices.
 - **Gemini CLI** (`gemini --acp`) as a third provider needs:
   - model selection through `unstable_setSessionModel` once the SDK exposes it. The legacy `modes` and `models` fallback already covers mode switching and model capabilities.
   - a per-run config that turns off the user's MCP servers and local file tools. It adds servers from `~/.gemini/settings.json` even when we pass none, and reads the disk directly when client fs is off.

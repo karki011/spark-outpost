@@ -13,6 +13,7 @@ import {
 } from 'react';
 import {
   MESSAGE_MAX_LENGTH,
+  type AgentCommand,
   type Attachment,
   type ChatSettings,
   type ConversationUsage,
@@ -21,11 +22,25 @@ import {
   type ProviderSetup,
   type Run,
 } from '@spark-outpost/contracts';
+import { useQuery } from '@tanstack/react-query';
+import { api, queryKeys } from '../api/client.ts';
 import { usePopover } from '../ui/use-popover.ts';
 import { AttachmentChips } from './attachments/AttachmentChips.tsx';
 import type { AttachmentsState } from './attachments/use-attachments.ts';
 import { ContextRing } from './composer/ContextRing.tsx';
-import { ModelPicker } from './composer/ModelPicker.tsx';
+import { ModelPicker, type PickerRequest } from './composer/ModelPicker.tsx';
+import {
+  blockedMessage,
+  clientCommand,
+  effortHint,
+  typedCommandNote,
+  parseSlash,
+  planPrompt,
+  reviewPrompt,
+  type ClientCommandName,
+} from './composer/slash.ts';
+import { SlashMenu } from './composer/SlashMenu.tsx';
+import { useSlash } from './composer/use-slash.ts';
 import { takeDraft, usePendingDraft } from './composer/pending-draft.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
 import { ContextBar } from './project/ContextBar.tsx';
@@ -50,8 +65,14 @@ interface ComposerProps {
   onSend: (content: string, attachments: Attachment[]) => Promise<void>;
   onStop: () => void;
   onAudit?: () => void;
+  onStartFresh?: () => void;
+  agentCommands?: readonly AgentCommand[];
+  agentName?: string;
   autoFocus?: boolean;
 }
+
+const NO_COMMANDS: readonly AgentCommand[] = [];
+const CAPABILITIES_STALE_MS = 60 * 60 * 1000;
 
 const MAX_ROWS = 5;
 
@@ -71,6 +92,9 @@ export function Composer({
   onSend,
   onStop,
   onAudit,
+  onStartFresh,
+  agentCommands = NO_COMMANDS,
+  agentName = 'Agent',
   autoFocus = true,
 }: ComposerProps) {
   const [draft, setDraft] = useState('');
@@ -91,6 +115,62 @@ export function Composer({
     setDraft,
     textareaRef,
     onPick: addFromRepo,
+  });
+  const [pickerRequest, setPickerRequest] = useState<PickerRequest | null>(null);
+  const provider = settings?.provider ?? null;
+  const capabilities = useQuery({
+    queryKey: queryKeys.capabilities(provider ?? 'claude'),
+    queryFn: () => api.getCapabilities(provider ?? 'claude'),
+    staleTime: CAPABILITIES_STALE_MS,
+    enabled: provider !== null,
+  });
+  const canStartFresh = onStartFresh !== undefined;
+  const hasSettings = settings !== null;
+  const efforts = capabilities.data?.efforts;
+  const slashContext = useMemo(
+    () => ({
+      agentName,
+      effortHint: effortHint(efforts ?? []),
+      hidden: new Set<ClientCommandName>([
+        ...(canStartFresh ? [] : (['fresh'] as const)),
+        ...(hasSettings ? [] : (['model', 'effort'] as const)),
+      ]),
+    }),
+    [agentName, efforts, canStartFresh, hasSettings],
+  );
+  const runClientCommand = (command: ClientCommandName, args = ''): string | null => {
+    if (command === 'fresh') {
+      onStartFresh?.();
+      attachments.notify(
+        onStartFresh
+          ? 'Started fresh. Your next message opens a new agent session.'
+          : 'This chat has no agent session yet.',
+      );
+      return null;
+    }
+    if (command === 'model' || command === 'effort') {
+      setPickerRequest({
+        section: command,
+        id: (pickerRequest?.id ?? 0) + 1,
+        ...(args ? { value: args } : {}),
+      });
+      return null;
+    }
+    if (command === 'plan') {
+      if (args) return planPrompt(args);
+      attachments.notify('Add what to plan after /plan.');
+      setDraft('/plan ');
+      return null;
+    }
+    return reviewPrompt(args);
+  };
+  const slash = useSlash({
+    draft,
+    setDraft,
+    textareaRef,
+    agentCommands,
+    context: slashContext,
+    onRun: (command) => void runClientCommand(command),
   });
   const closeRepo = useCallback(() => {
     setRepoOpen(false);
@@ -130,17 +210,36 @@ export function Composer({
     !attachments.uploading &&
     !attachments.failed;
 
+  const outgoing = (): string | null => {
+    const parsed = parseSlash(draft);
+    const command = clientCommand(parsed);
+    if (command && parsed) {
+      setDraft('');
+      return runClientCommand(command, parsed.args);
+    }
+    const blocked = blockedMessage(parsed);
+    if (blocked) {
+      attachments.notify(blocked);
+      return null;
+    }
+    return draft;
+  };
+
   const submit = async () => {
     if (!canSend) return;
-    const content = draft;
+    const draftText = draft;
+    const content = outgoing();
+    if (content === null) return;
     setDraft('');
     try {
       await onSend(content, attachments.uploaded);
       attachments.clear();
     } catch {
-      setDraft(content);
+      setDraft(draftText);
     }
   };
+
+  const typedNote = typedCommandNote(parseSlash(draft), slash.all, agentName);
 
   const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const files = Array.from(event.clipboardData.files);
@@ -150,6 +249,7 @@ export function Composer({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (slash.handleKey(event)) return;
     if (mention.handleKey(event)) return;
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
@@ -174,9 +274,31 @@ export function Composer({
         <p className="composer-notice" role="status">
           {attachments.notice}
         </p>
+        {typedNote && !slash.open && (
+          <p className="composer-notice" role="status">
+            {typedNote}
+          </p>
+        )}
         <label className="sr-only" htmlFor={inputId}>
           Message
         </label>
+        {slash.open && (
+          <SlashMenu
+            listId={slash.listId}
+            items={slash.items}
+            active={slash.active}
+            agentName={agentName}
+            emptyNote={typedNote}
+            onActive={slash.setActive}
+            onPick={(item) => {
+              slash.pick(item);
+              textareaRef.current?.focus();
+            }}
+            onKeyDown={(event) => {
+              if (slash.handleKey(event)) textareaRef.current?.focus();
+            }}
+          />
+        )}
         {mention.open && (
           <MentionPicker
             listId={mention.listId}
@@ -201,14 +323,29 @@ export function Composer({
           value={draft}
           rows={Math.min(MAX_ROWS, Math.max(1, draft.split('\n').length))}
           maxLength={MESSAGE_MAX_LENGTH}
-          placeholder={hasRepos ? 'Ask anything, @ to add a file' : 'Ask anything'}
-          {...mention.inputProps}
+          placeholder={
+            hasRepos
+              ? 'Ask anything, @ to add a file, / for commands'
+              : 'Ask anything, / for commands'
+          }
+          {...(slash.open ? slash.inputProps : mention.inputProps)}
           onChange={(event) => {
             setDraft(event.target.value);
+            slash.sync(event.target);
             mention.sync(event.target);
           }}
-          onSelect={(event) => mention.sync(event.currentTarget)}
-          onBlur={() => mention.dismiss()}
+          onSelect={(event) => {
+            slash.sync(event.currentTarget);
+            mention.sync(event.currentTarget);
+          }}
+          onBlur={(event) => {
+            if (!(
+              event.relatedTarget instanceof Element && event.relatedTarget.closest('.slashpop')
+            )) {
+              slash.dismiss();
+            }
+            mention.dismiss();
+          }}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
         />
@@ -225,6 +362,8 @@ export function Composer({
           </span>
           {settings && (
             <ModelPicker
+              openRequest={pickerRequest}
+              onNotice={attachments.notify}
               conversationId={conversationId}
               settings={settings}
               providers={providers}

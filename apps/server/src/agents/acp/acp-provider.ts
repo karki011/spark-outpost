@@ -21,7 +21,7 @@ import {
   followUpBlocks,
   type PromptSupport,
 } from './conversation-prompt.ts';
-import { failureError, toProviderError } from './errors.ts';
+import { assertProtocolVersion, failureError, toProviderError } from './errors.ts';
 import { declineInConversation } from './permissions.ts';
 import { applySessionSettings } from './apply-settings.ts';
 import { offeredCapabilities } from './capabilities.ts';
@@ -41,6 +41,7 @@ import {
 } from './session-open.ts';
 import { createUpdateMapper, type UpdateMapper } from './session-updates.ts';
 import { promptTokens } from './prompt-usage.ts';
+import { slashPrompt } from './slash-commands.ts';
 import { TITLE_REQUEST } from '../../titles/title-line.ts';
 
 export interface AcpProviderOptions {
@@ -319,11 +320,7 @@ async function converse(
         clientInfo: CLIENT_INFO,
       },
     );
-    if (init.protocolVersion !== acp.PROTOCOL_VERSION) {
-      throw new ProviderError(
-        `${definition.name} speaks ACP version ${init.protocolVersion}, but Spark Outpost needs ${acp.PROTOCOL_VERSION}.`,
-      );
-    }
+    assertProtocolVersion(definition.name, init);
     const support = promptSupport(init);
     if (!support.image && turn.attachments?.some((attachment) => attachment.kind === 'image')) {
       throw new ProviderError(
@@ -376,7 +373,15 @@ async function converse(
       const history = continued ? [] : turn.history;
       for (const step of contextSteps(history, promptOptions)) push(mapper.note(step));
       const request = continued ? (turn.session?.followUp ?? turn.prompt) : turn.prompt;
-      const text = turn.askTitle ? `${request}\n\n${TITLE_REQUEST}` : request;
+      const slash = slashPrompt(
+        request,
+        definition.name,
+        continued ? (turn.session?.resume?.commands ?? []) : null,
+      );
+      if (slash.note) push(mapper.note(slash.note));
+      const asked = continued ? slash.text : request;
+      const text =
+        turn.askTitle && slash.kind !== 'command' ? `${asked}\n\n${TITLE_REQUEST}` : asked;
       const blocks = continued
         ? followUpBlocks(text, promptOptions)
         : conversationBlocks(history, text, promptOptions);

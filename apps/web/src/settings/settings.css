@@ -151,3 +151,11 @@
     padding: 12px 16px 20px;
   }
 }
+
+.companion-setting {
+  margin-top: 24px;
+}
+
+.companion-setting .seg {
+  max-width: 240px;
+}

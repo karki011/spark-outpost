@@ -92,8 +92,13 @@ export interface SessionStart {
   replacedReason: string;
 }
 
-export async function startProviderSession(db: Db, start: SessionStart): Promise<string> {
+export async function startProviderSession(db: Db, start: SessionStart): Promise<string | null> {
   return withTransaction(db, async (client) => {
+    const conversation = await client.query(
+      'SELECT 1 FROM conversations WHERE id = $1 FOR KEY SHARE',
+      [start.conversationId],
+    );
+    if (!conversation.rowCount) return null;
     const { rows } = await client.query<{ id: string }>(
       `UPDATE provider_sessions SET last_used_at = now(), last_message_id = NULL,
               last_reply_hash = NULL

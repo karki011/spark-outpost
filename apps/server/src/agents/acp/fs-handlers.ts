@@ -48,7 +48,7 @@ export function refuseWrite(
 ): never {
   const reason = inProject ? ASK_MODE_REASON : NO_FOLDER_REASON;
   report(`Declined: Write \`${params.path}\` (${reason})`);
-  throw acp.RequestError.invalidRequest({ path: params.path }, `Declined: ${reason}.`);
+  throw acp.RequestError.methodNotFound(acp.methods.client.fs.writeTextFile);
 }
 
 async function currentText(target: string): Promise<string | null> {
@@ -103,7 +103,10 @@ export async function writeTextFile(
     home: context.home,
   });
   context.annotate(answer.note);
-  if (answer.outcome !== 'selected' || !answer.allowed) {
+  if (answer.outcome === 'cancelled') {
+    throw acp.RequestError.requestCancelled({ path: params.path }, 'The turn was stopped.');
+  }
+  if (!answer.allowed) {
     throw acp.RequestError.invalidRequest(
       { path: params.path },
       'Declined: the write was not approved.',

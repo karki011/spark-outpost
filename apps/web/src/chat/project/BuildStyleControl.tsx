@@ -13,7 +13,7 @@ const LABELS: Record<BuildStyle, string> = { off: 'Off', lite: 'Lite', lean: 'Le
 const HINTS: Record<BuildStyle, string> = {
   off: 'Builders work as usual.',
   lite: 'Builders build everything asked and name a leaner option.',
-  lean: 'Builders reuse, use the standard library and native features first, and mark shortcuts with lean: comments. Validation, security and accessibility are never trimmed.',
+  lean: 'The default. Builders reuse, use the standard library and native features first, and mark shortcuts with lean: comments. Validation, security and accessibility are never trimmed. Jev can still pick a lighter style for a task.',
 };
 
 export function BuildStyleControl({ project }: { project: Project }) {

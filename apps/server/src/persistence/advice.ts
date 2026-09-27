@@ -7,6 +7,7 @@ import {
   type AdvisorUsage,
   type CapabilityOption,
   type Depth,
+  type MechanicalNote,
   type ModelRouting,
   type ProviderId,
   type ProviderModel,
@@ -43,6 +44,18 @@ export async function noteIntakeDepth(
     `UPDATE run_advice SET body = body || jsonb_build_object('depthNote', $2::jsonb)
      WHERE run_id = $1 AND purpose = 'intake'`,
     [runId, JSON.stringify(depthNote)],
+  );
+}
+
+export async function noteIntakeMechanical(
+  db: Queryable,
+  runId: string,
+  mechanical: MechanicalNote,
+): Promise<void> {
+  await db.query(
+    `UPDATE run_advice SET body = body || jsonb_build_object('mechanical', $2::jsonb)
+     WHERE run_id = $1 AND purpose = 'intake'`,
+    [runId, JSON.stringify(mechanical)],
   );
 }
 

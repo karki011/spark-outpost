@@ -9,6 +9,7 @@ import { ThemeCards } from '../theme/ThemeCards.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
 import { AutoContinueSetting } from './AutoContinueSetting.tsx';
+import { CompanionSetting } from './CompanionSetting.tsx';
 import { ProfileSection } from './ProfileSection.tsx';
 import '../onboarding/tools.css';
 import './settings.css';
@@ -204,6 +205,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                   <>
                     <p className="lede">Pick a theme. It applies everywhere right away.</p>
                     <ThemeCards />
+                    <CompanionSetting />
                   </>
                 )}
               </motion.div>

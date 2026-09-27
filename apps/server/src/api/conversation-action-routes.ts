@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   pinnedOrderRequestSchema,
+  type AgentCommandsResponse,
   updateConversationRequestSchema,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
@@ -16,6 +17,9 @@ import {
   conversationWorkdirs,
 } from '../persistence/provider-sessions.ts';
 import { removeWorkdirs } from '../workflow/turn-session.ts';
+import { allowedCommands } from '../agents/acp/slash-commands.ts';
+import { resolveChatSettings } from '../persistence/chat-settings.ts';
+import { openChatCommands } from '../persistence/session-commands.ts';
 import { paramId, parseBody } from './validation.ts';
 
 export interface ConversationActionDeps {
@@ -51,6 +55,14 @@ export function conversationActionRoutes({ db, workspaceId }: ConversationAction
       SESSION_CLOSE_REASONS.fresh,
     );
     res.json({ closed });
+  });
+
+  router.get('/conversations/:id/agent-commands', async (req, res) => {
+    const id = paramId(req);
+    const { provider } = await resolveChatSettings(db, id);
+    const commands = provider ? await openChatCommands(db, workspaceId, id, provider) : [];
+    const response: AgentCommandsResponse = { provider, commands: allowedCommands(commands) };
+    res.json(response);
   });
 
   router.post('/conversations/:id/read', async (req, res) => {

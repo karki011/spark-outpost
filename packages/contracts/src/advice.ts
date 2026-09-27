@@ -62,6 +62,7 @@ export const jevIntakeSchema = intakeAnswerSchema.extend({
   scope: scopeSchema.nullable().optional(),
   reviewExisting: z.number().min(0).max(1).optional(),
   vague: z.number().min(0).max(1).optional(),
+  mechanical: z.number().min(0).max(1).optional(),
   confidence: z.number().min(0).max(1),
   routeConfidence: z.number().min(0).max(1).nullable(),
   confidences: z.record(z.string(), z.number()),
@@ -78,6 +79,15 @@ export const gateSchema = z.object({
   clarifyBelow: z.number().nullable(),
 });
 export type Gate = z.infer<typeof gateSchema>;
+
+export const mechanicalNoteSchema = z.object({
+  mechanical: z.boolean(),
+  source: z.enum(['jev', 'rules']),
+  jev: z.number().min(0).max(1).nullable(),
+  rule: z.boolean(),
+  summary: z.string(),
+});
+export type MechanicalNote = z.infer<typeof mechanicalNoteSchema>;
 
 export const adviceUsageSchema = z.object({
   inputTokens: z.number().int().nonnegative(),
@@ -103,6 +113,7 @@ export const adviceSummarySchema = z.object({
   latencyMs: z.number().int().nonnegative().nullable(),
   usage: adviceUsageSchema.nullable(),
   depthNote: z.object({ depth: depthSchema, reason: z.string() }).nullable().optional(),
+  mechanical: mechanicalNoteSchema.nullable().optional(),
   title: z.object({ text: z.string(), origin: titleOriginSchema }).nullable().optional(),
 });
 export type AdviceSummary = z.infer<typeof adviceSummarySchema>;

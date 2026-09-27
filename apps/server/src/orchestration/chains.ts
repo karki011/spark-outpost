@@ -59,6 +59,13 @@ export function stepNotesFromReply(text: string, count: number): StepNotes {
   return notes;
 }
 
+const PARALLEL_CHAINS_LINE = /^[\s*_#>-]*parallel chains[\s*_]*:[\s*_]*(yes|no)\b/im;
+
+export function parallelChainsFromReply(text: string): boolean | null {
+  const answer = PARALLEL_CHAINS_LINE.exec(text)?.[1];
+  return answer === undefined ? null : answer.toLowerCase() === 'yes';
+}
+
 export function chainsFromReply(text: string, count: number): number[][] {
   const chains: number[][] = [];
   for (const match of text.matchAll(CHAIN_LINE)) {
@@ -68,6 +75,14 @@ export function chainsFromReply(text: string, count: number): number[][] {
     if (steps.length > 0) chains.push(steps);
   }
   return chains.length > 1 ? chains : [];
+}
+
+export function architectChains(
+  text: string,
+  count: number,
+  depends: readonly (number[] | null)[],
+): { chains: number[][]; depends: readonly (number[] | null)[]; parallel: boolean | null } {
+  return { chains: chainsFromReply(text, count), depends, parallel: parallelChainsFromReply(text) };
 }
 
 export function withFilesLines(steps: readonly string[], notes: StepNotes): string[] {

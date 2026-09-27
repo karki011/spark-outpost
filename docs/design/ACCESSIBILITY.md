@@ -90,7 +90,7 @@ Two uses are decorative and are not held to 3:1. The lighter shades that mark ch
 
 ### Automated check
 
-`pnpm a11y:contrast` (part of `pnpm check`) resolves the tokens for every theme from `apps/web/public/theme.css`, `chat/approvals/diff-view.css` and `chat/markdown/code-tokens.css`. It composites the translucent layers (`color-mix`, `rgba`), then checks 142 text and UI pairings plus one hue check per theme. It prints a table per theme and exits non-zero on any failure. The pairings are listed in `scripts/contrast/*-pairs.ts`. When a feature puts text on a new surface, add a pair for it.
+`pnpm a11y:contrast` (part of `pnpm check`) resolves the tokens for every theme from `apps/web/public/theme.css`, `chat/approvals/diff-view.css` and `chat/markdown/code-tokens.css`. It composites the translucent layers (`color-mix`, `rgba`), then checks 153 text and UI pairings plus one hue check per theme. It prints a table per theme and exits non-zero on any failure. The pairings are listed in `scripts/contrast/*-pairs.ts`. When a feature puts text on a new surface, add a pair for it.
 
 The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every entry gives its reason:
 
@@ -145,6 +145,7 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 - **Sidebar drag and drop:** the lifted copy of the row scales up slightly, its blob wiggles when the drop target changes, the card bounces a little when it lands in a new project, and that project's header pulses. The dragged row stays in the list as a faded ghost at the spot where it will land, and its neighbours slide apart in 200ms. Each reaction stays under 250ms and uses transform and opacity only. Under reduced motion the card only fades, the neighbours move without sliding, and the header only glows.
 - **Drag handles:** every draggable chat and project has a Move button that starts a keyboard drag. Up and down arrows choose the spot, right and left arrows move a chat into the project above or out to Chats, Space or Enter drops, and Escape cancels. A live region announces each step.
 - **Scout mascot:** the hop and squish springs play only when the mascot is poked or happy.
+- **Status companion:** the floating Scout outside open chats is a small delight zone. It floats 3px on a slow 5s loop, the needs-you ring pulses every 2.4s, and a finished run gives one 240ms ease-out bounce, however many runs finish together. The loops pause while the tab is hidden or the companion is being dragged, and the drop snaps to the nearest corner in 220ms. Under reduced motion it keeps a static mood, a static ring and fades only. The mood is never the only cue: the button's name reads the status ("Status: 2 need you, 5 running, 1 failed"), the badge shows the needs-you count as a number, and failures add a `!` mark. Every corner can also be chosen from the panel's Position control, so dragging is never required.
 - **Theme switch:** the circular reveal (650ms, `theme/reveal.ts`) runs longer than 250ms and doesn't use ease-out. It is skipped under reduced motion.
 - **Spinners:** they keep rotating under reduced motion because they show progress.
 - **Sidebar:** the collapse and expand animation and the resize handle are being reworked to the motion rules separately.

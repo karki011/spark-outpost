@@ -2,8 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
+import { requestCancel } from '../src/persistence/runs.ts';
 import { KEPT_FOR_SESSION } from '../src/orchestration/session-keep.ts';
 import {
   SCENARIOS,
@@ -18,7 +20,8 @@ import {
   type JevScript,
   type Scenario,
 } from './orchestration-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestDb, eventually, type TestDb } from './support.ts';
 
 const TRIVIAL = SCENARIOS[1] as Scenario;
 
@@ -107,5 +110,37 @@ describe('Auto routing on turn 2 of a chat with a resumable session', () => {
     expect(await sessionSteps(second.runId)).toContain('Fresh session (settings changed)');
     const route = second.orchestration.decisions.find((decision) => decision.kind === 'route');
     expect(route?.answer.session).toMatchObject({ kept: false });
+  }, 60_000);
+});
+
+describe('deleting a chat mid-run', () => {
+  it('refuses while the run is active, then deletes the chat and its sessions once it stopped', async () => {
+    const script: JevScript = { calls: [], scenario: TRIVIAL };
+    harness = startOrchestrator(t, jevFetch(script), { sessions: store });
+    const slow = { ...TRIVIAL, text: `${TRIVIAL.text} #slowbuild` };
+    const { conversationId, runId } = await startScenario(t, root, slow, 'hands-off');
+    await eventually(async () => {
+      const { rows } = await t.db.query(
+        'SELECT 1 FROM provider_sessions WHERE conversation_id = $1',
+        [conversationId],
+      );
+      return rows.length > 0 ? true : null;
+    }, 30_000);
+    const app = createTestApp(t);
+    const remove = () =>
+      request(app)
+        .delete(`/api/conversations/${conversationId}`)
+        .set('Host', HOST)
+        .set('Origin', ORIGIN)
+        .send({});
+    const busy = await remove().expect(409);
+    expect(busy.body.error).toMatch(/Stop the reply/);
+
+    await requestCancel(t.db, runId);
+    const { orchestration } = await driveToEnd(t, conversationId, runId);
+    expect(orchestration.status).toBe('cancelled');
+    await remove().expect(204);
+    const left = await t.db.query('SELECT 1 FROM provider_sessions');
+    expect(left.rows).toEqual([]);
   }, 60_000);
 });

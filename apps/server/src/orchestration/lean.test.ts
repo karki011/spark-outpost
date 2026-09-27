@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_BUILD_STYLE } from '@spark-outpost/contracts';
 import {
   architectStyle,
   builderStyle,
@@ -120,6 +121,13 @@ describe('the rule for a turn’s build style', () => {
     });
     expect(ruleBuildStyle('lean', 'do', 'Make it production-ready').style).toBe('lite');
     expect(ruleBuildStyle('lean', 'do', 'Add a date input').style).toBe('lean');
+  });
+
+  it('names the default when the project never chose a style', () => {
+    expect(ruleBuildStyle(DEFAULT_BUILD_STYLE, 'do', 'Add a cache', 'default')).toEqual({
+      style: 'lean',
+      reason: 'default',
+    });
   });
 });
 

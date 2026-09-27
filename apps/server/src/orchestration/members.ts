@@ -22,7 +22,7 @@ import { plansFirst } from './depth.ts';
 import { reviewNet, withBuilderStyle } from './lean.ts';
 import { labelFor, nameFor, recordRoute, resolveRoute } from './member-routes.ts';
 import { markPlanStep, recordsOwnPlan, stepTicker } from './plan-progress.ts';
-import { chainsFromReply, stepNotesFromReply, withFilesLines } from './chains.ts';
+import { architectChains, stepNotesFromReply, withFilesLines } from './chains.ts';
 import { largeFromReply, parallelFromReply } from './parallel.ts';
 import type { ParallelVerdicts } from './parallel-choice.ts';
 import { decideParallel } from './parallel-jev.ts';
@@ -446,7 +446,7 @@ async function afterPlan(s: Session, result: MemberResult): Promise<MemberOutcom
   s.architectNotes = architectNotes(result.text, readFiles(result.tools));
   const groups = parallelFromReply(result.text, steps.length);
   const large = largeFromReply(result.text, steps.length);
-  const chains = { chains: chainsFromReply(result.text, steps.length), depends: notes.depends };
+  const chains = architectChains(result.text, steps.length, notes.depends);
   const decision = await decideParallel(s, steps, groups, large, chains, result.runId);
   return {
     result,

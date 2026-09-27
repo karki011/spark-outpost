@@ -163,6 +163,14 @@ describe('fs/write_text_file in Do mode', () => {
     expect(await readFile(target, 'utf8')).toBe('before\n');
   });
 
+  it('answers request_cancelled when the write was cancelled while waiting', async () => {
+    const { stub } = gate(async () => ({ outcome: 'cancelled', note: 'Cancelled it' }));
+    const target = join(root, 'notes.txt');
+    const result = await run(`#fswrite ${target}`, stub);
+    expect(result.text).toContain(`[write ${target}=err:-32800]`);
+    expect(await readFile(target, 'utf8')).toBe('before\n');
+  });
+
   it('refuses secret files and paths outside the project before asking', async () => {
     const { stub, requests } = gate(allow);
     const result = await run(`#fswrite ${join(root, '.env')} #fswrite /tmp/elsewhere.txt`, stub);

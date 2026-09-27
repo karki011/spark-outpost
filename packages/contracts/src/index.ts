@@ -1,4 +1,5 @@
 export * from './advice.ts';
+export * from './agent-commands.ts';
 export * from './approvals.ts';
 export * from './artifacts.ts';
 export * from './attachments.ts';
@@ -23,3 +24,6 @@ export * from './model-cards.ts';
 export * from './home.ts';
 export * from './digest.ts';
 export * from './outcomes.ts';
+export * from './analytics.ts';
+export * from './analytics-spend.ts';
+export * from './analytics-harness.ts';

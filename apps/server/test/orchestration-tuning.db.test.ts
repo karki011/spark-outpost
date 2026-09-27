@@ -1,5 +1,5 @@
 import { mkdtempSync, rmSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -16,6 +16,8 @@ import {
   type JevScript,
   type Scenario,
 } from './orchestration-support.ts';
+import type { CheckBody } from '@spark-outpost/contracts';
+import { createProject } from '../src/projects/projects.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 const COMPLEX = SCENARIOS[3] as Scenario;
@@ -74,7 +76,7 @@ describe('a request that is already a plan', () => {
     expect(orchestration.crew[0]!.runId).toBe(runId);
     const intake = orchestration.decisions.find((decision) => decision.kind === 'intake');
     expect(intake?.summary).toBe(
-      'plan → execute · multi-file → execute: The request names its 3 files, so one Builder works from it without an Architect.',
+      'plan → execute · multi-file → execute: The request names its 3 files, so one Builder works from it without an Architect. · mechanical yes (rules; Jev did not answer; rule: yes)',
     );
     expect(intake?.answer.depthNote).toEqual({
       depth: 'execute',
@@ -99,6 +101,77 @@ describe('a request that is already a plan', () => {
     );
     expect(builder).toContain('Step 3: Update src/turns.ts for step 3');
     expect(orchestration.crew[1]?.planStep?.split('\n')).toHaveLength(3);
+  }, 60_000);
+});
+
+describe('a mechanical change across files', () => {
+  it('skips the Architect, runs one Builder with the checks and records Jev next to the rule', async () => {
+    await writeFile(join(root, 'check.mjs'), "console.log('ok');\n");
+    const { project } = await createProject(t.db, t.workspaceId, root);
+    await t.db.query('UPDATE projects SET check_commands = $2 WHERE id = $1', [
+      project.id,
+      ['node check.mjs'],
+    ]);
+    const { orchestration } = await run({
+      ...planned('Rename formatDay to formatDate in every component. #build', 0.65),
+      mechanical: 0.92,
+    });
+    expect(orchestration.status).toBe('succeeded');
+    expect(orchestration.depth).toBe('execute');
+    expect(orchestration.crew.map((member) => member.role)).toEqual(['builder']);
+    const intake = orchestration.decisions.find((decision) => decision.kind === 'intake');
+    expect(intake?.summary).toBe(
+      'plan → execute · multi-file → execute: The change applies one clear pattern across files, so one Builder does it without an Architect. · mechanical yes (jev; Jev 0.92; rule: yes)',
+    );
+    expect(intake?.answer.mechanical).toMatchObject({
+      mechanical: true,
+      source: 'jev',
+      rule: true,
+    });
+    const { rows } = await t.db.query<{ body: CheckBody }>(
+      `SELECT body FROM run_artifacts WHERE kind = 'check'`,
+    );
+    expect(rows.map((row) => row.body.status)).toEqual(['passed']);
+  }, 60_000);
+
+  it('still plans when Jev is sure the change is not mechanical', async () => {
+    const { orchestration } = await run({
+      ...planned('Rename formatDay to formatDate in every component. #build', 0.65),
+      mechanical: 0.08,
+    });
+    expect(orchestration.crew.map((member) => member.role)).toEqual(['architect', 'builder']);
+    const intake = orchestration.decisions.find((decision) => decision.kind === 'intake');
+    expect(intake?.summary).toContain('mechanical no (jev; Jev 0.08; rule: yes)');
+  }, 60_000);
+});
+
+describe('destructive work with a narrow scope', () => {
+  const RISKY = SCENARIOS[4] as Scenario;
+
+  it('plans with a Sonnet Architect when the request names its files, and keeps the Critic', async () => {
+    const { orchestration } = await run({
+      ...RISKY,
+      text: 'Drop the legacy column in src/db/schema.sql and migrate old rows. #build',
+    });
+    expect(orchestration.status).toBe('succeeded');
+    const roles = orchestration.crew.map((member) => member.role);
+    expect(roles[0]).toBe('architect');
+    expect(roles).toContain('critic');
+    expect(orchestration.crew[0]).toMatchObject({ model: 'sonnet', effort: 'high' });
+    const route = orchestration.decisions.find(
+      (decision) => decision.kind === 'route' && decision.role === 'architect',
+    );
+    expect(route?.answer.rule).toBe('narrow destructive');
+    expect(route?.summary).toContain('Auto would have used Sonnet 5');
+  }, 60_000);
+
+  it('keeps the top tier when destructive work names nothing', async () => {
+    const { orchestration } = await run(RISKY);
+    expect(orchestration.crew[0]).toMatchObject({ role: 'architect', model: 'opus[1m]' });
+    const route = orchestration.decisions.find(
+      (decision) => decision.kind === 'route' && decision.role === 'architect',
+    );
+    expect(route?.answer.rule).toBe('destructive');
   }, 60_000);
 });
 

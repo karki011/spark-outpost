@@ -17,7 +17,7 @@ export const homeKeys = {
   digest: ['home', 'digest'] as const,
 };
 
-function viewerTimeZone(): string {
+export function viewerTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 }
 

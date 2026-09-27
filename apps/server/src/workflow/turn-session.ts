@@ -1,5 +1,6 @@
 import { rm } from 'node:fs/promises';
 import { relative, isAbsolute } from 'node:path';
+import type { AgentCommand } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import {
   closeProviderSession,
@@ -12,6 +13,7 @@ import {
   sweepProviderSessions,
   type SweepLimits,
 } from '../persistence/provider-sessions.ts';
+import { recordSessionCommands, sessionCommands } from '../persistence/session-commands.ts';
 import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import type { RunInput } from './run-input.ts';
 import {
@@ -32,6 +34,7 @@ type UsageOutput = Extract<ProviderOutput, { kind: 'usage' }>;
 export interface TurnSession {
   target: SessionTarget;
   started(output: SessionOutput): Promise<void>;
+  commands(commands: readonly AgentCommand[]): Promise<void>;
   usage(output: UsageOutput): UsageOutput;
   finished(result: { outcome: string; messageId: string | null; text: string }): Promise<void>;
 }
@@ -76,13 +79,18 @@ export async function prepareTurnSession(
     idleMs: limits.idleMs,
   });
   const workdir = input.projectRoots.length === 0 ? sessionWorkdir(conversationId, key) : null;
+  const commands = decision.resume && stored ? await sessionCommands(db, stored.id) : [];
+  const resume =
+    decision.resume && commands.length > 0
+      ? { ...decision.resume, commands: commands.map((command) => command.name) }
+      : decision.resume;
   let rowId: string | null = null;
   let costBaseline = 0;
   let reportedCost: number | null = null;
   return {
     target: {
       workdir,
-      resume: decision.resume,
+      resume,
       freshReason: decision.freshReason,
       ...(input.followUp ? { followUp: input.followUp } : {}),
     },
@@ -104,7 +112,11 @@ export async function prepareTurnSession(
         if (!isUniqueViolation(error)) throw error;
         return;
       }
+      if (!rowId) return;
       await evictBeyondLimit(db, limits.openLimit);
+    },
+    async commands(commands) {
+      if (rowId) await recordSessionCommands(db, rowId, commands);
     },
     usage(output) {
       if (output.costUsd === null) return output;

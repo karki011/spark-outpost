@@ -3,6 +3,7 @@ import type { IntakeRequest } from './advice.ts';
 import { adviceBody } from './advice-body.ts';
 import {
   REVIEW_EXISTING_QUESTION,
+  MECHANICAL_QUESTION,
   VAGUE_QUESTION,
   buildIntakeQuestions,
   parseIntakeAnswers,
@@ -94,6 +95,7 @@ describe('intake questions', () => {
       'depth',
       'scope',
       'review_existing',
+      'mechanical',
       'vague',
       'provider',
       'model_claude',
@@ -163,9 +165,11 @@ describe('intake questions', () => {
     expect(questions.review_existing!.instructions).toContain(REVIEW_EXISTING_QUESTION);
     expect(questions.vague).toMatchObject({ type: 'noul' });
     expect(questions.vague!.instructions).toContain(VAGUE_QUESTION);
+    expect(questions.mechanical!.instructions).toContain(MECHANICAL_QUESTION);
     const ask = buildIntakeQuestions({ ...intakeRequest, mode: 'ask' }).questions;
     expect(ask.review_existing).toBeUndefined();
     expect(ask.vague).toBeUndefined();
+    expect(ask.mechanical).toBeUndefined();
   });
 
   it('reads the review and vague answers only when Jev gave them', () => {
@@ -176,12 +180,14 @@ describe('intake questions', () => {
       intakeResponse({
         review_existing: { type: 'noul', noul: 0.91 },
         vague: { type: 'noul', noul: 0.12 },
+        mechanical: { type: 'noul', noul: 0.88 },
       }),
     );
-    expect(answered).toMatchObject({ reviewExisting: 0.91, vague: 0.12 });
+    expect(answered).toMatchObject({ reviewExisting: 0.91, vague: 0.12, mechanical: 0.88 });
     const silent = parseIntakeAnswers(intakeRequest, asked, intakeResponse());
     expect(silent).not.toHaveProperty('reviewExisting');
     expect(silent).not.toHaveProperty('vague');
+    expect(silent).not.toHaveProperty('mechanical');
   });
 
   it('asks about injection only over attached text, never the user message', () => {

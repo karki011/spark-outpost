@@ -82,7 +82,7 @@ async function insertProject(
       project.createdAt,
       project.commandAllowlist,
       project.checkCommands ?? null,
-      project.buildStyle ?? 'off',
+      project.buildStyle ?? null,
     ],
   );
   if (inserted.rows[0]) return inserted.rows[0];

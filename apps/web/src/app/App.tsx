@@ -1,10 +1,12 @@
 import { useCallback, useState, type CSSProperties } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { SetupState } from '@spark-outpost/contracts';
+import type { ConversationSummary, SetupState } from '@spark-outpost/contracts';
+import { Analytics } from '../analytics/Analytics.tsx';
 import { api, newDraftId, queryKeys } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { ChatView } from '../chat/ChatView.tsx';
+import { StatusCompanion } from '../companion/StatusCompanion.tsx';
 import { AgentTvHost } from '../crew/AgentTvHost.tsx';
 import { approvalAnchor } from '../crew/conversation-crew.ts';
 import { JUMP_TRIES, scrollToAnchor } from '../crew/scroll-to-anchor.ts';
@@ -71,6 +73,12 @@ function ChatShell({ entering }: { entering: boolean }) {
     layout.closeDrawer();
   };
 
+  const openAtCard = (chat: ConversationSummary) => {
+    openChat(chat.id);
+    const approvalId = chat.attention?.approvalId;
+    if (approvalId) scrollToAnchor(approvalAnchor(approvalId), JUMP_TRIES);
+  };
+
   const activeId =
     selectedId ??
     chats.find((chat) => !chat.archivedAt)?.id ??
@@ -122,11 +130,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             seeded={homeDraft.seeded}
             onSeeded={markHomeDraftSeeded}
             suggestedProjectId={chats.find((chat) => chat.id === activeId)?.projectIds[0] ?? null}
-            onOpenChat={(chat) => {
-              openChat(chat.id);
-              const approvalId = chat.attention?.approvalId;
-              if (approvalId) scrollToAnchor(approvalAnchor(approvalId), JUMP_TRIES);
-            }}
+            onOpenChat={openAtCard}
             onRotateDraft={(id) => setHomeDraft({ id, seeded: true })}
             onOpenId={openChat}
             onChats={() => setView('chats')}
@@ -134,6 +138,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             onProviders={() => setSettings('ai')}
           />
         )}
+        {view === 'analytics' && <Analytics />}
         {view === 'tickets' && (
           <ComingSoon
             title="Tickets are coming soon"
@@ -150,6 +155,12 @@ function ChatShell({ entering }: { entering: boolean }) {
             }}
           />
         )}
+        <StatusCompanion
+          chats={chats}
+          visible={view !== 'chats' || activeId === null}
+          onOpenChat={openAtCard}
+          onHome={() => setView('home')}
+        />
         <AnimatePresence>
           {settings && (
             <SettingsDialog

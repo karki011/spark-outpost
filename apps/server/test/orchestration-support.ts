@@ -108,6 +108,7 @@ export interface Scenario {
   intentConfidence?: number;
   reviewExisting?: number;
   vague?: number;
+  mechanical?: number;
   intentProbabilities?: Record<string, number>;
 }
 
@@ -221,6 +222,9 @@ function intakeAnswers(scenario: Scenario): Answers {
       ? {}
       : { review_existing: { type: 'noul', noul: scenario.reviewExisting } }),
     ...(scenario.vague === undefined ? {} : { vague: { type: 'noul', noul: scenario.vague } }),
+    ...(scenario.mechanical === undefined
+      ? {}
+      : { mechanical: { type: 'noul', noul: scenario.mechanical } }),
     complexity: score(scenario.complexity ?? 1),
     risk: score(RISKS.indexOf(scenario.risk)),
     depth: choice(scenario.depth, scenario.confidence, second),

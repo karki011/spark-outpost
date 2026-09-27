@@ -1,7 +1,12 @@
 import { realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { buildStyleSchema, type BuildStyle, type Project } from '@spark-outpost/contracts';
+import {
+  buildStyleSchema,
+  DEFAULT_BUILD_STYLE,
+  type BuildStyle,
+  type Project,
+} from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { FolderError, realDirectory } from './folders.ts';
@@ -13,7 +18,7 @@ export interface ProjectRow {
   created_at: Date;
   command_allowlist: string[];
   check_commands: string[] | null;
-  build_style: string;
+  build_style: string | null;
   last_used_at?: Date;
 }
 
@@ -42,7 +47,9 @@ export function toProject(row: ProjectRow, home: string): Project {
     ...(row.last_used_at ? { lastUsedAt: row.last_used_at.toISOString() } : {}),
     commandAllowlist: row.command_allowlist,
     checkCommands: row.check_commands,
-    buildStyle: buildStyleSchema.catch('off').parse(row.build_style),
+    ...(row.build_style === null
+      ? {}
+      : { buildStyle: buildStyleSchema.catch(DEFAULT_BUILD_STYLE).parse(row.build_style) }),
   };
 }
 

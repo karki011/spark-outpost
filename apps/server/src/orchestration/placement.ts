@@ -9,11 +9,6 @@ export interface LaneOptions {
 
 export type LanePlacement = 'shared' | 'worktree';
 
-export interface PlacementChoice {
-  placement: LanePlacement;
-  reason: string;
-}
-
 export interface PlacementDecision extends PlacementChoice {
   rule: PlacementChoice;
   jev: NoulVerdict | null;
@@ -29,15 +24,12 @@ const MANIFEST =
   /(?:^|\/)(?:package\.json|pnpm-workspace\.yaml|Cargo\.toml|go\.mod|pyproject\.toml|setup\.(?:py|cfg)|requirements[^/]*\.txt|Pipfile|Gemfile|composer\.json|deno\.jsonc?)$/i;
 const LOCKFILE =
   /(?:^|\/)(?:[^/]+\.lock|[^/]+-lock\.(?:json|ya?ml)|bun\.lockb|go\.sum|npm-shrinkwrap\.json)$/i;
-const CONFIG =
-  /(?:^|\/)(?:tsconfig[^/]*\.json|jsconfig\.json|[^/]+\.config\.[cm]?[jt]s|eslint\.config\.[^/]+|\.eslintrc[^/]*|\.prettierrc[^/]*|\.babelrc[^/]*|\.env[^/]*|\.npmrc|\.nvmrc|\.gitignore|Dockerfile|docker-compose[^/]*\.ya?ml|Makefile)$|(?:^|\/)\.github\//i;
 const GENERATED =
   /(?:^|\/)(?:dist|build|out|generated|__generated__|coverage|\.next)\/|\.(?:gen|generated)\.[^/]+$|\.d\.ts$|\.min\.(?:js|css)$/i;
 
 export function sharedTreeBlocker(file: string): string | null {
   if (MANIFEST.test(file)) return 'a manifest';
   if (LOCKFILE.test(file)) return 'a lockfile';
-  if (CONFIG.test(file)) return 'a config file';
   if (GENERATED.test(file)) return 'a generated file';
   return null;
 }
@@ -80,15 +72,70 @@ export function sensitiveFiles(
   );
 }
 
+export type WorktreeNeed =
+  'overlapping files' | 'sensitive files' | 'destructive work' | 'unattended Codex' | 'requested';
+
+export interface PlacementContext {
+  destructive: boolean;
+  unattendedCodex: boolean;
+}
+
+export const PLAIN_CONTEXT: PlacementContext = { destructive: false, unattendedCodex: false };
+
+const DESTRUCTIVE_STEP =
+  /\b(?:drop|truncate|migrat(?:e|es|ing|ion)|delete\s+(?:the\s+|all\s+|old\s+)*(?:files?|folders?|director(?:y|ies)|data|rows?|records?|tables?|columns?)|rm\s+-rf|rewrite\s+(?:the\s+)?history|force[- ]push)\b/i;
+
+function destructiveLanes(
+  steps: readonly string[],
+  lanes: readonly (readonly number[])[],
+  context: PlacementContext,
+): boolean {
+  if (context.destructive) return true;
+  return lanes.flat().some((index) => DESTRUCTIVE_STEP.test(steps[index] ?? ''));
+}
+
+interface Need {
+  need: WorktreeNeed;
+  reason: string;
+}
+
+function safetyNeed(
+  steps: readonly string[],
+  lanes: readonly (readonly number[])[],
+  context: PlacementContext,
+): Need | null {
+  const blocked = hardBlock(steps, lanes);
+  if (blocked) return { need: 'overlapping files', reason: blocked };
+  if (context.unattendedCodex) {
+    return { need: 'unattended Codex', reason: 'Codex Builders work unattended at this level' };
+  }
+  if (destructiveLanes(steps, lanes, context)) {
+    return { need: 'destructive work', reason: 'a lane deletes, migrates or rewrites data' };
+  }
+  return null;
+}
+
+export interface PlacementChoice {
+  placement: LanePlacement;
+  reason: string;
+  need: WorktreeNeed | null;
+}
+
+const SEPARATE = 'lanes change separate source files';
+
 export function rulePlacement(
   steps: readonly string[],
   lanes: readonly (readonly number[])[],
+  context: PlacementContext = PLAIN_CONTEXT,
 ): PlacementChoice {
-  const blocked = hardBlock(steps, lanes);
-  if (blocked) return { placement: 'worktree', reason: blocked };
+  const safety = safetyNeed(steps, lanes, context);
+  if (safety) return { placement: 'worktree', ...safety };
   const sensitive = sensitiveFiles(steps, lanes)[0];
-  if (sensitive) return { placement: 'worktree', reason: `${sensitive.file} is ${sensitive.kind}` };
-  return { placement: 'shared', reason: 'lanes change separate source files' };
+  if (sensitive) {
+    const reason = `${sensitive.file} is ${sensitive.kind}`;
+    return { placement: 'worktree', reason, need: 'sensitive files' };
+  }
+  return { placement: 'shared', reason: SEPARATE, need: null };
 }
 
 export interface JevPlacement {
@@ -96,37 +143,46 @@ export interface JevPlacement {
   verdict: NoulVerdict | null;
 }
 
+function sensitiveReason(jev: JevPlacement): string {
+  if (!jev.answered || !jev.verdict) return 'Jev did not answer';
+  return jev.verdict.value === false ? 'Jev expects conflicts' : 'Jev is unsure';
+}
+
 export function choosePlacement(
   steps: readonly string[],
   lanes: readonly (readonly number[])[],
   jev: JevPlacement,
   option: LaneOptions['placement'] = 'jev',
+  context: PlacementContext = PLAIN_CONTEXT,
 ): PlacementDecision {
-  const rule = rulePlacement(steps, lanes);
-  const blocked = hardBlock(steps, lanes);
+  const rule = rulePlacement(steps, lanes, context);
   const decided = (
-    placement: LanePlacement,
-    reason: string,
+    choice: PlacementChoice,
     source: PlacementDecision['source'],
-  ) => ({
-    placement,
-    reason,
-    rule,
-    jev: jev.verdict,
-    source,
-  });
-  if (blocked) return decided('worktree', blocked, 'rules');
-  if (option === 'shared' || option === 'worktree') {
+  ): PlacementDecision => ({ ...choice, rule, jev: jev.verdict, source });
+  const safety = safetyNeed(steps, lanes, context);
+  if (safety) return decided({ placement: 'worktree', ...safety }, 'rules');
+  if (option === 'shared') {
     return decided(
-      option,
-      option === 'shared' ? 'the shared tree was requested' : 'worktrees were requested',
+      { placement: 'shared', reason: 'the shared tree was requested', need: null },
       'forced',
     );
   }
-  if (!jev.answered) return decided(rule.placement, rule.reason, 'rules');
-  if (jev.verdict?.value === true) {
-    return decided('shared', 'Jev is sure the Builders can share the folder', 'jev');
+  if (option === 'worktree') {
+    return decided(
+      { placement: 'worktree', reason: 'worktrees were requested', need: 'requested' },
+      'forced',
+    );
   }
-  const why = jev.verdict?.value === false ? 'Jev expects conflicts' : 'Jev is unsure';
-  return decided('worktree', why, 'jev');
+  const sensitive = sensitiveFiles(steps, lanes)[0];
+  if (!sensitive) return decided({ placement: 'shared', reason: SEPARATE, need: null }, 'rules');
+  if (jev.verdict?.value === true) {
+    const reason = `Jev is sure the Builders can share the folder despite ${sensitive.file}`;
+    return decided({ placement: 'shared', reason, need: null }, 'jev');
+  }
+  const reason = `${sensitive.file} is ${sensitive.kind} and ${sensitiveReason(jev)}`;
+  return decided(
+    { placement: 'worktree', reason, need: 'sensitive files' },
+    jev.answered && jev.verdict ? 'jev' : 'rules',
+  );
 }

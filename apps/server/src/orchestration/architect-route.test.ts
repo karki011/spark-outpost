@@ -55,14 +55,33 @@ describe('simple and vague requests', () => {
       files: 2,
       complexity: 3,
       scope: 'one_module',
+      scopeSure: true,
       sure: true,
     });
   });
 });
 
 describe('the Architect rule', () => {
-  it('keeps the top tier for destructive work, whatever else holds', () => {
-    expect(architectRule('destructive', shape(1, intake('one_spot', 0)))).toBe('destructive');
+  it('keeps the top tier for destructive work that names no files and no narrow scope', () => {
+    expect(architectRule('destructive', shape(0, null))).toBe('destructive');
+    expect(architectRule('destructive', shape(0, intake('codebase', 1)))).toBe('destructive');
+    expect(architectRule('destructive', shape(0, intake('one_module', 1, 0.4)))).toBe(
+      'destructive',
+    );
+  });
+
+  it('gives destructive work that names its files or a narrow scope a Sonnet Architect', () => {
+    const destructive = { ...multi, risk: 'destructive' as const };
+    expect(architectRule('destructive', shape(1, intake('codebase', 3)))).toBe(
+      'narrow destructive',
+    );
+    expect(architectRule('destructive', shape(0, intake('one_spot', 3)))).toBe(
+      'narrow destructive',
+    );
+    expect(routeArchitect(destructive, shape(2, null))).toMatchObject({
+      pick: { model: 'sonnet', effort: 'high' },
+      rule: 'narrow destructive',
+    });
   });
 
   it('gives simple work, vague or not, Sonnet at high effort', () => {
@@ -126,13 +145,20 @@ describe('Jev picking the Architect', () => {
     });
   });
 
-  it('never lets Jev move destructive work off the top tier', () => {
+  it('never lets Jev move destructive work off the rule’s tier', () => {
     const destructive = { ...multi, risk: 'destructive' as const };
     expect(routeArchitect(destructive, vague, jevPick('sonnet', 'high', 0.99))).toMatchObject({
       routedBy: 'rules',
       pick: { model: 'opus[1m]' },
       autoWouldUse: { model: 'sonnet' },
       rule: 'destructive',
+    });
+    const named = shape(2, null);
+    expect(routeArchitect(destructive, named, jevPick('opus[1m]', 'high', 0.99))).toMatchObject({
+      routedBy: 'rules',
+      pick: { model: 'sonnet' },
+      autoWouldUse: { model: 'opus[1m]' },
+      rule: 'narrow destructive',
     });
   });
 

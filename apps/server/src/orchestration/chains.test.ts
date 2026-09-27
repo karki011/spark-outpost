@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { noulVerdict } from './parallel-choice.ts';
 import {
   chainsFromReply,
+  parallelChainsFromReply,
   chooseLanes,
   dependencies,
   largeLane,
@@ -82,6 +83,12 @@ describe('planning in chains', () => {
     expect(chooseLanes({ ...inputs, large: [] })).toEqual([]);
     expect(chooseLanes({ ...inputs, large: [0, 1, 3, 5] })).toEqual(lanes);
     expect(chooseLanes({ ...inputs, large: [], split: 'any' })).toEqual(lanes);
+  });
+
+  it('reads the Architect’s explicit parallel-chains line', () => {
+    expect(parallelChainsFromReply('Chain A: steps 1-2\nParallel chains: yes')).toBe(true);
+    expect(parallelChainsFromReply('**Parallel chains:** No, one Builder is enough')).toBe(false);
+    expect(parallelChainsFromReply('Parallel: 2, 3')).toBeNull();
   });
 
   it('counts a lane that changes five or more files as large', () => {

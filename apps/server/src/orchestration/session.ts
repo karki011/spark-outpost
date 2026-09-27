@@ -23,6 +23,7 @@ import type { RunInput } from '../workflow/run-input.ts';
 import type { BudgetLimits } from './budget.ts';
 import type { ArchitectNotes, ResearchNote } from './context.ts';
 import type { JevAccess } from './jev-calls.ts';
+import type { ProjectStyle } from './lean.ts';
 import type { ReviewQueue } from './reviews.ts';
 import type { JevPick, MemberRoute, RouteContext } from './routing.ts';
 import type { Slots } from './slots.ts';
@@ -95,7 +96,7 @@ export interface Session {
   checkRounds: number;
   checkBodies: CheckBody[];
   reviews: ReviewQueue | null;
-  projectStyle: BuildStyle;
+  projectStyle: ProjectStyle;
   buildStyle: BuildStyle;
   buildStyleDecided: boolean;
   lanePlacement: LanePlacement | null;

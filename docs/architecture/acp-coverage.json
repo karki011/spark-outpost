@@ -1,8 +1,8 @@
 {
   "agent-method:initialize": {
     "status": "partial",
-    "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/probe.ts",
-    "note": "Runs refuse a protocolVersion mismatch, but the probe never checks it. agentInfo and authMethods in the response are ignored. clientInfo.version is hard-coded to 0.0.0."
+    "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/probe.ts, apps/server/src/agents/acp/errors.ts",
+    "note": "Runs and the capability probe both refuse an agent that answers with another protocolVersion (errors.ts assertProtocolVersion). agentInfo and authMethods in the response are ignored. clientInfo.version is hard-coded to 0.0.0."
   },
   "agent-method:authenticate": {
     "status": "missing",
@@ -48,12 +48,12 @@
   "agent-method:session/set_config_option": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/apply-settings.ts, apps/server/src/agents/acp/session-config.ts",
-    "note": "Select options for mode, model and thought_level only. Boolean options are never set because the boolean capability isn't advertised, and model_config options are not shown."
+    "note": "Select options for mode, model and thought_level only, and only with ids the agent offered (the probe also switches models to collect each model's efforts, using the agent's own model option only). Boolean options are never set because the boolean capability isn't advertised, and model_config options are not shown."
   },
   "agent-method:session/prompt": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/conversation-prompt.ts",
-    "note": "One prompt per session. The history is resent as text within a 36 KB budget. PromptResponse.usage is saved on the run (prompt-usage.ts)."
+    "note": "One prompt per session. The history is resent as text within a 36 KB budget; a resumed session gets only the new message. PromptResponse.usage is saved on the run (prompt-usage.ts); that field is unstable in SDK 1.5.0 and absent from the stable v1 schema, so it is read only when present."
   },
   "agent-method:_*": {
     "status": "not_applicable",
@@ -62,7 +62,7 @@
   "client-method:fs/write_text_file": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/fs-handlers.ts, apps/server/src/agents/acp/do-handlers.ts",
-    "note": "Do mode only: writeTextFile is advertised and each write goes through projects/path-policy.ts (absolute paths inside a linked root after symlinks, secret files and .git refused as invalid_params), then the approval gate with the old and new text as a diff. Allowed writes create missing folders; denied writes answer invalid_request. A path allowed by an earlier edit approval in the run is written without asking again. Ask and chat runs still refuse every write. Neither real adapter calls it (claude-agent-acp 0.81.2, codex-acp 1.13.1), so it is exercised by the fake agent."
+    "note": "Do mode only: writeTextFile is advertised and each write goes through projects/path-policy.ts (absolute paths inside a linked root after symlinks, secret files and .git refused as invalid_params -32602), then the approval gate with the old and new text as a diff. Allowed writes create missing folders; denied writes answer invalid_request -32600 (ACP defines no code for a user refusal); a write cancelled by Stop answers request_cancelled -32800. A path allowed by an earlier edit approval in the run is written without asking again. Ask and chat runs don't advertise it, so a call answers method_not_found -32601 and records a Declined step. Neither real adapter calls it (claude-agent-acp 0.81.2, codex-acp 1.13.1), so it is exercised by the fake agent."
   },
   "client-method:fs/read_text_file": {
     "status": "supported",
@@ -159,8 +159,9 @@
     "note": "Passed through whole as a plan output with content, priority and status. The worker opens or joins the chat's task, stores a new plan version when it differs (200 per task, then the latest is overwritten), marks the previous version superseded when more than half of the entries changed, records the version on the run, and streams it as an ACTIVITY_SNAPSHOT. The work panel shows it with history and Markdown export; there is no Plan card in the turn yet. The orchestrator's Architect runs read-only with Claude's task tools, which claude-agent-acp reports as `plan` updates."
   },
   "session-update:available_commands_update": {
-    "status": "missing",
-    "note": "Ignored. There is no slash-command menu, and the chat prompt starts with our note so a user's / never reaches the agent."
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/slash-commands.ts, apps/server/src/persistence/session-commands.ts, apps/web/src/chat/composer/slash.ts",
+    "note": "Each update replaces the session's command list (name, description, input hint), stored on provider_sessions.available_commands. The composer's / menu lists them after Spark Outpost's own commands, minus the blocked list in packages/contracts/src/agent-commands.ts (mode, model, permissions, session, setup and sign-in commands). An advertised, unblocked command is sent as the first text of a continued session (\"/name args\"); any other text starting with / is escaped with a leading note so neither adapter parses it as a command, and blocked commands are refused in the composer."
   },
   "session-update:current_mode_update": {
     "status": "supported",
@@ -183,9 +184,9 @@
     "note": "used, size and cost are saved. Cost is kept only in USD."
   },
   "session-update:notice": {
-    "status": "partial",
+    "status": "supported",
     "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/client-info.ts",
-    "note": "Not in the v1 schema: it comes from the unstable session notices RFD in SDK 1.5.0, and client-info.ts advertises session.notices, which ClientSessionCapabilities doesn't define. Info and warning notices become steps, but an error notice fails the run although the RFD says notices are advisory."
+    "note": "Unstable in SDK 1.5.0 (session notices RFD, schema 1.23.0 unstable), not in the stable v1 schema. Info, warning, error and custom severities become Note, Warning and Error steps. As the RFD requires, an error notice is advisory: it never fails the run; failures come from the stop reason, a JSON-RPC error or the sessionFailure extension. Both pinned adapters fall back to plain message text when the capability is missing."
   },
   "content-block:text": {
     "status": "supported",
@@ -347,7 +348,7 @@
   "permission-option-kind:reject_once": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/permissions.ts, apps/server/src/workflow/approval-gate.ts",
-    "note": "Chosen for Deny, for refusals (reads outside the project, edits in .git), on approval timeout, and for every request outside Do mode."
+    "note": "Chosen for Deny, for refusals (reads outside the project, edits in .git), on approval timeout, and for every request outside Do mode. When several reject_once options are offered, the first is used; our codex-acp patch puts decline (continue the turn) before cancel (end the turn), so this relies on the patch's ordering."
   },
   "permission-option-kind:reject_always": {
     "status": "partial",
@@ -370,8 +371,8 @@
     "note": "pending, in_progress and completed are stored and drive the task list: done, working, not started. An unfinished entry shows as not finished once the run stopped or failed."
   },
   "client-capability:session.notices": {
-    "status": "partial",
+    "status": "supported",
     "where": "apps/server/src/agents/acp/client-info.ts",
-    "note": "Not in the v1 schema: advertised as {} for the unstable session notices RFD. See session-update:notice."
+    "note": "Unstable ClientSessionCapabilities.notices from the session notices RFD, advertised as {}. It is a spec field, not our extension, so it stays at session.notices (moving it under _meta would hide it from both adapters, which check exactly this field). Keep the SDK pinned while it is unstable."
   }
 }

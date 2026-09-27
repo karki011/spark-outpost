@@ -2,6 +2,7 @@ import type { ContentBlock, SessionUpdate, ToolCallContent } from '@agentclientp
 import type { PlanEntry } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../../providers/provider.ts';
 import { findPullRequests } from '../../tasks/pr-links.ts';
+import { agentCommands } from './slash-commands.ts';
 
 export const THINKING_STEP = 'Thinking';
 export const FAILED_PREFIX = 'Failed: ';
@@ -54,6 +55,10 @@ export function describeTool(title: string): string {
     )
     .join('`');
 }
+
+const NOTICE_LABELS: Record<string, string> = { error: 'Error', warning: 'Warning' };
+
+const noticeLabel = (severity: string) => NOTICE_LABELS[severity] ?? 'Note';
 
 const WEB_LINK = /^https?:$/;
 
@@ -210,13 +215,10 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
           }
           return note(`Warning: ${reported.title}`);
         }
-        case 'notice': {
-          if (update.severity === 'error') {
-            failure ??= { category: 'provider_error', title: update.title };
-            return [];
-          }
-          return note(`${update.severity === 'warning' ? 'Warning' : 'Note'}: ${update.title}`);
-        }
+        case 'notice':
+          return note(`${noticeLabel(update.severity)}: ${update.title}`);
+        case 'available_commands_update':
+          return [{ kind: 'commands', commands: agentCommands(update.availableCommands) }];
         case 'usage_update':
           return [
             {

@@ -65,6 +65,8 @@ More rows:
 
 ## The patch (in `patches/@agentclientprotocol__codex-acp@1.13.1.patch`)
 
+What each part changes, what guards it and when it can go is tracked in [PATCHES.md](PATCHES.md).
+
 About 25 changed lines in `dist/index.js`, prototyped in `scratchpad/codex-do/proposed-patch-addition.diff` and checked live: `ls`, `apply_patch`, `cat .env` and an outside write all asked, and a denied `echo` failed while the turn ended normally.
 
 1. **New mode `ask-every-action`** ("Ask every time"): `approvalPolicy: "untrusted"`, `approvalsReviewer: "user"`, `workspaceWrite` with `writableRoots: []`, `networkAccess: false`, `excludeSlashTmp: true` and `excludeTmpdirEnvVar: false`. The private `TMPDIR` stays writable, but not `/tmp`. It's added to `AgentMode.all()`, and the other modes are unchanged.

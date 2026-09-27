@@ -26,18 +26,26 @@ async function chooseLean(page: Page): Promise<void> {
   const styles = menu.getByRole('radiogroup', {
     name: `Build style for ${path.basename(repo.root)}`,
   });
-  await expect(styles.getByRole('radio', { name: 'Off' })).toHaveAttribute('aria-checked', 'true');
   const lean = styles.getByRole('radio', { name: 'Lean' });
+  await expect(lean).toHaveAttribute('aria-checked', 'true');
+  await expect(menu).toContainText('The default.');
+  const off = styles.getByRole('radio', { name: 'Off' });
+  await off.focus();
+  await page.keyboard.press('Enter');
+  await expect(off).toHaveAttribute('aria-checked', 'true');
+  expect(await savedStyle(page)).toBe('off');
   await lean.focus();
   await page.keyboard.press('Enter');
   await expect(lean).toHaveAttribute('aria-checked', 'true');
   await expect(menu).toContainText('Validation, security and accessibility are never trimmed.');
   await page.keyboard.press('Escape');
+  expect(await savedStyle(page)).toBe('lean');
+}
+
+async function savedStyle(page: Page): Promise<string | undefined> {
   const listed = await page.request.get('/api/projects');
-  const saved = ((await listed.json()) as { rootPath: string; buildStyle: string }[]).find(
-    (project) => project.rootPath === repo.root,
-  );
-  expect(saved?.buildStyle).toBe('lean');
+  const projects = (await listed.json()) as { rootPath: string; buildStyle?: string }[];
+  return projects.find((project) => project.rootPath === repo.root)?.buildStyle;
 }
 
 test('the lean build style is set per project and its shortcuts show in the work panel', async ({
@@ -46,7 +54,7 @@ test('the lean build style is set per project and its shortcuts show in the work
   test.setTimeout(120_000);
   await crewChat(page, repo, 'Full auto');
   await chooseLean(page);
-  await send(page, `${CREW_REQUEST} #build #crew`);
+  await send(page, `${CREW_REQUEST} #build #crew #leanmark`);
 
   const turn = page.locator('.crew-turn');
   await expect(turn.locator('.crew-foot')).toContainText('Done', { timeout: 60_000 });

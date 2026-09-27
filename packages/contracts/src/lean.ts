@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const buildStyleSchema = z.enum(['off', 'lite', 'lean']);
 export type BuildStyle = z.infer<typeof buildStyleSchema>;
 
-export const DEFAULT_BUILD_STYLE: BuildStyle = 'off';
+export const DEFAULT_BUILD_STYLE: BuildStyle = 'lean';
 export const BUILD_STYLES: readonly BuildStyle[] = buildStyleSchema.options;
 
 export function buildStyleRank(style: BuildStyle): number {

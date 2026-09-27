@@ -1,0 +1,281 @@
+import { expect, test, type Page } from '@playwright/test';
+import { createDb } from '../../apps/server/src/persistence/db.ts';
+import { resetTestDatabase, testDatabaseUrl } from './database.ts';
+import { decorateLatestRun } from './home-seed.ts';
+import { seedChats } from './sidebar-seed.ts';
+
+const companion = (page: Page) => page.getByRole('button', { name: /^Status: / });
+const panel = (page: Page) => page.getByRole('dialog', { name: 'Status' });
+const root = (page: Page) => page.locator('.cmp');
+
+async function goHome(page: Page) {
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Home/ })
+    .click();
+  await expect(page.locator('#home-greet')).toBeVisible();
+}
+
+async function setRun(conversationId: string, status: string) {
+  const db = createDb(testDatabaseUrl());
+  try {
+    await db.query(`UPDATE runs SET status = $2, finished_at = now() WHERE conversation_id = $1`, [
+      conversationId,
+      status,
+    ]);
+  } finally {
+    await db.end();
+  }
+}
+
+async function seedBusy() {
+  const ids = await seedChats([
+    { title: 'Current chat' },
+    { title: 'Filter chips overflow', run: { status: 'running' } },
+    {
+      title: 'Deploy the site',
+      message: Array.from({ length: 60 }, (_, index) => `Line ${index + 1}.`).join('\n\n'),
+      run: { status: 'awaiting_approval' },
+      approval: { kind: 'execute', title: 'Deploy', command: 'pnpm deploy' },
+    },
+    {
+      title: 'Rotate the keys',
+      run: { status: 'awaiting_approval' },
+      approval: { kind: 'execute', title: 'Rotate', command: 'pnpm rotate' },
+    },
+  ]);
+  await decorateLatestRun(ids[1]!, { provider: 'claude', step: 'Reading FilterBar.tsx' });
+  return ids;
+}
+
+test('the companion hides in an open chat and shows status on Home', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedBusy();
+  await page.goto('/');
+  await expect(page.locator('.chat-title')).toBeVisible();
+  await expect(companion(page)).toHaveCount(0);
+
+  await goHome(page);
+  await expect(companion(page)).toHaveAccessibleName('Status: 2 need you, 1 running');
+  await expect(root(page)).toHaveAttribute('data-mood', 'alert');
+  await expect(root(page).locator('.cmp-badge')).toHaveText('2');
+  const box = (await companion(page).boundingBox())!;
+  const viewport = page.viewportSize()!;
+  expect(box.x + box.width).toBeGreaterThan(viewport.width - 80);
+  expect(box.y + box.height).toBeGreaterThan(viewport.height - 80);
+
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Tickets/ })
+    .click();
+  await expect(companion(page)).toBeVisible();
+});
+
+test('the panel lists the live feed and jumps to the waiting card', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedBusy();
+  await page.goto('/');
+  await goHome(page);
+
+  await companion(page).click();
+  await expect(companion(page)).toHaveAttribute('aria-expanded', 'true');
+  const status = panel(page);
+  await expect(status.getByRole('region', { name: /^Needs you/ })).toContainText(
+    'Fake provider wants to run pnpm deploy',
+  );
+  await expect(status.getByRole('region', { name: /^Running/ })).toContainText(
+    'Reading FilterBar.tsx',
+  );
+  await expect(status.getByRole('button', { name: 'Open Home' })).toBeVisible();
+
+  await status.getByRole('button', { name: 'Answer: Deploy the site' }).click();
+  await expect(page.locator('.chat-title')).toHaveText('Deploy the site');
+  const approval = page.getByRole('group', { name: /Run a command\?/ });
+  await expect(approval).toBeInViewport();
+  await expect(companion(page)).toHaveCount(0);
+});
+
+test('the panel works from the keyboard and Escape returns focus', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedChats([{ title: 'Quiet chat', run: { status: 'succeeded' } }]);
+  await page.goto('/');
+  await goHome(page);
+
+  await expect(companion(page)).toHaveAccessibleName('Status: all quiet');
+  await companion(page).focus();
+  await page.keyboard.press('Enter');
+  await expect(panel(page)).toContainText('Nothing needs you and no agents are running.');
+  await expect(panel(page).getByRole('button', { name: 'Open Home' })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(panel(page).getByRole('button', { name: 'Hide companion' })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(panel(page).getByRole('button', { name: 'Open Home' })).toBeFocused();
+
+  await page.keyboard.press('Escape');
+  await expect(panel(page)).toHaveCount(0);
+  await expect(companion(page)).toBeFocused();
+});
+
+test('dragging snaps to the nearest corner and is remembered', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await page.goto('/');
+  await goHome(page);
+
+  const box = (await companion(page).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(400, 300, { steps: 8 });
+  await page.mouse.move(200, 120, { steps: 8 });
+  await page.mouse.up();
+  await expect(root(page)).toHaveAttribute('data-corner', 'top-left');
+  await expect(panel(page)).toHaveCount(0);
+  await expect.poll(async () => (await companion(page).boundingBox())?.y ?? 999).toBeLessThan(40);
+
+  await page.reload();
+  await goHome(page);
+  await expect(root(page)).toHaveAttribute('data-corner', 'top-left');
+
+  await companion(page).click();
+  await panel(page).getByRole('radio', { name: 'Bottom right' }).click();
+  await expect(root(page)).toHaveAttribute('data-corner', 'bottom-right');
+});
+
+test('hiding the companion and bringing it back from Settings', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await page.goto('/');
+  await goHome(page);
+
+  await companion(page).click();
+  await panel(page).getByRole('button', { name: 'Hide companion' }).click();
+  await expect(companion(page)).toHaveCount(0);
+  await expect(
+    page.locator('[aria-live="polite"]').filter({ hasText: 'companion hidden' }),
+  ).toHaveCount(1);
+
+  await page.reload();
+  await goHome(page);
+  await expect(companion(page)).toHaveCount(0);
+
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: 'Settings' })
+    .click();
+  const settings = page.getByRole('dialog', { name: 'Profile' });
+  await settings.getByRole('tab', { name: 'Appearance' }).click();
+  const appearance = page.getByRole('dialog', { name: 'Appearance' });
+  await appearance
+    .getByRole('radiogroup', { name: 'Status companion' })
+    .getByRole('radio', { name: 'Show' })
+    .click();
+  await page.keyboard.press('Escape');
+  await expect(companion(page)).toBeVisible();
+});
+
+test('the mood follows runs: working, then one happy bounce and a summary', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  const [, runningId] = await seedChats([
+    { title: 'Current chat' },
+    { title: 'Worktree cleanup', run: { status: 'running' } },
+  ]);
+  await page.goto('/');
+  await goHome(page);
+  await expect(root(page)).toHaveAttribute('data-mood', 'working');
+  await expect(root(page).locator('.cmp-float')).toHaveCSS('animation-name', 'cmp-float');
+
+  await setRun(runningId!, 'succeeded');
+  await expect(root(page)).toHaveAttribute('data-celebrate', 'true', { timeout: 10_000 });
+  await expect(root(page)).toHaveAttribute('data-mood', 'happy');
+  await expect(root(page)).not.toHaveAttribute('data-celebrate', /.*/, { timeout: 5_000 });
+  await expect(companion(page)).toHaveAccessibleName('Status: 1 finished');
+  await expect(page.locator('.cmp-live')).toHaveText('Status: 1 finished', { timeout: 10_000 });
+});
+
+test('a failed run makes the companion sad until the panel is opened', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedChats([
+    { title: 'Mock fetch', run: { status: 'failed', error: 'Rate limit reached.' } },
+  ]);
+  await page.goto('/');
+  await goHome(page);
+  await expect(root(page)).toHaveAttribute('data-mood', 'sad');
+  await companion(page).click();
+  await expect(panel(page).getByRole('region', { name: /^Failed/ })).toContainText(
+    'Stopped: rate limit reached',
+  );
+  await expect(root(page)).toHaveAttribute('data-mood', 'idle');
+});
+
+test('reduced motion keeps a static mood with no float or pulse', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await resetTestDatabase({ onboarded: true });
+  await seedBusy();
+  await page.goto('/');
+  await goHome(page);
+
+  await expect(root(page)).toHaveAttribute('data-mood', 'alert');
+  await expect(root(page).locator('.cmp-float')).toHaveCSS('animation-name', 'none');
+  const ring = await companion(page).evaluate(
+    (element) => getComputedStyle(element, '::after').animationName,
+  );
+  expect(ring).toBe('none');
+});
+
+test('on a phone the companion is smaller and sits above the bottom bar', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.goto('/');
+  await goHome(page);
+
+  const box = (await companion(page).boundingBox())!;
+  const rail = (await page.getByRole('navigation', { name: 'Main' }).boundingBox())!;
+  expect(box.width).toBeLessThanOrEqual(40);
+  expect(box.y + box.height).toBeLessThanOrEqual(rail.y);
+});
+
+test('many things at once: the most urgent mood, a count badge and capped lists', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedChats([
+    { title: 'Current chat' },
+    ...Array.from({ length: 5 }, (_, index) => ({
+      title: `Running chat ${index + 1}`,
+      run: { status: 'running' },
+    })),
+    {
+      title: 'Deploy the site',
+      run: { status: 'awaiting_approval' },
+      approval: { kind: 'execute', title: 'Deploy', command: 'pnpm deploy' },
+    },
+    {
+      title: 'Rotate the keys',
+      run: { status: 'awaiting_approval' },
+      approval: { kind: 'execute', title: 'Rotate', command: 'pnpm rotate' },
+    },
+    { title: 'Mock fetch', run: { status: 'failed', error: 'Rate limit reached.' } },
+  ]);
+  await page.goto('/');
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Tickets/ })
+    .click();
+
+  await expect(companion(page)).toHaveAccessibleName('Status: 2 need you, 5 running, 1 failed');
+  await expect(root(page)).toHaveAttribute('data-mood', 'alert');
+  await expect(root(page).locator('.cmp-badge')).toHaveText('2');
+  await expect(root(page).locator('.cmp-run i')).toHaveCount(5);
+  await expect(root(page).locator('.cmp-fail')).toBeVisible();
+
+  await companion(page).click();
+  const status = panel(page);
+  await expect(status.getByRole('heading', { level: 3 })).toHaveText([
+    'Needs you · 2',
+    'Failed · 1',
+    'Running · 5',
+  ]);
+  const running = status.getByRole('region', { name: /^Running/ });
+  await expect(running.getByRole('listitem')).toHaveCount(4);
+  await status.getByRole('button', { name: '1 more in Running on Home' }).click();
+  await expect(page.locator('#home-greet')).toBeVisible();
+  await expect(panel(page)).toHaveCount(0);
+});

@@ -83,17 +83,25 @@ export function lowerOf(a: BuildStyle, b: BuildStyle): BuildStyle {
   return buildStyleRank(a) <= buildStyleRank(b) ? a : b;
 }
 
+export type StyleSource = 'project setting' | 'default';
+
+export interface ProjectStyle {
+  style: BuildStyle;
+  source: StyleSource;
+}
+
 export function ruleBuildStyle(
   project: BuildStyle,
   mode: RunMode | null,
   request: string,
+  source: StyleSource = 'project setting',
 ): StyleRule {
-  if (project === 'off') return { style: 'off', reason: 'project setting' };
+  if (project === 'off') return { style: 'off', reason: source };
   if (mode !== 'do') return { style: 'off', reason: 'not a code-changing turn' };
   if (FULL_VERSION.test(request)) {
     return { style: lowerOf(project, 'lite'), reason: 'asks for a complete version' };
   }
-  return { style: project, reason: 'project setting' };
+  return { style: project, reason: source };
 }
 
 const COMMENT_MARKER = /(?:\/\/|\/\*+|#|<!--|--|;|%)\s*lean:\s*(.*?)\s*(?:\*+\/|-->)?[\s)}]*$/i;

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import {
+  agentCommandsResponseSchema,
+  type AgentCommandsResponse,
   EMPTY_CONVERSATION_USAGE,
   UNTITLED_CONVERSATION,
   usageSummarySchema,
@@ -110,6 +112,10 @@ export const api = {
       method: 'POST',
       body: '{}',
     }),
+  getAgentCommands: async (id: string): Promise<AgentCommandsResponse> => {
+    if (drafts.has(id)) return { provider: null, commands: [] };
+    return request(agentCommandsResponseSchema, `/conversations/${id}/agent-commands`);
+  },
   deleteConversation: (id: string): Promise<null> =>
     request(z.null(), `/conversations/${id}`, { method: 'DELETE', keepalive: true }),
   getConversation: async (id: string): Promise<ConversationDetail> => {
@@ -179,6 +185,7 @@ function draftConversation(id: string, settings: ChatSettings): ConversationDeta
 export const queryKeys = {
   conversations: ['conversations'] as const,
   conversation: (id: string) => ['conversations', id] as const,
+  agentCommands: (id: string) => ['conversations', id, 'agent-commands'] as const,
   conversationSearch: (query: string) => ['conversation-search', query] as const,
   capabilities: (provider: ProviderId) => ['capabilities', provider] as const,
   usageSummary: ['usage-summary'] as const,

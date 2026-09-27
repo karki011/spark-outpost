@@ -137,7 +137,7 @@ describe('ACP provider in a project folder', { timeout: 20_000 }, () => {
   it('declines writes with a hint to switch to Do', async () => {
     const target = join(root, 'notes.txt');
     const { text, steps } = await collect(`#fswrite ${target}`, root);
-    expect(text).toContain(`[write ${target}=err:-32600]`);
+    expect(text).toContain(`[write ${target}=err:-32601]`);
     expect(steps).toContain(
       `Declined: Write \`${target}\` (Ask mode only reads files; switch to Do to allow changes)`,
     );

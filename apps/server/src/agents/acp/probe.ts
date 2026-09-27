@@ -9,9 +9,9 @@ import type { AgentDefinition, AgentLaunch } from './agents.ts';
 import { startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
 import { capabilitiesFrom, offeredCapabilities, sessionCapabilities } from './capabilities.ts';
-import { sessionOptions } from './legacy-options.ts';
+import { findOption } from './session-config.ts';
 import { CLIENT_CAPABILITIES, CLIENT_INFO } from './client-info.ts';
-import { toProviderError } from './errors.ts';
+import { assertProtocolVersion, toProviderError } from './errors.ts';
 
 export interface ProbeOptions {
   launch?: AgentLaunch;
@@ -34,7 +34,7 @@ export async function probeCapabilities(
     agent = startAgentProcess(options.launch ?? definition.launch(), workdir, env);
     const running = agent;
     const read = acp.client(CLIENT_INFO).connectWith(running.stream, async (ctx) => {
-      await ctx.request<acp.InitializeResponse, acp.InitializeRequest>(
+      const init = await ctx.request<acp.InitializeResponse, acp.InitializeRequest>(
         acp.methods.agent.initialize,
         {
           protocolVersion: acp.PROTOCOL_VERSION,
@@ -42,6 +42,7 @@ export async function probeCapabilities(
           clientInfo: CLIENT_INFO,
         },
       );
+      assertProtocolVersion(definition.name, init);
       const session = await ctx.request(acp.methods.agent.session.new, {
         cwd: workdir,
         mcpServers: [],
@@ -49,7 +50,7 @@ export async function probeCapabilities(
       });
       const report = sessionCapabilities(session);
       if (report.efforts.length > 0) return offeredCapabilities(report, definition.offers);
-      const modelOption = sessionOptions(session).find((option) => option.category === 'model');
+      const modelOption = findOption(session.configOptions ?? [], 'model');
       if (!modelOption) return offeredCapabilities(report, definition.offers);
       const efforts = new Map(report.efforts.map((effort) => [effort.id, effort]));
       for (const model of report.models) {

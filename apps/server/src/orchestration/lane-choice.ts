@@ -26,6 +26,7 @@ export function laneQuestions(
       },
     ]),
   );
+  const sensitive = sensitiveFiles(steps, lanes).length > 0;
   return {
     chains,
     questions: {
@@ -37,14 +38,18 @@ export function laneQuestions(
           no: 'Each chain is long enough that parallel Builders finish clearly sooner',
         },
       },
-      same_folder: {
-        type: 'noul',
-        instructions: `${SAME_FOLDER_QUESTION}: \`chains\` of \`task\`, each with the files it changes and any manifests, lockfiles, config or generated files among them. Sharing the folder is unsafe when one chain installs packages, regenerates files, reformats the whole project, or changes files the other reads.`,
-        criteria: {
-          yes: 'The chains change separate files and nothing they run touches the other’s files',
-          no: 'They could step on each other: shared manifests, installs, generated files or overlapping edits',
-        },
-      },
+      ...(sensitive ? { same_folder: sameFolderQuestion() } : {}),
+    },
+  };
+}
+
+function sameFolderQuestion(): Record<string, unknown> {
+  return {
+    type: 'noul',
+    instructions: `${SAME_FOLDER_QUESTION}: \`chains\` of \`task\`, each with the files it changes and any manifests, lockfiles or generated files among them. Sharing the folder is unsafe when one chain installs packages, regenerates files, reformats the whole project, or changes files the other reads.`,
+    criteria: {
+      yes: 'The chains change separate files and nothing they run touches the other’s files',
+      no: 'They could step on each other: shared manifests, installs, generated files or overlapping edits',
     },
   };
 }
@@ -65,21 +70,26 @@ export interface SplitDecision {
   lanes: number[][];
   rule: number[][];
   jev: NoulVerdict | null;
-  source: 'jev' | 'rules' | 'forced';
+  architect: boolean | null;
+  source: 'jev' | 'architect' | 'rules' | 'forced';
 }
+
+const copy = (lanes: readonly number[][]) => lanes.map((lane) => [...lane]);
 
 export function chooseSplit(
   anyLanes: readonly number[][],
   ruleLanes: readonly number[][],
   oneBuilder: NoulVerdict | null,
   option: LaneOptions['split'] = 'jev',
+  architect: boolean | null = null,
 ): SplitDecision {
-  const base = { rule: ruleLanes.map((lane) => [...lane]), jev: oneBuilder };
-  if (option === 'any')
-    return { ...base, lanes: anyLanes.map((lane) => [...lane]), source: 'forced' };
-  const jevValue = option === 'jev' ? (oneBuilder?.value ?? null) : null;
+  const base = { rule: copy(ruleLanes), jev: oneBuilder, architect };
+  if (option === 'any') return { ...base, lanes: copy(anyLanes), source: 'forced' };
+  if (option === 'large') return { ...base, lanes: base.rule, source: 'rules' };
+  const jevValue = oneBuilder?.value ?? null;
   if (jevValue === true) return { ...base, lanes: [], source: 'jev' };
-  if (jevValue === false)
-    return { ...base, lanes: anyLanes.map((lane) => [...lane]), source: 'jev' };
+  if (jevValue === false) return { ...base, lanes: copy(anyLanes), source: 'jev' };
+  if (architect === true) return { ...base, lanes: copy(anyLanes), source: 'architect' };
+  if (architect === false) return { ...base, lanes: [], source: 'architect' };
   return { ...base, lanes: base.rule, source: 'rules' };
 }

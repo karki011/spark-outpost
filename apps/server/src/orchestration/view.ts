@@ -196,11 +196,16 @@ function intakeSummary(
   const note = body.depthNote
     ? ` → ${depthLabel(body.depthNote.depth)}: ${body.depthNote.reason}`
     : '';
+  const mechanical = body.mechanical ? ` · ${body.mechanical.summary}` : '';
   return {
-    summary: `${depthLabel(answer.depth)} · ${answer.risk}${note}`,
+    summary: `${depthLabel(answer.depth)} · ${answer.risk}${note}${mechanical}`,
     applied,
     gate: body.gate,
-    answer: { ...answer, ...(body.depthNote ? { depthNote: body.depthNote } : {}) },
+    answer: {
+      ...answer,
+      ...(body.depthNote ? { depthNote: body.depthNote } : {}),
+      ...(body.mechanical ? { mechanical: body.mechanical } : {}),
+    },
   };
 }
 

@@ -1,4 +1,5 @@
 import type {
+  AgentCommand,
   PlanEntry,
   ProtocolDirection,
   RunMode,
@@ -31,6 +32,7 @@ export interface StoredSession {
   sessionId: string;
   cwd: string;
   additionalDirectories: readonly string[];
+  commands?: readonly string[];
 }
 
 export interface SessionTarget {
@@ -97,7 +99,8 @@ export type ProviderOutput =
       continued: boolean;
       freshReason: string | null;
     }
-  | { kind: 'link'; url: string; title: string; source: Exclude<TaskLinkSource, 'user'> };
+  | { kind: 'link'; url: string; title: string; source: Exclude<TaskLinkSource, 'user'> }
+  | { kind: 'commands'; commands: AgentCommand[] };
 
 export interface Provider {
   readonly name: string;

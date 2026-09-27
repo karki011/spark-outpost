@@ -240,10 +240,11 @@ describe('routing', () => {
     expect(orchestration).toMatchObject({ depth: 'execute', depthSource: 'rules' });
     expect(orchestration.crew.map((member) => member.role)).toEqual(['builder']);
     expect(orchestration.totals.jevCalls).toBe(0);
-    expect(orchestration.decisions.map((decision) => decision.applied)).toEqual([
-      'rules',
-      'rules',
-      'rules',
+    expect(orchestration.decisions.map((decision) => [decision.kind, decision.applied])).toEqual([
+      ['intake', 'rules'],
+      ['build_style', 'rules'],
+      ['route', 'rules'],
+      ['transition', 'rules'],
     ]);
   }, 60_000);
 });

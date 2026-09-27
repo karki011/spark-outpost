@@ -1,7 +1,12 @@
 import { ORCHESTRATION_PARALLEL_LIMIT } from '@spark-outpost/contracts';
 import { adviceBody } from '../advisor/advice-body.ts';
 import { intakeRequest, recordIntake, type IntakeResult } from '../advisor/intake-recorder.ts';
-import { insertAdvice, loadIntakeContext, noteIntakeDepth } from '../persistence/advice.ts';
+import {
+  insertAdvice,
+  loadIntakeContext,
+  noteIntakeDepth,
+  noteIntakeMechanical,
+} from '../persistence/advice.ts';
 import { newId } from '../persistence/ids.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { insertOrchestration } from '../persistence/orchestrations.ts';
@@ -22,13 +27,19 @@ import { asksToKeep } from './checkpoint-policy.ts';
 import { assumptionLine, interpretations, isVagueRequest, vagueHandling } from './clarify.ts';
 import { namedFiles } from './context.ts';
 import { chooseDepth, intakeDepthNote, refineDepth, reviewIntent, trustedRisk } from './depth.ts';
+import { mechanicalChange, mechanicalNote, worthRecording } from './mechanical.ts';
 import { finalText } from './final-message.ts';
 import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
 import { cleanupCopies, runGroup } from './group.ts';
 import { judge } from './judge.ts';
 import { buildAndLand } from './land.ts';
 import { buildInCopy, buildsInCopy } from './solo-copy.ts';
-import { decideBuildStyle, projectBuildStyle, recordShortcuts } from './build-style.ts';
+import {
+  decideBuildStyle,
+  NO_PROJECT_STYLE,
+  projectBuildStyle,
+  recordShortcuts,
+} from './build-style.ts';
 import { collectedReview } from './reviews.ts';
 import { sequentialReason } from './parallel.ts';
 import { markPlanStep, markPlanSteps, statusAfterJudging } from './plan-progress.ts';
@@ -210,19 +221,30 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const mode = input.mode ?? 'chat';
     const risk = trustedRisk(mode, intake.body.jev);
     const intakeGate = intake.body.gate?.decision ?? null;
+    const requestFiles = namedFiles([input.userRequest]).length;
+    const mechanical = mechanicalChange(
+      mode,
+      risk,
+      input.userRequest,
+      requestFiles,
+      intake.body.jev,
+    );
     const depth = refineDepth(
       chooseDepth(mode, risk, intake.body.jev, intakeGate),
       risk,
-      namedFiles([input.userRequest]).length,
+      requestFiles,
       intake.body.jev,
+      mechanical,
     );
+    if (worthRecording(mechanical))
+      await noteIntakeMechanical(deps.db, lease.runId, mechanicalNote(mechanical));
     const review = reviewIntent(mode, intake.body.jev, input.userRequest);
     const note = intakeDepthNote(depth, review);
     if (note) await noteIntakeDepth(deps.db, lease.runId, { depth: depth.depth, reason: note });
     const vague =
       mode === 'do' &&
       input.history.length === 0 &&
-      isVagueRequest(input.userRequest, namedFiles([input.userRequest]).length, intake.body.jev);
+      isVagueRequest(input.userRequest, requestFiles, intake.body.jev);
     const limits = baseLimits(deps, input.provider);
     const root = input.projectRoots[0];
     const worktrees = mode === 'do' && root !== undefined && (await isGitWorkTree(root));
@@ -285,7 +307,9 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       checkBodies: [],
       reviews: null,
       projectStyle:
-        mode === 'do' && root !== undefined ? await projectBuildStyle(deps.db, lease.runId) : 'off',
+        mode === 'do' && root !== undefined
+          ? await projectBuildStyle(deps.db, lease.runId)
+          : NO_PROJECT_STYLE,
       buildStyle: 'off',
       buildStyleDecided: false,
       lanePlacement: null,

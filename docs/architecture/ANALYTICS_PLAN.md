@@ -12,14 +12,14 @@ Proposed on September 26, 2026. The goal is an Analytics page that shows where t
 
 ## Phases
 
-| Phase                                     | Status                  | What lands                                                                                        |
-| ----------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| 1. Signals                                | **Done** (September 26) | `task_outcomes`, `outcome_signals`, implicit signals, thumbs feedback, the outcome and report API |
-| 2. Aggregation                            | Next                    | Daily rollups, counterfactual joins (rules vs Jev pick), per-profile-version slices               |
-| 3. Overview, Spend and Harness tabs       | Planned                 | The first Analytics screens on the phase 2 rollups                                                |
-| 4. Sessions                               | Planned                 | Flight recorder and friction metrics                                                              |
-| 5. Anomalies and Ask                      | Planned                 | Deterministic anomaly detection, "Ask about this view"                                            |
-| 6. Profile, recommendations and optimizer | Planned                 | Versioned harness profile per project, recommendations, the "Optimize workflow" button            |
+| Phase                                     | Status                  | What lands                                                                                                                                          |
+| ----------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Signals                                | **Done** (September 26) | `task_outcomes`, `outcome_signals`, implicit signals, thumbs feedback, the outcome and report API                                                   |
+| 2. Aggregation                            | **Done** (September 27) | Rollups by day, project, provider, model, category and Jev decision; rule vs Jev pick against outcomes; per-profile-version slices wait for phase 6 |
+| 3. Overview, Spend and Harness tabs       | **Done** (September 27) | The first Analytics screens on the phase 2 rollups                                                                                                  |
+| 4. Sessions                               | Planned                 | Flight recorder and friction metrics                                                                                                                |
+| 5. Anomalies and Ask                      | Planned                 | Deterministic anomaly detection, "Ask about this view"                                                                                              |
+| 6. Profile, recommendations and optimizer | Planned                 | Versioned harness profile per project, recommendations, the "Optimize workflow" button                                                              |
 
 ## Phase 1: outcome signals (done)
 
@@ -60,6 +60,25 @@ Each signal is stored once with its time, its source and a small detail object. 
 - `GET /api/runs/:id/outcome` refreshes and returns the turn's outcome, or `null` while it runs.
 - `PUT /api/runs/:id/feedback` `{ rating, reasons?, comment? }` records or changes feedback; `409` until the run has finished.
 - `GET /api/analytics/outcomes?groupBy=day|project|provider|model|category|jev_decision|jev_vs_rules&days=30` returns counts per group: turns, verdicts, mean score, ratings, nudges and samples, keeps, reverts, commits and corrections. It joins `run_advice`, so `jev_decision` (what the gate would apply) and `jev_vs_rules` (same pick, different pick, no Jev) can be set against outcomes.
+
+## Phase 2: aggregation (done)
+
+- **Window.** Every endpoint takes `range=7d|30d|90d` (ending on the viewer's local today) or `range=custom&from=YYYY-MM-DD&to=YYYY-MM-DD` (at most 366 days), and `tz`, the viewer's IANA time zone; days are bucketed in that zone (`analytics/window.ts`).
+- **Turn facts.** One query per request (`persistence/analytics-facts.ts`) reads each top-level turn in the window with its project, category, depth, retries, crew roles and Builder count, the main Builder's provider and model, cost split into reported, estimated and Jev, the outcome and its kept, reverted and correction signals, the intake advice (Jev's confidence, gate decision and line, which pick would apply, the differing fields with both picks), the build style decision, and its review and check artifacts. The aggregations over it are pure functions with unit tests (`analytics/harness.ts`, `rollups.ts`, `tally.ts`, `health.ts`).
+- **Spend.** Direct SQL over `runs` and `run_advice` for the project → provider → model split, daily reported and estimated spend (Jev counted as estimated), Jev's calls and cost; routing savings reuse `tallySavings` over Jev-routed runs in the window; resume savings price the cached input of runs whose work log says "Continued session" at the model card's input minus cached-input price, against every run that decided whether to resume.
+- **Indexes.** `0034_analytics_indexes.sql` adds `run_artifacts (source_run_id, kind)` for the review and check lookups and a partial `runs (created_at) WHERE parent_run_id IS NULL` for top-level turns. Ninety days of seeded history (about 330 turns) answer all three tab endpoints together well under a second in the DB test.
+- **API.** `GET /api/analytics/overview` (daily series, totals, keep rate, first-time check pass rate, health), `/spend` (tree leaves, daily sources, cost per finished turn by verdict with mean and median, cost per good outcome, routing and resume savings), `/harness` (routing paths category → depth → crew → model → outcome, Jev confidence points, rule-vs-Jev disagreements, agreement tallies, Lean on/off, Critic, checks, retries and fix loops, approval waits by kind) and `/rollups?groupBy=day|project|provider|model|category|jev_decision`.
+- **Health score.** A 0–100 weighted mean of five parts: good outcomes (mixed counts half, weight 40), checks passing on the first round (20), turns not reverted or corrected (20), crew turns without a retry or fix round (10), and the median approval wait (10; 30 s or less scores 100, 10 minutes or more 0). A part with fewer than 5 turns is left out and the rest reweighted; without enough outcomes there is no score. Grades: 80 and up healthy, 60 and up fair, below that needs attention.
+- **Who was right.** For each disagreement pattern (field, rule pick, Jev pick) the table compares the mean score of the turns where Jev's pick ran with those where the rule's ran. It names a winner only with 3 or more turns on each side and a gap of at least 0.2; otherwise "too close" or "not enough runs (n)". This is the outcome of the pick that ran, not a counterfactual replay.
+
+## Phase 3: Overview, Spend and Harness (done)
+
+- **Where.** An Analytics item in the rail, between Chats and Tickets, with Overview, Spend and Harness tabs and a 7, 30, 90 days or custom range. Sessions, Insights and Ask are not shown as tabs yet; a line under the tabs says they come next.
+- **Overview.** Harness health (gauge, the five parts with their details and weights, and "How the score is computed"), a calendar of turns per day (square size encodes the count), the spend trend with a 7-day average, and keep and first-time pass rates with the good, mixed, unclear and bad split.
+- **Spend.** A treemap by project → provider → model (provider colour on the tile edge, name and cost on a light tint), cost per finished turn by outcome (mean bar, median tick, cost per good outcome), reported against estimated per day (estimated hatched), and what Jev's routing saved against the top model after Jev's own cost, with resumed sessions and the estimated cache saving.
+- **Harness.** The routing flow (Sankey; focusing or hovering a bar lights its turns, more than 7 values per stage fold into Other), Jev's confidence against outcome score with the 0.75, 0.8, 0.9 and 0.95 gate lines and a mean-score curve, rule vs Jev agreement and the disagreement table with who did better, Lean off, lite and lean with the Critic's value, and checks, loops and approval waits.
+- **Accessibility.** Every chart card has a summary sentence written from the data, a "Show data table" toggle, and a Small sample flag below 10. Marks are one tab stop per chart with arrow, Home and End keys, each with a label and the shared tooltip on focus and hover. Outcomes use a shape or pattern as well as colour (circle, diamond, ring and cross; solid, dotted, hollow and hatched), and estimated spend is hatched. The new colour pairs are in `scripts/contrast/analytics-pairs.ts`. Motion is a 200 ms fade and rise of the tab panel and 250 ms bar growth, transform and opacity only, and none under reduced motion. Wide charts (the calendar and the flow) scroll inside their card on a phone.
+- **Tests.** Unit: window, health, harness aggregations, resume savings, calendar, treemap and Sankey layouts, and the summary sentences. DB: `analytics.db.test.ts` (empty workspace, a known scenario for every endpoint, time zones, custom ranges, validation, workspace isolation, 90 days of realistic history). Browser: `analytics.spec.ts` (tabs, data tables, keyboard marks, axe in Apricot and Aurora, phone width, empty state).
 
 ## Analytics tabs
 

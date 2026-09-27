@@ -1,3 +1,4 @@
+import { buildsInWorktree } from '../agents/acp/agents.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { callJev, type JevCall } from './jev-calls.ts';
 import {
@@ -64,6 +65,7 @@ function verdictsOf(call: JevCall | null, count: number): ParallelVerdicts | nul
 export interface ArchitectChains {
   chains: readonly number[][];
   depends: readonly (number[] | null)[];
+  parallel: boolean | null;
 }
 
 export interface ParallelDecision {
@@ -88,6 +90,13 @@ function verdictText(verdict: NoulVerdict | null): string {
   return verdict ? `Jev ${verdict.noul.toFixed(2)}` : 'Jev did not answer';
 }
 
+const DECIDED_BY: Record<SplitDecision['source'], string> = {
+  jev: 'Jev',
+  architect: 'Architect',
+  rules: 'rule',
+  forced: 'setting',
+};
+
 export function laneSummary(
   split: SplitDecision,
   placement: PlacementDecision | null,
@@ -95,11 +104,14 @@ export function laneSummary(
 ): string | null {
   if (candidates.length < 2) return null;
   const splitRule = split.rule.length > 1 ? 'split' : 'one Builder';
-  const splitText = `${split.lanes.length > 1 ? 'split' : 'one Builder'} (${split.source}; ${verdictText(split.jev)} on one Builder; rule: ${splitRule})`;
+  const architectText =
+    split.architect === null ? '' : `; Architect: ${split.architect ? 'parallel' : 'one Builder'}`;
+  const splitText = `${split.lanes.length > 1 ? 'split' : 'one Builder'} (decided by ${DECIDED_BY[split.source]}; ${verdictText(split.jev)} on one Builder${architectText}; rule: ${splitRule})`;
   if (!placement) return `Chains: ${splitText}`;
   const where = placement.placement === 'shared' ? 'shared tree' : 'worktrees';
   const rule = placement.rule.placement === 'shared' ? 'shared tree' : 'worktrees';
-  return `Chains: ${splitText} · ${where} (${placement.reason}; ${verdictText(placement.jev)} on sharing; rule: ${rule})`;
+  const need = placement.need ? `need: ${placement.need}, ` : '';
+  return `Chains: ${splitText} · ${where} (${need}${placement.reason}; ${verdictText(placement.jev)} on sharing; rule: ${rule})`;
 }
 
 export async function decideParallel(
@@ -136,6 +148,7 @@ export async function decideParallel(
     chooseLanes({ ...withJev, split: 'large' }),
     laneVerdicts.oneBuilder,
     s.deps.lanes?.split,
+    architect.parallel,
   );
   const lanes = split.lanes;
   const placement =
@@ -148,6 +161,10 @@ export async function decideParallel(
             verdict: laneVerdicts.sameFolder,
           },
           s.deps.lanes?.placement,
+          {
+            destructive: s.flow.risk === 'destructive',
+            unattendedCodex: buildsInWorktree(s.input.provider, s.flow.level),
+          },
         )
       : null;
   s.lanePlacement = placement?.placement ?? null;
@@ -179,7 +196,13 @@ export async function decideParallel(
         pairs: choice.pairs,
         sizes: choice.sizes,
         agreement: agreement(choice),
-        chains: { architect: architect.chains, depends: architect.depends, candidates, lanes },
+        chains: {
+          architect: architect.chains,
+          depends: architect.depends,
+          parallel: architect.parallel,
+          candidates,
+          lanes,
+        },
         split,
         ...(placement ? { placement } : {}),
       },

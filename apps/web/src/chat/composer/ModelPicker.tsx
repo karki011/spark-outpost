@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import {
@@ -23,12 +23,20 @@ import { PermissionOptions } from './PermissionOptions.tsx';
 import { PickerNav, type PickerRow, type PickerSection } from './PickerNav.tsx';
 import { ProviderSwitch } from './ProviderSwitch.tsx';
 import { autoThisTurn, autoWouldHaveUsed } from '../../crew/auto-route.ts';
-import { buttonLabel, currentModel, selectableEfforts } from './model-options.ts';
+import { buttonLabel, currentModel, selectableEfforts, shortLabel } from './model-options.ts';
 import './model-picker.css';
 
 const SECTIONS: PickerSection[] = ['model', 'effort', 'permission'];
 
+export interface PickerRequest {
+  section: PickerSection;
+  id: number;
+  value?: string;
+}
+
 interface ModelPickerProps {
+  openRequest?: PickerRequest | null;
+  onNotice?: (message: string) => void;
   conversationId: string;
   settings: ChatSettings;
   providers: ProviderSetup[];
@@ -40,6 +48,8 @@ interface ModelPickerProps {
 const HOUR = 60 * 60 * 1000;
 
 export function ModelPicker({
+  openRequest = null,
+  onNotice,
   conversationId,
   settings,
   providers,
@@ -48,10 +58,23 @@ export function ModelPicker({
   orchestration = null,
 }: ModelPickerProps) {
   const queryClient = useQueryClient();
-  const { open, toggle, anchorRef, panelRef } = usePopover<HTMLButtonElement, HTMLDivElement>();
+  const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
+    HTMLButtonElement,
+    HTMLDivElement
+  >();
   const panelId = useId();
   const listId = useId();
   const [section, setSection] = useState<PickerSection>('model');
+  const [handledRequest, setHandledRequest] = useState(openRequest?.id ?? null);
+  const [focusRequest, setFocusRequest] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (focusRequest === null) return;
+    const frame = requestAnimationFrame(() =>
+      panelRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus(),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [focusRequest, panelRef]);
   const [direction, setDirection] = useState(1);
   const provider = settings.provider;
 
@@ -91,6 +114,31 @@ export function ModelPicker({
   const hint = would ? `Auto would have used ${would}` : null;
 
   const effort = efforts.find((option) => option.id === settings.effort);
+
+  if (openRequest && openRequest.id !== handledRequest) {
+    setHandledRequest(openRequest.id);
+    const wanted = openRequest.value?.trim().toLowerCase() ?? '';
+    const options = openRequest.section === 'effort' ? efforts : (capabilities?.models ?? []);
+    const match = wanted
+      ? options.find(
+          (option) =>
+            option.id.toLowerCase() === wanted || shortLabel(option.label).toLowerCase() === wanted,
+        )
+      : undefined;
+    if (match && openRequest.section === 'effort') {
+      update.mutate({ effort: match.id });
+      onNotice?.(`Effort set to ${match.label}.`);
+    } else if (match) {
+      update.mutate(jevConnected ? { model: match.id, routing: 'pinned' } : { model: match.id });
+      onNotice?.(`Model set to ${shortLabel(match.label)}.`);
+    } else {
+      if (wanted)
+        onNotice?.(`${setup?.name ?? 'This agent'} doesn't offer "${openRequest.value}".`);
+      setSection(openRequest.section);
+      setOpen(true);
+      setFocusRequest(openRequest.id);
+    }
+  }
   const rows: PickerRow[] = [
     {
       id: 'model',

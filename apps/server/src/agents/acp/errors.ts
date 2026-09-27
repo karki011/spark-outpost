@@ -1,4 +1,4 @@
-import { RequestError } from '@agentclientprotocol/sdk';
+import { PROTOCOL_VERSION, RequestError, type InitializeResponse } from '@agentclientprotocol/sdk';
 import { ProviderError } from '../../providers/provider.ts';
 import { AgentExitedError } from './agent-process.ts';
 import type { AgentFailure } from './session-updates.ts';
@@ -59,5 +59,12 @@ export function failureError(agentName: string, failure: AgentFailure): Provider
   }
   return new ProviderError(
     `${agentName} stopped with an error: ${failure.title.slice(0, MAX_DETAIL)}`,
+  );
+}
+
+export function assertProtocolVersion(agentName: string, init: InitializeResponse): void {
+  if (init.protocolVersion === PROTOCOL_VERSION) return;
+  throw new ProviderError(
+    `${agentName} speaks ACP version ${init.protocolVersion}, but Spark Outpost needs ${PROTOCOL_VERSION}.`,
   );
 }

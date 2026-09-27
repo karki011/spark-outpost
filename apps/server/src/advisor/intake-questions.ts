@@ -93,6 +93,8 @@ export const SCOPE_CRITERIA: Record<Scope, string> = {
 
 export const REVIEW_EXISTING_QUESTION =
   'Is the user asking for a review of existing changes, not new work?';
+export const MECHANICAL_QUESTION =
+  'Is this a mechanical change applying one clear pattern across files?';
 export const VAGUE_QUESTION =
   'Is `task` too vague to act on without first asking the user what they want?';
 
@@ -105,6 +107,14 @@ function doModeQuestions(mode: IntakeRequest['mode']): IntakeQuestions['question
       criteria: {
         yes: 'It asks to review, look over or check changes that already exist',
         no: 'It asks for new work: building, fixing or changing something',
+      },
+    },
+    mechanical: {
+      type: 'noul',
+      instructions: `${MECHANICAL_QUESTION} Judge \`task\`. Mechanical means a rename, a move, fixing type or lint errors, formatting, or an API migration where every edit follows the same stated pattern and needs no design choices.`,
+      criteria: {
+        yes: 'Mechanical: the same clear edit repeated across files, no design needed',
+        no: 'Not mechanical: new behaviour, design choices, or edits that differ from file to file',
       },
     },
     vague: {
@@ -368,12 +378,16 @@ function answeredNoul(response: SystemOneResponse, key: string): number | null {
   return answer?.type === 'noul' ? answer.noul : null;
 }
 
-function doModeAnswers(response: SystemOneResponse): Pick<JevIntake, 'reviewExisting' | 'vague'> {
+function doModeAnswers(
+  response: SystemOneResponse,
+): Pick<JevIntake, 'reviewExisting' | 'vague' | 'mechanical'> {
   const reviewExisting = answeredNoul(response, 'review_existing');
   const vague = answeredNoul(response, 'vague');
+  const mechanical = answeredNoul(response, 'mechanical');
   return {
     ...(reviewExisting === null ? {} : { reviewExisting }),
     ...(vague === null ? {} : { vague }),
+    ...(mechanical === null ? {} : { mechanical }),
   };
 }
 

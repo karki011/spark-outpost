@@ -53,6 +53,17 @@ const configOptions = (): acp.SessionConfigOption[] => [
   ]),
 ];
 
+const advertisedCommands = JSON.parse(process.env.FAKE_ACP_COMMANDS ?? '[]') as string[];
+
+function slashCommand(prompt: acp.ContentBlock[]): { name: string; rest: string } | null {
+  const first = prompt[0];
+  if (first?.type !== 'text') return null;
+  const trimmed = first.text.trim();
+  if (!trimmed.startsWith('/')) return null;
+  const [name = '', ...rest] = trimmed.slice(1).split(/\s+/);
+  return { name: name.toLowerCase(), rest: rest.join(' ') };
+}
+
 let clientCapabilities: unknown = null;
 let sessionCwd = '';
 let sessionDirectories: string[] | null = null;
@@ -208,6 +219,21 @@ async function turn(
       content: { type: 'text', text: chunk },
     });
 
+  if (advertisedCommands.length > 0) {
+    await update({
+      sessionUpdate: 'available_commands_update',
+      availableCommands: advertisedCommands.map((name) => ({
+        name,
+        description: `Run ${name}`,
+        input: name === 'review' ? { hint: 'what to review' } : null,
+      })),
+    });
+  }
+  const command = slashCommand(params.prompt);
+  if (command && advertisedCommands.includes(command.name)) {
+    await say(`command=/${command.name} args=${command.rest}`);
+    return 'end_turn';
+  }
   if (text.includes('#silent')) return 'end_turn';
   if (text.includes('#recall')) {
     await say(
@@ -312,7 +338,7 @@ acp
   .onRequest(acp.methods.agent.initialize, (ctx) => {
     clientCapabilities = ctx.params.clientCapabilities ?? null;
     return {
-      protocolVersion: acp.PROTOCOL_VERSION,
+      protocolVersion: Number(process.env.FAKE_ACP_PROTOCOL_VERSION ?? acp.PROTOCOL_VERSION),
       agentCapabilities: {
         loadSession: loadSessionAdvertised,
         promptCapabilities,
@@ -370,6 +396,9 @@ acp
   })
   .onRequest(acp.methods.agent.session.setConfigOption, (ctx) => {
     const { configId, value } = ctx.params as { configId: string; value: string };
+    if (!configOptions().some((option) => option.id === configId)) {
+      throw acp.RequestError.invalidParams({ configId }, 'Unknown config option.');
+    }
     config[configId] = value;
     return { configOptions: configOptions() };
   })

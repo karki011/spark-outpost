@@ -1,4 +1,5 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
+import { analyticsRoutes } from './analytics-routes.ts';
 import { approvalRoutes } from './approval-routes.ts';
 import { attachmentRoutes } from './attachment-routes.ts';
 import { auditRoutes } from './audit-routes.ts';
@@ -39,6 +40,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', modelCardRoutes(options));
   app.use('/api', homeRoutes(options));
   app.use('/api', outcomeRoutes(options));
+  app.use('/api', analyticsRoutes(options));
   app.use('/api', terminalRoutes(options.terminals));
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found.' });

@@ -98,10 +98,25 @@ describe('the lean build style', () => {
     expect(await readFile(join(root, 'notes.txt'), 'utf8')).toBe('start\nstep 1\n');
   });
 
-  it('tells the in-place Builder the ladder and harvests its lean: markers', async () => {
-    await configure('lean');
+  it('builds lean by default when the project never chose a style', async () => {
     start(TRIVIAL);
     const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'full-auto');
+    const { orchestration } = await driveToEnd(t, conversationId, runId);
+    expect(orchestration.status).toBe('succeeded');
+    expect(await decision(runId)).toEqual([
+      {
+        applied: 'rules',
+        chosen: 'lean',
+        summary: 'Build style lean · rule would have used lean (default) · Jev said lean at 0.50',
+      },
+    ]);
+  });
+
+  it('tells the in-place Builder the ladder and harvests its lean: markers', async () => {
+    await configure('lean');
+    const marked = { ...TRIVIAL, text: `${TRIVIAL.text} #leanmark` };
+    start(marked);
+    const { conversationId, runId } = await startScenario(t, root, marked, 'full-auto');
     const { orchestration } = await driveToEnd(t, conversationId, runId);
     expect(orchestration.status).toBe('succeeded');
     expect(await decision(runId)).toEqual([
@@ -174,7 +189,7 @@ describe('parallel lanes in the shared working tree', () => {
   it('runs disjoint lanes side by side, attributes each diff, checks and reviews the merge once', async () => {
     await writeFile(join(root, 'check.mjs'), "console.log('ok');\n");
     await configure('off', ['node check.mjs']);
-    start(COMPLEX, undefined, { same_folder: 0.95 });
+    const script = start(COMPLEX, undefined, { same_folder: 0.95 });
     const scenario = { ...COMPLEX, text: `${COMPLEX.text} #parallel #chains #sleepstep 3` };
     const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
     const { orchestration } = await driveToEnd(t, conversationId, runId);
@@ -208,19 +223,26 @@ describe('parallel lanes in the shared working tree', () => {
       [runId],
     );
     expect(rows[0]?.summary).toContain(
-      'shared tree (Jev is sure the Builders can share the folder; Jev 0.95 on sharing; rule: shared tree)',
+      'shared tree (lanes change separate source files; Jev did not answer on sharing; rule: shared tree)',
     );
+    expect(script.calls.some((call) => call.questions.includes('same_folder'))).toBe(false);
   });
 
-  it('keeps worktrees when Jev is unsure the Builders can share the folder', async () => {
-    start(COMPLEX, undefined, { same_folder: 0.6 });
-    const scenario = { ...COMPLEX, text: `${COMPLEX.text} #parallel #chains` };
+  it('keeps worktrees for destructive lanes and records the need', async () => {
+    const scenario = {
+      ...COMPLEX,
+      risk: 'destructive' as const,
+      text: `${COMPLEX.text} #parallel #chains`,
+    };
+    start(scenario);
     const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
     const { orchestration } = await driveToEnd(t, conversationId, runId);
-    const builders = orchestration.crew.filter((member) => member.role === 'builder');
+    const builders = orchestration.crew.filter((member) => member.parallelGroup === 'g1');
+    expect(builders).toHaveLength(2);
     expect(builders.every((member) => member.copy?.startsWith('spark/'))).toBe(true);
-    const summary = await parallelSummary(runId);
-    expect(summary).toContain('worktrees (Jev is unsure; Jev 0.60 on sharing; rule: shared tree)');
+    expect(await parallelSummary(runId)).toContain(
+      'worktrees (need: destructive work, a lane deletes, migrates or rewrites data;',
+    );
   });
 
   it('lets one Builder carry the chains when Jev is sure that is as good', async () => {
@@ -231,7 +253,35 @@ describe('parallel lanes in the shared working tree', () => {
     const builders = orchestration.crew.filter((member) => member.role === 'builder');
     expect(builders.map((member) => member.parallelGroup ?? null)).toEqual([null]);
     expect(await parallelSummary(runId)).toContain(
-      'Chains: one Builder (jev; Jev 0.90 on one Builder; rule: split)',
+      'Chains: one Builder (decided by Jev; Jev 0.90 on one Builder; rule: split)',
+    );
+  });
+});
+
+describe('chains when Jev is unsure about one Builder', () => {
+  it('follows the Architect’s parallel-chains line over the large-chain rule', async () => {
+    await configure('off');
+    start(COMPLEX, undefined, { one_builder: 0.6, large_2: 0.1, same_folder: 0.95 });
+    const scenario = { ...COMPLEX, text: `${COMPLEX.text} #parallel #chains #parallelchains` };
+    const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
+    const { orchestration } = await driveToEnd(t, conversationId, runId);
+    expect(orchestration.status).toBe('succeeded');
+    const builders = orchestration.crew.filter((member) => member.role === 'builder');
+    expect(builders.map((member) => member.parallelGroup)).toEqual(['g1', 'g1']);
+    expect(await parallelSummary(runId)).toContain(
+      'Chains: split (decided by Architect; Jev 0.60 on one Builder; Architect: parallel; rule: one Builder)',
+    );
+  });
+
+  it('falls back to the large-chain rule when the Architect does not say', async () => {
+    await configure('off');
+    start(COMPLEX, undefined, { one_builder: 0.6, large_2: 0.1 });
+    const scenario = { ...COMPLEX, text: `${COMPLEX.text} #parallel #chains` };
+    const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
+    const { orchestration } = await driveToEnd(t, conversationId, runId);
+    expect(orchestration.status).toBe('succeeded');
+    expect(await parallelSummary(runId)).toContain(
+      'Chains: one Builder (decided by rule; Jev 0.60 on one Builder; rule: one Builder)',
     );
   });
 });

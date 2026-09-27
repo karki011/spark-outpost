@@ -160,6 +160,23 @@ describe('provider sessions across chat turns', () => {
     expect(next?.target).toMatchObject({ resume: null, freshReason: 'last turn did not finish' });
   });
 
+  it('saves no session when the chat was deleted while the turn ran', async () => {
+    const id = await conversation();
+    const turn = await prepareTurnSession(t.db, chatInput(id, null), limits);
+    await t.db.query('DELETE FROM conversations WHERE id = $1', [id]);
+    await turn?.started({
+      kind: 'session',
+      sessionId: 's-1',
+      cwd: '/work',
+      additionalDirectories: [],
+      continued: false,
+      freshReason: null,
+    });
+    await turn?.finished({ outcome: 'succeeded', messageId: null, text: 'Done.' });
+    const { rows } = await t.db.query('SELECT 1 FROM provider_sessions');
+    expect(rows).toEqual([]);
+  });
+
   it('tracks orchestration children only when they carry a resume key', async () => {
     const id = await conversation();
     const child = { ...chatInput(id, null), parentRunId: randomUUID(), mode: 'do' as const };

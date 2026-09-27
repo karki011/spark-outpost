@@ -46,8 +46,9 @@ export async function architect(turn: RoleTurn): Promise<acp.StopReason> {
   const chains = turn.text.includes('#chains')
     ? '\n\nStep 1 · Files: src/dates.ts · Depends on: none\nStep 2 · Files: src/divider.tsx · Depends on: 1\nStep 3 · Files: src/turns.ts · Depends on: none\nChain A: steps 1-2\nChain B: step 3'
     : '';
+  const parallelChains = turn.text.includes('#parallelchains') ? '\nParallel chains: yes' : '';
   await turn.say(
-    `Plan ready with ${entries.length} steps.${edited ? ` Edited: ${edited}` : ''}${chains}${notes}${hint}${large}`,
+    `Plan ready with ${entries.length} steps.${edited ? ` Edited: ${edited}` : ''}${chains}${parallelChains}${notes}${hint}${large}`,
   );
   return 'end_turn';
 }
@@ -70,7 +71,7 @@ function priorPrompts(sessionId: string): number {
 }
 
 function leanMarker(text: string): string {
-  return text.includes('## Build style: lean')
+  return text.includes('## Build style: lean') && text.includes('#leanmark')
     ? '// lean: fixed list; upgrade: load from config when asked\n'
     : '';
 }

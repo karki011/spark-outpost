@@ -1,4 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { resolve } from 'node:path';
 import { format, resolveConfig } from 'prettier';
 import { z } from 'zod';
 
@@ -8,7 +10,9 @@ const DOC_PATH = 'docs/architecture/ACP_COVERAGE.md';
 const START_MARKER = '<!-- acp-coverage:start -->';
 const END_MARKER = '<!-- acp-coverage:end -->';
 const WHERE_PREFIX = 'apps/server/src/agents/acp/';
-const OUTSIDE_SCHEMA = 'Outside the v1 schema';
+const OUTSIDE_SCHEMA = 'Unstable (outside the stable v1 schema)';
+const SDK_PACKAGE = '@agentclientprotocol/sdk';
+const UNSTABLE_SCHEMA = `${SDK_PACKAGE}/schema/schema.json`;
 
 interface JsonSchema {
   $ref?: string;
@@ -229,23 +233,38 @@ async function renderDoc(rows: readonly Row[]): Promise<string> {
   return format(text, { ...config, filepath: DOC_PATH });
 }
 
-function problems(surfaces: readonly Surface[], coverage: StatusFile): string[] {
+function problems(
+  surfaces: readonly Surface[],
+  unstable: ReadonlySet<string>,
+  coverage: StatusFile,
+): string[] {
+  const known = new Set(surfaces.map((surface) => surface.id));
   const untracked = surfaces
     .filter((surface) => !coverage[surface.id])
     .map((surface) => `No entry for ${surface.id} (${surface.area})`);
+  const unknown = Object.keys(coverage)
+    .filter((id) => !known.has(id) && !unstable.has(id))
+    .map((id) => `${id} is in neither ${SCHEMA_PATH} nor the SDK's unstable schema`);
   const unexplained = Object.entries(coverage)
     .filter(([, entry]) => entry.status === 'partial' && !entry.note?.trim())
     .map(([id]) => `${id} is partial but has no note saying what is missing`);
-  return [...untracked, ...unexplained];
+  return [...untracked, ...unknown, ...unexplained];
 }
 
 function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
+function unstableSurfaceIds(): Set<string> {
+  const require = createRequire(resolve('apps/server/package.json'));
+  const unstable = readJson(require.resolve(UNSTABLE_SCHEMA)) as SchemaFile;
+  return new Set(listSurfaces(unstable).map((surface) => surface.id));
+}
+
 const schema = readJson(SCHEMA_PATH) as SchemaFile;
 const coverage = statusFileSchema.parse(readJson(STATUS_PATH));
 const surfaces = listSurfaces(schema);
+const unstable = unstableSurfaceIds();
 const rows = rowsFor(surfaces, coverage);
 const command = process.argv[2] ?? 'check';
 
@@ -253,9 +272,11 @@ if (command === 'render') {
   writeFileSync(DOC_PATH, await renderDoc(rows));
   console.log(`Rendered ${DOC_PATH} from ${rows.length} entries.`);
 } else if (command === 'check') {
-  const found = problems(surfaces, coverage);
+  const found = problems(surfaces, unstable, coverage);
   for (const row of rows.filter((candidate) => candidate.area === OUTSIDE_SCHEMA)) {
-    console.warn(`Not in the schema: ${row.id} (${row.entry.status})`);
+    console.warn(
+      `Unstable in ${SDK_PACKAGE}, not in the v1 schema: ${row.id} (${row.entry.status})`,
+    );
   }
   if ((await renderDoc(rows)) !== readFileSync(DOC_PATH, 'utf8')) {
     found.push(`${DOC_PATH} is out of date. Run pnpm acp:coverage render`);

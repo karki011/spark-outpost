@@ -87,16 +87,23 @@ describe('ACP session update mapping', () => {
     expect(mapper.map({ sessionUpdate: 'session_info_update', title: 'Chat' })).toEqual([]);
   });
 
-  it('shows notices as steps and treats error notices as the turn failure', () => {
+  it('shows notices as steps and never fails the turn on an advisory error notice', () => {
     const mapper = createUpdateMapper();
-    expect(
-      mapper.map({ sessionUpdate: 'notice', severity: 'warning', title: 'Using HTTPS transport' }),
-    ).toEqual([
+    const notice = (severity: string, title: string) =>
+      mapper.map({ sessionUpdate: 'notice', severity, title });
+    expect(notice('warning', 'Using HTTPS transport')).toEqual([
       { kind: 'step_started', name: 'Warning: Using HTTPS transport' },
       { kind: 'step_finished', name: 'Warning: Using HTTPS transport' },
     ]);
-    expect(mapper.map({ sessionUpdate: 'notice', severity: 'error', title: 'Boom' })).toEqual([]);
-    expect(mapper.failure()).toEqual({ category: 'provider_error', title: 'Boom' });
+    expect(notice('error', 'Boom')).toEqual([
+      { kind: 'step_started', name: 'Error: Boom' },
+      { kind: 'step_finished', name: 'Error: Boom' },
+    ]);
+    expect(notice('_vendor', 'Custom')).toEqual([
+      { kind: 'step_started', name: 'Note: Custom' },
+      { kind: 'step_finished', name: 'Note: Custom' },
+    ]);
+    expect(mapper.failure()).toBeNull();
   });
 
   it('reports context usage and USD cost', () => {
@@ -123,8 +130,13 @@ describe('ACP session update mapping', () => {
       status: 'in_progress',
     });
     expect(
-      mapper.map({ sessionUpdate: 'available_commands_update', availableCommands: [] }),
-    ).toEqual([]);
+      mapper.map({
+        sessionUpdate: 'available_commands_update',
+        availableCommands: [{ name: 'compact', description: 'Summarize', input: null }],
+      }),
+    ).toEqual([
+      { kind: 'commands', commands: [{ name: 'compact', description: 'Summarize', hint: null }] },
+    ]);
     expect(mapper.finish()).toEqual([{ kind: 'step_finished', name: 'Search' }]);
     expect(mapper.finish()).toEqual([]);
   });

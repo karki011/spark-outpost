@@ -1,5 +1,6 @@
 import type { Depth, GateDecision, JevIntake, Risk, RunMode } from '@spark-outpost/contracts';
 import { ASK_AT } from '../advisor/gate.ts';
+import { MECHANICAL_REASON, type MechanicalCall } from './mechanical.ts';
 import { noulVerdict } from './parallel-choice.ts';
 
 const DEPTH_FOR_RISK: Record<Risk, Depth> = {
@@ -71,6 +72,7 @@ export function refineDepth(
   risk: Risk,
   namedFiles: number,
   jev: JevIntake | null,
+  mechanical: MechanicalCall | null = null,
 ): DepthChoice {
   if (choice.depth !== 'plan_execute') return choice;
   if (wantsReview(jev)) {
@@ -81,7 +83,10 @@ export function refineDepth(
     };
   }
   if (oneSpot(risk, jev)) return { ...choice, depth: 'execute', reason: ONE_SPOT_REASON };
-  if (!planInRequest(risk, namedFiles, jev)) return choice;
+  if (!planInRequest(risk, namedFiles, jev)) {
+    if (!mechanical?.mechanical) return choice;
+    return { ...choice, depth: 'execute', reason: MECHANICAL_REASON };
+  }
   const files = namedFiles === 1 ? '1 file' : `${namedFiles} files`;
   return {
     ...choice,
