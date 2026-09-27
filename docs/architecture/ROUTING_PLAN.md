@@ -255,14 +255,17 @@ Cloned (read-only use) into the session scratchpad at `scratchpad/repos/feature-
 
 It's a good test of the monorepo signals: one request can touch one Nx project or many. "Training" here means building a labelled task set and tuning our wording and thresholds; nothing trains Jev itself.
 
-**Privacy gate:** the local scan never leaves the machine. But Jev is an external service (TypeSafe), and its state would include this repo's file paths, symbol names and the task text. Before any Jev call on this repo, the user confirms that sending that metadata is allowed for company code. Until then, the prototype runs the scan and ranking locally and logs what it would send, without sending it.
+**Privacy:** the local scan never leaves the machine. Jev is an external service (TypeSafe), and its state includes this repo's file paths, symbol names and the task text. The user confirmed on 2026-09-27 that the company allows this for `feature-web-apps`. Other company repositories need their own confirmation.
 
 ## Rollout
 
 0. **Prototype and load-test the scan.** Build the indexer and the per-task scan. Measure on a small repo, `feature-web-apps` (5,443 files, 133 Nx projects) and a 100,000-file repo: first index time, per-task scan time, cache size, and API response time while five projects scan at once. Continue only if per-task scans stay under 2 s and the API stays responsive.
 1. **Shadow.** Build steps 1–3 and log Jev's route next to the rule's route, as `autoWouldUse` does today. No behaviour change.
 2. **Label.** Collect about 50 real tasks with outcomes, plus a seeded corpus of coding tasks with preferred tiers (pi's 24-task file is a template).
-3. **Compare.** Rules vs Jev text-only vs Jev with evidence, on preferred tier, escalations, cost and Keep rate. The evidence only ships if it beats text-only.
+3. **Compare.** Rules vs Jev text-only vs Jev with evidence, on pass rate first, then preferred tier, escalations, Keep rate and cost per successful task. The evidence only ships if it beats text-only.
+
+   **Cost is not the whole picture.** A cheaper route that fails pushes the cost onto the user: noticing, re-prompting, debugging and fixing, plus lost trust. Compare on cost per successful task including an estimate of that repair cost, never on spend alone. A small tier only takes over a class of tasks when it passes them as reliably as the tier it replaces.
+
 4. **Switch.** Jev routes; the verified cascade replaces retry-up.
 5. **Delete.** Remove `TRIVIAL_VERB`, `trivialByRule` and the trivial branch of `routeBuilder`. Keep `DESTRUCTIVE` as a safety gate.
 
