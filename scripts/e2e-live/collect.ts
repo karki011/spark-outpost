@@ -43,7 +43,8 @@ const KNOWN_ARTIFACTS = ['plan', 'review', 'check', 'shortcuts'];
 
 async function observations(db: Db, ids: string[], taskId: string | null): Promise<Observation[]> {
   const advice = await db.query<{ purpose: string; body: Record<string, unknown> }>(
-    'SELECT purpose, body FROM run_advice WHERE run_id = ANY($1) ORDER BY created_at',
+    `SELECT purpose, body || jsonb_build_object('row', to_jsonb(a) - 'body') AS body
+     FROM run_advice a WHERE run_id = ANY($1) ORDER BY created_at`,
     [ids],
   );
   const artifacts = taskId
@@ -56,7 +57,7 @@ async function observations(db: Db, ids: string[], taskId: string | null): Promi
     source,
     kind,
     summary: typeof body.summary === 'string' ? body.summary : null,
-    body: JSON.stringify(body).slice(0, 2_000),
+    body: JSON.stringify(body).slice(0, 4_000),
   });
   return [
     ...advice.rows.map((row) => toObservation('advice', row.purpose, row.body)),
