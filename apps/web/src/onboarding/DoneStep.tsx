@@ -28,8 +28,10 @@ function providerItem(provider: ProviderSetup, isDefault: boolean): SummaryItem 
   const model =
     connection.models.find((option) => option.id === connection.model)?.label ??
     'CLI default model';
-  const effort =
-    provider.efforts.find((option) => option.id === connection.effort)?.label ?? connection.effort;
+  const effort = connection.effort
+    ? (provider.efforts.find((option) => option.id === connection.effort)?.label ??
+      connection.effort)
+    : 'Per-chat';
   const permission =
     provider.permissions.find((option) => option.id === connection.permission)?.label ??
     connection.permission;

@@ -3,7 +3,13 @@ import { POLICY_VERSION } from '../advisor/policy.ts';
 import { whyLine } from '../model-cards/why.ts';
 import { insertDecision, usedNames } from '../persistence/orchestrations.ts';
 import { keepSession, resumableChat, resumableTask, type SessionChoice } from './session-keep.ts';
-import { escalate, routeBuilder, routeCritic, type MemberRoute } from './routing.ts';
+import {
+  escalate,
+  routeBuilder,
+  routeCritic,
+  routeMemberModel,
+  type MemberRoute,
+} from './routing.ts';
 import { builderKey, type Session } from './session.ts';
 import type { Spawn } from './transitions.ts';
 
@@ -30,7 +36,7 @@ async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
 }
 
 async function scoutRoute(s: Session): Promise<ResolvedRoute> {
-  const route = routeBuilder(s.route, { trivial: false, destructive: false }, jevTier(s));
+  const route = routeMemberModel(s.route, { trivial: false, destructive: false }, jevTier(s));
   const mode = s.input.mode === 'do' ? 'ask' : (s.input.mode ?? 'chat');
   const session = await resumableChat(s.deps.db, s.input, mode, s.deps.sessionLimits?.idleMs);
   const kept = keepSession(route, session);

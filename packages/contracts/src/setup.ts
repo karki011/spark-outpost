@@ -49,7 +49,7 @@ export const providerConnectionSchema = z.object({
   model: z.string().nullable(),
   permission: z.string(),
   level: involvementLevelSchema,
-  effort: z.string(),
+  effort: z.string().nullable(),
   verifiedAt: z.string(),
 });
 export type ProviderConnection = z.infer<typeof providerConnectionSchema>;
@@ -129,7 +129,7 @@ export const updateProviderDefaultsRequestSchema = z
     model: z.string(),
     permission: z.string(),
     level: involvementLevelSchema,
-    effort: z.string(),
+    effort: z.string().min(1).max(40).nullable(),
   })
   .partial();
 export type UpdateProviderDefaultsRequest = z.infer<typeof updateProviderDefaultsRequestSchema>;

@@ -1,4 +1,5 @@
 import type {
+  CapabilityOption,
   InvolvementLevel,
   Profile,
   ProviderConnection,
@@ -10,6 +11,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { effectiveDefaultModel } from '../model-cards/cards.ts';
 import { catalog, catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
+import { reportedEfforts } from '../providers/efforts.ts';
 import type { TestOutcome } from '../setup/test-message.ts';
 import type { VerifiedConnection } from '../setup/verify.ts';
 import { listAdvisors } from './advisors.ts';
@@ -31,7 +33,7 @@ interface ConnectionRow {
   model: string | null;
   permission: string;
   level: InvolvementLevel;
-  effort: string;
+  effort: string | null;
   verified_at: Date;
   disconnected_at: Date | null;
   summary: string | null;
@@ -186,7 +188,7 @@ export async function saveConnection(
   const { rows } = await db.query<ConnectionRow>(
     `INSERT INTO provider_connections
        (workspace_id, provider, method, detail, models, model, permission, effort, verified_at, summary)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, now(), $8)
      ON CONFLICT (workspace_id, provider) DO UPDATE SET
        method = EXCLUDED.method,
        detail = EXCLUDED.detail,
@@ -212,7 +214,6 @@ export async function saveConnection(
       JSON.stringify(verified.models),
       defaultModel,
       entry.permissions[0]!.id,
-      entry.defaultEffort,
       verified.summary,
     ],
   );
@@ -258,6 +259,18 @@ export async function disconnectProvider(
   );
 }
 
+async function capabilityOptions(
+  db: Queryable,
+  workspaceId: string,
+  provider: ProviderId,
+): Promise<{ models: CapabilityOption[]; efforts: CapabilityOption[] } | null> {
+  const { rows } = await db.query<{ models: CapabilityOption[]; efforts: CapabilityOption[] }>(
+    'SELECT models, efforts FROM provider_capabilities WHERE workspace_id = $1 AND provider = $2',
+    [workspaceId, provider],
+  );
+  return rows[0] ?? null;
+}
+
 async function offersModel(
   db: Queryable,
   workspaceId: string,
@@ -265,11 +278,20 @@ async function offersModel(
   model: string,
 ): Promise<boolean> {
   if (connection.models.some((option) => option.id === model)) return true;
-  const { rows } = await db.query<{ models: { id: string }[] }>(
-    'SELECT models FROM provider_capabilities WHERE workspace_id = $1 AND provider = $2',
-    [workspaceId, connection.provider],
+  const captured = await capabilityOptions(db, workspaceId, connection.provider);
+  return captured?.models.some((option) => option.id === model) ?? false;
+}
+
+async function reportsEffort(
+  db: Queryable,
+  workspaceId: string,
+  provider: ProviderId,
+  effort: string,
+): Promise<boolean> {
+  const captured = await capabilityOptions(db, workspaceId, provider);
+  return reportedEfforts(provider, captured?.efforts ?? null).some(
+    (option) => option.id === effort,
   );
-  return rows[0]?.models.some((option) => option.id === model) ?? false;
 }
 
 export async function updateProviderDefaults(
@@ -280,7 +302,7 @@ export async function updateProviderDefaults(
     model?: string | undefined;
     permission?: string | undefined;
     level?: InvolvementLevel | undefined;
-    effort?: string | undefined;
+    effort?: string | null | undefined;
   },
 ): Promise<ProviderConnection> {
   const entry = catalogEntry(provider);
@@ -298,14 +320,14 @@ export async function updateProviderDefaults(
       choice?.unavailableReason ?? `${entry.name} does not have that permission mode.`,
     );
   }
-  if (update.effort && !entry.efforts.some((choice) => choice.id === update.effort)) {
+  if (update.effort && !(await reportsEffort(db, workspaceId, provider, update.effort))) {
     throw new InvalidDefaultError(`${entry.name} does not have that effort level.`);
   }
   const { rows } = await db.query<ConnectionRow>(
     `UPDATE provider_connections SET
        model = COALESCE($3, model),
        permission = COALESCE($4, permission),
-       effort = COALESCE($5, effort),
+       effort = CASE WHEN $7 THEN $5 ELSE effort END,
        level = COALESCE($6, level)
      WHERE workspace_id = $1 AND provider = $2
      RETURNING *`,
@@ -316,6 +338,7 @@ export async function updateProviderDefaults(
       update.permission ?? null,
       update.effort ?? null,
       update.level ?? null,
+      update.effort !== undefined,
     ],
   );
   return toConnection(rows[0])!;

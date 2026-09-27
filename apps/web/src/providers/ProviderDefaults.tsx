@@ -3,14 +3,21 @@ import { api, queryKeys } from '../api/client.ts';
 import {
   INVOLVEMENT_LEVELS,
   levelHint,
+  type CapabilityOption,
   type Choice,
+  type ProviderCapabilities,
   type ProviderConnection,
   type ProviderSetup,
   type UpdateProviderDefaultsRequest,
 } from '@spark-outpost/contracts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { Segmented } from '../ui/Segmented.tsx';
-import { cleanDescription, optionLabel } from '../chat/composer/model-options.ts';
+import {
+  cleanDescription,
+  effortNote,
+  optionLabel,
+  selectableEfforts,
+} from '../chat/composer/model-options.ts';
 import { ChoicePicker } from './ChoicePicker.tsx';
 
 function levelChoices(provider: string): Choice[] {
@@ -23,6 +30,17 @@ function levelChoices(provider: string): Choice[] {
   }));
 }
 
+const PER_CHAT = 'per-chat';
+
+function effortOptions(
+  provider: ProviderSetup,
+  capabilities: ProviderCapabilities | undefined,
+): CapabilityOption[] {
+  const reported = selectableEfforts(capabilities);
+  if (reported.length > 0) return reported;
+  return provider.efforts.map(({ id, label, description }) => ({ id, label, description }));
+}
+
 interface ProviderDefaultsProps {
   provider: ProviderSetup;
   connection: ProviderConnection;
@@ -33,9 +51,13 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
   const mutation = useMutation({
     mutationFn: (update: UpdateProviderDefaultsRequest) =>
       setupApi.updateDefaults(provider.id, update),
-    onSuccess: (state) => queryClient.setQueryData(setupKey, state),
+    onSuccess: (state, update) => {
+      queryClient.setQueryData(setupKey, state);
+      if (update.effort !== undefined) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.conversations });
+      }
+    },
   });
-  const effort = provider.efforts.find((choice) => choice.id === connection.effort);
   const capabilities = useQuery({
     queryKey: queryKeys.capabilities(provider.id),
     queryFn: () => api.getCapabilities(provider.id),
@@ -57,6 +79,8 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
           risky: false,
           unavailableReason: null,
         }));
+  const efforts = effortOptions(provider, capabilities.data);
+  const effort = efforts.find((choice) => choice.id === connection.effort) ?? null;
   const offered = models.some((model) => model.id === connection.model);
   const selectedModel = offered ? connection.model : (capabilities.data?.defaultModel ?? null);
 
@@ -108,11 +132,18 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
         <dd>
           <Segmented
             ariaLabel={`${provider.name} effort`}
-            options={provider.efforts.map((choice) => ({ id: choice.id, label: choice.label }))}
-            value={connection.effort}
-            onChange={(id) => mutation.mutate({ effort: id })}
+            options={[
+              { id: PER_CHAT, label: 'Per chat' },
+              ...efforts.map((choice) => ({ id: choice.id, label: choice.label })),
+            ]}
+            value={effort?.id ?? PER_CHAT}
+            onChange={(id) => mutation.mutate({ effort: id === PER_CHAT ? null : id })}
           />
-          {effort && <small className="note">{effort.description}</small>}
+          <small className="note">
+            {effort
+              ? `${effortNote(effort) ?? effort.label}. Do-task Builders always use it.`
+              : 'Each chat keeps its own effort, and Do-task Builders follow it.'}
+          </small>
         </dd>
       </dl>
     </section>
