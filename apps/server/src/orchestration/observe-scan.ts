@@ -2,6 +2,7 @@ import { renderJevState } from '../codescan/jev-state.ts';
 import type { ScanOutcome } from '../codescan/scanner.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { track } from './observe.ts';
+import { observeRouting } from './observe-route.ts';
 import type { Session } from './session.ts';
 
 export const SCAN_TOP_FILES = 10;
@@ -62,6 +63,7 @@ async function recordScan(s: Session, scanning: Promise<ScanOutcome>): Promise<v
       answer: scanAnswer(outcome),
     },
   });
+  await observeRouting(s, outcome.report);
 }
 
 export function startScan(

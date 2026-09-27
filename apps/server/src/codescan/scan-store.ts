@@ -206,3 +206,22 @@ export async function neighbours(
   );
   return toFacts(rows);
 }
+
+export async function definedNames(
+  db: Queryable,
+  projectId: string,
+  paths: readonly string[],
+  perFile: number,
+): Promise<Map<string, string[]>> {
+  if (paths.length === 0) return new Map();
+  const { rows } = await db.query<{ path: string; names: string[] }>(
+    `SELECT f.path, ARRAY(
+       SELECT n.name FROM code_index_names n
+       WHERE n.project_id = f.project_id AND n.id = ANY(f.def_ids)
+       ORDER BY n.ref_files DESC, n.name LIMIT $3
+     ) AS names
+     FROM code_index_files f WHERE f.project_id = $1 AND f.path = ANY($2::text[])`,
+    [projectId, paths, perFile],
+  );
+  return new Map(rows.map((row) => [row.path, row.names]));
+}
