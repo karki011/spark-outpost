@@ -1,9 +1,11 @@
 import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, realpath, rm, unlink, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { indexProject } from '../src/codescan/indexer.ts';
+import { removeProject } from '../src/projects/project-removal.ts';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import { evictBeyondCap, expireIndexes } from '../src/codescan/retention.ts';
 import { createCodeScanner } from '../src/codescan/scanner.ts';
@@ -161,6 +163,18 @@ describe('code index cache', () => {
     } finally {
       await rm(other, { recursive: true, force: true });
     }
+  });
+
+  it('drops the index when its project is removed', async () => {
+    await indexProject(t.db, root);
+    const id = randomUUID();
+    await t.db.query(
+      'INSERT INTO projects (id, workspace_id, name, root_path) VALUES ($1, $2, $3, $4)',
+      [id, t.workspaceId, 'demo', root],
+    );
+    await removeProject(t.db, t.workspaceId, id);
+    const { rowCount } = await t.db.query('SELECT 1 FROM code_index_projects');
+    expect(rowCount).toBe(0);
   });
 
   it('scans a request against the cache and live text search', async () => {

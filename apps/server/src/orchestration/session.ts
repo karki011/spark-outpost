@@ -9,6 +9,7 @@ import {
   type PlanEntry,
 } from '@spark-outpost/contracts';
 import type { IntakeResult } from '../advisor/intake-recorder.ts';
+import type { CodeScanner } from '../codescan/scanner.ts';
 import type { ProjectChecks } from '../checks/project-checks.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import {
@@ -33,6 +34,7 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   checkpointTimeoutMs?: number;
   jevTimeoutMs?: number;
   loopGuard?: Partial<LoopGuardSettings> | false;
+  codeScan?: CodeScanner;
 }
 
 export interface MemberResult {
