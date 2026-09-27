@@ -15,6 +15,12 @@ The cluster listens on loopback only, uses SCRAM password authentication, and ha
 
 To start over, stop the cluster and delete `.local/postgres` and `.local/credentials.env`. This deletes all local data.
 
+## Migrations at startup
+
+The API and the workflow worker apply pending migrations when they start, so a pull that adds a migration needs no manual step. One process takes a PostgreSQL advisory lock and migrates; the other waits for the lock and then finds nothing left to do. `pnpm db:migrate` uses the same path.
+
+Before applying anything to a database that already has migrations, the server backs it up with `pg_dump --format=custom` into `.local/backups/<database>-<timestamp>.dump` and keeps the newest five per database. `pg_dump` is found the same way as the cluster binaries: `brew --prefix postgresql@17`, then `PATH`. A failed backup applies nothing. A failed migration stops startup with an error naming the migration and the backup file; earlier migrations in the same start stay applied. Restore a backup with `pg_restore --clean --if-exists --dbname=<url> <file>` while the API and worker are stopped.
+
 ## Troubleshooting on macOS
 
 - `postmaster became multithreaded during startup`: PostgreSQL needs a valid `LC_ALL`. The scripts set `en_US.UTF-8`; override with `SPARK_PG_LOCALE`.
