@@ -26,7 +26,7 @@ test('shows what Jev suggested on the turn, with the rules comparison on focus',
   await expect(tip).toBeVisible();
   await expect(tip).toContainText('Category Bug fix');
   await expect(tip).toContainText('Rules ran: Claude');
-  await expect(tip).toContainText('policy lean-1');
+  await expect(tip).toContainText('policy cascade-1');
 
   await page.getByRole('button', { name: /Context window/ }).click();
   await expect(page.locator('.ctx-usage')).toContainText('Jev');

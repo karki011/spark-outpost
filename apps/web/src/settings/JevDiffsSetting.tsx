@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
 
 export const JEV_DIFFS_DISCLOSURE =
-  'Sends the diff and file paths of each proposed edit, and the final diff of a change, to TypeSafe for observation-only checks that never block or allow anything. TypeSafe does not train on it.';
+  'Sends the diff and file paths of each proposed edit to TypeSafe for observation-only checks that never block or allow anything, and the final diff of a change so Jev can verify it: a change Jev finds incomplete is redone once by a stronger model. TypeSafe does not train on it.';
 
 export function JevDiffsSetting({ enabled }: { enabled: boolean }) {
   const hintId = useId();

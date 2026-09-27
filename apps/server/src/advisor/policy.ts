@@ -1,8 +1,9 @@
-export const POLICY_VERSION = 'lean-1';
+export const POLICY_VERSION = 'cascade-1';
 
-export type ActingQuestion = 'question' | 'vague' | 'review' | 'destructive' | 'continues_task';
+export type ActingQuestion =
+  'question' | 'vague' | 'review' | 'destructive' | 'continues_task' | 'verify';
 
-export type ObservedQuestion = 'tier' | 'policy' | 'verify';
+export type ObservedQuestion = 'tier' | 'policy';
 
 export const ACT_AT: Record<ActingQuestion | ObservedQuestion, number> = {
   question: 0.8,
@@ -25,6 +26,7 @@ export const LARGE_DIFF_FILES = 10;
 
 export const CHECK_FIXES = 2;
 export const PLAN_CONTINUES = 2;
+export const MAX_VERDICTS = 2;
 export const LOOP_STREAK = 5;
 
 export const FOLLOW_UP_WORDS = 15;

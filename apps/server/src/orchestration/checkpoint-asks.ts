@@ -12,6 +12,7 @@ import {
   clarifiedRequest,
   retryCard,
   stuckCard,
+  verifyCard,
   type CheckpointCard,
 } from './checkpoint.ts';
 import { autoContinueOption } from './checkpoint-policy.ts';
@@ -33,10 +34,11 @@ function builderPick(s: Session): AgentPick | null {
 
 async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
   if (action.kind === 'clarify') return answerOrBuildCard(action.reason);
-  if (action.kind === 'retry') {
+  if (action.kind === 'retry' || action.kind === 'verify') {
     const previous = s.routes.get('builder');
     const to = previous ? escalate(s.route, previous).pick : null;
-    return retryCard(builderPick(s), to, action.reason);
+    const card = action.kind === 'retry' ? retryCard : verifyCard;
+    return card(builderPick(s), to, action.reason);
   }
   if (action.kind === 'stuck') {
     const name = s.results.findLast((result) => result.role === 'builder')?.name ?? 'The Builder';

@@ -193,6 +193,8 @@ Thresholds and wording start from pi's values and are then fitted on our own lab
 
 After the Builder finishes: checks run, then one Jev verdict on the diff against the task (supported, unsupported, declined, accepted at 0.8, as in the OpenRouter cascade). Unsupported → rerun once a tier up, in the same worktree, with the failure as evidence. Declined → stop and report. This replaces the retry-one-tier-up rule and gives us the outcome labels we need.
 
+**Built on 2026-09-27** after a measurement on 24 labelled diffs (unsupported precision 0.91, recall 0.83; [verifier-2026-09-27.md](../benchmarks/verifier-2026-09-27.md)). Declined asks with a card rather than stopping outright. The retry one tier up for a failed Builder stays: it covers agent failures, which never reach the verdict.
+
 ### 6. Learn from our own runs
 
 Every task records: candidates, Jev's distribution, the chosen route, the predicted files, the files actually changed, the checks, the verdict, the escalation, Keep or Revert, and the thumbs. That becomes the labelled corpus. The route question's wording and thresholds are A/B-tested on it, as pi and Mandrilsquad did, before any default changes.

@@ -1,12 +1,15 @@
 import { redactText } from '../audit/redact.ts';
 import type { IntakeQuestions, SystemOneResponse } from './intake-questions.ts';
-import { validNoul } from './intake-questions.ts';
+import { validChoice, validNoul } from './intake-questions.ts';
 import { capped, MAX_DIFF_CHARACTERS, MAX_REQUEST_CHARACTERS } from './policy-gate.ts';
 import { ACT_AT } from './policy.ts';
 import { noulQuestion } from './questions.ts';
 
 export const MAX_REQUIREMENTS = 5;
+export const MAX_PLAN_ENTRIES = 12;
+export const MAX_CHECK_CHARACTERS = 3_000;
 const MIN_REQUIREMENT_WORDS = 3;
+const UNMET_REASON_AT = 0.5;
 
 const SENTENCE = /(?<=[.!?])\s+|\n+|;\s+/;
 const BULLET = /^\s*(?:[-*]|\d+[.)])\s+/;
@@ -31,20 +34,48 @@ export function requirementLines(request: string, planEntries: readonly string[]
   return lines.slice(0, MAX_REQUIREMENTS);
 }
 
-export interface VerifyFacts {
+export const VERDICTS = ['supported', 'unsupported', 'declined'] as const;
+export type Verdict = (typeof VERDICTS)[number];
+
+export const VERDICT_QUESTION = {
+  question: 'Does `diff` do what `task` asks?',
+  how: 'Check every requirement `task` states, including named cases, values, formats and edge cases, against the lines in `diff`. Passing `checks` only show the project’s own tests pass; they do not show that a requirement is met.',
+  ignore: 'Do not judge by the size of the diff, its style, or how many tests it adds.',
+};
+
+export const VERDICT_CRITERIA: Record<Verdict, Record<string, string>> = {
+  supported: {
+    what: 'Every requirement stated in `task` is visibly done by the lines in `diff`',
+    not_for: 'a diff that does most of the task but skips or gets wrong one stated case',
+  },
+  unsupported: {
+    what: 'At least one stated requirement is missing, only partly done, or done differently from what `task` says, even if the checks pass',
+    not_for: 'work that is complete but written in a style you would not choose',
+  },
+  declined: {
+    what: 'The evidence cannot settle it: `diff` is empty or cut off, or the work was refused or deliberately left unfinished',
+    not_for: 'a complete diff that simply misses a requirement (unsupported)',
+  },
+};
+
+export interface VerdictFacts {
   request: string;
+  plan: readonly string[];
   requirements: readonly string[];
   diff: string;
+  checks: readonly string[];
 }
 
 export const unmetKey = (index: number) => `unmet_${index + 1}`;
 
-export function buildVerifyQuestions(facts: VerifyFacts): IntakeQuestions {
-  const questions: IntakeQuestions['questions'] = {};
+export function buildVerdictQuestions(facts: VerdictFacts): IntakeQuestions {
+  const questions: IntakeQuestions['questions'] = {
+    verdict: { type: 'choice', instructions: VERDICT_QUESTION, criteria: VERDICT_CRITERIA },
+  };
   facts.requirements.forEach((requirement, index) => {
     questions[unmetKey(index)] = noulQuestion(
       {
-        question: 'Does `diff` fail to do this requirement from `request`?',
+        question: 'Does `diff` fail to do this requirement from `task`?',
         requirement: capped(redactText(requirement), 500),
       },
       {
@@ -53,47 +84,53 @@ export function buildVerifyQuestions(facts: VerifyFacts): IntakeQuestions {
       },
     );
   });
-  questions.weakens_tests = noulQuestion('Does `diff` weaken or delete tests to make them pass?', {
-    true: 'It removes, skips or loosens tests or assertions',
-    false: 'Tests and assertions are kept or strengthened',
-  });
+  const plan = facts.plan.slice(0, MAX_PLAN_ENTRIES).map((entry) => capped(entry, 300));
   return {
     state: {
-      request: capped(redactText(facts.request), MAX_REQUEST_CHARACTERS),
+      task: capped(redactText(facts.request), MAX_REQUEST_CHARACTERS),
+      plan: plan.length > 0 ? plan : 'No plan was made.',
+      checks: capped(
+        redactText(facts.checks.length > 0 ? facts.checks.join('\n') : 'No checks ran.'),
+        MAX_CHECK_CHARACTERS,
+      ),
       diff: capped(redactText(facts.diff), MAX_DIFF_CHARACTERS),
     },
     questions,
   };
 }
 
-export interface VerifyVerdict {
+export interface VerdictReading {
+  verdict: Verdict | null;
+  confidence: number | null;
+  probabilities: Record<string, number> | null;
+  accepted: Verdict | null;
   unmet: { requirement: string; noul: number | null }[];
-  weakensTests: number | null;
+  reasons: string[];
   invalid: string[];
-  worst: number | null;
-  would: 'pass' | 'flag' | 'review';
 }
 
-export function verifyVerdict(
+export function readVerdict(
   requirements: readonly string[],
   response: SystemOneResponse | null,
-): VerifyVerdict {
+): VerdictReading {
   const invalid: string[] = [];
-  const read = (key: string) => {
-    const value = validNoul(response, key);
-    if (value === null) invalid.push(key);
-    return value;
+  const choice = validChoice(response, 'verdict', VERDICTS);
+  if (!choice) invalid.push('verdict');
+  const unmet = requirements.map((requirement, index) => {
+    const noul = validNoul(response, unmetKey(index));
+    if (noul === null) invalid.push(unmetKey(index));
+    return { requirement, noul };
+  });
+  const accepted = choice && choice.confidence >= ACT_AT.verify ? choice.value : null;
+  return {
+    verdict: choice?.value ?? null,
+    confidence: choice?.confidence ?? null,
+    probabilities: choice?.probabilities ?? null,
+    accepted,
+    unmet,
+    reasons: unmet
+      .filter((entry) => (entry.noul ?? 0) >= UNMET_REASON_AT)
+      .map((entry) => entry.requirement),
+    invalid,
   };
-  const unmet = requirements.map((requirement, index) => ({
-    requirement,
-    noul: read(unmetKey(index)),
-  }));
-  const weakensTests = read('weakens_tests');
-  const known = [...unmet.map((entry) => entry.noul), weakensTests].filter(
-    (value): value is number => value !== null,
-  );
-  const worst = known.length > 0 ? Math.max(...known) : null;
-  const would =
-    worst !== null && worst >= ACT_AT.verify ? 'flag' : invalid.length > 0 ? 'review' : 'pass';
-  return { unmet, weakensTests, invalid, worst, would };
 }

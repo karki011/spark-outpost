@@ -25,6 +25,7 @@ const KINDS: Record<ApprovalKind, AttentionKind> = {
   budget: 'input',
   merge_conflict: 'input',
   stuck: 'stuck',
+  verify: 'input',
 };
 
 function baseName(path: string): string {

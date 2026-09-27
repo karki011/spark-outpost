@@ -30,6 +30,7 @@ const TITLES: Record<CheckpointPayload['kind'], string> = {
   budget: 'Continue past the budget?',
   merge_conflict: 'The Builder’s copy and your files collided',
   stuck: 'The Builder was repeating itself',
+  verify: 'Jev could not verify the change',
 };
 
 export function checkpointTitle(payload: CheckpointPayload): string {
@@ -51,6 +52,7 @@ const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
   budget: 'Continue past the budget',
   merge_conflict: 'Choose which version to keep',
   stuck: 'Continue, or stop and report',
+  verify: 'Finish, retry one tier up, or stop',
 };
 
 export function waitingLabel(payload: CheckpointPayload): string {
@@ -72,6 +74,11 @@ export function retryLine(payload: CheckpointPayload): string {
   const from = pickLabel(payload.from);
   if (!to || to === from) return 'Retry the step once more?';
   return `Retry with ${to}?`;
+}
+
+export function escalateLabel(payload: CheckpointPayload): string {
+  const to = pickLabel(payload.to);
+  return to && to !== pickLabel(payload.from) ? `Retry with ${to}` : 'Retry one tier up';
 }
 
 function budgetAmount(limit: BudgetLimit, value: number): string {
@@ -113,6 +120,7 @@ const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.stopReport]: 'Stopped and reported.',
   [CHECKPOINT_OPTION.justAnswer]: 'Answered without changes.',
   [CHECKPOINT_OPTION.makeChange]: 'Making the change.',
+  [CHECKPOINT_OPTION.finishUnverified]: 'Finished without verification.',
 };
 
 const AUTO_LABELS: Record<string, string> = {
@@ -120,6 +128,7 @@ const AUTO_LABELS: Record<string, string> = {
   [CHECKPOINT_OPTION.clarifyRules]: 'Continue',
   [CHECKPOINT_OPTION.letContinue]: 'Let it continue',
   [CHECKPOINT_OPTION.stopReport]: 'Stop and report',
+  [CHECKPOINT_OPTION.finishUnverified]: 'Finish',
 };
 
 export function autoLabel(optionId: string, seconds: number): string {

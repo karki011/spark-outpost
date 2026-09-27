@@ -81,7 +81,11 @@ describe('observation mode', () => {
     expect(policy.body.jevModel).toBe('jev-test');
 
     const verify = rows.find((row) => row.purpose === 'verify')!;
-    expect(verify.body.answer).toMatchObject({ observation: true, would: 'pass' });
+    expect(verify.body.answer).toMatchObject({
+      observation: false,
+      would: 'supported',
+      action: 'finish',
+    });
     expect(verify.body.state).toMatchObject({ diff: expect.stringContaining('step 1') });
 
     const view = await loadOrchestration(t.db, runId);
@@ -102,17 +106,6 @@ describe('observation mode', () => {
       [policy.body.answer.actual!.approvalId],
     );
     expect(rows).toEqual([{ status: 'allowed' }]);
-  }, 60_000);
-
-  it('flags a verifier that sees an unmet requirement, still without acting', async () => {
-    const script: JevScript = { calls: [], scenario: NORMAL, verify: 0.93 };
-    harness = startOrchestrator(t, jevFetch(script));
-    const { conversationId, runId } = await startScenario(t, root, NORMAL, 'full-auto');
-    const { orchestration } = await driveToEnd(t, conversationId, runId);
-    expect(orchestration.status).toBe('succeeded');
-    expect(orchestration.crew.map((member) => member.role)).toEqual(['builder']);
-    const verify = (await observations(runId)).find((row) => row.purpose === 'verify')!;
-    expect(verify.body.answer).toMatchObject({ would: 'flag' });
   }, 60_000);
 
   it('sends no diff and records "skipped" when code diffs are turned off', async () => {
