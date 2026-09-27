@@ -1,6 +1,6 @@
 # Routing plan
 
-> **Status: plan only.** Nothing here is built. The lean harness (round 10, `104bcbe`) still routes with the rules in `orchestration/routing.ts` and `risk-rules.ts`, and records Jev's tier as `autoWouldUse` without acting on it.
+> **Status: rollout step 1 (shadow) built on September 27, 2026.** The code scan (step 0), the two-stage Jev file ranking and the route question run for every Do task and are recorded next to the rule route (`run_advice` purposes `scan`, `rank` and `route_shadow`; the `routing_labels` view; `pnpm routing:labels`). The Builder still runs on the rules in `orchestration/routing.ts` and `risk-rules.ts`. Results: [routing-shadow-2026-09-27.md](../benchmarks/routing-shadow-2026-09-27.md).
 
 This plan replaces keyword routing with a Jev decision that uses codebase evidence, and then checks the result before paying for a stronger model. It draws on six routers read in full, including their code, fixtures and studies.
 

@@ -19,7 +19,7 @@ export function atK(predicted: readonly string[], changed: readonly string[], k 
   };
 }
 
-interface Pick {
+interface PickFields {
   provider?: string;
   model?: string | null;
   modelLabel?: string | null;
@@ -33,11 +33,11 @@ interface Variant {
   tokens?: number | null;
   costUsd?: number | null;
   selection?: { basis: string; tier: string | null; routeProbability: number } | null;
-  pick?: Pick;
+  pick?: PickFields;
 }
 
 function pickName(pick: unknown): string | null {
-  const value = pick as Pick | null | undefined;
+  const value = pick as PickFields | null | undefined;
   if (!value) return null;
   return value.modelLabel ?? value.model ?? value.provider ?? null;
 }
@@ -64,10 +64,20 @@ function stageOneOrder(raw: unknown): string[] {
   return (stage?.probabilities ?? []).map(([path]) => path);
 }
 
+type RankColumns = Pick<RoutingLabelRow, 'scan_files' | 'rank_stage_one' | 'predicted_files'>;
+
+export function filesAtK(row: RankColumns, changed: readonly string[]) {
+  return {
+    scan: atK(row.scan_files ?? [], changed),
+    stageOne: atK(stageOneOrder(row.rank_stage_one), changed),
+    predicted: atK(row.predicted_files ?? [], changed),
+  };
+}
+
 export function toLabel(row: RoutingLabelRow) {
   const changed = row.changed_files ?? [];
   const known = row.changed_files !== null;
-  const rule = row.rule_route as { pick?: Pick; rule?: string } | null;
+  const rule = row.rule_route as { pick?: PickFields; rule?: string } | null;
   return {
     runId: row.run_id,
     taskId: row.task_id,
@@ -87,15 +97,10 @@ export function toLabel(row: RoutingLabelRow) {
     evidenceDistribution:
       (row.jev_evidence as { probabilities?: unknown } | null)?.probabilities ?? null,
     scan: { status: row.scan_status, ms: row.scan_ms },
+    scanFiles: row.scan_files ?? [],
     predictedFiles: row.predicted_files ?? [],
     changedFiles: known ? changed : null,
-    files: known
-      ? {
-          scan: atK(row.scan_files ?? [], changed),
-          stageOne: atK(stageOneOrder(row.rank_stage_one), changed),
-          predicted: atK(row.predicted_files ?? [], changed),
-        }
-      : null,
+    files: known ? filesAtK(row, changed) : null,
     rankStageOne: row.rank_stage_one,
     rankStageTwo: row.rank_stage_two,
     checks: row.checks,
