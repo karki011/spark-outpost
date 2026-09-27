@@ -29,8 +29,7 @@ SELECT
   (scan.body->>'latencyMs')::int AS scan_ms,
   rank.body->'answer'->'scanOrder' AS scan_files,
   rank.body->'answer'->'predicted' AS predicted_files,
-  rank.body->'answer'->'stageOne' AS rank_stage_one,
-  rank.body->'answer'->'stageTwo' AS rank_stage_two,
+  rank.body->'answer'->'jev' AS rank_jev,
   (
     SELECT jsonb_agg(f->>'path' ORDER BY f->>'path')
     FROM jsonb_array_elements(COALESCE(o.kept->'files', '[]'::jsonb)) f

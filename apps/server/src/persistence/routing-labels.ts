@@ -20,8 +20,7 @@ export interface RoutingLabelRow {
   scan_ms: number | null;
   scan_files: string[] | null;
   predicted_files: string[] | null;
-  rank_stage_one: unknown;
-  rank_stage_two: unknown;
+  rank_jev: unknown;
   changed_files: string[] | null;
   checks: unknown;
   verify: string[] | null;

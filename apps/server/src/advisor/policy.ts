@@ -35,10 +35,7 @@ export const FOLLOW_UP_MINUTES = 10;
 export const ROUTE_ACCEPT_CONFIDENCE = 0.65;
 export const ROUTE_CUMULATIVE_MASS = 0.8;
 
-export const RANK_SHORTLIST_MASS = 0.9;
-export const RANK_SHORTLIST_MIN = 3;
-export const RANK_SHORTLIST_MAX = 12;
-export const RANK_DEFINED_NAMES = 12;
+export const RANK_PREDICTED_FILES = 12;
 
 export const ROUTER_TIERS = ['micro', 'low', 'mid', 'top'] as const;
 export type RouterTier = (typeof ROUTER_TIERS)[number];

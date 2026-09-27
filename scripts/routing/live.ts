@@ -25,7 +25,7 @@ const { values } = parseArgs({
     'run-cap': { type: 'string', default: '0.3' },
     'total-cap': { type: 'string', default: '2.6' },
     skip: { type: 'string', default: '0' },
-    'no-loop-guard': { type: 'boolean', default: false },
+    check: { type: 'string', multiple: true, default: [] },
   },
 });
 
@@ -127,13 +127,7 @@ async function main() {
   const api = startProcess('api', ['--import', 'tsx', 'src/api/main.ts'], server, env, logs);
   const worker = startProcess(
     'worker',
-    [
-      '--import',
-      'tsx',
-      values['no-loop-guard']
-        ? join(ROOT, 'scripts/routing/live-worker.ts')
-        : 'src/workflow/main.ts',
-    ],
+    ['--import', 'tsx', 'src/workflow/main.ts'],
     server,
     env,
     logs,
@@ -143,7 +137,11 @@ async function main() {
   try {
     await waitFor(answers(`http://127.0.0.1:${port}/api/health`), 'The API');
     await waitFor(async () => /Worker running/.test(worker.output()), 'The worker');
-    const projectId = await client.linkProject(repo, 'off');
+    const projectId = await client.linkProject(
+      repo,
+      'off',
+      values.check.length > 0 ? values.check : undefined,
+    );
     const requests = renamesLast(REQUESTS['feature-web-apps']!)
       .slice(0, Number(values.limit))
       .slice(Number(values.skip));

@@ -121,7 +121,6 @@ describe('Jev routing in shadow mode', () => {
     expect(shadow?.body.summary).toMatch(/^Shadow route: rules Sonnet 5 · Jev text-only Haiku 4.5/);
     expect(asked(script, 'route')).toHaveLength(2);
     expect(asked(script, 'likely_file')).toHaveLength(1);
-    expect(asked(script, 'shortlist_file')).toHaveLength(1);
 
     const view = await loadOrchestration(t.db, runId);
     const kinds = view?.decisions.map((decision) => decision.kind) ?? [];

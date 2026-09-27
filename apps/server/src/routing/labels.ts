@@ -59,17 +59,11 @@ function variantLabel(raw: unknown) {
   };
 }
 
-function stageOneOrder(raw: unknown): string[] {
-  const stage = raw as { probabilities?: [string, number][] } | null;
-  return (stage?.probabilities ?? []).map(([path]) => path);
-}
-
-type RankColumns = Pick<RoutingLabelRow, 'scan_files' | 'rank_stage_one' | 'predicted_files'>;
+type RankColumns = Pick<RoutingLabelRow, 'scan_files' | 'predicted_files'>;
 
 export function filesAtK(row: RankColumns, changed: readonly string[]) {
   return {
     scan: atK(row.scan_files ?? [], changed),
-    stageOne: atK(stageOneOrder(row.rank_stage_one), changed),
     predicted: atK(row.predicted_files ?? [], changed),
   };
 }
@@ -101,8 +95,7 @@ export function toLabel(row: RoutingLabelRow) {
     predictedFiles: row.predicted_files ?? [],
     changedFiles: known ? changed : null,
     files: known ? filesAtK(row, changed) : null,
-    rankStageOne: row.rank_stage_one,
-    rankStageTwo: row.rank_stage_two,
+    rankJev: row.rank_jev,
     checks: row.checks,
     verify: row.verify,
     critic: row.critic,
