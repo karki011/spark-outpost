@@ -91,6 +91,18 @@ describe('extractSymbols', () => {
     expect(symbols.references).toEqual(expect.arrayContaining(['useUploadCsv']));
   });
 
+  it('keeps functions but not variables as definitions in test files', async () => {
+    const source = [
+      'const useUploadCsv = api.useUploadCsv as unknown as Mock;',
+      'const searchInput = () => screen.getByRole("searchbox");',
+      'function renderPanel() { return null; }',
+    ].join('\n');
+    const inTest = await extractSymbols('typescript', source, true);
+    expect(inTest.definitions.map((definition) => definition.name)).toEqual(['renderPanel']);
+    const inSource = await extractSymbols('typescript', source);
+    expect(inSource.definitions).toHaveLength(3);
+  });
+
   it('skips names shorter than three characters', async () => {
     const symbols = await extractSymbols('typescript', 'const ab = cd(ef);');
     expect(symbols.definitions).toEqual([]);

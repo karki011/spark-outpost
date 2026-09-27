@@ -104,6 +104,7 @@ async function scanPhase(repo: Repo) {
   const times: number[] = [];
   const samples = [];
   try {
+    await scanner.ensureIndexed(repo.root);
     for (const request of REQUESTS[repo.name] ?? []) {
       const runs: ScanOutcome[] = [];
       for (let attempt = 0; attempt < repeats; attempt += 1)
@@ -160,6 +161,7 @@ async function concurrentScans(db: Db, deadlineMs: number) {
   const statuses: Record<string, number> = {};
   const times: number[] = [];
   const queued: number[] = [];
+  await Promise.all(repos.map((repo) => scanner.ensureIndexed(repo.root)));
   const { api } = await underLoad(async () => {
     for (let round = 0; round < rounds; round += 1) {
       const outcomes = await Promise.all(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createLimiter } from './scanner.ts';
-import { undefinedTerms } from './scan.ts';
+import { spellings, undefinedTerms } from './scan.ts';
 import { STATUS_TTL_MS, statusIsFresh } from './status-cache.ts';
 
 describe('createLimiter', () => {
@@ -50,11 +50,13 @@ describe('undefinedTerms', () => {
       ['useChartData', 1],
       ['SearchInput', 2],
       ['DatePicker', 3],
+      ['nowhere', 4],
     ]);
     const stats = new Map([
       [1, { defFiles: 1, refFiles: 4 }],
       [2, { defFiles: 0, refFiles: 9 }],
       [3, { defFiles: 2, refFiles: 9 }],
+      [4, { defFiles: 1, refFiles: 1 }],
     ]);
     expect(
       undefinedTerms(
@@ -63,5 +65,12 @@ describe('undefinedTerms', () => {
         stats,
       ),
     ).toEqual(['SearchInput', 'Nowhere']);
+  });
+});
+
+describe('spellings', () => {
+  it('looks up code-shaped names as written and expands kebab and snake names', () => {
+    expect(spellings('SearchInput')).toEqual(['SearchInput']);
+    expect(spellings('date-picker')).toContain('DatePicker');
   });
 });

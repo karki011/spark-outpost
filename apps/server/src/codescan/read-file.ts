@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { extensionOf, symbolLanguage } from './languages.ts';
 import { looksBinary, looksGenerated } from './skip.ts';
 import { extractSymbols, type Definition } from './symbols.ts';
+import { isTestFile } from './test-pairs.ts';
 
 export interface FileJob {
   path: string;
@@ -58,6 +59,6 @@ export async function readAndParse(root: string, job: FileJob): Promise<FileResu
     const label = language ? 'generated' : extensionOf(job.path) || 'text';
     return { ...base, lines, language: label, definitions: [], references: [] };
   }
-  const symbols = await extractSymbols(language, text);
+  const symbols = await extractSymbols(language, text, isTestFile(job.path));
   return { ...base, lines, language, ...symbols };
 }

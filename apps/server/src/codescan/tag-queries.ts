@@ -1,6 +1,6 @@
 import type { SymbolLanguage } from './languages.ts';
 
-export const PARSER_VERSION = 'web-tree-sitter@0.27.0+tree-sitter-wasm@0.3.1+tags@1';
+export const PARSER_VERSION = 'web-tree-sitter@0.27.0+tree-sitter-wasm@0.3.1+tags@2';
 
 export const DEFINITION_KINDS = [
   'function',

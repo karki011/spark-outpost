@@ -174,7 +174,7 @@ async function gatherSymbols(
 ): Promise<void> {
   const project = evidence.project;
   if (!project) return;
-  const variants = terms.identifiers.flatMap(nameVariants);
+  const variants = terms.identifiers.flatMap(spellings);
   const [named, pathHits, pathWords] = await Promise.all([
     abortable(nameIds(db, project.id, variants), signal),
     abortable(pathsLike(db, project.id, [...terms.paths, ...terms.fileNames]), signal),
@@ -202,6 +202,10 @@ async function gatherSymbols(
   await expandNeighbours(db, project, evidence, core, seeds, timings, signal);
 }
 
+export function spellings(term: string): string[] {
+  return /[-_]/.test(term) ? nameVariants(term) : [term];
+}
+
 export function undefinedTerms(
   identifiers: readonly string[],
   named: ReadonlyMap<string, number>,
@@ -209,7 +213,7 @@ export function undefinedTerms(
 ): string[] {
   return identifiers.filter((term) => {
     if (term.length < 4) return false;
-    return !nameVariants(term).some((variant) => {
+    return !spellings(term).some((variant) => {
       const id = named.get(variant);
       return id !== undefined && (stats.get(id)?.defFiles ?? 0) > 0;
     });

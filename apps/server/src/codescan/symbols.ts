@@ -75,13 +75,17 @@ export function isMockDefinition(name: Node): boolean {
   return false;
 }
 
-function collectDefinitions(tools: LoadedLanguage, tree: Parameters<Query['captures']>[0]) {
+function collectDefinitions(
+  tools: LoadedLanguage,
+  tree: Parameters<Query['captures']>[0],
+  testFile: boolean,
+) {
   const seen = new Map<string, Definition>();
   for (const capture of tools.definitions.captures(tree)) {
     const kind = definitionKind(capture.name);
     const name = capture.node.text;
     if (!kind || name.length < MIN_NAME_LENGTH || seen.has(name)) continue;
-    if (isMockDefinition(capture.node)) continue;
+    if (isMockDefinition(capture.node) || (testFile && kind === 'variable')) continue;
     seen.set(name, { name, kind });
     if (seen.size >= MAX_DEFINITIONS) break;
   }
@@ -106,12 +110,13 @@ function collectReferences(
 export async function extractSymbols(
   language: SymbolLanguage,
   source: string,
+  testFile = false,
 ): Promise<FileSymbols> {
   const tools = await languageFor(language);
   const tree = tools.parser.parse(source);
   if (!tree) return { definitions: [], references: [] };
   try {
-    const definitions = collectDefinitions(tools, tree.rootNode);
+    const definitions = collectDefinitions(tools, tree.rootNode, testFile);
     const defined = new Set(definitions.map((definition) => definition.name));
     return { definitions, references: collectReferences(tools, tree.rootNode, defined) };
   } finally {
