@@ -56,7 +56,7 @@ describe('chat settings', () => {
     expect(initial.body.settings).toEqual({
       provider: 'claude',
       model: null,
-      effort: null,
+      effort: 'medium',
       permission: 'ask',
       level: 'balanced',
       routing: 'pinned',
@@ -69,7 +69,7 @@ describe('chat settings', () => {
     expect(switched.body).toEqual({
       provider: 'codex',
       model: 'gpt-6-sol',
-      effort: null,
+      effort: 'medium',
       permission: 'ask',
       level: 'balanced',
       routing: 'pinned',

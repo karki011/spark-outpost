@@ -3,6 +3,8 @@ import { catalogEntry } from './catalog.ts';
 
 const AGENT_DEFAULT = 'default';
 
+export const INITIAL_PROVIDER_EFFORT = 'medium';
+
 export function reportedEfforts(
   provider: ProviderId,
   captured: readonly CapabilityOption[] | null,

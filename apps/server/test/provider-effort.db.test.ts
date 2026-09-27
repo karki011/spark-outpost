@@ -59,13 +59,14 @@ async function freshChatEffort(): Promise<string | null> {
 }
 
 describe('provider default effort', () => {
-  it('starts unset, then saves only an effort the provider reports', async () => {
+  it('starts at medium, then saves only an effort the provider reports', async () => {
     await connectClaude();
-    expect(await storedEffort()).toBeNull();
-    expect(await freshChatEffort()).toBeNull();
+    expect(await storedEffort()).toBe('medium');
+    expect(await freshChatEffort()).toBe('medium');
 
     await setEffort('xhigh').expect(400);
     await send('get', '/api/providers/claude/capabilities').expect(200);
+    expect(await freshChatEffort()).toBeNull();
     await setEffort('high').expect(400);
     await setEffort('default').expect(400);
     await setEffort('xhigh').expect(200);

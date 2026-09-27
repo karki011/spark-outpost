@@ -11,7 +11,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { effectiveDefaultModel } from '../model-cards/cards.ts';
 import { catalog, catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
-import { reportedEfforts } from '../providers/efforts.ts';
+import { INITIAL_PROVIDER_EFFORT, reportedEfforts } from '../providers/efforts.ts';
 import type { TestOutcome } from '../setup/test-message.ts';
 import type { VerifiedConnection } from '../setup/verify.ts';
 import { listAdvisors } from './advisors.ts';
@@ -188,7 +188,7 @@ export async function saveConnection(
   const { rows } = await db.query<ConnectionRow>(
     `INSERT INTO provider_connections
        (workspace_id, provider, method, detail, models, model, permission, effort, verified_at, summary)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, now(), $8)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9)
      ON CONFLICT (workspace_id, provider) DO UPDATE SET
        method = EXCLUDED.method,
        detail = EXCLUDED.detail,
@@ -214,6 +214,7 @@ export async function saveConnection(
       JSON.stringify(verified.models),
       defaultModel,
       entry.permissions[0]!.id,
+      INITIAL_PROVIDER_EFFORT,
       verified.summary,
     ],
   );

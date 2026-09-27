@@ -11,7 +11,6 @@ import {
   type UpdateProviderDefaultsRequest,
 } from '@spark-outpost/contracts';
 import { setupApi, setupKey } from '../api/setup.ts';
-import { Segmented } from '../ui/Segmented.tsx';
 import {
   cleanDescription,
   effortNote,
@@ -20,17 +19,18 @@ import {
 } from '../chat/composer/model-options.ts';
 import { ChoicePicker } from './ChoicePicker.tsx';
 
+function toChoice(id: string, label: string, description: string): Choice {
+  return { id, label, description, risky: false, unavailableReason: null };
+}
+
 function levelChoices(provider: string): Choice[] {
-  return INVOLVEMENT_LEVELS.map((level) => ({
-    id: level.id,
-    label: level.label,
-    description: levelHint(level, provider),
-    risky: false,
-    unavailableReason: null,
-  }));
+  return INVOLVEMENT_LEVELS.map((level) =>
+    toChoice(level.id, level.label, levelHint(level, provider)),
+  );
 }
 
 const PER_CHAT = 'per-chat';
+const PER_CHAT_NOTE = 'Each chat keeps its own effort, and Do-task Builders follow it.';
 
 function effortOptions(
   provider: ProviderSetup,
@@ -130,20 +130,18 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
         </dd>
         <dt>Effort</dt>
         <dd>
-          <Segmented
-            ariaLabel={`${provider.name} effort`}
-            options={[
-              { id: PER_CHAT, label: 'Per chat' },
-              ...efforts.map((choice) => ({ id: choice.id, label: choice.label })),
+          <ChoicePicker
+            label={`${provider.name} effort`}
+            choices={[
+              toChoice(PER_CHAT, 'Per chat', PER_CHAT_NOTE),
+              ...efforts.map((choice) =>
+                toChoice(choice.id, choice.label, effortNote(choice) ?? ''),
+              ),
             ]}
             value={effort?.id ?? PER_CHAT}
             onChange={(id) => mutation.mutate({ effort: id === PER_CHAT ? null : id })}
           />
-          <small className="note">
-            {effort
-              ? `${effortNote(effort) ?? effort.label}. Do-task Builders always use it.`
-              : 'Each chat keeps its own effort, and Do-task Builders follow it.'}
-          </small>
+          {effort && <small className="note">Do-task Builders always use this effort.</small>}
         </dd>
       </dl>
     </section>

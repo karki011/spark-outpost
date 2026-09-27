@@ -29,20 +29,29 @@ async function chooseClaudeDefault(page: Page): Promise<void> {
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   const claude = providers.locator('.pcard').filter({ hasText: 'Claude' });
   await claude.locator('.pc-head').click();
-  const effort = claude.getByRole('radiogroup', { name: 'Claude effort' });
-  await expect(effort.getByRole('radio', { name: 'high' })).toHaveAttribute('aria-checked', 'true');
+  const effort = claude.getByRole('button', { name: 'Claude effort' });
+  await expect(effort).toHaveText('high');
 
-  const perChat = effort.getByRole('radio', { name: 'Per chat' });
-  await perChat.focus();
+  await effort.focus();
   await page.keyboard.press('Enter');
-  await expect(perChat).toHaveAttribute('aria-checked', 'true');
+  const menu = page.getByRole('menu', { name: 'Claude effort' });
+  const items = menu.getByRole('menuitemradio');
+  await expect(items.first()).toContainText('Per chat');
+  await expect(menu.getByRole('menuitemradio', { name: /^high/ })).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await expect(items.first()).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(effort).toHaveText('Per chat');
   await expect(claude).toContainText(
     'Each chat keeps its own effort, and Do-task Builders follow it.',
   );
 
-  await effort.getByRole('radio', { name: 'low' }).click();
-  await expect(effort.getByRole('radio', { name: 'low' })).toHaveAttribute('aria-checked', 'true');
-  await expect(claude).toContainText('Do-task Builders always use it.');
+  await effort.click();
+  await menu.getByRole('menuitemradio', { name: /^low/ }).click();
+  await expect(effort).toHaveText('low');
+  await expect(claude).toContainText('Do-task Builders always use this effort.');
   await page.keyboard.press('Escape');
   await expect(providers).toHaveCount(0);
 }
