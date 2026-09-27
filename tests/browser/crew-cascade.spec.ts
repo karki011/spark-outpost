@@ -30,16 +30,20 @@ test('Jev finds the change incomplete, so the Builder reruns once one tier up', 
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 60_000 });
   await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  await expect(page.getByRole('button', { name: /^Done Bolt · Builder · Sonnet 5/ })).toBeVisible({
+    timeout: 30_000,
+  });
   await expect(
-    page.locator('.md', {
-      hasText: 'The Builder ran again one tier up after Jev could not confirm',
-    }),
-  ).toBeVisible({ timeout: 30_000 });
+    page.getByRole('button', { name: /^Done Bolt · Builder · Opus 5\.5/ }),
+  ).toBeVisible();
+  await expect(page.locator('.crew-turn')).toContainText('Finished what was missing');
   expect(repo.notes()).toBe('start\nstep 1\nfinished what was missing\n');
 });
 
 test('Jev declines to judge the change, so a card asks you before finishing', async ({ page }) => {
   test.setTimeout(60_000);
+  const off = await page.request.patch('/api/profile', { data: { autoContinueSeconds: null } });
+  expect(off.ok()).toBe(true);
   await crewChat(page, repo, 'Balanced');
   await send(page, 'Fix the divider after midnight #build #declined');
   await allowEdit(page);
