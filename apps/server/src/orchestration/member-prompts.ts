@@ -1,4 +1,4 @@
-import { gitDiffSince } from '../projects/snapshot.ts';
+import { gitDiffBetween, gitDiffSince, headCommit } from '../projects/snapshot.ts';
 import { getSnapshot } from '../persistence/run-snapshots.ts';
 import { builderPrompt, criticPrompt, type ChangedFile } from './context.ts';
 import type { Session } from './session.ts';
@@ -17,6 +17,34 @@ export async function changesSoFar(s: Session): Promise<ChangeSummary> {
   return diff ? { files: diff.stats, patch: diff.patch } : { files: [], patch: '' };
 }
 
+export async function changesForReview(s: Session): Promise<ChangeSummary> {
+  const own = await changesSoFar(s);
+  const state = await getSnapshot(s.deps.db, s.input.workspaceId, s.lease.runId);
+  const snapshot = state?.snapshot;
+  if (!snapshot || snapshot.kind !== 'git' || !snapshot.ref) return own;
+  const head = await headCommit(snapshot.root).catch(() => null);
+  if (!head) return own;
+  const [all, before] = await Promise.all([
+    gitDiffSince(snapshot.root, head).catch(() => null),
+    gitDiffBetween(snapshot.root, head, snapshot.ref).catch(() => null),
+  ]);
+  if (!all || !before || before.stats.length === 0) return own;
+  const ownPaths = new Set(own.files.map((file) => file.path));
+  const beforePaths = new Set(before.stats.map((file) => file.path));
+  return {
+    files: all.stats.map((file) => ({
+      ...file,
+      origin:
+        ownPaths.has(file.path) && beforePaths.has(file.path)
+          ? 'both'
+          : beforePaths.has(file.path)
+            ? 'before'
+            : 'task',
+    })),
+    patch: all.patch,
+  };
+}
+
 export function checkCommands(s: Session): string[] {
   return s.checks?.commands.map((check) => check.command) ?? [];
 }
@@ -24,7 +52,7 @@ export function checkCommands(s: Session): string[] {
 export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
   const request = s.input.userRequest;
   if (spawn.role === 'critic') {
-    const changes = await changesSoFar(s);
+    const changes = await changesForReview(s);
     return criticPrompt({
       request,
       plan: s.plan.map((entry) => entry.content),

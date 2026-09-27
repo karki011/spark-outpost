@@ -123,7 +123,7 @@ export const QUESTION_QUESTION =
 export const VAGUE_QUESTION =
   'Is `task` too vague to act on without first asking the user what they want?';
 export const REVIEW_QUESTION =
-  'Does `task` ask to review, check or look over changes that already exist, rather than make new ones?';
+  'Does `task` ask for a review: of changes that already exist, or of the work it asks for before it is finished?';
 export const DESTRUCTIVE_QUESTION =
   'Would doing `task` delete files or data, drop or migrate stored data, rewrite git history, or touch secrets?';
 export const CONTINUES_QUESTION =
@@ -155,8 +155,18 @@ function doModeQuestions(request: IntakeRequest): IntakeQuestions['questions'] {
       },
     }),
     review: noulQuestion(REVIEW_QUESTION, {
-      true: 'It asks to review, look over or check changes that already exist',
-      false: 'It asks for new work: building, fixing or changing something',
+      true: {
+        what: 'It asks for a review, a reviewer or a second check, of existing changes or of the new work',
+        examples: [
+          'Review my changes to the parser',
+          'Review this change and fix what you find',
+          'Add a retry, then have a reviewer check it',
+        ],
+      },
+      false: {
+        what: 'It asks only for work to be done, with no review, or to act on review comments already given',
+        examples: ['Add a retry to the upload', 'Address the review comments on the parser'],
+      },
     }),
     destructive: noulQuestion(DESTRUCTIVE_QUESTION, {
       true: {

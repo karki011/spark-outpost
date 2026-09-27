@@ -38,12 +38,14 @@ export function trivialByRule(request: string): boolean {
 }
 
 const REVIEW_PHRASE =
-  /\b(?:review|look (?:over|through|at)|check (?:my|the|these|our|this) (?:changes?|diff|work|code|branch|pr)|go over|second opinion)\b/i;
+  /\b(?:review(?:er|ed)?|look (?:over|through)|check (?:my|the|these|our|this) (?:changes?|diff|work|code|branch|pr)|go over|second (?:opinion|pair of eyes))\b/i;
+const ACTS_ON_REVIEW =
+  /\b(?:address|fix|resolve|apply|handle)\b[^.]{0,30}\breview (?:comments?|feedback|notes|suggestions)\b/i;
 const BUILD_VERB =
   /\b(?:add|build|create|implement|fix|write|refactor|rename|remove|delete|make|move|update|change|replace|migrate|convert|port|rewrite|extract|split|install)\b/i;
 
 export function asksForReview(request: string): boolean {
-  return REVIEW_PHRASE.test(request) && !BUILD_VERB.test(request.replace(REVIEW_PHRASE, ''));
+  return REVIEW_PHRASE.test(request) && !ACTS_ON_REVIEW.test(request);
 }
 
 export function questionByRule(request: string): boolean {

@@ -56,6 +56,25 @@ export function describeTool(title: string): string {
     .join('`');
 }
 
+const TARGET_CHARS = 400;
+
+export function toolTarget(
+  locations: readonly { path: string; line?: number | null }[] | null | undefined,
+  rawInput: unknown,
+): string | null {
+  const paths = (locations ?? []).map((location) => `${location.path}:${location.line ?? ''}`);
+  let input = '';
+  if (rawInput !== undefined && rawInput !== null) {
+    try {
+      input = JSON.stringify(rawInput) ?? '';
+    } catch {
+      input = '';
+    }
+  }
+  const target = [paths.join(','), input].filter(Boolean).join(' ');
+  return target ? target.slice(0, TARGET_CHARS) : null;
+}
+
 const NOTICE_LABELS: Record<string, string> = { error: 'Error', warning: 'Warning' };
 
 const noticeLabel = (severity: string) => NOTICE_LABELS[severity] ?? 'Note';
@@ -184,11 +203,14 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
           const name = describeTool(update.title);
           worked = true;
           openTools.set(update.toolCallId, name);
-          outputs.push(
-            update.kind
-              ? { kind: 'step_started', name, tool: true, toolKind: update.kind }
-              : { kind: 'step_started', name, tool: true },
-          );
+          const target = toolTarget(update.locations, update.rawInput);
+          outputs.push({
+            kind: 'step_started',
+            name,
+            tool: true,
+            ...(update.kind ? { toolKind: update.kind } : {}),
+            ...(target ? { target } : {}),
+          });
           outputs.push(...links(toolTexts(update.content, update.rawOutput)));
           if (update.status === 'completed' || update.status === 'failed') {
             outputs.push(...finishTool(update.toolCallId, update.status === 'failed'));

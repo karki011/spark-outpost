@@ -82,7 +82,13 @@ export interface ProviderCapabilityReport {
 }
 
 export type ProviderOutput =
-  | { kind: 'step_started'; name: string; tool?: boolean; toolKind?: string }
+  | {
+      kind: 'step_started';
+      name: string;
+      tool?: boolean;
+      toolKind?: string;
+      target?: string;
+    }
   | { kind: 'step_finished'; name: string }
   | { kind: 'text_delta'; delta: string }
   | { kind: 'capabilities'; report: ProviderCapabilityReport }

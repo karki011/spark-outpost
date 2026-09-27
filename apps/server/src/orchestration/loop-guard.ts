@@ -13,6 +13,13 @@ export interface LoopGuard {
 }
 
 const EDIT_KINDS = new Set(['edit', 'delete', 'move']);
+const LOOKUP_KINDS = new Set(['read', 'search', 'fetch']);
+
+function streakFor(output: { target?: string; toolKind?: string }, settings: LoopGuardSettings) {
+  return !output.target && LOOKUP_KINDS.has(output.toolKind ?? '')
+    ? settings.streak * 2
+    : settings.streak;
+}
 
 function shortTitle(title: string): string {
   const flat = title.replace(/\s+/g, ' ').trim();
@@ -39,9 +46,10 @@ export function createLoopGuard(
         count = 0;
         return;
       }
-      count = output.name === last ? count + 1 : 1;
-      last = output.name;
-      if (count < settings.streak) return;
+      const key = output.target ? `${output.name}\u0000${output.target}` : output.name;
+      count = key === last ? count + 1 : 1;
+      last = key;
+      if (count < streakFor(output, settings)) return;
       summary = loopSummary(name, output.name, count);
       onTrip();
     },

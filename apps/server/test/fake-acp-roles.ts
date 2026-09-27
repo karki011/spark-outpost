@@ -24,6 +24,8 @@ async function readTool(turn: RoleTurn, file: string, id: string): Promise<void>
     toolCallId: id,
     title: `Read \`${file}\``,
     kind: 'read',
+    locations: [{ path: file }],
+    rawInput: { file_path: file },
     status: 'completed',
   });
 }

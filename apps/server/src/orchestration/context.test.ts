@@ -66,6 +66,23 @@ describe('context assembly', () => {
     expect(prompt.length).toBeLessThan(PATCH_LIMIT + 2_000);
   });
 
+  it('tells the Critic which changes were already there before the task', () => {
+    const prompt = criticPrompt({
+      request: 'r',
+      plan: [],
+      changes: [
+        { path: 'src/money.ts', additions: 4, deletions: 1, origin: 'both' },
+        { path: 'src/notes.ts', additions: 2, deletions: 0, origin: 'before' },
+        { path: 'test/money.test.ts', additions: 9, deletions: 0, origin: 'task' },
+      ],
+      patch: 'diff',
+      checks: [],
+    });
+    expect(prompt).toContain('- src/money.ts (+4 -1, changed before and during this task)');
+    expect(prompt).toContain('- src/notes.ts (+2 -0, changed before this task)');
+    expect(prompt).toContain('- test/money.test.ts (+9 -0)\n');
+  });
+
   it('turns failing checks into a short fix request with the end of each output', () => {
     const failures = checkFailureText([
       { command: 'npm test', outcome: 'failed', exitCode: 1, outputTail: `${'x'.repeat(5000)}END` },

@@ -41,10 +41,15 @@ describe('risk rules', () => {
     expect(trivialByRule('Delete the typo file')).toBe(false);
   });
 
-  it('keeps a Critic for review phrases without build verbs', () => {
+  it('keeps a Critic for a review of existing changes or of the requested work', () => {
     expect(asksForReview('Review my changes to the parser')).toBe(true);
     expect(asksForReview('Can you look over the diff?')).toBe(true);
-    expect(asksForReview('Review and fix the parser')).toBe(false);
+    expect(asksForReview('Review and fix the parser')).toBe(true);
+    expect(asksForReview('Add a retry. When it is built, have a reviewer check the change.')).toBe(
+      true,
+    );
+    expect(asksForReview('Address the review comments on the parser')).toBe(false);
+    expect(asksForReview('Add a retry to the upload')).toBe(false);
   });
 
   it('reads a question mark without a build verb as a question', () => {

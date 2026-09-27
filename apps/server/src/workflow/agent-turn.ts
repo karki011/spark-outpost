@@ -202,6 +202,9 @@ export async function runAgentTurn(
     })) {
       if (control.signal.aborted) {
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
+        if (output.kind === 'usage') {
+          await recordUsage(deps.db, lease.runId, session ? session.usage(output) : output);
+        }
         continue;
       }
       options.onOutput?.(output);

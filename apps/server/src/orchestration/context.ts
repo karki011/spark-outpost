@@ -18,6 +18,7 @@ export interface ChangedFile {
   path: string;
   additions: number;
   deletions: number;
+  origin?: 'task' | 'before' | 'both';
 }
 
 export interface BuilderContext {
@@ -57,9 +58,20 @@ function numbered(steps: readonly string[]): string {
   return steps.map((step, index) => `${index + 1}. ${step}`).join('\n');
 }
 
+const ORIGIN_NOTES = {
+  task: '',
+  before: ', changed before this task',
+  both: ', changed before and during this task',
+} as const;
+
 function changeLines(changes: readonly ChangedFile[]): string {
   if (changes.length === 0) return 'No files changed yet.';
-  return changes.map((file) => `- ${file.path} (+${file.additions} -${file.deletions})`).join('\n');
+  return changes
+    .map(
+      (file) =>
+        `- ${file.path} (+${file.additions} -${file.deletions}${ORIGIN_NOTES[file.origin ?? 'task']})`,
+    )
+    .join('\n');
 }
 
 const PATH_TOKEN =

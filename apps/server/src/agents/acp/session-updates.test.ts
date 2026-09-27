@@ -1,6 +1,6 @@
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { describe, expect, it } from 'vitest';
-import { THINKING_STEP, createUpdateMapper, describeTool } from './session-updates.ts';
+import { THINKING_STEP, createUpdateMapper, describeTool, toolTarget } from './session-updates.ts';
 
 const link = (uri: string, name: string): SessionUpdate => ({
   sessionUpdate: 'agent_message_chunk',
@@ -291,5 +291,14 @@ describe('ACP session update mapping', () => {
       { kind: 'step_finished', name: 'Declined: Write a.txt' },
     ]);
     expect(mapper.didWork()).toBe(true);
+  });
+
+  it('describes a tool call target from its locations and input', () => {
+    expect(toolTarget([{ path: '/repo/src/a.ts', line: 4 }], { file_path: '/repo/src/a.ts' })).toBe(
+      '/repo/src/a.ts:4 {"file_path":"/repo/src/a.ts"}',
+    );
+    expect(toolTarget(undefined, { command: 'ls' })).toBe('{"command":"ls"}');
+    expect(toolTarget([], undefined)).toBeNull();
+    expect(toolTarget(null, { text: 'x'.repeat(1_000) })).toHaveLength(400);
   });
 });
