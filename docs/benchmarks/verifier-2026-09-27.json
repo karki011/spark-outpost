@@ -1,0 +1,1785 @@
+{
+  "note": "run1: Jev only; run2: Jev + Sonnet Critic. Same 24 cases.",
+  "runs": {
+    "run1": [
+      {
+        "id": "percent-zero",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.84,
+          "probabilities": {
+            "supported": 0.1,
+            "unsupported": 0.9,
+            "declined": 0
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "Add a function percentOf(part: number, total: number): number to src/money.ts.",
+              "noul": 0.12
+            },
+            {
+              "requirement": "It returns part as a percentage of total rounded to one decimal place (percentOf(1, 3) is 33.3) and returns 0 when total is 0.",
+              "noul": 0.81
+            },
+            {
+              "requirement": "Add a test for it in test/money.test.ts.",
+              "noul": 0.17
+            }
+          ],
+          "reasons": [
+            "It returns part as a percentage of total rounded to one decimal place (percentOf(1, 3) is 33.3) and returns 0 when total is 0."
+          ],
+          "invalid": [],
+          "inputTokens": 1385,
+          "costUsd": 0.00005817,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "percent-zero",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.37,
+          "probabilities": {
+            "supported": 0.42,
+            "unsupported": 0.58,
+            "declined": 0
+          },
+          "accepted": null,
+          "unmet": [
+            {
+              "requirement": "Add a function percentOf(part: number, total: number): number to src/money.ts.",
+              "noul": 0.04
+            },
+            {
+              "requirement": "It returns part as a percentage of total rounded to one decimal place (percentOf(1, 3) is 33.3) and returns 0 when total is 0.",
+              "noul": 0.15
+            },
+            {
+              "requirement": "Add a test for it in test/money.test.ts.",
+              "noul": 0.1
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1394,
+          "costUsd": 0.000058548,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "parentheses-negative",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.98,
+          "probabilities": {
+            "declined": 0,
+            "unsupported": 0.99,
+            "supported": 0.01
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "parseCents in src/money.ts should treat an amount in parentheses as negative, the way accountants write it: '(12.50)' is -1250 and '($1,000)' is -100000.",
+              "noul": 0.97
+            }
+          ],
+          "reasons": [
+            "parseCents in src/money.ts should treat an amount in parentheses as negative, the way accountants write it: '(12.50)' is -1250 and '($1,000)' is -100000."
+          ],
+          "invalid": [],
+          "inputTokens": 1127,
+          "costUsd": 0.000047334000000000005,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "parentheses-negative",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.77,
+          "probabilities": {
+            "supported": 0.15,
+            "unsupported": 0.85,
+            "declined": 0
+          },
+          "accepted": null,
+          "unmet": [
+            {
+              "requirement": "parseCents in src/money.ts should treat an amount in parentheses as negative, the way accountants write it: '(12.50)' is -1250 and '($1,000)' is -100000.",
+              "noul": 0.25
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1152,
+          "costUsd": 0.000048384,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "thousands-groups",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.95,
+          "probabilities": {
+            "supported": 0.03,
+            "unsupported": 0.97,
+            "declined": 0
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "formatCents in src/money.ts should group thousands with commas: 123456 is '$1,234.56' and 123456789 is '$1,234,567.89'.",
+              "noul": 0.84
+            },
+            {
+              "requirement": "Negative amounts keep the sign in front ('-$1,234.56').",
+              "noul": 0.12
+            },
+            {
+              "requirement": "Update the tests.",
+              "noul": 0.76
+            }
+          ],
+          "reasons": [
+            "formatCents in src/money.ts should group thousands with commas: 123456 is '$1,234.56' and 123456789 is '$1,234,567.89'.",
+            "Update the tests."
+          ],
+          "invalid": [],
+          "inputTokens": 1356,
+          "costUsd": 0.000056952000000000006,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "thousands-groups",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.82,
+          "probabilities": {
+            "supported": 0.12,
+            "unsupported": 0.88,
+            "declined": 0
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "formatCents in src/money.ts should group thousands with commas: 123456 is '$1,234.56' and 123456789 is '$1,234,567.89'.",
+              "noul": 0.19
+            },
+            {
+              "requirement": "Negative amounts keep the sign in front ('-$1,234.56').",
+              "noul": 0.07
+            },
+            {
+              "requirement": "Update the tests.",
+              "noul": 0.62
+            }
+          ],
+          "reasons": [
+            "Update the tests."
+          ],
+          "invalid": [],
+          "inputTokens": 1350,
+          "costUsd": 0.0000567,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "sum-skips-blanks",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.94,
+          "probabilities": {
+            "unsupported": 0.96,
+            "declined": 0,
+            "supported": 0.04
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "Add sumCents(amounts: string[]): number to src/money.ts.",
+              "noul": 0.08
+            },
+            {
+              "requirement": "It adds up the amounts using parseCents and skips blank strings.",
+              "noul": 0.75
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.14
+            }
+          ],
+          "reasons": [
+            "It adds up the amounts using parseCents and skips blank strings."
+          ],
+          "invalid": [],
+          "inputTokens": 1297,
+          "costUsd": 0.000054474,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "sum-skips-blanks",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.95,
+          "probabilities": {
+            "unsupported": 0.03,
+            "supported": 0.97,
+            "declined": 0
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "Add sumCents(amounts: string[]): number to src/money.ts.",
+              "noul": 0.03
+            },
+            {
+              "requirement": "It adds up the amounts using parseCents and skips blank strings.",
+              "noul": 0.04
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1317,
+          "costUsd": 0.000055314,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "apostrophe-names",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.98,
+          "probabilities": {
+            "declined": 0,
+            "unsupported": 0.99,
+            "supported": 0.01
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "titleCase in src/invoice.ts should capitalise each part of hyphenated names and names with an apostrophe: 'mary-jane o'neil' becomes 'Mary-Jane O'Neil'.",
+              "noul": 0.94
+            },
+            {
+              "requirement": "Add a test in test/invoice.test.ts.",
+              "noul": 0.42
+            }
+          ],
+          "reasons": [
+            "titleCase in src/invoice.ts should capitalise each part of hyphenated names and names with an apostrophe: 'mary-jane o'neil' becomes 'Mary-Jane O'Neil'."
+          ],
+          "invalid": [],
+          "inputTokens": 1318,
+          "costUsd": 0.000055356,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "apostrophe-names",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.92,
+          "probabilities": {
+            "supported": 0.94,
+            "declined": 0,
+            "unsupported": 0.06
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "titleCase in src/invoice.ts should capitalise each part of hyphenated names and names with an apostrophe: 'mary-jane o'neil' becomes 'Mary-Jane O'Neil'.",
+              "noul": 0.05
+            },
+            {
+              "requirement": "Add a test in test/invoice.test.ts.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1326,
+          "costUsd": 0.000055692,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "due-on-receipt",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.99,
+          "probabilities": {
+            "unsupported": 1,
+            "declined": 0,
+            "supported": 0
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "In src/invoice.ts, dueLabel's termsDays should default to 30 when it is left out, and the label should read 'Due on receipt' when termsDays is 0.",
+              "noul": 0.97
+            }
+          ],
+          "reasons": [
+            "In src/invoice.ts, dueLabel's termsDays should default to 30 when it is left out, and the label should read 'Due on receipt' when termsDays is 0."
+          ],
+          "invalid": [],
+          "inputTokens": 1206,
+          "costUsd": 0.000050652,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "due-on-receipt",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.98,
+          "probabilities": {
+            "declined": 0,
+            "supported": 0.99,
+            "unsupported": 0.01
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "In src/invoice.ts, dueLabel's termsDays should default to 30 when it is left out, and the label should read 'Due on receipt' when termsDays is 0.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1243,
+          "costUsd": 0.000052206,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "tax-after-discount",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.84,
+          "probabilities": {
+            "unsupported": 0.11,
+            "declined": 0,
+            "supported": 0.89
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "Add an optional taxRate to Invoice in src/invoice.ts (default 0).",
+              "noul": 0.04
+            },
+            {
+              "requirement": "totalCents applies the discount first, then the tax to the discounted amount, and rounds once at the end.",
+              "noul": 0.31
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1341,
+          "costUsd": 0.000056322,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "tax-after-discount",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.87,
+          "probabilities": {
+            "unsupported": 0.09,
+            "declined": 0,
+            "supported": 0.91
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "Add an optional taxRate to Invoice in src/invoice.ts (default 0).",
+              "noul": 0.03
+            },
+            {
+              "requirement": "totalCents applies the discount first, then the tax to the discounted amount, and rounds once at the end.",
+              "noul": 0.04
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1332,
+          "costUsd": 0.000055944000000000005,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "average-skips-transfers",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.3,
+          "probabilities": {
+            "supported": 0.47,
+            "declined": 0,
+            "unsupported": 0.53
+          },
+          "accepted": null,
+          "unmet": [
+            {
+              "requirement": "averageCents in src/ledger.ts should ignore entries whose category is 'transfer', and return 0 when nothing but transfers is left.",
+              "noul": 0.21
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.09
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1172,
+          "costUsd": 0.000049224,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "average-skips-transfers",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.99,
+          "probabilities": {
+            "supported": 0.99,
+            "unsupported": 0.01,
+            "declined": 0
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "averageCents in src/ledger.ts should ignore entries whose category is 'transfer', and return 0 when nothing but transfers is left.",
+              "noul": 0.03
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1227,
+          "costUsd": 0.000051534000000000005,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "categories-by-total",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.93,
+          "probabilities": {
+            "unsupported": 0.95,
+            "declined": 0,
+            "supported": 0.05
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "categories() in src/ledger.ts should list categories by total amount, largest first",
+              "noul": 0.3
+            },
+            {
+              "requirement": "categories with equal totals go in alphabetical order.",
+              "noul": 0.93
+            },
+            {
+              "requirement": "Update the test.",
+              "noul": 0.32
+            }
+          ],
+          "reasons": [
+            "categories with equal totals go in alphabetical order."
+          ],
+          "invalid": [],
+          "inputTokens": 1192,
+          "costUsd": 0.000050064,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "categories-by-total",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.86,
+          "probabilities": {
+            "declined": 0,
+            "supported": 0.9,
+            "unsupported": 0.1
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "categories() in src/ledger.ts should list categories by total amount, largest first",
+              "noul": 0.05
+            },
+            {
+              "requirement": "categories with equal totals go in alphabetical order.",
+              "noul": 0.06
+            },
+            {
+              "requirement": "Update the test.",
+              "noul": 0.07
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1207,
+          "costUsd": 0.000050694,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "guest-greeting",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.97,
+          "probabilities": {
+            "supported": 0.02,
+            "declined": 0,
+            "unsupported": 0.98
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "Fix the typo in the greeting in src/greet.ts, and when the name is empty or only spaces, greeting should return 'Welcome, guest!'.",
+              "noul": 0.92
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.07
+            }
+          ],
+          "reasons": [
+            "Fix the typo in the greeting in src/greet.ts, and when the name is empty or only spaces, greeting should return 'Welcome, guest!'."
+          ],
+          "invalid": [],
+          "inputTokens": 1077,
+          "costUsd": 0.000045234,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "guest-greeting",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.67,
+          "probabilities": {
+            "unsupported": 0.22,
+            "supported": 0.78,
+            "declined": 0
+          },
+          "accepted": null,
+          "unmet": [
+            {
+              "requirement": "Fix the typo in the greeting in src/greet.ts, and when the name is empty or only spaces, greeting should return 'Welcome, guest!'.",
+              "noul": 0.06
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.04
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1084,
+          "costUsd": 0.00004552800000000001,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "share-in-report",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.99,
+          "probabilities": {
+            "declined": 0,
+            "unsupported": 1,
+            "supported": 0
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "reportLine in src/report.ts should add the category's share as a percentage with one decimal after the amount, for example 'Food: $500.00 (25.0%)'.",
+              "noul": 0.97
+            },
+            {
+              "requirement": "Update the test.",
+              "noul": 0.6
+            }
+          ],
+          "reasons": [
+            "reportLine in src/report.ts should add the category's share as a percentage with one decimal after the amount, for example 'Food: $500.00 (25.0%)'.",
+            "Update the test."
+          ],
+          "invalid": [],
+          "inputTokens": 1164,
+          "costUsd": 0.000048888000000000004,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "share-in-report",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.97,
+          "probabilities": {
+            "supported": 0.98,
+            "unsupported": 0.02,
+            "declined": 0
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "reportLine in src/report.ts should add the category's share as a percentage with one decimal after the amount, for example 'Food: $500.00 (25.0%)'.",
+              "noul": 0.03
+            },
+            {
+              "requirement": "Update the test.",
+              "noul": 0.04
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1171,
+          "costUsd": 0.000049182000000000004,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "case-insensitive-ledger",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.93,
+          "probabilities": {
+            "unsupported": 0.96,
+            "supported": 0.03,
+            "declined": 0.01
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "Make the ledger in src/ledger.ts case-insensitive: categories() treats 'Food' and 'food' as one category and lists it in lowercase, and totalFor(entries, 'food') also counts 'Food' entries.",
+              "noul": 0.94
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.21
+            }
+          ],
+          "reasons": [
+            "Make the ledger in src/ledger.ts case-insensitive: categories() treats 'Food' and 'food' as one category and lists it in lowercase, and totalFor(entries, 'food') also counts 'Food' entries."
+          ],
+          "invalid": [],
+          "inputTokens": 1167,
+          "costUsd": 0.000049014,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      },
+      {
+        "id": "case-insensitive-ledger",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.98,
+          "probabilities": {
+            "unsupported": 0.02,
+            "supported": 0.98,
+            "declined": 0
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "Make the ledger in src/ledger.ts case-insensitive: categories() treats 'Food' and 'food' as one category and lists it in lowercase, and totalFor(entries, 'food') also counts 'Food' entries.",
+              "noul": 0.03
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1248,
+          "costUsd": 0.000052416,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": null
+      }
+    ],
+    "run2": [
+      {
+        "id": "percent-zero",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.94,
+          "probabilities": {
+            "supported": 0.04,
+            "unsupported": 0.96,
+            "declined": 0
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "Add a function percentOf(part: number, total: number): number to src/money.ts.",
+              "noul": 0.13
+            },
+            {
+              "requirement": "It returns part as a percentage of total rounded to one decimal place (percentOf(1, 3) is 33.3) and returns 0 when total is 0.",
+              "noul": 0.89
+            },
+            {
+              "requirement": "Add a test for it in test/money.test.ts.",
+              "noul": 0.15
+            }
+          ],
+          "reasons": [
+            "It returns part as a percentage of total rounded to one decimal place (percentOf(1, 3) is 33.3) and returns 0 when total is 0."
+          ],
+          "invalid": [],
+          "inputTokens": 1385,
+          "costUsd": 0.00005817,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.009424,
+          "text": "Findings:\n- percentOf(0, 0) returns NaN, not 0 as required — total-is-zero case is unhandled (0/0 = NaN, not caught since 0 isn't detected).\n- No test covers total === 0 despite it being an explicit requirement.\n- Negative numbers/edge cases (negative total, negative part) untested but not specified either.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "percent-zero",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.36,
+          "probabilities": {
+            "declined": 0,
+            "supported": 0.43,
+            "unsupported": 0.57
+          },
+          "accepted": null,
+          "unmet": [
+            {
+              "requirement": "Add a function percentOf(part: number, total: number): number to src/money.ts.",
+              "noul": 0.04
+            },
+            {
+              "requirement": "It returns part as a percentage of total rounded to one decimal place (percentOf(1, 3) is 33.3) and returns 0 when total is 0.",
+              "noul": 0.14
+            },
+            {
+              "requirement": "Add a test for it in test/money.test.ts.",
+              "noul": 0.1
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1394,
+          "costUsd": 0.000058548,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "looks_good",
+          "costUsd": 0.011606,
+          "text": "Findings:\n- Implementation matches spec: `Math.round((part/total)*1000)/10` correctly rounds to one decimal (verified against 33.3 example mentally).\n- Zero-total guard returns 0 as required.\n- Test covers a normal case and the total=0 case, but doesn't test the exact example from the request (1,3 → 33.3); minor coverage gap, not a bug.\n- No edge case test for negative total/part, but not required by spec.\n\nVerdict: looks good"
+        }
+      },
+      {
+        "id": "parentheses-negative",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.98,
+          "probabilities": {
+            "supported": 0.01,
+            "declined": 0,
+            "unsupported": 0.99
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "parseCents in src/money.ts should treat an amount in parentheses as negative, the way accountants write it: '(12.50)' is -1250 and '($1,000)' is -100000.",
+              "noul": 0.96
+            }
+          ],
+          "reasons": [
+            "parseCents in src/money.ts should treat an amount in parentheses as negative, the way accountants write it: '(12.50)' is -1250 and '($1,000)' is -100000."
+          ],
+          "invalid": [],
+          "inputTokens": 1127,
+          "costUsd": 0.000047334000000000005,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.010866,
+          "text": "Findings:\n- Bug: parseCents strips `()` but never negates the value — `/[$,\\s()]/g` just deletes parens, so `'(12.50)'` becomes `'12.50'` → 1250, not -1250 as required. Same for `'($1,000)'` → 100000 instead of -100000.\n- Tests don't catch this because they only assert `doesNotThrow`, never checking the actual returned value against -1250/-100000, so the bug slips through despite tests \"passing.\"\n- No test for a plain negative case (e.g., leading `-`) to confirm no regression, though not strictly required by the request.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "parentheses-negative",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.77,
+          "probabilities": {
+            "unsupported": 0.85,
+            "declined": 0,
+            "supported": 0.15
+          },
+          "accepted": null,
+          "unmet": [
+            {
+              "requirement": "parseCents in src/money.ts should treat an amount in parentheses as negative, the way accountants write it: '(12.50)' is -1250 and '($1,000)' is -100000.",
+              "noul": 0.22
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1152,
+          "costUsd": 0.000048384,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.014204000000000001,
+          "text": "Findings:\n- Logic is correct: regex negation detection + stripping `()` from cleaned string handles both `(12.50)` and `($1,000)` cases correctly.\n- Test coverage is thin — only `(12.50)` is tested; the request's other example `($1,000)` → `-100000` isn't covered, nor combos like negative with commas/`$` together in one assertion beyond the simple case.\n- Edge case: `(0.00)` would produce `-0` (Math.round(-0) applied to negative zero); not tested, likely harmless but worth a thought if downstream code distinguishes -0/0.\n- Malformed input like `(12.50` (unbalanced parens) won't match the regex and silently parses as positive after stray `(` is stripped — acceptable but undocumented behavior, no test asserts it either way.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "thousands-groups",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.94,
+          "probabilities": {
+            "unsupported": 0.96,
+            "supported": 0.04,
+            "declined": 0
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "formatCents in src/money.ts should group thousands with commas: 123456 is '$1,234.56' and 123456789 is '$1,234,567.89'.",
+              "noul": 0.87
+            },
+            {
+              "requirement": "Negative amounts keep the sign in front ('-$1,234.56').",
+              "noul": 0.14
+            },
+            {
+              "requirement": "Update the tests.",
+              "noul": 0.75
+            }
+          ],
+          "reasons": [
+            "formatCents in src/money.ts should group thousands with commas: 123456 is '$1,234.56' and 123456789 is '$1,234,567.89'.",
+            "Update the tests."
+          ],
+          "invalid": [],
+          "inputTokens": 1356,
+          "costUsd": 0.000056952000000000006,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.01423,
+          "text": "Findings:\n- Grouping logic only inserts one comma (single regex-free slice), so it fails for the `123456789` → `'$1,234,567.89'` case explicitly required by the request. With `whole = \"1234567\"`, the code produces `1234,567` (missing the second comma), yielding `\"$1234,567.89\"` instead of `\"$1,234,567.89\"`.\n- Tests were not updated to cover the multi-comma case (`123456789`) that the request explicitly calls out, so this bug isn't caught by the test suite despite it passing.\n- `whole!` non-null assertions are used but destructuring guarantees non-null here anyway, so it's harmless but slightly sloppy.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "thousands-groups",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.84,
+          "probabilities": {
+            "supported": 0.11,
+            "declined": 0,
+            "unsupported": 0.89
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "formatCents in src/money.ts should group thousands with commas: 123456 is '$1,234.56' and 123456789 is '$1,234,567.89'.",
+              "noul": 0.23
+            },
+            {
+              "requirement": "Negative amounts keep the sign in front ('-$1,234.56').",
+              "noul": 0.07
+            },
+            {
+              "requirement": "Update the tests.",
+              "noul": 0.65
+            }
+          ],
+          "reasons": [
+            "Update the tests."
+          ],
+          "invalid": [],
+          "inputTokens": 1350,
+          "costUsd": 0.0000567,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.012761999999999999,
+          "text": "Findings:\n- Test coverage is incomplete: the request explicitly specifies 123456789 → '$1,234,567.89', but no test was added for the multi-comma case, nor for a negative amount with grouping (e.g. -123456 → '-$1,234.56').\n- `parseCents` isn't updated or tested to handle comma-formatted strings; if it's expected to round-trip `formatCents` output, it will likely break on grouped input now.\n- Regex grouping logic itself looks correct for the given cases.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "sum-skips-blanks",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.97,
+          "probabilities": {
+            "supported": 0.02,
+            "unsupported": 0.98,
+            "declined": 0
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "Add sumCents(amounts: string[]): number to src/money.ts.",
+              "noul": 0.09
+            },
+            {
+              "requirement": "It adds up the amounts using parseCents and skips blank strings.",
+              "noul": 0.8
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.13
+            }
+          ],
+          "reasons": [
+            "It adds up the amounts using parseCents and skips blank strings."
+          ],
+          "invalid": [],
+          "inputTokens": 1297,
+          "costUsd": 0.000054474,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.010048000000000001,
+          "text": "Findings:\n- `sumCents` does not skip blank strings as required — it passes every element straight to `parseCents`, which throws on `''` (empty after cleaning). A blank entry would crash instead of being skipped.\n- No test covers the blank-string-skipping behavior, so this gap isn't caught.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "sum-skips-blanks",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.95,
+          "probabilities": {
+            "unsupported": 0.03,
+            "supported": 0.97,
+            "declined": 0
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "Add sumCents(amounts: string[]): number to src/money.ts.",
+              "noul": 0.03
+            },
+            {
+              "requirement": "It adds up the amounts using parseCents and skips blank strings.",
+              "noul": 0.04
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1317,
+          "costUsd": 0.000055314,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "looks_good",
+          "costUsd": 0.010478,
+          "text": "Findings:\n- Logic correctly filters blank/whitespace-only strings before summing via parseCents; matches spec.\n- Test only covers one blank-skip case; no test for all-blank/empty array (would return 0, which is reasonable but untested) or negative amounts — minor coverage gap, not blocking.\n- Check results confirm tests pass.\n\nVerdict: looks good"
+        }
+      },
+      {
+        "id": "apostrophe-names",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.97,
+          "probabilities": {
+            "unsupported": 0.98,
+            "supported": 0.02,
+            "declined": 0
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "titleCase in src/invoice.ts should capitalise each part of hyphenated names and names with an apostrophe: 'mary-jane o'neil' becomes 'Mary-Jane O'Neil'.",
+              "noul": 0.92
+            },
+            {
+              "requirement": "Add a test in test/invoice.test.ts.",
+              "noul": 0.33
+            }
+          ],
+          "reasons": [
+            "titleCase in src/invoice.ts should capitalise each part of hyphenated names and names with an apostrophe: 'mary-jane o'neil' becomes 'Mary-Jane O'Neil'."
+          ],
+          "invalid": [],
+          "inputTokens": 1318,
+          "costUsd": 0.000055356,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.012136000000000001,
+          "text": "Findings:\n- Apostrophe capitalization is not implemented — only hyphen splitting was added. `titleCase(\"o'neil\")` would produce `\"O'neil\"` instead of `\"O'Neil\"`, so the exact example in the request (`mary-jane o'neil` → `Mary-Jane O'Neil`) is not satisfied.\n- The added test only covers the hyphen case (`mary-jane watson`); it doesn't test the apostrophe case or the combined example from the request, so the missing behavior isn't caught by tests.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "apostrophe-names",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.92,
+          "probabilities": {
+            "unsupported": 0.05,
+            "supported": 0.95,
+            "declined": 0
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "titleCase in src/invoice.ts should capitalise each part of hyphenated names and names with an apostrophe: 'mary-jane o'neil' becomes 'Mary-Jane O'Neil'.",
+              "noul": 0.05
+            },
+            {
+              "requirement": "Add a test in test/invoice.test.ts.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1326,
+          "costUsd": 0.000055692,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "looks_good",
+          "costUsd": 0.01586,
+          "text": "Findings:\n- Regex-based approach correctly handles both hyphen and apostrophe boundaries, and the `mary-jane o'neil` → `Mary-Jane O'Neil` case is verified by test and passes.\n- Only one combined test case is added; no separate tests for hyphen-only or apostrophe-only names, though the combined case implicitly covers both paths.\n- Edge case not covered: words with internal capitals unrelated to name boundaries (e.g. contractions like \"don't\" → \"Don'T\") would now capitalize after any apostrophe, which is a minor behavior change outside the stated scope but not tested either way. Not a blocker given the narrow ticket intent.\n\nVerdict: looks good"
+        }
+      },
+      {
+        "id": "due-on-receipt",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 1,
+          "probabilities": {
+            "unsupported": 1,
+            "supported": 0,
+            "declined": 0
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "In src/invoice.ts, dueLabel's termsDays should default to 30 when it is left out, and the label should read 'Due on receipt' when termsDays is 0.",
+              "noul": 0.97
+            }
+          ],
+          "reasons": [
+            "In src/invoice.ts, dueLabel's termsDays should default to 30 when it is left out, and the label should read 'Due on receipt' when termsDays is 0."
+          ],
+          "invalid": [],
+          "inputTokens": 1206,
+          "costUsd": 0.000050652,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.010014,
+          "text": "Findings:\n- The requested \"Due on receipt\" label for termsDays === 0 was not implemented; `dueLabel` still always returns `Due ${formatIsoDate(...)}` regardless of termsDays.\n- No test covers the termsDays=0 case or the \"Due on receipt\" text, since the feature is missing.\n- The added test only checks that the default equals passing 30 explicitly — it doesn't verify actual output format/content (e.g., against a real date string).\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "due-on-receipt",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.98,
+          "probabilities": {
+            "supported": 0.98,
+            "unsupported": 0.02,
+            "declined": 0
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "In src/invoice.ts, dueLabel's termsDays should default to 30 when it is left out, and the label should read 'Due on receipt' when termsDays is 0.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1243,
+          "costUsd": 0.000052206,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "looks_good",
+          "costUsd": 0.011128,
+          "text": "Findings:\n- Logic matches spec: default 30 via parameter default, termsDays===0 short-circuits to 'Due on receipt' before date math.\n- Tests cover default behavior (via equivalence to explicit 30) and the 0 case; reasonably targeted for a 2-line change.\n- No test for negative/other edge termsDays, but that's outside the stated requirements.\n\nVerdict: looks good"
+        }
+      },
+      {
+        "id": "tax-after-discount",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.88,
+          "probabilities": {
+            "declined": 0,
+            "unsupported": 0.08,
+            "supported": 0.92
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "Add an optional taxRate to Invoice in src/invoice.ts (default 0).",
+              "noul": 0.03
+            },
+            {
+              "requirement": "totalCents applies the discount first, then the tax to the discounted amount, and rounds once at the end.",
+              "noul": 0.24
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1341,
+          "costUsd": 0.000056322,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.021221999999999998,
+          "text": "Findings:\n- Bug: `totalCents` computes tax from the pre-discount `subtotal`, not the discounted amount (`tax = subtotal * taxRate` instead of `subtotal * (1 - discountRate) * taxRate`). This contradicts the stated requirement \"discount first, then tax on the discounted amount.\" Currently `total = subtotal*(1-discountRate) + subtotal*taxRate`, which is wrong whenever both `discountRate` and `taxRate` are nonzero.\n- The added test uses `discountRate: 0`, so it cannot detect the bug above — with no discount, taxing the original subtotal and taxing the discounted subtotal are identical. Need a test case with both a nonzero discount and nonzero tax to actually verify the \"tax after discount\" behavior.\n- Minor: rounding is done once at the end as required (that part is correct), but the underlying formula it rounds is wrong per above.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "tax-after-discount",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.86,
+          "probabilities": {
+            "unsupported": 0.09,
+            "declined": 0,
+            "supported": 0.91
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "Add an optional taxRate to Invoice in src/invoice.ts (default 0).",
+              "noul": 0.03
+            },
+            {
+              "requirement": "totalCents applies the discount first, then the tax to the discounted amount, and rounds once at the end.",
+              "noul": 0.04
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1332,
+          "costUsd": 0.000055944000000000005,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "looks_good",
+          "costUsd": 0.011668,
+          "text": "Findings:\n- Logic matches spec: discount applied first, tax applied to discounted amount, single rounding at the end.\n- Test value checks out: 29250 × 1.2 = 35100, consistent with existing $292.50 discounted subtotal.\n- No validation on taxRate (e.g., negative or >1) but discountRate has the same lack of guard, so consistent with existing style.\n- Only one new test case (tax with discount); no test for taxRate default (0) or tax without discount, but coverage is minimally acceptable for this small change.\n\nVerdict: looks good"
+        }
+      },
+      {
+        "id": "average-skips-transfers",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.33,
+          "probabilities": {
+            "supported": 0.45,
+            "declined": 0,
+            "unsupported": 0.55
+          },
+          "accepted": null,
+          "unmet": [
+            {
+              "requirement": "averageCents in src/ledger.ts should ignore entries whose category is 'transfer', and return 0 when nothing but transfers is left.",
+              "noul": 0.26
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.12
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1172,
+          "costUsd": 0.000049224,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.009244,
+          "text": "Findings:\n- Bug: divisor still uses `entries.length` instead of `kept.length`, so transfers still dilute the average instead of being fully ignored.\n- Test doesn't catch this bug because it only uses a single transfer entry (0/1 == 0/0-guard hides the divisor error); no test with a mix of transfer + non-transfer entries to verify correct averaging.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "average-skips-transfers",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.99,
+          "probabilities": {
+            "declined": 0,
+            "unsupported": 0.01,
+            "supported": 0.99
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "averageCents in src/ledger.ts should ignore entries whose category is 'transfer', and return 0 when nothing but transfers is left.",
+              "noul": 0.03
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1227,
+          "costUsd": 0.000051534000000000005,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "looks_good",
+          "costUsd": 0.010056,
+          "text": "Findings:\n- Logic correctly filters 'transfer' entries and handles the all-transfer case, matching the request.\n- Test covers both the all-transfer-returns-0 case and a mixed case, using object literals without importing `Entry` type — fine if `Entry` isn't a strict interface requiring more fields; otherwise TS may complain.\n- No test for entries with no transfers at all (regression check on normal averaging), though existing tests likely cover base behavior already.\n- No plan was made per the task, but the diff is small and matches the request scope.\n\nVerdict: looks good"
+        }
+      },
+      {
+        "id": "categories-by-total",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.91,
+          "probabilities": {
+            "unsupported": 0.94,
+            "declined": 0,
+            "supported": 0.06
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "categories() in src/ledger.ts should list categories by total amount, largest first",
+              "noul": 0.27
+            },
+            {
+              "requirement": "categories with equal totals go in alphabetical order.",
+              "noul": 0.93
+            },
+            {
+              "requirement": "Update the test.",
+              "noul": 0.3
+            }
+          ],
+          "reasons": [
+            "categories with equal totals go in alphabetical order."
+          ],
+          "invalid": [],
+          "inputTokens": 1192,
+          "costUsd": 0.000050064,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.012858,
+          "text": "Findings:\n- Comparator `(a, b) => totalFor(entries, b) - totalFor(entries, a)` only breaks ties by original insertion order (stable sort), not alphabetically as required by the spec (\"categories with equal totals go in alphabetical order\"). Needs a secondary comparison, e.g. `|| a.localeCompare(b)`.\n- No test case covers the tie-breaking behavior, so this gap isn't caught.\n- Minor: `totalFor` is recomputed on every comparator call (O(n log n · n)); fine for now but worth noting if category lists grow.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "categories-by-total",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.83,
+          "probabilities": {
+            "unsupported": 0.11,
+            "declined": 0,
+            "supported": 0.89
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "categories() in src/ledger.ts should list categories by total amount, largest first",
+              "noul": 0.05
+            },
+            {
+              "requirement": "categories with equal totals go in alphabetical order.",
+              "noul": 0.06
+            },
+            {
+              "requirement": "Update the test.",
+              "noul": 0.07
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1207,
+          "costUsd": 0.000050694,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "looks_good",
+          "costUsd": 0.014834,
+          "text": "Findings:\n- Logic is correct: sorts by total descending, ties broken alphabetically via `localeCompare`.\n- Minor inefficiency: `totalFor` is recomputed on every comparison (O(n² log n) instead of precomputing totals once), but fine for typical ledger sizes.\n- Test updated to match new ordering; assumes rent's total > food's total (50000) — correctness relies on unseen `entries` data, but reported test run passed.\n- No plan was provided for this change, per the plan section.\n\nVerdict: looks good"
+        }
+      },
+      {
+        "id": "guest-greeting",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.96,
+          "probabilities": {
+            "supported": 0.02,
+            "declined": 0,
+            "unsupported": 0.98
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "Fix the typo in the greeting in src/greet.ts, and when the name is empty or only spaces, greeting should return 'Welcome, guest!'.",
+              "noul": 0.92
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.07
+            }
+          ],
+          "reasons": [
+            "Fix the typo in the greeting in src/greet.ts, and when the name is empty or only spaces, greeting should return 'Welcome, guest!'."
+          ],
+          "invalid": [],
+          "inputTokens": 1077,
+          "costUsd": 0.000045234,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.008806000000000001,
+          "text": "Findings:\n- The empty-check `name === ''` doesn't handle \"only spaces\" as required (e.g., `greeting('   ')` won't return the guest message) — should trim before checking.\n- No test covers the whitespace-only case, so this gap isn't caught by the test suite.\n- `titleCase(name)` behavior for a name that's only spaces (if it somehow got through) isn't verified either.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "guest-greeting",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.71,
+          "probabilities": {
+            "supported": 0.81,
+            "declined": 0,
+            "unsupported": 0.19
+          },
+          "accepted": null,
+          "unmet": [
+            {
+              "requirement": "Fix the typo in the greeting in src/greet.ts, and when the name is empty or only spaces, greeting should return 'Welcome, guest!'.",
+              "noul": 0.06
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.04
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1084,
+          "costUsd": 0.00004552800000000001,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "looks_good",
+          "costUsd": 0.011522,
+          "text": "Findings:\n- Logic correct: `name.trim() === ''` covers empty and whitespace-only names.\n- Typo fix (`Welcom` → `Welcome`) is correct, but no test explicitly asserts the \"Welcome back\" spelling — existing test only matches the `Grace Hopper!$` suffix, so a regression of the typo wouldn't be caught.\n- Only one new test case (whitespace-only); no test for a plain empty string `''`, though the same code path should cover it.\n\nVerdict: looks good"
+        }
+      },
+      {
+        "id": "share-in-report",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.99,
+          "probabilities": {
+            "declined": 0,
+            "unsupported": 0.99,
+            "supported": 0.01
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "reportLine in src/report.ts should add the category's share as a percentage with one decimal after the amount, for example 'Food: $500.00 (25.0%)'.",
+              "noul": 0.97
+            },
+            {
+              "requirement": "Update the test.",
+              "noul": 0.61
+            }
+          ],
+          "reasons": [
+            "reportLine in src/report.ts should add the category's share as a percentage with one decimal after the amount, for example 'Food: $500.00 (25.0%)'.",
+            "Update the test."
+          ],
+          "invalid": [],
+          "inputTokens": 1164,
+          "costUsd": 0.000048888000000000004,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.011168,
+          "text": "Findings:\n- `reportLine` doesn't match the spec's one-decimal format. `Math.round(share * 100)` produces an integer (`25`), then the template literal outputs `25%`, not `25.0%` as required by the example `(25.0%)`.\n- The test was updated to match the buggy output (`'Food: $500.00 (25%)'`) instead of the required `'Food: $500.00 (25.0%)'`, so it passes but doesn't verify the actual spec.\n- Fix should use something like `(categoryShare(entries, category) * 100).toFixed(1)`.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "share-in-report",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.96,
+          "probabilities": {
+            "declined": 0,
+            "unsupported": 0.02,
+            "supported": 0.98
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "reportLine in src/report.ts should add the category's share as a percentage with one decimal after the amount, for example 'Food: $500.00 (25.0%)'.",
+              "noul": 0.03
+            },
+            {
+              "requirement": "Update the test.",
+              "noul": 0.04
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1171,
+          "costUsd": 0.000049182000000000004,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "looks_good",
+          "costUsd": 0.010744,
+          "text": "Findings:\n- Logic matches the requested format exactly (amount + space + percentage in parens, one decimal).\n- Test updated consistently with the new output; existing `categoryShare` unit assertion (0.25) is reused correctly for the 25.0% expectation.\n- No edge-case test added (e.g., 0% share, or a percentage requiring rounding like 33.33%→33.3%), but not required by the request.\n\nVerdict: looks good"
+        }
+      },
+      {
+        "id": "case-insensitive-ledger",
+        "variant": "wrong",
+        "visible": true,
+        "hidden": false,
+        "jev": {
+          "verdict": "unsupported",
+          "confidence": 0.92,
+          "probabilities": {
+            "supported": 0.04,
+            "declined": 0.01,
+            "unsupported": 0.95
+          },
+          "accepted": "unsupported",
+          "unmet": [
+            {
+              "requirement": "Make the ledger in src/ledger.ts case-insensitive: categories() treats 'Food' and 'food' as one category and lists it in lowercase, and totalFor(entries, 'food') also counts 'Food' entries.",
+              "noul": 0.94
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.23
+            }
+          ],
+          "reasons": [
+            "Make the ledger in src/ledger.ts case-insensitive: categories() treats 'Food' and 'food' as one category and lists it in lowercase, and totalFor(entries, 'food') also counts 'Food' entries."
+          ],
+          "invalid": [],
+          "inputTokens": 1167,
+          "costUsd": 0.000049014,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "concerns",
+          "costUsd": 0.011412,
+          "text": "Findings:\n- `totalFor` is not modified in the diff at all, but the request explicitly requires `totalFor(entries, 'food')` to also count `'Food'` entries — this requirement appears unimplemented (still likely does exact string match).\n- The new test only checks `categories()` case-insensitivity; it does not test `totalFor` case-insensitive matching as the request specifies.\n- `categories()` now lowercases all category names, which changes the return value/casing for every existing category (not just mixed-case duplicates) — could be a breaking change for any consumer expecting original casing; worth confirming this is intended.\n\nVerdict: concerns"
+        }
+      },
+      {
+        "id": "case-insensitive-ledger",
+        "variant": "correct",
+        "visible": true,
+        "hidden": true,
+        "jev": {
+          "verdict": "supported",
+          "confidence": 0.98,
+          "probabilities": {
+            "supported": 0.99,
+            "unsupported": 0.01,
+            "declined": 0
+          },
+          "accepted": "supported",
+          "unmet": [
+            {
+              "requirement": "Make the ledger in src/ledger.ts case-insensitive: categories() treats 'Food' and 'food' as one category and lists it in lowercase, and totalFor(entries, 'food') also counts 'Food' entries.",
+              "noul": 0.03
+            },
+            {
+              "requirement": "Add a test.",
+              "noul": 0.03
+            }
+          ],
+          "reasons": [],
+          "invalid": [],
+          "inputTokens": 1248,
+          "costUsd": 0.000052416,
+          "model": "jev-1.13.0"
+        },
+        "jevError": null,
+        "critic": {
+          "verdict": "looks_good",
+          "costUsd": 0.015542,
+          "text": "Findings:\n- Diff is minimal and directly implements the requested case-insensitive behavior in both `categories()` and `totalFor()`.\n- New test covers the core requirement (mixed-case categories collapse to one lowercase entry, totals combine correctly).\n- No other functions (e.g., `categoryShare`, `reportLine`) were touched, and the existing test for those still passes per check results, so no regression from the lowercasing.\n- Minor: `totalFor` also lowercases the `category` argument itself, which is a slight behavior extension beyond what was asked but harmless and consistent with the goal.\n\nVerdict: looks good"
+        }
+      }
+    ]
+  }
+}
