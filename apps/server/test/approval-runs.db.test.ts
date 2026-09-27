@@ -14,7 +14,7 @@ import { createFakeProvider } from '../src/providers/fake.ts';
 import { APPROVAL_TIMEOUT_MESSAGE } from '../src/workflow/approval-gate.ts';
 import { WAITING_OUTCOME_MESSAGE, recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { doRun } from './approval-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
@@ -73,7 +73,7 @@ async function builderRunId(runId: string): Promise<string> {
 
 const api = () => createTestApp(t);
 const post = (path: string, body: object = {}) =>
-  request(api()).post(path).set('Host', HOST).set('Origin', ORIGIN).send(body);
+  request(api()).post(path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
 
 describe('Do runs with approvals', () => {
   it('waits for the user, flags the chat, and finishes after an allow', async () => {
@@ -81,7 +81,7 @@ describe('Do runs with approvals', () => {
     const { conversationId, runId } = await doRun(t, root, '#approve');
     const approval = await waitingApproval(conversationId);
     expect(approval).toMatchObject({ kind: 'execute', payload: { command: FAKE_COMMAND } });
-    const list = await request(api()).get('/api/conversations').set('Host', HOST);
+    const list = await request(api()).get('/api/conversations').set(LOCAL_HEADERS);
     expect(list.body.find((c: ConversationSummary) => c.id === conversationId)).toMatchObject({
       needsInput: true,
       attention: {
@@ -187,7 +187,7 @@ describe('revert to before the run', () => {
     const { runId } = await allowEdit();
     const target = join(root, FAKE_EDIT_FILE);
     expect(await readFile(target, 'utf8')).toBe('original\nEdited by the fake agent\n');
-    const changes = await request(api()).get(`/api/runs/${runId}/changes`).set('Host', HOST);
+    const changes = await request(api()).get(`/api/runs/${runId}/changes`).set(LOCAL_HEADERS);
     expect(changes.body).toMatchObject({
       revertible: true,
       files: [{ path: FAKE_EDIT_FILE, change: 'modified' }],
@@ -208,7 +208,7 @@ describe('revert to before the run', () => {
     git('add', 'staged.txt');
     const { runId } = await allowEdit();
     await writeFile(join(root, 'added-by-run.txt'), 'new\n');
-    const changes = await request(api()).get(`/api/runs/${runId}/changes`).set('Host', HOST);
+    const changes = await request(api()).get(`/api/runs/${runId}/changes`).set(LOCAL_HEADERS);
     expect(changes.body.files).toEqual([
       { path: 'added-by-run.txt', change: 'added' },
       { path: FAKE_EDIT_FILE, change: 'modified' },

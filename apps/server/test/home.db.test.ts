@@ -3,7 +3,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { providerHealthSchema, spendSummarySchema } from '@spark-outpost/contracts';
 import { listConversations, sendUserMessage } from '../src/persistence/conversations.ts';
-import { createTestApp, HOST } from './app-support.ts';
+import { createTestApp, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -18,7 +18,7 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-const get = (path: string) => request(app).get(path).set('Host', HOST);
+const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
 
 interface RunSpec {
   provider: string;

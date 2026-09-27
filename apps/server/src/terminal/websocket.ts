@@ -1,7 +1,12 @@
 import type { IncomingMessage, Server } from 'node:http';
 import type { Duplex } from 'node:stream';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { TERMINAL_INPUT_MAX_LENGTH, terminalClientMessageSchema } from '@spark-outpost/contracts';
+import {
+  API_TOKEN_HEADER,
+  TERMINAL_INPUT_MAX_LENGTH,
+  terminalClientMessageSchema,
+} from '@spark-outpost/contracts';
+import { launchTokenCheck } from '../api/launch-token.ts';
 import { TerminalAuthError, type AttachedTerminal, type TerminalSessions } from './sessions.ts';
 
 const STREAM_PATH = /^\/api\/terminal\/sessions\/([0-9a-f-]{36})\/stream$/;
@@ -11,6 +16,7 @@ const DEFAULT_SIZE = { cols: 100, rows: 24 };
 export interface TerminalSocketOptions {
   port: number;
   allowedOrigins: readonly string[];
+  apiToken: string;
 }
 
 function reject(socket: Duplex, status: number, message: string) {
@@ -81,6 +87,7 @@ export function attachTerminalSockets(
   const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_MESSAGE_BYTES });
   const hosts = new Set([`127.0.0.1:${options.port}`, `localhost:${options.port}`]);
   const origins = new Set(options.allowedOrigins);
+  const launchTokenMatches = launchTokenCheck(options.apiToken);
 
   server.on('upgrade', (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
@@ -89,6 +96,8 @@ export function attachTerminalSockets(
     if (!hosts.has(req.headers.host ?? '')) return reject(socket, 403, 'Forbidden');
     if (!req.headers.origin || !origins.has(req.headers.origin))
       return reject(socket, 403, 'Forbidden');
+    if (!launchTokenMatches(req.headers[API_TOKEN_HEADER]))
+      return reject(socket, 401, 'Unauthorized');
 
     const id = match[1]!;
     const token = url.searchParams.get('token') ?? '';

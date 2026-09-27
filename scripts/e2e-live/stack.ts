@@ -2,6 +2,8 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { API_TOKEN_ENV, API_TOKEN_HEADER } from '../../packages/contracts/src/index.ts';
+import { createLaunchToken } from '../../apps/server/src/api/launch-token.ts';
 import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { FAKE_ACP_MODELS } from '../../tests/browser/stub-config.ts';
 import { STUB_URL, portsFor, urlsFor, type StackUrls } from './config.ts';
@@ -21,6 +23,7 @@ export interface Stack {
   db: Db;
   workspaceId: string;
   urls: StackUrls;
+  apiToken: string;
   processes: ChildProcess[];
   workerPid: number | null;
   logs: string;
@@ -139,7 +142,10 @@ export async function waitFor(check: () => Promise<boolean>, what: string, timeo
   throw new Error(`${what} did not start within ${timeoutMs / 1000} s.`);
 }
 
-export const answers = (url: string) => async () => (await fetch(url)).ok;
+export const answers =
+  (url: string, headers: Record<string, string> = {}) =>
+  async () =>
+    (await fetch(url, { headers })).ok;
 
 async function migrate(appRoot: string, env: NodeJS.ProcessEnv, logs: string): Promise<void> {
   const cli = startProcess(
@@ -167,6 +173,7 @@ export async function startStack(
   const env = baseEnv(runtime, version, appRoot, target.url, urls);
   await migrate(appRoot, env, logs);
   const workspaceId = await seedWorkspace(target.db);
+  const apiToken = createLaunchToken();
   const stack: Stack = {
     runtime,
     version,
@@ -176,14 +183,19 @@ export async function startStack(
     db: target.db,
     workspaceId,
     urls,
+    apiToken,
     processes: [],
     workerPid: null,
     logs,
   };
   const server = join(appRoot, 'apps/server');
-  const api = startProcess('api', ['--import', 'tsx', 'src/api/main.ts'], server, env, logs);
+  const apiEnv = { ...env, [API_TOKEN_ENV]: apiToken };
+  const api = startProcess('api', ['--import', 'tsx', 'src/api/main.ts'], server, apiEnv, logs);
   stack.processes.push(api.child);
-  await waitFor(answers(`${urls.api}/health`), `The ${version} API`);
+  await waitFor(
+    answers(`${urls.api}/health`, { [API_TOKEN_HEADER]: apiToken }),
+    `The ${version} API`,
+  );
   const worker = startProcess(
     'worker',
     ['--import', 'tsx', 'src/workflow/main.ts'],
@@ -199,6 +211,7 @@ export async function startStack(
       ...process.env,
       SPARK_WEB_PORT: String(urls.ports.web),
       SPARK_API_PORT: String(urls.ports.api),
+      [API_TOKEN_ENV]: apiToken,
     };
     const web = startProcess(
       'web',

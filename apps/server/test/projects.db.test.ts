@@ -13,7 +13,7 @@ import {
   type ProjectFilesResponse,
 } from '@spark-outpost/contracts';
 import { getAttachmentContent } from '../src/persistence/attachments.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -54,11 +54,11 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-const get = (path: string) => request(app).get(path).set('Host', HOST);
+const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
 const post = (path: string, body: unknown) =>
   request(app)
     .post(path)
-    .set('Host', HOST)
+    .set(LOCAL_HEADERS)
     .set('Origin', ORIGIN)
     .send(body as object);
 

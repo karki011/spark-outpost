@@ -20,7 +20,7 @@ import {
   type JevScript,
   type Scenario,
 } from './orchestration-support.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 const TRIVIAL = SCENARIOS[1] as Scenario;
@@ -161,7 +161,7 @@ describe('deleting a chat mid-run', () => {
     const remove = () =>
       request(app)
         .delete(`/api/conversations/${conversationId}`)
-        .set('Host', HOST)
+        .set(LOCAL_HEADERS)
         .set('Origin', ORIGIN)
         .send({});
     const busy = await remove().expect(409);

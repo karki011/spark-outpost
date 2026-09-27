@@ -11,7 +11,7 @@ import { modelCardRoutes } from './model-card-routes.ts';
 import { outcomeRoutes, type OutcomeRouteDeps } from './outcome-routes.ts';
 import { projectRoutes } from './project-routes.ts';
 import { apiRoutes, statusForError, type RouteDeps } from './routes.ts';
-import { localRequestGuard } from './security.ts';
+import { localRequestGuard, requireLaunchToken } from './security.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
 import { taskRoutes } from './task-routes.ts';
 import { terminalRoutes } from '../terminal/routes.ts';
@@ -23,12 +23,14 @@ export interface AppOptions
   appEvents: AppEventFeed;
   port: number;
   allowedOrigins: readonly string[];
+  apiToken: string;
 }
 
 export function createApp(options: AppOptions) {
   const app = express();
   app.disable('x-powered-by');
   app.use(localRequestGuard(options.port, options.allowedOrigins));
+  app.use(requireLaunchToken(options.apiToken));
   app.use('/api', attachmentRoutes(options));
   app.use(express.json({ limit: '256kb' }));
   app.get('/api/events', (req, res) => options.appEvents.subscribe(req, res));

@@ -10,7 +10,7 @@ import {
   type Project,
   type RemovedProject,
 } from '@spark-outpost/contracts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -39,9 +39,9 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-const get = (path: string) => request(app).get(path).set('Host', HOST);
+const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
 const send = (method: 'post' | 'patch' | 'delete', path: string, body: object = {}) =>
-  request(app)[method](path).set('Host', HOST).set('Origin', ORIGIN).send(body);
+  request(app)[method](path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
 
 async function project(folder: string): Promise<Project> {
   return (await send('post', '/api/projects', { rootPath: folder }).expect(201)).body as Project;

@@ -26,7 +26,7 @@ import {
 } from '../src/projects/worktrees.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -63,8 +63,8 @@ afterEach(async () => {
 });
 
 const post = (path: string, body: object) =>
-  request(app).post(path).set('Host', HOST).set('Origin', ORIGIN).send(body);
-const get = (path: string) => request(app).get(path).set('Host', HOST);
+  request(app).post(path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
+const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
 
 async function send(conversationId: string, content: string): Promise<string> {
   const sent = await post(`/api/conversations/${conversationId}/messages`, {

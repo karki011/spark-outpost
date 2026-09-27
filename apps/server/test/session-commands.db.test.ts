@@ -5,7 +5,7 @@ import { createConversation } from '../src/persistence/conversations.ts';
 import { saveConnection } from '../src/persistence/setup.ts';
 import type { RunInput } from '../src/workflow/run-input.ts';
 import { prepareTurnSession } from '../src/workflow/turn-session.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -80,7 +80,7 @@ describe('agent commands per session', () => {
 
     const listed = await request(app)
       .get(`/api/conversations/${id}/agent-commands`)
-      .set('Host', HOST)
+      .set(LOCAL_HEADERS)
       .set('Origin', ORIGIN);
     expect(listed.status).toBe(200);
     expect(listed.body).toEqual({
@@ -92,7 +92,7 @@ describe('agent commands per session', () => {
   it('answers 404 for an unknown chat', async () => {
     const response = await request(app)
       .get(`/api/conversations/${randomUUID()}/agent-commands`)
-      .set('Host', HOST)
+      .set(LOCAL_HEADERS)
       .set('Origin', ORIGIN);
     expect(response.status).toBe(404);
   });

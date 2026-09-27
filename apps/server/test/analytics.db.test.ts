@@ -6,7 +6,7 @@ import {
   analyticsSpendSchema,
   rollupReportSchema,
 } from '@spark-outpost/contracts';
-import { createTestApp, HOST } from './app-support.ts';
+import { createTestApp, LOCAL_HEADERS } from './app-support.ts';
 import { seedAnalyticsTurn, seedProjectChat, type AnalyticsTurn } from './analytics-seed.ts';
 import { seedRealisticAnalytics } from './analytics-realistic.ts';
 import { createTestDb, type TestDb } from './support.ts';
@@ -23,7 +23,7 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-const get = (path: string) => request(app).get(path).set('Host', HOST);
+const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
 const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000);
 
 const builder = (model: string, costUsd: number, extra = {}) => ({

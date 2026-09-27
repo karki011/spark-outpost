@@ -1,6 +1,8 @@
+import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+import { API_TOKEN_ENV } from './packages/contracts/src/api-token.ts';
 import { FAKE_ACP_MODELS, FAKE_CODEX_STATE } from './tests/browser/stub-config.ts';
 
 if (existsSync('.local/credentials.env')) process.loadEnvFile('.local/credentials.env');
@@ -8,6 +10,7 @@ if (existsSync('.local/credentials.env')) process.loadEnvFile('.local/credential
 const API_PORT = 4319;
 const WEB_PORT = 5174;
 const STUB_URL = 'http://127.0.0.1:4399';
+const apiToken = randomBytes(32).toString('base64url');
 
 const serverEnv = {
   PATH: `${path.resolve('tests/browser/bin')}:/usr/bin:/bin`,
@@ -54,7 +57,7 @@ export default defineConfig({
     {
       command: `${serverCommand('src/persistence/migrate-cli.ts')} && ${serverCommand('src/api/main.ts')}`,
       cwd: 'apps/server',
-      env: serverEnv,
+      env: { ...serverEnv, [API_TOKEN_ENV]: apiToken },
       url: `http://127.0.0.1:${API_PORT}/api/health`,
       reuseExistingServer: false,
       timeout: 60_000,
@@ -72,7 +75,11 @@ export default defineConfig({
     {
       command: `${node} node_modules/vite/bin/vite.js`,
       cwd: 'apps/web',
-      env: { SPARK_WEB_PORT: String(WEB_PORT), SPARK_API_PORT: String(API_PORT) },
+      env: {
+        SPARK_WEB_PORT: String(WEB_PORT),
+        SPARK_API_PORT: String(API_PORT),
+        [API_TOKEN_ENV]: apiToken,
+      },
       url: `http://127.0.0.1:${WEB_PORT}`,
       reuseExistingServer: false,
       timeout: 60_000,

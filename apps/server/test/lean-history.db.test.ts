@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { analyticsHarnessSchema, orchestrationSchema } from '@spark-outpost/contracts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
-import { createTestApp, HOST } from './app-support.ts';
+import { createTestApp, LOCAL_HEADERS } from './app-support.ts';
 import {
   SCENARIOS,
   connectProviders,
@@ -106,12 +106,12 @@ describe('history from before round 10', () => {
     const app = createTestApp(t);
     const harnessTab = await request(app)
       .get('/api/analytics/harness?range=7d&tz=UTC')
-      .set('Host', HOST)
+      .set(LOCAL_HEADERS)
       .expect(200);
     expect(analyticsHarnessSchema.safeParse(harnessTab.body).success).toBe(true);
     const audit = await request(app)
       .get(`/api/conversations/${conversationId}/audit/summary`)
-      .set('Host', HOST);
+      .set(LOCAL_HEADERS);
     expect(audit.status).toBe(200);
   }, 60_000);
 });

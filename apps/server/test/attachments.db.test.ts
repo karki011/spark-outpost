@@ -7,7 +7,7 @@ import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -37,7 +37,7 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0
 const upload = (data: Buffer | string, name: string, type: string) =>
   request(app)
     .post('/api/attachments')
-    .set('Host', HOST)
+    .set(LOCAL_HEADERS)
     .set('Origin', ORIGIN)
     .set('Content-Type', type)
     .set('X-File-Name', encodeURIComponent(name))
@@ -46,11 +46,11 @@ const upload = (data: Buffer | string, name: string, type: string) =>
 const send = (conversationId: string, content: string, attachmentIds: string[]) =>
   request(app)
     .post(`/api/conversations/${conversationId}/messages`)
-    .set('Host', HOST)
+    .set(LOCAL_HEADERS)
     .set('Origin', ORIGIN)
     .send({ id: randomUUID(), content, attachmentIds });
 
-const get = (path: string) => request(app).get(path).set('Host', HOST);
+const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
 
 async function uploaded(data: Buffer | string, name: string, type: string): Promise<Attachment> {
   const response = await upload(data, name, type).expect(201);
@@ -85,14 +85,14 @@ describe('attachment uploads', () => {
     );
     await request(app)
       .post('/api/attachments')
-      .set('Host', HOST)
+      .set(LOCAL_HEADERS)
       .set('Content-Type', 'text/plain')
       .send('hi')
       .expect(400);
     await upload(Buffer.alloc(5 * 1024 * 1024 + 1, 'a'), 'big.txt', 'text/plain').expect(413);
     await request(app)
       .post('/api/attachments')
-      .set('Host', HOST)
+      .set(LOCAL_HEADERS)
       .set('Origin', 'https://evil.example')
       .set('X-File-Name', 'a.txt')
       .send('hi')
@@ -158,7 +158,7 @@ describe('sending attachments', () => {
     const post = () =>
       request(app)
         .post(`/api/conversations/${conversationId}/messages`)
-        .set('Host', HOST)
+        .set(LOCAL_HEADERS)
         .set('Origin', ORIGIN)
         .send(body);
     const first = await post().expect(201);

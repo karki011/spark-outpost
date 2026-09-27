@@ -29,6 +29,13 @@ Today the API accepts requests only for its own host and from allowed web origin
 
 - The API and the stream require a **token created at each launch**. The main process passes it to the window, and the token never reaches logs, files or anything an agent can see.
 - The API listens on a random free port, not a fixed one.
+
+How it works today (web milestone):
+
+- Every HTTP request, the event streams, uploads and the terminal socket need the `X-Spark-Token` header; anything else gets 401. The host and origin checks still run first. The server compares SHA-256 digests with `timingSafeEqual`.
+- A launcher can hand the API its token in `SPARK_API_TOKEN`; the API removes it from its environment before it starts anything, so agents and shells never inherit it. Playwright and `pnpm e2e:live` do this, and the Electron main process will too, injecting the header into its window's requests.
+- Without a launcher (`pnpm dev`), the API creates a random token and writes it to `.local/api-token` with mode 0600. The Vite dev proxy reads that file for each proxied `/api` request and socket upgrade and adds the header, so the browser's JavaScript never holds the token and `EventSource` needs no query string. Agents are denied reading any `api-token` file like other secret files.
+- In development the Vite server on 127.0.0.1 is the gate: a local program that calls Vite instead of the API still gets through. The Electron build has no dev proxy and closes this.
 - API keys stay in the system keychain, as today.
 
 ### Migrations at startup (F-24)
