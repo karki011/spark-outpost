@@ -146,9 +146,16 @@
       "status": "ready",
       "acceptance": [
         "Requests without the token are rejected",
-        "Token never reaches logs or agent-visible artifacts"
+        "Token never reaches logs or agent-visible artifacts",
+        "The Electron app passes the token to its window at launch; the API picks a random free port"
       ],
-      "notes": []
+      "notes": [
+        {
+          "date": "2026-09-27",
+          "status": "ready",
+          "text": "Prioritised for the Electron plan (docs/architecture/ELECTRON_PLAN.md): today any local program can call the API; host and origin checks only stop web pages."
+        }
+      ]
     },
     {
       "id": "F-10",
@@ -348,6 +355,25 @@
           "date": "2026-09-25",
           "status": "review",
           "text": "Smart flow: verification reports cli_missing or not_logged_in and the terminal starts on the matching step (install or claude auth login). Terminal closes and checks again by itself after a clean install or a successful login. Claude login verified for free with claude auth status (the test request is only a fallback). Parent Claude Code env vars stripped. Browser tests are hermetic (fake codex CLI, no host PATH). check 60, test:db 29, test:browser 7 pass."
+        }
+      ]
+    },
+    {
+      "id": "F-24",
+      "title": "Apply pending migrations at startup, after a database backup",
+      "phase": "0",
+      "status": "ready",
+      "acceptance": [
+        "API and worker start cleanly after a pull that adds migrations, with no manual db:migrate",
+        "A backup of the database is taken before any pending migration runs, and the last few are kept",
+        "Only one process runs migrations; the other waits for it",
+        "A failed migration stops startup with a readable error and leaves the backup in place"
+      ],
+      "notes": [
+        {
+          "date": "2026-09-27",
+          "status": "ready",
+          "text": "Pending migrations crashed the dev API twice (502s). Needed for the Electron app, where users can't run pnpm db:migrate."
         }
       ]
     }

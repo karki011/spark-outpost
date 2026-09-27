@@ -10,11 +10,12 @@ Generated from `docs/tasks/board.json` by `pnpm tasks`. Do not edit by hand.
 - **F-18** Worker shutdown semantics for long-running provider processes _(phase 1)_
 - **F-20** Show the collapsed work log ("Worked for Ns") on finished runs _(phase 4)_
 
-## Ready (3)
+## Ready (4)
 
-- **F-9** Authenticate UI, API, and stream with a per-launch token _(phase 0)_
+- **F-9** Authenticate UI, API, and stream with a per-launch token _(phase 0)_ — 2026-09-27: Prioritised for the Electron plan (docs/architecture/ELECTRON_PLAN.md): today any local program can call the API; host and origin checks only stop web pages.
 - **F-10** App-wide status stream for sidebar, Home, rail badge, favicon _(phase 1)_
 - **F-21** Make Ctrl+C on pnpm dev stop every child process _(phase 0)_ — 2026-09-25: pnpm 12's native wrapper did not forward Playwright's SIGTERM to Vite; tests now bypass pnpm, dev still uses it.
+- **F-24** Apply pending migrations at startup, after a database backup _(phase 0)_ — 2026-09-27: Pending migrations crashed the dev API twice (502s). Needed for the Electron app, where users can't run pnpm db:migrate.
 
 ## In progress (0)
 
