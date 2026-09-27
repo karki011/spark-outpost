@@ -218,6 +218,14 @@ async function fixRequest(turn: RoleTurn): Promise<acp.StopReason> {
   return 'end_turn';
 }
 
+async function finishMissing(turn: RoleTurn): Promise<acp.StopReason> {
+  await write(turn, 'notes.txt', 'finished what was missing');
+  await turn.say(
+    `Finished what was missing after ${priorPrompts(turn.sessionId)} earlier prompts.`,
+  );
+  return 'end_turn';
+}
+
 async function unstick(turn: RoleTurn): Promise<acp.StopReason> {
   await write(turn, 'notes.txt', 'tried another way');
   await turn.say('Tried another way.');
@@ -228,6 +236,7 @@ export function roleFor(text: string): ((turn: RoleTurn) => Promise<acp.StopReas
   if (text.includes('You stopped before finishing')) return continueTodos;
   if (text.includes('The harness stopped your last turn')) return unstick;
   if (text.includes('The user asked for a fix')) return fixRequest;
+  if (text.includes('An independent check of your change')) return finishMissing;
   if (text.includes('Role: Critic.')) return critic;
   if (text.includes("The project's checks failed")) return fixChecks;
   if (text.includes('#build')) return builder;

@@ -3,6 +3,8 @@ export const CREW_MARKER = '#crew';
 export const UNSURE_MARKER = '#unsure';
 export const DEBUG_MARKER = '#debug';
 export const VAGUE_MARKER = '#vague';
+export const UNSUPPORTED_MARKER = '#unsupported';
+export const DECLINED_MARKER = '#declined';
 
 interface StubQuestion {
   type: 'choice' | 'score' | 'noul';
@@ -60,8 +62,18 @@ function intakeAnswers(request: StubRequest, task: string): Record<string, Answe
   return answers;
 }
 
+function verdictFor(task: string): string {
+  if (task.includes(UNSUPPORTED_MARKER)) return 'unsupported';
+  if (task.includes(DECLINED_MARKER)) return 'declined';
+  return 'supported';
+}
+
 export function jevAnswers(request: StubRequest): Record<string, Answer> {
   const task = String(request.state.task ?? '');
   if (request.questions.intent) return intakeAnswers(request, task);
-  return Object.fromEntries(Object.keys(request.questions).map((key) => [key, noul(0.05)]));
+  const answers = Object.fromEntries(
+    Object.keys(request.questions).map((key) => [key, noul(0.05)]),
+  );
+  if (request.questions.verdict) answers.verdict = choice(verdictFor(task), 0.95);
+  return answers;
 }

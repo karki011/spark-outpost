@@ -2,7 +2,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { VerifyEvent } from '@spark-outpost/contracts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 const FAKE_JEV_KEY = 'fake-typesafe-key-0000000000009z8y';
@@ -36,9 +36,9 @@ const typesafeModels = {
 function appWith(fetch: typeof globalThis.fetch) {
   const app = createTestApp(t, { fetch, secrets });
   const send = (method: 'post' | 'delete', path: string, body: object = {}) =>
-    request(app)[method](path).set('Host', HOST).set('Origin', ORIGIN).send(body);
+    request(app)[method](path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
   return {
-    get: (path: string) => request(app).get(path).set('Host', HOST),
+    get: (path: string) => request(app).get(path).set(LOCAL_HEADERS),
     send,
     async verify(body: object): Promise<VerifyEvent[]> {
       const response = await send('post', '/api/providers/jev/verify', body).expect(200);
@@ -124,7 +124,7 @@ describe('Jev connection', () => {
     await app.send('post', '/api/providers/jev/test').expect(400);
     await request(createTestApp(t, { secrets }))
       .patch('/api/profile')
-      .set('Host', HOST)
+      .set(LOCAL_HEADERS)
       .set('Origin', ORIGIN)
       .send({ defaultProvider: 'jev' })
       .expect(400);

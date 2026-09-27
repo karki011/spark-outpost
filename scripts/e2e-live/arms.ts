@@ -75,7 +75,7 @@ async function cleanupAfter(stack: Stack, chat: Chat, runId: string): Promise<st
 
 async function harnessOnStack(ctx: ArmContext, cell: Cell, repo: string): Promise<ArmResult> {
   const stack = await ctx.stack(cell);
-  const api = new Api(stack.urls.api);
+  const api = new Api(stack.urls.api, stack.apiToken);
   const { setup, scenario } = cell;
   await setConnections(stack.db, stack.workspaceId, {
     jev: setup.jev,

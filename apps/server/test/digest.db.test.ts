@@ -6,7 +6,7 @@ import { listConversations, sendUserMessage } from '../src/persistence/conversat
 import { getRun } from '../src/persistence/runs.ts';
 import { FAKE_COST_USD, FAKE_UNKNOWN_CHAT, createFakeProvider } from '../src/providers/fake.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
-import { createTestApp, HOST } from './app-support.ts';
+import { createTestApp, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -70,7 +70,7 @@ async function chat(title: string, status = 'succeeded', error: string | null = 
 }
 
 const post = (trigger: 'open' | 'refresh') =>
-  request(app).post('/api/home/digest?tz=UTC').set('Host', HOST).send({ trigger });
+  request(app).post('/api/home/digest?tz=UTC').set(LOCAL_HEADERS).send({ trigger });
 
 async function state(response: Promise<request.Response> | request.Test): Promise<DigestState> {
   const result = await response;
@@ -87,7 +87,7 @@ async function digestCount(): Promise<number> {
 
 async function ready(): Promise<DigestState> {
   return eventually(async () => {
-    const current = await state(request(app).get('/api/home/digest').set('Host', HOST));
+    const current = await state(request(app).get('/api/home/digest').set(LOCAL_HEADERS));
     return current.digest?.status === 'ready' || current.digest?.status === 'failed'
       ? current
       : null;
@@ -235,7 +235,7 @@ describe('home digest', () => {
   it('rejects an unknown trigger', async () => {
     const response = await request(app)
       .post('/api/home/digest')
-      .set('Host', HOST)
+      .set(LOCAL_HEADERS)
       .send({ trigger: 'always' });
     expect(response.status).toBe(400);
   });

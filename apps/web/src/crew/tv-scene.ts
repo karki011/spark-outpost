@@ -78,6 +78,7 @@ function confidence(decision: OrchestrationDecision): string | null {
 
 function decisionVerb(decision: OrchestrationDecision): string {
   if (decision.kind === 'intake') return 'Picked';
+  if (decision.kind === 'verify') return 'Checked';
   if (decision.kind !== 'route') return 'Noted';
   const role = agentRoleSchema.safeParse(decision.role);
   return role.success ? `Sent ${agentRoleLabel(role.data)}` : 'Routed';
@@ -90,7 +91,7 @@ export function decisionLine(decision: OrchestrationDecision | undefined): strin
   return [summary, confidence(decision)].filter(Boolean).join(' · ');
 }
 
-const OBSERVED: ReadonlySet<string> = new Set(['policy', 'verify']);
+const OBSERVED: ReadonlySet<string> = new Set(['policy']);
 
 export function lastDecisionLine(orchestration: Orchestration): string | null {
   const shown = orchestration.decisions.filter((decision) => !OBSERVED.has(decision.kind));

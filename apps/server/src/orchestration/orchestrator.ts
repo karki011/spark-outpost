@@ -44,10 +44,17 @@ import {
   type OrchestratorDeps,
   type Session,
 } from './session.ts';
-import { initialFlow, nextStep, type FlowAction, type FlowEvent } from './transitions.ts';
+import {
+  ESCALATED_NOTE,
+  initialFlow,
+  nextStep,
+  type FlowAction,
+  type FlowEvent,
+} from './transitions.ts';
 import type { MemberOutcome } from './members.ts';
-import { jevDiffsAllowed, observeBuilder, settleObservations } from './observe.ts';
+import { jevDiffsAllowed, settleObservations } from './observe.ts';
 import { observeScan, startScan } from './observe-scan.ts';
+import { verifyChange } from './verify.ts';
 
 export const TASK_SESSION_CLOSED = 'task session closed';
 export const NEW_TASK_STARTED = 'a new task started';
@@ -128,7 +135,6 @@ async function closeTaskSessions(s: Session, taskId: string, reason: string): Pr
 
 async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEvent> {
   const { result } = outcome;
-  observeBuilder(s, result);
   if (result.loop && s.control.reason() !== 'cancelled') {
     return { type: 'looped', summary: result.loop, open: await refreshPlan(s) };
   }
@@ -140,8 +146,12 @@ async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEve
     outcome: result.outcome === 'lease_lost' ? 'failed' : result.outcome,
     error: result.error,
     ...(open ? { open } : {}),
-    ...(changes ? { large: isLargeDiff(changes.files) } : {}),
+    ...(changes ? { large: isLargeDiff(changes.files), green: isGreen(s, changes.files) } : {}),
   };
+}
+
+function isGreen(s: Session, files: readonly unknown[]): boolean {
+  return files.length > 0 && s.checkBodies.at(-1)?.status !== 'failed';
 }
 
 async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null> {
@@ -169,6 +179,8 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
         ...(outcome.verdict ? { verdict: outcome.verdict } : {}),
       };
     }
+    case 'verify':
+      return verifyChange(s);
     case 'wrap_up': {
       await recordShortcuts(s).catch(() => null);
       const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true).catch(
@@ -204,7 +216,10 @@ async function finish(
   const verdict = s.results.some((result) => result.role === 'critic') ? s.flow.verdict : null;
   const assumed = s.assumption ? assumptionLine(s.assumption) : null;
   const stopped = status === 'failed' && reason ? reason : null;
-  const notes = [assumed, stopped, incomplete].filter((line): line is string => line !== null);
+  const escalated = s.flow.escalated ? ESCALATED_NOTE : null;
+  const notes = [assumed, escalated, stopped, incomplete].filter(
+    (line): line is string => line !== null,
+  );
   const text = withNotes(
     finalText(s.results, verdict, s.findings, s.message !== null, s.checkBodies),
     notes,
@@ -267,23 +282,24 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       costCapUsd: limits.costCapUsd,
     });
     const busy = git && !answers ? await repoBusy(deps.db, lease.runId, root) : false;
+    const jev =
+      deps.intake && intake.context.jevModel
+        ? {
+            deps: { ...deps.intake.deps, timeoutMs: jevTimeout(deps) },
+            model: intake.context.jevModel,
+          }
+        : null;
     const s: Session = {
       deps,
       lease,
       input,
       append,
       control,
-      jev:
-        deps.intake && intake.context.jevModel
-          ? {
-              deps: { ...deps.intake.deps, timeoutMs: jevTimeout(deps) },
-              model: intake.context.jevModel,
-            }
-          : null,
+      jev,
       route: routeContext(input, intake.context),
       facts: { trivial: decisions.trivial, destructive: decisions.destructive },
       intake,
-      flow: initialFlow(decisions.risk, input.level, decisions.review),
+      flow: initialFlow(decisions.risk, input.level, decisions.review, jev !== null),
       routes: new Map(),
       plan: [],
       taskId: null,

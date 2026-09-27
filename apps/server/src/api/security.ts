@@ -1,4 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
+import { API_TOKEN_HEADER } from '@spark-outpost/contracts';
+import { launchTokenCheck } from './launch-token.ts';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 export const UPLOAD_PATH = '/api/attachments';
@@ -32,6 +34,17 @@ export function localRequestGuard(port: number, allowedOrigins: readonly string[
     }
     if (MUTATING_METHODS.has(req.method) && !req.is('application/json')) {
       res.status(415).json({ error: 'Send JSON with Content-Type: application/json.' });
+      return;
+    }
+    next();
+  };
+}
+
+export function requireLaunchToken(token: string) {
+  const matches = launchTokenCheck(token);
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!matches(req.headers[API_TOKEN_HEADER])) {
+      res.status(401).json({ error: 'This request needs the API launch token.' });
       return;
     }
     next();

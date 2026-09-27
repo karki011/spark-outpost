@@ -1,3 +1,4 @@
+import { API_TOKEN_HEADER } from '@spark-outpost/contracts';
 import { AppEventFeed } from '../src/api/app-events.ts';
 import { createApp, type AppOptions } from '../src/api/app.ts';
 import { RunEventHub } from '../src/api/run-event-hub.ts';
@@ -10,6 +11,8 @@ import type { TestDb } from './support.ts';
 export const PORT = 4318;
 export const HOST = `127.0.0.1:${PORT}`;
 export const ORIGIN = 'http://localhost:5173';
+export const API_TOKEN = 'test-launch-token-0123456789abcdefghijkl';
+export const LOCAL_HEADERS = { Host: HOST, [API_TOKEN_HEADER]: API_TOKEN };
 
 export interface TestAppOptions {
   fetch?: typeof fetch;
@@ -35,6 +38,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
       : { fixedRunProvider: options.fixedRunProvider ?? 'fake' }),
     port: PORT,
     allowedOrigins: [ORIGIN],
+    apiToken: API_TOKEN,
     secrets: options.secrets ?? memorySecretStore(),
     endpoints: {
       anthropicBaseUrl: 'https://anthropic.test',

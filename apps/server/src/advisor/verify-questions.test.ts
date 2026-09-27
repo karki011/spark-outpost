@@ -1,17 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import type { SystemOneResponse } from './intake-questions.ts';
 import {
-  buildVerifyQuestions,
+  buildVerdictQuestions,
   MAX_REQUIREMENTS,
+  readVerdict,
   requirementLines,
-  verifyVerdict,
+  VERDICTS,
 } from './verify-questions.ts';
 
-const answered = (values: Record<string, number>): SystemOneResponse => ({
+const answered = (
+  choice: string,
+  confidence: number,
+  nouls: Record<string, number> = {},
+): SystemOneResponse => ({
   model: 'jev-1.13.0',
-  answers: Object.fromEntries(
-    Object.entries(values).map(([key, noul]) => [key, { type: 'noul' as const, noul }]),
-  ),
+  answers: {
+    verdict: {
+      type: 'choice',
+      choice,
+      confidence,
+      probabilities: { [choice]: (2 * confidence + 1) / 3 },
+    },
+    ...Object.fromEntries(
+      Object.entries(nouls).map(([key, noul]) => [key, { type: 'noul' as const, noul }]),
+    ),
+  },
 });
 
 describe('requirement lines', () => {
@@ -36,29 +49,82 @@ describe('requirement lines', () => {
   });
 });
 
-describe('verifier', () => {
-  it('asks one noul per requirement plus the weakened-tests check, with the diff as evidence', () => {
-    const asked = buildVerifyQuestions({
-      request: 'Fix the divider. Add a test.',
-      requirements: ['Fix the divider.', 'Add a test.'],
-      diff: '+fixed',
+describe('three-way diff verdict', () => {
+  const requirements = ['Return 0 when total is 0.', 'Add a test for it.'];
+
+  it('asks one Choice over the three verdicts plus a Noul per requirement, with the evidence as state', () => {
+    const asked = buildVerdictQuestions({
+      request: 'Add percentOf. Return 0 when total is 0. Add a test for it.',
+      plan: [],
+      requirements,
+      diff: '+export function percentOf',
+      checks: ['- `pnpm test` passed'],
     });
-    expect(Object.keys(asked.questions)).toEqual(['unmet_1', 'unmet_2', 'weakens_tests']);
-    expect(asked.state).toEqual({ request: 'Fix the divider. Add a test.', diff: '+fixed' });
+    expect(Object.keys(asked.questions)).toEqual(['verdict', 'unmet_1', 'unmet_2']);
+    expect(Object.keys(asked.questions.verdict!.criteria as object)).toEqual([...VERDICTS]);
+    expect(asked.state).toEqual({
+      task: 'Add percentOf. Return 0 when total is 0. Add a test for it.',
+      plan: 'No plan was made.',
+      checks: '- `pnpm test` passed',
+      diff: '+export function percentOf',
+    });
   });
 
-  it('flags when any check passes the line, and asks for review when an answer is missing', () => {
-    const requirements = ['Fix the divider.', 'Add a test.'];
+  it('caps the diff and redacts secrets before sending', () => {
+    const asked = buildVerdictQuestions({
+      request: 'Rotate the key',
+      plan: ['Change the key'],
+      requirements: ['Rotate the key'],
+      diff: `+API_KEY=sk-ant-${'a'.repeat(40)}\n${'+x\n'.repeat(20_000)}`,
+      checks: [],
+    });
+    const diff = String(asked.state.diff);
+    expect(diff).not.toContain('sk-ant-aaaa');
+    expect(diff).toContain('[cut at 24000 characters]');
+    expect(asked.state.plan).toEqual(['Change the key']);
+    expect(asked.state.checks).toBe('No checks ran.');
+  });
+
+  it('accepts a verdict at confidence 0.8 or more and keeps the unmet requirements as reasons', () => {
+    const reading = readVerdict(
+      requirements,
+      answered('unsupported', 0.93, { unmet_1: 0.91, unmet_2: 0.1 }),
+    );
+    expect(reading).toMatchObject({
+      verdict: 'unsupported',
+      accepted: 'unsupported',
+      reasons: ['Return 0 when total is 0.'],
+      invalid: [],
+    });
     expect(
-      verifyVerdict(requirements, answered({ unmet_1: 0.05, unmet_2: 0.92, weakens_tests: 0.1 })),
-    ).toMatchObject({ would: 'flag', worst: 0.92 });
-    expect(
-      verifyVerdict(requirements, answered({ unmet_1: 0.05, unmet_2: 0.1, weakens_tests: 0.1 }))
-        .would,
-    ).toBe('pass');
-    expect(verifyVerdict(requirements, answered({ unmet_1: 0.05 }))).toMatchObject({
-      would: 'review',
-      invalid: ['unmet_2', 'weakens_tests'],
+      readVerdict(requirements, answered('declined', 0.8, { unmet_1: 0, unmet_2: 0 })).accepted,
+    ).toBe('declined');
+  });
+
+  it('counts an answer below 0.8 as not verified', () => {
+    const reading = readVerdict(
+      requirements,
+      answered('unsupported', 0.79, { unmet_1: 0.6, unmet_2: 0 }),
+    );
+    expect(reading).toMatchObject({ verdict: 'unsupported', accepted: null });
+  });
+
+  it('rejects an unknown option, an out-of-range value or a missing answer', () => {
+    expect(readVerdict(requirements, answered('maybe', 0.99)).invalid).toEqual([
+      'verdict',
+      'unmet_1',
+      'unmet_2',
+    ]);
+    expect(readVerdict(requirements, answered('supported', 1.4)).accepted).toBeNull();
+    const bad = readVerdict(
+      requirements,
+      answered('supported', 0.95, { unmet_1: 2, unmet_2: 0.1 }),
+    );
+    expect(bad).toMatchObject({ accepted: 'supported', invalid: ['unmet_1'] });
+    expect(readVerdict(requirements, null)).toMatchObject({
+      verdict: null,
+      accepted: null,
+      reasons: [],
     });
   });
 });

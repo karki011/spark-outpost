@@ -10,10 +10,12 @@ import {
   type ReviewVerdict,
   type Risk,
 } from '@spark-outpost/contracts';
-import { PLAN_CONTINUES } from '../advisor/policy.ts';
+import { MAX_VERDICTS, PLAN_CONTINUES } from '../advisor/policy.ts';
+import type { Verdict } from '../advisor/verify-questions.ts';
 import { asksToKeep, asksForLoop } from './checkpoint-policy.ts';
 
-export type SpawnReason = 'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'unstick';
+export type SpawnReason =
+  'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'unstick' | 'escalate';
 
 export interface Spawn {
   role: AgentRole;
@@ -32,6 +34,7 @@ export type FlowAction =
       answerOrBuild?: boolean;
     }
   | ({ type: 'spawn' } & Spawn)
+  | { type: 'verify' }
   | { type: 'wrap_up' }
   | { type: 'revert' }
   | {
@@ -55,8 +58,10 @@ export type FlowEvent =
       error?: string | null;
       open?: readonly string[];
       large?: boolean;
+      green?: boolean;
       verdict?: ReviewVerdict;
     }
+  | { type: 'verified'; accepted: Verdict | null; reasons: readonly string[] }
   | { type: 'looped'; summary: string; open?: readonly string[] }
   | { type: 'answered'; kind: CheckpointKind; optionId: string; note: string | null }
   | { type: 'wrapped'; filesChanged: number }
@@ -80,6 +85,10 @@ export interface FlowState {
   resumeLast: boolean;
   open: string[];
   loop: string | null;
+  verifier: boolean;
+  verdicts: number;
+  escalated: boolean;
+  large: boolean;
 }
 
 export interface FlowResult {
@@ -87,7 +96,12 @@ export interface FlowResult {
   action: FlowAction;
 }
 
-export function initialFlow(risk: Risk, level: InvolvementLevel, reviewWanted = false): FlowState {
+export function initialFlow(
+  risk: Risk,
+  level: InvolvementLevel,
+  reviewWanted = false,
+  verifier = false,
+): FlowState {
   return {
     depth: 'execute',
     risk,
@@ -104,6 +118,10 @@ export function initialFlow(risk: Risk, level: InvolvementLevel, reviewWanted = 
     resumeLast: false,
     open: [],
     loop: null,
+    verifier,
+    verdicts: 0,
+    escalated: false,
+    large: false,
   };
 }
 
@@ -222,7 +240,49 @@ function builderDone(
       },
     );
   }
-  return afterBuilder(next, event.large ?? false);
+  const large = event.large ?? false;
+  if (next.verifier && event.green && next.verdicts < MAX_VERDICTS) {
+    return { state: { ...next, large, waitingFor: null }, action: { type: 'verify' } };
+  }
+  return afterBuilder(next, large);
+}
+
+export type CascadeAction = 'escalate' | 'ask' | 'finish';
+
+export function cascadeAction(accepted: Verdict | null, escalated: boolean): CascadeAction {
+  if (escalated) return 'finish';
+  if (accepted === 'unsupported') return 'escalate';
+  if (accepted === 'declined') return 'ask';
+  return 'finish';
+}
+
+export function escalateFollowUp(reasons: readonly string[]): string {
+  const missing =
+    reasons.length > 0
+      ? ` These requirements look unmet: ${listText(reasons)}.`
+      : ' A stated case, value or edge case looks missing or different from what was asked.';
+  return `An independent check of your change against the request found that it does not yet do everything asked.${missing} Re-read the request, finish what is missing without undoing what works, then reply with what you changed.`;
+}
+
+export const ESCALATED_NOTE =
+  'The Builder ran again one tier up after Jev could not confirm the first attempt did everything asked.';
+
+export const DECLINED_REASON =
+  'Jev could not confirm the change does what you asked: the diff does not settle it, or the work looks refused or left unfinished on purpose.';
+
+function escalateOnce(state: FlowState, followUp: string): FlowResult {
+  return spawn(
+    { ...state, escalated: true },
+    { role: 'builder', reason: 'escalate', escalate: true, followUp },
+  );
+}
+
+function verified(state: FlowState, event: Extract<FlowEvent, { type: 'verified' }>): FlowResult {
+  const next = { ...state, verdicts: state.verdicts + 1 };
+  const action = cascadeAction(event.accepted, state.escalated);
+  if (action === 'escalate') return escalateOnce(next, escalateFollowUp(event.reasons));
+  if (action === 'ask') return ask(next, 'verify', DECLINED_REASON);
+  return afterBuilder(next, state.large);
 }
 
 function agentDone(
@@ -278,6 +338,12 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
     }
     return stopReport(state, `Stopped: ${state.loop ?? 'the Builder was repeating itself'}.`);
   }
+  if (event.kind === 'verify') {
+    if (option === CHECKPOINT_OPTION.retry) {
+      return escalateOnce(state, escalateFollowUp(event.note ? [event.note] : []));
+    }
+    return afterBuilder(state, state.large);
+  }
   if (event.kind === 'accept') {
     if (option === CHECKPOINT_OPTION.revert) {
       return { state: { ...state, waitingFor: null }, action: { type: 'revert' } };
@@ -312,6 +378,8 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
       return agentDone(state, event);
     case 'looped':
       return looped(state, event);
+    case 'verified':
+      return verified(state, event);
     case 'answered':
       return answered(state, event);
     case 'wrapped':

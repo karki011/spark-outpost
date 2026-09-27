@@ -53,7 +53,9 @@ test('the rules pick models, so there is no frontier switch, and code diffs to J
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   const diffs = providers.getByRole('switch', { name: 'Send code diffs to Jev for safety checks' });
   await expect(diffs).toBeChecked();
-  await expect(diffs).toHaveAccessibleDescription(/observation-only checks/);
+  await expect(diffs).toHaveAccessibleDescription(
+    /observation-only checks.*redone once by a stronger model/,
+  );
   await diffs.focus();
   await page.keyboard.press('Space');
   await expect(diffs).not.toBeChecked();

@@ -8,7 +8,7 @@ import { createConversation, sendUserMessage } from '../src/persistence/conversa
 import { claimNextJob } from '../src/persistence/jobs.ts';
 import { listen, type NotificationListener } from '../src/persistence/notifications.ts';
 import { appendRunEvent } from '../src/persistence/run-events.ts';
-import { HOST, createTestApp } from './app-support.ts';
+import { createTestApp, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, eventually, testDatabaseUrl, type TestDb } from './support.ts';
 
 interface Subscriber {
@@ -42,7 +42,7 @@ function subscribe(): Promise<Subscriber> {
   const { port } = server.address() as AddressInfo;
   return new Promise((resolve, reject) => {
     const request = http.get(
-      { host: '127.0.0.1', port, path: '/api/events', headers: { Host: HOST } },
+      { host: '127.0.0.1', port, path: '/api/events', headers: LOCAL_HEADERS },
       (response) => {
         const subscriber: Subscriber = {
           status: response.statusCode ?? 0,

@@ -3,7 +3,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -19,14 +19,14 @@ afterEach(async () => {
 });
 
 const list = async () =>
-  (await request(app).get('/api/conversations').set('Host', HOST).expect(200))
+  (await request(app).get('/api/conversations').set(LOCAL_HEADERS).expect(200))
     .body as ConversationSummary[];
 const pin = (id: string, pinned: boolean) =>
-  request(app).patch(`/api/conversations/${id}`).set('Host', HOST).send({ pinned }).expect(200);
+  request(app).patch(`/api/conversations/${id}`).set(LOCAL_HEADERS).send({ pinned }).expect(200);
 const order = (conversationIds: unknown) =>
   request(app)
     .put('/api/conversations/pinned-order')
-    .set('Host', HOST)
+    .set(LOCAL_HEADERS)
     .set('Origin', ORIGIN)
     .send({ conversationIds });
 

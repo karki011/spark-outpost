@@ -2,12 +2,13 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
-import type { TerminalServerMessage } from '@spark-outpost/contracts';
+import { API_TOKEN_HEADER, type TerminalServerMessage } from '@spark-outpost/contracts';
 import { loginShellSpawner } from './pty.ts';
 import { TerminalSessions } from './sessions.ts';
 import { attachTerminalSockets } from './websocket.ts';
 
 const ORIGIN = 'http://127.0.0.1:5173';
+const API_TOKEN = 'terminal-launch-token-0123456789abcdefghij';
 let server: Server;
 let sessions: TerminalSessions;
 let port: number;
@@ -17,7 +18,7 @@ beforeEach(async () => {
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   port = (server.address() as AddressInfo).port;
   sessions = new TerminalSessions(loginShellSpawner('/bin/sh'));
-  attachTerminalSockets(server, sessions, { port, allowedOrigins: [ORIGIN] });
+  attachTerminalSockets(server, sessions, { port, allowedOrigins: [ORIGIN], apiToken: API_TOKEN });
 });
 
 afterEach(async () => {
@@ -26,8 +27,9 @@ afterEach(async () => {
   await new Promise((resolve) => server.close(resolve));
 });
 
-function connect(path: string, origin?: string) {
-  return new WebSocket(`ws://127.0.0.1:${port}${path}`, origin ? { origin } : {});
+function connect(path: string, origin?: string, apiToken: string | null = API_TOKEN) {
+  const headers = apiToken === null ? {} : { [API_TOKEN_HEADER]: apiToken };
+  return new WebSocket(`ws://127.0.0.1:${port}${path}`, origin ? { origin, headers } : { headers });
 }
 
 function rejectedStatus(socket: WebSocket): Promise<number> {
@@ -42,6 +44,13 @@ describe('terminal websocket', () => {
     const path = `/api/terminal/sessions/${id}/stream?token=${token}`;
     expect(await rejectedStatus(connect(path))).toBe(403);
     expect(await rejectedStatus(connect(path, 'https://evil.example'))).toBe(403);
+  });
+
+  it('refuses connections without the launch token', async () => {
+    const { id, token } = sessions.create('claude');
+    const path = `/api/terminal/sessions/${id}/stream?token=${token}`;
+    expect(await rejectedStatus(connect(path, ORIGIN, null))).toBe(401);
+    expect(await rejectedStatus(connect(path, ORIGIN, `${API_TOKEN}x`))).toBe(401);
   });
 
   it('closes with 4401 for a wrong token', async () => {

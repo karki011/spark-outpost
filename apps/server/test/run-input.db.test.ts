@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import { saveConnection, updateProfile } from '../src/persistence/setup.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -74,7 +74,7 @@ describe('choosing the provider for a new message', () => {
   it('refuses to queue a run until a provider is connected, then uses the default', async () => {
     const app = createTestApp(t, { fixedRunProvider: null });
     const post = (path: string, body: object) =>
-      request(app).post(path).set('Host', HOST).set('Origin', ORIGIN).send(body);
+      request(app).post(path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
     const conversationId = randomUUID();
     await post('/api/conversations', { id: conversationId }).expect(201);
 

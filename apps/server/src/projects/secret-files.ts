@@ -22,6 +22,7 @@ export const SECRET_FILE_PATTERNS: readonly string[] = [
   '*.key',
   '*.p12',
   '*.pfx',
+  'api-token',
 ];
 
 export const SECRET_FILE_EXCEPTIONS: readonly string[] = ['.env.example'];

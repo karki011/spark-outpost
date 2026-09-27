@@ -3,7 +3,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createConversation } from '../src/persistence/conversations.ts';
 import { saveConnection, updateProfile } from '../src/persistence/setup.ts';
-import { createTestApp, HOST, ORIGIN } from './app-support.ts';
+import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -40,7 +40,7 @@ afterEach(async () => {
 });
 
 const send = (method: 'get' | 'patch' | 'post', path: string, body?: object) => {
-  const call = request(app)[method](path).set('Host', HOST).set('Origin', ORIGIN);
+  const call = request(app)[method](path).set(LOCAL_HEADERS).set('Origin', ORIGIN);
   return body ? call.send(body) : call;
 };
 

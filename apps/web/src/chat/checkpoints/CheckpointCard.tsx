@@ -23,6 +23,7 @@ import {
   checkpointResult,
   checkpointTitle,
   offers,
+  escalateLabel,
   retryLine,
   type CheckpointApproval,
 } from './checkpoint-model.ts';
@@ -310,6 +311,25 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
           </Action>
           <Action id={CHECKPOINT_OPTION.stopReport} approval={approval} decide={decide} kind="stop">
             Stop and report
+          </Action>
+        </div>
+      );
+    case 'verify':
+      return (
+        <div className="appr-acts">
+          <Action
+            id={CHECKPOINT_OPTION.finishUnverified}
+            approval={approval}
+            decide={decide}
+            kind="primary"
+          >
+            Finish as it is
+          </Action>
+          <Action id={CHECKPOINT_OPTION.retry} approval={approval} decide={decide}>
+            {escalateLabel(checkpoint)}
+          </Action>
+          <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
+            Stop
           </Action>
         </div>
       );
