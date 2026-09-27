@@ -1,4 +1,6 @@
-export const POLICY_VERSION = 'cascade-1';
+import type { ModelTier } from '@spark-outpost/contracts';
+
+export const POLICY_VERSION = 'cascade-2';
 
 export type ActingQuestion =
   'question' | 'vague' | 'review' | 'destructive' | 'continues_task' | 'verify';
@@ -31,3 +33,18 @@ export const LOOP_STREAK = 5;
 
 export const FOLLOW_UP_WORDS = 15;
 export const FOLLOW_UP_MINUTES = 10;
+
+export const ROUTE_ACCEPT_CONFIDENCE = 0.65;
+export const ROUTE_CUMULATIVE_MASS = 0.8;
+
+export const RANK_PREDICTED_FILES = 12;
+
+export const ROUTER_TIERS = ['micro', 'low', 'mid', 'top'] as const;
+export type RouterTier = (typeof ROUTER_TIERS)[number];
+
+export const ROUTER_TIER_OF_CARD: Readonly<Record<ModelTier, RouterTier | null>> = {
+  small: 'low',
+  mid: 'mid',
+  top: 'top',
+  frontier: null,
+};

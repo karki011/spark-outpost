@@ -4,6 +4,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AdviceBody } from '@spark-outpost/contracts';
 import { createIntakeRecorder, type IntakeRecorder } from '../src/advisor/intake-recorder.ts';
+import { POLICY_VERSION } from '../src/advisor/policy.ts';
 import { runAdvice } from '../src/persistence/advice.ts';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import { getRun } from '../src/persistence/runs.ts';
@@ -140,7 +141,7 @@ describe('Jev intake recording', () => {
       jev: { intent: 'bug_fix', provider: 'fake', depth: 'direct', risk: 'read-only' },
       gate: null,
       wouldApply: 'rules',
-      policyVersion: 'cascade-1',
+      policyVersion: POLICY_VERSION,
       usage: { inputTokens: 1000, tokenSource: 'reported', costSource: 'estimated' },
     });
     expect(body.usage?.costUsd).toBeCloseTo(0.000042);

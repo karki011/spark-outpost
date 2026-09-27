@@ -164,6 +164,30 @@ export interface JevScript {
   policy?: Partial<Record<string, number>>;
   verify?: number;
   verdicts?: { choice: string; confidence: number }[];
+  choices?: Partial<Record<string, string>>;
+}
+
+interface AskedQuestion {
+  type?: string;
+  criteria?: Record<string, unknown>;
+}
+
+function preferredOption(key: string, options: readonly string[], script: JevScript): string {
+  const wanted = script.choices?.[key];
+  if (wanted && options.includes(wanted)) return wanted;
+  return options.find((option) => option !== 'uncertain') ?? options[0]!;
+}
+
+function spreadChoice(key: string, question: AskedQuestion, script: JevScript): Answers[string] {
+  const options = Object.keys(question.criteria ?? {});
+  const top = preferredOption(key, options, script);
+  const rest = options.filter((option) => option !== top);
+  const topMass = rest.length > 0 ? 0.8 : 1;
+  const probabilities: Record<string, number> = { [top]: topMass };
+  for (const option of rest) probabilities[option] = (1 - topMass) / rest.length;
+  const n = options.length;
+  const confidence = n > 1 ? (n * topMass - 1) / (n - 1) : 1;
+  return { type: 'choice', choice: top, probabilities, confidence };
 }
 
 function intentAnswer(scenario: Scenario): Answers[string] {
@@ -204,13 +228,17 @@ function verdictAnswer(script: JevScript): Answers[string] {
   return choice(next.choice, next.confidence);
 }
 
-function observedAnswers(script: JevScript, questions: Record<string, unknown>): Answers {
+function observedAnswers(script: JevScript, questions: Record<string, AskedQuestion>): Answers {
   return Object.fromEntries(
-    Object.keys(questions).map((key) => [
+    Object.entries(questions).map(([key, question]) => [
       key,
       key === 'verdict'
         ? verdictAnswer(script)
-        : noul(script.policy?.[key] ?? (key.startsWith('unmet_') ? (script.verify ?? 0.05) : 0.05)),
+        : question.type === 'choice'
+          ? spreadChoice(key, question, script)
+          : noul(
+              script.policy?.[key] ?? (key.startsWith('unmet_') ? (script.verify ?? 0.05) : 0.05),
+            ),
     ]),
   );
 }
@@ -219,7 +247,7 @@ export function jevFetch(script: JevScript): typeof fetch {
   return async (_input, init) => {
     const body = JSON.parse(String(init?.body)) as {
       state: Record<string, unknown>;
-      questions: Record<string, { criteria?: Record<string, string> }>;
+      questions: Record<string, AskedQuestion & { criteria?: Record<string, string> }>;
     };
     script.calls.push({ questions: Object.keys(body.questions), state: body.state });
     const task = String(body.state.task ?? '');
