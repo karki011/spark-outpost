@@ -2,7 +2,7 @@ import type { BuildStyle, InvolvementLevel } from '../../packages/contracts/src/
 import { CORE_SCENARIOS, SCENARIOS, scenarioById, type ArmId, type Scenario } from './scenarios.ts';
 
 export type Block =
-  'core' | 'scenarios' | 'versions' | 'configs' | 'models' | 'glm' | 'focus' | 'lean';
+  'core' | 'scenarios' | 'versions' | 'configs' | 'models' | 'glm' | 'focus' | 'lean' | 'routing';
 export const BLOCKS: readonly Block[] = [
   'core',
   'scenarios',
@@ -12,6 +12,7 @@ export const BLOCKS: readonly Block[] = [
   'glm',
   'focus',
   'lean',
+  'routing',
 ];
 
 export type Driver = 'ui' | 'api' | 'bench';
@@ -32,6 +33,8 @@ export interface HarnessSetup {
   freshBeforeLastTurn: boolean;
   withDeps: boolean;
   version: Version;
+  /** With Auto routing: the chat's model, so the rule route (chat model) lands there. */
+  chatModel?: ModelChoice;
 }
 
 export interface Cell {
@@ -76,7 +79,8 @@ function cost(scenario: Scenario, arm: ArmId, setup: HarnessSetup, effort: Effor
   const critic = setup.codexConnected ? 1 : 1.1;
   const glm = setup.provider === 'zai' ? 0.45 : setup.provider === 'codex' ? 0.8 : 1;
   const rules = setup.jev ? 1 : 1.05;
-  return base * MODEL_COST[setup.model] * lean * critic * rules * glm;
+  const chat = setup.chatModel ? MODEL_COST[setup.chatModel] / MODEL_COST.sonnet : 1;
+  return base * MODEL_COST[setup.model] * lean * critic * rules * glm * chat;
 }
 
 function cell(
@@ -280,8 +284,52 @@ function leanCells(): Cell[] {
   return [...lean, ...full, ...checked, ...drift, ...extra];
 }
 
+/** Scenarios whose point is routing a coding task (not a question, Stop, or clarify). */
+export const ROUTING_SCENARIOS = [
+  'b',
+  'c',
+  'd',
+  'e',
+  'g',
+  'h',
+  'i',
+  'j',
+  'k',
+  'l',
+  'm',
+  'o',
+  'p',
+  'q',
+  'r',
+  't',
+];
+const ROUTING_CHATS: Record<string, ModelChoice> = {
+  rule: 'sonnet',
+  'chat-haiku': 'haiku',
+  'chat-opus': 'opus[1m]',
+};
+
+/**
+ * Live routing comparison: Claude only (no Codex, so the Critic is Claude), API driver at
+ * Balanced, Auto routing. `rule` is the rule route with Sonnet as the chat model; the
+ * `chat-*` variants move the chat model so the rule route runs the Builder on that model.
+ */
+function routingCells(): Cell[] {
+  return Object.entries(ROUTING_CHATS).flatMap(([variant, chatModel]) =>
+    ROUTING_SCENARIOS.map((id) =>
+      cell('routing', id, 'harness', variant, {
+        driver: 'api',
+        codexConnected: false,
+        chatModel,
+        withDeps: id === 'd',
+      }),
+    ),
+  );
+}
+
 export function planCells(): Cell[] {
   return [
+    ...routingCells(),
     ...leanCells(),
     ...focusCells(),
     ...coreCells(),

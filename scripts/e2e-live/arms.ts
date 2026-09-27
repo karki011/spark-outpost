@@ -20,6 +20,9 @@ import type { Cell } from './plan.ts';
 import type { TurnRecord } from './results.ts';
 import { setConnections } from './seed.ts';
 import type { Runtime, Stack } from './stack.ts';
+import { indexProject } from '../../apps/server/src/codescan/indexer.ts';
+import { routingLabels } from '../../apps/server/src/persistence/routing-labels.ts';
+import { toLabel, type RoutingLabel } from '../../apps/server/src/routing/labels.ts';
 import { newUiSession, openUiChat, sendUiTurn, startFreshInUi } from './ui-driver.ts';
 
 export interface ArmContext {
@@ -36,6 +39,7 @@ export interface ArmResult {
   consoleErrors: string[];
   notes: UiNote[];
   cleanup: string[] | null;
+  labels?: RoutingLabel[] | undefined;
 }
 
 function withTags(ctx: ArmContext, cell: Cell, text: string): string {
@@ -94,6 +98,7 @@ async function harnessOnStack(ctx: ArmContext, cell: Cell, repo: string): Promis
     const chat: Chat = session
       ? await openUiChat(session, repo, setup, scenario.checkCommands, notes)
       : await openApiChat(api, repo, setup, scenario.checkCommands);
+    if (cell.block === 'routing') await indexProject(stack.db, repo);
     for (const [index, text] of scenario.turns.entries()) {
       const last = index === scenario.turns.length - 1;
       if (index > 0 && last && setup.freshBeforeLastTurn) {
@@ -111,7 +116,12 @@ async function harnessOnStack(ctx: ArmContext, cell: Cell, repo: string): Promis
       scenario.task.verify === 'cleanup' && lastRun
         ? await cleanupAfter(stack, chat, lastRun)
         : null;
-    return { turns, consoleErrors: session?.consoleErrors ?? [], notes, cleanup };
+    const runIds = turns.map((turn) => turn.metrics.runId);
+    const labels =
+      cell.block === 'routing'
+        ? (await routingLabels(stack.db, { runIds }).catch(() => [])).map(toLabel)
+        : undefined;
+    return { turns, consoleErrors: session?.consoleErrors ?? [], notes, cleanup, labels };
   } finally {
     await session?.page.context().close();
     await setConnections(stack.db, stack.workspaceId, { jev: true, codex: true, zai: false });

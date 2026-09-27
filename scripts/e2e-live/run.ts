@@ -5,6 +5,7 @@ import { parseArgs } from 'node:util';
 import type { Browser } from '@playwright/test';
 import { keychainSecretStore } from '../../apps/server/src/setup/secrets.ts';
 import { stopBench } from '../bench/live.ts';
+import { stopParseWorker } from '../../apps/server/src/codescan/parse-pool.ts';
 import { runArm, type ArmContext, type ArmResult } from './arms.ts';
 import { STUB_URL } from './config.ts';
 import { printPlan } from './plan-print.ts';
@@ -130,6 +131,7 @@ async function runCell(runner: Runner, cell: Cell, repeat: number): Promise<Cell
     consoleErrors: result.consoleErrors,
     notes: [...result.notes, ...result.turns.flatMap((turn) => turn.outcome?.notes ?? [])],
     error,
+    ...(result.labels ? { labels: result.labels } : {}),
   };
 }
 
@@ -274,6 +276,7 @@ async function main(): Promise<void> {
     for (const stack of runner.stacks.values()) await stopStack(stack, values['keep-data']);
     if (runner.stub) await stopProcess(runner.stub.child);
     await save(runner);
+    if (blocks.includes('routing')) await stopParseWorker();
   }
   console.log(`Spent $${run.spentUsd.toFixed(3)}. Results in ${resultsPath}.`);
 }
