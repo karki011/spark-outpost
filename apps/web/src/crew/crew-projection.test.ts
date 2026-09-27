@@ -54,7 +54,7 @@ describe('crew agents', () => {
     ]);
     expect(agent).toMatchObject({ state: 'working', line: 'edit turns.ts' });
 
-    const gate = checkpoint({ kind: 'plan' }, { runId: editing.runId });
+    const gate = checkpoint({ kind: 'clarify' }, { runId: editing.runId });
     expect(runAgent(editing, orchestration({ pendingCheckpoint: gate })).state).toBe('waiting');
     expect(runAgent(member({ status: 'queued', role: 'critic' }), orchestration()).line).toBe(
       'queued for review',

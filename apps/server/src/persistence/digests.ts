@@ -1,13 +1,16 @@
 import {
   digestBodySchema,
+  digestStatsSchema,
   planBodySchema,
   type ConversationSummary,
   type Digest,
   type DigestBody,
+  type DigestStats,
   type DigestStatus,
 } from '@spark-outpost/contracts';
 import type { ActivityChat, ChatState } from '../digest/input.ts';
 import type { LastDigest } from '../digest/policy.ts';
+import { EMPTY_DIGEST_STATS } from '../digest/stats.ts';
 import { listConversations } from './conversations.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
@@ -31,6 +34,7 @@ interface DigestRow {
   run_finished_at: Date | null;
   cost_usd: string | null;
   cost_source: 'reported' | 'estimated' | null;
+  stats: unknown;
 }
 
 function effectiveStatus(
@@ -51,6 +55,7 @@ function effectiveStatus(
 function toDigest(row: DigestRow, now: Date): Digest {
   const { status, error } = effectiveStatus(row, now);
   const body = digestBodySchema.safeParse(row.body);
+  const stats = digestStatsSchema.safeParse(row.stats);
   return {
     id: row.id,
     status,
@@ -64,6 +69,7 @@ function toDigest(row: DigestRow, now: Date): Digest {
     costUsd: row.cost_usd === null ? null : Number(row.cost_usd),
     costSource: row.cost_usd === null ? null : (row.cost_source ?? 'reported'),
     conversationId: row.conversation_id,
+    stats: stats.success ? stats.data : EMPTY_DIGEST_STATS,
   };
 }
 
@@ -74,7 +80,7 @@ export async function latestDigests(
 ): Promise<{ latest: Digest | null; lastReady: Digest | null }> {
   const { rows } = await db.query<DigestRow>(
     `SELECT d.id, d.status, d.created_at, d.finished_at, d.since, d.body, d.error, d.provider,
-       d.model_label, d.conversation_id, r.status AS run_status,
+       d.model_label, d.conversation_id, d.stats, r.status AS run_status,
        r.finished_at AS run_finished_at, r.cost_usd, r.cost_source
      FROM digests d LEFT JOIN runs r ON r.id = d.run_id
      WHERE d.workspace_id = $1
@@ -227,6 +233,7 @@ export interface NewDigest {
   until: Date;
   prompt: string;
   chatIds: readonly string[];
+  stats: DigestStats;
 }
 
 export async function startDigest(
@@ -268,8 +275,8 @@ export async function startDigest(
     ]);
     await client.query(
       `INSERT INTO digests (id, workspace_id, conversation_id, run_id, status, since, until,
-         chat_ids, provider, model, model_label)
-       VALUES ($1, $2, $3, $4, 'running', $5, $6, $7, $8, $9, $10)`,
+         chat_ids, provider, model, model_label, stats)
+       VALUES ($1, $2, $3, $4, 'running', $5, $6, $7, $8, $9, $10, $11)`,
       [
         digestId,
         workspaceId,
@@ -281,6 +288,7 @@ export async function startDigest(
         digest.provider,
         digest.model,
         digest.modelLabel,
+        JSON.stringify(digest.stats),
       ],
     );
     await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);
@@ -301,6 +309,15 @@ export async function digestChatIds(db: Queryable, runId: string): Promise<Set<s
     [runId],
   );
   return new Set(rows[0]?.chat_ids ?? []);
+}
+
+export async function digestStatsByRun(db: Queryable, runId: string): Promise<DigestStats> {
+  const { rows } = await db.query<{ stats: unknown }>(
+    'SELECT stats FROM digests WHERE run_id = $1',
+    [runId],
+  );
+  const parsed = digestStatsSchema.safeParse(rows[0]?.stats);
+  return parsed.success ? parsed.data : EMPTY_DIGEST_STATS;
 }
 
 export async function finishDigest(

@@ -25,13 +25,8 @@ export const candidates: AdvisorCandidate[] = [
   },
 ];
 
-export const context = (
-  routing: 'auto' | 'pinned' | 'full-auto',
-  level: RouteContext['level'] = routing === 'full-auto' ? 'full-auto' : 'balanced',
-): RouteContext => ({
-  routing: routing === 'pinned' ? 'pinned' : 'auto',
+export const context = (routing: 'auto' | 'pinned'): RouteContext => ({
+  routing,
   chat: { provider: 'claude', model: 'sonnet', modelLabel: null, effort: 'medium' },
   candidates,
-  risk: 'edits',
-  level,
 });

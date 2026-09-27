@@ -1,0 +1,573 @@
+From 99281b570127ec960e17ba99f4b089cef1144357 Mon Sep 17 00:00:00 2001
+From: Subash karki <karki011@gmail.com>
+Date: Sun, 27 Sep 2026 10:20:11 -0400
+Subject: [PATCH] feat: offer decline before cancel for clients that opt in
+
+Codex does not advertise `decline` for file-change approvals, nor for
+command approvals under the `untrusted` approval policy, so the only
+reject option there is `cancel`, which interrupts the turn.
+
+Clients that set `clientCapabilities._meta.continueOnReject: true` on
+`initialize` now also get Codex's `decline` decision, right before
+`cancel`, whenever the decision set has `cancel` but no `decline`, and in
+every file-change approval. Without the capability, permission requests
+are unchanged, so the adapter still does not invent choices by default.
+---
+ docs/permission-extension.md                  |  30 +++-
+ src/CodexAcpServer.ts                         |   2 +
+ .../CodexACPAgent/approval-events.test.ts     | 154 ++++++++++++++++++
+ .../approval-command-continue-on-reject.json  |  42 +++++
+ .../e2e/acp-e2e-file-approval.test.ts         |  21 +++
+ .../e2e/acp-e2e-shell-approval.test.ts        |  30 ++++
+ .../CodexACPAgent/e2e/acp-e2e-test-utils.ts   |  14 +-
+ src/permissions/CodexApprovalHandler.ts       |   5 +-
+ src/permissions/capabilities.ts               |  14 ++
+ src/permissions/options.ts                    |  30 +++-
+ 10 files changed, 331 insertions(+), 11 deletions(-)
+ create mode 100644 src/__tests__/CodexACPAgent/data/approval-command-continue-on-reject.json
+ create mode 100644 src/permissions/capabilities.ts
+
+diff --git a/docs/permission-extension.md b/docs/permission-extension.md
+index f23f3a0..ecff9fa 100644
+--- a/docs/permission-extension.md
++++ b/docs/permission-extension.md
+@@ -117,7 +117,7 @@ When Codex sends `availableDecisions`, that ordered list is authoritative. Older
+ 
+ Exec-policy and network amendments are returned as the exact structured values supplied by Codex. An amendment is rejected if it does not match the corresponding proposal. An exec-policy option whose rendered prefix contains a line break is not shown, matching the native Codex UI.
+ 
+-Unknown, malformed, empty, or internally inconsistent authoritative decision sets fail closed with `cancel`; the adapter does not invent replacement choices.
++Unknown, malformed, empty, or internally inconsistent authoritative decision sets fail closed with `cancel`; the adapter does not invent replacement choices. The only addition to a valid decision set is opt-in; see [Continue-on-reject capability](#continue-on-reject-capability).
+ 
+ ## File changes
+ 
+@@ -129,7 +129,33 @@ File-change approvals expose the native Codex choices:
+ | `Yes, and don't ask again for these files` | `allow_always` | `acceptForSession` |
+ | `No, and tell Codex what to do differently` | `reject_once` | `cancel` |
+ 
+-Although the protocol decision enum also contains `decline`, the native Codex file-change prompt does not currently advertise it.
++Although the protocol decision enum also contains `decline`, the native Codex file-change prompt does not currently advertise it. Clients that opt in with the [continue-on-reject capability](#continue-on-reject-capability) also get `No, continue without making these edits` (`reject_once`, `decline`) before the `cancel` option.
++
++## Continue-on-reject capability
++
++Status: Experimental
++
++Codex has two ways to reject an action: `decline` rejects it and lets the turn continue, while `cancel` rejects it and interrupts the turn. Codex does not always advertise `decline`. File-change prompts never do, and command approvals under the `untrusted` approval policy offer only `accept`, an exec-policy amendment and `cancel`. In those prompts the only `reject_once` option interrupts the turn, and `session/prompt` ends with `stopReason: "cancelled"`.
++
++A client that wants a reject option that continues the turn advertises it on `initialize`:
++
++```json
++{
++  "protocolVersion": 1,
++  "clientCapabilities": {
++    "_meta": {
++      "continueOnReject": true
++    }
++  }
++}
++```
++
++With the capability, `codex-acp` adds `decline` right before `cancel`:
++
++- in command and network approvals whose decision set contains `cancel` but not `decline`, labelled `No, continue without running it`;
++- in every file-change approval, labelled `No, continue without making these edits`.
++
++Nothing else changes. `decline` is never added twice, never to a decision set without `cancel`, and never to the legacy additional-permissions fallback, which keeps accept and cancel only. Selecting `cancel`, or an ACP `cancelled` outcome, still returns `cancel`. Without the capability, permission requests are unchanged.
+ 
+ ## Additional sandbox permissions
+ 
+diff --git a/src/CodexAcpServer.ts b/src/CodexAcpServer.ts
+index a7605d3..1e13d26 100644
+--- a/src/CodexAcpServer.ts
++++ b/src/CodexAcpServer.ts
+@@ -2,6 +2,7 @@ import * as acp from "@agentclientprotocol/sdk";
+ import {RequestError, type SessionId, type SessionModeState} from "@agentclientprotocol/sdk";
+ import {CodexEventHandler, type CompletedPlan} from "./CodexEventHandler";
+ import {CodexApprovalHandler} from "./permissions/CodexApprovalHandler";
++import {clientSupportsContinueOnReject} from "./permissions/capabilities";
+ import {PermissionLifecycleContext} from "./permissions/lifecycle";
+ import {
+     planImplementationApproved,
+@@ -2895,6 +2896,7 @@ export class CodexAcpServer {
+                 this.connection,
+                 permissionContext,
+                 activePrompt.signal,
++                clientSupportsContinueOnReject(this.clientCapabilities),
+             );
+             const elicitationHandler = new CodexElicitationHandler(
+                 this.connection,
+diff --git a/src/__tests__/CodexACPAgent/approval-events.test.ts b/src/__tests__/CodexACPAgent/approval-events.test.ts
+index 138d5d9..99a9784 100644
+--- a/src/__tests__/CodexACPAgent/approval-events.test.ts
++++ b/src/__tests__/CodexACPAgent/approval-events.test.ts
+@@ -1,4 +1,5 @@
+ import {beforeEach, describe, expect, it, vi} from "vitest";
++import * as acp from "@agentclientprotocol/sdk";
+ import type {
+     AdditionalPermissionProfile,
+     CommandExecutionApprovalDecision,
+@@ -61,6 +62,18 @@ describe("Approval Events", () => {
+         };
+     }
+ 
++    async function setupContinueOnRejectPrompt() {
++        await fixture.getCodexAcpAgent().initialize({
++            protocolVersion: acp.PROTOCOL_VERSION,
++            clientCapabilities: {_meta: {continueOnReject: true}},
++        });
++        return setupSessionWithPendingPrompt();
++    }
++
++    function optionIds(): string[] {
++        return permissionRequest().options.map((option: {optionId: string}) => option.optionId);
++    }
++
+     function commandParams(
+         availableDecisions: CommandExecutionApprovalDecision[] | unknown,
+         overrides: Partial<CommandParams> = {},
+@@ -269,6 +282,104 @@ describe("Approval Events", () => {
+             await finish(prompt);
+         });
+ 
++        describe("with the continueOnReject client capability", () => {
++            const untrustedAmendment = ["ls"];
++            const untrustedDecisions: CommandExecutionApprovalDecision[] = [
++                "accept",
++                {acceptWithExecpolicyAmendment: {execpolicy_amendment: untrustedAmendment}},
++                "cancel",
++            ];
++
++            it("offers decline before cancel when Codex's decision set lacks it", async () => {
++                const prompt = await setupContinueOnRejectPrompt();
++                fixture.setPermissionResponse({outcome: {outcome: "selected", optionId: ApprovalOptionId.Decline}});
++
++                const response = await fixture.sendServerRequest<{decision: unknown}>(
++                    "item/commandExecution/requestApproval",
++                    commandParams(untrustedDecisions, {command: "ls", proposedExecpolicyAmendment: untrustedAmendment}),
++                );
++
++                expect(response).toEqual({decision: "decline"});
++                await expect(JSON.stringify(permissionRequest(), null, 2) + "\n")
++                    .toMatchFileSnapshot("data/approval-command-continue-on-reject.json");
++                await finish(prompt);
++            });
++
++            it("still maps an explicit cancel selection to cancel", async () => {
++                const prompt = await setupContinueOnRejectPrompt();
++                fixture.setPermissionResponse({outcome: {outcome: "selected", optionId: ApprovalOptionId.Cancel}});
++                expect(await fixture.sendServerRequest(
++                    "item/commandExecution/requestApproval",
++                    commandParams(["accept", "cancel"]),
++                )).toEqual({decision: "cancel"});
++                expect(optionIds()).toEqual([ApprovalOptionId.AllowOnce, ApprovalOptionId.Decline, ApprovalOptionId.Cancel]);
++                await finish(prompt);
++            });
++
++            it("maps ACP cancellation to cancel, not decline", async () => {
++                const prompt = await setupContinueOnRejectPrompt();
++                fixture.setPermissionResponse({outcome: {outcome: "cancelled"}});
++                expect(await fixture.sendServerRequest(
++                    "item/commandExecution/requestApproval",
++                    commandParams(["accept", "cancel"]),
++                )).toEqual({decision: "cancel"});
++                await finish(prompt);
++            });
++
++            it("keeps a single decline when Codex already advertises it", async () => {
++                const prompt = await setupContinueOnRejectPrompt();
++                fixture.setPermissionResponse({outcome: {outcome: "selected", optionId: ApprovalOptionId.AllowOnce}});
++                await fixture.sendServerRequest(
++                    "item/commandExecution/requestApproval",
++                    commandParams(["accept", "acceptForSession", "decline", "cancel"]),
++                );
++                expect(optionIds()).toEqual([
++                    ApprovalOptionId.AllowOnce,
++                    ApprovalOptionId.AllowForSession,
++                    ApprovalOptionId.Decline,
++                    ApprovalOptionId.Cancel,
++                ]);
++                await finish(prompt);
++            });
++
++            it("does not add decline to a decision set without cancel", async () => {
++                const prompt = await setupContinueOnRejectPrompt();
++                fixture.setPermissionResponse({outcome: {outcome: "selected", optionId: ApprovalOptionId.AllowOnce}});
++                await fixture.sendServerRequest(
++                    "item/commandExecution/requestApproval",
++                    commandParams(["accept", "decline"]),
++                );
++                expect(optionIds()).toEqual([ApprovalOptionId.AllowOnce, ApprovalOptionId.Decline]);
++                await finish(prompt);
++            });
++
++            it("does not add decline to the legacy additional-permissions fallback", async () => {
++                const prompt = await setupContinueOnRejectPrompt();
++                fixture.setPermissionResponse({outcome: {outcome: "selected", optionId: ApprovalOptionId.AllowOnce}});
++                await fixture.sendServerRequest(
++                    "item/commandExecution/requestApproval",
++                    commandParams(undefined, {additionalPermissions: {network: {enabled: true}, fileSystem: null}}),
++                );
++                expect(optionIds()).toEqual([ApprovalOptionId.AllowOnce, ApprovalOptionId.Cancel]);
++                await finish(prompt);
++            });
++
++            it("ends the prompt with end_turn when Codex continues after a declined command", async () => {
++                const prompt = await setupContinueOnRejectPrompt();
++                const turnInterrupt = vi.spyOn(fixture.getCodexAppServerClient(), "turnInterrupt");
++                fixture.setPermissionResponse({outcome: {outcome: "selected", optionId: ApprovalOptionId.Decline}});
++
++                expect(await fixture.sendServerRequest(
++                    "item/commandExecution/requestApproval",
++                    commandParams(untrustedDecisions, {command: "ls", proposedExecpolicyAmendment: untrustedAmendment}),
++                )).toEqual({decision: "decline"});
++                prompt.completeTurn();
++
++                expect((await prompt.promptPromise).stopReason).toBe("end_turn");
++                expect(turnInterrupt).not.toHaveBeenCalled();
++            });
++        });
++
+         it("orders native decisions as allow once, always allow, then deny", async () => {
+             const prompt = setupSessionWithPendingPrompt();
+             fixture.setPermissionResponse({outcome: {outcome: "selected", optionId: ApprovalOptionId.AllowOnce}});
+@@ -646,6 +757,49 @@ describe("Approval Events", () => {
+                 .toEqual({decision: "cancel"});
+             await finish(cancelPrompt);
+         });
++
++        it("offers only the native file-change choices without the continueOnReject capability", async () => {
++            const prompt = setupSessionWithPendingPrompt();
++            fixture.setPermissionResponse({outcome: {outcome: "selected", optionId: ApprovalOptionId.AllowOnce}});
++            await fixture.sendServerRequest("item/fileChange/requestApproval", fileParams());
++            expect(optionIds()).toEqual([
++                ApprovalOptionId.AllowOnce,
++                ApprovalOptionId.AllowForSession,
++                ApprovalOptionId.Cancel,
++            ]);
++            await finish(prompt);
++        });
++
++        it("offers decline before cancel with the continueOnReject capability", async () => {
++            const prompt = await setupContinueOnRejectPrompt();
++            fixture.setPermissionResponse({outcome: {outcome: "selected", optionId: ApprovalOptionId.Decline}});
++
++            expect(await fixture.sendServerRequest("item/fileChange/requestApproval", fileParams()))
++                .toEqual({decision: "decline"});
++            expect(permissionRequest().options).toEqual([
++                {optionId: "allow_once", name: "Yes, proceed", kind: "allow_once"},
++                {optionId: "allow_for_session", name: "Yes, and don't ask again for these files", kind: "allow_always"},
++                {optionId: "decline", name: "No, continue without making these edits", kind: "reject_once"},
++                {optionId: "cancel", name: "No, and tell Codex what to do differently", kind: "reject_once"},
++            ]);
++            prompt.completeTurn();
++            expect((await prompt.promptPromise).stopReason).toBe("end_turn");
++        });
++
++        it("keeps cancel and ACP cancellation distinct from decline with the continueOnReject capability", async () => {
++            const rejectPrompt = await setupContinueOnRejectPrompt();
++            fixture.setPermissionResponse({outcome: {outcome: "selected", optionId: ApprovalOptionId.Cancel}});
++            expect(await fixture.sendServerRequest("item/fileChange/requestApproval", fileParams()))
++                .toEqual({decision: "cancel"});
++            await finish(rejectPrompt);
++
++            fixture = createCodexMockTestFixture();
++            const cancelPrompt = await setupContinueOnRejectPrompt();
++            fixture.setPermissionResponse({outcome: {outcome: "cancelled"}});
++            expect(await fixture.sendServerRequest("item/fileChange/requestApproval", fileParams()))
++                .toEqual({decision: "cancel"});
++            await finish(cancelPrompt);
++        });
+     });
+ 
+     describe("additional permission approvals", () => {
+diff --git a/src/__tests__/CodexACPAgent/data/approval-command-continue-on-reject.json b/src/__tests__/CodexACPAgent/data/approval-command-continue-on-reject.json
+new file mode 100644
+index 0000000..6031ad5
+--- /dev/null
++++ b/src/__tests__/CodexACPAgent/data/approval-command-continue-on-reject.json
+@@ -0,0 +1,42 @@
++{
++  "sessionId": "test-session-id",
++  "toolCall": {
++    "toolCallId": "command-item",
++    "kind": "execute",
++    "status": "pending",
++    "title": "Run command",
++    "rawInput": {
++      "command": "ls",
++      "cwd": "/workspace"
++    }
++  },
++  "options": [
++    {
++      "optionId": "allow_once",
++      "name": "Yes, proceed",
++      "kind": "allow_once"
++    },
++    {
++      "optionId": "accept_execpolicy_amendment",
++      "name": "Yes, and don't ask again for commands that start with `ls`",
++      "kind": "allow_always"
++    },
++    {
++      "optionId": "decline",
++      "name": "No, continue without running it",
++      "kind": "reject_once"
++    },
++    {
++      "optionId": "cancel",
++      "name": "No, and tell Codex what to do differently",
++      "kind": "reject_once"
++    }
++  ],
++  "_meta": {
++    "permission": {
++      "version": 1,
++      "title": "Run command?",
++      "description": "Needed to verify the changes."
++    }
++  }
++}
+diff --git a/src/__tests__/CodexACPAgent/e2e/acp-e2e-file-approval.test.ts b/src/__tests__/CodexACPAgent/e2e/acp-e2e-file-approval.test.ts
+index b2ca73b..d50f230 100644
+--- a/src/__tests__/CodexACPAgent/e2e/acp-e2e-file-approval.test.ts
++++ b/src/__tests__/CodexACPAgent/e2e/acp-e2e-file-approval.test.ts
+@@ -47,6 +47,27 @@ describeE2E("E2E read-only mode file permission tests", () => {
+     });
+ });
+ 
++describeE2E("E2E continue-on-reject file permission tests", () => {
++    let fixture: SpawnedAgentFixture;
++
++    beforeEach(async () => {
++        fixture = await createAuthenticatedFixture(AgentMode.ReadOnly, undefined, {continueOnReject: true});
++    });
++
++    afterEach(async () => {
++        await fixture.dispose();
++    });
++
++    it("continues the turn when a workspace file edit is declined", async () => {
++        fixture.setPermissionResponder(createPermissionResponder("edit", ApprovalOptionId.Decline));
++        const filePath = newFilePathIn(fixture.workspaceDir);
++        const turn = await askAgentToEditFile(fixture, filePath);
++
++        expect(turn.response.stopReason, turn.diagnostics()).toBe("end_turn");
++        expect(fs.existsSync(filePath), turn.diagnostics()).toBe(false);
++    });
++});
++
+ describeE2E("E2E workspace access mode file permission tests", () => {
+     let fixture: SpawnedAgentFixture;
+ 
+diff --git a/src/__tests__/CodexACPAgent/e2e/acp-e2e-shell-approval.test.ts b/src/__tests__/CodexACPAgent/e2e/acp-e2e-shell-approval.test.ts
+index d3d59f4..d13ad9b 100644
+--- a/src/__tests__/CodexACPAgent/e2e/acp-e2e-shell-approval.test.ts
++++ b/src/__tests__/CodexACPAgent/e2e/acp-e2e-shell-approval.test.ts
+@@ -181,6 +181,36 @@ describeE2E("E2E full-access mode shell permission tests", () => {
+     });
+ });
+ 
++describeE2E("E2E continue-on-reject shell permission tests", () => {
++    let fixture: SpawnedAgentFixture;
++
++    beforeEach(async () => {
++        fixture = await createAuthenticatedFixture(AgentMode.ReadOnly, undefined, {continueOnReject: true});
++    });
++
++    afterEach(async () => {
++        await fixture.dispose();
++    });
++
++    it("continues the turn when a workspace write command is declined", async () => {
++        fixture.setPermissionResponder(createPermissionResponder("execute", ApprovalOptionId.Decline));
++        const filePath = path.join(fixture.workspaceDir, generateFileNameForTest());
++        const sessionId = (await fixture.createSession()).sessionId;
++        const response = await fixture.connection.prompt({
++            sessionId,
++            prompt: [{
++                type: "text",
++                text: `Use your shell tool to run exactly \`printf 'blocked' > '${filePath}'\`. Do not modify files any other way.`,
++            }],
++        });
++
++        const diagnostics = `stopReason=${response.stopReason}; agent said: ${fixture.readText(sessionId)}`;
++        expect(fixture.readPermissionRequests(sessionId, "execute").length, diagnostics).toBeGreaterThanOrEqual(1);
++        expectEndTurn(response);
++        expect(fs.existsSync(filePath), diagnostics).toBe(false);
++    });
++});
++
+ describeE2E("E2E shell cancellation tests", () => {
+     let fixture: SpawnedAgentFixture | null = null;
+ 
+diff --git a/src/__tests__/CodexACPAgent/e2e/acp-e2e-test-utils.ts b/src/__tests__/CodexACPAgent/e2e/acp-e2e-test-utils.ts
+index 35bb5f3..e10f255 100644
+--- a/src/__tests__/CodexACPAgent/e2e/acp-e2e-test-utils.ts
++++ b/src/__tests__/CodexACPAgent/e2e/acp-e2e-test-utils.ts
+@@ -47,7 +47,11 @@ export function expectNoPermissionRequests(fixture: SpawnedAgentFixture, session
+     expectPermissionRequests(fixture, sessionId, { edit: 0, execute: 0 });
+ }
+ 
+-export async function createAuthenticatedFixture(initialMode?: AgentMode, mcpServers?: acp.McpServerStdio[]): Promise<SpawnedAgentFixture> {
++export async function createAuthenticatedFixture(
++    initialMode?: AgentMode,
++    mcpServers?: acp.McpServerStdio[],
++    clientCapabilitiesMeta?: Record<string, unknown>,
++): Promise<SpawnedAgentFixture> {
+     const apiKey = requireLiveApiKey();
+     const extraEnv = initialMode ? {INITIAL_AGENT_MODE: initialMode.id} : undefined;
+     return await createSpawnedFixture(async (connection, authMethods) => {
+@@ -68,7 +72,7 @@ export async function createAuthenticatedFixture(initialMode?: AgentMode, mcpSer
+         if (authenticationStatus["type"] !== "api-key") {
+             throw new Error(`Unexpected authentication status: ${JSON.stringify(authenticationStatus)}`);
+         }
+-    }, extraEnv, mcpServers);
++    }, extraEnv, mcpServers, clientCapabilitiesMeta);
+ }
+ 
+ export async function createGatewayFixture(
+@@ -97,7 +101,7 @@ export async function createGatewayFixture(
+     });
+ }
+ 
+-function buildClientCapabilities(): acp.ClientCapabilities {
++function buildClientCapabilities(extraMeta?: Record<string, unknown>): acp.ClientCapabilities {
+     return {
+         fs: {
+             readTextFile: true,
+@@ -111,6 +115,7 @@ function buildClientCapabilities(): acp.ClientCapabilities {
+         },
+         _meta: {
+             "terminal-auth": true,
++            ...extraMeta,
+         },
+     };
+ }
+@@ -121,11 +126,12 @@ async function createSpawnedFixture(
+     authenticate: Authenticator,
+     extraEnv?: NodeJS.ProcessEnv,
+     mcpServers?: acp.McpServerStdio[],
++    clientCapabilitiesMeta?: Record<string, unknown>,
+ ): Promise<SpawnedAgentFixture> {
+     return await createSpawnedAgentFixture(async (connection) => {
+         const initializeResponse = await connection.initialize({
+             protocolVersion: acp.PROTOCOL_VERSION,
+-            clientCapabilities: buildClientCapabilities(),
++            clientCapabilities: buildClientCapabilities(clientCapabilitiesMeta),
+             clientInfo: {
+                 name: "vitest",
+                 version: "1.0.0",
+diff --git a/src/permissions/CodexApprovalHandler.ts b/src/permissions/CodexApprovalHandler.ts
+index a62bcb5..8fd12d2 100644
+--- a/src/permissions/CodexApprovalHandler.ts
++++ b/src/permissions/CodexApprovalHandler.ts
+@@ -35,13 +35,14 @@ export class CodexApprovalHandler implements ApprovalHandler {
+         private readonly connection: AcpClientConnection,
+         private readonly permissionContext: PermissionPromptContext,
+         private readonly cancellationSignal?: AbortSignal,
++        private readonly continueOnReject = false,
+     ) {}
+ 
+     async handleCommandExecution(
+         params: CommandExecutionRequestApprovalParams,
+     ): Promise<CommandExecutionRequestApprovalResponse> {
+         const authoritativeParams = params as CommandParamsWithAvailableDecisions;
+-        const decisions = commandDecisionOptions(authoritativeParams);
++        const decisions = commandDecisionOptions(authoritativeParams, this.continueOnReject);
+         if (!decisions) {
+             logger.error("Cancelling command approval without a complete authoritative decision set", undefined);
+             return {decision: "cancel"};
+@@ -65,7 +66,7 @@ export class CodexApprovalHandler implements ApprovalHandler {
+     }
+ 
+     async handleFileChange(params: FileChangeRequestApprovalParams): Promise<FileChangeRequestApprovalResponse> {
+-        const decisions = fileChangeDecisionOptions();
++        const decisions = fileChangeDecisionOptions(this.continueOnReject);
+         try {
+             const response = await this.requestPermission({
+                 sessionId: params.threadId,
+diff --git a/src/permissions/capabilities.ts b/src/permissions/capabilities.ts
+new file mode 100644
+index 0000000..e440570
+--- /dev/null
++++ b/src/permissions/capabilities.ts
+@@ -0,0 +1,14 @@
++import type * as acp from "@agentclientprotocol/sdk";
++
++/**
++ * Client capability (`clientCapabilities._meta.continueOnReject: true` on `initialize`) that asks the
++ * adapter to offer Codex's `decline` decision before `cancel` when Codex's own decision set lacks it.
++ * See docs/permission-extension.md.
++ */
++export const CONTINUE_ON_REJECT_CAPABILITY_KEY = "continueOnReject";
++
++export function clientSupportsContinueOnReject(
++    clientCapabilities?: acp.ClientCapabilities | null,
++): boolean {
++    return clientCapabilities?._meta?.[CONTINUE_ON_REJECT_CAPABILITY_KEY] === true;
++}
+diff --git a/src/permissions/options.ts b/src/permissions/options.ts
+index 9f42e6c..837fa2c 100644
+--- a/src/permissions/options.ts
++++ b/src/permissions/options.ts
+@@ -15,9 +15,11 @@ export type DecisionOption<T> = {option: acp.PermissionOption; decision: T};
+ 
+ export function commandDecisionOptions(
+     params: CommandParamsWithAvailableDecisions,
++    continueOnReject = false,
+ ): DecisionOption<CommandExecutionApprovalDecision>[] | undefined {
+-    const decisions = parseAvailableCommandDecisions(params);
+-    if (!decisions) return undefined;
++    const parsed = parseAvailableCommandDecisions(params);
++    if (!parsed) return undefined;
++    const decisions = continueOnReject && !params.additionalPermissions ? withDeclineBeforeCancel(parsed) : parsed;
+ 
+     const options: DecisionOption<CommandExecutionApprovalDecision>[] = [];
+     let networkIndex = 0;
+@@ -86,13 +88,27 @@ export function commandDecisionOptions(
+     return hasAllow && hasReject && hasUniqueOptionIds ? orderedOptions : undefined;
+ }
+ 
++/**
++ * Codex accepts `decline` for command approvals, but does not advertise it in every decision set
++ * (for example under the `untrusted` approval policy, where only `cancel` rejects). For clients that
++ * opt in with the `continueOnReject` capability, offer `decline` right before `cancel`.
++ */
++function withDeclineBeforeCancel(
++    decisions: CommandExecutionApprovalDecision[],
++): CommandExecutionApprovalDecision[] {
++    if (decisions.includes("decline")) return decisions;
++    const cancelIndex = decisions.indexOf("cancel");
++    if (cancelIndex === -1) return decisions;
++    return [...decisions.slice(0, cancelIndex), "decline", ...decisions.slice(cancelIndex)];
++}
++
+ function permissionOptionOrder(option: acp.PermissionOption): number {
+     if (option.kind === "allow_once") return 0;
+     if (option.kind === "allow_always") return 1;
+     return 2;
+ }
+ 
+-export function fileChangeDecisionOptions(): DecisionOption<FileChangeApprovalDecision>[] {
++export function fileChangeDecisionOptions(continueOnReject = false): DecisionOption<FileChangeApprovalDecision>[] {
+     return [
+         decisionOption(ApprovalOptionId.AllowOnce, "Yes, proceed", "allow_once", "accept"),
+         decisionOption(
+@@ -101,6 +117,14 @@ export function fileChangeDecisionOptions(): DecisionOption<FileChangeApprovalDe
+             "allow_always",
+             "acceptForSession",
+         ),
++        ...(continueOnReject
++            ? [decisionOption<FileChangeApprovalDecision>(
++                ApprovalOptionId.Decline,
++                "No, continue without making these edits",
++                "reject_once",
++                "decline",
++            )]
++            : []),
+         decisionOption(
+             ApprovalOptionId.Cancel,
+             "No, and tell Codex what to do differently",
+-- 
+2.39.5 (Apple Git-154)
+

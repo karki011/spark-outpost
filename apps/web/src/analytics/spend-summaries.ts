@@ -32,7 +32,5 @@ export function savingsSummary(data: AnalyticsSpend): string {
     data.resume.sessionRuns === 0
       ? 'No run could resume a session.'
       : `${data.resume.resumedRuns} of ${plural(data.resume.sessionRuns, 'session run')} resumed, reusing cached input worth about ${usd(data.resume.savedUsd)}.`;
-  if (!data.savings) return `Jev did not route any priced run in this range. ${resume}`;
-  const { grossUsd, jevCostUsd, netUsd, runs } = data.savings;
-  return `Routing ${plural(runs, 'run')} with Jev saved ${usd(grossUsd)} against always using the top model; Jev cost ${usd(jevCostUsd)}, so the net is ${netUsd >= 0 ? '' : 'minus '}${usd(Math.abs(netUsd))}. ${resume}`;
+  return resume;
 }

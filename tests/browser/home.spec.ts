@@ -221,9 +221,7 @@ test('Running now shows the step and plan progress, and updates live', async ({ 
   await expect(page.locator('.chat-title')).toHaveText('Worktree cleanup');
 });
 
-test('the spend card splits today by provider and estimates what Jev routing saved', async ({
-  page,
-}) => {
+test('the spend card splits today by provider, Jev included', async ({ page }) => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'], jev: true });
   const [claudeChat, codexChat] = await seedChats([
     { title: 'Routed by Jev', run: { status: 'succeeded' } },
@@ -261,8 +259,7 @@ test('the spend card splits today by provider and estimates what Jev routing sav
     'Codex~$0.08estimated',
     'Jev~$0.004estimated',
   ]);
-  await expect(spend).toContainText('Jev routing saved ≈$0.64 vs always using the top model');
-  await expect(spend).toContainText('after $0.004 for Jev itself');
+  await expect(spend).not.toContainText('routing saved');
 
   await spend.getByRole('radio', { name: 'This week' }).click();
   await expect(spend.getByRole('radio', { name: 'This week' })).toHaveAttribute(

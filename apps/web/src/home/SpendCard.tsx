@@ -8,7 +8,7 @@ import { CostText } from '../usage/CostText.tsx';
 import { costNote, formatCost } from '../usage/format.ts';
 import { homeApi, homeKeys } from './home-api.ts';
 import { HomeSection } from './HomeCards.tsx';
-import { activityLine, costSlices, savingsLine, savingsTip } from './spend-model.ts';
+import { activityLine, costSlices } from './spend-model.ts';
 
 const RANGES = [
   { id: 'today', label: 'Today' },
@@ -74,7 +74,6 @@ export function SpendCard({ onUsage }: { onUsage: () => void }) {
   const summary = spend.data;
   const slices = summary ? costSlices(summary) : [];
   const total = slices.reduce((sum, row) => sum + (row.costUsd ?? 0), 0);
-  const saved = summary ? savingsLine(summary.savings) : null;
 
   return (
     <HomeSection
@@ -108,12 +107,6 @@ export function SpendCard({ onUsage }: { onUsage: () => void }) {
               <SpendSplit rows={slices} total={total} />
             ) : (
               <p className="hnote">{emptyNote(summary.runs, range)}</p>
-            )}
-            {saved && summary.savings && (
-              <p className="spend-save">
-                <b>{saved}</b>
-                <small>{savingsTip(summary.savings)}</small>
-              </p>
             )}
           </>
         )}

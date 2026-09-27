@@ -1,5 +1,4 @@
 import '../approvals/approval-card.css';
-import '../../tasks/task-panes.css';
 import './checkpoint-card.css';
 import { useId, useState, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,13 +8,10 @@ import {
   type ApprovalDecidedValue,
   type ConflictSide,
   type MergeConflict,
-  type PlanEntry,
-  type TaskItemState,
 } from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
 import { queryKeys } from '../../api/client.ts';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
-import { TaskStateIcon } from '../../tasks/TaskIcons.tsx';
 import { useViewChanges } from '../../tasks/view-changes.ts';
 import { CheckIcon, XIcon } from '../../ui/icons.tsx';
 import { DiffView } from '../approvals/DiffView.tsx';
@@ -27,42 +23,16 @@ import {
   checkpointResult,
   checkpointTitle,
   offers,
-  planText,
   retryLine,
   type CheckpointApproval,
 } from './checkpoint-model.ts';
 import { useAutoContinue, type Countdown } from './use-auto-continue.ts';
-
-const ENTRY_STATES: Record<PlanEntry['status'], TaskItemState> = {
-  pending: 'pending',
-  in_progress: 'active',
-  completed: 'done',
-  failed: 'failed',
-};
 
 interface Decide {
   (optionId: string, note?: string): void;
   busy: boolean;
   countdown: Countdown | null;
   hold(): void;
-}
-
-function PlanList({ entries }: { entries: readonly PlanEntry[] }) {
-  return (
-    <ul className="plist ck-plan" aria-label="Plan">
-      {entries.map((entry, index) => (
-        <li key={index} className={entry.status}>
-          <TaskStateIcon state={ENTRY_STATES[entry.status]} />
-          <span>
-            {entry.content}
-            {entry.priority !== 'medium' && (
-              <span className={`prio ${entry.priority}`}>{entry.priority}</span>
-            )}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
 }
 
 function NoteForm({
@@ -176,6 +146,17 @@ function ClarifyBody({ approval, decide }: { approval: CheckpointApproval; decid
         />
       )}
       <div className="appr-acts ck-foot">
+        <Action
+          id={CHECKPOINT_OPTION.justAnswer}
+          approval={approval}
+          decide={decide}
+          kind="primary"
+        >
+          Just answer
+        </Action>
+        <Action id={CHECKPOINT_OPTION.makeChange} approval={approval} decide={decide}>
+          Make the change
+        </Action>
         <Action id={CHECKPOINT_OPTION.clarifyRules} approval={approval} decide={decide}>
           Let the rules decide
         </Action>
@@ -183,45 +164,6 @@ function ClarifyBody({ approval, decide }: { approval: CheckpointApproval; decid
           Stop
         </Action>
       </div>
-    </>
-  );
-}
-
-function PlanBody({ approval, decide }: { approval: CheckpointApproval; decide: Decide }) {
-  const [editing, setEditing] = useState(false);
-  const plan = approval.payload.checkpoint.plan;
-  return (
-    <>
-      <PlanList entries={plan} />
-      {editing ? (
-        <NoteForm
-          label="Edit the plan"
-          initial={planText(plan)}
-          submit="Send changes"
-          busy={decide.busy}
-          onSubmit={(note) => decide(CHECKPOINT_OPTION.editPlan, note)}
-          onCancel={() => setEditing(false)}
-        />
-      ) : (
-        <div className="appr-acts">
-          <Action
-            id={CHECKPOINT_OPTION.approvePlan}
-            approval={approval}
-            decide={decide}
-            kind="primary"
-          >
-            Approve
-          </Action>
-          {offers(approval, CHECKPOINT_OPTION.editPlan) && (
-            <button type="button" className="btn line sm" onClick={() => setEditing(true)}>
-              Edit
-            </button>
-          )}
-          <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
-            Stop
-          </Action>
-        </div>
-      )}
     </>
   );
 }
@@ -320,13 +262,10 @@ function MergeConflictBody({ approval, decide }: { approval: CheckpointApproval;
       <ConflictFiles conflict={conflict} />
       <div className="appr-acts">
         <Action id={CHECKPOINT_OPTION.keepFirst} approval={approval} decide={decide} kind="primary">
-          Keep {conflict.first}’s
+          Keep {conflict.first}
         </Action>
         <Action id={CHECKPOINT_OPTION.keepSecond} approval={approval} decide={decide}>
           Keep {conflict.second}’s
-        </Action>
-        <Action id={CHECKPOINT_OPTION.reconcile} approval={approval} decide={decide}>
-          Ask a Builder to reconcile
         </Action>
         <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
           Stop
@@ -342,7 +281,7 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
     case 'clarify':
       return <ClarifyBody approval={approval} decide={decide} />;
     case 'plan':
-      return <PlanBody approval={approval} decide={decide} />;
+      return null;
     case 'accept':
       return <AcceptBody approval={approval} decide={decide} />;
     case 'retry':
@@ -351,11 +290,8 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
           <Action id={CHECKPOINT_OPTION.retry} approval={approval} decide={decide} kind="primary">
             Retry
           </Action>
-          <Action id={CHECKPOINT_OPTION.finish} approval={approval} decide={decide}>
-            Skip
-          </Action>
-          <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
-            Stop
+          <Action id={CHECKPOINT_OPTION.stopReport} approval={approval} decide={decide} kind="stop">
+            Stop and report
           </Action>
         </div>
       );
@@ -364,14 +300,16 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
     case 'stuck':
       return (
         <div className="appr-acts">
-          <Action id={CHECKPOINT_OPTION.nudge} approval={approval} decide={decide} kind="primary">
-            Nudge
+          <Action
+            id={CHECKPOINT_OPTION.continueStuck}
+            approval={approval}
+            decide={decide}
+            kind="primary"
+          >
+            Continue
           </Action>
-          <Action id={CHECKPOINT_OPTION.letContinue} approval={approval} decide={decide}>
-            Let it continue
-          </Action>
-          <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
-            Stop
+          <Action id={CHECKPOINT_OPTION.stopReport} approval={approval} decide={decide} kind="stop">
+            Stop and report
           </Action>
         </div>
       );
@@ -398,9 +336,6 @@ function lead(approval: CheckpointApproval): string | null {
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint.kind === 'retry') return retryLine(checkpoint);
   if (checkpoint.kind === 'budget') return budgetLine(checkpoint);
-  if (checkpoint.kind === 'plan' && checkpoint.planVersion) {
-    return `Plan v${checkpoint.planVersion} · ${checkpoint.plan.length} steps`;
-  }
   return null;
 }
 

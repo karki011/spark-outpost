@@ -3,12 +3,19 @@ import {
   advisorLabel,
   type AdvisorUsage,
   type ConversationUsage,
+  type Orchestration,
   type Run,
 } from '@spark-outpost/contracts';
 import { usePopover } from '../../ui/use-popover.ts';
 import { providerName } from '../provider-name.ts';
 import { ShieldIcon } from '../../ui/icons.tsx';
-import { contextPercent, costTip, latestContext, usageLine } from '../../usage/format.ts';
+import {
+  contextPercent,
+  costTip,
+  latestContext,
+  taskContext,
+  usageLine,
+} from '../../usage/format.ts';
 import '../../usage/usage.css';
 import { contextLevel, formatTokens } from './model-options.ts';
 
@@ -24,6 +31,7 @@ interface ContextRingProps {
   runs: Run[];
   provider: string | null;
   usageTotals: ConversationUsage;
+  orchestration?: Orchestration | null;
   onAudit?: () => void;
 }
 
@@ -47,20 +55,29 @@ function advisorLine(entry: AdvisorUsage): string {
   return [calls, usageLine(entry.inputTokens, entry.costUsd, 'estimated')].join(' · ');
 }
 
-export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRingProps) {
+export function ContextRing({
+  runs,
+  provider,
+  usageTotals,
+  orchestration = null,
+  onAudit,
+}: ContextRingProps) {
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
     HTMLDivElement
   >();
   const panelId = useId();
-  const reading = latestContext(runs, provider);
+  const task = taskContext(orchestration);
+  const reading = task ?? latestContext(runs, provider);
   const used = reading?.used ?? 0;
   const size = reading?.size ?? 0;
   const percent = contextPercent(used, size);
   const level = contextLevel(percent);
-  const label = reading
-    ? `Context window: ${percent}% used, ${formatTokens(used)} of ${formatTokens(size)} tokens`
-    : 'Context window: no usage reported yet';
+  const label = task
+    ? `Task · ${task.name} · ${percent}% context, ${formatTokens(used)} of ${formatTokens(size)} tokens`
+    : reading
+      ? `Context window: ${percent}% used, ${formatTokens(used)} of ${formatTokens(size)} tokens`
+      : 'Context window: no usage reported yet';
   const chat = chatLine(usageTotals);
   const showProviders = usageTotals.byProvider.length > 1;
 
@@ -98,7 +115,7 @@ export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRin
         aria-label="Context window"
       >
         <div className="ctx-h">
-          <b>Context window</b>
+          <b>{task ? `Task · ${task.name}` : 'Context window'}</b>
           <span>
             {reading
               ? `${formatTokens(used)} of ${formatTokens(size)} tokens (${percent}%)`
@@ -111,7 +128,7 @@ export function ContextRing({ runs, provider, usageTotals, onAudit }: ContextRin
         <div className="ctx-legend">
           <div>
             <i className="used" />
-            <span>Used by the last reply</span>
+            <span>{task ? 'Used by the task session' : 'Used by the last reply'}</span>
             <b>{formatTokens(used)}</b>
           </div>
           <div className="free">

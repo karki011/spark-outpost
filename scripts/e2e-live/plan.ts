@@ -15,7 +15,6 @@ export const BLOCKS: readonly Block[] = [
 ];
 
 export type Driver = 'ui' | 'api' | 'bench';
-export type Placement = 'jev' | 'shared' | 'worktree';
 export type ModelChoice = 'auto' | 'haiku' | 'sonnet' | 'opus[1m]';
 export type Effort = 'low' | 'medium' | 'high';
 export const VERSIONS = ['current', '2381803', '9a932f9', 'd87e633'] as const;
@@ -27,12 +26,9 @@ export interface HarnessSetup {
   level: InvolvementLevel;
   model: ModelChoice;
   buildStyle: BuildStyle;
-  placement: Placement;
   jev: boolean;
   codexConnected: boolean;
   zaiConnected: boolean;
-  workOrders: boolean;
-  planSession: boolean;
   freshBeforeLastTurn: boolean;
   withDeps: boolean;
   version: Version;
@@ -55,12 +51,9 @@ export const BASELINE: HarnessSetup = {
   level: 'balanced',
   model: 'auto',
   buildStyle: 'off',
-  placement: 'jev',
   jev: true,
   codexConnected: true,
   zaiConnected: false,
-  workOrders: true,
-  planSession: true,
   freshBeforeLastTurn: false,
   withDeps: false,
   version: 'current',
@@ -119,16 +112,7 @@ function coreCells(): Cell[] {
     ...CORE_SCENARIOS.filter((scenario) => scenario.id !== 'j').flatMap((scenario) =>
       allArms('core', scenario, scenario.id === 'd' ? { withDeps: true } : {}),
     ),
-    cell('core', 'd', 'harness', 'shared', {
-      driver: 'bench',
-      placement: 'shared',
-      withDeps: true,
-    }),
-    cell('core', 'd', 'harness', 'worktree', {
-      driver: 'bench',
-      placement: 'worktree',
-      withDeps: true,
-    }),
+    cell('core', 'd', 'harness', 'bench', { driver: 'bench', withDeps: true }),
     cell('core', 'h', 'harness', 'lean', { buildStyle: 'lean' }),
     cell('core', 'i', 'harness', 'fresh', { freshBeforeLastTurn: true }),
     cell('core', 'j', 'harness', 'claude-builder'),
@@ -142,7 +126,7 @@ function scenarioCells(): Cell[] {
     if (scenario.id === 's') return [cell('scenarios', 's', 'harness')];
     if (scenario.id === 't') {
       return [
-        cell('scenarios', 't', 'harness', 'worktree', { driver: 'bench', placement: 'worktree' }),
+        cell('scenarios', 't', 'harness', 'bench', { driver: 'bench' }),
         cell('scenarios', 't', 'direct-claude'),
         cell('scenarios', 't', 'direct-codex'),
       ];
@@ -226,14 +210,9 @@ function glmCells(): Cell[] {
 const PLANNED = ['c', 'd', 'f', 'l', 'q', 'r', 't', 'g'];
 
 function focusCells(): Cell[] {
-  const bench = (id: string, on: boolean) =>
-    cell('focus', id, 'harness', on ? 'handoff-on' : 'handoff-off', {
-      driver: 'bench',
-      workOrders: on,
-      planSession: on,
-      withDeps: id === 'd',
-    });
-  const ab = PLANNED.flatMap((id) => [bench(id, true), bench(id, false)]);
+  const ab = PLANNED.map((id) =>
+    cell('focus', id, 'harness', 'bench', { driver: 'bench', withDeps: id === 'd' }),
+  );
   const drift = ['c', 'q'].map((id) => cell('focus', id, 'direct-claude', 'drift-check'));
   const regression = [
     cell('focus', 'n', 'harness', 'regression'),

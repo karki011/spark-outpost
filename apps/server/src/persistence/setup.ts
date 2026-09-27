@@ -20,6 +20,7 @@ interface ProfileRow {
   default_provider: ProviderId | null;
   onboarding_completed_at: Date | null;
   auto_continue_seconds: number | null;
+  jev_diffs: boolean;
 }
 
 interface ConnectionRow {
@@ -46,7 +47,8 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
     workspaceId,
   ]);
   const { rows } = await db.query<ProfileRow>(
-    `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds
+    `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
+       jev_diffs
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
   );
@@ -119,6 +121,7 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     defaultProvider,
     onboardingCompleted: profile.onboarding_completed_at !== null && connected.length > 0,
     autoContinueSeconds: profile.auto_continue_seconds,
+    jevDiffs: profile.jev_diffs,
   };
   return { profile: result, providers, advisors };
 }
@@ -146,6 +149,7 @@ export async function updateProfile(
        default_provider = COALESCE($3, default_provider),
        onboarding_completed_at = CASE WHEN $4 THEN COALESCE(onboarding_completed_at, now()) ELSE onboarding_completed_at END,
        auto_continue_seconds = CASE WHEN $5 THEN $6::integer ELSE auto_continue_seconds END,
+       jev_diffs = COALESCE($7, jev_diffs),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -155,6 +159,7 @@ export async function updateProfile(
       update.onboardingCompleted ?? false,
       update.autoContinueSeconds !== undefined,
       update.autoContinueSeconds ?? null,
+      update.jevDiffs ?? null,
     ],
   );
 }

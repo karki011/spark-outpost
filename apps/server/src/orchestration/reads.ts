@@ -32,30 +32,3 @@ export function countOutput(total: Counted, output: ProviderOutput): boolean {
   if (isFileRead(output.name, output.toolKind)) total.reads.push(readTarget(output.name));
   return true;
 }
-
-function baseName(file: string): string {
-  return file.split('/').at(-1) ?? file;
-}
-
-export function rereadCount(reads: readonly string[], earlier: readonly string[]): number {
-  const seen = new Set(earlier.map(baseName));
-  return reads.filter((file) => seen.has(baseName(file))).length;
-}
-
-export interface ReadRecord {
-  fileReads: number;
-  rereads?: number;
-  extraReads?: string;
-}
-
-export function readRecord(
-  reads: readonly string[],
-  architectFiles: readonly string[] | null,
-  extraReads: string | null,
-): ReadRecord {
-  return {
-    fileReads: reads.length,
-    ...(architectFiles ? { rereads: rereadCount(reads, architectFiles) } : {}),
-    ...(extraReads ? { extraReads } : {}),
-  };
-}

@@ -77,7 +77,6 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await worker.stop();
-  await intake.settled();
   await t.cleanup();
 });
 

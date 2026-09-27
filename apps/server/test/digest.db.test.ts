@@ -123,6 +123,8 @@ describe('home digest', () => {
     const digest = result.digest!;
     expect(digest.status).toBe('ready');
     expect(digest.body?.structured).toBe(true);
+    expect(digest.body?.headline).toBe('1 chat finished, 1 chat failed or stalled.');
+    expect(digest.stats).toEqual({ finished: 1, waiting: 0, failedOrStalled: 1, costUsd: null });
     const linked = digest.body!.lines.map((line) => line.chatId);
     expect(linked).not.toContain(FAKE_UNKNOWN_CHAT);
     const known: (string | null)[] = [done.id, failed.id];

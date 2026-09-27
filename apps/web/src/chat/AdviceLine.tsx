@@ -1,27 +1,14 @@
 import { useId } from 'react';
 import {
   categoryLabel,
-  depthLabel,
-  scopeLabel,
   type AdviceSummary,
-  type Gate,
-  type GateDecision,
   type IntakeAnswer,
+  type IntakeCall,
 } from '@spark-outpost/contracts';
 import { formatCost } from '../usage/format.ts';
 import { formatTokens, shortLabel } from './composer/model-options.ts';
 import { providerName } from './provider-name.ts';
 import '../usage/usage.css';
-
-const WOULD: Record<GateDecision, string> = {
-  act: 'would use this',
-  ask: 'would ask you first',
-  fallback: 'would fall back to the fixed rules',
-};
-
-function gateLine(gate: Gate): string {
-  return `${gate.confidence.toFixed(2)}: ${WOULD[gate.decision]} (acts at ${gate.actAt})`;
-}
 
 function routeParts(answer: IntakeAnswer): string[] {
   const model = answer.modelLabel ? shortLabel(answer.modelLabel) : answer.model;
@@ -30,49 +17,59 @@ function routeParts(answer: IntakeAnswer): string[] {
   );
 }
 
+const CALLS: Record<string, [string, string]> = {
+  question: ['answer only', 'make changes'],
+  vague: ['vague', 'clear enough'],
+  review: ['review wanted', 'no review asked'],
+  destructive: ['destructive', 'not destructive'],
+  continues_task: ['same task', 'new task'],
+};
+
+function callText(key: string, call: IntakeCall): string {
+  const [yes, no] = CALLS[key] ?? [key, `not ${key}`];
+  const jev = call.jev === null ? '' : ` ${call.jev.toFixed(2)}`;
+  return `${call.value ? yes : no} (${call.source === 'jev' ? 'Jev' : 'rules'}${jev})`;
+}
+
 function headline(advice: AdviceSummary): string {
   const jev = advice.jev;
   if (!jev) {
     const reason = advice.jevStatus === 'timed_out' ? 'Jev timed out' : 'Jev unavailable';
     return `${reason} · used the fixed rules`;
   }
-  return [
-    'Jev suggested',
-    [...routeParts(jev), depthLabel(jev.depth), jev.confidence.toFixed(2)].join(' · '),
-  ].join(' ');
+  const calls = Object.entries(advice.calls ?? {}).filter(([key]) => key !== 'vague');
+  const head = calls.length > 0 ? callText(...calls[0]!) : categoryName(jev);
+  const would = jev.modelLabel ?? jev.model;
+  return `Jev: ${head}${would ? ` · would have used ${shortLabel(would)}` : ''}`;
+}
+
+function categoryName(jev: NonNullable<AdviceSummary['jev']>): string {
+  return jev.intent ? categoryLabel(jev.intent) : 'no category';
 }
 
 export function adviceDetails(advice: AdviceSummary): string[] {
-  const { jev, rules, gate } = advice;
-  if (!jev) return [advice.jevError ?? 'Jev did not answer.', 'The chat’s own settings ran.'];
-  const lines = [
-    [
-      `Category ${jev.intent ? categoryLabel(jev.intent) : 'unknown'}`,
-      jev.complexity === null ? null : `complexity ${jev.complexity.toFixed(1)} of 3`,
-      jev.scope ? `scope ${scopeLabel(jev.scope)}` : null,
-      `risk ${jev.risk}`,
-    ]
-      .filter(Boolean)
-      .join(' · '),
-  ];
+  const { jev, rules } = advice;
+  if (!jev) return [advice.jevError ?? 'Jev did not answer.', 'The rules decided everything.'];
+  const lines = [`Category ${categoryName(jev)}`];
+  for (const [key, call] of Object.entries(advice.calls ?? {})) lines.push(callText(key, call));
   if (jev.injection !== null) {
     lines.push(`Attached text steering the agent: ${jev.injection.toFixed(2)}`);
   }
-  if (gate) lines.push(`Intake confidence ${gateLine(gate)}`);
-  if (advice.routeGate) lines.push(`Model pick confidence ${gateLine(advice.routeGate)}`);
-  const rulesRoute = [providerName(rules.provider), ...routeParts(rules), depthLabel(rules.depth)];
-  lines.push(`Fixed rules: ${rulesRoute.join(' · ')}`);
-  lines.push(
-    advice.differences.length > 0
-      ? `Differs from the rules on ${advice.differences.join(', ')}`
-      : 'Same as the rules',
-  );
+  if (jev.tier && advice.routeGate) {
+    lines.push(
+      `Jev would have used the ${jev.tier} tier (${advice.routeGate.confidence.toFixed(2)}), recorded only`,
+    );
+  }
+  lines.push(`Rules ran: ${[providerName(rules.provider), ...routeParts(rules)].join(' · ')}`);
   const cost = advice.usage
     ? `${formatTokens(advice.usage.inputTokens)} tokens · ${formatCost(advice.usage.costUsd, 'estimated')}, estimated`
     : null;
   const latency = advice.latencyMs === null ? null : `${advice.latencyMs} ms`;
-  lines.push([latency, cost].filter(Boolean).join(' · '));
-  lines.push('Recorded only: the chat’s own settings ran.');
+  lines.push(
+    [latency, cost, advice.policyVersion ? `policy ${advice.policyVersion}` : null]
+      .filter(Boolean)
+      .join(' · '),
+  );
   return lines.filter(Boolean);
 }
 

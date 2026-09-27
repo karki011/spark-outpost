@@ -54,48 +54,6 @@ function TaskCosts({ data }: { data: AnalyticsSpend }) {
   );
 }
 
-function Savings({ data }: { data: AnalyticsSpend }) {
-  const hatch = useId();
-  const savings = data.savings;
-  if (!savings)
-    return (
-      <EmptyChart>
-        No turns were routed by Jev in this range, so there is nothing to compare.
-      </EmptyChart>
-    );
-  return (
-    <>
-      <p className="an-kpi">
-        <b>{usd(Math.abs(savings.netUsd))}</b> {savings.netUsd >= 0 ? 'saved' : 'lost'} after Jev’s
-        own cost
-      </p>
-      <HBars
-        ariaLabel="Routing savings against the top model"
-        defs={<HatchPattern id={hatch} color="var(--c-jev)" />}
-        bars={[
-          {
-            key: 'gross',
-            label: 'Saved by routing',
-            value: Math.max(0, savings.grossUsd),
-            valueText: usd(savings.grossUsd),
-            fill: 'var(--accent)',
-            tip: `Routing ${plural(savings.runs, 'run')} to cheaper models saved ${usd(savings.grossUsd)} against always using each provider’s top model`,
-          },
-          {
-            key: 'jev',
-            label: 'Jev’s own cost',
-            value: savings.jevCostUsd,
-            valueText: usd(savings.jevCostUsd),
-            fill: `url(#${hatch})`,
-            stroke: 'var(--c-jev)',
-            tip: `Jev’s advice cost ${usd(savings.jevCostUsd)} (estimated)`,
-          },
-        ]}
-      />
-    </>
-  );
-}
-
 export function SpendTab({ data }: { data: AnalyticsSpend }) {
   const agentUsd = data.leaves.reduce((sum, leaf) => sum + leaf.costUsd, 0);
   return (
@@ -178,9 +136,9 @@ export function SpendTab({ data }: { data: AnalyticsSpend }) {
         )}
       </ChartCard>
       <ChartCard
-        title="What routing and resuming saved"
+        title="What resuming saved"
         summary={savingsSummary(data)}
-        n={data.savings?.runs ?? 0}
+        n={data.resume.sessionRuns}
         table={{
           caption: 'Savings',
           columns: [
@@ -188,17 +146,13 @@ export function SpendTab({ data }: { data: AnalyticsSpend }) {
             { label: 'Value', value: (row) => row[1], numeric: true },
           ],
           rows: [
-            ['Runs routed by Jev and priced', String(data.savings?.runs ?? 0)],
-            ['Saved against the top model', usd(data.savings?.grossUsd ?? null)],
-            ['Jev’s own cost', usd(data.savings?.jevCostUsd ?? data.jev.costUsd)],
-            ['Net', usd(data.savings?.netUsd ?? null)],
+            ['Jev’s own cost', usd(data.jev.costUsd)],
             ['Resumed sessions', `${data.resume.resumedRuns} of ${data.resume.sessionRuns}`],
             ['Cached input on resumed turns', formatTokens(data.resume.cachedTokens)],
             ['Estimated saving from resuming', usd(data.resume.savedUsd)],
           ] as [string, string][],
         }}
       >
-        <Savings data={data} />
         <dl className="an-stats">
           <div>
             <dt>Resumed sessions</dt>

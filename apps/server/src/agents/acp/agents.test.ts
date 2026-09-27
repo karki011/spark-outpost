@@ -75,9 +75,9 @@ describe('Claude session options', () => {
     );
   });
 
-  it('gives Do runs the edit and shell tools, forces every change to ask, and keeps bypass off', () => {
+  it('gives Do runs the edit, shell and todo tools, forces every change to ask, and keeps bypass off', () => {
     const options = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
-    expect(options.tools).toEqual(['Read', 'Glob', 'Grep', 'Edit', 'Write', 'Bash']);
+    expect(options.tools).toEqual(['Read', 'Glob', 'Grep', 'Edit', 'Write', 'Bash', 'TodoWrite']);
     expect(options.settings.permissions).toMatchObject({
       ask: ['Bash', 'Edit', 'Write'],
       blockReadsOutsideWorkingDirectories: true,
@@ -258,7 +258,6 @@ describe('Z.ai launch', () => {
     expect(zai.projectSessionMeta?.(['/w'])).toEqual(
       agentDefinitions.claude.projectSessionMeta?.(['/w']),
     );
-    expect(zai.planSessionMeta?.([])).toEqual(agentDefinitions.claude.planSessionMeta?.([]));
     expect(zai.doSessionMeta?.([])).toEqual(agentDefinitions.claude.doSessionMeta?.([]));
     expect(optionsOf(zai.doSessionMeta?.([]))).toMatchObject({
       settingSources: [],

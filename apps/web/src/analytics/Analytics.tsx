@@ -8,9 +8,12 @@ import {
   type AnalyticsTab,
   type RangeChoice,
 } from './analytics-api.ts';
+import { HarnessSkeleton } from './HarnessSkeleton.tsx';
 import { HarnessTab } from './HarnessTab.tsx';
+import { OverviewSkeleton } from './OverviewSkeleton.tsx';
 import { OverviewTab } from './OverviewTab.tsx';
 import { daysBefore, localToday, RangePicker } from './RangePicker.tsx';
+import { SpendSkeleton } from './SpendSkeleton.tsx';
 import { SpendTab } from './SpendTab.tsx';
 
 const TABS: { id: AnalyticsTab; label: string }[] = [
@@ -23,14 +26,22 @@ function usable(choice: RangeChoice): boolean {
   return choice.range !== 'custom' || choice.from <= choice.to;
 }
 
-function Panel<T>({ query, render }: { query: UseQueryResult<T>; render: (data: T) => ReactNode }) {
+function Panel<T>({
+  query,
+  render,
+  skeleton,
+}: {
+  query: UseQueryResult<T>;
+  render: (data: T) => ReactNode;
+  skeleton: ReactNode;
+}) {
   if (query.isError)
     return (
       <p className="an-error" role="alert">
         {query.error.message}
       </p>
     );
-  if (!query.data) return <p className="an-loading">Loading…</p>;
+  if (!query.data) return <>{skeleton}</>;
   return render(query.data);
 }
 
@@ -76,7 +87,9 @@ export function Analytics() {
     document.getElementById(`an-tab-${TABS[next]!.id}`)?.focus();
   };
 
-  const busy = { overview, spend, harness }[tab].isFetching;
+  const activeQuery = { overview, spend, harness }[tab];
+  const coldLoading = activeQuery.isFetching && !activeQuery.data;
+  const updating = activeQuery.isFetching && Boolean(activeQuery.data);
 
   return (
     <main className="page" aria-labelledby="an-title">
@@ -89,22 +102,30 @@ export function Analytics() {
             </div>
             <RangePicker value={choice} onChange={setChoice} />
           </header>
-          <div className="an-tabs" role="tablist" aria-label="Analytics views">
-            {TABS.map((entry) => (
-              <button
-                key={entry.id}
-                id={`an-tab-${entry.id}`}
-                type="button"
-                role="tab"
-                aria-selected={tab === entry.id}
-                aria-controls="an-panel"
-                tabIndex={tab === entry.id ? 0 : -1}
-                onClick={() => setTab(entry.id)}
-                onKeyDown={onTabKey}
-              >
-                {entry.label}
-              </button>
-            ))}
+          <div className="an-tabs-row">
+            <div className="an-tabs" role="tablist" aria-label="Analytics views">
+              {TABS.map((entry) => (
+                <button
+                  key={entry.id}
+                  id={`an-tab-${entry.id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === entry.id}
+                  aria-controls="an-panel"
+                  tabIndex={tab === entry.id ? 0 : -1}
+                  onClick={() => setTab(entry.id)}
+                  onKeyDown={onTabKey}
+                >
+                  {entry.label}
+                </button>
+              ))}
+            </div>
+            {updating && (
+              <span className="an-updating" role="status">
+                <span className="an-updating-dot" aria-hidden="true" />
+                Updating…
+              </span>
+            )}
           </div>
           <div
             id="an-panel"
@@ -112,14 +133,28 @@ export function Analytics() {
             className="an-panel"
             role="tabpanel"
             aria-labelledby={`an-tab-${tab}`}
-            aria-busy={busy}
+            aria-busy={coldLoading}
           >
             {tab === 'overview' && (
-              <Panel query={overview} render={(data) => <OverviewTab data={data} />} />
+              <Panel
+                query={overview}
+                skeleton={<OverviewSkeleton />}
+                render={(data) => <OverviewTab data={data} />}
+              />
             )}
-            {tab === 'spend' && <Panel query={spend} render={(data) => <SpendTab data={data} />} />}
+            {tab === 'spend' && (
+              <Panel
+                query={spend}
+                skeleton={<SpendSkeleton />}
+                render={(data) => <SpendTab data={data} />}
+              />
+            )}
             {tab === 'harness' && (
-              <Panel query={harness} render={(data) => <HarnessTab data={data} />} />
+              <Panel
+                query={harness}
+                skeleton={<HarnessSkeleton />}
+                render={(data) => <HarnessTab data={data} />}
+              />
             )}
           </div>
           <p className="an-next">Sessions, Insights and Ask about this view come next.</p>

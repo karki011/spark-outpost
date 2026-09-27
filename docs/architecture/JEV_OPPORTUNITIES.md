@@ -1,6 +1,8 @@
 # Jev opportunities
 
-Written on September 27, 2026, after re-reading the TypeSafe docs in full (see [JEV.md](JEV.md#docs-review-2026-09-27)). This file ranks the places where Spark Outpost should ask Jev more often, and flags the places where Jev is the wrong tool. Nothing here is built yet.
+Written on September 27, 2026, after re-reading the TypeSafe docs in full (see [JEV.md](JEV.md#docs-review-2026-09-27)). This file ranks the places where Spark Outpost should ask Jev more often, and flags the places where Jev is the wrong tool.
+
+> **Status after round 10.** Opportunities 1 (step checks) and 5 (the watchdog) were built and then removed: step checks had no evidence and skipped the shadow period, and the watchdog had no measured benefit. Opportunity 2 went with the Architect and transitions. Opportunity 3 lives on as the `continues_task` question. Opportunity 4 is covered by a code rule (Critic for destructive work, review requests and large diffs). Rule 7 is now enforced by observation mode: the edit gate and the verifier only record until the threshold report supports acting. See [JEV.md](JEV.md#round-10-what-jev-does-now-september-27-2026).
 
 ## Why more Jev
 

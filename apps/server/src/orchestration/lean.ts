@@ -12,14 +12,6 @@ const SAFETY_FLOOR =
 const MARKER_RULE =
   'When you take a deliberate shortcut with a known limit, mark it with a comment such as `// lean: in-memory only; upgrade: move to Redis when there are several servers`, naming the limit and when to revisit it.';
 
-const ARCHITECT_TEXT: Record<Exclude<BuildStyle, 'off'>, string> = {
-  lean: [
-    'Plan the least work that fully meets the request. Before adding a step, ask whether it needs to exist at all and whether the codebase already has what it needs; leave out speculative steps and say in one line what you left out.',
-    'Prefer fewer steps and fewer files. When a step can reuse something already in the repo, add "Reuse: <file or function>" to that step.',
-  ].join('\n'),
-  lite: 'Plan what the request asks. When a step can reuse something already in the repo, add "Reuse: <file or function>" to that step.',
-};
-
 const BUILDER_TEXT: Record<Exclude<BuildStyle, 'off'>, string> = {
   lean: [
     'Read the request and the code it touches first, and trace the real flow end to end. Then build the least code that fully does what was asked. Stop at the first of these that works:',
@@ -54,21 +46,12 @@ function titled(style: BuildStyle, body: string): string {
   return `## Build style: ${style}\n${body}`;
 }
 
-export function architectStyle(style: BuildStyle): string | null {
-  return style === 'off' ? null : titled(style, ARCHITECT_TEXT[style]);
-}
-
 export function builderStyle(style: BuildStyle): string | null {
   return style === 'off' ? null : titled(style, BUILDER_TEXT[style]);
 }
 
 export function criticStyle(style: BuildStyle): string | null {
   return style === 'off' ? null : `## Complexity (same review)\n${CRITIC_TEXT}`;
-}
-
-export function withBuilderStyle(prompt: string, style: BuildStyle): string {
-  const section = builderStyle(style);
-  return section ? `${prompt}\n\n${section}` : prompt;
 }
 
 export interface StyleRule {

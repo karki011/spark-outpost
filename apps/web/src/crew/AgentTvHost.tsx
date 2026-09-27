@@ -30,7 +30,8 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
   const orchestration = crewOrchestration(source);
   const waiting = orchestration?.pendingCheckpoint ?? null;
   const elsewhere = sourceId !== null && sourceId !== activeId;
-  const idle = busyCount(agents) === 0 && !waiting;
+  const asking = agents.some((agent) => agent.state === 'waiting');
+  const idle = busyCount(agents) === 0 && !waiting && !asking;
 
   useEffect(() => {
     if (elsewhere && idle && source) closeAgentTv();

@@ -66,7 +66,7 @@ export async function prepareTurnSession(
     model: input.settings.model,
     effort: input.settings.effort,
     mode: input.mode,
-    planning: input.role === 'architect',
+    planning: false,
     roots: input.projectRoots,
   });
   const stored = await latestProviderSession(db, conversationId, key);

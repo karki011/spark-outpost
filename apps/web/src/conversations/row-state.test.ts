@@ -156,17 +156,17 @@ describe('attention', () => {
   });
 });
 
-describe('rowState for a stuck agent', () => {
-  it('says the agent looks stuck and still asks for you', () => {
+describe('rowState for a Builder the loop guard stopped', () => {
+  it('says the Builder was repeating itself and still asks for you', () => {
     const stuck = chat({
       needsInput: true,
-      attention: ask({ kind: 'stuck', title: 'Bolt looks stuck', agentName: 'Bolt' }),
+      attention: ask({ kind: 'stuck', title: 'Bolt was repeating itself', agentName: 'Bolt' }),
     });
     expect(rowState(stuck, false)).toEqual({
       tone: 'asking',
-      label: 'Looks stuck',
-      sub: 'Bolt looks stuck',
+      label: 'Repeating itself',
+      sub: 'Bolt was repeating itself',
     });
-    expect(attentionLine(ask({ kind: 'stuck' }))).toBe('An agent looks stuck');
+    expect(attentionLine(ask({ kind: 'stuck' }))).toBe('The Builder was repeating itself');
   });
 });

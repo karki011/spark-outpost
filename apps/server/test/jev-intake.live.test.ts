@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
 import { afterAll, describe, expect, it } from 'vitest';
-import type { IntakeRequest } from '../src/advisor/advice.ts';
+import { ruleAdvisor, type IntakeRequest } from '../src/advisor/advice.ts';
 import { adviceBody } from '../src/advisor/advice-body.ts';
 import { askJev } from '../src/advisor/intake-recorder.ts';
 import { loadConfig } from '../src/config.ts';
@@ -99,13 +99,15 @@ describe('Jev intake, live', async () => {
       current: { provider: 'claude', model: 'sonnet', modelLabel: 'Sonnet 5', effort: 'medium' },
       level: 'balanced',
       routing: 'pinned',
+      firstMessage: true,
+      currentTask: null,
     };
     const outcome = await askJev(
       { db, secrets, fetch, baseUrl: config.TYPESAFE_BASE_URL },
       request,
       context.jevModel!,
     );
-    const body = adviceBody(request, outcome);
+    const body = adviceBody(request, outcome, { rules: ruleAdvisor(request), calls: {} });
     results.push({ sample: sample.name, ...body, state: undefined, questions: undefined });
     expect(body.jevError).toBeNull();
     expect(body.jevStatus).toBe('answered');

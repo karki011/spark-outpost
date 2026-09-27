@@ -67,8 +67,6 @@ export function HomeComposer(props: HomeComposerProps) {
   });
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const connected = setup.data?.providers.filter((provider) => provider.connection) ?? [];
-  const jevConnected =
-    setup.data?.advisors.some((advisor) => advisor.id === 'jev' && advisor.connection) ?? false;
   const repos = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_REPOS);
   const attachments = useAttachments();
   const linkRepos = useChatRepos(draftId);
@@ -112,7 +110,6 @@ export function HomeComposer(props: HomeComposerProps) {
         settings={detail.data?.settings ?? null}
         providers={connected}
         runs={[]}
-        jevConnected={jevConnected}
         usageTotals={EMPTY_CONVERSATION_USAGE}
         busy={false}
         sending={send.isPending}

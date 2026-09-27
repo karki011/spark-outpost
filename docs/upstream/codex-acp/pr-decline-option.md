@@ -1,105 +1,73 @@
-<!-- DRAFT for the user to review and submit from their own account. Not opened. CONDITIONAL: open only if the maintainers pick option A or B on the issue (issue-decline-option.md). If they pick C (a fix in openai/codex), this PR isn't needed. -->
+<!-- FINAL DRAFT for the user to review. Not opened. Branch `feat/decline-option` (one commit on agentclientprotocol/codex-acp main bf37821); full diff in feat-decline-option.patch. Implements the opt-in variant ("option B") from issue-decline-option.md. Open as a DRAFT PR after both issues exist; POSTING_PLAN.md fills in the issue numbers and posts only the text between the BODY markers. -->
 
-**Title:** `feat: offer a continue-on-reject option for command and file-change approvals`
+**Title:** `feat: offer decline before cancel for clients that opt in`
+
+<!-- BODY BELOW -->
+
+Closes #<decline issue>
 
 ## Summary
 
-When Codex's decision set has no `decline`, a client's only reject option is `cancel`, which interrupts the turn. This happens for every file change, and for commands under `approvalPolicy: "untrusted"`. This PR offers Codex's `decline` decision ("No, continue without …", `reject_once`) ahead of `cancel`. A rejected action is then skipped and the model carries on, and `cancel` keeps its current meaning.
+Adds an opt-in client capability, `clientCapabilities._meta.continueOnReject`. A client that sets it on `initialize` gets Codex's `decline` decision ("No, continue without …", `reject_once`) right before `cancel` whenever Codex's decision set offers `cancel` but not `decline`, and in every file-change approval. A rejected action is then skipped and the turn continues. Without the capability, permission requests are byte-for-byte unchanged.
 
-Closes #<decline issue>.
+## Motivation
+
+Codex doesn't advertise `decline` for file changes, for escalation requests in `read-only`, or for any command under `approvalPolicy: "untrusted"` (#<ask-always issue>). There the only `reject_once` option is `cancel`, which interrupts the turn and ends `session/prompt` with `stopReason: "cancelled"`, although the client never sent `session/cancel`. The app-server accepts `decline` in all of these cases; it just isn't offered.
+
+#405 made `availableDecisions` authoritative ("the adapter does not invent replacement choices"), and #26 relies on `cancel` interrupting the turn after a rejected file edit. Making the extra option opt-in keeps both as the default and lets clients that want "skip this, keep going" ask for it.
+
+Evidence from a raw ACP client (fresh session per action):
+
+| Build / Codex                        | Mode         | Opted in | Action                             | Options offered                                                  | Answer    | Written? | `stopReason` |
+| ------------------------------------ | ------------ | -------- | ---------------------------------- | ---------------------------------------------------------------- | --------- | -------- | ------------ |
+| 1.13.1 / 0.156.1                     | `untrusted`  | –        | `echo hi > shell.txt`              | `allow_once`, `accept_execpolicy_amendment`, `cancel`            | `cancel`  | no       | `cancelled`  |
+| 1.13.2-preview.5 / 0.157.1           | `untrusted`  | –        | `echo hi > shell.txt`              | `allow_once`, `accept_execpolicy_amendment`, `cancel`            | `cancel`  | no       | `cancelled`  |
+| this branch / 0.157.0                | `read-only`  | no       | `apply_patch`                      | `allow_once`, `allow_for_session`, `cancel`                      | `cancel`  | no       | `cancelled`  |
+| this branch / 0.157.0                | `read-only`  | yes      | `apply_patch`                      | `allow_once`, `allow_for_session`, `decline`, `cancel`           | `decline` | no       | `end_turn`   |
+| this branch / 0.157.0                | `read-only`  | yes      | `echo hi > shell.txt` (escalation) | `allow_once`, `accept_execpolicy_amendment`, `decline`, `cancel` | `decline` | no       | `end_turn`   |
+| this branch + `ask-always` / 0.157.0 | `ask-always` | yes      | `echo hi > shell.txt`              | `allow_once`, `accept_execpolicy_amendment`, `decline`, `cancel` | `decline` | no       | `end_turn`   |
+| this branch + `ask-always` / 0.157.0 | `ask-always` | yes      | `apply_patch`                      | `allow_once`, `allow_for_session`, `decline`, `cancel`           | `decline` | no       | `end_turn`   |
+| this branch + `ask-always` / 0.157.0 | `ask-always` | yes      | `echo hi > shell.txt`              | `allow_once`, `accept_execpolicy_amendment`, `decline`, `cancel` | `cancel`  | no       | `cancelled`  |
+
+After `decline`, the model said the action was rejected and finished normally. `cancel` keeps interrupting the turn.
 
 ## The change
 
-`src/permissions/options.ts`:
-
-```ts
-export function commandDecisionOptions(
-  params: CommandParamsWithAvailableDecisions,
-): DecisionOption<CommandExecutionApprovalDecision>[] | undefined {
-  const parsed = parseAvailableCommandDecisions(params);
-  if (!parsed) return undefined;
-  const decisions = params.additionalPermissions ? parsed : withContinueOnReject(parsed);
-  // ... unchanged ...
-}
-
-/**
- * Codex accepts `decline` for command approvals, but does not advertise it under
- * the untrusted approval policy. Offer it before `cancel` so that a client can
- * reject one command without interrupting the turn.
- */
-function withContinueOnReject(
-  decisions: CommandExecutionApprovalDecision[],
-): CommandExecutionApprovalDecision[] {
-  if (decisions.includes('decline')) return decisions;
-  const cancelIndex = decisions.indexOf('cancel');
-  if (cancelIndex === -1) return decisions;
-  return [...decisions.slice(0, cancelIndex), 'decline', ...decisions.slice(cancelIndex)];
-}
-```
-
-```ts
-export function fileChangeDecisionOptions(): DecisionOption<FileChangeApprovalDecision>[] {
-  return [
-    decisionOption(ApprovalOptionId.AllowOnce, 'Yes, proceed', 'allow_once', 'accept'),
-    decisionOption(
-      ApprovalOptionId.AllowForSession,
-      "Yes, and don't ask again for these files",
-      'allow_always',
-      'acceptForSession',
-    ),
-    decisionOption(
-      ApprovalOptionId.Decline,
-      'No, continue without making these edits',
-      'reject_once',
-      'decline',
-    ),
-    decisionOption(
-      ApprovalOptionId.Cancel,
-      'No, and tell Codex what to do differently',
-      'reject_once',
-      'cancel',
-    ),
-  ];
-}
-```
-
-- `decline` is inserted only when Codex offers `cancel`, never for additional-permission requests (those keep accept plus cancel), and never twice. `permissionOptionOrder` keeps it after the allow options and before `cancel`.
-- Clients that pick the first `reject_once` option now get "continue without it". Clients that pick by `optionId` are unaffected. Selecting `cancel`, or an ACP `cancelled` outcome, still maps to `cancel`, exactly as today (#26's interrupt flow stays available).
-- `docs/permission-extension.md`:
-  - "Command and network decisions": say the adapter adds `decline` before `cancel` when Codex's list lacks it, and why.
-  - "File changes": add the `No, continue without making these edits` → `decline` row, and drop the sentence about the native prompt not advertising it.
-  - Keep "does not invent replacement choices" for everything else.
-
-### Variant B (opt-in), if the maintainers prefer it
-
-Same helpers, but gated. Read `_meta.codex.continueOnReject === true` from `session/new`, `session/load` and `session/resume` into the session state (like the `_meta.codex.strictMcpConfig` key proposed in open PR #548). Pass it to `commandDecisionOptions(params, continueOnReject)` and `fileChangeDecisionOptions(continueOnReject)` from `CodexApprovalHandler`. Document the key in `readme-dev.md` and `docs/permission-extension.md`. Without the flag, the behavior is byte-for-byte today's, so no existing test changes.
+- `src/permissions/capabilities.ts` (new): `clientSupportsContinueOnReject(clientCapabilities)` reads `clientCapabilities._meta.continueOnReject === true`, in the same style as the `terminal_output_delta` capability.
+- `src/permissions/options.ts`:
+  - `commandDecisionOptions(params, continueOnReject = false)`: with the flag, `withDeclineBeforeCancel` inserts `decline` right before `cancel` when the parsed decision set has `cancel` and no `decline`. It is not applied to the legacy additional-permissions fallback, which keeps accept and cancel only. The existing ordering and completeness checks run unchanged afterwards.
+  - `fileChangeDecisionOptions(continueOnReject = false)`: with the flag, adds `No, continue without making these edits` (`decline`) before `cancel`.
+- `src/permissions/CodexApprovalHandler.ts`: takes the flag as an optional constructor argument (default `false`) and passes it to both helpers. `src/CodexAcpServer.ts` passes `clientSupportsContinueOnReject(this.clientCapabilities)`.
+- `docs/permission-extension.md`: a new "Continue-on-reject capability" section (marked experimental), with cross-references from "Command and network decisions" and "File changes". "Does not invent replacement choices" stays true for everyone who doesn't opt in.
 
 ## Tests
 
-`src/__tests__/CodexACPAgent/approval-events.test.ts`:
+`approval-events.test.ts`, with the capability set on `initialize`:
 
-- Replace "supports the native accept-plus-cancel decision set without inventing decline" with "offers decline before cancel when Codex's decision set lacks it". `commandParams(["accept", "cancel"])` yields the option ids `[allow_once, decline, cancel]`, and selecting `decline` returns `{decision: "decline"}`. (Under variant B, keep the old test and add this one with the flag set.)
-- "does not add decline to additional-permission requests": the legacy `additionalPermissions` fallback still yields `[allow_once, cancel]`.
-- "keeps a single decline when Codex already advertises it": `["accept", "decline", "cancel"]` is unchanged.
-- The existing "maps ACP cancellation to cancel, not decline" test still passes.
-- File changes: "offers decline for file changes and maps it to decline", and the existing "distinguishes explicit file rejection from ACP cancellation" still returns `cancel` for `cancel` and for `cancelled`.
-- Snapshot updates in `data/approval-file-change.json` and any command snapshot that lists options.
+- offers `decline` before `cancel` when Codex's decision set lacks it, using the exact `untrusted` shape (`accept`, exec-policy amendment, `cancel`); selecting it returns `{decision: "decline"}`. The full permission request is pinned in `data/approval-command-continue-on-reject.json`.
+- an explicit `cancel` selection still returns `cancel`, and an ACP `cancelled` outcome still returns `cancel`, not `decline`.
+- keeps a single `decline` when Codex already advertises it; adds nothing to a decision set without `cancel`; adds nothing to the legacy additional-permissions fallback.
+- after a declined command, the prompt ends with `end_turn` once Codex completes the turn, and the adapter never calls `turn/interrupt`.
+- file changes: offers `decline` before `cancel` and maps it to `decline` (prompt ends with `end_turn`); `cancel` and ACP cancellation still return `cancel`.
 
-E2E (`acp-e2e-shell-approval.test.ts` and `acp-e2e-file-approval.test.ts`, read-only mode):
+Without the capability: a new test pins the native file-change options (`allow_once`, `allow_for_session`, `cancel`), and every existing test, including "supports the native accept-plus-cancel decision set without inventing decline", passes unchanged.
 
-- "continues the turn when a workspace write is declined": the responder selects `ApprovalOptionId.Decline`, then `expectEndTurn(response)`, and the file doesn't exist.
-- The same for an `apply_patch` edit.
+E2E (`RUN_E2E_TESTS=true`, `read-only` mode with the capability): `createAuthenticatedFixture` gains an optional `clientCapabilitiesMeta` argument. New cases check that declining an in-workspace file edit, and declining an in-workspace write command, both end with `end_turn` and leave the file unwritten.
 
-Validation to fill in before opening:
+Local results:
 
-- [ ] `npm run typecheck`
-- [ ] `npm test`
-- [ ] `npm run build`
-- [ ] `npm run test:e2e` for the new cases
-- [ ] Manual probe under the `untrusted` mode: answering `decline` leaves the file unwritten and ends the turn with `end_turn`. (Result on 1.13.1 and Codex 0.156.1: confirmed for `echo … > shell.txt` and `apply_patch` of `notes.txt`.)
+- [x] `npm run typecheck`
+- [x] `CI=true npm test`: 60 files passed, 789 tests passed, 34 skipped (the e2e suites)
+- [x] `npm run build`
+- [ ] `npm run bundle:all`: not run locally (no bun installed); the change adds no dependencies or build inputs
+- [ ] `npm run test:e2e`: not run (needs an OpenAI API key); the manual probe above covers the same cases
 
 ## Compatibility
 
-- Additive for clients that choose by `optionId`: one more `reject_once` option appears in some prompts.
-- Changes behavior for clients that answer with "the first `reject_once` option" or show only one reject button: a rejection there now continues the turn instead of cancelling it. Under variant B, nothing changes unless the client opts in.
-- Relies on the app-server accepting `decline` for both request types, which is part of the generated v2 types (`CommandExecutionApprovalDecision` and `FileChangeApprovalDecision`), and was verified live on 0.156.1.
+- No behavior change unless a client sets `continueOnReject: true`. Existing clients, including ones that answer with "the first `reject_once` option", see exactly today's options.
+- For clients that opt in, `decline` comes before `cancel`, so a client that answers with the first `reject_once` option gets "continue without it". Clients that choose by `optionId` can offer both.
+- Relies on the app-server accepting `decline` for command and file-change approvals even when it doesn't advertise it. Both decisions are part of the generated v2 types (`CommandExecutionApprovalDecision`, `FileChangeApprovalDecision`) and were verified live on Codex 0.156.1, 0.157.0 and 0.157.1.
+- If Codex later advertises `decline` itself, the capability becomes a no-op for those prompts (no duplicate is added).
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+<!-- END BODY -->

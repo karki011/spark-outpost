@@ -57,9 +57,8 @@ export function doingLine(line: string): string {
 }
 
 function finishLine(agent: CrewAgent): string {
-  if (agent.role === 'architect') return 'Plan ready!';
   if (agent.role === 'critic') return VERDICTS[agent.line] ?? 'Review done.';
-  if (agent.role === 'scout') return 'Scouting done.';
+  if (agent.role === 'scout') return 'Answered.';
   return 'Step done!';
 }
 

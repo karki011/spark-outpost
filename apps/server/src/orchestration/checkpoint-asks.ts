@@ -5,17 +5,13 @@ import { runEvents } from '../workflow/run-events.ts';
 import { activeTime, extendLimits, usedAndAllowed } from './budget.ts';
 import {
   acceptCard,
-  agentQuestion,
+  answerOrBuildCard,
   askCard,
   budgetCard,
   CheckpointTimeout,
   clarifiedRequest,
-  clarifyCard,
-  clarifyDepths,
-  depthFromClarify,
-  needsInputCard,
-  planCard,
   retryCard,
+  stuckCard,
   type CheckpointCard,
 } from './checkpoint.ts';
 import { autoContinueOption } from './checkpoint-policy.ts';
@@ -25,38 +21,26 @@ import {
   interpretationCard,
   interpretations,
 } from './clarify.ts';
-import { ruleDepth } from './depth.ts';
-import { escalate, ruleCriticPick } from './routing.ts';
-import { routeKey, save, type Session } from './session.ts';
+import { escalate } from './routing.ts';
+import { save, type Session } from './session.ts';
 import type { FlowAction, FlowEvent } from './transitions.ts';
 
-function lastPick(s: Session): AgentPick | null {
-  const builder = s.routes.get(routeKey('builder', s.flow.stepIndex));
-  return builder?.pick ?? null;
+type Ask = Extract<FlowAction, { type: 'ask' }>;
+
+function builderPick(s: Session): AgentPick | null {
+  return s.routes.get('builder')?.pick ?? null;
 }
 
-async function cardFor(
-  s: Session,
-  action: Extract<FlowAction, { type: 'ask' }>,
-): Promise<CheckpointCard> {
-  if (action.kind === 'clarify') {
-    const response = s.intake.outcome.status === 'answered' ? s.intake.outcome.response : null;
-    return clarifyCard(clarifyDepths(response, s.flow.depth), action.reason);
-  }
-  if (action.kind === 'plan') return planCard(s.plan, s.planVersion, action.reason);
-  if (action.kind === 'needs_input') {
-    const last = s.results.at(-1);
-    return needsInputCard(last?.name ?? 'The agent', action.blocked ?? false, last?.text ?? '');
-  }
+async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
+  if (action.kind === 'clarify') return answerOrBuildCard(action.reason);
   if (action.kind === 'retry') {
-    const previous = s.routes.get(routeKey('builder', s.flow.stepIndex));
-    const to =
-      action.suggestion === 'review'
-        ? ruleCriticPick(s.route)
-        : previous
-          ? escalate(s.route, previous).pick
-          : null;
-    return retryCard(action.suggestion, lastPick(s), to, action.reason);
+    const previous = s.routes.get('builder');
+    const to = previous ? escalate(s.route, previous).pick : null;
+    return retryCard(builderPick(s), to, action.reason);
+  }
+  if (action.kind === 'stuck') {
+    const name = s.results.findLast((result) => result.role === 'builder')?.name ?? 'The Builder';
+    return stuckCard(name, action.reason);
   }
   if (action.kind === 'accept') {
     const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
@@ -77,18 +61,9 @@ export async function budgetUsage(s: Session) {
   };
 }
 
-function withAutoOption(
-  s: Session,
-  action: Extract<FlowAction, { type: 'ask' }>,
-  card: CheckpointCard,
-): CheckpointCard {
-  const text = action.kind === 'needs_input' ? (s.results.at(-1)?.text ?? '') : '';
-  const autoOption = autoContinueOption({
-    kind: action.kind,
-    fromJev: action.fromJev,
-    agentAsked: agentQuestion(text) !== null,
-  });
-  return { ...card, payload: { ...card.payload, autoOption } };
+function withAutoOption(action: Ask, card: CheckpointCard): CheckpointCard {
+  const autoOption = autoContinueOption(action.kind, action.interpret ?? false);
+  return autoOption ? { ...card, payload: { ...card.payload, autoOption } } : card;
 }
 
 export function intakeResponse(s: Session) {
@@ -107,38 +82,37 @@ export async function assume(s: Session, interpretation: string): Promise<void> 
   await s.append(runEvents.stepFinished(note));
 }
 
-async function askInterpretation(
-  s: Session,
-  action: Extract<FlowAction, { type: 'ask' }>,
-): Promise<FlowEvent> {
+function clarify(s: Session, answer: string): void {
+  s.input = {
+    ...s.input,
+    userRequest: clarifiedRequest(s.input.userRequest, answer),
+    prompt: clarifiedRequest(s.input.prompt, answer),
+  };
+}
+
+async function askInterpretation(s: Session, action: Ask): Promise<FlowEvent> {
   const card = interpretationCard(interpretations(intakeResponse(s)), action.reason);
-  const answer = await askCard(s, withAutoOption(s, action, card));
+  const answer = await askCard(s, withAutoOption(action, card));
   if (answer.type === 'stopped') return { type: 'stopped' };
   if (answer.type === 'timeout') throw new CheckpointTimeout();
   const picked = chosenInterpretation(card, answer.optionId, answer.note);
-  if (picked.type === 'stopped') return { type: 'clarified', depth: null };
+  if (picked.type === 'stopped') return { type: 'clarified', answer: null };
   if (picked.type === 'assumed') await assume(s, picked.text);
   else clarify(s, picked.text);
-  return { type: 'clarified', depth: s.flow.depth };
+  return { type: 'clarified', answer: false };
 }
 
-export async function ask(
-  s: Session,
-  action: Extract<FlowAction, { type: 'ask' }>,
-): Promise<FlowEvent> {
+export async function ask(s: Session, action: Ask): Promise<FlowEvent> {
   if (action.interpret) return askInterpretation(s, action);
-  const card = withAutoOption(s, action, await cardFor(s, action));
+  const card = withAutoOption(action, await cardFor(s, action));
   const answer = await askCard(s, card);
   if (answer.type === 'stopped') return { type: 'stopped' };
   if (answer.type === 'timeout') throw new CheckpointTimeout();
-  if (action.kind === 'clarify') {
-    const rules = ruleDepth(s.input.mode ?? 'chat', s.flow.risk);
-    const depth = depthFromClarify(card, answer.optionId, rules);
-    if (answer.optionId === CHECKPOINT_OPTION.answer && answer.note) clarify(s, answer.note);
-    if (depth) await save(s, { depthSource: depthSourceOf(answer.optionId) });
-    return { type: 'clarified', depth };
+  if (action.answerOrBuild) {
+    if (answer.optionId === CHECKPOINT_OPTION.stop) return { type: 'clarified', answer: null };
+    return { type: 'clarified', answer: answer.optionId === CHECKPOINT_OPTION.justAnswer };
   }
-  if (action.kind === 'budget' && answer.optionId === 'continue') {
+  if (action.kind === 'budget' && answer.optionId === CHECKPOINT_OPTION.continueBudget) {
     s.limits = extendLimits(s.limits, await budgetUsage(s), s.baseLimits);
     s.budgetHit = null;
     await save(s, {
@@ -149,15 +123,4 @@ export async function ask(
     });
   }
   return { type: 'answered', kind: action.kind, optionId: answer.optionId, note: answer.note };
-}
-
-function depthSourceOf(optionId: string): 'rules' | 'user' {
-  const byRules =
-    optionId === CHECKPOINT_OPTION.clarifyRules || optionId === CHECKPOINT_OPTION.answer;
-  return byRules ? 'rules' : 'user';
-}
-
-function clarify(s: Session, answer: string): void {
-  const request = clarifiedRequest(s.input.userRequest, answer);
-  s.input = { ...s.input, userRequest: request, prompt: clarifiedRequest(s.input.prompt, answer) };
 }

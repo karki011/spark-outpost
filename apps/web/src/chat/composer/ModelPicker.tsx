@@ -42,7 +42,6 @@ interface ModelPickerProps {
   settings: ChatSettings;
   providers: ProviderSetup[];
   hasRepos?: boolean;
-  jevConnected?: boolean;
   orchestration?: Orchestration | null;
 }
 
@@ -55,7 +54,6 @@ export function ModelPicker({
   settings,
   providers,
   hasRepos = false,
-  jevConnected = false,
   orchestration = null,
 }: ModelPickerProps) {
   const queryClient = useQueryClient();
@@ -108,11 +106,11 @@ export function ModelPicker({
   const efforts = selectableEfforts(capabilities);
   const permission = setup?.permissions.find((choice) => choice.id === settings.permission);
   const pinnedName = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
-  const auto = jevConnected && settings.routing === 'auto';
+  const auto = settings.routing === 'auto';
   const thisTurn = autoThisTurn(orchestration);
   const modelName = auto ? (thisTurn ? `Auto · ${thisTurn} this turn` : 'Auto') : pinnedName;
-  const would = auto ? null : autoWouldHaveUsed(orchestration);
-  const hint = would ? `Auto would have used ${would}` : null;
+  const would = autoWouldHaveUsed(orchestration);
+  const hint = would ? `Jev would have used ${would}` : null;
 
   const effort = efforts.find((option) => option.id === settings.effort);
 
@@ -130,7 +128,7 @@ export function ModelPicker({
       update.mutate({ effort: match.id });
       onNotice?.(`Effort set to ${match.label}.`);
     } else if (match) {
-      update.mutate(jevConnected ? { model: match.id, routing: 'pinned' } : { model: match.id });
+      update.mutate({ model: match.id, routing: 'pinned' });
       onNotice?.(`Model set to ${shortLabel(match.label)}.`);
     } else {
       if (wanted)
@@ -246,13 +244,9 @@ export function ModelPicker({
                         capabilities={capabilities}
                         loading={queryFor(provider)?.isFetching ?? false}
                         selected={model?.id ?? null}
-                        onSelect={(next) =>
-                          update.mutate(
-                            jevConnected ? { model: next, routing: 'pinned' } : { model: next },
-                          )
-                        }
+                        onSelect={(next) => update.mutate({ model: next, routing: 'pinned' })}
                         routing={settings.routing ?? 'pinned'}
-                        onAuto={jevConnected ? () => update.mutate({ routing: 'auto' }) : null}
+                        onAuto={() => update.mutate({ routing: 'auto' })}
                         hint={hint}
                       />
                     )}

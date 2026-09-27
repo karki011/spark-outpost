@@ -18,7 +18,7 @@ function AutoOption({ checked, onSelect }: { checked: boolean; onSelect: () => v
     <button type="button" className="mopt" role="radio" aria-checked={checked} onClick={onSelect}>
       <span>
         <b>Auto</b>
-        <small>Jev picks the model for each agent and turn.</small>
+        <small>Rules pick the size: smaller for trivial edits, top for destructive work.</small>
       </span>
       <Tick />
     </button>

@@ -2,6 +2,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
   CREW_REQUEST,
+  allowEdit,
   card,
   crewChat,
   crewRepo,
@@ -42,15 +43,15 @@ async function scrollThread(page: Page, to: 'top' | 'bottom') {
     .evaluate((element, end) => (element.scrollTop = end === 'top' ? 0 : element.scrollHeight), to);
 }
 
-async function planWaiting(page: Page) {
+async function editWaiting(page: Page) {
   await crewChat(page, repo, 'Balanced');
   await send(page, `${CREW_REQUEST} #build #crew`);
-  const plan = card(page, /Approve the plan/);
-  await expect(plan).toBeVisible({ timeout: 30_000 });
+  const edit = card(page, /Change a file\?/);
+  await expect(edit).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Agent TV' }).click();
   await expect(tvOf(page)).toBeVisible();
   await settled(page);
-  return plan;
+  return edit;
 }
 
 async function settled(page: Page) {
@@ -69,35 +70,33 @@ test('clicking a blob bounces it and shows its status, Go to scrolls, Esc steps 
   page,
 }) => {
   test.setTimeout(60_000);
-  const plan = await planWaiting(page);
+  const edit = await editWaiting(page);
   const tv = tvOf(page);
 
-  await blob(page, 'architect').click();
+  await blob(page, 'builder').click();
   const bubble = details(page);
   await expect(bubble).toBeVisible();
-  await expect(bubble).toContainText('Architect');
-  await expect(bubble).toContainText('Done');
-  await expect(bubble).toContainText('Opus 5.5 · high');
-  await expect(bubble).toContainText('tokens');
-  await expect(blob(page, 'architect')).toHaveAttribute('aria-expanded', 'true');
+  await expect(bubble).toContainText('Builder');
+  await expect(bubble).toContainText('Sonnet 5 · high');
+  await expect(blob(page, 'builder')).toHaveAttribute('aria-expanded', 'true');
 
-  await scrollThread(page, 'bottom');
+  await scrollThread(page, 'top');
   await bubble.getByRole('button', { name: 'Go to' }).click();
   await expect(bubble).toBeHidden();
-  await expect(await blockOf(page, 'architect')).toBeInViewport();
+  await expect(await blockOf(page, 'builder')).toBeInViewport();
 
   await blob(page, 'jev').click();
-  await expect(bubble).toContainText(/Dispatcher(Picked|Sent \w+:|Checked:|Split:) /);
+  await expect(bubble).toContainText(/Dispatcher(Picked|Sent \w+:|Noted:) /);
   await expect(bubble).toContainText('router');
   await page.keyboard.press('Escape');
   await expect(bubble).toBeHidden();
   await expect(tv).toBeVisible();
 
-  const ask = tv.getByRole('button', { name: /Needs you: approve the plan/ });
+  const ask = tv.getByRole('button', { name: /Needs you: change notes\.txt\?/ });
   await expect(ask).toBeVisible();
   await scrollThread(page, 'top');
   await ask.click();
-  await expect(plan).toBeInViewport();
+  await expect(edit).toBeInViewport();
 
   await page.keyboard.press('Escape');
   await expect(tv).toBeHidden();
@@ -108,45 +107,45 @@ test('keyboard: Tab reaches the blobs, Enter opens the bubble, Enter again goes 
   page,
 }) => {
   test.setTimeout(60_000);
-  await planWaiting(page);
-  const architect = blob(page, 'architect');
-  await architect.focus();
+  await editWaiting(page);
+  const builder = blob(page, 'builder');
+  await builder.focus();
   await page.keyboard.press('Shift+Tab');
   await expect(blob(page, 'jev')).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(architect).toBeFocused();
+  await expect(builder).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(details(page)).toBeVisible();
-  await scrollThread(page, 'bottom');
+  await scrollThread(page, 'top');
   await page.keyboard.press('Enter');
-  await expect(await blockOf(page, 'architect')).toBeInViewport();
+  await expect(await blockOf(page, 'builder')).toBeInViewport();
 });
 
 test('a dispatch sends a packet and a line of chatter, and a waiting agent asks for you', async ({
   page,
 }) => {
   test.setTimeout(60_000);
-  const plan = await planWaiting(page);
+  await editWaiting(page);
   const tv = tvOf(page);
-  await shot(page, 'plan');
-  await plan.getByRole('button', { name: 'Approve' }).click();
+  await allowEdit(page);
 
   await expect(tv.locator('.tv-pk.out')).not.toHaveCount(0, { timeout: 15_000 });
-  await expect(tv.locator('.tv-bub.tv-chat')).toHaveText(/^Over to .+\.$/, { timeout: 15_000 });
+  await expect(tv.locator('.tv-bub.tv-chat')).toHaveText(/^(Over to .+|Looks good to me)\.$/, {
+    timeout: 15_000,
+  });
   await expect(tv.locator('.tv-pk.out')).toHaveCount(0, { timeout: 5_000 });
 
-  const ask = tv.getByRole('button', { name: /Needs you: change notes\.txt\?/ });
+  const ask = tv.getByRole('button', { name: /Needs you: keep these changes\?/ });
   await expect(ask).toBeVisible({ timeout: 30_000 });
-  await expect(blob(page, 'builder').locator('.tv-ring')).toBeVisible();
   await shot(page, 'waiting');
   await scrollThread(page, 'top');
   await ask.click();
-  await expect(card(page, /Change a file\?/)).toBeInViewport();
+  await expect(card(page, /Keep these changes\?/)).toBeInViewport();
 });
 
 test('the header controls explain themselves on keyboard focus', async ({ page }) => {
   test.setTimeout(60_000);
-  await planWaiting(page);
+  await editWaiting(page);
   const tv = tvOf(page);
   const tooltip = page.getByRole('tooltip');
   await tv.getByRole('button', { name: 'Watch mode' }).focus();
@@ -172,11 +171,11 @@ test('the header controls explain themselves on keyboard focus', async ({ page }
 
 test('muted chatter stays quiet, and the choice is remembered', async ({ page }) => {
   test.setTimeout(60_000);
-  const plan = await planWaiting(page);
+  await editWaiting(page);
   const mute = tvOf(page).getByRole('button', { name: 'Mute speech bubbles' });
   await mute.click();
   await expect(mute).toHaveAttribute('aria-pressed', 'true');
-  await plan.getByRole('button', { name: 'Approve' }).click();
+  await allowEdit(page);
   await expect(tvOf(page).locator('.tv-pk.out')).not.toHaveCount(0, { timeout: 15_000 });
   await expect(tvOf(page).locator('.tv-bub.tv-chat')).toHaveCount(0);
   const saved = await page.evaluate(() => localStorage.getItem('spark-outpost.agent-tv'));
@@ -188,7 +187,7 @@ test('with reduced motion there are no packets or bounces, only still faces and 
 }) => {
   test.setTimeout(60_000);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  const plan = await planWaiting(page);
+  await editWaiting(page);
   const tv = tvOf(page);
   await expect(tv).toHaveClass(/\bstill\b/);
   const bob = await blob(page, 'jev')
@@ -196,12 +195,14 @@ test('with reduced motion there are no packets or bounces, only still faces and 
     .evaluate((element) => getComputedStyle(element).animationName);
   expect(bob).toBe('none');
 
-  await plan.getByRole('button', { name: 'Approve' }).click();
-  await expect(tv.locator('.tv-bub.tv-chat')).toHaveText(/^Over to .+\.$/, { timeout: 15_000 });
+  await allowEdit(page);
+  await expect(tv.locator('.tv-bub.tv-chat')).toHaveText(/^(Over to .+|Looks good to me)\.$/, {
+    timeout: 15_000,
+  });
   await expect(tv.locator('.tv-pk')).toHaveCount(0);
-  await blob(page, 'architect').click();
+  await blob(page, 'builder').click();
   await expect(details(page)).toBeVisible();
-  const animations = await blob(page, 'architect')
+  const animations = await blob(page, 'builder')
     .locator('.tv-sq')
     .evaluate((element) => element.getAnimations().length);
   expect(animations).toBe(0);
@@ -209,7 +210,7 @@ test('with reduced motion there are no packets or bounces, only still faces and 
 
 test('sizes and watch mode grow the stage, and the size is remembered', async ({ page }) => {
   test.setTimeout(60_000);
-  await planWaiting(page);
+  await editWaiting(page);
   const tv = tvOf(page);
   const stageWidth = () =>
     tv.locator('.tv-stage').evaluate((element) => (element as HTMLElement).offsetWidth);
@@ -237,7 +238,7 @@ test('sizes and watch mode grow the stage, and the size is remembered', async ({
 
 test('dragging moves the TV and the position survives a reload', async ({ page }) => {
   test.setTimeout(60_000);
-  await planWaiting(page);
+  await editWaiting(page);
   const header = tvOf(page).locator('.tv-h');
   const start = (await header.boundingBox())!;
   await page.mouse.move(start.x + 40, start.y + 10);
@@ -266,17 +267,17 @@ test('recording of a full run with handoffs', async ({ browser }) => {
     recordVideo: { dir: SHOTS, size },
   });
   const page = await context.newPage();
-  const plan = await planWaiting(page);
+  await crewChat(page, repo, 'Balanced');
+  await page.getByRole('button', { name: 'Agent TV' }).click();
   await tvOf(page).getByRole('radio', { name: 'M' }).click();
-  await shot(page, 'plan');
-  await blob(page, 'jev').click();
-  await shot(page, 'jev-bubble');
-  await page.keyboard.press('Escape');
-  await plan.getByRole('button', { name: 'Approve' }).click();
+  await send(page, `${CREW_REQUEST} #build #crew`);
   await expect(tvOf(page).locator('.tv-pk.out')).not.toHaveCount(0, { timeout: 15_000 });
   await page.waitForTimeout(350);
   await page.screenshot({ path: path.join(SHOTS, 'tv-handoff.png') });
-  for (let step = 1; step <= 3; step += 1) {
+  await blob(page, 'jev').click();
+  await shot(page, 'jev-bubble');
+  await page.keyboard.press('Escape');
+  for (let step = 1; step <= 1; step += 1) {
     const edit = card(page, /Change a file\?/).filter({
       has: page.getByRole('button', { name: 'Deny' }),
     });

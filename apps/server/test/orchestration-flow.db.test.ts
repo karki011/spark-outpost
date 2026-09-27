@@ -72,13 +72,14 @@ async function activeBuilder(runId: string) {
 }
 
 describe('repair and escalation', () => {
-  it('retries one tier up at most twice, then asks you', async () => {
-    script.transition = () => ({ status: 'needs_more_work', next: 'retry_up' });
+  it('retries a failed Builder one tier up twice by rule, then stops and reports by default', async () => {
     await start();
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'hands-off');
+    script.scenario = TRIVIAL;
+    const failing = withText(TRIVIAL, `${TRIVIAL.text} #failstep 1`);
+    const { conversationId, runId } = await startScenario(t, root, failing, 'hands-off');
     const answers: Answerer = (approval) =>
       approval.kind === 'retry'
-        ? { optionId: CHECKPOINT_OPTION.finish }
+        ? { optionId: CHECKPOINT_OPTION.stopReport }
         : answerEverything(approval);
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
     expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
@@ -88,100 +89,55 @@ describe('repair and escalation', () => {
     ]);
     expect(orchestration.retries).toBe(2);
     expect(asked.map((approval) => approval.kind)).toEqual(['retry']);
-    expect(asked[0]!.payload.checkpoint?.reason).toBe('Stopped after 2 retries.');
-    expect(orchestration.status).toBe('succeeded');
+    expect(asked[0]!.payload.checkpoint).toMatchObject({
+      reason: 'Stopped after 2 retries.',
+      autoOption: CHECKPOINT_OPTION.stopReport,
+    });
+    expect(orchestration.status).toBe('failed');
   }, 60_000);
 
-  it('confirms a retry under Balanced when Jev is below 0.9', async () => {
-    let judged = 0;
-    script.transition = () =>
-      judged++ === 0
-        ? { status: 'needs_more_work', next: 'retry_up', confidence: 0.8 }
-        : { status: 'done', next: 'finish' };
+  it('recovers from one failure by retrying one tier up without asking', async () => {
     await start();
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'balanced');
+    script.scenario = TRIVIAL;
+    const flaky = withText(TRIVIAL, `${TRIVIAL.text} #failonce 1`);
+    const { conversationId, runId } = await startScenario(t, root, flaky, 'balanced');
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
-    expect(asked.map((approval) => approval.kind)).toEqual(['edit', 'retry', 'edit', 'accept']);
-    expect(asked[1]!.payload.checkpoint).toMatchObject({
-      from: { model: 'haiku' },
-      to: { model: 'sonnet' },
-    });
+    expect(asked.map((approval) => approval.kind)).toEqual(['edit', 'accept']);
     expect(orchestration.crew.map((member) => member.model)).toEqual(['haiku', 'sonnet']);
+    expect(orchestration.status).toBe('succeeded');
   }, 60_000);
 });
 
-describe('when Jev says the agent needs you', () => {
-  it('finishes without a checkpoint when Jev is unsure after a successful Builder', async () => {
-    script.transition = () => ({ status: 'needs_you', next: 'finish', confidence: 0.64 });
+describe('the loop guard', () => {
+  it('stops a Builder that repeats itself and asks at Balanced; Continue resumes with a note', async () => {
     await start();
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'hands-off');
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
-    expect(asked).toEqual([]);
-    expect(orchestration).toMatchObject({ status: 'succeeded', checkpoints: [] });
-    expect(orchestration.crew.map((member) => member.status)).toEqual(['succeeded']);
-    const transition = orchestration.decisions.find((decision) => decision.kind === 'transition');
-    expect(transition).toMatchObject({
-      applied: 'rules',
-      summary: 'done · next finish',
-      answer: { status: 'done', next: 'finish', quality: null, jev: { status: 'needs_you' } },
-    });
-    expect(orchestration.crew[0]!.quality).toBeNull();
-  }, 60_000);
-
-  it('asks for your input when Jev is sure, and sends your answer to the Builder', async () => {
-    let judged = 0;
-    script.transition = () =>
-      judged++ === 0
-        ? { status: 'needs_you', next: 'finish', confidence: 0.95 }
-        : { status: 'done', next: 'finish' };
-    await start();
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'hands-off');
+    script.scenario = TRIVIAL;
+    const looping = withText(TRIVIAL, `${TRIVIAL.text} #repeat 8`);
+    const { conversationId, runId } = await startScenario(t, root, looping, 'balanced');
     const answers: Answerer = (approval) =>
-      approval.kind === 'clarify'
-        ? { optionId: CHECKPOINT_OPTION.answer, note: 'Use the staging bucket' }
+      approval.kind === 'stuck'
+        ? { optionId: CHECKPOINT_OPTION.continueStuck }
         : answerEverything(approval);
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
-    expect(asked.map((approval) => approval.kind)).toEqual(['clarify']);
-    expect(asked[0]).toMatchObject({ title: 'Bolt needs your input' });
-    expect(asked[0]!.payload.checkpoint).toMatchObject({ agent: 'Bolt' });
-    expect(asked[0]!.payload.checkpoint?.reason).toMatch(/^Bolt is waiting for your input/);
-    expect(orchestration.status).toBe('succeeded');
-    expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
-      ['builder', 'haiku'],
-      ['builder', 'haiku'],
-    ]);
-    const answered = await t.db.query<{ prompt: string }>('SELECT prompt FROM runs WHERE id = $1', [
-      orchestration.crew[1]!.runId,
-    ]);
-    expect(answered.rows[0]!.prompt).toContain('Use the staging bucket');
+    expect(asked.map((approval) => approval.kind)).toEqual(['stuck', 'edit', 'accept']);
+    expect(asked[0]!.payload.checkpoint?.reason).toContain('repeated `Read `src/dates.ts``');
+    expect(orchestration.crew.map((member) => member.status)).toEqual(['cancelled', 'succeeded']);
+    expect(await readFile(join(root, 'notes.txt'), 'utf8')).toContain('tried another way');
+  }, 60_000);
+
+  it('stops with a report at Full auto', async () => {
+    await start();
+    script.scenario = TRIVIAL;
+    const looping = withText(TRIVIAL, `${TRIVIAL.text} #repeat 8`);
+    const { conversationId, runId } = await startScenario(t, root, looping, 'full-auto');
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    expect(asked).toEqual([]);
+    expect(orchestration.status).toBe('failed');
+    expect(orchestration.error).toMatch(/^Stopped: Bolt repeated/);
   }, 60_000);
 });
 
 describe('checkpoints', () => {
-  it('sends an edited plan back to the Architect, then builds from the approved plan', async () => {
-    await start();
-    const { conversationId, runId } = await startScenario(t, root, COMPLEX, 'balanced');
-    let plans = 0;
-    const answers: Answerer = (approval) =>
-      approval.kind === 'plan' && plans++ === 0
-        ? { optionId: CHECKPOINT_OPTION.editPlan, note: 'Keep the divider untouched' }
-        : answerEverything(approval);
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
-    expect(orchestration.crew.map((member) => member.role).slice(0, 3)).toEqual([
-      'architect',
-      'architect',
-      'builder',
-    ]);
-    const plansAsked = asked.filter((approval) => approval.kind === 'plan');
-    expect(plansAsked).toHaveLength(2);
-    const architects = await t.db.query<{ prompt: string }>(
-      `SELECT prompt FROM runs WHERE parent_run_id = $1 AND role = 'architect' ORDER BY created_at`,
-      [runId],
-    );
-    expect(architects.rows[1]!.prompt).toContain('Keep the divider untouched');
-    expect(architects.rows[1]!.prompt).toContain('Your previous plan');
-  }, 60_000);
-
   it('reverts the whole orchestration from the keep, fix or revert card', async () => {
     await start();
     const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'balanced');
@@ -193,6 +149,21 @@ describe('checkpoints', () => {
     expect(orchestration.status).toBe('succeeded');
     expect(await readFile(join(root, 'notes.txt'), 'utf8')).toBe('start\n');
     expect((await getRun(t.db, runId))?.revertedAt).not.toBeNull();
+  }, 60_000);
+
+  it('sends a fix request back to the same Builder from the keep card', async () => {
+    await start();
+    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'balanced');
+    let fixed = false;
+    const answers: Answerer = (approval) => {
+      if (approval.kind !== 'accept') return answerEverything(approval);
+      if (fixed) return { optionId: CHECKPOINT_OPTION.keep };
+      fixed = true;
+      return { optionId: CHECKPOINT_OPTION.fix, note: 'Use UTC' };
+    };
+    const { orchestration } = await driveToEnd(t, conversationId, runId, answers);
+    expect(orchestration.crew.map((member) => member.name)).toEqual(['Bolt', 'Bolt']);
+    expect(await readFile(join(root, 'notes.txt'), 'utf8')).toContain('fixed as asked');
   }, 60_000);
 
   it('stops at the time budget and asks before continuing', async () => {
@@ -213,24 +184,20 @@ describe('checkpoints', () => {
 });
 
 describe('routing', () => {
-  it('uses the pinned model for workers and records what Auto would have used', async () => {
+  it('uses the pinned model and records the tier Jev would have used', async () => {
     await start();
-    const pinned = { ...COMPLEX };
-    const { conversationId, runId } = await startScenario(t, root, pinned, 'hands-off', 'pinned');
+    const { conversationId, runId } = await startScenario(t, root, COMPLEX, 'hands-off', 'pinned');
     const { orchestration } = await driveToEnd(t, conversationId, runId);
-    const [architect, builder] = orchestration.crew;
-    expect(architect).toMatchObject({
-      model: 'sonnet',
-      effort: 'high',
-      routedBy: 'pinned',
-      autoWouldUse: { model: 'opus[1m]', effort: 'high' },
-    });
-    expect(builder).toMatchObject({
-      model: 'sonnet',
-      routedBy: 'pinned',
-      autoWouldUse: { model: 'sonnet' },
-    });
-    expect(orchestration.crew.at(-1)).toMatchObject({ role: 'critic', provider: 'codex' });
+    expect(orchestration.crew).toEqual([
+      expect.objectContaining({
+        role: 'builder',
+        model: 'sonnet',
+        routedBy: 'pinned',
+        autoWouldUse: expect.objectContaining({ model: 'opus[1m]' }),
+      }),
+    ]);
+    const route = orchestration.decisions.find((decision) => decision.kind === 'route');
+    expect(route?.summary).toContain('Jev would have used Opus 5.5');
   }, 60_000);
 
   it('falls back to the rules without Jev: a Do request runs one Builder', async () => {
@@ -242,9 +209,7 @@ describe('routing', () => {
     expect(orchestration.totals.jevCalls).toBe(0);
     expect(orchestration.decisions.map((decision) => [decision.kind, decision.applied])).toEqual([
       ['intake', 'rules'],
-      ['build_style', 'rules'],
       ['route', 'rules'],
-      ['transition', 'rules'],
     ]);
   }, 60_000);
 });
@@ -260,7 +225,7 @@ describe('stop and recovery', () => {
     const { orchestration } = await driveToEnd(t, conversationId, runId);
     expect(orchestration.status).toBe('cancelled');
     expect(await getRun(t.db, builder.runId)).toMatchObject({ status: 'cancelled' });
-    expect(orchestration.crew.map((member) => member.role)).toEqual(['architect', 'builder']);
+    expect(orchestration.crew.map((member) => member.role)).toEqual(['builder']);
   }, 60_000);
 
   it('marks the orchestration and its active child outcome unknown after a crash', async () => {
@@ -288,13 +253,15 @@ describe('stop and recovery', () => {
 
   it('expires a pending checkpoint when the worker crashes while waiting', async () => {
     await start();
-    const { conversationId, runId } = await startScenario(t, root, COMPLEX, 'balanced');
-    const plan = await pending(conversationId, 'plan');
+    const vague = { ...TRIVIAL, text: 'Make the reports better', vague: 0.95 };
+    script.scenario = vague;
+    const { conversationId, runId } = await startScenario(t, root, vague, 'balanced');
+    const keep = await pending(conversationId, 'clarify');
     await t.db.query(`UPDATE jobs SET lease_expires_at = now() - interval '1 second'`);
     await recoverExpiredLeases(t.db);
     const view = await loadOrchestration(t.db, runId);
     expect(view?.status).toBe('outcome_unknown');
-    expect(view?.checkpoints.find((checkpoint) => checkpoint.id === plan.id)).toMatchObject({
+    expect(view?.checkpoints.find((checkpoint) => checkpoint.id === keep.id)).toMatchObject({
       status: 'expired',
       decidedBy: 'recovery',
     });

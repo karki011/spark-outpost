@@ -1,18 +1,7 @@
-import type {
-  AgentPick,
-  Gate,
-  InvolvementLevel,
-  ModelRouting,
-  Risk,
-  RouteSource,
-} from '@spark-outpost/contracts';
+import type { AgentPick, ModelRouting, RouteSource, RouteTier } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
-import { frontierGate, gate } from '../advisor/gate.ts';
-import { cardFor } from '../model-cards/cards.ts';
-import { selectableModels, type SystemOneResponse } from '../advisor/intake-questions.ts';
-import type { RoutePick } from './jev-questions.ts';
+import { selectableModels, tierOptions } from '../advisor/intake-questions.ts';
 import {
-  effortRank,
   escalatedEffort,
   highEffort,
   modelTier,
@@ -26,20 +15,18 @@ export interface RouteContext {
   routing: ModelRouting;
   chat: AgentPick;
   candidates: readonly AdvisorCandidate[];
-  risk: Risk;
-  level: InvolvementLevel;
 }
 
 export interface MemberRoute {
   pick: AgentPick;
   routedBy: RouteSource;
+  rule: string;
   autoWouldUse: AgentPick | null;
-  gate: Gate | null;
 }
 
-export interface JevPick {
-  pick: AgentPick;
-  confidence: number | null;
+export interface RouteFacts {
+  trivial: boolean;
+  destructive: boolean;
 }
 
 export function candidateFor(
@@ -64,93 +51,6 @@ export function criticProvider(context: RouteContext): string {
   return other?.provider ?? context.chat.provider;
 }
 
-export function pickFromRoute(
-  provider: string,
-  candidate: AdvisorCandidate,
-  route: RoutePick,
-): JevPick {
-  return {
-    pick: {
-      provider,
-      model: route.model?.id ?? null,
-      modelLabel: route.model?.label ?? null,
-      effort: route.effort,
-    },
-    confidence: route.confidence,
-  };
-}
-
-export function intakePickFor(
-  context: RouteContext,
-  provider: string,
-  response: SystemOneResponse | null,
-): JevPick | null {
-  const candidate = candidateFor(context, provider);
-  if (!candidate || !response) return null;
-  const models = selectableModels(candidate);
-  const modelAnswer = response.answers[`model_${provider}`];
-  const effortAnswer = response.answers[`effort_${provider}`];
-  const model =
-    modelAnswer?.type === 'choice'
-      ? models.find((option) => option.id === modelAnswer.choice)
-      : models.length === 1
-        ? models[0]
-        : undefined;
-  if (!model) return null;
-  const index = effortAnswer?.type === 'score' ? Math.round(effortAnswer.score) : -1;
-  const effort = candidate.efforts[index]?.id ?? context.chat.effort;
-  return {
-    pick: { provider, model: model.id, modelLabel: model.label, effort },
-    confidence: modelAnswer?.type === 'choice' ? modelAnswer.confidence : null,
-  };
-}
-
-function pickModel(pick: AgentPick) {
-  return { id: pick.model ?? '', label: pick.modelLabel ?? '' };
-}
-
-function tierOf(pick: AgentPick): number | null {
-  return modelTier(pickModel(pick), pick.provider);
-}
-
-function outputPrice(pick: AgentPick): number | null {
-  return cardFor(pickModel(pick), pick.provider)?.price?.outputPerMillion ?? null;
-}
-
-export function isFrontierPick(pick: AgentPick): boolean {
-  return cardFor(pickModel(pick), pick.provider)?.tier === 'frontier';
-}
-
-export function notPricier(pick: AgentPick, baseline: AgentPick): boolean {
-  if (pick.provider !== baseline.provider) return false;
-  const tier = tierOf(pick);
-  const baseTier = tierOf(baseline);
-  if (tier === null || baseTier === null || tier > baseTier) return false;
-  const price = outputPrice(pick);
-  const basePrice = outputPrice(baseline);
-  if (tier === baseTier && price !== null && basePrice !== null && price > basePrice) return false;
-  return effortRank(pick.effort) <= effortRank(baseline.effort);
-}
-
-export function routeGate(
-  context: RouteContext,
-  jev: JevPick,
-  baseline: AgentPick,
-  readsOnly = false,
-): Gate {
-  const confidence = { confidence: jev.confidence ?? 1 };
-  if (isFrontierPick(jev.pick)) return frontierGate(confidence, context.risk, context.level);
-  const downgrade = notPricier(jev.pick, baseline);
-  return gate(confidence, context.risk, context.level, {
-    downgrade,
-    ...(readsOnly ? { readsOnly } : {}),
-  });
-}
-
-function gated(context: RouteContext, jev: JevPick, baseline: AgentPick): Gate {
-  return routeGate(context, jev, baseline);
-}
-
 export function chatPick(context: RouteContext): AgentPick {
   const candidate = candidateFor(context, context.chat.provider);
   return {
@@ -159,24 +59,48 @@ export function chatPick(context: RouteContext): AgentPick {
   };
 }
 
-export function routeWorker(context: RouteContext, jev: JevPick | null): MemberRoute {
-  const pinned = chatPick(context);
-  if (context.routing === 'pinned') {
-    return { pick: pinned, routedBy: 'pinned', autoWouldUse: jev?.pick ?? null, gate: null };
-  }
-  if (!jev) return { pick: pinned, routedBy: 'rules', autoWouldUse: null, gate: null };
-  const decision = gated(context, jev, pinned);
-  return decision.decision === 'act'
-    ? { pick: jev.pick, routedBy: 'jev', autoWouldUse: jev.pick, gate: decision }
-    : { pick: pinned, routedBy: 'rules', autoWouldUse: jev.pick, gate: decision };
+function withModel(pick: AgentPick, model: { id: string; label: string } | null): AgentPick {
+  return model ? { ...pick, model: model.id, modelLabel: model.label } : pick;
 }
 
-export function topTierPick(context: RouteContext, provider: string): AgentPick {
-  const candidate = candidateFor(context, provider);
-  const top = candidate ? topTier(selectableModels(candidate), provider) : null;
-  const effort = highEffort(effortIds(candidate)) ?? 'high';
-  if (!top) return { ...chatPick(context), provider, effort };
-  return { provider, model: top.id, modelLabel: top.label, effort };
+export function jevTierPick(context: RouteContext, tier: RouteTier | null): AgentPick | null {
+  if (!tier) return null;
+  const candidate = candidateFor(context, context.chat.provider);
+  const option = candidate ? tierOptions(candidate).find((entry) => entry.tier === tier) : null;
+  return option ? withModel(chatPick(context), option.model) : null;
+}
+
+export function routeBuilder(
+  context: RouteContext,
+  facts: RouteFacts,
+  jevTier: RouteTier | null = null,
+): MemberRoute {
+  const chat = chatPick(context);
+  const autoWouldUse = jevTierPick(context, jevTier);
+  if (context.routing === 'pinned') {
+    return { pick: chat, routedBy: 'pinned', rule: 'pinned', autoWouldUse };
+  }
+  const candidate = candidateFor(context, context.chat.provider);
+  const models = candidate ? selectableModels(candidate) : [];
+  const ladder = tierLadder(models, context.chat.provider);
+  if (facts.destructive) {
+    const top = topTier(models, context.chat.provider);
+    return {
+      pick: withModel(chat, top),
+      routedBy: 'rules',
+      rule: 'destructive → top tier',
+      autoWouldUse,
+    };
+  }
+  if (facts.trivial && ladder[0]) {
+    return {
+      pick: withModel(chat, ladder[0]),
+      routedBy: 'rules',
+      rule: 'trivial → small tier',
+      autoWouldUse,
+    };
+  }
+  return { pick: chat, routedBy: 'rules', rule: 'chat model', autoWouldUse };
 }
 
 export function ruleCriticPick(context: RouteContext): AgentPick {
@@ -195,16 +119,8 @@ export function ruleCriticPick(context: RouteContext): AgentPick {
   return { provider, model: middle?.id ?? null, modelLabel: middle?.label ?? null, effort };
 }
 
-export function routeCritic(context: RouteContext, jev: JevPick | null): MemberRoute {
-  const rules = ruleCriticPick(context);
-  if (!jev) return { pick: rules, routedBy: 'rules', autoWouldUse: null, gate: null };
-  if (context.routing === 'pinned') {
-    return { pick: rules, routedBy: 'rules', autoWouldUse: jev.pick, gate: null };
-  }
-  const decision = gated(context, jev, rules);
-  return decision.decision === 'act'
-    ? { pick: jev.pick, routedBy: 'jev', autoWouldUse: jev.pick, gate: decision }
-    : { pick: rules, routedBy: 'rules', autoWouldUse: jev.pick, gate: decision };
+export function routeCritic(context: RouteContext): MemberRoute {
+  return { pick: ruleCriticPick(context), routedBy: 'rules', rule: 'critic', autoWouldUse: null };
 }
 
 export function escalate(context: RouteContext, previous: MemberRoute): MemberRoute {
@@ -219,5 +135,5 @@ export function escalate(context: RouteContext, previous: MemberRoute): MemberRo
         effort: escalatedEffort(effortIds(candidate), previous.pick.effort),
       }
     : { ...previous.pick, effort: strongerEffort(effortIds(candidate), previous.pick.effort) };
-  return { ...previous, pick, gate: null };
+  return { ...previous, pick, rule: 'one tier up' };
 }

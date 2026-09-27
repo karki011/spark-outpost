@@ -21,8 +21,8 @@ const sonnet = { provider: 'claude', model: 'sonnet-5', modelLabel: 'Sonnet 5', 
 describe('checkpoint wording', () => {
   it('suggests the escalated model for a retry', () => {
     const payload = checkpoint({ kind: 'retry', from: sonnet, to: opus }).payload.checkpoint!;
-    expect(retryLine(payload)).toBe('Jev suggests retrying with Opus 5.5 · high.');
-    expect(retryLine({ ...payload, to: sonnet })).toBe('Jev suggests retrying the step.');
+    expect(retryLine(payload)).toBe('Retry with Opus 5.5 · high?');
+    expect(retryLine({ ...payload, to: sonnet })).toBe('Retry the step once more?');
   });
 
   it('names the agent that needs your input', () => {
@@ -37,13 +37,17 @@ describe('checkpoint wording', () => {
       .checkpoint!;
     expect(checkpointTitle(keep)).toBe('Keep these changes?');
     expect(checkpointQuestion(keep)).toBeNull();
-    const plan = checkpoint({ kind: 'plan', question: 'Approve the plan before any edits?' })
-      .payload.checkpoint!;
-    expect(checkpointQuestion(plan)).toBe('Approve the plan before any edits?');
+    const stuck = checkpoint({
+      kind: 'stuck',
+      agent: 'Bolt',
+      question: 'Continue, or stop and report?',
+    }).payload.checkpoint!;
+    expect(checkpointTitle(stuck)).toBe('Bolt was repeating itself');
+    expect(checkpointQuestion(stuck)).toBe('Continue, or stop and report?');
   });
 
   it('counts down the default answer from the server deadline', () => {
-    expect(autoLabel(CHECKPOINT_OPTION.finish, 10)).toBe('Skip (10s)');
+    expect(autoLabel(CHECKPOINT_OPTION.stopReport, 10)).toBe('Stop and report (10s)');
     expect(autoLabel(CHECKPOINT_OPTION.clarifyRules, 3)).toBe('Continue (3s)');
     const at = '2026-09-26T10:00:10.000Z';
     expect(secondsLeft(at, Date.parse('2026-09-26T10:00:00.200Z'))).toBe(10);
@@ -56,7 +60,7 @@ describe('checkpoint wording', () => {
       {
         status: 'denied',
         decidedBy: 'auto',
-        decisionOptionId: CHECKPOINT_OPTION.finish,
+        decisionOptionId: CHECKPOINT_OPTION.stopReport,
         createdAt: '2026-09-26T10:00:00.000Z',
         autoContinueAt: '2026-09-26T10:00:10.000Z',
       },
@@ -78,9 +82,12 @@ describe('checkpoint wording', () => {
       { status: 'allowed', decisionOptionId: 'option:1' },
     );
     expect(checkpointResult(clarify)).toBe('You chose: UTC');
-    const plan = checkpoint({ kind: 'plan' }, { status: 'allowed', decisionOptionId: 'edit' });
-    expect(checkpointResult(plan)).toBe('Sent your changes to the plan.');
-    expect(checkpointResult(checkpoint({ kind: 'plan' }, { status: 'expired' }))).toBe(
+    const retry = checkpoint(
+      { kind: 'retry' },
+      { status: 'denied', decisionOptionId: CHECKPOINT_OPTION.stopReport },
+    );
+    expect(checkpointResult(retry)).toBe('Stopped and reported.');
+    expect(checkpointResult(checkpoint({ kind: 'accept' }, { status: 'expired' }))).toBe(
       'Expired before you answered.',
     );
   });
@@ -88,8 +95,8 @@ describe('checkpoint wording', () => {
 
 describe('checkpoints in the turn', () => {
   it('keeps the decided copy of a checkpoint and ignores tool approvals', () => {
-    const pending = checkpoint({ kind: 'plan' });
-    const decided = { ...pending, status: 'allowed' as const, decisionOptionId: 'approve' };
+    const pending = checkpoint({ kind: 'accept' });
+    const decided = { ...pending, status: 'allowed' as const, decisionOptionId: 'keep' };
     const tool = {
       ...pending,
       id: '00000000-0000-4000-8000-0000000000c9',
@@ -102,7 +109,7 @@ describe('checkpoints in the turn', () => {
   });
 
   it('places run-level checkpoints between the agents by time', () => {
-    const scout = member({ runId: '00000000-0000-4000-8000-0000000000b1', role: 'scout' });
+    const scout = member({ runId: '00000000-0000-4000-8000-0000000000b1', role: 'builder' });
     const builder = member({ startedAt: '2026-09-26T10:04:00.000Z' });
     const queued = member({
       runId: '00000000-0000-4000-8000-0000000000b3',
@@ -110,7 +117,7 @@ describe('checkpoints in the turn', () => {
       startedAt: null,
       status: 'queued',
     });
-    const plan = checkpoint({ kind: 'plan' }, { createdAt: '2026-09-26T10:03:30.000Z' });
+    const plan = checkpoint({ kind: 'clarify' }, { createdAt: '2026-09-26T10:03:30.000Z' });
     const own = checkpoint({ kind: 'accept' }, { id: 'x', runId: builder.runId });
     const items = crewItems([scout, builder, queued], mergeCheckpoints([plan, own]));
     expect(items.map((item) => item.kind)).toEqual(['agent', 'checkpoint', 'agent', 'agent']);
@@ -124,7 +131,7 @@ describe('checkpoints in the turn', () => {
       startedAt: '2026-09-26T10:06:00.000Z',
     });
     const check = {
-      ...checkpoint({ kind: 'plan' }),
+      ...checkpoint({ kind: 'accept' }),
       id: '00000000-0000-4000-8000-0000000000c7',
       toolCallId: 'check:1',
       kind: 'execute' as const,

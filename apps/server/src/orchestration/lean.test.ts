@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_BUILD_STYLE } from '@spark-outpost/contracts';
 import {
-  architectStyle,
   builderStyle,
   criticStyle,
   harvestShortcuts,
@@ -9,9 +8,8 @@ import {
   reviewNet,
   ruleBuildStyle,
   splitMarker,
-  withBuilderStyle,
 } from './lean.ts';
-import { builderPrompt, criticFollowUp, criticPrompt } from './context.ts';
+import { builderPrompt, criticPrompt } from './context.ts';
 
 const PATCH = `diff --git a/src/rates.ts b/src/rates.ts
 index 1111111..2222222 100644
@@ -42,18 +40,8 @@ deleted file mode 100644
 
 describe('build style prompts', () => {
   it('adds nothing when the style is off', () => {
-    expect(architectStyle('off')).toBeNull();
     expect(builderStyle('off')).toBeNull();
     expect(criticStyle('off')).toBeNull();
-    expect(withBuilderStyle('Fix it.', 'off')).toBe('Fix it.');
-  });
-
-  it('gives the Architect the first two rungs and the Reuse line', () => {
-    const lean = architectStyle('lean')!;
-    expect(lean).toContain('needs to exist at all');
-    expect(lean).toContain('the codebase already has');
-    expect(lean).toContain('"Reuse: <file or function>"');
-    expect(lean).not.toContain('standard library');
   });
 
   it('gives the Builder the full ladder, the safety floor, markers and one check', () => {
@@ -71,31 +59,23 @@ describe('build style prompts', () => {
     expect(lite).not.toContain('7. Only then');
   });
 
-  it('puts the style at the end of a planned Builder prompt and after an in-place request', () => {
+  it('puts the style at the end of the Builder prompt', () => {
     const prompt = builderPrompt({
       request: 'Add a date field',
-      plan: ['Edit src/Form.tsx'],
-      stepIndex: 0,
-      earlierChanges: [],
+      history: [],
       note: null,
       findings: [],
       buildStyle: 'lean',
     });
     expect(prompt.trimEnd().endsWith(builderStyle('lean')!)).toBe(true);
-    expect(withBuilderStyle('Add a date field', 'lite')).toBe(
-      `Add a date field\n\n${builderStyle('lite')}`,
-    );
   });
 
-  it('adds the complexity lens to the one Critic pass and its follow-ups', () => {
+  it('adds the complexity lens to the one Critic pass', () => {
     const context = { changes: [], patch: '', checks: [], buildStyle: 'lean' as const };
-    const first = criticPrompt({ request: 'r', plan: [], ...context });
-    const next = criticFollowUp(context);
-    for (const prompt of [first, next]) {
-      expect(prompt).toContain('## Complexity (same review)');
-      expect(prompt).toContain('"net: -N lines possible"');
-      expect(prompt).toContain('Complexity findings alone do not make the verdict concerns');
-    }
+    const prompt = criticPrompt({ request: 'r', plan: [], ...context });
+    expect(prompt).toContain('## Complexity (same review)');
+    expect(prompt).toContain('"net: -N lines possible"');
+    expect(prompt).toContain('Complexity findings alone do not make the verdict concerns');
     expect(criticPrompt({ request: 'r', plan: [], ...context, buildStyle: 'off' })).not.toContain(
       'Complexity',
     );

@@ -56,7 +56,6 @@ interface ComposerProps {
   providers: ProviderSetup[];
   runs: Run[];
   orchestration?: Orchestration | null;
-  jevConnected?: boolean;
   usageTotals: ConversationUsage;
   busy: boolean;
   sending: boolean;
@@ -83,7 +82,6 @@ export function Composer({
   providers,
   runs,
   orchestration = null,
-  jevConnected = false,
   usageTotals,
   busy,
   sending,
@@ -368,7 +366,6 @@ export function Composer({
               settings={settings}
               providers={providers}
               hasRepos={hasRepos}
-              jevConnected={jevConnected}
               orchestration={orchestration}
             />
           )}
@@ -376,6 +373,7 @@ export function Composer({
             runs={runs}
             provider={settings?.provider ?? null}
             usageTotals={usageTotals}
+            orchestration={orchestration}
             {...(onAudit ? { onAudit } : {})}
           />
           {busy ? (

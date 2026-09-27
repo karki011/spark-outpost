@@ -1,35 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION, clarifyOptionId, type JevIntake } from '@spark-outpost/contracts';
+import { CHECKPOINT_OPTION, clarifyOptionId } from '@spark-outpost/contracts';
 import type { SystemOneResponse } from '../advisor/intake-questions.ts';
 import { autoContinueOption } from './checkpoint-policy.ts';
 import {
   MAX_INTERPRETATIONS,
-  VAGUE_REASON,
   assumptionLine,
   chosenInterpretation,
   interpretationCard,
   interpretations,
-  isVagueRequest,
+  vagueByRule,
   vagueHandling,
 } from './clarify.ts';
-import { initialFlow, nextStep } from './transitions.ts';
-
-const intake = (extra: Partial<JevIntake> = {}): JevIntake => ({
-  intent: 'docs',
-  complexity: 2.8,
-  risk: 'edits',
-  injection: null,
-  depth: 'plan_execute',
-  provider: 'claude',
-  model: 'sonnet',
-  modelLabel: 'Sonnet 5',
-  effort: 'medium',
-  confidence: 0.66,
-  routeConfidence: 0.75,
-  scope: 'codebase',
-  confidences: { intent: 0.68, depth: 0.66, scope: 0.29 },
-  ...extra,
-});
 
 const response = (probabilities: Record<string, number>): SystemOneResponse => ({
   model: 'jev-test',
@@ -39,25 +20,12 @@ const response = (probabilities: Record<string, number>): SystemOneResponse => (
 });
 
 describe('vague requests', () => {
-  it('reads "Make the reports better" as vague from its unsure, broad scope', () => {
-    expect(isVagueRequest('Make the reports better.', 0, intake())).toBe(true);
-    expect(isVagueRequest('Make the reports better.', 0, null)).toBe(true);
-  });
-
-  it('follows Jev’s vague question when it is sure', () => {
-    expect(isVagueRequest('Make the reports better.', 0, intake({ vague: 0.1 }))).toBe(false);
-    expect(isVagueRequest('Handle the new invoice states', 0, intake({ vague: 0.9 }))).toBe(true);
-  });
-
-  it('never calls a request that names its files vague', () => {
-    expect(isVagueRequest('Make src/report.ts better', 1, intake({ vague: 0.95 }))).toBe(false);
-  });
-
-  it('does not call a specific request vague just because it names no files', () => {
-    const clear = 'The divider shows the wrong day after midnight. Fix it and add a test.';
-    const sure = intake({ scope: 'one_module', confidences: { scope: 0.8 } });
-    expect(isVagueRequest(clear, 0, sure)).toBe(false);
-    expect(isVagueRequest(clear, 0, null)).toBe(false);
+  it('reads a short request with a vague goal and no files as vague', () => {
+    expect(vagueByRule('Make the reports better.', 0)).toBe(true);
+    expect(vagueByRule('Make src/report.ts better', 1)).toBe(false);
+    expect(
+      vagueByRule('The divider shows the wrong day after midnight. Fix it and add a test.', 0),
+    ).toBe(false);
   });
 
   it('asks at Balanced and Hands-on, and assumes at Hands-off and Full auto', () => {
@@ -95,9 +63,7 @@ describe('the interpretation question', () => {
       'Go with the most likely',
       'Stop',
     ]);
-    expect(autoContinueOption({ kind: 'clarify', fromJev: true, agentAsked: false })).toBe(
-      CHECKPOINT_OPTION.clarifyRules,
-    );
+    expect(autoContinueOption('clarify', true)).toBe(CHECKPOINT_OPTION.clarifyRules);
     expect(chosenInterpretation(card, clarifyOptionId(1), null)).toEqual({
       type: 'chosen',
       text: 'Add new behaviour',
@@ -114,23 +80,5 @@ describe('the interpretation question', () => {
     expect(assumptionLine('Improve its documentation')).toBe(
       'Assumed you meant: Improve its documentation. Say so if you meant something else.',
     );
-  });
-
-  it('asks the interpretation question before any agent starts', () => {
-    const asked = nextStep(initialFlow('plan_execute', 'edits', 'balanced'), {
-      type: 'start',
-      intake: 'interpret',
-    });
-    expect(asked.action).toEqual({
-      type: 'ask',
-      kind: 'clarify',
-      reason: VAGUE_REASON,
-      suggestion: null,
-      fromJev: true,
-      interpret: true,
-    });
-    expect(
-      nextStep(asked.state, { type: 'clarified', depth: 'plan_execute' }).action,
-    ).toMatchObject({ type: 'spawn', role: 'architect' });
   });
 });

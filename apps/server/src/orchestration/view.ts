@@ -10,6 +10,7 @@ import {
   type Approval,
   type CostSource,
   type CrewMember,
+  type IntakeCall,
   type Orchestration,
   type OrchestrationDecision,
   type OrchestrationTotals,
@@ -28,12 +29,9 @@ export interface StoredRoute {
   modelLabel?: string | null;
   quality?: number | null;
   verdict?: ReviewVerdict | null;
-  parallelGroup?: string | null;
   copy?: string | null;
   sameProvider?: boolean;
   fileReads?: number;
-  rereads?: number;
-  extraReads?: string;
 }
 
 export interface MemberRow {
@@ -54,6 +52,8 @@ export interface MemberRow {
   cost_source: CostSource | null;
   duration_ms: number | null;
   tool_call_count: number | null;
+  context_used?: number | null;
+  context_size?: number | null;
   started_at: Date | null;
   finished_at: Date | null;
 }
@@ -84,11 +84,13 @@ export function toCrewMember(row: MemberRow): CrewMember {
     costSource: row.cost_usd === null ? null : (row.cost_source ?? 'reported'),
     durationMs: row.duration_ms,
     toolCalls: row.tool_call_count,
+    ...(row.context_used != null && row.context_size != null
+      ? { contextUsed: row.context_used, contextSize: row.context_size }
+      : {}),
     quality: route.quality ?? null,
     verdict: route.verdict ?? null,
     startedAt: row.started_at?.toISOString() ?? null,
     finishedAt: row.finished_at?.toISOString() ?? null,
-    parallelGroup: route.parallelGroup ?? null,
     copy: route.copy ?? null,
     ...(route.sameProvider ? { sameProvider: true } : {}),
   };
@@ -136,26 +138,6 @@ function grouped<K extends string>(crew: readonly CrewMember[], key: (member: Cr
   return [...groups.values()];
 }
 
-export function orderCrew(crew: readonly CrewMember[]): CrewMember[] {
-  const ordered: CrewMember[] = [];
-  const placed = new Set<string>();
-  for (const member of crew) {
-    const group = member.parallelGroup ?? null;
-    if (group === null) {
-      ordered.push(member);
-      continue;
-    }
-    if (placed.has(group)) continue;
-    placed.add(group);
-    ordered.push(
-      ...crew
-        .filter((other) => other.parallelGroup === group)
-        .sort((a, b) => a.stepIndex - b.stepIndex || a.attempt - b.attempt),
-    );
-  }
-  return ordered;
-}
-
 export function orchestrationTotals(
   crew: readonly CrewMember[],
   decisions: readonly OrchestrationDecision[],
@@ -191,24 +173,34 @@ export interface DecisionRow {
   created_at: Date;
 }
 
+const CALL_LABELS: Record<string, [string, string]> = {
+  question: ['answer only', 'make changes'],
+  vague: ['vague', 'clear'],
+  review: ['review wanted', 'no review asked'],
+  destructive: ['destructive', 'not destructive'],
+  continues_task: ['same task', 'new task'],
+};
+
+function callLine(key: string, call: IntakeCall): string {
+  const [yes, no] = CALL_LABELS[key] ?? [key, `not ${key}`];
+  const jev = call.jev === null ? '' : ` ${call.jev.toFixed(2)}`;
+  return `${call.value ? yes : no} (${call.source}${jev})`;
+}
+
 function intakeSummary(
   body: AdviceBody,
 ): Pick<OrchestrationDecision, 'summary' | 'applied' | 'gate' | 'answer'> {
   const answer = body.jev ?? body.rules;
   const applied = body.wouldApply === 'jev' ? 'jev' : body.wouldApply === 'ask' ? 'asked' : 'rules';
-  const note = body.depthNote
-    ? ` → ${depthLabel(body.depthNote.depth)}: ${body.depthNote.reason}`
-    : '';
-  const mechanical = body.mechanical ? ` · ${body.mechanical.summary}` : '';
+  const calls = Object.entries(body.calls ?? {}).map(([key, call]) => callLine(key, call));
+  const head =
+    calls.length > 0 ? calls.join(' · ') : `${depthLabel(answer.depth)} · ${answer.risk}`;
+  const tier = body.jev?.tier ? ` · Jev tier ${body.jev.tier}` : '';
   return {
-    summary: `${depthLabel(answer.depth)} · ${answer.risk}${note}${mechanical}`,
+    summary: `${head}${tier}`,
     applied,
     gate: body.gate,
-    answer: {
-      ...answer,
-      ...(body.depthNote ? { depthNote: body.depthNote } : {}),
-      ...(body.mechanical ? { mechanical: body.mechanical } : {}),
-    },
+    answer: { ...answer, ...(body.calls ? { calls: body.calls } : {}) },
   };
 }
 
@@ -268,7 +260,6 @@ export interface OrchestrationRow {
   exceeded: Orchestration['budget']['exceeded'];
   error: string | null;
   updated_at: Date;
-  parallel_note: string | null;
 }
 
 const LIVE: ReadonlySet<RunStatus> = new Set(['queued', 'running', 'awaiting_approval']);
@@ -296,7 +287,7 @@ export function buildOrchestration(
     planVersion: row.plan_version,
     retries: row.retries,
     maxRetries: MAX_REPAIR_RETRIES,
-    crew: orderCrew(crew),
+    crew: [...crew],
     checkpoints: [...checkpoints],
     pendingCheckpoint: checkpoints.find((checkpoint) => checkpoint.status === 'pending') ?? null,
     decisions: [...decisions],
@@ -312,6 +303,5 @@ export function buildOrchestration(
     totals,
     error: row.error ?? (live ? null : row.run_error),
     updatedAt: row.updated_at.toISOString(),
-    parallelNote: row.parallel_note,
   };
 }

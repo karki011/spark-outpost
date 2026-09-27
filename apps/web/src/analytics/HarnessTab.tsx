@@ -17,6 +17,7 @@ import { ConfidenceChart } from './charts/ConfidenceChart.tsx';
 import { HBars } from './charts/HBars.tsx';
 import { RoutingFlow } from './charts/RoutingFlow.tsx';
 import { ScoreBars } from './charts/ScoreBars.tsx';
+import { ObservationCard } from './ObservationCard.tsx';
 import {
   confidenceSummary,
   disagreementSummary,
@@ -320,6 +321,7 @@ export function HarnessTab({ data }: { data: AnalyticsHarness }) {
           />
         )}
       </ChartCard>
+      <ObservationCard data={data} />
     </div>
   );
 }

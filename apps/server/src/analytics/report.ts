@@ -17,12 +17,10 @@ import {
   jevSpend,
   sessionRuns,
   spendLeaves,
-  windowBounds,
   type DailySpend,
 } from '../persistence/analytics-spend.ts';
+import { observationSummaries } from '../persistence/analytics-observations.ts';
 import { approvalWaits } from '../persistence/analytics-waits.ts';
-import { offeredModels, routedRuns } from '../persistence/spend.ts';
-import { routingSavings, tallySavings } from '../usage/routing-savings.ts';
 import { turnCost, type TurnFact } from './facts.ts';
 import {
   agreement,
@@ -33,6 +31,7 @@ import {
   flowPaths,
   leanRows,
   loopSummary,
+  routingCost,
   waitSummary,
 } from './harness.ts';
 import { healthScore } from './health.ts';
@@ -159,14 +158,11 @@ export async function spendReport(
   workspaceId: string,
   window: AnalyticsWindow,
 ): Promise<AnalyticsSpend> {
-  const bounds = await windowBounds(db, window);
-  const [facts, leaves, days, jev, routed, offered, sessions] = await Promise.all([
+  const [facts, leaves, days, jev, sessions] = await Promise.all([
     turnFacts(db, workspaceId, window),
     spendLeaves(db, workspaceId, window),
     dailySpend(db, workspaceId, window),
     jevSpend(db, workspaceId, window),
-    routedRuns(db, workspaceId, bounds.since, bounds.until),
-    offeredModels(db, workspaceId),
     sessionRuns(db, workspaceId, window),
   ]);
   const perTask = taskCosts(facts);
@@ -187,7 +183,6 @@ export async function spendReport(
     perTask,
     finishedTasks: finished,
     costPerGoodUsd: good && good.tasks > 0 ? roundTo(finishedCost / good.tasks, 6) : null,
-    savings: routingSavings(tallySavings(routed, offered), jev.costUsd),
     resume: resumeSavings(sessions),
   };
 }
@@ -197,9 +192,10 @@ export async function harnessReport(
   workspaceId: string,
   window: AnalyticsWindow,
 ): Promise<AnalyticsHarness> {
-  const [facts, waits] = await Promise.all([
+  const [facts, waits, observation] = await Promise.all([
     turnFacts(db, workspaceId, window),
     approvalWaits(db, workspaceId, window),
+    observationSummaries(db, workspaceId, window),
   ]);
   return {
     window,
@@ -213,5 +209,7 @@ export async function harnessReport(
     checks: checkSummary(facts),
     loops: loopSummary(facts),
     approvals: waitSummary(waits),
+    routingCost: routingCost(facts),
+    observation,
   };
 }

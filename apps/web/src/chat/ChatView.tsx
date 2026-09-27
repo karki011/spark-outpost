@@ -53,8 +53,6 @@ export function ChatView({ conversationId }: { conversationId: string }) {
 
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const connected = setup.data?.providers.filter((provider) => provider.connection) ?? [];
-  const jevConnected =
-    setup.data?.advisors.some((advisor) => advisor.id === 'jev' && advisor.connection) ?? false;
 
   const refresh = () =>
     Promise.all([
@@ -155,7 +153,6 @@ export function ChatView({ conversationId }: { conversationId: string }) {
           providers={connected}
           runs={detail.data?.runs ?? []}
           orchestration={orchestration}
-          jevConnected={jevConnected}
           usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
           busy={running !== null}
           sending={send.isPending}

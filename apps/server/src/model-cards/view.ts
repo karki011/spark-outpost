@@ -1,5 +1,4 @@
 import {
-  type AllowFrontier,
   type CapabilityOption,
   type ModelCardsResponse,
   type ModelStat,
@@ -21,7 +20,6 @@ const AGENT_DEFAULT_MODEL = 'default';
 
 function providerView(
   snapshot: ProviderSnapshot,
-  allowFrontier: AllowFrontier,
   stats: readonly ModelStat[],
   now: Date,
 ): ProviderCardsView | null {
@@ -49,7 +47,6 @@ function providerView(
   return {
     provider: { ...provider, doMode: snapshot.doAvailable ? 'yes' : 'no' },
     connected: snapshot.connected,
-    allowFrontier: allowFrontier[snapshot.provider] ?? false,
     hasFrontier: cards.some((card) => card.tier === 'frontier'),
     models,
     uncardedModels,
@@ -58,14 +55,11 @@ function providerView(
 
 export function modelCardsView(
   snapshots: readonly ProviderSnapshot[],
-  allowFrontier: AllowFrontier,
   stats: readonly ModelStat[],
   now: Date,
 ): ModelCardsResponse {
   return {
     checkedAt: VENDOR_CARDS.checkedAt,
-    providers: snapshots.flatMap(
-      (snapshot) => providerView(snapshot, allowFrontier, stats, now) ?? [],
-    ),
+    providers: snapshots.flatMap((snapshot) => providerView(snapshot, stats, now) ?? []),
   };
 }

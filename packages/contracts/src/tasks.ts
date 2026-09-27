@@ -34,7 +34,6 @@ export const taskListItemSchema = z.object({
   role: agentRoleSchema.optional(),
   runId: z.uuid().optional(),
   name: z.string().optional(),
-  group: z.string().optional(),
   tokens: z.number().optional(),
   costUsd: z.number().optional(),
   costSource: costSourceSchema.optional(),
@@ -124,7 +123,6 @@ export interface TaskListRun {
   step?: string | null | undefined;
   role?: AgentRole | null | undefined;
   name?: string | null | undefined;
-  group?: string | null | undefined;
 }
 
 export interface TaskListEvent {
@@ -270,7 +268,6 @@ function runItem(run: TaskListRun, index: number, asking: ReadonlySet<string>): 
     state: waitingElsewhere ? 'active' : runStates[run.status],
     detail: runVerbs[run.status],
     ...ownerOf(run),
-    ...(run.group ? { group: run.group } : {}),
     ...usage(run),
   };
 }

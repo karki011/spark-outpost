@@ -201,16 +201,10 @@ function extraRoots(policy: PathPolicy | null): string[] {
   return policy ? policy.roots.slice(1).map((root) => root.path) : [];
 }
 
-function sessionMeta(
-  definition: AgentDefinition,
-  policy: PathPolicy | null,
-  changing: boolean,
-  planning: boolean,
-) {
+function sessionMeta(definition: AgentDefinition, policy: PathPolicy | null, changing: boolean) {
   if (!policy) return definition.conversationSessionMeta ?? null;
   if (changing) return definition.doSessionMeta?.(extraRoots(policy)) ?? null;
-  const meta = planning ? definition.planSessionMeta : undefined;
-  return (meta ?? definition.projectSessionMeta)?.(extraRoots(policy)) ?? null;
+  return definition.projectSessionMeta?.(extraRoots(policy)) ?? null;
 }
 
 function openedRoots(
@@ -331,7 +325,7 @@ async function converse(
       agentName: definition.name,
       cwd: workspace.cwd,
       extraRoots: extraRoots(policy),
-      meta: sessionMeta(definition, policy, doing !== null, turn.planning === true),
+      meta: sessionMeta(definition, policy, doing !== null),
       init,
     });
     const opened = await openSession(

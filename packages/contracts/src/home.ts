@@ -5,14 +5,6 @@ import { providerTotalsSchema } from './usage.ts';
 export const spendRangeSchema = z.enum(['today', 'week']);
 export type SpendRange = z.infer<typeof spendRangeSchema>;
 
-export const routingSavingsSchema = z.object({
-  runs: z.number().int().positive(),
-  grossUsd: z.number(),
-  jevCostUsd: z.number().nonnegative(),
-  netUsd: z.number(),
-});
-export type RoutingSavings = z.infer<typeof routingSavingsSchema>;
-
 export const spendSummarySchema = z.object({
   range: spendRangeSchema,
   since: z.string(),
@@ -21,7 +13,6 @@ export const spendSummarySchema = z.object({
   costSource: totalCostSourceSchema.nullable(),
   totalTokens: z.number().nonnegative(),
   byProvider: z.array(providerTotalsSchema),
-  savings: routingSavingsSchema.nullable(),
 });
 export type SpendSummary = z.infer<typeof spendSummarySchema>;
 

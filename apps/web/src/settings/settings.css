@@ -159,3 +159,24 @@
 .companion-setting .seg {
   max-width: 240px;
 }
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.check-row input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.check-row input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

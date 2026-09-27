@@ -228,12 +228,12 @@ test('provider tiles start collapsed and open one at a time', async ({ page }) =
   await expect(heads.nth(1)).toHaveAttribute('aria-expanded', 'false');
 });
 
-test('Jev connects with an API key as optional routing and does not unlock chats', async ({
+test('Jev connects with an API key as optional decisions and does not unlock chats', async ({
   page,
 }) => {
   await enterName(page, 'Hazel');
   const jev = dialog(page).locator('.pcard').filter({ hasText: 'Jev' });
-  await expect(dialog(page).getByRole('heading', { name: 'Optional routing' })).toBeVisible();
+  await expect(dialog(page).getByRole('heading', { name: 'Optional decisions' })).toBeVisible();
   await openTile(page, 'Jev');
   await expect(jev.getByRole('tab')).toHaveCount(0);
   await expect(jev.getByRole('link', { name: /TypeSafe console/ })).toHaveAttribute(
@@ -251,7 +251,7 @@ test('Jev connects with an API key as optional routing and does not unlock chats
   const details = jev.getByRole('region', { name: 'Connection' });
   await expect(details).toContainText('Key…c3d4');
   await expect(details).toContainText('Modeljev-latest');
-  await expect(details).toContainText('Never file contents, diffs, tool output or keys');
+  await expect(details).toContainText('Never keys or tool output');
   await expect(jev.getByRole('button', { name: 'Send test message' })).toHaveCount(0);
   await expect(continueButton(page)).toBeDisabled();
 

@@ -1,5 +1,7 @@
 # Lead mode
 
+> **Future design, not planned.** Round 10 removed the pieces this design builds on (the Architect, work orders, the plan-session handoff, lanes and worktree groups; recoverable from checkpoint `06db4c6`). The next step for large work is a branch and worktree per task, not a Lead. Revisit only when a large-task benchmark shows one Builder falling short. See [HARNESS_PLAN.md](HARNESS_PLAN.md#removed-in-round-10).
+
 A design for large tasks, written on September 27, 2026. Nothing here is built. It follows [Round 8: work orders](HARNESS_PLAN.md#round-8-work-orders-september-27-2026), which built the pieces a Lead needs (work orders, continuing a worker's session, reviewers that get a diff and a contract, read counts), and it leans on [JEV_OPPORTUNITIES.md](JEV_OPPORTUNITIES.md) for the Jev questions, most of all opportunity 2, "Lead decisions as atomic facts".
 
 The idea comes from Omnigent's Polly orchestrator (read from its repository: `examples/polly/config.yaml`, the `fanout` and `cross-review` skills, and `SysSessionSendTool` in `omnigent/tools/builtins/spawn.py`). We took the ideas, not the code or prompts.

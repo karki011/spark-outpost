@@ -9,69 +9,29 @@ import {
   type OrchestrationPhase,
   type ReviewVerdict,
   type Risk,
-  type TransitionNext,
-  type TransitionStatus,
 } from '@spark-outpost/contracts';
-import { asksForPlan } from './checkpoint-policy.ts';
-import { VAGUE_REASON } from './clarify.ts';
-import { reviewWanted } from './depth.ts';
-import {
-  ask,
-  askInterpretation,
-  finish,
-  first,
-  firstAgent,
-  laneOf,
-  continueFollowUp,
-  continueOrSpawn,
-  incompleteLine,
-  markedSpan,
-  spawn,
-  spawnGroup,
-  spawnLanes,
-  startBuilding,
-  stepsLeftAfter,
-  withDone,
-  withStepDone,
-  wrapUp,
-} from './flow-steps.ts';
-import { batchGroups, batchRanges, batchSteps, firstOpenStep } from './parallel.ts';
-import { chooseGroups, type ParallelVerdicts } from './parallel-choice.ts';
-import { openSpan, spanOf } from './spans.ts';
-import { stopsForUser, wantsConfirm, type Transition } from './transition-choice.ts';
+import { PLAN_CONTINUES } from '../advisor/policy.ts';
+import { asksToKeep, asksForLoop } from './checkpoint-policy.ts';
 
-export const MAX_PLAN_EDITS = 3;
-
-export type SpawnReason = 'first' | 'retry' | 'fix' | 'edit' | 'resume' | 'answer' | 'continue';
-
-export type FlowCheckpoint = CheckpointKind | 'needs_input';
+export type SpawnReason = 'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'unstick';
 
 export interface Spawn {
   role: AgentRole;
-  stepIndex: number;
+  reason: SpawnReason;
   escalate: boolean;
   note: string | null;
-  reason: SpawnReason;
-  conflict?: string;
-  carry?: number[] | undefined;
   followUp?: string;
-  checkFailures?: string;
-  from?: number;
 }
 
 export type FlowAction =
   | {
       type: 'ask';
-      kind: FlowCheckpoint;
+      kind: CheckpointKind;
       reason: string;
-      suggestion: TransitionNext | null;
-      fromJev: boolean;
-      blocked?: boolean;
       interpret?: boolean;
+      answerOrBuild?: boolean;
     }
   | ({ type: 'spawn' } & Spawn)
-  | { type: 'spawn_group'; stepIndexes: number[]; lanes?: number[][] }
-  | { type: 'judge'; role: AgentRole; stepIndex: number }
   | { type: 'wrap_up' }
   | { type: 'revert' }
   | {
@@ -83,68 +43,42 @@ export type FlowAction =
 
 export type AgentOutcome = 'succeeded' | 'failed' | 'cancelled';
 
+export type StartMode = 'answer' | 'build' | 'interpret' | 'choose';
+
 export type FlowEvent =
-  | { type: 'start'; intake: 'act' | 'ask' | 'fallback' | 'interpret' }
-  | { type: 'clarified'; depth: Depth | null }
+  | { type: 'start'; start: StartMode }
+  | { type: 'clarified'; answer: boolean | null }
   | {
       type: 'agent_done';
       role: AgentRole;
       outcome: AgentOutcome;
       error?: string | null;
-      steps?: readonly string[];
-      groups?: readonly number[][];
-      large?: readonly number[];
-      parallel?: ParallelVerdicts;
-      lanes?: readonly number[][];
-      ticked?: readonly number[];
+      open?: readonly string[];
+      large?: boolean;
       verdict?: ReviewVerdict;
     }
-  | {
-      type: 'judged';
-      status: TransitionStatus;
-      next: TransitionNext;
-      rules: Transition;
-      source: 'jev' | 'rules';
-      confidence: number | null;
-      open?: readonly number[];
-    }
-  | { type: 'answered'; kind: FlowCheckpoint; optionId: string; note: string | null }
-  | { type: 'wrapped'; filesChanged: number; asksToKeep: boolean }
+  | { type: 'looped'; summary: string; open?: readonly string[] }
+  | { type: 'answered'; kind: CheckpointKind; optionId: string; note: string | null }
+  | { type: 'wrapped'; filesChanged: number }
   | { type: 'reverted' }
-  | { type: 'budget_exceeded'; limit: BudgetLimit; ticked?: readonly number[] }
-  | { type: 'group_done'; results: GroupResult[]; stopped: boolean }
+  | { type: 'budget_exceeded'; limit: BudgetLimit }
   | { type: 'stopped' };
-
-export interface GroupResult {
-  stepIndex: number;
-  outcome: AgentOutcome;
-  ticked?: readonly number[];
-}
 
 export interface FlowState {
   depth: Depth;
   risk: Risk;
   level: InvolvementLevel;
   phase: OrchestrationPhase;
-  steps: string[];
-  stepIndex: number;
+  reviewWanted: boolean;
   retries: number;
-  planEdits: number;
+  continues: number;
   reviewed: boolean;
   verdict: ReviewVerdict | null;
   last: Spawn | null;
-  suggestion: TransitionNext | null;
-  fallback: Transition | null;
-  waitingFor: FlowCheckpoint | null;
+  waitingFor: CheckpointKind | null;
   exceeded: BudgetLimit | null;
-  groups: number[][];
-  completed: number[];
-  worktrees: boolean;
-  lastGroup: number[] | null;
-  lanes: number[][];
-  ranges: number[][] | null;
-  reviewIntent: boolean;
-  ticked: number[];
+  open: string[];
+  loop: string | null;
 }
 
 export interface FlowResult {
@@ -152,203 +86,141 @@ export interface FlowResult {
   action: FlowAction;
 }
 
-export function initialFlow(
-  depth: Depth,
-  risk: Risk,
-  level: InvolvementLevel,
-  worktrees = false,
-  reviewIntent = false,
-): FlowState {
+export function initialFlow(risk: Risk, level: InvolvementLevel, reviewWanted = false): FlowState {
   return {
-    depth,
+    depth: 'execute',
     risk,
     level,
     phase: 'intake',
-    steps: [],
-    stepIndex: 0,
+    reviewWanted: reviewWanted || risk === 'destructive',
     retries: 0,
-    planEdits: 0,
+    continues: 0,
     reviewed: false,
     verdict: null,
     last: null,
-    suggestion: null,
-    fallback: null,
     waitingFor: null,
     exceeded: null,
-    groups: [],
-    completed: [],
-    worktrees,
-    lastGroup: null,
-    lanes: [],
-    ranges: null,
-    reviewIntent,
-    ticked: [],
+    open: [],
+    loop: null,
   };
 }
 
-function planned(
+const PHASE_FOR_ROLE: Record<AgentRole, OrchestrationPhase> = {
+  scout: 'scouting',
+  architect: 'planning',
+  builder: 'building',
+  critic: 'reviewing',
+};
+
+function spawn(state: FlowState, next: Omit<Spawn, 'note'> & { note?: string | null }): FlowResult {
+  const full: Spawn = { ...next, note: next.note ?? null };
+  return {
+    state: { ...state, phase: PHASE_FOR_ROLE[full.role], last: full, waitingFor: null },
+    action: { type: 'spawn', ...full },
+  };
+}
+
+function ask(
   state: FlowState,
-  raw: readonly string[],
-  hinted: readonly number[][],
-  large: readonly number[],
-  verdicts: ParallelVerdicts | null,
-  lanes: readonly (readonly number[])[],
-): FlowState {
-  const kept = raw.map((step) => step.trim()).filter(Boolean);
-  if (state.worktrees && lanes.length > 1) {
-    return {
-      ...state,
-      steps: kept,
-      groups: [],
-      lanes: lanes.map((lane) => [...lane]),
-      ranges: kept.map((_, index) => [index]),
-    };
-  }
-  const steps = batchSteps(kept);
-  const worth = chooseGroups(kept, hinted, large, verdicts).groups;
-  const groups = batchGroups(worth, batchRanges(kept.length));
-  return { ...state, steps: steps.length > 0 ? steps : [''], groups, lanes: [], ranges: null };
+  kind: CheckpointKind,
+  reason: string,
+  extra: Partial<Extract<FlowAction, { type: 'ask' }>> = {},
+): FlowResult {
+  return {
+    state: { ...state, phase: 'waiting', waitingFor: kind },
+    action: { type: 'ask', kind, reason, ...extra },
+  };
 }
 
-function review(state: FlowState): FlowResult {
-  return spawn({ ...state, reviewed: true }, first('critic', 0));
+function listText(items: readonly string[]): string {
+  const shown = items.slice(0, 5).map((item) => `"${item}"`);
+  const more = items.length > 5 ? ` and ${items.length - 5} more` : '';
+  return `${shown.join(', ')}${more}`;
 }
 
-function afterWork(state: FlowState): FlowResult {
-  if (reviewWanted(state) && !state.reviewed) return review(state);
-  return wrapUp(state);
+export function incompleteLine(open: readonly string[]): string | null {
+  if (open.length === 0) return null;
+  const verb = open.length === 1 ? 'is' : 'are';
+  const noun = open.length === 1 ? 'plan item' : 'plan items';
+  return `Incomplete: ${open.length} ${noun} ${verb} still open: ${listText(open)}. Ask to continue and the Builder picks up from there.`;
+}
+
+export function finish(
+  state: FlowState,
+  status: 'succeeded' | 'failed' | 'cancelled',
+  reason: string | null = null,
+): FlowResult {
+  const incomplete = status === 'cancelled' ? null : incompleteLine(state.open);
+  return {
+    state: { ...state, phase: 'finished', waitingFor: null },
+    action: { type: 'finish', status, reason, ...(incomplete ? { incomplete } : {}) },
+  };
+}
+
+function wrapUp(state: FlowState): FlowResult {
+  return { state: { ...state, waitingFor: null }, action: { type: 'wrap_up' } };
+}
+
+export function continueFollowUp(open: readonly string[]): string {
+  return `You stopped before finishing: ${listText(open)} ${open.length === 1 ? 'is' : 'are'} still open in your plan. Continue with ${open.length === 1 ? 'it' : 'them'} now, then reply with what you changed.`;
+}
+
+export const UNSTICK_NOTE =
+  'The harness stopped your last turn because you repeated the same action several times without progress. Take a different approach, or say what is blocking you.';
+
+function build(state: FlowState): FlowResult {
+  return spawn(
+    { ...state, depth: 'execute' },
+    { role: 'builder', reason: 'first', escalate: false },
+  );
+}
+
+function answer(state: FlowState): FlowResult {
+  return spawn({ ...state, depth: 'direct' }, { role: 'scout', reason: 'first', escalate: false });
 }
 
 function retry(state: FlowState, note: string | null = null): FlowResult {
-  const span =
-    state.last?.role === 'builder'
-      ? openSpan(state.last, state.completed)
-      : { stepIndex: state.stepIndex };
   return spawn(
-    { ...state, retries: state.retries + 1, stepIndex: span.stepIndex },
-    { role: 'builder', escalate: true, reason: 'retry', note, ...span },
+    { ...state, retries: state.retries + 1 },
+    { role: 'builder', reason: 'retry', escalate: true, note },
   );
 }
 
-function follow(current: FlowState, next: TransitionNext): FlowResult {
-  if (next === 'retry_up') return retry(current);
-  const state = withStepDone(current);
-  if (next === 'review') return state.reviewed ? wrapUp(state) : review(state);
-  if (next === 'next_step' && state.last?.role === 'builder') {
-    const stepIndex = firstOpenStep(state.steps, state.completed);
-    if (stepIndex !== null) return continueOrSpawn(state, stepIndex);
+function afterBuilder(state: FlowState, large: boolean): FlowResult {
+  if ((state.reviewWanted || large) && !state.reviewed) {
+    return spawn(
+      { ...state, reviewed: true },
+      { role: 'critic', reason: 'first', escalate: false },
+    );
   }
-  return afterWork(state);
+  return wrapUp(state);
 }
 
-function groupDone(state: FlowState, event: Extract<FlowEvent, { type: 'group_done' }>) {
-  if (event.stopped) return finish(state, 'cancelled', 'You stopped it.');
-  if (event.results.some((result) => result.outcome === 'cancelled')) {
-    return finish(state, 'cancelled', 'Stopped.');
-  }
-  const spanFor = (head: number) => {
-    const lane = laneOf(state, head);
-    return lane
-      ? lane.filter((index) => index >= head && !state.completed.includes(index))
-      : [head];
-  };
-  const done = event.results.flatMap((result) =>
-    result.outcome === 'succeeded'
-      ? markedSpan(spanFor(result.stepIndex), result.ticked ?? [])
-      : (result.ticked ?? []),
-  );
-  const completed = [...state.completed, ...done.filter((i) => !state.completed.includes(i))];
-  const failed = event.results
-    .filter((result) => result.outcome === 'failed')
-    .map((result) => result.stepIndex)
-    .sort((a, b) => a - b);
-  const stepIndex =
-    failed[0] ?? Math.max(...event.results.flatMap((result) => spanFor(result.stepIndex)));
-  const open =
-    failed[0] === undefined ? [] : spanFor(failed[0]).filter((i) => !completed.includes(i));
-  const next: FlowState = {
-    ...state,
-    completed,
-    stepIndex,
-    last: {
-      ...first('builder', stepIndex),
-      note: null,
-      ...(open.length > 1 ? { carry: open } : {}),
-    },
-    lastGroup: null,
-    ticked: [],
-  };
-  if (failed.length === 0) return follow(next, 'next_step');
-  const rules: Transition = { status: 'needs_more_work', next: 'retry_up' };
-  return judged(next, { type: 'judged', ...rules, rules, source: 'rules', confidence: null });
+function stopReport(state: FlowState, reason: string): FlowResult {
+  return finish(state, 'failed', reason);
 }
 
-function askUser(state: FlowState, status: 'needs_you' | 'blocked', rules: Transition) {
-  const waiting = ask({ ...state, fallback: rules }, 'needs_input', status, null, true);
-  return { ...waiting, action: { ...waiting.action, blocked: status === 'blocked' } };
-}
-
-function byRules(state: FlowState, rules: Transition): FlowResult {
-  const cleared = { ...state, fallback: null };
-  return judged(cleared, { type: 'judged', ...rules, rules, source: 'rules', confidence: null });
-}
-
-function answerAgent(state: FlowState, note: string): FlowResult {
-  const cleared = { ...state, fallback: null };
-  if (state.last?.role === 'builder') {
-    return spawn(cleared, { ...state.last, escalate: false, reason: 'answer', note });
+function builderDone(
+  state: FlowState,
+  event: Extract<FlowEvent, { type: 'agent_done' }>,
+): FlowResult {
+  const next = { ...state, open: [...(event.open ?? state.open)] };
+  if (event.outcome === 'failed') {
+    if (next.retries < MAX_REPAIR_RETRIES) return retry(next);
+    return ask(next, 'retry', `Stopped after ${MAX_REPAIR_RETRIES} retries.`);
   }
-  const stepIndex = Math.max(0, state.steps.length - 1);
-  return spawn(
-    { ...cleared, stepIndex },
-    { role: 'builder', stepIndex, escalate: false, reason: 'answer', note },
-  );
-}
-
-function continueOpen(state: FlowState, open: readonly number[]): FlowResult | null {
-  const last = state.last;
-  if (last?.role !== 'builder' || state.retries >= MAX_REPAIR_RETRIES) return null;
-  const span = spanOf(last);
-  const reopened = span.filter((index) => open.includes(index));
-  const claimed = markedSpan(span, state.ticked).filter((index) => !reopened.includes(index));
-  const kept = state.completed.filter((index) => !reopened.includes(index));
-  const settled = withDone({ ...state, completed: kept }, claimed);
-  const left = span.filter((index) => !settled.completed.includes(index));
-  const [stepIndex] = left;
-  if (stepIndex === undefined) return null;
-  return spawn(
-    { ...settled, stepIndex, retries: state.retries + 1 },
-    {
-      role: 'builder',
-      stepIndex,
-      escalate: false,
-      reason: 'continue',
-      from: last.from ?? last.stepIndex,
-      followUp: continueFollowUp(left),
-      ...(left.length > 1 ? { carry: left } : {}),
-    },
-  );
-}
-
-function judged(state: FlowState, event: Extract<FlowEvent, { type: 'judged' }>): FlowResult {
-  if (event.source === 'jev' && stopsForUser(event.status)) {
-    return askUser(state, event.status, event.rules);
+  if (next.open.length > 0 && next.continues < PLAN_CONTINUES) {
+    return spawn(
+      { ...next, continues: next.continues + 1 },
+      {
+        role: 'builder',
+        reason: 'continue',
+        escalate: false,
+        followUp: continueFollowUp(next.open),
+      },
+    );
   }
-  let next = event.next;
-  if (next === 'finish' && state.last?.role === 'builder') next = 'next_step';
-  if (next === 'review' && stepsLeftAfter(state)) next = 'next_step';
-  const exhausted = state.retries >= MAX_REPAIR_RETRIES;
-  if (exhausted && (next === 'retry_up' || event.status !== 'done')) {
-    return ask(state, 'retry', `Stopped after ${MAX_REPAIR_RETRIES} retries.`, 'retry_up');
-  }
-  const reopened = next === 'retry_up' || !event.open ? null : continueOpen(state, event.open);
-  if (reopened) return reopened;
-  if (wantsConfirm(state, next, event.source === 'jev' ? event.confidence : null)) {
-    const reason =
-      next === 'retry_up' ? 'Jev suggests a retry one tier up.' : 'Jev suggests a review.';
-    return ask(state, 'retry', reason, next, event.source === 'jev');
-  }
-  return follow(state, next);
+  return afterBuilder(next, event.large ?? false);
 }
 
 function agentDone(
@@ -359,85 +231,57 @@ function agentDone(
   if (event.role === 'scout') {
     return event.outcome === 'succeeded'
       ? finish(state, 'succeeded')
-      : finish(state, 'failed', event.error ?? 'The Scout hit a problem.');
-  }
-  if (event.role === 'architect') {
-    if (event.outcome === 'failed')
-      return finish(state, 'failed', event.error ?? 'The Architect hit a problem.');
-    const next = planned(
-      state,
-      event.steps ?? [],
-      event.groups ?? [],
-      event.large ?? [],
-      event.parallel ?? null,
-      event.lanes ?? [],
-    );
-    if (asksForPlan(state.level, state.risk)) return ask(next, 'plan', 'Approve the plan.');
-    return startBuilding(next);
+      : finish(state, 'failed', event.error ?? 'The agent hit a problem.');
   }
   if (event.role === 'critic') {
-    const verdict = event.verdict ?? 'unclear';
-    return {
-      state: { ...state, verdict },
-      action: { type: 'judge', role: 'critic', stepIndex: state.stepIndex },
-    };
+    return wrapUp({ ...state, verdict: event.verdict ?? 'unclear' });
   }
-  const ticked = { ...withDone(state, event.ticked ?? []), ticked: [...(event.ticked ?? [])] };
-  return { state: ticked, action: { type: 'judge', role: 'builder', stepIndex: state.stepIndex } };
+  return builderDone(state, event);
+}
+
+function looped(state: FlowState, event: Extract<FlowEvent, { type: 'looped' }>): FlowResult {
+  const next = { ...state, loop: event.summary, open: [...(event.open ?? state.open)] };
+  if (asksForLoop(state.level) && state.retries < MAX_REPAIR_RETRIES) {
+    return ask(next, 'stuck', event.summary);
+  }
+  return stopReport(next, `Stopped: ${event.summary}.`);
 }
 
 function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered' }>): FlowResult {
   const option = event.optionId;
   if (event.kind === 'budget') {
-    if (option === CHECKPOINT_OPTION.continueBudget && state.lastGroup) {
-      const resumed = { ...state, exceeded: null };
-      const lanes = spawnLanes(resumed, state.lastGroup[0]!);
-      if (lanes) return lanes;
-      const open = state.lastGroup.filter((index) => !state.completed.includes(index));
-      if (open.length > 0) return spawnGroup(resumed, open);
-    }
     if (option === CHECKPOINT_OPTION.continueBudget && state.last) {
-      const span = openSpan(state.last, state.completed);
       return spawn(
-        { ...state, exceeded: null, stepIndex: span.stepIndex },
-        { ...state.last, escalate: false, reason: 'resume', ...span },
+        { ...state, exceeded: null },
+        { ...state.last, escalate: false, reason: 'resume' },
       );
     }
     const limit = (state.exceeded ?? 'time').replace('_', ' ');
-    return finish(state, 'failed', budgetStopLine(state, limit));
+    return stopReport(state, `Stopped: the ${limit} budget ran out.`);
   }
   if (option === CHECKPOINT_OPTION.stop) return finish(state, 'cancelled', 'You stopped it.');
-  if (event.kind === 'needs_input') {
-    if (option === CHECKPOINT_OPTION.answer && event.note) return answerAgent(state, event.note);
-    return byRules(state, state.fallback ?? { status: 'done', next: 'finish' });
+  if (event.kind === 'retry') {
+    if (option === CHECKPOINT_OPTION.retry) return retry(state, event.note);
+    return stopReport(
+      state,
+      `Stopped after ${MAX_REPAIR_RETRIES} retries; the step did not succeed.`,
+    );
   }
-  if (event.kind === 'plan') {
-    if (option === CHECKPOINT_OPTION.editPlan) {
-      if (state.planEdits >= MAX_PLAN_EDITS) return startBuilding(state);
+  if (event.kind === 'stuck') {
+    if (option === CHECKPOINT_OPTION.continueStuck) {
       return spawn(
-        { ...state, planEdits: state.planEdits + 1 },
-        { role: 'architect', stepIndex: 0, escalate: false, reason: 'edit', note: event.note },
+        { ...state, retries: state.retries + 1, loop: null },
+        { role: 'builder', reason: 'unstick', escalate: false, followUp: UNSTICK_NOTE },
       );
     }
-    return startBuilding(state);
-  }
-  if (event.kind === 'retry') {
-    if (option === CHECKPOINT_OPTION.retry) {
-      if (state.suggestion === 'review') return review(state);
-      return retry(state, event.note);
-    }
-    return afterWork({ ...state, reviewed: state.reviewed || state.suggestion === 'review' });
+    return stopReport(state, `Stopped: ${state.loop ?? 'the Builder was repeating itself'}.`);
   }
   if (event.kind === 'accept') {
     if (option === CHECKPOINT_OPTION.revert) {
       return { state: { ...state, waitingFor: null }, action: { type: 'revert' } };
     }
     if (option === CHECKPOINT_OPTION.fix) {
-      const stepIndex = Math.max(0, state.steps.length - 1);
-      return spawn(
-        { ...state, stepIndex },
-        { role: 'builder', stepIndex, escalate: false, reason: 'fix', note: event.note },
-      );
+      return spawn(state, { role: 'builder', reason: 'fix', escalate: false, note: event.note });
     }
     return finish(state, 'succeeded');
   }
@@ -447,46 +291,42 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
 export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
   switch (event.type) {
     case 'start':
-      if (event.intake === 'interpret') return askInterpretation(state, VAGUE_REASON);
-      return event.intake === 'ask'
-        ? ask(state, 'clarify', 'Jev is unsure what you meant.', null, true)
-        : firstAgent(state);
+      if (event.start === 'answer') return answer(state);
+      if (event.start === 'interpret') {
+        return ask(state, 'clarify', 'The request does not say what to change.', {
+          interpret: true,
+        });
+      }
+      if (event.start === 'choose') {
+        return ask(state, 'clarify', 'Not sure whether you want an answer or a change.', {
+          answerOrBuild: true,
+        });
+      }
+      return build(state);
     case 'clarified':
-      return event.depth === null
-        ? finish(state, 'cancelled', 'You stopped it.')
-        : firstAgent({ ...state, depth: event.depth });
+      if (event.answer === null) return finish(state, 'cancelled', 'You stopped it.');
+      return event.answer ? answer(state) : build(state);
     case 'agent_done':
       return agentDone(state, event);
-    case 'judged':
-      return judged(state, event);
+    case 'looped':
+      return looped(state, event);
     case 'answered':
       return answered(state, event);
     case 'wrapped':
-      return event.asksToKeep
+      return asksToKeep(state.level, event.filesChanged)
         ? ask(state, 'accept', filesChangedLine(event.filesChanged))
         : finish(state, 'succeeded');
     case 'reverted':
-      return finish(state, 'succeeded', 'Reverted the changes.');
+      return finish({ ...state, open: [] }, 'succeeded', 'Reverted the changes.');
     case 'budget_exceeded':
       return ask(
-        { ...withDone(state, event.ticked ?? []), exceeded: event.limit },
+        { ...state, exceeded: event.limit },
         'budget',
         `The ${event.limit.replace('_', ' ')} budget ran out.`,
       );
-    case 'group_done':
-      return groupDone(state, event);
     case 'stopped':
       return finish(state, 'cancelled', 'Stopped.');
   }
-}
-
-function budgetStopLine(state: FlowState, limit: string): string {
-  const open = incompleteLine(state);
-  const unreviewed =
-    reviewWanted(state) && !state.reviewed && state.last?.role === 'builder'
-      ? ' The changes so far were not reviewed.'
-      : '';
-  return `Stopped: the ${limit} budget ran out.${open ? ` ${open}` : ''}${unreviewed}`;
 }
 
 function filesChangedLine(count: number): string {

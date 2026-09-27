@@ -233,7 +233,7 @@ describe('Z.ai in the fake runtime', { timeout: 20_000 }, () => {
   it('runs a fake GLM Builder turn when a key is stored, without handing the key to the agent', async () => {
     const { outputs, text, error, notes } = await build();
     expect(error).toBeNull();
-    expect(text).toContain('Built step 1.');
+    expect(text).toContain('Built it after 0 earlier prompts.');
     expect(notes).toBe('before\nstep 1\n');
     expect(outputs).toContainEqual(
       expect.objectContaining({ kind: 'session_settings', model: 'glm-5.3-flash' }),

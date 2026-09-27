@@ -54,7 +54,7 @@ async function editedChat(page: Page) {
     .getByRole('group', { name: /Keep these changes\?/ })
     .getByRole('button', { name: 'Keep', exact: true })
     .click();
-  await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
 }
 
 const bigText = (lines: number, label: string) =>

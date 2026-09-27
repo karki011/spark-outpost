@@ -6,23 +6,22 @@ import {
   type AdviceSummary,
   type AdvisorUsage,
   type CapabilityOption,
-  type Depth,
-  type MechanicalNote,
   type ModelRouting,
   type ProviderId,
   type ProviderModel,
 } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
 import { advisorEntry, catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
-import { allowFrontier, listModelStats } from './model-stats.ts';
+import { listModelStats } from './model-stats.ts';
 import type { Queryable } from './db.ts';
 
 const AGENT_DEFAULT = 'default';
 
 export async function insertAdvice(db: Queryable, runId: string, body: AdviceBody): Promise<void> {
   await db.query(
-    `INSERT INTO run_advice (run_id, purpose, jev_status, jev_input_tokens, jev_cost_usd, body)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO run_advice (run_id, purpose, jev_status, jev_input_tokens, jev_cost_usd, body,
+       policy_version)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT (run_id) WHERE purpose = 'intake' DO NOTHING`,
     [
       runId,
@@ -31,31 +30,8 @@ export async function insertAdvice(db: Queryable, runId: string, body: AdviceBod
       body.usage?.inputTokens ?? null,
       body.usage?.costUsd ?? null,
       JSON.stringify(body),
+      body.policyVersion ?? null,
     ],
-  );
-}
-
-export async function noteIntakeDepth(
-  db: Queryable,
-  runId: string,
-  depthNote: { depth: Depth; reason: string },
-): Promise<void> {
-  await db.query(
-    `UPDATE run_advice SET body = body || jsonb_build_object('depthNote', $2::jsonb)
-     WHERE run_id = $1 AND purpose = 'intake'`,
-    [runId, JSON.stringify(depthNote)],
-  );
-}
-
-export async function noteIntakeMechanical(
-  db: Queryable,
-  runId: string,
-  mechanical: MechanicalNote,
-): Promise<void> {
-  await db.query(
-    `UPDATE run_advice SET body = body || jsonb_build_object('mechanical', $2::jsonb)
-     WHERE run_id = $1 AND purpose = 'intake'`,
-    [runId, JSON.stringify(mechanical)],
   );
 }
 
@@ -177,7 +153,7 @@ export async function loadIntakeContext(
   workspaceId: string,
   conversationId: string,
 ): Promise<IntakeContext> {
-  const [candidates, jev, conversation, frontier, stats] = await Promise.all([
+  const [candidates, jev, conversation, stats] = await Promise.all([
     db.query<CandidateRow>(
       `SELECT pc.provider, pc.models, cap.models AS capability_models,
          cap.efforts AS capability_efforts
@@ -196,7 +172,6 @@ export async function loadIntakeContext(
       'SELECT model_routing FROM conversations WHERE id = $1',
       [conversationId],
     ),
-    allowFrontier(db, workspaceId),
     listModelStats(db),
   ]);
   const jevRow = jev.rows[0];
@@ -207,7 +182,7 @@ export async function loadIntakeContext(
       const provider = providerIdSchema.safeParse(row.provider);
       if (!provider.success) return [];
       const candidate = toCandidate({ ...row, provider: provider.data });
-      return [{ ...candidate, allowFrontier: frontier[provider.data] ?? false, stats }];
+      return [{ ...candidate, stats }];
     }),
   };
 }

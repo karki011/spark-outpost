@@ -1,7 +1,7 @@
 <title>Spark Outpost Harness</title>
 <meta
   name="description"
-  content="How the Jev-orchestrated harness routes work, where people stay in the loop, and what it records."
+  content="How the lean harness handles a request: one Builder, checks, an optional Critic, Jev observing, and where you stay in the loop."
 />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -633,9 +633,10 @@
 <main>
   <h1>One request, a controlled path, a full record</h1>
   <p class="lede">
-    Jev decides how much process each request needs and which model does each part. Agents do the
-    work. The harness enforces permissions, pauses at the checkpoints you choose, and records every
-    decision so you can see why something happened.
+    Jev answers a few yes-or-no questions about each request and observes the rest. Fixed rules pick
+    the model. One Builder does the work in a task session, the project checks verify it, and a
+    Critic reviews only risky, requested or large changes. The harness enforces permissions, pauses
+    at the checkpoints you choose, and records every decision so you can see why something happened.
   </p>
   <div class="legend" aria-label="Legend">
     <span><i class="dot d-harness"></i>Harness (fixed rules, storage)</span>
@@ -712,13 +713,14 @@
     <h2 id="rules">Rules that never bend</h2>
     <div class="rules">
       <p>
-        <strong>Jev chooses the path, never the permissions.</strong> Folders, mode, the allowlist
-        and budgets come from you and the fixed rules. A 0.99 confidence is still a guess, not a
-        grant.
+        <strong>Jev answers questions, never grants permissions.</strong> Folders, mode, the
+        allowlist and budgets come from you and the fixed rules, and the rules pick the model. A
+        0.99 confidence is still a guess, not a grant.
       </p>
       <p>
-        <strong>Low confidence falls back.</strong> Below 0.5, or when Jev is unavailable, the fixed
-        rules decide and the record says so.
+        <strong>One act line, whatever the level.</strong> Below it, or when Jev is unavailable, the
+        level decides only whether you are asked or the fixed rules decide, and the record says so.
+        The edit gate and the verifier only observe until their thresholds are tuned.
       </p>
       <p>
         <strong>Evidence beats claims.</strong> What changed comes from git and our own receipts.
@@ -736,8 +738,8 @@
   </section>
 
   <footer>
-    Spark Outpost harness design, September 26, 2026. Models shown are examples of Jev's tier
-    choices: Haiku for trivial work, Sonnet for normal fixes, Opus for planning and risky review.
+    Spark Outpost lean harness, round 10, September 27, 2026. Models shown are examples of the rules
+    on Auto: Haiku for trivial edits, the chat model for normal work, Opus for destructive work.
     Source: <code>docs/architecture/HARNESS_PLAN.md</code>.
   </footer>
 </main>
@@ -763,7 +765,7 @@
       kind: 'jev',
       name: 'Intake',
       who: 'Jev, one batched call',
-      what: 'Jev answers typed questions about the request in one call: intent, complexity, risk, whether untrusted content is trying to steer the agent, and how deep the work should go.',
+      what: 'Jev answers concrete questions in one call: is it only a question, is it too vague, is it a review request, is it destructive, does it continue the current task. It also names the category and, for the record only, which model size it would use.',
       records: [
         ['decisions', 'questions, answers, probabilities, confidence'],
         ['decisions', 'threshold used, applied / asked you / fell back to rules'],
@@ -773,34 +775,20 @@
     },
     {
       id: 'route',
-      n: 'J2',
-      kind: 'jev',
-      name: 'Pick a model per subagent',
-      who: 'Jev, once per subagent',
-      what: 'For each piece of work Jev picks provider, model and effort. Simple work never reaches a frontier model. The answer is only used inside the limits you set.',
-      records: [['decisions', 'role, provider, model, effort, confidence']],
-    },
-    {
-      id: 'plan',
-      n: 'A1',
-      kind: 'agent',
-      name: 'Plan',
-      who: 'Planner subagent, read-only',
-      what: 'For bigger work a planner reads the repo and writes a plan with steps and how to check them. Every plan update is saved as a new version.',
-      records: [
-        ['runs', 'child run, role planner'],
-        ['run_artifacts', 'plan v1, v2, … entries with status and priority'],
-        ['run_events', 'steps and tool calls while reading'],
-      ],
-      gate: { id: 'plan', label: 'Approve the plan' },
+      n: 'H1',
+      kind: 'harness',
+      name: 'Pick the model',
+      who: 'Fixed rules; Jev observes',
+      what: 'A pinned model always runs. On Auto the rules pick the chat model, a smaller one for a trivial edit and the top one for destructive work. Jev’s pick is recorded as “Jev would have used …”, never applied.',
+      records: [['decisions', 'rule pick, Jev tier pick, policy version']],
     },
     {
       id: 'work',
-      n: 'A2',
+      n: 'A1',
       kind: 'agent',
       name: 'Do the work',
-      who: 'Executor subagent',
-      what: 'The executor answers or edits. Before it starts, the harness takes a snapshot. Every edit and command passes the approval rules first; your mode and allowlist decide, never Jev.',
+      who: 'One Builder, in its own task session',
+      what: 'One Builder does a small increment and plans for itself only when needed. The harness takes a snapshot first. Every edit and command passes the approval rules; your mode and allowlist decide, never Jev. Jev observes each proposed edit and records what it would have done.',
       records: [
         ['snapshots', 'git ref or file copies at start'],
         ['approvals', 'exact payload and hash, your decision, scope'],
@@ -811,30 +799,20 @@
     },
     {
       id: 'check',
-      n: 'H1',
+      n: 'H2',
       kind: 'harness',
       name: 'Run checks',
       who: 'Harness',
-      what: 'The project check command, for example pnpm test, runs through the same approval rules. Its exit code is recorded as evidence.',
+      what: 'The project checks, for example pnpm test, run through the same approval rules. A failure goes back to the same Builder session for up to two fixes. Open items in its own plan get up to two “continue” turns; after that the reply says what is still open.',
       records: [['run_artifacts', 'check: command, exit code, duration, output tail']],
     },
     {
-      id: 'judge',
-      n: 'J3',
-      kind: 'jev',
-      name: 'Judge and decide next',
-      who: 'Jev',
-      what: 'Jev scores the result against the plan and picks what happens next: finish, retry one tier up, ask for a review, or ask you.',
-      records: [['decisions', 'quality score, next step, confidence']],
-      gate: { id: 'next', label: 'Confirm a retry or escalation' },
-    },
-    {
       id: 'review',
-      n: 'A3',
+      n: 'A2',
       kind: 'agent',
       name: 'Review',
-      who: 'Reviewer subagent, read-only, other provider',
-      what: 'A fresh read-only session checks the evidence and re-checks file fingerprints, so it cannot be fooled by files changing afterwards.',
+      who: 'Critic, read-only, other provider',
+      what: 'Only for destructive work, a review request, or a large diff: one pass with the request, the diff and the check results. Its findings go into the reply as an AI review, never as verification.',
       records: [
         ['runs', 'child run, role reviewer'],
         ['run_artifacts', 'review: verdict, findings, reviewer model'],
@@ -842,7 +820,7 @@
     },
     {
       id: 'finish',
-      n: 'H2',
+      n: 'H3',
       kind: 'harness',
       name: 'Finish',
       who: 'Harness',
@@ -862,8 +840,8 @@
       label: 'Question in a repo',
       text: '“What does parseDate do?”',
       path: ['message', 'intake', 'route', 'work', 'finish'],
-      picks: { route: 'Sonnet · low', work: 'Ask mode, reads only' },
-      depth: 'direct',
+      picks: { route: 'chat model', work: 'answers in place, reads only' },
+      depth: 'answer',
       risk: 'read-only',
       conf: 0.94,
     },
@@ -871,9 +849,9 @@
       id: 'trivial',
       label: 'Trivial fix',
       text: '“Fix the typo in the README heading.”',
-      path: ['message', 'intake', 'route', 'work', 'check', 'judge', 'finish'],
-      picks: { route: 'Haiku · low', work: '1 file' },
-      depth: 'execute',
+      path: ['message', 'intake', 'route', 'work', 'check', 'finish'],
+      picks: { route: 'Haiku (trivial rule)', work: '1 file' },
+      depth: 'one Builder',
       risk: 'edits',
       conf: 0.92,
     },
@@ -881,9 +859,9 @@
       id: 'normal',
       label: 'Normal fix',
       text: '“The date divider shows the wrong day after midnight. Fix it and add a test.”',
-      path: ['message', 'intake', 'route', 'work', 'check', 'judge', 'finish'],
-      picks: { route: 'Sonnet · medium', work: '2 files' },
-      depth: 'execute',
+      path: ['message', 'intake', 'route', 'work', 'check', 'finish'],
+      picks: { route: 'Sonnet (chat model)', work: '2 files' },
+      depth: 'one Builder',
       risk: 'edits',
       conf: 0.81,
     },
@@ -891,53 +869,21 @@
       id: 'complex',
       label: 'Complex change',
       text: '“Move date handling into one module and update every component.”',
-      path: [
-        'message',
-        'intake',
-        'route',
-        'plan',
-        'route',
-        'work',
-        'check',
-        'judge',
-        'review',
-        'finish',
-      ],
-      picks: {
-        route: 'Opus plan · Sonnet ×3',
-        plan: 'Opus · high',
-        work: '3 subtasks',
-        review: 'Codex · high',
-      },
-      depth: 'plan → execute → review',
-      risk: 'multi-file',
-      conf: 0.77,
+      path: ['message', 'intake', 'route', 'work', 'check', 'finish'],
+      picks: { route: 'Sonnet (chat model)', work: 'one Builder, its own plan' },
+      depth: 'one Builder',
+      risk: 'edits',
+      conf: 0.9,
     },
     {
       id: 'risky',
       label: 'Risky migration',
       text: '“Rename the runs table column and migrate old rows.”',
-      path: [
-        'message',
-        'intake',
-        'route',
-        'plan',
-        'route',
-        'work',
-        'check',
-        'judge',
-        'review',
-        'finish',
-      ],
-      picks: {
-        route: 'Opus · high',
-        plan: 'Opus · high',
-        work: 'migration + code',
-        review: 'Codex · high',
-      },
-      depth: 'plan → execute → review',
+      path: ['message', 'intake', 'route', 'work', 'check', 'review', 'finish'],
+      picks: { route: 'Opus (top tier)', work: 'in a worktree copy', review: 'Codex · high' },
+      depth: 'one Builder + Critic',
       risk: 'destructive',
-      conf: 0.71,
+      conf: 0.9,
     },
   ];
 
@@ -945,12 +891,12 @@
     {
       id: 'hands-on',
       label: 'Hands-on',
-      hint: 'You approve the plan, every edit and every command.',
+      hint: 'You approve every edit and every command. Unsure answers ask you.',
     },
     {
       id: 'balanced',
       label: 'Balanced',
-      hint: 'Edits and commands ask. Plans ask only for risky or multi-file work. Jev asks when unsure.',
+      hint: 'Edits and commands ask. Unsure answers ask you instead of acting.',
     },
     {
       id: 'hands-off',
@@ -970,21 +916,10 @@
       name: 'Clarify what you meant',
       when: 'Jev is unsure what you asked for',
       rule: {
-        'hands-on': 'Below 0.75',
-        balanced: 'Below 0.6',
-        'hands-off': 'Below 0.5',
+        'hands-on': 'When Jev is unsure (one act line at every level)',
+        balanced: 'When Jev is unsure (one act line at every level)',
+        'hands-off': 'Never; the fixed rules decide',
         auto: 'Never; the fixed rules decide',
-      },
-    },
-    {
-      id: 'plan',
-      name: 'Approve the plan',
-      when: 'A planner ran',
-      rule: {
-        'hands-on': 'Always',
-        balanced: 'Multi-file or risky work',
-        'hands-off': 'Destructive work only',
-        auto: 'Never',
       },
     },
     {
@@ -1000,13 +935,13 @@
     },
     {
       id: 'next',
-      name: 'Confirm a retry or escalation',
-      when: 'Jev wants to retry with a bigger model or send work back',
+      name: 'Retry, or stop and report',
+      when: 'The Builder failed twice after two rule retries one tier up, or repeated itself',
       rule: {
-        'hands-on': 'Always',
-        balanced: 'When Jev is below 0.9',
-        'hands-off': 'Never; the retry limit still applies',
-        auto: 'Never; the retry limit still applies',
+        'hands-on': 'Asks; the default is Stop and report',
+        balanced: 'Asks; the default is Stop and report',
+        'hands-off': 'Stops and reports',
+        auto: 'Stops and reports',
       },
     },
     {
@@ -1047,7 +982,7 @@
       items: [
         'status and outcome, including outcome unknown after a crash',
         'mode, provider, model, effort',
-        'role: planner, executor, reviewer',
+        'role: builder, scout, critic',
         'timestamps and active time',
       ],
     },
@@ -1156,21 +1091,9 @@
   function gateActive(id) {
     const s = scen(),
       l = state.level;
-    if (id === 'clarify')
-      return s.conf < { 'hands-on': 0.75, balanced: 0.6, 'hands-off': 0.5, auto: 0 }[l];
-    if (id === 'plan') {
-      if (!s.path.includes('plan')) return false;
-      if (l === 'hands-on') return true;
-      if (l === 'balanced') return s.risk === 'multi-file' || s.risk === 'destructive';
-      return s.risk === 'destructive' && l !== 'auto';
-    }
+    if (id === 'clarify') return s.conf < 0.8 && (l === 'hands-on' || l === 'balanced');
     if (id === 'action') return s.risk !== 'read-only' && l !== 'auto';
-    if (id === 'next') {
-      if (!s.path.includes('judge')) return false;
-      if (l === 'hands-on') return true;
-      if (l === 'balanced') return s.conf < 0.9 && s.path.includes('review');
-      return false;
-    }
+    if (id === 'next') return false;
     if (id === 'accept') {
       if (s.risk === 'read-only') return false;
       return l !== 'hands-off' && l !== 'auto';
@@ -1261,13 +1184,13 @@
       t: at(0),
       by: 'harness',
       rec: 'runs',
-      txt: `queued · ${s.risk === 'read-only' ? 'Ask' : 'Do'} mode · ${s.path.includes('plan') ? 'orchestrated' : 'single agent'}`,
+      txt: `queued · ${s.risk === 'read-only' ? 'Ask' : 'Do'} mode · ${s.risk === 'read-only' ? 'answer in place' : 'task Builder'}`,
     });
     rows.push({
       t: at(0.4),
       by: 'jev',
       rec: 'decisions',
-      txt: `intake · depth “${s.depth}” · risk ${s.risk} · injection 0.03 · confidence ${s.conf.toFixed(2)}`,
+      txt: `intake · question ${s.risk === 'read-only' ? 'yes' : 'no'} · destructive ${s.risk === 'destructive' ? 'yes' : 'no'} · injection 0.03 · policy lean-1`,
     });
     if (gateActive('clarify'))
       rows.push({
@@ -1281,30 +1204,8 @@
       t: at(0.3),
       by: 'jev',
       rec: 'decisions',
-      txt: `model · ${s.picks.plan ? 'planner ' + s.picks.plan : s.picks.route}`,
+      txt: `route · rule: ${s.picks.route} · Jev would have used Sonnet (observed)`,
     });
-    if (s.path.includes('plan')) {
-      rows.push({
-        t: at(9.5),
-        by: 'agent',
-        rec: 'run_artifacts',
-        txt: 'plan v1 · 5 entries · “Plan · 0 of 5 done”',
-      });
-      if (gateActive('plan'))
-        rows.push({
-          t: at(0.1),
-          by: 'human',
-          rec: 'approvals',
-          txt: 'Approve the plan before any edits?',
-          gate: ['Approve', 'Edit plan', 'Stop'],
-        });
-      rows.push({
-        t: at(0.3),
-        by: 'jev',
-        rec: 'decisions',
-        txt: 'model per subtask · Sonnet medium ×2 · Haiku low ×1',
-      });
-    }
     if (s.risk !== 'read-only') {
       rows.push({
         t: at(0.2),
@@ -1364,22 +1265,14 @@
         t: at(0.5),
         by: 'jev',
         rec: 'decisions',
-        txt: `judge · quality 4 of 5 · next “${s.path.includes('review') ? 'review' : 'finish'}” · confidence 0.88`,
+        txt: 'verify (observed) · every requirement met · tests not weakened',
       });
-      if (gateActive('next'))
-        rows.push({
-          t: at(0.1),
-          by: 'human',
-          rec: 'approvals',
-          txt: 'Jev suggests a review by Codex · high effort',
-          gate: ['Review', 'Skip review'],
-        });
       if (s.path.includes('review'))
         rows.push({
           t: at(11.3),
           by: 'agent',
           rec: 'run_artifacts',
-          txt: 'review · Codex · looks good · fingerprints match',
+          txt: 'review · Codex · looks good',
         });
       rows.push({
         t: at(0.4),

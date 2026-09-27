@@ -108,6 +108,80 @@ export async function taskForWorkingRun(
   });
 }
 
+export interface TaskContext {
+  taskId: string;
+  previousRequest: string;
+  summary: string;
+  lastReplyAt: Date | null;
+}
+
+export async function currentTaskContext(
+  db: Queryable,
+  runId: string,
+): Promise<TaskContext | null> {
+  const { rows } = await db.query<{
+    task_id: string;
+    request: string;
+    reply: string | null;
+    replied_at: Date | null;
+  }>(
+    `SELECT p.task_id, m.content AS request, a.content AS reply, a.created_at AS replied_at
+     FROM runs me
+     JOIN runs p ON p.task_id = me.task_id AND p.parent_run_id IS NULL AND p.id <> me.id
+       AND p.created_at < me.created_at
+     JOIN messages m ON m.id = p.user_message_id
+     LEFT JOIN messages a ON a.run_id = p.id AND a.role = 'assistant'
+     WHERE me.id = $1 AND me.task_id IS NOT NULL
+       AND EXISTS (SELECT 1 FROM runs c WHERE c.parent_run_id = p.id AND c.role = 'builder')
+     ORDER BY p.created_at DESC
+     LIMIT 1`,
+    [runId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    taskId: row.task_id,
+    previousRequest: row.request,
+    summary: row.reply ?? '',
+    lastReplyAt: row.replied_at,
+  };
+}
+
+export async function startNewTask(
+  db: Db,
+  runId: string,
+  request: string,
+): Promise<{ taskId: string; closed: string | null }> {
+  return withTransaction(db, async (client) => {
+    const { rows } = await client.query<{ conversation_id: string; task_id: string | null }>(
+      `SELECT r.conversation_id, r.task_id FROM runs r
+       JOIN conversations c ON c.id = r.conversation_id
+       WHERE r.id = $1 FOR UPDATE OF c`,
+      [runId],
+    );
+    const run = rows[0];
+    if (!run) throw new Error(`Run ${runId} was not found.`);
+    if (run.task_id) {
+      await client.query(
+        `UPDATE tasks SET status = 'closed', closed_at = now()
+         WHERE id = $1 AND status = 'open'`,
+        [run.task_id],
+      );
+    }
+    const taskId = newId();
+    await client.query('INSERT INTO tasks (id, conversation_id, title) VALUES ($1, $2, $3)', [
+      taskId,
+      run.conversation_id,
+      taskTitle(request),
+    ]);
+    await client.query('UPDATE runs SET task_id = $2, plan_version = NULL WHERE id = $1', [
+      runId,
+      taskId,
+    ]);
+    return { taskId, closed: run.task_id };
+  });
+}
+
 function toTaskLink(row: LinkRow): TaskLink {
   return {
     id: row.id,

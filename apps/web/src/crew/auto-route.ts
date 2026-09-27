@@ -22,7 +22,7 @@ export function autoThisTurn(orchestration: Orchestration | null): string | null
 }
 
 export function autoWouldHaveUsed(orchestration: Orchestration | null): string | null {
-  if (!orchestration || orchestration.routing !== 'pinned') return null;
+  if (!orchestration) return null;
   const member = [...orchestration.crew].reverse().find((candidate) => candidate.autoWouldUse);
   const pick = member?.autoWouldUse;
   if (!member || !pick) return null;

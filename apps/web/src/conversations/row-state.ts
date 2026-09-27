@@ -44,7 +44,7 @@ export function attentionLine(attention: ConversationAttention | null): string {
     case 'input':
       return name ? `${name} has a question` : attention.title || 'Needs your input';
     case 'stuck':
-      return name ? `${name} looks stuck` : 'An agent looks stuck';
+      return name ? `${name} was repeating itself` : 'The Builder was repeating itself';
   }
 }
 
@@ -55,7 +55,7 @@ export function asksPermission(chat: ConversationSummary): boolean {
 function waitingState(chat: ConversationSummary): RowState {
   const sub = attentionLine(chat.attention);
   if (asksPermission(chat)) return { tone: 'permission', label: 'Asking permission', sub };
-  if (chat.attention?.kind === 'stuck') return { tone: 'asking', label: 'Looks stuck', sub };
+  if (chat.attention?.kind === 'stuck') return { tone: 'asking', label: 'Repeating itself', sub };
   return { tone: 'asking', label: 'Needs your input', sub };
 }
 

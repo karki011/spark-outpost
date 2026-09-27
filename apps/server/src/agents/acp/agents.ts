@@ -29,23 +29,20 @@ export interface AgentDefinition {
   conversationSessionMeta?: Record<string, unknown>;
   conversationEnv?: (workdir: string, browsing?: boolean) => Record<string, string>;
   projectSessionMeta?: (extraRoots: readonly string[]) => Record<string, unknown>;
-  planSessionMeta?: (extraRoots: readonly string[]) => Record<string, unknown>;
   doSessionMeta?: (extraRoots: readonly string[]) => Record<string, unknown>;
   doMode?: string;
   doPrimaryRootOnly?: boolean;
   doWorktreeLevels?: readonly InvolvementLevel[];
 }
 
-export const CLAUDE_DO_TOOLS = ['Read', 'Glob', 'Grep', 'Edit', 'Write', 'Bash'] as const;
-export const CLAUDE_PLAN_TOOLS = [
+export const CLAUDE_DO_TOOLS = [
   'Read',
   'Glob',
   'Grep',
+  'Edit',
+  'Write',
+  'Bash',
   'TodoWrite',
-  'TaskCreate',
-  'TaskUpdate',
-  'TaskList',
-  'TaskGet',
 ] as const;
 export const CLAUDE_DO_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
 export const CODEX_DO_MODE = 'ask-every-action';
@@ -114,8 +111,6 @@ const claudeSessions = {
   conversationSessionMeta: claudeSessionMeta([], []),
   projectSessionMeta: (extraRoots: readonly string[]) =>
     claudeSessionMeta(['Read', 'Glob', 'Grep'], extraRoots),
-  planSessionMeta: (extraRoots: readonly string[]) =>
-    claudeSessionMeta(CLAUDE_PLAN_TOOLS, extraRoots),
   doSessionMeta: (extraRoots: readonly string[]) =>
     claudeSessionMeta(CLAUDE_DO_TOOLS, extraRoots, CLAUDE_DO_ASK_RULES),
 } satisfies Partial<AgentDefinition>;

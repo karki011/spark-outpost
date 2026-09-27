@@ -6,8 +6,7 @@ type AgentItem = { kind: 'agent'; member: CrewMember; checkpoints: CheckpointApp
 type LooseItem =
   { kind: 'checkpoint'; approval: CheckpointApproval } | { kind: 'approval'; approval: Approval };
 
-export type CrewItem =
-  AgentItem | LooseItem | { kind: 'group'; group: string; members: AgentItem[] };
+export type CrewItem = AgentItem | LooseItem;
 
 const STATUS_RANK: Record<Approval['status'], number> = {
   pending: 0,
@@ -74,22 +73,4 @@ export function crewItems(
 
 export function lastAgentIndex(items: readonly CrewItem[]): number {
   return items.findLastIndex((item) => item.kind === 'agent');
-}
-
-export function groupParallel(items: readonly CrewItem[]): CrewItem[] {
-  const grouped: CrewItem[] = [];
-  for (const item of items) {
-    const group = item.kind === 'agent' ? (item.member.parallelGroup ?? null) : null;
-    const last = grouped.at(-1);
-    if (item.kind !== 'agent' || group === null) {
-      grouped.push(item);
-    } else if (last?.kind === 'group' && last.group === group) {
-      last.members.push(item);
-    } else if (last?.kind === 'agent' && last.member.parallelGroup === group) {
-      grouped[grouped.length - 1] = { kind: 'group', group, members: [last, item] };
-    } else {
-      grouped.push(item);
-    }
-  }
-  return grouped;
 }

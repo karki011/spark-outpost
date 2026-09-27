@@ -13,6 +13,7 @@ import { catalogEntry } from '../providers/catalog.ts';
 import { buildDigestPrompt } from './input.ts';
 import { digestModel } from './model.ts';
 import { decideDigest, DIGEST_MIN_GAP_MS, digestSince, refreshableAt } from './policy.ts';
+import { computeDigestStats } from './stats.ts';
 
 interface Snapshot {
   state: DigestState;
@@ -67,6 +68,7 @@ export async function requestDigest(
   if (decision !== 'start') return state;
   const chats = await loadActivity(db, workspaceId, since);
   if (chats.length === 0) return state;
+  const stats = computeDigestStats(chats);
   const { prompt, chatIds } = buildDigestPrompt({
     since: since.toISOString(),
     until: now.toISOString(),
@@ -86,6 +88,7 @@ export async function requestDigest(
       until: now,
       prompt,
       chatIds,
+      stats,
     },
     DIGEST_MIN_GAP_MS,
   );

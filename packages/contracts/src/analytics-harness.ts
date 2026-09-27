@@ -101,6 +101,29 @@ export const approvalKindWaitSchema = z.object({
 });
 export type ApprovalKindWait = z.infer<typeof approvalKindWaitSchema>;
 
+export const routingCostRowSchema = z.object({
+  key: agreementKeySchema,
+  turns: count,
+  verified: count,
+  costUsd: z.number().nonnegative(),
+  costPerVerifiedUsd: z.number().nonnegative().nullable(),
+});
+export type RoutingCostRow = z.infer<typeof routingCostRowSchema>;
+
+export const observationRowSchema = z.object({
+  would: z.string(),
+  actual: z.string(),
+  count,
+});
+export type ObservationRow = z.infer<typeof observationRowSchema>;
+
+export const observationSummarySchema = z.object({
+  checks: count,
+  skipped: count,
+  rows: z.array(observationRowSchema),
+});
+export type ObservationSummary = z.infer<typeof observationSummarySchema>;
+
 export const analyticsHarnessSchema = z.object({
   window: analyticsWindowSchema,
   turns: count,
@@ -117,12 +140,14 @@ export const analyticsHarnessSchema = z.object({
     medianMs: z.number().int().nonnegative().nullable(),
     byKind: z.array(approvalKindWaitSchema),
   }),
+  routingCost: z.array(routingCostRowSchema).default([]),
+  observation: z
+    .object({ policy: observationSummarySchema, verify: observationSummarySchema })
+    .default({
+      policy: { checks: 0, skipped: 0, rows: [] },
+      verify: { checks: 0, skipped: 0, rows: [] },
+    }),
 });
 export type AnalyticsHarness = z.infer<typeof analyticsHarnessSchema>;
 
-export const GATE_LINES = [
-  { at: 0.75, label: 'Act, read-only' },
-  { at: 0.8, label: 'Cheaper pick' },
-  { at: 0.9, label: 'Act' },
-  { at: 0.95, label: 'Frontier' },
-] as const;
+export const GATE_LINES = [{ at: 0.9, label: 'Tier act line (observed only)' }] as const;

@@ -5,9 +5,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConversationSummary, Digest, DigestSuggestion } from '@spark-outpost/contracts';
 import { AuditDialog } from '../audit/AuditDialog.tsx';
 import { BlobScout } from '../brand/BlobScout.tsx';
+import { scrollToAnchor } from '../crew/scroll-to-anchor.ts';
+import { readDetailsOpen, writeDetailsOpen } from './digest-details.ts';
 import { homeApi, homeKeys } from './home-api.ts';
 import { HomeSection } from './HomeCards.tsx';
-import { canRefresh, digestMeta, digestView, refreshHint } from './digest-model.ts';
+import {
+  canRefresh,
+  digestChips,
+  digestMeta,
+  digestView,
+  refreshHint,
+  type DigestChip,
+} from './digest-model.ts';
 
 interface DigestCardProps {
   chats: readonly ConversationSummary[];
@@ -76,9 +85,51 @@ function Writing() {
   );
 }
 
+function Chips({ chips }: { chips: readonly DigestChip[] }) {
+  if (chips.length === 0) return null;
+  return (
+    <ul className="dg-chips">
+      {chips.map((chip) => (
+        <li key={chip.id}>
+          <button type="button" className="dg-chip" onClick={() => scrollToAnchor(chip.section)}>
+            {chip.label}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+interface OverviewProps {
+  digest: Digest;
+  detailsOpen: boolean;
+  onToggleDetails: () => void;
+}
+
+function Overview({ digest, detailsOpen, onToggleDetails }: OverviewProps) {
+  const headline = digest.body?.headline;
+  if (!headline) return null;
+  return (
+    <div className="dg-overview">
+      <p className="dg-headline">{headline}</p>
+      <Chips chips={digestChips(digest.stats)} />
+      <button
+        type="button"
+        className="hlink dg-toggle"
+        aria-expanded={detailsOpen}
+        aria-controls="digest-details"
+        onClick={onToggleDetails}
+      >
+        {detailsOpen ? 'Hide details' : 'Show details'}
+      </button>
+    </div>
+  );
+}
+
 export function DigestCard({ chats, now, onOpenChat, onContinue }: DigestCardProps) {
   const queryClient = useQueryClient();
   const [auditOpen, setAuditOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(readDetailsOpen);
   const digest = useQuery({
     queryKey: homeKeys.digest,
     queryFn: homeApi.digest,
@@ -100,6 +151,13 @@ export function DigestCard({ chats, now, onOpenChat, onContinue }: DigestCardPro
   const writing = view === 'writing' || ask.isPending;
   const titleOf = (id: string) => chats.find((chat) => chat.id === id)?.title ?? 'This chat';
   const hint = refreshHint(state, now);
+  const toggleDetails = () => {
+    setDetailsOpen((open) => {
+      const next = !open;
+      writeDetailsOpen(next);
+      return next;
+    });
+  };
 
   return (
     <HomeSection
@@ -149,13 +207,18 @@ export function DigestCard({ chats, now, onOpenChat, onContinue }: DigestCardPro
         )}
         {!writing && view === 'ready' && current && (
           <>
-            <Lines digest={current} onOpenChat={onOpenChat} />
-            <Suggestions
-              suggestions={current.body?.suggestions ?? []}
-              titleOf={titleOf}
-              onContinue={onContinue}
-            />
-            {!state?.newActivity && <p className="hnote">Nothing new since this digest.</p>}
+            <Overview digest={current} detailsOpen={detailsOpen} onToggleDetails={toggleDetails} />
+            {detailsOpen && (
+              <div id="digest-details">
+                <Lines digest={current} onOpenChat={onOpenChat} />
+                <Suggestions
+                  suggestions={current.body?.suggestions ?? []}
+                  titleOf={titleOf}
+                  onContinue={onContinue}
+                />
+                {!state?.newActivity && <p className="hnote">Nothing new since this digest.</p>}
+              </div>
+            )}
           </>
         )}
         {ask.isError && <p className="home-error">{ask.error.message}</p>}

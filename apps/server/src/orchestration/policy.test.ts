@@ -1,205 +1,84 @@
 import { describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION, type JevIntake } from '@spark-outpost/contracts';
+import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { activeTime, exceededLimit, extendLimits } from './budget.ts';
-import { asksForPlan, asksForRetry, asksToKeep, autoContinueOption } from './checkpoint-policy.ts';
+import { asksForLoop, asksToKeep, autoContinueOption } from './checkpoint-policy.ts';
 import {
-  chooseDepth,
-  ONE_SPOT_REASON,
-  refineDepth,
   asksForReview,
-  reviewIntent,
-  reviewWanted,
-  ruleDepth,
-  trustedRisk,
-} from './depth.ts';
+  destructiveByRule,
+  followUpByRule,
+  isLargeDiff,
+  questionByRule,
+  trivialByRule,
+} from './risk-rules.ts';
 import { oneTierUp, strongerEffort, tierLadder, topTier } from './tiers.ts';
 
-const jev = (
-  depth: JevIntake['depth'],
-  risk: JevIntake['risk'],
-  riskConfidence = 0.9,
-): JevIntake => ({
-  intent: 'bug_fix',
-  complexity: 1,
-  risk,
-  injection: null,
-  depth,
-  provider: 'claude',
-  model: 'sonnet',
-  modelLabel: 'Sonnet 5',
-  effort: 'medium',
-  confidence: 0.8,
-  routeConfidence: 0.9,
-  confidences: { risk: riskConfidence },
-});
-
-describe('review requests', () => {
-  it('keeps a Critic when Jev reads the intent as review at 0.5 or more, in Do mode only', () => {
-    const review = (confidence: number): JevIntake => ({
-      ...jev('execute', 'edits'),
-      intent: 'review',
-      confidences: { intent: confidence },
-    });
-    expect(reviewIntent('do', review(0.5))).toBe(true);
-    expect(reviewIntent('do', review(0.49))).toBe(false);
-    expect(reviewIntent('ask', review(0.9))).toBe(false);
-    expect(reviewIntent('do', jev('execute', 'edits'))).toBe(false);
-    expect(reviewWanted({ depth: 'execute', reviewIntent: true })).toBe(true);
-    expect(reviewWanted({ depth: 'direct', reviewIntent: true })).toBe(false);
-    expect(reviewWanted({ depth: 'plan_execute_review', reviewIntent: false })).toBe(true);
+describe('risk rules', () => {
+  it('calls deletions, drops, data migrations, history rewrites and secrets destructive', () => {
+    for (const request of [
+      'Drop the legacy users table',
+      'Delete the old reports folder',
+      'Migrate the orders data to the new schema',
+      'git reset --hard and force push',
+      'Remove the files under tmp/',
+      'Rotate the key in .env',
+    ]) {
+      expect(destructiveByRule(request), request).toBe(true);
+    }
+    for (const request of [
+      'Rename formatDate to formatDay in src/dates.ts',
+      'Add a CSV export to the reports page',
+      'Fix the typo in README.md',
+    ]) {
+      expect(destructiveByRule(request), request).toBe(false);
+    }
   });
 
-  it('follows Jev’s review question when it is sure, either way', () => {
-    const asked = (noul: number, intent: JevIntake['intent'] = 'feature'): JevIntake => ({
-      ...jev('execute', 'edits'),
-      intent,
-      reviewExisting: noul,
-      confidences: { intent: 0.9 },
-    });
-    expect(reviewIntent('do', asked(0.9), 'Tidy the parser')).toBe(true);
-    expect(reviewIntent('do', asked(0.1, 'review'), 'Please review my changes')).toBe(false);
-    expect(reviewIntent('ask', asked(0.9))).toBe(false);
+  it('calls short, local wording and formatting fixes trivial', () => {
+    expect(trivialByRule('Fix the typo in README.md')).toBe(true);
+    expect(trivialByRule('Rename formatDate to formatDay in src/dates.ts')).toBe(true);
+    expect(trivialByRule('Rename formatDate in src/a.ts and src/b.ts')).toBe(false);
+    expect(trivialByRule('Add a CSV export to the reports page')).toBe(false);
+    expect(trivialByRule('Delete the typo file')).toBe(false);
   });
 
-  it('keeps a Critic for review phrases without build verbs when Jev is unsure', () => {
-    const unsure: JevIntake = {
-      ...jev('execute', 'edits'),
-      intent: 'review',
-      reviewExisting: 0.55,
-      confidences: { intent: 0.44 },
-    };
-    expect(reviewIntent('do', unsure, 'Review the changes in src/invoice.ts')).toBe(true);
-    expect(reviewIntent('do', unsure, 'Can you look over what I did in the parser?')).toBe(true);
-    expect(reviewIntent('do', unsure, 'Check my changes before I push')).toBe(true);
-    expect(reviewIntent('do', unsure, 'Review the parser and fix any bugs you find')).toBe(false);
-    expect(reviewIntent('do', unsure, 'Add a review screen for invoices')).toBe(false);
-    expect(reviewIntent('do', null, 'Please review the PR that adds CSV export')).toBe(true);
-    expect(asksForReview('Make the reports better')).toBe(false);
-  });
-});
-
-describe('depth fallback', () => {
-  it('uses the rules by mode and risk when Jev is not acted on', () => {
-    expect(ruleDepth('chat', 'destructive')).toBe('direct');
-    expect(ruleDepth('ask', 'edits')).toBe('direct');
-    expect(ruleDepth('do', 'read-only')).toBe('execute');
-    expect(ruleDepth('do', 'edits')).toBe('execute');
-    expect(ruleDepth('do', 'multi-file')).toBe('plan_execute');
-    expect(ruleDepth('do', 'destructive')).toBe('plan_execute_review');
+  it('keeps a Critic for review phrases without build verbs', () => {
+    expect(asksForReview('Review my changes to the parser')).toBe(true);
+    expect(asksForReview('Can you look over the diff?')).toBe(true);
+    expect(asksForReview('Review and fix the parser')).toBe(false);
   });
 
-  it("trusts Jev's risk only when its own confidence passes, and never outside Do", () => {
-    expect(trustedRisk('do', jev('execute', 'destructive'))).toBe('destructive');
-    expect(trustedRisk('do', jev('execute', 'destructive', 0.3))).toBe('edits');
-    expect(trustedRisk('ask', jev('execute', 'destructive'))).toBe('read-only');
-    expect(trustedRisk('do', null)).toBe('edits');
+  it('reads a question mark without a build verb as a question', () => {
+    expect(questionByRule('How does the retry logic work?')).toBe(true);
+    expect(questionByRule('Can you add a retry?')).toBe(false);
+    expect(questionByRule('Explain the retry logic')).toBe(false);
   });
 
-  it("uses Jev's depth only when the gate acts, and never a deeper one than the mode allows", () => {
-    expect(chooseDepth('do', 'edits', jev('plan_execute', 'edits'), 'act')).toEqual({
-      depth: 'plan_execute',
-      source: 'jev',
-      reason: null,
-    });
-    expect(chooseDepth('do', 'multi-file', jev('execute', 'multi-file'), 'fallback')).toEqual({
-      depth: 'plan_execute',
-      source: 'rules',
-      reason: null,
-    });
-    expect(chooseDepth('do', 'edits', jev('execute', 'edits'), 'ask')).toEqual({
-      depth: 'execute',
-      source: 'rules',
-      reason: null,
-    });
-    expect(chooseDepth('ask', 'read-only', jev('plan_execute_review', 'edits'), 'act')).toEqual({
-      depth: 'direct',
-      source: 'jev',
-      reason: null,
-    });
-    expect(chooseDepth('do', 'edits', null, null)).toEqual({
-      depth: 'execute',
-      source: 'rules',
-      reason: null,
-    });
+  it('treats short references back, or a quick reply, as a follow-up', () => {
+    const now = new Date('2026-09-27T10:00:00Z');
+    const old = new Date('2026-09-27T09:00:00Z');
+    expect(followUpByRule('also handle empty input', old, now)).toBe(true);
+    expect(followUpByRule('now add a logout button to the header', old, now)).toBe(false);
+    expect(
+      followUpByRule(
+        'now add a logout button to the header',
+        new Date('2026-09-27T09:55:00Z'),
+        now,
+      ),
+    ).toBe(true);
+    expect(followUpByRule('add a logout button', null, now)).toBe(false);
   });
 
-  const planned = { depth: 'plan_execute' as const, source: 'rules' as const, reason: null };
-  const sure = (depth: JevIntake['depth'], confidence: number, depthConfidence = 0.9) => ({
-    ...jev(depth, 'multi-file'),
-    confidence,
-    confidences: { risk: 0.9, depth: depthConfidence },
-  });
-
-  it('skips the Architect when the request already names up to 6 files', () => {
-    const refined = refineDepth(planned, 'multi-file', 4, sure('plan_execute', 0.78));
-    expect(refined).toMatchObject({ depth: 'execute', source: 'rules' });
-    expect(refined.reason).toBe(
-      'The request names its 4 files, so one Builder works from it without an Architect.',
-    );
-    expect(refineDepth(planned, 'multi-file', 7, sure('plan_execute', 0.9)).depth).toBe(
-      'plan_execute',
-    );
-    expect(refineDepth(planned, 'multi-file', 0, sure('plan_execute', 0.9)).depth).toBe(
-      'plan_execute',
-    );
-    expect(refineDepth(planned, 'multi-file', 3, sure('plan_execute', 0.69)).depth).toBe(
-      'plan_execute',
-    );
-    expect(refineDepth(planned, 'multi-file', 3, null).depth).toBe('plan_execute');
-    const reviewed = { ...planned, depth: 'plan_execute_review' as const };
-    expect(refineDepth(reviewed, 'destructive', 2, sure('plan_execute', 0.9))).toBe(reviewed);
-  });
-
-  it('keeps the Critic when Jev suggests a review, even below the act threshold', () => {
-    const refined = refineDepth(planned, 'multi-file', 3, sure('plan_execute_review', 0.77));
-    expect(refined.depth).toBe('plan_execute_review');
-    expect(refined.reason).toMatch(/Jev suggested a review/);
-    expect(refineDepth(planned, 'multi-file', 3, sure('plan_execute_review', 0.8, 0.4)).depth).toBe(
-      'execute',
-    );
-  });
-
-  it('skips the Architect when Jev places a vague request in one spot with confidence', () => {
-    const oneSpot = (scope: number, overall = 0.8) => ({
-      ...sure('plan_execute', overall),
-      scope: 'one_spot' as const,
-      confidences: { risk: 0.9, depth: 0.9, scope },
-    });
-    const refined = refineDepth(planned, 'multi-file', 0, oneSpot(0.75));
-    expect(refined).toMatchObject({ depth: 'execute', reason: ONE_SPOT_REASON });
-    expect(refineDepth(planned, 'multi-file', 0, oneSpot(0.6)).depth).toBe('plan_execute');
-    expect(refineDepth(planned, 'multi-file', 0, oneSpot(0.9, 0.65)).depth).toBe('plan_execute');
-    const reviewed = { ...planned, depth: 'plan_execute_review' as const };
-    expect(refineDepth(reviewed, 'destructive', 0, oneSpot(0.95)).depth).toBe(
-      'plan_execute_review',
-    );
-    const suggested = { ...oneSpot(0.95), depth: 'plan_execute_review' as const };
-    expect(refineDepth(planned, 'multi-file', 0, suggested).depth).toBe('plan_execute_review');
+  it('calls a diff large at 400 changed lines or 10 files, not counting lockfiles', () => {
+    const file = (path: string, additions: number) => ({ path, additions, deletions: 0 });
+    expect(isLargeDiff([file('src/a.ts', 399)])).toBe(false);
+    expect(isLargeDiff([file('src/a.ts', 300), file('src/b.ts', 100)])).toBe(true);
+    expect(isLargeDiff([file('src/a.ts', 10), file('pnpm-lock.yaml', 5000)])).toBe(false);
+    const many = Array.from({ length: 10 }, (_, index) => file(`src/${index}.ts`, 1));
+    expect(isLargeDiff(many)).toBe(true);
   });
 });
 
 describe('level checkpoints', () => {
-  it('asks for the plan by level and risk', () => {
-    const table = (['hands-on', 'balanced', 'hands-off', 'full-auto'] as const).map((level) =>
-      (['edits', 'multi-file', 'destructive'] as const).map((risk) => asksForPlan(level, risk)),
-    );
-    expect(table).toEqual([
-      [true, true, true],
-      [false, true, true],
-      [false, false, true],
-      [false, false, false],
-    ]);
-  });
-
-  it('confirms retries by level and confidence', () => {
-    expect(asksForRetry('hands-on', 1)).toBe(true);
-    expect(asksForRetry('balanced', 0.9)).toBe(false);
-    expect(asksForRetry('balanced', 0.89)).toBe(true);
-    expect(asksForRetry('balanced', null)).toBe(true);
-    expect(asksForRetry('hands-off', 0.1)).toBe(false);
-    expect(asksForRetry('full-auto', 0.1)).toBe(false);
-  });
-
   it('asks to keep changes at Hands-on and Balanced when files changed', () => {
     expect(asksToKeep('hands-on', 1)).toBe(true);
     expect(asksToKeep('balanced', 3)).toBe(true);
@@ -270,20 +149,23 @@ describe('model tiers', () => {
 });
 
 describe('auto-continue', () => {
-  const ask = (kind: Parameters<typeof autoContinueOption>[0]['kind'], agentAsked = false) =>
-    autoContinueOption({ kind, fromJev: true, agentAsked });
-
-  it("takes the safe default on Jev's own questions", () => {
-    expect(ask('clarify')).toBe(CHECKPOINT_OPTION.clarifyRules);
-    expect(ask('retry')).toBe(CHECKPOINT_OPTION.finish);
-    expect(ask('needs_input')).toBe(CHECKPOINT_OPTION.clarifyRules);
+  it('stops and reports on the retry and loop cards, and takes the likely reading when vague', () => {
+    expect(autoContinueOption('retry', false)).toBe(CHECKPOINT_OPTION.stopReport);
+    expect(autoContinueOption('stuck', false)).toBe(CHECKPOINT_OPTION.stopReport);
+    expect(autoContinueOption('clarify', true)).toBe(CHECKPOINT_OPTION.clarifyRules);
   });
 
-  it('never auto-continues an agent question, the rules, or the user-owned cards', () => {
-    expect(ask('needs_input', true)).toBeNull();
-    expect(autoContinueOption({ kind: 'retry', fromJev: false, agentAsked: false })).toBeNull();
-    for (const kind of ['plan', 'accept', 'budget', 'merge_conflict'] as const) {
-      expect(ask(kind)).toBeNull();
-    }
+  it('never auto-continues the user-owned cards', () => {
+    expect(autoContinueOption('clarify', false)).toBeNull();
+    expect(autoContinueOption('accept', false)).toBeNull();
+    expect(autoContinueOption('budget', false)).toBeNull();
+    expect(autoContinueOption('merge_conflict', false)).toBeNull();
+  });
+
+  it('asks about a loop only at the levels that ask', () => {
+    expect(asksForLoop('hands-on')).toBe(true);
+    expect(asksForLoop('balanced')).toBe(true);
+    expect(asksForLoop('hands-off')).toBe(false);
+    expect(asksForLoop('full-auto')).toBe(false);
   });
 });

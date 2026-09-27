@@ -4,7 +4,7 @@ import type { AppendOptions } from '../persistence/run-events.ts';
 import { saveSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { backupBeforeEdit, snapshotRun } from '../projects/run-changes.ts';
 import type { PermissionGate } from '../providers/provider.ts';
-import { createApprovalGate } from './approval-gate.ts';
+import { createApprovalGate, type EditObserver } from './approval-gate.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 
 export interface DoRunOptions {
@@ -19,6 +19,7 @@ export interface DoRunOptions {
   onTimeout: () => void;
   backupAlsoFor?: string | undefined;
   copyOf?: string | null | undefined;
+  observe?: EditObserver | undefined;
 }
 
 export async function takeSnapshot(db: Db, runId: string, root: string): Promise<RunSnapshot> {
@@ -46,6 +47,7 @@ export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGat
     ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
     onTimeout: options.onTimeout,
     copyOf: options.copyOf ?? null,
+    ...(options.observe ? { observe: options.observe } : {}),
     backup: async (paths) => {
       await backupBeforeEdit(options.db, options.runId, snapshot, paths);
       if (options.backupAlsoFor) {

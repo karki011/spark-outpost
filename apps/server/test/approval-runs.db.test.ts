@@ -59,8 +59,16 @@ async function settled(runId: string) {
 async function waitingApproval(conversationId: string): Promise<Approval> {
   return eventually(async () => {
     const detail = await getConversationDetail(t.db, conversationId);
-    return detail?.runs[0]?.status === 'awaiting_approval' ? detail.approvals[0] : null;
+    return detail?.approvals.find((approval) => approval.status === 'pending') ?? null;
   });
+}
+
+async function builderRunId(runId: string): Promise<string> {
+  const { rows } = await t.db.query<{ id: string }>(
+    `SELECT id FROM runs WHERE parent_run_id = $1 AND role = 'builder' ORDER BY created_at`,
+    [runId],
+  );
+  return rows[0]!.id;
 }
 
 const api = () => createTestApp(t);
@@ -79,7 +87,7 @@ describe('Do runs with approvals', () => {
       attention: {
         kind: 'permission',
         title: `run ${FAKE_COMMAND}`,
-        agentName: null,
+        agentName: 'Bolt',
         provider: 'fake',
         approvalId: approval.id,
       },
@@ -93,7 +101,9 @@ describe('Do runs with approvals', () => {
     expect((await settled(runId)).status).toBe('succeeded');
     const detail = await getConversationDetail(t.db, conversationId);
     expect(detail?.approvals).toEqual([]);
-    expect(detail?.activity[runId]?.map((step) => step.name)).toContain(
+    const builder = await builderRunId(runId);
+    expect(approval.runId).toBe(builder);
+    expect(detail?.activity[builder]?.map((step) => step.name)).toContain(
       `Allowed \`${FAKE_COMMAND}\` (you allowed it)`,
     );
     expect(detail?.runs[0]).toMatchObject({ mode: 'do', level: 'balanced', snapshot: 'files' });
@@ -124,7 +134,9 @@ describe('Do runs with approvals', () => {
     const { runId } = await doRun(t, root, '#approve');
     const run = await settled(runId);
     expect(run).toMatchObject({ status: 'failed', error: APPROVAL_TIMEOUT_MESSAGE });
-    const { rows } = await t.db.query('SELECT status FROM approvals WHERE run_id = $1', [runId]);
+    const { rows } = await t.db.query('SELECT status FROM approvals WHERE run_id = $1', [
+      await builderRunId(runId),
+    ]);
     expect(rows).toEqual([{ status: 'expired' }]);
   });
 

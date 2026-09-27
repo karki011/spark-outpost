@@ -126,11 +126,6 @@ export const measuredSeedSchema = z.object({
 });
 export type MeasuredSeed = z.infer<typeof measuredSeedSchema>;
 
-export const allowFrontierSchema = z.partialRecord(providerIdSchema, z.boolean());
-export type AllowFrontier = z.infer<typeof allowFrontierSchema>;
-
-export const setAllowFrontierRequestSchema = z.object({ allowed: z.boolean() });
-
 export const cardStalenessSchema = z.object({
   checkedDaysAgo: z.number().int().nonnegative(),
   checkStale: z.boolean(),
@@ -152,7 +147,6 @@ export type ModelCardView = z.infer<typeof modelCardViewSchema>;
 export const providerCardsViewSchema = z.object({
   provider: providerCardSchema,
   connected: z.boolean(),
-  allowFrontier: z.boolean(),
   hasFrontier: z.boolean(),
   models: z.array(modelCardViewSchema),
   uncardedModels: z.array(z.object({ id: z.string(), label: z.string() })),

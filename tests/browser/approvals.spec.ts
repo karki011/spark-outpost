@@ -87,8 +87,9 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
   await expect(approval).toBeVisible({ timeout: 15_000 });
   await expect(approval.locator('pre')).toHaveText('$ pnpm test -- groupMessages');
   await expect(approval).toContainText("Commands aren't sandboxed");
-  await expect(page.locator('.mood')).toHaveText('waiting for you');
-  await expect(page.locator('.ai-avatar.waiting')).toBeVisible();
+  await expect(page.locator('.crew-turn .agent-head', { hasText: 'Bolt' })).toContainText(
+    'Waiting for you',
+  );
   await expect(page.getByRole('button', { name: 'Stop' })).toBeVisible();
   await shot(page, 'approval-command');
 
@@ -101,7 +102,11 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
   await expect(page.locator('.md', { hasText: 'Done. fake-run=allowed' })).toBeVisible({
     timeout: 15_000,
   });
-  await page.getByRole('button', { name: /Worked for|steps/ }).click();
+  await page.locator('.crew-turn .agent-head', { hasText: 'Bolt' }).click();
+  await page
+    .getByRole('button', { name: /Worked for|steps/ })
+    .first()
+    .click();
   await expect(page.getByText('(you allowed it)')).toBeVisible();
 });
 
@@ -191,7 +196,10 @@ test('Stop while waiting cancels the approval and the run', async ({ page }) => 
   await send(page, 'Run the tests #approve');
   await expect(card(page, /Run a command\?/)).toBeVisible({ timeout: 15_000 });
   await page.getByRole('button', { name: 'Stop' }).click();
-  await expect(page.locator('.mood', { hasText: 'stopped' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.crew-turn .agent-head', { hasText: 'Bolt' })).toContainText(
+    'Stopped',
+    { timeout: 15_000 },
+  );
   await expect(card(page, /Run a command\?/)).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
 });

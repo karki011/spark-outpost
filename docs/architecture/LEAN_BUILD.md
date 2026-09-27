@@ -2,6 +2,8 @@
 
 A discussion paper, written on September 26, 2026 with the first implementation and live runs. It covers the "Lean build" style, where it sits in the harness cycle, what Jev decides and what the user decides, how parallel lanes are placed (shared working tree or worktrees), the Critic's single pass, and what the live runs showed. Status and decisions go to [HARNESS_PLAN.md](HARNESS_PLAN.md#lean-build-and-lane-placement-september-26-2026).
 
+> **Round 10 (September 27, 2026).** Lean stays the default for Do, but only the rule and the project setting decide the style now: the Jev style choice and the `build_style` decision are gone. The Architect's rungs, the lane questions, parallel lanes, shared-tree placement and the group landing described below were removed with the Architect and lanes (recoverable from checkpoint `06db4c6`). Builders get the ladder in their own prompt; the Critic's complexity lens rides along only when a Critic runs (destructive work, a review request or a large diff). See [HARNESS_PLAN.md](HARNESS_PLAN.md#current-architecture-the-lean-harness-round-10-september-27-2026).
+
 The idea comes from [ponytail](https://github.com/dietrichgebert/ponytail) by Dietrich Gebert, MIT licensed. We read its code and results and wrote our own wording; no ponytail file, prompt or hook is copied or run.
 
 ## What ponytail does
@@ -32,7 +34,7 @@ Everything is behind one setting. It was off by default for the A/B runs; since 
 
 The markers are `lean:` rather than `ponytail:`, and they are comments in the user's project, written by Builders. Spark Outpost's own code keeps its no-comments rule.
 
-## What Jev decides and what the user decides
+## What Jev decides and what the user decides (before round 10)
 
 - **The user** sets the ceiling per project: off, lite or lean. A project that never chose builds lean (the rule's reason reads "default"); an explicit choice is kept. The live e2e run (lean cut diffs by 30–50% and cost by 20–30% with every safety check passing) decided it.
 - **The rule** lowers it per turn: not a Do turn gives off; a request that asks for a full-featured, complete, production-ready, comprehensive or polished version gives lite; otherwise the project setting.
@@ -45,7 +47,7 @@ The Critic's job is an AI review of what landed: correctness, safety and missing
 
 The one-pass rule is unchanged: the Critic runs at most once per landed change, a fix after concerns is not reviewed again (only the checks re-run), and there is no second reviewer. For parallel groups "landed change" now means the merged group when the lanes were small: see below.
 
-## Parallel lanes
+## Parallel lanes (removed in round 10)
 
 ### When to split
 

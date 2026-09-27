@@ -11,7 +11,7 @@ import {
 } from '../persistence/run-events.ts';
 import { ProviderError, type Provider, type ProviderOutput } from '../providers/provider.ts';
 import { createTitleFilter } from '../titles/title-line.ts';
-import { APPROVAL_TIMEOUT_MESSAGE } from './approval-gate.ts';
+import { APPROVAL_TIMEOUT_MESSAGE, type EditObserver } from './approval-gate.ts';
 import type { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
 import { prepareDoRun } from './do-run.ts';
@@ -87,6 +87,7 @@ export interface TurnOptions {
   onOutput?: (output: ProviderOutput) => void;
   backupAlsoFor?: string;
   recordsPlan?: boolean;
+  observeEdits?: EditObserver | undefined;
 }
 
 export interface TurnResult {
@@ -180,6 +181,7 @@ export async function runAgentTurn(
             onTimeout: () => control.stop('approval_timeout'),
             backupAlsoFor: options.backupAlsoFor,
             copyOf: input.copyOf,
+            observe: options.observeEdits,
           })
         : undefined;
     turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
@@ -195,7 +197,6 @@ export async function runAgentTurn(
       audit,
       ...(input.mode ? { mode: input.mode } : {}),
       ...(approvals ? { approvals } : {}),
-      ...(input.role === 'architect' ? { planning: true } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(session ? { session: session.target } : {}),
     })) {

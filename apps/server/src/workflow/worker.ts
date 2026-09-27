@@ -2,7 +2,7 @@ import { executeDigest } from '../digest/execute.ts';
 import type { Db } from '../persistence/db.ts';
 import { isDigestRun } from '../persistence/digests.ts';
 import { claimNextJob, type Lease } from '../persistence/jobs.ts';
-import { cleanOrphanedCopies } from '../orchestration/group.ts';
+import { cleanOrphanedCopies } from '../orchestration/solo-copy.ts';
 import { orchestrate } from '../orchestration/orchestrator.ts';
 import type { OrchestratorDeps } from '../orchestration/session.ts';
 import { recoverExpiredLeases } from './recovery.ts';

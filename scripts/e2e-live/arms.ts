@@ -1,9 +1,7 @@
 import { join } from 'node:path';
 import type { Browser } from '@playwright/test';
 import type { Orchestration } from '../../packages/contracts/src/index.ts';
-import type { LaneOptions } from '../../apps/server/src/orchestration/placement.ts';
 import type { BenchEnv } from '../bench/live.ts';
-import type { HandoffOptions } from '../../apps/server/src/orchestration/session.ts';
 import {
   Api,
   openApiChat,
@@ -44,15 +42,10 @@ function withTags(ctx: ArmContext, cell: Cell, text: string): string {
   return ctx.runtime === 'fake' ? `${text}${cell.scenario.fakeTags}` : text;
 }
 
-async function bench(
-  ctx: ArmContext,
-  key: string,
-  lanes: LaneOptions,
-  handoff: HandoffOptions = {},
-): Promise<BenchEnv> {
+async function bench(ctx: ArmContext, key: string): Promise<BenchEnv> {
   const existing = ctx.benches.get(key);
   if (existing) return existing;
-  const env = await benchEnv(ctx.runtime, lanes, handoff);
+  const env = await benchEnv(ctx.runtime);
   ctx.benches.set(key, env);
   return env;
 }
@@ -126,10 +119,8 @@ async function harnessOnStack(ctx: ArmContext, cell: Cell, repo: string): Promis
 }
 
 async function harnessBench(ctx: ArmContext, cell: Cell, repo: string): Promise<ArmResult> {
-  const { placement, buildStyle, workOrders, planSession } = cell.setup;
-  const lanes: LaneOptions = placement === 'jev' ? {} : { placement, split: 'any' };
-  const key = `harness-${placement}-${workOrders}-${planSession}`;
-  const env = await bench(ctx, key, lanes, { workOrders, planSession });
+  const { buildStyle } = cell.setup;
+  const env = await bench(ctx, 'harness');
   const prompts = cell.scenario.turns.map((text) => withTags(ctx, cell, text));
   const turns = await directClaudeTurns(env, repo, prompts, ctx.timeoutMs, {
     harness: true,
@@ -162,11 +153,11 @@ export async function runArm(ctx: ArmContext, cell: Cell, repo: string): Promise
     cleanup: null,
   });
   if (cell.arm === 'direct-claude') {
-    const env = await bench(ctx, 'direct', {});
+    const env = await bench(ctx, 'direct');
     return toRecords(await directClaudeTurns(env, repo, prompts, ctx.timeoutMs));
   }
   if (cell.arm === 'direct-checks') {
-    const env = await bench(ctx, 'direct', {});
+    const env = await bench(ctx, 'direct');
     const turns = await directWithChecks(
       env,
       repo,

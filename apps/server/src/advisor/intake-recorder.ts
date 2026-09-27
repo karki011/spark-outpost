@@ -2,7 +2,6 @@ import {
   adviceSummarySchema,
   CATEGORY_CONFIDENCE_FLOOR,
   type AdviceBody,
-  type BuildStyle,
   type Category,
   type RunEvent,
 } from '@spark-outpost/contracts';
@@ -14,8 +13,9 @@ import type { SecretStore } from '../setup/secrets.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { AdvisorError, AdvisorTimeoutError, type IntakeRequest } from './advice.ts';
-import { adviceBody, type JevOutcome } from './advice-body.ts';
+import { adviceBody, type IntakeDecided, type JevOutcome } from './advice-body.ts';
 import {
+  assertCandidates,
   buildIntakeQuestions,
   parseIntakeAnswers,
   type IntakeQuestions,
@@ -34,8 +34,6 @@ export interface IntakeDeps {
 
 export interface IntakeRecorder {
   deps: IntakeDeps;
-  start(input: RunInput, append: Append): void;
-  settled(): Promise<void>;
 }
 
 const MISSING_KEY = 'The Jev key is missing from the keychain. Connect Jev again in Settings.';
@@ -63,6 +61,7 @@ export async function askJev(
   let asked: IntakeQuestions | null = null;
   const startedAt = Date.now();
   try {
+    assertCandidates(request);
     asked = buildIntakeQuestions(request);
     const response = await askSystemOne(
       {
@@ -98,10 +97,15 @@ async function announce(append: Append, body: AdviceBody): Promise<void> {
   }
 }
 
+export interface IntakeExtra {
+  firstMessage: boolean;
+  currentTask: IntakeRequest['currentTask'];
+}
+
 export function intakeRequest(
   input: RunInput,
   context: IntakeContext,
-  buildStyle?: BuildStyle,
+  extra: IntakeExtra = { firstMessage: input.history.length === 0, currentTask: null },
 ): IntakeRequest {
   return {
     task: input.prompt,
@@ -117,7 +121,8 @@ export function intakeRequest(
     },
     level: input.level,
     routing: context.routing,
-    ...(buildStyle ? { buildStyle } : {}),
+    firstMessage: extra.firstMessage,
+    currentTask: extra.currentTask,
   };
 }
 
@@ -133,37 +138,41 @@ export interface IntakeResult {
   outcome: JevOutcome;
 }
 
-export async function recordIntake(
-  deps: IntakeDeps,
+export interface AskedIntake {
+  request: IntakeRequest;
+  context: IntakeContext;
+  outcome: JevOutcome;
+}
+
+export async function askIntake(
+  db: Db,
+  deps: IntakeDeps | null,
+  input: RunInput,
+  extra: IntakeExtra,
+): Promise<AskedIntake> {
+  const context = await loadIntakeContext(db, input.workspaceId, input.identity.threadId);
+  const request = intakeRequest(input, context, extra);
+  const outcome =
+    deps && context.jevModel
+      ? await askJev(deps, request, context.jevModel)
+      : ({ status: 'not_connected' } as const);
+  return { request, context, outcome };
+}
+
+export async function saveIntake(
+  db: Db,
   input: RunInput,
   append: Append,
-  buildStyle?: BuildStyle,
+  asked: AskedIntake,
+  decided: IntakeDecided,
 ): Promise<IntakeResult> {
-  const context = await loadIntakeContext(deps.db, input.workspaceId, input.identity.threadId);
-  const request = intakeRequest(input, context, buildStyle);
-  const outcome = context.jevModel
-    ? await askJev(deps, request, context.jevModel)
-    : ({ status: 'not_connected' } as const);
-  const body = adviceBody(request, outcome);
-  await insertAdvice(deps.db, input.identity.runId, body);
-  await recordRunCategory(deps.db, input.identity.runId, turnCategory(outcome));
-  if (outcome.status !== 'not_connected') await announce(append, body);
-  return { body, context, outcome };
+  const body = adviceBody(asked.request, asked.outcome, decided);
+  await insertAdvice(db, input.identity.runId, body);
+  await recordRunCategory(db, input.identity.runId, turnCategory(asked.outcome));
+  if (asked.outcome.status !== 'not_connected') await announce(append, body);
+  return { body, context: asked.context, outcome: asked.outcome };
 }
 
 export function createIntakeRecorder(deps: IntakeDeps): IntakeRecorder {
-  const pending = new Set<Promise<void>>();
-  return {
-    deps,
-    start(input, append) {
-      const work = recordIntake(deps, input, append)
-        .then(() => undefined)
-        .catch((error: unknown) => console.error('Could not record Jev intake', error))
-        .finally(() => pending.delete(work));
-      pending.add(work);
-    },
-    async settled() {
-      while (pending.size > 0) await Promise.allSettled([...pending]);
-    },
-  };
+  return { deps };
 }

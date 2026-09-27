@@ -1,4 +1,15 @@
-# Upstream contributions to codex-acp
+# codex-acp upstream contributions
+
+**Posted 2026-09-27 from karki011:**
+
+- Issue [#555](https://github.com/agentclientprotocol/codex-acp/issues/555): no mode asks before every command and file edit
+- Issue [#556](https://github.com/agentclientprotocol/codex-acp/issues/556): rejecting can only end the turn without `decline`
+- Draft PR [#557](https://github.com/agentclientprotocol/codex-acp/pull/557): `feat: add ask-every-time session mode` (closes #555)
+- Draft PR [#558](https://github.com/agentclientprotocol/codex-acp/pull/558): `feat: offer decline before cancel for clients that opt in` (closes #556)
+- Comment on [#447](https://github.com/agentclientprotocol/codex-acp/issues/447#issuecomment-5856984813) backing PR #486 (per-turn usage)
+- Fork: https://github.com/karki011/codex-acp
+
+Next: mark a PR ready (`gh pr ready <n> --repo agentclientprotocol/codex-acp`) only after the maintainers answer its issue. When they merge, update PATCHES.md and shrink our patch.
 
 > **Drafts only.** Nothing here has been filed, commented or pushed. Review the drafts, then submit them from your own GitHub account. Research done September 27, 2026 using public, read-only access (no sign-in, no forks, no comments).
 
@@ -7,6 +18,23 @@ Spark Outpost patches `@agentclientprotocol/codex-acp` 1.13.1 ([PATCHES.md](../.
 1. an "ask before every action" mode (`untrusted` approval policy, `workspaceWrite` sandbox, no network);
 2. Codex's `decline` option, ahead of `cancel`, on command and file-change approvals, so that a denial doesn't end the turn;
 3. `PromptResponse.usage` summed over the whole turn instead of only the last model request.
+
+## Final texts and PR branches (September 27, 2026)
+
+The drafts below are now final bodies, and both PRs exist as local branches on `main` at `bf37821`. **Nothing is posted.** [POSTING_PLAN.md](POSTING_PLAN.md) lists the exact `gh` commands, in order.
+
+| Topic                 | Issue                                                | PR branch and diff                                                                                                                                              | Local CI                                                 |
+| --------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| 1. Ask every time     | [issue-ask-always-mode.md](issue-ask-always-mode.md) | `feat/ask-always-mode`, `feat: add ask-every-time session mode`, [feat-ask-always-mode.patch](feat-ask-always-mode.patch) (7 files, +133/−5)                    | typecheck, `CI=true npm test` (786 passed), build: green |
+| 2. Continue on reject | [issue-decline-option.md](issue-decline-option.md)   | `feat/decline-option`, `feat: offer decline before cancel for clients that opt in`, [feat-decline-option.patch](feat-decline-option.patch) (10 files, +331/−11) | typecheck, `CI=true npm test` (789 passed), build: green |
+| 3. Usage per turn     | –                                                    | none; [comment-turn-usage.md](comment-turn-usage.md) on #447                                                                                                    | –                                                        |
+
+Changes from the earlier recommendation:
+
+- **Topic 2 uses the opt-in (option B).** `decline` is offered only to clients that set `clientCapabilities._meta.continueOnReject: true` on `initialize`, so #405's "does not invent replacement choices" contract and its existing tests stay unchanged by default. Because of that, the plan posts it as a **draft** PR next to the issue instead of waiting for an answer. Keep it in draft until the maintainers pick an option.
+- The live probe of the PR builds found one more case without `decline`: an **escalation request in upstream's own `read-only` mode** (`echo hi > shell.txt`) offers only `allow_once`, `accept_execpolicy_amendment` and `cancel`. So topic 2 doesn't depend on topic 1.
+- Topic 1 keeps `excludeSlashTmp: false` (same sandbox as `workspace-write`), unlike our patch's `true`.
+- Not run locally: `npm run bundle:all` (no bun) and `npm run test:e2e` (needs an OpenAI API key). Instead, 17 live turns on the ChatGPT login (`gpt-6-luna` · low) against local builds of each branch and of both combined; the results are in the issue and PR tables. The probe script and logs are in the session scratchpad (`upstream-codex-acp/probe/`).
 
 ## The repository
 
@@ -35,16 +63,16 @@ The findings above were written from GitHub research plus the September 26 live 
 
 **Evidence table** (mode/policy → command, `allow_once` unless noted; "unpatched" is the plain npm package, "patched" is the patch above hand-applied to it):
 
-| Row                                              | 1.13.1 / codex 0.156.1 (Sept 26)                                         | 1.13.2-preview.5 / codex 0.157.1 (Sept 27)                               | Changed?                    |
-| ------------------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------- | ---------------------------- |
-| `ls`, `cat .env`, `git status` under native on-request modes | ran unasked                                                               | ran unasked (`workspace-write`, on-request, unpatched)                     | No                            |
-| `ls`, `cat .env`, `apply_patch`, `curl` under `approvalPolicy: "untrusted"` forced onto a mode | every one asked, nothing ran unasked                                       | every one asked, nothing ran unasked (forced onto the unpatched build's native `workspace-write` mode) | No — `untrusted` still works per turn |
-| Options offered for a command/file-change approval under `untrusted` (unpatched) | `allow_once`, `accept_execpolicy_amendment`, `cancel` — no `decline`      | same three, still no `decline`                                             | No                            |
-| Reject the only `reject_once` option (`cancel`) under `untrusted` (unpatched) | turn ends, `stopReason: "cancelled"`                                      | turn ends, `stopReason: "cancelled"`                                        | No                            |
-| Our patch's `ask-every-action` mode: options offered | `allow_once`/`accept_execpolicy_amendment`/**`decline`**/`cancel` (commands), `allow_once`/`allow_for_session`/**`decline`**/`cancel` (edits) | same, confirmed live on the 1.13.2-preview.5 dist with the hand-fixed patch | No                            |
-| Our patch's `ask-every-action` mode: answer `decline` on a denied command | turn continues, `stopReason: "end_turn"`, model acknowledges the rejection | same, confirmed live                                                       | No                            |
-| Per-turn usage helpers (`tokenUsageStep`, `addTokenUsage`, `turnPromptUsage`) | present, sum deltas of `tokenUsage.total` per turn                       | present unchanged in the 1.13.2-preview.5 dist (same call sites); a live single- and multi-tool-call turn each returned non-zero, non-last-only-looking totals | No                            |
-| `PromptResponse.usage` fields (`totalTokens`, `inputTokens`, `cachedInputTokens`/`cachedReadTokens`, `outputTokens`, `reasoningOutputTokens`) | as listed                                                                 | unchanged; codex 0.157's new `cacheWriteInputTokens` (`schema157/` capture, PATCHES.md) still isn't in `TOKEN_USAGE_FIELDS` on either version | No                            |
+| Row                                                                                                                                           | 1.13.1 / codex 0.156.1 (Sept 26)                                                                                                              | 1.13.2-preview.5 / codex 0.157.1 (Sept 27)                                                                                                                     | Changed?                              |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `ls`, `cat .env`, `git status` under native on-request modes                                                                                  | ran unasked                                                                                                                                   | ran unasked (`workspace-write`, on-request, unpatched)                                                                                                         | No                                    |
+| `ls`, `cat .env`, `apply_patch`, `curl` under `approvalPolicy: "untrusted"` forced onto a mode                                                | every one asked, nothing ran unasked                                                                                                          | every one asked, nothing ran unasked (forced onto the unpatched build's native `workspace-write` mode)                                                         | No — `untrusted` still works per turn |
+| Options offered for a command/file-change approval under `untrusted` (unpatched)                                                              | `allow_once`, `accept_execpolicy_amendment`, `cancel` — no `decline`                                                                          | same three, still no `decline`                                                                                                                                 | No                                    |
+| Reject the only `reject_once` option (`cancel`) under `untrusted` (unpatched)                                                                 | turn ends, `stopReason: "cancelled"`                                                                                                          | turn ends, `stopReason: "cancelled"`                                                                                                                           | No                                    |
+| Our patch's `ask-every-action` mode: options offered                                                                                          | `allow_once`/`accept_execpolicy_amendment`/**`decline`**/`cancel` (commands), `allow_once`/`allow_for_session`/**`decline`**/`cancel` (edits) | same, confirmed live on the 1.13.2-preview.5 dist with the hand-fixed patch                                                                                    | No                                    |
+| Our patch's `ask-every-action` mode: answer `decline` on a denied command                                                                     | turn continues, `stopReason: "end_turn"`, model acknowledges the rejection                                                                    | same, confirmed live                                                                                                                                           | No                                    |
+| Per-turn usage helpers (`tokenUsageStep`, `addTokenUsage`, `turnPromptUsage`)                                                                 | present, sum deltas of `tokenUsage.total` per turn                                                                                            | present unchanged in the 1.13.2-preview.5 dist (same call sites); a live single- and multi-tool-call turn each returned non-zero, non-last-only-looking totals | No                                    |
+| `PromptResponse.usage` fields (`totalTokens`, `inputTokens`, `cachedInputTokens`/`cachedReadTokens`, `outputTokens`, `reasoningOutputTokens`) | as listed                                                                                                                                     | unchanged; codex 0.157's new `cacheWriteInputTokens` (`schema157/` capture, PATCHES.md) still isn't in `TOKEN_USAGE_FIELDS` on either version                  | No                                    |
 
 **Conclusion: none of the three topics changed.** The `untrusted` wire value still works per turn on 0.157.1 (topic 1's premise holds; the retirement risk noted in "Findings per topic" is unchanged either way). Upstream still offers no `decline` for commands under `untrusted` or for any file change (topic 2's gap is still open, and PR #405's contract is unmodified on `main`). `PromptResponse.usage` is still last-request-only upstream, and issues/PRs #447/#353/#367/#486 are all still open (topic 3's "don't open a new issue or PR, comment on #447" stands). No recommendation below changes because of this rerun.
 

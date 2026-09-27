@@ -4,7 +4,7 @@ import { Detail } from './ConnectedSummary.tsx';
 import { MoreMenu } from './MoreMenu.tsx';
 
 const JEV_SENDS =
-  'Your request, plan steps with their file paths, the end of each agent’s reply, and the titles of its recent tool calls. Never file contents, diffs, tool output or keys. TypeSafe does not train on it.';
+  'Your request, the previous request and a short summary of the task it may continue, and the text of files you attach (only to check it for instructions aimed at the agent). With code diffs on, also the diff of each proposed edit and the final diff. Never keys or tool output. TypeSafe does not train on it.';
 
 interface AdvisorSummaryProps {
   advisor: AdvisorSetup;
@@ -42,7 +42,9 @@ export function AdvisorSummary({
             <Detail term="Role">
               {advisor.role}
               <small className="note">
-                Used in runs while connected. A pinned model still runs as chosen.
+                Answers a few questions per turn: is it a question, too vague, a review request,
+                destructive, or a follow-up. The rules still pick the model; Jev’s pick is recorded
+                only.
               </small>
             </Detail>
             <Detail term="Sends">{JEV_SENDS}</Detail>

@@ -3,7 +3,6 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { buildStyleSchema } from '../packages/contracts/src/index.ts';
-import type { LaneOptions } from '../apps/server/src/orchestration/placement.ts';
 import { projectedCostUsd } from './bench/aggregate.ts';
 import { createTaskRepo } from './bench/fixture.ts';
 import { BENCH_LEVEL, PINNED, runLiveCell, startBench, stopBench } from './bench/live.ts';
@@ -32,27 +31,11 @@ const { values } = parseArgs({
     baseline: { type: 'string' },
     'report-only': { type: 'boolean', default: false },
     'build-style': { type: 'string', default: 'off' },
-    placement: { type: 'string', default: 'jev' },
-    split: { type: 'string', default: 'jev' },
-    'work-orders': { type: 'string', default: 'on' },
-    'plan-session': { type: 'string', default: 'on' },
     'no-ingest': { type: 'boolean', default: false },
   },
 });
 
 const buildStyle = buildStyleSchema.parse(values['build-style']);
-const PLACEMENTS = ['jev', 'shared', 'worktree'] as const;
-const SPLITS = ['jev', 'large', 'any'] as const;
-const lanes: LaneOptions = {
-  placement: PLACEMENTS.find((option) => option === values.placement) ?? 'jev',
-  split: SPLITS.find((option) => option === values.split) ?? 'jev',
-};
-
-const handoff = {
-  workOrders: values['work-orders'] !== 'off',
-  planSession: values['plan-session'] !== 'off',
-};
-
 const out = resolve(values.out);
 const date = values.date;
 const files = {
@@ -77,13 +60,11 @@ async function initialRun(): Promise<BenchRun> {
     settings: {
       direct: `One ${PINNED.provider} agent (Sonnet 5, ${PINNED.effort} effort) in Do mode, no orchestrator, no Jev.`,
       harness:
-        'Full orchestrator on Auto routing with Jev intake: per-agent model routing, Architect / Builders / Critic as the depth requires, one Builder per run of sequential steps, parallel Builders in git worktree copies only for large independent steps.',
+        'Lean harness on Auto: rule routing with Jev observing, one task-scoped Builder, project checks with up to two fix turns, and a Critic only for destructive work, review requests or large diffs.',
       level: `${BENCH_LEVEL} (tool approvals that still ask are auto-denied and recorded)`,
       fixture:
         'Ledger Lite, a 6-module TypeScript project tested with node --test (scripts/bench/fixture).',
       buildStyle,
-      lanes: `placement ${lanes.placement}, split ${lanes.split}`,
-      handoff: `work orders ${handoff.workOrders ? 'on' : 'off'}, plan session ${handoff.planSession ? 'on' : 'off'}`,
     },
     results: [],
   };
@@ -174,7 +155,7 @@ async function main(): Promise<void> {
   });
   const queue = pending(run, tasks, modes, Number(values.repeats));
   const runtime = process.env.SPARK_BENCH_RUNTIME === 'fake' ? 'fake' : 'acp';
-  const env = await startBench(PER_RUN_CAP_USD, runtime, lanes, handoff);
+  const env = await startBench(PER_RUN_CAP_USD, runtime);
   try {
     for (const { task, mode, repeat } of queue) {
       const projected = projectedCostUsd(run.results, task.id, mode, FALLBACK_COST_USD[mode]);

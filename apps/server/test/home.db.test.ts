@@ -93,7 +93,6 @@ describe('GET /api/usage/spend', () => {
       ['claude', 1, 'reported'],
       ['codex', 1, 'estimated'],
     ]);
-    expect(today.savings).toBeNull();
 
     const week = await spend('week');
     expect(week.runs).toBeGreaterThanOrEqual(2);
@@ -114,52 +113,6 @@ describe('GET /api/usage/spend', () => {
     });
     expect(today.costUsd).toBeCloseTo(0.104);
     expect(today.costSource).toBe('mixed');
-  });
-
-  it('estimates what Jev routing saved against the top model, after its own cost', async () => {
-    const { runId } = await run({
-      provider: 'claude',
-      model: 'claude-sonnet-5',
-      cost: 3,
-      input: 1_000_000,
-      output: 100_000,
-      route: { name: 'Ada', routedBy: 'jev', modelLabel: null },
-    });
-    await run({
-      provider: 'claude',
-      model: 'claude-haiku-4-5',
-      input: 1_000_000,
-      output: 0,
-      route: { name: 'Bo', routedBy: 'rules', modelLabel: null },
-    });
-    await jevAdvice(runId, 0.01);
-
-    const today = await spend('today');
-    expect(today.savings).toEqual({ runs: 1, grossUsd: 3, jevCostUsd: 0.01, netUsd: 2.99 });
-  });
-
-  it('compares against the top model the provider actually offers', async () => {
-    await t.db.query(
-      `INSERT INTO provider_capabilities (workspace_id, provider, models, efforts, default_model)
-       VALUES ($1, 'claude', $2, '[]', NULL)`,
-      [
-        t.workspaceId,
-        JSON.stringify([
-          { id: 'haiku', label: 'Haiku 4.5', description: null },
-          { id: 'sonnet', label: 'Sonnet 5', description: null },
-        ]),
-      ],
-    );
-    await run({
-      provider: 'claude',
-      model: 'claude-haiku-4-5',
-      input: 1_000_000,
-      output: 0,
-      route: { name: 'Ada', routedBy: 'jev', modelLabel: null },
-    });
-
-    const today = await spend('today');
-    expect(today.savings).toEqual({ runs: 1, grossUsd: 1, jevCostUsd: 0, netUsd: 1 });
   });
 
   it('starts the day in the viewer time zone and rejects bad parameters', async () => {

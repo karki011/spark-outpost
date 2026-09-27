@@ -102,6 +102,7 @@ export const profileSchema = z.object({
   defaultProvider: providerIdSchema.nullable(),
   onboardingCompleted: z.boolean(),
   autoContinueSeconds: autoContinueSecondsSchema.default(DEFAULT_AUTO_CONTINUE_SECONDS),
+  jevDiffs: z.boolean().default(true),
 });
 export type Profile = z.infer<typeof profileSchema>;
 
@@ -118,6 +119,7 @@ export const updateProfileRequestSchema = z
     defaultProvider: providerIdSchema,
     onboardingCompleted: z.literal(true),
     autoContinueSeconds: autoContinueSecondsSchema,
+    jevDiffs: z.boolean(),
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

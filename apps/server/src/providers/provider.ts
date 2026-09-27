@@ -52,7 +52,6 @@ export interface ProviderTurn {
   audit?: ProtocolObserver;
   mode?: RunMode;
   approvals?: PermissionGate;
-  planning?: boolean;
   askTitle?: boolean;
   session?: SessionTarget;
 }

@@ -67,7 +67,6 @@ export interface OrchestrationPatch {
   costCapUsd?: number | null;
   exceeded?: 'time' | 'tool_calls' | 'cost' | null;
   error?: string | null;
-  parallelNote?: string | null;
 }
 
 const PATCH_COLUMNS: Record<keyof OrchestrationPatch, string> = {
@@ -82,7 +81,6 @@ const PATCH_COLUMNS: Record<keyof OrchestrationPatch, string> = {
   costCapUsd: 'cost_cap_usd',
   exceeded: 'exceeded',
   error: 'error',
-  parallelNote: 'parallel_note',
 };
 
 export async function updateOrchestration(
@@ -190,7 +188,7 @@ export async function insertChildRun(
 
 export interface NewDecision {
   runId: string;
-  purpose: 'route' | 'transition' | 'parallel' | 'build_style' | 'watchdog';
+  purpose: 'route' | 'policy' | 'verify';
   childRunId: string | null;
   role: AgentRole | null;
   stepIndex: number | null;
@@ -198,13 +196,14 @@ export interface NewDecision {
   inputTokens: number | null;
   costUsd: number | null;
   body: Record<string, unknown>;
+  policyVersion?: string | null;
 }
 
 export async function insertDecision(db: Queryable, decision: NewDecision): Promise<void> {
   await db.query(
     `INSERT INTO run_advice (run_id, purpose, jev_status, jev_input_tokens, jev_cost_usd, body,
-       child_run_id, role, step_index)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+       child_run_id, role, step_index, policy_version)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
     [
       decision.runId,
       decision.purpose,
@@ -215,6 +214,7 @@ export async function insertDecision(db: Queryable, decision: NewDecision): Prom
       decision.childRunId,
       decision.role,
       decision.stepIndex,
+      decision.policyVersion ?? null,
     ],
   );
 }
@@ -233,7 +233,7 @@ export async function waitedMs(db: Queryable, runId: string): Promise<number> {
     `SELECT EXTRACT(EPOCH FROM a.created_at) * 1000 AS started,
        EXTRACT(EPOCH FROM COALESCE(a.decided_at, now())) * 1000 AS ended
      FROM approvals a JOIN runs r ON r.id = a.run_id
-     WHERE (r.id = $1 OR r.parent_run_id = $1) AND a.kind <> 'stuck'
+     WHERE (r.id = $1 OR r.parent_run_id = $1)
        AND (a.status = 'pending' OR a.decided_by IN ('user', 'stop', 'timeout', 'auto'))`,
     [runId],
   );
@@ -253,7 +253,7 @@ const CHECKPOINT_KINDS: readonly CheckpointKind[] = checkpointKindSchema.options
 const MEMBER_COLUMNS = `r.id, r.role, r.step_index, r.attempt, r.agent_label, r.provider, r.model,
   r.effort, r.mode, r.route, r.status, r.error,
   COALESCE(r.total_tokens, r.input_tokens + r.output_tokens) AS tokens,
-  r.cost_usd, r.cost_source, r.duration_ms, r.tool_call_count, r.started_at, r.finished_at`;
+  r.cost_usd, r.cost_source, r.duration_ms, r.tool_call_count, r.context_used, r.context_size, r.started_at, r.finished_at`;
 
 async function orchestrationRows(db: Queryable, where: string, id: string) {
   const { rows } = await db.query<OrchestrationRow>(

@@ -2,6 +2,76 @@
 
 Proposed on September 25, 2026 and updated the same day into a build plan, now that Jev is connectable as an advisor. The user's Decisions, at the end, are binding. `HARNESS_ONE_PAGE.md` is inspiration, not a spec. Jev itself is described in [JEV.md](JEV.md), the ACP details in [ACP_AGENTS.md](ACP_AGENTS.md) and [ACP_COVERAGE.md](ACP_COVERAGE.md).
 
+## Current architecture: the lean harness (round 10, September 27, 2026)
+
+Everything below this section up to "Evidence, kept distinct" is history: it records how the harness grew in rounds 1 to 9. This section is what runs today. The plan, the decisions and the inventory are in the round-10 plan the user approved, and the evidence is in the independent review and `docs/benchmarks/harness-e2e-live-2026-09-26.md`.
+
+```text
+ message ─► intake: ONE batched Jev call (3 s cap, limiter, every answer validated)
+            question? · vague? (first message) · review? · destructive? · continues_task?
+            · injection (attached text only) · intent (category chip) · tier (observed only)
+               │
+               ├─ Ask / Chat ───────────────► Scout answers in place (unchanged)
+               ├─ Do, "answer only" ────────► Scout answers in place, read-only
+               ├─ Do, unsure answer-or-change (Hands-on, Balanced) ► card
+               ├─ Do, vague first message ──► "What should change?" card, or "Assumed you meant"
+               ▼
+   rules pick the model: pinned model │ Auto: chat model, small tier if trivial, top tier if destructive
+               ▼
+   ONE Builder = a task-scoped child session (resumeKey `${taskId}:builder`), Lean on,
+   plans for itself only when the change needs it, works in small increments
+      │  works in place; a worktree copy only for unattended Codex, a second task running
+      │  in the same repo, or destructive work
+      │  loop guard: 5 identical non-edit tool calls ► stop the turn, then a card or a report
+      │  budgets: time, tool calls, cost cap (unchanged)
+      │  observation: the edit gate records what it would do for each proposed edit
+      ▼
+   project checks ─fail─► resumed fix turn (at most 2) ─► checks again
+      ▼
+   plan completion: open items in the Builder's own plan ► resumed "continue" (at most 2)
+                    ► otherwise the reply ends "Incomplete: …", never "done"
+      ▼
+   observation: the verifier records whether the diff does each requirement
+      ▼
+   Critic (other provider, request + diff + check results, one pass) only for destructive work,
+   a review request, or a diff of 400+ changed lines or 10+ files (lockfiles not counted)
+      ▼
+   keep / fix / revert card (Hands-on, Balanced, when files changed) ─► finish
+```
+
+- **Intake** (`advisor/intake-questions.ts`, `orchestration/intake.ts`). One batched call per turn. The acting questions are Nouls, each worded as one concrete fact with structured `true`/`false` descriptions: `question`, `vague` (first message only), `review`, `destructive` and `continues_task` (only when the chat has a task to continue, with the previous request and a short task summary as evidence). `intent` stays for the category chips, the clarify readings and the auto-title fallback; its options carry `what` and `not_for` so neighbouring categories do not share probability. `injection` is judged over attached text only and never relaxes anything. `tier` is a Choice over the chat provider's small, mid and top models, recorded and never applied. Removed from intake: complexity, risk score, depth, scope, mechanical, provider, per-provider model and effort, and the speculative build style.
+- **Validation.** Before anything branches, every answer is checked: the key is present, its type matches the question, a Choice is one of the offered options, and every probability and Noul is finite and between 0 and 1. A failed intake or routing answer falls back to the rules for that question only. A failed policy-gate or verifier answer counts as "review", never "allow". Only 429 and 529 are retried; a malformed request is never sent again unchanged.
+- **Gates** (`advisor/gate.ts`, `advisor/policy.ts`). Each question has one act line, the same at every involvement level; the level only decides whether an unsure answer asks you (Hands-on, Balanced) or falls back to the rules (Hands-off, Full auto). For Nouls the line is a probability band: 0.8 or more acts as yes, 0.2 or less as no. Before round 10, `decide()` acted at the level's clarify line, so Balanced acted at 0.6 and Hands-off at 0.5 even for destructive work.
+- **Destructive work** is destructive when Jev says so at its act line or the keyword rule matches (`orchestration/risk-rules.ts`): the larger of the two wins, so a keyword match is never cleared by Jev. Destructive work gets the top tier on Auto, a Critic and a worktree copy.
+- **Routing** (`orchestration/routing.ts`). Rules only. A pinned model always wins. Auto means the rules choose the tier: the chat's model, the small tier for a trivial edit (at most 25 words, at most one named file, a wording or formatting verb) and the top tier for destructive work. Session-keep (`session-keep.ts`) keeps the task session's model when the rules would change the tier mid-task, except for a move to the top tier. Jev's tier pick is stored as `autoWouldUse` and shown as "Jev would have used …".
+- **One task-scoped Builder** (`members.ts`, `member-routes.ts`). A Do task runs as a child run with `resumeKey = ${taskId}:builder`, not in the chat's own session. The chat only keeps compact results: the Builder's reply plus the check, "Incomplete" and review lines. A follow-up in the same task resumes the task session (M6) and sends only the new message; a new task starts a fresh, small-context Builder with the request and the recent chat, never the whole transcript. Questions are still answered in place by the chat's agent (Scout). The Builder prompt asks for one small increment: do the change, and for a whole feature do the first useful slice, say what is left and stop. Claude Builders get `TodoWrite`, so their own plan is recorded as the task plan.
+- **Follow-up or new task.** `continues_task` decides; when Jev is unsure the rule counts a message as a follow-up when it has at most 15 words and refers back ("it", "that", "also" and so on), or arrives within 10 minutes of the task's last reply. A new task closes the previous one and its session.
+- **Task sessions close** on Revert, a failure, Stop, the 30-minute idle timeout, or when a new task starts in the chat. Keep does not close them: Keep marks the task done for outcomes, and a follow-up after Keep continues the same session.
+- **Worktrees** (`solo-copy.ts`, the kept `projects/worktrees.ts`, `snapshot.ts`, `worktree-deps.ts`, `deps-prep.ts`). One copy per orchestration, reused by retries, fixes and continues. It is used only for unattended Codex (Hands-off, Full auto), for a second task running in the same repo at the same time (`repoBusy`), and for destructive work. It merges back after each Builder turn; if your files changed meanwhile, a card offers Keep your version, Keep Bolt's or Stop (no reconciling Builder). Copies are removed before the turn finishes, and the worker still sweeps orphans. "One Do run per project" (M4) was never enforced by `claimNextJob`; the copy is how two tasks share a repo now.
+- **Verification loop.** Project checks after every Builder turn that changed files, then up to 2 resumed fix turns (`CHECK_FIXES`). The plan-completion rule reads the Builder's own ACP plan: open entries get a resumed "continue" (at most `PLAN_CONTINUES`, 2); still-open entries end the reply with "Incomplete: …".
+- **Critic.** One pass on the other connected provider (same provider one tier up when alone) with the request, the Builder's plan, the diff (24 KB cap) and the check results, only for destructive work, a review request (the `review` Noul or the review phrase rule) or a large diff (`LARGE_DIFF_LINES` 400, `LARGE_DIFF_FILES` 10, lockfiles and generated files not counted). Findings go into the reply; the Critic never starts a fix loop.
+- **Failures and the loop guard.** A failed Builder is retried one tier up by rule, at most twice; then the retry card offers Retry or Stop and report, and its auto-continue picks Stop and report (it used to finish). The loop guard (`loop-guard.ts`) stops a Builder after 5 identical non-edit tool calls in a row: at Hands-on and Balanced a card offers Continue (resume with a note to try another way) or Stop and report; at Hands-off and Full auto the turn stops with a report.
+- **Observation mode, phase 2** (`advisor/policy-gate.ts`, `advisor/verify-questions.ts`, `orchestration/observe.ts`). Hard rules in `approvals/decide.ts` still decide first and are unchanged. For every proposed edit with a diff, the approval gate calls an observer after deciding and without waiting for it; one batched call asks four bad-is-true Nouls (`beyond_request`, `destroys_work`, `weakens_tests`, `unsupported_file`), takes the maximum, and records what the policy would do (block at 0.85 or more, review at 0.5 or more, otherwise allow; a missing or invalid answer is review) next to what the rules did and the approval id, so your later answer joins. After each Builder turn the verifier splits the request (or the Builder's own plan) into at most 5 requirement lines and asks, with the diff as evidence, whether each is unmet and whether tests were weakened. Both are `run_advice` rows (`policy`, `verify`) and never act. The workspace setting "Send code diffs to Jev for safety checks" (on by default, `profiles.jev_diffs`) turns them off; then nothing is sent and a row records "skipped: diffs off".
+- **Audit.** Every Jev record carries `policy_version` (`lean-1`, from `advisor/policy.ts`, which holds every threshold) and the Jev model version that answered.
+- **Analytics.** The Harness tab keeps the rule-vs-Jev comparison, adds cost per verified completion by routing agreement (total turn cost including Jev over turns whose outcome is good), and an "Observation mode: would have asked or blocked" card with the edit gate's and verifier's would-be actions against what happened. `pnpm jev:thresholds` prints precision and recall per threshold from the observation rows and the outcome signals. Every threshold is provisional until tuned on that data.
+- **Kept unchanged:** approvals and all four levels, the Codex Do patch and rules, session resume (M6), outcomes and thumbs, model cards (prices, tiers and the tier question's text), analytics, the digest, the companion, slash commands, the Home screen, the audit log, Lean build (default lean, now a rule only), Keep and Revert, run snapshots and the changes view.
+
+### Removed in round 10
+
+The code is recoverable from checkpoint `06db4c6` (it includes the round-9 watchdog, which `d87e633` does not). The evidence for each removal is in the independent review and the live end-to-end run: the harness cost 2.2 times direct Claude and took 2.4 times as long for a quality tie (33/36 against 32/36); rules-only routing was cheaper and passed everything (c $0.109 against $0.361, d $0.086 against $0.216); the one harness win (scenario g) came from checks with a resumed fix turn.
+
+| Removed                                                                                                                                                              | Why                                                                                                                                                                               | Evidence                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Architect role, plan approval card, depth tiers, one-spot, plan-in-request and mechanical skips, Architect tier rules                                                | Planned turns cost 2.1–4.4 times direct with no pass-rate gain; the Architect was 34–77% of a planned turn's cost                                                                 | review §1, HARNESS_PLAN round 8              |
+| Work orders and the plan-session handoff                                                                                                                             | Patches for the cold-Builder cost the Architect split created                                                                                                                     | review §1                                    |
+| Chains, parallel lanes, groups, split and placement decisions, shared-tree attribution, lane worktrees, merge and group landing, spans and slots, lane Jev questions | Shared tree and worktrees ran at the same speed (57 s against 60 s); the merge-conflict card was never exercised live; direct Claude did d in 31 s for $0.103 against about $0.26 | e2e §Lanes, LEAN_BUILD §P1                   |
+| Jev model, provider and effort routing that acted, its gates, the frontier gate and the "Allow frontier models" switch, routing savings                              | Rules-only routing was cheaper at the same pass rate; the gate acted at 0.5–0.6 below Full auto; the provider pick was a coin flip                                                | review §1 and §5 (1, 2), JEV.md live results |
+| Jev transitions (status, quality, next) and the judge                                                                                                                | Broad questions without evidence; missed a half-done plan ("done · next finish" at 0.60)                                                                                          | JEV.md docs review point 4, e2e d #1         |
+| Jev step checks                                                                                                                                                      | Shipped without the shadow period rule 7 requires, and had no evidence to judge                                                                                                   | JEV_OPPORTUNITIES rule 7, review §1          |
+| Jev watchdog and nudges                                                                                                                                              | No measured benefit; its card auto-continued to "Let it continue"; nudges waited for a turn a looping agent never reaches; the budgets already catch loops                        | JEV.md round 9, review §1                    |
+| Jev build-style choice                                                                                                                                               | The rule and the project setting decide; Jev could only lower the style                                                                                                           | LEAN_BUILD                                   |
+| Scouts as research children, re-read counts                                                                                                                          | Existed for the Architect's plan                                                                                                                                                  | —                                            |
+
 ## Build order for the next 2 weeks
 
 1. **M1 is done**: several read-only repos per chat, the context bar, and Claude and Codex reading (Codex through a patched true read-only mode).
@@ -66,7 +136,7 @@ Run statuses: `queued → running ⇄ awaiting_approval → succeeded | failed |
 - **Approvals** (M2). The permission handler calls a pure `decide(mode, request, runRules, allowlist)` that returns allow, reject, or ask. Ask inserts a pending `approvals` row, emits `approval_requested`, and waits on `NOTIFY approvals` with a 1 s poll as backup. The ACP request stays open and the lease keeps renewing. `POST /api/approvals/:id/decision {optionId}` only succeeds while the row is `pending`; a changed `payload_hash` needs a new approval. Stop answers `cancelled`. After 30 minutes the harness answers reject-once, marks it `expired`, and fails the run with "Approval timed out".
 - **Recovery.** A crashed run becomes `outcome_unknown`, and its pending approvals expire. If it was waiting, the message says the action never ran. The plan and every other artifact written so far stay readable. Nothing is replayed.
 - **Budgets** (M4). A pure `budgets.ts`: 15 minutes of active time (approval waits don't count), 60 tool calls, and an optional cost cap from Settings (Decision 4). A spent budget sends `session/cancel` and ends with `RUN_ERROR` `budget_exceeded`, naming the limit.
-- **Concurrency** (M4). 2 jobs at a time by default, at most 3. One Do run per project, checked when the job is claimed. Ask and Chat runs run in parallel.
+- **Concurrency** (M4). 2 jobs at a time by default, at most 3. "One Do run per project" was planned here but never enforced at claim time; since round 10 a second Do task on the same repo builds in a worktree copy instead. Ask and Chat runs run in parallel.
 
 ## Run artifacts
 
@@ -119,6 +189,8 @@ ALTER TABLE runs ADD COLUMN mode text;
 - **Claude's plan mode.** An exit-plan-mode request (`kind: switch_mode`) is an approval (M2). Its plan text shows on the approval card and isn't a plan artifact, because it isn't an ACP `plan` update.
 
 ## Where Jev fits
+
+> History. Since round 10 Jev answers the intake questions and observes routing, edits and diffs; see [Current architecture](#current-architecture-the-lean-harness-round-10-september-27-2026) and [JEV.md](JEV.md).
 
 Jev is an advisor, never an executor or an authority. It answers two questions: which provider, model, and effort, and whether a finished Do run should be reviewed and by whom. `ruleAdvisor` answers the same questions with fixed rules and is always the fallback.
 
@@ -539,6 +611,8 @@ The user asked for these on September 26. They build on the run artifacts above.
 
 ### Crew
 
+> Since round 10 a crew is at most a Scout (answers in place), one task-scoped Builder, and a Critic when one is wanted. Architect runs remain only in old chats.
+
 - **Agents have roles:**
   - Jev: dispatcher
   - Scout: answers and reads
@@ -586,13 +660,13 @@ The model is CloudWatch-like: everything an agent does is recorded.
 
 ### Involvement levels
 
-| Checkpoint           | Hands-on       | Balanced                                                   | Hands-off                                  | Full auto                                                             |
-| -------------------- | -------------- | ---------------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------- |
-| Clarify the request  | Jev below 0.75 | Below 0.6                                                  | Below 0.5                                  | Never; the fixed rules decide                                         |
-| Approve the plan     | Always         | Multi-file or risky work                                   | Destructive work only                      | Never                                                                 |
-| Edits and commands   | Every one      | Every edit, and commands not on the allowlist or read-only | Commands not on the allowlist or read-only | Only pushing, deleting outside the repo, secrets and package installs |
-| Retry or escalate    | Always         | When Jev is below 0.9                                      | Never                                      | Never                                                                 |
-| Keep, fix, or revert | Always         | Always                                                     | Kept by default                            | Kept by default                                                       |
+| Checkpoint           | Hands-on                                      | Balanced                                                   | Hands-off                                        | Full auto                                                             |
+| -------------------- | --------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------- |
+| Clarify the request  | Jev below 0.75                                | Below 0.6                                                  | Below 0.5                                        | Never; the fixed rules decide                                         |
+| Approve the plan     | Removed in round 10                           | Removed in round 10                                        | Removed in round 10                              | Removed in round 10                                                   |
+| Edits and commands   | Every one                                     | Every edit, and commands not on the allowlist or read-only | Commands not on the allowlist or read-only       | Only pushing, deleting outside the repo, secrets and package installs |
+| Retry or escalate    | Rule retries (at most 2), then the retry card | Same                                                       | Same; the card auto-continues to Stop and report | Same; the card auto-continues to Stop and report                      |
+| Keep, fix, or revert | Always                                        | Always                                                     | Kept by default                                  | Kept by default                                                       |
 
 - **Read-only commands** (both providers, `approvals/command-kinds.ts`) run without asking from Balanced up. A read-only command is one simple command, with no pipes, redirects or wrappers:
   - `ls`, `pwd`, `stat`, `tree`, `wc`, `find` without actions

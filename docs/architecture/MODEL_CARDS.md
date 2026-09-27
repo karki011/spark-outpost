@@ -2,9 +2,11 @@
 
 Designed on September 26, 2026 (Phase 1: research, data and design) and built the same day (Phase 2, see [Built](#built-september-26-2026)). See [JEV.md](JEV.md) for Jev's questions and [HARNESS_PLAN.md](HARNESS_PLAN.md) for the routing rules that use tiers.
 
+> **Round 10 (September 27, 2026): routing is rules-only.** A pinned model always runs; on Auto the rules pick the chat's model, the small tier for a trivial edit and the top tier for destructive work. Jev answers one observed `tier` question (small, mid or top of the chat's provider, with the card lines below as option text) and its pick is recorded as "Jev would have used …" for the Harness tab's rule-vs-Jev comparison, never applied. The provider, per-provider model and effort questions, the routing gates and the frontier gate are gone, and so is the "Allow frontier models" switch (`profiles.allow_frontier`, dropped by `0039_lean_harness.sql`): pinning a frontier model still works. Cards still supply prices, tiers, the effective default model, Settings → Models and the tier question's text. Sections below that describe Jev picking models are history.
+
 ## Why
 
-Jev picks the provider, model and effort for every agent. Today it sees only:
+Before round 10, Jev picked the provider, model and effort for every agent. Today it sees only:
 
 - the provider name
 - each model's id, label and the adapter's one-line description (for example "Sonnet 5 · Efficient for routine tasks")

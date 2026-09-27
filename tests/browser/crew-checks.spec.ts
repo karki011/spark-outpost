@@ -83,8 +83,6 @@ test('Balanced: the check approval shows in the thread, Review jumps to it, and 
   await useChecks(page, [command]);
   await send(page, `${CREW_REQUEST} #build #crew`);
 
-  const plan = card(page, /Approve the plan/);
-  await plan.getByRole('button', { name: 'Approve' }).click({ timeout: 30_000 });
   const edit = card(page, /Change a file\?/).filter({
     has: page.getByRole('button', { name: 'Deny' }),
   });

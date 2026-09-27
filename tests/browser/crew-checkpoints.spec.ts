@@ -1,7 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
   CREW_REQUEST,
-  agentBlock,
   agentHead,
   allowEdit,
   card,
@@ -25,12 +24,11 @@ test.afterEach(() => repo.remove());
 test('clarify takes an answer in your own words and works from it', async ({ page }) => {
   test.setTimeout(60_000);
   await crewChat(page, repo, 'Balanced');
-  await send(page, 'Tidy the heading #build #unsure');
+  await send(page, 'Make the reports better #build #vague');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify).toBeVisible({ timeout: 30_000 });
-  await expect(clarify.getByRole('button', { name: 'Make the change directly' })).toBeVisible();
   await expect(
-    page.getByRole('button', { name: /^Needs your input Tidy the heading/ }),
+    page.getByRole('button', { name: /^Needs your input Make the reports better/ }),
   ).toBeVisible();
   const answer = clarify.getByRole('textbox', { name: 'Or answer in your own words' });
   await answer.fill('Only the top heading');
@@ -66,41 +64,49 @@ test('a vague request gets one short question with likely readings', async ({ pa
   ).toBeVisible({ timeout: 30_000 });
 });
 
-test('a clarify option answers with one click', async ({ page }) => {
+test('an unsure question asks whether to answer or change the code', async ({ page }) => {
   test.setTimeout(60_000);
   await crewChat(page, repo, 'Balanced');
   await send(page, 'Tidy the heading #build #unsure');
   const clarify = card(page, /Jev has a question/);
-  await clarify
-    .getByRole('button', { name: 'Make the change directly' })
-    .click({ timeout: 30_000 });
-  await expect(clarify).toContainText('You chose: Make the change directly');
+  await expect(clarify).toContainText('Answer, or change the code?', { timeout: 30_000 });
+  await expect(clarify.getByRole('button', { name: 'Just answer' })).toBeVisible();
+  await clarify.getByRole('button', { name: 'Make the change' }).click();
+  await expect(clarify).toContainText('Making the change.');
   await allowEdit(page);
   await expect(card(page, /Keep these changes\?/)).toBeVisible({ timeout: 30_000 });
   expect(repo.notes()).toBe('start\nstep 1\n');
 });
 
-test('a retry card escalates the Builder one tier', async ({ page }) => {
+test('a Builder that keeps failing stops on a retry card, which stops and reports', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await crewChat(page, repo, 'Balanced');
+  await send(page, 'Fix the divider #build #failstep 1');
+  const retry = card(page, /A step needs another try/);
+  await expect(retry).toBeVisible({ timeout: 60_000 });
+  await expect(retry).toContainText('Stopped after 2 retries.');
+  await retry.getByRole('button', { name: 'Stop and report' }).click();
+  await expect(retry).toContainText('Stopped and reported.');
+  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
+});
+
+test('the loop guard stops a Builder that repeats itself, and Continue resumes it', async ({
+  page,
+}) => {
   test.setTimeout(60_000);
   await crewChat(page, repo, 'Balanced');
-  await send(page, 'Fix the divider #build #retry');
-  await allowEdit(page);
-  const retry = card(page, /A step needs another try/);
-  await expect(retry).toBeVisible({ timeout: 30_000 });
-  await expect(retry).toContainText('Jev suggests retrying with Opus 5.5 · medium.');
-  await retry.getByRole('button', { name: 'Retry' }).click();
-  await expect(retry).toContainText('Retrying.');
-
-  await expect(page.locator('.crew-turn')).toBeVisible({ timeout: 30_000 });
+  await send(page, 'Fix the divider #build #repeat 8');
+  const stuck = card(page, /Bolt was repeating itself/);
+  await expect(stuck).toBeVisible({ timeout: 30_000 });
+  await stuck.getByRole('button', { name: 'Continue' }).click();
+  await expect(stuck).toContainText('Continued with a note to try another way.');
   await allowEdit(page);
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });
   await keep.getByRole('button', { name: 'Keep', exact: true }).click();
-  await expect(page.locator('.crew-foot')).toContainText('Done 1 agent', { timeout: 30_000 });
-  const heads = page.locator('.crew-turn .agent-name', { hasText: /^Bolt$/ });
-  await expect(heads).toHaveCount(2);
-  await expect(agentHead(page, 'Bolt').last()).toContainText('Opus 5.5 · medium');
-  expect(repo.notes()).toBe('start\nstep 1\nstep 1\n');
+  expect(repo.notes()).toBe('start\ntried another way\n');
 });
 
 test('Stop mid-Builder cancels the Builder and the crew', async ({ page }) => {
@@ -116,37 +122,8 @@ test('Stop mid-Builder cancels the Builder and the crew', async ({ page }) => {
   await expect(builder.locator('.agent-ava')).toHaveClass(/\bstopped\b/);
   await expect(agentHead(page, 'Jev')).toContainText('Stopped');
   await expect(page.locator('.crew-turn .agent-state.failed')).toHaveCount(0);
-  await expect(page.locator('.crew-foot')).toContainText('Done 2 agents');
-  await expect(agentHead(page, 'Rivet')).toHaveCount(0);
+  await expect(page.locator('.crew-foot')).toContainText('Done 1 agent');
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible();
-});
-
-test('an edited plan goes back to the Architect, and Stop on the new plan ends the turn', async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await crewChat(page, repo, 'Balanced');
-  await send(page, `${CREW_REQUEST} #build #crew`);
-  const first = card(page, /Approve the plan/).first();
-  await expect(first).toBeVisible({ timeout: 30_000 });
-  await first.getByRole('button', { name: 'Edit' }).click();
-  const editor = first.getByRole('textbox', { name: 'Edit the plan' });
-  await expect(editor).toHaveValue(/- Update src\/turns\.ts for step 3$/);
-  await editor.fill('Keep the divider untouched');
-  await first.getByRole('button', { name: 'Send changes' }).click();
-  await expect(first).toContainText('Sent your changes to the plan.');
-
-  const second = card(page, /Approve the plan/).nth(1);
-  await expect(second).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator('.crew-turn .agent-name', { hasText: /^Sketch$/ })).toHaveCount(2);
-  await expect(agentBlock(page, 'Sketch').last()).toContainText(
-    'Edited: Keep the divider untouched',
-  );
-  await second.getByRole('button', { name: 'Stop' }).click();
-  await expect(second).toContainText('Stopped.');
-  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
-  await expect(agentHead(page, 'Bolt')).toHaveCount(0);
-  expect(repo.notes()).toBe('start\n');
 });
 
 test('Fix from the keep card runs another Builder with your note', async ({ page }) => {
@@ -166,7 +143,7 @@ test('Fix from the keep card runs another Builder with your note', async ({ page
   await expect(again).toBeVisible({ timeout: 30_000 });
   await again.getByRole('button', { name: 'Keep', exact: true }).click();
   await expect(page.locator('.crew-foot')).toContainText('Done 1 agent', { timeout: 30_000 });
-  expect(repo.notes()).toBe('start\nstep 1\nstep 1\n');
+  expect(repo.notes()).toBe('start\nstep 1\nfixed as asked\n');
 });
 
 async function autoContinueAfter(page: Page, seconds: number): Promise<void> {
@@ -180,7 +157,7 @@ test('an unanswered Jev question counts down and continues with the rules', asyn
   test.setTimeout(60_000);
   await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Balanced');
-  await send(page, 'Tidy the heading #build #unsure');
+  await send(page, 'Make the reports better #build #vague');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify.getByRole('button', { name: /^Continue \(\ds\)$/ })).toBeVisible({
     timeout: 30_000,
@@ -194,7 +171,7 @@ test('typing an answer holds the countdown', async ({ page }) => {
   test.setTimeout(60_000);
   await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Balanced');
-  await send(page, 'Tidy the heading #build #unsure');
+  await send(page, 'Make the reports better #build #vague');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify.getByRole('button', { name: /^Continue \(\ds\)$/ })).toBeVisible({
     timeout: 30_000,

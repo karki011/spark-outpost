@@ -119,12 +119,12 @@ test.describe('a finished crew', () => {
     test.setTimeout(90_000);
     await crewChat(page, repo, 'Full auto');
     await send(page, `${CREW_REQUEST} #build #crew`);
-    await expect(page.locator('.crew-turn .crew-foot')).toContainText(/Done 3 agents/, {
+    await expect(page.locator('.crew-turn .crew-foot')).toContainText(/Done 2 agents/, {
       timeout: 30_000,
     });
 
     const files = page.locator('.crew-turn > .fchg');
-    await expect(files).toContainText('1 file changed+3 −0');
+    await expect(files).toContainText('1 file changed+1 −0');
     await files.getByRole('button', { name: 'Open notes.txt' }).click();
     await expect(files.locator('.dv-row.add').first()).toContainText('step 1');
     await expect(agentBlock(page, 'Bolt').locator('.fchg')).toHaveCount(0);
@@ -132,11 +132,9 @@ test.describe('a finished crew', () => {
     const work = panel(page);
     await work.getByRole('tab', { name: 'Cost' }).click();
     const rows = work.getByRole('list', { name: 'Cost by agent' }).getByRole('listitem');
-    await expect(rows).toHaveCount(4);
-    await expect(rows.nth(0)).toContainText('SketchArchitect · Opus 5.5high');
-    await expect(rows.nth(1)).toContainText('BoltBuilder · Sonnet 5');
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(0)).toContainText('BoltBuilder · Sonnet 5');
     await expect(rows.last()).toContainText('JevDispatcherestimated');
-    await expect(work.getByText('opus[1m]')).toHaveCount(0);
     for (const row of await rows.all()) {
       const height = (await row.boundingBox())!.height;
       expect(height).toBeLessThan(40);

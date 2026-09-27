@@ -55,11 +55,9 @@ interface TaskRunRow {
   step: string | null;
   role: AgentRole | null;
   name: string | null;
-  group_key: string | null;
 }
 
-type TaskRunView = TaskRun &
-  Pick<TaskRunRow, 'request' | 'label' | 'step' | 'role' | 'name'> & { group: string | null };
+type TaskRunView = TaskRun & Pick<TaskRunRow, 'request' | 'label' | 'step' | 'role' | 'name'>;
 
 const runsQuery = `
   SELECT r.id, r.task_id, r.provider, COALESCE(r.used_model, r.model) AS model,
@@ -68,8 +66,7 @@ const runsQuery = `
     r.cost_usd, r.cost_source, r.mode, r.duration_ms, r.created_at, m.content AS request,
     CASE WHEN r.parent_run_id IS NOT NULL THEN r.agent_label END AS label,
     CASE WHEN r.parent_run_id IS NOT NULL THEN r.route->>'planStep' END AS step,
-    r.role, r.route->>'name' AS name,
-    r.parent_run_id || ':' || (r.route->>'parallelGroup') AS group_key
+    r.role, r.route->>'name' AS name
   FROM runs r JOIN messages m ON m.id = r.user_message_id
   WHERE r.task_id = ANY($1::uuid[])
     AND NOT (r.role IS NULL AND EXISTS (SELECT 1 FROM runs c WHERE c.parent_run_id = r.id))
@@ -94,7 +91,6 @@ function toTaskRun(row: TaskRunRow): TaskRunView {
     step: row.step,
     role: row.role,
     name: row.name,
-    group: row.group_key,
   };
 }
 

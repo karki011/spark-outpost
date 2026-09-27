@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
 import { ZAI_MODELS } from '../agents/acp/zai.ts';
 import { candidates, context } from './route-fixtures.ts';
-import { escalate, routeWorker, ruleCriticPick, type RouteContext } from './routing.ts';
+import { escalate, routeBuilder, ruleCriticPick, type RouteContext } from './routing.ts';
 import { modelTier, oneTierUp, tierLadder, topTier } from './tiers.ts';
 
 const glm = ZAI_MODELS.map((model) => ({
@@ -70,7 +70,7 @@ describe('routing with Z.ai connected', () => {
       modelLabel: 'GLM-5.3-Flash',
       effort: 'low',
     });
-    const first = routeWorker(route, null);
+    const first = routeBuilder(route, { trivial: false, destructive: false });
     expect(escalate(route, first).pick).toMatchObject({
       provider: 'zai',
       model: 'opus',
@@ -79,21 +79,20 @@ describe('routing with Z.ai connected', () => {
     });
   });
 
-  it('gates a confident Jev pick of GLM-5.3-Flash like any other cheaper pick', () => {
+  it('picks GLM-5.3-Flash for trivial edits on Auto, and records Jev’s tier only', () => {
     const route = withZai({
       provider: 'zai',
       model: 'opus',
       modelLabel: 'GLM-5.3',
       effort: 'high',
     });
-    const pick = { provider: 'zai', model: 'haiku', modelLabel: 'GLM-5.3-Flash', effort: 'low' };
-    expect(routeWorker(route, { pick, confidence: 0.95 })).toMatchObject({
-      pick,
-      routedBy: 'jev',
-    });
-    expect(routeWorker(route, { pick, confidence: 0.3 })).toMatchObject({
-      pick: route.chat,
-      routedBy: 'rules',
-    });
+    const trivial = routeBuilder(
+      { ...route, routing: 'auto' },
+      { trivial: true, destructive: false },
+    );
+    expect(trivial.pick).toMatchObject({ model: 'haiku', modelLabel: 'GLM-5.3-Flash' });
+    const observed = routeBuilder(route, { trivial: false, destructive: false }, 'small');
+    expect(observed.pick).toMatchObject({ model: 'opus' });
+    expect(observed.autoWouldUse).toMatchObject({ model: 'haiku' });
   });
 });

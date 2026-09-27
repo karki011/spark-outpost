@@ -47,11 +47,11 @@ export function ProviderList({
       {advisors.length > 0 && (
         <section className="advisors" aria-labelledby="advisors-title">
           <h3 className="advisors-title" id="advisors-title">
-            Optional routing
+            Optional decisions
           </h3>
           <p className="advisors-note">
-            A decision model that can suggest which provider, model, and effort fit a task. It
-            doesn't answer chats.
+            A decision model that answers a few yes-or-no questions about each turn and records
+            which model it would have used. It doesn't answer chats.
           </p>
           {advisors.map((advisor) => (
             <ProviderCard

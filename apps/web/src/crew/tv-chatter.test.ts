@@ -4,16 +4,14 @@ import type {
   OrchestrationDecision,
 } from '@spark-outpost/contracts';
 import { describe, expect, it } from 'vitest';
-import { crewAgents, runAgent, watchdogNotes } from './crew-projection.ts';
+import { crewAgents } from './crew-projection.ts';
 import { checkpoint, member, orchestration } from './test-orchestration.ts';
 import { doingLine, sceneChanges, type TvScene } from './tv-chatter.ts';
-import { askText, decisionLine, lastDecisionLine, pendingAsks, roleSubtitle } from './tv-scene.ts';
+import { askText, decisionLine, pendingAsks, roleSubtitle } from './tv-scene.ts';
 
 const BUILDER = '00000000-0000-4000-8000-0000000000a1';
-const ARCHITECT = '00000000-0000-4000-8000-0000000000a2';
 const CRITIC = '00000000-0000-4000-8000-0000000000a3';
 
-const architect = member({ runId: ARCHITECT, role: 'architect', name: 'Architect' });
 const critic = member({ runId: CRITIC, role: 'critic', name: 'Critic' });
 
 function scene(
@@ -31,8 +29,8 @@ describe('Agent TV handoffs and chatter', () => {
   });
 
   it('sends a packet out and announces the handoff when an agent is dispatched', () => {
-    const before = scene([architect]);
-    const after = scene([architect, member({ status: 'running', toolCalls: 0 })]);
+    const before = scene([]);
+    const after = scene([member({ status: 'running', toolCalls: 0 })]);
     expect(sceneChanges(before, after)).toEqual({
       handoffs: [{ agentId: BUILDER, direction: 'out' }],
       chatter: [{ agentId: 'jev', text: 'Over to Builder.' }],
@@ -57,15 +55,6 @@ describe('Agent TV handoffs and chatter', () => {
     expect(sceneChanges(before, after).chatter).toEqual([
       { agentId: BUILDER, text: 'Editing format.ts…' },
     ]);
-  });
-
-  it('returns a packet to Jev and cheers when the plan is ready', () => {
-    const before = scene([{ ...architect, status: 'running', toolCalls: 1 }]);
-    const after = scene([architect]);
-    expect(sceneChanges(before, after)).toEqual({
-      handoffs: [{ agentId: ARCHITECT, direction: 'in' }],
-      chatter: [{ agentId: ARCHITECT, text: 'Plan ready!' }],
-    });
   });
 
   it("speaks the Critic's actual verdict", () => {
@@ -132,33 +121,33 @@ describe('Agent TV scene', () => {
   });
 
   it('asks in plain words what an agent needs from you', () => {
-    const run = checkpoint({ kind: 'plan' }, { kind: 'execute', title: 'Run a command?' });
+    const run = checkpoint({ kind: 'accept' }, { kind: 'execute', title: 'Run a command?' });
     run.payload.command = 'pnpm test';
     expect(askText(run)).toBe('Needs you: run pnpm test?');
-    const edit = checkpoint({ kind: 'plan' }, { kind: 'edit', title: 'Change a file?' });
+    const edit = checkpoint({ kind: 'accept' }, { kind: 'edit', title: 'Change a file?' });
     edit.payload.paths = ['/repo/src/format.ts'];
     expect(askText(edit)).toBe('Needs you: change format.ts?');
-    expect(askText(checkpoint({ kind: 'plan' }, { title: 'Approve the plan' }))).toBe(
-      'Needs you: approve the plan?',
+    expect(askText(checkpoint({ kind: 'accept' }, { title: 'Keep these changes' }))).toBe(
+      'Needs you: keep these changes?',
     );
   });
 
   it('pins each pending approval on the agent that asked, and checkpoints on Jev', () => {
     const waiting = member({ status: 'awaiting_approval' });
-    const plan = checkpoint({ kind: 'plan' }, { title: 'Approve the plan' });
+    const plan = checkpoint({ kind: 'accept' }, { title: 'Keep these changes' });
     const edit = checkpoint(
-      { kind: 'plan' },
+      { kind: 'accept' },
       { id: '00000000-0000-4000-8000-0000000000c2', runId: BUILDER, kind: 'edit' },
     );
     const stranger = checkpoint(
-      { kind: 'plan' },
+      { kind: 'accept' },
       { id: '00000000-0000-4000-8000-0000000000c3', runId: CRITIC },
     );
     const run = orchestration({ crew: [waiting], pendingCheckpoint: plan });
     const detail = { approvals: [edit, stranger] } as unknown as ConversationDetail;
     const asks = pendingAsks(detail, run, crewAgents(run));
     expect(Object.keys(asks).sort()).toEqual([BUILDER, 'jev']);
-    expect(asks.jev).toEqual({ approvalId: plan.id, text: 'Needs you: approve the plan?' });
+    expect(asks.jev).toEqual({ approvalId: plan.id, text: 'Needs you: keep these changes?' });
     expect(asks[BUILDER]!.approvalId).toBe(edit.id);
   });
 
@@ -169,49 +158,12 @@ describe('Agent TV scene', () => {
   });
 });
 
-describe('watchdog on Agent TV', () => {
-  const watched = (
-    flagged: boolean,
-    childRunId: string | null = BUILDER,
-  ): OrchestrationDecision => ({
-    ...decision,
-    id: flagged ? '00000000-0000-4000-8000-0000000000d2' : '00000000-0000-4000-8000-0000000000d3',
-    kind: 'watchdog',
-    role: 'builder',
-    childRunId,
-    gate: null,
-    summary: flagged
-      ? 'Builder looks stuck: repeating Read a.ts · asked you'
-      : 'Builder looks fine',
-    answer: flagged
-      ? { member: 'Builder', flagged, reasonText: 'repeating Read a.ts', action: 'nudge' }
-      : { member: 'Builder', flagged },
-  });
-
-  it('shows a stuck flag on the working member and in its work log, but not a fine check', () => {
-    const working = member({ status: 'running', toolCalls: 12 });
-    const run = orchestration({
-      crew: [working],
-      decisions: [decision, watched(true), watched(false)],
-    });
-    expect(runAgent(working, run).line).toBe('looks stuck: repeating Read a.ts');
-    expect(watchdogNotes(working, run)).toEqual([
-      'Jev: looks stuck, repeating Read a.ts · nudge queued for its next turn',
-    ]);
-    expect(lastDecisionLine(run)).toBe(
-      'Watched: Builder looks stuck: repeating Read a.ts · asked you',
-    );
-    const done = member({ status: 'succeeded' });
-    expect(
-      runAgent(done, orchestration({ crew: [done], decisions: [watched(true)] })).line,
-    ).not.toContain('stuck');
-  });
-
-  it('asks about a stuck agent in plain words', () => {
+describe('loop guard on Agent TV', () => {
+  it('asks about a Builder that was repeating itself in plain words', () => {
     const stuck = checkpoint(
       { kind: 'stuck', agent: 'Bolt' },
-      { kind: 'stuck', title: 'Bolt looks stuck' },
+      { kind: 'stuck', title: 'Bolt was repeating itself' },
     );
-    expect(askText(stuck)).toBe('Needs you: Bolt looks stuck');
+    expect(askText(stuck)).toBe('Needs you: Bolt was repeating itself');
   });
 });

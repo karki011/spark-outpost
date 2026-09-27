@@ -23,19 +23,6 @@ export const orchestrationPhaseSchema = z.enum([
 ]);
 export type OrchestrationPhase = z.infer<typeof orchestrationPhaseSchema>;
 
-export const transitionStatusSchema = z.enum(['done', 'needs_more_work', 'blocked', 'needs_you']);
-export type TransitionStatus = z.infer<typeof transitionStatusSchema>;
-
-export const transitionNextSchema = z.enum(['next_step', 'retry_up', 'review', 'finish']);
-export type TransitionNext = z.infer<typeof transitionNextSchema>;
-
-export const transitionAnswerSchema = z.object({
-  status: transitionStatusSchema,
-  quality: z.number().min(0).max(4).nullable(),
-  next: transitionNextSchema,
-});
-export type TransitionAnswer = z.infer<typeof transitionAnswerSchema>;
-
 export const reviewVerdictSchema = z.enum(['looks_good', 'concerns', 'unclear']);
 export type ReviewVerdict = z.infer<typeof reviewVerdictSchema>;
 
@@ -57,6 +44,8 @@ export const decisionKindSchema = z.enum([
   'parallel',
   'build_style',
   'watchdog',
+  'policy',
+  'verify',
 ]);
 export type DecisionKind = z.infer<typeof decisionKindSchema>;
 
@@ -104,11 +93,12 @@ export const crewMemberSchema = z.object({
   costSource: costSourceSchema.nullable(),
   durationMs: z.number().int().nullable(),
   toolCalls: z.number().int().nullable(),
+  contextUsed: z.number().int().nullable().optional(),
+  contextSize: z.number().int().nullable().optional(),
   quality: z.number().nullable(),
   verdict: reviewVerdictSchema.nullable(),
   startedAt: z.string().nullable(),
   finishedAt: z.string().nullable(),
-  parallelGroup: z.string().nullable().optional(),
   copy: z.string().nullable().optional(),
   sameProvider: z.boolean().optional(),
 });
@@ -147,7 +137,6 @@ export const orchestrationTotalsSchema = z.object({
 export type OrchestrationTotals = z.infer<typeof orchestrationTotalsSchema>;
 
 export const MAX_REPAIR_RETRIES = 2;
-export const ORCHESTRATION_PARALLEL_LIMIT = 3;
 export const ORCHESTRATION_ACTIVE_LIMIT_MS = 15 * 60 * 1000;
 export const ORCHESTRATION_TOOL_CALL_LIMIT = 60;
 
@@ -174,7 +163,6 @@ export const orchestrationSchema = z.object({
   totals: orchestrationTotalsSchema,
   error: z.string().nullable(),
   updatedAt: z.string(),
-  parallelNote: z.string().nullable().optional(),
 });
 export type Orchestration = z.infer<typeof orchestrationSchema>;
 

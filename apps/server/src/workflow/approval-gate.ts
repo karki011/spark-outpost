@@ -35,6 +35,14 @@ export const APPROVAL_TIMEOUT_MESSAGE = 'Approval timed out';
 
 const DIFF_BUDGET = 64 * 1024;
 
+export interface ObservedDecision {
+  verdict: 'allow' | 'reject' | 'ask';
+  by: string | null;
+  approvalId: string | null;
+}
+
+export type EditObserver = (request: ApprovalRequest, decision: ObservedDecision) => void;
+
 export interface GateDeps {
   db: Db;
   runId: string;
@@ -46,6 +54,7 @@ export interface GateDeps {
   onTimeout: () => void;
   backup: (paths: readonly string[]) => Promise<void>;
   copyOf?: string | null;
+  observe?: EditObserver;
 }
 
 function relativeLabel(request: ApprovalRequest, target: string): string {
@@ -161,6 +170,15 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     return allowed.flatMap((approval) => toRule(approval) ?? []);
   };
 
+  const observe = (request: ApprovalRequest, decision: ObservedDecision) => {
+    if (!deps.observe || request.kind !== 'edit' || request.diffs.length === 0) return;
+    try {
+      deps.observe(request, decision);
+    } catch (error) {
+      console.error('Could not observe an edit request', error);
+    }
+  };
+
   const grant = async (request: ApprovalRequest) => {
     if (request.kind !== 'edit') return;
     request.paths.forEach((target) => grants.add(target));
@@ -244,6 +262,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     signal: AbortSignal,
   ): Promise<GateAnswer> => {
     const pending = await insertApproval(deps.db, newApproval(request, reason));
+    observe(request, { verdict: 'ask', by: null, approvalId: pending.id });
     waiting += 1;
     let result: WaitResult;
     try {
@@ -273,18 +292,24 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     const decision = decide(deps.level, request, runRules, allowlist);
     if (decision.verdict === 'ask') return ask(request, decision.reason, signal);
     if (decision.verdict === 'reject') {
-      await insertApproval(deps.db, newApproval(request, decision.reason), {
+      const denied = await insertApproval(deps.db, newApproval(request, decision.reason), {
         status: 'denied',
         decidedBy: 'policy',
         optionId: rejectOption(request.options)?.optionId ?? null,
       });
+      observe(request, { verdict: 'reject', by: 'policy', approvalId: denied.id });
       return reject(request, `Declined: ${what} (${decision.reason})`);
     }
     const option = allowOption(request.options);
-    await insertApproval(deps.db, newApproval(request, null), {
+    const recorded = await insertApproval(deps.db, newApproval(request, null), {
       status: option ? 'allowed' : 'denied',
       decidedBy: decision.by,
       optionId: option?.optionId ?? null,
+    });
+    observe(request, {
+      verdict: option ? 'allow' : 'reject',
+      by: decision.by,
+      approvalId: recorded.id,
     });
     const why =
       decision.why ??

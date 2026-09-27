@@ -59,9 +59,10 @@ async function secondTurn(conversationId: string, text: string) {
   }));
 }
 
-async function runRow(runId: string) {
-  const { rows } = await t.db.query<{ model: string; effort: string }>(
-    'SELECT model, effort FROM runs WHERE id = $1',
+async function builderRow(runId: string) {
+  const { rows } = await t.db.query<{ model: string; effort: string; task_id: string }>(
+    `SELECT model, effort, task_id FROM runs WHERE parent_run_id = $1 AND role = 'builder'
+     ORDER BY created_at LIMIT 1`,
     [runId],
   );
   return rows[0]!;
@@ -69,47 +70,77 @@ async function runRow(runId: string) {
 
 async function sessionSteps(runId: string): Promise<string[]> {
   const { rows } = await t.db.query<{ name: string }>(
-    `SELECT payload->>'stepName' AS name FROM run_events
-     WHERE run_id = $1 AND type = 'STEP_STARTED' ORDER BY seq`,
+    `SELECT payload->>'stepName' AS name FROM run_events e JOIN runs r ON r.id = e.run_id
+     WHERE (r.id = $1 OR r.parent_run_id = $1) AND e.type = 'STEP_STARTED'
+     ORDER BY e.created_at, e.seq`,
     [runId],
   );
   return rows.map((row) => row.name).filter((name) => /session/i.test(name));
 }
 
-describe('Auto routing on turn 2 of a chat with a resumable session', () => {
-  it('keeps the session model when Jev is not sure enough to switch', async () => {
-    const script: JevScript = { calls: [], scenario: { ...TRIVIAL, model: 'haiku', effort: 0 } };
-    harness = startOrchestrator(t, jevFetch(script), { sessions: store });
-    const first = await startScenario(t, root, script.scenario!, 'hands-off');
-    await driveToEnd(t, first.conversationId, first.runId);
-    expect(await runRow(first.runId)).toEqual({ model: 'haiku', effort: 'low' });
+async function openSessionKeys(conversationId: string): Promise<string[]> {
+  const { rows } = await t.db.query<{ agent_key: string }>(
+    `SELECT agent_key FROM provider_sessions
+     WHERE conversation_id = $1 AND closed_at IS NULL ORDER BY created_at`,
+    [conversationId],
+  );
+  return rows.map((row) => row.agent_key);
+}
 
-    script.scenario = { ...TRIVIAL, model: 'sonnet', effort: 2, modelConfidence: 0.45 };
-    const second = await secondTurn(first.conversationId, 'Also fix the footer typo. #build');
+describe('task-scoped Builder sessions', () => {
+  it('resumes the task Builder for a follow-up, keeping its model, and leaves the chat session alone', async () => {
+    const script: JevScript = { calls: [], scenario: TRIVIAL };
+    harness = startOrchestrator(t, jevFetch(script), { sessions: store });
+    const first = await startScenario(t, root, TRIVIAL, 'hands-off');
+    await driveToEnd(t, first.conversationId, first.runId);
+    const firstBuilder = await builderRow(first.runId);
+    expect(firstBuilder).toMatchObject({ model: 'haiku', effort: 'medium' });
+    expect(await openSessionKeys(first.conversationId)).toEqual([
+      `key:${firstBuilder.task_id}:builder`,
+    ]);
+
+    script.scenario = { ...TRIVIAL, continuesTask: 0.95, tier: 'mid' };
+    const second = await secondTurn(
+      first.conversationId,
+      'Also make the heading shorter and keep the tone. #build',
+    );
     expect(second.orchestration.status).toBe('succeeded');
-    expect(await runRow(second.runId)).toEqual({ model: 'haiku', effort: 'low' });
+    const secondBuilder = await builderRow(second.runId);
+    expect(secondBuilder).toMatchObject({ model: 'haiku', task_id: firstBuilder.task_id });
     expect(await sessionSteps(second.runId)).toContain('Continued session');
     const route = second.orchestration.decisions.find((decision) => decision.kind === 'route');
-    expect(route?.summary).toContain(KEPT_FOR_SESSION);
     expect(route?.answer.rule).toBe(KEPT_FOR_SESSION);
-    expect(route?.answer.session).toMatchObject({
-      kept: true,
-      session: { model: 'haiku', effort: 'low' },
-    });
+    expect(route?.answer.session).toMatchObject({ kept: true, session: { model: 'haiku' } });
+    const intake = second.orchestration.decisions.find((decision) => decision.kind === 'intake');
+    expect(intake?.summary).toContain('same task (jev 0.95)');
   }, 60_000);
 
-  it('switches when Jev is confident about a stronger model and says the session is lost', async () => {
-    const script: JevScript = { calls: [], scenario: { ...TRIVIAL, model: 'haiku', effort: 0 } };
+  it('starts a fresh task and closes the old task’s session when the message is new work', async () => {
+    const script: JevScript = { calls: [], scenario: TRIVIAL };
     harness = startOrchestrator(t, jevFetch(script), { sessions: store });
-    const first = await startScenario(t, root, script.scenario!, 'hands-off');
+    const first = await startScenario(t, root, TRIVIAL, 'hands-off');
     await driveToEnd(t, first.conversationId, first.runId);
+    const oldTask = (await builderRow(first.runId)).task_id;
 
-    script.scenario = { ...TRIVIAL, model: 'sonnet', effort: 2 };
-    const second = await secondTurn(first.conversationId, 'Now refactor the header. #build');
-    expect(await runRow(second.runId)).toEqual({ model: 'sonnet', effort: 'high' });
-    expect(await sessionSteps(second.runId)).toContain('Fresh session (settings changed)');
-    const route = second.orchestration.decisions.find((decision) => decision.kind === 'route');
-    expect(route?.answer.session).toMatchObject({ kept: false });
+    script.scenario = { ...TRIVIAL, continuesTask: 0.03 };
+    const second = await secondTurn(first.conversationId, 'Now add a logout button. #build');
+    const newTask = (await builderRow(second.runId)).task_id;
+    expect(newTask).not.toBe(oldTask);
+    expect(await sessionSteps(second.runId)).not.toContain('Continued session');
+    const { rows } = await t.db.query<{ agent_key: string; close_reason: string | null }>(
+      `SELECT agent_key, close_reason FROM provider_sessions WHERE conversation_id = $1
+       ORDER BY created_at`,
+      [first.conversationId],
+    );
+    expect(rows).toEqual([
+      { agent_key: `key:${oldTask}:builder`, close_reason: 'a new task started' },
+      { agent_key: `key:${newTask}:builder`, close_reason: null },
+    ]);
+    const { rows: tasks } = await t.db.query<{ status: string }>(
+      'SELECT status FROM tasks WHERE id = $1',
+      [oldTask],
+    );
+    expect(tasks[0]!.status).toBe('closed');
   }, 60_000);
 });
 

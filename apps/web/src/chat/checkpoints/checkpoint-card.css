@@ -2,12 +2,6 @@
   color: var(--text);
   font-weight: 500;
 }
-.ck .ck-plan {
-  margin: 10px 14px 0;
-  padding: 8px 12px;
-  border-radius: var(--r-sm);
-  background: var(--panel);
-}
 .ck-choices {
   padding-bottom: 0;
 }

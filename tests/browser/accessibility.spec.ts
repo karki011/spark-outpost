@@ -103,7 +103,7 @@ for (const theme of THEMES) {
       .getByRole('tab', { name: 'Models' })
       .click();
     await expect(
-      page.getByRole('dialog', { name: 'Models' }).getByRole('switch').first(),
+      page.getByRole('dialog', { name: 'Models' }).getByRole('region', { name: 'Claude' }),
     ).toBeVisible();
     found.push(...(await blockingViolations(page, 'settings models')));
 

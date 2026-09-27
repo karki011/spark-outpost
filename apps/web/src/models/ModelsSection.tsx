@@ -1,59 +1,9 @@
 import { useId } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ModelCardsResponse, ProviderCardsView } from '@spark-outpost/contracts';
+import { useQuery } from '@tanstack/react-query';
+import type { ProviderCardsView } from '@spark-outpost/contracts';
 import { modelCardsApi, modelCardsKey } from '../api/model-cards.ts';
 import { ModelCardItem } from './ModelCardItem.tsx';
 import './models.css';
-
-function frontierCopy(view: ProviderCardsView): string {
-  const names = view.models
-    .filter((model) => model.card.tier === 'frontier')
-    .map((model) => model.card.label)
-    .join(' or ');
-  const base = `Lets Jev choose ${names} on Auto when it is sure (0.90), the same bar as any upgrade. Pinned chats can always use it.`;
-  return view.provider.doMode === 'no'
-    ? `${base} ${view.provider.label} only reads here, so this applies to Scouts, Architects and Critics, never to Builders.`
-    : base;
-}
-
-function FrontierSwitch({ view }: { view: ProviderCardsView }) {
-  const hintId = useId();
-  const queryClient = useQueryClient();
-  const provider = view.provider.provider;
-  const save = useMutation({
-    mutationFn: (allowed: boolean) => modelCardsApi.setFrontier(provider, allowed),
-    onSuccess: (allowFrontier) =>
-      queryClient.setQueryData<ModelCardsResponse>(modelCardsKey, (current) =>
-        current
-          ? {
-              ...current,
-              providers: current.providers.map((entry) => ({
-                ...entry,
-                allowFrontier: allowFrontier[entry.provider.provider] ?? false,
-              })),
-            }
-          : current,
-      ),
-  });
-  const checked = save.isPending ? save.variables : view.allowFrontier;
-  return (
-    <div className="mc-switch">
-      <label>
-        <input
-          type="checkbox"
-          role="switch"
-          checked={checked}
-          aria-describedby={hintId}
-          onChange={(event) => save.mutate(event.target.checked)}
-        />
-        <span>Allow frontier models for {view.provider.label}</span>
-      </label>
-      <p id={hintId} className="set-hint" aria-live="polite">
-        {save.isError ? save.error.message : frontierCopy(view)}
-      </p>
-    </div>
-  );
-}
 
 function ProviderFacts({ view }: { view: ProviderCardsView }) {
   const card = view.provider;
@@ -93,7 +43,6 @@ function ProviderModels({ view }: { view: ProviderCardsView }) {
         {!view.connected && <span className="mc-tag">not connected</span>}
       </div>
       <ProviderFacts view={view} />
-      {view.hasFrontier && <FrontierSwitch view={view} />}
       <ul className="mc-list">
         {view.models.map((model) => (
           <ModelCardItem key={model.card.id} view={model} />
@@ -116,8 +65,8 @@ export function ModelsSection() {
   return (
     <>
       <p className="lede">
-        What Jev knows about each model when it picks one: vendor facts checked{' '}
-        {cards.data.checkedAt}, and what our own benchmark measured.
+        Vendor facts checked {cards.data.checkedAt}, and what our own benchmark measured. The rules
+        pick models; Jev reads these cards only to record which size it would have used.
       </p>
       {cards.data.providers.map((view) => (
         <ProviderModels key={view.provider.provider} view={view} />

@@ -41,7 +41,6 @@ const configSchema = z.object({
     .default('http://localhost:5173,http://127.0.0.1:5173')
     .transform((value) => value.split(',').map((origin) => origin.trim())),
   WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(16).default(2),
-  PARALLEL_AGENT_LIMIT: z.coerce.number().int().min(1).max(32).default(6),
   LEASE_SECONDS: z.coerce.number().int().min(5).default(30),
   SESSION_IDLE_MINUTES: z.coerce.number().int().min(1).default(30),
   SESSION_OPEN_LIMIT: z.coerce.number().int().min(1).max(64).default(8),

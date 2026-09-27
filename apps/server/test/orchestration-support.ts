@@ -8,10 +8,8 @@ import {
   clarifyOptionId,
   type Approval,
   type ApprovalScope,
-  type Depth,
   type InvolvementLevel,
   type Orchestration,
-  type Risk,
 } from '@spark-outpost/contracts';
 import { createIntakeRecorder } from '../src/advisor/intake-recorder.ts';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
@@ -20,8 +18,7 @@ import { decideApproval } from '../src/persistence/approvals.ts';
 import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { getRun } from '../src/persistence/runs.ts';
-import type { LaneOptions } from '../src/orchestration/placement.ts';
-import type { HandoffOptions, OrchestratorDeps } from '../src/orchestration/session.ts';
+import type { OrchestratorDeps } from '../src/orchestration/session.ts';
 import type { Provider } from '../src/providers/provider.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
@@ -96,73 +93,51 @@ export interface Scenario {
   id: string;
   text: string;
   mode: 'ask' | 'do';
-  depth: Depth;
-  risk: Risk;
-  confidence: number;
-  model: string;
-  effort: number;
-  scope?: string;
-  scopeConfidence?: number;
-  complexity?: number;
-  intent?: string;
-  modelConfidence?: number;
-  intentConfidence?: number;
-  reviewExisting?: number;
+  question?: number;
+  destructive?: number;
+  review?: number;
   vague?: number;
-  mechanical?: number;
+  continuesTask?: number;
+  tier?: 'small' | 'mid' | 'top';
+  tierConfidence?: number;
+  intent?: string;
+  intentConfidence?: number;
   intentProbabilities?: Record<string, number>;
 }
 
 export const SCENARIOS: readonly Scenario[] = [
-  {
-    id: 'question',
-    text: 'What does parseDate do?',
-    mode: 'ask',
-    depth: 'direct',
-    risk: 'read-only',
-    confidence: 0.94,
-    model: 'sonnet',
-    effort: 0,
-  },
+  { id: 'question', text: 'What does parseDate do?', mode: 'ask', tier: 'small' },
   {
     id: 'trivial',
     text: 'Fix the typo in the README heading. #build',
     mode: 'do',
-    depth: 'execute',
-    risk: 'edits',
-    confidence: 0.92,
-    model: 'haiku',
-    effort: 0,
+    question: 0.02,
+    destructive: 0.03,
+    tier: 'small',
   },
   {
     id: 'normal',
     text: 'The divider shows the wrong day after midnight. Fix it and add a test. #build',
     mode: 'do',
-    depth: 'execute',
-    risk: 'edits',
-    confidence: 0.81,
-    model: 'sonnet',
-    effort: 1,
+    question: 0.03,
+    destructive: 0.05,
+    tier: 'mid',
   },
   {
     id: 'complex',
     text: 'Move date handling into one module and update every component. #build',
     mode: 'do',
-    depth: 'plan_execute_review',
-    risk: 'multi-file',
-    confidence: 0.77,
-    model: 'sonnet',
-    effort: 1,
+    question: 0.03,
+    destructive: 0.2,
+    tier: 'top',
   },
   {
     id: 'risky',
     text: 'Rename the runs table column and migrate old rows. #build',
     mode: 'do',
-    depth: 'plan_execute_review',
-    risk: 'destructive',
-    confidence: 0.71,
-    model: 'opus[1m]',
-    effort: 2,
+    question: 0.02,
+    destructive: 0.93,
+    tier: 'top',
   },
 ];
 
@@ -173,8 +148,6 @@ export const LEVELS: readonly InvolvementLevel[] = [
   'full-auto',
 ];
 
-const RISKS: Risk[] = ['read-only', 'edits', 'multi-file', 'destructive'];
-
 type Answers = Record<string, unknown>;
 
 function choice(value: string, confidence: number, second?: string): Answers[string] {
@@ -183,31 +156,18 @@ function choice(value: string, confidence: number, second?: string): Answers[str
   return { type: 'choice', choice: value, probabilities, confidence };
 }
 
-const score = (value: number, confidence = 0.9) => ({ type: 'score', score: value, confidence });
-
-export interface ArchitectAnswer {
-  model: string;
-  effort: number;
-  confidence: number;
-}
+const noul = (value: number) => ({ type: 'noul', noul: value });
 
 export interface JevScript {
   calls: { questions: string[]; state: Record<string, unknown> }[];
   scenario?: Scenario;
-  architect?: ArchitectAnswer;
-  parallel?: Record<string, number>;
-  buildStyle?: { choice: string; confidence: number };
-  watchdog?: Partial<Record<'repeating' | 'off_step' | 'waiting' | 'finished', number>>;
-  stepOpen?: number;
-  transition?: (
-    state: Record<string, unknown>,
-    offered: string[],
-  ) => { status: string; next: string; confidence?: number };
+  policy?: Partial<Record<string, number>>;
+  verify?: number;
 }
 
 function intentAnswer(scenario: Scenario): Answers[string] {
   const intent = scenario.intent ?? (scenario.mode === 'ask' ? 'question' : 'bug_fix');
-  const confidence = scenario.intentConfidence ?? scenario.confidence;
+  const confidence = scenario.intentConfidence ?? 0.9;
   if (!scenario.intentProbabilities) return choice(intent, confidence);
   return {
     type: 'choice',
@@ -217,88 +177,33 @@ function intentAnswer(scenario: Scenario): Answers[string] {
   };
 }
 
-function intakeAnswers(scenario: Scenario): Answers {
-  const second = scenario.depth === 'plan_execute_review' ? 'plan_execute' : 'execute';
-  return {
-    intent: intentAnswer(scenario),
-    ...(scenario.reviewExisting === undefined
-      ? {}
-      : { review_existing: { type: 'noul', noul: scenario.reviewExisting } }),
-    ...(scenario.vague === undefined ? {} : { vague: { type: 'noul', noul: scenario.vague } }),
-    ...(scenario.mechanical === undefined
-      ? {}
-      : { mechanical: { type: 'noul', noul: scenario.mechanical } }),
-    complexity: score(scenario.complexity ?? 1),
-    risk: score(RISKS.indexOf(scenario.risk)),
-    depth: choice(scenario.depth, scenario.confidence, second),
-    ...(scenario.scope ? { scope: choice(scenario.scope, scenario.scopeConfidence ?? 0.9) } : {}),
-    provider: choice('claude', 0.95),
-    model_claude: choice(scenario.model, scenario.modelConfidence ?? 0.95),
-    effort_claude: score(scenario.effort),
-    model_codex: choice('gpt-6-sol', 0.95),
-    effort_codex: score(1),
-  };
-}
+const NOUL_FIELDS = [
+  ['question', 'question'],
+  ['destructive', 'destructive'],
+  ['review', 'review'],
+  ['vague', 'vague'],
+  ['continues_task', 'continuesTask'],
+] as const;
 
-const UNSURE_ARCHITECT: ArchitectAnswer = { model: 'sonnet', effort: 1, confidence: 0.45 };
-
-function routeAnswers(script: JevScript, questions: Record<string, unknown>): Answers {
-  const answers: Answers = {};
-  const architect = script.architect ?? UNSURE_ARCHITECT;
-  for (const key of Object.keys(questions)) {
-    if (key === 'model_architect_0') answers[key] = choice(architect.model, architect.confidence);
-    else if (key === 'effort_architect_0') answers[key] = score(architect.effort);
-    else if (key.startsWith('model_critic')) answers[key] = choice('gpt-6-sol', 0.95);
-    else if (key.startsWith('model_')) answers[key] = choice('sonnet', 0.95);
-    else answers[key] = score(key.startsWith('effort_critic') ? 2 : 1);
+function intakeAnswers(scenario: Scenario, questions: Record<string, unknown>): Answers {
+  const answers: Answers = { intent: intentAnswer(scenario) };
+  for (const [key, field] of NOUL_FIELDS) {
+    const value = scenario[field];
+    if (questions[key] && value !== undefined) answers[key] = noul(value);
   }
+  if (questions.tier && scenario.tier) {
+    answers.tier = choice(scenario.tier, scenario.tierConfidence ?? 0.95);
+  }
+  if (questions.injection) answers.injection = noul(0.05);
   return answers;
 }
 
-const isParallelKey = (key: string) => key.startsWith('independent_') || key.startsWith('large_');
-
-function parallelAnswers(script: JevScript, questions: Record<string, unknown>): Answers {
+function observedAnswers(script: JevScript, questions: Record<string, unknown>): Answers {
   return Object.fromEntries(
-    Object.keys(questions).flatMap((key) =>
-      script.parallel?.[key] === undefined
-        ? []
-        : [[key, { type: 'noul', noul: script.parallel[key] }]],
-    ),
-  );
-}
-
-function transitionAnswers(
-  script: JevScript,
-  state: Record<string, unknown>,
-  questions: Record<string, { criteria?: Record<string, string> }>,
-): Answers {
-  const offered = Object.keys(questions.next?.criteria ?? {});
-  const scripted = script.transition?.(state, offered);
-  const fallback = offered.includes('next_step') ? 'next_step' : 'finish';
-  const next = scripted && offered.includes(scripted.next) ? scripted.next : fallback;
-  const stepChecks = Object.keys(questions).flatMap((key) =>
-    script.stepOpen !== undefined && key.startsWith('step_not_done_')
-      ? [[key, { type: 'noul', noul: script.stepOpen }]]
-      : [],
-  );
-  return {
-    ...Object.fromEntries(stepChecks),
-    status: choice(scripted?.status ?? 'done', scripted?.confidence ?? 0.95),
-    quality: score(3),
-    next: choice(next, scripted?.confidence ?? 0.95),
-  };
-}
-
-function buildStyleAnswers(script: JevScript): Answers {
-  const pick = script.buildStyle ?? { choice: 'lean', confidence: 0.5 };
-  return { build_style: choice(pick.choice, pick.confidence) };
-}
-
-const WATCHDOG_KEYS = ['repeating', 'off_step', 'waiting', 'finished'] as const;
-
-function watchdogAnswers(script: JevScript): Answers {
-  return Object.fromEntries(
-    WATCHDOG_KEYS.map((key) => [key, { type: 'noul', noul: script.watchdog?.[key] ?? 0.05 }]),
+    Object.keys(questions).map((key) => [
+      key,
+      noul(script.policy?.[key] ?? (key.startsWith('unmet_') ? (script.verify ?? 0.05) : 0.05)),
+    ]),
   );
 }
 
@@ -315,19 +220,8 @@ export function jevFetch(script: JevScript): typeof fetch {
       SCENARIOS.find((candidate) => task.startsWith(candidate.text)) ??
       SCENARIOS[0]!;
     const answers = body.questions.intent
-      ? {
-          ...intakeAnswers(scenario),
-          ...(body.questions.build_style ? buildStyleAnswers(script) : {}),
-        }
-      : body.questions.build_style
-        ? buildStyleAnswers(script)
-        : body.questions.status
-          ? transitionAnswers(script, body.state, body.questions)
-          : body.questions.repeating
-            ? watchdogAnswers(script)
-            : Object.keys(body.questions).some(isParallelKey)
-              ? parallelAnswers(script, body.questions)
-              : routeAnswers(script, body.questions);
+      ? intakeAnswers(scenario, body.questions)
+      : observedAnswers(script, body.questions);
     return new Response(
       JSON.stringify({
         model: 'jev-test',
@@ -350,9 +244,7 @@ export function startOrchestrator(
   options: {
     budget?: { activeLimitMs?: number; toolCallLimit?: number };
     sessions?: string;
-    lanes?: LaneOptions;
-    handoff?: HandoffOptions;
-    watchdog?: OrchestratorDeps['watchdog'];
+    loopGuard?: OrchestratorDeps['loopGuard'];
   } = {},
 ): Harness {
   const intake = fetcher
@@ -377,15 +269,12 @@ export function startOrchestrator(
     budgetPollMs: 50,
     ...(intake ? { intake } : {}),
     ...(options.budget ? { budget: options.budget } : {}),
-    ...(options.lanes ? { lanes: options.lanes } : {}),
-    ...(options.handoff ? { handoff: options.handoff } : {}),
-    ...(options.watchdog !== undefined ? { watchdog: options.watchdog } : {}),
+    ...(options.loopGuard !== undefined ? { loopGuard: options.loopGuard } : {}),
   });
   return {
     worker,
     async stop() {
       await worker.stop();
-      await intake?.settled();
     },
   };
 }
@@ -429,7 +318,6 @@ export type Answerer = (
 
 export const answerEverything: Answerer = (approval) => {
   if (approval.kind === 'clarify') return { optionId: clarifyOptionId(0) };
-  if (approval.kind === 'plan') return { optionId: CHECKPOINT_OPTION.approvePlan };
   if (approval.kind === 'retry') return { optionId: CHECKPOINT_OPTION.retry };
   if (approval.kind === 'accept') return { optionId: CHECKPOINT_OPTION.keep };
   if (approval.kind === 'budget') return { optionId: CHECKPOINT_OPTION.continueBudget };
@@ -463,18 +351,4 @@ export async function driveToEnd(
     throw new Error(`No orchestration was recorded; the run ${run?.status}: ${run?.error}`);
   }
   return { asked, orchestration };
-}
-
-export async function planWrites(t: TestDb, runId: string): Promise<string[]> {
-  const { rows } = await t.db.query<{ statuses: string }>(
-    `SELECT (SELECT string_agg(entry->>'status', ' ' ORDER BY position)
-             FROM jsonb_array_elements(e.payload->'content'->'body'->'entries')
-               WITH ORDINALITY AS item(entry, position)) AS statuses
-     FROM run_events e JOIN runs r ON r.id = e.run_id
-     WHERE (r.id = $1 OR r.parent_run_id = $1) AND e.type = 'ACTIVITY_SNAPSHOT'
-       AND e.payload->>'activityType' = 'plan'
-     ORDER BY e.created_at, e.seq`,
-    [runId],
-  );
-  return rows.map((row) => row.statuses);
 }

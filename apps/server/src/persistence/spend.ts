@@ -5,8 +5,6 @@ import {
   type SpendSummary,
   type TotalCostSource,
 } from '@spark-outpost/contracts';
-import type { TierModel } from '../orchestration/tiers.ts';
-import { routingSavings, tallySavings, type RoutedRun } from '../usage/routing-savings.ts';
 import type { Queryable } from './db.ts';
 
 const TRUNC_UNIT: Record<SpendRange, string> = { today: 'day', week: 'week' };
@@ -26,16 +24,6 @@ interface JevRow {
   calls: number;
   input_tokens: number;
   cost_usd: number;
-}
-
-interface RoutedRow {
-  provider: string;
-  model: string | null;
-  model_label: string | null;
-  input_tokens: number;
-  output_tokens: number;
-  cached_read_tokens: number | null;
-  cached_write_tokens: number | null;
 }
 
 function totalSource(reported: boolean, estimated: boolean): TotalCostSource | null {
@@ -114,52 +102,6 @@ function jevSlice(jev: JevRow): ProviderTotals[] {
   ];
 }
 
-export async function routedRuns(
-  db: Queryable,
-  workspaceId: string,
-  since: Date,
-  until: Date | null = null,
-): Promise<RoutedRun[]> {
-  const { rows } = await db.query<RoutedRow>(
-    `SELECT r.provider, COALESCE(r.used_model, r.model) AS model,
-       r.route->>'modelLabel' AS model_label, r.input_tokens, r.output_tokens,
-       r.cached_read_tokens, r.cached_write_tokens
-     FROM runs r JOIN conversations c ON c.id = r.conversation_id
-     WHERE c.workspace_id = $1 AND r.created_at >= $2
-       AND ($3::timestamptz IS NULL OR r.created_at < $3)
-       AND r.route->>'routedBy' = 'jev'
-       AND r.input_tokens IS NOT NULL AND r.output_tokens IS NOT NULL`,
-    [workspaceId, since, until],
-  );
-  return rows.map((row) => ({
-    provider: row.provider,
-    model: row.model,
-    modelLabel: row.model_label,
-    tokens: {
-      input: row.input_tokens,
-      output: row.output_tokens,
-      cachedRead: row.cached_read_tokens,
-      cachedWrite: row.cached_write_tokens,
-    },
-  }));
-}
-
-export async function offeredModels(
-  db: Queryable,
-  workspaceId: string,
-): Promise<Map<string, TierModel[]>> {
-  const { rows } = await db.query<{ provider: string; models: { id: string; label?: string }[] }>(
-    'SELECT provider, models FROM provider_capabilities WHERE workspace_id = $1',
-    [workspaceId],
-  );
-  return new Map(
-    rows.map((row) => [
-      row.provider,
-      row.models.map((model) => ({ id: model.id, label: model.label ?? '' })),
-    ]),
-  );
-}
-
 function sumCost(rows: readonly ProviderTotals[]): number | null {
   return rows.reduce<number | null>(
     (total, row) => (row.costUsd === null ? total : (total ?? 0) + row.costUsd),
@@ -174,11 +116,9 @@ export async function spendSummary(
   timeZone: string,
 ): Promise<SpendSummary> {
   const since = await rangeStart(db, range, timeZone);
-  const [agents, jev, routed, offered] = await Promise.all([
+  const [agents, jev] = await Promise.all([
     providerTotals(db, workspaceId, since),
     jevTotals(db, workspaceId, since),
-    routedRuns(db, workspaceId, since),
-    offeredModels(db, workspaceId),
   ]);
   const byProvider = [...agents, ...jevSlice(jev)];
   return {
@@ -193,6 +133,5 @@ export async function spendSummary(
     ),
     totalTokens: byProvider.reduce((sum, row) => sum + row.totalTokens, 0),
     byProvider,
-    savings: routingSavings(tallySavings(routed, offered), jev.cost_usd),
   };
 }

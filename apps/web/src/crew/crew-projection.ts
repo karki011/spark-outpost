@@ -23,8 +23,8 @@ const VERDICT_LINES = { looks_good: 'looks good', concerns: 'has concerns', uncl
 
 const PHASE_LINES: Record<Orchestration['phase'], string> = {
   intake: 'reading the request',
-  scouting: 'sent Scout to read',
-  planning: 'waiting on the plan',
+  scouting: 'answering',
+  planning: 'working',
   building: 'handed off the build',
   reviewing: 'asked for a review',
   waiting: 'waiting on you',
@@ -56,46 +56,12 @@ function memberLine(member: CrewMember, state: CrewState, steps: readonly Activi
   return member.planStep ? stepLine(member.planStep) : 'thinking';
 }
 
-function watchdogDecisions(member: CrewMember, orchestration: Orchestration) {
-  return orchestration.decisions.filter(
-    (decision) =>
-      decision.kind === 'watchdog' &&
-      decision.answer.flagged === true &&
-      (decision.childRunId === member.runId ||
-        (decision.childRunId === null && decision.answer.member === member.name)),
-  );
-}
-
-const WATCH_ACTIONS: Record<string, string> = {
-  checkpoint: 'asked you',
-  nudge: 'nudge queued for its next turn',
-  held: 'already flagged',
-  none: 'no action',
-};
-
-export function watchdogNotes(member: CrewMember, orchestration: Orchestration): string[] {
-  return watchdogDecisions(member, orchestration).map((decision) => {
-    const reason = typeof decision.answer.reasonText === 'string' ? decision.answer.reasonText : '';
-    const action = WATCH_ACTIONS[String(decision.answer.action)] ?? 'no action';
-    return `Jev: looks stuck${reason ? `, ${reason}` : ''} · ${action}`;
-  });
-}
-
-function stuckLine(member: CrewMember, orchestration: Orchestration): string | null {
-  const latest = watchdogDecisions(member, orchestration).at(-1);
-  const reason = latest?.answer.reasonText;
-  if (!latest) return null;
-  return typeof reason === 'string' ? `looks stuck: ${reason}` : 'looks stuck';
-}
-
 export function runAgent(
   member: CrewMember,
   orchestration: Orchestration,
   steps: readonly ActivityStep[] = [],
 ): CrewAgent {
   const state = memberState(member, orchestration);
-  const busy = state === 'working' || state === 'thinking';
-  const stuck = busy ? stuckLine(member, orchestration) : null;
   return {
     id: member.runId,
     role: member.role,
@@ -104,7 +70,7 @@ export function runAgent(
     model: member.modelLabel ?? member.model,
     effort: member.effort,
     state,
-    line: stuck ?? memberLine(member, state, steps),
+    line: memberLine(member, state, steps),
     tokens: member.tokens,
     costUsd: member.costUsd,
     costSource: member.costSource,

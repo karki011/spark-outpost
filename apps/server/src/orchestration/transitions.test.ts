@@ -2,22 +2,21 @@ import { describe, expect, it } from 'vitest';
 import {
   CHECKPOINT_OPTION,
   MAX_REPAIR_RETRIES,
-  type Depth,
   type InvolvementLevel,
-  type Risk,
 } from '@spark-outpost/contracts';
-import { MAX_BUILDERS, batchSteps } from './parallel.ts';
-import { ruleTransition } from './transition-choice.ts';
+import { openEntries } from './plan-progress.ts';
 import {
-  MAX_PLAN_EDITS,
+  continueFollowUp,
+  incompleteLine,
   initialFlow,
   nextStep,
+  UNSTICK_NOTE,
   type FlowEvent,
   type FlowResult,
   type FlowState,
 } from './transitions.ts';
 
-function run(state: FlowState, events: FlowEvent[]): FlowResult[] {
+function run(state: FlowState, events: readonly FlowEvent[]): FlowResult[] {
   const results: FlowResult[] = [];
   let current = state;
   for (const event of events) {
@@ -28,427 +27,231 @@ function run(state: FlowState, events: FlowEvent[]): FlowResult[] {
   return results;
 }
 
-const flow = (depth: Depth, risk: Risk = 'edits', level: InvolvementLevel = 'hands-off') =>
-  initialFlow(depth, risk, level);
-const start: FlowEvent = { type: 'start', intake: 'act' };
-const done = (role: 'scout' | 'architect' | 'builder' | 'critic', extra = {}): FlowEvent => ({
+const built = (extra: Partial<Extract<FlowEvent, { type: 'agent_done' }>> = {}): FlowEvent => ({
   type: 'agent_done',
-  role,
+  role: 'builder',
   outcome: 'succeeded',
   ...extra,
 });
-const judged = (next: 'next_step' | 'retry_up' | 'review' | 'finish', extra = {}): FlowEvent => ({
-  type: 'judged',
-  status: 'done',
-  next,
-  rules: { status: 'done', next },
-  source: 'jev',
-  confidence: 0.95,
-  ...extra,
-});
-const answer = (
-  kind: 'clarify' | 'plan' | 'retry' | 'accept' | 'budget',
-  optionId: string,
-  note: string | null = null,
-): FlowEvent => ({
-  type: 'answered',
-  kind,
-  optionId,
-  note,
-});
-const actions = (results: FlowResult[]) =>
-  results.map(({ action }) =>
-    action.type === 'spawn'
-      ? `spawn ${action.role}:${action.carry ? action.carry.join('-') : action.stepIndex}${action.escalate ? '+' : ''}`
-      : action.type === 'ask'
-        ? `ask ${action.kind}`
-        : action.type === 'finish'
-          ? `finish ${action.status}`
-          : action.type === 'judge'
-            ? `judge ${action.role}`
-            : action.type,
-  );
 
-describe('depth paths', () => {
-  it('answers directly with a Scout', () => {
-    expect(actions(run(flow('direct', 'read-only'), [start, done('scout')]))).toEqual([
-      'spawn scout:0',
-      'finish succeeded',
+const flow = (level: InvolvementLevel = 'balanced', review = false) =>
+  initialFlow('edits', level, review);
+
+describe('lean flow', () => {
+  it('answers a question with one in-place Scout and finishes', () => {
+    const [start, done] = run(flow(), [
+      { type: 'start', start: 'answer' },
+      { type: 'agent_done', role: 'scout', outcome: 'succeeded' },
     ]);
+    expect(start!.action).toMatchObject({ type: 'spawn', role: 'scout' });
+    expect(start!.state.depth).toBe('direct');
+    expect(done!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
   });
 
-  it('executes with one Builder, judges it and wraps up', () => {
-    expect(
-      actions(
-        run(flow('execute'), [
-          start,
-          done('builder'),
-          judged('finish'),
-          { type: 'wrapped', filesChanged: 1, asksToKeep: false },
-        ]),
-      ),
-    ).toEqual(['spawn builder:0', 'judge builder', 'wrap_up', 'finish succeeded']);
+  it('builds with one Builder, wraps up and asks to keep at Balanced', () => {
+    const [start, afterBuild, wrapped] = run(flow(), [
+      { type: 'start', start: 'build' },
+      built(),
+      { type: 'wrapped', filesChanged: 2 },
+    ]);
+    expect(start!.action).toMatchObject({ type: 'spawn', role: 'builder', reason: 'first' });
+    expect(afterBuild!.action).toEqual({ type: 'wrap_up' });
+    expect(wrapped!.action).toMatchObject({ type: 'ask', kind: 'accept' });
   });
 
-  it('plans, then one Builder carries every step in order and finishes without review', () => {
-    const results = run(flow('plan_execute'), [
-      start,
-      done('architect', { steps: ['one', 'two'] }),
-      done('builder'),
-      judged('next_step'),
+  it('finishes without a keep card at Hands-off', () => {
+    const [, , wrapped] = run(flow('hands-off'), [
+      { type: 'start', start: 'build' },
+      built(),
+      { type: 'wrapped', filesChanged: 2 },
     ]);
-    expect(actions(results)).toEqual([
-      'spawn architect:0',
-      'spawn builder:0-1',
-      'judge builder',
-      'wrap_up',
-    ]);
-    expect(results.at(-1)!.state).toMatchObject({ completed: [0, 1], stepIndex: 1 });
+    expect(wrapped!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
   });
 
-  it('retries only the steps the carrying Builder had not marked done', () => {
-    const results = run(flow('plan_execute'), [
-      start,
-      done('architect', { steps: ['one', 'two', 'three'] }),
-      { type: 'agent_done', role: 'builder', outcome: 'failed', ticked: [0] },
-      judged('retry_up', { status: 'needs_more_work' }),
-      done('builder', { ticked: [1, 2] }),
-      judged('next_step'),
+  it('runs one Critic only for destructive work, a review request or a large diff', () => {
+    const destructive = run(initialFlow('destructive', 'balanced'), [
+      { type: 'start', start: 'build' },
+      built(),
     ]);
-    expect(actions(results)).toEqual([
-      'spawn architect:0',
-      'spawn builder:0-1-2',
-      'judge builder',
-      'spawn builder:1-2+',
-      'judge builder',
-      'wrap_up',
-    ]);
+    expect(destructive[1]!.action).toMatchObject({ type: 'spawn', role: 'critic' });
+    const review = run(flow('balanced', true), [{ type: 'start', start: 'build' }, built()]);
+    expect(review[1]!.action).toMatchObject({ type: 'spawn', role: 'critic' });
+    const large = run(flow(), [{ type: 'start', start: 'build' }, built({ large: true })]);
+    expect(large[1]!.action).toMatchObject({ type: 'spawn', role: 'critic' });
+    const small = run(flow(), [{ type: 'start', start: 'build' }, built({ large: false })]);
+    expect(small[1]!.action).toEqual({ type: 'wrap_up' });
   });
 
-  it('reviews after building when the depth asks for it, even if Jev says finish', () => {
-    const results = run(flow('plan_execute_review'), [
-      start,
-      done('architect', { steps: ['one'] }),
-      done('builder'),
-      judged('finish'),
-      done('critic', { verdict: 'looks_good' }),
-      judged('finish'),
+  it('reviews once, then wraps up with the verdict', () => {
+    const results = run(flow('balanced', true), [
+      { type: 'start', start: 'build' },
+      built(),
+      { type: 'agent_done', role: 'critic', outcome: 'succeeded', verdict: 'concerns' },
     ]);
-    expect(actions(results)).toEqual([
-      'spawn architect:0',
-      'spawn builder:0',
-      'judge builder',
-      'spawn critic:0',
-      'judge critic',
-      'wrap_up',
-    ]);
-    expect(results.at(-1)!.state).toMatchObject({ reviewed: true, verdict: 'looks_good' });
-  });
-
-  it('treats an empty plan as one step for the whole request', () => {
-    const [, built] = run(flow('plan_execute'), [start, done('architect', { steps: [] })]);
-    expect(built!.state.steps).toEqual(['']);
-  });
-
-  it('never runs more Builders than the cap, batching the plan steps', () => {
-    const steps = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
-    expect(batchSteps(steps)).toHaveLength(MAX_BUILDERS);
-    expect(batchSteps(steps).join('\n').split('\n')).toEqual(steps);
-    expect(batchSteps([' a ', '', 'b'])).toEqual(['a', 'b']);
+    expect(results[2]!.action).toEqual({ type: 'wrap_up' });
+    expect(results[2]!.state.verdict).toBe('concerns');
   });
 });
 
-describe('checkpoints by level', () => {
-  it('asks to clarify when the intake gate says ask, and uses the chosen depth', () => {
-    const results = run(flow('execute'), [
-      { type: 'start', intake: 'ask' },
-      { type: 'clarified', depth: 'plan_execute' },
+describe('plan completion', () => {
+  it('continues the same Builder while its own plan has open items, at most twice', () => {
+    const open = ['Add a test', 'Update the docs'];
+    const results = run(flow('hands-off'), [
+      { type: 'start', start: 'build' },
+      built({ open }),
+      built({ open }),
+      built({ open }),
+      { type: 'wrapped', filesChanged: 1 },
     ]);
-    expect(actions(results)).toEqual(['ask clarify', 'spawn architect:0']);
-    expect(results[1]!.state.depth).toBe('plan_execute');
-  });
-
-  it('stops when you stop at the clarify card', () => {
-    expect(
-      actions(
-        run(flow('execute'), [
-          { type: 'start', intake: 'ask' },
-          { type: 'clarified', depth: null },
-        ]),
-      ),
-    ).toEqual(['ask clarify', 'finish cancelled']);
-  });
-
-  it.each([
-    ['hands-on', 'edits', true],
-    ['balanced', 'edits', false],
-    ['balanced', 'multi-file', true],
-    ['hands-off', 'multi-file', false],
-    ['hands-off', 'destructive', true],
-    ['full-auto', 'destructive', false],
-  ] as const)('at %s with %s work, asks for the plan: %s', (level, risk, asks) => {
-    const [, afterPlan] = run(flow('plan_execute', risk, level), [
-      start,
-      done('architect', { steps: ['one'] }),
-    ]);
-    expect(afterPlan!.action.type).toBe(asks ? 'ask' : 'spawn');
-  });
-
-  it('sends an edited plan back to the Architect with your note, up to a limit', () => {
-    let state = run(flow('plan_execute', 'multi-file', 'balanced'), [
-      start,
-      done('architect', { steps: ['one'] }),
-    ]).at(-1)!.state;
-    for (let edit = 0; edit < MAX_PLAN_EDITS; edit++) {
-      const result = nextStep(state, answer('plan', CHECKPOINT_OPTION.editPlan, 'smaller'));
-      expect(result.action).toMatchObject({
-        type: 'spawn',
-        role: 'architect',
-        note: 'smaller',
-        reason: 'edit',
-      });
-      state = nextStep(result.state, done('architect', { steps: ['one'] })).state;
-    }
-    expect(
-      nextStep(state, answer('plan', CHECKPOINT_OPTION.editPlan, 'again')).action,
-    ).toMatchObject({
+    expect(results[1]!.action).toMatchObject({
       type: 'spawn',
       role: 'builder',
+      reason: 'continue',
+      followUp: continueFollowUp(open),
+    });
+    expect(results[2]!.action).toMatchObject({ reason: 'continue' });
+    expect(results[3]!.action).toEqual({ type: 'wrap_up' });
+    expect(results[4]!.action).toMatchObject({
+      type: 'finish',
+      status: 'succeeded',
+      incomplete: incompleteLine(open),
     });
   });
 
-  it('stops at the plan card', () => {
-    const state = run(flow('plan_execute', 'multi-file', 'balanced'), [
-      start,
-      done('architect', { steps: ['one'] }),
-    ]).at(-1)!.state;
-    expect(nextStep(state, answer('plan', CHECKPOINT_OPTION.stop)).action).toMatchObject({
+  it('never reports done while plan items are open', () => {
+    expect(incompleteLine(['Add a test'])).toBe(
+      'Incomplete: 1 plan item is still open: "Add a test". Ask to continue and the Builder picks up from there.',
+    );
+    expect(incompleteLine([])).toBeNull();
+  });
+
+  it('reads open items from the Builder’s own plan', () => {
+    expect(
+      openEntries([
+        { content: 'Write it', priority: 'medium', status: 'completed' },
+        { content: 'Test it', priority: 'medium', status: 'in_progress' },
+        { content: 'Ship it', priority: 'low', status: 'pending' },
+      ]),
+    ).toEqual(['Test it', 'Ship it']);
+  });
+});
+
+describe('failures and retries', () => {
+  it('retries a failed Builder one tier up by rule, then asks with Stop and report', () => {
+    const failed = built({ outcome: 'failed', error: 'boom' });
+    const events: FlowEvent[] = [{ type: 'start', start: 'build' }];
+    for (let index = 0; index <= MAX_REPAIR_RETRIES; index += 1) events.push(failed);
+    const results = run(flow(), events);
+    expect(results[1]!.action).toMatchObject({ reason: 'retry', escalate: true });
+    expect(results.at(-1)!.action).toMatchObject({ type: 'ask', kind: 'retry' });
+  });
+
+  it('stops and reports from the retry card instead of finishing', () => {
+    const state = { ...flow(), retries: MAX_REPAIR_RETRIES };
+    const result = nextStep(state, {
+      type: 'answered',
+      kind: 'retry',
+      optionId: CHECKPOINT_OPTION.stopReport,
+      note: null,
+    });
+    expect(result.action).toMatchObject({ type: 'finish', status: 'failed' });
+  });
+
+  it('asks about a loop at Balanced and stops with a report at Full auto', () => {
+    const looped: FlowEvent = {
+      type: 'looped',
+      summary: 'Bolt repeated `Read a.ts` 5 times in a row',
+    };
+    const balanced = run(flow(), [{ type: 'start', start: 'build' }, looped]);
+    expect(balanced[1]!.action).toMatchObject({ type: 'ask', kind: 'stuck' });
+    const continued = nextStep(balanced[1]!.state, {
+      type: 'answered',
+      kind: 'stuck',
+      optionId: CHECKPOINT_OPTION.continueStuck,
+      note: null,
+    });
+    expect(continued.action).toMatchObject({
+      type: 'spawn',
+      role: 'builder',
+      reason: 'unstick',
+      followUp: UNSTICK_NOTE,
+    });
+    const auto = run(flow('full-auto'), [{ type: 'start', start: 'build' }, looped]);
+    expect(auto[1]!.action).toMatchObject({
+      type: 'finish',
+      status: 'failed',
+      reason: 'Stopped: Bolt repeated `Read a.ts` 5 times in a row.',
+    });
+  });
+});
+
+describe('checkpoints', () => {
+  it('asks whether to answer or build when the question is unsure, and follows the reply', () => {
+    const [ask] = run(flow(), [{ type: 'start', start: 'choose' }]);
+    expect(ask!.action).toMatchObject({ type: 'ask', kind: 'clarify', answerOrBuild: true });
+    expect(nextStep(ask!.state, { type: 'clarified', answer: true }).action).toMatchObject({
+      role: 'scout',
+    });
+    expect(nextStep(ask!.state, { type: 'clarified', answer: false }).action).toMatchObject({
+      role: 'builder',
+    });
+    expect(nextStep(ask!.state, { type: 'clarified', answer: null }).action).toMatchObject({
       type: 'finish',
       status: 'cancelled',
     });
   });
 
-  it('asks to keep changes only when the wrap-up says so', () => {
-    const base = run(flow('execute'), [start, done('builder'), judged('finish')]).at(-1)!.state;
-    expect(
-      nextStep(base, { type: 'wrapped', filesChanged: 2, asksToKeep: true }).action,
-    ).toMatchObject({ type: 'ask', kind: 'accept' });
-    expect(
-      nextStep(base, { type: 'wrapped', filesChanged: 2, asksToKeep: false }).action,
-    ).toMatchObject({ type: 'finish', status: 'succeeded' });
+  it('asks for a reading of a vague request, then builds', () => {
+    const [ask] = run(flow(), [{ type: 'start', start: 'interpret' }]);
+    expect(ask!.action).toMatchObject({ type: 'ask', kind: 'clarify', interpret: true });
   });
 
-  it('keeps, reverts, or sends a fix to a new Builder', () => {
-    const waiting = nextStep(
-      run(flow('execute'), [start, done('builder'), judged('finish')]).at(-1)!.state,
-      { type: 'wrapped', filesChanged: 1, asksToKeep: true },
-    ).state;
-    expect(nextStep(waiting, answer('accept', CHECKPOINT_OPTION.keep)).action).toMatchObject({
-      type: 'finish',
-      status: 'succeeded',
-    });
-    expect(nextStep(waiting, answer('accept', CHECKPOINT_OPTION.revert)).action).toEqual({
-      type: 'revert',
-    });
-    expect(
-      nextStep(nextStep(waiting, answer('accept', CHECKPOINT_OPTION.revert)).state, {
-        type: 'reverted',
-      }).action,
-    ).toMatchObject({ type: 'finish', status: 'succeeded' });
-    expect(
-      nextStep(waiting, answer('accept', CHECKPOINT_OPTION.fix, 'add a test')).action,
-    ).toMatchObject({
+  it('keeps, fixes or reverts from the keep card', () => {
+    const [, , wrapped] = run(flow(), [
+      { type: 'start', start: 'build' },
+      built(),
+      { type: 'wrapped', filesChanged: 1 },
+    ]);
+    const answer = (optionId: string, note: string | null = null) =>
+      nextStep(wrapped!.state, { type: 'answered', kind: 'accept', optionId, note }).action;
+    expect(answer(CHECKPOINT_OPTION.keep)).toMatchObject({ type: 'finish', status: 'succeeded' });
+    expect(answer(CHECKPOINT_OPTION.revert)).toEqual({ type: 'revert' });
+    expect(answer(CHECKPOINT_OPTION.fix, 'Use UTC')).toMatchObject({
       type: 'spawn',
       role: 'builder',
       reason: 'fix',
-      escalate: false,
-      note: 'add a test',
+      note: 'Use UTC',
     });
   });
-});
 
-describe('repair and escalation', () => {
-  const failed: FlowEvent = {
-    type: 'agent_done',
-    role: 'builder',
-    outcome: 'failed',
-    error: 'boom',
-  };
-
-  it('retries one tier up without asking at Hands-off, at most twice, then asks you', () => {
-    const results = run(flow('execute'), [
-      start,
-      failed,
-      judged('retry_up', { status: 'needs_more_work' }),
-      failed,
-      judged('retry_up', { status: 'needs_more_work' }),
-      failed,
-      judged('finish', { status: 'needs_more_work' }),
+  it('continues past a spent budget with the same agent, or stops with a report', () => {
+    const [, spent] = run(flow(), [
+      { type: 'start', start: 'build' },
+      { type: 'budget_exceeded', limit: 'tool_calls' },
     ]);
-    expect(actions(results)).toEqual([
-      'spawn builder:0',
-      'judge builder',
-      'spawn builder:0+',
-      'judge builder',
-      'spawn builder:0+',
-      'judge builder',
-      'ask retry',
-    ]);
-    expect(results.at(-1)!.state.retries).toBe(MAX_REPAIR_RETRIES);
-    expect(results.at(-1)!.action).toMatchObject({
-      reason: `Stopped after ${MAX_REPAIR_RETRIES} retries.`,
-    });
-  });
-
-  it.each([
-    ['hands-on', 0.99, true],
-    ['balanced', 0.95, false],
-    ['balanced', 0.8, true],
-    ['hands-off', 0.5, false],
-    ['full-auto', 0.5, false],
-  ] as const)('at %s with Jev at %s, confirms a retry: %s', (level, confidence, asks) => {
-    const [, , result] = run(flow('execute', 'edits', level), [
-      start,
-      failed,
-      judged('retry_up', { confidence }),
-    ]);
-    expect(result!.action.type).toBe(asks ? 'ask' : 'spawn');
-  });
-
-  it('always confirms a retry the rules chose under Balanced', () => {
-    const [, , result] = run(flow('execute', 'edits', 'balanced'), [
-      start,
-      failed,
-      judged('retry_up', { source: 'rules', confidence: null }),
-    ]);
-    expect(result!.action).toMatchObject({ type: 'ask', kind: 'retry' });
-  });
-
-  it('runs an unplanned review only after confirming it at Balanced', () => {
-    const [, , asked] = run(flow('execute', 'edits', 'balanced'), [
-      start,
-      done('builder'),
-      judged('review', { confidence: 0.8 }),
-    ]);
-    expect(asked!.action).toMatchObject({ type: 'ask', kind: 'retry', suggestion: 'review' });
-    expect(nextStep(asked!.state, answer('retry', CHECKPOINT_OPTION.retry)).action).toMatchObject({
-      type: 'spawn',
-      role: 'critic',
-    });
-    expect(nextStep(asked!.state, answer('retry', CHECKPOINT_OPTION.finish)).action).toEqual({
-      type: 'wrap_up',
-    });
-  });
-
-  it('repairs after review concerns with a Builder one tier up', () => {
-    const results = run(flow('plan_execute_review'), [
-      start,
-      done('architect', { steps: ['one', 'two'] }),
-      done('builder'),
-      judged('next_step'),
-      done('builder'),
-      judged('finish'),
-      done('critic', { verdict: 'concerns' }),
-      judged('retry_up', { status: 'needs_more_work' }),
-    ]);
-    expect(results.at(-1)!.action).toMatchObject({
-      type: 'spawn',
-      role: 'builder',
-      stepIndex: 1,
-      escalate: true,
-    });
-  });
-
-  it('follows the rules when Jev is not used', () => {
-    const state = run(flow('plan_execute_review'), [
-      start,
-      done('architect', { steps: ['a', 'b'] }),
-    ]).at(-1)!.state;
-    expect(ruleTransition(state, 'succeeded')).toEqual({ status: 'done', next: 'review' });
-    const single = { ...state, last: { ...state.last!, carry: undefined } };
-    expect(ruleTransition(single, 'succeeded')).toEqual({ status: 'done', next: 'next_step' });
-    const second = {
-      ...single,
-      stepIndex: 1,
-      completed: [0],
-      last: { ...single.last!, stepIndex: 1 },
-    };
-    expect(ruleTransition(second, 'succeeded')).toEqual({
-      status: 'done',
-      next: 'review',
-    });
-    expect(ruleTransition({ ...state, retries: MAX_REPAIR_RETRIES }, 'failed')).toEqual({
-      status: 'needs_you',
-      next: 'finish',
-    });
-    expect(ruleTransition(state, 'failed')).toEqual({
-      status: 'needs_more_work',
-      next: 'retry_up',
-    });
-  });
-});
-
-describe('stop, failure and budgets', () => {
-  it('finishes cancelled when stopped at any point', () => {
-    expect(nextStep(flow('execute'), { type: 'stopped' }).action).toMatchObject({
-      type: 'finish',
-      status: 'cancelled',
-    });
-    expect(
-      nextStep(flow('execute'), { type: 'agent_done', role: 'builder', outcome: 'cancelled' })
-        .action,
-    ).toMatchObject({ status: 'cancelled' });
-  });
-
-  it('fails with the agent error when a Scout or Architect fails', () => {
-    expect(
-      nextStep(flow('direct'), {
-        type: 'agent_done',
-        role: 'scout',
-        outcome: 'failed',
-        error: 'no model',
-      }).action,
-    ).toEqual({
-      type: 'finish',
-      status: 'failed',
-      reason: 'no model',
-    });
-    expect(
-      nextStep(flow('plan_execute'), { type: 'agent_done', role: 'architect', outcome: 'failed' })
-        .action,
-    ).toMatchObject({ status: 'failed' });
-  });
-
-  it('asks before continuing past a budget and resumes the steps still open', () => {
-    const building = run(flow('plan_execute'), [
-      start,
-      done('architect', { steps: ['a', 'b', 'c'] }),
-    ]).at(-1)!.state;
-    const asked = nextStep(building, {
-      type: 'budget_exceeded',
-      limit: 'tool_calls',
-      ticked: [0],
-    });
-    expect(asked.action).toMatchObject({
-      type: 'ask',
+    expect(spent!.action).toMatchObject({ type: 'ask', kind: 'budget' });
+    const resumed = nextStep(spent!.state, {
+      type: 'answered',
       kind: 'budget',
-      reason: 'The tool calls budget ran out.',
+      optionId: CHECKPOINT_OPTION.continueBudget,
+      note: null,
     });
-    expect(
-      nextStep(asked.state, answer('budget', CHECKPOINT_OPTION.continueBudget)).action,
-    ).toMatchObject({
-      type: 'spawn',
-      role: 'builder',
-      stepIndex: 1,
-      carry: [1, 2],
-      reason: 'resume',
-      escalate: false,
+    expect(resumed.action).toMatchObject({ type: 'spawn', role: 'builder', reason: 'resume' });
+    const stopped = nextStep(spent!.state, {
+      type: 'answered',
+      kind: 'budget',
+      optionId: CHECKPOINT_OPTION.stop,
+      note: null,
     });
-    expect(nextStep(asked.state, answer('budget', CHECKPOINT_OPTION.stop)).action).toEqual({
+    expect(stopped.action).toMatchObject({
       type: 'finish',
       status: 'failed',
-      reason:
-        'Stopped: the tool calls budget ran out. Incomplete: steps 2 and 3 of 3 are still open. Ask to continue and a Builder picks up from there.',
+      reason: 'Stopped: the tool calls budget ran out.',
     });
+  });
+
+  it('stops on Stop', () => {
+    const [, stopped] = run(flow(), [{ type: 'start', start: 'build' }, { type: 'stopped' }]);
+    expect(stopped!.action).toMatchObject({ type: 'finish', status: 'cancelled' });
   });
 });

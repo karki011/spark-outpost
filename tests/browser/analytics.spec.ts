@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { seedAnalytics } from './analytics-seed.ts';
 import { resetTestDatabase } from './database.ts';
 
@@ -12,6 +12,22 @@ async function openAnalytics(page: Page) {
     .getByRole('button', { name: /^Analytics/ })
     .click();
   await expect(page.getByRole('heading', { name: 'Analytics', level: 1 })).toBeVisible();
+}
+
+async function openCalendar(page: Page) {
+  await page.getByRole('radio', { name: 'Custom' }).click();
+  await page.getByRole('button', { name: /–/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Choose a custom date range' });
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+function dayButton(dialog: Locator, day: number) {
+  return dialog
+    .locator('.rdp-month')
+    .first()
+    .locator('.rdp-day:not(.rdp-outside) .rdp-day_button')
+    .filter({ hasText: new RegExp(`^${day}$`) });
 }
 
 async function blocking(page: Page, screen: string) {
@@ -101,9 +117,70 @@ test.describe('with three months of history', () => {
         while ((await toggles.count()) > 0) await toggles.first().click();
         found.push(...(await blocking(page, `${theme} ${tab}`)));
       }
+      await openCalendar(page);
+      found.push(...(await blocking(page, `${theme} calendar`)));
       expect(found).toEqual([]);
     });
   }
+
+  test('picks a custom range with the calendar by mouse', async ({ page }) => {
+    await openAnalytics(page);
+    const dialog = await openCalendar(page);
+    await dayButton(dialog, 5).click();
+    await dayButton(dialog, 20).click();
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+    await expect(dialog).toBeHidden();
+    const rangeButton = page.getByRole('button', { name: /–/ });
+    await expect(rangeButton).toContainText('5');
+    await expect(rangeButton).toContainText('20');
+  });
+
+  test('picks a custom range with the calendar by keyboard', async ({ page }) => {
+    await openAnalytics(page);
+    const dialog = await openCalendar(page);
+    const start = dayButton(dialog, 5);
+    await start.focus();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+    await dialog.getByRole('button', { name: 'Apply' }).click();
+    await expect(dialog).toBeHidden();
+    const rangeButton = page.getByRole('button', { name: /–/ });
+    await expect(rangeButton).toContainText('5');
+    await expect(rangeButton).toContainText('10');
+  });
+
+  test('applies a preset immediately and closes the popover', async ({ page }) => {
+    await openAnalytics(page);
+    const main = page.getByRole('main', { name: 'Analytics' });
+    const dialog = await openCalendar(page);
+    await dialog.getByRole('button', { name: 'Last 7 days' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole('button', { name: /–/ })).toBeVisible();
+    await expect(main.getByRole('region', { name: 'Activity' }).locator('.an-sum')).toContainText(
+      'turn',
+    );
+  });
+
+  test('disables future days in the calendar', async ({ page }) => {
+    await openAnalytics(page);
+    const dialog = await openCalendar(page);
+    const future = dialog.locator('.rdp-month').last().locator('.rdp-day_button:disabled');
+    await expect(future.first()).toBeVisible();
+    await expect(future.first()).toBeDisabled();
+  });
+
+  test('Escape closes the calendar and returns focus to the range button', async ({ page }) => {
+    await openAnalytics(page);
+    await openCalendar(page);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Choose a custom date range' })).toBeHidden();
+    await expect(page.getByRole('button', { name: /–/ })).toBeFocused();
+  });
 
   test('fits a phone without horizontal page scroll', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
@@ -129,5 +206,25 @@ test('is honest about an empty workspace', async ({ page }) => {
     'Not enough data yet',
   );
   await page.getByRole('radio', { name: 'Custom' }).click();
-  await expect(page.getByLabel('From')).toBeVisible();
+  await expect(page.getByRole('button', { name: /–/ })).toBeVisible();
+});
+
+test('shows skeletons matching the layout on a cold load, then real data', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedAnalytics();
+  await page.route('**/analytics/overview*', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    await route.continue();
+  });
+  await openAnalytics(page);
+  const main = page.getByRole('main', { name: 'Analytics' });
+  const overviewPanel = main.locator('#an-panel');
+  await expect(overviewPanel).toHaveAttribute('aria-busy', 'true');
+  await expect(overviewPanel.locator('.an-skel-card').first()).toBeVisible();
+  await expect(overviewPanel.getByText(/Loading .*…/)).toHaveCount(4);
+  await expect(main.getByRole('region', { name: 'Harness health' })).toContainText('of 100', {
+    timeout: 5000,
+  });
+  await expect(overviewPanel).toHaveAttribute('aria-busy', 'false');
+  await expect(overviewPanel.locator('.an-skel-card')).toHaveCount(0);
 });

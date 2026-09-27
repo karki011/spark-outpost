@@ -1,13 +1,12 @@
 export const JEV_STUB_CONFIDENCE = 0.81;
 export const CREW_MARKER = '#crew';
 export const UNSURE_MARKER = '#unsure';
-export const RETRY_MARKER = '#retry';
 export const DEBUG_MARKER = '#debug';
 export const VAGUE_MARKER = '#vague';
 
 interface StubQuestion {
   type: 'choice' | 'score' | 'noul';
-  criteria?: Record<string, string> | string[];
+  criteria?: Record<string, unknown> | unknown[];
 }
 
 export interface StubRequest {
@@ -17,95 +16,52 @@ export interface StubRequest {
 
 type Answer = Record<string, unknown>;
 
-const RISKS = ['read-only', 'edits', 'multi-file', 'destructive'];
-const PREFERRED_MODELS = /^(sonnet|gpt-6-sol)$/;
-
 function choice(value: string, confidence: number): Answer {
   return { type: 'choice', choice: value, probabilities: { [value]: 0.9 }, confidence };
 }
 
-function score(value: number, confidence: number): Answer {
-  return { type: 'score', score: value, confidence };
-}
+const noul = (value: number): Answer => ({ type: 'noul', noul: value });
 
 function options(question: StubQuestion): string[] {
   return Array.isArray(question.criteria)
-    ? question.criteria
+    ? question.criteria.map(String)
     : Object.keys(question.criteria ?? {});
 }
 
-const UNSURE_NOUL = /^(independent|large)_/;
-const ARCHITECT_ROUTE = /_architect_/;
-const ARCHITECT_CONFIDENCE = 0.45;
-
-function genericAnswer(key: string, question: StubQuestion, confidence: number): Answer {
-  if (question.type === 'noul') return { type: 'noul', noul: UNSURE_NOUL.test(key) ? 0.5 : 0.04 };
-  const offered = options(question);
-  if (question.type === 'score') return score(Math.min(1, offered.length - 1), confidence);
-  if (key === 'build_style') return choice(offered.at(-1)!, confidence);
-  const preferred: Record<string, string> = {
-    intent: 'bug_fix',
-    depth: 'execute',
-    scope: 'few_modules',
+function nouls(task: string): Record<string, number> {
+  return {
+    question: task.includes(UNSURE_MARKER) ? 0.6 : 0.03,
+    review: task.includes(CREW_MARKER) ? 0.95 : 0.02,
+    destructive: 0.03,
+    vague: task.includes(VAGUE_MARKER) ? 0.96 : 0.04,
+    continues_task: 0.9,
+    injection: 0.02,
   };
-  const model = key.startsWith('model_') ? offered.find((id) => PREFERRED_MODELS.test(id)) : null;
-  return choice(
-    model ?? (offered.includes(preferred[key] ?? '') ? preferred[key]! : offered[0]!),
-    confidence,
-  );
 }
 
 function intakeAnswers(request: StubRequest, task: string): Record<string, Answer> {
-  const confidence = task.includes(UNSURE_MARKER) ? 0.55 : JEV_STUB_CONFIDENCE;
-  const answers = Object.fromEntries(
-    Object.entries(request.questions).map(([key, question]) => [
-      key,
-      genericAnswer(key, question, confidence),
-    ]),
-  );
-  if (task.includes(DEBUG_MARKER)) answers.intent = choice('debugging', confidence);
+  const values = nouls(task);
+  const answers: Record<string, Answer> = {};
+  for (const [key, question] of Object.entries(request.questions)) {
+    if (question.type === 'noul') answers[key] = noul(values[key] ?? 0.05);
+    else if (key === 'tier')
+      answers[key] = choice(options(question).includes('mid') ? 'mid' : options(question)[0]!, 0.9);
+    else answers[key] = choice('bug_fix', JEV_STUB_CONFIDENCE);
+  }
+  if (task.includes(DEBUG_MARKER)) answers.intent = choice('debugging', JEV_STUB_CONFIDENCE);
   if (task.includes(VAGUE_MARKER)) {
-    answers.vague = { type: 'noul', noul: 0.96 };
     answers.intent = {
       type: 'choice',
       choice: 'docs',
       probabilities: { docs: 0.6, feature: 0.3, refactor: 0.1 },
-      confidence,
+      confidence: JEV_STUB_CONFIDENCE,
     };
   }
-  if (!task.includes(CREW_MARKER)) return answers;
-  return {
-    ...answers,
-    depth: choice('plan_execute_review', confidence),
-    risk: score(RISKS.indexOf('multi-file'), confidence),
-  };
-}
-
-function transitionAnswers(request: StubRequest, task: string): Record<string, Answer> {
-  const offered = options(request.questions.next ?? { type: 'choice' });
-  const retrying = task.includes(RETRY_MARKER) && request.state.retriesLeft === 'several left';
-  if (retrying && offered.includes('retry_up')) {
-    return {
-      status: choice('needs_more_work', JEV_STUB_CONFIDENCE),
-      quality: score(1, JEV_STUB_CONFIDENCE),
-      next: choice('retry_up', JEV_STUB_CONFIDENCE),
-    };
-  }
-  return {
-    status: choice('done', 0.95),
-    quality: score(3, 0.95),
-    next: choice(offered.includes('next_step') ? 'next_step' : 'finish', 0.95),
-  };
+  return answers;
 }
 
 export function jevAnswers(request: StubRequest): Record<string, Answer> {
   const task = String(request.state.task ?? '');
   if (request.questions.intent) return intakeAnswers(request, task);
-  if (request.questions.status) return transitionAnswers(request, task);
-  return Object.fromEntries(
-    Object.entries(request.questions).map(([key, question]) => [
-      key,
-      genericAnswer(key, question, ARCHITECT_ROUTE.test(key) ? ARCHITECT_CONFIDENCE : 0.9),
-    ]),
-  );
+  return Object.fromEntries(Object.keys(request.questions).map((key) => [key, noul(0.05)]));
 }

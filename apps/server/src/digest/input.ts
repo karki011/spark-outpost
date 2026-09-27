@@ -154,9 +154,11 @@ Write in the second person, warm and brief: "Yesterday you…", "Today you…". 
 
 Then suggest 1 to 3 chats worth continuing, only where the data shows unfinished work (see each chat's "unfinished" list). For each, give a short reason and a draft message they could send to pick it up. The draft restates where things stand and the next step, for example "Let's continue: steps 1-3 are done; run the tests step and fix any failures." Suggest nothing if nothing is unfinished.
 
+Also write a headline: one sentence of no more than 140 characters that stands alone above everything else, naming the most important thing that finished, the most important thing waiting on them, and anything failed or stalled, whichever matters most. For example: "Refactor is 3 of 4 steps in; the date bug is fixed; one chat needs your answer."
+
 Reply with only a JSON object, with no other text and no code fence:
-{"lines":[{"text":"...","chatId":"<id or null>"}],"suggestions":[{"chatId":"<id>","reason":"...","draft":"..."}]}
-Give each line the chatId of the chat it is mostly about, and use null only when a line covers several chats equally. Use only chat ids that appear in the data. Keep each line under 280 characters, each reason under 200 and each draft under 600.`;
+{"headline":"...","lines":[{"text":"...","chatId":"<id or null>"}],"suggestions":[{"chatId":"<id>","reason":"...","draft":"..."}]}
+Give each line the chatId of the chat it is mostly about, and use null only when a line covers several chats equally. Use only chat ids that appear in the data. Keep the headline under 140 characters, each line under 280 characters, each reason under 200 and each draft under 600.`;
 
 export function buildDigestPrompt(snapshot: ActivitySnapshot): DigestPrompt {
   const chats = fittedChats(snapshot);

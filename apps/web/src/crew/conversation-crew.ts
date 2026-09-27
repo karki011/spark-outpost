@@ -12,7 +12,8 @@ export function latestOrchestration(detail: ConversationDetail | undefined): Orc
 export function isCrewTurn(orchestration: Orchestration | null | undefined): boolean {
   if (!orchestration) return false;
   const planned = orchestration.depth !== 'direct' && orchestration.depth !== 'execute';
-  return planned || orchestration.crew.length > 1;
+  const child = orchestration.crew.some((member) => member.runId !== orchestration.runId);
+  return planned || child || orchestration.crew.length > 1;
 }
 
 export function crewOrchestration(detail: ConversationDetail | undefined): Orchestration | null {

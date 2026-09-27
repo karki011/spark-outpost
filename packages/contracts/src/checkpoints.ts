@@ -29,6 +29,10 @@ export const CHECKPOINT_OPTION = {
   reconcile: 'reconcile',
   nudge: 'nudge',
   letContinue: 'let_continue',
+  continueStuck: 'continue_stuck',
+  stopReport: 'stop_report',
+  justAnswer: 'just_answer',
+  makeChange: 'make_change',
 } as const;
 
 export const clarifyOptionId = (index: number): string => `option:${index}`;

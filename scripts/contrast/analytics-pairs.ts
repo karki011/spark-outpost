@@ -64,4 +64,33 @@ export const ANALYTICS: Pair[] = [
     'text',
   ),
   pair('focus-mark', 'focus ring around a chart mark', 'var(--accent)', ['var(--panel)'], 'focus'),
+  pair(
+    'cal-range-text',
+    'selected day text on the accent fill',
+    'var(--accent-ink)',
+    ['var(--accent)'],
+    'text',
+  ),
+  pair(
+    'cal-range-middle-text',
+    'in-range day text on the soft accent band',
+    'var(--accent-text)',
+    ['var(--panel)', 'var(--accent-soft)'],
+    'text',
+  ),
+  pair(
+    'cal-today-ring',
+    'today outline on the calendar grid',
+    'var(--accent)',
+    ['var(--panel)'],
+    'ui',
+  ),
+  pair(
+    'cal-preset-text',
+    'preset button text on the popover',
+    'var(--text)',
+    ['var(--panel)'],
+    'text',
+  ),
+  pair('updating-dot', 'updating dot on its pill', 'var(--accent)', ['var(--raise)'], 'ui'),
 ];

@@ -1,4 +1,10 @@
-import type { Run, RunUsage, TokenUsage, TotalCostSource } from '@spark-outpost/contracts';
+import type {
+  Orchestration,
+  Run,
+  RunUsage,
+  TokenUsage,
+  TotalCostSource,
+} from '@spark-outpost/contracts';
 import { formatTokens } from '../chat/composer/model-options.ts';
 
 export type CostSourceLabel = TotalCostSource | null | undefined;
@@ -89,4 +95,23 @@ export function latestContext(
   provider: string | null,
 ): ContextReading | null {
   return lastReading(runs, (run) => run.provider === provider) ?? lastReading(runs, () => true);
+}
+
+export interface TaskContext extends ContextReading {
+  name: string;
+}
+
+const ACTIVE = new Set(['queued', 'running', 'awaiting_approval']);
+
+export function taskContext(orchestration: Orchestration | null | undefined): TaskContext | null {
+  if (!orchestration || !ACTIVE.has(orchestration.status)) return null;
+  for (let index = orchestration.crew.length - 1; index >= 0; index--) {
+    const member = orchestration.crew[index];
+    if (member?.role !== 'builder') continue;
+    const { contextUsed, contextSize } = member;
+    if (contextUsed != null && contextSize != null) {
+      return { name: member.name, used: contextUsed, size: contextSize };
+    }
+  }
+  return null;
 }

@@ -206,6 +206,5 @@ export function AuditSummaryPane({ summary }: { summary: AuditSummary }) {
 
 function readsCell(run: AuditRunSummary): string {
   if (run.fileReads === undefined || run.fileReads === null) return '—';
-  const rereads = run.rereads ? ` (${run.rereads} again)` : '';
-  return `${run.fileReads}${rereads}`;
+  return `${run.fileReads}`;
 }

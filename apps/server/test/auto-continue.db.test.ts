@@ -10,6 +10,7 @@ import {
   insertApproval,
   settleIfDue,
 } from '../src/persistence/approvals.ts';
+import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { autoContinueSeconds, updateProfile } from '../src/persistence/setup.ts';
 import { askCheckpoint, retryCard, type CheckpointCard } from '../src/orchestration/checkpoint.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
@@ -52,8 +53,7 @@ afterEach(async () => {
 });
 
 function jevRetry(): CheckpointCard {
-  const card = retryCard('retry_up', null, null, 'Jev suggests a retry one tier up.');
-  return { ...card, payload: { ...card.payload, autoOption: CHECKPOINT_OPTION.finish } };
+  return retryCard(null, null, 'Stopped after 2 retries.');
 }
 
 async function pendingCheckpoint(runId: string, autoContinueMs: number | null) {
@@ -113,21 +113,22 @@ describe('auto-continue on Jev questions', () => {
     const { answer } = ask(runId, jevRetry(), 200);
     expect(await answer).toEqual({
       type: 'answered',
-      optionId: CHECKPOINT_OPTION.finish,
+      optionId: CHECKPOINT_OPTION.stopReport,
       note: null,
     });
     const settled = await checkpointOf(runId);
     expect(settled).toMatchObject({
       status: 'denied',
       decidedBy: 'auto',
-      decisionOptionId: CHECKPOINT_OPTION.finish,
+      decisionOptionId: CHECKPOINT_OPTION.stopReport,
     });
     expect(Date.parse(settled.autoContinueAt!) - Date.parse(settled.createdAt)).toBe(200);
   });
 
   it('never sets a deadline on a card without a safe default, or when turned off', async () => {
     const { runId } = await doRun(t, root);
-    const plain = retryCard('retry_up', null, null, 'Stopped after 2 retries.');
+    const retry = retryCard(null, null, 'Stopped after 2 retries.');
+    const plain = { ...retry, payload: { ...retry.payload, autoOption: null } };
     const first = ask(runId, plain, 200);
     const pending = await checkpointOf(runId);
     expect(pending.autoContinueAt).toBeNull();
@@ -137,19 +138,19 @@ describe('auto-continue on Jev questions', () => {
     await first.answer;
     const off = await pendingCheckpoint(runId, null);
     expect(off.autoContinueAt).toBeNull();
-    expect(await settleIfDue(t.db, off.id, CHECKPOINT_OPTION.finish)).toBeNull();
+    expect(await settleIfDue(t.db, off.id, CHECKPOINT_OPTION.stopReport)).toBeNull();
   });
 
   it('resolves only items that are still pending and due', async () => {
     const { runId } = await doRun(t, root);
     const later = await pendingCheckpoint(runId, 60_000);
-    expect(await settleIfDue(t.db, later.id, CHECKPOINT_OPTION.finish)).toBeNull();
+    expect(await settleIfDue(t.db, later.id, CHECKPOINT_OPTION.stopReport)).toBeNull();
     const due = await pendingCheckpoint(runId, 0);
     await decideApproval(t.db, t.workspaceId, due.id, {
       optionId: CHECKPOINT_OPTION.retry,
       scope: 'once',
     });
-    expect(await settleIfDue(t.db, due.id, CHECKPOINT_OPTION.finish)).toBeNull();
+    expect(await settleIfDue(t.db, due.id, CHECKPOINT_OPTION.stopReport)).toBeNull();
     expect(await getApproval(t.db, due.id)).toMatchObject({
       status: 'allowed',
       decidedBy: 'user',
@@ -166,7 +167,7 @@ describe('auto-continue on Jev questions', () => {
           optionId: CHECKPOINT_OPTION.retry,
           scope: 'once',
         }),
-        settleIfDue(t.db, due.id, CHECKPOINT_OPTION.finish),
+        settleIfDue(t.db, due.id, CHECKPOINT_OPTION.stopReport),
       ]);
       const userWon = user.status === 'fulfilled';
       const autoWon = auto.status === 'fulfilled' && auto.value !== null;
@@ -217,19 +218,25 @@ describe('auto-continue in a crew run', () => {
     repo = await gitRepo();
     await connectProviders(t);
     await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
-    const unsure = { ...TRIVIAL, confidence: 0.5 };
+    const unsure = { ...TRIVIAL, text: 'Make the reports better', vague: 0.95 };
     harness = startOrchestrator(t, jevFetch({ calls: [], scenario: unsure }));
     const { conversationId, runId } = await startScenario(t, repo, unsure, 'balanced');
     const answers: Answerer = (approval) =>
       approval.kind === 'clarify' ? null : answerEverything(approval);
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
-    expect(asked.map((approval) => approval.kind)).toEqual(['edit', 'accept']);
-    expect(orchestration).toMatchObject({ status: 'succeeded', depthSource: 'rules' });
+    expect(asked.map((approval) => approval.kind)).toEqual([]);
+    expect(orchestration).toMatchObject({ status: 'succeeded' });
     expect(orchestration.checkpoints[0]).toMatchObject({
       kind: 'clarify',
       decidedBy: 'auto',
       decisionOptionId: CHECKPOINT_OPTION.clarifyRules,
     });
-    expect(asked.map((approval) => approval.autoContinueAt)).toEqual([null, null]);
+    const detail = await eventually(async () => {
+      const view = await getConversationDetail(t.db, conversationId);
+      return view?.messages.some((message) => message.role === 'assistant') ? view : null;
+    });
+    expect(
+      detail.approvals.every((approval) => approval.kind === 'clarify' || !approval.autoContinueAt),
+    ).toBe(true);
   }, 60_000);
 });

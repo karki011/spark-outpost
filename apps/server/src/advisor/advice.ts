@@ -1,5 +1,4 @@
 import type {
-  BuildStyle,
   IntakeAnswer,
   InvolvementLevel,
   ModelRouting,
@@ -19,7 +18,6 @@ export interface AdvisorCandidate {
   name: string;
   models: AdvisorOption[];
   efforts: AdvisorOption[];
-  allowFrontier?: boolean;
   doAvailable?: boolean;
   stats?: readonly ModelStat[];
 }
@@ -40,25 +38,13 @@ export interface IntakeRequest {
   current: CurrentSettings;
   level: InvolvementLevel;
   routing: ModelRouting;
-  buildStyle?: BuildStyle;
-}
-
-export interface WorkSummary {
-  madeBy: ProviderId;
-  filesChanged: number;
-  filesDeleted: number;
-  checkRan: boolean;
+  firstMessage: boolean;
+  currentTask: { previousRequest: string; summary: string } | null;
 }
 
 export class AdvisorError extends Error {}
 
 export class AdvisorTimeoutError extends AdvisorError {}
-
-export const REVIEW_FILE_THRESHOLD = 3;
-
-export function reviewSuggested(work: WorkSummary): boolean {
-  return work.filesChanged > REVIEW_FILE_THRESHOLD || work.filesDeleted > 0 || !work.checkRan;
-}
 
 export function ruleAdvisor(request: IntakeRequest): IntakeAnswer {
   const doing = request.mode === 'do';

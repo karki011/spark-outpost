@@ -45,82 +45,54 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: path.join(SHOTS, `crew-${name}.png`) });
 }
 
-async function startComplex(page: Page) {
+async function startCrew(page: Page) {
   await crewChat(page, repo, 'Balanced');
   await send(page, `${CREW_REQUEST} #build #crew`);
-  const plan = card(page, /Approve the plan/);
-  await expect(plan).toBeVisible({ timeout: 30_000 });
-  return plan;
+  const edit = card(page, /Change a file\?/);
+  await expect(edit).toBeVisible({ timeout: 30_000 });
+  return edit;
 }
 
 const panel = (page: Page) => page.getByRole('complementary', { name: 'Work panel' });
-const asking = (page: Page) => page.getByRole('button', { name: /^Needs your input Move date/ });
 
-test('Balanced: the plan, one Builder carrying it with an edit approval, the Critic, then Keep', async ({
+test('Balanced: one task Builder with an edit approval, the Critic, then Keep', async ({
   page,
 }) => {
   test.setTimeout(120_000);
-  const plan = await startComplex(page);
+  await startCrew(page);
   const turn = page.locator('.crew-turn');
-  await expect(turn.locator('.jevline')).toContainText(
-    'Jev: simple · plan → execute → review · models by Jev · 0.81',
-  );
+  await expect(turn.locator('.jevline')).toContainText('model by rules');
   await expect(turn.locator('.jevline .cat-chip')).toHaveText('Bug fix');
-  await expect(agentHead(page, 'Jev')).toContainText('Waiting for you');
-  await expect(agentHead(page, 'Sketch')).toContainText('Architect');
-  await expect(agentHead(page, 'Sketch')).toContainText('Opus 5.5 · high');
-  await expect(plan.getByRole('list', { name: 'Plan' }).getByRole('listitem')).toHaveCount(3);
-  await expect(plan).toContainText('Plan v1 · 3 steps');
-  await expect(asking(page)).toBeVisible();
-
-  const work = panel(page);
-  const waiting = work.getByRole('list', { name: 'Waiting for you' });
-  await expect(waiting).toContainText('Approve the plan');
-  await expect(work.getByRole('list', { name: 'Remaining' })).toContainText(
-    'Update src/turns.ts for step 3',
-  );
-  await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
-  await waiting.getByRole('button', { name: 'Review' }).click();
-  await expect(plan).toBeInViewport();
-  await shot(page, 'plan');
-  await plan.getByRole('button', { name: 'Approve' }).click();
-  await expect(plan).toContainText('Plan approved.');
-
-  const edit = card(page, /Change a file\?/);
-  await expect(edit).toBeVisible({ timeout: 30_000 });
   const builder = agentBlock(page, 'Bolt');
   await expect(builder.getByRole('group', { name: /Change a file\?/ })).toBeVisible();
   await expect(agentHead(page, 'Bolt')).toContainText('Waiting for you');
   await expect(agentHead(page, 'Bolt')).toContainText('Builder');
-  await expect(agentHead(page, 'Bolt')).toContainText('Sonnet 5 · medium');
+  await expect(agentHead(page, 'Bolt')).toContainText('Sonnet 5 · high');
   await expect(
     page.getByRole('button', {
       name: /^Asking permission Move date.*Bolt wants to edit notes\.txt/,
     }),
   ).toBeVisible();
   await expect(page.getByLabel('1 chat needs your input')).toBeVisible();
+  const work = panel(page);
+  const waiting = work.getByRole('list', { name: 'Waiting for you' });
   await expect(waiting).toContainText('Waiting for you: Write notes.txt');
   await expect(waiting.getByText('Waiting for you: Write notes.txt')).toHaveAttribute(
     'title',
     path.join(repo.root, 'notes.txt'),
   );
-  await expect(work).toContainText(
-    'Bolt · Builder · Sonnet 5 · medium: Update src/dates.ts for step 1',
-  );
 
   await work.getByRole('tab', { name: 'Crew' }).click();
   const crew = work.getByRole('list', { name: 'Crew' }).getByRole('listitem');
-  await expect(crew).toHaveCount(3);
+  await expect(crew).toHaveCount(2);
   await expect(crew.nth(0)).toContainText('Dispatcher · router');
-  await expect(crew.nth(1)).toContainText('SketchDone');
-  await expect(crew.nth(1)).toContainText('Architect · Opus 5.5 · high');
-  await expect(crew.nth(2)).toContainText('BoltWaiting for you');
-  await expect(crew.nth(2)).toContainText('Builder · Sonnet 5 · medium');
+  await expect(crew.nth(1)).toContainText('BoltWaiting for you');
+  await expect(crew.nth(1)).toContainText('Builder · Sonnet 5 · high');
 
   const tvButton = page.getByRole('button', { name: 'Agent TV' });
   await tvButton.click();
   const tv = page.getByRole('dialog', { name: 'Agent TV' });
-  for (const name of ['Jev', 'Sketch', 'Bolt']) {
+  for (const name of ['Jev', 'Bolt']) {
     await expect(tv.getByRole('button', { name: new RegExp(`^${name},`) })).toBeVisible();
   }
   await expect(tv.getByRole('button', { name: /^Bolt, waiting for you/ })).toBeVisible();
@@ -135,56 +107,48 @@ test('Balanced: the plan, one Builder carrying it with an edit approval, the Cri
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });
   await expect(keep).toContainText('1 file changed.');
-  await expect(agentHead(page, 'Hawk')).toContainText('6 Sol · medium');
+  await expect(agentHead(page, 'Hawk')).toContainText('6 Sol · high');
   await expect(agentBlock(page, 'Hawk')).toContainText('Verdict: looks good');
   await expect(waiting).toContainText('Keep these changes?');
-  await expect(work.getByRole('list', { name: 'Remaining' })).toHaveCount(0);
   await shot(page, 'keep');
   await keep.getByRole('button', { name: 'Keep', exact: true }).click();
 
-  await expect(turn.locator('.crew-foot')).toContainText('Done 3 agents', { timeout: 30_000 });
+  await expect(turn.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
   await agentHead(page, 'Bolt').click();
-  await expect(agentBlock(page, 'Bolt')).toContainText('Built step 1, 2, 3.');
-  await expect(asking(page)).toHaveCount(0);
-  expect(repo.notes()).toBe('start\nstep 1\nstep 2\nstep 3\n');
+  await expect(agentBlock(page, 'Bolt')).toContainText('Built it');
+  expect(repo.notes()).toBe('start\nstep 1\n');
   await expect(page.getByRole('button', { name: 'Revert to before this run' })).toBeVisible();
   await work.getByRole('tab', { name: 'Crew' }).click();
-  await expect(work.getByRole('list', { name: 'Crew' }).getByRole('listitem')).toHaveCount(4);
-
-  await work.getByRole('tab', { name: 'Plan' }).click();
-  const planned = work.locator('.plist li');
-  await expect(planned).toHaveCount(3);
-  await expect(planned.getByRole('img', { name: 'Done' })).toHaveCount(3);
-  await expect(work.locator('.vbadge')).toHaveText('v1');
-  await expect(work.getByRole('button', { name: /^History ·/ })).toHaveCount(0);
+  await expect(work.getByRole('list', { name: 'Crew' }).getByRole('listitem')).toHaveCount(3);
 });
 
-test("Review jumps to a second turn's plan, whose card renders once", async ({ page }) => {
+test("Review jumps to a second turn's keep card, which renders once", async ({ page }) => {
   test.setTimeout(120_000);
-  const first = await startComplex(page);
-  await first.getByRole('button', { name: 'Approve' }).click();
-  await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
+  await startCrew(page);
   await allowEdit(page);
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toBeVisible({ timeout: 30_000 });
-  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  const first = card(page, /Keep these changes\?/);
+  await expect(first).toBeVisible({ timeout: 30_000 });
+  await first.getByRole('button', { name: 'Keep', exact: true }).click();
   const turns = page.locator('.crew-turn');
   await expect(turns.first().locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
 
-  await send(page, `${CREW_REQUEST} #build #crew #revise`);
-  const plan = turns.nth(1).getByRole('group', { name: /Approve the plan/ });
-  await expect(plan).toBeVisible({ timeout: 30_000 });
-  await expect(plan).toContainText('Plan v2 · 3 steps');
-  const anchor = await plan.getAttribute('id');
+  await send(page, 'Also tidy the heading. #build');
+  await expect(turns.nth(1).getByRole('group', { name: /Change a file\?/ })).toBeVisible({
+    timeout: 30_000,
+  });
+  await allowEdit(page);
+  const keep = turns.nth(1).getByRole('group', { name: /Keep these changes\?/ });
+  await expect(keep).toBeVisible({ timeout: 30_000 });
+  const anchor = await keep.getAttribute('id');
   expect(anchor).toMatch(/^approval-/);
   await expect(page.locator(`[id="${anchor}"]`)).toHaveCount(1);
-  await expect(turns.first().getByRole('group', { name: /Approve the plan/ })).toHaveCount(1);
+  await expect(turns.first().getByRole('group', { name: /Keep these changes\?/ })).toHaveCount(1);
 
   await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
-  await expect(plan).not.toBeInViewport();
+  await expect(keep).not.toBeInViewport();
   const waiting = panel(page).getByRole('list', { name: 'Waiting for you' });
   await waiting.getByRole('button', { name: 'Review' }).click();
-  await expect(plan).toBeInViewport();
+  await expect(keep).toBeInViewport();
 });
 
 test('Full auto asks for nothing, and a normal push follows the level', async ({ page }) => {
@@ -193,22 +157,21 @@ test('Full auto asks for nothing, and a normal push follows the level', async ({
   await send(page, `${CREW_REQUEST} #build #crew #push`);
 
   const turn = page.locator('.crew-turn');
-  await expect(turn.locator('.crew-foot')).toContainText('Done 3 agents', { timeout: 30_000 });
+  await expect(turn.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
   await expect(
-    page.getByRole('group', { name: /Approve the plan|Keep these|Change a file|Run a command/ }),
+    page.getByRole('group', { name: /Keep these|Change a file|Run a command/ }),
   ).toHaveCount(0);
-  for (const name of ['Sketch', 'Bolt', 'Hawk']) {
+  for (const name of ['Bolt', 'Hawk']) {
     await expect(agentHead(page, name)).toBeVisible();
   }
-  await expect(agentHead(page, 'Rivet')).toHaveCount(0);
-  expect(repo.notes()).toBe('start\nstep 1\nstep 2\nstep 3\n');
+  expect(repo.notes()).toBe('start\nstep 1\n');
 });
 
 test('on a phone the crew fits and Agent TV opens as a sheet that stays across chats', async ({
   page,
 }) => {
   test.setTimeout(60_000);
-  await startComplex(page);
+  await startCrew(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('.crew-turn')).toBeVisible();
   const overflow = await page.evaluate(
@@ -231,7 +194,7 @@ test('on a phone the crew fits and Agent TV opens as a sheet that stays across c
   await page.getByRole('button', { name: 'New chat' }).first().click();
   await expect(page.getByRole('heading', { name: 'What should we work on?' })).toBeVisible();
   await expect(tv).toBeVisible();
-  await tv.getByRole('button', { name: /^Sketch,/ }).click();
+  await tv.getByRole('button', { name: /^Bolt,/ }).click();
   await tv
     .getByRole('group', { name: / details$/ })
     .getByRole('button', { name: 'Go to' })
@@ -242,7 +205,7 @@ test('on a phone the crew fits and Agent TV opens as a sheet that stays across c
 test('screenshots of the crew in every theme', async ({ page }) => {
   test.skip(!SHOTS, 'Set ORCH_SCREENSHOTS to a folder to capture screenshots.');
   test.setTimeout(120_000);
-  await startComplex(page);
+  await startCrew(page);
   for (const theme of THEMES) {
     await page.evaluate((id) => localStorage.setItem('spark-outpost.theme', id), theme);
     await page.reload();

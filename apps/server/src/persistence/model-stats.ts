@@ -1,10 +1,4 @@
-import {
-  allowFrontierSchema,
-  modelStatSchema,
-  type AllowFrontier,
-  type ModelStat,
-  type ProviderId,
-} from '@spark-outpost/contracts';
+import { modelStatSchema, type ModelStat } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
 
 interface StatRow {
@@ -104,29 +98,4 @@ export async function listModelStats(db: Queryable): Promise<ModelStat[]> {
     'SELECT * FROM model_stats ORDER BY measured_on DESC, provider, model, role, category',
   );
   return rows.flatMap((row) => toStat(row) ?? []);
-}
-
-export async function allowFrontier(db: Queryable, workspaceId: string): Promise<AllowFrontier> {
-  const { rows } = await db.query<{ allow_frontier: unknown }>(
-    'SELECT allow_frontier FROM profiles WHERE workspace_id = $1',
-    [workspaceId],
-  );
-  const parsed = allowFrontierSchema.safeParse(rows[0]?.allow_frontier ?? {});
-  return parsed.success ? parsed.data : {};
-}
-
-export async function setAllowFrontier(
-  db: Queryable,
-  workspaceId: string,
-  provider: ProviderId,
-  allowed: boolean,
-): Promise<AllowFrontier> {
-  await db.query(
-    `INSERT INTO profiles (workspace_id, allow_frontier) VALUES ($1, jsonb_build_object($2::text, $3::boolean))
-     ON CONFLICT (workspace_id) DO UPDATE
-       SET allow_frontier = profiles.allow_frontier || jsonb_build_object($2::text, $3::boolean),
-           updated_at = now()`,
-    [workspaceId, provider, allowed],
-  );
-  return allowFrontier(db, workspaceId);
 }

@@ -13,6 +13,7 @@ import {
   type LeanRow,
   type LoopSummary,
   type OutcomeTally,
+  type RoutingCostRow,
 } from '@spark-outpost/contracts';
 import { turnCost, type TurnFact } from './facts.ts';
 import { checkRollup, groupBy, mean, outcomeTally, quantile, roundTo } from './tally.ts';
@@ -104,6 +105,22 @@ export function disagreements(facts: readonly TurnFact[]): DisagreementRow[] {
 function agreementKey(fact: TurnFact): AgreementRow['key'] {
   if (!fact.jevAnswered) return 'no_jev';
   return fact.differences.length === 0 ? 'same' : 'differs';
+}
+
+export function routingCost(facts: readonly TurnFact[]): RoutingCostRow[] {
+  const groups = groupBy(facts, agreementKey);
+  return (['same', 'differs', 'no_jev'] as const).map((key) => {
+    const turns = groups.get(key) ?? [];
+    const costUsd = turns.reduce((sum, fact) => sum + turnCost(fact), 0);
+    const verified = turns.filter((fact) => fact.verdict === 'good').length;
+    return {
+      key,
+      turns: turns.length,
+      verified,
+      costUsd: roundTo(costUsd, 6),
+      costPerVerifiedUsd: verified > 0 ? roundTo(costUsd / verified, 6) : null,
+    };
+  });
 }
 
 export function agreement(facts: readonly TurnFact[]): AgreementRow[] {

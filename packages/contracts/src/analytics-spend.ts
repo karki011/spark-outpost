@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { analyticsWindowSchema } from './analytics.ts';
 import { outcomeVerdictSchema } from './outcomes.ts';
-import { routingSavingsSchema } from './home.ts';
 
 const count = z.number().int().nonnegative();
 const usd = z.number().nonnegative();
@@ -54,7 +53,6 @@ export const analyticsSpendSchema = z.object({
   perTask: z.array(taskCostSchema),
   finishedTasks: count,
   costPerGoodUsd: usd.nullable(),
-  savings: routingSavingsSchema.nullable(),
   resume: resumeSavingsSchema,
 });
 export type AnalyticsSpend = z.infer<typeof analyticsSpendSchema>;

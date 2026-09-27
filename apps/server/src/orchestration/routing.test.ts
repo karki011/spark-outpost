@@ -1,109 +1,67 @@
 import { describe, expect, it } from 'vitest';
-import type { SystemOneResponse } from '../advisor/intake-questions.ts';
 import {
   criticProvider,
   escalate,
-  intakePickFor,
-  notPricier,
+  jevTierPick,
+  routeBuilder,
   routeCritic,
-  routeWorker,
   type MemberRoute,
 } from './routing.ts';
 import { candidates, context } from './route-fixtures.ts';
 import { escalatedEffort } from './tiers.ts';
 
-const response = (confidence: number): SystemOneResponse => ({
-  model: 'jev',
-  answers: {
-    model_claude: { type: 'choice', choice: 'haiku', probabilities: {}, confidence },
-    effort_claude: { type: 'score', score: 0, confidence: 0.9 },
-  },
-});
+const plain = { trivial: false, destructive: false };
 
-describe('the routing gate', () => {
-  it("uses Jev's pick on Auto only when the gate acts", () => {
-    const pick = intakePickFor(context('auto'), 'claude', response(0.95));
-    expect(routeWorker(context('auto'), pick)).toMatchObject({
-      routedBy: 'jev',
-      pick: { model: 'haiku', effort: 'low', modelLabel: 'Haiku 4.5' },
-      gate: { decision: 'act' },
-    });
-    const unsure = intakePickFor(context('auto'), 'claude', response(0.3));
-    expect(routeWorker(context('auto'), unsure)).toMatchObject({
-      routedBy: 'rules',
-      pick: { model: 'sonnet', modelLabel: 'Sonnet 5' },
-      autoWouldUse: { model: 'haiku', effort: 'low' },
-      gate: { decision: 'fallback' },
-    });
-  });
-
-  it('keeps the pinned model and records what Auto would have used', () => {
-    const pick = intakePickFor(context('pinned'), 'claude', response(0.95));
-    expect(routeWorker(context('pinned'), pick)).toMatchObject({
+describe('rule routes', () => {
+  it('keeps a pinned model whatever the rules or Jev say', () => {
+    expect(
+      routeBuilder(context('pinned'), { trivial: true, destructive: true }, 'small'),
+    ).toMatchObject({
       routedBy: 'pinned',
       pick: { model: 'sonnet' },
-      autoWouldUse: { model: 'haiku', effort: 'low' },
-    });
-  });
-
-  it('uses the rules without Jev', () => {
-    expect(routeWorker(context('auto'), null)).toMatchObject({
-      routedBy: 'rules',
-      pick: { model: 'sonnet' },
-    });
-  });
-
-  it('acts on a cheaper pick at 0.8 for edits, but keeps 0.9 for upgrades and multi-file', () => {
-    const cheaper = intakePickFor(context('auto'), 'claude', response(0.84));
-    expect(routeWorker(context('full-auto'), cheaper)).toMatchObject({
-      routedBy: 'jev',
-      pick: { model: 'haiku' },
-      gate: { actAt: 0.8, decision: 'act' },
-    });
-    const multi = { ...context('full-auto'), risk: 'multi-file' as const };
-    expect(routeWorker(multi, cheaper)).toMatchObject({
-      routedBy: 'rules',
-      pick: { model: 'sonnet' },
       autoWouldUse: { model: 'haiku' },
-      gate: { actAt: 0.9, decision: 'fallback' },
     });
-    const opus = {
-      pick: { provider: 'claude', model: 'opus[1m]', modelLabel: 'Opus 5.5', effort: 'medium' },
-      confidence: 0.84,
-    };
-    expect(routeWorker(context('full-auto'), opus)).toMatchObject({
+  });
+
+  it('uses the chat model on Auto, the small tier for trivial work and the top tier for destructive', () => {
+    expect(routeBuilder(context('auto'), plain)).toMatchObject({
       routedBy: 'rules',
-      autoWouldUse: { model: 'opus[1m]' },
-      gate: { actAt: 0.9 },
+      rule: 'chat model',
+      pick: { model: 'sonnet' },
     });
-    const harder = { ...opus, pick: { ...opus.pick, model: 'sonnet', effort: 'high' } };
-    expect(notPricier(harder.pick, context('auto').chat)).toBe(false);
+    expect(routeBuilder(context('auto'), { trivial: true, destructive: false })).toMatchObject({
+      rule: 'trivial → small tier',
+      pick: { model: 'haiku', modelLabel: 'Haiku 4.5' },
+    });
+    expect(routeBuilder(context('auto'), { trivial: true, destructive: true })).toMatchObject({
+      rule: 'destructive → top tier',
+      pick: { model: 'opus[1m]' },
+    });
+  });
+
+  it('records Jev’s tier pick without ever running it', () => {
+    const route = routeBuilder(context('auto'), plain, 'top');
+    expect(route.pick.model).toBe('sonnet');
+    expect(route.autoWouldUse).toMatchObject({ model: 'opus[1m]', modelLabel: 'Opus 5.5' });
+    expect(jevTierPick(context('auto'), null)).toBeNull();
   });
 
   it('sends the Critic to the other connected provider', () => {
     expect(criticProvider(context('auto'))).toBe('codex');
-    expect(routeCritic(context('auto'), null).pick).toMatchObject({
+    expect(routeCritic(context('auto')).pick).toMatchObject({
       provider: 'codex',
       model: 'gpt-6-sol',
       effort: 'high',
     });
     const alone = { ...context('auto'), candidates: [candidates[0]!] };
-    expect(routeCritic(alone, null).pick).toMatchObject({ provider: 'claude', effort: 'high' });
-  });
-
-  it('gives a same-provider Critic the tier above the chat model', () => {
-    const alone = { ...context('auto'), candidates: [candidates[0]!] };
-    const pick = routeCritic(alone, null).pick;
+    const pick = routeCritic(alone).pick;
     expect(pick.provider).toBe('claude');
     expect(pick.model).not.toBe(alone.chat.model);
     expect(pick.effort).toBe('high');
   });
 
-  it('escalates the previous pick one tier up', () => {
-    const first = routeWorker(
-      context('auto'),
-      intakePickFor(context('auto'), 'claude', response(0.95)),
-    );
+  it('escalates the previous pick one tier up, then raises effort', () => {
+    const first = routeBuilder(context('auto'), { trivial: true, destructive: false });
     const second = escalate(context('auto'), first);
     expect(second.pick).toMatchObject({
       model: 'sonnet',
@@ -121,9 +79,9 @@ describe('the routing gate', () => {
   it('raises a low effort to at least medium when escalating, and keeps a higher one', () => {
     const at = (effort: string): MemberRoute => ({
       pick: { provider: 'claude', model: 'sonnet', modelLabel: 'Sonnet 5', effort },
-      routedBy: 'jev',
+      routedBy: 'rules',
+      rule: 'chat model',
       autoWouldUse: null,
-      gate: null,
     });
     expect(escalate(context('auto'), at('low')).pick).toMatchObject({
       model: 'opus[1m]',

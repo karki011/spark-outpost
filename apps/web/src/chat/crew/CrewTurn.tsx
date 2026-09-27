@@ -11,7 +11,7 @@ import {
 } from '@spark-outpost/contracts';
 import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { crewTotals, totalsLine } from '../../crew/crew-model.ts';
-import { crewAgents, runAgent, watchdogNotes } from '../../crew/crew-projection.ts';
+import { crewAgents, runAgent } from '../../crew/crew-projection.ts';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from '../changes/FilesChanged.tsx';
@@ -25,14 +25,12 @@ import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock, AgentHead } from './AgentBlock.tsx';
 import {
   crewItems,
-  groupParallel,
   lastAgentIndex,
   mergeCheckpoints,
   turnApprovals,
   type CrewItem,
 } from './crew-items.ts';
 import { DispatchLine } from './DispatchLine.tsx';
-import { ParallelGroup } from './ParallelGroup.tsx';
 
 interface CrewTurnProps {
   run: Run;
@@ -67,7 +65,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
     approvals,
   );
   const checkApprovals = approvals.filter(isCheckApproval);
-  const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals));
+  const items = crewItems(orchestration.crew, checkpoints, checkApprovals);
   const last = lastAgentIndex(items);
   const finished = isTerminalRunStatus(orchestration.status);
   const changeTask = taskForRuns(detail.tasks, crewRunIds);
@@ -106,7 +104,6 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         collapsed={collapsible && agent.state === 'done'}
         conversationId={detail.conversation.id}
         steps={detail.activity[member.runId] ?? []}
-        notes={watchdogNotes(member, orchestration)}
         text={textByRun.get(member.runId) ?? ''}
         error={member.error}
         seconds={child ? runSeconds(child) : null}
@@ -140,18 +137,6 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
               approval={item.approval}
               provider={run.provider}
               repo={repo}
-            />
-          );
-        }
-        if (item.kind === 'group') {
-          const byRun = new Map(item.members.map((member) => [member.member.runId, member]));
-          return (
-            <ParallelGroup
-              key={item.group}
-              agents={item.members.map((member) =>
-                runAgent(member.member, orchestration, detail.activity[member.member.runId] ?? []),
-              )}
-              renderMember={(agent) => agentBlock(byRun.get(agent.id)!, false)}
             />
           );
         }

@@ -120,40 +120,13 @@ function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[]
   );
 }
 
-type Segment = { group: string | null; items: TaskListItem[] };
-
-function segments(items: readonly TaskListItem[]): Segment[] {
-  const result: Segment[] = [];
-  for (const item of items) {
-    const last = result.at(-1);
-    if (item.group && last?.group === item.group) last.items.push(item);
-    else result.push({ group: item.group ?? null, items: [item] });
-  }
-  return result.flatMap((segment) =>
-    segment.group && segment.items.length < 2 ? [{ group: null, items: segment.items }] : [segment],
-  );
-}
-
 interface RowsProps {
   items: readonly TaskListItem[];
   roots: readonly string[];
 }
 
 function Rows({ items, roots }: RowsProps) {
-  return segments(items).map((segment) =>
-    segment.group ? (
-      <li key={`group:${segment.group}`} className="tgroup">
-        <span className="tgroup-h">In parallel</span>
-        <ul className="tlist" aria-label="In parallel">
-          {segment.items.map((item) => (
-            <TaskRow key={item.id} item={item} roots={roots} />
-          ))}
-        </ul>
-      </li>
-    ) : (
-      <TaskRow key={segment.items[0]!.id} item={segment.items[0]!} roots={roots} />
-    ),
-  );
+  return items.map((item) => <TaskRow key={item.id} item={item} roots={roots} />);
 }
 
 export function TaskList({ items, roots }: RowsProps) {

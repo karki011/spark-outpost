@@ -6,7 +6,7 @@ import { dispatchParts } from '../../crew/crew-projection.ts';
 import { whyLines } from '../../crew/why-lines.ts';
 import { adviceDetails } from '../AdviceLine.tsx';
 
-const ROUTING = { auto: 'models by Jev', pinned: 'pinned model' } as const;
+const ROUTING = { auto: 'model by rules', pinned: 'pinned model' } as const;
 
 interface DispatchLineProps {
   orchestration: Orchestration;

@@ -5,7 +5,6 @@ import {
   type Approval,
   type BudgetLimit,
   type CheckpointPayload,
-  type PlanEntry,
 } from '@spark-outpost/contracts';
 import { formatDuration } from '../../audit/audit-model.ts';
 import { formatCost } from '../../usage/format.ts';
@@ -29,13 +28,13 @@ const TITLES: Record<CheckpointPayload['kind'], string> = {
   retry: 'A step needs another try',
   accept: 'Keep these changes?',
   budget: 'Continue past the budget?',
-  merge_conflict: 'Parallel changes collided',
-  stuck: 'An agent looks stuck',
+  merge_conflict: 'The Builder’s copy and your files collided',
+  stuck: 'The Builder was repeating itself',
 };
 
 export function checkpointTitle(payload: CheckpointPayload): string {
   if (payload.kind === 'stuck')
-    return payload.agent ? `${payload.agent} looks stuck` : TITLES.stuck;
+    return payload.agent ? `${payload.agent} was repeating itself` : TITLES.stuck;
   if (payload.agent) return `${payload.agent} needs your input`;
   return TITLES[payload.kind];
 }
@@ -47,16 +46,16 @@ export function checkpointQuestion(payload: CheckpointPayload): string | null {
 const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
   clarify: 'Answer Jev’s question',
   plan: 'Approve the plan',
-  retry: 'Retry or skip a step',
+  retry: 'Retry, or stop and report',
   accept: 'Keep, fix, or revert the changes',
   budget: 'Continue past the budget',
-  merge_conflict: 'Choose which parallel change to keep',
-  stuck: 'Check on a stuck agent',
+  merge_conflict: 'Choose which version to keep',
+  stuck: 'Continue, or stop and report',
 };
 
 export function waitingLabel(payload: CheckpointPayload): string {
   if (payload.kind === 'stuck') {
-    return payload.agent ? `Check on ${payload.agent}` : WAITING_LABELS.stuck;
+    return payload.agent ? `Continue ${payload.agent}, or stop` : WAITING_LABELS.stuck;
   }
   if (payload.agent) return `Answer ${payload.agent}`;
   return WAITING_LABELS[payload.kind];
@@ -71,8 +70,8 @@ export function pickLabel(pick: AgentPick | null): string | null {
 export function retryLine(payload: CheckpointPayload): string {
   const to = pickLabel(payload.to);
   const from = pickLabel(payload.from);
-  if (!to || to === from) return 'Jev suggests retrying the step.';
-  return `Jev suggests retrying with ${to}.`;
+  if (!to || to === from) return 'Retry the step once more?';
+  return `Retry with ${to}?`;
 }
 
 function budgetAmount(limit: BudgetLimit, value: number): string {
@@ -95,10 +94,6 @@ export function budgetLine(payload: CheckpointPayload): string | null {
   return `Used ${used} of ${allowed} · ${BUDGET_NAMES[budget.limit]}`;
 }
 
-export function planText(entries: readonly PlanEntry[]): string {
-  return entries.map((entry) => `- ${entry.content}`).join('\n');
-}
-
 const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.stop]: 'Stopped.',
   [CHECKPOINT_OPTION.clarifyRules]: 'Left it to the fixed rules.',
@@ -114,12 +109,17 @@ const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.reconcile]: 'Asked a Builder to reconcile.',
   [CHECKPOINT_OPTION.nudge]: 'Nudged it; the note goes with its next turn.',
   [CHECKPOINT_OPTION.letContinue]: 'Let it continue.',
+  [CHECKPOINT_OPTION.continueStuck]: 'Continued with a note to try another way.',
+  [CHECKPOINT_OPTION.stopReport]: 'Stopped and reported.',
+  [CHECKPOINT_OPTION.justAnswer]: 'Answered without changes.',
+  [CHECKPOINT_OPTION.makeChange]: 'Making the change.',
 };
 
 const AUTO_LABELS: Record<string, string> = {
   [CHECKPOINT_OPTION.finish]: 'Skip',
   [CHECKPOINT_OPTION.clarifyRules]: 'Continue',
   [CHECKPOINT_OPTION.letContinue]: 'Let it continue',
+  [CHECKPOINT_OPTION.stopReport]: 'Stop and report',
 };
 
 export function autoLabel(optionId: string, seconds: number): string {
@@ -148,7 +148,11 @@ export function checkpointResult(approval: Approval): string {
   const id = approval.decisionOptionId;
   if (!id) return approval.status === 'denied' ? 'Stopped.' : 'Answered.';
   const conflict = approval.payload.checkpoint?.conflict;
-  if (conflict && id === CHECKPOINT_OPTION.keepFirst) return `Kept ${conflict.first}’s change.`;
+  if (conflict && id === CHECKPOINT_OPTION.keepFirst) {
+    return conflict.first === 'your version'
+      ? 'Kept your version.'
+      : `Kept ${conflict.first}’s change.`;
+  }
   if (conflict && id === CHECKPOINT_OPTION.keepSecond) return `Kept ${conflict.second}’s change.`;
   const choices = approval.payload.checkpoint?.choices ?? [];
   const index = id.startsWith('option:') ? Number(id.slice('option:'.length)) : -1;

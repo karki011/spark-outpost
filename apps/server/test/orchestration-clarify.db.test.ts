@@ -20,15 +20,10 @@ const VAGUE: Scenario = {
   id: 'vague',
   text: 'Make the reports better. #build',
   mode: 'do',
-  depth: 'execute',
-  risk: 'edits',
-  confidence: 0.9,
-  model: 'sonnet',
-  effort: 1,
+  question: 0.02,
+  destructive: 0.02,
   intent: 'docs',
   intentProbabilities: { docs: 0.6, feature: 0.3, refactor: 0.1 },
-  scope: 'codebase',
-  scopeConfidence: 0.29,
 };
 
 let t: TestDb;

@@ -27,11 +27,9 @@ export function finalText(
   const worker = children.findLast(
     (result) => result.role === 'builder' || result.role === 'scout',
   );
-  const architect = children.findLast((result) => result.role === 'architect');
   const critic = children.findLast((result) => result.role === 'critic');
   const parts: string[] = [];
-  const main = worker ?? architect;
-  if (main?.text.trim()) parts.push(main.text.trim());
+  if (worker?.text.trim()) parts.push(worker.text.trim());
   if (latest.length > 0) parts.push(latest.map(checkLine).join('\n'));
   if (critic && verdict) {
     const lines = [`AI review by ${critic.label}: ${VERDICTS[verdict]}.`];

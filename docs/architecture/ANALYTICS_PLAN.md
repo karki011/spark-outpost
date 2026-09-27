@@ -80,6 +80,13 @@ Each signal is stored once with its time, its source and a small detail object. 
 - **Accessibility.** Every chart card has a summary sentence written from the data, a "Show data table" toggle, and a Small sample flag below 10. Marks are one tab stop per chart with arrow, Home and End keys, each with a label and the shared tooltip on focus and hover. Outcomes use a shape or pattern as well as colour (circle, diamond, ring and cross; solid, dotted, hollow and hatched), and estimated spend is hatched. The new colour pairs are in `scripts/contrast/analytics-pairs.ts`. Motion is a 200 ms fade and rise of the tab panel and 250 ms bar growth, transform and opacity only, and none under reduced motion. Wide charts (the calendar and the flow) scroll inside their card on a phone.
 - **Tests.** Unit: window, health, harness aggregations, resume savings, calendar, treemap and Sankey layouts, and the summary sentences. DB: `analytics.db.test.ts` (empty workspace, a known scenario for every endpoint, time zones, custom ranges, validation, workspace isolation, 90 days of realistic history). Browser: `analytics.spec.ts` (tabs, data tables, keyboard marks, axe in Apricot and Aurora, phone width, empty state).
 
+### Harness tab since round 10
+
+- **Rule vs Jev** now compares the rules' model with Jev's observed tier pick (Jev never routes), and a table gives **cost per verified completion** by agreement: the turns' total cost including Jev, divided by the turns whose outcome is good.
+- **Observation mode: would have asked or blocked.** The edit gate's would-be action (allow, ask, block) against what happened to the approval (allowed by the rules, you allowed, you denied, refused), and the verifier's would-be action (pass, flag, review) against the turn's outcome. Rows skipped with code diffs off are counted apart.
+- Old decision kinds (transition, parallel, watchdog, build style) stay readable in the audit but no longer feed the tab.
+- `pnpm jev:thresholds` prints precision and recall per threshold from the same records, so the provisional thresholds can be tuned before anything acts.
+
 ## Analytics tabs
 
 | Tab          | Shows                                                                                                                                                                                                                                            |

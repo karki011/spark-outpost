@@ -42,27 +42,27 @@ test('Models shows each provider’s cards, measured runs and what Jev reads', a
   await expect(sol.locator('.mc-jev')).toContainText('of 160 characters');
 });
 
-test('frontier models are allowed per provider from the keyboard and stay saved', async ({
+test('the rules pick models, so there is no frontier switch, and code diffs to Jev can be turned off', async ({
   page,
 }) => {
   const dialog = await openModels(page);
-  const codexSwitch = dialog.getByRole('switch', { name: 'Allow frontier models for Codex' });
-  const claudeSwitch = dialog.getByRole('switch', { name: 'Allow frontier models for Claude' });
-  await expect(codexSwitch).not.toBeChecked();
-  await expect(claudeSwitch).not.toBeChecked();
-  await expect(codexSwitch).toHaveAccessibleDescription(/Lets Jev choose 6 Astra on Auto/);
-  await expect(claudeSwitch).toHaveAccessibleDescription(/Lets Jev choose Fable 5\.1 on Auto/);
+  await expect(dialog.getByRole('switch', { name: /Allow frontier models/ })).toHaveCount(0);
+  await expect(dialog).toContainText('The rules pick models');
 
-  await codexSwitch.focus();
+  await dialog.getByRole('tab', { name: /AI providers/ }).click();
+  const providers = page.getByRole('dialog', { name: 'AI providers' });
+  const diffs = providers.getByRole('switch', { name: 'Send code diffs to Jev for safety checks' });
+  await expect(diffs).toBeChecked();
+  await expect(diffs).toHaveAccessibleDescription(/observation-only checks/);
+  await diffs.focus();
   await page.keyboard.press('Space');
-  await expect(codexSwitch).toBeChecked();
-
+  await expect(diffs).not.toBeChecked();
   await page.reload();
   const again = await openModels(page);
+  await again.getByRole('tab', { name: /AI providers/ }).click();
   await expect(
-    again.getByRole('switch', { name: 'Allow frontier models for Codex' }),
-  ).toBeChecked();
-  await expect(
-    again.getByRole('switch', { name: 'Allow frontier models for Claude' }),
+    page
+      .getByRole('dialog', { name: 'AI providers' })
+      .getByRole('switch', { name: 'Send code diffs to Jev for safety checks' }),
   ).not.toBeChecked();
 });

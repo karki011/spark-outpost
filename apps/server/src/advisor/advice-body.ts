@@ -2,12 +2,14 @@ import {
   adviceDifferences,
   type AdviceBody,
   type AdviceUsage,
-  type GateDecision,
+  type IntakeAnswer,
+  type IntakeCall,
   type JevIntake,
 } from '@spark-outpost/contracts';
-import { ruleAdvisor, type IntakeRequest } from './advice.ts';
+import type { IntakeRequest } from './advice.ts';
 import { gate } from './gate.ts';
 import type { IntakeQuestions, SystemOneResponse } from './intake-questions.ts';
+import { POLICY_VERSION } from './policy.ts';
 
 export type JevOutcome =
   | { status: 'not_connected' }
@@ -28,18 +30,29 @@ export type JevOutcome =
       usage: AdviceUsage;
     };
 
-const APPLIED: Record<GateDecision, AdviceBody['wouldApply']> = {
-  act: 'jev',
-  ask: 'ask',
-  fallback: 'rules',
-};
+export interface IntakeDecided {
+  rules: IntakeAnswer;
+  calls: Record<string, IntakeCall>;
+}
 
-export function adviceBody(request: IntakeRequest, outcome: JevOutcome): AdviceBody {
-  const rules = ruleAdvisor(request);
+function applied(calls: Record<string, IntakeCall>): AdviceBody['wouldApply'] {
+  const entries = Object.values(calls);
+  if (entries.some((entry) => entry.source === 'jev')) return 'jev';
+  if (entries.some((entry) => entry.gate?.decision === 'ask')) return 'ask';
+  return 'rules';
+}
+
+export function adviceBody(
+  request: IntakeRequest,
+  outcome: JevOutcome,
+  decided: IntakeDecided,
+): AdviceBody {
   const base: AdviceBody = {
     purpose: 'intake',
+    policyVersion: POLICY_VERSION,
+    calls: decided.calls,
     routing: request.routing,
-    rules,
+    rules: decided.rules,
     jev: null,
     jevStatus: outcome.status,
     jevError: null,
@@ -62,18 +75,16 @@ export function adviceBody(request: IntakeRequest, outcome: JevOutcome): AdviceB
     questions: outcome.asked?.questions ?? null,
   };
   if (outcome.status !== 'answered') return { ...base, ...sent, jevError: outcome.error };
-  const risk = request.mode === 'do' ? outcome.intake.risk : 'read-only';
-  const decision = gate(outcome.intake, risk, request.level);
   const route = outcome.intake.routeConfidence;
   return {
     ...base,
     ...sent,
     jevModel: outcome.response.model,
     jev: outcome.intake,
-    gate: decision,
-    routeGate: route === null ? null : gate({ confidence: route }, risk, request.level),
-    wouldApply: APPLIED[decision.decision],
-    differences: adviceDifferences(rules, outcome.intake),
+    gate: decided.calls.question?.gate ?? null,
+    routeGate: route === null ? null : gate(route, 'tier', request.level, decided.rules.risk),
+    wouldApply: applied(decided.calls),
+    differences: adviceDifferences(decided.rules, outcome.intake),
     usage: outcome.usage,
     answers: outcome.response.answers,
   };

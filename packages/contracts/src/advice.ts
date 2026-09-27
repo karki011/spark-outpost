@@ -58,11 +58,22 @@ export function scopeLabel(scope: Scope): string {
   return SCOPE_LABELS[scope];
 }
 
+export const routeTierSchema = z.enum(['small', 'mid', 'top']);
+export type RouteTier = z.infer<typeof routeTierSchema>;
+
+const noul = z.number().min(0).max(1);
+
 export const jevIntakeSchema = intakeAnswerSchema.extend({
   scope: scopeSchema.nullable().optional(),
-  reviewExisting: z.number().min(0).max(1).optional(),
-  vague: z.number().min(0).max(1).optional(),
-  mechanical: z.number().min(0).max(1).optional(),
+  reviewExisting: noul.optional(),
+  vague: noul.optional(),
+  mechanical: noul.optional(),
+  question: noul.optional(),
+  review: noul.optional(),
+  destructive: noul.optional(),
+  continuesTask: noul.optional(),
+  tier: routeTierSchema.nullable().optional(),
+  invalid: z.array(z.string()).optional(),
   confidence: z.number().min(0).max(1),
   routeConfidence: z.number().min(0).max(1).nullable(),
   confidences: z.record(z.string(), z.number()),
@@ -98,8 +109,19 @@ export const adviceUsageSchema = z.object({
 });
 export type AdviceUsage = z.infer<typeof adviceUsageSchema>;
 
+export const intakeCallSchema = z.object({
+  jev: z.number().min(0).max(1).nullable(),
+  rule: z.boolean().nullable(),
+  value: z.boolean(),
+  source: z.enum(['jev', 'rules', 'user']),
+  gate: gateSchema.nullable(),
+});
+export type IntakeCall = z.infer<typeof intakeCallSchema>;
+
 export const adviceSummarySchema = z.object({
   purpose: z.literal('intake'),
+  policyVersion: z.string().optional(),
+  calls: z.record(z.string(), intakeCallSchema).optional(),
   routing: modelRoutingSchema,
   rules: intakeAnswerSchema,
   jev: jevIntakeSchema.nullable(),

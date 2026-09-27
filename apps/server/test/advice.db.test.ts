@@ -27,7 +27,6 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await worker?.stop();
-  await intake?.settled();
   worker = null;
   await t.cleanup();
 });
@@ -41,10 +40,6 @@ const jevAnswer = {
       probabilities: { bug_fix: 0.9 },
       confidence: 0.86,
     },
-    complexity: { type: 'score', score: 0.4, confidence: 0.8 },
-    risk: { type: 'score', score: 1, confidence: 0.7 },
-    depth: { type: 'choice', choice: 'execute', probabilities: { execute: 0.8 }, confidence: 0.81 },
-    effort_claude: { type: 'score', score: 1, confidence: 0.6 },
   },
   usage: { input_tokens: 1000, output_tokens: 0 },
 };
@@ -142,15 +137,10 @@ describe('Jev intake recording', () => {
       jevStatus: 'answered',
       jevModel: 'jev-1.13.0',
       rules: { provider: 'fake', depth: 'direct', risk: 'read-only' },
-      jev: {
-        intent: 'bug_fix',
-        provider: 'claude',
-        model: 'sonnet',
-        effort: 'medium',
-        depth: 'execute',
-      },
-      gate: { decision: 'act', risk: 'read-only', level: 'balanced' },
-      wouldApply: 'jev',
+      jev: { intent: 'bug_fix', provider: 'fake', depth: 'direct', risk: 'read-only' },
+      gate: null,
+      wouldApply: 'rules',
+      policyVersion: 'lean-1',
       usage: { inputTokens: 1000, tokenSource: 'reported', costSource: 'estimated' },
     });
     expect(body.usage?.costUsd).toBeCloseTo(0.000042);
@@ -159,9 +149,8 @@ describe('Jev intake recording', () => {
     expect(jevCalls[0]!.body.state).toEqual({
       task: 'Fix the typo in the README heading',
       mode: 'chat',
-      reposLinked: false,
-      providers: [{ provider: 'claude', models: ['sonnet'] }],
     });
+    expect(Object.keys(jevCalls[0]!.body.questions as object)).toEqual(['intent']);
 
     const run = await finished(runId);
     expect(run.status).toBe('succeeded');
@@ -182,7 +171,7 @@ describe('Jev intake recording', () => {
 
     const app = createTestApp(t);
     const detail = await request(app).get(`/api/conversations/${conversationId}`).set('Host', HOST);
-    expect(detail.body.advice[runId]).toMatchObject({ jevStatus: 'answered', wouldApply: 'jev' });
+    expect(detail.body.advice[runId]).toMatchObject({ jevStatus: 'answered', wouldApply: 'rules' });
     expect(detail.body.advice[runId].questions).toBeUndefined();
     expect(detail.body.usageTotals.advisors).toEqual([
       { advisor: 'jev', calls: 1, inputTokens: 1000, costUsd: 0.000042 },

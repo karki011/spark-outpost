@@ -78,9 +78,7 @@ function confidence(decision: OrchestrationDecision): string | null {
 
 function decisionVerb(decision: OrchestrationDecision): string {
   if (decision.kind === 'intake') return 'Picked';
-  if (decision.kind === 'transition') return 'Checked';
-  if (decision.kind === 'parallel') return 'Split';
-  if (decision.kind === 'watchdog') return 'Watched';
+  if (decision.kind !== 'route') return 'Noted';
   const role = agentRoleSchema.safeParse(decision.role);
   return role.success ? `Sent ${agentRoleLabel(role.data)}` : 'Routed';
 }
@@ -92,13 +90,9 @@ export function decisionLine(decision: OrchestrationDecision | undefined): strin
   return [summary, confidence(decision)].filter(Boolean).join(' · ');
 }
 
-export function flaggedByWatchdog(decision: OrchestrationDecision): boolean {
-  return decision.kind === 'watchdog' && decision.answer.flagged === true;
-}
+const OBSERVED: ReadonlySet<string> = new Set(['policy', 'verify']);
 
 export function lastDecisionLine(orchestration: Orchestration): string | null {
-  const shown = orchestration.decisions.filter(
-    (decision) => decision.kind !== 'watchdog' || flaggedByWatchdog(decision),
-  );
+  const shown = orchestration.decisions.filter((decision) => !OBSERVED.has(decision.kind));
   return decisionLine(shown.at(-1));
 }

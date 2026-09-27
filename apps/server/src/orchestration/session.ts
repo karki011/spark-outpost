@@ -21,40 +21,23 @@ import type { ExecuteRunDeps } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import type { BudgetLimits } from './budget.ts';
-import type { ArchitectNotes, ResearchNote } from './context.ts';
 import type { JevAccess } from './jev-calls.ts';
 import type { ProjectStyle } from './lean.ts';
-import type { ReviewQueue } from './reviews.ts';
-import type { JevPick, MemberRoute, RouteContext } from './routing.ts';
-import type { Slots } from './slots.ts';
-import type { LaneOptions, LanePlacement } from './placement.ts';
+import type { LoopGuardSettings } from './loop-guard.ts';
+import type { MemberRoute, RouteContext, RouteFacts } from './routing.ts';
 import type { FlowState } from './transitions.ts';
-import type { PlanSessionChoice } from './plan-session.ts';
-import type { WorkOrder } from './work-orders.ts';
-import type { WatchdogState } from './watchdog.ts';
-import type { WatchSettings } from './watchdog-rules.ts';
 
 export interface OrchestratorDeps extends ExecuteRunDeps {
   budget?: Partial<BudgetLimits>;
   budgetPollMs?: number;
   checkpointTimeoutMs?: number;
   jevTimeoutMs?: number;
-  parallelLimit?: number;
-  agentSlots?: Slots;
-  lanes?: LaneOptions;
-  handoff?: HandoffOptions;
-  watchdog?: Partial<WatchSettings> | false;
-}
-
-export interface HandoffOptions {
-  workOrders?: boolean;
-  planSession?: boolean;
+  loopGuard?: Partial<LoopGuardSettings> | false;
 }
 
 export interface MemberResult {
   role: AgentRole;
   runId: string;
-  stepIndex: number;
   label: string;
   outcome: 'succeeded' | 'failed' | 'cancelled' | 'lease_lost';
   error: string | null;
@@ -62,10 +45,7 @@ export interface MemberResult {
   toolCalls: number;
   inPlace: boolean;
   name: string;
-  steps: number[];
-  ticked: number[];
-  tools: string[];
-  reads?: string[];
+  loop: string | null;
   copyRunId?: string;
 }
 
@@ -77,16 +57,13 @@ export interface Session {
   control: RunControl;
   jev: JevAccess | null;
   route: RouteContext;
+  facts: RouteFacts;
   intake: IntakeResult;
   flow: FlowState;
-  routes: Map<string, MemberRoute>;
-  planned: Map<string, JevPick | null>;
-  plannedCalled: boolean;
+  routes: Map<AgentRole, MemberRoute>;
   plan: PlanEntry[];
-  planVersion: number | null;
   taskId: string | null;
-  inPlaceUsed: boolean;
-  snapshotTaken: boolean;
+  continuesTask: boolean;
   message: { id: string; text: string } | null;
   results: MemberResult[];
   findings: string[];
@@ -97,27 +74,20 @@ export interface Session {
   budgetHit: BudgetLimit | null;
   members: Map<string, () => void>;
   checkpoints: number;
-  names: Map<string, string>;
-  research: ResearchNote[];
-  architectNotes: ArchitectNotes | null;
-  slots: Slots;
-  groups: number;
-  parallelNoted: boolean;
   git: boolean;
   checks: ProjectChecks | null;
   checkRounds: number;
   checkBodies: CheckBody[];
-  reviews: ReviewQueue | null;
+  checkLines: string[];
   projectStyle: ProjectStyle;
   buildStyle: BuildStyle;
-  buildStyleDecided: boolean;
-  lanePlacement: LanePlacement | null;
   assumption: string | null;
-  workOrders?: WorkOrder[];
-  plannedCount?: number;
-  largeSteps?: number[];
-  planSession?: PlanSessionChoice | null;
-  watchdog?: WatchdogState;
+  needsCopy: boolean;
+  copyRunId: string | null;
+  snapshotTaken: boolean;
+  closeReason: string | null;
+  observations: Promise<void>[];
+  jevDiffs: boolean;
 }
 
 export const COMMAND_READER_TOOL_CALL_LIMIT = 120;
@@ -145,7 +115,9 @@ export function fitToolLimit(s: Session, provider: string): void {
   s.limits = { ...s.limits, toolCallLimit: s.limits.toolCallLimit + extra };
 }
 
-export const routeKey = (role: AgentRole, stepIndex: number) => `${role}:${stepIndex}`;
+export function builderKey(taskId: string): string {
+  return `${taskId}:builder`;
+}
 
 export async function save(s: Session, patch: OrchestrationPatch = {}): Promise<void> {
   await updateOrchestration(s.deps.db, s.lease.runId, {

@@ -17,18 +17,22 @@ import {
   type Harness,
   type Scenario,
 } from './orchestration-support.ts';
-import { FAKE_PLAN_FILES } from './fake-acp-roles.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
-const A: AgentRole = 'architect';
 const B: AgentRole = 'builder';
 const C: AgentRole = 'critic';
-const PLANNED_BUILD = [A, B];
 
 interface Expectation {
   crew: AgentRole[];
   asked: string[];
 }
+
+const asksEdits = (crew: AgentRole[]): Record<InvolvementLevel, Expectation> => ({
+  'hands-on': { crew, asked: ['edit', 'accept'] },
+  balanced: { crew, asked: ['edit', 'accept'] },
+  'hands-off': { crew, asked: [] },
+  'full-auto': { crew, asked: [] },
+});
 
 const EXPECTED: Record<string, Record<InvolvementLevel, Expectation>> = {
   question: {
@@ -37,33 +41,10 @@ const EXPECTED: Record<string, Record<InvolvementLevel, Expectation>> = {
     'hands-off': { crew: ['scout'], asked: [] },
     'full-auto': { crew: ['scout'], asked: [] },
   },
-  trivial: {
-    'hands-on': { crew: [B], asked: ['edit', 'accept'] },
-    balanced: { crew: [B], asked: ['edit', 'accept'] },
-    'hands-off': { crew: [B], asked: [] },
-    'full-auto': { crew: [B], asked: [] },
-  },
-  normal: {
-    'hands-on': { crew: [B], asked: ['edit', 'accept'] },
-    balanced: { crew: [B], asked: ['edit', 'accept'] },
-    'hands-off': { crew: [B], asked: [] },
-    'full-auto': { crew: [B], asked: [] },
-  },
-  complex: {
-    'hands-on': { crew: [...PLANNED_BUILD, C], asked: ['plan', 'edit', 'accept'] },
-    balanced: { crew: [...PLANNED_BUILD, C], asked: ['plan', 'edit', 'accept'] },
-    'hands-off': { crew: [...PLANNED_BUILD, C], asked: [] },
-    'full-auto': { crew: [...PLANNED_BUILD, C], asked: [] },
-  },
-  risky: {
-    'hands-on': {
-      crew: [...PLANNED_BUILD, C],
-      asked: ['clarify', 'plan', 'edit', 'accept'],
-    },
-    balanced: { crew: [...PLANNED_BUILD, C], asked: ['plan', 'edit', 'accept'] },
-    'hands-off': { crew: [...PLANNED_BUILD, C], asked: ['plan'] },
-    'full-auto': { crew: [...PLANNED_BUILD, C], asked: [] },
-  },
+  trivial: asksEdits([B]),
+  normal: asksEdits([B]),
+  complex: asksEdits([B]),
+  risky: asksEdits([B, C]),
 };
 
 let t: TestDb;
@@ -117,11 +98,12 @@ describe.each(SCENARIOS)('$id', (scenario) => {
         context,
       ).toBe(true);
 
-      const planned = expected.crew.includes(A);
+      const builders = expected.crew.filter((role) => role === B).length;
       expect(notes.split('\n').filter((line) => line.startsWith('step')).length, context).toBe(
-        planned ? FAKE_PLAN_FILES.length : expected.crew.filter((role) => role === B).length,
+        builders,
       );
-      if (expected.crew.length === 1) expect(orchestration.crew[0]!.runId, context).toBe(runId);
+      if (expected.crew[0] === 'scout') expect(orchestration.crew[0]!.runId, context).toBe(runId);
+      else expect(orchestration.crew[0]!.runId, context).not.toBe(runId);
 
       const kinds = orchestration.decisions.map((decision) => decision.kind);
       expect(
@@ -132,11 +114,10 @@ describe.each(SCENARIOS)('$id', (scenario) => {
         kinds.filter((kind) => kind === 'route'),
         context,
       ).toHaveLength(expected.crew.length);
-      const judged = expected.crew.filter((role) => role === 'builder' || role === 'critic');
       expect(
-        kinds.filter((kind) => kind === 'transition'),
+        kinds.filter((kind) => !['intake', 'route', 'policy', 'verify'].includes(kind)),
         context,
-      ).toHaveLength(judged.length);
+      ).toEqual([]);
 
       const tokens = orchestration.crew.reduce((total, member) => total + (member.tokens ?? 0), 0);
       expect(orchestration.totals.tokens, context).toBe(tokens);
@@ -151,7 +132,7 @@ describe.each(SCENARIOS)('$id', (scenario) => {
       ).toBe(expected.crew.length);
 
       const labels = [...roles].map((role) => role.charAt(0).toUpperCase() + role.slice(1)).sort();
-      if (expected.crew.length > 1) {
+      if (expected.crew[0] !== 'scout') {
         const [audited] = audit.orchestrations ?? [];
         expect(audited?.totals.totalTokens, context).toBe(orchestration.totals.tokens);
         expect(audited?.byRole.map((group) => group.role).sort(), context).toEqual(labels);
@@ -172,25 +153,31 @@ describe.each(SCENARIOS)('$id', (scenario) => {
           context,
         ).toBe(true);
       }
-      const architect = orchestration.crew.find((member) => member.role === 'architect');
-      if (architect) {
-        expect(architect, context).toMatchObject({
-          model: 'opus[1m]',
-          effort: 'high',
-          routedBy: 'rules',
-        });
-        expect(orchestration.planVersion, context).toBe(1);
-      }
     }
   }, 180_000);
 });
 
-describe('trivial fix on Auto', () => {
-  it('runs a single Haiku builder at low effort without a planner', async () => {
+describe('rule routing on Auto', () => {
+  it('runs a trivial fix on the small tier and records the tier Jev would have used', async () => {
     const { orchestration } = await runLevel(SCENARIOS[1]!, 'hands-off');
     expect(orchestration.depth).toBe('execute');
     expect(orchestration.crew).toEqual([
-      expect.objectContaining({ role: 'builder', model: 'haiku', effort: 'low', routedBy: 'jev' }),
+      expect.objectContaining({
+        role: 'builder',
+        model: 'haiku',
+        effort: 'medium',
+        routedBy: 'rules',
+        autoWouldUse: expect.objectContaining({ model: 'haiku' }),
+      }),
+    ]);
+  }, 60_000);
+
+  it('runs destructive work on the top tier with a cross-provider Critic', async () => {
+    const { orchestration } = await runLevel(SCENARIOS[4]!, 'full-auto');
+    expect(orchestration.risk).toBe('destructive');
+    expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
+      ['builder', 'opus[1m]'],
+      ['critic', 'gpt-6-sol'],
     ]);
   }, 60_000);
 });

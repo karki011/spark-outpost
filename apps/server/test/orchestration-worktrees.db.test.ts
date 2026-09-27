@@ -1,12 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { CheckBody } from '@spark-outpost/contracts';
+import { CHECKPOINT_OPTION, type CheckBody } from '@spark-outpost/contracts';
+import { requestCancel } from '../src/persistence/runs.ts';
 import { createProject } from '../src/projects/projects.ts';
 import {
   SCENARIOS,
+  answerEverything,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -14,13 +16,15 @@ import {
   removeRepo,
   startOrchestrator,
   startScenario,
+  type Answerer,
   type Harness,
   type JevScript,
   type Scenario,
 } from './orchestration-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { createTestDb, eventually, type TestDb } from './support.ts';
 
-const COMPLEX = SCENARIOS[3] as Scenario;
+const TRIVIAL = SCENARIOS[1] as Scenario;
+const RISKY = SCENARIOS[4] as Scenario;
 
 const NEEDS_DEPS = `import { existsSync } from 'node:fs';
 if (!existsSync('node_modules/left-pad/index.js')) {
@@ -42,8 +46,8 @@ beforeEach(async () => {
   t = await createTestDb();
   root = await gitRepo();
   await connectProviders(t);
-  const script: JevScript = { calls: [], scenario: COMPLEX };
-  harness = startOrchestrator(t, jevFetch(script), { lanes: { placement: 'worktree' } });
+  const script: JevScript = { calls: [] };
+  harness = startOrchestrator(t, jevFetch(script));
 });
 
 afterEach(async () => {
@@ -53,10 +57,10 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
-async function run(tags: string) {
-  const scenario = { ...COMPLEX, text: `${COMPLEX.text} ${tags}` };
+async function run(tags: string, answer?: Answerer) {
+  const scenario = { ...RISKY, text: `${RISKY.text} ${tags}` };
   const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
-  const result = await driveToEnd(t, conversationId, runId);
+  const result = await driveToEnd(t, conversationId, runId, answer);
   return { ...result, runId };
 }
 
@@ -74,26 +78,58 @@ async function expectNoCopies(runId: string) {
   expect(Number(rows[0]!.count)).toBe(0);
 }
 
-describe('worktree lifecycle', () => {
-  it('removes a failed member’s copy and branch before its step is retried', async () => {
-    const { orchestration, runId } = await run('#parallel #failonce 2');
+describe('the solo worktree copy', () => {
+  it('builds destructive work in one copy, retries in the same copy, merges and removes it', async () => {
+    const { orchestration, runId } = await run('#failonce 1');
     expect(orchestration.status).toBe('succeeded');
+    expect(orchestration.crew.map((member) => [member.role, member.copy])).toEqual([
+      ['builder', expect.stringMatching(/^spark\//)],
+      ['builder', expect.stringMatching(/^spark\//)],
+      ['critic', null],
+    ]);
     const { rows } = await t.db.query<{ removed: boolean; merged: boolean }>(
       `SELECT removed_at IS NOT NULL AS removed, merged_at IS NOT NULL AS merged
-       FROM run_worktrees WHERE orchestration_run_id = $1 ORDER BY created_at`,
+       FROM run_worktrees WHERE orchestration_run_id = $1`,
       [runId],
     );
-    expect(rows.length).toBeGreaterThanOrEqual(2);
-    expect(rows.every((row) => row.removed)).toBe(true);
-    expect(rows.some((row) => !row.merged)).toBe(true);
-    const { rows: reviews } = await t.db.query<{ prompt: string }>(
-      `SELECT prompt FROM runs WHERE parent_run_id = $1 AND role = 'critic' ORDER BY created_at`,
-      [runId],
-    );
-    expect(reviews.some((review) => review.prompt.includes("Tack's change for step 3."))).toBe(
-      true,
-    );
+    expect(rows).toEqual([{ removed: true, merged: true }]);
+    expect(await readFile(join(root, 'notes.txt'), 'utf8')).toBe('start\nstep 1\n');
     await expectNoCopies(runId);
+  }, 60_000);
+
+  it('asks which version to keep when your files changed meanwhile, with no reconcile', async () => {
+    const answer: Answerer = (approval) =>
+      approval.kind === 'merge_conflict'
+        ? { optionId: CHECKPOINT_OPTION.keepSecond }
+        : answerEverything(approval);
+    const { asked, runId } = await run('#touchmain', answer);
+    const conflict = asked.find((approval) => approval.kind === 'merge_conflict');
+    expect(conflict?.options.map((option) => option.optionId)).toEqual([
+      CHECKPOINT_OPTION.keepFirst,
+      CHECKPOINT_OPTION.keepSecond,
+      CHECKPOINT_OPTION.stop,
+    ]);
+    expect(conflict?.payload.checkpoint?.conflict?.first).toBe('your version');
+    expect(await readFile(join(root, 'notes.txt'), 'utf8')).toBe('start\nstep 1\n');
+    await expectNoCopies(runId);
+  }, 60_000);
+
+  it('gives a second task in the same repo its own copy while the first still works', async () => {
+    const slow = { ...TRIVIAL, text: `${TRIVIAL.text} #slowbuild` };
+    const first = await startScenario(t, root, slow, 'hands-off');
+    await eventually(async () => {
+      const { rows } = await t.db.query(
+        `SELECT 1 FROM runs WHERE parent_run_id = $1 AND status = 'running'`,
+        [first.runId],
+      );
+      return rows.length > 0 ? true : null;
+    }, 30_000);
+    const second = await startScenario(t, root, TRIVIAL, 'hands-off');
+    const { orchestration } = await driveToEnd(t, second.conversationId, second.runId);
+    expect(orchestration.crew[0]?.copy).toMatch(/^spark\//);
+    await requestCancel(t.db, first.runId);
+    await driveToEnd(t, first.conversationId, first.runId);
+    await expectNoCopies(second.runId);
   }, 60_000);
 
   it('prepares node_modules beside the Builder, makes checks wait for it, and removes it', async () => {
@@ -111,22 +147,18 @@ describe('worktree lifecycle', () => {
       ['node check.mjs'],
     ]);
 
-    const { orchestration, runId } = await run('#parallel');
+    const { orchestration, runId } = await run('');
     expect(orchestration.status).toBe('succeeded');
     const { rows } = await t.db.query<{ deps_method: string; deps_waited_ms: number | null }>(
       'SELECT deps_method, deps_waited_ms FROM run_worktrees WHERE orchestration_run_id = $1',
       [runId],
     );
-    expect(rows.map((row) => row.deps_method)).toEqual(['clone', 'clone']);
+    expect(rows.map((row) => row.deps_method)).toEqual(['clone']);
     expect(rows.every((row) => row.deps_waited_ms !== null)).toBe(true);
     const { rows: checks } = await t.db.query<{ body: CheckBody }>(
       `SELECT body FROM run_artifacts WHERE kind = 'check' ORDER BY version`,
     );
-    expect(checks.map((row) => [row.body.copy, row.body.status])).toContainEqual([
-      'Rivet',
-      'passed',
-    ]);
-    expect(checks.every((row) => row.body.status === 'passed')).toBe(true);
+    expect(checks.map((row) => [row.body.copy, row.body.status])).toEqual([['Bolt', 'passed']]);
     expect(existsSync(join(root, 'node_modules', 'left-pad', 'index.js'))).toBe(true);
     await expectNoCopies(runId);
   }, 60_000);

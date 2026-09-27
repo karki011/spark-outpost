@@ -66,7 +66,7 @@ async function approvalEvents(runId: string) {
 
 describe('clarify in your own words', () => {
   it('needs a note, then works on the request with the answer added', async () => {
-    const unsure = { ...TRIVIAL, confidence: 0.5 };
+    const unsure = { ...TRIVIAL, text: 'Make the reports better', vague: 0.95 };
     script.scenario = unsure;
     const { conversationId, runId } = await startScenario(t, root, unsure, 'balanced');
     const clarify = await pendingApproval(conversationId, 'clarify');
@@ -80,17 +80,13 @@ describe('clarify in your own words', () => {
 
     const answers: Answerer = (approval) =>
       approval.kind === 'clarify'
-        ? { optionId: CHECKPOINT_OPTION.answer, note: 'Only the heading' }
+        ? { optionId: CHECKPOINT_OPTION.answer, note: 'Only the heading #build' }
         : answerEverything(approval);
     const { orchestration } = await driveToEnd(t, conversationId, runId, answers);
-    expect(orchestration).toMatchObject({
-      status: 'succeeded',
-      depth: 'execute',
-      depthSource: 'rules',
-    });
+    expect(orchestration).toMatchObject({ status: 'succeeded', depth: 'execute' });
     expect(orchestration.checkpoints[0]).toMatchObject({
       decisionOptionId: CHECKPOINT_OPTION.answer,
-      note: 'Only the heading',
+      note: 'Only the heading #build',
     });
     const detail = await getConversationDetail(t.db, conversationId);
     expect(detail?.messages.at(-1)?.content).toContain('Clarified: Only the heading');
@@ -99,18 +95,9 @@ describe('clarify in your own words', () => {
 
 describe('a Builder waiting on an edit', () => {
   it('marks the chat as needing input and mirrors the approval on the orchestration stream', async () => {
-    const { conversationId, runId } = await startScenario(t, root, COMPLEX, 'balanced');
-    const plan = await pendingApproval(conversationId, 'plan');
-    const [planning] = await listConversations(t.db, t.workspaceId);
-    expect(planning?.attention).toMatchObject({
-      kind: 'plan',
-      agentName: 'Sketch',
-      approvalId: plan.id,
-    });
-    await decideApproval(t.db, t.workspaceId, plan.id, {
-      optionId: CHECKPOINT_OPTION.approvePlan,
-      scope: 'once',
-    });
+    const reviewed = { ...COMPLEX, review: 0.95 };
+    script.scenario = reviewed;
+    const { conversationId, runId } = await startScenario(t, root, reviewed, 'balanced');
     const edit = await pendingApproval(conversationId, 'edit');
     expect(edit.runId).not.toBe(runId);
     expect((await getRun(t.db, runId))?.status).toBe('running');
@@ -127,17 +114,14 @@ describe('a Builder waiting on an edit', () => {
     const [done] = await listConversations(t.db, t.workspaceId);
     expect(done).toMatchObject({ needsInput: false, attention: null });
 
-    expect(orchestration.crew.map((member) => member.name)).toEqual(['Sketch', 'Bolt', 'Hawk']);
-    expect(orchestration.crew[1]?.agentLabel).toBe('Bolt · Builder · Sonnet 5 · medium');
+    expect(orchestration.crew.map((member) => member.name)).toEqual(['Bolt', 'Hawk']);
+    expect(orchestration.crew[0]?.agentLabel).toBe('Bolt · Builder · Sonnet 5 · medium');
     expect(orchestration.totals.jevTokens).toBe(1000 * orchestration.totals.jevCalls);
     const task = await getTaskDetail(t.db, orchestration.taskId!);
     const critic = orchestration.crew.at(-1)!;
     expect(task?.items.find((item) => item.runId === critic.runId)).toMatchObject({
       role: 'critic',
       name: 'Hawk',
-    });
-    expect(task?.items.find((item) => item.id === 'planned')).toMatchObject({
-      role: 'architect',
     });
   }, 60_000);
 });

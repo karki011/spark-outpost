@@ -1,18 +1,12 @@
-import { ORCHESTRATION_PARALLEL_LIMIT } from '@spark-outpost/contracts';
-import { adviceBody } from '../advisor/advice-body.ts';
-import { intakeRequest, recordIntake, type IntakeResult } from '../advisor/intake-recorder.ts';
-import {
-  insertAdvice,
-  loadIntakeContext,
-  noteIntakeDepth,
-  noteIntakeMechanical,
-} from '../persistence/advice.ts';
+import { askIntake, saveIntake, type IntakeResult } from '../advisor/intake-recorder.ts';
+import type { IntakeContext } from '../persistence/advice.ts';
+import { ruleAdvisor } from '../advisor/advice.ts';
 import { newId } from '../persistence/ids.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { insertOrchestration } from '../persistence/orchestrations.ts';
 import { recordKeptChanges } from '../outcomes/record.ts';
 import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
-import { taskForWorkingRun } from '../persistence/tasks.ts';
+import { currentTaskContext, startNewTask, taskForWorkingRun } from '../persistence/tasks.ts';
 import { revertRun, runChanges } from '../projects/run-changes.ts';
 import { isGitWorkTree } from '../projects/snapshot.ts';
 import { startControl, type Append } from '../workflow/agent-turn.ts';
@@ -20,85 +14,114 @@ import { APPROVAL_TIMEOUT_MESSAGE } from '../workflow/approval-gate.ts';
 import { closeMessage } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { loadRunInput, type RunInput } from '../workflow/run-input.ts';
+import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
+import { projectChecks } from '../checks/project-checks.ts';
 import { exceededLimit } from './budget.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
 import { ask, assume, budgetUsage, intakeResponse } from './checkpoint-asks.ts';
-import { asksToKeep } from './checkpoint-policy.ts';
-import { assumptionLine, interpretations, isVagueRequest, vagueHandling } from './clarify.ts';
+import { assumptionLine, interpretations } from './clarify.ts';
 import { namedFiles } from './context.ts';
-import { chooseDepth, intakeDepthNote, refineDepth, reviewIntent, trustedRisk } from './depth.ts';
-import { mechanicalChange, mechanicalNote, worthRecording } from './mechanical.ts';
-import { finalText } from './final-message.ts';
+import { decideIntake, rulesAnswer, type CurrentTask, type IntakeDecisions } from './intake.ts';
 import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
-import { cleanupCopies, runGroup } from './group.ts';
-import { judge } from './judge.ts';
 import { buildAndLand } from './land.ts';
-import { buildInCopy, buildsInCopy } from './solo-copy.ts';
+import { finalText } from './final-message.ts';
 import {
   decideBuildStyle,
   NO_PROJECT_STYLE,
   projectBuildStyle,
   recordShortcuts,
 } from './build-style.ts';
-import { collectedReview } from './reviews.ts';
-import { sequentialReason } from './parallel.ts';
-import { markPlanStep, markPlanSteps, statusAfterJudging } from './plan-progress.ts';
-import type { RouteContext } from './routing.ts';
-import type { ProjectStyle } from './lean.ts';
-import { Slots } from './slots.ts';
-import { spanOf } from './spans.ts';
-import { baseLimits, publish, save, type OrchestratorDeps, type Session } from './session.ts';
-import { closeKeyedSessions, SESSION_CLOSE_REASONS } from '../persistence/provider-sessions.ts';
-import { projectChecks } from '../checks/project-checks.ts';
+import { changesSoFar } from './member-prompts.ts';
+import { refreshPlan } from './plan-progress.ts';
+import { isLargeDiff } from './risk-rules.ts';
+import { routeBuilder, type RouteContext } from './routing.ts';
+import { buildInCopy, cleanupCopies, needsCopyFor, repoBusy } from './solo-copy.ts';
+import {
+  baseLimits,
+  builderKey,
+  publish,
+  save,
+  type OrchestratorDeps,
+  type Session,
+} from './session.ts';
 import { initialFlow, nextStep, type FlowAction, type FlowEvent } from './transitions.ts';
+import type { MemberOutcome } from './members.ts';
+import { jevDiffsAllowed, observeBuilder, settleObservations } from './observe.ts';
+
+export const TASK_SESSION_CLOSED = 'task session closed';
+export const NEW_TASK_STARTED = 'a new task started';
 
 function jevTimeout(deps: OrchestratorDeps): number {
   const own = deps.intake?.deps.timeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS;
   return Math.min(own, deps.jevTimeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS);
 }
 
-async function decideIntake(
-  deps: OrchestratorDeps,
-  input: RunInput,
-  append: Append,
-  projectStyle: ProjectStyle,
-): Promise<IntakeResult> {
-  if (deps.intake) {
-    const timeoutMs = jevTimeout(deps);
-    return recordIntake({ ...deps.intake.deps, timeoutMs }, input, append, projectStyle.style);
-  }
-  const context = await loadIntakeContext(deps.db, input.workspaceId, input.identity.threadId);
-  const body = adviceBody(intakeRequest(input, context), { status: 'not_connected' });
-  await insertAdvice(deps.db, input.identity.runId, body);
-  return { body, context, outcome: { status: 'not_connected' } };
-}
-
-function routeContext(
-  input: RunInput,
-  intake: IntakeResult,
-  risk: RouteContext['risk'],
-): RouteContext {
+function routeContext(input: RunInput, context: IntakeContext): RouteContext {
   return {
-    routing: intake.context.routing,
+    routing: context.routing,
     chat: {
       provider: input.provider,
       model: input.settings.model,
       modelLabel: input.settings.modelLabel,
       effort: input.settings.effort,
     },
-    candidates: intake.context.candidates,
-    risk,
-    level: input.level,
+    candidates: context.candidates,
   };
 }
 
-async function ensureTask(s: Session): Promise<void> {
-  if (s.flow.depth === 'direct') return;
-  await decideBuildStyle(s);
+async function runIntake(
+  deps: OrchestratorDeps,
+  input: RunInput,
+  append: Append,
+  current: CurrentTask | null,
+): Promise<{ intake: IntakeResult; decisions: IntakeDecisions }> {
+  const extra = {
+    firstMessage: input.history.length === 0,
+    currentTask: current
+      ? { previousRequest: current.previousRequest, summary: current.summary }
+      : null,
+  };
+  const jevDeps = deps.intake ? { ...deps.intake.deps, timeoutMs: jevTimeout(deps) } : null;
+  const asked = await askIntake(deps.db, jevDeps, input, extra);
+  const jev = asked.outcome.status === 'answered' ? asked.outcome.intake : null;
+  const decisions = decideIntake(jev, {
+    request: input.userRequest,
+    mode: input.mode ?? 'chat',
+    level: input.level,
+    firstMessage: extra.firstMessage,
+    namedFiles: namedFiles([input.userRequest]).length,
+    currentTask: current,
+  });
+  const pick = routeBuilder(routeContext(input, asked.context), decisions).pick;
+  const rules = rulesAnswer(ruleAdvisor(asked.request), decisions, pick);
+  const intake = await saveIntake(deps.db, input, append, asked, {
+    rules,
+    calls: decisions.calls,
+  });
+  return { intake, decisions };
+}
+
+async function ensureTask(s: Session, current: CurrentTask | null): Promise<void> {
   if (s.taskId) return;
+  if (current && !s.continuesTask) {
+    const started = await startNewTask(s.deps.db, s.lease.runId, s.input.userRequest);
+    s.taskId = started.taskId;
+    if (started.closed) await closeTaskSessions(s, started.closed, NEW_TASK_STARTED);
+    await s.append(runEvents.activity('task', 'task', { taskId: s.taskId, opened: true }));
+    return;
+  }
   const joined = await taskForWorkingRun(s.deps.db, s.lease.runId, s.input.userRequest);
   s.taskId = joined.task.taskId;
   await s.append(runEvents.activity('task', 'task', { taskId: s.taskId, opened: joined.opened }));
+}
+
+async function closeTaskSessions(s: Session, taskId: string, reason: string): Promise<void> {
+  await closeKeyedSessions(
+    s.deps.db,
+    s.input.identity.threadId,
+    `key:${builderKey(taskId)}`,
+    reason,
+  ).catch(() => undefined);
 }
 
 async function checkBudget(s: Session): Promise<void> {
@@ -112,59 +135,68 @@ async function checkBudget(s: Session): Promise<void> {
   for (const abort of s.members.values()) abort();
 }
 
+async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEvent> {
+  const { result } = outcome;
+  observeBuilder(s, result);
+  if (result.loop && s.control.reason() !== 'cancelled') {
+    return { type: 'looped', summary: result.loop, open: await refreshPlan(s) };
+  }
+  const open = result.outcome === 'succeeded' ? await refreshPlan(s) : undefined;
+  const changes = result.outcome === 'succeeded' ? await changesSoFar(s) : null;
+  return {
+    type: 'agent_done',
+    role: 'builder',
+    outcome: result.outcome === 'lease_lost' ? 'failed' : result.outcome,
+    error: result.error,
+    ...(open ? { open } : {}),
+    ...(changes ? { large: isLargeDiff(changes.files) } : {}),
+  };
+}
+
 async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null> {
   switch (action.type) {
     case 'ask':
       return ask(s, action);
     case 'spawn': {
-      if (action.role !== 'scout') await ensureTask(s);
-      if (action.role === 'critic' && s.reviews && s.reviews.size > 0) {
-        const collected = await collectedReview(s);
-        if (collected) return collected;
-      }
-      const outcome = buildsInCopy(s, action)
-        ? await buildInCopy(s, action)
-        : await buildAndLand(s, action);
-      const { result, steps, groups, large, lanes, parallel, verdict } = outcome;
+      const copied = action.role === 'builder' && s.needsCopy;
+      const outcome = copied ? await buildInCopy(s, action) : await buildAndLand(s, action);
+      const { result } = outcome;
       if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
       await publish(s);
       if (result.error === APPROVAL_TIMEOUT_MESSAGE) throw new CheckpointTimeout();
-      if (s.budgetHit && s.control.reason() === null)
-        return { type: 'budget_exceeded', limit: s.budgetHit, ticked: result.ticked };
+      if (s.budgetHit && s.control.reason() === null) {
+        return { type: 'budget_exceeded', limit: s.budgetHit };
+      }
+      if (action.role === 'builder') return afterBuilder(s, outcome);
       return {
         type: 'agent_done',
         role: action.role,
         outcome: result.outcome,
         error: result.error,
-        ...(steps ? { steps } : {}),
-        ...(groups && groups.length > 0 ? { groups } : {}),
-        ...(large && large.length > 0 ? { large } : {}),
-        ...(lanes && lanes.length > 1 ? { lanes } : {}),
-        ...(parallel ? { parallel } : {}),
-        ...(result.ticked.length > 0 ? { ticked: result.ticked } : {}),
-        ...(verdict ? { verdict } : {}),
+        ...(outcome.verdict ? { verdict: outcome.verdict } : {}),
       };
     }
-    case 'spawn_group':
-      await ensureTask(s);
-      return runGroup(s, action.stepIndexes, action.lanes ?? []);
-    case 'judge':
-      return judge(s, action.role);
     case 'wrap_up': {
       await recordShortcuts(s).catch(() => null);
       const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true).catch(
         () => null,
       );
-      const files = changes?.files.length ?? 0;
-      return { type: 'wrapped', filesChanged: files, asksToKeep: asksToKeep(s.flow.level, files) };
+      return { type: 'wrapped', filesChanged: changes?.files.length ?? 0 };
     }
     case 'revert':
       await revertRun(s.deps.db, s.input.workspaceId, s.lease.runId, true);
+      s.closeReason = 'reverted';
       return { type: 'reverted' };
     case 'finish':
       await finish(s, action.status, action.reason, action.incomplete ?? null);
       return null;
   }
+}
+
+function withNotes(text: string, notes: readonly string[], hasMessage: boolean): string {
+  if (notes.length === 0) return text;
+  const joined = notes.join('\n\n');
+  return text || hasMessage ? `${text}\n\n${joined}` : joined;
 }
 
 async function finish(
@@ -173,9 +205,13 @@ async function finish(
   reason: string | null,
   incomplete: string | null = null,
 ) {
+  if (status !== 'succeeded') s.closeReason ??= status;
+  await cleanupCopies(s).catch(() => undefined);
+  await settleObservations(s);
   const verdict = s.results.some((result) => result.role === 'critic') ? s.flow.verdict : null;
   const assumed = s.assumption ? assumptionLine(s.assumption) : null;
-  const notes = [assumed, incomplete].filter((line): line is string => line !== null);
+  const stopped = status === 'failed' && reason ? reason : null;
+  const notes = [assumed, stopped, incomplete].filter((line): line is string => line !== null);
   const text = withNotes(
     finalText(s.results, verdict, s.findings, s.message !== null, s.checkBodies),
     notes,
@@ -207,12 +243,6 @@ async function finish(
   }
 }
 
-function withNotes(text: string, notes: readonly string[], hasMessage: boolean): string {
-  if (notes.length === 0) return text;
-  const joined = notes.join('\n\n');
-  return text || hasMessage ? `${text}\n\n${joined}` : joined;
-}
-
 export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise<void> {
   const input = await loadRunInput(deps.db, lease.runId);
   const append: Append = (event, options) => appendRunEvent(deps.db, lease, event, options);
@@ -223,49 +253,25 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
     const mode = input.mode ?? 'chat';
     const root = input.projectRoots[0];
-    const projectStyle =
-      mode === 'do' && root !== undefined
-        ? await projectBuildStyle(deps.db, lease.runId)
-        : NO_PROJECT_STYLE;
-    const intake = await decideIntake(deps, input, append, projectStyle);
-    const risk = trustedRisk(mode, intake.body.jev);
-    const intakeGate = intake.body.gate?.decision ?? null;
-    const requestFiles = namedFiles([input.userRequest]).length;
-    const mechanical = mechanicalChange(
-      mode,
-      risk,
-      input.userRequest,
-      requestFiles,
-      intake.body.jev,
-    );
-    const depth = refineDepth(
-      chooseDepth(mode, risk, intake.body.jev, intakeGate),
-      risk,
-      requestFiles,
-      intake.body.jev,
-      mechanical,
-    );
-    if (worthRecording(mechanical))
-      await noteIntakeMechanical(deps.db, lease.runId, mechanicalNote(mechanical));
-    const review = reviewIntent(mode, intake.body.jev, input.userRequest);
-    const note = intakeDepthNote(depth, review);
-    if (note) await noteIntakeDepth(deps.db, lease.runId, { depth: depth.depth, reason: note });
-    const vague =
-      mode === 'do' &&
-      input.history.length === 0 &&
-      isVagueRequest(input.userRequest, requestFiles, intake.body.jev);
+    const doing = mode === 'do' && root !== undefined;
+    const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
+    const { intake, decisions } = await runIntake(deps, input, append, current);
+    const answers = decisions.start === 'answer';
+    const git = doing && (await isGitWorkTree(root));
     const limits = baseLimits(deps, input.provider);
-    const worktrees = mode === 'do' && root !== undefined && (await isGitWorkTree(root));
     await insertOrchestration(deps.db, {
       runId: lease.runId,
-      depth: depth.depth,
-      depthSource: depth.source,
-      risk,
+      depth: answers ? 'direct' : 'execute',
+      depthSource: Object.values(decisions.calls).some((call) => call.source === 'jev')
+        ? 'jev'
+        : 'rules',
+      risk: decisions.risk,
       routing: intake.context.routing,
       activeLimitMs: limits.activeLimitMs,
       toolCallLimit: limits.toolCallLimit,
       costCapUsd: limits.costCapUsd,
     });
+    const busy = git && !answers ? await repoBusy(deps.db, lease.runId, root) : false;
     const s: Session = {
       deps,
       lease,
@@ -279,17 +285,14 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
               model: intake.context.jevModel,
             }
           : null,
-      route: routeContext(input, intake, risk),
+      route: routeContext(input, intake.context),
+      facts: { trivial: decisions.trivial, destructive: decisions.destructive },
       intake,
-      flow: initialFlow(depth.depth, risk, input.level, worktrees, review),
+      flow: initialFlow(decisions.risk, input.level, decisions.review),
       routes: new Map(),
-      planned: new Map(),
-      plannedCalled: false,
       plan: [],
-      planVersion: null,
       taskId: null,
-      inPlaceUsed: false,
-      snapshotTaken: false,
+      continuesTask: decisions.continues === true,
       message: null,
       results: [],
       findings: [],
@@ -300,46 +303,35 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       budgetHit: null,
       members: new Map(),
       checkpoints: 0,
-      names: new Map(),
-      research: [],
-      architectNotes: null,
-      slots: new Slots(deps.parallelLimit ?? ORCHESTRATION_PARALLEL_LIMIT),
-      groups: 0,
-      parallelNoted: false,
-      git: worktrees,
-      checks:
-        mode === 'do' && root !== undefined
-          ? await projectChecks(deps.db, lease.runId, root)
-          : null,
+      git,
+      checks: doing ? await projectChecks(deps.db, lease.runId, root) : null,
       checkRounds: 0,
       checkBodies: [],
-      reviews: null,
-      projectStyle,
+      checkLines: [],
+      projectStyle: doing ? await projectBuildStyle(deps.db, lease.runId) : NO_PROJECT_STYLE,
       buildStyle: 'off',
-      buildStyleDecided: false,
-      lanePlacement: null,
       assumption: null,
+      needsCopy: git && needsCopyFor(input.provider, input.level, decisions.destructive, busy),
+      copyRunId: null,
+      snapshotTaken: false,
+      closeReason: null,
+      observations: [],
+      jevDiffs: await jevDiffsAllowed(deps.db, input.workspaceId),
     };
     session = s;
+    if (doing && !answers) {
+      decideBuildStyle(s);
+      await ensureTask(s, current);
+    }
     budgetTimer = setInterval(
       () => void checkBudget(s).catch(() => undefined),
       deps.budgetPollMs ?? 1000,
     );
-    const handling = vague ? vagueHandling(input.level) : null;
-    if (handling === 'assume') {
+    if (decisions.assume) {
       const [likely] = interpretations(intakeResponse(s));
       if (likely) await assume(s, likely);
     }
-    await drive(
-      s,
-      handling === 'ask'
-        ? 'interpret'
-        : intakeGate === 'ask' && mode === 'do'
-          ? 'ask'
-          : intakeGate === 'act'
-            ? 'act'
-            : 'fallback',
-    );
+    await drive(s, decisions);
   } catch (error) {
     if (error instanceof LeaseLostError || control.reason() === 'lease_lost') return;
     await failSafely(append, error);
@@ -352,27 +344,15 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
 
 async function settleSession(s: Session): Promise<void> {
   for (const abort of s.members.values()) abort();
-  await s.reviews?.collect().catch(() => undefined);
   await cleanupCopies(s).catch(() => undefined);
-  if (s.taskId) {
-    await closeKeyedSessions(
-      s.deps.db,
-      s.input.identity.threadId,
-      `key:${s.taskId}:`,
-      SESSION_CLOSE_REASONS.orchestrationDone,
-    ).catch(() => undefined);
-  }
+  if (s.taskId && s.closeReason) await closeTaskSessions(s, s.taskId, TASK_SESSION_CLOSED);
   if (s.input.mode === 'do') await recordKeptChanges(s.deps.db, s.input.workspaceId, s.lease.runId);
 }
 
-async function drive(
-  s: Session,
-  intake: Extract<FlowEvent, { type: 'start' }>['intake'],
-): Promise<void> {
-  let result = nextStep(s.flow, { type: 'start', intake });
+async function drive(s: Session, decisions: IntakeDecisions): Promise<void> {
+  let result = nextStep(s.flow, { type: 'start', start: decisions.start });
   for (;;) {
     s.flow = result.state;
-    await noteSequential(s);
     if (result.action.type === 'finish') {
       await perform(s, result.action);
       return;
@@ -392,37 +372,7 @@ async function drive(
     if (!event) return;
     if (s.control.reason() === 'cancelled' && event.type !== 'stopped') event = { type: 'stopped' };
     result = nextStep(s.flow, event);
-    await recordStepOutcome(s, event, result.action);
   }
-}
-
-async function noteSequential(s: Session): Promise<void> {
-  if (s.flow.worktrees || s.flow.groups.length === 0 || s.parallelNoted) return;
-  const note = sequentialReason(s.flow.groups, s.flow.steps);
-  if (!note) return;
-  s.parallelNoted = true;
-  await save(s, { parallelNote: note });
-}
-
-function reopenedSteps(event: FlowEvent, action: FlowAction): number[] {
-  if (event.type !== 'judged' || !event.open || event.open.length === 0) return [];
-  if (action.type !== 'spawn' || action.reason !== 'continue') return [];
-  return spanOf(action);
-}
-
-async function recordStepOutcome(s: Session, event: FlowEvent, action: FlowAction) {
-  const last = s.results.at(-1);
-  const status = statusAfterJudging(event, action, last);
-  if (!last || !status) return;
-  if (status === 'completed') {
-    const reopened = reopenedSteps(event, action);
-    const done = last.steps.filter((index) => !reopened.includes(index));
-    await markPlanSteps(s, done, status, last.runId);
-    if (reopened.length > 0) await markPlanSteps(s, reopened, 'in_progress', last.runId);
-    return;
-  }
-  const open = last.steps.find((index) => !last.ticked.includes(index)) ?? last.stepIndex;
-  await markPlanStep(s, open, status, last.runId);
 }
 
 async function failSafely(append: Append, error: unknown): Promise<void> {

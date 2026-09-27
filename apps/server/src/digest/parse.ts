@@ -1,5 +1,6 @@
 import {
   DIGEST_DRAFT_MAX_LENGTH,
+  DIGEST_HEADLINE_MAX_LENGTH,
   DIGEST_LINE_MAX_LENGTH,
   DIGEST_LINES_MAX,
   DIGEST_REASON_MAX_LENGTH,
@@ -7,12 +8,20 @@ import {
   digestReplySchema,
   type DigestBody,
   type DigestLine,
+  type DigestStats,
   type DigestSuggestion,
 } from '@spark-outpost/contracts';
+import { fallbackHeadline } from './stats.ts';
 
 function clip(text: string, max: number): string {
   const clean = text.replace(/\s+/g, ' ').trim();
   return clean.length <= max ? clean : `${clean.slice(0, max - 1).trimEnd()}…`;
+}
+
+function headlineOf(raw: string | undefined, stats: DigestStats): string {
+  const clean = raw?.replace(/\s+/g, ' ').trim();
+  if (clean && clean.length > 0 && clean.length <= DIGEST_HEADLINE_MAX_LENGTH) return clean;
+  return fallbackHeadline(stats);
 }
 
 function jsonPart(text: string): string | null {
@@ -22,7 +31,11 @@ function jsonPart(text: string): string | null {
   return start >= 0 && end > start ? unfenced.slice(start, end + 1) : null;
 }
 
-function structured(text: string, chatIds: ReadonlySet<string>): DigestBody | null {
+function structured(
+  text: string,
+  chatIds: ReadonlySet<string>,
+  stats: DigestStats,
+): DigestBody | null {
   const json = jsonPart(text);
   if (!json) return null;
   let value: unknown;
@@ -51,19 +64,23 @@ function structured(text: string, chatIds: ReadonlySet<string>): DigestBody | nu
       suggestions.push({ chatId: suggestion.chatId, reason, draft });
     }
   }
-  return { lines, suggestions, structured: true };
+  return { headline: headlineOf(reply.data.headline, stats), lines, suggestions, structured: true };
 }
 
-function bullets(text: string): DigestBody {
+function bullets(text: string, stats: DigestStats): DigestBody {
   const lines = text
     .split('\n')
     .map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '').trim())
     .filter((line) => line.length > 0 && !/^[{}[\]]/.test(line))
     .slice(0, DIGEST_LINES_MAX)
     .map((line): DigestLine => ({ text: clip(line, DIGEST_LINE_MAX_LENGTH), chatId: null }));
-  return { lines, suggestions: [], structured: false };
+  return { headline: fallbackHeadline(stats), lines, suggestions: [], structured: false };
 }
 
-export function parseDigestReply(text: string, chatIds: ReadonlySet<string>): DigestBody {
-  return structured(text, chatIds) ?? bullets(text);
+export function parseDigestReply(
+  text: string,
+  chatIds: ReadonlySet<string>,
+  stats: DigestStats,
+): DigestBody {
+  return structured(text, chatIds, stats) ?? bullets(text, stats);
 }

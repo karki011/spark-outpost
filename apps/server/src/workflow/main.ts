@@ -1,6 +1,5 @@
 import { createIntakeRecorder } from '../advisor/intake-recorder.ts';
 import { loadConfig } from '../config.ts';
-import { Slots } from '../orchestration/slots.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { assertMigrated } from '../persistence/migrate.ts';
 import { listen } from '../persistence/notifications.ts';
@@ -35,7 +34,6 @@ const worker = startWorker({
     openLimit: config.SESSION_OPEN_LIMIT,
   },
   concurrency: config.WORKER_CONCURRENCY,
-  agentSlots: new Slots(config.PARALLEL_AGENT_LIMIT),
   ...(config.ORCHESTRATION_COST_CAP_USD
     ? { budget: { costCapUsd: config.ORCHESTRATION_COST_CAP_USD } }
     : {}),
@@ -52,7 +50,6 @@ const shutdown = async () => {
   await listener.close();
   await approvalListener.close();
   await worker.stop();
-  await intake.settled();
   await db.end();
   process.exit(0);
 };

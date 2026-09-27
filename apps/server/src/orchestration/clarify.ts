@@ -5,15 +5,12 @@ import {
   clarifyOptionId,
   type Category,
   type InvolvementLevel,
-  type JevIntake,
 } from '@spark-outpost/contracts';
+import { asksWhenUnsure } from '../advisor/gate.ts';
 import type { SystemOneResponse } from '../advisor/intake-questions.ts';
-import { ASK_AT } from '../advisor/gate.ts';
 import type { CheckpointCard } from './checkpoint.ts';
-import { noulVerdict } from './parallel-choice.ts';
 
 export const INTERPRETATION_QUESTION = 'What should change?';
-export const VAGUE_REASON = 'The request does not say what to change, so Jev asks first.';
 export const MIN_INTERPRETATIONS = 2;
 export const MAX_INTERPRETATIONS = 4;
 const LIKELY_ENOUGH = 0.1;
@@ -35,33 +32,20 @@ const FALLBACK_INTERPRETATIONS = [INTERPRETATIONS.feature!, INTERPRETATIONS.refa
 
 const VAGUE_GOAL =
   /\b(?:better|improve|improved|nicer|cleaner|clean up|tidy|polish|enhance|optimi[sz]e|modernise|modernize|fix it|sort out)\b/i;
-const BROAD_SCOPES: readonly string[] = ['few_modules', 'codebase'];
 
 function words(request: string): number {
   return request.trim().split(/\s+/).filter(Boolean).length;
 }
 
-function unsureBroadScope(jev: JevIntake | null): boolean {
-  if (!jev?.scope || !BROAD_SCOPES.includes(jev.scope)) return false;
-  return (jev.confidences.scope ?? 0) < ASK_AT;
-}
-
-export function isVagueRequest(
-  request: string,
-  namedFiles: number,
-  jev: JevIntake | null,
-): boolean {
+export function vagueByRule(request: string, namedFiles: number): boolean {
   if (namedFiles > 0) return false;
-  const asked = jev?.vague === undefined ? null : noulVerdict(jev.vague).value;
-  if (asked !== null) return asked;
-  const short = words(request) <= SHORT_REQUEST_WORDS;
-  return short && (VAGUE_GOAL.test(request) || unsureBroadScope(jev));
+  return words(request) <= SHORT_REQUEST_WORDS && VAGUE_GOAL.test(request);
 }
 
 export type VagueHandling = 'ask' | 'assume';
 
 export function vagueHandling(level: InvolvementLevel): VagueHandling {
-  return level === 'hands-on' || level === 'balanced' ? 'ask' : 'assume';
+  return asksWhenUnsure(level) ? 'ask' : 'assume';
 }
 
 function rankedCategories(response: SystemOneResponse | null): [Category, number][] {
@@ -117,7 +101,6 @@ export function interpretationCard(choices: readonly string[], reason: string): 
       },
       { optionId: CHECKPOINT_OPTION.stop, name: 'Stop', kind: 'reject_once' },
     ],
-    depths: [],
   };
 }
 

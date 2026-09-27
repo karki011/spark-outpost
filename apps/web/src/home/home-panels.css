@@ -41,26 +41,6 @@
   font-size: 12px;
 }
 
-.spend-save {
-  display: grid;
-  gap: 2px;
-  margin: 14px 0 0;
-  padding: 10px 12px;
-  border-radius: var(--r-sm);
-  background: var(--raise);
-}
-
-.spend-save b {
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.spend-save small {
-  color: var(--muted);
-  font-size: 12px;
-}
-
 .hpanel .hlink {
   display: block;
   margin: 12px 0 0 -6px;
