@@ -56,7 +56,7 @@ describe('chat settings', () => {
     expect(initial.body.settings).toEqual({
       provider: 'claude',
       model: null,
-      effort: 'high',
+      effort: 'medium',
       permission: 'ask',
       level: 'balanced',
       routing: 'pinned',

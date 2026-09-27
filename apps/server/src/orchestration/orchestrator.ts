@@ -66,6 +66,7 @@ function routeContext(input: RunInput, context: IntakeContext): RouteContext {
       modelLabel: input.settings.modelLabel,
       effort: input.settings.effort,
     },
+    providerEffort: context.defaultEfforts[input.provider] ?? null,
     candidates: context.candidates,
   };
 }

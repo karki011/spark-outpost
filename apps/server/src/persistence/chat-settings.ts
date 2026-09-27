@@ -9,6 +9,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { effectiveDefaultModel } from '../model-cards/cards.ts';
 import { catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
+import { firstReportedEffort, reportedEfforts } from '../providers/efforts.ts';
 import type { Queryable } from './db.ts';
 import { InvalidDefaultError } from './setup.ts';
 
@@ -32,7 +33,7 @@ interface SettingsRow {
 interface ConnectionDefaults {
   provider: ProviderId;
   model: string | null;
-  effort: string;
+  effort: string | null;
   permission: string;
   level: InvolvementLevel;
 }
@@ -63,12 +64,20 @@ async function connectionDefaults(
   db: Queryable,
   workspaceId: string,
 ): Promise<Map<ProviderId, ConnectionDefaults>> {
-  const { rows } = await db.query<ConnectionDefaults>(
-    `SELECT provider, model, effort, permission, level FROM provider_connections
-     WHERE workspace_id = $1 AND disconnected_at IS NULL ORDER BY provider`,
+  const { rows } = await db.query<ConnectionDefaults & { reported: CapabilityOption[] | null }>(
+    `SELECT pc.provider, pc.model, pc.effort, pc.permission, pc.level, cap.efforts AS reported
+     FROM provider_connections pc
+     LEFT JOIN provider_capabilities cap
+       ON cap.workspace_id = pc.workspace_id AND cap.provider = pc.provider
+     WHERE pc.workspace_id = $1 AND pc.disconnected_at IS NULL ORDER BY pc.provider`,
     [workspaceId],
   );
-  return new Map(rows.map((row) => [row.provider, row]));
+  return new Map(
+    rows.map(({ reported, ...row }) => {
+      const offered = reportedEfforts(row.provider, reported).map((option) => option.id);
+      return [row.provider, { ...row, effort: firstReportedEffort([row.effort], offered) }];
+    }),
+  );
 }
 
 export function effectiveSettings(

@@ -106,7 +106,7 @@ describe('Z.ai connection', () => {
         { id: 'haiku', label: 'GLM-5.3-Flash' },
       ],
       permission: 'ask',
-      effort: 'high',
+      effort: 'medium',
     });
     const stored = await t.db.query('SELECT * FROM provider_connections');
     expect(JSON.stringify(stored.rows)).not.toContain(ZAI_KEY);

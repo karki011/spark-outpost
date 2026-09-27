@@ -28,5 +28,6 @@ export const candidates: AdvisorCandidate[] = [
 export const context = (routing: 'auto' | 'pinned'): RouteContext => ({
   routing,
   chat: { provider: 'claude', model: 'sonnet', modelLabel: null, effort: 'medium' },
+  providerEffort: null,
   candidates,
 });
