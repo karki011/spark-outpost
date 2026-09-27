@@ -74,13 +74,13 @@ describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, ()
     const steps = outputs.filter((output) => output.kind.startsWith('step_'));
     expect(steps.slice(0, 8)).toEqual([
       { kind: 'step_started', name: 'Using Smart Two · high effort' },
-      { kind: 'step_finished', name: 'Using Smart Two · high effort' },
+      expect.objectContaining({ kind: 'step_finished', name: 'Using Smart Two · high effort' }),
       { kind: 'step_started', name: 'Recalled 1 earlier message' },
-      { kind: 'step_finished', name: 'Recalled 1 earlier message' },
+      expect.objectContaining({ kind: 'step_finished', name: 'Recalled 1 earlier message' }),
       { kind: 'step_started', name: THINKING_STEP },
-      { kind: 'step_finished', name: THINKING_STEP },
+      expect.objectContaining({ kind: 'step_finished', name: THINKING_STEP }),
       { kind: 'step_started', name: 'Read context', tool: true, toolKind: 'read' },
-      { kind: 'step_finished', name: 'Read context' },
+      expect.objectContaining({ kind: 'step_finished', name: 'Read context' }),
     ]);
     expect(text).toContain('Hello there\n\nmode=read-only model=smart-2 effort=high');
     expect(text).toContain('User: earlier question');

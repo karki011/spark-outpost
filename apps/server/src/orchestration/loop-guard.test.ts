@@ -3,7 +3,7 @@ import type { ProviderOutput } from '../providers/provider.ts';
 import { createLoopGuard } from './loop-guard.ts';
 
 const call = (name: string, toolKind = 'read', target?: string): ProviderOutput => ({
-  kind: 'step_started',
+  kind: 'step_finished',
   name,
   tool: true,
   toolKind,

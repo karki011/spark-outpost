@@ -40,7 +40,7 @@ export function createLoopGuard(
   let summary: string | null = null;
   return {
     observe(output) {
-      if (!settings || summary || output.kind !== 'step_started' || !output.tool) return;
+      if (!settings || summary || output.kind !== 'step_finished' || !output.tool) return;
       if (EDIT_KINDS.has(output.toolKind ?? '')) {
         last = null;
         count = 0;
