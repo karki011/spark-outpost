@@ -3,6 +3,8 @@ import './composer/composer-popovers.css';
 import './project/project.css';
 import {
   useCallback,
+  useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -24,6 +26,7 @@ import { AttachmentChips } from './attachments/AttachmentChips.tsx';
 import type { AttachmentsState } from './attachments/use-attachments.ts';
 import { ContextRing } from './composer/ContextRing.tsx';
 import { ModelPicker } from './composer/ModelPicker.tsx';
+import { takeDraft, usePendingDraft } from './composer/pending-draft.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
 import { ContextBar } from './project/ContextBar.tsx';
 import { MentionPicker } from './project/MentionPicker.tsx';
@@ -47,6 +50,7 @@ interface ComposerProps {
   onSend: (content: string, attachments: Attachment[]) => Promise<void>;
   onStop: () => void;
   onAudit?: () => void;
+  autoFocus?: boolean;
 }
 
 const MAX_ROWS = 5;
@@ -67,10 +71,13 @@ export function Composer({
   onSend,
   onStop,
   onAudit,
+  autoFocus = true,
 }: ComposerProps) {
   const [draft, setDraft] = useState('');
   const [repoOpen, setRepoOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputId = useId();
+  const pendingDraft = usePendingDraft(conversationId);
   const repoPopover = usePopover<HTMLButtonElement, HTMLDivElement>();
   const hasRepos = repos.length > 0;
   const addFromRepo = (file: RepoFile) => attachments.addFromRepo(file.projectId, file);
@@ -98,6 +105,23 @@ export function Composer({
       ),
     [attachments.items],
   );
+  const [appliedDraft, setAppliedDraft] = useState<string | null>(null);
+  if (pendingDraft !== appliedDraft) {
+    setAppliedDraft(pendingDraft);
+    if (pendingDraft !== null) setDraft(pendingDraft);
+  }
+
+  useEffect(() => {
+    if (pendingDraft === null) return;
+    takeDraft(conversationId);
+    requestAnimationFrame(() => {
+      const input = textareaRef.current;
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    });
+  }, [pendingDraft, conversationId]);
+
   const hasText = draft.trim().length > 0;
   const canSend =
     (hasText || attachments.items.length > 0) &&
@@ -150,7 +174,7 @@ export function Composer({
         <p className="composer-notice" role="status">
           {attachments.notice}
         </p>
-        <label className="sr-only" htmlFor="composer-input">
+        <label className="sr-only" htmlFor={inputId}>
           Message
         </label>
         {mention.open && (
@@ -172,8 +196,8 @@ export function Composer({
         )}
         <textarea
           ref={textareaRef}
-          id="composer-input"
-          autoFocus
+          id={inputId}
+          autoFocus={autoFocus}
           value={draft}
           rows={Math.min(MAX_ROWS, Math.max(1, draft.split('\n').length))}
           maxLength={MESSAGE_MAX_LENGTH}

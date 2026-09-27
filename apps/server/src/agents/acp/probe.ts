@@ -8,7 +8,8 @@ import type { SecretStore } from '../../setup/secrets.ts';
 import type { AgentDefinition, AgentLaunch } from './agents.ts';
 import { startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
-import { offeredCapabilities, sessionCapabilities } from './capabilities.ts';
+import { capabilitiesFrom, offeredCapabilities, sessionCapabilities } from './capabilities.ts';
+import { sessionOptions } from './legacy-options.ts';
 import { CLIENT_CAPABILITIES, CLIENT_INFO } from './client-info.ts';
 import { toProviderError } from './errors.ts';
 
@@ -46,7 +47,23 @@ export async function probeCapabilities(
         mcpServers: [],
         _meta: definition.conversationSessionMeta ?? null,
       });
-      return offeredCapabilities(sessionCapabilities(session), definition.offers);
+      const report = sessionCapabilities(session);
+      if (report.efforts.length > 0) return offeredCapabilities(report, definition.offers);
+      const modelOption = sessionOptions(session).find((option) => option.category === 'model');
+      if (!modelOption) return offeredCapabilities(report, definition.offers);
+      const efforts = new Map(report.efforts.map((effort) => [effort.id, effort]));
+      for (const model of report.models) {
+        if (model.id === report.defaultModel) continue;
+        const response = await ctx.request(acp.methods.agent.session.setConfigOption, {
+          sessionId: session.sessionId,
+          configId: modelOption.id,
+          value: model.id,
+        });
+        for (const effort of capabilitiesFrom(response.configOptions).efforts) {
+          if (!efforts.has(effort.id)) efforts.set(effort.id, effort);
+        }
+      }
+      return offeredCapabilities({ ...report, efforts: [...efforts.values()] }, definition.offers);
     });
     const timeout = delay(options.timeoutMs ?? DEFAULT_TIMEOUT_MS, undefined, {
       signal: timer.signal,

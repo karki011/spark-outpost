@@ -1,6 +1,6 @@
 # Accessibility rules
 
-Spark Outpost targets **WCAG 2.2 AA** in every theme (Light, Graphite, Apricot, Void, Fjord, Moss, Lagoon, Plum, Sage, High contrast, and the system light and dark pair). This page lists the rules we enforce, where each one comes from, and how it is checked.
+Spark Outpost targets **WCAG 2.2 AA** in every theme (Light, Graphite, Apricot, Void, Fjord, Moss, Lagoon, Plum, Sage, Aurora, Iris, High contrast, and the system light and dark pair). This page lists the rules we enforce, where each one comes from, and how it is checked.
 
 The per-theme before and after numbers are in [`accessibility-report.html`](accessibility-report.html).
 
@@ -43,6 +43,7 @@ Keep feature CSS on these tokens and never hard-code palette values (see `AGENTS
 | `--success`                    | Added lines, added counts                                      | ≥ 4.5:1 as text; hue ≥ 60° from `--danger`                           |
 | `--line`                       | Decorative dividers (not needed to identify a control)         | Not enforced                                                         |
 | `--line-strong`                | Borders of text inputs and the composer                        | ≥ 3:1 against canvas, panel and raise                                |
+| `--c-claude`, `--c-codex`, `--c-zai`, `--c-jev` | Provider colours: cost bar slices, legend swatches, active Agent TV wires | ≥ 3:1 against canvas, rail, panel and raise |
 
 Use `color: var(--accent-text)`, not `var(--accent)`, whenever accent colour is used for text or `currentColor` icons.
 
@@ -58,16 +59,46 @@ These three themes follow Apricot's recipe: tinted surfaces instead of neutral g
 
 All three pass every pair in `pnpm a11y:contrast` with only the standard allowlist exempt.
 
+### Aurora and Iris
+
+Aurora and Iris follow the same recipe, and each block defines every token itself. Their provider colours come from the shared light and dark sets described under [Provider colours](#provider-colours).
+
+| Theme  | Mood                             | Canvas / rail / panel             | Accent (fill / text)  | Success / danger, hue gap   |
+| ------ | -------------------------------- | --------------------------------- | --------------------- | --------------------------- |
+| Aurora | Lime glow on a night-violet sky  | `#110f26` / `#0b091c` / `#18152f` | `#c1f354` / `#c4f16a` | `#78d694` / `#fc7182`, 137° |
+| Iris   | Lilac light, indigo buttons      | `#f3f0fe` / `#e8deff` / `#fdfcff` | `#5b3df5` / `#5234e6` | `#1d6e38` / `#b63039`, 128° |
+
+- **Aurora:** the violet `#2d1b69` is used only for the user bubble, where its text reaches 12.2:1. Button labels use the dark `--accent-ink` `#150e34` on the lime fill (14.2:1), and the mascot eye matches the canvas.
+- **Iris:** the lilac `#e8deff` is the rail. Buttons are `#5b3df5` with white labels (6.1:1). The mascot eye is white, because a dark eye on the indigo body would reach only 3.1:1.
+
+Both pass every pair in `pnpm a11y:contrast` with only the standard allowlist exempt.
+
+### Provider colours
+
+The provider colours fill the cost bar and its legend swatches in the work panel, and they draw the active wires and packets in Agent TV. They are never used as text. The audit checks each one as non-text UI at 3:1 against canvas, rail, panel and raise.
+
+Each provider keeps one OKLCH hue in every theme: Claude 40°, Codex 225°, Z.ai 115° and Jev 330°. Only the lightness and chroma change. `:root` holds a darker light set that serves every light theme. The system dark block and one grouped block for Graphite, Void, Moss, Plum and Aurora keep the original set.
+
+| Set   | Claude                 | Codex                    | Z.ai                   | Jev                    | Lowest ratio          |
+| ----- | ---------------------- | ------------------------ | ---------------------- | ---------------------- | --------------------- |
+| Light | `oklch(0.605 0.15 40)` | `oklch(0.575 0.105 225)` | `oklch(0.58 0.13 115)` | `oklch(0.615 0.2 330)` | 3.20:1 (Iris rail)    |
+| Dark  | `oklch(0.68 0.15 40)`  | `oklch(0.64 0.12 225)`   | `oklch(0.66 0.14 115)` | `oklch(0.62 0.2 330)`  | 3.87:1 (Jev on Moss)  |
+
+Before this change, the original colours fell to about 2.4:1 on the light rails. The shared chroma for Codex is 0.105 in the light set, because 0.12 falls outside sRGB at that lightness and would shift the hue.
+
+Two uses are decorative and are not held to 3:1. The lighter shades that mark cheaper model tiers in the cost bar (36% and 62% mixes with the panel) are allowlisted, because the legend beside the bar names each slice with its cost, and the bar has the same text as its `aria-label`. The soft Jev glow behind the Agent TV stage and the halo around moving packets are 2–26% tints and are pure decoration.
+
 ### Automated check
 
-`pnpm a11y:contrast` (part of `pnpm check`) resolves the tokens for every theme from `apps/web/public/theme.css`, `chat/approvals/diff-view.css` and `chat/markdown/code-tokens.css`. It composites the translucent layers (`color-mix`, `rgba`), then checks 110 text and UI pairings plus one hue check per theme. It prints a table per theme and exits non-zero on any failure. The pairings are listed in `scripts/contrast/*-pairs.ts`. When a feature puts text on a new surface, add a pair for it.
+`pnpm a11y:contrast` (part of `pnpm check`) resolves the tokens for every theme from `apps/web/public/theme.css`, `chat/approvals/diff-view.css` and `chat/markdown/code-tokens.css`. It composites the translucent layers (`color-mix`, `rgba`), then checks 142 text and UI pairings plus one hue check per theme. It prints a table per theme and exits non-zero on any failure. The pairings are listed in `scripts/contrast/*-pairs.ts`. When a feature puts text on a new surface, add a pair for it.
 
 The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every entry gives its reason:
 
 - `disabled.button-label` and `disabled.button-ghost`: disabled controls, exempt under WCAG 1.4.3.
 - `offline.zz`: the decorative, `aria-hidden` "z" glyphs on the offline mascot.
+- `provider.cost-tier-shade`: the lighter tier shades in the cost bar, which repeat what the legend text says.
 
-`tests/browser/accessibility.spec.ts` runs axe-core on the main screens in all ten themes. It fails on any serious or critical `color-contrast` or `aria-*` violation.
+`tests/browser/accessibility.spec.ts` runs axe-core on the main screens (chat with work panel, Settings and Home) in all twelve themes. It fails on any serious or critical `color-contrast` or `aria-*` violation.
 
 ## Typography
 

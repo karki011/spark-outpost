@@ -21,14 +21,14 @@ import {
 import { plansFirst } from './depth.ts';
 import { reviewNet, withBuilderStyle } from './lean.ts';
 import { labelFor, nameFor, recordRoute, resolveRoute } from './member-routes.ts';
-import { markPlanStep, stepTicker } from './plan-progress.ts';
+import { markPlanStep, recordsOwnPlan, stepTicker } from './plan-progress.ts';
 import { chainsFromReply, stepNotesFromReply, withFilesLines } from './chains.ts';
 import { largeFromReply, parallelFromReply } from './parallel.ts';
 import type { ParallelVerdicts } from './parallel-choice.ts';
 import { decideParallel } from './parallel-jev.ts';
 import { reviewFindings, reviewVerdict } from './review.ts';
 import type { MemberRoute } from './routing.ts';
-import { publish, routeKey, type MemberResult, type Session } from './session.ts';
+import { fitToolLimit, publish, routeKey, type MemberResult, type Session } from './session.ts';
 import { spanOf } from './spans.ts';
 import type { Spawn } from './transitions.ts';
 
@@ -336,7 +336,11 @@ async function runChild(
     const result = await executeChildRun(
       s.deps,
       lease,
-      { onOutput: counter(s, counted, ticker.observe), backupAlsoFor: s.lease.runId },
+      {
+        onOutput: counter(s, counted, ticker.observe),
+        backupAlsoFor: s.lease.runId,
+        recordsPlan: recordsOwnPlan(s, spawn.role),
+      },
       s.append,
     );
     await ticker.settled();
@@ -463,9 +467,11 @@ export async function runMember(
   const resolved = await resolveRoute(s, spawn);
   const { route } = resolved;
   for (const stepIndex of spanOf(spawn)) s.routes.set(routeKey(spawn.role, stepIndex), route);
-  const name = await nameFor(s, spawn.role, place?.key ?? routeKey(spawn.role, spawn.stepIndex));
+  const nameKey = routeKey(spawn.role, spawn.from ?? spawn.stepIndex);
+  const name = await nameFor(s, spawn.role, place?.key ?? nameKey);
   const naming = { label: labelFor(spawn.role, route.pick, name), name };
   const announce: Announce = async (runId) => {
+    fitToolLimit(s, route.pick.provider);
     await recordRoute(s, spawn, resolved, runId, name);
     if (spawn.role === 'builder' && !place) {
       await markPlanStep(s, spawn.stepIndex, 'in_progress', runId);

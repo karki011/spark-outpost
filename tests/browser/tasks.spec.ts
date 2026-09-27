@@ -42,14 +42,12 @@ test('a planned run shows a task card and the work panel with plan history and a
   await expect(done).toBeVisible();
 
   await panel.getByRole('tab', { name: 'Plan' }).click();
-  await expect(panel.locator('.vbadge')).toHaveText('v3');
+  await expect(panel.locator('.vbadge')).toHaveText('v1');
   await expect(panel.getByText('used by Claude · 1 turn')).toBeVisible();
-  await panel.getByRole('button', { name: 'History · 3 versions' }).click();
-  await expect(panel.locator('.pv')).toHaveCount(3);
-  await expect(panel.locator('.pv').last()).toContainText('First plan, 3 entries');
+  await expect(panel.getByRole('button', { name: /^History ·/ })).toHaveCount(0);
   await panel.getByRole('button', { name: 'Copy as Markdown' }).click();
   await expect(panel.getByRole('button', { name: 'Copied' })).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('# Plan v3');
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('# Plan v1');
 
   await panel.getByRole('tab', { name: 'Links' }).click();
   const pr = panel.getByRole('link', { name: new RegExp(PR_TITLE) });

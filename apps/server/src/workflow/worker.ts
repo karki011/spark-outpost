@@ -1,5 +1,7 @@
+import { executeDigest } from '../digest/execute.ts';
 import type { Db } from '../persistence/db.ts';
-import { claimNextJob } from '../persistence/jobs.ts';
+import { isDigestRun } from '../persistence/digests.ts';
+import { claimNextJob, type Lease } from '../persistence/jobs.ts';
 import { cleanOrphanedCopies } from '../orchestration/group.ts';
 import { orchestrate } from '../orchestration/orchestrator.ts';
 import type { OrchestratorDeps } from '../orchestration/session.ts';
@@ -16,6 +18,11 @@ export interface Worker {
   wake(): void;
   stop(): Promise<void>;
   idle(): Promise<void>;
+}
+
+async function runLease(options: WorkerOptions, lease: Lease): Promise<void> {
+  if (await isDigestRun(options.db, lease.runId)) return executeDigest(options, lease);
+  return orchestrate(options, lease);
 }
 
 export function startWorker(options: WorkerOptions): Worker {
@@ -41,7 +48,7 @@ export function startWorker(options: WorkerOptions): Worker {
     while (!stopped && active.size < options.concurrency) {
       const lease = await claimNextJob(db, options.leaseSeconds);
       if (!lease) return;
-      const task = orchestrate(options, lease)
+      const task = runLease(options, lease)
         .catch((error) => console.error(`Run ${lease.runId} crashed`, error))
         .finally(() => {
           active.delete(task);

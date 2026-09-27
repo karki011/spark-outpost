@@ -6,6 +6,7 @@ import {
   chooseDepth,
   ONE_SPOT_REASON,
   refineDepth,
+  asksForReview,
   reviewIntent,
   reviewWanted,
   ruleDepth,
@@ -46,6 +47,34 @@ describe('review requests', () => {
     expect(reviewWanted({ depth: 'execute', reviewIntent: true })).toBe(true);
     expect(reviewWanted({ depth: 'direct', reviewIntent: true })).toBe(false);
     expect(reviewWanted({ depth: 'plan_execute_review', reviewIntent: false })).toBe(true);
+  });
+
+  it('follows Jev’s review question when it is sure, either way', () => {
+    const asked = (noul: number, intent: JevIntake['intent'] = 'feature'): JevIntake => ({
+      ...jev('execute', 'edits'),
+      intent,
+      reviewExisting: noul,
+      confidences: { intent: 0.9 },
+    });
+    expect(reviewIntent('do', asked(0.9), 'Tidy the parser')).toBe(true);
+    expect(reviewIntent('do', asked(0.1, 'review'), 'Please review my changes')).toBe(false);
+    expect(reviewIntent('ask', asked(0.9))).toBe(false);
+  });
+
+  it('keeps a Critic for review phrases without build verbs when Jev is unsure', () => {
+    const unsure: JevIntake = {
+      ...jev('execute', 'edits'),
+      intent: 'review',
+      reviewExisting: 0.55,
+      confidences: { intent: 0.44 },
+    };
+    expect(reviewIntent('do', unsure, 'Review the changes in src/invoice.ts')).toBe(true);
+    expect(reviewIntent('do', unsure, 'Can you look over what I did in the parser?')).toBe(true);
+    expect(reviewIntent('do', unsure, 'Check my changes before I push')).toBe(true);
+    expect(reviewIntent('do', unsure, 'Review the parser and fix any bugs you find')).toBe(false);
+    expect(reviewIntent('do', unsure, 'Add a review screen for invoices')).toBe(false);
+    expect(reviewIntent('do', null, 'Please review the PR that adds CSV export')).toBe(true);
+    expect(asksForReview('Make the reports better')).toBe(false);
   });
 });
 

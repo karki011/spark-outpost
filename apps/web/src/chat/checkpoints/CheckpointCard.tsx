@@ -390,7 +390,13 @@ function lead(approval: CheckpointApproval): string | null {
   return null;
 }
 
-export function CheckpointCard({ approval: incoming }: { approval: CheckpointApproval }) {
+export function CheckpointCard({
+  approval: incoming,
+  footer,
+}: {
+  approval: CheckpointApproval;
+  footer?: ReactNode;
+}) {
   const queryClient = useQueryClient();
   const headingId = useId();
   const [local, setLocal] = useState<ApprovalDecidedValue | null>(null);
@@ -446,6 +452,7 @@ export function CheckpointCard({ approval: incoming }: { approval: CheckpointApp
           {approval.note && <span className="ck-said">“{approval.note}”</span>}
         </div>
       )}
+      {!pending && footer}
       {mutation.isError && (
         <p className="appr-err" role="alert">
           {mutation.error.message}

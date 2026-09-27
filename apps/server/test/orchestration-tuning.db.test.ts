@@ -1,4 +1,6 @@
+import { mkdtempSync, rmSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
@@ -35,9 +37,9 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
-async function run(scenario: Scenario) {
+async function run(scenario: Scenario, sessions?: string) {
   const script: JevScript = { calls: [], scenario };
-  harness = startOrchestrator(t, jevFetch(script));
+  harness = startOrchestrator(t, jevFetch(script), sessions ? { sessions } : {});
   const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
   const { orchestration } = await driveToEnd(t, conversationId, runId);
   return { orchestration, runId, script };
@@ -107,5 +109,31 @@ describe('parallel steps that are not worth their own Builders', () => {
     const builders = orchestration.crew.filter((member) => member.role === 'builder');
     expect(builders.map((member) => member.parallelGroup ?? null)).toEqual([null]);
     expect(await readFile(join(root, 'src/turns.ts'), 'utf8')).toBe('step 3\n');
+  }, 60_000);
+});
+
+describe('a carrying Builder that stops early', () => {
+  it('continues the same Builder session with the open steps instead of finishing', async () => {
+    const store = mkdtempSync(join(tmpdir(), 'fake-acp-store-'));
+    const { orchestration, runId } = await run(
+      { ...COMPLEX, id: 'partial', text: `${COMPLEX.text} #stopafter 1`, depth: 'plan_execute' },
+      store,
+    ).finally(() => rmSync(store, { recursive: true, force: true }));
+    expect(orchestration.status).toBe('succeeded');
+    const builders = orchestration.crew.filter((member) => member.role === 'builder');
+    expect(builders).toHaveLength(2);
+    expect(new Set(builders.map((member) => member.name)).size).toBe(1);
+    expect(await readFile(join(root, 'notes.txt'), 'utf8')).toBe('start\nstep 1\nstep 2\nstep 3\n');
+    const { rows } = await t.db.query<{ route: { followUp?: string } }>(
+      `SELECT r.route FROM runs r WHERE r.parent_run_id = $1 AND r.role = 'builder' ORDER BY r.created_at`,
+      [runId],
+    );
+    expect(rows[1]?.route.followUp).toContain('steps 2 and 3 of the plan are still open');
+    const reply = await t.db.query<{ content: string }>(
+      `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant'`,
+      [runId],
+    );
+    expect(reply.rows[0]?.content).toContain('Continued with step 2, 3 after 1 earlier prompts.');
+    expect(reply.rows[0]?.content).not.toContain('Incomplete');
   }, 60_000);
 });

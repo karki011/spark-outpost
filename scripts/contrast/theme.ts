@@ -22,6 +22,8 @@ export const THEMES = [
   'lagoon',
   'plum',
   'sage',
+  'aurora',
+  'iris',
   'contrast',
 ] as const;
 export type ThemeId = (typeof THEMES)[number];

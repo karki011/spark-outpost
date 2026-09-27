@@ -289,4 +289,39 @@ describe('Critic alongside Builders and chains', () => {
     );
     expect(advice[0]?.reason).toBe(REVIEW_INTENT_REASON);
   });
+
+  it('keeps a Critic for a review request Jev is unsure about, and prices the Codex review', async () => {
+    const scenario: Scenario = {
+      ...TRIVIAL,
+      text: 'Review my changes to the README heading.',
+      intent: 'review',
+      intentConfidence: 0.44,
+      reviewExisting: 0.6,
+    };
+    start(scenario);
+    const { conversationId, runId } = await startScenario(t, root, scenario, 'full-auto');
+    await driveToEnd(t, conversationId, runId);
+    const { rows } = await t.db.query<{
+      role: string;
+      provider: string;
+      input_tokens: number;
+      cached_read_tokens: number;
+      cost_usd: string;
+      cost_source: string;
+    }>(
+      `SELECT role, provider, input_tokens, cached_read_tokens, cost_usd, cost_source
+       FROM runs WHERE parent_run_id = $1`,
+      [runId],
+    );
+    expect(rows).toEqual([
+      {
+        role: 'critic',
+        provider: 'codex',
+        input_tokens: 220,
+        cached_read_tokens: 100,
+        cost_usd: '0.000860',
+        cost_source: 'estimated',
+      },
+    ]);
+  });
 });

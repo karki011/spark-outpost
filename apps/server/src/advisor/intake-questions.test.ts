@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { IntakeRequest } from './advice.ts';
 import { adviceBody } from './advice-body.ts';
 import {
+  REVIEW_EXISTING_QUESTION,
+  VAGUE_QUESTION,
   buildIntakeQuestions,
   parseIntakeAnswers,
   type SystemOneResponse,
@@ -91,6 +93,8 @@ describe('intake questions', () => {
       'risk',
       'depth',
       'scope',
+      'review_existing',
+      'vague',
       'provider',
       'model_claude',
       'effort_claude',
@@ -151,6 +155,33 @@ describe('intake questions', () => {
         'If Claude handles `task`, how much reasoning effort does it need? Defaults: Opus 5.5 medium, Sonnet 5 high.',
       criteria: ['Low: Quick', 'Medium: Balanced', 'High: Deep'],
     });
+  });
+
+  it('asks in Do whether the user wants a review of existing changes and whether the task is vague', () => {
+    const { questions } = buildIntakeQuestions(intakeRequest);
+    expect(questions.review_existing).toMatchObject({ type: 'noul' });
+    expect(questions.review_existing!.instructions).toContain(REVIEW_EXISTING_QUESTION);
+    expect(questions.vague).toMatchObject({ type: 'noul' });
+    expect(questions.vague!.instructions).toContain(VAGUE_QUESTION);
+    const ask = buildIntakeQuestions({ ...intakeRequest, mode: 'ask' }).questions;
+    expect(ask.review_existing).toBeUndefined();
+    expect(ask.vague).toBeUndefined();
+  });
+
+  it('reads the review and vague answers only when Jev gave them', () => {
+    const asked = buildIntakeQuestions(intakeRequest);
+    const answered = parseIntakeAnswers(
+      intakeRequest,
+      asked,
+      intakeResponse({
+        review_existing: { type: 'noul', noul: 0.91 },
+        vague: { type: 'noul', noul: 0.12 },
+      }),
+    );
+    expect(answered).toMatchObject({ reviewExisting: 0.91, vague: 0.12 });
+    const silent = parseIntakeAnswers(intakeRequest, asked, intakeResponse());
+    expect(silent).not.toHaveProperty('reviewExisting');
+    expect(silent).not.toHaveProperty('vague');
   });
 
   it('asks about injection only over attached text, never the user message', () => {

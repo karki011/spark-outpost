@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Run } from '@spark-outpost/contracts';
 import { approvalKeys, approvalsApi } from '../../api/approvals.ts';
 import { queryKeys } from '../../api/client.ts';
+import { outcomeKeys } from '../../api/outcomes.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 import { RestoreIcon } from '../../ui/icons.tsx';
 
@@ -29,6 +30,7 @@ export function RevertRun({ run }: { run: Run }) {
       setConfirming(false);
       void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(run.conversationId) });
       void queryClient.invalidateQueries({ queryKey: taskKeys.all });
+      void queryClient.invalidateQueries({ queryKey: outcomeKeys.all });
     },
   });
 

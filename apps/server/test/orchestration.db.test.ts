@@ -179,7 +179,7 @@ describe.each(SCENARIOS)('$id', (scenario) => {
           effort: 'high',
           routedBy: 'rules',
         });
-        expect(orchestration.planVersion, context).toBe(2 + FAKE_PLAN_FILES.length);
+        expect(orchestration.planVersion, context).toBe(1);
       }
     }
   }, 180_000);

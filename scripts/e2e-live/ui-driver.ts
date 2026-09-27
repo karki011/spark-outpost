@@ -58,6 +58,12 @@ export async function newUiSession(
     if (message.type() === 'error') session.consoleErrors.push(message.text().slice(0, 300));
   });
   page.on('pageerror', (error) => session.consoleErrors.push(`pageerror: ${error.message}`));
+  page.on('response', (response) => {
+    if (response.status() >= 400) {
+      const url = new URL(response.url());
+      session.consoleErrors.push(`HTTP ${response.status()} ${url.pathname}`);
+    }
+  });
   return session;
 }
 

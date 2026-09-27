@@ -109,6 +109,60 @@ export function fakeProviderPlan(
   ];
 }
 
+export const FAKE_DIGEST_TRIGGER = '<activity>';
+export const FAKE_UNKNOWN_CHAT = '00000000-0000-4000-8000-00000000dead';
+
+interface FakeDigestChat {
+  id: string;
+  title: string;
+  unfinished: string[];
+}
+
+function digestChats(prompt: string): FakeDigestChat[] {
+  const start = prompt.lastIndexOf('<activity>\n');
+  const end = prompt.lastIndexOf('\n</activity>');
+  const block = start >= 0 && end > start ? prompt.slice(start + 11, end) : '{}';
+  const data = JSON.parse(block) as {
+    days?: { threads: { chats: FakeDigestChat[] }[] }[];
+  };
+  return (data.days ?? []).flatMap((day) => day.threads.flatMap((thread) => thread.chats));
+}
+
+export function fakeDigestReply(prompt: string): string {
+  const chats = digestChats(prompt);
+  const first = chats[0];
+  const open = chats.find((chat) => chat.unfinished.length > 0);
+  return JSON.stringify({
+    lines: [
+      {
+        text: first ? `Today you worked on ${first.title}.` : 'Today was quiet.',
+        chatId: first?.id ?? null,
+      },
+      { text: 'This line points at a chat that does not exist.', chatId: FAKE_UNKNOWN_CHAT },
+    ],
+    suggestions: [
+      ...(open
+        ? [
+            {
+              chatId: open.id,
+              reason: `Unfinished: ${open.unfinished.join(', ')}.`,
+              draft: `Let's continue ${open.title}: pick up the open step and finish it.`,
+            },
+          ]
+        : []),
+      { chatId: FAKE_UNKNOWN_CHAT, reason: 'Made up.', draft: 'Made up.' },
+    ],
+  });
+}
+
+function replyOutputs(reply: string): ProviderOutput[] {
+  return [
+    ...reply.split(/(?<=\s)/).map((delta): ProviderOutput => ({ kind: 'text_delta', delta })),
+    { kind: 'usage', contextUsed: 12_000, contextSize: 200_000, costUsd: FAKE_COST_USD },
+    { kind: 'tokens', tokens: FAKE_TOKENS },
+  ];
+}
+
 export function fakeCapabilities(provider?: string): ProviderCapabilityReport {
   if (provider === 'zai') return fakeZaiCapabilities();
   return {
@@ -157,7 +211,9 @@ export function createFakeProvider(timing: FakeProviderTiming = defaultTiming): 
         return;
       }
       const titled = turn.askTitle && turn.prompt.includes(FAKE_TITLE_TRIGGER);
-      const outputs = fakeProviderPlan(turn.prompt, turn.attachments, turn.projectRoots);
+      const outputs = turn.prompt.includes(FAKE_DIGEST_TRIGGER)
+        ? replyOutputs(fakeDigestReply(turn.prompt))
+        : fakeProviderPlan(turn.prompt, turn.attachments, turn.projectRoots);
       if (titled) outputs.push({ kind: 'text_delta', delta: `\n\nTitle: ${FAKE_TITLE}` });
       for (const output of outputs) {
         const wait =

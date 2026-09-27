@@ -7,7 +7,7 @@ import {
   groupMembers,
   isResearchStep,
   largeFromReply,
-  nextOpenStep,
+  firstOpenStep,
   parallelFromReply,
   parallelGroups,
   parallelTag,
@@ -114,8 +114,9 @@ describe('group members', () => {
   });
 
   it('finds the next step that has not run yet', () => {
-    expect(nextOpenStep(['a', 'b', 'c', 'd'], [2], 1)).toBe(3);
-    expect(nextOpenStep(['a', 'b'], [], 1)).toBeNull();
+    expect(firstOpenStep(['a', 'b', 'c', 'd'], [0, 1, 2])).toBe(3);
+    expect(firstOpenStep(['a', 'b', 'c'], [0, 2])).toBe(1);
+    expect(firstOpenStep(['a', 'b'], [0, 1])).toBeNull();
   });
 });
 

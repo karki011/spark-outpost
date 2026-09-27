@@ -11,6 +11,7 @@ export interface DoWorkspace {
   gate: PermissionGate;
   signal: AbortSignal;
   report: (name: string) => void;
+  annotate: (name: string) => void;
 }
 
 export async function reviewPermission(
@@ -25,7 +26,7 @@ export async function reviewPermission(
     home: homedir(),
   });
   const answer = await workspace.gate.review(request, workspace.signal);
-  workspace.report(answer.note);
+  workspace.annotate(answer.note);
   return permissionResponse(answer);
 }
 
@@ -38,5 +39,6 @@ export function writeWithApproval(
     home: homedir(),
     review: (request) => workspace.gate.review(request, workspace.signal),
     report: workspace.report,
+    annotate: workspace.annotate,
   });
 }

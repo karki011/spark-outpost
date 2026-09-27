@@ -86,6 +86,7 @@ export function startControl(deps: TurnDeps, lease: Lease): RunControl {
 export interface TurnOptions {
   onOutput?: (output: ProviderOutput) => void;
   backupAlsoFor?: string;
+  recordsPlan?: boolean;
 }
 
 export interface TurnResult {
@@ -113,7 +114,13 @@ export async function runAgentTurn(
   control: Pick<RunControl, 'signal' | 'reason' | 'stop'>,
   options: TurnOptions = {},
 ): Promise<TurnResult> {
-  const tasks = createTaskRecorder(deps.db, lease.runId, input.prompt, append);
+  const tasks = createTaskRecorder(
+    deps.db,
+    lease.runId,
+    input.prompt,
+    append,
+    options.recordsPlan ?? true,
+  );
   const startedAt = Date.now();
   const audit = createAuditRecorder({
     write: (entries) => insertProtocolEntries(deps.db, lease, entries),
@@ -192,7 +199,10 @@ export async function runAgentTurn(
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(session ? { session: session.target } : {}),
     })) {
-      if (control.signal.aborted) break;
+      if (control.signal.aborted) {
+        if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
+        continue;
+      }
       options.onOutput?.(output);
       if (output.kind === 'step_started') await append(runEvents.stepStarted(output.name));
       if (output.kind === 'step_finished') await append(runEvents.stepFinished(output.name));

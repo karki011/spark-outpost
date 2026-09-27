@@ -7,8 +7,7 @@ import {
 import { ASK_AT, gate } from '../advisor/gate.ts';
 import { asksForRetry } from './checkpoint-policy.ts';
 import { reviewWanted } from './depth.ts';
-import { nextOpenStep } from './parallel.ts';
-import { spanOf } from './spans.ts';
+import { stepsLeftAfter } from './flow-steps.ts';
 import type { AgentOutcome, FlowEvent, FlowState } from './transitions.ts';
 
 export interface Transition {
@@ -38,10 +37,7 @@ export function ruleTransition(state: FlowState, outcome: AgentOutcome): Transit
       : { status: 'needs_you', next: 'finish' };
   }
   if (state.last?.role === 'critic') return { status: 'done', next: 'finish' };
-  const after = Math.max(state.stepIndex, ...(state.last ? spanOf(state.last) : []));
-  if (nextOpenStep(state.steps, state.completed, after) !== null) {
-    return { status: 'done', next: 'next_step' };
-  }
+  if (stepsLeftAfter(state)) return { status: 'done', next: 'next_step' };
   return {
     status: 'done',
     next: reviewWanted(state) && !state.reviewed ? 'review' : 'finish',

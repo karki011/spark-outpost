@@ -367,7 +367,13 @@ describe('repair and escalation', () => {
     expect(ruleTransition(state, 'succeeded')).toEqual({ status: 'done', next: 'review' });
     const single = { ...state, last: { ...state.last!, carry: undefined } };
     expect(ruleTransition(single, 'succeeded')).toEqual({ status: 'done', next: 'next_step' });
-    expect(ruleTransition({ ...single, stepIndex: 1 }, 'succeeded')).toEqual({
+    const second = {
+      ...single,
+      stepIndex: 1,
+      completed: [0],
+      last: { ...single.last!, stepIndex: 1 },
+    };
+    expect(ruleTransition(second, 'succeeded')).toEqual({
       status: 'done',
       next: 'review',
     });
@@ -441,7 +447,8 @@ describe('stop, failure and budgets', () => {
     expect(nextStep(asked.state, answer('budget', CHECKPOINT_OPTION.stop)).action).toEqual({
       type: 'finish',
       status: 'failed',
-      reason: 'Stopped: the tool calls budget ran out.',
+      reason:
+        'Stopped: the tool calls budget ran out. Incomplete: steps 2 and 3 of 3 are still open. Ask to continue and a Builder picks up from there.',
     });
   });
 });

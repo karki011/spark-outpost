@@ -218,3 +218,83 @@ export const DROP_TARGET: Pair[] = Object.entries(DROP_BASES).flatMap(([surface,
     kind: 'text' as const,
   })),
 );
+
+const PROVIDER_IDS = ['claude', 'codex', 'zai', 'jev'] as const;
+
+export const PROVIDERS: Pair[] = [
+  ...PROVIDER_IDS.flatMap((provider) =>
+    onEach(
+      'Provider colours',
+      `provider.${provider}`,
+      `var(--c-${provider})`,
+      ['canvas', 'rail', 'panel', 'raise'],
+      'ui',
+    ),
+  ),
+  {
+    id: 'provider.cost-tier-shade',
+    group: 'Provider colours',
+    label: 'cheapest-tier cost slice (36% shade) on the bar track',
+    fg: 'color-mix(in srgb, var(--c-claude) 36%, var(--panel))',
+    bg: ['var(--raise)'],
+    kind: 'decorative',
+  },
+];
+
+const ASKING_CARD = ['var(--panel)', 'color-mix(in srgb, var(--warn) 6%, transparent)'];
+
+export const HOME: Pair[] = [
+  ...Object.entries({
+    text: 'var(--text)',
+    muted: 'var(--muted)',
+    faint: 'var(--faint)',
+    warn: 'var(--warn)',
+  }).map(([ink, fg]) => ({
+    id: `home.${ink}-on-asking-card`,
+    group: 'Home',
+    label: `${ink} on the tinted Needs you card`,
+    fg,
+    bg: ASKING_CARD,
+    kind: 'text' as const,
+  })),
+  {
+    id: 'home.asking-dot',
+    group: 'Home',
+    label: 'waiting dot on the tinted Needs you card',
+    fg: 'var(--warn)',
+    bg: ASKING_CARD,
+    kind: 'ui',
+  },
+  {
+    id: 'home.answer-button',
+    group: 'Home',
+    label: 'Answer button label (panel on text)',
+    fg: 'var(--panel)',
+    bg: ['var(--text)'],
+    kind: 'text',
+  },
+  {
+    id: 'home.progress',
+    group: 'Home',
+    label: 'plan progress bar on its track',
+    fg: 'var(--accent)',
+    bg: ['var(--raise)'],
+    kind: 'ui',
+  },
+  {
+    id: 'home.savings',
+    group: 'Home',
+    label: 'routing savings text on the accent tint',
+    fg: 'var(--accent-text)',
+    bg: ['var(--panel)', 'var(--accent-soft)'],
+    kind: 'text',
+  },
+  {
+    id: 'home.savings-note',
+    group: 'Home',
+    label: 'savings note (muted) on the accent tint',
+    fg: 'var(--muted)',
+    bg: ['var(--panel)', 'var(--accent-soft)'],
+    kind: 'text',
+  },
+];

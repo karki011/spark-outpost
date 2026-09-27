@@ -19,6 +19,7 @@ export interface RoleTurn {
 }
 
 function planStep(file: string, index: number, text: string): string {
+  if (text.includes('#revise')) return `Revise ${file} for step ${index + 1}`;
   if (text.includes('#research') && index < 2) {
     return `Research: how ${file} is used [parallel R]`;
   }
@@ -170,17 +171,31 @@ function ownSteps(text: string): { step: string; line: string }[] {
   return steps.length > 0 ? steps : [{ step: '1', line: '' }];
 }
 
+async function ownTodos(turn: RoleTurn, steps: readonly { step: string }[]): Promise<void> {
+  const entries = steps.map(({ step }) => ({
+    content: `My todo for step ${step}`,
+    priority: 'medium' as const,
+    status: 'in_progress' as const,
+  }));
+  await turn.update({ sessionUpdate: 'plan', entries });
+}
+
 export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   if (turn.text.includes('## Conflicting changes to reconcile')) return reconcile(turn);
   const steps = ownSteps(turn.text);
+  if (turn.text.includes('#todos')) await ownTodos(turn, steps);
+  const stopAfter = /#stopafter (\d+)/.exec(turn.text)?.[1];
   for (const { step, line } of steps) {
     const stopped = await buildStep(turn, step, line, steps.length > 1);
     if (stopped) return stopped;
+    if (step === stopAfter) break;
   }
   const clarified = /The user clarified: (.+)/.exec(turn.text)?.[1];
+  const assumed = /assume the user means: (.+)/.exec(turn.text)?.[1];
   const built = steps.map(({ step }) => step).join(', ');
   const notes = turn.text.includes('## Notes from the Architect') ? ' Read the notes.' : '';
-  await turn.say(`Built step ${built}.${clarified ? ` Clarified: ${clarified}` : ''}${notes}`);
+  const heard = `${clarified ? ` Clarified: ${clarified}` : ''}${assumed ? ` Took it as: ${assumed}` : ''}`;
+  await turn.say(`Built step ${built}.${heard}${notes}`);
   return 'end_turn';
 }
 
@@ -244,7 +259,21 @@ export async function fixChecks(turn: RoleTurn): Promise<acp.StopReason> {
   return 'end_turn';
 }
 
+async function continueSteps(turn: RoleTurn): Promise<acp.StopReason> {
+  const list = /(?:steps?) ([\d, and]+) of the plan/.exec(turn.text)?.[1] ?? '';
+  const steps = [...list.matchAll(/\d+/g)].map((match) => match[0]);
+  for (const step of steps) {
+    const stopped = await buildStep(turn, step, '', steps.length > 1);
+    if (stopped) return stopped;
+  }
+  await turn.say(
+    `Continued with step ${steps.join(', ')} after ${priorPrompts(turn.sessionId)} earlier prompts.`,
+  );
+  return 'end_turn';
+}
+
 export function roleFor(text: string): ((turn: RoleTurn) => Promise<acp.StopReason>) | null {
+  if (text.includes('You stopped before finishing')) return continueSteps;
   if (text.includes('Role: Architect.')) return architect;
   if (text.includes('Role: Critic.') || text.includes('Review the next change')) return critic;
   if (text.includes('Role: Scout.')) return scout;

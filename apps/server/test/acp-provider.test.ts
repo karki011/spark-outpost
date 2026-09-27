@@ -77,7 +77,7 @@ describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, ()
     expect(outputs).toContainEqual({
       kind: 'tokens',
       tokens: {
-        input: 120,
+        input: 220,
         output: 60,
         total: 180,
         cachedRead: 100,

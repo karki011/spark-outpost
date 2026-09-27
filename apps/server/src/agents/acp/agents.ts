@@ -23,6 +23,7 @@ export interface AgentDefinition {
   offers?: AgentOffers;
   usedModel?: (model: string | null) => string | null;
   estimatesCost?: boolean;
+  inputExcludesCache?: boolean;
   conversationMode: string;
   readsProjectFolders: boolean;
   conversationSessionMeta?: Record<string, unknown>;
@@ -153,6 +154,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     doMode: CODEX_DO_MODE,
     doPrimaryRootOnly: true,
     doWorktreeLevels: ['hands-off', 'full-auto'],
+    inputExcludesCache: true,
   },
   zai: {
     id: 'zai',

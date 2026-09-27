@@ -8,6 +8,12 @@ import { callJev, type JevCall } from './jev-calls.ts';
 import { buildRouteQuestions, parseRouteAnswers, type RouteSlot } from './jev-questions.ts';
 import { planShape, routeArchitect } from './architect-route.ts';
 import {
+  KEPT_FOR_SESSION,
+  keepSession,
+  resumableChat,
+  type SessionChoice,
+} from './session-keep.ts';
+import {
   criticProvider,
   escalate,
   intakePickFor,
@@ -117,6 +123,7 @@ export interface ResolvedRoute {
   call: JevCall | null;
   fresh: boolean;
   rulePick?: AgentPick;
+  session?: SessionChoice;
 }
 
 async function architectRoute(s: Session): Promise<ResolvedRoute> {
@@ -141,7 +148,23 @@ export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRo
   if (spawn.role === 'architect') return architectRoute(s);
   const { jev, call } = await jevPickFor(s, spawn);
   const route = spawn.role === 'critic' ? routeCritic(s.route, jev) : routeWorker(s.route, jev);
-  return { route, summary: route.routedBy, call, fresh: true };
+  if (!runsInPlace(s, spawn)) return { route, summary: route.routedBy, call, fresh: true };
+  const mode = spawn.role === 'scout' && s.input.mode === 'do' ? 'ask' : s.input.mode;
+  const session = await resumableChat(s.deps.db, s.input, mode, s.deps.sessionLimits?.idleMs);
+  const kept = keepSession(route, session);
+  const summary = kept.choice?.kept ? KEPT_FOR_SESSION : kept.route.routedBy;
+  return {
+    route: kept.route,
+    summary,
+    call,
+    fresh: true,
+    ...(kept.choice ? { session: kept.choice } : {}),
+  };
+}
+
+function runsInPlace(s: Session, spawn: Spawn): boolean {
+  if (s.inPlaceUsed || spawn.reason !== 'first' || spawn.stepIndex !== 0) return false;
+  return spawn.role === 'scout' || (spawn.role === 'builder' && !plansFirst(s.flow.depth));
 }
 
 export async function nameFor(s: Session, role: AgentRole, key: string): Promise<string> {
@@ -183,6 +206,7 @@ export async function recordRoute(
   const wouldUse = route.autoWouldUse
     ? ` · Auto would have used ${route.autoWouldUse.modelLabel ?? route.autoWouldUse.model} · ${route.autoWouldUse.effort}`
     : '';
+  const sessionNote = resolved.session ? ` · ${resolved.session.reason}` : '';
   await insertDecision(s.deps.db, {
     runId: s.lease.runId,
     purpose: 'route',
@@ -193,7 +217,7 @@ export async function recordRoute(
     inputTokens: call?.usage?.inputTokens ?? null,
     costUsd: call?.usage?.costUsd ?? null,
     body: {
-      summary: `${label}${wouldUse}`,
+      summary: `${label}${wouldUse}${sessionNote}`,
       applied,
       gate: route.gate,
       jevError: call?.error ?? null,
@@ -206,6 +230,7 @@ export async function recordRoute(
         escalated: spawn.escalate,
         rule: resolved.summary,
         ...(resolved.rulePick ? { rulePick: resolved.rulePick } : {}),
+        ...(resolved.session ? { session: resolved.session } : {}),
         why: whyLine(why),
         tierSource: tierSourceOf(route.pick),
         ...(frontier ? { frontier } : {}),

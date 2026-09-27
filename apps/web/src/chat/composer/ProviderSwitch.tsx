@@ -2,12 +2,56 @@ import type { KeyboardEvent } from 'react';
 import { motion } from 'motion/react';
 import type { ProviderId, ProviderSetup } from '@spark-outpost/contracts';
 import { ProviderBlob } from '../../brand/ProviderBlob.tsx';
+import { useTooltip } from '../../ui/Tooltip.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 
 interface ProviderSwitchProps {
   providers: ProviderSetup[];
   active: ProviderId;
   onSelect: (id: ProviderId) => void;
+}
+
+interface SwitchTabProps {
+  provider: ProviderSetup;
+  selected: boolean;
+  onSelect: (id: ProviderId) => void;
+}
+
+function SwitchTab({ provider, selected, onSelect }: SwitchTabProps) {
+  const { triggerProps, tooltip } = useTooltip(
+    selected ? `${provider.name} · in use` : `Switch to ${provider.name}`,
+  );
+  return (
+    <button
+      type="button"
+      role="tab"
+      data-provider={provider.id}
+      aria-label={provider.name}
+      aria-selected={selected}
+      tabIndex={selected ? 0 : -1}
+      onClick={() => onSelect(provider.id)}
+      {...triggerProps}
+    >
+      {selected && (
+        <motion.span layoutId="provider-ring" className="pswitch-ring" transition={reveal} />
+      )}
+      <motion.span
+        className="pswitch-blob"
+        animate={{ scale: selected ? 1.12 : 1 }}
+        transition={reveal}
+        whileHover={{ scale: selected ? 1.16 : 1.08 }}
+        whileTap={{ scale: 0.92 }}
+      >
+        <ProviderBlob
+          providerId={provider.id}
+          size={24}
+          expression={selected ? 'happy' : 'idle'}
+          animate="hover"
+        />
+      </motion.span>
+      {tooltip}
+    </button>
+  );
 }
 
 export function ProviderSwitch({ providers, active, onSelect }: ProviderSwitchProps) {
@@ -26,40 +70,14 @@ export function ProviderSwitch({ providers, active, onSelect }: ProviderSwitchPr
   };
   return (
     <div className="pswitch" role="tablist" aria-label="AI provider" onKeyDown={onKeyDown}>
-      {providers.map((provider) => {
-        const selected = provider.id === active;
-        return (
-          <button
-            key={provider.id}
-            type="button"
-            role="tab"
-            data-provider={provider.id}
-            data-tip={selected ? `${provider.name} · in use` : `Switch to ${provider.name}`}
-            aria-label={provider.name}
-            aria-selected={selected}
-            tabIndex={selected ? 0 : -1}
-            onClick={() => onSelect(provider.id)}
-          >
-            {selected && (
-              <motion.span layoutId="provider-ring" className="pswitch-ring" transition={reveal} />
-            )}
-            <motion.span
-              className="pswitch-blob"
-              animate={{ scale: selected ? 1.12 : 1 }}
-              transition={reveal}
-              whileHover={{ scale: selected ? 1.16 : 1.08 }}
-              whileTap={{ scale: 0.92 }}
-            >
-              <ProviderBlob
-                providerId={provider.id}
-                size={24}
-                expression={selected ? 'happy' : 'idle'}
-                animate="hover"
-              />
-            </motion.span>
-          </button>
-        );
-      })}
+      {providers.map((provider) => (
+        <SwitchTab
+          key={provider.id}
+          provider={provider}
+          selected={provider.id === active}
+          onSelect={onSelect}
+        />
+      ))}
     </div>
   );
 }

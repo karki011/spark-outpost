@@ -20,6 +20,7 @@ import {
   driveToEnd,
   gitRepo,
   jevFetch,
+  planWrites,
   removeRepo,
   startOrchestrator,
   startScenario,
@@ -136,8 +137,8 @@ describe('parallel Builders', () => {
     expect(copyEdits[0]?.payload.paths[0]).toMatch(/^src\//);
 
     const versions = await planVersions(t.db, orchestration.taskId!);
-    expect(statuses(versions)).toContain('completed in_progress in_progress');
-    expect(statuses(versions).at(-1)).toBe('completed completed completed');
+    expect(await planWrites(t, runId)).toContain('completed in_progress in_progress');
+    expect(statuses(versions)).toEqual(['completed completed completed']);
     expect(git('status', '--porcelain')).not.toContain('.spark');
     expect(await readFile(join(root, '.git/info/exclude'), 'utf8')).toContain('.spark/');
     await expectClean(runId);

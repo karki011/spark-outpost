@@ -1,4 +1,4 @@
-import type { PlanEntry, PlanStatus } from '@spark-outpost/contracts';
+import type { AgentRole, PlanEntry, PlanStatus } from '@spark-outpost/contracts';
 import { latestPlan } from '../persistence/artifacts.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
 import { nextPlanWrite } from '../tasks/plan-versions.ts';
@@ -27,6 +27,10 @@ export function markStep(
 ): PlanEntry[] {
   const targets = new Set(entriesForStep(entries, stepIndex, ranges));
   return entries.map((entry, index) => (targets.has(index) ? { ...entry, status } : entry));
+}
+
+export function recordsOwnPlan(s: Pick<Session, 'plan'>, role: AgentRole): boolean {
+  return role === 'architect' || (role === 'builder' && s.plan.length === 0);
 }
 
 function retriesBuilder(action: FlowAction): boolean {
@@ -128,7 +132,7 @@ async function writeSteps(
     s.plan,
   );
   s.plan = entries;
-  const write = nextPlanWrite(await latestPlan(s.deps.db, s.taskId), entries);
+  const write = nextPlanWrite(await latestPlan(s.deps.db, s.taskId), entries, sourceRunId);
   if (!write) return;
   const body = { entries };
   await s.append(runEvents.activity('artifact:plan', 'plan', { version: write.version, body }), {

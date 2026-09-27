@@ -39,16 +39,35 @@ export interface SnapshotSource {
   gone: boolean;
 }
 
+function exists(target: string): Promise<boolean> {
+  return access(target).then(
+    () => true,
+    () => false,
+  );
+}
+
+export async function changesWhilePresent(
+  root: string,
+  read: () => Promise<RunChange[]>,
+): Promise<RunChange[] | null> {
+  try {
+    return await read();
+  } catch (error) {
+    if (await repoStillThere(root)) throw error;
+    return null;
+  }
+}
+
+export async function repoStillThere(root: string): Promise<boolean> {
+  return (await exists(root)) && (await isGitWorkTree(root));
+}
+
 export async function snapshotSource(
   db: Queryable,
   runId: string,
   root: string,
 ): Promise<SnapshotSource> {
-  const present = await access(root).then(
-    () => true,
-    () => false,
-  );
-  if (present) return { gitRoot: root, end: null, gone: false };
+  if (await exists(root)) return { gitRoot: root, end: null, gone: false };
   const lane = await laneOfRun(db, runId);
   return { gitRoot: lane?.repoRoot ?? root, end: lane?.resultCommit ?? null, gone: true };
 }
@@ -126,18 +145,27 @@ export async function runChanges(
   if (!snapshot) {
     return { revertible: false, revertedAt, files: [], reason: 'This run made no snapshot.' };
   }
+  const removed = (files: RunChange[]): RunChanges => ({
+    revertible: false,
+    revertedAt,
+    files,
+    reason: REMOVED_FOLDER_REASON,
+  });
+  const { ref } = snapshot;
   const source = await snapshotSource(db, runId, snapshot.root);
   if (source.gone) {
-    const files =
-      snapshot.kind === 'git' && snapshot.ref && source.end
-        ? await gitChanges(source.gitRoot, snapshot.ref, source.end)
-        : [];
-    return { revertible: false, revertedAt, files, reason: REMOVED_FOLDER_REASON };
+    const end = source.end;
+    if (snapshot.kind !== 'git' || !ref || !end) return removed([]);
+    const files = await changesWhilePresent(source.gitRoot, () =>
+      gitChanges(source.gitRoot, ref, end),
+    );
+    return removed(files ?? []);
   }
   const files =
-    snapshot.kind === 'git' && snapshot.ref
-      ? await gitChanges(snapshot.root, snapshot.ref)
+    snapshot.kind === 'git' && ref
+      ? await changesWhilePresent(snapshot.root, () => gitChanges(snapshot.root, ref))
       : (await backupChanges(await listBackups(db, runId), snapshot.root)).map((c) => c.change);
+  if (files === null) return removed([]);
   const status = runStatusSchema.parse(state.status);
   const reason =
     !live && !isTerminalRunStatus(status)

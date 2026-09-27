@@ -1,14 +1,11 @@
-import {
-  CHECKPOINT_OPTION,
-  ORCHESTRATION_PARALLEL_LIMIT,
-  type AgentPick,
-} from '@spark-outpost/contracts';
+import { ORCHESTRATION_PARALLEL_LIMIT } from '@spark-outpost/contracts';
 import { adviceBody } from '../advisor/advice-body.ts';
 import { intakeRequest, recordIntake, type IntakeResult } from '../advisor/intake-recorder.ts';
 import { insertAdvice, loadIntakeContext, noteIntakeDepth } from '../persistence/advice.ts';
 import { newId } from '../persistence/ids.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { insertOrchestration } from '../persistence/orchestrations.ts';
+import { recordKeptChanges } from '../outcomes/record.ts';
 import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
 import { taskForWorkingRun } from '../persistence/tasks.ts';
 import { revertRun, runChanges } from '../projects/run-changes.ts';
@@ -18,32 +15,13 @@ import { APPROVAL_TIMEOUT_MESSAGE } from '../workflow/approval-gate.ts';
 import { closeMessage } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { loadRunInput, type RunInput } from '../workflow/run-input.ts';
-import { activeTime, exceededLimit, extendLimits, usedAndAllowed } from './budget.ts';
-import {
-  acceptCard,
-  askCard,
-  budgetCard,
-  CheckpointTimeout,
-  clarifiedRequest,
-  agentQuestion,
-  clarifyCard,
-  needsInputCard,
-  clarifyDepths,
-  depthFromClarify,
-  planCard,
-  retryCard,
-  type CheckpointCard,
-} from './checkpoint.ts';
-import { asksToKeep, autoContinueOption } from './checkpoint-policy.ts';
+import { exceededLimit } from './budget.ts';
+import { CheckpointTimeout } from './checkpoint.ts';
+import { ask, assume, budgetUsage, intakeResponse } from './checkpoint-asks.ts';
+import { asksToKeep } from './checkpoint-policy.ts';
+import { assumptionLine, interpretations, isVagueRequest, vagueHandling } from './clarify.ts';
 import { namedFiles } from './context.ts';
-import {
-  chooseDepth,
-  intakeDepthNote,
-  refineDepth,
-  reviewIntent,
-  ruleDepth,
-  trustedRisk,
-} from './depth.ts';
+import { chooseDepth, intakeDepthNote, refineDepth, reviewIntent, trustedRisk } from './depth.ts';
 import { finalText } from './final-message.ts';
 import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
 import { cleanupCopies, runGroup } from './group.ts';
@@ -54,17 +32,9 @@ import { decideBuildStyle, projectBuildStyle, recordShortcuts } from './build-st
 import { collectedReview } from './reviews.ts';
 import { sequentialReason } from './parallel.ts';
 import { markPlanStep, markPlanSteps, statusAfterJudging } from './plan-progress.ts';
-import { escalate, ruleCriticPick, type RouteContext } from './routing.ts';
+import type { RouteContext } from './routing.ts';
 import { Slots } from './slots.ts';
-import {
-  baseLimits,
-  publish,
-  routeKey,
-  save,
-  type OrchestratorDeps,
-  type Session,
-} from './session.ts';
-import { spentUsd, waitedMs } from '../persistence/orchestrations.ts';
+import { baseLimits, publish, save, type OrchestratorDeps, type Session } from './session.ts';
 import { closeKeyedSessions, SESSION_CLOSE_REASONS } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
 import { initialFlow, nextStep, type FlowAction, type FlowEvent } from './transitions.ts';
@@ -116,53 +86,6 @@ async function ensureTask(s: Session): Promise<void> {
   await s.append(runEvents.activity('task', 'task', { taskId: s.taskId, opened: joined.opened }));
 }
 
-function lastPick(s: Session): AgentPick | null {
-  const builder = s.routes.get(routeKey('builder', s.flow.stepIndex));
-  return builder?.pick ?? null;
-}
-
-async function cardFor(
-  s: Session,
-  action: Extract<FlowAction, { type: 'ask' }>,
-): Promise<CheckpointCard> {
-  if (action.kind === 'clarify') {
-    const response = s.intake.outcome.status === 'answered' ? s.intake.outcome.response : null;
-    return clarifyCard(clarifyDepths(response, s.flow.depth), action.reason);
-  }
-  if (action.kind === 'plan') return planCard(s.plan, s.planVersion, action.reason);
-  if (action.kind === 'needs_input') {
-    const last = s.results.at(-1);
-    return needsInputCard(last?.name ?? 'The agent', action.blocked ?? false, last?.text ?? '');
-  }
-  if (action.kind === 'retry') {
-    const previous = s.routes.get(routeKey('builder', s.flow.stepIndex));
-    const to =
-      action.suggestion === 'review'
-        ? ruleCriticPick(s.route)
-        : previous
-          ? escalate(s.route, previous).pick
-          : null;
-    return retryCard(action.suggestion, lastPick(s), to, action.reason);
-  }
-  if (action.kind === 'accept') {
-    const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
-    return acceptCard(changes.files, action.reason);
-  }
-  const usage = await budgetUsage(s);
-  const limit = s.budgetHit ?? 'time';
-  const { used, allowed } = usedAndAllowed(limit, usage, s.limits);
-  return budgetCard(limit, used, allowed, action.reason);
-}
-
-async function budgetUsage(s: Session) {
-  const waited = await waitedMs(s.deps.db, s.lease.runId);
-  return {
-    activeMs: activeTime(Date.now() - s.startedAt, waited),
-    toolCalls: s.toolCalls,
-    costUsd: await spentUsd(s.deps.db, s.lease.runId),
-  };
-}
-
 async function checkBudget(s: Session): Promise<void> {
   if (s.budgetHit || s.members.size === 0) return;
   const usage = await budgetUsage(s);
@@ -172,56 +95,6 @@ async function checkBudget(s: Session): Promise<void> {
   s.budgetHit = limit;
   await save(s, { exceeded: limit });
   for (const abort of s.members.values()) abort();
-}
-
-function withAutoOption(
-  s: Session,
-  action: Extract<FlowAction, { type: 'ask' }>,
-  card: CheckpointCard,
-): CheckpointCard {
-  const text = action.kind === 'needs_input' ? (s.results.at(-1)?.text ?? '') : '';
-  const autoOption = autoContinueOption({
-    kind: action.kind,
-    fromJev: action.fromJev,
-    agentAsked: agentQuestion(text) !== null,
-  });
-  return { ...card, payload: { ...card.payload, autoOption } };
-}
-
-async function ask(s: Session, action: Extract<FlowAction, { type: 'ask' }>): Promise<FlowEvent> {
-  const card = withAutoOption(s, action, await cardFor(s, action));
-  const answer = await askCard(s, card);
-  if (answer.type === 'stopped') return { type: 'stopped' };
-  if (answer.type === 'timeout') throw new CheckpointTimeout();
-  if (action.kind === 'clarify') {
-    const rules = ruleDepth(s.input.mode ?? 'chat', s.flow.risk);
-    const depth = depthFromClarify(card, answer.optionId, rules);
-    if (answer.optionId === CHECKPOINT_OPTION.answer && answer.note) clarify(s, answer.note);
-    if (depth) await save(s, { depthSource: depthSourceOf(answer.optionId) });
-    return { type: 'clarified', depth };
-  }
-  if (action.kind === 'budget' && answer.optionId === 'continue') {
-    s.limits = extendLimits(s.limits, await budgetUsage(s), s.baseLimits);
-    s.budgetHit = null;
-    await save(s, {
-      activeLimitMs: s.limits.activeLimitMs,
-      toolCallLimit: s.limits.toolCallLimit,
-      costCapUsd: s.limits.costCapUsd,
-      exceeded: null,
-    });
-  }
-  return { type: 'answered', kind: action.kind, optionId: answer.optionId, note: answer.note };
-}
-
-function depthSourceOf(optionId: string): 'rules' | 'user' {
-  const byRules =
-    optionId === CHECKPOINT_OPTION.clarifyRules || optionId === CHECKPOINT_OPTION.answer;
-  return byRules ? 'rules' : 'user';
-}
-
-function clarify(s: Session, answer: string): void {
-  const request = clarifiedRequest(s.input.userRequest, answer);
-  s.input = { ...s.input, userRequest: request, prompt: clarifiedRequest(s.input.prompt, answer) };
 }
 
 async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null> {
@@ -274,7 +147,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       await revertRun(s.deps.db, s.input.workspaceId, s.lease.runId, true);
       return { type: 'reverted' };
     case 'finish':
-      await finish(s, action.status, action.reason);
+      await finish(s, action.status, action.reason, action.incomplete ?? null);
       return null;
   }
 }
@@ -283,9 +156,16 @@ async function finish(
   s: Session,
   status: 'succeeded' | 'failed' | 'cancelled',
   reason: string | null,
+  incomplete: string | null = null,
 ) {
   const verdict = s.results.some((result) => result.role === 'critic') ? s.flow.verdict : null;
-  const text = finalText(s.results, verdict, s.findings, s.message !== null, s.checkBodies);
+  const assumed = s.assumption ? assumptionLine(s.assumption) : null;
+  const notes = [assumed, incomplete].filter((line): line is string => line !== null);
+  const text = withNotes(
+    finalText(s.results, verdict, s.findings, s.message !== null, s.checkBodies),
+    notes,
+    s.message !== null,
+  );
   await publish(s, { phase: 'finished', error: status === 'failed' ? reason : null });
   if (text) {
     if (!s.message) {
@@ -312,6 +192,12 @@ async function finish(
   }
 }
 
+function withNotes(text: string, notes: readonly string[], hasMessage: boolean): string {
+  if (notes.length === 0) return text;
+  const joined = notes.join('\n\n');
+  return text || hasMessage ? `${text}\n\n${joined}` : joined;
+}
+
 export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise<void> {
   const input = await loadRunInput(deps.db, lease.runId);
   const append: Append = (event, options) => appendRunEvent(deps.db, lease, event, options);
@@ -330,10 +216,14 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       namedFiles([input.userRequest]).length,
       intake.body.jev,
     );
-    const review = reviewIntent(mode, intake.body.jev);
+    const review = reviewIntent(mode, intake.body.jev, input.userRequest);
     const note = intakeDepthNote(depth, review);
     if (note) await noteIntakeDepth(deps.db, lease.runId, { depth: depth.depth, reason: note });
-    const limits = baseLimits(deps);
+    const vague =
+      mode === 'do' &&
+      input.history.length === 0 &&
+      isVagueRequest(input.userRequest, namedFiles([input.userRequest]).length, intake.body.jev);
+    const limits = baseLimits(deps, input.provider);
     const root = input.projectRoots[0];
     const worktrees = mode === 'do' && root !== undefined && (await isGitWorkTree(root));
     await insertOrchestration(deps.db, {
@@ -399,15 +289,27 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       buildStyle: 'off',
       buildStyleDecided: false,
       lanePlacement: null,
+      assumption: null,
     };
     session = s;
     budgetTimer = setInterval(
       () => void checkBudget(s).catch(() => undefined),
       deps.budgetPollMs ?? 1000,
     );
+    const handling = vague ? vagueHandling(input.level) : null;
+    if (handling === 'assume') {
+      const [likely] = interpretations(intakeResponse(s));
+      if (likely) await assume(s, likely);
+    }
     await drive(
       s,
-      intakeGate === 'ask' && mode === 'do' ? 'ask' : intakeGate === 'act' ? 'act' : 'fallback',
+      handling === 'ask'
+        ? 'interpret'
+        : intakeGate === 'ask' && mode === 'do'
+          ? 'ask'
+          : intakeGate === 'act'
+            ? 'act'
+            : 'fallback',
     );
   } catch (error) {
     if (error instanceof LeaseLostError || control.reason() === 'lease_lost') return;
@@ -431,9 +333,13 @@ async function settleSession(s: Session): Promise<void> {
       SESSION_CLOSE_REASONS.orchestrationDone,
     ).catch(() => undefined);
   }
+  if (s.input.mode === 'do') await recordKeptChanges(s.deps.db, s.input.workspaceId, s.lease.runId);
 }
 
-async function drive(s: Session, intake: 'act' | 'ask' | 'fallback'): Promise<void> {
+async function drive(
+  s: Session,
+  intake: Extract<FlowEvent, { type: 'start' }>['intake'],
+): Promise<void> {
   let result = nextStep(s.flow, { type: 'start', intake });
   for (;;) {
     s.flow = result.state;

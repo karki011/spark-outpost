@@ -104,6 +104,11 @@ export interface Scenario {
   scopeConfidence?: number;
   complexity?: number;
   intent?: string;
+  modelConfidence?: number;
+  intentConfidence?: number;
+  reviewExisting?: number;
+  vague?: number;
+  intentProbabilities?: Record<string, number>;
 }
 
 export const SCENARIOS: readonly Scenario[] = [
@@ -196,19 +201,32 @@ export interface JevScript {
   ) => { status: string; next: string; confidence?: number };
 }
 
+function intentAnswer(scenario: Scenario): Answers[string] {
+  const intent = scenario.intent ?? (scenario.mode === 'ask' ? 'question' : 'bug_fix');
+  const confidence = scenario.intentConfidence ?? scenario.confidence;
+  if (!scenario.intentProbabilities) return choice(intent, confidence);
+  return {
+    type: 'choice',
+    choice: intent,
+    probabilities: scenario.intentProbabilities,
+    confidence,
+  };
+}
+
 function intakeAnswers(scenario: Scenario): Answers {
   const second = scenario.depth === 'plan_execute_review' ? 'plan_execute' : 'execute';
   return {
-    intent: choice(
-      scenario.intent ?? (scenario.mode === 'ask' ? 'question' : 'bug_fix'),
-      scenario.confidence,
-    ),
+    intent: intentAnswer(scenario),
+    ...(scenario.reviewExisting === undefined
+      ? {}
+      : { review_existing: { type: 'noul', noul: scenario.reviewExisting } }),
+    ...(scenario.vague === undefined ? {} : { vague: { type: 'noul', noul: scenario.vague } }),
     complexity: score(scenario.complexity ?? 1),
     risk: score(RISKS.indexOf(scenario.risk)),
     depth: choice(scenario.depth, scenario.confidence, second),
     ...(scenario.scope ? { scope: choice(scenario.scope, scenario.scopeConfidence ?? 0.9) } : {}),
     provider: choice('claude', 0.95),
-    model_claude: choice(scenario.model, 0.95),
+    model_claude: choice(scenario.model, scenario.modelConfidence ?? 0.95),
     effort_claude: score(scenario.effort),
     model_codex: choice('gpt-6-sol', 0.95),
     effort_codex: score(1),
@@ -410,6 +428,23 @@ export async function driveToEnd(
     return run?.finishedAt ? run : null;
   }, timeoutMs);
   const orchestration = await loadOrchestration(t.db, runId);
-  if (!orchestration) throw new Error('No orchestration was recorded.');
+  if (!orchestration) {
+    const run = await getRun(t.db, runId);
+    throw new Error(`No orchestration was recorded; the run ${run?.status}: ${run?.error}`);
+  }
   return { asked, orchestration };
+}
+
+export async function planWrites(t: TestDb, runId: string): Promise<string[]> {
+  const { rows } = await t.db.query<{ statuses: string }>(
+    `SELECT (SELECT string_agg(entry->>'status', ' ' ORDER BY position)
+             FROM jsonb_array_elements(e.payload->'content'->'body'->'entries')
+               WITH ORDINALITY AS item(entry, position)) AS statuses
+     FROM run_events e JOIN runs r ON r.id = e.run_id
+     WHERE (r.id = $1 OR r.parent_run_id = $1) AND e.type = 'ACTIVITY_SNAPSHOT'
+       AND e.payload->>'activityType' = 'plan'
+     ORDER BY e.created_at, e.seq`,
+    [runId],
+  );
+  return rows.map((row) => row.statuses);
 }

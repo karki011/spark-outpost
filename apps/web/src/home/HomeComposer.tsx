@@ -1,0 +1,139 @@
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  EMPTY_CONVERSATION_USAGE,
+  titleFromMessage,
+  type Attachment,
+  type ConversationDetail,
+  type UpdateChatSettingsRequest,
+} from '@spark-outpost/contracts';
+import { api, newDraftId, queryKeys } from '../api/client.ts';
+import { setupApi, setupKey } from '../api/setup.ts';
+import { useAttachments } from '../chat/attachments/use-attachments.ts';
+import { Composer } from '../chat/Composer.tsx';
+import { useChatRepos, useLinkedProjects } from '../chat/project/use-chat-repos.ts';
+
+const NO_REPOS: string[] = [];
+const STARTED_MS = 6000;
+
+interface Outgoing {
+  content: string;
+  attachments: Attachment[];
+}
+
+interface HomeComposerProps {
+  draftId: string;
+  seedProjectId: string | null;
+  onSeeded: () => void;
+  onRotate: (nextDraftId: string) => void;
+  onOpenId: (conversationId: string) => void;
+}
+
+interface Started {
+  id: string;
+  title: string;
+}
+
+function carriedSettings(detail: ConversationDetail | undefined): UpdateChatSettingsRequest | null {
+  if (!detail) return null;
+  const { settings, conversation } = detail;
+  const carried: UpdateChatSettingsRequest = { projectIds: conversation.projectIds };
+  if (settings.provider) carried.provider = settings.provider;
+  if (settings.model) carried.model = settings.model;
+  if (settings.effort) carried.effort = settings.effort;
+  if (settings.permission) carried.permission = settings.permission;
+  if (settings.level) carried.level = settings.level;
+  if (settings.routing) carried.routing = settings.routing;
+  return carried;
+}
+
+function useStarted() {
+  const [started, setStarted] = useState<Started | null>(null);
+  useEffect(() => {
+    if (!started) return;
+    const timer = setTimeout(() => setStarted(null), STARTED_MS);
+    return () => clearTimeout(timer);
+  }, [started]);
+  return [started, setStarted] as const;
+}
+
+export function HomeComposer(props: HomeComposerProps) {
+  const { draftId, seedProjectId, onSeeded, onRotate, onOpenId } = props;
+  const queryClient = useQueryClient();
+  const [started, setStarted] = useStarted();
+  const detail = useQuery({
+    queryKey: queryKeys.conversation(draftId),
+    queryFn: () => api.getConversation(draftId),
+  });
+  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
+  const connected = setup.data?.providers.filter((provider) => provider.connection) ?? [];
+  const jevConnected =
+    setup.data?.advisors.some((advisor) => advisor.id === 'jev' && advisor.connection) ?? false;
+  const repos = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_REPOS);
+  const attachments = useAttachments();
+  const linkRepos = useChatRepos(draftId);
+  const seed = detail.isSuccess ? seedProjectId : null;
+  const link = linkRepos.mutate;
+
+  useEffect(() => {
+    if (!seed) return;
+    onSeeded();
+    link({ type: 'add', projectId: seed });
+  }, [seed, onSeeded, link]);
+
+  const send = useMutation({
+    mutationFn: async (message: Outgoing) => {
+      const carried = carriedSettings(detail.data);
+      await api.sendMessage(
+        draftId,
+        crypto.randomUUID(),
+        message.content,
+        message.attachments.map((attachment) => attachment.id),
+      );
+      const next = newDraftId();
+      if (carried) await api.updateChatSettings(next, carried);
+      return { next, title: titleFromMessage(message.content) };
+    },
+    onSuccess: async ({ next, title }) => {
+      setStarted({ id: draftId, title });
+      onRotate(next);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.conversation(draftId) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }),
+      ]);
+    },
+  });
+
+  return (
+    <section className="home-compose" aria-label="Start a new chat">
+      <Composer
+        conversationId={draftId}
+        repos={repos}
+        settings={detail.data?.settings ?? null}
+        providers={connected}
+        runs={[]}
+        jevConnected={jevConnected}
+        usageTotals={EMPTY_CONVERSATION_USAGE}
+        busy={false}
+        sending={send.isPending}
+        error={send.error?.message ?? null}
+        attachments={attachments}
+        onSend={async (content, files) => {
+          await send.mutateAsync({ content, attachments: files });
+        }}
+        onStop={() => undefined}
+        autoFocus={false}
+      />
+      <p className="home-started" role="status" aria-live="polite">
+        {started && (
+          <span key={started.id}>
+            Started ‘{started.title}’ ·{' '}
+            <button type="button" className="hlink" onClick={() => onOpenId(started.id)}>
+              Open
+            </button>
+          </span>
+        )}
+      </p>
+    </section>
+  );
+}

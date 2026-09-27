@@ -62,7 +62,7 @@ async function prepareDatabase(version: Version): Promise<Target> {
     url.searchParams.set('options', `-c search_path=${schema}`);
     return {
       url: url.toString(),
-      db: createDb(testUrl, schema),
+      db: createDb(testUrl, { searchPath: schema }),
       cleanupSql: { url: testUrl, sql: `DROP SCHEMA ${schema} CASCADE` },
     };
   }
@@ -78,7 +78,13 @@ async function prepareDatabase(version: Version): Promise<Target> {
   };
 }
 
-function baseEnv(runtime: Runtime, appRoot: string, databaseUrl: string, urls: StackUrls) {
+function baseEnv(
+  runtime: Runtime,
+  version: Version,
+  appRoot: string,
+  databaseUrl: string,
+  urls: StackUrls,
+) {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     DATABASE_URL: databaseUrl,
@@ -92,7 +98,10 @@ function baseEnv(runtime: Runtime, appRoot: string, databaseUrl: string, urls: S
   return {
     ...env,
     SECRET_STORE: 'memory',
-    MEMORY_SECRETS: JSON.stringify({ jev: 'e2e-dry-run-jev-key', zai: 'e2e-dry-run-zai-key' }),
+    MEMORY_SECRETS: JSON.stringify({
+      jev: 'e2e-dry-run-jev-key',
+      ...(version === 'current' ? { zai: 'e2e-dry-run-zai-key' } : {}),
+    }),
     FAKE_ACP_AGENT: join(appRoot, 'apps/server/test/fake-acp-agent.ts'),
     FAKE_ACP_MODELS: JSON.stringify(FAKE_ACP_MODELS),
     TYPESAFE_BASE_URL: `${STUB_URL}/typesafe`,
@@ -155,7 +164,7 @@ export async function startStack(
   await mkdir(logs, { recursive: true });
   const urls = urlsFor(portsFor(version));
   const target = await prepareDatabase(version);
-  const env = baseEnv(runtime, appRoot, target.url, urls);
+  const env = baseEnv(runtime, version, appRoot, target.url, urls);
   await migrate(appRoot, env, logs);
   const workspaceId = await seedWorkspace(target.db);
   const stack: Stack = {

@@ -140,6 +140,34 @@ describe('Codex launch', () => {
       expect(source).toContain('_AgentMode.ReadOnly, _AgentMode.AskEveryAction,');
     });
 
+    it('reports the whole turn’s tokens, not only the last model request', () => {
+      expect(source).not.toContain('buildPromptUsage(sessionState.lastTokenUsage)');
+      expect(source.split('buildPromptUsage(turnPromptUsage(sessionState))')).toHaveLength(5);
+      const helpers = source.slice(
+        source.indexOf('var TOKEN_USAGE_FIELDS'),
+        source.indexOf('function turnPromptUsage('),
+      );
+      const { step, add } = new Function(
+        `${helpers}; return { step: tokenUsageStep, add: addTokenUsage };`,
+      )() as {
+        step: (usage: object, previous: object | undefined) => Record<string, number>;
+        add: (sum: object | null, step: object) => Record<string, number>;
+      };
+      const usage = (input: number, cached: number, output: number) => ({
+        totalTokens: input + output,
+        inputTokens: input,
+        cachedInputTokens: cached,
+        outputTokens: output,
+        reasoningOutputTokens: 0,
+      });
+      const first = { last: usage(100, 80, 10), total: usage(500, 400, 50) };
+      const second = { last: usage(120, 100, 5), total: usage(620, 500, 55) };
+      let turn = add(null, step(first, undefined));
+      turn = add(turn, step(second, first.total));
+      turn = add(turn, step(second, second.total));
+      expect(turn).toEqual(usage(220, 180, 15));
+    });
+
     it('offers decline before cancel for commands and file changes', () => {
       const commands = source.slice(
         source.indexOf('function commandDecisionOptions(params) {'),

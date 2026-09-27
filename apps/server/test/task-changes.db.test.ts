@@ -72,7 +72,12 @@ async function send(conversationId: string, content: string): Promise<string> {
     content,
   }).expect(201);
   const runId = sent.body.run.id as string;
-  await eventually(async () => (await getRun(t.db, runId))?.finishedAt);
+  const run = await eventually(async () => {
+    const current = await getRun(t.db, runId);
+    return current?.finishedAt ? current : null;
+  }, 15_000);
+  expect(run.error).toBeNull();
+  expect(run.status).toBe('succeeded');
   return runId;
 }
 

@@ -60,6 +60,8 @@ export function scopeLabel(scope: Scope): string {
 
 export const jevIntakeSchema = intakeAnswerSchema.extend({
   scope: scopeSchema.nullable().optional(),
+  reviewExisting: z.number().min(0).max(1).optional(),
+  vague: z.number().min(0).max(1).optional(),
   confidence: z.number().min(0).max(1),
   routeConfidence: z.number().min(0).max(1).nullable(),
   confidences: z.record(z.string(), z.number()),

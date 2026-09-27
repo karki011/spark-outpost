@@ -202,20 +202,30 @@ describe('approval gate', () => {
     expect(rows[0]).toMatchObject({ status: 'allowed', decided_by: 'level' });
   });
 
-  it('always asks before a push, even in Full auto', async () => {
-    const run = await doRun(t, root, 'go', 'full-auto');
+  it('asks before a push below Full auto', async () => {
+    const run = await doRun(t, root, 'go', 'balanced');
     const { answer } = await (async () => {
-      const { gate, waiters } = gateFor(run.runId, 'full-auto');
+      const { gate, waiters } = gateFor(run.runId, 'balanced');
       const pending = gate.review(
         commandRequest(root, 'git push origin main'),
         new AbortController().signal,
       );
       const id = await pendingFor(run.runId);
-      expect((await getApproval(t.db, id))?.reason).toBe('Pushing always asks');
+      expect((await getApproval(t.db, id))?.reason).toBe('Pushing publishes outside this computer');
       await decideApproval(t.db, t.workspaceId, id, { optionId: 'reject', scope: 'once' });
       waiters.notify(id);
       return { answer: await pending };
     })();
+    expect(answer).toMatchObject({ allowed: false });
+  });
+
+  it('refuses a force push even in Full auto', async () => {
+    const run = await doRun(t, root, 'go', 'full-auto');
+    const { gate } = gateFor(run.runId, 'full-auto');
+    const answer = await gate.review(
+      commandRequest(root, 'git push --force origin main'),
+      new AbortController().signal,
+    );
     expect(answer).toMatchObject({ allowed: false });
   });
 

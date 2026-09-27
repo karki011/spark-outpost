@@ -13,6 +13,8 @@ const THEMES = [
   'lagoon',
   'plum',
   'sage',
+  'aurora',
+  'iris',
   'contrast',
 ] as const;
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -103,6 +105,15 @@ for (const theme of THEMES) {
       page.getByRole('dialog', { name: 'Models' }).getByRole('switch').first(),
     ).toBeVisible();
     found.push(...(await blockingViolations(page, 'settings models')));
+
+    await page.getByRole('button', { name: 'Close settings' }).click();
+    await page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('button', { name: /^Home/ })
+      .click();
+    await expect(page.getByRole('region', { name: 'Needs you' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Spend' }).locator('.cost-total')).toBeVisible();
+    found.push(...(await blockingViolations(page, 'home')));
 
     expect(found).toEqual([]);
   });

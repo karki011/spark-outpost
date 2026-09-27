@@ -36,6 +36,13 @@ export const conversationAttentionSchema = z.object({
 });
 export type ConversationAttention = z.infer<typeof conversationAttentionSchema>;
 
+export const planProgressSchema = z.object({
+  done: z.number().int().nonnegative(),
+  active: z.number().int().nonnegative(),
+  total: z.number().int().positive(),
+});
+export type PlanProgress = z.infer<typeof planProgressSchema>;
+
 export const conversationSummarySchema = z.object({
   id: z.uuid(),
   title: z.string(),
@@ -47,6 +54,8 @@ export const conversationSummarySchema = z.object({
       status: runStatusSchema,
       error: z.string().nullable(),
       step: z.string().nullable(),
+      provider: z.string().nullable().default(null),
+      progress: planProgressSchema.nullable().default(null),
     })
     .nullable(),
   archivedAt: z.string().nullable(),

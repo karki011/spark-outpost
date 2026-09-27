@@ -99,14 +99,32 @@ export interface Session {
   buildStyle: BuildStyle;
   buildStyleDecided: boolean;
   lanePlacement: LanePlacement | null;
+  assumption: string | null;
 }
 
-export function baseLimits(deps: OrchestratorDeps): BudgetLimits {
+export const COMMAND_READER_TOOL_CALL_LIMIT = 120;
+const COMMAND_READERS = new Set(['codex']);
+
+export function toolCallLimitFor(provider: string): number {
+  return COMMAND_READERS.has(provider)
+    ? COMMAND_READER_TOOL_CALL_LIMIT
+    : ORCHESTRATION_TOOL_CALL_LIMIT;
+}
+
+export function baseLimits(deps: OrchestratorDeps, provider: string): BudgetLimits {
   return {
     activeLimitMs: deps.budget?.activeLimitMs ?? ORCHESTRATION_ACTIVE_LIMIT_MS,
-    toolCallLimit: deps.budget?.toolCallLimit ?? ORCHESTRATION_TOOL_CALL_LIMIT,
+    toolCallLimit: deps.budget?.toolCallLimit ?? toolCallLimitFor(provider),
     costCapUsd: deps.budget?.costCapUsd ?? null,
   };
+}
+
+export function fitToolLimit(s: Session, provider: string): void {
+  if (s.deps.budget?.toolCallLimit !== undefined) return;
+  const extra = toolCallLimitFor(provider) - s.baseLimits.toolCallLimit;
+  if (extra <= 0) return;
+  s.baseLimits = { ...s.baseLimits, toolCallLimit: s.baseLimits.toolCallLimit + extra };
+  s.limits = { ...s.limits, toolCallLimit: s.limits.toolCallLimit + extra };
 }
 
 export const routeKey = (role: AgentRole, stepIndex: number) => `${role}:${stepIndex}`;
@@ -117,6 +135,7 @@ export async function save(s: Session, patch: OrchestrationPatch = {}): Promise<
     depth: s.flow.depth,
     retries: s.flow.retries,
     toolCalls: s.toolCalls,
+    toolCallLimit: s.limits.toolCallLimit,
     ...patch,
   });
 }

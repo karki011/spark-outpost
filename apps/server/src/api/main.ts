@@ -3,7 +3,8 @@ import { ensureLocalWorkspace, pruneEmptyConversations } from '../persistence/co
 import { pruneUnlinkedAttachments } from '../persistence/attachments.ts';
 import { pruneProtocolLog } from '../persistence/audit-log.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
-import { createDb } from '../persistence/db.ts';
+import { createDb, POOL_MAX } from '../persistence/db.ts';
+import { startOutcomeSweep } from '../outcomes/sweep.ts';
 import { assertMigrated } from '../persistence/migrate.ts';
 import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
@@ -19,7 +20,7 @@ import { createApp } from './app.ts';
 import { RunEventHub } from './run-event-hub.ts';
 
 const config = loadConfig();
-const db = createDb(config.DATABASE_URL);
+const db = createDb(config.DATABASE_URL, { max: POOL_MAX.api });
 await assertMigrated(db);
 
 const workspaceId = await ensureLocalWorkspace(db);
@@ -56,6 +57,10 @@ const app = createApp({
   terminals,
   port: config.API_PORT,
   allowedOrigins: config.ALLOWED_ORIGINS,
+  outcomeSampleRate: config.OUTCOME_SAMPLE_RATE,
+});
+const outcomeSweep = startOutcomeSweep(db, workspaceId, {
+  sampleRate: config.OUTCOME_SAMPLE_RATE,
 });
 
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
@@ -68,6 +73,7 @@ attachTerminalSockets(server, terminals, {
 
 const shutdown = async () => {
   terminals.killAll();
+  outcomeSweep.stop();
   server.close();
   server.closeAllConnections();
   await listener.close();

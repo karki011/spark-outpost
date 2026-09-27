@@ -1,7 +1,7 @@
 import { createIntakeRecorder } from '../advisor/intake-recorder.ts';
 import { loadConfig } from '../config.ts';
 import { Slots } from '../orchestration/slots.ts';
-import { createDb } from '../persistence/db.ts';
+import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { assertMigrated } from '../persistence/migrate.ts';
 import { listen } from '../persistence/notifications.ts';
 import { keychainSecretStore, memorySecretStore } from '../setup/secrets.ts';
@@ -10,7 +10,7 @@ import { createProviders } from './providers.ts';
 import { startWorker } from './worker.ts';
 
 const config = loadConfig();
-const db = createDb(config.DATABASE_URL);
+const db = createDb(config.DATABASE_URL, { max: POOL_MAX.worker });
 await assertMigrated(db);
 
 const approvalWaiters = new ApprovalWaiters();

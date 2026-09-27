@@ -66,6 +66,7 @@ export interface WriteContext {
   home: string;
   review: (request: ApprovalRequest) => Promise<GateAnswer>;
   report: Report;
+  annotate: Report;
 }
 
 export async function writeTextFile(
@@ -101,7 +102,7 @@ export async function writeTextFile(
     roots: policy.roots,
     home: context.home,
   });
-  report(answer.note);
+  context.annotate(answer.note);
   if (answer.outcome !== 'selected' || !answer.allowed) {
     throw acp.RequestError.invalidRequest(
       { path: params.path },

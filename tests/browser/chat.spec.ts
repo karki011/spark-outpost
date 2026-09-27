@@ -17,6 +17,11 @@ test('sends a message, streams the reply, and survives a reload without duplicat
   page,
 }) => {
   const marker = `Browser check ${Date.now()}`;
+  const missing: string[] = [];
+  page.on('response', (response) => {
+    const path = new URL(response.url()).pathname;
+    if (response.status() === 404 && /^\/api\/conversations\/[^/]+$/.test(path)) missing.push(path);
+  });
   const input = await newChat(page);
   const chats = page.getByRole('navigation', { name: 'Chats' });
   await expect(chats.getByRole('listitem')).toHaveCount(0);
@@ -38,6 +43,7 @@ test('sends a message, streams the reply, and survives a reload without duplicat
   await workLog.click();
   await expect(page.locator('.steps li', { hasText: 'Writing a reply' })).toBeVisible();
   await expect(page.locator('.bubble', { hasText: marker })).toHaveCount(1);
+  expect(missing).toEqual([]);
 });
 
 test('Shift+Enter adds a line and Stop cancels the run', async ({ page }) => {
@@ -89,6 +95,8 @@ test('the theme picker lists every theme and applies the newer ones', async ({ p
     'Lagoon',
     'Plum',
     'Sage',
+    'Aurora',
+    'Iris',
     'High contrast',
   ]);
   await page.keyboard.press('Escape');
@@ -97,6 +105,8 @@ test('the theme picker lists every theme and applies the newer ones', async ({ p
     { name: 'Lagoon', skin: 'lagoon', panel: '#fbfefe' },
     { name: 'Plum', skin: 'plum', panel: '#1c1520' },
     { name: 'Sage', skin: 'sage', panel: '#fbfcf8' },
+    { name: 'Aurora', skin: 'aurora', panel: '#18152f' },
+    { name: 'Iris', skin: 'iris', panel: '#fdfcff' },
   ];
   for (const { name, skin, panel } of newer) {
     await page.getByRole('button', { name: 'Theme' }).click();
@@ -112,7 +122,7 @@ test('the theme picker lists every theme and applies the newer ones', async ({ p
   }
 
   await page.reload();
-  expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('sage');
+  expect(await page.evaluate(() => document.documentElement.dataset.skin)).toBe('iris');
 });
 
 test('replies render Markdown safely', async ({ page }) => {

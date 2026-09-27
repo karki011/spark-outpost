@@ -194,6 +194,13 @@ function summary(record: CellRecord, spent: number): string {
   return `  ${verdict} ${(record.wallMs / 1000).toFixed(1)} s $${record.costUsd.toFixed(4)} spent=$${spent.toFixed(3)}${why.slice(0, 400)}`;
 }
 
+const LIMIT = /rate.?limit|usage limit|too many requests|\b429\b|overloaded|quota/i;
+
+function rateLimited(record: CellRecord): boolean {
+  const errors = [record.error, ...record.turns.map((turn) => turn.metrics.error)];
+  return errors.some((text) => text !== null && LIMIT.test(text));
+}
+
 async function runQueue(runner: Runner): Promise<void> {
   const { run } = runner;
   for (let repeat = 1; repeat <= Number(values.repeats); repeat++) {
@@ -213,6 +220,11 @@ async function runQueue(runner: Runner): Promise<void> {
       run.spentUsd += record.costUsd;
       console.log(summary(record, run.spentUsd));
       await save(runner);
+      if (rateLimited(record)) {
+        run.stoppedForBudget = false;
+        console.log(`Paused after ${cell.key} #${repeat}: an agent hit a rate or usage limit.`);
+        return;
+      }
     }
   }
 }

@@ -3,6 +3,7 @@ export const CREW_MARKER = '#crew';
 export const UNSURE_MARKER = '#unsure';
 export const RETRY_MARKER = '#retry';
 export const DEBUG_MARKER = '#debug';
+export const VAGUE_MARKER = '#vague';
 
 interface StubQuestion {
   type: 'choice' | 'score' | 'noul';
@@ -63,6 +64,15 @@ function intakeAnswers(request: StubRequest, task: string): Record<string, Answe
     ]),
   );
   if (task.includes(DEBUG_MARKER)) answers.intent = choice('debugging', confidence);
+  if (task.includes(VAGUE_MARKER)) {
+    answers.vague = { type: 'noul', noul: 0.96 };
+    answers.intent = {
+      type: 'choice',
+      choice: 'docs',
+      probabilities: { docs: 0.6, feature: 0.3, refactor: 0.1 },
+      confidence,
+    };
+  }
   if (!task.includes(CREW_MARKER)) return answers;
   return {
     ...answers,

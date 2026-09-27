@@ -54,6 +54,18 @@ export const themes = [
     swatch: { accent: '#a85a2a', background: '#fbfcf8' },
   },
   {
+    id: 'aurora',
+    label: 'Aurora',
+    description: 'Night violet, lime glow',
+    swatch: { accent: '#c1f354', background: '#18152f' },
+  },
+  {
+    id: 'iris',
+    label: 'Iris',
+    description: 'Lilac light, indigo accent',
+    swatch: { accent: '#5b3df5', background: '#fdfcff' },
+  },
+  {
     id: 'contrast',
     label: 'High contrast',
     description: 'Maximum legibility',

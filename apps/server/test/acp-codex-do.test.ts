@@ -85,7 +85,9 @@ async function run(prompt: string, approvals: PermissionGate, projectRoots = [ro
   const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
   const steps = outputs.flatMap((output) => (output.kind === 'step_started' ? [output.name] : []));
   const settings = outputs.find((output) => output.kind === 'session_settings');
-  return { text, steps, error, settings };
+  const toolSteps = outputs.filter((output) => output.kind === 'step_started' && output.tool);
+  const tokens = outputs.find((output) => output.kind === 'tokens');
+  return { text, steps, error, settings, toolSteps: toolSteps.length, tokens };
 }
 
 const SCRIPT =
@@ -119,6 +121,20 @@ describe('Codex Do through the fake agent', () => {
     ]);
     expect(result.text).toContain('[ls -la=allow_once]');
     expect(result.text).toContain('[pnpm add left-pad=allow_once]');
+  });
+
+  it('counts each approved action once toward the tool-call budget', async () => {
+    const { stub, reviewed } = levelGate('hands-on');
+    const result = await run(SCRIPT, stub);
+    expect(reviewed).toHaveLength(6);
+    expect(result.toolSteps).toBe(6);
+    expect(result.steps.filter((step) => step.startsWith('allow_once'))).toHaveLength(6);
+  });
+
+  it('counts cached input as input, as Codex reports it apart', async () => {
+    const { stub } = levelGate('balanced');
+    const result = await run('#codex ls', stub);
+    expect(result.tokens).toMatchObject({ tokens: { input: 220, cachedRead: 100, output: 60 } });
   });
 
   it('declines with the option that lets Codex continue', async () => {

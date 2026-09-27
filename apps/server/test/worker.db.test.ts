@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import pg from 'pg';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createConversation,
   getConversationDetail,
@@ -23,6 +24,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await worker?.stop();
   worker = null;
   await t.cleanup();
@@ -106,5 +108,21 @@ describe('worker', () => {
     expect(run.status).toBe('failed');
     expect(run.error).toContain('#fail');
     expect((await eventTypes(t.db, runId)).at(-1)).toBe('RUN_ERROR');
+  });
+
+  it('retries a full database with backoff instead of failing the run', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const tooMany = Object.assign(new Error('sorry, too many clients already'), { code: '53300' });
+    start({ stepMs: 20, wordMs: 5 });
+    const { runId } = await send('Hello');
+    await eventually(async () => (await getRun(t.db, runId))?.status === 'running');
+    const connect = vi
+      .spyOn(pg.Pool.prototype, 'connect')
+      .mockImplementationOnce(() => Promise.reject(tooMany) as never)
+      .mockImplementationOnce(() => Promise.reject(tooMany) as never)
+      .mockImplementationOnce(() => Promise.reject(tooMany) as never);
+
+    expect((await settled(runId)).status).toBe('succeeded');
+    expect(connect.mock.calls.length).toBeGreaterThan(3);
   });
 });

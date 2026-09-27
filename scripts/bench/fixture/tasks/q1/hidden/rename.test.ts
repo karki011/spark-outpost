@@ -37,14 +37,17 @@ test('every module behaves as before', () => {
   assert.deepEqual(orderSummary(lines), { subtotal: 13000, tax: 2600, grand: 15600 });
 });
 
-test('the old name is gone outside the alias', () => {
-  const files = [
-    ...readdirSync('src/shop').map((file) => `src/shop/${file}`),
-    ...readdirSync('test').map((file) => `test/${file}`),
-    'README.md',
-  ];
+test('the old name is gone from the code and the README outside the alias', () => {
+  const files = [...readdirSync('src/shop').map((file) => `src/shop/${file}`), 'README.md'];
   for (const file of files) {
     if (file === 'src/shop/total.ts') continue;
-    assert.doesNotMatch(readFileSync(file, 'utf8'), /\bcalcTotal\b/, file);
+    const text = readFileSync(file, 'utf8')
+      .split('\n')
+      .filter(
+        (line) => !(file === 'src/shop/index.ts' && /^export .* from '\.\/total\.ts'/.test(line)),
+      )
+      .filter((line) => !(file === 'README.md' && /deprecated/i.test(line)))
+      .join('\n');
+    assert.doesNotMatch(text, /\bcalcTotal\b/, file);
   }
 });

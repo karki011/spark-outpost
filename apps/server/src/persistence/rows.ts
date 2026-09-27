@@ -1,4 +1,5 @@
 import {
+  agentRoleSchema,
   categorySchema,
   titleSourceSchema,
   type AgentRole,
@@ -67,6 +68,8 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   latest_run_status: RunStatus | null;
   latest_run_error: string | null;
   latest_run_step: string | null;
+  latest_run_provider: string | null;
+  latest_run_progress: { done: number; active: number; total: number } | null;
   archived_at: Date | null;
   pinned_at: Date | null;
   pinned_order: number | null;
@@ -113,7 +116,7 @@ export function toRun(row: RunRow): Run {
     snapshot: row.snapshot_kind ?? null,
     revertedAt: iso(row.reverted_at ?? null),
     parentRunId: row.parent_run_id ?? null,
-    role: row.role ?? null,
+    role: agentRoleSchema.safeParse(row.role).data ?? null,
     stepIndex: row.step_index ?? null,
     agentLabel: row.agent_label ?? null,
     category: categorySchema.safeParse(row.category).data ?? null,
@@ -158,6 +161,11 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
             status: row.latest_run_status,
             error: row.latest_run_error,
             step: row.latest_run_step,
+            provider: row.latest_run_provider,
+            progress:
+              row.latest_run_progress && row.latest_run_progress.total > 0
+                ? row.latest_run_progress
+                : null,
           }
         : null,
     archivedAt: iso(row.archived_at),

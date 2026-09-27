@@ -23,6 +23,8 @@ const THEMES = [
   'lagoon',
   'plum',
   'sage',
+  'aurora',
+  'iris',
   'contrast',
   'system',
 ];
@@ -153,30 +155,47 @@ test('Balanced: the plan, one Builder carrying it with an edit approval, the Cri
   const planned = work.locator('.plist li');
   await expect(planned).toHaveCount(3);
   await expect(planned.getByRole('img', { name: 'Done' })).toHaveCount(3);
-  await expect(work.locator('.vbadge')).toHaveText('v5');
-  await work.getByRole('button', { name: 'History · 5 versions' }).click();
-  const done = work.locator('.phist .pd.comp');
-  await expect(done).toHaveCount(3);
-  await expect(done.first()).toHaveText('✓Done: Update src/turns.ts for step 3');
-  await expect(done.last()).toHaveText('✓Done: Update src/dates.ts for step 1');
-  await expect(work.locator('.phist .pd.stat')).toHaveCount(3);
-  await expect(work.locator('.phist .pv.old')).toHaveCount(0);
+  await expect(work.locator('.vbadge')).toHaveText('v1');
+  await expect(work.getByRole('button', { name: /^History ·/ })).toHaveCount(0);
 });
 
-test('Full auto asks only for what always asks, like pushing', async ({ page }) => {
+test("Review jumps to a second turn's plan, whose card renders once", async ({ page }) => {
+  test.setTimeout(120_000);
+  const first = await startComplex(page);
+  await first.getByRole('button', { name: 'Approve' }).click();
+  await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
+  await allowEdit(page);
+  const keep = card(page, /Keep these changes\?/);
+  await expect(keep).toBeVisible({ timeout: 30_000 });
+  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  const turns = page.locator('.crew-turn');
+  await expect(turns.first().locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
+
+  await send(page, `${CREW_REQUEST} #build #crew #revise`);
+  const plan = turns.nth(1).getByRole('group', { name: /Approve the plan/ });
+  await expect(plan).toBeVisible({ timeout: 30_000 });
+  await expect(plan).toContainText('Plan v2 · 3 steps');
+  const anchor = await plan.getAttribute('id');
+  expect(anchor).toMatch(/^approval-/);
+  await expect(page.locator(`[id="${anchor}"]`)).toHaveCount(1);
+  await expect(turns.first().getByRole('group', { name: /Approve the plan/ })).toHaveCount(1);
+
+  await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
+  await expect(plan).not.toBeInViewport();
+  const waiting = panel(page).getByRole('list', { name: 'Waiting for you' });
+  await waiting.getByRole('button', { name: 'Review' }).click();
+  await expect(plan).toBeInViewport();
+});
+
+test('Full auto asks for nothing, and a normal push follows the level', async ({ page }) => {
   test.setTimeout(90_000);
   await crewChat(page, repo, 'Full auto');
   await send(page, `${CREW_REQUEST} #build #crew #push`);
-  const push = card(page, /Run a command\?/);
-  await expect(push).toBeVisible({ timeout: 30_000 });
-  await expect(push.locator('pre')).toHaveText('$ git push origin main');
-  await expect(push).toContainText('Pushing always asks');
-  await push.getByRole('button', { name: 'Deny' }).click();
 
   const turn = page.locator('.crew-turn');
   await expect(turn.locator('.crew-foot')).toContainText('Done 3 agents', { timeout: 30_000 });
   await expect(
-    page.getByRole('group', { name: /Approve the plan|Keep these|Change a file/ }),
+    page.getByRole('group', { name: /Approve the plan|Keep these|Change a file|Run a command/ }),
   ).toHaveCount(0);
   for (const name of ['Sketch', 'Bolt', 'Hawk']) {
     await expect(agentHead(page, name)).toBeVisible();

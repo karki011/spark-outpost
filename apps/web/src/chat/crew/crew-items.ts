@@ -28,6 +28,18 @@ export function mergeApprovals(...lists: readonly (readonly Approval[])[]): Appr
   return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+export function turnApprovals(
+  runIds: readonly string[],
+  stored: readonly Approval[],
+  streamed: readonly Approval[],
+): Approval[] {
+  const own = new Set(runIds);
+  return mergeApprovals(
+    stored.filter((approval) => own.has(approval.runId)),
+    streamed,
+  );
+}
+
 export function mergeCheckpoints(...lists: readonly (readonly Approval[])[]): CheckpointApproval[] {
   return mergeApprovals(...lists).filter(isCheckpoint);
 }

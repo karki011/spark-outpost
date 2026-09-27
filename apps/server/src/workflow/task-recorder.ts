@@ -21,6 +21,7 @@ export function createTaskRecorder(
   runId: string,
   request: string,
   append: Append,
+  recordsPlan = true,
 ): TaskRecorder {
   let task: RunTask | null | undefined;
   let latest: StoredPlan | null | undefined;
@@ -42,16 +43,16 @@ export function createTaskRecorder(
   };
 
   const recordPlan = async (entries: PlanEntry[]) => {
-    if (entries.length === 0 && !(await current())) return;
+    if (!recordsPlan || (entries.length === 0 && !(await current()))) return;
     const { taskId } = await ensure();
     latest ??= await latestPlan(db, taskId);
-    const write = nextPlanWrite(latest, entries);
+    const write = nextPlanWrite(latest, entries, runId);
     if (!write) return;
     const body = { entries };
     await append(runEvents.activity('artifact:plan', 'plan', { version: write.version, body }), {
       artifact: { taskId, kind: 'plan', body, ...write },
     });
-    latest = { version: write.version, entries };
+    latest = { version: write.version, entries, sourceRunId: runId };
   };
 
   const recordLink = async (link: LinkOutput) => {

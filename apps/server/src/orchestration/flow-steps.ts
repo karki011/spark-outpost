@@ -1,6 +1,6 @@
 import type { AgentRole, OrchestrationPhase, TransitionNext } from '@spark-outpost/contracts';
 import { plansFirst } from './depth.ts';
-import { groupMembers, isResearchStep } from './parallel.ts';
+import { firstOpenStep, groupMembers, isResearchStep } from './parallel.ts';
 import { carriedSteps, spanOf } from './spans.ts';
 import type { FlowCheckpoint, FlowResult, FlowState, Spawn } from './transitions.ts';
 
@@ -23,6 +23,7 @@ export function spawn(
       last: full,
       lastGroup: null,
       waitingFor: null,
+      ticked: [],
     },
     action: { type: 'spawn', ...full },
   };
@@ -42,6 +43,7 @@ export function spawnGroup(
       last: { ...first('builder', stepIndex), note: null },
       lastGroup: stepIndexes,
       waitingFor: null,
+      ticked: [],
     },
     action: { type: 'spawn_group', stepIndexes, ...(lanes ? { lanes } : {}) },
   };
@@ -102,10 +104,64 @@ export function withDone(state: FlowState, steps: readonly number[]): FlowState 
   return added.length > 0 ? { ...state, completed: [...state.completed, ...added] } : state;
 }
 
+export function markedSpan(span: readonly number[], ticked: readonly number[]): number[] {
+  const marked = ticked.filter((index) => span.includes(index));
+  if (marked.length === 0) return [...span];
+  const last = Math.max(...marked);
+  return span.filter((index) => index <= last);
+}
+
 export function withStepDone(state: FlowState): FlowState {
   if (state.last?.role !== 'builder') return state;
-  const span = spanOf(state.last);
-  return { ...withDone(state, span), stepIndex: Math.max(state.stepIndex, ...span) };
+  const done = markedSpan(spanOf(state.last), state.ticked);
+  return { ...withDone(state, done), stepIndex: Math.max(state.stepIndex, ...done) };
+}
+
+export function stepsLeftAfter(state: FlowState): boolean {
+  if (state.last?.role !== 'builder') return false;
+  const settled = withStepDone(state);
+  return firstOpenStep(settled.steps, settled.completed) !== null;
+}
+
+function stepList(indexes: readonly number[]): string {
+  const numbers = indexes.map((index) => String(index + 1));
+  if (numbers.length === 1) return `step ${numbers[0]}`;
+  return `steps ${numbers.slice(0, -1).join(', ')} and ${numbers.at(-1)}`;
+}
+
+export function continueFollowUp(open: readonly number[]): string {
+  const list = stepList(open);
+  const markers = open.length > 1 ? ' Write "Step N done." on its own line after each one.' : '';
+  return `You stopped before finishing: ${list} of the plan ${open.length === 1 ? 'is' : 'are'} still open. Continue with ${open.length === 1 ? 'it' : 'them'} now, in plan order.${markers} Then reply with what you changed.`;
+}
+
+export function continueOrSpawn(state: FlowState, stepIndex: number): FlowResult {
+  const last = state.last;
+  const partial = last?.role === 'builder' && state.ticked.length > 0;
+  if (!partial || !spanOf(last).includes(stepIndex)) return spawnStep(state, stepIndex);
+  const open = spanOf(last).filter((index) => !state.completed.includes(index));
+  return spawn(
+    { ...state, stepIndex },
+    {
+      role: 'builder',
+      stepIndex,
+      escalate: false,
+      reason: 'continue',
+      from: last.from ?? last.stepIndex,
+      followUp: continueFollowUp(open),
+      ...(open.length > 1 ? { carry: open } : {}),
+    },
+  );
+}
+
+export function incompleteLine(state: FlowState): string | null {
+  const open = state.steps.flatMap((step, index) =>
+    step.trim() && !state.completed.includes(index) ? [index] : [],
+  );
+  if (open.length === 0 || state.depth === 'direct') return null;
+  const total = state.steps.length;
+  const verb = open.length === 1 ? 'is' : 'are';
+  return `Incomplete: ${stepList(open)} of ${total} ${verb} still open. Ask to continue and a Builder picks up from there.`;
 }
 
 export function ask(
@@ -121,14 +177,29 @@ export function ask(
   };
 }
 
+export function askInterpretation(state: FlowState, reason: string): FlowResult {
+  return {
+    state: { ...state, phase: 'waiting', waitingFor: 'clarify', suggestion: null },
+    action: {
+      type: 'ask',
+      kind: 'clarify',
+      reason,
+      suggestion: null,
+      fromJev: true,
+      interpret: true,
+    },
+  };
+}
+
 export function finish(
   state: FlowState,
   status: 'succeeded' | 'failed' | 'cancelled',
   reason: string | null = null,
 ): FlowResult {
+  const incomplete = status === 'succeeded' ? incompleteLine(state) : null;
   return {
     state: { ...state, phase: 'finished', waitingFor: null },
-    action: { type: 'finish', status, reason },
+    action: { type: 'finish', status, reason, ...(incomplete ? { incomplete } : {}) },
   };
 }
 

@@ -35,6 +35,7 @@ import { FolderError } from '../projects/folders.ts';
 import { ProjectNotFoundError } from '../projects/projects.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
 import { BadRequestError, UploadTooLargeError, paramId, parseBody } from './validation.ts';
+import { outcomeErrorStatus } from './outcome-routes.ts';
 import { approvalErrorStatus } from './approval-routes.ts';
 
 export interface RouteDeps {
@@ -147,8 +148,8 @@ export function apiRoutes({ db, hub, workspaceId, fixedRunProvider }: RouteDeps)
 }
 
 export function statusForError(error: unknown): { status: number; message: string } {
-  const approvalStatus = approvalErrorStatus(error);
-  if (approvalStatus) return approvalStatus;
+  const known = approvalErrorStatus(error) ?? outcomeErrorStatus(error);
+  if (known) return known;
   if (
     error instanceof BadRequestError ||
     error instanceof InvalidDefaultError ||

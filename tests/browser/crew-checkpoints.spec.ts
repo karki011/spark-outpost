@@ -48,6 +48,24 @@ test('clarify takes an answer in your own words and works from it', async ({ pag
   expect(repo.notes()).toBe('start\nstep 1\n');
 });
 
+test('a vague request gets one short question with likely readings', async ({ page }) => {
+  test.setTimeout(60_000);
+  await crewChat(page, repo, 'Balanced');
+  await send(page, 'Make the reports better #build #vague');
+  const clarify = card(page, /Jev has a question/);
+  await expect(clarify).toContainText('What should change?', { timeout: 30_000 });
+  await expect(clarify.getByRole('button', { name: 'Improve its documentation' })).toBeVisible();
+  await clarify.getByRole('button', { name: 'Add new behaviour or features' }).click();
+  await expect(clarify).toContainText('You chose: Add new behaviour or features');
+  await allowEdit(page);
+  const keep = card(page, /Keep these changes\?/);
+  await expect(keep).toBeVisible({ timeout: 30_000 });
+  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  await expect(
+    page.locator('.md', { hasText: 'Clarified: Add new behaviour or features' }),
+  ).toBeVisible({ timeout: 30_000 });
+});
+
 test('a clarify option answers with one click', async ({ page }) => {
   test.setTimeout(60_000);
   await crewChat(page, repo, 'Balanced');

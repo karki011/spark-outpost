@@ -95,16 +95,19 @@ describe('tasks', () => {
 
     const { task_id: taskId, plan_version } = await runRow(run.id);
     expect(taskId).not.toBeNull();
-    expect(plan_version).toBe(3);
+    expect(plan_version).toBe(1);
 
     const task = await getTaskDetail(t.db, taskId!);
-    expect(task).toMatchObject({ title: 'Fix the divider #plan', status: 'open', planVersion: 3 });
+    expect(task).toMatchObject({ title: 'Fix the divider #plan', status: 'open', planVersion: 1 });
     expect(task!.planVersions.map((version) => [version.version, version.supersededBy])).toEqual([
       [1, null],
-      [2, null],
-      [3, null],
     ]);
-    expect(task!.planVersions[2]!.usedBy).toEqual([run.id]);
+    expect(task!.planVersions[0]!.body.entries.map((entry) => entry.status)).toEqual([
+      'completed',
+      'completed',
+      'completed',
+    ]);
+    expect(task!.planVersions[0]!.usedBy).toEqual([run.id]);
     expect(task!.links).toMatchObject([
       { kind: 'pr', url: FAKE_PR_URL, title: 'spark-outpost/demo#42', source: 'agent_text' },
     ]);
@@ -159,15 +162,15 @@ describe('tasks', () => {
     const taskId = (await runRow(first.id)).task_id;
 
     const chat = await sendAndSettle(conversationId, 'Thanks, what changed?');
-    expect(await runRow(chat.id)).toEqual({ task_id: taskId, plan_version: 3 });
+    expect(await runRow(chat.id)).toEqual({ task_id: taskId, plan_version: 1 });
 
     const again = await sendAndSettle(conversationId, 'Also add a test #plan');
-    expect(await runRow(again.id)).toEqual({ task_id: taskId, plan_version: 6 });
+    expect(await runRow(again.id)).toEqual({ task_id: taskId, plan_version: 1 });
 
     const task = await getTaskDetail(t.db, taskId!);
-    expect(task!.planVersions.map((version) => version.version)).toEqual([1, 2, 3, 4, 5, 6]);
-    expect(task!.planVersions[2]!.usedBy).toEqual([first.id, chat.id]);
-    expect(task!.planVersions[3]!.sourceRunId).toBe(again.id);
+    expect(task!.planVersions.map((version) => version.version)).toEqual([1]);
+    expect(task!.planVersions[0]!.usedBy).toEqual([first.id, chat.id, again.id]);
+    expect(task!.planVersions[0]!.sourceRunId).toBe(again.id);
     expect(task!.links).toHaveLength(1);
     expect(task!.items.map((item) => item.label)).toContain('Follow-up: Also add a test #plan');
   });
@@ -189,27 +192,36 @@ describe('tasks', () => {
     expect((await getTaskDetail(t.db, nextTask!))?.planVersions[0]?.version).toBe(1);
   });
 
-  it('marks a replaced plan superseded and keeps an updated one current', async () => {
+  it('adds a version per run that changes the plan and supersedes a replaced one', async () => {
+    const plans: Record<string, PlanEntry[][]> = {
+      'Plan it': [entries('Read', 'Fix', 'Test'), entries('Read', 'Fix', 'Add docs')],
+      'Update it': [entries('Read', 'Fix', 'Add docs'), entries('Read', 'Fix', 'Add docs', 'Ship')],
+      'Replace it': [entries('Rewrite', 'Ship')],
+    };
     const name = start(
-      scripted(() => [
-        { kind: 'plan', entries: entries('Read', 'Fix', 'Test') },
-        { kind: 'plan', entries: entries('Read', 'Fix', 'Test') },
-        { kind: 'plan', entries: entries('Read', 'Fix', 'Add docs') },
-        { kind: 'plan', entries: entries('Rewrite', 'Ship') },
+      scripted((prompt) => [
+        ...(plans[prompt] ?? []).map((plan): ProviderOutput => ({ kind: 'plan', entries: plan })),
         { kind: 'text_delta', delta: 'ok' },
       ]),
     );
     const conversationId = await newConversation();
-    const run = await sendAndSettle(conversationId, 'Plan it', name);
-    const task = await getTaskDetail(t.db, (await runRow(run.id)).task_id!);
+    const first = await sendAndSettle(conversationId, 'Plan it', name);
+    await sendAndSettle(conversationId, 'Update it', name);
+    await sendAndSettle(conversationId, 'Replace it', name);
+    const task = await getTaskDetail(t.db, (await runRow(first.id)).task_id!);
     expect(task!.planVersions.map((version) => [version.version, version.supersededBy])).toEqual([
       [1, null],
       [2, 3],
       [3, null],
     ]);
+    expect(task!.planVersions[0]!.body.entries.map((entry) => entry.content)).toEqual([
+      'Read',
+      'Fix',
+      'Add docs',
+    ]);
   });
 
-  it('caps a looping plan at 200 versions by overwriting the latest', async () => {
+  it('folds a looping plan within one run into a single version', async () => {
     const name = start(
       scripted(() =>
         Array.from({ length: 205 }, (_, index): ProviderOutput => ({
@@ -225,7 +237,7 @@ describe('tasks', () => {
       `SELECT COUNT(*) AS count, MAX(version) AS max FROM run_artifacts WHERE task_id = $1`,
       [taskId],
     );
-    expect(rows[0]).toEqual({ count: '200', max: 200 });
+    expect(rows[0]).toEqual({ count: '1', max: 1 });
     const latest = (await getTaskDetail(t.db, taskId))!.planVersions.at(-1)!;
     expect(latest.body.entries[0]?.content).toBe('Step 204');
   });

@@ -1,5 +1,5 @@
 import { AGENT_TV, DIFF, OFFLINE } from './content-pairs.ts';
-import { ACCENT, CHIPS, DROP_TARGET, FORMS, STATUS } from './interface-pairs.ts';
+import { ACCENT, CHIPS, DROP_TARGET, FORMS, HOME, PROVIDERS, STATUS } from './interface-pairs.ts';
 import { surfaceText, type HuePair, type Pair, type PairKind } from './pair-types.ts';
 
 export type { HuePair, Pair, PairKind };
@@ -20,6 +20,8 @@ export const ALLOWLIST: Record<string, string> = {
     'WCAG 1.4.3 exempts inactive components; disabled buttons also carry the disabled attribute and a not-allowed cursor.',
   'offline.zz':
     'Decorative sleeping "z" glyphs on the offline mascot (aria-hidden); WCAG 1.4.3 exempts pure decoration.',
+  'provider.cost-tier-shade':
+    "Lighter shades mark cheaper model tiers in the cost bar; every slice is named with its cost in the legend beside it and in the bar's aria-label, so the shade is redundant.",
 };
 
 export const PAIRS: Pair[] = [
@@ -29,6 +31,8 @@ export const PAIRS: Pair[] = [
   ...FORMS,
   ...CHIPS,
   ...DROP_TARGET,
+  ...PROVIDERS,
+  ...HOME,
   ...DIFF,
   ...OFFLINE,
   ...AGENT_TV,

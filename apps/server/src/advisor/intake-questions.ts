@@ -91,6 +91,33 @@ export const SCOPE_CRITERIA: Record<Scope, string> = {
   codebase: 'Across the codebase: many files or areas, or shared code everything relies on',
 };
 
+export const REVIEW_EXISTING_QUESTION =
+  'Is the user asking for a review of existing changes, not new work?';
+export const VAGUE_QUESTION =
+  'Is `task` too vague to act on without first asking the user what they want?';
+
+function doModeQuestions(mode: IntakeRequest['mode']): IntakeQuestions['questions'] {
+  if (mode !== 'do') return {};
+  return {
+    review_existing: {
+      type: 'noul',
+      instructions: `${REVIEW_EXISTING_QUESTION} Judge \`task\`.`,
+      criteria: {
+        yes: 'It asks to review, look over or check changes that already exist',
+        no: 'It asks for new work: building, fixing or changing something',
+      },
+    },
+    vague: {
+      type: 'noul',
+      instructions: `${VAGUE_QUESTION} Vague means it does not say what to change or what "done" looks like, so reasonable people would build quite different things.`,
+      criteria: {
+        yes: 'Too vague: it needs one question first, such as which part or what outcome',
+        no: 'Clear enough: a competent developer would know what to do',
+      },
+    },
+  };
+}
+
 export const RISK_CRITERIA: Record<Risk, string> = {
   'read-only': 'Read-only: answers or reads files and changes nothing',
   edits: 'Edits: changes one or two files in a contained way',
@@ -222,6 +249,7 @@ export function buildIntakeQuestions(request: IntakeRequest): IntakeQuestions {
     },
     depth: choice('How much process does `task` need before it is done well?', DEPTH_CRITERIA),
     scope: choice(SCOPE_QUESTION, SCOPE_CRITERIA),
+    ...doModeQuestions(request.mode),
     ...routingQuestions(request.candidates),
   };
   if (untrusted.length > 0) {
@@ -335,6 +363,20 @@ function answeredScope(
   return scope.data;
 }
 
+function answeredNoul(response: SystemOneResponse, key: string): number | null {
+  const answer = response.answers[key];
+  return answer?.type === 'noul' ? answer.noul : null;
+}
+
+function doModeAnswers(response: SystemOneResponse): Pick<JevIntake, 'reviewExisting' | 'vague'> {
+  const reviewExisting = answeredNoul(response, 'review_existing');
+  const vague = answeredNoul(response, 'vague');
+  return {
+    ...(reviewExisting === null ? {} : { reviewExisting }),
+    ...(vague === null ? {} : { vague }),
+  };
+}
+
 const INTAKE_CONFIDENCES = ['intent', 'depth'];
 const ROUTE_CONFIDENCES = ['provider', 'model'];
 
@@ -368,6 +410,7 @@ export function parseIntakeAnswers(
     complexity: complexity.score,
     risk: riskSchema.options[risk.index]!,
     scope,
+    ...doModeAnswers(response),
     injection,
     depth: depth.value,
     provider: candidate.provider,

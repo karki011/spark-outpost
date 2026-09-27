@@ -1,5 +1,6 @@
 import type { Depth, GateDecision, JevIntake, Risk, RunMode } from '@spark-outpost/contracts';
 import { ASK_AT } from '../advisor/gate.ts';
+import { noulVerdict } from './parallel-choice.ts';
 
 const DEPTH_FOR_RISK: Record<Risk, Depth> = {
   'read-only': 'execute',
@@ -110,9 +111,23 @@ export const REVIEW_INTENT_CONFIDENCE = 0.5;
 export const REVIEW_INTENT_REASON =
   'Jev reads the request as a review, so a Critic reviews each change as it lands.';
 
-export function reviewIntent(mode: RunMode, jev: JevIntake | null): boolean {
-  if (mode !== 'do' || jev?.intent !== 'review') return false;
-  return (jev.confidences.intent ?? jev.confidence) >= REVIEW_INTENT_CONFIDENCE;
+const REVIEW_PHRASE =
+  /\b(?:review|look (?:over|through|at)|check (?:my|the|these|our|this) (?:changes?|diff|work|code|branch|pr)|go over|second opinion)\b/i;
+const BUILD_VERB =
+  /\b(?:add|build|create|implement|fix|write|refactor|rename|remove|delete|make|move|update|change|replace|migrate|convert|port|rewrite|extract|split|install)\b/i;
+
+export function asksForReview(request: string): boolean {
+  return REVIEW_PHRASE.test(request) && !BUILD_VERB.test(request.replace(REVIEW_PHRASE, ''));
+}
+
+export function reviewIntent(mode: RunMode, jev: JevIntake | null, request = ''): boolean {
+  if (mode !== 'do') return false;
+  const asked = jev?.reviewExisting === undefined ? null : noulVerdict(jev.reviewExisting).value;
+  if (asked !== null) return asked;
+  if (jev?.intent === 'review') {
+    if ((jev.confidences.intent ?? jev.confidence) >= REVIEW_INTENT_CONFIDENCE) return true;
+  }
+  return asksForReview(request);
 }
 
 export function intakeDepthNote(depth: DepthChoice, review: boolean): string | null {

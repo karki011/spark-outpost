@@ -17,7 +17,12 @@ import { pairRenames } from './change-renames.ts';
 import { copyChanges, type Describe } from './copy-changes.ts';
 import { countChangedLines } from './line-counts.ts';
 import { relativeInside } from './path-policy.ts';
-import { readIfPresent, snapshotSource, type SnapshotSource } from './run-changes.ts';
+import {
+  changesWhilePresent,
+  readIfPresent,
+  snapshotSource,
+  type SnapshotSource,
+} from './run-changes.ts';
 import { gitChanges, gitFileAt } from './snapshot.ts';
 
 interface FileVersions {
@@ -79,7 +84,8 @@ async function gitVersions(
   const until = next?.snapshot.ref ?? source.end;
   if (source.gone && !until) return [];
   const gitRoot = source.gitRoot;
-  const changes = await gitChanges(gitRoot, ref, until);
+  const changes = await changesWhilePresent(gitRoot, () => gitChanges(gitRoot, ref, until));
+  if (changes === null) return [];
   return Promise.all(
     changes.map(async (change) => ({
       change,

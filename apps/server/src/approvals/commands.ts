@@ -85,6 +85,22 @@ export function isGitPush(command: string): boolean {
   });
 }
 
+function isForceFlag(token: string): boolean {
+  if (token === '--force' || token === '--mirror') return true;
+  if (token.startsWith('--force-with-lease') || token === '--force-if-includes') return true;
+  return /^-[a-zA-Z]*f[a-zA-Z]*$/.test(token);
+}
+
+export function isGitForcePush(command: string): boolean {
+  return splitSimpleCommands(command).some((tokens) => {
+    const program = programTokens(tokens);
+    if (path.basename(program[0] ?? '') !== 'git') return false;
+    const pushAt = program.indexOf('push');
+    if (pushAt < 1) return false;
+    return program.slice(pushAt + 1).some((token) => isForceFlag(token) || /^\+[^+]/.test(token));
+  });
+}
+
 export function deletedPaths(command: string): string[] {
   return splitSimpleCommands(command).flatMap((tokens) => {
     const program = programTokens(tokens);

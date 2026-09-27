@@ -1,4 +1,4 @@
-import type { TokenUsage } from '@spark-outpost/contracts';
+import type { ModelCard, TokenUsage } from '@spark-outpost/contracts';
 import { VENDOR_CARDS } from '../model-cards/cards.ts';
 
 export interface ModelPrice {
@@ -13,21 +13,23 @@ export interface ModelPrice {
 const ESTIMATED_PROVIDERS = new Set(['codex', 'zai']);
 const CACHE_OUTSIDE_INPUT = new Set(['zai']);
 
+export function cardPrice(card: ModelCard): ModelPrice | null {
+  if (!card.price) return null;
+  return {
+    provider: card.provider,
+    model: card.id,
+    inputPerMillion: card.price.inputPerMillion,
+    cachedInputPerMillion: card.price.cachedInputPerMillion,
+    outputPerMillion: card.price.outputPerMillion,
+    ...(CACHE_OUTSIDE_INPUT.has(card.provider) ? { cacheOutsideInput: true } : {}),
+  };
+}
+
 function cardPrices(): readonly ModelPrice[] {
-  return VENDOR_CARDS.cards.flatMap((card) =>
-    card.price && ESTIMATED_PROVIDERS.has(card.provider)
-      ? [
-          {
-            provider: card.provider,
-            model: card.id,
-            inputPerMillion: card.price.inputPerMillion,
-            cachedInputPerMillion: card.price.cachedInputPerMillion,
-            outputPerMillion: card.price.outputPerMillion,
-            ...(CACHE_OUTSIDE_INPUT.has(card.provider) ? { cacheOutsideInput: true } : {}),
-          },
-        ]
-      : [],
-  );
+  return VENDOR_CARDS.cards.flatMap((card) => {
+    const price = ESTIMATED_PROVIDERS.has(card.provider) ? cardPrice(card) : null;
+    return price ? [price] : [];
+  });
 }
 
 export const PRICE_TABLE = {

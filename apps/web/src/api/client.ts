@@ -65,6 +65,21 @@ export async function request<T>(
   return schema.parse(payload);
 }
 
+const drafts = new Set<string>();
+
+export function newDraftId(): string {
+  const id = crypto.randomUUID();
+  drafts.add(id);
+  return id;
+}
+
+function saved<T>(conversationId: string): (result: T) => T {
+  return (result) => {
+    drafts.delete(conversationId);
+    return result;
+  };
+}
+
 export const api = {
   health: (): Promise<{ ok: boolean }> => request(z.object({ ok: z.boolean() }), '/health'),
   listConversations: (): Promise<ConversationSummary[]> =>
@@ -97,11 +112,15 @@ export const api = {
     }),
   deleteConversation: (id: string): Promise<null> =>
     request(z.null(), `/conversations/${id}`, { method: 'DELETE', keepalive: true }),
-  getConversation: (id: string): Promise<ConversationDetail> =>
-    request(conversationDetailSchema, `/conversations/${id}`).catch(async (error: unknown) => {
-      if (!(error instanceof ApiError) || error.status !== 404) throw error;
-      return draftConversation(id, await api.getChatDefaults());
-    }),
+  getConversation: async (id: string): Promise<ConversationDetail> => {
+    if (drafts.has(id)) return draftConversation(id, await api.getChatDefaults());
+    return request(conversationDetailSchema, `/conversations/${id}`).catch(
+      async (error: unknown) => {
+        if (!(error instanceof ApiError) || error.status !== 404) throw error;
+        return draftConversation(id, await api.getChatDefaults());
+      },
+    );
+  },
   getChatDefaults: (): Promise<ChatSettings> =>
     request(chatSettingsSchema, '/chat-settings/defaults'),
   sendMessage: (
@@ -113,7 +132,7 @@ export const api = {
     request(sendMessageResponseSchema, `/conversations/${conversationId}/messages`, {
       method: 'POST',
       body: JSON.stringify({ id, content, attachmentIds }),
-    }),
+    }).then(saved(conversationId)),
   cancelRun: (runId: string): Promise<Run> =>
     request(runSchema, `/runs/${runId}/cancel`, { method: 'POST', body: '{}' }),
   updateChatSettings: (
@@ -123,7 +142,7 @@ export const api = {
     request(chatSettingsSchema, `/conversations/${conversationId}/settings`, {
       method: 'PATCH',
       body: JSON.stringify(update),
-    }),
+    }).then(saved(conversationId)),
   getCapabilities: (provider: ProviderId): Promise<ProviderCapabilities> =>
     request(providerCapabilitiesSchema, `/providers/${provider}/capabilities`),
   getUsageSummary: (): Promise<UsageSummary> => request(usageSummarySchema, '/usage/summary'),

@@ -158,6 +158,8 @@ async function leakSecrets(
   return 'end_turn';
 }
 
+const FAKE_USAGE = { totalTokens: 180, inputTokens: 120, outputTokens: 60, cachedReadTokens: 100 };
+
 const CREDENTIAL_NAMES = /ANTHROPIC|CLAUDE|OPENAI|AWS|_KEY$|TOKEN|SECRET/;
 
 async function reportEnvironment(
@@ -378,12 +380,9 @@ acp
       const text = ctx.params.prompt.map((block) => (block.type === 'text' ? block.text : ''));
       recordPrompt(ctx.params.sessionId, text.join(''));
       const stopReason = await turn(ctx.params, ctx.client, controller.signal);
-      return {
-        stopReason,
-        usage: { totalTokens: 180, inputTokens: 120, outputTokens: 60, cachedReadTokens: 100 },
-      };
+      return { stopReason, usage: FAKE_USAGE };
     } catch (error) {
-      if (controller.signal.aborted) return { stopReason: 'cancelled' as const };
+      if (controller.signal.aborted) return { stopReason: 'cancelled' as const, usage: FAKE_USAGE };
       throw error;
     }
   })

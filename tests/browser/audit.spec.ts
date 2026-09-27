@@ -27,6 +27,8 @@ const THEMES = [
   'lagoon',
   'plum',
   'sage',
+  'aurora',
+  'iris',
   'contrast',
 ];
 

@@ -36,14 +36,17 @@ function TooltipBubble({ id, label, keys, anchor, side }: BubbleProps) {
   useLayoutEffect(() => {
     const bubble = ref.current;
     if (!bubble) return;
-    const { width, height } = bubble.getBoundingClientRect();
+    const rect = bubble.getBoundingClientRect();
+    const width = Math.ceil(rect.width);
+    const height = Math.ceil(rect.height);
     const centered = anchor.left + anchor.width / 2 - width / 2;
     const left = Math.min(Math.max(EDGE, centered), innerWidth - width - EDGE);
+    const x = Math.max(EDGE, Math.floor(left));
     const below = anchor.bottom + GAP;
     const above = anchor.top - height - GAP;
     const fitsBelow = below + height <= innerHeight - EDGE;
     const top = side === 'bottom' ? (fitsBelow ? below : above) : above >= EDGE ? above : below;
-    bubble.style.left = `${Math.round(left)}px`;
+    bubble.style.left = `${x}px`;
     bubble.style.top = `${Math.round(top)}px`;
     bubble.dataset.placed = top === below ? 'below' : 'above';
   }, [anchor, side, label]);

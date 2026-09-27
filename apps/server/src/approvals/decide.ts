@@ -10,6 +10,7 @@ import {
   allowlistCovers,
   commandWords,
   deletedPaths,
+  isGitForcePush,
   isGitPush,
   normalizeCommand,
   resolveCommandPath,
@@ -46,7 +47,8 @@ export type Decision =
 
 export const FS_WRITE_TOOL_KIND = 'write_text_file';
 
-export const PUSH_REASON = 'Pushing always asks';
+export const PUSH_REASON = 'Pushing publishes outside this computer';
+export const FORCE_PUSH_REASON = 'Force pushes are refused';
 export const OUTSIDE_DELETE_REASON = 'Deleting outside the repo always asks';
 export const OUTSIDE_WRITE_REASON = 'Changing files outside the repo always asks';
 export const SECRET_REASON = 'Secret files always ask';
@@ -95,7 +97,6 @@ function outsideRoots(request: ApprovalRequest, target: string): boolean {
 }
 
 export function alwaysAskReason(request: ApprovalRequest): string | null {
-  if (request.command && isGitPush(request.command)) return PUSH_REASON;
   if (request.command) {
     const cwd = commandCwd(request);
     const deleted = deletedPaths(request.command).map((word) =>
@@ -116,6 +117,7 @@ export function alwaysAskReason(request: ApprovalRequest): string | null {
 }
 
 function refusal(request: ApprovalRequest): string | null {
+  if (request.command && isGitForcePush(request.command)) return FORCE_PUSH_REASON;
   if (request.toolKind === 'read' && request.paths.some((p) => outsideRoots(request, p))) {
     return 'Reads outside the project are refused';
   }
@@ -176,6 +178,12 @@ export function decide(
     return level === 'hands-off' ? { verdict: 'allow', by: 'level' } : ASK;
   }
   if (request.kind === 'execute') {
+    if (request.command && isGitPush(request.command)) {
+      const listed = allowlistCovers(allowlist, request.command);
+      return listed && level !== 'hands-on'
+        ? { verdict: 'allow', by: 'allowlist' }
+        : { verdict: 'ask', reason: PUSH_REASON };
+    }
     if (level !== 'hands-on' && isSafeReadRequest(request)) {
       return { verdict: 'allow', by: 'level', why: SAFE_READ_WHY };
     }

@@ -4,6 +4,7 @@ import {
   INSTALL_REASON,
   OUTSIDE_DELETE_REASON,
   OUTSIDE_WRITE_REASON,
+  FORCE_PUSH_REASON,
   PUSH_REASON,
   SAFE_READ_WHY,
   SECRET_REASON,
@@ -99,10 +100,43 @@ describe('decide() run rules', () => {
   });
 });
 
+describe('decide() refuses force pushes at every level', () => {
+  it.each([
+    'git push --force',
+    'git push -f origin main',
+    'git push -fu origin feature',
+    'git push --force-with-lease origin main',
+    'git push --mirror backup',
+    'git push origin +main',
+    'git add . && git -C sub push --force',
+  ])('%s', (command) => {
+    for (const level of LEVELS) {
+      expect(decide(level, run(command), [ruleFor(run(command))!], ['git'])).toEqual({
+        verdict: 'reject',
+        reason: FORCE_PUSH_REASON,
+      });
+    }
+  });
+
+  it('lets a normal push follow the level and rules', () => {
+    const push = run('git push -u origin feature');
+    expect(decide('full-auto', push, [], [])).toEqual({ verdict: 'allow', by: 'level' });
+    expect(decide('hands-off', push, [], [])).toEqual({ verdict: 'ask', reason: PUSH_REASON });
+    expect(decide('balanced', push, [], [])).toEqual({ verdict: 'ask', reason: PUSH_REASON });
+    expect(decide('balanced', push, [], ['git push'])).toEqual({
+      verdict: 'allow',
+      by: 'allowlist',
+    });
+    expect(decide('hands-on', push, [], ['git push'])).toEqual({
+      verdict: 'ask',
+      reason: PUSH_REASON,
+    });
+    expect(decide('hands-on', push, [ruleFor(push)!], []).verdict).toBe('allow');
+  });
+});
+
 describe('decide() always asks, at every level', () => {
   const cases: [string, ApprovalRequest, string][] = [
-    ['git push', run('git push origin main'), PUSH_REASON],
-    ['git push after other commands', run('git add . && git -C sub push'), PUSH_REASON],
     ['rm outside the repo', run('rm -rf /tmp/other'), OUTSIDE_DELETE_REASON],
     ['rm with a parent path', run('rm ../sibling/file.txt'), OUTSIDE_DELETE_REASON],
     ['rm in the home folder', run('rm ~/notes.txt'), OUTSIDE_DELETE_REASON],

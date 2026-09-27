@@ -1,0 +1,147 @@
+.dg-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dg-head .scout {
+  flex-shrink: 0;
+}
+
+.dg-meta {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dg-lines {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dg-lines li {
+  position: relative;
+  padding-left: 16px;
+}
+
+.dg-lines li::before {
+  content: '';
+  position: absolute;
+  top: 0.65em;
+  left: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.dg-line {
+  font-size: 14px;
+  line-height: 1.55;
+  text-align: left;
+}
+
+button.dg-line {
+  border-radius: 4px;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent);
+  text-underline-offset: 3px;
+}
+
+button.dg-line:hover {
+  text-decoration-color: currentColor;
+}
+
+.dg-next {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dg-next li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+
+.dg-next-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.dg-next-main b {
+  display: block;
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dg-next-main small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.dg-error {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dg-error .hlink {
+  margin: 0;
+  color: var(--accent-text);
+}
+
+.dg-hint {
+  color: var(--faint);
+}
+
+.dg-skel {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.dg-skel i {
+  display: block;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--raise);
+  animation: dg-pulse 1.2s ease-in-out infinite;
+}
+
+.dg-skel i:nth-child(2) {
+  width: 82%;
+  animation-delay: 0.15s;
+}
+
+.dg-skel i:nth-child(3) {
+  width: 64%;
+  animation-delay: 0.3s;
+}
+
+@keyframes dg-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dg-skel i {
+    animation: none;
+  }
+}

@@ -1,8 +1,39 @@
 diff --git a/dist/index.js b/dist/index.js
-index 87213c3..fd7e521 100755
+index 87213c3..bcf216b 100755
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -31020,6 +31020,10 @@ function sameNetworkAmendment(left, right) {
+@@ -27333,6 +27333,20 @@ function toTokenCount(usage) {
+     reasoningOutputTokens: usage.reasoningOutputTokens
+   };
+ }
++var TOKEN_USAGE_FIELDS = ["totalTokens", "inputTokens", "cachedInputTokens", "outputTokens", "reasoningOutputTokens"];
++function tokenUsageStep(tokenUsage, previousTotal) {
++  const total = tokenUsage.total;
++  if (!previousTotal || total.totalTokens < previousTotal.totalTokens) {
++    return tokenUsage.last;
++  }
++  return Object.fromEntries(TOKEN_USAGE_FIELDS.map((field) => [field, (total[field] ?? 0) - (previousTotal[field] ?? 0)]));
++}
++function addTokenUsage(sum, step) {
++  return Object.fromEntries(TOKEN_USAGE_FIELDS.map((field) => [field, (sum?.[field] ?? 0) + (step[field] ?? 0)]));
++}
++function turnPromptUsage(sessionState) {
++  return sessionState.turnTokenUsage ? toTokenCount(sessionState.turnTokenUsage) : sessionState.lastTokenUsage;
++}
+ function toPromptUsage(tokenCount) {
+   return {
+     totalTokens: tokenCount.totalTokens,
+@@ -30835,6 +30849,9 @@ ${event.stdin}
+     return data;
+   }
+   handleTokenUsageUpdated(params) {
++    const step = tokenUsageStep(params.tokenUsage, this.sessionState.rawTotalTokenUsage);
++    this.sessionState.turnTokenUsage = addTokenUsage(this.sessionState.turnTokenUsage, step);
++    this.sessionState.rawTotalTokenUsage = params.tokenUsage.total;
+     this.sessionState.lastTokenUsage = toTokenCount(params.tokenUsage.last);
+     this.sessionState.totalTokenUsage = toTokenCount(params.tokenUsage.total);
+     this.sessionState.modelContextWindow = params.tokenUsage.modelContextWindow;
+@@ -31020,6 +31037,10 @@ function sameNetworkAmendment(left, right) {
  function commandDecisionOptions(params) {
    const decisions = parseAvailableCommandDecisions(params);
    if (!decisions) return void 0;
@@ -13,7 +44,7 @@ index 87213c3..fd7e521 100755
    const options = [];
    let networkIndex = 0;
    for (const decision of decisions) {
-@@ -31093,6 +31097,12 @@ function fileChangeDecisionOptions() {
+@@ -31093,6 +31114,12 @@ function fileChangeDecisionOptions() {
        "allow_always",
        "acceptForSession"
      ),
@@ -26,7 +57,7 @@ index 87213c3..fd7e521 100755
      decisionOption(
        ApprovalOptionId.Cancel,
        "No, and tell Codex what to do differently",
-@@ -32983,19 +32993,16 @@ var AgentMode = class _AgentMode {
+@@ -32983,19 +33010,16 @@ var AgentMode = class _AgentMode {
    }
    static ReadOnly = new _AgentMode(
      "read-only",
@@ -51,7 +82,7 @@ index 87213c3..fd7e521 100755
    );
    static Agent = new _AgentMode(
      "agent",
-@@ -33023,6 +33030,22 @@ var AgentMode = class _AgentMode {
+@@ -33023,6 +33047,22 @@ var AgentMode = class _AgentMode {
      { "type": "dangerFullAccess" },
      "danger-full-access"
    );
@@ -74,7 +105,7 @@ index 87213c3..fd7e521 100755
    static DEFAULT_AGENT_MODE = _AgentMode.Agent;
    toSessionMode() {
      return {
-@@ -33055,7 +33078,7 @@ var AgentMode = class _AgentMode {
+@@ -33055,7 +33095,7 @@ var AgentMode = class _AgentMode {
      };
    }
    static all() {
@@ -83,3 +114,55 @@ index 87213c3..fd7e521 100755
    }
    static find(modeId) {
      const match = _AgentMode.all().find((m) => m.id === modeId);
+@@ -39876,6 +39916,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+       const commandPromise = this.availableCommands.tryHandleCommand(params.prompt, sessionState, {
+         onTurnStartPending: () => {
+           sessionState.lastTokenUsage = null;
++          sessionState.turnTokenUsage = null;
+           ensurePendingTurnStart();
+         },
+         onTurnStarted: (turnId, threadId) => {
+@@ -39947,7 +39988,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+         await clearRecoveredSessionFailure(eventHandler);
+         return {
+           stopReason: "end_turn",
+-          usage: this.buildPromptUsage(sessionState.lastTokenUsage),
++          usage: this.buildPromptUsage(turnPromptUsage(sessionState)),
+           _meta: this.buildQuotaMeta(sessionState)
+         };
+       }
+@@ -39973,6 +40014,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+         sessionState.currentModelSupportsFast
+       );
+       sessionState.lastTokenUsage = null;
++      sessionState.turnTokenUsage = null;
+       ensurePendingTurnStart();
+       const sendPromptPromise = this.runWithProcessCheck(
+         () => this.codexAcpClient.sendPrompt(
+@@ -40144,7 +40186,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+       );
+       return {
+         stopReason: "end_turn",
+-        usage: this.buildPromptUsage(sessionState.lastTokenUsage),
++        usage: this.buildPromptUsage(turnPromptUsage(sessionState)),
+         _meta: this.buildQuotaMeta(sessionState)
+       };
+     } catch (err) {
+@@ -40238,7 +40280,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+   cancelledPromptResponse(sessionState) {
+     return {
+       stopReason: "cancelled",
+-      usage: this.buildPromptUsage(sessionState.lastTokenUsage),
++      usage: this.buildPromptUsage(turnPromptUsage(sessionState)),
+       _meta: this.buildQuotaMeta(sessionState)
+     };
+   }
+@@ -40249,7 +40291,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+     }
+     return {
+       stopReason: "end_turn",
+-      usage: this.buildPromptUsage(sessionState.lastTokenUsage),
++      usage: this.buildPromptUsage(turnPromptUsage(sessionState)),
+       _meta: {
+         ...this.buildQuotaMeta(sessionState),
+         ...failureMeta

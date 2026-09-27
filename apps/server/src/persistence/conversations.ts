@@ -43,6 +43,18 @@ const summaryQuery = `
        LIMIT 1)
     ) AS category,
     r.id AS latest_run_id, r.status AS latest_run_status, r.error AS latest_run_error,
+    r.provider AS latest_run_provider,
+    CASE WHEN r.status IN ('queued', 'running') THEN (
+      SELECT jsonb_build_object(
+        'done', count(*) FILTER (WHERE entry->>'status' = 'completed'),
+        'active', count(*) FILTER (WHERE entry->>'status' = 'in_progress'),
+        'total', count(*))
+      FROM (
+        SELECT body FROM run_artifacts
+        WHERE task_id = r.task_id AND kind = 'plan' ORDER BY version DESC LIMIT 1
+      ) plan, jsonb_array_elements(plan.body->'entries') entry
+      WHERE btrim(entry->>'content') <> ''
+    ) END AS latest_run_progress,
     CASE WHEN r.status = 'running' THEN (
       SELECT e.payload->>'stepName' FROM run_events e
       WHERE e.run_id = r.id AND e.type = 'STEP_STARTED' ORDER BY e.seq DESC LIMIT 1
@@ -62,7 +74,7 @@ const summaryQuery = `
      WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at LIMIT 1) AS project_order
   FROM conversations c
   LEFT JOIN LATERAL (
-    SELECT id, status, error, finished_at FROM runs
+    SELECT id, status, error, finished_at, provider, task_id FROM runs
     WHERE conversation_id = c.id AND parent_run_id IS NULL ORDER BY created_at DESC LIMIT 1
   ) r ON true
   LEFT JOIN LATERAL (
@@ -116,7 +128,7 @@ export async function listConversations(
 ): Promise<ConversationSummary[]> {
   const text = search.trim();
   const { rows } = await db.query<ConversationSummaryRow>(
-    `${summaryQuery} WHERE c.workspace_id = $1
+    `${summaryQuery} WHERE c.workspace_id = $1 AND c.kind = 'chat'
        AND EXISTS (SELECT 1 FROM messages m WHERE m.conversation_id = c.id)
        AND ($2 = '' OR c.title ILIKE $3 OR EXISTS (
          SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.content ILIKE $3

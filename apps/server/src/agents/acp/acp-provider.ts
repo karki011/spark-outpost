@@ -3,6 +3,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
+import type { TokenUsage } from '@spark-outpost/contracts';
 import type { SecretStore } from '../../setup/secrets.ts';
 import {
   ProviderError,
@@ -156,6 +157,9 @@ async function runSession(
 
 function asReported(definition: AgentDefinition, output: ProviderOutput): ProviderOutput {
   if (output.kind === 'usage' && definition.estimatesCost) return { ...output, costUsd: null };
+  if (output.kind === 'tokens' && definition.inputExcludesCache) {
+    return { ...output, tokens: withCachedInput(output.tokens) };
+  }
   if (output.kind === 'capabilities') {
     return { ...output, report: offeredCapabilities(output.report, definition.offers) };
   }
@@ -163,6 +167,10 @@ function asReported(definition: AgentDefinition, output: ProviderOutput): Provid
     return { ...output, model: definition.usedModel(output.model) };
   }
   return output;
+}
+
+export function withCachedInput(tokens: TokenUsage): TokenUsage {
+  return { ...tokens, input: tokens.input + (tokens.cachedRead ?? 0) };
 }
 
 async function exitOr(agent: AgentProcess, error: unknown): Promise<unknown> {
@@ -278,9 +286,10 @@ async function converse(
 ): Promise<acp.StopReason> {
   const { policy } = workspace;
   const report = (name: string) => push(mapper.clientAction(name));
+  const annotate = (name: string) => push(mapper.note(name));
   const doing: DoWorkspace | null =
     workspace.changing && policy && turn.approvals
-      ? { policy, cwd: workspace.cwd, gate: turn.approvals, signal, report }
+      ? { policy, cwd: workspace.cwd, gate: turn.approvals, signal, report, annotate }
       : null;
   const client = acp
     .client(CLIENT_INFO)

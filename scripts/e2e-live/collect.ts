@@ -166,7 +166,13 @@ async function replyOf(db: Db, runId: string): Promise<string> {
      ORDER BY created_at DESC LIMIT 1`,
     [runId],
   );
-  return rows[0]?.content ?? '';
+  if (rows[0]) return rows[0].content;
+  const streamed = await db.query<{ text: string | null }>(
+    `SELECT string_agg(payload->>'delta', '' ORDER BY seq) AS text FROM run_events
+     WHERE run_id = $1 AND type = 'TEXT_MESSAGE_CONTENT'`,
+    [runId],
+  );
+  return streamed.rows[0]?.text ?? '';
 }
 
 function reviewOf(body: Record<string, unknown>): ReviewRecord {

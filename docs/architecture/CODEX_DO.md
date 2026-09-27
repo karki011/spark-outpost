@@ -69,10 +69,11 @@ About 25 changed lines in `dist/index.js`, prototyped in `scratchpad/codex-do/pr
 
 1. **New mode `ask-every-action`** ("Ask every time"): `approvalPolicy: "untrusted"`, `approvalsReviewer: "user"`, `workspaceWrite` with `writableRoots: []`, `networkAccess: false`, `excludeSlashTmp: true` and `excludeTmpdirEnvVar: false`. The private `TMPDIR` stays writable, but not `/tmp`. It's added to `AgentMode.all()`, and the other modes are unchanged.
 2. **`decline` option.** `decline` ("No, continue without it", `reject_once`) is added to command and file-change approvals when Codex doesn't offer it, placed before `cancel`, so our gate's first `reject_once` means "skip this and carry on" instead of ending the turn.
+3. **Usage per turn** (added September 27). codex-acp answers a prompt with the usage of the turn's last model request only. The patch sums the turn's requests from `thread/tokenUsage/updated` (the change in the thread total, or the last request when no total was seen yet, so repeated updates add nothing) and reports that sum. Input is still reported without its cached part, so the harness adds the cached tokens back before estimating the cost.
 
 Maintenance:
 
-- The patch touches three code blocks.
+- The patch touches three code blocks for the mode and the `decline` option, plus the token-usage handler, the turn start and the prompt responses for usage.
 - A unit test fails if the mode or the `decline` option is missing, like today's read-only check.
 - Upstream PR #480 (a `workspace-write` mode) doesn't replace it: that mode is still `on-request`. The patch can go only when codex-acp ships an "ask for everything" mode and a continue-on-deny option. Both are worth an upstream issue.
 - Risk: a future Codex drops `untrusted` from the protocol. Pin `@openai/codex` through codex-acp's exact version, and add a live test that fails if `ls` stops asking.

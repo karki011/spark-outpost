@@ -297,7 +297,7 @@ Any Blob Scout elsewhere (Home, empty chat, onboarding) squishes when tapped.
 
 Two entry points: the round theme button in the chat header (popover list) and Settings → Appearance (preview cards).
 
-Themes: Match system, Graphite (default), Apricot, Void, Fjord, Moss, Lagoon, Plum, Sage, High contrast.
+Themes: Match system, Graphite (default), Apricot, Void, Fjord, Moss, Lagoon, Plum, Sage, Aurora, Iris, High contrast.
 
 Switching reveals the new theme in a circle expanding from the control that was clicked (600 ms, using view transitions; instant where unsupported or with reduced motion). The favicon recolors.
 

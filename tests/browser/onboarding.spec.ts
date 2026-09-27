@@ -293,7 +293,9 @@ test('the theme step applies the chosen theme and remembers it', async ({ page }
   expect(await previewBackground('lagoon')).toBe('rgb(232, 242, 241)');
   expect(await previewBackground('plum')).toBe('rgb(21, 15, 23)');
   expect(await previewBackground('sage')).toBe('rgb(236, 239, 228)');
-  await expect(dialog(page).getByRole('radio')).toHaveCount(10);
+  expect(await previewBackground('aurora')).toBe('rgb(17, 15, 38)');
+  expect(await previewBackground('iris')).toBe('rgb(243, 240, 254)');
+  await expect(dialog(page).getByRole('radio')).toHaveCount(12);
 
   const apricot = dialog(page).getByRole('radio', { name: 'Apricot' });
   await apricot.click();

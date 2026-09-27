@@ -1,14 +1,17 @@
-import { useState, type CSSProperties } from 'react';
+import { useCallback, useState, type CSSProperties } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SetupState } from '@spark-outpost/contracts';
-import { api, queryKeys } from '../api/client.ts';
+import { api, newDraftId, queryKeys } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { ChatView } from '../chat/ChatView.tsx';
 import { AgentTvHost } from '../crew/AgentTvHost.tsx';
+import { approvalAnchor } from '../crew/conversation-crew.ts';
+import { JUMP_TRIES, scrollToAnchor } from '../crew/scroll-to-anchor.ts';
 import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';
+import { Home } from '../home/Home.tsx';
 import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
 import { BackOnlineToast } from './connection/BackOnlineToast.tsx';
@@ -23,9 +26,17 @@ import '../ui/controls.css';
 function ChatShell({ entering }: { entering: boolean }) {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [draftId, setDraftId] = useState(() => crypto.randomUUID());
+  const [draftId, setDraftId] = useState(newDraftId);
   const [settings, setSettings] = useState<SettingsSection | null>(null);
   const [view, setView] = useState<AppView>('chats');
+  const [homeDraft, setHomeDraft] = useState<{ id: string; seeded: boolean }>(() => ({
+    id: newDraftId(),
+    seeded: false,
+  }));
+  const markHomeDraftSeeded = useCallback(
+    () => setHomeDraft((draft) => (draft.seeded ? draft : { ...draft, seeded: true })),
+    [],
+  );
   const conversations = useQuery({
     queryKey: queryKeys.conversations,
     queryFn: api.listConversations,
@@ -39,7 +50,7 @@ function ChatShell({ entering }: { entering: boolean }) {
     waiting > 0 ? 'alert' : chats.some(isRunning) ? 'working' : finished ? 'happy' : null;
 
   const startDraft = () => {
-    const next = crypto.randomUUID();
+    const next = newDraftId();
     setDraftId(next);
     setSelectedId(next);
     setView('chats');
@@ -52,6 +63,12 @@ function ChatShell({ entering }: { entering: boolean }) {
     void api
       .updateChatSettings(next, { projectIds: [projectId] })
       .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.conversation(next) }));
+  };
+
+  const openChat = (id: string) => {
+    setSelectedId(id);
+    setView('chats');
+    layout.closeDrawer();
   };
 
   const activeId =
@@ -98,10 +115,23 @@ function ChatShell({ entering }: { entering: boolean }) {
           )}
         </div>
         {view === 'home' && (
-          <ComingSoon
-            title="Home is coming soon"
-            text="A summary of what your chats are doing will live here."
+          <Home
+            chats={chats}
+            mood={mood}
+            draftId={homeDraft.id}
+            seeded={homeDraft.seeded}
+            onSeeded={markHomeDraftSeeded}
+            suggestedProjectId={chats.find((chat) => chat.id === activeId)?.projectIds[0] ?? null}
+            onOpenChat={(chat) => {
+              openChat(chat.id);
+              const approvalId = chat.attention?.approvalId;
+              if (approvalId) scrollToAnchor(approvalAnchor(approvalId), JUMP_TRIES);
+            }}
+            onRotateDraft={(id) => setHomeDraft({ id, seeded: true })}
+            onOpenId={openChat}
             onChats={() => setView('chats')}
+            onUsage={() => setSettings('usage')}
+            onProviders={() => setSettings('ai')}
           />
         )}
         {view === 'tickets' && (

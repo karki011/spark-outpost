@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { recencyBuckets, recencyLabel } from './recency.ts';
+import { activeLabel, recencyBuckets, recencyLabel } from './recency.ts';
 
 const now = new Date(2026, 8, 26, 15).getTime();
 const at = (days: number, hour = 9) => new Date(2026, 8, 26 - days, hour).toISOString();
@@ -23,6 +23,21 @@ describe('recencyLabel', () => {
   it('treats future and unreadable times as today', () => {
     expect(recencyLabel(at(-2), now)).toBe('Today');
     expect(recencyLabel('not a date', now)).toBe('Today');
+  });
+});
+
+describe('activeLabel', () => {
+  const minutesAgo = (minutes: number) => new Date(now - minutes * 60_000).toISOString();
+
+  it('counts minutes and hours today, then falls back to the sidebar wording', () => {
+    expect(activeLabel(minutesAgo(0.5), now)).toBe('Just now');
+    expect(activeLabel(minutesAgo(30), now)).toBe('30m ago');
+    expect(activeLabel(minutesAgo(125), now)).toBe('2h ago');
+    expect(activeLabel(at(0, 0), now)).toBe('15h ago');
+    expect(activeLabel(new Date(2026, 8, 25, 23, 59).toISOString(), now)).toBe('Yesterday');
+    expect(activeLabel(at(3), now)).toBe('3d ago');
+    expect(activeLabel(at(20), now)).toBe('20d ago');
+    expect(activeLabel(new Date(2026, 7, 20).toISOString(), now)).toBe('August');
   });
 });
 

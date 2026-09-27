@@ -32,6 +32,30 @@ describe('nextPlanWrite', () => {
     });
   });
 
+  it('keeps the version when only statuses change', () => {
+    const latest = { version: 1, entries: plan('A', 'B') };
+    const started = [{ ...latest.entries[0]!, status: 'in_progress' as const }, latest.entries[1]!];
+    expect(nextPlanWrite(latest, started, 'builder-run')).toEqual({
+      version: 1,
+      overwrite: true,
+      supersedesPrevious: false,
+    });
+  });
+
+  it("folds every plan update from one run into that run's version", () => {
+    const latest = { version: 1, entries: plan('Read the code'), sourceRunId: 'architect-run' };
+    expect(nextPlanWrite(latest, plan('Edit a.ts', 'Edit b.ts'), 'architect-run')).toEqual({
+      version: 1,
+      overwrite: true,
+      supersedesPrevious: false,
+    });
+    expect(nextPlanWrite(latest, plan('Edit a.ts', 'Edit b.ts'), 'next-architect')).toEqual({
+      version: 2,
+      overwrite: false,
+      supersedesPrevious: true,
+    });
+  });
+
   it('overwrites the latest version once the cap is reached', () => {
     expect(nextPlanWrite({ version: 200, entries: plan('A') }, plan('B'))).toEqual({
       version: 200,

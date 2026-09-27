@@ -18,7 +18,7 @@ import { PlusIcon } from '../ui/icons.tsx';
 import { isFiltering, matchesFilter, parseChatFilter } from '../categories/category-filter.ts';
 import { useDebouncedValue } from '../ui/use-debounced-value.ts';
 import { approvalAnchor } from '../crew/conversation-crew.ts';
-import { scrollToAnchor } from '../crew/scroll-to-anchor.ts';
+import { JUMP_TRIES, scrollToAnchor } from '../crew/scroll-to-anchor.ts';
 import { AttentionCard } from './AttentionCard.tsx';
 import { ChatMenu } from './ChatMenu.tsx';
 import type { MenuAnchor } from './MenuShell.tsx';
@@ -53,7 +53,6 @@ import { useToast } from './use-toast.ts';
 const SEARCH_DELAY_MS = 180;
 const HOVER_OPEN_MS = 550;
 const POLL_MS = 2000;
-const JUMP_TRIES = 180;
 
 interface ConversationListProps {
   selectedId: string | null;

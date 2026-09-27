@@ -25,6 +25,7 @@ function building(stepIndex: number, retries = 0): FlowState {
     steps,
     stepIndex,
     retries,
+    completed: Array.from({ length: stepIndex }, (_, index) => index),
     last: { role: 'builder', stepIndex, escalate: false, note: null, reason: 'first' },
   };
 }
@@ -87,11 +88,11 @@ describe('markStep', () => {
     ]);
   });
 
-  it('writes status changes as a new version that does not supersede the plan', () => {
+  it('writes step progress into the current version instead of adding one', () => {
     const latest = { version: 4, entries: plan(4) };
     expect(nextPlanWrite(latest, markStep(latest.entries, 0, 'in_progress'))).toEqual({
-      version: 5,
-      overwrite: false,
+      version: 4,
+      overwrite: true,
       supersedesPrevious: false,
     });
     const allDone = [0, 1, 2, 3].reduce(

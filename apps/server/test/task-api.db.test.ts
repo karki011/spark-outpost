@@ -60,7 +60,7 @@ describe('task API', () => {
     expect(detail.tasks[0]!.summary.text).toMatch(/^\d+ of \d+ done$/);
 
     const task = taskDetailSchema.parse((await get(`/api/tasks/${taskId}`).expect(200)).body);
-    expect(task.planVersions).toHaveLength(3);
+    expect(task.planVersions).toHaveLength(1);
     expect(task.links.map((link) => link.url)).toEqual([FAKE_PR_URL]);
     expect(task.runs).toHaveLength(1);
     expect(task.runs[0]).not.toHaveProperty('request');
@@ -106,7 +106,7 @@ describe('task API', () => {
     const response = await get(`/api/tasks/${taskId}/artifacts/plan.md`).expect(200);
     expect(response.headers['content-type']).toContain('text/markdown');
     expect(response.headers['content-disposition']).toContain('plan.md');
-    expect(response.text).toContain('# Plan v3');
+    expect(response.text).toContain('# Plan v1');
     expect(response.text).toContain('- [x] Write the answer · low priority');
     await get(`/api/tasks/${taskId}/artifacts/secret.md`).expect(404);
   });

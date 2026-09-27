@@ -17,6 +17,9 @@ import { RevertRun } from '../approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from '../changes/FilesChanged.tsx';
 import { Markdown } from '../markdown/Markdown.tsx';
 import { CheckpointCard } from '../checkpoints/CheckpointCard.tsx';
+import type { CheckpointApproval } from '../checkpoints/checkpoint-model.ts';
+import { keepCardHost } from '../outcomes/feedback-host.ts';
+import { TurnFeedback } from '../outcomes/TurnFeedback.tsx';
 import { runSeconds } from '../turns.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock, AgentHead } from './AgentBlock.tsx';
@@ -24,8 +27,8 @@ import {
   crewItems,
   groupParallel,
   lastAgentIndex,
-  mergeApprovals,
   mergeCheckpoints,
+  turnApprovals,
   type CrewItem,
 } from './crew-items.ts';
 import { DispatchLine } from './DispatchLine.tsx';
@@ -56,17 +59,17 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
   );
   const agents = crewAgents(orchestration, detail.activity);
   const jev = agents[0]!;
+  const crewRunIds = [run.id, ...orchestration.crew.map((member) => member.runId)];
+  const approvals = turnApprovals(crewRunIds, detail.approvals, liveApprovals);
   const checkpoints = mergeCheckpoints(
     orchestration.checkpoints,
     orchestration.pendingCheckpoint ? [orchestration.pendingCheckpoint] : [],
-    detail.approvals,
-    liveApprovals,
+    approvals,
   );
-  const checkApprovals = mergeApprovals(detail.approvals, liveApprovals).filter(isCheckApproval);
+  const checkApprovals = approvals.filter(isCheckApproval);
   const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals));
   const last = lastAgentIndex(items);
   const finished = isTerminalRunStatus(orchestration.status);
-  const crewRunIds = [run.id, ...orchestration.crew.map((member) => member.runId)];
   const changeTask = taskForRuns(detail.tasks, crewRunIds);
   const showsOwnChanges = (runId: string) => {
     const child = runsById.get(runId);
@@ -77,6 +80,18 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
       <FilesChanged taskId={changeTask.id} runIds={[runId]} />
     ) : null;
   const unlisted = crewRunIds.filter((runId) => runId === run.id || !showsOwnChanges(runId));
+  const host = finished ? keepCardHost(checkpoints) : null;
+  const checkpointCard = (approval: CheckpointApproval) => (
+    <CheckpointCard
+      key={approval.id}
+      approval={approval}
+      footer={
+        host?.approvalId === approval.id ? (
+          <TurnFeedback runId={run.id} variant={host.variant} />
+        ) : undefined
+      }
+    />
+  );
 
   const agentBlock = (item: Extract<CrewItem, { kind: 'agent' }>, collapsible: boolean) => {
     const member = item.member;
@@ -97,9 +112,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         approvals={detail.approvals.filter((approval) => approval.runId === member.runId)}
         repo={repo}
         changes={changedBy(member.runId)}
-        after={item.checkpoints.map((approval) => (
-          <CheckpointCard key={approval.id} approval={approval} />
-        ))}
+        after={item.checkpoints.map(checkpointCard)}
       />
     );
   };
@@ -117,7 +130,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
       </div>
       {items.map((item, index) => {
         if (item.kind === 'checkpoint') {
-          return <CheckpointCard key={item.approval.id} approval={item.approval} />;
+          return checkpointCard(item.approval);
         }
         if (item.kind === 'approval') {
           return (
@@ -153,6 +166,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         <span>{finished ? 'Done' : 'So far'}</span>{' '}
         {totalsLine(crewTotals(orchestration.totals, agents.length - 1))}
       </p>
+      {finished && !host && <TurnFeedback runId={run.id} variant="turn" />}
       {finished && changeTask && run.mode === 'do' && (
         <FilesChanged taskId={changeTask.id} runIds={crewRunIds} listed={unlisted} />
       )}

@@ -91,6 +91,7 @@ export const ORCHESTRATION_ROLE = 'Orchestration';
 function roleOf(row: RunAuditRow): string {
   const role = agentRoleSchema.safeParse(row.agent_role);
   if (role.success) return agentRoleLabel(role.data);
+  if (row.agent_role === 'digest') return 'Digest';
   return row.has_children ? ORCHESTRATION_ROLE : runRole(row.run_mode);
 }
 

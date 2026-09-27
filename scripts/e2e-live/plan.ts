@@ -71,7 +71,7 @@ function cost(scenario: Scenario, arm: ArmId, setup: HarnessSetup, effort: Effor
   if (arm === 'direct-claude') return base;
   const lean = setup.buildStyle === 'lean' ? 0.95 : 1;
   const critic = setup.codexConnected ? 1 : 1.1;
-  const glm = setup.provider === 'zai' ? 0.45 : 1;
+  const glm = setup.provider === 'zai' ? 0.45 : setup.provider === 'codex' ? 0.8 : 1;
   const rules = setup.jev ? 1 : 1.05;
   return base * MODEL_COST[setup.model] * lean * critic * rules * glm;
 }
@@ -199,7 +199,10 @@ function modelCells(): Cell[] {
   const codex = (['low', 'high'] as const).flatMap((effort) =>
     MODEL_SCENARIOS.map((id) => cell('models', id, 'direct-codex', `codex-${effort}`, {}, effort)),
   );
-  return [...claude, ...codex];
+  const codexBuilder = ['b', 'c', 'g'].map((id) =>
+    cell('models', id, 'harness', 'codex-builder', { driver: 'api', provider: 'codex' }),
+  );
+  return [...claude, ...codex, ...codexBuilder];
 }
 
 function glmCells(): Cell[] {

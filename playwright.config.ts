@@ -20,6 +20,7 @@ const serverEnv = {
   SECRET_STORE: 'memory',
   MEMORY_SECRETS: JSON.stringify({ jev: 'browser-test-jev-key', zai: 'browser-test-zai-key' }),
   AGENT_RUNTIME: 'fake',
+  OUTCOME_SAMPLE_RATE: '0',
   FAKE_ACP_AGENT: path.resolve('apps/server/test/fake-acp-agent.ts'),
   FAKE_ACP_MODELS: JSON.stringify(FAKE_ACP_MODELS),
   ANTHROPIC_BASE_URL: `${STUB_URL}/anthropic`,

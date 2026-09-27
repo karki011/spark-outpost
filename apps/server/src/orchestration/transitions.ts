@@ -13,30 +13,35 @@ import {
   type TransitionStatus,
 } from '@spark-outpost/contracts';
 import { asksForPlan } from './checkpoint-policy.ts';
+import { VAGUE_REASON } from './clarify.ts';
 import { reviewWanted } from './depth.ts';
 import {
   ask,
+  askInterpretation,
   finish,
   first,
   firstAgent,
   laneOf,
+  continueOrSpawn,
+  incompleteLine,
+  markedSpan,
   spawn,
   spawnGroup,
   spawnLanes,
-  spawnStep,
   startBuilding,
+  stepsLeftAfter,
   withDone,
   withStepDone,
   wrapUp,
 } from './flow-steps.ts';
-import { batchGroups, batchRanges, batchSteps, nextOpenStep } from './parallel.ts';
+import { batchGroups, batchRanges, batchSteps, firstOpenStep } from './parallel.ts';
 import { chooseGroups, type ParallelVerdicts } from './parallel-choice.ts';
 import { openSpan } from './spans.ts';
 import { stopsForUser, wantsConfirm, type Transition } from './transition-choice.ts';
 
 export const MAX_PLAN_EDITS = 3;
 
-export type SpawnReason = 'first' | 'retry' | 'fix' | 'edit' | 'resume' | 'answer';
+export type SpawnReason = 'first' | 'retry' | 'fix' | 'edit' | 'resume' | 'answer' | 'continue';
 
 export type FlowCheckpoint = CheckpointKind | 'needs_input';
 
@@ -50,6 +55,7 @@ export interface Spawn {
   carry?: number[] | undefined;
   followUp?: string;
   checkFailures?: string;
+  from?: number;
 }
 
 export type FlowAction =
@@ -60,18 +66,24 @@ export type FlowAction =
       suggestion: TransitionNext | null;
       fromJev: boolean;
       blocked?: boolean;
+      interpret?: boolean;
     }
   | ({ type: 'spawn' } & Spawn)
   | { type: 'spawn_group'; stepIndexes: number[]; lanes?: number[][] }
   | { type: 'judge'; role: AgentRole; stepIndex: number }
   | { type: 'wrap_up' }
   | { type: 'revert' }
-  | { type: 'finish'; status: 'succeeded' | 'failed' | 'cancelled'; reason: string | null };
+  | {
+      type: 'finish';
+      status: 'succeeded' | 'failed' | 'cancelled';
+      reason: string | null;
+      incomplete?: string;
+    };
 
 export type AgentOutcome = 'succeeded' | 'failed' | 'cancelled';
 
 export type FlowEvent =
-  | { type: 'start'; intake: 'act' | 'ask' | 'fallback' }
+  | { type: 'start'; intake: 'act' | 'ask' | 'fallback' | 'interpret' }
   | { type: 'clarified'; depth: Depth | null }
   | {
       type: 'agent_done';
@@ -130,6 +142,7 @@ export interface FlowState {
   lanes: number[][];
   ranges: number[][] | null;
   reviewIntent: boolean;
+  ticked: number[];
 }
 
 export interface FlowResult {
@@ -167,6 +180,7 @@ export function initialFlow(
     lanes: [],
     ranges: null,
     reviewIntent,
+    ticked: [],
   };
 }
 
@@ -219,8 +233,8 @@ function follow(current: FlowState, next: TransitionNext): FlowResult {
   const state = withStepDone(current);
   if (next === 'review') return state.reviewed ? wrapUp(state) : review(state);
   if (next === 'next_step' && state.last?.role === 'builder') {
-    const stepIndex = nextOpenStep(state.steps, state.completed, state.stepIndex);
-    if (stepIndex !== null) return spawnStep(state, stepIndex);
+    const stepIndex = firstOpenStep(state.steps, state.completed);
+    if (stepIndex !== null) return continueOrSpawn(state, stepIndex);
   }
   return afterWork(state);
 }
@@ -237,7 +251,9 @@ function groupDone(state: FlowState, event: Extract<FlowEvent, { type: 'group_do
       : [head];
   };
   const done = event.results.flatMap((result) =>
-    result.outcome === 'succeeded' ? spanFor(result.stepIndex) : (result.ticked ?? []),
+    result.outcome === 'succeeded'
+      ? markedSpan(spanFor(result.stepIndex), result.ticked ?? [])
+      : (result.ticked ?? []),
   );
   const completed = [...state.completed, ...done.filter((i) => !state.completed.includes(i))];
   const failed = event.results
@@ -258,6 +274,7 @@ function groupDone(state: FlowState, event: Extract<FlowEvent, { type: 'group_do
       ...(open.length > 1 ? { carry: open } : {}),
     },
     lastGroup: null,
+    ticked: [],
   };
   if (failed.length === 0) return follow(next, 'next_step');
   const rules: Transition = { status: 'needs_more_work', next: 'retry_up' };
@@ -292,6 +309,7 @@ function judged(state: FlowState, event: Extract<FlowEvent, { type: 'judged' }>)
   }
   let next = event.next;
   if (next === 'finish' && state.last?.role === 'builder') next = 'next_step';
+  if (next === 'review' && stepsLeftAfter(state)) next = 'next_step';
   const exhausted = state.retries >= MAX_REPAIR_RETRIES;
   if (exhausted && (next === 'retry_up' || event.status !== 'done')) {
     return ask(state, 'retry', `Stopped after ${MAX_REPAIR_RETRIES} retries.`, 'retry_up');
@@ -335,7 +353,7 @@ function agentDone(
       action: { type: 'judge', role: 'critic', stepIndex: state.stepIndex },
     };
   }
-  const ticked = withDone(state, event.ticked ?? []);
+  const ticked = { ...withDone(state, event.ticked ?? []), ticked: [...(event.ticked ?? [])] };
   return { state: ticked, action: { type: 'judge', role: 'builder', stepIndex: state.stepIndex } };
 }
 
@@ -357,7 +375,7 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
       );
     }
     const limit = (state.exceeded ?? 'time').replace('_', ' ');
-    return finish(state, 'failed', `Stopped: the ${limit} budget ran out.`);
+    return finish(state, 'failed', budgetStopLine(state, limit));
   }
   if (option === CHECKPOINT_OPTION.stop) return finish(state, 'cancelled', 'You stopped it.');
   if (event.kind === 'needs_input') {
@@ -400,6 +418,7 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
 export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
   switch (event.type) {
     case 'start':
+      if (event.intake === 'interpret') return askInterpretation(state, VAGUE_REASON);
       return event.intake === 'ask'
         ? ask(state, 'clarify', 'Jev is unsure what you meant.', null, true)
         : firstAgent(state);
@@ -430,6 +449,15 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
     case 'stopped':
       return finish(state, 'cancelled', 'Stopped.');
   }
+}
+
+function budgetStopLine(state: FlowState, limit: string): string {
+  const open = incompleteLine(state);
+  const unreviewed =
+    reviewWanted(state) && !state.reviewed && state.last?.role === 'builder'
+      ? ' The changes so far were not reviewed.'
+      : '';
+  return `Stopped: the ${limit} budget ran out.${open ? ` ${open}` : ''}${unreviewed}`;
 }
 
 function filesChangedLine(count: number): string {

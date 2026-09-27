@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
-import { createDb, type Db } from '../src/persistence/db.ts';
+import { createDb, POOL_MAX, type Db } from '../src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../src/persistence/conversations.ts';
 import { runMigrations } from '../src/persistence/migrate.ts';
 
@@ -31,7 +31,7 @@ export async function createTestDb(): Promise<TestDb> {
   const url = testDatabaseUrl();
   const schema = `test_${randomUUID().replaceAll('-', '')}`;
   await admin(url, (client) => client.query(`CREATE SCHEMA ${schema}`));
-  const db = createDb(url, schema);
+  const db = createDb(url, { searchPath: schema, max: POOL_MAX.test });
   await runMigrations(db);
   const workspaceId = await ensureLocalWorkspace(db);
   return {

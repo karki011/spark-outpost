@@ -136,15 +136,12 @@ export function groupMembers(
   return open.filter((member) => member === builders[0] || !builders.includes(member));
 }
 
-export function nextOpenStep(
+export function firstOpenStep(
   steps: readonly string[],
   completed: readonly number[],
-  after: number,
 ): number | null {
-  for (let index = after + 1; index < steps.length; index += 1) {
-    if (!completed.includes(index)) return index;
-  }
-  return null;
+  const index = steps.findIndex((_, position) => !completed.includes(position));
+  return index < 0 ? null : index;
 }
 
 export function sequentialReason(groups: readonly (readonly number[])[], steps: readonly string[]) {

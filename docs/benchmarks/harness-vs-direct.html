@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Harness vs Direct</title>
-<meta name="description" content="Cost, speed and quality of Spark Outpost's orchestrated harness against a single direct agent on 9 coding tasks.">
+<meta name="description" content="Cost, speed and quality of Spark Outpost's orchestrated harness against direct Claude and Codex, from the first benchmark rounds to the live end-to-end run.">
 <style>
 :root {
   color-scheme: light;
@@ -75,10 +75,32 @@ code { font-size: .9em; }
 <header>
 <div>
 <h1>Harness vs direct</h1>
-<p class="meta">Spark Outpost benchmark · 2026-09-26-round3 · 20 live runs · full-auto (tool approvals that still ask are auto-denied and recorded)</p>
+<p class="meta">Spark Outpost benchmark · latest: round 5, live end-to-end (188 cells, Balanced, web UI) · earlier: round 3, 20 live runs at full-auto</p>
 </div>
 <button class="theme" type="button">Dark theme</button>
 </header>
+<section id="round5">
+<h2>Round 5: live end-to-end (September 26–27, 2026)</h2>
+<p>The whole product path with real agents: the web UI driven by Playwright, the real API and worker processes, Claude, Codex and GLM agents, and Jev, at Balanced involvement, on checkpoint <code>d4c59d3</code>. 188 cells, including two older checkpoints and settings and model variants. Full report: <a href="harness-e2e-live-2026-09-26.md">harness-e2e-live-2026-09-26.md</a>; data: <a href="harness-e2e-live-2026-09-26.json">JSON</a>.</p>
+<div class="tiles">
+<div class="tile"><div class="label">Spend</div><div class="value">$19.55</div><div class="sub">of $40 cap, API-equivalent; Jev $0.018</div></div>
+<div class="tile"><div class="label">Pass rate</div><div class="value">33 · 32 · 33 of 36</div><div class="sub">harness · direct Claude · direct Codex</div></div>
+<div class="tile"><div class="label">Cost</div><div class="value">$4.85 · $2.18 · $2.26</div><div class="sub">same 18 scenarios × 2</div></div>
+<div class="tile"><div class="label">Wall time</div><div class="value">30 · 13 · 22 min</div><div class="sub">harness · Claude · Codex</div></div>
+</div>
+<div class="scroll"><table><thead><tr><th>Scenario (n=2)</th><th>Harness</th><th>Direct Claude</th><th>Direct Codex</th><th>Harness ÷ Claude cost</th></tr></thead><tbody>
+<tr><td>a · Simple question</td><td class="num">2/2 · $0.028 · 12 s</td><td class="num">2/2 · $0.021 · 7 s</td><td class="num">2/2 · $0.015 · 9 s</td><td class="num">1.33×</td></tr><tr><td>b · Single-file fix</td><td class="num">2/2 · $0.029 · 22 s</td><td class="num">2/2 · $0.045 · 14 s</td><td class="num">2/2 · $0.034 · 17 s</td><td class="num">0.65×</td></tr><tr><td>c · Vague multi-module fix</td><td class="num">2/2 · $0.361 · 100 s</td><td class="num">2/2 · $0.115 · 43 s</td><td class="num">2/2 · $0.098 · 69 s</td><td class="num">3.14×</td></tr><tr><td>d · Two independent features</td><td class="num">1/2 · $0.216 · 68 s</td><td class="num">2/2 · $0.103 · 31 s</td><td class="num">2/2 · $0.063 · 43 s</td><td class="num">2.10×</td></tr><tr><td>e · Review request</td><td class="num">2/2 · $0.108 · 51 s</td><td class="num">2/2 · $0.085 · 40 s</td><td class="num">2/2 · $0.089 · 57 s</td><td class="num">1.27×</td></tr><tr><td>f · Destructive clean-up</td><td class="num">2/2 · $0.263 · 91 s</td><td class="num">2/2 · $0.085 · 28 s</td><td class="num">2/2 · $0.066 · 40 s</td><td class="num">3.09×</td></tr><tr><td>g · Check the Builder does not know about</td><td class="num">2/2 · $0.115 · 35 s</td><td class="num">0/2 · $0.035 · 12 s</td><td class="num">2/2 · $0.054 · 29 s</td><td class="num">3.25×</td></tr><tr><td>h · Over-build-prone cache</td><td class="num">2/2 · $0.059 · 38 s</td><td class="num">2/2 · $0.063 · 23 s</td><td class="num">2/2 · $0.051 · 34 s</td><td class="num">0.93×</td></tr><tr><td>i · Two turns in one chat</td><td class="num">2/2 · $0.083 · 47 s</td><td class="num">2/2 · $0.070 · 25 s</td><td class="num">2/2 · $0.107 · 42 s</td><td class="num">1.18×</td></tr><tr><td>k · Python project</td><td class="num">2/2 · $0.056 · 25 s</td><td class="num">2/2 · $0.046 · 16 s</td><td class="num">2/2 · $0.048 · 30 s</td><td class="num">1.23×</td></tr><tr><td>l · Type errors across files</td><td class="num">2/2 · $0.174 · 59 s</td><td class="num">2/2 · $0.040 · 12 s</td><td class="num">2/2 · $0.055 · 24 s</td><td class="num">4.38×</td></tr><tr><td>m · Accessible UI toggle</td><td class="num">2/2 · $0.037 · 22 s</td><td class="num">2/2 · $0.036 · 12 s</td><td class="num">1/2 · $0.045 · 27 s</td><td class="num">1.04×</td></tr><tr><td>n · Ambiguous request</td><td class="num">0/2 · $0.234 · 61 s</td><td class="num">0/2 · $0.058 · 20 s</td><td class="num">0/2 · $0.075 · 43 s</td><td class="num">4.00×</td></tr><tr><td>o · Security-sensitive upload rule</td><td class="num">2/2 · $0.045 · 31 s</td><td class="num">2/2 · $0.047 · 16 s</td><td class="num">2/2 · $0.041 · 27 s</td><td class="num">0.97×</td></tr><tr><td>p · Docs only</td><td class="num">2/2 · $0.041 · 21 s</td><td class="num">2/2 · $0.035 · 13 s</td><td class="num">2/2 · $0.031 · 18 s</td><td class="num">1.17×</td></tr><tr><td>q · Rename across 13 files</td><td class="num">2/2 · $0.207 · 78 s</td><td class="num">2/2 · $0.051 · 17 s</td><td class="num">2/2 · $0.059 · 39 s</td><td class="num">4.05×</td></tr><tr><td>r · Turn 2 changes the plan</td><td class="num">2/2 · $0.210 · 103 s</td><td class="num">2/2 · $0.085 · 31 s</td><td class="num">2/2 · $0.136 · 53 s</td><td class="num">2.47×</td></tr><tr><td>t · Lanes meeting in one file</td><td class="num">2/2 · $0.161 · 48 s</td><td class="num">2/2 · $0.070 · 23 s</td><td class="num">2/2 · $0.066 · 46 s</td><td class="num">2.29×</td></tr>
+</tbody></table></div>
+<ul>
+<li><strong>Quality ties.</strong> The harness won g: its checks caught a project lint that direct Claude missed twice. It lost d #1 to a harness bug: one Builder finished step 1 of a six-step plan and the run still succeeded. Nobody asked a question on the ambiguous request (n).</li>
+<li><strong>Cost.</strong> 2.2× direct Claude overall. Execute-depth work costs 0.65–1.3×; planned work (c, d, f, l, q, r, t) costs 2.1–4.4×.</li>
+<li><strong>Lanes.</strong> Shared tree 60 s and worktrees 57 s on P1, both 2/2; node_modules prep took 0.2–0.4 s and nothing waited for it. Left to Jev, one Builder dropped half a plan.</li>
+<li><strong>Resume regressed.</strong> Older checkpoints resumed turn 2 for $0.015. d4c59d3's model-card routing switches Haiku to Sonnet between turns, so turn 2 starts fresh for $0.045–0.050.</li>
+<li><strong>Lean.</strong> 30–50% smaller diffs and 20–30% lower cost, with every safety check passing. <strong>Critic:</strong> real untested defects in 6 of 14 reviews, no change to any pass. <strong>Stop:</strong> clean 2/2.</li>
+<li><strong>Models.</strong> Haiku failed both harder tasks. Sonnet pinned passed everything at about half the Auto cost on c. Codex and GLM Builders passed everything but ran slowly, and Codex usage is under-counted inside the harness.</li>
+</ul>
+</section>
+<h2>Round 3 (September 26, 2026)</h2>
 <p><strong>Direct:</strong> One claude agent (Sonnet 5, medium effort) in Do mode, no orchestrator, no Jev.<br><strong>Harness:</strong> Full orchestrator on Auto routing with Jev intake (now with the scope question), Jev-picked Architect behind the routing gate, Jev parallel nouls after the plan, per-agent model routing, Architect / Builders / Critic as the depth requires.<br><strong>Fixture:</strong> Ledger Lite, a 6-module TypeScript project tested with node --test (scripts/bench/fixture).</p>
 <div class="tiles">
 <div class="tile"><div class="label">Total spend</div><div class="value">$3.303</div><div class="sub">of $4.000 budget, 20 runs</div></div>
@@ -86,7 +108,7 @@ code { font-size: .9em; }
 <div class="tile"><div class="label">Harness cost</div><div class="value">$1.921</div><div class="sub">10/10 verified, Jev $0.0016</div></div>
 <div class="tile"><div class="label">Wall time</div><div class="value">699.1 s vs 652.7 s</div><div class="sub">direct vs harness, summed</div></div>
 </div>
-<h2>Cost and time per task</h2>
+<h2>Round 3: cost and time per task</h2>
 <div class="charts"><figure class="chart">
 <figcaption>Mean cost per task (USD)</figcaption>
 <div class="legend"><span class="key"><span class="swatch s1"></span>Direct</span><span class="key"><span class="swatch s2"></span>Harness</span></div>
