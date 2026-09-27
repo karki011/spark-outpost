@@ -8,6 +8,10 @@ const WOULD: Record<string, string> = {
   block: 'Would block',
   pass: 'Would pass',
   flag: 'Would flag',
+  supported: 'Supported',
+  unsupported: 'Unsupported: reran one tier up',
+  declined: 'Declined: asked you',
+  unverified: 'Not verified',
 };
 
 const ROUTING: Record<string, string> = {

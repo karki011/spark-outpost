@@ -101,6 +101,31 @@ export function stuckCard(agent: string, reason: string): CheckpointCard {
   };
 }
 
+export function verifyCard(
+  from: AgentPick | null,
+  to: AgentPick | null,
+  reason: string,
+): CheckpointCard {
+  const title = 'Jev could not verify the change';
+  return {
+    kind: 'verify',
+    title,
+    payload: payload({
+      kind: 'verify',
+      question: `Finish as it is, or retry${to?.modelLabel ? ` with ${to.modelLabel}` : ' one tier up'}?`,
+      reason,
+      from,
+      to,
+      autoOption: CHECKPOINT_OPTION.finishUnverified,
+    }),
+    options: [
+      allow(CHECKPOINT_OPTION.finishUnverified, 'Finish as it is'),
+      allow(CHECKPOINT_OPTION.retry, 'Retry one tier up'),
+      stopOption,
+    ],
+  };
+}
+
 export function acceptCard(files: readonly RunChange[], reason: string): CheckpointCard {
   return {
     kind: 'accept',

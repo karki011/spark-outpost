@@ -163,6 +163,7 @@ export interface JevScript {
   scenario?: Scenario;
   policy?: Partial<Record<string, number>>;
   verify?: number;
+  verdicts?: { choice: string; confidence: number }[];
 }
 
 function intentAnswer(scenario: Scenario): Answers[string] {
@@ -198,11 +199,18 @@ function intakeAnswers(scenario: Scenario, questions: Record<string, unknown>): 
   return answers;
 }
 
+function verdictAnswer(script: JevScript): Answers[string] {
+  const next = script.verdicts?.shift() ?? { choice: 'supported', confidence: 0.95 };
+  return choice(next.choice, next.confidence);
+}
+
 function observedAnswers(script: JevScript, questions: Record<string, unknown>): Answers {
   return Object.fromEntries(
     Object.keys(questions).map((key) => [
       key,
-      noul(script.policy?.[key] ?? (key.startsWith('unmet_') ? (script.verify ?? 0.05) : 0.05)),
+      key === 'verdict'
+        ? verdictAnswer(script)
+        : noul(script.policy?.[key] ?? (key.startsWith('unmet_') ? (script.verify ?? 0.05) : 0.05)),
     ]),
   );
 }

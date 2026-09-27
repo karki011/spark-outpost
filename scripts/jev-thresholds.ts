@@ -26,7 +26,8 @@ try {
          OR ${BAD_SIGNALS} AS positive
      FROM run_advice a JOIN runs r ON r.id = a.run_id
      LEFT JOIN task_outcomes o ON o.run_id = r.id
-     WHERE a.purpose = 'verify' AND a.body->'answer'->>'worst' IS NOT NULL`,
+     WHERE a.purpose = 'verify' AND a.body->'answer' ? 'accepted'
+       AND a.body->'answer'->>'worst' IS NOT NULL`,
   );
   const version = await db.query<{ versions: string[] }>(
     `SELECT array_agg(DISTINCT policy_version) AS versions FROM run_advice
@@ -37,7 +38,7 @@ try {
   console.log(`Policy versions: ${(version.rows[0]?.versions ?? []).join(', ') || 'none'}`);
   console.log(renderTable('Policy gate (max violation)', toSamples(policy.rows)));
   console.log('');
-  console.log(renderTable('Verifier (worst unmet)', toSamples(verify.rows)));
+  console.log(renderTable('Verifier (probability of unsupported)', toSamples(verify.rows)));
 } finally {
   await db.end();
 }

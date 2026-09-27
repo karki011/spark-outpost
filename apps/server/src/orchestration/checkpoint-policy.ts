@@ -18,5 +18,6 @@ export function autoContinueOption(kind: CheckpointKind, interpret: boolean): st
   if (kind === 'clarify' && interpret) return CHECKPOINT_OPTION.clarifyRules;
   if (kind === 'retry') return CHECKPOINT_OPTION.stopReport;
   if (kind === 'stuck') return CHECKPOINT_OPTION.stopReport;
+  if (kind === 'verify') return CHECKPOINT_OPTION.finishUnverified;
   return null;
 }

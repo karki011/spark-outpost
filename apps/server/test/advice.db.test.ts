@@ -140,7 +140,7 @@ describe('Jev intake recording', () => {
       jev: { intent: 'bug_fix', provider: 'fake', depth: 'direct', risk: 'read-only' },
       gate: null,
       wouldApply: 'rules',
-      policyVersion: 'lean-1',
+      policyVersion: 'cascade-1',
       usage: { inputTokens: 1000, tokenSource: 'reported', costSource: 'estimated' },
     });
     expect(body.usage?.costUsd).toBeCloseTo(0.000042);
