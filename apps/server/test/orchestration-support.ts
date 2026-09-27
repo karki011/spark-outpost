@@ -21,7 +21,7 @@ import { getConversationDetail, sendUserMessage } from '../src/persistence/conve
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import type { LaneOptions } from '../src/orchestration/placement.ts';
-import type { HandoffOptions } from '../src/orchestration/session.ts';
+import type { HandoffOptions, OrchestratorDeps } from '../src/orchestration/session.ts';
 import type { Provider } from '../src/providers/provider.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
@@ -197,6 +197,8 @@ export interface JevScript {
   architect?: ArchitectAnswer;
   parallel?: Record<string, number>;
   buildStyle?: { choice: string; confidence: number };
+  watchdog?: Partial<Record<'repeating' | 'off_step' | 'waiting' | 'finished', number>>;
+  stepOpen?: number;
   transition?: (
     state: Record<string, unknown>,
     offered: string[],
@@ -274,7 +276,13 @@ function transitionAnswers(
   const scripted = script.transition?.(state, offered);
   const fallback = offered.includes('next_step') ? 'next_step' : 'finish';
   const next = scripted && offered.includes(scripted.next) ? scripted.next : fallback;
+  const stepChecks = Object.keys(questions).flatMap((key) =>
+    script.stepOpen !== undefined && key.startsWith('step_not_done_')
+      ? [[key, { type: 'noul', noul: script.stepOpen }]]
+      : [],
+  );
   return {
+    ...Object.fromEntries(stepChecks),
     status: choice(scripted?.status ?? 'done', scripted?.confidence ?? 0.95),
     quality: score(3),
     next: choice(next, scripted?.confidence ?? 0.95),
@@ -284,6 +292,14 @@ function transitionAnswers(
 function buildStyleAnswers(script: JevScript): Answers {
   const pick = script.buildStyle ?? { choice: 'lean', confidence: 0.5 };
   return { build_style: choice(pick.choice, pick.confidence) };
+}
+
+const WATCHDOG_KEYS = ['repeating', 'off_step', 'waiting', 'finished'] as const;
+
+function watchdogAnswers(script: JevScript): Answers {
+  return Object.fromEntries(
+    WATCHDOG_KEYS.map((key) => [key, { type: 'noul', noul: script.watchdog?.[key] ?? 0.05 }]),
+  );
 }
 
 export function jevFetch(script: JevScript): typeof fetch {
@@ -307,9 +323,11 @@ export function jevFetch(script: JevScript): typeof fetch {
         ? buildStyleAnswers(script)
         : body.questions.status
           ? transitionAnswers(script, body.state, body.questions)
-          : Object.keys(body.questions).some(isParallelKey)
-            ? parallelAnswers(script, body.questions)
-            : routeAnswers(script, body.questions);
+          : body.questions.repeating
+            ? watchdogAnswers(script)
+            : Object.keys(body.questions).some(isParallelKey)
+              ? parallelAnswers(script, body.questions)
+              : routeAnswers(script, body.questions);
     return new Response(
       JSON.stringify({
         model: 'jev-test',
@@ -334,6 +352,7 @@ export function startOrchestrator(
     sessions?: string;
     lanes?: LaneOptions;
     handoff?: HandoffOptions;
+    watchdog?: OrchestratorDeps['watchdog'];
   } = {},
 ): Harness {
   const intake = fetcher
@@ -360,6 +379,7 @@ export function startOrchestrator(
     ...(options.budget ? { budget: options.budget } : {}),
     ...(options.lanes ? { lanes: options.lanes } : {}),
     ...(options.handoff ? { handoff: options.handoff } : {}),
+    ...(options.watchdog !== undefined ? { watchdog: options.watchdog } : {}),
   });
   return {
     worker,

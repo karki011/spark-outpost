@@ -180,7 +180,7 @@ export function orchestrationTotals(
 
 export interface DecisionRow {
   id: string;
-  purpose: 'intake' | 'route' | 'transition' | 'parallel';
+  purpose: OrchestrationDecision['kind'];
   child_run_id: string | null;
   role: AgentRole | null;
   step_index: number | null;

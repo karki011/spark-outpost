@@ -1,3 +1,4 @@
+import { checkpointKindSchema } from '@spark-outpost/contracts';
 import type {
   AgentRole,
   CheckpointKind,
@@ -189,7 +190,7 @@ export async function insertChildRun(
 
 export interface NewDecision {
   runId: string;
-  purpose: 'route' | 'transition' | 'parallel' | 'build_style';
+  purpose: 'route' | 'transition' | 'parallel' | 'build_style' | 'watchdog';
   childRunId: string | null;
   role: AgentRole | null;
   stepIndex: number | null;
@@ -232,7 +233,7 @@ export async function waitedMs(db: Queryable, runId: string): Promise<number> {
     `SELECT EXTRACT(EPOCH FROM a.created_at) * 1000 AS started,
        EXTRACT(EPOCH FROM COALESCE(a.decided_at, now())) * 1000 AS ended
      FROM approvals a JOIN runs r ON r.id = a.run_id
-     WHERE (r.id = $1 OR r.parent_run_id = $1)
+     WHERE (r.id = $1 OR r.parent_run_id = $1) AND a.kind <> 'stuck'
        AND (a.status = 'pending' OR a.decided_by IN ('user', 'stop', 'timeout', 'auto'))`,
     [runId],
   );
@@ -247,14 +248,7 @@ export async function spentUsd(db: Queryable, runId: string): Promise<number> {
   return Number(rows[0]?.spent ?? 0);
 }
 
-const CHECKPOINT_KINDS: readonly CheckpointKind[] = [
-  'clarify',
-  'plan',
-  'retry',
-  'accept',
-  'budget',
-  'merge_conflict',
-];
+const CHECKPOINT_KINDS: readonly CheckpointKind[] = checkpointKindSchema.options;
 
 const MEMBER_COLUMNS = `r.id, r.role, r.step_index, r.attempt, r.agent_label, r.provider, r.model,
   r.effort, r.mode, r.route, r.status, r.error,

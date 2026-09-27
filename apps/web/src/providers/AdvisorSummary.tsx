@@ -3,6 +3,9 @@ import { relativeTime } from '../ui/relative-time.ts';
 import { Detail } from './ConnectedSummary.tsx';
 import { MoreMenu } from './MoreMenu.tsx';
 
+const JEV_SENDS =
+  'Your request, plan steps with their file paths, the end of each agent’s reply, and the titles of its recent tool calls. Never file contents, diffs, tool output or keys. TypeSafe does not train on it.';
+
 interface AdvisorSummaryProps {
   advisor: AdvisorSetup;
   connection: AdvisorConnection;
@@ -38,8 +41,11 @@ export function AdvisorSummary({
             </Detail>
             <Detail term="Role">
               {advisor.role}
-              <small className="note">Not used in runs yet. Chats keep your chosen provider.</small>
+              <small className="note">
+                Used in runs while connected. A pinned model still runs as chosen.
+              </small>
             </Detail>
+            <Detail term="Sends">{JEV_SENDS}</Detail>
           </dl>
         </section>
         <div className="conn-actions">

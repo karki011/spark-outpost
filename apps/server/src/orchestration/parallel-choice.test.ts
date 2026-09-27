@@ -96,6 +96,10 @@ describe('Jev deciding parallelism', () => {
     );
     expect(String(asked.questions.large_1!.instructions).startsWith(LARGE_QUESTION)).toBe(true);
     expect(asked.state.steps).toMatchObject({ '2': { reads: ['src/percent.ts'] } });
+    expect(Object.keys(asked.state)).toEqual(['task', 'steps']);
+    expect(asked.state.steps).toMatchObject({
+      '1': { text: PERCENT[0], changes: ['src/percent.ts', 'test/percent.test.ts'] },
+    });
   });
 
   it('trusts a noul at 0.75 or 0.25, confidence 0.5 on the two-option scale', () => {

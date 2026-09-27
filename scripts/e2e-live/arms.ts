@@ -2,7 +2,8 @@ import { join } from 'node:path';
 import type { Browser } from '@playwright/test';
 import type { Orchestration } from '../../packages/contracts/src/index.ts';
 import type { LaneOptions } from '../../apps/server/src/orchestration/placement.ts';
-import { runLiveCell, type BenchEnv } from '../bench/live.ts';
+import type { BenchEnv } from '../bench/live.ts';
+import type { HandoffOptions } from '../../apps/server/src/orchestration/session.ts';
 import {
   Api,
   openApiChat,
@@ -15,6 +16,7 @@ import {
 import { benchEnv } from './bench-env.ts';
 import { builderStartedAt, cleanupProblems } from './cleanup.ts';
 import { collectTurn, type OrchestrationLoader } from './collect.ts';
+import { directWithChecks } from './direct-checks.ts';
 import { directClaudeTurns, directCodexTurns } from './direct.ts';
 import type { Cell } from './plan.ts';
 import type { TurnRecord } from './results.ts';
@@ -42,10 +44,15 @@ function withTags(ctx: ArmContext, cell: Cell, text: string): string {
   return ctx.runtime === 'fake' ? `${text}${cell.scenario.fakeTags}` : text;
 }
 
-async function bench(ctx: ArmContext, key: string, lanes: LaneOptions): Promise<BenchEnv> {
+async function bench(
+  ctx: ArmContext,
+  key: string,
+  lanes: LaneOptions,
+  handoff: HandoffOptions = {},
+): Promise<BenchEnv> {
   const existing = ctx.benches.get(key);
   if (existing) return existing;
-  const env = await benchEnv(ctx.runtime, lanes);
+  const env = await benchEnv(ctx.runtime, lanes, handoff);
   ctx.benches.set(key, env);
   return env;
 }
@@ -80,7 +87,7 @@ async function harnessOnStack(ctx: ArmContext, cell: Cell, repo: string): Promis
   await setConnections(stack.db, stack.workspaceId, {
     jev: setup.jev,
     codex: setup.codexConnected,
-    zai: setup.provider === 'zai',
+    zai: setup.zaiConnected,
   });
   const notes: UiNote[] = [];
   const turns: TurnRecord[] = [];
@@ -119,16 +126,22 @@ async function harnessOnStack(ctx: ArmContext, cell: Cell, repo: string): Promis
 }
 
 async function harnessBench(ctx: ArmContext, cell: Cell, repo: string): Promise<ArmResult> {
-  const { placement, buildStyle } = cell.setup;
+  const { placement, buildStyle, workOrders, planSession } = cell.setup;
   const lanes: LaneOptions = placement === 'jev' ? {} : { placement, split: 'any' };
-  const env = await bench(ctx, `harness-${placement}`, lanes);
-  const text = cell.scenario.turns[0]!;
-  const tagged = withTags(ctx, cell, text);
-  const live = await runLiveCell(env, 'harness', repo, tagged, ctx.timeoutMs, buildStyle);
-  const metrics = await collectTurn(env.t.db, live.runId, live.wallMs);
-  const autoDenied = live.asked.filter((item) => item.autoDenied).length;
+  const key = `harness-${placement}-${workOrders}-${planSession}`;
+  const env = await bench(ctx, key, lanes, { workOrders, planSession });
+  const prompts = cell.scenario.turns.map((text) => withTags(ctx, cell, text));
+  const turns = await directClaudeTurns(env, repo, prompts, ctx.timeoutMs, {
+    harness: true,
+    buildStyle,
+  });
   return {
-    turns: [{ prompt: text, metrics, outcome: null, autoDenied }],
+    turns: turns.map((turn, index) => ({
+      prompt: cell.scenario.turns[index]!,
+      metrics: turn.metrics,
+      outcome: null,
+      autoDenied: turn.autoDenied,
+    })),
     consoleErrors: [],
     notes: [],
     cleanup: null,
@@ -151,6 +164,27 @@ export async function runArm(ctx: ArmContext, cell: Cell, repo: string): Promise
   if (cell.arm === 'direct-claude') {
     const env = await bench(ctx, 'direct', {});
     return toRecords(await directClaudeTurns(env, repo, prompts, ctx.timeoutMs));
+  }
+  if (cell.arm === 'direct-checks') {
+    const env = await bench(ctx, 'direct', {});
+    const turns = await directWithChecks(
+      env,
+      repo,
+      prompts,
+      ctx.timeoutMs,
+      cell.scenario.checkCommands,
+    );
+    return {
+      turns: turns.map((turn, index) => ({
+        prompt: index === 0 ? cell.scenario.turns[0]! : 'check fix or next turn',
+        metrics: turn.metrics,
+        outcome: null,
+        autoDenied: turn.autoDenied,
+      })),
+      consoleErrors: [],
+      notes: [],
+      cleanup: null,
+    };
   }
   if (cell.arm === 'direct-codex') {
     return toRecords(await directCodexTurns(repo, prompts, ctx.timeoutMs, cell.codexEffort));

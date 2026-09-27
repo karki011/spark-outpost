@@ -8,7 +8,6 @@ import { BlobScout, type ScoutMood } from '../brand/BlobScout.tsx';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import { queueDraft } from '../chat/composer/pending-draft.ts';
 import { DigestCard } from './DigestCard.tsx';
-import { homeApi, homeKeys } from './home-api.ts';
 import { HomeComposer } from './HomeComposer.tsx';
 import { CheckIcon } from '../ui/icons.tsx';
 import { NeedsYou, Quiet, RecentChats, RunningNow } from './HomeCards.tsx';
@@ -18,7 +17,6 @@ import {
   needsYou,
   recentChats,
   runningNow,
-  runSignature,
   summaryParts,
 } from './home-model.ts';
 import { ProviderStrip } from './ProviderStrip.tsx';
@@ -75,12 +73,6 @@ export function Home(props: HomeProps) {
     chats,
     [...need, ...running].map((item) => item.chat),
   );
-  const latestDigest = useQuery({
-    queryKey: homeKeys.digest,
-    queryFn: homeApi.digest,
-    enabled: false,
-  }).data?.digest;
-  const refresh = `${runSignature(chats)}|${latestDigest?.id ?? ''}:${latestDigest?.status ?? ''}`;
   const seedProject =
     props.seeded || !projects.isSuccess ? null : (suggestedProjectId ?? projectList[0]?.id ?? null);
   const projectById = new Map(projectList.map((project) => [project.id, project.name]));
@@ -114,7 +106,7 @@ export function Home(props: HomeProps) {
                   part.strong ? <b key={index}>{part.text}</b> : part.text,
                 )}
               </p>
-              <ProviderStrip refresh={refresh} onSettings={props.onProviders} />
+              <ProviderStrip onSettings={props.onProviders} />
             </div>
           </header>
           <HomeComposer
@@ -158,7 +150,7 @@ export function Home(props: HomeProps) {
               onViewAll={props.onChats}
             />
             <div className="hsecondary">
-              <SpendCard refresh={refresh} onUsage={props.onUsage} />
+              <SpendCard onUsage={props.onUsage} />
             </div>
           </div>
         </div>

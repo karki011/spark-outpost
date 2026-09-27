@@ -18,15 +18,13 @@ import {
   type SystemOneResponse,
 } from '../advisor/intake-questions.ts';
 import { effortLevels } from '../advisor/questions.ts';
+import { redactText } from '../audit/redact.ts';
 
 export const STEP_CHARACTERS = 300;
 export const REPLY_CHARACTERS = 1_000;
 
-const PATH_LIKE =
-  /(?:[~.]{0,2}\/)?(?:[\w.-]+\/)+[\w.-]+|\b[\w-]+\.(?:ts|tsx|js|jsx|json|md|sql|css|html|py|rs|go|ya?ml|toml|env)\b/g;
-
-export function redactPaths(text: string): string {
-  return text.replace(PATH_LIKE, '[path]');
+export function forJev(text: string): string {
+  return redactText(text);
 }
 
 export interface RouteSlot {
@@ -48,9 +46,7 @@ export function buildRouteQuestions(task: string, slots: readonly RouteSlot[]): 
   const work: Record<string, string> = {};
   for (const slot of slots) {
     const role = agentRoleLabel(slot.role);
-    work[slot.key] = slot.step
-      ? `${role}: ${redactPaths(slot.step).slice(0, STEP_CHARACTERS)}`
-      : role;
+    work[slot.key] = slot.step ? `${role}: ${forJev(slot.step).slice(0, STEP_CHARACTERS)}` : role;
     const models = selectableModels(slot.candidate);
     if (models.length > 1) {
       questions[`model_${slot.key}`] = {
@@ -208,9 +204,9 @@ export function buildTransitionQuestions(facts: TransitionFacts): IntakeQuestion
     state: {
       task: facts.task.slice(0, MAX_TASK_CHARACTERS),
       role: facts.role,
-      step: facts.step ? redactPaths(facts.step).slice(0, STEP_CHARACTERS) : null,
+      step: facts.step ? forJev(facts.step).slice(0, STEP_CHARACTERS) : null,
       outcome: facts.outcome,
-      reply: redactPaths(facts.reply).slice(-REPLY_CHARACTERS),
+      reply: forJev(facts.reply).slice(-REPLY_CHARACTERS),
       stepsLeft: stepsLeftBucket(facts.stepsLeft),
       retriesLeft: retriesLeftBucket(facts.retriesLeft),
       verdict: facts.verdict,

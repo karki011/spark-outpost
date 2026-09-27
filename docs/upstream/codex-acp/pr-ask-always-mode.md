@@ -97,7 +97,7 @@ Validation to fill in before opening:
 - [ ] `npm test`
 - [ ] `npm run build` and `npm run bundle:all`
 - [ ] `npm run test:e2e` for the new cases, with the Codex version bundled on `main`
-- [ ] Manual probe on the PR build: `ls`, `cat .env` and an in-workspace `apply_patch` each ask; after `allow_once`, `echo hi > shell.txt` writes the file. (Earlier results on 1.13.1 and Codex 0.156.1 are in the issue.)
+- [ ] Manual probe on the PR build: `ls`, `cat .env` and an in-workspace `apply_patch` each ask; after `allow_once`, `echo hi > shell.txt` writes the file. (Results on 1.13.1/Codex 0.156.1 are in the issue; reconfirmed September 27, 2026 with the patch hand-applied to 1.13.2-preview.5/Codex 0.157.1 — still rerun this checklist item against the actual PR branch build, not just the hand-applied patch, before opening.)
 
 ## Compatibility
 

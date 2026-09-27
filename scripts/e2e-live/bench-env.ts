@@ -1,6 +1,7 @@
 import { join, resolve } from 'node:path';
 import { createIntakeRecorder } from '../../apps/server/src/advisor/intake-recorder.ts';
 import type { LaneOptions } from '../../apps/server/src/orchestration/placement.ts';
+import type { HandoffOptions } from '../../apps/server/src/orchestration/session.ts';
 import { memorySecretStore } from '../../apps/server/src/setup/secrets.ts';
 import { createProviders } from '../../apps/server/src/workflow/providers.ts';
 import { seedConnections } from '../../apps/server/test/orchestration-live-support.ts';
@@ -15,8 +16,12 @@ const FAKE_AGENT = join(
   'apps/server/test/fake-acp-agent.ts',
 );
 
-export async function benchEnv(runtime: Runtime, lanes: LaneOptions): Promise<BenchEnv> {
-  if (runtime === 'acp') return startBench(PER_RUN_CAP_USD, 'acp', lanes);
+export async function benchEnv(
+  runtime: Runtime,
+  lanes: LaneOptions,
+  handoff: HandoffOptions = {},
+): Promise<BenchEnv> {
+  if (runtime === 'acp') return startBench(PER_RUN_CAP_USD, 'acp', lanes, handoff);
   const t = await createTestDb();
   await seedConnections(t);
   const intake = createIntakeRecorder({
@@ -35,6 +40,7 @@ export async function benchEnv(runtime: Runtime, lanes: LaneOptions): Promise<Be
       intake,
       budget: { costCapUsd: PER_RUN_CAP_USD },
       lanes,
+      handoff,
     },
   };
 }

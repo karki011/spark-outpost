@@ -33,6 +33,29 @@ export function isTransientConnectError(error: unknown): boolean {
   return /timeout exceeded when trying to connect|Connection terminated/i.test(error.message);
 }
 
+const DEADLOCK = '40P01';
+
+function isDeadlock(error: unknown): boolean {
+  return error instanceof Error && (error as { code?: unknown }).code === DEADLOCK;
+}
+
+async function retryDeadlockOnce<T>(work: () => Promise<T>): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (!isDeadlock(error)) throw error;
+    console.warn('Database deadlock; retrying once.');
+    return work();
+  }
+}
+
+type AnyQuery = (...args: unknown[]) => unknown;
+
+function isPlainQuery(args: readonly unknown[]): boolean {
+  const first = args[0] as { submit?: unknown } | null | undefined;
+  return typeof args.at(-1) !== 'function' && typeof first?.submit !== 'function';
+}
+
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 type ConnectCallback = (
@@ -49,6 +72,11 @@ class RetryingPool extends pg.Pool {
     super(config);
     this.#tries = tries;
     this.#baseMs = baseMs;
+    const query = this.query.bind(this) as AnyQuery;
+    this.query = ((...args: unknown[]) =>
+      isPlainQuery(args)
+        ? retryDeadlockOnce(() => query(...args) as Promise<unknown>)
+        : query(...args)) as pg.Pool['query'];
   }
 
   async #connectWithRetry(): Promise<pg.PoolClient> {
@@ -88,10 +116,11 @@ export function createDb(connectionString: string, options: DbOptions = {}): Db 
   );
 }
 
-export async function withTransaction<T>(
-  db: Db,
-  work: (client: DbClient) => Promise<T>,
-): Promise<T> {
+export function withTransaction<T>(db: Db, work: (client: DbClient) => Promise<T>): Promise<T> {
+  return retryDeadlockOnce(() => runTransaction(db, work));
+}
+
+async function runTransaction<T>(db: Db, work: (client: DbClient) => Promise<T>): Promise<T> {
   const client = await db.connect();
   try {
     await client.query('BEGIN');

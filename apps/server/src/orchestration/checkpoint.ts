@@ -176,6 +176,27 @@ export function needsInputCard(agent: string, blocked: boolean, text: string): C
   };
 }
 
+export function stuckCard(agent: string, reason: string): CheckpointCard {
+  const title = `${agent} looks stuck`;
+  return {
+    kind: 'stuck',
+    title,
+    payload: payload({
+      kind: 'stuck',
+      question: 'How should it continue?',
+      reason: `${title}: ${reason}.`,
+      agent,
+      autoOption: CHECKPOINT_OPTION.letContinue,
+    }),
+    options: [
+      allow(CHECKPOINT_OPTION.nudge, `Nudge ${agent}`),
+      allow(CHECKPOINT_OPTION.letContinue, 'Let it continue'),
+      stopOption,
+    ],
+    depths: [],
+  };
+}
+
 export function acceptCard(files: readonly RunChange[], reason: string): CheckpointCard {
   return {
     kind: 'accept',

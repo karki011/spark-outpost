@@ -18,6 +18,7 @@ export interface LogFilters {
 export const LOG_PAGE_SIZE = 100;
 
 export const auditKeys = {
+  all: ['audit'] as const,
   summary: (conversationId: string) => ['audit', conversationId, 'summary'] as const,
   verify: (runId: string) => ['audit', 'verify', runId] as const,
   log: (runId: string, filters: LogFilters) => ['audit', 'log', runId, filters] as const,

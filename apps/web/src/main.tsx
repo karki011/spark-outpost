@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './app/App.tsx';
 import { markConnectionRestored, reportRequestError } from './app/connection/connection-store.ts';
+import { configureLiveQueries } from './app/live/use-app-events.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
 import { AppMotion } from './ui/transitions.tsx';
 import { trackInputModality } from './ui/input-modality.ts';
@@ -17,6 +18,7 @@ const queryClient = new QueryClient({
   mutationCache: new MutationCache({ onError: reportRequestError }),
   defaultOptions: { queries: { staleTime: 5_000, retry: 1 } },
 });
+configureLiveQueries(queryClient);
 
 markScrollbarStyle();
 

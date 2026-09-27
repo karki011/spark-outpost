@@ -9,8 +9,6 @@ import { homeApi, homeKeys } from './home-api.ts';
 import { HomeSection } from './HomeCards.tsx';
 import { canRefresh, digestMeta, digestView, refreshHint } from './digest-model.ts';
 
-const POLL_MS = 1500;
-
 interface DigestCardProps {
   chats: readonly ConversationSummary[];
   now: number;
@@ -84,7 +82,6 @@ export function DigestCard({ chats, now, onOpenChat, onContinue }: DigestCardPro
   const digest = useQuery({
     queryKey: homeKeys.digest,
     queryFn: homeApi.digest,
-    refetchInterval: (query) => (query.state.data?.digest?.status === 'running' ? POLL_MS : false),
   });
   const ask = useMutation({
     mutationFn: homeApi.requestDigest,

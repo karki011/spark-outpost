@@ -39,6 +39,7 @@ function question(text: string): string {
 }
 
 export function askText(approval: Approval): string {
+  if (approval.kind === 'stuck') return `Needs you: ${approval.title}`;
   const command = approval.payload.command?.trim();
   if (command) return `Needs you: run ${command}?`;
   const path = approval.payload.paths[0];
@@ -79,6 +80,7 @@ function decisionVerb(decision: OrchestrationDecision): string {
   if (decision.kind === 'intake') return 'Picked';
   if (decision.kind === 'transition') return 'Checked';
   if (decision.kind === 'parallel') return 'Split';
+  if (decision.kind === 'watchdog') return 'Watched';
   const role = agentRoleSchema.safeParse(decision.role);
   return role.success ? `Sent ${agentRoleLabel(role.data)}` : 'Routed';
 }
@@ -90,6 +92,13 @@ export function decisionLine(decision: OrchestrationDecision | undefined): strin
   return [summary, confidence(decision)].filter(Boolean).join(' · ');
 }
 
+export function flaggedByWatchdog(decision: OrchestrationDecision): boolean {
+  return decision.kind === 'watchdog' && decision.answer.flagged === true;
+}
+
 export function lastDecisionLine(orchestration: Orchestration): string | null {
-  return decisionLine(orchestration.decisions.at(-1));
+  const shown = orchestration.decisions.filter(
+    (decision) => decision.kind !== 'watchdog' || flaggedByWatchdog(decision),
+  );
+  return decisionLine(shown.at(-1));
 }

@@ -29,7 +29,7 @@ import { FoldSection } from './FoldSection.tsx';
 import { LooseChats } from './LooseChats.tsx';
 import { ProjectGroup } from './ProjectGroup.tsx';
 import { ProjectMenu } from './ProjectMenu.tsx';
-import { attention, isRunning, needsInput } from './row-state.ts';
+import { attention } from './row-state.ts';
 import { activeGroups, historyGroups, movedOrder, pinnedSiblings } from './sidebar-groups.ts';
 import { NO_PROJECT, chatLayout, groupOf, listIn, pinnedIn, LOOSE } from './sidebar-order.ts';
 import {
@@ -52,7 +52,6 @@ import { useToast } from './use-toast.ts';
 
 const SEARCH_DELAY_MS = 180;
 const HOVER_OPEN_MS = 550;
-const POLL_MS = 2000;
 
 interface ConversationListProps {
   selectedId: string | null;
@@ -102,8 +101,6 @@ export function ConversationList({
   const conversations = useQuery({
     queryKey: queryKeys.conversations,
     queryFn: api.listConversations,
-    refetchInterval: (query) =>
-      query.state.data?.some((chat) => isRunning(chat) || needsInput(chat)) ? POLL_MS : false,
   });
   const projects = useProjects();
   const projectList = projects.data ?? [];

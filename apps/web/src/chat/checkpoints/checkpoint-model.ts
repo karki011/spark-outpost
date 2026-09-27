@@ -30,9 +30,12 @@ const TITLES: Record<CheckpointPayload['kind'], string> = {
   accept: 'Keep these changes?',
   budget: 'Continue past the budget?',
   merge_conflict: 'Parallel changes collided',
+  stuck: 'An agent looks stuck',
 };
 
 export function checkpointTitle(payload: CheckpointPayload): string {
+  if (payload.kind === 'stuck')
+    return payload.agent ? `${payload.agent} looks stuck` : TITLES.stuck;
   if (payload.agent) return `${payload.agent} needs your input`;
   return TITLES[payload.kind];
 }
@@ -48,9 +51,13 @@ const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
   accept: 'Keep, fix, or revert the changes',
   budget: 'Continue past the budget',
   merge_conflict: 'Choose which parallel change to keep',
+  stuck: 'Check on a stuck agent',
 };
 
 export function waitingLabel(payload: CheckpointPayload): string {
+  if (payload.kind === 'stuck') {
+    return payload.agent ? `Check on ${payload.agent}` : WAITING_LABELS.stuck;
+  }
   if (payload.agent) return `Answer ${payload.agent}`;
   return WAITING_LABELS[payload.kind];
 }
@@ -105,11 +112,14 @@ const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.continueBudget]: 'Continued past the budget.',
   [CHECKPOINT_OPTION.answer]: 'Answered.',
   [CHECKPOINT_OPTION.reconcile]: 'Asked a Builder to reconcile.',
+  [CHECKPOINT_OPTION.nudge]: 'Nudged it; the note goes with its next turn.',
+  [CHECKPOINT_OPTION.letContinue]: 'Let it continue.',
 };
 
 const AUTO_LABELS: Record<string, string> = {
   [CHECKPOINT_OPTION.finish]: 'Skip',
   [CHECKPOINT_OPTION.clarifyRules]: 'Continue',
+  [CHECKPOINT_OPTION.letContinue]: 'Let it continue',
 };
 
 export function autoLabel(optionId: string, seconds: number): string {
@@ -130,6 +140,9 @@ export function checkpointResult(approval: Approval): string {
   if (approval.decidedBy === 'auto') {
     const delay = autoDelaySeconds(approval);
     return delay === null ? 'Continued automatically.' : `Continued automatically after ${delay}s.`;
+  }
+  if (approval.status === 'cancelled' && approval.decidedBy === 'policy') {
+    return 'It moved on before you answered.';
   }
   if (approval.status === 'cancelled') return 'The run stopped before you answered.';
   const id = approval.decisionOptionId;

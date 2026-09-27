@@ -31,6 +31,8 @@ import type { LaneOptions, LanePlacement } from './placement.ts';
 import type { FlowState } from './transitions.ts';
 import type { PlanSessionChoice } from './plan-session.ts';
 import type { WorkOrder } from './work-orders.ts';
+import type { WatchdogState } from './watchdog.ts';
+import type { WatchSettings } from './watchdog-rules.ts';
 
 export interface OrchestratorDeps extends ExecuteRunDeps {
   budget?: Partial<BudgetLimits>;
@@ -41,6 +43,7 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   agentSlots?: Slots;
   lanes?: LaneOptions;
   handoff?: HandoffOptions;
+  watchdog?: Partial<WatchSettings> | false;
 }
 
 export interface HandoffOptions {
@@ -114,6 +117,7 @@ export interface Session {
   plannedCount?: number;
   largeSteps?: number[];
   planSession?: PlanSessionChoice | null;
+  watchdog?: WatchdogState;
 }
 
 export const COMMAND_READER_TOOL_CALL_LIMIT = 120;

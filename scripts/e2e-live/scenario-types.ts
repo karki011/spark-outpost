@@ -1,7 +1,8 @@
 import { taskById, type BenchTask } from '../bench/tasks.ts';
 
-export type ArmId = 'harness' | 'direct-claude' | 'direct-codex';
-export const ARMS: readonly ArmId[] = ['harness', 'direct-claude', 'direct-codex'];
+export type BaseArm = 'harness' | 'direct-claude' | 'direct-codex';
+export type ArmId = BaseArm | 'direct-checks';
+export const ARMS: readonly ArmId[] = ['harness', 'direct-claude', 'direct-codex', 'direct-checks'];
 
 export type Verify = 'tests' | 'answer' | 'clarify' | 'cleanup';
 
@@ -25,7 +26,7 @@ export interface Scenario {
   fakeTags: string;
   checkCommands?: readonly string[];
   cancelAfterBuilderMs?: number;
-  expectUsd: Record<ArmId, number>;
+  expectUsd: Record<BaseArm, number>;
 }
 
 export function fromBench(id: string): { task: ScenarioTask; prompt: string } {

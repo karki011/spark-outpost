@@ -3,7 +3,7 @@ import type { Gate, InvolvementLevel, Risk } from '@spark-outpost/contracts';
 export const ACT_AT = 0.9;
 export const ACT_AT_READ_ONLY = 0.75;
 export const ACT_AT_DOWNGRADE = 0.8;
-export const ACT_AT_FRONTIER = 0.95;
+export const ACT_AT_FRONTIER = ACT_AT;
 export const ASK_AT = 0.5;
 
 export const CLARIFY_BELOW: Record<InvolvementLevel, number | null> = {

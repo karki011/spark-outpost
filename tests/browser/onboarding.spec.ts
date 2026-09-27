@@ -251,7 +251,7 @@ test('Jev connects with an API key as optional routing and does not unlock chats
   const details = jev.getByRole('region', { name: 'Connection' });
   await expect(details).toContainText('Key…c3d4');
   await expect(details).toContainText('Modeljev-latest');
-  await expect(details).toContainText('Not used in runs yet');
+  await expect(details).toContainText('Never file contents, diffs, tool output or keys');
   await expect(jev.getByRole('button', { name: 'Send test message' })).toHaveCount(0);
   await expect(continueButton(page)).toBeDisabled();
 

@@ -11,7 +11,7 @@ import {
 } from '@spark-outpost/contracts';
 import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { crewTotals, totalsLine } from '../../crew/crew-model.ts';
-import { crewAgents, runAgent } from '../../crew/crew-projection.ts';
+import { crewAgents, runAgent, watchdogNotes } from '../../crew/crew-projection.ts';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from '../changes/FilesChanged.tsx';
@@ -106,6 +106,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         collapsed={collapsible && agent.state === 'done'}
         conversationId={detail.conversation.id}
         steps={detail.activity[member.runId] ?? []}
+        notes={watchdogNotes(member, orchestration)}
         text={textByRun.get(member.runId) ?? ''}
         error={member.error}
         seconds={child ? runSeconds(child) : null}

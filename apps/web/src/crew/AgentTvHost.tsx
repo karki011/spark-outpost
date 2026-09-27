@@ -13,8 +13,6 @@ import { busyCount } from './crew-model.ts';
 import { scrollToAnchor } from './scroll-to-anchor.ts';
 import { lastDecisionLine, pendingAsks } from './tv-scene.ts';
 
-const ELSEWHERE_POLL_MS = 2000;
-
 interface AgentTvHostProps {
   activeId: string | null;
   onGoTo(conversationId: string): void;
@@ -26,7 +24,6 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
     queryKey: queryKeys.conversation(sourceId ?? ''),
     queryFn: () => api.getConversation(sourceId!),
     enabled: sourceId !== null,
-    refetchInterval: sourceId !== activeId ? ELSEWHERE_POLL_MS : false,
   });
   const source = sourceId ? detail.data : undefined;
   const agents = conversationCrew(source);

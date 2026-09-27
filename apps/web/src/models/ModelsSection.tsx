@@ -10,7 +10,7 @@ function frontierCopy(view: ProviderCardsView): string {
     .filter((model) => model.card.tier === 'frontier')
     .map((model) => model.card.label)
     .join(' or ');
-  const base = `Lets Jev choose ${names} on Auto when it is very sure (0.95). Pinned chats can always use it.`;
+  const base = `Lets Jev choose ${names} on Auto when it is sure (0.90), the same bar as any upgrade. Pinned chats can always use it.`;
   return view.provider.doMode === 'no'
     ? `${base} ${view.provider.label} only reads here, so this applies to Scouts, Architects and Critics, never to Builders.`
     : base;

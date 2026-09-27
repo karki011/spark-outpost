@@ -116,6 +116,11 @@ export async function openUiChat(
   const { page } = session;
   const projectId = await session.api.linkProject(repo, 'off', checks);
   await page.goto(session.web);
+  const chats = page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Chats/ });
+  await chats.click({ timeout: 15_000 }).catch(() => undefined);
+  await shoot(session, 'chats');
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const menu = await linkRepoInMenu(session, repo, notes);
   if (setup.buildStyle !== 'off') {

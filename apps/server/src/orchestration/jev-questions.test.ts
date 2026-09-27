@@ -6,7 +6,7 @@ import {
   offeredNext,
   parseRouteAnswers,
   parseTransitionAnswers,
-  redactPaths,
+  forJev,
   type TransitionFacts,
 } from './jev-questions.ts';
 
@@ -36,12 +36,12 @@ const facts: TransitionFacts = {
 };
 
 describe('routing questions', () => {
-  it('asks one model and effort per slot, with paths removed from the step', () => {
+  it('asks one model and effort per slot, keeping file paths in the step', () => {
     const asked = buildRouteQuestions('Fix it', [
       { key: 'builder_0', role: 'builder', step: 'Edit src/app.ts', candidate },
     ]);
     expect(Object.keys(asked.state)).toEqual(['task', 'work']);
-    expect(asked.state.work).toEqual({ builder_0: 'Builder: Edit [path]' });
+    expect(asked.state.work).toEqual({ builder_0: 'Builder: Edit src/app.ts' });
     expect(Object.keys(asked.questions)).toEqual(['model_builder_0', 'effort_builder_0']);
   });
 
@@ -64,7 +64,7 @@ describe('routing questions', () => {
 });
 
 describe('transition questions', () => {
-  it('pins the state keys sent and removes paths from the reply', () => {
+  it('pins the state keys sent and keeps paths but not secrets in the reply', () => {
     const asked = buildTransitionQuestions(facts);
     expect(Object.keys(asked.state)).toEqual([
       'task',
@@ -79,8 +79,11 @@ describe('transition questions', () => {
       'filesChanged',
       'toolCalls',
     ]);
-    expect(asked.state.reply).toBe('Changed [path] and [path]');
-    expect(redactPaths('see ./a/b.ts')).toBe('see [path]');
+    expect(asked.state.reply).toBe(facts.reply);
+    expect(forJev('see ./a/b.ts')).toBe('see ./a/b.ts');
+    expect(forJev('export OPENAI_API_KEY=sk-live-abcdefghijklmnopqrstuvwx')).not.toContain(
+      'sk-live-abcdefghijklmnopqrstuvwx',
+    );
   });
 
   it('sends counts as named buckets, never raw numbers', () => {

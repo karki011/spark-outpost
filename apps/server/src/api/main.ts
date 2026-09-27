@@ -16,6 +16,7 @@ import { attachTerminalSockets } from '../terminal/websocket.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
 import { probeCapabilities } from '../agents/acp/probe.ts';
 import { fakeCapabilities } from '../providers/fake.ts';
+import { AppEventFeed, listenForAppEvents } from './app-events.ts';
 import { createApp } from './app.ts';
 import { RunEventHub } from './run-event-hub.ts';
 
@@ -32,6 +33,8 @@ const hub = new RunEventHub();
 ensureSpawnHelperExecutable();
 const terminals = new TerminalSessions(loginShellSpawner());
 const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.notify(runId));
+const appEvents = new AppEventFeed();
+const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
 
 const secrets = config.SECRET_STORE === 'memory' ? memorySecretStore() : keychainSecretStore();
 const app = createApp({
@@ -55,6 +58,7 @@ const app = createApp({
   }),
   loginShell: config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null,
   terminals,
+  appEvents,
   port: config.API_PORT,
   allowedOrigins: config.ALLOWED_ORIGINS,
   outcomeSampleRate: config.OUTCOME_SAMPLE_RATE,
@@ -77,6 +81,7 @@ const shutdown = async () => {
   server.close();
   server.closeAllConnections();
   await listener.close();
+  await appEventListener.close();
   await db.end();
   process.exit(0);
 };

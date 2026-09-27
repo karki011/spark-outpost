@@ -32,6 +32,47 @@ export interface ReviewRecord {
   net: number | null;
 }
 
+export interface Observation {
+  source: string;
+  kind: string;
+  summary: string | null;
+  body: string;
+}
+
+const KNOWN_ARTIFACTS = ['plan', 'review', 'check', 'shortcuts'];
+
+async function observations(db: Db, ids: string[], taskId: string | null): Promise<Observation[]> {
+  const advice = await db.query<{ purpose: string; body: Record<string, unknown> }>(
+    'SELECT purpose, body FROM run_advice WHERE run_id = ANY($1) ORDER BY created_at',
+    [ids],
+  );
+  const artifacts = taskId
+    ? await db.query<{ kind: string; body: Record<string, unknown> }>(
+        'SELECT kind, body FROM run_artifacts WHERE task_id = $1 AND NOT (kind = ANY($2)) ORDER BY version',
+        [taskId, KNOWN_ARTIFACTS],
+      )
+    : { rows: [] };
+  const toObservation = (source: string, kind: string, body: Record<string, unknown>) => ({
+    source,
+    kind,
+    summary: typeof body.summary === 'string' ? body.summary : null,
+    body: JSON.stringify(body).slice(0, 2_000),
+  });
+  return [
+    ...advice.rows.map((row) => toObservation('advice', row.purpose, row.body)),
+    ...artifacts.rows.map((row) => toObservation('artifact', row.kind, row.body)),
+  ];
+}
+
+export interface MemberReads {
+  name: string | null;
+  role: string | null;
+  fileReads: number | null;
+  rereads: number | null;
+  outputTokens: number;
+  durationMs: number;
+}
+
 export interface TurnMetrics {
   runId: string;
   status: string;
@@ -54,6 +95,8 @@ export interface TurnMetrics {
   lanes: LaneRecord;
   shortcuts: number;
   reply: string;
+  members?: MemberReads[];
+  observations?: Observation[];
 }
 
 async function runIds(db: Db, runId: string): Promise<string[]> {
@@ -149,6 +192,30 @@ async function basicLanes(db: Db, runId: string, agents: AgentUsage[]): Promise<
     builderMs: builders.map((agent) => agent.durationMs),
     parallelBuilders: builders.filter((agent) => agent.parallelGroup !== null).length,
   };
+}
+
+async function memberReads(db: Db, runId: string): Promise<MemberReads[]> {
+  const { rows } = await db.query<{
+    name: string | null;
+    role: string | null;
+    file_reads: number | null;
+    rereads: number | null;
+    output_tokens: number | null;
+    duration_ms: number | null;
+  }>(
+    `SELECT route->>'name' AS name, role, (route->>'fileReads')::int AS file_reads,
+       (route->>'rereads')::int AS rereads, output_tokens, duration_ms
+     FROM runs WHERE id = $1 OR parent_run_id = $1 ORDER BY created_at`,
+    [runId],
+  );
+  return rows.map((row) => ({
+    name: row.name,
+    role: row.role,
+    fileReads: row.file_reads,
+    rereads: row.rereads,
+    outputTokens: row.output_tokens ?? 0,
+    durationMs: row.duration_ms ?? 0,
+  }));
 }
 
 async function fixTurns(db: Db, runId: string): Promise<number> {
@@ -251,5 +318,7 @@ export async function collectTurn(
       0,
     ),
     reply: await replyOf(db, runId),
+    members: await safely(() => memberReads(db, runId), []),
+    observations: await safely(() => observations(db, ids, taskId), []),
   };
 }

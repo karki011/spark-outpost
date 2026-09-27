@@ -25,7 +25,7 @@ const CHECKS: StepCheck[] = [
 ];
 
 describe('step check questions', () => {
-  it('asks three kinds of bad-is-true nouls per step, with paths removed', () => {
+  it('asks three kinds of bad-is-true nouls per step, keeping file paths', () => {
     const questions = buildStepCheckQuestions(CHECKS);
     expect(Object.keys(questions)).toEqual([
       'step_not_done_1',
@@ -35,7 +35,7 @@ describe('step check questions', () => {
       'step_left_2',
     ]);
     expect(questions.step_left_1!.instructions).toMatchObject({
-      plan_step: 'Add the parser in [path]',
+      plan_step: CHECKS[0]!.text,
     });
     expect(questions.criterion_unmet_1_1!.instructions).toMatchObject({
       criterion: 'Empty input returns []',

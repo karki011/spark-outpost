@@ -1,7 +1,8 @@
 import type { BuildStyle, InvolvementLevel } from '../../packages/contracts/src/index.ts';
 import { CORE_SCENARIOS, SCENARIOS, scenarioById, type ArmId, type Scenario } from './scenarios.ts';
 
-export type Block = 'core' | 'scenarios' | 'versions' | 'configs' | 'models' | 'glm';
+export type Block =
+  'core' | 'scenarios' | 'versions' | 'configs' | 'models' | 'glm' | 'focus' | 'lean';
 export const BLOCKS: readonly Block[] = [
   'core',
   'scenarios',
@@ -9,13 +10,15 @@ export const BLOCKS: readonly Block[] = [
   'configs',
   'models',
   'glm',
+  'focus',
+  'lean',
 ];
 
 export type Driver = 'ui' | 'api' | 'bench';
 export type Placement = 'jev' | 'shared' | 'worktree';
 export type ModelChoice = 'auto' | 'haiku' | 'sonnet' | 'opus[1m]';
 export type Effort = 'low' | 'medium' | 'high';
-export const VERSIONS = ['current', '2381803', '9a932f9'] as const;
+export const VERSIONS = ['current', '2381803', '9a932f9', 'd87e633'] as const;
 export type Version = (typeof VERSIONS)[number];
 
 export interface HarnessSetup {
@@ -27,6 +30,9 @@ export interface HarnessSetup {
   placement: Placement;
   jev: boolean;
   codexConnected: boolean;
+  zaiConnected: boolean;
+  workOrders: boolean;
+  planSession: boolean;
   freshBeforeLastTurn: boolean;
   withDeps: boolean;
   version: Version;
@@ -52,6 +58,9 @@ export const BASELINE: HarnessSetup = {
   placement: 'jev',
   jev: true,
   codexConnected: true,
+  zaiConnected: false,
+  workOrders: true,
+  planSession: true,
   freshBeforeLastTurn: false,
   withDeps: false,
   version: 'current',
@@ -66,6 +75,7 @@ const MODEL_COST: Record<ModelChoice, number> = {
 const EFFORT_COST: Record<Effort, number> = { low: 0.6, medium: 1, high: 1.6 };
 
 function cost(scenario: Scenario, arm: ArmId, setup: HarnessSetup, effort: Effort): number {
+  if (arm === 'direct-checks') return scenario.expectUsd['direct-claude'] * 1.15;
   const base = scenario.expectUsd[arm];
   if (arm === 'direct-codex') return base * EFFORT_COST[effort];
   if (arm === 'direct-claude') return base;
@@ -206,15 +216,95 @@ function modelCells(): Cell[] {
 }
 
 function glmCells(): Cell[] {
-  const glm = { driver: 'api', provider: 'zai' } as const;
+  const glm = { driver: 'api', provider: 'zai', zaiConnected: true } as const;
   return [
     ...['b', 'c', 'g'].map((id) => cell('glm', id, 'harness', 'glm-builder', glm)),
     cell('glm', 'e', 'harness', 'glm-builder-claude-critic', { ...glm, codexConnected: false }),
   ];
 }
 
+const PLANNED = ['c', 'd', 'f', 'l', 'q', 'r', 't', 'g'];
+
+function focusCells(): Cell[] {
+  const bench = (id: string, on: boolean) =>
+    cell('focus', id, 'harness', on ? 'handoff-on' : 'handoff-off', {
+      driver: 'bench',
+      workOrders: on,
+      planSession: on,
+      withDeps: id === 'd',
+    });
+  const ab = PLANNED.flatMap((id) => [bench(id, true), bench(id, false)]);
+  const drift = ['c', 'q'].map((id) => cell('focus', id, 'direct-claude', 'drift-check'));
+  const regression = [
+    cell('focus', 'n', 'harness', 'regression'),
+    cell('focus', 'e', 'harness', 'regression'),
+    cell('focus', 'i', 'harness', 'regression'),
+    cell('focus', 'j', 'harness', 'regression-codex-builder', { driver: 'api', provider: 'codex' }),
+    cell('focus', 'd', 'harness', 'regression', { withDeps: true }),
+  ];
+  const glm = [
+    ...['c', 'g'].map((id) =>
+      cell('focus', id, 'harness', 'glm-builder', {
+        driver: 'api',
+        provider: 'zai',
+        zaiConnected: true,
+      }),
+    ),
+    cell('focus', 'c', 'harness', 'auto-three-providers', { zaiConnected: true }),
+  ];
+  return [...ab, ...drift, ...regression, ...glm];
+}
+
+const ROUND5 = [
+  'a',
+  'b',
+  'c',
+  'd',
+  'e',
+  'f',
+  'g',
+  'h',
+  'i',
+  'j',
+  'k',
+  'l',
+  'm',
+  'n',
+  'o',
+  'p',
+  'q',
+  'r',
+  's',
+  't',
+];
+
+function leanCells(): Cell[] {
+  const deps = (id: string) => (id === 'd' ? { withDeps: true } : {});
+  const lean = ROUND5.map((id) => cell('lean', id, 'harness', 'lean', deps(id)));
+  const full = ROUND5.filter((id) => id !== 's').map((id) =>
+    cell('lean', id, 'harness', 'full-d87e633', { driver: 'api', version: 'd87e633', ...deps(id) }),
+  );
+  const checked = ROUND5.filter((id) => id !== 'j' && id !== 's').map((id) =>
+    cell('lean', id, 'direct-checks', 'direct-checks'),
+  );
+  const drift = ['c', 'q'].map((id) => cell('lean', id, 'direct-claude', 'drift-check'));
+  const extra = [
+    cell('lean', 'j', 'harness', 'lean-codex-builder', { driver: 'api', provider: 'codex' }),
+    ...['c', 'g'].map((id) =>
+      cell('lean', id, 'harness', 'lean-glm-builder', {
+        driver: 'api',
+        provider: 'zai',
+        zaiConnected: true,
+      }),
+    ),
+  ];
+  return [...lean, ...full, ...checked, ...drift, ...extra];
+}
+
 export function planCells(): Cell[] {
   return [
+    ...leanCells(),
+    ...focusCells(),
     ...coreCells(),
     ...scenarioCells(),
     ...versionCells(),

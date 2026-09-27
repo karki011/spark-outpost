@@ -47,6 +47,7 @@ export function AgentHead({ agent, anchor }: { agent: CrewAgent; anchor: string 
 interface BodyProps {
   agent: CrewAgent;
   steps: readonly RunStep[];
+  notes?: readonly string[];
   text: string;
   error: string | null;
   seconds: number | null;
@@ -54,12 +55,17 @@ interface BodyProps {
   repo: Project | null;
 }
 
-function AgentBody({ agent, steps, text, error, seconds, approvals, repo }: BodyProps) {
+function AgentBody({ agent, steps, notes = [], text, error, seconds, approvals, repo }: BodyProps) {
   const state = TURN_STATES[agent.state];
   const busy = agent.state === 'working' || agent.state === 'thinking';
   return (
     <>
       <WorkLog steps={[...steps]} state={state} seconds={seconds} />
+      {notes.map((note, index) => (
+        <p key={index} className="ai-note watchdog-note">
+          {note}
+        </p>
+      ))}
       {approvals
         .filter(
           (approval) =>
@@ -114,6 +120,7 @@ interface AgentBlockProps {
   collapsed: boolean;
   conversationId: string;
   steps: readonly RunStep[];
+  notes?: readonly string[];
   text: string;
   error: string | null;
   seconds: number | null;

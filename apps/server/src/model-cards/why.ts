@@ -58,7 +58,7 @@ export function whyLine(input: WhyInput): string {
   if (!input.jevPick || !input.gate) return `${head}${off}`;
   const needs =
     frontier?.picked && input.gate.actAt === ACT_AT_FRONTIER
-      ? ' · frontier needs 0.95'
+      ? ` · frontier needs ${ACT_AT_FRONTIER.toFixed(2)}`
       : ', below the gate';
   return `${head} · Jev picked ${labelOf(input.jevPick)} at ${input.gate.confidence.toFixed(2)}${needs}${off}`;
 }

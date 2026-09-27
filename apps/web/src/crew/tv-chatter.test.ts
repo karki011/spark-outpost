@@ -4,10 +4,10 @@ import type {
   OrchestrationDecision,
 } from '@spark-outpost/contracts';
 import { describe, expect, it } from 'vitest';
-import { crewAgents } from './crew-projection.ts';
+import { crewAgents, runAgent, watchdogNotes } from './crew-projection.ts';
 import { checkpoint, member, orchestration } from './test-orchestration.ts';
 import { doingLine, sceneChanges, type TvScene } from './tv-chatter.ts';
-import { askText, decisionLine, pendingAsks, roleSubtitle } from './tv-scene.ts';
+import { askText, decisionLine, lastDecisionLine, pendingAsks, roleSubtitle } from './tv-scene.ts';
 
 const BUILDER = '00000000-0000-4000-8000-0000000000a1';
 const ARCHITECT = '00000000-0000-4000-8000-0000000000a2';
@@ -166,5 +166,52 @@ describe('Agent TV scene', () => {
     expect(roleSubtitle({ role: 'builder', name: 'Bolt' })).toBe('Builder');
     expect(roleSubtitle({ role: 'builder', name: 'Builder 2' })).toBeNull();
     expect(roleSubtitle({ role: 'jev', name: 'Jev' })).toBeNull();
+  });
+});
+
+describe('watchdog on Agent TV', () => {
+  const watched = (
+    flagged: boolean,
+    childRunId: string | null = BUILDER,
+  ): OrchestrationDecision => ({
+    ...decision,
+    id: flagged ? '00000000-0000-4000-8000-0000000000d2' : '00000000-0000-4000-8000-0000000000d3',
+    kind: 'watchdog',
+    role: 'builder',
+    childRunId,
+    gate: null,
+    summary: flagged
+      ? 'Builder looks stuck: repeating Read a.ts · asked you'
+      : 'Builder looks fine',
+    answer: flagged
+      ? { member: 'Builder', flagged, reasonText: 'repeating Read a.ts', action: 'nudge' }
+      : { member: 'Builder', flagged },
+  });
+
+  it('shows a stuck flag on the working member and in its work log, but not a fine check', () => {
+    const working = member({ status: 'running', toolCalls: 12 });
+    const run = orchestration({
+      crew: [working],
+      decisions: [decision, watched(true), watched(false)],
+    });
+    expect(runAgent(working, run).line).toBe('looks stuck: repeating Read a.ts');
+    expect(watchdogNotes(working, run)).toEqual([
+      'Jev: looks stuck, repeating Read a.ts · nudge queued for its next turn',
+    ]);
+    expect(lastDecisionLine(run)).toBe(
+      'Watched: Builder looks stuck: repeating Read a.ts · asked you',
+    );
+    const done = member({ status: 'succeeded' });
+    expect(
+      runAgent(done, orchestration({ crew: [done], decisions: [watched(true)] })).line,
+    ).not.toContain('stuck');
+  });
+
+  it('asks about a stuck agent in plain words', () => {
+    const stuck = checkpoint(
+      { kind: 'stuck', agent: 'Bolt' },
+      { kind: 'stuck', title: 'Bolt looks stuck' },
+    );
+    expect(askText(stuck)).toBe('Needs you: Bolt looks stuck');
   });
 });

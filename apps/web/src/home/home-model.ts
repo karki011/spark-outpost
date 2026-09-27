@@ -129,9 +129,3 @@ export function recentChats(
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, RECENT_LIMIT);
 }
-
-export function runSignature(chats: readonly ConversationSummary[]): string {
-  return chats
-    .map((chat) => `${chat.latestRun?.id ?? ''}:${chat.latestRun?.status ?? ''}`)
-    .join('|');
-}

@@ -201,9 +201,25 @@ async function ownTodos(turn: RoleTurn, steps: readonly { step: string }[]): Pro
   await turn.update({ sessionUpdate: 'plan', entries });
 }
 
+const LOOP_READS = 30;
+const BUSY_READS = 12;
+
+async function wander(turn: RoleTurn): Promise<void> {
+  const looping = /#loop\b/.test(turn.text);
+  const busy = /#busy\b/.test(turn.text);
+  if (!looping && !busy) return;
+  const count = looping ? LOOP_READS : BUSY_READS;
+  for (let index = 0; index < count; index += 1) {
+    const file = looping ? 'src/dates.ts' : `src/part-${index}.ts`;
+    await readTool(turn, file, `wander-${index}`);
+    await sleep(looping ? 60 : 10, turn.signal);
+  }
+}
+
 export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   if (turn.text.includes('## Conflicting changes to reconcile')) return reconcile(turn);
   const steps = ownSteps(turn.text);
+  await wander(turn);
   if (turn.text.includes('#reads')) {
     await readTool(turn, 'src/dates.ts', 'build-read-1');
     await readTool(turn, 'src/extra.ts', 'build-read-2');
@@ -225,7 +241,8 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
     ? ` Continued the plan after ${priorPrompts(turn.sessionId)} earlier prompts.`
     : '';
   const extra = turn.text.includes('#reads') ? '\nExtra files read: src/extra.ts (a helper)' : '';
-  await turn.say(`Built step ${built}.${heard}${notes}${order}${planned}${extra}`);
+  const nudged = turn.text.includes('## Note from the harness') ? ' Heard the nudge.' : '';
+  await turn.say(`Built step ${built}.${heard}${notes}${order}${planned}${nudged}${extra}`);
   return 'end_turn';
 }
 
@@ -296,8 +313,9 @@ async function continueSteps(turn: RoleTurn): Promise<acp.StopReason> {
     const stopped = await buildStep(turn, step, '', steps.length > 1);
     if (stopped) return stopped;
   }
+  const nudged = turn.text.includes('## Note from the harness') ? ' Heard the nudge.' : '';
   await turn.say(
-    `Continued with step ${steps.join(', ')} after ${priorPrompts(turn.sessionId)} earlier prompts.`,
+    `Continued with step ${steps.join(', ')} after ${priorPrompts(turn.sessionId)} earlier prompts.${nudged}`,
   );
   return 'end_turn';
 }

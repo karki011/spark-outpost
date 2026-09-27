@@ -1,7 +1,8 @@
 import { rmSync } from 'node:fs';
 import { CREW_CATALOG, FAKE_CODEX_STATE } from './stub-config.ts';
-import { createDb } from '../../apps/server/src/persistence/db.ts';
+import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
+import { truncateTables } from '../../apps/server/src/persistence/truncate.ts';
 
 export function testDatabaseUrl(): string {
   const url = process.env.TEST_DATABASE_URL;
@@ -17,6 +18,35 @@ interface ResetOptions {
   catalog?: boolean;
 }
 
+const RESET_TABLES = [
+  'jobs',
+  'run_events',
+  'messages',
+  'runs',
+  'conversations',
+  'projects',
+  'provider_connections',
+  'provider_capabilities',
+  'advisor_connections',
+  'profiles',
+];
+const LEFTOVER_RUN_WAIT_MS = 5000;
+
+async function stopLeftoverRuns(db: Db): Promise<void> {
+  await db.query(
+    `UPDATE runs SET cancel_requested_at = COALESCE(cancel_requested_at, now())
+     WHERE status IN ('queued', 'running', 'awaiting_approval')`,
+  );
+  const deadline = Date.now() + LEFTOVER_RUN_WAIT_MS;
+  while (Date.now() < deadline) {
+    const { rowCount } = await db.query(
+      `SELECT 1 FROM jobs WHERE status = 'leased' AND lease_expires_at > now() LIMIT 1`,
+    );
+    if (!rowCount) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 const EFFORTS = ['low', 'medium', 'high'].map((id) => ({ id, label: id, description: null }));
 
 export async function resetTestDatabase({
@@ -28,9 +58,8 @@ export async function resetTestDatabase({
   rmSync(FAKE_CODEX_STATE, { force: true });
   const db = createDb(testDatabaseUrl());
   try {
-    await db.query(
-      'TRUNCATE jobs, run_events, messages, runs, conversations, projects, provider_connections, provider_capabilities, advisor_connections, profiles CASCADE',
-    );
+    await stopLeftoverRuns(db);
+    await truncateTables(db, RESET_TABLES);
     if (!onboarded && connected.length === 0) return;
     const workspaceId = await ensureLocalWorkspace(db);
     await db.query(

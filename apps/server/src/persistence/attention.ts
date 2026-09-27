@@ -24,6 +24,7 @@ const KINDS: Record<ApprovalKind, AttentionKind> = {
   accept: 'review',
   budget: 'input',
   merge_conflict: 'input',
+  stuck: 'stuck',
 };
 
 function baseName(path: string): string {
@@ -54,6 +55,7 @@ function permissionTitle(row: PendingApprovalRow, kind: ApprovalKind): string {
 
 function agentFor(row: PendingApprovalRow, kind: ApprovalKind): string | null {
   if (kind === 'clarify') return row.pending_asker ?? JEV;
+  if (kind === 'stuck') return row.pending_asker;
   if (kind === 'plan' || kind === 'accept') return row.pending_member ?? row.pending_agent;
   if (KINDS[kind] === 'permission') return row.pending_agent;
   return null;

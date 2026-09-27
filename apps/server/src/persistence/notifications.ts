@@ -4,11 +4,16 @@ export interface NotificationListener {
   close(): Promise<void>;
 }
 
+export interface ListenOptions {
+  searchPath?: string;
+  onError?: (error: Error) => void;
+}
+
 export async function listen(
   connectionString: string,
-  channel: 'run_events' | 'jobs' | 'approvals',
+  channel: 'run_events' | 'jobs' | 'approvals' | 'changes',
   onPayload: (payload: string) => void,
-  searchPath?: string,
+  { searchPath, onError }: ListenOptions = {},
 ): Promise<NotificationListener> {
   const options = searchPath ? `-c search_path=${searchPath}` : undefined;
   const client = new pg.Client({ connectionString, ...(options ? { options } : {}) });
@@ -17,6 +22,7 @@ export async function listen(
       `Notification listener on ${channel} failed; falling back to polling.`,
       error.message,
     );
+    onError?.(error);
   });
   client.on('notification', (message) => onPayload(message.payload ?? ''));
   await client.connect();

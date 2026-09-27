@@ -328,3 +328,11 @@ export async function pendingApprovalsForConversation(
   );
   return rows.map(toApproval);
 }
+
+export async function hasPendingApproval(db: Queryable, runId: string): Promise<boolean> {
+  const { rows } = await db.query(
+    `SELECT 1 FROM approvals WHERE run_id = $1 AND status = 'pending' LIMIT 1`,
+    [runId],
+  );
+  return rows.length > 0;
+}

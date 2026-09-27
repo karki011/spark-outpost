@@ -186,6 +186,7 @@ export const queryKeys = {
   conversations: ['conversations'] as const,
   conversation: (id: string) => ['conversations', id] as const,
   agentCommands: (id: string) => ['conversations', id, 'agent-commands'] as const,
+  conversationSearches: ['conversation-search'] as const,
   conversationSearch: (query: string) => ['conversation-search', query] as const,
   capabilities: (provider: ProviderId) => ['capabilities', provider] as const,
   usageSummary: ['usage-summary'] as const,

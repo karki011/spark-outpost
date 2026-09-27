@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
+import { createDb } from '../../apps/server/src/persistence/db.ts';
 import { fakeReply } from '../../apps/server/src/providers/fake.ts';
-import { resetTestDatabase } from './database.ts';
+import { resetTestDatabase, testDatabaseUrl } from './database.ts';
 import { openChats } from './navigation.ts';
 
 const MAX_FRAME_GROWTH = 200;
@@ -71,6 +72,15 @@ function detailResponse(page: Page, conversationPath: string, timeout?: number) 
   );
 }
 
+async function touchConversation(id: string) {
+  const db = createDb(testDatabaseUrl());
+  try {
+    await db.query('UPDATE conversations SET updated_at = now() WHERE id = $1', [id]);
+  } finally {
+    await db.end();
+  }
+}
+
 async function refetchWithFinalText(page: Page, conversationPath: string, finalText: string) {
   let pending = true;
   await page.route(`**${conversationPath}`, async (route) => {
@@ -93,7 +103,7 @@ async function refetchWithFinalText(page: Page, conversationPath: string, finalT
     await route.fulfill({ response, json: detail });
   });
   const refetched = detailResponse(page, conversationPath);
-  await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+  await touchConversation(conversationPath.split('/').at(-1)!);
   await refetched;
 }
 

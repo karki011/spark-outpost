@@ -287,7 +287,7 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
 - **Records.** `runs.used_model` is recorded as usual from the applied session settings, so a run that used the effective default reads `gpt-6-sol`.
 - **Astra stays reachable:**
   - by pinning it in the picker or Provider defaults, or
-  - on Auto through the Codex frontier switch at 0.95 or more.
+  - on Auto through the Codex frontier switch at 0.90 or more.
 
 ### Allow frontier models, per provider (decided September 26, 2026)
 
@@ -296,15 +296,15 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
   - It lives on the profile rather than on the provider connection, so reconnecting a provider doesn't reset it. The API validates it with `z.record(providerIdSchema, z.boolean())`.
   - A provider with no frontier card (Z.ai until its card says otherwise) shows no switch.
 - **Settings copy** (Settings → Models, at the top of each provider's group):
-  - Claude: "Allow frontier models. Lets Jev choose Fable 5.1 on Auto when it is very sure (0.95). Pinned chats can always use it."
-  - Codex: "Allow frontier models. Lets Jev choose 6 Astra on Auto when it is very sure (0.95). Codex only reads here, so this applies to Scouts, Architects and Critics, never to Builders."
+  - Claude: "Allow frontier models. Lets Jev choose Fable 5.1 on Auto when it is sure (0.90), the same bar as any upgrade. Pinned chats can always use it."
+  - Codex: "Allow frontier models. Lets Jev choose 6 Astra on Auto when it is sure (0.90), the same bar as any upgrade. Codex only reads here, so this applies to Scouts, Architects and Critics, never to Builders."
 - **Off, for a provider:**
   - That provider's frontier cards are left out of the `model_<provider>` and `model_<slot>` options sent to Jev, so Jev cannot pick one.
   - A chat pinned to a frontier model still runs it, as any pinned model does.
   - `autoWouldUse` then records a non-frontier pick.
-- **On, for a provider:** that provider's frontier cards are offered, and a Jev pick of one acts only when its confidence is at least **0.95** (`ACT_AT_FRONTIER` in `gate.ts`).
+- **On, for a provider:** that provider's frontier cards are offered, and a Jev pick of one acts only when its confidence is at least **0.90** (`ACT_AT_FRONTIER` in `gate.ts`, equal to `ACT_AT`, the normal upgrade gate; lowered from 0.95 on September 27, 2026 at the user's request).
   - The bar applies at every risk and level, including read-only (0.75 otherwise) and cheaper-pick routes (0.8 otherwise). A frontier pick is never a downgrade.
-  - Below 0.95 the rule's pick runs, and the decision reads as a fallback:
+  - Below 0.90 the rule's pick runs, and the decision reads as a fallback:
     - Opus 5.5 for a Claude Architect
     - the chat's model for Builders
     - 6 Sol for a Codex Critic
@@ -312,10 +312,10 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
   - Escalation (`oneTierUp`) never reaches frontier, even when the setting is on.
 - **Codex is read-only in our harness** (no Do, see the provider card). So a Codex frontier pick can only apply to the read-only roles: Scout, Architect and Critic. Builders never run on Codex, whatever the setting. In practice today that means the Critic (Codex reviews Claude work) and the Scout of a Codex Ask chat. An Architect runs only in Do orchestrations, which stay on Claude while Codex has no Do.
 - **Recorded like every other Jev decision.**
-  - Each route that offered or picked a frontier model stores its gate in the `run_advice` route row with `actAt: 0.95`.
+  - Each route that offered or picked a frontier model stores its gate in the `run_advice` route row with `actAt: 0.9`.
   - The `answer` gains `frontier: { provider, allowed: boolean, offered: boolean, picked: boolean }`, so a benchmark can count how often Jev reached for a frontier model and whether it passed.
-  - The dispatch tooltip reads, for example, "Jev picked Fable 5.1 at 0.91 · frontier needs 0.95 · ran Opus 5.5", or "Frontier off for Claude" when Jev wasn't offered it.
-- **The intake's model pick** (Scout and the in-place Builder) uses the same bar: `routeWorker` gates a frontier pick at 0.95 before the usual gate.
+  - The dispatch tooltip reads, for example, "Jev picked Fable 5.1 at 0.86 · frontier needs 0.90 · ran Opus 5.5", or "Frontier off for Claude" when Jev wasn't offered it.
+- **The intake's model pick** (Scout and the in-place Builder) uses the same bar: `routeWorker` gates a frontier pick at 0.90 before the usual gate.
 
 ### Benchmark runner writes measured stats
 
@@ -384,7 +384,7 @@ Everything in the design landed, with these specifics and deviations:
 - **Tiers.** `modelTier`, `tierLadder`, `topTier`, `middleTier` and `oneTierUp` take the provider and use the card, with the regex as the fallback. `tierInfo` also reports the source.
 - **Provider line.** The provider line's Do part comes from the live catalog (`doAvailable`), so it follows Codex Do when that lands.
 - **Measured stats.** Stats are keyed by card id. A relabelled model therefore counts old stats only until they pass the 90-day limit; exact per-label counting is left out.
-- **Frontier gate.** `frontierGate` acts at 0.95 or more and otherwise falls back, and never asks. `routeGate` applies it to every Builder, Scout, Critic and Architect route whose Jev pick is frontier.
+- **Frontier gate.** `frontierGate` acts at 0.90 or more and otherwise falls back, and never asks. `routeGate` applies it to every Builder, Scout, Critic and Architect route whose Jev pick is frontier.
 - **Where the why line shows.** Route decisions store `why`, `tierSource` and, when a frontier model was involved, `frontier`. `DispatchLine` lists every route's `why` in its tooltip, named by crew member.
 - **Effective default.**
   - `getCapabilities` returns the effective `defaultModel` plus `agentDefaultModel`.
@@ -426,7 +426,7 @@ Five tasks through the intake and, for the three that plan, an Architect route c
    - `model-cards/` (load, match, `cardText`, `ingest`)
    - the `model_stats` migration (plus `profiles.allow_frontier`) with the seed upsert on start-up
    - the effective default model from the cards (`everydayModel`, applied in `getCapabilities`, with `agentDefaultModel` kept)
-   - the per-provider frontier gate (0.95) and the setting's API (`PATCH /api/profile {allowFrontier}`)
+   - the per-provider frontier gate (0.90) and the setting's API (`PATCH /api/profile {allowFrontier}`)
    - `GET /api/model-cards`
    - tiers from cards with the regex fallback
    - `priceFor` from cards
@@ -437,7 +437,7 @@ Five tasks through the intake and, for the three that plan, an Architect route c
 5. **Tests:**
    - Unit:
      - tiers from cards (Fable is frontier and off the ladder, `gpt-5.6-sol` is top, label drift falls back, unknown ids fall back)
-     - the frontier gate, per provider: Codex on and Claude off offers 6 Astra but not Fable; on, a frontier pick acts at 0.95 and falls back at 0.94 (read-only and cheaper-pick routes too); destructive keeps Opus; escalation never reaches frontier (Codex Sol has no tier up); the gate and `frontier` are recorded
+     - the frontier gate, per provider: Codex on and Claude off offers 6 Astra but not Fable; on, a frontier pick acts at 0.90 and falls back at 0.89 (read-only and cheaper-pick routes too); destructive keeps Opus; escalation never reaches frontier (Codex Sol has no tier up); the gate and `frontier` are recorded
      - 6 Astra is frontier, so the Codex ladder is Luna then Sol
      - `effectiveDefaultModel`: Codex with the adapter default Astra gives 6 Sol; Claude keeps its adapter default; a frontier adapter default without `everydayModel` gives the top non-frontier model; no cards keeps the adapter default
      - `cardText` ≤ 160 for every card × category, with n < 3 hidden

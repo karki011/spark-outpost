@@ -267,6 +267,22 @@
   border-radius: 999px;
   font-size: 12.5px;
 }
+.live-paused {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  z-index: 60;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+  padding: 3px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
 .online-toast {
   position: fixed;
   top: 66px;

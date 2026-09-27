@@ -100,4 +100,23 @@ describe('toAttention', () => {
       ),
     ).toMatchObject({ kind: 'input', title: 'Continue past the budget?', agentName: null });
   });
+
+  it('marks a watchdog checkpoint as looks stuck, naming the member', () => {
+    expect(
+      toAttention(
+        pending({
+          pending_kind: 'stuck',
+          pending_title: 'Bolt looks stuck',
+          pending_asker: 'Bolt',
+          pending_provider: 'claude',
+        }),
+      ),
+    ).toEqual({
+      kind: 'stuck',
+      title: 'Bolt looks stuck',
+      agentName: 'Bolt',
+      provider: 'claude',
+      approvalId: ID,
+    });
+  });
 });

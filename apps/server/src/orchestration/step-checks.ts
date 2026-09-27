@@ -1,6 +1,6 @@
 import type { IntakeQuestions, SystemOneResponse } from '../advisor/intake-questions.ts';
 import { noulQuestion } from '../advisor/questions.ts';
-import { redactPaths, STEP_CHARACTERS } from './jev-questions.ts';
+import { forJev, STEP_CHARACTERS } from './jev-questions.ts';
 
 export const STEP_OPEN_AT = 0.8;
 export const STEP_DONE_AT_MOST = 0.2;
@@ -49,7 +49,7 @@ export function buildStepCheckQuestions(
 ): IntakeQuestions['questions'] {
   const questions: IntakeQuestions['questions'] = {};
   for (const check of checks) {
-    const planStep = redactPaths(check.text).slice(0, STEP_CHARACTERS);
+    const planStep = forJev(check.text).slice(0, STEP_CHARACTERS);
     questions[notDoneKey(check.stepIndex)] = noulQuestion(
       { plan_step: planStep, question: 'Is there no sign in `reply` that `plan_step` was done?' },
       {
@@ -72,7 +72,7 @@ export function buildStepCheckQuestions(
       questions[criterionKey(check.stepIndex, item)] = noulQuestion(
         {
           plan_step: planStep,
-          criterion: redactPaths(criterion).slice(0, CRITERION_CHARACTERS),
+          criterion: forJev(criterion).slice(0, CRITERION_CHARACTERS),
           question: 'Does `reply` show that `criterion`, promised for `plan_step`, is not met?',
         },
         {

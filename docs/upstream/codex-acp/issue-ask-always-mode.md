@@ -36,6 +36,8 @@ Every `session/request_permission` was logged, and each request was answered `al
 
 `read-only` (after #480) asks for writes, but still runs every read unasked, including both `.env` reads.
 
+Reconfirmed September 27, 2026 against the current `preview` release, codex-acp 1.13.2-preview.5 with `@openai/codex` 0.157.1: forcing `approvalPolicy: "untrusted"` onto the (now native, #480) `workspace-write` mode still made every one of `ls`, `cat .env` and `apply_patch` request permission, and nothing ran unasked. The wire value hasn't been removed from the app-server between 0.156.1 and 0.157.1.
+
 Workarounds that don't work:
 
 - `CODEX_CONFIG={"approval_policy":"untrusted"}` fails the session with "no longer supported" (see the comment in #450, and openai/codex#39630).

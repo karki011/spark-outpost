@@ -24,7 +24,7 @@ export const messageSchema = z.object({
 });
 export type Message = z.infer<typeof messageSchema>;
 
-export const attentionKindSchema = z.enum(['permission', 'input', 'plan', 'review']);
+export const attentionKindSchema = z.enum(['permission', 'input', 'plan', 'review', 'stuck']);
 export type AttentionKind = z.infer<typeof attentionKindSchema>;
 
 export const conversationAttentionSchema = z.object({

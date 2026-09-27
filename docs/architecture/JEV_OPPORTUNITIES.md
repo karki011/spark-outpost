@@ -242,6 +242,8 @@ The e2e run showed a Critic costing 3 to 5 times a rules-only run on a spelled-o
 
 ### 5. Stuck or looping agent
 
+**Built** in harness round 9 (September 27, 2026) as the Jev watchdog, with a fourth question (`finished`) and single-check gating at 0.85; see [JEV.md](JEV.md#watchdog-round-9-september-27-2026). The user approved sending tool-call titles.
+
 **Decision.** Whether a live agent is going nowhere: the same edit and revert, the same failing command, reading the same files, or drifting off its step. Today only the 60-tool-call, 15-minute and cost budgets catch it, after the money is spent.
 
 **Policy change needed.** HARNESS_PLAN says Jev is "never" called during a run. This asks it during a run, for advice only.
@@ -471,18 +473,18 @@ Don't use Jev for these:
 
 ### Data sent
 
-| Use                                    | New data sent to TypeSafe                                                                                                          | Needs the user's yes                         |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Today (see [JEV.md](JEV.md#data-sent)) | Includes plan step text and changed file names in the parallel and lane calls, which JEV.md's "never sent" list does not yet admit | Already sent; fix the docs or redact         |
-| 1, 2 Builder steps and Lead facts      | Step text, `Done when` lines, reply tail (already sent), check result bucket                                                       | No (same class as today)                     |
-| 3 Corrections                          | The previous request and a 500-character reply tail                                                                                | No (same class)                              |
-| 4 Critic need                          | Changed file kinds (paths only with consent), size bucket                                                                          | Only for paths                               |
-| 5 Stuck                                | Tool-call titles and kinds, paths redacted, no output                                                                              | Yes: a new class                             |
-| 6 Plan coverage                        | Request sentences, plan steps                                                                                                      | No                                           |
-| 7 Mid-run messages                     | The message, member names and steps                                                                                                | No                                           |
-| 8 File scoping                         | File paths and first lines                                                                                                         | Yes                                          |
-| 9 Compaction                           | Earlier requests and reply tails                                                                                                   | Yes: history is on today's "never sent" list |
-| 11 Digest                              | Chat titles and reply tails across chats                                                                                           | Yes                                          |
+| Use                                    | New data sent to TypeSafe                                                                                               | Needs the user's yes                         |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| Today (see [JEV.md](JEV.md#data-sent)) | Plan step text and file paths in the routing, parallel, lane, transition and step-check calls; JEV.md lists every field | Approved by the user on September 27, 2026   |
+| 1, 2 Builder steps and Lead facts      | Step text, `Done when` lines, reply tail (already sent), check result bucket                                            | No (same class as today)                     |
+| 3 Corrections                          | The previous request and a 500-character reply tail                                                                     | No (same class)                              |
+| 4 Critic need                          | Changed file kinds (paths only with consent), size bucket                                                               | Only for paths                               |
+| 5 Stuck (built)                        | Tool-call titles and kinds, with paths, no output                                                                       | Approved on September 27, 2026               |
+| 6 Plan coverage                        | Request sentences, plan steps                                                                                           | No                                           |
+| 7 Mid-run messages                     | The message, member names and steps                                                                                     | No                                           |
+| 8 File scoping                         | File paths and first lines                                                                                              | Yes                                          |
+| 9 Compaction                           | Earlier requests and reply tails                                                                                        | Yes: history is on today's "never sent" list |
+| 11 Digest                              | Chat titles and reply tails across chats                                                                                | Yes                                          |
 
 Every new field must be pinned in a `*-questions.test.ts`, as JEV.md requires. Keep redacting paths, keep the 8,000-character caps, never send tool output, diffs or credentials, and keep ZDR (enterprise only) in mind. Routing through OpenRouter or Vercel AI Gateway would add a third party, so don't.
 

@@ -43,6 +43,8 @@ export function attentionLine(attention: ConversationAttention | null): string {
       return name ? `${name}’s changes are ready to review` : 'Changes are ready to review';
     case 'input':
       return name ? `${name} has a question` : attention.title || 'Needs your input';
+    case 'stuck':
+      return name ? `${name} looks stuck` : 'An agent looks stuck';
   }
 }
 
@@ -52,9 +54,9 @@ export function asksPermission(chat: ConversationSummary): boolean {
 
 function waitingState(chat: ConversationSummary): RowState {
   const sub = attentionLine(chat.attention);
-  return asksPermission(chat)
-    ? { tone: 'permission', label: 'Asking permission', sub }
-    : { tone: 'asking', label: 'Needs your input', sub };
+  if (asksPermission(chat)) return { tone: 'permission', label: 'Asking permission', sub };
+  if (chat.attention?.kind === 'stuck') return { tone: 'asking', label: 'Looks stuck', sub };
+  return { tone: 'asking', label: 'Needs your input', sub };
 }
 
 export function rowState(chat: ConversationSummary, open: boolean): RowState {

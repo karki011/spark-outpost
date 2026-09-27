@@ -155,3 +155,18 @@ describe('attention', () => {
     expect(attention([{ ...first, archivedAt: '2026-09-26T00:00:00.000Z' }], null).count).toBe(0);
   });
 });
+
+describe('rowState for a stuck agent', () => {
+  it('says the agent looks stuck and still asks for you', () => {
+    const stuck = chat({
+      needsInput: true,
+      attention: ask({ kind: 'stuck', title: 'Bolt looks stuck', agentName: 'Bolt' }),
+    });
+    expect(rowState(stuck, false)).toEqual({
+      tone: 'asking',
+      label: 'Looks stuck',
+      sub: 'Bolt looks stuck',
+    });
+    expect(attentionLine(ask({ kind: 'stuck' }))).toBe('An agent looks stuck');
+  });
+});

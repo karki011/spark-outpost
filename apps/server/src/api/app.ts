@@ -1,5 +1,6 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { analyticsRoutes } from './analytics-routes.ts';
+import type { AppEventFeed } from './app-events.ts';
 import { approvalRoutes } from './approval-routes.ts';
 import { attachmentRoutes } from './attachment-routes.ts';
 import { auditRoutes } from './audit-routes.ts';
@@ -19,6 +20,7 @@ import type { TerminalSessions } from '../terminal/sessions.ts';
 export interface AppOptions
   extends RouteDeps, SetupDeps, ChatSettingsDeps, Pick<OutcomeRouteDeps, 'outcomeSampleRate'> {
   terminals: TerminalSessions;
+  appEvents: AppEventFeed;
   port: number;
   allowedOrigins: readonly string[];
 }
@@ -29,6 +31,7 @@ export function createApp(options: AppOptions) {
   app.use(localRequestGuard(options.port, options.allowedOrigins));
   app.use('/api', attachmentRoutes(options));
   app.use(express.json({ limit: '256kb' }));
+  app.get('/api/events', (req, res) => options.appEvents.subscribe(req, res));
   app.use('/api', apiRoutes(options));
   app.use('/api', setupRoutes(options));
   app.use('/api', chatSettingsRoutes(options));

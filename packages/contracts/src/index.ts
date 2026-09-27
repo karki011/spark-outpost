@@ -27,3 +27,4 @@ export * from './outcomes.ts';
 export * from './analytics.ts';
 export * from './analytics-spend.ts';
 export * from './analytics-harness.ts';
+export * from './app-events.ts';

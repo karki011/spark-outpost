@@ -25,6 +25,8 @@ import type { MemberRoute } from './routing.ts';
 import { fitToolLimit, publish, routeKey, type MemberResult, type Session } from './session.ts';
 import { spanOf } from './spans.ts';
 import type { Spawn } from './transitions.ts';
+import { takeNudge, watchMember } from './watchdog.ts';
+import { withNudge } from './watchdog-rules.ts';
 
 export interface Place {
   group?: string;
@@ -104,6 +106,7 @@ interface RouteExtra {
   followUp?: string;
   worktreeRun?: string;
   sameProvider?: boolean;
+  nudge?: string;
 }
 
 function storedRoute(
@@ -160,9 +163,18 @@ async function runInPlace(
   const total = counted();
   const member = memberControl(s);
   s.members.set(s.lease.runId, member.abort);
+  const watch = watchMember(s, {
+    runId: s.lease.runId,
+    childRunId: null,
+    name,
+    role: spawn.role,
+    stepIndex: 0,
+    steps: spawn.role === 'builder' ? [0] : [],
+    ticked: () => [],
+  });
   try {
     const result = await runAgentTurn(s.deps, s.lease, input, s.append, member.control, {
-      onOutput: counter(s, total),
+      onOutput: counter(s, total, watch.observe),
     });
     if (result.messageId) s.message = { id: result.messageId, text: result.text };
     return {
@@ -182,6 +194,7 @@ async function runInPlace(
       reads: total.reads,
     };
   } finally {
+    await watch.stop();
     s.members.delete(s.lease.runId);
   }
 }
@@ -230,6 +243,11 @@ async function runChild(
     .join('\n');
   const planStep = spawn.role === 'builder' || place ? stepText || null : null;
   if (mode === 'do') await ensureParentSnapshot(s);
+  const nudge = takeNudge(s, name);
+  const followUp = options.followUp ?? spawn.followUp;
+  const nudged: MemberOptions =
+    nudge && followUp ? { ...options, followUp: withNudge(followUp, nudge) } : options;
+  const prompt = options.prompt ?? (await promptFor(s, spawn));
   const attempt =
     options.attempt ??
     [...s.results].filter((r) => r.role === spawn.role && r.stepIndex === spawn.stepIndex).length +
@@ -246,9 +264,10 @@ async function runChild(
       model: route.pick.model,
       effort: route.pick.effort,
       mode,
-      prompt: options.prompt ?? (await promptFor(s, spawn)),
+      prompt: nudge ? withNudge(prompt, nudge) : prompt,
       route: storedRoute(route, name, planStep, {
-        ...routeExtra(s, spawn, name, place, branch, options),
+        ...routeExtra(s, spawn, name, place, branch, nudged),
+        ...(nudge ? { nudge } : {}),
         ...(reviewsOwnProvider(s, spawn.role, route) ? { sameProvider: true } : {}),
       }),
     },
@@ -262,12 +281,25 @@ async function runChild(
   const total = counted();
   const steps = spanOf(spawn);
   const ticker = stepTicker(s, spawn.role === 'builder' ? steps : [], lease.runId);
+  const watch = watchMember(s, {
+    runId: lease.runId,
+    childRunId: lease.runId,
+    name,
+    role: spawn.role,
+    stepIndex: spawn.stepIndex,
+    steps: spawn.role === 'builder' || place ? steps : [],
+    ticked: () => [...ticker.ticked],
+  });
+  const observe = (output: ProviderOutput) => {
+    ticker.observe(output);
+    watch.observe(output);
+  };
   try {
     const result = await executeChildRun(
       s.deps,
       lease,
       {
-        onOutput: counter(s, total, ticker.observe),
+        onOutput: counter(s, total, observe),
         backupAlsoFor: s.lease.runId,
         recordsPlan: recordsOwnPlan(s, spawn.role),
       },
@@ -292,6 +324,7 @@ async function runChild(
       ...(place?.reuse ? { copyRunId: place.reuse.runId } : {}),
     };
   } finally {
+    await watch.stop();
     s.control.signal.removeEventListener('abort', cancel);
     s.members.delete(lease.runId);
   }

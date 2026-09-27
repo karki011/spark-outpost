@@ -19,6 +19,7 @@ export interface RangeChoice {
 export type AnalyticsTab = 'overview' | 'spend' | 'harness';
 
 export const analyticsKeys = {
+  all: ['analytics'] as const,
   tab: (tab: AnalyticsTab, choice: RangeChoice) =>
     [
       'analytics',

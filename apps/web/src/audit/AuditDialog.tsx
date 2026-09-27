@@ -7,7 +7,6 @@ import { useQuery } from '@tanstack/react-query';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { auditApi, auditKeys } from './audit-api.ts';
-import { isLive } from './audit-model.ts';
 import { AuditExport } from './AuditExport.tsx';
 import { AuditLogs } from './AuditLogs.tsx';
 import { AuditSummaryPane } from './AuditSummaryPane.tsx';
@@ -71,7 +70,6 @@ export function AuditDialog({ conversationId, title, onClose }: AuditDialogProps
   const summary = useQuery({
     queryKey: auditKeys.summary(conversationId),
     queryFn: () => auditApi.summary(conversationId),
-    refetchInterval: (query) => (query.state.data?.runs.some(isLive) ? 2000 : false),
   });
   const runs = summary.data?.runs ?? [];
   const checks = useChainChecks(runs);

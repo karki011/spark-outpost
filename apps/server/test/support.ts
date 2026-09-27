@@ -10,7 +10,7 @@ export interface TestDb {
   cleanup(): Promise<void>;
 }
 
-function testDatabaseUrl(): string {
+export function testDatabaseUrl(): string {
   const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!url)
     throw new Error('pnpm test:db requires DATABASE_URL or TEST_DATABASE_URL. Run pnpm db:setup.');

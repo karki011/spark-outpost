@@ -64,10 +64,10 @@ function emptyNote(runs: number, range: SpendRange): string {
   return runs > 0 ? `No provider reported a cost ${period}.` : `No spend ${period} yet.`;
 }
 
-export function SpendCard({ refresh, onUsage }: { refresh: string; onUsage: () => void }) {
+export function SpendCard({ onUsage }: { onUsage: () => void }) {
   const [range, setRange] = useState<SpendRange>('today');
   const spend = useQuery({
-    queryKey: [...homeKeys.spend(range), refresh],
+    queryKey: homeKeys.spend(range),
     queryFn: () => homeApi.spend(range),
     placeholderData: keepPreviousData,
   });

@@ -25,6 +25,8 @@ Actual: `shell.txt` isn't written (good). But the turn ends with `stopReason: "c
 
 With the adapter changed to also offer Codex's `decline` (see option A below) and the client answering `decline`: `shell.txt` and `notes.txt` stayed unwritten, and the turn ended normally with `end_turn`. The model replied that the command was rejected and continued. So the app-server accepts `decline` for both request types under `untrusted`.
 
+Reconfirmed September 27, 2026 on codex-acp 1.13.2-preview.5 / `@openai/codex` 0.157.1: unpatched, `availableDecisions` for a command under `untrusted` is still `["accept", {acceptWithExecpolicyAmendment}, "cancel"]` (no `decline`), and answering `cancel` still ends the turn as `stopReason: "cancelled"`. With option A applied (adapter offers `decline` ahead of `cancel`), answering `decline` still ends the turn as `end_turn` and Codex continues. Nothing here changed between 0.156.1 and 0.157.1.
+
 ### Expected
 
 At least one `reject_once` option that rejects the single action and lets the turn continue, as `decline` already does whenever Codex advertises it (`"No, continue without running it"`).

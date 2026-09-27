@@ -55,15 +55,9 @@ function StripButton({ item, onOpen }: { item: StripItem; onOpen: () => void }) 
   );
 }
 
-export function ProviderStrip({
-  refresh,
-  onSettings,
-}: {
-  refresh: string;
-  onSettings: () => void;
-}) {
+export function ProviderStrip({ onSettings }: { onSettings: () => void }) {
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
-  const health = useQuery({ queryKey: [...homeKeys.health, refresh], queryFn: homeApi.health });
+  const health = useQuery({ queryKey: homeKeys.health, queryFn: homeApi.health });
   const connected = (setup.data?.providers ?? []).filter((provider) => provider.connection);
   const capabilities = useQueries({
     queries: connected.map((provider) => ({

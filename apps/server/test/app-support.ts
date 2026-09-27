@@ -1,3 +1,4 @@
+import { AppEventFeed } from '../src/api/app-events.ts';
 import { createApp, type AppOptions } from '../src/api/app.ts';
 import { RunEventHub } from '../src/api/run-event-hub.ts';
 import type { CommandResult, RunCommand } from '../src/setup/command.ts';
@@ -16,6 +17,7 @@ export interface TestAppOptions {
   secrets?: SecretStore;
   fixedRunProvider?: string | null;
   probeCapabilities?: AppOptions['probeCapabilities'];
+  appEvents?: AppEventFeed;
 }
 
 const unavailableProbe: AppOptions['probeCapabilities'] = () =>
@@ -43,6 +45,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     },
     runCommand: options.runCommand ?? (async () => notFound),
     terminals: new TerminalSessions(loginShellSpawner('/bin/sh')),
+    appEvents: options.appEvents ?? new AppEventFeed(),
     loginShell: '/bin/zsh',
     probeCapabilities: options.probeCapabilities ?? unavailableProbe,
   });

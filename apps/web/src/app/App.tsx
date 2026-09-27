@@ -21,6 +21,8 @@ import { markConnectionRestored, useConnection } from './connection/connection-s
 import { OfflineScreen } from './connection/OfflineScreen.tsx';
 import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { ComingSoon } from './ComingSoon.tsx';
+import { LivePausedHint } from './live/LivePausedHint.tsx';
+import { useAppEvents } from './live/use-app-events.ts';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
@@ -28,6 +30,8 @@ import '../ui/controls.css';
 
 function ChatShell({ entering }: { entering: boolean }) {
   const queryClient = useQueryClient();
+  const live = useAppEvents();
+  const connection = useConnection();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draftId, setDraftId] = useState(newDraftId);
   const [settings, setSettings] = useState<SettingsSection | null>(null);
@@ -166,6 +170,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           onOpenChat={openAtCard}
           onHome={() => setView('home')}
         />
+        {live.paused && !connection.lost && <LivePausedHint />}
         <AnimatePresence>
           {settings && (
             <SettingsDialog

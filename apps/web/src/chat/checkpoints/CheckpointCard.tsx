@@ -361,6 +361,20 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
       );
     case 'merge_conflict':
       return <MergeConflictBody approval={approval} decide={decide} />;
+    case 'stuck':
+      return (
+        <div className="appr-acts">
+          <Action id={CHECKPOINT_OPTION.nudge} approval={approval} decide={decide} kind="primary">
+            Nudge
+          </Action>
+          <Action id={CHECKPOINT_OPTION.letContinue} approval={approval} decide={decide}>
+            Let it continue
+          </Action>
+          <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
+            Stop
+          </Action>
+        </div>
+      );
     case 'budget':
       return (
         <div className="appr-acts">

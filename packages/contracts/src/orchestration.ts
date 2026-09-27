@@ -56,6 +56,7 @@ export const decisionKindSchema = z.enum([
   'transition',
   'parallel',
   'build_style',
+  'watchdog',
 ]);
 export type DecisionKind = z.infer<typeof decisionKindSchema>;
 

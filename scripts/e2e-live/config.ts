@@ -18,6 +18,7 @@ const PORTS: Record<Version, Ports> = {
   current: { api: 4339, web: 5194 },
   '2381803': { api: 4349, web: 5204 },
   '9a932f9': { api: 4359, web: 5214 },
+  d87e633: { api: 4369, web: 5224 },
 };
 
 export function portsFor(version: Version): Ports {

@@ -12,6 +12,7 @@ import { request } from '../api/client.ts';
 
 export const homeKeys = {
   all: ['home'] as const,
+  spendAll: ['home', 'spend'] as const,
   spend: (range: SpendRange) => ['home', 'spend', range] as const,
   health: ['home', 'provider-health'] as const,
   digest: ['home', 'digest'] as const,
