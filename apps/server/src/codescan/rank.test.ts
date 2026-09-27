@@ -134,6 +134,26 @@ describe('rankFiles', () => {
     });
   });
 
+  it('pushes down hub files that are only linked by references', () => {
+    const base = {
+      facts: new Map([
+        ['feature/a.ts', facts([], [1, 2])],
+        ['shared/tokens.ts', facts([1], [])],
+        ['feature/helper.ts', facts([2], [])],
+      ]),
+      matches: new Map([['feature/a.ts', match(2, 'x')]]),
+      nameStats: new Map([
+        [1, { defFiles: 1, refFiles: 900 }],
+        [2, { defFiles: 1, refFiles: 3 }],
+      ]),
+    };
+    const plain = rankFiles(input(base)).map((file) => file.path);
+    const damped = rankFiles(input({ ...base, hubCap: 50 })).map((file) => file.path);
+    expect(damped.indexOf('shared/tokens.ts')).toBeGreaterThan(damped.indexOf('feature/helper.ts'));
+    expect(damped[0]).toBe('feature/a.ts');
+    expect(plain).toHaveLength(3);
+  });
+
   it('caps the candidate list', () => {
     const matches = new Map(
       Array.from({ length: 300 }, (_, index) => [`f${index}.ts`, match(1, 'x')] as const),

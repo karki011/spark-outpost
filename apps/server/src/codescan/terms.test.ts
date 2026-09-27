@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractTerms, nameVariants, searchPatterns } from './terms.ts';
+import { extractTerms, nameVariants, pascalForm, searchPatterns } from './terms.ts';
 
 describe('extractTerms', () => {
   it('pulls paths, file names and code-shaped words from a request', () => {
@@ -87,5 +87,13 @@ describe('searchPatterns', () => {
       'line_chart',
       'Export CSV',
     ]);
+  });
+});
+
+describe('pascalForm', () => {
+  it('spells a name in PascalCase for partial definition lookups', () => {
+    expect(pascalForm('SearchInput')).toBe('SearchInput');
+    expect(pascalForm('searchInput')).toBe('SearchInput');
+    expect(pascalForm('date-picker')).toBe('DatePicker');
   });
 });

@@ -3,7 +3,7 @@ import type { Commit } from './git.ts';
 import type { ProjectLayout } from './layout.ts';
 import type { NameStats, NodeFacts } from './rank.ts';
 
-export const NEIGHBOUR_LIMIT = 600;
+export const NEIGHBOUR_LIMIT = 400;
 export const PATH_MATCH_LIMIT = 40;
 export const DEFINER_LIMIT = 200;
 
@@ -37,6 +37,7 @@ export async function loadScanProject(db: Queryable, root: string): Promise<Scan
       packages: row.layout.packages ?? [],
       instructions: row.layout.instructions ?? [],
       owners: row.layout.owners ?? [],
+      searchExcludes: row.layout.searchExcludes ?? [],
     },
     history: row.history,
   };
@@ -120,6 +121,27 @@ export async function pathsWithWords(
   return new Map(rows.map((row) => [row.path, row.words]));
 }
 
+export const PARTIAL_NAME_LIMIT = 5;
+
+export async function namesContaining(
+  db: Queryable,
+  projectId: string,
+  words: readonly string[],
+): Promise<Map<string, number>> {
+  if (words.length === 0) return new Map();
+  const { rows } = await db.query<{ id: number; name: string }>(
+    `SELECT n.id, n.name FROM unnest($2::text[]) AS q (word)
+     CROSS JOIN LATERAL (
+       SELECT id, name FROM code_index_names
+       WHERE project_id = $1 AND def_files > 0 AND name <> q.word
+         AND strpos(name, q.word) > 0 AND name ~ (q.word || '([A-Z0-9_]|$)')
+       ORDER BY ref_files DESC, name LIMIT $3
+     ) n`,
+    [projectId, words, PARTIAL_NAME_LIMIT],
+  );
+  return new Map(rows.map((row) => [row.name, row.id]));
+}
+
 interface FactRow {
   path: string;
   def_ids: number[];
@@ -177,8 +199,9 @@ export async function neighbours(
        UNION
        (SELECT path FROM referencing WHERE NOT path = ANY($4::text[]) LIMIT $5)
      )
-     SELECT ${FACT_COLUMNS} FROM code_index_files
-     WHERE project_id = $1 AND path IN (SELECT path FROM picked)`,
+     SELECT path, def_ids, lines, package, has_test,
+       ARRAY(SELECT unnest(ref_ids) INTERSECT SELECT unnest($3::int[])) AS ref_ids
+     FROM code_index_files WHERE project_id = $1 AND path IN (SELECT path FROM picked)`,
     [projectId, referenced, defined, exclude, NEIGHBOUR_LIMIT / 2],
   );
   return toFacts(rows);

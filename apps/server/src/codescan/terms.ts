@@ -155,6 +155,11 @@ export function nameVariants(term: string): string[] {
   return [...new Set([term, pascal, camel, parts.join('_'), parts.join('-')])];
 }
 
+export function pascalForm(term: string): string {
+  const parts = words(term);
+  return parts.map(capitalise).join('');
+}
+
 export function searchPatterns(terms: RequestTerms): string[] {
   const names = terms.identifiers.flatMap((term) =>
     term.includes('-') || term.includes('_') ? nameVariants(term) : [term],

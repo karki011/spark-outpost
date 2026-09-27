@@ -7,6 +7,7 @@ CREATE TABLE code_index_projects (
   file_count integer NOT NULL DEFAULT 0 CHECK (file_count >= 0),
   listed_count integer NOT NULL DEFAULT 0 CHECK (listed_count >= 0),
   name_count integer NOT NULL DEFAULT 0 CHECK (name_count >= 0),
+  row_bytes bigint NOT NULL DEFAULT 0 CHECK (row_bytes >= 0),
   bytes bigint NOT NULL DEFAULT 0 CHECK (bytes >= 0),
   layout jsonb NOT NULL DEFAULT '{}',
   history jsonb NOT NULL DEFAULT '[]',

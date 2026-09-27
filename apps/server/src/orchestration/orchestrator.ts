@@ -245,6 +245,7 @@ async function finish(
 }
 
 export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise<void> {
+  const taskStartedAt = Date.now();
   const input = await loadRunInput(deps.db, lease.runId);
   const append: Append = (event, options) => appendRunEvent(deps.db, lease, event, options);
   const control = startControl(deps, lease);
@@ -255,7 +256,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const mode = input.mode ?? 'chat';
     const root = input.projectRoots[0];
     const doing = mode === 'do' && root !== undefined;
-    const scanning = doing ? startScan({ deps, input }, root) : null;
+    const scanning = doing ? startScan({ deps, input }, root, taskStartedAt) : null;
     const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
     const { intake, decisions } = await runIntake(deps, input, append, current);
     const answers = decisions.start === 'answer';

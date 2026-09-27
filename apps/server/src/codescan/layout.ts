@@ -10,6 +10,7 @@ export interface ProjectLayout {
   packages: WorkspacePackage[];
   instructions: string[];
   owners: OwnerRule[];
+  searchExcludes: string[];
 }
 
 export type ReadText = (path: string) => Promise<string | null>;
@@ -111,6 +112,7 @@ export async function readLayout(paths: readonly string[], read: ReadText): Prom
     packages: packages.sort((a, b) => a.root.localeCompare(b.root)),
     instructions: paths.filter((path) => INSTRUCTION_FILE.test(path)).sort(),
     owners: ownersText ? parseCodeowners(ownersText) : [],
+    searchExcludes: [],
   };
 }
 

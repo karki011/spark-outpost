@@ -16,6 +16,7 @@ import {
   PROJECT_FILE_CAP,
   rebuildReason,
   withinCap,
+  uncoveredDirectories,
   type FileStat,
 } from './refresh-plan.ts';
 import { evictBeyondCap, expireIndexes } from './retention.ts';
@@ -188,7 +189,18 @@ export async function indexProject(
   ]);
   const recent = new Set([...changed, ...(history ?? []).flatMap((entry) => entry.files)]);
   const selected = withinCap(indexable, options.fileCap ?? PROJECT_FILE_CAP, recent);
-  const layout = await readLayout(listed, textReader(root));
+  const read = await readLayout(listed, textReader(root));
+  const capped = selected.length < indexable.length;
+  const kept = new Set(selected.map((file) => file.path));
+  const layout = {
+    ...read,
+    searchExcludes: capped
+      ? uncoveredDirectories(
+          indexable.map((file) => file.path),
+          kept,
+        )
+      : [],
+  };
   const packageOf = packageMatcher(layout.packages);
   const cached = rebuilt ? new Map<string, CachedRow>() : await cachedFiles(db, project.id);
   const names = rebuilt ? new Map<string, number>() : await projectNames(db, project.id);
@@ -228,7 +240,7 @@ export async function indexProject(
     rebuilt,
     listed: listed.length,
     indexable: indexable.length,
-    capped: selected.length < indexable.length,
+    capped,
     parsed: totals.parsed,
     unchanged: totals.unchanged,
     removed: plan.remove.length + totals.missing,

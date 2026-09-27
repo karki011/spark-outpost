@@ -66,6 +66,12 @@ export function skipReason(path: string): string | null {
   return null;
 }
 
+const BULK_DATA = /(?:^|\/)(?:testdata|test-data|fixtures|__fixtures__|test-fixtures|baselines)\//i;
+
+export function isBulkData(path: string): boolean {
+  return BULK_DATA.test(path);
+}
+
 export function isSkipped(path: string): boolean {
   return skipReason(path) !== null;
 }

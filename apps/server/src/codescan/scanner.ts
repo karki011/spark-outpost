@@ -2,8 +2,8 @@ import type { Queryable } from '../persistence/db.ts';
 import { indexProject, type IndexOutcome } from './indexer.ts';
 import { scanRequest, type ScanReport } from './scan.ts';
 
-export const SCAN_DEADLINE_MS = 1500;
-export const MAX_CONCURRENT_SCANS = 2;
+export const SCAN_DEADLINE_MS = 2500;
+export const MAX_CONCURRENT_SCANS = 3;
 export const REFRESH_EVERY_MS = 60_000;
 
 export type ScanStatus = 'done' | 'partial' | 'timed_out' | 'queued_past_deadline' | 'failed';
@@ -17,7 +17,7 @@ export interface ScanOutcome {
 }
 
 export interface CodeScanner {
-  scan(root: string, request: string): Promise<ScanOutcome>;
+  scan(root: string, request: string, startedAt?: number): Promise<ScanOutcome>;
   ensureIndexed(root: string): Promise<IndexOutcome | null>;
   idle(): Promise<void>;
 }
@@ -94,11 +94,15 @@ export function createCodeScanner(db: Queryable, options: ScannerOptions = {}): 
     return work;
   }
 
-  async function scan(root: string, request: string): Promise<ScanOutcome> {
+  async function scan(
+    root: string,
+    request: string,
+    startedAt: number = Date.now(),
+  ): Promise<ScanOutcome> {
     const started = performance.now();
     const elapsed = () => Math.round(performance.now() - started);
     void ensureIndexed(root);
-    const deadline = AbortSignal.timeout(deadlineMs);
+    const deadline = AbortSignal.timeout(Math.max(0, startedAt + deadlineMs - Date.now()));
     if (!(await limiter.acquire(deadline))) {
       return {
         status: 'queued_past_deadline',

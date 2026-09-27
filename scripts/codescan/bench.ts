@@ -4,7 +4,11 @@ import { parseArgs } from 'node:util';
 import { indexProject, type IndexOutcome } from '../../apps/server/src/codescan/indexer.ts';
 import { renderJevState } from '../../apps/server/src/codescan/jev-state.ts';
 import { stopParseWorker } from '../../apps/server/src/codescan/parse-pool.ts';
-import { createCodeScanner, type ScanOutcome } from '../../apps/server/src/codescan/scanner.ts';
+import {
+  createCodeScanner,
+  SCAN_DEADLINE_MS,
+  type ScanOutcome,
+} from '../../apps/server/src/codescan/scanner.ts';
 import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { runMigrations } from '../../apps/server/src/persistence/migrate.ts';
 import { percentile, underLoad, type LoadStats } from './load.ts';
@@ -189,7 +193,7 @@ async function concurrentPhase() {
     );
     const indexing = await concurrentIndex(db);
     const raw = await concurrentScans(db, 10_000);
-    const real = await concurrentScans(db, 1500);
+    const real = await concurrentScans(db, SCAN_DEADLINE_MS);
     return { idle, indexing, raw, real };
   } finally {
     await db.end();

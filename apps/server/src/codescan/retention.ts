@@ -11,11 +11,25 @@ export async function expireIndexes(db: Queryable, days: number = EXPIRY_DAYS): 
   return rowCount ?? 0;
 }
 
+export async function refreshCacheSizes(db: Queryable): Promise<void> {
+  await db.query(
+    `UPDATE code_index_projects p SET bytes = round(p.row_bytes * s.scale)::bigint
+     FROM (
+       SELECT (pg_total_relation_size('code_index_files')
+         + pg_total_relation_size('code_index_names')
+         + pg_total_relation_size('code_index_projects'))::float8
+         / GREATEST(1, sum(row_bytes)) AS scale
+       FROM code_index_projects
+     ) s`,
+  );
+}
+
 export async function evictBeyondCap(
   db: Queryable,
   keepProjectId: string,
   capBytes: number = GLOBAL_CAP_BYTES,
 ): Promise<string[]> {
+  await refreshCacheSizes(db);
   const { rows } = await db.query<{ root_path: string }>(
     `WITH ranked AS (
        SELECT id, root_path,

@@ -27,6 +27,7 @@ export interface RankInput {
   namedDefiners: ReadonlyMap<string, number>;
   namedIds: ReadonlySet<number>;
   nameStats?: ReadonlyMap<number, NameStats>;
+  hubCap?: number;
   uncommitted: ReadonlySet<string>;
   coChange: ReadonlyMap<string, number>;
   churn: ReadonlyMap<string, number>;
@@ -164,6 +165,19 @@ function reasonsFor(input: RankInput, path: string, linked: boolean): string[] {
   return reasons;
 }
 
+export function reach(input: RankInput, path: string): number {
+  let widest = 0;
+  for (const id of input.facts.get(path)?.defIds ?? []) {
+    widest = Math.max(widest, input.nameStats?.get(id)?.refFiles ?? 0);
+  }
+  return widest;
+}
+
+export function hubFactor(input: RankInput, path: string, evidence: number): number {
+  if (evidence > 0 || input.hubCap === undefined) return 1;
+  return Math.min(1, input.hubCap / Math.max(1, reach(input, path)));
+}
+
 function largest(values: readonly number[]): number {
   return values.reduce((top, value) => Math.max(top, value), Number.MIN_VALUE);
 }
@@ -186,8 +200,10 @@ export function rankFiles(input: RankInput): RankedFile[] {
   const ranked = paths.map((path, index): RankedFile => {
     const facts = input.facts.get(path);
     const match = input.matches.get(path);
+    const own = evidence[index] ?? 0;
     const score =
-      0.5 * ((rank[index] ?? 0) / topRank) + 0.5 * ((evidence[index] ?? 0) / topEvidence);
+      (0.5 * ((rank[index] ?? 0) / topRank) + 0.5 * (own / topEvidence)) *
+      hubFactor(input, path, own);
     return {
       path,
       score: Math.round(score * 10_000) / 10_000,

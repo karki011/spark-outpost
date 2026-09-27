@@ -77,6 +77,20 @@ describe('extractSymbols', () => {
     for (const name of sample.defines) expect(symbols.references).not.toContain(name);
   });
 
+  it('does not treat mock factories or mock functions as definitions', async () => {
+    const symbols = await extractSymbols(
+      'typescript',
+      [
+        "vi.mock('./api', () => ({ useBudgets() { return []; } }));",
+        "jest.mock('./flags', () => { function useFeatureFlag() { return true; } return { useFeatureFlag }; });",
+        'const useUploadCsv = vi.fn().mockReturnValue(null);',
+        'export function renderPanel() { return useUploadCsv(); }',
+      ].join('\n'),
+    );
+    expect(symbols.definitions.map((definition) => definition.name)).toEqual(['renderPanel']);
+    expect(symbols.references).toEqual(expect.arrayContaining(['useUploadCsv']));
+  });
+
   it('skips names shorter than three characters', async () => {
     const symbols = await extractSymbols('typescript', 'const ab = cd(ef);');
     expect(symbols.definitions).toEqual([]);

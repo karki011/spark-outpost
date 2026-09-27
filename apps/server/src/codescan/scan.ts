@@ -1,5 +1,4 @@
 import type { Queryable } from '../persistence/db.ts';
-import { workingChanges } from './git.ts';
 import { churnByFile, coChanged } from './history.ts';
 import { packageMatcher } from './layout.ts';
 import { ownersMatcher } from './owners.ts';
@@ -19,11 +18,19 @@ import {
   neighbours,
   pathsLike,
   pathsWithWords,
+  namesContaining,
   nameStats,
   type ScanProject,
 } from './scan-store.ts';
 import { isSkipped } from './skip.ts';
-import { extractTerms, nameVariants, searchPatterns, type RequestTerms } from './terms.ts';
+import { recentWorkingChanges } from './status-cache.ts';
+import {
+  extractTerms,
+  nameVariants,
+  pascalForm,
+  searchPatterns,
+  type RequestTerms,
+} from './terms.ts';
 
 export const CORE_SEEDS = 30;
 export const MAX_SEEDS = 300;
@@ -112,10 +119,13 @@ async function gatherText(
   timings: Record<string, number>,
   signal: AbortSignal,
 ): Promise<void> {
-  const [matches, uncommitted, project] = await Promise.all([
-    timed(timings, 'ripgrep', searchText(root, searchPatterns(terms), signal)),
-    timed(timings, 'gitStatus', workingChanges(root, signal)),
-    timed(timings, 'project', abortable(loadScanProject(db, root), signal)),
+  const status = timed(timings, 'gitStatus', abortable(recentWorkingChanges(root), signal));
+  status.catch(() => undefined);
+  const project = await timed(timings, 'project', abortable(loadScanProject(db, root), signal));
+  const excludes = project?.layout.searchExcludes ?? [];
+  const [matches, uncommitted] = await Promise.all([
+    timed(timings, 'ripgrep', searchText(root, searchPatterns(terms), excludes, signal)),
+    status,
   ]);
   evidence.matches = matches;
   const changed = uncommitted.filter((path) => !isSkipped(path));
@@ -173,13 +183,12 @@ async function gatherSymbols(
   evidence.named = named;
   evidence.pathHits = new Set(pathHits);
   evidence.pathWords = pathWords;
-  const ids = [...named.values()];
-  const [definers, stats] = await Promise.all([
-    abortable(definersOf(db, project.id, ids), signal),
-    abortable(nameStats(db, project.id, ids), signal),
-  ]);
-  evidence.namedDefiners = definers;
-  evidence.nameStats = stats;
+  evidence.nameStats = await abortable(nameStats(db, project.id, [...named.values()]), signal);
+  const partial = undefinedTerms(terms.identifiers, named, evidence.nameStats).map(pascalForm);
+  const widened = await abortable(namesContaining(db, project.id, partial), signal);
+  for (const [name, id] of widened) named.set(name, id);
+  await addNameStats(db, project, evidence, [...widened.values()], signal);
+  evidence.namedDefiners = await abortable(definersOf(db, project.id, [...named.values()]), signal);
   const core = topByEvidence(evidence, CORE_SEEDS);
   evidence.coChange = coChanged(project.history, new Set(core));
   const coChanged10 = [...evidence.coChange].sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -193,7 +202,21 @@ async function gatherSymbols(
   await expandNeighbours(db, project, evidence, core, seeds, timings, signal);
 }
 
-function specificCap(fileCount: number): number {
+export function undefinedTerms(
+  identifiers: readonly string[],
+  named: ReadonlyMap<string, number>,
+  stats: ReadonlyMap<number, NameStats>,
+): string[] {
+  return identifiers.filter((term) => {
+    if (term.length < 4) return false;
+    return !nameVariants(term).some((variant) => {
+      const id = named.get(variant);
+      return id !== undefined && (stats.get(id)?.defFiles ?? 0) > 0;
+    });
+  });
+}
+
+export function specificCap(fileCount: number): number {
   return Math.max(SPECIFIC_MIN_FILES, Math.round(fileCount * SPECIFIC_SHARE));
 }
 
@@ -242,8 +265,11 @@ async function expandNeighbours(
     abortable(neighbours(db, project.id, specific, used, seeds), signal),
   );
   for (const [path, facts] of around) evidence.facts.set(path, facts);
-  const allRefs = unionIds(evidence.facts.values(), (entry) => entry.refIds, MAX_STAT_IDS);
-  await timed(timings, 'edgeStats', addNameStats(db, project, evidence, allRefs, signal));
+  const allIds = [
+    ...unionIds(evidence.facts.values(), (entry) => entry.refIds, MAX_STAT_IDS),
+    ...unionIds(evidence.facts.values(), (entry) => entry.defIds, MAX_STAT_IDS),
+  ];
+  await timed(timings, 'edgeStats', addNameStats(db, project, evidence, allIds, signal));
 }
 
 function summarise(evidence: Evidence, candidates: readonly RankedFile[]): ScanSummary {
@@ -280,6 +306,7 @@ function report(
     namedDefiners: new Map([...evidence.namedDefiners].map(([path, ids]) => [path, ids.length])),
     namedIds: new Set(evidence.named.values()),
     nameStats: evidence.nameStats,
+    hubCap: specificCap(evidence.project?.fileCount ?? 0),
     uncommitted: evidence.uncommitted,
     coChange: evidence.coChange,
     churn: churnByFile(evidence.project?.history ?? []),

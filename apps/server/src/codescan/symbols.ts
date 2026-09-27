@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { Language, Parser, Query } from 'web-tree-sitter';
+import { Language, Parser, Query, type Node } from 'web-tree-sitter';
 import type { SymbolLanguage } from './languages.ts';
 import {
   definitionKind,
@@ -58,12 +58,30 @@ function languageFor(language: SymbolLanguage): Promise<LoadedLanguage> {
   return entry;
 }
 
+const MOCK_CALL = /^(?:vi|jest)\.(?:mock|doMock|unstable_mockModule|hoisted|fn|spyOn|mocked)\b/;
+
+function isMockCall(node: Node | null): boolean {
+  if (node?.type !== 'call_expression') return false;
+  return MOCK_CALL.test(node.childForFieldName('function')?.text ?? '');
+}
+
+export function isMockDefinition(name: Node): boolean {
+  for (let node = name.parent; node; node = node.parent) {
+    if (isMockCall(node)) return true;
+    if (node.type === 'variable_declarator' && isMockCall(node.childForFieldName('value'))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function collectDefinitions(tools: LoadedLanguage, tree: Parameters<Query['captures']>[0]) {
   const seen = new Map<string, Definition>();
   for (const capture of tools.definitions.captures(tree)) {
     const kind = definitionKind(capture.name);
     const name = capture.node.text;
     if (!kind || name.length < MIN_NAME_LENGTH || seen.has(name)) continue;
+    if (isMockDefinition(capture.node)) continue;
     seen.set(name, { name, kind });
     if (seen.size >= MAX_DEFINITIONS) break;
   }

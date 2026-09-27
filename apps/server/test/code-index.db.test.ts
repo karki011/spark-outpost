@@ -22,6 +22,9 @@ const FILES: Record<string, string> = {
     'import { useChartData } from "./use-chart-data";\nexport function LineChart() { const rows = useChartData(7); return <svg>{rows}</svg>; }\n',
   'src/chart/line-chart.test.tsx': 'import { LineChart } from "./line-chart";\nLineChart();\n',
   'src/data/load-series.ts': 'export function loadSeries(days: number) { return [days]; }\n',
+  'src/ui/cz-search-input.tsx': 'export function CZSearchInput() { return null; }\n',
+  'src/chart/mocked.test.ts':
+    "vi.mock('./use-chart-data', () => { function useChartData() { return []; } return { useChartData }; });\n",
   'node_modules/dep/index.js': 'export const hidden = 1;\n',
   'assets/logo.png': 'binary',
 };
@@ -70,24 +73,38 @@ afterAll(async () => {
 describe('code index cache', () => {
   it('indexes tracked files with their symbols and skips ignored, binary and dependency files', async () => {
     const outcome = await indexProject(t.db, root);
-    expect(outcome).toMatchObject({ rebuilt: 'first index', parsed: 6, capped: false });
+    expect(outcome).toMatchObject({ rebuilt: 'first index', parsed: 8, capped: false });
     const indexed = await files();
     expect(Object.keys(indexed)).toEqual([
       '.gitignore',
       'package.json',
       'src/chart/line-chart.test.tsx',
       'src/chart/line-chart.tsx',
+      'src/chart/mocked.test.ts',
       'src/chart/use-chart-data.ts',
       'src/data/load-series.ts',
+      'src/ui/cz-search-input.tsx',
     ]);
+    expect(indexed['src/chart/mocked.test.ts']?.defs).toEqual([]);
     expect(indexed['src/chart/line-chart.tsx']).toEqual({ language: 'tsx', defs: ['LineChart'] });
-    const { rows } = await t.db.query<{ status: string; indexed_commit: string; bytes: string }>(
-      'SELECT status, indexed_commit, bytes FROM code_index_projects WHERE root_path = $1',
+    const { rows } = await t.db.query<{
+      status: string;
+      indexed_commit: string;
+      row_bytes: string;
+      bytes: string;
+      disk: string;
+    }>(
+      `SELECT status, indexed_commit, row_bytes, bytes,
+         pg_total_relation_size('code_index_files') + pg_total_relation_size('code_index_names')
+           + pg_total_relation_size('code_index_projects') AS disk
+       FROM code_index_projects WHERE root_path = $1`,
       [root],
     );
     expect(rows[0]?.status).toBe('ready');
     expect(rows[0]?.indexed_commit).toMatch(/^[0-9a-f]{40}$/);
-    expect(Number(rows[0]?.bytes)).toBeGreaterThan(0);
+    expect(Number(rows[0]?.row_bytes)).toBeGreaterThan(0);
+    expect(Number(rows[0]?.bytes)).toBeGreaterThan(Number(rows[0]?.row_bytes));
+    expect(Math.abs(Number(rows[0]?.bytes) - Number(rows[0]?.disk))).toBeLessThan(1024);
   });
 
   it('re-parses only changed files on refresh and overwrites rows', async () => {
@@ -125,7 +142,7 @@ describe('code index cache', () => {
   it('rebuilds from scratch when the parser version changes or a build did not finish', async () => {
     await indexProject(t.db, root, { parserVersion: 'old-parser' });
     const upgraded = await indexProject(t.db, root);
-    expect(upgraded).toMatchObject({ rebuilt: 'the parser version changed', parsed: 6 });
+    expect(upgraded).toMatchObject({ rebuilt: 'the parser version changed', parsed: 8 });
 
     await t.db.query(`UPDATE code_index_projects SET status = 'building'`);
     expect(await indexProject(t.db, root)).toMatchObject({
@@ -196,11 +213,24 @@ describe('code index cache', () => {
       lines: null,
     });
     expect(report.summary.namedSymbols).toEqual([
-      { name: 'useChartData', definedIn: 1, referencedBy: 1 },
+      { name: 'useChartData', definedIn: 1, referencedBy: 2 },
     ]);
     expect(
       report.candidates.find((file) => file.path === 'src/chart/line-chart.tsx')?.hasTest,
     ).toBe(true);
+  });
+
+  it('falls back to a definition whose name ends with an undefined request name', async () => {
+    const scanner = createCodeScanner(t.db, { deadlineMs: 10_000 });
+    await scanner.ensureIndexed(root);
+    const outcome = await scanner.scan(root, 'Add a compact prop to SearchInput');
+    expect(outcome.report?.summary.namedSymbols).toEqual([
+      { name: 'CZSearchInput', definedIn: 1, referencedBy: 0 },
+    ]);
+    expect(outcome.report?.candidates[0]).toMatchObject({
+      path: 'src/ui/cz-search-input.tsx',
+      reasons: expect.arrayContaining(['defines a named symbol']),
+    });
   });
 
   it('returns nothing useful rather than waiting past the deadline', async () => {

@@ -67,15 +67,18 @@ async function recordScan(s: Session, scanning: Promise<ScanOutcome>): Promise<v
 export function startScan(
   s: Pick<Session, 'deps' | 'input'>,
   root: string | undefined,
+  taskStartedAt: number,
 ): Promise<ScanOutcome> | null {
   if (!root || !s.deps.codeScan || s.input.mode !== 'do') return null;
-  return s.deps.codeScan.scan(root, s.input.userRequest).catch((error: unknown): ScanOutcome => ({
-    status: 'failed',
-    report: null,
-    error: error instanceof Error ? error.message : String(error),
-    elapsedMs: 0,
-    queuedMs: 0,
-  }));
+  return s.deps.codeScan
+    .scan(root, s.input.userRequest, taskStartedAt)
+    .catch((error: unknown): ScanOutcome => ({
+      status: 'failed',
+      report: null,
+      error: error instanceof Error ? error.message : String(error),
+      elapsedMs: 0,
+      queuedMs: 0,
+    }));
 }
 
 export function observeScan(s: Session, scanning: Promise<ScanOutcome> | null): void {

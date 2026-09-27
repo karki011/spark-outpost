@@ -259,7 +259,7 @@ export async function finishIndex(
        indexed_at = now(), last_opened_at = now(),
        file_count = (SELECT count(*) FROM code_index_files f WHERE f.project_id = p.id),
        name_count = (SELECT count(*) FROM code_index_names n WHERE n.project_id = p.id),
-       bytes = COALESCE((SELECT sum(pg_column_size(f.*)) FROM code_index_files f
+       row_bytes = COALESCE((SELECT sum(pg_column_size(f.*)) FROM code_index_files f
                  WHERE f.project_id = p.id), 0)
              + COALESCE((SELECT sum(pg_column_size(n.*)) FROM code_index_names n
                  WHERE n.project_id = p.id), 0)

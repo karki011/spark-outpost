@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { planRefresh, rebuildReason, withinCap, type CachedFile } from './refresh-plan.ts';
+import {
+  planRefresh,
+  rebuildReason,
+  uncoveredDirectories,
+  withinCap,
+  type CachedFile,
+} from './refresh-plan.ts';
 
 const cached = (path: string, size = 10, mtimeMs = 100): CachedFile => ({
   path,
@@ -73,5 +79,40 @@ describe('withinCap', () => {
   it('keeps recently changed files first, then the newest', () => {
     const kept = withinCap(files, 2, new Set(['recent-in-git.ts'])).map((file) => file.path);
     expect(kept).toEqual(['recent-in-git.ts', 'newest.ts']);
+  });
+});
+
+describe('withinCap over the cap', () => {
+  it('drops test data trees before anything else', () => {
+    const kept = withinCap(
+      [
+        { path: 'tsc/testdata/baselines/a.js', size: 1, mtimeMs: 9 },
+        { path: 'src/fixtures/b.ts', size: 1, mtimeMs: 8 },
+        { path: 'src/core.ts', size: 1, mtimeMs: 1 },
+        { path: 'src/util.ts', size: 1, mtimeMs: 2 },
+      ],
+      3,
+      new Set(['tsc/testdata/baselines/a.js']),
+    ).map((file) => file.path);
+    expect(kept).toEqual(['src/util.ts', 'src/core.ts']);
+  });
+});
+
+describe('uncoveredDirectories', () => {
+  it('lists the widest directories with no indexed file', () => {
+    const listed = [
+      'src/a.ts',
+      'src/gen/x.ts',
+      'tsc/testdata/one/a.js',
+      'tsc/testdata/two/b.js',
+      'tsc/internal/c.go',
+      'docs/big/d.md',
+    ];
+    const kept = new Set(['src/a.ts', 'tsc/internal/c.go']);
+    expect(uncoveredDirectories(listed, kept)).toEqual(['docs', 'src/gen', 'tsc/testdata']);
+  });
+
+  it('returns nothing when every directory has an indexed file', () => {
+    expect(uncoveredDirectories(['a/b.ts'], new Set(['a/b.ts']))).toEqual([]);
   });
 });

@@ -69,7 +69,9 @@ export function parseStatus(output: string): string[] {
 
 export async function workingChanges(root: string, signal?: AbortSignal): Promise<string[]> {
   try {
-    return parseStatus(await git(root, ['status', '--porcelain=v1', '-z'], signal));
+    return parseStatus(
+      await git(root, ['--no-optional-locks', 'status', '--porcelain=v1', '-z'], signal),
+    );
   } catch {
     return [];
   }

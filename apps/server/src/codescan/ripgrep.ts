@@ -2,7 +2,7 @@ import { rgPath } from '@vscode/ripgrep';
 import { runCommand } from './processes.ts';
 import { isSkipped, MAX_FILE_BYTES } from './skip.ts';
 
-export const MAX_MATCHES_PER_FILE = 50;
+export const MAX_MATCHES_PER_FILE = 3;
 
 export interface TextMatch {
   count: number;
@@ -33,6 +33,7 @@ export function parseMatches(output: string, patterns: readonly string[]) {
 export async function searchText(
   root: string,
   patterns: readonly string[],
+  excludes: readonly string[],
   signal?: AbortSignal,
 ): Promise<Map<string, TextMatch>> {
   if (patterns.length === 0) return new Map();
@@ -46,6 +47,7 @@ export async function searchText(
     `--max-count=${MAX_MATCHES_PER_FILE}`,
     `--max-filesize=${MAX_FILE_BYTES}`,
     ...EXCLUDED_GLOBS,
+    ...excludes.flatMap((directory) => ['--glob', `!${directory}/**`]),
     ...patterns.flatMap((pattern) => ['-e', pattern]),
     '.',
   ];
