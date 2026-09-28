@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'fixturn-2-intake';
+export const POLICY_VERSION = 'fixturn-3-devday-rerun';
 
 export type ActingQuestion =
   | 'question'
@@ -40,6 +40,12 @@ export const LARGE_DIFF_FILES = 10;
 
 export const CHECK_FIXES = 2;
 export const CRITIC_FIX_ROUNDS = 3;
+/** One Critic fix round (fix turn, its check fixes and the re-review) gets this share of the run's tool calls… */
+export const FIX_ROUND_TOOL_SHARE = 0.25;
+/** …but never fewer than this many… */
+export const FIX_ROUND_MIN_TOOL_CALLS = 20;
+/** …and at most this much active time. */
+export const FIX_ROUND_ACTIVE_MS = 4 * 60 * 1000;
 export const PLAN_CONTINUES = 2;
 export const MAX_VERDICTS = 2;
 export const LOOP_STREAK = 5;

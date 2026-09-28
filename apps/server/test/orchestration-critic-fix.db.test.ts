@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type CheckBody, type InvolvementLevel } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
 import { createProject } from '../src/projects/projects.ts';
-import { BUG_FINDINGS, ROUND_FINDINGS } from './fake-acp-roles.ts';
+import { BUG_FINDINGS, HARDENING_FINDINGS, ROUND_FINDINGS } from './fake-acp-roles.ts';
 import {
   SCENARIOS,
   answerEverything,
@@ -53,6 +53,8 @@ interface StartOptions {
   jev?: boolean;
   policy?: JevScript['policy'];
   costCapUsd?: number;
+  toolCallLimit?: number;
+  fixRound?: { toolCalls?: number; activeMs?: number };
 }
 
 async function start(options: StartOptions = {}) {
@@ -65,6 +67,10 @@ async function start(options: StartOptions = {}) {
     ...(options.costCapUsd === undefined
       ? {}
       : { budget: { costCapUsd: options.costCapUsd }, budgetPollMs: NO_BUDGET_POLL }),
+    ...(options.toolCallLimit === undefined
+      ? {}
+      : { budget: { toolCallLimit: options.toolCallLimit }, budgetPollMs: NO_BUDGET_POLL }),
+    ...(options.fixRound ? { fixRound: options.fixRound } : {}),
   });
 }
 
@@ -276,6 +282,22 @@ describe('Critic → fix rounds', () => {
     expect(await findingAdvice(good.runId)).toEqual([]);
   }, 120_000);
 
+  it("reports the rerun's hardening findings instead of fixing them at Auto-edit, even when Jev says bug (N2)", async () => {
+    await start({ policy: { finding_1: 0.95, finding_2: 0.95, finding_3: 0.95 } });
+    const { conversationId, runId } = await begin('#hardeningreview', 'hands-off');
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    expect(orchestration.status).toBe('succeeded');
+    expect(await roles(runId)).toEqual(['builder', 'critic']);
+    expect(asked.filter((approval) => approval.kind === 'accept')).toEqual([]);
+    expect((await findingAdvice(runId))[0]?.body.answer).toMatchObject({
+      fixable: 0,
+      action: 'clean',
+    });
+    const text = await reply(runId);
+    expect(text).toContain('Not fixed automatically: 3 AI review suggestions about hardening');
+    expect(text).toContain(HARDENING_FINDINGS[0]!.slice(0, 60));
+  }, 120_000);
+
   it('lets Jev overrule the rules when it is sure a finding is not a bug', async () => {
     await start({ policy: { finding_1: 0.1, finding_2: 0.05 } });
     const { conversationId, runId } = await begin('#bugreview', 'hands-off');
@@ -315,12 +337,12 @@ describe('the task budget', () => {
   const stopAtBudget: Answerer = (approval) =>
     approval.kind === 'budget' ? { optionId: CHECKPOINT_OPTION.stop } : answerEverything(approval);
 
-  it('refuses the first fix turn once the Builder and Critic spent the cap', async () => {
+  it('refuses the first fix turn once the Builder and Critic spent the cap, and Stop ends on the keep card', async () => {
     await start({ policy: JEV_SAYS_BUGS, costCapUsd: 0.2004 });
     const { conversationId, runId } = await begin('#bugreview #cost', 'hands-off');
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, stopAtBudget);
-    expect(asked.map((approval) => approval.kind)).toEqual(['budget']);
-    expect(orchestration).toMatchObject({ status: 'failed', budget: { exceeded: 'cost' } });
+    expect(asked.map((approval) => approval.kind)).toEqual(['budget', 'accept']);
+    expect(orchestration).toMatchObject({ status: 'succeeded', budget: { exceeded: 'cost' } });
     expect(await roles(runId)).toEqual(['builder', 'critic']);
     expect((await findingAdvice(runId))[0]?.body.answer.fixable).toBe(2);
     expect(await reply(runId)).toContain(
@@ -328,16 +350,54 @@ describe('the task budget', () => {
     );
   }, 120_000);
 
-  it('counts a fix turn against the cap and stops mid-loop before the next review', async () => {
+  it('does not fail when the budget runs out after a fix round that passed the checks: it keeps that state and asks to keep (N2)', async () => {
+    await configureCheck(PASSING_CHECK);
     await start({ policy: JEV_SAYS_BUGS, costCapUsd: 0.1 });
     const { conversationId, runId } = await begin('#bugrounds 2 #fixcost', 'hands-off');
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, stopAtBudget);
-    expect(asked.map((approval) => approval.kind)).toEqual(['budget']);
-    expect(orchestration).toMatchObject({ status: 'failed', budget: { exceeded: 'cost' } });
+    const cards = asked.filter((approval) => approval.kind !== 'execute');
+    expect(cards.map((approval) => approval.kind)).toEqual(['accept']);
+    expect(cards[0]!.reason).toContain('Auto-edit asks because the Critic still has concerns.');
+    expect(cards[0]!.reason).toContain(
+      "Stopped fix round 1: the run's cost budget ran out, so Spark Outpost kept the last state; checks pass.",
+    );
+    expect(orchestration).toMatchObject({ status: 'succeeded', budget: { exceeded: 'cost' } });
     expect(await roles(runId)).toEqual(['builder', 'critic', 'builder']);
     expect(orchestration.budget.costUsd).toBeGreaterThanOrEqual(0.2);
-    expect(await reply(runId)).toContain(
-      "1 fix round ran for the AI review's findings; the Critic did not review the last fix",
+    expect(await notes()).toContain('fixed the review findings');
+    expect(await reply(runId)).toContain('Stopped fix round 1');
+  }, 120_000);
+
+  it('rolls a fix round cut by its own budget back to the last passing state and ends on the keep card (N2)', async () => {
+    await configureCheck(PASSING_CHECK);
+    await start({ policy: JEV_SAYS_BUGS, fixRound: { toolCalls: 1 } });
+    const { conversationId, runId } = await begin('#bugrounds 9 #slowfix', 'hands-off');
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    expect(orchestration.status).toBe('succeeded');
+    expect(orchestration.budget.exceeded).toBeNull();
+    expect(await roles(runId)).toEqual(['builder', 'critic', 'builder']);
+    const cards = asked.filter((approval) => approval.kind !== 'execute');
+    expect(cards.map((approval) => approval.kind)).toEqual(['accept']);
+    const keep = cards[0]!;
+    expect(keep.reason).toContain(
+      "Stopped fix round 1: fix round 1's own tool-call budget ran out, so Spark Outpost rolled its edits back to the last state that passed the checks.",
     );
+    expect(keep.reason).toContain(`Still open: ${ROUND_FINDINGS[0]}`);
+    expect(keep.options.map((option) => option.optionId)).toContain(CHECKPOINT_OPTION.fixFindings);
+    expect(await notes()).not.toContain('fixed the review findings');
+    expect(await notes()).toContain('step 1');
+  }, 120_000);
+
+  it('does not start a fix round by itself when too little of the run budget is left for one', async () => {
+    await start({ policy: JEV_SAYS_BUGS, fixRound: { toolCalls: 10_000 } });
+    const { conversationId, runId } = await begin('#bugreview', 'hands-off');
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    expect(orchestration.status).toBe('succeeded');
+    expect(await roles(runId)).toEqual(['builder', 'critic']);
+    expect(asked.map((approval) => approval.kind)).toEqual(['accept']);
+    expect(asked[0]!.reason).toContain(
+      "Did not start fix round 1: too little of the run's tool-call budget was left for one",
+    );
+    expect(asked[0]!.reason).toContain(`Still open: ${BUG_FINDINGS[0]}`);
   }, 120_000);
 });

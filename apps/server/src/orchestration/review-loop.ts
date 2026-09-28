@@ -1,9 +1,21 @@
-import type { InvolvementLevel, ReviewVerdict } from '@spark-outpost/contracts';
+import type { BudgetLimit, InvolvementLevel, ReviewVerdict } from '@spark-outpost/contracts';
 import { CRITIC_FIX_ROUNDS } from '../advisor/policy.ts';
 import { fixesFindingsItself } from './checkpoint-policy.ts';
 
 export type ReviewAction = 'fix' | 'offer' | 'clean' | 'unclear' | 'repeated' | 'cap';
-export type ReviewStop = 'clean' | 'unclear' | 'repeated' | 'cap' | 'checks_failing' | 'budget';
+export type ReviewStop =
+  'clean' | 'unclear' | 'repeated' | 'cap' | 'checks_failing' | 'budget' | 'limit';
+
+/** How a fix round was cut short by a tool-call, time or cost limit. */
+export interface FixCut {
+  limit: BudgetLimit;
+  /** The fix round's own budget ran out (not the whole run's). */
+  round: boolean;
+  /** The round never started: too little of the run's budget was left for one. */
+  unstarted: boolean;
+  /** Files were rolled back to the last state that passed the checks. */
+  restored: boolean;
+}
 
 export interface ReviewRound {
   review: number;
@@ -17,6 +29,7 @@ export interface ReviewLoop {
   fixing: boolean;
   fixable: string[];
   stop: ReviewStop | null;
+  cut?: FixCut | null;
 }
 
 export const IDLE_REVIEW: ReviewLoop = {
@@ -25,6 +38,7 @@ export const IDLE_REVIEW: ReviewLoop = {
   fixing: false,
   fixable: [],
   stop: null,
+  cut: null,
 };
 
 const LINE_REF = /:\d+(?::\d+)?\b|\bL\d+\b/g;
@@ -82,7 +96,25 @@ export function afterReview(
 }
 
 export function startFix(loop: ReviewLoop): ReviewLoop {
-  return { ...loop, fixRounds: loop.fixRounds + 1, fixing: true, stop: null };
+  return { ...loop, fixRounds: loop.fixRounds + 1, fixing: true, stop: null, cut: null };
+}
+
+/**
+ * A limit cut the fix round short (or kept it from starting) while the change before it passed
+ * the checks: the loop ends there, the last passing state is kept, and the findings stay open.
+ */
+export function fixCut(loop: ReviewLoop, cut: Omit<FixCut, 'restored'>): ReviewLoop {
+  return {
+    ...loop,
+    fixRounds: cut.unstarted ? loop.fixRounds - 1 : loop.fixRounds,
+    fixing: false,
+    stop: 'limit',
+    cut: { ...cut, restored: false },
+  };
+}
+
+export function fixRestored(loop: ReviewLoop, restored: boolean): ReviewLoop {
+  return loop.cut ? { ...loop, cut: { ...loop.cut, restored } } : loop;
 }
 
 export function checksFailedAfterFix(loop: ReviewLoop): ReviewLoop {
@@ -125,6 +157,28 @@ function findingList(findings: readonly string[]): string {
   return `${shown.join('; ')}${more}`;
 }
 
+const LIMIT_NAMES: Record<BudgetLimit, string> = {
+  time: 'time',
+  tool_calls: 'tool-call',
+  cost: 'cost',
+};
+
+function cutLine(loop: ReviewLoop, checks: string): string {
+  const cut = loop.cut;
+  const limit = cut ? LIMIT_NAMES[cut.limit] : 'budget';
+  const remaining = loop.fixable.length > 0 ? ` Still open: ${findingList(loop.fixable)}.` : '';
+  if (!cut || cut.unstarted) {
+    return `Did not start fix round ${loop.fixRounds + 1}: too little of the run's ${limit} budget was left for one; kept the change that passed the checks.${remaining}`;
+  }
+  const which = cut.round
+    ? `fix round ${loop.fixRounds}'s own ${limit} budget`
+    : `the run's ${limit} budget`;
+  const kept = cut.restored
+    ? 'rolled its edits back to the last state that passed the checks'
+    : `kept the last state; ${checks}`;
+  return `Stopped fix round ${loop.fixRounds}: ${which} ran out, so Spark Outpost ${kept}.${remaining}`;
+}
+
 export function reviewLine(loop: ReviewLoop, checks: string): string | null {
   const rounds = counted(loop.fixRounds, 'round');
   if (loop.fixing) {
@@ -143,6 +197,8 @@ export function reviewLine(loop: ReviewLoop, checks: string): string | null {
       return `The budget ran out before a fix turn for ${counted(loop.fixable.length, 'correctness finding')} from the AI review: ${findingList(loop.fixable)}.`;
     case 'checks_failing':
       return `Stopped after ${counted(loop.fixRounds, 'fix round')}: the checks failed after the fix and the check-fix turns could not fix them.`;
+    case 'limit':
+      return cutLine(loop, checks);
     case null:
       break;
   }

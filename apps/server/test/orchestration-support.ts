@@ -293,6 +293,7 @@ export function startOrchestrator(
     codeScan?: OrchestratorDeps['codeScan'];
     budgetPollMs?: number;
     shipAccess?: OrchestratorDeps['shipAccess'];
+    fixRound?: OrchestratorDeps['fixRound'];
   } = {},
 ): Harness {
   const intake = fetcher
@@ -320,6 +321,7 @@ export function startOrchestrator(
     ...(options.loopGuard !== undefined ? { loopGuard: options.loopGuard } : {}),
     ...(options.codeScan ? { codeScan: options.codeScan } : {}),
     ...(options.shipAccess ? { shipAccess: options.shipAccess } : {}),
+    ...(options.fixRound ? { fixRound: options.fixRound } : {}),
   });
   return {
     worker,

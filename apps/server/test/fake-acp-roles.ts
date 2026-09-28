@@ -69,6 +69,13 @@ export const ROUND_FINDINGS = [
   "`parseCents('$1,000.00')` returns 1 instead of 100000.",
 ];
 
+/** The s04 findings the Auto-edit fix loop chased in the developer's-day rerun (N2). */
+export const HARDENING_FINDINGS = [
+  '`apps/web/src/analytics/spend-csv.ts:13`: Project names can begin with `=`, `+`, `-`, or `@`, and the export writes them as spreadsheet formulas. CSV quoting does not prevent formula execution when the file is opened in a spreadsheet.',
+  '`apps/web/src/analytics/SpendTab.tsx:65`: The blob URL is revoked immediately after `link.click()`. Browsers that start the download asynchronously may lose access to the file; revoke it after the download has started.',
+  '`apps/web/src/analytics/spend-csv.ts:7`: A field containing `\\r` is left unquoted. Some CSV readers treat it as a row break, which can corrupt the exported rows.',
+];
+
 const ASKED_TO_FIX = '## Findings the Builder was asked to fix';
 
 function reviewNumber(text: string): number {
@@ -96,6 +103,7 @@ function reviewFindings(text: string): { findings: string[]; concerns: boolean }
     return { findings: BUG_FINDINGS, concerns: true };
   }
   if (text.includes('#stylereview')) return { findings: STYLE_FINDINGS, concerns: true };
+  if (text.includes('#hardeningreview')) return { findings: HARDENING_FINDINGS, concerns: true };
   if (text.includes('#concerns')) {
     return { findings: ['The divider test is missing'], concerns: true };
   }
@@ -242,6 +250,16 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
     await write(turn, 'button.ts', 'export const button = 1;');
   }
   if (turn.text.includes('#story')) await write(turn, 'schema.sql', 'ALTER TABLE t ADD c int;');
+  if (turn.text.includes('#addmigration')) {
+    await write(
+      turn,
+      '004_project_tags.sql',
+      'CREATE TABLE project_tags (project_id int, tag text);',
+    );
+  }
+  if (turn.text.includes('#dropmigration')) {
+    await write(turn, '005_drop_note.sql', 'ALTER TABLE projects DROP COLUMN note;');
+  }
   if (turn.text.includes('#push')) await push(turn);
   if (turn.text.includes('#spend')) await spend(turn);
   if (turn.text.includes('#slowbuild')) {
@@ -280,9 +298,14 @@ async function fixRequest(turn: RoleTurn): Promise<acp.StopReason> {
 
 async function fixFindings(turn: RoleTurn): Promise<acp.StopReason> {
   await write(turn, 'notes.txt', 'fixed the review findings');
-  if (sessionPrompts(turn).some((prompt) => prompt.includes('#fixcost'))) {
+  const prompts = sessionPrompts(turn);
+  if (prompts.some((prompt) => prompt.includes('#fixcost'))) {
     const cost = { amount: 0.2, currency: 'USD' };
     await turn.update({ sessionUpdate: 'usage_update', used: 1_000, size: 200_000, cost });
+  }
+  if (prompts.some((prompt) => prompt.includes('#slowfix'))) {
+    // A fix round that never finishes: only its budget ends it, halfway through its edits.
+    for (;;) await sleep(50, turn.signal);
   }
   await turn.say(
     `Fixed the review findings after ${priorPrompts(turn.sessionId)} earlier prompts.`,

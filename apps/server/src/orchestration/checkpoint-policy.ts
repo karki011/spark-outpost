@@ -4,20 +4,31 @@ import {
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
 import { asksWhenUnsure } from '../advisor/gate.ts';
-import { complexByRule } from './risk-rules.ts';
+import { destructiveMigrationWording } from './risk-rules.ts';
 
 export const DESTRUCTIVE_CARD_REASON =
   'This change looks destructive: it can delete or rewrite data, files or history. The Builder works in a worktree copy on the top-tier model, and the Critic reviews the change before it lands.';
 export const MIGRATION_CARD_REASON =
-  'This change touches the database schema with a migration, and existing data depends on it. The Critic reviews the change when the Builder is done.';
+  'This migration can rename, drop or rewrite what existing data depends on. The Critic reviews the change when the Builder is done.';
 export const RISKY_PR_NOTE =
   'Risky change: destructive or a schema migration. Review it carefully before merging.';
 
-/** Why a change is risky enough for a card before the Builder, or null. */
+/**
+ * Why a change is risky enough for a card before the Builder, or null. Destructive work asks;
+ * a migration asks only when its wording drops, renames, retypes or rewrites existing data.
+ * Additive migrations (a new table, a nullable column, an index) don't; they still get the
+ * Critic. Once the Builder has written the migration, `riskyMigrationReason` reads its diff.
+ */
 export function riskyChange(destructive: boolean, request: string): string | null {
   if (destructive) return DESTRUCTIVE_CARD_REASON;
-  if (complexByRule(request) === 'migration') return MIGRATION_CARD_REASON;
+  if (destructiveMigrationWording(request)) return MIGRATION_CARD_REASON;
   return null;
+}
+
+/** Why the migration the change adds is destructive, from its diff. */
+export function riskyMigrationReason(statement: string): string {
+  const shown = statement.length > 120 ? `${statement.slice(0, 120)}…` : statement;
+  return `the migration it added can lose or rewrite existing data (\`${shown}\`)`;
 }
 
 /**
@@ -33,6 +44,8 @@ export interface KeepFacts {
   checksFailing: boolean;
   /** The Critic ran and is not satisfied: correctness findings left, or no clear verdict. */
   criticUnsatisfied: boolean;
+  /** The diff adds a destructive migration nobody confirmed before the Builder started. */
+  riskyMigration?: string | null;
 }
 
 const SETTLED: KeepFacts = { checksFailing: false, criticUnsatisfied: false };
@@ -49,7 +62,9 @@ export function asksToKeep(
 ): boolean {
   if (filesChanged === 0) return false;
   if (level === 'balanced') return true;
-  if (level === 'hands-off') return facts.checksFailing || facts.criticUnsatisfied;
+  if (level === 'hands-off') {
+    return facts.checksFailing || facts.criticUnsatisfied || Boolean(facts.riskyMigration);
+  }
   return false;
 }
 
@@ -61,6 +76,8 @@ export function keepReason(level: InvolvementLevel, facts: KeepFacts): string | 
   if (level !== 'hands-off') return null;
   if (facts.checksFailing) return 'Auto-edit asks because the checks still fail.';
   if (facts.criticUnsatisfied) return 'Auto-edit asks because the Critic still has concerns.';
+  if (facts.riskyMigration)
+    return `Auto-edit asks because ${riskyMigrationReason(facts.riskyMigration)}.`;
   return null;
 }
 

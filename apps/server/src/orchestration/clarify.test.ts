@@ -29,10 +29,14 @@ describe('vague requests', () => {
     ).toBe(false);
   });
 
-  it('asks at Ask before edits, and assumes at Auto-edit and Full auto', () => {
+  it('asks at Ask before edits and Auto-edit, and assumes only at Full auto', () => {
     expect(vagueHandling('balanced')).toBe('ask');
-    expect(vagueHandling('hands-off')).toBe('assume');
+    expect(vagueHandling('hands-off')).toBe('ask');
     expect(vagueHandling('full-auto')).toBe('assume');
+  });
+
+  it('reads the rerun\'s "Make it faster." as vague by rule', () => {
+    expect(vagueByRule('Make it faster.', 0)).toBe(true);
   });
 });
 

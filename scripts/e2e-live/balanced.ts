@@ -47,6 +47,17 @@ const CHECKPOINT_CHOICES: Record<string, { optionId: string; label: string; why:
 /** What the developer wanted from the turn, for the "Answer, or change the code?" card. */
 export type UserIntent = 'answer' | 'change';
 
+/**
+ * The first "Fix these findings" offer: a Balanced developer lets one round fix the Critic's
+ * correctness bugs, then keeps. "Fix again", or a card after a fix round was cut short by a
+ * limit, gets Keep, so the bench never loops on fix rounds.
+ */
+export function firstFixOffer(approval: Approval): boolean {
+  const option = approval.options.find((o) => o.optionId === CHECKPOINT_OPTION.fixFindings);
+  if (!option || option.name !== 'Fix these findings') return false;
+  return !/\b(?:Stopped fix round|Did not start fix round)\b/.test(approval.reason ?? '');
+}
+
 function offered(approval: Approval, optionId: string): boolean {
   return approval.options.some((option) => option.optionId === optionId);
 }
@@ -121,7 +132,7 @@ export function balancedChoice(approval: Approval, intent: UserIntent | null = n
       why: 'no suggestion offered',
     };
   }
-  if (approval.kind === 'accept' && offered(approval, CHECKPOINT_OPTION.fixFindings)) {
+  if (approval.kind === 'accept' && firstFixOffer(approval)) {
     const option = approval.options.find((o) => o.optionId === CHECKPOINT_OPTION.fixFindings);
     return {
       optionId: CHECKPOINT_OPTION.fixFindings,

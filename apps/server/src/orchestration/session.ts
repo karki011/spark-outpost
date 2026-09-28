@@ -9,6 +9,11 @@ import {
   type PlanEntry,
 } from '@spark-outpost/contracts';
 import type { IntakeResult } from '../advisor/intake-recorder.ts';
+import {
+  FIX_ROUND_ACTIVE_MS,
+  FIX_ROUND_MIN_TOOL_CALLS,
+  FIX_ROUND_TOOL_SHARE,
+} from '../advisor/policy.ts';
 import type { ScanReport } from '../codescan/scan.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
@@ -32,6 +37,8 @@ import type { FlowState } from './transitions.ts';
 
 export interface OrchestratorDeps extends ExecuteRunDeps {
   budget?: Partial<BudgetLimits>;
+  /** Overrides for one Critic fix round's own budget (tests). */
+  fixRound?: Partial<FixRoundLimits>;
   budgetPollMs?: number;
   checkpointTimeoutMs?: number;
   jevTimeoutMs?: number;
@@ -42,6 +49,26 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
 }
 
 export type ShipAccess = Omit<GitHubDeps, 'db' | 'workspaceId'>;
+
+export interface FixRoundLimits {
+  toolCalls: number;
+  activeMs: number;
+}
+
+/** The Critic fix round in progress: where its own budget started, and whether it ran out. */
+export interface FixRound {
+  round: number;
+  toolCallsAt: number;
+  activeMsAt: number;
+  hit: BudgetLimit | null;
+}
+
+/** The last state of the change that passed the checks, to fall back to when a fix round is cut. */
+export interface PassingState {
+  tree: string;
+  checkBodies: CheckBody[];
+  checkLines: string[];
+}
 
 export interface MemberResult {
   role: AgentRole;
@@ -103,6 +130,10 @@ export interface Session {
   /** Why the change is risky (destructive or a migration), or null. */
   risky?: string | null;
   shipLine?: string | null;
+  fixRound?: FixRound | null;
+  passing?: PassingState | null;
+  /** The latest review's hardening suggestions, reported rather than fixed. */
+  suggestions?: string[];
 }
 
 export const COMMAND_READER_TOOL_CALL_LIMIT = 120;
@@ -119,6 +150,18 @@ export function baseLimits(deps: OrchestratorDeps, provider: string): BudgetLimi
     activeLimitMs: deps.budget?.activeLimitMs ?? ORCHESTRATION_ACTIVE_LIMIT_MS,
     toolCallLimit: deps.budget?.toolCallLimit ?? toolCallLimitFor(provider),
     costCapUsd: deps.budget?.costCapUsd ?? null,
+  };
+}
+
+export function fixRoundLimits(s: Pick<Session, 'deps' | 'baseLimits'>): FixRoundLimits {
+  return {
+    toolCalls:
+      s.deps.fixRound?.toolCalls ??
+      Math.max(
+        FIX_ROUND_MIN_TOOL_CALLS,
+        Math.ceil(s.baseLimits.toolCallLimit * FIX_ROUND_TOOL_SHARE),
+      ),
+    activeMs: s.deps.fixRound?.activeMs ?? FIX_ROUND_ACTIVE_MS,
   };
 }
 
