@@ -18,6 +18,7 @@ import {
   commitOnBranch,
   createBranch,
   filesBetween,
+  harnessCommitsToPush,
   pushBranch,
   remoteDefaultBranch,
   remoteHasBranch,
@@ -123,6 +124,12 @@ async function pushStep(deps: ShipDeps, plan: ShipPlan, progress: Progress) {
     !safeToPush(plan.branch, deps.branchPrefix, [plan.baseBranch, defaultBranch, 'main', 'master'])
   ) {
     throw new ShipBlockedError(`Ship only pushes its own ${deps.branchPrefix}/ branches.`);
+  }
+  const internal = await harnessCommitsToPush(plan.root!, remote.name, plan.branch);
+  if (internal.length > 0) {
+    throw new ShipBlockedError(
+      `${plan.branch} carries Spark Outpost's internal commits (${internal.slice(0, 3).join('; ')}), so it was not pushed.`,
+    );
   }
   await pushBranch(plan.root!, remote.name, plan.branch);
   progress.pushed = true;

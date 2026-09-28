@@ -237,6 +237,11 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
       Array.from({ length: 450 }, (_, index) => `line ${index}`).join('\n'),
     );
   }
+  if (turn.text.includes('#feature') || turn.text.includes('#story')) {
+    await write(turn, 'export.ts', 'export const csv = 1;');
+    await write(turn, 'button.ts', 'export const button = 1;');
+  }
+  if (turn.text.includes('#story')) await write(turn, 'schema.sql', 'ALTER TABLE t ADD c int;');
   if (turn.text.includes('#push')) await push(turn);
   if (turn.text.includes('#spend')) await spend(turn);
   if (turn.text.includes('#slowbuild')) {

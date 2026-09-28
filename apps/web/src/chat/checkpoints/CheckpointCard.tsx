@@ -241,6 +241,9 @@ function PlanBody({ approval, decide }: { approval: CheckpointApproval; decide: 
       <Action id={CHECKPOINT_OPTION.approvePlan} approval={approval} decide={decide} kind="primary">
         Approve plan
       </Action>
+      <Action id={CHECKPOINT_OPTION.makeChange} approval={approval} decide={decide} kind="primary">
+        Build it
+      </Action>
       {offers(approval, CHECKPOINT_OPTION.editPlan) && (
         <button type="button" className="btn line sm" onClick={() => setRevising(true)}>
           Revise

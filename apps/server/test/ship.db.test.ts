@@ -13,6 +13,7 @@ import {
 } from '@spark-outpost/contracts';
 import { getRun } from '../src/persistence/runs.ts';
 import { snapshotRun } from '../src/projects/run-changes.ts';
+import { HARNESS_COMMIT_EMAIL } from '../src/projects/snapshot.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
@@ -235,6 +236,32 @@ describe('ship', () => {
     const failed = await ship(taskId, { mode: 'push' }, 409);
     expect(failed.error).toMatch(/^Pushing .* failed/);
     expect(git(repo.bare, 'rev-parse', `refs/heads/${branch}`)).toBe(theirs);
+  });
+
+  it("never pushes a branch that carries Spark Outpost's internal commits", async () => {
+    const repo = await repoWithRemote(base, 'internal');
+    const { taskId } = await editedTask(repo.root);
+    const branch = (await preview(taskId)).branch;
+    git(repo.root, 'switch', '-q', '-c', branch);
+    const internal = git(
+      repo.root,
+      '-c',
+      'user.name=Spark Outpost',
+      '-c',
+      `user.email=${HARNESS_COMMIT_EMAIL}`,
+      'commit-tree',
+      'HEAD^{tree}',
+      '-p',
+      'HEAD',
+      '-m',
+      'Spark Outpost: parallel base 01a0e739 solo',
+    );
+    git(repo.root, 'update-ref', `refs/heads/${branch}`, internal);
+
+    const failed = await ship(taskId, { mode: 'push' }, 409);
+    expect(failed.error).toContain("carries Spark Outpost's internal commits");
+    expect(failed.error).toContain('parallel base 01a0e739 solo');
+    expect(git(repo.bare, 'for-each-ref', '--format=%(refname:short)', 'refs/heads')).toBe('main');
   });
 
   it('opens the PR with a saved token when gh is not logged in, and forgets it on remove', async () => {

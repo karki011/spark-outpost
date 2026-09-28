@@ -91,7 +91,11 @@ describe('Critic → fix rounds', () => {
     const review = results.at(-1)!.state.review;
     expect(reviewLine(review, 'checks pass')).toContain('Fixed after 2 review rounds');
     const done = nextStep(results.at(-1)!.state, { type: 'wrapped', filesChanged: 1 });
-    expect(done.action).toMatchObject({ type: 'finish', status: 'succeeded' });
+    expect(done.action).toEqual({ type: 'keep' });
+    expect(nextStep(done.state, { type: 'kept' }).action).toMatchObject({
+      type: 'finish',
+      status: 'succeeded',
+    });
     expect(fixOptionLabel(done.state.review)).toBeNull();
   });
 
@@ -107,7 +111,7 @@ describe('Critic → fix rounds', () => {
     expect(fixOptionLabel(review)).toBe('Fix again');
   });
 
-  it('stops after three fix rounds and finishes with the concerns at Auto-edit', () => {
+  it('stops after three fix rounds and asks to keep with the concerns at Auto-edit', () => {
     const results = run('hands-off', [
       reviewedAs(A),
       built(),
@@ -122,7 +126,12 @@ describe('Critic → fix rounds', () => {
     expect(fixes).toHaveLength(3);
     const state = results.at(-1)!.state;
     expect(state.review).toMatchObject({ stop: 'cap', fixRounds: 3, fixable: D });
-    expect(results.at(-1)!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
+    expect(results.at(-1)!.action).toEqual({
+      type: 'ask',
+      kind: 'accept',
+      reason: '1 file changed. Auto-edit asks because the Critic still has concerns.',
+    });
+    expect(fixOptionLabel(state.review)).toBe('Fix again');
     expect(reviewLine(state.review, 'checks pass')).toBe(
       `Still concerns after 3 rounds: ${D[0]}; checks pass.`,
     );
@@ -267,9 +276,7 @@ describe('Full auto runs on to ship', () => {
       type: 'finish',
       status: 'succeeded',
     });
-    expect(nextStep(initialFlow('edits', 'hands-off'), wrapped).action).toMatchObject({
-      type: 'finish',
-    });
+    expect(nextStep(initialFlow('edits', 'hands-off'), wrapped).action).toEqual({ type: 'keep' });
     expect(nextStep(initialFlow('edits', 'balanced'), wrapped).action).toMatchObject({
       type: 'ask',
       kind: 'accept',

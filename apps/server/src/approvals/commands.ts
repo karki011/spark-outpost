@@ -138,3 +138,46 @@ export function allowlistCovers(allowlist: readonly string[], command: string): 
     return normalized.startsWith(`${allowed} `) && !hasControlOperators(normalized);
   });
 }
+
+const REMOTE_CHANGES = new Set([
+  'add',
+  'set-url',
+  'remove',
+  'rm',
+  'rename',
+  'set-head',
+  'set-branches',
+]);
+const HOSTING_CLIS = new Set(['gh', 'hub', 'glab', 'tea']);
+
+function gitSubcommand(args: readonly string[]): { name: string; rest: string[] } | null {
+  let index = 0;
+  while (index < args.length) {
+    const token = args[index]!;
+    if (token === '-C' || token === '-c' || token === '--git-dir' || token === '--work-tree') {
+      index += 2;
+    } else if (token.startsWith('-')) index += 1;
+    else return { name: token, rest: args.slice(index + 1) };
+  }
+  return null;
+}
+
+/**
+ * A command that publishes code or changes where it would be published: `git push`,
+ * `git send-email`, `git remote add/set-url/…`, or a code-hosting CLI such as `gh`.
+ * Builders never run these; the harness commits, pushes and opens the PR at the end.
+ */
+export function publishesCode(command: string): boolean {
+  return splitSimpleCommands(command).some((tokens) => {
+    const program = programTokens(tokens);
+    const name = path.basename(program[0] ?? '');
+    if (HOSTING_CLIS.has(name)) return true;
+    if (name !== 'git') return false;
+    const sub = gitSubcommand(program.slice(1));
+    if (!sub) return false;
+    if (sub.name === 'push' || sub.name === 'send-email' || sub.name === 'request-pull') {
+      return true;
+    }
+    return sub.name === 'remote' && sub.rest.some((token) => REMOTE_CHANGES.has(token));
+  });
+}

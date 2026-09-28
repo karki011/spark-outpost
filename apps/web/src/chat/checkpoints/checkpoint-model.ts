@@ -41,6 +41,7 @@ export function checkpointTitle(payload: CheckpointPayload): string {
   if (payload.kind === 'stuck')
     return payload.agent ? `${payload.agent} was repeating itself` : TITLES.stuck;
   if (payload.agent) return `${payload.agent} needs your input`;
+  if (payload.kind === 'plan' && payload.question) return payload.question;
   return TITLES[payload.kind];
 }
 
@@ -64,6 +65,9 @@ export function waitingLabel(payload: CheckpointPayload): string {
     return payload.agent ? `Continue ${payload.agent}, or stop` : WAITING_LABELS.stuck;
   }
   if (payload.agent) return `Answer ${payload.agent}`;
+  if (payload.kind === 'plan' && payload.question && payload.question !== TITLES.plan) {
+    return 'Build it, or stop';
+  }
   return WAITING_LABELS[payload.kind];
 }
 
@@ -156,7 +160,9 @@ export function checkpointResult(approval: Approval): string {
     return delay === null ? 'Continued automatically.' : `Continued automatically after ${delay}s.`;
   }
   if (approval.decidedBy === 'level' && approval.decisionOptionId === CHECKPOINT_OPTION.keep) {
-    return 'Kept by Full auto.';
+    return approval.payload.checkpoint?.keptBy === 'hands-off'
+      ? 'Kept by Auto-edit.'
+      : 'Kept by Full auto.';
   }
   if (approval.status === 'cancelled' && approval.decidedBy === 'policy') {
     return 'It moved on before you answered.';

@@ -11,6 +11,7 @@ import {
   CheckpointTimeout,
   clarifiedRequest,
   retryCard,
+  riskyCard,
   stuckCard,
   verifyCard,
   type CheckpointCard,
@@ -37,6 +38,7 @@ function builderPick(s: Session): AgentPick | null {
 
 async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
   if (action.kind === 'clarify') return answerOrBuildCard(action.reason);
+  if (action.kind === 'plan') return riskyCard(action.reason);
   if (action.kind === 'retry' || action.kind === 'verify') {
     const previous = s.routes.get('builder');
     const to = previous ? escalateBuilder(s.route, previous).pick : null;

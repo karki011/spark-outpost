@@ -7,6 +7,9 @@ import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { getTaskShip } from '../src/persistence/task-ships.ts';
 import { createProject } from '../src/projects/projects.ts';
+import { BUILDER_PUBLISH_REASON } from '../src/approvals/decide.ts';
+import { RISKY_PR_NOTE } from '../src/orchestration/checkpoint-policy.ts';
+import { HARNESS_COMMIT_EMAIL } from '../src/projects/snapshot.ts';
 import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import {
@@ -124,7 +127,7 @@ async function runFullAuto(text = NORMAL.text, answer: Answerer = answerEverythi
       JSON.stringify(runs.rows, null, 1),
     );
   }
-  return { ...result, reply, taskId, keep, conversationId };
+  return { ...result, reply, taskId, keep, conversationId, runId };
 }
 
 async function configureCheck(source: string): Promise<void> {
@@ -187,6 +190,41 @@ describe('Full auto runs to a draft PR', () => {
       `SELECT method FROM run_protocol_log WHERE kind = 'ship'`,
     );
     expect(audit.rows.map((row) => row.method)).toEqual(['ship/draft_pr']);
+  }, 120_000);
+
+  it("refuses the Builder's own push, so only Ship's branch reaches the remote and no internal commit does", async () => {
+    await newRepo();
+    await writeFile(ghState(), 'octo-cli');
+    start();
+    const { orchestration, asked, runId } = await runFullAuto(`${NORMAL.text} #push`);
+    expect(orchestration.status).toBe('succeeded');
+    expect(asked).toEqual([]);
+    const pushes = await t.db.query<{ status: string; decided_by: string; reason: string }>(
+      `SELECT a.status, a.decided_by, a.reason FROM approvals a JOIN runs r ON r.id = a.run_id
+       WHERE r.parent_run_id = $1 AND a.kind = 'execute'`,
+      [runId],
+    );
+    expect(pushes.rows).toEqual([
+      { status: 'denied', decided_by: 'policy', reason: BUILDER_PUBLISH_REASON },
+    ]);
+    expect(stub.github.pulls).toHaveLength(1);
+    const head = stub.github.pulls[0]!.head;
+    expect(remoteBranches().sort()).toEqual(['main', head].sort());
+    const authors = git(repo.bare, 'log', '--format=%ae %ce', head).split('\n');
+    expect(authors.some((line) => line.includes(HARNESS_COMMIT_EMAIL))).toBe(false);
+  }, 120_000);
+
+  it('builds risky work without a card at Full auto and flags it in the PR body', async () => {
+    await newRepo();
+    await writeFile(ghState(), 'octo-cli');
+    start();
+    const { orchestration, asked } = await runFullAuto(
+      'Rename the runs table column and migrate old rows. #build',
+    );
+    expect(orchestration.status).toBe('succeeded');
+    expect(asked).toEqual([]);
+    expect(stub.github.pulls).toHaveLength(1);
+    expect(stub.github.pulls[0]!.body).toContain(`**${RISKY_PR_NOTE}**`);
   }, 120_000);
 
   it('pushes the branch without a PR when GitHub is not connected, and says so', async () => {

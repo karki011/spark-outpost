@@ -213,9 +213,10 @@ function sessionMeta(
   policy: PathPolicy | null,
   changing: boolean,
   repo: ClaudeRepoOptions | null,
+  builder = false,
 ) {
   if (!policy) return definition.conversationSessionMeta ?? null;
-  if (changing) return definition.doSessionMeta?.(extraRoots(policy), repo) ?? null;
+  if (changing) return definition.doSessionMeta?.(extraRoots(policy), repo, builder) ?? null;
   return definition.projectSessionMeta?.(extraRoots(policy), repo) ?? null;
 }
 
@@ -347,7 +348,13 @@ async function converse(
       agentName: definition.name,
       cwd: workspace.cwd,
       extraRoots: extraRoots(policy),
-      meta: sessionMeta(definition, policy, doing !== null, workspace.repo?.claude ?? null),
+      meta: sessionMeta(
+        definition,
+        policy,
+        doing !== null,
+        workspace.repo?.claude ?? null,
+        turn.builder === true,
+      ),
       init,
       mcpServers: workspace.repo?.mcpServers ?? [],
     });

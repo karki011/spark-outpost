@@ -151,7 +151,7 @@ test("Review jumps to a second turn's keep card, which renders once", async ({ p
   await expect(keep).toBeInViewport();
 });
 
-test('Full auto asks for nothing, keeps by itself, and a normal push follows the level', async ({
+test("Full auto asks for nothing, keeps by itself, and refuses the Builder's own push", async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -162,6 +162,13 @@ test('Full auto asks for nothing, keeps by itself, and a normal push follows the
   await expect(turn.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
   await expect(page.getByRole('group', { name: /Change a file|Run a command/ })).toHaveCount(0);
   await expect(page.getByRole('group', { name: /Keep these/ })).toContainText('Kept by Full auto.');
+  await agentHead(page, 'Bolt').click();
+  await agentBlock(page, 'Bolt')
+    .getByRole('button', { name: /^\d+ steps$/ })
+    .click();
+  await expect(agentBlock(page, 'Bolt')).toContainText(
+    "Builders don't push, open pull requests or change remotes",
+  );
   for (const name of ['Bolt', 'Hawk']) {
     await expect(agentHead(page, name)).toBeVisible();
   }

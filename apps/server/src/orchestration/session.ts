@@ -100,6 +100,8 @@ export interface Session {
   jevDiffs: boolean;
   scanReport?: ScanReport | null;
   unverified?: boolean;
+  /** Why the change is risky (destructive or a migration), or null. */
+  risky?: string | null;
   shipLine?: string | null;
 }
 

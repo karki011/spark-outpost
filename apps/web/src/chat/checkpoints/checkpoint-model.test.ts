@@ -91,6 +91,34 @@ describe('checkpoint wording', () => {
       'Expired before you answered.',
     );
   });
+
+  it('says which choice kept the changes by itself', () => {
+    const kept = {
+      status: 'allowed' as const,
+      decidedBy: 'level' as const,
+      decisionOptionId: 'keep',
+    };
+    expect(checkpointResult(checkpoint({ kind: 'accept', keptBy: 'full-auto' }, kept))).toBe(
+      'Kept by Full auto.',
+    );
+    expect(checkpointResult(checkpoint({ kind: 'accept', keptBy: 'hands-off' }, kept))).toBe(
+      'Kept by Auto-edit.',
+    );
+  });
+
+  it('titles the risky-change card and reports its approval', () => {
+    const risky = checkpoint({ kind: 'plan', question: 'Start this risky change?' });
+    expect(checkpointTitle(risky.payload.checkpoint!)).toBe('Start this risky change?');
+    expect(waitingLabel(risky.payload.checkpoint!)).toBe('Build it, or stop');
+    const approved = checkpoint(
+      { kind: 'plan' },
+      { status: 'allowed', decisionOptionId: CHECKPOINT_OPTION.makeChange },
+    );
+    expect(checkpointResult(approved)).toBe('Making the change.');
+    const plan = checkpoint({ kind: 'plan', question: 'Approve the plan?' });
+    expect(checkpointTitle(plan.payload.checkpoint!)).toBe('Approve the plan?');
+    expect(waitingLabel(plan.payload.checkpoint!)).toBe('Approve the plan');
+  });
 });
 
 describe('checkpoints in the turn', () => {

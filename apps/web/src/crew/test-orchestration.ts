@@ -67,6 +67,7 @@ export function checkpoint(
         conflict: null,
         agent: null,
         autoOption: null,
+        keptBy: null,
         ...payload,
       },
     },

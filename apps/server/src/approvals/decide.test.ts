@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
 import {
+  BUILDER_PUBLISH_REASON,
   INSTALL_REASON,
   OUTSIDE_DELETE_REASON,
   OUTSIDE_WRITE_REASON,
@@ -151,6 +152,41 @@ describe('decide() refuses force pushes at every level', () => {
       by: 'allowlist',
     });
     expect(decide('hands-off', push, [ruleFor(push)!], []).verdict).toBe('allow');
+  });
+});
+
+describe('decide() refuses publishing from a Builder at every level', () => {
+  it.each([
+    'git push -u origin spark/01a0e739/bolt',
+    'git push',
+    'cd app && git push origin HEAD',
+    'git -C sub push origin feature',
+    'gh pr create --draft --title x',
+    'gh api repos/acme/widgets/pulls',
+    '/usr/local/bin/gh auth status',
+    'git remote add fork git@github.com:me/widgets.git',
+    'git remote set-url origin https://example.com/x.git',
+    'hub pull-request',
+    'glab mr create',
+    'git send-email HEAD~1',
+  ])('%s', (command) => {
+    for (const level of LEVELS) {
+      const decision = decide(level, run(command), [ruleFor(run(command))!], [command, 'git'], {
+        builder: true,
+      });
+      expect(decision).toEqual({ verdict: 'reject', reason: BUILDER_PUBLISH_REASON });
+      expect(decide(level, run(command), [], [], { builder: true })).toEqual({
+        verdict: 'reject',
+        reason: BUILDER_PUBLISH_REASON,
+      });
+    }
+  });
+
+  it('leaves read-only git and other commands alone', () => {
+    for (const command of ['git status', 'git remote -v', 'git log --oneline', 'git diff HEAD']) {
+      expect(decide('full-auto', run(command), [], [], { builder: true }).verdict).toBe('allow');
+    }
+    expect(decide('full-auto', run('pnpm test'), [], [], { builder: true }).verdict).toBe('allow');
   });
 });
 

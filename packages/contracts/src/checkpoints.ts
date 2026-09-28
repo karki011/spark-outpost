@@ -103,6 +103,8 @@ export const checkpointPayloadSchema = z.object({
   conflict: mergeConflictSchema.nullable().default(null),
   agent: z.string().nullable().default(null),
   autoOption: z.string().nullable().default(null),
+  /** Set on a keep card the harness decided by itself: which permission choice kept it. */
+  keptBy: z.enum(['hands-off', 'full-auto']).nullable().default(null),
 });
 export type CheckpointPayload = z.infer<typeof checkpointPayloadSchema>;
 

@@ -59,13 +59,50 @@ describe('lean flow', () => {
     expect(wrapped!.action).toMatchObject({ type: 'ask', kind: 'accept' });
   });
 
-  it('finishes without a keep card at Hands-off', () => {
-    const [, , wrapped] = run(flow('hands-off'), [
+  it('keeps by itself without a keep card at Auto-edit when the checks pass', () => {
+    const [, , wrapped, kept] = run(flow('hands-off'), [
       { type: 'start', start: 'build' },
       built(),
       { type: 'wrapped', filesChanged: 2 },
+      { type: 'kept' },
     ]);
-    expect(wrapped!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
+    expect(wrapped!.action).toEqual({ type: 'keep' });
+    expect(kept!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
+  });
+
+  it('asks to keep at Auto-edit when the checks still fail', () => {
+    const [, , wrapped] = run(flow('hands-off'), [
+      { type: 'start', start: 'build' },
+      built(),
+      { type: 'wrapped', filesChanged: 2, checksFailing: true },
+    ]);
+    expect(wrapped!.action).toEqual({
+      type: 'ask',
+      kind: 'accept',
+      reason: '2 files changed. Auto-edit asks because the checks still fail.',
+    });
+  });
+
+  it('keeps by itself at Auto-edit after a clean Critic, and asks after an unclear one', () => {
+    const reviewed = (verdict: 'looks_good' | 'unclear') =>
+      run(flow('hands-off', true), [
+        { type: 'start', start: 'build' },
+        built(),
+        { type: 'agent_done', role: 'critic', outcome: 'succeeded', verdict },
+        { type: 'wrapped', filesChanged: 1 },
+      ]).at(-1)!.action;
+    expect(reviewed('looks_good')).toEqual({ type: 'keep' });
+    expect(reviewed('unclear')).toMatchObject({ type: 'ask', kind: 'accept' });
+  });
+
+  it('still asks to keep at Ask before edits when everything passed', () => {
+    const [, , , wrapped] = run(flow('balanced', true), [
+      { type: 'start', start: 'build' },
+      built(),
+      { type: 'agent_done', role: 'critic', outcome: 'succeeded', verdict: 'looks_good' },
+      { type: 'wrapped', filesChanged: 1 },
+    ]);
+    expect(wrapped!.action).toEqual({ type: 'ask', kind: 'accept', reason: '1 file changed.' });
   });
 
   it('runs one Critic only for destructive work, a review request or a large diff', () => {
@@ -93,6 +130,46 @@ describe('lean flow', () => {
   });
 });
 
+describe('risky work asks before the Builder starts', () => {
+  const RISKY = 'This change looks destructive.';
+  const risky = (level: InvolvementLevel) => initialFlow('destructive', level, false, false, RISKY);
+
+  it.each(['balanced', 'hands-off'] as const)('shows the card first at %s', (level) => {
+    const [start, approved] = run(risky(level), [
+      { type: 'start', start: 'build' },
+      { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.makeChange, note: null },
+    ]);
+    expect(start!.action).toEqual({ type: 'ask', kind: 'plan', reason: RISKY });
+    expect(approved!.action).toMatchObject({ type: 'spawn', role: 'builder', reason: 'first' });
+    expect(approved!.state.confirmFirst).toBeNull();
+  });
+
+  it('stops without building when the card is answered Stop', () => {
+    const [, stopped] = run(risky('balanced'), [
+      { type: 'start', start: 'build' },
+      { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.stop, note: null },
+    ]);
+    expect(stopped!.action).toMatchObject({ type: 'finish', status: 'cancelled' });
+  });
+
+  it('asks after the answer-or-build card too, but never for an answer', () => {
+    const [, built] = run(risky('balanced'), [
+      { type: 'start', start: 'choose' },
+      { type: 'clarified', answer: false },
+    ]);
+    expect(built!.action).toMatchObject({ type: 'ask', kind: 'plan' });
+    const [answer] = run(risky('balanced'), [{ type: 'start', start: 'answer' }]);
+    expect(answer!.action).toMatchObject({ type: 'spawn', role: 'scout' });
+  });
+
+  it('builds straight away without a reason (Full auto, or ordinary work)', () => {
+    const [start] = run(initialFlow('destructive', 'full-auto'), [
+      { type: 'start', start: 'build' },
+    ]);
+    expect(start!.action).toMatchObject({ type: 'spawn', role: 'builder' });
+  });
+});
+
 describe('plan completion', () => {
   it('continues the same Builder while its own plan has open items, at most twice', () => {
     const open = ['Add a test', 'Update the docs'];
@@ -111,7 +188,8 @@ describe('plan completion', () => {
     });
     expect(results[2]!.action).toMatchObject({ reason: 'continue' });
     expect(results[3]!.action).toEqual({ type: 'wrap_up' });
-    expect(results[4]!.action).toMatchObject({
+    expect(results[4]!.action).toEqual({ type: 'keep' });
+    expect(nextStep(results[4]!.state, { type: 'kept' }).action).toMatchObject({
       type: 'finish',
       status: 'succeeded',
       incomplete: incompleteLine(open),

@@ -19,6 +19,7 @@ import { projectChecks } from '../checks/project-checks.ts';
 import { checkBudget } from './budget-check.ts';
 import { correctnessFindings, sessionReviewLine } from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
+import { confirmsRiskyFirst, KEPT_BY_AUTO_EDIT, riskyChange } from './checkpoint-policy.ts';
 import { ask, assume, intakeResponse } from './checkpoint-asks.ts';
 import { assumptionLine, interpretations } from './clarify.ts';
 import { namedFiles } from './context.ts';
@@ -38,14 +39,14 @@ import {
   projectBuildStyle,
   recordShortcuts,
 } from './build-style.ts';
-import { changesSoFar, checkCommands } from './member-prompts.ts';
+import { agreedPlanText, changesSoFar, checkCommands } from './member-prompts.ts';
 import { writePlanOnly } from './plan-only.ts';
 import { observePlanAgreement } from './plan-agreement.ts';
 import { refreshPlan } from './plan-progress.ts';
-import { isLargeDiff } from './risk-rules.ts';
+import { wantsCritic } from './critic-rule.ts';
 import { routeBuilder, type RouteContext } from './routing.ts';
 import { buildInCopy, cleanupCopies, needsCopyFor, repoBusy } from './solo-copy.ts';
-import { shipFullAuto } from './full-auto-ship.ts';
+import { autoKeep, checksFailing, shipFullAuto } from './full-auto-ship.ts';
 import {
   baseLimits,
   builderKey,
@@ -151,13 +152,16 @@ async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEve
   }
   const open = result.outcome === 'succeeded' ? await refreshPlan(s) : undefined;
   const changes = result.outcome === 'succeeded' ? await changesSoFar(s) : null;
+  const planned = changes ? (await agreedPlanText(s)) !== null : false;
   return {
     type: 'agent_done',
     role: 'builder',
     outcome: result.outcome === 'lease_lost' ? 'failed' : result.outcome,
     error: result.error,
     ...(open ? { open } : {}),
-    ...(changes ? { large: isLargeDiff(changes.files), green: isGreen(s, changes.files) } : {}),
+    ...(changes
+      ? { large: wantsCritic(changes.files, planned), green: isGreen(s, changes.files) }
+      : {}),
     ...(s.checkBodies.at(-1)?.status === 'failed' ? { checksFailing: true } : {}),
   };
 }
@@ -203,8 +207,15 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true).catch(
         () => null,
       );
-      return { type: 'wrapped', filesChanged: changes?.files.length ?? 0 };
+      return {
+        type: 'wrapped',
+        filesChanged: changes?.files.length ?? 0,
+        ...(checksFailing(s) ? { checksFailing: true } : {}),
+      };
     }
+    case 'keep':
+      await autoKeep(s, 'hands-off', [KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
+      return { type: 'kept' };
     case 'ship':
       return shipFullAuto(s);
     case 'revert':
@@ -308,6 +319,8 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       costCapUsd: limits.costCapUsd,
     });
     const busy = git && !answers ? await repoBusy(deps.db, lease.runId, root) : false;
+    const risky = doing ? riskyChange(decisions.destructive, input.userRequest) : null;
+    const confirmFirst = risky && confirmsRiskyFirst(input.level) ? risky : null;
     const jev =
       deps.intake && intake.context.jevModel
         ? {
@@ -325,7 +338,14 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       route: routeContext(input, intake.context),
       facts: { trivial: decisions.trivial, destructive: decisions.destructive },
       intake,
-      flow: initialFlow(decisions.risk, input.level, decisions.review, jev !== null),
+      flow: initialFlow(
+        decisions.risk,
+        input.level,
+        decisions.review || risky !== null,
+        jev !== null,
+        confirmFirst,
+      ),
+      risky,
       routes: new Map(),
       plan: [],
       taskId: null,

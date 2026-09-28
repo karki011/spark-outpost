@@ -110,6 +110,26 @@ test('the loop guard stops a Builder that repeats itself, and Continue resumes i
   expect(repo.notes()).toBe('start\ntried another way\n');
 });
 
+test('risky work shows a card before the Builder starts, and Build it goes on', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await crewChat(page, repo, 'Ask before edits');
+  await send(page, 'Rename the runs table column and migrate old rows #build');
+  const risky = card(page, /Start this risky change\?/);
+  await expect(risky).toBeVisible({ timeout: 30_000 });
+  await expect(risky).toContainText('looks destructive');
+  expect(repo.notes()).toBe('start\n');
+  await risky.getByRole('button', { name: 'Build it' }).click();
+  await expect(risky).toContainText('Making the change.');
+  await allowEdit(page);
+  const keep = card(page, /Keep these changes\?/);
+  await expect(keep).toBeVisible({ timeout: 30_000 });
+  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
+  expect(repo.notes()).toContain('step 1');
+});
+
 test('Stop mid-Builder cancels the Builder and the crew', async ({ page }) => {
   test.setTimeout(60_000);
   await crewChat(page, repo, 'Auto-edit');
@@ -147,7 +167,7 @@ test('Fix from the keep card runs another Builder with your note', async ({ page
   expect(repo.notes()).toBe('start\nstep 1\nfixed as asked\n');
 });
 
-test('Auto-edit: Critic concerns get a fix round and a second review, with no keep card', async ({
+test('Auto-edit: Critic concerns get a fix round and a second review, then it keeps by itself', async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -157,7 +177,11 @@ test('Auto-edit: Critic concerns get a fix round and a second review, with no ke
   await expect(page.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
   await expect(page.locator('.crew-turn')).toContainText('has concerns');
   await expect(agentBlock(page, 'Hawk').last()).toContainText('Verdict: looks good');
-  await expect(card(page, /Keep these changes\?/)).toHaveCount(0);
+  const kept = card(page, /Keep these changes\?/);
+  await expect(kept).toHaveCount(1);
+  await expect(kept).toContainText('Kept by Auto-edit.');
+  await expect(kept.getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Revert to before this run' })).toBeVisible();
   expect(repo.notes()).toBe('start\nstep 1\nfixed the review findings\n');
 });
 

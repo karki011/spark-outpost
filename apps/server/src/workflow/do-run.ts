@@ -11,6 +11,7 @@ export interface DoRunOptions {
   db: Db;
   runId: string;
   level: InvolvementLevel;
+  builder?: boolean | undefined;
   projectRoots: readonly string[];
   append: (event: RunEvent, options?: AppendOptions) => Promise<number>;
   waiters?: ApprovalWaiters | undefined;
@@ -42,6 +43,7 @@ export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGat
     db: options.db,
     runId: options.runId,
     level: options.level,
+    builder: options.builder === true,
     append: options.append,
     waiters: options.waiters ?? new ApprovalWaiters(),
     ...(options.pollMs === undefined ? {} : { pollMs: options.pollMs }),

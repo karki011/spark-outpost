@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  BUILDER_PUBLISH_DENY_RULES,
   CODEX_DO_MODE,
   supportsDo,
   HIDE_CLAUDE_AUTH,
@@ -95,6 +96,21 @@ describe('Claude session options', () => {
     });
     expect(options.allowDangerouslySkipPermissions).toBe(false);
     expect(supportsDo(agentDefinitions.claude)).toBe(true);
+  });
+
+  it('denies pushing, gh and remote changes to Builders, and only to Builders', () => {
+    const builder = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
+    const deny = builder.settings.permissions.deny as string[];
+    for (const rule of ['Bash(git push:*)', 'Bash(gh:*)', 'Bash(git remote add:*)']) {
+      expect(BUILDER_PUBLISH_DENY_RULES).toContain(rule);
+      expect(deny).toContain(rule);
+      expect(builder.disallowedTools).toContain(rule);
+    }
+    expect(deny).toEqual(expect.arrayContaining(secretReadRules([])));
+    const plain = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
+    expect(plain.settings.permissions.deny).not.toContain('Bash(git push:*)');
+    const zai = optionsOf(agentDefinitions.zai.doSessionMeta?.([], null, true));
+    expect(zai.settings.permissions.deny).toContain('Bash(gh:*)');
   });
 });
 
