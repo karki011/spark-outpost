@@ -475,7 +475,7 @@ export const SESSIONS: readonly DaySession[] = [
       {
         text: "Add CSV export for a project's expenses: `expensesCsv(db, projectId): string` in `src/export.ts`, header `id,created_at,amount,note`, rows oldest first (by created_at, then id), the note quoted RFC 4180 style when it contains a comma, quote or newline, `\\n` line endings with a trailing newline. Add tests in `test/export.test.ts`.",
         fakeTags: ' #build #repeat 400',
-        interruptAfterMs: { live: 40_000, fake: 2_000 },
+        interruptAfterMs: { live: 8_000, fake: 2_000 },
       },
       { text: 'continue', fakeTags: ' #build' },
     ],

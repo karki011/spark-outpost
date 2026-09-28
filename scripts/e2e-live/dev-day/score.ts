@@ -79,8 +79,15 @@ const LIST_ITEM = /^\s{0,3}(?:\d+[.)]|[-*+])\s+\S/;
 const HEADING = /^\s{0,3}#{1,4}\s+\S/;
 const OPTION_WORDS = /\b(?:options?|alternatives?|approach(?:es)?|trade-?offs?|pros|cons)\b/i;
 
+/** A markdown table body row (not the header separator). */
+const TABLE_ROW = /^\s*\|(?!\s*:?-{3,}).+\|\s*$/;
+
 function listItems(text: string): number {
-  return text.split('\n').filter((line) => LIST_ITEM.test(line) || HEADING.test(line)).length;
+  const lines = text.split('\n');
+  const listed = lines.filter((line) => LIST_ITEM.test(line) || HEADING.test(line)).length;
+  // An options table: its body rows count as options (the first row is the header).
+  const rows = lines.filter((line) => TABLE_ROW.test(line)).length;
+  return Math.max(listed, rows - 1);
 }
 
 /** A short reply that asks something back, rather than answering or doing. */
