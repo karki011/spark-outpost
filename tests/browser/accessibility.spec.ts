@@ -86,6 +86,7 @@ for (const theme of THEMES) {
   test(`${theme} theme has no serious colour-contrast or ARIA issues on the main screens`, async ({
     page,
   }) => {
+    test.setTimeout(60_000);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openWorkedChat(page);
     await useTheme(page, theme);

@@ -3,7 +3,7 @@ import { isCheckApproval, type Approval, type Project } from '@spark-outpost/con
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import {
   crewStateWord,
-  headerMeta,
+  modelLabel,
   roleLabel,
   usageParts,
   type CrewAgent,
@@ -11,11 +11,35 @@ import {
 import { ChevronIcon } from '../../ui/icons.tsx';
 import type { TurnState } from '../AiTurn.tsx';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
+import { EffortMeter } from '../composer/EffortMeter.tsx';
 import { isCheckpoint } from '../checkpoints/checkpoint-model.ts';
 import { Markdown } from '../markdown/Markdown.tsx';
 import { shownText, streamLeads, type RunStep } from '../run-projection.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { WorkLog } from '../WorkLog.tsx';
+
+const EFFORT_SCALE = ['low', 'medium', 'high', 'xhigh', 'max'].map((id) => ({
+  id,
+  label: id,
+  description: null,
+}));
+
+function HeadMeta({ agent }: { agent: CrewAgent }) {
+  const model = modelLabel({ ...agent, effort: null });
+  const rest = [agent.routeNote, ...usageParts(agent)].filter(Boolean).join(' · ');
+  return (
+    <span className="ah-meta">
+      · {model}
+      {agent.effort && (
+        <span className="ah-effort" title={`${agent.effort} effort`}>
+          <EffortMeter efforts={EFFORT_SCALE} effort={agent.effort} />
+          <span className="sr-only">{agent.effort} effort</span>
+        </span>
+      )}
+      {rest && ` · ${rest}`}
+    </span>
+  );
+}
 
 const TURN_STATES: Record<CrewAgent['state'], TurnState> = {
   thinking: 'working',
@@ -39,7 +63,7 @@ export function AgentHead({ agent, anchor }: { agent: CrewAgent; anchor: string 
         <span className="agent-role">{roleLabel(agent)}</span>
       </span>
       {live && <span className={`agent-state ${agent.state}`}>{crewStateWord(agent.state)}</span>}
-      <span className="ah-meta">· {headerMeta(agent)}</span>
+      <HeadMeta agent={agent} />
     </div>
   );
 }

@@ -67,7 +67,7 @@ test('Balanced: one task Builder with an edit approval, the Critic, then Keep', 
   await expect(builder.getByRole('group', { name: /Change a file\?/ })).toBeVisible();
   await expect(agentHead(page, 'Bolt')).toContainText('Waiting for you');
   await expect(agentHead(page, 'Bolt')).toContainText('Builder');
-  await expect(agentHead(page, 'Bolt')).toContainText('Sonnet 5 · high');
+  await expect(agentHead(page, 'Bolt')).toContainText('Sonnet 5high effort');
   await expect(
     page.getByRole('button', {
       name: /^Asking permission Move date.*Bolt wants to edit notes\.txt/,
@@ -107,7 +107,7 @@ test('Balanced: one task Builder with an edit approval, the Critic, then Keep', 
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });
   await expect(keep).toContainText('1 file changed.');
-  await expect(agentHead(page, 'Hawk')).toContainText('6 Sol · high');
+  await expect(agentHead(page, 'Hawk')).toContainText('6 Solhigh effort');
   await expect(agentBlock(page, 'Hawk')).toContainText('Verdict: looks good');
   await expect(waiting).toContainText('Keep these changes?');
   await shot(page, 'keep');

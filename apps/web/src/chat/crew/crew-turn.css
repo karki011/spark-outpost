@@ -165,3 +165,19 @@
     animation: none;
   }
 }
+.agent-head > .agent-who {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+}
+.agent-head > .agent-who .agent-role::before {
+  content: '· ';
+}
+.ah-effort {
+  display: inline-flex;
+  margin: 0 0 0 6px;
+  vertical-align: baseline;
+}
+.ah-effort .meter {
+  height: 9px;
+}

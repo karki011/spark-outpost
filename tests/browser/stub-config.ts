@@ -3,8 +3,6 @@ import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-// Each test database gets its own ports, so browser runs in several worktrees can run at once.
-// The shared `spark_outpost_test` database keeps the original ports.
 const credentials = path.resolve(import.meta.dirname, '../../.local/credentials.env');
 if (!process.env.TEST_DATABASE_URL && existsSync(credentials)) process.loadEnvFile(credentials);
 
@@ -17,7 +15,7 @@ function portSlot(): number {
   return 1 + (createHash('sha256').update(database).digest().readUInt16BE(0) % 400);
 }
 
-const slot = portSlot();
+export const slot = portSlot();
 const base = slot === 0 ? null : 20_000 + slot * 10;
 
 export const STUB_PORT = base ?? 4399;

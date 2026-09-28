@@ -7,6 +7,7 @@ import {
   API_PORT,
   FAKE_ACP_MODELS,
   FAKE_CODEX_STATE,
+  slot,
   STUB_PORT,
   WEB_PORT,
 } from './tests/browser/stub-config.ts';
@@ -42,6 +43,7 @@ const shutdown = { signal: 'SIGTERM', timeout: 5_000 } as const;
 
 export default defineConfig({
   testDir: 'tests/browser',
+  outputDir: slot === 0 ? 'test-results' : `test-results/slot-${slot}`,
   timeout: 30_000,
   retries: 0,
   workers: 1,

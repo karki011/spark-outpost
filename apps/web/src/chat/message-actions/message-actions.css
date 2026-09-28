@@ -103,3 +103,17 @@ section:hover .turn-foot > .fb.quiet,
 .turn-foot:has(> .crew-foot) {
   margin-top: 14px;
 }
+.turn-foot > .revert-btn {
+  gap: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--faint);
+}
+.turn-foot > .revert-btn:hover {
+  color: var(--text);
+}
+.turn-foot > .revert-btn svg {
+  width: 12px;
+  height: 12px;
+}
