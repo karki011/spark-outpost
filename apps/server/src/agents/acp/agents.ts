@@ -66,11 +66,6 @@ export const CLAUDE_DO_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
 export const CLAUDE_DO_MODE = 'default';
 export const CODEX_DO_MODE = 'ask-every-action';
 
-/**
- * Builders never publish: pushing, pull requests and remote changes are the harness's job at
- * the end of the task (Ship). These deny rules back up the approval gate's refusal, which also
- * covers Codex (every Codex Do action goes through the gate).
- */
 export const BUILDER_PUBLISH_DENY_RULES = [
   'Bash(git push:*)',
   'Bash(git remote add:*)',

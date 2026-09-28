@@ -118,7 +118,6 @@ export function alwaysAskReason(request: ApprovalRequest): string | null {
 }
 
 export interface DecideOptions {
-  /** The request comes from a harness Builder: publishing is the harness's job, never its own. */
   builder?: boolean;
 }
 

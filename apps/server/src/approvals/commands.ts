@@ -162,11 +162,6 @@ function gitSubcommand(args: readonly string[]): { name: string; rest: string[] 
   return null;
 }
 
-/**
- * A command that publishes code or changes where it would be published: `git push`,
- * `git send-email`, `git remote add/set-url/…`, or a code-hosting CLI such as `gh`.
- * Builders never run these; the harness commits, pushes and opens the PR at the end.
- */
 const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh']);
 
 function shellScript(program: readonly string[]): string | null {

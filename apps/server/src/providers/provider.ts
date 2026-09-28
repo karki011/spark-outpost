@@ -61,7 +61,6 @@ export interface ProviderTurn {
   signal: AbortSignal;
   audit?: ProtocolObserver;
   mode?: RunMode;
-  /** A harness Builder: it may not push, open pull requests or change remotes. */
   builder?: boolean;
   worktree?: boolean;
   modeRequests?: ModeRequests;

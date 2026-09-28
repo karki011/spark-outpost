@@ -12,7 +12,6 @@ import {
 import { destructiveByRule, destructiveMigrationInPatch } from './risk-rules.ts';
 import { riskyCard, RISKY_CARD_TITLE } from './checkpoint.ts';
 
-/** The developer's-day tags story (s11): an additive CREATE TABLE migration. */
 const S11 = [
   'Add tags to projects, end to end:',
   '- Database: a new migration that stores tags per project. Existing databases must upgrade and their projects start with no tags.',

@@ -1,14 +1,10 @@
+import type { FlowAction, FlowEvent, FlowResult, FlowState, Spawn } from './flow-types.ts';
 import {
   CHECKPOINT_OPTION,
   MAX_REPAIR_RETRIES,
   type AgentRole,
-  type BudgetLimit,
   type CheckpointKind,
-  type Depth,
-  type InvolvementLevel,
   type OrchestrationPhase,
-  type ReviewVerdict,
-  type Risk,
 } from '@spark-outpost/contracts';
 import { MAX_VERDICTS, PLAN_CONTINUES } from '../advisor/policy.ts';
 import type { Verdict } from '../advisor/verify-questions.ts';
@@ -29,159 +25,22 @@ import {
   fixCut,
   fixRefused,
   fixRestored,
-  IDLE_REVIEW,
   lastAction,
   startFix,
-  type ReviewLoop,
 } from './review-loop.ts';
 
-export type SpawnReason =
-  'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'unstick' | 'escalate' | 'recheck';
-
-export interface Spawn {
-  role: AgentRole;
-  reason: SpawnReason;
-  escalate: boolean;
-  note: string | null;
-  followUp?: string;
-  /** A Critic fix round the harness started by itself (not the user's "Fix these findings"). */
-  auto?: boolean;
-}
-
-export type FlowAction =
-  | {
-      type: 'ask';
-      kind: CheckpointKind;
-      reason: string;
-      interpret?: boolean;
-      answerOrBuild?: boolean;
-    }
-  | ({ type: 'spawn' } & Spawn)
-  | { type: 'plan'; note: string | null }
-  | { type: 'verify' }
-  | { type: 'wrap_up' }
-  | { type: 'keep'; approvedEach?: boolean }
-  | { type: 'ship' }
-  | { type: 'revert' }
-  | { type: 'restore' }
-  | {
-      type: 'finish';
-      status: 'succeeded' | 'failed' | 'cancelled';
-      reason: string | null;
-      incomplete?: string;
-    };
-
-export type AgentOutcome = 'succeeded' | 'failed' | 'cancelled';
-
-export type StartMode = 'answer' | 'build' | 'interpret' | 'choose' | 'plan' | 'review';
-
-export type ReadOnlyWork = 'plan' | 'review';
-
-export type FlowEvent =
-  | { type: 'start'; start: StartMode }
-  | { type: 'clarified'; answer: boolean | null }
-  | {
-      type: 'agent_done';
-      role: AgentRole;
-      outcome: AgentOutcome;
-      error?: string | null;
-      open?: readonly string[];
-      large?: boolean;
-      green?: boolean;
-      verdict?: ReviewVerdict;
-      fixable?: readonly string[];
-      checksFailing?: boolean;
-    }
-  | { type: 'verified'; accepted: Verdict | null; reasons: readonly string[] }
-  | { type: 'looped'; summary: string; open?: readonly string[] }
-  | { type: 'answered'; kind: CheckpointKind; optionId: string; note: string | null }
-  | {
-      type: 'wrapped';
-      filesChanged: number;
-      checksFailing?: boolean;
-      /** A destructive statement the change added to a migration nobody confirmed first. */
-      riskyMigration?: string;
-      approvedEach?: boolean;
-    }
-  | { type: 'kept' }
-  | { type: 'shipped' }
-  | { type: 'ship_held'; reason: string }
-  | { type: 'reverted' }
-  | { type: 'restored'; restored: boolean }
-  | {
-      type: 'budget_exceeded';
-      limit: BudgetLimit;
-      unstarted?: boolean;
-      /** The running fix round's own budget ran out, not the run's. */
-      round?: boolean;
-      /** A state that passed the checks is there to fall back to. */
-      passing?: boolean;
-    }
-  | { type: 'stopped' };
-
-export interface FlowState {
-  depth: Depth;
-  risk: Risk;
-  level: InvolvementLevel;
-  phase: OrchestrationPhase;
-  reviewWanted: boolean;
-  retries: number;
-  continues: number;
-  reviewed: boolean;
-  verdict: ReviewVerdict | null;
-  last: Spawn | null;
-  waitingFor: CheckpointKind | null;
-  exceeded: BudgetLimit | null;
-  resumeLast: boolean;
-  open: string[];
-  loop: string | null;
-  verifier: boolean;
-  verdicts: number;
-  escalated: boolean;
-  large: boolean;
-  review: ReviewLoop;
-  shipping?: boolean;
-  readOnly?: ReadOnlyWork;
-  /** Why this change needs your go-ahead before the first Builder starts; null once given. */
-  confirmFirst: string | null;
-}
-
-export interface FlowResult {
-  state: FlowState;
-  action: FlowAction;
-}
-
-export function initialFlow(
-  risk: Risk,
-  level: InvolvementLevel,
-  reviewWanted = false,
-  verifier = false,
-  confirmFirst: string | null = null,
-): FlowState {
-  return {
-    depth: 'execute',
-    risk,
-    level,
-    phase: 'intake',
-    reviewWanted: reviewWanted || risk === 'destructive',
-    retries: 0,
-    continues: 0,
-    reviewed: false,
-    verdict: null,
-    last: null,
-    waitingFor: null,
-    exceeded: null,
-    resumeLast: false,
-    open: [],
-    loop: null,
-    verifier,
-    verdicts: 0,
-    escalated: false,
-    large: false,
-    review: IDLE_REVIEW,
-    confirmFirst,
-  };
-}
+export type {
+  AgentOutcome,
+  FlowAction,
+  FlowEvent,
+  FlowResult,
+  FlowState,
+  ReadOnlyWork,
+  Spawn,
+  SpawnReason,
+  StartMode,
+} from './flow-types.ts';
+export { initialFlow } from './flow-types.ts';
 
 const PHASE_FOR_ROLE: Record<AgentRole, OrchestrationPhase> = {
   scout: 'scouting',
@@ -368,11 +227,6 @@ function fixFindings(state: FlowState, auto = false): FlowResult {
   );
 }
 
-/**
- * A limit hit during a Critic fix round (or kept one from starting) while the change before it
- * passed the checks: the run doesn't fail. The last passing state is restored and kept, and the
- * keep card (Automatic, Review each step) lists the findings still open.
- */
 function cutFixRound(
   state: FlowState,
   event: Extract<FlowEvent, { type: 'budget_exceeded' }>,
@@ -453,7 +307,6 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
       return spawn({ ...state, exceeded: null, resumeLast: false }, next);
     }
     if (state.review.stop === 'budget') {
-      // The budget ran out before a fix turn: the change itself is done, so end on keep.
       return wrapUp(state);
     }
     const limit = (state.exceeded ?? 'time').replace('_', ' ');

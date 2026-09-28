@@ -95,7 +95,6 @@ export function sessionReviewLine(s: Session): string | null {
 
 const SHOWN_SUGGESTIONS = 3;
 
-/** The Critic's hardening suggestions, reported instead of fixed by the loop. */
 export function suggestionsLine(suggestions: readonly string[]): string | null {
   if (suggestions.length === 0) return null;
   const shown = suggestions.slice(0, SHOWN_SUGGESTIONS).map((finding) => {

@@ -14,7 +14,6 @@ import {
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
-/** The developer's-day tags story (s11): its migration only adds a table. */
 const TAGS_STORY =
   'Add tags to projects, end to end. Database: a new migration that stores tags per project. Existing databases must upgrade and their projects start with no tags. API: PUT /projects/:id/tags replaces the tags. Add tests for each part.';
 

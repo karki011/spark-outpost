@@ -55,7 +55,6 @@ describe('correctness finding rules', () => {
   });
 });
 
-/** The s04 Critic findings the Auto-edit fix loop chased in the developer's-day rerun (N2). */
 const N2_HARDENING = [
   '`apps/web/src/analytics/spend-csv.ts:13`: Project names can begin with `=`, `+`, `-`, or `@`, and the export writes them as spreadsheet formulas. CSV quoting does not prevent formula execution when the file is opened in a spreadsheet.',
   '`apps/web/src/analytics/spend-csv.ts:7`: Project names can begin with `=`, `+`, `-`, or `@`. The export writes those values unchanged, so opening the CSV in a spreadsheet can execute them as formulas. CSV quoting does not prevent this; the existing audit CSV exporter neutralizes such values.',
@@ -82,7 +81,6 @@ describe('hardening suggestions are not correctness bugs (N2)', () => {
       [false, 'suggestion', 'rules'],
       [false, 'suggestion', 'rules'],
     ]);
-    // Jev may still say no to a rule bug, and yes to an unclear one.
     const mixed = readFindings(
       [PARENS_FINDING, 'The export button label moved'],
       answered({ finding_1: 0.1, finding_2: 0.9 }),

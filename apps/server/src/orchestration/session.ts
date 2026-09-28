@@ -37,7 +37,6 @@ import type { FlowState } from './transitions.ts';
 
 export interface OrchestratorDeps extends ExecuteRunDeps {
   budget?: Partial<BudgetLimits>;
-  /** Overrides for one Critic fix round's own budget (tests). */
   fixRound?: Partial<FixRoundLimits>;
   budgetPollMs?: number;
   checkpointTimeoutMs?: number;
@@ -55,7 +54,6 @@ export interface FixRoundLimits {
   activeMs: number;
 }
 
-/** The Critic fix round in progress: where its own budget started, and whether it ran out. */
 export interface FixRound {
   round: number;
   toolCallsAt: number;
@@ -63,7 +61,6 @@ export interface FixRound {
   hit: BudgetLimit | null;
 }
 
-/** The last state of the change that passed the checks, to fall back to when a fix round is cut. */
 export interface PassingState {
   tree: string;
   checkBodies: CheckBody[];
@@ -127,12 +124,10 @@ export interface Session {
   jevDiffs: boolean;
   scanReport?: ScanReport | null;
   unverified?: boolean;
-  /** Why the change is risky (destructive or a migration), or null. */
   risky?: string | null;
   shipLine?: string | null;
   fixRound?: FixRound | null;
   passing?: PassingState | null;
-  /** The latest review's hardening suggestions, reported rather than fixed. */
   suggestions?: string[];
 }
 
