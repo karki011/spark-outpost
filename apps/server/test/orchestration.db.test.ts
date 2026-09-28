@@ -63,10 +63,15 @@ afterAll(async () => {
   await t.cleanup();
 });
 
-async function runLevel(scenario: Scenario, level: InvolvementLevel) {
+async function runLevel(
+  scenario: Scenario,
+  level: InvolvementLevel,
+  routing: 'auto' | 'pinned' = 'auto',
+  model = 'sonnet',
+) {
   const root = await gitRepo();
   try {
-    const { conversationId, runId } = await startScenario(t, root, scenario, level);
+    const { conversationId, runId } = await startScenario(t, root, scenario, level, routing, model);
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
     const notes = await readFile(join(root, 'notes.txt'), 'utf8');
     const audit = summarizeAudit(
@@ -172,10 +177,9 @@ describe.each(SCENARIOS)('$id', (scenario) => {
 });
 
 describe('rule routing on Auto', () => {
-  it('raises a trivial fix off the small tier, since Builders never run there', async () => {
+  it('routes a trivial fix to the middle tier and maps Jev’s small-tier pick there', async () => {
     const { orchestration } = await runLevel(SCENARIOS[1]!, 'hands-off');
     expect(orchestration.depth).toBe('execute');
-    const note = "raised to Sonnet 5: Builders don't run on the fast tier";
     expect(orchestration.crew).toEqual([
       expect.objectContaining({
         role: 'builder',
@@ -183,12 +187,32 @@ describe('rule routing on Auto', () => {
         effort: 'medium',
         routedBy: 'rules',
         autoWouldUse: expect.objectContaining({ model: 'sonnet' }),
-        routeNote: note,
       }),
     ]);
+    expect(orchestration.crew[0]?.routeNote).toBeUndefined();
     const route = orchestration.decisions.find((decision) => decision.kind === 'route');
-    expect(route?.summary).toContain(`trivial → small tier · ${note}`);
-    expect(route?.answer).toMatchObject({ note, jevTier: 'small' });
+    expect(route?.summary).toContain('trivial → middle tier');
+    expect(route?.answer).toMatchObject({ rule: 'trivial → middle tier', jevTier: 'small' });
+  }, 60_000);
+
+  it('answers on the middle tier when the chat is on Haiku and Auto picks', async () => {
+    const { orchestration } = await runLevel(SCENARIOS[0]!, 'balanced', 'auto', 'haiku');
+    const note = "raised to Sonnet 5: the harness doesn't use the fast tier";
+    expect(orchestration.crew).toEqual([
+      expect.objectContaining({ role: 'scout', model: 'sonnet', routeNote: note }),
+    ]);
+    const route = orchestration.decisions.find((decision) => decision.kind === 'route');
+    expect(route?.summary).toContain(note);
+  }, 60_000);
+
+  it('answers on Haiku when the user picked it, with a retiring note', async () => {
+    const { orchestration } = await runLevel(SCENARIOS[0]!, 'balanced', 'pinned', 'haiku');
+    const note = 'Haiku 4.5 retiring on 2026-10-15';
+    expect(orchestration.crew).toEqual([
+      expect.objectContaining({ role: 'scout', model: 'haiku', routeNote: note }),
+    ]);
+    const route = orchestration.decisions.find((decision) => decision.kind === 'route');
+    expect(route?.answer).toMatchObject({ routedBy: 'pinned', note });
   }, 60_000);
 
   it('runs destructive work on the top tier with a cross-provider Critic', async () => {

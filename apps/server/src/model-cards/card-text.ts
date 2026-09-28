@@ -6,6 +6,7 @@ import {
   type ModelStat,
   type ProviderCard,
 } from '@spark-outpost/contracts';
+import { cardRetiring } from './cards.ts';
 
 export const MIN_STAT_SAMPLES = 3;
 export const STAT_MAX_AGE_DAYS = 90;
@@ -35,9 +36,7 @@ export function staleness(card: ModelCard, now: Date): CardStaleness {
     checkedDaysAgo,
     checkStale: checkedDaysAgo > CHECK_STALE_DAYS,
     factsExpired: checkedDaysAgo > FACTS_EXPIRE_DAYS,
-    retiring:
-      card.retiresNotBefore !== null &&
-      Date.parse(`${card.retiresNotBefore}T00:00:00Z`) <= now.getTime(),
+    retiring: cardRetiring(card, now),
   };
 }
 

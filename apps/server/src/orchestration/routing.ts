@@ -4,7 +4,15 @@ import { selectableModels, tierOptions } from '../advisor/intake-questions.ts';
 import { cardFor } from '../model-cards/cards.ts';
 import { firstReportedEffort } from '../providers/efforts.ts';
 import { complexByRequest, firstSignal, type ComplexSignal } from './builder-complexity.ts';
-import { builderPick, floorText, type FlooredPick } from './builder-floor.ts';
+import {
+  floorModel,
+  floorPick,
+  floorText,
+  harnessModels,
+  retiringNote,
+  type FloorRole,
+  type FlooredPick,
+} from './model-floor.ts';
 import {
   escalatedEffort,
   highEffort,
@@ -21,6 +29,7 @@ export interface RouteContext {
   providerEffort: string | null;
   candidates: readonly AdvisorCandidate[];
   request?: string;
+  now?: Date;
 }
 
 export interface MemberRoute {
@@ -96,19 +105,44 @@ function modelsFor(context: RouteContext, provider: string) {
   return candidate ? selectableModels(candidate) : [];
 }
 
-export function floorBuilderPick(context: RouteContext, pick: AgentPick): FlooredPick {
-  return builderPick(pick, modelsFor(context, pick.provider));
+function nowOf(context: RouteContext): Date {
+  return context.now ?? new Date();
 }
 
-function withNote(route: MemberRoute, floored: FlooredPick): MemberRoute {
+function usableFor(context: RouteContext, provider: string) {
+  return harnessModels(modelsFor(context, provider), provider, nowOf(context));
+}
+
+export function floorFor(context: RouteContext, pick: AgentPick): FlooredPick {
+  return floorPick(pick, modelsFor(context, pick.provider), { now: nowOf(context) });
+}
+
+function withNote(route: MemberRoute, floored: FlooredPick, role: FloorRole): MemberRoute {
   const next: MemberRoute = { ...route, pick: floored.pick };
   delete next.note;
-  if (floored.note) next.note = floorText(floored.note);
+  if (floored.note) next.note = floorText(floored.note, role);
   return next;
 }
 
 export function floorBuilderRoute(context: RouteContext, route: MemberRoute): MemberRoute {
-  return withNote(route, floorBuilderPick(context, route.pick));
+  return withNote(route, floorFor(context, route.pick), 'builder');
+}
+
+function flooredOrNull(context: RouteContext, pick: AgentPick | null): AgentPick | null {
+  return pick ? floorFor(context, pick).pick : null;
+}
+
+function readerFloor(context: RouteContext, route: MemberRoute): FlooredPick {
+  if (route.routedBy === 'pinned') {
+    return { pick: route.pick, note: retiringNote(route.pick, nowOf(context)) };
+  }
+  const floored = floorFor(context, route.pick);
+  return floored.note?.kind === 'tier_unknown' ? { ...floored, note: null } : floored;
+}
+
+export function floorReaderRoute(context: RouteContext, route: MemberRoute): MemberRoute {
+  const autoWouldUse = flooredOrNull(context, route.autoWouldUse);
+  return withNote({ ...route, autoWouldUse }, readerFloor(context, route), 'reader');
 }
 
 function familyWords(label: string): string[] {
@@ -116,7 +150,7 @@ function familyWords(label: string): string[] {
 }
 
 export function topFamilies(context: RouteContext): string[] {
-  const models = modelsFor(context, context.chat.provider);
+  const models = usableFor(context, context.chat.provider);
   const top = topTier(models, context.chat.provider);
   if (!top) return [];
   const others = new Set(
@@ -130,8 +164,7 @@ export function builderComplexity(context: RouteContext, facts: RouteFacts): Com
 }
 
 export function builderTierPick(context: RouteContext, tier: RouteTier | null): AgentPick | null {
-  const pick = jevTierPick(context, tier);
-  return pick ? floorBuilderPick(context, pick).pick : null;
+  return flooredOrNull(context, jevTierPick(context, tier));
 }
 
 export function routeBuilder(
@@ -139,37 +172,36 @@ export function routeBuilder(
   facts: RouteFacts,
   jevTier: RouteTier | null = null,
 ): MemberRoute {
-  const base = routeMemberModel(context, facts, jevTier);
+  const base = ruleRoute(context, facts, jevTier);
   const complex = base.routedBy === 'pinned' ? null : builderComplexity(context, facts);
-  const floored = builderPick(
-    base.pick,
-    modelsFor(context, base.pick.provider),
-    complex ? 'top' : 'floor',
-  );
+  const floored = floorPick(base.pick, modelsFor(context, base.pick.provider), {
+    aim: complex ? 'top' : 'floor',
+    now: nowOf(context),
+  });
   const rule =
     complex && base.rule !== DESTRUCTIVE_RULE
       ? `complex → top tier (${complex.reason})`
       : !complex && facts.setAside && base.routedBy === 'rules' && base.rule !== DESTRUCTIVE_RULE
         ? `${base.rule} (${facts.setAside})`
         : base.rule;
-  const autoWouldUse = base.autoWouldUse ? floorBuilderPick(context, base.autoWouldUse).pick : null;
-  const route = withNote({ ...base, rule, autoWouldUse }, floored);
+  const autoWouldUse = flooredOrNull(context, base.autoWouldUse);
+  const route = withNote({ ...base, rule, autoWouldUse }, floored, 'builder');
   return { ...route, pick: { ...route.pick, effort: builderEffort(context, route.pick) } };
 }
 
-export function routeMemberModel(
+export const TRIVIAL_RULE = 'trivial → middle tier';
+
+function ruleRoute(
   context: RouteContext,
   facts: RouteFacts,
-  jevTier: RouteTier | null = null,
+  jevTier: RouteTier | null,
 ): MemberRoute {
   const chat = chatPick(context);
   const autoWouldUse = jevTierPick(context, jevTier);
   if (context.routing === 'pinned') {
     return { pick: chat, routedBy: 'pinned', rule: 'pinned', autoWouldUse };
   }
-  const candidate = candidateFor(context, context.chat.provider);
-  const models = candidate ? selectableModels(candidate) : [];
-  const ladder = tierLadder(models, context.chat.provider);
+  const models = usableFor(context, context.chat.provider);
   if (facts.destructive) {
     const top = topTier(models, context.chat.provider);
     return {
@@ -179,41 +211,52 @@ export function routeMemberModel(
       autoWouldUse,
     };
   }
-  if (facts.trivial && ladder[0]) {
-    return {
-      pick: withModel(chat, ladder[0]),
-      routedBy: 'rules',
-      rule: 'trivial → small tier',
-      autoWouldUse,
-    };
+  const middle = facts.trivial ? floorModel(models, context.chat.provider, nowOf(context)) : null;
+  if (middle) {
+    return { pick: withModel(chat, middle), routedBy: 'rules', rule: TRIVIAL_RULE, autoWouldUse };
   }
   return { pick: chat, routedBy: 'rules', rule: 'chat model', autoWouldUse };
+}
+
+export function routeMemberModel(
+  context: RouteContext,
+  facts: RouteFacts,
+  jevTier: RouteTier | null = null,
+): MemberRoute {
+  return floorReaderRoute(context, ruleRoute(context, facts, jevTier));
 }
 
 export function ruleCriticPick(context: RouteContext): AgentPick {
   const provider = criticProvider(context);
   const candidate = candidateFor(context, provider);
   const effort = highEffort(effortIds(candidate)) ?? 'high';
-  const models = candidate ? selectableModels(candidate) : [];
+  const models = modelsFor(context, provider);
+  const usable = usableFor(context, provider);
   if (provider === context.chat.provider) {
-    const stronger = oneTierUp(models, context.chat.model, provider);
+    const stronger = oneTierUp(models, context.chat.model, provider, usable);
     if (!stronger) return { ...chatPick(context), effort };
     return { provider, model: stronger.id, modelLabel: stronger.label, effort };
   }
-  const ladder = tierLadder(models, provider);
+  const ladder = tierLadder(usable, provider);
   const middle =
-    ladder.find((model) => modelTier(model, provider) === 1) ?? ladder.at(-1) ?? models[0];
+    ladder.find((model) => modelTier(model, provider) === 1) ?? ladder.at(-1) ?? usable[0];
   return { provider, model: middle?.id ?? null, modelLabel: middle?.label ?? null, effort };
 }
 
 export function routeCritic(context: RouteContext): MemberRoute {
-  return { pick: ruleCriticPick(context), routedBy: 'rules', rule: 'critic', autoWouldUse: null };
+  const route: MemberRoute = {
+    pick: ruleCriticPick(context),
+    routedBy: 'rules',
+    rule: 'critic',
+    autoWouldUse: null,
+  };
+  return floorReaderRoute(context, route);
 }
 
 export function escalate(context: RouteContext, previous: MemberRoute): MemberRoute {
-  const candidate = candidateFor(context, previous.pick.provider);
-  const models = candidate ? selectableModels(candidate) : [];
-  const up = oneTierUp(models, previous.pick.model, previous.pick.provider);
+  const { provider, model } = previous.pick;
+  const candidate = candidateFor(context, provider);
+  const up = oneTierUp(modelsFor(context, provider), model, provider, usableFor(context, provider));
   const pick: AgentPick = up
     ? {
         ...previous.pick,

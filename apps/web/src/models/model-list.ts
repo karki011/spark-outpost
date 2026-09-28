@@ -55,7 +55,8 @@ export function sortModels(models: readonly ModelCardView[], sort: ModelSort): M
 }
 
 const TIER_NOTES: Partial<Record<ModelTier, string>> = {
-  small: 'Answers, scouting and Jev only; Builders run on a stronger tier.',
+  small: 'The harness never picks it; it runs only when you choose it for a chat.',
+  mid: 'Scouts, answers, Critics and everyday Builders run here.',
   top: 'Builders move up to it for complex or destructive work.',
   frontier: 'The rules never pick it; it runs only when you choose it for a chat.',
 };
@@ -96,5 +97,5 @@ export function benchmarkHeadline(view: ModelCardView): Headline | null {
 export function retirementNote(view: ModelCardView): string | null {
   const date = view.card.retiresNotBefore;
   if (!date) return null;
-  return view.staleness.retiring ? `Past its retirement date (${date})` : `Retires ${date}`;
+  return view.staleness.retiring ? `Retiring ${date} · not used by the harness` : `Retires ${date}`;
 }

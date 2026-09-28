@@ -3,7 +3,7 @@ import { POLICY_VERSION } from '../advisor/policy.ts';
 import { whyLine } from '../model-cards/why.ts';
 import { insertDecision, usedNames } from '../persistence/orchestrations.ts';
 import { complexByBreadth, complexByJev, firstSignal } from './builder-complexity.ts';
-import { belowFloor, FLOOR_REASON } from './builder-floor.ts';
+import { belowFloor, floorReason, type FloorRole } from './model-floor.ts';
 import {
   keepSession,
   resumableChat,
@@ -49,14 +49,22 @@ function topReason(route: MemberRoute, facts: RouteFacts, s: Session): string | 
   return complex ? `complex work (${complex.reason}) needs the top tier` : null;
 }
 
+function floorKept(route: MemberRoute, kept: KeptRoute, role: FloorRole): KeptRoute {
+  if (!kept.choice?.kept || !belowFloor(kept.choice.session)) return kept;
+  const { session } = kept.choice;
+  return { route, choice: { kept: false, reason: floorReason(session, role), session } };
+}
+
 export function keepBuilderSession(
   route: MemberRoute,
   session: ResumableSession | null,
   needsTop: string | null,
 ): KeptRoute {
-  const kept = keepSession(route, session, needsTop ?? false);
-  if (!kept.choice?.kept || !belowFloor(kept.choice.session)) return kept;
-  return { route, choice: { kept: false, reason: FLOOR_REASON, session: kept.choice.session } };
+  return floorKept(route, keepSession(route, session, needsTop ?? false), 'builder');
+}
+
+export function keepScoutSession(route: MemberRoute, session: ResumableSession | null): KeptRoute {
+  return floorKept(route, keepSession(route, session), 'reader');
 }
 
 async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
@@ -77,7 +85,7 @@ async function scoutRoute(s: Session): Promise<ResolvedRoute> {
   const route = routeMemberModel(s.route, { trivial: false, destructive: false }, jevTier(s));
   const mode = s.input.mode === 'do' ? 'ask' : (s.input.mode ?? 'chat');
   const session = await resumableChat(s.deps.db, s.input, mode, s.deps.sessionLimits?.idleMs);
-  const kept = keepSession(route, session);
+  const kept = keepScoutSession(route, session);
   return { route: kept.route, ...(kept.choice ? { session: kept.choice } : {}) };
 }
 

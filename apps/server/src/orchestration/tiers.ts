@@ -57,8 +57,9 @@ export function oneTierUp<T extends TierModel>(
   models: readonly T[],
   currentId: string | null,
   provider: string | null = null,
+  pool: readonly T[] = models,
 ): T | null {
-  const ladder = tierLadder(models, provider);
+  const ladder = tierLadder(pool, provider);
   const current = models.find((model) => model.id === currentId);
   const tier = current ? modelTier(current, provider) : null;
   if (tier === null) return null;

@@ -102,9 +102,9 @@ describe('model list', () => {
     expect(effortRange(card({ reasoning: { ...card({}).reasoning, efforts: [] } }))).toBe('none');
   });
 
-  it('notes how the rules use the small, top and frontier tiers only', () => {
-    expect(tierNote('small')).toMatch(/Builders run on a stronger tier/);
-    expect(tierNote('mid')).toBeNull();
+  it('notes that the harness skips the small tier and runs on the middle one', () => {
+    expect(tierNote('small')).toMatch(/harness never picks it/);
+    expect(tierNote('mid')).toMatch(/Scouts, answers, Critics and everyday Builders/);
     expect(tierNote('frontier')).toMatch(/never pick it/);
   });
 
@@ -122,12 +122,12 @@ describe('model list', () => {
     });
   });
 
-  it('shows upcoming and past retirement dates', () => {
+  it('shows upcoming retirement dates and tags a retiring model as unused by the harness', () => {
     expect(retirementNote(view({}))).toBeNull();
     expect(retirementNote(view({ retiresNotBefore: '2027-06-30' }))).toBe('Retires 2027-06-30');
-    const past = { ...view({ retiresNotBefore: '2026-01-01' }) };
-    past.staleness = { ...past.staleness, retiring: true };
-    expect(retirementNote(past)).toBe('Past its retirement date (2026-01-01)');
+    const retiring = { ...view({ retiresNotBefore: '2026-10-15' }) };
+    retiring.staleness = { ...retiring.staleness, retiring: true };
+    expect(retirementNote(retiring)).toBe('Retiring 2026-10-15 · not used by the harness');
   });
 
   it('remembers the provider filter and falls back to all when storage or provider is gone', () => {

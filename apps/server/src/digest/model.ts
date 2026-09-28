@@ -1,5 +1,5 @@
 import type { ModelCard } from '@spark-outpost/contracts';
-import { cardFor, TIER_RANK, VENDOR_CARDS } from '../model-cards/cards.ts';
+import { cardFor, cardRetiring, TIER_RANK, VENDOR_CARDS } from '../model-cards/cards.ts';
 
 export interface DigestModel {
   model: string | null;
@@ -12,9 +12,13 @@ export interface OfferedModel {
   label?: string | null;
 }
 
-function cheapestFirst(provider: string, cards: readonly ModelCard[]): ModelCard[] {
+function harnessCard(card: ModelCard, now: Date): boolean {
+  return card.tier !== 'small' && card.tier !== 'frontier' && !cardRetiring(card, now);
+}
+
+function cheapestFirst(provider: string, cards: readonly ModelCard[], now: Date): ModelCard[] {
   return cards
-    .filter((card) => card.provider === provider && card.tier !== 'frontier' && card.price)
+    .filter((card) => card.provider === provider && harnessCard(card, now) && card.price)
     .toSorted(
       (a, b) =>
         TIER_RANK[a.tier] - TIER_RANK[b.tier] ||
@@ -27,9 +31,10 @@ export function digestModel(
   offered: readonly OfferedModel[],
   efforts: readonly string[],
   cards: readonly ModelCard[] = VENDOR_CARDS.cards,
+  now: Date = new Date(),
 ): DigestModel {
   const effort = efforts.includes('low') ? 'low' : null;
-  const ranked = cheapestFirst(provider, cards);
+  const ranked = cheapestFirst(provider, cards, now);
   if (offered.length === 0) {
     const card = ranked[0];
     return card

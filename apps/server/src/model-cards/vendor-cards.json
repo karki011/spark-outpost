@@ -142,9 +142,9 @@
       "weakSpots": [
         "200K context and 64K output, the smallest in the lineup",
         "Oldest knowledge (Feb 2025)",
-        "Retirement not sooner than October 15, 2026"
+        "Retires October 15, 2026; the harness no longer picks it"
       ],
-      "blurb": "fastest, cheapest; quick fixes, sub-agent work",
+      "blurb": "retiring 2026-10-15; chat only, the harness skips it",
       "knowledgeCutoff": "2025-02",
       "retiresNotBefore": "2026-10-15",
       "sources": [

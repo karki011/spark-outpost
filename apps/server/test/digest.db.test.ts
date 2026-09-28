@@ -109,7 +109,7 @@ describe('home digest', () => {
     expect(await digestCount()).toBe(0);
   });
 
-  it('runs a plain digest turn with the cheapest model and keeps only known chat links', async () => {
+  it('runs a plain digest turn on the middle tier and keeps only known chat links', async () => {
     await connectClaude();
     const done = await chat('Refactor the date formatter');
     const failed = await chat('Mock fetch retries', 'failed', 'Claude is rate limited.');
@@ -117,7 +117,7 @@ describe('home digest', () => {
 
     const started = await state(post('open'));
     expect(started.digest).toMatchObject({ status: 'running', provider: 'claude' });
-    expect(started.digest?.modelLabel).toBe('Haiku 4.5');
+    expect(started.digest?.modelLabel).toBe('Sonnet 5');
 
     const result = await ready();
     const digest = result.digest!;
@@ -144,7 +144,7 @@ describe('home digest', () => {
       `SELECT r.id, r.role, r.mode, r.model, r.effort FROM runs r
        JOIN digests d ON d.run_id = r.id`,
     );
-    expect(rows[0]).toMatchObject({ role: 'digest', mode: 'chat', model: 'haiku', effort: 'low' });
+    expect(rows[0]).toMatchObject({ role: 'digest', mode: 'chat', model: 'sonnet', effort: 'low' });
     expect((await getRun(t.db, rows[0]!.id))?.status).toBe('succeeded');
     const listed = await listConversations(t.db, t.workspaceId);
     expect(listed.map((entry) => entry.title).sort()).toEqual([

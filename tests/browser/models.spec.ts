@@ -47,8 +47,11 @@ test('Models shows compact cards that expand to measured runs and what Jev reads
   await expect(table).toBeHidden();
 
   const haiku = claude.getByRole('listitem', { name: 'Haiku 4.5', exact: true });
-  await expect(haiku).toContainText('Builders run on a stronger tier');
-  await expect(haiku.getByRole('note')).toContainText(/Retires|Past its retirement date/);
+  await expect(haiku).toContainText('The harness never picks it');
+  await expect(haiku.getByRole('note')).toContainText(
+    'Retiring 2026-10-15 · not used by the harness',
+  );
+  await expect(sonnet.getByRole('note')).toHaveText('Retires 2027-06-30');
   const fable = claude.getByRole('listitem', { name: 'Fable 5.1', exact: true });
   await expect(fable).toContainText('frontier tier');
   await expect(fable).toContainText('The rules never pick it');

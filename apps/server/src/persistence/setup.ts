@@ -9,7 +9,7 @@ import type {
   SetupState,
   UpdateProfileRequest,
 } from '@spark-outpost/contracts';
-import { effectiveDefaultModel } from '../model-cards/cards.ts';
+import { effectiveDefaultModel, retiringOn, usableDefault } from '../model-cards/cards.ts';
 import { catalog, catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
 import { INITIAL_PROVIDER_EFFORT, reportedEfforts } from '../providers/efforts.ts';
 import type { TestOutcome } from '../setup/test-message.ts';
@@ -81,7 +81,7 @@ function toConnection(row: ConnectionRow | undefined): ProviderConnection | null
           }
         : null,
     models: row.models,
-    model: row.model,
+    model: usableDefault(row.provider, row.model),
     permission: row.permission,
     level: row.level,
     effort: row.effort,
@@ -208,6 +208,7 @@ export async function saveConnection(
        model = CASE
          WHEN provider_connections.model IS NOT NULL
            AND EXCLUDED.models @> jsonb_build_array(jsonb_build_object('id', provider_connections.model))
+           AND NOT provider_connections.model = ANY($10::text[])
          THEN provider_connections.model
          ELSE EXCLUDED.model
        END,
@@ -224,6 +225,7 @@ export async function saveConnection(
       entry.permissions[0]!.id,
       INITIAL_PROVIDER_EFFORT,
       verified.summary,
+      verified.models.flatMap((model) => (retiringOn(model, provider) ? [model.id] : [])),
     ],
   );
   return toConnection(rows[0])!;
@@ -303,6 +305,11 @@ async function reportsEffort(
   );
 }
 
+function retiringModel(connection: ConnectionRow, model: string): string | null {
+  const listed = connection.models.find((option) => option.id === model) ?? { id: model };
+  return retiringOn(listed, connection.provider);
+}
+
 export async function updateProviderDefaults(
   db: Queryable,
   workspaceId: string,
@@ -322,6 +329,12 @@ export async function updateProviderDefaults(
     throw new InvalidDefaultError(`Connect ${entry.name} before changing its defaults.`);
   if (update.model && !(await offersModel(db, workspaceId, current, update.model))) {
     throw new InvalidDefaultError(`${entry.name} does not offer that model.`);
+  }
+  const retiring = update.model ? retiringModel(current, update.model) : null;
+  if (retiring) {
+    throw new InvalidDefaultError(
+      `That model retires on ${retiring}, so it can't be the default. Pick it in a chat instead.`,
+    );
   }
   if (update.permission && !isSelectablePermission(entry, update.permission)) {
     const choice = entry.permissions.find((option) => option.id === update.permission);

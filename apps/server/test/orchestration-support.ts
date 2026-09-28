@@ -349,6 +349,7 @@ export async function startScenario(
   scenario: Scenario,
   level: InvolvementLevel,
   routing: 'auto' | 'pinned' = 'auto',
+  model = 'sonnet',
 ) {
   const { conversationId } = await linkedConversation(t, root);
   await t.db.query('UPDATE conversations SET model_routing = $2 WHERE id = $1', [
@@ -359,7 +360,7 @@ export async function startScenario(
     t.db,
     conversationId,
     { id: randomUUID(), content: scenario.text },
-    { provider: 'claude', model: 'sonnet', effort: 'medium', permission: scenario.mode, level },
+    { provider: 'claude', model, effort: 'medium', permission: scenario.mode, level },
   );
   return { conversationId, runId: sent.run.id };
 }
