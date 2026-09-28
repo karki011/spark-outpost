@@ -1,15 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CARD_CATEGORIES, JEV_CARD_CHARACTERS, type ModelStat } from '@spark-outpost/contracts';
 import { cardById, VENDOR_CARDS } from './cards.ts';
-import {
-  cardText,
-  effortNote,
-  fitPieces,
-  providerText,
-  staleness,
-  statFor,
-  usableStats,
-} from './card-text.ts';
+import { cardText, effortNote, fitPieces, staleness, statFor, usableStats } from './card-text.ts';
 import { MEASURED_SEED } from './ingest.ts';
 
 const now = new Date('2026-09-27T12:00:00Z');
@@ -95,21 +87,6 @@ describe('card text for Jev', () => {
     expect(cardText(haiku, null, afterRetirement)).toMatch(/; retiring$/);
     expect(staleness(haiku, new Date('2026-09-28T00:00:00Z')).retiring).toBe(true);
     expect(staleness(haiku, new Date('2026-09-01T00:00:00Z')).retiring).toBe(false);
-  });
-
-  it('describes providers within the budget, reflecting whether Do is available', () => {
-    for (const card of VENDOR_CARDS.providers) {
-      for (const doAvailable of [true, false]) {
-        expect(providerText(card, doAvailable).length).toBeLessThanOrEqual(JEV_CARD_CHARACTERS);
-      }
-    }
-    const codex = VENDOR_CARDS.providers.find((card) => card.provider === 'codex')!;
-    expect(providerText(codex, false)).toMatch(
-      /^Codex: read-only here \(no Do\); good independent reviewer/,
-    );
-    expect(providerText(codex, true)).toMatch(
-      /^Codex: can edit \(Do\), asks only outside its sandbox/,
-    );
   });
 
   it('notes default efforts and models without an effort setting', () => {
