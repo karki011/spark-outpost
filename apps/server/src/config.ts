@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { connectableIdSchema } from '@spark-outpost/contracts';
+import { DEFAULT_BRANCH_PREFIX } from './projects/worktrees.ts';
+import { DEFAULT_KEYCHAIN_SERVICE } from './setup/secrets.ts';
 
 const providerUrl = z
   .url()
@@ -59,6 +61,13 @@ const configSchema = z.object({
   OPENAI_BASE_URL: providerUrl.default('https://api.openai.com'),
   TYPESAFE_BASE_URL: providerUrl.default('https://api.typesafe.ai'),
   ZAI_BASE_URL: providerUrl.default('https://api.z.ai/api/anthropic'),
+  KEYCHAIN_SERVICE: z.string().min(1).default(DEFAULT_KEYCHAIN_SERVICE),
+  BRANCH_PREFIX: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]*$/)
+    .default(DEFAULT_BRANCH_PREFIX),
+  BACKUP_DIR: z.string().min(1).optional(),
+  WEB_ROOT: z.string().min(1).optional(),
 });
 
 export type Config = z.infer<typeof configSchema>;

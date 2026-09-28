@@ -12,13 +12,19 @@ import { startWorker } from './worker.ts';
 
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.worker });
-await migrateOrExit(db, { backup: () => backupDatabase({ databaseUrl: config.DATABASE_URL }) });
+await migrateOrExit(db, {
+  backup: () =>
+    backupDatabase({
+      databaseUrl: config.DATABASE_URL,
+      ...(config.BACKUP_DIR ? { dir: config.BACKUP_DIR } : {}),
+    }),
+});
 
 const approvalWaiters = new ApprovalWaiters();
 const secrets =
   config.SECRET_STORE === 'memory'
     ? memorySecretStore(config.MEMORY_SECRETS)
-    : keychainSecretStore();
+    : keychainSecretStore(config.KEYCHAIN_SERVICE);
 const intake = createIntakeRecorder({
   db,
   secrets,
@@ -37,6 +43,7 @@ const worker = startWorker({
   },
   concurrency: config.WORKER_CONCURRENCY,
   codeScan: createCodeScanner(db),
+  branchPrefix: config.BRANCH_PREFIX,
   ...(config.ORCHESTRATION_COST_CAP_USD
     ? { budget: { costCapUsd: config.ORCHESTRATION_COST_CAP_USD } }
     : {}),
