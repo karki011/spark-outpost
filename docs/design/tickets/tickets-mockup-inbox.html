@@ -950,52 +950,62 @@ textarea:focus-visible,.home-compose input:focus-visible,.search input:focus-vis
 .bi .num{width:20px;height:20px;border-radius:6px;background:var(--raise);color:var(--muted);font-size:12px;font-weight:600;display:grid;place-items:center;margin-top:1px}
 .bi p{margin:0;font-size:13.5px;line-height:1.45}
 .bi p .kref{font-family:"Geist Mono",monospace;font-size:12.5px;color:var(--accent-text);text-decoration:underline;text-underline-offset:2px}
-.why{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
-.flag{display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:999px;font-size:12px;line-height:18px;background:color-mix(in srgb,var(--warn) 12%,var(--panel));color:var(--warn);white-space:nowrap}
-.flag.bad{background:color-mix(in srgb,var(--danger) 9%,var(--panel));color:var(--danger)}
-.flag.na{background:var(--raise);color:var(--muted)}
-.flag svg{flex-shrink:0}
 .brief-foot{display:flex;align-items:center;gap:8px;padding:0 12px 10px;font-size:12px;color:var(--faint)}
 .brief.off{border-style:dashed}
 .brief.off .brief-foot{padding-top:6px}
 .brief-sk{padding:10px 12px 12px;display:grid;gap:10px}
 .brief-sk .sk{height:12px}
 
-/* Sections and rows */
-.sec-h{position:relative;display:flex;align-items:center;gap:8px;width:100%;padding:10px 18px 8px;background:var(--panel);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--faint);text-align:left}
+/* Sections and rows: lean rows (September 28, 2026). One line: priority, key, title, then one plain reason and a compact age.
+   No pills, no source/project/status text in the row. Everything else lives in the detail pane. */
+:root{--sel-bg:color-mix(in srgb,var(--accent) 11%,var(--panel));--row-h:40px}
+body.compact{--row-h:32px}
+body.compact .brief{display:none}
+.sec-h{position:relative;display:flex;align-items:center;gap:6px;width:100%;padding:0 18px 0 12px;min-height:38px;background:var(--panel);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--faint)}
+.sec-t{display:inline-flex;align-items:center;gap:8px;padding:4px 6px;border-radius:var(--r-sm);text-align:left}
+.sec-t:hover{background:var(--raise)}
 .sec-h b{color:var(--text);font-weight:600;font-size:13.5px}
-.sec-h .chev{transition:transform .3s var(--out);transform:rotate(90deg)}
-.sec-h[aria-expanded="false"] .chev{transform:none}
-.sec-h .rule{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sec-t .chev{transition:transform .3s var(--out);transform:rotate(90deg);color:var(--faint)}
+.sec-t[aria-expanded="false"] .chev{transform:none}
 .sec-h .n{font-variant-numeric:tabular-nums;color:var(--muted)}
 .sec-h.attn b{color:var(--warn)}
+.sec-h.static{padding-left:18px}
+.tipw{position:relative;display:inline-flex}
+.info{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:var(--faint)}
+.info:hover{color:var(--text);background:var(--raise)}
+.tip{position:absolute;left:50%;top:calc(100% + 4px);transform:translateX(-50%);z-index:9;width:max-content;max-width:260px;padding:6px 10px;border-radius:var(--r-sm);background:var(--text);color:var(--panel);font-size:12.5px;line-height:1.4;font-weight:400;white-space:normal;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s}
+.tipw:hover .tip,.info:focus-visible+.tip{opacity:1;visibility:visible;pointer-events:auto}
+.tipw.hush .tip{opacity:0!important;visibility:hidden!important}
 .sec-empty{padding:12px 18px;font-size:13px;color:var(--faint);border-bottom:1px solid var(--line)}
-.irow{display:flex;align-items:stretch;gap:0;padding:0;border-bottom:1px solid var(--line);position:relative;background:var(--panel);transition:background .15s}
-.irow:hover{background:var(--raise)}
-.irow.sel{background:var(--accent-soft)}
-.ir-main{flex:1;min-width:0;display:grid;grid-template-columns:14px 16px 18px 70px minmax(0,1fr) auto;align-items:center;column-gap:10px;row-gap:2px;padding:9px 8px 9px 18px;text-align:left;font-size:13.5px}
+.irow{display:flex;flex-wrap:wrap;align-items:stretch;padding:0;border-bottom:1px solid var(--line);position:relative;background:var(--panel);transition:background .15s;--row-bg:var(--panel)}
+.irow:hover{--row-bg:var(--raise);background:var(--row-bg)}
+.irow.sel{--row-bg:var(--sel-bg);background:var(--row-bg);box-shadow:inset 3px 0 0 var(--accent-text)}
+.ir-main{flex:1;min-width:0;min-height:var(--row-h);display:grid;grid-template-columns:10px 16px 66px minmax(0,1fr) auto 34px;align-items:center;column-gap:10px;padding:0 18px 0 10px;text-align:left;font-size:13.5px}
+.ir-main:focus-visible{outline:2px solid var(--accent-text);outline-offset:-2px;border-radius:0}
+.ir-main.st{grid-template-columns:10px 14px 16px 66px minmax(0,1fr) auto 34px}
 .ir-main .tk-title{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ir-main .ir-sub{grid-column:5/7;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--faint);min-width:0}
-.ir-main .ir-sub>span{white-space:nowrap}
-.ir-right{display:flex;align-items:center;gap:10px;justify-content:flex-end;white-space:nowrap}
-.age{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
-.age.warn{color:var(--warn);font-weight:500}
-.ir-acts{display:flex;align-items:center;gap:6px;padding:0 14px 0 4px;opacity:0;transition:opacity .15s}
-.irow:hover .ir-acts,.irow:focus-within .ir-acts,.irow.sel .ir-acts,.ir-acts.pin{opacity:1}
-.qa{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--panel);font-size:12.5px;font-weight:500;white-space:nowrap;transition:border-color .2s,background .2s}
-.qa:hover:not(:disabled){border-color:var(--faint)}
-.qa.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
-.qa.primary:hover:not(:disabled){box-shadow:0 0 0 3px var(--accent-soft)}
-.qa:disabled{opacity:.4;cursor:not-allowed}
-.qa.done{border-color:transparent;background:transparent;color:var(--accent-text)}
-body.compact .ir-main{padding-top:6px;padding-bottom:6px}
-body.compact .ir-main .ir-sub{display:none}
-body.compact .brief{display:none}
-.cmp-flag{display:none;color:var(--warn)}
-.cmp-only{display:none}
-body.compact .cmp-only{display:inline}
-body.compact .cmf-only{display:none}
-body.compact .cmp-flag{display:inline-flex}
+.srcl{font:500 10px/1 "Geist Mono",monospace;color:var(--faint);opacity:0;transition:opacity .15s;text-align:center}
+.irow:hover .srcl,.irow:focus-within .srcl,.irow.sel .srcl{opacity:1}
+.why-r{display:inline-flex;align-items:center;gap:6px;min-width:0;justify-content:flex-end;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.why-r .txt{overflow:hidden;text-overflow:ellipsis}
+.sev{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:transparent}
+.sev.warn{background:var(--warn)}
+.sev.bad{background:var(--danger)}
+.sev.run{background:var(--accent);animation:pulse 1.4s infinite}
+.more{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.syncw{display:inline-grid;place-items:center;color:var(--danger)}
+.syncw.stale{color:var(--warn)}
+.age{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.ir-acts{position:absolute;right:12px;top:0;bottom:0;display:flex;align-items:center;gap:4px;padding-left:12px;background:var(--row-bg);opacity:0;pointer-events:none;transition:opacity .12s}
+.irow:hover .ir-acts,.irow:focus-within .ir-acts,.irow.sel .ir-acts,.ir-acts.pin{opacity:1;pointer-events:auto}
+/* The action takes the place of the reason and age; the detail pane lists every reason */
+.irow.acts:hover .ir-main>.why-r,.irow.acts:hover .ir-main>.age,.irow.acts:focus-within .ir-main>.why-r,.irow.acts:focus-within .ir-main>.age,.irow.acts.sel .ir-main>.why-r,.irow.acts.sel .ir-main>.age,.irow.pinned .ir-main>.why-r,.irow.pinned .ir-main>.age{visibility:hidden}
+.qa{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:var(--r-sm);border:1px solid transparent;background:transparent;color:var(--text);font-size:12.5px;font-weight:500;white-space:nowrap;transition:border-color .15s,background .15s}
+.qa:hover:not(:disabled){background:color-mix(in srgb,var(--text) 7%,transparent)}
+.qa.primary{color:var(--accent-text);border-color:color-mix(in srgb,var(--accent-text) 45%,transparent);font-weight:600}
+.qa.primary:hover:not(:disabled){background:var(--accent-soft)}
+.qa:disabled{opacity:.45;cursor:not-allowed}
+.qa.done{color:var(--accent-text)}
 .pri.urgent{width:14px;height:14px;border-radius:4px;background:var(--warn);color:var(--warn-ink);display:inline-grid;place-items:center;font-size:12px;font-weight:700;line-height:1}
 .pri.none i{background:var(--line)}
 .who-ava{width:18px;height:18px;border-radius:6px;font-size:12px;font-weight:600;display:inline-grid;place-items:center;background:var(--raise);color:var(--muted)}
@@ -1032,9 +1042,7 @@ body.compact .cmp-flag{display:inline-flex}
 /* Skeletons: shaped like the content, never a spinner */
 .sk-nav{display:grid;gap:12px;padding:16px 12px}
 .sk-sec{display:flex;gap:10px;align-items:center;padding:12px 18px 10px;border-bottom:1px solid var(--line)}
-.sk-irow{display:grid;grid-template-columns:14px 16px 18px 70px minmax(0,1fr) 90px;gap:10px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line)}
-.sk-irow .l2{grid-column:5/7;height:9px;width:45%}
-body.compact .sk-irow .l2{display:none}
+.sk-irow{display:grid;grid-template-columns:10px 16px 66px minmax(0,1fr) 130px 34px;gap:10px;align-items:center;min-height:var(--row-h);padding:0 18px 0 10px;border-bottom:1px solid var(--line)}
 .sk.c{border-radius:50%}
 .sk-detail{padding:22px;display:grid;gap:12px}
 .sk-detail .sk{height:12px}
@@ -1049,13 +1057,17 @@ body.compact .sk-irow .l2{display:none}
 }
 @media (max-width:900px){
   .ib-nav{display:none}
-  .ir-main{grid-template-columns:14px 16px 18px minmax(0,1fr) auto}
-  .ir-main .tk-key{display:none}
-  .ir-main .ir-sub{grid-column:4/6}
-  .ir-acts{opacity:1}
+  /* Two lines at most: title on the first, the reason under it */
+  .ir-main,.ir-main.st{grid-template-columns:16px 58px minmax(0,1fr) 34px;grid-template-areas:"pri key title age" ". . why why";row-gap:2px;padding:8px 14px 8px 12px}
+  .ir-main .srcl,.ir-main .bk{display:none}
+  .ir-main .pri{grid-area:pri}.ir-main .tk-key{grid-area:key}.ir-main .tk-title{grid-area:title}.ir-main .age{grid-area:age}
+  .ir-main .why-r{grid-area:why;justify-content:flex-start}
+  .ir-acts{top:auto;bottom:4px;height:30px}
 }
 
-.bi .ir-acts{opacity:1;padding:0}
+.bi .ir-acts{position:static;opacity:1;pointer-events:auto;background:none;padding:0}
+.why-l{margin-top:2px}
+.why-l .why-r{justify-content:flex-start}
 
 </style>
 </head>
@@ -1099,7 +1111,8 @@ Object.assign(P,{
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   spark:'<path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
-  home:'<path d="M3 11 12 4l9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/>'
+  home:'<path d="M3 11 12 4l9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'
 });
 
 /* ---------- Sample data (fictional: team "Acme", example.atlassian.net, linear.app/acme) ---------- */
@@ -1192,20 +1205,23 @@ const findT=k=>T.find(t=>t.key===k);
 const mine=t=>t.who==="RP";
 
 /* ---------- Attention rules: deterministic, free, instant. Each flag says why. ---------- */
+const ago=v=>{if(!v)return "";const l=String(v).toLowerCase();if(l.includes("just now"))return "now";if(l.includes("yesterday"))return "1d";
+  const m=l.match(/(\d+)\s*(min|hour|h\b|day)/);return m?m[1]+(m[2]==="min"?"m":m[2]==="day"?"d":"h"):""};
+const days=n=>n?`${n}d`:"today";
+/* reason(t) -> [plain text for the row, compact age, what the age means] */
 const RULES=[
-  {id:"chat-asking",kind:"warn",rule:"A chat linked to this ticket asked you a question.",test:t=>t.chat&&t.chat.state==="asking",short:t=>"Chat is waiting for you",long:t=>`Chat is waiting for your answer · ${t.chat.when.toLowerCase()}`},
-  {id:"sync-failed",kind:"bad",rule:"Spark could not change this ticket's status in the tracker.",test:t=>t.sync&&t.sync.s==="fail",short:t=>`Move failed in ${SRC[srcOf(t)].name}`,long:t=>`Move to In Progress failed in ${SRC[srcOf(t)].name}`},
-  {id:"high-idle",kind:"warn",rule:"High or Urgent, not started, assigned to you 2 or more days ago.",test:t=>t.pri>=3&&t.b==="To do"&&!t.chat&&(t.assignedDays||0)>=2,short:t=>`${PRI[t.pri]}, not started`,long:t=>`${PRI[t.pri]}, not started · assigned ${t.assignedDays} days ago`},
-  {id:"due-soon",kind:"warn",rule:"Due within 2 days and not yet in review or done.",test:t=>t.dueDays!=null&&t.dueDays<=2&&t.b!=="Done"&&t.b!=="In review",short:t=>dueWord(t),long:t=>dueWord(t)+(t.chat?"":" · no chat yet")},
-  {id:"review-slow",kind:"warn",rule:"In review for 3 days or more.",test:t=>t.b==="In review"&&(t.statusDays||0)>=3,short:t=>`In review ${t.statusDays} days`,long:t=>`In review ${t.statusDays} days · review status not available yet`}
+  {id:"chat-asking",kind:"warn",rule:"A chat linked to this ticket asked you a question.",test:t=>t.chat&&t.chat.state==="asking",reason:t=>["Waiting for your answer",ago(t.chat.when),t.chat.when],long:t=>`Chat is waiting for your answer · ${t.chat.when.toLowerCase()}`},
+  {id:"sync-failed",kind:"bad",rule:"Spark could not change this ticket's status in the tracker.",test:t=>t.sync&&t.sync.s==="fail",reason:t=>[`Move failed in ${SRC[srcOf(t)].name}`,ago(t.updated),`Updated ${t.updated}`],long:t=>`Move to In Progress failed in ${SRC[srcOf(t)].name}`},
+  {id:"high-idle",kind:"warn",rule:"High or Urgent, not started, assigned to you 2 or more days ago.",test:t=>t.pri>=3&&t.b==="To do"&&!t.chat&&(t.assignedDays||0)>=2,reason:t=>[`${PRI[t.pri]} · not started`,days(t.assignedDays),`Assigned ${t.assignedDays} days ago`],long:t=>`${PRI[t.pri]}, not started · assigned ${t.assignedDays} days ago`},
+  {id:"due-soon",kind:"warn",rule:"Due within 2 days and not yet in review or done.",test:t=>t.dueDays!=null&&t.dueDays<=2&&t.b!=="Done"&&t.b!=="In review",reason:t=>[dueWord(t),ago(t.updated),`Updated ${t.updated}`],long:t=>dueWord(t)+(t.chat?"":" · no chat yet")},
+  {id:"review-slow",kind:"warn",rule:"In review for 3 days or more.",test:t=>t.b==="In review"&&(t.statusDays||0)>=3,reason:t=>[t.pr?`PR #${t.pr.n} in review`:"In review",days(t.statusDays),`In review for ${t.statusDays} days`],long:t=>`In review ${t.statusDays} days · review status not available yet`}
 ];
 const dueWord=t=>t.dueDays<0?`Overdue by ${-t.dueDays} days`:t.dueDays===0?"Due today":t.dueDays===1?"Due tomorrow":`Due in ${t.dueDays} days`;
 const flagsOf=t=>mine(t)?RULES.filter(r=>r.test(t)):[];
-const flagHTML=(t,r,long)=>`<span class="flag${r.kind==="bad"?" bad":""}" title="${esc(r.rule)}">${svg(r.kind==="bad"?P.warn:P.flag,11,2.2)}${esc(long?r.long(t):r.short(t))}</span>`;
 
 /* ---------- Smart views: every ticket assigned to you lands in exactly one ---------- */
 const SECTIONS=[
-  ["attn","Needs attention","Flagged by the rules below. Each row says why."],
+  ["attn","Needs attention","Flagged by rules; each row says why."],
   ["work","Working on","A linked chat is running or open, or the ticket is in progress."],
   ["pr","PR ready","Spark opened a draft PR. Review and CI status aren't read yet."],
   ["review","In review","Waiting on others. Age counts from when it entered review."],
@@ -1257,20 +1273,35 @@ const priHTML=n=>n===4?`<span class="pri urgent" role="img" aria-label="Urgent p
 const srcb=s=>`<span class="srcb" role="img" aria-label="${SRC[s].name}" title="${SRC[s].name}">${svg(P[SRC[s].icon],12,2)}</span>`;
 const bkCls=b=>b==="To do"?"todo":b==="In progress"?"prog":b==="In review"?"rev":"done";
 const bk=t=>`<i class="bk ${bkCls(t.b)}" role="img" aria-label="${t.b}" title="${esc(t.st)} in ${SRC[srcOf(t)].name}"></i>`;
-const CHAT_WORD={running:"running",done:"finished",asking:"needs your answer",idle:"finished, not shipped",error:"stopped with an error"};
-function linksHTML(t){
-  let h="";
-  if(t.chat)h+=`<span class="lk" title="Linked chat, ${CHAT_WORD[t.chat.state]}">${t.chat.state==="running"?'<i class="cdot running" aria-hidden="true"></i>':t.chat.state==="asking"?'<i class="cdot asking" aria-hidden="true"></i>':""}${svg(P.chat,14,2)}<span class="vh">Linked chat, ${CHAT_WORD[t.chat.state]}</span></span>`;
-  if(t.pr)h+=`<span class="lk pr" title="Draft PR ${t.pr.repo}#${t.pr.n}">${svg(P.pr,14,1.9)}#${t.pr.n}<span class="vh"> draft pull request</span></span>`;
-  return h?`<span class="lks">${h}</span>`:"";
+/* The one reason a row shows. Extra flags become a +N counter; sync problems become a small glyph. */
+function reasonOf(t,sec){
+  const f=sec==="attn"?flagsOf(t):[];
+  if(f.length){const [text,age,title]=f[0].reason(t);return {sev:f[0].kind,text,age,title,more:f.slice(1).filter(r=>r.id!=="sync-failed"),lead:f[0].id}}
+  const up={age:ago(t.updated),title:`Updated ${t.updated}`};
+  if(sec==="work"){
+    if(t.chat&&t.chat.state==="running")return {sev:"run",text:t.chat.when.replace(/^Running, /,"Running · "),...up};
+    if(t.chat)return {text:"Finished, not shipped",age:ago(t.chat.when),title:t.chat.when};
+    return {text:"In progress · no chat",...up};
+  }
+  if(sec==="pr")return {text:`Draft PR #${t.pr.n}`,age:ago(t.pr.when),title:t.pr.when};
+  if(sec==="review")return {text:t.pr?`PR #${t.pr.n} in review`:"In review",age:days(t.statusDays),title:t.statusDays?`In review for ${t.statusDays} day${t.statusDays>1?"s":""}`:"Entered review today"};
+  if(sec==="next")return {text:t.due?`Due ${t.due==="Tomorrow"||t.due==="Today"?t.due.toLowerCase():t.due}`:"Not started",age:days(t.assignedDays),title:`Assigned ${t.assignedDays} day${t.assignedDays===1?"":"s"} ago`};
+  if(sec==="done")return {text:"Done",age:ago(t.doneAgo),title:`Done ${t.doneAgo}`};
+  if(sec==="search")return {text:mine(t)?"Assigned to you":t.who?`Assigned to ${PEOPLE[t.who]}`:"Unassigned",...up};
+  return {text:"",...up};
 }
-function syncMark(t){
-  if(stale(t))return `<span class="stale-tag">Out of date</span>`;
-  if(t.sync&&t.sync.s==="pend")return `<span class="pend-line"><i class="pdot" aria-hidden="true"></i><span class="vh">Status change pending</span></span>`;
+function syncGlyph(t,r){
+  if(stale(t))return `<span class="syncw stale" title="Out of date: showing the copy from 11:02">${svg(P.warn,13,2.2)}<span class="vh">Out of date</span></span>`;
+  if(t.sync&&t.sync.s==="pend")return `<span class="syncw" title="${esc(t.sync.text)}"><i class="pdot" aria-hidden="true"></i><span class="vh">${esc(t.sync.text)}</span></span>`;
+  if(t.sync&&t.sync.s==="fail"&&r.lead!=="sync-failed")return `<span class="syncw" title="${esc(t.sync.text)} Details and Retry in the ticket.">${svg(P.warn,13,2.2)}<span class="vh">${esc(t.sync.text)}</span></span>`;
   return "";
 }
+function reasonHTML(t,sec,r=reasonOf(t,sec)){
+  const more=r.more&&r.more.length?`<span class="more" title="${esc(r.more.map(x=>x.reason(t)[0]).join("; "))}">+${r.more.length}<span class="vh"> more: ${esc(r.more.map(x=>x.reason(t)[0]).join("; "))}</span></span>`:"";
+  return `<span class="why-r"><i class="sev${r.sev?" "+r.sev:""}" aria-hidden="true"></i><span class="txt">${esc(r.text)}</span>${more}${syncGlyph(t,r)}</span>`;
+}
+const tipHTML=(id,label,text)=>`<span class="tipw"><button class="info" type="button" aria-label="About ${esc(label)}" aria-describedby="tip-${id}">${svg(P.info,14,2)}</button><span class="tip" role="tooltip" id="tip-${id}">${esc(text)}</span></span>`;
 const avaHTML=(i,cls="mini")=>`<span class="ava ${cls}" aria-hidden="true">${i}</span>`;
-const whoHTML=t=>t.who?`<span class="who-ava${t.who==="RP"?" me":""}" role="img" aria-label="Assigned to ${t.who==="RP"?"you":PEOPLE[t.who]}" title="${t.who==="RP"?"You":PEOPLE[t.who]}">${t.who}</span>`:`<span class="unass" role="img" aria-label="Unassigned" title="Unassigned"></span>`;
 
 function toast(msg,undo){
   const box=$("toasts");const d=document.createElement("div");d.className="toast";d.setAttribute("role","status");
@@ -1330,7 +1361,7 @@ function briefHTML(){
     <button class="hlink" data-act="brief-refresh" title="Refreshes at most every 30 minutes">Refresh</button>
     <div style="position:relative"><button class="icon-btn" data-act="brief-pop" aria-expanded="${S.briefPop}" aria-controls="briefPop" aria-label="Brief settings" title="Brief settings">${svg(P.gear,15,2)}</button>${pop}</div>
     </div>
-    <ol>${items.map(([b,t],i)=>`<li class="bi"><span class="num" aria-hidden="true">${i+1}</span><div><p><button class="kref" data-act="sel" data-k="${t.key}" aria-label="Show ${t.key}">${t.key}</button> ${esc(b.text)}</p><div class="why" aria-label="Why">${flagsOf(t).map(r=>flagHTML(t,r)).join("")}</div></div>${quickActs(t,"attn",true)}</li>`).join("")}</ol>
+    <ol>${items.map(([b,t],i)=>`<li class="bi"><span class="num" aria-hidden="true">${i+1}</span><div><p><button class="kref" data-act="sel" data-k="${t.key}" aria-label="Show ${t.key}">${t.key}</button> ${esc(b.text)}</p><div class="why-l">${reasonHTML(t,"attn")}</div></div>${quickActs(t,"attn",true)}</li>`).join("")}</ol>
     <div class="brief-foot">${svg(P.spark,12,2)}The ticket items from your Home brief, written only from the flagged items and their ticket and PR details. The flags come from rules, not the AI.${more>0?` ${more} more flagged below.`:""}<a class="hlink" style="margin-left:auto;white-space:nowrap" href="home-brief-mockup.html${location.search}">Full brief on Home</a></div></section>`;
 }
 function briefPopHTML(){
@@ -1346,60 +1377,32 @@ function briefPopHTML(){
 }
 
 /* ---------- Rows and quick actions ---------- */
-function quickActs(t,sec,small){
+function quickActs(t,sec){
   const st=stale(t),dis=st?` disabled title="Reconnect Jira first"`:"";
   const b=(act,label,cls="",extra="")=>`<button class="qa ${cls}" data-act="${act}" data-k="${t.key}"${extra} aria-label="${label} ${t.key}">${label}</button>`;
   if(t.assigning)return `<span class="ir-acts pin"><span class="pend-line" role="status"><i class="pdot" aria-hidden="true"></i>Assigning in ${SRC[srcOf(t)].name}</span></span>`;
   if(t.justAssigned)return `<span class="ir-acts pin"><span class="qa done">${I.ok}Assigned to you</span>${b("undo","Undo")}</span>`;
-  const acts=[];
-  if(sec==="search"&&!mine(t))acts.push(b("assign","Assign to me",t.who?"":"primary",dis));
-  if(sec==="attn"){
-    const f=flagsOf(t)[0];
-    if(f&&f.id==="chat-asking")acts.push(b("open-chat","Answer","primary"));
-    else if(f&&f.id==="sync-failed")acts.push(b("retry","Retry","",dis));
-    else if(f&&f.id==="review-slow")acts.push(b("open-pr","Open PR","primary"));
-    else acts.push(b("start","Start","primary",dis));
-    if(!small&&f&&f.id==="chat-asking"&&t.sync&&t.sync.s==="fail")acts.push(b("retry","Retry","",dis));
-  }
-  if(sec==="work")acts.push(t.chat?b("open-chat","Open chat"):b("start","Start","",dis));
-  if(sec==="pr"){acts.push(b("open-pr","Open PR","primary"));if(!small)acts.push(b("open-chat","Open chat"))}
-  if(sec==="review")acts.push(t.pr?b("open-pr","Open PR"):b("ext",`Open in ${SRC[srcOf(t)].name}`));
-  if(sec==="next")acts.push(b("start","Start","primary",dis));
-  if(sec==="search"&&mine(t))acts.push(t.chat?b("open-chat","Open chat"):b("start","Start","",dis));
-  if(sec==="search"&&!mine(t)&&!t.who)acts.push(b("start","Start","",dis));
-  return `<span class="ir-acts${sec==="search"&&!t.who?" pin":""}">${acts.join("")}</span>`;
-}
-function ageHTML(t,sec){
-  const f=flagsOf(t);
-  if(sec==="attn")return `<span class="age warn cmp-only">${esc(f[0].short(t))}</span><span class="age cmf-only">Updated ${t.updated}</span>`;
-  if(sec==="work")return `<span class="age">${t.chat?esc(t.chat.when):"No chat in Spark"}</span>`;
-  if(sec==="pr")return `<span class="age">PR ${esc(t.pr.when.toLowerCase())}</span>`;
-  if(sec==="review")return `<span class="age">in review ${t.statusDays} day${t.statusDays===1?"":"s"}</span>`;
-  if(sec==="next")return `<span class="age">${t.due?`Due ${t.due.toLowerCase()==="tomorrow"?"tomorrow":t.due}`:`Assigned ${t.assignedDays} day${t.assignedDays===1?"":"s"} ago`}</span>`;
-  if(sec==="done")return `<span class="age">Done ${t.doneAgo}</span>`;
-  return `<span class="age">Updated ${t.updated}</span>`;
-}
-function subHTML(t,sec){
-  const pj=PROJ[t.p],bits=[];
-  if(sec==="attn")bits.push(flagsOf(t).map(r=>flagHTML(t,r,true)).join(""));
-  if(sec==="search")bits.push(`<span>${t.who?(t.who==="RP"?"Assigned to you":`Assigned to ${PEOPLE[t.who]}`):"Unassigned"}</span><span>·</span>`);
-  if(sec==="pr")bits.push(`<span>${t.pr.repo}#${t.pr.n} · Draft</span><span>·</span><span class="flag na" title="Spark doesn't read pull request status yet">Review status not available yet</span>`);
-  if(sec==="review")bits.push(`<span>${t.pr?`${t.pr.repo}#${t.pr.n}`:"Not opened from Spark"}</span><span>·</span><span class="flag na" title="Spark doesn't read pull request status yet">Reviewers not available yet</span>`);
-  bits.push(`<span>${esc(pj.name)}${pj.sprint?" · "+esc(pj.sprint):""}</span>`);
-  if(sec!=="attn"&&t.due&&sec!=="next")bits.push(`<span>· Due ${t.due.toLowerCase()==="tomorrow"||t.due.toLowerCase()==="today"?t.due.toLowerCase():t.due}</span>`);
-  if(t.st.toLowerCase()!==t.b.toLowerCase())bits.push(`<span>· ${SRC[srcOf(t)].name}: ${esc(t.st)}</span>`);
-  return `<span class="ir-sub">${bits.join("")}</span>`;
+  /* One action per row, shown on hover, focus or selection. Retry and everything else live in the detail pane. */
+  let a="";
+  if(sec==="search")a=!mine(t)?b("assign","Assign to me","primary",dis):t.chat?b("open-chat","Open chat"):b("start","Start","",dis);
+  if(sec==="attn"){const f=flagsOf(t)[0];
+    a=f.id==="chat-asking"?b("open-chat","Answer","primary"):f.id==="review-slow"?b("open-pr","Open PR","primary"):f.id==="sync-failed"?"":b("start","Start","primary",dis)}
+  if(sec==="work")a=t.chat?b("open-chat","Open chat"):b("start","Start","",dis);
+  if(sec==="pr")a=b("open-pr","Open PR","primary");
+  if(sec==="review")a=t.pr?b("open-pr","Open PR"):b("ext",`Open in ${SRC[srcOf(t)].name}`);
+  if(sec==="next")a=b("start","Start","primary",dis);
+  return a?`<span class="ir-acts">${a}</span>`:"";
 }
 function rowHTML(t,sec){
-  const f=sec==="attn"?flagsOf(t):[];
+  const r=reasonOf(t,sec),s=srcOf(t);
   const confirm=S.confirm===t.key?confirmHTML(t):"";
   const err=S.assignErr===t.key?`<div class="inline-err" role="alert">${svg(P.warn,14,2)}<span><b>Couldn't assign ${t.key}.</b> Jira says you can't assign issues in Engineering (ENG). Ask a project admin for the Assign issues permission. Nothing changed.</span></div>`:"";
-  return `<div class="irow${t.key===S.sel?" sel":""}${stale(t)?" stale":""}" role="listitem"${confirm?' style="z-index:7"':""}>
-    <button class="ir-main" data-act="sel" data-k="${t.key}" aria-current="${t.key===S.sel}">
-      ${bk(t)}${priHTML(t.pri)}${srcb(srcOf(t))}<span class="tk-key">${t.key}</span><span class="tk-title">${esc(t.title)}</span>
-      <span class="ir-right">${f.length?`<span class="cmp-flag" title="${esc(f.map(r=>r.long(t)).join("; "))}">${svg(P.flag,13,2)}<span class="vh">${esc(f.map(r=>r.long(t)).join("; "))}</span></span>`:""}${syncMark(t)}${sec==="search"?whoHTML(t):""}${linksHTML(t)}${ageHTML(t,sec)}</span>
-      ${subHTML(t,sec)}
-    </button>${quickActs(t,sec)}${confirm}${err}</div>`;
+  const acts=quickActs(t,sec);
+  return `<div class="irow${t.key===S.sel?" sel":""}${stale(t)?" stale":""}${acts?" acts":""}${acts.includes(" pin")?" pinned":""}" role="listitem"${confirm?' style="z-index:7"':""}>
+    <button class="ir-main${sec==="search"?" st":""}" data-act="sel" data-k="${t.key}" aria-current="${t.key===S.sel}">
+      <span class="srcl" aria-hidden="true" title="${SRC[s].name}">${S.src==="all"?SRC[s].name[0]:""}</span>${sec==="search"?bk(t):""}${priHTML(t.pri)}<span class="tk-key">${t.key}</span><span class="tk-title">${esc(t.title)}</span>
+      ${reasonHTML(t,sec,r)}<span class="age" title="${esc(r.title||"")}">${r.age}</span>
+    </button>${acts}${confirm}${err}</div>`;
 }
 function confirmHTML(t){
   return `<div class="confirm" role="dialog" aria-modal="false" aria-labelledby="cf-${t.key}" id="confirmPop">
@@ -1410,7 +1413,7 @@ function sectionHTML([id,label,rule,list]){
   if(S.view!=="all"&&S.view!==id)return "";
   const c=!!S.collapsed[id]&&S.view==="all";
   const body=list.length?list.map(t=>rowHTML(t,id)).join(""):`<div class="sec-empty">${id==="attn"?"Nothing needs you right now.":"Nothing here."}</div>`;
-  return `<section class="grp" aria-labelledby="sh-${id}"><button class="sec-h${id==="attn"&&list.length?" attn":""}" id="sh-${id}" data-act="sec-toggle" data-v="${id}" aria-expanded="${!c}" aria-controls="sb-${id}">${I.chev}<b>${label}</b><span class="n">${list.length}</span><span class="rule">${rule}</span></button>
+  return `<section class="grp" aria-labelledby="sh-${id}"><div class="sec-h${id==="attn"&&list.length?" attn":""}"><button class="sec-t" id="sh-${id}" data-act="sec-toggle" data-v="${id}" aria-expanded="${!c}" aria-controls="sb-${id}">${I.chev}<b>${label}</b><span class="n">${list.length}</span></button>${tipHTML(id,label,rule)}</div>
     <div role="list" id="sb-${id}" aria-labelledby="sh-${id}"${c?" hidden":""}>${body}</div></section>`;
 }
 function searchHTML(){
@@ -1419,7 +1422,7 @@ function searchHTML(){
   const src=S.error?`<div class="src-note" role="status">${svg(P.warn,14,2)}Jira results are from 11:02. Reconnect Jira to search it again. Linear results are live.</div>`:"";
   if(!hits.length)return `${src}<div class="tk-empty" style="padding:48px 22px"><div><h2 style="font-size:17px">No tickets match "${esc(S.q.trim())}"</h2><p class="set-hint">Searched every ticket you can see in Linear (Acme) and Jira (example.atlassian.net), not just yours. Try fewer words, or clear the filters.</p><div class="tk-cta" style="margin-top:12px"><button class="btn sm line" data-act="clear-filters">Clear filters</button><button class="btn sm ghost" data-act="clear-q">Clear search</button></div></div></div>`;
   return `${src}<div class="res-h" role="status"><b>${hits.length} results</b> for "${esc(S.q.trim())}" across all tickets in Linear and Jira</div>
-    ${groups.map(([g,l],i)=>`<section aria-labelledby="rg-${i}"><div class="sec-h" id="rg-${i}" style="cursor:default"><b>${g}</b><span class="n">${l.length}</span>${g==="Unassigned"?`<span class="rule">Assign to me sets you as the assignee in the tracker.</span>`:""}</div><div role="list" aria-labelledby="rg-${i}">${l.map(t=>rowHTML(t,"search")).join("")}</div></section>`).join("")}`;
+    ${groups.map(([g,l],i)=>`<section aria-labelledby="rg-${i}"><div class="sec-h static" id="rg-${i}"><b>${g}</b><span class="n">${l.length}</span>${g==="Unassigned"?tipHTML("unass","Unassigned","Assign to me sets you as the assignee in the tracker."):""}</div><div role="list" aria-labelledby="rg-${i}">${l.map(t=>rowHTML(t,"search")).join("")}</div></section>`).join("")}`;
 }
 function listHTML(){
   if(S.loading)return skeletonHTML();
@@ -1505,7 +1508,7 @@ function emptyHTML(){
     <p class="set-hint" style="margin-top:16px">Tokens stay in your macOS keychain. Spark changes a ticket only when you start work, open a draft PR or assign it to yourself.</p></div></div>`;
 }
 function skeletonHTML(){
-  const row=w=>`<div class="sk-irow" aria-hidden="true"><span class="sk c" style="height:13px;width:13px"></span><span class="sk" style="height:12px"></span><span class="sk" style="height:18px;border-radius:6px"></span><span class="sk"></span><span class="sk" style="width:${w}%"></span><span class="sk" style="height:12px"></span><span class="sk l2"></span></div>`;
+  const row=w=>`<div class="sk-irow" aria-hidden="true"><span></span><span class="sk" style="height:12px"></span><span class="sk" style="height:11px"></span><span class="sk" style="width:${w}%"></span><span class="sk" style="height:11px"></span><span class="sk" style="height:11px"></span></div>`;
   const sec=(w,rows)=>`<div class="sk-sec" aria-hidden="true"><span class="sk" style="width:12px;height:12px"></span><span class="sk" style="width:${w}px;height:13px"></span><span class="sk" style="width:18px"></span></div>`+rows.map(row).join("");
   return `<p class="vh" role="status">Loading tickets from Linear and Jira</p>${briefHTML()}${sec(120,[72,58,66])}${sec(90,[54,70])}${sec(80,[62,48,57])}`;
 }
@@ -1864,6 +1867,11 @@ function undoAssign(k){
 }
 
 /* ---------- Events ---------- */
+function selectRow(k,fromRow){
+  S.sel=k;S.confirm=null;renderList();renderDetail();
+  const d=$("tkDetail");if(d&&matchMedia("(max-width:1180px)").matches){d.focus();return}
+  if(fromRow){const r=document.querySelector(`.ir-main[data-k="${k}"]`);if(r)r.focus()}
+}
 function onClick(e){
   const b=e.target.closest("[data-act]");if(!b)return;
   const a=b.dataset.act,v=b.dataset.v,k=b.dataset.k;
@@ -1873,7 +1881,7 @@ function onClick(e){
   if(a==="nav-chats"){toast("Chats is not part of this mockup.");return}
   if(a==="nav-tickets"){go("");return}
   if(a==="nav-settings"){go("settings");return}
-  if(a==="sel"){S.sel=k;S.confirm=null;renderList();renderDetail();const d=$("tkDetail");if(d&&matchMedia("(max-width:1180px)").matches)d.focus();return}
+  if(a==="sel"){selectRow(k,b.classList.contains("ir-main"));return}
   if(a==="view"){S.view=v;S.q="";render();return}
   if(a==="sec-toggle"){S.collapsed[v]=!S.collapsed[v];renderList();const nb=$("sh-"+v);if(nb)nb.focus();return}
   if(a==="density"){S.compact=v==="compact";render();return}
@@ -1932,13 +1940,19 @@ function boot(){
   });
   document.addEventListener("input",e=>{if(e.target.id==="tkQ"){const was=searching();S.q=e.target.value;S.confirm=null;S.assignErr=null;
       if(was!==searching()){render();const q=$("tkQ");q.focus();q.setSelectionRange(q.value.length,q.value.length)}
-      else{const box=$("tkList");box.innerHTML=`<div class="res-h" role="status"><b>Searching Linear and Jira…</b></div>`+[66,52,71].map(w=>`<div class="sk-irow" aria-hidden="true"><span class="sk c" style="height:13px;width:13px"></span><span class="sk" style="height:12px"></span><span class="sk" style="height:18px;border-radius:6px"></span><span class="sk"></span><span class="sk" style="width:${w}%"></span><span class="sk" style="height:12px"></span><span class="sk l2"></span></div>`).join("");
+      else{const box=$("tkList");box.innerHTML=`<div class="res-h" role="status"><b>Searching Linear and Jira…</b></div>`+[66,52,71].map(w=>`<div class="sk-irow" aria-hidden="true"><span></span><span class="sk" style="height:12px"></span><span class="sk" style="height:11px"></span><span class="sk" style="width:${w}%"></span><span class="sk" style="height:11px"></span><span class="sk" style="height:11px"></span></div>`).join("");
         clearTimeout(boot.t);boot.t=setTimeout(renderList,reduce?0:450)}}
     if(e.target.id==="ctxNote"){CTX.note=e.target.value;syncCtx(findT(S.startKey))}});
   document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="ctxAt"||e.target.id==="ctxUrl")){e.preventDefault();ctxClick(e.target.id==="ctxAt"?"ctx-mention":"ctx-link")}});
   document.addEventListener("keydown",e=>{
     if(e.key==="/"&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)&&!$("dlg")&&!$("set")){const q=$("tkQ");if(q){e.preventDefault();q.focus()}return}
+    /* Arrow keys or j/k move the selection between rows; the selected row keeps focus and shows its action */
+    const ae=document.activeElement;
+    if(ae&&ae.classList.contains("ir-main")&&["ArrowDown","ArrowUp","j","k"].includes(e.key)){
+      const rows=[...document.querySelectorAll("#tkList .ir-main")],i=rows.indexOf(ae),nx=rows[i+(e.key==="ArrowDown"||e.key==="j"?1:-1)];
+      e.preventDefault();if(nx)selectRow(nx.dataset.k,true);return}
     if(e.key!=="Escape")return;
+    if(ae&&ae.classList.contains("info")){const w=ae.closest(".tipw");w.classList.add("hush");ae.addEventListener("blur",()=>w.classList.remove("hush"),{once:true});w.addEventListener("mouseleave",()=>w.classList.remove("hush"),{once:true});return}
     if($("dlg")){e.preventDefault();closeDlg();return}
     if($("set")){e.preventDefault();go(closeTo());return}
     if(S.confirm){const k=S.confirm;S.confirm=null;renderList();const r=document.querySelector(`.ir-acts [data-act="assign"][data-k="${k}"]`);if(r)r.focus();return}
