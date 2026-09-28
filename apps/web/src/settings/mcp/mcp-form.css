@@ -1,0 +1,127 @@
+.mcp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+.mcp-form-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mcp-form-head h4 {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.mcp-form .field > label,
+.mcp-paste > label,
+.mcp-pairs legend {
+  display: block;
+  margin-bottom: 5px;
+  padding: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.mcp-form .field > span {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.mcp-form .inp.sm {
+  padding: 6px 9px;
+  font-size: 13px;
+}
+.mcp-form .mono {
+  font-family: var(--mcp-mono);
+  font-size: 12.5px;
+}
+.mcp-form .inp[aria-invalid='true'] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+.mcp-form-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 12px;
+  align-items: start;
+}
+.mcp-form .seg button {
+  padding: 4px 0;
+}
+.mcp-field-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.mcp-parsed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.mcp-parsed code {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--raise);
+  color: var(--text);
+  font-family: var(--mcp-mono);
+  font-size: 11.5px;
+}
+.mcp-paste {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+.mcp-paste .inp {
+  background: var(--panel);
+  resize: vertical;
+}
+.mcp-pairs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.mcp-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+.mcp-pairs-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.mcp-pairs-foot small {
+  color: var(--faint);
+  font-size: 12px;
+}
+.mcp-form-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 700px) {
+  .mcp-form-row,
+  .mcp-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

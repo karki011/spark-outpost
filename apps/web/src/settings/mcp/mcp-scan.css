@@ -1,0 +1,52 @@
+.mcp-scan {
+  padding: 8px 8px 8px 14px;
+  font-size: 13px;
+}
+.mcp-scan-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mcp-scan-row p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.mcp-scan-note {
+  margin: 6px 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.mcp-scan ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.mcp-scan li {
+  display: grid;
+  grid-template-columns: 120px 72px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 2px 8px;
+  font-size: 12.5px;
+}
+.mcp-scan li b {
+  font-weight: 500;
+}
+.mcp-scan li span {
+  color: var(--muted);
+}
+.mcp-scan li code {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--faint);
+  font-family: var(--mcp-mono);
+  font-size: 11.5px;
+}
+.mcp-scan li small {
+  grid-column: 1 / -1;
+  font-size: 12px;
+}
