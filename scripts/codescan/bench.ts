@@ -11,7 +11,7 @@ import {
 } from '../../apps/server/src/codescan/scanner.ts';
 import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { runMigrations } from '../../apps/server/src/persistence/migrate.ts';
-import { percentile, underLoad, type LoadStats } from './load.ts';
+import { percentile, underLoad } from './load.ts';
 import { REQUESTS } from './requests.ts';
 
 const { values } = parseArgs({
@@ -217,7 +217,7 @@ try {
   }
   if (phases.has('concurrent')) {
     results.concurrent = await concurrentPhase();
-    logStep('concurrent', results.concurrent as LoadStats);
+    logStep('concurrent', results.concurrent);
   }
   await writeFile(values.out, JSON.stringify(results, null, 1));
 } finally {

@@ -7,9 +7,9 @@ Instructions for humans and coding agents working in Spark Outpost.
 - Build a local-first, provider-agnostic workflow application. Cloud hosting is a future direction, not a reason to add unused infrastructure today.
 - Use a pnpm workspace monorepo, TypeScript, React with Vite, and Node.js with Express.
 - Use local PostgreSQL with versioned schema migrations. Keep database access in the backend.
-- Start with the local web interface. Electron is the preferred desktop shell after the web milestone; it stays a thin wrapper around the unchanged web app and Node service. A Rust backend is not required.
+- The local web interface comes first. Electron (`apps/desktop`) is the desktop shell; it stays a thin wrapper around the unchanged web app and Node service. A Rust backend is not required.
 - Use React state for UI interactions, TanStack Query for cached API data, and AG-UI events for live run updates. Give each piece of state one clear owner.
-- Coding agents connect through ACP. CopilotKit is not adopted for phases 0–1; if evaluated later, verify the exact integration license and do not introduce a paid runtime requirement implicitly.
+- Coding agents connect through ACP. CopilotKit is not used; if evaluated later, verify the exact integration license and do not introduce a paid runtime requirement implicitly.
 - The harness owns workflow state, execution policy, budgets, cancellation, recovery, and verification. Jev is an optional decision service; providers execute through explicit adapters.
 - Use A2A where independent agent communication is needed. Do not wrap every internal function or worker in a protocol without a current need.
 - Agents operate within authorized boundaries. Approval checkpoints are enforced by the backend; model recommendations cannot grant authority.
@@ -84,8 +84,8 @@ Read `docs/product/PLAN.md` for product direction and `docs/architecture/PROTOCO
 
 - Read `docs/KANBAN.md` before starting work; `docs/tasks/board.json` is the task source of truth.
 - Use `pnpm tasks move <ID> <status> "note"` to update progress and regenerate the board. Include acceptance evidence when marking done.
-- Run `pnpm test:db` for storage changes against an isolated PostgreSQL schema; it requires DATABASE_URL.
-- Run `pnpm check` for the foundation checks and `pnpm test:browser` for browser behavior.
+- Run `pnpm test:db` for storage changes against an isolated PostgreSQL schema in `TEST_DATABASE_URL` (falls back to `DATABASE_URL`); `pnpm db:setup` writes both to `.local/credentials.env`.
+- Run `pnpm check` (format, lint, typecheck, source rules, contrast audit, ACP coverage, unit tests) and `pnpm test:browser` for browser behavior.
 - Run `pnpm db:setup` once for the isolated native macOS PostgreSQL cluster, then `pnpm db:up`, `pnpm db:migrate` and `pnpm dev`. Stop only this cluster with `pnpm db:stop`; preserve `.local` data and ignored credentials. See `infra/local/README.md`.
 - Run `pnpm desktop:dev` for the Electron shell (dev channel, own data folder and bundled Postgres); see `docs/architecture/ELECTRON_PLAN.md`.
 - Do not create or publish a remote repository, push, or deploy without user authorization.

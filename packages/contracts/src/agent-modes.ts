@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { PERMISSION_ASK, PERMISSION_DO, type InvolvementLevel } from './approvals.ts';
+import { PERMISSION_ASK, PERMISSION_DO } from './approvals.ts';
+import type { InvolvementLevel } from './involvement-levels.ts';
 
 export const agentModeOptionSchema = z.object({
   id: z.string(),
@@ -104,7 +105,7 @@ const PROVIDER_MODES: Readonly<Record<string, ProviderModeTable>> = {
   codex: CODEX_MODES,
 };
 
-export function providerModes(provider: string | null): ProviderModeTable | null {
+function providerModes(provider: string | null): ProviderModeTable | null {
   return provider ? (PROVIDER_MODES[provider] ?? null) : null;
 }
 
@@ -117,16 +118,19 @@ const KIND_POSTURES: Readonly<Record<string, ModePosture>> = {
 
 const READ_ONLY_ID = /^(read-?only|plan)$/i;
 
+function knownPosture(provider: string | null, mode: string): ModePosture | undefined {
+  const table = providerModes(provider);
+  if (table) return table.postures[mode];
+  return Object.values(PROVIDER_MODES).find((other) => other.postures[mode])?.postures[mode];
+}
+
 export function modePosture(
   provider: string | null,
   mode: string | null,
   kind: string | null = null,
 ): ModePosture {
   if (!mode) return 'unknown';
-  const table = providerModes(provider);
-  const known = table
-    ? table.postures[mode]
-    : Object.values(PROVIDER_MODES).find((other) => other.postures[mode])?.postures[mode];
+  const known = knownPosture(provider, mode);
   if (known) return known;
   if (kind && KIND_POSTURES[kind]) return KIND_POSTURES[kind];
   if (READ_ONLY_ID.test(mode)) return 'read_only';
@@ -137,9 +141,7 @@ export function isReadOnlyPosture(posture: ModePosture): boolean {
   return posture === 'read_only';
 }
 
-export function permissionForPosture(
-  posture: ModePosture,
-): typeof PERMISSION_ASK | typeof PERMISSION_DO {
+function permissionForPosture(posture: ModePosture): typeof PERMISSION_ASK | typeof PERMISSION_DO {
   return isReadOnlyPosture(posture) ? PERMISSION_ASK : PERMISSION_DO;
 }
 
@@ -159,10 +161,6 @@ export function defaultModeFor(provider: string | null): string | null {
   return providerModes(provider)?.defaultMode ?? null;
 }
 
-export function readOnlyModeFor(provider: string | null): string | null {
-  return providerModes(provider)?.readOnlyMode ?? null;
-}
-
 export function modeNeedsWorktree(
   provider: string | null,
   mode: string | null,
@@ -175,6 +173,14 @@ export function modeNeedsWorktree(
   if (table?.postures[mode]) return false;
   const posture = modePosture(provider, mode, kind);
   return posture === 'unknown' || posture === 'auto' || posture === 'full_access';
+}
+
+function firstModeWith(table: ProviderModeTable, postures: readonly ModePosture[]): string | null {
+  for (const wanted of postures) {
+    const match = Object.entries(table.postures).find(([, value]) => value === wanted);
+    if (match) return match[0];
+  }
+  return null;
 }
 
 const TRANSLATIONS: Readonly<Record<ModePosture, ModePosture[]>> = {
@@ -195,12 +201,7 @@ export function translateMode(
   if (!mode || from === to) return mode;
   const target = providerModes(to);
   if (!target) return null;
-  const posture = modePosture(from, mode);
-  for (const wanted of TRANSLATIONS[posture]) {
-    const match = Object.entries(target.postures).find(([, value]) => value === wanted);
-    if (match) return match[0];
-  }
-  return target.askingMode;
+  return firstModeWith(target, TRANSLATIONS[modePosture(from, mode)]) ?? target.askingMode;
 }
 
 const LEGACY_POSTURES: Readonly<Record<InvolvementLevel, readonly ModePosture[]>> = {
@@ -220,11 +221,7 @@ export function modeForLegacy(
   const wanted = LEGACY_POSTURES[level ?? 'balanced'].filter(
     (posture) => table.gatesEveryMode || posture !== 'full_access',
   );
-  for (const posture of wanted) {
-    const match = Object.entries(table.postures).find(([, value]) => value === posture);
-    if (match) return match[0];
-  }
-  return table.askingMode;
+  return firstModeWith(table, wanted) ?? table.askingMode;
 }
 
 const POSTURE_LINES: Readonly<Record<ModePosture, string>> = {
@@ -253,9 +250,9 @@ export interface CombinationFacts {
 
 export function combinationLine(facts: CombinationFacts): string {
   if (!facts.hasRepos) return 'Plain chat: no project folder, so nothing can change';
-  const posture = modePosture(facts.provider, facts.mode, facts.kind ?? null);
+  const posture = modePosture(facts.provider, facts.mode, facts.kind);
   if (isReadOnlyPosture(posture)) return `${POSTURE_LINES.read_only} · nothing changes`;
-  const worktree = modeNeedsWorktree(facts.provider, facts.mode, facts.kind ?? null);
+  const worktree = modeNeedsWorktree(facts.provider, facts.mode, facts.kind);
   const parts = [POSTURE_LINES[posture], AUTONOMY_LINES[facts.level]];
   if (worktree || facts.level === 'full-auto') parts.push('in a worktree copy');
   parts.push('Revert available');
@@ -264,9 +261,9 @@ export function combinationLine(facts: CombinationFacts): string {
 
 export function combinationWarning(facts: CombinationFacts): string | null {
   if (!facts.hasRepos) return null;
-  const posture = modePosture(facts.provider, facts.mode, facts.kind ?? null);
+  const posture = modePosture(facts.provider, facts.mode, facts.kind);
   if (isReadOnlyPosture(posture)) return null;
-  if (modeNeedsWorktree(facts.provider, facts.mode, facts.kind ?? null)) {
+  if (modeNeedsWorktree(facts.provider, facts.mode, facts.kind)) {
     return "In this mode the agent acts without Spark Outpost's approval gate, so it runs only in a worktree copy, never on your checkout.";
   }
   if (posture !== 'full_access' || facts.level === 'full-auto') return null;

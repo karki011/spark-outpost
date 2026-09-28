@@ -22,7 +22,7 @@ import {
 } from './repos.ts';
 import type { DayOptions } from './run-day.ts';
 import { scoreSession, type Evidence, type Intervention, type SessionScore } from './score.ts';
-import type { DaySession, RepoKey } from './sessions.ts';
+import type { DaySession, RepoKey } from './session-types.ts';
 
 const CAP_FACTOR = 3;
 const MIN_CAP_USD = 0.5;

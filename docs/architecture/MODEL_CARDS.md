@@ -2,7 +2,7 @@
 
 Designed on September 26, 2026 (Phase 1: research, data and design) and built the same day (Phase 2, see [Built](#built-september-26-2026)). See [JEV.md](JEV.md) for Jev's questions and [HARNESS_PLAN.md](HARNESS_PLAN.md) for the routing rules that use tiers.
 
-> **Round 10 (September 27, 2026): routing is rules-only.** A pinned model always runs; on Auto the rules pick the chat's model, the small tier for a trivial edit and the top tier for destructive work. Jev answers one observed `tier` question (small, mid or top of the chat's provider, with the card lines below as option text) and its pick is recorded as "Jev would have used …" for the Harness tab's rule-vs-Jev comparison, never applied. The provider, per-provider model and effort questions, the routing gates and the frontier gate are gone, and so is the "Allow frontier models" switch (`profiles.allow_frontier`, dropped by `0039_lean_harness.sql`): pinning a frontier model still works. Cards still supply prices, tiers, the effective default model, Settings → Models and the tier question's text. Sections below that describe Jev picking models are history.
+> **Round 10 (September 27, 2026): routing is rules-only.** A pinned model always runs; on Auto the rules pick the chat's model, the middle tier for a trivial edit and the top tier for destructive or complex work, and the harness never picks the fast tier or a retiring model ([ROUTING_PLAN.md §4](ROUTING_PLAN.md#4-policy-that-stays-in-code)). Jev answers one observed `tier` question (small, mid or top of the chat's provider, with the card lines below as option text) and its pick is recorded as "Jev would have used …" for the Harness tab's rule-vs-Jev comparison, never applied. The provider, per-provider model and effort questions, the routing gates and the frontier gate are gone, and so is the "Allow frontier models" switch (`profiles.allow_frontier`, dropped by `0039_lean_harness.sql`): pinning a frontier model still works. Cards still supply prices, tiers, the effective default model, Settings → Models and the tier question's text. Sections below that describe Jev picking models are history.
 
 ## Why
 
@@ -69,7 +69,7 @@ Strengths and weak spots per model are in the JSON. They are short phrases from 
 
 |                      | Claude (claude-agent-acp 0.81.2)                                                                                        | Codex (codex-acp 1.13.1, patched)                                                                         |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Do mode              | yes                                                                                                                     | **no**: agent mode ran `ls` and wrote a file without asking                                               |
+| Do mode              | yes                                                                                                                     | yes, since September 26: the patched `ask-every-action` mode (see [CODEX_DO.md](CODEX_DO.md))             |
 | Asks before commands | every edit and command, read-only ones included                                                                         | only for actions outside its sandbox                                                                      |
 | Sandbox              | none at OS level; tools limited, secret files denied, Bash unsandboxed after approval, its tools bypass our path policy | true read-only sandbox, but it can read the whole disk; the chat file editor can still write under `/tmp` |
 | Resume               | yes, across processes                                                                                                   | yes (`thread/resume`)                                                                                     |
@@ -219,11 +219,11 @@ Rules for the measured piece:
 
 Where the text goes:
 
-- **Intake** (`intake-questions.ts`, `routingQuestions`):
+- **Intake** (`intake-questions.ts`, `routingQuestions`, removed in round 10):
   - `provider` criteria become each provider card's `jevText` (≤ 160) instead of the bare name.
   - `model_<provider>` criteria become `cardText` instead of `label: description`. The adapter description is used only when there is no card.
   - `effort_<provider>` instructions gain the chosen-provider effort note, for example "Opus 5.5 defaults to medium; Haiku 4.5 ignores effort" (≤ 160).
-- **Routes** (`jev-questions.ts`, `buildRouteQuestions`): the same card text per model option, with the slot's category.
+- **Routes** (`jev-questions.ts`, `buildRouteQuestions`, removed in round 10): the same card text per model option, with the slot's category.
 - **The Architect route** asks through the same builder with category `plan`, so Jev sees "Opus 5.5 … bench plan 10/10 ~$0.17" next to "Sonnet 5 … bench plan 4/4 ~$0.12". A provider's frontier cards are offered only when "Allow frontier models" is on for that provider (see below).
 
 What it costs, and what gets pinned:
@@ -291,7 +291,7 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
   - by pinning it in the picker or Provider defaults, or
   - on Auto through the Codex frontier switch at 0.90 or more.
 
-### Allow frontier models, per provider (decided September 26, 2026)
+### Allow frontier models, per provider (decided September 26, 2026; removed in round 10)
 
 - **The setting.** One "Allow frontier models" switch per connected provider, all off by default.
   - Stored as `profiles.allow_frontier jsonb not null default '{}'` in the same migration as `model_stats`, for example `{"claude": false, "codex": true, "zai": false}`. A missing key means off.
@@ -312,7 +312,7 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
     - 6 Sol for a Codex Critic
   - Destructive Architect routes keep the rule's tier (top tier, or Sonnet for destructive work that names its files or a narrow scope, round 7), so Jev's frontier pick is recorded but never applied there.
   - Escalation (`oneTierUp`) never reaches frontier, even when the setting is on.
-- **Codex is read-only in our harness** (no Do, see the provider card). So a Codex frontier pick can only apply to the read-only roles: Scout, Architect and Critic. Builders never run on Codex, whatever the setting. In practice today that means the Critic (Codex reviews Claude work) and the Scout of a Codex Ask chat. An Architect runs only in Do orchestrations, which stay on Claude while Codex has no Do.
+- **Codex was read-only in our harness** (it had no Do when this was decided). So a Codex frontier pick can only apply to the read-only roles: Scout, Architect and Critic. Builders never run on Codex, whatever the setting. In practice today that means the Critic (Codex reviews Claude work) and the Scout of a Codex Ask chat. An Architect runs only in Do orchestrations, which stay on Claude while Codex has no Do.
 - **Recorded like every other Jev decision.**
   - Each route that offered or picked a frontier model stores its gate in the `run_advice` route row with `actAt: 0.9`.
   - The `answer` gains `frontier: { provider, allowed: boolean, offered: boolean, picked: boolean }`, so a benchmark can count how often Jev reached for a frontier model and whether it passed.

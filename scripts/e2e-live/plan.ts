@@ -293,7 +293,7 @@ function leanCells(): Cell[] {
   return [...lean, ...full, ...checked, ...drift, ...extra];
 }
 
-export const ROUTING_SCENARIOS = [
+const ROUTING_SCENARIOS = [
   'b',
   'c',
   'd',

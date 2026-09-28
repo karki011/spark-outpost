@@ -2,7 +2,8 @@ import { join } from 'node:path';
 import { testsGreen, type TestCounts } from '../../bench/verify.ts';
 import { hiddenCounts, suiteCounts } from './hidden.ts';
 import { applyPatch, createRepo, git, restore, settle, type DayRepo } from './repos.ts';
-import { SESSIONS, type RepoKey } from './sessions.ts';
+import type { RepoKey } from './session-types.ts';
+import { SESSIONS } from './sessions.ts';
 
 export interface SelfTestLine {
   session: string;
@@ -16,19 +17,21 @@ export interface SelfTestLine {
 const show = (counts: TestCounts | null) =>
   counts ? `${counts.pass}/${counts.tests}` : 'no result';
 
+const noHiddenTest = (session: string): SelfTestLine => ({
+  session,
+  before: null,
+  after: null,
+  suite: null,
+  ok: true,
+  note: 'no hidden test',
+});
+
 export async function selfTest(dir: string): Promise<SelfTestLine[]> {
   const lines: SelfTestLine[] = [];
   const repos = new Map<RepoKey, DayRepo>();
   for (const session of SESSIONS) {
     if (!session.expect.hidden && !session.plantBefore) {
-      lines.push({
-        session: session.id,
-        before: null,
-        after: null,
-        suite: null,
-        ok: true,
-        note: 'no hidden test',
-      });
+      lines.push(noHiddenTest(session.id));
       continue;
     }
     let repo = repos.get(session.repo);
@@ -43,14 +46,7 @@ export async function selfTest(dir: string): Promise<SelfTestLine[]> {
       restore(repo, dir, base);
     }
     if (!session.expect.hidden) {
-      lines.push({
-        session: session.id,
-        before: null,
-        after: null,
-        suite: null,
-        ok: true,
-        note: 'no hidden test',
-      });
+      lines.push(noHiddenTest(session.id));
       continue;
     }
     const before = await hiddenCounts(session.repo, repo.path, session.expect.hidden, scratch);

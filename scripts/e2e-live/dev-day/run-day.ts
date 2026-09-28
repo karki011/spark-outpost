@@ -7,6 +7,7 @@ import { stopBench } from '../../bench/live.ts';
 import { keychainSecretStore } from '../../../apps/server/src/setup/secrets.ts';
 import { Api } from '../api-driver.ts';
 import { benchEnv } from '../bench-env.ts';
+import { hitRateLimit } from '../results.ts';
 import type { BaseArm } from '../scenario-types.ts';
 import { startStack, stopStack, type Runtime, type Stack } from '../stack.ts';
 import { openBrowser } from '../ui-driver.ts';
@@ -17,8 +18,9 @@ import { HarnessDay } from './harness-day.ts';
 import { DEFAULT_LEVEL, LEVELS, type LevelKey } from './levels.ts';
 import { renderDayReport } from './report-day.ts';
 import { FAKE_REMOTE_HOST, ROOT } from './repos.ts';
-import { DEFAULT_RATES, type Rates } from './score.ts';
-import { SESSIONS, type DaySession } from './sessions.ts';
+import type { Rates } from './score.ts';
+import type { DaySession } from './session-types.ts';
+import { SESSIONS } from './sessions.ts';
 import { runSession, sessionCap, type ArmState, type DayRecord } from './session-run.ts';
 
 export const DEV_DAY_HARD_CAP_USD = 25;
@@ -66,7 +68,6 @@ function cleanGitHubEnv(): NodeJS.ProcessEnv {
 }
 export const DAY_ARMS: readonly BaseArm[] = ['harness', 'direct-claude', 'direct-codex'];
 const PROJECTION_FACTOR = 1.3;
-const LIMIT = /rate.?limit|usage limit|too many requests|\b429\b|overloaded|quota/i;
 
 export interface DayRun {
   version: 1;
@@ -109,7 +110,7 @@ async function save(options: DayOptions, run: DayRun): Promise<string> {
   return path;
 }
 
-export function daySessions(match: RegExp | null, dayLevel?: LevelKey): DaySession[] {
+function daySessions(match: RegExp | null, dayLevel?: LevelKey): DaySession[] {
   return SESSIONS.filter((session) => !match || match.test(session.id)).map((session) =>
     dayLevel && session.level === DEFAULT_LEVEL ? { ...session, level: dayLevel } : session,
   );
@@ -150,9 +151,7 @@ function newRun(options: DayOptions): DayRun {
 }
 
 function rateLimited(record: DayRecord): boolean {
-  return [record.evidence.error, ...record.turns.map((turn) => turn.error)].some(
-    (text) => text !== null && LIMIT.test(text),
-  );
+  return hitRateLimit([record.evidence.error, ...record.turns.map((turn) => turn.error)]);
 }
 
 async function armDays(
@@ -265,8 +264,6 @@ export async function runDevDay(options: DayOptions): Promise<DayRun> {
   }
   return run;
 }
-
-export const DEFAULT_DAY_RATES = DEFAULT_RATES;
 
 export function printDayPlan(match: RegExp | null): void {
   const sessions = SESSIONS.filter((session) => !match || match.test(session.id));

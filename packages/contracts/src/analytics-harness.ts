@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { gateDecisionSchema } from './advice.ts';
 import { analyticsWindowSchema, verdictCountsSchema } from './analytics.ts';
 import { buildStyleSchema } from './lean.ts';
 import { outcomeVerdictSchema } from './outcomes.ts';
@@ -19,13 +20,11 @@ export const flowPathSchema = z.object({
 });
 export type FlowPath = z.infer<typeof flowPathSchema>;
 
-export const gateDecisionPointSchema = z.enum(['act', 'ask', 'fallback']);
-
 export const confidencePointSchema = z.object({
   confidence: z.number().min(0).max(1),
   score: z.number().min(-1).max(1).nullable(),
   verdict: outcomeVerdictSchema,
-  decision: gateDecisionPointSchema.nullable(),
+  decision: gateDecisionSchema.nullable(),
   actAt: z.number().nullable(),
 });
 export type ConfidencePoint = z.infer<typeof confidencePointSchema>;

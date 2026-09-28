@@ -5,6 +5,7 @@ export * from './annotations.ts';
 export * from './agent-commands.ts';
 export * from './agent-modes.ts';
 export * from './approvals.ts';
+export * from './involvement-levels.ts';
 export * from './artifacts.ts';
 export * from './attachments.ts';
 export * from './audit.ts';

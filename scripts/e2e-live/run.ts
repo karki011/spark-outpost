@@ -12,7 +12,7 @@ import { printPlan } from './plan-print.ts';
 import { BLOCKS, planCells, VERSIONS, type Block, type Cell, type Version } from './plan.ts';
 import { assertScratchDir, createScenarioRepo, verifyScenario } from './repo.ts';
 import { renderReport } from './report.ts';
-import { cellCost, projectedUsd, type CellRecord, type E2eRun } from './results.ts';
+import { cellCost, hitRateLimit, projectedUsd, type CellRecord, type E2eRun } from './results.ts';
 import {
   ROOT,
   answers,
@@ -54,6 +54,7 @@ const { values } = parseArgs({
 });
 
 const runtime: Runtime = values.live ? 'acp' : 'fake';
+const timeoutMs = Number(values['timeout-min']) * 60_000;
 const blocks = values.blocks.split(',').map((block) => {
   if (!BLOCKS.includes(block as Block)) throw new Error(`Unknown block ${block}.`);
   return block as Block;
@@ -183,7 +184,7 @@ function armContext(runner: Runner): ArmContext {
   return {
     runtime,
     dir: runner.dir,
-    timeoutMs: Number(values['timeout-min']) * 60_000,
+    timeoutMs,
     benches: new Map(),
     browser: async () => (runner.browser ??= await openBrowser()),
     stack: async (cell) => {
@@ -206,11 +207,8 @@ function summary(record: CellRecord, spent: number): string {
   return `  ${verdict} ${(record.wallMs / 1000).toFixed(1)} s $${record.costUsd.toFixed(4)} spent=$${spent.toFixed(3)}${why.slice(0, 400)}`;
 }
 
-const LIMIT = /rate.?limit|usage limit|too many requests|\b429\b|overloaded|quota/i;
-
 function rateLimited(record: CellRecord): boolean {
-  const errors = [record.error, ...record.turns.map((turn) => turn.metrics.error)];
-  return errors.some((text) => text !== null && LIMIT.test(text));
+  return hitRateLimit([record.error, ...record.turns.map((turn) => turn.metrics.error)]);
 }
 
 async function runQueue(runner: Runner): Promise<void> {
@@ -280,7 +278,7 @@ async function devDay(dir: string): Promise<void> {
       dir,
       label: values.label,
       budgetUsd: budget,
-      timeoutMs: Number(values['timeout-min']) * 60_000,
+      timeoutMs,
       arms,
       match: pattern,
       shots: values.shots,

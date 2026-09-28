@@ -13,8 +13,8 @@ message → run (Postgres) → worker claims job → ACP provider
   → stop reason → run finished, failed, or cancelled
 ```
 
-- **One process per run.** The worker starts `claude-agent-acp` or `codex-acp` from the server's dependencies, over stdio. The run gets a new empty folder under the system temp directory. The process tree and the folder are removed when the run ends.
-- **Context.** The whole conversation is resent on every run, because Postgres is the source of truth. Up to 36 KB of the newest messages are included, and the prompt says how many older ones were left out. Messages are not summarized yet.
+- **Processes and sessions.** The worker starts `claude-agent-acp` or `codex-acp` from the server's dependencies, over stdio. A chat without a project works in a folder under `$TMPDIR/spark-outpost-sessions` (`SESSION_WORKDIR_ROOT`), and a later turn resumes the chat's agent session when it can (M6, `workflow/session-decision.ts`).
+- **Context.** A fresh session gets the conversation from Postgres, the source of truth; a resumed session gets only the new message. Up to 36 KB of the newest messages are included, and the prompt says how many older ones were left out. Messages are not summarized yet.
 - **Settings.** The run first forces the chat mode, then applies the connection's model and effort through config options. Model and effort are matched by value first, then by display name. If a value isn't offered, the run adds a visible step saying the agent's default is used. If the chat mode can't be applied, the run stops before the prompt is sent.
 - **Permissions.** Every permission request is declined with the agent's reject-once option, and the work log records a "Declined: …" step. A request that arrives after Stop is answered with the `cancelled` outcome, as the spec requires.
 - **Cancel.** Stop sends `session/cancel`. The process is killed if the agent hasn't stopped within 5 seconds.
@@ -60,30 +60,30 @@ Code: `apps/server/src/projects/`, `apps/server/src/persistence/conversation-pro
 
 ## Do in project folders (M2)
 
-A chat linked to a project runs in Do mode when its permission is Do (`overrides[provider].permission = 'do'`, with the involvement level in `.level`; defaults live on the provider connection and in Settings). The run records `runs.mode` (`chat`, `ask`, `do`) and `runs.level`. See [HARNESS_PLAN.md](HARNESS_PLAN.md#m2-status-september-26-2026) for the decision rules.
+A chat linked to a project runs in Do mode when its agent mode (`overrides[provider].agentMode`, default from `provider_connections.agent_mode`) is not read-only; the harness autonomy is `.level`. The run records `runs.mode` (`chat`, `ask`, `do`), `runs.agent_mode` and `runs.level`. See [HARNESS_PLAN.md](HARNESS_PLAN.md#m2-status-september-26-2026) for the decision rules.
 
-- **Claude.** Same hardening as Ask, with `tools: ['Read','Glob','Grep','Edit','Write','Bash']` and `settings.permissions.ask: ['Bash','Edit','Write']`, so even read-only commands like `ls` reach `session/request_permission`. The mode stays `default` and the mode lock is unchanged; bypass stays disabled. The prompt note says the agent may change files and that a denied action must not be retried another way.
+- **Claude.** Same hardening as Ask, with `tools: ['Read','Glob','Grep','Edit','Write','Bash']` and `settings.permissions.ask: ['Bash','Edit','Write']`, so even read-only commands like `ls` reach `session/request_permission`. The chosen Claude mode is applied; Do sessions let the adapter offer Bypass permissions, and the ask rules keep every edit and command at the gate in every mode (HARNESS_PLAN, "Safety floor under the permissive modes"). The prompt note says the agent may change files and that a denied action must not be retried another way.
 - **Codex** (since September 26, [CODEX_DO.md](CODEX_DO.md)). Our codex-acp patch adds the mode `ask-every-action`:
   - `approvalPolicy: "untrusted"` with approvals reviewed by the user
   - a `workspaceWrite` sandbox with no network and no `/tmp`; the run's private `TMPDIR` stays writable
   - a `decline` option on command and file-change requests, so a denied action lets Codex continue instead of ending its turn
 
-  A Do run sets that mode through `set_config_option` (`AgentDefinition.doMode`), and the mode lock stops the run if it changes. Live, every command, including `ls`, `cat` and `git status`, and every `apply_patch` reached `session/request_permission`, so `decide()` sees each action. Codex Do opens only the primary repo (`doPrimaryRootOnly`, because extra folders would become writable roots) and adds a step saying so. Codex Builders work in a git worktree at Auto-edit and Full auto (`doWorktreeLevels`, `orchestration/solo-copy.ts`; every Full auto Builder uses one since September 28), and in place at Ask before edits.
+  `ask-every-action` is Codex's asking mode (`AgentDefinition.doMode`): Ask every time uses it, and it is the fallback when a chosen mode is unavailable. A live switch to a mode the run may not use stops the run. Live, every command, including `ls`, `cat` and `git status`, and every `apply_patch` reached `session/request_permission`, so `decide()` sees each action. Codex Do opens only the primary repo (`doPrimaryRootOnly`, because extra folders would become writable roots) and adds a step saying so. Approve for me and Full access skip the gate, so they run only in a git worktree copy (`modeNeedsWorktree`, `orchestration/solo-copy.ts`); Ask every time runs where the autonomy puts it, and every Full auto → PR Builder uses a worktree.
 
   Known gaps:
   - Codex's sandbox reads the whole disk. We see and ask about commands that name a secret file, but not what a search or script reads.
   - If Codex asks to escalate, one approval runs the command outside the sandbox, with network, and the request doesn't show it.
   - The picker, Settings and the approval card say both.
 
-- **Permission requests** (`permission-request.ts`, `do-handlers.ts`): the tool kind, title, `rawInput.command`/`cwd`/`file_path`, diff content and locations become an approval request for the gate in `workflow/approval-gate.ts`. The harness answers `allow_once` or `reject_once` itself, stores every answer as an approval receipt with the JSON-RPC id and tool-call id (the link into the audit log), and adds an "Allowed …", "Denied: …" or "Cancelled: …" step. A request after Stop answers `cancelled`.
+- **Permission requests** (`permission-request.ts`, `do-handlers.ts`): the tool kind, title, `rawInput.command`/`cwd`/`file_path`, diff content and locations become an approval request for the gate in `workflow/approval-gate.ts`. The user's chosen option goes back as sent, including `*_always`, which is also stored as a run rule; when the gate decides by itself it answers `allow_once` or `reject_once`. It stores every answer as an approval receipt with the JSON-RPC id and tool-call id (the link into the audit log), and adds an "Allowed …", "Denied: …" or "Cancelled: …" step. A request after Stop answers `cancelled`.
 - **`fs/write_text_file`** is advertised in Do only. The path policy runs first (secret files, `.git/`, outside the roots are refused), then the gate with the old and new text; an approved write creates missing folders. Neither real adapter calls it.
 - **Snapshots.** Before the prompt, the worker records a git snapshot of the primary repo (a commit under `refs/spark-outpost/runs/<runId>`, made from a temporary index) or, outside git, copies each file before an approved edit. "Revert to before this run" restores only files changed since then.
-- **Safe reads and installs** (`approvals/command-kinds.ts`, both providers). At Balanced and above, one simple read-only command runs without asking when every path is inside the project (see HARNESS_PLAN's involvement table). Package installs always ask, at every level, unless they only restore the lockfile (a frozen or offline install that adds no packages).
+- **Safe reads and installs** (`approvals/command-kinds.ts`, both providers). In every mode whose requests reach the gate, one simple read-only command runs without asking when every path is inside the project. Package installs always ask, in every mode, unless they only restore the lockfile (a frozen or offline install that adds no packages).
 - **Known gaps:** Claude's Bash runs unsandboxed after approval (the card says so). Git snapshots skip ignored files. Outside git, files changed by commands are not backed up.
 
 ## Chat settings, capabilities, and usage
 
-- **Per-chat settings.** Each conversation stores its current provider and, per provider, the model, effort, and permission picked in that chat (`conversations.overrides`). Switching provider and back keeps those picks. A new chat starts on the connection defaults. Every run records the model and effort it was sent with.
+- **Per-chat settings.** Each conversation stores its current provider and, per provider, the model, effort, agent mode, autonomy and other config options picked in that chat (`conversations.overrides`). Switching provider and back keeps those picks. A new chat starts on the connection defaults. Every run records the model and effort it was sent with.
 - **Capability snapshots.** `provider_capabilities` caches each agent's model and effort lists, read from the config options in `session/new`.
   - The API fills the cache with a probe that runs `initialize` and `session/new` without prompting, so it costs no usage and takes about 5–10 s.
   - The worker refreshes the cache on every run.
@@ -186,13 +186,11 @@ In a chat there is little to show: Claude's tools are off, so a Claude chat usua
 ## Chat lockdown and known limits
 
 - **Claude:** built-in tools are turned off (`_meta.claudeCode.options.tools: []`, `strictMcpConfig`), so a chat cannot read or write files or run commands. Without a note in the prompt, Claude wrote fake tool-call markup as text. The prompt now says the chat has no project folder and no tools.
-- **Codex:** codex-acp's mode named "read-only" is a workspace-write sandbox that can also write `/tmp` and `$TMPDIR` without asking. For chats, Spark Outpost:
+- **Codex:** chats use the patched `read-only` mode, a real `readOnly` sandbox with no network (see "Session (Codex)" above and [PATCHES.md](PATCHES.md)). For chats, Spark Outpost also:
   - sets `INITIAL_AGENT_MODE=read-only`
   - points `TMPDIR` at the run's private folder
-  - turns off the shell, unified exec, JS REPL, and web search through `CODEX_CONFIG`
+  - turns off the shell, unified exec and web search through `CODEX_CONFIG`
   - declines every permission request
-
-  A live test confirmed that a write outside the sandbox is blocked. **Known gap:** Codex's file editor can still write under `/tmp` without asking. Closing this needs a real read-only sandbox from codex-acp, or the project-folder path with its own sandbox.
 
 - The user's global `~/.codex/config.toml` (for example `approval_policy = "never"`) does not loosen chats, because codex-acp sends its sandbox policy on every turn.
 - API-key connections for Claude and Codex are refused with a clear message. The adapters support `ANTHROPIC_API_KEY`, and `CODEX_API_KEY` or `OPENAI_API_KEY`, but that path isn't wired or tested yet. Z.ai is the only key-only agent (below).
@@ -211,9 +209,9 @@ In a chat there is little to show: Claude's tools are off, so a Claude chat usua
   - `test/acp-provider.test.ts`, which drives the real provider against `test/fake-acp-agent.ts` over stdio. It covers streaming, config, permission, cancel, crash, auth, and refusal cases.
   - `test/acp-project.test.ts`, which runs the fake agent in a project folder: `cwd`, advertised capabilities, reads with `line`/`limit`, refused reads (`..`, symlink escape, `.env`), declined writes, and a missing root.
   - `src/projects/path-policy.test.ts` for the path policy and `.sparkignore`.
-  - `src/approvals/decide.test.ts` for every involvement level, run rules, the allowlist and the always-ask list; `permission-request.test.ts` for the ACP mapping; `test/acp-approvals.test.ts`, which drives the fake agent in Do mode through allow, deny, cancel on Stop and approved, denied and refused `fs/write_text_file`; `src/approvals/command-kinds.test.ts` for safe reads and installs; `test/acp-codex-do.test.ts`, where the fake agent acts like Codex (`#codex`, `test/fake-codex-do.ts`: every command and patch asks with Codex's option ids, and `cancel` ends the turn) at all four levels.
+  - `src/approvals/decide.test.ts` for every mode posture, run rules, the allowlist and the always-ask list; `permission-request.test.ts` for the ACP mapping; `test/acp-approvals.test.ts`, which drives the fake agent in Do mode through allow, deny, cancel on Stop and approved, denied and refused `fs/write_text_file`; `src/approvals/command-kinds.test.ts` for safe reads and installs; `test/acp-codex-do.test.ts`, where the fake agent acts like Codex (`#codex`, `test/fake-codex-do.ts`: every command and patch asks with Codex's option ids, and `cancel` ends the turn).
 - `pnpm test:db` includes `test/approvals.db.test.ts` (the gate, run rules, the allowlist, decision races, payload hashes, Stop and the timeout) and `test/approval-runs.db.test.ts` (a worker run through the API decision, Stop while waiting, the timeout failing the run, crash recovery expiring approvals, and revert in and outside git).
-- `pnpm test:db` also includes `test/codex-crew.db.test.ts`: a Codex-only crew builds in place at Ask before edits, and in a merged and removed worktree at Auto-edit and Full auto.
+- `pnpm test:db` also includes `test/codex-crew.db.test.ts`: a Codex-only crew builds in place with Ask every time at Review each step, and in a merged and removed worktree with Approve for me at Automatic and Full auto → PR.
 - `pnpm test:live` includes `test/approvals.live.test.ts`: Claude in a temp git repo edits a file, runs `ls` and tries `git push`, and the run is reverted. `test/codex-do.live.test.ts` runs Codex Do (`gpt-6-luna` · low) at each level and checks that every Codex tool call has an approval receipt. Set `SPARK_LIVE_DIR` to keep its repos in a scratch folder.
 - The audit tests: unit tests for redaction, protocol entries, the hash chain, the recorder, and price estimates, and `test/acp-provider.test.ts` checks that every message is recorded in order with a secret in tool output redacted. `test/audit-log.db.test.ts` and `test/audit-api.db.test.ts` cover storage, paging, tamper detection, pruning, a worker run against the fake agent, the summary, and the export.
 - `pnpm test:db` covers run input: history, settings, and choosing the provider; `test/projects.db.test.ts` covers the folder picker, projects, file search, and project-file attachments.
@@ -232,7 +230,7 @@ Handled:
 
 - **Modes and models.** `legacy-options.ts` turns the legacy `modes` and unstable `models` fields into mode and model options when no config option of that category exists. Config options stay preferred. The safe mode is set with `session/set_config_option` or, for legacy agents, `session/set_mode`. SDK 1.5.0 has no `session/set_model`, so a legacy model choice falls back to the agent default with a visible note.
 - **Fresher options.** `applySessionSettings` returns the options from the last `set_config_option` and a capability report built from them, keeping the default model from `session/new`.
-- **Mode changes.** `current_mode_update` and the mode in `config_option_update` are checked against the mode the run was locked to. Leaving it adds a `Warning: … switched to … mode` step and `unsafeModeChange()` reports it so the provider can stop the run.
+- **Mode changes.** `current_mode_update` and the mode in `config_option_update` are checked against the modes the run may use (no worktree-only mode on the checkout, only read-only in Ask). Leaving it adds a `Warning: … switched to … mode` step and `unsafeModeChange()` reports it so the provider can stop the run.
 - **Failed tools** close their step and add a `Failed: {step}` step. The web work log folds that into the tool row and shows it as failed, live and after reload.
 - **Cancel.** `finish(true)` leaves unfinished tool and plan steps open, so the work log shows them as not finished.
 - **Plan updates** replace the whole plan. Entries that disappear are closed, `in_progress` entries stay open.
@@ -248,7 +246,7 @@ Still open:
 ## Extensibility and other agents
 
 - Our `_meta` use follows the extensibility rules: vendor-namespaced keys in `clientCapabilities._meta` and `session/new._meta`, no custom methods, and no new root fields. `session.notices` is an unstable spec field in SDK 1.5.0 (not ours), so keep the SDK version pinned. The full audit is in [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md). The run and the capability probe share `CLIENT_CAPABILITIES` and `CLIENT_INFO` from `client-info.ts`, so both advertise `sessionFailure` and notices.
-- **Gemini CLI** (`gemini --acp`) as a third provider needs:
+- **Gemini CLI** (`gemini --acp`) as another provider needs:
   - model selection through `unstable_setSessionModel` once the SDK exposes it. The legacy `modes` and `models` fallback already covers mode switching and model capabilities.
   - a per-run config that turns off the user's MCP servers and local file tools. It adds servers from `~/.gemini/settings.json` even when we pass none, and reads the disk directly when client fs is off.
   - usage read from the prompt response's `_meta.quota`

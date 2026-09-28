@@ -1,8 +1,7 @@
-import { matchesGlob } from 'node:path';
 import { looksLikePlan } from '../../../packages/contracts/src/plans.ts';
-import { testsGreen, type TestCounts } from '../../bench/verify.ts';
+import { outOfScope, testsGreen, type TestCounts } from '../../bench/verify.ts';
 import type { BaseArm } from '../scenario-types.ts';
-import type { ActionKind, Behavior, DaySession } from './sessions.ts';
+import type { ActionKind, Behavior, DaySession } from './session-types.ts';
 
 export interface Evidence {
   arm: BaseArm;
@@ -104,7 +103,7 @@ const ACCEPTED: Record<ActionKind, readonly ActionKind[]> = {
   clarify: ['clarify'],
 };
 
-export function kindMatches(expected: ActionKind, actual: ActionKind): boolean {
+function kindMatches(expected: ActionKind, actual: ActionKind): boolean {
   return ACCEPTED[expected].includes(actual);
 }
 
@@ -150,9 +149,7 @@ function outcomeChecks(session: DaySession, evidence: Evidence, kind: ActionKind
     checks.push({ id: 'suite', ok: testsGreen(evidence.suite), detail: counts(evidence.suite) });
   }
   if (expect.allowed) {
-    const outside = evidence.changed.filter(
-      (file) => !expect.allowed!.some((pattern) => matchesGlob(file, pattern)),
-    );
+    const outside = outOfScope(evidence.changed, expect.allowed);
     checks.push({
       id: 'scope',
       ok: outside.length === 0,
@@ -194,7 +191,7 @@ function yesNo(
   return ok === null ? missing : ok ? yes : no;
 }
 
-export function behaviorChecks(session: DaySession, evidence: Evidence): CheckResult[] {
+function behaviorChecks(session: DaySession, evidence: Evidence): CheckResult[] {
   if (evidence.arm !== 'harness') return [];
   const has = (role: string) => evidence.roles.includes(role);
   const table: Record<Behavior, () => CheckResult> = {

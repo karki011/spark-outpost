@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { runChangeSchema, type RunChange } from './approvals.ts';
 import { taskLinkSchema } from './tasks.ts';
 
 export const GIT_INSTALL_HINT =
@@ -12,11 +13,7 @@ export type ShipMode = z.infer<typeof shipModeSchema>;
 export const githubMethodSchema = z.enum(['gh_cli', 'token', 'app']);
 export type GitHubMethod = z.infer<typeof githubMethodSchema>;
 
-export const shipFileSchema = z.object({
-  path: z.string(),
-  change: z.enum(['added', 'modified', 'deleted']),
-});
-export type ShipFile = z.infer<typeof shipFileSchema>;
+export type ShipFile = RunChange;
 
 export const shipSkippedFileSchema = z.object({ path: z.string(), reason: z.string() });
 export type ShipSkippedFile = z.infer<typeof shipSkippedFileSchema>;
@@ -69,7 +66,7 @@ export const shipPreviewSchema = z.object({
   branch: z.string(),
   baseBranch: z.string().nullable(),
   title: z.string(),
-  files: z.array(shipFileSchema),
+  files: z.array(runChangeSchema),
   skipped: z.array(shipSkippedFileSchema),
   remote: shipRemoteSchema.nullable(),
   modes: z.array(shipModeSchema),

@@ -21,7 +21,7 @@ const HARNESS_OWNS_SESSION = 'Spark Outpost manages the agent session';
 const HARNESS_OWNS_SETUP = 'it changes the agent setup outside Spark Outpost';
 const HARNESS_OWNS_SIGN_IN = 'sign-in is managed in Settings';
 
-export const BLOCKED_AGENT_COMMANDS: Readonly<Record<string, string>> = {
+const BLOCKED_AGENT_COMMANDS: Readonly<Record<string, string>> = {
   'add-dir': HARNESS_OWNS_MODE,
   'allowed-tools': HARNESS_OWNS_MODE,
   approvals: HARNESS_OWNS_MODE,

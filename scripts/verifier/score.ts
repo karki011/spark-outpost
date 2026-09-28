@@ -1,5 +1,7 @@
+import type { Variant } from './case.ts';
+
 export interface Scored {
-  variant: 'correct' | 'wrong';
+  variant: Variant;
   jev: {
     verdict: string | null;
     confidence: number | null;
@@ -18,7 +20,7 @@ export interface Confusion {
   recall: number | null;
 }
 
-export function confusion<T extends Scored>(
+function confusion<T extends Scored>(
   results: readonly T[],
   flags: (result: T) => boolean,
 ): Confusion {
@@ -37,7 +39,7 @@ export function confusion<T extends Scored>(
 const maxUnmet = (result: Scored) =>
   Math.max(0, ...(result.jev?.unmet.map((entry) => entry.noul ?? 0) ?? []));
 
-export const SIGNALS: Record<string, (result: Scored) => boolean> = {
+const SIGNALS: Record<string, (result: Scored) => boolean> = {
   'Jev unsupported, accepted (confidence ≥ 0.8)': (result) =>
     result.jev?.accepted === 'unsupported',
   'Jev unsupported, top choice at any confidence': (result) =>

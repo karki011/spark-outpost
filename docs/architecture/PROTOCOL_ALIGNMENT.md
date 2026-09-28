@@ -4,15 +4,18 @@ Read this before changing persistence or agent integration. Product direction is
 
 ## Pinned versions
 
-| Package       | Version                       | Used for                                                            |
-| ------------- | ----------------------------- | ------------------------------------------------------------------- |
-| `@ag-ui/core` | 1.0.0 (MIT)                   | Event types and Zod schemas for every run event we store and stream |
-| `zod`         | 4.6.5                         | Validation at API, event, and configuration boundaries              |
-| PostgreSQL    | 17 (Homebrew `postgresql@17`) | Source of truth; matches the planned RDS major version              |
+| Package                                 | Version                                    | Used for                                                                                          |
+| --------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `@ag-ui/core`                           | 1.0.0 (MIT)                                | Event types and Zod schemas for every run event we store and stream                               |
+| `zod`                                   | 4.6.5                                      | Validation at API, event, and configuration boundaries                                            |
+| PostgreSQL                              | 17 (Homebrew `postgresql@17`)              | Source of truth; matches the planned RDS major version                                            |
+| `@agentclientprotocol/sdk`              | 1.5.0                                      | ACP client in the worker ([ACP_AGENTS.md](ACP_AGENTS.md), [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md)) |
+| `@agentclientprotocol/claude-agent-acp` | 0.81.2                                     | Claude adapter                                                                                    |
+| `@agentclientprotocol/codex-acp`        | 1.13.1 (patched, [PATCHES.md](PATCHES.md)) | Codex adapter                                                                                     |
 
-Not installed yet: `@ag-ui/client`, `@agentclientprotocol/sdk`, `@a2a-js/sdk`, CopilotKit.
+Not installed: `@ag-ui/client`, `@a2a-js/sdk`, CopilotKit.
 
-## What is implemented (phase 0)
+## What is implemented
 
 | Capability                                                                                          | Status                | Evidence                                                         |
 | --------------------------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------- |
@@ -31,9 +34,9 @@ Not installed yet: `@ag-ui/client`, `@agentclientprotocol/sdk`, `@a2a-js/sdk`, C
 
 ## Events emitted today
 
-`RUN_STARTED`, `STEP_STARTED`, `STEP_FINISHED`, `TEXT_MESSAGE_START`, `TEXT_MESSAGE_CONTENT`, `TEXT_MESSAGE_END`, `RUN_FINISHED` (outcomes `success`, `cancelled`), `RUN_ERROR` (codes `provider_error`, `outcome_unknown`).
+`RUN_STARTED`, `STEP_STARTED`, `STEP_FINISHED`, `TEXT_MESSAGE_START`, `TEXT_MESSAGE_CONTENT`, `TEXT_MESSAGE_END`, `CUSTOM` (`approval_requested`, `approval_decided`), `ACTIVITY_SNAPSHOT`, `RUN_FINISHED` (outcomes `success`, `cancelled`), `RUN_ERROR` (codes `provider_error`, `outcome_unknown`), built in `apps/server/src/workflow/run-events.ts`.
 
-The only provider is the fake provider, which echoes the message. It exists so the pipeline can be tested without a model; it is not evidence of any real provider capability.
+Real providers run through ACP (Claude, Codex, Z.ai; see [ACP_AGENTS.md](ACP_AGENTS.md)). The fake provider, which echoes the message, remains for tests; it is not evidence of any real provider capability.
 
 ## Deviations from the AG-UI client model
 
@@ -42,14 +45,12 @@ The only provider is the fake provider, which echoes the message. It exists so t
 
 ## Planned, not implemented
 
-| Item                                                                       | Task       |
-| -------------------------------------------------------------------------- | ---------- |
-| Per-launch token authentication for UI, API, and stream                    | F-9        |
-| App-wide status stream                                                     | F-10       |
-| ACP coverage spike and ACP client adapter                                  | F-11, F-12 |
-| Approvals via AG-UI interrupt outcome and ACP `session/request_permission` | F-13       |
-| Usage and context events (`CUSTOM` from ACP `usage_update`)                | F-16       |
-| A2A remote agents via `SUBAGENT_*` events                                  | Phase 3    |
+| Item                                      | Task    |
+| ----------------------------------------- | ------- |
+| App-wide status stream                    | F-10    |
+| A2A remote agents via `SUBAGENT_*` events | Phase 3 |
+
+Per-launch token authentication (F-9), the ACP client adapter (F-11, F-12), approvals through ACP `session/request_permission` with `CUSTOM` approval events (F-13) and usage and context readings (F-16) are built; their state is on [KANBAN.md](../KANBAN.md) and in [ACP_AGENTS.md](ACP_AGENTS.md).
 
 ## Gates before a protocol claim
 

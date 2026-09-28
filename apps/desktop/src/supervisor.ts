@@ -12,7 +12,7 @@ export interface Backoff {
   maxFailures: number;
 }
 
-export const DEFAULT_BACKOFF: Backoff = {
+const DEFAULT_BACKOFF: Backoff = {
   initialMs: 500,
   maxMs: 30_000,
   stableMs: 60_000,

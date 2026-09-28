@@ -4,18 +4,19 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { parseNumstat, type DiffStat } from '../../bench/verify.ts';
-import { SPARK_BASELINE, SPARK_HIDDEN_PATHS, type Patch, type RepoKey } from './sessions.ts';
+import type { Patch, RepoKey } from './session-types.ts';
+import { SPARK_BASELINE, SPARK_HIDDEN_PATHS } from './sessions.ts';
 
 const run = promisify(execFile);
 export const ROOT = resolve(import.meta.dirname, '../../..');
 export const FIXTURES = join(import.meta.dirname, 'fixtures');
 
-export const EXTERNAL_REPO =
+const EXTERNAL_REPO =
   process.env.DEV_DAY_EXTERNAL_REPO ??
   '/private/tmp/claude-501/-Users-hmk-Downloads-spark-outpost/de4f337c-37ca-43f6-b4b8-456b09d97ef9/scratchpad/repos/feature-web-apps';
 
 export const FAKE_REMOTE_HOST = 'github.e2e.localhost';
-export const FAKE_REMOTE_URL = `https://${FAKE_REMOTE_HOST}/e2e-bench/workbench.git`;
+const FAKE_REMOTE_URL = `https://${FAKE_REMOTE_HOST}/e2e-bench/workbench.git`;
 
 export function git(repo: string, ...args: string[]): string {
   return execFileSync(
@@ -71,7 +72,7 @@ async function install(repo: string): Promise<DayRepo['install']> {
   return { ms: Date.now() - started, error };
 }
 
-export async function createSparkRepo(dir: string, name: string): Promise<DayRepo> {
+async function createSparkRepo(dir: string, name: string): Promise<DayRepo> {
   const path = join(dir, 'repos', name);
   assertInside(path, dir);
   await rm(path, { recursive: true, force: true });
@@ -88,7 +89,7 @@ export async function createSparkRepo(dir: string, name: string): Promise<DayRep
   return { key: 'spark', path, remote: null, original: null, install: installed };
 }
 
-export async function createWorkbenchRepo(dir: string, name: string): Promise<DayRepo> {
+async function createWorkbenchRepo(dir: string, name: string): Promise<DayRepo> {
   const path = join(dir, 'repos', name);
   const remote = join(dir, 'repos', `${name}-remote.git`);
   assertInside(path, dir);
@@ -116,7 +117,7 @@ export function fingerprint(repo: string): string {
   return createHash('sha256').update(`${head}\n${status}\n${refs}`).digest('hex');
 }
 
-export async function createExternalRepo(dir: string, name: string): Promise<DayRepo> {
+async function createExternalRepo(dir: string, name: string): Promise<DayRepo> {
   const path = join(dir, 'repos', name);
   assertInside(path, dir);
   await rm(path, { recursive: true, force: true });
@@ -156,9 +157,9 @@ export function snapshot(repo: string): Snapshot {
     const path = entry.slice(3);
     if (entry.startsWith('R') || entry.startsWith('C')) index += 1;
     if (IGNORED_CHANGES.test(path)) continue;
-    const hash = execFileSync('git', ['-C', repo, 'hash-object', '--', path], { encoding: 'utf8' })
-      .toString()
-      .trim();
+    const hash = execFileSync('git', ['-C', repo, 'hash-object', '--', path], {
+      encoding: 'utf8',
+    }).trim();
     files.set(path, hash);
   }
   const branch = git(repo, 'rev-parse', '--abbrev-ref', 'HEAD').trim();

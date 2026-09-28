@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { checkCommandsSchema } from './checks.ts';
 import { buildStyleSchema } from './lean.ts';
 import { checkpointKindSchema, checkpointPayloadSchema } from './checkpoints.ts';
+import { INVOLVEMENT_LEVEL_IDS, type InvolvementLevel } from './involvement-levels.ts';
 import { projectNameSchema } from './projects.ts';
 
 export const runModeSchema = z.enum(['chat', 'ask', 'do']);
@@ -10,15 +11,12 @@ export type RunMode = z.infer<typeof runModeSchema>;
 export const PERMISSION_ASK = 'ask' as const;
 export const PERMISSION_DO = 'do' as const;
 
-export const INVOLVEMENT_LEVEL_IDS = ['balanced', 'hands-off', 'full-auto'] as const;
-
-export const LEGACY_HANDS_ON = 'hands-on';
+const LEGACY_HANDS_ON = 'hands-on';
 
 export const involvementLevelSchema = z.preprocess(
   (value) => (value === LEGACY_HANDS_ON ? 'balanced' : value),
   z.enum(INVOLVEMENT_LEVEL_IDS),
 );
-export type InvolvementLevel = (typeof INVOLVEMENT_LEVEL_IDS)[number];
 
 export const DEFAULT_INVOLVEMENT_LEVEL: InvolvementLevel = 'hands-off';
 

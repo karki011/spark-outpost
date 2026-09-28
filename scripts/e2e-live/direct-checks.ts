@@ -8,7 +8,7 @@ import { runCheck } from '../../apps/server/src/checks/run-check.ts';
 import type { BenchEnv } from '../bench/live.ts';
 import { inProcessSession, type DirectTurn } from './direct.ts';
 
-export const MAX_FIX_TURNS = 2;
+const MAX_FIX_TURNS = 2;
 const OUTPUT_LIMIT = 3_000;
 
 interface Outcome {

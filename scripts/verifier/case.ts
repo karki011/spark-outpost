@@ -17,7 +17,16 @@ export interface VerifierCase {
   variant: Variant;
 }
 
-export async function swap(repo: string, file: string, from: string, to: string): Promise<void> {
+export const TEST_HEAD = `import assert from 'node:assert/strict';
+import test from 'node:test';
+`;
+
+export async function replaceLiteral(
+  repo: string,
+  file: string,
+  from: string,
+  to: string,
+): Promise<void> {
   const path = join(repo, file);
   const text = await readFile(path, 'utf8');
   if (!text.includes(from)) throw new Error(`The edit did not apply to ${file}.`);

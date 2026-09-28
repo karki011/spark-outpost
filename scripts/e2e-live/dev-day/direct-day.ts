@@ -1,7 +1,7 @@
 import type { BenchEnv } from '../../bench/live.ts';
 import { codexTurn, inProcessSession, type CodexEffort, type InProcessSession } from '../direct.ts';
 import type { DayRepo } from './repos.ts';
-import type { DaySession } from './sessions.ts';
+import type { DaySession } from './session-types.ts';
 import {
   NO_HARNESS_EVIDENCE,
   type ArmDay,
@@ -9,6 +9,8 @@ import {
   type PreparedTurn,
   type TurnLog,
 } from './arm.ts';
+
+const CODEX_EFFORT: CodexEffort = 'medium';
 
 function result(logs: TurnLog[], timeoutMs: number): ArmSessionResult {
   const reply = logs.at(-1)?.metrics.reply ?? '';
@@ -61,18 +63,13 @@ export class DirectClaudeDay implements ArmDay {
     }
     return result(logs, this.timeoutMs);
   }
-
-  async close(): Promise<void> {}
 }
 
 export class DirectCodexDay implements ArmDay {
   readonly arm = 'direct-codex' as const;
   private readonly threads = new Map<string, string | null>();
 
-  constructor(
-    private readonly timeoutMs: number,
-    private readonly effort: CodexEffort = 'medium',
-  ) {}
+  constructor(private readonly timeoutMs: number) {}
 
   async run(
     session: DaySession,
@@ -87,7 +84,7 @@ export class DirectCodexDay implements ArmDay {
         turn.text,
         threadId,
         this.timeoutMs,
-        this.effort,
+        CODEX_EFFORT,
         turn.interruptAfterMs === null ? {} : { cancelAfterMs: turn.interruptAfterMs },
       );
       threadId = next.threadId;
@@ -101,6 +98,4 @@ export class DirectCodexDay implements ArmDay {
     this.threads.set(session.thread, threadId);
     return result(logs, this.timeoutMs);
   }
-
-  async close(): Promise<void> {}
 }

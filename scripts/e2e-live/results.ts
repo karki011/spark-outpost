@@ -60,3 +60,9 @@ export function projectedUsd(run: E2eRun, cell: Cell): number {
   const worst = Math.max(...seen.map((record) => record.costUsd));
   return Math.max(worst, cell.expectUsd) * 1.15;
 }
+
+const RATE_LIMIT = /rate.?limit|usage limit|too many requests|\b429\b|overloaded|quota/i;
+
+export function hitRateLimit(errors: readonly (string | null)[]): boolean {
+  return errors.some((text) => text !== null && RATE_LIMIT.test(text));
+}

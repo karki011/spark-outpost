@@ -133,8 +133,6 @@ export interface BenchRun {
     level: string;
     fixture: string;
     buildStyle?: string;
-    lanes?: string;
-    handoff?: string;
   };
   results: CellResult[];
 }

@@ -164,8 +164,7 @@ function firstPick(shadow: readonly Cell[], which: 'text' | 'evidence'): Pick {
   return shadow[0]?.[which] ?? { pick: null, confidence: null, basis: null };
 }
 
-async function main() {
-  const cells = await load();
+function score(cells: Cell[]) {
   const threshold = Number(values.threshold);
   const repairMinutes = Number(values['repair-minutes']);
   const hourly = Number(values['hourly-usd']);
@@ -173,8 +172,10 @@ async function main() {
   for (const cell of cells)
     byScenario.set(cell.scenario, [...(byScenario.get(cell.scenario) ?? []), cell]);
   const scenarios = [...byScenario.keys()].sort();
-  const opusCosts = cells.filter((c) => c.model === 'Opus 5.5');
-  const sonnetCosts = cells.filter((c) => c.model === 'Sonnet 5');
+  const opusCells = cells.filter((c) => c.model === 'Opus 5.5');
+  const sonnetCells = cells.filter((c) => c.model === 'Sonnet 5');
+  const opusRatio =
+    (mean(opusCells.map((c) => c.costUsd)) ?? 0) / (mean(sonnetCells.map((c) => c.costUsd)) || 1);
   const perScenario = scenarios.map((id) => {
     const all = byScenario.get(id)!;
     const shadow = all.filter((cell) => cell.variant === 'rule');
@@ -188,8 +189,6 @@ async function main() {
     ) as Record<Model, Arm | null>;
     const opusHere = mean(all.filter((c) => c.model === 'Opus 5.5').map((c) => c.costUsd));
     const sonnetHere = mean(all.filter((c) => c.model === 'Sonnet 5').map((c) => c.costUsd));
-    const opusRatio =
-      (mean(opusCosts.map((c) => c.costUsd)) ?? 0) / (mean(sonnetCosts.map((c) => c.costUsd)) || 1);
     const topRerun = opusHere ?? (sonnetHere ?? 0) * (opusRatio || 2.5);
     const repairUsd = topRerun + (repairMinutes / 60) * hourly;
     const policies: Record<PolicyId, Model | null> = {
@@ -240,13 +239,9 @@ async function main() {
           missing.push(`${row.scenario}:${model ? SHORT[model] : '?'}`);
         continue;
       }
-      const model = row.policies[policy];
+      const model = row.policies[policy]!;
       if (model !== row.rulePick) differs++;
-      const observed = model ? row.atModel[model] : null;
-      if (!observed) {
-        missing.push(`${row.scenario}:${model ? SHORT[model] : '?'}`);
-        continue;
-      }
+      const observed = row.atModel[model]!;
       covered++;
       passes += observed.pass;
       cost += observed.meanCost;
@@ -352,6 +347,12 @@ async function main() {
     latency,
     cells,
   };
+  return output;
+}
+
+async function main() {
+  const cells = await load();
+  const output = score(cells);
   if (values.out) await writeFile(values.out, `${JSON.stringify(output, null, 2)}\n`);
   printTables(output);
 }
@@ -372,8 +373,7 @@ function armText(a: Arm | null): string {
   return `${passed}/${a.n} · $${fmt(a.meanCost)} · ${Math.round(a.meanWallS)} s`;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function printTables(output: any) {
+function printTables(output: ReturnType<typeof score>) {
   console.log('| Scenario | Rule | Jev text | Jev evidence | Haiku | Sonnet | Opus |');
   console.log('| --- | --- | --- | --- | --- | --- | --- |');
   for (const row of output.perScenario) {
