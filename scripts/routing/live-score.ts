@@ -256,7 +256,7 @@ function score(cells: Cell[]) {
       totalCost: cost,
       costPerPass: passes ? cost / passes : null,
       withRepair: cost + repair,
-      costPerPassWithRepair: covered ? (cost + repair) / covered : null,
+      perTaskWithRepair: covered ? (cost + repair) / covered : null,
       missing,
     };
   });
@@ -387,7 +387,7 @@ function printTables(output: ReturnType<typeof score>) {
   console.log('| --- | --- | --- | --- | --- | --- | --- | --- | --- |');
   for (const p of output.scoring) {
     console.log(
-      `| ${p.policy} | ${p.differsFromRule} | ${p.covered} | ${fmt(p.expectedPasses, 2)} (${fmt((p.passRate ?? 0) * 100, 0)}%) | $${fmt(p.totalCost)} | $${fmt(p.costPerPass)} | $${fmt(p.withRepair, 2)} | $${fmt(p.costPerPassWithRepair, 2)} | ${p.missing.join(', ')} |`,
+      `| ${p.policy} | ${p.differsFromRule} | ${p.covered} | ${fmt(p.expectedPasses, 2)} (${fmt((p.passRate ?? 0) * 100, 0)}%) | $${fmt(p.totalCost)} | $${fmt(p.costPerPass)} | $${fmt(p.withRepair, 2)} | $${fmt(p.perTaskWithRepair, 2)} | ${p.missing.join(', ')} |`,
     );
   }
   console.log(
