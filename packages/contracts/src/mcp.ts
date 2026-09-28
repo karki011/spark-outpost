@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { mcpServerSourceSchema, mcpTransportSchema } from './agent-config.ts';
+import {
+  fingerprintSchema,
+  mcpScopeSchema,
+  mcpServerSourceSchema,
+  mcpTransportSchema,
+  SERVER_FINGERPRINT_MESSAGE,
+} from './agent-config.ts';
 
 export const MCP_IMPORT_TOOLS = [
   'claude-code',
@@ -92,27 +98,27 @@ export type SaveUserMcpRequest = z.infer<typeof saveUserMcpRequestSchema>;
 
 export const mcpEnableRequestSchema = z
   .object({
-    scope: z.enum(['global', 'project', 'chat']),
+    scope: mcpScopeSchema,
     scopeId: z.uuid().optional(),
     enabled: z.boolean().nullable(),
-    fingerprint: z.string().max(128).optional(),
+    fingerprint: fingerprintSchema.optional(),
   })
   .refine((body) => body.scope === 'global' || body.scopeId !== undefined, {
     message: 'Project and chat switches need the project or chat.',
   })
   .refine((body) => body.enabled !== true || body.fingerprint !== undefined, {
-    message: 'Turning a server on needs the fingerprint of the config you reviewed.',
+    message: SERVER_FINGERPRINT_MESSAGE,
   });
 export type McpEnableRequest = z.infer<typeof mcpEnableRequestSchema>;
 
 export const mcpCopySecretsRequestSchema = z.object({
-  fingerprint: z.string().max(128),
+  fingerprint: fingerprintSchema,
   names: z.array(z.string().max(128)).max(64),
 });
 export type McpCopySecretsRequest = z.infer<typeof mcpCopySecretsRequestSchema>;
 
-export const chatMcpVia = z.enum(['chat', 'project', 'global', 'off']);
-export type ChatMcpVia = z.infer<typeof chatMcpVia>;
+export const chatMcpViaSchema = z.enum(['chat', 'project', 'global', 'off']);
+export type ChatMcpVia = z.infer<typeof chatMcpViaSchema>;
 
 export const chatMcpServerSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -123,7 +129,7 @@ export const chatMcpServerSchema = z.discriminatedUnion('kind', [
     transport: mcpTransportSchema,
     fingerprint: z.string(),
     enabled: z.boolean(),
-    via: chatMcpVia,
+    via: chatMcpViaSchema,
     changed: z.boolean(),
     check: mcpCheckSchema.nullable(),
   }),

@@ -146,6 +146,6 @@ export const analyticsOverviewSchema = z.object({
 });
 export type AnalyticsOverview = z.infer<typeof analyticsOverviewSchema>;
 
-export function isSmallSample(n: number, threshold = ANALYTICS_SMALL_N): boolean {
-  return n < threshold;
+export function isSmallSample(n: number): boolean {
+  return n < ANALYTICS_SMALL_N;
 }

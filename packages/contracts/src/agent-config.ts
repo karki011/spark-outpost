@@ -1,8 +1,7 @@
 import { z } from 'zod';
 
 export const AGENT_CONFIG_SWITCHES = ['instructions', 'skills', 'commands', 'subagents'] as const;
-export const agentConfigSwitchSchema = z.enum(AGENT_CONFIG_SWITCHES);
-export type AgentConfigSwitch = z.infer<typeof agentConfigSwitchSchema>;
+export type AgentConfigSwitch = (typeof AGENT_CONFIG_SWITCHES)[number];
 
 export const repoInstructionFileSchema = z.object({
   path: z.string(),
@@ -35,6 +34,10 @@ export const mcpServerSourceSchema = z.union([
   z.string().regex(/^imported:[a-z0-9-]+$/),
 ]);
 export type McpServerSource = z.infer<typeof mcpServerSourceSchema>;
+
+export const fingerprintSchema = z.string().max(128);
+export const SERVER_FINGERPRINT_MESSAGE =
+  'Turning a server on needs the fingerprint of the config you reviewed.';
 
 export const mcpScopeSchema = z.enum(['global', 'project', 'chat']);
 export type McpScope = z.infer<typeof mcpScopeSchema>;
@@ -111,7 +114,7 @@ export const repoRedirectSchema = z.object({
 export type RepoRedirect = z.infer<typeof repoRedirectSchema>;
 
 export const updateTrustRequestSchema = z.discriminatedUnion('trusted', [
-  z.object({ trusted: z.literal(true), fingerprint: z.string().max(128) }),
+  z.object({ trusted: z.literal(true), fingerprint: fingerprintSchema }),
   z.object({ trusted: z.literal(false) }),
 ]);
 export type UpdateTrustRequest = z.infer<typeof updateTrustRequestSchema>;
@@ -119,7 +122,7 @@ export type UpdateTrustRequest = z.infer<typeof updateTrustRequestSchema>;
 export const updateRedirectsRequestSchema = z
   .object({
     confirmed: z.boolean(),
-    fingerprint: z.string().max(128).optional(),
+    fingerprint: fingerprintSchema.optional(),
   })
   .refine((body) => !body.confirmed || body.fingerprint !== undefined, {
     message: 'Using these settings needs the fingerprint of the list you reviewed.',
@@ -160,7 +163,7 @@ export const updateAgentConfigRequestSchema = z
     commands: z.boolean().optional(),
     subagents: z.boolean().optional(),
     hooks: z.boolean().optional(),
-    hooksFingerprint: z.string().max(128).optional(),
+    hooksFingerprint: fingerprintSchema.optional(),
   })
   .refine((body) => body.hooks !== true || body.hooksFingerprint !== undefined, {
     message: 'Turning hooks on needs the fingerprint of the hooks you reviewed.',
@@ -170,9 +173,9 @@ export type UpdateAgentConfigRequest = z.infer<typeof updateAgentConfigRequestSc
 export const updateMcpServerRequestSchema = z
   .object({
     enabled: z.boolean(),
-    fingerprint: z.string().max(128).optional(),
+    fingerprint: fingerprintSchema.optional(),
   })
   .refine((body) => !body.enabled || body.fingerprint !== undefined, {
-    message: 'Turning a server on needs the fingerprint of the config you reviewed.',
+    message: SERVER_FINGERPRINT_MESSAGE,
   });
 export type UpdateMcpServerRequest = z.infer<typeof updateMcpServerRequestSchema>;
