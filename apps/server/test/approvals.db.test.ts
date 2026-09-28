@@ -176,13 +176,13 @@ describe('approval gate', () => {
       allowed: true,
       note: 'Allowed `pnpm test -- unit` (on the project allowlist)',
     });
-    const handsOnRun = await sendDo(t, run.conversationId, 'third', 'hands-on');
+    const unlisted = await sendDo(t, run.conversationId, 'third');
     const controller = new AbortController();
-    const asked = gateFor(handsOnRun, 'hands-on').gate.review(
-      commandRequest(root, 'pnpm test'),
+    const asked = gateFor(unlisted).gate.review(
+      commandRequest(root, 'pnpm build'),
       controller.signal,
     );
-    expect(await pendingFor(handsOnRun)).toBeTruthy();
+    expect(await pendingFor(unlisted)).toBeTruthy();
     controller.abort();
     await asked;
   });

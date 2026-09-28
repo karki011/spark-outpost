@@ -4,7 +4,9 @@ import {
   reviewBodySchema,
   type ReviewBody,
 } from '@spark-outpost/contracts';
+import path from 'node:path';
 import type { Queryable } from '../persistence/db.ts';
+import { WORKTREES_DIR } from '../projects/worktrees.ts';
 
 export interface ShipTaskFacts {
   running: boolean;
@@ -23,6 +25,14 @@ interface RootRow {
   removed_at: Date | null;
 }
 
+const COPY_MARKER = `${path.sep}${WORKTREES_DIR}${path.sep}`;
+
+/** A fix or continue turn inside a worktree copy snapshots the copy; ship its project instead. */
+export function projectRoot(root: string): string {
+  const at = root.indexOf(COPY_MARKER);
+  return at >= 0 ? root.slice(0, at) : root;
+}
+
 async function roots(db: Queryable, taskId: string) {
   const { rows } = await db.query<RootRow>(
     `SELECT r.snapshot_root, w.repo_root, w.merged_at, w.removed_at
@@ -31,7 +41,7 @@ async function roots(db: Queryable, taskId: string) {
     [taskId],
   );
   return {
-    roots: [...new Set(rows.map((row) => row.repo_root ?? row.snapshot_root))],
+    roots: [...new Set(rows.map((row) => projectRoot(row.repo_root ?? row.snapshot_root)))],
     unmergedCopy: rows.some(
       (row) => row.repo_root !== null && row.merged_at === null && row.removed_at === null,
     ),

@@ -1,6 +1,6 @@
 import { basename, join } from 'node:path';
 import { chromium, type Browser, type Page } from '@playwright/test';
-import type { Approval, InvolvementLevel } from '../../packages/contracts/src/index.ts';
+import { involvementLevelLabel, type Approval } from '../../packages/contracts/src/index.ts';
 import type { Db } from '../../apps/server/src/persistence/db.ts';
 import {
   shouldCancel,
@@ -15,13 +15,6 @@ import { balancedChoice } from './balanced.ts';
 import type { HarnessSetup, ModelChoice } from './plan.ts';
 
 const CARD_VISIBLE_MS = 15_000;
-
-const LEVEL_LABELS: Record<InvolvementLevel, string> = {
-  'hands-on': 'Hands-on',
-  balanced: 'Balanced',
-  'hands-off': 'Hands-off',
-  'full-auto': 'Full auto',
-};
 
 const MODEL_LABELS: Record<ModelChoice, RegExp> = {
   auto: /^Auto/,
@@ -134,15 +127,14 @@ export async function openUiChat(
   const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
   await panel.getByRole('radio', { name: MODEL_LABELS[setup.model] }).first().click();
   await panel.getByRole('tab', { name: /Permissions/ }).click();
-  await panel.getByRole('radio', { name: /^Do/ }).click();
-  const level = LEVEL_LABELS[setup.level];
+  const level = involvementLevelLabel(setup.level);
   await panel
-    .getByRole('radiogroup', { name: 'Involvement level' })
-    .getByRole('radio', { name: new RegExp(`^${level}`) })
+    .getByRole('radiogroup', { name: 'Permissions' })
+    .getByRole('radio', { name: level, exact: true })
     .click();
   await panel
     .getByRole('tab', { name: /Permissions/ })
-    .filter({ hasText: `Do · ${level}` })
+    .filter({ hasText: level })
     .waitFor();
   await page.keyboard.press('Escape');
   await shoot(session, 'chat-ready');

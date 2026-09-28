@@ -103,6 +103,7 @@ export const profileSchema = z.object({
   onboardingCompleted: z.boolean(),
   autoContinueSeconds: autoContinueSecondsSchema.default(DEFAULT_AUTO_CONTINUE_SECONDS),
   jevDiffs: z.boolean().default(true),
+  shipFailingChecks: z.boolean().default(true),
 });
 export type Profile = z.infer<typeof profileSchema>;
 
@@ -120,6 +121,7 @@ export const updateProfileRequestSchema = z
     onboardingCompleted: z.literal(true),
     autoContinueSeconds: autoContinueSecondsSchema,
     jevDiffs: z.boolean(),
+    shipFailingChecks: z.boolean(),
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

@@ -28,7 +28,6 @@ interface Expectation {
 }
 
 const asksEdits = (crew: AgentRole[]): Record<InvolvementLevel, Expectation> => ({
-  'hands-on': { crew, asked: ['edit', 'accept'] },
   balanced: { crew, asked: ['edit', 'accept'] },
   'hands-off': { crew, asked: [] },
   'full-auto': { crew, asked: [] },
@@ -36,7 +35,6 @@ const asksEdits = (crew: AgentRole[]): Record<InvolvementLevel, Expectation> => 
 
 const EXPECTED: Record<string, Record<InvolvementLevel, Expectation>> = {
   question: {
-    'hands-on': { crew: ['scout'], asked: [] },
     balanced: { crew: ['scout'], asked: [] },
     'hands-off': { crew: ['scout'], asked: [] },
     'full-auto': { crew: ['scout'], asked: [] },

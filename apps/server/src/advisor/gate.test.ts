@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
 import { gate, noulGate, optionConfidence } from './gate.ts';
 
-const LEVELS: InvolvementLevel[] = ['hands-on', 'balanced', 'hands-off', 'full-auto'];
+const LEVELS: InvolvementLevel[] = ['balanced', 'hands-off', 'full-auto'];
 
 describe('choice gate', () => {
   it('acts at the question’s own line at every level, never lower', () => {
@@ -12,15 +12,14 @@ describe('choice gate', () => {
     }
   });
 
-  it('never acts at 0.6 on destructive work: Balanced asks, Hands-off falls back', () => {
+  it('never acts at 0.6 on destructive work: Ask before edits asks, Auto-edit falls back', () => {
     expect(gate(0.6, 'tier', 'balanced', 'destructive').decision).toBe('ask');
-    expect(gate(0.6, 'tier', 'hands-on', 'destructive').decision).toBe('ask');
     expect(gate(0.6, 'tier', 'hands-off', 'destructive').decision).toBe('fallback');
     expect(gate(0.6, 'tier', 'full-auto', 'destructive').decision).toBe('fallback');
   });
 
   it('falls back below the ask line even where the level would ask', () => {
-    expect(gate(0.49, 'tier', 'hands-on', 'edits').decision).toBe('fallback');
+    expect(gate(0.49, 'tier', 'balanced', 'edits').decision).toBe('fallback');
   });
 
   it('records the line it used', () => {

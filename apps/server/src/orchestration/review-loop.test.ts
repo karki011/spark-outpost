@@ -48,7 +48,7 @@ const actions = (results: readonly FlowResult[]) =>
   );
 
 describe('Critic → fix rounds', () => {
-  it.each(['balanced', 'hands-off', 'full-auto'] as const)(
+  it.each(['hands-off', 'full-auto'] as const)(
     'fixes correctness findings, reruns the Critic and stops when it is clean at %s',
     (level) => {
       const results = run(level, [reviewedAs(A), built(), reviewedAs()]);
@@ -73,7 +73,13 @@ describe('Critic → fix rounds', () => {
   );
 
   it('keeps going when the next review finds something new, and says it fixed in round 2', () => {
-    const results = run('balanced', [reviewedAs(A), built(), reviewedAs(B), built(), reviewedAs()]);
+    const results = run('hands-off', [
+      reviewedAs(A),
+      built(),
+      reviewedAs(B),
+      built(),
+      reviewedAs(),
+    ]);
     expect(actions(results).slice(2)).toEqual([
       'builder:fix',
       'critic:recheck',
@@ -84,14 +90,14 @@ describe('Critic → fix rounds', () => {
     expect(results[4]!.action).toMatchObject({ followUp: criticFixFollowUp(B) });
     const review = results.at(-1)!.state.review;
     expect(reviewLine(review, 'checks pass')).toContain('Fixed after 2 review rounds');
-    const keep = nextStep(results.at(-1)!.state, { type: 'wrapped', filesChanged: 1 });
-    expect(keep.action).toMatchObject({ type: 'ask', kind: 'accept' });
-    expect(fixOptionLabel(keep.state.review)).toBeNull();
+    const done = nextStep(results.at(-1)!.state, { type: 'wrapped', filesChanged: 1 });
+    expect(done.action).toMatchObject({ type: 'finish', status: 'succeeded' });
+    expect(fixOptionLabel(done.state.review)).toBeNull();
   });
 
   it('stops early when the same findings come back after a fix', () => {
     const moved = ["`src/money.ts:16`: `parseCents('((5.00)')` returns -500 when it should throw"];
-    const results = run('balanced', [reviewedAs(A), built(), reviewedAs(moved)]);
+    const results = run('hands-off', [reviewedAs(A), built(), reviewedAs(moved)]);
     expect(actions(results).slice(2)).toEqual(['builder:fix', 'critic:recheck', 'wrap_up']);
     const review = results.at(-1)!.state.review;
     expect(review).toMatchObject({ stop: 'repeated', fixRounds: 1 });
@@ -101,8 +107,8 @@ describe('Critic → fix rounds', () => {
     expect(fixOptionLabel(review)).toBe('Fix again');
   });
 
-  it('stops after three fix rounds and offers Fix again on the keep card', () => {
-    const results = run('balanced', [
+  it('stops after three fix rounds and finishes with the concerns at Auto-edit', () => {
+    const results = run('hands-off', [
       reviewedAs(A),
       built(),
       reviewedAs(B),
@@ -116,21 +122,13 @@ describe('Critic → fix rounds', () => {
     expect(fixes).toHaveLength(3);
     const state = results.at(-1)!.state;
     expect(state.review).toMatchObject({ stop: 'cap', fixRounds: 3, fixable: D });
-    expect(results.at(-1)!.action).toMatchObject({ type: 'ask', kind: 'accept' });
+    expect(results.at(-1)!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
     expect(reviewLine(state.review, 'checks pass')).toBe(
       `Still concerns after 3 rounds: ${D[0]}; checks pass.`,
     );
-    const again = nextStep(state, {
-      type: 'answered',
-      kind: 'accept',
-      optionId: CHECKPOINT_OPTION.fixFindings,
-      note: null,
-    });
-    expect(again.action).toMatchObject({ type: 'spawn', role: 'builder', reason: 'fix' });
-    expect(again.state.review.fixRounds).toBe(4);
   });
 
-  it('finishes with the concerns shown at Full auto after the cap', () => {
+  it('goes on to ship with the concerns shown at Full auto after the cap', () => {
     const results = run('full-auto', [
       reviewedAs(A),
       built(),
@@ -141,12 +139,12 @@ describe('Critic → fix rounds', () => {
       reviewedAs(D),
       { type: 'wrapped', filesChanged: 1 },
     ]);
-    expect(results.at(-1)!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
+    expect(results.at(-1)!.action).toEqual({ type: 'ship' });
     expect(results.at(-1)!.state.review.stop).toBe('cap');
   });
 
   it('stops the loop when checks fail after the fix and the check-fix turns could not fix them', () => {
-    const results = run('balanced', [reviewedAs(A), built({ checksFailing: true })]);
+    const results = run('hands-off', [reviewedAs(A), built({ checksFailing: true })]);
     expect(actions(results).slice(2)).toEqual(['builder:fix', 'wrap_up']);
     const review = results.at(-1)!.state.review;
     expect(review.stop).toBe('checks_failing');
@@ -166,7 +164,7 @@ describe('Critic → fix rounds', () => {
   });
 
   it('treats a failed recheck as no verdict rather than clean', () => {
-    const results = run('balanced', [
+    const results = run('hands-off', [
       reviewedAs(A),
       built(),
       { type: 'agent_done', role: 'critic', outcome: 'failed', error: 'boom' },
@@ -174,8 +172,8 @@ describe('Critic → fix rounds', () => {
     expect(results.at(-1)!.state.review.stop).toBe('unclear');
   });
 
-  it('offers the fix on the keep card at Hands-on, one round per answer', () => {
-    const results = run('hands-on', [reviewedAs(A), { type: 'wrapped', filesChanged: 1 }]);
+  it('offers the fix on the keep card at Ask before edits, one round per answer', () => {
+    const results = run('balanced', [reviewedAs(A), { type: 'wrapped', filesChanged: 1 }]);
     expect(actions(results).slice(2)).toEqual(['wrap_up', 'ask']);
     const offered = results.at(-1)!.state;
     expect(fixOptionLabel(offered.review)).toBe('Fix these findings');
@@ -231,7 +229,7 @@ describe('a budget refusal inside the loop', () => {
   const spent: FlowEvent = { type: 'budget_exceeded', limit: 'cost', unstarted: true };
 
   it('does not count a fix turn the budget refused, and continuing runs it', () => {
-    const results = run('balanced', [reviewedAs(A), spent]);
+    const results = run('hands-off', [reviewedAs(A), spent]);
     const waiting = results.at(-1)!;
     expect(waiting.action).toMatchObject({ type: 'ask', kind: 'budget' });
     expect(waiting.state.review).toMatchObject({ fixRounds: 0, fixing: false, stop: 'budget' });
@@ -249,11 +247,58 @@ describe('a budget refusal inside the loop', () => {
   });
 
   it('says the last fix went unreviewed when the budget refuses the next review', () => {
-    const results = run('balanced', [reviewedAs(A), built(), spent]);
+    const results = run('hands-off', [reviewedAs(A), built(), spent]);
     const review = results.at(-1)!.state.review;
     expect(review).toMatchObject({ fixRounds: 1, fixing: true });
     expect(reviewLine(review, 'checks pass')).toBe(
       "1 fix round ran for the AI review's findings; the Critic did not review the last fix; checks pass.",
     );
+  });
+});
+
+describe('Full auto runs on to ship', () => {
+  const wrapped: FlowEvent = { type: 'wrapped', filesChanged: 2 };
+
+  it('ships after auto Keep only at Full auto, and finishes when shipped', () => {
+    const state = initialFlow('edits', 'full-auto');
+    const shipping = nextStep(state, wrapped);
+    expect(shipping.action).toEqual({ type: 'ship' });
+    expect(nextStep(shipping.state, { type: 'shipped' }).action).toMatchObject({
+      type: 'finish',
+      status: 'succeeded',
+    });
+    expect(nextStep(initialFlow('edits', 'hands-off'), wrapped).action).toMatchObject({
+      type: 'finish',
+    });
+    expect(nextStep(initialFlow('edits', 'balanced'), wrapped).action).toMatchObject({
+      type: 'ask',
+      kind: 'accept',
+    });
+    expect(nextStep(state, { type: 'wrapped', filesChanged: 0 }).action).toMatchObject({
+      type: 'finish',
+    });
+  });
+
+  it('raises the keep card when shipping is held', () => {
+    const shipping = nextStep(initialFlow('edits', 'full-auto'), wrapped);
+    const held = nextStep(shipping.state, { type: 'ship_held', reason: 'Checks still fail.' });
+    expect(held.action).toEqual({ type: 'ask', kind: 'accept', reason: 'Checks still fail.' });
+  });
+
+  it('asks about the budget before shipping, and Continue ships instead of rebuilding', () => {
+    const shipping = nextStep(initialFlow('edits', 'full-auto'), wrapped);
+    const asked = nextStep(shipping.state, {
+      type: 'budget_exceeded',
+      limit: 'cost',
+      unstarted: true,
+    });
+    expect(asked.action).toMatchObject({ type: 'ask', kind: 'budget' });
+    const answer = (optionId: string) =>
+      nextStep(asked.state, { type: 'answered', kind: 'budget', optionId, note: null });
+    expect(answer(CHECKPOINT_OPTION.continueBudget).action).toEqual({ type: 'ship' });
+    expect(answer(CHECKPOINT_OPTION.stop).action).toMatchObject({
+      type: 'finish',
+      status: 'failed',
+    });
   });
 });

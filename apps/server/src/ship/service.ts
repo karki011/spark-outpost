@@ -13,7 +13,9 @@ import { saveTaskShip, type TaskShip } from '../persistence/task-ships.ts';
 import { addTaskLink } from '../persistence/tasks.ts';
 import { safeToPush } from './branch.ts';
 import {
+  branchTip,
   commitFiles,
+  commitOnBranch,
   createBranch,
   filesBetween,
   pushBranch,
@@ -22,7 +24,14 @@ import {
 } from './git.ts';
 import type { PullRequest } from './github/connection.ts';
 import { commitBody, commitSubject, pullRequestBody, type ShipSummary } from './message.ts';
-import { planShip, previewOf, ShipBlockedError, type ShipDeps, type ShipPlan } from './prepare.ts';
+import {
+  planShip,
+  previewOf,
+  ShipBlockedError,
+  type ShipDeps,
+  type ShipOptions,
+  type ShipPlan,
+} from './prepare.ts';
 import { repoSlug } from './remote.ts';
 
 const running = new Map<string, Promise<unknown>>();
@@ -42,8 +51,15 @@ export async function shipPreview(deps: ShipDeps, taskId: string): Promise<ShipP
   return previewOf(await planShip(deps, taskId));
 }
 
-async function summaryFor(deps: ShipDeps, plan: ShipPlan, title: string, files: ShipFile[]) {
+async function summaryFor(
+  deps: ShipDeps,
+  plan: ShipPlan,
+  title: string,
+  files: ShipFile[],
+  notes: readonly string[] = [],
+) {
   const summary: ShipSummary = {
+    notes,
     title,
     summary: plan.facts?.summary ?? null,
     files,
@@ -65,18 +81,36 @@ interface Progress {
   link: TaskLink | null;
 }
 
-async function commitStep(deps: ShipDeps, plan: ShipPlan, title: string, progress: Progress) {
+async function commitWithoutCheckout(
+  plan: ShipPlan,
+  subject: string,
+  body: string,
+): Promise<string | null> {
+  const root = plan.root!;
+  const start = (plan.branchExists ? await branchTip(root, plan.branch) : null) ?? plan.repo!.head!;
+  return commitOnBranch(root, plan.repo!.prefix, plan.paths, plan.branch, start, subject, body);
+}
+
+async function commitStep(
+  deps: ShipDeps,
+  plan: ShipPlan,
+  title: string,
+  progress: Progress,
+  notes: readonly string[],
+) {
   if (plan.files.length === 0) return;
   const root = plan.root!;
-  if (!plan.branchExists) await createBranch(root, plan.branch);
-  const summary = await summaryFor(deps, plan, title, plan.files);
-  progress.commit = await commitFiles(
-    root,
-    plan.repo!.prefix,
-    plan.files,
-    commitSubject(title),
-    commitBody(summary),
-  );
+  const summary = await summaryFor(deps, plan, title, plan.files, notes);
+  const subject = commitSubject(title);
+  const body = commitBody(summary);
+  if (plan.keepCheckout) {
+    const commit = await commitWithoutCheckout(plan, subject, body);
+    if (!commit) return;
+    progress.commit = commit;
+  } else {
+    if (!plan.branchExists) await createBranch(root, plan.branch);
+    progress.commit = await commitFiles(root, plan.repo!.prefix, plan.files, subject, body);
+  }
   progress.committedFiles = plan.files.map((file) => file.path);
   progress.ship = { ...progress.ship, lastCommit: progress.commit };
   await saveTaskShip(deps.db, plan.task.id, progress.ship);
@@ -103,12 +137,18 @@ async function pullRequestFiles(plan: ShipPlan, base: string): Promise<ShipFile[
   return filesBetween(root, plan.repo!.prefix, `refs/remotes/${remote}/${base}`, plan.branch);
 }
 
-async function pullRequestStep(deps: ShipDeps, plan: ShipPlan, title: string, progress: Progress) {
+async function pullRequestStep(
+  deps: ShipDeps,
+  plan: ShipPlan,
+  title: string,
+  progress: Progress,
+  notes: readonly string[],
+) {
   const github = plan.github!;
   const repo = plan.remoteRepo!;
   const base = plan.baseBranch ?? (await github.defaultBranch(repo));
   if (base === plan.branch) throw new ShipBlockedError('The branch and its base are the same.');
-  const summary = await summaryFor(deps, plan, title, await pullRequestFiles(plan, base));
+  const summary = await summaryFor(deps, plan, title, await pullRequestFiles(plan, base), notes);
   const body = pullRequestBody(summary);
   const existing = await github.findPullRequest(repo, plan.branch);
   const pull = existing
@@ -149,6 +189,7 @@ async function audit(
     pushed: progress.pushed,
     pullRequest: progress.pullRequest,
     github: plan.github?.method ?? null,
+    keepsCheckout: plan.keepCheckout,
   });
   await insertFinishedRunEntries(deps.db, runId, [
     {
@@ -164,8 +205,14 @@ async function audit(
   ]);
 }
 
-async function runShip(deps: ShipDeps, taskId: string, request: ShipRequest): Promise<ShipResult> {
-  const plan = await planShip(deps, taskId);
+async function runShip(
+  deps: ShipDeps,
+  taskId: string,
+  request: ShipRequest,
+  options: ShipOptions,
+): Promise<ShipResult> {
+  const plan = await planShip(deps, taskId, options);
+  const notes = options.notes ?? [];
   if (plan.blocked) throw new ShipBlockedError(plan.blocked.message);
   if (!plan.modes.includes(request.mode)) {
     throw new ShipBlockedError(plan.notes[0] ?? 'That kind of ship isn’t available for this task.');
@@ -181,6 +228,7 @@ async function runShip(deps: ShipDeps, taskId: string, request: ShipRequest): Pr
       pushedAt: null,
       prUrl: null,
       prNumber: null,
+      keepsCheckout: plan.keepCheckout,
     },
     commit: null,
     committedFiles: [],
@@ -189,9 +237,9 @@ async function runShip(deps: ShipDeps, taskId: string, request: ShipRequest): Pr
     link: null,
   };
   try {
-    await commitStep(deps, plan, title, progress);
+    await commitStep(deps, plan, title, progress, notes);
     if (request.mode !== 'commit') await pushStep(deps, plan, progress);
-    if (request.mode === 'draft_pr') await pullRequestStep(deps, plan, title, progress);
+    if (request.mode === 'draft_pr') await pullRequestStep(deps, plan, title, progress, notes);
   } catch (error) {
     await audit(deps, plan, request.mode, progress, (error as Error).message);
     throw error;
@@ -212,6 +260,7 @@ export function shipTask(
   deps: ShipDeps,
   taskId: string,
   request: ShipRequest,
+  options: ShipOptions = {},
 ): Promise<ShipResult> {
-  return serialized(taskId, () => runShip(deps, taskId, request));
+  return serialized(taskId, () => runShip(deps, taskId, request, options));
 }

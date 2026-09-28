@@ -147,10 +147,10 @@ async function reply(runId: string): Promise<string> {
 const notes = () => readFile(join(root, 'notes.txt'), 'utf8');
 
 describe('Critic → fix rounds', () => {
-  it('sends correctness findings back to the same Builder, reruns the checks and the Critic, then asks to keep', async () => {
+  it('sends correctness findings back to the same Builder at Auto-edit, reruns the checks and the Critic', async () => {
     await configureCheck(PASSING_CHECK);
     await start({ policy: JEV_SAYS_BUGS });
-    const { conversationId, runId } = await begin('#bugreview', 'balanced');
+    const { conversationId, runId } = await begin('#bugreview', 'hands-off');
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
     expect(orchestration.status).toBe('succeeded');
 
@@ -164,14 +164,7 @@ describe('Critic → fix rounds', () => {
     expect(await notes()).toContain('fixed the review findings');
     expect(await checkStatuses()).toEqual(['passed', 'passed']);
 
-    const keep = asked.filter((approval) => approval.kind === 'accept');
-    expect(keep).toHaveLength(1);
-    expect(keep[0]!.options.map((option) => option.optionId)).not.toContain(
-      CHECKPOINT_OPTION.fixFindings,
-    );
-    expect(keep[0]!.reason).toContain(
-      "Fixed after 1 review round: the Critic's last review found no correctness problems; checks pass.",
-    );
+    expect(asked.filter((approval) => approval.kind === 'accept')).toEqual([]);
 
     const [advice] = await findingAdvice(runId);
     expect(advice).toMatchObject({
@@ -186,7 +179,9 @@ describe('Critic → fix rounds', () => {
     const text = await reply(runId);
     expect(text).toContain('Fixed the review findings after 1 earlier prompts.');
     expect(text).toContain('looks good');
-    expect(text).toContain('Fixed after 1 review round');
+    expect(text).toContain(
+      "Fixed after 1 review round: the Critic's last review found no correctness problems; checks pass.",
+    );
   }, 120_000);
 
   it('fixes in round 2 by the rules alone, without Jev, at Full auto', async () => {
@@ -220,19 +215,16 @@ describe('Critic → fix rounds', () => {
 
   it('stops early when the same findings come back after a fix', async () => {
     await start({ policy: JEV_SAYS_BUGS });
-    const { conversationId, runId } = await begin('#stuckreview', 'balanced');
-    const { asked } = await driveToEnd(t, conversationId, runId);
+    const { conversationId, runId } = await begin('#stuckreview', 'hands-off');
+    await driveToEnd(t, conversationId, runId);
     expect(await roles(runId)).toEqual(['builder', 'critic', 'builder', 'critic']);
     expect(await adviceActions(runId)).toEqual([
       [1, 'fix'],
       [2, 'repeated'],
     ]);
-    const [keep] = asked.filter((approval) => approval.kind === 'accept');
-    expect(keep!.reason).toContain(
+    expect(await reply(runId)).toContain(
       'Still concerns after 1 round: the same findings came back after the fix',
     );
-    const again = keep!.options.find((option) => option.optionId === CHECKPOINT_OPTION.fixFindings);
-    expect(again?.name).toBe('Fix again');
   }, 120_000);
 
   it('stops after three fix rounds and shows the remaining concerns', async () => {
@@ -287,9 +279,9 @@ describe('Critic → fix rounds', () => {
     expect(await roles(runId)).toEqual(['builder', 'critic']);
   }, 120_000);
 
-  it('offers "Fix these findings" on the keep card at Hands-on instead of fixing by itself', async () => {
+  it('offers "Fix these findings" on the keep card at Ask before edits instead of fixing by itself', async () => {
     await start({ policy: JEV_SAYS_BUGS });
-    const { conversationId, runId } = await begin('#bugreview', 'hands-on');
+    const { conversationId, runId } = await begin('#bugreview', 'balanced');
     let fixed = false;
     const answers: Answerer = (approval) => {
       if (approval.kind !== 'accept') return answerEverything(approval);

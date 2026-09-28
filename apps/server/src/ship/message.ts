@@ -17,6 +17,7 @@ export interface ShipSummary {
   costUsd: number | null;
   costEstimated: boolean;
   plan: PlanDocument | null;
+  notes?: readonly string[];
 }
 
 const VERDICTS: Record<ReviewBody['verdict'], string> = {
@@ -40,7 +41,7 @@ function reviewLine(review: NonNullable<ShipSummary['review']>): string {
 }
 
 export function commitBody(summary: ShipSummary): string {
-  const sections: string[] = [];
+  const sections: string[] = [...(summary.notes ?? [])];
   if (summary.summary) {
     const lines = clip(summary.summary, SUMMARY_MAX).split('\n').slice(0, COMMIT_SUMMARY_LINES);
     sections.push(lines.join('\n'));
@@ -80,6 +81,9 @@ function planSection(plan: PlanDocument): string[] {
 
 export function pullRequestBody(summary: ShipSummary): string {
   const sections: string[][] = [
+    ...(summary.notes && summary.notes.length > 0
+      ? [summary.notes.map((note) => `> **${note}**`)]
+      : []),
     ['## Summary', summary.summary ? clip(summary.summary, SUMMARY_MAX) : summary.title],
     filesSection(summary.files),
     [

@@ -65,7 +65,7 @@ export function needsCopyFor(
   destructive: boolean,
   busy: boolean,
 ): boolean {
-  return buildsInWorktree(provider, level) || destructive || busy;
+  return level === 'full-auto' || buildsInWorktree(provider, level) || destructive || busy;
 }
 
 interface Copies {

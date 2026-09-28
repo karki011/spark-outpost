@@ -10,6 +10,7 @@ import {
 } from '@spark-outpost/contracts';
 import type { IntakeResult } from '../advisor/intake-recorder.ts';
 import type { ScanReport } from '../codescan/scan.ts';
+import type { GitHubDeps } from '../ship/github/access.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
 import type { ProjectChecks } from '../checks/project-checks.ts';
 import type { Lease } from '../persistence/jobs.ts';
@@ -37,7 +38,11 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   loopGuard?: Partial<LoopGuardSettings> | false;
   codeScan?: CodeScanner;
   branchPrefix?: string;
+  /** GitHub access for Full auto's draft PR; without it Full auto can still commit and push. */
+  shipAccess?: ShipAccess;
 }
+
+export type ShipAccess = Omit<GitHubDeps, 'db' | 'workspaceId'>;
 
 export interface MemberResult {
   role: AgentRole;
@@ -94,6 +99,10 @@ export interface Session {
   observations: Promise<void>[];
   jevDiffs: boolean;
   scanReport?: ScanReport | null;
+  /** Set when a "Jev could not verify" card was answered with Finish. */
+  unverified?: boolean;
+  /** What Full auto's ship did, for the final reply. */
+  shipLine?: string | null;
 }
 
 export const COMMAND_READER_TOOL_CALL_LIMIT = 120;

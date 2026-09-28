@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { activeTime, exceededLimit, extendLimits } from './budget.ts';
-import { asksForLoop, asksToKeep, autoContinueOption } from './checkpoint-policy.ts';
+import {
+  asksForLoop,
+  asksToKeep,
+  autoContinueOption,
+  fixesFindingsItself,
+  shipsByItself,
+} from './checkpoint-policy.ts';
 import {
   asksForReview,
   destructiveByRule,
@@ -84,12 +90,24 @@ describe('risk rules', () => {
 });
 
 describe('level checkpoints', () => {
-  it('asks to keep changes at Hands-on and Balanced when files changed', () => {
-    expect(asksToKeep('hands-on', 1)).toBe(true);
+  it('asks to keep changes at Ask before edits when files changed', () => {
     expect(asksToKeep('balanced', 3)).toBe(true);
     expect(asksToKeep('balanced', 0)).toBe(false);
     expect(asksToKeep('hands-off', 3)).toBe(false);
     expect(asksToKeep('full-auto', 3)).toBe(false);
+  });
+
+  it('offers the Critic fix on the keep card only at Ask before edits', () => {
+    expect(fixesFindingsItself('balanced')).toBe(false);
+    expect(fixesFindingsItself('hands-off')).toBe(true);
+    expect(fixesFindingsItself('full-auto')).toBe(true);
+  });
+
+  it('ships by itself only at Full auto, and only with changed files', () => {
+    expect(shipsByItself('full-auto', 2)).toBe(true);
+    expect(shipsByItself('full-auto', 0)).toBe(false);
+    expect(shipsByItself('hands-off', 2)).toBe(false);
+    expect(shipsByItself('balanced', 2)).toBe(false);
   });
 });
 
@@ -168,7 +186,6 @@ describe('auto-continue', () => {
   });
 
   it('asks about a loop only at the levels that ask', () => {
-    expect(asksForLoop('hands-on')).toBe(true);
     expect(asksForLoop('balanced')).toBe(true);
     expect(asksForLoop('hands-off')).toBe(false);
     expect(asksForLoop('full-auto')).toBe(false);

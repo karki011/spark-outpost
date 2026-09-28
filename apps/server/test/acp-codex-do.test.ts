@@ -102,7 +102,6 @@ describe('Codex Do through the fake agent', () => {
   });
 
   it.each([
-    ['hands-on', ['ask', 'ask', 'ask', 'ask', 'ask', 'ask']],
     ['balanced', ['allow', 'allow', 'ask', 'ask', 'ask', 'ask']],
     ['hands-off', ['allow', 'allow', 'allow', 'ask', 'ask', 'ask']],
     ['full-auto', ['allow', 'allow', 'allow', 'allow', 'ask', 'ask']],
@@ -124,7 +123,7 @@ describe('Codex Do through the fake agent', () => {
   });
 
   it('counts each approved action once toward the tool-call budget', async () => {
-    const { stub, reviewed } = levelGate('hands-on');
+    const { stub, reviewed } = levelGate('balanced');
     const result = await run(SCRIPT, stub);
     expect(reviewed).toHaveLength(6);
     expect(result.toolSteps).toBe(6);
@@ -138,13 +137,13 @@ describe('Codex Do through the fake agent', () => {
   });
 
   it('declines with the option that lets Codex continue', async () => {
-    const { stub, reviewed } = levelGate('hands-on', false);
-    const result = await run('#codex echo hi > a.txt;;patch b.txt;;ls', stub);
+    const { stub, reviewed } = levelGate('balanced', false);
+    const result = await run('#codex echo hi > a.txt;;patch b.txt;;make build', stub);
     expect(result.error).toBeNull();
     expect(reviewed).toHaveLength(3);
     expect(result.text).toContain('[echo hi > a.txt=decline]');
     expect(result.text).toContain('[patch b.txt=decline]');
-    expect(result.text).toContain('[ls=decline]');
+    expect(result.text).toContain('[make build=decline]');
   });
 
   it('opens only the primary repo and says so', async () => {
