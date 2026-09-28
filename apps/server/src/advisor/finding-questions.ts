@@ -1,9 +1,8 @@
 import { redactText } from '../audit/redact.ts';
 import type { IntakeQuestions, SystemOneResponse } from './intake-questions.ts';
 import { validNoul } from './intake-questions.ts';
-import { capped, MAX_DIFF_CHARACTERS, MAX_REQUEST_CHARACTERS } from './policy-gate.ts';
 import { ACT_AT } from './policy.ts';
-import { noulQuestion } from './questions.ts';
+import { capped, MAX_DIFF_CHARACTERS, MAX_REQUEST_CHARACTERS, noulQuestion } from './questions.ts';
 
 export const FINDING_QUESTION = 'Is this finding a concrete correctness bug in the change?';
 export const MAX_FINDING_CHARACTERS = 500;

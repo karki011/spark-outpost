@@ -50,8 +50,6 @@ export const systemOneResponseSchema = z.object({
 });
 export type SystemOneResponse = z.infer<typeof systemOneResponseSchema>;
 
-type Answer = SystemOneResponse['answers'][string];
-
 const unit = (value: number) => Number.isFinite(value) && value >= 0 && value <= 1;
 
 export function validNoul(response: SystemOneResponse | null, key: string): number | null {
@@ -425,10 +423,6 @@ export function parseIntakeAnswers(
     confidences,
     ...(invalid.length > 0 ? { invalid } : {}),
   };
-}
-
-export function intakeAnswer(response: SystemOneResponse | null, key: string): Answer | null {
-  return response?.answers[key] ?? null;
 }
 
 export function assertCandidates(request: IntakeRequest): void {
