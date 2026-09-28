@@ -102,7 +102,7 @@ describe('repair and escalation', () => {
     const flaky = withText(TRIVIAL, `${TRIVIAL.text} #failonce 1`);
     const { conversationId, runId } = await startScenario(t, root, flaky, 'balanced');
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
-    expect(asked.map((approval) => approval.kind)).toEqual(['edit', 'accept']);
+    expect(asked.map((approval) => approval.kind)).toEqual(['edit']);
     expect(orchestration.crew.map((member) => member.model)).toEqual(['sonnet', 'opus[1m]']);
     expect(orchestration.status).toBe('succeeded');
   }, 60_000);
@@ -119,7 +119,7 @@ describe('the loop guard', () => {
         ? { optionId: CHECKPOINT_OPTION.continueStuck }
         : answerEverything(approval);
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
-    expect(asked.map((approval) => approval.kind)).toEqual(['stuck', 'edit', 'accept']);
+    expect(asked.map((approval) => approval.kind)).toEqual(['stuck', 'edit']);
     expect(asked[0]!.payload.checkpoint?.reason).toContain('repeated `Read `src/dates.ts``');
     expect(orchestration.crew.map((member) => member.status)).toEqual(['cancelled', 'succeeded']);
     expect(await readFile(join(root, 'notes.txt'), 'utf8')).toContain('tried another way');
@@ -140,7 +140,15 @@ describe('the loop guard', () => {
 describe('checkpoints', () => {
   it('reverts the whole orchestration from the keep, fix or revert card', async () => {
     await start();
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'balanced');
+    const { conversationId, runId } = await startScenario(
+      t,
+      root,
+      TRIVIAL,
+      'balanced',
+      'auto',
+      'sonnet',
+      'acceptEdits',
+    );
     const answers: Answerer = (approval) =>
       approval.kind === 'accept'
         ? { optionId: CHECKPOINT_OPTION.revert }
@@ -153,7 +161,15 @@ describe('checkpoints', () => {
 
   it('sends a fix request back to the same Builder from the keep card', async () => {
     await start();
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'balanced');
+    const { conversationId, runId } = await startScenario(
+      t,
+      root,
+      TRIVIAL,
+      'balanced',
+      'auto',
+      'sonnet',
+      'acceptEdits',
+    );
     let fixed = false;
     const answers: Answerer = (approval) => {
       if (approval.kind !== 'accept') return answerEverything(approval);

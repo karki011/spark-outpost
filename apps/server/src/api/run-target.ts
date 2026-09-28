@@ -35,6 +35,8 @@ export async function resolveRunTarget(
     model: offered ? settings.model : (capabilities?.defaultModel ?? null),
     effort: settings.effort,
     permission: settings.permission,
+    agentMode: settings.agentMode,
     level: settings.level,
+    options: settings.options,
   };
 }

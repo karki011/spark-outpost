@@ -1,4 +1,4 @@
-import { providerIdSchema, type CapabilityOption } from '@spark-outpost/contracts';
+import { providerIdSchema } from '@spark-outpost/contracts';
 import { getCapabilities, saveCapabilities } from '../persistence/chat-settings.ts';
 import type { Db } from '../persistence/db.ts';
 import type { ProviderCapabilityReport, ProviderOutput } from '../providers/provider.ts';
@@ -16,18 +16,21 @@ export async function recordCapabilities(
   await saveCapabilities(db, input.workspaceId, {
     provider: provider.data,
     ...report,
-    efforts: mergeEfforts(known?.efforts ?? [], report.efforts),
+    efforts: mergeById(known?.efforts ?? [], report.efforts),
+    modes: mergeById(known?.modes ?? [], report.modes ?? []),
+    defaultMode: report.defaultMode ?? null,
+    options: mergeById(known?.options ?? [], report.options ?? []),
   });
 }
 
-export function mergeEfforts(
-  known: readonly CapabilityOption[],
-  reported: readonly CapabilityOption[],
-): CapabilityOption[] {
-  const reportedById = new Map(reported.map((effort) => [effort.id, effort]));
-  const kept = known.map((effort) => reportedById.get(effort.id) ?? effort);
-  const keptIds = new Set(kept.map((effort) => effort.id));
-  return [...kept, ...reported.filter((effort) => !keptIds.has(effort.id))];
+export function mergeById<T extends { id: string }>(
+  known: readonly T[],
+  reported: readonly T[],
+): T[] {
+  const reportedById = new Map(reported.map((item) => [item.id, item]));
+  const kept = known.map((item) => reportedById.get(item.id) ?? item);
+  const keptIds = new Set(kept.map((item) => item.id));
+  return [...kept, ...reported.filter((item) => !keptIds.has(item.id))];
 }
 
 export async function recordUsage(

@@ -15,7 +15,7 @@ import { balancedChoice } from '../balanced.ts';
 import { builderStartedAt } from '../cleanup.ts';
 import { collectTurn, type TurnMetrics } from '../collect.ts';
 import type { Stack } from '../stack.ts';
-import { AGREED_PLAN_MARKER, LEVELS } from './levels.ts';
+import { AGREED_PLAN_MARKER, levelSettings } from './levels.ts';
 import type { DayRepo } from './repos.ts';
 import { REPO_CHECKS, type DaySession } from './sessions.ts';
 import type { ArmDay, ArmSessionResult, PreparedTurn, TurnLog } from './arm.ts';
@@ -141,14 +141,12 @@ export class HarnessDay implements ArmDay {
 
   private async chat(session: DaySession, repo: DayRepo): Promise<Chat> {
     const projectId = await this.project(repo, session.checks);
-    const level = LEVELS[session.level];
     const existing = this.chats.get(session.thread);
     const chat = existing ?? { conversationId: randomUUID(), projectId, repo: repo.path };
     await this.api.call('PATCH', `/conversations/${chat.conversationId}/settings`, {
       projectIds: [projectId],
       provider: 'claude',
-      permission: level.permission,
-      level: level.level,
+      ...levelSettings(session.level, 'claude'),
       routing: 'auto',
     });
     this.chats.set(session.thread, chat);

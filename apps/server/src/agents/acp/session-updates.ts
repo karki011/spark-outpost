@@ -1,7 +1,13 @@
-import type { ContentBlock, SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk';
-import type { PlanEntry } from '@spark-outpost/contracts';
+import type {
+  ContentBlock,
+  SessionConfigOption,
+  SessionUpdate,
+  ToolCallContent,
+} from '@agentclientprotocol/sdk';
+import type { ConfigValues, PlanEntry } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../../providers/provider.ts';
-import { PLAN_MODE } from '../../plans/plan-mode.ts';
+import { findOption } from './session-config.ts';
+import { isCoreOption } from './capabilities.ts';
 import { findPullRequests } from '../../tasks/pr-links.ts';
 import { agentCommands } from './slash-commands.ts';
 
@@ -18,12 +24,51 @@ export interface UpdateMapper {
   failure(): AgentFailure | null;
   repliedWithText(): boolean;
   didWork(): boolean;
-  lockMode(modeId: string | null): void;
+  trackSettings(settings: TrackedSettings, policy: ModePolicy): void;
   unsafeModeChange(): string | null;
+  currentMode(): string | null;
   note(name: string): ProviderOutput[];
   clientAction(name: string): ProviderOutput[];
   finish(cancelled?: boolean): ProviderOutput[];
 }
+
+export interface TrackedSettings {
+  model: string | null;
+  effort: string | null;
+  mode: string | null;
+  values: ConfigValues;
+}
+
+export interface ModePolicy {
+  allowed(mode: string): boolean;
+  name(mode: string): string;
+}
+
+type SessionSettingsOutput = Extract<ProviderOutput, { kind: 'session_settings' }>;
+
+function settingsFrom(
+  options: readonly SessionConfigOption[],
+  previous: TrackedSettings,
+): TrackedSettings {
+  const text = (category: string, fallback: string | null) => {
+    const option = findOption(options, category);
+    return option && typeof option.currentValue === 'string' ? option.currentValue : fallback;
+  };
+  const values: ConfigValues = { ...previous.values };
+  for (const option of options) {
+    if (!isCoreOption(options, option)) values[option.id] = option.currentValue;
+  }
+  return {
+    model: text('model', previous.model),
+    effort: text('thought_level', previous.effort),
+    mode: text('mode', previous.mode),
+    values,
+  };
+}
+
+const sameValues = (a: ConfigValues, b: ConfigValues) =>
+  Object.keys(a).length === Object.keys(b).length &&
+  Object.entries(a).every(([key, value]) => b[key] === value);
 
 interface ReportedFailure extends AgentFailure {
   severity: string;
@@ -153,7 +198,8 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
   let wroteText = false;
   let worked = false;
   let failure: AgentFailure | null = null;
-  let lockedMode: string | null = null;
+  let tracked: TrackedSettings | null = null;
+  let policy: ModePolicy | null = null;
   let unsafeMode: string | null = null;
 
   const stopThinking = (): ProviderOutput[] => {
@@ -190,11 +236,34 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
 
   const note = (name: string): ProviderOutput[] => [...stopThinking(), ...noteSteps(name)];
 
-  const changeMode = (modeId: string): ProviderOutput[] => {
-    if (lockedMode === null || modeId === lockedMode || modeId === unsafeMode) return [];
-    if (modeId === PLAN_MODE) return [];
-    unsafeMode = modeId;
-    return note(`Warning: ${agentName} switched to ${modeId} mode`);
+  const settingsOutput = (settings: TrackedSettings): SessionSettingsOutput => ({
+    kind: 'session_settings',
+    model: settings.model,
+    effort: settings.effort,
+    mode: settings.mode,
+    options: settings.values,
+  });
+
+  const changeSettings = (next: TrackedSettings): ProviderOutput[] => {
+    if (!tracked || !policy) return [];
+    const previous = tracked;
+    const modeChanged = next.mode !== null && next.mode !== previous.mode;
+    if (modeChanged && next.mode === unsafeMode) return [];
+    if (modeChanged && !policy.allowed(next.mode!)) {
+      unsafeMode = next.mode;
+      return note(`Warning: ${agentName} switched to ${policy.name(next.mode!)} mode`);
+    }
+    const changed =
+      modeChanged ||
+      next.model !== previous.model ||
+      next.effort !== previous.effort ||
+      !sameValues(next.values, previous.values);
+    if (!changed) return [];
+    tracked = next;
+    const shown = modeChanged
+      ? note(`${agentName} switched to ${policy.name(next.mode!)} mode`)
+      : [];
+    return [...shown, settingsOutput(next)];
   };
 
   const links = (texts: readonly [string, LinkSource][]): ProviderOutput[] =>
@@ -260,11 +329,9 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
         case 'plan':
           return [...stopThinking(), { kind: 'plan', entries: planEntries(update.entries) }];
         case 'current_mode_update':
-          return changeMode(update.currentModeId);
-        case 'config_option_update': {
-          const mode = update.configOptions.find((option) => option.category === 'mode');
-          return typeof mode?.currentValue === 'string' ? changeMode(mode.currentValue) : [];
-        }
+          return tracked ? changeSettings({ ...tracked, mode: update.currentModeId }) : [];
+        case 'config_option_update':
+          return tracked ? changeSettings(settingsFrom(update.configOptions, tracked)) : [];
         case 'session_info_update': {
           const reported = sessionFailure(update._meta);
           if (!reported) return [];
@@ -294,10 +361,12 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
     failure: () => failure,
     repliedWithText: () => wroteText,
     didWork: () => worked,
-    lockMode(modeId) {
-      lockedMode = modeId;
+    trackSettings(settings, modes) {
+      tracked = settings;
+      policy = modes;
     },
     unsafeModeChange: () => unsafeMode,
+    currentMode: () => tracked?.mode ?? null,
     note,
     clientAction(name) {
       worked = true;

@@ -28,7 +28,7 @@ interface Expectation {
 }
 
 const asksEdits = (crew: AgentRole[]): Record<InvolvementLevel, Expectation> => ({
-  balanced: { crew, asked: ['edit', 'accept'] },
+  balanced: { crew, asked: ['edit'] },
   'hands-off': { crew, asked: [] },
   'full-auto': { crew, asked: [] },
 });
@@ -43,8 +43,8 @@ const EXPECTED: Record<string, Record<InvolvementLevel, Expectation>> = {
   normal: asksEdits([B]),
   complex: asksEdits([B]),
   risky: {
-    balanced: { crew: [B, C], asked: ['plan', 'edit', 'accept'] },
-    'hands-off': { crew: [B, C], asked: ['plan'] },
+    balanced: { crew: [B, C], asked: ['plan', 'edit'] },
+    'hands-off': { crew: [B, C], asked: [] },
     'full-auto': { crew: [B, C], asked: [] },
   },
 };
@@ -108,13 +108,16 @@ describe.each(SCENARIOS)('$id', (scenario) => {
       const kept = orchestration.checkpoints.filter(
         (approval) => approval.kind === 'accept' && approval.decidedBy === 'level',
       );
-      const keptBy = level === 'balanced' || expected.crew[0] === 'scout' ? [] : [level];
+      const keptBy = expected.crew[0] === 'scout' ? [] : [level];
       expect(
         kept.map((approval) => approval.payload.checkpoint?.keptBy),
         context,
       ).toEqual(keptBy);
       if (level === 'hands-off' && keptBy.length > 0) {
-        expect(kept[0]!.reason, context).toContain('Auto-edit kept the changes');
+        expect(kept[0]!.reason, context).toContain('Kept automatically');
+      }
+      if (level === 'balanced' && keptBy.length > 0) {
+        expect(kept[0]!.reason, context).toContain('you approved every edit');
       }
 
       const builders = expected.crew.filter((role) => role === B).length;

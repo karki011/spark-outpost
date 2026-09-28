@@ -56,3 +56,10 @@ export const FAKE_ACP_MODELS: [string, string][] = [
   { id: 'fake-fast', label: 'Fake Fast' },
   { id: 'fake-deep', label: 'Fake Deep' },
 ].map((model) => [model.id, model.label]);
+
+export const FAKE_ACP_MODES: [string, string, string | null, string | null][] = [
+  ['read-only', 'Ask first', null, null],
+  ['ask-every-action', 'Ask every time', null, null],
+  ['agent', 'Agent', null, null],
+  ['yolo', 'Yolo', 'Custom mode from the fake agent', 'full_access'],
+];

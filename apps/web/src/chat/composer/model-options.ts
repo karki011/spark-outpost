@@ -1,7 +1,9 @@
-import type {
-  CapabilityOption,
-  ChatSettings,
-  ProviderCapabilities,
+import {
+  isRetiring,
+  type CapabilityOption,
+  type ChatSettings,
+  type ModelOption,
+  type ProviderCapabilities,
 } from '@spark-outpost/contracts';
 
 export const AGENT_DEFAULT = 'default';
@@ -32,6 +34,27 @@ export function optionLabel(
 ): string {
   const marked = option.id !== AGENT_DEFAULT && option.id === capabilities?.defaultModel;
   return marked ? `${option.label} (default)` : option.label;
+}
+
+export function retiringLabel(model: ModelOption, now: Date): string | null {
+  if (!model.retiresNotBefore || !isRetiring(model, now)) return null;
+  const date = new Date(`${model.retiresNotBefore}T00:00:00Z`).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+  return `Retiring ${date}`;
+}
+
+export function visibleModels(
+  models: readonly ModelOption[],
+  selected: string | null,
+  showRetiring: boolean,
+  now: Date,
+): ModelOption[] {
+  if (showRetiring) return [...models];
+  return models.filter((model) => model.id === selected || !isRetiring(model, now));
 }
 
 export function selectableEfforts(

@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { git, repoWithRemote } from '../../apps/server/test/ship-support.ts';
+import { pickPermission } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
@@ -33,12 +34,7 @@ async function keptChange(page: Page, root: string) {
   await menu.getByRole('button', { name: new RegExp(`^${path.basename(root)}`) }).click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: /^Model and effort/ }).click();
-  const picker = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
-  await picker.getByRole('tab', { name: /Permissions/ }).click();
-  await picker
-    .getByRole('radiogroup', { name: 'Permissions' })
-    .getByRole('radio', { name: 'Ask before edits', exact: true })
-    .click();
+  await pickPermission(page, 'Ask before edits');
   await page.keyboard.press('Escape');
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Tidy the notes #edit #plan');
@@ -47,10 +43,9 @@ async function keptChange(page: Page, root: string) {
     .getByRole('group', { name: /Change a file\?/ })
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
-  await page
-    .getByRole('group', { name: /Keep these changes\?/ })
-    .getByRole('button', { name: 'Keep', exact: true })
-    .click();
+  await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toContainText(
+    'Kept: you approved every edit.',
+  );
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
 }
 
@@ -146,14 +141,9 @@ test('Full auto runs to a draft PR: the reply and the auto-kept card show the PR
   await page.keyboard.press('Escape');
   const button = page.getByRole('button', { name: /^Model and effort/ });
   await button.click();
-  const picker = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
-  await picker.getByRole('tab', { name: /Permissions/ }).click();
-  await picker
-    .getByRole('radiogroup', { name: 'Permissions' })
-    .getByRole('radio', { name: 'Full auto', exact: true })
-    .click();
+  await pickPermission(page, 'Full auto');
   await page.keyboard.press('Escape');
-  await expect(button).toContainText('· Full auto');
+  await expect(button).toContainText('· Bypass permissions · Full auto → PR');
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Tidy the notes #edit #plan');
   await input.press('Enter');
@@ -161,7 +151,7 @@ test('Full auto runs to a draft PR: the reply and the auto-kept card show the PR
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
   await expect(page.getByRole('group', { name: /Change a file\?/ })).toHaveCount(0);
   const keep = page.getByRole('group', { name: /Keep these changes\?/ });
-  await expect(keep).toContainText('Kept by Full auto.');
+  await expect(keep).toContainText('Kept by Full auto → PR.');
   await expect(keep).toContainText('Opened draft PR #1: https://github.com/acme/widgets/pull/1');
   await expect(keep).toContainText('Your checkout stays on main');
   const chip = keep.locator('.ship .lchip');

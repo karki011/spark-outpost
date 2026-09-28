@@ -173,3 +173,64 @@
   font-size: 12px;
   color: var(--faint);
 }
+.copt-hint,
+.copt-group {
+  margin: 0;
+  padding: 0 10px 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.copt-group {
+  padding-top: 6px;
+  color: var(--faint);
+}
+.cswitch {
+  flex: none;
+  width: 30px;
+  height: 18px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--line-strong);
+  transition: background 0.2s;
+}
+.cswitch i {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--panel);
+  transition: transform 0.2s var(--out);
+}
+.copt[aria-checked='true'] .cswitch {
+  background: var(--accent);
+}
+.copt[aria-checked='true'] .cswitch i {
+  transform: translateX(12px);
+}
+.mretire {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 12px);
+  margin: 6px;
+  padding: 6px 4px;
+  font-size: 12.5px;
+  color: var(--muted);
+  text-align: left;
+}
+.mretire[aria-checked='true'] .cswitch {
+  background: var(--accent);
+}
+.mretire[aria-checked='true'] .cswitch i {
+  transform: translateX(12px);
+}
+.mtag {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--raise);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  vertical-align: 1px;
+}

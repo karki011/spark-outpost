@@ -15,6 +15,7 @@ import {
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { createProviders } from '../src/workflow/providers.ts';
 import { createAuditRecorder } from '../src/workflow/audit-recorder.ts';
+import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 const KEY = 'zai-test-key-0123456789abcdef.QwErTyUiOp';
 const launch = {
@@ -66,7 +67,7 @@ afterEach(() => {
 
 const definition: AgentDefinition = {
   ...agentDefinitions.zai,
-  conversationMode: 'read-only',
+  ...FAKE_AGENT_MODES,
   keyEnvironment: async (apiKey) => ({
     ...(await zaiLaunchEnvironment(apiKey, configDir)),
     FAKE_ACP_MODELS: FAKE_MODELS,

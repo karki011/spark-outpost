@@ -3,6 +3,7 @@ import { CREW_CATALOG, FAKE_CODEX_STATE, FAKE_GH_STATE } from './stub-config.ts'
 import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { truncateTables } from '../../apps/server/src/persistence/truncate.ts';
+import { FAKE_CLAUDE_MODES, FAKE_CODEX_MODES } from '../../apps/server/src/providers/fake.ts';
 
 export function testDatabaseUrl(): string {
   const url = process.env.TEST_DATABASE_URL;
@@ -50,6 +51,11 @@ async function stopLeftoverRuns(db: Db): Promise<void> {
 
 const EFFORTS = ['low', 'medium', 'high'].map((id) => ({ id, label: id, description: null }));
 
+const SEED_MODES = {
+  claude: { readOnly: 'plan', defaultMode: 'default', modes: FAKE_CLAUDE_MODES },
+  codex: { readOnly: 'read-only', defaultMode: 'agent', modes: FAKE_CODEX_MODES },
+};
+
 export async function resetTestDatabase({
   onboarded,
   connected = onboarded ? ['claude'] : [],
@@ -72,16 +78,26 @@ export async function resetTestDatabase({
     for (const provider of connected) {
       await db.query(
         `INSERT INTO provider_connections
-           (workspace_id, provider, method, detail, models, model, permission, effort, verified_at)
-         VALUES ($1, $2, 'cli', $3, '[]', NULL, 'ask', 'high', now())`,
-        [workspaceId, provider, `${provider} test-fixture`],
+           (workspace_id, provider, method, detail, models, model, permission, agent_mode,
+            effort, verified_at)
+         VALUES ($1, $2, 'cli', $3, '[]', NULL, 'ask', $4, 'high', now())`,
+        [workspaceId, provider, `${provider} test-fixture`, SEED_MODES[provider].readOnly],
       );
       if (!catalog) continue;
       const models = CREW_CATALOG[provider];
       await db.query(
-        `INSERT INTO provider_capabilities (workspace_id, provider, models, efforts, default_model)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [workspaceId, provider, JSON.stringify(models), JSON.stringify(EFFORTS), models[1]!.id],
+        `INSERT INTO provider_capabilities
+           (workspace_id, provider, models, efforts, default_model, modes, default_mode)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          workspaceId,
+          provider,
+          JSON.stringify(models),
+          JSON.stringify(EFFORTS),
+          models[1]!.id,
+          JSON.stringify(SEED_MODES[provider].modes),
+          SEED_MODES[provider].defaultMode,
+        ],
       );
     }
     if (jev) {

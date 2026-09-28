@@ -43,6 +43,7 @@ function checkRequest(check: CheckCommand, target: CheckTarget, root: string): A
     diffs: [],
     options: [
       { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+      { optionId: 'allow-run', name: 'Allow for this run', kind: 'allow_always' },
       { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
     ],
     roots: [{ path: root, ignore: [] }],
@@ -163,7 +164,9 @@ function checkGate(s: Session, target: CheckTarget, timedOut: () => void) {
   return createApprovalGate({
     db: s.deps.db,
     runId: s.lease.runId,
-    level: s.input.level,
+    provider: s.input.provider,
+    mode: s.input.agentMode,
+    ...(s.input.level === 'full-auto' ? { posture: 'full_access' as const } : {}),
     append: s.append,
     waiters: s.deps.approvalWaiters ?? new ApprovalWaiters(),
     ...(s.deps.approvalPollMs === undefined ? {} : { pollMs: s.deps.approvalPollMs }),

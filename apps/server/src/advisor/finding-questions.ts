@@ -20,34 +20,20 @@ const BEHAVIOR_WORDS =
 const STYLE_WORDS =
   /\b(?:nam(?:e|es|ed|ing)|renam\w*|style|stylistic|format\w*|whitespace|indent\w*|typos?|comments?|docstrings?|jsdoc|readab\w*|cosmetic|consisten\w*|lint\w*|prefer\w*|simplif\w*|refactor\w*|duplicat\w*|verbose|nit\w*|cleaner|tidy|tidier)\b/i;
 
-/**
- * Hardening, security and robustness advice: a risk under some reader, browser or input the
- * request never mentioned (spreadsheet formula injection in an export, quoting `\r` for "some
- * CSV readers", when to revoke a blob URL). Worth reporting, not a bug against the request.
- */
 const HARDENING_WORDS =
   /\b(?:formulas?|formula injection|csv injection|spreadsheets?|some (?:\w+ )?(?:readers?|browsers?|clients?|parsers?|tools?|environments?|platforms?|versions?|programs?|apps?)|may (?:lose|fail|break|not|become|leak|cause|corrupt)|could (?:potentially )?(?:lead|allow|cause|leak)|in (?:some|rare) cases|hardening|harden\w*|defen[cs]ive\w*|defen[cs]e in depth|robust\w*|safety concerns?|to be safe|safer|revok\w*|asynchronous\w*|timing|neutrali[sz]\w*|sanitiz\w*|saniti[sz]\w*|does not guarantee|doesn't guarantee|not guaranteed|rate[- ]limit\w*|denial of service|consider(?:ing)?)\b/i;
 
-/** The finding ties the gap to the request or the agreed plan, so it is a missed requirement. */
 const REQUIRED_WORDS =
   /\b(?:(?:the )?(?:request|task|plan|agreed plan|spec|story|ticket) (?:asks?|asked|requires?|required|says|said|specifies|specified|calls for|called for|lists|listed|wants)|required by the (?:request|task|plan)|(?:planned|requested|listed|required) (?:step|behaviou?r|requirement|charset|encoding|filename|format|header|field|order|case|output)|(?:omits|skips|misses|contradicts|ignores|violates) (?:the |a )?(?:planned|requested|listed|plan|request|requirement))\b/i;
 
-/** A concrete input and the wrong result it gives: the strongest sign of a real bug. */
 const CONCRETE_WRONG =
   /→|->|\b(?:returns?|gives|yields|produces|prints|shows|renders)\b[^.;]*\b(?:instead of|when it should|but should|rather than)\b|\bshould (?:throw|return|reject|be rejected|fail)\b/i;
 
-/** A real vulnerability in code the change wrote: fixed even when the request never named it. */
 const REAL_VULNERABILITY =
   /\b(?:sql injection|command injection|shell injection|code injection|xss|cross[- ]site scripting|path traversal|directory traversal|remote code execution|privilege escalation|ssrf|open redirect|(?:auth(?:entication|orization)?|permission|access[- ]control) (?:bypass|checks? (?:is |are )?missing)|(?:bypass(?:es)?|skips) (?:the )?(?:auth\w*|permission checks?|access control)|(?:no|missing) (?:auth\w*|permission|access[- ]control) checks?|(?:leaks?|exposes?|logs?|returns?) (?:the )?(?:user's |users' )?(?:secrets?|credentials?|tokens?|passwords?|api keys?|password hashes)|(?:unescaped|not escaped|without escaping)\b[^.;]{0,40}\b(?:html|user input|markup))\b/i;
 
 export type FindingKind = 'bug' | 'suggestion' | 'style';
 
-/**
- * What a Critic finding is, by rule. A bug is wrong behavior against the request or the agreed
- * plan; the fix loop acts on those only. A suggestion (hardening, security or robustness advice
- * the request did not ask for) and style are reported, not fixed by themselves. A real
- * vulnerability the change introduced counts as a bug.
- */
 export function findingKind(finding: string): FindingKind {
   const text = finding.trim();
   if (!text || NIT_LABEL.test(text)) return 'style';
@@ -70,7 +56,6 @@ export interface FindingFacts {
   request: string;
   diff: string;
   findings: readonly string[];
-  /** The agreed plan the change was built from, when there is one. */
   plan?: string | null;
 }
 
@@ -125,7 +110,6 @@ export function readFindings(
     const kind = findingKind(finding);
     const rules = kind === 'bug';
     const noul = validNoul(response, findingKey(index));
-    // A hardening suggestion stays a suggestion: Jev can't turn it into a fix turn.
     const jev = kind === 'suggestion' && jevSays(noul) === true ? null : jevSays(noul);
     return {
       finding,

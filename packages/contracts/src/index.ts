@@ -3,6 +3,7 @@ export * from './agent-config.ts';
 export * from './mcp.ts';
 export * from './annotations.ts';
 export * from './agent-commands.ts';
+export * from './agent-modes.ts';
 export * from './approvals.ts';
 export * from './artifacts.ts';
 export * from './attachments.ts';

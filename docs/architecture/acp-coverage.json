@@ -43,12 +43,12 @@
   "agent-method:session/set_mode": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/apply-settings.ts, apps/server/src/agents/acp/legacy-options.ts",
-    "note": "Legacy fallback, used only when the agent reports modes and no mode config option."
+    "note": "Legacy fallback, used only when the agent reports modes and no mode config option. Modes are shown with their names, descriptions and _meta.kind."
   },
   "agent-method:session/set_config_option": {
-    "status": "partial",
-    "where": "apps/server/src/agents/acp/apply-settings.ts, apps/server/src/agents/acp/session-config.ts",
-    "note": "Select options for mode, model and thought_level only, and only with ids the agent offered (the probe also switches models to collect each model's efforts, using the agent's own model option only). Boolean options are never set because the boolean capability isn't advertised, and model_config options are not shown."
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/apply-settings.ts, apps/server/src/agents/acp/session-config.ts, apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Mode, model and thought_level by category, and every other option (model_config, unknown categories such as Codex collaboration_mode) by id with the value the chat chose, select or boolean. Only values the agent offered are sent. Also used for live mode switches while a turn runs."
   },
   "agent-method:session/prompt": {
     "status": "supported",
@@ -146,12 +146,12 @@
   "session-update:tool_call": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "Becomes a step named from the title, with absolute paths shortened to file names, and opens a task for the chat. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links. kind, locations, diffs and rawInput are ignored, and pending looks the same as in_progress."
+    "note": "Becomes a step named from the title, with absolute paths shortened to file names, and opens a task for the chat. kind becomes the step kind and locations and rawInput its target. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links. name, pending status (looks like in_progress), content text and diffs are not kept on the step."
   },
   "session-update:tool_call_update": {
     "status": "partial",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "A completed or failed status closes the step; failed adds a Failed step. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links. Title changes, diffs and locations are dropped."
+    "note": "A completed or failed status closes the step; failed adds a Failed step. Title, locations and rawInput update the step target. GitHub pull request URLs in text content, resource_link content and rawOutput are saved as task links. Diffs are not kept."
   },
   "session-update:plan": {
     "status": "supported",
@@ -166,12 +166,12 @@
   "session-update:current_mode_update": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/acp-provider.ts",
-    "note": "The mode applied at start is locked. Leaving it adds a warning and stops the run."
+    "note": "Deprecated in favour of config options, still handled: the new mode shows as a step and becomes the run's mode for the approval gate, unless the run doesn't allow it (then a warning and the run stops)."
   },
   "session-update:config_option_update": {
-    "status": "partial",
-    "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "Only the mode option is checked against the locked mode. Model and effort changes, such as a rate-limit fallback, don't update the capability report or the run's recorded model."
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/agents/acp/acp-provider.ts",
+    "note": "Model, effort, mode and every other option are tracked and reported as session settings (the run's used model, effort and mode). A mode change the run allows shows as a step; one it doesn't allow (a worktree-only mode on the checkout, anything but read-only in Ask) stops the run."
   },
   "session-update:session_info_update": {
     "status": "partial",
@@ -179,9 +179,9 @@
     "note": "Only the jetbrains.air.sessionFailure extension in _meta is read; an error fails the run, anything else is a warning step. title and updatedAt are ignored."
   },
   "session-update:usage_update": {
-    "status": "supported",
+    "status": "partial",
     "where": "apps/server/src/agents/acp/session-updates.ts",
-    "note": "used, size and cost are saved. Cost is kept only in USD."
+    "note": "used, size and cost are saved. Cost is kept only in USD (neither pinned adapter sends another currency)."
   },
   "session-update:notice": {
     "status": "supported",
@@ -213,16 +213,18 @@
     "note": "Text attachments are sent as embedded text resources when embeddedContext is advertised, otherwise as fenced text. Blob resources are never sent, and resource blocks in replies are dropped."
   },
   "tool-call-content:content": {
-    "status": "missing",
-    "note": "Dropped from tool_call and tool_call_update."
+    "status": "partial",
+    "note": "Text is scanned for pull request links and used as the plan text of Claude's ExitPlanMode request; otherwise not shown.",
+    "where": "apps/server/src/agents/acp/session-updates.ts, apps/server/src/plans/plan-mode.ts"
   },
   "tool-call-content:diff": {
-    "status": "missing",
-    "note": "Dropped. Needed for the what-changed card and edit approvals."
+    "status": "partial",
+    "note": "Shown on edit approval cards. Diffs in tool_call updates that need no approval are not kept.",
+    "where": "apps/server/src/agents/acp/permission-request.ts"
   },
   "tool-call-content:terminal": {
     "status": "missing",
-    "note": "Dropped. No terminal support."
+    "note": "Dropped. No terminal support. Codex sends terminal content without checking the capability, with its output in _meta.terminal_output_delta; Claude only when _meta.terminal_output is advertised."
   },
   "agent-capability:loadSession": {
     "status": "supported",
@@ -296,9 +298,9 @@
     "note": "Advertised false. The terminal capability is deferred in the harness plan."
   },
   "client-capability:session.configOptions.boolean": {
-    "status": "missing",
-    "where": "apps/server/src/agents/acp/client-info.ts",
-    "note": "Not advertised, so boolean options such as fast mode are hidden."
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/client-info.ts, apps/server/src/agents/acp/apply-settings.ts",
+    "note": "Advertised in every session and the probe. Boolean options (Claude fast, Codex fast-mode) are reported, shown in the picker and set with type \"boolean\"."
   },
   "client-capability:auth.terminal": {
     "status": "missing",
@@ -340,22 +342,22 @@
   "permission-option-kind:allow_once": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/permission-request.ts, apps/server/src/workflow/approval-gate.ts",
-    "note": "Chosen for Allow, Allow for this run, Always allow in this project, and for requests the involvement level, a run rule or the allowlist allows."
+    "note": "Shown on the approval card with the agent's label and sent straight back. Also chosen for Always allow in this project, and for requests the agent's mode, a run rule or the allowlist allows."
   },
   "permission-option-kind:allow_always": {
-    "status": "partial",
-    "where": "apps/server/src/agents/acp/permission-request.ts, apps/server/src/workflow/approval-gate.ts",
-    "note": "Only used when an agent offers no allow_once. Allow for this run is kept by the harness instead, so Claude never switches itself to acceptEdits and every later action still reaches the gate with a receipt."
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/permission-request.ts, apps/server/src/workflow/approval-gate.ts, apps/web/src/chat/approvals/ApprovalCard.tsx",
+    "note": "Shown on the approval card with the agent's label and sent straight back. The harness also records it as a run rule, so the same request isn't asked again in the run. Hidden on cards for actions that always ask (secret files, package installs, changes or deletes outside the repo), because an agent-side always rule could let the next one skip the gate."
   },
   "permission-option-kind:reject_once": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/permissions.ts, apps/server/src/workflow/approval-gate.ts",
-    "note": "Chosen for Deny, for refusals (reads outside the project, edits in .git), on approval timeout, and for every request outside Do mode. When several reject_once options are offered, the first is used; our codex-acp patch puts decline (continue the turn) before cancel (end the turn), so this relies on the patch's ordering."
+    "note": "Shown on the approval card with the agent's label and sent straight back. Chosen for refusals (reads outside the project, edits in .git, a Builder publishing), on approval timeout, and for every request outside Do mode. When the gate answers by itself and several reject_once options are offered, the first is used; our codex-acp patch puts decline (continue the turn) before cancel (end the turn)."
   },
   "permission-option-kind:reject_always": {
-    "status": "partial",
-    "where": "apps/server/src/agents/acp/permissions.ts, apps/server/src/workflow/approval-gate.ts",
-    "note": "Chosen only when no reject_once option is offered; not shown on the card."
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/permission-request.ts, apps/server/src/workflow/approval-gate.ts, apps/web/src/chat/approvals/ApprovalCard.tsx",
+    "note": "Shown on the approval card with the agent's label and sent straight back; recorded as a run rule that refuses the same request later in the run. Only Codex sends it today (block a network host)."
   },
   "plan-entry:content": {
     "status": "supported",

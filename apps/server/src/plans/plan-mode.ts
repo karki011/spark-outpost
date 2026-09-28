@@ -1,9 +1,7 @@
-import { PLAN_DOCUMENT_MAX_LENGTH, type ApprovalOption } from '@spark-outpost/contracts';
+import { PLAN_DOCUMENT_MAX_LENGTH } from '@spark-outpost/contracts';
 
 export const SWITCH_MODE_KIND = 'switch_mode';
-export const PLAN_MODE = 'plan';
 export const EXIT_PLAN_PREFIX = 'exit-plan-';
-export const EXIT_PLAN_KEEP_MODE = 'exit-plan-default';
 export const ENTER_PLAN_MODE_TITLE = 'EnterPlanMode';
 export const ENTER_PLAN_MODE_WHY = 'planning changes no files';
 
@@ -33,13 +31,4 @@ export function exitPlanText(
     .join('\n\n');
   const text = (typeof input === 'string' && input.trim() ? input : shown).trim();
   return text ? text.slice(0, PLAN_DOCUMENT_MAX_LENGTH) : null;
-}
-
-const isReject = (option: ApprovalOption) =>
-  option.kind === 'reject_once' || option.kind === 'reject_always';
-
-export function harnessPlanOptions(options: readonly ApprovalOption[]): ApprovalOption[] {
-  const keep = options.find((option) => option.optionId === EXIT_PLAN_KEEP_MODE);
-  if (!keep) return [...options];
-  return options.filter((option) => option === keep || isReject(option));
 }

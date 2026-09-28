@@ -1,6 +1,6 @@
 import { basename, join } from 'node:path';
 import { chromium, type Browser, type Page } from '@playwright/test';
-import { involvementLevelLabel, type Approval } from '../../packages/contracts/src/index.ts';
+import { autonomyLabel, modeForLegacy, type Approval } from '../../packages/contracts/src/index.ts';
 import type { Db } from '../../apps/server/src/persistence/db.ts';
 import {
   shouldCancel,
@@ -15,6 +15,16 @@ import { balancedChoice } from './balanced.ts';
 import type { HarnessSetup, ModelChoice } from './plan.ts';
 
 const CARD_VISIBLE_MS = 15_000;
+
+const MODE_LABELS: Record<string, string> = {
+  default: 'Manual',
+  acceptEdits: 'Accept edits',
+  bypassPermissions: 'Bypass permissions',
+  plan: 'Plan',
+  'ask-every-action': 'Ask every time',
+  agent: 'Approve for me',
+  'read-only': 'Read-only',
+};
 
 const MODEL_LABELS: Record<ModelChoice, RegExp> = {
   auto: /^Auto/,
@@ -127,9 +137,14 @@ export async function openUiChat(
   const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
   await panel.getByRole('radio', { name: MODEL_LABELS[setup.model] }).first().click();
   await panel.getByRole('tab', { name: /Permissions/ }).click();
-  const level = involvementLevelLabel(setup.level);
+  const mode = MODE_LABELS[modeForLegacy(setup.provider, 'do', setup.level) ?? ''] ?? 'Manual';
+  const level = autonomyLabel(setup.level);
   await panel
-    .getByRole('radiogroup', { name: 'Permissions' })
+    .getByRole('radiogroup', { name: 'Agent mode' })
+    .getByRole('radio', { name: mode, exact: true })
+    .click();
+  await panel
+    .getByRole('radiogroup', { name: 'Harness autonomy' })
     .getByRole('radio', { name: level, exact: true })
     .click();
   await panel

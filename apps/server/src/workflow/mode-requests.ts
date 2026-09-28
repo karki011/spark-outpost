@@ -1,0 +1,43 @@
+import type { Db } from '../persistence/db.ts';
+import type { ModeRequests } from '../providers/provider.ts';
+
+export interface ModeRequestWatch extends ModeRequests {
+  dispose(): void;
+}
+
+export async function requestedMode(db: Db, runId: string): Promise<string | null> {
+  const { rows } = await db.query<{ requested_mode: string | null }>(
+    'SELECT requested_mode FROM runs WHERE id = $1',
+    [runId],
+  );
+  return rows[0]?.requested_mode ?? null;
+}
+
+export function watchModeRequests(db: Db, runId: string, pollMs: number): ModeRequestWatch {
+  const listeners = new Set<(mode: string) => void>();
+  let last: string | null = null;
+  let started = false;
+  const poll = async () => {
+    const mode = await requestedMode(db, runId);
+    if (!started) {
+      started = true;
+      last = mode;
+      return;
+    }
+    if (mode === null || mode === last) return;
+    last = mode;
+    for (const listener of listeners) listener(mode);
+  };
+  void poll().catch(() => undefined);
+  const timer = setInterval(() => void poll().catch(() => undefined), pollMs);
+  return {
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    dispose() {
+      clearInterval(timer);
+      listeners.clear();
+    },
+  };
+}

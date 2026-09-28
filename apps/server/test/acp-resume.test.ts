@@ -13,11 +13,12 @@ import type {
   SessionTarget,
   StoredSession,
 } from '../src/providers/provider.ts';
+import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 const definition: AgentDefinition = {
   ...agentDefinitions.codex,
   name: 'Fake',
-  conversationMode: 'read-only',
+  ...FAKE_AGENT_MODES,
 };
 const launch = {
   command: process.execPath,

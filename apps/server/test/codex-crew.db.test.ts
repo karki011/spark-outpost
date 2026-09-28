@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { InvolvementLevel } from '@spark-outpost/contracts';
+import { modeForLegacy, type InvolvementLevel } from '@spark-outpost/contracts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { linkedConversation } from './approval-support.ts';
 import {
@@ -54,7 +54,14 @@ async function build(level: InvolvementLevel) {
     t.db,
     conversationId,
     { id: randomUUID(), content: 'Fix the typo in the README heading. #build' },
-    { provider: 'codex', model: 'gpt-6-sol', effort: 'medium', permission: 'do', level },
+    {
+      provider: 'codex',
+      model: 'gpt-6-sol',
+      effort: 'medium',
+      permission: 'do',
+      agentMode: modeForLegacy('codex', 'do', level),
+      level,
+    },
   );
   const result = await driveToEnd(t, conversationId, sent.run.id);
   const builders = await t.db.query<{ id: string; provider: string; in_copy: boolean }>(

@@ -23,7 +23,8 @@ import {
 } from './conversation-prompt.ts';
 import { assertProtocolVersion, failureError, toProviderError } from './errors.ts';
 import { declineInConversation } from './permissions.ts';
-import { applySessionSettings } from './apply-settings.ts';
+import { applySessionSettings, modeName } from './apply-settings.ts';
+import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
 import { offeredCapabilities } from './capabilities.ts';
 import { CLIENT_INFO, clientCapabilities } from './client-info.ts';
 import { readTextFile, refuseWrite } from './fs-handlers.ts';
@@ -137,7 +138,13 @@ async function runSession(
           )
         : null;
     const mcpServers = repo?.mcpServers ?? namedMcpServers([], userMcp, reserved);
-    const env = await agentEnvironment(options, home, browsing, repo?.codex ?? null);
+    const env = await agentEnvironment(
+      options,
+      home,
+      browsing,
+      repo?.codex ?? null,
+      turn.builder === true,
+    );
     agent = startAgentProcess(options.launch ?? definition.launch(), cwd, env, replay.observer);
     const notes = roots.length > 0 && !browsing ? [noFolderAccessNote(definition)] : [];
     if (roots.length < linked.length) notes.push(primaryOnlyNote(definition, roots[0]!));
@@ -321,7 +328,15 @@ async function converse(
   const annotate = (name: string) => push(mapper.note(name));
   const doing: DoWorkspace | null =
     workspace.changing && policy && turn.approvals
-      ? { policy, cwd: workspace.cwd, gate: turn.approvals, signal, report, annotate }
+      ? {
+          policy,
+          cwd: workspace.cwd,
+          gate: turn.approvals,
+          signal,
+          report,
+          annotate,
+          mode: () => mapper.currentMode(),
+        }
       : null;
   const client = acp
     .client(CLIENT_INFO)
@@ -383,11 +398,16 @@ async function converse(
     const { session, continued } = opened;
     try {
       if (turn.session) push([sessionOutput(plan.request, opened, turn.session.freshReason)]);
-      const mode = doing ? (definition.doMode ?? definition.conversationMode) : undefined;
-      const applied = await applySessionSettings(ctx, session, definition, turn.settings, mode);
+      const wish = modeWish(definition, turn, policy !== null, doing !== null);
+      const applied = await applySessionSettings(ctx, session, definition, turn.settings, wish);
       push([
         { kind: 'capabilities', report: applied.capabilities },
-        { kind: 'session_settings', ...applied.current, mode: applied.mode },
+        {
+          kind: 'session_settings',
+          ...applied.current,
+          mode: applied.mode,
+          options: applied.values,
+        },
         ...(workspace.repo
           ? [{ kind: 'instructions' as const, files: workspace.repo.following }]
           : []),
@@ -397,7 +417,16 @@ async function converse(
       for (const note of [...notes, ...applied.notes]) {
         if (note) push(mapper.note(note));
       }
-      mapper.lockMode(applied.mode);
+      const { live } = applied;
+      const allowed = modeAllowed(definition, turn, policy !== null, doing !== null);
+      mapper.trackSettings(
+        { ...applied.current, mode: applied.mode, values: applied.values },
+        { allowed, name: (mode) => modeName(live.options(), mode) },
+      );
+      const stopRequests = turn.modeRequests?.subscribe(
+        (mode) => void switchMode(live, mode, allowed, definition.name, push, mapper),
+      );
+      signal.addEventListener('abort', () => stopRequests?.(), { once: true });
       if (signal.aborted) return 'cancelled';
       const cancel = () =>
         void ctx
@@ -435,15 +464,19 @@ async function converse(
       for (;;) {
         const message = await Promise.race([session.nextUpdate(), promptFailure]);
         if (message.kind === 'stop') {
+          stopRequests?.();
           push(promptTokens(message.response.usage));
           if (turn.session) await closeQuietly(ctx, init, session.sessionId);
           return message.stopReason;
+        }
+        if (message.update.sessionUpdate === 'config_option_update') {
+          live.adopt(message.update.configOptions);
         }
         push(mapper.map(message.update));
         const unsafe = mapper.unsafeModeChange();
         if (unsafe) {
           throw new ProviderError(
-            `${definition.name} switched to ${unsafe} mode, so the run was stopped.`,
+            `${definition.name} switched to ${modeName(live.options(), unsafe)} mode, so the run was stopped.`,
           );
         }
       }

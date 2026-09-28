@@ -105,7 +105,8 @@ describe('Z.ai connection', () => {
         { id: 'opus', label: 'GLM-5.3' },
         { id: 'haiku', label: 'GLM-5.3-Flash' },
       ],
-      permission: 'ask',
+      permission: 'do',
+      agentMode: 'default',
       effort: 'medium',
     });
     const stored = await t.db.query('SELECT * FROM provider_connections');

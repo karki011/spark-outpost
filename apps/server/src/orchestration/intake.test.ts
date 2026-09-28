@@ -82,16 +82,12 @@ describe('intake decisions', () => {
     const decided = decideIntake(jev({ vague: 0.94, intent: 'refactor' }), faster);
     expect(decided).toMatchObject({ start: 'interpret', assume: false });
     expect(decided.calls.vague).toMatchObject({ jev: 0.94, value: true, source: 'jev' });
-    // Without Jev the vague rule decides, and it asks too.
     expect(decideIntake(null, faster)).toMatchObject({ start: 'interpret', assume: false });
-    // Jev unsure (0.6) at Auto-edit falls back to the rule, which reads it as vague.
     expect(decideIntake(jev({ vague: 0.6 }), faster).start).toBe('interpret');
-    // Only Full auto assumes.
     expect(decideIntake(jev({ vague: 0.94 }), { ...faster, level: 'full-auto' })).toMatchObject({
       start: 'build',
       assume: true,
     });
-    // A clear request at Auto-edit is not vague and builds.
     const clear = facts({
       request: 'The divider shows the wrong day after midnight. Fix it and add a test.',
       firstMessage: true,

@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { pickAutonomy, pickMode } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -60,24 +61,18 @@ async function doChat(page: Page) {
   const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
   await expect(panel.getByRole('radio', { name: /Fake Fast/ })).toBeVisible();
   await panel.getByRole('tab', { name: /Permissions/ }).click();
-  const choices = panel.getByRole('radiogroup', { name: 'Permissions' });
-  await expect(choices.getByRole('radio')).toHaveText([
-    /^Ask/,
-    /^Ask before edits/,
-    /^Auto-edit/,
-    /^Full auto/,
-  ]);
-  await expect(choices.getByRole('radio', { name: 'Ask', exact: true })).toHaveAttribute(
+  const modes = panel.getByRole('radiogroup', { name: 'Agent mode' });
+  await expect(modes.getByRole('radio', { name: 'Plan', exact: true })).toHaveAttribute(
     'aria-checked',
     'true',
   );
-  await choices.getByRole('radio', { name: 'Ask before edits', exact: true }).click();
-  await expect(
-    choices.getByRole('radio', { name: 'Ask before edits', exact: true }),
-  ).toHaveAttribute('aria-checked', 'true');
-  await expect(panel.getByRole('tab', { name: /Permissions/ })).toContainText('Ask before edits');
+  await pickMode(page, 'Manual');
+  await pickAutonomy(page, 'Review each step');
+  await expect(panel.getByRole('tab', { name: /Permissions/ })).toContainText(
+    'Manual · Review each step',
+  );
   await expect(page.getByRole('button', { name: /^Model and effort/ })).toContainText(
-    '· Ask before edits',
+    '· Manual · Review each step',
   );
   await shot(page, 'level-picker');
   await page.keyboard.press('Escape');
@@ -110,7 +105,7 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
   const allow = card(page, /Run a command\?/).getByRole('button', { name: 'Allow', exact: true });
   await allow.focus();
   await page.keyboard.press('Enter');
-  await expect(card(page, /Run a command\?/).getByRole('status')).toContainText('Allowed once.');
+  await expect(card(page, /Run a command\?/).getByRole('status')).toContainText('Chose: Allow.');
   await expect(page.locator('.md', { hasText: 'Done. fake-run=allowed' })).toBeVisible({
     timeout: 15_000,
   });
@@ -227,8 +222,9 @@ test('reverts an allowed edit after one confirmation', async ({ page }) => {
   });
   expect(readFileSync(notes(), 'utf8')).toContain('Edited by the fake agent');
   const keep = card(page, /Keep these changes\?/);
-  await keep.getByRole('button', { name: 'View changes' }).click();
+  await expect(keep).toContainText('Kept: you approved every edit.');
   const panel = page.getByRole('complementary', { name: 'Work panel' });
+  await panel.getByRole('tab', { name: 'Changes' }).click();
   await expect(panel.getByRole('tab', { name: 'Changes' })).toHaveAttribute(
     'aria-selected',
     'true',
@@ -239,7 +235,6 @@ test('reverts an allowed edit after one confirmation', async ({ page }) => {
   await changed.getByRole('button', { name: 'Open notes.txt' }).click();
   await expect(changed.locator('.dv-row.add')).toHaveText('2+AddedEdited by the fake agent');
   await shot(page, 'changes-tab');
-  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
 
   await page.getByRole('button', { name: 'Revert to before this run' }).click();
   const confirm = page.getByRole('group', { name: 'Revert to before this run' });
@@ -259,20 +254,25 @@ test('Codex offers Do with its own copy and sandbox note', async ({ page }) => {
   await panel.getByRole('tab', { name: 'Codex' }).click();
   await expect(panel.getByRole('tab', { name: 'Codex' })).toHaveAttribute('aria-selected', 'true');
   await panel.getByRole('tab', { name: /Permissions/ }).click();
-  const levels = panel.getByRole('radiogroup', { name: 'Permissions' });
-  const codexDo = levels.getByRole('radio', { name: 'Ask before edits', exact: true });
-  await expect(codexDo).not.toHaveAttribute('aria-disabled', 'true');
-  await codexDo.click();
-  await expect(codexDo).toHaveAttribute('aria-checked', 'true');
-  await expect(codexDo).toContainText('Read-only commands in the project are answered for you');
-  await expect(levels.getByRole('radio', { name: 'Auto-edit', exact: true })).toContainText(
-    'separate git copy',
+  const modes = panel.getByRole('radiogroup', { name: 'Agent mode' });
+  await expect(modes.getByRole('radio')).toHaveText([
+    /^Read-only/,
+    /^Ask every time/,
+    /^Approve for me/,
+    /^Full access/,
+  ]);
+  await expect(modes.getByRole('radio', { name: 'Read-only', exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true',
   );
-  await expect(levels.getByRole('radio', { name: 'Full auto', exact: true })).toContainText(
-    'runs to a draft PR',
+  await pickMode(page, 'Approve for me');
+  await expect(panel.getByRole('note')).toContainText('runs only in a worktree copy');
+  await pickMode(page, 'Ask every time');
+  await expect(modes.getByRole('radio', { name: 'Ask every time', exact: true })).toContainText(
+    'Commands run in a workspace-write sandbox without network',
   );
-  await expect(levels.getByRole('radio', { name: /Hands-on/ })).toHaveCount(0);
-  await expect(panel).toContainText("Codex's sandbox can read any file on this computer");
+  await expect(panel.getByRole('note')).toHaveCount(0);
+  await expect(panel).toContainText('Agent asks before edits and commands');
   await shot(page, 'codex-do');
   await page.keyboard.press('Escape');
   await send(page, 'Run the tests #approve');

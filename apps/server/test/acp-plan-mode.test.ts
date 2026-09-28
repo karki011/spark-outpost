@@ -7,13 +7,14 @@ import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import type { ApprovalRequest } from '../src/approvals/decide.ts';
 import type { GateAnswer, ProviderOutput } from '../src/providers/provider.ts';
 import { FAKE_PLAN } from './fake-acp-plans.ts';
+import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 const launch = {
   command: process.execPath,
   args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 const claude = createAcpProvider({
-  definition: { ...agentDefinitions.claude, name: 'Fake', conversationMode: 'read-only' },
+  definition: { ...agentDefinitions.claude, name: 'Fake', ...FAKE_AGENT_MODES },
   launch,
   cancelGraceMs: 2_000,
 });
@@ -56,10 +57,10 @@ async function planTurn(pick: (request: ApprovalRequest) => GateAnswer) {
 }
 
 describe("Claude's plan mode over ACP", () => {
-  it('sends the plan to the gate with approve and keep-planning options, then keeps running', async () => {
+  it('sends the plan to the gate with every option the agent offers, then keeps running', async () => {
     const { requests, text, error } = await planTurn((request) => ({
       outcome: 'selected',
-      optionId: request.options[0]!.optionId,
+      optionId: request.options.find((option) => option.optionId === 'exit-plan-default')!.optionId,
       allowed: true,
       note: 'Approved the plan',
     }));
@@ -69,6 +70,8 @@ describe("Claude's plan mode over ACP", () => {
       toolKind: 'switch_mode',
       plan: FAKE_PLAN,
       options: [
+        { optionId: 'exit-plan-clear-auto', kind: 'allow_always' },
+        { optionId: 'exit-plan-auto', kind: 'allow_always' },
         { optionId: 'exit-plan-default', kind: 'allow_once' },
         { optionId: 'reject', kind: 'reject_once' },
       ],

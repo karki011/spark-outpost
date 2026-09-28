@@ -7,8 +7,8 @@ import { insertOrchestration } from '../persistence/orchestrations.ts';
 import { recordKeptChanges } from '../outcomes/record.ts';
 import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
 import { currentTaskContext, startNewTask, taskForWorkingRun } from '../persistence/tasks.ts';
-import { revertRun, runChanges } from '../projects/run-changes.ts';
-import { gitChanges, isGitWorkTree, revertGitChanges } from '../projects/snapshot.ts';
+import { revertRun } from '../projects/run-changes.ts';
+import { isGitWorkTree } from '../projects/snapshot.ts';
 import { startControl, type Append } from '../workflow/agent-turn.ts';
 import { APPROVAL_TIMEOUT_MESSAGE } from '../workflow/approval-gate.ts';
 import { closeMessage } from '../workflow/execute-run.ts';
@@ -16,11 +16,17 @@ import { runEvents } from '../workflow/run-events.ts';
 import { loadRunInput, type RunInput } from '../workflow/run-input.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
-import { budgetUsage, checkBudget, fixRoundShort } from './budget-check.ts';
+import { checkBudget, fixRoundShort } from './budget-check.ts';
 import { correctnessFindings, sessionReviewLine, suggestionsLine } from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
-import { confirmsRiskyFirst, KEPT_BY_AUTO_EDIT, riskyChange } from './checkpoint-policy.ts';
-import { destructiveMigrationInPatch, migrationByRule } from './risk-rules.ts';
+import {
+  confirmsRiskyFirst,
+  KEPT_AFTER_EACH_EDIT,
+  KEPT_BY_AUTO_EDIT,
+  riskyChange,
+} from './checkpoint-policy.ts';
+import { migrationByRule } from './risk-rules.ts';
+import { wrappedUp } from './wrap-up.ts';
 import { ask, assume, intakeResponse } from './checkpoint-asks.ts';
 import { assumptionLine, interpretations } from './clarify.ts';
 import { namedFiles } from './context.ts';
@@ -32,7 +38,14 @@ import {
   type IntakeDecisions,
 } from './intake.ts';
 import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
-import { buildAndLand, treeOf } from './land.ts';
+import { buildAndLand } from './land.ts';
+import {
+  beginFixRound,
+  cutFacts,
+  notePassing,
+  restoreAfterCut,
+  startsFixRound,
+} from './fix-rounds.ts';
 import { finalText } from './final-message.ts';
 import {
   decideBuildStyle,
@@ -171,85 +184,6 @@ function isGreen(s: Session, files: readonly unknown[]): boolean {
   return files.length > 0 && s.checkBodies.at(-1)?.status !== 'failed';
 }
 
-/**
- * A destructive statement the change added to a migration when nothing flagged the work as risky
- * up front (the request read as additive). Full auto flags it in the PR body; Auto-edit asks to
- * keep.
- */
-async function unconfirmedRiskyMigration(s: Session): Promise<string | null> {
-  if (s.risky || s.input.mode !== 'do' || s.flow.readOnly) return null;
-  const { patch } = await changesSoFar(s).catch(() => ({ patch: '' }));
-  const statement = patch ? destructiveMigrationInPatch(patch) : null;
-  if (statement) s.risky = `The change adds a destructive migration: ${statement}`;
-  return statement;
-}
-
-function startsFixRound(s: Session, action: Extract<FlowAction, { type: 'spawn' }>): boolean {
-  return (
-    action.role === 'builder' &&
-    action.reason === 'fix' &&
-    s.flow.review.fixing &&
-    s.fixRound?.round !== s.flow.review.fixRounds
-  );
-}
-
-/** Snapshot the passing change before a fix round, and start the round's own budget. */
-async function beginFixRound(s: Session): Promise<void> {
-  const usage = await budgetUsage(s);
-  s.fixRound = {
-    round: s.flow.review.fixRounds,
-    toolCallsAt: usage.toolCalls,
-    activeMsAt: usage.activeMs,
-    hit: null,
-  };
-  if (checksFailing(s)) s.passing = null;
-  else await notePassing(s);
-}
-
-async function notePassing(s: Session): Promise<void> {
-  const root = s.input.projectRoots[0];
-  const tree = root ? await treeOf(s, root) : null;
-  s.passing = tree
-    ? { tree, checkBodies: [...s.checkBodies], checkLines: [...s.checkLines] }
-    : null;
-}
-
-function cutFacts(s: Session): { round?: boolean; passing?: boolean } {
-  if (!s.flow.review.fixing) return {};
-  return {
-    ...(s.fixRound?.hit ? { round: true } : {}),
-    ...(s.passing ? { passing: true } : {}),
-  };
-}
-
-/** After a cut fix round: put back the last passing state and pick up the run's own budget. */
-async function restoreAfterCut(s: Session): Promise<FlowEvent> {
-  const root = s.input.projectRoots[0];
-  const passing = s.passing;
-  let restored = false;
-  if (root && passing) {
-    try {
-      const current = await treeOf(s, root);
-      if (current && current !== passing.tree) {
-        await revertGitChanges(root, passing.tree, await gitChanges(root, passing.tree, current));
-        restored = true;
-      }
-      s.checkBodies = [...passing.checkBodies];
-      s.checkLines = [...passing.checkLines];
-    } catch (error) {
-      console.error('Could not restore the last passing state', error);
-    }
-  }
-  if (s.fixRound?.hit) s.budgetHit = null;
-  s.fixRound = null;
-  const note = restored
-    ? 'Fix round cut short: rolled back to the last state that passed the checks'
-    : 'Fix round cut short: kept the last state that passed the checks';
-  await s.append(runEvents.stepStarted(note));
-  await s.append(runEvents.stepFinished(note));
-  return { type: 'restored', restored };
-}
-
 async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null> {
   switch (action.type) {
     case 'ask':
@@ -299,21 +233,15 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       return writePlanOnly(s, action.note);
     case 'verify':
       return verifyChange(s);
-    case 'wrap_up': {
+    case 'wrap_up':
       await recordShortcuts(s).catch(() => null);
-      const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true).catch(
-        () => null,
-      );
-      const riskyMigration = await unconfirmedRiskyMigration(s);
-      return {
-        type: 'wrapped',
-        filesChanged: changes?.files.length ?? 0,
-        ...(checksFailing(s) ? { checksFailing: true } : {}),
-        ...(riskyMigration ? { riskyMigration } : {}),
-      };
-    }
+      return wrappedUp(s);
     case 'keep':
-      await autoKeep(s, 'hands-off', [KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
+      if (action.approvedEach) {
+        await autoKeep(s, 'balanced', [KEPT_AFTER_EACH_EDIT]);
+      } else {
+        await autoKeep(s, 'hands-off', [KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
+      }
       return { type: 'kept' };
     case 'ship':
       return shipFullAuto(s);
@@ -341,7 +269,6 @@ async function finish(
   reason: string | null,
   incomplete: string | null = null,
 ) {
-  // A stop keeps the task's Builder session: "continue" resumes it (turn-session marks it stopped).
   if (status === 'failed') s.closeReason ??= status;
   await cleanupCopies(s).catch(() => undefined);
   await settleObservations(s);
@@ -445,7 +372,6 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       flow: initialFlow(
         decisions.risk,
         input.level,
-        // Additive migrations don't get the risky card, but they still get the Critic.
         decisions.review || risky !== null || (doing && migrationByRule(input.userRequest)),
         jev !== null,
         confirmFirst,
@@ -474,7 +400,16 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       projectStyle: doing ? await projectBuildStyle(deps.db, lease.runId) : NO_PROJECT_STYLE,
       buildStyle: 'off',
       assumption: null,
-      needsCopy: git && needsCopyFor(input.provider, input.level, decisions.destructive, busy),
+      needsCopy:
+        git &&
+        needsCopyFor({
+          provider: input.provider,
+          agentMode: input.agentMode,
+          level: input.level,
+          destructive: decisions.destructive,
+          risky: risky !== null,
+          busy,
+        }),
       copyRunId: null,
       snapshotTaken: false,
       closeReason: null,

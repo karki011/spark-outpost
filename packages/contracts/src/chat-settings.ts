@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import { modelRoutingSchema } from './advice.ts';
+import {
+  agentModeOptionSchema,
+  configOptionInfoSchema,
+  configValuesSchema,
+} from './agent-modes.ts';
 import { involvementLevelSchema } from './approvals.ts';
 import { CONVERSATION_PROJECTS_MAX } from './projects.ts';
 import { providerIdSchema } from './setup.ts';
@@ -11,12 +16,28 @@ export const capabilityOptionSchema = z.object({
 });
 export type CapabilityOption = z.infer<typeof capabilityOptionSchema>;
 
+export const modelOptionSchema = capabilityOptionSchema.extend({
+  retiresNotBefore: z.string().nullable().optional(),
+});
+export type ModelOption = z.infer<typeof modelOptionSchema>;
+
+export const RETIRING_WITHIN_DAYS = 30;
+
+export function isRetiring(model: Pick<ModelOption, 'retiresNotBefore'>, now: Date): boolean {
+  if (!model.retiresNotBefore) return false;
+  const retires = Date.parse(`${model.retiresNotBefore}T00:00:00Z`);
+  return retires - now.getTime() <= RETIRING_WITHIN_DAYS * 86_400_000;
+}
+
 export const providerCapabilitiesSchema = z.object({
   provider: providerIdSchema,
-  models: z.array(capabilityOptionSchema),
+  models: z.array(modelOptionSchema),
   efforts: z.array(capabilityOptionSchema),
   defaultModel: z.string().nullable(),
   agentDefaultModel: z.string().nullable().optional(),
+  modes: z.array(agentModeOptionSchema).default([]),
+  defaultMode: z.string().nullable().default(null),
+  options: z.array(configOptionInfoSchema).default([]),
   capturedAt: z.string(),
 });
 export type ProviderCapabilities = z.infer<typeof providerCapabilitiesSchema>;
@@ -26,7 +47,9 @@ export const chatSettingsSchema = z.object({
   model: z.string().nullable(),
   effort: z.string().nullable(),
   permission: z.string().nullable(),
+  agentMode: z.string().nullable().default(null),
   level: involvementLevelSchema.nullable(),
+  options: configValuesSchema.default({}),
   routing: modelRoutingSchema.optional(),
 });
 export type ChatSettings = z.infer<typeof chatSettingsSchema>;
@@ -36,8 +59,9 @@ export const updateChatSettingsRequestSchema = z
     provider: providerIdSchema,
     model: z.string().min(1).max(200).nullable(),
     effort: z.string().min(1).max(40).nullable(),
-    permission: z.string().min(1).max(40).nullable(),
+    agentMode: z.string().min(1).max(200).nullable(),
     level: involvementLevelSchema.nullable(),
+    options: configValuesSchema,
     routing: modelRoutingSchema,
     projectIds: z
       .array(z.uuid())

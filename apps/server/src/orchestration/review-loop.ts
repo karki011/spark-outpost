@@ -6,14 +6,10 @@ export type ReviewAction = 'fix' | 'offer' | 'clean' | 'unclear' | 'repeated' | 
 export type ReviewStop =
   'clean' | 'unclear' | 'repeated' | 'cap' | 'checks_failing' | 'budget' | 'limit';
 
-/** How a fix round was cut short by a tool-call, time or cost limit. */
 export interface FixCut {
   limit: BudgetLimit;
-  /** The fix round's own budget ran out (not the whole run's). */
   round: boolean;
-  /** The round never started: too little of the run's budget was left for one. */
   unstarted: boolean;
-  /** Files were rolled back to the last state that passed the checks. */
   restored: boolean;
 }
 
@@ -99,10 +95,6 @@ export function startFix(loop: ReviewLoop): ReviewLoop {
   return { ...loop, fixRounds: loop.fixRounds + 1, fixing: true, stop: null, cut: null };
 }
 
-/**
- * A limit cut the fix round short (or kept it from starting) while the change before it passed
- * the checks: the loop ends there, the last passing state is kept, and the findings stay open.
- */
 export function fixCut(loop: ReviewLoop, cut: Omit<FixCut, 'restored'>): ReviewLoop {
   return {
     ...loop,

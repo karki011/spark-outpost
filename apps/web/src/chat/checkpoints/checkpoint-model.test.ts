@@ -99,10 +99,13 @@ describe('checkpoint wording', () => {
       decisionOptionId: 'keep',
     };
     expect(checkpointResult(checkpoint({ kind: 'accept', keptBy: 'full-auto' }, kept))).toBe(
-      'Kept by Full auto.',
+      'Kept by Full auto → PR.',
     );
     expect(checkpointResult(checkpoint({ kind: 'accept', keptBy: 'hands-off' }, kept))).toBe(
-      'Kept by Auto-edit.',
+      'Kept automatically.',
+    );
+    expect(checkpointResult(checkpoint({ kind: 'accept', keptBy: 'balanced' }, kept))).toBe(
+      'Kept: you approved every edit.',
     );
   });
 

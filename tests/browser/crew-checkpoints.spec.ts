@@ -24,7 +24,7 @@ test.afterEach(() => repo.remove());
 
 test('clarify takes an answer in your own words and works from it', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Ask before edits');
+  await crewChat(page, repo, 'Review keep');
   await send(page, 'Make the reports better #build #vague');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify).toBeVisible({ timeout: 30_000 });
@@ -37,7 +37,6 @@ test('clarify takes an answer in your own words and works from it', async ({ pag
   await expect(clarify).toContainText('Answered.');
   await expect(clarify).toContainText('Only the top heading');
 
-  await allowEdit(page);
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });
   await keep.getByRole('button', { name: 'Keep', exact: true }).click();
@@ -49,14 +48,13 @@ test('clarify takes an answer in your own words and works from it', async ({ pag
 
 test('a vague request gets one short question with likely readings', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Ask before edits');
+  await crewChat(page, repo, 'Review keep');
   await send(page, 'Make the reports better #build #vague');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify).toContainText('What should change?', { timeout: 30_000 });
   await expect(clarify.getByRole('button', { name: 'Improve its documentation' })).toBeVisible();
   await clarify.getByRole('button', { name: 'Add new behaviour or features' }).click();
   await expect(clarify).toContainText('You chose: Add new behaviour or features');
-  await allowEdit(page);
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });
   await keep.getByRole('button', { name: 'Keep', exact: true }).click();
@@ -105,8 +103,7 @@ test('the loop guard stops a Builder that repeats itself, and Continue resumes i
   await expect(stuck).toContainText('Continued with a note to try another way.');
   await allowEdit(page);
   const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toBeVisible({ timeout: 30_000 });
-  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  await expect(keep).toContainText('Kept: you approved every edit.', { timeout: 30_000 });
   expect(repo.notes()).toBe('start\ntried another way\n');
 });
 
@@ -114,7 +111,7 @@ test('risky work shows a card before the Builder starts, and Build it goes on', 
   page,
 }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Ask before edits');
+  await crewChat(page, repo, 'Review keep');
   await send(page, 'Rename the runs table column and migrate old rows #build');
   const risky = card(page, /Start this risky change\?/);
   await expect(risky).toBeVisible({ timeout: 30_000 });
@@ -122,7 +119,6 @@ test('risky work shows a card before the Builder starts, and Build it goes on', 
   expect(repo.notes()).toBe('start\n');
   await risky.getByRole('button', { name: 'Build it' }).click();
   await expect(risky).toContainText('Making the change.');
-  await allowEdit(page);
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });
   await keep.getByRole('button', { name: 'Keep', exact: true }).click();
@@ -149,9 +145,8 @@ test('Stop mid-Builder cancels the Builder and the crew', async ({ page }) => {
 
 test('Fix from the keep card runs another Builder with your note', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Ask before edits');
+  await crewChat(page, repo, 'Review keep');
   await send(page, 'Fix the divider #build');
-  await allowEdit(page);
   const keep = card(page, /Keep these changes\?/).first();
   await expect(keep).toBeVisible({ timeout: 30_000 });
   await keep.getByRole('button', { name: 'Fix' }).click();
@@ -159,7 +154,6 @@ test('Fix from the keep card runs another Builder with your note', async ({ page
   await keep.getByRole('button', { name: 'Ask for a fix' }).click();
   await expect(keep).toContainText('Asked for a fix.');
 
-  await allowEdit(page);
   const again = card(page, /Keep these changes\?/).nth(1);
   await expect(again).toBeVisible({ timeout: 30_000 });
   await again.getByRole('button', { name: 'Keep', exact: true }).click();
@@ -179,19 +173,18 @@ test('Auto-edit: Critic concerns get a fix round and a second review, then it ke
   await expect(agentBlock(page, 'Hawk').last()).toContainText('Verdict: looks good');
   const kept = card(page, /Keep these changes\?/);
   await expect(kept).toHaveCount(1);
-  await expect(kept).toContainText('Kept by Auto-edit.');
+  await expect(kept).toContainText('Kept automatically.');
   await expect(kept.getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Revert to before this run' })).toBeVisible();
   expect(repo.notes()).toBe('start\nstep 1\nfixed the review findings\n');
 });
 
-test('Ask before edits: "Fix these findings" on the keep card sends the review back to the Builder', async ({
+test('Review each step: "Fix these findings" on the keep card sends the review back to the Builder', async ({
   page,
 }) => {
   test.setTimeout(90_000);
-  await crewChat(page, repo, 'Ask before edits');
+  await crewChat(page, repo, 'Review keep');
   await send(page, 'Fix the divider #build #crew #bugreview');
-  await allowEdit(page);
   const keep = card(page, /Keep these changes\?/).first();
   await expect(keep).toContainText('The AI review found 2 correctness findings.', {
     timeout: 30_000,
@@ -200,7 +193,6 @@ test('Ask before edits: "Fix these findings" on the keep card sends the review b
   await keep.getByRole('button', { name: 'Fix these findings' }).click();
   await expect(keep).toContainText('Sent the review findings back to the Builder.');
 
-  await allowEdit(page);
   const again = card(page, /Keep these changes\?/).nth(1);
   await expect(again).toContainText('Fixed after 1 review round', { timeout: 30_000 });
   await expect(again.getByRole('button', { name: /Fix these findings|Fix again/ })).toHaveCount(0);

@@ -1,16 +1,20 @@
-import type {
-  CapabilityOption,
-  InvolvementLevel,
-  Profile,
-  ProviderConnection,
-  ProviderId,
-  ProviderModel,
-  ProviderSetup,
-  SetupState,
-  UpdateProfileRequest,
+import {
+  defaultModeFor,
+  modePosture,
+  permissionFor,
+  type AgentModeOption,
+  type CapabilityOption,
+  type InvolvementLevel,
+  type Profile,
+  type ProviderConnection,
+  type ProviderId,
+  type ProviderModel,
+  type ProviderSetup,
+  type SetupState,
+  type UpdateProfileRequest,
 } from '@spark-outpost/contracts';
 import { effectiveDefaultModel, retiringOn, usableDefault } from '../model-cards/cards.ts';
-import { catalog, catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
+import { catalog, catalogEntry } from '../providers/catalog.ts';
 import { INITIAL_PROVIDER_EFFORT, reportedEfforts } from '../providers/efforts.ts';
 import type { TestOutcome } from '../setup/test-message.ts';
 import type { VerifiedConnection } from '../setup/verify.ts';
@@ -33,6 +37,7 @@ interface ConnectionRow {
   models: ProviderModel[];
   model: string | null;
   permission: string;
+  agent_mode: string | null;
   level: InvolvementLevel;
   effort: string | null;
   verified_at: Date;
@@ -44,6 +49,19 @@ interface ConnectionRow {
 }
 
 export class InvalidDefaultError extends Error {}
+
+export function assertModeOffered(
+  provider: ProviderId,
+  mode: string,
+  modes: readonly AgentModeOption[],
+): void {
+  const offered =
+    modes.length > 0
+      ? modes.some((option) => option.id === mode)
+      : modePosture(provider, mode) !== 'unknown';
+  if (!offered)
+    throw new InvalidDefaultError(`${catalogEntry(provider).name} doesn't offer that mode.`);
+}
 
 async function ensureProfile(db: Queryable, workspaceId: string): Promise<ProfileRow> {
   await db.query('INSERT INTO profiles (workspace_id) VALUES ($1) ON CONFLICT DO NOTHING', [
@@ -83,6 +101,7 @@ function toConnection(row: ConnectionRow | undefined): ProviderConnection | null
     models: row.models,
     model: usableDefault(row.provider, row.model),
     permission: row.permission,
+    agentMode: row.agent_mode ?? defaultModeFor(row.provider),
     level: row.level,
     effort: row.effort,
     verifiedAt: row.verified_at.toISOString(),
@@ -114,7 +133,6 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     keyLink: entry.keyLink,
     note: entry.note,
     methods: entry.methods,
-    permissions: entry.permissions,
     efforts: entry.efforts,
     defaultEffort: entry.defaultEffort,
     connection: toConnection(rows.find((row) => row.provider === entry.id)),
@@ -187,7 +205,7 @@ export async function saveConnection(
   provider: ProviderId,
   verified: VerifiedConnection,
 ): Promise<ProviderConnection> {
-  const entry = catalogEntry(provider);
+  const defaultMode = defaultModeFor(provider);
   const defaultModel = effectiveDefaultModel(
     provider,
     verified.models,
@@ -195,8 +213,9 @@ export async function saveConnection(
   );
   const { rows } = await db.query<ConnectionRow>(
     `INSERT INTO provider_connections
-       (workspace_id, provider, method, detail, models, model, permission, effort, verified_at, summary)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9)
+       (workspace_id, provider, method, detail, models, model, permission, effort, verified_at,
+        summary, agent_mode)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), $9, $10)
      ON CONFLICT (workspace_id, provider) DO UPDATE SET
        method = EXCLUDED.method,
        detail = EXCLUDED.detail,
@@ -208,10 +227,11 @@ export async function saveConnection(
        model = CASE
          WHEN provider_connections.model IS NOT NULL
            AND EXCLUDED.models @> jsonb_build_array(jsonb_build_object('id', provider_connections.model))
-           AND NOT provider_connections.model = ANY($10::text[])
+           AND NOT provider_connections.model = ANY($11::text[])
          THEN provider_connections.model
          ELSE EXCLUDED.model
        END,
+       agent_mode = COALESCE(provider_connections.agent_mode, EXCLUDED.agent_mode),
        verified_at = now(),
        disconnected_at = NULL
      RETURNING *`,
@@ -222,9 +242,10 @@ export async function saveConnection(
       verified.detail,
       JSON.stringify(verified.models),
       defaultModel,
-      entry.permissions[0]!.id,
+      permissionFor(provider, defaultMode),
       INITIAL_PROVIDER_EFFORT,
       verified.summary,
+      defaultMode,
       verified.models.flatMap((model) => (retiringOn(model, provider) ? [model.id] : [])),
     ],
   );
@@ -270,13 +291,20 @@ export async function disconnectProvider(
   );
 }
 
+interface CapturedOptions {
+  models: CapabilityOption[];
+  efforts: CapabilityOption[];
+  modes: AgentModeOption[];
+}
+
 async function capabilityOptions(
   db: Queryable,
   workspaceId: string,
   provider: ProviderId,
-): Promise<{ models: CapabilityOption[]; efforts: CapabilityOption[] } | null> {
-  const { rows } = await db.query<{ models: CapabilityOption[]; efforts: CapabilityOption[] }>(
-    'SELECT models, efforts FROM provider_capabilities WHERE workspace_id = $1 AND provider = $2',
+): Promise<CapturedOptions | null> {
+  const { rows } = await db.query<CapturedOptions>(
+    `SELECT models, efforts, modes FROM provider_capabilities
+     WHERE workspace_id = $1 AND provider = $2`,
     [workspaceId, provider],
   );
   return rows[0] ?? null;
@@ -316,7 +344,7 @@ export async function updateProviderDefaults(
   provider: ProviderId,
   update: {
     model?: string | undefined;
-    permission?: string | undefined;
+    agentMode?: string | undefined;
     level?: InvolvementLevel | undefined;
     effort?: string | null | undefined;
   },
@@ -336,12 +364,10 @@ export async function updateProviderDefaults(
       `That model retires on ${retiring}, so it can't be the default. Pick it in a chat instead.`,
     );
   }
-  if (update.permission && !isSelectablePermission(entry, update.permission)) {
-    const choice = entry.permissions.find((option) => option.id === update.permission);
-    throw new InvalidDefaultError(
-      choice?.unavailableReason ?? `${entry.name} does not have that permission mode.`,
-    );
-  }
+  const modes = update.agentMode
+    ? ((await capabilityOptions(db, workspaceId, provider))?.modes ?? [])
+    : [];
+  if (update.agentMode) assertModeOffered(provider, update.agentMode, modes);
   if (update.effort && !(await reportsEffort(db, workspaceId, provider, update.effort))) {
     throw new InvalidDefaultError(`${entry.name} does not have that effort level.`);
   }
@@ -350,17 +376,19 @@ export async function updateProviderDefaults(
        model = COALESCE($3, model),
        permission = COALESCE($4, permission),
        effort = CASE WHEN $7 THEN $5 ELSE effort END,
-       level = COALESCE($6, level)
+       level = COALESCE($6, level),
+       agent_mode = COALESCE($8, agent_mode)
      WHERE workspace_id = $1 AND provider = $2
      RETURNING *`,
     [
       workspaceId,
       provider,
       update.model ?? null,
-      update.permission ?? null,
+      update.agentMode ? permissionFor(provider, update.agentMode, modes) : null,
       update.effort ?? null,
       update.level ?? null,
       update.effort !== undefined,
+      update.agentMode ?? null,
     ],
   );
   return toConnection(rows[0])!;

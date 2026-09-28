@@ -113,7 +113,7 @@ describe('cost cap', () => {
     start(COST_CAP, RISKY);
     const { conversationId, runId } = await begin('#cost', RISKY);
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, stopAtBudget);
-    expect(asked.map((approval) => approval.kind)).toEqual(['plan', 'budget']);
+    expect(asked.map((approval) => approval.kind)).toEqual(['budget']);
     expect(orchestration.budget.exceeded).toBe('cost');
     expect((await members(runId)).map((member) => member.role)).toEqual(['builder']);
   }, 60_000);

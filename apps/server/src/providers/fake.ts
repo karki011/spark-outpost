@@ -177,7 +177,56 @@ export function fakeCapabilities(provider?: string): ProviderCapabilityReport {
       { id: 'high', label: 'High', description: 'Thinks longer' },
     ],
     defaultModel: 'fake-fast',
+    modes: fakeModes(provider),
+    defaultMode: provider === 'codex' ? 'agent' : 'default',
+    options: [],
   };
+}
+
+const mode = (id: string, label: string, description: string, kind: string) => ({
+  id,
+  label,
+  description,
+  kind,
+});
+
+export const FAKE_CLAUDE_MODES = [
+  mode('default', 'Manual', 'Always ask before making changes', 'standard'),
+  mode('acceptEdits', 'Accept edits', 'Automatically accept all file edits', 'standard'),
+  mode('plan', 'Plan', 'Create a plan before making changes', 'plan'),
+  mode('auto', 'Auto', 'Claude handles permission decisions', 'auto_review'),
+  mode('bypassPermissions', 'Bypass permissions', 'Accepts all permissions', 'full_access'),
+];
+
+export const FAKE_CODEX_MODES = [
+  mode(
+    'read-only',
+    'Read-only',
+    'Requires approval to edit files and access the internet.',
+    'standard',
+  ),
+  mode(
+    'ask-every-action',
+    'Ask every time',
+    'Asks before every command and every file change. Commands run in a workspace-write sandbox without network.',
+    'standard',
+  ),
+  mode(
+    'agent',
+    'Approve for me',
+    'Only ask for actions detected as potentially unsafe',
+    'auto_review',
+  ),
+  mode(
+    'agent-full-access',
+    'Full access',
+    'Unrestricted access to the internet and any file on your computer',
+    'full_access',
+  ),
+];
+
+function fakeModes(provider: string | undefined) {
+  return provider === 'codex' ? FAKE_CODEX_MODES : FAKE_CLAUDE_MODES;
 }
 
 function fakeZaiCapabilities(): ProviderCapabilityReport {
@@ -193,6 +242,9 @@ function fakeZaiCapabilities(): ProviderCapabilityReport {
       description: null,
     })),
     defaultModel: ZAI_MODELS[0]?.slot ?? null,
+    modes: FAKE_CLAUDE_MODES,
+    defaultMode: 'default',
+    options: [],
   };
 }
 

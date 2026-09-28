@@ -1,11 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import {
-  ACCESS_CHOICES,
-  accessChoice,
-  accessFor,
-  accessHint,
-  accessUpdate,
+  AUTONOMY_LEVELS,
   type CapabilityOption,
   type Choice,
   type ProviderCapabilities,
@@ -20,21 +16,25 @@ import {
   optionLabel,
   selectableEfforts,
 } from '../chat/composer/model-options.ts';
+import { withCurrentMode } from '../chat/composer/mode-summary.ts';
 import { ChoicePicker } from './ChoicePicker.tsx';
 
 function toChoice(id: string, label: string, description: string): Choice {
   return { id, label, description, risky: false, unavailableReason: null };
 }
 
-function accessChoices(provider: ProviderSetup): Choice[] {
-  return ACCESS_CHOICES.map((choice) => {
-    const permission = provider.permissions.find((option) => option.id === choice.permission);
-    return {
-      ...toChoice(choice.id, choice.label, accessHint(choice, provider.id)),
-      unavailableReason: permission ? permission.unavailableReason : 'Not offered by this agent.',
-    };
-  });
+function modeChoices(capabilities: ProviderCapabilities | undefined, current: string | null) {
+  const modes = withCurrentMode(capabilities?.modes ?? [], current);
+  return modes.map((mode) =>
+    toChoice(
+      mode.id,
+      mode.id === capabilities?.defaultMode ? `${mode.label} (default)` : mode.label,
+      mode.description ?? '',
+    ),
+  );
 }
+
+const AUTONOMY_CHOICES = AUTONOMY_LEVELS.map((info) => toChoice(info.id, info.label, info.hint));
 
 const PER_CHAT = 'per-chat';
 const PER_CHAT_NOTE = 'Each chat keeps its own effort, and Do-task Builders follow it.';
@@ -69,10 +69,10 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
     queryKey: queryKeys.capabilities(provider.id),
     queryFn: () => api.getCapabilities(provider.id),
     staleTime: 60 * 60 * 1000,
-    enabled: connection.method === 'cli',
   });
+  const cli = connection.method === 'cli';
   const models =
-    connection.method === 'cli' && capabilities.data
+    cli && capabilities.data
       ? capabilities.data.models.map((model) => ({
           id: model.id,
           label: optionLabel(model, capabilities.data),
@@ -90,6 +90,8 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
   const effort = efforts.find((choice) => choice.id === connection.effort) ?? null;
   const offered = models.some((model) => model.id === connection.model);
   const selectedModel = offered ? connection.model : (capabilities.data?.defaultModel ?? null);
+  const agentMode = connection.agentMode ?? capabilities.data?.defaultMode ?? null;
+  const modes = modeChoices(capabilities.data, agentMode);
 
   return (
     <section className="conn-section" aria-labelledby={`${provider.id}-defaults-title`}>
@@ -114,15 +116,32 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
             />
           )}
         </dd>
-        <dt>Permissions</dt>
+        <dt>Default mode for new chats</dt>
+        <dd>
+          {modes.length === 0 ? (
+            <span className="muted">
+              {capabilities.isFetching
+                ? `Asking ${provider.name} for its modes…`
+                : `Whatever your ${provider.cli} CLI is set to`}
+            </span>
+          ) : (
+            <ChoicePicker
+              label={`${provider.name} default mode`}
+              choices={modes}
+              value={agentMode ?? ''}
+              onChange={(id) => mutation.mutate({ agentMode: id })}
+            />
+          )}
+        </dd>
+        <dt>Harness autonomy</dt>
         <dd>
           <ChoicePicker
-            label={`${provider.name} permissions`}
-            choices={accessChoices(provider)}
-            value={accessFor(connection.permission, connection.level)?.id ?? ''}
+            label={`${provider.name} harness autonomy`}
+            choices={AUTONOMY_CHOICES}
+            value={connection.level}
             onChange={(id) => {
-              const choice = accessChoice(id);
-              if (choice) mutation.mutate(accessUpdate(choice));
+              const level = AUTONOMY_LEVELS.find((info) => info.id === id);
+              if (level) mutation.mutate({ level: level.id });
             }}
           />
         </dd>

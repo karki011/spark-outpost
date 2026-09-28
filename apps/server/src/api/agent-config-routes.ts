@@ -3,6 +3,8 @@ import {
   AGENT_CONFIG_SWITCHES,
   updateAgentConfigRequestSchema,
   updateMcpServerRequestSchema,
+  updateRedirectsRequestSchema,
+  updateTrustRequestSchema,
   type RepoAgentConfig,
 } from '@spark-outpost/contracts';
 import { repoScanner, type RepoScan, type RepoScanner } from '../agent-config/discovery.ts';
@@ -12,6 +14,13 @@ import {
   setProjectMcpServer,
   updateAgentSettings,
 } from '../agent-config/store.ts';
+import {
+  grantTrust,
+  listProjectTrust,
+  setRedirects,
+  trustFor,
+  withdrawTrust,
+} from '../agent-config/trust-store.ts';
 import { agentConfigView } from '../agent-config/view.ts';
 import type { Db } from '../persistence/db.ts';
 import { getProject } from '../projects/projects.ts';
@@ -39,16 +48,18 @@ export function agentConfigRoutes({
 
   const load = async (projectId: string): Promise<Loaded> => {
     const project = await getProject(db, workspaceId, projectId);
-    const [scan, settings, mcp] = await Promise.all([
+    const [scan, settings, mcp, trust] = await Promise.all([
       scanner.scan(project.rootPath),
       agentSettingsFor(db, [project.id]),
       enabledProjectMcp(db, [project.id]),
+      trustFor(db, [project.id]),
     ]);
     const view = agentConfigView(
       project,
       scan,
       settings.get(project.id)!,
       mcp.get(project.id) ?? new Map(),
+      trust.get(project.id) ?? null,
     );
     return { scan, view };
   };
@@ -99,6 +110,44 @@ export function agentConfigRoutes({
       );
     }
     await setProjectMcpServer(db, workspaceId, projectId, server, body.enabled);
+    res.json((await load(projectId)).view);
+  });
+
+  router.get('/agent-config/trust', async (_req, res) => {
+    res.json(await listProjectTrust(db, workspaceId));
+  });
+
+  router.put('/projects/:id/agent-config/trust', async (req, res) => {
+    const projectId = paramId(req);
+    const body = parseBody(updateTrustRequestSchema, req);
+    const { scan, view } = await load(projectId);
+    if (!body.trusted) {
+      await withdrawTrust(db, workspaceId, projectId);
+    } else if (body.fingerprint !== view.trust.fingerprint) {
+      throw new AgentConfigConflictError(
+        'The folder’s hooks, allow rules or MCP servers changed since you reviewed them. Review them again.',
+      );
+    } else {
+      await grantTrust(db, workspaceId, projectId, scan);
+    }
+    res.json((await load(projectId)).view);
+  });
+
+  router.put('/projects/:id/agent-config/trust/redirects', async (req, res) => {
+    const projectId = paramId(req);
+    const body = parseBody(updateRedirectsRequestSchema, req);
+    const { scan, view } = await load(projectId);
+    if (body.confirmed) {
+      if (view.trust.state !== 'trusted') {
+        throw new BadRequestError('Trust this folder before using its key or proxy settings.');
+      }
+      if (body.fingerprint !== view.trust.redirectsFingerprint) {
+        throw new AgentConfigConflictError(
+          'These settings changed since you reviewed them. Review them again.',
+        );
+      }
+    }
+    await setRedirects(db, workspaceId, projectId, scan, body.confirmed);
     res.json((await load(projectId)).view);
   });
 

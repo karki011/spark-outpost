@@ -173,13 +173,17 @@ describe('revert to before the run', () => {
     const run = await doRun(t, root, content);
     const approval = await waitingApproval(run.conversationId);
     await post(`/api/approvals/${approval.id}/decision`, { optionId: 'allow' }).expect(200);
-    const keep = await eventually(async () => {
-      const detail = await getConversationDetail(t.db, run.conversationId);
-      return detail?.approvals.find((pending) => pending.kind === 'accept');
-    });
-    expect(keep.payload.checkpoint?.files).toEqual([{ path: FAKE_EDIT_FILE, change: 'modified' }]);
-    await post(`/api/approvals/${keep.id}/decision`, { optionId: 'keep' }).expect(200);
     await settled(run.runId);
+    const { rows } = await t.db.query<{
+      status: string;
+      decided_by: string;
+      payload: Approval['payload'];
+    }>(`SELECT status, decided_by, payload FROM approvals WHERE kind = 'accept'`);
+    expect(rows).toMatchObject([{ status: 'allowed', decided_by: 'level' }]);
+    expect(rows[0]!.payload.checkpoint).toMatchObject({
+      keptBy: 'balanced',
+      files: [{ path: FAKE_EDIT_FILE, change: 'modified' }],
+    });
     return run;
   }
 

@@ -69,7 +69,6 @@ export const ROUND_FINDINGS = [
   "`parseCents('$1,000.00')` returns 1 instead of 100000.",
 ];
 
-/** The s04 findings the Auto-edit fix loop chased in the developer's-day rerun (N2). */
 export const HARDENING_FINDINGS = [
   '`apps/web/src/analytics/spend-csv.ts:13`: Project names can begin with `=`, `+`, `-`, or `@`, and the export writes them as spreadsheet formulas. CSV quoting does not prevent formula execution when the file is opened in a spreadsheet.',
   '`apps/web/src/analytics/SpendTab.tsx:65`: The blob URL is revoked immediately after `link.click()`. Browsers that start the download asynchronously may lose access to the file; revoke it after the download has started.',
@@ -304,7 +303,6 @@ async function fixFindings(turn: RoleTurn): Promise<acp.StopReason> {
     await turn.update({ sessionUpdate: 'usage_update', used: 1_000, size: 200_000, cost });
   }
   if (prompts.some((prompt) => prompt.includes('#slowfix'))) {
-    // A fix round that never finishes: only its budget ends it, halfway through its edits.
     for (;;) await sleep(50, turn.signal);
   }
   await turn.say(

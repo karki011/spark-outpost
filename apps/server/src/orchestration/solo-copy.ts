@@ -4,7 +4,7 @@ import {
   CONFLICT_TEXT_MAX_BYTES,
   type MergeConflict,
 } from '@spark-outpost/contracts';
-import { buildsInWorktree } from '../agents/acp/agents.ts';
+import { modeNeedsWorktree } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { saveSnapshot } from '../persistence/run-snapshots.ts';
 import {
@@ -36,6 +36,7 @@ import {
   type MergeAttempt,
 } from '../projects/worktrees.ts';
 import { askCard, CheckpointTimeout, mergeConflictCard } from './checkpoint.ts';
+import { copiesRiskyWork } from './checkpoint-policy.ts';
 import { checkAndFix } from './land.ts';
 import { ensureParentSnapshot, runMember, type MemberOutcome, type Place } from './members.ts';
 import type { Session } from './session.ts';
@@ -59,13 +60,23 @@ export async function repoBusy(db: Db, runId: string, root: string): Promise<boo
   return rows[0]?.busy ?? false;
 }
 
-export function needsCopyFor(
-  provider: string,
-  level: Session['input']['level'],
-  destructive: boolean,
-  busy: boolean,
-): boolean {
-  return level === 'full-auto' || buildsInWorktree(provider, level) || destructive || busy;
+export interface CopyFacts {
+  provider: string;
+  agentMode: string | null;
+  level: Session['input']['level'];
+  destructive: boolean;
+  risky: boolean;
+  busy: boolean;
+}
+
+export function needsCopyFor(facts: CopyFacts): boolean {
+  return (
+    facts.level === 'full-auto' ||
+    modeNeedsWorktree(facts.provider, facts.agentMode) ||
+    facts.destructive ||
+    (facts.risky && copiesRiskyWork(facts.level)) ||
+    facts.busy
+  );
 }
 
 interface Copies {

@@ -2,6 +2,8 @@
 
 Can Codex build (Do mode) under Spark Outpost's approval gate? Probed live on September 26, 2026 against codex-acp 1.13.1 (with our read-only patch) and the `codex app-server` it bundles, `@openai/codex` 0.156.1. See [ACP agents](ACP_AGENTS.md#do-in-project-folders-m2) and [agent adapters](AGENT_ADAPTERS.md) for the background.
 
+**Update, September 28, 2026: provider permission modes.** The picker now shows Codex's own modes (Read-only, Ask every time, Approve for me, Full access); the chat's mode decides what Codex asks, and the harness autonomy (Review each step, Automatic, Full auto → PR) decides the rest ([HARNESS_PLAN.md](HARNESS_PLAN.md#provider-permission-modes-september-28-2026)). Ask every time still sends every action to the gate and may run on the checkout. Approve for me and Full access don't reach the gate, so they run only in a worktree copy, and a live switch to them on the checkout is refused. Ask before edits maps to Ask every time, Auto-edit and Full auto to Approve for me.
+
 **Status: implemented September 26, 2026.** The user approved the proposal with two changes: safe reads use the same rule for every provider, and package installs always ask for every provider unless they only restore the lockfile. What shipped and the live check are at the end.
 
 ## Short answer

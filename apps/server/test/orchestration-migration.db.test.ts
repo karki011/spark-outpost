@@ -14,7 +14,6 @@ import {
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
-/** The developer's-day tags story (s11): its migration only adds a table. */
 const TAGS_STORY =
   'Add tags to projects, end to end. Database: a new migration that stores tags per project. Existing databases must upgrade and their projects start with no tags. API: PUT /projects/:id/tags replaces the tags. Add tests for each part.';
 
@@ -63,21 +62,35 @@ describe('the risky card and migrations (N3)', () => {
     expect(kept?.decidedBy).toBe('level');
   }, 60_000);
 
-  it('asks no risky card for it at Ask before edits either: only the keep card', async () => {
+  it('asks no risky card for it at Review each step either, and no keep card after you approved each edit', async () => {
     const { orchestration, cards } = await run(`${TAGS_STORY} #build #addmigration`, 'balanced');
     expect(orchestration.status).toBe('succeeded');
-    expect(cards.map((approval) => approval.kind)).toEqual(['accept']);
+    expect(cards.map((approval) => approval.kind)).toEqual([]);
+    expect(
+      orchestration.checkpoints.find((approval) => approval.kind === 'accept')?.payload.checkpoint
+        ?.keptBy,
+    ).toBe('balanced');
     expect(orchestration.crew.map((member) => member.role)).toEqual(['builder', 'critic']);
   }, 60_000);
 
-  it('still shows the card first for a migration that drops a column', async () => {
+  it('still shows the card first for a migration that drops a column at Review each step', async () => {
+    const { orchestration, cards } = await run(
+      'Write a migration that drops the note column from projects. #build #dropmigration',
+      'balanced',
+    );
+    expect(orchestration.status).toBe('succeeded');
+    expect(cards[0]).toMatchObject({ kind: 'plan' });
+    expect(cards[0]!.reason).toBe(MIGRATION_CARD_REASON);
+  }, 60_000);
+
+  it('builds a column drop in a worktree copy at Automatic and asks to keep it instead', async () => {
     const { orchestration, cards } = await run(
       'Write a migration that drops the note column from projects. #build #dropmigration',
       'hands-off',
     );
     expect(orchestration.status).toBe('succeeded');
-    expect(cards[0]).toMatchObject({ kind: 'plan' });
-    expect(cards[0]!.reason).toBe(MIGRATION_CARD_REASON);
+    expect(cards.map((approval) => approval.kind)).toEqual(['accept']);
+    expect(cards[0]!.reason).toContain('Automatic asks because the migration it added');
   }, 60_000);
 
   it('reads the migration diff: an additive-sounding request whose migration drops a column asks to keep at Auto-edit', async () => {
@@ -88,7 +101,7 @@ describe('the risky card and migrations (N3)', () => {
     expect(orchestration.status).toBe('succeeded');
     expect(cards.map((approval) => approval.kind)).toEqual(['accept']);
     expect(cards[0]!.reason).toContain(
-      'Auto-edit asks because the migration it added can lose or rewrite existing data (`ALTER TABLE projects DROP COLUMN note`).',
+      'Automatic asks because the migration it added can lose or rewrite existing data (`ALTER TABLE projects DROP COLUMN note`).',
     );
   }, 60_000);
 });

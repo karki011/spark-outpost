@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   asksToKeep,
   confirmsRiskyFirst,
+  copiesRiskyWork,
   DESTRUCTIVE_CARD_REASON,
   keepReason,
   keepsByItself,
@@ -11,7 +12,6 @@ import {
 import { destructiveByRule, destructiveMigrationInPatch } from './risk-rules.ts';
 import { riskyCard, RISKY_CARD_TITLE } from './checkpoint.ts';
 
-/** The developer's-day tags story (s11): an additive CREATE TABLE migration. */
 const S11 = [
   'Add tags to projects, end to end:',
   '- Database: a new migration that stores tags per project. Existing databases must upgrade and their projects start with no tags.',
@@ -119,17 +119,20 @@ describe('risky migrations found after the Builder', () => {
     };
     expect(asksToKeep('hands-off', 2, facts)).toBe(true);
     expect(keepReason('hands-off', facts)).toBe(
-      'Auto-edit asks because the migration it added can lose or rewrite existing data (`ALTER TABLE expenses DROP COLUMN note`).',
+      'Automatic asks because the migration it added can lose or rewrite existing data (`ALTER TABLE expenses DROP COLUMN note`).',
     );
     expect(asksToKeep('full-auto', 2, facts)).toBe(false);
   });
 });
 
 describe('the risky card', () => {
-  it('asks first at Ask before edits and Auto-edit, not at Full auto', () => {
+  it('asks first only at Review each step; Automatic and Full auto → PR copy risky work instead', () => {
     expect(confirmsRiskyFirst('balanced')).toBe(true);
-    expect(confirmsRiskyFirst('hands-off')).toBe(true);
+    expect(confirmsRiskyFirst('hands-off')).toBe(false);
     expect(confirmsRiskyFirst('full-auto')).toBe(false);
+    expect(copiesRiskyWork('balanced')).toBe(false);
+    expect(copiesRiskyWork('hands-off')).toBe(true);
+    expect(copiesRiskyWork('full-auto')).toBe(true);
   });
 
   it('offers Build it or Stop on the card', () => {
@@ -160,5 +163,20 @@ describe('keep card', () => {
       false,
     );
     expect(keepsByItself('full-auto', 2)).toBe(false);
+  });
+});
+
+describe('never ask twice', () => {
+  it('skips the keep card at Review each step when you approved every edit', () => {
+    const settled = { checksFailing: false, criticUnsatisfied: false };
+    expect(asksToKeep('balanced', 2, settled)).toBe(true);
+    expect(asksToKeep('balanced', 2, { ...settled, approvedEach: true })).toBe(false);
+    expect(keepsByItself('balanced', 2, { ...settled, approvedEach: true })).toBe(true);
+    expect(keepsByItself('balanced', 2, settled)).toBe(false);
+  });
+
+  it('still asks when something new went wrong after the edits you approved', () => {
+    const approved = { checksFailing: true, criticUnsatisfied: false, approvedEach: true };
+    expect(asksToKeep('balanced', 2, approved)).toBe(true);
   });
 });

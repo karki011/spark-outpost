@@ -1,5 +1,8 @@
 import type {
   AgentCommand,
+  AgentModeOption,
+  ConfigOptionInfo,
+  ConfigValues,
   PlanEntry,
   ProtocolDirection,
   RunMode,
@@ -28,6 +31,12 @@ export interface AgentSettings {
   model: string | null;
   modelLabel: string | null;
   effort: string | null;
+  mode?: string | null;
+  options?: ConfigValues;
+}
+
+export interface ModeRequests {
+  subscribe(listener: (mode: string) => void): () => void;
 }
 
 export interface StoredSession {
@@ -54,6 +63,8 @@ export interface ProviderTurn {
   audit?: ProtocolObserver;
   mode?: RunMode;
   builder?: boolean;
+  worktree?: boolean;
+  modeRequests?: ModeRequests;
   approvals?: PermissionGate;
   askTitle?: boolean;
   session?: SessionTarget;
@@ -91,6 +102,9 @@ export interface ProviderCapabilityReport {
   models: CapabilityChoice[];
   efforts: CapabilityChoice[];
   defaultModel: string | null;
+  modes?: AgentModeOption[];
+  defaultMode?: string | null;
+  options?: ConfigOptionInfo[];
 }
 
 export type UsageReadings = 'start_and_end' | 'end';
@@ -120,7 +134,13 @@ export type ProviderOutput =
       readings?: UsageReadings;
     }
   | { kind: 'tokens'; tokens: TokenUsage }
-  | { kind: 'session_settings'; model: string | null; effort: string | null; mode: string | null }
+  | {
+      kind: 'session_settings';
+      model: string | null;
+      effort: string | null;
+      mode: string | null;
+      options?: ConfigValues;
+    }
   | { kind: 'plan'; entries: PlanEntry[] }
   | {
       kind: 'session';

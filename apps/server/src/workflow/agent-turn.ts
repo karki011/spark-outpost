@@ -1,4 +1,5 @@
-import type { RunEvent } from '@spark-outpost/contracts';
+import { providerIdSchema, type AgentModeOption, type RunEvent } from '@spark-outpost/contracts';
+import { getCapabilities } from '../persistence/chat-settings.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
@@ -15,6 +16,7 @@ import { APPROVAL_TIMEOUT_MESSAGE, type EditObserver } from './approval-gate.ts'
 import type { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
 import { prepareDoRun } from './do-run.ts';
+import { watchModeRequests } from './mode-requests.ts';
 import { runEvents } from './run-events.ts';
 import type { RunInput } from './run-input.ts';
 import {
@@ -33,6 +35,7 @@ import { prepareTurnSession, type TurnSession } from './turn-session.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
+import { commandAllowlistFromRules } from '../agent-config/allow-rules.ts';
 import { conversationProjectIds } from '../agent-config/store.ts';
 import { loadUserMcp } from '../mcp/launch.ts';
 
@@ -116,6 +119,13 @@ function failureMessage(error: unknown, reason: StopReason | null): string {
   return GENERIC_PROVIDER_FAILURE;
 }
 
+async function knownModes(db: Db, input: RunInput): Promise<AgentModeOption[]> {
+  const provider = providerIdSchema.safeParse(input.provider);
+  if (!provider.success) return [];
+  const captured = await getCapabilities(db, input.workspaceId, provider.data).catch(() => null);
+  return captured?.modes ?? [];
+}
+
 export async function runAgentTurn(
   deps: TurnDeps,
   lease: Lease,
@@ -188,6 +198,8 @@ export async function runAgentTurn(
     text,
     messageId,
   });
+  const modeWatch =
+    input.mode === 'do' ? watchModeRequests(deps.db, lease.runId, deps.cancelPollMs ?? 250) : null;
   try {
     if (await isCancelRequested(deps.db, lease.runId)) control.stop('cancelled');
     if (control.signal.aborted && control.reason() !== 'lease_lost') {
@@ -196,12 +208,22 @@ export async function runAgentTurn(
     }
     const provider = deps.providers.get(input.provider);
     if (!provider) throw new ProviderError(`Provider "${input.provider}" is not available.`);
+    const repo = await loadRepoLaunch(
+      deps.db,
+      repoScanner,
+      input.identity.threadId,
+      input.projectRoots,
+    ).catch(() => []);
+    const trustedCommands = commandAllowlistFromRules(repo.flatMap((root) => root.allowRules));
     const approvals =
       input.mode === 'do'
         ? await prepareDoRun({
             db: deps.db,
             runId: lease.runId,
-            level: input.level,
+            provider: input.provider,
+            mode: input.agentMode,
+            modes: await knownModes(deps.db, input),
+            extraAllowlist: () => trustedCommands,
             builder: input.role === 'builder',
             projectRoots: input.projectRoots,
             append,
@@ -217,12 +239,6 @@ export async function runAgentTurn(
         : undefined;
     turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
     const session = turnSession;
-    const repo = await loadRepoLaunch(
-      deps.db,
-      repoScanner,
-      input.identity.threadId,
-      input.projectRoots,
-    ).catch(() => []);
     const userMcp = await loadUserMcp(
       deps.db,
       input.identity.threadId,
@@ -239,7 +255,9 @@ export async function runAgentTurn(
       audit,
       ...(input.mode ? { mode: input.mode } : {}),
       ...(input.role === 'builder' ? { builder: true } : {}),
+      ...(input.copyOf !== null ? { worktree: true } : {}),
       ...(approvals ? { approvals } : {}),
+      ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(input.preamble ? { preamble: input.preamble } : {}),
       ...(session ? { session: session.target } : {}),
@@ -297,6 +315,7 @@ export async function runAgentTurn(
     if (reason === 'cancelled' || reason === 'budget') return ended(result('cancelled'));
     return ended(result('failed', failureMessage(error, reason)));
   } finally {
+    modeWatch?.dispose();
     audit.discard();
   }
 }

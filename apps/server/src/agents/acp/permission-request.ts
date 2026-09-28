@@ -7,7 +7,7 @@ import {
   type FileDiff,
 } from '@spark-outpost/contracts';
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
-import { exitPlanText, harnessPlanOptions } from '../../plans/plan-mode.ts';
+import { exitPlanText } from '../../plans/plan-mode.ts';
 import type { GateAnswer } from '../../providers/provider.ts';
 
 export interface RequestContext {
@@ -15,6 +15,7 @@ export interface RequestContext {
   roots: readonly RequestRoot[];
   cwd: string;
   home: string;
+  mode?: string | null;
 }
 
 const EDIT_KINDS = new Set(['edit', 'delete', 'move']);
@@ -96,10 +97,11 @@ export function approvalRequestFrom(
     cwd: kind === 'execute' ? cwd : null,
     paths: kind === 'execute' ? [] : pathsOf(toolCall, rawInput, diffs, cwd),
     diffs,
-    options: plan ? harnessPlanOptions(options) : options,
+    options,
     roots: context.roots,
     home: context.home,
     ...(plan ? { plan } : {}),
+    ...(context.mode !== undefined ? { mode: context.mode } : {}),
   };
 }
 

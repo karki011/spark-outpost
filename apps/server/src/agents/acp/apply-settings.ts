@@ -1,11 +1,12 @@
 import * as acp from '@agentclientprotocol/sdk';
+import type { ConfigValues } from '@spark-outpost/contracts';
 import {
   ProviderError,
   type AgentSettings,
   type ProviderCapabilityReport,
 } from '../../providers/provider.ts';
 import type { AgentDefinition } from './agents.ts';
-import { capabilitiesFrom } from './capabilities.ts';
+import { capabilitiesFrom, isCoreOption } from './capabilities.ts';
 import {
   LEGACY_MODE_OPTION,
   LEGACY_MODEL_OPTION,
@@ -26,7 +27,15 @@ export interface AppliedSettings {
   capabilities: ProviderCapabilityReport;
   mode: string | null;
   current: { model: string | null; effort: string | null };
+  values: ConfigValues;
   using: string;
+  live: SettingsSession;
+}
+
+export interface ModeWish {
+  wanted: string;
+  fallback?: string;
+  note?: string;
 }
 
 type Requester = Pick<acp.ClientContext, 'request'>;
@@ -54,65 +63,131 @@ function currentValue(
   return option && typeof option.currentValue === 'string' ? option.currentValue : null;
 }
 
+export function currentValues(options: readonly acp.SessionConfigOption[]): ConfigValues {
+  return Object.fromEntries(
+    options
+      .filter((option) => !isCoreOption(options, option))
+      .map((option) => [option.id, option.currentValue]),
+  );
+}
+
+export function modeName(options: readonly acp.SessionConfigOption[], mode: string): string {
+  const option = findOption(options, 'mode');
+  return (option && choices(option).find((choice) => choice.value === mode)?.name) ?? mode;
+}
+
+export function offersMode(options: readonly acp.SessionConfigOption[], mode: string): boolean {
+  const option = findOption(options, 'mode');
+  return option !== undefined && choices(option).some((choice) => choice.value === mode);
+}
+
+export interface SettingsSession {
+  options(): acp.SessionConfigOption[];
+  adopt(options: readonly acp.SessionConfigOption[]): void;
+  setMode(mode: string): Promise<void>;
+  setValue(configId: string, value: string | boolean): Promise<void>;
+}
+
+export function settingsSession(ctx: Requester, session: SessionHandle): SettingsSession {
+  let configOptions = [...(session.newSessionResponse.configOptions ?? [])];
+  let legacy = legacyOptions(session.newSessionResponse);
+  const all = () => withLegacy(configOptions, legacy);
+  const setLegacyMode = async (mode: string) => {
+    await ctx.request(acp.methods.agent.session.setMode, {
+      sessionId: session.sessionId,
+      modeId: mode,
+    });
+    legacy = legacy.map((option) =>
+      option.id === LEGACY_MODE_OPTION && option.type === 'select'
+        ? { ...option, currentValue: mode }
+        : option,
+    );
+  };
+  const setValue = async (configId: string, value: string | boolean) => {
+    const response = await ctx.request(acp.methods.agent.session.setConfigOption, {
+      sessionId: session.sessionId,
+      configId,
+      ...(typeof value === 'boolean' ? { type: 'boolean' as const, value } : { value }),
+    });
+    configOptions = response.configOptions;
+  };
+  return {
+    options: all,
+    adopt(options) {
+      configOptions = [...options];
+    },
+    setValue,
+    async setMode(mode) {
+      const option = findOption(all(), 'mode');
+      if (!option) throw new ProviderError('The agent has no modes.');
+      if (option.currentValue === mode) return;
+      if (option.id === LEGACY_MODE_OPTION) await setLegacyMode(mode);
+      else await setValue(option.id, mode);
+    },
+  };
+}
+
+function valueFits(option: acp.SessionConfigOption, value: string | boolean): boolean {
+  if (option.type === 'boolean') return typeof value === 'boolean';
+  return typeof value === 'string' && choices(option).some((choice) => choice.value === value);
+}
+
 export async function applySessionSettings(
   ctx: Requester,
   session: SessionHandle,
   definition: AgentDefinition,
   settings: AgentSettings,
-  mode: string = definition.conversationMode,
+  mode: ModeWish = { wanted: definition.conversationMode },
 ): Promise<AppliedSettings> {
-  let configOptions = session.newSessionResponse.configOptions ?? [];
-  let legacy = legacyOptions(session.newSessionResponse);
-  const initial = withLegacy(configOptions, legacy);
-  let options = initial;
-  const notes: string[] = [];
-  const wishes: ConfigWish[] = [
-    { category: 'mode', value: mode },
-    { category: 'model', value: settings.model, label: settings.modelLabel },
-    { category: 'thought_level', value: settings.effort },
-  ];
+  const initial = withLegacy(
+    session.newSessionResponse.configOptions ?? [],
+    legacyOptions(session.newSessionResponse),
+  );
+  const live = settingsSession(ctx, session);
+  const notes: string[] = mode.note ? [mode.note] : [];
   const defaultNote = (wish: ConfigWish, reason: string) =>
     `Using ${definition.name}'s default ${wish.category === 'model' ? 'model' : 'effort'}; ${wish.label ?? wish.value} ${reason}`;
 
-  const apply = async (wish: ConfigWish, change: ConfigChange) => {
-    if (change.configId === LEGACY_MODEL_OPTION) {
-      notes.push(defaultNote(wish, "can't be selected with this agent"));
-      return;
-    }
-    if (change.configId === LEGACY_MODE_OPTION) {
-      await ctx.request(acp.methods.agent.session.setMode, {
-        sessionId: session.sessionId,
-        modeId: change.value,
-      });
-      legacy = legacy.map((option) =>
-        option.id === change.configId && option.type === 'select'
-          ? { ...option, currentValue: change.value }
-          : option,
-      );
-    } else {
-      const response = await ctx.request(acp.methods.agent.session.setConfigOption, {
-        sessionId: session.sessionId,
-        configId: change.configId,
-        value: change.value,
-      });
-      configOptions = response.configOptions;
-    }
-    options = withLegacy(configOptions, legacy);
-  };
+  const chosenMode = offersMode(live.options(), mode.wanted)
+    ? mode.wanted
+    : mode.fallback && offersMode(live.options(), mode.fallback)
+      ? mode.fallback
+      : null;
+  if (chosenMode === null) {
+    throw new ProviderError(
+      `${definition.name} could not switch to the ${mode.wanted} mode, so the run was stopped before it started.`,
+    );
+  }
+  if (chosenMode !== mode.wanted) {
+    notes.push(
+      `${definition.name} doesn't offer ${mode.wanted} here; using ${modeName(live.options(), chosenMode)}`,
+    );
+  }
+  await live.setMode(chosenMode);
 
+  const wishes: ConfigWish[] = [
+    { category: 'model', value: settings.model, label: settings.modelLabel },
+    { category: 'thought_level', value: settings.effort },
+  ];
   for (const wish of wishes) {
-    const plan = planConfig(options, [wish]);
+    const plan = planConfig(live.options(), [wish]);
     if (plan.unmatched.length > 0) {
-      if (wish.category === 'mode') {
-        throw new ProviderError(
-          `${definition.name} could not switch to its safe chat mode, so the run was stopped before it started.`,
-        );
-      }
       notes.push(defaultNote(wish, "isn't offered by the agent"));
       continue;
     }
-    for (const change of plan.changes) await apply(wish, change);
+    for (const change of plan.changes) await applyChange(live, wish, change, notes, defaultNote);
   }
+  for (const [configId, value] of Object.entries(settings.options ?? {})) {
+    const option = live.options().find((candidate) => candidate.id === configId);
+    if (!option || isCoreOption(live.options(), option) || !valueFits(option, value)) {
+      notes.push(
+        `${definition.name} no longer offers the ${configId} setting you chose; skipped it`,
+      );
+      continue;
+    }
+    if (option.currentValue !== value) await live.setValue(configId, value);
+  }
+  const options = live.options();
   return {
     notes,
     options,
@@ -122,8 +197,24 @@ export async function applySessionSettings(
       model: currentValue(options, 'model'),
       effort: currentValue(options, 'thought_level'),
     },
+    values: currentValues(options),
     using: usingLabel(options, definition.name),
+    live,
   };
+}
+
+async function applyChange(
+  live: SettingsSession,
+  wish: ConfigWish,
+  change: ConfigChange,
+  notes: string[],
+  defaultNote: (wish: ConfigWish, reason: string) => string,
+): Promise<void> {
+  if (change.configId === LEGACY_MODEL_OPTION) {
+    notes.push(defaultNote(wish, "can't be selected with this agent"));
+    return;
+  }
+  await live.setValue(change.configId, change.value);
 }
 
 export async function applySettings(

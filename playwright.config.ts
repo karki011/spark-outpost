@@ -6,6 +6,7 @@ import { API_TOKEN_ENV } from './packages/contracts/src/api-token.ts';
 import {
   API_PORT,
   FAKE_ACP_MODELS,
+  FAKE_ACP_MODES,
   FAKE_CODEX_STATE,
   FAKE_GH_STATE,
   MCP_SCAN_HOME,
@@ -38,6 +39,8 @@ const serverEnv = {
   OUTCOME_SAMPLE_RATE: '0',
   FAKE_ACP_AGENT: path.resolve('apps/server/test/fake-acp-agent.ts'),
   FAKE_ACP_MODELS: JSON.stringify(FAKE_ACP_MODELS),
+  FAKE_ACP_MODES: JSON.stringify(FAKE_ACP_MODES),
+  FAKE_ACP_FAST: '1',
   ANTHROPIC_BASE_URL: `${STUB_URL}/anthropic`,
   OPENAI_BASE_URL: `${STUB_URL}/openai`,
   TYPESAFE_BASE_URL: `${STUB_URL}/typesafe`,

@@ -238,7 +238,7 @@ describe('Critic → fix rounds', () => {
     const { conversationId, runId } = await begin('#bugrounds 9', 'hands-off');
     const { asked } = await driveToEnd(t, conversationId, runId);
     expect(asked.map((approval) => approval.kind)).toEqual(['accept']);
-    expect(asked[0]!.reason).toContain('Auto-edit asks because the Critic still has concerns.');
+    expect(asked[0]!.reason).toContain('Automatic asks because the Critic still has concerns.');
     expect(asked[0]!.options.map((option) => option.optionId)).toContain(
       CHECKPOINT_OPTION.fixFindings,
     );
@@ -305,7 +305,7 @@ describe('Critic → fix rounds', () => {
     expect(await roles(runId)).toEqual(['builder', 'critic']);
   }, 120_000);
 
-  it('offers "Fix these findings" on the keep card at Ask before edits instead of fixing by itself', async () => {
+  it('offers "Fix these findings" on the keep card at Review each step instead of fixing by itself', async () => {
     await start({ policy: JEV_SAYS_BUGS });
     const { conversationId, runId } = await begin('#bugreview', 'balanced');
     let fixed = false;
@@ -315,7 +315,7 @@ describe('Critic → fix rounds', () => {
       fixed = true;
       return { optionId: CHECKPOINT_OPTION.fixFindings };
     };
-    const { asked } = await driveToEnd(t, conversationId, runId, answers);
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
     const [offer, after] = asked.filter((approval) => approval.kind === 'accept');
     expect(offer!.options.map((option) => [option.optionId, option.name])).toEqual([
       [CHECKPOINT_OPTION.keep, 'Keep'],
@@ -324,10 +324,11 @@ describe('Critic → fix rounds', () => {
       [CHECKPOINT_OPTION.revert, 'Revert'],
     ]);
     expect(offer!.reason).toContain('The AI review found 2 correctness findings.');
-    expect(after!.options.map((option) => option.optionId)).not.toContain(
-      CHECKPOINT_OPTION.fixFindings,
+    expect(after).toBeUndefined();
+    const kept = orchestration.checkpoints.find(
+      (approval) => approval.kind === 'accept' && approval.decidedBy === 'level',
     );
-    expect(after!.reason).toContain('Fixed after 1 review round');
+    expect(kept?.payload.checkpoint?.keptBy).toBe('balanced');
     expect(await roles(runId)).toEqual(['builder', 'critic', 'builder', 'critic']);
     expect(await notes()).toContain('fixed the review findings');
   }, 120_000);
@@ -357,7 +358,7 @@ describe('the task budget', () => {
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, stopAtBudget);
     const cards = asked.filter((approval) => approval.kind !== 'execute');
     expect(cards.map((approval) => approval.kind)).toEqual(['accept']);
-    expect(cards[0]!.reason).toContain('Auto-edit asks because the Critic still has concerns.');
+    expect(cards[0]!.reason).toContain('Automatic asks because the Critic still has concerns.');
     expect(cards[0]!.reason).toContain(
       "Stopped fix round 1: the run's cost budget ran out, so Spark Outpost kept the last state; checks pass.",
     );

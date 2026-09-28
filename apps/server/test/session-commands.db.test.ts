@@ -33,6 +33,7 @@ function chatInput(conversationId: string, previousMessageId: string | null): Ru
     projectRoots: [],
     mode: 'chat',
     level: 'balanced',
+    agentMode: null,
     parentRunId: null,
     userRequest: 'next',
     role: null,

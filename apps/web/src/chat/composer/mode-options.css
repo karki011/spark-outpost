@@ -1,0 +1,20 @@
+.modeopts .mgroup {
+  margin: 0;
+  padding: 6px 2px 6px;
+}
+.modeopts .rlist + .mgroup {
+  padding-top: 14px;
+}
+.mode-line {
+  color: var(--muted);
+}
+.mode-warn {
+  margin: 8px 2px 2px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+  background: color-mix(in srgb, var(--warn) 9%, transparent);
+  color: var(--warn);
+  font-size: 12px;
+  line-height: 1.45;
+}

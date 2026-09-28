@@ -1,6 +1,40 @@
-import type { IgnoredSetting, RepoAgentConfig } from '@spark-outpost/contracts';
+import type { IgnoredSetting, RepoAgentConfig, TrustChange } from '@spark-outpost/contracts';
+
+export type TrustPrompt = 'ask' | 'changed' | null;
+
+export function trustPrompt(config: RepoAgentConfig): TrustPrompt {
+  const { trust } = config;
+  if (!trust.needed) return null;
+  if (trust.state === 'changed') return 'changed';
+  return trust.state === 'unset' ? 'ask' : null;
+}
+
+const plural = (count: number, one: string, many = `${one}s`) =>
+  `${count} ${count === 1 ? one : many}`;
+
+export function executableSummary(config: RepoAgentConfig): string {
+  const parts = [
+    config.hooks.length > 0 ? plural(config.hooks.length, 'hook') : null,
+    config.allowRules.length > 0 ? plural(config.allowRules.length, 'allow rule') : null,
+    config.mcpServers.length > 0 ? plural(config.mcpServers.length, 'MCP server') : null,
+  ].filter((part): part is string => part !== null);
+  return parts.length > 0 ? parts.join(', ') : 'Key or proxy settings only';
+}
+
+export const CHANGE_LABELS: Record<TrustChange['change'], string> = {
+  added: 'Added',
+  removed: 'Removed',
+  changed: 'Changed',
+};
+
+export const CHANGE_KINDS: Record<TrustChange['kind'], string> = {
+  hook: 'hook',
+  allow: 'allow rule',
+  mcp: 'MCP server',
+};
 
 export function needsAttention(config: RepoAgentConfig): boolean {
+  if (trustPrompt(config) !== null) return true;
   const { settings } = config;
   const offWithContent =
     (!settings.instructions && config.instructions.length > 0) ||

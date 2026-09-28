@@ -66,6 +66,8 @@ describe('run input', () => {
       model: 'claude-sonnet-5',
       modelLabel: 'Claude Sonnet 5',
       effort: 'medium',
+      mode: null,
+      options: {},
     });
   });
 });

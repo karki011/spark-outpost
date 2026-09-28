@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import { PERMISSION_DO } from '@spark-outpost/contracts';
 import { modelCardsView, type ProviderSnapshot } from '../model-cards/view.ts';
 import { getCapabilities } from '../persistence/chat-settings.ts';
 import type { Db } from '../persistence/db.ts';
 import { listModelStats } from '../persistence/model-stats.ts';
-import { catalog, isSelectablePermission } from '../providers/catalog.ts';
+import { catalog } from '../providers/catalog.ts';
 
 export interface ModelCardRouteDeps {
   db: Db;
@@ -28,7 +27,7 @@ async function snapshots(db: Db, workspaceId: string): Promise<ProviderSnapshot[
       return {
         provider: entry.id,
         connected: connected.has(entry.id),
-        doAvailable: isSelectablePermission(entry, PERMISSION_DO),
+        doAvailable: entry.doAvailable,
         models: capabilities?.models ?? [],
         defaultModel: capabilities?.defaultModel ?? null,
       };

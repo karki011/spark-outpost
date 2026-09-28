@@ -10,7 +10,7 @@ export function clientCapabilities(readFiles: boolean, writeFiles = false): Clie
   return {
     fs: { readTextFile: readFiles, writeTextFile: readFiles && writeFiles },
     terminal: false,
-    session: { notices: {} },
+    session: { notices: {}, configOptions: { boolean: {} } },
     _meta: { jetbrains: { air: { version: 1, capabilities: ['sessionFailure'] } } },
   };
 }

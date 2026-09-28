@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
@@ -78,10 +78,22 @@ test('shows what the repo gives the agents, with risky parts off and a dot on th
       mcp.getByRole('switch', { name: `Use MCP server ${name} from app` }),
     ).not.toBeChecked();
   }
+  await expect(card(page, 'Trust this folder?')).toContainText(
+    '4 hooks, 6 allow rules, 3 MCP servers',
+  );
+  const allow = card(page, 'Allow rules');
+  await allow.getByText('Show 6 allow rules').click();
+  await expect(allow).toContainText('Not applied: Could push code or change remotes');
+  await expect(allow).toContainText('Applied when trusted');
+  const keys = card(page, 'Keys and traffic');
+  await expect(keys).toContainText('ANTHROPIC_BASE_URL = http://evil.example');
+  await expect(
+    keys.getByRole('switch', { name: 'Use key and proxy settings from app' }),
+  ).toBeDisabled();
   const ignored = card(page, 'Ignored settings');
   await ignored.getByText('Show ignored settings').click();
-  await expect(ignored).toContainText('Permission allow rules');
-  await expect(ignored).toContainText('ANTHROPIC_BASE_URL');
+  await expect(ignored).toContainText('DEBUG');
+  await expect(ignored).not.toContainText('ANTHROPIC_BASE_URL');
 
   const results = await new AxeBuilder({ page })
     .include('.setuppop')
@@ -153,4 +165,115 @@ test('the turn header names the instruction files the agent followed', async ({ 
     'Following: CLAUDE.md, CLAUDE.local.md, AGENTS.md, .cursorrules, .github/copilot-instructions.md, .cursor/rules/style.mdc',
     { timeout: 15_000 },
   );
+});
+
+const trustChip = (page: Page) => page.getByRole('button', { name: 'Trust this folder?' });
+
+test('asks to trust the folder, then loads its executable parts as configured', async ({
+  page,
+}) => {
+  await chatWithRepo(page);
+  await trustChip(page).click();
+  await expect(setup(page)).toBeVisible();
+  const prompt = card(page, 'Trust this folder?');
+  await expect(prompt).toContainText('can run commands on your computer');
+  await prompt.getByRole('button', { name: 'Trust this folder', exact: true }).click();
+
+  const trusted = card(page, 'Trusted folder');
+  await expect(trusted).toContainText('Spark Outpost’s safety rules still apply');
+  await expect(card(page, 'Hooks')).toContainText('On · trusted folder');
+  await expect(card(page, 'Hooks').getByRole('switch')).toHaveCount(0);
+  await expect(card(page, 'MCP servers').getByRole('switch')).toHaveCount(0);
+  await expect(card(page, 'Allow rules')).toContainText('2 applied');
+  await expect(trustChip(page)).toHaveCount(0);
+
+  const keys = card(page, 'Keys and traffic');
+  await expect(keys).toContainText('Trusting the folder does not turn them on');
+  const redirects = keys.getByRole('switch', { name: 'Use key and proxy settings from app' });
+  await expect(redirects).not.toBeChecked();
+  await redirects.click();
+  await expect(redirects).toBeChecked();
+
+  await page.reload();
+  await chatWithRepo(page);
+  await expect(trustChip(page)).toHaveCount(0);
+  await openSetup(page);
+  await expect(card(page, 'Trusted folder')).toBeVisible();
+  await card(page, 'Trusted folder').getByRole('button', { name: 'Stop trusting' }).click();
+  await expect(card(page, 'Trust this folder?')).toBeVisible();
+  await expect(
+    card(page, 'Trust this folder?').getByRole('button', { name: 'Not now' }),
+  ).toHaveCount(0);
+  await expect(card(page, 'Hooks').getByRole('switch')).not.toBeChecked();
+});
+
+test('Not now keeps the folder untrusted without asking again', async ({ page }) => {
+  await chatWithRepo(page);
+  await trustChip(page).click();
+  await card(page, 'Trust this folder?').getByRole('button', { name: 'Not now' }).click();
+  await page.keyboard.press('Escape');
+  await expect(trustChip(page)).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Agent setup for app (some parts are off)' }),
+  ).toBeVisible();
+});
+
+test('asks again with the list of changes after the folder’s setup changes', async ({ page }) => {
+  await chatWithRepo(page);
+  await trustChip(page).click();
+  await card(page, 'Trust this folder?')
+    .getByRole('button', { name: 'Trust this folder', exact: true })
+    .click();
+  await expect(card(page, 'Trusted folder')).toBeVisible();
+  writeFileSync(
+    path.join(appRoot, '.claude/settings.local.json'),
+    JSON.stringify({ permissions: { allow: ['Bash(make:*)'] } }),
+  );
+  try {
+    await page.reload();
+    await chatWithRepo(page);
+    const chip = page.getByRole('button', { name: 'Folder setup changed' });
+    await chip.click();
+    const changed = card(page, 'Folder setup changed');
+    await expect(changed).toContainText('changed since you trusted it');
+    await expect(changed).toContainText('Bash(make:*)');
+    await expect(changed).toContainText('Added allow rule');
+    await expect(changed).toContainText('Removed hook');
+    await changed.getByRole('button', { name: 'Trust this folder', exact: true }).click();
+    await expect(card(page, 'Trusted folder')).toBeVisible();
+  } finally {
+    await makeConfiguredRepo(appRoot);
+  }
+});
+
+test('Settings, Projects lists trust and can stop trusting a folder', async ({ page }) => {
+  await chatWithRepo(page);
+  await trustChip(page).click();
+  await card(page, 'Trust this folder?')
+    .getByRole('button', { name: 'Trust this folder', exact: true })
+    .click();
+  await expect(card(page, 'Trusted folder')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile' })
+    .getByRole('tab', { name: 'Projects' })
+    .click();
+  const projects = page.getByRole('dialog', { name: 'Projects' });
+  const row = projects.getByRole('listitem').filter({ hasText: 'app' });
+  await expect(row).toContainText('Trusted');
+  await row.getByRole('button', { name: 'Stop trusting app' }).click();
+  await expect(row).toContainText('Not trusted');
+  await expect(row.getByRole('button')).toHaveCount(0);
+  const results = await new AxeBuilder({ page })
+    .include('.set-panel')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(
+    results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
+  ).toEqual([]);
+  await page.keyboard.press('Escape');
+  await openSetup(page);
+  await expect(card(page, 'Trust this folder?')).toBeVisible();
 });

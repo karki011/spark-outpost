@@ -7,6 +7,7 @@ import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import { SLASH_ESCAPE_NOTE } from '../src/agents/acp/slash-commands.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import type { ProviderOutput, SessionTarget, StoredSession } from '../src/providers/provider.ts';
+import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 const launch = {
   command: process.execPath,
@@ -17,7 +18,7 @@ const workdir = join(store, 'workdir');
 afterAll(() => rmSync(store, { recursive: true, force: true }));
 
 const provider = createAcpProvider({
-  definition: { ...agentDefinitions.codex, name: 'Fake', conversationMode: 'read-only' },
+  definition: { ...agentDefinitions.codex, name: 'Fake', ...FAKE_AGENT_MODES },
   launch,
   cancelGraceMs: 2_000,
   env: {

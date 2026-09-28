@@ -1,15 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import {
-  allowEdit,
-  card,
-  crewChat,
-  crewRepo,
-  resetCrew,
-  send,
-  type CrewRepo,
-} from './crew-engine.ts';
+import { card, crewChat, crewRepo, resetCrew, send, type CrewRepo } from './crew-engine.ts';
 import { openChats } from './navigation.ts';
 
 let repo: CrewRepo;
@@ -27,9 +19,8 @@ const keepCard = (page: Page) =>
 const askHow = (page: Page) => page.getByRole('group', { name: 'How did it go?' });
 
 async function keptChange(page: Page, choice: 'Keep' | 'Revert'): Promise<void> {
-  await crewChat(page, repo, 'Ask before edits');
+  await crewChat(page, repo, 'Review keep');
   await send(page, 'Fix the divider #build');
-  await allowEdit(page);
   await expect(keepCard(page)).toBeVisible({ timeout: 30_000 });
   await keepCard(page).getByRole('button', { name: choice, exact: true }).click();
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
@@ -107,7 +98,7 @@ test('shows a quiet thumbs row under an answer', async ({ page }) => {
 test('stays quiet when the signals agree: just the thumbs', async ({ page }) => {
   test.setTimeout(90_000);
   writeFileSync(path.join(repo.root, 'check.mjs'), "console.log('ok');\n");
-  await crewChat(page, repo, 'Ask before edits');
+  await crewChat(page, repo, 'Review keep');
   const listed = await page.request.get('/api/projects');
   const project = ((await listed.json()) as { id: string; rootPath: string }[]).find(
     (candidate) => candidate.rootPath === repo.root,
@@ -117,7 +108,6 @@ test('stays quiet when the signals agree: just the thumbs', async ({ page }) => 
   });
   expect(saved.ok()).toBe(true);
   await send(page, 'Fix the divider #build');
-  await allowEdit(page);
   const check = card(page, /^Run a check\?/).filter({
     has: page.getByRole('button', { name: 'Deny' }),
   });

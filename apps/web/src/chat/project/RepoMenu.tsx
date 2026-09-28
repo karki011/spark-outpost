@@ -156,8 +156,8 @@ export function RepoMenu({
         </p>
       )}
       <p className="eff-note repo-note">
-        Ask reads these folders. Ask before edits, Auto-edit and Full auto can also change them,
-        asking first as the permission you picked says.
+        Plan and read-only modes only read these folders. Other agent modes can also change them,
+        asking first as the mode you picked says.
       </p>
     </div>
   );

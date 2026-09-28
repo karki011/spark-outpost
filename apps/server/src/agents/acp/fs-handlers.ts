@@ -97,6 +97,7 @@ export async function writeTextFile(
     diffs: [{ path: target, oldText: await currentText(target), newText: params.content }],
     options: [
       { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+      { optionId: 'allow-run', name: 'Allow for this run', kind: 'allow_always' },
       { optionId: 'reject', name: 'Deny', kind: 'reject_once' },
     ],
     roots: policy.roots,

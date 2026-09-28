@@ -32,11 +32,6 @@ export function destructiveByRule(request: string): boolean {
 
 const MIGRATION = /\bmigrat(?:e|es|ed|ing|ion|ions)\b|\bschema changes?\b|\balter table\b/i;
 
-/**
- * Request wording for a migration that can lose or rewrite existing data: a drop, rename, type
- * change, truncate, delete, or a data rewrite. Additive wording (a new table, a nullable column,
- * an index) is not destructive.
- */
 const DESTRUCTIVE_SCHEMA_WORDING =
   /\b(?:drop(?:s|ped|ping)?|truncat\w*|delet(?:e|es|ed|ing)|remov(?:e|es|ed|ing)|purg\w*|wip(?:e|es|ed|ing))\b|\brenam\w*\b[^.\n]{0,40}\b(?:columns?|tables?|fields?)\b|\b(?:columns?|tables?)\b[^.\n]{0,40}\brenam\w*|\bcolumn types?\b|\b(?:alter|chang)\w*\b[^.\n]{0,40}\btypes?\b|\b(?:backfill|rewrit|convert|transform|migrat)\w*\b[^.\n]{0,40}\b(?:existing |old )?(?:data|rows?|records?|values?)\b|\bupdate (?:all|every|the existing|existing) (?:rows|records)\b/i;
 
@@ -44,7 +39,6 @@ export function migrationByRule(request: string): boolean {
   return MIGRATION.test(request);
 }
 
-/** A migration request whose wording says it drops, renames or rewrites existing data. */
 export function destructiveMigrationWording(request: string): boolean {
   return MIGRATION.test(request) && DESTRUCTIVE_SCHEMA_WORDING.test(request);
 }
@@ -94,11 +88,6 @@ function statements(lines: readonly string[]): string[] {
     .filter(Boolean);
 }
 
-/**
- * The first destructive statement a change adds to a migration file: a drop, rename, type
- * change, truncate, or a delete or update without WHERE. Null for additive migrations (CREATE
- * TABLE, ADD COLUMN, CREATE INDEX) and for changes without migrations.
- */
 export function destructiveMigrationInPatch(patch: string): string | null {
   for (const file of patchFiles(patch)) {
     if (!MIGRATION_FILE.test(file.path)) continue;

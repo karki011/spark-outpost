@@ -12,6 +12,7 @@ export interface DoWorkspace {
   signal: AbortSignal;
   report: (name: string) => void;
   annotate: (name: string) => void;
+  mode: () => string | null;
 }
 
 export async function reviewPermission(
@@ -24,6 +25,7 @@ export async function reviewPermission(
     roots: workspace.policy.roots,
     cwd: workspace.cwd,
     home: homedir(),
+    mode: workspace.mode(),
   });
   const answer = await workspace.gate.review(request, workspace.signal);
   workspace.annotate(answer.note);

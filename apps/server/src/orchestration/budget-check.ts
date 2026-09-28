@@ -18,7 +18,6 @@ export async function budgetUsage(s: Session): Promise<BudgetUsage> {
   };
 }
 
-/** Which of the running fix round's own limits ran out, if any. */
 export function fixRoundExceeded(s: Session, usage: BudgetUsage): BudgetLimit | null {
   const round = s.fixRound;
   if (!round) return null;
@@ -28,10 +27,6 @@ export function fixRoundExceeded(s: Session, usage: BudgetUsage): BudgetLimit | 
   return null;
 }
 
-/**
- * Whether too little of the run's budget is left to start another fix round by itself: it stops
- * the loop from spending the whole run's budget on findings.
- */
 export async function fixRoundShort(s: Session): Promise<BudgetLimit | null> {
   const usage = await budgetUsage(s);
   const limits = fixRoundLimits(s);
@@ -48,7 +43,6 @@ export async function checkBudget(s: Session): Promise<BudgetLimit | null> {
   const roundLimit = limit ? null : fixRoundExceeded(s, usage);
   if (!limit && !roundLimit) return null;
   if (roundLimit && s.fixRound) {
-    // Only this fix round is over: the run's budget is intact, so nothing is saved as exceeded.
     s.fixRound.hit = roundLimit;
     s.budgetHit = roundLimit;
   } else if (limit) {

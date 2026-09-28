@@ -7,6 +7,8 @@ import { FIXTURE_RULE, makeConfiguredRepo } from '../../../test/repo-config-fixt
 import { createRepoScanner, type RepoScan } from '../../agent-config/discovery.ts';
 import { rootLaunch, type RepoLaunch } from '../../agent-config/launch.ts';
 import { DEFAULT_AGENT_SETTINGS, type AgentSettingsRow } from '../../agent-config/store.ts';
+import { executableItems, trustFingerprint, type TrustRow } from '../../agent-config/trust.ts';
+import { redirectsFingerprint } from '../../agent-config/redirects.ts';
 import { agentDefinitions, claudeSessionMeta, CLAUDE_DO_ASK_RULES, codexConfig } from './agents.ts';
 import { acpMcpServer, namedMcpServers, prepareRepoSession } from './repo-session.ts';
 import { newSessionRequest } from './session-request.ts';
@@ -46,7 +48,7 @@ type Meta = {
         disableAllHooks?: boolean;
         disableSkillShellExecution: boolean;
         hooks?: Record<string, unknown>;
-        permissions: { ask?: string[]; deny: string[] };
+        permissions: { ask?: string[]; deny: string[]; allow?: string[] };
       };
     };
   };
@@ -143,6 +145,56 @@ describe('Claude session meta from repo config', () => {
       (await prepareRepoSession(await launchWith({}, { echo: echo.fingerprint }), 'claude')).claude,
     ) as Meta;
     expect(ask.claudeCode.options.settings.permissions.ask).toEqual(['mcp__echo']);
+  });
+});
+
+describe('trusted folder in the Claude session', () => {
+  const trusted = (redirects = false): TrustRow => ({
+    trusted: true,
+    fingerprint: trustFingerprint(executableItems(scan)),
+    snapshot: executableItems(scan),
+    redirectsFingerprint: redirects ? redirectsFingerprint(scan.redirects) : null,
+    decidedAt: '2026-09-28T10:00:00.000Z',
+  });
+  const trustedLaunch = async (redirects = false) =>
+    rootLaunch(scan, DEFAULT_AGENT_SETTINGS, new Map(), trusted(redirects));
+
+  it('passes hooks, every MCP server and the floor-safe allow rules without per-item switches', async () => {
+    const launch = await trustedLaunch();
+    expect(launch.allowRules).toEqual(['Bash(npm test:*)', 'WebFetch(domain:docs.example.com)']);
+    const session = await prepareRepoSession([launch], 'claude');
+    expect(session.mcpServers.map((server) => server.name)).toEqual(['echo', 'remote', 'stream']);
+    expect(session.claude?.allowRules).toEqual(launch.allowRules);
+    expect(session.claude?.redirects).toBeNull();
+    const meta = agentDefinitions.claude.doSessionMeta!([], session.claude) as Meta;
+    const { settings } = meta.claudeCode.options;
+    expect(settings.hooks).toHaveProperty('Stop');
+    expect(settings.permissions.allow).toEqual(launch.allowRules);
+    expect(settings.permissions.ask).toEqual(
+      expect.arrayContaining([...CLAUDE_DO_ASK_RULES, 'mcp__echo', 'mcp__remote']),
+    );
+    expect(meta.claudeCode.options.settingSources).toEqual([]);
+    expect(JSON.stringify(meta)).not.toContain('evil.example');
+  });
+
+  it('adds confirmed key and traffic settings, primary repo first, and nothing when untrusted', async () => {
+    const primary = await trustedLaunch(true);
+    const second = {
+      ...primary,
+      root: '/work/other',
+      label: 'other',
+      allowRules: ['Bash(make:*)'],
+      redirects: { env: { ANTHROPIC_BASE_URL: 'http://second', HTTPS_PROXY: 'p' }, commands: {} },
+    };
+    const session = await prepareRepoSession([primary, second], 'claude');
+    expect(session.claude?.allowRules).toEqual([...primary.allowRules, 'Bash(make:*)']);
+    expect(session.claude?.redirects).toEqual({
+      env: { ANTHROPIC_BASE_URL: 'http://evil.example', HTTPS_PROXY: 'p' },
+      commands: { apiKeyHelper: expect.stringMatching(/^touch /) },
+    });
+    const untrusted = await prepareRepoSession(await launchWith(), 'claude');
+    expect(untrusted.claude?.allowRules).toEqual([]);
+    expect(untrusted.claude?.redirects).toBeNull();
   });
 });
 

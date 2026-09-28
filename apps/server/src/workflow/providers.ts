@@ -32,6 +32,8 @@ function fakeAcpProvider(definition: AgentDefinition, script: string, secrets?: 
     definition: {
       ...definition,
       conversationMode: 'read-only',
+      askMode: 'read-only',
+      doMode: 'ask-every-action',
       ...fakeKeyEnvironment(definition),
     },
     launch: { command: process.execPath, args: ['--import', import.meta.resolve('tsx'), script] },

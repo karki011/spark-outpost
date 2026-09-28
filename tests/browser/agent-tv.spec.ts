@@ -125,9 +125,11 @@ test('a dispatch sends a packet and a line of chatter, and a waiting agent asks 
   page,
 }) => {
   test.setTimeout(60_000);
-  await editWaiting(page);
+  await crewChat(page, repo, 'Review keep');
+  await send(page, `${CREW_REQUEST} #build #crew`);
+  await page.getByRole('button', { name: 'Agent TV' }).click();
   const tv = tvOf(page);
-  await allowEdit(page);
+  await expect(tv).toBeVisible();
 
   await expect(tv.locator('.tv-pk.out')).not.toHaveCount(0, { timeout: 15_000 });
   await expect(tv.locator('.tv-bub.tv-chat')).toHaveText(/^(Over to .+|Looks good to me)\.$/, {

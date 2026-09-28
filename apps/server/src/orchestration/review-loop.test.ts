@@ -129,7 +129,7 @@ describe('Critic → fix rounds', () => {
     expect(results.at(-1)!.action).toEqual({
       type: 'ask',
       kind: 'accept',
-      reason: '1 file changed. Auto-edit asks because the Critic still has concerns.',
+      reason: '1 file changed. Automatic asks because the Critic still has concerns.',
     });
     expect(fixOptionLabel(state.review)).toBe('Fix again');
     expect(reviewLine(state.review, 'checks pass')).toBe(
@@ -295,7 +295,7 @@ describe('a limit that cuts a fix round short (N2)', () => {
     const keep = nextStep(restored.state, { type: 'wrapped', filesChanged: 2 });
     expect(keep.action).toMatchObject({ type: 'ask', kind: 'accept' });
     expect(keep.action).toMatchObject({
-      reason: expect.stringContaining('Auto-edit asks because the Critic still has concerns.'),
+      reason: expect.stringContaining('Automatic asks because the Critic still has concerns.'),
     });
   });
 

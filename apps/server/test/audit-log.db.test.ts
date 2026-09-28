@@ -16,6 +16,7 @@ import { LeaseLostError } from '../src/persistence/run-events.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
+import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 let t: TestDb;
 let worker: Worker | null = null;
@@ -153,7 +154,7 @@ describe('protocol log storage', () => {
 describe('worker audit recording with an ACP agent', { timeout: 30_000 }, () => {
   it('stores every protocol message and the settings, duration, and tool calls it used', async () => {
     const provider = createAcpProvider({
-      definition: { ...agentDefinitions.codex, name: 'Fake', conversationMode: 'read-only' },
+      definition: { ...agentDefinitions.codex, name: 'Fake', ...FAKE_AGENT_MODES },
       launch: {
         command: process.execPath,
         args: [

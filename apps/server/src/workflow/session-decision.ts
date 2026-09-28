@@ -16,8 +16,6 @@ export const RESUME_REASONS = {
   replaced: 'replaced',
 } as const;
 
-// Stored in last_reply_hash when the user stopped the turn: the agent's session is intact and
-// can pick up where it was. Never a sha256 hex digest, so it can't match a real reply.
 export const STOPPED_REPLY = 'stopped by the user';
 
 export const STOPPED_NOTE =
