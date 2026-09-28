@@ -188,7 +188,8 @@ export async function insertChildRun(
 
 export interface NewDecision {
   runId: string;
-  purpose: 'route' | 'policy' | 'verify' | 'scan' | 'rank' | 'route_shadow' | 'plan_agreed';
+  purpose:
+    'route' | 'policy' | 'verify' | 'finding' | 'scan' | 'rank' | 'route_shadow' | 'plan_agreed';
   childRunId: string | null;
   role: AgentRole | null;
   stepIndex: number | null;

@@ -23,6 +23,7 @@ export const CHECKPOINT_OPTION = {
   finish: 'finish',
   keep: 'keep',
   fix: 'fix',
+  fixFindings: 'fix_findings',
   revert: 'revert',
   continueBudget: 'continue',
   keepFirst: 'keep_first',

@@ -74,7 +74,10 @@ export function jevAnswers(request: StubRequest): Record<string, Answer> {
   const task = String(request.state.task ?? '');
   if (request.questions.intent) return intakeAnswers(request, task);
   const answers = Object.fromEntries(
-    Object.keys(request.questions).map((key) => [key, noul(0.05)]),
+    Object.keys(request.questions).map((key) => [
+      key,
+      noul(key.startsWith('finding_') ? 0.5 : 0.05),
+    ]),
   );
   if (request.questions.verdict) answers.verdict = choice(verdictFor(task), 0.95);
   return answers;

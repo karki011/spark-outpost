@@ -39,6 +39,7 @@ export interface CriticContext {
   checks: readonly string[];
   buildStyle?: BuildStyle;
   agreedPlan?: string | null;
+  previousFindings?: readonly string[];
 }
 
 function optional(text: string | null): string[] {
@@ -159,6 +160,17 @@ function reviewSections(context: Omit<CriticContext, 'request' | 'plan'>): strin
   ];
 }
 
+function previousFindingsSection(findings: readonly string[]): string[] {
+  if (findings.length === 0) return [];
+  const lines = findings.slice(0, FINDINGS_LIMIT).map((finding) => `- ${cap(finding, 500)}`);
+  return [
+    section(
+      'Findings the Builder was asked to fix',
+      `Check whether each is fixed now. Repeat any that remain in the same words.\n${lines.join('\n')}`,
+    ),
+  ];
+}
+
 export function criticPrompt(context: CriticContext): string {
   return [
     'Role: Critic. Review the change below; do not change files. This is an AI review, not verification.',
@@ -168,6 +180,7 @@ export function criticPrompt(context: CriticContext): string {
     section('Request', cap(context.request, REQUEST_LIMIT)),
     ...optional(context.agreedPlan ?? null),
     section('Plan', context.plan.length > 0 ? numbered(context.plan) : 'No plan was made.'),
+    ...previousFindingsSection(context.previousFindings ?? []),
     ...reviewSections(context),
   ].join('\n\n');
 }
@@ -200,4 +213,12 @@ export function checkFixFollowUp(failures: string): string {
     "The project's checks failed after your change. Fix the cause without undoing the change's intent, then reply with what you changed.",
     section('Failing checks', cap(failures, CHECK_OUTPUT_LIMIT)),
   ].join('\n\n');
+}
+
+export const CRITIC_FIX_LEAD =
+  "The AI review of your change found these correctness problems. Fix each one without undoing the change's intent, add or adjust a test that shows it where the project has tests, then reply with what you changed.";
+
+export function criticFixFollowUp(findings: readonly string[]): string {
+  const lines = findings.slice(0, FINDINGS_LIMIT).map((finding) => `- ${cap(finding, 500)}`);
+  return [CRITIC_FIX_LEAD, section('Review findings to fix', lines.join('\n'))].join('\n\n');
 }

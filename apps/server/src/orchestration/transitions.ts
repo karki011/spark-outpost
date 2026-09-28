@@ -13,9 +13,20 @@ import {
 import { MAX_VERDICTS, PLAN_CONTINUES } from '../advisor/policy.ts';
 import type { Verdict } from '../advisor/verify-questions.ts';
 import { asksToKeep, asksForLoop } from './checkpoint-policy.ts';
+import { criticFixFollowUp } from './context.ts';
+import {
+  afterReview,
+  canFixAgain,
+  checksFailedAfterFix,
+  fixRefused,
+  IDLE_REVIEW,
+  lastAction,
+  startFix,
+  type ReviewLoop,
+} from './review-loop.ts';
 
 export type SpawnReason =
-  'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'unstick' | 'escalate';
+  'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'unstick' | 'escalate' | 'recheck';
 
 export interface Spawn {
   role: AgentRole;
@@ -60,6 +71,8 @@ export type FlowEvent =
       large?: boolean;
       green?: boolean;
       verdict?: ReviewVerdict;
+      fixable?: readonly string[];
+      checksFailing?: boolean;
     }
   | { type: 'verified'; accepted: Verdict | null; reasons: readonly string[] }
   | { type: 'looped'; summary: string; open?: readonly string[] }
@@ -89,6 +102,7 @@ export interface FlowState {
   verdicts: number;
   escalated: boolean;
   large: boolean;
+  review: ReviewLoop;
 }
 
 export interface FlowResult {
@@ -122,6 +136,7 @@ export function initialFlow(
     verdicts: 0,
     escalated: false,
     large: false,
+    review: IDLE_REVIEW,
   };
 }
 
@@ -207,6 +222,9 @@ function retry(state: FlowState, note: string | null = null): FlowResult {
 }
 
 function afterBuilder(state: FlowState, large: boolean): FlowResult {
+  if (state.review.fixing) {
+    return spawn(state, { role: 'critic', reason: 'recheck', escalate: false });
+  }
   if ((state.reviewWanted || large) && !state.reviewed) {
     return spawn(
       { ...state, reviewed: true },
@@ -239,6 +257,9 @@ function builderDone(
         followUp: continueFollowUp(next.open),
       },
     );
+  }
+  if (next.review.fixing && event.checksFailing) {
+    return wrapUp({ ...next, review: checksFailedAfterFix(next.review) });
   }
   const large = event.large ?? false;
   if (next.verifier && event.green && next.verdicts < MAX_VERDICTS) {
@@ -277,6 +298,27 @@ function escalateOnce(state: FlowState, followUp: string): FlowResult {
   );
 }
 
+function refusedFix(state: FlowState, unstarted: boolean): boolean {
+  return (
+    unstarted &&
+    state.review.fixing &&
+    state.last?.role === 'builder' &&
+    state.last.reason === 'fix'
+  );
+}
+
+function fixFindings(state: FlowState): FlowResult {
+  return spawn(
+    { ...state, review: startFix(state.review) },
+    {
+      role: 'builder',
+      reason: 'fix',
+      escalate: false,
+      followUp: criticFixFollowUp(state.review.fixable),
+    },
+  );
+}
+
 function verified(state: FlowState, event: Extract<FlowEvent, { type: 'verified' }>): FlowResult {
   const next = { ...state, verdicts: state.verdicts + 1 };
   const action = cascadeAction(event.accepted, state.escalated);
@@ -296,7 +338,10 @@ function agentDone(
       : finish(state, 'failed', event.error ?? 'The agent hit a problem.');
   }
   if (event.role === 'critic') {
-    return wrapUp({ ...state, verdict: event.verdict ?? 'unclear' });
+    const verdict = event.outcome === 'succeeded' ? (event.verdict ?? 'unclear') : 'unclear';
+    const review = afterReview(state.review, verdict, event.fixable ?? [], state.level);
+    const next = { ...state, verdict, review };
+    return lastAction(review) === 'fix' ? fixFindings(next) : wrapUp(next);
   }
   return builderDone(state, event);
 }
@@ -312,6 +357,9 @@ function looped(state: FlowState, event: Extract<FlowEvent, { type: 'looped' }>)
 function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered' }>): FlowResult {
   const option = event.optionId;
   if (event.kind === 'budget') {
+    if (option === CHECKPOINT_OPTION.continueBudget && state.review.stop === 'budget') {
+      return fixFindings({ ...state, exceeded: null, resumeLast: false });
+    }
     if (option === CHECKPOINT_OPTION.continueBudget && state.last) {
       const next = state.resumeLast
         ? { ...state.last, escalate: false, reason: 'resume' as const }
@@ -350,6 +398,9 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
     }
     if (option === CHECKPOINT_OPTION.fix) {
       return spawn(state, { role: 'builder', reason: 'fix', escalate: false, note: event.note });
+    }
+    if (option === CHECKPOINT_OPTION.fixFindings && canFixAgain(state.review)) {
+      return fixFindings(state);
     }
     return finish(state, 'succeeded');
   }
@@ -390,7 +441,14 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
       return finish({ ...state, open: [] }, 'succeeded', 'Reverted the changes.');
     case 'budget_exceeded':
       return ask(
-        { ...state, exceeded: event.limit, resumeLast: event.unstarted !== true },
+        {
+          ...state,
+          exceeded: event.limit,
+          resumeLast: event.unstarted !== true,
+          review: refusedFix(state, event.unstarted === true)
+            ? fixRefused(state.review)
+            : state.review,
+        },
         'budget',
         `The ${event.limit.replace('_', ' ')} budget ran out.`,
       );

@@ -72,6 +72,7 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
       checks: s.checkLines,
       buildStyle: s.buildStyle,
       agreedPlan,
+      previousFindings: s.flow.review.fixing ? s.flow.review.fixable : [],
     });
   }
   return builderPrompt({

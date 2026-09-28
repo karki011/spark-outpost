@@ -16,6 +16,8 @@ import {
   type CheckpointCard,
 } from './checkpoint.ts';
 import { autoContinueOption } from './checkpoint-policy.ts';
+import { sessionReviewLine } from './critic-fix.ts';
+import { fixOptionLabel } from './review-loop.ts';
 import {
   assumedRequest,
   chosenInterpretation,
@@ -46,7 +48,9 @@ async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
   }
   if (action.kind === 'accept') {
     const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
-    return acceptCard(changes.files, action.reason);
+    const line = sessionReviewLine(s);
+    const reason = line ? `${action.reason} ${line}` : action.reason;
+    return acceptCard(changes.files, reason, fixOptionLabel(s.flow.review));
   }
   const usage = await budgetUsage(s);
   const limit = s.budgetHit ?? 'time';

@@ -126,7 +126,11 @@ export function verifyCard(
   };
 }
 
-export function acceptCard(files: readonly RunChange[], reason: string): CheckpointCard {
+export function acceptCard(
+  files: readonly RunChange[],
+  reason: string,
+  fixLabel: string | null = null,
+): CheckpointCard {
   return {
     kind: 'accept',
     title: 'Keep these changes?',
@@ -138,6 +142,7 @@ export function acceptCard(files: readonly RunChange[], reason: string): Checkpo
     }),
     options: [
       allow(CHECKPOINT_OPTION.keep, 'Keep'),
+      ...(fixLabel ? [reject(CHECKPOINT_OPTION.fixFindings, fixLabel)] : []),
       reject(CHECKPOINT_OPTION.fix, 'Ask for a fix'),
       reject(CHECKPOINT_OPTION.revert, 'Revert'),
     ],

@@ -146,6 +146,47 @@ test('Fix from the keep card runs another Builder with your note', async ({ page
   expect(repo.notes()).toBe('start\nstep 1\nfixed as asked\n');
 });
 
+test('Balanced: Critic concerns get a fix round and a second review before the keep card', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await crewChat(page, repo, 'Balanced');
+  await send(page, 'Fix the divider #build #crew #bugreview');
+  await allowEdit(page);
+  await expect(agentHead(page, 'Hawk')).toBeVisible({ timeout: 30_000 });
+  await allowEdit(page);
+  const keep = card(page, /Keep these changes\?/);
+  await expect(keep).toContainText('Fixed after 1 review round', { timeout: 30_000 });
+  await expect(keep.getByRole('button', { name: 'Fix these findings' })).toHaveCount(0);
+  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  await expect(keep).toContainText('Kept the changes.');
+  await expect(page.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
+  expect(repo.notes()).toBe('start\nstep 1\nfixed the review findings\n');
+});
+
+test('Hands-on: "Fix these findings" on the keep card sends the review back to the Builder', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await crewChat(page, repo, 'Hands-on');
+  await send(page, 'Fix the divider #build #crew #bugreview');
+  await allowEdit(page);
+  const keep = card(page, /Keep these changes\?/).first();
+  await expect(keep).toContainText('The AI review found 2 correctness findings.', {
+    timeout: 30_000,
+  });
+  await expect(keep.getByRole('button', { name: 'Keep', exact: true })).toHaveClass(/primary/);
+  await keep.getByRole('button', { name: 'Fix these findings' }).click();
+  await expect(keep).toContainText('Sent the review findings back to the Builder.');
+
+  await allowEdit(page);
+  const again = card(page, /Keep these changes\?/).nth(1);
+  await expect(again).toContainText('Fixed after 1 review round', { timeout: 30_000 });
+  await expect(again.getByRole('button', { name: /Fix these findings|Fix again/ })).toHaveCount(0);
+  await again.getByRole('button', { name: 'Keep', exact: true }).click();
+  expect(repo.notes()).toBe('start\nstep 1\nfixed the review findings\n');
+});
+
 async function autoContinueAfter(page: Page, seconds: number): Promise<void> {
   const response = await page.request.patch('/api/profile', {
     data: { autoContinueSeconds: seconds },

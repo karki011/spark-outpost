@@ -46,6 +46,7 @@ export const decisionKindSchema = z.enum([
   'watchdog',
   'policy',
   'verify',
+  'finding',
 ]);
 export type DecisionKind = z.infer<typeof decisionKindSchema>;
 

@@ -10,6 +10,10 @@ export function asksToKeep(level: InvolvementLevel, filesChanged: number): boole
   return level === 'hands-on' || level === 'balanced';
 }
 
+export function fixesFindingsItself(level: InvolvementLevel): boolean {
+  return level !== 'hands-on';
+}
+
 export function asksForLoop(level: InvolvementLevel): boolean {
   return asksWhenUnsure(level);
 }

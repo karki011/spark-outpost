@@ -1,9 +1,9 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'floor-1';
+export const POLICY_VERSION = 'fixturn-1';
 
 export type ActingQuestion =
-  'question' | 'vague' | 'review' | 'destructive' | 'continues_task' | 'verify';
+  'question' | 'vague' | 'review' | 'destructive' | 'continues_task' | 'verify' | 'finding';
 
 export type ObservedQuestion = 'tier' | 'policy';
 
@@ -16,6 +16,7 @@ export const ACT_AT: Record<ActingQuestion | ObservedQuestion, number> = {
   tier: 0.9,
   policy: 0.85,
   verify: 0.8,
+  finding: 0.8,
 };
 
 export const ASK_AT = 0.5;
@@ -30,6 +31,7 @@ export const LARGE_DIFF_LINES = 400;
 export const LARGE_DIFF_FILES = 10;
 
 export const CHECK_FIXES = 2;
+export const CRITIC_FIX_ROUNDS = 3;
 export const PLAN_CONTINUES = 2;
 export const MAX_VERDICTS = 2;
 export const LOOP_STREAK = 5;
