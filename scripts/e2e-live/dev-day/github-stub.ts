@@ -1,7 +1,11 @@
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { createServer, type Server } from 'node:http';
+import { fakeGitHub, type FakePull } from '../../../apps/server/test/fake-github.ts';
 
 export const GITHUB_STUB_PORT = 4429;
 export const GITHUB_STUB_URL = `http://127.0.0.1:${GITHUB_STUB_PORT}`;
+
+/** The token the bench saves for Ship. The stub records any other credential it is sent. */
+export const FAKE_GITHUB_TOKEN = 'ghp_devday0fake0github0token0never0real';
 
 export interface StubPull {
   number: number;
@@ -18,87 +22,58 @@ export interface GitHubStub {
   url: string;
   pulls: StubPull[];
   requests: string[];
+  /** Requests that carried anything other than the bench's fake token (should stay empty). */
+  foreignCredentials: string[];
   close(): Promise<void>;
 }
 
-function send(res: ServerResponse, status: number, body: unknown): void {
-  res.writeHead(status, { 'content-type': 'application/json' });
-  res.end(JSON.stringify(body));
-}
-
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
-  let text = '';
-  for await (const chunk of req) text += String(chunk);
-  try {
-    return JSON.parse(text || '{}') as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
-
-const REPO = /^\/repos\/([^/]+)\/([^/]+)(\/pulls(?:\/(\d+))?)?$/;
+const toStubPull = (pull: FakePull): StubPull => ({
+  number: pull.number,
+  repo: `${pull.owner}/${pull.repo}`,
+  title: pull.title,
+  body: pull.body,
+  head: pull.head,
+  base: pull.base,
+  draft: pull.draft,
+  html_url: pull.html_url,
+});
 
 /**
- * A GitHub REST stand-in for the Full auto draft PR: /user, /repos/:owner/:repo and its pulls.
- * Any bearer token is accepted and nothing leaves this process.
+ * The app's own GitHub REST fake (apps/server/test/fake-github.ts) on a local port, so the bench
+ * and the server tests fake the same API surface. Nothing leaves this process.
  */
 export async function startGitHubStub(port = GITHUB_STUB_PORT): Promise<GitHubStub> {
-  const pulls: StubPull[] = [];
+  const fake = fakeGitHub();
   const requests: string[] = [];
+  const foreignCredentials: string[] = [];
   const server: Server = createServer((req, res) => {
-    void (async () => {
-      const url = new URL(req.url ?? '/', 'http://stub');
-      requests.push(`${req.method} ${url.pathname}`);
-      if (url.pathname === '/health') return send(res, 200, { ok: true });
-      if (url.pathname === '/user') return send(res, 200, { login: 'dev-day' });
-      const match = REPO.exec(url.pathname);
-      if (!match) return send(res, 404, { message: 'Not Found' });
-      const [, owner, repo, pullsPath] = match;
-      const slug = `${owner}/${repo}`;
-      if (!pullsPath) {
-        return send(res, 200, {
-          full_name: slug,
-          default_branch: 'main',
-          permissions: { push: true, pull: true },
-        });
-      }
-      if (req.method === 'GET') {
-        const head = url.searchParams.get('head');
-        return send(
-          res,
-          200,
-          pulls.filter((pull) => pull.repo === slug && (!head || `${owner}:${pull.head}` === head)),
-        );
-      }
-      const body = await readJson(req);
-      if (req.method === 'PATCH') {
-        const pull = pulls.find((entry) => entry.number === Number(match[4]));
-        if (!pull) return send(res, 404, { message: 'Not Found' });
-        pull.title = String(body.title ?? pull.title);
-        pull.body = String(body.body ?? pull.body);
-        return send(res, 200, pull);
-      }
-      if (req.method !== 'POST') return send(res, 405, { message: 'Method not allowed' });
-      const number = pulls.length + 1;
-      const pull: StubPull = {
-        number,
-        repo: slug,
-        title: String(body.title ?? ''),
-        body: String(body.body ?? ''),
-        head: String(body.head ?? ''),
-        base: String(body.base ?? 'main'),
-        draft: body.draft === true,
-        html_url: `https://github.e2e.localhost/${slug}/pull/${number}`,
-      };
-      pulls.push(pull);
-      return send(res, 201, pull);
-    })();
+    const path = req.url ?? '/';
+    const pathname = new URL(path, 'http://stub').pathname;
+    requests.push(`${req.method} ${pathname}`);
+    if (pathname === '/health') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end('{"ok":true}');
+      return;
+    }
+    const auth = String(req.headers.authorization ?? '');
+    if (auth !== `Bearer ${FAKE_GITHUB_TOKEN}`) {
+      foreignCredentials.push(
+        `${req.method} ${pathname}: ${auth ? `${auth.slice(0, 12)}…` : '(no authorization)'}`,
+      );
+    }
+    void fake.handle(req, res, path).catch(() => {
+      res.writeHead(500);
+      res.end();
+    });
   });
   await new Promise<void>((done) => server.listen(port, '127.0.0.1', done));
   return {
     url: `http://127.0.0.1:${port}`,
-    pulls,
+    get pulls() {
+      return fake.pulls.map(toStubPull);
+    },
     requests,
+    foreignCredentials,
     close: () => new Promise((done) => server.close(() => done())),
   };
 }

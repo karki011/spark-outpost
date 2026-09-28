@@ -195,7 +195,10 @@ export class HarnessDay implements ArmDay {
           await cancel();
           break;
         }
-        const choice = balancedChoice(approval as Approval);
+        const choice = balancedChoice(
+          approval as Approval,
+          session.expect.kind === 'build' ? 'change' : 'answer',
+        );
         if (choice.waitForAuto) continue;
         await this.api.decide(approval, choice).catch(() => undefined);
         outcome.answered.push({

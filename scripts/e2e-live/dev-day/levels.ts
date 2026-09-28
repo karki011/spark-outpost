@@ -1,11 +1,11 @@
 /**
  * The permission levels a developer picks in the chat's settings, in one place.
  *
- * The app is moving to four levels: Ask / Ask before edits / Auto-edit / Full auto, with
- * Hands-on removed and Full auto opening a draft PR. Until that lands, each level maps to
- * today's `permission` (run mode) and `level` (involvement) values. When the rename merges,
- * update only the `permission` and `level` values below (and `DIRECT_LEVEL`); sessions refer
- * to levels by key.
+ * The app's four choices (packages/contracts/src/approvals.ts ACCESS_CHOICES): Ask (permission
+ * `ask`, no level), Ask before edits (`do` + `balanced`), Auto-edit (`do` + `hands-off`) and
+ * Full auto (`do` + `full-auto`, which runs in a worktree and ends in a draft PR). Hands-on is
+ * gone (migration 0049 maps it to `balanced`). Ask sends `balanced` as its level; the app ignores
+ * the level when the permission is `ask`. Sessions refer to levels by key.
  */
 export const LEVELS = {
   ask: { label: 'Ask', permission: 'ask', level: 'balanced' },
@@ -20,8 +20,8 @@ export type LevelKey = keyof typeof LEVELS;
 export const DEFAULT_LEVEL: LevelKey = 'askBeforeEdits';
 
 /**
- * The direct arms have no levels; they run like scripts/bench's direct arm (`BENCH_LEVEL`,
- * today 'full-auto'). Named here so the report can say what the direct arms ran at.
+ * The direct arms have no levels; they run like scripts/bench's direct arm (`BENCH_LEVEL` =
+ * 'full-auto': every tool call allowed, no orchestrator, so no worktree and no draft PR).
  */
 export const DIRECT_LEVEL_LABEL = 'Full auto (scripts/bench BENCH_LEVEL)';
 

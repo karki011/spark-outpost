@@ -26,7 +26,20 @@ const CHECKPOINT_CHOICES: Record<string, { optionId: string; label: string; why:
     label: 'Ask a Builder to reconcile',
     why: 'let a Builder merge both',
   },
+  stuck: {
+    optionId: CHECKPOINT_OPTION.stopReport,
+    label: 'Stop and report',
+    why: 'an agent repeating itself will not get better',
+  },
+  verify: {
+    optionId: CHECKPOINT_OPTION.finishUnverified,
+    label: 'Finish as it is',
+    why: 'the hidden tests judge it; do not pay for another tier',
+  },
 };
+
+/** What the developer wanted from the turn, for the "Answer, or change the code?" card. */
+export type UserIntent = 'answer' | 'change';
 
 function offered(approval: Approval, optionId: string): boolean {
   return approval.options.some((option) => option.optionId === optionId);
@@ -58,11 +71,21 @@ function toolChoice(approval: Approval): UserChoice {
   };
 }
 
-export function balancedChoice(approval: Approval): UserChoice {
+export function balancedChoice(approval: Approval, intent: UserIntent | null = null): UserChoice {
   if (approval.kind === 'edit' || approval.kind === 'execute' || approval.kind === 'other') {
     return toolChoice(approval);
   }
   const waitForAuto = Boolean(approval.autoContinueAt);
+  if (approval.kind === 'clarify' && offered(approval, CHECKPOINT_OPTION.makeChange)) {
+    const change = intent !== 'answer';
+    return {
+      optionId: change ? CHECKPOINT_OPTION.makeChange : CHECKPOINT_OPTION.justAnswer,
+      scope: 'once',
+      label: change ? 'Make the change' : 'Just answer; change nothing',
+      waitForAuto: false,
+      why: change ? 'the developer asked for a change' : 'the developer asked a question',
+    };
+  }
   if (approval.kind === 'clarify') {
     const first = approval.payload.checkpoint?.choices[0];
     if (first && offered(approval, clarifyOptionId(0))) {
@@ -80,6 +103,16 @@ export function balancedChoice(approval: Approval): UserChoice {
       label: 'Let the rules decide',
       waitForAuto,
       why: 'no suggestion offered',
+    };
+  }
+  if (approval.kind === 'accept' && offered(approval, CHECKPOINT_OPTION.fixFindings)) {
+    const option = approval.options.find((o) => o.optionId === CHECKPOINT_OPTION.fixFindings);
+    return {
+      optionId: CHECKPOINT_OPTION.fixFindings,
+      scope: 'once',
+      label: option?.name ?? 'Fix the findings',
+      waitForAuto,
+      why: 'the Critic found correctness bugs; let it fix them (≤3 rounds)',
     };
   }
   const known = CHECKPOINT_CHOICES[approval.kind];

@@ -29,7 +29,7 @@ export function keychainSecretStore(service = DEFAULT_KEYCHAIN_SERVICE): SecretS
   };
 }
 
-export function memorySecretStore(seed: Partial<Record<ConnectableId, string>> = {}): SecretStore {
+export function memorySecretStore(seed: Partial<Record<SecretId, string>> = {}): SecretStore {
   const secrets = new Map(Object.entries(seed) as [SecretId, string][]);
   return {
     async set(provider, secret) {

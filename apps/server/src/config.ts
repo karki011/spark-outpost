@@ -11,7 +11,11 @@ const providerUrl = z
   }, 'Provider URLs must use HTTPS, or 127.0.0.1 for local test stubs.')
   .transform((value) => value.replace(/\/$/, ''));
 
-const memorySecretsSchema = z.partialRecord(connectableIdSchema, z.string().min(1));
+/** Keys for the memory store (tests and benches): a connection's API key, or 'github' for Ship. */
+const memorySecretsSchema = z.partialRecord(
+  z.union([connectableIdSchema, z.literal('github')]),
+  z.string().min(1),
+);
 
 function parseJson(value: string): unknown {
   try {
