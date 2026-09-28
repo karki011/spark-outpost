@@ -8,7 +8,6 @@ import type { RepoKey } from './sessions.ts';
 
 const run = promisify(execFile);
 
-/** Where hidden tests go while they run; removed straight after, never seen by an agent. */
 export const HIDDEN_DIRS: Record<Exclude<RepoKey, 'external'>, string> = {
   spark: 'apps/web/src/__devday_hidden__',
   workbench: 'bench-verify',
@@ -65,7 +64,6 @@ async function nodeCounts(repo: string, pattern: string): Promise<TestCounts | n
   return parseTapCounts(text);
 }
 
-/** The repo's own tests for the area the day touches. */
 export async function suiteCounts(
   key: RepoKey,
   repo: string,

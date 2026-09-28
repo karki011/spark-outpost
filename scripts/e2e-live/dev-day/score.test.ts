@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { anchorFor, pickPassage, quotedMessage } from './quotes.ts';
 import { verdict } from './report-day.ts';
-import { projectedRound, sessionCap } from './run-day.ts';
+import { projectedRound } from './run-day.ts';
+import { sessionCap } from './session-run.ts';
 import {
   asksBack,
   classify,

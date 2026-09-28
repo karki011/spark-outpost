@@ -1,9 +1,3 @@
-// Scores the live routing comparison (docs/benchmarks/routing-live-2026-09-27.md).
-// Reads e2e-live result files from the `routing` block, groups cells by scenario and by the
-// model the Builder started on, and scores four policies over the observed cells:
-// rule, Jev text-only, Jev with evidence, and Jev with evidence only at confidence >= 0.8.
-//
-//   node --import tsx scripts/routing/live-score.ts --out cells.json results-*.json
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 import { atK } from '../../apps/server/src/routing/labels.ts';
@@ -167,8 +161,6 @@ function arm(cells: readonly Cell[]): Arm | null {
 type PolicyId = 'rule' | 'jev-text' | 'jev-evidence' | 'jev-evidence-0.8';
 
 function firstPick(shadow: readonly Cell[], which: 'text' | 'evidence'): Pick {
-  // The policy's pick for a scenario is the first shadow run's answer (what acting would
-  // have used on that run); later shadow runs are reported as stability.
   return shadow[0]?.[which] ?? { pick: null, confidence: null, basis: null };
 }
 
@@ -194,7 +186,6 @@ async function main() {
     const atModel = Object.fromEntries(
       MODELS.map((model) => [model, arm(all.filter((cell) => cell.model === model))]),
     ) as Record<Model, Arm | null>;
-    // Repair cost: the user notices, reruns on the top tier, and spends repairMinutes.
     const opusHere = mean(all.filter((c) => c.model === 'Opus 5.5').map((c) => c.costUsd));
     const sonnetHere = mean(all.filter((c) => c.model === 'Sonnet 5').map((c) => c.costUsd));
     const opusRatio =
@@ -225,7 +216,6 @@ async function main() {
   });
 
   const policyIds: PolicyId[] = ['rule', 'jev-text', 'jev-evidence', 'jev-evidence-0.8'];
-  // Score every policy over the same scenarios: those where each policy's model was run.
   const common = new Set(
     perScenario
       .filter((row) =>
@@ -276,8 +266,6 @@ async function main() {
     };
   });
 
-  // Fixed tiers: every task on one model, scored per run (not per scenario mean) over the
-  // scenarios where that model ran, next to the rule route on the same scenarios.
   const fixed = MODELS.map((model) => {
     const rows = perScenario.filter((row) => row.atModel[model] !== null);
     const runs = cells.filter((cell) => cell.model === model);

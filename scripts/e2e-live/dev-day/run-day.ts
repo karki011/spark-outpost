@@ -3,7 +3,6 @@ import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Browser } from '@playwright/test';
 import { connectableIdSchema } from '../../../packages/contracts/src/index.ts';
-import type { DiffStat } from '../../bench/verify.ts';
 import { stopBench } from '../../bench/live.ts';
 import { keychainSecretStore } from '../../../apps/server/src/setup/secrets.ts';
 import { Api } from '../api-driver.ts';
@@ -11,46 +10,19 @@ import { benchEnv } from '../bench-env.ts';
 import type { BaseArm } from '../scenario-types.ts';
 import { startStack, stopStack, type Runtime, type Stack } from '../stack.ts';
 import { openBrowser } from '../ui-driver.ts';
-import type { ArmDay, ArmSessionResult, PreparedTurn } from './arm.ts';
-import { NO_HARNESS_EVIDENCE } from './arm.ts';
+import type { ArmDay } from './arm.ts';
 import { DirectClaudeDay, DirectCodexDay } from './direct-day.ts';
 import { FAKE_GITHUB_TOKEN, startGitHubStub, type GitHubStub } from './github-stub.ts';
 import { HarnessDay } from './harness-day.ts';
-import { hiddenCounts, suiteCounts } from './hidden.ts';
-import { DEFAULT_LEVEL, DIRECT_LEVEL_LABEL, LEVELS, type LevelKey } from './levels.ts';
-import { anchorFor, pickPassage, quotedMessage } from './quotes.ts';
+import { DEFAULT_LEVEL, LEVELS, type LevelKey } from './levels.ts';
 import { renderDayReport } from './report-day.ts';
-import {
-  FAKE_REMOTE_HOST,
-  ROOT,
-  applyPatch,
-  changedFiles,
-  createRepo,
-  diffStat,
-  fingerprint,
-  git,
-  remoteBranches,
-  settle,
-  snapshot,
-  type DayRepo,
-} from './repos.ts';
-import {
-  DEFAULT_RATES,
-  scoreSession,
-  type Evidence,
-  type Intervention,
-  type Rates,
-  type SessionScore,
-} from './score.ts';
-import { SESSIONS, type DaySession, type RepoKey } from './sessions.ts';
+import { FAKE_REMOTE_HOST, ROOT } from './repos.ts';
+import { DEFAULT_RATES, type Rates } from './score.ts';
+import { SESSIONS, type DaySession } from './sessions.ts';
+import { runSession, sessionCap, type ArmState, type DayRecord } from './session-run.ts';
 
 export const DEV_DAY_HARD_CAP_USD = 25;
 
-/**
- * The secrets the stack's API and worker get. Both arms of the harness run on the memory store,
- * so Ship reads the bench's fake GitHub token and never the keychain's `github:token`: the live
- * run copies only the connection keys (Jev, Z.ai, ...) out of the keychain, read-only.
- */
 async function stackSecrets(runtime: Runtime): Promise<Record<string, string>> {
   const secrets: Record<string, string> = { github: FAKE_GITHUB_TOKEN };
   if (runtime === 'fake') return secrets;
@@ -62,7 +34,6 @@ async function stackSecrets(runtime: Runtime): Promise<Record<string, string>> {
   return secrets;
 }
 
-/** Connect the fake GitHub the way Settings does (a token for the fake host), and prove it. */
 async function connectFakeGitHub(stack: Stack, ghHome: string, run: DayRun): Promise<void> {
   const api = new Api(stack.urls.api, stack.apiToken);
   const saved = await api.call<{ active: string | null; ghCli: { login: string | null } }>(
@@ -94,41 +65,8 @@ function cleanGitHubEnv(): NodeJS.ProcessEnv {
   return env;
 }
 export const DAY_ARMS: readonly BaseArm[] = ['harness', 'direct-claude', 'direct-codex'];
-/** A session may spend this multiple of its expected cost before the bench stops it. */
-const CAP_FACTOR = 3;
-const MIN_CAP_USD = 0.5;
 const PROJECTION_FACTOR = 1.3;
 const LIMIT = /rate.?limit|usage limit|too many requests|\b429\b|overloaded|quota/i;
-
-export interface DayTurnRecord {
-  prompt: string;
-  runId: string;
-  status: string;
-  error: string | null;
-  wallMs: number;
-  costUsd: number;
-  crew: string[];
-  interrupted: boolean;
-  reply: string;
-}
-
-export interface DayRecord {
-  session: string;
-  title: string;
-  arm: BaseArm;
-  level: string;
-  startedAt: string;
-  wallMs: number;
-  costUsd: number;
-  capUsd: number;
-  overCap: boolean;
-  turns: DayTurnRecord[];
-  evidence: Evidence;
-  score: SessionScore;
-  diff: DiffStat;
-  shots: string[];
-  conversation: string | null;
-}
 
 export interface DayRun {
   version: 1;
@@ -157,204 +95,11 @@ export interface DayOptions {
   shots: boolean;
   rates: Rates;
   keepData: boolean;
-  /** Harness: play the day's default-level sessions at this level instead (`--day-level`). */
   dayLevel?: LevelKey | undefined;
-}
-
-interface ArmState {
-  day: ArmDay;
-  repos: Map<RepoKey, DayRepo>;
-  replies: Map<string, { reply: string; messageId: string | null }>;
-}
-
-export function sessionCap(session: DaySession, arm: BaseArm): number {
-  return Math.max(MIN_CAP_USD, session.expectUsd[arm] * CAP_FACTOR);
 }
 
 export function projectedRound(session: DaySession, arms: readonly BaseArm[]): number {
   return arms.reduce((sum, arm) => sum + session.expectUsd[arm] * PROJECTION_FACTOR, 0);
-}
-
-function prepareTurns(
-  session: DaySession,
-  arm: BaseArm,
-  state: ArmState,
-  runtime: Runtime,
-): { turns: PreparedTurn[]; interventions: Intervention[] } {
-  const interventions: Intervention[] = [];
-  const turns = session.turns.map((turn, index): PreparedTurn => {
-    let text = turn.text;
-    let quote: PreparedTurn['quote'] = null;
-    if (turn.quote) {
-      const source = state.replies.get(turn.quote.fromSession);
-      const reply = source?.reply ?? '';
-      const passage = pickPassage(reply, turn.quote.pick);
-      quote = { passage, messageId: source?.messageId ?? null, anchor: anchorFor(reply, passage) };
-      text = quotedMessage(passage, turn.text);
-    }
-    if (index === 0 && arm !== 'harness' && session.pastePlanFrom) {
-      const plan = state.replies.get(session.pastePlanFrom)?.reply ?? '';
-      text = `${text}\n\nHere is the plan we agreed on:\n\n${plan}`;
-      interventions.push({ kind: 'paste', text: `pasted the plan from ${session.pastePlanFrom}` });
-    }
-    if (runtime === 'fake') text = `${text}${turn.fakeTags}`;
-    const interrupt = turn.interruptAfterMs
-      ? runtime === 'fake'
-        ? turn.interruptAfterMs.fake
-        : turn.interruptAfterMs.live
-      : null;
-    return { text, quote, interruptAfterMs: interrupt };
-  });
-  return { turns, interventions };
-}
-
-function failed(error: string): ArmSessionResult {
-  return {
-    ...NO_HARNESS_EVIDENCE,
-    logs: [],
-    reply: '',
-    replyMessageId: null,
-    reviewText: '',
-    timedOut: false,
-    error,
-    cappedAtUsd: null,
-    interventions: [],
-    conversation: null,
-  };
-}
-
-function shipEvidence(
-  session: DaySession,
-  repo: DayRepo,
-  stub: GitHubStub,
-  pullsBefore: number,
-): Pick<Evidence, 'draftPr' | 'pushedBranches'> {
-  if (!session.ship || !repo.remote) return { draftPr: null, pushedBranches: [] };
-  const branches = remoteBranches(repo.remote).filter((branch) => branch !== 'main');
-  const pull = stub.pulls.slice(pullsBefore).at(-1);
-  return {
-    draftPr: pull
-      ? { opened: true, draft: pull.draft, branchPushed: branches.includes(pull.head) }
-      : { opened: false, draft: false, branchPushed: false },
-    pushedBranches: branches,
-  };
-}
-
-function directShipInterventions(evidence: Pick<Evidence, 'pushedBranches'>): Intervention[] {
-  const list: Intervention[] = [];
-  if (evidence.pushedBranches.length === 0) {
-    list.push({ kind: 'manual-push', text: 'pushed the branch by hand' });
-  }
-  list.push({ kind: 'manual-pr', text: 'opened the draft PR by hand' });
-  return list;
-}
-
-const clip = (text: string, length: number) =>
-  text.length > length ? `${text.slice(0, length)}…` : text;
-
-async function runSession(
-  options: DayOptions,
-  session: DaySession,
-  state: ArmState,
-  stub: GitHubStub,
-): Promise<DayRecord> {
-  const arm = state.day.arm;
-  let repo = state.repos.get(session.repo);
-  if (!repo) {
-    repo = await createRepo(session.repo, options.dir, `${arm}-${session.repo}`);
-    state.repos.set(session.repo, repo);
-  }
-  const base = git(repo.path, 'rev-parse', 'HEAD').trim();
-  if (session.plantBefore) await applyPatch(repo.path, session.plantBefore);
-  const before = snapshot(repo.path);
-  const prepared = prepareTurns(session, arm, state, options.runtime);
-  const capUsd = sessionCap(session, arm);
-  const pullsBefore = stub.pulls.length;
-  const startedAt = new Date().toISOString();
-  const result = await state.day
-    .run(session, repo, prepared.turns, capUsd)
-    .catch((error: unknown) => failed(error instanceof Error ? error.message : String(error)));
-  const changed = changedFiles(repo.path, before);
-  const scratch = join(options.dir, 'scratch');
-  const hidden = session.expect.hidden
-    ? await hiddenCounts(session.repo, repo.path, session.expect.hidden, scratch)
-    : null;
-  const suite = session.expect.hidden ? await suiteCounts(session.repo, repo.path, scratch) : null;
-  const ship = shipEvidence(session, repo, stub, pullsBefore);
-  const interventions = [
-    ...prepared.interventions,
-    ...result.interventions,
-    ...(session.ship && arm !== 'harness' ? directShipInterventions(ship) : []),
-  ];
-  const evidence: Evidence = {
-    arm,
-    changed,
-    reply: result.reply,
-    reviewText: result.reviewText,
-    clarifyCard: result.clarifyCard,
-    planCard: result.planCard,
-    planSaved: result.planSaved,
-    hidden,
-    suite,
-    timedOut: result.timedOut,
-    error: result.error,
-    originalUntouched: repo.original
-      ? fingerprint(repo.original.path) === repo.original.fingerprint
-      : null,
-    roles: result.roles,
-    checksRan: result.checksRan,
-    builderPlanLoaded: result.builderPlanLoaded,
-    criticPlanLoaded: result.criticPlanLoaded,
-    topTier: result.topTier,
-    worktrees: result.worktrees,
-    cardFirst: result.cardFirst,
-    builders: result.builders,
-    parallelBuilders: result.parallelBuilders,
-    handoff: result.handoff,
-    resumed: result.resumed,
-    shipAvailable: result.shipAvailable,
-    interventions,
-    clicks: result.clicks,
-    ...ship,
-  };
-  const score = scoreSession(session, evidence, options.rates);
-  const diff = diffStat(repo.path, base);
-  await settle(repo, options.dir, base, session.reference, `Developer: ${session.id} done`);
-  state.replies.set(session.id, { reply: result.reply, messageId: result.replyMessageId });
-  const costUsd = result.logs.reduce((sum, log) => sum + log.metrics.costUsd, 0);
-  return {
-    session: session.id,
-    title: session.title,
-    arm,
-    level: arm === 'harness' ? LEVELS[session.level].label : DIRECT_LEVEL_LABEL,
-    startedAt,
-    wallMs: result.logs.reduce((sum, log) => sum + log.metrics.wallMs, 0),
-    costUsd,
-    capUsd,
-    overCap: result.cappedAtUsd !== null || costUsd > capUsd,
-    turns: result.logs.map((log) => ({
-      prompt: clip(log.prompt, 600),
-      runId: log.metrics.runId,
-      status: log.metrics.status,
-      error: log.metrics.error,
-      wallMs: log.metrics.wallMs,
-      costUsd: log.metrics.costUsd,
-      crew: log.metrics.agents.map(
-        (agent) => `${agent.role} ${agent.model ?? '?'}·${agent.effort ?? '?'}`,
-      ),
-      interrupted: log.interrupted,
-      reply: clip(log.metrics.reply, 3_000),
-    })),
-    evidence: {
-      ...evidence,
-      reply: clip(evidence.reply, 3_000),
-      reviewText: clip(evidence.reviewText, 4_000),
-    },
-    score,
-    diff,
-    shots: result.shots,
-    conversation: result.conversation,
-  };
 }
 
 async function save(options: DayOptions, run: DayRun): Promise<string> {
@@ -364,7 +109,6 @@ async function save(options: DayOptions, run: DayRun): Promise<string> {
   return path;
 }
 
-/** The sessions to play, with the default-level ones moved to `--day-level` when it is set. */
 export function daySessions(match: RegExp | null, dayLevel?: LevelKey): DaySession[] {
   return SESSIONS.filter((session) => !match || match.test(session.id)).map((session) =>
     dayLevel && session.level === DEFAULT_LEVEL ? { ...session, level: dayLevel } : session,
@@ -437,7 +181,6 @@ async function armDays(
           GITHUB_API_URL: stub.url,
           GH_CONFIG_DIR: ghHome,
           GIT_TERMINAL_PROMPT: '0',
-          // Live too: the memory store keeps Ship off the keychain's real GitHub token.
           SECRET_STORE: 'memory',
           MEMORY_SECRETS: JSON.stringify(secrets),
         },
@@ -525,7 +268,6 @@ export async function runDevDay(options: DayOptions): Promise<DayRun> {
 
 export const DEFAULT_DAY_RATES = DEFAULT_RATES;
 
-/** The session list with expected spend and caps per arm, for `--plan`. */
 export function printDayPlan(match: RegExp | null): void {
   const sessions = SESSIONS.filter((session) => !match || match.test(session.id));
   const totals = new Map<BaseArm, number>(DAY_ARMS.map((arm) => [arm, 0]));

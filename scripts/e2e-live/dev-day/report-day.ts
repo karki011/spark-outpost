@@ -1,4 +1,5 @@
-import type { DayRecord, DayRun } from './run-day.ts';
+import type { DayRun } from './run-day.ts';
+import type { DayRecord } from './session-run.ts';
 import { rank, summarise, type ArmSummary, type ScoredRun } from './score.ts';
 import { SESSIONS } from './sessions.ts';
 

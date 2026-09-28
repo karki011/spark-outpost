@@ -1,26 +1,23 @@
 import type { BaseArm } from '../scenario-types.ts';
 import { DEFAULT_LEVEL, type LevelKey } from './levels.ts';
 
-/** Which throwaway repo a session works in. */
 export type RepoKey = 'spark' | 'workbench' | 'external';
 
-/** What the right response to the request is. */
 export type ActionKind = 'answer' | 'options' | 'plan' | 'build' | 'clarify';
 
-/** Harness-only expectations, reported next to (not inside) the pass/fail outcome. */
 export type Behavior =
-  | 'noCrew' // answered or edited directly: no Architect, no Critic, no plan card
-  | 'planCard' // a plan card was shown and the approved plan was saved
-  | 'planLoaded' // the Builder and the Critic prompts carried the agreed plan
+  | 'noCrew'
+  | 'planCard'
+  | 'planLoaded'
   | 'criticRan'
   | 'checksRan'
   | 'topTier'
   | 'worktree'
-  | 'cardFirst' // a card came before the first Builder touched the repo
-  | 'oneBuilder' // Builder-sized chunks, no parallel Builders
-  | 'handoff' // context handoff at 75% (only reported when it triggers)
-  | 'resumed' // the turn after Stop continued the same agent session
-  | 'draftPr'; // Full auto shipped a draft PR to the fake GitHub
+  | 'cardFirst'
+  | 'oneBuilder'
+  | 'handoff'
+  | 'resumed'
+  | 'draftPr';
 
 export interface Edit {
   file: string;
@@ -28,38 +25,28 @@ export interface Edit {
   to: string;
 }
 
-/** Changes the bench (playing the developer) makes: whole files from fixtures, or edits. */
 export interface Patch {
-  /** repo path → fixture path, relative to dev-day/fixtures. */
   files?: Record<string, string>;
   edits?: readonly Edit[];
 }
 
 export interface QuoteSpec {
-  /** Quote a passage of the reply from this earlier session. */
   fromSession: string;
-  /** The first sentence of that reply matching this is the passage; else its first line. */
   pick: RegExp;
 }
 
 export interface DayTurn {
   text: string;
-  /** Appended in the fake runtime so the fake agents and the Jev stub take the right path. */
   fakeTags: string;
   quote?: QuoteSpec;
-  /** Press Stop this long after the Builder starts (the harness) or the turn starts (direct). */
   interruptAfterMs?: { live: number; fake: number };
 }
 
 export interface Expectation {
   kind: ActionKind;
-  /** Every pattern must match the final reply. */
   answer?: readonly RegExp[];
-  /** Each group names one planted problem; every pattern in a group must match the review. */
   review?: readonly (readonly RegExp[])[];
-  /** Hidden test file under fixtures/hidden/<repo>/. */
   hidden?: string;
-  /** Globs the change may touch (build sessions). */
   allowed?: readonly string[];
 }
 
@@ -68,30 +55,21 @@ export interface DaySession {
   title: string;
   why: string;
   repo: RepoKey;
-  /** Sessions sharing a thread continue the same chat (harness) or agent session (direct). */
   thread: string;
   level: LevelKey;
-  /** Harness: start a fresh agent session in the same chat first ("Start fresh"). */
   freshSession?: boolean;
-  /** Direct arms: a new agent session; with pastePlanFrom the user pastes that plan in. */
   directNewSession?: boolean;
   pastePlanFrom?: string;
   turns: readonly DayTurn[];
   expect: Expectation;
   behaviors: readonly Behavior[];
-  /** 'stop-on-clarify': when the harness asks, the bench records it and stops the run. */
   policy?: 'balanced' | 'stop-on-clarify';
-  /** Harness: if no plan was saved on its own, save the reply as the plan (a user click). */
   savePlan?: boolean;
-  /** Uncommitted changes the developer has in the tree before the session. */
   plantBefore?: Patch;
-  /** The state the developer ends up with (after fixing it by hand when the agent failed). */
   reference?: Patch;
-  /** Full auto should ship a draft PR to the fake GitHub remote. */
   ship?: boolean;
   checks?: readonly string[];
   expectUsd: Record<BaseArm, number>;
-  /** User minutes to notice, undo and redo it by hand when the session fails. */
   repairMinutes: number;
   repairWhy: string;
 }
@@ -100,14 +78,12 @@ const VITEST_ANALYTICS =
   'node node_modules/vitest/vitest.mjs run --project unit apps/web/src/analytics';
 const NODE_TESTS = 'node --test "test/**/*.test.ts"';
 
-/** The project checks the developer set up once per repo (the external repo keeps its own). */
 export const REPO_CHECKS: Record<RepoKey, readonly string[] | undefined> = {
   spark: [VITEST_ANALYTICS],
   workbench: [NODE_TESTS],
   external: undefined,
 };
 
-/** Committed before the day starts: the typo (s05) and the rounding bug (s06). */
 export const SPARK_BASELINE: Patch = {
   edits: [
     {
@@ -123,7 +99,6 @@ export const SPARK_BASELINE: Patch = {
   ],
 };
 
-/** Paths removed from the spark copy so the agents cannot read the answers. */
 export const SPARK_HIDDEN_PATHS = ['scripts/e2e-live/dev-day', 'docs/benchmarks/dev-day-PLAN.md'];
 
 const CSV_SPEC = [
@@ -328,7 +303,6 @@ export const SESSIONS: readonly DaySession[] = [
     expect: {
       kind: 'answer',
       review: [
-        // "makes zero singular" names the plural() bug without the word "plural" (rerun, Auto-edit).
         [/plural|singular/i, /\b0\b|zero|<= ?1|none/i],
         [/median/i, /sort|even/i],
       ],

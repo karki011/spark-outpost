@@ -1,9 +1,3 @@
-/**
- * Re-score a saved dev-day run with the current score.ts, without re-running anything:
- *   node --import tsx scripts/e2e-live/dev-day/rescore-day.ts <run.json> <out-prefix>
- * Writes <out-prefix>.json and .md. A harness clarify card the developer answered, after which the
- * run replied in full, no longer counts as the turn's action (see harness-day.ts).
- */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { ANSWERED_CLARIFY_REPLY_CHARS } from './harness-day.ts';
 import { renderDayReport } from './report-day.ts';
