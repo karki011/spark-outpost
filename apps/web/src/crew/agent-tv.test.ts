@@ -82,15 +82,31 @@ describe('Agent TV stage layout', () => {
 });
 
 describe('Agent TV saved settings', () => {
-  it('restores position, size and mute, ignoring anything malformed', () => {
-    const saved = JSON.stringify({ position: { x: 40, y: 60 }, size: 'l', muted: true });
-    expect(parseSavedTv(saved)).toEqual({ position: { x: 40, y: 60 }, size: 'l', muted: true });
-    expect(parseSavedTv('{"position":{"x":"a"},"size":"xl"}')).toEqual({
+  it('restores position, size, mute and view, ignoring anything malformed', () => {
+    const saved = JSON.stringify({
+      position: { x: 40, y: 60 },
+      size: 'l',
+      muted: true,
+      view: 'list',
+    });
+    expect(parseSavedTv(saved)).toEqual({
+      position: { x: 40, y: 60 },
+      size: 'l',
+      muted: true,
+      view: 'list',
+    });
+    expect(parseSavedTv('{"position":{"x":"a"},"size":"xl","view":"grid"}')).toEqual({
       position: null,
       size: 's',
       muted: false,
+      view: 'stage',
     });
-    expect(parseSavedTv('not json')).toEqual({ position: null, size: 's', muted: false });
+    expect(parseSavedTv('not json')).toEqual({
+      position: null,
+      size: 's',
+      muted: false,
+      view: 'stage',
+    });
   });
 });
 

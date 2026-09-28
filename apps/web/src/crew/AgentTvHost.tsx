@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import { closeAgentTv, useAgentTv } from './agent-tv-store.ts';
 import { AgentTv } from './AgentTv.tsx';
@@ -11,6 +11,7 @@ import {
 } from './conversation-crew.ts';
 import { busyCount } from './crew-model.ts';
 import { scrollToAnchor } from './scroll-to-anchor.ts';
+import { tvListRows } from './tv-list.ts';
 import { lastDecisionLine, pendingAsks } from './tv-scene.ts';
 
 interface AgentTvHostProps {
@@ -20,6 +21,7 @@ interface AgentTvHostProps {
 
 export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
   const { sourceId } = useAgentTv();
+  const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: queryKeys.conversation(sourceId ?? ''),
     queryFn: () => api.getConversation(sourceId!),
@@ -32,6 +34,14 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
   const elsewhere = sourceId !== null && sourceId !== activeId;
   const asking = agents.some((agent) => agent.state === 'waiting');
   const idle = busyCount(agents) === 0 && !waiting && !asking;
+  const stop = useMutation({
+    mutationFn: api.cancelRun,
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.conversation(sourceId ?? '') }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }),
+      ]),
+  });
 
   useEffect(() => {
     if (elsewhere && idle && source) closeAgentTv();
@@ -44,10 +54,15 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
     scrollToAnchor(anchor);
   };
 
+  const asks = pendingAsks(source, orchestration, agents);
+
   return (
     <AgentTv
       members={agents}
-      asks={pendingAsks(source, orchestration, agents)}
+      asks={asks}
+      rows={tvListRows(source, orchestration, agents, asks)}
+      stopping={stop.isPending ? (stop.variables ?? null) : null}
+      onStop={(runId) => stop.mutate(runId)}
       decision={lastDecisionLine(orchestration)}
       onPick={(agentId) => jump(agentAnchor(orchestration.runId, agentId))}
       onAsk={(approvalId) => jump(approvalAnchor(approvalId))}
