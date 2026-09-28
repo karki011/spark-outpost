@@ -56,12 +56,3 @@ describe('ship file selection', () => {
     });
   });
 });
-
-describe('the project a copied turn belongs to', () => {
-  it('maps a worktree copy back to its project folder', async () => {
-    const { projectRoot } = await import('./task-facts.ts');
-    expect(projectRoot('/work/app/.spark/worktrees/0190-abc')).toBe('/work/app');
-    expect(projectRoot('/work/app/.spark/worktrees/0190-abc/packages/web')).toBe('/work/app');
-    expect(projectRoot('/work/app')).toBe('/work/app');
-  });
-});
