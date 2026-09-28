@@ -14,6 +14,7 @@ import {
   FS_WRITE_TOOL_KIND,
   decide,
   type ApprovalRequest,
+  type Decision,
   type RunRule,
   type RunRules,
 } from '../approvals/decide.ts';
@@ -30,6 +31,7 @@ import type { Db } from '../persistence/db.ts';
 import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts';
 import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
+import type { Append } from './agent-turn.ts';
 import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approval-waiters.ts';
 import { runEvents } from './run-events.ts';
 
@@ -61,7 +63,7 @@ export interface GateDeps {
   posture?: ModePosture;
   builder?: boolean;
   extraAllowlist?: () => readonly string[];
-  append: (event: RunEvent, options?: AppendOptions) => Promise<number>;
+  append: Append;
   waiters: ApprovalWaiters;
   pollMs?: number;
   timeoutMs?: number;
@@ -106,7 +108,7 @@ export function subject(request: ApprovalRequest): string {
   return request.title.trim() || 'an action';
 }
 
-export function approvalPayload(request: ApprovalRequest): ApprovalPayload {
+function approvalPayload(request: ApprovalRequest): ApprovalPayload {
   let budget = DIFF_BUDGET;
   let truncated = false;
   const cut = (text: string) => {
@@ -199,6 +201,16 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     if (deps.posture) return deps.posture;
     const mode = modeOf(request);
     return modePosture(deps.provider, mode, modeKind(deps.modes ?? [], mode));
+  };
+
+  const allowedWhy = (
+    decision: Extract<Decision, { verdict: 'allow' }>,
+    request: ApprovalRequest,
+  ): string => {
+    if (decision.why !== undefined) return decision.why;
+    if (decision.by === 'allowlist') return 'on the project allowlist';
+    if (decision.by === 'run_rule') return 'allowed for this run';
+    return `${modeLabel(modeOf(request))} mode`;
   };
 
   const observe = (request: ApprovalRequest, decision: ObservedDecision) => {
@@ -379,14 +391,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       by: decision.by,
       approvalId: recorded.id,
     });
-    const why =
-      decision.why ??
-      (decision.by === 'allowlist'
-        ? 'on the project allowlist'
-        : decision.by === 'run_rule'
-          ? 'allowed for this run'
-          : `${modeLabel(modeOf(request))} mode`);
-    return allow(request, `Allowed ${what} (${why})`, recorded.id);
+    return allow(request, `Allowed ${what} (${allowedWhy(decision, request)})`, recorded.id);
   };
 
   const review = async (request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer> => {

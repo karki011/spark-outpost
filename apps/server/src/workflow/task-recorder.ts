@@ -1,14 +1,13 @@
-import type { PlanEntry, RunEvent } from '@spark-outpost/contracts';
+import type { PlanEntry } from '@spark-outpost/contracts';
 import { latestPlan } from '../persistence/artifacts.ts';
 import type { Db } from '../persistence/db.ts';
-import type { AppendOptions } from '../persistence/run-events.ts';
 import { addTaskLink, runTask, taskForWorkingRun, type RunTask } from '../persistence/tasks.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
 import { nextPlanWrite, type StoredPlan } from '../tasks/plan-versions.ts';
 import { findPullRequests } from '../tasks/pr-links.ts';
+import type { Append } from './agent-turn.ts';
 import { runEvents } from './run-events.ts';
 
-type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
 type LinkOutput = Omit<Extract<ProviderOutput, { kind: 'link' }>, 'kind'>;
 
 export interface TaskRecorder {
