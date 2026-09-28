@@ -57,6 +57,7 @@ export interface RunRow {
   step_index?: number | null;
   agent_label?: string | null;
   category?: string | null;
+  followed_instructions?: string[] | null;
 }
 
 export interface ConversationSummaryRow extends PendingApprovalRow {
@@ -120,6 +121,7 @@ export function toRun(row: RunRow): Run {
     stepIndex: row.step_index ?? null,
     agentLabel: row.agent_label ?? null,
     category: categorySchema.safeParse(row.category).data ?? null,
+    following: row.followed_instructions ?? null,
   };
 }
 

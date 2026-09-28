@@ -1,0 +1,88 @@
+# Repo agent configuration
+
+How Claude and Codex use a linked repo's own agent setup (instructions, skills, commands, subagents, hooks, MCP servers) without letting the repo loosen Spark Outpost's rules. Checked September 28, 2026 against `@agentclientprotocol/claude-agent-acp` 0.81.2 (Claude Agent SDK 0.3.280, Claude Code CLI 2.1.280) and `@agentclientprotocol/codex-acp` 1.13.1 (Codex 0.156.1, patched).
+
+## Policy
+
+| Repo content                                                                                                                                               | Default         | How it reaches the agent                                                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Instructions: `CLAUDE.md`, `.claude/CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`, `.cursorrules`, `.cursor/rules/*.md(c)`, `.github/copilot-instructions.md` | On              | Claude: system prompt append (all files, AGENTS.md included). Codex: reads AGENTS.md itself; the other files go in `developer_instructions`. Nested `CLAUDE.md`/`AGENTS.md` are listed by path for the agent to read. |
+| Skills (`.claude/skills`, `.agents/skills`, `.codex/skills`) and commands (`.claude/commands`)                                                             | On              | Claude: a sanitized local plugin. Codex reads `.agents/skills` and `.codex/skills` itself. Inline `!` shell in skills and commands never runs.                                                                        |
+| Subagents (`.claude/agents`)                                                                                                                               | On              | Claude: the same plugin. Tools they call go through our rules.                                                                                                                                                        |
+| Hooks (`hooks` in `.claude/settings.json` and `.claude/settings.local.json`)                                                                               | Off             | Claude only. On means the exact set the user reviewed, passed as flag settings. A changed set is off until reviewed again.                                                                                            |
+| MCP servers (`.mcp.json`)                                                                                                                                  | Off, per server | ACP `mcpServers`. On means the exact config the user reviewed. Every tool call asks first.                                                                                                                            |
+| Allow rules, `env`, `apiKeyHelper` and other settings in `.claude/settings*.json`; `.codex/config.toml`                                                    | Ignored         | Never loaded. Listed in the popover.                                                                                                                                                                                  |
+
+## Step 1: what loading the project settings source would do (Claude)
+
+Method: a fake Anthropic API on 127.0.0.1 records every request the real CLI makes (system prompt, tools, auth header) and answers with canned text or tool calls, so no tokens are spent. A trap repo holds each file type plus hooks, `apiKeyHelper`, `statusLine`, `otelHeadersHelper`, `awsAuthRefresh`, `env` (including `ANTHROPIC_BASE_URL` pointing at a second recording server and `BASH_ENV`), `permissions.allow: [Bash, Edit, Write, Read]`, `defaultMode: bypassPermissions`, `additionalDirectories` outside the repo and a `.mcp.json` server. Every command touches a marker file. The real `claude-agent-acp` is driven over ACP with our session `_meta`. Scripts are not committed (they lived in `.local/verify/`).
+
+| Question                                                                                      | Result with `settingSources: ['project', 'local']`                                                                                                                                                                                                              |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Loads CLAUDE.md, CLAUDE.local.md, skills, commands, subagents?                                | Yes, all five appear in the first model request. Nested `sub/CLAUDE.md` does not (it loads lazily). AGENTS.md is not read.                                                                                                                                      |
+| Does flag `disableAllHooks: true` win over the repo's `disableAllHooks: false` and its hooks? | Yes. No project or local hook ran. The adapter's own SDK callback hooks (`PostToolUse`, `UserPromptSubmit`) still fired.                                                                                                                                        |
+| Permission merge                                                                              | Our flag `ask: [Bash, Edit, Write]` still asked for Bash and Write despite the repo's `allow` rules and `bypassPermissions` default (deny, then ask, then allow). `blockReadsOutsideWorkingDirectories` refused a read into the repo's `additionalDirectories`. |
+| Command-executing settings                                                                    | **`apiKeyHelper` ran.** Flag `apiKeyHelper: ""` stops it. `statusLine`, `otelHeadersHelper` and `awsAuthRefresh` did not run in these sessions.                                                                                                                 |
+| Project `env`                                                                                 | **Applied.** `ANTHROPIC_BASE_URL` sent every model request, with our API key, to the second server. A flag `env` entry overrides a key it names, but keys we don't know about reach the CLI and Bash.                                                           |
+| Mid-session changes                                                                           | **The CLI hot-reloads `.claude/settings.json`.** An env key added after the session started reached the next Bash command.                                                                                                                                      |
+
+Because a repo's `env` can't be neutralized (unknown keys, hot reload), `settingSources` stays `[]` and `strictMcpConfig` stays on. Instead:
+
+- Instructions go through `_meta.systemPrompt.append`, with a header saying they are repository content that can't grant permissions. Verified: appended text reaches the system prompt.
+- Skills, commands and subagents go through the SDK `plugins` option, pointing at a generated plugin folder under `$TMPDIR/spark-outpost-repo-plugins/<content hash>` (`agent-config/plugin-dir.ts`). Frontmatter is reduced to an allowlist, so `allowed-tools`, `hooks`, `mcpServers` and `permissionMode` are dropped. Verified: all three appear, namespaced as `<repo>:<name>` (for example `/app:greet`).
+- `disableSkillShellExecution: true` is always set. Verified: a command's `` !`touch …` `` became "[shell command execution disabled by policy]".
+- Hooks off: `disableAllHooks: true`. Hooks on: the reviewed hooks object goes in flag `settings.hooks`. Verified both: flag hooks ran; with `disableAllHooks` they didn't.
+- MCP: enabled servers go in ACP `session/new` `mcpServers`, plus an `ask` rule `mcp__<server>`. Verified with a local stdio echo server: each call to its tool raised `session/request_permission` in both Ask and Do sessions, even without the rule. Ask declines every request; Do sends it to the approval gate, where an MCP call is an `other` action: it asks at every involvement level except Full auto, and "allow for this run" covers that tool only.
+
+Also noted: the adapter's own `SettingsManager` reads the project's `permissions.defaultMode` whatever `settingSources` says (escalating modes are filtered). This predates this change; we set the mode explicitly and a run stops if the mode changes unsafely.
+
+## Codex
+
+| Question                   | Finding                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AGENTS.md                  | Read natively from the repo, trusted or not (`codex debug prompt-input`). `project_doc_max_bytes = 0` suppresses it; we set it when the instructions switch is off for the primary repo.                                                                                                                                                                                                                    |
+| `.codex/config.toml`       | Loaded only for trusted projects. codex-acp marked every session root trusted, and a repo's `[mcp_servers.*]` entry was **started at `session/new`** (marker test through the real adapter). We now patch the root to `untrusted` ([PATCHES.md](PATCHES.md) part 5); the same test starts nothing. Approval and sandbox are sent per turn from the ACP mode, so the repo could not loosen them even before. |
+| Skills                     | `.agents/skills` and `.codex/skills` load whether trusted or not. `skills.include_instructions = false` hides the listing when the switch is off (this hides user skills too). `features.skill_mcp_dependency_install = false` is always set.                                                                                                                                                               |
+| Other instruction files    | Passed as `developer_instructions` in `CODEX_CONFIG`.                                                                                                                                                                                                                                                                                                                                                       |
+| Hooks, commands, subagents | Not used with Codex (its project config never loads).                                                                                                                                                                                                                                                                                                                                                       |
+| MCP                        | Stdio and HTTP through ACP `mcpServers`. codex-acp advertises `mcpCapabilities` `{ http: true, sse: false }`, so SSE servers are skipped with a note. Verified offline (fake Responses API, local stdio echo server): Codex calls MCP tools from its `exec` code tool, and each call raised `session/request_permission` in both `read-only` and `ask-every-action` before the server was called.           |
+
+## Discovery
+
+`agent-config/discovery.ts` lists, per repo root, instruction files (root files by name, nested ones from `git ls-files`), skills with frontmatter name and description, commands (`ops/deploy.md` becomes `ops:deploy`), subagents, hooks (event, matcher, command preview, source file), MCP servers (name, transport, command and args or URL, env and header names) and ignored settings (allow rules, env names, command settings, other keys, `.codex/config.toml`). Files are only read and parsed, never run; files over 256 KB are skipped; bad JSON becomes a warning. Results are cached per root by `git HEAD` plus the path, mtime and size of every candidate file, so a new untracked nested `AGENTS.md` shows up once HEAD or a watched file changes.
+
+## Storage (migration 0047)
+
+- `project_agent_settings`: per project, `instructions`, `skills`, `commands`, `subagents` (default true) and `hooks_fingerprint` (null means off). Hooks count as on only while the repo's current hooks hash to that fingerprint.
+- `mcp_servers`: `source` (`project`, `user` or `imported:<tool>`), `project_id` (required for `project`, never set otherwise), name, transport, a config snapshot with env and header names but no values, and a fingerprint of the full config. Project servers are scoped to their project and never listed globally.
+- `mcp_server_enablements`: per server and scope (`global`, `project`, `chat`) with the reviewed fingerprint. Only `project` scope is used today. Secrets for user-level servers will be keychain references, not values.
+- `agent_config_audit`: every switch change, with the hook commands or MCP config that was approved.
+- `runs.followed_instructions`: the files a run was given, shown as "Following: …" in the turn header.
+
+MCP env values like `${HOME}` are expanded from the server's environment with secret-looking names removed (`childEnvironment`), so `${GITHUB_TOKEN}` expands to an empty string.
+
+## Launch
+
+`workflow/agent-turn.ts` calls `loadRepoLaunch` with the chat's project roots. Settings are matched to roots by the chat's project order, so a Builder worktree in place of the first root uses the first project's switches; its MCP servers and hooks still have to match the approved fingerprints. `acp-provider.ts` turns the launch into Claude `_meta` (`claudeSessionMeta`) or Codex `CODEX_CONFIG` (`codexConfig`) and the `mcpServers` list.
+
+## UI
+
+The context bar's sliders button ("Agent setup for <project>") opens a popover with cards for instructions, skills, commands, subagents, hooks (with command previews and a warning), MCP servers (per-server switches, command or URL, env names, warning) and ignored settings. A dot marks the button when something found is off, changed or unreadable. Focus stays inside while open; Escape returns focus to the button.
+
+## Tests
+
+- Unit: `agent-config/discovery.test.ts` (fixture repo with every file type, caching, nothing executed), `agents/acp/repo-session.test.ts` (meta policy, plugin sanitizing, Codex config, MCP filtering), `agents.test.ts` (patch guard), `web/.../agent-setup.test.ts`.
+- Integration without a live model: `test/acp-repo-config.test.ts` checks the `_meta`, `CODEX_CONFIG` and `mcpServers` the fake ACP agent receives.
+- DB: `test/agent-config.db.test.ts` (API, fingerprints, audit, cascade, launch).
+- Browser: `tests/browser/agent-setup.spec.ts`.
+- Live, September 28, Haiku 4.5, throwaway repo in the session scratchpad, about $0.05 in total: with defaults, Claude answered with the CLAUDE.md codeword, listed the skill as `live-repo:zebra-stripes` and the MCP tool `mcp__echo__echo`, and the `UserPromptSubmit` hook did not run. With hooks approved it ran.
+
+## Limitations
+
+- Off means "not given to the agent", not "hidden": with instructions off, the live Claude run read CLAUDE.md with its Read tool and still answered with the codeword.
+- CLAUDE.md `@imports` are not expanded, and nested instruction files are listed rather than loaded when the agent enters a folder.
+- Plugin names namespace skills and commands (`/app:greet`, not `/greet`). A skill's supporting files stay in the repo; the skill text names that folder.
+- When hooks are on, a `PreToolUse` hook can approve or block tool calls; the popover says so.
+- MCP servers that need secrets from the shell don't get them yet.
+- Removing and restoring a project drops its agent settings and MCP approvals.
+- Instructions text is capped at 48 KB per session (24 KB per file).

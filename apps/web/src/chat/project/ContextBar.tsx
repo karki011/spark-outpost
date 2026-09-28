@@ -4,6 +4,7 @@ import { AnimatePresence } from 'motion/react';
 import type { Project } from '@spark-outpost/contracts';
 import { BranchIcon, ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
+import { AgentSetup } from './AgentSetup.tsx';
 import { FolderDialog } from './FolderDialog.tsx';
 import { RepoMenu } from './RepoMenu.tsx';
 import { recentProjects, repoSummary } from './repo-list.ts';
@@ -83,6 +84,7 @@ export function ContextBar({ conversationId, repos, popover }: ContextBarProps) 
             <span className="ctx-branch-name">{branch}</span>
           </span>
         )}
+        {primary && <AgentSetup key={primary.id} repos={repos} />}
       </div>
       <RepoMenu
         id={menuId}

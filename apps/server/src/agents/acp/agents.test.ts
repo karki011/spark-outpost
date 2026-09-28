@@ -105,13 +105,13 @@ describe('Codex launch', () => {
     const chat = agentDefinitions.codex.conversationEnv?.('/tmp/run') ?? {};
     expect(chat).toMatchObject({ INITIAL_AGENT_MODE: 'read-only', TMPDIR: '/tmp/run' });
     expect(JSON.parse(chat.CODEX_CONFIG ?? '{}')).toEqual({
-      features: { shell_tool: false, unified_exec: false },
+      features: { shell_tool: false, unified_exec: false, skill_mcp_dependency_install: false },
       web_search: 'disabled',
     });
     const project = agentDefinitions.codex.conversationEnv?.('/tmp/run', true) ?? {};
     expect(project).toMatchObject({ INITIAL_AGENT_MODE: 'read-only' });
     expect(JSON.parse(project.CODEX_CONFIG ?? '{}')).toEqual({
-      features: { shell_tool: true, unified_exec: false },
+      features: { shell_tool: true, unified_exec: false, skill_mcp_dependency_install: false },
       web_search: 'disabled',
     });
   });
@@ -148,6 +148,15 @@ describe('Codex launch', () => {
       expect(mode).toContain('networkAccess: false');
       expect(mode).toContain('excludeSlashTmp: true');
       expect(source).toContain('_AgentMode.ReadOnly, _AgentMode.AskEveryAction,');
+    });
+
+    it('marks session roots untrusted so a repo’s .codex/config.toml is never loaded', () => {
+      const config = source.slice(
+        source.indexOf('async createSessionConfig('),
+        source.indexOf('mergeSandboxWorkspaceWriteRoots(mergedConfig'),
+      );
+      expect(config).toContain('trust_level: "untrusted"');
+      expect(source).not.toContain('trust_level: "trusted"');
     });
 
     it('reports the whole turn’s tokens, not only the last model request', () => {
