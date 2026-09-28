@@ -18,7 +18,6 @@ import type { AgentUsage } from '../bench/results.ts';
 import { collectTurn, type TurnMetrics } from './collect.ts';
 
 export const CODEX_MODEL = 'gpt-6-sol';
-/** A Stop pressed before the agent got going can be missed; press it again after this long. */
 const RECANCEL_MS = 5_000;
 export type CodexEffort = 'low' | 'medium' | 'high';
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -34,7 +33,6 @@ export interface InProcessOptions {
 }
 
 export interface SendOptions {
-  /** Press Stop this long after the turn starts, like a user interrupting it. */
   cancelAfterMs?: number;
 }
 
@@ -307,10 +305,6 @@ function codexMetrics(run: CodexRun, wallMs: number, effort: CodexEffort): TurnM
   };
 }
 
-/**
- * One codex exec turn, resuming `threadId` when given. With `cancelAfterMs` the process is
- * stopped early, like a user pressing Stop.
- */
 export async function codexTurn(
   repo: string,
   text: string,

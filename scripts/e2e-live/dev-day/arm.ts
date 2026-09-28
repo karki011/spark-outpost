@@ -5,14 +5,12 @@ import type { DayRepo } from './repos.ts';
 import type { Evidence } from './score.ts';
 import type { DaySession } from './sessions.ts';
 
-/** A quote the developer selected in an earlier reply (select-to-chat). */
 export interface PreparedQuote {
   passage: string;
   messageId: string | null;
   anchor: TextAnchor;
 }
 
-/** A turn as the arm sends it: quotes composed in, fake tags added in the dry run. */
 export interface PreparedTurn {
   text: string;
   quote: PreparedQuote | null;
@@ -25,7 +23,6 @@ export interface TurnLog {
   interrupted: boolean;
 }
 
-/** What an arm hands back after a session; the runner adds the repo-side evidence. */
 export type ArmSessionResult = Omit<
   Evidence,
   'arm' | 'changed' | 'hidden' | 'suite' | 'originalUntouched' | 'draftPr' | 'pushedBranches'
@@ -48,7 +45,6 @@ export interface ArmDay {
   close(): Promise<void>;
 }
 
-/** Evidence fields only the harness can observe, blank for the direct arms. */
 export const NO_HARNESS_EVIDENCE = {
   clarifyCard: false,
   planCard: false,

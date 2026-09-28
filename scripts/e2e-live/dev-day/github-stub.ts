@@ -4,7 +4,6 @@ import { fakeGitHub, type FakePull } from '../../../apps/server/test/fake-github
 export const GITHUB_STUB_PORT = 4429;
 export const GITHUB_STUB_URL = `http://127.0.0.1:${GITHUB_STUB_PORT}`;
 
-/** The token the bench saves for Ship. The stub records any other credential it is sent. */
 export const FAKE_GITHUB_TOKEN = 'ghp_devday0fake0github0token0never0real';
 
 export interface StubPull {
@@ -22,7 +21,6 @@ export interface GitHubStub {
   url: string;
   pulls: StubPull[];
   requests: string[];
-  /** Requests that carried anything other than the bench's fake token (should stay empty). */
   foreignCredentials: string[];
   close(): Promise<void>;
 }
@@ -38,10 +36,6 @@ const toStubPull = (pull: FakePull): StubPull => ({
   html_url: pull.html_url,
 });
 
-/**
- * The app's own GitHub REST fake (apps/server/test/fake-github.ts) on a local port, so the bench
- * and the server tests fake the same API surface. Nothing leaves this process.
- */
 export async function startGitHubStub(port = GITHUB_STUB_PORT): Promise<GitHubStub> {
   const fake = fakeGitHub();
   const requests: string[] = [];

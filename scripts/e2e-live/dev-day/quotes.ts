@@ -5,7 +5,6 @@ import { LEAD_IN_LATEST, composeMessage } from '../../../apps/web/src/chat/quote
 const PASSAGE_MAX = 400;
 const EMPTY_REPLY = 'The earlier reply was empty.';
 
-/** The passage a developer would select: the first sentence matching `pick`, else the first. */
 export function pickPassage(reply: string, pick: RegExp): string {
   const sentences = reply
     .split(/(?<=[.!?])\s+|\n+/)
@@ -15,7 +14,6 @@ export function pickPassage(reply: string, pick: RegExp): string {
   return (chosen || EMPTY_REPLY).slice(0, PASSAGE_MAX);
 }
 
-/** The anchor the web UI records for a selection, measured on the reply text. */
 export function anchorFor(reply: string, passage: string): TextAnchor {
   const found = reply.indexOf(passage);
   const start = found < 0 ? 0 : found;
@@ -29,7 +27,6 @@ export function anchorFor(reply: string, passage: string): TextAnchor {
   };
 }
 
-/** The message the composer sends for one quote on the latest reply plus typed text. */
 export function quotedMessage(passage: string, typed: string): string {
   return composeMessage([{ text: passage, note: '' }], typed, LEAD_IN_LATEST);
 }

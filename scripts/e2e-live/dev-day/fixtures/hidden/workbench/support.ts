@@ -20,7 +20,6 @@ export const ORIGINAL_MIGRATIONS: Record<string, string> = {
 `,
 };
 
-/** A database as it was before today: only the original two migrations, applied. */
 export function legacyDb(): DatabaseSync {
   const db = openDb();
   db.exec('CREATE TABLE schema_migrations (name TEXT PRIMARY KEY)');

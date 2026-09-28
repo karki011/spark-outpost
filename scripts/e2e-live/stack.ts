@@ -81,11 +81,9 @@ async function prepareDatabase(version: Version): Promise<Target> {
   };
 }
 
-/** Extra settings for one stack: env for the API and worker, and fake-runtime secrets. */
 export interface StackExtras {
   env?: NodeJS.ProcessEnv;
   secrets?: Record<string, string>;
-  /** Env names to drop from the inherited environment (say, real GitHub tokens). */
   unset?: readonly string[];
 }
 

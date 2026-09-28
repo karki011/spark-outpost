@@ -28,7 +28,6 @@ function result(logs: TurnLog[], timeoutMs: number): ArmSessionResult {
   };
 }
 
-/** One Claude agent in Do mode, no orchestrator and no Jev (scripts/bench's direct arm). */
 export class DirectClaudeDay implements ArmDay {
   readonly arm = 'direct-claude' as const;
   private readonly sessions = new Map<string, InProcessSession>();
@@ -66,7 +65,6 @@ export class DirectClaudeDay implements ArmDay {
   async close(): Promise<void> {}
 }
 
-/** `codex exec` in a workspace-write sandbox; `exec resume` continues a thread. */
 export class DirectCodexDay implements ArmDay {
   readonly arm = 'direct-codex' as const;
   private readonly threads = new Map<string, string | null>();

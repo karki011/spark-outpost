@@ -10,12 +10,10 @@ const run = promisify(execFile);
 export const ROOT = resolve(import.meta.dirname, '../../..');
 export const FIXTURES = join(import.meta.dirname, 'fixtures');
 
-/** The user's read-only work clone for s14. The bench never writes to it; it clones it. */
 export const EXTERNAL_REPO =
   process.env.DEV_DAY_EXTERNAL_REPO ??
   '/private/tmp/claude-501/-Users-hmk-Downloads-spark-outpost/de4f337c-37ca-43f6-b4b8-456b09d97ef9/scratchpad/repos/feature-web-apps';
 
-/** The fake remote looks like a GitHub Enterprise host so no real token or gh login matches it. */
 export const FAKE_REMOTE_HOST = 'github.e2e.localhost';
 export const FAKE_REMOTE_URL = `https://${FAKE_REMOTE_HOST}/e2e-bench/workbench.git`;
 
@@ -30,9 +28,7 @@ export function git(repo: string, ...args: string[]): string {
 export interface DayRepo {
   key: RepoKey;
   path: string;
-  /** The bare repo standing in for the GitHub remote (workbench only). */
   remote: string | null;
-  /** The read-only original a clone was made from, and its state before the day. */
   original: { path: string; fingerprint: string } | null;
   install: { ms: number; error: string | null } | null;
 }
@@ -75,10 +71,6 @@ async function install(repo: string): Promise<DayRepo['install']> {
   return { ms: Date.now() - started, error };
 }
 
-/**
- * A throwaway copy of this checkout's HEAD with no history (so neither the answers under
- * scripts/e2e-live/dev-day nor their history are readable), plus the day's planted typo and bug.
- */
 export async function createSparkRepo(dir: string, name: string): Promise<DayRepo> {
   const path = join(dir, 'repos', name);
   assertInside(path, dir);
@@ -96,7 +88,6 @@ export async function createSparkRepo(dir: string, name: string): Promise<DayRep
   return { key: 'spark', path, remote: null, original: null, install: installed };
 }
 
-/** The small workbench fixture, with a bare repo behind a GitHub-looking origin URL. */
 export async function createWorkbenchRepo(dir: string, name: string): Promise<DayRepo> {
   const path = join(dir, 'repos', name);
   const remote = join(dir, 'repos', `${name}-remote.git`);
@@ -109,7 +100,6 @@ export async function createWorkbenchRepo(dir: string, name: string): Promise<Da
   git(path, 'commit', '-qm', 'Workbench');
   execFileSync('git', ['init', '-q', '--bare', '-b', 'main', remote]);
   git(path, 'remote', 'add', 'origin', FAKE_REMOTE_URL);
-  // Every URL on the fake host resolves to the local bare repo; any other https remote is a dead end.
   git(path, 'config', `url.file://${remote}.insteadOf`, FAKE_REMOTE_URL);
   git(path, 'config', 'url.file:///nonexistent/dev-day-blocked/.insteadOf', 'https://');
   git(path, 'push', '-q', 'origin', 'main');
@@ -126,7 +116,6 @@ export function fingerprint(repo: string): string {
   return createHash('sha256').update(`${head}\n${status}\n${refs}`).digest('hex');
 }
 
-/** s14 works in a local clone; the original is fingerprinted to prove it was never touched. */
 export async function createExternalRepo(dir: string, name: string): Promise<DayRepo> {
   const path = join(dir, 'repos', name);
   assertInside(path, dir);
@@ -158,7 +147,6 @@ export interface Snapshot {
   files: Map<string, string>;
 }
 
-/** HEAD plus a hash of every modified or untracked file, so later edits show up exactly. */
 export function snapshot(repo: string): Snapshot {
   const status = git(repo, 'status', '--porcelain', '-z', '-uall');
   const files = new Map<string, string>();
@@ -188,7 +176,6 @@ function blobAt(repo: string, commit: string, path: string): string {
   }
 }
 
-/** Files the session changed: commits since the base plus working-tree differences. */
 export function changedFiles(repo: string, before: Snapshot): string[] {
   const after = snapshot(repo);
   const changed = new Set<string>();
@@ -206,7 +193,6 @@ export function changedFiles(repo: string, before: Snapshot): string[] {
   return [...changed].sort();
 }
 
-/** Line counts against the base commit, for the report. */
 export function diffStat(repo: string, base: string): DiffStat {
   git(repo, 'add', '-A');
   const stat = parseNumstat(git(repo, 'diff', '--cached', '--numstat', base));
@@ -214,10 +200,6 @@ export function diffStat(repo: string, base: string): DiffStat {
   return { ...stat, files };
 }
 
-/**
- * Put the scratch repo back on its main branch at `base`, dropping whatever the session left.
- * Only ever runs inside the run directory: this is the bench's own throwaway copy.
- */
 export function restore(repo: DayRepo, dir: string, base: string): void {
   assertInside(repo.path, dir);
   git(repo.path, 'checkout', '-q', '-f', 'main');
@@ -226,7 +208,6 @@ export function restore(repo: DayRepo, dir: string, base: string): void {
   git(repo.path, 'worktree', 'prune');
 }
 
-/** The developer's state after the session: the reference change, committed. */
 export async function settle(
   repo: DayRepo,
   dir: string,
