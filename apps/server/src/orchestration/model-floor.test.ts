@@ -6,7 +6,7 @@ import type { JevCall } from './jev-calls.ts';
 import type { ScanReport } from '../codescan/scan.ts';
 import { complexByBreadth } from './builder-complexity.ts';
 import { keepBuilderSession } from './member-routes.ts';
-import { builderPick, FLOOR_REASON, floorText } from './builder-floor.ts';
+import { floorPick, FLOOR_REASON, floorText } from './model-floor.ts';
 import { candidates, context } from './route-fixtures.ts';
 import {
   builderTierPick,
@@ -14,7 +14,6 @@ import {
   floorBuilderRoute,
   routeBuilder,
   routeCritic,
-  routeMemberModel,
   topFamilies,
   type MemberRoute,
   type RouteContext,
@@ -61,22 +60,22 @@ const onHaiku = (routing: 'auto' | 'pinned' = 'auto', request?: string): RouteCo
 
 describe('the Builder floor, by tier', () => {
   it('raises a fast-tier pick to the lowest tier at or above the middle', () => {
-    expect(builderPick(pick(HAIKU), claude.models)).toEqual({
+    expect(floorPick(pick(HAIKU), claude.models)).toEqual({
       pick: pick(SONNET),
       note: { kind: 'raised', from: 'Haiku 4.5', to: 'Sonnet 5' },
     });
-    expect(builderPick(pick(SONNET), claude.models)).toEqual({ pick: pick(SONNET), note: null });
-    expect(builderPick(pick(OPUS), claude.models)).toEqual({ pick: pick(OPUS), note: null });
+    expect(floorPick(pick(SONNET), claude.models)).toEqual({ pick: pick(SONNET), note: null });
+    expect(floorPick(pick(OPUS), claude.models)).toEqual({ pick: pick(OPUS), note: null });
   });
 
   it('aims at the highest known tier for complex work', () => {
-    expect(builderPick(pick(HAIKU), claude.models, 'top').pick.model).toBe('opus[1m]');
-    expect(builderPick(pick(SONNET), claude.models, 'top').pick.model).toBe('opus[1m]');
+    expect(floorPick(pick(HAIKU), claude.models, { aim: 'top' }).pick.model).toBe('opus[1m]');
+    expect(floorPick(pick(SONNET), claude.models, { aim: 'top' }).pick.model).toBe('opus[1m]');
   });
 
   it('uses the next tier up when the middle-tier model is gone', () => {
     const noMiddle = [HAIKU, OPUS];
-    expect(builderPick(pick(HAIKU), noMiddle)).toMatchObject({
+    expect(floorPick(pick(HAIKU), noMiddle)).toMatchObject({
       pick: { model: 'opus[1m]', modelLabel: 'Opus 5.5' },
       note: { kind: 'raised', to: 'Opus 5.5' },
     });
@@ -84,16 +83,16 @@ describe('the Builder floor, by tier', () => {
 
   it('keeps a brand-new model with no card or known name, and notes its tier is unknown', () => {
     const nova = { id: 'nova-1', label: 'Nova 1', description: null };
-    const floored = builderPick(pick(nova), [HAIKU, nova, SONNET]);
+    const floored = floorPick(pick(nova), [HAIKU, nova, SONNET]);
     expect(floored.pick.model).toBe('nova-1');
     expect(floored.note).toEqual({ kind: 'tier_unknown', model: 'Nova 1' });
     expect(floorText(floored.note!)).toBe('tier unknown for Nova 1');
-    expect(builderPick(pick(nova), [HAIKU, nova, OPUS], 'top').pick.model).toBe('opus[1m]');
+    expect(floorPick(pick(nova), [HAIKU, nova, OPUS], { aim: 'top' }).pick.model).toBe('opus[1m]');
   });
 
   it('raises a fast-tier pick to an unknown-tier model when no known stronger one exists', () => {
     const nova = { id: 'nova-1', label: 'Nova 1', description: null };
-    const floored = builderPick(pick(HAIKU), [HAIKU, nova]);
+    const floored = floorPick(pick(HAIKU), [HAIKU, nova]);
     expect(floored.pick.model).toBe('nova-1');
     expect(floorText(floored.note!)).toBe(
       "raised to Nova 1: Builders don't run on the fast tier · tier unknown for Nova 1",
@@ -101,14 +100,16 @@ describe('the Builder floor, by tier', () => {
   });
 
   it('keeps the pick and says why when the provider offers nothing stronger', () => {
-    const floored = builderPick(pick(HAIKU), [HAIKU]);
+    const floored = floorPick(pick(HAIKU), [HAIKU]);
     expect(floored.pick.model).toBe('haiku');
-    expect(floorText(floored.note!)).toBe('kept Haiku 4.5: no stronger model for Builders');
+    expect(floorText(floored.note!)).toBe(
+      'kept Haiku 4.5: no stronger model for Builders · retiring on 2026-10-15',
+    );
   });
 
   it('leaves the agent default alone', () => {
     const agentDefault: AgentPick = { ...pick(HAIKU), model: null, modelLabel: null };
-    expect(builderPick(agentDefault, claude.models)).toEqual({ pick: agentDefault, note: null });
+    expect(floorPick(agentDefault, claude.models)).toEqual({ pick: agentDefault, note: null });
   });
 });
 
@@ -144,7 +145,7 @@ describe('every path that picks a Builder model', () => {
     const alone = { ...context('auto'), candidates: [{ ...claude, models: [HAIKU] }] };
     const up = escalateBuilder(alone, fast);
     expect(up.pick.model).toBe('haiku');
-    expect(up.note).toBe('kept Haiku 4.5: no stronger model for Builders');
+    expect(up.note).toBe('kept Haiku 4.5: no stronger model for Builders · retiring on 2026-10-15');
     const raised = floorBuilderRoute(context('auto'), { ...fast, rule: 'kept' });
     expect(raised).toMatchObject({ pick: { model: 'sonnet' }, note: RAISED });
     expect(escalateBuilder(context('auto'), raised).note).toBe(undefined);
@@ -203,8 +204,7 @@ describe('every path that picks a Builder model', () => {
     expect(variant.selection?.candidateId).toBe('claude/haiku');
   });
 
-  it('leaves Scouts and Critics alone', () => {
-    expect(routeMemberModel(onHaiku(), plain).pick.model).toBe('haiku');
+  it('puts Critics on the middle tier when the chat is on the fast tier', () => {
     const critic = routeCritic({ ...onHaiku(), candidates: [claude] }).pick;
     expect(critic.model).toBe('sonnet');
   });
@@ -259,10 +259,10 @@ describe('complex work goes to the top tier', () => {
       'small',
     );
     expect(route).toMatchObject({
-      rule: 'trivial → small tier (matches in 4 packages set aside: one-line fix)',
+      rule: 'trivial → middle tier (matches in 4 packages set aside: one-line fix)',
       pick: { model: 'sonnet' },
-      note: RAISED,
     });
+    expect(route.note).toBeUndefined();
   });
 
   it('routes the dev-day rounding bug (s06) to the middle tier on the chat model', () => {

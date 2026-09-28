@@ -7,7 +7,7 @@ import type {
   ProviderId,
   UpdateChatSettingsRequest,
 } from '@spark-outpost/contracts';
-import { effectiveDefaultModel } from '../model-cards/cards.ts';
+import { effectiveDefaultModel, usableDefault } from '../model-cards/cards.ts';
 import { catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
 import { firstReportedEffort, reportedEfforts } from '../providers/efforts.ts';
 import type { Queryable } from './db.ts';
@@ -75,7 +75,14 @@ async function connectionDefaults(
   return new Map(
     rows.map(({ reported, ...row }) => {
       const offered = reportedEfforts(row.provider, reported).map((option) => option.id);
-      return [row.provider, { ...row, effort: firstReportedEffort([row.effort], offered) }];
+      return [
+        row.provider,
+        {
+          ...row,
+          model: usableDefault(row.provider, row.model),
+          effort: firstReportedEffort([row.effort], offered),
+        },
+      ];
     }),
   );
 }

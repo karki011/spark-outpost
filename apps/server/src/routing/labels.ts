@@ -34,6 +34,7 @@ interface Variant {
   costUsd?: number | null;
   selection?: { basis: string; tier: string | null; routeProbability: number } | null;
   pick?: PickFields;
+  raisedTo?: PickFields;
 }
 
 function pickName(pick: unknown): string | null {
@@ -48,6 +49,7 @@ function variantLabel(raw: unknown) {
   return {
     status: variant.status ?? null,
     pick: pickName(variant.pick),
+    runs: pickName(variant.raisedTo ?? variant.pick),
     choice: variant.choice ?? null,
     confidence: variant.confidence ?? null,
     basis: variant.selection?.basis ?? null,

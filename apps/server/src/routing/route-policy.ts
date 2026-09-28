@@ -3,7 +3,7 @@ import type { RouterTier } from '../advisor/policy.ts';
 import {
   builderEffort,
   chatPick,
-  floorBuilderPick,
+  floorFor,
   routeBuilder,
   type MemberRoute,
   type RouteContext,
@@ -35,7 +35,7 @@ export function withEffort(context: RouteContext, pick: AgentPick): AgentPick {
 }
 
 export function builderRun(context: RouteContext, pick: AgentPick): AgentPick {
-  const floored = floorBuilderPick(context, pick).pick;
+  const floored = floorFor(context, pick).pick;
   return floored.model === pick.model ? pick : withEffort(context, floored);
 }
 

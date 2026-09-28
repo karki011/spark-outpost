@@ -10,6 +10,7 @@ import {
   attachmentsForMessages,
   type AttachmentFile,
 } from '../persistence/attachments.ts';
+import { usableDefault } from '../model-cards/cards.ts';
 import type { Db } from '../persistence/db.ts';
 import type { AgentSettings, ConversationTurn, TurnAttachment } from '../providers/provider.ts';
 import type { RunIdentity } from './run-events.ts';
@@ -174,7 +175,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
 }
 
 function settingsOf(row: RunRow): AgentSettings {
-  const model = row.run_model ?? row.model;
+  const model = row.run_model ?? usableDefault(row.provider, row.model);
   return {
     method: row.method,
     model,
