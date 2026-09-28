@@ -11,6 +11,7 @@
 
 .composer {
   position: relative;
+  container: composer / inline-size;
   max-width: 700px;
   margin: 0 auto;
   border: 1px solid var(--line-strong);
@@ -130,3 +131,34 @@
     display: none;
   }
 }
+
+@container composer (max-width: 520px) {
+  .hint,
+  .mbtn .meter {
+    display: none;
+  }
+
+  .mbtn {
+    gap: 6px;
+    padding-inline: 6px;
+  }
+
+  .mbtn .mname {
+    max-width: 128px;
+  }
+}
+
+@container composer (max-width: 400px) {
+  .ctxpct {
+    display: none;
+  }
+
+  .ctxbtn {
+    padding: 0 7px;
+  }
+
+  .mbtn .mname {
+    max-width: 96px;
+  }
+}
+
