@@ -47,7 +47,7 @@ Because a repo's `env` can't be neutralized (unknown keys, hot reload), `setting
 - Skills, commands and subagents go through the SDK `plugins` option, pointing at a generated plugin folder under `$TMPDIR/spark-outpost-repo-plugins/<content hash>` (`agent-config/plugin-dir.ts`). Frontmatter is reduced to an allowlist, so `allowed-tools`, `hooks`, `mcpServers` and `permissionMode` are dropped. Verified: all three appear, namespaced as `<repo>:<name>` (for example `/app:greet`).
 - `disableSkillShellExecution: true` is always set. Verified: a command's `` !`touch …` `` became "[shell command execution disabled by policy]".
 - Hooks off: `disableAllHooks: true`. Hooks on: the reviewed hooks object goes in flag `settings.hooks`. Verified both: flag hooks ran; with `disableAllHooks` they didn't.
-- MCP: enabled servers go in ACP `session/new` `mcpServers`, plus an `ask` rule `mcp__<server>`. Verified with a local stdio echo server: each call to its tool raised `session/request_permission` in both Ask and Do sessions, even without the rule. Ask declines every request; Do sends it to the approval gate, where an MCP call is an `other` action: it asks at every permission choice except Full auto, and "allow for this run" covers that tool only.
+- MCP: enabled servers go in ACP `session/new` `mcpServers`, plus an `ask` rule `mcp__<server>`. Verified with a local stdio echo server: each call to its tool raised `session/request_permission` in both Ask and Do sessions, even without the rule. Ask declines every request; Do sends it to the approval gate, where an MCP call is an `other` action: it asks unless the agent's mode lets everything through (Auto, Bypass permissions, Approve for me, Full access); Don't ask refuses it, and "allow for this run" covers that tool only.
 
 Also noted: the adapter's own `SettingsManager` reads the project's `permissions.defaultMode` whatever `settingSources` says (escalating modes are filtered). This predates this change; we set the mode explicitly and a run stops if the mode changes unsafely.
 
@@ -134,7 +134,7 @@ Settings → Test connection starts the server through the MCP SDK client with a
 
 ### Launch
 
-`workflow/agent-turn.ts` loads the chat's enabled user servers (`mcp/launch.ts`) next to the repo launch; `acp-provider.ts` resolves their keychain values and puts them first in `session/new` `mcpServers`, followed by the repo's, with names made unique. Claude gets an `mcp__<name>` ask rule for each (in project chats), so MCP tool calls ask at every permission choice except Full auto, as before. HTTP and SSE servers are skipped with a note when the agent does not advertise them (Codex has no SSE). User servers also reach chats without a project, where every tool call is declined like any other action.
+`workflow/agent-turn.ts` loads the chat's enabled user servers (`mcp/launch.ts`) next to the repo launch; `acp-provider.ts` resolves their keychain values and puts them first in `session/new` `mcpServers`, followed by the repo's, with names made unique. Claude gets an `mcp__<name>` ask rule for each (in project chats), so MCP tool calls ask unless the agent's mode lets everything through, as above. HTTP and SSE servers are skipped with a note when the agent does not advertise them (Codex has no SSE). User servers also reach chats without a project, where every tool call is declined like any other action.
 
 ### /mcp
 

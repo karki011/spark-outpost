@@ -82,9 +82,9 @@ Maintenance:
 - Upstream PR #480 (a `workspace-write` mode) doesn't replace it: that mode is still `on-request`. The patch can go only when codex-acp ships an "ask for everything" mode and a continue-on-deny option. Both are worth an upstream issue.
 - Risk: a future Codex drops `untrusted` from the protocol. Pin `@openai/codex` through codex-acp's exact version, and add a live test that fails if `ls` stops asking.
 
-## Proposal: Codex Do by involvement level
+## Proposal: Codex Do by involvement level (September 26; superseded by provider modes)
 
-Codex Do runs in the `ask-every-action` mode, and every command and patch reaches `decide()`. The levels then mean the same as for Claude. Differences (level names as of September 26; since September 28 the picker shows Ask before edits, Auto-edit and Full auto, and Hands-on is gone):
+Codex Do runs in the `ask-every-action` mode, and every command and patch reaches `decide()`. The levels then mean the same as for Claude. Differences (level names as of September 26; the update at the top describes today's modes and autonomy):
 
 | Level     | Codex Do                                                                                   | What Codex asks (picker copy)                                                                                                                                                        |
 | --------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -128,24 +128,21 @@ Guardrails:
 ## What shipped
 
 - **Patch.** `ask-every-action` and the `decline` option, as above. `agents.test.ts` fails if the read-only sandbox, the new mode's policy and sandbox, or the `decline` ordering is missing.
-- **Agent definition** (`agents.ts`): Codex has `doMode: 'ask-every-action'`, `doPrimaryRootOnly` and `doWorktreeLevels: ['hands-off', 'full-auto']`. Claude and Z.ai keep `doSessionMeta`, and `supportsDo()` covers both. `apply-settings.ts` applies the Do mode instead of the chat mode, and the mode lock watches it.
-- **Decisions** (`approvals/command-kinds.ts`, `decide.ts`): `isSafeRead` and `isPackageInstall`, for every provider. A safe read is allowed with the reason "a read-only command inside the project" (`decided_by = 'level'`) from Balanced up. An install asks with "Installing packages always asks" at every level, ahead of run rules and the allowlist.
-- **Worktrees** (`orchestration/solo-copy.ts`): at Hands-off and Full auto, a Codex Builder (including a retry or fix) runs as a child in its own worktree. Checks and fixes run there. The copy is merged into the working tree after each Builder turn (since round 10, a conflict with your own edits offers Keep your version, Keep Bolt's or Stop; there is no reconciling Builder) and removed before the turn finishes. Keep or Revert covers it through the orchestration snapshot. The same copy now also serves destructive work and a second task running in the same repo.
+- **Agent definition** (`agents.ts`): Codex has `doMode: 'ask-every-action'` (its asking mode) and `doPrimaryRootOnly`. Claude and Z.ai keep `doSessionMeta`, and `supportsDo()` covers both. `session-modes.ts` applies the chat's chosen mode, falls back to the asking mode when the mode is unavailable, and refuses a worktree-only mode outside a worktree (`modeNeedsWorktree`).
+- **Decisions** (`approvals/command-kinds.ts`, `decide.ts`): `isSafeRead` and `isPackageInstall`, for every provider. A safe read is allowed with the reason "a read-only command inside the project" (`decided_by = 'level'`) in every mode whose requests reach the gate. An install asks with "Installing packages always asks" at every level, ahead of run rules and the allowlist.
+- **Worktrees** (`orchestration/solo-copy.ts`): a Codex Builder in Approve for me or Full access (including a retry or fix) runs as a child in its own worktree, as does every Full auto → PR task. Checks and fixes run there. The copy is merged into the working tree after each Builder turn (since round 10, a conflict with your own edits offers Keep your version, Keep Bolt's or Stop; there is no reconciling Builder) and removed before the turn finishes. Keep or Revert covers it through the orchestration snapshot. The same copy now also serves destructive work and a second task running in the same repo.
 - **Single-provider crews.** `ruleCriticPick` gives a same-provider Critic the tier above the chat model at high effort. `sameProvider` is recorded on the Critic's route and review body. The crew block reads "Critic (same provider, no cross-model review)".
 - **Copy** (`packages/contracts/src/approvals.ts`):
-  - `levelHint(level, provider)` adds what Codex asks at each level.
-  - `doDisclosure(provider)` is the secret-read disclosure under the picker.
-  - `commandSandboxNote(provider)` replaces "Commands aren't sandboxed" on Codex command cards.
-  - The picker and Settings use all three.
+  - `commandSandboxNote(provider)` replaces "Commands aren't sandboxed" on Codex command cards. The per-level hints and the picker disclosure went with the provider-modes picker, which shows Codex's own mode descriptions.
 - **Tests.**
   - Unit: `command-kinds.test.ts`, `decide.test.ts`, `agents.test.ts`, `routing.test.ts`, `approvals-copy.test.ts` and `crew-projection.test.ts`.
   - Fake-agent provider: `test/acp-codex-do.test.ts`, which simulates Codex's options and `cancel`.
   - DB: `test/codex-crew.db.test.ts`, plus the updated `approvals.db.test.ts` and `chat-settings.db.test.ts`.
-  - Browser: `approvals.spec.ts`, where Codex offers Do with its copy and a Codex command card shows the sandbox note.
+  - Browser: `approvals.spec.ts` (a Codex command card shows the sandbox note) and `permission-modes.spec.ts` (Codex's modes in the picker).
 
 ### Live check (September 26)
 
-`test/codex-do.live.test.ts` ran in scratch repos under the session scratchpad on the ChatGPT login, with `gpt-6-luna` · low and no Jev. Task: `ls`, `cat README.md`, append a line, `git status --short`. Every Codex tool call had an approval row with the same tool-call id.
+`test/codex-do.live.test.ts` ran in scratch repos under the session scratchpad on the ChatGPT login, with `gpt-6-luna` · low and no Jev. Task: `ls`, `cat README.md`, append a line, `git status --short`. Every Codex tool call had an approval row with the same tool-call id. The rows use the level names of the time; `0049_levels_full_auto_ship.sql` and `0050_provider_modes.sql` map Hands-on and Balanced to Ask every time with Review each step, and Hands-off and Full auto to Approve for me with Automatic and Full auto → PR.
 
 | Level     | Where    | Receipts                                                                               | Tokens |
 | --------- | -------- | -------------------------------------------------------------------------------------- | ------ |

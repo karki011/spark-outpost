@@ -1,6 +1,6 @@
 # Agent adapters: what they really do
 
-How the pinned ACP adapters behave, checked against their shipped code, their docs, and our setup. Written September 25, 2026.
+How the pinned ACP adapters behave, checked against their shipped code, their docs, and our setup. Written September 25, 2026; line references are from that date. Since then top findings 1 and 2 and changes 1, 2, 5, 6 and 7 below are fixed (the codex-acp patch in [PATCHES.md](PATCHES.md), `settingSources: []` and `secretReadRules()` in `agents.ts`), and provider permission modes replaced the Do setup in (b) ([HARNESS_PLAN.md](HARNESS_PLAN.md#provider-permission-modes-september-28-2026)).
 
 - Claude: `@agentclientprotocol/claude-agent-acp` 0.81.2, which bundles `@anthropic-ai/claude-agent-sdk` 0.3.280 (Claude Code 2.1.280).
 - Codex: `@agentclientprotocol/codex-acp` 1.13.1, a TypeScript bridge that starts `codex app-server` from `@openai/codex` 0.156.1.
@@ -40,7 +40,7 @@ Paths below are shortened:
   - `disallowedTools` entries with a specifier become deny rules. Patterns are gitignore-style and relative to `cwd`, so `**/.env` matches at any depth under the project ([permissions: Read and Edit](https://code.claude.com/docs/en/permissions#read-and-edit)).
   - Gaps:
     - `**/.env.*` also blocks `.env.example`, which our path policy allows.
-    - The list is missing `.pgpass`, `.pypirc`, `.git-credentials`, `credentials*`, `*.p12` and `*.pfx`, which `projects/path-policy.ts:40-50` refuses.
+    - The list is missing `.pgpass`, `.pypirc`, `.git-credentials`, `credentials*`, `*.p12` and `*.pfx`, which `projects/path-policy.ts:40-50` refused (the list now lives in `projects/secret-files.ts`).
     - `**/id_*` also blocks ordinary files such as `id_utils.ts`.
 - **Do Read deny rules cover Grep and Glob?** Partly. The docs say Claude "makes a best-effort attempt to apply `Read` rules to all built-in tools that read files like Grep and Glob". Grep and Glob apply deny rules to the directory they search. Glob can still list a denied file's name, and a Grep over a parent folder is only filtered on a best-effort basis. Verify it with a live test that greps for a string that only appears in `.env`.
 - **In `default` mode, does reading outside `cwd` ask?** Yes. Read-only tools need no approval only "within the working directory and additional directories" ([permissions table](https://code.claude.com/docs/en/permissions#permission-system)). Outside those, the SDK calls `canUseTool`, the adapter sends `session/request_permission`, and we reject it (`permissions.ts:11-24`). A hard stop that doesn't depend on our reply is `permissions.blockReadsOutsideWorkingDirectories: true`. It works in every mode, and the bundled CLI 2.1.280 supports it.
@@ -149,7 +149,9 @@ Then set the mode to `default` (as today) and keep declining every permission re
 
 **Codex, after upgrading to a release with PR #480.** Use `INITIAL_AGENT_MODE=read-only` and `conversationMode: 'read-only'`. This is now a `readOnly` sandbox: reads anywhere on disk, no writes, no network, on-request approvals that we decline. Use `CODEX_CONFIG={"features":{"shell_tool":true,"unified_exec":false},"web_search":"disabled"}` and pass extra roots as `additionalDirectories`. Under `readOnly` they don't become writable, but check that `addAdditionalDirectoriesToSandboxPolicy` still skips non-`workspaceWrite` policies. Secrets outside our control stay a known gap. Add `spark-fs` MCP if that gap isn't acceptable.
 
-### (b) Do with approvals (M2)
+### (b) Do with approvals (M2, September 26; superseded by provider modes)
+
+Today Do sessions offer every Claude mode, and `ask: ['Bash', 'Edit', 'Write']` keeps every edit and command at our gate in each; Codex's `agent` (Approve for me) and `agent-full-access` (Full access) bypass the gate, so they run only in a worktree copy (`modeNeedsWorktree`). The setup below is the September 26 recommendation.
 
 **Claude.**
 
@@ -207,7 +209,7 @@ Then set the mode to `default` (as today) and keep declining every permission re
 
 ## Verified live for Do (September 26)
 
-- Codex 1.13.1 with our patch, asked to run `ls` and create a file in a temp git repo: in `agent` mode both ran with no `session/request_permission`; in `read-only` mode `ls` ran unasked and only the write became a permission request (`edit`, offering `allow_once`, `allow_always`, `reject_once`). This confirms that commands can't be made to ask, so Codex Do is unavailable (HARNESS_PLAN, M2 status).
+- Codex 1.13.1 with our patch, asked to run `ls` and create a file in a temp git repo: in `agent` mode both ran with no `session/request_permission`; in `read-only` mode `ls` ran unasked and only the write became a permission request (`edit`, offering `allow_once`, `allow_always`, `reject_once`). This confirmed that commands couldn't be made to ask, so Codex Do was unavailable until the patched `ask-every-action` mode below, the same day (HARNESS_PLAN, M2 status).
 - Claude 0.81.2 with `settings.permissions.ask: ['Bash', 'Edit', 'Write']` in `default` mode asked for an edit, for `ls` and for `git push`, each as one `session/request_permission`.
 
 ## Verified live for Codex Do (September 26, patched)
@@ -219,4 +221,4 @@ Then set the mode to `default` (as today) and keep declining every permission re
 - `test/codex-do.live.test.ts` (`gpt-6-luna` · low, one small task per level) found every Codex tool call behind an approval receipt:
   - Hands-on: 4 of 4 asked.
   - Balanced: `ls`, `cat` and `git status` were allowed as safe reads, and the shell edit asked.
-  - Hands-off and Full auto ran in a worktree, all allowed by the level.
+  - Hands-off and Full auto ran in a worktree, all allowed by the level. (Level names of the time; see [CODEX_DO.md](CODEX_DO.md#live-check-september-26) for today's mapping.)
