@@ -15,6 +15,7 @@ import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';
 import { Home } from '../home/Home.tsx';
 import { Onboarding } from '../onboarding/Onboarding.tsx';
+import { ResetHost } from '../reset/ResetHost.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
 import { useSettingsRequests } from '../settings/settings-request.ts';
 import { BackOnlineToast } from './connection/BackOnlineToast.tsx';
@@ -215,6 +216,7 @@ export function App() {
       )}
       {connection.lost && <ReconnectBanner />}
       {connection.recoveries > 0 && <BackOnlineToast key={connection.recoveries} />}
+      <ResetHost />
     </>
   );
 }

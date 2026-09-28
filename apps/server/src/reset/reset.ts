@@ -1,0 +1,64 @@
+import type { ResetReport } from '@spark-outpost/contracts';
+import type { Db } from '../persistence/db.ts';
+import type { SecretId, SecretStore } from '../setup/secrets.ts';
+import { storedSecretIds } from './secrets.ts';
+import { stopActiveWork } from './stop-work.ts';
+import { wipeAppData } from './wipe.ts';
+import { ownedWorktrees, removeOwnedWorktree, type OwnedWorktree } from './worktrees.ts';
+
+export const RUN_SETTLE_MS = 5000;
+
+export interface ResetDeps {
+  db: Db;
+  workspaceId: string;
+  secrets: SecretStore;
+  stopTerminals: () => void;
+  settleMs?: number;
+}
+
+async function removeSecret(secrets: SecretStore, id: SecretId): Promise<boolean> {
+  if ((await secrets.get(id)) === null) return false;
+  await secrets.delete(id);
+  return true;
+}
+
+async function removeSecrets(secrets: SecretStore, ids: readonly SecretId[], problems: string[]) {
+  let removed = 0;
+  for (const id of ids) {
+    try {
+      if (await removeSecret(secrets, id)) removed += 1;
+    } catch {
+      problems.push(`Couldn't remove the saved ${id} secret from the keychain.`);
+    }
+  }
+  return removed;
+}
+
+async function removeWorktrees(worktrees: readonly OwnedWorktree[], problems: string[]) {
+  let removed = 0;
+  for (const worktree of worktrees) {
+    try {
+      await removeOwnedWorktree(worktree);
+      removed += 1;
+    } catch {
+      problems.push(`Couldn't fully remove the ${worktree.branch} copy in ${worktree.repoRoot}.`);
+    }
+  }
+  return removed;
+}
+
+export async function resetSparkOutpost(
+  deps: ResetDeps,
+  { keepApiKeys }: { keepApiKeys: boolean },
+): Promise<ResetReport> {
+  const problems: string[] = [];
+  const stillRunning = await stopActiveWork(deps.db, deps.settleMs ?? RUN_SETTLE_MS);
+  if (stillRunning > 0) problems.push(`${stillRunning} agent runs were still stopping.`);
+  deps.stopTerminals();
+  const secretIds = await storedSecretIds(deps.db, keepApiKeys);
+  const worktrees = await ownedWorktrees(deps.db);
+  await wipeAppData(deps.db, deps.workspaceId);
+  const secretsRemoved = await removeSecrets(deps.secrets, secretIds, problems);
+  const worktreesRemoved = await removeWorktrees(worktrees, problems);
+  return { secretsRemoved, worktreesRemoved, problems };
+}
