@@ -1,6 +1,7 @@
 import {
   isCheckApproval,
   isTerminalRunStatus,
+  looksLikePlan,
   type Approval,
   type ConversationDetail,
   type Message,
@@ -19,6 +20,7 @@ import { isCheckpoint } from './checkpoints/checkpoint-model.ts';
 import { mergeCheckpoints } from './crew/crew-items.ts';
 import { Markdown } from './markdown/Markdown.tsx';
 import { keepCardHost } from './outcomes/feedback-host.ts';
+import { SavePlan } from './plans/SavePlan.tsx';
 import { TurnFeedback } from './outcomes/TurnFeedback.tsx';
 import {
   shownText,
@@ -127,6 +129,17 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
       )
     : undefined;
 
+  const conversationId = detail.conversation.id;
+  const offer = detail.plans?.offers.find((candidate) => candidate.runId === run.id) ?? null;
+  const savedVersion = assistantMessage
+    ? (detail.plans?.saved.find((saved) => saved.messageId === assistantMessage.id)?.version ??
+      null)
+    : null;
+  const planLike =
+    finished &&
+    assistantMessage !== null &&
+    (savedVersion !== null || looksLikePlan(assistantMessage.content));
+
   const turnRuns = [run, child].filter((candidate): candidate is Run => Boolean(candidate));
   const changeRunIds = turnRuns.map((candidate) => candidate.id);
   const changeTask =
@@ -137,6 +150,14 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
   return (
     <AiTurn provider={provider} label={label} state={state} category={run.category}>
       <WorkLog steps={steps} state={state} seconds={finished ? runSeconds(run) : null} />
+      {offer && (
+        <SavePlan
+          conversationId={conversationId}
+          messageId={offer.messageId}
+          savedVersion={null}
+          offered
+        />
+      )}
       {approvals.map((approval) =>
         isCheckpoint(approval) ? (
           <CheckpointCard key={approval.id} approval={approval} />
@@ -151,6 +172,13 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
           <i />
           <i />
         </span>
+      )}
+      {planLike && assistantMessage && (
+        <SavePlan
+          conversationId={conversationId}
+          messageId={assistantMessage.id}
+          savedVersion={savedVersion}
+        />
       )}
       {run.status === 'cancelled' && <p className="ai-note">Stopped before finishing.</p>}
       {error && <p className="error-line">{error}</p>}

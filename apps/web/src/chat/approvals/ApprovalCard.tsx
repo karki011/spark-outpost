@@ -14,6 +14,7 @@ import { approvalsApi } from '../../api/approvals.ts';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { projectKeys } from '../../api/projects.ts';
 import { CheckIcon, XIcon } from '../../ui/icons.tsx';
+import { Markdown } from '../markdown/Markdown.tsx';
 import { providerName } from '../provider-name.ts';
 import { useProjectBranch } from '../project/use-chat-repos.ts';
 import { mergeDecision } from './approval-events.ts';
@@ -52,6 +53,7 @@ function fullPath(approval: Approval, shown: string): string | undefined {
 }
 
 function heading(approval: Approval): string {
+  if (approval.payload.plan) return 'Approve the plan?';
   if (isCheckApproval(approval)) return 'Run a check?';
   if (approval.kind === 'execute') return 'Run a command?';
   if (approval.kind === 'edit') {
@@ -61,6 +63,7 @@ function heading(approval: Approval): string {
 }
 
 function request(approval: Approval, agent: string) {
+  if (approval.payload.plan) return `${agent} wrote a plan and wants to start building.`;
   if (isCheckApproval(approval)) return 'Jev wants to run a project check.';
   if (approval.kind === 'execute') return `${agent} wants to run a command.`;
   if (approval.kind === 'edit') {
@@ -70,7 +73,18 @@ function request(approval: Approval, agent: string) {
   return `${agent} wants to: ${approval.title}`;
 }
 
+function planOutcome(approval: Approval): { icon: 'ok' | 'no'; label: string; detail: string } {
+  if (approval.status === 'allowed') {
+    return { icon: 'ok', label: 'Plan approved.', detail: 'Saved as the agreed plan.' };
+  }
+  if (approval.status === 'denied') {
+    return { icon: 'no', label: 'Kept planning.', detail: 'The agent can revise the plan.' };
+  }
+  return outcome({ ...approval, payload: { ...approval.payload, plan: undefined } });
+}
+
 function outcome(approval: Approval): { icon: 'ok' | 'no'; label: string; detail: string } {
+  if (approval.payload.plan) return planOutcome(approval);
   const command = approval.kind === 'execute';
   switch (approval.status) {
     case 'allowed':
@@ -125,6 +139,7 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
   const reject = rejectOption(approval.options);
   const alwaysAsks = approval.reason !== null;
   const command = approval.payload.command;
+  const plan = approval.payload.plan ?? null;
   const cwd = displayCwd(approval.payload.cwd, repo);
   const result = outcome(approval);
   const className = [
@@ -151,6 +166,11 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
         </span>
       </div>
       {command && <pre className="appr-cmd">$ {command}</pre>}
+      {plan && (
+        <div className="appr-plan" tabIndex={0} aria-label="Proposed plan">
+          <Markdown text={plan} />
+        </div>
+      )}
       {approval.kind === 'edit' && approval.payload.diffs.length > 0
         ? approval.payload.diffs.map((diff) => (
             <DiffView key={diff.path} diff={diff} fullPath={fullPath(approval, diff.path)} />
@@ -198,10 +218,10 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
               disabled={decide.isPending}
               onClick={() => decide.mutate({ optionId: allow.optionId, scope: 'once' })}
             >
-              Allow
+              {plan ? 'Approve plan' : 'Allow'}
             </button>
           )}
-          {allow && !alwaysAsks && (
+          {allow && !alwaysAsks && !plan && (
             <button
               type="button"
               className="btn line sm"
@@ -228,7 +248,7 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
               disabled={decide.isPending}
               onClick={() => decide.mutate({ optionId: reject.optionId, scope: 'once' })}
             >
-              Deny
+              {plan ? 'Keep planning' : 'Deny'}
             </button>
           )}
         </div>
