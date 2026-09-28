@@ -1,0 +1,199 @@
+import { z } from 'zod';
+
+export const TICKET_KEY_MAX_LENGTH = 64;
+export const TICKET_SEARCH_MAX_LENGTH = 200;
+export const TICKET_COMMENT_MAX_LENGTH = 10_000;
+
+export const ticketSourceIdSchema = z.enum(['linear', 'jira']);
+export type TicketSourceId = z.infer<typeof ticketSourceIdSchema>;
+
+export const ticketSourceNames: Record<TicketSourceId, string> = {
+  linear: 'Linear',
+  jira: 'Jira',
+};
+
+export const ticketStatusSchema = z.enum(['todo', 'in_progress', 'in_review', 'done']);
+export type TicketStatus = z.infer<typeof ticketStatusSchema>;
+
+export const ticketStatusLabels: Record<TicketStatus, string> = {
+  todo: 'To do',
+  in_progress: 'In progress',
+  in_review: 'In review',
+  done: 'Done',
+};
+
+export const ticketKeySchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(TICKET_KEY_MAX_LENGTH)
+  .regex(/^[A-Za-z][A-Za-z0-9_]*-\d+$/, 'Use a ticket key such as ENG-12.');
+
+export const ticketSummarySchema = z.object({
+  source: ticketSourceIdSchema,
+  key: z.string(),
+  title: z.string(),
+  status: ticketStatusSchema,
+  statusName: z.string(),
+  url: z.string(),
+  updatedAt: z.string(),
+  project: z.string().nullable(),
+  priority: z.string().nullable(),
+  sprint: z.string().nullable(),
+});
+export type TicketSummary = z.infer<typeof ticketSummarySchema>;
+
+export const ticketCommentSchema = z.object({
+  author: z.string().nullable(),
+  body: z.string(),
+  createdAt: z.string(),
+});
+export type TicketComment = z.infer<typeof ticketCommentSchema>;
+
+export const ticketRefSchema = z.object({ title: z.string(), url: z.string() });
+export type TicketRef = z.infer<typeof ticketRefSchema>;
+
+export const ticketSubtaskSchema = z.object({
+  key: z.string(),
+  title: z.string(),
+  status: ticketStatusSchema,
+  statusName: z.string(),
+});
+export type TicketSubtask = z.infer<typeof ticketSubtaskSchema>;
+
+export const ticketDetailSchema = ticketSummarySchema.extend({
+  description: z.string(),
+  assignee: z.string().nullable(),
+  labels: z.array(z.string()),
+  comments: z.array(ticketCommentSchema),
+  links: z.array(ticketRefSchema),
+  subtasks: z.array(ticketSubtaskSchema),
+});
+export type TicketDetail = z.infer<typeof ticketDetailSchema>;
+
+export const ticketWorkSchema = z.object({
+  taskId: z.uuid(),
+  conversationId: z.uuid(),
+  startedAt: z.string(),
+  pullRequests: z.array(ticketRefSchema),
+});
+export type TicketWork = z.infer<typeof ticketWorkSchema>;
+
+export const ticketListItemSchema = ticketSummarySchema.extend({
+  work: z.array(ticketWorkSchema),
+});
+export type TicketListItem = z.infer<typeof ticketListItemSchema>;
+
+export const ticketSourceErrorSchema = z.object({
+  source: ticketSourceIdSchema,
+  message: z.string(),
+});
+
+export const ticketListSchema = z.object({
+  tickets: z.array(ticketListItemSchema),
+  errors: z.array(ticketSourceErrorSchema),
+});
+export type TicketList = z.infer<typeof ticketListSchema>;
+
+export const ticketViewSchema = z.object({
+  ticket: ticketDetailSchema,
+  work: z.array(ticketWorkSchema),
+});
+export type TicketView = z.infer<typeof ticketViewSchema>;
+
+export const ticketListQuerySchema = z.object({
+  source: ticketSourceIdSchema.optional(),
+  status: ticketStatusSchema.optional(),
+  project: z.string().trim().min(1).max(TICKET_KEY_MAX_LENGTH).optional(),
+  q: z.string().trim().max(TICKET_SEARCH_MAX_LENGTH).optional(),
+});
+export type TicketListQuery = z.infer<typeof ticketListQuerySchema>;
+
+export const ticketStatusMapSchema = z.record(
+  z.string().trim().min(1).max(TICKET_KEY_MAX_LENGTH),
+  z.partialRecord(ticketStatusSchema, z.string().trim().min(1).max(100)),
+);
+export type TicketStatusMap = z.infer<typeof ticketStatusMapSchema>;
+
+export const ticketConnectionSchema = z.object({
+  source: ticketSourceIdSchema,
+  account: z.string(),
+  siteUrl: z.string().nullable(),
+  validatedAt: z.string(),
+  keySaved: z.boolean(),
+  moveOnShip: z.boolean(),
+  statusMap: ticketStatusMapSchema,
+});
+export type TicketConnection = z.infer<typeof ticketConnectionSchema>;
+
+export const ticketConnectionsSchema = z.object({
+  connections: z.array(ticketConnectionSchema),
+});
+export type TicketConnections = z.infer<typeof ticketConnectionsSchema>;
+
+const JIRA_SITE =
+  /^(?:https:\/\/[a-z0-9.-]+(?::\d{1,5})?|http:\/\/(?:127\.0\.0\.1|localhost|\[::1\])(?::\d{1,5})?)\/?$/i;
+
+export const jiraSiteUrlSchema = z
+  .string()
+  .trim()
+  .max(300)
+  .regex(JIRA_SITE, 'Use your Jira site address, such as https://your-team.atlassian.net.')
+  .transform((value) => value.replace(/\/$/, '').toLowerCase());
+
+export const saveTicketConnectionRequestSchema = z.discriminatedUnion('source', [
+  z.object({
+    source: z.literal('linear'),
+    apiKey: z.string().trim().min(20).max(400),
+  }),
+  z.object({
+    source: z.literal('jira'),
+    siteUrl: jiraSiteUrlSchema,
+    email: z.email().max(320),
+    apiToken: z.string().trim().min(10).max(400),
+  }),
+]);
+export type SaveTicketConnectionRequest = z.infer<typeof saveTicketConnectionRequestSchema>;
+
+export const updateTicketSettingsRequestSchema = z
+  .object({
+    moveOnShip: z.boolean().optional(),
+    statusMap: ticketStatusMapSchema.optional(),
+  })
+  .refine((body) => body.moveOnShip !== undefined || body.statusMap !== undefined, {
+    message: 'Change at least one setting.',
+  });
+export type UpdateTicketSettingsRequest = z.infer<typeof updateTicketSettingsRequestSchema>;
+
+export const ticketStartModeSchema = z.enum(['plan', 'build']);
+export type TicketStartMode = z.infer<typeof ticketStartModeSchema>;
+
+export const startTicketRequestSchema = z.object({
+  conversationId: z.uuid(),
+  messageId: z.uuid(),
+  projectId: z.uuid().optional(),
+  mode: ticketStartModeSchema.default('build'),
+  moveToInProgress: z.boolean().default(true),
+});
+export type StartTicketRequest = z.infer<typeof startTicketRequestSchema>;
+
+export const ticketSyncSchema = z.object({
+  outcome: z.enum(['succeeded', 'skipped', 'failed']),
+  message: z.string().nullable(),
+});
+export type TicketSync = z.infer<typeof ticketSyncSchema>;
+
+export const startTicketResponseSchema = z.object({
+  conversationId: z.uuid(),
+  taskId: z.uuid(),
+  runId: z.uuid(),
+  ticket: ticketSummarySchema,
+  transition: ticketSyncSchema.nullable(),
+});
+export type StartTicketResponse = z.infer<typeof startTicketResponseSchema>;
+
+export const transitionTicketRequestSchema = z.object({ status: ticketStatusSchema });
+
+export const commentTicketRequestSchema = z.object({
+  body: z.string().trim().min(1).max(TICKET_COMMENT_MAX_LENGTH),
+});

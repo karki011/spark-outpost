@@ -11,7 +11,6 @@ const providerUrl = z
   }, 'Provider URLs must use HTTPS, or 127.0.0.1 for local test stubs.')
   .transform((value) => value.replace(/\/$/, ''));
 
-/** Keys for the memory store (tests and benches): a connection's API key, or 'github' for Ship. */
 const memorySecretsSchema = z.partialRecord(
   z.union([connectableIdSchema, z.literal('github')]),
   z.string().min(1),
@@ -66,6 +65,7 @@ const configSchema = z.object({
   TYPESAFE_BASE_URL: providerUrl.default('https://api.typesafe.ai'),
   ZAI_BASE_URL: providerUrl.default('https://api.z.ai/api/anthropic'),
   GITHUB_API_URL: providerUrl.optional(),
+  LINEAR_API_URL: providerUrl.optional(),
   KEYCHAIN_SERVICE: z.string().min(1).default(DEFAULT_KEYCHAIN_SERVICE),
   BRANCH_PREFIX: z
     .string()

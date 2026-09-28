@@ -34,6 +34,7 @@ import {
   type ShipPlan,
 } from './prepare.ts';
 import { repoSlug } from './remote.ts';
+import { syncTicketsAfterShip } from '../tickets/ship-sync.ts';
 
 const running = new Map<string, Promise<unknown>>();
 
@@ -171,6 +172,7 @@ async function pullRequestStep(
     source: 'ship',
   });
   progress.link = link;
+  await syncTicketsAfterShip(deps, plan.task.id, { url: pull.url, title: link.title ?? pull.url });
 }
 
 async function audit(

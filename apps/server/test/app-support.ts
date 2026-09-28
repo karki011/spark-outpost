@@ -22,6 +22,7 @@ export interface TestAppOptions {
   probeCapabilities?: AppOptions['probeCapabilities'];
   appEvents?: AppEventFeed;
   githubApiUrl?: string;
+  linearApiUrl?: string;
   locateGh?: () => Promise<string | null>;
 }
 
@@ -55,6 +56,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     loginShell: '/bin/zsh',
     probeCapabilities: options.probeCapabilities ?? unavailableProbe,
     githubApiUrl: options.githubApiUrl,
+    linearApiUrl: options.linearApiUrl,
     locateGh: options.locateGh ?? (async () => null),
   });
 }

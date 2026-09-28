@@ -48,6 +48,7 @@ export const taskLinkSourceSchema = z.enum([
   'agent_text',
   'user',
   'ship',
+  'ticket',
 ]);
 export type TaskLinkSource = z.infer<typeof taskLinkSourceSchema>;
 

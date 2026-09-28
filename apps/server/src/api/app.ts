@@ -17,6 +17,7 @@ import { setupRoutes, type SetupDeps } from './setup-routes.ts';
 import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
 import { planRoutes } from './plan-routes.ts';
 import { taskRoutes } from './task-routes.ts';
+import { ticketRoutes, type TicketRouteDeps } from './ticket-routes.ts';
 import { webApp } from './web-app.ts';
 import { terminalRoutes } from '../terminal/routes.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
@@ -26,6 +27,7 @@ export interface AppOptions
     RouteDeps,
     SetupDeps,
     ShipRouteDeps,
+    TicketRouteDeps,
     ChatSettingsDeps,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'> {
   terminals: TerminalSessions;
@@ -53,6 +55,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));
   app.use('/api', shipRoutes(options));
+  app.use('/api', ticketRoutes(options));
   app.use('/api', planRoutes(options));
   app.use('/api', approvalRoutes(options));
   app.use('/api', modelCardRoutes(options));

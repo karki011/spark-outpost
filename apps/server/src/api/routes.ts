@@ -12,7 +12,6 @@ import {
   getConversationDetail,
   listConversations,
   sendUserMessage,
-  type RunTarget,
 } from '../persistence/conversations.ts';
 import { ConversationBusyError } from '../persistence/conversation-actions.ts';
 import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
@@ -21,12 +20,7 @@ import { loadOrchestration } from '../persistence/orchestrations.ts';
 import { advisorUsageSummary } from '../persistence/advice.ts';
 import { usageSummary } from '../persistence/usage.ts';
 import { categoryUsage } from '../persistence/category-usage.ts';
-import {
-  ConversationMissingError,
-  draftChatSettings,
-  getCapabilities,
-  resolveChatSettings,
-} from '../persistence/chat-settings.ts';
+import { ConversationMissingError } from '../persistence/chat-settings.ts';
 import { InvalidDefaultError } from '../persistence/setup.ts';
 import { TerminalLimitError } from '../terminal/sessions.ts';
 import type { RunEventHub } from './run-event-hub.ts';
@@ -39,6 +33,8 @@ import { BadRequestError, UploadTooLargeError, paramId, parseBody } from './vali
 import { outcomeErrorStatus } from './outcome-routes.ts';
 import { approvalErrorStatus } from './approval-routes.ts';
 import { shipErrorStatus } from './ship-routes.ts';
+import { ticketErrorStatus } from './ticket-routes.ts';
+import { resolveRunTarget } from './run-target.ts';
 import { PlanDocumentError } from '../persistence/plan-documents.ts';
 import { AgentConfigConflictError } from './agent-config-routes.ts';
 
@@ -52,27 +48,8 @@ export interface RouteDeps {
 export function apiRoutes({ db, hub, workspaceId, fixedRunProvider }: RouteDeps): Router {
   const router = Router();
 
-  const runTarget = async (conversationId: string): Promise<RunTarget> => {
-    if (fixedRunProvider) return { provider: fixedRunProvider };
-    const settings = await resolveChatSettings(db, conversationId).catch((error: unknown) => {
-      if (error instanceof ConversationMissingError) return draftChatSettings(db, workspaceId);
-      throw error;
-    });
-    if (!settings.provider) {
-      throw new BadRequestError('Connect an AI provider before sending a message.');
-    }
-    const capabilities = await getCapabilities(db, workspaceId, settings.provider);
-    const offered =
-      settings.model !== null &&
-      (!capabilities || capabilities.models.some((model) => model.id === settings.model));
-    return {
-      provider: settings.provider,
-      model: offered ? settings.model : (capabilities?.defaultModel ?? null),
-      effort: settings.effort,
-      permission: settings.permission,
-      level: settings.level,
-    };
-  };
+  const runTarget = (conversationId: string) =>
+    resolveRunTarget({ db, workspaceId, fixedRunProvider }, conversationId);
 
   router.get('/health', async (_req, res) => {
     await db.query('SELECT 1');
@@ -156,7 +133,11 @@ export function apiRoutes({ db, hub, workspaceId, fixedRunProvider }: RouteDeps)
 }
 
 export function statusForError(error: unknown): { status: number; message: string } {
-  const known = approvalErrorStatus(error) ?? outcomeErrorStatus(error) ?? shipErrorStatus(error);
+  const known =
+    approvalErrorStatus(error) ??
+    outcomeErrorStatus(error) ??
+    shipErrorStatus(error) ??
+    ticketErrorStatus(error);
   if (known) return known;
   if (
     error instanceof BadRequestError ||
