@@ -83,6 +83,7 @@ const app = createApp({
   outcomeSampleRate: config.OUTCOME_SAMPLE_RATE,
   branchPrefix: config.BRANCH_PREFIX,
   githubApiUrl: config.GITHUB_API_URL,
+  linearApiUrl: config.LINEAR_API_URL,
   ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
   ...(config.MCP_SCAN_HOME ? { mcpHomes: scanHomesAt(config.MCP_SCAN_HOME) } : {}),
 });

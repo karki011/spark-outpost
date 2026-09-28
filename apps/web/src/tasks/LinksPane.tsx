@@ -13,6 +13,7 @@ const sourceNames: Record<TaskLink['source'], string> = {
   agent_text: 'Mentioned by the agent',
   user: 'Added by you',
   ship: 'Opened by Ship',
+  ticket: 'The ticket this task started from',
 };
 
 function shortUrl(url: string): string {
