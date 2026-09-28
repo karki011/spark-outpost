@@ -18,6 +18,8 @@ import type { AgentUsage } from '../bench/results.ts';
 import { collectTurn, type TurnMetrics } from './collect.ts';
 
 export const CODEX_MODEL = 'gpt-6-sol';
+/** A Stop pressed before the agent got going can be missed; press it again after this long. */
+const RECANCEL_MS = 5_000;
 export type CodexEffort = 'low' | 'medium' | 'high';
 const ROOT = resolve(import.meta.dirname, '../..');
 
@@ -31,8 +33,13 @@ export interface InProcessOptions {
   buildStyle: BuildStyle;
 }
 
+export interface SendOptions {
+  /** Press Stop this long after the turn starts, like a user interrupting it. */
+  cancelAfterMs?: number;
+}
+
 export interface InProcessSession {
-  send(text: string): Promise<DirectTurn>;
+  send(text: string, sendOptions?: SendOptions): Promise<DirectTurn>;
 }
 
 async function recordReply(env: BenchEnv, runId: string): Promise<void> {
@@ -72,7 +79,7 @@ export async function inProcessSession(
     repo,
     options.buildStyle,
   ]);
-  const send = async (text: string): Promise<DirectTurn> => {
+  const send = async (text: string, sendOptions: SendOptions = {}): Promise<DirectTurn> => {
     const sent = await sendUserMessage(
       t.db,
       conversationId,
@@ -90,7 +97,7 @@ export async function inProcessSession(
       settled = true;
     });
     let autoDenied = 0;
-    let cancelled = false;
+    let cancelledAt: number | null = null;
     while (!settled) {
       const detail = await getConversationDetail(t.db, conversationId);
       for (const approval of detail?.approvals ?? []) {
@@ -102,8 +109,10 @@ export async function inProcessSession(
           optionId: choice.optionId,
         });
       }
-      if (!cancelled && Date.now() - started > timeoutMs) {
-        cancelled = true;
+      const interrupt = sendOptions.cancelAfterMs ?? Number.POSITIVE_INFINITY;
+      const due = Date.now() - started > Math.min(timeoutMs, interrupt);
+      if (due && (cancelledAt === null || Date.now() - cancelledAt > RECANCEL_MS)) {
+        cancelledAt = Date.now();
         await requestCancel(t.db, sent.run.id);
       }
       await new Promise((done) => setTimeout(done, 250));
@@ -298,6 +307,30 @@ function codexMetrics(run: CodexRun, wallMs: number, effort: CodexEffort): TurnM
   };
 }
 
+/**
+ * One codex exec turn, resuming `threadId` when given. With `cancelAfterMs` the process is
+ * stopped early, like a user pressing Stop.
+ */
+export async function codexTurn(
+  repo: string,
+  text: string,
+  threadId: string | null,
+  timeoutMs: number,
+  effort: CodexEffort,
+  sendOptions: SendOptions = {},
+): Promise<{ turn: DirectTurn; threadId: string | null }> {
+  const started = Date.now();
+  const limit = Math.min(timeoutMs, sendOptions.cancelAfterMs ?? Number.POSITIVE_INFINITY);
+  const run = await runCodex(repo, text, threadId, limit, effort);
+  if (limit < timeoutMs && run.error === 'Timed out and was stopped.') {
+    run.error = null;
+  }
+  return {
+    turn: { metrics: codexMetrics(run, Date.now() - started, effort), autoDenied: 0 },
+    threadId: run.threadId ?? threadId,
+  };
+}
+
 export async function directCodexTurns(
   repo: string,
   turns: readonly string[],
@@ -307,10 +340,9 @@ export async function directCodexTurns(
   const results: DirectTurn[] = [];
   let threadId: string | null = null;
   for (const text of turns) {
-    const started = Date.now();
-    const run = await runCodex(repo, text, threadId, timeoutMs, effort);
-    threadId = run.threadId;
-    results.push({ metrics: codexMetrics(run, Date.now() - started, effort), autoDenied: 0 });
+    const next = await codexTurn(repo, text, threadId, timeoutMs, effort);
+    threadId = next.threadId;
+    results.push(next.turn);
   }
   return results;
 }

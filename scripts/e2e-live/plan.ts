@@ -2,7 +2,16 @@ import type { BuildStyle, InvolvementLevel } from '../../packages/contracts/src/
 import { CORE_SCENARIOS, SCENARIOS, scenarioById, type ArmId, type Scenario } from './scenarios.ts';
 
 export type Block =
-  'core' | 'scenarios' | 'versions' | 'configs' | 'models' | 'glm' | 'focus' | 'lean' | 'routing';
+  | 'core'
+  | 'scenarios'
+  | 'versions'
+  | 'configs'
+  | 'models'
+  | 'glm'
+  | 'focus'
+  | 'lean'
+  | 'routing'
+  | 'dev-day';
 export const BLOCKS: readonly Block[] = [
   'core',
   'scenarios',
@@ -13,6 +22,7 @@ export const BLOCKS: readonly Block[] = [
   'focus',
   'lean',
   'routing',
+  'dev-day',
 ];
 
 export type Driver = 'ui' | 'api' | 'bench';
