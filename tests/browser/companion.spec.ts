@@ -1,6 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { createDb } from '../../apps/server/src/persistence/db.ts';
-import { resetTestDatabase, testDatabaseUrl } from './database.ts';
+import { openTestDb, resetTestDatabase } from './database.ts';
 import { decorateLatestRun } from './home-seed.ts';
 import { openChats } from './navigation.ts';
 import { seedChats } from './sidebar-seed.ts';
@@ -18,7 +17,7 @@ async function goHome(page: Page) {
 }
 
 async function setRun(conversationId: string, status: string) {
-  const db = createDb(testDatabaseUrl());
+  const db = openTestDb();
   try {
     await db.query(`UPDATE runs SET status = $2, finished_at = now() WHERE conversation_id = $1`, [
       conversationId,

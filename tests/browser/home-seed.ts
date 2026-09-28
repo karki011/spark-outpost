@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { createDb } from '../../apps/server/src/persistence/db.ts';
-import { testDatabaseUrl } from './database.ts';
+import { openTestDb } from './database.ts';
 
 export interface RunDetails {
   provider?: string;
@@ -16,7 +15,7 @@ export interface RunDetails {
 }
 
 export async function decorateLatestRun(conversationId: string, details: RunDetails) {
-  const db = createDb(testDatabaseUrl());
+  const db = openTestDb();
   try {
     const { rows } = await db.query<{ id: string }>(
       'SELECT id FROM runs WHERE conversation_id = $1 ORDER BY created_at DESC LIMIT 1',
@@ -83,7 +82,7 @@ export async function decorateLatestRun(conversationId: string, details: RunDeta
 }
 
 export async function markVerifyFailed(provider: string, message: string) {
-  const db = createDb(testDatabaseUrl());
+  const db = openTestDb();
   try {
     await db.query(
       `UPDATE provider_connections

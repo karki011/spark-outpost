@@ -12,6 +12,10 @@ export function testDatabaseUrl(): string {
   return url;
 }
 
+export function openTestDb(): Db {
+  return createDb(testDatabaseUrl(), { connectTries: 7 });
+}
+
 interface ResetOptions {
   onboarded: boolean;
   connected?: ('claude' | 'codex')[];
@@ -64,7 +68,7 @@ export async function resetTestDatabase({
 }: ResetOptions): Promise<void> {
   rmSync(FAKE_CODEX_STATE, { force: true });
   rmSync(FAKE_GH_STATE, { force: true });
-  const db = createDb(testDatabaseUrl());
+  const db = openTestDb();
   try {
     await stopLeftoverRuns(db);
     await truncateTables(db, RESET_TABLES);
