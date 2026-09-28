@@ -21,6 +21,12 @@ export function autoThisTurn(orchestration: Orchestration | null): string | null
   return member ? modelFamily(member) : null;
 }
 
+export function builderRouteNote(orchestration: Orchestration | null): string | null {
+  const builder = orchestration?.crew.findLast((member) => member.role === 'builder');
+  const note = builder?.routeNote;
+  return note ? note.charAt(0).toUpperCase() + note.slice(1) : null;
+}
+
 export function autoWouldHaveUsed(orchestration: Orchestration | null): string | null {
   if (!orchestration) return null;
   const member = [...orchestration.crew].reverse().find((candidate) => candidate.autoWouldUse);

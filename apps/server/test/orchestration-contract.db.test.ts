@@ -115,7 +115,7 @@ describe('a Builder waiting on an edit', () => {
     expect(done).toMatchObject({ needsInput: false, attention: null });
 
     expect(orchestration.crew.map((member) => member.name)).toEqual(['Bolt', 'Hawk']);
-    expect(orchestration.crew[0]?.agentLabel).toBe('Bolt · Builder · Sonnet 5 · medium');
+    expect(orchestration.crew[0]?.agentLabel).toBe('Bolt · Builder · Opus 5.5 · medium');
     expect(orchestration.totals.jevTokens).toBe(1000 * orchestration.totals.jevCalls);
     const task = await getTaskDetail(t.db, orchestration.taskId!);
     const critic = orchestration.crew.at(-1)!;

@@ -19,7 +19,7 @@ describe('rule routes', () => {
     ).toMatchObject({
       routedBy: 'pinned',
       pick: { model: 'sonnet' },
-      autoWouldUse: { model: 'haiku' },
+      autoWouldUse: { model: 'sonnet' },
     });
   });
 
@@ -31,7 +31,8 @@ describe('rule routes', () => {
     });
     expect(routeBuilder(context('auto'), { trivial: true, destructive: false })).toMatchObject({
       rule: 'trivial → small tier',
-      pick: { model: 'haiku', modelLabel: 'Haiku 4.5' },
+      pick: { model: 'sonnet', modelLabel: 'Sonnet 5' },
+      note: "raised to Sonnet 5: Builders don't run on the fast tier",
     });
     expect(routeBuilder(context('auto'), { trivial: true, destructive: true })).toMatchObject({
       rule: 'destructive → top tier',
@@ -61,7 +62,8 @@ describe('rule routes', () => {
   });
 
   it('escalates the previous pick one tier up, then raises effort', () => {
-    const first = routeBuilder(context('auto'), { trivial: true, destructive: false });
+    const haiku = { provider: 'claude', model: 'haiku', modelLabel: 'Haiku 4.5', effort: 'low' };
+    const first: MemberRoute = { pick: haiku, routedBy: 'rules', rule: 'x', autoWouldUse: null };
     const second = escalate(context('auto'), first);
     expect(second.pick).toMatchObject({
       model: 'sonnet',

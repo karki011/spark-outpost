@@ -48,9 +48,9 @@ describe('Builder effort', () => {
 
   it('still escalates one step from the provider default', () => {
     const first = routeBuilder(withEfforts('low', 'high'), { trivial: true, destructive: false });
-    expect(first.pick).toMatchObject({ model: 'haiku', effort: 'low' });
+    expect(first.pick).toMatchObject({ model: 'sonnet', effort: 'low' });
     expect(escalate(withEfforts('low', 'high'), first).pick).toMatchObject({
-      model: 'sonnet',
+      model: 'opus[1m]',
       effort: 'medium',
     });
   });

@@ -22,7 +22,7 @@ import {
   interpretationCard,
   interpretations,
 } from './clarify.ts';
-import { escalate } from './routing.ts';
+import { escalateBuilder } from './routing.ts';
 import { save, type Session } from './session.ts';
 import type { FlowAction, FlowEvent } from './transitions.ts';
 
@@ -36,7 +36,7 @@ async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
   if (action.kind === 'clarify') return answerOrBuildCard(action.reason);
   if (action.kind === 'retry' || action.kind === 'verify') {
     const previous = s.routes.get('builder');
-    const to = previous ? escalate(s.route, previous).pick : null;
+    const to = previous ? escalateBuilder(s.route, previous).pick : null;
     const card = action.kind === 'retry' ? retryCard : verifyCard;
     return card(builderPick(s), to, action.reason);
   }

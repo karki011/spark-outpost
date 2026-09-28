@@ -79,7 +79,7 @@ describe('routing with Z.ai connected', () => {
     });
   });
 
-  it('picks GLM-5.3-Flash for trivial edits on Auto, and records Jev’s tier only', () => {
+  it('raises trivial edits past GLM-5.3-Flash to GLM-5.3, and records Jev’s tier only', () => {
     const route = withZai({
       provider: 'zai',
       model: 'opus',
@@ -90,9 +90,10 @@ describe('routing with Z.ai connected', () => {
       { ...route, routing: 'auto' },
       { trivial: true, destructive: false },
     );
-    expect(trivial.pick).toMatchObject({ model: 'haiku', modelLabel: 'GLM-5.3-Flash' });
+    expect(trivial.pick).toMatchObject({ model: 'opus', modelLabel: 'GLM-5.3' });
+    expect(trivial.note).toBe("raised to GLM-5.3: Builders don't run on the fast tier");
     const observed = routeBuilder(route, { trivial: false, destructive: false }, 'small');
     expect(observed.pick).toMatchObject({ model: 'opus' });
-    expect(observed.autoWouldUse).toMatchObject({ model: 'haiku' });
+    expect(observed.autoWouldUse).toMatchObject({ model: 'opus', modelLabel: 'GLM-5.3' });
   });
 });

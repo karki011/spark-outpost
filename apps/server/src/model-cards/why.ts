@@ -7,6 +7,7 @@ export interface WhyInput {
   routedBy: RouteSource;
   rule: string;
   autoWouldUse: AgentPick | null;
+  note?: string;
 }
 
 function labelOf(pick: AgentPick): string {
@@ -25,10 +26,11 @@ export function whyLine(input: WhyInput): string {
   const label = labelOf(input.pick);
   const card = cardFor(pickModel(input.pick), input.pick.provider);
   const tier = card ? ` · ${card.tier} tier` : '';
-  const head =
+  const base =
     input.routedBy === 'pinned'
       ? `Why ${label}: pinned in this chat`
       : `Why ${label}: rule ${input.rule}${tier}`;
+  const head = input.note ? `${base} · ${input.note}` : base;
   const jev = input.autoWouldUse;
   if (!jev || jev.model === input.pick.model) return head;
   return `${head} · Jev would have used ${labelOf(jev)}`;

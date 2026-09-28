@@ -3,6 +3,7 @@ import type { RouterTier } from '../advisor/policy.ts';
 import {
   builderEffort,
   chatPick,
+  floorBuilderPick,
   routeBuilder,
   type MemberRoute,
   type RouteContext,
@@ -33,6 +34,11 @@ export function withEffort(context: RouteContext, pick: AgentPick): AgentPick {
   return { ...pick, effort: builderEffort(context, pick) };
 }
 
+export function builderRun(context: RouteContext, pick: AgentPick): AgentPick {
+  const floored = floorBuilderPick(context, pick).pick;
+  return floored.model === pick.model ? pick : withEffort(context, floored);
+}
+
 function policyKind(
   context: RouteContext,
   facts: RouteFacts,
@@ -54,11 +60,11 @@ function codePick(
 ): AgentPick | null {
   const chat = withEffort(context, chatPick(context));
   if (kind === 'ask') return null;
-  if (kind === 'destructive') return rule.pick;
+  if (kind === 'destructive' || kind === 'pinned') return rule.pick;
   if (kind === 'one_candidate' && candidates[0]) {
-    return withEffort(context, pickOf(candidates[0], null));
+    return builderRun(context, withEffort(context, pickOf(candidates[0], null)));
   }
-  return chat;
+  return builderRun(context, chat);
 }
 
 export function routePolicy(

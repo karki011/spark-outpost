@@ -30,6 +30,37 @@ export function destructiveByRule(request: string): boolean {
   return DESTRUCTIVE.test(request) || namesSecret(request);
 }
 
+const MIGRATION = /\bmigrat(?:e|es|ed|ing|ion|ions)\b|\bschema changes?\b|\balter table\b/i;
+
+const SECURITY =
+  /\b(?:security|auth(?:entic\w*|oriz\w*|n|z)?|login|passwords?|permissions?|oauth|jwt|csrf|xss|(?:sql|command|prompt) injection|encrypt\w*|decrypt\w*|cryptograph\w*|vulnerab\w*|secrets?)\b/i;
+
+const MULTI_PACKAGE =
+  /\b(?:across|every|all|multiple|several)\s+(?:the\s+|our\s+)?(?:packages|modules|services|apps|workspaces|repos|repositories)\b|\bmonorepo\b|\bacross the (?:code ?base|repo(?:sitory)?|project)\b|\bcode ?base[- ]wide\b/i;
+
+const TOP_MODEL =
+  /\b(?:strongest|most capable|smartest|biggest|best available|top[- ]tier|top)\s+model\b/i;
+
+export type ComplexRule = 'migration' | 'security' | 'multi-package';
+
+export function complexByRule(request: string): ComplexRule | null {
+  if (MIGRATION.test(request)) return 'migration';
+  if (SECURITY.test(request)) return 'security';
+  if (MULTI_PACKAGE.test(request)) return 'multi-package';
+  return null;
+}
+
+function escaped(word: string): string {
+  return word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function asksForTopModel(request: string, topFamilies: readonly string[] = []): boolean {
+  if (TOP_MODEL.test(request)) return true;
+  return topFamilies
+    .filter((family) => family.length >= 3)
+    .some((family) => new RegExp(`\\b${escaped(family)}\\b`, 'i').test(request));
+}
+
 export function trivialByRule(request: string): boolean {
   if (destructiveByRule(request)) return false;
   if (words(request) > TRIVIAL_MAX_WORDS) return false;

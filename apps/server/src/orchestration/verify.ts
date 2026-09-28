@@ -7,7 +7,7 @@ import {
 import { callJev } from './jev-calls.ts';
 import { changesForReview } from './member-prompts.ts';
 import { DIFFS_OFF, recordAdvice } from './observe.ts';
-import { escalate } from './routing.ts';
+import { escalateBuilder } from './routing.ts';
 import type { Session } from './session.ts';
 import { cascadeAction, type CascadeAction, type FlowEvent } from './transitions.ts';
 
@@ -67,7 +67,7 @@ export async function verifyChange(s: Session): Promise<FlowEvent> {
   const reading = readVerdict(requirements, call.status === 'answered' ? call.response : null);
   const action = cascadeAction(reading.accepted, s.flow.escalated);
   const previous = s.routes.get('builder');
-  const to = action === 'escalate' && previous ? escalate(s.route, previous).pick : null;
+  const to = action === 'escalate' && previous ? escalateBuilder(s.route, previous).pick : null;
   await recordAdvice(
     s,
     'verify',

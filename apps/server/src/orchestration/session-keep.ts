@@ -38,18 +38,16 @@ function tierOf(pick: AgentPick): string | null {
 export function keepSession(
   route: MemberRoute,
   session: ResumableSession | null,
-  destructive = false,
+  needsTop: boolean | string = false,
 ): KeptRoute {
   if (!session || route.routedBy === 'pinned' || route.routedBy === 'fixed') {
     return { route, choice: null };
   }
   if (samePick(route.pick, session.pick)) return { route, choice: null };
   if (route.pick.provider !== session.pick.provider) return { route, choice: null };
-  if (destructive && tierOf(route.pick) !== tierOf(session.pick)) {
-    return {
-      route,
-      choice: { kept: false, reason: 'destructive work needs the top tier', session: session.pick },
-    };
+  if (needsTop && tierOf(route.pick) !== tierOf(session.pick)) {
+    const reason = typeof needsTop === 'string' ? needsTop : 'destructive work needs the top tier';
+    return { route, choice: { kept: false, reason, session: session.pick } };
   }
   const kept = { ...route, pick: session.pick, rule: KEPT_FOR_SESSION };
   return { route: kept, choice: { kept: true, reason: KEPT_FOR_SESSION, session: session.pick } };

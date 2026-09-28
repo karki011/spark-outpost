@@ -75,6 +75,7 @@ function routeContext(input: RunInput, context: IntakeContext): RouteContext {
     },
     providerEffort: context.defaultEfforts[input.provider] ?? null,
     candidates: context.candidates,
+    request: input.userRequest,
   };
 }
 

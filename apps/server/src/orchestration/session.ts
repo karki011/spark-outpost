@@ -9,6 +9,7 @@ import {
   type PlanEntry,
 } from '@spark-outpost/contracts';
 import type { IntakeResult } from '../advisor/intake-recorder.ts';
+import type { ScanReport } from '../codescan/scan.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
 import type { ProjectChecks } from '../checks/project-checks.ts';
 import type { Lease } from '../persistence/jobs.ts';
@@ -92,6 +93,7 @@ export interface Session {
   closeReason: string | null;
   observations: Promise<void>[];
   jevDiffs: boolean;
+  scanReport?: ScanReport | null;
 }
 
 export const COMMAND_READER_TOOL_CALL_LIMIT = 120;

@@ -18,7 +18,8 @@ import {
 } from '../routing/route-state.ts';
 import { callJev, type JevCall } from './jev-calls.ts';
 import { rankFiles, type Ranking } from './observe-rank.ts';
-import { jevTierPick } from './routing.ts';
+import { builderFacts } from './member-routes.ts';
+import { builderTierPick } from './routing.ts';
 import type { Session } from './session.ts';
 
 async function lastFailingCheck(s: Session): Promise<string | null> {
@@ -113,7 +114,7 @@ async function record(
         chat: policy.chat,
         rule: { pick: policy.rule.pick, rule: policy.rule.rule },
         codePick: policy.codePick,
-        tierPick: jevTierPick(s.route, s.intake.body.jev?.tier ?? null),
+        tierPick: builderTierPick(s.route, s.intake.body.jev?.tier ?? null),
         evidenceFiles: ranking.predicted,
         variants: { text, evidence },
       },
@@ -131,7 +132,7 @@ async function record(
 }
 
 export async function observeRouting(s: Session, report: ScanReport | null): Promise<void> {
-  const policy = routePolicy(s.route, s.facts, s.jev !== null);
+  const policy = routePolicy(s.route, builderFacts(s), s.jev !== null);
   const asking = policy.kind === 'ask';
   const facts = asking ? await routeFacts(s) : null;
   const textCall = facts ? askRoute(s, policy, facts, 'text') : null;
