@@ -60,6 +60,7 @@ const KEEP_CARD_SIGNALS: Record<string, OutcomeSignalKind> = {
   [CHECKPOINT_OPTION.keep]: 'kept',
   [CHECKPOINT_OPTION.revert]: 'reverted',
   [CHECKPOINT_OPTION.fix]: 'correction',
+  [CHECKPOINT_OPTION.fixFindings]: 'correction',
 };
 
 export function outcomeKind(facts: TurnFacts): OutcomeKind {

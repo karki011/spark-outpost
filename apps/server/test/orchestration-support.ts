@@ -284,6 +284,7 @@ export function startOrchestrator(
     sessions?: string;
     loopGuard?: OrchestratorDeps['loopGuard'];
     codeScan?: OrchestratorDeps['codeScan'];
+    budgetPollMs?: number;
   } = {},
 ): Harness {
   const intake = fetcher
@@ -305,7 +306,7 @@ export function startOrchestrator(
     pollMs: 20,
     cancelPollMs: 20,
     approvalPollMs: 20,
-    budgetPollMs: 50,
+    budgetPollMs: options.budgetPollMs ?? 50,
     ...(intake ? { intake } : {}),
     ...(options.budget ? { budget: options.budget } : {}),
     ...(options.loopGuard !== undefined ? { loopGuard: options.loopGuard } : {}),

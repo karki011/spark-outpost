@@ -23,6 +23,7 @@ import {
   checkpointResult,
   checkpointTitle,
   offers,
+  optionName,
   escalateLabel,
   retryLine,
   type CheckpointApproval,
@@ -203,6 +204,9 @@ function AcceptBody({ approval, decide }: { approval: CheckpointApproval; decide
         <div className="appr-acts">
           <Action id={CHECKPOINT_OPTION.keep} approval={approval} decide={decide} kind="primary">
             Keep
+          </Action>
+          <Action id={CHECKPOINT_OPTION.fixFindings} approval={approval} decide={decide}>
+            {optionName(approval, CHECKPOINT_OPTION.fixFindings)}
           </Action>
           {offers(approval, CHECKPOINT_OPTION.fix) && (
             <button type="button" className="btn line sm" onClick={() => setFixing(true)}>

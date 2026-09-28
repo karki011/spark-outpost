@@ -22,6 +22,10 @@ export function offers(approval: Approval, optionId: string): boolean {
   return approval.options.some((option) => option.optionId === optionId);
 }
 
+export function optionName(approval: Approval, optionId: string): string | null {
+  return approval.options.find((option) => option.optionId === optionId)?.name ?? null;
+}
+
 const TITLES: Record<CheckpointPayload['kind'], string> = {
   clarify: 'Jev has a question',
   plan: 'Approve the plan?',
@@ -110,6 +114,7 @@ const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.finish]: 'Skipped.',
   [CHECKPOINT_OPTION.keep]: 'Kept the changes.',
   [CHECKPOINT_OPTION.fix]: 'Asked for a fix.',
+  [CHECKPOINT_OPTION.fixFindings]: 'Sent the review findings back to the Builder.',
   [CHECKPOINT_OPTION.revert]: 'Reverted the changes.',
   [CHECKPOINT_OPTION.continueBudget]: 'Continued past the budget.',
   [CHECKPOINT_OPTION.answer]: 'Answered.',

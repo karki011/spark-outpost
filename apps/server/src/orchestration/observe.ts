@@ -17,7 +17,7 @@ export async function jevDiffsAllowed(db: Queryable, workspaceId: string): Promi
   return rows[0]?.jev_diffs ?? true;
 }
 
-type Purpose = Extract<NewDecision['purpose'], 'policy' | 'verify'>;
+type Purpose = Extract<NewDecision['purpose'], 'policy' | 'verify' | 'finding'>;
 
 export function recordAdvice(
   s: Session,
@@ -32,7 +32,7 @@ export function recordAdvice(
     runId: s.lease.runId,
     purpose,
     childRunId,
-    role: 'builder',
+    role: purpose === 'finding' ? 'critic' : 'builder',
     stepIndex: 0,
     jevStatus: call?.status ?? 'not_asked',
     inputTokens: call?.usage?.inputTokens ?? null,

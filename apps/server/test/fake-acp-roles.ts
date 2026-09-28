@@ -38,22 +38,77 @@ function priorPrompts(sessionId: string): number {
   }
 }
 
+function sessionPrompts(turn: RoleTurn): string[] {
+  try {
+    return readFakeSession(turn.sessionId).prompts;
+  } catch {
+    return [turn.text];
+  }
+}
+
 function leanMarker(text: string): string {
   return text.includes('## Build style: lean') && text.includes('#leanmark')
     ? '// lean: fixed list; upgrade: load from config when asked\n'
     : '';
 }
 
+export const BUG_FINDINGS = [
+  '`notes.txt:2`: `"((5.00)"` is accepted because `hasParens` only looks at the first and last characters; it should throw.',
+  "Critical regression: an unconditional `Math.abs` turns `-$5.00` positive, so `parseCents('-$5.00')` returns 500.",
+];
+
+export const STYLE_FINDINGS = [
+  'Nit: `parseCents` could be named `toCents` to match the other helpers.',
+  'Consider extracting the parentheses check into a named constant for readability.',
+];
+
+export const ROUND_FINDINGS = [
+  BUG_FINDINGS[0]!,
+  BUG_FINDINGS[1]!,
+  '`(+$5)` is accepted when a plus sign inside parentheses should be rejected.',
+  "`parseCents('$1,000.00')` returns 1 instead of 100000.",
+];
+
+const ASKED_TO_FIX = '## Findings the Builder was asked to fix';
+
+function reviewNumber(text: string): number {
+  const start = text.indexOf(ASKED_TO_FIX);
+  if (start === -1) return 1;
+  const asked = text.slice(start, text.indexOf('\n## ', start + ASKED_TO_FIX.length));
+  const last = ROUND_FINDINGS.findLastIndex((finding) => asked.includes(finding));
+  return last + 2;
+}
+
+function roundFindings(text: string): string[] {
+  const rounds = Number(/#bugrounds (\d+)/.exec(text)?.[1] ?? 0);
+  const review = reviewNumber(text);
+  if (review > rounds) return [];
+  return [ROUND_FINDINGS[(review - 1) % ROUND_FINDINGS.length]!];
+}
+
+function reviewFindings(text: string): { findings: string[]; concerns: boolean } {
+  const rechecking = text.includes(ASKED_TO_FIX);
+  if (text.includes('#stuckreview')) return { findings: BUG_FINDINGS, concerns: true };
+  if (text.includes('#bugrounds')) {
+    const findings = roundFindings(text);
+    if (findings.length > 0) return { findings, concerns: true };
+  } else if (text.includes('#bugreview') && !rechecking) {
+    return { findings: BUG_FINDINGS, concerns: true };
+  }
+  if (text.includes('#stylereview')) return { findings: STYLE_FINDINGS, concerns: true };
+  if (text.includes('#concerns')) {
+    return { findings: ['The divider test is missing'], concerns: true };
+  }
+  return { findings: ['The change matches the request'], concerns: false };
+}
+
 export async function critic(turn: RoleTurn): Promise<acp.StopReason> {
-  const concerns = turn.text.includes('#concerns');
+  const { findings, concerns } = reviewFindings(turn.text);
   const lens = turn.text.includes('## Complexity (same review)')
     ? '- notes.txt:L2: shrink: two lines say the same\nnet: -2 lines possible\n'
     : '';
-  await turn.say(
-    concerns
-      ? `Findings:\n- The divider test is missing\n${lens}Verdict: concerns`
-      : `Findings:\n- The change matches the request\n${lens}Verdict: looks good`,
-  );
+  const bullets = findings.map((finding) => `- ${finding}\n`).join('');
+  await turn.say(`Findings:\n${bullets}${lens}Verdict: ${concerns ? 'concerns' : 'looks good'}`);
   return 'end_turn';
 }
 
@@ -218,6 +273,18 @@ async function fixRequest(turn: RoleTurn): Promise<acp.StopReason> {
   return 'end_turn';
 }
 
+async function fixFindings(turn: RoleTurn): Promise<acp.StopReason> {
+  await write(turn, 'notes.txt', 'fixed the review findings');
+  if (sessionPrompts(turn).some((prompt) => prompt.includes('#fixcost'))) {
+    const cost = { amount: 0.2, currency: 'USD' };
+    await turn.update({ sessionUpdate: 'usage_update', used: 1_000, size: 200_000, cost });
+  }
+  await turn.say(
+    `Fixed the review findings after ${priorPrompts(turn.sessionId)} earlier prompts.`,
+  );
+  return 'end_turn';
+}
+
 async function finishMissing(turn: RoleTurn): Promise<acp.StopReason> {
   await write(turn, 'notes.txt', 'finished what was missing');
   await turn.say(
@@ -236,6 +303,7 @@ export function roleFor(text: string): ((turn: RoleTurn) => Promise<acp.StopReas
   if (text.includes('You stopped before finishing')) return continueTodos;
   if (text.includes('The harness stopped your last turn')) return unstick;
   if (text.includes('The user asked for a fix')) return fixRequest;
+  if (text.includes('The AI review of your change found')) return fixFindings;
   if (text.includes('An independent check of your change')) return finishMissing;
   if (text.includes('Role: Critic.')) return critic;
   if (text.includes("The project's checks failed")) return fixChecks;

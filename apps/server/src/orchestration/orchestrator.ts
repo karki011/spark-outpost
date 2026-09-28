@@ -17,6 +17,7 @@ import { loadRunInput, type RunInput } from '../workflow/run-input.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
 import { checkBudget } from './budget-check.ts';
+import { correctnessFindings, sessionReviewLine } from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
 import { ask, assume, intakeResponse } from './checkpoint-asks.ts';
 import { assumptionLine, interpretations } from './clarify.ts';
@@ -149,6 +150,7 @@ async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEve
     error: result.error,
     ...(open ? { open } : {}),
     ...(changes ? { large: isLargeDiff(changes.files), green: isGreen(s, changes.files) } : {}),
+    ...(s.checkBodies.at(-1)?.status === 'failed' ? { checksFailing: true } : {}),
   };
 }
 
@@ -173,12 +175,15 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
         return { type: 'budget_exceeded', limit: s.budgetHit };
       }
       if (action.role === 'builder') return afterBuilder(s, outcome);
+      const fixable =
+        outcome.verdict === 'concerns' ? await correctnessFindings(s, result, s.findings) : [];
       return {
         type: 'agent_done',
         role: action.role,
         outcome: result.outcome,
         error: result.error,
         ...(outcome.verdict ? { verdict: outcome.verdict } : {}),
+        ...(fixable.length > 0 ? { fixable } : {}),
       };
     }
     case 'verify':
@@ -219,7 +224,9 @@ async function finish(
   const assumed = s.assumption ? assumptionLine(s.assumption) : null;
   const stopped = status === 'failed' && reason ? reason : null;
   const escalated = s.flow.escalated ? ESCALATED_NOTE : null;
-  const notes = [assumed, escalated, stopped, incomplete].filter(
+  const fixed =
+    s.flow.review.fixRounds > 0 || s.flow.review.stop === 'budget' ? sessionReviewLine(s) : null;
+  const notes = [assumed, escalated, fixed, stopped, incomplete].filter(
     (line): line is string => line !== null,
   );
   const text = withNotes(
