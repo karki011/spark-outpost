@@ -652,7 +652,7 @@
       <p class="hint" id="scenario-hint"></p>
     </fieldset>
     <fieldset>
-      <legend>How involved you want to be</legend>
+      <legend>Harness autonomy</legend>
       <div class="seg" id="levels"></div>
       <p class="hint" id="level-hint"></p>
     </fieldset>
@@ -718,9 +718,10 @@
         0.99 confidence is still a guess, not a grant.
       </p>
       <p>
-        <strong>One act line, whatever the level.</strong> Below it, or when Jev is unavailable, the
-        level decides only whether you are asked or the fixed rules decide, and the record says so.
-        The edit gate and the verifier only observe until their thresholds are tuned.
+        <strong>One act line, whatever the autonomy.</strong> Below it, or when Jev is unavailable,
+        the autonomy decides only whether you are asked or the fixed rules decide, and the record
+        says so. The edit gate only observes until its thresholds are tuned; the verifier acts at
+        0.8.
       </p>
       <p>
         <strong>Evidence beats claims.</strong> What changed comes from git and our own receipts.
@@ -739,8 +740,8 @@
 
   <footer>
     Spark Outpost lean harness, round 10, September 27, 2026. Models shown are examples of the rules
-    on Auto: Haiku for trivial edits, the chat model for normal work, Opus for destructive work.
-    Source: <code>docs/architecture/HARNESS_PLAN.md</code>.
+    on Auto: Sonnet for trivial and normal work, Opus for destructive or complex work. Source:
+    <code>docs/architecture/HARNESS_PLAN.md</code>.
   </footer>
 </main>
 
@@ -779,7 +780,7 @@
       kind: 'harness',
       name: 'Pick the model',
       who: 'Fixed rules; Jev observes',
-      what: 'A pinned model always runs. On Auto the rules pick the chat model, a smaller one for a trivial edit and the top one for destructive work. Jev’s pick is recorded as “Jev would have used …”, never applied.',
+      what: 'A pinned model always runs. On Auto the rules pick the chat model, the middle tier for a trivial edit and the top one for destructive or complex work; never the fast tier or a retiring model. Jev’s pick is recorded as “Jev would have used …”, never applied.',
       records: [['decisions', 'rule pick, Jev tier pick, policy version']],
     },
     {
@@ -812,7 +813,7 @@
       kind: 'agent',
       name: 'Review',
       who: 'Critic, read-only, other provider',
-      what: 'Only for destructive work, a review request, or a large diff: one pass with the request, the diff and the check results. Its findings go into the reply as an AI review, never as verification.',
+      what: 'For destructive work, a review request, a large diff, a build from an agreed plan or a feature across several files or areas: the request, the diff and the check results; correctness findings get up to 3 fix rounds. Its findings go into the reply as an AI review, never as verification.',
       records: [
         ['runs', 'child run, role reviewer'],
         ['run_artifacts', 'review: verdict, findings, reviewer model'],
@@ -850,7 +851,7 @@
       label: 'Trivial fix',
       text: '“Fix the typo in the README heading.”',
       path: ['message', 'intake', 'route', 'work', 'check', 'finish'],
-      picks: { route: 'Haiku (trivial rule)', work: '1 file' },
+      picks: { route: 'Sonnet (trivial rule)', work: '1 file' },
       depth: 'one Builder',
       risk: 'edits',
       conf: 0.92,
@@ -889,24 +890,19 @@
 
   const LEVELS = [
     {
-      id: 'hands-on',
-      label: 'Hands-on',
-      hint: 'You approve every edit and every command. Unsure answers ask you.',
-    },
-    {
       id: 'balanced',
-      label: 'Balanced',
-      hint: 'Edits and commands ask. Unsure answers ask you instead of acting.',
+      label: 'Review each step',
+      hint: 'Unsure answers ask you. Risky work asks before the Builder starts, and you decide whether to keep each change.',
     },
     {
       id: 'hands-off',
-      label: 'Hands-off',
-      hint: 'Edits go through; commands outside the allowlist still ask. You see everything afterwards.',
+      label: 'Automatic',
+      hint: 'The default. Changes are kept unless checks fail, the Critic still has concerns or a destructive migration needs confirming.',
     },
     {
-      id: 'auto',
-      label: 'Full auto',
-      hint: 'Nothing asks except pushing, deleting outside the repo, secrets and budgets. The harness answers the agent itself, so every action still gets a receipt and the run can be reverted.',
+      id: 'full-auto',
+      label: 'Full auto → PR',
+      hint: 'Builds in a worktree copy and ships the task to a draft PR on its own branch. Nothing ever merges.',
     },
   ];
 
@@ -914,12 +910,11 @@
     {
       id: 'clarify',
       name: 'Clarify what you meant',
-      when: 'Jev is unsure what you asked for',
+      when: 'Jev is unsure what you asked for, or the request is vague',
       rule: {
-        'hands-on': 'When Jev is unsure (one act line at every level)',
-        balanced: 'When Jev is unsure (one act line at every level)',
-        'hands-off': 'Never; the fixed rules decide',
-        auto: 'Never; the fixed rules decide',
+        balanced: 'When Jev is unsure; a vague request asks "What should change?"',
+        'hands-off': 'A vague request asks "What should change?"; otherwise the fixed rules decide',
+        'full-auto': 'Never; assumes the likeliest reading and says so',
       },
     },
     {
@@ -927,10 +922,9 @@
       name: 'Approve edits and commands',
       when: 'The agent wants to change a file or run something',
       rule: {
-        'hands-on': 'Every edit and command',
-        balanced: 'Every edit; commands not on the allowlist',
-        'hands-off': 'Commands not on the allowlist',
-        auto: 'Only pushing, deleting outside the repo, or touching secrets',
+        balanced: "Whatever the agent's mode asks; the safety floor always asks",
+        'hands-off': "Whatever the agent's mode asks; the safety floor always asks",
+        'full-auto': "Whatever the agent's mode asks; the safety floor always asks",
       },
     },
     {
@@ -938,10 +932,9 @@
       name: 'Retry, or stop and report',
       when: 'The Builder failed twice after two rule retries one tier up, or repeated itself',
       rule: {
-        'hands-on': 'Asks; the default is Stop and report',
         balanced: 'Asks; the default is Stop and report',
         'hands-off': 'Stops and reports',
-        auto: 'Stops and reports',
+        'full-auto': 'Stops and reports',
       },
     },
     {
@@ -949,27 +942,25 @@
       name: 'Keep, fix or revert',
       when: 'The run changed files',
       rule: {
-        'hands-on': 'Always',
-        balanced: 'Always',
-        'hands-off': 'Kept by default; revert stays available',
-        auto: 'Kept by default; revert stays available',
+        balanced: 'Always, unless you approved every edit yourself',
+        'hands-off': 'Kept by default; asks when checks fail or concerns remain',
+        'full-auto': 'Kept, then shipped to a draft PR',
       },
     },
     {
       id: 'budget',
       name: 'Continue past a budget',
       when: 'Time, tool calls or cost ran out',
-      rule: { 'hands-on': 'Always', balanced: 'Always', 'hands-off': 'Always', auto: 'Always' },
+      rule: { balanced: 'Always', 'hands-off': 'Always', 'full-auto': 'Always' },
     },
     {
       id: 'stop',
       name: 'Stop',
       when: 'Any moment',
       rule: {
-        'hands-on': 'Always available',
         balanced: 'Always available',
         'hands-off': 'Always available',
-        auto: 'Always available',
+        'full-auto': 'Always available',
       },
     },
   ];
@@ -1066,7 +1057,7 @@
   const $ = (s) => document.querySelector(s);
   const state = {
     scenario: 'normal',
-    level: 'balanced',
+    level: 'hands-off',
     stage: 'intake',
     cursor: 0,
     waiting: null,
@@ -1084,19 +1075,20 @@
     }
   }
   state.scenario = load('scenario') || state.scenario;
-  state.level = load('level') || state.level;
+  const savedLevel = load('level');
+  if (LEVELS.some((l) => l.id === savedLevel)) state.level = savedLevel;
   const scen = () => SCENARIOS.find((s) => s.id === state.scenario);
   const level = () => LEVELS.find((l) => l.id === state.level);
 
   function gateActive(id) {
     const s = scen(),
       l = state.level;
-    if (id === 'clarify') return s.conf < 0.8 && (l === 'hands-on' || l === 'balanced');
-    if (id === 'action') return s.risk !== 'read-only' && l !== 'auto';
+    if (id === 'clarify') return s.conf < 0.8 && l === 'balanced';
+    if (id === 'action') return s.risk !== 'read-only';
     if (id === 'next') return false;
     if (id === 'accept') {
       if (s.risk === 'read-only') return false;
-      return l !== 'hands-off' && l !== 'auto';
+      return l === 'balanced';
     }
     return false;
   }
@@ -1219,42 +1211,26 @@
         rec: 'tool_calls',
         txt: 'read src/chat/turns.ts · 212 lines',
       });
-      if (gateActive('action') && state.level !== 'hands-off')
-        rows.push({
-          t: at(0.1),
-          by: 'human',
-          rec: 'approvals',
-          txt: 'Edit src/chat/turns.ts · +6 −2 · hash 9be1…',
-          gate: ['Allow', 'Allow for this run', 'Deny'],
-        });
-      else
-        rows.push({
-          t: at(0.1),
-          by: 'harness',
-          rec: 'approvals',
-          txt: `Edit src/chat/turns.ts · auto-approved by your ${level().label} setting`,
-        });
+      rows.push({
+        t: at(0.1),
+        by: 'human',
+        rec: 'approvals',
+        txt: 'Edit src/chat/turns.ts · +6 −2 · hash 9be1… · asked by the Manual agent mode',
+        gate: ['Allow', 'Allow for this run', 'Deny'],
+      });
       rows.push({
         t: at(1.2),
         by: 'agent',
         rec: 'tool_calls',
         txt: 'edit src/chat/turns.ts · +6 −2 · receipt saved',
       });
-      if (state.level === 'auto')
-        rows.push({
-          t: at(0.1),
-          by: 'harness',
-          rec: 'approvals',
-          txt: 'Run pnpm test · auto-approved by your Full auto setting',
-        });
-      else
-        rows.push({
-          t: at(0.1),
-          by: 'human',
-          rec: 'approvals',
-          txt: 'Run pnpm test (not on the allowlist)',
-          gate: ['Allow', 'Always allow in this project', 'Deny'],
-        });
+      rows.push({
+        t: at(0.1),
+        by: 'human',
+        rec: 'approvals',
+        txt: 'Run pnpm test (not on the allowlist)',
+        gate: ['Allow', 'Always allow in this project', 'Deny'],
+      });
       rows.push({
         t: at(14.8),
         by: 'harness',
@@ -1265,7 +1241,7 @@
         t: at(0.5),
         by: 'jev',
         rec: 'decisions',
-        txt: 'verify (observed) · every requirement met · tests not weakened',
+        txt: 'verify · every requirement met · tests not weakened',
       });
       if (s.path.includes('review'))
         rows.push({

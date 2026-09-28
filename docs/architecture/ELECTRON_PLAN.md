@@ -17,7 +17,7 @@ No server work runs in Electron's main process. It drives the windows, menus and
 
 ### Database: keep Postgres, bundle it
 
-The server depends on `LISTEN/NOTIFY` (live updates between the API and the worker), `FOR UPDATE SKIP LOCKED` (the job queue) and 39 migrations. PGlite allows one connection per instance, and our API and worker are separate processes. SQLite would mean rewriting the migrations, the live-update channel and the job queue. See [ROUTING_PLAN.md](ROUTING_PLAN.md), section 10.
+The server depends on `LISTEN/NOTIFY` (live updates between the API and the worker), `FOR UPDATE SKIP LOCKED` (the job queue) and every migration (plain SQL). PGlite allows one connection per instance, and our API and worker are separate processes. SQLite would mean rewriting the migrations, the live-update channel and the job queue. See [ROUTING_PLAN.md](ROUTING_PLAN.md), section 10.
 
 - **Source:** pin one [`embedded-postgres`](https://www.npmjs.com/package/embedded-postgres) version (its current release is a beta), or ship the same per-platform binaries ourselves. About 30–40 MB per platform.
 - **Data:** in the app's folder, `~/Library/Application Support/Spark Outpost` on macOS, never inside a project.

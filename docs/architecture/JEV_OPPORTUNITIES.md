@@ -2,7 +2,7 @@
 
 Written on September 27, 2026, after re-reading the TypeSafe docs in full (see [JEV.md](JEV.md#docs-review-2026-09-27)). This file ranks the places where Spark Outpost should ask Jev more often, and flags the places where Jev is the wrong tool.
 
-> **Status after round 10.** Opportunities 1 (step checks) and 5 (the watchdog) were built and then removed: step checks had no evidence and skipped the shadow period, and the watchdog had no measured benefit. Opportunity 2 went with the Architect and transitions. Opportunity 3 lives on as the `continues_task` question. Opportunity 4 is covered by a code rule (Critic for destructive work, review requests and large diffs). Rule 7 is now enforced by observation mode: the edit gate and the verifier only record until the threshold report supports acting. See [JEV.md](JEV.md#round-10-what-jev-does-now-september-27-2026).
+> **Status after round 10.** Opportunities 1 (step checks) and 5 (the watchdog) were built and then removed: step checks had no evidence and skipped the shadow period, and the watchdog had no measured benefit. Opportunity 2 went with the Architect and transitions. Opportunity 3 lives on as the `continues_task` question. Opportunity 4 is covered by a code rule (`orchestration/critic-rule.ts`: destructive work, review requests, large diffs, a build from an agreed plan, and features over 3+ source files or 2+ areas). Rule 7 is enforced by observation mode: the edit gate only records until the threshold report supports acting; the verifier acts at 0.8 since the verified cascade. See [JEV.md](JEV.md#round-10-what-jev-does-now-september-27-2026).
 
 ## Why more Jev
 
@@ -463,32 +463,32 @@ Don't use Jev for these:
 
 - The limits are 1,200 requests per minute and 250k tokens per second per account, and they are dynamic. Cookbooks hit 429 at about 8 concurrent requests on a shared key.
 - Worst case today:
-  - 3 orchestrations (`WORKER_CONCURRENCY` at most 3)
+  - 2 orchestrations by default (`WORKER_CONCURRENCY`, at most 16)
   - × 3 parallel members
   - × one stuck check every 10 tool calls, plus transitions
 
   That can reach 5 to 10 calls in the same second.
 
-- Add a process-wide semaphore of 4 in-flight Jev calls and a per-orchestration budget (for example 60 calls), with stuck checks dropped first when the budget is short.
+- Keep the process-wide limit of 4 in-flight Jev calls (`advisor/jev-limiter.ts`, built) and add a per-orchestration budget (for example 60 calls), with stuck checks dropped first when the budget is short.
 - Retry 429, 529 and 5xx once when at least 1 s of the 3 s is left, honouring `retry-after-ms`. Otherwise use the rules.
 - Record 429s as `rate_limited`, not `failed`, so the analytics can separate them.
 
 ### Data sent
 
-| Use                                    | New data sent to TypeSafe                                                                                               | Needs the user's yes                         |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Today (see [JEV.md](JEV.md#data-sent)) | Plan step text and file paths in the routing, parallel, lane, transition and step-check calls; JEV.md lists every field | Approved by the user on September 27, 2026   |
-| 1, 2 Builder steps and Lead facts      | Step text, `Done when` lines, reply tail (already sent), check result bucket                                            | No (same class as today)                     |
-| 3 Corrections                          | The previous request and a 500-character reply tail                                                                     | No (same class)                              |
-| 4 Critic need                          | Changed file kinds (paths only with consent), size bucket                                                               | Only for paths                               |
-| 5 Stuck (built)                        | Tool-call titles and kinds, with paths, no output                                                                       | Approved on September 27, 2026               |
-| 6 Plan coverage                        | Request sentences, plan steps                                                                                           | No                                           |
-| 7 Mid-run messages                     | The message, member names and steps                                                                                     | No                                           |
-| 8 File scoping                         | File paths and first lines                                                                                              | Yes                                          |
-| 9 Compaction                           | Earlier requests and reply tails                                                                                        | Yes: history is on today's "never sent" list |
-| 11 Digest                              | Chat titles and reply tails across chats                                                                                | Yes                                          |
+| Use                                    | New data sent to TypeSafe                                                    | Needs the user's yes                         |
+| -------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------- |
+| Today (see [JEV.md](JEV.md#data-sent)) | JEV.md lists every field of every call sent today                            | Approved by the user on September 27, 2026   |
+| 1, 2 Builder steps and Lead facts      | Step text, `Done when` lines, reply tail (already sent), check result bucket | No (same class as today)                     |
+| 3 Corrections                          | The previous request and a 500-character reply tail                          | No (same class)                              |
+| 4 Critic need                          | Changed file kinds (paths only with consent), size bucket                    | Only for paths                               |
+| 5 Stuck (built)                        | Tool-call titles and kinds, with paths, no output                            | Approved on September 27, 2026               |
+| 6 Plan coverage                        | Request sentences, plan steps                                                | No                                           |
+| 7 Mid-run messages                     | The message, member names and steps                                          | No                                           |
+| 8 File scoping                         | File paths and first lines                                                   | Yes                                          |
+| 9 Compaction                           | Earlier requests and reply tails                                             | Yes: history is on today's "never sent" list |
+| 11 Digest                              | Chat titles and reply tails across chats                                     | Yes                                          |
 
-Every new field must be pinned in a `*-questions.test.ts`, as JEV.md requires. Keep redacting paths, keep the 8,000-character caps, never send tool output, diffs or credentials, and keep ZDR (enterprise only) in mind. Routing through OpenRouter or Vercel AI Gateway would add a third party, so don't.
+Every new field must be pinned in a `*-questions.test.ts`, as JEV.md requires. Keep the 8,000-character caps, send diffs only while "Send code diffs to Jev for safety checks" is on, never send tool output or credentials, and keep ZDR (enterprise only) in mind. Routing through OpenRouter or Vercel AI Gateway would add a third party, so don't.
 
 ### Batching
 
