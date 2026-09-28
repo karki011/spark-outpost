@@ -53,6 +53,20 @@ export function XIcon() {
   );
 }
 
+export function TickIcon() {
+  return (
+    <svg className="tick" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="m5 12 5 5 9-10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function SpinnerIcon() {
   return <i className="spin" aria-hidden="true" />;
 }
@@ -219,4 +233,14 @@ export function ThumbDownIcon() {
 
 export function CommentIcon() {
   return <StrokeIcon path="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />;
+}
+
+export function QuoteIcon() {
+  return <StrokeIcon path="M4 11h5v6H4v-6Zm0 0c0-3 1-5 4-6M14 11h5v6h-5v-6Zm0 0c0-3 1-5 4-6" />;
+}
+
+export function AskIcon() {
+  return (
+    <StrokeIcon path="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12ZM10 9.5a2.2 2.2 0 1 1 3 2c-.6.3-1 .8-1 1.5M12 16h.01" />
+  );
 }
