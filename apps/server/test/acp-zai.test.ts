@@ -16,12 +16,9 @@ import { memorySecretStore } from '../src/setup/secrets.ts';
 import { createProviders } from '../src/workflow/providers.ts';
 import { createAuditRecorder } from '../src/workflow/audit-recorder.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
 const KEY = 'zai-test-key-0123456789abcdef.QwErTyUiOp';
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
-};
 const FAKE_MODELS = JSON.stringify([
   ['default', 'Default (recommended)'],
   ['opus', 'GLM-5.3'],
@@ -101,7 +98,7 @@ async function run(prompt: string, secrets = memorySecretStore({ zai: KEY })) {
     error = caught;
   }
   await audit.close();
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   return { outputs, text, error, written };
 }
 
@@ -231,9 +228,7 @@ describe('Z.ai in the fake runtime', { timeout: 20_000 }, () => {
     }
     const notes = await readFile(join(root, 'notes.txt'), 'utf8');
     await rm(root, { recursive: true, force: true });
-    const text = outputs
-      .map((output) => (output.kind === 'text_delta' ? output.delta : ''))
-      .join('');
+    const text = replyText(outputs);
     return { outputs, text, error, notes };
   }
 

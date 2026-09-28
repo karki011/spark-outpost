@@ -16,11 +16,8 @@ import type { ProviderOutput, ProviderTurn } from '../src/providers/provider.ts'
 import { childEnvironment } from '../src/setup/environment.ts';
 import { FIXTURE_RULE, makeConfiguredRepo } from './repo-config-fixture.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
-};
 const env = {
   ...childEnvironment(process.env),
   FAKE_ACP_MCP_CAPABILITIES: JSON.stringify({ http: true, sse: false }),
@@ -80,7 +77,7 @@ async function session(
   })) {
     outputs.push(output);
   }
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   const received = JSON.parse(text.slice(text.indexOf('session=') + 'session='.length)) as Received;
   const following = outputs.find((output) => output.kind === 'instructions');
   const steps = outputs.flatMap((output) => (output.kind === 'step_started' ? [output.name] : []));

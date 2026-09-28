@@ -8,11 +8,8 @@ import { SLASH_ESCAPE_NOTE } from '../src/agents/acp/slash-commands.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import type { ProviderOutput, SessionTarget, StoredSession } from '../src/providers/provider.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
-};
 const store = mkdtempSync(join(tmpdir(), 'fake-acp-slash-'));
 const workdir = join(store, 'workdir');
 afterAll(() => rmSync(store, { recursive: true, force: true }));
@@ -40,7 +37,7 @@ async function turn(prompt: string, session: SessionTarget) {
   })) {
     outputs.push(output);
   }
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   const steps = outputs.flatMap((output) => (output.kind === 'step_started' ? [output.name] : []));
   return { outputs, text, steps };
 }
