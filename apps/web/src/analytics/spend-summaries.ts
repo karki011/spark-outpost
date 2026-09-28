@@ -28,9 +28,6 @@ export function sourceSummary(data: AnalyticsSpend): string {
 }
 
 export function savingsSummary(data: AnalyticsSpend): string {
-  const resume =
-    data.resume.sessionRuns === 0
-      ? 'No run could resume a session.'
-      : `${data.resume.resumedRuns} of ${plural(data.resume.sessionRuns, 'session run')} resumed, reusing cached input worth about ${usd(data.resume.savedUsd)}.`;
-  return resume;
+  if (data.resume.sessionRuns === 0) return 'No run could resume a session.';
+  return `${data.resume.resumedRuns} of ${plural(data.resume.sessionRuns, 'session run')} resumed, reusing cached input worth about ${usd(data.resume.savedUsd)}.`;
 }

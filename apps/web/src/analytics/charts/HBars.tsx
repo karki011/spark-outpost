@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Mark, roveMarks } from './Mark.tsx';
 import { useChartWidth } from './use-chart-width.ts';
 
-export interface HBar {
+interface HBar {
   key: string;
   label: string;
   value: number;

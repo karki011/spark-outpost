@@ -12,15 +12,15 @@ const GRADES: Record<HealthGrade, { label: string; tone: string }> = {
   not_enough_data: { label: 'Not enough data yet', tone: 'none' },
 };
 
+const GRADE_PATHS: Record<HealthGrade, string> = {
+  healthy: 'M4 8.5 7 11.5 12.5 5',
+  fair: 'M4 8h8',
+  needs_attention: 'M8 4v5M8 11.5v.1',
+  not_enough_data: 'M6 6.2a2 2 0 1 1 2.6 1.9c-.5.2-.6.6-.6 1.1M8 11.5v.1',
+};
+
 function GradeIcon({ grade }: { grade: HealthGrade }) {
-  const path =
-    grade === 'healthy'
-      ? 'M4 8.5 7 11.5 12.5 5'
-      : grade === 'fair'
-        ? 'M4 8h8'
-        : grade === 'needs_attention'
-          ? 'M8 4v5M8 11.5v.1'
-          : 'M6 6.2a2 2 0 1 1 2.6 1.9c-.5.2-.6.6-.6 1.1M8 11.5v.1';
+  const path = GRADE_PATHS[grade];
   return (
     <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
       <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="1.5" />

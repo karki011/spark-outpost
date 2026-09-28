@@ -28,7 +28,6 @@ describe('date math', () => {
     expect(isFutureIso('2026-09-27', '2026-09-27')).toBe(false);
     expect(isCappedOut('2026-09-27', '2027-09-28')).toBe(true);
     expect(isCappedOut('2026-09-27', '2027-09-27')).toBe(false);
-    expect(isCappedOut(undefined, '2027-09-27')).toBe(false);
   });
 
   it('computes the five quick presets relative to today', () => {

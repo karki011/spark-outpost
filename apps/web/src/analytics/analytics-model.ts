@@ -4,15 +4,27 @@ import {
   depthLabel,
   depthSchema,
   type DisagreementWinner,
-  type OutcomeTally,
   type OutcomeVerdict,
+  type VerdictCounts,
 } from '@spark-outpost/contracts';
 import { formatCost } from '../usage/format.ts';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+export function shortMonth(date: string): string {
+  return MONTHS[Number(date.slice(5, 7)) - 1]!;
+}
+
 export function shortDate(date: string): string {
-  return `${MONTHS[Number(date.slice(5, 7)) - 1]} ${Number(date.slice(8, 10))}`;
+  return `${shortMonth(date)} ${Number(date.slice(8, 10))}`;
+}
+
+export function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export function ratedTurns(counts: Pick<VerdictCounts, RatedVerdict>): number {
+  return counts.good + counts.bad + counts.mixed + counts.unclear;
 }
 
 export function percent(part: number, whole: number): string {
@@ -46,9 +58,12 @@ export function categoryName(key: string): string {
 export function depthName(key: string): string {
   const parsed = depthSchema.safeParse(key);
   if (!parsed.success) return key;
-  const label = depthLabel(parsed.data);
-  return label.charAt(0).toUpperCase() + label.slice(1);
+  return capitalize(depthLabel(parsed.data));
 }
+
+export const RATED_VERDICTS = ['good', 'mixed', 'unclear', 'bad'] as const;
+
+export type RatedVerdict = (typeof RATED_VERDICTS)[number];
 
 export const VERDICT_ORDER = ['good', 'mixed', 'unclear', 'bad', 'pending'] as const;
 
@@ -89,15 +104,6 @@ export function fieldName(field: string): string {
 
 export function pickName(field: string, value: string): string {
   return field === 'depth' ? depthName(value) : value;
-}
-
-export function goodShare(tally: Pick<OutcomeTally, 'good' | 'turns'>): string {
-  return percent(tally.good, tally.turns);
-}
-
-export function tallyLine(tally: OutcomeTally): string {
-  if (tally.turns === 0) return 'none';
-  return `${plural(tally.turns, 'turn')}, ${goodShare(tally)} good, mean ${signedScore(tally.meanScore)}`;
 }
 
 export function duration(ms: number | null): string {

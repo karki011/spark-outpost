@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { FLOW_STAGES, type FlowPath } from '@spark-outpost/contracts';
+import { providerColor } from '../../chat/provider-name.ts';
 import {
   categoryName,
   depthName,
@@ -54,7 +55,7 @@ export function RoutingFlow({ paths }: { paths: readonly FlowPath[] }) {
   const step = (width - NODE) / (FLOW_STAGES.length - 1);
   const activePaths = new Set(active?.paths ?? []);
   const fill = (node: SankeyNode) => {
-    if (node.stage === 3) return `var(--c-${providerOf.get(node.label) ?? 'none'}, var(--muted))`;
+    if (node.stage === 3) return providerColor(providerOf.get(node.label) ?? 'none');
     if (node.stage === 4 && node.label === 'bad') return `url(#${hatch})`;
     if (node.stage === 4) return verdictColor(node.label);
     return 'var(--muted)';

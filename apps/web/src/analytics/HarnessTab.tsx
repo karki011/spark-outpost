@@ -1,5 +1,6 @@
 import type { AnalyticsHarness, DisagreementRow } from '@spark-outpost/contracts';
 import {
+  capitalize,
   categoryName,
   depthName,
   duration,
@@ -311,7 +312,7 @@ export function HarnessTab({ data }: { data: AnalyticsHarness }) {
             ariaLabel="Median approval wait by kind"
             bars={data.approvals.byKind.map((row) => ({
               key: row.kind,
-              label: `${row.kind.charAt(0).toUpperCase()}${row.kind.slice(1)} (${row.count})`,
+              label: `${capitalize(row.kind)} (${row.count})`,
               value: row.medianMs ?? 0,
               valueText: duration(row.medianMs),
               marker: row.p90Ms,

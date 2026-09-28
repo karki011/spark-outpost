@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 
-export function useChartWidth<T extends HTMLElement>(fallback: number, min = 0) {
+export function useChartWidth<T extends HTMLElement>(fallback: number, min: number) {
   const ref = useRef<T>(null);
   const [width, setWidth] = useState(fallback);
   useLayoutEffect(() => {

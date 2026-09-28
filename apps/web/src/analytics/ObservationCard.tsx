@@ -1,6 +1,6 @@
 import type { AnalyticsHarness, ObservationSummary } from '@spark-outpost/contracts';
 import { plural, usd } from './analytics-model.ts';
-import { ChartCard, EmptyChart } from './charts/ChartCard.tsx';
+import { ChartCard, DataTable, EmptyChart } from './charts/ChartCard.tsx';
 
 const WOULD: Record<string, string> = {
   allow: 'Would allow',
@@ -30,33 +30,19 @@ function ObservationTable({ label, summary }: { label: string; summary: Observat
     );
   }
   return (
-    <div className="an-table-wrap">
-      <table className="an-table">
-        <caption>{label}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Jev</th>
-            <th scope="col">What happened</th>
-            <th scope="col" className="num">
-              Checks
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {summary.rows.map((row) => (
-            <tr key={`${row.would}:${row.actual}`}>
-              <td>{WOULD[row.would] ?? row.would}</td>
-              <td>{row.actual}</td>
-              <td className="num">{row.count}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      caption={label}
+      rows={summary.rows}
+      columns={[
+        { label: 'Jev', value: (row) => WOULD[row.would] ?? row.would },
+        { label: 'What happened', value: (row) => row.actual },
+        { label: 'Checks', value: (row) => row.count, numeric: true },
+      ]}
+    />
   );
 }
 
-export function observationSummary(data: AnalyticsHarness): string {
+function observationSummary(data: AnalyticsHarness): string {
   const { policy, verify } = data.observation;
   const wouldAsk = policy.rows
     .filter((row) => row.would !== 'allow')

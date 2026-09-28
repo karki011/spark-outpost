@@ -1,8 +1,8 @@
 import type { CSSProperties, ReactNode } from 'react';
 import './analytics-skeleton.css';
 
-function block(style: CSSProperties, key?: string) {
-  return <span key={key} className="an-skel" style={style} aria-hidden="true" />;
+function block(style: CSSProperties) {
+  return <span className="an-skel" style={style} aria-hidden="true" />;
 }
 
 export function SkeletonCard({
@@ -57,7 +57,7 @@ export function SkelTreemap() {
   );
 }
 
-export function SkelBars({ rows = 4 }: { rows?: number }) {
+export function SkelBars({ rows }: { rows: number }) {
   return (
     <div className="an-skel-bars" aria-hidden="true">
       {Array.from({ length: rows }, (_, index) => (
@@ -77,7 +77,7 @@ export function SkelRings({ count = 2 }: { count?: number }) {
   );
 }
 
-export function SkelTableRows({ rows = 3 }: { rows?: number }) {
+export function SkelTableRows({ rows }: { rows: number }) {
   return (
     <div className="an-skel-rows" aria-hidden="true">
       {Array.from({ length: rows }, (_, index) => (

@@ -1,11 +1,9 @@
 import type { SpendLeaf } from '@spark-outpost/contracts';
-import { providerName } from '../../chat/provider-name.ts';
+import { providerColor, providerName } from '../../chat/provider-name.ts';
 import { usd } from '../analytics-model.ts';
 import { Mark, roveMarks } from './Mark.tsx';
 import { GROUP_HEADER, treemap } from './treemap-layout.ts';
 import { useChartWidth } from './use-chart-width.ts';
-
-const providerColor = (provider: string) => `var(--c-${provider}, var(--muted))`;
 
 interface TreeItem {
   group: string;

@@ -60,20 +60,20 @@ const NEXT_KEYS: Record<string, number> = {
   ArrowUp: -1,
 };
 
+function nextMarkIndex(key: string, current: number, last: number): number | null {
+  const step = NEXT_KEYS[key];
+  if (step !== undefined) return Math.min(last, Math.max(0, current + step));
+  if (key === 'Home') return 0;
+  if (key === 'End') return last;
+  return null;
+}
+
 export function roveMarks(event: KeyboardEvent<SVGElement>) {
   const marks = [...event.currentTarget.querySelectorAll<SVGGElement>('[data-mark]')];
   const current = marks.indexOf(document.activeElement as SVGGElement);
   if (current < 0 || marks.length === 0) return;
   const last = marks.length - 1;
-  const step = NEXT_KEYS[event.key];
-  const next =
-    step !== undefined
-      ? Math.min(last, Math.max(0, current + step))
-      : event.key === 'Home'
-        ? 0
-        : event.key === 'End'
-          ? last
-          : null;
+  const next = nextMarkIndex(event.key, current, last);
   if (next === null) return;
   event.preventDefault();
   marks[current]!.setAttribute('tabindex', '-1');

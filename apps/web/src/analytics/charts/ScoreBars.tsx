@@ -2,7 +2,7 @@ import { signedScore } from '../analytics-model.ts';
 import { Mark, roveMarks } from './Mark.tsx';
 import { useChartWidth } from './use-chart-width.ts';
 
-export interface ScoreRow {
+interface ScoreRow {
   key: string;
   label: string;
   score: number | null;
