@@ -1,8 +1,9 @@
 import './changes-pane.css';
 import { useQuery } from '@tanstack/react-query';
-import type { RunFileChanges, TaskRun } from '@spark-outpost/contracts';
+import { isTerminalRunStatus, type RunFileChanges, type TaskRun } from '@spark-outpost/contracts';
 import { changeTotals, filesLabel } from '../chat/changes/change-rules.ts';
 import { Counts, FileChangeList } from '../chat/changes/FileChangeList.tsx';
+import { ShipControl } from '../ship/ShipControl.tsx';
 import { crewNames } from './CrewPane.tsx';
 import { taskApi, taskKeys } from './task-api.ts';
 
@@ -25,7 +26,13 @@ function RunGroup({ taskId, run, name }: { taskId: string; run: RunFileChanges; 
   );
 }
 
-export function ChangesPane({ taskId, runs }: { taskId: string; runs: readonly TaskRun[] }) {
+interface ChangesPaneProps {
+  taskId: string;
+  conversationId: string;
+  runs: readonly TaskRun[];
+}
+
+export function ChangesPane({ taskId, conversationId, runs }: ChangesPaneProps) {
   const changes = useQuery({
     queryKey: taskKeys.changes(taskId),
     queryFn: () => taskApi.changes(taskId),
@@ -33,6 +40,7 @@ export function ChangesPane({ taskId, runs }: { taskId: string; runs: readonly T
   const names = new Map(crewNames(runs).map((name, index) => [runs[index]!.id, name]));
   const groups = changes.data?.runs ?? [];
   const totals = changeTotals(groups.flatMap((run) => run.files));
+  const settled = runs.length > 0 && runs.every((run) => isTerminalRunStatus(run.status));
   return (
     <div className="wsec">
       <div className="wsec-h">
@@ -58,6 +66,9 @@ export function ChangesPane({ taskId, runs }: { taskId: string; runs: readonly T
           }
         />
       ))}
+      {groups.length > 0 && settled && (
+        <ShipControl taskId={taskId} conversationId={conversationId} />
+      )}
       {groups.length > 0 && (
         <p className="wnote">
           Each run shows what changed from its start until the next run, or until now for the last

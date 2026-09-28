@@ -12,6 +12,7 @@ const sourceNames: Record<TaskLink['source'], string> = {
   resource_link: 'Shared by the agent',
   agent_text: 'Mentioned by the agent',
   user: 'Added by you',
+  ship: 'Opened by Ship',
 };
 
 function shortUrl(url: string): string {
@@ -23,7 +24,7 @@ function shortUrl(url: string): string {
   }
 }
 
-function LinkChip({ link }: { link: TaskLink }) {
+export function LinkChip({ link }: { link: Pick<TaskLink, 'kind' | 'url' | 'title' | 'source'> }) {
   return (
     <a className="lchip" href={link.url} target="_blank" rel="noopener noreferrer">
       {link.kind === 'pr' ? <GitHubIcon /> : <LinkIcon />}

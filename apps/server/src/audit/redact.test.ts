@@ -25,6 +25,19 @@ describe('redactText', () => {
     expect(redactText(`before ${secret} after`)).toBe(`before ${replacement} after`);
   });
 
+  it('hides GitHub tokens in push URLs and token headers', () => {
+    expect(
+      redactText(
+        'fatal: unable to access https://x-access-token:ghs_abcdefghijklmnopqrstuvwxyz0123@github.com/a/b.git',
+      ),
+    ).toBe(
+      'fatal: unable to access https://x-access-token:[redacted:url_password]@github.com/a/b.git',
+    );
+    expect(redactText('Authorization: token 0123456789abcdef0123')).toBe(
+      'Authorization: token [redacted:github_token]',
+    );
+  });
+
   it('keeps the Bearer scheme and hides the token', () => {
     expect(redactText('Authorization: Bearer abc123def456ghi789')).toBe(
       'Authorization: Bearer [redacted:bearer]',

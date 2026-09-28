@@ -6,7 +6,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { CHAIN_START, chainRows, verifyChain, type HashedRow } from '../audit/hash-chain.ts';
 import type { ProtocolEntry } from '../audit/protocol-entry.ts';
-import { withTransaction, type Db, type Queryable } from './db.ts';
+import { withTransaction, type Db, type DbClient, type Queryable } from './db.ts';
 import type { Lease } from './jobs.ts';
 import { assertLeaseHeld } from './run-events.ts';
 
@@ -57,50 +57,70 @@ export async function insertProtocolEntries(
   if (entries.length === 0) return;
   await withTransaction(db, async (client) => {
     await assertLeaseHeld(client, lease, false);
-    const last = await client.query<{ seq: number; hash: string }>(
-      'SELECT seq, hash FROM run_protocol_log WHERE run_id = $1 ORDER BY seq DESC LIMIT 1',
-      [lease.runId],
-    );
-    const rows = chainRows(
-      last.rows[0] ?? null,
-      entries.map((entry) => ({
-        runId: lease.runId,
-        at: entry.at.toISOString(),
-        direction: entry.direction,
-        kind: entry.kind,
-        method: entry.method,
-        rpcId: entry.rpcId,
-        sizeBytes: entry.sizeBytes,
-        truncated: entry.truncated,
-        payload: entry.payload,
-      })),
-    );
-    await client.query(
-      `INSERT INTO run_protocol_log (${LOG_COLUMNS})
-       SELECT * FROM jsonb_to_recordset($1::jsonb) AS row(
-         run_id uuid, seq integer, at timestamptz, direction text, kind text, method text,
-         rpc_id text, size_bytes integer, truncated boolean, payload jsonb, prev_hash text,
-         hash text)`,
-      [
-        JSON.stringify(
-          rows.map((row) => ({
-            run_id: row.runId,
-            seq: row.seq,
-            at: row.at,
-            direction: row.direction,
-            kind: row.kind,
-            method: row.method,
-            rpc_id: row.rpcId,
-            size_bytes: row.sizeBytes,
-            truncated: row.truncated,
-            payload: row.payload,
-            prev_hash: row.prevHash,
-            hash: row.hash,
-          })),
-        ),
-      ],
-    );
+    await writeEntries(client, lease.runId, entries);
   });
+}
+
+export async function insertFinishedRunEntries(
+  db: Db,
+  runId: string,
+  entries: readonly ProtocolEntry[],
+): Promise<void> {
+  if (entries.length === 0) return;
+  await withTransaction(db, async (client) => {
+    await client.query('SELECT id FROM runs WHERE id = $1 FOR UPDATE', [runId]);
+    await writeEntries(client, runId, entries);
+  });
+}
+
+async function writeEntries(
+  client: DbClient,
+  runId: string,
+  entries: readonly ProtocolEntry[],
+): Promise<void> {
+  const last = await client.query<{ seq: number; hash: string }>(
+    'SELECT seq, hash FROM run_protocol_log WHERE run_id = $1 ORDER BY seq DESC LIMIT 1',
+    [runId],
+  );
+  const rows = chainRows(
+    last.rows[0] ?? null,
+    entries.map((entry) => ({
+      runId,
+      at: entry.at.toISOString(),
+      direction: entry.direction,
+      kind: entry.kind,
+      method: entry.method,
+      rpcId: entry.rpcId,
+      sizeBytes: entry.sizeBytes,
+      truncated: entry.truncated,
+      payload: entry.payload,
+    })),
+  );
+  await client.query(
+    `INSERT INTO run_protocol_log (${LOG_COLUMNS})
+     SELECT * FROM jsonb_to_recordset($1::jsonb) AS row(
+       run_id uuid, seq integer, at timestamptz, direction text, kind text, method text,
+       rpc_id text, size_bytes integer, truncated boolean, payload jsonb, prev_hash text,
+       hash text)`,
+    [
+      JSON.stringify(
+        rows.map((row) => ({
+          run_id: row.runId,
+          seq: row.seq,
+          at: row.at,
+          direction: row.direction,
+          kind: row.kind,
+          method: row.method,
+          rpc_id: row.rpcId,
+          size_bytes: row.sizeBytes,
+          truncated: row.truncated,
+          payload: row.payload,
+          prev_hash: row.prevHash,
+          hash: row.hash,
+        })),
+      ),
+    ],
+  );
 }
 
 function escapeLike(text: string): string {

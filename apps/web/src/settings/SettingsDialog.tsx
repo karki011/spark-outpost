@@ -203,8 +203,8 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                 {section === 'tools' && (
                   <>
                     <p className="lede">
-                      Connectors will let Spark read tickets, pull requests, and threads when you
-                      ask it to. They aren't ready yet.
+                      GitHub connects now, so Ship can open draft pull requests. The other
+                      connectors aren't ready yet.
                     </p>
                     <ConnectorGrid />
                   </>

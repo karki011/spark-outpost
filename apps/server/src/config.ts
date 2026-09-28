@@ -61,6 +61,7 @@ const configSchema = z.object({
   OPENAI_BASE_URL: providerUrl.default('https://api.openai.com'),
   TYPESAFE_BASE_URL: providerUrl.default('https://api.typesafe.ai'),
   ZAI_BASE_URL: providerUrl.default('https://api.z.ai/api/anthropic'),
+  GITHUB_API_URL: providerUrl.optional(),
   KEYCHAIN_SERVICE: z.string().min(1).default(DEFAULT_KEYCHAIN_SERVICE),
   BRANCH_PREFIX: z
     .string()

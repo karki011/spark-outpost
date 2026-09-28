@@ -42,7 +42,13 @@ export const taskListItemSchema = z.object({
 export type TaskListItem = z.infer<typeof taskListItemSchema>;
 
 export const taskLinkKindSchema = z.enum(['pr', 'link']);
-export const taskLinkSourceSchema = z.enum(['tool_output', 'resource_link', 'agent_text', 'user']);
+export const taskLinkSourceSchema = z.enum([
+  'tool_output',
+  'resource_link',
+  'agent_text',
+  'user',
+  'ship',
+]);
 export type TaskLinkSource = z.infer<typeof taskLinkSourceSchema>;
 
 export const taskLinkSchema = z.object({

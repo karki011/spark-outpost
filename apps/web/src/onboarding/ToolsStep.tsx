@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { motion } from 'motion/react';
+import { GitHubCard } from '../ship/GitHubCard.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import './tools.css';
 
@@ -79,25 +80,29 @@ export const connectors: Connector[] = [
 export function ConnectorGrid() {
   return (
     <ul className="cgrid">
-      {connectors.map((connector, index) => (
-        <motion.li
-          key={connector.id}
-          className="ccard"
-          initial={{ opacity: 0, y: 14, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ ...reveal, delay: index * 0.07 }}
-          whileHover={{ y: -3 }}
-        >
-          <div className="top">
-            <span className="plogo">{connector.icon}</span>
-            <b>{connector.name}</b>
-          </div>
-          <p>{connector.description}</p>
-          <div className="row2">
-            <span className="soon">Coming soon</span>
-          </div>
-        </motion.li>
-      ))}
+      {connectors.map((connector, index) =>
+        connector.id === 'github' ? (
+          <GitHubCard key={connector.id} icon={connector.icon} />
+        ) : (
+          <motion.li
+            key={connector.id}
+            className="ccard"
+            initial={{ opacity: 0, y: 14, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ ...reveal, delay: index * 0.07 }}
+            whileHover={{ y: -3 }}
+          >
+            <div className="top">
+              <span className="plogo">{connector.icon}</span>
+              <b>{connector.name}</b>
+            </div>
+            <p>{connector.description}</p>
+            <div className="row2">
+              <span className="soon">Coming soon</span>
+            </div>
+          </motion.li>
+        ),
+      )}
     </ul>
   );
 }
@@ -107,8 +112,8 @@ export function ToolsStep() {
     <>
       <h2 id="onbTitle">Bring in your tools</h2>
       <p className="lede">
-        Connectors will let Spark read tickets, pull requests, and threads when you ask it to. They
-        aren't ready yet, so there's nothing to connect today. Here's what's coming.
+        GitHub connects now, so Ship can open draft pull requests. The other connectors will let
+        Spark read tickets and threads when you ask it to; they aren't ready yet.
       </p>
       <ConnectorGrid />
     </>

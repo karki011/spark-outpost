@@ -20,6 +20,7 @@ import { CheckpointCard } from '../checkpoints/CheckpointCard.tsx';
 import type { CheckpointApproval } from '../checkpoints/checkpoint-model.ts';
 import { keepCardHost } from '../outcomes/feedback-host.ts';
 import { TurnFeedback } from '../outcomes/TurnFeedback.tsx';
+import { KeepCardFooter } from '../outcomes/KeepCardFooter.tsx';
 import { ReplyPlanAction, TurnPlanOffer } from '../plans/TurnPlans.tsx';
 import { runSeconds } from '../turns.ts';
 import { useRunStream } from '../use-run-stream.ts';
@@ -86,7 +87,12 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
       approval={approval}
       footer={
         host?.approvalId === approval.id ? (
-          <TurnFeedback runId={run.id} variant={host.variant} />
+          <KeepCardFooter
+            runId={run.id}
+            host={host}
+            taskId={changeTask?.id ?? null}
+            conversationId={detail.conversation.id}
+          />
         ) : undefined
       }
     />

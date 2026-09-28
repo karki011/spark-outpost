@@ -7,6 +7,7 @@ import {
   API_PORT,
   FAKE_ACP_MODELS,
   FAKE_CODEX_STATE,
+  FAKE_GH_STATE,
   STUB_PORT,
   WEB_PORT,
 } from './tests/browser/stub-config.ts';
@@ -20,6 +21,10 @@ const serverEnv = {
   PATH: `${path.resolve('tests/browser/bin')}:/usr/bin:/bin`,
   CLI_LOOKUP_LOGIN_SHELL: 'false',
   FAKE_CODEX_STATE,
+  FAKE_GH_STATE,
+  FAKE_GH_NODE: process.execPath,
+  FAKE_GH_API: `${STUB_URL}/github`,
+  GITHUB_API_URL: `${STUB_URL}/github`,
   SHELL: '/bin/sh',
   DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
   API_PORT: String(API_PORT),
