@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, queryKeys } from '../api/client.ts';
+import { CAPABILITIES_STALE_MS, capabilitiesQuery, queryKeys } from '../api/client.ts';
 import {
   AUTONOMY_LEVELS,
   type CapabilityOption,
@@ -66,26 +66,16 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
     },
   });
   const capabilities = useQuery({
-    queryKey: queryKeys.capabilities(provider.id),
-    queryFn: () => api.getCapabilities(provider.id),
-    staleTime: 60 * 60 * 1000,
+    ...capabilitiesQuery(provider.id),
+    staleTime: CAPABILITIES_STALE_MS,
   });
   const cli = connection.method === 'cli';
   const models =
     cli && capabilities.data
-      ? capabilities.data.models.map((model) => ({
-          id: model.id,
-          label: optionLabel(model, capabilities.data),
-          description: cleanDescription(model) ?? '',
-          risky: false,
-          unavailableReason: null,
-        }))
-      : connection.models.map((model) => ({
-          ...model,
-          description: '',
-          risky: false,
-          unavailableReason: null,
-        }));
+      ? capabilities.data.models.map((model) =>
+          toChoice(model.id, optionLabel(model, capabilities.data), cleanDescription(model) ?? ''),
+        )
+      : connection.models.map((model) => toChoice(model.id, model.label, ''));
   const efforts = effortOptions(provider, capabilities.data);
   const effort = efforts.find((choice) => choice.id === connection.effort) ?? null;
   const offered = models.some((model) => model.id === connection.model);

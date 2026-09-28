@@ -36,6 +36,10 @@ function resultLine(result: ShipResult): string {
   return `Committed ${result.commit?.slice(0, 7) ?? ''} on ${result.branch}.`;
 }
 
+function pullTitle(repo: string | null | undefined, number: number): string {
+  return repo ? `${repo}#${number}` : `Pull request #${number}`;
+}
+
 function withShipResult(preview: ShipPreview, result: ShipResult): ShipPreview {
   const pullRequest = result.pullRequest
     ? { url: result.pullRequest.url, number: result.pullRequest.number }
@@ -206,11 +210,7 @@ export function ShipControl({
           link={{
             kind: 'pr',
             url: pull.url,
-            title:
-              result?.link?.title ??
-              (data.remote?.repo
-                ? `${data.remote.repo}#${pull.number}`
-                : `Pull request #${pull.number}`),
+            title: result?.link?.title ?? pullTitle(data.remote?.repo, pull.number),
             source: 'ship',
           }}
         />

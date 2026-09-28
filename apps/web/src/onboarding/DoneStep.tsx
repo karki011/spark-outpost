@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { useQueries } from '@tanstack/react-query';
 import type { ProviderCapabilities, ProviderId, ProviderSetup } from '@spark-outpost/contracts';
-import { api, queryKeys } from '../api/client.ts';
+import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { modeSummary } from '../chat/composer/mode-summary.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
@@ -63,9 +63,8 @@ export function DoneStep({ displayName, providers, defaultProvider }: DoneStepPr
   const connected = providers.filter((provider) => provider.connection);
   const capabilities = useQueries({
     queries: connected.map((provider) => ({
-      queryKey: queryKeys.capabilities(provider.id),
-      queryFn: () => api.getCapabilities(provider.id),
-      staleTime: 60 * 60 * 1000,
+      ...capabilitiesQuery(provider.id),
+      staleTime: CAPABILITIES_STALE_MS,
     })),
   });
   const firstName = displayName.trim().split(/\s+/)[0] ?? '';
