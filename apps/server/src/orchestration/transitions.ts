@@ -26,7 +26,9 @@ import {
   afterReview,
   canFixAgain,
   checksFailedAfterFix,
+  fixCut,
   fixRefused,
+  fixRestored,
   IDLE_REVIEW,
   lastAction,
   startFix,
@@ -42,6 +44,8 @@ export interface Spawn {
   escalate: boolean;
   note: string | null;
   followUp?: string;
+  /** A Critic fix round the harness started by itself (not the user's "Fix these findings"). */
+  auto?: boolean;
 }
 
 export type FlowAction =
@@ -59,6 +63,7 @@ export type FlowAction =
   | { type: 'keep' }
   | { type: 'ship' }
   | { type: 'revert' }
+  | { type: 'restore' }
   | {
       type: 'finish';
       status: 'succeeded' | 'failed' | 'cancelled';
@@ -95,7 +100,16 @@ export type FlowEvent =
   | { type: 'shipped' }
   | { type: 'ship_held'; reason: string }
   | { type: 'reverted' }
-  | { type: 'budget_exceeded'; limit: BudgetLimit; unstarted?: boolean }
+  | { type: 'restored'; restored: boolean }
+  | {
+      type: 'budget_exceeded';
+      limit: BudgetLimit;
+      unstarted?: boolean;
+      /** The running fix round's own budget ran out, not the run's. */
+      round?: boolean;
+      /** A state that passed the checks is there to fall back to. */
+      passing?: boolean;
+    }
   | { type: 'stopped' };
 
 export interface FlowState {
@@ -334,7 +348,7 @@ function refusedFix(state: FlowState, unstarted: boolean): boolean {
   );
 }
 
-function fixFindings(state: FlowState): FlowResult {
+function fixFindings(state: FlowState, auto = false): FlowResult {
   return spawn(
     { ...state, review: startFix(state.review) },
     {
@@ -342,8 +356,37 @@ function fixFindings(state: FlowState): FlowResult {
       reason: 'fix',
       escalate: false,
       followUp: criticFixFollowUp(state.review.fixable),
+      ...(auto ? { auto: true } : {}),
     },
   );
+}
+
+/**
+ * A limit hit during a Critic fix round (or kept one from starting) while the change before it
+ * passed the checks: the run doesn't fail. The last passing state is restored and kept, and the
+ * keep card (Auto-edit, Ask before edits) lists the findings still open.
+ */
+function cutFixRound(
+  state: FlowState,
+  event: Extract<FlowEvent, { type: 'budget_exceeded' }>,
+): FlowResult | null {
+  if (!state.review.fixing || event.passing !== true) return null;
+  const notStarted = refusedFix(state, event.unstarted === true);
+  if (notStarted && event.round !== true) return null;
+  const review = fixCut(state.review, {
+    limit: event.limit,
+    round: event.round === true,
+    unstarted: notStarted,
+  });
+  return {
+    state: {
+      ...state,
+      review,
+      exceeded: event.round === true ? null : event.limit,
+      waitingFor: null,
+    },
+    action: { type: 'restore' },
+  };
 }
 
 function verified(state: FlowState, event: Extract<FlowEvent, { type: 'verified' }>): FlowResult {
@@ -374,7 +417,7 @@ function agentDone(
     const verdict = event.outcome === 'succeeded' ? (event.verdict ?? 'unclear') : 'unclear';
     const review = afterReview(state.review, verdict, event.fixable ?? [], state.level);
     const next = { ...state, verdict, review };
-    return lastAction(review) === 'fix' ? fixFindings(next) : wrapUp(next);
+    return lastAction(review) === 'fix' ? fixFindings(next, true) : wrapUp(next);
   }
   return builderDone(state, event);
 }
@@ -401,6 +444,10 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
         ? { ...state.last, escalate: false, reason: 'resume' as const }
         : state.last;
       return spawn({ ...state, exceeded: null, resumeLast: false }, next);
+    }
+    if (state.review.stop === 'budget') {
+      // The budget ran out before a fix turn: the change itself is done, so end on keep.
+      return wrapUp(state);
     }
     const limit = (state.exceeded ?? 'time').replace('_', ' ');
     return stopReport(state, `Stopped: the ${limit} budget ran out.`);
@@ -500,7 +547,11 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
       return ask(state, 'accept', event.reason);
     case 'reverted':
       return finish({ ...state, open: [] }, 'succeeded', 'Reverted the changes.');
-    case 'budget_exceeded':
+    case 'restored':
+      return wrapUp({ ...state, review: fixRestored(state.review, event.restored) });
+    case 'budget_exceeded': {
+      const cut = cutFixRound(state, event);
+      if (cut) return cut;
       return ask(
         {
           ...state,
@@ -513,6 +564,7 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
         'budget',
         `The ${event.limit.replace('_', ' ')} budget ran out.`,
       );
+    }
     case 'stopped':
       return finish(state, 'cancelled', 'Stopped.');
   }

@@ -12,19 +12,56 @@ const NIT_LABEL =
   /^\W*(?:nit(?:pick)?|style|naming|minor|optional|suggestion|cosmetic|consider|praise|fyi)\b/i;
 
 const BUG_WORDS =
-  /\b(?:bugs?|buggy|incorrect(?:ly)?|wrong(?:ly)?|regression|regresses|crash(?:es|ed)?|broken|breaks|off[- ]by[- ]one|security|vulnerab\w*|race condition|data loss|corrupts?)\b/i;
+  /\b(?:bugs?|buggy|incorrect(?:ly)?|wrong(?:ly)?|regression|regresses|crash(?:es|ed)?|broken|breaks|off[- ]by[- ]one|race condition|data loss|corrupts?)\b/i;
 
 const BEHAVIOR_WORDS =
-  /\b(?:accept(?:s|ed)?|reject(?:s|ed)?|returns?|returned|throws?|thrown|fails?|failing|failed|exceptions?|missing|missed|misses|unhandled|not handled|not implemented|unimplemented|ignores?|ignored|drops?|dropped|loses?|lost|differs?|instead of|edge case|critical|no tests? (?:covers?|for)|(?:does not|doesn't|never|no longer) (?:handle|check|reject|throw|validate|cover|work|match|update|call|return|compile)|should (?:throw|reject|return|fail|handle|not|be rejected))\b|→|->/i;
+  /\b(?:accept(?:s|ed)?|reject(?:s|ed)?|returns?|returned|throws?|thrown|fails?|failing|failed|exceptions?|missing|missed|misses|omits?|omitted|incomplete|unhandled|not handled|not implemented|unimplemented|ignores?|ignored|drops?|dropped|loses?|lost|differs?|instead of|edge case|critical|no tests? (?:covers?|for)|(?:does not|doesn't|never|no longer) (?:handle|check|reject|throw|validate|cover|work|match|update|call|return|compile)|should (?:throw|reject|return|fail|handle|not|be rejected))\b|→|->/i;
 
 const STYLE_WORDS =
   /\b(?:nam(?:e|es|ed|ing)|renam\w*|style|stylistic|format\w*|whitespace|indent\w*|typos?|comments?|docstrings?|jsdoc|readab\w*|cosmetic|consisten\w*|lint\w*|prefer\w*|simplif\w*|refactor\w*|duplicat\w*|verbose|nit\w*|cleaner|tidy|tidier)\b/i;
 
-export function isCorrectnessFinding(finding: string): boolean {
+/**
+ * Hardening, security and robustness advice: a risk under some reader, browser or input the
+ * request never mentioned (spreadsheet formula injection in an export, quoting `\r` for "some
+ * CSV readers", when to revoke a blob URL). Worth reporting, not a bug against the request.
+ */
+const HARDENING_WORDS =
+  /\b(?:formulas?|formula injection|csv injection|spreadsheets?|some (?:\w+ )?(?:readers?|browsers?|clients?|parsers?|tools?|environments?|platforms?|versions?|programs?|apps?)|may (?:lose|fail|break|not|become|leak|cause|corrupt)|could (?:potentially )?(?:lead|allow|cause|leak)|in (?:some|rare) cases|hardening|harden\w*|defen[cs]ive\w*|defen[cs]e in depth|robust\w*|safety concerns?|to be safe|safer|revok\w*|asynchronous\w*|timing|neutrali[sz]\w*|sanitiz\w*|saniti[sz]\w*|does not guarantee|doesn't guarantee|not guaranteed|rate[- ]limit\w*|denial of service|consider(?:ing)?)\b/i;
+
+/** The finding ties the gap to the request or the agreed plan, so it is a missed requirement. */
+const REQUIRED_WORDS =
+  /\b(?:(?:the )?(?:request|task|plan|agreed plan|spec|story|ticket) (?:asks?|asked|requires?|required|says|said|specifies|specified|calls for|called for|lists|listed|wants)|required by the (?:request|task|plan)|(?:planned|requested|listed|required) (?:step|behaviou?r|requirement|charset|encoding|filename|format|header|field|order|case|output)|(?:omits|skips|misses|contradicts|ignores|violates) (?:the |a )?(?:planned|requested|listed|plan|request|requirement))\b/i;
+
+/** A concrete input and the wrong result it gives: the strongest sign of a real bug. */
+const CONCRETE_WRONG =
+  /→|->|\b(?:returns?|gives|yields|produces|prints|shows|renders)\b[^.;]*\b(?:instead of|when it should|but should|rather than)\b|\bshould (?:throw|return|reject|be rejected|fail)\b/i;
+
+/** A real vulnerability in code the change wrote: fixed even when the request never named it. */
+const REAL_VULNERABILITY =
+  /\b(?:sql injection|command injection|shell injection|code injection|xss|cross[- ]site scripting|path traversal|directory traversal|remote code execution|privilege escalation|ssrf|open redirect|(?:auth(?:entication|orization)?|permission|access[- ]control) (?:bypass|checks? (?:is |are )?missing)|(?:bypass(?:es)?|skips) (?:the )?(?:auth\w*|permission checks?|access control)|(?:no|missing) (?:auth\w*|permission|access[- ]control) checks?|(?:leaks?|exposes?|logs?|returns?) (?:the )?(?:user's |users' )?(?:secrets?|credentials?|tokens?|passwords?|api keys?|password hashes)|(?:unescaped|not escaped|without escaping)\b[^.;]{0,40}\b(?:html|user input|markup))\b/i;
+
+export type FindingKind = 'bug' | 'suggestion' | 'style';
+
+/**
+ * What a Critic finding is, by rule. A bug is wrong behavior against the request or the agreed
+ * plan; the fix loop acts on those only. A suggestion (hardening, security or robustness advice
+ * the request did not ask for) and style are reported, not fixed by themselves. A real
+ * vulnerability the change introduced counts as a bug.
+ */
+export function findingKind(finding: string): FindingKind {
   const text = finding.trim();
-  if (!text || NIT_LABEL.test(text)) return false;
-  if (BUG_WORDS.test(text)) return true;
-  return BEHAVIOR_WORDS.test(text) && !STYLE_WORDS.test(text);
+  if (!text || NIT_LABEL.test(text)) return 'style';
+  if (REAL_VULNERABILITY.test(text)) return 'bug';
+  if (HARDENING_WORDS.test(text) && !REQUIRED_WORDS.test(text) && !CONCRETE_WRONG.test(text)) {
+    return 'suggestion';
+  }
+  if (BUG_WORDS.test(text)) return 'bug';
+  if (REQUIRED_WORDS.test(text)) return 'bug';
+  return BEHAVIOR_WORDS.test(text) && !STYLE_WORDS.test(text) ? 'bug' : 'style';
+}
+
+export function isCorrectnessFinding(finding: string): boolean {
+  return findingKind(finding) === 'bug';
 }
 
 export const findingKey = (index: number) => `finding_${index + 1}`;
@@ -33,6 +70,8 @@ export interface FindingFacts {
   request: string;
   diff: string;
   findings: readonly string[];
+  /** The agreed plan the change was built from, when there is one. */
+  plan?: string | null;
 }
 
 export function buildFindingQuestions(facts: FindingFacts): IntakeQuestions {
@@ -42,17 +81,20 @@ export function buildFindingQuestions(facts: FindingFacts): IntakeQuestions {
       {
         question: FINDING_QUESTION,
         finding: capped(redactText(finding), MAX_FINDING_CHARACTERS),
-        how: 'Yes only when the finding names behavior of `diff` that is wrong for `task`: a bug, a wrong or failing result, a crash, or a requirement of `task` the change misses. A finding that names an input and the wrong output it gives is a strong sign.',
+        how: 'Yes only when the finding names behavior of `diff` that is wrong for `task` (or `plan`, when given): a bug, a wrong or failing result, a crash, or a requirement of `task` or `plan` the change misses. A finding that names an input and the wrong output it gives is a strong sign. No for hardening, security or robustness advice that `task` and `plan` do not ask for, such as neutralizing spreadsheet formulas in an export, quoting for some other reader, or cleanup timing, unless the change itself adds an exploitable hole such as SQL injection or an auth bypass.',
       },
       {
-        true: 'A concrete correctness problem: wrong or failing behavior, or a missed requirement',
-        false: 'Style, naming, readability, structure, a suggestion, a question, or praise',
+        true: 'A concrete correctness problem against the task or plan: wrong or failing behavior, a missed requirement, or a real vulnerability the change adds',
+        false:
+          'Style, naming, readability, structure, a hardening or robustness suggestion the task did not ask for, a question, or praise',
       },
     );
   });
+  const plan = facts.plan?.trim();
   return {
     state: {
       task: capped(redactText(facts.request), MAX_REQUEST_CHARACTERS),
+      ...(plan ? { plan: capped(redactText(plan), MAX_REQUEST_CHARACTERS) } : {}),
       diff: capped(redactText(facts.diff), MAX_DIFF_CHARACTERS),
     },
     questions,
@@ -62,6 +104,7 @@ export function buildFindingQuestions(facts: FindingFacts): IntakeQuestions {
 export interface FindingReading {
   finding: string;
   rules: boolean;
+  kind: FindingKind;
   noul: number | null;
   correct: boolean;
   by: 'jev' | 'rules';
@@ -79,9 +122,18 @@ export function readFindings(
   response: SystemOneResponse | null,
 ): FindingReading[] {
   return findings.map((finding, index) => {
-    const rules = isCorrectnessFinding(finding);
+    const kind = findingKind(finding);
+    const rules = kind === 'bug';
     const noul = validNoul(response, findingKey(index));
-    const jev = jevSays(noul);
-    return { finding, rules, noul, correct: jev ?? rules, by: jev === null ? 'rules' : 'jev' };
+    // A hardening suggestion stays a suggestion: Jev can't turn it into a fix turn.
+    const jev = kind === 'suggestion' && jevSays(noul) === true ? null : jevSays(noul);
+    return {
+      finding,
+      rules,
+      kind,
+      noul,
+      correct: jev ?? rules,
+      by: jev === null ? 'rules' : 'jev',
+    };
   });
 }

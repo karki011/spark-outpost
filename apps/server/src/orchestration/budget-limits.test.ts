@@ -4,8 +4,10 @@ import {
   COMMAND_READER_TOOL_CALL_LIMIT,
   baseLimits,
   fitToolLimit,
+  fixRoundLimits,
   toolCallLimitFor,
 } from './session.ts';
+import { fixRoundExceeded } from './budget-check.ts';
 import type { OrchestratorDeps, Session } from './session.ts';
 
 function session(deps: OrchestratorDeps, provider: string, extended = 0) {
@@ -39,5 +41,26 @@ describe('tool-call budget per provider', () => {
     const s = session({ budget: { toolCallLimit: 7 } } as OrchestratorDeps, 'claude');
     fitToolLimit(s, 'codex');
     expect(s.limits.toolCallLimit).toBe(7);
+  });
+});
+
+describe('one Critic fix round has its own budget', () => {
+  const deps = {} as OrchestratorDeps;
+
+  it('gets a quarter of the run’s tool calls, at least 20, and 4 minutes', () => {
+    expect(fixRoundLimits(session(deps, 'codex'))).toEqual({ toolCalls: 30, activeMs: 240_000 });
+    expect(fixRoundLimits(session(deps, 'claude'))).toEqual({ toolCalls: 20, activeMs: 240_000 });
+    const tight = { fixRound: { toolCalls: 3, activeMs: 500 } } as OrchestratorDeps;
+    expect(fixRoundLimits(session(tight, 'claude'))).toEqual({ toolCalls: 3, activeMs: 500 });
+  });
+
+  it('runs out by tool calls or active time since the round started, only while a round runs', () => {
+    const s = session(deps, 'codex');
+    const usage = (toolCalls: number, activeMs: number) => ({ toolCalls, activeMs, costUsd: 0 });
+    expect(fixRoundExceeded(s, usage(500, 10_000_000))).toBeNull();
+    s.fixRound = { round: 1, toolCallsAt: 70, activeMsAt: 100_000, hit: null };
+    expect(fixRoundExceeded(s, usage(99, 100_000))).toBeNull();
+    expect(fixRoundExceeded(s, usage(100, 100_000))).toBe('tool_calls');
+    expect(fixRoundExceeded(s, usage(80, 340_000))).toBe('time');
   });
 });

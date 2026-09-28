@@ -8,7 +8,7 @@ import { recordKeptChanges } from '../outcomes/record.ts';
 import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
 import { currentTaskContext, startNewTask, taskForWorkingRun } from '../persistence/tasks.ts';
 import { revertRun, runChanges } from '../projects/run-changes.ts';
-import { isGitWorkTree } from '../projects/snapshot.ts';
+import { gitChanges, isGitWorkTree, revertGitChanges } from '../projects/snapshot.ts';
 import { startControl, type Append } from '../workflow/agent-turn.ts';
 import { APPROVAL_TIMEOUT_MESSAGE } from '../workflow/approval-gate.ts';
 import { closeMessage } from '../workflow/execute-run.ts';
@@ -16,8 +16,8 @@ import { runEvents } from '../workflow/run-events.ts';
 import { loadRunInput, type RunInput } from '../workflow/run-input.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
-import { checkBudget } from './budget-check.ts';
-import { correctnessFindings, sessionReviewLine } from './critic-fix.ts';
+import { budgetUsage, checkBudget, fixRoundShort } from './budget-check.ts';
+import { correctnessFindings, sessionReviewLine, suggestionsLine } from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
 import { confirmsRiskyFirst, KEPT_BY_AUTO_EDIT, riskyChange } from './checkpoint-policy.ts';
 import { ask, assume, intakeResponse } from './checkpoint-asks.ts';
@@ -31,7 +31,7 @@ import {
   type IntakeDecisions,
 } from './intake.ts';
 import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
-import { buildAndLand } from './land.ts';
+import { buildAndLand, treeOf } from './land.ts';
 import { finalText } from './final-message.ts';
 import {
   decideBuildStyle,
@@ -170,13 +170,92 @@ function isGreen(s: Session, files: readonly unknown[]): boolean {
   return files.length > 0 && s.checkBodies.at(-1)?.status !== 'failed';
 }
 
+function startsFixRound(s: Session, action: Extract<FlowAction, { type: 'spawn' }>): boolean {
+  return (
+    action.role === 'builder' &&
+    action.reason === 'fix' &&
+    s.flow.review.fixing &&
+    s.fixRound?.round !== s.flow.review.fixRounds
+  );
+}
+
+/** Snapshot the passing change before a fix round, and start the round's own budget. */
+async function beginFixRound(s: Session): Promise<void> {
+  const usage = await budgetUsage(s);
+  s.fixRound = {
+    round: s.flow.review.fixRounds,
+    toolCallsAt: usage.toolCalls,
+    activeMsAt: usage.activeMs,
+    hit: null,
+  };
+  if (checksFailing(s)) s.passing = null;
+  else await notePassing(s);
+}
+
+async function notePassing(s: Session): Promise<void> {
+  const root = s.input.projectRoots[0];
+  const tree = root ? await treeOf(s, root) : null;
+  s.passing = tree
+    ? { tree, checkBodies: [...s.checkBodies], checkLines: [...s.checkLines] }
+    : null;
+}
+
+function cutFacts(s: Session): { round?: boolean; passing?: boolean } {
+  if (!s.flow.review.fixing) return {};
+  return {
+    ...(s.fixRound?.hit ? { round: true } : {}),
+    ...(s.passing ? { passing: true } : {}),
+  };
+}
+
+/** After a cut fix round: put back the last passing state and pick up the run's own budget. */
+async function restoreAfterCut(s: Session): Promise<FlowEvent> {
+  const root = s.input.projectRoots[0];
+  const passing = s.passing;
+  let restored = false;
+  if (root && passing) {
+    try {
+      const current = await treeOf(s, root);
+      if (current && current !== passing.tree) {
+        await revertGitChanges(root, passing.tree, await gitChanges(root, passing.tree, current));
+        restored = true;
+      }
+      s.checkBodies = [...passing.checkBodies];
+      s.checkLines = [...passing.checkLines];
+    } catch (error) {
+      console.error('Could not restore the last passing state', error);
+    }
+  }
+  if (s.fixRound?.hit) s.budgetHit = null;
+  s.fixRound = null;
+  const note = restored
+    ? 'Fix round cut short: rolled back to the last state that passed the checks'
+    : 'Fix round cut short: kept the last state that passed the checks';
+  await s.append(runEvents.stepStarted(note));
+  await s.append(runEvents.stepFinished(note));
+  return { type: 'restored', restored };
+}
+
 async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null> {
   switch (action.type) {
     case 'ask':
       return ask(s, action);
     case 'spawn': {
       const hit = await checkBudget(s);
-      if (hit) return { type: 'budget_exceeded', limit: hit, unstarted: true };
+      if (hit) return { type: 'budget_exceeded', limit: hit, unstarted: true, ...cutFacts(s) };
+      if (startsFixRound(s, action)) {
+        const short = action.auto && !checksFailing(s) ? await fixRoundShort(s) : null;
+        if (short) {
+          return {
+            type: 'budget_exceeded',
+            limit: short,
+            unstarted: true,
+            round: true,
+            passing: true,
+          };
+        }
+        await beginFixRound(s);
+      }
       const copied = action.role === 'builder' && s.needsCopy;
       const outcome = copied ? await buildInCopy(s, action) : await buildAndLand(s, action);
       const { result } = outcome;
@@ -184,9 +263,13 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       await publish(s);
       if (result.error === APPROVAL_TIMEOUT_MESSAGE) throw new CheckpointTimeout();
       if (s.budgetHit && s.control.reason() === null) {
-        return { type: 'budget_exceeded', limit: s.budgetHit };
+        return { type: 'budget_exceeded', limit: s.budgetHit, ...cutFacts(s) };
       }
-      if (action.role === 'builder') return afterBuilder(s, outcome);
+      if (action.role === 'builder') {
+        if (s.flow.review.fixing && !checksFailing(s)) await notePassing(s);
+        return afterBuilder(s, outcome);
+      }
+      if (action.role === 'critic') s.fixRound = null;
       const fixable =
         outcome.verdict === 'concerns' ? await correctnessFindings(s, result, s.findings) : [];
       return {
@@ -218,6 +301,8 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       return { type: 'kept' };
     case 'ship':
       return shipFullAuto(s);
+    case 'restore':
+      return restoreAfterCut(s);
     case 'revert':
       await revertRun(s.deps.db, s.input.workspaceId, s.lease.runId, true);
       s.closeReason = 'reverted';
@@ -249,9 +334,12 @@ async function finish(
   const stopped = status === 'failed' && reason ? reason : null;
   const escalated = s.flow.escalated ? ESCALATED_NOTE : null;
   const fixed =
-    s.flow.review.fixRounds > 0 || s.flow.review.stop === 'budget' ? sessionReviewLine(s) : null;
+    s.flow.review.fixRounds > 0 || s.flow.review.stop === 'budget' || s.flow.review.stop === 'limit'
+      ? sessionReviewLine(s)
+      : null;
+  const suggested = verdict ? suggestionsLine(s.suggestions ?? []) : null;
   const shipped = s.shipLine ?? null;
-  const notes = [assumed, escalated, fixed, stopped, incomplete, shipped].filter(
+  const notes = [assumed, escalated, fixed, suggested, stopped, incomplete, shipped].filter(
     (line): line is string => line !== null,
   );
   const text = withNotes(

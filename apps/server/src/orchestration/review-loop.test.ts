@@ -265,6 +265,91 @@ describe('a budget refusal inside the loop', () => {
   });
 });
 
+describe('a limit that cuts a fix round short (N2)', () => {
+  it("marks harness-started fix rounds as automatic, and the keep card's as the user's", () => {
+    const auto = run('hands-off', [reviewedAs(A)]).at(-1)!;
+    expect(auto.action).toMatchObject({ type: 'spawn', reason: 'fix', auto: true });
+    const offered = run('balanced', [reviewedAs(A), { type: 'wrapped', filesChanged: 1 }]).at(-1)!;
+    const byUser = nextStep(offered.state, {
+      type: 'answered',
+      kind: 'accept',
+      optionId: CHECKPOINT_OPTION.fixFindings,
+      note: null,
+    });
+    expect(byUser.action).toMatchObject({ type: 'spawn', reason: 'fix' });
+    expect(byUser.action).not.toHaveProperty('auto');
+  });
+
+  it('restores the last passing state and ends on the keep card instead of the budget card', () => {
+    const cut = run('hands-off', [
+      reviewedAs(A),
+      { type: 'budget_exceeded', limit: 'tool_calls', round: true, passing: true },
+    ]).at(-1)!;
+    expect(cut.action).toEqual({ type: 'restore' });
+    expect(cut.state.review).toMatchObject({ fixRounds: 1, fixing: false, stop: 'limit' });
+    const restored = nextStep(cut.state, { type: 'restored', restored: true });
+    expect(restored.action).toEqual({ type: 'wrap_up' });
+    expect(reviewLine(restored.state.review, 'checks pass')).toBe(
+      `Stopped fix round 1: fix round 1's own tool-call budget ran out, so Spark Outpost rolled its edits back to the last state that passed the checks. Still open: ${A[0]}.`,
+    );
+    const keep = nextStep(restored.state, { type: 'wrapped', filesChanged: 2 });
+    expect(keep.action).toMatchObject({ type: 'ask', kind: 'accept' });
+    expect(keep.action).toMatchObject({
+      reason: expect.stringContaining('Auto-edit asks because the Critic still has concerns.'),
+    });
+  });
+
+  it('keeps the fixed state when the run budget runs out at the re-review (the s04 case)', () => {
+    const cut = run('hands-off', [
+      reviewedAs(A),
+      built(),
+      reviewedAs(B),
+      built(),
+      { type: 'budget_exceeded', limit: 'tool_calls', unstarted: true, passing: true },
+    ]).at(-1)!;
+    expect(cut.action).toEqual({ type: 'restore' });
+    const restored = nextStep(cut.state, { type: 'restored', restored: false });
+    expect(restored.state.exceeded).toBe('tool_calls');
+    expect(reviewLine(restored.state.review, 'checks pass')).toBe(
+      `Stopped fix round 2: the run's tool-call budget ran out, so Spark Outpost kept the last state; checks pass. Still open: ${B[0]}.`,
+    );
+  });
+
+  it('does not count a fix round that too little budget was left to start', () => {
+    const cut = run('hands-off', [
+      reviewedAs(A),
+      { type: 'budget_exceeded', limit: 'time', unstarted: true, round: true, passing: true },
+    ]).at(-1)!;
+    expect(cut.action).toEqual({ type: 'restore' });
+    expect(cut.state.review).toMatchObject({ fixRounds: 0, stop: 'limit' });
+    expect(reviewLine(cut.state.review, 'checks pass')).toBe(
+      `Did not start fix round 1: too little of the run's time budget was left for one; kept the change that passed the checks. Still open: ${A[0]}.`,
+    );
+  });
+
+  it('still asks about the budget when no passing state is there to fall back to', () => {
+    const cut = run('hands-off', [
+      reviewedAs(A),
+      { type: 'budget_exceeded', limit: 'tool_calls' },
+    ]).at(-1)!;
+    expect(cut.action).toMatchObject({ type: 'ask', kind: 'budget' });
+  });
+
+  it('ends on the keep card, not a failure, when the user stops at a budget card before a fix turn', () => {
+    const waiting = run('hands-off', [
+      reviewedAs(A),
+      { type: 'budget_exceeded', limit: 'cost', unstarted: true },
+    ]).at(-1)!;
+    const stopped = nextStep(waiting.state, {
+      type: 'answered',
+      kind: 'budget',
+      optionId: CHECKPOINT_OPTION.stop,
+      note: null,
+    });
+    expect(stopped.action).toEqual({ type: 'wrap_up' });
+  });
+});
+
 describe('Full auto runs on to ship', () => {
   const wrapped: FlowEvent = { type: 'wrapped', filesChanged: 2 };
 
