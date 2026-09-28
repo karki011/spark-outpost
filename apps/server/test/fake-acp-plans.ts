@@ -41,11 +41,15 @@ export async function planModeTurn(turn: RoleTurn, lockedMode: string): Promise<
     content: [{ type: 'content' as const, content: { type: 'text' as const, text: FAKE_PLAN } }],
   };
   await turn.update({ sessionUpdate: 'tool_call', ...toolCall });
-  const answer = await turn.client.request(acp.methods.client.session.requestPermission, {
+  const request: acp.RequestPermissionRequest = {
     sessionId: turn.sessionId,
     toolCall,
     options: FAKE_PLAN_OPTIONS,
-  });
+  };
+  const answer = await turn.client.request<
+    acp.RequestPermissionResponse,
+    acp.RequestPermissionRequest
+  >(acp.methods.client.session.requestPermission, request);
   const chose = answer.outcome.outcome === 'selected' ? answer.outcome.optionId : 'cancelled';
   if (chose.startsWith('exit-plan-')) {
     await turn.update({ sessionUpdate: 'current_mode_update', currentModeId: lockedMode });
