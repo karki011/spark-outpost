@@ -17,7 +17,7 @@ export interface McpJsonSummary {
   warnings: string[];
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
@@ -50,7 +50,7 @@ export function mcpFingerprint(config: Omit<McpServerConfig, 'fingerprint'>): st
   return createHash('sha256').update(canonical).digest('hex').slice(0, 32);
 }
 
-function serverFrom(name: string, entry: unknown): McpServerConfig | string {
+export function mcpServerFrom(name: string, entry: unknown): McpServerConfig | string {
   if (!isRecord(entry)) return `MCP server "${name}" is not an object, so it was skipped.`;
   const transport = transportOf(entry);
   if (!transport) return `MCP server "${name}" has no command or URL, so it was skipped.`;
@@ -84,7 +84,7 @@ export function readMcpJson(text: string, source: string): McpJsonSummary {
   const servers = isRecord(parsed) && isRecord(parsed.mcpServers) ? parsed.mcpServers : {};
   const summary: McpJsonSummary = { servers: [], warnings: [] };
   for (const [name, entry] of Object.entries(servers)) {
-    const result = serverFrom(name, entry);
+    const result = mcpServerFrom(name, entry);
     if (typeof result === 'string') summary.warnings.push(result);
     else summary.servers.push(result);
   }

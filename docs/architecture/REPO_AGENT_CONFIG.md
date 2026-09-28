@@ -70,7 +70,7 @@ Also noted: the adapter's own `SettingsManager` reads the project's `permissions
 
 - `project_agent_settings`: per project, `instructions`, `skills`, `commands`, `subagents` (default true) and `hooks_fingerprint` (null means off). Hooks count as on only while the repo's current hooks hash to that fingerprint.
 - `mcp_servers`: `source` (`project`, `user` or `imported:<tool>`), `project_id` (required for `project`, never set otherwise), name, transport, a config snapshot with env and header names but no values, and a fingerprint of the full config. Project servers are scoped to their project and never listed globally.
-- `mcp_server_enablements`: per server and scope (`global`, `project`, `chat`) with the reviewed fingerprint. Only `project` scope is used today. Secrets for user-level servers will be keychain references, not values.
+- `mcp_server_enablements`: per server and scope (`global`, `project`, `chat`) with the reviewed fingerprint. Repo servers use `project` scope; user-level servers use all three (see [User-level MCP servers](#user-level-mcp-servers)). Migration 0053 adds `mcp_servers.last_check` (the last connection test) and an index on scope.
 - `agent_config_audit`: every switch change, with the hook commands or MCP config that was approved, plus trust and key-and-traffic decisions.
 - `project_trust` (migration 0052): per project, `trusted`, the executable-config `fingerprint` and item `snapshot` at trust time, `redirects_fingerprint` (null means key and traffic settings are off) and `decided_at`. A row with `trusted = false` records "Not now" or a revoke.
 - `runs.followed_instructions`: the files a run was given, shown as "Following: …" in the turn header.
@@ -90,8 +90,55 @@ The context bar's sliders button ("Agent setup for <project>") opens a popover w
 - Unit: `agent-config/discovery.test.ts` (fixture repo with every file type, caching, nothing executed), `agent-config/allow-rules.test.ts` (floor filter, allowlist entries), `agent-config/trust.test.ts` (fingerprint, change list, key and traffic confirmation), `agents/acp/repo-session.test.ts` (meta policy, plugin sanitizing, Codex config, MCP filtering), `agents.test.ts` (patch guard), `web/.../agent-setup.test.ts`.
 - Integration without a live model: `test/acp-repo-config.test.ts` checks the `_meta`, `CODEX_CONFIG` and `mcpServers` the fake ACP agent receives.
 - DB: `test/agent-config.db.test.ts` (API, fingerprints, audit, cascade, launch, trust grant, change, key and traffic confirmation, revoke).
-- Browser: `tests/browser/agent-setup.spec.ts`.
+- Browser: `tests/browser/agent-setup.spec.ts`, `tests/browser/mcp-settings.spec.ts`.
+- User-level MCP: `mcp/scan.test.ts` (each app's file under a temporary HOME, nothing run), `mcp/effective.test.ts`, `mcp/secrets.test.ts`, `mcp/probe.test.ts`, `agents/acp/codex-mcp.test.ts`, `test/acp-user-mcp.test.ts` (what the fake agent receives), `test/user-mcp.db.test.ts` (API, scopes, fingerprints, no values in the database or audit).
 - Live, September 28, Haiku 4.5, throwaway repo in the session scratchpad, about $0.05 in total: with defaults, Claude answered with the CLAUDE.md codeword, listed the skill as `live-repo:zebra-stripes` and the MCP tool `mcp__echo__echo`, and the `UserPromptSubmit` hook did not run. With hooks approved it ran.
+
+## User-level MCP servers
+
+Servers that belong to the user rather than a repo: imported from other apps or added by hand in Settings → MCP servers, and turned on for all chats, per project or per chat.
+
+### Did agents already load the user's global MCP servers?
+
+Checked September 28, 2026 with the marker technique above: a temporary `HOME` and `CODEX_HOME`, a fake model endpoint, and MCP servers whose only job is to write a marker file when started. The real adapters were driven over ACP; the user's own config was never read.
+
+| Agent  | Setup                                                                                       | Did the user-level server start?                                                   |
+| ------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Claude | Our meta (`settingSources: []`, `strictMcpConfig: true`), `~/.claude.json` has `mcpServers` | No. The ACP server did.                                                            |
+| Claude | Same, `strictMcpConfig: false`                                                              | No: with no user settings source, `~/.claude.json` servers are not loaded.         |
+| Claude | Control: `settingSources: ['user', 'project', 'local']`                                     | Yes, so the check can see a start.                                                 |
+| Codex  | `$CODEX_HOME/config.toml` has `[mcp_servers.*]`                                             | **Yes, at `session/new`, in every Codex chat and in the capability probe.**        |
+| Codex  | Same, `CODEX_CONFIG` sets `mcp_servers.<name>.enabled = false`                              | No.                                                                                |
+| Codex  | Same, plus one ACP server (unpatched codex-acp)                                             | **Yes**: the ACP servers replaced the `CODEX_CONFIG` table. Fixed by patch part 6. |
+| Codex  | ACP server with the same name as a user-level one                                           | codex-acp drops ours and runs the user's (its dedupe filter).                      |
+
+So Claude was already consistent; Codex was not. Now, for every Codex process (chats, Builders, the capability probe), `agent-env.ts` reads the names under `[mcp_servers]` in `$CODEX_HOME/config.toml` (default `~/.codex`) and sets each to `enabled = false` in `CODEX_CONFIG`; codex-acp keeps those entries next to the ACP servers ([PATCHES.md](PATCHES.md) part 6). A Spark server whose name clashes with one of them is renamed `<name>_spark`, so it is never dropped or merged with the user's entry. `APP_SERVER_LOGS` is removed from Codex's environment because codex-acp logs the full `thread/start` config there. We kept the user's `CODEX_HOME` rather than a harness-managed copy: Codex rotates refresh tokens in `auth.json` and keeps session rollouts there, so a copy would break sign-in and resume.
+
+### Scan (read only)
+
+`mcp/scan.ts` reads, never runs: `~/.claude.json` (`mcpServers` and each `projects[path].mcpServers`, a clashing per-project name becomes `<name>-<folder>`), Claude Desktop's `claude_desktop_config.json`, `~/.cursor/mcp.json`, VS Code's user `mcp.json` (`servers`) and `settings.json` (`mcp.servers`, JSON with comments), `$CODEX_HOME/config.toml` (`[mcp_servers.*]`; `bearer_token_env_var` and `env_http_headers` become `${VAR}` header references) and Windsurf's `~/.codeium/windsurf/mcp_config.json` (`serverUrl`). Files over 16 MB are skipped; bad files become warnings. Project `.mcp.json` files are not shown here; they stay in each project's Agent setup.
+
+Scanning imports every server as `imported:<tool>`, switched off. A later scan updates the stored config; if it changed, the fingerprint changes and every switch for it reads as "changed" and off until the user turns it on again. Removing an imported server and scanning again brings it back, off.
+
+### Secrets
+
+The database keeps env and header names only (`config.envNames`, `headerNames`, plus `secretNames` for names with a stored value and `importableNames` for names the source file has values for). Values live in the keychain under `KEYCHAIN_SERVICE`, one entry per server (`mcp:<server id>`, JSON of env and headers). For an imported server, values move only when the user clicks "Copy values to keychain", which re-reads the file and refuses if the config changed since the scan. The fingerprint of a user-level server covers name, transport, command, args, URL and value names, not values, so rotating a token needs no review. Values are resolved in the worker when the agent starts; `session/new`, `session/load` and `session/resume` audit entries have every MCP env and header value replaced with `[redacted:mcp_secret]`. Removing a server deletes its keychain entry.
+
+### Scopes
+
+A user-level server runs in a chat when the first switch found, in this order, is on and matches the current fingerprint: the chat's (`/mcp`), the chat's projects' (in link order), then all chats (`global`). Clearing a chat or project switch falls back to the next. Every change is written to `agent_config_audit` with the scope and the reviewed config (names, never values).
+
+### Test connection
+
+Settings → Test connection starts the server through the MCP SDK client with a 20-second limit, in a temporary working folder, with only the SDK's default variables (`HOME`, `LOGNAME`, `PATH`, `SHELL`, `TERM`, `USER`) plus the server's own env, then lists its tools. HTTP and SSE servers get their headers. The result (tool names or a redacted error, with the fingerprint tested) is stored on the server. It is not an OS sandbox: the command runs with the user's permissions, which is why it only runs when the user clicks.
+
+### Launch
+
+`workflow/agent-turn.ts` loads the chat's enabled user servers (`mcp/launch.ts`) next to the repo launch; `acp-provider.ts` resolves their keychain values and puts them first in `session/new` `mcpServers`, followed by the repo's, with names made unique. Claude gets an `mcp__<name>` ask rule for each (in project chats), so MCP tool calls ask at every permission choice except Full auto, as before. HTTP and SSE servers are skipped with a note when the agent does not advertise them (Codex has no SSE). User servers also reach chats without a project, where every tool call is declined like any other action.
+
+### /mcp
+
+`/mcp` in the composer opens "MCP servers in this chat": each user-level server with its source, which switch decides it and its last test, a switch for this chat and Reset (back to the project or all-chats setting); the linked repos' servers read only, with their state; and "Manage in Settings".
 
 ## Limitations
 
@@ -99,7 +146,7 @@ The context bar's sliders button ("Agent setup for <project>") opens a popover w
 - CLAUDE.md `@imports` are not expanded, and nested instruction files are listed rather than loaded when the agent enters a folder.
 - Plugin names namespace skills and commands (`/app:greet`, not `/greet`). A skill's supporting files stay in the repo; the skill text names that folder.
 - When hooks are on, a `PreToolUse` hook can approve or block tool calls; the popover says so.
-- MCP servers that need secrets from the shell don't get them yet.
+- Repo MCP servers that need secrets from the shell don't get them; user-level servers get theirs from the keychain.
 - Removing and restoring a project drops its agent settings and MCP approvals.
 - Instructions text is capped at 48 KB per session (24 KB per file).
 - A hook's change list line shows the first 200 characters of its command; a change past that shows as the hook being changed with the same text.

@@ -43,7 +43,6 @@ export interface HarnessSetup {
   freshBeforeLastTurn: boolean;
   withDeps: boolean;
   version: Version;
-  /** With Auto routing: the chat's model, so the rule route (chat model) lands there. */
   chatModel?: ModelChoice;
 }
 
@@ -294,7 +293,6 @@ function leanCells(): Cell[] {
   return [...lean, ...full, ...checked, ...drift, ...extra];
 }
 
-/** Scenarios whose point is routing a coding task (not a question, Stop, or clarify). */
 export const ROUTING_SCENARIOS = [
   'b',
   'c',
@@ -319,11 +317,6 @@ const ROUTING_CHATS: Record<string, ModelChoice> = {
   'chat-opus': 'opus[1m]',
 };
 
-/**
- * Live routing comparison: Claude only (no Codex, so the Critic is Claude), API driver at
- * Balanced, Auto routing. `rule` is the rule route with Sonnet as the chat model; the
- * `chat-*` variants move the chat model so the rule route runs the Builder on that model.
- */
 function routingCells(): Cell[] {
   return Object.entries(ROUTING_CHATS).flatMap(([variant, chatModel]) =>
     ROUTING_SCENARIOS.map((id) =>

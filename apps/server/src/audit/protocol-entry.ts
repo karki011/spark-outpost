@@ -69,6 +69,31 @@ function withResultContentRedacted(message: Message): Message {
   return { ...message, result: { ...result, content: redacted('secret_file') } };
 }
 
+const SESSION_OPENERS = new Set(['session/new', 'session/load', 'session/resume']);
+
+function hiddenValues(list: unknown): unknown {
+  if (!Array.isArray(list)) return list;
+  return list.map((item) => {
+    const pair = asRecord(item);
+    return pair && 'value' in pair ? { ...pair, value: redacted('mcp_secret') } : item;
+  });
+}
+
+function withMcpSecretsRedacted(message: Message): Message {
+  const params = asRecord(message.params);
+  if (!params || !Array.isArray(params.mcpServers)) return message;
+  const mcpServers = params.mcpServers.map((server) => {
+    const entry = asRecord(server);
+    if (!entry) return server;
+    return {
+      ...entry,
+      ...('env' in entry ? { env: hiddenValues(entry.env) } : {}),
+      ...('headers' in entry ? { headers: hiddenValues(entry.headers) } : {}),
+    };
+  });
+  return { ...message, params: { ...params, mcpServers } };
+}
+
 export interface ProtocolRecorder {
   entry(direction: ProtocolDirection, message: unknown, at?: Date): ProtocolEntry;
 }
@@ -83,6 +108,9 @@ export function createProtocolRecorder(): ProtocolRecorder {
     `${direction === 'to_agent' ? 'from_agent' : 'to_agent'}:${id}`;
 
   const scrubSecrets = (direction: ProtocolDirection, message: Message, rpcId: string | null) => {
+    if (typeof message.method === 'string' && SESSION_OPENERS.has(message.method)) {
+      return withMcpSecretsRedacted(message);
+    }
     const tool = toolUpdate(message);
     if (tool) {
       const toolCallId = typeof tool.toolCallId === 'string' ? tool.toolCallId : null;

@@ -32,6 +32,7 @@ const env = {
       null,
     ]),
   ),
+  CODEX_HOME: join(tmpdir(), 'spark-no-codex-home'),
 };
 const claude: AgentDefinition = { ...agentDefinitions.claude, ...FAKE_AGENT_MODES };
 const provider = (definition: AgentDefinition) =>

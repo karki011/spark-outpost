@@ -16,10 +16,6 @@ export interface SelfTestLine {
 const show = (counts: TestCounts | null) =>
   counts ? `${counts.pass}/${counts.tests}` : 'no result';
 
-/**
- * Checks the day's fixtures without any agent: each hidden test fails on the state the agent
- * starts from and passes once the reference change is applied, and the plants still apply.
- */
 export async function selfTest(dir: string): Promise<SelfTestLine[]> {
   const lines: SelfTestLine[] = [];
   const repos = new Map<RepoKey, DayRepo>();

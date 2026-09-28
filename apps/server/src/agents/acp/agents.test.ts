@@ -189,6 +189,16 @@ describe('Codex launch', () => {
       expect(source).not.toContain('trust_level: "trusted"');
     });
 
+    it('keeps CODEX_CONFIG mcp_servers next to ACP servers so user-level ones stay off', () => {
+      const config = source.slice(
+        source.indexOf('async createSessionConfig('),
+        source.indexOf('async getConfigMcpServerNames('),
+      );
+      expect(config).toContain(
+        '...isJsonObject(configWithWorkspaceRoots["mcp_servers"]) ? configWithWorkspaceRoots["mcp_servers"] : {},',
+      );
+    });
+
     it('reports the whole turn’s tokens, not only the last model request', () => {
       expect(source).not.toContain('buildPromptUsage(sessionState.lastTokenUsage)');
       expect(source.split('buildPromptUsage(turnPromptUsage(sessionState))')).toHaveLength(5);

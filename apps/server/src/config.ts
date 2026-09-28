@@ -11,7 +11,6 @@ const providerUrl = z
   }, 'Provider URLs must use HTTPS, or 127.0.0.1 for local test stubs.')
   .transform((value) => value.replace(/\/$/, ''));
 
-/** Keys for the memory store (tests and benches): a connection's API key, or 'github' for Ship. */
 const memorySecretsSchema = z.partialRecord(
   z.union([connectableIdSchema, z.literal('github')]),
   z.string().min(1),
@@ -73,6 +72,7 @@ const configSchema = z.object({
     .default(DEFAULT_BRANCH_PREFIX),
   BACKUP_DIR: z.string().min(1).optional(),
   WEB_ROOT: z.string().min(1).optional(),
+  MCP_SCAN_HOME: z.string().min(1).optional(),
 });
 
 export type Config = z.infer<typeof configSchema>;

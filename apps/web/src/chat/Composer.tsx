@@ -41,6 +41,7 @@ import {
   type ClientCommandName,
 } from './composer/slash.ts';
 import { SlashMenu } from './composer/SlashMenu.tsx';
+import { ChatMcpPanel } from './composer/ChatMcpPanel.tsx';
 import { useSlash } from './composer/use-slash.ts';
 import { takeDraft, usePendingDraft } from './composer/pending-draft.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
@@ -125,6 +126,7 @@ export function Composer({
     onPick: addFromRepo,
   });
   const [pickerRequest, setPickerRequest] = useState<PickerRequest | null>(null);
+  const [mcpOpen, setMcpOpen] = useState(false);
   const provider = settings?.provider ?? null;
   const capabilities = useQuery({
     queryKey: queryKeys.capabilities(provider ?? 'claude'),
@@ -147,6 +149,10 @@ export function Composer({
     [agentName, efforts, canStartFresh, hasSettings],
   );
   const runClientCommand = (command: ClientCommandName, args = ''): string | null => {
+    if (command === 'mcp') {
+      setMcpOpen(true);
+      return null;
+    }
     if (command === 'fresh') {
       onStartFresh?.();
       attachments.notify(
@@ -322,6 +328,15 @@ export function Composer({
             }}
             onKeyDown={(event) => {
               if (slash.handleKey(event)) textareaRef.current?.focus();
+            }}
+          />
+        )}
+        {mcpOpen && (
+          <ChatMcpPanel
+            conversationId={conversationId}
+            onClose={() => {
+              setMcpOpen(false);
+              textareaRef.current?.focus();
             }}
           />
         )}

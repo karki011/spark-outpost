@@ -4,28 +4,19 @@ import { testsGreen, type TestCounts } from '../../bench/verify.ts';
 import type { BaseArm } from '../scenario-types.ts';
 import type { ActionKind, Behavior, DaySession } from './sessions.ts';
 
-/** What the bench saw in one session, for one arm. Everything scoring needs, nothing more. */
 export interface Evidence {
   arm: BaseArm;
-  /** Files changed against the session's starting point (commits and working tree). */
   changed: string[];
-  /** The last reply of the session. */
   reply: string;
-  /** Replies plus any Critic findings: what a review is judged on. */
   reviewText: string;
-  /** The harness showed a clarify card, or the bench stopped a run on one. */
   clarifyCard: boolean;
-  /** The harness showed a plan card (an approval carrying a plan). */
   planCard: boolean;
-  /** How the plan got saved: by the harness, from its offer card, by hand, or not at all. */
   planSaved: 'auto' | 'offer' | 'manual' | 'none' | null;
   hidden: TestCounts | null;
   suite: TestCounts | null;
   timedOut: boolean;
   error: string | null;
-  /** The read-only original repo is byte-for-byte as it was (s14). */
   originalUntouched: boolean | null;
-  /** Harness-only observations; null when they do not apply to the arm. */
   roles: string[];
   checksRan: number;
   builderPlanLoaded: boolean | null;
@@ -41,7 +32,6 @@ export interface Evidence {
   shipAvailable: boolean | null;
   pushedBranches: string[];
   interventions: Intervention[];
-  /** Tool approvals the user clicked through (Allow / Allow for this run). */
   clicks: number;
 }
 
@@ -52,7 +42,6 @@ export interface Intervention {
 
 export interface CheckResult {
   id: string;
-  /** null: does not apply to this arm or this build. */
   ok: boolean | null;
   detail: string;
 }
@@ -67,9 +56,7 @@ export interface SessionScore {
 }
 
 export interface Rates {
-  /** What an hour of the developer's time is worth, in dollars. */
   hourlyUsd: number;
-  /** Minutes one intervention (a paste, a card, a manual PR) costs the developer. */
   interventionMinutes: number;
 }
 
@@ -77,22 +64,18 @@ export const DEFAULT_RATES: Rates = { hourlyUsd: 100, interventionMinutes: 1 };
 
 const LIST_ITEM = /^\s{0,3}(?:\d+[.)]|[-*+])\s+\S/;
 const HEADING = /^\s{0,3}#{1,4}\s+\S/;
-// "Pro:" / "Con:" bullets and "a few ways to …" are options too (the harness's s02 in the rerun).
 const OPTION_WORDS =
   /\b(?:options?|alternatives?|approach(?:es)?|trade-?offs?|pros|cons|ways\s+(?:to|we\s+could))\b|^\s*(?:[-*+]\s+)?(?:\*\*)?(?:pro|con)s?(?:\*\*)?\s*:/im;
 
-/** A markdown table body row (not the header separator). */
 const TABLE_ROW = /^\s*\|(?!\s*:?-{3,}).+\|\s*$/;
 
 function listItems(text: string): number {
   const lines = text.split('\n');
   const listed = lines.filter((line) => LIST_ITEM.test(line) || HEADING.test(line)).length;
-  // An options table: its body rows count as options (the first row is the header).
   const rows = lines.filter((line) => TABLE_ROW.test(line)).length;
   return Math.max(listed, rows - 1);
 }
 
-/** A short reply that asks something back, rather than answering or doing. */
 export function asksBack(reply: string): boolean {
   const text = reply.trim();
   if (!text.includes('?') || text.length > 1_200) return false;
@@ -113,7 +96,6 @@ export function classify(evidence: Evidence): ActionKind {
   return 'answer';
 }
 
-/** The kinds that count as the right action for each expected kind. */
 const ACCEPTED: Record<ActionKind, readonly ActionKind[]> = {
   answer: ['answer', 'options', 'plan'],
   options: ['options'],
@@ -314,7 +296,6 @@ export interface ArmSummary {
   interventions: number;
   userMinutes: number;
   userUsd: number;
-  /** Spend plus the developer's time (interventions and repairs), per session run. */
   trueCostUsd: number;
   trueCostPerPassUsd: number | null;
   wallMs: number;
@@ -355,10 +336,6 @@ export function summarise(
   };
 }
 
-/**
- * Pass rate first; among equal pass rates, the lower cost per pass counting the developer's
- * time. Spend alone never decides the order.
- */
 export function rank(summaries: readonly ArmSummary[]): ArmSummary[] {
   const perPass = (summary: ArmSummary) => summary.trueCostPerPassUsd ?? Number.POSITIVE_INFINITY;
   return [...summaries].sort(

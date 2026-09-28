@@ -100,4 +100,26 @@ describe('protocol entries', () => {
     expect(Buffer.byteLength(JSON.stringify(payload))).toBe(PAYLOAD_CAP_BYTES);
     expect(capPayload(payload)).toEqual({ payload, truncated: false });
   });
+
+  it('hides MCP env and header values sent when a session opens', () => {
+    const recorder = createProtocolRecorder();
+    const request = {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'session/new',
+      params: {
+        cwd: '/work',
+        mcpServers: [
+          { name: 'gh', command: 'gh-mcp', args: [], env: [{ name: 'PLAIN', value: 'abc123' }] },
+          { type: 'http', name: 'docs', url: 'https://d', headers: [{ name: 'X', value: 'k9' }] },
+        ],
+      },
+    };
+    const entry = recorder.entry('to_agent', request, at);
+    const text = JSON.stringify(entry.payload);
+    expect(text).not.toContain('abc123');
+    expect(text).not.toContain('k9');
+    expect(text).toContain('"name":"PLAIN"');
+    expect(text).toContain('gh-mcp');
+  });
 });

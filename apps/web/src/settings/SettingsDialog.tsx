@@ -14,10 +14,12 @@ import { JevDiffsSetting } from './JevDiffsSetting.tsx';
 import { CompanionSetting } from './CompanionSetting.tsx';
 import { ProfileSection } from './ProfileSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
+import { McpSection } from './mcp/McpSection.tsx';
 import '../onboarding/tools.css';
 import './settings.css';
 
-export type SettingsSection = 'profile' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'look';
+export type SettingsSection =
+  'profile' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'mcp' | 'look';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   {
@@ -59,6 +61,17 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
     id: 'tools',
     label: 'Connectors',
     icon: <path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5" />,
+  },
+  {
+    id: 'mcp',
+    label: 'MCP servers',
+    icon: (
+      <>
+        <rect x="3" y="4" width="18" height="6" rx="1.5" />
+        <rect x="3" y="14" width="18" height="6" rx="1.5" />
+        <path d="M7 7h.01M7 17h.01" />
+      </>
+    ),
   },
   {
     id: 'look',
@@ -218,6 +231,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                     <ConnectorGrid />
                   </>
                 )}
+                {section === 'mcp' && <McpSection />}
                 {section === 'look' && (
                   <>
                     <p className="lede">Pick a theme. It applies everywhere right away.</p>
