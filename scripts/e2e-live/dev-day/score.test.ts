@@ -69,6 +69,9 @@ describe('classify', () => {
   it('separates options from a plan and from an answer', () => {
     const options = '## Option 1: a panel\nPros: simple.\n## Option 2: a badge\nTrade-off: noisy.';
     expect(classify(evidence({ reply: options }))).toBe('options');
+    const table =
+      'Three ways to show them:\n\n| Option | What people see | Trade-off |\n| --- | --- | --- |\n| A note | counts | no paths |\n| A panel | paths | long lists |\n| A page | search | more UI |';
+    expect(classify(evidence({ reply: table }))).toBe('options');
     const plan = '## Plan\n1. Add spend-csv.ts\n2. Add the button\n3. Test quoting';
     expect(classify(evidence({ reply: plan }))).toBe('plan');
     expect(classify(evidence({ reply: 'skipReason in skip.ts skips node_modules.' }))).toBe(

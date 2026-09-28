@@ -1,9 +1,12 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Browser } from '@playwright/test';
 import { connectableIdSchema } from '../../../packages/contracts/src/index.ts';
 import type { DiffStat } from '../../bench/verify.ts';
 import { stopBench } from '../../bench/live.ts';
+import { keychainSecretStore } from '../../../apps/server/src/setup/secrets.ts';
+import { Api } from '../api-driver.ts';
 import { benchEnv } from '../bench-env.ts';
 import type { BaseArm } from '../scenario-types.ts';
 import { startStack, stopStack, type Runtime, type Stack } from '../stack.ts';
@@ -11,13 +14,14 @@ import { openBrowser } from '../ui-driver.ts';
 import type { ArmDay, ArmSessionResult, PreparedTurn } from './arm.ts';
 import { NO_HARNESS_EVIDENCE } from './arm.ts';
 import { DirectClaudeDay, DirectCodexDay } from './direct-day.ts';
-import { startGitHubStub, type GitHubStub } from './github-stub.ts';
+import { FAKE_GITHUB_TOKEN, startGitHubStub, type GitHubStub } from './github-stub.ts';
 import { HarnessDay } from './harness-day.ts';
 import { hiddenCounts, suiteCounts } from './hidden.ts';
 import { DIRECT_LEVEL_LABEL, LEVELS } from './levels.ts';
 import { anchorFor, pickPassage, quotedMessage } from './quotes.ts';
 import { renderDayReport } from './report-day.ts';
 import {
+  FAKE_REMOTE_HOST,
   ROOT,
   applyPatch,
   changedFiles,
@@ -42,11 +46,52 @@ import { SESSIONS, type DaySession, type RepoKey } from './sessions.ts';
 
 export const DEV_DAY_HARD_CAP_USD = 25;
 
-/** The dry run's GitHub token, once the app knows a 'github' connection (after Ship merges). */
-function fakeGitHubSecret(): Record<string, string> {
-  return connectableIdSchema.safeParse('github').success
-    ? { github: 'dev-day-fake-github-token' }
-    : {};
+/**
+ * The secrets the stack's API and worker get. Both arms of the harness run on the memory store,
+ * so Ship reads the bench's fake GitHub token and never the keychain's `github:token`: the live
+ * run copies only the connection keys (Jev, Z.ai, ...) out of the keychain, read-only.
+ */
+async function stackSecrets(runtime: Runtime): Promise<Record<string, string>> {
+  const secrets: Record<string, string> = { github: FAKE_GITHUB_TOKEN };
+  if (runtime === 'fake') return secrets;
+  const keychain = keychainSecretStore();
+  for (const id of connectableIdSchema.options) {
+    const key = await keychain.get(id).catch(() => null);
+    if (key) secrets[id] = key;
+  }
+  return secrets;
+}
+
+/** Connect the fake GitHub the way Settings does (a token for the fake host), and prove it. */
+async function connectFakeGitHub(stack: Stack, ghHome: string, run: DayRun): Promise<void> {
+  const api = new Api(stack.urls.api, stack.apiToken);
+  const saved = await api.call<{ active: string | null; ghCli: { login: string | null } }>(
+    'PUT',
+    '/github/token',
+    { token: FAKE_GITHUB_TOKEN, host: FAKE_REMOTE_HOST },
+  );
+  run.setup['github connection'] =
+    `active ${saved.active ?? 'none'}; gh CLI login ${saved.ghCli.login ?? 'none'} (GH_CONFIG_DIR ${ghHome})`;
+  const gh = spawnSync('gh', ['auth', 'status', '--hostname', 'github.com'], {
+    env: { ...cleanGitHubEnv(), GH_CONFIG_DIR: ghHome },
+    encoding: 'utf8',
+  });
+  run.setup['gh auth status (stack env)'] = gh.error
+    ? `gh not found (${gh.error.message})`
+    : `exit ${gh.status}: ${`${gh.stdout}${gh.stderr}`.trim().split('\n')[0]?.slice(0, 160) ?? ''}`;
+}
+
+const GITHUB_TOKEN_ENV = [
+  'GH_TOKEN',
+  'GITHUB_TOKEN',
+  'GH_ENTERPRISE_TOKEN',
+  'GITHUB_ENTERPRISE_TOKEN',
+];
+
+function cleanGitHubEnv(): NodeJS.ProcessEnv {
+  const env = { ...process.env };
+  for (const name of GITHUB_TOKEN_ENV) delete env[name];
+  return env;
 }
 export const DAY_ARMS: readonly BaseArm[] = ['harness', 'direct-claude', 'direct-codex'];
 /** A session may spend this multiple of its expected cost before the bench stops it. */
@@ -357,6 +402,7 @@ async function armDays(
   options: DayOptions,
   stub: GitHubStub,
   cleanups: (() => Promise<void>)[],
+  run: DayRun,
 ): Promise<Map<BaseArm, ArmState>> {
   const states = new Map<BaseArm, ArmState>();
   const fresh = (day: ArmDay): ArmState => ({ day, repos: new Map(), replies: new Map() });
@@ -365,6 +411,8 @@ async function armDays(
     process.env.E2E_RUN_CAP_USD ??= String(maxCap);
     const ghHome = join(options.dir, 'gh-empty');
     await mkdir(ghHome, { recursive: true });
+    if ((await readdir(ghHome)).length > 0) throw new Error(`${ghHome} must be empty.`);
+    const secrets = await stackSecrets(options.runtime);
     const stack: Stack = await startStack(
       options.runtime,
       'current',
@@ -372,12 +420,20 @@ async function armDays(
       options.dir,
       options.shots,
       {
-        env: { GITHUB_API_URL: stub.url, GH_CONFIG_DIR: ghHome, GIT_TERMINAL_PROMPT: '0' },
-        unset: ['GH_TOKEN', 'GITHUB_TOKEN', 'GH_ENTERPRISE_TOKEN', 'GITHUB_ENTERPRISE_TOKEN'],
-        secrets: fakeGitHubSecret(),
+        env: {
+          GITHUB_API_URL: stub.url,
+          GH_CONFIG_DIR: ghHome,
+          GIT_TERMINAL_PROMPT: '0',
+          // Live too: the memory store keeps Ship off the keychain's real GitHub token.
+          SECRET_STORE: 'memory',
+          MEMORY_SECRETS: JSON.stringify(secrets),
+        },
+        unset: GITHUB_TOKEN_ENV,
+        secrets: { github: FAKE_GITHUB_TOKEN },
       },
     );
     cleanups.push(() => stopStack(stack, options.keepData));
+    await connectFakeGitHub(stack, ghHome, run);
     let browser: Browser | null = null;
     cleanups.push(async () => browser?.close());
     const day = new HarnessDay(stack, {
@@ -407,7 +463,7 @@ export async function runDevDay(options: DayOptions): Promise<DayRun> {
   const stub = await startGitHubStub();
   const cleanups: (() => Promise<void>)[] = [async () => stub.close()];
   try {
-    const states = await armDays(options, stub, cleanups);
+    const states = await armDays(options, stub, cleanups, run);
     const sessions = SESSIONS.filter((session) => !options.match || options.match.test(session.id));
     outer: for (const session of sessions) {
       const projected = projectedRound(session, options.arms);
@@ -444,6 +500,9 @@ export async function runDevDay(options: DayOptions): Promise<DayRun> {
       }
     }
   } finally {
+    run.setup['github stub requests'] = String(stub.requests.length);
+    run.setup['github stub foreign credentials'] =
+      stub.foreignCredentials.length === 0 ? 'none' : stub.foreignCredentials.join('; ');
     for (const cleanup of cleanups.reverse()) await cleanup().catch(() => undefined);
     const path = await save(options, run);
     console.log(`Spent $${run.spentUsd.toFixed(3)}. Results in ${path}.`);

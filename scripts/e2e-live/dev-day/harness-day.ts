@@ -24,6 +24,8 @@ import type { Intervention } from './score.ts';
 const CHECKPOINT_KINDS_SQL = `(kind NOT IN ('edit', 'execute', 'other') OR payload ? 'plan')`;
 const TOOL_KINDS = new Set(['edit', 'execute', 'other']);
 const TOP_TIER_MODEL = /opus|astra/i;
+/** A reply this long after an answered clarify card is the turn's real answer. */
+export const ANSWERED_CLARIFY_REPLY_CHARS = 400;
 /** Press Stop again when a run keeps going after it (a Stop before the agent started). */
 const RECANCEL_MS = 5_000;
 /** With no Builder by then, the interrupt counts from here instead. */
@@ -195,7 +197,10 @@ export class HarnessDay implements ArmDay {
           await cancel();
           break;
         }
-        const choice = balancedChoice(approval as Approval);
+        const choice = balancedChoice(
+          approval as Approval,
+          session.expect.kind === 'build' ? 'change' : 'answer',
+        );
         if (choice.waitForAuto) continue;
         await this.api.decide(approval, choice).catch(() => undefined);
         outcome.answered.push({
@@ -350,9 +355,12 @@ export class HarnessDay implements ArmDay {
       ? await this.savePlan(chat, session.thread, lastRunId, reply)
       : null;
     const { list, clicks } = interventionsFrom(answered);
+    // A clarify card the developer answered, after which the run went on to reply in full, is an
+    // intervention, not the turn's action: the action is what the run ended with.
     const clarifyCard =
       stoppedOnClarify ||
-      logs.some((log) => log.metrics.approvals.some((a) => a.kind === 'clarify'));
+      (logs.some((log) => log.metrics.approvals.some((a) => a.kind === 'clarify')) &&
+        (logs.at(-1)?.metrics.reply ?? '').trim().length < ANSWERED_CLARIFY_REPLY_CHARS);
     const secondTurn = logs[1];
     const resumed = secondTurn
       ? secondTurn.metrics.sessionNotes.some((note) => note.startsWith('Continued session')) ||

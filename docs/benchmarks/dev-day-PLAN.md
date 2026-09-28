@@ -6,7 +6,7 @@ Codex. Fourteen sessions run in order; some continue earlier ones. It answers on
 over a realistic day, which arm gets the most work right, and what does each right answer cost
 once the developer's own time is counted?
 
-Status: ready, not run live. The dry run (`AGENT_RUNTIME=fake`) executes every session on every
+Status: run live on 2026-09-28, see [dev-day-2026-09-28.md](dev-day-2026-09-28.md). The dry run (`AGENT_RUNTIME=fake`) executes every session on every
 arm end to end and renders the report. Code: `scripts/e2e-live/dev-day/`.
 
 ## How to run
