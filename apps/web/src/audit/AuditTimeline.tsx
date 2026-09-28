@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { providerLabel, type AuditRunSummary } from '@spark-outpost/contracts';
+import { providerColor } from '../chat/provider-name.ts';
 import {
   auditTurns,
   clockTime,
@@ -51,7 +52,7 @@ function TurnWaterfall({ turn, index, now }: { turn: AuditTurn; index: number; n
                 style={{
                   left: pct(bar.left),
                   width: pct(bar.width),
-                  ['--bc' as string]: `var(--c-${bar.run.provider}, var(--muted))`,
+                  ['--bc' as string]: providerColor(bar.run.provider),
                 }}
                 title={`${bar.run.model ?? providerLabel(bar.run.provider)} · ${bar.seconds.toFixed(1)}s`}
               >
@@ -105,11 +106,7 @@ export function AuditTimeline({ runs }: { runs: readonly AuditRunSummary[] }) {
       <div className="wf-legend">
         {providers.map((provider) => (
           <span key={provider}>
-            <i
-              className="sw"
-              style={{ background: `var(--c-${provider}, var(--muted))` }}
-              aria-hidden="true"
-            />
+            <i className="sw" style={{ background: providerColor(provider) }} aria-hidden="true" />
             {providerLabel(provider)}
           </span>
         ))}
