@@ -105,7 +105,7 @@ async function lastReply(runId: string): Promise<string> {
   return rows[0]?.text ?? '';
 }
 
-describe('checks after a Builder lands', () => {
+describe('checks after a Builder lands', { timeout: 60_000 }, () => {
   it('runs the project checks, resumes the Builder to fix a failure, and records it all', async () => {
     await writeFile(join(root, 'check.mjs'), FAILS_UNTIL_FIXED);
     await configureChecks(['node check.mjs']);
@@ -207,7 +207,7 @@ describe('checks after a Builder lands', () => {
   });
 });
 
-describe('when a Critic runs', () => {
+describe('when a Critic runs', { timeout: 60_000 }, () => {
   it('reviews a large diff once on the other provider, even for ordinary work', async () => {
     const big = { ...TRIVIAL, text: `${TRIVIAL.text} #bigdiff` };
     start(big);

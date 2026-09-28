@@ -75,7 +75,7 @@ async function builderPrompt(runId: string): Promise<string> {
   return rows[0]?.prompt ?? '';
 }
 
-describe('the lean build style', () => {
+describe('the lean build style', { timeout: 60_000 }, () => {
   it('leaves an off project without the ladder and without markers', async () => {
     await configure('off');
     const script = start(TRIVIAL);

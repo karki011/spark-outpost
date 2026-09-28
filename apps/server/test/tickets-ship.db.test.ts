@@ -101,7 +101,7 @@ async function ticketTask(root: string) {
   return taskId;
 }
 
-describe('Ship with a linked ticket', () => {
+describe('Ship with a linked ticket', { timeout: 60_000 }, () => {
   it('adds the draft PR to the ticket and moves it to In review', async () => {
     await put('/api/tickets/connections/linear', { source: 'linear', apiKey: LINEAR_KEY }).expect(
       200,

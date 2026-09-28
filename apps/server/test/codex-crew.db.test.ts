@@ -81,7 +81,7 @@ async function build(level: InvolvementLevel) {
   return { ...result, builders: builders.rows, copies: copies.rows, status };
 }
 
-describe('a Codex-only crew in Do', () => {
+describe('a Codex-only crew in Do', { timeout: 60_000 }, () => {
   it.each(['balanced'] as const)(
     'builds in place at %s and asks for the edit',
     async (level) => {

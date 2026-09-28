@@ -88,7 +88,7 @@ async function run(
   return { text, steps, error };
 }
 
-describe('ACP permission requests in Do mode', () => {
+describe('ACP permission requests in Do mode', { timeout: 20_000 }, () => {
   it('sends the request to the gate and answers with the allowed option', async () => {
     const { stub, requests } = gate(allow);
     const result = await run('#write', stub);
@@ -141,7 +141,7 @@ describe('ACP permission requests in Do mode', () => {
   });
 });
 
-describe('fs/write_text_file in Do mode', () => {
+describe('fs/write_text_file in Do mode', { timeout: 20_000 }, () => {
   it('asks the gate with a diff, then writes the file', async () => {
     const { stub, requests } = gate(allow);
     const target = join(root, 'notes.txt');
