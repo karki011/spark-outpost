@@ -103,13 +103,17 @@ class RetryingPool extends pg.Pool {
   }
 }
 
+export function searchPathOptions(searchPath: string | undefined): { options?: string } {
+  return searchPath ? { options: `-c search_path=${searchPath}` } : {};
+}
+
 export function createDb(connectionString: string, options: DbOptions = {}): Db {
   const { searchPath, max = POOL_MAX.script, connectTries = 5, retryBaseMs = 200 } = options;
   return new RetryingPool(
     {
       connectionString,
       max,
-      ...(searchPath ? { options: `-c search_path=${searchPath}` } : {}),
+      ...searchPathOptions(searchPath),
     },
     connectTries,
     retryBaseMs,

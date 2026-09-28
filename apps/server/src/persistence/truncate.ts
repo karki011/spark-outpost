@@ -1,7 +1,7 @@
 import { withTransaction, type Db } from './db.ts';
 
 const LOCK_NOT_AVAILABLE = '55P03';
-export const TRUNCATE_LOCK_TIMEOUT_MS = 200;
+const TRUNCATE_LOCK_TIMEOUT_MS = 200;
 
 export interface TruncateOptions {
   tries?: number;

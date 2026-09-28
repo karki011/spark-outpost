@@ -1,6 +1,6 @@
 import type { AnalyticsWindow } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
-import { WINDOW_FILTER, windowParams } from './analytics-facts.ts';
+import { WINDOW_FILTER, windowParams } from './analytics-window.ts';
 
 export interface ApprovalWaitRow {
   kind: string;

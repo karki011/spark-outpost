@@ -5,6 +5,7 @@ import {
   type SpendSummary,
   type TotalCostSource,
 } from '@spark-outpost/contracts';
+import { JEV_USAGE_COLUMNS, type JevUsageRow } from './advice.ts';
 import type { Queryable } from './db.ts';
 
 const TRUNC_UNIT: Record<SpendRange, string> = { today: 'day', week: 'week' };
@@ -18,12 +19,6 @@ interface ProviderRow {
   total_tokens: number;
   reported: boolean;
   estimated: boolean;
-}
-
-interface JevRow {
-  calls: number;
-  input_tokens: number;
-  cost_usd: number;
 }
 
 function totalSource(reported: boolean, estimated: boolean): TotalCostSource | null {
@@ -73,12 +68,9 @@ async function providerTotals(
   }));
 }
 
-async function jevTotals(db: Queryable, workspaceId: string, since: Date): Promise<JevRow> {
-  const { rows } = await db.query<JevRow>(
-    `SELECT
-       count(*) FILTER (WHERE a.jev_status NOT IN ('not_connected', 'not_asked'))::int AS calls,
-       COALESCE(sum(a.jev_input_tokens), 0)::int AS input_tokens,
-       COALESCE(sum(a.jev_cost_usd), 0)::float8 AS cost_usd
+async function jevTotals(db: Queryable, workspaceId: string, since: Date): Promise<JevUsageRow> {
+  const { rows } = await db.query<JevUsageRow>(
+    `SELECT ${JEV_USAGE_COLUMNS}
      FROM run_advice a
      JOIN runs r ON r.id = a.run_id JOIN conversations c ON c.id = r.conversation_id
      WHERE c.workspace_id = $1 AND a.created_at >= $2`,
@@ -87,7 +79,7 @@ async function jevTotals(db: Queryable, workspaceId: string, since: Date): Promi
   return rows[0] ?? { calls: 0, input_tokens: 0, cost_usd: 0 };
 }
 
-function jevSlice(jev: JevRow): ProviderTotals[] {
+function jevSlice(jev: JevUsageRow): ProviderTotals[] {
   if (jev.calls === 0) return [];
   return [
     {

@@ -15,7 +15,7 @@ export interface TicketConnectionRow {
   validatedAt: Date;
 }
 
-interface Row {
+interface StoredTicketConnection {
   source: TicketSourceId;
   api_url: string;
   email: string | null;
@@ -25,7 +25,7 @@ interface Row {
   validated_at: Date;
 }
 
-function toConnection(row: Row): TicketConnectionRow {
+function toConnection(row: StoredTicketConnection): TicketConnectionRow {
   const statusMap = ticketStatusMapSchema.safeParse(row.status_map);
   return {
     source: row.source,
@@ -42,7 +42,7 @@ export async function listTicketConnections(
   db: Queryable,
   workspaceId: string,
 ): Promise<TicketConnectionRow[]> {
-  const { rows } = await db.query<Row>(
+  const { rows } = await db.query<StoredTicketConnection>(
     'SELECT * FROM ticket_connections WHERE workspace_id = $1 ORDER BY source',
     [workspaceId],
   );
@@ -54,7 +54,7 @@ export async function getTicketConnection(
   workspaceId: string,
   source: TicketSourceId,
 ): Promise<TicketConnectionRow | null> {
-  const { rows } = await db.query<Row>(
+  const { rows } = await db.query<StoredTicketConnection>(
     'SELECT * FROM ticket_connections WHERE workspace_id = $1 AND source = $2',
     [workspaceId, source],
   );

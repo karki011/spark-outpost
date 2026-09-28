@@ -20,7 +20,7 @@ import {
   type OrchestrationRow,
   type StoredRoute,
 } from '../orchestration/view.ts';
-import { toApproval } from './approvals.ts';
+import { toApproval, type ApprovalRow } from './approvals.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
 import type { Lease } from './jobs.ts';
@@ -277,7 +277,7 @@ async function orchestrationRows(db: Queryable, where: string, id: string) {
   return rows;
 }
 
-async function assemble(db: Queryable, rows: readonly OrchestrationRow[]) {
+async function assembleOrchestrations(db: Queryable, rows: readonly OrchestrationRow[]) {
   const ids = rows.map((row) => row.run_id);
   if (ids.length === 0) return [];
   const [members, approvals, decisions] = await Promise.all([
@@ -287,7 +287,7 @@ async function assemble(db: Queryable, rows: readonly OrchestrationRow[]) {
        ORDER BY r.created_at`,
       [ids],
     ),
-    db.query(
+    db.query<ApprovalRow>(
       `SELECT * FROM approvals WHERE run_id = ANY($1::uuid[]) AND kind = ANY($2::text[])
        ORDER BY created_at`,
       [ids, CHECKPOINT_KINDS],
@@ -313,7 +313,10 @@ export async function loadOrchestration(
   db: Queryable,
   runId: string,
 ): Promise<Orchestration | null> {
-  const [orchestration] = await assemble(db, await orchestrationRows(db, 'o.run_id = $1', runId));
+  const [orchestration] = await assembleOrchestrations(
+    db,
+    await orchestrationRows(db, 'o.run_id = $1', runId),
+  );
   return orchestration ?? null;
 }
 
@@ -322,6 +325,6 @@ export async function conversationOrchestrations(
   conversationId: string,
 ): Promise<Record<string, Orchestration>> {
   const rows = await orchestrationRows(db, 'r.conversation_id = $1', conversationId);
-  const all = await assemble(db, rows);
+  const all = await assembleOrchestrations(db, rows);
   return Object.fromEntries(all.map((orchestration) => [orchestration.runId, orchestration]));
 }

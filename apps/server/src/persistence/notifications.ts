@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { searchPathOptions } from './db.ts';
 
 export interface NotificationListener {
   close(): Promise<void>;
@@ -15,8 +16,7 @@ export async function listen(
   onPayload: (payload: string) => void,
   { searchPath, onError }: ListenOptions = {},
 ): Promise<NotificationListener> {
-  const options = searchPath ? `-c search_path=${searchPath}` : undefined;
-  const client = new pg.Client({ connectionString, ...(options ? { options } : {}) });
+  const client = new pg.Client({ connectionString, ...searchPathOptions(searchPath) });
   client.on('error', (error) => {
     console.error(
       `Notification listener on ${channel} failed; falling back to polling.`,

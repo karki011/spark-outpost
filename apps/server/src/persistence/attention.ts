@@ -14,7 +14,7 @@ export interface PendingApprovalRow {
 
 const JEV = 'Jev';
 
-const KINDS: Record<ApprovalKind, AttentionKind> = {
+const ATTENTION_BY_APPROVAL_KIND: Record<ApprovalKind, AttentionKind> = {
   edit: 'permission',
   execute: 'permission',
   other: 'permission',
@@ -37,7 +37,7 @@ function lowerFirst(text: string): string {
   return text;
 }
 
-function paths(value: unknown): string[] {
+function stringPaths(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((entry): entry is string => typeof entry === 'string');
 }
@@ -46,7 +46,7 @@ function permissionTitle(row: PendingApprovalRow, kind: ApprovalKind): string {
   const title = row.pending_title?.trim() ?? '';
   if (kind === 'execute') return `run ${row.pending_command?.trim() || title}`.trim();
   if (kind === 'edit') {
-    const files = paths(row.pending_paths);
+    const files = stringPaths(row.pending_paths);
     if (files.length === 1) return `edit ${baseName(files[0]!)}`;
     if (files.length > 1) return `edit ${files.length} files`;
     return 'change files';
@@ -58,14 +58,14 @@ function agentFor(row: PendingApprovalRow, kind: ApprovalKind): string | null {
   if (kind === 'clarify') return row.pending_asker ?? JEV;
   if (kind === 'stuck') return row.pending_asker;
   if (kind === 'plan' || kind === 'accept') return row.pending_member ?? row.pending_agent;
-  if (KINDS[kind] === 'permission') return row.pending_agent;
+  if (ATTENTION_BY_APPROVAL_KIND[kind] === 'permission') return row.pending_agent;
   return null;
 }
 
 export function toAttention(row: PendingApprovalRow): ConversationAttention | null {
   const kind = row.pending_kind;
   if (!row.pending_id || !kind) return null;
-  const attention = KINDS[kind];
+  const attention = ATTENTION_BY_APPROVAL_KIND[kind];
   return {
     kind: attention,
     title: attention === 'permission' ? permissionTitle(row, kind) : (row.pending_title ?? ''),
