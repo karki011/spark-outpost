@@ -7,9 +7,9 @@ import { loadIntakeContext } from '../src/persistence/advice.ts';
 import { saveCapabilities } from '../src/persistence/chat-settings.ts';
 import { createConversation } from '../src/persistence/conversations.ts';
 import { listModelStats } from '../src/persistence/model-stats.ts';
-import { saveConnection, updateProfile } from '../src/persistence/setup.ts';
+import { updateProfile } from '../src/persistence/setup.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
 let app: ReturnType<typeof createTestApp>;
@@ -23,12 +23,7 @@ const codexModels = [
 const efforts = [{ id: 'medium', label: 'Medium', description: null }];
 
 async function connectCodex() {
-  await saveConnection(t.db, t.workspaceId, 'codex', {
-    method: 'cli',
-    detail: 'codex 1.0',
-    summary: '',
-    models: [],
-  });
+  await connectCliProvider(t, 'codex');
   await saveCapabilities(t.db, t.workspaceId, {
     provider: 'codex',
     models: codexModels,
