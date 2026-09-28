@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
@@ -20,6 +21,15 @@ const THEMES = [
 ] as const;
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const BLOCKING_IMPACTS = new Set(['serious', 'critical']);
+
+const axeCore = createRequire(import.meta.resolve('@axe-core/playwright'))('axe-core') as {
+  getRules(tags: string[]): { ruleId: string }[];
+};
+const isColourOrAria = (rule: string) => rule === 'color-contrast' || rule.startsWith('aria-');
+const CHECKED_RULES = axeCore
+  .getRules(WCAG_TAGS)
+  .map((rule) => rule.ruleId)
+  .filter(isColourOrAria);
 
 const TEXT_SPACING_CSS = `
   * { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; }
@@ -55,8 +65,7 @@ async function useTheme(page: Page, theme: string) {
 }
 
 function isBlocking(violation: { id: string; impact?: string | null }): boolean {
-  const colourOrAria = violation.id === 'color-contrast' || violation.id.startsWith('aria-');
-  return colourOrAria && BLOCKING_IMPACTS.has(violation.impact ?? '');
+  return isColourOrAria(violation.id) && BLOCKING_IMPACTS.has(violation.impact ?? '');
 }
 
 async function settle(page: Page) {
@@ -73,7 +82,10 @@ async function settle(page: Page) {
 
 async function blockingViolations(page: Page, screen: string) {
   await settle(page);
-  const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+  const results = await new AxeBuilder({ page })
+    .withRules(CHECKED_RULES)
+    .setLegacyMode(true)
+    .analyze();
   return results.violations.filter(isBlocking).map((violation) => ({
     screen,
     rule: violation.id,
