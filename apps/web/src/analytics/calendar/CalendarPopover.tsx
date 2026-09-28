@@ -83,7 +83,9 @@ export function CalendarPopover({
     onApply(presetFrom, presetTo);
   };
 
-  const canApply = Boolean(draft?.from && draft?.to);
+  const picked =
+    draft?.from && draft?.to ? [formatIsoLocal(draft.from), formatIsoLocal(draft.to)].sort() : null;
+  const canApply = picked !== null && (picked[0] !== from || picked[1] !== to);
 
   return (
     <div

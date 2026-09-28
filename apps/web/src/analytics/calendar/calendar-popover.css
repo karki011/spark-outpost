@@ -114,6 +114,8 @@
 }
 
 .an-cal-grid .rdp-chevron {
+  width: 16px;
+  height: 16px;
   fill: currentColor;
 }
 

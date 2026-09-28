@@ -125,8 +125,11 @@ test.describe('with three months of history', () => {
   test('picks a custom range with the calendar by mouse', async ({ page }) => {
     await openAnalytics(page);
     const dialog = await openCalendar(page);
+    const apply = dialog.getByRole('button', { name: 'Apply' });
+    await expect(apply).toBeDisabled();
     await dayButton(dialog, 5).click();
     await dayButton(dialog, 20).click();
+    await expect(apply).toBeEnabled();
     await dialog.getByRole('button', { name: 'Apply' }).click();
     await expect(dialog).toBeHidden();
     const rangeButton = page.getByRole('radio', { name: /^Custom: .*–/ });
