@@ -129,11 +129,22 @@ async function current(path: string): Promise<string> {
 
 function sleep(ms: number, signal: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(resolve, ms);
-    signal.addEventListener('abort', () => {
+    const onAbort = () => {
       clearTimeout(timer);
       reject(new Error('aborted'));
-    });
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+function stopped(signal: AbortSignal) {
+  return new Promise<never>((_, reject) => {
+    if (signal.aborted) reject(new Error('aborted'));
+    signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
   });
 }
 
@@ -183,22 +194,25 @@ async function todos(turn: RoleTurn, done: number): Promise<void> {
   });
 }
 
-async function repeat(turn: RoleTurn): Promise<void> {
-  const count = Number(/#repeat (\d+)/.exec(turn.text)?.[1] ?? 0);
-  for (let index = 0; index < count; index += 1) {
+async function repeatUntilStopped(turn: RoleTurn): Promise<void> {
+  if (!turn.text.includes('#repeat')) return;
+  for (let index = 0; ; index += 1) {
     await readTool(turn, 'src/dates.ts', `repeat-${index}`);
     await sleep(20, turn.signal);
   }
 }
 
+const SPEND_CALLS = 7;
+
 async function spend(turn: RoleTurn): Promise<void> {
-  for (let call = 0; ; call += 1) {
+  for (let call = 0; call < SPEND_CALLS; call += 1) {
     const context = 2_000 + call * 2_000;
     await turn.update({ sessionUpdate: 'usage_update', used: context, size: 200_000 });
     await turn.update({ sessionUpdate: 'usage_update', used: context + 500, size: 200_000 });
     await readTool(turn, `src/part-${call}.ts`, `spend-${call}`);
     await sleep(30, turn.signal);
   }
+  await stopped(turn.signal);
 }
 
 async function write(turn: RoleTurn, file: string, line: string): Promise<boolean> {
@@ -229,7 +243,7 @@ async function write(turn: RoleTurn, file: string, line: string): Promise<boolea
 
 export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   await failWhenAsked(turn);
-  await repeat(turn);
+  await repeatUntilStopped(turn);
   const stopAfter = Number(/#stopafter (\d+)/.exec(turn.text)?.[1] ?? FAKE_TODOS.length);
   if (turn.text.includes('#todos')) await todos(turn, 0);
   if (!(await write(turn, 'notes.txt', 'step 1'))) return 'end_turn';
