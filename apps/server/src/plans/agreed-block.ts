@@ -11,6 +11,7 @@ const HEADING = /^\s{0,3}#{1,6}\s+(.*)$/;
 const LIST_ITEM = /^\s*(?:\d+[.)]|[-*+])\s+(?:\[( |x|X)\]\s+)?(.*)$/;
 const DECISION_HEADING =
   /\b(decision|decisions|approach|design|trade-?offs?|notes?|constraints?)\b/i;
+const GOAL_PREFIX = /^\s*goal:\s*/i;
 const GOAL_HEADING = /\b(goal|summary|context|overview)\b/i;
 
 export interface PlanOutline {
@@ -50,7 +51,7 @@ export function outlinePlan(body: string): PlanOutline {
       else if (item[1]?.toLowerCase() !== 'x') open.push(text);
       continue;
     }
-    if (!goal && line.trim()) goal = clip(line);
+    if (!goal && line.trim()) goal = clip(line.replace(GOAL_PREFIX, '')) || null;
   }
   return { goal: goal ?? title, open, decisions };
 }

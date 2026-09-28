@@ -85,6 +85,31 @@ describe('decide() by involvement level', () => {
   });
 });
 
+describe('decide() for plan mode', () => {
+  it('lets the agent enter plan mode at every level, since planning changes no files', () => {
+    const enter = request({
+      kind: 'other',
+      toolKind: 'other',
+      title: 'EnterPlanMode',
+      command: null,
+    });
+    for (const level of LEVELS) expect(decide(level, enter, [], []).verdict).toBe('allow');
+  });
+
+  it('asks before leaving plan mode, below Full auto', () => {
+    const exit = request({
+      kind: 'other',
+      toolKind: 'switch_mode',
+      title: 'Approve Plan',
+      command: null,
+      plan: '# Plan',
+    });
+    expect(decide('balanced', exit, [], []).verdict).toBe('ask');
+    expect(decide('hands-off', exit, [], []).verdict).toBe('ask');
+    expect(decide('full-auto', exit, [], []).verdict).toBe('allow');
+  });
+});
+
 describe('decide() run rules', () => {
   it('allows the same command again after "Allow for this run", even hands-on', () => {
     const rule = ruleFor(run('ls  -la'))!;

@@ -14,7 +14,41 @@ const options = [
   { optionId: 'no', name: 'No', kind: 'reject_once' as const },
 ];
 
+const exitPlanOptions = [
+  { optionId: 'exit-plan-clear-auto', name: 'Yes, clear context', kind: 'allow_always' as const },
+  { optionId: 'exit-plan-auto', name: 'Yes, and use auto mode', kind: 'allow_always' as const },
+  {
+    optionId: 'exit-plan-default',
+    name: 'Yes, manually approve edits',
+    kind: 'allow_once' as const,
+  },
+  { optionId: 'reject', name: 'No, keep planning', kind: 'reject_once' as const },
+];
+
 describe('approvalRequestFrom', () => {
+  it("carries Claude's plan and keeps only the options that leave the session's mode alone", () => {
+    const request = approvalRequestFrom(
+      {
+        sessionId: 's',
+        toolCall: {
+          toolCallId: 'toolu_plan',
+          title: 'Approve Plan',
+          kind: 'switch_mode',
+          rawInput: { plan: '# Plan\n1. Add export' },
+          content: [{ type: 'content', content: { type: 'text', text: 'shown text' } }],
+        },
+        options: exitPlanOptions,
+      },
+      context,
+    );
+    expect(request).toMatchObject({
+      kind: 'other',
+      toolKind: 'switch_mode',
+      plan: '# Plan\n1. Add export',
+      options: [exitPlanOptions[2], exitPlanOptions[3]],
+    });
+  });
+
   it('maps a Claude Bash request to a command', () => {
     const request = approvalRequestFrom(
       {

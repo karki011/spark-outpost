@@ -259,6 +259,18 @@ describe('ACP session update mapping', () => {
     expect(mapper.unsafeModeChange()).toBe('agent');
   });
 
+  it("treats Claude's plan mode as safe, since it only narrows what the agent may do", () => {
+    const mapper = createUpdateMapper('Fake');
+    mapper.lockMode('default');
+    expect(mapper.map({ sessionUpdate: 'current_mode_update', currentModeId: 'plan' })).toEqual([]);
+    expect(mapper.map({ sessionUpdate: 'current_mode_update', currentModeId: 'default' })).toEqual(
+      [],
+    );
+    expect(mapper.unsafeModeChange()).toBeNull();
+    mapper.map({ sessionUpdate: 'current_mode_update', currentModeId: 'auto' });
+    expect(mapper.unsafeModeChange()).toBe('auto');
+  });
+
   it('ignores mode and config updates before a mode is locked', () => {
     const mapper = createUpdateMapper();
     expect(mapper.map({ sessionUpdate: 'current_mode_update', currentModeId: 'agent' })).toEqual(
