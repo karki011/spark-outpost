@@ -1,6 +1,8 @@
 import { blockedReason, commandKey, type AgentCommand } from '@spark-outpost/contracts';
 
-export type ClientCommandName = 'fresh' | 'model' | 'effort' | 'plan' | 'review' | 'mcp';
+const CLIENT_COMMAND_NAMES = ['fresh', 'model', 'effort', 'plan', 'review', 'mcp'] as const;
+
+export type ClientCommandName = (typeof CLIENT_COMMAND_NAMES)[number];
 
 export interface SlashItem {
   name: string;
@@ -61,7 +63,11 @@ function clientCommands(context: SlashContext): ClientItem[] {
   ];
 }
 
-const CLIENT_NAMES = new Set<string>(['fresh', 'model', 'effort', 'plan', 'review', 'mcp']);
+const CLIENT_NAMES = new Set<string>(CLIENT_COMMAND_NAMES);
+
+function isClientCommand(key: string): key is ClientCommandName {
+  return CLIENT_NAMES.has(key);
+}
 
 export function effortHint(efforts: readonly { id: string }[]): string | null {
   const ids = efforts.map((effort) => effort.id).filter((id) => id !== 'default');
@@ -127,7 +133,7 @@ export function parseSlash(text: string): ParsedSlash | null {
 
 export function clientCommand(parsed: ParsedSlash | null): ClientCommandName | null {
   const key = parsed ? commandKey(parsed.name) : null;
-  return key && CLIENT_NAMES.has(key) ? (key as ClientCommandName) : null;
+  return key && isClientCommand(key) ? key : null;
 }
 
 export function blockedMessage(parsed: ParsedSlash | null): string | null {

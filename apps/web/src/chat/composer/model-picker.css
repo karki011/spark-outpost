@@ -187,10 +187,12 @@
   background: var(--panel);
   transition: transform 0.2s var(--out);
 }
-.copt[aria-checked='true'] .cswitch {
+.copt[aria-checked='true'] .cswitch,
+.mretire[aria-checked='true'] .cswitch {
   background: var(--accent);
 }
-.copt[aria-checked='true'] .cswitch i {
+.copt[aria-checked='true'] .cswitch i,
+.mretire[aria-checked='true'] .cswitch i {
   transform: translateX(12px);
 }
 .mretire {
@@ -203,12 +205,6 @@
   font-size: 12.5px;
   color: var(--muted);
   text-align: left;
-}
-.mretire[aria-checked='true'] .cswitch {
-  background: var(--accent);
-}
-.mretire[aria-checked='true'] .cswitch i {
-  transform: translateX(12px);
 }
 .mtag {
   margin-left: 8px;

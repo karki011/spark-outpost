@@ -10,8 +10,9 @@ import {
   type ProviderSetup,
   type UpdateChatSettingsRequest,
 } from '@spark-outpost/contracts';
-import { api, queryKeys } from '../../api/client.ts';
+import { api, CAPABILITIES_STALE_MS, capabilitiesQuery, queryKeys } from '../../api/client.ts';
 import { ProviderBlob } from '../../brand/ProviderBlob.tsx';
+import { countLabel } from '../../ui/count-label.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
 import { reveal } from '../../ui/transitions.tsx';
 import { usePopover } from '../../ui/use-popover.ts';
@@ -37,25 +38,23 @@ export interface PickerRequest {
 }
 
 interface ModelPickerProps {
-  openRequest?: PickerRequest | null;
-  onNotice?: (message: string) => void;
+  openRequest: PickerRequest | null;
+  onNotice: (message: string) => void;
   conversationId: string;
   settings: ChatSettings;
   providers: ProviderSetup[];
-  hasRepos?: boolean;
-  orchestration?: Orchestration | null;
+  hasRepos: boolean;
+  orchestration: Orchestration | null;
 }
 
-const HOUR = 60 * 60 * 1000;
-
 export function ModelPicker({
-  openRequest = null,
+  openRequest,
   onNotice,
   conversationId,
   settings,
   providers,
-  hasRepos = false,
-  orchestration = null,
+  hasRepos,
+  orchestration,
 }: ModelPickerProps) {
   const queryClient = useQueryClient();
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
@@ -80,9 +79,8 @@ export function ModelPicker({
 
   const capabilityQueries = useQueries({
     queries: providers.map((entry) => ({
-      queryKey: queryKeys.capabilities(entry.id),
-      queryFn: () => api.getCapabilities(entry.id),
-      staleTime: HOUR,
+      ...capabilitiesQuery(entry.id),
+      staleTime: CAPABILITIES_STALE_MS,
       enabled: entry.id === provider || open,
     })),
   });
@@ -130,13 +128,12 @@ export function ModelPicker({
       : undefined;
     if (match && openRequest.section === 'effort') {
       update.mutate({ effort: match.id });
-      onNotice?.(`Effort set to ${match.label}.`);
+      onNotice(`Effort set to ${match.label}.`);
     } else if (match) {
       update.mutate({ model: match.id, routing: 'pinned' });
-      onNotice?.(`Model set to ${shortLabel(match.label)}.`);
+      onNotice(`Model set to ${shortLabel(match.label)}.`);
     } else {
-      if (wanted)
-        onNotice?.(`${setup?.name ?? 'This agent'} doesn't offer "${openRequest.value}".`);
+      if (wanted) onNotice(`${setup?.name ?? 'This agent'} doesn't offer "${openRequest.value}".`);
       setSection(openRequest.section);
       setOpen(true);
       setFocusRequest(openRequest.id);
@@ -171,7 +168,7 @@ export function ModelPicker({
           {
             id: 'options' as const,
             label: 'Options',
-            value: `${configOptions.length} ${configOptions.length === 1 ? 'option' : 'options'}`,
+            value: countLabel(configOptions.length, 'option'),
             disabled: false,
           },
         ]

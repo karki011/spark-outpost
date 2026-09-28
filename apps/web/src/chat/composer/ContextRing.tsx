@@ -15,6 +15,8 @@ import {
   latestContext,
   taskContext,
   usageLine,
+  type ContextReading,
+  type TaskContext,
 } from '../../usage/format.ts';
 import '../../usage/usage.css';
 import { contextLevel, formatTokens } from './model-options.ts';
@@ -31,8 +33,21 @@ interface ContextRingProps {
   runs: Run[];
   provider: string | null;
   usageTotals: ConversationUsage;
-  orchestration?: Orchestration | null;
+  orchestration: Orchestration | null;
   onAudit?: () => void;
+}
+
+function ringLabel(
+  task: TaskContext | null,
+  reading: ContextReading | null,
+  percent: number,
+): string {
+  const used = reading?.used ?? 0;
+  const size = reading?.size ?? 0;
+  const tokens = `${formatTokens(used)} of ${formatTokens(size)} tokens`;
+  if (task) return `Task · ${task.name} · ${percent}% context, ${tokens}`;
+  if (reading) return `Context window: ${percent}% used, ${tokens}`;
+  return 'Context window: no usage reported yet';
 }
 
 function chatLine(totals: ConversationUsage): string | null {
@@ -59,7 +74,7 @@ export function ContextRing({
   runs,
   provider,
   usageTotals,
-  orchestration = null,
+  orchestration,
   onAudit,
 }: ContextRingProps) {
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
@@ -73,11 +88,7 @@ export function ContextRing({
   const size = reading?.size ?? 0;
   const percent = contextPercent(used, size);
   const level = contextLevel(percent);
-  const label = task
-    ? `Task · ${task.name} · ${percent}% context, ${formatTokens(used)} of ${formatTokens(size)} tokens`
-    : reading
-      ? `Context window: ${percent}% used, ${formatTokens(used)} of ${formatTokens(size)} tokens`
-      : 'Context window: no usage reported yet';
+  const label = ringLabel(task, reading, percent);
   const chat = chatLine(usageTotals);
   const showProviders = usageTotals.byProvider.length > 1;
 
