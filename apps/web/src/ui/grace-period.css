@@ -1,0 +1,26 @@
+.toast.grace .grace-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.toast.grace button {
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.toast.grace button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.toast.grace .tbar {
+  height: 3px;
+  animation-duration: var(--grace-ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast.grace .tbar {
+    animation: none;
+    transform: scaleX(var(--grace-left));
+  }
+}

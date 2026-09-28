@@ -86,7 +86,7 @@ for (const theme of THEMES) {
   test(`${theme} theme has no serious colour-contrast or ARIA issues on the main screens`, async ({
     page,
   }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openWorkedChat(page);
     await useTheme(page, theme);
@@ -107,6 +107,10 @@ for (const theme of THEMES) {
       page.getByRole('dialog', { name: 'Models' }).getByRole('region', { name: 'Claude' }),
     ).toBeVisible();
     found.push(...(await blockingViolations(page, 'settings models')));
+    await page.getByRole('dialog', { name: 'Models' }).getByRole('tab', { name: 'Reset' }).click();
+    const hold = page.getByRole('dialog', { name: 'Reset' }).locator('.hold-btn');
+    await expect(hold).toBeVisible();
+    found.push(...(await blockingViolations(page, 'settings reset')));
 
     await page.getByRole('button', { name: 'Close settings' }).click();
     await page

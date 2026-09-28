@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { reveal } from '../ui/transitions.tsx';
 import type { ShownToast, Toaster } from './use-toast.ts';
+import '../ui/toast.css';
 
 const TOAST_MS = 5000;
 const AFTER_HOVER_MS = 1500;

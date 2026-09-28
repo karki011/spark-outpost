@@ -14,12 +14,13 @@ import { JevDiffsSetting } from './JevDiffsSetting.tsx';
 import { CompanionSetting } from './CompanionSetting.tsx';
 import { ProfileSection } from './ProfileSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
+import { ResetSection } from '../reset/ResetSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
 import '../onboarding/tools.css';
 import './settings.css';
 
 export type SettingsSection =
-  'profile' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'mcp' | 'look';
+  'profile' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'mcp' | 'look' | 'reset';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   {
@@ -82,6 +83,11 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
         <path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor" />
       </>
     ),
+  },
+  {
+    id: 'reset',
+    label: 'Reset',
+    icon: <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5" />,
   },
 ];
 
@@ -239,6 +245,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                     <CompanionSetting />
                   </>
                 )}
+                {section === 'reset' && <ResetSection />}
               </motion.div>
             </AnimatePresence>
           </div>
