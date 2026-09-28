@@ -328,7 +328,8 @@ export const SESSIONS: readonly DaySession[] = [
     expect: {
       kind: 'answer',
       review: [
-        [/plural/i, /\b0\b|zero|<= ?1|none/i],
+        // "makes zero singular" names the plural() bug without the word "plural" (rerun, Auto-edit).
+        [/plural|singular/i, /\b0\b|zero|<= ?1|none/i],
         [/median/i, /sort|even/i],
       ],
     },
