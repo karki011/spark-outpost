@@ -16,7 +16,7 @@ function errorText(error: unknown): string {
   return error.message;
 }
 
-export function isRateLimited(error: unknown): boolean {
+function isRateLimited(error: unknown): boolean {
   if (error instanceof Error) {
     const fields = error as Error & { code?: unknown; status?: unknown };
     if (fields.code === RATE_LIMITED || fields.status === RATE_LIMITED) return true;

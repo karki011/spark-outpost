@@ -52,7 +52,7 @@ import {
 } from './session-open.ts';
 import { createUpdateMapper, type UpdateMapper } from './session-updates.ts';
 import { promptTokens } from './prompt-usage.ts';
-import { slashPrompt } from './slash-commands.ts';
+import { slashPrompt, type SlashPrompt } from './slash-commands.ts';
 import { TITLE_REQUEST } from '../../titles/title-line.ts';
 
 export interface AcpProviderOptions {
@@ -206,7 +206,7 @@ function asReported(definition: AgentDefinition, output: ProviderOutput): Provid
   return output;
 }
 
-export function withCachedInput(tokens: TokenUsage): TokenUsage {
+function withCachedInput(tokens: TokenUsage): TokenUsage {
   return { ...tokens, input: tokens.input + (tokens.cachedRead ?? 0) };
 }
 
@@ -312,6 +312,20 @@ function promptSupport(init: acp.InitializeResponse): PromptSupport {
     image: capabilities?.image === true,
     embeddedContext: capabilities?.embeddedContext === true,
   };
+}
+
+function promptText(
+  turn: ProviderTurn,
+  request: string,
+  slash: SlashPrompt,
+  continued: boolean,
+): string {
+  const asked = continued ? slash.text : request;
+  const primed =
+    !continued && turn.preamble && slash.kind !== 'command'
+      ? `${turn.preamble}\n\n${asked}`
+      : asked;
+  return turn.askTitle && slash.kind !== 'command' ? `${primed}\n\n${TITLE_REQUEST}` : primed;
 }
 
 async function converse(
@@ -449,13 +463,7 @@ async function converse(
         continued ? (turn.session?.resume?.commands ?? []) : null,
       );
       if (slash.note) push(mapper.note(slash.note));
-      const asked = continued ? slash.text : request;
-      const primed =
-        !continued && turn.preamble && slash.kind !== 'command'
-          ? `${turn.preamble}\n\n${asked}`
-          : asked;
-      const text =
-        turn.askTitle && slash.kind !== 'command' ? `${primed}\n\n${TITLE_REQUEST}` : primed;
+      const text = promptText(turn, request, slash, continued);
       const blocks = continued
         ? followUpBlocks(text, promptOptions)
         : conversationBlocks(history, text, promptOptions);

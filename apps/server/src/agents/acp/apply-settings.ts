@@ -6,7 +6,7 @@ import {
   type ProviderCapabilityReport,
 } from '../../providers/provider.ts';
 import type { AgentDefinition } from './agents.ts';
-import { capabilitiesFrom, isCoreOption } from './capabilities.ts';
+import { capabilitiesFrom, currentValues, isCoreOption } from './capabilities.ts';
 import {
   LEGACY_MODE_OPTION,
   LEGACY_MODEL_OPTION,
@@ -15,6 +15,7 @@ import {
 } from './legacy-options.ts';
 import {
   choices,
+  currentValue,
   findOption,
   planConfig,
   type ConfigChange,
@@ -41,39 +42,26 @@ export interface ModeWish {
 type Requester = Pick<acp.ClientContext, 'request'>;
 type SessionHandle = Pick<acp.ActiveSession, 'sessionId' | 'newSessionResponse'>;
 
-function currentName(options: readonly acp.SessionConfigOption[], category: string) {
-  const option = findOption(options, category);
-  if (!option || typeof option.currentValue !== 'string') return null;
-  const value = option.currentValue;
+function choiceName(option: acp.SessionConfigOption, value: string): string {
   return choices(option).find((choice) => choice.value === value)?.name ?? value;
 }
 
-export function usingLabel(options: readonly acp.SessionConfigOption[], agentName: string): string {
+function currentName(options: readonly acp.SessionConfigOption[], category: string) {
+  const option = findOption(options, category);
+  if (!option || typeof option.currentValue !== 'string') return null;
+  return choiceName(option, option.currentValue);
+}
+
+function usingLabel(options: readonly acp.SessionConfigOption[], agentName: string): string {
   const model = currentName(options, 'model');
   const effort = currentName(options, 'thought_level');
   const parts = [model, effort && `${effort.toLowerCase()} effort`].filter(Boolean);
   return parts.length > 0 ? `Using ${parts.join(' · ')}` : `Using ${agentName}'s defaults`;
 }
 
-function currentValue(
-  options: readonly acp.SessionConfigOption[],
-  category: string,
-): string | null {
-  const option = findOption(options, category);
-  return option && typeof option.currentValue === 'string' ? option.currentValue : null;
-}
-
-export function currentValues(options: readonly acp.SessionConfigOption[]): ConfigValues {
-  return Object.fromEntries(
-    options
-      .filter((option) => !isCoreOption(options, option))
-      .map((option) => [option.id, option.currentValue]),
-  );
-}
-
 export function modeName(options: readonly acp.SessionConfigOption[], mode: string): string {
   const option = findOption(options, 'mode');
-  return (option && choices(option).find((choice) => choice.value === mode)?.name) ?? mode;
+  return option ? choiceName(option, mode) : mode;
 }
 
 export function offersMode(options: readonly acp.SessionConfigOption[], mode: string): boolean {
@@ -88,7 +76,7 @@ export interface SettingsSession {
   setValue(configId: string, value: string | boolean): Promise<void>;
 }
 
-export function settingsSession(ctx: Requester, session: SessionHandle): SettingsSession {
+function settingsSession(ctx: Requester, session: SessionHandle): SettingsSession {
   let configOptions = [...(session.newSessionResponse.configOptions ?? [])];
   let legacy = legacyOptions(session.newSessionResponse);
   const all = () => withLegacy(configOptions, legacy);
