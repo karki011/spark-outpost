@@ -109,11 +109,15 @@ describe('checkpoint wording', () => {
   it('titles the risky-change card and reports its approval', () => {
     const risky = checkpoint({ kind: 'plan', question: 'Start this risky change?' });
     expect(checkpointTitle(risky.payload.checkpoint!)).toBe('Start this risky change?');
+    expect(waitingLabel(risky.payload.checkpoint!)).toBe('Build it, or stop');
     const approved = checkpoint(
       { kind: 'plan' },
-      { status: 'allowed', decisionOptionId: CHECKPOINT_OPTION.approvePlan },
+      { status: 'allowed', decisionOptionId: CHECKPOINT_OPTION.makeChange },
     );
-    expect(checkpointResult(approved)).toBe('Approved; the Builder started.');
+    expect(checkpointResult(approved)).toBe('Making the change.');
+    const plan = checkpoint({ kind: 'plan', question: 'Approve the plan?' });
+    expect(checkpointTitle(plan.payload.checkpoint!)).toBe('Approve the plan?');
+    expect(waitingLabel(plan.payload.checkpoint!)).toBe('Approve the plan');
   });
 });
 

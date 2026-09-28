@@ -8,6 +8,7 @@ import {
   chosenInterpretation,
   interpretationCard,
   interpretations,
+  SPEED_KEY,
   vagueByRule,
   vagueHandling,
 } from './clarify.ts';
@@ -79,5 +80,64 @@ describe('the interpretation question', () => {
     expect(assumptionLine('Improve its documentation')).toBe(
       'Assumed you meant: Improve its documentation. Say so if you meant something else.',
     );
+  });
+});
+
+describe('clarifying a vague "make it faster" (dev-day s08)', () => {
+  const speed = (probabilities: Record<string, number>): SystemOneResponse => ({
+    model: 'jev-test',
+    answers: {
+      intent: {
+        type: 'choice',
+        choice: 'refactor',
+        probabilities: { refactor: 0.6 },
+        confidence: 0.5,
+      },
+      [SPEED_KEY]: { type: 'choice', choice: 'page_load', probabilities, confidence: 0.4 },
+    },
+  });
+
+  it('reads "make it faster" as vague unless it names what to speed up', () => {
+    expect(vagueByRule('Make it faster.', 0)).toBe(true);
+    expect(vagueByRule('Speed it up', 0)).toBe(true);
+    expect(vagueByRule('Make the tests faster', 0)).toBe(false);
+    expect(vagueByRule('Make the Spend page load faster', 0)).toBe(false);
+  });
+
+  it('offers performance choices, never the generic category readings', () => {
+    const choices = interpretations(null, 'Make it faster.');
+    expect(choices).toEqual([
+      'Startup: make the app and dev server start faster',
+      'Page load: make pages load and render faster',
+      'Tests: make the test suite run faster',
+      'Build: make builds and type checks faster',
+    ]);
+    expect(choices.join(' ')).not.toMatch(/Restructure|new behaviour/);
+  });
+
+  it('orders the choices by Jev, two to four of them, and names the project’s own checks', () => {
+    const ranked = speed({
+      page_load: 0.55,
+      queries: 0.25,
+      startup: 0.12,
+      tests: 0.05,
+      build: 0.03,
+    });
+    expect(interpretations(ranked, 'Make it faster.', ['pnpm test', 'pnpm typecheck'])).toEqual([
+      'Page load: make pages load and render faster',
+      'API and database: make slow requests and queries faster',
+      'Startup: make the app and dev server start faster',
+    ]);
+    const sure = speed({ tests: 0.96, build: 0.02, startup: 0.01, page_load: 0.01 });
+    expect(interpretations(sure, 'Make it faster.', ['pnpm test'])).toEqual([
+      'Tests: make `pnpm test` run faster',
+      'Build: make builds and type checks faster',
+    ]);
+  });
+
+  it('keeps the free-text answer on the card', () => {
+    const card = interpretationCard(interpretations(null, 'Make it faster.'), 'why');
+    expect(card.options.map((option) => option.optionId)).toContain(CHECKPOINT_OPTION.answer);
+    expect(card.options[0]!.name).toMatch(/^Startup/);
   });
 });

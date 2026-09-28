@@ -25,6 +25,7 @@ import {
   interpretationCard,
   interpretations,
 } from './clarify.ts';
+import { checkCommands } from './member-prompts.ts';
 import { escalateBuilder } from './routing.ts';
 import { save, type Session } from './session.ts';
 import type { FlowAction, FlowEvent } from './transitions.ts';
@@ -90,7 +91,8 @@ function clarify(s: Session, answer: string): void {
 }
 
 async function askInterpretation(s: Session, action: Ask): Promise<FlowEvent> {
-  const card = interpretationCard(interpretations(intakeResponse(s)), action.reason);
+  const choices = interpretations(intakeResponse(s), s.input.userRequest, checkCommands(s));
+  const card = interpretationCard(choices, action.reason);
   const answer = await askCard(s, withAutoOption(action, card));
   if (answer.type === 'stopped') return { type: 'stopped' };
   if (answer.type === 'timeout') throw new CheckpointTimeout();

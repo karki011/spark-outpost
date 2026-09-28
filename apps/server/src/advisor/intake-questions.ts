@@ -15,6 +15,7 @@ import {
 import { cardFor } from '../model-cards/cards.ts';
 import { noulQuestion, type Description } from './questions.ts';
 import { cardText, statFor, usableStats } from '../model-cards/card-text.ts';
+import { asksForSpeed, SPEED_KEY, speedQuestion } from '../orchestration/clarify.ts';
 import { tierLadder } from '../orchestration/tiers.ts';
 
 export const MAX_TASK_CHARACTERS = 8_000;
@@ -121,6 +122,7 @@ export const CATEGORY_CRITERIA: Record<Category, Description> = {
 
 export const QUESTION_QUESTION =
   'Does `task` ask only for an answer or explanation, with nothing in the project to change?';
+export const PLAN_ONLY_QUESTION = 'Does `task` ask only for a plan, not changes yet?';
 export const VAGUE_QUESTION =
   'Is `task` too vague to act on without first asking the user what they want?';
 export const REVIEW_QUESTION =
@@ -137,6 +139,7 @@ export const TIER_QUESTION =
 export type IntakeKey =
   | 'intent'
   | 'question'
+  | 'plan_only'
   | 'vague'
   | 'review'
   | 'destructive'
@@ -156,6 +159,23 @@ function doModeQuestions(request: IntakeRequest): IntakeQuestions['questions'] {
       false: {
         what: 'It wants files changed: add, fix, rename, update, remove or write something',
         examples: ['Fix the typo in README.md', 'Add a test for parseDate'],
+      },
+    }),
+    plan_only: noulQuestion(PLAN_ONLY_QUESTION, {
+      true: {
+        what: 'It asks for a plan, steps or a design to agree before any file is changed',
+        examples: [
+          "Plan adding CSV export to the reports page. Plan only for now: don't change any files.",
+          'Write up a plan for moving the settings to a database first',
+        ],
+      },
+      false: {
+        what: 'It asks for changes now, an explanation, or options or ideas to compare',
+        examples: [
+          'Add CSV export to the reports page',
+          'Brainstorm a few ways to show skipped files, options only: no plan and no changes',
+          'How does the retry logic work?',
+        ],
       },
     }),
     review: noulQuestion(REVIEW_QUESTION, {
@@ -191,6 +211,7 @@ function doModeQuestions(request: IntakeRequest): IntakeQuestions['questions'] {
         false: 'Clear enough: a competent developer would know what to do',
       },
     );
+    if (asksForSpeed(request.task)) questions[SPEED_KEY] = speedQuestion();
   }
   if (request.currentTask) {
     questions.continues_task = noulQuestion(CONTINUES_QUESTION, {
@@ -392,6 +413,7 @@ export function parseIntakeAnswers(
     modelLabel: tierModel?.label ?? null,
     effort: request.current.effort,
     ...noulField('question', question),
+    ...noulField('planOnly', read('plan_only')),
     ...noulField('vague', read('vague')),
     ...noulField('review', read('review')),
     ...noulField('destructive', destructive),

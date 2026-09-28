@@ -28,7 +28,7 @@ export function optionName(approval: Approval, optionId: string): string | null 
 
 const TITLES: Record<CheckpointPayload['kind'], string> = {
   clarify: 'Jev has a question',
-  plan: 'Start this risky change?',
+  plan: 'Approve the plan?',
   retry: 'A step needs another try',
   accept: 'Keep these changes?',
   budget: 'Continue past the budget?',
@@ -41,6 +41,7 @@ export function checkpointTitle(payload: CheckpointPayload): string {
   if (payload.kind === 'stuck')
     return payload.agent ? `${payload.agent} was repeating itself` : TITLES.stuck;
   if (payload.agent) return `${payload.agent} needs your input`;
+  if (payload.kind === 'plan' && payload.question) return payload.question;
   return TITLES[payload.kind];
 }
 
@@ -50,7 +51,7 @@ export function checkpointQuestion(payload: CheckpointPayload): string | null {
 
 const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
   clarify: 'Answer Jev’s question',
-  plan: 'Build it, or stop',
+  plan: 'Approve the plan',
   retry: 'Retry, or stop and report',
   accept: 'Keep, fix, or revert the changes',
   budget: 'Continue past the budget',
@@ -64,6 +65,9 @@ export function waitingLabel(payload: CheckpointPayload): string {
     return payload.agent ? `Continue ${payload.agent}, or stop` : WAITING_LABELS.stuck;
   }
   if (payload.agent) return `Answer ${payload.agent}`;
+  if (payload.kind === 'plan' && payload.question && payload.question !== TITLES.plan) {
+    return 'Build it, or stop';
+  }
   return WAITING_LABELS[payload.kind];
 }
 
@@ -108,7 +112,7 @@ export function budgetLine(payload: CheckpointPayload): string | null {
 const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.stop]: 'Stopped.',
   [CHECKPOINT_OPTION.clarifyRules]: 'Left it to the fixed rules.',
-  [CHECKPOINT_OPTION.approvePlan]: 'Approved; the Builder started.',
+  [CHECKPOINT_OPTION.approvePlan]: 'Plan approved.',
   [CHECKPOINT_OPTION.editPlan]: 'Sent your changes to the plan.',
   [CHECKPOINT_OPTION.retry]: 'Retrying.',
   [CHECKPOINT_OPTION.finish]: 'Skipped.',

@@ -222,6 +222,40 @@ function AcceptBody({ approval, decide }: { approval: CheckpointApproval; decide
   );
 }
 
+function PlanBody({ approval, decide }: { approval: CheckpointApproval; decide: Decide }) {
+  const [revising, setRevising] = useState(false);
+  if (revising) {
+    return (
+      <NoteForm
+        label="What should change in the plan?"
+        initial=""
+        submit="Revise the plan"
+        busy={decide.busy}
+        onSubmit={(note) => decide(CHECKPOINT_OPTION.editPlan, note)}
+        onCancel={() => setRevising(false)}
+      />
+    );
+  }
+  return (
+    <div className="appr-acts">
+      <Action id={CHECKPOINT_OPTION.approvePlan} approval={approval} decide={decide} kind="primary">
+        Approve plan
+      </Action>
+      <Action id={CHECKPOINT_OPTION.makeChange} approval={approval} decide={decide} kind="primary">
+        Build it
+      </Action>
+      {offers(approval, CHECKPOINT_OPTION.editPlan) && (
+        <button type="button" className="btn line sm" onClick={() => setRevising(true)}>
+          Revise
+        </button>
+      )}
+      <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
+        Stop
+      </Action>
+    </div>
+  );
+}
+
 function ConflictSideView({
   path,
   base,
@@ -286,21 +320,7 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
     case 'clarify':
       return <ClarifyBody approval={approval} decide={decide} />;
     case 'plan':
-      return (
-        <div className="appr-acts">
-          <Action
-            id={CHECKPOINT_OPTION.approvePlan}
-            approval={approval}
-            decide={decide}
-            kind="primary"
-          >
-            Build it
-          </Action>
-          <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
-            Stop
-          </Action>
-        </div>
-      );
+      return <PlanBody approval={approval} decide={decide} />;
     case 'accept':
       return <AcceptBody approval={approval} decide={decide} />;
     case 'retry':

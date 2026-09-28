@@ -13,7 +13,9 @@ import {
   asksForReview,
   destructiveByRule,
   followUpByRule,
+  planOnlyByRule,
   questionByRule,
+  reviewsExistingByRule,
   trivialByRule,
 } from './risk-rules.ts';
 import type { StartMode } from './transitions.ts';
@@ -46,7 +48,7 @@ export interface IntakeDecisions {
   calls: Record<string, IntakeCall>;
 }
 
-type Noul = 'question' | 'vague' | 'review' | 'destructive' | 'continuesTask';
+type Noul = 'question' | 'planOnly' | 'vague' | 'review' | 'destructive' | 'continuesTask';
 
 function call(
   jev: JevIntake | null,
@@ -107,8 +109,11 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   const risk: Risk = destructive ? 'destructive' : 'edits';
   const question = call(jev, 'question', 'question', questionByRule(facts.request), facts, risk);
   const review = call(jev, 'review', 'review', asksForReview(facts.request), facts, risk);
+  const planCall = call(jev, 'planOnly', 'plan_only', planOnlyByRule(facts.request), facts, risk);
+  const planOnly = planCall.rule === true || (planCall.source === 'jev' && planCall.value);
   const calls: Record<string, IntakeCall> = {
     question: plain(question),
+    ...(planOnly ? { plan_only: plain({ ...planCall, value: planOnly }) } : {}),
     review: plain(review),
     destructive: plain({ ...destructiveCall, value: destructive }),
   };
@@ -133,23 +138,33 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     calls.continues_task = plain(continuesCall);
   }
   const answers = question.source === 'jev' ? question.value : question.rule === true;
-  const start: StartMode = answers
-    ? 'answer'
-    : question.asks && !destructive
-      ? 'choose'
-      : vague && vagueHandling(facts.level) === 'ask'
-        ? 'interpret'
-        : 'build';
+  const existing = reviewsExistingByRule(facts.request);
+  const reviewOnly = existing || (review.value && answers);
+  const start: StartMode = planOnly
+    ? 'plan'
+    : reviewOnly
+      ? 'review'
+      : answers
+        ? 'answer'
+        : question.asks && !destructive
+          ? 'choose'
+          : vague && vagueHandling(facts.level) === 'ask'
+            ? 'interpret'
+            : 'build';
   return {
     start,
     assume: vague && start === 'build' && vagueHandling(facts.level) === 'assume',
-    review: review.value,
+    review: review.value || start === 'review',
     destructive,
     trivial: !destructive && trivialByRule(facts.request),
     continues,
     risk,
     calls,
   };
+}
+
+export function readOnlyStart(start: StartMode): boolean {
+  return start === 'answer' || start === 'plan' || start === 'review';
 }
 
 export function rulesAnswer(
@@ -160,7 +175,7 @@ export function rulesAnswer(
   return {
     ...base,
     risk: decisions.risk,
-    depth: decisions.start === 'answer' ? 'direct' : 'execute',
+    depth: readOnlyStart(decisions.start) ? 'direct' : 'execute',
     ...pick,
   };
 }

@@ -7,6 +7,7 @@ import {
   DESTRUCTIVE_QUESTION,
   MAX_PREVIOUS_REPLY_CHARACTERS,
   PLAN_AGREED_QUESTION,
+  PLAN_ONLY_QUESTION,
   QUESTION_QUESTION,
   REVIEW_QUESTION,
   buildIntakeQuestions,
@@ -17,6 +18,7 @@ import {
   type SystemOneResponse,
 } from './intake-questions.ts';
 import { POLICY_VERSION } from './policy.ts';
+import { SPEED_ANGLES, SPEED_KEY } from '../orchestration/clarify.ts';
 
 const claude = {
   provider: 'claude' as const,
@@ -60,6 +62,7 @@ function answered(overrides: Partial<SystemOneResponse['answers']> = {}): System
     answers: {
       intent: choice('refactor'),
       question: noul(0.04),
+      plan_only: noul(0.03),
       review: noul(0.02),
       destructive: noul(0.1),
       tier: choice('mid', 0.7),
@@ -80,6 +83,7 @@ describe('intake questions', () => {
     expect(Object.keys(asked.questions)).toEqual([
       'intent',
       'question',
+      'plan_only',
       'review',
       'destructive',
       'tier',
@@ -87,6 +91,10 @@ describe('intake questions', () => {
     expect(asked.questions.question).toMatchObject({
       type: 'noul',
       instructions: QUESTION_QUESTION,
+    });
+    expect(asked.questions.plan_only).toMatchObject({
+      type: 'noul',
+      instructions: PLAN_ONLY_QUESTION,
     });
     expect(asked.questions.review).toMatchObject({ instructions: REVIEW_QUESTION });
     expect(asked.questions.destructive).toMatchObject({ instructions: DESTRUCTIVE_QUESTION });
@@ -104,6 +112,20 @@ describe('intake questions', () => {
       previous_request: 'Add a CSV export',
       task_summary: 'Added exportCsv.',
     });
+  });
+
+  it('asks what kind of speed a first vague "faster" request means, with concrete choices', () => {
+    const faster = buildIntakeQuestions({
+      ...request,
+      task: 'Make it faster.',
+      firstMessage: true,
+    });
+    expect(faster.questions[SPEED_KEY]).toMatchObject({ type: 'choice' });
+    expect(Object.keys(faster.questions[SPEED_KEY]!.criteria as object)).toEqual([...SPEED_ANGLES]);
+    const later = buildIntakeQuestions({ ...request, task: 'Make it faster.' });
+    expect(later.questions[SPEED_KEY]).toBeUndefined();
+    const other = buildIntakeQuestions({ ...request, task: 'Make it better.', firstMessage: true });
+    expect(other.questions[SPEED_KEY]).toBeUndefined();
   });
 
   it('asks whether the message approves a plan only when there is a previous reply, and sends its end', () => {
@@ -167,6 +189,7 @@ describe('intake answers', () => {
     expect(intake).toMatchObject({
       intent: 'refactor',
       question: 0.04,
+      planOnly: 0.03,
       review: 0.02,
       destructive: 0.1,
       tier: 'mid',

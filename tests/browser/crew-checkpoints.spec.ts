@@ -121,7 +121,7 @@ test('risky work shows a card before the Builder starts, and Build it goes on', 
   await expect(risky).toContainText('looks destructive');
   expect(repo.notes()).toBe('start\n');
   await risky.getByRole('button', { name: 'Build it' }).click();
-  await expect(risky).toContainText('Approved; the Builder started.');
+  await expect(risky).toContainText('Making the change.');
   await allowEdit(page);
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });

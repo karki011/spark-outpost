@@ -21,6 +21,7 @@ import {
   type KeepFacts,
 } from './checkpoint-policy.ts';
 import { criticFixFollowUp } from './context.ts';
+import { reviewExisting, writePlan } from './read-only-flow.ts';
 import {
   afterReview,
   canFixAgain,
@@ -52,6 +53,7 @@ export type FlowAction =
       answerOrBuild?: boolean;
     }
   | ({ type: 'spawn' } & Spawn)
+  | { type: 'plan'; note: string | null }
   | { type: 'verify' }
   | { type: 'wrap_up' }
   | { type: 'keep' }
@@ -66,7 +68,9 @@ export type FlowAction =
 
 export type AgentOutcome = 'succeeded' | 'failed' | 'cancelled';
 
-export type StartMode = 'answer' | 'build' | 'interpret' | 'choose';
+export type StartMode = 'answer' | 'build' | 'interpret' | 'choose' | 'plan' | 'review';
+
+export type ReadOnlyWork = 'plan' | 'review';
 
 export type FlowEvent =
   | { type: 'start'; start: StartMode }
@@ -116,6 +120,7 @@ export interface FlowState {
   large: boolean;
   review: ReviewLoop;
   shipping?: boolean;
+  readOnly?: ReadOnlyWork;
   /** Why this change needs your go-ahead before the first Builder starts; null once given. */
   confirmFirst: string | null;
 }
@@ -359,6 +364,12 @@ function agentDone(
       ? finish(state, 'succeeded')
       : finish(state, 'failed', event.error ?? 'The agent hit a problem.');
   }
+  if (event.role === 'critic' && state.readOnly === 'review') {
+    if (event.outcome !== 'succeeded') {
+      return finish(state, 'failed', event.error ?? 'The review hit a problem.');
+    }
+    return finish({ ...state, verdict: event.verdict ?? 'unclear' }, 'succeeded');
+  }
   if (event.role === 'critic') {
     const verdict = event.outcome === 'succeeded' ? (event.verdict ?? 'unclear') : 'unclear';
     const review = afterReview(state.review, verdict, event.fixable ?? [], state.level);
@@ -395,12 +406,6 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
     return stopReport(state, `Stopped: the ${limit} budget ran out.`);
   }
   if (option === CHECKPOINT_OPTION.stop) return finish(state, 'cancelled', 'You stopped it.');
-  if (event.kind === 'plan') {
-    if (option !== CHECKPOINT_OPTION.approvePlan) {
-      return finish(state, 'cancelled', 'You stopped it.');
-    }
-    return build({ ...state, confirmFirst: null });
-  }
   if (event.kind === 'retry') {
     if (option === CHECKPOINT_OPTION.retry) return retry(state, event.note);
     return stopReport(
@@ -416,6 +421,15 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
       );
     }
     return stopReport(state, `Stopped: ${state.loop ?? 'the Builder was repeating itself'}.`);
+  }
+  if (event.kind === 'plan' && state.readOnly !== 'plan') {
+    if (option !== CHECKPOINT_OPTION.makeChange)
+      return finish(state, 'cancelled', 'You stopped it.');
+    return build({ ...state, confirmFirst: null });
+  }
+  if (event.kind === 'plan') {
+    const note = option === CHECKPOINT_OPTION.editPlan ? event.note?.trim() : null;
+    return note ? writePlan(state, note) : finish(state, 'succeeded');
   }
   if (event.kind === 'verify') {
     if (option === CHECKPOINT_OPTION.retry) {
@@ -442,6 +456,8 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
   switch (event.type) {
     case 'start':
       if (event.start === 'answer') return answer(state);
+      if (event.start === 'plan') return writePlan(state, null);
+      if (event.start === 'review') return reviewExisting(state);
       if (event.start === 'interpret') {
         return ask(state, 'clarify', 'The request does not say what to change.', {
           interpret: true,

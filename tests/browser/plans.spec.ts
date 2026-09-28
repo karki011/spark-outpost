@@ -71,7 +71,7 @@ test('an unsure agreement offers to save the plan, and older plans fold away in 
 
   const second = page.getByRole('region', { name: 'Turn' }).nth(1);
   await expect(second.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
-  await send(page, 'Plan the next part #planreply #build');
+  await send(page, 'How would you do the next part? #planreply #build');
   const third = page.getByRole('region', { name: 'Turn' }).nth(2);
   await third.getByRole('button', { name: 'Save as agreed plan' }).click({ timeout: 30_000 });
   await expect(third.getByRole('status').filter({ hasText: 'Agreed plan v2' })).toBeVisible();
@@ -87,4 +87,35 @@ test('an unsure agreement offers to save the plan, and older plans fold away in 
   await expect(older).toHaveAttribute('aria-expanded', 'true');
   await expect(agreed.locator('.pv')).toContainText('Replaced');
   await expect(agreed.locator('.pv')).toContainText('agreed in chat');
+});
+
+test('a plan-only request writes the plan, changes nothing, and saves it from the plan card', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await crewChat(page, repo, 'Ask before edits');
+  await send(
+    page,
+    "Plan adding CSV export to the reports. Plan only for now: don't change any files. #planreply #build",
+  );
+
+  const approval = card(page, /Approve the plan\?/);
+  await expect(approval).toContainText('Saved as proposed plan v1; nothing was changed.', {
+    timeout: 30_000,
+  });
+  await expect(card(page, /Jev has a question/)).toHaveCount(0);
+  await expect(
+    page.getByRole('region', { name: 'Turn' }).getByRole('heading', { name: 'Add CSV export' }),
+  ).toBeVisible();
+  await expect(approval.getByRole('button', { name: 'Revise' })).toBeVisible();
+  await approval.getByRole('button', { name: 'Approve plan' }).click();
+  await expect(approval.getByRole('status')).toContainText('Plan approved.');
+
+  const work = panel(page);
+  await work.getByRole('tab', { name: 'Plan' }).click();
+  const agreed = work.getByRole('region', { name: 'Agreed plan' });
+  await expect(agreed).toContainText('Approved', { timeout: 30_000 });
+  await expect(agreed.locator('.vbadge')).toHaveText('v1');
+  await expect(agreed.getByRole('heading', { name: 'Add CSV export' })).toBeVisible();
+  expect(repo.notes()).toBe('start\n');
 });

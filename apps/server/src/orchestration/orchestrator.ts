@@ -23,7 +23,13 @@ import { confirmsRiskyFirst, KEPT_BY_AUTO_EDIT, riskyChange } from './checkpoint
 import { ask, assume, intakeResponse } from './checkpoint-asks.ts';
 import { assumptionLine, interpretations } from './clarify.ts';
 import { namedFiles } from './context.ts';
-import { decideIntake, rulesAnswer, type CurrentTask, type IntakeDecisions } from './intake.ts';
+import {
+  decideIntake,
+  readOnlyStart,
+  rulesAnswer,
+  type CurrentTask,
+  type IntakeDecisions,
+} from './intake.ts';
 import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
 import { buildAndLand } from './land.ts';
 import { finalText } from './final-message.ts';
@@ -33,7 +39,8 @@ import {
   projectBuildStyle,
   recordShortcuts,
 } from './build-style.ts';
-import { agreedPlanText, changesSoFar } from './member-prompts.ts';
+import { agreedPlanText, changesSoFar, checkCommands } from './member-prompts.ts';
+import { writePlanOnly } from './plan-only.ts';
 import { observePlanAgreement } from './plan-agreement.ts';
 import { refreshPlan } from './plan-progress.ts';
 import { wantsCritic } from './critic-rule.ts';
@@ -191,6 +198,8 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
         ...(fixable.length > 0 ? { fixable } : {}),
       };
     }
+    case 'plan':
+      return writePlanOnly(s, action.note);
     case 'verify':
       return verifyChange(s);
     case 'wrap_up': {
@@ -299,7 +308,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const limits = baseLimits(deps, input.provider);
     await insertOrchestration(deps.db, {
       runId: lease.runId,
-      depth: answers ? 'direct' : 'execute',
+      depth: readOnlyStart(decisions.start) ? 'direct' : 'execute',
       depthSource: Object.values(decisions.calls).some((call) => call.source === 'jev')
         ? 'jev'
         : 'rules',
@@ -377,7 +386,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       if (s.members.size > 0) void checkBudget(s).catch(() => undefined);
     }, deps.budgetPollMs ?? 1000);
     if (decisions.assume) {
-      const [likely] = interpretations(intakeResponse(s));
+      const [likely] = interpretations(intakeResponse(s), s.input.userRequest, checkCommands(s));
       if (likely) await assume(s, likely);
     }
     await drive(s, decisions);

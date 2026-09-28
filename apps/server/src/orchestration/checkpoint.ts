@@ -65,7 +65,7 @@ export function riskyCard(reason: string): CheckpointCard {
     kind: 'plan',
     title: RISKY_CARD_TITLE,
     payload: payload({ kind: 'plan', question: RISKY_CARD_TITLE, reason }),
-    options: [allow(CHECKPOINT_OPTION.approvePlan, 'Build it'), stopOption],
+    options: [allow(CHECKPOINT_OPTION.makeChange, 'Build it'), stopOption],
   };
 }
 
