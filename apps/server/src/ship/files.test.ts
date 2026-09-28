@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ChangedFile, TaskChanges } from '@spark-outpost/contracts';
 import { SECRET_SKIP_REASON, shipCandidates } from './files.ts';
+import { projectRoot } from './task-facts.ts';
 
 const RUN_A = '00000000-0000-4000-8000-00000000000a';
 const RUN_B = '00000000-0000-4000-8000-00000000000b';
@@ -58,8 +59,7 @@ describe('ship file selection', () => {
 });
 
 describe('the project a copied turn belongs to', () => {
-  it('maps a worktree copy back to its project folder', async () => {
-    const { projectRoot } = await import('./task-facts.ts');
+  it('maps a worktree copy back to its project folder', () => {
     expect(projectRoot('/work/app/.spark/worktrees/0190-abc')).toBe('/work/app');
     expect(projectRoot('/work/app/.spark/worktrees/0190-abc/packages/web')).toBe('/work/app');
     expect(projectRoot('/work/app')).toBe('/work/app');
