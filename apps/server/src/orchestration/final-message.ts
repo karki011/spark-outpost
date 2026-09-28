@@ -31,9 +31,11 @@ export function finalText(
   const parts: string[] = [];
   if (worker?.text.trim()) parts.push(worker.text.trim());
   if (latest.length > 0) parts.push(latest.map(checkLine).join('\n'));
+  const reviewOnly = !worker && critic?.text.trim();
+  if (critic && reviewOnly) parts.push(critic.text.trim());
   if (critic && verdict) {
     const lines = [`AI review by ${critic.label}: ${VERDICTS[verdict]}.`];
-    lines.push(...findings.slice(0, 5).map((finding) => `- ${finding}`));
+    if (!reviewOnly) lines.push(...findings.slice(0, 5).map((finding) => `- ${finding}`));
     parts.push(lines.join('\n'));
   }
   if (parts.length === 0) return '';

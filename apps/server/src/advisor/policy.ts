@@ -1,14 +1,22 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'fixturn-1';
+export const POLICY_VERSION = 'fixturn-1-intake';
 
 export type ActingQuestion =
-  'question' | 'vague' | 'review' | 'destructive' | 'continues_task' | 'verify' | 'finding';
+  | 'question'
+  | 'plan_only'
+  | 'vague'
+  | 'review'
+  | 'destructive'
+  | 'continues_task'
+  | 'verify'
+  | 'finding';
 
 export type ObservedQuestion = 'tier' | 'policy';
 
 export const ACT_AT: Record<ActingQuestion | ObservedQuestion, number> = {
   question: 0.8,
+  plan_only: 0.8,
   vague: 0.8,
   review: 0.8,
   destructive: 0.8,

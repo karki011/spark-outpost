@@ -13,7 +13,9 @@ import {
   destructiveByRule,
   followUpByRule,
   isLargeDiff,
+  planOnlyByRule,
   questionByRule,
+  reviewsExistingByRule,
   trivialByRule,
 } from './risk-rules.ts';
 import { oneTierUp, strongerEffort, tierLadder, topTier } from './tiers.ts';
@@ -56,6 +58,48 @@ describe('risk rules', () => {
     );
     expect(asksForReview('Address the review comments on the parser')).toBe(false);
     expect(asksForReview('Add a retry to the upload')).toBe(false);
+  });
+
+  it('reads a leading review of existing changes, with nothing to change, as review-only', () => {
+    for (const request of [
+      "Review my uncommitted changes before I commit them. Don't change anything; just tell me what's wrong.",
+      'Can you look over my staged changes?',
+      'Check the diff on this branch for bugs',
+      'Please review the current changes',
+    ]) {
+      expect(reviewsExistingByRule(request), request).toBe(true);
+    }
+    for (const request of [
+      'Review my changes to the parser and fix what you find',
+      'Review my uncommitted changes, then fix the bugs',
+      'Add a retry. When it is built, have a reviewer check the change.',
+      'Add a retry, then review the changes',
+      'Review and fix the parser',
+      'Check that the tests pass',
+    ]) {
+      expect(reviewsExistingByRule(request), request).toBe(false);
+    }
+  });
+
+  it('reads explicit plan-only wording as a plan request, never a brainstorm or a plan-then-build', () => {
+    for (const request of [
+      "Plan adding CSV export to Analytics. Plan only for now: don't change any files.",
+      'Plan adding CSV export to Analytics',
+      'Just a plan for now: how would we split the reports module?',
+      'Write up a plan for moving auth to JWT',
+      'Can you draft a plan for the tags feature?',
+    ]) {
+      expect(planOnlyByRule(request), request).toBe(true);
+    }
+    for (const request of [
+      'Brainstorm a few ways we could show that, with the trade-offs of each. Options only for now: no plan and no changes.',
+      'Plan the CSV export and then build it',
+      "How does the code scan decide which files to read? Just answer; don't change anything.",
+      'Add CSV export to the Spend tab',
+      "Fix the typo. Don't change any other files.",
+    ]) {
+      expect(planOnlyByRule(request), request).toBe(false);
+    }
   });
 
   it('reads a question mark without a build verb as a question', () => {

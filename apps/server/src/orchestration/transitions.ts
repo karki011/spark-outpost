@@ -45,6 +45,7 @@ export type FlowAction =
       answerOrBuild?: boolean;
     }
   | ({ type: 'spawn' } & Spawn)
+  | { type: 'plan'; note: string | null }
   | { type: 'verify' }
   | { type: 'wrap_up' }
   | { type: 'ship' }
@@ -58,7 +59,9 @@ export type FlowAction =
 
 export type AgentOutcome = 'succeeded' | 'failed' | 'cancelled';
 
-export type StartMode = 'answer' | 'build' | 'interpret' | 'choose';
+export type StartMode = 'answer' | 'build' | 'interpret' | 'choose' | 'plan' | 'review';
+
+export type ReadOnlyWork = 'plan' | 'review';
 
 export type FlowEvent =
   | { type: 'start'; start: StartMode }
@@ -107,6 +110,7 @@ export interface FlowState {
   large: boolean;
   review: ReviewLoop;
   shipping?: boolean;
+  readOnly?: ReadOnlyWork;
 }
 
 export interface FlowResult {
@@ -215,6 +219,20 @@ function build(state: FlowState): FlowResult {
   return spawn(
     { ...state, depth: 'execute' },
     { role: 'builder', reason: 'first', escalate: false },
+  );
+}
+
+function writePlan(state: FlowState, note: string | null): FlowResult {
+  return {
+    state: { ...state, depth: 'direct', readOnly: 'plan', phase: 'planning', waitingFor: null },
+    action: { type: 'plan', note },
+  };
+}
+
+function reviewExisting(state: FlowState): FlowResult {
+  return spawn(
+    { ...state, depth: 'direct', readOnly: 'review', reviewWanted: true, reviewed: true },
+    { role: 'critic', reason: 'first', escalate: false },
   );
 }
 
@@ -345,6 +363,12 @@ function agentDone(
       ? finish(state, 'succeeded')
       : finish(state, 'failed', event.error ?? 'The agent hit a problem.');
   }
+  if (event.role === 'critic' && state.readOnly === 'review') {
+    if (event.outcome !== 'succeeded') {
+      return finish(state, 'failed', event.error ?? 'The review hit a problem.');
+    }
+    return finish({ ...state, verdict: event.verdict ?? 'unclear' }, 'succeeded');
+  }
   if (event.role === 'critic') {
     const verdict = event.outcome === 'succeeded' ? (event.verdict ?? 'unclear') : 'unclear';
     const review = afterReview(state.review, verdict, event.fixable ?? [], state.level);
@@ -397,6 +421,12 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
     }
     return stopReport(state, `Stopped: ${state.loop ?? 'the Builder was repeating itself'}.`);
   }
+  if (event.kind === 'plan') {
+    if (option === CHECKPOINT_OPTION.editPlan && event.note?.trim()) {
+      return writePlan(state, event.note.trim());
+    }
+    return finish(state, 'succeeded');
+  }
   if (event.kind === 'verify') {
     if (option === CHECKPOINT_OPTION.retry) {
       return escalateOnce(state, escalateFollowUp(event.note ? [event.note] : []));
@@ -422,6 +452,8 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
   switch (event.type) {
     case 'start':
       if (event.start === 'answer') return answer(state);
+      if (event.start === 'plan') return writePlan(state, null);
+      if (event.start === 'review') return reviewExisting(state);
       if (event.start === 'interpret') {
         return ask(state, 'clarify', 'The request does not say what to change.', {
           interpret: true,

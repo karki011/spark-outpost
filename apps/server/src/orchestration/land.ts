@@ -5,7 +5,7 @@ import { workingTree } from '../projects/snapshot.ts';
 import { checkBudget } from './budget-check.ts';
 import { runChecks } from './checks.ts';
 import { checkFailureText } from './context.ts';
-import { runMember, type MemberOutcome, type Place } from './members.ts';
+import { ensureParentSnapshot, runMember, type MemberOutcome, type Place } from './members.ts';
 import { checkLines } from './reviews.ts';
 import type { MemberResult, Session } from './session.ts';
 import type { FlowAction } from './transitions.ts';
@@ -78,6 +78,7 @@ export async function buildAndLand(
   const root = s.input.projectRoots[0];
   const lands = action.role === 'builder' && root !== undefined;
   const before = lands ? await treeOf(s, root) : null;
+  if (action.role === 'critic' && s.flow.readOnly === 'review') await ensureParentSnapshot(s);
   const outcome = await runMember(s, action);
   if (!lands || outcome.result.outcome !== 'succeeded' || s.budgetHit) return outcome;
   const landed = await checkAndFix(s, outcome.result, { cwd: root, before, place: null });

@@ -51,6 +51,7 @@ describe('noul requests', () => {
     const nouls = Object.entries(body.questions).filter(([, question]) => question.type === 'noul');
     expect(nouls.map(([key]) => key)).toEqual([
       'question',
+      'plan_only',
       'review',
       'destructive',
       'vague',

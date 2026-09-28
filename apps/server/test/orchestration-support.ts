@@ -94,6 +94,7 @@ export interface Scenario {
   text: string;
   mode: 'ask' | 'do';
   question?: number;
+  planOnly?: number;
   destructive?: number;
   review?: number;
   vague?: number;
@@ -104,6 +105,7 @@ export interface Scenario {
   intent?: string;
   intentConfidence?: number;
   intentProbabilities?: Record<string, number>;
+  speed?: Record<string, number>;
 }
 
 export const SCENARIOS: readonly Scenario[] = [
@@ -200,6 +202,7 @@ function intentAnswer(scenario: Scenario): Answers[string] {
 
 const NOUL_FIELDS = [
   ['question', 'question'],
+  ['plan_only', 'planOnly'],
   ['destructive', 'destructive'],
   ['review', 'review'],
   ['vague', 'vague'],
@@ -217,6 +220,15 @@ function intakeAnswers(scenario: Scenario, questions: Record<string, unknown>): 
     answers.tier = choice(scenario.tier, scenario.tierConfidence ?? 0.95);
   }
   if (questions.injection) answers.injection = noul(0.05);
+  if (questions.speed && scenario.speed) {
+    const [top] = Object.entries(scenario.speed).sort(([, a], [, b]) => b - a);
+    answers.speed = {
+      type: 'choice',
+      choice: top![0],
+      probabilities: scenario.speed,
+      confidence: top![1],
+    };
+  }
   return answers;
 }
 

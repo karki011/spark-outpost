@@ -269,3 +269,50 @@ describe('checkpoints', () => {
     expect(stopped!.action).toMatchObject({ type: 'finish', status: 'cancelled' });
   });
 });
+
+describe('read-only work: a plan, or a review of existing changes', () => {
+  it('writes a plan, asks to approve it, and finishes without building (dev-day s03)', () => {
+    const [start, approved] = run(flow(), [
+      { type: 'start', start: 'plan' },
+      { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.approvePlan, note: null },
+    ]);
+    expect(start!.action).toEqual({ type: 'plan', note: null });
+    expect(start!.state).toMatchObject({ depth: 'direct', readOnly: 'plan', phase: 'planning' });
+    expect(approved!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
+  });
+
+  it('revises the plan with the user’s note, and stops when asked', () => {
+    const [, revised, stopped] = run(flow(), [
+      { type: 'start', start: 'plan' },
+      { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.editPlan, note: ' add tests ' },
+      { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.stop, note: null },
+    ]);
+    expect(revised!.action).toEqual({ type: 'plan', note: 'add tests' });
+    expect(stopped!.action).toMatchObject({ type: 'finish', status: 'cancelled' });
+  });
+
+  it('finishes when the planner fails or writes nothing', () => {
+    const [, failed] = run(flow(), [
+      { type: 'start', start: 'plan' },
+      { type: 'agent_done', role: 'scout', outcome: 'failed', error: 'no plan' },
+    ]);
+    expect(failed!.action).toMatchObject({ type: 'finish', status: 'failed', reason: 'no plan' });
+  });
+
+  it('reviews existing changes with the Critic alone and never sends findings to a Builder (dev-day s07)', () => {
+    const [start, reviewed] = run(flow(), [
+      { type: 'start', start: 'review' },
+      {
+        type: 'agent_done',
+        role: 'critic',
+        outcome: 'succeeded',
+        verdict: 'concerns',
+        fixable: ['plural() is wrong for 0'],
+      },
+    ]);
+    expect(start!.action).toMatchObject({ type: 'spawn', role: 'critic', reason: 'first' });
+    expect(start!.state).toMatchObject({ depth: 'direct', readOnly: 'review', reviewed: true });
+    expect(reviewed!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
+    expect(reviewed!.state.verdict).toBe('concerns');
+  });
+});
