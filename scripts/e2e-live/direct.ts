@@ -7,6 +7,7 @@ import {
   sendUserMessage,
 } from '../../apps/server/src/persistence/conversations.ts';
 import { claimNextJob } from '../../apps/server/src/persistence/jobs.ts';
+import type { Db } from '../../apps/server/src/persistence/db.ts';
 import { requestCancel } from '../../apps/server/src/persistence/runs.ts';
 import { estimateCostUsd } from '../../apps/server/src/usage/prices.ts';
 import { executeChildRun } from '../../apps/server/src/workflow/execute-run.ts';
@@ -40,8 +41,8 @@ export interface InProcessSession {
   send(text: string, sendOptions?: SendOptions): Promise<DirectTurn>;
 }
 
-async function recordReply(env: BenchEnv, runId: string): Promise<void> {
-  const { rows } = await env.t.db.query<{ id: string | null; text: string | null }>(
+async function recordReply(db: Db, runId: string): Promise<void> {
+  const { rows } = await db.query<{ id: string | null; text: string | null }>(
     `SELECT e.payload->>'messageId' AS id,
        (SELECT string_agg(c.payload->>'delta', '' ORDER BY c.seq) FROM run_events c
         WHERE c.run_id = $1 AND c.type = 'TEXT_MESSAGE_CONTENT'
@@ -52,12 +53,22 @@ async function recordReply(env: BenchEnv, runId: string): Promise<void> {
   );
   const reply = rows[0];
   if (!reply?.id || !reply.text) return;
-  await env.t.db.query(
+  await db.query(
     `INSERT INTO messages (id, conversation_id, role, content, run_id)
      SELECT $1, conversation_id, 'assistant', $2, id FROM runs WHERE id = $3
      ON CONFLICT (id) DO NOTHING`,
     [reply.id, reply.text, runId],
   );
+}
+
+export async function finishDirectTurn(
+  db: Db,
+  runId: string,
+  wallMs: number,
+  harness: boolean,
+): Promise<TurnMetrics> {
+  if (!harness) await recordReply(db, runId);
+  return collectTurn(db, runId, wallMs);
 }
 
 export async function inProcessSession(
@@ -116,8 +127,12 @@ export async function inProcessSession(
       await new Promise((done) => setTimeout(done, 250));
     }
     await work;
-    const metrics = await collectTurn(t.db, sent.run.id, Date.now() - started);
-    if (!options.harness) await recordReply(env, sent.run.id);
+    const metrics = await finishDirectTurn(
+      t.db,
+      sent.run.id,
+      Date.now() - started,
+      options.harness,
+    );
     return { metrics, autoDenied };
   };
   return { send };
