@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -32,6 +32,20 @@ export interface CaseResult {
   jev: (VerdictReading & { inputTokens: number; costUsd: number; model: string }) | null;
   jevError: string | null;
   critic: { verdict: string; costUsd: number; text: string } | null;
+}
+
+interface CriticOutput {
+  result: string;
+  total_cost_usd: number;
+}
+
+export function readCriticRun(run: SpawnSyncReturns<string>): CriticOutput {
+  if (run.error) throw new Error(`The critic did not run: ${run.error.message}`);
+  if (run.status !== 0) {
+    const reason = run.stderr.trim() || `signal ${run.signal ?? 'none'}`;
+    throw new Error(`The critic exited with status ${run.status}: ${reason}`);
+  }
+  return JSON.parse(run.stdout) as CriticOutput;
 }
 
 const CHECKS = [`- \`${CHECK_COMMAND}\` passed`];
@@ -90,7 +104,7 @@ function askCritic(item: VerifierCase, prepared: PreparedCase) {
     ],
     { cwd: prepared.repo, input: prompt, encoding: 'utf8', timeout: 180_000 },
   );
-  const parsed = JSON.parse(run.stdout) as { result: string; total_cost_usd: number };
+  const parsed = readCriticRun(run);
   return {
     verdict: reviewVerdict(parsed.result),
     costUsd: parsed.total_cost_usd,

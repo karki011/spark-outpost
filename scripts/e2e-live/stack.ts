@@ -6,6 +6,7 @@ import { API_TOKEN_ENV, API_TOKEN_HEADER } from '../../packages/contracts/src/in
 import { createLaunchToken } from '../../apps/server/src/api/launch-token.ts';
 import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { FAKE_ACP_MODELS } from '../../tests/browser/stub-config.ts';
+import { testDatabaseUrl } from '../test-database.ts';
 import { STUB_URL, portsFor, urlsFor, type StackUrls } from './config.ts';
 import type { Version } from './plan.ts';
 import { seedWorkspace } from './seed.ts';
@@ -27,18 +28,6 @@ export interface Stack {
   processes: ChildProcess[];
   workerPid: number | null;
   logs: string;
-}
-
-export function testDatabaseUrl(): string {
-  const url = process.env.TEST_DATABASE_URL;
-  if (!url) throw new Error('The live end-to-end run needs TEST_DATABASE_URL.');
-  const test = new URL(url);
-  const dev = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL) : null;
-  const sameAsDev = dev && dev.host === test.host && dev.pathname === test.pathname;
-  if (sameAsDev || !/_test(_\w+)?$/.test(test.pathname)) {
-    throw new Error('TEST_DATABASE_URL must name a separate *_test database, never the dev one.');
-  }
-  return url;
 }
 
 async function admin(url: string, sql: string): Promise<void> {

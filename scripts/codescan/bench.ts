@@ -11,6 +11,7 @@ import {
 } from '../../apps/server/src/codescan/scanner.ts';
 import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { runMigrations } from '../../apps/server/src/persistence/migrate.ts';
+import { testDatabaseUrl } from '../test-database.ts';
 import { percentile, underLoad } from './load.ts';
 import { REQUESTS } from './requests.ts';
 
@@ -25,10 +26,7 @@ const { values } = parseArgs({
 });
 
 if (existsSync('.local/credentials.env')) process.loadEnvFile('.local/credentials.env');
-const url = process.env.TEST_DATABASE_URL;
-if (!url || !/\/[\w]*_test[\w]*$/.test(url)) {
-  throw new Error('The benchmark needs TEST_DATABASE_URL pointing at a *_test database.');
-}
+const url = testDatabaseUrl();
 
 interface Repo {
   name: string;

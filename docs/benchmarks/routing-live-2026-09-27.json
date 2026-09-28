@@ -38,7 +38,7 @@
       "totalCost": 1.949301,
       "costPerPass": 0.1218313125,
       "withRepair": 1.949301,
-      "costPerPassWithRepair": 0.1218313125,
+      "perTaskWithRepair": 0.1218313125,
       "missing": []
     },
     {
@@ -50,7 +50,7 @@
       "totalCost": 1.8234375789999997,
       "costPerPass": 0.11396484868749998,
       "withRepair": 1.8234375789999997,
-      "costPerPassWithRepair": 0.11396484868749998,
+      "perTaskWithRepair": 0.11396484868749998,
       "missing": []
     },
     {
@@ -62,7 +62,7 @@
       "totalCost": 1.8129463839999995,
       "costPerPass": 0.11330914899999997,
       "withRepair": 1.8129463839999995,
-      "costPerPassWithRepair": 0.11330914899999997,
+      "perTaskWithRepair": 0.11330914899999997,
       "missing": []
     },
     {
@@ -74,7 +74,7 @@
       "totalCost": 1.8660644899999999,
       "costPerPass": 0.11662903062499999,
       "withRepair": 1.8660644899999999,
-      "costPerPassWithRepair": 0.11662903062499999,
+      "perTaskWithRepair": 0.11662903062499999,
       "missing": []
     }
   ],

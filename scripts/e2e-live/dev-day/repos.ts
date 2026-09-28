@@ -1,5 +1,6 @@
 import { execFile, execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
@@ -11,9 +12,12 @@ const run = promisify(execFile);
 export const ROOT = resolve(import.meta.dirname, '../../..');
 export const FIXTURES = join(import.meta.dirname, 'fixtures');
 
-const EXTERNAL_REPO =
-  process.env.DEV_DAY_EXTERNAL_REPO ??
-  '/private/tmp/claude-501/-Users-hmk-Downloads-spark-outpost/de4f337c-37ca-43f6-b4b8-456b09d97ef9/scratchpad/repos/feature-web-apps';
+function externalRepo(): string {
+  const path = process.env.DEV_DAY_EXTERNAL_REPO;
+  if (!path)
+    throw new Error('Set DEV_DAY_EXTERNAL_REPO to the read-only clone for the external repo.');
+  return path;
+}
 
 export const FAKE_REMOTE_HOST = 'github.e2e.localhost';
 const FAKE_REMOTE_URL = `https://${FAKE_REMOTE_HOST}/e2e-bench/workbench.git`;
@@ -77,7 +81,10 @@ async function createSparkRepo(dir: string, name: string): Promise<DayRepo> {
   assertInside(path, dir);
   await rm(path, { recursive: true, force: true });
   await mkdir(path, { recursive: true });
-  execFileSync('sh', ['-c', `git -C "${ROOT}" archive --format=tar HEAD | tar -x -C "${path}"`]);
+  const archive = `${path}.tar`;
+  execFileSync('git', ['-C', ROOT, 'archive', '--format=tar', '-o', archive, 'HEAD']);
+  execFileSync('tar', ['-x', '-f', archive, '-C', path]);
+  await rm(archive, { force: true });
   for (const hidden of SPARK_HIDDEN_PATHS)
     await rm(join(path, hidden), { recursive: true, force: true });
   git(path, 'init', '-q', '-b', 'main');
@@ -112,23 +119,24 @@ async function createWorkbenchRepo(dir: string, name: string): Promise<DayRepo> 
 
 export function fingerprint(repo: string): string {
   const head = git(repo, 'rev-parse', 'HEAD').trim();
-  const status = git(repo, 'status', '--porcelain', '--ignored=no');
+  const status = git(repo, '--no-optional-locks', 'status', '--porcelain', '--ignored=no');
   const refs = git(repo, 'for-each-ref', '--format=%(refname) %(objectname)');
   return createHash('sha256').update(`${head}\n${status}\n${refs}`).digest('hex');
 }
 
 async function createExternalRepo(dir: string, name: string): Promise<DayRepo> {
+  const original = externalRepo();
   const path = join(dir, 'repos', name);
   assertInside(path, dir);
   await rm(path, { recursive: true, force: true });
-  const before = fingerprint(EXTERNAL_REPO);
-  execFileSync('git', ['clone', '-q', '--local', '--no-hardlinks', EXTERNAL_REPO, path]);
+  const before = fingerprint(original);
+  execFileSync('git', ['clone', '-q', '--local', '--no-hardlinks', original, path]);
   git(path, 'remote', 'remove', 'origin');
   return {
     key: 'external',
     path,
     remote: null,
-    original: { path: EXTERNAL_REPO, fingerprint: before },
+    original: { path: original, fingerprint: before },
     install: null,
   };
 }
@@ -139,6 +147,8 @@ export async function createRepo(key: RepoKey, dir: string, name: string): Promi
   return createExternalRepo(dir, name);
 }
 
+const MISSING = 'missing';
+
 const IGNORED_CHANGES =
   /^(?:\.spark\/|node_modules\/|bench-verify\/|apps\/web\/src\/__devday_hidden__\/)/;
 
@@ -146,6 +156,10 @@ export interface Snapshot {
   head: string;
   branch: string;
   files: Map<string, string>;
+}
+
+function hashObject(repo: string, path: string): string {
+  return execFileSync('git', ['-C', repo, 'hash-object', '--', path], { encoding: 'utf8' }).trim();
 }
 
 export function snapshot(repo: string): Snapshot {
@@ -157,10 +171,7 @@ export function snapshot(repo: string): Snapshot {
     const path = entry.slice(3);
     if (entry.startsWith('R') || entry.startsWith('C')) index += 1;
     if (IGNORED_CHANGES.test(path)) continue;
-    const hash = execFileSync('git', ['-C', repo, 'hash-object', '--', path], {
-      encoding: 'utf8',
-    }).trim();
-    files.set(path, hash);
+    files.set(path, existsSync(join(repo, path)) ? hashObject(repo, path) : MISSING);
   }
   const branch = git(repo, 'rev-parse', '--abbrev-ref', 'HEAD').trim();
   return { head: git(repo, 'rev-parse', 'HEAD').trim(), branch, files };
@@ -173,7 +184,7 @@ function blobAt(repo: string, commit: string, path: string): string {
       stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
   } catch {
-    return 'missing';
+    return MISSING;
   }
 }
 
