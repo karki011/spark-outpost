@@ -130,7 +130,14 @@ function FeedbackRow({
 
   return (
     <div
-      className={quiet && !draft.rating ? 'fb quiet' : 'fb'}
+      className={[
+        'fb',
+        quiet && 'quiet',
+        draft.rating && 'rated',
+        (draft.rating === 'down' || commenting) && 'open',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       role="group"
       aria-labelledby={labelId}
       ref={firstRef}

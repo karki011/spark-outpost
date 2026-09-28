@@ -64,7 +64,38 @@
 }
 .turn-foot > .fb.quiet {
   flex-basis: auto;
-  margin-top: 0;
+  order: 1;
+  margin: 0 0 0 auto;
+  opacity: 0;
+  transition: opacity 0.15s var(--out);
+}
+section:hover .turn-foot > .fb.quiet,
+.turn-foot > .fb.quiet:focus-within,
+.turn-foot > .fb.quiet.rated {
+  opacity: 1;
+}
+.turn-foot > .fb.quiet.open {
+  flex-basis: 100%;
+}
+.turn-foot > .fb.quiet.open .fb-line {
+  justify-content: flex-end;
+}
+.turn-foot > .fb.quiet .fb-thumb {
+  padding: 4px;
+}
+.turn-foot > .fb.quiet .fb-thumb svg {
+  width: 12px;
+  height: 12px;
+}
+@media (hover: none) {
+  .turn-foot > .fb.quiet {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .turn-foot > .fb.quiet {
+    transition: none;
+  }
 }
 .turn-foot > .fb {
   flex-basis: 100%;
