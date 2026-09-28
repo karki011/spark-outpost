@@ -7,7 +7,7 @@ import {
 import { harnessReport, overviewReport, rollupReport, spendReport } from '../analytics/report.ts';
 import { resolveWindow } from '../analytics/window.ts';
 import type { Db } from '../persistence/db.ts';
-import { timeZoneParam } from './home-routes.ts';
+import { timeZoneParam } from './time-zone-param.ts';
 import { BadRequestError } from './validation.ts';
 
 export interface AnalyticsRouteDeps {

@@ -1,11 +1,11 @@
-import { Router, type Request } from 'express';
-import { z } from 'zod';
+import { Router } from 'express';
 import {
   providerIdSchema,
   updateChatSettingsRequestSchema,
   type ProviderId,
 } from '@spark-outpost/contracts';
-import { withTransaction, type Db } from '../persistence/db.ts';
+import { conversationProjectIds } from '../agent-config/store.ts';
+import { withTransaction, type Db, type DbClient } from '../persistence/db.ts';
 import { createConversation } from '../persistence/conversations.ts';
 import {
   draftChatSettings,
@@ -21,8 +21,8 @@ import {
   SESSION_CLOSE_REASONS,
   closeConversationSessions,
 } from '../persistence/provider-sessions.ts';
-import type { DbClient } from '../persistence/db.ts';
-import { BadRequestError, parseBody } from './validation.ts';
+import { requestModeChange } from '../workflow/mode-requests.ts';
+import { BadRequestError, paramId, parseBody } from './validation.ts';
 
 export interface ChatSettingsDeps {
   db: Db;
@@ -30,15 +30,14 @@ export interface ChatSettingsDeps {
   probeCapabilities: (provider: ProviderId) => Promise<CapabilitySnapshot>;
 }
 
-const idParam = z.uuid();
+interface SessionShape {
+  settings: string;
+  repos: string;
+}
 
-async function sessionShape(client: DbClient, id: string) {
+async function sessionShape(client: DbClient, id: string): Promise<SessionShape> {
   const settings = await resolveChatSettings(client, id);
-  const { rows } = await client.query<{ project_id: string }>(
-    `SELECT project_id FROM conversation_projects WHERE conversation_id = $1
-     ORDER BY position, created_at`,
-    [id],
-  );
+  const projectIds = await conversationProjectIds(client, id);
   return {
     settings: JSON.stringify({
       ...settings,
@@ -47,39 +46,13 @@ async function sessionShape(client: DbClient, id: string) {
       options: null,
       permission: settings.permission,
     }),
-    repos: rows.map((row) => row.project_id).join(),
+    repos: projectIds.join(),
   };
 }
 
-function changeReason(
-  before: Awaited<ReturnType<typeof sessionShape>>,
-  after: Awaited<ReturnType<typeof sessionShape>>,
-): string | null {
+function changeReason(before: SessionShape, after: SessionShape): string | null {
   if (before.repos !== after.repos) return SESSION_CLOSE_REASONS.repos;
   return before.settings === after.settings ? null : SESSION_CLOSE_REASONS.settings;
-}
-
-async function requestModeChange(
-  client: DbClient,
-  conversationId: string,
-  provider: string,
-  mode: string,
-): Promise<void> {
-  await client.query(
-    `UPDATE runs SET
-       agent_mode = CASE WHEN status = 'queued' THEN $3 ELSE agent_mode END,
-       requested_mode = CASE WHEN status = 'queued' THEN requested_mode ELSE $3 END
-     WHERE conversation_id = $1 AND provider = $2 AND mode = 'do'
-       AND status IN ('queued', 'running', 'awaiting_approval')
-       AND (role IS NULL OR role = 'builder')`,
-    [conversationId, provider, mode],
-  );
-}
-
-function conversationId(req: Request): string {
-  const result = idParam.safeParse(req.params.id);
-  if (!result.success) throw new BadRequestError('The id must be a UUID.');
-  return result.data;
 }
 
 export function chatSettingsRoutes({ db, workspaceId, probeCapabilities }: ChatSettingsDeps) {
@@ -89,7 +62,7 @@ export function chatSettingsRoutes({ db, workspaceId, probeCapabilities }: ChatS
 
   router.patch('/conversations/:id/settings', async (req, res) => {
     const { projectIds, ...update } = parseBody(updateChatSettingsRequestSchema, req);
-    const id = conversationId(req);
+    const id = paramId(req);
     const settings = await withTransaction(db, async (client) => {
       await createConversation(client, workspaceId, id);
       const before = await sessionShape(client, id);
@@ -136,8 +109,7 @@ export function chatSettingsRoutes({ db, workspaceId, probeCapabilities }: ChatS
         .finally(() => probing.delete(provider));
       probing.set(provider, pending);
     }
-    const probed = pending;
-    await (lacksModes ? probed.catch(() => undefined) : probed);
+    await (lacksModes ? pending.catch(() => undefined) : pending);
     res.json(await getCapabilities(db, workspaceId, provider));
   });
 
