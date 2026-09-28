@@ -1,0 +1,101 @@
+.ship {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 10px;
+}
+.ship .lchip {
+  margin-bottom: 0;
+}
+.ship-btn {
+  gap: 6px;
+}
+.ship-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.ship-pop {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--text) 10%, transparent);
+  animation: rise 0.2s var(--out) both;
+}
+.ship-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 12.5px;
+}
+.ship-facts dt {
+  color: var(--muted);
+}
+.ship-facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ship-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.ship-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 180px;
+  overflow: auto;
+  font-size: 12.5px;
+}
+.ship-files li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  min-width: 0;
+}
+.ship-files code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ship-change {
+  font-size: 12px;
+  color: var(--muted);
+}
+.ship-change.added {
+  color: var(--accent-text);
+}
+.ship-change.deleted {
+  color: var(--danger);
+}
+.ship-note,
+.ship-done,
+.ship-err {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.ship-done {
+  color: var(--success);
+}
+.ship-err {
+  color: var(--danger);
+}
+.ship-acts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}

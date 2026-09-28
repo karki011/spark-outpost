@@ -1,0 +1,79 @@
+.ccard.gh-card {
+  grid-column: 1 / -1;
+}
+.gh-badge {
+  font-size: 12px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--raise);
+  color: var(--muted);
+}
+.gh-badge.on {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.gh-active {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+.gh-method {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.gh-method h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.gh-note,
+.gh-err {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.gh-err {
+  color: var(--danger);
+}
+.gh-form,
+.gh-token {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+}
+.gh-keyrow {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.gh-keyrow .inp,
+.gh-form > .inp {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+}
+.gh-host {
+  font-size: 12px;
+  color: var(--muted);
+}
+.gh-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin: 0;
+  font-size: 12.5px;
+}
+.gh-facts dt {
+  color: var(--muted);
+}
+.gh-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

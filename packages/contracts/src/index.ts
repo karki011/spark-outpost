@@ -31,3 +31,4 @@ export * from './analytics-spend.ts';
 export * from './analytics-harness.ts';
 export * from './app-events.ts';
 export * from './api-token.ts';
+export * from './ship.ts';

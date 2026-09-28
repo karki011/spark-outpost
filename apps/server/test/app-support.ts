@@ -21,6 +21,8 @@ export interface TestAppOptions {
   fixedRunProvider?: string | null;
   probeCapabilities?: AppOptions['probeCapabilities'];
   appEvents?: AppEventFeed;
+  githubApiUrl?: string;
+  locateGh?: () => Promise<string | null>;
 }
 
 const unavailableProbe: AppOptions['probeCapabilities'] = () =>
@@ -52,5 +54,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     appEvents: options.appEvents ?? new AppEventFeed(),
     loginShell: '/bin/zsh',
     probeCapabilities: options.probeCapabilities ?? unavailableProbe,
+    githubApiUrl: options.githubApiUrl,
+    locateGh: options.locateGh ?? (async () => null),
   });
 }

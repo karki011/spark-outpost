@@ -38,6 +38,7 @@ import { TaskNotFoundError } from '../persistence/tasks.ts';
 import { BadRequestError, UploadTooLargeError, paramId, parseBody } from './validation.ts';
 import { outcomeErrorStatus } from './outcome-routes.ts';
 import { approvalErrorStatus } from './approval-routes.ts';
+import { shipErrorStatus } from './ship-routes.ts';
 import { PlanDocumentError } from '../persistence/plan-documents.ts';
 
 export interface RouteDeps {
@@ -154,7 +155,7 @@ export function apiRoutes({ db, hub, workspaceId, fixedRunProvider }: RouteDeps)
 }
 
 export function statusForError(error: unknown): { status: number; message: string } {
-  const known = approvalErrorStatus(error) ?? outcomeErrorStatus(error);
+  const known = approvalErrorStatus(error) ?? outcomeErrorStatus(error) ?? shipErrorStatus(error);
   if (known) return known;
   if (
     error instanceof BadRequestError ||

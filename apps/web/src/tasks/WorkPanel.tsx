@@ -214,7 +214,11 @@ export function WorkPanel({
                 <CrewPane runs={detail.data.runs} />
               )}
               {current === 'changes' && (
-                <ChangesPane taskId={task.id} runs={detail.data?.runs ?? []} />
+                <ChangesPane
+                  taskId={task.id}
+                  conversationId={conversationId}
+                  runs={detail.data?.runs ?? []}
+                />
               )}
               {current === 'cost' && detail.data && (
                 <CostPane task={detail.data} runs={runs} agents={agents} onAudit={onAudit} />

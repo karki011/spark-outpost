@@ -1,5 +1,5 @@
 import { rmSync } from 'node:fs';
-import { CREW_CATALOG, FAKE_CODEX_STATE } from './stub-config.ts';
+import { CREW_CATALOG, FAKE_CODEX_STATE, FAKE_GH_STATE } from './stub-config.ts';
 import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { truncateTables } from '../../apps/server/src/persistence/truncate.ts';
@@ -29,6 +29,7 @@ const RESET_TABLES = [
   'provider_capabilities',
   'advisor_connections',
   'profiles',
+  'github_tokens',
 ];
 const LEFTOVER_RUN_WAIT_MS = 5000;
 
@@ -56,6 +57,7 @@ export async function resetTestDatabase({
   catalog = false,
 }: ResetOptions): Promise<void> {
   rmSync(FAKE_CODEX_STATE, { force: true });
+  rmSync(FAKE_GH_STATE, { force: true });
   const db = createDb(testDatabaseUrl());
   try {
     await stopLeftoverRuns(db);

@@ -22,6 +22,7 @@ import { Markdown } from './markdown/Markdown.tsx';
 import { keepCardHost } from './outcomes/feedback-host.ts';
 import { ReplyPlanAction, TurnPlanOffer } from './plans/TurnPlans.tsx';
 import { TurnFeedback } from './outcomes/TurnFeedback.tsx';
+import { KeepCardFooter } from './outcomes/KeepCardFooter.tsx';
 import {
   shownText,
   streamLeads,
@@ -179,7 +180,12 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
           approval={approval}
           footer={
             host?.approvalId === approval.id ? (
-              <TurnFeedback runId={run.id} variant={host.variant} />
+              <KeepCardFooter
+                runId={run.id}
+                host={host}
+                taskId={changeTask?.id ?? null}
+                conversationId={detail.conversation.id}
+              />
             ) : undefined
           }
         />

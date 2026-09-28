@@ -55,6 +55,11 @@ const TEXT_RULES: TextRule[] = [
     pattern: /\b(Bearer)\s+(?=[A-Za-z._~+/=-]*\d)[A-Za-z0-9._~+/=-]{8,}/gi,
     replace: (_match, scheme) => `${scheme} ${redacted('bearer')}`,
   },
+  {
+    kind: 'github_token',
+    pattern: /\b(Authorization:\s*token)\s+[A-Za-z0-9_.-]{8,}/gi,
+    replace: (_match, header) => `${header} ${redacted('github_token')}`,
+  },
   { kind: 'github_token', pattern: /\bgithub_pat_[A-Za-z0-9_]{20,}/g },
   { kind: 'github_token', pattern: /\bgh[pousr]_[A-Za-z0-9]{20,}/g },
   { kind: 'api_key', pattern: /\bsk-[A-Za-z0-9_-]{16,}/g },

@@ -13,6 +13,7 @@ import { projectRoutes } from './project-routes.ts';
 import { apiRoutes, statusForError, type RouteDeps } from './routes.ts';
 import { localRequestGuard, requireLaunchToken } from './security.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
+import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
 import { planRoutes } from './plan-routes.ts';
 import { taskRoutes } from './task-routes.ts';
 import { webApp } from './web-app.ts';
@@ -20,7 +21,12 @@ import { terminalRoutes } from '../terminal/routes.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
 
 export interface AppOptions
-  extends RouteDeps, SetupDeps, ChatSettingsDeps, Pick<OutcomeRouteDeps, 'outcomeSampleRate'> {
+  extends
+    RouteDeps,
+    SetupDeps,
+    ShipRouteDeps,
+    ChatSettingsDeps,
+    Pick<OutcomeRouteDeps, 'outcomeSampleRate'> {
   terminals: TerminalSessions;
   appEvents: AppEventFeed;
   port: number;
@@ -44,6 +50,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', projectRoutes(options));
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));
+  app.use('/api', shipRoutes(options));
   app.use('/api', planRoutes(options));
   app.use('/api', approvalRoutes(options));
   app.use('/api', modelCardRoutes(options));
