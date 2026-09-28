@@ -1,6 +1,7 @@
 import {
   EMPTY_CONVERSATION_USAGE,
   type AgentCommand,
+  type AnnotationInput,
   type Attachment,
   type TaskOverview,
 } from '@spark-outpost/contracts';
@@ -33,6 +34,7 @@ import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
 import { Thread } from './Thread.tsx';
+import { useQuotes } from './quotes/use-quotes.ts';
 import { activeRun } from './turns.ts';
 
 const NO_REPOS: string[] = [];
@@ -42,6 +44,7 @@ const NO_COMMANDS: AgentCommand[] = [];
 export interface OutgoingMessage {
   content: string;
   attachments: Attachment[];
+  annotations?: AnnotationInput[];
 }
 
 export function ChatView({ conversationId }: { conversationId: string }) {
@@ -67,10 +70,14 @@ export function ChatView({ conversationId }: { conversationId: string }) {
         crypto.randomUUID(),
         message.content,
         message.attachments.map((attachment) => attachment.id),
+        message.annotations,
       ),
     onSuccess: refresh,
   });
   const attachments = useAttachments();
+  const latestReplyId =
+    detail.data?.messages.findLast((message) => message.role === 'assistant')?.id ?? null;
+  const quotes = useQuotes(conversationId, latestReplyId);
   const drop = useFileDrop(attachments.add);
   const stop = useMutation({ mutationFn: api.cancelRun, onSuccess: refresh });
   const startFresh = useMutation({
@@ -144,6 +151,7 @@ export function ChatView({ conversationId }: { conversationId: string }) {
             pendingMessage={send.isPending ? send.variables : null}
             panelOpen={panel.open}
             onOpenTask={panel.openTask}
+            quotes={quotes}
           />
         )}
         <Composer
@@ -158,8 +166,9 @@ export function ChatView({ conversationId }: { conversationId: string }) {
           sending={send.isPending}
           error={send.error?.message ?? stop.error?.message ?? null}
           attachments={attachments}
-          onSend={async (content, files) => {
-            await send.mutateAsync({ content, attachments: files });
+          quotes={quotes}
+          onSend={async (content, files, annotations) => {
+            await send.mutateAsync({ content, attachments: files, annotations });
           }}
           onStop={() => {
             if (running) stop.mutate(running.id);

@@ -15,6 +15,7 @@ import {
   type RunTarget,
 } from '../persistence/conversations.ts';
 import { ConversationBusyError } from '../persistence/conversation-actions.ts';
+import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
 import { getRun, requestCancel } from '../persistence/runs.ts';
 import { loadOrchestration } from '../persistence/orchestrations.ts';
 import { advisorUsageSummary } from '../persistence/advice.ts';
@@ -104,6 +105,10 @@ export function apiRoutes({ db, hub, workspaceId, fixedRunProvider }: RouteDeps)
     res.status(201).json(await sendUserMessage(db, conversationId, request, target, workspaceId));
   });
 
+  router.get('/conversations/:id/annotations', async (req, res) => {
+    res.json({ annotations: await listAnnotations(db, paramId(req)) });
+  });
+
   router.get('/usage/summary', async (_req, res) => {
     const [summary, advisors, byCategory] = await Promise.all([
       usageSummary(db, workspaceId),
@@ -154,6 +159,7 @@ export function statusForError(error: unknown): { status: number; message: strin
     error instanceof BadRequestError ||
     error instanceof InvalidDefaultError ||
     error instanceof AttachmentError ||
+    error instanceof AnnotationError ||
     error instanceof FolderError
   ) {
     return { status: 400, message: error.message };

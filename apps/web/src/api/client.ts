@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import {
   agentCommandsResponseSchema,
+  annotationListSchema,
   type AgentCommandsResponse,
+  type AnnotationInput,
+  type MessageAnnotation,
   EMPTY_CONVERSATION_USAGE,
   UNTITLED_CONVERSATION,
   usageSummarySchema,
@@ -134,11 +137,20 @@ export const api = {
     id: string,
     content: string,
     attachmentIds: string[] = [],
+    annotations: AnnotationInput[] = [],
   ): Promise<SendMessageResponse> =>
     request(sendMessageResponseSchema, `/conversations/${conversationId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ id, content, attachmentIds }),
+      body: JSON.stringify({ id, content, attachmentIds, annotations }),
     }).then(saved(conversationId)),
+  listAnnotations: async (conversationId: string): Promise<MessageAnnotation[]> => {
+    if (drafts.has(conversationId)) return [];
+    const list = await request(
+      annotationListSchema,
+      `/conversations/${conversationId}/annotations`,
+    );
+    return list.annotations;
+  },
   cancelRun: (runId: string): Promise<Run> =>
     request(runSchema, `/runs/${runId}/cancel`, { method: 'POST', body: '{}' }),
   updateChatSettings: (
@@ -186,6 +198,7 @@ export const queryKeys = {
   conversations: ['conversations'] as const,
   conversation: (id: string) => ['conversations', id] as const,
   agentCommands: (id: string) => ['conversations', id, 'agent-commands'] as const,
+  annotations: (id: string) => ['conversations', id, 'annotations'] as const,
   conversationSearches: ['conversation-search'] as const,
   conversationSearch: (query: string) => ['conversation-search', query] as const,
   capabilities: (provider: ProviderId) => ['capabilities', provider] as const,

@@ -14,6 +14,7 @@ import {
 import {
   MESSAGE_MAX_LENGTH,
   type AgentCommand,
+  type AnnotationInput,
   type Attachment,
   type ChatSettings,
   type ConversationUsage,
@@ -48,6 +49,9 @@ import { MentionPicker } from './project/MentionPicker.tsx';
 import { RepoFilePicker } from './project/RepoFilePicker.tsx';
 import { repoFileKey, type RepoFile } from './project/use-file-search.ts';
 import { useMention } from './project/use-mention.ts';
+import { QuoteChips } from './quotes/QuoteChips.tsx';
+import { sendLabel } from './quotes/quote-text.ts';
+import type { QuotesState } from './quotes/use-quotes.ts';
 
 interface ComposerProps {
   conversationId: string;
@@ -61,7 +65,12 @@ interface ComposerProps {
   sending: boolean;
   error: string | null;
   attachments: AttachmentsState;
-  onSend: (content: string, attachments: Attachment[]) => Promise<void>;
+  onSend: (
+    content: string,
+    attachments: Attachment[],
+    annotations: AnnotationInput[],
+  ) => Promise<void>;
+  quotes?: QuotesState;
   onStop: () => void;
   onAudit?: () => void;
   onStartFresh?: () => void;
@@ -94,6 +103,7 @@ export function Composer({
   agentCommands = NO_COMMANDS,
   agentName = 'Agent',
   autoFocus = true,
+  quotes,
 }: ComposerProps) {
   const [draft, setDraft] = useState('');
   const [repoOpen, setRepoOpen] = useState(false);
@@ -200,9 +210,20 @@ export function Composer({
     });
   }, [pendingDraft, conversationId]);
 
+  const focusRequest = quotes?.focusRequest ?? 0;
+  useEffect(() => {
+    if (focusRequest === 0) return;
+    const input = textareaRef.current;
+    if (!input) return;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }, [focusRequest]);
+
   const hasText = draft.trim().length > 0;
+  const quoteItems = quotes?.items ?? [];
+  const sendName = hasText ? 'Send' : sendLabel(quoteItems.map((quote) => quote.kind));
   const canSend =
-    (hasText || attachments.items.length > 0) &&
+    (hasText || attachments.items.length > 0 || quoteItems.length > 0) &&
     !sending &&
     !busy &&
     !attachments.uploading &&
@@ -226,12 +247,18 @@ export function Composer({
   const submit = async () => {
     if (!canSend) return;
     const draftText = draft;
-    const content = outgoing();
-    if (content === null) return;
+    const typed = outgoing();
+    if (typed === null) return;
+    const { content, annotations } = quotes?.compose(typed) ?? { content: typed, annotations: [] };
+    if (content.length > MESSAGE_MAX_LENGTH) {
+      attachments.notify('Your quotes and message are too long to send. Remove a quote first.');
+      return;
+    }
     setDraft('');
     try {
-      await onSend(content, attachments.uploaded);
+      await onSend(content, attachments.uploaded, annotations);
       attachments.clear();
+      quotes?.clear();
     } catch {
       setDraft(draftText);
     }
@@ -264,6 +291,7 @@ export function Composer({
       )}
       <ContextBar conversationId={conversationId} repos={repos} popover={repoPopover} />
       <div className="composer">
+        {quotes && <QuoteChips items={quotes.items} onRemove={quotes.remove} />}
         <AttachmentChips
           items={attachments.items}
           onRemove={attachments.remove}
@@ -389,7 +417,8 @@ export function Composer({
             <button
               type="button"
               className="send"
-              aria-label="Send"
+              aria-label={sendName}
+              title={sendName === 'Send' ? undefined : sendName}
               disabled={!canSend}
               onClick={() => void submit()}
             >
