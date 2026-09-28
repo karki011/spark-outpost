@@ -1,6 +1,7 @@
 import './turn-feedback.css';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   FEEDBACK_COMMENT_MAX_LENGTH,
   FEEDBACK_REASON_LABELS,
@@ -12,9 +13,18 @@ import {
 } from '@spark-outpost/contracts';
 import { outcomeKeys, outcomesApi } from '../../api/outcomes.ts';
 import { CheckIcon, CommentIcon, ThumbDownIcon, ThumbUpIcon } from '../../ui/icons.tsx';
+import { useReducedMotion } from '../../ui/motion.ts';
+import { easeOut } from '../../ui/transitions.tsx';
 import type { FeedbackVariant } from './feedback-host.ts';
 
 const OUTCOME_STALE_MS = 30_000;
+const NOTE_REVEAL_S = 0.18;
+
+const noteMotion = {
+  initial: { height: 0, opacity: 0 },
+  animate: { height: 'auto', opacity: 1 },
+  exit: { height: 0, opacity: 0 },
+} as const;
 
 interface Draft {
   rating: FeedbackRating | null;
@@ -72,6 +82,8 @@ function FeedbackRow({
   const reverted = variant === 'reverted';
   const [draft, setDraft] = useState<Draft>(() => draftOf(outcome, variant));
   const [commenting, setCommenting] = useState(reverted || Boolean(outcome.feedback?.comment));
+  const refocusThumb = useRef(false);
+  const reducedMotion = useReducedMotion();
   const mutation = useMutation({
     mutationFn: (feedback: SaveFeedbackRequest) =>
       outcomesApi.saveFeedback(outcome.runId, feedback),
@@ -81,6 +93,28 @@ function FeedbackRow({
   useEffect(() => {
     if (focusFirst) firstRef.current?.querySelector('button')?.focus();
   }, [focusFirst]);
+
+  useEffect(() => {
+    if (commenting || !refocusThumb.current) return;
+    refocusThumb.current = false;
+    const row = firstRef.current;
+    const target =
+      row?.querySelector<HTMLButtonElement>('.fb-thumb[aria-pressed="true"]') ??
+      row?.querySelector<HTMLButtonElement>('.fb-thumb, .fb-link');
+    target?.focus();
+  }, [commenting]);
+
+  const cancelComment = () => {
+    setDraft({ ...draft, comment: outcome.feedback?.comment ?? '' });
+    refocusThumb.current = true;
+    setCommenting(false);
+  };
+  const onNoteKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    cancelComment();
+  };
 
   const save = (next: Draft) => {
     setDraft(next);
@@ -146,31 +180,44 @@ function FeedbackRow({
           ))}
         </div>
       )}
-      {commenting && (
-        <form
-          className="fb-note"
-          onSubmit={(event) => {
-            event.preventDefault();
-            save({ ...draft, rating: draft.rating ?? 'down' });
-          }}
-        >
-          <label htmlFor={commentId} className="sr-only">
-            Comment (optional)
-          </label>
-          <textarea
-            id={commentId}
-            className="inp"
-            rows={2}
-            maxLength={FEEDBACK_COMMENT_MAX_LENGTH}
-            placeholder="Comment (optional). Stays on this computer."
-            value={draft.comment}
-            onChange={(event) => setDraft({ ...draft, comment: event.target.value })}
-          />
-          <button type="submit" className="btn line sm" disabled={mutation.isPending}>
-            Save
-          </button>
-        </form>
-      )}
+      <AnimatePresence initial={false}>
+        {commenting && (
+          <motion.div
+            key="note"
+            className="fb-note-reveal"
+            {...noteMotion}
+            transition={{ duration: reducedMotion ? 0 : NOTE_REVEAL_S, ease: easeOut }}
+          >
+            <form
+              className="fb-note"
+              onSubmit={(event) => {
+                event.preventDefault();
+                save({ ...draft, rating: draft.rating ?? 'down' });
+              }}
+            >
+              <label htmlFor={commentId} className="sr-only">
+                Comment (optional)
+              </label>
+              <textarea
+                id={commentId}
+                className="inp"
+                rows={2}
+                maxLength={FEEDBACK_COMMENT_MAX_LENGTH}
+                placeholder="Comment (optional). Stays on this computer."
+                value={draft.comment}
+                onChange={(event) => setDraft({ ...draft, comment: event.target.value })}
+                onKeyDown={onNoteKeyDown}
+              />
+              <button type="button" className="btn ghost sm" onClick={cancelComment}>
+                Cancel
+              </button>
+              <button type="submit" className="btn line sm" disabled={mutation.isPending}>
+                Save
+              </button>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {mutation.isError && (
         <p className="appr-err" role="alert">
           {mutation.error.message}

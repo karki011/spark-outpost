@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { adviceSummarySchema } from './advice.ts';
+import { ANNOTATIONS_PER_MESSAGE, annotationInputSchema } from './annotations.ts';
 import { approvalSchema } from './approvals.ts';
 import { ATTACHMENTS_PER_MESSAGE, attachmentSchema } from './attachments.ts';
 import { categorySchema, titleSourceSchema } from './categories.ts';
@@ -122,6 +123,7 @@ export const sendMessageRequestSchema = z
     id: z.uuid(),
     content: z.string().trim().max(MESSAGE_MAX_LENGTH),
     attachmentIds: z.array(z.uuid()).max(ATTACHMENTS_PER_MESSAGE).default([]),
+    annotations: z.array(annotationInputSchema).max(ANNOTATIONS_PER_MESSAGE).default([]),
   })
   .refine((request) => request.content.length > 0 || request.attachmentIds.length > 0, {
     message: 'Write a message or attach a file.',

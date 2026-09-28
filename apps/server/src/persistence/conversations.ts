@@ -11,6 +11,7 @@ import {
 } from '@spark-outpost/contracts';
 import { activityFromEvents, type StepEventRow } from './activity.ts';
 import { conversationAdvice } from './advice.ts';
+import { insertAnnotations } from './annotations.ts';
 import { conversationPlans } from './plan-documents.ts';
 import { conversationOrchestrations } from './orchestrations.ts';
 import { pendingApprovalsForConversation } from './approvals.ts';
@@ -241,8 +242,9 @@ async function runMode(
   return permission === PERMISSION_DO ? 'do' : 'ask';
 }
 
-export type SendMessageInput = Omit<SendMessageRequest, 'attachmentIds'> & {
+export type SendMessageInput = Omit<SendMessageRequest, 'attachmentIds' | 'annotations'> & {
   attachmentIds?: readonly string[];
+  annotations?: SendMessageRequest['annotations'];
 };
 
 export async function sendUserMessage(
@@ -277,6 +279,7 @@ export async function sendUserMessage(
       request.id,
       request.attachmentIds ?? [],
     );
+    await insertAnnotations(client, conversationId, request.id, request.annotations ?? []);
     const runId = newId();
     const task = await taskForNewRun(client, conversationId);
     const mode = await runMode(client, conversationId, target.permission ?? null);

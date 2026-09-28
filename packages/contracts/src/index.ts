@@ -1,4 +1,5 @@
 export * from './advice.ts';
+export * from './annotations.ts';
 export * from './agent-commands.ts';
 export * from './approvals.ts';
 export * from './artifacts.ts';

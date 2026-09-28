@@ -61,6 +61,9 @@
   background: var(--raise);
   color: var(--text);
 }
+.fb-note-reveal {
+  overflow: hidden;
+}
 .fb-note {
   display: flex;
   align-items: flex-end;

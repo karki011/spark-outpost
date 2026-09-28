@@ -1,5 +1,5 @@
 import './thread.css';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { PERMISSION_DO, type ConversationDetail, type Project } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { ArrowDownIcon } from '../ui/icons.tsx';
@@ -14,6 +14,11 @@ import { TaskCard } from '../tasks/TaskCard.tsx';
 import { CrewTurn } from './crew/CrewTurn.tsx';
 import { crewAgents } from '../crew/crew-projection.ts';
 import { isCrewTurn } from '../crew/conversation-crew.ts';
+import { MessageActions } from './message-actions/MessageActions.tsx';
+import { QuotedText } from './quotes/QuotedText.tsx';
+import { QuoteMarks } from './quotes/QuoteMarks.tsx';
+import { QuoteToolbar } from './quotes/QuoteToolbar.tsx';
+import type { QuotesState } from './quotes/use-quotes.ts';
 
 interface ThreadProps {
   detail: ConversationDetail;
@@ -21,6 +26,7 @@ interface ThreadProps {
   pendingMessage: OutgoingMessage | null;
   panelOpen?: boolean;
   onOpenTask?: (taskId: string) => void;
+  quotes?: QuotesState;
 }
 
 export function Thread({
@@ -29,8 +35,17 @@ export function Thread({
   pendingMessage,
   panelOpen = false,
   onOpenTask,
+  quotes,
 }: ThreadProps) {
   const { scrollerRef, away, follow, jumpToLatest } = useStickToBottom();
+  const quoteRootRef = useRef<HTMLDivElement | null>(null);
+  const threadRef = useCallback(
+    (scroller: HTMLDivElement | null) => {
+      quoteRootRef.current = scroller;
+      return scrollerRef(scroller);
+    },
+    [scrollerRef],
+  );
   const turns = buildTurns(detail);
   const parentOf = new Map(detail.runs.map((run) => [run.id, run.parentRunId ?? run.id]));
   const taskAfterRun = new Map(
@@ -93,14 +108,30 @@ export function Thread({
 
   return (
     <div className="thread-wrap">
-      <div className="thread" ref={scrollerRef}>
+      <div className="thread" ref={threadRef}>
         <div className="col">
           {turns.map(({ run, userMessage, assistantMessage }) => (
-            <section key={run.id} aria-label="Turn">
+            <section
+              key={run.id}
+              aria-label="Turn"
+              data-assistant-message-id={assistantMessage?.id}
+            >
               {userMessage && (
-                <div className="msg me">
+                <div className="msg me" data-message-id={userMessage.id}>
                   <MessageAttachments attachments={userMessage.attachments} />
-                  {userMessage.content && <div className="bubble">{userMessage.content}</div>}
+                  {userMessage.content && (
+                    <>
+                      <div className="bubble">
+                        <QuotedText text={userMessage.content} />
+                      </div>
+                      <MessageActions
+                        text={userMessage.content}
+                        createdAt={userMessage.createdAt}
+                        copyLabel="Copy message"
+                        side="user"
+                      />
+                    </>
+                  )}
                 </div>
               )}
               {crewRun(run.id) ? (
@@ -131,12 +162,24 @@ export function Thread({
             <div className="msg me">
               <MessageAttachments attachments={pendingMessage.attachments} />
               {pendingMessage.content && (
-                <div className="bubble pending">{pendingMessage.content}</div>
+                <div className="bubble pending">
+                  <QuotedText text={pendingMessage.content} />
+                </div>
               )}
             </div>
           )}
         </div>
       </div>
+      {quotes && (
+        <>
+          <QuoteToolbar scrollerRef={quoteRootRef} quotes={quotes} />
+          <QuoteMarks
+            scrollerRef={quoteRootRef}
+            conversationId={detail.conversation.id}
+            pending={quotes.items}
+          />
+        </>
+      )}
       <button type="button" className={away ? 'jump show' : 'jump'} onClick={jumpToLatest}>
         <ArrowDownIcon />
         Jump to latest
