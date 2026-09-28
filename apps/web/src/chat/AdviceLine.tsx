@@ -39,7 +39,8 @@ function headline(advice: AdviceSummary): string {
     return `${reason} · used the fixed rules`;
   }
   const calls = Object.entries(advice.calls ?? {}).filter(([key]) => key !== 'vague');
-  const head = calls.length > 0 ? callText(...calls[0]!) : categoryName(jev);
+  const [first] = calls;
+  const head = first ? callText(...first) : categoryName(jev);
   const would = jev.modelLabel ?? jev.model;
   return `Jev: ${head}${would ? ` · would have used ${shortLabel(would)}` : ''}`;
 }

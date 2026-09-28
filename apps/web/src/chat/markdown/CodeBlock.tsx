@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { copyButtonText, useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 import { highlight, resolveLanguage } from './highlighter.ts';
 
 interface CodeBlockProps {
@@ -7,12 +8,9 @@ interface CodeBlockProps {
   streaming: boolean;
 }
 
-type CopyState = 'idle' | 'copied' | 'failed';
-
 export function CodeBlock({ code, language, streaming }: CodeBlockProps) {
   const resolved = resolveLanguage(language);
   const [html, setHtml] = useState<{ code: string; html: string } | null>(null);
-  const [copy, setCopy] = useState<CopyState>('idle');
 
   useEffect(() => {
     if (!resolved || streaming) return;
@@ -27,25 +25,14 @@ export function CodeBlock({ code, language, streaming }: CodeBlockProps) {
     };
   }, [code, resolved, streaming]);
 
-  useEffect(() => {
-    if (copy === 'idle') return;
-    const timeout = setTimeout(() => setCopy('idle'), 1600);
-    return () => clearTimeout(timeout);
-  }, [copy]);
-
-  const copyCode = () => {
-    navigator.clipboard.writeText(code).then(
-      () => setCopy('copied'),
-      () => setCopy('failed'),
-    );
-  };
+  const { state: copyState, copy } = useCopyFeedback();
 
   return (
     <figure className="md-code">
       <figcaption>
         <span>{language || 'text'}</span>
-        <button type="button" className="md-copy" onClick={copyCode}>
-          {copy === 'copied' ? 'Copied' : copy === 'failed' ? 'Copy failed' : 'Copy'}
+        <button type="button" className="md-copy" onClick={() => copy(code)}>
+          {copyButtonText(copyState)}
         </button>
       </figcaption>
       {html && html.code === code ? (

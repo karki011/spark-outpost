@@ -82,5 +82,5 @@ export function useStickToBottom() {
     toBottom(gliding.current);
   }, [toBottom]);
 
-  return { scrollerRef, away, follow, jumpToLatest };
+  return { scrollerRef, scroller: element, away, follow, jumpToLatest };
 }
