@@ -31,6 +31,8 @@ import { reviewPermission, writeWithApproval, type DoWorkspace } from './do-hand
 import { projectPolicy, RootMissingError } from '../../projects/project-fs.ts';
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { newSessionRequest } from './session-request.ts';
+import { prepareRepoSession, type ClaudeRepoOptions, type RepoSession } from './repo-session.ts';
+import type { RepoLaunch } from '../../agent-config/launch.ts';
 import {
   FRESH_REASONS,
   closeQuietly,
@@ -112,13 +114,14 @@ async function runSession(
     const home = workdir ?? scratch ?? tmpdir();
     const cwd = policy ? primaryRoot(policy) : home;
     const replay = replayFilter(turn.audit);
-    const env = await agentEnvironment(options, home, browsing);
+    const repo = policy && turn.repo ? await openedRepo(definition, turn.repo, roots) : null;
+    const env = await agentEnvironment(options, home, browsing, repo?.codex ?? null);
     agent = startAgentProcess(options.launch ?? definition.launch(), cwd, env, replay.observer);
     const notes = roots.length > 0 && !browsing ? [noFolderAccessNote(definition)] : [];
     if (roots.length < linked.length) notes.push(primaryOnlyNote(definition, roots[0]!));
     const changing = policy !== null && turn.mode === 'do';
     if (changing) assertCanChange(definition, turn);
-    const workspace = { cwd, policy, notes, changing, replay };
+    const workspace = { cwd, policy, notes, changing, replay, repo };
     const stopReason = await Promise.race([
       converse(agent, definition, workspace, turn, signal, mapper, push),
       agent.exited,
@@ -205,10 +208,24 @@ function extraRoots(policy: PathPolicy | null): string[] {
   return policy ? policy.roots.slice(1).map((root) => root.path) : [];
 }
 
-function sessionMeta(definition: AgentDefinition, policy: PathPolicy | null, changing: boolean) {
+function sessionMeta(
+  definition: AgentDefinition,
+  policy: PathPolicy | null,
+  changing: boolean,
+  repo: ClaudeRepoOptions | null,
+) {
   if (!policy) return definition.conversationSessionMeta ?? null;
-  if (changing) return definition.doSessionMeta?.(extraRoots(policy)) ?? null;
-  return definition.projectSessionMeta?.(extraRoots(policy)) ?? null;
+  if (changing) return definition.doSessionMeta?.(extraRoots(policy), repo) ?? null;
+  return definition.projectSessionMeta?.(extraRoots(policy), repo) ?? null;
+}
+
+async function openedRepo(
+  definition: AgentDefinition,
+  launch: RepoLaunch,
+  roots: readonly string[],
+): Promise<RepoSession> {
+  const opened = launch.filter((entry) => roots.includes(entry.root));
+  return prepareRepoSession(opened, definition.repoStyle);
 }
 
 function openedRoots(
@@ -238,6 +255,7 @@ interface Workspace {
   notes: string[];
   changing: boolean;
   replay: ReplayFilter;
+  repo: RepoSession | null;
 }
 
 export function noFolderAccessNote(definition: AgentDefinition): string {
@@ -329,8 +347,9 @@ async function converse(
       agentName: definition.name,
       cwd: workspace.cwd,
       extraRoots: extraRoots(policy),
-      meta: sessionMeta(definition, policy, doing !== null),
+      meta: sessionMeta(definition, policy, doing !== null, workspace.repo?.claude ?? null),
       init,
+      mcpServers: workspace.repo?.mcpServers ?? [],
     });
     const opened = await openSession(
       ctx,
@@ -348,6 +367,9 @@ async function converse(
       push([
         { kind: 'capabilities', report: applied.capabilities },
         { kind: 'session_settings', ...applied.current, mode: applied.mode },
+        ...(workspace.repo
+          ? [{ kind: 'instructions' as const, files: workspace.repo.following }]
+          : []),
       ]);
       const sessionNotes = turn.session ? [sessionNote(opened, turn.session.freshReason)] : [];
       const notes = [applied.using, ...sessionNotes, ...workspace.notes, ...plan.notes];

@@ -1,4 +1,5 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
+import { agentConfigRoutes } from './agent-config-routes.ts';
 import { analyticsRoutes } from './analytics-routes.ts';
 import type { AppEventFeed } from './app-events.ts';
 import { approvalRoutes } from './approval-routes.ts';
@@ -48,6 +49,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', chatSettingsRoutes(options));
   app.use('/api', conversationActionRoutes(options));
   app.use('/api', projectRoutes(options));
+  app.use('/api', agentConfigRoutes(options));
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));
   app.use('/api', shipRoutes(options));

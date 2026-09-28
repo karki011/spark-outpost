@@ -9,6 +9,7 @@ import type {
   TurnAttachment,
 } from './provider.ts';
 import { ProviderError } from './provider.ts';
+import { followedFiles } from '../agent-config/instructions.ts';
 import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
 import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
 
@@ -210,6 +211,7 @@ export function createFakeProvider(timing: FakeProviderTiming = defaultTiming): 
         yield* fakeApprovalTurn(turn);
         return;
       }
+      if (turn.repo) yield { kind: 'instructions', files: followedFiles(turn.repo) };
       const titled = turn.askTitle && turn.prompt.includes(FAKE_TITLE_TRIGGER);
       const outputs = turn.prompt.includes(FAKE_DIGEST_TRIGGER)
         ? replyOutputs(fakeDigestReply(turn.prompt))

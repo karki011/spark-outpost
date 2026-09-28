@@ -51,5 +51,6 @@ export const runSchema = z.object({
   stepIndex: z.number().int().nullable().optional(),
   agentLabel: z.string().nullable().optional(),
   category: categorySchema.nullable().optional(),
+  following: z.array(z.string()).nullable().optional(),
 });
 export type Run = z.infer<typeof runSchema>;

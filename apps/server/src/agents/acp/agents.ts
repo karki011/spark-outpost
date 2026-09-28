@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import type { InvolvementLevel, ProviderId } from '@spark-outpost/contracts';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
+import type { ClaudeRepoOptions, CodexRepoOptions, RepoStyle } from './repo-session.ts';
 import { ZAI_EFFORTS, ZAI_MODELS, zaiLaunchEnvironment, zaiModelId } from './zai.ts';
 
 export interface AgentLaunch {
@@ -28,10 +29,21 @@ export interface AgentDefinition {
   usageReadings?: UsageReadings;
   conversationMode: string;
   readsProjectFolders: boolean;
+  repoStyle: RepoStyle;
   conversationSessionMeta?: Record<string, unknown>;
-  conversationEnv?: (workdir: string, browsing?: boolean) => Record<string, string>;
-  projectSessionMeta?: (extraRoots: readonly string[]) => Record<string, unknown>;
-  doSessionMeta?: (extraRoots: readonly string[]) => Record<string, unknown>;
+  conversationEnv?: (
+    workdir: string,
+    browsing?: boolean,
+    repo?: CodexRepoOptions | null,
+  ) => Record<string, string>;
+  projectSessionMeta?: (
+    extraRoots: readonly string[],
+    repo?: ClaudeRepoOptions | null,
+  ) => Record<string, unknown>;
+  doSessionMeta?: (
+    extraRoots: readonly string[],
+    repo?: ClaudeRepoOptions | null,
+  ) => Record<string, unknown>;
   doMode?: string;
   doPrimaryRootOnly?: boolean;
   doWorktreeLevels?: readonly InvolvementLevel[];
@@ -59,23 +71,37 @@ export function secretReadRules(extraRoots: readonly string[]): string[] {
   return [...underCwd, ...underExtraRoots].map((pattern) => `Read(${pattern})`);
 }
 
+function repoTools(repo: ClaudeRepoOptions | null): string[] {
+  if (!repo) return [];
+  return [...(repo.skillTool ? ['Skill'] : []), ...(repo.agentTool ? ['Agent'] : [])];
+}
+
 export function claudeSessionMeta(
   tools: readonly string[],
   extraRoots: readonly string[],
   ask: readonly string[] = [],
+  repo: ClaudeRepoOptions | null = null,
 ): Record<string, unknown> {
   const deny = secretReadRules(extraRoots);
+  const askRules = [...ask, ...(repo?.mcpNames ?? []).map((name) => `mcp__${name}`)];
+  const plugins = repo?.plugins ?? [];
   return {
+    ...(repo?.appendPrompt ? { systemPrompt: { append: repo.appendPrompt } } : {}),
     claudeCode: {
       options: {
-        tools: [...tools],
+        tools: [...tools, ...repoTools(repo)],
         disallowedTools: deny,
         settingSources: [],
+        ...(plugins.length > 0
+          ? { plugins: plugins.map((path) => ({ type: 'local', path })) }
+          : {}),
         allowDangerouslySkipPermissions: false,
         settings: {
+          ...(repo?.hooks ? { hooks: repo.hooks } : { disableAllHooks: true }),
+          disableSkillShellExecution: true,
           permissions: {
             deny,
-            ...(ask.length > 0 ? { ask: [...ask] } : {}),
+            ...(askRules.length > 0 ? { ask: askRules } : {}),
             blockReadsOutsideWorkingDirectories: true,
             disableBypassPermissionsMode: 'disable',
           },
@@ -86,14 +112,25 @@ export function claudeSessionMeta(
   };
 }
 
-function codexEnv(workdir: string, browsing = false): Record<string, string> {
+export function codexConfig(browsing: boolean, repo: CodexRepoOptions | null): object {
+  return {
+    features: { shell_tool: browsing, unified_exec: false, skill_mcp_dependency_install: false },
+    web_search: 'disabled',
+    ...(repo && !repo.agentsMd ? { project_doc_max_bytes: 0 } : {}),
+    ...(repo?.developerInstructions ? { developer_instructions: repo.developerInstructions } : {}),
+    ...(repo && !repo.skills ? { skills: { include_instructions: false } } : {}),
+  };
+}
+
+function codexEnv(
+  workdir: string,
+  browsing = false,
+  repo: CodexRepoOptions | null = null,
+): Record<string, string> {
   return {
     INITIAL_AGENT_MODE: 'read-only',
     TMPDIR: workdir,
-    CODEX_CONFIG: JSON.stringify({
-      features: { shell_tool: browsing, unified_exec: false },
-      web_search: 'disabled',
-    }),
+    CODEX_CONFIG: JSON.stringify(codexConfig(browsing, repo)),
   };
 }
 
@@ -110,14 +147,15 @@ function packageBin(packageName: string): AgentLaunch {
 }
 
 const claudeSessions = {
+  repoStyle: 'claude',
   conversationMode: 'default',
   usageReadings: 'start_and_end',
   readsProjectFolders: true,
   conversationSessionMeta: claudeSessionMeta([], []),
-  projectSessionMeta: (extraRoots: readonly string[]) =>
-    claudeSessionMeta(['Read', 'Glob', 'Grep'], extraRoots),
-  doSessionMeta: (extraRoots: readonly string[]) =>
-    claudeSessionMeta(CLAUDE_DO_TOOLS, extraRoots, CLAUDE_DO_ASK_RULES),
+  projectSessionMeta: (extraRoots: readonly string[], repo?: ClaudeRepoOptions | null) =>
+    claudeSessionMeta(['Read', 'Glob', 'Grep'], extraRoots, [], repo ?? null),
+  doSessionMeta: (extraRoots: readonly string[], repo?: ClaudeRepoOptions | null) =>
+    claudeSessionMeta(CLAUDE_DO_TOOLS, extraRoots, CLAUDE_DO_ASK_RULES, repo ?? null),
 } satisfies Partial<AgentDefinition>;
 
 const CLAUDE_ACP = '@agentclientprotocol/claude-agent-acp';
@@ -148,6 +186,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     id: 'codex',
     name: 'Codex',
     launch: () => packageBin('@agentclientprotocol/codex-acp'),
+    repoStyle: 'codex',
     conversationMode: 'read-only',
     readsProjectFolders: true,
     conversationEnv: codexEnv,

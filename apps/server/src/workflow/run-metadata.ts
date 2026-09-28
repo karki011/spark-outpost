@@ -75,6 +75,14 @@ export async function recordSessionSettings(
   );
 }
 
+export async function recordFollowedInstructions(
+  db: Db,
+  runId: string,
+  files: readonly string[],
+): Promise<void> {
+  await db.query('UPDATE runs SET followed_instructions = $2 WHERE id = $1', [runId, files]);
+}
+
 export interface RunMetrics {
   durationMs: number;
   toolCallCount: number;

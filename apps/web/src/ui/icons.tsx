@@ -181,6 +181,10 @@ export function UnpinIcon() {
   return <StrokeIcon path="M12 17v5M9 3h6l-1 6 4 4H6l4-4zM3 3l18 18" />;
 }
 
+export function SlidersIcon() {
+  return <StrokeIcon path="M7 4v5M7 13v7M17 4v9M17 17v3M4 11h6M14 15h6" />;
+}
+
 export function ShieldIcon() {
   return <StrokeIcon path="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6zM9 12l2 2 4-4" />;
 }

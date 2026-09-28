@@ -138,7 +138,13 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
       : null;
 
   return (
-    <AiTurn provider={provider} label={label} state={state} category={run.category}>
+    <AiTurn
+      provider={provider}
+      label={label}
+      state={state}
+      category={run.category}
+      following={child?.following ?? run.following}
+    >
       <WorkLog steps={steps} state={state} seconds={finished ? runSeconds(run) : null} />
       <TurnPlanOffer detail={detail} runId={run.id} />
       {approvals.map((approval) =>
