@@ -25,9 +25,3 @@ export function AskIcon() {
     <OutlineIcon path="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12ZM10 9.5a2.2 2.2 0 1 1 3 2c-.6.3-1 .8-1 1.5M12 16h.01" />
   );
 }
-
-export function CopyIcon() {
-  return (
-    <OutlineIcon path="M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1ZM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
-  );
-}

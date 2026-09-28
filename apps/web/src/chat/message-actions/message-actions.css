@@ -1,0 +1,61 @@
+.msg-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.msg-actions.user {
+  flex-direction: row-reverse;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.msg.me:hover .msg-actions,
+.msg.me:focus-within .msg-actions {
+  opacity: 1;
+}
+@media (hover: none), (max-width: 640px) {
+  .msg-actions.user {
+    opacity: 1;
+  }
+}
+
+.msg-time {
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.msg-act.icon-btn {
+  width: 28px;
+  height: 28px;
+  color: var(--faint);
+}
+.msg-act.icon-btn:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+.msg-act svg {
+  width: 14px;
+  height: 14px;
+}
+.msg-act.copied {
+  color: var(--accent-text);
+}
+
+.turn-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 4px;
+  margin-top: 4px;
+}
+.turn-foot > .run-meta {
+  margin-top: 0;
+}
+.turn-foot > .fb-open {
+  margin-top: 0;
+}
+.turn-foot > .fb {
+  flex-basis: 100%;
+}

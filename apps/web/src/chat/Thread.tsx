@@ -14,6 +14,7 @@ import { TaskCard } from '../tasks/TaskCard.tsx';
 import { CrewTurn } from './crew/CrewTurn.tsx';
 import { crewAgents } from '../crew/crew-projection.ts';
 import { isCrewTurn } from '../crew/conversation-crew.ts';
+import { MessageActions } from './message-actions/MessageActions.tsx';
 import { QuotedText } from './quotes/QuotedText.tsx';
 import { QuoteMarks } from './quotes/QuoteMarks.tsx';
 import { QuoteToolbar } from './quotes/QuoteToolbar.tsx';
@@ -119,9 +120,17 @@ export function Thread({
                 <div className="msg me" data-message-id={userMessage.id}>
                   <MessageAttachments attachments={userMessage.attachments} />
                   {userMessage.content && (
-                    <div className="bubble">
-                      <QuotedText text={userMessage.content} />
-                    </div>
+                    <>
+                      <div className="bubble">
+                        <QuotedText text={userMessage.content} />
+                      </div>
+                      <MessageActions
+                        text={userMessage.content}
+                        createdAt={userMessage.createdAt}
+                        copyLabel="Copy message"
+                        side="user"
+                      />
+                    </>
                   )}
                 </div>
               )}

@@ -195,6 +195,12 @@ export function DownloadIcon() {
   return <StrokeIcon path="M12 4v12M7 11l5 5 5-5M5 20h14" />;
 }
 
+export function CopyIcon() {
+  return (
+    <StrokeIcon path="M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1ZM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+  );
+}
+
 export function ThumbUpIcon() {
   return (
     <StrokeIcon path="M7 10v11M15 5.9 14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 8a2 2 0 0 1-1.9 1.4H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.8a2 2 0 0 0 1.8-1.1L12 2a3.1 3.1 0 0 1 3 3.9Z" />

@@ -17,6 +17,7 @@ import { FilesChanged, taskForRuns } from './changes/FilesChanged.tsx';
 import { CheckpointCard } from './checkpoints/CheckpointCard.tsx';
 import { isCheckpoint } from './checkpoints/checkpoint-model.ts';
 import { mergeCheckpoints } from './crew/crew-items.ts';
+import { MessageActions } from './message-actions/MessageActions.tsx';
 import { Markdown } from './markdown/Markdown.tsx';
 import { keepCardHost } from './outcomes/feedback-host.ts';
 import { TurnFeedback } from './outcomes/TurnFeedback.tsx';
@@ -154,8 +155,20 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
       )}
       {run.status === 'cancelled' && <p className="ai-note">Stopped before finishing.</p>}
       {error && <p className="error-line">{error}</p>}
-      {finished && <RunUsageMeta run={child?.usage ? child : run} />}
-      {finished && !host && <TurnFeedback runId={run.id} variant="turn" />}
+      {finished && (
+        <div className="turn-foot">
+          <RunUsageMeta run={child?.usage ? child : run} />
+          {text && (
+            <MessageActions
+              text={text}
+              createdAt={assistantMessage?.createdAt ?? run.finishedAt ?? run.createdAt}
+              copyLabel="Copy reply"
+              side="assistant"
+            />
+          )}
+          {!host && <TurnFeedback runId={run.id} variant="turn" />}
+        </div>
+      )}
       {changeTask && <FilesChanged taskId={changeTask.id} runIds={changeRunIds} />}
       {checkpoints.map((approval) => (
         <CheckpointCard

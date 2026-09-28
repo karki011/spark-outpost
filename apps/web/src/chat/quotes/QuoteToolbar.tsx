@@ -9,11 +9,11 @@ import {
   type MouseEvent,
   type RefObject,
 } from 'react';
-import { CommentIcon } from '../../ui/icons.tsx';
+import { CommentIcon, CopyIcon } from '../../ui/icons.tsx';
 import type { AnnotationKind } from '@spark-outpost/contracts';
 import { createAnchor } from './anchor.ts';
 import { paintHighlight } from './highlight.ts';
-import { AskIcon, CopyIcon, QuoteIcon } from './quote-icons.tsx';
+import { AskIcon, QuoteIcon } from './quote-icons.tsx';
 import {
   readMessageSelection,
   useSelectionCapture,
