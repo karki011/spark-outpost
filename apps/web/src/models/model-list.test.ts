@@ -103,7 +103,7 @@ describe('model list', () => {
   });
 
   it('notes how the rules use the small, top and frontier tiers only', () => {
-    expect(tierNote('small')).toMatch(/Builder only for trivial requests/);
+    expect(tierNote('small')).toMatch(/Builders run on a stronger tier/);
     expect(tierNote('mid')).toBeNull();
     expect(tierNote('frontier')).toMatch(/never pick it/);
   });

@@ -55,8 +55,8 @@ export function sortModels(models: readonly ModelCardView[], sort: ModelSort): M
 }
 
 const TIER_NOTES: Partial<Record<ModelTier, string>> = {
-  small: 'The rules use it as Builder only for trivial requests.',
-  top: 'The rules move up to it for destructive work.',
+  small: 'Answers, scouting and Jev only; Builders run on a stronger tier.',
+  top: 'Builders move up to it for complex or destructive work.',
   frontier: 'The rules never pick it; it runs only when you choose it for a chat.',
 };
 
