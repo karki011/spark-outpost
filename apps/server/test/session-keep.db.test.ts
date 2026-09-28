@@ -220,7 +220,6 @@ describe('continuing after Stop', () => {
     harness = startOrchestrator(t, jevFetch(script), { sessions: store });
     const first = await startScenario(t, root, TRIVIAL, 'hands-off');
     await driveToEnd(t, first.conversationId, first.runId);
-    // What a turn cut off by a crash leaves: the session started, no reply and no stop marker.
     await t.db.query(
       'UPDATE provider_sessions SET last_reply_hash = NULL WHERE conversation_id = $1',
       [first.conversationId],

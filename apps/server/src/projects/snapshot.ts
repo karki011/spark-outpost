@@ -90,7 +90,6 @@ export async function workingTree(root: string): Promise<string> {
   }
 }
 
-/** Every internal commit (snapshots, worktree bases and results) carries this identity. */
 export const HARNESS_COMMIT_EMAIL = 'snapshots@spark-outpost.local';
 
 const HARNESS_AUTHOR = {

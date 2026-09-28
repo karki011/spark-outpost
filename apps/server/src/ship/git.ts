@@ -219,10 +219,6 @@ export async function remoteDefaultBranch(root: string, remote: string): Promise
   return ref?.startsWith(`${remote}/`) ? ref.slice(remote.length + 1) : null;
 }
 
-/**
- * Internal harness commits (run snapshots, worktree bases such as "Spark Outpost: parallel
- * base …") that pushing `branch` would publish: those on the branch and not on the remote yet.
- */
 export async function harnessCommitsToPush(
   root: string,
   remote: string,
