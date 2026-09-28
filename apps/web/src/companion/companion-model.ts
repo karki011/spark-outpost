@@ -2,7 +2,7 @@ import type { ConversationSummary } from '@spark-outpost/contracts';
 import type { ScoutMood } from '../brand/BlobScout.tsx';
 import { needsYou, runningNow, type NeedItem, type RunItem } from '../home/home-model.ts';
 
-export const FINISHED_LIMIT = 3;
+const FINISHED_LIMIT = 3;
 
 export interface CompanionFeed {
   needs: NeedItem[];
@@ -11,9 +11,9 @@ export interface CompanionFeed {
   errors: NeedItem[];
 }
 
-export type CompanionMood = 'idle' | 'working' | 'alert' | 'happy' | 'sad';
+type CompanionMood = 'idle' | 'working' | 'alert' | 'happy' | 'sad';
 
-export interface MoodContext {
+interface MoodContext {
   celebrating: boolean;
   seenErrors: ReadonlySet<string>;
 }
@@ -62,7 +62,7 @@ export function statusText(feed: CompanionFeed): string {
   return parts.length === 0 ? 'all quiet' : parts.join(', ');
 }
 
-export const RUNNING_DOTS = 5;
+const RUNNING_DOTS = 5;
 
 export function runningDots(count: number): number | string {
   return count > RUNNING_DOTS ? `${RUNNING_DOTS}+` : count;

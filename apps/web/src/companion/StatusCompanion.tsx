@@ -3,6 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
+import { usePageHidden } from '../ui/use-page-hidden.ts';
 import { CompanionPanel } from './CompanionPanel.tsx';
 import {
   companionFeed,
@@ -16,13 +17,9 @@ import {
 } from './companion-model.ts';
 import { companionPrefs, useCompanionPrefs } from './companion-prefs.ts';
 import { useCornerDrag } from './use-corner-drag.ts';
-import {
-  useCelebration,
-  usePageHidden,
-  useThrottledAnnouncement,
-} from './use-companion-signals.ts';
+import { useCelebration, useThrottledAnnouncement } from './use-companion-signals.ts';
 
-export const HIDDEN_NOTICE = 'Status companion hidden. Turn it back on in Settings, Appearance.';
+const HIDDEN_NOTICE = 'Status companion hidden. Turn it back on in Settings, Appearance.';
 
 interface StatusCompanionProps {
   chats: readonly ConversationSummary[];
