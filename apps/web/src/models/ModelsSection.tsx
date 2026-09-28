@@ -1,50 +1,44 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ProviderCardsView } from '@spark-outpost/contracts';
 import { modelCardsApi, modelCardsKey } from '../api/model-cards.ts';
+import { ProviderBlob } from '../brand/ProviderBlob.tsx';
+import { Segmented } from '../ui/Segmented.tsx';
 import { ModelCardItem } from './ModelCardItem.tsx';
+import {
+  ALL_PROVIDERS,
+  readSavedProvider,
+  shownProvider,
+  sortModels,
+  writeSavedProvider,
+  type ModelSort,
+} from './model-list.ts';
+import { ProviderChips } from './ProviderChips.tsx';
+import { ProviderSummary } from './ProviderSummary.tsx';
 import './models.css';
 
-function ProviderFacts({ view }: { view: ProviderCardsView }) {
-  const card = view.provider;
-  const asks =
-    card.asksBeforeCommands === 'every'
-      ? 'before every edit and command'
-      : card.asksBeforeCommands === 'outside-sandbox-only'
-        ? 'only outside its sandbox'
-        : 'never';
-  const [from, to] = card.coldStartSeconds;
-  return (
-    <dl className="mc-facts">
-      <dt>Do mode</dt>
-      <dd>{card.doMode === 'yes' ? 'Yes, through approvals' : 'No, reads only'}</dd>
-      <dt>Asks</dt>
-      <dd>{asks}</dd>
-      <dt>Sandbox</dt>
-      <dd>{card.sandbox}</dd>
-      <dt>Resume</dt>
-      <dd>{card.resume === 'yes' ? 'Yes' : 'No'}</dd>
-      <dt>Review</dt>
-      <dd>{card.review === 'yes' ? 'Can review others' : 'No'}</dd>
-      <dt>Start-up</dt>
-      <dd>
-        {from}–{to} s · cost {card.costSource}
-      </dd>
-    </dl>
-  );
-}
+const SORTS: { id: ModelSort; label: string }[] = [
+  { id: 'tier', label: 'Tier' },
+  { id: 'price', label: 'Price' },
+  { id: 'speed', label: 'Speed' },
+];
 
-function ProviderModels({ view }: { view: ProviderCardsView }) {
+function ProviderModels({ view, sort }: { view: ProviderCardsView; sort: ModelSort }) {
   const headingId = useId();
   return (
     <section className="mc-provider" aria-labelledby={headingId}>
       <div className="mc-head">
+        <ProviderBlob
+          providerId={view.provider.provider}
+          size={26}
+          expression={view.connected ? 'idle' : 'sleepy'}
+        />
         <h4 id={headingId}>{view.provider.label}</h4>
         {!view.connected && <span className="mc-tag">not connected</span>}
       </div>
-      <ProviderFacts view={view} />
-      <ul className="mc-list">
-        {view.models.map((model) => (
+      <ProviderSummary card={view.provider} />
+      <ul className="mc-grid">
+        {sortModels(view.models, sort).map((model) => (
           <ModelCardItem key={model.card.id} view={model} />
         ))}
       </ul>
@@ -60,17 +54,42 @@ function ProviderModels({ view }: { view: ProviderCardsView }) {
 
 export function ModelsSection() {
   const cards = useQuery({ queryKey: modelCardsKey, queryFn: modelCardsApi.get });
+  const [saved, setSaved] = useState(readSavedProvider);
+  const [sort, setSort] = useState<ModelSort>('tier');
   if (cards.isError) return <p className="set-hint">{cards.error.message}</p>;
   if (!cards.data) return <p className="set-hint">Loading model cards…</p>;
+  const providers = cards.data.providers;
+  const selected = shownProvider(
+    saved,
+    providers.map((view) => view.provider.provider),
+  );
+  const shown =
+    selected === ALL_PROVIDERS
+      ? providers
+      : providers.filter((view) => view.provider.provider === selected);
+  const choose = (provider: string) => {
+    setSaved(provider);
+    writeSavedProvider(provider);
+  };
   return (
-    <>
+    <div className="mc">
       <p className="lede">
-        Vendor facts checked {cards.data.checkedAt}, and what our own benchmark measured. The rules
-        pick models; Jev reads these cards only to record which size it would have used.
+        Vendor facts checked {cards.data.checkedAt} and our benchmark results. The rules pick
+        models; Jev only reads these cards.
       </p>
-      {cards.data.providers.map((view) => (
-        <ProviderModels key={view.provider.provider} view={view} />
+      <ProviderChips providers={providers} value={selected} onChange={choose} />
+      <div className="mc-sort">
+        <span aria-hidden="true">Sort by</span>
+        <Segmented
+          ariaLabel="Sort models by"
+          options={SORTS}
+          value={sort}
+          onChange={(id) => setSort(SORTS.find((option) => option.id === id)?.id ?? 'tier')}
+        />
+      </div>
+      {shown.map((view) => (
+        <ProviderModels key={view.provider.provider} view={view} sort={sort} />
       ))}
-    </>
+    </div>
   );
 }
