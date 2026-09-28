@@ -1,7 +1,7 @@
 import { Entry } from '@napi-rs/keyring';
 import type { ConnectableId } from '@spark-outpost/contracts';
 
-export type SecretId = ConnectableId | 'github';
+export type SecretId = ConnectableId | 'github' | `mcp:${string}`;
 
 export interface SecretStore {
   set(provider: SecretId, secret: string): Promise<void>;
@@ -11,8 +11,10 @@ export interface SecretStore {
 
 export const DEFAULT_KEYCHAIN_SERVICE = 'Spark Outpost';
 
-const account = (provider: SecretId) =>
-  provider === 'github' ? 'github:token' : `${provider}:api_key`;
+const account = (provider: SecretId) => {
+  if (provider.startsWith('mcp:')) return provider;
+  return provider === 'github' ? 'github:token' : `${provider}:api_key`;
+};
 
 export function keychainSecretStore(service = DEFAULT_KEYCHAIN_SERVICE): SecretStore {
   const entry = (provider: SecretId) => new Entry(service, account(provider));

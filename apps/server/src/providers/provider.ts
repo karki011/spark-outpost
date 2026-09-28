@@ -7,6 +7,7 @@ import type {
   TokenUsage,
 } from '@spark-outpost/contracts';
 import type { RepoLaunch } from '../agent-config/launch.ts';
+import type { UserMcpLaunch } from '../mcp/launch.ts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
 
 export interface TurnAttachment {
@@ -52,13 +53,13 @@ export interface ProviderTurn {
   signal: AbortSignal;
   audit?: ProtocolObserver;
   mode?: RunMode;
-  /** A harness Builder: it may not push, open pull requests or change remotes. */
   builder?: boolean;
   approvals?: PermissionGate;
   askTitle?: boolean;
   session?: SessionTarget;
   preamble?: string;
   repo?: RepoLaunch;
+  userMcp?: readonly UserMcpLaunch[];
 }
 
 export type GateAnswer =

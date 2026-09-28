@@ -8,6 +8,7 @@ import { auditRoutes } from './audit-routes.ts';
 import { chatSettingsRoutes, type ChatSettingsDeps } from './chat-settings-routes.ts';
 import { conversationActionRoutes } from './conversation-action-routes.ts';
 import { homeRoutes } from './home-routes.ts';
+import { mcpRoutes, type McpRouteDeps } from './mcp-routes.ts';
 import { modelCardRoutes } from './model-card-routes.ts';
 import { outcomeRoutes, type OutcomeRouteDeps } from './outcome-routes.ts';
 import { projectRoutes } from './project-routes.ts';
@@ -27,7 +28,8 @@ export interface AppOptions
     SetupDeps,
     ShipRouteDeps,
     ChatSettingsDeps,
-    Pick<OutcomeRouteDeps, 'outcomeSampleRate'> {
+    Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
+    Pick<McpRouteDeps, 'mcpHomes' | 'probeMcp'> {
   terminals: TerminalSessions;
   appEvents: AppEventFeed;
   port: number;
@@ -50,6 +52,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', conversationActionRoutes(options));
   app.use('/api', projectRoutes(options));
   app.use('/api', agentConfigRoutes(options));
+  app.use('/api', mcpRoutes(options));
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));
   app.use('/api', shipRoutes(options));

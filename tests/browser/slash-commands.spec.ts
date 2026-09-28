@@ -43,6 +43,7 @@ test("the / menu lists our commands and the agent's, filters and inserts by keyb
     /\/effort/,
     /\/plan/,
     /\/review/,
+    /\/mcp/,
     /\/compact/,
     /\/review-branch/,
     /\/status/,

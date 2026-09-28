@@ -33,6 +33,8 @@ import { prepareTurnSession, type TurnSession } from './turn-session.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
 import { repoScanner } from '../agent-config/discovery.ts';
 import { loadRepoLaunch } from '../agent-config/launch.ts';
+import { conversationProjectIds } from '../agent-config/store.ts';
+import { loadUserMcp } from '../mcp/launch.ts';
 
 export type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
 
@@ -221,6 +223,11 @@ export async function runAgentTurn(
       input.identity.threadId,
       input.projectRoots,
     ).catch(() => []);
+    const userMcp = await loadUserMcp(
+      deps.db,
+      input.identity.threadId,
+      await conversationProjectIds(deps.db, input.identity.threadId),
+    ).catch(() => []);
 
     for await (const output of provider.run({
       prompt: input.prompt,
@@ -237,6 +244,7 @@ export async function runAgentTurn(
       ...(input.preamble ? { preamble: input.preamble } : {}),
       ...(session ? { session: session.target } : {}),
       ...(repo.length > 0 ? { repo } : {}),
+      ...(userMcp.length > 0 ? { userMcp } : {}),
     })) {
       meter(output);
       if (control.signal.aborted) {

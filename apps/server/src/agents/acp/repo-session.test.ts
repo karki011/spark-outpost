@@ -8,7 +8,7 @@ import { createRepoScanner, type RepoScan } from '../../agent-config/discovery.t
 import { rootLaunch, type RepoLaunch } from '../../agent-config/launch.ts';
 import { DEFAULT_AGENT_SETTINGS, type AgentSettingsRow } from '../../agent-config/store.ts';
 import { agentDefinitions, claudeSessionMeta, CLAUDE_DO_ASK_RULES, codexConfig } from './agents.ts';
-import { acpMcpServer, prepareRepoSession } from './repo-session.ts';
+import { acpMcpServer, namedMcpServers, prepareRepoSession } from './repo-session.ts';
 import { newSessionRequest } from './session-request.ts';
 
 let base: string;
@@ -194,6 +194,28 @@ describe('MCP servers in the session request', () => {
     });
     expect(plan.request.mcpServers.map((server) => server.name)).toEqual(['echo']);
     expect(plan.notes).toEqual(["Codex can't use the SSE MCP server stream; skipped it"]);
+  });
+
+  it('puts user-level servers first and renames any that clash with a name already taken', async () => {
+    const [echo] = scan.mcpServers;
+    const user = [
+      { ...echo!, name: 'echo' },
+      { ...echo!, name: 'git hub' },
+    ];
+    const session = await prepareRepoSession(
+      await launchWith({}, { echo: echo!.fingerprint }),
+      'codex',
+      user,
+      ['git_hub'],
+    );
+    expect(session.mcpServers.map((server) => server.name)).toEqual([
+      'echo',
+      'git_hub_spark',
+      'echo_app',
+    ]);
+    expect(namedMcpServers([], user, ['echo', 'echo_spark']).map((s) => s.name)).toEqual([
+      'git_hub',
+    ]);
   });
 
   it('expands references from the environment but never passes secrets', () => {
