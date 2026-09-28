@@ -25,6 +25,10 @@ import {
   type Stack,
 } from './stack.ts';
 import { openBrowser } from './ui-driver.ts';
+import { DAY_ARMS, DEV_DAY_HARD_CAP_USD, printDayPlan, runDevDay } from './dev-day/run-day.ts';
+import { DEFAULT_RATES } from './dev-day/score.ts';
+import { selfTest } from './dev-day/selftest.ts';
+import type { BaseArm } from './scenario-types.ts';
 import { prepareVersion, removeVersion } from './versions.ts';
 
 const { values } = parseArgs({
@@ -40,6 +44,10 @@ const { values } = parseArgs({
     'keep-data': { type: 'boolean', default: false },
     plan: { type: 'boolean', default: false },
     'remove-versions': { type: 'boolean', default: false },
+    selftest: { type: 'boolean', default: false },
+    shots: { type: 'boolean', default: false },
+    arms: { type: 'string', default: DAY_ARMS.join(',') },
+    'hourly-usd': { type: 'string', default: String(DEFAULT_RATES.hourlyUsd) },
   },
 });
 
@@ -241,10 +249,46 @@ async function startStub(dir: string): Promise<Runner['stub']> {
   return stub;
 }
 
+async function devDay(dir: string): Promise<void> {
+  if (blocks.length > 1) throw new Error('Run the dev-day block on its own.');
+  if (values.selftest) {
+    const lines = await selfTest(dir);
+    for (const line of lines)
+      console.log(`${line.ok ? 'OK ' : 'BAD'} ${line.session} ${line.note}`);
+    if (lines.some((line) => !line.ok)) process.exitCode = 1;
+    return;
+  }
+  const budget = Number(values.budget) > 0 ? Number(values.budget) : DEV_DAY_HARD_CAP_USD;
+  const arms = values.arms.split(',').map((arm) => {
+    if (!DAY_ARMS.includes(arm as BaseArm)) throw new Error(`Unknown arm ${arm}.`);
+    return arm as BaseArm;
+  });
+  if (runtime === 'fake') process.env.E2E_FAKE_CODEX = '1';
+  const stub = await startStub(dir);
+  try {
+    await runDevDay({
+      runtime,
+      dir,
+      label: values.label,
+      budgetUsd: budget,
+      timeoutMs: Number(values['timeout-min']) * 60_000,
+      arms,
+      match: pattern,
+      shots: values.shots,
+      keepData: values['keep-data'],
+      rates: { ...DEFAULT_RATES, hourlyUsd: Number(values['hourly-usd']) },
+    });
+  } finally {
+    if (stub) await stopProcess(stub.child);
+  }
+}
+
 async function main(): Promise<void> {
+  if (values.plan && blocks.includes('dev-day')) return printDayPlan(pattern);
   if (values.plan) return printPlan(cells, Number(values.repeats));
   if (!values.dir) throw new Error('Pass --dir with a scratch folder.');
   const dir = await assertScratchDir(values.dir);
+  if (blocks.includes('dev-day')) return devDay(dir);
   if (values['remove-versions']) {
     for (const version of VERSIONS) await removeVersion(dir, version);
     return;

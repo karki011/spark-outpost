@@ -16,6 +16,7 @@ export default defineConfig({
             '**/node_modules/**',
             'tests/browser/**',
             'scripts/bench/fixture/**',
+            'scripts/e2e-live/dev-day/fixtures/**',
           ],
           environment: 'node',
         },

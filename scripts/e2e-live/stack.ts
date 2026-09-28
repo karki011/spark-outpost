@@ -81,15 +81,25 @@ async function prepareDatabase(version: Version): Promise<Target> {
   };
 }
 
+/** Extra settings for one stack: env for the API and worker, and fake-runtime secrets. */
+export interface StackExtras {
+  env?: NodeJS.ProcessEnv;
+  secrets?: Record<string, string>;
+  /** Env names to drop from the inherited environment (say, real GitHub tokens). */
+  unset?: readonly string[];
+}
+
 function baseEnv(
   runtime: Runtime,
   version: Version,
   appRoot: string,
   databaseUrl: string,
   urls: StackUrls,
+  extras: StackExtras = {},
 ) {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
+    ...extras.env,
     DATABASE_URL: databaseUrl,
     API_PORT: String(urls.ports.api),
     ALLOWED_ORIGINS: urls.web,
@@ -97,6 +107,7 @@ function baseEnv(
     ORCHESTRATION_COST_CAP_USD: process.env.E2E_RUN_CAP_USD ?? '1.5',
   };
   delete env.TEST_DATABASE_URL;
+  for (const name of extras.unset ?? []) delete env[name];
   if (runtime === 'acp') return env;
   return {
     ...env,
@@ -104,6 +115,7 @@ function baseEnv(
     MEMORY_SECRETS: JSON.stringify({
       jev: 'e2e-dry-run-jev-key',
       ...(version === 'current' ? { zai: 'e2e-dry-run-zai-key' } : {}),
+      ...extras.secrets,
     }),
     FAKE_ACP_AGENT: join(appRoot, 'apps/server/test/fake-acp-agent.ts'),
     FAKE_ACP_MODELS: JSON.stringify(FAKE_ACP_MODELS),
@@ -165,12 +177,13 @@ export async function startStack(
   appRoot: string,
   dir: string,
   ui: boolean,
+  extras: StackExtras = {},
 ): Promise<Stack> {
   const logs = join(dir, 'logs', version);
   await mkdir(logs, { recursive: true });
   const urls = urlsFor(portsFor(version));
   const target = await prepareDatabase(version);
-  const env = baseEnv(runtime, version, appRoot, target.url, urls);
+  const env = baseEnv(runtime, version, appRoot, target.url, urls, extras);
   await migrate(appRoot, env, logs);
   const workspaceId = await seedWorkspace(target.db);
   const apiToken = createLaunchToken();

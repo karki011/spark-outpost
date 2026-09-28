@@ -99,7 +99,7 @@ export class Api {
   }
 
   async startFresh(conversationId: string): Promise<void> {
-    await this.call('POST', `/conversations/${conversationId}/fresh-session`);
+    await this.call('POST', `/conversations/${conversationId}/fresh-session`, {});
   }
 
   async orchestration(runId: string): Promise<unknown> {
