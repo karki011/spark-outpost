@@ -1,11 +1,11 @@
 import type { Db } from '../persistence/db.ts';
 import { refreshOutcome, type OutcomeOptions } from './record.ts';
 
-export const SWEEP_EVERY_MS = 10 * 60 * 1000;
-export const SWEEP_BATCH = 200;
+const SWEEP_EVERY_MS = 10 * 60 * 1000;
+const SWEEP_BATCH = 200;
 const SWEEP_LOOKBACK_DAYS = 30;
 
-export async function unsettledTurns(db: Db, workspaceId: string): Promise<string[]> {
+async function unsettledTurns(db: Db, workspaceId: string): Promise<string[]> {
   const { rows } = await db.query<{ id: string }>(
     `SELECT r.id FROM runs r
      JOIN conversations c ON c.id = r.conversation_id

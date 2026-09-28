@@ -2,8 +2,8 @@ import { z } from 'zod';
 import type { RunChange } from '@spark-outpost/contracts';
 import { git } from '../projects/snapshot.ts';
 
-export const KEPT_FILES_MAX = 200;
-export const COMMIT_SCAN_MAX = 200;
+const KEPT_FILES_MAX = 200;
+const COMMIT_SCAN_MAX = 200;
 const SINCE_SLACK_SECONDS = 60;
 
 export const keptContentSchema = z.object({
@@ -52,7 +52,7 @@ export async function keptContent(
   };
 }
 
-export function parseLsTree(output: string): Map<string, string> {
+function parseLsTree(output: string): Map<string, string> {
   const entries = new Map<string, string>();
   for (const entry of output.split('\0')) {
     const tab = entry.indexOf('\t');
@@ -63,7 +63,7 @@ export function parseLsTree(output: string): Map<string, string> {
   return entries;
 }
 
-export function matchesKept(kept: KeptContent, tree: ReadonlyMap<string, string>): boolean {
+function matchesKept(kept: KeptContent, tree: ReadonlyMap<string, string>): boolean {
   return kept.files.every((file) =>
     file.blob === null ? !tree.has(file.path) : tree.get(file.path) === file.blob,
   );
