@@ -69,6 +69,8 @@ test('an unsure agreement offers to save the plan, and older plans fold away in 
   await expect(offer).toHaveCount(0);
   await expect(first.getByRole('status').filter({ hasText: 'Agreed plan v1' })).toBeVisible();
 
+  const second = page.getByRole('region', { name: 'Turn' }).nth(1);
+  await expect(second.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
   await send(page, 'Plan the next part #planreply #build');
   const third = page.getByRole('region', { name: 'Turn' }).nth(2);
   await third.getByRole('button', { name: 'Save as agreed plan' }).click({ timeout: 30_000 });

@@ -20,6 +20,7 @@ import { CheckpointCard } from '../checkpoints/CheckpointCard.tsx';
 import type { CheckpointApproval } from '../checkpoints/checkpoint-model.ts';
 import { keepCardHost } from '../outcomes/feedback-host.ts';
 import { TurnFeedback } from '../outcomes/TurnFeedback.tsx';
+import { ReplyPlanAction, TurnPlanOffer } from '../plans/TurnPlans.tsx';
 import { runSeconds } from '../turns.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock, AgentHead } from './AgentBlock.tsx';
@@ -148,6 +149,14 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         </div>
       )}
       {orchestration.error && <p className="error-line">{orchestration.error}</p>}
+      <TurnPlanOffer detail={detail} runId={run.id} />
+      <ReplyPlanAction
+        detail={detail}
+        message={detail.messages.find(
+          (message) => message.role === 'assistant' && message.runId === run.id,
+        )}
+        finished={finished}
+      />
       <p className="crew-foot">
         <span>{finished ? 'Done' : 'So far'}</span>{' '}
         {totalsLine(crewTotals(orchestration.totals, agents.length - 1))}
