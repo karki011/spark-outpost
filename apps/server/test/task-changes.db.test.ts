@@ -238,6 +238,7 @@ describe('task changes', { timeout: 60_000 }, () => {
       'a',
     ]);
     const { taskId, runs } = await twoRunTask();
+    await worker.stop();
     const [lane, fix] = runs;
     const copy = worktreePath(root, lane);
     const branch = branchName(taskId, 'Bolt');
