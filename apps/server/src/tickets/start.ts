@@ -3,7 +3,6 @@ import type {
   StartTicketResponse,
   TicketDetail,
   TicketSourceId,
-  TicketSummary,
 } from '@spark-outpost/contracts';
 import { setConversationProjects } from '../persistence/conversation-projects.ts';
 import {
@@ -18,26 +17,11 @@ import { cacheTickets, linkTaskTicket, openTicketTask } from '../persistence/tic
 import { addTaskLink, taskTitle } from '../persistence/tasks.ts';
 import { requireSource, type TicketDeps } from './connections.ts';
 import { ticketRequest } from './request.ts';
-import { TicketConflictError } from './source.ts';
+import { summaryOf, TicketConflictError } from './source.ts';
 import { moveTicket } from './sync.ts';
 
 export interface StartDeps extends TicketDeps {
   runTarget(conversationId: string): Promise<RunTarget>;
-}
-
-export function summaryOf(ticket: TicketDetail): TicketSummary {
-  return {
-    source: ticket.source,
-    key: ticket.key,
-    title: ticket.title,
-    status: ticket.status,
-    statusName: ticket.statusName,
-    url: ticket.url,
-    updatedAt: ticket.updatedAt,
-    project: ticket.project,
-    priority: ticket.priority,
-    sprint: ticket.sprint,
-  };
 }
 
 async function hasMessages(db: Queryable, conversationId: string): Promise<boolean> {

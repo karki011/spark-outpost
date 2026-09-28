@@ -6,7 +6,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { cacheTickets, ticketRef, ticketWork } from '../persistence/tickets.ts';
 import { connectedSources, requireSource, type TicketDeps } from './connections.ts';
-import { summaryOf } from './start.ts';
+import { summaryOf } from './source.ts';
 
 export async function listTickets(deps: TicketDeps, query: TicketListQuery): Promise<TicketList> {
   const sources = (await connectedSources(deps)).filter(
