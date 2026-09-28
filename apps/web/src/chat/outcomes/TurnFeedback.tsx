@@ -12,7 +12,7 @@ import {
   type TurnOutcome,
 } from '@spark-outpost/contracts';
 import { outcomeKeys, outcomesApi } from '../../api/outcomes.ts';
-import { CheckIcon, CommentIcon, ThumbDownIcon, ThumbUpIcon } from '../../ui/icons.tsx';
+import { CheckIcon, ThumbDownIcon, ThumbUpIcon } from '../../ui/icons.tsx';
 import { useReducedMotion } from '../../ui/motion.ts';
 import { easeOut } from '../../ui/transitions.tsx';
 import type { FeedbackVariant } from './feedback-host.ts';
@@ -69,11 +69,11 @@ function Thumb({
 function FeedbackRow({
   outcome,
   variant,
-  focusFirst,
+  quiet,
 }: {
   outcome: TurnOutcome;
   variant: FeedbackVariant;
-  focusFirst: boolean;
+  quiet: boolean;
 }) {
   const queryClient = useQueryClient();
   const labelId = useId();
@@ -89,10 +89,6 @@ function FeedbackRow({
       outcomesApi.saveFeedback(outcome.runId, feedback),
     onSuccess: (response) => queryClient.setQueryData(outcomeKeys.run(outcome.runId), response),
   });
-
-  useEffect(() => {
-    if (focusFirst) firstRef.current?.querySelector('button')?.focus();
-  }, [focusFirst]);
 
   useEffect(() => {
     if (commenting || !refocusThumb.current) return;
@@ -133,9 +129,14 @@ function FeedbackRow({
   };
 
   return (
-    <div className="fb" role="group" aria-labelledby={labelId} ref={firstRef}>
+    <div
+      className={quiet && !draft.rating ? 'fb quiet' : 'fb'}
+      role="group"
+      aria-labelledby={labelId}
+      ref={firstRef}
+    >
       <div className="fb-line">
-        <span id={labelId} className="fb-q">
+        <span id={labelId} className={quiet ? 'sr-only' : 'fb-q'}>
           {reverted ? 'What went wrong?' : 'How did it go?'}
         </span>
         {!reverted && (
@@ -228,7 +229,6 @@ function FeedbackRow({
 }
 
 export function TurnFeedback({ runId, variant }: { runId: string; variant: FeedbackVariant }) {
-  const [open, setOpen] = useState(false);
   const query = useQuery({
     queryKey: outcomeKeys.run(runId),
     queryFn: () => outcomesApi.get(runId),
@@ -237,13 +237,5 @@ export function TurnFeedback({ runId, variant }: { runId: string; variant: Feedb
   const outcome = query.data?.outcome ?? null;
   if (!outcome) return null;
   const nudged = outcome.prompt !== null || outcome.feedback !== null;
-  if (!nudged && !open) {
-    return (
-      <button type="button" className="btn ghost sm fb-open" onClick={() => setOpen(true)}>
-        <CommentIcon />
-        Feedback
-      </button>
-    );
-  }
-  return <FeedbackRow outcome={outcome} variant={variant} focusFirst={open && !nudged} />;
+  return <FeedbackRow outcome={outcome} variant={variant} quiet={!nudged} />;
 }

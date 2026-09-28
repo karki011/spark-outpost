@@ -53,7 +53,8 @@
 .turn-foot > .run-meta {
   margin-top: 0;
 }
-.turn-foot > .fb-open {
+.turn-foot > .fb.quiet {
+  flex-basis: auto;
   margin-top: 0;
 }
 .turn-foot > .fb {

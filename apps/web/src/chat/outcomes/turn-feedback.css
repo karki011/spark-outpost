@@ -78,13 +78,6 @@
   resize: vertical;
   background: var(--panel);
 }
-.fb-open {
-  margin-top: 6px;
-  padding: 4px 8px;
-  font-size: 12.5px;
-  gap: 6px;
-}
-.fb-open svg,
 .fb-thumb svg {
   width: 14px;
   height: 14px;

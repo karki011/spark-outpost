@@ -104,7 +104,7 @@ test('shows a quiet thumbs row under an answer', async ({ page }) => {
   await expect(feedback.getByRole('status')).toHaveText('Saved');
 });
 
-test('stays hidden when the signals agree, behind a Feedback button', async ({ page }) => {
+test('stays quiet when the signals agree: just the thumbs', async ({ page }) => {
   test.setTimeout(90_000);
   writeFileSync(path.join(repo.root, 'check.mjs'), "console.log('ok');\n");
   await crewChat(page, repo, 'Balanced');
@@ -126,9 +126,9 @@ test('stays hidden when the signals agree, behind a Feedback button', async ({ p
   await keepCard(page).getByRole('button', { name: 'Keep', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
 
-  const open = keepCard(page).getByRole('button', { name: 'Feedback' });
-  await expect(open).toBeVisible({ timeout: 15_000 });
-  await expect(askHow(page)).toHaveCount(0);
-  await open.click();
-  await expect(askHow(page).getByRole('button', { name: 'Good result' })).toBeFocused();
+  const good = keepCard(page).getByRole('button', { name: 'Good result' });
+  await expect(good).toBeVisible({ timeout: 15_000 });
+  await expect(keepCard(page).locator('.fb-q')).toHaveCount(0);
+  await good.click();
+  await expect(good).toHaveAttribute('aria-pressed', 'true');
 });
