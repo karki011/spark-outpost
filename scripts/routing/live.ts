@@ -19,6 +19,7 @@ import {
   modeForLegacy,
 } from '../../packages/contracts/src/index.ts';
 import { answers, startProcess, stopProcess, waitFor } from '../e2e-live/stack.ts';
+import { testDatabaseUrl } from '../test-database.ts';
 
 const { values } = parseArgs({
   options: {
@@ -41,9 +42,7 @@ if (!values.repo || !existsSync(join(repo, '.git'))) throw new Error('Pass --rep
 if (existsSync(join(ROOT, '.local/credentials.env'))) {
   process.loadEnvFile(join(ROOT, '.local/credentials.env'));
 }
-const url = process.env.TEST_DATABASE_URL;
-if (!url || !/\/\w*_test\w*$/.test(url))
-  throw new Error('TEST_DATABASE_URL must name a *_test database.');
+const url = testDatabaseUrl();
 
 const schema = `route_live_${Date.now()}`;
 
