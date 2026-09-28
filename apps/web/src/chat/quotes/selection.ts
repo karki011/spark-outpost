@@ -1,11 +1,11 @@
-export const QUOTE_SOURCE = '.bubble, .md';
+const QUOTE_SOURCE = '.bubble, .md';
 
-export interface MessageSelection {
+interface MessageSelection {
   range: Range;
   source: Element;
 }
 
-export function sourceOf(node: Node | null, root: Element): Element | null {
+function sourceOf(node: Node | null, root: Element): Element | null {
   const element = node instanceof Element ? node : (node?.parentElement ?? null);
   const source = element?.closest(QUOTE_SOURCE) ?? null;
   return source && root.contains(source) ? source : null;

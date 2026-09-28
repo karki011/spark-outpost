@@ -8,8 +8,8 @@ import { paintHighlight } from './highlight.ts';
 import { sourcesFor, userMessageElement } from './selection.ts';
 import type { Quote } from './use-quotes.ts';
 
-export const SENT_HIGHLIGHT = 'spark-annotation';
-export const UNSENT_HIGHLIGHT = 'spark-quote-note';
+const SENT_HIGHLIGHT = 'spark-annotation';
+const UNSENT_HIGHLIGHT = 'spark-quote-note';
 const FLASH_MS = 1800;
 const TIP_WIDTH = 260;
 
