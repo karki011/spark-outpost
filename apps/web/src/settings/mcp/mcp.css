@@ -117,7 +117,8 @@
 .mcp-project-add select {
   width: auto;
   max-width: 220px;
-  padding-block: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
 }
 .mcp-check {
   display: flex;
@@ -223,7 +224,7 @@
   gap: 6px;
 }
 
-.mcppop {
+.mpop.left.mcppop {
   width: min(420px, calc(100vw - 32px));
   padding: 10px;
 }
