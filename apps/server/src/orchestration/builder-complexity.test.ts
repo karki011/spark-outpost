@@ -2,17 +2,20 @@ import { describe, expect, it } from 'vitest';
 import type { RankedFile } from '../codescan/rank.ts';
 import type { ScanReport } from '../codescan/scan.ts';
 import {
+  broadRequest,
+  complexByBreadth,
   complexByJev,
   complexByRequest,
   complexByScan,
   firstSignal,
+  smallByRequest,
 } from './builder-complexity.ts';
 import { asksForTopModel, complexByRule } from './risk-rules.ts';
 
-function file(path: string, pkg: string, termsMatched = 1): RankedFile {
+function file(path: string, pkg: string, termsMatched = 1, score = 1): RankedFile {
   return {
     path,
-    score: 1,
+    score,
     matches: termsMatched,
     termsMatched,
     references: 0,
@@ -92,6 +95,84 @@ describe('complex by code scan breadth', () => {
     expect(complexByScan(report(neighbours))).toBeNull();
     expect(complexByScan(null)).toBeNull();
     expect(complexByScan(undefined)).toBeNull();
+  });
+
+  it('counts only likely files, not loose keyword hits in other packages', () => {
+    const loose = [
+      file('apps/web/src/analytics/spend-summaries.ts', 'apps/web', 2, 1),
+      file('packages/contracts/src/analytics.ts', 'packages/contracts', 1, 0.2),
+      file('apps/server/src/analytics/spend.ts', 'apps/server', 1, 0.18),
+      file('package.json', 'root', 1, 0.1),
+    ];
+    expect(complexByScan(report(loose))).toBeNull();
+    const likely = loose.map((entry) => ({ ...entry, score: 0.6 }));
+    expect(complexByScan(report(likely))?.reason).toBe('matches in 4 packages');
+  });
+});
+
+const S05 =
+  'Typo on the Analytics Spend tab: the source line says "was reportd by providers". Fix it.';
+const S06 =
+  'Bug: on Analytics a share of 2 out of 3 shows as 66%, but it should round to the nearest percent (67%). Fix it.';
+const BROAD_SCAN = report(
+  ['apps/web', 'packages/contracts', 'apps/server', 'root'].map((pkg) => file(`${pkg}/a.ts`, pkg)),
+);
+
+describe('code scan breadth needs a broad request', () => {
+  it('keeps the dev-day typo (s05) off the top tier: Jev small and the one-line rule win', () => {
+    const jev = { tier: 'small' as const, routeConfidence: 1 };
+    expect(smallByRequest(S05, jev)).toBe('one-line fix');
+    expect(complexByBreadth(BROAD_SCAN, S05, jev)).toEqual({
+      complex: null,
+      setAside: 'matches in 4 packages set aside: one-line fix',
+    });
+    expect(complexByBreadth(BROAD_SCAN, S05, null).complex).toBeNull();
+  });
+
+  it('keeps the dev-day rounding bug (s06) off the top tier', () => {
+    expect(broadRequest(S06, { tier: 'mid', routeConfidence: 0.9 })).toBeNull();
+    expect(complexByBreadth(BROAD_SCAN, S06, { tier: 'mid', routeConfidence: 0.9 })).toEqual({
+      complex: null,
+      setAside: null,
+    });
+    expect(complexByBreadth(BROAD_SCAN, S06, { tier: 'small', routeConfidence: 0.85 })).toEqual({
+      complex: null,
+      setAside: 'matches in 4 packages set aside: Jev small tier 0.85',
+    });
+  });
+
+  it('lets an unsure Jev small call through to the broad-request check', () => {
+    expect(smallByRequest(S06, { tier: 'small', routeConfidence: 0.6 })).toBeNull();
+  });
+
+  it.each([
+    ['refactor the spend summaries into one module', 'broad wording'],
+    ['implement CSV export for analytics', 'broad wording'],
+    ['- add the column\n- update the API\n- show it in the table', 'several parts'],
+    ['add a column, update the API and change the table', 'several parts'],
+  ])('sends a broad request with broad matches to the top tier: %s', (request, why) => {
+    expect(complexByBreadth(BROAD_SCAN, request, null)).toEqual({
+      complex: { source: 'scan', reason: `matches in 4 packages, ${why}` },
+      setAside: null,
+    });
+  });
+
+  it('counts a confident Jev top tier or high complexity as a broad request', () => {
+    const top = { tier: 'top' as const, routeConfidence: 0.9 };
+    expect(complexByBreadth(BROAD_SCAN, S06, top).complex?.reason).toBe(
+      'matches in 4 packages, Jev top tier',
+    );
+    const complexity = { tier: null, routeConfidence: null, complexity: 0.85 };
+    expect(broadRequest('fix the chart', complexity)).toBe('Jev complexity high');
+    expect(broadRequest('fix the chart', { ...complexity, complexity: 0.4 })).toBeNull();
+  });
+
+  it('needs breadth in the scan too', () => {
+    const narrow = report([file('apps/web/a.ts', 'apps/web')]);
+    expect(complexByBreadth(narrow, 'refactor the spend page', null)).toEqual({
+      complex: null,
+      setAside: null,
+    });
   });
 });
 

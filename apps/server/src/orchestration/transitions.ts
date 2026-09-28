@@ -14,6 +14,7 @@ import { MAX_VERDICTS, PLAN_CONTINUES } from '../advisor/policy.ts';
 import type { Verdict } from '../advisor/verify-questions.ts';
 import { asksToKeep, asksForLoop, shipsByItself } from './checkpoint-policy.ts';
 import { criticFixFollowUp } from './context.ts';
+import { reviewExisting, writePlan } from './read-only-flow.ts';
 import {
   afterReview,
   canFixAgain,
@@ -222,20 +223,6 @@ function build(state: FlowState): FlowResult {
   );
 }
 
-function writePlan(state: FlowState, note: string | null): FlowResult {
-  return {
-    state: { ...state, depth: 'direct', readOnly: 'plan', phase: 'planning', waitingFor: null },
-    action: { type: 'plan', note },
-  };
-}
-
-function reviewExisting(state: FlowState): FlowResult {
-  return spawn(
-    { ...state, depth: 'direct', readOnly: 'review', reviewWanted: true, reviewed: true },
-    { role: 'critic', reason: 'first', escalate: false },
-  );
-}
-
 function answer(state: FlowState): FlowResult {
   return spawn({ ...state, depth: 'direct' }, { role: 'scout', reason: 'first', escalate: false });
 }
@@ -422,10 +409,8 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
     return stopReport(state, `Stopped: ${state.loop ?? 'the Builder was repeating itself'}.`);
   }
   if (event.kind === 'plan') {
-    if (option === CHECKPOINT_OPTION.editPlan && event.note?.trim()) {
-      return writePlan(state, event.note.trim());
-    }
-    return finish(state, 'succeeded');
+    const note = option === CHECKPOINT_OPTION.editPlan ? event.note?.trim() : null;
+    return note ? writePlan(state, note) : finish(state, 'succeeded');
   }
   if (event.kind === 'verify') {
     if (option === CHECKPOINT_OPTION.retry) {

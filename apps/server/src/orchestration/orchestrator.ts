@@ -229,7 +229,8 @@ async function finish(
   reason: string | null,
   incomplete: string | null = null,
 ) {
-  if (status !== 'succeeded') s.closeReason ??= status;
+  // A stop keeps the task's Builder session: "continue" resumes it (turn-session marks it stopped).
+  if (status === 'failed') s.closeReason ??= status;
   await cleanupCopies(s).catch(() => undefined);
   await settleObservations(s);
   const verdict = s.results.some((result) => result.role === 'critic') ? s.flow.verdict : null;

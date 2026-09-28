@@ -35,6 +35,7 @@ export interface RouteFacts {
   trivial: boolean;
   destructive: boolean;
   complex?: ComplexSignal | null;
+  setAside?: string;
 }
 
 export const DESTRUCTIVE_RULE = 'destructive → top tier';
@@ -148,7 +149,9 @@ export function routeBuilder(
   const rule =
     complex && base.rule !== DESTRUCTIVE_RULE
       ? `complex → top tier (${complex.reason})`
-      : base.rule;
+      : !complex && facts.setAside && base.routedBy === 'rules' && base.rule !== DESTRUCTIVE_RULE
+        ? `${base.rule} (${facts.setAside})`
+        : base.rule;
   const autoWouldUse = base.autoWouldUse ? floorBuilderPick(context, base.autoWouldUse).pick : null;
   const route = withNote({ ...base, rule, autoWouldUse }, floored);
   return { ...route, pick: { ...route.pick, effort: builderEffort(context, route.pick) } };

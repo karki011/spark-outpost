@@ -5,6 +5,9 @@ import {
   replyHash,
   sessionWorkdir,
   settingsHash,
+  STOPPED_NOTE,
+  STOPPED_REPLY,
+  stoppedFollowUp,
   type DecisionInput,
   type SessionSettings,
   type StoredState,
@@ -113,5 +116,65 @@ describe('decideResume', () => {
     const child = { ...input, checksMessages: false, previousMessageId: null };
     const decision = decideResume({ ...child, stored: { ...stored, lastMessageId: null } });
     expect(decision.resume?.sessionId).toBe('s-1');
+  });
+
+  it('resumes a turn the user stopped, for orchestration children', () => {
+    const child = { ...input, checksMessages: false, previousMessageId: null };
+    const stopped = { ...stored, lastMessageId: null, lastReplyHash: STOPPED_REPLY };
+    expect(decideResume({ ...child, stored: stopped })).toEqual({
+      resume: { sessionId: 's-1', cwd: '/work/app', additionalDirectories: [] },
+      freshReason: null,
+      stopped: true,
+    });
+  });
+
+  it('resumes a stopped chat turn only while its partial reply is still the last message', () => {
+    const stopped = { ...stored, lastReplyHash: STOPPED_REPLY, lastMessageContent: 'Half a rep' };
+    expect(decideResume({ ...input, stored: stopped })).toMatchObject({
+      resume: { sessionId: 's-1' },
+      stopped: true,
+    });
+    expect(decideResume({ ...input, stored: stopped, previousMessageId: 'm-9' })).toEqual({
+      resume: null,
+      freshReason: 'chat changed since',
+    });
+    expect(decideResume({ ...input, stored: { ...stopped, lastMessageId: null } })).toEqual({
+      resume: null,
+      freshReason: 'last turn did not finish',
+    });
+  });
+
+  it('still starts fresh after a crash, a closed session or new settings, even when stopped', () => {
+    const child = { ...input, checksMessages: false, previousMessageId: null };
+    const crashed = { ...stored, lastMessageId: null, lastReplyHash: null };
+    expect(decideResume({ ...child, stored: crashed }).freshReason).toBe(
+      'last turn did not finish',
+    );
+    const stopped = { ...stored, lastMessageId: null, lastReplyHash: STOPPED_REPLY };
+    expect(decideResume({ ...child, stored: { ...stopped, closeReason: 'failed' } })).toEqual({
+      resume: null,
+      freshReason: 'failed',
+    });
+    expect(decideResume({ ...child, stored: stopped, hash: 'other' }).freshReason).toBe(
+      'settings changed',
+    );
+  });
+
+  it('never mistakes the stop marker for a reply hash', () => {
+    expect(STOPPED_REPLY).not.toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe('stoppedFollowUp', () => {
+  it('tells the agent it was stopped, lists the changed files, then gives the message', () => {
+    expect(stoppedFollowUp('continue', ['src/export.ts', 'test/export.test.ts'])).toBe(
+      `${STOPPED_NOTE}\nFiles changed before the stop: \`src/export.ts\`, \`test/export.test.ts\`.\n\ncontinue`,
+    );
+    expect(stoppedFollowUp('continue', [])).toBe(`${STOPPED_NOTE}\n\ncontinue`);
+  });
+
+  it('shortens a long file list', () => {
+    const files = Array.from({ length: 23 }, (_, index) => `f${index}.ts`);
+    expect(stoppedFollowUp('go on', files)).toContain('`f19.ts`, and 3 more.');
   });
 });
