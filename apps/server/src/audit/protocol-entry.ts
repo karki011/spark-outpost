@@ -30,7 +30,7 @@ function rpcIdOf(message: Message): string | null {
   return typeof id === 'string' || typeof id === 'number' ? String(id) : null;
 }
 
-export function messageKind(message: Message): ProtocolEntryKind {
+function messageKind(message: Message): ProtocolEntryKind {
   if (typeof message.method === 'string') {
     return 'id' in message ? 'request' : 'notification';
   }
@@ -136,11 +136,12 @@ export function createProtocolRecorder(): ProtocolRecorder {
   };
 
   const methodFor = (direction: ProtocolDirection, message: Message, rpcId: string | null) => {
-    const kind = messageKind(message);
-    if (kind === 'request' && rpcId !== null) {
-      pendingMethods.set(requestKey(direction, rpcId), message.method as string);
+    if (typeof message.method === 'string') {
+      if (messageKind(message) === 'request' && rpcId !== null) {
+        pendingMethods.set(requestKey(direction, rpcId), message.method);
+      }
+      return message.method;
     }
-    if (typeof message.method === 'string') return message.method;
     if (rpcId === null) return null;
     const key = replyKey(direction, rpcId);
     const method = pendingMethods.get(key) ?? null;

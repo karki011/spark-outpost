@@ -7,11 +7,11 @@ import type {
   VerdictCounts,
 } from '@spark-outpost/contracts';
 
-export const MIN_COMPONENT_N = 5;
-export const FAST_WAIT_MS = 30_000;
-export const SLOW_WAIT_MS = 600_000;
+const MIN_COMPONENT_N = 5;
+const FAST_WAIT_MS = 30_000;
+const SLOW_WAIT_MS = 600_000;
 
-export const HEALTH_WEIGHTS = {
+const HEALTH_WEIGHTS = {
   outcomes: 40,
   checks: 20,
   corrections: 20,
@@ -57,7 +57,7 @@ function component(
   };
 }
 
-export function healthComponents(input: HealthInputs): HealthComponent[] {
+function healthComponents(input: HealthInputs): HealthComponent[] {
   const { good, bad, mixed } = input.verdicts;
   const rated = good + bad + mixed;
   const { checks, loops } = input;

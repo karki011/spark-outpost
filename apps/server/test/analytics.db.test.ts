@@ -36,10 +36,10 @@ const builder = (model: string, costUsd: number, extra = {}) => ({
 });
 
 async function seedScenario() {
-  const app1 = await seedProjectChat(t.db, t.workspaceId, 'spark-outpost');
+  const projectChat = await seedProjectChat(t.db, t.workspaceId, 'spark-outpost');
   const loose = await seedProjectChat(t.db, t.workspaceId, null);
   const turn = (overrides: Partial<AnalyticsTurn>): AnalyticsTurn => ({
-    conversationId: app1,
+    conversationId: projectChat,
     createdAt: hoursAgo(2),
     category: 'bug_fix',
     ...overrides,

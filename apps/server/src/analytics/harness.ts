@@ -18,10 +18,10 @@ import {
 import { turnCost, type TurnFact } from './facts.ts';
 import { checkRollup, groupBy, mean, outcomeTally, quantile, roundTo } from './tally.ts';
 
-export const MIN_SIDE_TURNS = 3;
-export const WINNER_MARGIN = 0.2;
-export const CONFIDENCE_POINTS_MAX = 400;
-export const DISAGREEMENTS_MAX = 12;
+const MIN_SIDE_TURNS = 3;
+const WINNER_MARGIN = 0.2;
+const CONFIDENCE_POINTS_MAX = 400;
+const DISAGREEMENTS_MAX = 12;
 
 const ROLE_ORDER: AgentRole[] = ['scout', 'architect', 'builder', 'critic'];
 
@@ -102,6 +102,8 @@ export function disagreements(facts: readonly TurnFact[]): DisagreementRow[] {
     .slice(0, DISAGREEMENTS_MAX);
 }
 
+const AGREEMENT_KEYS = ['same', 'differs', 'no_jev'] as const;
+
 function agreementKey(fact: TurnFact): AgreementRow['key'] {
   if (!fact.jevAnswered) return 'no_jev';
   return fact.differences.length === 0 ? 'same' : 'differs';
@@ -109,7 +111,7 @@ function agreementKey(fact: TurnFact): AgreementRow['key'] {
 
 export function routingCost(facts: readonly TurnFact[]): RoutingCostRow[] {
   const groups = groupBy(facts, agreementKey);
-  return (['same', 'differs', 'no_jev'] as const).map((key) => {
+  return AGREEMENT_KEYS.map((key) => {
     const turns = groups.get(key) ?? [];
     const costUsd = turns.reduce((sum, fact) => sum + turnCost(fact), 0);
     const verified = turns.filter((fact) => fact.verdict === 'good').length;
@@ -125,7 +127,7 @@ export function routingCost(facts: readonly TurnFact[]): RoutingCostRow[] {
 
 export function agreement(facts: readonly TurnFact[]): AgreementRow[] {
   const groups = groupBy(facts, agreementKey);
-  return (['same', 'differs', 'no_jev'] as const).map((key) => ({
+  return AGREEMENT_KEYS.map((key) => ({
     key,
     ...outcomeTally(groups.get(key) ?? []),
   }));

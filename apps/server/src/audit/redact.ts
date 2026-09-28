@@ -115,7 +115,7 @@ export function redactValue(value: unknown): unknown {
   return result;
 }
 
-export function looksLikeSecretPath(candidate: string): boolean {
+function looksLikeSecretPath(candidate: string): boolean {
   const trimmed = candidate.replace(/^['"`]+|['"`;,)]+$/g, '');
   if (trimmed === '' || trimmed.length > 4096) return false;
   return isSecretPath(trimmed.replaceAll('\\', '/'));
