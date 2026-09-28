@@ -1,9 +1,9 @@
 import type { CellRecord, E2eRun } from './results.ts';
 
 const usd = (value: number) => `$${value.toFixed(3)}`;
-const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
+export const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 
-function table(head: string[], rows: string[][]): string {
+export function table(head: string[], rows: string[][]): string {
   const line = (cells: string[]) =>
     `| ${cells.map((cell) => cell.replaceAll('|', '\\|').replaceAll('\n', ' ')).join(' | ')} |`;
   return [line(head), line(head.map(() => '---')), ...rows.map(line)].join('\n');

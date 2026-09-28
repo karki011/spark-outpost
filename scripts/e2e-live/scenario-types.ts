@@ -2,7 +2,6 @@ import { taskById, type BenchTask } from '../bench/tasks.ts';
 
 export type BaseArm = 'harness' | 'direct-claude' | 'direct-codex';
 export type ArmId = BaseArm | 'direct-checks';
-export const ARMS: readonly ArmId[] = ['harness', 'direct-claude', 'direct-codex', 'direct-checks'];
 
 export type Verify = 'tests' | 'answer' | 'clarify' | 'cleanup';
 

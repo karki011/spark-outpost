@@ -3,7 +3,7 @@ import type { TurnMetrics } from '../collect.ts';
 import type { BaseArm } from '../scenario-types.ts';
 import type { DayRepo } from './repos.ts';
 import type { Evidence } from './score.ts';
-import type { DaySession } from './sessions.ts';
+import type { DaySession } from './session-types.ts';
 
 export interface PreparedQuote {
   passage: string;
@@ -42,7 +42,6 @@ export interface ArmDay {
     turns: readonly PreparedTurn[],
     capUsd: number,
   ): Promise<ArmSessionResult>;
-  close(): Promise<void>;
 }
 
 export const NO_HARNESS_EVIDENCE = {

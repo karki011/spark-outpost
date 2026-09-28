@@ -4,11 +4,11 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { parseTapCounts, type TestCounts } from '../../bench/verify.ts';
 import { FIXTURES } from './repos.ts';
-import type { RepoKey } from './sessions.ts';
+import type { RepoKey } from './session-types.ts';
 
 const run = promisify(execFile);
 
-export const HIDDEN_DIRS: Record<Exclude<RepoKey, 'external'>, string> = {
+const HIDDEN_DIRS: Record<Exclude<RepoKey, 'external'>, string> = {
   spark: 'apps/web/src/__devday_hidden__',
   workbench: 'bench-verify',
 };
@@ -50,7 +50,6 @@ async function vitestCounts(
   const parsed = JSON.parse(text) as {
     numTotalTests: number;
     numPassedTests: number;
-    numFailedTests: number;
   };
   return {
     tests: parsed.numTotalTests,

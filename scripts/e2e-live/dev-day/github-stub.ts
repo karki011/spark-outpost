@@ -1,8 +1,8 @@
 import { createServer, type Server } from 'node:http';
 import { fakeGitHub, type FakePull } from '../../../apps/server/test/fake-github.ts';
 
-export const GITHUB_STUB_PORT = 4429;
-export const GITHUB_STUB_URL = `http://127.0.0.1:${GITHUB_STUB_PORT}`;
+const GITHUB_STUB_PORT = 4429;
+const GITHUB_STUB_URL = `http://127.0.0.1:${GITHUB_STUB_PORT}`;
 
 export const FAKE_GITHUB_TOKEN = 'ghp_devday0fake0github0token0never0real';
 
@@ -36,7 +36,7 @@ const toStubPull = (pull: FakePull): StubPull => ({
   html_url: pull.html_url,
 });
 
-export async function startGitHubStub(port = GITHUB_STUB_PORT): Promise<GitHubStub> {
+export async function startGitHubStub(): Promise<GitHubStub> {
   const fake = fakeGitHub();
   const requests: string[] = [];
   const foreignCredentials: string[] = [];
@@ -60,9 +60,9 @@ export async function startGitHubStub(port = GITHUB_STUB_PORT): Promise<GitHubSt
       res.end();
     });
   });
-  await new Promise<void>((done) => server.listen(port, '127.0.0.1', done));
+  await new Promise<void>((done) => server.listen(GITHUB_STUB_PORT, '127.0.0.1', done));
   return {
-    url: `http://127.0.0.1:${port}`,
+    url: GITHUB_STUB_URL,
     get pulls() {
       return fake.pulls.map(toStubPull);
     },

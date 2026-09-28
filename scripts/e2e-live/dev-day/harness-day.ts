@@ -17,7 +17,8 @@ import { collectTurn, type TurnMetrics } from '../collect.ts';
 import type { Stack } from '../stack.ts';
 import { AGREED_PLAN_MARKER, levelSettings } from './levels.ts';
 import type { DayRepo } from './repos.ts';
-import { REPO_CHECKS, type DaySession } from './sessions.ts';
+import type { DaySession } from './session-types.ts';
+import { REPO_CHECKS } from './sessions.ts';
 import type { ArmDay, ArmSessionResult, PreparedTurn, TurnLog } from './arm.ts';
 import type { Intervention } from './score.ts';
 
@@ -64,7 +65,7 @@ async function planCards(stack: Stack, ids: string[]): Promise<number> {
   return Number(rows[0]?.count ?? 0);
 }
 
-async function cardBeforeBuilder(stack: Stack, ids: string[]): Promise<boolean | null> {
+async function cardBeforeBuilder(stack: Stack, ids: string[]): Promise<boolean> {
   const { rows } = await stack.db.query<{ card: Date | null; builder: Date | null }>(
     `SELECT (SELECT min(created_at) FROM approvals WHERE run_id = ANY($1) AND ${CHECKPOINT_KINDS_SQL}) AS card,
        (SELECT min(started_at) FROM runs WHERE id = ANY($1) AND role = 'builder') AS builder`,
@@ -276,11 +277,7 @@ export class HarnessDay implements ArmDay {
     return existsSync(join(this.stack.appRoot, 'apps/server/src/api/ship-routes.ts'));
   }
 
-  private async screenshot(
-    session: DaySession,
-    chat: Chat,
-    firstText: string,
-  ): Promise<string | null> {
+  private async screenshot(session: DaySession, firstText: string): Promise<string | null> {
     if (!this.options.shotsDir || !this.options.browser || !this.stack.urls.web) return null;
     const browser = await this.options.browser();
     const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
@@ -305,7 +302,6 @@ export class HarnessDay implements ArmDay {
       return null;
     } finally {
       await context.close();
-      void chat;
     }
   }
 
@@ -351,7 +347,7 @@ export class HarnessDay implements ArmDay {
     const clarifyCard =
       stoppedOnClarify ||
       (logs.some((log) => log.metrics.approvals.some((a) => a.kind === 'clarify')) &&
-        (logs.at(-1)?.metrics.reply ?? '').trim().length < ANSWERED_CLARIFY_REPLY_CHARS);
+        reply.trim().length < ANSWERED_CLARIFY_REPLY_CHARS);
     const secondTurn = logs[1];
     const resumed = secondTurn
       ? secondTurn.metrics.sessionNotes.some((note) => note.startsWith('Continued session')) ||
@@ -360,7 +356,7 @@ export class HarnessDay implements ArmDay {
     const findings = logs.flatMap((log) =>
       log.metrics.reviews.flatMap((review) => review.findings),
     );
-    const shot = await this.screenshot(session, chat, turns[0]?.text ?? '').catch(() => null);
+    const shot = await this.screenshot(session, turns[0]?.text ?? '').catch(() => null);
     return {
       logs,
       reply,
@@ -395,6 +391,4 @@ export class HarnessDay implements ArmDay {
       conversation: chat.conversationId,
     };
   }
-
-  async close(): Promise<void> {}
 }

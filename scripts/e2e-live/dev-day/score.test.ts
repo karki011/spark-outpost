@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { anchorFor, pickPassage, quotedMessage } from './quotes.ts';
 import { verdict } from './report-day.ts';
-import { projectedRound } from './run-day.ts';
+import { DAY_ARMS, DEV_DAY_HARD_CAP_USD, projectedRound } from './run-day.ts';
 import { sessionCap } from './session-run.ts';
 import {
   asksBack,
@@ -263,9 +263,8 @@ describe('the day', () => {
   });
 
   it('keeps the whole day inside the hard cap with the projection margin', () => {
-    const arms = ['harness', 'direct-claude', 'direct-codex'] as const;
-    const projected = SESSIONS.reduce((sum, session) => sum + projectedRound(session, arms), 0);
-    expect(projected).toBeLessThan(25);
+    const projected = SESSIONS.reduce((sum, session) => sum + projectedRound(session, DAY_ARMS), 0);
+    expect(projected).toBeLessThan(DEV_DAY_HARD_CAP_USD);
     expect(sessionCap(sessionById('s05'), 'direct-codex')).toBe(0.5);
   });
 });

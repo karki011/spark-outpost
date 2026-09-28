@@ -128,14 +128,7 @@ async function harnessOnStack(ctx: ArmContext, cell: Cell, repo: string): Promis
   }
 }
 
-async function harnessBench(ctx: ArmContext, cell: Cell, repo: string): Promise<ArmResult> {
-  const { buildStyle } = cell.setup;
-  const env = await bench(ctx, 'harness');
-  const prompts = cell.scenario.turns.map((text) => withTags(ctx, cell, text));
-  const turns = await directClaudeTurns(env, repo, prompts, ctx.timeoutMs, {
-    harness: true,
-    buildStyle,
-  });
+function toRecords(cell: Cell, turns: Awaited<ReturnType<typeof directCodexTurns>>): ArmResult {
   return {
     turns: turns.map((turn, index) => ({
       prompt: cell.scenario.turns[index]!,
@@ -149,22 +142,22 @@ async function harnessBench(ctx: ArmContext, cell: Cell, repo: string): Promise<
   };
 }
 
+async function harnessBench(ctx: ArmContext, cell: Cell, repo: string): Promise<ArmResult> {
+  const { buildStyle } = cell.setup;
+  const env = await bench(ctx, 'harness');
+  const prompts = cell.scenario.turns.map((text) => withTags(ctx, cell, text));
+  const turns = await directClaudeTurns(env, repo, prompts, ctx.timeoutMs, {
+    harness: true,
+    buildStyle,
+  });
+  return toRecords(cell, turns);
+}
+
 export async function runArm(ctx: ArmContext, cell: Cell, repo: string): Promise<ArmResult> {
   const prompts = cell.scenario.turns.map((text) => withTags(ctx, cell, text));
-  const toRecords = (turns: Awaited<ReturnType<typeof directCodexTurns>>): ArmResult => ({
-    turns: turns.map((turn, index) => ({
-      prompt: cell.scenario.turns[index]!,
-      metrics: turn.metrics,
-      outcome: null,
-      autoDenied: turn.autoDenied,
-    })),
-    consoleErrors: [],
-    notes: [],
-    cleanup: null,
-  });
   if (cell.arm === 'direct-claude') {
     const env = await bench(ctx, 'direct');
-    return toRecords(await directClaudeTurns(env, repo, prompts, ctx.timeoutMs));
+    return toRecords(cell, await directClaudeTurns(env, repo, prompts, ctx.timeoutMs));
   }
   if (cell.arm === 'direct-checks') {
     const env = await bench(ctx, 'direct');
@@ -188,7 +181,7 @@ export async function runArm(ctx: ArmContext, cell: Cell, repo: string): Promise
     };
   }
   if (cell.arm === 'direct-codex') {
-    return toRecords(await directCodexTurns(repo, prompts, ctx.timeoutMs, cell.codexEffort));
+    return toRecords(cell, await directCodexTurns(repo, prompts, ctx.timeoutMs, cell.codexEffort));
   }
   if (cell.setup.driver === 'bench') return harnessBench(ctx, cell, repo);
   return harnessOnStack(ctx, cell, repo);

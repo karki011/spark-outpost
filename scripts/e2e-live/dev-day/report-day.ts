@@ -1,17 +1,11 @@
+import { seconds, table } from '../report.ts';
 import type { DayRun } from './run-day.ts';
 import type { DayRecord } from './session-run.ts';
 import { rank, summarise, type ArmSummary, type ScoredRun } from './score.ts';
 import { SESSIONS } from './sessions.ts';
 
 const usd = (value: number | null) => (value === null ? '–' : `$${value.toFixed(3)}`);
-const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
 const percent = (value: number) => `${Math.round(value * 100)}%`;
-
-function table(head: string[], rows: string[][]): string {
-  const line = (cells: string[]) =>
-    `| ${cells.map((cell) => cell.replaceAll('|', '\\|').replaceAll('\n', ' ')).join(' | ')} |`;
-  return [line(head), line(head.map(() => '---')), ...rows.map(line)].join('\n');
-}
 
 function scored(records: readonly DayRecord[]): ScoredRun[] {
   return records.map((record) => ({
@@ -81,16 +75,16 @@ function behaviorRows(records: readonly DayRecord[]): string[][] {
 }
 
 function detailLines(records: readonly DayRecord[]): string[] {
-  return records.flatMap((record) => {
+  return records.map((record) => {
     const crews = record.turns.map((turn) => turn.crew.join(', ') || 'no agents').join(' → ');
     const interventions = record.evidence.interventions.map((item) => item.text).join('; ');
     const shots = record.shots.map((shot) => `[shot](${shot})`).join(' ');
-    return [
+    return (
       `- **${record.session} · ${record.arm}** (${record.level}): crew ${crews}.` +
-        `${interventions ? ` Interventions: ${interventions}.` : ''}` +
-        `${record.evidence.changed.length ? ` Changed: ${record.evidence.changed.slice(0, 8).join(', ')}.` : ''}` +
-        `${shots ? ` ${shots}` : ''}`,
-    ];
+      `${interventions ? ` Interventions: ${interventions}.` : ''}` +
+      `${record.evidence.changed.length ? ` Changed: ${record.evidence.changed.slice(0, 8).join(', ')}.` : ''}` +
+      `${shots ? ` ${shots}` : ''}`
+    );
   });
 }
 

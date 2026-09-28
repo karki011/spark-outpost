@@ -44,7 +44,7 @@ const CHECKPOINT_CHOICES: Record<string, { optionId: string; label: string; why:
 
 export type UserIntent = 'answer' | 'change';
 
-export function firstFixOffer(approval: Approval): boolean {
+function firstFixOffer(approval: Approval): boolean {
   const option = approval.options.find((o) => o.optionId === CHECKPOINT_OPTION.fixFindings);
   if (!option || option.name !== 'Fix these findings') return false;
   return !/\b(?:Stopped fix round|Did not start fix round)\b/.test(approval.reason ?? '');
@@ -124,11 +124,10 @@ export function balancedChoice(approval: Approval, intent: UserIntent | null = n
     };
   }
   if (approval.kind === 'accept' && firstFixOffer(approval)) {
-    const option = approval.options.find((o) => o.optionId === CHECKPOINT_OPTION.fixFindings);
     return {
       optionId: CHECKPOINT_OPTION.fixFindings,
       scope: 'once',
-      label: option?.name ?? 'Fix the findings',
+      label: 'Fix these findings',
       waitForAuto,
       why: 'the Critic found correctness bugs; let it fix them (≤3 rounds)',
     };
