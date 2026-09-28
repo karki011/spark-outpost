@@ -16,6 +16,14 @@ export const RESUME_REASONS = {
   replaced: 'replaced',
 } as const;
 
+// Stored in last_reply_hash when the user stopped the turn: the agent's session is intact and
+// can pick up where it was. Never a sha256 hex digest, so it can't match a real reply.
+export const STOPPED_REPLY = 'stopped by the user';
+
+export const STOPPED_NOTE =
+  'You were stopped by the user before your last turn finished; continue where you left off. ' +
+  'Your edits so far are still in place: check them instead of redoing that work.';
+
 export interface SessionSettings {
   provider: string;
   model: string | null;
@@ -74,7 +82,8 @@ export interface DecisionInput {
 }
 
 export type ResumeDecision =
-  { resume: StoredSession; freshReason: null } | { resume: null; freshReason: string | null };
+  | { resume: StoredSession; freshReason: null; stopped?: true }
+  | { resume: null; freshReason: string | null };
 
 const fresh = (freshReason: string | null): ResumeDecision => ({ resume: null, freshReason });
 
@@ -99,13 +108,27 @@ export function decideResume(input: DecisionInput): ResumeDecision {
   if (stored.lastReplyHash === null) {
     return fresh(RESUME_REASONS.unfinished);
   }
-  if (chatMovedOn(input, stored)) return fresh(RESUME_REASONS.moved);
-  return {
-    resume: {
-      sessionId: stored.sessionId,
-      cwd: stored.cwd,
-      additionalDirectories: [...stored.additionalDirs],
-    },
-    freshReason: null,
+  const resume: StoredSession = {
+    sessionId: stored.sessionId,
+    cwd: stored.cwd,
+    additionalDirectories: [...stored.additionalDirs],
   };
+  if (stored.lastReplyHash === STOPPED_REPLY) {
+    if (!input.checksMessages) return { resume, freshReason: null, stopped: true };
+    if (stored.lastMessageId === null) return fresh(RESUME_REASONS.unfinished);
+    if (stored.lastMessageId !== input.previousMessageId) return fresh(RESUME_REASONS.moved);
+    return { resume, freshReason: null, stopped: true };
+  }
+  if (chatMovedOn(input, stored)) return fresh(RESUME_REASONS.moved);
+  return { resume, freshReason: null };
+}
+
+const STOPPED_FILES_SHOWN = 20;
+
+export function stoppedFollowUp(message: string, changed: readonly string[]): string {
+  const shown = changed.slice(0, STOPPED_FILES_SHOWN).map((path) => `\`${path}\``);
+  const more = changed.length - shown.length;
+  if (more > 0) shown.push(`and ${more} more`);
+  const files = shown.length > 0 ? `\nFiles changed before the stop: ${shown.join(', ')}.` : '';
+  return `${STOPPED_NOTE}${files}\n\n${message}`;
 }

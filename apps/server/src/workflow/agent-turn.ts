@@ -176,7 +176,7 @@ export async function runAgentTurn(
   let turnSession: TurnSession | null = null;
   const ended = async (settled: TurnResult) => {
     await turnSession
-      ?.finished(settled)
+      ?.finished({ ...settled, stopReason: control.reason() })
       .catch((error: unknown) => console.error('Could not record the agent session', error));
     return settled;
   };
