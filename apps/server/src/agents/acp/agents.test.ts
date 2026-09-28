@@ -77,7 +77,17 @@ describe('Claude session options', () => {
 
   it('gives Do runs the edit, shell and todo tools, forces every change to ask, and keeps bypass off', () => {
     const options = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
-    expect(options.tools).toEqual(['Read', 'Glob', 'Grep', 'Edit', 'Write', 'Bash', 'TodoWrite']);
+    expect(options.tools).toEqual([
+      'Read',
+      'Glob',
+      'Grep',
+      'Edit',
+      'Write',
+      'Bash',
+      'TodoWrite',
+      'EnterPlanMode',
+      'ExitPlanMode',
+    ]);
     expect(options.settings.permissions).toMatchObject({
       ask: ['Bash', 'Edit', 'Write'],
       blockReadsOutsideWorkingDirectories: true,

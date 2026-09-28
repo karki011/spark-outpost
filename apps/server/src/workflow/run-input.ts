@@ -33,6 +33,7 @@ export interface RunInput {
   previousMessageId?: string | null;
   resumeKey?: string | null;
   followUp?: string | null;
+  preamble?: string | null;
 }
 
 interface RunRow {

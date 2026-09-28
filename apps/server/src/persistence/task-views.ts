@@ -24,6 +24,7 @@ import {
   type AgentRole,
 } from '@spark-outpost/contracts';
 import { latestPlan, planVersions } from './artifacts.ts';
+import { latestApprovedPlan } from './plan-documents.ts';
 import type { Queryable } from './db.ts';
 import { taskLinks } from './tasks.ts';
 
@@ -220,6 +221,7 @@ async function overview(
   links: readonly TaskLink[],
 ): Promise<TaskOverview> {
   const plan = await latestPlan(db, row.id);
+  const agreed = await latestApprovedPlan(db, row.conversation_id);
   const listRuns: readonly TaskListRun[] = runs;
   const events = [
     ...(await approvalEvents(db, row.id)),
@@ -236,6 +238,7 @@ async function overview(
     closedAt: row.closed_at?.toISOString() ?? null,
     runIds: runs.map((run) => run.id),
     planVersion: plan?.version ?? null,
+    agreedPlanVersion: agreed?.version ?? null,
     items,
     summary: taskSummary(items, listRuns),
     costUsd: sumOrNull(runs.map((run) => run.costUsd)),

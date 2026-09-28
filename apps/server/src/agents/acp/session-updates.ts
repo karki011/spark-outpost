@@ -1,6 +1,7 @@
 import type { ContentBlock, SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk';
 import type { PlanEntry } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../../providers/provider.ts';
+import { PLAN_MODE } from '../../plans/plan-mode.ts';
 import { findPullRequests } from '../../tasks/pr-links.ts';
 import { agentCommands } from './slash-commands.ts';
 
@@ -191,6 +192,7 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
 
   const changeMode = (modeId: string): ProviderOutput[] => {
     if (lockedMode === null || modeId === lockedMode || modeId === unsafeMode) return [];
+    if (modeId === PLAN_MODE) return [];
     unsafeMode = modeId;
     return note(`Warning: ${agentName} switched to ${modeId} mode`);
   };

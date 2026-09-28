@@ -32,6 +32,7 @@ import {
   recordShortcuts,
 } from './build-style.ts';
 import { changesSoFar } from './member-prompts.ts';
+import { observePlanAgreement } from './plan-agreement.ts';
 import { refreshPlan } from './plan-progress.ts';
 import { isLargeDiff } from './risk-rules.ts';
 import { routeBuilder, type RouteContext } from './routing.ts';
@@ -266,6 +267,9 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const scanning = doing ? startScan({ deps, input }, root, taskStartedAt) : null;
     const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
     const { intake, decisions } = await runIntake(deps, input, append, current);
+    await observePlanAgreement({ db: deps.db, runId: lease.runId, input, intake, append }).catch(
+      (error: unknown) => console.error('Could not observe a plan agreement', error),
+    );
     const answers = decisions.start === 'answer';
     const git = doing && (await isGitWorkTree(root));
     const limits = baseLimits(deps, input.provider);

@@ -24,6 +24,8 @@ import {
   recordTokens,
   recordUsage,
 } from './run-metadata.ts';
+import { proposedPlan } from '../plans/codex-plan.ts';
+import { createPlanRecorder } from './plan-recorder.ts';
 import { createTaskRecorder } from './task-recorder.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
 import { prepareTurnSession, type TurnSession } from './turn-session.ts';
@@ -124,6 +126,14 @@ export async function runAgentTurn(
     append,
     options.recordsPlan ?? true,
   );
+  const plans = createPlanRecorder({
+    db: deps.db,
+    runId: lease.runId,
+    conversationId: input.identity.threadId,
+    root: input.projectRoots[0] ?? null,
+    taskId: () => tasks.taskId(),
+    append,
+  });
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
   const meter = (output: ProviderOutput) => {
@@ -196,6 +206,7 @@ export async function runAgentTurn(
             backupAlsoFor: options.backupAlsoFor,
             copyOf: input.copyOf,
             observe: options.observeEdits,
+            plans: plans.hooks,
           })
         : undefined;
     turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
@@ -212,6 +223,7 @@ export async function runAgentTurn(
       ...(input.mode ? { mode: input.mode } : {}),
       ...(approvals ? { approvals } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
+      ...(input.preamble ? { preamble: input.preamble } : {}),
       ...(session ? { session: session.target } : {}),
     })) {
       meter(output);
@@ -249,6 +261,8 @@ export async function runAgentTurn(
     await settleAudit();
     if (control.reason() === 'lease_lost') return result('lease_lost');
     await tasks.replied(text);
+    const codexPlan = proposedPlan(text);
+    if (codexPlan) await plans.propose(codexPlan, 'codex');
     return await ended(result(control.signal.aborted ? 'cancelled' : 'succeeded'));
   } catch (error) {
     if (error instanceof LeaseLostError || control.reason() === 'lease_lost') {

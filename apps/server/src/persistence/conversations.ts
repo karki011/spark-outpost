@@ -11,6 +11,7 @@ import {
 } from '@spark-outpost/contracts';
 import { activityFromEvents, type StepEventRow } from './activity.ts';
 import { conversationAdvice } from './advice.ts';
+import { conversationPlans } from './plan-documents.ts';
 import { conversationOrchestrations } from './orchestrations.ts';
 import { pendingApprovalsForConversation } from './approvals.ts';
 import { attachmentsForMessages, linkAttachments } from './attachments.ts';
@@ -197,6 +198,7 @@ export async function getConversationDetail(
   const approvals = await pendingApprovalsForConversation(db, id);
   const advice = await conversationAdvice(db, id);
   const orchestrations = await conversationOrchestrations(db, id);
+  const plans = await conversationPlans(db, id);
   const attachments = await attachmentsForMessages(
     db,
     messages.rows.map((message) => message.id),
@@ -214,6 +216,7 @@ export async function getConversationDetail(
     approvals,
     advice: advice.byRun,
     orchestrations,
+    plans,
   };
 }
 

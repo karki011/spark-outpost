@@ -40,6 +40,7 @@ export interface IntakeRequest {
   routing: ModelRouting;
   firstMessage: boolean;
   currentTask: { previousRequest: string; summary: string } | null;
+  previousReply?: string | null;
 }
 
 export class AdvisorError extends Error {}

@@ -1,3 +1,4 @@
+import { agreedPlanFor } from '../plans/plan-staleness.ts';
 import { gitDiffBetween, gitDiffSince, headCommit } from '../projects/snapshot.ts';
 import { getSnapshot } from '../persistence/run-snapshots.ts';
 import { builderPrompt, criticPrompt, type ChangedFile } from './context.ts';
@@ -49,8 +50,18 @@ export function checkCommands(s: Session): string[] {
   return s.checks?.commands.map((check) => check.command) ?? [];
 }
 
+export function agreedPlanText(s: Session): Promise<string | null> {
+  return agreedPlanFor(s.deps.db, s.input.identity.threadId, s.input.projectRoots[0] ?? null).catch(
+    (error: unknown) => {
+      console.error('Could not load the agreed plan', error);
+      return null;
+    },
+  );
+}
+
 export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
   const request = s.input.userRequest;
+  const agreedPlan = await agreedPlanText(s);
   if (spawn.role === 'critic') {
     const changes = await changesForReview(s);
     return criticPrompt({
@@ -60,6 +71,7 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
       patch: changes.patch,
       checks: s.checkLines,
       buildStyle: s.buildStyle,
+      agreedPlan,
     });
   }
   return builderPrompt({
@@ -69,5 +81,6 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
     findings: [],
     buildStyle: s.buildStyle,
     checkCommands: checkCommands(s),
+    agreedPlan,
   });
 }

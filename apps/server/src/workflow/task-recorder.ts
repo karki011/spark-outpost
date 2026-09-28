@@ -14,6 +14,7 @@ type LinkOutput = Omit<Extract<ProviderOutput, { kind: 'link' }>, 'kind'>;
 export interface TaskRecorder {
   observe(output: ProviderOutput): Promise<void>;
   replied(text: string): Promise<void>;
+  taskId(): Promise<string | null>;
 }
 
 export function createTaskRecorder(
@@ -80,6 +81,9 @@ export function createTaskRecorder(
     },
     async replied(text) {
       for (const pr of findPullRequests(text)) await recordLink({ ...pr, source: 'agent_text' });
+    },
+    async taskId() {
+      return (await current())?.taskId ?? null;
     },
   };
 }

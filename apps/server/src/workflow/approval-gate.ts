@@ -43,6 +43,11 @@ export interface ObservedDecision {
 
 export type EditObserver = (request: ApprovalRequest, decision: ObservedDecision) => void;
 
+export interface PlanModeHooks {
+  proposed(request: ApprovalRequest & { plan: string }): Promise<string | null>;
+  decided(planId: string, answer: GateAnswer): Promise<void>;
+}
+
 export interface GateDeps {
   db: Db;
   runId: string;
@@ -55,6 +60,7 @@ export interface GateDeps {
   backup: (paths: readonly string[]) => Promise<void>;
   copyOf?: string | null;
   observe?: EditObserver;
+  plans?: PlanModeHooks;
 }
 
 function relativeLabel(request: ApprovalRequest, target: string): string {
@@ -116,6 +122,7 @@ export function approvalPayload(request: ApprovalRequest): ApprovalPayload {
     fullPaths: request.paths,
     diffs,
     truncated,
+    ...(request.plan ? { plan: request.plan } : {}),
   };
 }
 
@@ -185,18 +192,34 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     await deps.backup(request.paths);
   };
 
-  const allow = async (request: ApprovalRequest, note: string): Promise<GateAnswer> => {
+  const allow = async (
+    request: ApprovalRequest,
+    note: string,
+    approvalId?: string,
+  ): Promise<GateAnswer> => {
     const option = allowOption(request.options);
     if (!option)
       return { outcome: 'cancelled', note: `Declined: ${subject(request)} (no allow option)` };
     await grant(request);
-    return { outcome: 'selected', optionId: option.optionId, allowed: true, note };
+    return {
+      outcome: 'selected',
+      optionId: option.optionId,
+      allowed: true,
+      note,
+      ...(approvalId ? { approvalId } : {}),
+    };
   };
 
-  const reject = (request: ApprovalRequest, note: string): GateAnswer => {
+  const reject = (request: ApprovalRequest, note: string, approvalId?: string): GateAnswer => {
     const option = rejectOption(request.options);
     return option
-      ? { outcome: 'selected', optionId: option.optionId, allowed: false, note }
+      ? {
+          outcome: 'selected',
+          optionId: option.optionId,
+          allowed: false,
+          note,
+          ...(approvalId ? { approvalId } : {}),
+        }
       : { outcome: 'cancelled', note };
   };
 
@@ -251,9 +274,17 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       waiting === 0 ? { transition: { status: 'running' } } : undefined,
     );
     const note = userNote(result, what);
-    if (result.status !== 'allowed' || !result.decisionOptionId) return reject(request, note);
+    if (result.status !== 'allowed' || !result.decisionOptionId) {
+      return reject(request, note, result.id);
+    }
     await grant(request);
-    return { outcome: 'selected', optionId: result.decisionOptionId, allowed: true, note };
+    return {
+      outcome: 'selected',
+      optionId: result.decisionOptionId,
+      allowed: true,
+      note,
+      approvalId: result.id,
+    };
   };
 
   const ask = async (
@@ -276,7 +307,10 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     return settle(pending, result, request);
   };
 
-  const review = async (request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer> => {
+  const decideRequest = async (
+    request: ApprovalRequest,
+    signal: AbortSignal,
+  ): Promise<GateAnswer> => {
     const what = subject(request);
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
     if (request.kind === 'execute' && deps.copyOf) await awaitDepsPrep(deps.db, deps.runId);
@@ -298,7 +332,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
         optionId: rejectOption(request.options)?.optionId ?? null,
       });
       observe(request, { verdict: 'reject', by: 'policy', approvalId: denied.id });
-      return reject(request, `Declined: ${what} (${decision.reason})`);
+      return reject(request, `Declined: ${what} (${decision.reason})`, denied.id);
     }
     const option = allowOption(request.options);
     const recorded = await insertApproval(deps.db, newApproval(request, null), {
@@ -318,7 +352,16 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
         : decision.by === 'run_rule'
           ? 'allowed for this run'
           : `your ${involvementLevelLabel(deps.level)} setting`);
-    return allow(request, `Allowed ${what} (${why})`);
+    return allow(request, `Allowed ${what} (${why})`, recorded.id);
+  };
+
+  const review = async (request: ApprovalRequest, signal: AbortSignal): Promise<GateAnswer> => {
+    const plan = request.plan;
+    if (!plan || !deps.plans || signal.aborted) return decideRequest(request, signal);
+    const planId = await deps.plans.proposed({ ...request, plan });
+    const answer = await decideRequest(request, signal);
+    if (planId) await deps.plans.decided(planId, answer);
+    return answer;
   };
 
   return { review };
