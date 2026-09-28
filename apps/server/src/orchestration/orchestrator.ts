@@ -20,6 +20,7 @@ import { budgetUsage, checkBudget, fixRoundShort } from './budget-check.ts';
 import { correctnessFindings, sessionReviewLine, suggestionsLine } from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
 import { confirmsRiskyFirst, KEPT_BY_AUTO_EDIT, riskyChange } from './checkpoint-policy.ts';
+import { destructiveMigrationInPatch, migrationByRule } from './risk-rules.ts';
 import { ask, assume, intakeResponse } from './checkpoint-asks.ts';
 import { assumptionLine, interpretations } from './clarify.ts';
 import { namedFiles } from './context.ts';
@@ -170,6 +171,19 @@ function isGreen(s: Session, files: readonly unknown[]): boolean {
   return files.length > 0 && s.checkBodies.at(-1)?.status !== 'failed';
 }
 
+/**
+ * A destructive statement the change added to a migration when nothing flagged the work as risky
+ * up front (the request read as additive). Full auto flags it in the PR body; Auto-edit asks to
+ * keep.
+ */
+async function unconfirmedRiskyMigration(s: Session): Promise<string | null> {
+  if (s.risky || s.input.mode !== 'do' || s.flow.readOnly) return null;
+  const { patch } = await changesSoFar(s).catch(() => ({ patch: '' }));
+  const statement = patch ? destructiveMigrationInPatch(patch) : null;
+  if (statement) s.risky = `The change adds a destructive migration: ${statement}`;
+  return statement;
+}
+
 function startsFixRound(s: Session, action: Extract<FlowAction, { type: 'spawn' }>): boolean {
   return (
     action.role === 'builder' &&
@@ -290,10 +304,12 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true).catch(
         () => null,
       );
+      const riskyMigration = await unconfirmedRiskyMigration(s);
       return {
         type: 'wrapped',
         filesChanged: changes?.files.length ?? 0,
         ...(checksFailing(s) ? { checksFailing: true } : {}),
+        ...(riskyMigration ? { riskyMigration } : {}),
       };
     }
     case 'keep':
@@ -429,7 +445,8 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       flow: initialFlow(
         decisions.risk,
         input.level,
-        decisions.review || risky !== null,
+        // Additive migrations don't get the risky card, but they still get the Critic.
+        decisions.review || risky !== null || (doing && migrationByRule(input.userRequest)),
         jev !== null,
         confirmFirst,
       ),

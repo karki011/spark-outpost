@@ -250,6 +250,16 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
     await write(turn, 'button.ts', 'export const button = 1;');
   }
   if (turn.text.includes('#story')) await write(turn, 'schema.sql', 'ALTER TABLE t ADD c int;');
+  if (turn.text.includes('#addmigration')) {
+    await write(
+      turn,
+      '004_project_tags.sql',
+      'CREATE TABLE project_tags (project_id int, tag text);',
+    );
+  }
+  if (turn.text.includes('#dropmigration')) {
+    await write(turn, '005_drop_note.sql', 'ALTER TABLE projects DROP COLUMN note;');
+  }
   if (turn.text.includes('#push')) await push(turn);
   if (turn.text.includes('#spend')) await spend(turn);
   if (turn.text.includes('#slowbuild')) {

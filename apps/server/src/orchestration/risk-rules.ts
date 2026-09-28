@@ -8,7 +8,7 @@ import { isSecretPath } from '../projects/path-policy.ts';
 import { namedFiles } from './context.ts';
 
 const DESTRUCTIVE =
-  /\b(?:delete|drop|truncate|wipe|purge|erase|destroy)\b|\brm\s+-\w*r|\breset\s+--hard\b|\bforce[- ]?push\b|\bpush\s+(?:-f|--force)\b|\brewrite (?:the )?(?:git )?history\b|\bmigrat\w*\b[^.\n]{0,40}\b(?:data|database|table|schema|column|rows?)\b|\bremove\s+(?:the |all |every )?(?:files?|folders?|director(?:y|ies)|tables?|columns?|rows?|records?|data|database|branch(?:es)?)\b/i;
+  /\b(?:delete|drop|truncate|wipe|purge|erase|destroy)\b|\brm\s+-\w*r|\breset\s+--hard\b|\bforce[- ]?push\b|\bpush\s+(?:-f|--force)\b|\brewrite (?:the )?(?:git )?history\b|\bmigrat\w*\b[^.\n]{0,40}\b(?:data|rows?|records?)\b|\brenam\w*\b[^.\n]{0,40}\b(?:columns?|tables?)\b|\b(?:alter|change)\w*\b[^.\n]{0,40}\bcolumn\b[^.\n]{0,40}\btypes?\b|\bcolumn types?\b|\bremove\s+(?:the |all |every )?(?:files?|folders?|director(?:y|ies)|tables?|columns?|rows?|records?|data|database|branch(?:es)?)\b/i;
 
 const TRIVIAL_VERB =
   /\b(?:typos?|rename|reword|spelling|comment|comments|bump|format(?:ting)?|lint|whitespace|indent(?:ation)?)\b/i;
@@ -31,6 +31,84 @@ export function destructiveByRule(request: string): boolean {
 }
 
 const MIGRATION = /\bmigrat(?:e|es|ed|ing|ion|ions)\b|\bschema changes?\b|\balter table\b/i;
+
+/**
+ * Request wording for a migration that can lose or rewrite existing data: a drop, rename, type
+ * change, truncate, delete, or a data rewrite. Additive wording (a new table, a nullable column,
+ * an index) is not destructive.
+ */
+const DESTRUCTIVE_SCHEMA_WORDING =
+  /\b(?:drop(?:s|ped|ping)?|truncat\w*|delet(?:e|es|ed|ing)|remov(?:e|es|ed|ing)|purg\w*|wip(?:e|es|ed|ing))\b|\brenam\w*\b[^.\n]{0,40}\b(?:columns?|tables?|fields?)\b|\b(?:columns?|tables?)\b[^.\n]{0,40}\brenam\w*|\bcolumn types?\b|\b(?:alter|chang)\w*\b[^.\n]{0,40}\btypes?\b|\b(?:backfill|rewrit|convert|transform|migrat)\w*\b[^.\n]{0,40}\b(?:existing |old )?(?:data|rows?|records?|values?)\b|\bupdate (?:all|every|the existing|existing) (?:rows|records)\b/i;
+
+export function migrationByRule(request: string): boolean {
+  return MIGRATION.test(request);
+}
+
+/** A migration request whose wording says it drops, renames or rewrites existing data. */
+export function destructiveMigrationWording(request: string): boolean {
+  return MIGRATION.test(request) && DESTRUCTIVE_SCHEMA_WORDING.test(request);
+}
+
+const MIGRATION_FILE =
+  /(?:^|\/)(?:migrations?|migrate|db\/migrate|alembic\/versions|schema)\/|\.sql$|(?:^|\/)schema\.prisma$/i;
+
+const DESTRUCTIVE_SQL: readonly RegExp[] = [
+  /\bdrop\s+(?:table|column|schema|database|type)\b/i,
+  /\balter\s+table\b[^;]*\bdrop\b(?!\s+(?:constraint|index|default|not\s+null)\b)/i,
+  /\brename\s+(?:column\b|to\b)/i,
+  /\balter\s+table\b[^;]*\brename\b/i,
+  /\balter\s+(?:column\s+)?\S+\s+(?:set\s+data\s+)?type\b/i,
+  /\bmodify\s+(?:column\s+)?\S+\s+\w+/i,
+  /\btruncate\b/i,
+  /\b(?:dropTable|dropColumn|dropColumns|renameColumn|renameTable|dropSchema)\s*\(/,
+];
+
+const UNSCOPED_WRITE = /^\s*(?:delete\s+from|update)\b(?![\s\S]*\bwhere\b)/i;
+
+interface PatchFile {
+  path: string;
+  added: string[];
+}
+
+function patchFiles(patch: string): PatchFile[] {
+  const files: PatchFile[] = [];
+  let current: PatchFile | null = null;
+  for (const line of patch.split('\n')) {
+    const header = /^diff --git a\/.+ b\/(.+)$/.exec(line);
+    if (header) {
+      current = { path: header[1]!, added: [] };
+      files.push(current);
+    } else if (current && line.startsWith('+') && !line.startsWith('+++')) {
+      current.added.push(line.slice(1));
+    }
+  }
+  return files;
+}
+
+function statements(lines: readonly string[]): string[] {
+  return lines
+    .map((line) => line.replace(/--.*$/, ''))
+    .join('\n')
+    .split(';')
+    .map((statement) => statement.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+}
+
+/**
+ * The first destructive statement a change adds to a migration file: a drop, rename, type
+ * change, truncate, or a delete or update without WHERE. Null for additive migrations (CREATE
+ * TABLE, ADD COLUMN, CREATE INDEX) and for changes without migrations.
+ */
+export function destructiveMigrationInPatch(patch: string): string | null {
+  for (const file of patchFiles(patch)) {
+    if (!MIGRATION_FILE.test(file.path)) continue;
+    for (const statement of statements(file.added)) {
+      if (DESTRUCTIVE_SQL.some((pattern) => pattern.test(statement))) return statement;
+      if (UNSCOPED_WRITE.test(statement)) return statement;
+    }
+  }
+  return null;
+}
 
 const SECURITY =
   /\b(?:security|auth(?:entic\w*|oriz\w*|n|z)?|login|passwords?|permissions?|oauth|jwt|csrf|xss|(?:sql|command|prompt) injection|encrypt\w*|decrypt\w*|cryptograph\w*|vulnerab\w*|secrets?)\b/i;

@@ -95,7 +95,13 @@ export type FlowEvent =
   | { type: 'verified'; accepted: Verdict | null; reasons: readonly string[] }
   | { type: 'looped'; summary: string; open?: readonly string[] }
   | { type: 'answered'; kind: CheckpointKind; optionId: string; note: string | null }
-  | { type: 'wrapped'; filesChanged: number; checksFailing?: boolean }
+  | {
+      type: 'wrapped';
+      filesChanged: number;
+      checksFailing?: boolean;
+      /** A destructive statement the change added to a migration nobody confirmed first. */
+      riskyMigration?: string;
+    }
   | { type: 'kept' }
   | { type: 'shipped' }
   | { type: 'ship_held'; reason: string }
@@ -528,7 +534,7 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
     case 'answered':
       return answered(state, event);
     case 'wrapped': {
-      const facts = keepFacts(state, event.checksFailing === true);
+      const facts = keepFacts(state, event.checksFailing === true, event.riskyMigration ?? null);
       if (asksToKeep(state.level, event.filesChanged, facts)) {
         const why = keepReason(state.level, facts);
         const line = filesChangedLine(event.filesChanged);
@@ -570,11 +576,16 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
   }
 }
 
-export function keepFacts(state: FlowState, checksFailing: boolean): KeepFacts {
+export function keepFacts(
+  state: FlowState,
+  checksFailing: boolean,
+  riskyMigration: string | null = null,
+): KeepFacts {
   const critic = state.verdict !== null;
   return {
     checksFailing,
     criticUnsatisfied: critic && (state.verdict === 'unclear' || state.review.fixable.length > 0),
+    ...(riskyMigration ? { riskyMigration } : {}),
   };
 }
 
