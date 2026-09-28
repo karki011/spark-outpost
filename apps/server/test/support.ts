@@ -29,30 +29,31 @@ const ALREADY_EXISTS = new Set(['42P04', '23505']);
 export async function ensureWorkerDatabase(): Promise<void> {
   const url = testDatabaseUrl();
   const name = new URL(url).pathname.slice(1);
-  await admin(suiteDatabaseUrl(), async (client) => {
-    const { rowCount } = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [name]);
+  await admin(suiteDatabaseUrl(), async (server) => {
+    const { rowCount } = await server.query('SELECT 1 FROM pg_database WHERE datname = $1', [name]);
     if (rowCount) return;
-    await client.query(`CREATE DATABASE ${pg.escapeIdentifier(name)}`).catch((error: unknown) => {
+    await server.query(`CREATE DATABASE ${pg.escapeIdentifier(name)}`).catch((error: unknown) => {
       if (!ALREADY_EXISTS.has((error as { code?: string }).code ?? '')) throw error;
     });
   });
 }
 
-async function admin<T>(url: string, work: (client: pg.Client) => Promise<T>): Promise<T> {
-  const client = new pg.Client({ connectionString: url });
-  await client.connect();
+const CONNECT_TRIES = 7;
+
+async function admin<T>(url: string, work: (server: Db) => Promise<T>): Promise<T> {
+  const server = createDb(url, { max: 1, connectTries: CONNECT_TRIES });
   try {
-    return await work(client);
+    return await work(server);
   } finally {
-    await client.end();
+    await server.end();
   }
 }
 
 export async function createTestDb(): Promise<TestDb> {
   const url = testDatabaseUrl();
   const schema = `test_${randomUUID().replaceAll('-', '')}`;
-  await admin(url, (client) => client.query(`CREATE SCHEMA ${schema}`));
-  const db = createDb(url, { searchPath: schema, max: POOL_MAX.test });
+  await admin(url, (server) => server.query(`CREATE SCHEMA ${schema}`));
+  const db = createDb(url, { searchPath: schema, max: POOL_MAX.test, connectTries: CONNECT_TRIES });
   await runMigrations(db);
   const workspaceId = await ensureLocalWorkspace(db);
   return {
@@ -60,7 +61,7 @@ export async function createTestDb(): Promise<TestDb> {
     workspaceId,
     async cleanup() {
       await db.end();
-      await admin(url, (client) => client.query(`DROP SCHEMA ${schema} CASCADE`));
+      await admin(url, (server) => server.query(`DROP SCHEMA ${schema} CASCADE`));
     },
   };
 }
