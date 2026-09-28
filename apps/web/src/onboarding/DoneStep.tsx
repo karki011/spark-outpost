@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import type { ProviderId, ProviderSetup } from '@spark-outpost/contracts';
+import { accessFor, type ProviderId, type ProviderSetup } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { UserBlob } from '../brand/UserBlob.tsx';
@@ -32,9 +32,7 @@ function providerItem(provider: ProviderSetup, isDefault: boolean): SummaryItem 
     ? (provider.efforts.find((option) => option.id === connection.effort)?.label ??
       connection.effort)
     : 'Per-chat';
-  const permission =
-    provider.permissions.find((option) => option.id === connection.permission)?.label ??
-    connection.permission;
+  const permission = accessFor(connection.permission, connection.level)?.label ?? 'Ask';
   return {
     key: provider.id,
     icon: <ProviderBlob providerId={provider.id} size={30} expression="happy" animate="always" />,
@@ -44,7 +42,7 @@ function providerItem(provider: ProviderSetup, isDefault: boolean): SummaryItem 
         {isDefault && <span className="tag-default">Default</span>}
       </>
     ),
-    detail: `${model}, ${effort.toLowerCase()} effort, ${permission.toLowerCase()} mode`,
+    detail: `${model}, ${effort.toLowerCase()} effort, permissions: ${permission}`,
   };
 }
 

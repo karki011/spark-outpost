@@ -27,7 +27,7 @@ const keepCard = (page: Page) =>
 const askHow = (page: Page) => page.getByRole('group', { name: 'How did it go?' });
 
 async function keptChange(page: Page, choice: 'Keep' | 'Revert'): Promise<void> {
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Fix the divider #build');
   await allowEdit(page);
   await expect(keepCard(page)).toBeVisible({ timeout: 30_000 });
@@ -107,7 +107,7 @@ test('shows a quiet thumbs row under an answer', async ({ page }) => {
 test('stays quiet when the signals agree: just the thumbs', async ({ page }) => {
   test.setTimeout(90_000);
   writeFileSync(path.join(repo.root, 'check.mjs'), "console.log('ok');\n");
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   const listed = await page.request.get('/api/projects');
   const project = ((await listed.json()) as { id: string; rootPath: string }[]).find(
     (candidate) => candidate.rootPath === repo.root,

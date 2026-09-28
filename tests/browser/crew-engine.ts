@@ -6,7 +6,7 @@ import { expect, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
-export type Level = 'Hands-on' | 'Balanced' | 'Hands-off' | 'Full auto';
+export type Level = 'Ask before edits' | 'Auto-edit' | 'Full auto';
 
 export const CREW_REQUEST = 'Move date handling into one module and update every component';
 
@@ -58,11 +58,22 @@ export async function crewChat(page: Page, repo: CrewRepo, level: Level): Promis
   await panel.getByRole('radio', { name: /^Auto/ }).click();
   await expect(panel.getByRole('radio', { name: /^Auto/ })).toHaveAttribute('aria-checked', 'true');
   await panel.getByRole('tab', { name: /Permissions/ }).click();
-  await panel.getByRole('radio', { name: /^Do/ }).click();
-  const levels = panel.getByRole('radiogroup', { name: 'Involvement level' });
-  await levels.getByRole('radio', { name: new RegExp(`^${level}`) }).click();
-  await expect(panel.getByRole('tab', { name: /Permissions/ })).toContainText(`Do · ${level}`);
+  await pickPermission(page, level);
   await page.keyboard.press('Escape');
+}
+
+export type Permission = 'Ask' | Level;
+
+export async function pickPermission(page: Page, permission: Permission): Promise<void> {
+  const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
+  await panel.getByRole('tab', { name: /Permissions/ }).click();
+  const choices = panel.getByRole('radiogroup', { name: 'Permissions' });
+  await choices.getByRole('radio', { name: permission, exact: true }).click();
+  await expect(choices.getByRole('radio', { name: permission, exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(panel.getByRole('tab', { name: /Permissions/ })).toContainText(permission);
 }
 
 export async function send(page: Page, text: string): Promise<void> {

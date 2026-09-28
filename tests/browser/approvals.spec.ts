@@ -60,13 +60,25 @@ async function doChat(page: Page) {
   const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
   await expect(panel.getByRole('radio', { name: /Fake Fast/ })).toBeVisible();
   await panel.getByRole('tab', { name: /Permissions/ }).click();
-  await panel.getByRole('radio', { name: /^Do/ }).click();
-  const levels = panel.getByRole('radiogroup', { name: 'Involvement level' });
-  await expect(levels.getByRole('radio', { name: /^Balanced/ })).toHaveAttribute(
+  const choices = panel.getByRole('radiogroup', { name: 'Permissions' });
+  await expect(choices.getByRole('radio')).toHaveText([
+    /^Ask/,
+    /^Ask before edits/,
+    /^Auto-edit/,
+    /^Full auto/,
+  ]);
+  await expect(choices.getByRole('radio', { name: 'Ask', exact: true })).toHaveAttribute(
     'aria-checked',
     'true',
   );
-  await expect(panel.getByRole('tab', { name: /Permissions/ })).toContainText('Do · Balanced');
+  await choices.getByRole('radio', { name: 'Ask before edits', exact: true }).click();
+  await expect(
+    choices.getByRole('radio', { name: 'Ask before edits', exact: true }),
+  ).toHaveAttribute('aria-checked', 'true');
+  await expect(panel.getByRole('tab', { name: /Permissions/ })).toContainText('Ask before edits');
+  await expect(page.getByRole('button', { name: /^Model and effort/ })).toContainText(
+    '· Ask before edits',
+  );
   await shot(page, 'level-picker');
   await page.keyboard.press('Escape');
   return page.getByRole('textbox', { name: 'Message' });
@@ -247,20 +259,19 @@ test('Codex offers Do with its own copy and sandbox note', async ({ page }) => {
   await panel.getByRole('tab', { name: 'Codex' }).click();
   await expect(panel.getByRole('tab', { name: 'Codex' })).toHaveAttribute('aria-selected', 'true');
   await panel.getByRole('tab', { name: /Permissions/ }).click();
-  const codexDo = panel.getByRole('radio', { name: /^Do/ });
+  const levels = panel.getByRole('radiogroup', { name: 'Permissions' });
+  const codexDo = levels.getByRole('radio', { name: 'Ask before edits', exact: true });
   await expect(codexDo).not.toHaveAttribute('aria-disabled', 'true');
   await codexDo.click();
   await expect(codexDo).toHaveAttribute('aria-checked', 'true');
-  const levels = panel.getByRole('radiogroup', { name: 'Involvement level' });
-  await expect(levels.getByRole('radio', { name: /^Hands-on/ })).toContainText(
-    'Codex asks before every command and every file change',
-  );
-  await expect(levels.getByRole('radio', { name: /^Balanced/ })).toContainText(
-    'Read-only commands in the project are answered for you',
-  );
-  await expect(levels.getByRole('radio', { name: /^Hands-off/ })).toContainText(
+  await expect(codexDo).toContainText('Read-only commands in the project are answered for you');
+  await expect(levels.getByRole('radio', { name: 'Auto-edit', exact: true })).toContainText(
     'separate git copy',
   );
+  await expect(levels.getByRole('radio', { name: 'Full auto', exact: true })).toContainText(
+    'runs to a draft PR',
+  );
+  await expect(levels.getByRole('radio', { name: /Hands-on/ })).toHaveCount(0);
   await expect(panel).toContainText("Codex's sandbox can read any file on this computer");
   await shot(page, 'codex-do');
   await page.keyboard.press('Escape');

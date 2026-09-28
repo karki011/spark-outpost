@@ -23,7 +23,7 @@ test('Jev finds the change incomplete, so the Builder reruns once one tier up', 
   page,
 }) => {
   test.setTimeout(90_000);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Fix the divider after midnight and add a test #build #unsupported');
   await allowEdit(page);
   await allowEdit(page);
@@ -44,7 +44,7 @@ test('Jev declines to judge the change, so a card asks you before finishing', as
   test.setTimeout(60_000);
   const off = await page.request.patch('/api/profile', { data: { autoContinueSeconds: null } });
   expect(off.ok()).toBe(true);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Fix the divider after midnight #build #declined');
   await allowEdit(page);
   const verify = card(page, /Jev could not verify the change/);

@@ -35,7 +35,10 @@ async function keptChange(page: Page, root: string) {
   await page.getByRole('button', { name: /^Model and effort/ }).click();
   const picker = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
   await picker.getByRole('tab', { name: /Permissions/ }).click();
-  await picker.getByRole('radio', { name: /^Do/ }).click();
+  await picker
+    .getByRole('radiogroup', { name: 'Permissions' })
+    .getByRole('radio', { name: 'Ask before edits', exact: true })
+    .click();
   await page.keyboard.press('Escape');
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Tidy the notes #edit #plan');
@@ -124,6 +127,56 @@ test('Ship offers push only when GitHub is not connected', async ({ page }) => {
   });
   const branch = git(repo.root, 'symbolic-ref', '--short', 'HEAD');
   expect(git(repo.bare, 'rev-parse', branch)).toBe(git(repo.root, 'rev-parse', 'HEAD'));
+});
+
+test('Full auto runs to a draft PR: the reply and the auto-kept card show the PR link', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  const repo = await repoWithRemote(base, 'fullauto');
+  writeFileSync(path.join(repo.root, 'mine.txt'), 'my own edit\n');
+  writeFileSync(FAKE_GH_STATE, 'octo-cli');
+  const response = await page.request.post('/api/projects', { data: { rootPath: repo.root } });
+  expect(response.ok()).toBe(true);
+  await openChats(page);
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  await page.locator('.ctx-repo').click();
+  const menu = page.getByRole('dialog', { name: 'Project folders' });
+  await menu.getByRole('button', { name: /^fullauto/ }).click();
+  await page.keyboard.press('Escape');
+  const button = page.getByRole('button', { name: /^Model and effort/ });
+  await button.click();
+  const picker = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
+  await picker.getByRole('tab', { name: /Permissions/ }).click();
+  await picker
+    .getByRole('radiogroup', { name: 'Permissions' })
+    .getByRole('radio', { name: 'Full auto', exact: true })
+    .click();
+  await page.keyboard.press('Escape');
+  await expect(button).toContainText('· Full auto');
+  const input = page.getByRole('textbox', { name: 'Message' });
+  await input.fill('Tidy the notes #edit #plan');
+  await input.press('Enter');
+
+  await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
+  await expect(page.getByRole('group', { name: /Change a file\?/ })).toHaveCount(0);
+  const keep = page.getByRole('group', { name: /Keep these changes\?/ });
+  await expect(keep).toContainText('Kept by Full auto.');
+  await expect(keep).toContainText('Opened draft PR #1: https://github.com/acme/widgets/pull/1');
+  await expect(keep).toContainText('Your checkout stays on main');
+  const chip = keep.locator('.ship .lchip');
+  await expect(chip).toContainText('acme/widgets#1');
+  await expect(chip).toHaveAttribute('href', 'https://github.com/acme/widgets/pull/1');
+
+  const pulls = (await (await page.request.get(`${STUB_URL}/github-test/pulls`)).json()) as {
+    draft: boolean;
+    base: string;
+    head: string;
+  }[];
+  expect(pulls).toHaveLength(1);
+  expect(pulls[0]).toMatchObject({ draft: true, base: 'main' });
+  expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
+  expect(git(repo.bare, 'diff', '--name-only', 'main', pulls[0]!.head)).toBe('notes.txt');
 });
 
 test('Settings shows the GitHub connection and saves, then removes, a token', async ({ page }) => {

@@ -2,8 +2,8 @@ import { useEffect, useId, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import {
-  involvementLevelLabel,
-  PERMISSION_DO,
+  accessFor,
+  accessUpdate,
   type ChatSettings,
   type ConversationDetail,
   type Orchestration,
@@ -104,11 +104,12 @@ export function ModelPicker({
   const capabilities = capabilitiesFor(provider);
   const model = currentModel(settings, capabilities);
   const efforts = selectableEfforts(capabilities);
-  const permission = setup?.permissions.find((choice) => choice.id === settings.permission);
+  const access = hasRepos ? accessFor(settings.permission, settings.level) : null;
   const pinnedName = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
   const auto = settings.routing === 'auto';
   const thisTurn = autoThisTurn(orchestration);
   const modelName = auto ? (thisTurn ? `Auto · ${thisTurn} this turn` : 'Auto') : pinnedName;
+  const buttonName = access ? `${modelName} · ${access.label}` : modelName;
   const would = autoWouldHaveUsed(orchestration);
   const hint = builderRouteNote(orchestration) ?? (would ? `Jev would have used ${would}` : null);
 
@@ -159,7 +160,7 @@ export function ModelPicker({
     {
       id: 'permission',
       label: 'Permissions',
-      value: permissionSummary(hasRepos, permission?.label, settings),
+      value: hasRepos ? (access?.label ?? 'Default') : 'Chat',
       disabled: !setup,
     },
   ];
@@ -179,7 +180,7 @@ export function ModelPicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={panelId}
-        aria-label={`Model and effort: ${modelName}`}
+        aria-label={`Model and effort: ${buttonName}`}
         onClick={() => {
           setSection('model');
           toggle();
@@ -187,6 +188,7 @@ export function ModelPicker({
       >
         <ProviderBlob providerId={provider} size={18} animate="hover" />
         <span className="mname">{modelName}</span>
+        {access && <span className="maccess">· {access.label}</span>}
         <EffortMeter efforts={efforts} effort={settings.effort} />
         <ChevronIcon />
       </button>
@@ -264,8 +266,7 @@ export function ModelPicker({
                         selected={settings.permission}
                         level={settings.level}
                         hasRepos={hasRepos}
-                        onSelect={(next) => update.mutate({ permission: next })}
-                        onLevel={(next) => update.mutate({ level: next })}
+                        onSelect={(next) => update.mutate(accessUpdate(next))}
                       />
                     )}
                   </ExitingInert>
@@ -279,16 +280,4 @@ export function ModelPicker({
       </div>
     </div>
   );
-}
-
-function permissionSummary(
-  hasRepos: boolean,
-  label: string | undefined,
-  settings: ChatSettings,
-): string {
-  if (!hasRepos) return 'Chat';
-  if (settings.permission === PERMISSION_DO && settings.level) {
-    return `${label ?? 'Do'} · ${involvementLevelLabel(settings.level)}`;
-  }
-  return label ?? 'Default';
 }

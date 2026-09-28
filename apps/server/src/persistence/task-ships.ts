@@ -10,7 +10,6 @@ export interface TaskShip {
   pushedAt: Date | null;
   prUrl: string | null;
   prNumber: number | null;
-  /** Full auto ships commit on the branch without switching the user's checkout. */
   keepsCheckout?: boolean;
 }
 

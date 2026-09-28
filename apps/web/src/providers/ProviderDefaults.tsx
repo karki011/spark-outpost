@@ -1,8 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import {
-  INVOLVEMENT_LEVELS,
-  levelHint,
+  ACCESS_CHOICES,
+  accessChoice,
+  accessFor,
+  accessHint,
+  accessUpdate,
   type CapabilityOption,
   type Choice,
   type ProviderCapabilities,
@@ -23,10 +26,14 @@ function toChoice(id: string, label: string, description: string): Choice {
   return { id, label, description, risky: false, unavailableReason: null };
 }
 
-function levelChoices(provider: string): Choice[] {
-  return INVOLVEMENT_LEVELS.map((level) =>
-    toChoice(level.id, level.label, levelHint(level, provider)),
-  );
+function accessChoices(provider: ProviderSetup): Choice[] {
+  return ACCESS_CHOICES.map((choice) => {
+    const permission = provider.permissions.find((option) => option.id === choice.permission);
+    return {
+      ...toChoice(choice.id, choice.label, accessHint(choice, provider.id)),
+      unavailableReason: permission ? permission.unavailableReason : 'Not offered by this agent.',
+    };
+  });
 }
 
 const PER_CHAT = 'per-chat';
@@ -107,24 +114,15 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
             />
           )}
         </dd>
-        <dt>Permission</dt>
+        <dt>Permissions</dt>
         <dd>
           <ChoicePicker
-            label={`${provider.name} permission`}
-            choices={provider.permissions}
-            value={connection.permission}
-            onChange={(id) => mutation.mutate({ permission: id })}
-          />
-        </dd>
-        <dt>Involvement</dt>
-        <dd>
-          <ChoicePicker
-            label={`${provider.name} involvement level`}
-            choices={levelChoices(provider.id)}
-            value={connection.level}
+            label={`${provider.name} permissions`}
+            choices={accessChoices(provider)}
+            value={accessFor(connection.permission, connection.level)?.id ?? ''}
             onChange={(id) => {
-              const level = INVOLVEMENT_LEVELS.find((option) => option.id === id);
-              if (level) mutation.mutate({ level: level.id });
+              const choice = accessChoice(id);
+              if (choice) mutation.mutate(accessUpdate(choice));
             }}
           />
         </dd>

@@ -17,7 +17,7 @@ test("Claude's plan shows on the approval card, and once approved it is the agre
   page,
 }) => {
   test.setTimeout(90_000);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Add CSV export #planmode #build');
 
   const approval = card(page, /Approve the plan\?/);

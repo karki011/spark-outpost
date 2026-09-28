@@ -9,6 +9,7 @@ import { ThemeCards } from '../theme/ThemeCards.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
 import { AutoContinueSetting } from './AutoContinueSetting.tsx';
+import { ShipFailingChecksSetting } from './ShipFailingChecksSetting.tsx';
 import { JevDiffsSetting } from './JevDiffsSetting.tsx';
 import { CompanionSetting } from './CompanionSetting.tsx';
 import { ProfileSection } from './ProfileSection.tsx';
@@ -196,6 +197,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                     />
                     <AutoContinueSetting seconds={setup.data.profile.autoContinueSeconds} />
                     <JevDiffsSetting enabled={setup.data.profile.jevDiffs} />
+                    <ShipFailingChecksSetting enabled={setup.data.profile.shipFailingChecks} />
                   </>
                 )}
                 {section === 'models' && <ModelsSection />}

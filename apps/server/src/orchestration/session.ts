@@ -38,7 +38,6 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   loopGuard?: Partial<LoopGuardSettings> | false;
   codeScan?: CodeScanner;
   branchPrefix?: string;
-  /** GitHub access for Full auto's draft PR; without it Full auto can still commit and push. */
   shipAccess?: ShipAccess;
 }
 
@@ -99,9 +98,7 @@ export interface Session {
   observations: Promise<void>[];
   jevDiffs: boolean;
   scanReport?: ScanReport | null;
-  /** Set when a "Jev could not verify" card was answered with Finish. */
   unverified?: boolean;
-  /** What Full auto's ship did, for the final reply. */
   shipLine?: string | null;
 }
 

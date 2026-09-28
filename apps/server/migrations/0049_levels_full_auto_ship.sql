@@ -1,4 +1,3 @@
--- Hands-on is gone: its chats, defaults and runs read as Balanced ("Ask before edits").
 UPDATE provider_connections SET level = 'balanced' WHERE level = 'hands-on';
 ALTER TABLE provider_connections DROP CONSTRAINT IF EXISTS provider_connections_level_check;
 ALTER TABLE provider_connections
@@ -25,8 +24,6 @@ UPDATE conversations SET overrides = (
 WHERE jsonb_typeof(overrides) = 'object'
   AND EXISTS (SELECT 1 FROM jsonb_each(overrides) WHERE value->>'level' = 'hands-on');
 
--- Full auto opens a draft PR even when checks still fail, unless this is turned off.
 ALTER TABLE profiles ADD COLUMN ship_failing_checks boolean NOT NULL DEFAULT true;
 
--- A Full auto ship commits on its branch without switching the user's checkout.
 ALTER TABLE task_ships ADD COLUMN keeps_checkout boolean NOT NULL DEFAULT false;

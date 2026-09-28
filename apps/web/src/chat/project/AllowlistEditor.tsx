@@ -86,8 +86,8 @@ export function AllowlistEditor({ project }: { project: Project }) {
             </button>
           </form>
           <p className="allow-note">
-            Used in Do chats at the Balanced and Hands-off levels. A listed command also covers the
-            same command with more arguments. Pushing always asks.
+            Used by chats set to Ask before edits or Auto-edit. A listed command also covers the
+            same command with more arguments. Pushing asks unless it's listed.
           </p>
           {save.isError && (
             <p className="mpop-error" role="alert">

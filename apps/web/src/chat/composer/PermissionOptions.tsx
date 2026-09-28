@@ -1,9 +1,12 @@
 import './permission-options.css';
+import { useId } from 'react';
 import {
-  INVOLVEMENT_LEVELS,
+  ACCESS_CHOICES,
   PERMISSION_DO,
+  accessFor,
+  accessHint,
   doDisclosure,
-  levelHint,
+  type AccessChoice,
   type Choice,
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
@@ -14,8 +17,13 @@ interface PermissionOptionsProps {
   selected: string | null;
   level: InvolvementLevel | null;
   hasRepos: boolean;
-  onSelect: (permission: string) => void;
-  onLevel: (level: InvolvementLevel) => void;
+  onSelect: (choice: AccessChoice) => void;
+}
+
+export function unavailableReason(choices: readonly Choice[], choice: AccessChoice): string | null {
+  const permission = choices.find((option) => option.id === choice.permission);
+  if (!permission) return 'Not offered by this agent.';
+  return permission.unavailableReason;
 }
 
 export function PermissionOptions({
@@ -25,25 +33,29 @@ export function PermissionOptions({
   level,
   hasRepos,
   onSelect,
-  onLevel,
 }: PermissionOptionsProps) {
-  const doing = selected === PERMISSION_DO;
+  const current = accessFor(selected, level);
+  const hintPrefix = useId();
   return (
     <>
-      <div className="rlist" role="radiogroup" aria-label="Mode">
-        {choices.map((choice) => {
-          const unavailable = choice.unavailableReason !== null;
+      <div className="rlist" role="radiogroup" aria-label="Permissions">
+        {ACCESS_CHOICES.map((choice) => {
+          const reason = unavailableReason(choices, choice);
+          const unavailable = reason !== null;
+          const hintId = `${hintPrefix}-${choice.id}`;
           return (
             <button
               key={choice.id}
               type="button"
               className={unavailable ? 'rrow unavailable' : 'rrow'}
               role="radio"
-              aria-checked={choice.id === selected}
+              aria-checked={choice.id === current?.id}
               aria-disabled={unavailable}
-              title={choice.unavailableReason ?? undefined}
+              aria-label={choice.label}
+              aria-describedby={hintId}
+              title={reason ?? undefined}
               onClick={() => {
-                if (!unavailable) onSelect(choice.id);
+                if (!unavailable) onSelect(choice);
               }}
             >
               <i className="radio" />
@@ -52,37 +64,16 @@ export function PermissionOptions({
                   {choice.label}
                   {unavailable && <span className="rtag">Unavailable</span>}
                 </b>
-                <small>{choice.unavailableReason ?? choice.description}</small>
+                <small id={hintId}>{reason ?? accessHint(choice, provider)}</small>
               </span>
             </button>
           );
         })}
       </div>
-      {doing && (
-        <div className="rlist levels" role="radiogroup" aria-label="Involvement level">
-          <p className="mgroup">How involved do you want to be?</p>
-          {INVOLVEMENT_LEVELS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className="rrow"
-              role="radio"
-              aria-checked={option.id === level}
-              onClick={() => onLevel(option.id)}
-            >
-              <i className="radio" />
-              <span>
-                <b>{option.label}</b>
-                <small>{levelHint(option, provider)}</small>
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
       <p className="eff-note">
         {!hasRepos
           ? "This chat has no project folder, so it runs as a plain chat: your AI can't read or change files whichever you pick."
-          : doing
+          : selected === PERMISSION_DO
             ? doDisclosure(provider)
             : 'Ask reads the linked repos and never changes them.'}
       </p>

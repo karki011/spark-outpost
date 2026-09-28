@@ -38,11 +38,8 @@ export interface ShipDeps extends GitHubDeps {
 export class ShipBlockedError extends Error {}
 
 export interface ShipOptions {
-  /** Commit on the branch without switching the user's checkout (Full auto). */
   keepCheckout?: boolean;
-  /** The orchestration ships its own task while its run is still open. */
   duringRun?: boolean;
-  /** Lines put first in the commit message and the PR body, such as "Checks failing". */
   notes?: readonly string[];
 }
 
@@ -64,7 +61,6 @@ export interface ShipPlan {
   modes: ShipMode[];
   notes: string[];
   keepCheckout: boolean;
-  /** The task's own paths, committed from the working tree when the checkout is kept. */
   paths: string[];
 }
 

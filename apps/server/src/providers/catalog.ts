@@ -47,7 +47,7 @@ const ASK_CHOICE: Choice = {
 const doChoice = (unavailableReason: string | null = null): Choice => ({
   id: PERMISSION_DO,
   label: 'Do',
-  description: 'Edits files and runs commands, asking as your involvement level says',
+  description: 'Edits files and runs commands: Ask before edits, Auto-edit or Full auto',
   risky: false,
   unavailableReason,
 });

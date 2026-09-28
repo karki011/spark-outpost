@@ -255,10 +255,6 @@ export async function branchTip(root: string, branch: string): Promise<string | 
 
 type IndexEnv = Record<string, string>;
 
-/**
- * Stages the task's paths from the working tree onto `start` in a throwaway index, so a
- * branch can get a commit without switching or touching the user's checkout and index.
- */
 async function withTaskIndex<T>(
   root: string,
   prefix: string,
@@ -318,7 +314,6 @@ export async function filesAgainst(
   });
 }
 
-/** Commits the task's paths on `branch` (created at `start`) without a checkout; null when nothing changed. */
 export async function commitOnBranch(
   root: string,
   prefix: string,

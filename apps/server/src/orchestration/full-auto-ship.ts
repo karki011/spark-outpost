@@ -45,14 +45,12 @@ function checksFailing(s: Session): boolean {
   return latestChecks(s.checkBodies).some((body) => body.status === 'failed');
 }
 
-/** Records Full auto's Keep as a decided keep card, so the card carries Ship and the PR link. */
-async function autoKeep(s: Session): Promise<void> {
+async function autoKeep(s: Session, shipped: string | null): Promise<void> {
   const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
-  const review = sessionReviewLine(s);
-  const card = acceptCard(
-    changes.files,
-    review ? `${KEPT_BY_FULL_AUTO} ${review}` : KEPT_BY_FULL_AUTO,
-  );
+  const reason = [KEPT_BY_FULL_AUTO, sessionReviewLine(s), shipped]
+    .filter((line): line is string => Boolean(line))
+    .join(' ');
+  const card = acceptCard(changes.files, reason);
   s.checkpoints += 1;
   const kept = await insertApproval(
     s.deps.db,
@@ -104,11 +102,6 @@ function shippedLine(result: ShipResult, plan: ShipPlan, failing: boolean): stri
   return `Committed${commit} on ${result.branch}, not pushed.${why}`;
 }
 
-/**
- * Full auto after the checks, the Critic fix loop and Jev's verdict: keep the change, then
- * one call to shipTask on the task's own branch, without switching the user's checkout.
- * Never merges. Returns `ship_held` to raise the keep card instead of shipping.
- */
 export async function shipFullAuto(s: Session): Promise<FlowEvent> {
   const hit = await checkBudget(s);
   if (hit) return { type: 'budget_exceeded', limit: hit, unstarted: true };
@@ -116,11 +109,13 @@ export async function shipFullAuto(s: Session): Promise<FlowEvent> {
   if (failing && !(await shipsFailingChecks(s.deps.db, s.input.workspaceId))) {
     return { type: 'ship_held', reason: CHECKS_HOLD_REASON };
   }
-  await autoKeep(s);
-  if (!s.taskId) {
-    s.shipLine = 'Full auto kept the change, but it has no task to ship.';
-    return { type: 'shipped' };
-  }
+  s.shipLine = await ship(s, failing);
+  await autoKeep(s, s.shipLine);
+  return { type: 'shipped' };
+}
+
+async function ship(s: Session, failing: boolean): Promise<string> {
+  if (!s.taskId) return 'Full auto kept the change, but it has no task to ship.';
   const notes = [
     failing ? CHECKS_FAILING_NOTE : null,
     s.unverified ? UNVERIFIED_NOTE : null,
@@ -131,14 +126,12 @@ export async function shipFullAuto(s: Session): Promise<FlowEvent> {
     const plan = await planShip(deps, s.taskId, options);
     const mode = plan.blocked ? null : modeFor(plan);
     if (!mode) {
-      s.shipLine = `Full auto kept the change but did not ship it: ${plan.blocked?.message ?? plan.notes[0] ?? 'there is nothing to ship.'}`;
-      return { type: 'shipped' };
+      return `Full auto kept the change but did not ship it: ${plan.blocked?.message ?? plan.notes[0] ?? 'there is nothing to ship.'}`;
     }
     const title = failing ? `[${CHECKS_FAILING_NOTE}] ${plan.task.title}` : plan.task.title;
     const result = await shipTask(deps, s.taskId, { mode, title: title.slice(0, 200) }, options);
-    s.shipLine = shippedLine(result, plan, failing);
+    return shippedLine(result, plan, failing);
   } catch (error) {
-    s.shipLine = `Full auto kept the change but could not ship it: ${(error as Error).message}`;
+    return `Full auto kept the change but could not ship it: ${(error as Error).message}`;
   }
-  return { type: 'shipped' };
 }

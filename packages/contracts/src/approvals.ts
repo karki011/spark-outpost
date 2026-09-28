@@ -12,7 +12,6 @@ export const PERMISSION_DO = 'do' as const;
 
 export const INVOLVEMENT_LEVEL_IDS = ['balanced', 'hands-off', 'full-auto'] as const;
 
-/** Hands-on was removed on September 28, 2026; stored or sent values read as Balanced. */
 export const LEGACY_HANDS_ON = 'hands-on';
 
 export const involvementLevelSchema = z.preprocess(
@@ -66,7 +65,6 @@ export const ASK_ACCESS_CHOICE: AccessChoice = {
   level: null,
 };
 
-/** The one list of permission choices users see, safest first. */
 export const ACCESS_CHOICES: readonly AccessChoice[] = [
   ASK_ACCESS_CHOICE,
   ...INVOLVEMENT_LEVELS.map((level) => ({
@@ -92,7 +90,6 @@ export function accessChoice(id: string): AccessChoice | null {
   return ACCESS_CHOICES.find((choice) => choice.id === id) ?? null;
 }
 
-/** The settings change that selects an access choice: Ask keeps the stored level. */
 export function accessUpdate(choice: AccessChoice): {
   permission: string;
   level?: InvolvementLevel;

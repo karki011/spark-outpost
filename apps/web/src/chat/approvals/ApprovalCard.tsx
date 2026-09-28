@@ -206,9 +206,7 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
       {approval.kind === 'edit' && (
         <p>The change lands in your working tree. You can revert this run afterwards.</p>
       )}
-      {alwaysAsks && (
-        <p className="appr-reason">{approval.reason}, whatever your involvement level.</p>
-      )}
+      {alwaysAsks && <p className="appr-reason">{approval.reason}, whatever your permissions.</p>}
       {pending ? (
         <div className="appr-acts">
           {allow && (

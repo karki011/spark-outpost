@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
   CREW_REQUEST,
+  agentBlock,
   agentHead,
   allowEdit,
   card,
@@ -23,7 +24,7 @@ test.afterEach(() => repo.remove());
 
 test('clarify takes an answer in your own words and works from it', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Make the reports better #build #vague');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify).toBeVisible({ timeout: 30_000 });
@@ -48,7 +49,7 @@ test('clarify takes an answer in your own words and works from it', async ({ pag
 
 test('a vague request gets one short question with likely readings', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Make the reports better #build #vague');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify).toContainText('What should change?', { timeout: 30_000 });
@@ -66,7 +67,7 @@ test('a vague request gets one short question with likely readings', async ({ pa
 
 test('an unsure question asks whether to answer or change the code', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Tidy the heading #build #unsure');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify).toContainText('Answer, or change the code?', { timeout: 30_000 });
@@ -82,7 +83,7 @@ test('a Builder that keeps failing stops on a retry card, which stops and report
   page,
 }) => {
   test.setTimeout(90_000);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Fix the divider #build #failstep 1');
   const retry = card(page, /A step needs another try/);
   await expect(retry).toBeVisible({ timeout: 60_000 });
@@ -96,7 +97,7 @@ test('the loop guard stops a Builder that repeats itself, and Continue resumes i
   page,
 }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Fix the divider #build #repeat 8');
   const stuck = card(page, /Bolt was repeating itself/);
   await expect(stuck).toBeVisible({ timeout: 30_000 });
@@ -111,7 +112,7 @@ test('the loop guard stops a Builder that repeats itself, and Continue resumes i
 
 test('Stop mid-Builder cancels the Builder and the crew', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Hands-off');
+  await crewChat(page, repo, 'Auto-edit');
   await send(page, `${CREW_REQUEST} #build #crew #slowbuild`);
   const builder = agentHead(page, 'Bolt');
   await expect(builder).toContainText(/Working|Thinking/, { timeout: 30_000 });
@@ -128,7 +129,7 @@ test('Stop mid-Builder cancels the Builder and the crew', async ({ page }) => {
 
 test('Fix from the keep card runs another Builder with your note', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Fix the divider #build');
   await allowEdit(page);
   const keep = card(page, /Keep these changes\?/).first();
@@ -146,29 +147,25 @@ test('Fix from the keep card runs another Builder with your note', async ({ page
   expect(repo.notes()).toBe('start\nstep 1\nfixed as asked\n');
 });
 
-test('Balanced: Critic concerns get a fix round and a second review before the keep card', async ({
+test('Auto-edit: Critic concerns get a fix round and a second review, with no keep card', async ({
   page,
 }) => {
   test.setTimeout(90_000);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Auto-edit');
   await send(page, 'Fix the divider #build #crew #bugreview');
-  await allowEdit(page);
   await expect(agentHead(page, 'Hawk')).toBeVisible({ timeout: 30_000 });
-  await allowEdit(page);
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toContainText('Fixed after 1 review round', { timeout: 30_000 });
-  await expect(keep.getByRole('button', { name: 'Fix these findings' })).toHaveCount(0);
-  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
-  await expect(keep).toContainText('Kept the changes.');
   await expect(page.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
+  await expect(page.locator('.crew-turn')).toContainText('has concerns');
+  await expect(agentBlock(page, 'Hawk').last()).toContainText('Verdict: looks good');
+  await expect(card(page, /Keep these changes\?/)).toHaveCount(0);
   expect(repo.notes()).toBe('start\nstep 1\nfixed the review findings\n');
 });
 
-test('Hands-on: "Fix these findings" on the keep card sends the review back to the Builder', async ({
+test('Ask before edits: "Fix these findings" on the keep card sends the review back to the Builder', async ({
   page,
 }) => {
   test.setTimeout(90_000);
-  await crewChat(page, repo, 'Hands-on');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Fix the divider #build #crew #bugreview');
   await allowEdit(page);
   const keep = card(page, /Keep these changes\?/).first();
@@ -197,7 +194,7 @@ async function autoContinueAfter(page: Page, seconds: number): Promise<void> {
 test('an unanswered Jev question counts down and continues with the rules', async ({ page }) => {
   test.setTimeout(60_000);
   await autoContinueAfter(page, 3);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Make the reports better #build #vague');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify.getByRole('button', { name: /^Continue \(\ds\)$/ })).toBeVisible({
@@ -211,7 +208,7 @@ test('an unanswered Jev question counts down and continues with the rules', asyn
 test('typing an answer holds the countdown', async ({ page }) => {
   test.setTimeout(60_000);
   await autoContinueAfter(page, 3);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Make the reports better #build #vague');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify.getByRole('button', { name: /^Continue \(\ds\)$/ })).toBeVisible({

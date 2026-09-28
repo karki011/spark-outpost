@@ -27,7 +27,6 @@ interface RootRow {
 
 const COPY_MARKER = `${path.sep}${WORKTREES_DIR}${path.sep}`;
 
-/** A fix or continue turn inside a worktree copy snapshots the copy; ship its project instead. */
 export function projectRoot(root: string): string {
   const at = root.indexOf(COPY_MARKER);
   return at >= 0 ? root.slice(0, at) : root;

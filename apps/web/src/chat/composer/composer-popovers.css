@@ -29,6 +29,11 @@
   text-overflow: ellipsis;
   max-width: 160px;
 }
+.mbtn .maccess {
+  margin-left: -4px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
 .mbtn .chev {
   color: var(--faint);
   transform: rotate(90deg);

@@ -10,12 +10,10 @@ export function asksToKeep(level: InvolvementLevel, filesChanged: number): boole
   return level === 'balanced';
 }
 
-/** Ask before edits offers "Fix these findings" on the keep card; the other levels fix by themselves. */
 export function fixesFindingsItself(level: InvolvementLevel): boolean {
   return level !== 'balanced';
 }
 
-/** Full auto runs on from auto Keep to a draft PR. */
 export function shipsByItself(level: InvolvementLevel, filesChanged: number): boolean {
   return level === 'full-auto' && filesChanged > 0;
 }

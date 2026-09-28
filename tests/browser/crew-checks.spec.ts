@@ -69,16 +69,16 @@ test('a failing check goes back to the Builder, and the work panel shows both ro
   await failed.click();
   await expect(work.getByLabel('Check output')).toContainText('expected fixed.txt to exist');
   await expect(work.getByRole('list', { name: 'Done' })).toContainText(
-    /Checks passed for Bolt: .*check\.mjs passed/,
+    /Checks passed for Bolt(?:'s copy)?: .*check\.mjs passed/,
   );
 });
 
-test('Balanced: the check approval shows in the thread, Review jumps to it, and the fix turn reuses "Allow for this run"', async ({
+test('Ask before edits: the check approval shows in the thread, Review jumps to it, and the fix turn reuses "Allow for this run"', async ({
   page,
 }) => {
   test.setTimeout(120_000);
   writeFileSync(path.join(repo.root, 'check.mjs'), FAILS_UNTIL_FIXED);
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   const command = `${process.execPath} check.mjs`;
   await useChecks(page, [command]);
   await send(page, `${CREW_REQUEST} #build #crew`);

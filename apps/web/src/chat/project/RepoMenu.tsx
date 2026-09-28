@@ -156,8 +156,8 @@ export function RepoMenu({
         </p>
       )}
       <p className="eff-note repo-note">
-        Ask reads these folders. Do can also change them, asking first as your involvement level
-        says.
+        Ask reads these folders. Ask before edits, Auto-edit and Full auto can also change them,
+        asking first as the permission you picked says.
       </p>
     </div>
   );

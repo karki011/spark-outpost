@@ -87,7 +87,7 @@ export function Thread({
             <p>
               New chat in <b>{repoSummary(repos.map((repo) => repo.name))}</b>.{' '}
               {detail.settings.permission === PERMISSION_DO ? (
-                <>Your AI can change files here, and asks first as your involvement level says.</>
+                <>Your AI can change files here, and asks first as your permissions say.</>
               ) : (
                 <>
                   Your AI can read {repos.length === 1 ? "this folder's" : "these folders'"} files
