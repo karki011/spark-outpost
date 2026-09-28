@@ -77,7 +77,9 @@ export const DEFAULT_RATES: Rates = { hourlyUsd: 100, interventionMinutes: 1 };
 
 const LIST_ITEM = /^\s{0,3}(?:\d+[.)]|[-*+])\s+\S/;
 const HEADING = /^\s{0,3}#{1,4}\s+\S/;
-const OPTION_WORDS = /\b(?:options?|alternatives?|approach(?:es)?|trade-?offs?|pros|cons)\b/i;
+// "Pro:" / "Con:" bullets and "a few ways to …" are options too (the harness's s02 in the rerun).
+const OPTION_WORDS =
+  /\b(?:options?|alternatives?|approach(?:es)?|trade-?offs?|pros|cons|ways\s+(?:to|we\s+could))\b|^\s*(?:[-*+]\s+)?(?:\*\*)?(?:pro|con)s?(?:\*\*)?\s*:/im;
 
 /** A markdown table body row (not the header separator). */
 const TABLE_ROW = /^\s*\|(?!\s*:?-{3,}).+\|\s*$/;

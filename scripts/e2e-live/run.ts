@@ -28,6 +28,7 @@ import { openBrowser } from './ui-driver.ts';
 import { DAY_ARMS, DEV_DAY_HARD_CAP_USD, printDayPlan, runDevDay } from './dev-day/run-day.ts';
 import { DEFAULT_RATES } from './dev-day/score.ts';
 import { selfTest } from './dev-day/selftest.ts';
+import { LEVELS, type LevelKey } from './dev-day/levels.ts';
 import type { BaseArm } from './scenario-types.ts';
 import { prepareVersion, removeVersion } from './versions.ts';
 
@@ -48,6 +49,7 @@ const { values } = parseArgs({
     shots: { type: 'boolean', default: false },
     arms: { type: 'string', default: DAY_ARMS.join(',') },
     'hourly-usd': { type: 'string', default: String(DEFAULT_RATES.hourlyUsd) },
+    'day-level': { type: 'string', default: '' },
   },
 });
 
@@ -249,6 +251,13 @@ async function startStub(dir: string): Promise<Runner['stub']> {
   return stub;
 }
 
+function dayLevel(value: string): LevelKey | undefined {
+  if (!value) return undefined;
+  if (!(value in LEVELS))
+    throw new Error(`Unknown --day-level ${value} (${Object.keys(LEVELS).join(', ')}).`);
+  return value as LevelKey;
+}
+
 async function devDay(dir: string): Promise<void> {
   if (blocks.length > 1) throw new Error('Run the dev-day block on its own.');
   if (values.selftest) {
@@ -277,6 +286,7 @@ async function devDay(dir: string): Promise<void> {
       shots: values.shots,
       keepData: values['keep-data'],
       rates: { ...DEFAULT_RATES, hourlyUsd: Number(values['hourly-usd']) },
+      dayLevel: dayLevel(values['day-level']),
     });
   } finally {
     if (stub) await stopProcess(stub.child);

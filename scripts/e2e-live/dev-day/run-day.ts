@@ -17,7 +17,7 @@ import { DirectClaudeDay, DirectCodexDay } from './direct-day.ts';
 import { FAKE_GITHUB_TOKEN, startGitHubStub, type GitHubStub } from './github-stub.ts';
 import { HarnessDay } from './harness-day.ts';
 import { hiddenCounts, suiteCounts } from './hidden.ts';
-import { DIRECT_LEVEL_LABEL, LEVELS } from './levels.ts';
+import { DEFAULT_LEVEL, DIRECT_LEVEL_LABEL, LEVELS, type LevelKey } from './levels.ts';
 import { anchorFor, pickPassage, quotedMessage } from './quotes.ts';
 import { renderDayReport } from './report-day.ts';
 import {
@@ -157,6 +157,8 @@ export interface DayOptions {
   shots: boolean;
   rates: Rates;
   keepData: boolean;
+  /** Harness: play the day's default-level sessions at this level instead (`--day-level`). */
+  dayLevel?: LevelKey | undefined;
 }
 
 interface ArmState {
@@ -362,6 +364,13 @@ async function save(options: DayOptions, run: DayRun): Promise<string> {
   return path;
 }
 
+/** The sessions to play, with the default-level ones moved to `--day-level` when it is set. */
+export function daySessions(match: RegExp | null, dayLevel?: LevelKey): DaySession[] {
+  return SESSIONS.filter((session) => !match || match.test(session.id)).map((session) =>
+    dayLevel && session.level === DEFAULT_LEVEL ? { ...session, level: dayLevel } : session,
+  );
+}
+
 function newRun(options: DayOptions): DayRun {
   return {
     version: 1,
@@ -387,7 +396,11 @@ function newRun(options: DayOptions): DayRun {
       'direct-codex':
         'codex exec (gpt-6-sol, medium) in a workspace-write sandbox; a thread resumes its codex thread. Cost estimated from tokens.',
     },
-    setup: {},
+    setup: options.dayLevel
+      ? {
+          'day level': `${LEVELS[options.dayLevel].label} for the harness (sessions at ${LEVELS[DEFAULT_LEVEL].label} moved to it; others keep theirs)`,
+        }
+      : {},
     records: [],
   };
 }
@@ -464,7 +477,7 @@ export async function runDevDay(options: DayOptions): Promise<DayRun> {
   const cleanups: (() => Promise<void>)[] = [async () => stub.close()];
   try {
     const states = await armDays(options, stub, cleanups, run);
-    const sessions = SESSIONS.filter((session) => !options.match || options.match.test(session.id));
+    const sessions = daySessions(options.match, options.dayLevel);
     outer: for (const session of sessions) {
       const projected = projectedRound(session, options.arms);
       if (options.runtime === 'acp' && run.spentUsd + projected > options.budgetUsd) {

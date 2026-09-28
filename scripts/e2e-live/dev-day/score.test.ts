@@ -69,6 +69,9 @@ describe('classify', () => {
   it('separates options from a plan and from an answer', () => {
     const options = '## Option 1: a panel\nPros: simple.\n## Option 2: a badge\nTrade-off: noisy.';
     expect(classify(evidence({ reply: options }))).toBe('options');
+    const proCon =
+      'A few ways to surface it:\n\n1. **A badge**\n   - Pro: cheap.\n   - Con: reactive.\n2. **A panel**\n   - Pro: proactive.\n   - Con: new backend.';
+    expect(classify(evidence({ reply: proCon }))).toBe('options');
     const table =
       'Three ways to show them:\n\n| Option | What people see | Trade-off |\n| --- | --- | --- |\n| A note | counts | no paths |\n| A panel | paths | long lists |\n| A page | search | more UI |';
     expect(classify(evidence({ reply: table }))).toBe('options');
