@@ -127,6 +127,11 @@ export async function startDatabase(options: DatabaseOptions): Promise<Database>
     );
   }
   const url = `postgres://${USER}:${encodeURIComponent(password)}@${LOOPBACK}:${port}/${DATABASE_NAME}`;
-  await ensureDatabase(url);
+  try {
+    await ensureDatabase(url);
+  } catch (error) {
+    await server.stop().catch(() => undefined);
+    throw error;
+  }
   return { url, stop: () => server.stop() };
 }

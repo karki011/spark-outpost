@@ -9,6 +9,7 @@ import { freePort, LOOPBACK } from './ports.ts';
 import { startDatabase, type Database } from './postgres.ts';
 import { apiEnv, POSTGRES_LOCALE, workerEnv, type ServerLaunch } from './server-env.ts';
 import { forkService, OutputTail } from './service.ts';
+import { createShutdown } from './shutdown.ts';
 import { Supervisor } from './supervisor.ts';
 import { attachApiToken, openWindow } from './window.ts';
 
@@ -25,9 +26,7 @@ process.env.LC_ALL = POSTGRES_LOCALE;
 
 let database: Database | null = null;
 const supervisors: Supervisor[] = [];
-const startupFailed = new AbortController();
 let window: BrowserWindow | null = null;
-let stopping: Promise<void> | null = null;
 
 function log(source: string) {
   return (line: string) => console.log(`[${source}] ${line}`);
@@ -58,26 +57,22 @@ async function stopEverything(): Promise<void> {
   console.log('[main] Stopped.');
 }
 
-function stopAll(): Promise<void> {
-  stopping ??= stopEverything();
-  return stopping;
-}
+const shutdown = createShutdown({
+  stop: stopEverything,
+  closeWindow: () => window?.destroy(),
+  showError: (message, detail) =>
+    dialog.showMessageBox({
+      type: 'error',
+      title: `${config.appName} could not continue`,
+      message,
+      detail,
+    }),
+  exit: (code) => app.exit(code),
+});
 
 function fail(message: string, detail: string): void {
-  if (startupFailed.signal.aborted) return;
-  console.error(`[main] ${message}\n${detail}`);
-  startupFailed.abort();
-  window?.destroy();
-  void stopAll()
-    .then(() =>
-      dialog.showMessageBox({
-        type: 'error',
-        title: `${config.appName} could not continue`,
-        message,
-        detail,
-      }),
-    )
-    .finally(() => app.exit(1));
+  if (!shutdown.failed.aborted) console.error(`[main] ${message}\n${detail}`);
+  shutdown.fail(message, detail);
 }
 
 async function launch(): Promise<void> {
@@ -111,7 +106,7 @@ async function launch(): Promise<void> {
     apiEnv(launchInfo),
     () => apiReady,
   );
-  await waitForApi(origin, token, startupFailed.signal);
+  await waitForApi(origin, token, shutdown.failed);
   apiReady = true;
   supervise(
     'Spark Outpost Worker',
@@ -140,12 +135,12 @@ if (!app.requestSingleInstanceLock()) {
   for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => app.quit());
   app.on('before-quit', (event) => {
     event.preventDefault();
-    void stopAll().finally(() => app.exit(0));
+    shutdown.quit();
   });
   app
     .whenReady()
     .then(launch)
     .catch((error: Error) => {
-      if (!startupFailed.signal.aborted) fail('Startup failed.', error.message);
+      fail('Startup failed.', error.message);
     });
 }
