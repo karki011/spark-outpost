@@ -355,7 +355,7 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
   - After 60 days Settings shows "Checked N days ago", and the card stays in use.
   - After 120 days the price and blurb are dropped from Jev's line (label, tier and speed stay), because an old price is worse than none.
   - A dev-only check (`pnpm model-cards:check`) lists expired sources. There is no automatic network refresh, because vendor pages are HTML and change shape.
-- **Retirement.** Once a card's `retiresNotBefore` has passed, Settings warns on that model and Jev's line adds "retiring". Haiku 4.5 hits this on October 15, 2026.
+- **Retirement.** A card is retiring from 30 days before its `retiresNotBefore` (`cardRetiring`). From then the harness never picks it for any role, provider and chat defaults skip it, Settings → Models tags it "Retiring <date> · not used by the harness", and Jev's line adds "retiring". A user can still pick it for a chat, with a "retiring on <date>" note on the route. Haiku 4.5 (October 15, 2026) and GPT-5.5 (October 14, 2026) are retiring as of September 28, 2026.
 - **Label drift.** A capability snapshot label that matches no card label means the card is not applied (tier falls back to the pattern), and Settings shows "No card for Sonnet 5.5". This covers aliases such as `sonnet` and `opus[1m]` moving to a new model.
 - **Measured stats.**
   - Only rows recorded under the card's current label count; `agent_model` plus `measured_on` against the card's first `checkedAt` decides this.

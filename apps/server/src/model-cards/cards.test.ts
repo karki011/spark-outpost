@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { measuredSeedSchema, vendorCardsFileSchema } from '@spark-outpost/contracts';
 import seedJson from './measured-seed.json' with { type: 'json' };
 import vendorJson from './vendor-cards.json' with { type: 'json' };
-import { cardFor, effectiveDefaultModel, VENDOR_CARDS } from './cards.ts';
+import { cardFor, effectiveDefaultModel, usableDefault, VENDOR_CARDS } from './cards.ts';
 import { modelTier, oneTierUp, tierInfo, tierLadder, topTier } from '../orchestration/tiers.ts';
 
 const claude = [
@@ -88,6 +88,20 @@ describe('effective default model', () => {
   it("keeps Claude's adapter default, which is not frontier", () => {
     expect(effectiveDefaultModel('claude', claude, 'default')).toBe('default');
     expect(effectiveDefaultModel('claude', claude, 'sonnet')).toBe('sonnet');
+  });
+
+  it('never defaults to a retiring model', () => {
+    const today = new Date('2026-09-28T00:00:00Z');
+    expect(effectiveDefaultModel('claude', claude, 'haiku', today)).toBe('opus[1m]');
+    expect(effectiveDefaultModel('claude', [], 'haiku', today)).toBe('haiku');
+    const earlier = new Date('2026-08-01T00:00:00Z');
+    expect(effectiveDefaultModel('claude', claude, 'haiku', earlier)).toBe('haiku');
+    const onlyRetiring = [{ id: 'gpt-5.5', label: 'GPT-5.5' }, ...codex];
+    expect(effectiveDefaultModel('codex', onlyRetiring, 'gpt-5.5', today)).toBe('gpt-6-sol');
+    expect(usableDefault('claude', 'haiku', today)).toBeNull();
+    expect(usableDefault('claude', 'sonnet', today)).toBe('sonnet');
+    expect(usableDefault('zai', 'haiku', today)).toBe('haiku');
+    expect(usableDefault('claude', null, today)).toBeNull();
   });
 
   it('replaces a frontier adapter default with the top non-frontier model', () => {

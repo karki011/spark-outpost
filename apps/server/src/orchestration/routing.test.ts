@@ -23,17 +23,19 @@ describe('rule routes', () => {
     });
   });
 
-  it('uses the chat model on Auto, the small tier for trivial work and the top tier for destructive', () => {
+  it('uses the chat model on Auto, the middle tier for trivial work and the top tier for destructive', () => {
     expect(routeBuilder(context('auto'), plain)).toMatchObject({
       routedBy: 'rules',
       rule: 'chat model',
       pick: { model: 'sonnet' },
     });
     expect(routeBuilder(context('auto'), { trivial: true, destructive: false })).toMatchObject({
-      rule: 'trivial → small tier',
+      rule: 'trivial → middle tier',
       pick: { model: 'sonnet', modelLabel: 'Sonnet 5' },
-      note: "raised to Sonnet 5: Builders don't run on the fast tier",
     });
+    expect(
+      routeBuilder(context('auto'), { trivial: true, destructive: false }).note,
+    ).toBeUndefined();
     expect(routeBuilder(context('auto'), { trivial: true, destructive: true })).toMatchObject({
       rule: 'destructive → top tier',
       pick: { model: 'opus[1m]' },

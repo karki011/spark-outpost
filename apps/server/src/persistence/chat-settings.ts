@@ -12,7 +12,7 @@ import {
   type ProviderId,
   type UpdateChatSettingsRequest,
 } from '@spark-outpost/contracts';
-import { cardFor, effectiveDefaultModel } from '../model-cards/cards.ts';
+import { cardFor, effectiveDefaultModel, usableDefault } from '../model-cards/cards.ts';
 import { catalogEntry } from '../providers/catalog.ts';
 import { firstReportedEffort, reportedEfforts } from '../providers/efforts.ts';
 import type { Queryable } from './db.ts';
@@ -96,6 +96,7 @@ async function connectionDefaults(
         row.provider,
         {
           ...row,
+          model: usableDefault(row.provider, row.model),
           effort: firstReportedEffort([row.effort], offered),
           modes: modes ?? [],
           options: options ?? [],

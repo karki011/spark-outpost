@@ -89,10 +89,12 @@ describe('card text for Jev', () => {
     expect(cardText(sonnet, null, later)).toBe('Sonnet 5: mid tier, fast');
   });
 
-  it('marks a retiring model', () => {
+  it('marks a model retiring within 30 days', () => {
     const afterRetirement = new Date('2026-10-20T00:00:00Z');
     expect(staleness(haiku, afterRetirement).retiring).toBe(true);
     expect(cardText(haiku, null, afterRetirement)).toMatch(/; retiring$/);
+    expect(staleness(haiku, new Date('2026-09-28T00:00:00Z')).retiring).toBe(true);
+    expect(staleness(haiku, new Date('2026-09-01T00:00:00Z')).retiring).toBe(false);
   });
 
   it('describes providers within the budget, reflecting whether Do is available', () => {

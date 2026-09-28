@@ -351,6 +351,7 @@ export async function startScenario(
   scenario: Scenario,
   level: InvolvementLevel,
   routing: 'auto' | 'pinned' = 'auto',
+  model = 'sonnet',
   agentMode: string | null = modeForLegacy('claude', scenario.mode, level),
 ) {
   const { conversationId } = await linkedConversation(t, root);
@@ -362,14 +363,7 @@ export async function startScenario(
     t.db,
     conversationId,
     { id: randomUUID(), content: scenario.text },
-    {
-      provider: 'claude',
-      model: 'sonnet',
-      effort: 'medium',
-      permission: scenario.mode,
-      agentMode,
-      level,
-    },
+    { provider: 'claude', model, effort: 'medium', permission: scenario.mode, agentMode, level },
   );
   return { conversationId, runId: sent.run.id };
 }

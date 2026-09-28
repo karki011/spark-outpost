@@ -146,6 +146,7 @@ describe('checkpoints', () => {
       TRIVIAL,
       'balanced',
       'auto',
+      'sonnet',
       'acceptEdits',
     );
     const answers: Answerer = (approval) =>
@@ -166,6 +167,7 @@ describe('checkpoints', () => {
       TRIVIAL,
       'balanced',
       'auto',
+      'sonnet',
       'acceptEdits',
     );
     let fixed = false;
