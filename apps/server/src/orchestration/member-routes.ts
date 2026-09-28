@@ -2,7 +2,7 @@ import { agentLabel, nextCrewName, type AgentPick, type AgentRole } from '@spark
 import { POLICY_VERSION } from '../advisor/policy.ts';
 import { whyLine } from '../model-cards/why.ts';
 import { insertDecision, usedNames } from '../persistence/orchestrations.ts';
-import { complexByJev, complexByScan, firstSignal } from './builder-complexity.ts';
+import { complexByBreadth, complexByJev, firstSignal } from './builder-complexity.ts';
 import { belowFloor, FLOOR_REASON } from './builder-floor.ts';
 import {
   keepSession,
@@ -36,8 +36,10 @@ function jevTier(s: Session) {
 }
 
 export function builderFacts(s: Session): RouteFacts {
-  const complex = firstSignal(complexByScan(s.scanReport), complexByJev(s.intake.body.jev));
-  return { ...s.facts, complex };
+  const jev = s.intake.body.jev;
+  const breadth = complexByBreadth(s.scanReport, s.input.userRequest, jev);
+  const complex = firstSignal(breadth.complex, complexByJev(jev));
+  return { ...s.facts, complex, ...(breadth.setAside ? { setAside: breadth.setAside } : {}) };
 }
 
 function topReason(route: MemberRoute, facts: RouteFacts, s: Session): string | null {

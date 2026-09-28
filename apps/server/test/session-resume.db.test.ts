@@ -7,8 +7,9 @@ import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import { closeConversationSessions } from '../src/persistence/provider-sessions.ts';
-import { getRun } from '../src/persistence/runs.ts';
+import { getRun, requestCancel } from '../src/persistence/runs.ts';
 import type { Provider } from '../src/providers/provider.ts';
+import { STOPPED_NOTE } from '../src/workflow/session-decision.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { CLAUDE_MODELS, connectProviders } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
@@ -111,5 +112,48 @@ describe('chat turns reuse the agent session', { timeout: 60_000 }, () => {
     expect(sessions[0]).toMatchObject({ close_reason: 'started fresh' });
     expect(sessions[1]).toMatchObject({ close_reason: null });
     expect(sessions[1]!.session_id).not.toBe(first!.session_id);
+  });
+});
+
+describe('a chat turn the user stopped', { timeout: 60_000 }, () => {
+  it('resumes the same session with a stop note on the next message', async () => {
+    const { id } = await createConversation(t.db, t.workspaceId, randomUUID());
+    const sent = await sendUserMessage(
+      t.db,
+      id,
+      { id: randomUUID(), content: 'Tell me a long story #slow' },
+      {
+        provider: 'claude',
+        model: 'sonnet',
+        effort: 'medium',
+        permission: 'ask',
+        level: 'balanced',
+      },
+    );
+    worker.wake();
+    await eventually(async () => {
+      const { rows } = await t.db.query(
+        `SELECT 1 FROM run_events WHERE run_id = $1 AND type = 'TEXT_MESSAGE_CONTENT'`,
+        [sent.run.id],
+      );
+      return rows.length > 2 ? true : null;
+    }, 20_000);
+    await requestCancel(t.db, sent.run.id);
+    const stopped = await eventually(async () => {
+      const current = await getRun(t.db, sent.run.id);
+      return current?.finishedAt ? current : null;
+    }, 20_000);
+    expect(stopped.status).toBe('cancelled');
+
+    const next = await say(id, 'go on');
+    expect(next).toContain('Continued session');
+    const sessions = await sessionIds(id);
+    expect(sessions).toHaveLength(1);
+    const stored = JSON.parse(
+      readFileSync(join(store, `${sessions[0]!.session_id}.json`), 'utf8'),
+    ) as { prompts: string[] };
+    expect(stored.prompts).toHaveLength(2);
+    expect(stored.prompts[1]).toContain(STOPPED_NOTE);
+    expect(stored.prompts[1]).toContain('go on');
   });
 });

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import request from 'supertest';
@@ -7,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { requestCancel } from '../src/persistence/runs.ts';
 import { KEPT_FOR_SESSION } from '../src/orchestration/session-keep.ts';
+import { STOPPED_NOTE, STOPPED_REPLY } from '../src/workflow/session-decision.ts';
 import {
   SCENARIOS,
   connectProviders,
@@ -142,6 +144,102 @@ describe('task-scoped Builder sessions', () => {
       [oldTask],
     );
     expect(tasks[0]!.status).toBe('closed');
+  }, 60_000);
+});
+
+interface BuilderSessionRow {
+  session_id: string;
+  agent_key: string;
+  last_reply_hash: string | null;
+  close_reason: string | null;
+}
+
+async function builderSessions(conversationId: string): Promise<BuilderSessionRow[]> {
+  const { rows } = await t.db.query<BuilderSessionRow>(
+    `SELECT session_id, agent_key, last_reply_hash, close_reason FROM provider_sessions
+     WHERE conversation_id = $1 AND starts_with(agent_key, 'key:') ORDER BY created_at`,
+    [conversationId],
+  );
+  return rows;
+}
+
+function fakePrompts(sessionId: string): string[] {
+  const stored = JSON.parse(readFileSync(join(store, `${sessionId}.json`), 'utf8')) as {
+    prompts: string[];
+  };
+  return stored.prompts;
+}
+
+async function stopMidBuild(script: JevScript) {
+  harness = startOrchestrator(t, jevFetch(script), { sessions: store });
+  const slow = { ...TRIVIAL, text: `${TRIVIAL.text} #slowbuild` };
+  const first = await startScenario(t, root, slow, 'hands-off');
+  await eventually(async () => {
+    const rows = await builderSessions(first.conversationId);
+    const notes = await readFile(join(root, 'notes.txt'), 'utf8').catch(() => '');
+    return rows.length > 0 && notes.includes('step 1') ? true : null;
+  }, 30_000);
+  await requestCancel(t.db, first.runId);
+  const { orchestration } = await driveToEnd(t, first.conversationId, first.runId);
+  expect(orchestration.status).toBe('cancelled');
+  return first;
+}
+
+describe('continuing after Stop', () => {
+  it('resumes the stopped Builder session with a stop note and the files it had changed', async () => {
+    const script: JevScript = { calls: [], scenario: TRIVIAL };
+    const first = await stopMidBuild(script);
+    const [stopped] = await builderSessions(first.conversationId);
+    expect(stopped).toMatchObject({ last_reply_hash: STOPPED_REPLY, close_reason: null });
+    const firstTask = (await builderRow(first.runId)).task_id;
+
+    script.scenario = { ...TRIVIAL, continuesTask: 0.95 };
+    const second = await secondTurn(first.conversationId, 'continue #build');
+    expect(second.orchestration.status).toBe('succeeded');
+    expect((await builderRow(second.runId)).task_id).toBe(firstTask);
+    expect(await sessionSteps(second.runId)).toContain('Continued session');
+    const rows = await builderSessions(first.conversationId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      session_id: stopped!.session_id,
+      agent_key: stopped!.agent_key,
+      close_reason: null,
+    });
+    expect(rows[0]!.last_reply_hash).not.toBe(STOPPED_REPLY);
+    const prompts = fakePrompts(stopped!.session_id);
+    expect(prompts).toHaveLength(2);
+    expect(prompts[1]).toContain(STOPPED_NOTE);
+    expect(prompts[1]).toContain('`notes.txt`');
+    expect(prompts[1]).toContain('continue #build');
+    const notes = await readFile(join(root, 'notes.txt'), 'utf8');
+    expect(notes).toContain('step 1');
+  }, 60_000);
+
+  it('starts a fresh Builder session when the last turn crashed instead', async () => {
+    const script: JevScript = { calls: [], scenario: TRIVIAL };
+    harness = startOrchestrator(t, jevFetch(script), { sessions: store });
+    const first = await startScenario(t, root, TRIVIAL, 'hands-off');
+    await driveToEnd(t, first.conversationId, first.runId);
+    // What a turn cut off by a crash leaves: the session started, no reply and no stop marker.
+    await t.db.query(
+      'UPDATE provider_sessions SET last_reply_hash = NULL WHERE conversation_id = $1',
+      [first.conversationId],
+    );
+    const [crashed] = await builderSessions(first.conversationId);
+
+    script.scenario = { ...TRIVIAL, continuesTask: 0.95 };
+    const second = await secondTurn(first.conversationId, 'continue #build');
+    expect(second.orchestration.status).toBe('succeeded');
+    expect(await sessionSteps(second.runId)).not.toContain('Continued session');
+    const rows = await builderSessions(first.conversationId);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      session_id: crashed!.session_id,
+      close_reason: 'last turn did not finish',
+    });
+    expect(rows[1]!.session_id).not.toBe(crashed!.session_id);
+    expect(rows[1]!.close_reason).toBeNull();
+    expect(fakePrompts(rows[1]!.session_id).join('\n')).not.toContain(STOPPED_NOTE);
   }, 60_000);
 });
 
