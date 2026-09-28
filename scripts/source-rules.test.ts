@@ -40,4 +40,16 @@ describe('checkSource', () => {
   it('allows the shell shebang', () => {
     expect(checkSource('a.sh', '#!/usr/bin/env bash\nset -e\n')).toEqual([]);
   });
+
+  it('flags native selects in the web app', () => {
+    const text = 'export const A = () => (\n  <select aria-label="Run" />\n);\n';
+    expect(checkSource('apps/web/src/a.tsx', text)).toEqual([
+      {
+        file: 'apps/web/src/a.tsx',
+        line: 2,
+        message: 'Native <select>; use ui/ChoicePicker.tsx',
+      },
+    ]);
+    expect(checkSource('apps/server/src/a.tsx', text)).toEqual([]);
+  });
 });

@@ -5,6 +5,7 @@ import type {
   ProtocolDirection,
   ProtocolLogEntry,
 } from '@spark-outpost/contracts';
+import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { ChevronIcon } from '../ui/icons.tsx';
 import { useDebouncedValue } from '../ui/use-debounced-value.ts';
 import { auditApi, auditKeys, type LogFilters } from './audit-api.ts';
@@ -126,43 +127,36 @@ export function AuditLogs({
   return (
     <>
       <div className="lf">
-        <select
-          aria-label="Run"
+        <ChoicePicker
+          label="Run"
+          choices={runs.map((candidate, index) => ({
+            id: candidate.runId,
+            label: runOption(candidate, index),
+          }))}
           value={runId}
-          onChange={(event) => {
-            setRunId(event.target.value);
+          onChange={(id) => {
+            setRunId(id);
             setMethod('');
           }}
-        >
-          {runs.map((candidate, index) => (
-            <option key={candidate.runId} value={candidate.runId}>
-              {runOption(candidate, index)}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Direction"
+        />
+        <ChoicePicker
+          label="Direction"
+          choices={DIRECTIONS}
           value={direction}
-          onChange={(event) => setDirection(event.target.value as ProtocolDirection | 'all')}
-        >
-          {DIRECTIONS.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Method"
+          onChange={(id) => {
+            const next = DIRECTIONS.find((option) => option.id === id);
+            if (next) setDirection(next.id);
+          }}
+        />
+        <ChoicePicker
+          label="Method"
+          choices={[
+            { id: '', label: 'All methods' },
+            ...run.methods.map((name) => ({ id: name, label: name })),
+          ]}
           value={method}
-          onChange={(event) => setMethod(event.target.value)}
-        >
-          <option value="">All methods</option>
-          {run.methods.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
+          onChange={setMethod}
+        />
         <input
           className="lf-q"
           type="search"

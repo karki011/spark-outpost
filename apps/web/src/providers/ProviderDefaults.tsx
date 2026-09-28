@@ -17,7 +17,7 @@ import {
   selectableEfforts,
 } from '../chat/composer/model-options.ts';
 import { withCurrentMode } from '../chat/composer/mode-summary.ts';
-import { ChoicePicker } from './ChoicePicker.tsx';
+import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 
 function toChoice(id: string, label: string, description: string): Choice {
   return { id, label, description, risky: false, unavailableReason: null };

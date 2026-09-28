@@ -166,7 +166,7 @@
   align-items: center;
   margin: 4px 0 10px;
 }
-.lf select,
+.lf .field-button,
 .lf-q {
   padding: 6px 10px;
   border: 1px solid var(--line);
@@ -175,14 +175,17 @@
   font-size: 13px;
   color: var(--text);
 }
-.lf select {
+.lf .choice-picker {
   max-width: 100%;
+}
+.lf .field-button {
+  padding-right: 30px;
 }
 .lf-q {
   flex: 1;
   min-width: 170px;
 }
-.lf select:focus-visible,
+.lf .field-button:focus-visible,
 .lf-q:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
