@@ -23,7 +23,7 @@ const definition: AgentDefinition = {
 };
 const launch = {
   command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
+  args: [join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 const provider = createAcpProvider({ definition, launch, cancelGraceMs: 2_000 });
 const settings: AgentSettings = { method: 'cli', model: null, modelLabel: null, effort: null };

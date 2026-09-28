@@ -67,7 +67,7 @@ export async function connectProviders(t: TestDb, jev = true): Promise<void> {
 
 const launch = {
   command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
+  args: [join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 
 function sessionEnv(store: string | undefined): Record<string, string> {

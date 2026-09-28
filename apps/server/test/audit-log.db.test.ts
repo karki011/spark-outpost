@@ -157,11 +157,7 @@ describe('worker audit recording with an ACP agent', { timeout: 30_000 }, () => 
       definition: { ...agentDefinitions.codex, name: 'Fake', ...FAKE_AGENT_MODES },
       launch: {
         command: process.execPath,
-        args: [
-          '--import',
-          import.meta.resolve('tsx'),
-          join(import.meta.dirname, 'fake-acp-agent.ts'),
-        ],
+        args: [join(import.meta.dirname, 'fake-acp-agent.ts')],
       },
     });
     worker = startWorker({

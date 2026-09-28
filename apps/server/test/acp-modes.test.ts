@@ -15,7 +15,7 @@ import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 const launch = {
   command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
+  args: [join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 const env = {
   ...childEnvironment(process.env),

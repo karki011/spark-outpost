@@ -20,7 +20,7 @@ import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 const KEY = 'zai-test-key-0123456789abcdef.QwErTyUiOp';
 const launch = {
   command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
+  args: [join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 const FAKE_MODELS = JSON.stringify([
   ['default', 'Default (recommended)'],

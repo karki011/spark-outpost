@@ -10,7 +10,7 @@ import type { GateAnswer, PermissionGate, ProviderOutput } from '../src/provider
 
 const launch = {
   command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
+  args: [join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 const codex = createAcpProvider({
   definition: agentDefinitions.codex,

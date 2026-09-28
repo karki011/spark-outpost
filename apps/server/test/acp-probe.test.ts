@@ -8,7 +8,7 @@ import { childEnvironment } from '../src/setup/environment.ts';
 const definition: AgentDefinition = { ...agentDefinitions.codex, name: 'Fake' };
 const launch = {
   command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
+  args: [join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 const probe = (env: Record<string, string> = {}) =>
   probeCapabilities(definition, { launch, env: { ...childEnvironment(process.env), ...env } });
