@@ -1,4 +1,5 @@
 import type { McpCheck, McpServerSource, McpTransport } from '@spark-outpost/contracts';
+import { countLabel } from '../../ui/count-label.ts';
 
 const TOOL_LABELS: Record<string, string> = {
   'claude-code': 'Claude Code',
@@ -31,5 +32,5 @@ export function checkLine(check: McpCheck | null, fingerprint: string): string {
   const stale = check.fingerprint !== fingerprint ? ' (before the last change)' : '';
   if (!check.ok) return `Failed${stale}`;
   const count = check.tools.length;
-  return `Connected · ${count} ${count === 1 ? 'tool' : 'tools'}${stale}`;
+  return `Connected · ${countLabel(count, 'tool')}${stale}`;
 }

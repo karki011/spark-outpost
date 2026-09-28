@@ -9,14 +9,19 @@ import { ThemeCards } from '../theme/ThemeCards.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
 import { AutoContinueSetting } from './AutoContinueSetting.tsx';
-import { ShipFailingChecksSetting } from './ShipFailingChecksSetting.tsx';
-import { JevDiffsSetting } from './JevDiffsSetting.tsx';
 import { CompanionSetting } from './CompanionSetting.tsx';
 import { ProfileSection } from './ProfileSection.tsx';
+import { ProfileSwitchSetting } from './ProfileSwitchSetting.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
 import '../onboarding/tools.css';
 import './settings.css';
+
+const JEV_DIFFS_DISCLOSURE =
+  'Sends the diff and file paths of each proposed edit to TypeSafe for observation-only checks that never block or allow anything, and the final diff of a change so Jev can verify it: a change Jev finds incomplete is redone once by a stronger model. TypeSafe does not train on it.';
+
+const SHIP_FAILING_CHECKS_HINT =
+  'When the project checks still fail after the fix turns, Full auto opens the draft PR anyway and marks it "Checks failing". Turn this off to stop at the keep card instead. Full auto never merges.';
 
 export type SettingsSection =
   'profile' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'mcp' | 'look';
@@ -215,8 +220,18 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                       defaultProvider={setup.data.profile.defaultProvider}
                     />
                     <AutoContinueSetting seconds={setup.data.profile.autoContinueSeconds} />
-                    <JevDiffsSetting enabled={setup.data.profile.jevDiffs} />
-                    <ShipFailingChecksSetting enabled={setup.data.profile.shipFailingChecks} />
+                    <ProfileSwitchSetting
+                      enabled={setup.data.profile.jevDiffs}
+                      label="Send code diffs to Jev for safety checks"
+                      hint={JEV_DIFFS_DISCLOSURE}
+                      toUpdate={(value) => ({ jevDiffs: value })}
+                    />
+                    <ProfileSwitchSetting
+                      enabled={setup.data.profile.shipFailingChecks}
+                      label="Full auto opens a draft PR when checks still fail"
+                      hint={SHIP_FAILING_CHECKS_HINT}
+                      toUpdate={(value) => ({ shipFailingChecks: value })}
+                    />
                   </>
                 )}
                 {section === 'models' && <ModelsSection />}
