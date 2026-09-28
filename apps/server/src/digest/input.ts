@@ -1,4 +1,5 @@
 import { redactText } from '../audit/redact.ts';
+import { ellipsize, oneLine } from './text.ts';
 
 export const DIGEST_CHAT_LIMIT = 20;
 export const DIGEST_INPUT_MAX_CHARS = 12_000;
@@ -43,12 +44,11 @@ const OFFER =
   /\?\s*$|\b(want me to|shall i|should i|would you like|do you want|let me know if|i can also)\b/i;
 
 function clip(text: string, max: number): string {
-  const clean = redactText(text).replace(/\s+/g, ' ').trim();
-  return clean.length <= max ? clean : `${clean.slice(0, max - 1).trimEnd()}…`;
+  return ellipsize(oneLine(redactText(text)), max);
 }
 
 function tail(text: string, max: number): string {
-  const clean = redactText(text).replace(/\s+/g, ' ').trim();
+  const clean = oneLine(redactText(text));
   return clean.length <= max ? clean : `…${clean.slice(clean.length - max + 1).trimStart()}`;
 }
 
@@ -136,7 +136,7 @@ function dataBlock(chats: readonly ActivityChat[], snapshot: ActivitySnapshot): 
   return JSON.stringify(data).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e');
 }
 
-export function fittedChats(snapshot: ActivitySnapshot): ActivityChat[] {
+function fittedChats(snapshot: ActivitySnapshot): ActivityChat[] {
   const newest = snapshot.chats
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, DIGEST_CHAT_LIMIT);

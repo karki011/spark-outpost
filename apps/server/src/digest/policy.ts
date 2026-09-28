@@ -1,10 +1,10 @@
 import type { DigestStatus, DigestTrigger } from '@spark-outpost/contracts';
 
 const MINUTE = 60_000;
-export const DIGEST_AUTO_AFTER_MS = 60 * MINUTE;
+const DIGEST_AUTO_AFTER_MS = 60 * MINUTE;
 export const DIGEST_MIN_GAP_MS = 10 * MINUTE;
-export const DIGEST_DEFAULT_WINDOW_MS = 24 * 60 * MINUTE;
-export const DIGEST_MAX_WINDOW_MS = 7 * 24 * 60 * MINUTE;
+const DIGEST_DEFAULT_WINDOW_MS = 24 * 60 * MINUTE;
+const DIGEST_MAX_WINDOW_MS = 7 * 24 * 60 * MINUTE;
 
 export interface LastDigest {
   status: DigestStatus;

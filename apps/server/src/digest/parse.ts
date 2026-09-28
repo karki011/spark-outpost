@@ -12,15 +12,15 @@ import {
   type DigestSuggestion,
 } from '@spark-outpost/contracts';
 import { fallbackHeadline } from './stats.ts';
+import { ellipsize, oneLine } from './text.ts';
 
 function clip(text: string, max: number): string {
-  const clean = text.replace(/\s+/g, ' ').trim();
-  return clean.length <= max ? clean : `${clean.slice(0, max - 1).trimEnd()}…`;
+  return ellipsize(oneLine(text), max);
 }
 
 function headlineOf(raw: string | undefined, stats: DigestStats): string {
-  const clean = raw?.replace(/\s+/g, ' ').trim();
-  if (clean && clean.length > 0 && clean.length <= DIGEST_HEADLINE_MAX_LENGTH) return clean;
+  const clean = oneLine(raw ?? '');
+  if (clean.length > 0 && clean.length <= DIGEST_HEADLINE_MAX_LENGTH) return clean;
   return fallbackHeadline(stats);
 }
 
