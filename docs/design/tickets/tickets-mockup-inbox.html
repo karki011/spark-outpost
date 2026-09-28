@@ -1773,7 +1773,7 @@ function shellHTML(){
   const q=location.search;
   return `<div class="mock-bar" role="region" aria-label="Mockup controls">
     <span class="mock-tag">Sample data</span><b class="vh">Tickets mockup: inbox</b>
-    <nav class="mock-nav" aria-label="Screens"><span>Screen</span><a href="tickets-mockup-inbox.html${q}" aria-current="page">Tickets</a><a href="home-brief-mockup.html${q}">Home brief</a></nav>
+    <nav class="mock-nav" aria-label="Screens"><span>Screen</span><a href="tickets-mockup-inbox.html${q}" aria-current="page">Tickets</a><a href="home-brief-mockup.html${q}">Home</a></nav>
     <nav class="mock-nav" aria-label="States" id="stateNav"><span>State</span>${STATES.map(([h,l])=>`<a href="#${h}" data-state="${h}">${l}</a>`).join("")}</nav>
     <div class="mock-theme"><div class="seg" id="themeSeg" style="--n:2" role="radiogroup" aria-label="Theme"><span class="seg-ind" style="transform:translateX(${th==="dark"?100:0}%)"></span><button role="radio" data-act="theme" data-v="light" aria-checked="${th==="light"}">Light</button><button role="radio" data-act="theme" data-v="dark" aria-checked="${th==="dark"}">Dark</button></div></div>
   </div>
