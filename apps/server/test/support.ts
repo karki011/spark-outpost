@@ -10,11 +10,32 @@ export interface TestDb {
   cleanup(): Promise<void>;
 }
 
-export function testDatabaseUrl(): string {
+function suiteDatabaseUrl(): string {
   const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!url)
     throw new Error('pnpm test:db requires DATABASE_URL or TEST_DATABASE_URL. Run pnpm db:setup.');
   return url;
+}
+
+export function testDatabaseUrl(): string {
+  const url = new URL(suiteDatabaseUrl());
+  const worker = process.env.VITEST_POOL_ID;
+  if (worker) url.pathname = `${url.pathname}_w${worker}`;
+  return url.toString();
+}
+
+const ALREADY_EXISTS = new Set(['42P04', '23505']);
+
+export async function ensureWorkerDatabase(): Promise<void> {
+  const url = testDatabaseUrl();
+  const name = new URL(url).pathname.slice(1);
+  await admin(suiteDatabaseUrl(), async (client) => {
+    const { rowCount } = await client.query('SELECT 1 FROM pg_database WHERE datname = $1', [name]);
+    if (rowCount) return;
+    await client.query(`CREATE DATABASE ${pg.escapeIdentifier(name)}`).catch((error: unknown) => {
+      if (!ALREADY_EXISTS.has((error as { code?: string }).code ?? '')) throw error;
+    });
+  });
 }
 
 async function admin<T>(url: string, work: (client: pg.Client) => Promise<T>): Promise<T> {
