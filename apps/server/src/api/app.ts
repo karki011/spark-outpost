@@ -12,6 +12,7 @@ import { mcpRoutes, type McpRouteDeps } from './mcp-routes.ts';
 import { modelCardRoutes } from './model-card-routes.ts';
 import { outcomeRoutes, type OutcomeRouteDeps } from './outcome-routes.ts';
 import { projectRoutes } from './project-routes.ts';
+import { resetRoutes } from './reset-routes.ts';
 import { apiRoutes, statusForError, type RouteDeps } from './routes.ts';
 import { localRequestGuard, requireLaunchToken } from './security.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
@@ -66,6 +67,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', outcomeRoutes(options));
   app.use('/api', analyticsRoutes(options));
   app.use('/api', terminalRoutes(options.terminals));
+  app.use('/api', resetRoutes({ ...options, stopTerminals: () => options.terminals.killAll() }));
   if (options.webRoot) app.use(webApp(options.webRoot));
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found.' });
