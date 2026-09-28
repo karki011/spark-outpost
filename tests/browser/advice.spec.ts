@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { POLICY_VERSION } from '../../apps/server/src/advisor/policy.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -26,7 +27,7 @@ test('shows what Jev suggested on the turn, with the rules comparison on focus',
   await expect(tip).toBeVisible();
   await expect(tip).toContainText('Category Bug fix');
   await expect(tip).toContainText('Rules ran: Claude');
-  await expect(tip).toContainText('policy cascade-2');
+  await expect(tip).toContainText(`policy ${POLICY_VERSION}`);
 
   await page.getByRole('button', { name: /Context window/ }).click();
   await expect(page.locator('.ctx-usage')).toContainText('Jev');

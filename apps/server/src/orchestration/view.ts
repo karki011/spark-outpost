@@ -32,6 +32,7 @@ export interface StoredRoute {
   copy?: string | null;
   sameProvider?: boolean;
   fileReads?: number;
+  routeNote?: string;
 }
 
 export interface MemberRow {
@@ -93,6 +94,7 @@ export function toCrewMember(row: MemberRow): CrewMember {
     finishedAt: row.finished_at?.toISOString() ?? null,
     copy: route.copy ?? null,
     ...(route.sameProvider ? { sameProvider: true } : {}),
+    ...(route.routeNote ? { routeNote: route.routeNote } : {}),
   };
 }
 

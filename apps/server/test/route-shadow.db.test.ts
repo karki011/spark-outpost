@@ -111,15 +111,27 @@ describe('Jev routing in shadow mode', () => {
       policy: 'ask',
       rule: { rule: 'chat model', pick: { model: 'sonnet' } },
       variants: {
-        text: { status: 'answered', pick: { model: 'haiku' }, selection: { basis: 'choice' } },
-        evidence: { status: 'answered', pick: { model: 'haiku' }, selection: { basis: 'choice' } },
+        text: {
+          status: 'answered',
+          pick: { model: 'haiku' },
+          raisedTo: { model: 'sonnet' },
+          selection: { basis: 'choice' },
+        },
+        evidence: {
+          status: 'answered',
+          pick: { model: 'haiku' },
+          raisedTo: { model: 'sonnet' },
+          selection: { basis: 'choice' },
+        },
       },
     });
     expect(shadow?.body.state.text).not.toHaveProperty('code_evidence');
     expect(
       String((shadow?.body.state.evidence as Record<string, unknown>).code_evidence),
     ).toContain('divider.ts');
-    expect(shadow?.body.summary).toMatch(/^Shadow route: rules Sonnet 5 · Jev text-only Haiku 4.5/);
+    expect(shadow?.body.summary).toMatch(
+      /^Shadow route: rules Sonnet 5 · Jev text-only Haiku 4.5 \(chose [\d.]+, raised to Sonnet 5\)/,
+    );
     expect(asked(script, 'route')).toHaveLength(2);
     expect(asked(script, 'likely_file')).toHaveLength(1);
 

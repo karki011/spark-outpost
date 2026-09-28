@@ -2,13 +2,26 @@ import { agentLabel, nextCrewName, type AgentPick, type AgentRole } from '@spark
 import { POLICY_VERSION } from '../advisor/policy.ts';
 import { whyLine } from '../model-cards/why.ts';
 import { insertDecision, usedNames } from '../persistence/orchestrations.ts';
-import { keepSession, resumableChat, resumableTask, type SessionChoice } from './session-keep.ts';
+import { complexByJev, complexByScan, firstSignal } from './builder-complexity.ts';
+import { belowFloor, FLOOR_REASON } from './builder-floor.ts';
 import {
+  keepSession,
+  resumableChat,
+  resumableTask,
+  type KeptRoute,
+  type ResumableSession,
+  type SessionChoice,
+} from './session-keep.ts';
+import {
+  builderComplexity,
+  DESTRUCTIVE_RULE,
   escalate,
+  escalateBuilder,
   routeBuilder,
   routeCritic,
   routeMemberModel,
   type MemberRoute,
+  type RouteFacts,
 } from './routing.ts';
 import { builderKey, type Session } from './session.ts';
 import type { Spawn } from './transitions.ts';
@@ -22,8 +35,31 @@ function jevTier(s: Session) {
   return s.intake.body.jev?.tier ?? null;
 }
 
+export function builderFacts(s: Session): RouteFacts {
+  const complex = firstSignal(complexByScan(s.scanReport), complexByJev(s.intake.body.jev));
+  return { ...s.facts, complex };
+}
+
+function topReason(route: MemberRoute, facts: RouteFacts, s: Session): string | null {
+  if (facts.destructive) return 'destructive work needs the top tier';
+  if (route.rule === DESTRUCTIVE_RULE) return null;
+  const complex = builderComplexity(s.route, facts);
+  return complex ? `complex work (${complex.reason}) needs the top tier` : null;
+}
+
+export function keepBuilderSession(
+  route: MemberRoute,
+  session: ResumableSession | null,
+  needsTop: string | null,
+): KeptRoute {
+  const kept = keepSession(route, session, needsTop ?? false);
+  if (!kept.choice?.kept || !belowFloor(kept.choice.session)) return kept;
+  return { route, choice: { kept: false, reason: FLOOR_REASON, session: kept.choice.session } };
+}
+
 async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
-  const route = routeBuilder(s.route, s.facts, jevTier(s));
+  const facts = builderFacts(s);
+  const route = routeBuilder(s.route, facts, jevTier(s));
   if (!s.taskId) return { route };
   const session = await resumableTask(
     s.deps.db,
@@ -31,7 +67,7 @@ async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
     builderKey(s.taskId),
     s.deps.sessionLimits?.idleMs,
   );
-  const kept = keepSession(route, session, s.facts.destructive);
+  const kept = keepBuilderSession(route, session, topReason(route, facts, s));
   return { route: kept.route, ...(kept.choice ? { session: kept.choice } : {}) };
 }
 
@@ -45,7 +81,10 @@ async function scoutRoute(s: Session): Promise<ResolvedRoute> {
 
 export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRoute> {
   const previous = s.routes.get(spawn.role);
-  if (previous && spawn.escalate) return { route: escalate(s.route, previous) };
+  if (previous && spawn.escalate) {
+    const builder = spawn.role === 'builder';
+    return { route: (builder ? escalateBuilder : escalate)(s.route, previous) };
+  }
   if (previous) return { route: previous };
   if (spawn.role === 'critic') return { route: routeCritic(s.route) };
   if (spawn.role === 'scout') return scoutRoute(s);
@@ -78,6 +117,7 @@ export async function recordRoute(
   const { route } = resolved;
   const label = labelFor(role, route.pick, name);
   const sessionNote = resolved.session ? ` · ${resolved.session.reason}` : '';
+  const floorNote = route.note ? ` · ${route.note}` : '';
   const jev = s.intake.body.jev;
   await insertDecision(s.deps.db, {
     runId: s.lease.runId,
@@ -90,7 +130,7 @@ export async function recordRoute(
     costUsd: null,
     policyVersion: POLICY_VERSION,
     body: {
-      summary: `${label} · ${route.rule}${jevLine(route)}${sessionNote}`,
+      summary: `${label} · ${route.rule}${floorNote}${jevLine(route)}${sessionNote}`,
       applied: route.routedBy === 'pinned' ? 'pinned' : 'rules',
       gate: null,
       jevError: null,
@@ -101,6 +141,7 @@ export async function recordRoute(
         routedBy: route.routedBy,
         autoWouldUse: route.autoWouldUse,
         rule: route.rule,
+        ...(route.note ? { note: route.note } : {}),
         jevTier: jev?.tier ?? null,
         jevTierConfidence: jev?.routeConfidence ?? null,
         ...(resolved.session ? { session: resolved.session } : {}),

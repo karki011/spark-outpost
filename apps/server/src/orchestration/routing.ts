@@ -3,6 +3,8 @@ import type { AdvisorCandidate } from '../advisor/advice.ts';
 import { selectableModels, tierOptions } from '../advisor/intake-questions.ts';
 import { cardFor } from '../model-cards/cards.ts';
 import { firstReportedEffort } from '../providers/efforts.ts';
+import { complexByRequest, firstSignal, type ComplexSignal } from './builder-complexity.ts';
+import { builderPick, floorText, type FlooredPick } from './builder-floor.ts';
 import {
   escalatedEffort,
   highEffort,
@@ -18,6 +20,7 @@ export interface RouteContext {
   chat: AgentPick;
   providerEffort: string | null;
   candidates: readonly AdvisorCandidate[];
+  request?: string;
 }
 
 export interface MemberRoute {
@@ -25,12 +28,16 @@ export interface MemberRoute {
   routedBy: RouteSource;
   rule: string;
   autoWouldUse: AgentPick | null;
+  note?: string;
 }
 
 export interface RouteFacts {
   trivial: boolean;
   destructive: boolean;
+  complex?: ComplexSignal | null;
 }
+
+export const DESTRUCTIVE_RULE = 'destructive → top tier';
 
 export function candidateFor(
   context: RouteContext,
@@ -83,12 +90,67 @@ export function builderEffort(context: RouteContext, pick: AgentPick): string | 
   );
 }
 
+function modelsFor(context: RouteContext, provider: string) {
+  const candidate = candidateFor(context, provider);
+  return candidate ? selectableModels(candidate) : [];
+}
+
+export function floorBuilderPick(context: RouteContext, pick: AgentPick): FlooredPick {
+  return builderPick(pick, modelsFor(context, pick.provider));
+}
+
+function withNote(route: MemberRoute, floored: FlooredPick): MemberRoute {
+  const next: MemberRoute = { ...route, pick: floored.pick };
+  delete next.note;
+  if (floored.note) next.note = floorText(floored.note);
+  return next;
+}
+
+export function floorBuilderRoute(context: RouteContext, route: MemberRoute): MemberRoute {
+  return withNote(route, floorBuilderPick(context, route.pick));
+}
+
+function familyWords(label: string): string[] {
+  return label.split(/[\s-]+/).filter((word) => /^[a-z]+$/i.test(word));
+}
+
+export function topFamilies(context: RouteContext): string[] {
+  const models = modelsFor(context, context.chat.provider);
+  const top = topTier(models, context.chat.provider);
+  if (!top) return [];
+  const others = new Set(
+    models.filter((model) => model.id !== top.id).flatMap((model) => familyWords(model.label)),
+  );
+  return familyWords(top.label).filter((word) => !others.has(word));
+}
+
+export function builderComplexity(context: RouteContext, facts: RouteFacts): ComplexSignal | null {
+  return firstSignal(complexByRequest(context.request, topFamilies(context)), facts.complex);
+}
+
+export function builderTierPick(context: RouteContext, tier: RouteTier | null): AgentPick | null {
+  const pick = jevTierPick(context, tier);
+  return pick ? floorBuilderPick(context, pick).pick : null;
+}
+
 export function routeBuilder(
   context: RouteContext,
   facts: RouteFacts,
   jevTier: RouteTier | null = null,
 ): MemberRoute {
-  const route = routeMemberModel(context, facts, jevTier);
+  const base = routeMemberModel(context, facts, jevTier);
+  const complex = base.routedBy === 'pinned' ? null : builderComplexity(context, facts);
+  const floored = builderPick(
+    base.pick,
+    modelsFor(context, base.pick.provider),
+    complex ? 'top' : 'floor',
+  );
+  const rule =
+    complex && base.rule !== DESTRUCTIVE_RULE
+      ? `complex → top tier (${complex.reason})`
+      : base.rule;
+  const autoWouldUse = base.autoWouldUse ? floorBuilderPick(context, base.autoWouldUse).pick : null;
+  const route = withNote({ ...base, rule, autoWouldUse }, floored);
   return { ...route, pick: { ...route.pick, effort: builderEffort(context, route.pick) } };
 }
 
@@ -110,7 +172,7 @@ export function routeMemberModel(
     return {
       pick: withModel(chat, top),
       routedBy: 'rules',
-      rule: 'destructive → top tier',
+      rule: DESTRUCTIVE_RULE,
       autoWouldUse,
     };
   }
@@ -157,5 +219,11 @@ export function escalate(context: RouteContext, previous: MemberRoute): MemberRo
         effort: escalatedEffort(effortIds(candidate), previous.pick.effort),
       }
     : { ...previous.pick, effort: strongerEffort(effortIds(candidate), previous.pick.effort) };
-  return { ...previous, pick, rule: 'one tier up' };
+  const next: MemberRoute = { ...previous, pick, rule: 'one tier up' };
+  delete next.note;
+  return next;
+}
+
+export function escalateBuilder(context: RouteContext, previous: MemberRoute): MemberRoute {
+  return floorBuilderRoute(context, escalate(context, previous));
 }

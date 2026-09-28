@@ -40,6 +40,13 @@ describe('crew agents', () => {
     const agent = runAgent(builder, orchestration());
     expect(agent.name).toBe('Builder 2');
     expect(headerMeta(agent)).toBe('Sonnet 5 · medium · 12.4K tokens · $0.03 · 38s');
+    const raised = runAgent(
+      member({ routeNote: "raised to Sonnet 5: Builders don't run on the fast tier" }),
+      orchestration(),
+    );
+    expect(headerMeta(raised)).toBe(
+      "Sonnet 5 · medium · raised to Sonnet 5: Builders don't run on the fast tier · 12.4K tokens · $0.03 · 38s",
+    );
   });
 
   it('follows run status, tool calls, and the pending checkpoint for the state', () => {

@@ -101,6 +101,7 @@ export const crewMemberSchema = z.object({
   finishedAt: z.string().nullable(),
   copy: z.string().nullable().optional(),
   sameProvider: z.boolean().optional(),
+  routeNote: z.string().optional(),
 });
 export type CrewMember = z.infer<typeof crewMemberSchema>;
 

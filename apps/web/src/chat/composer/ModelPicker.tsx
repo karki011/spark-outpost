@@ -23,7 +23,7 @@ import { PermissionOptions } from './PermissionOptions.tsx';
 import { PickerNav, type PickerRow, type PickerSection } from './PickerNav.tsx';
 import { ProviderSwitch } from './ProviderSwitch.tsx';
 import { ExitingInert } from './ExitingInert.tsx';
-import { autoThisTurn, autoWouldHaveUsed } from '../../crew/auto-route.ts';
+import { autoThisTurn, autoWouldHaveUsed, builderRouteNote } from '../../crew/auto-route.ts';
 import { buttonLabel, currentModel, selectableEfforts, shortLabel } from './model-options.ts';
 import './model-picker.css';
 
@@ -110,7 +110,7 @@ export function ModelPicker({
   const thisTurn = autoThisTurn(orchestration);
   const modelName = auto ? (thisTurn ? `Auto · ${thisTurn} this turn` : 'Auto') : pinnedName;
   const would = autoWouldHaveUsed(orchestration);
-  const hint = would ? `Jev would have used ${would}` : null;
+  const hint = builderRouteNote(orchestration) ?? (would ? `Jev would have used ${would}` : null);
 
   const effort = efforts.find((option) => option.id === settings.effort);
 

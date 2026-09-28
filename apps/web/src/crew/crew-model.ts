@@ -26,6 +26,7 @@ export interface CrewAgent {
   costSource: TotalCostSource | null;
   durationMs: number | null;
   sameProvider?: boolean;
+  routeNote?: string;
 }
 
 export const SAME_PROVIDER_REVIEW = 'same provider, no cross-model review';
@@ -94,7 +95,7 @@ export function usageParts(member: CrewAgent): string[] {
 }
 
 export function headerMeta(member: CrewAgent): string {
-  return [modelLabel(member), ...usageParts(member)].join(' · ');
+  return [modelLabel(member), member.routeNote, ...usageParts(member)].filter(Boolean).join(' · ');
 }
 
 export interface CrewTotals {

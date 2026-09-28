@@ -158,18 +158,23 @@ describe.each(SCENARIOS)('$id', (scenario) => {
 });
 
 describe('rule routing on Auto', () => {
-  it('runs a trivial fix on the small tier and records the tier Jev would have used', async () => {
+  it('raises a trivial fix off the small tier, since Builders never run there', async () => {
     const { orchestration } = await runLevel(SCENARIOS[1]!, 'hands-off');
     expect(orchestration.depth).toBe('execute');
+    const note = "raised to Sonnet 5: Builders don't run on the fast tier";
     expect(orchestration.crew).toEqual([
       expect.objectContaining({
         role: 'builder',
-        model: 'haiku',
+        model: 'sonnet',
         effort: 'medium',
         routedBy: 'rules',
-        autoWouldUse: expect.objectContaining({ model: 'haiku' }),
+        autoWouldUse: expect.objectContaining({ model: 'sonnet' }),
+        routeNote: note,
       }),
     ]);
+    const route = orchestration.decisions.find((decision) => decision.kind === 'route');
+    expect(route?.summary).toContain(`trivial → small tier · ${note}`);
+    expect(route?.answer).toMatchObject({ note, jevTier: 'small' });
   }, 60_000);
 
   it('runs destructive work on the top tier with a cross-provider Critic', async () => {

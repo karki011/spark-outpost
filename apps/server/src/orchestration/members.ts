@@ -82,6 +82,7 @@ function storedRoute(route: MemberRoute, name: string, extra: Record<string, unk
     routedBy: route.routedBy,
     autoWouldUse: route.autoWouldUse,
     modelLabel: route.pick.modelLabel,
+    ...(route.note ? { routeNote: route.note } : {}),
     ...extra,
   };
 }

@@ -83,8 +83,8 @@ describe('repair and escalation', () => {
         : answerEverything(approval);
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
     expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
-      ['builder', 'haiku'],
       ['builder', 'sonnet'],
+      ['builder', 'opus[1m]'],
       ['builder', 'opus[1m]'],
     ]);
     expect(orchestration.retries).toBe(2);
@@ -103,7 +103,7 @@ describe('repair and escalation', () => {
     const { conversationId, runId } = await startScenario(t, root, flaky, 'balanced');
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
     expect(asked.map((approval) => approval.kind)).toEqual(['edit', 'accept']);
-    expect(orchestration.crew.map((member) => member.model)).toEqual(['haiku', 'sonnet']);
+    expect(orchestration.crew.map((member) => member.model)).toEqual(['sonnet', 'opus[1m]']);
     expect(orchestration.status).toBe('succeeded');
   }, 60_000);
 });

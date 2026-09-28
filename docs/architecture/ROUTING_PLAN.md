@@ -1,6 +1,6 @@
 # Routing plan
 
-> **Status: rollout step 1 (shadow) built on September 27, 2026.** The code scan (step 0), the Jev file ranking and the route question run for every Do task and are recorded next to the rule route (`run_advice` purposes `scan`, `rank` and `route_shadow`; the `routing_labels` view; `pnpm routing:labels`). The Builder still runs on the rules in `orchestration/routing.ts` and `risk-rules.ts`. Results: [routing-shadow-2026-09-27.md](../benchmarks/routing-shadow-2026-09-27.md).
+> **Status: rollout step 1 (shadow) built on September 27, 2026.** The code scan (step 0), the Jev file ranking and the route question run for every Do task and are recorded next to the rule route (`run_advice` purposes `scan`, `rank` and `route_shadow`; the `routing_labels` view; `pnpm routing:labels`). The Builder still runs on the rules in `orchestration/routing.ts` and `risk-rules.ts`. Results: [routing-shadow-2026-09-27.md](../benchmarks/routing-shadow-2026-09-27.md). **Since September 28 the Builder has a floor (policy `floor-1`):** it never runs on the small tier, and it gets the top tier only for complex work (section 4). Evidence: [routing-live-2026-09-27.md](../benchmarks/routing-live-2026-09-27.md).
 
 This plan replaces keyword routing with a Jev decision that uses codebase evidence, and then checks the result before paying for a stronger model. It draws on six routers read in full, including their code, fixtures and studies.
 
@@ -182,8 +182,10 @@ Thresholds and wording start from pi's values and are then fitted on our own lab
 
 ### 4. Policy that stays in code
 
-- **Pinned** model: used as is, no Jev call.
+- **Pinned** model: used as is, no Jev call, except for the Builder floor below.
 - **Destructive** work → the top tier. This is a safety gate, not a difficulty guess, so it stays deterministic (keyword rule OR Jev's destructive answer, as today).
+- **Builder floor** (built September 28, `orchestration/builder-floor.ts`). A Builder never runs on the small tier. Whatever picked it (the rules, a pinned or small chat model, a cascade rerun, a resumed session, Jev's tier pick or its route answer), a small-tier pick moves to the lowest model at tier 1 or above in the provider's current list; the note reads "raised to <model>: Builders don't run on the fast tier". Tiers come from the model cards and name patterns, never from hardcoded ids, so a retired middle model means the next one up. A model whose tier is unknown stays eligible and is noted ("tier unknown for …"); with nothing stronger the pick stays and the note says so. The shadow record keeps Jev's own choice as `pick` (the label) and adds `raisedTo`. The live round's reason: a Haiku Builder failed 4 of 22 runs silently, Sonnet passed 32 of 32, and one silent failure costs about 500 times the per-task saving.
+- **Complex work → the top tier** (`orchestration/builder-complexity.ts`). The user asks for the top model; the request is a migration, security work or spans several packages; the code scan (only if already finished) matches 15+ files or 3+ packages; or Jev's intake tier is top at 0.8 or more. Otherwise the middle tier: Opus bought no extra passes in the live round, and Jev's Opus picks there were all at 0.62 or less.
 - **Daily cost cap** (queued feature): when reached, the cheapest eligible candidate.
 - **One candidate**: no Jev call.
 - **Context window**: skip candidates that can't hold the request at 90% fill.
@@ -208,7 +210,7 @@ Only large, spread-out tasks (many ranked files in unrelated areas) get a planne
 Jev is optional: no key, the user turned it off, or the service is down. The harness still works:
 
 - **The Builder subagent still runs,** one per Do task, with a worktree when the repo is busy.
-- **The model is the one the chat picked,** at the provider's default effort. The code policy still applies: a pin, destructive work → the top tier, the cost cap.
+- **The model is the one the chat picked,** at the provider's default effort. The code policy still applies: a pin, destructive work → the top tier, the Builder floor and complex work → the top tier (by rule and scan), the cost cap.
 - **The code scan still runs** (it's local), and its evidence still goes to the Builder as a starting file list.
 - **The cascade still works, on checks alone:** checks fail after the fix turns → one tier up, once. There's no diff verdict, so a passing check is trusted.
 - **No intake questions:** vague requests aren't caught, and there's no injection check beyond the approval rules.

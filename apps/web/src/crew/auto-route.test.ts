@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoThisTurn, autoWouldHaveUsed, modelFamily } from './auto-route.ts';
+import { autoThisTurn, autoWouldHaveUsed, builderRouteNote, modelFamily } from './auto-route.ts';
 import { member, orchestration } from './test-orchestration.ts';
 
 describe('Auto routing labels', () => {
@@ -24,5 +24,15 @@ describe('Auto routing labels', () => {
     expect(autoWouldHaveUsed(orchestration({ routing: 'pinned', crew }))).toBe('Haiku');
     const same = [member({ autoWouldUse: { ...pick, modelLabel: 'Sonnet 5' } })];
     expect(autoWouldHaveUsed(orchestration({ routing: 'pinned', crew: same }))).toBeNull();
+  });
+
+  it('says when the Builder was raised off the fast tier', () => {
+    const note = "raised to Sonnet 5: Builders don't run on the fast tier";
+    const crew = [member({ role: 'scout' }), member({ routeNote: note })];
+    expect(builderRouteNote(orchestration({ crew }))).toBe(
+      "Raised to Sonnet 5: Builders don't run on the fast tier",
+    );
+    expect(builderRouteNote(orchestration({ crew: [member()] }))).toBeNull();
+    expect(builderRouteNote(null)).toBeNull();
   });
 });

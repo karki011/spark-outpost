@@ -5,7 +5,7 @@ import type { JevCall } from '../orchestration/jev-calls.ts';
 import type { RouteContext } from '../orchestration/routing.ts';
 import { pickOf } from './candidates.ts';
 import { routeOptions } from './route-question.ts';
-import { POLICY_TEXT, withEffort, type RoutePolicy } from './route-policy.ts';
+import { builderRun, POLICY_TEXT, withEffort, type RoutePolicy } from './route-policy.ts';
 import { selectRoute, type SelectionBasis } from './select-route.ts';
 
 export const ROUTE_KEY = 'route';
@@ -30,6 +30,7 @@ export interface VariantResult {
   probabilities: Record<string, number> | null;
   selection: VariantSelection | null;
   pick: AgentPick;
+  raisedTo?: AgentPick;
 }
 
 function base(call: JevCall, chat: AgentPick): VariantResult {
@@ -54,6 +55,12 @@ export function routeVariant(
   policy: RoutePolicy,
   context: RouteContext,
 ): VariantResult {
+  const result = jevVariant(call, policy, context);
+  const run = builderRun(context, result.pick);
+  return run.model === result.pick.model ? result : { ...result, raisedTo: run };
+}
+
+function jevVariant(call: JevCall, policy: RoutePolicy, context: RouteContext): VariantResult {
   const result = base(call, policy.chat);
   if (call.status !== 'answered' || !call.response) return result;
   const answer = readChoice(call.response, ROUTE_KEY, routeOptions(policy.candidates));
@@ -88,7 +95,8 @@ export function variantLine(name: string, variant: VariantResult | null): string
   }
   const { basis, routeProbability } = variant.selection;
   const how = basis === 'choice' ? 'chose' : basis === 'probability' ? 'cumulative' : 'uncertain';
-  return `Jev ${name} ${pickLabel(variant.pick)} (${how} ${routeProbability.toFixed(2)})`;
+  const raised = variant.raisedTo ? `, raised to ${pickLabel(variant.raisedTo)}` : '';
+  return `Jev ${name} ${pickLabel(variant.pick)} (${how} ${routeProbability.toFixed(2)}${raised})`;
 }
 
 export function shadowSummary(

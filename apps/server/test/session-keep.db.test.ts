@@ -89,12 +89,13 @@ async function openSessionKeys(conversationId: string): Promise<string[]> {
 
 describe('task-scoped Builder sessions', () => {
   it('resumes the task Builder for a follow-up, keeping its model, and leaves the chat session alone', async () => {
-    const script: JevScript = { calls: [], scenario: TRIVIAL };
+    const confident = { ...TRIVIAL, tier: 'top' as const };
+    const script: JevScript = { calls: [], scenario: confident };
     harness = startOrchestrator(t, jevFetch(script), { sessions: store });
-    const first = await startScenario(t, root, TRIVIAL, 'hands-off');
+    const first = await startScenario(t, root, confident, 'hands-off');
     await driveToEnd(t, first.conversationId, first.runId);
     const firstBuilder = await builderRow(first.runId);
-    expect(firstBuilder).toMatchObject({ model: 'haiku', effort: 'medium' });
+    expect(firstBuilder).toMatchObject({ model: 'opus[1m]', effort: 'medium' });
     expect(await openSessionKeys(first.conversationId)).toEqual([
       `key:${firstBuilder.task_id}:builder`,
     ]);
@@ -106,11 +107,11 @@ describe('task-scoped Builder sessions', () => {
     );
     expect(second.orchestration.status).toBe('succeeded');
     const secondBuilder = await builderRow(second.runId);
-    expect(secondBuilder).toMatchObject({ model: 'haiku', task_id: firstBuilder.task_id });
+    expect(secondBuilder).toMatchObject({ model: 'opus[1m]', task_id: firstBuilder.task_id });
     expect(await sessionSteps(second.runId)).toContain('Continued session');
     const route = second.orchestration.decisions.find((decision) => decision.kind === 'route');
     expect(route?.answer.rule).toBe(KEPT_FOR_SESSION);
-    expect(route?.answer.session).toMatchObject({ kept: true, session: { model: 'haiku' } });
+    expect(route?.answer.session).toMatchObject({ kept: true, session: { model: 'opus[1m]' } });
     const intake = second.orchestration.decisions.find((decision) => decision.kind === 'intake');
     expect(intake?.summary).toContain('same task (jev 0.95)');
   }, 60_000);
