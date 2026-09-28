@@ -3,14 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Spark Outpost · Tickets · Inbox (mockup)</title>
+<title>Spark Outpost · Tickets (mockup)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script>(function(){var q=new URLSearchParams(location.search).get("theme"),s=null;try{s=localStorage.getItem("spark-tickets-theme")}catch(e){}
 document.documentElement.dataset.theme=q||s||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")})()</script>
 <style>
-/* Design mockup for the Tickets screen. Sample data only: every name, key and URL is made up.
+/* Design mockup for the Tickets screen: the inbox is the one layout (decided September 28, 2026).
+   Sample data only: every name, key and URL is made up.
    The block below is copied verbatim from docs/design/mockup/spark-outpost-mockup.html. */
 :root{
   box-sizing:border-box;
@@ -910,6 +911,152 @@ textarea:focus-visible,.home-compose input:focus-visible,.search input:focus-vis
 .bk.done{background:var(--faint);-webkit-mask:radial-gradient(circle,#000 6.5px,transparent 7px);box-shadow:inset 0 0 0 3px var(--faint)}
 .tk-detail{width:420px}
 
+/* ================= Inbox: the single Tickets layout (decided September 28, 2026) ================= */
+.tk-head{gap:12px}
+.tk-head h2{flex-shrink:0}
+.tk-find{flex:1;min-width:220px;max-width:560px;display:flex;align-items:center;gap:8px;padding:0 6px 0 11px;height:36px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--bg);color:var(--faint);transition:border-color .2s,box-shadow .2s}
+.tk-find:focus-within{border-color:var(--accent-text);box-shadow:0 0 0 4px var(--accent-soft)}
+.tk-find input{flex:1;min-width:0;border:0;background:transparent;outline:none;font-size:14px;color:var(--text)}
+.tk-find input::placeholder{color:var(--faint)}
+.tk-find input:focus-visible{outline:none}
+.kbd{font:12px/1 "Geist Mono",monospace;padding:3px 6px;border-radius:5px;border:1px solid var(--line);color:var(--faint)}
+.tk-find .icon-btn{width:26px;height:26px}
+.scope{font-size:12.5px;color:var(--muted);padding:8px 18px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.scope b{font-weight:500;color:var(--text)}
+.fbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--line)}
+.fbar .sp{flex:1}
+.fbar .seg{width:210px}
+.fsel.on{border-color:var(--accent-text);background:var(--accent-soft)}
+.fclear{font-size:12.5px;color:var(--muted);text-decoration:underline;text-underline-offset:2px}
+
+/* Smart views in the side column */
+.ib-nav{width:208px}
+.ib-item .dotw{width:15px;display:grid;place-items:center}
+.ib-item.attn .n{color:var(--warn);font-weight:600}
+.ib-foot{margin:18px 10px 0;font-size:12px;color:var(--faint);line-height:1.45}
+
+/* Brief strip (the ticket slice of the Home brief) */
+.brief{margin:12px 18px 6px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+.brief-h{display:flex;align-items:center;gap:10px;padding:8px 8px 0 12px}
+.brief-h .icon-btn{width:28px;height:28px}
+.brief-h h3{margin:0;font-size:14px;font-weight:600}
+.brief-meta{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.brief-h .sp{flex:1}
+.brief-h .hlink{font-size:12.5px;color:var(--muted);padding:4px 6px;border-radius:var(--r-sm)}
+.brief-h .hlink:hover{background:var(--raise);color:var(--text)}
+.brief ol{list-style:none;margin:6px 0 0;padding:0 6px 6px}
+.bi{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:start;padding:7px 6px;border-radius:var(--r-sm)}
+.bi:hover{background:var(--raise)}
+.bi .num{width:20px;height:20px;border-radius:6px;background:var(--raise);color:var(--muted);font-size:12px;font-weight:600;display:grid;place-items:center;margin-top:1px}
+.bi p{margin:0;font-size:13.5px;line-height:1.45}
+.bi p .kref{font-family:"Geist Mono",monospace;font-size:12.5px;color:var(--accent-text);text-decoration:underline;text-underline-offset:2px}
+.why{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.flag{display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:999px;font-size:12px;line-height:18px;background:color-mix(in srgb,var(--warn) 12%,var(--panel));color:var(--warn);white-space:nowrap}
+.flag.bad{background:color-mix(in srgb,var(--danger) 9%,var(--panel));color:var(--danger)}
+.flag.na{background:var(--raise);color:var(--muted)}
+.flag svg{flex-shrink:0}
+.brief-foot{display:flex;align-items:center;gap:8px;padding:0 12px 10px;font-size:12px;color:var(--faint)}
+.brief.off{border-style:dashed}
+.brief.off .brief-foot{padding-top:6px}
+.brief-sk{padding:10px 12px 12px;display:grid;gap:10px}
+.brief-sk .sk{height:12px}
+
+/* Sections and rows */
+.sec-h{position:relative;display:flex;align-items:center;gap:8px;width:100%;padding:10px 18px 8px;background:var(--panel);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--faint);text-align:left}
+.sec-h b{color:var(--text);font-weight:600;font-size:13.5px}
+.sec-h .chev{transition:transform .3s var(--out);transform:rotate(90deg)}
+.sec-h[aria-expanded="false"] .chev{transform:none}
+.sec-h .rule{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sec-h .n{font-variant-numeric:tabular-nums;color:var(--muted)}
+.sec-h.attn b{color:var(--warn)}
+.sec-empty{padding:12px 18px;font-size:13px;color:var(--faint);border-bottom:1px solid var(--line)}
+.irow{display:flex;align-items:stretch;gap:0;padding:0;border-bottom:1px solid var(--line);position:relative;background:var(--panel);transition:background .15s}
+.irow:hover{background:var(--raise)}
+.irow.sel{background:var(--accent-soft)}
+.ir-main{flex:1;min-width:0;display:grid;grid-template-columns:14px 16px 18px 70px minmax(0,1fr) auto;align-items:center;column-gap:10px;row-gap:2px;padding:9px 8px 9px 18px;text-align:left;font-size:13.5px}
+.ir-main .tk-title{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ir-main .ir-sub{grid-column:5/7;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--faint);min-width:0}
+.ir-main .ir-sub>span{white-space:nowrap}
+.ir-right{display:flex;align-items:center;gap:10px;justify-content:flex-end;white-space:nowrap}
+.age{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.age.warn{color:var(--warn);font-weight:500}
+.ir-acts{display:flex;align-items:center;gap:6px;padding:0 14px 0 4px;opacity:0;transition:opacity .15s}
+.irow:hover .ir-acts,.irow:focus-within .ir-acts,.irow.sel .ir-acts,.ir-acts.pin{opacity:1}
+.qa{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--panel);font-size:12.5px;font-weight:500;white-space:nowrap;transition:border-color .2s,background .2s}
+.qa:hover:not(:disabled){border-color:var(--faint)}
+.qa.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.qa.primary:hover:not(:disabled){box-shadow:0 0 0 3px var(--accent-soft)}
+.qa:disabled{opacity:.4;cursor:not-allowed}
+.qa.done{border-color:transparent;background:transparent;color:var(--accent-text)}
+body.compact .ir-main{padding-top:6px;padding-bottom:6px}
+body.compact .ir-main .ir-sub{display:none}
+body.compact .brief{display:none}
+.cmp-flag{display:none;color:var(--warn)}
+.cmp-only{display:none}
+body.compact .cmp-only{display:inline}
+body.compact .cmf-only{display:none}
+body.compact .cmp-flag{display:inline-flex}
+.pri.urgent{width:14px;height:14px;border-radius:4px;background:var(--warn);color:var(--warn-ink);display:inline-grid;place-items:center;font-size:12px;font-weight:700;line-height:1}
+.pri.none i{background:var(--line)}
+.who-ava{width:18px;height:18px;border-radius:6px;font-size:12px;font-weight:600;display:inline-grid;place-items:center;background:var(--raise);color:var(--muted)}
+.who-ava.me{background:var(--accent);color:var(--accent-ink)}
+.unass{width:18px;height:18px;border-radius:50%;border:1.5px dashed var(--line-strong);display:inline-block}
+.pdot{width:7px;height:7px;border-radius:50%;background:var(--accent-text);display:inline-block;animation:pulse 1.4s infinite}
+.pend-line{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+
+/* Assign confirm */
+.confirm{position:absolute;right:14px;top:calc(100% - 4px);z-index:8;width:320px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 16px 48px rgba(0,0,0,.22);animation:menuin .24s var(--spring)}
+.confirm p{margin:0 0 10px;font-size:13.5px;line-height:1.45}
+.confirm small{display:block;margin:-4px 0 10px;font-size:12.5px;color:var(--muted)}
+.confirm .acts{display:flex;justify-content:flex-end;gap:8px}
+.irow{flex-wrap:wrap}
+.inline-err{flex-basis:100%;display:flex;align-items:flex-start;gap:8px;padding:8px 18px 10px 58px;font-size:12.5px;color:var(--text);background:var(--danger-soft);border-bottom:1px solid var(--line)}
+.inline-err svg{color:var(--danger);margin-top:2px}
+.res-h{padding:14px 18px 6px;font-size:12.5px;color:var(--faint);display:flex;gap:8px;align-items:baseline;border-bottom:1px solid var(--line)}
+.res-h b{font-size:13.5px;color:var(--text);font-weight:600}
+.src-note{display:flex;align-items:center;gap:8px;margin:10px 18px 0;padding:8px 12px;border-radius:var(--r-sm);background:var(--raise);font-size:12.5px;color:var(--muted)}
+
+/* Detail additions */
+.whybox{margin:-6px 0 18px;padding:10px 12px;border-radius:var(--r-sm);background:color-mix(in srgb,var(--warn) 9%,transparent);box-shadow:inset 3px 0 0 var(--warn);font-size:13px}
+.whybox b{display:block;font-weight:600;margin-bottom:4px}
+.whybox ul{margin:0;padding-left:16px;color:var(--text)}
+.whybox li{margin:2px 0}
+.whybox li small{color:var(--muted)}
+.prbox{padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);font-size:13px;margin-top:6px}
+.prbox dl{display:grid;grid-template-columns:96px 1fr;gap:4px 10px;margin:8px 0 0}
+.prbox dt{color:var(--faint)}
+.prbox dd{margin:0}
+.na-txt{color:var(--muted);font-style:italic}
+.dep{font-size:12px;color:var(--faint);margin:6px 0 0}
+
+/* Skeletons: shaped like the content, never a spinner */
+.sk-nav{display:grid;gap:12px;padding:16px 12px}
+.sk-sec{display:flex;gap:10px;align-items:center;padding:12px 18px 10px;border-bottom:1px solid var(--line)}
+.sk-irow{display:grid;grid-template-columns:14px 16px 18px 70px minmax(0,1fr) 90px;gap:10px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line)}
+.sk-irow .l2{grid-column:5/7;height:9px;width:45%}
+body.compact .sk-irow .l2{display:none}
+.sk.c{border-radius:50%}
+.sk-detail{padding:22px;display:grid;gap:12px}
+.sk-detail .sk{height:12px}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+
+/* Toast with undo */
+.toast .undo{margin-left:auto}
+
+@media (max-width:1180px){
+  .tk-detail{position:absolute;top:0;right:0;bottom:0;z-index:6;background:var(--panel);box-shadow:-24px 0 60px rgba(0,0,0,.2)}
+  .tk-none{display:none}
+}
+@media (max-width:900px){
+  .ib-nav{display:none}
+  .ir-main{grid-template-columns:14px 16px 18px minmax(0,1fr) auto}
+  .ir-main .tk-key{display:none}
+  .ir-main .ir-sub{grid-column:4/6}
+  .ir-acts{opacity:1}
+}
+
+.bi .ir-acts{opacity:1;padding:0}
+
 </style>
 </head>
 <body data-skin="auto">
@@ -945,8 +1092,17 @@ const I={
   chev:'<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>',
   ok:'<svg class="ok" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>'
 };
+Object.assign(P,{
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  assign:'<circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 11-5.7M19 14v6M16 17h6"/>',
+  flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  spark:'<path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
+  home:'<path d="M3 11 12 4l9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/>'
+});
 
-/* ---------- Sample data (fictional) ---------- */
+/* ---------- Sample data (fictional: team "Acme", example.atlassian.net, linear.app/acme) ---------- */
 const SRC={
   linear:{name:"Linear",icon:"linear",account:"Riley Park",where:"Acme workspace",site:"linear.app/acme",checked:"Today at 09:14",url:k=>`https://linear.app/acme/issue/${k}`},
   jira:{name:"Jira",icon:"ticket",account:"riley@example.com",where:"example.atlassian.net",site:"example.atlassian.net",checked:"Today at 09:15",url:k=>`https://example.atlassian.net/browse/${k}`}
@@ -956,10 +1112,38 @@ const PROJ={
   API:{src:"jira",name:"Platform API",kind:"Project",sprint:"API Sprint 18",folder:"acme-api"},
   ENG:{src:"jira",name:"Engineering",kind:"Project",sprint:null,folder:"acme-tools"}
 };
+const PEOPLE={RP:"Riley Park",JL:"Jordan Lee",SO:"Sam Ortiz",PN:"Priya Nair"};
 const BUCKETS=["To do","In progress","In review","Done"];
-const PRI=["","Low","Medium","High"];
+const PRI=["No priority","Low","Medium","High","Urgent"];
+/* assignedDays: days since Spark first saw it assigned to you. dueDays: days until due (0 = today).
+   statusDays: days in the current status (from status history). All sample values. */
 const T=[
-  {key:"WEB-418",p:"WEB",title:"Date divider shows Today twice after a refresh",st:"In Review",b:"In review",pri:3,labels:["bug","chat"],updated:"10 min ago",
+  {key:"API-81",p:"API",title:"Paginate the audit export endpoint",st:"To Do",b:"To do",pri:3,labels:["api"],who:"RP",assignedDays:6,updated:"20 min ago",
+    chat:{title:"API-81: Paginate the audit export endpoint",state:"asking",when:"Asked 20 min ago",q:"Which page size should the export default to, 500 or 1000?"},
+    sync:{s:"fail",text:"Could not move API-81 to In Progress in Jira.",why:"Jira says the Team field must be set first. Set it in Jira, then retry."},
+    desc:"The audit export returns every row in one response and times out for large workspaces.",
+    ac:["Cursor pagination with a default page size of 500","The old unpaginated call keeps working for one release"],comments:[],links:[]},
+  {key:"WEB-433",p:"WEB",title:"Session expires during long uploads",st:"Todo",b:"To do",pri:4,labels:["upload","bug"],who:"RP",assignedDays:3,dueDays:1,due:"Tomorrow",updated:"3 days ago",
+    desc:"Uploads longer than 30 minutes fail at the end because the session token expires mid-upload.",
+    ac:["The upload refreshes the session before it expires","A test covers a 45 minute upload"],comments:[{who:"Priya Nair",i:"PN",when:"3 days ago",text:"Two enterprise customers hit this last week."}],links:[]},
+  {key:"API-77",p:"API",title:"Rate limit headers missing on 429 responses",st:"Code Review",b:"In review",pri:3,labels:["api","bug"],who:"RP",assignedDays:9,statusDays:4,updated:"4 days ago",
+    chat:{title:"API-77: Rate limit headers missing",state:"done",when:"Finished 4 days ago"},
+    pr:{n:88,repo:"acme/api",title:"Add Retry-After and rate limit headers",when:"Opened 4 days ago"},
+    sync:{s:"ok",text:"Moved to Code Review in Jira and added the PR link",when:"4 days ago"},
+    desc:"Clients get 429 responses without Retry-After or X-RateLimit headers, so they retry straight away and hit the limit again.",
+    ac:["429 responses include Retry-After in seconds","X-RateLimit-Limit and X-RateLimit-Remaining on every response","A contract test covers the headers"],
+    comments:[{who:"Sam Ortiz",i:"SO",when:"5 days ago",text:"The mobile client already reads Retry-After, so this fixes the retry storm there too."}],links:[]},
+  {key:"ENG-1215",p:"ENG",title:"Write the release notes for 3.2",st:"In Progress",b:"In progress",pri:2,labels:["docs"],who:"RP",assignedDays:5,dueDays:0,due:"Today",updated:"Yesterday",
+    desc:"Collect the merged changes since 3.1 and write user-facing release notes.",ac:["Notes reviewed by support"],comments:[],links:[]},
+  {key:"WEB-421",p:"WEB",title:"Filter chips overflow the toolbar on small screens",st:"In Progress",b:"In progress",pri:2,labels:["ui"],who:"RP",assignedDays:4,updated:"1 hour ago",
+    chat:{title:"WEB-421: Filter chips overflow the toolbar",state:"running",when:"Running, step 3 of 5"},
+    sync:{s:"ok",text:"Moved to In Progress in Linear",when:"1 hour ago"},
+    desc:"Below 768 px, filter chips push the toolbar past the viewport and the Apply button disappears.",
+    ac:["The toolbar never scrolls sideways","Chips that do not fit collapse into a +N more button"],comments:[],links:[]},
+  {key:"ENG-1198",p:"ENG",title:"Flaky test in worktree cleanup",st:"In Progress",b:"In progress",pri:3,labels:["tests"],who:"RP",assignedDays:2,updated:"2 hours ago",
+    chat:{title:"ENG-1198: Flaky test in worktree cleanup",state:"idle",when:"Finished 1 h ago, not shipped"},
+    desc:"The cleanup test fails about one run in twenty on CI, always on the rename step.",ac:["Test passes 200 runs in a row locally"],comments:[],links:[]},
+  {key:"WEB-418",p:"WEB",title:"Date divider shows Today twice after a refresh",st:"In Review",b:"In review",pri:3,labels:["bug","chat"],who:"RP",assignedDays:3,statusDays:0,updated:"38 min ago",
     chat:{title:"WEB-418: Date divider shows Today twice",state:"done",when:"Finished 40 min ago"},
     pr:{n:231,repo:"acme/web",title:"Fix duplicate Today divider",when:"Opened 38 min ago"},
     sync:{s:"ok",text:"Moved to In Review in Linear and added the PR link",when:"38 min ago"},
@@ -967,183 +1151,363 @@ const T=[
     ac:["Only one divider per calendar day, in the viewer's time zone","A test covers messages that cross midnight"],
     comments:[{who:"Jordan Lee",i:"JL",when:"Yesterday",text:"Seen on Safari too. Send a message at 23:58 UTC, refresh at 00:01."}],
     links:[{k:"WEB-402",t:"Relates to WEB-402"}]},
-  {key:"WEB-421",p:"WEB",title:"Filter chips overflow the toolbar on small screens",st:"In Progress",b:"In progress",pri:2,labels:["ui"],updated:"1 hour ago",
-    chat:{title:"WEB-421: Filter chips overflow the toolbar",state:"running",when:"Running, step 3 of 5"},
-    sync:{s:"ok",text:"Moved to In Progress in Linear",when:"1 hour ago"},
-    desc:"Below 768 px, filter chips push the toolbar past the viewport and the Apply button disappears.",
-    ac:["The toolbar never scrolls sideways","Chips that do not fit collapse into a +N more button"],comments:[],links:[]},
-  {key:"WEB-425",p:"WEB",title:"Add empty states for the outcomes tab",st:"Todo",b:"To do",pri:2,labels:["copy"],updated:"Yesterday",
-    desc:"New accounts see a blank table on the outcomes tab. Add an empty state that explains what outcomes are and how to add the first one.",
-    ac:["Empty state with one clear first action","Copy reviewed by design"],comments:[],links:[]},
-  {key:"WEB-430",p:"WEB",title:"Keyboard shortcut to jump between projects",st:"Backlog",b:"To do",pri:1,labels:["a11y"],updated:"2 days ago",
-    desc:"Power users want to switch projects without the mouse.",ac:["Cmd+1 to Cmd+9 open projects in sidebar order","The shortcut is listed in the help menu"],comments:[],links:[]},
-  {key:"WEB-402",p:"WEB",title:"Remove the old onboarding banner",st:"Done",b:"Done",pri:1,labels:["cleanup"],updated:"3 days ago",
-    desc:"The banner from the old onboarding still shows for accounts created before the redesign.",ac:[],comments:[],links:[]},
-  {key:"API-77",p:"API",title:"Rate limit headers missing on 429 responses",st:"Code Review",b:"In review",pri:3,labels:["api","bug"],updated:"5 min ago",
-    chat:{title:"API-77: Rate limit headers missing",state:"done",when:"Finished 6 min ago"},
-    pr:{n:88,repo:"acme/api",title:"Add Retry-After and rate limit headers",when:"Opened 5 min ago"},
-    sync:{s:"pend",text:"Moving to Code Review in Jira"},
-    desc:"Clients get 429 responses without Retry-After or X-RateLimit headers, so they retry straight away and hit the limit again.",
-    ac:["429 responses include Retry-After in seconds","X-RateLimit-Limit and X-RateLimit-Remaining on every response","A contract test covers the headers"],
-    comments:[{who:"Sam Ortiz",i:"SO",when:"2 days ago",text:"The mobile client already reads Retry-After, so this fixes the retry storm there too."}],links:[]},
-  {key:"API-81",p:"API",title:"Paginate the audit export endpoint",st:"To Do",b:"To do",pri:2,labels:["api"],updated:"20 min ago",
-    chat:{title:"API-81: Paginate the audit export endpoint",state:"asking",when:"Needs your answer"},
-    sync:{s:"fail",text:"Could not move API-81 to In Progress in Jira.",why:"Jira says the Team field must be set first. Set it in Jira, then retry."},
-    desc:"The audit export returns every row in one response and times out for large workspaces.",
-    ac:["Cursor pagination with a default page size of 500","The old unpaginated call keeps working for one release"],comments:[],links:[]},
-  {key:"API-84",p:"API",title:"Retry webhook deliveries with backoff",st:"To Do",b:"To do",pri:2,labels:["webhooks"],updated:"Yesterday",
+  {key:"API-90",p:"API",title:"Add request IDs to error responses",st:"Code Review",b:"In review",pri:2,labels:["api"],who:"RP",assignedDays:4,statusDays:1,updated:"Yesterday",
+    chat:{title:"API-90: Add request IDs to error responses",state:"done",when:"Finished yesterday"},
+    pr:{n:91,repo:"acme/api",title:"Return a request ID with every error",when:"Opened yesterday"},
+    sync:{s:"ok",text:"Moved to Code Review in Jira and added the PR link",when:"Yesterday"},
+    desc:"Support can't match customer error reports to logs. Return the request ID in the error body and a header.",ac:["X-Request-Id on every response","request_id in every error body"],comments:[],links:[]},
+  {key:"WEB-409",p:"WEB",title:"Upgrade the charting library",st:"In Review",b:"In review",pri:2,labels:["deps"],who:"RP",assignedDays:12,statusDays:2,updated:"2 days ago",
+    desc:"Move to the next major version of the charting library and fix the two breaking changes.",ac:[],comments:[],links:[]},
+  {key:"ENG-1210",p:"ENG",title:"Tray icon needs an offline state",st:"QA",b:"In review",pri:2,labels:["design"],who:"RP",assignedDays:8,statusDays:1,updated:"Yesterday",
+    desc:"When the network drops, the tray icon still shows syncing.",ac:["Offline icon in light and dark","Tooltip explains how to reconnect"],comments:[],links:[]},
+  {key:"API-84",p:"API",title:"Retry webhook deliveries with backoff",st:"To Do",b:"To do",pri:3,labels:["webhooks"],who:"RP",assignedDays:1,dueDays:8,due:"Oct 6",updated:"Yesterday",
     desc:"Failed webhook deliveries are dropped after one attempt. Customers miss events when their endpoint has a short outage.",
     ac:["Up to 5 attempts with exponential backoff, starting at 30 seconds","Each attempt is stored with its status code","A delivery is marked failed after the last attempt"],
     subtasks:[{key:"API-85",title:"Store delivery attempts",b:"To do",st:"To Do"},{key:"API-86",title:"Show failed deliveries in the dashboard",b:"To do",st:"To Do"}],
     comments:[{who:"Jordan Lee",i:"JL",when:"3 days ago",text:"The dashboard team needs the attempt count per delivery, so store it as its own column."},{who:"Sam Ortiz",i:"SO",when:"Yesterday",text:"Keep the first retry short. Most outages we see last under a minute."}],
     epic:"API-60 Webhooks v2",attach:[["retry-timeline.png","184 KB"],["delivery-log.csv","22 KB"]],
     links:[{k:"API-70",t:"Blocked by API-70 (done)"},{url:"https://docs.example.com/acme/webhooks",t:"Webhook design notes"}]},
-  {key:"API-69",p:"API",title:"Document the token scopes",st:"Done",b:"Done",pri:1,labels:["docs"],updated:"4 days ago",desc:"List every token scope and what it allows.",ac:[],comments:[],links:[]},
-  {key:"ENG-1203",p:"ENG",title:"Upgrade the CI runner image to Node 24",st:"Selected for Development",b:"To do",pri:2,labels:["ci"],updated:"3 hours ago",
+  {key:"WEB-425",p:"WEB",title:"Add empty states for the outcomes tab",st:"Todo",b:"To do",pri:2,labels:["copy"],who:"RP",assignedDays:2,updated:"Yesterday",
+    desc:"New accounts see a blank table on the outcomes tab. Add an empty state that explains what outcomes are and how to add the first one.",
+    ac:["Empty state with one clear first action","Copy reviewed by design"],comments:[],links:[]},
+  {key:"ENG-1203",p:"ENG",title:"Upgrade the CI runner image to Node 24",st:"Selected for Development",b:"To do",pri:2,labels:["ci"],who:"RP",assignedDays:3,dueDays:8,due:"Oct 6",updated:"3 hours ago",
     desc:"The runner image still ships Node 20. Move to Node 24 and drop the old polyfills.",ac:["All pipelines green on the new image","Old image removed from the registry"],comments:[],links:[]},
-  {key:"ENG-1198",p:"ENG",title:"Flaky test in worktree cleanup",st:"In Progress",b:"In progress",pri:3,labels:["tests"],updated:"2 hours ago",
-    desc:"The cleanup test fails about one run in twenty on CI, always on the rename step.",ac:["Test passes 200 runs in a row locally"],comments:[],links:[]},
-  {key:"ENG-1210",p:"ENG",title:"Tray icon needs an offline state",st:"Blocked",b:"In progress",pri:2,labels:["design"],updated:"Yesterday",
-    desc:"When the network drops, the tray icon still shows syncing.",ac:["Offline icon in light and dark","Tooltip explains how to reconnect"],comments:[],links:[]}
+  {key:"WEB-430",p:"WEB",title:"Keyboard shortcut to jump between projects",st:"Backlog",b:"To do",pri:1,labels:["a11y"],who:"RP",assignedDays:10,updated:"2 days ago",
+    desc:"Power users want to switch projects without the mouse.",ac:["Cmd+1 to Cmd+9 open projects in sidebar order","The shortcut is listed in the help menu"],comments:[],links:[]},
+  {key:"WEB-402",p:"WEB",title:"Remove the old onboarding banner",st:"Done",b:"Done",pri:1,labels:["cleanup"],who:"RP",doneAgo:"3 days ago",updated:"3 days ago",
+    desc:"The banner from the old onboarding still shows for accounts created before the redesign.",ac:[],comments:[],links:[]},
+  {key:"API-69",p:"API",title:"Document the token scopes",st:"Done",b:"Done",pri:1,labels:["docs"],who:"RP",doneAgo:"4 days ago",updated:"4 days ago",desc:"List every token scope and what it allows.",ac:[],comments:[],links:[]},
+  /* Not assigned to you: only reachable through search */
+  {key:"WEB-440",p:"WEB",title:"Upload progress bar jumps back to 0%",st:"Todo",b:"To do",pri:3,labels:["upload","bug"],who:null,updated:"2 hours ago",
+    desc:"On a flaky connection the progress bar resets to 0% when a chunk is retried, though the upload continues.",ac:["Progress never goes backwards","Retried chunks are not counted twice"],comments:[],links:[]},
+  {key:"API-95",p:"API",title:"Resumable uploads for files over 1 GB",st:"To Do",b:"To do",pri:2,labels:["upload","api"],who:null,updated:"Yesterday",
+    desc:"Large uploads restart from zero after a dropped connection. Support the tus protocol or a similar resumable scheme.",ac:["An upload resumes from the last confirmed chunk"],comments:[],links:[]},
+  {key:"WEB-437",p:"WEB",title:"Uploads over 2 GB fail without an error",st:"In Progress",b:"In progress",pri:3,labels:["upload","bug"],who:"JL",updated:"4 hours ago",
+    desc:"Uploads over 2 GB stop at 99% and the UI shows no error.",ac:["A clear error above the size limit"],comments:[],links:[]},
+  {key:"ENG-1221",p:"ENG",title:"Shrink the 40 MB upload test fixture",st:"To Do",b:"To do",pri:1,labels:["upload","tests"],who:"SO",updated:"3 days ago",
+    desc:"The upload test fixture makes the repository slow to clone.",ac:[],comments:[],links:[]}
 ];
 const srcOf=t=>PROJ[t.p].src;
 const findT=k=>T.find(t=>t.key===k);
+const mine=t=>t.who==="RP";
+
+/* ---------- Attention rules: deterministic, free, instant. Each flag says why. ---------- */
+const RULES=[
+  {id:"chat-asking",kind:"warn",rule:"A chat linked to this ticket asked you a question.",test:t=>t.chat&&t.chat.state==="asking",short:t=>"Chat is waiting for you",long:t=>`Chat is waiting for your answer · ${t.chat.when.toLowerCase()}`},
+  {id:"sync-failed",kind:"bad",rule:"Spark could not change this ticket's status in the tracker.",test:t=>t.sync&&t.sync.s==="fail",short:t=>`Move failed in ${SRC[srcOf(t)].name}`,long:t=>`Move to In Progress failed in ${SRC[srcOf(t)].name}`},
+  {id:"high-idle",kind:"warn",rule:"High or Urgent, not started, assigned to you 2 or more days ago.",test:t=>t.pri>=3&&t.b==="To do"&&!t.chat&&(t.assignedDays||0)>=2,short:t=>`${PRI[t.pri]}, not started`,long:t=>`${PRI[t.pri]}, not started · assigned ${t.assignedDays} days ago`},
+  {id:"due-soon",kind:"warn",rule:"Due within 2 days and not yet in review or done.",test:t=>t.dueDays!=null&&t.dueDays<=2&&t.b!=="Done"&&t.b!=="In review",short:t=>dueWord(t),long:t=>dueWord(t)+(t.chat?"":" · no chat yet")},
+  {id:"review-slow",kind:"warn",rule:"In review for 3 days or more.",test:t=>t.b==="In review"&&(t.statusDays||0)>=3,short:t=>`In review ${t.statusDays} days`,long:t=>`In review ${t.statusDays} days · review status not available yet`}
+];
+const dueWord=t=>t.dueDays<0?`Overdue by ${-t.dueDays} days`:t.dueDays===0?"Due today":t.dueDays===1?"Due tomorrow":`Due in ${t.dueDays} days`;
+const flagsOf=t=>mine(t)?RULES.filter(r=>r.test(t)):[];
+const flagHTML=(t,r,long)=>`<span class="flag${r.kind==="bad"?" bad":""}" title="${esc(r.rule)}">${svg(r.kind==="bad"?P.warn:P.flag,11,2.2)}${esc(long?r.long(t):r.short(t))}</span>`;
+
+/* ---------- Smart views: every ticket assigned to you lands in exactly one ---------- */
+const SECTIONS=[
+  ["attn","Needs attention","Flagged by the rules below. Each row says why."],
+  ["work","Working on","A linked chat is running or open, or the ticket is in progress."],
+  ["pr","PR ready","Spark opened a draft PR. Review and CI status aren't read yet."],
+  ["review","In review","Waiting on others. Age counts from when it entered review."],
+  ["next","Up next","Assigned to you, not started. Highest priority first."],
+  ["done","Done recently","Finished in the last 7 days."]
+];
+function sectionOf(t){
+  if(!mine(t))return null;
+  if(flagsOf(t).length)return "attn";
+  if(t.b==="Done")return "done";
+  if(t.pr)return "pr";
+  if(t.chat||t.b==="In progress")return "work";
+  if(t.b==="In review")return "review";
+  return "next";
+}
+const ruleRank=t=>{const f=flagsOf(t);return f.length?RULES.indexOf(f[0]):9};
+function sortIn(sec,list){
+  if(sec==="attn")return list.sort((a,b)=>ruleRank(a)-ruleRank(b)||b.pri-a.pri);
+  if(sec==="next")return list.sort((a,b)=>b.pri-a.pri||(a.dueDays??99)-(b.dueDays??99));
+  return list;
+}
 
 /* ---------- State ---------- */
-const S={src:"all",bucket:"open",proj:"all",sprint:"any",q:"",sel:null,error:false,loading:false,empty:false,view:"all",showDone:false,startKey:"API-84",startMode:"plan"};
-
-function passes(t,o={}){
+const S={q:"",src:"all",proj:"all",sprint:"any",pri:"any",label:"any",who:"any",view:"all",sel:"API-81",error:false,loading:false,empty:false,
+  compact:false,brief:"on",briefPop:false,confirm:null,assignErr:null,collapsed:{done:true},startKey:"API-84",startMode:"plan"};
+function passes(t){
   if(S.src!=="all"&&srcOf(t)!==S.src)return false;
   if(S.proj!=="all"&&t.p!==S.proj)return false;
   if(S.sprint!=="any"){const sp=PROJ[t.p].sprint;if(S.sprint==="none"?sp:sp!==S.sprint)return false}
-  if(S.view==="chat"&&!t.chat)return false;
-  if(S.view==="pr"&&!t.pr)return false;
-  if(S.view==="attn"&&!(t.sync&&t.sync.s==="fail")&&!(t.chat&&t.chat.state==="asking"))return false;
-  const q=S.q.trim().toLowerCase();
-  if(q&&!(t.key+" "+t.title).toLowerCase().includes(q))return false;
-  if(!o.ignoreBucket){
-    if(S.bucket==="open"&&t.b==="Done")return false;
-    if(BUCKETS.includes(S.bucket)&&t.b!==S.bucket)return false;
-  }
+  if(S.pri!=="any"&&t.pri<+S.pri)return false;
+  if(S.label!=="any"&&!t.labels.includes(S.label))return false;
   return true;
 }
-const filtered=o=>T.filter(t=>passes(t,o));
+function searching(){return S.q.trim().length>0}
+function searchHits(){
+  const q=S.q.trim().toLowerCase();
+  return T.filter(t=>passes(t)&&(`${t.key} ${t.title} ${t.labels.join(" ")}`).toLowerCase().includes(q)
+    &&(S.who==="any"||(S.who==="none"?!t.who:t.who===S.who)));
+}
+function inbox(){
+  const list=T.filter(t=>mine(t)&&passes(t));
+  return SECTIONS.map(([id,label,rule])=>[id,label,rule,sortIn(id,list.filter(t=>sectionOf(t)===id))]);
+}
+const stale=t=>S.error&&srcOf(t)==="jira";
 
 /* ---------- Small pieces ---------- */
 const spill=b=>`<span class="spill ${b==="In progress"?"prog":b==="In review"?"rev":b==="Done"?"done":""}">${b}</span>`;
-const priHTML=n=>`<span class="pri${n===3?" high":""}" role="img" aria-label="${PRI[n]} priority">${[1,2,3].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</span>`;
+const priHTML=n=>n===4?`<span class="pri urgent" role="img" aria-label="Urgent priority">!</span>`:`<span class="pri${n===3?" high":""}${n===0?" none":""}" role="img" aria-label="${PRI[n]}${n?" priority":""}">${[1,2,3].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</span>`;
 const srcb=s=>`<span class="srcb" role="img" aria-label="${SRC[s].name}" title="${SRC[s].name}">${svg(P[SRC[s].icon],12,2)}</span>`;
-const native=t=>t.st.toLowerCase()!==t.b.toLowerCase()?`<span class="native" title="Status in ${SRC[srcOf(t)].name}">${esc(t.st)}</span>`:"";
-const CHAT_WORD={running:"running",done:"finished",asking:"needs your answer"};
+const bkCls=b=>b==="To do"?"todo":b==="In progress"?"prog":b==="In review"?"rev":"done";
+const bk=t=>`<i class="bk ${bkCls(t.b)}" role="img" aria-label="${t.b}" title="${esc(t.st)} in ${SRC[srcOf(t)].name}"></i>`;
+const CHAT_WORD={running:"running",done:"finished",asking:"needs your answer",idle:"finished, not shipped",error:"stopped with an error"};
 function linksHTML(t){
   let h="";
-  if(t.chat)h+=`<span class="lk" title="Linked chat, ${CHAT_WORD[t.chat.state]}">${svg(P.chat,14,2)}<span class="vh">Linked chat, ${CHAT_WORD[t.chat.state]}</span></span>`;
+  if(t.chat)h+=`<span class="lk" title="Linked chat, ${CHAT_WORD[t.chat.state]}">${t.chat.state==="running"?'<i class="cdot running" aria-hidden="true"></i>':t.chat.state==="asking"?'<i class="cdot asking" aria-hidden="true"></i>':""}${svg(P.chat,14,2)}<span class="vh">Linked chat, ${CHAT_WORD[t.chat.state]}</span></span>`;
   if(t.pr)h+=`<span class="lk pr" title="Draft PR ${t.pr.repo}#${t.pr.n}">${svg(P.pr,14,1.9)}#${t.pr.n}<span class="vh"> draft pull request</span></span>`;
-  return `<span class="lks">${h}</span>`;
+  return h?`<span class="lks">${h}</span>`:"";
 }
 function syncMark(t){
-  if(S.error&&srcOf(t)==="jira")return `<span class="stale-tag">Out of date</span>`;
-  if(!t.sync)return "";
-  if(t.sync.s==="fail")return `<span class="syncx" title="Status change failed in ${SRC[srcOf(t)].name}">${svg(P.warn,14,2)}<span class="vh">Status change failed</span></span>`;
-  if(t.sync.s==="pend")return `<i class="spin" title="Status change pending"></i><span class="vh">Status change pending</span>`;
+  if(stale(t))return `<span class="stale-tag">Out of date</span>`;
+  if(t.sync&&t.sync.s==="pend")return `<span class="pend-line"><i class="pdot" aria-hidden="true"></i><span class="vh">Status change pending</span></span>`;
   return "";
 }
-const projSub=t=>{const pj=PROJ[t.p];return `${pj.name}${pj.sprint?" · "+pj.sprint:""}`};
 const avaHTML=(i,cls="mini")=>`<span class="ava ${cls}" aria-hidden="true">${i}</span>`;
+const whoHTML=t=>t.who?`<span class="who-ava${t.who==="RP"?" me":""}" role="img" aria-label="Assigned to ${t.who==="RP"?"you":PEOPLE[t.who]}" title="${t.who==="RP"?"You":PEOPLE[t.who]}">${t.who}</span>`:`<span class="unass" role="img" aria-label="Unassigned" title="Unassigned"></span>`;
 
-function toast(msg){
+function toast(msg,undo){
   const box=$("toasts");const d=document.createElement("div");d.className="toast";d.setAttribute("role","status");
-  d.innerHTML=`<span>${esc(msg)}</span><i class="tbar"></i>`;box.appendChild(d);
-  setTimeout(()=>{d.classList.add("out");setTimeout(()=>d.remove(),260)},4200);
+  d.innerHTML=`<span>${esc(msg)}</span>${undo?`<button class="undo" data-act="undo" data-k="${undo}">Undo</button>`:""}<i class="tbar"></i>`;box.appendChild(d);
+  setTimeout(()=>{d.classList.add("out");setTimeout(()=>d.remove(),260)},undo?9800:4200);
 }
 
-/* ---------- Header and filters ---------- */
-function countFor(key,val){const keep=S[key];S[key]=val;const n=filtered({ignoreBucket:V.id==="board"}).length;S[key]=keep;return n}
+/* ---------- Header, search, filters ---------- */
 function segHTML(label,act,opts,cur,width){
   const i=Math.max(0,opts.findIndex(o=>o[0]===cur));
   return `<div class="seg" style="--n:${opts.length};width:${width}px" role="radiogroup" aria-label="${label}"><span class="seg-ind" style="transform:translateX(${i*100}%)"></span>${opts.map(([v,l])=>`<button role="radio" data-act="${act}" data-v="${v}" aria-checked="${v===cur}">${l}</button>`).join("")}</div>`;
 }
-function headHTML(o={}){
-  const srcOpts=[["all",`All <span class="segn">${countFor("src","all")}</span>`],["linear",`Linear <span class="segn">${countFor("src","linear")}</span>`],["jira",`Jira <span class="segn">${countFor("src","jira")}</span>`]];
-  const layout=o.layout?segHTML("Layout","layout",[["list",`${svg(P.list,13,2)}List`],["board",`${svg(P.board,13,2)}Board`]],o.layout,150):"";
-  const sync=S.error?`<span class="synced bad">${svg(P.warn,13,2)}Jira not synced since 11:02</span>`:`<span class="synced">${svg(P.redo,13,2)}Synced 1 min ago</span>`;
-  return `<div class="tk-head"><h2>Tickets</h2>${segHTML("Source","src",srcOpts,S.src,228)}${layout}
-    <div class="tk-right">${sync}<button class="icon-btn" data-act="refresh" aria-label="Refresh tickets" title="Refresh">${svg(P.redo,15,2)}</button>
-    <label class="tk-search">${svg(P.search,14)}<input id="tkQ" placeholder="Search key or title" value="${esc(S.q)}" aria-label="Search tickets"></label></div></div>`;
+function headHTML(){
+  const sync=S.error?`<span class="synced bad">${svg(P.warn,13,2)}Jira not synced since 11:02</span>`:S.loading?`<span class="synced">Syncing Linear and Jira</span>`:`<span class="synced">${svg(P.redo,13,2)}Synced 1 min ago</span>`;
+  return `<div class="tk-head"><h2>Tickets</h2>
+    <label class="tk-find">${svg(P.search,15)}<span class="vh">Search all tickets in Linear and Jira</span><input id="tkQ" type="search" placeholder="Search all tickets in Linear and Jira" value="${esc(S.q)}" autocomplete="off">${S.q?`<button class="icon-btn" data-act="clear-q" aria-label="Clear search" title="Clear search">${svg(P.close,14,2)}</button>`:`<span class="kbd" aria-hidden="true">/</span>`}</label>
+    <div class="tk-right">${sync}<button class="icon-btn" data-act="refresh" aria-label="Refresh tickets" title="Refresh">${svg(P.redo,15,2)}</button></div></div>`;
 }
-function selHTML(act,label,val,opts){
-  return `<span class="fsel-w"><select class="fsel" data-change="${act}" aria-label="${label}">${opts.map(([v,l])=>`<option value="${v}"${v===val?" selected":""}>${esc(l)}</option>`).join("")}</select>${svg(P.chevd,12,2.2)}</span>`;
+function selHTML(act,label,val,opts,def){
+  return `<span class="fsel-w"><select class="fsel${val!==def?" on":""}" data-change="${act}" aria-label="${label}">${opts.map(([v,l])=>`<option value="${v}"${v===val?" selected":""}>${esc(l)}</option>`).join("")}</select>${svg(P.chevd,12,2.2)}</span>`;
 }
-function projSel(){return selHTML("proj","Project or team",S.proj,[["all","All projects and teams"],...Object.entries(PROJ).filter(([k,p])=>S.src==="all"||p.src===S.src).map(([k,p])=>[k,`${p.name} (${k}, ${SRC[p.src].name})`])])}
-function sprintSel(){return selHTML("sprint","Sprint or cycle",S.sprint,[["any","Any sprint or cycle"],...Object.values(PROJ).filter(p=>p.sprint&&(S.src==="all"||p.src===S.src)).map(p=>[p.sprint,`${p.sprint} (current)`]),["none","No sprint"]])}
-function bucketChips(){
-  const opts=[["open","Open"],...BUCKETS.map(b=>[b,b])];
-  return `<div role="group" aria-label="Status" style="display:flex;gap:6px;flex-wrap:wrap">${opts.map(([v,l])=>`<button class="fchip" data-act="bucket" data-v="${v}" aria-pressed="${S.bucket===v}">${l} <span class="n">${countFor("bucket",v)}</span></button>`).join("")}</div>`;
+function filtersHTML(){
+  const labels=[...new Set(T.filter(t=>searching()||mine(t)).flatMap(t=>t.labels))].sort();
+  const active=S.src!=="all"||S.proj!=="all"||S.sprint!=="any"||S.pri!=="any"||S.label!=="any"||(searching()&&S.who!=="any");
+  return `<div class="fbar" role="group" aria-label="Filters">
+    ${selHTML("src","Source",S.src,[["all","All sources"],["linear","Linear"],["jira","Jira"]],"all")}
+    ${selHTML("proj","Team or project",S.proj,[["all","All teams and projects"],...Object.entries(PROJ).filter(([k,p])=>S.src==="all"||p.src===S.src).map(([k,p])=>[k,`${p.name} (${k})`])],"all")}
+    ${selHTML("sprint","Sprint or cycle",S.sprint,[["any","Any sprint or cycle"],...Object.values(PROJ).filter(p=>p.sprint&&(S.src==="all"||p.src===S.src)).map(p=>[p.sprint,`${p.sprint} (current)`]),["none","No sprint"]],"any")}
+    ${selHTML("pri","Priority",S.pri,[["any","Any priority"],["4","Urgent"],["3","High and above"],["2","Medium and above"]],"any")}
+    ${selHTML("label","Label",S.label,[["any","Any label"],...labels.map(l=>[l,l])],"any")}
+    ${searching()?selHTML("who","Assignee",S.who,[["any","Anyone"],["RP","Me"],["none","Unassigned"],["JL","Jordan Lee"],["SO","Sam Ortiz"],["PN","Priya Nair"]],"any"):""}
+    ${active?`<button class="fclear" data-act="clear-filters">Clear filters</button>`:""}
+    <span class="sp"></span>
+    ${segHTML("Row density","density",[["comfortable","Comfortable"],["compact","Compact"]],S.compact?"compact":"comfortable",200)}
+  </div>`;
 }
 function alertHTML(){
   if(!S.error)return "";
-  return `<div class="tk-alert" role="alert">${svg(P.warn,16,2)}<span><b>Jira stopped accepting your API token.</b> Jira tickets below are from 11:02 and can't be started or moved until you reconnect. Linear is fine.</span><button class="btn sm primary" data-act="reconnect">Reconnect Jira</button></div>`;
+  return `<div class="tk-alert" role="alert">${svg(P.warn,16,2)}<span><b>Jira stopped accepting your API token.</b> Jira tickets below are from 11:02 and can't be started, assigned or moved until you reconnect. Linear is fine.</span><button class="btn sm primary" data-act="reconnect">Reconnect Jira</button></div>`;
+}
+
+/* ---------- Brief: the ticket slice of the Home brief ---------- */
+const BRIEF=[
+  {k:"API-81",text:"Answer the agent's question about the page size, then set the Team field in Jira so the move can go through."},
+  {k:"WEB-433",text:"Urgent, due tomorrow and not started. Start it with a plan this morning."},
+  {k:"API-77",text:"PR acme/api#88 has waited 4 days. Nudge a reviewer."}
+];
+function briefHTML(){
+  if(S.loading)return `<section class="brief" aria-label="Brief loading" aria-busy="true"><div class="brief-h"><h3>What needs you today</h3></div><div class="brief-sk" aria-hidden="true"><span class="sk" style="width:82%"></span><span class="sk" style="width:64%"></span><span class="sk" style="width:73%"></span></div></section>`;
+  const pop=S.briefPop?briefPopHTML():"";
+  if(S.brief==="off")return `<section class="brief off" aria-labelledby="briefT"><div class="brief-h"><h3 id="briefT">Brief is off</h3><span class="sp"></span><div style="position:relative"><button class="icon-btn" data-act="brief-pop" aria-expanded="${S.briefPop}" aria-controls="briefPop" aria-label="Brief settings" title="Brief settings">${svg(P.gear,15,2)}</button>${pop}</div></div>
+    <div class="brief-foot">The rules still flag tickets under Needs attention. Turn the brief on for a short summary, about $0.01 each.<button class="btn sm line" data-act="brief-on" style="margin-left:auto">Turn on</button></div></section>`;
+  if(S.brief==="writing")return `<section class="brief" aria-labelledby="briefT" aria-busy="true"><div class="brief-h">${scoutSVG(22).replace('class="scout"','class="scout working"')}<h3 id="briefT">What needs you today</h3><span class="brief-meta" role="status">Writing a new brief…</span></div><div class="brief-sk" aria-hidden="true"><span class="sk" style="width:82%"></span><span class="sk" style="width:64%"></span><span class="sk" style="width:73%"></span></div></section>`;
+  const items=BRIEF.map(b=>[b,findT(b.k)]).filter(([b,t])=>t&&mine(t)&&flagsOf(t).length);
+  const more=T.filter(t=>sectionOf(t)==="attn").length-items.length;
+  return `<section class="brief" aria-labelledby="briefT"><div class="brief-h">${scoutSVG(22)}<h3 id="briefT">What needs you today</h3><span class="brief-meta">09:12 · Sonnet 5 · ~$0.01</span><span class="sp"></span>
+    <button class="hlink" data-act="brief-refresh" title="Refreshes at most every 30 minutes">Refresh</button>
+    <div style="position:relative"><button class="icon-btn" data-act="brief-pop" aria-expanded="${S.briefPop}" aria-controls="briefPop" aria-label="Brief settings" title="Brief settings">${svg(P.gear,15,2)}</button>${pop}</div>
+    </div>
+    <ol>${items.map(([b,t],i)=>`<li class="bi"><span class="num" aria-hidden="true">${i+1}</span><div><p><button class="kref" data-act="sel" data-k="${t.key}" aria-label="Show ${t.key}">${t.key}</button> ${esc(b.text)}</p><div class="why" aria-label="Why">${flagsOf(t).map(r=>flagHTML(t,r)).join("")}</div></div>${quickActs(t,"attn",true)}</li>`).join("")}</ol>
+    <div class="brief-foot">${svg(P.spark,12,2)}The ticket items from your Home brief, written only from the flagged items and their ticket and PR details. The flags come from rules, not the AI.${more>0?` ${more} more flagged below.`:""}<a class="hlink" style="margin-left:auto;white-space:nowrap" href="home-brief-mockup.html${location.search}">Full brief on Home</a></div></section>`;
+}
+function briefPopHTML(){
+  return `<div class="pop open ctxpop" id="briefPop" role="dialog" aria-label="Brief settings" style="width:330px;right:0;top:32px;text-align:left">
+    <label class="check-row" style="margin-bottom:10px"><input type="checkbox" role="switch" data-act="brief-switch"${S.brief!=="off"?" checked":""}><span><b style="font-weight:500">Write a brief with AI</b><br><small style="color:var(--muted)">Off means rules only: nothing is sent to a model.</small></span></label>
+    <dl class="facts" style="grid-template-columns:70px minmax(0,1fr);white-space:normal">
+      <dt>Model</dt><dd style="white-space:normal">Sonnet 5, the middle tier of your default provider. Never the fast tier or a retiring model.</dd>
+      <dt>Refresh</dt><dd style="white-space:normal">When you open Home or press Refresh, and only if something changed.</dd>
+      <dt>Reads</dt><dd style="white-space:normal">Keys, titles, statuses, priorities, due dates, PR numbers and the rule flags. Never descriptions, comments or code.</dd>
+      <dt>Cost</dt><dd style="white-space:normal">About $0.01 a brief. $0.31 so far this month.</dd></dl>
+    <label class="field" style="margin-top:10px"><span style="font-size:12.5px">At most every</span><span class="selw"><select class="inp" style="font-size:13px;padding:6px 30px 6px 10px"><option>15 minutes</option><option selected>30 minutes</option><option>1 hour</option><option>Only when I press Refresh</option></select>${svg(P.chevd,12,2.2)}</span></label>
+    <p class="set-hint">At 30 minutes the brief costs at most about $0.20 a day.</p></div>`;
+}
+
+/* ---------- Rows and quick actions ---------- */
+function quickActs(t,sec,small){
+  const st=stale(t),dis=st?` disabled title="Reconnect Jira first"`:"";
+  const b=(act,label,cls="",extra="")=>`<button class="qa ${cls}" data-act="${act}" data-k="${t.key}"${extra} aria-label="${label} ${t.key}">${label}</button>`;
+  if(t.assigning)return `<span class="ir-acts pin"><span class="pend-line" role="status"><i class="pdot" aria-hidden="true"></i>Assigning in ${SRC[srcOf(t)].name}</span></span>`;
+  if(t.justAssigned)return `<span class="ir-acts pin"><span class="qa done">${I.ok}Assigned to you</span>${b("undo","Undo")}</span>`;
+  const acts=[];
+  if(sec==="search"&&!mine(t))acts.push(b("assign","Assign to me",t.who?"":"primary",dis));
+  if(sec==="attn"){
+    const f=flagsOf(t)[0];
+    if(f&&f.id==="chat-asking")acts.push(b("open-chat","Answer","primary"));
+    else if(f&&f.id==="sync-failed")acts.push(b("retry","Retry","",dis));
+    else if(f&&f.id==="review-slow")acts.push(b("open-pr","Open PR","primary"));
+    else acts.push(b("start","Start","primary",dis));
+    if(!small&&f&&f.id==="chat-asking"&&t.sync&&t.sync.s==="fail")acts.push(b("retry","Retry","",dis));
+  }
+  if(sec==="work")acts.push(t.chat?b("open-chat","Open chat"):b("start","Start","",dis));
+  if(sec==="pr"){acts.push(b("open-pr","Open PR","primary"));if(!small)acts.push(b("open-chat","Open chat"))}
+  if(sec==="review")acts.push(t.pr?b("open-pr","Open PR"):b("ext",`Open in ${SRC[srcOf(t)].name}`));
+  if(sec==="next")acts.push(b("start","Start","primary",dis));
+  if(sec==="search"&&mine(t))acts.push(t.chat?b("open-chat","Open chat"):b("start","Start","",dis));
+  if(sec==="search"&&!mine(t)&&!t.who)acts.push(b("start","Start","",dis));
+  return `<span class="ir-acts${sec==="search"&&!t.who?" pin":""}">${acts.join("")}</span>`;
+}
+function ageHTML(t,sec){
+  const f=flagsOf(t);
+  if(sec==="attn")return `<span class="age warn cmp-only">${esc(f[0].short(t))}</span><span class="age cmf-only">Updated ${t.updated}</span>`;
+  if(sec==="work")return `<span class="age">${t.chat?esc(t.chat.when):"No chat in Spark"}</span>`;
+  if(sec==="pr")return `<span class="age">PR ${esc(t.pr.when.toLowerCase())}</span>`;
+  if(sec==="review")return `<span class="age">in review ${t.statusDays} day${t.statusDays===1?"":"s"}</span>`;
+  if(sec==="next")return `<span class="age">${t.due?`Due ${t.due.toLowerCase()==="tomorrow"?"tomorrow":t.due}`:`Assigned ${t.assignedDays} day${t.assignedDays===1?"":"s"} ago`}</span>`;
+  if(sec==="done")return `<span class="age">Done ${t.doneAgo}</span>`;
+  return `<span class="age">Updated ${t.updated}</span>`;
+}
+function subHTML(t,sec){
+  const pj=PROJ[t.p],bits=[];
+  if(sec==="attn")bits.push(flagsOf(t).map(r=>flagHTML(t,r,true)).join(""));
+  if(sec==="search")bits.push(`<span>${t.who?(t.who==="RP"?"Assigned to you":`Assigned to ${PEOPLE[t.who]}`):"Unassigned"}</span><span>·</span>`);
+  if(sec==="pr")bits.push(`<span>${t.pr.repo}#${t.pr.n} · Draft</span><span>·</span><span class="flag na" title="Spark doesn't read pull request status yet">Review status not available yet</span>`);
+  if(sec==="review")bits.push(`<span>${t.pr?`${t.pr.repo}#${t.pr.n}`:"Not opened from Spark"}</span><span>·</span><span class="flag na" title="Spark doesn't read pull request status yet">Reviewers not available yet</span>`);
+  bits.push(`<span>${esc(pj.name)}${pj.sprint?" · "+esc(pj.sprint):""}</span>`);
+  if(sec!=="attn"&&t.due&&sec!=="next")bits.push(`<span>· Due ${t.due.toLowerCase()==="tomorrow"||t.due.toLowerCase()==="today"?t.due.toLowerCase():t.due}</span>`);
+  if(t.st.toLowerCase()!==t.b.toLowerCase())bits.push(`<span>· ${SRC[srcOf(t)].name}: ${esc(t.st)}</span>`);
+  return `<span class="ir-sub">${bits.join("")}</span>`;
+}
+function rowHTML(t,sec){
+  const f=sec==="attn"?flagsOf(t):[];
+  const confirm=S.confirm===t.key?confirmHTML(t):"";
+  const err=S.assignErr===t.key?`<div class="inline-err" role="alert">${svg(P.warn,14,2)}<span><b>Couldn't assign ${t.key}.</b> Jira says you can't assign issues in Engineering (ENG). Ask a project admin for the Assign issues permission. Nothing changed.</span></div>`:"";
+  return `<div class="irow${t.key===S.sel?" sel":""}${stale(t)?" stale":""}" role="listitem"${confirm?' style="z-index:7"':""}>
+    <button class="ir-main" data-act="sel" data-k="${t.key}" aria-current="${t.key===S.sel}">
+      ${bk(t)}${priHTML(t.pri)}${srcb(srcOf(t))}<span class="tk-key">${t.key}</span><span class="tk-title">${esc(t.title)}</span>
+      <span class="ir-right">${f.length?`<span class="cmp-flag" title="${esc(f.map(r=>r.long(t)).join("; "))}">${svg(P.flag,13,2)}<span class="vh">${esc(f.map(r=>r.long(t)).join("; "))}</span></span>`:""}${syncMark(t)}${sec==="search"?whoHTML(t):""}${linksHTML(t)}${ageHTML(t,sec)}</span>
+      ${subHTML(t,sec)}
+    </button>${quickActs(t,sec)}${confirm}${err}</div>`;
+}
+function confirmHTML(t){
+  return `<div class="confirm" role="dialog" aria-modal="false" aria-labelledby="cf-${t.key}" id="confirmPop">
+    <p id="cf-${t.key}"><b>Take ${t.key} from ${PEOPLE[t.who]}?</b></p><small>${SRC[srcOf(t)].name} makes you the assignee and notifies ${PEOPLE[t.who].split(" ")[0]}. You can undo for 10 seconds.</small>
+    <div class="acts"><button class="btn sm ghost" data-act="confirm-cancel" data-k="${t.key}">Cancel</button><button class="btn sm primary" data-act="confirm-assign" data-k="${t.key}">Assign to me</button></div></div>`;
+}
+function sectionHTML([id,label,rule,list]){
+  if(S.view!=="all"&&S.view!==id)return "";
+  const c=!!S.collapsed[id]&&S.view==="all";
+  const body=list.length?list.map(t=>rowHTML(t,id)).join(""):`<div class="sec-empty">${id==="attn"?"Nothing needs you right now.":"Nothing here."}</div>`;
+  return `<section class="grp" aria-labelledby="sh-${id}"><button class="sec-h${id==="attn"&&list.length?" attn":""}" id="sh-${id}" data-act="sec-toggle" data-v="${id}" aria-expanded="${!c}" aria-controls="sb-${id}">${I.chev}<b>${label}</b><span class="n">${list.length}</span><span class="rule">${rule}</span></button>
+    <div role="list" id="sb-${id}" aria-labelledby="sh-${id}"${c?" hidden":""}>${body}</div></section>`;
+}
+function searchHTML(){
+  const hits=searchHits();
+  const groups=[["Assigned to you",hits.filter(mine)],["Unassigned",hits.filter(t=>!t.who)],["Assigned to others",hits.filter(t=>t.who&&!mine(t))]].filter(g=>g[1].length);
+  const src=S.error?`<div class="src-note" role="status">${svg(P.warn,14,2)}Jira results are from 11:02. Reconnect Jira to search it again. Linear results are live.</div>`:"";
+  if(!hits.length)return `${src}<div class="tk-empty" style="padding:48px 22px"><div><h2 style="font-size:17px">No tickets match "${esc(S.q.trim())}"</h2><p class="set-hint">Searched every ticket you can see in Linear (Acme) and Jira (example.atlassian.net), not just yours. Try fewer words, or clear the filters.</p><div class="tk-cta" style="margin-top:12px"><button class="btn sm line" data-act="clear-filters">Clear filters</button><button class="btn sm ghost" data-act="clear-q">Clear search</button></div></div></div>`;
+  return `${src}<div class="res-h" role="status"><b>${hits.length} results</b> for "${esc(S.q.trim())}" across all tickets in Linear and Jira</div>
+    ${groups.map(([g,l],i)=>`<section aria-labelledby="rg-${i}"><div class="sec-h" id="rg-${i}" style="cursor:default"><b>${g}</b><span class="n">${l.length}</span>${g==="Unassigned"?`<span class="rule">Assign to me sets you as the assignee in the tracker.</span>`:""}</div><div role="list" aria-labelledby="rg-${i}">${l.map(t=>rowHTML(t,"search")).join("")}</div></section>`).join("")}`;
+}
+function listHTML(){
+  if(S.loading)return skeletonHTML();
+  if(searching())return searchHTML();
+  return briefHTML()+inbox().map(sectionHTML).join("");
+}
+
+/* ---------- Side column: smart views ---------- */
+function navHTML(){
+  if(S.loading)return `<nav class="ib-nav" aria-label="Views" aria-busy="true"><div class="sk-nav" aria-hidden="true">${[70,58,52,62,48,66,55].map(w=>`<span class="sk" style="width:${w}%"></span>`).join("")}</div></nav>`;
+  const secs=inbox();const total=secs.reduce((n,s)=>n+s[3].length,0);
+  const ic={attn:P.flag,work:P.chat,pr:P.pr,review:P.clock,next:P.play,done:P.ticket};
+  const item=(v,label,n,icon,cls="")=>`<button class="ib-item${cls}" data-act="view" data-v="${v}" aria-pressed="${S.view===v&&!searching()}">${icon?`<span class="dotw">${svg(icon,15,1.8)}</span>`:""}<span class="l">${label}</span><span class="n">${n}</span></button>`;
+  return `<nav class="ib-nav" aria-label="Views"><div class="ib-sec">Views</div>
+    ${item("all","Inbox",total,P.home)}
+    ${secs.map(([id,label,,l])=>item(id,label,l.length,ic[id],id==="attn"&&l.length?" attn":"")).join("")}
+    <p class="ib-foot"><b style="color:var(--muted);font-weight:500">Attention rules</b><br>High or Urgent not started after 2 days · due within 2 days · in review 3 days or more · a chat waiting on you · a failed status move. PR review and CI checks come when Spark reads PR status.</p></nav>`;
 }
 
 /* ---------- Detail ---------- */
 function syncLine(t){
-  const s=srcOf(t),n=SRC[s].name;
-  if(S.error&&s==="jira")return `<div class="sync fail">${svg(P.warn,15,2)}<span><b>Showing the copy from 11:02.</b> Reconnect Jira to refresh this ticket and move it.</span></div>`;
+  const s=srcOf(t);
+  if(stale(t))return `<div class="sync fail">${svg(P.warn,15,2)}<span><b>Showing the copy from 11:02.</b> Reconnect Jira to refresh this ticket, assign it or move it.</span></div>`;
   if(!t.sync)return "";
   if(t.sync.s==="ok")return `<div class="sync ok">${I.ok}<span>${esc(t.sync.text)} · ${t.sync.when}</span></div>`;
-  if(t.sync.s==="pend")return `<div class="sync pend"><i class="spin"></i><span>${esc(t.sync.text)}…</span></div>`;
-  return `<div class="sync fail">${svg(P.warn,15,2)}<span><b>${esc(t.sync.text)}</b> ${esc(t.sync.why)}</span><button class="btn sm line" data-act="retry" data-k="${t.key}">Retry</button></div>`;
+  if(t.sync.s==="pend")return `<div class="sync pend"><i class="pdot" aria-hidden="true"></i><span>${esc(t.sync.text)}…</span></div>`;
+  return `<div class="sync fail">${svg(P.warn,15,2)}<span><b>${esc(t.sync.text)}</b> ${esc(t.sync.why)}</span><button class="btn sm line" data-act="retry" data-k="${t.key}"${stale(t)?" disabled":""}>Retry</button></div>`;
 }
 function linkedWork(t){
   const items=[];
-  if(t.chat)items.push(`<button class="lchip" data-act="open-chat" data-k="${t.key}">${svg(P.chat,17,1.8)}<span class="t"><b>${esc(t.chat.title)}</b><small><i class="cdot ${t.chat.state}"></i>Chat · ${esc(t.chat.when)}</small></span></button>`);
-  if(t.pr)items.push(`<button class="lchip" data-act="open-pr" data-k="${t.key}">${svg(P.github,17,1.8)}<span class="t"><b>${esc(t.pr.title)}</b><small><span class="k">${t.pr.repo}#${t.pr.n}</span><span class="spill">Draft</span>${esc(t.pr.when)}</small></span></button>`);
+  if(t.chat)items.push(`<button class="lchip" data-act="open-chat" data-k="${t.key}">${svg(P.chat,17,1.8)}<span class="t"><b>${esc(t.chat.title)}</b><small><i class="cdot ${t.chat.state==="idle"?"done":t.chat.state}"></i>Chat · ${esc(t.chat.when)}</small></span></button>`);
+  if(t.chat&&t.chat.q)items.push(`<div class="question" style="font-size:13px;margin:0 0 8px">${esc(t.chat.q)}</div>`);
+  if(t.pr)items.push(`<div class="prbox"><button class="lchip" style="margin:0;border:0;padding:0" data-act="open-pr" data-k="${t.key}">${svg(P.github,17,1.8)}<span class="t"><b>${esc(t.pr.title)}</b><small><span class="k">${t.pr.repo}#${t.pr.n}</span><span class="spill">Draft</span>${esc(t.pr.when)}</small></span></button>
+    <dl><dt>Review</dt><dd class="na-txt">Not available yet</dd><dt>CI checks</dt><dd class="na-txt">Not available yet</dd><dt>Merged</dt><dd class="na-txt">Not available yet</dd></dl>
+    <p class="dep">Spark doesn't read pull request status yet. Until it does, the ticket stays in PR ready.</p></div>`);
   return `<div class="tk-sec"><h4>Linked work</h4>${items.join("")||`<div class="hquiet">No chats or pull requests yet. Start work to create a chat linked to this ticket.</div>`}</div>`;
 }
-function detailHTML(t,o={}){
-  const s=srcOf(t),pj=PROJ[t.p],n=SRC[s].name,stale=S.error&&s==="jira";
-  const acts=t.chat
-    ?`<button class="btn primary sm" data-act="open-chat" data-k="${t.key}">${svg(P.chat,14,2)}Open linked chat</button><button class="btn line sm" data-act="start" data-k="${t.key}"${stale?" disabled":""}>Start again</button>`
-    :`<button class="btn primary sm" data-act="start" data-k="${t.key}"${stale?" disabled":""}>${svg(P.play,13,2)}Start work</button>`;
+function detailHTML(t){
+  const s=srcOf(t),pj=PROJ[t.p],n=SRC[s].name,st=stale(t),f=flagsOf(t);
+  const dis=st?" disabled":"";
+  const acts=[];
+  if(!mine(t))acts.push(`<button class="btn ${t.who?"line":"primary"} sm" data-act="assign" data-k="${t.key}"${dis}>${svg(P.assign,14,2)}Assign to me</button>`);
+  if(t.chat)acts.push(`<button class="btn primary sm" data-act="open-chat" data-k="${t.key}">${svg(P.chat,14,2)}${t.chat.state==="asking"?"Answer in chat":"Open chat"}</button>`);
+  if(t.pr)acts.push(`<button class="btn ${t.chat?"line":"primary"} sm" data-act="open-pr" data-k="${t.key}">${svg(P.pr,14,2)}Open PR</button>`);
+  acts.push(`<button class="btn ${t.chat||!mine(t)&&!t.who?"line":"primary"} sm" data-act="start" data-k="${t.key}"${dis}>${svg(P.play,13,2)}${t.chat?"Start again":"Start work"}</button>`);
+  const why=f.length?`<div class="whybox"><b>Why it needs attention</b><ul>${f.map(r=>`<li>${esc(r.long(t))}<br><small>Rule: ${esc(r.rule)}</small></li>`).join("")}</ul></div>`:"";
   const sub=(t.subtasks||[]).map(x=>`<div class="subt"><span class="tk-key">${x.key}</span><span class="t">${esc(x.title)}</span>${spill(x.b)}</div>`).join("");
   const links=(t.links||[]).map(l=>l.url?`<div class="xlink">${svg(P.link,14,2)}<a href="#" data-act="ext-url" data-url="${esc(l.url)}">${esc(l.t)}</a><span class="native">${esc(l.url.replace("https://",""))}</span></div>`:`<div class="xlink">${svg(P.ticket,14,2)}<span>${esc(l.t)}</span></div>`).join("");
   const cm=(t.comments||[]).map(c=>`<div class="cmt">${avaHTML(c.i,"")}<div class="cb"><b>${esc(c.who)}</b><time>${c.when}</time><p>${esc(c.text)}</p></div></div>`).join("");
-  return `<aside class="tk-detail${o.over?" over":""}" aria-label="${t.key} details" id="tkDetail" tabindex="-1">
+  return `<aside class="tk-detail" aria-label="${t.key} details" id="tkDetail" tabindex="-1">
     <div class="tk-dhead"><span class="tk-key">${srcb(s)}${n} · ${t.key}</span>
       <button class="icon-btn" data-act="ext" data-k="${t.key}" aria-label="Open ${t.key} in ${n}" title="Open in ${n}">${svg(P.ext,15,2)}</button>
-      ${o.close?`<button class="icon-btn" data-act="close-detail" aria-label="Close details" title="Close">${svg(P.close,16,2)}</button>`:""}</div>
+      <button class="icon-btn" data-act="close-detail" aria-label="Close details" title="Close">${svg(P.close,16,2)}</button></div>
     <h3>${esc(t.title)}</h3>
-    <div class="tk-actions">${acts}</div>
-    ${syncLine(t)}
+    <div class="tk-actions">${acts.join("")}</div>
+    ${why}${syncLine(t)}
     <dl class="tk-props">
-      <dt>Status</dt><dd>${spill(t.b)}<span class="native-l">${n}: ${esc(t.st)}</span></dd>
+      <dt>Status</dt><dd>${spill(t.b)}<span class="native-l">${n}: ${esc(t.st)}${t.statusDays!=null&&t.b!=="Done"?` · ${t.statusDays?t.statusDays+" day"+(t.statusDays>1?"s":""):"since today"}`:""}</span></dd>
       <dt>Priority</dt><dd>${priHTML(t.pri)}${PRI[t.pri]}</dd>
+      <dt>Due</dt><dd>${t.due?esc(t.due):"No due date"}</dd>
       <dt>${pj.kind}</dt><dd>${esc(pj.name)} <span class="tk-key">${t.p}</span></dd>
       <dt>${s==="linear"?"Cycle":"Sprint"}</dt><dd>${pj.sprint?esc(pj.sprint):"None"}</dd>
-      <dt>Assignee</dt><dd>${avaHTML("RP")}Riley Park (you)</dd>
+      <dt>Assignee</dt><dd>${t.who?`${avaHTML(t.who)}${t.who==="RP"?"Riley Park (you)":PEOPLE[t.who]}`:`<span class="unass" aria-hidden="true"></span>Unassigned`}</dd>
       <dt>Labels</dt><dd>${t.labels.map(l=>`<span class="lbl">${esc(l)}</span>`).join("")}</dd>
       <dt>Updated</dt><dd>${t.updated}</dd>
     </dl>
     ${linkedWork(t)}
-    <div class="tk-sec"><h4>Description <span class="live-note">${stale?"Saved copy":"Loaded from "+n+" just now"}</span></h4><p>${esc(t.desc)}</p></div>
+    <div class="tk-sec"><h4>Description <span class="live-note">${st?"Saved copy":"Loaded from "+n+" just now"}</span></h4><p>${esc(t.desc)}</p></div>
     ${t.ac&&t.ac.length?`<div class="tk-sec"><h4>Acceptance criteria</h4><ul>${t.ac.map(a=>`<li>${esc(a)}</li>`).join("")}</ul></div>`:""}
     ${sub?`<div class="tk-sec"><h4>Subtasks <span class="live-note">${t.subtasks.length}</span></h4>${sub}</div>`:""}
     ${links?`<div class="tk-sec"><h4>Links</h4>${links}</div>`:""}
     <div class="tk-sec"><h4>Comments <span class="live-note">${(t.comments||[]).length}</span></h4>${cm||`<p style="color:var(--faint);font-size:13px">No comments.</p>`}</div>
   </aside>`;
 }
-function noSelHTML(){return `<aside class="tk-detail tk-none"><div>Select a ticket to see its details<br>and start work from it.</div></aside>`}
+function noSelHTML(){return `<aside class="tk-detail tk-none" aria-label="Details"><div>Select a ticket to see its details<br>and start work from it.</div></aside>`}
+function detailSkeleton(){return `<aside class="tk-detail" aria-label="Details loading" aria-busy="true"><div class="sk-detail" aria-hidden="true"><span class="sk" style="width:40%"></span><span class="sk" style="width:90%;height:18px"></span><span class="sk" style="width:60%;height:18px"></span><span class="sk" style="width:35%;height:28px;border-radius:8px"></span>${[70,55,62,48,66,52].map(w=>`<span class="sk" style="width:${w}%"></span>`).join("")}<span class="sk" style="width:100%;height:60px;border-radius:8px"></span></div></aside>`}
 
 /* ---------- Empty, loading ---------- */
 function emptyHTML(){
   return `<div class="tk-empty"><div><div class="big">${svg(P.ticket,28,1.8)}</div><h2>See your tickets here</h2>
-    <p class="lede">Connect Linear or Jira and Spark lists the tickets assigned to you. Start work from any ticket and the details come along.</p>
+    <p class="lede">Connect Linear or Jira and Spark sorts the tickets assigned to you into what needs you, what's in flight and what's next. Search covers every ticket you can see, and you can assign one to yourself.</p>
     <div class="tk-cta"><button class="btn primary" data-act="connect" data-v="linear">${svg(P.linear,17,1.8)}Connect Linear</button><button class="btn line" data-act="connect" data-v="jira">${svg(P.ticket,17,1.8)}Connect Jira</button></div>
-    <p class="set-hint" style="margin-top:16px">Tokens stay in your macOS keychain. Spark only reads tickets assigned to you and moves them when you start work or open a draft PR.</p></div></div>`;
+    <p class="set-hint" style="margin-top:16px">Tokens stay in your macOS keychain. Spark changes a ticket only when you start work, open a draft PR or assign it to yourself.</p></div></div>`;
 }
 function skeletonHTML(){
-  const w=[62,48,70,55,66,40,58];
-  return `<div class="loading-note" role="status"><i class="spin"></i>Loading tickets from Linear and Jira…</div>`+w.map(x=>`<div class="sk-row" aria-hidden="true"><span class="sk" style="height:12px"></span><span class="sk" style="height:18px"></span><span class="sk"></span><span class="sk" style="width:${x}%"></span><span class="sk" style="height:18px;border-radius:999px"></span></div>`).join("");
+  const row=w=>`<div class="sk-irow" aria-hidden="true"><span class="sk c" style="height:13px;width:13px"></span><span class="sk" style="height:12px"></span><span class="sk" style="height:18px;border-radius:6px"></span><span class="sk"></span><span class="sk" style="width:${w}%"></span><span class="sk" style="height:12px"></span><span class="sk l2"></span></div>`;
+  const sec=(w,rows)=>`<div class="sk-sec" aria-hidden="true"><span class="sk" style="width:12px;height:12px"></span><span class="sk" style="width:${w}px;height:13px"></span><span class="sk" style="width:18px"></span></div>`+rows.map(row).join("");
+  return `<p class="vh" role="status">Loading tickets from Linear and Jira</p>${briefHTML()}${sec(120,[72,58,66])}${sec(90,[54,70])}${sec(80,[62,48,57])}`;
 }
 
 /* ---------- Start dialog ---------- */
@@ -1250,6 +1614,7 @@ function openStart(t){
         <p class="set-hint" id="permHint"></p></div>
         <div><div class="dlabel">Ticket</div>
         <label class="check-row"><input type="checkbox" id="mv" checked><span>Move ${t.key} to In progress in ${n}</span></label>
+        ${mine(t)?"":`<label class="check-row" style="margin-top:8px"><input type="checkbox" id="asg" checked><span>Assign ${t.key} to me in ${n}</span></label>`}
         <p class="set-hint">Now ${esc(t.st)}. Uses the status chosen for In progress in Settings.</p></div>
       </div>
       <div id="ctxRoot">${ctxHTML(t)}</div>
@@ -1286,7 +1651,6 @@ function ctxClick(a,b){
   if(a==="ctx-remove"){CTX.added.splice(+b.dataset.i,1);redrawCtx(t,"#ctxNote");return true}
   return false;
 }
-
 /* ---------- Settings: connectors ---------- */
 const SECS=[["profile","Profile",'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'],["ai","AI providers",'<path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/>'],["tools","Connectors",'<path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5"/>'],["look","Appearance",'<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/>']];
 const MAP={
@@ -1340,7 +1704,7 @@ function statusLine(id){
 function connBody(id){
   const st=CS[id];
   if(id==="github")return `<p class="prov-line">Ship uses it to open draft pull requests.</p><dl class="facts"><dt>Method</dt><dd>gh CLI</dd><dt>Account</dt><dd>riley-park</dd><dt>Host</dt><dd>github.com</dd></dl><p class="set-hint">The full GitHub settings stay where they are today; this row is here for context.</p>`;
-  const lists=`<p class="prov-line">Lists the ${SRC[id].name} ${id==="jira"?"issues":"issues"} assigned to you and moves them when work starts or a draft PR opens.</p>`;
+  const lists=`<p class="prov-line">Lists the ${SRC[id].name} issues assigned to you, searches every issue you can see, assigns one to you when you ask, and moves tickets when work starts or a draft PR opens.${id==="jira"?" Assigning needs the Assign issues permission in that project.":""}</p>`;
   if(st==="none")return lists+formHTML(id,false);
   if(st==="error")return `<p class="prov-line">Jira tickets are paused until you reconnect. Your mapping and switch below are kept.</p>${formHTML(id,true)}${moveSwitch(id)}${mapHTML(id)}`;
   return `${lists}${REPL[id]?`<p class="chg-note">Saving a new ${id==="jira"?"token":"key"} replaces the one in the keychain.</p>${formHTML(id,false)}`:`${factsHTML(id)}<div class="conn-acts"><button class="btn sm line" data-act="replace" data-v="${id}">Replace ${id==="jira"?"token":"key"}</button><button class="btn sm ghost" data-act="remove" data-v="${id}">Remove</button></div>`}${moveSwitch(id)}${mapHTML(id)}`;
@@ -1379,18 +1743,6 @@ function openSettings(mode,open){
     <div class="set-main"><div class="set-head"><h3 id="setTitle">Connectors</h3><button class="icon-btn" data-act="close" aria-label="Close settings">${svg(P.close,16,2)}</button></div><div class="set-body" id="setBody">${connectorsHTML()}</div></div></div></div>`;
   requestAnimationFrame(()=>{const f=mode==="error"?$("f-jira-token"):mode==="connect"&&openConn?$(`f-${openConn}-token`)||$(`f-${openConn}-site`):$("set").querySelector(".set-panel");if(f)f.focus({preventScroll:true})});
 }
-
-/* ---------- Home: Your tickets ---------- */
-function homeHTML(){
-  const open=T.filter(t=>t.b!=="Done").sort((a,b)=>(b.chat?1:0)-(a.chat?1:0)).slice(0,5);
-  return `<div class="home"><div class="home-wrap"><div class="home-hero"><h1>Good morning, Riley</h1><p><b>1 chat needs you</b> and 1 agent is running.</p></div>
-    <div class="hgrid" style="margin-top:34px"><section class="hsec"><div class="hsec-h"><h2>Your tickets</h2><button data-act="nav-tickets">View all</button></div>
-    ${open.map(t=>`<button class="mrow" data-act="home-ticket" data-k="${t.key}">${srcb(srcOf(t))}<span class="k">${t.key}</span><span class="t">${esc(t.title)}</span>${t.chat?`<span class="lks">${svg(P.chat,13,2)}</span>`:""}${spill(t.b)}</button>`).join("")}</section>
-    <section class="hsec"><div class="hsec-h"><h2>Recent chats</h2><button>View all</button></div>
-    ${T.filter(t=>t.chat).map(t=>`<button class="mrow">${svg(P.folder,14,1.8)}<span class="t">${esc(t.chat.title)}</span><span class="pj" style="margin:0">${PROJ[t.p].folder}</span></button>`).join("")}</section></div>
-    <p class="set-hint" style="margin-top:8px">Home shows up to 5 open tickets assigned to you, ones with linked work first. With no source connected it says "Connect Linear or Jira to see your tickets here."</p></div></div>`;
-}
-
 /* ---------- Theme (same tokens and switch as the mockup) ---------- */
 function applyTheme(mode,x,y){
   const run=()=>{document.documentElement.dataset.theme=mode;document.body.dataset.skin="auto";
@@ -1410,29 +1762,30 @@ function scoutSVG(size){
   <g class="sc-cheeks"><circle cx="18.5" cy="46.5" r="2.7"/><circle cx="45.5" cy="46.5" r="2.7"/></g>
   <g class="sc-look"><rect class="sc-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8"/><rect class="sc-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8"/></g></g></g></svg>`;
 }
-const VARIANTS=[["list","tickets-mockup-list.html","List"],["board","tickets-mockup-board.html","Board"],["inbox","tickets-mockup-inbox.html","Inbox"]];
-const STATES=[["","Default"],["start","Start work"],["start-context","Context"],["start-prompt","Prompt"],["settings","Settings"],["settings-open","Jira open"],["settings-error","Jira error"],["connect","Connect"],["empty","Empty"],["error","Token rejected"],["loading","Loading"],["home","Home"]];
+
+/* ---------- Shell ---------- */
+const STATES=[["","Default"],["compact","Compact"],["search","Search + assign"],["assign-confirm","Assign confirm"],["assigned","Assigned + undo"],["assign-error","Assign failed"],["no-results","No results"],["loading","Loading"],["brief-writing","Brief writing"],["brief-off","Brief off"],["brief-settings","Brief settings"],["empty","Empty"],["error","Token rejected"],["start","Start work"],["start-context","Context"],["start-prompt","Prompt"],["settings","Settings"],["settings-open","Jira open"],["settings-error","Jira error"],["connect","Connect"]];
 function shellHTML(){
   const th=document.documentElement.dataset.theme||"light";
   const q=location.search;
   return `<div class="mock-bar" role="region" aria-label="Mockup controls">
-    <span class="mock-tag">Sample data</span><b class="vh">Tickets mockup, ${V.title}</b>
-    <nav class="mock-nav" aria-label="Variants"><span>Variant</span>${VARIANTS.map(([id,f,l])=>`<a href="${f}${q}" ${id===V.id?'aria-current="page"':""}>${l}</a>`).join("")}</nav>
-    <nav class="mock-nav" aria-label="States" id="stateNav"><span>State</span>${STATES.concat(V.extraStates||[]).map(([h,l])=>`<a href="#${h}" data-state="${h}">${l}</a>`).join("")}</nav>
+    <span class="mock-tag">Sample data</span><b class="vh">Tickets mockup: inbox</b>
+    <nav class="mock-nav" aria-label="Screens"><span>Screen</span><a href="tickets-mockup-inbox.html${q}" aria-current="page">Tickets</a><a href="home-brief-mockup.html${q}">Home brief</a></nav>
+    <nav class="mock-nav" aria-label="States" id="stateNav"><span>State</span>${STATES.map(([h,l])=>`<a href="#${h}" data-state="${h}">${l}</a>`).join("")}</nav>
     <div class="mock-theme"><div class="seg" id="themeSeg" style="--n:2" role="radiogroup" aria-label="Theme"><span class="seg-ind" style="transform:translateX(${th==="dark"?100:0}%)"></span><button role="radio" data-act="theme" data-v="light" aria-checked="${th==="light"}">Light</button><button role="radio" data-act="theme" data-v="dark" aria-checked="${th==="dark"}">Dark</button></div></div>
   </div>
   <div class="app">
     <nav class="rail" aria-label="Main">
       <button class="rail-logo" aria-label="Spark Outpost">${scoutSVG(34)}</button>
       <span class="rail-ind" id="railInd"></span>
-      <button class="rail-btn" data-view="home" data-act="nav-home">${svg('<path d="M3 11 12 4l9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/>',20,1.8)}Home</button>
-      <button class="rail-btn" data-view="chats">${svg(P.chat,20,1.8)}Chats<i class="rbadge" aria-label="1 chat needs your input">1</i></button>
-      <button class="rail-btn" data-view="tickets" data-act="nav-tickets">${svg(P.ticket,20,1.8)}Tickets</button>
+      <button class="rail-btn" data-view="home" data-act="nav-home">${svg(P.home,20,1.8)}Home</button>
+      <button class="rail-btn" data-view="chats" data-act="nav-chats">${svg(P.chat,20,1.8)}Chats<i class="rbadge" aria-label="1 chat needs your input">1</i></button>
+      <button class="rail-btn" data-view="tickets" data-act="nav-tickets">${svg(P.ticket,20,1.8)}Tickets<i class="rbadge" id="tkBadge" aria-label="Tickets needing attention"></i></button>
       <span class="rail-sp"></span>
       <button class="rail-btn" data-act="nav-settings">${svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',20,1.8)}Settings</button>
       <button class="ava rail-ava" aria-label="Your profile">RP</button>
     </nav>
-    <div class="view page" id="view"></div>
+    <main class="view page" id="view" aria-label="Tickets"></main>
   </div>
   <div id="dlgRoot"></div><div id="setRoot"></div><div id="toasts" aria-live="polite"></div>`;
 }
@@ -1442,22 +1795,47 @@ function moveRailInd(){const b=document.querySelector(`.rail-btn[data-view="${cu
   ind.style.transform=`translateY(${b.offsetTop}px)`;ind.style.height=b.offsetHeight+"px"}
 function render(){
   const root=$("view");
-  if(curView==="home"){root.innerHTML=homeHTML();return}
-  if(S.empty){root.innerHTML=emptyHTML();return}
-  V.render(root);
+  document.body.classList.toggle("compact",S.compact);
+  const n=S.empty||S.loading?0:T.filter(t=>sectionOf(t)==="attn").length;const bd=$("tkBadge");if(bd){bd.textContent=n||"";bd.setAttribute("aria-label",`${n} tickets need attention`)}
+  if(S.empty){root.innerHTML=`<div class="tk">${headHTML()}${emptyHTML()}</div>`;return}
+  root.innerHTML=`<div class="tk">${headHTML()}${filtersHTML()}${alertHTML()}
+    <div class="ib">${navHTML()}<div class="ib-main" id="tkList" aria-label="${searching()?"Search results":"Inbox"}"${S.loading?' aria-busy="true" tabindex="0"':""}>${listHTML()}</div><div id="tkDetailSlot" style="display:contents"></div></div></div>`;
+  renderDetail();
+}
+function renderList(){const box=$("tkList");if(!box){render();return}box.innerHTML=listHTML();box.setAttribute("aria-label",searching()?"Search results":"Inbox");
+  const nav=document.querySelector(".ib-nav");if(nav)nav.outerHTML=navHTML();
+  const fb=document.querySelector(".fbar");if(fb)fb.outerHTML=filtersHTML()}
+function renderDetail(){
+  const t=S.sel&&findT(S.sel);
+  $("tkDetailSlot").innerHTML=S.loading?detailSkeleton():!t?noSelHTML():detailHTML(t);
 }
 
 /* ---------- Routing (hash = mockup state) ---------- */
+function reset(){
+  Object.assign(S,{q:"",src:"all",proj:"all",sprint:"any",pri:"any",label:"any",who:"any",view:"all",sel:"API-81",error:false,loading:false,empty:false,compact:false,brief:"on",briefPop:false,confirm:null,assignErr:null});
+  T.forEach(t=>{delete t.justAssigned;delete t.assigning;if(t.prev!==undefined){t.who=t.prev;delete t.prev}});
+}
 function route(){
   const h=location.hash.slice(1);
   $("dlgRoot").innerHTML="";$("setRoot").innerHTML="";
-  S.error=h==="error"||h==="settings-error";S.empty=h==="empty"||h.startsWith("connect");S.loading=h==="loading";
-  curView=h==="home"?"home":"tickets";
-  if(V.onRoute)V.onRoute(h);
+  reset();
+  S.error=h==="error"||h==="settings-error";S.empty=h==="empty"||h.startsWith("connect");S.loading=h==="loading";S.compact=h==="compact";
+  if(h==="brief-off")S.brief="off";
+  if(h==="brief-writing")S.brief="writing";
+  if(h==="brief-settings")S.briefPop=true;
+  if(["search","assign-confirm","assigned","assign-error"].includes(h)){S.q="upload";S.sel="WEB-440"}
+  if(h==="assign-confirm"){S.confirm="WEB-437";S.sel="WEB-437"}
+  if(h==="assigned"){const t=findT("WEB-440");t.prev=t.who;t.who="RP";t.justAssigned=true}
+  if(h==="assign-error"){S.assignErr="ENG-1221";S.sel="ENG-1221"}
+  if(h==="no-results")S.q="billing export";
+  if(h==="error")S.sel="API-81";
   render();moveRailInd();
+  if(h==="assigned")toast("Assigned WEB-440 to you in Linear.","WEB-440");
+  if(h==="assign-confirm")requestAnimationFrame(()=>{const b=document.querySelector('[data-act="confirm-assign"]');if(b)b.focus({preventScroll:true})});
   if(h.startsWith("start")){CTX.open=h!=="start";CTX.preview=h==="start-prompt";
     if(h!=="start"&&!CTX.added.length){CTX.note="Keep the public webhook payload unchanged; two customers parse it strictly.";CTX.added=[{kind:"file",name:"retry-timeline.png",size:"184 KB",tokens:250},{kind:"mention",name:"src/webhooks/",size:"folder",tokens:0},{kind:"link",name:"acme.example.com/wiki/webhook-retries",tokens:0},{kind:"ticket",name:"API-81",title:"Paginate the audit export endpoint",tokens:30}]}
     if(h==="start"){CTX.note="";CTX.added=[]}
+    S.startKey="API-84";S.sel="API-84";renderDetail();
     openStart(findT(S.startKey));
     if(h!=="start")requestAnimationFrame(()=>{const b=$("dlgBody"),target=h==="start-prompt"?$("pvText"):$("ctxRoot");if(b&&target)b.scrollTop=target.offsetTop-b.offsetTop-8})}
   if(h==="settings")openSettings("connected");
@@ -1468,6 +1846,22 @@ function route(){
   document.querySelectorAll("#stateNav a").forEach(a=>a.setAttribute("aria-current",a.dataset.state===h?"true":"false"));
 }
 function go(h){if(location.hash.slice(1)===h)route();else location.hash=h}
+function closeTo(){return S.error?"error":""}
+function closeDlg(){$("dlgRoot").innerHTML="";if(location.hash.startsWith("#start"))history.replaceState(null,"",location.pathname+location.search);document.querySelectorAll("#stateNav a").forEach(a=>a.setAttribute("aria-current",a.dataset.state===""?"true":"false"));const r=document.querySelector(`.ir-main[data-k="${S.startKey}"]`);if(r)r.focus({preventScroll:true})}
+
+/* ---------- Assign to me ---------- */
+function doAssign(t){
+  if(t.p==="ENG"&&t.who==="SO"){S.confirm=null;S.assignErr=t.key;renderList();return}
+  S.confirm=null;S.assignErr=null;t.assigning=true;renderList();
+  setTimeout(()=>{t.assigning=false;t.prev=t.who;t.who="RP";t.justAssigned=true;renderList();if(S.sel===t.key)renderDetail();
+    toast(`Assigned ${t.key} to you in ${SRC[srcOf(t)].name}.`,t.key);
+    setTimeout(()=>{if(t.justAssigned){t.justAssigned=false;delete t.prev;if($("tkList"))renderList()}},10000)},reduce?0:700);
+}
+function undoAssign(k){
+  const t=findT(k);if(!t||t.prev===undefined)return;
+  const was=t.prev;t.who=was;delete t.prev;t.justAssigned=false;renderList();if(S.sel===k)renderDetail();
+  toast(was?`Gave ${k} back to ${PEOPLE[was]}.`:`${k} is unassigned again.`);
+}
 
 /* ---------- Events ---------- */
 function onClick(e){
@@ -1475,23 +1869,35 @@ function onClick(e){
   const a=b.dataset.act,v=b.dataset.v,k=b.dataset.k;
   if(b.tagName==="A")e.preventDefault();
   if(a==="theme"){const r=b.getBoundingClientRect();applyTheme(v,r.left+r.width/2,r.top+r.height/2);return}
-  if(a==="nav-home"){go("home");return}
+  if(a==="nav-home"){location.href="home-brief-mockup.html"+location.search;return}
+  if(a==="nav-chats"){toast("Chats is not part of this mockup.");return}
   if(a==="nav-tickets"){go("");return}
   if(a==="nav-settings"){go("settings");return}
-  if(a==="home-ticket"){S.sel=k;go("");return}
-  if(a==="src"){S.src=v;S.proj="all";render();return}
-  if(a==="bucket"){S.bucket=v;render();return}
-  if(a==="layout"){const f=VARIANTS.find(x=>x[0]===v);if(v!==V.id)location.href=f[1]+location.search;return}
+  if(a==="sel"){S.sel=k;S.confirm=null;renderList();renderDetail();const d=$("tkDetail");if(d&&matchMedia("(max-width:1180px)").matches)d.focus();return}
+  if(a==="view"){S.view=v;S.q="";render();return}
+  if(a==="sec-toggle"){S.collapsed[v]=!S.collapsed[v];renderList();const nb=$("sh-"+v);if(nb)nb.focus();return}
+  if(a==="density"){S.compact=v==="compact";render();return}
+  if(a==="clear-q"){S.q="";S.who="any";S.confirm=null;S.assignErr=null;render();$("tkQ").focus();return}
+  if(a==="clear-filters"){Object.assign(S,{src:"all",proj:"all",sprint:"any",pri:"any",label:"any",who:"any"});render();return}
   if(a==="refresh"){toast(S.error?"Linear refreshed. Jira needs a new token first.":"Refreshed. Nothing changed since 1 min ago.");return}
-  if(a==="start"){S.startKey=k;go("start");return}
-  if(a==="close"){go(curView==="home"?"home":S.error?"error":"");return}
+  if(a==="brief-refresh"){S.brief="writing";renderList();setTimeout(()=>{S.brief="on";renderList()},reduce?0:1600);return}
+  if(a==="brief-pop"){S.briefPop=!S.briefPop;renderList();const p=document.querySelector('[data-act="brief-pop"]');if(p)p.focus();return}
+  if(a==="brief-switch"){S.brief=b.checked?"on":"off";renderList();const sw=document.querySelector('[data-act="brief-switch"]');if(sw)sw.focus();return}
+  if(a==="brief-on"){S.brief="writing";renderList();setTimeout(()=>{S.brief="on";renderList()},reduce?0:1600);return}
+  if(a==="assign"){const t=findT(k);if(t.who&&t.who!=="RP"){S.confirm=k;renderList();requestAnimationFrame(()=>{const c=document.querySelector('[data-act="confirm-assign"]');if(c)c.focus()})}else doAssign(t);return}
+  if(a==="confirm-assign"){doAssign(findT(k));return}
+  if(a==="confirm-cancel"){S.confirm=null;renderList();const r=document.querySelector(`.ir-acts [data-act="assign"][data-k="${k}"]`);if(r)r.focus();return}
+  if(a==="undo"){undoAssign(k);return}
+  if(a==="start"){S.startKey=k;S.sel=k;CTX.note="";CTX.added=[];CTX.open=false;CTX.preview=false;openStart(findT(k));return}
+  if(a==="close"){if($("set")){go(closeTo());return}closeDlg();return}
   if(a==="folder"){b.parentElement.querySelectorAll("[data-act=folder]").forEach(x=>x.setAttribute("aria-checked",x===b));syncStart(findT(S.startKey));return}
   if(a==="mode"){S.startMode=v;b.parentElement.querySelectorAll("[data-act=mode]").forEach(x=>x.setAttribute("aria-checked",x===b));syncStart(findT(S.startKey));return}
   if(ctxClick(a,b))return;
-  if(a==="start-go"){const t=findT(k),mv=$("mv").checked,s=SRC[srcOf(t)].name;
+  if(a==="start-go"){const t=findT(k),mv=$("mv").checked,s=SRC[srcOf(t)].name,asg=$("asg");
+    if(asg&&asg.checked){t.who="RP"}
     t.chat={title:`${t.key}: ${t.title}`,state:"running",when:S.startMode==="plan"?"Writing a plan":"Running, step 1 of 5"};
-    if(mv&&t.b==="To do"){t.sync={s:"pend",text:`Moving to In Progress in ${s}`};}
-    go("");toast(mv?`Started a chat for ${t.key}. Moving it to In progress in ${s}.`:`Started a chat for ${t.key}.`);
+    if(mv&&t.b==="To do"){t.sync={s:"pend",text:`Moving to In Progress in ${s}`}}
+    closeDlg();S.q="";render();toast(mv?`Started a chat for ${t.key}. Moving it to In progress in ${s}.`:`Started a chat for ${t.key}.`);
     if(mv&&t.b==="To do")setTimeout(()=>{t.b="In progress";t.st="In Progress";t.sync={s:"ok",text:`Moved to In Progress in ${s}`,when:"just now"};render()},1400);return}
   if(a==="retry"){const t=findT(k);t.sync={s:"pend",text:`Moving to In Progress in Jira`};render();
     setTimeout(()=>{t.sync={s:"fail",text:"Could not move API-81 to In Progress in Jira.",why:"Jira still says the Team field must be set first."};render();toast("Jira refused the move again. Set the Team field in Jira, then retry.")},1200);return}
@@ -1508,80 +1914,40 @@ function onClick(e){
   if(a==="remove"){toast(`This would remove the ${SRC[v].name} connection and delete its token from the keychain.`);return}
   if(a==="save-conn"){const body=b.closest(".pc-body");const hint=body.querySelector(".hintline");const inp=body.querySelector('input[type="password"]');
     if(!inp.value.trim()){hint.className="hintline bad";hint.textContent="Paste a "+(v==="jira"?"token":"key")+" first.";inp.classList.add("bad");inp.setAttribute("aria-invalid","true");inp.focus();return}
-    hint.className="hintline";hint.innerHTML=`<i class="spin" style="display:inline-block;vertical-align:-1px;margin-right:6px"></i>Checking with ${SRC[v].name}…`;
+    hint.className="hintline";hint.innerHTML=`<i class="pdot" style="margin-right:6px" aria-hidden="true"></i>Checking with ${SRC[v].name}…`;
     setTimeout(()=>{CS[v]="connected";REPL[v]=false;redrawConnectors(`#ch-${v}`);toast(`Connected ${SRC[v].name}. Your tickets will show up in a moment.`)},1100);return}
   if(a==="map-reset"){MAP[mapSel[v]].set={};redrawConnectors(`[data-act="map-reset"][data-v="${v}"]`);toast("Status mapping reset to automatic.");return}
   if(a==="sec"){if(v!=="tools")toast("Only Connectors is part of this mockup.");return}
-  if(a==="close-detail"){S.sel=null;render();return}
-  if(V.onClick)V.onClick(a,b,e);
+  if(a==="close-detail"){S.sel=null;renderList();renderDetail();return}
 }
 function boot(){
   document.body.insertAdjacentHTML("afterbegin",shellHTML());
   document.addEventListener("click",onClick);
   document.addEventListener("change",e=>{const c=e.target.dataset.change;
-    if(c==="proj"){S.proj=e.target.value;render()}
-    if(c==="sprint"){S.sprint=e.target.value;render()}
+    if(c&&c in S&&c!=="map"){S[c]=e.target.value;if(c==="src")S.proj="all";render();const f=document.querySelector(`[data-change="${c}"]`);if(f)f.focus();return}
     if(c==="map"){const src=e.target.dataset.src;mapSel[src]=e.target.value;redrawConnectors(`[data-change="map"][data-src="${src}"]`)}
     if(e.target.id==="perm")syncStart(findT(S.startKey));
     if(e.target.dataset.piece){CTX.pieces[e.target.dataset.piece]=e.target.checked;redrawCtx(findT(S.startKey),`#${e.target.id}`)}
     if(e.target.id==="nCom"){CTX.n=+e.target.value;redrawCtx(findT(S.startKey),"#nCom")}
   });
-  document.addEventListener("input",e=>{if(e.target.id==="tkQ"){S.q=e.target.value;V.renderList?V.renderList():render()}if(e.target.id==="ctxNote"){CTX.note=e.target.value;syncCtx(findT(S.startKey))}});
+  document.addEventListener("input",e=>{if(e.target.id==="tkQ"){const was=searching();S.q=e.target.value;S.confirm=null;S.assignErr=null;
+      if(was!==searching()){render();const q=$("tkQ");q.focus();q.setSelectionRange(q.value.length,q.value.length)}
+      else{const box=$("tkList");box.innerHTML=`<div class="res-h" role="status"><b>Searching Linear and Jira…</b></div>`+[66,52,71].map(w=>`<div class="sk-irow" aria-hidden="true"><span class="sk c" style="height:13px;width:13px"></span><span class="sk" style="height:12px"></span><span class="sk" style="height:18px;border-radius:6px"></span><span class="sk"></span><span class="sk" style="width:${w}%"></span><span class="sk" style="height:12px"></span><span class="sk l2"></span></div>`).join("");
+        clearTimeout(boot.t);boot.t=setTimeout(renderList,reduce?0:450)}}
+    if(e.target.id==="ctxNote"){CTX.note=e.target.value;syncCtx(findT(S.startKey))}});
   document.addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.target.id==="ctxAt"||e.target.id==="ctxUrl")){e.preventDefault();ctxClick(e.target.id==="ctxAt"?"ctx-mention":"ctx-link")}});
-  document.addEventListener("keydown",e=>{if(e.key==="Escape"){if($("dlg")||$("set")){e.preventDefault();go(S.error?"error":"")}else if(S.sel&&V.closeOnEsc){S.sel=null;render()}}});
-  document.addEventListener("click",e=>{if(e.target.id==="dlg"||e.target.id==="set")go(S.error?"error":"")});
+  document.addEventListener("keydown",e=>{
+    if(e.key==="/"&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)&&!$("dlg")&&!$("set")){const q=$("tkQ");if(q){e.preventDefault();q.focus()}return}
+    if(e.key!=="Escape")return;
+    if($("dlg")){e.preventDefault();closeDlg();return}
+    if($("set")){e.preventDefault();go(closeTo());return}
+    if(S.confirm){const k=S.confirm;S.confirm=null;renderList();const r=document.querySelector(`.ir-acts [data-act="assign"][data-k="${k}"]`);if(r)r.focus();return}
+    if(S.briefPop){S.briefPop=false;renderList();const p=document.querySelector('[data-act="brief-pop"]');if(p)p.focus();return}
+    if(e.target.id==="tkQ"&&S.q){S.q="";render();$("tkQ").focus()}});
+  document.addEventListener("click",e=>{if(e.target.id==="dlg"){closeDlg()}if(e.target.id==="set")go(closeTo())});
   addEventListener("hashchange",route);addEventListener("resize",moveRailInd);
   route();
 }
-
-const V={id:"inbox",title:"Variant 3: inbox grouped by project",closeOnEsc:false,
-  collapsed:{},
-  onRoute(h){if(!S.sel)S.sel="API-84";if(h==="error")S.sel="API-84"},
-  navItem(act,v,label,n,icon,cur){return `<button class="ib-item" data-act="${act}" data-v="${v}" aria-pressed="${cur}">${icon||""}<span class="l">${label}</span><span class="n">${n}</span></button>`},
-  nav(){
-    const cnt=(k,v)=>{const o={...S};S[k]=v;const n=filtered().length;Object.assign(S,o);return n};
-    const views=[["all","Assigned to me",svg(P.ticket,15,1.8)],["attn","Needs attention",svg(P.warn,15,1.8)],["chat","Has a chat",svg(P.chat,15,1.8)],["pr","Has a draft PR",svg(P.pr,15,1.8)]];
-    const srcs=[["all","All sources",""],["linear","Linear",srcb("linear")],["jira","Jira",srcb("jira")]];
-    const bks=[["open","Open"],["all","Everything"],...BUCKETS.map(b=>[b,b])];
-    return `<nav class="ib-nav" aria-label="Ticket filters">
-      <div class="ib-sec">Views</div>${views.map(([v,l,ic])=>this.navItem("view",v,l,cnt("view",v),ic,S.view===v)).join("")}
-      <div class="ib-sec">Source</div>${srcs.map(([v,l,ic])=>this.navItem("src",v,l,cnt("src",v),ic,S.src===v)).join("")}
-      <div class="ib-sec">Status</div>${bks.map(([v,l])=>this.navItem("bucket",v,l,cnt("bucket",v),v==="open"||v==="all"?"":`<i class="bk ${bkCls(v)}" aria-hidden="true"></i>`,S.bucket===v)).join("")}
-      <div class="ib-sec">Sprint or cycle</div><div style="padding:2px 6px">${sprintSel()}</div>
-    </nav>`;
-  },
-  render(root){
-    root.innerHTML=`<div class="tk">${headHTML()}${alertHTML()}
-      <div class="ib">${this.nav()}<div class="ib-main" id="tkList" aria-label="Tickets by project"></div><div id="tkDetailSlot" style="display:contents"></div></div></div>`;
-    this.renderList();this.renderDetail();
-  },
-  row(t){
-    return `<button class="irow${t.key===S.sel?" sel":""}${S.error&&srcOf(t)==="jira"?" stale":""}" role="listitem" data-act="sel" data-k="${t.key}" aria-current="${t.key===S.sel}">
-      <i class="bk ${bkCls(t.b)}" role="img" aria-label="${t.b}"></i><span class="tk-key">${t.key}</span><span class="tk-title">${esc(t.title)}</span>
-      <span class="ir-st">${syncMark(t)}<span class="native">${esc(t.st)}</span></span>${linksHTML(t)}<span class="upd">${t.updated}</span></button>`;
-  },
-  renderList(){
-    const box=$("tkList");
-    if(S.loading){box.innerHTML=skeletonHTML();return}
-    const list=filtered();
-    const groups=Object.keys(PROJ).map(k=>[k,list.filter(t=>t.p===k)]).filter(([k,l])=>l.length);
-    box.innerHTML=groups.map(([k,l])=>{const pj=PROJ[k],c=!!this.collapsed[k];
-      return `<section class="grp"><button class="grp-h" data-act="grp" data-v="${k}" aria-expanded="${!c}">${I.chev}${srcb(pj.src)}<b>${esc(pj.name)}</b><span class="tk-key">${k}</span>${pj.sprint?`<span>· ${esc(pj.sprint)}</span>`:""}<span class="n">${l.length}</span></button>
-        <div role="list" ${c?"hidden":""}>${l.map(t=>this.row(t)).join("")}</div></section>`}).join("")
-      ||`<div class="hquiet" style="margin:18px">No tickets match. Try a different search or filter.</div>`;
-  },
-  renderDetail(){
-    const t=S.sel&&findT(S.sel);
-    $("tkDetailSlot").innerHTML=S.loading||!t?noSelHTML():detailHTML(t,{close:true});
-  },
-  onClick(a,b){
-    if(a==="sel"){S.sel=b.dataset.k;$("tkList").querySelectorAll(".irow").forEach(r=>{r.classList.toggle("sel",r===b);r.setAttribute("aria-current",r===b)});this.renderDetail();return}
-    if(a==="view"){S.view=b.dataset.v;render();return}
-    if(a==="grp"){const k=b.dataset.v;this.collapsed[k]=!this.collapsed[k];this.renderList();const nb=$("tkList").querySelector(`[data-act="grp"][data-v="${k}"]`);if(nb)nb.focus()}
-  }
-};
-const bkCls=b=>b==="To do"?"todo":b==="In progress"?"prog":b==="In review"?"rev":"done";
-
 boot();
 })();
 </script>

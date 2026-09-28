@@ -1,140 +1,161 @@
 # Tickets screen plan
 
-Design only. Nothing here is built in `apps/web` yet. The backend for Linear and Jira Cloud is on `feat/tickets` (`packages/contracts/src/tickets.ts`, `apps/server/src/tickets/`, `api/ticket-routes.ts`, `0054_tickets.sql`).
+Design only. Nothing here is built in `apps/web` yet. The backend for Linear and Jira Cloud is merged from `feat/tickets` (`packages/contracts/src/tickets.ts`, `apps/server/src/tickets/`, `api/ticket-routes.ts`, `0054_tickets.sql`).
 
-Mockups (open in a browser; each has a Light/Dark switch, a variant switch and a state switch in the dashed bar at the top, which is not part of the app):
+## Decisions (September 28, 2026)
 
-| File | Variant |
+1. **The inbox is the only layout.** The list and board mockups are removed (they are in git history at `0a3b94b`). The inbox has a Comfortable / Compact row density switch. Compact rows show one line; the reason for a flag becomes a short label.
+2. **Search covers every ticket in the connected sources**, not just yours. Results are grouped as Assigned to you, Unassigned and Assigned to others. Any result can be assigned to you in one click (Linear `issueUpdate` with `assigneeId`; Jira `PUT /issue/{key}/assignee`).
+3. **Smart views.** Every ticket assigned to you lands in exactly one: Needs attention, Working on, PR ready, In review (with its age, such as "in review 3 days"), Up next and Done recently.
+4. **Filters:** source, team or project, sprint or cycle, priority, label, plus assignee while searching.
+5. **Skeleton loading everywhere and no spinners.** Skeletons are shaped like the rows, sections, brief and detail they stand in for. Pending moves and "Assigning…" use a pulsing dot with text.
+6. **Attention comes from rules first.** Deterministic rules flag the work and each flag says why. An optional AI brief then summarises only the flagged items.
+7. **The brief lives on Home.** Home shows one attention feed for chats, tickets and PRs, and the Tickets inbox shows the ticket slice of that same feed. See "Where the brief lives".
+
+## Mockups
+
+Open them in a browser. The dashed bar at the top is not part of the app: it switches the screen, the state (URL hash) and Light/Dark. `?theme=dark` or `?theme=light` forces a theme. All data is made up (team "Acme", `example.atlassian.net`, `linear.app/acme`, and the people Riley Park, Jordan Lee, Sam Ortiz and Priya Nair).
+
+| File | States |
 | --- | --- |
-| `tickets-mockup-list.html` | 1. List with a detail drawer |
-| `tickets-mockup-board.html` | 2. Board by status bucket |
-| `tickets-mockup-inbox.html` | 3. Compact inbox grouped by project |
+| `tickets-mockup-inbox.html` | default, `#compact`, `#search` (search with unassigned results), `#assign-confirm` (taking a ticket from someone), `#assigned` (assigned, with undo), `#assign-error` (Jira refuses), `#no-results`, `#loading`, `#brief-writing`, `#brief-off`, `#brief-settings`, `#empty`, `#error` (token rejected), `#start`, `#start-context`, `#start-prompt`, `#settings`, `#settings-open`, `#settings-error`, `#connect`, `#connect-jira` |
+| `home-brief-mockup.html` | default, `#writing`, `#failed`, `#off`, `#settings`, `#tickets` (the ticket slice), `#clear`, `#loading`, `#no-tickets` |
 
-States are URL hashes, the same in every file: `#start` (context collapsed), `#start-context` (context open, with added items), `#start-prompt` (prompt preview open), `#settings` (all connector rows collapsed), `#settings-open` (Jira row open), `#settings-error` (Jira token rejected, row opens by itself), `#connect` and `#connect-jira` (nothing connected, that row open), `#empty`, `#error`, `#loading`, `#home`, and `#detail` on the board. Add `?theme=dark` or `?theme=light` to force a theme. All data is made up (team "Acme", `example.atlassian.net`, `linear.app/acme`).
+CSS tokens, fonts, rail, buttons, pills, provider cards, the Home layout (`home-hero`, `home-compose`, `hsec`, `hcard`, `mrow`) and the Settings panel are copied from `docs/design/mockup/spark-outpost-mockup.html`. New pieces use only those tokens.
 
-The CSS tokens, fonts, rail, buttons, pills, `tk-row`, `tk-detail`, provider cards (`pcard`), composer attachment chips and Settings panel are copied verbatim from `docs/design/mockup/spark-outpost-mockup.html`. New pieces (filter chips, source badge, sync line, Start dialog, context picker, board cards, inbox rows) use only those tokens.
+## Tickets inbox
 
-## User jobs
+**Header.** Title, then one wide search field ("Search all tickets in Linear and Jira", `/` focuses it, Escape clears it), then the sync line ("Synced 1 min ago", or in red "Jira not synced since 11:02") and Refresh.
 
-1. See the tickets assigned to me, from Linear and Jira, in one place.
-2. Pick one and start work on it without retyping the ticket.
-3. See which tickets already have a chat or a draft PR, and jump to them.
-4. Narrow the list by source, project or team, status, and sprint or cycle.
-5. Find a ticket by key or words in the title.
-6. Connect, reconnect and remove Linear and Jira, and see that it worked.
-7. Trust that the ticket's status in Linear or Jira follows the work, and notice when it did not.
+**Filter bar.** Selects for source, team or project, sprint or cycle, priority (Urgent, High and above, Medium and above) and label, plus assignee (Anyone, Me, Unassigned, or a person) while searching. An active filter is tinted and "Clear filters" appears. The density switch sits at the right end of the bar.
 
-## Information architecture
+**Side column: views.** Inbox (all sections) and one entry per smart view with its count. Needs attention's count is amber when it's above zero. Under the list, the attention rules are written out in plain words. The rail's Tickets item shows the same Needs attention count as a badge.
 
-**Tickets rail view.** The rail item already exists in the mockup. The view has:
+**Brief strip.** At the top of the Inbox view in Comfortable density: "What needs you today", with up to 3 ticket items from the Home brief. Each item shows its rule flags and one quick action. A footer links to "Full brief on Home". It is a view of the Home brief and never calls a model itself. It shows as a skeleton while the brief is being written. When the brief is off, it says so and offers "Turn on (about $0.01 each)".
 
-- Header: title, source switch (All / Linear / Jira with counts, shown only when two sources are connected; otherwise the source name), last sync time with a Refresh button, search on key and title.
-- Filters: status buckets (Open, To do, In progress, In review, Done), project or team, sprint or cycle.
-- The list itself, laid out per variant (below). Each ticket shows priority, a source badge, the key, the title, project and sprint, linked-work icons (chat, draft PR number), the bucket pill and the ticket's own status name when it differs ("Code Review" next to In review), and the updated time.
-- Open question: whether to offer a List / Board switch (variants 1 and 2 show it).
+**Sections**, in this order. A ticket is placed in the first one that matches:
 
-**Detail drawer.** Source and key, open in Linear or Jira, title. Primary action: Start work, or Open linked chat when one exists (with Start again next to it). Then the sync line, properties (status bucket and own status, priority, team or project, sprint or cycle, assignee, labels, updated), Linked work (chats with their state, draft PRs with repo and number), description (fetched live, marked "Loaded from Jira just now"), acceptance criteria when found, subtasks, links, comments.
+| View | Rule | Sorted by | Row shows | Quick actions |
+| --- | --- | --- | --- | --- |
+| Needs attention | Any attention rule matches (below) | Rule order, then priority | Every flag with its reason | Answer (chat asking), Retry (failed move), Open PR (slow review), otherwise Start |
+| Done recently | Done in the last 7 days | Most recent first; collapsed by default | "Done 3 days ago" | none (open in the tracker from the detail) |
+| PR ready | Has a draft PR from Ship | Newest PR first | Repo and number, Draft, "Review status not available yet" | Open PR, Open chat |
+| Working on | Linked chat running or open, or the ticket is In progress | Latest activity | Chat state ("Running, step 3 of 5", "Finished 1 h ago, not shipped") | Open chat, or Start when there's no chat |
+| In review | In review, no Spark PR | Longest in review first | "in review 2 days", "Reviewers not available yet" | Open PR, or open in the tracker |
+| Up next | Everything else assigned to you that isn't started | Priority, then due date | Due date or "Assigned 2 days ago" | Start |
 
-**Start work dialog.** Opens from the drawer. One column, top to bottom: project folder (the one linked to the ticket's project first), Plan first or Build, then side by side the permission (Ask, Ask before edits, Auto-edit, Full auto) and "Move {key} to In progress in {Source}" (checked). Last comes **What the agent gets**, collapsed by default to one line: "Title, description, 3 criteria, 2 subtasks, 2 comments, 2 linked · ~560 tokens · + Add context". The line is a button with `aria-expanded`; it opens a panel with three parts:
+Until Spark reads PR status, a ticket with a Spark draft PR stays in PR ready even after the ticket moves to In review. Once the PR reader exists, PR ready means the PR is still a draft (your move) and In review means it's open and waiting on reviewers.
 
-- **From {Source}:** real checkboxes, each with a token estimate: title, key and link (always on), description, acceptance criteria, subtasks, comments (with "Latest N": 1, 2, 3, 5 or 10), linked tickets and parent epic, the attachments list (names only), links. Pieces the ticket doesn't have show "None on this ticket" and can't be checked. Defaults: everything the backend sends today, plus comments and linked tickets; the attachments list and links start unchecked.
-- **Add context:** a note ("Anything the agent should know"); Attach… for files and images, shown as the composer's attachment chips with their size; a repo file or folder by `@` path (suggestions from the project); a link (URL, Confluence page, Slack thread), whose chip says "Fetched when the agent starts" because we can't fetch it before the run; a related ticket from your list. Every added item is a chip with a remove button, and the summary line counts them ("5 added").
-- **Preview the exact prompt:** a second disclosure showing the text the agent receives, in the backend's format (key and title, source line, `## Description`, `## Acceptance criteria`, `## Subtasks`, then the new sections, then the "ticket text is data" line and the Plan first line). The token total updates as you check, add and type.
+**Rows.** A status glyph, priority, source badge, key, title, then linked work (chat icon with a live dot, `#88` for the PR) and the age for that section. Comfortable rows add a second line: flags (in Needs attention), project and sprint, due date, and the tracker's own status name when it differs from the bucket ("Jira: Code Review"). Quick actions appear on hover, on focus within the row and on the selected row. In search, unassigned rows always show Assign to me. Each row is a list item with a main button (selects the ticket) and separate action buttons, so buttons are never nested.
 
-Footer: "Creates a chat in {folder} and links {key} to it." Buttons: Cancel, "Start with a plan" or "Start building".
+**Detail pane** (420 px; below 1180 px it overlays the list). The actions come first: Assign to me (when it isn't yours), then Answer in chat or Open chat, Open PR, and Start work or Start again. Next come "Why it needs attention" (each flag with the rule's wording), the sync line, and the properties: status and time in it, priority, due, team or project, sprint or cycle, assignee, labels, updated. Then Linked work: the chat, the question the chat is asking, and a PR box whose Review, CI checks and Merged lines read "Not available yet". Then the description (loaded live), acceptance criteria, subtasks, links and comments.
 
-**Context sources: supported today and later.** What `apps/server/src/tickets/request.ts` sends today, with no choice offered: key and title; the source, status and URL line; the description, with acceptance criteria split into their own section; subtasks (up to 50); the line saying the ticket text is data, not instructions; and the Plan first line when that mode is chosen. The start API also takes `projectId`, `mode` (plan or build) and `moveToInProgress`. `getTicket` already fetches comments, links and labels, but they are not put in the prompt yet. Not supported yet, and needed for the dialog as mocked: choosing pieces (the start request has no field for it), comments in the prompt (with a count), parent epic and linked tickets, the attachments list, the free note, attached files and images, `@` repo paths, link fetching, related tickets, and a token estimate per piece. Until then the build can ship the collapsed line and the preview with the fixed set, and hide the checkboxes and Add context.
+**Search.** Typing replaces the sections with results. Skeleton rows show while the query runs, and a line gives the count and scope ("5 results for "upload" across all tickets in Linear and Jira"). Results are grouped as Assigned to you, Unassigned and Assigned to others. Each row shows the assignee's avatar or a dashed circle. With no results, the text names both sources and offers Clear filters and Clear search. When Jira's token is rejected, a note says its results are from 11:02.
 
-**Linked chats and PRs.** Shown as icons in rows and cards, as a Linked work section in the drawer, and as filters in the inbox variant ("Has a chat", "Has a draft PR").
+**Assign to me.**
 
-**Status sync indicators.** A line under the actions in the drawer:
+- Unassigned: one click. The row shows "Assigning in Linear" with a pulsing dot, then "Assigned to you" with Undo, and a toast "Assigned WEB-440 to you in Linear." with Undo. Undo stays available for 10 seconds.
+- Assigned to someone else: a small confirm under the row, "Take WEB-437 from Jordan Lee? Linear makes you the assignee and notifies Jordan. You can undo for 10 seconds." with Cancel and Assign to me. Focus goes to Assign to me; Escape cancels and returns focus.
+- Undo sets the previous assignee back, or clears the assignee. The toast says "Gave WEB-437 back to Jordan Lee." or "WEB-440 is unassigned again."
+- Failure: an inline error under the row with the tracker's reason ("Jira says you can't assign issues in Engineering (ENG). Ask a project admin for the Assign issues permission. Nothing changed.").
+- Start work on a ticket that isn't yours adds a checked "Assign WEB-440 to me in Linear" to the Start dialog.
+- Assigning while the source's token is rejected is disabled, with "Reconnect Jira first".
 
-- Synced: "Moved to In Review in Linear and added the PR link · 38 min ago".
-- Pending: spinner, "Moving to Code Review in Jira…". Rows show a small spinner.
-- Failed: red, the source's reason, and Retry. Rows show a warning icon. The inbox "Needs attention" view collects these and chats waiting on you.
+**States.** Default; Compact; Search; Assign confirm, Assigned with undo, and Assign failed; No results; Loading (skeletons for the side column, brief, section headers, rows and detail, with an `aria-busy` region and hidden "Loading tickets from Linear and Jira"); Brief writing, off, and settings; Empty (no source: "Connect Linear or Jira", tokens stay in the keychain, and Spark changes a ticket only when you start work, open a draft PR or assign it to yourself); Token rejected (a banner naming Jira and the last good sync; Jira rows marked "Out of date" with Start, Assign and Retry disabled; Linear works as usual).
 
-**Settings → Connectors.** Compact rows that match the AI provider cards in Settings and onboarding (`ProviderCard.tsx`, `ProviderList.tsx`, `providers.css`, and `pcard` in the mockup): Linear, Jira Cloud, GitHub (existing, shown for context), and Jira Server or Data Center as a static row with "Coming later". A collapsed row shows the logo, the name, one status line ("Connected as riley@example.com · 2 projects", "Not connected", or in red "Token rejected at 11:02 · example.atlassian.net"), then the Connected pill or a primary action ("Connect", or "Reconnect" on an error), then the chevron. The row header is a button with `aria-expanded` and `aria-controls`; the action is a separate button next to it, so buttons are never nested. Clicking opens the row; only one row is open at a time, as in `ProviderList`. A row in an error state opens by itself.
+## Attention rules
 
-The open row holds, in order: a one-line description; for a connected source the account, site or workspace, when it was checked and "Saved in your macOS keychain", with Replace key/token and Remove; otherwise the form (Linear personal API key; Jira site URL, email and API token) with "Save and check" and any error under the field; the switch "Move tickets to In review when a draft PR opens" (per source, `moveOnShip`); and that source's status mapping. Keys and tokens are never shown back.
+The rules are deterministic, free and instant. Each flag carries its rule's wording ("Rule: High or Urgent, not started, assigned to you 2 or more days ago.") and its value ("assigned 3 days ago").
 
-**Status mapping.** Inside each source's row, with a team or project picker. One row per bucket: which source status Spark moves tickets to (Automatic or a chosen status), and which statuses currently count as that bucket. Automatic follows the backend defaults: Linear state type (backlog and unstarted → To do, started → In progress or In review by name, completed and canceled → Done); Jira status category (new → To do, in progress → In progress or In review by name, done → Done).
+| Rule id | Flags when | Says |
+| --- | --- | --- |
+| `chat-asking` | A linked (or, on Home, any) chat is asking you | Chat is waiting for your answer · 20 min |
+| `chat-error` | A chat stopped with an error (Home) | Stopped with an error · 1 h ago |
+| `chat-review` | A chat finished and hasn't been opened since (Home) | Finished 2 h ago · not opened |
+| `sync-failed` | Spark's last status move or PR link failed | Move to In Progress failed in Jira |
+| `high-idle` | High or Urgent, To do, no chat, assigned 2 or more days ago | Urgent, not started · assigned 3 days ago |
+| `due-soon` | Due within 2 days (or overdue), not in review or done | Due tomorrow · no chat yet |
+| `review-slow` | In review 3 days or more | In review 4 days |
+| `pr-changes` / `pr-ci` (later) | PR has changes requested / failing checks | needs the PR status reader |
 
-**Home "Your tickets".** Up to 5 open tickets assigned to you, ones with linked work first, each with a source badge, key, title, chat icon and pill. With no source connected: "Connect Linear or Jira to see your tickets here." (`#home` in any mockup.)
+The thresholds (2 days, 2 days, 3 days) are constants for now. Settings can expose them later if people ask. Items are ordered by rule (waiting on you, then errors and failed moves, then priority and dates), then by priority.
 
-**States.**
+## The AI brief
 
-- Empty (no source): the mockup's existing empty state, reworded for Linear first, with a note that tokens stay in the keychain.
-- Loading: skeleton rows and "Loading tickets from Linear and Jira…".
-- Token rejected or site unreachable: a banner over the list naming the source and time of the last good sync, with Reconnect. That source's rows stay visible, marked "Out of date"; Start and moves are disabled for them. The other source works normally.
-- Connector error in Settings: the row turns red with "Token rejected" and opens by itself, keeps the site and email, and asks for a new token. The mapping and switch below it are kept.
-- No results: "No tickets match. Try a different search or filter."
-- Multiple sources: one combined list with source badges, plus the source switch.
+- **Input: only the rule-flagged items and their metadata.** That means kind, key or chat title, status, priority, due date, PR repo and number, project, and the flags with their values. It never includes descriptions, comments, code or chat transcripts.
+- **Output.** A one-line headline plus 3 to 5 items (`{ itemId, text }`) in the order to tackle them. The server checks every `itemId` against the input and drops unknown ones. It also drops a line that mentions a key, PR number or number of days that isn't in the input. The flags shown under each line come from the rules, not from the model. The footer says so: "The brief only orders and summarises what the rules flagged… It can't add items."
+- **Model.** The user's default provider at the middle tier, never the fast tier or a retiring model. The digest already picks its model this way (`digestModel` in `apps/server/src/digest/model.ts`), so the brief reuses it. Today that is Sonnet 5 for Claude and 6 Sol or GPT-5.6 Terra for Codex.
+- **When it runs.** On opening Home and on Refresh, only if the flagged set changed (a hash of item ids, flags and values), and at most every 30 minutes by default (15 min, 1 h, or "Only when I press Refresh" are the other options). With nothing flagged it doesn't call a model ("Nothing is flagged, so Spark didn't call a model."). The result is cached and shown with "Generated 09:12 · Sonnet 5 · ~$0.01 · from 7 flagged items", plus Audit (the existing digest audit dialog).
+- **Cost.** About 2 to 3K input tokens and 300 output tokens, about $0.01 per brief at $2 / $10 per million tokens. At a 30-minute cap over a 10-hour day, that is at most about $0.20. Most days are far less, because unchanged feeds are skipped. The settings popover shows the per-brief estimate, the daily ceiling at the chosen interval and the month's spend.
+- **Off switch.** "Write a brief with AI" in the brief settings popover (the gear next to Refresh, on Home and on the Tickets strip). When it's off, nothing is sent to a model and the rules still sort everything.
+- **Failure.** The card keeps the last brief's time, shows the provider's reason ("Claude answered 529 (overloaded)… Nothing was charged.") and Retry, and says the list below is complete.
 
-## The three variants
+## Where the brief lives
 
-| | 1. List + drawer | 2. Board | 3. Inbox by project |
+**Recommendation: on Home, as the existing Digest card grown into "What needs you today".**
+
+- Home already has an AI Digest card (`apps/web/src/home/DigestCard.tsx`). It has a scout head, a meta line with model and cost, Refresh, a minimum gap, "Show details", Audit and a writing skeleton. It also has a matching server job (`apps/server/src/digest/`: model choice, throttle policy, cost). The brief is the same job with a different input. One card and one model call a day beats a second AI summary on Tickets.
+- The attention feed goes under the brief as "Needs you", replacing today's Home "Needs you" section. It has one list for chats, tickets and PRs and filter chips (All, Chats, Tickets, PRs). A ticket and its linked chat are one item. The Tickets chip is exactly what the Tickets inbox shows under Needs attention.
+- Today's digest content ("what happened while you were away") moves into the brief's "Show what happened since you were away" disclosure, so the separate Digest card goes away.
+- The Tickets inbox shows the ticket items of that brief as a strip, and Needs attention as its first section. It never generates its own brief.
+- Home keeps Running now, then "Up next" (top 4 tickets) next to Recent chats. It replaces "Your tickets".
+
+## Start work dialog
+
+Unchanged from the first plan, apart from the assign checkbox. One column, top to bottom:
+
+- The project folder, with the one linked to the ticket's project first.
+- Plan first or Build.
+- The permission (Ask, Ask before edits, Auto-edit, Full auto) next to "Move {key} to In progress in {Source}" (checked). For a ticket that isn't yours, "Assign {key} to me in {Source}" (checked) is added under it.
+- **What the agent gets**, collapsed to one line with a token total and "+ Add context". Open, it has three parts:
+  - **From {Source}:** a checkbox per piece, with its token estimate.
+  - **Add context:** a note, files and images, `@` repo paths, links ("Fetched when the agent starts") and related tickets.
+  - **Preview the exact prompt:** the text the agent receives.
+
+The footer says "Creates a chat in {folder} and links {key} to it." and has Cancel and "Start with a plan" or "Start building". What `request.ts` sends today, and what the dialog still needs from the backend, is unchanged. The build can ship the collapsed line and the preview first.
+
+## Settings → Connectors
+
+Unchanged: compact rows that match the AI provider cards (logo, name, one status line, the Connected pill or Connect/Reconnect, a chevron; one row open at a time; a row in error opens by itself). The Linear and Jira descriptions now say they also search every issue you can see and assign one to you when you ask. Jira adds that this needs the Assign issues permission in that project. The open row keeps the facts (account, site, checked, "Saved in your macOS keychain"), Replace and Remove, the "Move tickets to In review when a draft PR opens" switch and the status mapping per team or project. "Checking with Linear…" uses the pulsing dot, not a spinner.
+
+## Data each view needs, and what exists
+
+| Need | Used by | Exists today | Needed |
 | --- | --- | --- | --- |
-| Main layout | Full-width rows, 430 px drawer on the right | Columns To do, In progress, In review; Done folded to a narrow column | Filter sidebar, compact rows grouped under project headers, detail pane |
-| Density at 1440 × 900 | 10 rows with the drawer open | 5 cards per column | 10 rows and 3 group headers with the detail open |
-| Scanning status | Pill per row | Column position | Small status glyph, own status name |
-| Detail | Always visible | Overlay drawer over the board | Always visible |
-| Filters | Chips and selects in one bar | Selects; buckets are the columns | Sidebar with counts, including "Needs attention", "Has a chat", "Has a draft PR" |
-| Closest to the mockup | Yes, it extends the mockup's own Tickets view | New pattern | Reuses the Chats sidebar pattern |
-| Main weakness | Linked work and sync problems are small icons | Wide; the drawer covers a column; drag to move would imply moves we don't want to make casually | Three panes get tight below 1200 px |
+| Tickets assigned to you | All sections | `GET /tickets` (`listAssigned`): key, title, bucket, own status, URL, updated, project, priority **label**, sprint, plus `work` (task, conversation, PR links) and per-source `errors` | Add to the summary: assignee `{ id, name }`, labels, due date (Linear `dueDate`, Jira `duedate`), priority **rank** (Linear `priority` 0 to 4, Jira priority order) |
+| Done in the last 7 days | Done recently | `listAssigned` drops done tickets unless asked for a status | A `doneSince` filter (Linear `completedAt`, Jira `resolved >= -7d`) and `doneAt` |
+| Assigned since | `high-idle`, Up next age | nothing | `tickets.first_seen_assigned_at`, set by the cache the first time a ticket shows up as yours |
+| Time in current status | In review age, `review-slow` | nothing | Linear issue `history` (state changes), Jira `changelog` (status items). Fetch only for In review tickets, cache `status_since` |
+| Last sync result | `sync-failed`, Retry after reload | `ticket_events` has it | `lastSync: { action, outcome, message, at }` on each list item (open since the first plan) |
+| Chat state for linked work | `chat-asking`, Working on | chat queries, joined on `conversationId` | Join it into the list, or into the attention feed |
+| **Ticket search API** | Search | none: both sources only list your tickets (`assignee = currentUser()`, `viewer.assignedIssues`) | `GET /tickets/search?q&source&project&sprint&priority&label&assignee`. Linear `searchIssues(term)` or `issues(filter)`; Jira `search/jql` with `text ~ q` (or `key = Q` when q looks like a key), no assignee clause. Returns summaries with assignee. One failing source doesn't hide the other. |
+| **Assign API** | Assign to me, Undo, Start on someone else's ticket | `whoami` returns the Linear viewer id and Jira `accountId`, but the connection doesn't store it | `POST /tickets/:source/:key/assign { to: "me" \| accountId \| null, expected }`. Linear `issueUpdate(input: { assigneeId })`, Jira `PUT /rest/api/3/issue/{key}/assignee { accountId }`. Returns 409 when `expected` no longer matches (someone else changed it). Recorded in `ticket_events` as `assign`. Store the account id on connect. Undo is the same call with the previous assignee. |
+| **PR status reader** | PR ready vs In review, reviewers, `pr-changes`, `pr-ci`, merged | Ship keeps the PR URL in `task_links`; `GitHubConnection` has `findPullRequest`, `createPullRequest` and `updatePullRequest` only. The harness plan says PR status, CI results and merging are not read. | `getPullRequest(repo, n)`: draft, state, merged, `ready_for_review` time, requested reviewers, review decision, check runs. Read through the same `gh` or token path, on open and Refresh, with ETags. Until then the UI shows "Not available yet". |
+| **Attention rules engine** | Needs attention, Home feed, rail badges, brief input | none | A pure module (for example `packages/contracts/src/attention.ts` or `apps/server/src/attention/rules.ts`). It takes chats, tickets and PR info and returns items `{ id, kind, refs, flags: [{ rule, text, since }] }`, sorted. `GET /attention?kind=` serves the feed. Unit tests per rule and for the ordering. |
+| **AI brief job + cost** | Home brief, Tickets strip | The digest job: `digestModel` (middle tier, non-retiring), `decideDigest` (10-minute minimum gap, auto after 60 minutes, skip when nothing is new), cost and model label on the digest row, audit | Brief input from the attention feed, output schema `{ headline, items: [{ itemId, text }] }` with the checks above, the refresh interval as a setting (15, 30 or 60 min, or manual), `brief.enabled`, the month-to-date cost for the settings popover, and "since you were away" folded in |
+| Statuses per project | Status mapping editor | read when moving | A route that lists them (open since the first plan) |
+| Last good sync per source, error kind | Token banner, "Out of date" | `errors` is a message string | `lastSyncedAt` per source and an error kind (token rejected, unreachable, rate limited) (open since the first plan) |
 
-**Recommendation: variant 1 (list with drawer) as the default, with the inbox's "Needs attention", "Has a chat" and "Has a draft PR" filters added as chips.** It is the mockup's own Tickets view with the new data added, so it matches the design target with the least new UI. It keeps the detail and the Start button visible while you scan. It works at the narrow width by turning the drawer into a full panel (as the mockup already does below 900 px). The board reads well for "what's in flight", but it duplicates what Linear and Jira already do well, and it needs a decision about drag-to-move first. The inbox is the best for many tickets across many projects; if people end up with more than about 30 open tickets, grouping by project is the next step, and it can be a "Group by project" option on the list rather than a separate layout.
+**Dependencies, in order.** The attention rules and the extra summary fields come first: the inbox works without search, assign or PR status. Then search and assign. The PR status reader is the only thing blocking "PR ready vs In review" and the two PR rules, and the UI already has a "Not available yet" state for it. The brief comes last, and it's optional by design.
 
 ## Keyboard and accessibility
 
 - Every control is a native button, select, input or checkbox with a visible label or `aria-label`. Focus rings use the mockup's `:focus-visible` style.
-- The list is a `role="list"` of buttons; the selected row carries `aria-current`. Suggested keys for the build: `/` focuses search, Up and Down move the selection, Enter opens the detail, `S` opens Start work, Escape closes the dialog or drawer and returns focus to the row.
-- Connector rows are buttons with `aria-expanded` and `aria-controls`; the open panel is a region labelled by its row. The Start dialog's context line and "Preview the exact prompt" are disclosure buttons the same way. The prompt preview scrolls, so it is a focusable region labelled "Exact prompt". Context pieces are real checkboxes with labels, grouped in fieldsets with legends; the Add context inputs have labels, and each chip's remove button names the item.
-- The source switch, layout switch, Plan first / Build, folders and theme switch are radio groups (`role="radio"`, `aria-checked`). Filter chips are toggle buttons (`aria-pressed`). Group headers in the inbox are disclosure buttons (`aria-expanded`).
-- Status is never shown by color alone: every pill has its word, the inbox glyphs have `aria-label`, and the sync icons carry hidden text ("Status change failed").
-- The Start dialog and Settings are `role="dialog"` with `aria-modal`, labelled by their heading. On open, focus goes to the first choice (Start) or the field that needs attention (the rejected token). Escape and the backdrop close them. The build needs a focus trap and focus return, which the mockup does not implement.
-- Banners use `role="alert"`; toasts use a polite live region.
-- axe (WCAG 2.2 AA tags) reports no violations on all three mockups in both themes in the default, Start (collapsed, context open, prompt open), Settings (collapsed, Jira open, Jira error), Connect (Linear, Jira), Token rejected and Empty states. One fix found along the way applies to the main mockup too: its Settings nav puts the `h2` inside the `role="tablist"`; the Tickets mockups move the tablist to an inner element.
-- Motion follows the mockup, including its `prefers-reduced-motion` rules.
+- Rows are list items with a main button (`aria-current` when selected) and separate quick-action buttons, each named with the key ("Start API-84"). Quick actions show on `:focus-within`, so keyboard users see them.
+- Keys for the build: `/` focuses search, Escape clears it, Up and Down move the selection, Enter opens the detail, `S` opens Start work, `A` assigns to me. Escape closes the confirm, the popover and the dialog and returns focus to where it was.
+- Section headers are disclosure buttons (`aria-expanded`, `aria-controls`). Views in the side column are toggle buttons (`aria-pressed`). Density and theme are radio groups.
+- Flags are text, never color alone. Each carries its rule as a `title`, and compact rows keep the full reason as hidden text.
+- The assign confirm is a non-modal dialog labelled by its question. The Start dialog and Settings are modal dialogs (the build needs a focus trap and focus return). The brief settings popover is a labelled dialog with a real switch.
+- Loading regions carry `aria-busy` and a hidden status line; skeletons are `aria-hidden`. Search results announce their count. Toasts use a polite live region; banners and inline errors use `role="alert"`.
+- axe (WCAG 2.0, 2.1 and 2.2 A and AA tags) reports no violations in any listed state of either mockup, in light and dark. The click-through covers sections, views, density, filters, brief refresh, brief settings and the off switch, `/` search, the search skeleton, assign, undo, the confirm with Escape, the Jira assign error, Start from a quick action with focus return, Start on an unassigned ticket with the assign checkbox, Retry, Settings, the token-rejected disabled states, and the Home feed filter, brief off and on, and "since you were away".
+- Motion follows the mockup, including `prefers-reduced-motion`. Skeleton shimmer stops under reduced motion.
 
-## What the backend provides and what the UI would still need
+## Open questions
 
-Provided on `feat/tickets` today:
-
-- Connections: `GET/PUT/PATCH/DELETE /tickets/connections/:source`. Save checks the key or token; the response has account, site URL, validated time, `keySaved`, `moveOnShip` and `statusMap`. No token is ever returned.
-- List: `GET /tickets?source&status&project&q` returns tickets (source, key, title, bucket, own status name, URL, updated time, project, priority, sprint) with `work` (task, conversation, start time, PR links), plus per-source `errors`. One failing source does not hide the other.
-- Detail: `GET /tickets/:source/:key` fetches live: description, assignee, labels, comments, links, subtasks, and the linked work.
-- Start: `POST /tickets/:source/:key/start` with `mode` (`plan` or `build`), `projectId`, `moveToInProgress`. It creates the run in the given conversation, links the ticket to the task, and returns the transition outcome (`succeeded`, `skipped`, `failed` with a message).
-- Move and comment: `POST …/transition` and `POST …/comments`.
-- After Ship opens a draft PR, the PR link is added to the ticket and it moves to In review when that source's `moveOnShip` is on.
-- `statusMap` per team or project: one status name per bucket, used both to sort statuses and to pick the target of a move. Acceptance criteria are pulled from the description by heading (`request.ts`).
-
-The UI would need, or needs a decision on:
-
-1. **Last sync result per ticket.** The list and detail do not say whether the last move failed. `ticket_events` has the data; the list item needs something like `lastSync: { action, outcome, message, at }` to show the failed state and Retry after a reload.
-2. **Sprint filter.** `sprint` is returned but not a query parameter; the client can filter the loaded list, which is fine at the expected size.
-3. **Last successful sync time per source**, for "Synced 1 min ago" and the "Out of date since 11:02" banner. `errors` says a source failed now, not since when.
-4. **A distinct error kind** (token rejected vs site unreachable vs rate limited) so the banner can say "Reconnect" or "Try again later". Today it is a message string.
-5. **Project folder suggestion** for the Start dialog: which Spark project matches a Linear team or Jira project. Not stored anywhere yet; the dialog can default to the last folder used for that team.
-6. **Statuses per project** for the mapping editor (the list of names to choose from). The backend reads them when moving; the UI needs a route to list them.
-7. **Chat state for linked work** (running, needs you, finished) comes from the existing chat queries, joined on `conversationId`.
-8. **Context choices in the start request** (see "Context sources" above): which pieces, how many comments, the note, files, repo paths, links and related tickets, plus a token estimate per piece. Files and images need an upload or a path the agent can read; links need a fetcher, or they go in as plain URLs.
-9. **Descriptions are live only.** The drawer needs its own loading and error state ("Couldn't load the description from Jira. Retry.") while the cached row stays visible.
-
-## Open questions for you
-
-1. Default layout: list with drawer (recommended), board, or inbox? Should we offer a List / Board switch at all?
-2. Should Start default to Plan first or Build? The mockups default to Plan first.
-3. Should the Start dialog remember your last choices (folder, mode, permission, "Move to In progress") per team or project?
-4. Keep both automatic moves on by default: to In progress when you start work, and to In review when a draft PR opens?
-5. Show only tickets assigned to you, or also "All open" for the team (the original mockup had this filter)?
-6. Do you want a sprint or cycle filter, or is showing the sprint on each ticket enough?
-7. When Ship opens a draft PR, should Spark also post a comment on the ticket with the PR link and a short summary? The comment route exists; nothing calls it yet.
-8. More than one Jira site, or more than one Linear workspace, at the same time? The backend stores one connection per source.
-9. One combined list with source badges (as mocked), or separate lists per source?
-10. Should Spark ever close a ticket or move it to Done? We don't read PR merges yet, so today it stops at In review.
-11. Status mapping allows one status per bucket per project. Is that enough, or do you need several statuses to count as In review (for example Code Review and QA)?
-12. Should "Start again" on a ticket that already has a chat create a second chat, or reopen the first one?
-13. Should starting work be allowed on tickets from a source that is out of date (token rejected), using the cached title and the last description?
-14. Which context pieces should be on by default? The mockup adds comments (latest 2) and linked tickets to what the backend sends today, and leaves the attachments list and links off.
-15. For links (Confluence, Slack), should Spark fetch the page before the run and show it in the preview, or pass the URL and let the agent fetch it with its own tools?
-16. Should the Start dialog open with the context line expanded the first time, so people find Add context?
+1. Should "Assign to me" on a ticket someone else owns always confirm (as mocked), or only for In progress tickets?
+2. Are the rule thresholds (2 days idle, due within 2 days, 3 days in review) right, and do you want them in Settings?
+3. Should Done recently show 7 days, or since the start of the sprint or cycle?
+4. Should Home's brief replace the Digest card outright (recommended), or sit above it for a release?
+5. Is 30 minutes the right default cap for the brief, and should the brief also run once in the morning without you opening Home?
+6. Search scope: every project you can see, or only the teams and projects you've been assigned tickets in before?
+7. When the PR reader lands, should a merged PR move the ticket to Done (Spark never closes tickets today)?
