@@ -86,4 +86,5 @@ Read `docs/product/PLAN.md` for product direction and `docs/architecture/PROTOCO
 - Run `pnpm test:db` for storage changes against an isolated PostgreSQL schema; it requires DATABASE_URL.
 - Run `pnpm check` for the foundation checks and `pnpm test:browser` for browser behavior.
 - Run `pnpm db:setup` once for the isolated native macOS PostgreSQL cluster, then `pnpm db:up`, `pnpm db:migrate` and `pnpm dev`. Stop only this cluster with `pnpm db:stop`; preserve `.local` data and ignored credentials. See `infra/local/README.md`.
+- Run `pnpm desktop:dev` for the Electron shell (dev channel, own data folder and bundled Postgres); see `docs/architecture/ELECTRON_PLAN.md`.
 - Do not create or publish a remote repository, push, or deploy without user authorization.
