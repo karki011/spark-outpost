@@ -1,7 +1,6 @@
 import type { RefObject } from 'react';
 import type { Project } from '@spark-outpost/contracts';
-import { FolderIcon, PlusIcon, XIcon } from '../../ui/icons.tsx';
-import { Tick } from '../composer/EffortOptions.tsx';
+import { FolderIcon, PlusIcon, TickIcon, XIcon } from '../../ui/icons.tsx';
 import { AllowlistEditor } from './AllowlistEditor.tsx';
 import { BuildStyleControl } from './BuildStyleControl.tsx';
 import type { RepoRequest } from './use-chat-repos.ts';
@@ -148,7 +147,7 @@ export function RepoMenu({
           </svg>
         </span>
         <b>No project (chat only)</b>
-        <Tick />
+        <TickIcon />
       </button>
       {error && (
         <p className="mpop-error" role="alert">

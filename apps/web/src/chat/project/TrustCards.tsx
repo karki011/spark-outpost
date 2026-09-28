@@ -1,14 +1,12 @@
 import type { RepoAgentConfig, RepoRedirect } from '@spark-outpost/contracts';
-import { CHANGE_KINDS, CHANGE_LABELS, executableSummary, trustPrompt } from './agent-setup.ts';
-import { SetupCard, SetupList } from './SetupCard.tsx';
-import type { AgentConfigChange } from './use-agent-config.ts';
-
-interface TrustProps {
-  config: RepoAgentConfig;
-  name: string;
-  busy: boolean;
-  onChange: (change: AgentConfigChange) => void;
-}
+import {
+  CHANGE_KINDS,
+  CHANGE_LABELS,
+  executableSummary,
+  onOff,
+  trustPrompt,
+} from './agent-setup.ts';
+import { SetupCard, SetupList, type SetupCardsProps } from './SetupCard.tsx';
 
 function ChangeList({ config }: { config: RepoAgentConfig }) {
   const items = config.trust.changes.map((change, index) => ({
@@ -19,7 +17,7 @@ function ChangeList({ config }: { config: RepoAgentConfig }) {
   return <SetupList label="changes" items={items} preview={4} />;
 }
 
-export function TrustCard({ config, name, busy, onChange }: TrustProps) {
+export function TrustCard({ config, name, busy, onChange }: SetupCardsProps) {
   const { trust } = config;
   if (!trust.needed) return null;
   const trusted = trust.state === 'trusted';
@@ -107,7 +105,7 @@ export function AllowRulesCard({ config }: { config: RepoAgentConfig }) {
 const redirectName = (redirect: RepoRedirect) =>
   `${redirect.name} = ${redirect.value ?? 'value hidden'}`;
 
-export function RedirectsCard({ config, name, busy, onChange }: TrustProps) {
+export function RedirectsCard({ config, name, busy, onChange }: SetupCardsProps) {
   if (config.redirects.length === 0) return null;
   const { trust } = config;
   const trusted = trust.state === 'trusted';
@@ -121,7 +119,7 @@ export function RedirectsCard({ config, name, busy, onChange }: TrustProps) {
     <SetupCard
       title="Keys and traffic"
       count={config.redirects.length}
-      status={on ? 'On' : 'Off'}
+      status={onOff(on)}
       tone="warn"
       toggle={{
         label: `Use key and proxy settings from ${name}`,
