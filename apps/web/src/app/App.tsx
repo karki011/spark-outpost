@@ -16,6 +16,7 @@ import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/s
 import { Home } from '../home/Home.tsx';
 import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
+import { useSettingsRequests } from '../settings/settings-request.ts';
 import { BackOnlineToast } from './connection/BackOnlineToast.tsx';
 import { markConnectionRestored, useConnection } from './connection/connection-store.ts';
 import { OfflineScreen } from './connection/OfflineScreen.tsx';
@@ -35,6 +36,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draftId, setDraftId] = useState(newDraftId);
   const [settings, setSettings] = useState<SettingsSection | null>(null);
+  useSettingsRequests(setSettings);
   const [view, setViewState] = useState<AppView>(readSavedView);
   const setView = useCallback((next: AppView) => {
     setViewState(next);

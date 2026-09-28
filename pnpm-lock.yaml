@@ -163,7 +163,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@agentclientprotocol/codex-acp@1.13.1': 4827e42b45f72db7ca89d717100cea48d25765ee36bcba56dd296df913ba4177
+  '@agentclientprotocol/codex-acp@1.13.1': 9a4a76a2bb13444014dc7f1162a83e5d3b2d7f2c48210cba0d18f7c41f4a1166
 
 importers:
 
@@ -241,10 +241,13 @@ importers:
         version: 0.81.2(@anthropic-ai/sdk@0.128.0(zod@4.6.5))(@modelcontextprotocol/sdk@1.30.1(supports-color@10.2.2)(zod@4.6.5))
       '@agentclientprotocol/codex-acp':
         specifier: 1.13.1
-        version: 1.13.1(patch_hash=4827e42b45f72db7ca89d717100cea48d25765ee36bcba56dd296df913ba4177)
+        version: 1.13.1(patch_hash=9a4a76a2bb13444014dc7f1162a83e5d3b2d7f2c48210cba0d18f7c41f4a1166)
       '@agentclientprotocol/sdk':
         specifier: 1.5.0
         version: 1.5.0(zod@4.6.5)
+      '@modelcontextprotocol/sdk':
+        specifier: 1.30.1
+        version: 1.30.1(supports-color@10.2.2)(zod@4.6.5)
       '@napi-rs/keyring':
         specifier: ^2.1.0
         version: 2.1.0
@@ -269,6 +272,9 @@ importers:
       pg:
         specifier: ^8.23.0
         version: 8.23.0
+      smol-toml:
+        specifier: ^1.9.0
+        version: 1.9.0
       uuid:
         specifier: ^14.0.2
         version: 14.0.2
@@ -2901,6 +2907,10 @@ packages:
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
 
+  smol-toml@1.9.0:
+    resolution: {integrity: sha512-hpd+HLON7HdZXqYchMM/+LaTTbdK0AU3NngIJ4KVyWbY9bfQqdL9cD+4yf6dUoU2Ap4VsU0JkQi6FxAI1B2mXQ==}
+    engines: {node: '>= 18'}
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -3302,7 +3312,7 @@ snapshots:
       - '@anthropic-ai/sdk'
       - '@modelcontextprotocol/sdk'
 
-  '@agentclientprotocol/codex-acp@1.13.1(patch_hash=4827e42b45f72db7ca89d717100cea48d25765ee36bcba56dd296df913ba4177)':
+  '@agentclientprotocol/codex-acp@1.13.1(patch_hash=9a4a76a2bb13444014dc7f1162a83e5d3b2d7f2c48210cba0d18f7c41f4a1166)':
     dependencies:
       '@agentclientprotocol/sdk': 1.5.0(zod@4.6.5)
       '@openai/codex': 0.156.1
@@ -5901,6 +5911,8 @@ snapshots:
       side-channel-weakmap: 1.0.2
 
   siginfo@2.0.0: {}
+
+  smol-toml@1.9.0: {}
 
   source-map-js@1.2.1: {}
 

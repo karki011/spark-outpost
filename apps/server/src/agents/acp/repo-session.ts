@@ -45,17 +45,25 @@ function mergedHooks(launch: RepoLaunch): HooksConfig | null {
   return Object.keys(merged).length > 0 ? merged : null;
 }
 
-export function namedMcpServers(launch: RepoLaunch): NamedMcpServer[] {
-  const taken = new Set<string>();
+const safeName = (name: string) => name.replace(/[^A-Za-z0-9_-]/g, '_');
+
+export function namedMcpServers(
+  launch: RepoLaunch,
+  user: readonly McpServerConfig[] = [],
+  reserved: readonly string[] = [],
+): NamedMcpServer[] {
+  const taken = new Set(reserved);
   const named: NamedMcpServer[] = [];
+  const add = (config: McpServerConfig, suffix: string) => {
+    const base = safeName(config.name);
+    const name = taken.has(base) ? `${base}_${safeName(suffix)}` : base;
+    if (taken.has(name)) return;
+    taken.add(name);
+    named.push({ name, config });
+  };
+  for (const config of user) add(config, 'spark');
   for (const root of launch) {
-    for (const config of root.mcpServers) {
-      const base = config.name.replace(/[^A-Za-z0-9_-]/g, '_');
-      const name = taken.has(base) ? `${base}_${root.label.replace(/[^A-Za-z0-9_-]/g, '_')}` : base;
-      if (taken.has(name)) continue;
-      taken.add(name);
-      named.push({ name, config });
-    }
+    for (const config of root.mcpServers) add(config, root.label);
   }
   return named;
 }
@@ -102,8 +110,10 @@ function codexOptions(launch: RepoLaunch): CodexRepoOptions {
 export async function prepareRepoSession(
   launch: RepoLaunch,
   style: RepoStyle,
+  user: readonly McpServerConfig[] = [],
+  reserved: readonly string[] = [],
 ): Promise<RepoSession> {
-  const mcpServers = namedMcpServers(launch);
+  const mcpServers = namedMcpServers(launch, user, reserved);
   return {
     following: followedFiles(launch),
     mcpServers,

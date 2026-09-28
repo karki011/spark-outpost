@@ -18,6 +18,7 @@ const agent = [
   { name: 'compact', description: 'Summarize the conversation', hint: null },
   { name: 'review', description: 'Codex review', hint: null },
   { name: 'logout', description: 'Sign out', hint: null },
+  { name: 'mcp', description: 'Codex MCP list', hint: null },
   { name: 'status', description: 'Show token usage', hint: null },
   { name: 'rename', description: '', hint: 'new name' },
 ];
@@ -41,6 +42,7 @@ describe('slashItems and filtering', () => {
       'client:effort',
       'client:plan',
       'client:review',
+      'client:mcp',
       'agent:compact',
       'agent:status',
       'agent:rename',

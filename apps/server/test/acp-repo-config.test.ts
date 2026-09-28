@@ -22,6 +22,7 @@ const launch = {
 const env = {
   ...childEnvironment(process.env),
   FAKE_ACP_MCP_CAPABILITIES: JSON.stringify({ http: true, sse: false }),
+  CODEX_HOME: join(tmpdir(), 'spark-no-codex-home'),
 };
 const claude: AgentDefinition = { ...agentDefinitions.claude, conversationMode: 'read-only' };
 const provider = (definition: AgentDefinition) =>

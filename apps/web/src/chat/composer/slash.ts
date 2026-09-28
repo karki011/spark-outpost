@@ -1,6 +1,6 @@
 import { blockedReason, commandKey, type AgentCommand } from '@spark-outpost/contracts';
 
-export type ClientCommandName = 'fresh' | 'model' | 'effort' | 'plan' | 'review';
+export type ClientCommandName = 'fresh' | 'model' | 'effort' | 'plan' | 'review' | 'mcp';
 
 export interface SlashItem {
   name: string;
@@ -52,10 +52,16 @@ function clientCommands(context: SlashContext): ClientItem[] {
       detail:
         'Example: /review the parser changes. In Do, a Critic reviews the changes as they land.',
     },
+    {
+      name: 'mcp',
+      description: 'See and switch MCP servers for this chat',
+      hint: null,
+      detail: 'Lists your MCP servers and the repo’s, with a switch for this chat.',
+    },
   ];
 }
 
-const CLIENT_NAMES = new Set<string>(['fresh', 'model', 'effort', 'plan', 'review']);
+const CLIENT_NAMES = new Set<string>(['fresh', 'model', 'effort', 'plan', 'review', 'mcp']);
 
 export function effortHint(efforts: readonly { id: string }[]): string | null {
   const ids = efforts.map((effort) => effort.id).filter((id) => id !== 'default');
