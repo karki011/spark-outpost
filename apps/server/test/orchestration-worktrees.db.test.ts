@@ -5,26 +5,25 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type CheckBody } from '@spark-outpost/contracts';
 import { requestCancel } from '../src/persistence/runs.ts';
-import { createProject } from '../src/projects/projects.ts';
 import {
-  SCENARIOS,
+  RISKY,
+  TRIVIAL,
   answerEverything,
+  artifactBodies,
   connectProviders,
   driveToEnd,
   gitRepo,
   jevFetch,
   removeRepo,
+  setCheckCommands,
   startOrchestrator,
   startScenario,
+  withTag,
   type Answerer,
   type Harness,
   type JevScript,
-  type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
-
-const TRIVIAL = SCENARIOS[1] as Scenario;
-const RISKY = SCENARIOS[4] as Scenario;
 
 const NEEDS_DEPS = `import { existsSync } from 'node:fs';
 if (!existsSync('node_modules/left-pad/index.js')) {
@@ -58,7 +57,7 @@ afterEach(async () => {
 });
 
 async function run(tags: string, answer?: Answerer) {
-  const scenario = { ...RISKY, text: `${RISKY.text} ${tags}` };
+  const scenario = withTag(RISKY, tags);
   const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
   const result = await driveToEnd(t, conversationId, runId, answer);
   return { ...result, runId };
@@ -115,7 +114,7 @@ describe('the solo worktree copy', () => {
   }, 60_000);
 
   it('gives a second task in the same repo its own copy while the first still works', async () => {
-    const slow = { ...TRIVIAL, text: `${TRIVIAL.text} #slowbuild` };
+    const slow = withTag(TRIVIAL, '#slowbuild');
     const first = await startScenario(t, root, slow, 'hands-off');
     await eventually(async () => {
       const { rows } = await t.db.query(
@@ -141,11 +140,7 @@ describe('the solo worktree copy', () => {
     await writeFile(join(root, 'check.mjs'), NEEDS_DEPS);
     git('add', '.');
     git('commit', '-qm', 'node project');
-    const { project } = await createProject(t.db, t.workspaceId, root);
-    await t.db.query('UPDATE projects SET check_commands = $2 WHERE id = $1', [
-      project.id,
-      ['node check.mjs'],
-    ]);
+    await setCheckCommands(t, root, ['node check.mjs']);
 
     const { orchestration, runId } = await run('');
     expect(orchestration.status).toBe('succeeded');
@@ -155,10 +150,8 @@ describe('the solo worktree copy', () => {
     );
     expect(rows.map((row) => row.deps_method)).toEqual(['clone']);
     expect(rows.every((row) => row.deps_waited_ms !== null)).toBe(true);
-    const { rows: checks } = await t.db.query<{ body: CheckBody }>(
-      `SELECT body FROM run_artifacts WHERE kind = 'check' ORDER BY version`,
-    );
-    expect(checks.map((row) => [row.body.copy, row.body.status])).toEqual([['Bolt', 'passed']]);
+    const checks = await artifactBodies<CheckBody>(t, 'check');
+    expect(checks.map((body) => [body.copy, body.status])).toEqual([['Bolt', 'passed']]);
     expect(existsSync(join(root, 'node_modules', 'left-pad', 'index.js'))).toBe(true);
     await expectNoCopies(runId);
   }, 60_000);

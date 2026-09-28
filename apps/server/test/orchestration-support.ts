@@ -19,12 +19,14 @@ import { decideApproval } from '../src/persistence/approvals.ts';
 import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { getRun } from '../src/persistence/runs.ts';
+import { createProject } from '../src/projects/projects.ts';
 import type { OrchestratorDeps } from '../src/orchestration/session.ts';
 import type { Provider } from '../src/providers/provider.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { linkedConversation } from './approval-support.ts';
 import { eventually, type TestDb } from './support.ts';
+import { FAKE_ACP_LAUNCH } from './fake-acp-support.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 export const CLAUDE_MODELS = [
@@ -37,7 +39,11 @@ export const CODEX_MODELS = [
   { id: 'gpt-6-sol', label: '6 Sol', description: 'Workhorse' },
   { id: 'gpt-6-luna', label: '6 Luna', description: 'Fast' },
 ];
-const EFFORTS = ['low', 'medium', 'high'].map((id) => ({ id, label: id, description: null }));
+export const EFFORTS = ['low', 'medium', 'high'].map((id) => ({
+  id,
+  label: id,
+  description: null,
+}));
 
 export async function connectProviders(t: TestDb, jev = true): Promise<void> {
   for (const [provider, models, model] of [
@@ -65,10 +71,7 @@ export async function connectProviders(t: TestDb, jev = true): Promise<void> {
   );
 }
 
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
-};
+const launch = FAKE_ACP_LAUNCH;
 
 function sessionEnv(store: string | undefined): Record<string, string> {
   if (!store) return {};
@@ -110,41 +113,50 @@ export interface Scenario {
   speed?: Record<string, number>;
 }
 
-export const SCENARIOS: readonly Scenario[] = [
-  { id: 'question', text: 'What does parseDate do?', mode: 'ask', tier: 'small' },
-  {
-    id: 'trivial',
-    text: 'Fix the typo in the README heading. #build',
-    mode: 'do',
-    question: 0.02,
-    destructive: 0.03,
-    tier: 'small',
-  },
-  {
-    id: 'normal',
-    text: 'The divider shows the wrong day after midnight. Fix it and add a test. #build',
-    mode: 'do',
-    question: 0.03,
-    destructive: 0.05,
-    tier: 'mid',
-  },
-  {
-    id: 'complex',
-    text: 'Move date handling into one module and update every component. #build',
-    mode: 'do',
-    question: 0.03,
-    destructive: 0.2,
-    tier: 'top',
-  },
-  {
-    id: 'risky',
-    text: 'Rename the runs table column and migrate old rows. #build',
-    mode: 'do',
-    question: 0.02,
-    destructive: 0.93,
-    tier: 'top',
-  },
-];
+export const QUESTION: Scenario = {
+  id: 'question',
+  text: 'What does parseDate do?',
+  mode: 'ask',
+  tier: 'small',
+};
+export const TRIVIAL: Scenario = {
+  id: 'trivial',
+  text: 'Fix the typo in the README heading. #build',
+  mode: 'do',
+  question: 0.02,
+  destructive: 0.03,
+  tier: 'small',
+};
+export const NORMAL: Scenario = {
+  id: 'normal',
+  text: 'The divider shows the wrong day after midnight. Fix it and add a test. #build',
+  mode: 'do',
+  question: 0.03,
+  destructive: 0.05,
+  tier: 'mid',
+};
+export const COMPLEX: Scenario = {
+  id: 'complex',
+  text: 'Move date handling into one module and update every component. #build',
+  mode: 'do',
+  question: 0.03,
+  destructive: 0.2,
+  tier: 'top',
+};
+export const RISKY: Scenario = {
+  id: 'risky',
+  text: 'Rename the runs table column and migrate old rows. #build',
+  mode: 'do',
+  question: 0.02,
+  destructive: 0.93,
+  tier: 'top',
+};
+
+export const SCENARIOS: readonly Scenario[] = [QUESTION, TRIVIAL, NORMAL, COMPLEX, RISKY];
+
+export function withTag(scenario: Scenario, tag: string): Scenario {
+  return { ...scenario, text: `${scenario.text} ${tag}` };
+}
 
 export const LEVELS: readonly InvolvementLevel[] = ['balanced', 'hands-off', 'full-auto'];
 
@@ -263,9 +275,7 @@ export function jevFetch(script: JevScript): typeof fetch {
     script.calls.push({ questions: Object.keys(body.questions), state: body.state });
     const task = String(body.state.task ?? '');
     const scenario =
-      script.scenario ??
-      SCENARIOS.find((candidate) => task.startsWith(candidate.text)) ??
-      SCENARIOS[0]!;
+      script.scenario ?? SCENARIOS.find((candidate) => task.startsWith(candidate.text)) ?? QUESTION;
     const answers = body.questions.intent
       ? intakeAnswers(scenario, body.questions)
       : observedAnswers(script, body.questions);
@@ -408,4 +418,29 @@ export async function driveToEnd(
     throw new Error(`No orchestration was recorded; the run ${run?.status}: ${run?.error}`);
   }
   return { asked, orchestration };
+}
+
+export async function setCheckCommands(
+  t: TestDb,
+  root: string,
+  commands: string[] | null,
+): Promise<void> {
+  const { project } = await createProject(t.db, t.workspaceId, root);
+  await t.db.query('UPDATE projects SET check_commands = $2 WHERE id = $1', [project.id, commands]);
+}
+
+export async function artifactBodies<T>(t: TestDb, kind: string): Promise<T[]> {
+  const { rows } = await t.db.query<{ body: T }>(
+    'SELECT body FROM run_artifacts WHERE kind = $1 ORDER BY version',
+    [kind],
+  );
+  return rows.map((row) => row.body);
+}
+
+export async function assistantReplies(t: TestDb, runId: string): Promise<string[]> {
+  const { rows } = await t.db.query<{ content: string }>(
+    `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant'`,
+    [runId],
+  );
+  return rows.map((row) => row.content);
 }

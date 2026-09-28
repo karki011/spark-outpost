@@ -16,7 +16,7 @@ import { askCheckpoint, retryCard, type CheckpointCard } from '../src/orchestrat
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { doRun, recordingAppend } from './approval-support.ts';
 import {
-  SCENARIOS,
+  TRIVIAL,
   answerEverything,
   connectProviders,
   driveToEnd,
@@ -27,11 +27,8 @@ import {
   startScenario,
   type Answerer,
   type Harness,
-  type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
-
-const TRIVIAL = SCENARIOS[1] as Scenario;
 
 let t: TestDb;
 let root: string;

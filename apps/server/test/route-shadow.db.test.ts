@@ -8,7 +8,8 @@ import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { routingLabels } from '../src/persistence/routing-labels.ts';
 import { toLabel } from '../src/routing/labels.ts';
 import {
-  SCENARIOS,
+  NORMAL,
+  RISKY,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -21,9 +22,6 @@ import {
   type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const NORMAL = SCENARIOS[2] as Scenario;
-const RISKY = SCENARIOS[4] as Scenario;
 
 let t: TestDb;
 let root: string;

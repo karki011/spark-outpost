@@ -6,7 +6,8 @@ import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { requestCancel } from '../src/persistence/runs.ts';
 import {
-  SCENARIOS,
+  COMPLEX,
+  RISKY,
   answerEverything,
   connectProviders,
   driveToEnd,
@@ -15,15 +16,13 @@ import {
   removeRepo,
   startOrchestrator,
   startScenario,
+  withTag,
   type Answerer,
   type Harness,
   type JevScript,
-  type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
-const COMPLEX = SCENARIOS[3] as Scenario;
-const RISKY = SCENARIOS[4] as Scenario;
 const COST_CAP = 0.1;
 
 let t: TestDb;
@@ -53,7 +52,7 @@ function start(costCapUsd?: number, scenario = COMPLEX) {
 }
 
 function begin(tag: string, scenario = COMPLEX) {
-  return startScenario(t, root, { ...scenario, text: `${scenario.text} ${tag}` }, 'hands-off');
+  return startScenario(t, root, withTag(scenario, tag), 'hands-off');
 }
 
 interface Member {

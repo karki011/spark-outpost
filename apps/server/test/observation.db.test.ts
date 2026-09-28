@@ -4,7 +4,7 @@ import { updateProfile } from '../src/persistence/setup.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { DIFFS_OFF } from '../src/orchestration/observe.ts';
 import {
-  SCENARIOS,
+  NORMAL,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -14,11 +14,8 @@ import {
   startScenario,
   type Harness,
   type JevScript,
-  type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const NORMAL = SCENARIOS[2] as Scenario;
 
 let t: TestDb;
 let root: string;

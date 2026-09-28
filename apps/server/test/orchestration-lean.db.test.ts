@@ -7,7 +7,9 @@ import type { BuildStyle, ReviewBody, ShortcutsBody } from '@spark-outpost/contr
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { createProject } from '../src/projects/projects.ts';
 import {
-  SCENARIOS,
+  COMPLEX,
+  TRIVIAL,
+  artifactBodies,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -15,14 +17,12 @@ import {
   removeRepo,
   startOrchestrator,
   startScenario,
+  withTag,
   type Harness,
   type JevScript,
   type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const TRIVIAL = SCENARIOS[1] as Scenario;
-const COMPLEX = SCENARIOS[3] as Scenario;
 
 let t: TestDb;
 let root: string;
@@ -59,14 +59,6 @@ async function configure(style: BuildStyle, checks: string[] | null = []): Promi
   ]);
 }
 
-async function artifacts<T>(kind: string): Promise<T[]> {
-  const { rows } = await t.db.query<{ body: T }>(
-    'SELECT body FROM run_artifacts WHERE kind = $1 ORDER BY version',
-    [kind],
-  );
-  return rows.map((row) => row.body);
-}
-
 async function builderPrompt(runId: string): Promise<string> {
   const { rows } = await t.db.query<{ prompt: string }>(
     `SELECT prompt FROM runs WHERE parent_run_id = $1 AND role = 'builder' ORDER BY created_at`,
@@ -96,13 +88,13 @@ describe('the lean build style', () => {
 
   it('tells the task Builder the ladder and harvests its lean: markers', async () => {
     await configure('lean');
-    const marked = { ...TRIVIAL, text: `${TRIVIAL.text} #leanmark` };
+    const marked = withTag(TRIVIAL, '#leanmark');
     start(marked);
     const { conversationId, runId } = await startScenario(t, root, marked, 'full-auto');
     const { orchestration } = await driveToEnd(t, conversationId, runId);
     expect(orchestration.status).toBe('succeeded');
     expect(await builderPrompt(runId)).toContain('7. Only then write the minimum code that works.');
-    expect(await artifacts<ShortcutsBody>('shortcuts')).toEqual([
+    expect(await artifactBodies<ShortcutsBody>(t, 'shortcuts')).toEqual([
       {
         runId,
         style: 'lean',
@@ -126,7 +118,7 @@ describe('the lean build style', () => {
 
   it('eases to lite when the request asks for a complete version', async () => {
     await configure('lean');
-    const full = { ...TRIVIAL, text: `${TRIVIAL.text} Build the complete version.` };
+    const full = withTag(TRIVIAL, 'Build the complete version.');
     start(full);
     const { conversationId, runId } = await startScenario(t, root, full, 'full-auto');
     await driveToEnd(t, conversationId, runId);
@@ -147,7 +139,7 @@ describe('the lean build style', () => {
     const prompt = (role: string) => rows.find((row) => row.role === role)?.prompt ?? '';
     expect(prompt('builder')).toContain('7. Only then write the minimum code that works.');
     expect(prompt('critic')).toContain('## Complexity (same review)');
-    const [review] = await artifacts<ReviewBody>('review');
+    const [review] = await artifactBodies<ReviewBody>(t, 'review');
     expect(review).toMatchObject({ verdict: 'looks_good', net: -2 });
     expect(review!.findings).toContain('notes.txt:L2: shrink: two lines say the same');
   });

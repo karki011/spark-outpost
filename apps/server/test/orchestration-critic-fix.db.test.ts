@@ -5,18 +5,21 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type CheckBody, type InvolvementLevel } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
-import { createProject } from '../src/projects/projects.ts';
 import { BUG_FINDINGS, HARDENING_FINDINGS, ROUND_FINDINGS } from './fake-acp-roles.ts';
 import {
-  SCENARIOS,
+  TRIVIAL,
   answerEverything,
+  artifactBodies,
+  assistantReplies,
   connectProviders,
   driveToEnd,
   gitRepo,
   jevFetch,
   removeRepo,
+  setCheckCommands,
   startOrchestrator,
   startScenario,
+  withTag,
   type Answerer,
   type Harness,
   type JevScript,
@@ -24,7 +27,7 @@ import {
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
-const REVIEWED: Scenario = { ...(SCENARIOS[1] as Scenario), review: 0.95 };
+const REVIEWED: Scenario = { ...TRIVIAL, review: 0.95 };
 const JEV_SAYS_BUGS = { finding_1: 0.95, finding_2: 0.9 };
 const NO_BUDGET_POLL = 600_000;
 
@@ -75,16 +78,12 @@ async function start(options: StartOptions = {}) {
 }
 
 function begin(tag: string, level: InvolvementLevel) {
-  return startScenario(t, root, { ...REVIEWED, text: `${REVIEWED.text} ${tag}` }, level);
+  return startScenario(t, root, withTag(REVIEWED, tag), level);
 }
 
 async function configureCheck(source: string): Promise<void> {
   await writeFile(join(root, 'check.mjs'), source);
-  const { project } = await createProject(t.db, t.workspaceId, root);
-  await t.db.query('UPDATE projects SET check_commands = $2 WHERE id = $1', [
-    project.id,
-    ['node check.mjs'],
-  ]);
+  await setCheckCommands(t, root, ['node check.mjs']);
 }
 
 const PASSING_CHECK = "console.log('ok');\n";
@@ -113,10 +112,7 @@ async function children(runId: string): Promise<ChildRow[]> {
 const roles = async (runId: string) => (await children(runId)).map((row) => row.role);
 
 async function checkStatuses(): Promise<string[]> {
-  const { rows } = await t.db.query<{ body: CheckBody }>(
-    `SELECT body FROM run_artifacts WHERE kind = 'check' ORDER BY version`,
-  );
-  return rows.map((row) => row.body.status);
+  return (await artifactBodies<CheckBody>(t, 'check')).map((body) => body.status);
 }
 
 interface AdviceRow {
@@ -143,11 +139,7 @@ const adviceActions = async (runId: string) =>
   (await findingAdvice(runId)).map((row) => [row.body.answer.review, row.body.answer.action]);
 
 async function reply(runId: string): Promise<string> {
-  const { rows } = await t.db.query<{ content: string }>(
-    `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant'`,
-    [runId],
-  );
-  return rows.map((row) => row.content).join('\n');
+  return (await assistantReplies(t, runId)).join('\n');
 }
 
 const notes = () => readFile(join(root, 'notes.txt'), 'utf8');
