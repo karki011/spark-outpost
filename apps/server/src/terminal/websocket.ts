@@ -23,7 +23,7 @@ function reject(socket: Duplex, status: number, message: string) {
   socket.end(`HTTP/1.1 ${status} ${message}\r\nConnection: close\r\n\r\n`);
 }
 
-function sizeFrom(url: URL) {
+function requestedSize(url: URL) {
   const cols = Number(url.searchParams.get('cols'));
   const rows = Number(url.searchParams.get('rows'));
   return Number.isInteger(cols) && Number.isInteger(rows) && cols >= 10 && rows >= 4
@@ -56,7 +56,7 @@ function outputBatcher(ws: WebSocket) {
   return { write, flush };
 }
 
-function wire(ws: WebSocket, terminal: AttachedTerminal) {
+function forwardClientMessages(ws: WebSocket, terminal: AttachedTerminal) {
   ws.on('message', (raw, isBinary) => {
     if (isBinary) {
       const data = Buffer.isBuffer(raw)
@@ -115,9 +115,9 @@ export function attachTerminalSockets(
             },
             close: () => ws.close(1000),
           },
-          sizeFrom(url),
+          requestedSize(url),
         );
-        wire(ws, terminal);
+        forwardClientMessages(ws, terminal);
       } catch (error) {
         const reason =
           error instanceof TerminalAuthError ? error.message : 'The terminal could not start.';
