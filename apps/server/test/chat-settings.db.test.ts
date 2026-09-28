@@ -276,4 +276,17 @@ describe('provider capabilities', () => {
     expect(probes).toBe(2);
     await send('get', '/api/providers/codex/capabilities').expect(400);
   });
+
+  it('probes once more for a snapshot saved before modes were reported', async () => {
+    await connect('claude');
+    await t.db.query(
+      `INSERT INTO provider_capabilities (workspace_id, provider, models, efforts, default_model)
+       VALUES ($1, 'claude', '[]', '[]', NULL)`,
+      [t.workspaceId],
+    );
+    const first = await send('get', '/api/providers/claude/capabilities').expect(200);
+    expect(first.body.modes.map((mode: { id: string }) => mode.id)).toContain('acceptEdits');
+    await send('get', '/api/providers/claude/capabilities').expect(200);
+    expect(probes).toBe(1);
+  });
 });

@@ -20,6 +20,7 @@ import {
 
 const ROOT = '/work/app';
 const LEVELS: ModePosture[] = ['asks', 'edits', 'full_access'];
+const EVERY_MODE: ModePosture[] = ['asks', 'edits', 'auto', 'full_access', 'denies', 'unknown'];
 const allowing = (...rules: RunRule[]) => ({ allow: rules, reject: [] });
 
 function request(overrides: Partial<ApprovalRequest>): ApprovalRequest {
@@ -144,7 +145,7 @@ describe('decide() refuses force pushes in every mode', () => {
     'git push origin +main',
     'git add . && git -C sub push --force',
   ])('%s', (command) => {
-    for (const level of LEVELS) {
+    for (const level of EVERY_MODE) {
       expect(decide(level, run(command), allowing(ruleFor(run(command))!), ['git'])).toEqual({
         verdict: 'reject',
         reason: FORCE_PUSH_REASON,
@@ -189,7 +190,7 @@ describe('decide() refuses publishing from a Builder in every mode', () => {
     'bash -lc "gh pr create --fill"',
     'env GIT_CONFIG_COUNT=0 git push',
   ])('%s', (command) => {
-    for (const level of LEVELS) {
+    for (const level of EVERY_MODE) {
       const decision = decide(
         level,
         run(command),
@@ -232,7 +233,7 @@ describe('decide() always asks, in every mode', () => {
   ];
 
   it.each(cases)('%s', (_name, input, reason) => {
-    for (const level of LEVELS) {
+    for (const level of EVERY_MODE) {
       expect(
         decide(level, input, allowing(ruleFor(input)!), ['git', 'rm', 'cat', 'find', 'echo']),
       ).toEqual({ verdict: 'ask', reason });

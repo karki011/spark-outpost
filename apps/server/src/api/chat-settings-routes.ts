@@ -85,6 +85,7 @@ function conversationId(req: Request): string {
 export function chatSettingsRoutes({ db, workspaceId, probeCapabilities }: ChatSettingsDeps) {
   const router = Router();
   const probing = new Map<string, Promise<void>>();
+  const probedForModes = new Set<string>();
 
   router.patch('/conversations/:id/settings', async (req, res) => {
     const { projectIds, ...update } = parseBody(updateChatSettingsRequestSchema, req);
@@ -121,10 +122,13 @@ export function chatSettingsRoutes({ db, workspaceId, probeCapabilities }: ChatS
       throw new BadRequestError('Connect this provider first.');
     }
     const cached = await getCapabilities(db, workspaceId, provider);
-    if (cached && req.query.refresh !== '1') {
+    const lacksModes =
+      cached !== null && cached.modes.length === 0 && !probedForModes.has(provider);
+    if (cached && req.query.refresh !== '1' && !lacksModes) {
       res.json(cached);
       return;
     }
+    probedForModes.add(provider);
     let pending = probing.get(provider);
     if (!pending) {
       pending = probeCapabilities(provider)
