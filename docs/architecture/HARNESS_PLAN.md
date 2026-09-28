@@ -98,7 +98,7 @@ After Keep, the keep card and the Changes tab offer **Ship** (`ship/`, `api/ship
 
 ### Tickets: Linear and Jira connectors (September 28, 2026, backend only)
 
-The backend for Tickets (`tickets/`, `api/ticket-routes.ts`, `0054_tickets.sql`); the Tickets view keeps its "coming soon" placeholder until the user picks a screen from `docs/design/tickets/`.
+The backend for Tickets (`tickets/`, `api/ticket-routes.ts`, `0054_tickets.sql`); the Tickets view keeps its "coming soon" placeholder until the chosen design is built: the inbox layout with smart views, search across all tickets with Assign to me, attention rules and a Home brief (`docs/design/tickets/TICKETS_SCREEN_PLAN.md`, decided September 28, 2026).
 
 - **Sources.** `TicketSource` (`whoami`, `listAssigned`, `getTicket`, `transition`, `comment`, `linkPullRequest`) with Linear (GraphQL, personal API key) and Jira Cloud (REST v3, site URL + email + API token, `search/jql`, ADF read and written as text). Jira Server and Data Center with a personal access token come later.
 - **Status.** Four buckets: To do, In progress, In review, Done. Linear state types and Jira status categories map by default (a started state named like "review" is In review); `ticket_connections.status_map` maps a status name per Linear team or Jira project. A move never goes backwards (except to Done); with no matching state it is skipped with a message that points at Settings.
