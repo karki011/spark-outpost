@@ -34,7 +34,7 @@ export function shipErrorStatus(error: unknown): { status: number; message: stri
   return null;
 }
 
-export function shipDeps(deps: ShipRouteDeps): ShipDeps {
+function shipDeps(deps: ShipRouteDeps): ShipDeps {
   const github: GitHubDeps = {
     db: deps.db,
     workspaceId: deps.workspaceId,

@@ -3,7 +3,7 @@ import { API_TOKEN_HEADER } from '@spark-outpost/contracts';
 import { launchTokenCheck } from './launch-token.ts';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-export const UPLOAD_PATH = '/api/attachments';
+const UPLOAD_PATH = '/api/attachments';
 export const UPLOAD_NAME_HEADER = 'x-file-name';
 
 function isUpload(req: Request): boolean {

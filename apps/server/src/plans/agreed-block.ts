@@ -1,8 +1,8 @@
 import { PLAN_SOURCE_LABELS, type PlanDocument } from '@spark-outpost/contracts';
 
 export const AGREED_PLAN_LIMIT = 2_000;
-export const AGREED_ITEMS = 12;
-export const AGREED_DECISIONS = 6;
+const AGREED_ITEMS = 12;
+const AGREED_DECISIONS = 6;
 const LINE_LIMIT = 240;
 const STALE_FILES_SHOWN = 5;
 
