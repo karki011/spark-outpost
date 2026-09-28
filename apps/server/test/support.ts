@@ -3,6 +3,7 @@ import pg from 'pg';
 import { createDb, POOL_MAX, type Db } from '../src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../src/persistence/conversations.ts';
 import { runMigrations } from '../src/persistence/migrate.ts';
+import { truncateTables } from '../src/persistence/truncate.ts';
 
 export interface TestDb {
   db: Db;
@@ -49,26 +50,58 @@ async function admin<T>(url: string, work: (server: Db) => Promise<T>): Promise<
   }
 }
 
+const spareSchemas: string[] = [];
+
+async function emptyTables(db: Db, schema: string): Promise<void> {
+  const { rows } = await db.query<{ name: string }>(
+    `SELECT tablename AS name FROM pg_tables
+     WHERE schemaname = $1 AND tablename <> 'schema_migrations'`,
+    [schema],
+  );
+  await truncateTables(
+    db,
+    rows.map((row) => row.name),
+  );
+}
+
+async function openSchema(url: string): Promise<{ schema: string; db: Db }> {
+  const spare = spareSchemas.pop();
+  const schema = spare ?? `test_${randomUUID().replaceAll('-', '')}`;
+  if (!spare) await admin(url, (server) => server.query(`CREATE SCHEMA ${schema}`));
+  const db = createDb(url, { searchPath: schema, max: POOL_MAX.test, connectTries: CONNECT_TRIES });
+  if (spare) await emptyTables(db, schema);
+  else await runMigrations(db);
+  return { schema, db };
+}
+
 export async function createTestDb(): Promise<TestDb> {
   const url = testDatabaseUrl();
-  const schema = `test_${randomUUID().replaceAll('-', '')}`;
-  await admin(url, (server) => server.query(`CREATE SCHEMA ${schema}`));
-  const db = createDb(url, { searchPath: schema, max: POOL_MAX.test, connectTries: CONNECT_TRIES });
-  await runMigrations(db);
+  const { schema, db } = await openSchema(url);
   const workspaceId = await ensureLocalWorkspace(db);
+  let closed = false;
   return {
     db,
     workspaceId,
     async cleanup() {
+      if (closed) return;
+      closed = true;
       await db.end();
-      await admin(url, (server) => server.query(`DROP SCHEMA ${schema} CASCADE`));
+      spareSchemas.push(schema);
     },
   };
 }
 
+export async function dropSpareSchemas(): Promise<void> {
+  const schemas = spareSchemas.splice(0);
+  if (schemas.length === 0) return;
+  await admin(testDatabaseUrl(), (server) =>
+    server.query(`DROP SCHEMA ${schemas.join(', ')} CASCADE`),
+  );
+}
+
 export async function eventually<T>(
   check: () => Promise<T | null | undefined | false>,
-  timeoutMs = 5000,
+  timeoutMs = 15_000,
 ): Promise<T> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {

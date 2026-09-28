@@ -1,4 +1,5 @@
-import { beforeAll } from 'vitest';
-import { ensureWorkerDatabase } from './support.ts';
+import { afterAll, beforeAll } from 'vitest';
+import { dropSpareSchemas, ensureWorkerDatabase } from './support.ts';
 
 beforeAll(ensureWorkerDatabase);
+afterAll(dropSpareSchemas);
