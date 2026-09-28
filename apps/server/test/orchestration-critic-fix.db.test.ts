@@ -236,7 +236,7 @@ describe('Critic → fix rounds', () => {
   it('stops after three fix rounds, shows the remaining concerns and asks to keep at Auto-edit', async () => {
     await start({ policy: JEV_SAYS_BUGS });
     const { conversationId, runId } = await begin('#bugrounds 9', 'hands-off');
-    const { asked } = await driveToEnd(t, conversationId, runId);
+    const { asked } = await driveToEnd(t, conversationId, runId, answerEverything, 170_000);
     expect(asked.map((approval) => approval.kind)).toEqual(['accept']);
     expect(asked[0]!.reason).toContain('Automatic asks because the Critic still has concerns.');
     expect(asked[0]!.options.map((option) => option.optionId)).toContain(
