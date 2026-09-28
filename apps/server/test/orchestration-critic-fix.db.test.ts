@@ -227,11 +227,15 @@ describe('Critic → fix rounds', () => {
     );
   }, 120_000);
 
-  it('stops after three fix rounds and shows the remaining concerns', async () => {
+  it('stops after three fix rounds, shows the remaining concerns and asks to keep at Auto-edit', async () => {
     await start({ policy: JEV_SAYS_BUGS });
     const { conversationId, runId } = await begin('#bugrounds 9', 'hands-off');
     const { asked } = await driveToEnd(t, conversationId, runId);
-    expect(asked).toEqual([]);
+    expect(asked.map((approval) => approval.kind)).toEqual(['accept']);
+    expect(asked[0]!.reason).toContain('Auto-edit asks because the Critic still has concerns.');
+    expect(asked[0]!.options.map((option) => option.optionId)).toContain(
+      CHECKPOINT_OPTION.fixFindings,
+    );
     const spawned = await roles(runId);
     expect(spawned.filter((role) => role === 'builder')).toHaveLength(4);
     expect(spawned.filter((role) => role === 'critic')).toHaveLength(4);

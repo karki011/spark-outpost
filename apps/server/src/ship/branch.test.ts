@@ -26,6 +26,7 @@ describe('ship branch names', () => {
     expect(isShipBranch(branch, 'spark')).toBe(true);
     expect(isShipBranch('main', 'spark')).toBe(false);
     expect(isShipBranch('spark-dev/x-1', 'spark')).toBe(false);
+    expect(isShipBranch('spark/01a0e739/bolt', 'spark')).toBe(false);
     expect(safeToPush(branch, 'spark', ['main', null])).toBe(true);
     expect(safeToPush(branch, 'spark', [branch])).toBe(false);
   });

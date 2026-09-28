@@ -6,8 +6,12 @@ import { createRepoScanner, type RepoScan } from '../src/agent-config/discovery.
 import { rootLaunch, type RepoLaunch } from '../src/agent-config/launch.ts';
 import { DEFAULT_AGENT_SETTINGS } from '../src/agent-config/store.ts';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
-import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
-import type { ProviderOutput } from '../src/providers/provider.ts';
+import {
+  agentDefinitions,
+  BUILDER_PUBLISH_DENY_RULES,
+  type AgentDefinition,
+} from '../src/agents/acp/agents.ts';
+import type { ProviderOutput, ProviderTurn } from '../src/providers/provider.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import { FIXTURE_RULE, makeConfiguredRepo } from './repo-config-fixture.ts';
 
@@ -48,9 +52,14 @@ interface Received {
   codexConfig: string | null;
 }
 
-async function session(definition: AgentDefinition, repo: RepoLaunch) {
+async function session(
+  definition: AgentDefinition,
+  repo: RepoLaunch,
+  extra: Partial<ProviderTurn> = {},
+) {
   const outputs: ProviderOutput[] = [];
   for await (const output of provider(definition).run({
+    ...extra,
     prompt: '#session',
     history: [],
     settings: { method: 'cli', model: null, modelLabel: null, effort: null },
@@ -96,6 +105,22 @@ describe('repo agent config reaches the agent over ACP', { timeout: 20_000 }, ()
         '.cursor/rules/style.mdc',
       ],
     });
+  });
+
+  it('denies pushing, gh and remote changes to a Builder session, not to other Do sessions', async () => {
+    const repo = [await rootLaunch(scan, DEFAULT_AGENT_SETTINGS, enabled())];
+    const approvals = {
+      review: async () => ({ outcome: 'cancelled' as const, note: 'not used' }),
+    };
+    const denied = async (builder: boolean) => {
+      const { received } = await session(claude, repo, { mode: 'do', approvals, builder });
+      const settings = received.meta!.claudeCode.options.settings as {
+        permissions: { deny: string[] };
+      };
+      return settings.permissions.deny;
+    };
+    expect(await denied(true)).toEqual(expect.arrayContaining([...BUILDER_PUBLISH_DENY_RULES]));
+    expect(await denied(false)).not.toContain('Bash(git push:*)');
   });
 
   it('passes approved hooks through and sends nothing extra when all switches are off', async () => {

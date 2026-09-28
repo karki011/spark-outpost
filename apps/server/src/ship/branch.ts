@@ -21,6 +21,7 @@ export function shipBranchName(prefix: string, title: string, taskId: string): s
 export function isShipBranch(branch: string, prefix: string): boolean {
   return (
     branch.startsWith(`${prefix}/`) &&
+    !branch.slice(prefix.length + 1).includes('/') &&
     /^[a-z0-9][a-z0-9/-]*[a-z0-9]$/.test(branch) &&
     !branch.includes('//')
   );

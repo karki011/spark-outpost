@@ -28,7 +28,7 @@ export function optionName(approval: Approval, optionId: string): string | null 
 
 const TITLES: Record<CheckpointPayload['kind'], string> = {
   clarify: 'Jev has a question',
-  plan: 'Approve the plan?',
+  plan: 'Start this risky change?',
   retry: 'A step needs another try',
   accept: 'Keep these changes?',
   budget: 'Continue past the budget?',
@@ -50,7 +50,7 @@ export function checkpointQuestion(payload: CheckpointPayload): string | null {
 
 const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
   clarify: 'Answer Jev’s question',
-  plan: 'Approve the plan',
+  plan: 'Build it, or stop',
   retry: 'Retry, or stop and report',
   accept: 'Keep, fix, or revert the changes',
   budget: 'Continue past the budget',
@@ -108,7 +108,7 @@ export function budgetLine(payload: CheckpointPayload): string | null {
 const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.stop]: 'Stopped.',
   [CHECKPOINT_OPTION.clarifyRules]: 'Left it to the fixed rules.',
-  [CHECKPOINT_OPTION.approvePlan]: 'Plan approved.',
+  [CHECKPOINT_OPTION.approvePlan]: 'Approved; the Builder started.',
   [CHECKPOINT_OPTION.editPlan]: 'Sent your changes to the plan.',
   [CHECKPOINT_OPTION.retry]: 'Retrying.',
   [CHECKPOINT_OPTION.finish]: 'Skipped.',
@@ -156,7 +156,9 @@ export function checkpointResult(approval: Approval): string {
     return delay === null ? 'Continued automatically.' : `Continued automatically after ${delay}s.`;
   }
   if (approval.decidedBy === 'level' && approval.decisionOptionId === CHECKPOINT_OPTION.keep) {
-    return 'Kept by Full auto.';
+    return approval.payload.checkpoint?.keptBy === 'hands-off'
+      ? 'Kept by Auto-edit.'
+      : 'Kept by Full auto.';
   }
   if (approval.status === 'cancelled' && approval.decidedBy === 'policy') {
     return 'It moved on before you answered.';

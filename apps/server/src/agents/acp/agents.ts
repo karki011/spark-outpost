@@ -43,6 +43,7 @@ export interface AgentDefinition {
   doSessionMeta?: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
+    builder?: boolean,
   ) => Record<string, unknown>;
   doMode?: string;
   doPrimaryRootOnly?: boolean;
@@ -63,6 +64,25 @@ export const CLAUDE_DO_TOOLS = [
 export const CLAUDE_DO_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
 export const CODEX_DO_MODE = 'ask-every-action';
 
+/**
+ * Builders never publish: pushing, pull requests and remote changes are the harness's job at
+ * the end of the task (Ship). These deny rules back up the approval gate's refusal, which also
+ * covers Codex (every Codex Do action goes through the gate).
+ */
+export const BUILDER_PUBLISH_DENY_RULES = [
+  'Bash(git push:*)',
+  'Bash(git remote add:*)',
+  'Bash(git remote set-url:*)',
+  'Bash(git remote remove:*)',
+  'Bash(git remote rm:*)',
+  'Bash(git remote rename:*)',
+  'Bash(git send-email:*)',
+  'Bash(git request-pull:*)',
+  'Bash(gh:*)',
+  'Bash(hub:*)',
+  'Bash(glab:*)',
+] as const;
+
 export function secretReadRules(extraRoots: readonly string[]): string[] {
   const underCwd = SECRET_FILE_PATTERNS.map((pattern) => `**/${pattern}`);
   const underExtraRoots = extraRoots.flatMap((root) =>
@@ -81,8 +101,9 @@ export function claudeSessionMeta(
   extraRoots: readonly string[],
   ask: readonly string[] = [],
   repo: ClaudeRepoOptions | null = null,
+  builder = false,
 ): Record<string, unknown> {
-  const deny = secretReadRules(extraRoots);
+  const deny = [...secretReadRules(extraRoots), ...(builder ? BUILDER_PUBLISH_DENY_RULES : [])];
   const askRules = [...ask, ...(repo?.mcpNames ?? []).map((name) => `mcp__${name}`)];
   const plugins = repo?.plugins ?? [];
   return {
@@ -154,8 +175,11 @@ const claudeSessions = {
   conversationSessionMeta: claudeSessionMeta([], []),
   projectSessionMeta: (extraRoots: readonly string[], repo?: ClaudeRepoOptions | null) =>
     claudeSessionMeta(['Read', 'Glob', 'Grep'], extraRoots, [], repo ?? null),
-  doSessionMeta: (extraRoots: readonly string[], repo?: ClaudeRepoOptions | null) =>
-    claudeSessionMeta(CLAUDE_DO_TOOLS, extraRoots, CLAUDE_DO_ASK_RULES, repo ?? null),
+  doSessionMeta: (
+    extraRoots: readonly string[],
+    repo?: ClaudeRepoOptions | null,
+    builder = false,
+  ) => claudeSessionMeta(CLAUDE_DO_TOOLS, extraRoots, CLAUDE_DO_ASK_RULES, repo ?? null, builder),
 } satisfies Partial<AgentDefinition>;
 
 const CLAUDE_ACP = '@agentclientprotocol/claude-agent-acp';

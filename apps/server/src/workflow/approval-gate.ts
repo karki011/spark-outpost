@@ -52,6 +52,7 @@ export interface GateDeps {
   db: Db;
   runId: string;
   level: InvolvementLevel;
+  builder?: boolean;
   append: (event: RunEvent, options?: AppendOptions) => Promise<number>;
   waiters: ApprovalWaiters;
   pollMs?: number;
@@ -323,7 +324,9 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       rules(),
       projectAllowlistForRun(deps.db, deps.runId),
     ]);
-    const decision = decide(deps.level, request, runRules, allowlist);
+    const decision = decide(deps.level, request, runRules, allowlist, {
+      builder: deps.builder === true,
+    });
     if (decision.verdict === 'ask') return ask(request, decision.reason, signal);
     if (decision.verdict === 'reject') {
       const denied = await insertApproval(deps.db, newApproval(request, decision.reason), {

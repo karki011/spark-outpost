@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   HISTORY_TURNS,
   INCREMENT_RULE,
+  SHIP_RULE,
   PATCH_LIMIT,
   PLAN_FOLLOW_RULE,
   builderPrompt,
@@ -35,6 +36,8 @@ describe('context assembly', () => {
     });
     expect(prompt.startsWith('Role: Builder.')).toBe(true);
     expect(prompt).toContain(INCREMENT_RULE);
+    expect(prompt).toContain(SHIP_RULE);
+    expect(SHIP_RULE).toMatch(/Don't commit, push, open a pull request, run `gh`/);
     expect(prompt).toContain('## Request\nAdd a CSV export');
     expect(prompt).not.toContain('turn 0');
     expect(prompt).toContain(`turn ${HISTORY_TURNS + 1}`);

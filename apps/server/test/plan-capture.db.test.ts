@@ -159,6 +159,47 @@ describe("Claude's plan mode", () => {
   });
 });
 
+describe('the Critic on plan-driven and multi-file builds', () => {
+  async function roles(runId: string): Promise<string[]> {
+    const { rows } = await t.db.query<{ role: string }>(
+      `SELECT role FROM runs WHERE parent_run_id = $1 ORDER BY created_at`,
+      [runId],
+    );
+    return rows.map((row) => row.role);
+  }
+
+  it('reviews a build from the agreed plan with the plan, but not a one-liner', async () => {
+    start(null);
+    const { conversationId } = await linkedConversation(t, root);
+    const first = await say(conversationId, 'Add CSV export #planmode #build');
+    await driveToEnd(t, conversationId, first);
+    expect(await roles(first)).toEqual(['builder']);
+    const oneLiner = await say(conversationId, 'Fix the heading typo #build');
+    await driveToEnd(t, conversationId, oneLiner);
+    expect(await roles(oneLiner)).toEqual(['builder']);
+    const planned = await say(conversationId, 'Do it: build the CSV export #build #feature');
+    await driveToEnd(t, conversationId, planned);
+    expect(await roles(planned)).toEqual(['builder', 'critic']);
+    const { rows } = await t.db.query<{ prompt: string }>(
+      `SELECT prompt FROM runs WHERE parent_run_id = $1 AND role = 'critic'`,
+      [planned],
+    );
+    expect(rows[0]?.prompt).toContain('## Agreed plan');
+  });
+
+  it('reviews a multi-file story without a plan, and skips a two-file change in one place', async () => {
+    start(null);
+    const { conversationId } = await linkedConversation(t, root);
+    const small = await say(conversationId, 'Add the export and its button #build #feature');
+    await driveToEnd(t, conversationId, small);
+    expect(await roles(small)).toEqual(['builder']);
+    const { conversationId: other } = await linkedConversation(t, root);
+    const story = await say(other, 'Tags on projects: DB, API and UI #build #story');
+    await driveToEnd(t, other, story);
+    expect(await roles(story)).toEqual(['builder', 'critic']);
+  });
+});
+
 describe('plans agreed in chat', () => {
   beforeEach(() => connectProviders(t));
 

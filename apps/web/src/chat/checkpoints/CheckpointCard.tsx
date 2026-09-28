@@ -286,7 +286,21 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
     case 'clarify':
       return <ClarifyBody approval={approval} decide={decide} />;
     case 'plan':
-      return null;
+      return (
+        <div className="appr-acts">
+          <Action
+            id={CHECKPOINT_OPTION.approvePlan}
+            approval={approval}
+            decide={decide}
+            kind="primary"
+          >
+            Build it
+          </Action>
+          <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
+            Stop
+          </Action>
+        </div>
+      );
     case 'accept':
       return <AcceptBody approval={approval} decide={decide} />;
     case 'retry':

@@ -15,6 +15,7 @@ import { shipTask } from '../ship/service.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { checkBudget } from './budget-check.ts';
 import { acceptCard } from './checkpoint.ts';
+import { RISKY_PR_NOTE } from './checkpoint-policy.ts';
 import { latestChecks } from './final-message.ts';
 import { sessionReviewLine } from './critic-fix.ts';
 import { publish, type Session } from './session.ts';
@@ -41,16 +42,19 @@ function shipDeps(s: Session): ShipDeps {
   };
 }
 
-function checksFailing(s: Session): boolean {
+export function checksFailing(s: Session): boolean {
   return latestChecks(s.checkBodies).some((body) => body.status === 'failed');
 }
 
-async function autoKeep(s: Session, shipped: string | null): Promise<void> {
+export async function autoKeep(
+  s: Session,
+  keptBy: 'hands-off' | 'full-auto',
+  lines: readonly (string | null)[],
+): Promise<void> {
   const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
-  const reason = [KEPT_BY_FULL_AUTO, sessionReviewLine(s), shipped]
-    .filter((line): line is string => Boolean(line))
-    .join(' ');
-  const card = acceptCard(changes.files, reason);
+  const reason = lines.filter((line): line is string => Boolean(line)).join(' ');
+  const plain = acceptCard(changes.files, reason);
+  const card = { ...plain, payload: { ...plain.payload, keptBy } };
   s.checkpoints += 1;
   const kept = await insertApproval(
     s.deps.db,
@@ -110,7 +114,7 @@ export async function shipFullAuto(s: Session): Promise<FlowEvent> {
     return { type: 'ship_held', reason: CHECKS_HOLD_REASON };
   }
   s.shipLine = await ship(s, failing);
-  await autoKeep(s, s.shipLine);
+  await autoKeep(s, 'full-auto', [KEPT_BY_FULL_AUTO, sessionReviewLine(s), s.shipLine]);
   return { type: 'shipped' };
 }
 
@@ -119,6 +123,7 @@ async function ship(s: Session, failing: boolean): Promise<string> {
   const notes = [
     failing ? CHECKS_FAILING_NOTE : null,
     s.unverified ? UNVERIFIED_NOTE : null,
+    s.risky ? RISKY_PR_NOTE : null,
   ].filter((note): note is string => note !== null);
   const deps = shipDeps(s);
   const options = { keepCheckout: true, duringRun: true, notes };

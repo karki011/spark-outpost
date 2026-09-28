@@ -42,7 +42,11 @@ const EXPECTED: Record<string, Record<InvolvementLevel, Expectation>> = {
   trivial: asksEdits([B]),
   normal: asksEdits([B]),
   complex: asksEdits([B]),
-  risky: asksEdits([B, C]),
+  risky: {
+    balanced: { crew: [B, C], asked: ['plan', 'edit', 'accept'] },
+    'hands-off': { crew: [B, C], asked: ['plan'] },
+    'full-auto': { crew: [B, C], asked: [] },
+  },
 };
 
 let t: TestDb;
@@ -95,6 +99,18 @@ describe.each(SCENARIOS)('$id', (scenario) => {
         orchestration.crew.every((member) => member.status === 'succeeded'),
         context,
       ).toBe(true);
+
+      const kept = orchestration.checkpoints.filter(
+        (approval) => approval.kind === 'accept' && approval.decidedBy === 'level',
+      );
+      const keptBy = level === 'balanced' || expected.crew[0] === 'scout' ? [] : [level];
+      expect(
+        kept.map((approval) => approval.payload.checkpoint?.keptBy),
+        context,
+      ).toEqual(keptBy);
+      if (level === 'hands-off' && keptBy.length > 0) {
+        expect(kept[0]!.reason, context).toContain('Auto-edit kept the changes');
+      }
 
       const builders = expected.crew.filter((role) => role === B).length;
       expect(notes.split('\n').filter((line) => line.startsWith('step')).length, context).toBe(

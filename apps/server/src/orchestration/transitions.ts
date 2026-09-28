@@ -12,7 +12,14 @@ import {
 } from '@spark-outpost/contracts';
 import { MAX_VERDICTS, PLAN_CONTINUES } from '../advisor/policy.ts';
 import type { Verdict } from '../advisor/verify-questions.ts';
-import { asksToKeep, asksForLoop, shipsByItself } from './checkpoint-policy.ts';
+import {
+  asksToKeep,
+  asksForLoop,
+  keepReason,
+  keepsByItself,
+  shipsByItself,
+  type KeepFacts,
+} from './checkpoint-policy.ts';
 import { criticFixFollowUp } from './context.ts';
 import {
   afterReview,
@@ -47,6 +54,7 @@ export type FlowAction =
   | ({ type: 'spawn' } & Spawn)
   | { type: 'verify' }
   | { type: 'wrap_up' }
+  | { type: 'keep' }
   | { type: 'ship' }
   | { type: 'revert' }
   | {
@@ -78,7 +86,8 @@ export type FlowEvent =
   | { type: 'verified'; accepted: Verdict | null; reasons: readonly string[] }
   | { type: 'looped'; summary: string; open?: readonly string[] }
   | { type: 'answered'; kind: CheckpointKind; optionId: string; note: string | null }
-  | { type: 'wrapped'; filesChanged: number }
+  | { type: 'wrapped'; filesChanged: number; checksFailing?: boolean }
+  | { type: 'kept' }
   | { type: 'shipped' }
   | { type: 'ship_held'; reason: string }
   | { type: 'reverted' }
@@ -107,6 +116,8 @@ export interface FlowState {
   large: boolean;
   review: ReviewLoop;
   shipping?: boolean;
+  /** Why this change needs your go-ahead before the first Builder starts; null once given. */
+  confirmFirst: string | null;
 }
 
 export interface FlowResult {
@@ -119,6 +130,7 @@ export function initialFlow(
   level: InvolvementLevel,
   reviewWanted = false,
   verifier = false,
+  confirmFirst: string | null = null,
 ): FlowState {
   return {
     depth: 'execute',
@@ -141,6 +153,7 @@ export function initialFlow(
     escalated: false,
     large: false,
     review: IDLE_REVIEW,
+    confirmFirst,
   };
 }
 
@@ -212,6 +225,7 @@ export const UNSTICK_NOTE =
   'The harness stopped your last turn because you repeated the same action several times without progress. Take a different approach, or say what is blocking you.';
 
 function build(state: FlowState): FlowResult {
+  if (state.confirmFirst) return ask(state, 'plan', state.confirmFirst);
   return spawn(
     { ...state, depth: 'execute' },
     { role: 'builder', reason: 'first', escalate: false },
@@ -381,6 +395,12 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
     return stopReport(state, `Stopped: the ${limit} budget ran out.`);
   }
   if (option === CHECKPOINT_OPTION.stop) return finish(state, 'cancelled', 'You stopped it.');
+  if (event.kind === 'plan') {
+    if (option !== CHECKPOINT_OPTION.approvePlan) {
+      return finish(state, 'cancelled', 'You stopped it.');
+    }
+    return build({ ...state, confirmFirst: null });
+  }
   if (event.kind === 'retry') {
     if (option === CHECKPOINT_OPTION.retry) return retry(state, event.note);
     return stopReport(
@@ -444,12 +464,20 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
       return verified(state, event);
     case 'answered':
       return answered(state, event);
-    case 'wrapped':
-      if (asksToKeep(state.level, event.filesChanged)) {
-        return ask(state, 'accept', filesChangedLine(event.filesChanged));
+    case 'wrapped': {
+      const facts = keepFacts(state, event.checksFailing === true);
+      if (asksToKeep(state.level, event.filesChanged, facts)) {
+        const why = keepReason(state.level, facts);
+        const line = filesChangedLine(event.filesChanged);
+        return ask(state, 'accept', why ? `${line} ${why}` : line);
       }
       if (shipsByItself(state.level, event.filesChanged)) return ship(state);
+      if (keepsByItself(state.level, event.filesChanged)) {
+        return { state: { ...state, waitingFor: null }, action: { type: 'keep' } };
+      }
       return finish(state, 'succeeded');
+    }
+    case 'kept':
     case 'shipped':
       return finish(state, 'succeeded');
     case 'ship_held':
@@ -472,6 +500,14 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
     case 'stopped':
       return finish(state, 'cancelled', 'Stopped.');
   }
+}
+
+export function keepFacts(state: FlowState, checksFailing: boolean): KeepFacts {
+  const critic = state.verdict !== null;
+  return {
+    checksFailing,
+    criticUnsatisfied: critic && (state.verdict === 'unclear' || state.review.fixable.length > 0),
+  };
 }
 
 function filesChangedLine(count: number): string {

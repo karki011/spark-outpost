@@ -17,8 +17,14 @@ const RISKY_COMMAND =
   /\bgit\s+push\b|\bsudo\b|\bcurl\b|\bwget\b|\brm\s+-[a-z]*r[a-z]*f?\s+(?:\/|~)|\bnpm\s+publish\b/;
 
 const CHECKPOINT_CHOICES: Record<string, { optionId: string; label: string; why: string }> = {
-  plan: { optionId: CHECKPOINT_OPTION.approvePlan, label: 'Approve', why: 'the plan reads fine' },
+  // "Start this risky change?" (destructive work or a migration, before the first Builder).
+  plan: {
+    optionId: CHECKPOINT_OPTION.approvePlan,
+    label: 'Build it',
+    why: 'the developer asked for this risky change',
+  },
   retry: { optionId: CHECKPOINT_OPTION.retry, label: 'Retry', why: 'take Jev’s suggestion' },
+  // Ask before edits always asks; Auto-edit asks only when checks fail or the Critic has concerns.
   accept: { optionId: CHECKPOINT_OPTION.keep, label: 'Keep', why: 'keep the finished work' },
   budget: { optionId: CHECKPOINT_OPTION.stop, label: 'Stop', why: 'never pass the cost cap' },
   merge_conflict: {

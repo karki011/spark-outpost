@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { ShipFile } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
+import { HARNESS_COMMIT_EMAIL } from '../projects/snapshot.ts';
 
 const QUICK_MS = 15_000;
 const SLOW_MS = 120_000;
@@ -216,6 +217,35 @@ export async function remoteDefaultBranch(root: string, remote: string): Promise
     `refs/remotes/${remote}/HEAD`,
   ]);
   return ref?.startsWith(`${remote}/`) ? ref.slice(remote.length + 1) : null;
+}
+
+/**
+ * Internal harness commits (run snapshots, worktree bases such as "Spark Outpost: parallel
+ * base …") that pushing `branch` would publish: those on the branch and not on the remote yet.
+ */
+export async function harnessCommitsToPush(
+  root: string,
+  remote: string,
+  branch: string,
+): Promise<string[]> {
+  const result = await runGit(
+    root,
+    [
+      'log',
+      '--fixed-strings',
+      `--author=${HARNESS_COMMIT_EMAIL}`,
+      '--format=%h %s',
+      `refs/heads/${branch}`,
+      '--not',
+      `--remotes=${remote}`,
+    ],
+    SLOW_MS,
+  );
+  if (result.code !== 0) throw failure(`Checking ${branch} before the push`, result);
+  return result.stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 export async function pushBranch(root: string, remote: string, branch: string): Promise<void> {

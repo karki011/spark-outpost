@@ -13,6 +13,7 @@ import {
   isGitForcePush,
   isGitPush,
   normalizeCommand,
+  publishesCode,
   resolveCommandPath,
 } from './commands.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
@@ -51,6 +52,8 @@ export const FS_WRITE_TOOL_KIND = 'write_text_file';
 
 export const PUSH_REASON = 'Pushing publishes outside this computer';
 export const FORCE_PUSH_REASON = 'Force pushes are refused';
+export const BUILDER_PUBLISH_REASON =
+  "Builders don't push, open pull requests or change remotes: Spark Outpost commits, pushes and opens the PR when the task is done";
 export const OUTSIDE_DELETE_REASON = 'Deleting outside the repo always asks';
 export const OUTSIDE_WRITE_REASON = 'Changing files outside the repo always asks';
 export const SECRET_REASON = 'Secret files always ask';
@@ -118,8 +121,16 @@ export function alwaysAskReason(request: ApprovalRequest): string | null {
   return null;
 }
 
-function refusal(request: ApprovalRequest): string | null {
+export interface DecideOptions {
+  /** The request comes from a harness Builder: publishing is the harness's job, never its own. */
+  builder?: boolean;
+}
+
+function refusal(request: ApprovalRequest, options: DecideOptions): string | null {
   if (request.command && isGitForcePush(request.command)) return FORCE_PUSH_REASON;
+  if (options.builder && request.command && publishesCode(request.command)) {
+    return BUILDER_PUBLISH_REASON;
+  }
   if (request.toolKind === 'read' && request.paths.some((p) => outsideRoots(request, p))) {
     return 'Reads outside the project are refused';
   }
@@ -167,8 +178,9 @@ export function decide(
   request: ApprovalRequest,
   runRules: readonly RunRule[],
   allowlist: readonly string[],
+  options: DecideOptions = {},
 ): Decision {
-  const refused = refusal(request);
+  const refused = refusal(request, options);
   if (refused) return { verdict: 'reject', reason: refused };
   const always = alwaysAskReason(request);
   if (always) return { verdict: 'ask', reason: always };

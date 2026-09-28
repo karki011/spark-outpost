@@ -58,6 +58,17 @@ export function answerOrBuildCard(reason: string): CheckpointCard {
   };
 }
 
+export const RISKY_CARD_TITLE = 'Start this risky change?';
+
+export function riskyCard(reason: string): CheckpointCard {
+  return {
+    kind: 'plan',
+    title: RISKY_CARD_TITLE,
+    payload: payload({ kind: 'plan', question: RISKY_CARD_TITLE, reason }),
+    options: [allow(CHECKPOINT_OPTION.approvePlan, 'Build it'), stopOption],
+  };
+}
+
 export function retryCard(
   from: AgentPick | null,
   to: AgentPick | null,
