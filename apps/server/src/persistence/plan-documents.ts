@@ -168,6 +168,17 @@ export async function latestApprovedPlan(
   return rows[0] ? toPlanDocument(rows[0]) : null;
 }
 
+export async function latestPlanBody(
+  db: Queryable,
+  conversationId: string,
+): Promise<string | null> {
+  const { rows } = await db.query<{ body: string }>(
+    'SELECT body FROM plan_documents WHERE conversation_id = $1 ORDER BY version DESC LIMIT 1',
+    [conversationId],
+  );
+  return rows[0]?.body ?? null;
+}
+
 export async function planDocuments(
   db: Queryable,
   conversationId: string,

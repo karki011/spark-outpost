@@ -3,6 +3,7 @@ import type { Db } from '../persistence/db.ts';
 import {
   approvePlanDocument,
   insertPlanDocument,
+  latestPlanBody,
   rejectPlanDocument,
 } from '../persistence/plan-documents.ts';
 import type { AppendOptions } from '../persistence/run-events.ts';
@@ -74,8 +75,12 @@ export function createPlanRecorder(deps: PlanRecorderDeps): PlanRecorder {
   const announce = (plan: PlanDocument) => announcePlan(deps.append, plan);
   const failed = (error: unknown) => planSaveFailed(deps.append, error);
 
+  const repeated = async (body: string) =>
+    (await latestPlanBody(deps.db, deps.conversationId)) === body.trim();
+
   const propose = async (body: string, source: PlanDocumentSource, toolCallId?: string) => {
     try {
+      if (source === 'codex' && (await repeated(body))) return null;
       const plan = await insertPlanDocument(deps.db, {
         conversationId: deps.conversationId,
         taskId: await deps.taskId(),

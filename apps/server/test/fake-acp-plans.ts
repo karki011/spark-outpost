@@ -62,6 +62,15 @@ export async function planModeTurn(turn: RoleTurn, lockedMode: string): Promise<
   return 'end_turn';
 }
 
+const LATEST_MESSAGE = 'Reply to the latest message:';
+const REQUEST_SECTION = /## Request\n([\s\S]*?)(?:\n\n## |$)/;
+
+export function currentRequest(prompt: readonly acp.ContentBlock[]): string {
+  const last = prompt.findLast((block) => block.type === 'text');
+  const text = (last?.type === 'text' ? last.text : '').split(LATEST_MESSAGE).at(-1)!;
+  return REQUEST_SECTION.exec(text)?.[1] ?? text;
+}
+
 export async function planReplies(text: string, say: (chunk: string) => Promise<void>) {
   if (text.includes(PROPOSED_PLAN_TRIGGER)) {
     await say(
