@@ -7,22 +7,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createConversation } from '../src/persistence/conversations.ts';
 import { FAKE_CLAUDE_MODES } from '../src/providers/fake.ts';
 import { createProject } from '../src/projects/projects.ts';
-import { saveConnection, updateProfile } from '../src/persistence/setup.ts';
+import { updateProfile } from '../src/persistence/setup.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
 let root: string;
 let probes = 0;
 let app: ReturnType<typeof createTestApp>;
-
-const connect = (provider: 'claude' | 'codex') =>
-  saveConnection(t.db, t.workspaceId, provider, {
-    method: 'cli',
-    detail: `${provider} 1.0`,
-    summary: '',
-    models: [],
-  });
 
 beforeEach(async () => {
   t = await createTestDb();
@@ -66,8 +58,8 @@ const send = (method: 'get' | 'patch' | 'post', path: string, body?: object) => 
 
 describe('chat settings', () => {
   it('start from the default provider and override per chat without touching defaults', async () => {
-    await connect('claude');
-    await connect('codex');
+    await connectCliProvider(t, 'claude');
+    await connectCliProvider(t, 'codex');
     await updateProfile(t.db, t.workspaceId, { defaultProvider: 'claude' });
     const id = randomUUID();
     await createConversation(t.db, t.workspaceId, id);
@@ -121,7 +113,7 @@ describe('chat settings', () => {
   });
 
   it('sends the default model from the capability snapshot when the chat has none', async () => {
-    await connect('claude');
+    await connectCliProvider(t, 'claude');
     await send('get', '/api/providers/claude/capabilities').expect(200);
     const id = randomUUID();
     await createConversation(t.db, t.workspaceId, id);
@@ -140,7 +132,7 @@ describe('chat settings', () => {
   });
 
   it('lets a CLI provider pick a default model from its capability snapshot', async () => {
-    await connect('claude');
+    await connectCliProvider(t, 'claude');
     await send('patch', '/api/providers/claude/defaults', { model: 'fast' }).expect(400);
     await send('get', '/api/providers/claude/capabilities').expect(200);
     await send('patch', '/api/providers/claude/defaults', { model: 'fast' }).expect(200);
@@ -152,8 +144,8 @@ describe('chat settings', () => {
   });
 
   it('remembers each provider’s choices when the chat switches back and forth', async () => {
-    await connect('claude');
-    await connect('codex');
+    await connectCliProvider(t, 'claude');
+    await connectCliProvider(t, 'codex');
     const id = randomUUID();
     await createConversation(t.db, t.workspaceId, id);
     const path = `/api/conversations/${id}/settings`;
@@ -199,7 +191,7 @@ describe('chat settings', () => {
   });
 
   it('takes only modes and options the provider offers, and keeps the agent session when they change', async () => {
-    await connect('claude');
+    await connectCliProvider(t, 'claude');
     await send('get', '/api/providers/claude/capabilities').expect(200);
     const id = randomUUID();
     await createConversation(t.db, t.workspaceId, id);
@@ -215,7 +207,7 @@ describe('chat settings', () => {
   });
 
   it('switches a running Do turn to the mode you pick, and a queued one before it starts', async () => {
-    await connect('claude');
+    await connectCliProvider(t, 'claude');
     const id = randomUUID();
     await createConversation(t.db, t.workspaceId, id);
     const { project } = await createProject(t.db, t.workspaceId, root);
@@ -255,7 +247,7 @@ describe('chat settings', () => {
   });
 
   it('refuses a provider that is not connected', async () => {
-    await connect('claude');
+    await connectCliProvider(t, 'claude');
     const id = randomUUID();
     await createConversation(t.db, t.workspaceId, id);
     const refused = await send('patch', `/api/conversations/${id}/settings`, {
@@ -267,7 +259,7 @@ describe('chat settings', () => {
 
 describe('provider capabilities', () => {
   it('probes once, then serves the cached snapshot until a refresh is asked for', async () => {
-    await connect('claude');
+    await connectCliProvider(t, 'claude');
     const first = await send('get', '/api/providers/claude/capabilities').expect(200);
     expect(first.body).toMatchObject({ provider: 'claude', defaultModel: 'fast' });
     await send('get', '/api/providers/claude/capabilities').expect(200);
@@ -278,7 +270,7 @@ describe('provider capabilities', () => {
   });
 
   it('probes once more for a snapshot saved before modes were reported', async () => {
-    await connect('claude');
+    await connectCliProvider(t, 'claude');
     await t.db.query(
       `INSERT INTO provider_capabilities (workspace_id, provider, models, efforts, default_model)
        VALUES ($1, 'claude', '[]', '[]', NULL)`,

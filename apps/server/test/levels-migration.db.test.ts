@@ -2,37 +2,32 @@ import { randomUUID } from 'node:crypto';
 import { cp, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import pg from 'pg';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createDb, POOL_MAX, type Db } from '../src/persistence/db.ts';
+import type { Db } from '../src/persistence/db.ts';
 import { resolveChatSettings } from '../src/persistence/chat-settings.ts';
 import { createConversation, ensureLocalWorkspace } from '../src/persistence/conversations.ts';
 import { migrationsDir, runMigrations } from '../src/persistence/migrate.ts';
 import { getRun } from '../src/persistence/runs.ts';
-import { getSetupState, saveConnection } from '../src/persistence/setup.ts';
+import { getSetupState } from '../src/persistence/setup.ts';
 import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
-import { createTestDb, testDatabaseUrl, type TestDb } from './support.ts';
+import {
+  connectCliProvider,
+  createTestDb,
+  createTestSchema,
+  dropTestSchema,
+  schemaDb,
+  type TestDb,
+} from './support.ts';
 
 const LEVELS_MIGRATION = '0049_levels_full_auto_ship.sql';
 const MODES_MIGRATION = '0050_provider_modes.sql';
 
-async function admin(sql: string): Promise<void> {
-  const client = new pg.Client({ connectionString: testDatabaseUrl() });
-  await client.connect();
-  try {
-    await client.query(sql);
-  } finally {
-    await client.end();
-  }
-}
-
 function migratedUpTo(migration: string) {
   const state = { schema: '', db: null as unknown as Db, before: '' };
   beforeEach(async () => {
-    state.schema = `test_${randomUUID().replaceAll('-', '')}`;
-    await admin(`CREATE SCHEMA ${state.schema}`);
-    state.db = createDb(testDatabaseUrl(), { searchPath: state.schema, max: POOL_MAX.test });
+    state.schema = await createTestSchema();
+    state.db = schemaDb(state.schema);
     state.before = await mkdtemp(path.join(tmpdir(), 'spark-migrations-'));
     for (const name of await readdir(migrationsDir)) {
       if (name.endsWith('.sql') && name < migration) {
@@ -44,7 +39,7 @@ function migratedUpTo(migration: string) {
 
   afterEach(async () => {
     await state.db.end();
-    await admin(`DROP SCHEMA ${state.schema} CASCADE`);
+    await dropTestSchema(state.schema);
     await rm(state.before, { recursive: true, force: true });
   });
   return state;
@@ -91,7 +86,6 @@ describe('removing Hands-on', () => {
        VALUES ($1, $2, $3, 'fake', 'succeeded', 'do', 'hands-on')`,
       [runId, conversation.id, inserted.rows[0]!.id],
     );
-    const sent = { run: { id: runId } };
 
     await runMigrations(db);
 
@@ -108,7 +102,7 @@ describe('removing Hands-on', () => {
       claude: { level: 'balanced', model: 'sonnet', agentMode: 'default' },
       codex: { level: 'hands-off', agentMode: 'read-only' },
     });
-    expect((await getRun(db, sent.run.id))?.level).toBe('balanced');
+    expect((await getRun(db, runId))?.level).toBe('balanced');
     expect(await resolveChatSettings(db, conversation.id)).toMatchObject({
       permission: 'do',
       level: 'balanced',
@@ -119,7 +113,7 @@ describe('removing Hands-on', () => {
     );
     expect(setup.profile.shipFailingChecks).toBe(true);
     await expect(
-      db.query(`UPDATE runs SET level = 'hands-on' WHERE id = $1`, [sent.run.id]),
+      db.query(`UPDATE runs SET level = 'hands-on' WHERE id = $1`, [runId]),
     ).rejects.toThrow(/runs_level_check/);
     await expect(
       db.query(`UPDATE provider_connections SET level = 'hands-on' WHERE workspace_id = $1`, [
@@ -189,12 +183,7 @@ describe('modes and autonomy through the API', () => {
   beforeEach(async () => {
     t = await createTestDb();
     app = createTestApp(t, { fixedRunProvider: null });
-    await saveConnection(t.db, t.workspaceId, 'claude', {
-      method: 'cli',
-      detail: 'claude 1.0',
-      summary: '',
-      models: [],
-    });
+    await connectCliProvider(t, 'claude');
   });
 
   afterEach(async () => {

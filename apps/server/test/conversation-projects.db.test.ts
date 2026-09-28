@@ -12,10 +12,9 @@ import {
   type Project,
 } from '@spark-outpost/contracts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
-import { saveConnection } from '../src/persistence/setup.ts';
 import { loadRunInput } from '../src/workflow/run-input.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
 let app: ReturnType<typeof createTestApp>;
@@ -38,12 +37,7 @@ afterAll(async () => {
 beforeEach(async () => {
   t = await createTestDb();
   app = createTestApp(t);
-  await saveConnection(t.db, t.workspaceId, 'claude', {
-    method: 'cli',
-    detail: 'claude 1.0',
-    summary: '',
-    models: [],
-  });
+  await connectCliProvider(t, 'claude');
 });
 
 afterEach(async () => {

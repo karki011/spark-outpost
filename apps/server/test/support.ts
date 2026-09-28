@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
+import type { ProviderId } from '@spark-outpost/contracts';
 import { createDb, POOL_MAX, type Db } from '../src/persistence/db.ts';
-import { ensureLocalWorkspace } from '../src/persistence/conversations.ts';
+import { ensureLocalWorkspace, sendUserMessage } from '../src/persistence/conversations.ts';
 import { runMigrations } from '../src/persistence/migrate.ts';
+import { saveConnection } from '../src/persistence/setup.ts';
+import type { RunInput } from '../src/workflow/run-input.ts';
 
 export interface TestDb {
   db: Db;
@@ -27,11 +30,24 @@ async function admin<T>(url: string, work: (client: pg.Client) => Promise<T>): P
   }
 }
 
-export async function createTestDb(): Promise<TestDb> {
+export async function createTestSchema(): Promise<string> {
   const url = testDatabaseUrl();
   const schema = `test_${randomUUID().replaceAll('-', '')}`;
   await admin(url, (client) => client.query(`CREATE SCHEMA ${schema}`));
-  const db = createDb(url, { searchPath: schema, max: POOL_MAX.test });
+  return schema;
+}
+
+export async function dropTestSchema(schema: string): Promise<void> {
+  await admin(testDatabaseUrl(), (client) => client.query(`DROP SCHEMA ${schema} CASCADE`));
+}
+
+export function schemaDb(schema: string): Db {
+  return createDb(testDatabaseUrl(), { searchPath: schema, max: POOL_MAX.test });
+}
+
+export async function createTestDb(): Promise<TestDb> {
+  const schema = await createTestSchema();
+  const db = schemaDb(schema);
   await runMigrations(db);
   const workspaceId = await ensureLocalWorkspace(db);
   return {
@@ -39,8 +55,60 @@ export async function createTestDb(): Promise<TestDb> {
     workspaceId,
     async cleanup() {
       await db.end();
-      await admin(url, (client) => client.query(`DROP SCHEMA ${schema} CASCADE`));
+      await dropTestSchema(schema);
     },
+  };
+}
+
+export async function connectCliProvider(t: TestDb, provider: ProviderId): Promise<void> {
+  await saveConnection(t.db, t.workspaceId, provider, {
+    method: 'cli',
+    detail: `${provider} 1.0`,
+    summary: '',
+    models: [],
+  });
+}
+
+export async function startChat(
+  t: TestDb,
+  content: string,
+): Promise<{ conversationId: string; runId: string }> {
+  const conversationId = randomUUID();
+  const sent = await sendUserMessage(
+    t.db,
+    conversationId,
+    { id: randomUUID(), content },
+    { provider: 'fake' },
+    t.workspaceId,
+  );
+  return { conversationId, runId: sent.run.id };
+}
+
+export const SESSION_LIMITS = { idleMs: 30 * 60_000, openLimit: 8 };
+
+export function chatTurnInput(
+  t: TestDb,
+  conversationId: string,
+  previousMessageId: string | null,
+): RunInput {
+  return {
+    identity: { runId: randomUUID(), threadId: conversationId },
+    workspaceId: t.workspaceId,
+    prompt: 'next',
+    attachments: [],
+    provider: 'claude',
+    history: [],
+    settings: { method: 'cli', model: 'sonnet', modelLabel: 'Sonnet', effort: 'medium' },
+    projectRoots: [],
+    mode: 'chat',
+    level: 'balanced',
+    agentMode: null,
+    parentRunId: null,
+    userRequest: 'next',
+    role: null,
+    copyOf: null,
+    askTitle: false,
+    previousMessageId,
   };
 }
 

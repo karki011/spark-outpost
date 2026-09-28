@@ -57,6 +57,18 @@ async function uploaded(data: Buffer | string, name: string, type: string): Prom
   return response.body as Attachment;
 }
 
+async function foreignAttachment(content: string): Promise<Attachment> {
+  const other = await t.db.query<{ id: string }>(
+    `INSERT INTO workspaces (id, slug, name) VALUES ($1, 'other', 'Other') RETURNING id`,
+    [randomUUID()],
+  );
+  return saveAttachment(t.db, other.rows[0]!.id, {
+    name: 'x.txt',
+    mediaType: 'text/plain',
+    data: Buffer.from(content),
+  });
+}
+
 async function messageCount(): Promise<number> {
   const { rows } = await t.db.query<{ count: string }>('SELECT count(*) FROM messages');
   return Number(rows[0]!.count);
@@ -115,15 +127,7 @@ describe('attachment uploads', () => {
     const bytes = await get(`/api/attachments/${image.id}/content`).expect(200);
     expect(bytes.headers['content-type']).toBe('image/png');
 
-    const other = await t.db.query<{ id: string }>(
-      `INSERT INTO workspaces (id, slug, name) VALUES ($1, 'other', 'Other') RETURNING id`,
-      [randomUUID()],
-    );
-    const foreign = await saveAttachment(t.db, other.rows[0]!.id, {
-      name: 'x.txt',
-      mediaType: 'text/plain',
-      data: Buffer.from('secret'),
-    });
+    const foreign = await foreignAttachment('secret');
     await get(`/api/attachments/${foreign.id}/content`).expect(404);
     await get(`/api/attachments/${randomUUID()}/content`).expect(404);
   });
@@ -176,15 +180,7 @@ describe('sending attachments', () => {
     expect(reused.body.error).toMatch(/missing or already sent/);
     await send(conversationId, 'Unknown', [randomUUID()]).expect(400);
 
-    const other = await t.db.query<{ id: string }>(
-      `INSERT INTO workspaces (id, slug, name) VALUES ($1, 'other', 'Other') RETURNING id`,
-      [randomUUID()],
-    );
-    const foreign = await saveAttachment(t.db, other.rows[0]!.id, {
-      name: 'x.txt',
-      mediaType: 'text/plain',
-      data: Buffer.from('x'),
-    });
+    const foreign = await foreignAttachment('x');
     await send(conversationId, 'Foreign', [foreign.id]).expect(400);
     expect(await messageCount()).toBe(before);
   });
