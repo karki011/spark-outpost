@@ -1,6 +1,5 @@
-import { motion } from 'motion/react';
 import type { CapabilityOption } from '@spark-outpost/contracts';
-import { reveal } from '../../ui/transitions.tsx';
+import { EffortMeter } from './EffortMeter.tsx';
 import { effortNote } from './model-options.ts';
 
 interface EffortOptionsProps {
@@ -15,10 +14,9 @@ export function EffortOptions({ efforts, selected, onSelect }: EffortOptionsProp
   }
   return (
     <div role="radiogroup" aria-label="Effort">
-      {efforts.map((effort, index) => {
+      {efforts.map((effort) => {
         const note = effortNote(effort);
         const checked = effort.id === selected;
-        const filled = (index + 1) / efforts.length;
         return (
           <button
             key={effort.id}
@@ -28,13 +26,7 @@ export function EffortOptions({ efforts, selected, onSelect }: EffortOptionsProp
             aria-checked={checked}
             onClick={() => onSelect(effort.id)}
           >
-            <span className="ebar" aria-hidden="true">
-              <motion.i
-                initial={{ scaleY: 0 }}
-                animate={{ scaleY: filled }}
-                transition={{ ...reveal, delay: index * 0.04 }}
-              />
-            </span>
+            <EffortMeter efforts={efforts} effort={effort.id} />
             <span>
               <b>{effort.label}</b>
               {note && <small title={note}>{note}</small>}
