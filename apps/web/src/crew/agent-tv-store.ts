@@ -11,7 +11,7 @@ export const TV_SIZES: readonly TvSize[] = ['s', 'm', 'l'];
 
 export type TvView = 'stage' | 'list';
 
-export const TV_VIEWS: readonly TvView[] = ['stage', 'list'];
+const TV_VIEWS: readonly TvView[] = ['stage', 'list'];
 
 export interface AgentTvState {
   sourceId: string | null;

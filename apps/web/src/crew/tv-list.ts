@@ -1,11 +1,17 @@
-import type { ConversationDetail, Orchestration, TotalCostSource } from '@spark-outpost/contracts';
+import {
+  isTerminalRunStatus,
+  type ConversationDetail,
+  type Orchestration,
+  type TotalCostSource,
+} from '@spark-outpost/contracts';
 import { formatTokens } from '../chat/composer/model-options.ts';
+import { countLabel } from '../ui/count-label.ts';
 import { formatCost } from '../usage/format.ts';
 import { isBusy, isDispatcher, modelLabel, type CrewAgent, type CrewState } from './crew-model.ts';
 import { jevAgent, runAgent } from './crew-projection.ts';
 import { roleSubtitle, type TvAsk } from './tv-scene.ts';
 
-export type TvOutcome = 'passed' | 'failed' | 'stopped';
+type TvOutcome = 'passed' | 'failed' | 'stopped';
 
 export interface TvRow {
   key: string;
@@ -35,11 +41,6 @@ export interface TvRows {
 }
 
 const FINISHED: ReadonlySet<CrewState> = new Set(['done', 'failed', 'stopped']);
-const ACTIVE_TURN: ReadonlySet<Orchestration['status']> = new Set([
-  'queued',
-  'running',
-  'awaiting_approval',
-]);
 
 function time(iso: string | null | undefined): number | null {
   if (!iso) return null;
@@ -102,7 +103,7 @@ export function tvListRows(
     }),
   );
   const parent = detail?.runs.find((run) => run.id === orchestration.runId);
-  const turnActive = ACTIVE_TURN.has(orchestration.status);
+  const turnActive = !isTerminalRunStatus(orchestration.status);
   const jevBase = agents.find(isDispatcher) ?? jevAgent(orchestration, []);
   const jev = row(
     { ...jevBase, state: turnActive ? jevBase.state : turnState(orchestration.status) },
@@ -193,7 +194,7 @@ export function rowUsage(item: TvRow): string[] {
   if (item.tokens !== null) parts.push(`${formatTokens(item.tokens)} tokens`);
   if (item.costUsd !== null) parts.push(formatCost(item.costUsd, item.costSource));
   if (item.toolCalls) {
-    parts.push(`${item.toolCalls} ${item.toolCalls === 1 ? 'tool use' : 'tool uses'}`);
+    parts.push(countLabel(item.toolCalls, 'tool use'));
   }
   return parts;
 }
