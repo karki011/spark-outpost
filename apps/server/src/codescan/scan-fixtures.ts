@@ -1,5 +1,5 @@
-import type { RankedFile } from '../codescan/rank.ts';
-import type { ScanReport } from '../codescan/scan.ts';
+import type { RankedFile } from './rank.ts';
+import type { ScanReport } from './scan.ts';
 
 export function rankedFile(index: number, overrides: Partial<RankedFile> = {}): RankedFile {
   return {

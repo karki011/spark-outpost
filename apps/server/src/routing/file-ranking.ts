@@ -1,10 +1,9 @@
-import { redactText } from '../audit/redact.ts';
 import type { IntakeQuestions } from '../advisor/intake-questions.ts';
 import { RANK_PREDICTED_FILES } from '../advisor/policy.ts';
-import { indexLine, namedSymbolsText, UNTRUSTED_EVIDENCE } from '../codescan/jev-state.ts';
+import { evidenceBlock, indexLine, namedSymbolsLines } from '../codescan/jev-state.ts';
 import type { RankedFile } from '../codescan/rank.ts';
 import type { ScanReport } from '../codescan/scan.ts';
-import { headAndTail, REQUEST_CHARACTERS } from './route-state.ts';
+import { redactedExcerpt, REQUEST_CHARACTERS } from './route-state.ts';
 
 export const RANK_KEY = 'likely_file';
 
@@ -23,18 +22,13 @@ export const RANK_INSTRUCTIONS = {
 } as const;
 
 function rankState(request: string, report: ScanReport): Record<string, unknown> {
-  const symbols = namedSymbolsText(report.summary);
-  const evidence = [
-    '<code_evidence>',
-    UNTRUSTED_EVIDENCE,
-    indexLine(report),
-    ...(symbols ? [`Named symbols: ${symbols}`] : []),
-    `Uncommitted files in the repository: ${report.summary.uncommitted}.`,
-    '</code_evidence>',
-  ].join('\n');
   return {
-    request: headAndTail(redactText(request).trim(), REQUEST_CHARACTERS),
-    code_evidence: evidence,
+    request: redactedExcerpt(request, REQUEST_CHARACTERS),
+    code_evidence: evidenceBlock([
+      indexLine(report),
+      ...namedSymbolsLines(report.summary),
+      `Uncommitted files in the repository: ${report.summary.uncommitted}.`,
+    ]),
   };
 }
 
