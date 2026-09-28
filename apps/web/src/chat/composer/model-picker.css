@@ -1,5 +1,5 @@
 .mpop.picker {
-  width: 540px;
+  width: min(540px, 100cqw);
   max-height: min(520px, calc(100vh - 140px));
   padding: 0;
   display: flex;
@@ -154,10 +154,7 @@
   font-size: 12px;
   color: var(--faint);
 }
-@media (max-width: 600px) {
-  .mpop.picker {
-    width: calc(100vw - 20px);
-  }
+@container composer (max-width: 560px) {
   .picker-body {
     grid-template-columns: minmax(0, 1fr);
   }
