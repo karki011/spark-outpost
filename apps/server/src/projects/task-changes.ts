@@ -86,16 +86,16 @@ async function gitVersions(
   const gitRoot = source.gitRoot;
   const changes = await changesWhilePresent(gitRoot, () => gitChanges(gitRoot, ref, until));
   if (changes === null) return [];
+  const afterContent = (change: RunChange): Promise<Buffer | null> => {
+    if (change.change === 'deleted') return Promise.resolve(null);
+    if (until) return gitFileAt(gitRoot, until, change.path);
+    return readIfPresent(path.join(root, change.path));
+  };
   return Promise.all(
     changes.map(async (change) => ({
       change,
       before: change.change === 'added' ? null : await gitFileAt(gitRoot, ref, change.path),
-      after:
-        change.change === 'deleted'
-          ? null
-          : until
-            ? await gitFileAt(gitRoot, until, change.path)
-            : await readIfPresent(path.join(root, change.path)),
+      after: await afterContent(change),
     })),
   );
 }

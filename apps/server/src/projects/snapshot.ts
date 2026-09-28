@@ -58,7 +58,7 @@ export async function headCommit(root: string): Promise<string | null> {
   }
 }
 
-export const SNAPSHOT_PATHSPEC = ['.', ':(exclude,glob)**/node_modules/**'];
+const SNAPSHOT_PATHSPEC = ['.', ':(exclude,glob)**/node_modules/**'];
 
 const VANISHED_FILE = /No such file or directory|unable to index file|unable to stat/;
 

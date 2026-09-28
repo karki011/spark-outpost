@@ -8,6 +8,7 @@ import {
   PROJECT_COLUMNS,
   ProjectNotFoundError,
   projectRoot,
+  projectRowAt,
   realHome,
   toProject,
   type ProjectRow,
@@ -91,12 +92,9 @@ async function insertProject(
     ],
   );
   if (inserted.rows[0]) return inserted.rows[0];
-  const { rows } = await client.query<ProjectRow>(
-    `SELECT ${PROJECT_COLUMNS} FROM projects WHERE workspace_id = $1 AND root_path = $2`,
-    [workspaceId, root],
-  );
-  if (!rows[0]) throw new ProjectNotFoundError();
-  return rows[0];
+  const existing = await projectRowAt(client, workspaceId, root);
+  if (!existing) throw new ProjectNotFoundError();
+  return existing;
 }
 
 export async function restoreProject(
