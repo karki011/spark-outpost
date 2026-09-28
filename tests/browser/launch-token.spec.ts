@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { API_TOKEN_HEADER } from '../../packages/contracts/src/api-token.ts';
 import { resetTestDatabase } from './database.ts';
+import { API_PORT } from './stub-config.ts';
 
-const DIRECT_API = 'http://127.0.0.1:4319/api';
+const DIRECT_API = `http://127.0.0.1:${API_PORT}/api`;
 
 test('the API refuses callers without the launch token', async ({ request }) => {
   const health = await request.get(`${DIRECT_API}/health`);

@@ -3,13 +3,17 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 import { API_TOKEN_ENV } from './packages/contracts/src/api-token.ts';
-import { FAKE_ACP_MODELS, FAKE_CODEX_STATE } from './tests/browser/stub-config.ts';
+import {
+  API_PORT,
+  FAKE_ACP_MODELS,
+  FAKE_CODEX_STATE,
+  STUB_PORT,
+  WEB_PORT,
+} from './tests/browser/stub-config.ts';
 
 if (existsSync('.local/credentials.env')) process.loadEnvFile('.local/credentials.env');
 
-const API_PORT = 4319;
-const WEB_PORT = 5174;
-const STUB_URL = 'http://127.0.0.1:4399';
+const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 const apiToken = randomBytes(32).toString('base64url');
 
 const serverEnv = {
