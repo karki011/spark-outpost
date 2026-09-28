@@ -8,8 +8,7 @@ import { setupApi, setupKey } from '../api/setup.ts';
 import { ChatView } from '../chat/ChatView.tsx';
 import { StatusCompanion } from '../companion/StatusCompanion.tsx';
 import { AgentTvHost } from '../crew/AgentTvHost.tsx';
-import { approvalAnchor } from '../crew/conversation-crew.ts';
-import { JUMP_TRIES, scrollToAnchor } from '../crew/scroll-to-anchor.ts';
+import { scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
 import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';
@@ -79,8 +78,7 @@ function ChatShell({ entering }: { entering: boolean }) {
 
   const openAtCard = (chat: ConversationSummary) => {
     openChat(chat.id);
-    const approvalId = chat.attention?.approvalId;
-    if (approvalId) scrollToAnchor(approvalAnchor(approvalId), JUMP_TRIES);
+    scrollToChatApproval(chat);
   };
 
   const activeId =

@@ -7,7 +7,7 @@ import { auditKeys } from '../../audit/audit-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 
-export interface Invalidation {
+interface Invalidation {
   queryKey: QueryKey;
   exact?: boolean;
 }
@@ -47,7 +47,7 @@ function outcome(event: AppEvent): Invalidation[] {
   return event.runId ? [{ queryKey: outcomeKeys.run(event.runId), exact: true }] : [];
 }
 
-export function invalidationsFor(event: AppEvent): Invalidation[] {
+function invalidationsFor(event: AppEvent): Invalidation[] {
   switch (event.kind) {
     case 'conversation':
       return [list, search, ...conversationScoped(event, false)];
