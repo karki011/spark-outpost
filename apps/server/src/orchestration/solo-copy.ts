@@ -84,7 +84,7 @@ async function prepareCopies(s: Session): Promise<Copies> {
 
 function copyFor(s: Session, copies: Copies): NonNullable<Place['copy']> {
   return (name) => {
-    const branch = branchName(s.taskId, name);
+    const branch = branchName(s.taskId, name, s.deps.branchPrefix);
     return {
       branch,
       prepare: async (runId) => {

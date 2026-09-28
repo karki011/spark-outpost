@@ -1,6 +1,6 @@
 # Electron plan
 
-> **Status: plan only.** Nothing here is built. AGENTS.md sets the direction: Electron is a thin wrapper around the unchanged web app and Node service.
+> **Status: step 2 built (dev-runnable shell, not packaged).** Steps 1 (F-24, F-9) and 2 are done; step 3, packaging, is next. See [Step 2: the shell today](#step-2-the-shell-today). AGENTS.md sets the direction: Electron is a thin wrapper around the unchanged web app and Node service.
 
 ## Decided
 
@@ -97,6 +97,32 @@ The rule for every new feature: anything that stores data, opens a port, names a
 
 ## Order
 
-1. F-24 (auto-migrate with backup) and F-9 (per-launch token): useful now, in the web app.
-2. The Electron shell: renderer loading the built web app, API and worker in `utilityProcess`, bundled Postgres, git detection.
+1. F-24 (auto-migrate with backup) and F-9 (per-launch token): useful now, in the web app. **Done.**
+2. The Electron shell: renderer loading the built web app, API and worker in `utilityProcess`, bundled Postgres, git detection. **Done** (dev channel, run from source).
 3. Packaging: adapters, signing, notarization, updates.
+
+## Step 2: the shell today
+
+`pnpm desktop:dev` builds the web app, bundles the main process with esbuild and starts Electron from `apps/desktop`. Run from source, it is always the **dev** channel; only `app.isPackaged` selects **prod**.
+
+- **Channel** (`apps/desktop/src/channel.ts`): the one place that names the app, app ID, DEV badge, data folder, keychain service, link scheme and branch prefix. The data folder is `~/Library/Application Support/Spark Outpost Dev`; it holds the Chromium profile, `postgres/` (data dir), `postgres-password` (0600), `backups/` and `logs/`. One running copy per channel (`requestSingleInstanceLock` on the channel's userData).
+- **Server hooks for the channel:** the API and worker read `KEYCHAIN_SERVICE`, `BRANCH_PREFIX` (`spark-dev/…` branches), `BACKUP_DIR` and, for the API, `WEB_ROOT`. The defaults keep `pnpm dev` unchanged (`Spark Outpost`, `spark/…`, `.local/backups`, no static files).
+- **Postgres:** `embedded-postgres` pinned at `17.10.0-beta.17` (same major as the dev cluster), initdb with `--locale=C --encoding=UTF8` and `LC_ALL=en_US.UTF-8`, `listen_addresses=127.0.0.1`, no Unix socket, scram password, random free port per launch. A Postgres left running by a killed launch is stopped before starting. The library's own exit hooks are removed so shutdown order stays ours.
+- **API and worker:** each runs in `utilityProcess.fork` (no server work in main) through `dist/server-entry.js`, which registers `tsx` and imports the unchanged `apps/server/src/api/main.ts` / `workflow/main.ts`. Env: `DATABASE_URL`, random `API_PORT`, `ALLOWED_ORIGINS` = the API origin, and `SPARK_API_TOKEN` (API only; the worker never sees it). F-24 migrate-at-startup runs as-is. Inherited `DATABASE_URL`, `SECRET_STORE` and similar are dropped, and `.local/credentials.env` is never loaded, so the shell cannot reach the web dev database.
+- **Supervision:** a crashed API or worker restarts with backoff (0.5 s doubling to 30 s, reset after a minute up, give up after 5 quick crashes with a dialog showing its last output). An API exit before it first answers `/api/health` stops startup with that output instead of retrying (so a failing migration is not backed up and retried in a loop).
+- **Window:** the API serves the built web app (`apps/web/dist`) on its own origin, so the renderer's relative `/api` calls, `EventSource` and WebSockets need no change and no runtime config. `contextIsolation`, `sandbox` on, `nodeIntegration` off; `session.webRequest.onBeforeSendHeaders` adds `X-Spark-Token` to requests for the API origin (http and ws) and strips any page-set copy elsewhere. Other links open in the browser; the window title keeps the channel name and the Dock shows the DEV badge.
+- **git:** `git --version` at startup; if it fails, a dialog explains `xcode-select --install` and the app keeps running.
+- **Quit** (window close, Cmd+Q, SIGINT/SIGTERM): worker and API get SIGTERM (SIGKILL after 10 s), then Postgres stops, then the app exits.
+
+Verified on 2026-09-28 (Intel Mac, Electron 44.4.5 / Node 24.21): window loads onboarding; in-page `fetch('/api/health')` 200, `/api/setup` 200, `/api/events` stream opens; `window.require`/`process` undefined; direct `curl` without or with a wrong token gets 401; killing the worker with SIGKILL restarts it after 500 ms; quitting leaves no Electron, utility or Postgres processes. The terminal WebSocket through the injected header was not exercised live.
+
+### Left for packaging (step 3) and later
+
+- **Server as JS:** bundle or compile `apps/server` instead of registering `tsx` at runtime; resolve paths from `process.resourcesPath` instead of the repo root (`app.getAppPath()/../..`).
+- **ripgrep:** `@vscode/ripgrep`'s `rgPath` works from source. Packaged, add `asarUnpack: ["**/node_modules/@vscode/ripgrep/bin/**"]` and map `app.asar` → `app.asar.unpacked` in `rgPath` (both `codescan/ripgrep.ts` and `codescan/git.ts`), as VS Code does. The same applies to `node-pty`'s `spawn-helper`, the Postgres binaries and the tree-sitter wasm files.
+- **pg_dump:** `embedded-postgres` ships only `initdb`, `pg_ctl` and `postgres`. The pre-migration backup (F-24) finds `pg_dump` through Homebrew or PATH, which works on this dev machine but not for users; ship a matching `pg_dump` 17 or back up another way before the first migration after an update.
+- **PATH for GUI launches:** an app started from Finder gets a minimal PATH; agents, git and the CLI lookup need the login shell's PATH.
+- **Repo lock file** in `.git/` naming channel and run (isolation section): not built; the server has no hook for it yet (`repoBusy` only checks runs in its own database). TODO.
+- **Worktrees under the channel data folder:** branches are per channel now, but copies still live in `<repo>/.spark/worktrees/<runId>`.
+- **Link scheme:** `spark-outpost-dev://` is named but not registered with the OS (no handler yet).
+- Own dev icon, menu bar residency when the window closes, logs to `logs/` instead of stdout, import-a-copy from the installed app's database, a dev keychain service name for `pnpm dev`, signing, notarization, `electron-updater` (prod only), bundled agent adapters.

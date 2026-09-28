@@ -7,12 +7,12 @@ export interface SecretStore {
   delete(provider: ConnectableId): Promise<void>;
 }
 
-const KEYCHAIN_SERVICE = 'Spark Outpost';
+export const DEFAULT_KEYCHAIN_SERVICE = 'Spark Outpost';
 
 const account = (provider: ConnectableId) => `${provider}:api_key`;
 
-export function keychainSecretStore(): SecretStore {
-  const entry = (provider: ConnectableId) => new Entry(KEYCHAIN_SERVICE, account(provider));
+export function keychainSecretStore(service = DEFAULT_KEYCHAIN_SERVICE): SecretStore {
+  const entry = (provider: ConnectableId) => new Entry(service, account(provider));
   return {
     async set(provider, secret) {
       entry(provider).setPassword(secret);

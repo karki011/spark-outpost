@@ -30,7 +30,13 @@ const apiToken = takeLaunchToken(
 );
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.api });
-await migrateOrExit(db, { backup: () => backupDatabase({ databaseUrl: config.DATABASE_URL }) });
+await migrateOrExit(db, {
+  backup: () =>
+    backupDatabase({
+      databaseUrl: config.DATABASE_URL,
+      ...(config.BACKUP_DIR ? { dir: config.BACKUP_DIR } : {}),
+    }),
+});
 
 const workspaceId = await ensureLocalWorkspace(db);
 await pruneEmptyConversations(db, workspaceId);
@@ -44,7 +50,10 @@ const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.
 const appEvents = new AppEventFeed();
 const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
 
-const secrets = config.SECRET_STORE === 'memory' ? memorySecretStore() : keychainSecretStore();
+const secrets =
+  config.SECRET_STORE === 'memory'
+    ? memorySecretStore()
+    : keychainSecretStore(config.KEYCHAIN_SERVICE);
 const app = createApp({
   db,
   hub,
@@ -71,6 +80,7 @@ const app = createApp({
   allowedOrigins: config.ALLOWED_ORIGINS,
   apiToken,
   outcomeSampleRate: config.OUTCOME_SAMPLE_RATE,
+  ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
 });
 const outcomeSweep = startOutcomeSweep(db, workspaceId, {
   sampleRate: config.OUTCOME_SAMPLE_RATE,

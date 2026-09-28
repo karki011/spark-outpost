@@ -35,6 +35,7 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   jevTimeoutMs?: number;
   loopGuard?: Partial<LoopGuardSettings> | false;
   codeScan?: CodeScanner;
+  branchPrefix?: string;
 }
 
 export interface MemberResult {

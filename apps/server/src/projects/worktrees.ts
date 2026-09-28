@@ -15,14 +15,20 @@ export function worktreePath(root: string, runId: string): string {
   return path.join(root, WORKTREES_DIR, runId);
 }
 
-export function branchName(taskId: string | null, name: string): string {
+export const DEFAULT_BRANCH_PREFIX = 'spark';
+
+export function branchName(
+  taskId: string | null,
+  name: string,
+  prefix = DEFAULT_BRANCH_PREFIX,
+): string {
   const task = (taskId ?? 'task').slice(0, 8);
   const slug =
     name
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '') || 'agent';
-  return `spark/${task}/${slug}`;
+  return `${prefix}/${task}/${slug}`;
 }
 
 export async function repoTop(root: string): Promise<string> {

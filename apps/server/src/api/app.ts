@@ -14,6 +14,7 @@ import { apiRoutes, statusForError, type RouteDeps } from './routes.ts';
 import { localRequestGuard, requireLaunchToken } from './security.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
 import { taskRoutes } from './task-routes.ts';
+import { webApp } from './web-app.ts';
 import { terminalRoutes } from '../terminal/routes.ts';
 import type { TerminalSessions } from '../terminal/sessions.ts';
 
@@ -24,6 +25,7 @@ export interface AppOptions
   port: number;
   allowedOrigins: readonly string[];
   apiToken: string;
+  webRoot?: string;
 }
 
 export function createApp(options: AppOptions) {
@@ -47,6 +49,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', outcomeRoutes(options));
   app.use('/api', analyticsRoutes(options));
   app.use('/api', terminalRoutes(options.terminals));
+  if (options.webRoot) app.use(webApp(options.webRoot));
   app.use((_req, res) => {
     res.status(404).json({ error: 'Not found.' });
   });
