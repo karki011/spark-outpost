@@ -50,8 +50,17 @@
   column-gap: 4px;
   margin-top: 4px;
 }
-.turn-foot > .run-meta {
+.turn-foot > .run-meta,
+.turn-foot > .crew-foot,
+.turn-foot > .revert-btn {
   margin-top: 0;
+}
+.turn-foot > .crew-foot {
+  margin-right: 6px;
+}
+.turn-foot > .revert-confirm,
+.turn-foot > .revert-done {
+  flex-basis: 100%;
 }
 .turn-foot > .fb.quiet {
   flex-basis: auto;
@@ -59,4 +68,7 @@
 }
 .turn-foot > .fb {
   flex-basis: 100%;
+}
+.turn-foot:has(> .crew-foot) {
+  margin-top: 14px;
 }

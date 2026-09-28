@@ -14,7 +14,7 @@ function files(count: number): string {
   return `${count} ${count === 1 ? 'file' : 'files'}`;
 }
 
-export function RevertRun({ run }: { run: Run }) {
+export function RevertRun({ run, compact = false }: { run: Run; compact?: boolean }) {
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   const confirmRef = useRef<HTMLButtonElement>(null);
@@ -50,9 +50,15 @@ export function RevertRun({ run }: { run: Run }) {
 
   if (!confirming) {
     return (
-      <button type="button" className="btn ghost sm revert-btn" onClick={() => setConfirming(true)}>
+      <button
+        type="button"
+        className="btn ghost sm revert-btn"
+        aria-label={compact ? 'Revert to before this run' : undefined}
+        title={compact ? 'Revert to before this run' : undefined}
+        onClick={() => setConfirming(true)}
+      >
         <RestoreIcon />
-        Revert to before this run
+        {compact ? 'Revert' : 'Revert to before this run'}
       </button>
     );
   }

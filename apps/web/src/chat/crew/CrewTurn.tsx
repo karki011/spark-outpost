@@ -157,15 +157,17 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         )}
         finished={finished}
       />
-      <p className="crew-foot">
-        <span>{finished ? 'Done' : 'So far'}</span>{' '}
-        {totalsLine(crewTotals(orchestration.totals, agents.length - 1))}
-      </p>
-      {finished && !host && <TurnFeedback runId={run.id} variant="turn" />}
       {finished && changeTask && run.mode === 'do' && (
         <FilesChanged taskId={changeTask.id} runIds={crewRunIds} listed={unlisted} />
       )}
-      {run.mode === 'do' && run.snapshot && finished && <RevertRun run={run} />}
+      <div className="turn-foot">
+        <p className="crew-foot">
+          <span>{finished ? 'Done' : 'So far'}</span>{' '}
+          {totalsLine(crewTotals(orchestration.totals, agents.length - 1))}
+        </p>
+        {finished && !host && <TurnFeedback runId={run.id} variant="turn" />}
+        {run.mode === 'do' && run.snapshot && finished && <RevertRun run={run} compact />}
+      </div>
     </div>
   );
 }
