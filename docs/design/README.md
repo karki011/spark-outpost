@@ -11,6 +11,8 @@
   - `blob-scout-mark-black.svg`, `blob-scout-mark-white.svg`: one color, with the eyes cut out
   - `blob-scout-lockup-dark.svg`, `blob-scout-lockup-light.svg`: mark with the "spark outpost" wordmark
   - `blob-scout-logo-guide.html`: the logo guide, with moods, colors, and usage rules
+- `home/HOME_INTEGRATION_PLAN.md`: how the planned brief and "Needs you" feed merge into the Home that ships today; the mockup is `tickets/home-brief-mockup.html`.
+- `tickets/`: the Tickets screen plan and its inbox and Home mockups.
 - `ux/spark-outpost-ux-flow.md`: the complete UX flow and interaction spec.
 - `ACCESSIBILITY.md`: the WCAG 2.2 AA colour, typography, focus, target and motion rules, and how `pnpm a11y:contrast` checks them.
 - `accessibility-report.html`: per-theme contrast ratios before and after the AA pass, with swatches and pass/fail status.

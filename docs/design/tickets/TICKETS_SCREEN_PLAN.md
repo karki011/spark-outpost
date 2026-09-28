@@ -10,7 +10,7 @@ Design only. Nothing here is built in `apps/web` yet. The backend for Linear and
 4. **Filters:** source, team or project, sprint or cycle, priority, label, plus assignee while searching.
 5. **Skeleton loading everywhere and no spinners.** Skeletons are shaped like the rows, sections, brief and detail they stand in for. Pending moves and "Assigning…" use a pulsing dot with text.
 6. **Attention comes from rules first.** Deterministic rules flag the work and each flag says why. An optional AI brief then summarises only the flagged items.
-7. **The brief lives on Home.** Home shows one attention feed for chats, tickets and PRs, and the Tickets inbox shows the ticket slice of that same feed. See "Where the brief lives".
+7. **The brief lives on Home.** Home shows one attention feed for chats, tickets and PRs, and the Tickets inbox shows the ticket slice of that same feed. See "Where the brief lives" and, for how it fits the Home that ships today, `docs/design/home/HOME_INTEGRATION_PLAN.md`.
 8. **Lean rows (September 28, 2026, later the same day).** A row is one line: priority, key, title, then the single most important reason as plain muted text and a compact age. No pills, no source badge, no project or sprint, no tracker status text, no chat or PR icons in the row. Everything else is in the detail pane. See "Rows".
 
 ## Mockups
@@ -20,7 +20,7 @@ Open them in a browser. The dashed bar at the top is not part of the app: it swi
 | File | States |
 | --- | --- |
 | `tickets-mockup-inbox.html` | default, `#compact`, `#search` (search with unassigned results), `#assign-confirm` (taking a ticket from someone), `#assigned` (assigned, with undo), `#assign-error` (Jira refuses), `#no-results`, `#loading`, `#brief-writing`, `#brief-off`, `#brief-settings`, `#empty`, `#error` (token rejected), `#start`, `#start-context`, `#start-prompt`, `#settings`, `#settings-open`, `#settings-error`, `#connect`, `#connect-jira` |
-| `home-brief-mockup.html` | default, `#writing`, `#failed`, `#off`, `#settings`, `#tickets` (the ticket slice), `#clear`, `#loading`, `#no-tickets` |
+| `home-brief-mockup.html` | Now the integrated Home (see `docs/design/home/HOME_INTEGRATION_PLAN.md`): default, `#tickets` (the ticket slice), `#all-quiet`, `#quiet-bare`, `#no-tickets`, `#writing`, `#failed`, `#off`, `#settings`, `#no-ai`, `#loading`, `#narrow` |
 
 CSS tokens, fonts, rail, buttons, pills, provider cards, the Home layout (`home-hero`, `home-compose`, `hsec`, `hcard`, `mrow`) and the Settings panel are copied from `docs/design/mockup/spark-outpost-mockup.html`. New pieces use only those tokens.
 
@@ -108,6 +108,8 @@ The thresholds (2 days, 2 days, 3 days) are constants for now. Settings can expo
 - **Failure.** The card keeps the last brief's time, shows the provider's reason ("Claude answered 529 (overloaded)… Nothing was charged.") and Retry, and says the list below is complete.
 
 ## Where the brief lives
+
+**Superseded in detail by `docs/design/home/HOME_INTEGRATION_PLAN.md`**, which maps today's Home element by element. In short: brief and feed are one "What needs you today" section; the digest's continue suggestions become the brief's numbered items; Running now stays as live cards below the feed; the All quiet panel and the digest's stat chips go away. The reasoning below still holds.
 
 **Recommendation: on Home, as the existing Digest card grown into "What needs you today".**
 
