@@ -43,9 +43,24 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
-async function run(level: 'balanced' | 'hands-off', answer: Answerer = answerEverything) {
-  harness = startOrchestrator(t, jevFetch({ calls: [], scenario: VAGUE }));
-  const { conversationId, runId } = await startScenario(t, root, VAGUE, level);
+const FASTER: Scenario = {
+  id: 'faster',
+  text: 'Make it faster. #build',
+  mode: 'do',
+  question: 0.02,
+  destructive: 0.02,
+  vague: 0.94,
+  intent: 'refactor',
+  intentProbabilities: { refactor: 0.7, feature: 0.2, bug_fix: 0.1 },
+};
+
+async function run(
+  level: 'balanced' | 'hands-off' | 'full-auto',
+  answer: Answerer = answerEverything,
+  scenario: Scenario = VAGUE,
+) {
+  harness = startOrchestrator(t, jevFetch({ calls: [], scenario }));
+  const { conversationId, runId } = await startScenario(t, root, scenario, level);
   const done = await driveToEnd(t, conversationId, runId, answer);
   const { rows } = await t.db.query<{ content: string }>(
     `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant'`,
@@ -84,8 +99,41 @@ describe('a vague request', () => {
     expect(reply).toContain('Assumed you meant: Improve its documentation.');
   }, 60_000);
 
-  it('does not ask at Hands-off, and says what it assumed', async () => {
-    const { asked, orchestration, reply } = await run('hands-off');
+  it('asks at Auto-edit too, before any Builder runs', async () => {
+    const stop: Answerer = (approval) =>
+      approval.kind === 'clarify' ? { optionId: 'stop' } : answerEverything(approval);
+    const { asked, orchestration, reply, runId } = await run('hands-off', stop);
+    expect(orchestration.status).toBe('cancelled');
+    expect(asked.map((approval) => approval.kind)).toEqual(['clarify']);
+    expect(asked[0]!.title).toBe('What should change?');
+    expect(reply).not.toContain('Assumed you meant');
+    const { rows } = await t.db.query(`SELECT 1 FROM runs WHERE parent_run_id = $1`, [runId]);
+    expect(rows).toHaveLength(0);
+  }, 60_000);
+
+  it('asks at Auto-edit for "Make it faster." (Jev vague 0.94), with speed readings', async () => {
+    const pick: Answerer = (approval) =>
+      approval.kind === 'clarify' ? { optionId: clarifyOptionId(0) } : answerEverything(approval);
+    const { asked, orchestration, reply, runId } = await run('hands-off', pick, FASTER);
+    expect(orchestration.status).toBe('succeeded');
+    const clarify = asked.find((approval) => approval.kind === 'clarify')!;
+    expect(clarify.title).toBe('What should change?');
+    expect(clarify.options[0]!.name).toMatch(/^(Startup|Page load|Tests|Build|API and database):/);
+    expect(reply).toContain('Clarified:');
+    expect(reply).not.toContain('Assumed you meant');
+    const intake = await t.db.query<{ vague: unknown }>(
+      `SELECT body->'calls'->'vague' AS vague FROM run_advice WHERE run_id = $1 AND purpose = 'intake'`,
+      [runId],
+    );
+    expect(intake.rows[0]?.vague).toMatchObject({
+      jev: 0.94,
+      value: true,
+      gate: { level: 'hands-off', decision: 'act' },
+    });
+  }, 60_000);
+
+  it('assumes only at Full auto, and says what it assumed', async () => {
+    const { asked, orchestration, reply } = await run('full-auto');
     expect(orchestration.status).toBe('succeeded');
     expect(asked.some((approval) => approval.kind === 'clarify')).toBe(false);
     expect(reply).toContain('Took it as: Improve its documentation');

@@ -9,6 +9,7 @@ import { getTaskShip } from '../src/persistence/task-ships.ts';
 import { createProject } from '../src/projects/projects.ts';
 import { BUILDER_PUBLISH_REASON } from '../src/approvals/decide.ts';
 import { RISKY_PR_NOTE } from '../src/orchestration/checkpoint-policy.ts';
+import { assumptionPrNote } from '../src/orchestration/clarify.ts';
 import { HARNESS_COMMIT_EMAIL } from '../src/projects/snapshot.ts';
 import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
@@ -225,6 +226,20 @@ describe('Full auto runs to a draft PR', () => {
     expect(asked).toEqual([]);
     expect(stub.github.pulls).toHaveLength(1);
     expect(stub.github.pulls[0]!.body).toContain(`**${RISKY_PR_NOTE}**`);
+  }, 120_000);
+
+  it('assumes the likeliest reading of a vague request and states it in the reply and the PR body', async () => {
+    await newRepo();
+    await writeFile(ghState(), 'octo-cli');
+    const text = 'Make it faster. #build';
+    start({ scenario: { ...NORMAL, text, vague: 0.94, intent: 'refactor' } });
+    const { orchestration, asked, reply } = await runFullAuto(text);
+    expect(orchestration.status).toBe('succeeded');
+    expect(asked).toEqual([]);
+    expect(reply).toMatch(/Assumed you meant: .+\. Say so if you meant something else\./);
+    const assumed = /Assumed you meant: (.+?)\. Say so/.exec(reply)![1]!;
+    expect(stub.github.pulls).toHaveLength(1);
+    expect(stub.github.pulls[0]!.body).toContain(`**${assumptionPrNote(assumed)}**`);
   }, 120_000);
 
   it('pushes the branch without a PR when GitHub is not connected, and says so', async () => {
