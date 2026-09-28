@@ -1,8 +1,9 @@
 import type { ProviderTotals, SpendSummary } from '@spark-outpost/contracts';
 import { formatTokens } from '../chat/composer/model-options.ts';
+import { countLabel } from '../ui/count-label.ts';
 
 export function activityLine(summary: Pick<SpendSummary, 'runs' | 'totalTokens'>): string {
-  const runs = `${summary.runs} ${summary.runs === 1 ? 'run' : 'runs'}`;
+  const runs = countLabel(summary.runs, 'run');
   return `${runs} · ${formatTokens(summary.totalTokens)} tokens`;
 }
 

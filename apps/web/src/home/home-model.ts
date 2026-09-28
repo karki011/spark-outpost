@@ -1,6 +1,7 @@
 import type { ConversationSummary, PlanProgress } from '@spark-outpost/contracts';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import { isRunning, needsInput, rowState } from '../conversations/row-state.ts';
+import { countLabel } from '../ui/count-label.ts';
 
 export function greeting(hour: number): string {
   if (hour < 5) return 'Working late';
@@ -13,20 +14,18 @@ export function firstName(displayName: string): string {
   return displayName.trim().split(/\s+/)[0] ?? '';
 }
 
-export interface SummaryPart {
+interface SummaryPart {
   text: string;
   strong: boolean;
 }
-
-const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 export function summaryParts(chats: readonly ConversationSummary[]): SummaryPart[] {
   const active = chats.filter((chat) => !chat.archivedAt);
   const working = active.filter((chat) => isRunning(chat) && !needsInput(chat)).length;
   const asking = active.filter(needsInput).length;
   const bits = [
-    working > 0 ? plural(working, 'agent is working', 'agents are working') : null,
-    asking > 0 ? plural(asking, 'chat needs your input', 'chats need your input') : null,
+    working > 0 ? countLabel(working, 'agent is working', 'agents are working') : null,
+    asking > 0 ? countLabel(asking, 'chat needs your input', 'chats need your input') : null,
   ].filter((bit): bit is string => bit !== null);
   if (bits.length === 0) return [{ text: 'All quiet. Start something new below.', strong: false }];
   const parts = bits.flatMap((bit, index) => [
@@ -36,7 +35,7 @@ export function summaryParts(chats: readonly ConversationSummary[]): SummaryPart
   return [...parts, { text: '.', strong: false }];
 }
 
-export type NeedTone = 'asking' | 'error' | 'done';
+type NeedTone = 'asking' | 'error' | 'done';
 
 export interface NeedItem {
   chat: ConversationSummary;
@@ -90,7 +89,7 @@ export function needsYou(chats: readonly ConversationSummary[]): NeedItem[] {
     .sort((a, b) => NEED_RANK[a.tone] - NEED_RANK[b.tone]);
 }
 
-export const MIN_PROGRESS = 4;
+const MIN_PROGRESS = 4;
 
 export function progressPercent(progress: PlanProgress | null): number | null {
   if (!progress || progress.total <= 0) return null;
@@ -117,7 +116,7 @@ export function runningNow(chats: readonly ConversationSummary[]): RunItem[] {
     }));
 }
 
-export const RECENT_LIMIT = 5;
+const RECENT_LIMIT = 5;
 
 export function recentChats(
   chats: readonly ConversationSummary[],
