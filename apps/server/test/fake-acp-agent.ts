@@ -68,6 +68,7 @@ function slashCommand(prompt: acp.ContentBlock[]): { name: string; rest: string 
 let clientCapabilities: unknown = null;
 let sessionCwd = '';
 let sessionDirectories: string[] | null = null;
+let sessionRequest: { meta: unknown; mcpServers: unknown } | null = null;
 const pending = new Map<string, AbortController>();
 const sleep = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
@@ -256,6 +257,12 @@ async function turn(
     await say(`cwd=${sessionCwd} process=${process.cwd()}`);
     return 'end_turn';
   }
+  if (text.includes('#session')) {
+    await say(
+      `session=${JSON.stringify({ ...sessionRequest, codexConfig: process.env.CODEX_CONFIG ?? null })}`,
+    );
+    return 'end_turn';
+  }
   if (text.includes('#dirs')) {
     await say(`dirs=${JSON.stringify(sessionDirectories)}`);
     return 'end_turn';
@@ -354,10 +361,14 @@ acp
         loadSession: loadSessionAdvertised,
         promptCapabilities,
         sessionCapabilities,
+        ...(process.env.FAKE_ACP_MCP_CAPABILITIES
+          ? { mcpCapabilities: JSON.parse(process.env.FAKE_ACP_MCP_CAPABILITIES) as object }
+          : {}),
       },
     };
   })
   .onRequest(acp.methods.agent.session.new, (ctx) => {
+    sessionRequest = { meta: ctx.params._meta ?? null, mcpServers: ctx.params.mcpServers };
     sessionCwd = ctx.params.cwd;
     sessionDirectories = ctx.params.additionalDirectories ?? null;
     const sessionId = newSessionId();

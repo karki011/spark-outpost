@@ -163,7 +163,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@agentclientprotocol/codex-acp@1.13.1': 07f858b604f88d3c616ffb9b63bca71f98b48c85980485bff4a4ba68dbb1ceec
+  '@agentclientprotocol/codex-acp@1.13.1': 4827e42b45f72db7ca89d717100cea48d25765ee36bcba56dd296df913ba4177
 
 importers:
 
@@ -241,7 +241,7 @@ importers:
         version: 0.81.2(@anthropic-ai/sdk@0.128.0(zod@4.6.5))(@modelcontextprotocol/sdk@1.30.1(supports-color@10.2.2)(zod@4.6.5))
       '@agentclientprotocol/codex-acp':
         specifier: 1.13.1
-        version: 1.13.1(patch_hash=07f858b604f88d3c616ffb9b63bca71f98b48c85980485bff4a4ba68dbb1ceec)
+        version: 1.13.1(patch_hash=4827e42b45f72db7ca89d717100cea48d25765ee36bcba56dd296df913ba4177)
       '@agentclientprotocol/sdk':
         specifier: 1.5.0
         version: 1.5.0(zod@4.6.5)
@@ -3302,7 +3302,7 @@ snapshots:
       - '@anthropic-ai/sdk'
       - '@modelcontextprotocol/sdk'
 
-  '@agentclientprotocol/codex-acp@1.13.1(patch_hash=07f858b604f88d3c616ffb9b63bca71f98b48c85980485bff4a4ba68dbb1ceec)':
+  '@agentclientprotocol/codex-acp@1.13.1(patch_hash=4827e42b45f72db7ca89d717100cea48d25765ee36bcba56dd296df913ba4177)':
     dependencies:
       '@agentclientprotocol/sdk': 1.5.0(zod@4.6.5)
       '@openai/codex': 0.156.1

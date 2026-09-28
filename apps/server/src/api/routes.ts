@@ -39,6 +39,7 @@ import { BadRequestError, UploadTooLargeError, paramId, parseBody } from './vali
 import { outcomeErrorStatus } from './outcome-routes.ts';
 import { approvalErrorStatus } from './approval-routes.ts';
 import { PlanDocumentError } from '../persistence/plan-documents.ts';
+import { AgentConfigConflictError } from './agent-config-routes.ts';
 
 export interface RouteDeps {
   db: Db;
@@ -174,7 +175,9 @@ export function statusForError(error: unknown): { status: number; message: strin
   }
   if (error instanceof ProjectNotFoundError) return { status: 404, message: error.message };
   if (error instanceof TaskNotFoundError) return { status: 404, message: 'Task not found.' };
-  if (error instanceof PlanDocumentError) return { status: 409, message: error.message };
+  if (error instanceof PlanDocumentError || error instanceof AgentConfigConflictError) {
+    return { status: 409, message: error.message };
+  }
   if (error instanceof MessageConflictError || error instanceof ConversationBusyError) {
     return { status: 409, message: error.message };
   }

@@ -19,6 +19,7 @@ import { runEvents } from './run-events.ts';
 import type { RunInput } from './run-input.ts';
 import {
   recordCapabilities,
+  recordFollowedInstructions,
   recordRunMetrics,
   recordSessionSettings,
   recordTokens,
@@ -30,6 +31,8 @@ import { createTaskRecorder } from './task-recorder.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
 import { prepareTurnSession, type TurnSession } from './turn-session.ts';
 import type { SweepLimits } from '../persistence/provider-sessions.ts';
+import { repoScanner } from '../agent-config/discovery.ts';
+import { loadRepoLaunch } from '../agent-config/launch.ts';
 
 export type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
 
@@ -211,6 +214,12 @@ export async function runAgentTurn(
         : undefined;
     turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
     const session = turnSession;
+    const repo = await loadRepoLaunch(
+      deps.db,
+      repoScanner,
+      input.identity.threadId,
+      input.projectRoots,
+    ).catch(() => []);
 
     for await (const output of provider.run({
       prompt: input.prompt,
@@ -225,6 +234,7 @@ export async function runAgentTurn(
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(input.preamble ? { preamble: input.preamble } : {}),
       ...(session ? { session: session.target } : {}),
+      ...(repo.length > 0 ? { repo } : {}),
     })) {
       meter(output);
       if (control.signal.aborted) {
@@ -247,6 +257,9 @@ export async function runAgentTurn(
       if (output.kind === 'commands') await session?.commands(output.commands);
       if (output.kind === 'session_settings') {
         await recordSessionSettings(deps.db, lease.runId, output);
+      }
+      if (output.kind === 'instructions') {
+        await recordFollowedInstructions(deps.db, lease.runId, output.files);
       }
       if (output.kind === 'text_delta')
         await say(titles ? titles.push(output.delta) : output.delta);

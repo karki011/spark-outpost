@@ -6,6 +6,7 @@ import type {
   TaskLinkSource,
   TokenUsage,
 } from '@spark-outpost/contracts';
+import type { RepoLaunch } from '../agent-config/launch.ts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
 
 export interface TurnAttachment {
@@ -55,6 +56,7 @@ export interface ProviderTurn {
   askTitle?: boolean;
   session?: SessionTarget;
   preamble?: string;
+  repo?: RepoLaunch;
 }
 
 export type GateAnswer =
@@ -126,7 +128,8 @@ export type ProviderOutput =
       freshReason: string | null;
     }
   | { kind: 'link'; url: string; title: string; source: Exclude<TaskLinkSource, 'user'> }
-  | { kind: 'commands'; commands: AgentCommand[] };
+  | { kind: 'commands'; commands: AgentCommand[] }
+  | { kind: 'instructions'; files: string[] };
 
 export interface Provider {
   readonly name: string;
