@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { advisorUsageSchema } from './advice.ts';
 import { runModeSchema } from './approvals.ts';
 import { planVersionSchema, type PlanEntry } from './artifacts.ts';
+import { agreedPlansSchema } from './plans.ts';
 import { costSourceSchema, totalCostSourceSchema, type CostSource } from './audit.ts';
 import { agentRoleSchema, type AgentRole } from './roles.ts';
 import { runStatusSchema, type RunStatus } from './runs.ts';
@@ -71,6 +72,7 @@ export const taskOverviewSchema = z.object({
   closedAt: z.string().nullable(),
   runIds: z.array(z.uuid()),
   planVersion: z.number().int().nullable(),
+  agreedPlanVersion: z.number().int().nullable().optional(),
   items: z.array(taskListItemSchema),
   summary: taskSummarySchema,
   costUsd: z.number().nullable(),
@@ -99,6 +101,7 @@ export const taskDetailSchema = taskOverviewSchema.extend({
   runs: z.array(taskRunSchema),
   planVersions: z.array(planVersionSchema),
   links: z.array(taskLinkSchema),
+  agreedPlans: agreedPlansSchema.optional(),
   advisors: z.array(advisorUsageSchema).optional(),
 });
 export type TaskDetail = z.infer<typeof taskDetailSchema>;

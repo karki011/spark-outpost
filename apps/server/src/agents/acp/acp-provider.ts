@@ -378,8 +378,12 @@ async function converse(
       );
       if (slash.note) push(mapper.note(slash.note));
       const asked = continued ? slash.text : request;
+      const primed =
+        !continued && turn.preamble && slash.kind !== 'command'
+          ? `${turn.preamble}\n\n${asked}`
+          : asked;
       const text =
-        turn.askTitle && slash.kind !== 'command' ? `${asked}\n\n${TITLE_REQUEST}` : asked;
+        turn.askTitle && slash.kind !== 'command' ? `${primed}\n\n${TITLE_REQUEST}` : primed;
       const blocks = continued
         ? followUpBlocks(text, promptOptions)
         : conversationBlocks(history, text, promptOptions);

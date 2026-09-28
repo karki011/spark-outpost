@@ -289,3 +289,42 @@
   margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
+
+.pstat {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--raise);
+  color: var(--muted);
+}
+
+.pstat.approved {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.pstat.proposed {
+  color: var(--warn);
+}
+
+.pstat.rejected {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.pstale {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  color: var(--warn);
+}
+
+.agreed-body {
+  max-height: 420px;
+  overflow-y: auto;
+  font-size: 13px;
+}
+
+.wsec.agreed + .wsec {
+  margin-top: 14px;
+}

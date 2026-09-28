@@ -19,6 +19,7 @@ import { isCheckpoint } from './checkpoints/checkpoint-model.ts';
 import { mergeCheckpoints } from './crew/crew-items.ts';
 import { Markdown } from './markdown/Markdown.tsx';
 import { keepCardHost } from './outcomes/feedback-host.ts';
+import { ReplyPlanAction, TurnPlanOffer } from './plans/TurnPlans.tsx';
 import { TurnFeedback } from './outcomes/TurnFeedback.tsx';
 import {
   shownText,
@@ -137,6 +138,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
   return (
     <AiTurn provider={provider} label={label} state={state} category={run.category}>
       <WorkLog steps={steps} state={state} seconds={finished ? runSeconds(run) : null} />
+      <TurnPlanOffer detail={detail} runId={run.id} />
       {approvals.map((approval) =>
         isCheckpoint(approval) ? (
           <CheckpointCard key={approval.id} approval={approval} />
@@ -152,6 +154,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
           <i />
         </span>
       )}
+      <ReplyPlanAction detail={detail} message={assistantMessage} finished={finished} />
       {run.status === 'cancelled' && <p className="ai-note">Stopped before finishing.</p>}
       {error && <p className="error-line">{error}</p>}
       {finished && <RunUsageMeta run={child?.usage ? child : run} />}

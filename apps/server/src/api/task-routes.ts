@@ -12,6 +12,7 @@ import { addTaskLink, TaskNotFoundError } from '../persistence/tasks.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
 import { taskChangedFile, taskChanges } from '../projects/task-changes.ts';
 import { findPullRequests } from '../tasks/pr-links.ts';
+import { agreedPlans } from './plan-routes.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
 
 export interface TaskRouteDeps {
@@ -27,7 +28,11 @@ export function taskRoutes({ db, workspaceId }: TaskRouteDeps): Router {
   router.get('/tasks/:id', async (req, res) => {
     const task = await getTaskDetail(db, paramId(req));
     if (!task) throw new TaskNotFoundError(paramId(req));
-    res.json({ ...task, advisors: await advisorUsageForRuns(db, task.runIds) });
+    res.json({
+      ...task,
+      agreedPlans: await agreedPlans(db, task.conversationId),
+      advisors: await advisorUsageForRuns(db, task.runIds),
+    });
   });
 
   router.get('/tasks/:id/changes', async (req, res) => {

@@ -1,5 +1,6 @@
 import { Readable, Writable } from 'node:stream';
 import * as acp from '@agentclientprotocol/sdk';
+import { PLAN_MODE_TRIGGER, currentRequest, planModeTurn, planReplies } from './fake-acp-plans.ts';
 import { roleFor } from './fake-acp-roles.ts';
 import { CODEX_DO_TRIGGER, codexDoTurn } from './fake-codex-do.ts';
 import {
@@ -241,8 +242,12 @@ async function turn(
     );
     return 'end_turn';
   }
+  const roleTurn = { text, sessionId, cwd: sessionCwd, client, update, say, signal };
+  const asked = currentRequest(params.prompt);
+  if (asked.includes(PLAN_MODE_TRIGGER)) return planModeTurn(roleTurn, config.mode ?? '');
+  if (await planReplies(asked, say)) return 'end_turn';
   const role = roleFor(text);
-  if (role) return role({ text, sessionId, cwd: sessionCwd, client, update, say, signal });
+  if (role) return role(roleTurn);
   if (text.includes('#blocks')) {
     await say(JSON.stringify(params.prompt.map(describeBlock)));
     return 'end_turn';

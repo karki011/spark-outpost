@@ -21,6 +21,7 @@ export const MAX_TASK_CHARACTERS = 8_000;
 export const MAX_UNTRUSTED_CHARACTERS = 8_000;
 export const MAX_PREVIOUS_REQUEST_CHARACTERS = 2_000;
 export const MAX_TASK_SUMMARY_CHARACTERS = 1_000;
+export const MAX_PREVIOUS_REPLY_CHARACTERS = 4_000;
 const AGENT_DEFAULT_MODEL = 'default';
 
 const choiceAnswerSchema = z.object({
@@ -128,6 +129,8 @@ export const DESTRUCTIVE_QUESTION =
   'Would doing `task` delete files or data, drop or migrate stored data, rewrite git history, or touch secrets?';
 export const CONTINUES_QUESTION =
   'Is `task` a continuation of the current task described by `previous_request` and `task_summary`, not a new piece of work?';
+export const PLAN_AGREED_QUESTION =
+  'Is this message approving a plan or set of steps proposed in the previous assistant reply?';
 export const TIER_QUESTION =
   'Which model size fits `task` best? Prefer the smallest that will do it well.';
 
@@ -138,6 +141,7 @@ export type IntakeKey =
   | 'review'
   | 'destructive'
   | 'continues_task'
+  | 'plan_agreed'
   | 'injection'
   | 'tier';
 
@@ -201,6 +205,26 @@ function doModeQuestions(request: IntakeRequest): IntakeQuestions['questions'] {
     });
   }
   return questions;
+}
+
+function planAgreedQuestion(): Record<string, unknown> {
+  return noulQuestion(
+    `${PLAN_AGREED_QUESTION} \`task\` is the message; \`previous_reply\` is the assistant reply before it.`,
+    {
+      true: {
+        what: '`previous_reply` proposes a plan or steps, and `task` accepts them as they are or with small changes',
+        examples: ['yes, go ahead', 'sounds good, do that', 'ok but skip step 3'],
+      },
+      false: {
+        what: 'It asks something new, rejects or questions the plan, or `previous_reply` proposes no plan',
+        examples: ['why step 2?', 'no, keep the old parser', 'now add a logout button'],
+      },
+    },
+  );
+}
+
+function tail(text: string, limit: number): string {
+  return text.length > limit ? text.slice(text.length - limit) : text;
 }
 
 export interface IntakeQuestions {
@@ -290,6 +314,7 @@ export function buildIntakeQuestions(request: IntakeRequest): IntakeQuestions {
     intent: { type: 'choice', instructions: CATEGORY_QUESTION, criteria: CATEGORY_CRITERIA },
     ...doModeQuestions(request),
   };
+  if (request.previousReply) questions.plan_agreed = planAgreedQuestion();
   const tier = request.mode === 'chat' ? null : tierQuestion(chatCandidate(request));
   if (tier) questions.tier = tier;
   if (untrusted.length > 0) {
@@ -311,6 +336,9 @@ export function buildIntakeQuestions(request: IntakeRequest): IntakeQuestions {
       MAX_PREVIOUS_REQUEST_CHARACTERS,
     );
     state.task_summary = request.currentTask.summary.slice(0, MAX_TASK_SUMMARY_CHARACTERS);
+  }
+  if (request.previousReply) {
+    state.previous_reply = tail(request.previousReply, MAX_PREVIOUS_REPLY_CHARACTERS);
   }
   if (untrusted.length > 0) state.untrusted = untrusted;
   return { state, questions };
@@ -368,6 +396,7 @@ export function parseIntakeAnswers(
     ...noulField('review', read('review')),
     ...noulField('destructive', destructive),
     ...noulField('continuesTask', read('continues_task')),
+    ...noulField('planAgreed', read('plan_agreed')),
     tier: tier?.value ?? null,
     confidence: intent?.confidence ?? 0,
     routeConfidence: tier?.confidence ?? null,

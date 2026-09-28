@@ -5,6 +5,8 @@ import { adviceBody } from './advice-body.ts';
 import {
   CONTINUES_QUESTION,
   DESTRUCTIVE_QUESTION,
+  MAX_PREVIOUS_REPLY_CHARACTERS,
+  PLAN_AGREED_QUESTION,
   QUESTION_QUESTION,
   REVIEW_QUESTION,
   buildIntakeQuestions,
@@ -101,6 +103,26 @@ describe('intake questions', () => {
     expect(follow.state).toMatchObject({
       previous_request: 'Add a CSV export',
       task_summary: 'Added exportCsv.',
+    });
+  });
+
+  it('asks whether the message approves a plan only when there is a previous reply, and sends its end', () => {
+    expect(buildIntakeQuestions(request).questions.plan_agreed).toBeUndefined();
+    const reply = `${'a'.repeat(MAX_PREVIOUS_REPLY_CHARACTERS)}\n1. Add export\nShall I go ahead?`;
+    const asked = buildIntakeQuestions({
+      ...request,
+      mode: 'chat',
+      task: 'yes',
+      previousReply: reply,
+    });
+    expect(String(asked.questions.plan_agreed!.instructions)).toContain(PLAN_AGREED_QUESTION);
+    const sent = String(asked.state.previous_reply);
+    expect(sent).toHaveLength(MAX_PREVIOUS_REPLY_CHARACTERS);
+    expect(sent.endsWith('Shall I go ahead?')).toBe(true);
+    const response = answered({ plan_agreed: noul(0.93) });
+    const withReply = { ...request, previousReply: reply };
+    expect(parseIntakeAnswers(withReply, buildIntakeQuestions(withReply), response)).toMatchObject({
+      planAgreed: 0.93,
     });
   });
 

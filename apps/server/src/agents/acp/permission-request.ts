@@ -7,6 +7,7 @@ import {
   type FileDiff,
 } from '@spark-outpost/contracts';
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
+import { exitPlanText, harnessPlanOptions } from '../../plans/plan-mode.ts';
 import type { GateAnswer } from '../../providers/provider.ts';
 
 export interface RequestContext {
@@ -83,6 +84,8 @@ export function approvalRequestFrom(
   const cwdInput = rawInput.cwd;
   const cwd = typeof cwdInput === 'string' && path.isAbsolute(cwdInput) ? cwdInput : context.cwd;
   const diffs = diffsOf(toolCall.content, cwd);
+  const plan = exitPlanText(toolKind, toolCall.rawInput, toolCall.content);
+  const options = approvalOptions(params.options);
   return {
     toolCallId: toolCall.toolCallId,
     rpcId: context.rpcId,
@@ -93,9 +96,10 @@ export function approvalRequestFrom(
     cwd: kind === 'execute' ? cwd : null,
     paths: kind === 'execute' ? [] : pathsOf(toolCall, rawInput, diffs, cwd),
     diffs,
-    options: approvalOptions(params.options),
+    options: plan ? harnessPlanOptions(options) : options,
     roots: context.roots,
     home: context.home,
+    ...(plan ? { plan } : {}),
   };
 }
 

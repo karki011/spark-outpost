@@ -54,10 +54,17 @@ export interface ProviderTurn {
   approvals?: PermissionGate;
   askTitle?: boolean;
   session?: SessionTarget;
+  preamble?: string;
 }
 
 export type GateAnswer =
-  | { outcome: 'selected'; optionId: string; allowed: boolean; note: string }
+  | {
+      outcome: 'selected';
+      optionId: string;
+      allowed: boolean;
+      note: string;
+      approvalId?: string;
+    }
   | { outcome: 'cancelled'; note: string };
 
 export interface PermissionGate {

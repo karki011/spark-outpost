@@ -152,6 +152,7 @@ export const approvalPayloadSchema = z.object({
   diffs: z.array(fileDiffSchema),
   truncated: z.boolean(),
   checkpoint: checkpointPayloadSchema.optional(),
+  plan: z.string().optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
 

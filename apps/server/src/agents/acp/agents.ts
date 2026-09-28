@@ -45,6 +45,8 @@ export const CLAUDE_DO_TOOLS = [
   'Write',
   'Bash',
   'TodoWrite',
+  'EnterPlanMode',
+  'ExitPlanMode',
 ] as const;
 export const CLAUDE_DO_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
 export const CODEX_DO_MODE = 'ask-every-action';

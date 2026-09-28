@@ -27,3 +27,12 @@ export async function setConversationProjects(
     projectIds,
   ]);
 }
+
+export async function conversationRoots(db: Queryable, conversationId: string): Promise<string[]> {
+  const { rows } = await db.query<{ root_path: string }>(
+    `SELECT p.root_path FROM conversation_projects cp JOIN projects p ON p.id = cp.project_id
+     WHERE cp.conversation_id = $1 ORDER BY cp.position, cp.created_at`,
+    [conversationId],
+  );
+  return rows.map((row) => row.root_path);
+}

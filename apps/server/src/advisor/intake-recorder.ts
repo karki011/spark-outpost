@@ -102,6 +102,11 @@ export interface IntakeExtra {
   currentTask: IntakeRequest['currentTask'];
 }
 
+export function previousReply(input: RunInput): string | null {
+  const last = input.history.at(-1);
+  return last?.role === 'assistant' && last.content.trim() ? last.content : null;
+}
+
 export function intakeRequest(
   input: RunInput,
   context: IntakeContext,
@@ -123,6 +128,7 @@ export function intakeRequest(
     routing: context.routing,
     firstMessage: extra.firstMessage,
     currentTask: extra.currentTask,
+    previousReply: previousReply(input),
   };
 }
 

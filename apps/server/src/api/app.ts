@@ -13,6 +13,7 @@ import { projectRoutes } from './project-routes.ts';
 import { apiRoutes, statusForError, type RouteDeps } from './routes.ts';
 import { localRequestGuard, requireLaunchToken } from './security.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
+import { planRoutes } from './plan-routes.ts';
 import { taskRoutes } from './task-routes.ts';
 import { webApp } from './web-app.ts';
 import { terminalRoutes } from '../terminal/routes.ts';
@@ -43,6 +44,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', projectRoutes(options));
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));
+  app.use('/api', planRoutes(options));
   app.use('/api', approvalRoutes(options));
   app.use('/api', modelCardRoutes(options));
   app.use('/api', homeRoutes(options));

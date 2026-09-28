@@ -28,6 +28,7 @@ export interface BuilderContext {
   findings: readonly string[];
   buildStyle?: BuildStyle;
   checkCommands?: readonly string[];
+  agreedPlan?: string | null;
 }
 
 export interface CriticContext {
@@ -37,6 +38,7 @@ export interface CriticContext {
   patch: string;
   checks: readonly string[];
   buildStyle?: BuildStyle;
+  agreedPlan?: string | null;
 }
 
 function optional(text: string | null): string[] {
@@ -115,6 +117,7 @@ export function builderPrompt(context: BuilderContext): string {
     INCREMENT_RULE,
     section('Request', cap(context.request, REQUEST_LIMIT)),
   ];
+  if (context.agreedPlan) parts.push(context.agreedPlan);
   if (context.history.length > 0) {
     parts.push(section('Earlier conversation', historyLines(context.history)));
   }
@@ -135,6 +138,9 @@ export function fixFollowUp(note: string | null): string {
     ? `The user asked for a fix:\n\n${cap(note, NOTE_LIMIT)}\n\nMake it, then reply with what you changed.`
     : 'The user asked for a fix. Look again at your change, fix what is wrong, then reply with what you changed.';
 }
+
+export const PLAN_FOLLOW_RULE =
+  'The user agreed the plan below. Add one finding that says whether the changes follow it, naming any step they skip or contradict.';
 
 const VERDICT_RULE =
   'List findings as "- " bullets under a "Findings:" line, then end with exactly one line: "Verdict: looks good" or "Verdict: concerns".';
@@ -158,7 +164,9 @@ export function criticPrompt(context: CriticContext): string {
     'Role: Critic. Review the change below; do not change files. This is an AI review, not verification.',
     VERDICT_RULE,
     ...optional(criticStyle(context.buildStyle ?? 'off')),
+    ...(context.agreedPlan ? [PLAN_FOLLOW_RULE] : []),
     section('Request', cap(context.request, REQUEST_LIMIT)),
+    ...optional(context.agreedPlan ?? null),
     section('Plan', context.plan.length > 0 ? numbered(context.plan) : 'No plan was made.'),
     ...reviewSections(context),
   ].join('\n\n');

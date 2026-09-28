@@ -3,6 +3,7 @@ import {
   HISTORY_TURNS,
   INCREMENT_RULE,
   PATCH_LIMIT,
+  PLAN_FOLLOW_RULE,
   builderPrompt,
   checkFailureText,
   checkFixFollowUp,
@@ -45,6 +46,31 @@ describe('context assembly', () => {
     const prompt = builderPrompt({ request: 'r', history: [], note: 'Use UTC', findings: [] });
     expect(prompt).not.toContain('## Earlier conversation');
     expect(prompt).toContain('## Note from the user\nUse UTC');
+  });
+
+  it('puts the agreed plan after the request for the Builder, and asks the Critic to compare', () => {
+    const agreedPlan = '## Agreed plan\nGoal: CSV export';
+    const builder = builderPrompt({
+      request: 'r',
+      history: [],
+      note: null,
+      findings: [],
+      agreedPlan,
+    });
+    expect(builder).toContain(`## Request\nr\n\n${agreedPlan}`);
+    const critic = criticPrompt({
+      request: 'r',
+      plan,
+      changes: [],
+      patch: '',
+      checks: [],
+      agreedPlan,
+    });
+    expect(critic).toContain(PLAN_FOLLOW_RULE);
+    expect(critic).toContain(`## Request\nr\n\n${agreedPlan}\n\n## Plan`);
+    expect(criticPrompt({ request: 'r', plan, changes: [], patch: '', checks: [] })).not.toContain(
+      PLAN_FOLLOW_RULE,
+    );
   });
 
   it('turns a fix request into a short follow-up for the resumed session', () => {

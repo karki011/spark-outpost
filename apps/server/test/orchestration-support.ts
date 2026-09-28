@@ -98,6 +98,7 @@ export interface Scenario {
   review?: number;
   vague?: number;
   continuesTask?: number;
+  planAgreed?: number;
   tier?: 'small' | 'mid' | 'top';
   tierConfidence?: number;
   intent?: string;
@@ -208,6 +209,7 @@ const NOUL_FIELDS = [
   ['review', 'review'],
   ['vague', 'vague'],
   ['continues_task', 'continuesTask'],
+  ['plan_agreed', 'planAgreed'],
 ] as const;
 
 function intakeAnswers(scenario: Scenario, questions: Record<string, unknown>): Answers {

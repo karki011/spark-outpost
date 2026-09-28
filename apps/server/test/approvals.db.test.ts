@@ -105,6 +105,7 @@ describe('approval gate', () => {
       optionId: 'allow',
       allowed: true,
       note: 'Allowed `pnpm test` (you allowed it)',
+      approvalId: id,
     });
     expect(decided).toMatchObject({ status: 'allowed', decidedBy: 'user', scope: 'once' });
     expect(events.map(({ event }) => ('name' in event ? event.name : event.type))).toEqual([

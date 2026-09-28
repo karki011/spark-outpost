@@ -17,7 +17,7 @@ import {
   resolveRoute,
   type ResolvedRoute,
 } from './member-routes.ts';
-import { promptFor } from './member-prompts.ts';
+import { agreedPlanText, promptFor } from './member-prompts.ts';
 import { editObserver } from './observe.ts';
 import { countOutput, counted } from './reads.ts';
 import { reviewFindings, reviewVerdict } from './review.ts';
@@ -106,9 +106,11 @@ async function runInPlace(
   });
   if (mode !== s.input.mode)
     await s.deps.db.query('UPDATE runs SET mode = $2 WHERE id = $1', [s.lease.runId, mode]);
+  const preamble = await agreedPlanText(s);
   const input = {
     ...s.input,
     mode,
+    ...(preamble ? { preamble } : {}),
     settings: {
       ...s.input.settings,
       model: route.pick.model,

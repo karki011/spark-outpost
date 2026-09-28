@@ -72,6 +72,7 @@ export const jevIntakeSchema = intakeAnswerSchema.extend({
   review: noul.optional(),
   destructive: noul.optional(),
   continuesTask: noul.optional(),
+  planAgreed: noul.optional(),
   tier: routeTierSchema.nullable().optional(),
   invalid: z.array(z.string()).optional(),
   confidence: z.number().min(0).max(1),

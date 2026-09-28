@@ -15,6 +15,7 @@ import {
   normalizeCommand,
   resolveCommandPath,
 } from './commands.ts';
+import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { isPackageInstall, isSafeRead } from './command-kinds.ts';
 
 export interface RequestRoot {
@@ -35,6 +36,7 @@ export interface ApprovalRequest {
   options: ApprovalOption[];
   roots: readonly RequestRoot[];
   home: string;
+  plan?: string | null;
 }
 
 export type RunRule =
@@ -172,6 +174,9 @@ export function decide(
   if (always) return { verdict: 'ask', reason: always };
   if (runRules.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
+  }
+  if (request.kind === 'other' && request.title === ENTER_PLAN_MODE_TITLE) {
+    return { verdict: 'allow', by: 'level', why: ENTER_PLAN_MODE_WHY };
   }
   if (level === 'full-auto') return { verdict: 'allow', by: 'level' };
   if (request.kind === 'edit') {

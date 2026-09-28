@@ -19,7 +19,13 @@ export function isTerminalRunEvent(event: RunEvent): boolean {
   return event.type === EventType.RUN_FINISHED || event.type === EventType.RUN_ERROR;
 }
 
-export const TASK_ACTIVITY_TYPES: readonly string[] = ['task', 'plan', 'link', 'advice'];
+export const TASK_ACTIVITY_TYPES: readonly string[] = [
+  'task',
+  'plan',
+  'link',
+  'advice',
+  'plan_document',
+];
 
 export function isTaskActivity(event: RunEvent): boolean {
   return (

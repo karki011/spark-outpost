@@ -97,9 +97,10 @@ export function WorkPanel({
     queryFn: () => taskApi.get(task.id),
     enabled: open,
   });
-  const tabs: WorkTab[] = task.planVersion
-    ? ['tasks', 'plan', 'crew', 'links', 'changes', 'cost']
-    : ['tasks', 'crew', 'links', 'changes', 'cost'];
+  const tabs: WorkTab[] =
+    task.planVersion || task.agreedPlanVersion
+      ? ['tasks', 'plan', 'crew', 'links', 'changes', 'cost']
+      : ['tasks', 'crew', 'links', 'changes', 'cost'];
   const current = tabs.includes(tab) ? tab : 'tasks';
   const pill = orchestration ? orchestrationPill(orchestration, task) : statusPill(task);
 
@@ -199,6 +200,7 @@ export function WorkPanel({
                   taskId={task.id}
                   versions={detail.data.planVersions}
                   runs={detail.data.runs}
+                  agreed={detail.data.agreedPlans}
                 />
               )}
               {current === 'links' && detail.data && (

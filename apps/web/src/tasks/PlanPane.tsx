@@ -4,12 +4,14 @@ import {
   artifactMarkdown,
   planChanges,
   providerLabel,
+  type AgreedPlans,
   type PlanEntry,
   type PlanVersion,
   type TaskItemState,
   type TaskRun,
 } from '@spark-outpost/contracts';
 import { CheckIcon, ChevronIcon } from '../ui/icons.tsx';
+import { AgreedPlan } from './AgreedPlan.tsx';
 import { taskApi } from './task-api.ts';
 import { TaskStateIcon } from './TaskIcons.tsx';
 
@@ -112,14 +114,18 @@ interface PlanPaneProps {
   taskId: string;
   versions: readonly PlanVersion[];
   runs: readonly TaskRun[];
+  agreed?: AgreedPlans | undefined;
 }
 
-export function PlanPane({ taskId, versions, runs }: PlanPaneProps) {
+export function PlanPane({ taskId, versions, runs, agreed }: PlanPaneProps) {
   const [history, setHistory] = useState(false);
   const [copied, setCopied] = useState(false);
   const historyId = useId();
   const latest = versions.at(-1);
-  if (!latest) return <p className="wsec wnote">No plan yet. The agent's plan shows up here.</p>;
+  const agreedPlan = agreed && agreed.documents.length > 0 ? <AgreedPlan plans={agreed} /> : null;
+  if (!latest) {
+    return agreedPlan ?? <p className="wsec wnote">No plan yet. The agent's plan shows up here.</p>;
+  }
 
   const copy = async () => {
     await navigator.clipboard.writeText(artifactMarkdown('plan', versions));
@@ -128,54 +134,57 @@ export function PlanPane({ taskId, versions, runs }: PlanPaneProps) {
   };
 
   return (
-    <div className="wsec">
-      <div className="wsec-h">
-        <h3>Plan</h3>
-        <span className="vbadge">v{latest.version}</span>
-        <span>{usedBy(latest, runs)}</span>
-      </div>
-      <ul className="plist">
-        {latest.body.entries.map((entry, index) => (
-          <li key={index} className={entry.status}>
-            <TaskStateIcon state={entryStates[entry.status]} />
-            <span>
-              {entry.content}
-              {entry.priority !== 'medium' && (
-                <span className={`prio ${entry.priority}`}>{entry.priority}</span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <div className="wbtns">
-        {versions.length > 1 && (
-          <button
-            type="button"
-            className="btn line sm hist-btn"
-            aria-expanded={history}
-            aria-controls={historyId}
-            onClick={() => setHistory(!history)}
-          >
-            <ChevronIcon />
-            History · {versions.length} versions
-          </button>
-        )}
-        <button type="button" className="btn ghost sm" onClick={() => void copy()}>
-          {copied ? <CheckIcon /> : null}
-          {copied ? 'Copied' : 'Copy as Markdown'}
-        </button>
-        <a className="btn ghost sm" href={taskApi.markdownUrl(taskId, 'plan')} download>
-          Download .md
-        </a>
-      </div>
-      {history && (
-        <div id={historyId}>
-          <History versions={versions} />
+    <>
+      {agreedPlan}
+      <div className="wsec">
+        <div className="wsec-h">
+          <h3>{agreedPlan ? 'Agent checklist' : 'Plan'}</h3>
+          <span className="vbadge">v{latest.version}</span>
+          <span>{usedBy(latest, runs)}</span>
         </div>
-      )}
-      <span className="sr-only" role="status">
-        {copied ? 'Plan copied as Markdown' : ''}
-      </span>
-    </div>
+        <ul className="plist">
+          {latest.body.entries.map((entry, index) => (
+            <li key={index} className={entry.status}>
+              <TaskStateIcon state={entryStates[entry.status]} />
+              <span>
+                {entry.content}
+                {entry.priority !== 'medium' && (
+                  <span className={`prio ${entry.priority}`}>{entry.priority}</span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <div className="wbtns">
+          {versions.length > 1 && (
+            <button
+              type="button"
+              className="btn line sm hist-btn"
+              aria-expanded={history}
+              aria-controls={historyId}
+              onClick={() => setHistory(!history)}
+            >
+              <ChevronIcon />
+              History · {versions.length} versions
+            </button>
+          )}
+          <button type="button" className="btn ghost sm" onClick={() => void copy()}>
+            {copied ? <CheckIcon /> : null}
+            {copied ? 'Copied' : 'Copy as Markdown'}
+          </button>
+          <a className="btn ghost sm" href={taskApi.markdownUrl(taskId, 'plan')} download>
+            Download .md
+          </a>
+        </div>
+        {history && (
+          <div id={historyId}>
+            <History versions={versions} />
+          </div>
+        )}
+        <span className="sr-only" role="status">
+          {copied ? 'Plan copied as Markdown' : ''}
+        </span>
+      </div>
+    </>
   );
 }

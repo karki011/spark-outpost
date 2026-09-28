@@ -89,6 +89,15 @@
   color: var(--warn);
   font-weight: 500;
 }
+.appr-plan {
+  margin: 10px 14px 0;
+  padding: 4px 12px;
+  max-height: 360px;
+  overflow-y: auto;
+  border-radius: var(--r-sm);
+  background: var(--panel);
+  font-size: 13px;
+}
 .appr-paths {
   margin: 8px 14px 0;
   padding-left: 18px;
