@@ -347,7 +347,7 @@
   "permission-option-kind:allow_always": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/permission-request.ts, apps/server/src/workflow/approval-gate.ts, apps/web/src/chat/approvals/ApprovalCard.tsx",
-    "note": "Shown on the approval card with the agent's label and sent straight back. The harness also records it as a run rule, so the same request isn't asked again in the run."
+    "note": "Shown on the approval card with the agent's label and sent straight back. The harness also records it as a run rule, so the same request isn't asked again in the run. Hidden on cards for actions that always ask (secret files, package installs, changes or deletes outside the repo), because an agent-side always rule could let the next one skip the gate."
   },
   "permission-option-kind:reject_once": {
     "status": "supported",

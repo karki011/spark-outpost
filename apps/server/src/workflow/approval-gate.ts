@@ -234,8 +234,15 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     };
   };
 
-  const reject = (request: ApprovalRequest, note: string, approvalId?: string): GateAnswer => {
-    const option = rejectOption(request.options);
+  const reject = (
+    request: ApprovalRequest,
+    note: string,
+    approvalId?: string,
+    chosen?: string | null,
+  ): GateAnswer => {
+    const option =
+      request.options.find((candidate) => candidate.optionId === chosen) ??
+      rejectOption(request.options);
     return option
       ? {
           outcome: 'selected',
@@ -299,7 +306,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     );
     const note = userNote(result, what);
     if (result.status !== 'allowed' || !result.decisionOptionId) {
-      return reject(request, note, result.id);
+      return reject(request, note, result.id, result.decisionOptionId);
     }
     await grant(request);
     return {

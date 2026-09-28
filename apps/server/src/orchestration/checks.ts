@@ -43,6 +43,7 @@ function checkRequest(check: CheckCommand, target: CheckTarget, root: string): A
     diffs: [],
     options: [
       { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+      { optionId: 'allow-run', name: 'Allow for this run', kind: 'allow_always' },
       { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
     ],
     roots: [{ path: root, ignore: [] }],

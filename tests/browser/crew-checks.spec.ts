@@ -73,20 +73,15 @@ test('a failing check goes back to the Builder, and the work panel shows both ro
   );
 });
 
-test('Ask before edits: the check approval shows in the thread, Review jumps to it, and the fix turn reuses "Allow for this run"', async ({
+test('Accept edits, review each step: the check approval shows in the thread, Review jumps to it, and the fix turn runs the check again', async ({
   page,
 }) => {
   test.setTimeout(120_000);
   writeFileSync(path.join(repo.root, 'check.mjs'), FAILS_UNTIL_FIXED);
-  await crewChat(page, repo, 'Ask before edits');
+  await crewChat(page, repo, 'Review keep');
   const command = `${process.execPath} check.mjs`;
   await useChecks(page, [command]);
   await send(page, `${CREW_REQUEST} #build #crew`);
-
-  const edit = card(page, /Change a file\?/).filter({
-    has: page.getByRole('button', { name: 'Deny' }),
-  });
-  await edit.getByRole('button', { name: 'Allow for this run' }).click({ timeout: 30_000 });
 
   const check = card(page, /^Run a check\?/).filter({
     has: page.getByRole('button', { name: 'Deny' }),

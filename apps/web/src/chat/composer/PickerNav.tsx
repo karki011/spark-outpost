@@ -2,7 +2,7 @@ import type { KeyboardEvent, ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { reveal } from '../../ui/transitions.tsx';
 
-export type PickerSection = 'model' | 'effort' | 'permission';
+export type PickerSection = 'model' | 'effort' | 'permission' | 'options';
 
 export interface PickerRow {
   id: PickerSection;

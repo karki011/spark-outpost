@@ -27,10 +27,16 @@ test("Claude's plan shows on the approval card, and once approved it is the agre
   const plan = approval.getByRole('region', { name: 'Proposed plan' });
   await expect(plan.getByRole('heading', { name: 'Add CSV export' })).toBeVisible();
   await expect(plan.getByRole('listitem').first()).toContainText('src/export.ts');
-  await expect(approval.getByRole('button', { name: 'Allow for this run' })).toHaveCount(0);
-  await approval.getByRole('button', { name: 'Keep planning' }).focus();
-  await approval.getByRole('button', { name: 'Approve plan' }).click();
+  await expect(approval.getByRole('button')).toHaveText([
+    'Yes, clear context and use auto mode',
+    'Yes, and use auto mode',
+    'Yes, manually approve edits',
+    'No, keep planning',
+  ]);
+  await approval.getByRole('button', { name: 'No, keep planning' }).focus();
+  await approval.getByRole('button', { name: 'Yes, manually approve edits' }).click();
   await expect(approval.getByRole('status')).toContainText('Plan approved.');
+  await expect(approval.getByRole('status')).toContainText('Chose: Yes, manually approve edits.');
   await expect(page.getByText('Plan approved with exit-plan-default').first()).toBeVisible({
     timeout: 30_000,
   });

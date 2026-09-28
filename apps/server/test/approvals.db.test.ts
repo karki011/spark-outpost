@@ -97,6 +97,55 @@ async function answerOnce(run: LinkedRun, command: string, optionId: string, sco
 }
 
 describe('approval gate', () => {
+  it("sends the agent's own always options back and never asks twice in the run", async () => {
+    const run = await doRun(t, root);
+    const { gate, waiters } = gateFor(run.runId);
+    const request = {
+      ...commandRequest(root, 'pnpm build'),
+      options: [
+        { optionId: 'yes', name: 'Yes', kind: 'allow_once' as const },
+        { optionId: 'yes-always', name: "Yes, and don't ask again", kind: 'allow_always' as const },
+        { optionId: 'no', name: 'No', kind: 'reject_once' as const },
+        { optionId: 'no-always', name: "No, and don't ask again", kind: 'reject_always' as const },
+      ],
+    };
+    const first = gate.review(request, new AbortController().signal);
+    const id = await pendingFor(run.runId);
+    const decided = await decideApproval(t.db, t.workspaceId, id, {
+      optionId: 'no-always',
+      scope: 'once',
+    });
+    waiters.notify(id);
+    expect(decided).toMatchObject({
+      status: 'denied',
+      scope: 'run',
+      decisionOptionId: 'no-always',
+    });
+    expect(await first).toMatchObject({
+      outcome: 'selected',
+      optionId: 'no-always',
+      allowed: false,
+    });
+    const again = await gate.review(
+      { ...request, toolCallId: 'call-2' },
+      new AbortController().signal,
+    );
+    expect(again).toMatchObject({
+      allowed: false,
+      note: expect.stringContaining('always reject this in this run'),
+    });
+
+    const other = { ...request, toolCallId: 'call-3', command: 'pnpm lint', title: 'pnpm lint' };
+    const allowed = gate.review(other, new AbortController().signal);
+    const second = await pendingFor(run.runId);
+    await decideApproval(t.db, t.workspaceId, second, { optionId: 'yes-always', scope: 'once' });
+    waiters.notify(second);
+    expect(await allowed).toMatchObject({ optionId: 'yes-always', allowed: true });
+    expect(
+      await gate.review({ ...other, toolCallId: 'call-4' }, new AbortController().signal),
+    ).toMatchObject({ allowed: true, note: 'Allowed `pnpm lint` (allowed for this run)' });
+  });
+
   it('waits for the user, emits requested and decided events, and answers the chosen option', async () => {
     const run = await doRun(t, root);
     const { gate, waiters, events } = gateFor(run.runId);

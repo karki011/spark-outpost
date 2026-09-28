@@ -55,7 +55,7 @@ async function startCrew(page: Page) {
 
 const panel = (page: Page) => page.getByRole('complementary', { name: 'Work panel' });
 
-test('Ask before edits: one task Builder with an edit approval, the Critic, then Keep', async ({
+test('Manual, review each step: one task Builder with an edit approval, the Critic, then it keeps what you approved', async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -106,12 +106,11 @@ test('Ask before edits: one task Builder with an edit approval, the Critic, then
 
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });
-  await expect(keep).toContainText('1 file changed.');
+  await expect(keep).toContainText('Kept: you approved every edit.');
+  await expect(keep.getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
   await expect(agentHead(page, 'Hawk')).toContainText('6 Solhigh effort');
   await expect(agentBlock(page, 'Hawk')).toContainText('Verdict: looks good');
-  await expect(waiting).toContainText('Keep these changes?');
   await shot(page, 'keep');
-  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
 
   await expect(turn.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
   await agentHead(page, 'Bolt').click();
@@ -124,8 +123,8 @@ test('Ask before edits: one task Builder with an edit approval, the Critic, then
 
 test("Review jumps to a second turn's keep card, which renders once", async ({ page }) => {
   test.setTimeout(120_000);
-  await startCrew(page);
-  await allowEdit(page);
+  await crewChat(page, repo, 'Review keep');
+  await send(page, `${CREW_REQUEST} #build #crew`);
   const first = card(page, /Keep these changes\?/);
   await expect(first).toBeVisible({ timeout: 30_000 });
   await first.getByRole('button', { name: 'Keep', exact: true }).click();
@@ -133,10 +132,6 @@ test("Review jumps to a second turn's keep card, which renders once", async ({ p
   await expect(turns.first().locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
 
   await send(page, 'Also tidy the heading. #build');
-  await expect(turns.nth(1).getByRole('group', { name: /Change a file\?/ })).toBeVisible({
-    timeout: 30_000,
-  });
-  await allowEdit(page);
   const keep = turns.nth(1).getByRole('group', { name: /Keep these changes\?/ });
   await expect(keep).toBeVisible({ timeout: 30_000 });
   const anchor = await keep.getAttribute('id');
@@ -161,7 +156,9 @@ test("Full auto asks for nothing, keeps by itself, and refuses the Builder's own
   const turn = page.locator('.crew-turn');
   await expect(turn.locator('.crew-foot')).toContainText('Done 2 agents', { timeout: 30_000 });
   await expect(page.getByRole('group', { name: /Change a file|Run a command/ })).toHaveCount(0);
-  await expect(page.getByRole('group', { name: /Keep these/ })).toContainText('Kept by Full auto.');
+  await expect(page.getByRole('group', { name: /Keep these/ })).toContainText(
+    'Kept by Full auto → PR.',
+  );
   await agentHead(page, 'Bolt').click();
   await agentBlock(page, 'Bolt')
     .getByRole('button', { name: /^\d+ steps$/ })

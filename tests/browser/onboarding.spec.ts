@@ -66,27 +66,31 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   const effort = claudeCard(page).getByRole('button', { name: 'Claude effort' });
   await expect(effort).toHaveText('Medium');
   await effort.click();
-  await page.getByRole('menuitemradio', { name: /^Max/ }).click();
-  await expect(effort).toHaveText('Max');
-  const permission = claudeCard(page).getByRole('button', { name: 'Claude permissions' });
-  await expect(claudeCard(page).getByRole('button', { name: /involvement/i })).toHaveCount(0);
-  await permission.click();
-  await expect(page.getByRole('menuitemradio', { name: /Skip all checks/ })).toHaveCount(0);
-  await expect(page.getByRole('menuitemradio', { name: /Hands-on/ })).toHaveCount(0);
+  await page.getByRole('menuitemradio', { name: /^High/ }).click();
+  await expect(effort).toHaveText('High');
+  const mode = claudeCard(page).getByRole('button', { name: 'Claude default mode' });
+  await expect(claudeCard(page).getByRole('button', { name: /permissions/i })).toHaveCount(0);
+  await expect(mode).toHaveText('Manual (default)');
+  await mode.click();
   await expect(page.getByRole('menuitemradio')).toHaveText([
-    /^Ask/,
-    /^Ask before edits/,
-    /^Auto-edit/,
-    /^Full auto/,
+    /^Manual \(default\)Always ask before making changes/,
+    /^Accept edits/,
+    /^Plan/,
+    /^Auto/,
+    /^Bypass permissions/,
   ]);
-  await page.getByRole('menuitemradio', { name: /^Auto-edit/ }).click();
-  await expect(permission).toHaveText('Auto-edit');
-  await expect(
-    claudeCard(page).getByText('Edits and read-only commands go through', { exact: false }),
-  ).toBeVisible();
-  await permission.click();
-  await page.getByRole('menuitemradio', { name: /^Ask(?! before)/ }).click();
-  await expect(permission).toHaveText('Ask');
+  await page.getByRole('menuitemradio', { name: /^Accept edits/ }).click();
+  await expect(mode).toHaveText('Accept edits');
+  const autonomy = claudeCard(page).getByRole('button', { name: 'Claude harness autonomy' });
+  await expect(autonomy).toHaveText('Automatic');
+  await autonomy.click();
+  await expect(page.getByRole('menuitemradio')).toHaveText([
+    /^Review each step/,
+    /^Automatic/,
+    /^Full auto → PR/,
+  ]);
+  await page.getByRole('menuitemradio', { name: /^Review each step/ }).click();
+  await expect(autonomy).toHaveText('Review each step');
 
   await continueButton(page).click();
   await expect(dialog(page).getByRole('heading', { name: 'Bring in your tools' })).toBeVisible();
@@ -97,7 +101,9 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await continueButton(page).click();
   await expect(dialog(page).getByRole('heading', { name: "You're all set, Hazel" })).toBeVisible();
   await expect(dialog(page)).toContainText('Claude via API key');
-  await expect(dialog(page)).toContainText('Claude Sonnet 5, max effort, permissions: Ask');
+  await expect(dialog(page)).toContainText(
+    'Claude Sonnet 5, high effort, Accept edits · Review each step',
+  );
   await expect(dialog(page)).toContainText('Tools coming soon');
 
   await dialog(page).getByRole('button', { name: 'Open Spark Outpost' }).click();

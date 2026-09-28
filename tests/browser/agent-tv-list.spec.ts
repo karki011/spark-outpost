@@ -2,7 +2,6 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
   CREW_REQUEST,
-  allowEdit,
   card,
   crewChat,
   crewRepo,
@@ -39,6 +38,10 @@ async function listWaiting(page: Page) {
   await crewChat(page, repo, 'Ask before edits');
   await send(page, `${CREW_REQUEST} #build #crew`);
   await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
+  return openList(page);
+}
+
+async function openList(page: Page) {
   await page.getByRole('button', { name: 'Agent TV' }).click();
   const tv = tvOf(page);
   await expect(tv).toBeVisible();
@@ -96,8 +99,9 @@ test('Needs you jumps to the approval, and Finished opens, shows outcomes and cl
   page,
 }) => {
   test.setTimeout(90_000);
-  const tv = await listWaiting(page);
-  await allowEdit(page);
+  await crewChat(page, repo, 'Review keep');
+  await send(page, `${CREW_REQUEST} #build #crew`);
+  const tv = await openList(page);
 
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });

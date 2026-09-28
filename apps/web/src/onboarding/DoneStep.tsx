@@ -1,6 +1,9 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { motion } from 'motion/react';
-import { accessFor, type ProviderId, type ProviderSetup } from '@spark-outpost/contracts';
+import { useQueries } from '@tanstack/react-query';
+import type { ProviderCapabilities, ProviderId, ProviderSetup } from '@spark-outpost/contracts';
+import { api, queryKeys } from '../api/client.ts';
+import { modeSummary } from '../chat/composer/mode-summary.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { UserBlob } from '../brand/UserBlob.tsx';
@@ -22,7 +25,11 @@ interface SummaryItem {
   detail: string;
 }
 
-function providerItem(provider: ProviderSetup, isDefault: boolean): SummaryItem | null {
+function providerItem(
+  provider: ProviderSetup,
+  capabilities: ProviderCapabilities | undefined,
+  isDefault: boolean,
+): SummaryItem | null {
   const connection = provider.connection;
   if (!connection) return null;
   const model =
@@ -32,7 +39,12 @@ function providerItem(provider: ProviderSetup, isDefault: boolean): SummaryItem 
     ? (provider.efforts.find((option) => option.id === connection.effort)?.label ??
       connection.effort)
     : 'Per-chat';
-  const permission = accessFor(connection.permission, connection.level)?.label ?? 'Ask';
+  const permission = modeSummary(
+    provider.id,
+    connection.agentMode ?? capabilities?.defaultMode ?? null,
+    connection.level,
+    capabilities?.modes ?? [],
+  );
   return {
     key: provider.id,
     icon: <ProviderBlob providerId={provider.id} size={30} expression="happy" animate="always" />,
@@ -42,13 +54,20 @@ function providerItem(provider: ProviderSetup, isDefault: boolean): SummaryItem 
         {isDefault && <span className="tag-default">Default</span>}
       </>
     ),
-    detail: `${model}, ${effort.toLowerCase()} effort, permissions: ${permission}`,
+    detail: `${model}, ${effort.toLowerCase()} effort, ${permission}`,
   };
 }
 
 export function DoneStep({ displayName, providers, defaultProvider }: DoneStepProps) {
   const scoutRef = useRef<HTMLDivElement>(null);
   const connected = providers.filter((provider) => provider.connection);
+  const capabilities = useQueries({
+    queries: connected.map((provider) => ({
+      queryKey: queryKeys.capabilities(provider.id),
+      queryFn: () => api.getCapabilities(provider.id),
+      staleTime: 60 * 60 * 1000,
+    })),
+  });
   const firstName = displayName.trim().split(/\s+/)[0] ?? '';
   const themeId = readTheme();
   const theme = themes.find((option) => option.id === themeId) ?? themes[0];
@@ -87,8 +106,12 @@ export function DoneStep({ displayName, providers, defaultProvider }: DoneStepPr
       ),
       detail: theme.description,
     },
-    ...connected.flatMap((provider) => {
-      const item = providerItem(provider, connected.length > 1 && provider.id === defaultProvider);
+    ...connected.flatMap((provider, index) => {
+      const item = providerItem(
+        provider,
+        capabilities[index]?.data,
+        connected.length > 1 && provider.id === defaultProvider,
+      );
       return item ? [item] : [];
     }),
     {

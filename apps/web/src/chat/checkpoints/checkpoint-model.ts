@@ -160,9 +160,9 @@ export function checkpointResult(approval: Approval): string {
     return delay === null ? 'Continued automatically.' : `Continued automatically after ${delay}s.`;
   }
   if (approval.decidedBy === 'level' && approval.decisionOptionId === CHECKPOINT_OPTION.keep) {
-    return approval.payload.checkpoint?.keptBy === 'hands-off'
-      ? 'Kept by Auto-edit.'
-      : 'Kept by Full auto.';
+    const keptBy = approval.payload.checkpoint?.keptBy;
+    if (keptBy === 'balanced') return 'Kept: you approved every edit.';
+    return keptBy === 'hands-off' ? 'Kept automatically.' : 'Kept by Full auto → PR.';
   }
   if (approval.status === 'cancelled' && approval.decidedBy === 'policy') {
     return 'It moved on before you answered.';

@@ -54,6 +54,7 @@ export function useRunStream(runId: string, conversationId: string, live = true)
         source.close();
         void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) });
         void queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.allCapabilities });
       }
     };
     return () => source.close();

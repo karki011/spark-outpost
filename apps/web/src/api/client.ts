@@ -201,6 +201,7 @@ export const queryKeys = {
   annotations: (id: string) => ['conversations', id, 'annotations'] as const,
   conversationSearches: ['conversation-search'] as const,
   conversationSearch: (query: string) => ['conversation-search', query] as const,
+  allCapabilities: ['capabilities'] as const,
   capabilities: (provider: ProviderId) => ['capabilities', provider] as const,
   usageSummary: ['usage-summary'] as const,
 };

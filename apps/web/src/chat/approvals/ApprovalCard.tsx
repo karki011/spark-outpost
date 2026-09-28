@@ -1,12 +1,11 @@
 import './approval-card.css';
-import { useId, useState } from 'react';
+import { Fragment, useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   commandSandboxNote,
   isCheckApproval,
   type Approval,
   type ApprovalDecidedValue,
-  type ApprovalOption,
   type ApprovalScope,
   type Project,
 } from '@spark-outpost/contracts';
@@ -18,6 +17,7 @@ import { Markdown } from '../markdown/Markdown.tsx';
 import { providerName } from '../provider-name.ts';
 import { useProjectBranch } from '../project/use-chat-repos.ts';
 import { mergeDecision } from './approval-events.ts';
+import { isAllow, outcome, projectAllowOption, shownOptions } from './approval-outcome.ts';
 import { DiffView } from './DiffView.tsx';
 
 interface ApprovalCardProps {
@@ -25,18 +25,6 @@ interface ApprovalCardProps {
   provider: string;
   agent?: string;
   repo: Project | null;
-}
-
-function allowOption(options: readonly ApprovalOption[]) {
-  return (
-    options.find((o) => o.kind === 'allow_once') ?? options.find((o) => o.kind === 'allow_always')
-  );
-}
-
-function rejectOption(options: readonly ApprovalOption[]) {
-  return (
-    options.find((o) => o.kind === 'reject_once') ?? options.find((o) => o.kind === 'reject_always')
-  );
 }
 
 export function displayCwd(cwd: string | null, repo: Project | null): string | null {
@@ -73,53 +61,6 @@ function request(approval: Approval, agent: string) {
   return `${agent} wants to: ${approval.title}`;
 }
 
-function planOutcome(approval: Approval): { icon: 'ok' | 'no'; label: string; detail: string } {
-  if (approval.status === 'allowed') {
-    return { icon: 'ok', label: 'Plan approved.', detail: 'Saved as the agreed plan.' };
-  }
-  if (approval.status === 'denied') {
-    return { icon: 'no', label: 'Kept planning.', detail: 'The agent can revise the plan.' };
-  }
-  return outcome({ ...approval, payload: { ...approval.payload, plan: undefined } });
-}
-
-function outcome(approval: Approval): { icon: 'ok' | 'no'; label: string; detail: string } {
-  if (approval.payload.plan) return planOutcome(approval);
-  const command = approval.kind === 'execute';
-  switch (approval.status) {
-    case 'allowed':
-      if (approval.scope === 'run')
-        return { icon: 'ok', label: 'Allowed for this run.', detail: '' };
-      if (approval.scope === 'project') {
-        return {
-          icon: 'ok',
-          label: 'Always allowed in this project.',
-          detail: 'Added to the allowlist.',
-        };
-      }
-      return { icon: 'ok', label: 'Allowed once.', detail: '' };
-    case 'denied':
-      return {
-        icon: 'no',
-        label: 'Denied.',
-        detail: command ? "The command didn't run." : "The change wasn't made.",
-      };
-    case 'cancelled':
-      return { icon: 'no', label: 'Cancelled.', detail: 'The run stopped before you answered.' };
-    case 'expired':
-      return {
-        icon: 'no',
-        label: 'Expired.',
-        detail:
-          approval.decidedBy === 'recovery'
-            ? 'The run stopped unexpectedly, so the action never ran.'
-            : 'Nobody answered within 30 minutes, so it was declined.',
-      };
-    default:
-      return { icon: 'ok', label: '', detail: '' };
-  }
-}
-
 export function ApprovalCard({ approval: incoming, provider, agent, repo }: ApprovalCardProps) {
   const queryClient = useQueryClient();
   const headingId = useId();
@@ -135,12 +76,17 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
     },
   });
   const pending = approval.status === 'pending';
-  const allow = allowOption(approval.options);
-  const reject = rejectOption(approval.options);
+  const options = shownOptions(approval);
+  const firstAllow = options.findIndex(isAllow);
+  const lastAllow = options.findLastIndex(isAllow);
   const alwaysAsks = approval.reason !== null;
   const command = approval.payload.command;
   const plan = approval.payload.plan ?? null;
   const cwd = displayCwd(approval.payload.cwd, repo);
+  const projectAllow =
+    !alwaysAsks && !plan && approval.kind === 'execute' && command
+      ? projectAllowOption(approval.options)
+      : undefined;
   const result = outcome(approval);
   const className = [
     'appr',
@@ -209,46 +155,37 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
       {alwaysAsks && <p className="appr-reason">{approval.reason}, whatever your permissions.</p>}
       {pending ? (
         <div className="appr-acts">
-          {allow && (
-            <button
-              type="button"
-              className="btn primary sm"
-              disabled={decide.isPending}
-              onClick={() => decide.mutate({ optionId: allow.optionId, scope: 'once' })}
-            >
-              {plan ? 'Approve plan' : 'Allow'}
-            </button>
-          )}
-          {allow && !alwaysAsks && !plan && (
-            <button
-              type="button"
-              className="btn line sm"
-              disabled={decide.isPending}
-              onClick={() => decide.mutate({ optionId: allow.optionId, scope: 'run' })}
-            >
-              Allow for this run
-            </button>
-          )}
-          {allow && !alwaysAsks && approval.kind === 'execute' && command && (
-            <button
-              type="button"
-              className="btn line sm"
-              disabled={decide.isPending}
-              onClick={() => decide.mutate({ optionId: allow.optionId, scope: 'project' })}
-            >
-              Always allow in this project
-            </button>
-          )}
-          {reject && (
-            <button
-              type="button"
-              className="btn ghost sm deny"
-              disabled={decide.isPending}
-              onClick={() => decide.mutate({ optionId: reject.optionId, scope: 'once' })}
-            >
-              {plan ? 'Keep planning' : 'Deny'}
-            </button>
-          )}
+          {options.map((option, index) => (
+            <Fragment key={option.optionId}>
+              <button
+                type="button"
+                className={
+                  !isAllow(option)
+                    ? 'btn ghost sm deny'
+                    : index === firstAllow
+                      ? 'btn primary sm'
+                      : 'btn line sm'
+                }
+                disabled={decide.isPending || Boolean(option.unavailableReason)}
+                title={option.unavailableReason}
+                onClick={() => decide.mutate({ optionId: option.optionId, scope: 'once' })}
+              >
+                {option.name}
+              </button>
+              {index === lastAllow && projectAllow && (
+                <button
+                  type="button"
+                  className="btn line sm"
+                  disabled={decide.isPending}
+                  onClick={() =>
+                    decide.mutate({ optionId: projectAllow.optionId, scope: 'project' })
+                  }
+                >
+                  Always allow in this project
+                </button>
+              )}
+            </Fragment>
+          ))}
         </div>
       ) : (
         <div className="appr-res" role="status">

@@ -7,8 +7,10 @@ import {
   formatTokens,
   meterLevel,
   optionLabel,
+  retiringLabel,
   selectableEfforts,
   shortLabel,
+  visibleModels,
 } from './model-options.ts';
 
 const capabilities = {
@@ -24,6 +26,9 @@ const capabilities = {
     { id: 'max', label: 'Max', description: null },
   ],
   defaultModel: 'default',
+  modes: [],
+  defaultMode: null,
+  options: [],
   capturedAt: '2026-09-25T00:00:00.000Z',
 };
 
@@ -34,7 +39,9 @@ describe('composer model options', () => {
       model: null,
       effort: 'high',
       permission: null,
+      agentMode: null,
       level: null,
+      options: {},
     };
     expect(currentModel(settings, capabilities)?.id).toBe('default');
     expect(shortLabel('Default (recommended)')).toBe('Default');
@@ -92,5 +99,34 @@ describe('optionLabel', () => {
       optionLabel({ id: 'default', label: 'Default (recommended)' }, { defaultModel: 'default' }),
     ).toBe('Default (recommended)');
     expect(optionLabel({ id: 'gpt-6-sol', label: '6 Sol' }, undefined)).toBe('6 Sol');
+  });
+});
+
+describe('retiring models', () => {
+  const now = new Date('2026-09-28T12:00:00Z');
+  const models = [
+    { id: 'haiku', label: 'Haiku 4.5', description: null, retiresNotBefore: '2026-10-15' },
+    { id: 'sonnet', label: 'Sonnet 5', description: null, retiresNotBefore: '2027-06-30' },
+    { id: 'old', label: 'Old', description: null, retiresNotBefore: '2026-01-01' },
+    { id: 'sol', label: '6 Sol', description: null },
+  ];
+
+  it('hides models retiring within 30 days unless shown or currently picked', () => {
+    const ids = (list: { id: string }[]) => list.map((model) => model.id);
+    expect(ids(visibleModels(models, 'sonnet', false, now))).toEqual(['sonnet', 'sol']);
+    expect(ids(visibleModels(models, 'haiku', false, now))).toEqual(['haiku', 'sonnet', 'sol']);
+    expect(ids(visibleModels(models, 'sonnet', true, now))).toEqual([
+      'haiku',
+      'sonnet',
+      'old',
+      'sol',
+    ]);
+  });
+
+  it('labels a retiring model with its plain date', () => {
+    expect(retiringLabel(models[0]!, now)).toBe('Retiring Oct 15, 2026');
+    expect(retiringLabel(models[2]!, now)).toBe('Retiring Jan 1, 2026');
+    expect(retiringLabel(models[1]!, now)).toBeNull();
+    expect(retiringLabel(models[3]!, now)).toBeNull();
   });
 });

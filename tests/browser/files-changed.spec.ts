@@ -2,6 +2,7 @@ import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { pickPermission } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -37,11 +38,8 @@ async function editedChat(page: Page) {
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: /^Model and effort/ }).click();
   const picker = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
-  await picker.getByRole('tab', { name: /Permissions/ }).click();
-  await picker
-    .getByRole('radiogroup', { name: 'Permissions' })
-    .getByRole('radio', { name: 'Ask before edits', exact: true })
-    .click();
+  await pickPermission(page, 'Ask before edits');
+  await expect(picker).toBeVisible();
   await page.keyboard.press('Escape');
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Tidy the notes #edit #plan');
@@ -53,10 +51,9 @@ async function editedChat(page: Page) {
   await expect(page.locator('.md', { hasText: 'fake-edit=allowed' })).toBeVisible({
     timeout: 15_000,
   });
-  await page
-    .getByRole('group', { name: /Keep these changes\?/ })
-    .getByRole('button', { name: 'Keep', exact: true })
-    .click();
+  await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toContainText(
+    'Kept: you approved every edit.',
+  );
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
 }
 

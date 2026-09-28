@@ -2,8 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
 import {
-  accessFor,
-  accessUpdate,
+  DEFAULT_INVOLVEMENT_LEVEL,
   type ChatSettings,
   type ConversationDetail,
   type Orchestration,
@@ -19,15 +18,17 @@ import { usePopover } from '../../ui/use-popover.ts';
 import { EffortMeter } from './EffortMeter.tsx';
 import { EffortOptions } from './EffortOptions.tsx';
 import { ModelList } from './ModelList.tsx';
-import { PermissionOptions } from './PermissionOptions.tsx';
+import { ConfigOptions } from './ConfigOptions.tsx';
+import { ModeOptions } from './ModeOptions.tsx';
 import { PickerNav, type PickerRow, type PickerSection } from './PickerNav.tsx';
 import { ProviderSwitch } from './ProviderSwitch.tsx';
 import { ExitingInert } from './ExitingInert.tsx';
 import { autoThisTurn, autoWouldHaveUsed, builderRouteNote } from '../../crew/auto-route.ts';
 import { buttonLabel, currentModel, selectableEfforts, shortLabel } from './model-options.ts';
+import { permissionSummary } from './mode-summary.ts';
 import './model-picker.css';
 
-const SECTIONS: PickerSection[] = ['model', 'effort', 'permission'];
+const SECTIONS: PickerSection[] = ['model', 'effort', 'permission', 'options'];
 
 export interface PickerRequest {
   section: PickerSection;
@@ -104,12 +105,14 @@ export function ModelPicker({
   const capabilities = capabilitiesFor(provider);
   const model = currentModel(settings, capabilities);
   const efforts = selectableEfforts(capabilities);
-  const access = hasRepos ? accessFor(settings.permission, settings.level) : null;
+  const level = settings.level ?? DEFAULT_INVOLVEMENT_LEVEL;
+  const access = hasRepos ? permissionSummary(settings, capabilities) : null;
+  const configOptions = capabilities?.options ?? [];
   const pinnedName = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
   const auto = settings.routing === 'auto';
   const thisTurn = autoThisTurn(orchestration);
   const modelName = auto ? (thisTurn ? `Auto · ${thisTurn} this turn` : 'Auto') : pinnedName;
-  const buttonName = access ? `${modelName} · ${access.label}` : modelName;
+  const buttonName = access ? `${modelName} · ${access}` : modelName;
   const would = autoWouldHaveUsed(orchestration);
   const hint = builderRouteNote(orchestration) ?? (would ? `Jev would have used ${would}` : null);
 
@@ -160,11 +163,21 @@ export function ModelPicker({
     {
       id: 'permission',
       label: 'Permissions',
-      value: hasRepos ? (access?.label ?? 'Default') : 'Chat',
+      value: access ?? 'Chat',
       disabled: !setup,
     },
+    ...(configOptions.length > 0
+      ? [
+          {
+            id: 'options' as const,
+            label: 'Options',
+            value: `${configOptions.length} ${configOptions.length === 1 ? 'option' : 'options'}`,
+            disabled: false,
+          },
+        ]
+      : []),
   ];
-  const activeSection = section;
+  const activeSection = section === 'options' && configOptions.length === 0 ? 'model' : section;
 
   const selectSection = (next: PickerSection) => {
     setDirection(SECTIONS.indexOf(next) >= SECTIONS.indexOf(activeSection) ? 1 : -1);
@@ -188,7 +201,7 @@ export function ModelPicker({
       >
         <ProviderBlob providerId={provider} size={18} animate="hover" />
         <span className="mname">{modelName}</span>
-        {access && <span className="maccess">· {access.label}</span>}
+        {access && <span className="maccess">· {access}</span>}
         <EffortMeter efforts={efforts} effort={settings.effort} />
         <ChevronIcon />
       </button>
@@ -260,13 +273,23 @@ export function ModelPicker({
                       />
                     )}
                     {activeSection === 'permission' && setup && (
-                      <PermissionOptions
+                      <ModeOptions
                         provider={provider}
-                        choices={setup.permissions}
-                        selected={settings.permission}
-                        level={settings.level}
+                        modes={capabilities?.modes ?? []}
+                        defaultMode={capabilities?.defaultMode ?? null}
+                        selected={settings.agentMode}
+                        level={level}
                         hasRepos={hasRepos}
-                        onSelect={(next) => update.mutate(accessUpdate(next))}
+                        loading={queryFor(provider)?.isFetching ?? false}
+                        onMode={(next) => update.mutate({ agentMode: next })}
+                        onLevel={(next) => update.mutate({ level: next })}
+                      />
+                    )}
+                    {activeSection === 'options' && (
+                      <ConfigOptions
+                        options={configOptions}
+                        values={settings.options}
+                        onChange={(id, value) => update.mutate({ options: { [id]: value } })}
                       />
                     )}
                   </ExitingInert>
