@@ -167,7 +167,7 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
       </div>
       {command && <pre className="appr-cmd">$ {command}</pre>}
       {plan && (
-        <div className="appr-plan" tabIndex={0} aria-label="Proposed plan">
+        <div className="appr-plan" role="region" tabIndex={0} aria-label="Proposed plan">
           <Markdown text={plan} />
         </div>
       )}
