@@ -101,3 +101,63 @@ describe('intake decisions', () => {
     expect(decided.calls.review).toMatchObject({ jev: 0.5, value: false, source: 'rules' });
   });
 });
+
+const CSV_PLAN = [
+  'Plan adding CSV export to Analytics. On the Spend tab, an "Export CSV" button downloads the spend breakdown (one row per project, provider and model).',
+  'Put the CSV itself in a pure function `spendCsv(data: AnalyticsSpend): string` in `apps/web/src/analytics/spend-csv.ts`.',
+  "Plan only for now: don't change any files. I'll build it in a separate session.",
+].join('\n\n');
+const BRAINSTORM =
+  "I'd like people to see which files the code scan skipped and why. Brainstorm a few ways we could show that, with the trade-offs of each. Options only for now: no plan and no changes.";
+const REVIEW_S07 =
+  "Review my uncommitted changes before I commit them. Don't change anything; just tell me what's wrong.";
+const QUESTION_S01 =
+  "How does the code scan decide which files to read and index? Which files does it skip, and where in the code is that decided? Just answer; don't change anything.";
+
+describe('plan-only and review-only requests (dev-day s02, s03, s07)', () => {
+  it('plans a plan-only request instead of asking answer-or-build (s03)', () => {
+    const unsure = decideIntake(
+      jev({ question: 0.69, planOnly: 0.2 }),
+      facts({ request: CSV_PLAN }),
+    );
+    expect(unsure.start).toBe('plan');
+    expect(unsure.calls.plan_only).toMatchObject({ rule: true, value: true });
+    expect(decideIntake(null, facts({ request: CSV_PLAN })).start).toBe('plan');
+    const jevOnly = facts({ request: 'Work out how we would move the settings into Postgres' });
+    expect(decideIntake(jev({ question: 0.3, planOnly: 0.95 }), jevOnly).start).toBe('plan');
+  });
+
+  it('keeps a brainstorm answer-only, with no plan (s02)', () => {
+    const decided = decideIntake(
+      jev({ question: 0.95, planOnly: 0.05 }),
+      facts({ request: BRAINSTORM }),
+    );
+    expect(decided.start).toBe('answer');
+    expect(decided.calls.plan_only).toBeUndefined();
+    expect(decideIntake(null, facts({ request: BRAINSTORM })).start).not.toBe('plan');
+  });
+
+  it('sends "review my uncommitted changes" to the Critic, with or without Jev (s07)', () => {
+    const request = facts({ request: REVIEW_S07 });
+    expect(decideIntake(jev({ question: 0.93, review: 0.9 }), request)).toMatchObject({
+      start: 'review',
+      review: true,
+    });
+    expect(decideIntake(jev({ question: 0.05, review: 0.95 }), request).start).toBe('review');
+    expect(decideIntake(jev({ question: 0.93, review: 0.1 }), request).start).toBe('review');
+    expect(decideIntake(null, request).start).toBe('review');
+  });
+
+  it('still builds when a review comes with a change, and answers a plain question (s01)', () => {
+    const fixToo = facts({ request: 'Review my changes to the parser and fix what you find' });
+    expect(decideIntake(jev({ question: 0.05, review: 0.95 }), fixToo)).toMatchObject({
+      start: 'build',
+      review: true,
+    });
+    const question = decideIntake(
+      jev({ question: 0.95, review: 0.05 }),
+      facts({ request: QUESTION_S01 }),
+    );
+    expect(question.start).toBe('answer');
+  });
+});

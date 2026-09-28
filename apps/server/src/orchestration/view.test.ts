@@ -159,4 +159,11 @@ describe('the final reply', () => {
     );
     expect(text).toBe('Built it\n\nAI review by critic label: concerns.\n- Missing test');
   });
+
+  it('answers a review-only request with the Critic’s own findings (dev-day s07)', () => {
+    const review =
+      'Findings:\n- `plural()` now says "1 runs" is fine but returns the singular for 0\n- `median()` sorts in place\nVerdict: concerns';
+    const text = finalText([result('critic', review)], 'concerns', ['plural', 'median'], false);
+    expect(text).toBe(`${review}\n\nAI review by critic label: concerns.`);
+  });
 });

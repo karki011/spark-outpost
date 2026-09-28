@@ -79,6 +79,35 @@ export function asksForReview(request: string): boolean {
   return REVIEW_PHRASE.test(request) && !ACTS_ON_REVIEW.test(request);
 }
 
+const EXISTING_CHANGES =
+  /\b(?:uncommitted|unstaged|staged|unpushed|pending|local|working[- ]tree|git diff)\b|\b(?:my|our|these|this|the|current|recent|latest)\s+(?:\w+\s+)?(?:changes?|diff|edits|commits?|branch|pr|pull request|patch|work)\b/i;
+const THEN_CHANGE =
+  /\b(?:and|then)\s+(?:please\s+)?(?:fix|apply|address|change|update|implement|make|clean up)\b|\bfix (?:what|anything|everything|any|all)\b/i;
+
+const LEADS_WITH_REVIEW =
+  /^\s*(?:(?:please|can you|could you|would you|kindly)\s+)?(?:review|look (?:over|through|at)|check|go over|give (?:me )?a (?:review|second opinion) (?:of|on))\b/i;
+
+export function reviewsExistingByRule(request: string): boolean {
+  const first = request.trim().split(/[.!?\n]/, 1)[0] ?? '';
+  if (!LEADS_WITH_REVIEW.test(first) || !EXISTING_CHANGES.test(first)) return false;
+  return !THEN_CHANGE.test(request);
+}
+
+const PLAN_ONLY_PHRASE =
+  /\bplan[- ]only\b|\bonly (?:a |the |make a |write a )?plan\b|\bjust (?:a |the )?plan\b|\bjust plan\b/i;
+const PLAN_VERB_FIRST =
+  /^\s*(?:please\s+|can you\s+|could you\s+)?(?:plan(?: out)?|draft a plan|write (?:up )?a plan|make a plan|come up with a plan|propose a plan|sketch (?:out )?a plan)\b/i;
+const PLAN_ASK =
+  /\b(?:write|draft|make|give me|come up with|put together|propose|sketch)\s+(?:me\s+)?(?:up\s+)?(?:a|an)\s+(?:\w+\s+){0,2}plan\b/i;
+const PLAN_THEN_BUILD =
+  /\bplan\b[^.\n]{0,60}\b(?:and|then)\s+(?:then\s+)?(?:build|implement|do|make|code|start)\b|\bthen (?:build|implement) it\b/i;
+
+export function planOnlyByRule(request: string): boolean {
+  if (PLAN_ONLY_PHRASE.test(request)) return true;
+  if (!PLAN_VERB_FIRST.test(request) && !PLAN_ASK.test(request)) return false;
+  return !PLAN_THEN_BUILD.test(request);
+}
+
 export function questionByRule(request: string): boolean {
   return request.trim().endsWith('?') && !BUILD_VERB.test(request);
 }

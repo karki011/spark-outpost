@@ -177,6 +177,7 @@ export interface DecisionRow {
 
 const CALL_LABELS: Record<string, [string, string]> = {
   question: ['answer only', 'make changes'],
+  plan_only: ['plan only', 'no plan asked'],
   vague: ['vague', 'clear'],
   review: ['review wanted', 'no review asked'],
   destructive: ['destructive', 'not destructive'],
