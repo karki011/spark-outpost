@@ -14,10 +14,6 @@ export interface ServiceOptions {
   log: (line: string) => void;
 }
 
-export interface Service extends Supervised {
-  pid: number | undefined;
-}
-
 export class OutputTail {
   private readonly lines: string[] = [];
 
@@ -33,7 +29,7 @@ export class OutputTail {
   }
 }
 
-export function forkService(options: ServiceOptions, tail: OutputTail): Service {
+export function forkService(options: ServiceOptions, tail: OutputTail): Supervised {
   const child = utilityProcess.fork(options.bootstrap, [options.entry], {
     cwd: options.cwd,
     env: options.env,
@@ -53,9 +49,6 @@ export function forkService(options: ServiceOptions, tail: OutputTail): Service 
     });
   });
   return {
-    get pid() {
-      return child.pid;
-    },
     exited,
     async stop() {
       if (!running) return;

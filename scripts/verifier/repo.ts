@@ -1,20 +1,14 @@
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { git } from '../bench/fixture.ts';
 import type { VerifierCase } from './case.ts';
 
 const BASE = fileURLToPath(new URL('../bench/fixture/base/', import.meta.url));
 const HIDDEN_DIR = 'hidden-checks';
-export const CHECK_COMMAND = 'node --test "test/**/*.test.ts"';
-
-function git(repo: string, ...args: string[]): string {
-  return execFileSync(
-    'git',
-    ['-C', repo, '-c', 'user.email=bench@spark.local', '-c', 'user.name=bench', ...args],
-    { encoding: 'utf8' },
-  );
-}
+const VISIBLE_TESTS = 'test/**/*.test.ts';
+export const CHECK_COMMAND = `node --test "${VISIBLE_TESTS}"`;
 
 function passes(repo: string, pattern: string): { passed: boolean; output: string } {
   const run = spawnSync('node', ['--test', pattern], { cwd: repo, encoding: 'utf8' });
@@ -48,7 +42,7 @@ export async function prepareCase(root: string, item: VerifierCase): Promise<Pre
       const [additions, deletions, path] = line.split('\t');
       return { path: path!, additions: Number(additions), deletions: Number(deletions) };
     });
-  const visible = passes(repo, 'test/**/*.test.ts').passed;
+  const visible = passes(repo, VISIBLE_TESTS).passed;
   await mkdir(join(repo, HIDDEN_DIR));
   await writeFile(join(repo, HIDDEN_DIR, 'hidden.test.ts'), item.task.hidden);
   const hidden = passes(repo, `${HIDDEN_DIR}/*.test.ts`).passed;

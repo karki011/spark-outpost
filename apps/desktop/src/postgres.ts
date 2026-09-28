@@ -10,7 +10,7 @@ import { LOOPBACK } from './ports.ts';
 
 const run = promisify(execFile);
 
-export const DATABASE_NAME = 'spark_outpost';
+const DATABASE_NAME = 'spark_outpost';
 const USER = 'spark';
 const STALE_STOP_TIMEOUT_MS = 15_000;
 const EXIT_EVENTS = ['exit', 'beforeExit', 'SIGHUP', 'SIGINT', 'SIGTERM', 'SIGBREAK', 'message'];

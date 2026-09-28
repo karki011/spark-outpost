@@ -7,7 +7,7 @@ import type { BenchTask } from './tasks.ts';
 const FIXTURE = fileURLToPath(new URL('./fixture/', import.meta.url));
 export const HIDDEN_DIR = 'bench-verify';
 
-function git(repo: string, ...args: string[]): string {
+export function git(repo: string, ...args: string[]): string {
   return execFileSync(
     'git',
     ['-C', repo, '-c', 'user.email=bench@spark.local', '-c', 'user.name=bench', ...args],

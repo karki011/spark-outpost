@@ -1,9 +1,5 @@
 import { append } from '../bench/solution-edits.ts';
-import { swap as replace, type VerifierTask } from './case.ts';
-
-const HEAD = `import assert from 'node:assert/strict';
-import test from 'node:test';
-`;
+import { replaceLiteral, TEST_HEAD, type VerifierTask } from './case.ts';
 
 const PARSE_CENTS = `export function parseCents(text: string): number {
   const cleaned = text.replace(/[$,\\s]/g, '');
@@ -18,7 +14,7 @@ const FORMAT_CENTS = `export function formatCents(cents: number): string {
 }`;
 
 const addMoneyTest = async (repo: string, name: string, body: string) => {
-  await replace(repo, 'test/money.test.ts', 'parseCents }', `parseCents, ${name} }`);
+  await replaceLiteral(repo, 'test/money.test.ts', 'parseCents }', `parseCents, ${name} }`);
   await append(repo, 'test/money.test.ts', `\ntest('${name}', () => {\n${body}\n});\n`);
 };
 
@@ -28,7 +24,7 @@ export const MONEY_TASKS: readonly VerifierTask[] = [
     prompt:
       'Add a function percentOf(part: number, total: number): number to src/money.ts. It returns part as a percentage of total rounded to one decimal place (percentOf(1, 3) is 33.3) and returns 0 when total is 0. Add a test for it in test/money.test.ts.',
     missed: 'returns 0 when total is 0',
-    hidden: `${HEAD}import { percentOf } from '../src/money.ts';
+    hidden: `${TEST_HEAD}import { percentOf } from '../src/money.ts';
 
 test('percentOf', () => {
   assert.equal(percentOf(1, 3), 33.3);
@@ -65,7 +61,7 @@ test('percentOf', () => {
     prompt:
       "parseCents in src/money.ts should treat an amount in parentheses as negative, the way accountants write it: '(12.50)' is -1250 and '($1,000)' is -100000. Add tests.",
     missed: 'parentheses make the amount negative',
-    hidden: `${HEAD}import { parseCents } from '../src/money.ts';
+    hidden: `${TEST_HEAD}import { parseCents } from '../src/money.ts';
 
 test('parentheses are negative', () => {
   assert.equal(parseCents('(12.50)'), -1250);
@@ -73,7 +69,7 @@ test('parentheses are negative', () => {
 });
 `,
     async correct(repo) {
-      await replace(
+      await replaceLiteral(
         repo,
         'src/money.ts',
         PARSE_CENTS,
@@ -93,7 +89,7 @@ test('parentheses are negative', () => {
       );
     },
     async wrong(repo) {
-      await replace(repo, 'src/money.ts', '/[$,\\s]/g', '/[$,\\s()]/g');
+      await replaceLiteral(repo, 'src/money.ts', '/[$,\\s]/g', '/[$,\\s()]/g');
       await append(
         repo,
         'test/money.test.ts',
@@ -106,7 +102,7 @@ test('parentheses are negative', () => {
     prompt:
       "formatCents in src/money.ts should group thousands with commas: 123456 is '$1,234.56' and 123456789 is '$1,234,567.89'. Negative amounts keep the sign in front ('-$1,234.56'). Update the tests.",
     missed: 'every group of thousands gets a comma',
-    hidden: `${HEAD}import { formatCents } from '../src/money.ts';
+    hidden: `${TEST_HEAD}import { formatCents } from '../src/money.ts';
 
 test('groups thousands', () => {
   assert.equal(formatCents(123456789), '$1,234,567.89');
@@ -114,7 +110,7 @@ test('groups thousands', () => {
 });
 `,
     async correct(repo) {
-      await replace(
+      await replaceLiteral(
         repo,
         'src/money.ts',
         FORMAT_CENTS,
@@ -125,10 +121,10 @@ test('groups thousands', () => {
   return \`\${sign}$\${grouped}.\${fraction}\`;
 }`,
       );
-      await replace(repo, 'test/money.test.ts', "'$1234.56'", "'$1,234.56'");
+      await replaceLiteral(repo, 'test/money.test.ts', "'$1234.56'", "'$1,234.56'");
     },
     async wrong(repo) {
-      await replace(
+      await replaceLiteral(
         repo,
         'src/money.ts',
         FORMAT_CENTS,
@@ -139,7 +135,7 @@ test('groups thousands', () => {
   return \`\${sign}$\${grouped}.\${fraction}\`;
 }`,
       );
-      await replace(repo, 'test/money.test.ts', "'$1234.56'", "'$1,234.56'");
+      await replaceLiteral(repo, 'test/money.test.ts', "'$1234.56'", "'$1,234.56'");
     },
   },
   {
@@ -147,7 +143,7 @@ test('groups thousands', () => {
     prompt:
       'Add sumCents(amounts: string[]): number to src/money.ts. It adds up the amounts using parseCents and skips blank strings. Add a test.',
     missed: 'blank strings are skipped',
-    hidden: `${HEAD}import { sumCents } from '../src/money.ts';
+    hidden: `${TEST_HEAD}import { sumCents } from '../src/money.ts';
 
 test('sumCents skips blanks', () => {
   assert.equal(sumCents(['$1', '', '  ', '$2']), 300);

@@ -12,21 +12,21 @@ import {
 import { criticPrompt } from '../../apps/server/src/orchestration/context.ts';
 import { reviewVerdict } from '../../apps/server/src/orchestration/review.ts';
 import { keychainSecretStore } from '../../apps/server/src/setup/secrets.ts';
-import type { VerifierCase } from './case.ts';
+import type { Variant, VerifierCase } from './case.ts';
 import { LEDGER_TASKS } from './cases-ledger.ts';
 import { MONEY_TASKS } from './cases-money.ts';
 import { CHECK_COMMAND, prepareCase, type PreparedCase } from './repo.ts';
 import { summarise } from './score.ts';
 
-export const TASKS = [...MONEY_TASKS, ...LEDGER_TASKS];
-export const CASES: VerifierCase[] = TASKS.flatMap((task) => [
+const TASKS = [...MONEY_TASKS, ...LEDGER_TASKS];
+const CASES: VerifierCase[] = TASKS.flatMap((task) => [
   { task, variant: 'wrong' as const },
   { task, variant: 'correct' as const },
 ]);
 
 export interface CaseResult {
   id: string;
-  variant: 'correct' | 'wrong';
+  variant: Variant;
   visible: boolean;
   hidden: boolean;
   jev: (VerdictReading & { inputTokens: number; costUsd: number; model: string }) | null;

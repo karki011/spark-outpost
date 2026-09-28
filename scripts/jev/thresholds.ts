@@ -11,14 +11,11 @@ export interface ThresholdRow {
   recall: number | null;
 }
 
-export const THRESHOLDS = [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95];
+const THRESHOLDS = [0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95];
 
-export function thresholdTable(
-  samples: readonly Sample[],
-  thresholds = THRESHOLDS,
-): ThresholdRow[] {
+export function thresholdTable(samples: readonly Sample[]): ThresholdRow[] {
   const positives = samples.filter((sample) => sample.positive).length;
-  return thresholds.map((threshold) => {
+  return THRESHOLDS.map((threshold) => {
     const flagged = samples.filter((sample) => sample.score >= threshold);
     const truePositives = flagged.filter((sample) => sample.positive).length;
     return {
