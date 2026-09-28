@@ -694,11 +694,6 @@ textarea:focus-visible,.home-compose input:focus-visible,.search input:focus-vis
 .hsec-h .icon-btn{width:28px;height:28px}
 .srcb{width:20px;height:20px;border-radius:6px;display:inline-grid;place-items:center;background:var(--raise);color:var(--muted);flex-shrink:0}
 .mrow .srcb{width:18px;height:18px}
-.flag{display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:999px;font-size:12px;line-height:18px;background:color-mix(in srgb,var(--warn) 12%,var(--panel));color:var(--warn);white-space:nowrap}
-.flag.bad{background:color-mix(in srgb,var(--danger) 9%,var(--panel));color:var(--danger)}
-.flag.na{background:var(--raise);color:var(--muted)}
-.flag.ok{background:var(--accent-soft);color:var(--accent-text)}
-.why{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
 
 /* Brief card */
 .bp{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);padding:14px 16px 12px;position:relative}
@@ -745,6 +740,44 @@ textarea:focus-visible,.home-compose input:focus-visible,.search input:focus-vis
 .selw>svg{position:absolute;right:12px;top:50%;margin-top:-6px;pointer-events:none;color:var(--faint)}
 .selw select.inp{appearance:none;-webkit-appearance:none;font-size:13px;padding:6px 30px 6px 10px;cursor:pointer}
 
+/* Attention feed: the same lean rows as the Tickets inbox. One line: glyph, key, title, one plain reason, compact age.
+   The action shows on hover or focus as a ghost button. */
+.lrows{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);overflow:hidden}
+.lrow{position:relative;border-bottom:1px solid var(--line);--row-bg:var(--panel);background:var(--row-bg);transition:background .15s}
+.lrow:last-child{border-bottom:0}
+.lrow:hover,.lrow:focus-within{--row-bg:var(--raise)}
+.lr-main{width:100%;min-height:42px;display:grid;grid-template-columns:16px 66px minmax(0,1fr) auto 34px;align-items:center;column-gap:10px;padding:0 16px 0 14px;text-align:left;font-size:14px}
+.lr-main:focus-visible{outline:2px solid var(--accent-text);outline-offset:-2px;border-radius:0}
+.lr-main .t{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr-main .t.wide{grid-column:2/4}
+.lr-main .kglyph{color:var(--muted);display:grid;place-items:center}
+.why-r{display:inline-flex;align-items:center;gap:6px;min-width:0;justify-content:flex-end;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.why-r .txt{overflow:hidden;text-overflow:ellipsis}
+.sev{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:transparent}
+.sev.warn{background:var(--warn)}
+.sev.bad{background:var(--danger)}
+.more{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
+.syncw{display:inline-grid;place-items:center;color:var(--danger)}
+.lr-main .age{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.lr-acts{position:absolute;right:12px;top:0;bottom:0;display:flex;align-items:center;padding-left:12px;background:var(--row-bg);opacity:0;pointer-events:none;transition:opacity .12s}
+.lrow:hover .lr-acts,.lrow:focus-within .lr-acts{opacity:1;pointer-events:auto}
+.lrow:hover .lr-main>.why-r,.lrow:hover .lr-main>.age,.lrow:focus-within .lr-main>.why-r,.lrow:focus-within .lr-main>.age{visibility:hidden}
+.qa{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:var(--r-sm);border:1px solid transparent;background:transparent;font-size:12.5px;font-weight:500;white-space:nowrap;transition:background .15s}
+.qa:hover{background:color-mix(in srgb,var(--text) 7%,transparent)}
+.qa.primary{color:var(--accent-text);border-color:color-mix(in srgb,var(--accent-text) 45%,transparent);font-weight:600}
+.qa.primary:hover{background:var(--accent-soft)}
+.bi .why-r{justify-content:flex-start;margin-top:2px}
+.tipw{position:relative;display:inline-flex;font-size:12.5px;font-weight:400}
+.info{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:var(--faint)}
+.info:hover{color:var(--text);background:var(--raise)}
+.tip{position:absolute;left:50%;top:calc(100% + 4px);transform:translateX(-50%);z-index:9;width:max-content;max-width:280px;padding:6px 10px;border-radius:var(--r-sm);background:var(--text);color:var(--panel);line-height:1.4;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s}
+.tipw:hover .tip,.info:focus-visible+.tip{opacity:1;visibility:visible;pointer-events:auto}
+.tipw.hush .tip{opacity:0!important;visibility:hidden!important}
+@media (max-width:640px){
+  .lr-main{grid-template-columns:16px 58px minmax(0,1fr) 34px;grid-template-areas:"g key t age" ". why why why";row-gap:2px;padding:8px 12px}
+  .lr-main .kglyph,.lr-main .pri{grid-area:g}.lr-main .tk-key{grid-area:key}.lr-main .t{grid-area:t}.lr-main .t.wide{grid-column:2/4;grid-area:auto}.lr-main .age{grid-area:age}
+  .lr-main .why-r{grid-area:why;justify-content:flex-start}
+}
 /* Attention feed */
 .fchips{display:flex;gap:6px;flex-wrap:wrap}
 .fchip{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;border:1px solid var(--line);font-size:12.5px;color:var(--muted);transition:border-color .2s,background .2s,color .2s}
@@ -753,7 +786,6 @@ textarea:focus-visible,.home-compose input:focus-visible,.search input:focus-vis
 .fchip .n{color:var(--faint);font-weight:400;font-variant-numeric:tabular-nums}
 .hcard .tile{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--raise);color:var(--muted);flex-shrink:0;position:relative}
 .hcard .tile .hdot{right:-2px;bottom:-1px}
-.hc-main .why{margin-top:4px}
 .hc-main small .k{font-family:"Geist Mono",monospace;font-size:12px}
 .hcard.flagged{border-color:color-mix(in srgb,var(--warn) 40%,var(--line))}
 .hcard.bad{border-color:color-mix(in srgb,var(--danger) 40%,var(--line))}
@@ -812,7 +844,8 @@ Object.assign(P,{
   flag:'<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
   spark:'<path d="M12 3 L13.6 10.4 L21 12 L13.6 13.6 L12 21 L10.4 13.6 L3 12 L10.4 10.4 Z"/>',
   gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>',
-  home:'<path d="M3 11 12 4l9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/>'
+  home:'<path d="M3 11 12 4l9 7v8a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'
 });
 function scoutSVG(size,mood){
   const SC_BODY="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z";
@@ -839,7 +872,6 @@ function toast(msg){
 
 /* ---------- Sample data (fictional). One item per piece of work: a chat linked to a ticket shows as the ticket. ---------- */
 const SRC={linear:{name:"Linear",icon:"linear"},jira:{name:"Jira",icon:"ticket"}};
-const srcb=s=>`<span class="srcb" role="img" aria-label="${SRC[s].name}" title="${SRC[s].name}">${svg(P[SRC[s].icon],12,2)}</span>`;
 const FLAG={
   "chat-asking":{kind:"warn",rule:"A chat asked you a question."},
   "chat-error":{kind:"bad",rule:"A chat stopped with an error."},
@@ -850,14 +882,15 @@ const FLAG={
   "review-slow":{kind:"warn",rule:"In review for 3 days or more."},
   "na":{kind:"na",rule:"Spark doesn't read pull request status yet."}
 };
+/* why: [plain reason, compact age, what the age means]. more: extra reasons (shown as +N). sync: a failed tracker move (shown as a glyph). */
 const FEED=[
-  {id:"c1",kind:"chat",title:"Fix login redirect loop",where:"acme-web",flags:[["chat-asking","Waiting for your answer · 12 min"]],sub:"Asks whether to keep the legacy session cookie",go:"Answer",mood:"alert",dot:"asking",primary:true},
-  {id:"API-81",kind:"ticket",src:"jira",key:"API-81",title:"Paginate the audit export endpoint",where:"Platform API",flags:[["chat-asking","Chat is waiting for you · 20 min"],["sync-failed","Move failed in Jira"]],sub:"Its chat asks which page size to use",go:"Answer",primary:true},
-  {id:"WEB-433",kind:"ticket",src:"linear",key:"WEB-433",pri:4,title:"Session expires during long uploads",where:"Web app · Cycle 42",flags:[["high-idle","Urgent, not started · 3 days"],["due-soon","Due tomorrow"]],go:"Start"},
-  {id:"c2",kind:"chat",title:"Migrate billing tables",where:"acme-api",flags:[["chat-error","Stopped with an error · 1 h ago"]],sub:"Migration 0042 failed: column already exists",go:"See error",mood:"sad",dot:"error"},
-  {id:"API-77",kind:"pr",src:"jira",key:"API-77",pr:"acme/api#88",title:"Add Retry-After and rate limit headers",where:"Platform API",flags:[["review-slow","In review 4 days"],["na","Review status not available yet"]],go:"Open PR"},
-  {id:"ENG-1215",kind:"ticket",src:"jira",key:"ENG-1215",pri:2,title:"Write the release notes for 3.2",where:"Engineering",flags:[["due-soon","Due today · no chat yet"]],go:"Start"},
-  {id:"c3",kind:"chat",title:"Add dark mode tokens",where:"acme-web",flags:[["chat-review","Finished 2 h ago · not opened"]],sub:"Changed 6 files, all checks passed",go:"Review",mood:"happy",dot:"done"}
+  {id:"c1",kind:"chat",title:"Fix login redirect loop",flag:"chat-asking",why:["Waiting for your answer","12m","Asked 12 min ago"],go:"Answer",mood:"alert",dot:"asking",primary:true},
+  {id:"API-81",kind:"ticket",src:"jira",key:"API-81",pri:3,title:"Paginate the audit export endpoint",flag:"chat-asking",why:["Waiting for your answer","20m","Asked 20 min ago"],sync:"Could not move API-81 to In Progress in Jira. Details and Retry in the ticket.",go:"Answer",primary:true},
+  {id:"WEB-433",kind:"ticket",src:"linear",key:"WEB-433",pri:4,title:"Session expires during long uploads",flag:"high-idle",why:["Urgent · not started","3d","Assigned 3 days ago"],more:["Due tomorrow"],go:"Start",primary:true},
+  {id:"c2",kind:"chat",title:"Migrate billing tables",flag:"chat-error",why:["Stopped with an error","1h","Stopped 1 hour ago"],go:"See error",mood:"sad",dot:"error"},
+  {id:"API-77",kind:"pr",src:"jira",key:"API-77",pri:3,pr:"acme/api#88",title:"Add Retry-After and rate limit headers",flag:"review-slow",why:["PR #88 in review","4d","In review for 4 days"],go:"Open PR",primary:true},
+  {id:"ENG-1215",kind:"ticket",src:"jira",key:"ENG-1215",pri:2,title:"Write the release notes for 3.2",flag:"due-soon",why:["Due today","1d","Updated yesterday"],go:"Start",primary:true},
+  {id:"c3",kind:"chat",title:"Add dark mode tokens",flag:"chat-review",why:["Finished · not opened","2h","Finished 2 hours ago"],go:"Review"}
 ];
 const BRIEF={headline:"Two agents are waiting on you. Answer those first, then start WEB-433: it's urgent and due tomorrow.",
   items:[
@@ -876,10 +909,10 @@ const H={brief:"on",filter:"all",pop:false,loading:false,clear:false,noTickets:f
 const kindWord={chat:"Chats",ticket:"Tickets",pr:"PRs"};
 const priHTML=n=>n===4?`<span class="pri urgent" role="img" aria-label="Urgent priority">!</span>`:`<span class="pri${n===3?" high":""}" role="img" aria-label="${["No priority","Low","Medium","High"][n]}${n?" priority":""}">${[1,2,3].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</span>`;
 const feed=()=>H.clear?[]:FEED.filter(f=>!(H.noTickets&&f.kind!=="chat"));
-function flagChip([id,text]){const f=FLAG[id];return `<span class="flag${f.kind==="bad"?" bad":f.kind==="na"?" na":""}" title="${esc(f.rule)}">${f.kind==="na"?"":svg(f.kind==="bad"?P.warn:P.flag,11,2.2)}${esc(text)}</span>`}
-function tile(f){
-  if(f.kind==="chat")return `<span class="hblob">${scoutSVG(34,f.mood)}<i class="hdot ${f.dot}"></i></span>`;
-  return `<span class="tile">${svg(f.kind==="pr"?P.pr:P.ticket,17,1.8)}</span>`;
+function reasonHTML(f){
+  const k=FLAG[f.flag].kind,more=f.more&&f.more.length?`<span class="more" title="${esc(f.more.join("; "))}">+${f.more.length}<span class="vh"> more: ${esc(f.more.join("; "))}</span></span>`:"";
+  const sync=f.sync?`<span class="syncw" title="${esc(f.sync)}">${svg(P.warn,13,2.2)}<span class="vh">${esc(f.sync)}</span></span>`:"";
+  return `<span class="why-r"><i class="sev ${k==="bad"?"bad":"warn"}" aria-hidden="true"></i><span class="txt" title="${esc(FLAG[f.flag].rule)}">${esc(f.why[0])}</span>${more}${sync}</span>`;
 }
 
 /* ---------- Brief ---------- */
@@ -911,7 +944,7 @@ function briefHTML(){
     <div class="bp-head">${scoutSVG(28)}<p class="bp-meta">Generated 09:12 · Sonnet 5 · ~$0.01 · from ${n} flagged items</p><button class="hlink" data-act="audit">Audit</button></div>
     <p class="bp-headline">${esc(BRIEF.headline)}</p>
     <ol>${items.map(([b,f],i)=>`<li class="bi"><span class="num" aria-hidden="true">${i+1}</span><span class="kind${f.kind==="chat"?" chat":""}" role="img" aria-label="${f.kind==="pr"?"Pull request":f.kind==="chat"?"Chat":"Ticket"}">${f.kind==="chat"?scoutSVG(24,f.mood):svg(f.kind==="pr"?P.pr:P.ticket,15,1.8)}</span>
-      <div><p>${b.html}</p><div class="why" aria-label="Why">${f.flags.map(flagChip).join("")}</div></div><button class="btn sm line" data-act="go" data-v="${f.id}">${f.go}</button></li>`).join("")}</ol>
+      <div><p>${b.html}</p>${reasonHTML(f)}</div><button class="btn sm line" data-act="go" data-v="${f.id}">${f.go}</button></li>`).join("")}</ol>
     <div class="bp-foot">${svg(P.spark,13,2)}<span>The brief only orders and summarises what the rules flagged, from titles, statuses, due dates and PR numbers. It can't add items; the flags are the rules' own words. ${n-items.length} more flagged below.</span></div>
     <div class="bp-away"><button class="hlink" data-act="away" aria-expanded="${H.away}" aria-controls="awayList" style="margin-left:-6px">${H.away?"Hide":"Show"} what happened since you were away</button>
       <ul id="awayList"${H.away?"":" hidden"}>${AWAY.map(a=>`<li>${esc(a)}</li>`).join("")}</ul></div></div></section>`;
@@ -919,7 +952,8 @@ function briefHTML(){
 
 /* ---------- Attention feed (rules only, deterministic) ---------- */
 function feedHTML(){
-  const head=t=>`<div class="hsec-h"><h2 id="feedH">Needs you${t}</h2><span class="acts"><a class="hlink" href="tickets-mockup-inbox.html${location.search}">Tickets inbox</a></span></div>`;
+  const tip=H.filter==="ticket"||H.filter==="pr"?"The same slice the Tickets inbox shows under Needs attention.":"Flagged by rules; each row says why. Waiting on you first, then errors, then priority and dates.";
+  const head=t=>`<div class="hsec-h"><h2 id="feedH" style="display:flex;align-items:center;gap:4px">Needs you${t}${t?`<span class="tipw"><button class="info" type="button" aria-label="About Needs you" aria-describedby="tip-feed">${svg(P.info,14,2)}</button><span class="tip" role="tooltip" id="tip-feed">${tip}</span></span>`:""}</h2><span class="acts"><a class="hlink" href="tickets-mockup-inbox.html${location.search}">Tickets inbox</a></span></div>`;
   if(H.loading)return `<section class="hsec" aria-labelledby="feedH" aria-busy="true">${head("")}<div class="hlist">${[70,56,64,48].map(w=>`<div class="sk-card" aria-hidden="true"><span class="sk c"></span><span class="lines"><span class="sk" style="width:${w}%"></span><span class="sk" style="width:${w-20}%;height:10px"></span></span><span class="sk go"></span></div>`).join("")}</div><p class="vh" role="status">Loading chats, tickets and pull requests</p></section>`;
   const all=feed();
   if(!all.length)return `<section class="hsec" aria-labelledby="feedH">${head("")}<div class="hquiet">${I.ok}Nothing needs you right now. The rules checked 3 chats, 16 tickets and 2 pull requests.</div></section>`;
@@ -928,11 +962,10 @@ function feedHTML(){
   const chips=`<div class="fchips" role="group" aria-label="Show">${[["all","All"],["chat","Chats"],["ticket","Tickets"],["pr","PRs"]].filter(([k])=>k==="all"||counts[k]).map(([k,l])=>`<button class="fchip" data-act="filter" data-v="${k}" aria-pressed="${H.filter===k}">${l} <span class="n">${counts[k]}</span></button>`).join("")}</div>`;
   return `<section class="hsec" aria-labelledby="feedH">${head(`<span class="n">${all.length}</span>`)}
     <div style="margin:-2px 0 10px">${chips}</div>
-    <div class="hlist">${list.map(f=>{const bad=f.flags.some(x=>FLAG[x[0]].kind==="bad");
-      return `<button class="hcard ${bad?"bad":"flagged"}${f.primary?" primary":""}" data-act="go" data-v="${f.id}">${tile(f)}<span class="hc-main"><b>${f.key?`<span class="pj" style="font-family:'Geist Mono',monospace;font-size:12.5px">${f.key}</span>`:""}${esc(f.title)}</b>
-        <small>${f.src?srcb(f.src).replace('class="srcb"','class="srcb" style="width:16px;height:16px;display:inline-grid;vertical-align:-3px;margin-right:6px"'):""}<span class="pj">${esc(f.where)}</span>${f.pr?`<span class="k">${f.pr}</span> · `:""}${f.sub?esc(f.sub):""}</small>
-        <span class="why">${f.flags.map(flagChip).join("")}</span></span><span class="go">${f.go}</span></button>`}).join("")}</div>
-    ${H.noTickets?`<div class="hquiet" style="margin-top:10px">Connect Linear or Jira to add tickets and pull requests to this list.<button class="btn sm line" data-act="connect">Connect</button></div>`:`<p class="feed-note">${H.filter==="ticket"||H.filter==="pr"?"This is the same slice the Tickets inbox shows under Needs attention.":"Sorted by rule: waiting on you, then errors and failed moves, then priority and dates."}</p>`}</section>`;
+    <div class="lrows" role="list">${list.map(f=>`<div class="lrow" role="listitem"><button class="lr-main" data-act="go" data-v="${f.id}">
+      ${f.kind==="chat"?`<span class="kglyph" role="img" aria-label="Chat">${svg(P.chat,14,2)}</span><span class="t wide">${esc(f.title)}</span>`:`${priHTML(f.pri)}<span class="tk-key">${f.key}</span><span class="t">${esc(f.title)}</span>`}
+      ${reasonHTML(f)}<span class="age" title="${esc(f.why[2])}">${f.why[1]}</span></button><span class="lr-acts"><button class="qa${f.primary?" primary":""}" data-act="go" data-v="${f.id}" aria-label="${esc(f.go)} ${esc(f.key||f.title)}">${esc(f.go)}</button></span></div>`).join("")}</div>
+    ${H.noTickets?`<div class="hquiet" style="margin-top:10px">Connect Linear or Jira to add tickets and pull requests to this list.<button class="btn sm line" data-act="connect">Connect</button></div>`:""}</section>`;
 }
 function runningHTML(){
   if(H.loading)return `<section class="hsec"><div class="hsec-h"><h2>Running now</h2></div><div class="sk-card" aria-hidden="true"><span class="sk c"></span><span class="lines"><span class="sk" style="width:60%"></span><span class="sk" style="width:40%;height:10px"></span></span><span class="sk go"></span></div></section>`;
@@ -940,7 +973,7 @@ function runningHTML(){
 }
 function gridHTML(){
   const tk=H.noTickets?`<div class="hquiet">Connect Linear or Jira to see your tickets here.<button class="btn sm line" data-act="connect">Connect</button></div>`
-    :UPNEXT.map(t=>`<button class="mrow" data-act="go" data-v="${t.key}">${priHTML(t.pri)}${srcb(t.src)}<span class="k">${t.key}</span><span class="t">${esc(t.title)}</span><span class="due">${t.due}</span></button>`).join("");
+    :UPNEXT.map(t=>`<button class="mrow" data-act="go" data-v="${t.key}">${priHTML(t.pri)}<span class="k">${t.key}</span><span class="t">${esc(t.title)}</span><span class="due">${t.due}</span></button>`).join("");
   return `<div class="hgrid"><section class="hsec"><div class="hsec-h"><h2>Up next</h2>${H.noTickets?"":`<a class="hlink" href="tickets-mockup-inbox.html${location.search}">View all</a>`}</div>${H.loading?[60,72,54].map(w=>`<div class="mrow" aria-hidden="true"><span class="sk" style="width:${w}%"></span></div>`).join(""):tk}</section>
     <section class="hsec"><div class="hsec-h"><h2>Recent chats</h2><button class="hlink" data-act="chats">View all</button></div>${H.loading?[66,50,58].map(w=>`<div class="mrow" aria-hidden="true"><span class="sk" style="width:${w}%"></span></div>`).join(""):RECENT.map(([t,p])=>`<button class="mrow" data-act="chats">${svg(P.folder,14,1.8)}<span class="t">${esc(t)}</span><span class="pj" style="margin:0">${esc(p)}</span></button>`).join("")}</section></div>`;
 }
@@ -1009,7 +1042,11 @@ document.addEventListener("click",e=>{
   if(a==="connect"){location.href="tickets-mockup-inbox.html"+location.search+"#connect";return}
   if(a==="go"){const f=FEED.find(x=>x.id===v);toast(f?`This would ${f.go.toLowerCase()} for ${f.key||f.title}.`:`This would open ${v}.`);return}
 });
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&H.pop){H.pop=false;render();const p=document.querySelector('[data-act="pop"]');if(p)p.focus()}});
+document.addEventListener("keydown",e=>{const ae=document.activeElement;
+  if(e.key==="Escape"&&ae&&ae.classList.contains("info")){const w=ae.closest(".tipw");w.classList.add("hush");ae.addEventListener("blur",()=>w.classList.remove("hush"),{once:true});w.addEventListener("mouseleave",()=>w.classList.remove("hush"),{once:true});return}
+  /* Arrow keys move between rows of the Needs you list */
+  if(ae&&ae.classList.contains("lr-main")&&["ArrowDown","ArrowUp"].includes(e.key)){const rows=[...document.querySelectorAll(".lr-main")],nx=rows[rows.indexOf(ae)+(e.key==="ArrowDown"?1:-1)];e.preventDefault();if(nx)nx.focus();return}
+  if(e.key==="Escape"&&H.pop){H.pop=false;render();const p=document.querySelector('[data-act="pop"]');if(p)p.focus()}});
 addEventListener("hashchange",route);addEventListener("resize",moveRailInd);
 route();
 })();
