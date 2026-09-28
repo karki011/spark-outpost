@@ -2,6 +2,8 @@ import { rm } from 'node:fs/promises';
 import { relative, isAbsolute } from 'node:path';
 import type { AgentCommand } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
+import { isCancelRequested } from '../persistence/run-events.ts';
+import { runChanges } from '../projects/run-changes.ts';
 import {
   closeProviderSession,
   evictBeyondLimit,
@@ -15,9 +17,11 @@ import {
 } from '../persistence/provider-sessions.ts';
 import { recordSessionCommands, sessionCommands } from '../persistence/session-commands.ts';
 import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
+import type { StopReason } from './agent-turn.ts';
 import type { RunInput } from './run-input.ts';
 import {
   RESUME_REASONS,
+  STOPPED_REPLY,
   SESSION_IDLE_MS,
   SESSION_OPEN_LIMIT,
   SESSION_WORKDIR_ROOT,
@@ -26,6 +30,7 @@ import {
   replyHash,
   sessionWorkdir,
   settingsHash,
+  stoppedFollowUp,
 } from './session-decision.ts';
 
 export type SessionOutput = Extract<ProviderOutput, { kind: 'session' }>;
@@ -36,7 +41,14 @@ export interface TurnSession {
   started(output: SessionOutput): Promise<void>;
   commands(commands: readonly AgentCommand[]): Promise<void>;
   usage(output: UsageOutput): UsageOutput;
-  finished(result: { outcome: string; messageId: string | null; text: string }): Promise<void>;
+  finished(result: TurnEnd): Promise<void>;
+}
+
+export interface TurnEnd {
+  outcome: string;
+  messageId: string | null;
+  text: string;
+  stopReason?: StopReason | null;
 }
 
 export const DEFAULT_SWEEP_LIMITS: SweepLimits = {
@@ -84,6 +96,13 @@ export async function prepareTurnSession(
     decision.resume && commands.length > 0
       ? { ...decision.resume, commands: commands.map((command) => command.name) }
       : decision.resume;
+  const followUp =
+    decision.resume && decision.stopped
+      ? stoppedFollowUp(
+          input.followUp ?? input.prompt,
+          await stoppedChanges(db, input, chatTurn ? null : resumeKey),
+        )
+      : input.followUp;
   let rowId: string | null = null;
   let costBaseline = 0;
   let reportedCost: number | null = null;
@@ -92,7 +111,7 @@ export async function prepareTurnSession(
       workdir,
       resume,
       freshReason: decision.freshReason,
-      ...(input.followUp ? { followUp: input.followUp } : {}),
+      ...(followUp ? { followUp } : {}),
     },
     async started(output) {
       costBaseline = output.continued ? (stored?.reportedCostUsd ?? 0) : 0;
@@ -125,6 +144,14 @@ export async function prepareTurnSession(
     },
     async finished(result) {
       if (!rowId) return;
+      if (await resumableStop(db, input, result)) {
+        await finishProviderSession(db, rowId, {
+          lastMessageId: chatTurn ? result.messageId : null,
+          replyHash: STOPPED_REPLY,
+          reportedCostUsd: reportedCost,
+        });
+        return;
+      }
       if (result.outcome !== 'succeeded' || (chatTurn && !result.messageId)) {
         await closeProviderSession(db, rowId, RESUME_REASONS.unfinished);
         return;
@@ -136,6 +163,30 @@ export async function prepareTurnSession(
       });
     },
   };
+}
+
+async function resumableStop(db: Db, input: RunInput, result: TurnEnd): Promise<boolean> {
+  if (result.outcome !== 'cancelled' || result.stopReason !== 'cancelled') return false;
+  if (input.parentRunId === null) return result.messageId !== null;
+  return isCancelRequested(db, input.parentRunId);
+}
+
+async function stoppedChanges(
+  db: Db,
+  input: RunInput,
+  resumeKey: string | null,
+): Promise<string[]> {
+  const scope = resumeKey ? "route->>'resumeKey' = $3" : 'parent_run_id IS NULL';
+  const { rows } = await db.query<{ owner: string; status: string }>(
+    `SELECT COALESCE(parent_run_id, id) AS owner, status FROM runs
+     WHERE conversation_id = $1 AND id <> $2 AND ${scope}
+     ORDER BY created_at DESC, id DESC LIMIT 1`,
+    [input.identity.threadId, input.identity.runId, ...(resumeKey ? [resumeKey] : [])],
+  );
+  const stopped = rows[0];
+  if (stopped?.status !== 'cancelled') return [];
+  const changes = await runChanges(db, input.workspaceId, stopped.owner, true).catch(() => null);
+  return changes?.files.map((file) => file.path) ?? [];
 }
 
 function insideWorkdirRoot(path: string): boolean {
