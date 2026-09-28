@@ -14,7 +14,11 @@ import { filesAtK, toLabel } from '../../apps/server/src/routing/labels.ts';
 import { REQUESTS } from '../codescan/requests.ts';
 import { Api, sendApiTurn, sleep } from '../e2e-live/api-driver.ts';
 import { seedWorkspace, setConnections } from '../e2e-live/seed.ts';
-import { API_TOKEN_ENV, API_TOKEN_HEADER } from '../../packages/contracts/src/index.ts';
+import {
+  API_TOKEN_ENV,
+  API_TOKEN_HEADER,
+  modeForLegacy,
+} from '../../packages/contracts/src/index.ts';
 import { answers, startProcess, stopProcess, waitFor } from '../e2e-live/stack.ts';
 
 const { values } = parseArgs({
@@ -164,7 +168,7 @@ async function main() {
       await client.call('PATCH', `/conversations/${conversationId}/settings`, {
         projectIds: [projectId],
         provider: 'claude',
-        permission: 'do',
+        agentMode: modeForLegacy('claude', 'do', 'full-auto'),
         level: 'full-auto',
         routing: 'auto',
         model: values.model,

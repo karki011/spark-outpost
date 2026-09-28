@@ -13,6 +13,7 @@ import { STOPPED_NOTE } from '../src/workflow/session-decision.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { CLAUDE_MODELS, connectProviders } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
+import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 let t: TestDb;
 let worker: Worker;
@@ -20,7 +21,7 @@ let store: string;
 
 function fakeClaude(): Provider {
   return createAcpProvider({
-    definition: { ...agentDefinitions.claude, conversationMode: 'read-only' },
+    definition: { ...agentDefinitions.claude, ...FAKE_AGENT_MODES },
     launch: {
       command: process.execPath,
       args: [

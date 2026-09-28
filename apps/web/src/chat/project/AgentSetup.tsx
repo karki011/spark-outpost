@@ -4,7 +4,8 @@ import type { Project } from '@spark-outpost/contracts';
 import { SlidersIcon } from '../../ui/icons.tsx';
 import { usePopover } from '../../ui/use-popover.ts';
 import { EverydayCards, HooksCard, IgnoredCard, McpCard } from './AgentSetupCards.tsx';
-import { needsAttention } from './agent-setup.ts';
+import { needsAttention, trustPrompt } from './agent-setup.ts';
+import { AllowRulesCard, RedirectsCard, TrustCard } from './TrustCards.tsx';
 import { useAgentConfig, useAgentConfigChange } from './use-agent-config.ts';
 
 const FOCUSABLE =
@@ -64,9 +65,12 @@ function RepoSetup({ project }: { project: Project }) {
           {warning}
         </p>
       ))}
+      <TrustCard {...props} />
       <EverydayCards {...props} />
       <HooksCard {...props} />
+      <AllowRulesCard config={config.data} />
       <McpCard {...props} />
+      <RedirectsCard {...props} />
       <IgnoredCard config={config.data} />
     </div>
   );
@@ -74,7 +78,7 @@ function RepoSetup({ project }: { project: Project }) {
 
 export function AgentSetup({ repos }: { repos: Project[] }) {
   const popover = usePopover<HTMLButtonElement, HTMLDivElement>();
-  const { open, toggle, anchorRef, panelRef } = popover;
+  const { open, toggle, setOpen, anchorRef, panelRef } = popover;
   const panelId = useId();
   const titleId = useId();
   const primary = repos[0]!;
@@ -82,10 +86,20 @@ export function AgentSetup({ repos }: { repos: Project[] }) {
   const shown = repos.find((repo) => repo.id === chosenId) ?? primary;
   const config = useAgentConfig(primary.id);
   const attention = config.data ? needsAttention(config.data) : false;
+  const prompt = config.data ? trustPrompt(config.data) : null;
   useFocusTrap(panelRef, open);
+  const openForPrimary = () => {
+    setChosenId(primary.id);
+    setOpen(true);
+  };
 
   return (
     <>
+      {prompt && !open && (
+        <button type="button" className="ctx-trust" onClick={openForPrimary}>
+          {prompt === 'changed' ? 'Folder setup changed' : 'Trust this folder?'}
+        </button>
+      )}
       <button
         ref={anchorRef}
         type="button"

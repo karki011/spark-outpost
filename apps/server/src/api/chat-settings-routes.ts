@@ -40,7 +40,13 @@ async function sessionShape(client: DbClient, id: string) {
     [id],
   );
   return {
-    settings: JSON.stringify({ ...settings, level: null }),
+    settings: JSON.stringify({
+      ...settings,
+      level: null,
+      agentMode: null,
+      options: null,
+      permission: settings.permission,
+    }),
     repos: rows.map((row) => row.project_id).join(),
   };
 }
@@ -51,6 +57,23 @@ function changeReason(
 ): string | null {
   if (before.repos !== after.repos) return SESSION_CLOSE_REASONS.repos;
   return before.settings === after.settings ? null : SESSION_CLOSE_REASONS.settings;
+}
+
+async function requestModeChange(
+  client: DbClient,
+  conversationId: string,
+  provider: string,
+  mode: string,
+): Promise<void> {
+  await client.query(
+    `UPDATE runs SET
+       agent_mode = CASE WHEN status = 'queued' THEN $3 ELSE agent_mode END,
+       requested_mode = CASE WHEN status = 'queued' THEN requested_mode ELSE $3 END
+     WHERE conversation_id = $1 AND provider = $2 AND mode = 'do'
+       AND status IN ('queued', 'running', 'awaiting_approval')
+       AND (role IS NULL OR role = 'builder')`,
+    [conversationId, provider, mode],
+  );
 }
 
 function conversationId(req: Request): string {
@@ -78,6 +101,9 @@ export function chatSettingsRoutes({ db, workspaceId, probeCapabilities }: ChatS
           : await updateChatSettings(client, id, update);
       const reason = changeReason(before, await sessionShape(client, id));
       if (reason) await closeConversationSessions(client, workspaceId, id, reason);
+      if (update.agentMode && saved.provider && saved.agentMode) {
+        await requestModeChange(client, id, saved.provider, saved.agentMode);
+      }
       return saved;
     });
     res.json(settings);

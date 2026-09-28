@@ -70,6 +70,70 @@ export const agentConfigSettingsSchema = z.object({
 });
 export type AgentConfigSettings = z.infer<typeof agentConfigSettingsSchema>;
 
+export const trustChangeSchema = z.object({
+  change: z.enum(['added', 'removed', 'changed']),
+  kind: z.enum(['hook', 'allow', 'mcp']),
+  label: z.string(),
+});
+export type TrustChange = z.infer<typeof trustChangeSchema>;
+
+export const folderTrustStateSchema = z.enum(['unset', 'not_trusted', 'trusted', 'changed']);
+export type FolderTrustState = z.infer<typeof folderTrustStateSchema>;
+
+export const redirectsStateSchema = z.enum(['none', 'off', 'on', 'changed']);
+export type RedirectsState = z.infer<typeof redirectsStateSchema>;
+
+export const folderTrustSchema = z.object({
+  needed: z.boolean(),
+  state: folderTrustStateSchema,
+  fingerprint: z.string(),
+  decidedAt: z.string().nullable(),
+  changes: z.array(trustChangeSchema),
+  redirects: redirectsStateSchema,
+  redirectsFingerprint: z.string().nullable(),
+});
+export type FolderTrust = z.infer<typeof folderTrustSchema>;
+
+export const repoAllowRuleSchema = z.object({
+  rule: z.string(),
+  source: z.string(),
+  applied: z.boolean(),
+  reason: z.string().nullable(),
+});
+export type RepoAllowRule = z.infer<typeof repoAllowRuleSchema>;
+
+export const repoRedirectSchema = z.object({
+  kind: z.enum(['env', 'command']),
+  name: z.string(),
+  value: z.string().nullable(),
+  source: z.string(),
+});
+export type RepoRedirect = z.infer<typeof repoRedirectSchema>;
+
+export const updateTrustRequestSchema = z.discriminatedUnion('trusted', [
+  z.object({ trusted: z.literal(true), fingerprint: z.string().max(128) }),
+  z.object({ trusted: z.literal(false) }),
+]);
+export type UpdateTrustRequest = z.infer<typeof updateTrustRequestSchema>;
+
+export const updateRedirectsRequestSchema = z
+  .object({
+    confirmed: z.boolean(),
+    fingerprint: z.string().max(128).optional(),
+  })
+  .refine((body) => !body.confirmed || body.fingerprint !== undefined, {
+    message: 'Using these settings needs the fingerprint of the list you reviewed.',
+  });
+export type UpdateRedirectsRequest = z.infer<typeof updateRedirectsRequestSchema>;
+
+export const projectTrustSchema = z.object({
+  projectId: z.uuid(),
+  trusted: z.boolean(),
+  decidedAt: z.string(),
+  redirectsConfirmed: z.boolean(),
+});
+export type ProjectTrust = z.infer<typeof projectTrustSchema>;
+
 export const repoAgentConfigSchema = z.object({
   projectId: z.uuid(),
   rootPath: z.string(),
@@ -81,6 +145,9 @@ export const repoAgentConfigSchema = z.object({
   hooks: z.array(repoHookSchema),
   hooksFingerprint: z.string().nullable(),
   mcpServers: z.array(repoMcpServerSchema),
+  allowRules: z.array(repoAllowRuleSchema),
+  redirects: z.array(repoRedirectSchema),
+  trust: folderTrustSchema,
   ignored: z.array(ignoredSettingSchema),
   warnings: z.array(z.string()),
 });

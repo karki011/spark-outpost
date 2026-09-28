@@ -163,7 +163,9 @@ function checkGate(s: Session, target: CheckTarget, timedOut: () => void) {
   return createApprovalGate({
     db: s.deps.db,
     runId: s.lease.runId,
-    level: s.input.level,
+    provider: s.input.provider,
+    mode: s.input.agentMode,
+    ...(s.input.level === 'full-auto' ? { posture: 'full_access' as const } : {}),
     append: s.append,
     waiters: s.deps.approvalWaiters ?? new ApprovalWaiters(),
     ...(s.deps.approvalPollMs === undefined ? {} : { pollMs: s.deps.approvalPollMs }),

@@ -56,7 +56,7 @@ export async function agentSettingsFor(
   return new Map(projectIds.map((id) => [id, toSettings(byProject.get(id))]));
 }
 
-async function audit(
+export async function audit(
   db: Queryable,
   workspaceId: string,
   projectId: string,

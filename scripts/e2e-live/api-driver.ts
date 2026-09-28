@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   API_TOKEN_HEADER,
+  modeForLegacy,
   type Approval,
   type BuildStyle,
 } from '../../packages/contracts/src/index.ts';
@@ -114,7 +115,7 @@ export function chatSettings(setup: HarnessSetup) {
   if (!pinned && setup.chatModel) {
     return {
       provider: setup.provider,
-      permission: 'do',
+      agentMode: modeForLegacy(setup.provider, 'do', setup.level),
       level: setup.level,
       routing: 'auto',
       model: setup.chatModel,
@@ -122,7 +123,7 @@ export function chatSettings(setup: HarnessSetup) {
   }
   return {
     provider: setup.provider,
-    permission: 'do',
+    agentMode: modeForLegacy(setup.provider, 'do', setup.level),
     level: setup.level,
     routing: pinned ? 'pinned' : 'auto',
     ...(pinned ? { model: setup.model } : {}),

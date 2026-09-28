@@ -1,4 +1,4 @@
-import { checkpointKindSchema } from '@spark-outpost/contracts';
+import { checkpointKindSchema, translateMode, type ConfigValues } from '@spark-outpost/contracts';
 import type {
   AgentRole,
   CheckpointKind,
@@ -154,13 +154,20 @@ export async function insertChildRun(
   const jobId = newId();
   const token = newId();
   await withTransaction(db, async (client) => {
+    const parent = await client.query<{
+      provider: string;
+      agent_mode: string | null;
+      config_values: ConfigValues;
+    }>('SELECT provider, agent_mode, config_values FROM runs WHERE id = $1', [child.parentRunId]);
+    const from = parent.rows[0];
+    const sameAgent = from?.provider === child.provider;
     await client.query(
       `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
          task_id, plan_version, mode, level, parent_run_id, role, step_index, attempt,
-         agent_label, prompt, route)
+         agent_label, prompt, route, agent_mode, config_values)
        SELECT $1, p.conversation_id, p.user_message_id, $3, $4, $5, 'queued', p.task_id,
          (SELECT MAX(version) FROM run_artifacts a WHERE a.task_id = p.task_id AND a.kind = 'plan'),
-         $6, p.level, p.id, $7, $8, $9, $10, $11, $12
+         $6, p.level, p.id, $7, $8, $9, $10, $11, $12, $13, $14
        FROM runs p WHERE p.id = $2`,
       [
         runId,
@@ -175,6 +182,8 @@ export async function insertChildRun(
         child.agentLabel,
         child.prompt,
         JSON.stringify(child.route),
+        from ? translateMode(from.provider, from.agent_mode, child.provider) : null,
+        JSON.stringify(sameAgent ? from.config_values : {}),
       ],
     );
     await client.query(

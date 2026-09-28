@@ -2,10 +2,10 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { InvolvementLevel } from '@spark-outpost/contracts';
+import type { ModePosture } from '@spark-outpost/contracts';
 import { createAcpProvider, primaryOnlyNote } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
-import { decide, type ApprovalRequest } from '../src/approvals/decide.ts';
+import { decide, NO_RUN_RULES, type ApprovalRequest } from '../src/approvals/decide.ts';
 import type { GateAnswer, PermissionGate, ProviderOutput } from '../src/providers/provider.ts';
 
 const launch = {
@@ -40,7 +40,7 @@ interface Reviewed {
   verdict: string;
 }
 
-function levelGate(level: InvolvementLevel, userAllows = true) {
+function levelGate(level: ModePosture, userAllows = true) {
   const reviewed: Reviewed[] = [];
   const pick = (request: ApprovalRequest, allowed: boolean): GateAnswer => {
     const kind = allowed ? 'allow_once' : 'reject_once';
@@ -54,7 +54,7 @@ function levelGate(level: InvolvementLevel, userAllows = true) {
   };
   const stub: PermissionGate = {
     review: async (request) => {
-      const decision = decide(level, request, [], []);
+      const decision = decide(level, request, NO_RUN_RULES, []);
       reviewed.push({ request, verdict: decision.verdict });
       if (decision.verdict === 'allow') return pick(request, true);
       if (decision.verdict === 'reject') return pick(request, false);
@@ -95,35 +95,38 @@ const SCRIPT =
 
 describe('Codex Do through the fake agent', () => {
   it('switches to the ask-every-action mode before prompting', async () => {
-    const { stub } = levelGate('balanced');
+    const { stub } = levelGate('asks');
     const result = await run('#codex ls', stub);
     expect(result.error).toBeNull();
     expect(result.settings).toMatchObject({ mode: 'ask-every-action' });
   });
 
   it.each([
-    ['balanced', ['allow', 'allow', 'ask', 'ask', 'ask', 'ask']],
-    ['hands-off', ['allow', 'allow', 'allow', 'ask', 'ask', 'ask']],
-    ['full-auto', ['allow', 'allow', 'allow', 'allow', 'ask', 'ask']],
-  ] as const)('sends every action to the gate at %s', async (level, verdicts) => {
-    const { stub, reviewed } = levelGate(level);
-    const result = await run(SCRIPT, stub);
-    expect(result.error).toBeNull();
-    expect(reviewed.map((entry) => entry.verdict)).toEqual(verdicts);
-    expect(reviewed.map((entry) => entry.request.kind)).toEqual([
-      'execute',
-      'execute',
-      'edit',
-      'execute',
-      'execute',
-      'execute',
-    ]);
-    expect(result.text).toContain('[ls -la=allow_once]');
-    expect(result.text).toContain('[pnpm add left-pad=allow_once]');
-  });
+    ['asks', ['allow', 'allow', 'ask', 'ask', 'ask', 'ask']],
+    ['edits', ['allow', 'allow', 'allow', 'ask', 'ask', 'ask']],
+    ['full_access', ['allow', 'allow', 'allow', 'allow', 'ask', 'ask']],
+  ] as const)(
+    'sends every action to the gate in a mode with the %s posture',
+    async (level, verdicts) => {
+      const { stub, reviewed } = levelGate(level);
+      const result = await run(SCRIPT, stub);
+      expect(result.error).toBeNull();
+      expect(reviewed.map((entry) => entry.verdict)).toEqual(verdicts);
+      expect(reviewed.map((entry) => entry.request.kind)).toEqual([
+        'execute',
+        'execute',
+        'edit',
+        'execute',
+        'execute',
+        'execute',
+      ]);
+      expect(result.text).toContain('[ls -la=allow_once]');
+      expect(result.text).toContain('[pnpm add left-pad=allow_once]');
+    },
+  );
 
   it('counts each approved action once toward the tool-call budget', async () => {
-    const { stub, reviewed } = levelGate('balanced');
+    const { stub, reviewed } = levelGate('asks');
     const result = await run(SCRIPT, stub);
     expect(reviewed).toHaveLength(6);
     expect(result.toolSteps).toBe(6);
@@ -131,13 +134,13 @@ describe('Codex Do through the fake agent', () => {
   });
 
   it('counts cached input as input, as Codex reports it apart', async () => {
-    const { stub } = levelGate('balanced');
+    const { stub } = levelGate('asks');
     const result = await run('#codex ls', stub);
     expect(result.tokens).toMatchObject({ tokens: { input: 220, cachedRead: 100, output: 60 } });
   });
 
   it('declines with the option that lets Codex continue', async () => {
-    const { stub, reviewed } = levelGate('balanced', false);
+    const { stub, reviewed } = levelGate('asks', false);
     const result = await run('#codex echo hi > a.txt;;patch b.txt;;make build', stub);
     expect(result.error).toBeNull();
     expect(reviewed).toHaveLength(3);
@@ -147,7 +150,7 @@ describe('Codex Do through the fake agent', () => {
   });
 
   it('opens only the primary repo and says so', async () => {
-    const { stub, reviewed } = levelGate('balanced');
+    const { stub, reviewed } = levelGate('asks');
     const result = await run('#codex ls;;cat ../lib/x.txt', stub, [root, other]);
     expect(result.steps).toContain(primaryOnlyNote(agentDefinitions.codex, root));
     expect(reviewed[0]!.request.roots.map((entry) => entry.path)).toEqual([root]);

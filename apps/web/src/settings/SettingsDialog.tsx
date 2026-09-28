@@ -13,10 +13,11 @@ import { ShipFailingChecksSetting } from './ShipFailingChecksSetting.tsx';
 import { JevDiffsSetting } from './JevDiffsSetting.tsx';
 import { CompanionSetting } from './CompanionSetting.tsx';
 import { ProfileSection } from './ProfileSection.tsx';
+import { ProjectsSection } from './ProjectsSection.tsx';
 import '../onboarding/tools.css';
 import './settings.css';
 
-export type SettingsSection = 'profile' | 'ai' | 'models' | 'usage' | 'tools' | 'look';
+export type SettingsSection = 'profile' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'look';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   {
@@ -48,6 +49,11 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
     id: 'usage',
     label: 'Usage',
     icon: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+  },
+  {
+    id: 'projects',
+    label: 'Projects',
+    icon: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />,
   },
   {
     id: 'tools',
@@ -202,6 +208,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                 )}
                 {section === 'models' && <ModelsSection />}
                 {section === 'usage' && <UsageSection />}
+                {section === 'projects' && <ProjectsSection />}
                 {section === 'tools' && (
                   <>
                     <p className="lede">

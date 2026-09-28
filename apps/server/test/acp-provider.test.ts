@@ -14,11 +14,12 @@ import {
   type ProviderOutput,
   type TurnAttachment,
 } from '../src/providers/provider.ts';
+import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 const definition: AgentDefinition = {
   ...agentDefinitions.codex,
   name: 'Fake',
-  conversationMode: 'read-only',
+  ...FAKE_AGENT_MODES,
 };
 const launch = {
   command: process.execPath,
@@ -353,6 +354,7 @@ describe('ACP protocol audit against the fake agent', { timeout: 20_000 }, () =>
       model: 'smart-2',
       effort: 'high',
       mode: 'read-only',
+      options: {},
     });
   });
 

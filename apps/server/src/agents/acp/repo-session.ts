@@ -3,6 +3,7 @@ import { followedFiles, instructionsPrompt, isAgentsMd } from '../../agent-confi
 import type { RepoLaunch } from '../../agent-config/launch.ts';
 import { expandReferences, type McpServerConfig } from '../../agent-config/mcp-json.ts';
 import { pluginFiles, pluginName, writePluginDir } from '../../agent-config/plugin-dir.ts';
+import type { RedirectSettings } from '../../agent-config/redirects.ts';
 import type { HooksConfig } from '../../agent-config/settings-files.ts';
 import { childEnvironment } from '../../setup/environment.ts';
 
@@ -15,6 +16,8 @@ export interface ClaudeRepoOptions {
   mcpNames: string[];
   skillTool: boolean;
   agentTool: boolean;
+  allowRules?: readonly string[];
+  redirects?: RedirectSettings | null;
 }
 
 export interface CodexRepoOptions {
@@ -60,6 +63,21 @@ export function namedMcpServers(launch: RepoLaunch): NamedMcpServer[] {
   return named;
 }
 
+function mergedAllowRules(launch: RepoLaunch): string[] {
+  return [...new Set(launch.flatMap((root) => root.allowRules))];
+}
+
+function mergedRedirects(launch: RepoLaunch): RedirectSettings | null {
+  const confirmed = launch.flatMap((root) => (root.redirects ? [root.redirects] : []));
+  if (confirmed.length === 0) return null;
+  const merged: RedirectSettings = { env: {}, commands: {} };
+  for (const redirects of confirmed.reverse()) {
+    Object.assign(merged.env, redirects.env);
+    Object.assign(merged.commands, redirects.commands);
+  }
+  return merged;
+}
+
 async function claudePlugins(launch: RepoLaunch): Promise<string[]> {
   const taken = new Set<string>();
   const dirs: string[] = [];
@@ -84,6 +102,8 @@ async function claudeOptions(
     mcpNames: mcp.map((server) => server.name),
     skillTool: launch.some((root) => (root.skills?.length ?? 0) > 0),
     agentTool: launch.some((root) => root.subagents.length > 0),
+    allowRules: mergedAllowRules(launch),
+    redirects: mergedRedirects(launch),
   };
 }
 

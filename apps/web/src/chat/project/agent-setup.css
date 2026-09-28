@@ -199,7 +199,7 @@
   min-width: 0;
 }
 .as-changed {
-  color: var(--warn-ink);
+  color: var(--warn);
 }
 
 .as-switch {
@@ -268,4 +268,31 @@
   .as-track::after {
     transition: none;
   }
+}
+
+.ctx-trust {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--line));
+  border-radius: 999px;
+  color: var(--warn);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ctx-trust:hover {
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+}
+.ctx-trust:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ctx-trust + .ctx-setup {
+  margin-left: 4px;
+}
+.as-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
 }

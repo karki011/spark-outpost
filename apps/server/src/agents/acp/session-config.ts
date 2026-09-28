@@ -24,6 +24,24 @@ export interface Choice {
   value: string;
   name: string;
   description: string | null;
+  kind: string | null;
+  group: string | null;
+}
+
+const metaKind = (meta: unknown): string | null => {
+  const kind =
+    meta !== null && typeof meta === 'object' ? (meta as { kind?: unknown }).kind : undefined;
+  return typeof kind === 'string' ? kind : null;
+};
+
+function choiceOf(entry: SessionConfigSelectOption, group: string | null): Choice {
+  return {
+    value: entry.value,
+    name: entry.name,
+    description: entry.description ?? null,
+    kind: metaKind(entry._meta),
+    group,
+  };
 }
 
 export function choices(option: SessionConfigOption): Choice[] {
@@ -31,12 +49,8 @@ export function choices(option: SessionConfigOption): Choice[] {
   const entries: (SessionConfigSelectOption | SessionConfigSelectGroup)[] = option.options;
   return entries.flatMap((entry) =>
     'value' in entry
-      ? [{ value: entry.value, name: entry.name, description: entry.description ?? null }]
-      : entry.options.map((inner) => ({
-          value: inner.value,
-          name: inner.name,
-          description: inner.description ?? null,
-        })),
+      ? [choiceOf(entry, null)]
+      : entry.options.map((inner) => choiceOf(inner, entry.name)),
   );
 }
 

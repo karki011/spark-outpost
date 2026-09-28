@@ -1,4 +1,4 @@
-import type { InvolvementLevel, RunEvent } from '@spark-outpost/contracts';
+import type { AgentModeOption, RunEvent } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import type { AppendOptions } from '../persistence/run-events.ts';
 import { saveSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
@@ -10,8 +10,11 @@ import { ApprovalWaiters } from './approval-waiters.ts';
 export interface DoRunOptions {
   db: Db;
   runId: string;
-  level: InvolvementLevel;
+  provider: string;
+  mode: string | null;
+  modes?: readonly AgentModeOption[] | undefined;
   builder?: boolean | undefined;
+  extraAllowlist?: (() => readonly string[]) | undefined;
   projectRoots: readonly string[];
   append: (event: RunEvent, options?: AppendOptions) => Promise<number>;
   waiters?: ApprovalWaiters | undefined;
@@ -42,7 +45,10 @@ export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGat
   return createApprovalGate({
     db: options.db,
     runId: options.runId,
-    level: options.level,
+    provider: options.provider,
+    mode: options.mode,
+    ...(options.modes ? { modes: options.modes } : {}),
+    ...(options.extraAllowlist ? { extraAllowlist: options.extraAllowlist } : {}),
     builder: options.builder === true,
     append: options.append,
     waiters: options.waiters ?? new ApprovalWaiters(),

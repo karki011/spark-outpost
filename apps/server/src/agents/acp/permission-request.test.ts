@@ -26,7 +26,7 @@ const exitPlanOptions = [
 ];
 
 describe('approvalRequestFrom', () => {
-  it("carries Claude's plan and keeps only the options that leave the session's mode alone", () => {
+  it("carries Claude's plan and every option the agent offers", () => {
     const request = approvalRequestFrom(
       {
         sessionId: 's',
@@ -45,7 +45,7 @@ describe('approvalRequestFrom', () => {
       kind: 'other',
       toolKind: 'switch_mode',
       plan: '# Plan\n1. Add export',
-      options: [exitPlanOptions[2], exitPlanOptions[3]],
+      options: exitPlanOptions,
     });
   });
 

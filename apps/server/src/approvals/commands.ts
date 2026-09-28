@@ -167,9 +167,19 @@ function gitSubcommand(args: readonly string[]): { name: string; rest: string[] 
  * `git send-email`, `git remote add/set-url/…`, or a code-hosting CLI such as `gh`.
  * Builders never run these; the harness commits, pushes and opens the PR at the end.
  */
-export function publishesCode(command: string): boolean {
+const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh']);
+
+function shellScript(program: readonly string[]): string | null {
+  if (!SHELLS.has(path.basename(program[0] ?? ''))) return null;
+  const flag = program.findIndex((token, index) => index > 0 && /^-[a-z]*c[a-z]*$/.test(token));
+  return flag > 0 ? (program[flag + 1] ?? null) : null;
+}
+
+export function publishesCode(command: string, depth = 0): boolean {
   return splitSimpleCommands(command).some((tokens) => {
     const program = programTokens(tokens);
+    const script = shellScript(program);
+    if (script !== null) return depth < 3 && publishesCode(script, depth + 1);
     const name = path.basename(program[0] ?? '');
     if (HOSTING_CLIS.has(name)) return true;
     if (name !== 'git') return false;

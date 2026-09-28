@@ -1,10 +1,12 @@
 import path from 'node:path';
 import {
-  involvementLevelLabel,
+  modeKind,
+  modePosture,
+  type AgentModeOption,
+  type ModePosture,
   type Approval,
   type ApprovalOption,
   type ApprovalPayload,
-  type InvolvementLevel,
   type RunEvent,
 } from '@spark-outpost/contracts';
 import { normalizeCommand } from '../approvals/commands.ts';
@@ -13,9 +15,11 @@ import {
   decide,
   type ApprovalRequest,
   type RunRule,
+  type RunRules,
 } from '../approvals/decide.ts';
 import {
   allowedForRun,
+  rejectedForRun,
   getApproval,
   insertApproval,
   projectAllowlistForRun,
@@ -51,8 +55,12 @@ export interface PlanModeHooks {
 export interface GateDeps {
   db: Db;
   runId: string;
-  level: InvolvementLevel;
+  provider: string;
+  mode: string | null;
+  modes?: readonly AgentModeOption[];
+  posture?: ModePosture;
   builder?: boolean;
+  extraAllowlist?: () => readonly string[];
   append: (event: RunEvent, options?: AppendOptions) => Promise<number>;
   waiters: ApprovalWaiters;
   pollMs?: number;
@@ -173,9 +181,24 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     reason,
   });
 
-  const rules = async (): Promise<RunRule[]> => {
-    const allowed = await allowedForRun(deps.db, deps.runId);
-    return allowed.flatMap((approval) => toRule(approval) ?? []);
+  const rules = async (): Promise<RunRules> => {
+    const [allowed, rejected] = await Promise.all([
+      allowedForRun(deps.db, deps.runId),
+      rejectedForRun(deps.db, deps.runId),
+    ]);
+    return {
+      allow: allowed.flatMap((approval) => toRule(approval) ?? []),
+      reject: rejected.flatMap((approval) => toRule(approval) ?? []),
+    };
+  };
+
+  const modeOf = (request: ApprovalRequest) => request.mode ?? deps.mode;
+  const modeLabel = (mode: string | null) =>
+    deps.modes?.find((option) => option.id === mode)?.label ?? mode ?? 'default';
+  const postureOf = (request: ApprovalRequest) => {
+    if (deps.posture) return deps.posture;
+    const mode = modeOf(request);
+    return modePosture(deps.provider, mode, modeKind(deps.modes ?? [], mode));
   };
 
   const observe = (request: ApprovalRequest, decision: ObservedDecision) => {
@@ -320,11 +343,12 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       request.paths.length > 0 &&
       request.paths.every((target) => grants.has(target));
     if (covered) return allow(request, `Wrote ${what.replace(/^Edit /, '')}`);
-    const [runRules, allowlist] = await Promise.all([
+    const [runRules, projectAllowlist] = await Promise.all([
       rules(),
       projectAllowlistForRun(deps.db, deps.runId),
     ]);
-    const decision = decide(deps.level, request, runRules, allowlist, {
+    const allowlist = [...projectAllowlist, ...(deps.extraAllowlist?.() ?? [])];
+    const decision = decide(postureOf(request), request, runRules, allowlist, {
       builder: deps.builder === true,
     });
     if (decision.verdict === 'ask') return ask(request, decision.reason, signal);
@@ -354,7 +378,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
         ? 'on the project allowlist'
         : decision.by === 'run_rule'
           ? 'allowed for this run'
-          : `your ${involvementLevelLabel(deps.level)} setting`);
+          : `${modeLabel(modeOf(request))} mode`);
     return allow(request, `Allowed ${what} (${why})`, recorded.id);
   };
 

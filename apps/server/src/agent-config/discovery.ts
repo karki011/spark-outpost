@@ -7,7 +7,14 @@ import type { IgnoredSetting, RepoHook, RepoInstructionFile } from '@spark-outpo
 import { listProjectFiles } from '../codescan/git.ts';
 import { parseFrontmatter } from './frontmatter.ts';
 import { readMcpJson, type McpServerConfig } from './mcp-json.ts';
-import { emptySummary, preview, readSettingsFile, type HooksConfig } from './settings-files.ts';
+import type { RedirectSetting } from './redirects.ts';
+import {
+  emptySummary,
+  preview,
+  readSettingsFile,
+  type HooksConfig,
+  type SourcedAllowRule,
+} from './settings-files.ts';
 
 export interface ScannedDefinition {
   name: string;
@@ -25,6 +32,8 @@ export interface RepoScan {
   hooksConfig: HooksConfig;
   hooksFingerprint: string | null;
   mcpServers: McpServerConfig[];
+  allowRules: SourcedAllowRule[];
+  redirects: RedirectSetting[];
   ignored: IgnoredSetting[];
   warnings: string[];
 }
@@ -203,6 +212,8 @@ async function scan(root: string, stamps: Stamp[], nested: Stamp[]): Promise<Rep
     hooksConfig: settings.hooksConfig,
     hooksFingerprint: hasHooks ? fingerprintOf(settings.hooksConfig) : null,
     mcpServers: mcp.servers,
+    allowRules: settings.allowRules,
+    redirects: settings.redirects,
     ignored,
     warnings: [...settings.warnings, ...mcp.warnings],
   };

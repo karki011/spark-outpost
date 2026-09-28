@@ -1,11 +1,19 @@
 import type { IgnoredSetting, RepoHook } from '@spark-outpost/contracts';
+import { isRedirectCommand, isRedirectEnv, type RedirectSetting } from './redirects.ts';
 
 export type HookEntry = Record<string, unknown>;
 export type HooksConfig = Record<string, HookEntry[]>;
 
+export interface SourcedAllowRule {
+  rule: string;
+  source: string;
+}
+
 export interface SettingsFileSummary {
   hooks: RepoHook[];
   hooksConfig: HooksConfig;
+  allowRules: SourcedAllowRule[];
+  redirects: RedirectSetting[];
   ignored: IgnoredSetting[];
   warnings: string[];
 }
@@ -32,7 +40,7 @@ export function preview(text: string): string {
   return oneLine.length > PREVIEW_MAX ? `${oneLine.slice(0, PREVIEW_MAX - 1)}…` : oneLine;
 }
 
-function hookPreview(hook: Record<string, unknown>): string | null {
+export function hookPreview(hook: Record<string, unknown>): string | null {
   if (typeof hook.command === 'string') return preview(hook.command);
   if (typeof hook.url === 'string') return preview(`HTTP ${hook.url}`);
   if (typeof hook.prompt === 'string') return preview(`Prompt: ${hook.prompt}`);
@@ -72,12 +80,32 @@ function commandPreview(value: unknown): string {
   return 'set';
 }
 
+function allowRulesOf(settings: Record<string, unknown>): string[] {
+  const permissions = isRecord(settings.permissions) ? settings.permissions : {};
+  return Array.isArray(permissions.allow)
+    ? permissions.allow.filter((rule): rule is string => typeof rule === 'string')
+    : [];
+}
+
+function readRedirects(settings: Record<string, unknown>, source: string): RedirectSetting[] {
+  const env = isRecord(settings.env) ? settings.env : {};
+  const fromEnv = Object.entries(env).flatMap(([name, value]) =>
+    typeof value === 'string' && isRedirectEnv(name)
+      ? [{ kind: 'env' as const, name, value, source }]
+      : [],
+  );
+  const fromCommands = Object.entries(settings).flatMap(([name, value]) =>
+    typeof value === 'string' && isRedirectCommand(name)
+      ? [{ kind: 'command' as const, name, value, source }]
+      : [],
+  );
+  return [...fromEnv, ...fromCommands];
+}
+
 function readIgnored(settings: Record<string, unknown>, source: string): IgnoredSetting[] {
   const ignored: IgnoredSetting[] = [];
   const permissions = isRecord(settings.permissions) ? settings.permissions : {};
-  const allow = Array.isArray(permissions.allow)
-    ? permissions.allow.filter((rule): rule is string => typeof rule === 'string')
-    : [];
+  const allow = allowRulesOf(settings);
   if (allow.length > 0) ignored.push({ source, kind: 'allow', items: allow.map(preview) });
   if (isRecord(settings.env)) {
     const names = Object.keys(settings.env);
@@ -103,7 +131,7 @@ function readIgnored(settings: Record<string, unknown>, source: string): Ignored
 }
 
 export function emptySummary(): SettingsFileSummary {
-  return { hooks: [], hooksConfig: {}, ignored: [], warnings: [] };
+  return { hooks: [], hooksConfig: {}, allowRules: [], redirects: [], ignored: [], warnings: [] };
 }
 
 export function readSettingsFile(text: string, source: string, summary: SettingsFileSummary): void {
@@ -119,5 +147,7 @@ export function readSettingsFile(text: string, source: string, summary: Settings
     return;
   }
   readHooks(parsed.hooks, source, summary);
+  summary.allowRules.push(...allowRulesOf(parsed).map((rule) => ({ rule, source })));
+  summary.redirects.push(...readRedirects(parsed, source));
   summary.ignored.push(...readIgnored(parsed, source));
 }

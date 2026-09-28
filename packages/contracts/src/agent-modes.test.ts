@@ -1,0 +1,138 @@
+import { describe, expect, it } from 'vitest';
+import {
+  combinationLine,
+  combinationWarning,
+  defaultModeFor,
+  modeForLegacy,
+  modeNeedsWorktree,
+  modePosture,
+  permissionFor,
+  translateMode,
+} from './agent-modes.ts';
+
+describe('mode postures', () => {
+  it("knows Claude's and Codex's modes", () => {
+    expect(modePosture('claude', 'default')).toBe('asks');
+    expect(modePosture('claude', 'acceptEdits')).toBe('edits');
+    expect(modePosture('claude', 'plan')).toBe('read_only');
+    expect(modePosture('claude', 'bypassPermissions')).toBe('full_access');
+    expect(modePosture('codex', 'read-only')).toBe('read_only');
+    expect(modePosture('codex', 'ask-every-action')).toBe('asks');
+    expect(modePosture('codex', 'agent')).toBe('auto');
+    expect(modePosture('codex', 'agent-full-access')).toBe('full_access');
+  });
+
+  it("reads an unknown mode from the agent's kind, then its name", () => {
+    expect(modePosture('claude', 'yolo', 'full_access')).toBe('full_access');
+    expect(modePosture('fake', 'reviewer', 'auto_review')).toBe('auto');
+    expect(modePosture('fake', 'read-only')).toBe('read_only');
+    expect(modePosture('fake', 'custom')).toBe('unknown');
+  });
+
+  it('turns read-only modes into Ask runs and everything else into Do runs', () => {
+    expect(permissionFor('claude', 'plan')).toBe('ask');
+    expect(permissionFor('codex', 'read-only')).toBe('ask');
+    expect(permissionFor('claude', 'acceptEdits')).toBe('do');
+    expect(
+      permissionFor('fake', 'custom', [
+        { id: 'custom', label: 'C', description: null, kind: 'plan' },
+      ]),
+    ).toBe('ask');
+  });
+
+  it("starts new chats in each provider's own default mode", () => {
+    expect(defaultModeFor('claude')).toBe('default');
+    expect(defaultModeFor('codex')).toBe('agent');
+    expect(defaultModeFor('fake')).toBeNull();
+  });
+});
+
+describe('where a mode may run', () => {
+  it('keeps every Claude mode on the checkout, since the gate sees every action', () => {
+    for (const mode of ['default', 'acceptEdits', 'auto', 'bypassPermissions', 'future']) {
+      expect(modeNeedsWorktree('claude', mode)).toBe(false);
+    }
+  });
+
+  it('puts Codex modes that skip the gate, and unknown modes, in a worktree copy', () => {
+    expect(modeNeedsWorktree('codex', 'ask-every-action')).toBe(false);
+    expect(modeNeedsWorktree('codex', 'agent')).toBe(true);
+    expect(modeNeedsWorktree('codex', 'agent-full-access')).toBe(true);
+    expect(modeNeedsWorktree('codex', 'future')).toBe(true);
+    expect(modeNeedsWorktree('fake', 'custom')).toBe(true);
+    expect(modeNeedsWorktree('fake', 'read-only')).toBe(false);
+  });
+});
+
+describe('migrating the old levels', () => {
+  it.each([
+    ['claude', 'ask', null, 'plan'],
+    ['claude', 'do', 'balanced', 'default'],
+    ['claude', 'do', 'hands-off', 'acceptEdits'],
+    ['claude', 'do', 'full-auto', 'bypassPermissions'],
+    ['codex', 'ask', 'full-auto', 'read-only'],
+    ['codex', 'do', 'balanced', 'ask-every-action'],
+    ['codex', 'do', 'hands-off', 'agent'],
+    ['codex', 'do', 'full-auto', 'agent'],
+    ['zai', 'do', 'hands-off', 'acceptEdits'],
+  ] as const)('%s %s %s → %s', (provider, permission, level, mode) => {
+    expect(modeForLegacy(provider, permission, level)).toBe(mode);
+  });
+});
+
+describe('crew members on another agent', () => {
+  it('pick the closest mode of that agent', () => {
+    expect(translateMode('claude', 'acceptEdits', 'codex')).toBe('agent');
+    expect(translateMode('claude', 'default', 'codex')).toBe('ask-every-action');
+    expect(translateMode('codex', 'agent-full-access', 'claude')).toBe('bypassPermissions');
+    expect(translateMode('claude', 'default', 'claude')).toBe('default');
+    expect(translateMode('claude', 'acceptEdits', 'fake')).toBeNull();
+  });
+});
+
+describe('the one-line summary', () => {
+  const facts = { provider: 'claude', hasRepos: true } as const;
+
+  it('says what the mode and autonomy do together', () => {
+    expect(combinationLine({ ...facts, mode: 'bypassPermissions', level: 'hands-off' })).toBe(
+      "Agent won't ask · kept automatically · Revert available",
+    );
+    expect(combinationLine({ ...facts, mode: 'default', level: 'balanced' })).toBe(
+      'Agent asks before edits and commands · you review each step · Revert available',
+    );
+    expect(combinationLine({ ...facts, mode: 'plan', level: 'balanced' })).toBe(
+      'Agent only reads · nothing changes',
+    );
+    expect(
+      combinationLine({ provider: 'codex', mode: 'agent', level: 'full-auto', hasRepos: true }),
+    ).toBe(
+      'Agent decides what to ask · kept and opened as a draft PR · in a worktree copy · Revert available',
+    );
+  });
+
+  it('warns only for bypass-type modes on the real checkout and for worktree-only modes', () => {
+    expect(combinationWarning({ ...facts, mode: 'bypassPermissions', level: 'hands-off' })).toMatch(
+      /real checkout/,
+    );
+    expect(
+      combinationWarning({ ...facts, mode: 'bypassPermissions', level: 'full-auto' }),
+    ).toBeNull();
+    expect(combinationWarning({ ...facts, mode: 'acceptEdits', level: 'hands-off' })).toBeNull();
+    expect(
+      combinationWarning({
+        provider: 'codex',
+        mode: 'agent-full-access',
+        level: 'balanced',
+        hasRepos: true,
+      }),
+    ).toMatch(/worktree copy/);
+    expect(
+      combinationWarning({
+        ...facts,
+        mode: 'bypassPermissions',
+        level: 'hands-off',
+        hasRepos: false,
+      }),
+    ).toBeNull();
+  });
+});

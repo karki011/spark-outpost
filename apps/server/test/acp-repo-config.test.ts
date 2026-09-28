@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createRepoScanner, type RepoScan } from '../src/agent-config/discovery.ts';
 import { rootLaunch, type RepoLaunch } from '../src/agent-config/launch.ts';
 import { DEFAULT_AGENT_SETTINGS } from '../src/agent-config/store.ts';
+import { executableItems, trustFingerprint } from '../src/agent-config/trust.ts';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import {
   agentDefinitions,
@@ -14,6 +15,7 @@ import {
 import type { ProviderOutput, ProviderTurn } from '../src/providers/provider.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import { FIXTURE_RULE, makeConfiguredRepo } from './repo-config-fixture.ts';
+import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 const launch = {
   command: process.execPath,
@@ -22,8 +24,16 @@ const launch = {
 const env = {
   ...childEnvironment(process.env),
   FAKE_ACP_MCP_CAPABILITIES: JSON.stringify({ http: true, sse: false }),
+  FAKE_ACP_MODES: JSON.stringify(
+    ['read-only', 'default', 'plan', 'acceptEdits', 'ask-every-action', 'agent'].map((id) => [
+      id,
+      id,
+      null,
+      null,
+    ]),
+  ),
 };
-const claude: AgentDefinition = { ...agentDefinitions.claude, conversationMode: 'read-only' };
+const claude: AgentDefinition = { ...agentDefinitions.claude, ...FAKE_AGENT_MODES };
 const provider = (definition: AgentDefinition) =>
   createAcpProvider({ definition, launch, cancelGraceMs: 2_000, env });
 
@@ -146,6 +156,43 @@ describe('repo agent config reaches the agent over ACP', { timeout: 20_000 }, ()
     expect(quiet.received.meta!.claudeCode.options).not.toHaveProperty('plugins');
     expect(quiet.received.mcpServers).toEqual([]);
     expect(quiet.following).toEqual({ kind: 'instructions', files: [] });
+  });
+
+  it('loads a trusted folder’s hooks, MCP servers and floor-safe allow rules', async () => {
+    const items = executableItems(scan);
+    const trust = {
+      trusted: true,
+      fingerprint: trustFingerprint(items),
+      snapshot: items,
+      redirectsFingerprint: null,
+      decidedAt: '2026-09-28T10:00:00.000Z',
+    };
+    const repo = [await rootLaunch(scan, DEFAULT_AGENT_SETTINGS, new Map(), trust)];
+    const { received, steps } = await session(claude, repo);
+    const settings = received.meta!.claudeCode.options.settings as {
+      hooks?: Record<string, unknown>;
+      permissions: { allow?: string[]; ask?: string[] };
+    };
+    expect(Object.keys(settings.hooks ?? {})).toEqual(['SessionStart', 'PreToolUse', 'Stop']);
+    expect(settings).not.toHaveProperty('disableAllHooks');
+    expect(settings.permissions.allow).toEqual([
+      'Bash(npm test:*)',
+      'WebFetch(domain:docs.example.com)',
+    ]);
+    expect(settings.permissions.ask).toEqual(expect.arrayContaining(['mcp__echo', 'mcp__remote']));
+    expect(received.meta!.claudeCode.options.settingSources).toEqual([]);
+    expect(received.mcpServers.map((server) => server.name)).toEqual(['echo', 'remote']);
+    expect(steps).toContain("Claude can't use the SSE MCP server stream; skipped it");
+    expect(JSON.stringify(received)).not.toContain('evil.example');
+
+    const changed = { ...trust, fingerprint: 'reviewed-before-a-pull' };
+    const stale = await session(claude, [
+      await rootLaunch(scan, DEFAULT_AGENT_SETTINGS, new Map(), changed),
+    ]);
+    expect(stale.received.meta!.claudeCode.options.settings).toMatchObject({
+      disableAllHooks: true,
+    });
+    expect(stale.received.mcpServers).toEqual([]);
   });
 
   it('configures Codex through CODEX_CONFIG and ACP mcpServers', async () => {

@@ -1,6 +1,4 @@
 import {
-  PERMISSION_ASK,
-  PERMISSION_DO,
   type AdvisorId,
   type Choice,
   type ConnectionMethod,
@@ -23,9 +21,9 @@ export interface CatalogEntry {
   installCommand: string;
   loginCommand: string;
   methods: ConnectionMethod[];
-  permissions: Choice[];
   efforts: Choice[];
   defaultEffort: string;
+  doAvailable: boolean;
 }
 
 const effort = (id: string, label: string, description: string): Choice => ({
@@ -35,26 +33,6 @@ const effort = (id: string, label: string, description: string): Choice => ({
   risky: false,
   unavailableReason: null,
 });
-
-const ASK_CHOICE: Choice = {
-  id: PERMISSION_ASK,
-  label: 'Ask',
-  description: 'Reads files in linked repos, never changes them',
-  risky: false,
-  unavailableReason: null,
-};
-
-const doChoice = (unavailableReason: string | null = null): Choice => ({
-  id: PERMISSION_DO,
-  label: 'Do',
-  description: 'Edits files and runs commands: Ask before edits, Auto-edit or Full auto',
-  risky: false,
-  unavailableReason,
-});
-
-export function isSelectablePermission(entry: CatalogEntry, id: string): boolean {
-  return entry.permissions.some((choice) => choice.id === id && choice.unavailableReason === null);
-}
 
 export const catalog: readonly CatalogEntry[] = [
   {
@@ -73,7 +51,7 @@ export const catalog: readonly CatalogEntry[] = [
     installCommand: 'npm i -g @anthropic-ai/claude-code',
     loginCommand: 'claude auth login',
     methods: ['cli', 'api_key'],
-    permissions: [ASK_CHOICE, doChoice()],
+    doAvailable: true,
     efforts: [
       effort('low', 'Low', 'Quick replies, light reasoning'),
       effort('medium', 'Medium', 'Balanced for most tasks'),
@@ -97,7 +75,7 @@ export const catalog: readonly CatalogEntry[] = [
     installCommand: 'npm i -g @openai/codex',
     loginCommand: 'codex login',
     methods: ['cli', 'api_key'],
-    permissions: [ASK_CHOICE, doChoice()],
+    doAvailable: true,
     efforts: [
       effort('low', 'Low', 'Quick replies, light reasoning'),
       effort('medium', 'Medium', 'Balanced for most tasks'),
@@ -120,7 +98,7 @@ export const catalog: readonly CatalogEntry[] = [
     installCommand: '',
     loginCommand: '',
     methods: ['api_key'],
-    permissions: [ASK_CHOICE, doChoice()],
+    doAvailable: true,
     efforts: [
       effort('low', 'Low', 'Light thinking, fastest replies'),
       effort('high', 'High', 'Thinks longer on hard problems'),

@@ -1,10 +1,5 @@
 import path from 'node:path';
-import type {
-  ApprovalKind,
-  ApprovalOption,
-  FileDiff,
-  InvolvementLevel,
-} from '@spark-outpost/contracts';
+import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark-outpost/contracts';
 import { isSecretPath, refusalFor, relativeInside } from '../projects/path-policy.ts';
 import {
   allowlistCovers,
@@ -38,6 +33,7 @@ export interface ApprovalRequest {
   roots: readonly RequestRoot[];
   home: string;
   plan?: string | null;
+  mode?: string | null;
 }
 
 export type RunRule =
@@ -173,27 +169,43 @@ function isSafeReadRequest(request: ApprovalRequest): boolean {
   });
 }
 
+export const RUN_REJECTED_REASON = 'You chose to always reject this in this run';
+export const DENIES_REASON = "The agent's mode skips anything that isn't pre-approved";
+
+export interface RunRules {
+  allow: readonly RunRule[];
+  reject: readonly RunRule[];
+}
+
+export const NO_RUN_RULES: RunRules = { allow: [], reject: [] };
+
+function modeAllows(posture: ModePosture, request: ApprovalRequest): boolean {
+  if (posture === 'full_access' || posture === 'auto') return true;
+  return posture === 'edits' && request.kind === 'edit';
+}
+
 export function decide(
-  level: InvolvementLevel,
+  posture: ModePosture,
   request: ApprovalRequest,
-  runRules: readonly RunRule[],
+  runRules: RunRules,
   allowlist: readonly string[],
   options: DecideOptions = {},
 ): Decision {
   const refused = refusal(request, options);
   if (refused) return { verdict: 'reject', reason: refused };
+  if (runRules.reject.some((rule) => matchesRule(request, rule))) {
+    return { verdict: 'reject', reason: RUN_REJECTED_REASON };
+  }
   const always = alwaysAskReason(request);
   if (always) return { verdict: 'ask', reason: always };
-  if (runRules.some((rule) => matchesRule(request, rule))) {
+  if (runRules.allow.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
   }
   if (request.kind === 'other' && request.title === ENTER_PLAN_MODE_TITLE) {
     return { verdict: 'allow', by: 'level', why: ENTER_PLAN_MODE_WHY };
   }
-  if (level === 'full-auto') return { verdict: 'allow', by: 'level' };
-  if (request.kind === 'edit') {
-    return level === 'hands-off' ? { verdict: 'allow', by: 'level' } : ASK;
-  }
+  if (modeAllows(posture, request)) return { verdict: 'allow', by: 'level' };
+  if (request.kind === 'edit') return posture === 'denies' ? denied() : ASK;
   if (request.kind === 'execute') {
     if (request.command && isGitPush(request.command)) {
       const listed = allowlistCovers(allowlist, request.command);
@@ -205,7 +217,12 @@ export function decide(
       return { verdict: 'allow', by: 'level', why: SAFE_READ_WHY };
     }
     const listed = request.command !== null && allowlistCovers(allowlist, request.command);
-    return listed ? { verdict: 'allow', by: 'allowlist' } : ASK;
+    if (listed) return { verdict: 'allow', by: 'allowlist' };
+    return posture === 'denies' ? denied() : ASK;
   }
-  return ASK;
+  return posture === 'denies' ? denied() : ASK;
+}
+
+function denied(): Decision {
+  return { verdict: 'reject', reason: DENIES_REASON };
 }

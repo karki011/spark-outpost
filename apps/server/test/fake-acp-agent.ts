@@ -3,6 +3,7 @@ import * as acp from '@agentclientprotocol/sdk';
 import { PLAN_MODE_TRIGGER, currentRequest, planModeTurn, planReplies } from './fake-acp-plans.ts';
 import { roleFor } from './fake-acp-roles.ts';
 import { CODEX_DO_TRIGGER, codexDoTurn } from './fake-codex-do.ts';
+import { modeTurn } from './fake-acp-modes.ts';
 import {
   createFakeSession,
   loadSessionAdvertised,
@@ -21,11 +22,25 @@ const fakeModels = JSON.parse(
     ]),
 ) as [string, string][];
 
+const fakeModes = JSON.parse(
+  process.env.FAKE_ACP_MODES ??
+    JSON.stringify([
+      ['read-only', 'Ask first', null, null],
+      ['ask-every-action', 'Ask every time', null, null],
+      ['agent', 'Agent', null, 'auto_review'],
+      ['default', 'Manual', null, 'standard'],
+      ['acceptEdits', 'Accept edits', null, 'standard'],
+      ['plan', 'Plan', null, 'plan'],
+      ['bypassPermissions', 'Bypass permissions', null, 'full_access'],
+    ]),
+) as [string, string, string | null, string | null][];
+
 const config: Record<string, string> = {
   mode: 'agent',
   model: fakeModels[0]?.[0] ?? 'fast-1',
   effort: 'medium',
 };
+let fast = false;
 
 const select = (
   id: string,
@@ -40,18 +55,43 @@ const select = (
   options: values.map(([value, name]) => ({ value, name })),
 });
 
+const modeOption = (): acp.SessionConfigOption => ({
+  id: 'mode',
+  name: 'Mode',
+  category: 'mode',
+  type: 'select',
+  currentValue: config.mode ?? '',
+  options: fakeModes.map(([value, name, description, kind]) => ({
+    value,
+    name,
+    ...(description ? { description } : {}),
+    ...(kind ? { _meta: { kind } } : {}),
+  })),
+});
+
+const fastOption = (): acp.SessionConfigOption[] =>
+  process.env.FAKE_ACP_FAST
+    ? [
+        {
+          id: 'fast',
+          name: 'Fast mode',
+          description: 'Faster replies at a higher price',
+          category: 'model_config',
+          type: 'boolean',
+          currentValue: fast,
+        },
+      ]
+    : [];
+
 const configOptions = (): acp.SessionConfigOption[] => [
-  select('mode', 'mode', [
-    ['read-only', 'Ask first'],
-    ['ask-every-action', 'Ask every time'],
-    ['agent', 'Agent'],
-  ]),
+  modeOption(),
   select('model', 'model', fakeModels),
   select('effort', 'thought_level', [
     ['low', 'Low'],
     ['medium', 'Medium'],
     ['high', 'High'],
   ]),
+  ...fastOption(),
 ];
 
 const advertisedCommands = JSON.parse(process.env.FAKE_ACP_COMMANDS ?? '[]') as string[];
@@ -243,6 +283,8 @@ async function turn(
     );
     return 'end_turn';
   }
+  const moded = await modeTurn({ text, config, options: configOptions, update, say, signal });
+  if (moded) return moded;
   const roleTurn = { text, sessionId, cwd: sessionCwd, client, update, say, signal };
   const asked = currentRequest(params.prompt);
   if (asked.includes(PLAN_MODE_TRIGGER)) return planModeTurn(roleTurn, config.mode ?? '');
@@ -346,7 +388,10 @@ async function turn(
   await update({ sessionUpdate: 'tool_call_update', toolCallId: 'r1', status: 'completed' });
   await say('Hello');
   await say(' there', 'm1');
-  await say(`mode=${config.mode} model=${config.model} effort=${config.effort}`, 'm2');
+  await say(
+    `mode=${config.mode} model=${config.model} effort=${config.effort}${process.env.FAKE_ACP_FAST ? ` fast=${fast}` : ''}`,
+    'm2',
+  );
   await say(`\nprompt=${text}`, 'm2');
   return 'end_turn';
 }
@@ -417,11 +462,12 @@ acp
     return {};
   })
   .onRequest(acp.methods.agent.session.setConfigOption, (ctx) => {
-    const { configId, value } = ctx.params as { configId: string; value: string };
+    const { configId, value } = ctx.params as { configId: string; value: string | boolean };
     if (!configOptions().some((option) => option.id === configId)) {
       throw acp.RequestError.invalidParams({ configId }, 'Unknown config option.');
     }
-    config[configId] = value;
+    if (typeof value === 'boolean') fast = value;
+    else config[configId] = value;
     return { configOptions: configOptions() };
   })
   .onRequest(acp.methods.agent.session.prompt, async (ctx) => {

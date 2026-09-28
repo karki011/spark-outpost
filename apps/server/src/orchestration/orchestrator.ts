@@ -19,7 +19,13 @@ import { projectChecks } from '../checks/project-checks.ts';
 import { budgetUsage, checkBudget, fixRoundShort } from './budget-check.ts';
 import { correctnessFindings, sessionReviewLine, suggestionsLine } from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
-import { confirmsRiskyFirst, KEPT_BY_AUTO_EDIT, riskyChange } from './checkpoint-policy.ts';
+import {
+  confirmsRiskyFirst,
+  KEPT_AFTER_EACH_EDIT,
+  KEPT_BY_AUTO_EDIT,
+  riskyChange,
+} from './checkpoint-policy.ts';
+import { approvedEveryEdit } from '../persistence/approvals.ts';
 import { destructiveMigrationInPatch, migrationByRule } from './risk-rules.ts';
 import { ask, assume, intakeResponse } from './checkpoint-asks.ts';
 import { assumptionLine, interpretations } from './clarify.ts';
@@ -172,12 +178,13 @@ function isGreen(s: Session, files: readonly unknown[]): boolean {
 }
 
 /**
- * A destructive statement the change added to a migration when nothing flagged the work as risky
- * up front (the request read as additive). Full auto flags it in the PR body; Auto-edit asks to
- * keep.
+ * A destructive statement the change added to a migration that you didn't confirm on a risky
+ * card first: the request read as additive, or Automatic built the risky work in a worktree copy
+ * without asking. Full auto → PR flags it in the PR body; Automatic asks to keep.
  */
 async function unconfirmedRiskyMigration(s: Session): Promise<string | null> {
-  if (s.risky || s.input.mode !== 'do' || s.flow.readOnly) return null;
+  const confirmed = s.risky && confirmsRiskyFirst(s.input.level);
+  if (confirmed || s.input.mode !== 'do' || s.flow.readOnly) return null;
   const { patch } = await changesSoFar(s).catch(() => ({ patch: '' }));
   const statement = patch ? destructiveMigrationInPatch(patch) : null;
   if (statement) s.risky = `The change adds a destructive migration: ${statement}`;
@@ -305,15 +312,27 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
         () => null,
       );
       const riskyMigration = await unconfirmedRiskyMigration(s);
+      const approvedEach = changes
+        ? await approvedEveryEdit(
+            s.deps.db,
+            s.lease.runId,
+            changes.files.map((file) => file.path),
+          )
+        : false;
       return {
         type: 'wrapped',
         filesChanged: changes?.files.length ?? 0,
         ...(checksFailing(s) ? { checksFailing: true } : {}),
         ...(riskyMigration ? { riskyMigration } : {}),
+        ...(approvedEach ? { approvedEach: true } : {}),
       };
     }
     case 'keep':
-      await autoKeep(s, 'hands-off', [KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
+      if (action.approvedEach) {
+        await autoKeep(s, 'balanced', [KEPT_AFTER_EACH_EDIT]);
+      } else {
+        await autoKeep(s, 'hands-off', [KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
+      }
       return { type: 'kept' };
     case 'ship':
       return shipFullAuto(s);
@@ -474,7 +493,16 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       projectStyle: doing ? await projectBuildStyle(deps.db, lease.runId) : NO_PROJECT_STYLE,
       buildStyle: 'off',
       assumption: null,
-      needsCopy: git && needsCopyFor(input.provider, input.level, decisions.destructive, busy),
+      needsCopy:
+        git &&
+        needsCopyFor({
+          provider: input.provider,
+          agentMode: input.agentMode,
+          level: input.level,
+          destructive: decisions.destructive,
+          risky: risky !== null,
+          busy,
+        }),
       copyRunId: null,
       snapshotTaken: false,
       closeReason: null,

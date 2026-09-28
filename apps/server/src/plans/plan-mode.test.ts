@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { exitPlanText, harnessPlanOptions, isExitPlanAllow } from './plan-mode.ts';
+import { exitPlanText, isExitPlanAllow } from './plan-mode.ts';
 
 describe('isExitPlanAllow', () => {
   it('counts every exit-plan choice as approval, including the clear-context ones', () => {
@@ -37,19 +37,5 @@ describe('exitPlanText', () => {
   it('ignores other tools and empty plans', () => {
     expect(exitPlanText('edit', { plan: 'x' }, content)).toBeNull();
     expect(exitPlanText('switch_mode', { plan: '  ' }, [])).toBeNull();
-  });
-});
-
-describe('harnessPlanOptions', () => {
-  const reject = { optionId: 'reject', name: 'No', kind: 'reject_once' as const };
-  const keep = { optionId: 'exit-plan-default', name: 'Yes', kind: 'allow_once' as const };
-  const auto = { optionId: 'exit-plan-auto', name: 'Auto', kind: 'allow_always' as const };
-
-  it('offers approving without a mode switch, and keep planning', () => {
-    expect(harnessPlanOptions([auto, keep, reject])).toEqual([keep, reject]);
-  });
-
-  it('leaves the options alone when the agent offers no plain approval', () => {
-    expect(harnessPlanOptions([auto, reject])).toEqual([auto, reject]);
   });
 });

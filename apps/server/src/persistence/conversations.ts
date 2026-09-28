@@ -2,6 +2,7 @@ import {
   PERMISSION_DO,
   UNTITLED_CONVERSATION,
   titleFromMessage,
+  type ConfigValues,
   type InvolvementLevel,
   type RunMode,
   type ConversationDetail,
@@ -226,7 +227,9 @@ export interface RunTarget {
   model?: string | null;
   effort?: string | null;
   permission?: string | null;
+  agentMode?: string | null;
   level?: InvolvementLevel | null;
+  options?: ConfigValues;
 }
 
 async function runMode(
@@ -285,8 +288,8 @@ export async function sendUserMessage(
     const mode = await runMode(client, conversationId, target.permission ?? null);
     const run = await client.query<RunRow>(
       `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
-         task_id, plan_version, mode, level)
-       VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10) RETURNING *`,
+         task_id, plan_version, mode, level, agent_mode, config_values)
+       VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         runId,
         conversationId,
@@ -298,6 +301,8 @@ export async function sendUserMessage(
         task?.planVersion ?? null,
         mode,
         mode === 'do' ? (target.level ?? null) : null,
+        mode === 'do' ? (target.agentMode ?? null) : null,
+        JSON.stringify(target.options ?? {}),
       ],
     );
     await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [

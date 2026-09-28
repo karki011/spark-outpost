@@ -1,6 +1,5 @@
 import {
   adviceSummarySchema,
-  PERMISSION_DO,
   providerIdSchema,
   type AdviceBody,
   type AdviceSummary,
@@ -11,7 +10,7 @@ import {
   type ProviderModel,
 } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
-import { advisorEntry, catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
+import { advisorEntry, catalogEntry } from '../providers/catalog.ts';
 import { reportedEfforts } from '../providers/efforts.ts';
 import { listModelStats } from './model-stats.ts';
 import type { Queryable } from './db.ts';
@@ -135,7 +134,7 @@ function toCandidate(row: CandidateRow & { provider: ProviderId }): AdvisorCandi
     name: entry.name,
     models: models.map(({ id, label, description }) => ({ id, label, description })),
     efforts: efforts.map(({ id, label, description }) => ({ id, label, description })),
-    doAvailable: isSelectablePermission(entry, PERMISSION_DO),
+    doAvailable: entry.doAvailable,
   };
 }
 

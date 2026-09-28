@@ -46,7 +46,7 @@ export async function probeCapabilities(
       const session = await ctx.request(acp.methods.agent.session.new, {
         cwd: workdir,
         mcpServers: [],
-        _meta: definition.conversationSessionMeta ?? null,
+        _meta: definition.probeSessionMeta ?? definition.conversationSessionMeta ?? null,
       });
       const report = sessionCapabilities(session);
       if (report.efforts.length > 0) return offeredCapabilities(report, definition.offers);

@@ -154,7 +154,7 @@ export type VagueHandling = 'ask' | 'assume';
 
 /**
  * A confidently vague request (Jev's `vague` at the act line, or the vague rule) asks the clarify
- * card before anything is edited at Ask before edits and Auto-edit. Only Full auto assumes the
+ * card before anything is edited at Review each step and Automatic. Only Full auto assumes the
  * likeliest reading, and says so in the reply and the PR body.
  */
 export function vagueHandling(level: InvolvementLevel): VagueHandling {

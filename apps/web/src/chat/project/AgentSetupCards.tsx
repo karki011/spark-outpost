@@ -80,9 +80,12 @@ export function EverydayCards(props: CardsProps) {
   );
 }
 
+const TRUSTED_STATUS = 'On · trusted folder';
+
 export function HooksCard({ config, name, busy, onChange }: CardsProps) {
   if (config.hooks.length === 0) return null;
   const { hooks, hooksChanged } = config.settings;
+  const trusted = config.trust.state === 'trusted';
   const items = config.hooks.map((hook, index) => ({
     key: `${hook.source}-${index}`,
     name: hook.command,
@@ -92,20 +95,24 @@ export function HooksCard({ config, name, busy, onChange }: CardsProps) {
     <SetupCard
       title="Hooks"
       count={config.hooks.length}
-      status={onOff(hooks)}
+      status={trusted ? TRUSTED_STATUS : onOff(hooks)}
       tone="warn"
-      toggle={{
-        label: `Run hooks from ${name}`,
-        checked: hooks,
-        disabled: busy || config.hooksFingerprint === null,
-        onChange: (checked) =>
-          onChange({
-            type: 'settings',
-            change: checked
-              ? { hooks: true, hooksFingerprint: config.hooksFingerprint ?? '' }
-              : { hooks: false },
-          }),
-      }}
+      toggle={
+        trusted
+          ? undefined
+          : {
+              label: `Run hooks from ${name}`,
+              checked: hooks,
+              disabled: busy || config.hooksFingerprint === null,
+              onChange: (checked) =>
+                onChange({
+                  type: 'settings',
+                  change: checked
+                    ? { hooks: true, hooksFingerprint: config.hooksFingerprint ?? '' }
+                    : { hooks: false },
+                }),
+            }
+      }
     >
       <p className="as-warn">
         Hooks run these shell commands on your computer at agent events, and can approve or block
@@ -133,8 +140,14 @@ function serverDetail(server: RepoMcpServer): string {
 export function McpCard({ config, name, busy, onChange }: CardsProps) {
   if (config.mcpServers.length === 0) return null;
   const on = config.mcpServers.filter((server) => server.enabled).length;
+  const trusted = config.trust.state === 'trusted';
   return (
-    <SetupCard title="MCP servers" count={config.mcpServers.length} status={`${on} on`} tone="warn">
+    <SetupCard
+      title="MCP servers"
+      count={config.mcpServers.length}
+      status={trusted ? TRUSTED_STATUS : `${on} on`}
+      tone="warn"
+    >
       <p className="as-warn">
         Servers run programs or reach services with your access. Each tool call asks first, except
         at Full auto. Secrets in your shell are not passed.
@@ -149,20 +162,22 @@ export function McpCard({ config, name, busy, onChange }: CardsProps) {
                 <small className="as-changed">Changed since you turned it on</small>
               )}
             </span>
-            <SetupSwitch
-              label={`Use MCP server ${server.name} from ${name}`}
-              checked={server.enabled}
-              disabled={busy}
-              onChange={(checked) =>
-                onChange({
-                  type: 'mcp',
-                  name: server.name,
-                  change: checked
-                    ? { enabled: true, fingerprint: server.fingerprint }
-                    : { enabled: false },
-                })
-              }
-            />
+            {!trusted && (
+              <SetupSwitch
+                label={`Use MCP server ${server.name} from ${name}`}
+                checked={server.enabled}
+                disabled={busy}
+                onChange={(checked) =>
+                  onChange({
+                    type: 'mcp',
+                    name: server.name,
+                    change: checked
+                      ? { enabled: true, fingerprint: server.fingerprint }
+                      : { enabled: false },
+                  })
+                }
+              />
+            )}
           </li>
         ))}
       </ul>

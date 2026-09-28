@@ -1,6 +1,7 @@
 import {
   DEFAULT_INVOLVEMENT_LEVEL,
   type AgentRole,
+  type ConfigValues,
   type Attachment,
   type InvolvementLevel,
   type RunMode,
@@ -25,6 +26,7 @@ export interface RunInput {
   projectRoots: string[];
   mode: RunMode | null;
   level: InvolvementLevel;
+  agentMode: string | null;
   parentRunId: string | null;
   userRequest: string;
   role: AgentRole | null;
@@ -51,6 +53,8 @@ interface RunRow {
   project_roots: string[];
   run_mode: RunMode | null;
   run_level: InvolvementLevel | null;
+  agent_mode: string | null;
+  config_values: ConfigValues | null;
   parent_run_id: string | null;
   run_prompt: string | null;
   run_role: AgentRole | null;
@@ -120,7 +124,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
   const { rows } = await db.query<RunRow>(
     `SELECT r.user_message_id, r.conversation_id, c.workspace_id, r.provider, m.content,
             r.model AS run_model, r.effort AS run_effort,
-            r.mode AS run_mode, r.level AS run_level,
+            r.mode AS run_mode, r.level AS run_level, r.agent_mode, r.config_values,
             r.parent_run_id, r.prompt AS run_prompt, r.role AS run_role,
             r.route->>'name' AS run_name,
             r.route->>'resumeKey' AS resume_key, r.route->>'followUp' AS follow_up,
@@ -164,6 +168,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     projectRoots: row.project_roots,
     mode: row.run_mode,
     level: row.run_level ?? DEFAULT_INVOLVEMENT_LEVEL,
+    agentMode: row.agent_mode,
     parentRunId: null,
     userRequest: row.content,
     role: row.run_role,
@@ -180,6 +185,8 @@ function settingsOf(row: RunRow): AgentSettings {
     model,
     modelLabel: row.models?.find((option) => option.id === model)?.label ?? null,
     effort: row.run_effort ?? row.effort,
+    mode: row.agent_mode,
+    options: row.config_values ?? {},
   };
 }
 
@@ -197,6 +204,7 @@ function childInput(runId: string, row: RunRow): RunInput {
       : row.project_roots,
     mode: row.run_mode,
     level: row.run_level ?? DEFAULT_INVOLVEMENT_LEVEL,
+    agentMode: row.agent_mode,
     parentRunId: row.parent_run_id,
     userRequest: row.content,
     role: row.run_role,

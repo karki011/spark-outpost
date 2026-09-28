@@ -1,23 +1,29 @@
-import type {
-  CapabilityOption,
-  InvolvementLevel,
-  ChatSettings,
-  ModelRouting,
-  ProviderCapabilities,
-  ProviderId,
-  UpdateChatSettingsRequest,
+import {
+  defaultModeFor,
+  permissionFor,
+  type AgentModeOption,
+  type CapabilityOption,
+  type ConfigOptionInfo,
+  type ConfigValues,
+  type InvolvementLevel,
+  type ChatSettings,
+  type ModelRouting,
+  type ProviderCapabilities,
+  type ProviderId,
+  type UpdateChatSettingsRequest,
 } from '@spark-outpost/contracts';
-import { effectiveDefaultModel } from '../model-cards/cards.ts';
-import { catalogEntry, isSelectablePermission } from '../providers/catalog.ts';
+import { cardFor, effectiveDefaultModel } from '../model-cards/cards.ts';
+import { catalogEntry } from '../providers/catalog.ts';
 import { firstReportedEffort, reportedEfforts } from '../providers/efforts.ts';
 import type { Queryable } from './db.ts';
-import { InvalidDefaultError } from './setup.ts';
+import { assertModeOffered, InvalidDefaultError } from './setup.ts';
 
 interface ProviderChoices {
   model?: string;
   effort?: string;
-  permission?: string;
+  agentMode?: string;
   level?: InvolvementLevel;
+  options?: ConfigValues;
 }
 
 type Overrides = Partial<Record<ProviderId, ProviderChoices>>;
@@ -34,8 +40,10 @@ interface ConnectionDefaults {
   provider: ProviderId;
   model: string | null;
   effort: string | null;
-  permission: string;
+  agentMode: string | null;
   level: InvolvementLevel;
+  modes: AgentModeOption[];
+  options: ConfigOptionInfo[];
 }
 
 const EMPTY: ChatSettings = {
@@ -43,7 +51,9 @@ const EMPTY: ChatSettings = {
   model: null,
   effort: null,
   permission: null,
+  agentMode: null,
   level: null,
+  options: {},
 };
 
 export class ConversationMissingError extends Error {}
@@ -64,8 +74,15 @@ async function connectionDefaults(
   db: Queryable,
   workspaceId: string,
 ): Promise<Map<ProviderId, ConnectionDefaults>> {
-  const { rows } = await db.query<ConnectionDefaults & { reported: CapabilityOption[] | null }>(
-    `SELECT pc.provider, pc.model, pc.effort, pc.permission, pc.level, cap.efforts AS reported
+  const { rows } = await db.query<
+    Omit<ConnectionDefaults, 'modes' | 'options'> & {
+      reported: CapabilityOption[] | null;
+      modes: AgentModeOption[] | null;
+      options: ConfigOptionInfo[] | null;
+    }
+  >(
+    `SELECT pc.provider, pc.model, pc.effort, pc.agent_mode AS "agentMode", pc.level,
+       cap.efforts AS reported, cap.modes, cap.config_options AS options
      FROM provider_connections pc
      LEFT JOIN provider_capabilities cap
        ON cap.workspace_id = pc.workspace_id AND cap.provider = pc.provider
@@ -73,9 +90,17 @@ async function connectionDefaults(
     [workspaceId],
   );
   return new Map(
-    rows.map(({ reported, ...row }) => {
+    rows.map(({ reported, modes, options, ...row }) => {
       const offered = reportedEfforts(row.provider, reported).map((option) => option.id);
-      return [row.provider, { ...row, effort: firstReportedEffort([row.effort], offered) }];
+      return [
+        row.provider,
+        {
+          ...row,
+          effort: firstReportedEffort([row.effort], offered),
+          modes: modes ?? [],
+          options: options ?? [],
+        },
+      ];
     }),
   );
 }
@@ -90,12 +115,15 @@ export function effectiveSettings(
   if (!provider) return EMPTY;
   const connection = connections.get(provider)!;
   const chosen = row.overrides[provider] ?? {};
+  const agentMode = chosen.agentMode ?? connection.agentMode ?? defaultModeFor(provider);
   return {
     provider,
     model: chosen.model ?? connection.model,
     effort: chosen.effort ?? connection.effort,
-    permission: chosen.permission ?? connection.permission,
+    permission: permissionFor(provider, agentMode, connection.modes),
+    agentMode,
     level: chosen.level ?? connection.level,
+    options: chosen.options ?? {},
     ...(row.model_routing ? { routing: row.model_routing } : {}),
   };
 }
@@ -131,12 +159,11 @@ export async function updateChatSettings(
   if (!provider || !connections.has(provider)) {
     throw new InvalidDefaultError('Connect this provider before using it in a chat.');
   }
-  if (update.permission && !isSelectablePermission(catalogEntry(provider), update.permission)) {
-    const choice = catalogEntry(provider).permissions.find((c) => c.id === update.permission);
-    throw new InvalidDefaultError(choice?.unavailableReason ?? 'That permission mode is unknown.');
-  }
+  const connection = connections.get(provider)!;
+  if (update.agentMode) assertModeOffered(provider, update.agentMode, connection.modes);
+  if (update.options) assertOptionsOffered(provider, update.options, connection.options);
   const choices: ProviderChoices = { ...row.overrides[provider] };
-  for (const key of ['model', 'effort', 'permission'] as const) {
+  for (const key of ['model', 'effort', 'agentMode'] as const) {
     const value = update[key];
     if (value === undefined) continue;
     if (value === null) delete choices[key];
@@ -144,6 +171,7 @@ export async function updateChatSettings(
   }
   if (update.level === null) delete choices.level;
   else if (update.level !== undefined) choices.level = update.level;
+  if (update.options) choices.options = { ...choices.options, ...update.options };
   const overrides: Overrides = { ...row.overrides, [provider]: choices };
   const routing = update.routing ?? row.model_routing;
   await db.query(
@@ -158,11 +186,31 @@ export async function updateChatSettings(
   );
 }
 
+function assertOptionsOffered(
+  provider: ProviderId,
+  values: ConfigValues,
+  options: readonly ConfigOptionInfo[],
+): void {
+  for (const [id, value] of Object.entries(values)) {
+    const option = options.find((candidate) => candidate.id === id);
+    const fits =
+      option?.type === 'boolean'
+        ? typeof value === 'boolean'
+        : option?.type === 'select' && option.choices.some((choice) => choice.id === value);
+    if (!fits) {
+      throw new InvalidDefaultError(`${catalogEntry(provider).name} doesn't offer that option.`);
+    }
+  }
+}
+
 export interface CapabilitySnapshot {
   provider: ProviderId;
   models: CapabilityOption[];
   efforts: CapabilityOption[];
   defaultModel: string | null;
+  modes?: AgentModeOption[];
+  defaultMode?: string | null;
+  options?: ConfigOptionInfo[];
 }
 
 export async function saveCapabilities(
@@ -171,17 +219,23 @@ export async function saveCapabilities(
   snapshot: CapabilitySnapshot,
 ): Promise<void> {
   await db.query(
-    `INSERT INTO provider_capabilities (workspace_id, provider, models, efforts, default_model)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO provider_capabilities
+       (workspace_id, provider, models, efforts, default_model, modes, default_mode, config_options)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (workspace_id, provider) DO UPDATE SET
        models = EXCLUDED.models, efforts = EXCLUDED.efforts,
-       default_model = EXCLUDED.default_model, captured_at = now()`,
+       default_model = EXCLUDED.default_model, modes = EXCLUDED.modes,
+       default_mode = EXCLUDED.default_mode, config_options = EXCLUDED.config_options,
+       captured_at = now()`,
     [
       workspaceId,
       snapshot.provider,
       JSON.stringify(snapshot.models),
       JSON.stringify(snapshot.efforts),
       snapshot.defaultModel,
+      JSON.stringify(snapshot.modes ?? []),
+      snapshot.defaultMode ?? null,
+      JSON.stringify(snapshot.options ?? []),
     ],
   );
 }
@@ -195,20 +249,29 @@ export async function getCapabilities(
     models: CapabilityOption[];
     efforts: CapabilityOption[];
     default_model: string | null;
+    modes: AgentModeOption[];
+    default_mode: string | null;
+    config_options: ConfigOptionInfo[];
     captured_at: Date;
   }>(
-    `SELECT models, efforts, default_model, captured_at FROM provider_capabilities
-     WHERE workspace_id = $1 AND provider = $2`,
+    `SELECT models, efforts, default_model, modes, default_mode, config_options, captured_at
+     FROM provider_capabilities WHERE workspace_id = $1 AND provider = $2`,
     [workspaceId, provider],
   );
   const row = rows[0];
   if (!row) return null;
   return {
     provider,
-    models: row.models,
+    models: row.models.map((model) => ({
+      ...model,
+      retiresNotBefore: cardFor(model, provider)?.retiresNotBefore ?? null,
+    })),
     efforts: row.efforts,
     defaultModel: effectiveDefaultModel(provider, row.models, row.default_model),
     agentDefaultModel: row.default_model,
+    modes: row.modes,
+    defaultMode: defaultModeFor(provider) ?? row.default_mode,
+    options: row.config_options,
     capturedAt: row.captured_at.toISOString(),
   };
 }

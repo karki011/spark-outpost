@@ -60,7 +60,7 @@ export type FlowAction =
   | { type: 'plan'; note: string | null }
   | { type: 'verify' }
   | { type: 'wrap_up' }
-  | { type: 'keep' }
+  | { type: 'keep'; approvedEach?: boolean }
   | { type: 'ship' }
   | { type: 'revert' }
   | { type: 'restore' }
@@ -101,6 +101,7 @@ export type FlowEvent =
       checksFailing?: boolean;
       /** A destructive statement the change added to a migration nobody confirmed first. */
       riskyMigration?: string;
+      approvedEach?: boolean;
     }
   | { type: 'kept' }
   | { type: 'shipped' }
@@ -370,7 +371,7 @@ function fixFindings(state: FlowState, auto = false): FlowResult {
 /**
  * A limit hit during a Critic fix round (or kept one from starting) while the change before it
  * passed the checks: the run doesn't fail. The last passing state is restored and kept, and the
- * keep card (Auto-edit, Ask before edits) lists the findings still open.
+ * keep card (Automatic, Review each step) lists the findings still open.
  */
 function cutFixRound(
   state: FlowState,
@@ -534,15 +535,22 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
     case 'answered':
       return answered(state, event);
     case 'wrapped': {
-      const facts = keepFacts(state, event.checksFailing === true, event.riskyMigration ?? null);
+      const facts = {
+        ...keepFacts(state, event.checksFailing === true, event.riskyMigration ?? null),
+        approvedEach: event.approvedEach === true,
+      };
       if (asksToKeep(state.level, event.filesChanged, facts)) {
         const why = keepReason(state.level, facts);
         const line = filesChangedLine(event.filesChanged);
         return ask(state, 'accept', why ? `${line} ${why}` : line);
       }
       if (shipsByItself(state.level, event.filesChanged)) return ship(state);
-      if (keepsByItself(state.level, event.filesChanged)) {
-        return { state: { ...state, waitingFor: null }, action: { type: 'keep' } };
+      if (keepsByItself(state.level, event.filesChanged, facts)) {
+        const action =
+          state.level === 'balanced'
+            ? { type: 'keep' as const, approvedEach: true }
+            : { type: 'keep' as const };
+        return { state: { ...state, waitingFor: null }, action };
       }
       return finish(state, 'succeeded');
     }

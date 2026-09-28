@@ -46,6 +46,12 @@ afterEach(async () => {
   await t.cleanup();
 });
 
+const MODE_FOR: Record<InvolvementLevel, string> = {
+  balanced: 'default',
+  'hands-off': 'acceptEdits',
+  'full-auto': 'bypassPermissions',
+};
+
 function gateFor(
   runId: string,
   level: InvolvementLevel = 'balanced',
@@ -56,7 +62,8 @@ function gateFor(
   const gate = createApprovalGate({
     db: t.db,
     runId,
-    level,
+    provider: 'claude',
+    mode: MODE_FOR[level],
     append: recorded.append,
     waiters,
     pollMs: 20,
@@ -187,7 +194,7 @@ describe('approval gate', () => {
     await asked;
   });
 
-  it('records a receipt without asking when the level allows it', async () => {
+  it('records a receipt without asking when the mode allows it', async () => {
     const run = await doRun(t, root, 'go', 'full-auto');
     const { gate, events } = gateFor(run.runId, 'full-auto');
     const answer = await gate.review(
@@ -196,7 +203,7 @@ describe('approval gate', () => {
     );
     expect(answer).toMatchObject({
       allowed: true,
-      note: 'Allowed `rm -rf build` (your Full auto setting)',
+      note: 'Allowed `rm -rf build` (bypassPermissions mode)',
     });
     expect(events).toHaveLength(0);
     const { rows } = await t.db.query(`SELECT status, decided_by, decided_at FROM approvals`);

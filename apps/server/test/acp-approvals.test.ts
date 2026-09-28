@@ -10,13 +10,14 @@ import {
   type PermissionGate,
   type ProviderOutput,
 } from '../src/providers/provider.ts';
+import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 const launch = {
   command: process.execPath,
   args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 const claude = createAcpProvider({
-  definition: { ...agentDefinitions.claude, name: 'Fake', conversationMode: 'read-only' },
+  definition: { ...agentDefinitions.claude, name: 'Fake', ...FAKE_AGENT_MODES },
   launch,
   cancelGraceMs: 2_000,
 });

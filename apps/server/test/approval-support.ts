@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
-import type { InvolvementLevel, RunEvent } from '@spark-outpost/contracts';
+import { modeForLegacy, type InvolvementLevel, type RunEvent } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../src/approvals/decide.ts';
 import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
@@ -31,7 +31,7 @@ export async function sendDo(
     t.db,
     conversationId,
     { id: randomUUID(), content },
-    { provider: 'fake', permission: 'do', level },
+    { provider: 'fake', permission: 'do', agentMode: modeForLegacy('claude', 'do', level), level },
   );
   return sent.run.id;
 }

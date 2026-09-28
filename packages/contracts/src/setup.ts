@@ -48,6 +48,7 @@ export const providerConnectionSchema = z.object({
   models: z.array(modelSchema),
   model: z.string().nullable(),
   permission: z.string(),
+  agentMode: z.string().nullable().default(null),
   level: involvementLevelSchema,
   effort: z.string().nullable(),
   verifiedAt: z.string(),
@@ -80,7 +81,6 @@ export type ConnectableSetup = z.infer<typeof connectableSetupSchema>;
 export const providerSetupSchema = connectableSetupSchema.extend({
   id: providerIdSchema,
   note: z.string().nullable(),
-  permissions: z.array(choiceSchema),
   efforts: z.array(choiceSchema),
   defaultEffort: z.string(),
   connection: providerConnectionSchema.nullable(),
@@ -129,7 +129,7 @@ export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
 export const updateProviderDefaultsRequestSchema = z
   .object({
     model: z.string(),
-    permission: z.string(),
+    agentMode: z.string().min(1).max(200),
     level: involvementLevelSchema,
     effort: z.string().min(1).max(40).nullable(),
   })

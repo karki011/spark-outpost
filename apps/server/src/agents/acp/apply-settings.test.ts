@@ -78,14 +78,17 @@ describe('applying chat settings', () => {
     expect(applied.notes).toEqual([
       "Using Fake's default model; Smart Two can't be selected with this agent",
     ]);
-    expect(applied.capabilities).toEqual({
+    expect(applied.capabilities).toMatchObject({
       models: [
         { id: 'fast-1', label: 'Fast One', description: 'Quick' },
         { id: 'smart-2', label: 'Smart Two', description: null },
       ],
       efforts: [],
       defaultModel: 'fast-1',
+      defaultMode: 'agent',
+      options: [],
     });
+    expect(applied.capabilities.modes?.map((mode) => mode.id)).toEqual(['read-only', 'agent']);
   });
 
   it('prefers config options over legacy modes and reports the fresher options', async () => {
@@ -115,6 +118,49 @@ describe('applying chat settings', () => {
       'max',
     ]);
     expect(upgraded.mode).toBe('read-only');
+  });
+
+  it('uses the fallback mode, with a note, when the agent lacks the chosen one', async () => {
+    const { ctx, session, calls } = fakeAgent({
+      configOptions: [select('mode', 'mode', 'agent', ['read-only', 'agent'])],
+    });
+    const applied = await applySessionSettings(ctx, session, definition, settings, {
+      wanted: 'bypassPermissions',
+      fallback: 'read-only',
+    });
+    expect(calls).toEqual([
+      {
+        method: 'session/set_config_option',
+        params: { sessionId: 's', configId: 'mode', value: 'read-only' },
+      },
+    ]);
+    expect(applied.notes[0]).toBe("Fake doesn't offer bypassPermissions here; using READ-ONLY");
+  });
+
+  it('sets boolean and select options by id, and skips ones the agent no longer offers', async () => {
+    const { ctx, session, calls } = fakeAgent({
+      configOptions: [
+        select('mode', 'mode', 'read-only', ['read-only']),
+        {
+          id: 'fast',
+          name: 'Fast',
+          category: 'model_config',
+          type: 'boolean',
+          currentValue: false,
+        },
+      ],
+    });
+    const applied = await applySessionSettings(ctx, session, definition, {
+      ...settings,
+      options: { fast: true, gone: 'x' },
+    });
+    expect(calls).toEqual([
+      {
+        method: 'session/set_config_option',
+        params: { sessionId: 's', configId: 'fast', type: 'boolean', value: true },
+      },
+    ]);
+    expect(applied.notes).toContain('Fake no longer offers the gone setting you chose; skipped it');
   });
 
   it('stops before the turn when no safe mode is offered in either shape', async () => {

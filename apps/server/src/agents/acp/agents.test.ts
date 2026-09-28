@@ -76,7 +76,7 @@ describe('Claude session options', () => {
     );
   });
 
-  it('gives Do runs the edit, shell and todo tools, forces every change to ask, and keeps bypass off', () => {
+  it('gives Do runs the edit, shell and todo tools and forces every change to ask, in every mode', () => {
     const options = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
     expect(options.tools).toEqual([
       'Read',
@@ -92,10 +92,24 @@ describe('Claude session options', () => {
     expect(options.settings.permissions).toMatchObject({
       ask: ['Bash', 'Edit', 'Write'],
       blockReadsOutsideWorkingDirectories: true,
-      disableBypassPermissionsMode: 'disable',
     });
-    expect(options.allowDangerouslySkipPermissions).toBe(false);
+    expect(options.settings.permissions).not.toHaveProperty('disableBypassPermissionsMode');
+    expect(options.allowDangerouslySkipPermissions).toBe(true);
     expect(supportsDo(agentDefinitions.claude)).toBe(true);
+  });
+
+  it('offers bypass only to Do sessions and the capability probe, never to chats or Ask', () => {
+    const probe = optionsOf(agentDefinitions.claude.probeSessionMeta);
+    expect(probe.allowDangerouslySkipPermissions).toBe(true);
+    expect(probe.tools).toEqual([]);
+    expect(project.allowDangerouslySkipPermissions).toBe(false);
+    expect(chat.allowDangerouslySkipPermissions).toBe(false);
+  });
+
+  it("runs Ask in Claude's default mode, since plan mode points the model at tools Ask doesn't have", () => {
+    expect(agentDefinitions.claude.askMode).toBe('default');
+    expect(agentDefinitions.claude.doMode).toBe('default');
+    expect(agentDefinitions.codex.askMode).toBe('read-only');
   });
 
   it('denies pushing, gh and remote changes to Builders, and only to Builders', () => {
@@ -294,8 +308,8 @@ describe('Z.ai launch', () => {
       agentDefinitions.claude.projectSessionMeta?.(['/w']),
     );
     expect(zai.doSessionMeta?.([])).toEqual(agentDefinitions.claude.doSessionMeta?.([]));
-    expect(optionsOf(zai.doSessionMeta?.([]))).toMatchObject({
-      settingSources: [],
+    expect(optionsOf(zai.doSessionMeta?.([]))).toMatchObject({ settingSources: [] });
+    expect(optionsOf(zai.projectSessionMeta?.([]))).toMatchObject({
       allowDangerouslySkipPermissions: false,
     });
     expect(zai.conversationEnv).toBeUndefined();

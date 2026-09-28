@@ -229,46 +229,94 @@ describe('ACP session update mapping', () => {
     expect(mapper.finish()).toEqual([]);
   });
 
-  it('warns once and reports the mode when the agent leaves the locked chat mode', () => {
+  const modeOption = (value: string) => ({
+    id: 'mode',
+    name: 'Mode',
+    category: 'mode',
+    type: 'select' as const,
+    currentValue: value,
+    options: [
+      { value: 'read-only', name: 'Read-only' },
+      { value: 'agent', name: 'Agent' },
+    ],
+  });
+  const tracked = { model: 'm', effort: 'high', mode: 'read-only', values: {} };
+  const names = (mode: string) => (mode === 'agent' ? 'Agent' : mode);
+
+  it('warns once and reports the mode when the agent leaves a mode it may not leave', () => {
     const mapper = createUpdateMapper('Fake');
-    mapper.lockMode('read-only');
+    mapper.trackSettings(tracked, { allowed: (mode) => mode === 'read-only', name: names });
     expect(
       mapper.map({ sessionUpdate: 'current_mode_update', currentModeId: 'read-only' }),
     ).toEqual([]);
     expect(mapper.unsafeModeChange()).toBeNull();
-    const warning = 'Warning: Fake switched to agent mode';
+    const warning = 'Warning: Fake switched to Agent mode';
     expect(mapper.map({ sessionUpdate: 'current_mode_update', currentModeId: 'agent' })).toEqual([
       { kind: 'step_started', name: warning },
       expect.objectContaining({ kind: 'step_finished', name: warning }),
     ]);
     expect(
-      mapper.map({
-        sessionUpdate: 'config_option_update',
-        configOptions: [
-          {
-            id: 'mode',
-            name: 'Mode',
-            category: 'mode',
-            type: 'select',
-            currentValue: 'agent',
-            options: [{ value: 'agent', name: 'Agent' }],
-          },
-        ],
-      }),
+      mapper.map({ sessionUpdate: 'config_option_update', configOptions: [modeOption('agent')] }),
     ).toEqual([]);
     expect(mapper.unsafeModeChange()).toBe('agent');
+    expect(mapper.currentMode()).toBe('read-only');
   });
 
-  it("treats Claude's plan mode as safe, since it only narrows what the agent may do", () => {
+  it('shows a mode change the agent is allowed to make, and follows it', () => {
     const mapper = createUpdateMapper('Fake');
-    mapper.lockMode('default');
-    expect(mapper.map({ sessionUpdate: 'current_mode_update', currentModeId: 'plan' })).toEqual([]);
-    expect(mapper.map({ sessionUpdate: 'current_mode_update', currentModeId: 'default' })).toEqual(
-      [],
+    mapper.trackSettings(
+      { ...tracked, mode: 'default' },
+      { allowed: () => true, name: (mode) => (mode === 'plan' ? 'Plan' : mode) },
     );
+    const note = 'Fake switched to Plan mode';
+    expect(mapper.map({ sessionUpdate: 'current_mode_update', currentModeId: 'plan' })).toEqual([
+      { kind: 'step_started', name: note },
+      expect.objectContaining({ kind: 'step_finished', name: note }),
+      {
+        kind: 'session_settings',
+        model: 'm',
+        effort: 'high',
+        mode: 'plan',
+        options: {},
+      },
+    ]);
+    expect(mapper.currentMode()).toBe('plan');
     expect(mapper.unsafeModeChange()).toBeNull();
-    mapper.map({ sessionUpdate: 'current_mode_update', currentModeId: 'auto' });
-    expect(mapper.unsafeModeChange()).toBe('auto');
+  });
+
+  it('reports model, effort and other option changes from config updates', () => {
+    const mapper = createUpdateMapper('Fake');
+    mapper.trackSettings(tracked, { allowed: () => true, name: names });
+    const outputs = mapper.map({
+      sessionUpdate: 'config_option_update',
+      configOptions: [
+        modeOption('read-only'),
+        {
+          id: 'model',
+          name: 'Model',
+          category: 'model',
+          type: 'select',
+          currentValue: 'fallback',
+          options: [{ value: 'fallback', name: 'Fallback' }],
+        },
+        {
+          id: 'fast',
+          name: 'Fast mode',
+          category: 'model_config',
+          type: 'boolean',
+          currentValue: true,
+        },
+      ],
+    });
+    expect(outputs).toEqual([
+      {
+        kind: 'session_settings',
+        model: 'fallback',
+        effort: 'high',
+        mode: 'read-only',
+        options: { fast: true },
+      },
+    ]);
   });
 
   it('ignores mode and config updates before a mode is locked', () => {

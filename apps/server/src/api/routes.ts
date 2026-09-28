@@ -70,7 +70,9 @@ export function apiRoutes({ db, hub, workspaceId, fixedRunProvider }: RouteDeps)
       model: offered ? settings.model : (capabilities?.defaultModel ?? null),
       effort: settings.effort,
       permission: settings.permission,
+      agentMode: settings.agentMode,
       level: settings.level,
+      options: settings.options,
     };
   };
 

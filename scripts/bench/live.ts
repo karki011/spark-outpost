@@ -3,6 +3,7 @@ import {
   CHECKPOINT_OPTION,
   checkBodySchema,
   checkLine,
+  modeForLegacy,
   type Approval,
   type InvolvementLevel,
   type BuildStyle,
@@ -140,7 +141,12 @@ export async function runLiveCell(
     t.db,
     conversationId,
     { id: randomUUID(), content: prompt },
-    { ...PINNED, permission: 'do', level: BENCH_LEVEL },
+    {
+      ...PINNED,
+      permission: 'do',
+      agentMode: modeForLegacy(PINNED.provider, 'do', BENCH_LEVEL),
+      level: BENCH_LEVEL,
+    },
   );
   const lease = await claimNextJob(t.db, env.deps.leaseSeconds);
   if (lease?.runId !== sent.run.id) throw new Error('The benchmark could not claim its own run.');

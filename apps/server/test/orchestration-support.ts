@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   CHECKPOINT_OPTION,
   clarifyOptionId,
+  modeForLegacy,
   type Approval,
   type ApprovalScope,
   type InvolvementLevel,
@@ -24,6 +25,7 @@ import { memorySecretStore } from '../src/setup/secrets.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { linkedConversation } from './approval-support.ts';
 import { eventually, type TestDb } from './support.ts';
+import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 export const CLAUDE_MODELS = [
   { id: 'haiku', label: 'Haiku 4.5', description: 'Fastest for quick answers' },
@@ -78,7 +80,7 @@ function sessionEnv(store: string | undefined): Record<string, string> {
 
 function fakeAgent(id: 'claude' | 'codex', models: typeof CLAUDE_MODELS, store?: string): Provider {
   return createAcpProvider({
-    definition: { ...agentDefinitions[id], conversationMode: 'read-only' },
+    definition: { ...agentDefinitions[id], ...FAKE_AGENT_MODES },
     launch,
     cancelGraceMs: 2_000,
     env: {
@@ -349,6 +351,7 @@ export async function startScenario(
   scenario: Scenario,
   level: InvolvementLevel,
   routing: 'auto' | 'pinned' = 'auto',
+  agentMode: string | null = modeForLegacy('claude', scenario.mode, level),
 ) {
   const { conversationId } = await linkedConversation(t, root);
   await t.db.query('UPDATE conversations SET model_routing = $2 WHERE id = $1', [
@@ -359,7 +362,14 @@ export async function startScenario(
     t.db,
     conversationId,
     { id: randomUUID(), content: scenario.text },
-    { provider: 'claude', model: 'sonnet', effort: 'medium', permission: scenario.mode, level },
+    {
+      provider: 'claude',
+      model: 'sonnet',
+      effort: 'medium',
+      permission: scenario.mode,
+      agentMode,
+      level,
+    },
   );
   return { conversationId, runId: sent.run.id };
 }

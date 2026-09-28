@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import type { InvolvementLevel, ProviderId } from '@spark-outpost/contracts';
+import type { ProviderId } from '@spark-outpost/contracts';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { ClaudeRepoOptions, CodexRepoOptions, RepoStyle } from './repo-session.ts';
@@ -45,9 +45,10 @@ export interface AgentDefinition {
     repo?: ClaudeRepoOptions | null,
     builder?: boolean,
   ) => Record<string, unknown>;
+  probeSessionMeta?: Record<string, unknown>;
+  askMode: string;
   doMode?: string;
   doPrimaryRootOnly?: boolean;
-  doWorktreeLevels?: readonly InvolvementLevel[];
 }
 
 export const CLAUDE_DO_TOOLS = [
@@ -62,6 +63,7 @@ export const CLAUDE_DO_TOOLS = [
   'ExitPlanMode',
 ] as const;
 export const CLAUDE_DO_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
+export const CLAUDE_DO_MODE = 'default';
 export const CODEX_DO_MODE = 'ask-every-action';
 
 /**
@@ -102,9 +104,11 @@ export function claudeSessionMeta(
   ask: readonly string[] = [],
   repo: ClaudeRepoOptions | null = null,
   builder = false,
+  allowBypass = false,
 ): Record<string, unknown> {
   const deny = [...secretReadRules(extraRoots), ...(builder ? BUILDER_PUBLISH_DENY_RULES : [])];
   const askRules = [...ask, ...(repo?.mcpNames ?? []).map((name) => `mcp__${name}`)];
+  const allowRules = [...(repo?.allowRules ?? [])];
   const plugins = repo?.plugins ?? [];
   return {
     ...(repo?.appendPrompt ? { systemPrompt: { append: repo.appendPrompt } } : {}),
@@ -116,15 +120,20 @@ export function claudeSessionMeta(
         ...(plugins.length > 0
           ? { plugins: plugins.map((path) => ({ type: 'local', path })) }
           : {}),
-        allowDangerouslySkipPermissions: false,
+        allowDangerouslySkipPermissions: allowBypass,
         settings: {
+          ...(repo?.redirects?.commands ?? {}),
+          ...(repo?.redirects && Object.keys(repo.redirects.env).length > 0
+            ? { env: repo.redirects.env }
+            : {}),
           ...(repo?.hooks ? { hooks: repo.hooks } : { disableAllHooks: true }),
           disableSkillShellExecution: true,
           permissions: {
             deny,
             ...(askRules.length > 0 ? { ask: askRules } : {}),
+            ...(allowRules.length > 0 ? { allow: allowRules } : {}),
             blockReadsOutsideWorkingDirectories: true,
-            disableBypassPermissionsMode: 'disable',
+            ...(allowBypass ? {} : { disableBypassPermissionsMode: 'disable' }),
           },
         },
         strictMcpConfig: true,
@@ -170,16 +179,27 @@ function packageBin(packageName: string): AgentLaunch {
 const claudeSessions = {
   repoStyle: 'claude',
   conversationMode: 'default',
+  askMode: 'default',
+  doMode: CLAUDE_DO_MODE,
   usageReadings: 'start_and_end',
   readsProjectFolders: true,
   conversationSessionMeta: claudeSessionMeta([], []),
+  probeSessionMeta: claudeSessionMeta([], [], [], null, false, true),
   projectSessionMeta: (extraRoots: readonly string[], repo?: ClaudeRepoOptions | null) =>
     claudeSessionMeta(['Read', 'Glob', 'Grep'], extraRoots, [], repo ?? null),
   doSessionMeta: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
     builder = false,
-  ) => claudeSessionMeta(CLAUDE_DO_TOOLS, extraRoots, CLAUDE_DO_ASK_RULES, repo ?? null, builder),
+  ) =>
+    claudeSessionMeta(
+      CLAUDE_DO_TOOLS,
+      extraRoots,
+      CLAUDE_DO_ASK_RULES,
+      repo ?? null,
+      builder,
+      true,
+    ),
 } satisfies Partial<AgentDefinition>;
 
 const CLAUDE_ACP = '@agentclientprotocol/claude-agent-acp';
@@ -192,11 +212,6 @@ function zaiLaunch(): AgentLaunch {
 
 export function supportsDo(definition: AgentDefinition): boolean {
   return definition.doSessionMeta !== undefined || definition.doMode !== undefined;
-}
-
-export function buildsInWorktree(provider: string, level: InvolvementLevel): boolean {
-  const definition = agentDefinitions[provider as ProviderId] as AgentDefinition | undefined;
-  return definition?.doWorktreeLevels?.includes(level) ?? false;
 }
 
 export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
@@ -212,11 +227,11 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     launch: () => packageBin('@agentclientprotocol/codex-acp'),
     repoStyle: 'codex',
     conversationMode: 'read-only',
+    askMode: 'read-only',
     readsProjectFolders: true,
     conversationEnv: codexEnv,
     doMode: CODEX_DO_MODE,
     doPrimaryRootOnly: true,
-    doWorktreeLevels: ['hands-off', 'full-auto'],
     inputExcludesCache: true,
   },
   zai: {

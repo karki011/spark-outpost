@@ -24,9 +24,9 @@ import type { FlowEvent } from './transitions.ts';
 
 export const CHECKS_FAILING_NOTE = 'Checks failing';
 export const UNVERIFIED_NOTE = 'Jev could not verify this change';
-export const KEPT_BY_FULL_AUTO = 'Full auto kept the changes and went on to ship them.';
+export const KEPT_BY_FULL_AUTO = 'Full auto → PR kept the changes and went on to ship them.';
 export const CHECKS_HOLD_REASON =
-  'The checks still fail after the fix turns, and Full auto is set to stop before opening a draft PR when they do. Keep the change and ship it yourself, ask for a fix, or revert.';
+  'The checks still fail after the fix turns, and Full auto → PR is set to stop before opening a draft PR when they do. Keep the change and ship it yourself, ask for a fix, or revert.';
 
 function shipDeps(s: Session): ShipDeps {
   const access = s.deps.shipAccess ?? {
@@ -49,7 +49,7 @@ export function checksFailing(s: Session): boolean {
 
 export async function autoKeep(
   s: Session,
-  keptBy: 'hands-off' | 'full-auto',
+  keptBy: 'balanced' | 'hands-off' | 'full-auto',
   lines: readonly (string | null)[],
 ): Promise<void> {
   const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
@@ -120,7 +120,7 @@ export async function shipFullAuto(s: Session): Promise<FlowEvent> {
 }
 
 async function ship(s: Session, failing: boolean): Promise<string> {
-  if (!s.taskId) return 'Full auto kept the change, but it has no task to ship.';
+  if (!s.taskId) return 'Full auto → PR kept the change, but it has no task to ship.';
   const notes = [
     failing ? CHECKS_FAILING_NOTE : null,
     s.unverified ? UNVERIFIED_NOTE : null,
@@ -133,12 +133,12 @@ async function ship(s: Session, failing: boolean): Promise<string> {
     const plan = await planShip(deps, s.taskId, options);
     const mode = plan.blocked ? null : modeFor(plan);
     if (!mode) {
-      return `Full auto kept the change but did not ship it: ${plan.blocked?.message ?? plan.notes[0] ?? 'there is nothing to ship.'}`;
+      return `Full auto → PR kept the change but did not ship it: ${plan.blocked?.message ?? plan.notes[0] ?? 'there is nothing to ship.'}`;
     }
     const title = failing ? `[${CHECKS_FAILING_NOTE}] ${plan.task.title}` : plan.task.title;
     const result = await shipTask(deps, s.taskId, { mode, title: title.slice(0, 200) }, options);
     return shippedLine(result, plan, failing);
   } catch (error) {
-    return `Full auto kept the change but could not ship it: ${(error as Error).message}`;
+    return `Full auto → PR kept the change but could not ship it: ${(error as Error).message}`;
   }
 }

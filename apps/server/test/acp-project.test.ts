@@ -7,11 +7,12 @@ import { createAcpProvider, noFolderAccessNote } from '../src/agents/acp/acp-pro
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
 import { ProviderError, type Provider, type ProviderOutput } from '../src/providers/provider.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
+import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 const definition: AgentDefinition = {
   ...agentDefinitions.claude,
   name: 'Fake',
-  conversationMode: 'read-only',
+  ...FAKE_AGENT_MODES,
 };
 const launch = {
   command: process.execPath,

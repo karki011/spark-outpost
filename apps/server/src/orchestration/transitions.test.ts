@@ -79,7 +79,7 @@ describe('lean flow', () => {
     expect(wrapped!.action).toEqual({
       type: 'ask',
       kind: 'accept',
-      reason: '2 files changed. Auto-edit asks because the checks still fail.',
+      reason: '2 files changed. Automatic asks because the checks still fail.',
     });
   });
 

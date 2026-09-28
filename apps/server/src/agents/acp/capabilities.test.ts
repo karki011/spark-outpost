@@ -33,6 +33,9 @@ describe('capabilities from config options', () => {
       ],
       efforts: [{ id: 'high', label: 'High', description: null }],
       defaultModel: 'default',
+      modes: [],
+      defaultMode: null,
+      options: [],
     });
   });
 
@@ -57,7 +60,14 @@ describe('capabilities from config options', () => {
   });
 
   it('returns empty lists when the agent offers no options', () => {
-    expect(capabilitiesFrom([])).toEqual({ models: [], efforts: [], defaultModel: null });
+    expect(capabilitiesFrom([])).toEqual({
+      models: [],
+      efforts: [],
+      defaultModel: null,
+      modes: [],
+      defaultMode: null,
+      options: [],
+    });
   });
 });
 
@@ -82,6 +92,9 @@ describe('capabilities from a new session', () => {
       ],
       efforts: [],
       defaultModel: 'b',
+      modes: [],
+      defaultMode: null,
+      options: [],
     });
   });
 
@@ -116,5 +129,84 @@ describe('capabilities from a new session', () => {
       ],
     });
     expect(capabilitiesFrom([model('b')], [model('a')]).defaultModel).toBe('a');
+  });
+});
+
+describe('modes and other options from config options', () => {
+  it('reads every mode the agent advertises, with its kind, and the mode it started in', () => {
+    const report = capabilitiesFrom([
+      {
+        id: 'mode',
+        name: 'Mode',
+        category: 'mode',
+        type: 'select',
+        currentValue: 'default',
+        options: [
+          {
+            value: 'default',
+            name: 'Manual',
+            description: 'Always ask',
+            _meta: { kind: 'standard' },
+          },
+          { value: 'yolo', name: 'Yolo', description: 'Custom', _meta: { kind: 'full_access' } },
+        ],
+      },
+    ]);
+    expect(report.modes).toEqual([
+      { id: 'default', label: 'Manual', description: 'Always ask', kind: 'standard' },
+      { id: 'yolo', label: 'Yolo', description: 'Custom', kind: 'full_access' },
+    ]);
+    expect(report.defaultMode).toBe('default');
+  });
+
+  it('keeps model_config, unknown categories and booleans as generic options, with groups', () => {
+    const report = capabilitiesFrom([
+      {
+        id: 'fast',
+        name: 'Fast mode',
+        category: 'model_config',
+        type: 'boolean',
+        currentValue: false,
+      },
+      {
+        id: 'collaboration_mode',
+        name: 'Collaboration',
+        category: 'collaboration_mode',
+        type: 'select',
+        currentValue: 'default',
+        options: [
+          {
+            group: 'g',
+            name: 'Styles',
+            options: [
+              { value: 'default', name: 'Default' },
+              { value: 'plan', name: 'Plan' },
+            ],
+          },
+        ],
+      },
+    ]);
+    expect(report.options).toEqual([
+      {
+        type: 'boolean',
+        id: 'fast',
+        name: 'Fast mode',
+        description: null,
+        category: 'model_config',
+        currentValue: false,
+      },
+      {
+        type: 'select',
+        id: 'collaboration_mode',
+        name: 'Collaboration',
+        description: null,
+        category: 'collaboration_mode',
+        currentValue: 'default',
+        choices: [
+          { id: 'default', label: 'Default', description: null, group: 'Styles' },
+          { id: 'plan', label: 'Plan', description: null, group: 'Styles' },
+        ],
+      },
+    ]);
   });
 });

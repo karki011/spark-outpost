@@ -207,7 +207,10 @@ function validateDecision(approval: Approval, decision: UserDecision): ApprovalO
   const option = approval.options.find((candidate) => candidate.optionId === decision.optionId);
   if (!option) throw new ApprovalInputError('That option is not offered for this approval.');
   const allowing = option.kind.startsWith('allow');
-  if (!allowing && decision.scope !== 'once') {
+  if (!allowing && decision.scope === 'project') {
+    throw new ApprovalInputError('A denial applies to this run at most.');
+  }
+  if (option.kind === 'reject_once' && decision.scope !== 'once') {
     throw new ApprovalInputError('A denial applies once.');
   }
   if (decision.scope === 'project' && (approval.kind !== 'execute' || !approval.payload.command)) {
@@ -253,7 +256,7 @@ export async function decideApproval(
       status: option.kind.startsWith('allow') ? 'allowed' : 'denied',
       decidedBy: 'user',
       optionId: option.optionId,
-      scope: decision.scope,
+      scope: scopeFor(option, decision.scope),
       note: decision.note?.trim() || null,
     });
     if (!settled) throw new ApprovalConflictError('This approval was already answered.');
@@ -264,32 +267,59 @@ export async function decideApproval(
   });
 }
 
-export async function allowedForRun(
+export function scopeFor(option: ApprovalOption, requested: ApprovalScope): ApprovalScope {
+  if (requested === 'project') return 'project';
+  return option.kind.endsWith('_always') ? 'run' : requested;
+}
+
+function memberApprovals(status: 'allowed' | 'denied') {
+  return async (
+    db: Queryable,
+    runId: string,
+  ): Promise<Pick<Approval, 'kind' | 'title' | 'payload'>[]> => {
+    const { rows } = await db.query<Pick<ApprovalRow, 'kind' | 'title' | 'payload'>>(
+      `WITH me AS (
+         SELECT id, parent_run_id, role, route->>'name' AS name, route->>'resumeKey' AS resume_key
+         FROM runs WHERE id = $1
+       ),
+       same_member AS (
+         SELECT me.id FROM me
+         UNION
+         SELECT r.id FROM runs r JOIN me
+           ON me.parent_run_id IS NOT NULL AND me.resume_key IS NOT NULL
+          AND r.parent_run_id = me.parent_run_id AND r.route->>'resumeKey' = me.resume_key
+         UNION
+         SELECT r.id FROM runs r JOIN me
+           ON me.resume_key IS NOT NULL AND r.id = me.parent_run_id
+          AND r.role = me.role AND r.route->>'name' = me.name
+       )
+       SELECT kind, title, payload FROM approvals
+       WHERE run_id IN (SELECT id FROM same_member) AND status = $2 AND scope = 'run'
+       ORDER BY created_at`,
+      [runId, status],
+    );
+    return rows;
+  };
+}
+
+export const allowedForRun = memberApprovals('allowed');
+export const rejectedForRun = memberApprovals('denied');
+
+export async function approvedEveryEdit(
   db: Queryable,
   runId: string,
-): Promise<Pick<Approval, 'kind' | 'title' | 'payload'>[]> {
-  const { rows } = await db.query<Pick<ApprovalRow, 'kind' | 'title' | 'payload'>>(
-    `WITH me AS (
-       SELECT id, parent_run_id, role, route->>'name' AS name, route->>'resumeKey' AS resume_key
-       FROM runs WHERE id = $1
-     ),
-     same_member AS (
-       SELECT me.id FROM me
-       UNION
-       SELECT r.id FROM runs r JOIN me
-         ON me.parent_run_id IS NOT NULL AND me.resume_key IS NOT NULL
-        AND r.parent_run_id = me.parent_run_id AND r.route->>'resumeKey' = me.resume_key
-       UNION
-       SELECT r.id FROM runs r JOIN me
-         ON me.resume_key IS NOT NULL AND r.id = me.parent_run_id
-        AND r.role = me.role AND r.route->>'name' = me.name
-     )
-     SELECT kind, title, payload FROM approvals
-     WHERE run_id IN (SELECT id FROM same_member) AND status = 'allowed' AND scope = 'run'
-     ORDER BY created_at`,
+  changed: readonly string[],
+): Promise<boolean> {
+  if (changed.length === 0) return false;
+  const { rows } = await db.query<{ path: string }>(
+    `SELECT DISTINCT jsonb_array_elements_text(a.payload->'paths') AS path
+     FROM approvals a JOIN runs r ON r.id = a.run_id
+     WHERE (r.id = $1 OR r.parent_run_id = $1)
+       AND a.kind = 'edit' AND a.status = 'allowed' AND a.decided_by = 'user'`,
     [runId],
   );
-  return rows;
+  const approved = new Set(rows.map((row) => row.path));
+  return changed.every((path) => approved.has(path));
 }
 
 export async function projectAllowlistForRun(db: Queryable, runId: string): Promise<string[]> {

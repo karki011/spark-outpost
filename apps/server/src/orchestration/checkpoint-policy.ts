@@ -32,11 +32,15 @@ export function riskyMigrationReason(statement: string): string {
 }
 
 /**
- * Ask before edits and Auto-edit show a card before the first Builder starts on risky work.
- * Full auto goes ahead in its worktree copy and flags the change in the PR body instead.
+ * Review each step shows a card before the first Builder starts on risky work. Automatic and
+ * Full auto go ahead in a worktree copy instead; Full auto also flags the change in the PR body.
  */
 export function confirmsRiskyFirst(level: InvolvementLevel): boolean {
-  return level === 'balanced' || level === 'hands-off';
+  return level === 'balanced';
+}
+
+export function copiesRiskyWork(level: InvolvementLevel): boolean {
+  return level !== 'balanced';
 }
 
 export interface KeepFacts {
@@ -46,14 +50,16 @@ export interface KeepFacts {
   criticUnsatisfied: boolean;
   /** The diff adds a destructive migration nobody confirmed before the Builder started. */
   riskyMigration?: string | null;
+  approvedEach?: boolean;
 }
 
 const SETTLED: KeepFacts = { checksFailing: false, criticUnsatisfied: false };
 
 /**
- * Ask before edits always asks to keep changed files. Auto-edit asks only when something is
- * wrong (checks fail, or the Critic still has concerns); otherwise it keeps them by itself,
- * with Revert still there. Full auto keeps and ships (see shipsByItself).
+ * Review each step always asks to keep changed files, unless you already approved every edit
+ * (see `approvedEveryEdit`). Automatic asks only when something is wrong (checks fail, the
+ * Critic still has concerns, or an unconfirmed destructive migration); otherwise it keeps them
+ * by itself, with Revert still there. Full auto → PR keeps and ships (see shipsByItself).
  */
 export function asksToKeep(
   level: InvolvementLevel,
@@ -61,28 +67,35 @@ export function asksToKeep(
   facts: KeepFacts = SETTLED,
 ): boolean {
   if (filesChanged === 0) return false;
-  if (level === 'balanced') return true;
-  if (level === 'hands-off') {
-    return facts.checksFailing || facts.criticUnsatisfied || Boolean(facts.riskyMigration);
-  }
+  const troubled = facts.checksFailing || facts.criticUnsatisfied || Boolean(facts.riskyMigration);
+  if (level === 'balanced') return !facts.approvedEach || troubled;
+  if (level === 'hands-off') return troubled;
   return false;
 }
 
-export function keepsByItself(level: InvolvementLevel, filesChanged: number): boolean {
-  return level === 'hands-off' && filesChanged > 0;
+export function keepsByItself(
+  level: InvolvementLevel,
+  filesChanged: number,
+  facts: KeepFacts = SETTLED,
+): boolean {
+  if (filesChanged === 0) return false;
+  return level === 'hands-off' || (level === 'balanced' && facts.approvedEach === true);
 }
 
 export function keepReason(level: InvolvementLevel, facts: KeepFacts): string | null {
   if (level !== 'hands-off') return null;
-  if (facts.checksFailing) return 'Auto-edit asks because the checks still fail.';
-  if (facts.criticUnsatisfied) return 'Auto-edit asks because the Critic still has concerns.';
+  if (facts.checksFailing) return 'Automatic asks because the checks still fail.';
+  if (facts.criticUnsatisfied) return 'Automatic asks because the Critic still has concerns.';
   if (facts.riskyMigration)
-    return `Auto-edit asks because ${riskyMigrationReason(facts.riskyMigration)}.`;
+    return `Automatic asks because ${riskyMigrationReason(facts.riskyMigration)}.`;
   return null;
 }
 
 export const KEPT_BY_AUTO_EDIT =
-  'Auto-edit kept the changes: the checks pass and the Critic, if it ran, found no correctness problems. Revert undoes them.';
+  'Kept automatically: the checks pass and the Critic, if it ran, found no correctness problems. Revert undoes them.';
+
+export const KEPT_AFTER_EACH_EDIT =
+  'Kept: you approved every edit as it happened, so there was nothing new to ask. Revert undoes them.';
 
 export function fixesFindingsItself(level: InvolvementLevel): boolean {
   return level !== 'balanced';

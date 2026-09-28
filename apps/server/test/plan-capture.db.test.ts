@@ -109,6 +109,8 @@ describe("Claude's plan mode", () => {
     const approval = asked.find((candidate) => candidate.payload.plan);
     expect(approval?.payload.plan).toBe(FAKE_PLAN);
     expect(approval?.options.map((option) => option.optionId)).toEqual([
+      'exit-plan-clear-auto',
+      'exit-plan-auto',
       'exit-plan-default',
       'reject',
     ]);
