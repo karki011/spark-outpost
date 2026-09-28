@@ -3,6 +3,8 @@ import type { AgentPick } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
 import { whyLine } from '../model-cards/why.ts';
 import type { JevCall } from './jev-calls.ts';
+import type { ScanReport } from '../codescan/scan.ts';
+import { complexByBreadth } from './builder-complexity.ts';
 import { keepBuilderSession } from './member-routes.ts';
 import { builderPick, FLOOR_REASON, floorText } from './builder-floor.ts';
 import { candidates, context } from './route-fixtures.ts';
@@ -27,6 +29,16 @@ const [HAIKU, SONNET, OPUS] = claude.models as [
   (typeof claude.models)[0],
   (typeof claude.models)[0],
 ];
+function scanOf(packages: readonly string[]): ScanReport {
+  const candidates = packages.map((pkg) => ({
+    path: `${pkg}/a.ts`,
+    score: 1,
+    termsMatched: 1,
+    package: pkg,
+  }));
+  return { candidates } as unknown as ScanReport;
+}
+
 const RAISED = "raised to Sonnet 5: Builders don't run on the fast tier";
 
 function pick(model: { id: string; label: string }, effort = 'medium'): AgentPick {
@@ -231,6 +243,38 @@ describe('complex work goes to the top tier', () => {
       rule: 'complex → top tier (matches in 4 packages)',
       pick: { model: 'opus[1m]' },
     });
+  });
+
+  it('routes the dev-day typo (s05) to the middle tier despite broad scan matches', () => {
+    const request =
+      'Typo on the Analytics Spend tab: the source line says "was reportd by providers". Fix it.';
+    const breadth = complexByBreadth(
+      scanOf(['apps/web', 'packages/contracts', 'apps/server', 'root']),
+      request,
+      { tier: 'small', routeConfidence: 1 },
+    );
+    const route = routeBuilder(
+      onHaiku('auto', request),
+      { trivial: true, destructive: false, complex: breadth.complex, setAside: breadth.setAside! },
+      'small',
+    );
+    expect(route).toMatchObject({
+      rule: 'trivial → small tier (matches in 4 packages set aside: one-line fix)',
+      pick: { model: 'sonnet' },
+      note: RAISED,
+    });
+  });
+
+  it('routes the dev-day rounding bug (s06) to the middle tier on the chat model', () => {
+    const request =
+      'Bug: on Analytics a share of 2 out of 3 shows as 66%, but it should round to the nearest percent (67%). Fix it.';
+    const breadth = complexByBreadth(
+      scanOf(['apps/web', 'packages/contracts', 'apps/server']),
+      request,
+      { tier: 'mid', routeConfidence: 0.9 },
+    );
+    const route = routeBuilder(context('auto'), { ...plain, complex: breadth.complex }, 'mid');
+    expect(route).toMatchObject({ rule: 'chat model', pick: { model: 'sonnet' } });
   });
 
   it('keeps destructive wording and a pinned model as they are', () => {

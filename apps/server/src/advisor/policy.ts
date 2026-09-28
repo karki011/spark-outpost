@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'fixturn-1';
+export const POLICY_VERSION = 'fixturn-2';
 
 export type ActingQuestion =
   'question' | 'vague' | 'review' | 'destructive' | 'continues_task' | 'verify' | 'finding';
@@ -47,6 +47,8 @@ export const RANK_PREDICTED_FILES = 12;
 export const COMPLEX_JEV_AT = 0.8;
 export const BROAD_SCAN_FILES = 15;
 export const BROAD_SCAN_PACKAGES = 3;
+export const BROAD_SCAN_SCORE = 0.35;
+export const SMALL_JEV_AT = 0.8;
 
 export const ROUTER_TIERS = ['micro', 'low', 'mid', 'top'] as const;
 export type RouterTier = (typeof ROUTER_TIERS)[number];
