@@ -3,7 +3,7 @@ import { ACT_AT, ASK_AT, type ActingQuestion, type ObservedQuestion } from './po
 
 export { ASK_AT };
 
-const ASKING_LEVELS: ReadonlySet<InvolvementLevel> = new Set(['hands-on', 'balanced']);
+const ASKING_LEVELS: ReadonlySet<InvolvementLevel> = new Set(['balanced']);
 
 export function asksWhenUnsure(level: InvolvementLevel): boolean {
   return ASKING_LEVELS.has(level);

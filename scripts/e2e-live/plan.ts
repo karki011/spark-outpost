@@ -160,7 +160,7 @@ function versionCells(): Cell[] {
 }
 
 function configCells(): Cell[] {
-  const levels = (['hands-on', 'full-auto'] as const).flatMap((level) =>
+  const levels = (['balanced', 'full-auto'] as const).flatMap((level) =>
     ['b', 'c', 'f'].map((id) => cell('configs', id, 'harness', `level-${level}`, { level })),
   );
   const lean = ['c', 'd'].map((id) =>

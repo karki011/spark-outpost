@@ -36,7 +36,7 @@ const row = (page: Page, name: RegExp) => running(page).and(page.getByRole('list
 const BUILDER = / · Builder$/;
 
 async function listWaiting(page: Page) {
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, `${CREW_REQUEST} #build #crew`);
   await expect(card(page, /Change a file\?/)).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Agent TV' }).click();

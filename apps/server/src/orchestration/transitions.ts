@@ -12,7 +12,7 @@ import {
 } from '@spark-outpost/contracts';
 import { MAX_VERDICTS, PLAN_CONTINUES } from '../advisor/policy.ts';
 import type { Verdict } from '../advisor/verify-questions.ts';
-import { asksToKeep, asksForLoop } from './checkpoint-policy.ts';
+import { asksToKeep, asksForLoop, shipsByItself } from './checkpoint-policy.ts';
 import { criticFixFollowUp } from './context.ts';
 import {
   afterReview,
@@ -47,6 +47,7 @@ export type FlowAction =
   | ({ type: 'spawn' } & Spawn)
   | { type: 'verify' }
   | { type: 'wrap_up' }
+  | { type: 'ship' }
   | { type: 'revert' }
   | {
       type: 'finish';
@@ -78,6 +79,8 @@ export type FlowEvent =
   | { type: 'looped'; summary: string; open?: readonly string[] }
   | { type: 'answered'; kind: CheckpointKind; optionId: string; note: string | null }
   | { type: 'wrapped'; filesChanged: number }
+  | { type: 'shipped' }
+  | { type: 'ship_held'; reason: string }
   | { type: 'reverted' }
   | { type: 'budget_exceeded'; limit: BudgetLimit; unstarted?: boolean }
   | { type: 'stopped' };
@@ -103,6 +106,7 @@ export interface FlowState {
   escalated: boolean;
   large: boolean;
   review: ReviewLoop;
+  shipping?: boolean;
 }
 
 export interface FlowResult {
@@ -190,6 +194,10 @@ export function finish(
     state: { ...state, phase: 'finished', waitingFor: null },
     action: { type: 'finish', status, reason, ...(incomplete ? { incomplete } : {}) },
   };
+}
+
+function ship(state: FlowState): FlowResult {
+  return { state: { ...state, waitingFor: null, shipping: true }, action: { type: 'ship' } };
 }
 
 function wrapUp(state: FlowState): FlowResult {
@@ -357,6 +365,9 @@ function looped(state: FlowState, event: Extract<FlowEvent, { type: 'looped' }>)
 function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered' }>): FlowResult {
   const option = event.optionId;
   if (event.kind === 'budget') {
+    if (option === CHECKPOINT_OPTION.continueBudget && state.shipping) {
+      return ship({ ...state, exceeded: null, resumeLast: false });
+    }
     if (option === CHECKPOINT_OPTION.continueBudget && state.review.stop === 'budget') {
       return fixFindings({ ...state, exceeded: null, resumeLast: false });
     }
@@ -434,9 +445,15 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
     case 'answered':
       return answered(state, event);
     case 'wrapped':
-      return asksToKeep(state.level, event.filesChanged)
-        ? ask(state, 'accept', filesChangedLine(event.filesChanged))
-        : finish(state, 'succeeded');
+      if (asksToKeep(state.level, event.filesChanged)) {
+        return ask(state, 'accept', filesChangedLine(event.filesChanged));
+      }
+      if (shipsByItself(state.level, event.filesChanged)) return ship(state);
+      return finish(state, 'succeeded');
+    case 'shipped':
+      return finish(state, 'succeeded');
+    case 'ship_held':
+      return ask(state, 'accept', event.reason);
     case 'reverted':
       return finish({ ...state, open: [] }, 'succeeded', 'Reverted the changes.');
     case 'budget_exceeded':

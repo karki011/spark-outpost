@@ -15,6 +15,8 @@ import { shipBranchName } from './branch.ts';
 import { shipCandidates } from './files.ts';
 import {
   branchExists,
+  branchTip,
+  filesAgainst,
   gitInstalled,
   pendingFiles,
   pickRemote,
@@ -35,6 +37,12 @@ export interface ShipDeps extends GitHubDeps {
 
 export class ShipBlockedError extends Error {}
 
+export interface ShipOptions {
+  keepCheckout?: boolean;
+  duringRun?: boolean;
+  notes?: readonly string[];
+}
+
 export interface ShipPlan {
   task: TaskDetail;
   facts: ShipTaskFacts | null;
@@ -52,6 +60,8 @@ export interface ShipPlan {
   blocked: ShipBlock | null;
   modes: ShipMode[];
   notes: string[];
+  keepCheckout: boolean;
+  paths: string[];
 }
 
 const block = (reason: ShipBlock['reason'], message: string): ShipBlock => ({ reason, message });
@@ -142,21 +152,30 @@ function blockedPlan(
     remoteRepo: null,
     github: null,
     notes: [],
+    keepCheckout: false,
+    paths: [],
     ...base,
     blocked,
     modes: [],
   };
 }
 
-export async function planShip(deps: ShipDeps, taskId: string): Promise<ShipPlan> {
+export async function planShip(
+  deps: ShipDeps,
+  taskId: string,
+  options: ShipOptions = {},
+): Promise<ShipPlan> {
   const task = await getTaskDetail(deps.db, taskId);
   if (!task) throw new TaskNotFoundError(taskId);
   const shipped = await getTaskShip(deps.db, taskId);
   const branch = shipped?.branch ?? shipBranchName(deps.branchPrefix, task.title, task.id);
-  const start = { task, branch, shipped };
+  const keepCheckout = options.keepCheckout ?? shipped?.keepsCheckout ?? false;
+  const start = { task, branch, shipped, keepCheckout };
   if (!(await gitInstalled())) return blockedPlan(start, BLOCKED.gitMissing);
   const facts = await shipTaskFacts(deps.db, taskId);
-  if (facts.running) return blockedPlan({ ...start, facts }, BLOCKED.running);
+  if (facts.running && !options.duringRun) {
+    return blockedPlan({ ...start, facts }, BLOCKED.running);
+  }
   if (facts.roots.length > 1 && !shipped) return blockedPlan(start, BLOCKED.severalFolders);
   if (facts.unmergedCopy) return blockedPlan(start, BLOCKED.unmergedCopy);
   const root = shipped?.rootPath ?? facts.roots[0] ?? null;
@@ -166,11 +185,26 @@ export async function planShip(deps: ShipDeps, taskId: string): Promise<ShipPlan
   if (!repo.head) return blockedPlan({ ...start, root, repo }, BLOCKED.noCommits);
 
   const candidates = shipCandidates(await taskChanges(deps.db, deps.workspaceId, taskId));
-  const files = await pendingFiles(root, repo.prefix, candidates.paths);
   const exists = await branchExists(root, branch);
-  const context = { ...start, facts, root, repo, files, skipped: candidates.skipped };
+  const files = keepCheckout
+    ? await filesAgainst(
+        root,
+        repo.prefix,
+        candidates.paths,
+        (exists ? await branchTip(root, branch) : null) ?? repo.head,
+      )
+    : await pendingFiles(root, repo.prefix, candidates.paths);
+  const context = {
+    ...start,
+    facts,
+    root,
+    repo,
+    files,
+    skipped: candidates.skipped,
+    paths: candidates.paths,
+  };
   if (files.length === 0 && !exists) return blockedPlan(context, BLOCKED.nothingNew);
-  if (files.length > 0 && exists && repo.branch !== branch) {
+  if (!keepCheckout && files.length > 0 && exists && repo.branch !== branch) {
     return blockedPlan(context, switchFirst(branch, repo.branch));
   }
 

@@ -65,7 +65,7 @@ export function needsCopyFor(
   destructive: boolean,
   busy: boolean,
 ): boolean {
-  return buildsInWorktree(provider, level) || destructive || busy;
+  return level === 'full-auto' || buildsInWorktree(provider, level) || destructive || busy;
 }
 
 interface Copies {
@@ -126,9 +126,9 @@ async function describeConflict(
   record: WorktreeRecord & { resultCommit: string },
   name: string,
   attempt: MergeAttempt,
+  base: string,
 ): Promise<MergeConflict> {
   const root = record.repoRoot;
-  const base = record.baseCommit;
   const files = await Promise.all(
     attempt.conflicts.map(async (file) => ({
       path: file,
@@ -160,20 +160,21 @@ async function mergeCopy(s: Session, name: string): Promise<'merged' | 'stopped'
   const record = s.copyRunId ? await getWorktree(s.deps.db, s.copyRunId) : null;
   if (!record) return 'merged';
   const target = worktreePath(record.repoRoot, record.runId);
+  const base = s.copyMerged ?? record.baseCommit;
   const resultCommit = await commitWorktree(
     record.repoRoot,
     target,
     record.branch,
-    record.baseCommit,
+    base,
     record.runId,
   );
   await saveResult(s.deps.db, record.runId, resultCommit);
   const root = record.repoRoot;
-  const attempt = await tryMerge(root, record.baseCommit, resultCommit);
+  const attempt = await tryMerge(root, base, resultCommit);
   await pinSnapshot(root, record.runId, attempt.current);
   await saveSnapshot(s.deps.db, record.runId, { kind: 'git', ref: attempt.current, root });
   if (attempt.conflicts.length > 0) {
-    const conflict = await describeConflict({ ...record, resultCommit }, name, attempt);
+    const conflict = await describeConflict({ ...record, resultCommit }, name, attempt, base);
     const answer = await askCard(
       s,
       mergeConflictCard(conflict, conflictLine(name, attempt.conflicts)),
@@ -188,6 +189,7 @@ async function mergeCopy(s: Session, name: string): Promise<'merged' | 'stopped'
     await applyTree(root, attempt.current, attempt.tree);
   }
   await markMerged(s.deps.db, record.runId);
+  s.copyMerged = resultCommit;
   return 'merged';
 }
 

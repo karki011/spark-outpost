@@ -142,12 +142,7 @@ export const SCENARIOS: readonly Scenario[] = [
   },
 ];
 
-export const LEVELS: readonly InvolvementLevel[] = [
-  'hands-on',
-  'balanced',
-  'hands-off',
-  'full-auto',
-];
+export const LEVELS: readonly InvolvementLevel[] = ['balanced', 'hands-off', 'full-auto'];
 
 type Answers = Record<string, unknown>;
 
@@ -285,6 +280,7 @@ export function startOrchestrator(
     loopGuard?: OrchestratorDeps['loopGuard'];
     codeScan?: OrchestratorDeps['codeScan'];
     budgetPollMs?: number;
+    shipAccess?: OrchestratorDeps['shipAccess'];
   } = {},
 ): Harness {
   const intake = fetcher
@@ -311,6 +307,7 @@ export function startOrchestrator(
     ...(options.budget ? { budget: options.budget } : {}),
     ...(options.loopGuard !== undefined ? { loopGuard: options.loopGuard } : {}),
     ...(options.codeScan ? { codeScan: options.codeScan } : {}),
+    ...(options.shipAccess ? { shipAccess: options.shipAccess } : {}),
   });
   return {
     worker,
@@ -377,6 +374,7 @@ export async function driveToEnd(
   await eventually(async () => {
     const detail = await getConversationDetail(t.db, conversationId);
     for (const approval of detail?.approvals ?? []) {
+      if (approval.status !== 'pending') continue;
       if (asked.some((seen) => seen.id === approval.id)) continue;
       const decision = answer(approval);
       if (!decision) continue;

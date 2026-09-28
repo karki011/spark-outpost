@@ -7,8 +7,18 @@ import { projectNameSchema } from './projects.ts';
 export const runModeSchema = z.enum(['chat', 'ask', 'do']);
 export type RunMode = z.infer<typeof runModeSchema>;
 
-export const involvementLevelSchema = z.enum(['hands-on', 'balanced', 'hands-off', 'full-auto']);
-export type InvolvementLevel = z.infer<typeof involvementLevelSchema>;
+export const PERMISSION_ASK = 'ask' as const;
+export const PERMISSION_DO = 'do' as const;
+
+export const INVOLVEMENT_LEVEL_IDS = ['balanced', 'hands-off', 'full-auto'] as const;
+
+export const LEGACY_HANDS_ON = 'hands-on';
+
+export const involvementLevelSchema = z.preprocess(
+  (value) => (value === LEGACY_HANDS_ON ? 'balanced' : value),
+  z.enum(INVOLVEMENT_LEVEL_IDS),
+);
+export type InvolvementLevel = (typeof INVOLVEMENT_LEVEL_IDS)[number];
 
 export const DEFAULT_INVOLVEMENT_LEVEL: InvolvementLevel = 'balanced';
 
@@ -20,26 +30,74 @@ export interface InvolvementLevelInfo {
 
 export const INVOLVEMENT_LEVELS: readonly InvolvementLevelInfo[] = [
   {
-    id: 'hands-on',
-    label: 'Hands-on',
-    hint: 'You approve every edit and every command, even reads like ls or cat.',
-  },
-  {
     id: 'balanced',
-    label: 'Balanced',
-    hint: "Every edit asks. Read-only commands in the project run; other commands ask unless they're on the project's allowlist.",
+    label: 'Ask before edits',
+    hint: "Every edit and every risky command asks. Read-only commands in the project run, and so do commands on the project's allowlist.",
   },
   {
     id: 'hands-off',
-    label: 'Hands-off',
-    hint: "Edits and read-only commands go through. Other commands ask unless they're on the allowlist.",
+    label: 'Auto-edit',
+    hint: "Edits and read-only commands go through. Other commands ask unless they're on the project's allowlist.",
   },
   {
     id: 'full-auto',
     label: 'Full auto',
-    hint: 'Only pushing, deleting outside the repo, secret files and package installs ask. Every action still gets a receipt.',
+    hint: 'Everything goes through in a separate worktree, then runs to a draft PR; it never merges. Changing or deleting files outside the repo, secret files and package installs still ask.',
   },
 ];
+
+export const ASK_ACCESS = 'ask';
+export type AccessId = typeof ASK_ACCESS | InvolvementLevel;
+
+export interface AccessChoice {
+  id: AccessId;
+  label: string;
+  hint: string;
+  permission: typeof PERMISSION_ASK | typeof PERMISSION_DO;
+  level: InvolvementLevel | null;
+}
+
+export const ASK_ACCESS_CHOICE: AccessChoice = {
+  id: ASK_ACCESS,
+  label: 'Ask',
+  hint: 'Reads the linked repos and answers. Never changes files.',
+  permission: PERMISSION_ASK,
+  level: null,
+};
+
+export const ACCESS_CHOICES: readonly AccessChoice[] = [
+  ASK_ACCESS_CHOICE,
+  ...INVOLVEMENT_LEVELS.map((level) => ({
+    id: level.id,
+    label: level.label,
+    hint: level.hint,
+    permission: PERMISSION_DO,
+    level: level.id,
+  })),
+];
+
+export function accessFor(
+  permission: string | null | undefined,
+  level: InvolvementLevel | null | undefined,
+): AccessChoice | null {
+  if (permission === PERMISSION_ASK) return ASK_ACCESS_CHOICE;
+  if (permission !== PERMISSION_DO) return null;
+  const id = level ?? DEFAULT_INVOLVEMENT_LEVEL;
+  return ACCESS_CHOICES.find((choice) => choice.id === id) ?? null;
+}
+
+export function accessChoice(id: string): AccessChoice | null {
+  return ACCESS_CHOICES.find((choice) => choice.id === id) ?? null;
+}
+
+export function accessUpdate(choice: AccessChoice): {
+  permission: string;
+  level?: InvolvementLevel;
+} {
+  return choice.level
+    ? { permission: choice.permission, level: choice.level }
+    : { permission: choice.permission };
+}
 
 export interface DoProviderNotes {
   levels: Record<InvolvementLevel, string>;
@@ -55,8 +113,6 @@ export const DEFAULT_DO_DISCLOSURE =
 export const DO_PROVIDER_NOTES: Readonly<Record<string, DoProviderNotes>> = {
   codex: {
     levels: {
-      'hands-on':
-        'Codex asks before every command and every file change, and each one comes to you.',
       balanced:
         'Codex asks before every command and file change. Read-only commands in the project are answered for you; the rest come to you.',
       'hands-off':
@@ -70,9 +126,16 @@ export const DO_PROVIDER_NOTES: Readonly<Record<string, DoProviderNotes>> = {
   },
 };
 
-export function levelHint(level: InvolvementLevelInfo, provider: string | null): string {
+export function levelHint(
+  level: Pick<InvolvementLevelInfo, 'id' | 'hint'>,
+  provider: string | null,
+): string {
   const note = provider ? DO_PROVIDER_NOTES[provider]?.levels[level.id] : undefined;
   return note ? `${level.hint} ${note}` : level.hint;
+}
+
+export function accessHint(choice: AccessChoice, provider: string | null): string {
+  return choice.level ? levelHint({ id: choice.level, hint: choice.hint }, provider) : choice.hint;
 }
 
 export function commandSandboxNote(provider: string | null): string {
@@ -86,9 +149,6 @@ export function doDisclosure(provider: string | null): string {
 export function involvementLevelLabel(level: InvolvementLevel): string {
   return INVOLVEMENT_LEVELS.find((info) => info.id === level)?.label ?? level;
 }
-
-export const PERMISSION_ASK = 'ask';
-export const PERMISSION_DO = 'do';
 
 export const approvalKindSchema = z.enum([
   'edit',

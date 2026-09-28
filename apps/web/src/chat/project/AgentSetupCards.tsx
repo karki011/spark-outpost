@@ -136,8 +136,8 @@ export function McpCard({ config, name, busy, onChange }: CardsProps) {
   return (
     <SetupCard title="MCP servers" count={config.mcpServers.length} status={`${on} on`} tone="warn">
       <p className="as-warn">
-        Servers run programs or reach services with your access. Each tool call still asks first.
-        Secrets in your shell are not passed.
+        Servers run programs or reach services with your access. Each tool call asks first, except
+        at Full auto. Secrets in your shell are not passed.
       </p>
       <ul className="as-servers">
         {config.mcpServers.map((server) => (

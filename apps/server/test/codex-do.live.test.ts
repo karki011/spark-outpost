@@ -143,7 +143,7 @@ async function build(level: InvolvementLevel) {
 }
 
 describe('Codex Do, live (gpt-6-luna · low)', () => {
-  it.each(['hands-on', 'balanced', 'hands-off', 'full-auto'] as const)(
+  it.each(['balanced', 'hands-off', 'full-auto'] as const)(
     'sends every Codex action at %s to the gate',
     async (level) => {
       const result = await build(level);
@@ -162,8 +162,6 @@ describe('Codex Do, live (gpt-6-luna · low)', () => {
       for (const id of result.tools.keys()) expect(gatedIds.has(id)).toBe(true);
       expect(result.readme).toContain('Checked by Codex.');
       expect(result.copies).toBe(level === 'hands-off' || level === 'full-auto' ? 1 : 0);
-      const byUser = result.gated.filter((row) => row.decided_by === 'user');
-      if (level === 'hands-on') expect(byUser).toHaveLength(result.gated.length);
       if (level === 'balanced') {
         expect(result.gated.some((row) => row.decided_by === 'level')).toBe(true);
         expect(

@@ -68,18 +68,24 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await effort.click();
   await page.getByRole('menuitemradio', { name: /^Max/ }).click();
   await expect(effort).toHaveText('Max');
-  const permission = claudeCard(page).getByRole('button', { name: 'Claude permission' });
+  const permission = claudeCard(page).getByRole('button', { name: 'Claude permissions' });
+  await expect(claudeCard(page).getByRole('button', { name: /involvement/i })).toHaveCount(0);
   await permission.click();
   await expect(page.getByRole('menuitemradio', { name: /Skip all checks/ })).toHaveCount(0);
-  await page.getByRole('menuitemradio', { name: /^Do/ }).click();
-  await expect(permission).toHaveText('Do');
+  await expect(page.getByRole('menuitemradio', { name: /Hands-on/ })).toHaveCount(0);
+  await expect(page.getByRole('menuitemradio')).toHaveText([
+    /^Ask/,
+    /^Ask before edits/,
+    /^Auto-edit/,
+    /^Full auto/,
+  ]);
+  await page.getByRole('menuitemradio', { name: /^Auto-edit/ }).click();
+  await expect(permission).toHaveText('Auto-edit');
   await expect(
-    claudeCard(page).getByText(
-      'Edits files and runs commands, asking as your involvement level says',
-    ),
+    claudeCard(page).getByText('Edits and read-only commands go through', { exact: false }),
   ).toBeVisible();
   await permission.click();
-  await page.getByRole('menuitemradio', { name: /^Ask/ }).click();
+  await page.getByRole('menuitemradio', { name: /^Ask(?! before)/ }).click();
   await expect(permission).toHaveText('Ask');
 
   await continueButton(page).click();
@@ -91,7 +97,7 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await continueButton(page).click();
   await expect(dialog(page).getByRole('heading', { name: "You're all set, Hazel" })).toBeVisible();
   await expect(dialog(page)).toContainText('Claude via API key');
-  await expect(dialog(page)).toContainText('Claude Sonnet 5, max effort, ask mode');
+  await expect(dialog(page)).toContainText('Claude Sonnet 5, max effort, permissions: Ask');
   await expect(dialog(page)).toContainText('Tools coming soon');
 
   await dialog(page).getByRole('button', { name: 'Open Spark Outpost' }).click();

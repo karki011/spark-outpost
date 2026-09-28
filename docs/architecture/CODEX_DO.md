@@ -82,7 +82,7 @@ Maintenance:
 
 ## Proposal: Codex Do by involvement level
 
-Codex Do runs in the `ask-every-action` mode, and every command and patch reaches `decide()`. The levels then mean the same as for Claude. Differences:
+Codex Do runs in the `ask-every-action` mode, and every command and patch reaches `decide()`. The levels then mean the same as for Claude. Differences (level names as of September 26; since September 28 the picker shows Ask before edits, Auto-edit and Full auto, and Hands-on is gone):
 
 | Level     | Codex Do                                                                                   | What Codex asks (picker copy)                                                                                                                                                        |
 | --------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

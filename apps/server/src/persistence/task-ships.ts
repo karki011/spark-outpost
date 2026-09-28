@@ -10,6 +10,7 @@ export interface TaskShip {
   pushedAt: Date | null;
   prUrl: string | null;
   prNumber: number | null;
+  keepsCheckout?: boolean;
 }
 
 interface ShipRow {
@@ -21,6 +22,7 @@ interface ShipRow {
   pushed_at: Date | null;
   pr_url: string | null;
   pr_number: number | null;
+  keeps_checkout: boolean;
 }
 
 export async function getTaskShip(db: Queryable, taskId: string): Promise<TaskShip | null> {
@@ -36,18 +38,20 @@ export async function getTaskShip(db: Queryable, taskId: string): Promise<TaskSh
     pushedAt: row.pushed_at,
     prUrl: row.pr_url,
     prNumber: row.pr_number,
+    keepsCheckout: row.keeps_checkout,
   };
 }
 
 export async function saveTaskShip(db: Queryable, taskId: string, ship: TaskShip): Promise<void> {
   await db.query(
     `INSERT INTO task_ships (task_id, root_path, branch, base_branch, remote, last_commit,
-       pushed_at, pr_url, pr_number)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       pushed_at, pr_url, pr_number, keeps_checkout)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      ON CONFLICT (task_id) DO UPDATE SET root_path = EXCLUDED.root_path,
        branch = EXCLUDED.branch, base_branch = EXCLUDED.base_branch, remote = EXCLUDED.remote,
        last_commit = EXCLUDED.last_commit, pushed_at = EXCLUDED.pushed_at,
-       pr_url = EXCLUDED.pr_url, pr_number = EXCLUDED.pr_number, updated_at = now()`,
+       pr_url = EXCLUDED.pr_url, pr_number = EXCLUDED.pr_number,
+       keeps_checkout = EXCLUDED.keeps_checkout, updated_at = now()`,
     [
       taskId,
       ship.rootPath,
@@ -58,6 +62,7 @@ export async function saveTaskShip(db: Queryable, taskId: string, ship: TaskShip
       ship.pushedAt,
       ship.prUrl,
       ship.prNumber,
+      ship.keepsCheckout ?? false,
     ],
   );
 }

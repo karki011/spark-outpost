@@ -7,11 +7,15 @@ import { asksWhenUnsure } from '../advisor/gate.ts';
 
 export function asksToKeep(level: InvolvementLevel, filesChanged: number): boolean {
   if (filesChanged === 0) return false;
-  return level === 'hands-on' || level === 'balanced';
+  return level === 'balanced';
 }
 
 export function fixesFindingsItself(level: InvolvementLevel): boolean {
-  return level !== 'hands-on';
+  return level !== 'balanced';
+}
+
+export function shipsByItself(level: InvolvementLevel, filesChanged: number): boolean {
+  return level === 'full-auto' && filesChanged > 0;
 }
 
 export function asksForLoop(level: InvolvementLevel): boolean {

@@ -38,6 +38,7 @@ import { refreshPlan } from './plan-progress.ts';
 import { isLargeDiff } from './risk-rules.ts';
 import { routeBuilder, type RouteContext } from './routing.ts';
 import { buildInCopy, cleanupCopies, needsCopyFor, repoBusy } from './solo-copy.ts';
+import { shipFullAuto } from './full-auto-ship.ts';
 import {
   baseLimits,
   builderKey,
@@ -195,6 +196,8 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       );
       return { type: 'wrapped', filesChanged: changes?.files.length ?? 0 };
     }
+    case 'ship':
+      return shipFullAuto(s);
     case 'revert':
       await revertRun(s.deps.db, s.input.workspaceId, s.lease.runId, true);
       s.closeReason = 'reverted';
@@ -226,7 +229,8 @@ async function finish(
   const escalated = s.flow.escalated ? ESCALATED_NOTE : null;
   const fixed =
     s.flow.review.fixRounds > 0 || s.flow.review.stop === 'budget' ? sessionReviewLine(s) : null;
-  const notes = [assumed, escalated, fixed, stopped, incomplete].filter(
+  const shipped = s.shipLine ?? null;
+  const notes = [assumed, escalated, fixed, stopped, incomplete, shipped].filter(
     (line): line is string => line !== null,
   );
   const text = withNotes(

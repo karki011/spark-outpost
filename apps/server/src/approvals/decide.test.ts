@@ -14,7 +14,7 @@ import {
 } from './decide.ts';
 
 const ROOT = '/work/app';
-const LEVELS: InvolvementLevel[] = ['hands-on', 'balanced', 'hands-off', 'full-auto'];
+const LEVELS: InvolvementLevel[] = ['balanced', 'hands-off', 'full-auto'];
 
 function request(overrides: Partial<ApprovalRequest>): ApprovalRequest {
   return {
@@ -41,7 +41,6 @@ const other = request({ kind: 'other', toolKind: 'fetch', title: 'Fetch docs', c
 
 describe('decide() by involvement level', () => {
   it.each([
-    ['hands-on', 'ask'],
     ['balanced', 'ask'],
     ['hands-off', 'allow'],
     ['full-auto', 'allow'],
@@ -50,7 +49,6 @@ describe('decide() by involvement level', () => {
   });
 
   it.each([
-    ['hands-on', 'ask', 'ask'],
     ['balanced', 'ask', 'allow'],
     ['hands-off', 'ask', 'allow'],
     ['full-auto', 'allow', 'allow'],
@@ -111,13 +109,13 @@ describe('decide() for plan mode', () => {
 });
 
 describe('decide() run rules', () => {
-  it('allows the same command again after "Allow for this run", even hands-on', () => {
-    const rule = ruleFor(run('ls  -la'))!;
-    expect(decide('hands-on', run('ls -la'), [rule], [])).toEqual({
+  it('allows the same command again after "Allow for this run"', () => {
+    const rule = ruleFor(run('pnpm build  --watch'))!;
+    expect(decide('balanced', run('pnpm build --watch'), [rule], [])).toEqual({
       verdict: 'allow',
       by: 'run_rule',
     });
-    expect(decide('hands-on', run('ls -la src'), [rule], []).verdict).toBe('ask');
+    expect(decide('balanced', run('pnpm build --prod'), [rule], []).verdict).toBe('ask');
   });
 
   it('allows further edits after an edit was allowed for the run', () => {
@@ -152,11 +150,7 @@ describe('decide() refuses force pushes at every level', () => {
       verdict: 'allow',
       by: 'allowlist',
     });
-    expect(decide('hands-on', push, [], ['git push'])).toEqual({
-      verdict: 'ask',
-      reason: PUSH_REASON,
-    });
-    expect(decide('hands-on', push, [ruleFor(push)!], []).verdict).toBe('allow');
+    expect(decide('hands-off', push, [ruleFor(push)!], []).verdict).toBe('allow');
   });
 });
 
@@ -219,7 +213,6 @@ describe('decide() refusals', () => {
 
 describe('decide() for read-only commands', () => {
   it.each([
-    ['hands-on', 'ask'],
     ['balanced', 'allow'],
     ['hands-off', 'allow'],
     ['full-auto', 'allow'],

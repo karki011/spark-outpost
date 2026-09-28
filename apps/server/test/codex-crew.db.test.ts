@@ -75,7 +75,7 @@ async function build(level: InvolvementLevel) {
 }
 
 describe('a Codex-only crew in Do', () => {
-  it.each(['hands-on', 'balanced'] as const)(
+  it.each(['balanced'] as const)(
     'builds in place at %s and asks for the edit',
     async (level) => {
       const { orchestration, asked, builders, copies, status } = await build(level);

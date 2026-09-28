@@ -1,4 +1,8 @@
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import type { ShipFile } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
 
@@ -14,7 +18,12 @@ interface GitResult {
   stderr: string;
 }
 
-function runGit(root: string, args: string[], timeout = QUICK_MS): Promise<GitResult> {
+function runGit(
+  root: string,
+  args: string[],
+  timeout = QUICK_MS,
+  extraEnv: Record<string, string> = {},
+): Promise<GitResult> {
   return new Promise((resolve) => {
     const child = execFile(
       'git',
@@ -22,7 +31,13 @@ function runGit(root: string, args: string[], timeout = QUICK_MS): Promise<GitRe
       {
         timeout,
         maxBuffer: MAX_BUFFER,
-        env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_ASKPASS: '', SSH_ASKPASS: '' },
+        env: {
+          ...process.env,
+          GIT_TERMINAL_PROMPT: '0',
+          GIT_ASKPASS: '',
+          SSH_ASKPASS: '',
+          ...extraEnv,
+        },
       },
       (error, stdout, stderr) => {
         const code = error ? (typeof error.code === 'number' ? error.code : -1) : 0;
@@ -40,8 +55,14 @@ function failure(action: string, result: GitResult): ShipGitError {
   );
 }
 
-async function gitOut(root: string, args: string[], action: string, timeout?: number) {
-  const result = await runGit(root, args, timeout);
+async function gitOut(
+  root: string,
+  args: string[],
+  action: string,
+  timeout?: number,
+  extraEnv?: Record<string, string>,
+) {
+  const result = await runGit(root, args, timeout, extraEnv);
   if (result.code !== 0) throw failure(action, result);
   return result.stdout;
 }
@@ -71,12 +92,26 @@ export async function repoState(root: string): Promise<RepoState | null> {
   };
 }
 
+const NAME_STATUS: Record<string, ShipFile['change']> = { A: 'added', D: 'deleted' };
+
 const topPathspec = (prefix: string, path: string) => `:(top,literal)${prefix}${path}`;
 
 function statusChange(code: string): ShipFile['change'] {
   if (code === '??' || code.includes('A')) return 'added';
   if (code.includes('D')) return 'deleted';
   return 'modified';
+}
+
+export function parseNameStatus(output: string, prefix: string): ShipFile[] {
+  const parts = output.split('\0').filter(Boolean);
+  const files: ShipFile[] = [];
+  for (let index = 0; index + 1 < parts.length; index += 2) {
+    const file = parts[index + 1]!;
+    if (!file.startsWith(prefix)) continue;
+    const change = NAME_STATUS[parts[index]!.charAt(0)] ?? 'modified';
+    files.push({ path: file.slice(prefix.length), change });
+  }
+  return files.sort((a, b) => a.path.localeCompare(b.path));
 }
 
 export function parseStatus(output: string, prefix: string): ShipFile[] {
@@ -193,8 +228,6 @@ export async function pushBranch(root: string, remote: string, branch: string): 
   );
 }
 
-const NAME_STATUS: Record<string, ShipFile['change']> = { A: 'added', D: 'deleted' };
-
 export async function filesBetween(
   root: string,
   prefix: string,
@@ -213,13 +246,103 @@ export async function filesBetween(
     ],
     'Listing the branch files',
   );
-  const parts = output.split('\0').filter(Boolean);
-  const files: ShipFile[] = [];
-  for (let index = 0; index + 1 < parts.length; index += 2) {
-    const path = parts[index + 1]!;
-    if (!path.startsWith(prefix)) continue;
-    const change = NAME_STATUS[parts[index]!.charAt(0)] ?? 'modified';
-    files.push({ path: path.slice(prefix.length), change });
+  return parseNameStatus(output, prefix);
+}
+
+export async function branchTip(root: string, branch: string): Promise<string | null> {
+  return gitMaybe(root, ['rev-parse', '--verify', '-q', `refs/heads/${branch}^{commit}`]);
+}
+
+type IndexEnv = Record<string, string>;
+
+async function withTaskIndex<T>(
+  root: string,
+  prefix: string,
+  paths: readonly string[],
+  start: string,
+  work: (env: IndexEnv, pathspecs: string[]) => Promise<T>,
+): Promise<T> {
+  const dir = await mkdtemp(path.join(tmpdir(), 'spark-ship-index-'));
+  const env = { GIT_INDEX_FILE: path.join(dir, 'index') };
+  try {
+    await gitOut(root, ['read-tree', start], 'Reading the branch', undefined, env);
+    const all = paths.map((file) => topPathspec(prefix, file));
+    const tracked = all.length
+      ? (
+          await gitOut(
+            root,
+            ['ls-files', '-z', '--', ...all],
+            'Listing the branch files',
+            undefined,
+            env,
+          )
+        )
+          .split('\0')
+          .filter(Boolean)
+      : [];
+    const known = new Set(tracked);
+    const present = paths.filter(
+      (file) => known.has(`${prefix}${file}`) || existsSync(path.join(root, file)),
+    );
+    const pathspecs = present.map((file) => topPathspec(prefix, file));
+    if (pathspecs.length > 0) {
+      await gitOut(root, ['add', '-A', '--', ...pathspecs], 'Staging the task files', SLOW_MS, env);
+    }
+    return await work(env, pathspecs);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
   }
-  return files;
+}
+
+export async function filesAgainst(
+  root: string,
+  prefix: string,
+  paths: readonly string[],
+  start: string,
+): Promise<ShipFile[]> {
+  if (paths.length === 0) return [];
+  return withTaskIndex(root, prefix, paths, start, async (env, pathspecs) => {
+    if (pathspecs.length === 0) return [];
+    const output = await gitOut(
+      root,
+      ['diff', '--cached', '--name-status', '--no-renames', '-z', start, '--', ...pathspecs],
+      'Comparing the task files',
+      undefined,
+      env,
+    );
+    return parseNameStatus(output, prefix);
+  });
+}
+
+export async function commitOnBranch(
+  root: string,
+  prefix: string,
+  paths: readonly string[],
+  branch: string,
+  start: string,
+  subject: string,
+  body: string,
+): Promise<string | null> {
+  return withTaskIndex(root, prefix, paths, start, async (env) => {
+    const tree = (await gitOut(root, ['write-tree'], 'Writing the tree', undefined, env)).trim();
+    const startTree = (
+      await gitOut(root, ['rev-parse', `${start}^{tree}`], 'Reading the tree')
+    ).trim();
+    if (tree === startTree) return null;
+    const commit = (
+      await gitOut(
+        root,
+        ['commit-tree', tree, '-p', start, '-m', subject, '-m', body],
+        'Committing',
+        SLOW_MS,
+      )
+    ).trim();
+    const current = await branchTip(root, branch);
+    await gitOut(
+      root,
+      ['update-ref', `refs/heads/${branch}`, commit, current ?? ''],
+      `Updating ${branch}`,
+    );
+    return commit;
+  });
 }

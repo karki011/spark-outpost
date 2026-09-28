@@ -5,7 +5,9 @@ import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { backupDatabase } from '../persistence/backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
+import { runCommand } from '../setup/command.ts';
 import { keychainSecretStore, memorySecretStore } from '../setup/secrets.ts';
+import { locateCli } from '../setup/verify.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createProviders } from './providers.ts';
 import { startWorker } from './worker.ts';
@@ -31,6 +33,7 @@ const intake = createIntakeRecorder({
   fetch,
   baseUrl: config.TYPESAFE_BASE_URL,
 });
+const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const worker = startWorker({
   db,
   approvalWaiters,
@@ -44,6 +47,13 @@ const worker = startWorker({
   concurrency: config.WORKER_CONCURRENCY,
   codeScan: createCodeScanner(db),
   branchPrefix: config.BRANCH_PREFIX,
+  shipAccess: {
+    secrets,
+    runCommand,
+    fetch,
+    apiUrl: config.GITHUB_API_URL,
+    locateGh: () => locateCli('gh', runCommand, loginShell),
+  },
   ...(config.ORCHESTRATION_COST_CAP_USD
     ? { budget: { costCapUsd: config.ORCHESTRATION_COST_CAP_USD } }
     : {}),

@@ -109,6 +109,9 @@ export async function ask(s: Session, action: Ask): Promise<FlowEvent> {
     if (answer.optionId === CHECKPOINT_OPTION.stop) return { type: 'clarified', answer: null };
     return { type: 'clarified', answer: answer.optionId === CHECKPOINT_OPTION.justAnswer };
   }
+  if (action.kind === 'verify' && answer.optionId === CHECKPOINT_OPTION.finishUnverified) {
+    s.unverified = true;
+  }
   if (action.kind === 'budget' && answer.optionId === CHECKPOINT_OPTION.continueBudget) {
     s.limits = extendLimits(s.limits, await budgetUsage(s), s.baseLimits);
     s.budgetHit = null;

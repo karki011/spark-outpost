@@ -155,6 +155,9 @@ export function checkpointResult(approval: Approval): string {
     const delay = autoDelaySeconds(approval);
     return delay === null ? 'Continued automatically.' : `Continued automatically after ${delay}s.`;
   }
+  if (approval.decidedBy === 'level' && approval.decisionOptionId === CHECKPOINT_OPTION.keep) {
+    return 'Kept by Full auto.';
+  }
   if (approval.status === 'cancelled' && approval.decidedBy === 'policy') {
     return 'It moved on before you answered.';
   }

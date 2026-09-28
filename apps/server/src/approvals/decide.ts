@@ -185,15 +185,15 @@ export function decide(
   if (request.kind === 'execute') {
     if (request.command && isGitPush(request.command)) {
       const listed = allowlistCovers(allowlist, request.command);
-      return listed && level !== 'hands-on'
+      return listed
         ? { verdict: 'allow', by: 'allowlist' }
         : { verdict: 'ask', reason: PUSH_REASON };
     }
-    if (level !== 'hands-on' && isSafeReadRequest(request)) {
+    if (isSafeReadRequest(request)) {
       return { verdict: 'allow', by: 'level', why: SAFE_READ_WHY };
     }
     const listed = request.command !== null && allowlistCovers(allowlist, request.command);
-    return listed && level !== 'hands-on' ? { verdict: 'allow', by: 'allowlist' } : ASK;
+    return listed ? { verdict: 'allow', by: 'allowlist' } : ASK;
   }
   return ASK;
 }

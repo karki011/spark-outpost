@@ -44,7 +44,7 @@ async function scrollThread(page: Page, to: 'top' | 'bottom') {
 }
 
 async function editWaiting(page: Page) {
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, `${CREW_REQUEST} #build #crew`);
   const edit = card(page, /Change a file\?/);
   await expect(edit).toBeVisible({ timeout: 30_000 });
@@ -267,7 +267,7 @@ test('recording of a full run with handoffs', async ({ browser }) => {
     recordVideo: { dir: SHOTS, size },
   });
   const page = await context.newPage();
-  await crewChat(page, repo, 'Balanced');
+  await crewChat(page, repo, 'Ask before edits');
   await page.getByRole('button', { name: 'Agent TV' }).click();
   await tvOf(page).getByRole('radio', { name: 'M', exact: true }).click();
   await send(page, `${CREW_REQUEST} #build #crew`);

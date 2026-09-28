@@ -10,6 +10,7 @@ import {
 } from '@spark-outpost/contracts';
 import type { IntakeResult } from '../advisor/intake-recorder.ts';
 import type { ScanReport } from '../codescan/scan.ts';
+import type { GitHubDeps } from '../ship/github/access.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
 import type { ProjectChecks } from '../checks/project-checks.ts';
 import type { Lease } from '../persistence/jobs.ts';
@@ -37,7 +38,10 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   loopGuard?: Partial<LoopGuardSettings> | false;
   codeScan?: CodeScanner;
   branchPrefix?: string;
+  shipAccess?: ShipAccess;
 }
+
+export type ShipAccess = Omit<GitHubDeps, 'db' | 'workspaceId'>;
 
 export interface MemberResult {
   role: AgentRole;
@@ -89,11 +93,14 @@ export interface Session {
   assumption: string | null;
   needsCopy: boolean;
   copyRunId: string | null;
+  copyMerged?: string;
   snapshotTaken: boolean;
   closeReason: string | null;
   observations: Promise<void>[];
   jevDiffs: boolean;
   scanReport?: ScanReport | null;
+  unverified?: boolean;
+  shipLine?: string | null;
 }
 
 export const COMMAND_READER_TOOL_CALL_LIMIT = 120;

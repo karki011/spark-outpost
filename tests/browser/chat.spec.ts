@@ -154,7 +154,7 @@ test('the composer picks a model and effort per chat and shows context use', asy
   await panel.getByRole('radio', { name: /^Low/ }).click();
   await expect(panel.getByRole('tab', { name: /Effort/ })).toContainText('Low');
   await panel.getByRole('tab', { name: /Permissions/ }).click();
-  await expect(panel.getByRole('radiogroup', { name: 'Mode', exact: true })).toBeVisible();
+  await expect(panel.getByRole('radiogroup', { name: 'Permissions', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
 
   await input.fill('Hello');

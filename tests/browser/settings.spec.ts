@@ -81,7 +81,7 @@ test('provider setting dropdowns return focus to their trigger after a keyboard 
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   const claude = providers.locator('.pcard').filter({ hasText: 'Claude' });
   await claude.locator('.pc-head').click();
-  const rows = ['Claude permission', 'Claude involvement level', 'Claude effort'];
+  const rows = ['Claude permissions', 'Claude effort'];
   if ((await claude.getByRole('button', { name: 'Claude model' }).count()) > 0) {
     rows.unshift('Claude model');
   }
@@ -108,4 +108,29 @@ test('provider setting dropdowns return focus to their trigger after a keyboard 
     await expect(trigger).toBeFocused();
     await expect(providers).toBeVisible();
   }
+});
+
+test('the Full auto failing-checks switch saves, and defaults to opening the draft PR', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile' })
+    .getByRole('tab', { name: /AI providers/ })
+    .click();
+  const providers = page.getByRole('dialog', { name: 'AI providers' });
+  const toggle = providers.getByRole('switch', {
+    name: 'Full auto opens a draft PR when checks still fail',
+  });
+  await expect(toggle).toBeChecked();
+  await expect(providers).toContainText('marks it "Checks failing"');
+  const saved = page.waitForResponse(
+    (response) => response.url().endsWith('/api/profile') && response.ok(),
+  );
+  await toggle.click();
+  await saved;
+  await expect(toggle).not.toBeChecked();
+  const profile = await page.request.get('/api/setup');
+  expect((await profile.json()).profile.shipFailingChecks).toBe(false);
 });

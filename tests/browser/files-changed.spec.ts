@@ -38,7 +38,10 @@ async function editedChat(page: Page) {
   await page.getByRole('button', { name: /^Model and effort/ }).click();
   const picker = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
   await picker.getByRole('tab', { name: /Permissions/ }).click();
-  await picker.getByRole('radio', { name: /^Do/ }).click();
+  await picker
+    .getByRole('radiogroup', { name: 'Permissions' })
+    .getByRole('radio', { name: 'Ask before edits', exact: true })
+    .click();
   await page.keyboard.press('Escape');
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Tidy the notes #edit #plan');
