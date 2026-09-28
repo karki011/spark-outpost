@@ -46,8 +46,9 @@ stub 4429. Never 4318, 5173 or 4399.
   `https://github.e2e.localhost/e2e-bench/workbench.git`, rewritten by `url.insteadOf` to a local
   bare repo; every other `https://` remote is rewritten to a dead path, so nothing can reach a real
   host.
-- **external**: a `git clone --local --no-hardlinks` of the read-only feature-web-apps clone. The
-  original is fingerprinted (HEAD, status, refs) before the day and checked after s14.
+- **external**: a `git clone --local --no-hardlinks` of the read-only feature-web-apps clone, whose
+  path comes from `DEV_DAY_EXTERNAL_REPO`. The original is fingerprinted (HEAD, status without
+  optional locks, refs) before the day and checked after s14.
 
 Each arm gets its own copies. Hidden tests live in `fixtures/hidden/`, are copied in only after a
 session ends, run, and are deleted.
