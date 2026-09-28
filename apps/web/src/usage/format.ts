@@ -1,9 +1,10 @@
-import type {
-  Orchestration,
-  Run,
-  RunUsage,
-  TokenUsage,
-  TotalCostSource,
+import {
+  isTerminalRunStatus,
+  type Orchestration,
+  type Run,
+  type RunUsage,
+  type TokenUsage,
+  type TotalCostSource,
 } from '@spark-outpost/contracts';
 import { formatTokens } from '../chat/composer/model-options.ts';
 
@@ -101,10 +102,8 @@ export interface TaskContext extends ContextReading {
   name: string;
 }
 
-const ACTIVE = new Set(['queued', 'running', 'awaiting_approval']);
-
 export function taskContext(orchestration: Orchestration | null | undefined): TaskContext | null {
-  if (!orchestration || !ACTIVE.has(orchestration.status)) return null;
+  if (!orchestration || isTerminalRunStatus(orchestration.status)) return null;
   for (let index = orchestration.crew.length - 1; index >= 0; index--) {
     const member = orchestration.crew[index];
     if (member?.role !== 'builder') continue;
