@@ -45,6 +45,9 @@ interface ProjectRow {
   history_at: Date | null;
 }
 
+const PROJECT_COLUMNS =
+  'id, root_path, status, parser_version, indexed_commit, file_count, history_at';
+
 function toProject(row: ProjectRow): IndexProject {
   return {
     id: row.id,
@@ -59,8 +62,7 @@ function toProject(row: ProjectRow): IndexProject {
 
 export async function findIndexProject(db: Queryable, root: string): Promise<IndexProject | null> {
   const { rows } = await db.query<ProjectRow>(
-    `SELECT id, root_path, status, parser_version, indexed_commit, file_count, history_at
-     FROM code_index_projects WHERE root_path = $1`,
+    `SELECT ${PROJECT_COLUMNS} FROM code_index_projects WHERE root_path = $1`,
     [root],
   );
   return rows[0] ? toProject(rows[0]) : null;
@@ -75,16 +77,10 @@ export async function startIndexProject(
   const { rows } = await db.query<ProjectRow>(
     `INSERT INTO code_index_projects (root_path, status, parser_version)
      VALUES ($1, 'building', $2)
-     RETURNING id, root_path, status, parser_version, indexed_commit, file_count, history_at`,
+     RETURNING ${PROJECT_COLUMNS}`,
     [root, parserVersion],
   );
   return toProject(rows[0] as ProjectRow);
-}
-
-export async function markOpened(db: Queryable, projectId: string): Promise<void> {
-  await db.query('UPDATE code_index_projects SET last_opened_at = now() WHERE id = $1', [
-    projectId,
-  ]);
 }
 
 export async function fileParserVersions(db: Queryable, projectId: string): Promise<string[]> {

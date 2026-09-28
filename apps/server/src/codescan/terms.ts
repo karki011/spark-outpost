@@ -160,10 +160,12 @@ export function pascalForm(term: string): string {
   return parts.map(capitalise).join('');
 }
 
+export function spellings(term: string): string[] {
+  return /[-_]/.test(term) ? nameVariants(term) : [term];
+}
+
 export function searchPatterns(terms: RequestTerms): string[] {
-  const names = terms.identifiers.flatMap((term) =>
-    term.includes('-') || term.includes('_') ? nameVariants(term) : [term],
-  );
+  const names = terms.identifiers.flatMap(spellings);
   const files = terms.fileNames.flatMap((name) => {
     const stem = name.slice(0, name.lastIndexOf('.'));
     return stem.length >= 4 ? [name, `/${stem}`] : [name];

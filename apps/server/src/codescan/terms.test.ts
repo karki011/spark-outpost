@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractTerms, nameVariants, pascalForm, searchPatterns } from './terms.ts';
+import { extractTerms, nameVariants, pascalForm, searchPatterns, spellings } from './terms.ts';
 
 describe('extractTerms', () => {
   it('pulls paths, file names and code-shaped words from a request', () => {
@@ -95,5 +95,12 @@ describe('pascalForm', () => {
     expect(pascalForm('SearchInput')).toBe('SearchInput');
     expect(pascalForm('searchInput')).toBe('SearchInput');
     expect(pascalForm('date-picker')).toBe('DatePicker');
+  });
+});
+
+describe('spellings', () => {
+  it('looks up code-shaped names as written and expands kebab and snake names', () => {
+    expect(spellings('SearchInput')).toEqual(['SearchInput']);
+    expect(spellings('date-picker')).toContain('DatePicker');
   });
 });

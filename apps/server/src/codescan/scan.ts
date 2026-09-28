@@ -24,13 +24,7 @@ import {
 } from './scan-store.ts';
 import { isSkipped } from './skip.ts';
 import { recentWorkingChanges } from './status-cache.ts';
-import {
-  extractTerms,
-  nameVariants,
-  pascalForm,
-  searchPatterns,
-  type RequestTerms,
-} from './terms.ts';
+import { extractTerms, pascalForm, searchPatterns, spellings, type RequestTerms } from './terms.ts';
 
 export const CORE_SEEDS = 30;
 export const MAX_SEEDS = 300;
@@ -39,6 +33,7 @@ const MAX_DEFINED_IDS = 1000;
 const MAX_STAT_IDS = 20_000;
 const SPECIFIC_MIN_FILES = 25;
 const SPECIFIC_SHARE = 0.01;
+const MAX_CO_CHANGES = 10;
 const SUMMARY_TOP = 20;
 const MAX_UNCOMMITTED = 100;
 
@@ -190,9 +185,8 @@ async function gatherSymbols(
   await addNameStats(db, project, evidence, [...widened.values()], signal);
   evidence.namedDefiners = await abortable(definersOf(db, project.id, [...named.values()]), signal);
   const core = topByEvidence(evidence, CORE_SEEDS);
-  evidence.coChange = coChanged(project.history, new Set(core));
-  const coChanged10 = [...evidence.coChange].sort((a, b) => b[1] - a[1]).slice(0, 10);
-  evidence.coChange = new Map(coChanged10);
+  const coChanges = [...coChanged(project.history, new Set(core))];
+  evidence.coChange = new Map(coChanges.sort((a, b) => b[1] - a[1]).slice(0, MAX_CO_CHANGES));
   const seeds = [...new Set([...topByEvidence(evidence, MAX_SEEDS), ...evidence.coChange.keys()])];
   evidence.facts = await timed(
     timings,
@@ -200,10 +194,6 @@ async function gatherSymbols(
     abortable(factsFor(db, project.id, seeds), signal),
   );
   await expandNeighbours(db, project, evidence, core, seeds, timings, signal);
-}
-
-export function spellings(term: string): string[] {
-  return /[-_]/.test(term) ? nameVariants(term) : [term];
 }
 
 export function undefinedTerms(
