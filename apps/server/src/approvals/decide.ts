@@ -97,7 +97,7 @@ function outsideRoots(request: ApprovalRequest, target: string): boolean {
   return place(request.roots, target).relative === null;
 }
 
-export function alwaysAskReason(request: ApprovalRequest): string | null {
+function alwaysAskReason(request: ApprovalRequest): string | null {
   if (request.command) {
     const cwd = commandCwd(request);
     const deleted = deletedPaths(request.command).map((word) =>
@@ -204,7 +204,7 @@ export function decide(
     return { verdict: 'allow', by: 'level', why: ENTER_PLAN_MODE_WHY };
   }
   if (modeAllows(posture, request)) return { verdict: 'allow', by: 'level' };
-  if (request.kind === 'edit') return posture === 'denies' ? denied() : ASK;
+  if (request.kind === 'edit') return unapproved(posture);
   if (request.kind === 'execute') {
     if (request.command && isGitPush(request.command)) {
       const listed = allowlistCovers(allowlist, request.command);
@@ -217,11 +217,11 @@ export function decide(
     }
     const listed = request.command !== null && allowlistCovers(allowlist, request.command);
     if (listed) return { verdict: 'allow', by: 'allowlist' };
-    return posture === 'denies' ? denied() : ASK;
+    return unapproved(posture);
   }
-  return posture === 'denies' ? denied() : ASK;
+  return unapproved(posture);
 }
 
-function denied(): Decision {
-  return { verdict: 'reject', reason: DENIES_REASON };
+function unapproved(posture: ModePosture): Decision {
+  return posture === 'denies' ? { verdict: 'reject', reason: DENIES_REASON } : ASK;
 }

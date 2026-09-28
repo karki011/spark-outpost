@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import {
   APPROVAL_DECIDED,
   APPROVAL_REQUESTED,
+  type ApprovalScope,
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
 import {
@@ -12,7 +13,6 @@ import {
   ApprovalInputError,
   decideApproval,
   getApproval,
-  insertApproval,
 } from '../src/persistence/approvals.ts';
 import { getProject } from '../src/projects/projects.ts';
 import type { GateAnswer } from '../src/providers/provider.ts';
@@ -21,6 +21,7 @@ import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import {
   commandRequest,
   doRun,
+  insertCommandApproval,
   recordingAppend,
   sendDo,
   type LinkedRun,
@@ -84,14 +85,16 @@ async function pendingFor(runId: string) {
   });
 }
 
-async function answerOnce(run: LinkedRun, command: string, optionId: string, scope = 'once') {
+async function answerOnce(
+  run: LinkedRun,
+  command: string,
+  optionId: string,
+  scope: ApprovalScope = 'once',
+) {
   const { gate, waiters } = gateFor(run.runId);
   const answer = gate.review(commandRequest(root, command), new AbortController().signal);
   const id = await pendingFor(run.runId);
-  await decideApproval(t.db, t.workspaceId, id, {
-    optionId,
-    scope: scope as 'once' | 'run' | 'project',
-  });
+  await decideApproval(t.db, t.workspaceId, id, { optionId, scope });
   waiters.notify(id);
   return { answer: await answer, id };
 }
@@ -261,19 +264,16 @@ describe('approval gate', () => {
 
   it('asks before a push below Full auto', async () => {
     const run = await doRun(t, root, 'go', 'balanced');
-    const { answer } = await (async () => {
-      const { gate, waiters } = gateFor(run.runId, 'balanced');
-      const pending = gate.review(
-        commandRequest(root, 'git push origin main'),
-        new AbortController().signal,
-      );
-      const id = await pendingFor(run.runId);
-      expect((await getApproval(t.db, id))?.reason).toBe('Pushing publishes outside this computer');
-      await decideApproval(t.db, t.workspaceId, id, { optionId: 'reject', scope: 'once' });
-      waiters.notify(id);
-      return { answer: await pending };
-    })();
-    expect(answer).toMatchObject({ allowed: false });
+    const { gate, waiters } = gateFor(run.runId, 'balanced');
+    const answer = gate.review(
+      commandRequest(root, 'git push origin main'),
+      new AbortController().signal,
+    );
+    const id = await pendingFor(run.runId);
+    expect((await getApproval(t.db, id))?.reason).toBe('Pushing publishes outside this computer');
+    await decideApproval(t.db, t.workspaceId, id, { optionId: 'reject', scope: 'once' });
+    waiters.notify(id);
+    expect(await answer).toMatchObject({ allowed: false });
   });
 
   it('refuses a force push even in Full auto', async () => {
@@ -318,21 +318,8 @@ describe('approval gate', () => {
 });
 
 describe('approval decisions', () => {
-  async function pending(runId: string, command = 'pnpm test') {
-    return insertApproval(t.db, {
-      runId,
-      toolCallId: 'c1',
-      rpcId: null,
-      kind: 'execute',
-      title: command,
-      payload: { command, cwd: root, paths: [], diffs: [], truncated: false },
-      options: [
-        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
-        { optionId: 'reject', name: 'Deny', kind: 'reject_once' },
-      ],
-      reason: null,
-    });
-  }
+  const pending = (runId: string, command = 'pnpm test') =>
+    insertCommandApproval(t, runId, root, command);
 
   it('lets exactly one of two racing decisions win', async () => {
     const { runId } = await doRun(t, root);
