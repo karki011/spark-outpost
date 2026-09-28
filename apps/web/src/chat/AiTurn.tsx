@@ -3,6 +3,7 @@ import type { Category } from '@spark-outpost/contracts';
 import { AgentBlob } from '../brand/AgentBlob.tsx';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import { CategoryChip } from '../categories/CategoryChip.tsx';
+import { followingLine } from './project/agent-setup.ts';
 import { providerName } from './provider-name.ts';
 
 export type TurnState = 'working' | 'waiting' | 'done' | 'failed' | 'stopped';
@@ -20,10 +21,12 @@ interface AiTurnProps {
   label: string;
   state: TurnState;
   category?: Category | null | undefined;
+  following?: readonly string[] | null | undefined;
   children: ReactNode;
 }
 
-export function AiTurn({ provider, label, state, category, children }: AiTurnProps) {
+export function AiTurn({ provider, label, state, category, following, children }: AiTurnProps) {
+  const followed = followingLine(following ?? []);
   return (
     <div className="msg ai">
       <div className="ai-head">
@@ -38,6 +41,11 @@ export function AiTurn({ provider, label, state, category, children }: AiTurnPro
         <span className="provider-name">{providerName(provider)}</span>
         <span className="mood">{label}</span>
         <CategoryChip category={category} />
+        {followed && (
+          <span className="ai-following" title={followed}>
+            {followed}
+          </span>
+        )}
       </div>
       {children}
     </div>

@@ -15,7 +15,7 @@
   "agent-method:session/new": {
     "status": "supported",
     "where": "apps/server/src/agents/acp/acp-provider.ts, apps/server/src/agents/acp/probe.ts",
-    "note": "cwd is the primary linked repo. A chat without a project gets a private folder per conversation and agent key under $TMPDIR/spark-outpost-sessions so a resumed session keeps its cwd; a child run without a resumeKey gets a new temp folder. additionalDirectories carries the other linked repos when the agent advertises the capability. mcpServers is always empty. Vendor _meta comes from agents.ts."
+    "note": "cwd is the primary linked repo. A chat without a project gets a private folder per conversation and agent key under $TMPDIR/spark-outpost-sessions so a resumed session keeps its cwd; a child run without a resumeKey gets a new temp folder. additionalDirectories carries the other linked repos when the agent advertises the capability. mcpServers carries the project .mcp.json servers the user turned on (see REPO_AGENT_CONFIG.md). Vendor _meta comes from agents.ts."
   },
   "agent-method:session/load": {
     "status": "supported",
@@ -244,12 +244,14 @@
     "note": "Gates embedded resources; falls back to fenced text."
   },
   "agent-capability:mcpCapabilities.http": {
-    "status": "missing",
-    "note": "MCP servers aren't supported: mcpServers is always empty, so this is never read."
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/repo-session.ts, apps/server/src/agents/acp/session-request.ts",
+    "note": "An enabled HTTP server from .mcp.json is sent only when the agent advertises it; otherwise it is skipped with a note."
   },
   "agent-capability:mcpCapabilities.sse": {
-    "status": "missing",
-    "note": "MCP servers aren't supported: mcpServers is always empty, so this is never read."
+    "status": "supported",
+    "where": "apps/server/src/agents/acp/repo-session.ts, apps/server/src/agents/acp/session-request.ts",
+    "note": "An enabled SSE server from .mcp.json is sent only when the agent advertises it (Claude does, Codex doesn't); otherwise it is skipped with a note."
   },
   "agent-capability:sessionCapabilities.list": {
     "status": "not_applicable",
