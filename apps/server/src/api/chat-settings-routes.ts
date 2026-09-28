@@ -136,7 +136,8 @@ export function chatSettingsRoutes({ db, workspaceId, probeCapabilities }: ChatS
         .finally(() => probing.delete(provider));
       probing.set(provider, pending);
     }
-    await pending;
+    const probed = pending;
+    await (lacksModes ? probed.catch(() => undefined) : probed);
     res.json(await getCapabilities(db, workspaceId, provider));
   });
 
