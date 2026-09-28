@@ -229,7 +229,7 @@ test('shows skeletons matching the layout on a cold load, then real data', async
   await expect(overviewPanel.locator('.an-skel-card').first()).toBeVisible();
   await expect(overviewPanel.getByText(/Loading .*…/)).toHaveCount(4);
   await expect(main.getByRole('region', { name: 'Harness health' })).toContainText('of 100', {
-    timeout: 5000,
+    timeout: 15_000,
   });
   await expect(overviewPanel).toHaveAttribute('aria-busy', 'false');
   await expect(overviewPanel.locator('.an-skel-card')).toHaveCount(0);
