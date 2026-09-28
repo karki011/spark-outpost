@@ -111,6 +111,15 @@ export const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
 
 export function chatSettings(setup: HarnessSetup) {
   const pinned = setup.model !== 'auto';
+  if (!pinned && setup.chatModel) {
+    return {
+      provider: setup.provider,
+      permission: 'do',
+      level: setup.level,
+      routing: 'auto',
+      model: setup.chatModel,
+    };
+  }
   return {
     provider: setup.provider,
     permission: 'do',

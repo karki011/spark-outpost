@@ -22,6 +22,8 @@ const PORTS: Record<Version, Ports> = {
 };
 
 export function portsFor(version: Version): Ports {
+  const api = Number(process.env.E2E_API_PORT ?? 0);
+  if (version === 'current' && api > 0) return { api, web: api + 1 };
   return PORTS[version];
 }
 

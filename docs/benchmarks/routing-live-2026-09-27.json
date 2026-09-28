@@ -1,0 +1,6216 @@
+{
+  "assumptions": {
+    "policyPick": "first shadow run (variant rule) answer per scenario, turn 1",
+    "threshold": 0.8,
+    "repair": "failure repair = top-tier rerun cost for that scenario + 10 min x $60/h"
+  },
+  "spend": {
+    "cells": 60,
+    "total": 6.625500838,
+    "agents": 6.6033399999999975,
+    "jev": 0.022160838000000002
+  },
+  "commonScenarios": [
+    "b",
+    "c",
+    "d",
+    "e",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "o",
+    "p",
+    "q",
+    "r",
+    "t"
+  ],
+  "scoring": [
+    {
+      "policy": "rule",
+      "covered": 16,
+      "differsFromRule": 0,
+      "expectedPasses": 16,
+      "passRate": 1,
+      "totalCost": 1.949301,
+      "costPerPass": 0.1218313125,
+      "withRepair": 1.949301,
+      "costPerPassWithRepair": 0.1218313125,
+      "missing": []
+    },
+    {
+      "policy": "jev-text",
+      "covered": 16,
+      "differsFromRule": 10,
+      "expectedPasses": 16,
+      "passRate": 1,
+      "totalCost": 1.8234375789999997,
+      "costPerPass": 0.11396484868749998,
+      "withRepair": 1.8234375789999997,
+      "costPerPassWithRepair": 0.11396484868749998,
+      "missing": []
+    },
+    {
+      "policy": "jev-evidence",
+      "covered": 16,
+      "differsFromRule": 9,
+      "expectedPasses": 16,
+      "passRate": 1,
+      "totalCost": 1.8129463839999995,
+      "costPerPass": 0.11330914899999997,
+      "withRepair": 1.8129463839999995,
+      "costPerPassWithRepair": 0.11330914899999997,
+      "missing": []
+    },
+    {
+      "policy": "jev-evidence-0.8",
+      "covered": 16,
+      "differsFromRule": 5,
+      "expectedPasses": 16,
+      "passRate": 1,
+      "totalCost": 1.8660644899999999,
+      "costPerPass": 0.11662903062499999,
+      "withRepair": 1.8660644899999999,
+      "costPerPassWithRepair": 0.11662903062499999,
+      "missing": []
+    }
+  ],
+  "fixed": [
+    {
+      "policy": "fixed-haiku",
+      "scenarios": [
+        "b",
+        "d",
+        "e",
+        "g",
+        "i",
+        "k",
+        "l",
+        "m",
+        "o",
+        "p",
+        "q",
+        "r",
+        "t"
+      ],
+      "runs": 22,
+      "runPasses": 18,
+      "tier": {
+        "scenarios": 13,
+        "expectedPasses": 11,
+        "passRate": 0.8461538461538461,
+        "totalCost": 1.046124184,
+        "costPerPass": 0.09510219854545454,
+        "perTaskWithRepair": 1.6595071660611231
+      },
+      "ruleSameScenarios": {
+        "scenarios": 13,
+        "expectedPasses": 13,
+        "passRate": 1,
+        "totalCost": 1.42832327,
+        "costPerPass": 0.10987102076923076,
+        "perTaskWithRepair": 0.10987102076923076
+      }
+    },
+    {
+      "policy": "fixed-sonnet",
+      "scenarios": [
+        "b",
+        "c",
+        "d",
+        "e",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "o",
+        "p",
+        "q",
+        "r",
+        "t"
+      ],
+      "runs": 32,
+      "runPasses": 32,
+      "tier": {
+        "scenarios": 16,
+        "expectedPasses": 16,
+        "passRate": 1,
+        "totalCost": 1.949301,
+        "costPerPass": 0.1218313125,
+        "perTaskWithRepair": 0.1218313125
+      },
+      "ruleSameScenarios": {
+        "scenarios": 16,
+        "expectedPasses": 16,
+        "passRate": 1,
+        "totalCost": 1.949301,
+        "costPerPass": 0.1218313125,
+        "perTaskWithRepair": 0.1218313125
+      }
+    },
+    {
+      "policy": "fixed-opus",
+      "scenarios": [
+        "c",
+        "h",
+        "j"
+      ],
+      "runs": 6,
+      "runPasses": 6,
+      "tier": {
+        "scenarios": 3,
+        "expectedPasses": 3,
+        "passRate": 1,
+        "totalCost": 0.5328443709999999,
+        "costPerPass": 0.1776147903333333,
+        "perTaskWithRepair": 0.1776147903333333
+      },
+      "ruleSameScenarios": {
+        "scenarios": 3,
+        "expectedPasses": 3,
+        "passRate": 1,
+        "totalCost": 0.52097773,
+        "costPerPass": 0.17365924333333335,
+        "perTaskWithRepair": 0.17365924333333335
+      }
+    }
+  ],
+  "perScenario": [
+    {
+      "scenario": "b",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.99,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.98,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.99,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.98,
+            "basis": "choice"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.97,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.98,
+            "basis": "choice"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.032469362,
+          "meanWallS": 23.326
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.043674094,
+          "meanWallS": 27.046
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.063671357466564,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Haiku 4.5",
+        "jev-evidence": "Haiku 4.5",
+        "jev-evidence-0.8": "Haiku 4.5"
+      }
+    },
+    {
+      "scenario": "c",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.24,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Opus 5.5",
+        "confidence": 0.29,
+        "basis": "probability"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Opus 5.5",
+            "confidence": 0.24,
+            "basis": "probability"
+          },
+          "evidence": {
+            "pick": "Opus 5.5",
+            "confidence": 0.29,
+            "basis": "probability"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Opus 5.5",
+            "confidence": 0.3,
+            "basis": "probability"
+          },
+          "evidence": {
+            "pick": "Opus 5.5",
+            "confidence": 0.26,
+            "basis": "probability"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": null,
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.16264771700000002,
+          "meanWallS": 80.1995
+        },
+        "Opus 5.5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.13697077600000002,
+          "meanWallS": 35.859
+        }
+      },
+      "repairUsd": 10.136970776,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Opus 5.5",
+        "jev-evidence": "Opus 5.5",
+        "jev-evidence-0.8": "Sonnet 5"
+      }
+    },
+    {
+      "scenario": "d",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.95,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.96,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.95,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.96,
+            "basis": "choice"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.95,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.96,
+            "basis": "choice"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 1,
+          "pass": 1,
+          "meanCost": 0.075532956,
+          "meanWallS": 52.84
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.155056619,
+          "meanWallS": 60.271499999999996
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.22605312467171,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Sonnet 5",
+        "jev-evidence": "Sonnet 5",
+        "jev-evidence-0.8": "Sonnet 5"
+      }
+    },
+    {
+      "scenario": "e",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.53,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.49,
+        "basis": "probability"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.53,
+            "basis": "probability"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.49,
+            "basis": "probability"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.53,
+            "basis": "probability"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.5,
+            "basis": "probability"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 2,
+          "pass": 0,
+          "meanCost": 0.217376863,
+          "meanWallS": 175.006
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.231351962,
+          "meanWallS": 244.0375
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.337282176319288,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Sonnet 5",
+        "jev-evidence": "Sonnet 5",
+        "jev-evidence-0.8": "Sonnet 5"
+      }
+    },
+    {
+      "scenario": "g",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.93,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.94,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.93,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.94,
+            "basis": "choice"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.94,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.93,
+            "basis": "choice"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.051819242,
+          "meanWallS": 38.9465
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.072243177,
+          "meanWallS": 32.266
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.105321501283743,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Haiku 4.5",
+        "jev-evidence": "Haiku 4.5",
+        "jev-evidence-0.8": "Haiku 4.5"
+      }
+    },
+    {
+      "scenario": "h",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.61,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Opus 5.5",
+        "confidence": 0.53,
+        "basis": "probability"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Opus 5.5",
+            "confidence": 0.61,
+            "basis": "probability"
+          },
+          "evidence": {
+            "pick": "Opus 5.5",
+            "confidence": 0.53,
+            "basis": "probability"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Opus 5.5",
+            "confidence": 0.62,
+            "basis": "probability"
+          },
+          "evidence": {
+            "pick": "Opus 5.5",
+            "confidence": 0.53,
+            "basis": "probability"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": null,
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.064076987,
+          "meanWallS": 30.9395
+        },
+        "Opus 5.5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.091129374,
+          "meanWallS": 23.247500000000002
+        }
+      },
+      "repairUsd": 10.091129374,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Opus 5.5",
+        "jev-evidence": "Opus 5.5",
+        "jev-evidence-0.8": "Sonnet 5"
+      }
+    },
+    {
+      "scenario": "i",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.98,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.97,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.98,
+            "basis": "choice"
+          },
+          "turn2": {
+            "rule": "Sonnet 5",
+            "text": {
+              "pick": "Haiku 4.5",
+              "confidence": 0.96,
+              "basis": "choice"
+            },
+            "evidence": {
+              "pick": "Haiku 4.5",
+              "confidence": 0.95,
+              "basis": "choice"
+            }
+          }
+        },
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.97,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.98,
+            "basis": "choice"
+          },
+          "turn2": {
+            "rule": "Sonnet 5",
+            "text": {
+              "pick": "Haiku 4.5",
+              "confidence": 0.93,
+              "basis": "choice"
+            },
+            "evidence": {
+              "pick": "Haiku 4.5",
+              "confidence": 0.91,
+              "basis": "choice"
+            }
+          }
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.055782312,
+          "meanWallS": 45.228
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.07296391299999999,
+          "meanWallS": 43.6205
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.10637224407637,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Haiku 4.5",
+        "jev-evidence": "Haiku 4.5",
+        "jev-evidence-0.8": "Haiku 4.5"
+      }
+    },
+    {
+      "scenario": "j",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.5,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.56,
+        "basis": "probability"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Opus 5.5",
+            "confidence": 0.5,
+            "basis": "probability"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.56,
+            "basis": "probability"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Opus 5.5",
+            "confidence": 0.5,
+            "basis": "probability"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.51,
+            "basis": "probability"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": null,
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.29425302600000003,
+          "meanWallS": 103.338
+        },
+        "Opus 5.5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.304744221,
+          "meanWallS": 87.1625
+        }
+      },
+      "repairUsd": 10.304744221,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Opus 5.5",
+        "jev-evidence": "Sonnet 5",
+        "jev-evidence-0.8": "Sonnet 5"
+      }
+    },
+    {
+      "scenario": "k",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.82,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.84,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.82,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.84,
+            "basis": "choice"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.85,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.83,
+            "basis": "choice"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.058134652999999994,
+          "meanWallS": 41.095
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.069766194,
+          "meanWallS": 28.832500000000003
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.101710370391558,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Haiku 4.5",
+        "jev-evidence": "Haiku 4.5",
+        "jev-evidence-0.8": "Haiku 4.5"
+      }
+    },
+    {
+      "scenario": "l",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.92,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.91,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.92,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.91,
+            "basis": "choice"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.92,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.93,
+            "basis": "choice"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 1,
+          "pass": 1,
+          "meanCost": 0.088059836,
+          "meanWallS": 63.42
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.080931752,
+          "meanWallS": 30.262999999999998
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.11798835511018,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Sonnet 5",
+        "jev-evidence": "Sonnet 5",
+        "jev-evidence-0.8": "Sonnet 5"
+      }
+    },
+    {
+      "scenario": "m",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.68,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.66,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.68,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.66,
+            "basis": "choice"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.66,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.67,
+            "basis": "choice"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.039875813999999996,
+          "meanWallS": 28.989
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.063291243,
+          "meanWallS": 23.97
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.092270703029495,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Haiku 4.5",
+        "jev-evidence": "Haiku 4.5",
+        "jev-evidence-0.8": "Sonnet 5"
+      }
+    },
+    {
+      "scenario": "o",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.68,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.73,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.68,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.73,
+            "basis": "choice"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.65,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.78,
+            "basis": "choice"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.037029332,
+          "meanWallS": 26.079
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.068107455,
+          "meanWallS": 25.000500000000002
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.099292136739987,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Haiku 4.5",
+        "jev-evidence": "Haiku 4.5",
+        "jev-evidence-0.8": "Sonnet 5"
+      }
+    },
+    {
+      "scenario": "p",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.71,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.81,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.71,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.81,
+            "basis": "choice"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.71,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Haiku 4.5",
+            "confidence": 0.83,
+            "basis": "choice"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.031186724,
+          "meanWallS": 20.875
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.053981425,
+          "meanWallS": 21.6345
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.078698154739731,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Haiku 4.5",
+        "jev-evidence": "Haiku 4.5",
+        "jev-evidence-0.8": "Haiku 4.5"
+      }
+    },
+    {
+      "scenario": "q",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.89,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.89,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.89,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.89,
+            "basis": "choice"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.88,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.92,
+            "basis": "choice"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 1,
+          "pass": 1,
+          "meanCost": 0.185302866,
+          "meanWallS": 83.948
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.252924787,
+          "meanWallS": 153.5255
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.368732652478878,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Sonnet 5",
+        "jev-evidence": "Sonnet 5",
+        "jev-evidence-0.8": "Sonnet 5"
+      }
+    },
+    {
+      "scenario": "r",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.9,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.89,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.9,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.89,
+            "basis": "choice"
+          },
+          "turn2": {
+            "rule": "Sonnet 5",
+            "text": {
+              "pick": "Sonnet 5",
+              "confidence": 0.8,
+              "basis": "choice"
+            },
+            "evidence": {
+              "pick": "Sonnet 5",
+              "confidence": 0.7,
+              "basis": "choice"
+            }
+          }
+        },
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.91,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.91,
+            "basis": "choice"
+          },
+          "turn2": {
+            "rule": "Sonnet 5",
+            "text": {
+              "pick": "Sonnet 5",
+              "confidence": 0.74,
+              "basis": "choice"
+            },
+            "evidence": {
+              "pick": "Sonnet 5",
+              "confidence": 0.64,
+              "basis": "probability"
+            }
+          }
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 1,
+          "pass": 1,
+          "meanCost": 0.082142614,
+          "meanWallS": 70.241
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.13357581899999998,
+          "meanWallS": 56.0145
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.19473680943303,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Sonnet 5",
+        "jev-evidence": "Sonnet 5",
+        "jev-evidence-0.8": "Sonnet 5"
+      }
+    },
+    {
+      "scenario": "t",
+      "rulePick": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.96,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "shadowRuns": [
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.96,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.97,
+            "basis": "choice"
+          },
+          "turn2": null
+        },
+        {
+          "text": {
+            "pick": "Sonnet 5",
+            "confidence": 0.96,
+            "basis": "choice"
+          },
+          "evidence": {
+            "pick": "Sonnet 5",
+            "confidence": 0.97,
+            "basis": "choice"
+          },
+          "turn2": null
+        }
+      ],
+      "atModel": {
+        "Haiku 4.5": {
+          "n": 2,
+          "pass": 0,
+          "meanCost": 0.09141161,
+          "meanWallS": 74.32849999999999
+        },
+        "Sonnet 5": {
+          "n": 2,
+          "pass": 1,
+          "meanCost": 0.13045483,
+          "meanWallS": 57.980500000000006
+        },
+        "Opus 5.5": null
+      },
+      "repairUsd": 10.190186798475315,
+      "policies": {
+        "rule": "Sonnet 5",
+        "jev-text": "Sonnet 5",
+        "jev-evidence": "Sonnet 5",
+        "jev-evidence-0.8": "Sonnet 5"
+      }
+    }
+  ],
+  "files": [
+    {
+      "scenario": "b",
+      "repeat": 1,
+      "changed": 1,
+      "scan": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "c",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "d",
+      "repeat": 1,
+      "changed": 6,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.3333333333333333
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.3333333333333333
+      },
+      "top1": true
+    },
+    {
+      "scenario": "e",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "g",
+      "repeat": 1,
+      "changed": 3,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.6666666666666666
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.6666666666666666
+      },
+      "top1": true
+    },
+    {
+      "scenario": "h",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "i",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "j",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "k",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "l",
+      "repeat": 1,
+      "changed": 4,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.5
+      },
+      "predicted": {
+        "hits": 3,
+        "precision": 0.6,
+        "recall": 0.75
+      },
+      "top1": true
+    },
+    {
+      "scenario": "m",
+      "repeat": 1,
+      "changed": 1,
+      "scan": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "o",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "p",
+      "repeat": 1,
+      "changed": 1,
+      "scan": {
+        "hits": 0,
+        "precision": 0,
+        "recall": 0
+      },
+      "predicted": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "q",
+      "repeat": 1,
+      "changed": 13,
+      "scan": {
+        "hits": 5,
+        "precision": 1,
+        "recall": 0.38461538461538464
+      },
+      "predicted": {
+        "hits": 5,
+        "precision": 1,
+        "recall": 0.38461538461538464
+      },
+      "top1": true
+    },
+    {
+      "scenario": "r",
+      "repeat": 1,
+      "changed": 3,
+      "scan": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 0.3333333333333333
+      },
+      "predicted": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 0.3333333333333333
+      },
+      "top1": true
+    },
+    {
+      "scenario": "t",
+      "repeat": 1,
+      "changed": 7,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.2857142857142857
+      },
+      "predicted": {
+        "hits": 3,
+        "precision": 0.6,
+        "recall": 0.42857142857142855
+      },
+      "top1": true
+    },
+    {
+      "scenario": "b",
+      "repeat": 1,
+      "changed": 1,
+      "scan": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "c",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "g",
+      "repeat": 1,
+      "changed": 3,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.6666666666666666
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.6666666666666666
+      },
+      "top1": true
+    },
+    {
+      "scenario": "h",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "i",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "j",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "k",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "m",
+      "repeat": 1,
+      "changed": 1,
+      "scan": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "o",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "p",
+      "repeat": 1,
+      "changed": 1,
+      "scan": {
+        "hits": 0,
+        "precision": 0,
+        "recall": 0
+      },
+      "predicted": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "d",
+      "repeat": 1,
+      "changed": 6,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.3333333333333333
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.3333333333333333
+      },
+      "top1": true
+    },
+    {
+      "scenario": "e",
+      "repeat": 1,
+      "changed": 2,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "predicted": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 1
+      },
+      "top1": true
+    },
+    {
+      "scenario": "l",
+      "repeat": 1,
+      "changed": 4,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.5
+      },
+      "predicted": {
+        "hits": 3,
+        "precision": 0.6,
+        "recall": 0.75
+      },
+      "top1": true
+    },
+    {
+      "scenario": "q",
+      "repeat": 1,
+      "changed": 13,
+      "scan": {
+        "hits": 5,
+        "precision": 1,
+        "recall": 0.38461538461538464
+      },
+      "predicted": {
+        "hits": 5,
+        "precision": 1,
+        "recall": 0.38461538461538464
+      },
+      "top1": true
+    },
+    {
+      "scenario": "r",
+      "repeat": 1,
+      "changed": 3,
+      "scan": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 0.3333333333333333
+      },
+      "predicted": {
+        "hits": 1,
+        "precision": 0.2,
+        "recall": 0.3333333333333333
+      },
+      "top1": true
+    },
+    {
+      "scenario": "t",
+      "repeat": 1,
+      "changed": 7,
+      "scan": {
+        "hits": 2,
+        "precision": 0.4,
+        "recall": 0.2857142857142857
+      },
+      "predicted": {
+        "hits": 3,
+        "precision": 0.6,
+        "recall": 0.42857142857142855
+      },
+      "top1": true
+    }
+  ],
+  "fileSummary": {
+    "tasks": 32,
+    "scanP": 0.37500000000000006,
+    "scanR": 0.7189789377289376,
+    "jevP": 0.4125,
+    "jevR": 0.806032509157509,
+    "jevTop1": 32
+  },
+  "latency": {
+    "rankMedianMs": 256,
+    "textMedianMs": 191.5,
+    "evidenceMedianMs": 185.5,
+    "rankMaxMs": 354,
+    "textMaxMs": 299,
+    "evidenceMaxMs": 391,
+    "jevUsdPerTask": 0.00036934730000000006,
+    "jevUsdTotal": 0.022160838000000002
+  },
+  "cells": [
+    {
+      "file": "<scratchpad>/liveround/results-probe.json",
+      "scenario": "d",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.075532956,
+      "agentUsd": 0.074877,
+      "jevUsd": 0.0006559560000000001,
+      "wallMs": 52840,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.95,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.96,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/csv.ts",
+        "src/dates.ts",
+        "src/reminders.ts",
+        "src/report.ts",
+        "test/csv.test.ts",
+        "test/reminders.test.ts"
+      ],
+      "predicted": [
+        "src/report.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "README.md",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/report.ts",
+        "test/invoice.test.ts",
+        "README.md",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 258,
+      "textLatencyMs": 220,
+      "evidenceLatencyMs": 187,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-probe.json",
+      "scenario": "e",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": false,
+      "reasons": [
+        "Hidden checks: 1 of 4 failed."
+      ],
+      "costUsd": 0.232883222,
+      "agentUsd": 0.232619,
+      "jevUsd": 0.00026422200000000005,
+      "wallMs": 198406,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": [
+        "concerns"
+      ],
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.53,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Opus 5.5",
+        "confidence": 0.47,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 329,
+      "textLatencyMs": 232,
+      "evidenceLatencyMs": 226,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-probe.json",
+      "scenario": "l",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.088059836,
+      "agentUsd": 0.087734,
+      "jevUsd": 0.00032583600000000003,
+      "wallMs": 63420,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.92,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.92,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/credit-note.ts",
+        "src/invoice.ts",
+        "test/credit-note.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "predicted": [
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/money.ts",
+        "src/dates.ts",
+        "src/credit-note.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        ".gitignore",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/credit-note.test.ts"
+      ],
+      "scanFiles": [
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/credit-note.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        ".gitignore",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/credit-note.test.ts",
+        "test/greet.test.ts"
+      ],
+      "rankLatencyMs": 250,
+      "textLatencyMs": 211,
+      "evidenceLatencyMs": 236,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-probe.json",
+      "scenario": "q",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.185302866,
+      "agentUsd": 0.184506,
+      "jevUsd": 0.000796866,
+      "wallMs": 83948,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": [
+        "looks_good"
+      ],
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.89,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.92,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "README.md",
+        "src/shop/cart.ts",
+        "src/shop/checkout.ts",
+        "src/shop/discounts.ts",
+        "src/shop/index.ts",
+        "src/shop/invoice-lines.ts",
+        "src/shop/receipt.ts",
+        "src/shop/refunds.ts",
+        "src/shop/shipping.ts",
+        "src/shop/summary.ts",
+        "src/shop/tax.ts",
+        "src/shop/total.ts",
+        "test/shop.test.ts"
+      ],
+      "predicted": [
+        "src/shop/total.ts",
+        "test/shop.test.ts",
+        "src/shop/cart.ts",
+        "src/shop/checkout.ts",
+        "src/shop/summary.ts",
+        "src/shop/tax.ts",
+        "src/shop/discounts.ts",
+        "src/shop/invoice-lines.ts",
+        "src/shop/shipping.ts",
+        "README.md",
+        "src/shop/index.ts",
+        "src/shop/receipt.ts"
+      ],
+      "scanFiles": [
+        "src/shop/total.ts",
+        "test/shop.test.ts",
+        "src/shop/cart.ts",
+        "src/shop/checkout.ts",
+        "src/shop/summary.ts",
+        "src/shop/tax.ts",
+        "src/shop/discounts.ts",
+        "src/shop/invoice-lines.ts",
+        "src/shop/shipping.ts",
+        "README.md",
+        "src/shop/index.ts",
+        "src/shop/receipt.ts"
+      ],
+      "rankLatencyMs": 341,
+      "textLatencyMs": 273,
+      "evidenceLatencyMs": 178,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-probe.json",
+      "scenario": "r",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.082142614,
+      "agentUsd": 0.081451,
+      "jevUsd": 0.000691614,
+      "wallMs": 70241,
+      "escalated": false,
+      "verify": [
+        "supported",
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku",
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.9,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.9,
+        "basis": "choice"
+      },
+      "turn2": {
+        "rule": "Haiku 4.5",
+        "text": {
+          "pick": "Sonnet 5",
+          "confidence": 0.76,
+          "basis": "choice"
+        },
+        "evidence": {
+          "pick": "Sonnet 5",
+          "confidence": 0.7,
+          "basis": "choice"
+        }
+      },
+      "changed": [
+        "src/csv.ts",
+        "src/report.ts",
+        "test/csv.test.ts"
+      ],
+      "predicted": [
+        "src/report.ts",
+        "src/ledger.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/ledger.ts",
+        "src/report.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 253,
+      "textLatencyMs": 186,
+      "evidenceLatencyMs": 175,
+      "status": "succeeded/succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-probe.json",
+      "scenario": "t",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": false,
+      "reasons": [
+        "Hidden checks: 1 of 5 failed."
+      ],
+      "costUsd": 0.096174274,
+      "agentUsd": 0.095473,
+      "jevUsd": 0.0007012740000000001,
+      "wallMs": 80075,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "README.md",
+        "src/csv.ts",
+        "src/dates.ts",
+        "src/reminders.ts",
+        "src/report.ts",
+        "test/csv.test.ts",
+        "test/reminders.test.ts"
+      ],
+      "predicted": [
+        "src/report.ts",
+        "src/dates.ts",
+        "README.md",
+        "src/ledger.ts",
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/report.ts",
+        "test/invoice.test.ts",
+        "README.md",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 244,
+      "textLatencyMs": 198,
+      "evidenceLatencyMs": 167,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "b",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.050745594,
+      "agentUsd": 0.050592,
+      "jevUsd": 0.000153594,
+      "wallMs": 35885,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.99,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.98,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/dates.ts"
+      ],
+      "predicted": [
+        "src/dates.ts",
+        "test/dates.test.ts",
+        "src/invoice.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "test/dates.test.ts",
+        "src/invoice.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 269,
+      "textLatencyMs": 158,
+      "evidenceLatencyMs": 157,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "c",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.167672816,
+      "agentUsd": 0.167192,
+      "jevUsd": 0.0004808160000000001,
+      "wallMs": 84047,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.24,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Opus 5.5",
+        "confidence": 0.29,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/invoice.ts",
+        "src/money.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/report.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/invoice.ts",
+        "src/report.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 209,
+      "textLatencyMs": 172,
+      "evidenceLatencyMs": 162,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "d",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.114202622,
+      "agentUsd": 0.113594,
+      "jevUsd": 0.0006086220000000001,
+      "wallMs": 48696,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.95,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.96,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/csv.ts",
+        "src/dates.ts",
+        "src/reminders.ts",
+        "src/report.ts",
+        "test/csv.test.ts",
+        "test/reminders.test.ts"
+      ],
+      "predicted": [
+        "src/report.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "README.md",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/report.ts",
+        "test/invoice.test.ts",
+        "README.md",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 261,
+      "textLatencyMs": 219,
+      "evidenceLatencyMs": 391,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "e",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.208163172,
+      "agentUsd": 0.2079,
+      "jevUsd": 0.000263172,
+      "wallMs": 393768,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": [
+        "looks_good"
+      ],
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.53,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.49,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 222,
+      "textLatencyMs": 213,
+      "evidenceLatencyMs": 217,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "g",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.072253198,
+      "agentUsd": 0.071929,
+      "jevUsd": 0.00032419800000000004,
+      "wallMs": 32544,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.93,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.94,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "api-surface.json",
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "api-surface.json",
+        "package.json",
+        "README.md",
+        "scripts/check-api.ts",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "api-surface.json",
+        "package.json",
+        "README.md",
+        "scripts/check-api.ts",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "rankLatencyMs": 321,
+      "textLatencyMs": 158,
+      "evidenceLatencyMs": 208,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "h",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.070064658,
+      "agentUsd": 0.069777,
+      "jevUsd": 0.00028765800000000004,
+      "wallMs": 33516,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.61,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Opus 5.5",
+        "confidence": 0.53,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/rates.ts",
+        "test/rates.test.ts"
+      ],
+      "predicted": [
+        "src/rates.ts",
+        "test/rates.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "scanFiles": [
+        "src/rates.ts",
+        "test/rates.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "rankLatencyMs": 272,
+      "textLatencyMs": 203,
+      "evidenceLatencyMs": 172,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "i",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.07288426599999999,
+      "agentUsd": 0.072394,
+      "jevUsd": 0.000490266,
+      "wallMs": 37670,
+      "escalated": false,
+      "verify": [
+        "supported",
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet",
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.98,
+        "basis": "choice"
+      },
+      "turn2": {
+        "rule": "Sonnet 5",
+        "text": {
+          "pick": "Haiku 4.5",
+          "confidence": 0.96,
+          "basis": "choice"
+        },
+        "evidence": {
+          "pick": "Haiku 4.5",
+          "confidence": 0.95,
+          "basis": "choice"
+        }
+      },
+      "changed": [
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 230,
+      "textLatencyMs": 162,
+      "evidenceLatencyMs": 182,
+      "status": "succeeded/succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "j",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.29837628,
+      "agentUsd": 0.298026,
+      "jevUsd": 0.00035028,
+      "wallMs": 111790,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": [
+        "concerns"
+      ],
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.5,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.56,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/invoice.ts",
+        "test/invoice.test.ts"
+      ],
+      "predicted": [
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 273,
+      "textLatencyMs": 192,
+      "evidenceLatencyMs": 250,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "k",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.059710498,
+      "agentUsd": 0.059422,
+      "jevUsd": 0.00028849800000000004,
+      "wallMs": 28827,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.82,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.84,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "ledger/money.py",
+        "tests/test_money.py"
+      ],
+      "predicted": [
+        "ledger/money.py",
+        "tests/test_money.py",
+        ".gitignore",
+        "ledger/__init__.py",
+        "pyproject.toml",
+        "README.md",
+        "tests/__init__.py"
+      ],
+      "scanFiles": [
+        "ledger/money.py",
+        "tests/test_money.py",
+        ".gitignore",
+        "ledger/__init__.py",
+        "pyproject.toml",
+        "README.md",
+        "tests/__init__.py"
+      ],
+      "rankLatencyMs": 244,
+      "textLatencyMs": 172,
+      "evidenceLatencyMs": 169,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "l",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.06410327,
+      "agentUsd": 0.063875,
+      "jevUsd": 0.00022827,
+      "wallMs": 31433,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.92,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.91,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/credit-note.ts",
+        "src/invoice.ts",
+        "test/credit-note.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "predicted": [
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/money.ts",
+        "src/dates.ts",
+        "src/credit-note.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        ".gitignore",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/credit-note.test.ts"
+      ],
+      "scanFiles": [
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/credit-note.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        ".gitignore",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/credit-note.test.ts",
+        "test/greet.test.ts"
+      ],
+      "rankLatencyMs": 265,
+      "textLatencyMs": 205,
+      "evidenceLatencyMs": 169,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "m",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.05924031,
+      "agentUsd": 0.059028,
+      "jevUsd": 0.00021231,
+      "wallMs": 24737,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.68,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.66,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/SignupForm.tsx"
+      ],
+      "predicted": [
+        "src/SignupForm.tsx",
+        "src/signup.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "scanFiles": [
+        "src/SignupForm.tsx",
+        "src/signup.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "rankLatencyMs": 251,
+      "textLatencyMs": 166,
+      "evidenceLatencyMs": 197,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "o",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.054650626,
+      "agentUsd": 0.05443,
+      "jevUsd": 0.00022062600000000003,
+      "wallMs": 23695,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.68,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.73,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/upload.ts",
+        "test/upload.test.ts"
+      ],
+      "predicted": [
+        "src/upload.ts",
+        "test/upload.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "scanFiles": [
+        "src/upload.ts",
+        "test/upload.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "rankLatencyMs": 245,
+      "textLatencyMs": 178,
+      "evidenceLatencyMs": 164,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "p",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.044420068,
+      "agentUsd": 0.044254,
+      "jevUsd": 0.000166068,
+      "wallMs": 22171,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.71,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.81,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "README.md"
+      ],
+      "predicted": [
+        "README.md",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 330,
+      "textLatencyMs": 203,
+      "evidenceLatencyMs": 184,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "q",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.23393123999999998,
+      "agentUsd": 0.23282999999999998,
+      "jevUsd": 0.0011012399999999999,
+      "wallMs": 180905,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": [
+        "looks_good"
+      ],
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.89,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.89,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "README.md",
+        "src/shop/cart.ts",
+        "src/shop/checkout.ts",
+        "src/shop/discounts.ts",
+        "src/shop/index.ts",
+        "src/shop/invoice-lines.ts",
+        "src/shop/receipt.ts",
+        "src/shop/refunds.ts",
+        "src/shop/shipping.ts",
+        "src/shop/summary.ts",
+        "src/shop/tax.ts",
+        "src/shop/total.ts",
+        "test/shop.test.ts"
+      ],
+      "predicted": [
+        "src/shop/total.ts",
+        "test/shop.test.ts",
+        "src/shop/cart.ts",
+        "src/shop/checkout.ts",
+        "src/shop/summary.ts",
+        "src/shop/tax.ts",
+        "src/shop/discounts.ts",
+        "src/shop/invoice-lines.ts",
+        "src/shop/shipping.ts",
+        "README.md",
+        "src/shop/index.ts",
+        "src/shop/receipt.ts"
+      ],
+      "scanFiles": [
+        "src/shop/total.ts",
+        "test/shop.test.ts",
+        "src/shop/cart.ts",
+        "src/shop/checkout.ts",
+        "src/shop/summary.ts",
+        "src/shop/tax.ts",
+        "src/shop/discounts.ts",
+        "src/shop/invoice-lines.ts",
+        "src/shop/shipping.ts",
+        "README.md",
+        "src/shop/index.ts",
+        "src/shop/receipt.ts"
+      ],
+      "rankLatencyMs": 266,
+      "textLatencyMs": 210,
+      "evidenceLatencyMs": 189,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "r",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.11348219999999999,
+      "agentUsd": 0.112869,
+      "jevUsd": 0.0006132,
+      "wallMs": 57216,
+      "escalated": false,
+      "verify": [
+        "supported",
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet",
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.9,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.89,
+        "basis": "choice"
+      },
+      "turn2": {
+        "rule": "Sonnet 5",
+        "text": {
+          "pick": "Sonnet 5",
+          "confidence": 0.8,
+          "basis": "choice"
+        },
+        "evidence": {
+          "pick": "Sonnet 5",
+          "confidence": 0.7,
+          "basis": "choice"
+        }
+      },
+      "changed": [
+        "src/csv.ts",
+        "src/report.ts",
+        "test/csv.test.ts"
+      ],
+      "predicted": [
+        "src/report.ts",
+        "src/ledger.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/ledger.ts",
+        "src/report.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 257,
+      "textLatencyMs": 170,
+      "evidenceLatencyMs": 164,
+      "status": "succeeded/succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass1.json",
+      "scenario": "t",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.104054242,
+      "agentUsd": 0.103399,
+      "jevUsd": 0.0006552420000000001,
+      "wallMs": 65930,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.96,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "README.md",
+        "src/csv.ts",
+        "src/dates.ts",
+        "src/reminders.ts",
+        "src/report.ts",
+        "test/csv.test.ts",
+        "test/reminders.test.ts"
+      ],
+      "predicted": [
+        "src/report.ts",
+        "src/dates.ts",
+        "README.md",
+        "src/ledger.ts",
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/report.ts",
+        "test/invoice.test.ts",
+        "README.md",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 232,
+      "textLatencyMs": 190,
+      "evidenceLatencyMs": 193,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass2.json",
+      "scenario": "b",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.033978862,
+      "agentUsd": 0.033823,
+      "jevUsd": 0.00015586200000000002,
+      "wallMs": 24383,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.98,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.99,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/dates.ts"
+      ],
+      "predicted": [
+        "src/dates.ts",
+        "test/dates.test.ts",
+        "src/invoice.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "test/dates.test.ts",
+        "src/invoice.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 240,
+      "textLatencyMs": 200,
+      "evidenceLatencyMs": 176,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass2.json",
+      "scenario": "g",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.050272742,
+      "agentUsd": 0.049943,
+      "jevUsd": 0.000329742,
+      "wallMs": 38153,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.92,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.94,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "api-surface.json",
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "api-surface.json",
+        "package.json",
+        "README.md",
+        "scripts/check-api.ts",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "api-surface.json",
+        "package.json",
+        "README.md",
+        "scripts/check-api.ts",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "rankLatencyMs": 260,
+      "textLatencyMs": 165,
+      "evidenceLatencyMs": 241,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass2.json",
+      "scenario": "i",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.049268582000000005,
+      "agentUsd": 0.04877,
+      "jevUsd": 0.000498582,
+      "wallMs": 39725,
+      "escalated": false,
+      "verify": [
+        "supported",
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku",
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.98,
+        "basis": "choice"
+      },
+      "turn2": {
+        "rule": "Haiku 4.5",
+        "text": {
+          "pick": "Haiku 4.5",
+          "confidence": 0.94,
+          "basis": "choice"
+        },
+        "evidence": {
+          "pick": "Haiku 4.5",
+          "confidence": 0.92,
+          "basis": "choice"
+        }
+      },
+      "changed": [
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 262,
+      "textLatencyMs": 203,
+      "evidenceLatencyMs": 154,
+      "status": "succeeded/succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass2.json",
+      "scenario": "k",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.059925974,
+      "agentUsd": 0.059609,
+      "jevUsd": 0.00031697400000000003,
+      "wallMs": 43847,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.84,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.81,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "ledger/money.py",
+        "tests/test_money.py"
+      ],
+      "predicted": [
+        "ledger/money.py",
+        "tests/test_money.py",
+        ".gitignore",
+        "ledger/__init__.py",
+        "pyproject.toml",
+        "README.md",
+        "tests/__init__.py"
+      ],
+      "scanFiles": [
+        "ledger/money.py",
+        "tests/test_money.py",
+        ".gitignore",
+        "ledger/__init__.py",
+        "pyproject.toml",
+        "README.md",
+        "tests/__init__.py"
+      ],
+      "rankLatencyMs": 256,
+      "textLatencyMs": 209,
+      "evidenceLatencyMs": 202,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass2.json",
+      "scenario": "m",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.037760978,
+      "agentUsd": 0.037538,
+      "jevUsd": 0.00022297800000000003,
+      "wallMs": 28835,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.63,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.69,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/SignupForm.tsx"
+      ],
+      "predicted": [
+        "src/SignupForm.tsx",
+        "src/signup.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "scanFiles": [
+        "src/SignupForm.tsx",
+        "src/signup.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "rankLatencyMs": 286,
+      "textLatencyMs": 223,
+      "evidenceLatencyMs": 202,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass2.json",
+      "scenario": "o",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.034469846,
+      "agentUsd": 0.034253,
+      "jevUsd": 0.000216846,
+      "wallMs": 22175,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.65,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.75,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/upload.ts",
+        "test/upload.test.ts"
+      ],
+      "predicted": [
+        "src/upload.ts",
+        "test/upload.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "scanFiles": [
+        "src/upload.ts",
+        "test/upload.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "rankLatencyMs": 239,
+      "textLatencyMs": 171,
+      "evidenceLatencyMs": 142,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass2.json",
+      "scenario": "p",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.030285766,
+      "agentUsd": 0.030121,
+      "jevUsd": 0.000164766,
+      "wallMs": 20611,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.69,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.83,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "README.md"
+      ],
+      "predicted": [
+        "README.md",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 294,
+      "textLatencyMs": 152,
+      "evidenceLatencyMs": 156,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass2.json",
+      "scenario": "c",
+      "variant": "chat-opus",
+      "repeat": 1,
+      "model": "Opus 5.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.13159318,
+      "agentUsd": 0.131434,
+      "jevUsd": 0.00015918000000000003,
+      "wallMs": 33508,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "opus[1m]"
+      ],
+      "rule": "Opus 5.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.32,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Opus 5.5",
+        "confidence": 0.28,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/invoice.ts",
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/report.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/invoice.ts",
+        "src/report.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 271,
+      "textLatencyMs": 198,
+      "evidenceLatencyMs": 188,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass2.json",
+      "scenario": "h",
+      "variant": "chat-opus",
+      "repeat": 1,
+      "model": "Opus 5.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.091974744,
+      "agentUsd": 0.091839,
+      "jevUsd": 0.000135744,
+      "wallMs": 23207,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "opus[1m]"
+      ],
+      "rule": "Opus 5.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.55,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Opus 5.5",
+        "confidence": 0.57,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/rates.ts",
+        "test/rates.test.ts"
+      ],
+      "predicted": [
+        "src/rates.ts",
+        "test/rates.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "scanFiles": [
+        "src/rates.ts",
+        "test/rates.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "rankLatencyMs": 235,
+      "textLatencyMs": 175,
+      "evidenceLatencyMs": 180,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-pass2.json",
+      "scenario": "j",
+      "variant": "chat-opus",
+      "repeat": 1,
+      "model": "Opus 5.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.324783172,
+      "agentUsd": 0.324562,
+      "jevUsd": 0.000221172,
+      "wallMs": 94336,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": [
+        "looks_good"
+      ],
+      "builders": [
+        "opus[1m]"
+      ],
+      "rule": "Opus 5.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.52,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.56,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/invoice.ts",
+        "test/invoice.test.ts"
+      ],
+      "predicted": [
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 218,
+      "textLatencyMs": 177,
+      "evidenceLatencyMs": 152,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "b",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.036602594,
+      "agentUsd": 0.036449,
+      "jevUsd": 0.000153594,
+      "wallMs": 18207,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.98,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/dates.ts"
+      ],
+      "predicted": [
+        "src/dates.ts",
+        "test/dates.test.ts",
+        "src/invoice.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "test/dates.test.ts",
+        "src/invoice.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 241,
+      "textLatencyMs": 253,
+      "evidenceLatencyMs": 174,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "c",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.15762261800000002,
+      "agentUsd": 0.157151,
+      "jevUsd": 0.00047161800000000004,
+      "wallMs": 76352,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.3,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Opus 5.5",
+        "confidence": 0.26,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/invoice.ts",
+        "src/money.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/report.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/invoice.ts",
+        "src/report.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 256,
+      "textLatencyMs": 242,
+      "evidenceLatencyMs": 210,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "g",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.072233156,
+      "agentUsd": 0.071909,
+      "jevUsd": 0.00032415600000000003,
+      "wallMs": 31988,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.94,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.93,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "api-surface.json",
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "api-surface.json",
+        "package.json",
+        "README.md",
+        "scripts/check-api.ts",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "api-surface.json",
+        "package.json",
+        "README.md",
+        "scripts/check-api.ts",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "rankLatencyMs": 285,
+      "textLatencyMs": 199,
+      "evidenceLatencyMs": 187,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "h",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.058089316,
+      "agentUsd": 0.05785,
+      "jevUsd": 0.00023931600000000002,
+      "wallMs": 28363,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.62,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Opus 5.5",
+        "confidence": 0.53,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/rates.ts",
+        "test/rates.test.ts"
+      ],
+      "predicted": [
+        "src/rates.ts",
+        "test/rates.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "scanFiles": [
+        "src/rates.ts",
+        "test/rates.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "rankLatencyMs": 224,
+      "textLatencyMs": 192,
+      "evidenceLatencyMs": 243,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "i",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.07304356,
+      "agentUsd": 0.07255299999999999,
+      "jevUsd": 0.0004905600000000001,
+      "wallMs": 49571,
+      "escalated": false,
+      "verify": [
+        "supported",
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet",
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.98,
+        "basis": "choice"
+      },
+      "turn2": {
+        "rule": "Sonnet 5",
+        "text": {
+          "pick": "Haiku 4.5",
+          "confidence": 0.93,
+          "basis": "choice"
+        },
+        "evidence": {
+          "pick": "Haiku 4.5",
+          "confidence": 0.91,
+          "basis": "choice"
+        }
+      },
+      "changed": [
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 288,
+      "textLatencyMs": 156,
+      "evidenceLatencyMs": 152,
+      "status": "succeeded/succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "j",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.290129772,
+      "agentUsd": 0.289791,
+      "jevUsd": 0.000338772,
+      "wallMs": 94886,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": [
+        "looks_good"
+      ],
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.5,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.51,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/invoice.ts",
+        "test/invoice.test.ts"
+      ],
+      "predicted": [
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 223,
+      "textLatencyMs": 174,
+      "evidenceLatencyMs": 231,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "k",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.07982189,
+      "agentUsd": 0.079526,
+      "jevUsd": 0.00029589000000000004,
+      "wallMs": 28838,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.85,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.83,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "ledger/money.py",
+        "tests/test_money.py"
+      ],
+      "predicted": [
+        "ledger/money.py",
+        "tests/test_money.py",
+        ".gitignore",
+        "ledger/__init__.py",
+        "pyproject.toml",
+        "README.md",
+        "tests/__init__.py"
+      ],
+      "scanFiles": [
+        "ledger/money.py",
+        "tests/test_money.py",
+        ".gitignore",
+        "ledger/__init__.py",
+        "pyproject.toml",
+        "README.md",
+        "tests/__init__.py"
+      ],
+      "rankLatencyMs": 252,
+      "textLatencyMs": 177,
+      "evidenceLatencyMs": 214,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "m",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.06734217599999999,
+      "agentUsd": 0.067131,
+      "jevUsd": 0.00021117600000000004,
+      "wallMs": 23203,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.66,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.67,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/SignupForm.tsx"
+      ],
+      "predicted": [
+        "src/SignupForm.tsx",
+        "src/signup.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "scanFiles": [
+        "src/SignupForm.tsx",
+        "src/signup.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "rankLatencyMs": 263,
+      "textLatencyMs": 213,
+      "evidenceLatencyMs": 184,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "o",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.081564284,
+      "agentUsd": 0.08135,
+      "jevUsd": 0.00021428400000000002,
+      "wallMs": 26306,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.65,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.78,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/upload.ts",
+        "test/upload.test.ts"
+      ],
+      "predicted": [
+        "src/upload.ts",
+        "test/upload.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "scanFiles": [
+        "src/upload.ts",
+        "test/upload.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "rankLatencyMs": 253,
+      "textLatencyMs": 187,
+      "evidenceLatencyMs": 217,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "p",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.063542782,
+      "agentUsd": 0.063376,
+      "jevUsd": 0.00016678200000000003,
+      "wallMs": 21098,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.71,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.83,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "README.md"
+      ],
+      "predicted": [
+        "README.md",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 309,
+      "textLatencyMs": 186,
+      "evidenceLatencyMs": 206,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "b",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.030959862,
+      "agentUsd": 0.030804,
+      "jevUsd": 0.00015586200000000002,
+      "wallMs": 22269,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.98,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.98,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/dates.ts"
+      ],
+      "predicted": [
+        "src/dates.ts",
+        "test/dates.test.ts",
+        "src/invoice.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "test/dates.test.ts",
+        "src/invoice.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 254,
+      "textLatencyMs": 191,
+      "evidenceLatencyMs": 193,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "g",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.053365742,
+      "agentUsd": 0.053036,
+      "jevUsd": 0.000329742,
+      "wallMs": 39740,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.94,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.94,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "api-surface.json",
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "api-surface.json",
+        "package.json",
+        "README.md",
+        "scripts/check-api.ts",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "api-surface.json",
+        "package.json",
+        "README.md",
+        "scripts/check-api.ts",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "rankLatencyMs": 316,
+      "textLatencyMs": 299,
+      "evidenceLatencyMs": 212,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "i",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.062296041999999996,
+      "agentUsd": 0.061792,
+      "jevUsd": 0.000504042,
+      "wallMs": 50731,
+      "escalated": false,
+      "verify": [
+        "supported",
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku",
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.98,
+        "basis": "choice"
+      },
+      "turn2": {
+        "rule": "Haiku 4.5",
+        "text": {
+          "pick": "Haiku 4.5",
+          "confidence": 0.94,
+          "basis": "choice"
+        },
+        "evidence": {
+          "pick": "Haiku 4.5",
+          "confidence": 0.9,
+          "basis": "choice"
+        }
+      },
+      "changed": [
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 290,
+      "textLatencyMs": 255,
+      "evidenceLatencyMs": 211,
+      "status": "succeeded/succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "k",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.056343331999999996,
+      "agentUsd": 0.056018,
+      "jevUsd": 0.000325332,
+      "wallMs": 38343,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.81,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.83,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "ledger/money.py",
+        "tests/test_money.py"
+      ],
+      "predicted": [
+        "ledger/money.py",
+        "tests/test_money.py",
+        ".gitignore",
+        "ledger/__init__.py",
+        "pyproject.toml",
+        "README.md",
+        "tests/__init__.py"
+      ],
+      "scanFiles": [
+        "ledger/money.py",
+        "tests/test_money.py",
+        ".gitignore",
+        "ledger/__init__.py",
+        "pyproject.toml",
+        "README.md",
+        "tests/__init__.py"
+      ],
+      "rankLatencyMs": 232,
+      "textLatencyMs": 186,
+      "evidenceLatencyMs": 181,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "m",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.04199065,
+      "agentUsd": 0.041767,
+      "jevUsd": 0.00022365000000000002,
+      "wallMs": 29143,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.63,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.65,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/SignupForm.tsx"
+      ],
+      "predicted": [
+        "src/SignupForm.tsx",
+        "src/signup.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "scanFiles": [
+        "src/SignupForm.tsx",
+        "src/signup.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts"
+      ],
+      "rankLatencyMs": 255,
+      "textLatencyMs": 193,
+      "evidenceLatencyMs": 201,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "o",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.039588818,
+      "agentUsd": 0.039365,
+      "jevUsd": 0.000223818,
+      "wallMs": 29983,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.65,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.76,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/upload.ts",
+        "test/upload.test.ts"
+      ],
+      "predicted": [
+        "src/upload.ts",
+        "test/upload.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "scanFiles": [
+        "src/upload.ts",
+        "test/upload.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "rankLatencyMs": 279,
+      "textLatencyMs": 168,
+      "evidenceLatencyMs": 173,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2.json",
+      "scenario": "p",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.032087682,
+      "agentUsd": 0.031923,
+      "jevUsd": 0.000164682,
+      "wallMs": 21139,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.76,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Haiku 4.5",
+        "confidence": 0.81,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "README.md"
+      ],
+      "predicted": [
+        "README.md",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 265,
+      "textLatencyMs": 191,
+      "evidenceLatencyMs": 169,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2b.json",
+      "scenario": "d",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.195910616,
+      "agentUsd": 0.195245,
+      "jevUsd": 0.0006656160000000001,
+      "wallMs": 71847,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.95,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.96,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/csv.ts",
+        "src/dates.ts",
+        "src/reminders.ts",
+        "src/report.ts",
+        "test/csv.test.ts",
+        "test/reminders.test.ts"
+      ],
+      "predicted": [
+        "src/report.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "README.md",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/report.ts",
+        "test/invoice.test.ts",
+        "README.md",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 219,
+      "textLatencyMs": 188,
+      "evidenceLatencyMs": 181,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2b.json",
+      "scenario": "e",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.254540752,
+      "agentUsd": 0.254278,
+      "jevUsd": 0.000262752,
+      "wallMs": 94307,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": [
+        "concerns"
+      ],
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.53,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.5,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 249,
+      "textLatencyMs": 177,
+      "evidenceLatencyMs": 168,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2b.json",
+      "scenario": "l",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.097760234,
+      "agentUsd": 0.097442,
+      "jevUsd": 0.00031823400000000003,
+      "wallMs": 29093,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.92,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.93,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "src/credit-note.ts",
+        "src/invoice.ts",
+        "test/credit-note.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "predicted": [
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/dates.ts",
+        "src/credit-note.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        ".gitignore",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/credit-note.test.ts"
+      ],
+      "scanFiles": [
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/credit-note.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        ".gitignore",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/credit-note.test.ts",
+        "test/greet.test.ts"
+      ],
+      "rankLatencyMs": 276,
+      "textLatencyMs": 258,
+      "evidenceLatencyMs": 223,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2b.json",
+      "scenario": "q",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.27191833400000004,
+      "agentUsd": 0.270842,
+      "jevUsd": 0.001076334,
+      "wallMs": 126146,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": [
+        "looks_good"
+      ],
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.88,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.92,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "README.md",
+        "src/shop/cart.ts",
+        "src/shop/checkout.ts",
+        "src/shop/discounts.ts",
+        "src/shop/index.ts",
+        "src/shop/invoice-lines.ts",
+        "src/shop/receipt.ts",
+        "src/shop/refunds.ts",
+        "src/shop/shipping.ts",
+        "src/shop/summary.ts",
+        "src/shop/tax.ts",
+        "src/shop/total.ts",
+        "test/shop.test.ts"
+      ],
+      "predicted": [
+        "src/shop/total.ts",
+        "test/shop.test.ts",
+        "src/shop/cart.ts",
+        "src/shop/checkout.ts",
+        "src/shop/summary.ts",
+        "src/shop/tax.ts",
+        "src/shop/discounts.ts",
+        "src/shop/invoice-lines.ts",
+        "src/shop/shipping.ts",
+        "README.md",
+        "src/shop/index.ts",
+        "src/shop/receipt.ts"
+      ],
+      "scanFiles": [
+        "src/shop/total.ts",
+        "test/shop.test.ts",
+        "src/shop/cart.ts",
+        "src/shop/checkout.ts",
+        "src/shop/summary.ts",
+        "src/shop/tax.ts",
+        "src/shop/discounts.ts",
+        "src/shop/invoice-lines.ts",
+        "src/shop/shipping.ts",
+        "README.md",
+        "src/shop/index.ts",
+        "src/shop/receipt.ts"
+      ],
+      "rankLatencyMs": 337,
+      "textLatencyMs": 195,
+      "evidenceLatencyMs": 171,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2b.json",
+      "scenario": "r",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.153669438,
+      "agentUsd": 0.15302100000000002,
+      "jevUsd": 0.0006484380000000001,
+      "wallMs": 54813,
+      "escalated": false,
+      "verify": [
+        "supported",
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet",
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.91,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.91,
+        "basis": "choice"
+      },
+      "turn2": {
+        "rule": "Sonnet 5",
+        "text": {
+          "pick": "Sonnet 5",
+          "confidence": 0.74,
+          "basis": "choice"
+        },
+        "evidence": {
+          "pick": "Sonnet 5",
+          "confidence": 0.64,
+          "basis": "probability"
+        }
+      },
+      "changed": [
+        "src/csv.ts",
+        "src/report.ts",
+        "test/csv.test.ts"
+      ],
+      "predicted": [
+        "src/report.ts",
+        "src/ledger.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/ledger.ts",
+        "src/report.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 215,
+      "textLatencyMs": 200,
+      "evidenceLatencyMs": 202,
+      "status": "succeeded/succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2b.json",
+      "scenario": "t",
+      "variant": "rule",
+      "repeat": 1,
+      "model": "Sonnet 5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.156855418,
+      "agentUsd": 0.156199,
+      "jevUsd": 0.000656418,
+      "wallMs": 50031,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "sonnet"
+      ],
+      "rule": "Sonnet 5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.96,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "README.md",
+        "src/csv.ts",
+        "src/dates.ts",
+        "src/reminders.ts",
+        "src/report.ts",
+        "test/csv.test.ts",
+        "test/reminders.test.ts"
+      ],
+      "predicted": [
+        "src/report.ts",
+        "src/dates.ts",
+        "README.md",
+        "src/ledger.ts",
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/report.ts",
+        "test/invoice.test.ts",
+        "README.md",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 231,
+      "textLatencyMs": 165,
+      "evidenceLatencyMs": 163,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2b.json",
+      "scenario": "e",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": false,
+      "reasons": [
+        "Hidden checks: 1 of 4 failed."
+      ],
+      "costUsd": 0.201870504,
+      "agentUsd": 0.201597,
+      "jevUsd": 0.000273504,
+      "wallMs": 151606,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": [
+        "concerns"
+      ],
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.54,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.46,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "scanFiles": [
+        "src/money.ts",
+        "test/money.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts"
+      ],
+      "rankLatencyMs": 314,
+      "textLatencyMs": 248,
+      "evidenceLatencyMs": 220,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2b.json",
+      "scenario": "t",
+      "variant": "chat-haiku",
+      "repeat": 1,
+      "model": "Haiku 4.5",
+      "passed": false,
+      "reasons": [
+        "Hidden checks: 1 of 5 failed."
+      ],
+      "costUsd": 0.08664894599999999,
+      "agentUsd": 0.085989,
+      "jevUsd": 0.000659946,
+      "wallMs": 68582,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "haiku"
+      ],
+      "rule": "Haiku 4.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Sonnet 5",
+        "confidence": 0.96,
+        "basis": "choice"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.97,
+        "basis": "choice"
+      },
+      "turn2": null,
+      "changed": [
+        "README.md",
+        "src/csv.ts",
+        "src/dates.ts",
+        "src/reminders.ts",
+        "src/report.ts",
+        "test/csv.test.ts",
+        "test/reminders.test.ts"
+      ],
+      "predicted": [
+        "src/report.ts",
+        "src/dates.ts",
+        "README.md",
+        "src/ledger.ts",
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/dates.ts",
+        "src/invoice.ts",
+        "src/ledger.ts",
+        "src/report.ts",
+        "test/invoice.test.ts",
+        "README.md",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 354,
+      "textLatencyMs": 180,
+      "evidenceLatencyMs": 182,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2b.json",
+      "scenario": "c",
+      "variant": "chat-opus",
+      "repeat": 1,
+      "model": "Opus 5.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.142348372,
+      "agentUsd": 0.142186,
+      "jevUsd": 0.000162372,
+      "wallMs": 38210,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": null,
+      "builders": [
+        "opus[1m]"
+      ],
+      "rule": "Opus 5.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.35,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Opus 5.5",
+        "confidence": 0.26,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/invoice.ts",
+        "src/money.ts",
+        "test/money.test.ts"
+      ],
+      "predicted": [
+        "src/money.ts",
+        "src/invoice.ts",
+        "src/report.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/invoice.ts",
+        "src/report.ts",
+        "src/dates.ts",
+        "src/ledger.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/invoice.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 249,
+      "textLatencyMs": 157,
+      "evidenceLatencyMs": 168,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2b.json",
+      "scenario": "h",
+      "variant": "chat-opus",
+      "repeat": 1,
+      "model": "Opus 5.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.090284004,
+      "agentUsd": 0.090147,
+      "jevUsd": 0.00013700400000000003,
+      "wallMs": 23288,
+      "escalated": false,
+      "verify": [
+        "supported"
+      ],
+      "critic": null,
+      "builders": [
+        "opus[1m]"
+      ],
+      "rule": "Opus 5.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.61,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Opus 5.5",
+        "confidence": 0.57,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/rates.ts",
+        "test/rates.test.ts"
+      ],
+      "predicted": [
+        "src/rates.ts",
+        "test/rates.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "scanFiles": [
+        "src/rates.ts",
+        "test/rates.test.ts",
+        "src/invoice.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/greet.ts",
+        "src/ledger.ts",
+        "package.json",
+        "README.md",
+        "src/report.ts",
+        "test/greet.test.ts",
+        "test/invoice.test.ts"
+      ],
+      "rankLatencyMs": 255,
+      "textLatencyMs": 198,
+      "evidenceLatencyMs": 367,
+      "status": "succeeded",
+      "error": null
+    },
+    {
+      "file": "<scratchpad>/liveround/results-rep2b.json",
+      "scenario": "j",
+      "variant": "chat-opus",
+      "repeat": 1,
+      "model": "Opus 5.5",
+      "passed": true,
+      "reasons": [],
+      "costUsd": 0.28470527,
+      "agentUsd": 0.28454,
+      "jevUsd": 0.00016527000000000002,
+      "wallMs": 79989,
+      "escalated": false,
+      "verify": [
+        "unverified"
+      ],
+      "critic": [
+        "looks_good"
+      ],
+      "builders": [
+        "opus[1m]"
+      ],
+      "rule": "Opus 5.5",
+      "ruleName": "chat model",
+      "text": {
+        "pick": "Opus 5.5",
+        "confidence": 0.48,
+        "basis": "probability"
+      },
+      "evidence": {
+        "pick": "Sonnet 5",
+        "confidence": 0.54,
+        "basis": "probability"
+      },
+      "turn2": null,
+      "changed": [
+        "src/invoice.ts",
+        "test/invoice.test.ts"
+      ],
+      "predicted": [
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "scanFiles": [
+        "src/invoice.ts",
+        "test/invoice.test.ts",
+        "src/dates.ts",
+        "src/money.ts",
+        "src/ledger.ts",
+        "src/greet.ts",
+        "src/report.ts",
+        "package.json",
+        "README.md",
+        "test/greet.test.ts",
+        "test/ledger.test.ts",
+        "test/money.test.ts"
+      ],
+      "rankLatencyMs": 229,
+      "textLatencyMs": 157,
+      "evidenceLatencyMs": 207,
+      "status": "succeeded",
+      "error": null
+    }
+  ]
+}

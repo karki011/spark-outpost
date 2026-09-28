@@ -35,7 +35,7 @@ export function testDatabaseUrl(): string {
   const test = new URL(url);
   const dev = process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL) : null;
   const sameAsDev = dev && dev.host === test.host && dev.pathname === test.pathname;
-  if (sameAsDev || !test.pathname.endsWith('_test')) {
+  if (sameAsDev || !/_test(_\w+)?$/.test(test.pathname)) {
     throw new Error('TEST_DATABASE_URL must name a separate *_test database, never the dev one.');
   }
   return url;

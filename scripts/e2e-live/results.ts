@@ -36,6 +36,7 @@ export interface CellRecord {
   consoleErrors: string[];
   notes: TurnOutcome['notes'];
   error: string | null;
+  labels?: unknown[];
 }
 
 export interface E2eRun {

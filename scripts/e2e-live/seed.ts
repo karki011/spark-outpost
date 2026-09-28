@@ -28,7 +28,7 @@ async function connect(db: Db, workspaceId: string, provider: Provider): Promise
   await db.query(
     `INSERT INTO provider_connections
        (workspace_id, provider, method, detail, models, model, permission, effort, verified_at)
-     VALUES ($1, $2, $4, 'e2e', '[]', $3, 'ask', 'high', now())
+     VALUES ($1, $2, $4, 'e2e', '[]', $3, 'ask', 'medium', now())
      ON CONFLICT (workspace_id, provider) DO NOTHING`,
     [workspaceId, provider, model, method],
   );
