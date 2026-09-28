@@ -91,21 +91,18 @@ test('the quiet Home greets by name and says nothing needs you', async ({ page }
   await expect(recent.locator('.k')).toHaveText(/^(Just now|\d+m ago)$/);
 });
 
-test('the Home composer starts a chat in the background and keeps its choices', async ({
+test('the Home composer starts a chat in the background, keeps its model and starts without a project', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
   await page.goto('/');
   const response = await page.request.post('/api/projects', { data: { rootPath: base } });
   expect(response.ok()).toBe(true);
-  const projectName = path.basename(base);
   await openHome(page);
 
   const composer = home(page).getByRole('region', { name: 'Start a new chat' });
   await expect(home(page).locator('select')).toHaveCount(0);
-  await expect(
-    composer.getByRole('button', { name: `Project folders: ${projectName}` }),
-  ).toBeVisible();
+  await expect(composer.getByRole('button', { name: 'Choose project' })).toBeVisible();
   const input = composer.getByRole('textbox', { name: 'Message' });
   await expect(input).not.toBeFocused();
   await expect(composer.getByRole('button', { name: 'Send' })).toBeDisabled();
@@ -129,13 +126,10 @@ test('the Home composer starts a chat in the background and keeps its choices', 
     'Summarise the home brief',
   );
   await expect(picker).toHaveAccessibleName('Model and effort: Fake Deep');
-  await expect(
-    composer.getByRole('button', { name: `Project folders: ${projectName}` }),
-  ).toBeVisible();
+  await expect(composer.getByRole('button', { name: 'Choose project' })).toBeVisible();
 
   await started.getByRole('button', { name: 'Open' }).click();
   await expect(page.locator('.chat-title')).toHaveText('Summarise the home brief');
-  await expect(page.locator('.crumb')).toContainText(projectName);
   await expect(page.getByRole('button', { name: /^Model and effort/ })).toHaveAccessibleName(
     'Model and effort: Fake Deep',
   );

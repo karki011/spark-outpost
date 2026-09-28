@@ -320,8 +320,6 @@
 }
 
 .agreed-body {
-  max-height: 420px;
-  overflow-y: auto;
   font-size: 13px;
 }
 

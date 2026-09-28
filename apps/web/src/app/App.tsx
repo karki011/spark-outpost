@@ -40,14 +40,7 @@ function ChatShell({ entering }: { entering: boolean }) {
     setViewState(next);
     saveView(next);
   }, []);
-  const [homeDraft, setHomeDraft] = useState<{ id: string; seeded: boolean }>(() => ({
-    id: newDraftId(),
-    seeded: false,
-  }));
-  const markHomeDraftSeeded = useCallback(
-    () => setHomeDraft((draft) => (draft.seeded ? draft : { ...draft, seeded: true })),
-    [],
-  );
+  const [homeDraftId, setHomeDraftId] = useState(newDraftId);
   const conversations = useQuery({
     queryKey: queryKeys.conversations,
     queryFn: api.listConversations,
@@ -135,12 +128,9 @@ function ChatShell({ entering }: { entering: boolean }) {
           <Home
             chats={chats}
             mood={mood}
-            draftId={homeDraft.id}
-            seeded={homeDraft.seeded}
-            onSeeded={markHomeDraftSeeded}
-            suggestedProjectId={chats.find((chat) => chat.id === activeId)?.projectIds[0] ?? null}
+            draftId={homeDraftId}
             onOpenChat={openAtCard}
-            onRotateDraft={(id) => setHomeDraft({ id, seeded: true })}
+            onRotateDraft={setHomeDraftId}
             onOpenId={openChat}
             onChats={() => setView('chats')}
             onUsage={() => setSettings('usage')}

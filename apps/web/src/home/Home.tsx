@@ -29,9 +29,6 @@ interface HomeProps {
   chats: readonly ConversationSummary[];
   mood: ScoutMood;
   draftId: string;
-  seeded: boolean;
-  onSeeded: () => void;
-  suggestedProjectId: string | null;
   onOpenChat: (chat: ConversationSummary) => void;
   onRotateDraft: (nextDraftId: string) => void;
   onOpenId: (conversationId: string) => void;
@@ -59,7 +56,7 @@ function useMinuteClock(): number {
 }
 
 export function Home(props: HomeProps) {
-  const { chats, mood, draftId, suggestedProjectId, onOpenChat } = props;
+  const { chats, mood, draftId, onOpenChat } = props;
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const projects = useProjects();
   const projectList = projects.data ?? [];
@@ -73,8 +70,6 @@ export function Home(props: HomeProps) {
     chats,
     [...need, ...running].map((item) => item.chat),
   );
-  const seedProject =
-    props.seeded || !projects.isSuccess ? null : (suggestedProjectId ?? projectList[0]?.id ?? null);
   const projectById = new Map(projectList.map((project) => [project.id, project.name]));
   const projectName = (chat: ConversationSummary) => {
     const first = chat.projectIds[0];
@@ -111,8 +106,6 @@ export function Home(props: HomeProps) {
           </header>
           <HomeComposer
             draftId={draftId}
-            seedProjectId={seedProject}
-            onSeeded={props.onSeeded}
             onRotate={props.onRotateDraft}
             onOpenId={props.onOpenId}
           />

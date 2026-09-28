@@ -11,7 +11,7 @@ import { api, newDraftId, queryKeys } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
 import { Composer } from '../chat/Composer.tsx';
-import { useChatRepos, useLinkedProjects } from '../chat/project/use-chat-repos.ts';
+import { useLinkedProjects } from '../chat/project/use-chat-repos.ts';
 
 const NO_REPOS: string[] = [];
 const STARTED_MS = 6000;
@@ -23,8 +23,6 @@ interface Outgoing {
 
 interface HomeComposerProps {
   draftId: string;
-  seedProjectId: string | null;
-  onSeeded: () => void;
   onRotate: (nextDraftId: string) => void;
   onOpenId: (conversationId: string) => void;
 }
@@ -36,8 +34,8 @@ interface Started {
 
 function carriedSettings(detail: ConversationDetail | undefined): UpdateChatSettingsRequest | null {
   if (!detail) return null;
-  const { settings, conversation } = detail;
-  const carried: UpdateChatSettingsRequest = { projectIds: conversation.projectIds };
+  const { settings } = detail;
+  const carried: UpdateChatSettingsRequest = {};
   if (settings.provider) carried.provider = settings.provider;
   if (settings.model) carried.model = settings.model;
   if (settings.effort) carried.effort = settings.effort;
@@ -58,7 +56,7 @@ function useStarted() {
 }
 
 export function HomeComposer(props: HomeComposerProps) {
-  const { draftId, seedProjectId, onSeeded, onRotate, onOpenId } = props;
+  const { draftId, onRotate, onOpenId } = props;
   const queryClient = useQueryClient();
   const [started, setStarted] = useStarted();
   const detail = useQuery({
@@ -69,16 +67,6 @@ export function HomeComposer(props: HomeComposerProps) {
   const connected = setup.data?.providers.filter((provider) => provider.connection) ?? [];
   const repos = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_REPOS);
   const attachments = useAttachments();
-  const linkRepos = useChatRepos(draftId);
-  const seed = detail.isSuccess ? seedProjectId : null;
-  const link = linkRepos.mutate;
-
-  useEffect(() => {
-    if (!seed) return;
-    onSeeded();
-    link({ type: 'add', projectId: seed });
-  }, [seed, onSeeded, link]);
-
   const send = useMutation({
     mutationFn: async (message: Outgoing) => {
       const carried = carriedSettings(detail.data);
