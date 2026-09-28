@@ -29,6 +29,7 @@ export interface AppliedSettings {
   current: { model: string | null; effort: string | null };
   values: ConfigValues;
   using: string;
+  live: SettingsSession;
 }
 
 export interface ModeWish {
@@ -87,12 +88,8 @@ export interface SettingsSession {
   setValue(configId: string, value: string | boolean): Promise<void>;
 }
 
-export function settingsSession(
-  ctx: Requester,
-  session: SessionHandle,
-  initial: readonly acp.SessionConfigOption[] = session.newSessionResponse.configOptions ?? [],
-): SettingsSession {
-  let configOptions = [...initial];
+export function settingsSession(ctx: Requester, session: SessionHandle): SettingsSession {
+  let configOptions = [...(session.newSessionResponse.configOptions ?? [])];
   let legacy = legacyOptions(session.newSessionResponse);
   const all = () => withLegacy(configOptions, legacy);
   const setLegacyMode = async (mode: string) => {
@@ -202,6 +199,7 @@ export async function applySessionSettings(
     },
     values: currentValues(options),
     using: usingLabel(options, definition.name),
+    live,
   };
 }
 

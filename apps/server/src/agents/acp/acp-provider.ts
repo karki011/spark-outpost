@@ -23,7 +23,7 @@ import {
 } from './conversation-prompt.ts';
 import { assertProtocolVersion, failureError, toProviderError } from './errors.ts';
 import { declineInConversation } from './permissions.ts';
-import { applySessionSettings, modeName, settingsSession } from './apply-settings.ts';
+import { applySessionSettings, modeName } from './apply-settings.ts';
 import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
 import { offeredCapabilities } from './capabilities.ts';
 import { CLIENT_INFO, clientCapabilities } from './client-info.ts';
@@ -403,7 +403,7 @@ async function converse(
       for (const note of [...notes, ...applied.notes]) {
         if (note) push(mapper.note(note));
       }
-      const live = settingsSession(ctx, session, applied.options);
+      const { live } = applied;
       const allowed = modeAllowed(definition, turn, policy !== null, doing !== null);
       mapper.trackSettings(
         { ...applied.current, mode: applied.mode, values: applied.values },
