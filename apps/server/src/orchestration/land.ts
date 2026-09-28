@@ -3,10 +3,10 @@ import { CHECK_FIXES } from '../advisor/policy.ts';
 import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { workingTree } from '../projects/snapshot.ts';
 import { checkBudget } from './budget-check.ts';
+import { checkLines } from './check-results.ts';
 import { runChecks } from './checks.ts';
 import { checkFailureText } from './context.ts';
 import { ensureParentSnapshot, runMember, type MemberOutcome, type Place } from './members.ts';
-import { checkLines } from './reviews.ts';
 import type { MemberResult, Session } from './session.ts';
 import type { FlowAction } from './transitions.ts';
 

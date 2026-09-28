@@ -137,7 +137,7 @@ function counted(count: number, noun: string): string {
 const SHOWN_FINDINGS = 3;
 const FINDING_CHARACTERS = 160;
 
-function findingList(findings: readonly string[]): string {
+export function findingList(findings: readonly string[]): string {
   const shown = findings.slice(0, SHOWN_FINDINGS).map((finding) => {
     const trimmed = finding.trim();
     return trimmed.length > FINDING_CHARACTERS

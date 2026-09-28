@@ -1,7 +1,7 @@
 import { isLargeDiff, type DiffFile } from './risk-rules.ts';
 
-export const ONE_LINER_LINES = 10;
-export const FEATURE_FILES = 3;
+const ONE_LINER_LINES = 10;
+const FEATURE_FILES = 3;
 
 const TEST_FILE =
   /(?:^|\/)(?:tests?|__tests__|specs?|e2e)\/|\.(?:test|spec)\.[cm]?[jt]sx?$|_test\.(?:go|py|rb)$|(?:^|\/)test_[^/]+\.py$/;

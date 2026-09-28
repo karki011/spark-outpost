@@ -26,7 +26,7 @@ import {
   interpretations,
 } from './clarify.ts';
 import { checkCommands } from './member-prompts.ts';
-import { escalateBuilder } from './routing.ts';
+import { escalatedBuilderPick } from './member-routes.ts';
 import { save, type Session } from './session.ts';
 import type { FlowAction, FlowEvent } from './transitions.ts';
 
@@ -40,10 +40,8 @@ async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
   if (action.kind === 'clarify') return answerOrBuildCard(action.reason);
   if (action.kind === 'plan') return riskyCard(action.reason);
   if (action.kind === 'retry' || action.kind === 'verify') {
-    const previous = s.routes.get('builder');
-    const to = previous ? escalateBuilder(s.route, previous).pick : null;
     const card = action.kind === 'retry' ? retryCard : verifyCard;
-    return card(builderPick(s), to, action.reason);
+    return card(builderPick(s), escalatedBuilderPick(s), action.reason);
   }
   if (action.kind === 'stuck') {
     const name = s.results.findLast((result) => result.role === 'builder')?.name ?? 'The Builder';
@@ -70,24 +68,20 @@ export function intakeResponse(s: Session) {
   return s.intake.outcome.status === 'answered' ? s.intake.outcome.response : null;
 }
 
-export async function assume(s: Session, interpretation: string): Promise<void> {
-  s.assumption = interpretation;
+function rewriteRequest(s: Session, rewrite: (text: string) => string): void {
   s.input = {
     ...s.input,
-    userRequest: assumedRequest(s.input.userRequest, interpretation),
-    prompt: assumedRequest(s.input.prompt, interpretation),
+    userRequest: rewrite(s.input.userRequest),
+    prompt: rewrite(s.input.prompt),
   };
+}
+
+export async function assume(s: Session, interpretation: string): Promise<void> {
+  s.assumption = interpretation;
+  rewriteRequest(s, (text) => assumedRequest(text, interpretation));
   const note = `Assumed: ${interpretation}`;
   await s.append(runEvents.stepStarted(note));
   await s.append(runEvents.stepFinished(note));
-}
-
-function clarify(s: Session, answer: string): void {
-  s.input = {
-    ...s.input,
-    userRequest: clarifiedRequest(s.input.userRequest, answer),
-    prompt: clarifiedRequest(s.input.prompt, answer),
-  };
 }
 
 async function askInterpretation(s: Session, action: Ask): Promise<FlowEvent> {
@@ -99,7 +93,7 @@ async function askInterpretation(s: Session, action: Ask): Promise<FlowEvent> {
   const picked = chosenInterpretation(card, answer.optionId, answer.note);
   if (picked.type === 'stopped') return { type: 'clarified', answer: null };
   if (picked.type === 'assumed') await assume(s, picked.text);
-  else clarify(s, picked.text);
+  else rewriteRequest(s, (text) => clarifiedRequest(text, picked.text));
   return { type: 'clarified', answer: false };
 }
 

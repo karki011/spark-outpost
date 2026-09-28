@@ -437,7 +437,7 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
   }
 }
 
-export function keepFacts(
+function keepFacts(
   state: FlowState,
   checksFailing: boolean,
   riskyMigration: string | null = null,

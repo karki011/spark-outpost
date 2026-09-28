@@ -19,7 +19,7 @@ export function riskyChange(destructive: boolean, request: string): string | nul
   return null;
 }
 
-export function riskyMigrationReason(statement: string): string {
+function riskyMigrationReason(statement: string): string {
   const shown = statement.length > 120 ? `${statement.slice(0, 120)}…` : statement;
   return `the migration it added can lose or rewrite existing data (\`${shown}\`)`;
 }

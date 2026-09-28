@@ -49,10 +49,7 @@ export interface RouteFacts {
 
 export const DESTRUCTIVE_RULE = 'destructive → top tier';
 
-export function candidateFor(
-  context: RouteContext,
-  provider: string,
-): AdvisorCandidate | undefined {
+function candidateFor(context: RouteContext, provider: string): AdvisorCandidate | undefined {
   return context.candidates.find((candidate) => candidate.provider === provider);
 }
 
@@ -60,7 +57,7 @@ function labelOf(candidate: AdvisorCandidate | undefined, model: string | null):
   return candidate?.models.find((option) => option.id === model)?.label ?? null;
 }
 
-export function effortIds(candidate: AdvisorCandidate | undefined): string[] {
+function effortIds(candidate: AdvisorCandidate | undefined): string[] {
   return candidate?.efforts.map((effort) => effort.id) ?? [];
 }
 
@@ -140,7 +137,7 @@ function readerFloor(context: RouteContext, route: MemberRoute): FlooredPick {
   return floored.note?.kind === 'tier_unknown' ? { ...floored, note: null } : floored;
 }
 
-export function floorReaderRoute(context: RouteContext, route: MemberRoute): MemberRoute {
+function floorReaderRoute(context: RouteContext, route: MemberRoute): MemberRoute {
   const autoWouldUse = flooredOrNull(context, route.autoWouldUse);
   return withNote({ ...route, autoWouldUse }, readerFloor(context, route), 'reader');
 }
@@ -167,6 +164,13 @@ export function builderTierPick(context: RouteContext, tier: RouteTier | null): 
   return flooredOrNull(context, jevTierPick(context, tier));
 }
 
+function builderRule(base: MemberRoute, complex: ComplexSignal | null, facts: RouteFacts): string {
+  if (base.rule === DESTRUCTIVE_RULE) return base.rule;
+  if (complex) return `complex → top tier (${complex.reason})`;
+  if (facts.setAside && base.routedBy === 'rules') return `${base.rule} (${facts.setAside})`;
+  return base.rule;
+}
+
 export function routeBuilder(
   context: RouteContext,
   facts: RouteFacts,
@@ -178,18 +182,13 @@ export function routeBuilder(
     aim: complex ? 'top' : 'floor',
     now: nowOf(context),
   });
-  const rule =
-    complex && base.rule !== DESTRUCTIVE_RULE
-      ? `complex → top tier (${complex.reason})`
-      : !complex && facts.setAside && base.routedBy === 'rules' && base.rule !== DESTRUCTIVE_RULE
-        ? `${base.rule} (${facts.setAside})`
-        : base.rule;
+  const rule = builderRule(base, complex, facts);
   const autoWouldUse = flooredOrNull(context, base.autoWouldUse);
   const route = withNote({ ...base, rule, autoWouldUse }, floored, 'builder');
   return { ...route, pick: { ...route.pick, effort: builderEffort(context, route.pick) } };
 }
 
-export const TRIVIAL_RULE = 'trivial → middle tier';
+const TRIVIAL_RULE = 'trivial → middle tier';
 
 function ruleRoute(
   context: RouteContext,

@@ -12,15 +12,13 @@ import type { CheckCommand } from '../checks/detect.ts';
 import { runsPackageScript, scriptsFingerprint } from '../checks/project-checks.ts';
 import { runCheck, type CheckRun } from '../checks/run-check.ts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
-import { nextArtifactVersion } from '../persistence/artifacts.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import { createApprovalGate } from '../workflow/approval-gate.ts';
 import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
-import { runEvents } from '../workflow/run-events.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
-import { publish, type Session } from './session.ts';
+import { appendNewArtifact, publish, type Session } from './session.ts';
 
-export const SCRIPTS_CHANGED_NOTE =
+const SCRIPTS_CHANGED_NOTE =
   'The package.json scripts changed during this run, so this check was not run automatically.';
 
 export interface CheckTarget {
@@ -93,7 +91,7 @@ function notRun(
   };
 }
 
-export function checkStatus(results: readonly CheckResult[]): CheckStatus {
+function checkStatus(results: readonly CheckResult[]): CheckStatus {
   if (results.some((result) => result.outcome === 'failed' || result.outcome === 'timed_out')) {
     return 'failed';
   }
@@ -145,19 +143,7 @@ export function queueRecord(taskId: string, write: () => Promise<void>): Promise
 async function record(s: Session, body: CheckBody): Promise<void> {
   const taskId = s.taskId;
   if (!taskId) return;
-  await queueRecord(taskId, async () => {
-    const version = await nextArtifactVersion(s.deps.db, taskId, 'check');
-    await s.append(runEvents.activity('artifact:check', 'check', { version, body }), {
-      artifact: {
-        taskId,
-        kind: 'check',
-        body,
-        version,
-        overwrite: false,
-        supersedesPrevious: false,
-      },
-    });
-  });
+  await queueRecord(taskId, () => appendNewArtifact(s, taskId, 'check', body));
 }
 
 function checkGate(s: Session, target: CheckTarget, timedOut: () => void) {
