@@ -9,18 +9,25 @@ export type TvSize = 's' | 'm' | 'l';
 
 export const TV_SIZES: readonly TvSize[] = ['s', 'm', 'l'];
 
+export type TvView = 'stage' | 'list';
+
+export const TV_VIEWS: readonly TvView[] = ['stage', 'list'];
+
 export interface AgentTvState {
   sourceId: string | null;
   position: TvPosition | null;
   size: TvSize;
   watch: boolean;
   muted: boolean;
+  view: TvView;
+  cleared: ReadonlySet<string>;
 }
 
 interface SavedTv {
   position: TvPosition | null;
   size: TvSize;
   muted: boolean;
+  view: TvView;
 }
 
 const STORAGE_KEY = 'spark-outpost.agent-tv';
@@ -32,7 +39,7 @@ function isPosition(value: unknown): value is TvPosition {
 }
 
 export function parseSavedTv(raw: string | null): SavedTv {
-  const fallback: SavedTv = { position: null, size: 's', muted: false };
+  const fallback: SavedTv = { position: null, size: 's', muted: false, view: 'stage' };
   if (!raw) return fallback;
   try {
     const value = JSON.parse(raw) as Record<string, unknown>;
@@ -40,6 +47,7 @@ export function parseSavedTv(raw: string | null): SavedTv {
       position: isPosition(value.position) ? value.position : null,
       size: TV_SIZES.includes(value.size as TvSize) ? (value.size as TvSize) : 's',
       muted: value.muted === true,
+      view: TV_VIEWS.includes(value.view as TvView) ? (value.view as TvView) : 'stage',
     };
   } catch {
     return fallback;
@@ -55,7 +63,12 @@ function readSaved(): SavedTv {
 }
 
 function save(next: AgentTvState) {
-  const saved: SavedTv = { position: next.position, size: next.size, muted: next.muted };
+  const saved: SavedTv = {
+    position: next.position,
+    size: next.size,
+    muted: next.muted,
+    view: next.view,
+  };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
   } catch {
@@ -63,7 +76,7 @@ function save(next: AgentTvState) {
   }
 }
 
-let state: AgentTvState = { sourceId: null, watch: false, ...readSaved() };
+let state: AgentTvState = { sourceId: null, watch: false, cleared: new Set(), ...readSaved() };
 const listeners = new Set<() => void>();
 
 function set(next: Partial<AgentTvState>) {
@@ -103,4 +116,12 @@ export function setTvWatch(watch: boolean) {
 
 export function setTvMuted(muted: boolean) {
   set({ muted });
+}
+
+export function setTvView(view: TvView) {
+  set({ view });
+}
+
+export function clearTvFinished(keys: readonly string[]) {
+  set({ cleared: new Set([...state.cleared, ...keys]) });
 }

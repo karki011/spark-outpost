@@ -215,7 +215,7 @@ test('sizes and watch mode grow the stage, and the size is remembered', async ({
   const stageWidth = () =>
     tv.locator('.tv-stage').evaluate((element) => (element as HTMLElement).offsetWidth);
   expect(await stageWidth()).toBe(300);
-  await tv.getByRole('radio', { name: 'L' }).click();
+  await tv.getByRole('radio', { name: 'L', exact: true }).click();
   await expect.poll(stageWidth).toBe(460);
   await shot(page, 'large');
 
@@ -269,7 +269,7 @@ test('recording of a full run with handoffs', async ({ browser }) => {
   const page = await context.newPage();
   await crewChat(page, repo, 'Balanced');
   await page.getByRole('button', { name: 'Agent TV' }).click();
-  await tvOf(page).getByRole('radio', { name: 'M' }).click();
+  await tvOf(page).getByRole('radio', { name: 'M', exact: true }).click();
   await send(page, `${CREW_REQUEST} #build #crew`);
   await expect(tvOf(page).locator('.tv-pk.out')).not.toHaveCount(0, { timeout: 15_000 });
   await page.waitForTimeout(350);

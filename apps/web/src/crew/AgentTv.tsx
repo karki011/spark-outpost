@@ -16,18 +16,23 @@ import { Segmented } from '../ui/Segmented.tsx';
 import { useReducedMotion } from '../ui/motion.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import {
+  clearTvFinished,
   closeAgentTv,
   moveAgentTv,
   resizeAgentTv,
   setTvMuted,
+  setTvView,
   setTvWatch,
   TV_SIZES,
   useAgentTv,
   type TvSize,
+  type TvView,
 } from './agent-tv-store.ts';
 import { AgentTvStage } from './AgentTvStage.tsx';
 import type { CrewAgent } from './crew-model.ts';
-import { ChatterIcon, WatchIcon } from './tv-icons.tsx';
+import { ChatterIcon, ListIcon, StageIcon, WatchIcon } from './tv-icons.tsx';
+import { TvList } from './TvList.tsx';
+import type { TvRows } from './tv-list.ts';
 import { tvCaption } from './tv-caption.ts';
 import { StageGaze } from './tv-gaze.ts';
 import { clampToViewport, STAGES, watchStage } from './tv-layout.ts';
@@ -39,6 +44,26 @@ export const TV_BUTTON_ID = 'agent-tv-button';
 
 const CAPTION_THROTTLE_MS = 2500;
 const SIZE_OPTIONS = TV_SIZES.map((id) => ({ id, label: id.toUpperCase() }));
+const VIEW_OPTIONS = [
+  {
+    id: 'stage',
+    label: (
+      <>
+        <StageIcon />
+        <span className="sr-only">Stage</span>
+      </>
+    ),
+  },
+  {
+    id: 'list',
+    label: (
+      <>
+        <ListIcon />
+        <span className="sr-only">List</span>
+      </>
+    ),
+  },
+];
 
 function isNarrow(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(max-width: 640px)').matches;
@@ -52,12 +77,16 @@ interface AgentTvProps {
   members: readonly CrewAgent[];
   asks: Record<string, TvAsk>;
   decision: string | null;
+  rows: TvRows;
+  stopping: string | null;
   onPick(id: string): void;
   onAsk(approvalId: string): void;
+  onStop(runId: string): void;
 }
 
-export function AgentTv({ members, asks, decision, onPick, onAsk }: AgentTvProps) {
-  const { position, size, watch, muted } = useAgentTv();
+export function AgentTv(props: AgentTvProps) {
+  const { members, asks, decision, onPick, onAsk } = props;
+  const { position, size, watch, muted, view, cleared } = useAgentTv();
   const panel = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const reduced = useReducedMotion();
@@ -70,6 +99,7 @@ export function AgentTv({ members, asks, decision, onPick, onAsk }: AgentTvProps
   const spoken = useThrottledText(captionText, CAPTION_THROTTLE_MS);
   const narrow = viewport.width <= 640;
   const metrics = watch ? watchStage(viewport) : STAGES[narrow ? 's' : size];
+  const viewTip = useTooltip(view === 'list' ? 'List view' : 'Stage view');
   const sizeTip = useTooltip('Small / Medium / Large TV');
   const muteTip = useTooltip(muted ? 'Show speech bubbles' : 'Mute speech bubbles');
   const watchTip = useTooltip(watch ? 'Leave watch mode' : 'Watch mode');
@@ -121,7 +151,7 @@ export function AgentTv({ members, asks, decision, onPick, onAsk }: AgentTvProps
       right: 'auto',
       bottom: 'auto',
     });
-  }, [position, size, watch, viewport.width, viewport.height]);
+  }, [position, size, watch, view, viewport.width, viewport.height]);
 
   const close = () => {
     closeAgentTv();
@@ -153,7 +183,14 @@ export function AgentTv({ members, asks, decision, onPick, onAsk }: AgentTvProps
     if (!watch) moveAgentTv(null);
   };
 
-  const classes = ['tv', `size-${size}`, watch && 'watch', hidden && 'paused', reduced && 'still'];
+  const classes = [
+    'tv',
+    `size-${size}`,
+    `view-${view}`,
+    watch && 'watch',
+    hidden && 'paused',
+    reduced && 'still',
+  ];
 
   return createPortal(
     <>
@@ -169,6 +206,14 @@ export function AgentTv({ members, asks, decision, onPick, onAsk }: AgentTvProps
           <i className="tv-live" aria-hidden="true" />
           <span title={watch ? undefined : 'Drag to move. Double-click to dock'}>
             Agent TV <small>live</small>
+          </span>
+          <span className="tv-view" {...viewTip.triggerProps}>
+            <Segmented
+              ariaLabel="Agent TV view"
+              options={VIEW_OPTIONS}
+              value={view}
+              onChange={(id) => setTvView(id as TvView)}
+            />
           </span>
           {!watch && (
             <span className="tv-size" {...sizeTip.triggerProps}>
@@ -210,29 +255,44 @@ export function AgentTv({ members, asks, decision, onPick, onAsk }: AgentTvProps
           >
             <CloseIcon />
           </button>
+          {viewTip.tooltip}
           {sizeTip.tooltip}
           {muteTip.tooltip}
           {watchTip.tooltip}
           {closeTip.tooltip}
         </div>
-        <AgentTvStage
-          members={members}
-          metrics={metrics}
-          asks={asks}
-          decision={decision}
-          chatter={events.chatter}
-          packets={events.packets}
-          gaze={gaze}
-          reduced={reduced}
-          selected={selected}
-          onSelect={setSelected}
-          onLanded={events.landed}
-          onPick={onPick}
-          onAsk={onAsk}
-        />
-        <p className="tv-cap" aria-hidden="true">
-          {caption.lead && <b>{caption.lead}</b>} {caption.text}
-        </p>
+        {view === 'list' ? (
+          <TvList
+            rows={props.rows}
+            cleared={cleared}
+            stopping={props.stopping}
+            onPick={onPick}
+            onAsk={onAsk}
+            onStop={props.onStop}
+            onClear={clearTvFinished}
+          />
+        ) : (
+          <AgentTvStage
+            members={members}
+            metrics={metrics}
+            asks={asks}
+            decision={decision}
+            chatter={events.chatter}
+            packets={events.packets}
+            gaze={gaze}
+            reduced={reduced}
+            selected={selected}
+            onSelect={setSelected}
+            onLanded={events.landed}
+            onPick={onPick}
+            onAsk={onAsk}
+          />
+        )}
+        {view === 'stage' && (
+          <p className="tv-cap" aria-hidden="true">
+            {caption.lead && <b>{caption.lead}</b>} {caption.text}
+          </p>
+        )}
         <p className="sr-only" aria-live="polite">
           {spoken}
         </p>

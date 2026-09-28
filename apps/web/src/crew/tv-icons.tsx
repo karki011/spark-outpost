@@ -38,3 +38,31 @@ export function ChatterIcon({ muted }: { muted: boolean }) {
     </Icon>
   );
 }
+
+export function StopIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="5" y="5" width="14" height="14" rx="2.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function StageIcon() {
+  return (
+    <Icon>
+      <circle cx="12" cy="15" r="3.2" />
+      <circle cx="5.5" cy="7" r="2" />
+      <circle cx="18.5" cy="7" r="2" />
+      <path d="M7 8.6 9.8 12.6M17 8.6l-2.8 4" />
+    </Icon>
+  );
+}
+
+export function ListIcon() {
+  return (
+    <Icon>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" strokeWidth="2.6" />
+    </Icon>
+  );
+}
