@@ -5,7 +5,7 @@ export interface Effective extends McpEnablement {
   via: ChatMcpVia;
 }
 
-export function enablementOf(server: UserMcpRow, row: EnablementRow): McpEnablement {
+function enablementOf(server: UserMcpRow, row: EnablementRow): McpEnablement {
   const current = row.fingerprint === server.fingerprint;
   return { enabled: row.enabled && current, changed: row.enabled && !current };
 }

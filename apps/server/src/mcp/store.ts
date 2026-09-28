@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { McpCheck, McpScope, McpTransport } from '@spark-outpost/contracts';
-import { mcpFingerprint, type McpServerConfig } from '../agent-config/mcp-json.ts';
+import { mcpFingerprint, storedMcpConfig, type McpServerConfig } from '../agent-config/mcp-json.ts';
+import { audit } from '../agent-config/store.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 
 export interface StoredUserConfig {
@@ -75,14 +76,7 @@ export function storedUserConfig(
   server: Omit<McpServerConfig, 'fingerprint'>,
   extra: Pick<StoredUserConfig, 'secretNames' | 'importableNames' | 'origin'>,
 ): StoredUserConfig {
-  return {
-    command: server.command,
-    args: server.args,
-    url: server.url,
-    envNames: Object.keys(server.env).sort(),
-    headerNames: Object.keys(server.headers).sort(),
-    ...extra,
-  };
+  return { ...storedMcpConfig(server), ...extra };
 }
 
 const SERVER_COLUMNS = 'id, source, name, transport, config, fingerprint, last_check';
@@ -226,29 +220,26 @@ export async function setUserEnablement(
         [server.id, change.scope, change.scopeKey, change.enabled, server.fingerprint],
       );
     }
-    await client.query(
-      `INSERT INTO agent_config_audit (id, workspace_id, project_id, subject, target, enabled, detail)
-       VALUES ($1, $2, $3, 'mcp', $4, $5, $6)`,
-      [
-        randomUUID(),
-        workspaceId,
-        change.scope === 'project' ? change.scopeKey : null,
-        server.name,
-        change.enabled === true,
-        {
-          scope: change.scope,
-          scopeKey: change.scopeKey,
-          cleared: change.enabled === null,
-          source: server.source,
-          transport: server.transport,
-          fingerprint: server.fingerprint,
-          command: server.config.command,
-          args: server.config.args,
-          url: server.config.url,
-          envNames: server.config.envNames,
-          headerNames: server.config.headerNames,
-        },
-      ],
+    await audit(
+      client,
+      workspaceId,
+      change.scope === 'project' ? change.scopeKey : null,
+      'mcp',
+      change.enabled === true,
+      server.name,
+      {
+        scope: change.scope,
+        scopeKey: change.scopeKey,
+        cleared: change.enabled === null,
+        source: server.source,
+        transport: server.transport,
+        fingerprint: server.fingerprint,
+        command: server.config.command,
+        args: server.config.args,
+        url: server.config.url,
+        envNames: server.config.envNames,
+        headerNames: server.config.headerNames,
+      },
     );
   });
 }

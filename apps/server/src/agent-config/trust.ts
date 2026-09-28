@@ -1,8 +1,9 @@
-import { createHash } from 'node:crypto';
 import type { FolderTrust, TrustChange } from '@spark-outpost/contracts';
 import { appliedAllowRules } from './allow-rules.ts';
 import type { RepoScan } from './discovery.ts';
+import { fingerprintOf } from './fingerprint.ts';
 import type { McpServerConfig } from './mcp-json.ts';
+import { isRecord } from './records.ts';
 import { redirectSettingsOf, redirectsFingerprint, type RedirectSettings } from './redirects.ts';
 import { hookPreview, type HooksConfig } from './settings-files.ts';
 
@@ -28,14 +29,6 @@ export interface TrustedParts {
   redirects: RedirectSettings | null;
 }
 
-function hash(value: unknown): string {
-  return createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 32);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 function hookItems(config: HooksConfig): ExecutableItem[] {
   const items: ExecutableItem[] = [];
   const seen = new Map<string, number>();
@@ -51,7 +44,7 @@ function hookItems(config: HooksConfig): ExecutableItem[] {
           kind: 'hook',
           key: count === 1 ? label : `${label} #${count}`,
           label,
-          fingerprint: hash([event, matcher, hook]),
+          fingerprint: fingerprintOf([event, matcher, hook]),
         });
       }
     }
@@ -82,10 +75,10 @@ export function executableItems(scan: RepoScan): ExecutableItem[] {
 }
 
 export function trustFingerprint(items: readonly ExecutableItem[]): string {
-  return hash(items.map((item) => [item.kind, item.key, item.fingerprint]));
+  return fingerprintOf(items.map((item) => [item.kind, item.key, item.fingerprint]));
 }
 
-export function trustChanges(
+function trustChanges(
   before: readonly ExecutableItem[],
   after: readonly ExecutableItem[],
 ): TrustChange[] {
@@ -106,7 +99,7 @@ export function trustChanges(
   return changes;
 }
 
-export function isTrusted(row: TrustRow | null, scan: RepoScan): boolean {
+function isTrusted(row: TrustRow | null, scan: RepoScan): boolean {
   return row !== null && row.trusted && row.fingerprint === trustFingerprint(executableItems(scan));
 }
 
