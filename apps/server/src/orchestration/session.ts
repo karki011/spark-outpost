@@ -93,6 +93,7 @@ export interface Session {
   assumption: string | null;
   needsCopy: boolean;
   copyRunId: string | null;
+  copyMerged?: string;
   snapshotTaken: boolean;
   closeReason: string | null;
   observations: Promise<void>[];

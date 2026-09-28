@@ -62,6 +62,7 @@ describe('setup state', () => {
       onboardingCompleted: false,
       autoContinueSeconds: 10,
       jevDiffs: true,
+      shipFailingChecks: true,
     });
     expect(body.providers.map((provider: { id: string }) => provider.id)).toEqual([
       'claude',
