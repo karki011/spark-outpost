@@ -142,7 +142,7 @@
       "weakSpots": [
         "200K context and 64K output, the smallest in the lineup",
         "Oldest knowledge (Feb 2025)",
-        "Retires October 15, 2026; the harness no longer picks it"
+        "Retires October 15, 2026; Spark no longer picks it"
       ],
       "blurb": "retiring 2026-10-15; chat only, the harness skips it",
       "knowledgeCutoff": "2025-02",
@@ -336,7 +336,7 @@
     {
       "provider": "codex",
       "id": "gpt-6-luna",
-      "label": "6 Luna",
+      "label": "GPT-6 Luna",
       "match": {
         "ids": ["gpt-6-luna"],
         "labels": ["6 Luna", "GPT-6 Luna"]
@@ -384,7 +384,7 @@
     {
       "provider": "codex",
       "id": "gpt-6-sol",
-      "label": "6 Sol",
+      "label": "GPT-6 Sol",
       "match": {
         "ids": ["gpt-6-sol"],
         "labels": ["6 Sol", "GPT-6 Sol"]
@@ -433,7 +433,7 @@
     {
       "provider": "codex",
       "id": "gpt-6-astra",
-      "label": "6 Astra",
+      "label": "GPT-6 Astra",
       "match": {
         "ids": ["gpt-6-astra"],
         "labels": ["6 Astra", "GPT-6 Astra"]

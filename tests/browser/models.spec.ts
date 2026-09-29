@@ -24,17 +24,21 @@ test('Models shows compact cards that expand to measured runs and what Jev reads
   const claude = dialog.getByRole('region', { name: 'Claude' });
   const codex = dialog.getByRole('region', { name: 'Codex' });
   await expect(dialog.getByRole('region', { name: 'Z.ai (GLM)' })).toContainText('not connected');
-  await expect(claude).toContainText('Do mode');
+  await expect(claude).toContainText('Asks before edits and commands · resumes chats');
   await expect(claude.getByText('No OS sandbox')).toBeHidden();
-  await claude.getByText('Sandbox details').click();
+  await claude.getByText('About Claude').click();
   await expect(claude.getByText(/^No OS sandbox/)).toBeVisible();
+  await expect(claude.getByText('Do mode')).toBeVisible();
+  await expect(dialog.getByRole('radiogroup', { name: 'Sort models by' })).toHaveCount(0);
 
   const sonnet = claude.getByRole('listitem', { name: 'Sonnet 5', exact: true });
   await expect(sonnet).toContainText('mid tier');
-  await expect(sonnet).toContainText('$2 / $10 per M');
-  await expect(sonnet.locator('.mc-headline')).toContainText(
-    /^Best \d+\/\d+ passed, \$[\d.]+ mean · /,
+  await expect(sonnet).toContainText('Everyday Builder, Critic, answers');
+  await expect(sonnet).toContainText('$2 / $10·1M context·fast');
+  await expect(sonnet.locator('.mc-badge')).toHaveText(
+    /^\d+\/\d+ passed, Best at .+, \$[\d.]+ mean$/,
   );
+  await expect(sonnet.getByText(/Retires 2027-06-30/)).toBeHidden();
   const table = sonnet.getByRole('table', { name: 'Measured on our benchmark' });
   await expect(table).toBeHidden();
   const details = sonnet.getByRole('button', { name: 'Details' });
@@ -43,22 +47,28 @@ test('Models shows compact cards that expand to measured runs and what Jev reads
   await expect(details).toHaveAttribute('aria-expanded', 'true');
   await expect(table).toContainText('fix alone · medium');
   await expect(sonnet.getByRole('heading', { name: 'Good at' })).toBeVisible();
+  await expect(
+    sonnet.getByText(/^Effort low–max \(default \w+\) · Retires 2027-06-30$/),
+  ).toBeVisible();
   await details.click();
   await expect(table).toBeHidden();
 
   const haiku = claude.getByRole('listitem', { name: 'Haiku 4.5', exact: true });
-  await expect(haiku).toContainText('The harness never picks it');
-  await expect(haiku.getByRole('note')).toContainText(
-    'Retiring 2026-10-15 · not used by the harness',
-  );
-  await expect(sonnet.getByRole('note')).toHaveText('Retires 2027-06-30');
+  await expect(haiku).toContainText('Retiring Oct 15');
+  await expect(haiku).toContainText('Spark no longer picks it');
   const fable = claude.getByRole('listitem', { name: 'Fable 5.1', exact: true });
   await expect(fable).toContainText('frontier tier');
-  await expect(fable).toContainText('The rules never pick it');
+  await expect(fable).toContainText('Only when you pick it');
   await expect(fable).toContainText('not offered');
-  await expect(fable).toContainText('No benchmark runs yet');
+  await expect(fable).toContainText('Not benchmarked');
+  await expect(claude.getByRole('listitem')).toHaveText([
+    /^Sonnet 5/,
+    /^Opus 5\.5/,
+    /^Haiku 4\.5/,
+    /^Fable 5\.1/,
+  ]);
 
-  const sol = codex.getByRole('listitem', { name: '6 Sol', exact: true });
+  const sol = codex.getByRole('listitem', { name: 'GPT-6 Sol', exact: true });
   await expect(sol).toContainText('default');
   const solDetails = sol.getByRole('button', { name: 'Details' });
   await solDetails.focus();
@@ -67,7 +77,9 @@ test('Models shows compact cards that expand to measured runs and what Jev reads
   const summary = sol.getByText('What Jev reads');
   await summary.focus();
   await page.keyboard.press('Enter');
-  await expect(sol.locator('.mc-more code')).toHaveText(/^6 Sol: mid tier, fast, \$2\/\$10 per M/);
+  await expect(sol.locator('.mc-more code')).toHaveText(
+    /^GPT-6 Sol: mid tier, fast, \$2\/\$10 per M/,
+  );
   await expect(sol.locator('.mc-more')).toContainText('of 160 characters');
 });
 
@@ -95,9 +107,8 @@ test('provider chips filter the cards, work from the keyboard and are remembered
   const codex = dialog.getByRole('region', { name: 'Codex' });
   await page.keyboard.press('ArrowLeft');
   await expect(codex).toBeVisible();
-  const sort = dialog.getByRole('radiogroup', { name: 'Sort models by' });
-  await sort.getByRole('radio', { name: 'Price' }).click();
-  await expect(codex.getByRole('listitem').first()).toHaveAccessibleName('6 Luna');
+  await expect(codex.getByRole('listitem').first()).toHaveAccessibleName('GPT-6 Sol');
+  await expect(codex.getByRole('listitem').last()).toHaveAccessibleName('GPT-6 Astra');
 
   await page.reload();
   const again = await openModels(page);

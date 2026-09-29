@@ -15,7 +15,7 @@ describe('digestModel', () => {
     });
     expect(digestModel('codex', [{ id: 'gpt-6-sol' }, { id: 'gpt-6-luna' }], ['low'])).toEqual({
       model: 'gpt-6-sol',
-      label: '6 Sol',
+      label: 'GPT-6 Sol',
       effort: 'low',
     });
   });

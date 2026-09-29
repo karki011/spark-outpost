@@ -2,14 +2,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ModelCard, ModelCardView, ModelStat } from '@spark-outpost/contracts';
 import {
   ALL_PROVIDERS,
-  benchmarkHeadline,
+  benchmarkBadge,
   effortRange,
+  metaLine,
+  modelTag,
+  orderModels,
   readSavedProvider,
-  retirementNote,
+  retirementDetail,
+  roleLine,
   shortPrice,
   shownProvider,
-  sortModels,
-  tierNote,
+  usedBySpark,
   writeSavedProvider,
 } from './model-list.ts';
 
@@ -78,56 +81,68 @@ describe('model list', () => {
     vi.unstubAllGlobals();
   });
 
-  it('sorts by tier, price or speed, falling back to tier and putting unpriced models last', () => {
+  it('puts the tiers Spark uses first and the ones it never picks last, in tier order', () => {
+    const retiring = view({ id: 'old', tier: 'top' });
+    retiring.staleness = { ...retiring.staleness, retiring: true };
     const models = [
-      view({ id: 'top', tier: 'top', speed: 'moderate' }),
-      view({ id: 'free', tier: 'frontier', price: null, speed: 'fastest' }),
-      view({
-        id: 'small',
-        tier: 'small',
-        price: { ...card({}).price!, inputPerMillion: 1, outputPerMillion: 5 },
-      }),
+      view({ id: 'frontier', tier: 'frontier' }),
+      retiring,
+      view({ id: 'top', tier: 'top' }),
+      view({ id: 'small', tier: 'small' }),
+      view({ id: 'mid', tier: 'mid' }),
     ];
-    const ids = (sort: 'tier' | 'price' | 'speed') =>
-      sortModels(models, sort).map((model) => model.card.id);
-    expect(ids('tier')).toEqual(['small', 'top', 'free']);
-    expect(ids('price')).toEqual(['small', 'top', 'free']);
-    expect(ids('speed')).toEqual(['free', 'small', 'top']);
+    expect(orderModels(models).map((model) => model.card.id)).toEqual([
+      'mid',
+      'top',
+      'small',
+      'old',
+      'frontier',
+    ]);
+    expect(usedBySpark(retiring)).toBe(false);
+    expect(roleLine(retiring)).toBeNull();
+    expect(roleLine(view({}))).toBe('Everyday Builder, Critic, answers');
+    expect(roleLine(view({ tier: 'top' }))).toBe('Complex and risky work');
+    expect(roleLine(view({ tier: 'small' }))).toBeNull();
   });
 
-  it('writes compact price and effort facts', () => {
-    expect(shortPrice(card({}))).toBe('$2 / $10 per M');
+  it('writes a compact meta line and effort range', () => {
+    expect(metaLine(card({}))).toEqual(['$2 / $10', '200K context', 'fast']);
     expect(shortPrice(card({ price: null }))).toBe('No price listed');
     expect(effortRange(card({}))).toBe('low–high');
     expect(effortRange(card({ reasoning: { ...card({}).reasoning, efforts: [] } }))).toBe('none');
   });
 
-  it('notes that the harness skips the small tier and runs on the middle one', () => {
-    expect(tierNote('small')).toMatch(/harness never picks it/);
-    expect(tierNote('mid')).toMatch(/Scouts, answers, Critics and everyday Builders/);
-    expect(tierNote('frontier')).toMatch(/never pick it/);
-  });
-
-  it('headlines the best pass rate with its mean cost and flags thin evidence', () => {
-    expect(benchmarkHeadline(view({}))).toBeNull();
-    const headline = benchmarkHeadline(
+  it('badges the best pass rate and keeps the cost and work for its tooltip', () => {
+    expect(benchmarkBadge(view({}))).toBeNull();
+    const badge = benchmarkBadge(
       view({}, [
         stat({}),
         stat({ category: 'plan', role: 'architect', n: 2, passed: 2, meanCostUsd: 0.25 }),
       ]),
     );
-    expect(headline).toEqual({
-      text: 'Best 2/2 passed, $0.250 mean · plan as Architect · medium',
+    expect(badge).toEqual({
+      text: '2/2 passed',
+      detail: 'Best at plan as Architect · medium, $0.250 mean',
       anecdotal: true,
     });
   });
 
-  it('shows upcoming retirement dates and tags a retiring model as unused by the harness', () => {
-    expect(retirementNote(view({}))).toBeNull();
-    expect(retirementNote(view({ retiresNotBefore: '2027-06-30' }))).toBe('Retires 2027-06-30');
-    const retiring = { ...view({ retiresNotBefore: '2026-10-15' }) };
-    retiring.staleness = { ...retiring.staleness, retiring: true };
-    expect(retirementNote(retiring)).toBe('Retiring 2026-10-15 · not used by the harness');
+  it('tags a model Spark never picks and shows a retirement only when it is near', () => {
+    const now = Date.parse('2026-09-28T12:00:00Z');
+    expect(modelTag(view({}), now)).toBeNull();
+    expect(modelTag(view({ retiresNotBefore: '2027-06-30' }), now)).toBeNull();
+    expect(modelTag(view({ retiresNotBefore: '2026-12-01' }), now)).toBe('Retiring Dec 1');
+    expect(modelTag(view({ tier: 'frontier', retiresNotBefore: '2027-09-01' }), now)).toBe(
+      'Only when you pick it',
+    );
+    expect(modelTag(view({ tier: 'small', retiresNotBefore: '2026-10-15' }), now)).toBe(
+      'Retiring Oct 15',
+    );
+    expect(modelTag(view({ retiresNotBefore: '2027-01-10' }), Date.parse('2026-12-01'))).toBe(
+      'Retiring Jan 10, 2027',
+    );
+    expect(retirementDetail(card({ retiresNotBefore: '2027-06-30' }))).toBe('Retires 2027-06-30');
+    expect(retirementDetail(card({}))).toBeNull();
   });
 
   it('remembers the provider filter and falls back to all when storage or provider is gone', () => {
