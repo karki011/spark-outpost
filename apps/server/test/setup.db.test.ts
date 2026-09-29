@@ -53,6 +53,10 @@ describe('setup state', () => {
       autoContinueSeconds: 10,
       jevDiffs: true,
       shipFailingChecks: true,
+      personality: 'friendly',
+      sparkEnabled: true,
+      teamMode: true,
+      useName: true,
     });
     expect(body.providers.map((provider: { id: string }) => provider.id)).toEqual([
       'claude',
@@ -71,6 +75,27 @@ describe('setup state', () => {
       .expect(200);
     expect(body.profile.displayName).toBe('Hazel Morgan');
     await app.send('patch', '/api/profile', { onboardingCompleted: true }).expect(400);
+  });
+
+  it('saves Spark preferences and rejects an unknown personality', async () => {
+    const app = appWith();
+    const { body } = await app
+      .send('patch', '/api/profile', {
+        personality: 'playful',
+        sparkEnabled: false,
+        teamMode: false,
+        useName: false,
+      })
+      .expect(200);
+    expect(body.profile).toMatchObject({
+      personality: 'playful',
+      sparkEnabled: false,
+      teamMode: false,
+      useName: false,
+    });
+    await app.send('patch', '/api/profile', { personality: 'grumpy' }).expect(400);
+    const { body: after } = await app.get('/api/setup').expect(200);
+    expect(after.profile.personality).toBe('playful');
   });
 });
 

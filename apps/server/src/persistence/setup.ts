@@ -5,12 +5,14 @@ import {
   type AgentModeOption,
   type CapabilityOption,
   type InvolvementLevel,
+  type Personality,
   type Profile,
   type ProviderConnection,
   type ProviderId,
   type ProviderModel,
   type ProviderSetup,
   type SetupState,
+  type SparkSessionPrefs,
   type UpdateProfileRequest,
 } from '@spark-outpost/contracts';
 import { effectiveDefaultModel, retiringOn, usableDefault } from '../model-cards/cards.ts';
@@ -28,6 +30,10 @@ interface ProfileRow {
   auto_continue_seconds: number | null;
   jev_diffs: boolean;
   ship_failing_checks: boolean;
+  personality: Personality;
+  spark_enabled: boolean;
+  team_mode: boolean;
+  use_name: boolean;
 }
 
 interface ConnectionRow {
@@ -69,7 +75,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
   ]);
   const { rows } = await db.query<ProfileRow>(
     `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
-       jev_diffs, ship_failing_checks
+       jev_diffs, ship_failing_checks, personality, spark_enabled, team_mode, use_name
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
   );
@@ -144,6 +150,10 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     autoContinueSeconds: profile.auto_continue_seconds,
     jevDiffs: profile.jev_diffs,
     shipFailingChecks: profile.ship_failing_checks,
+    personality: profile.personality,
+    sparkEnabled: profile.spark_enabled,
+    teamMode: profile.team_mode,
+    useName: profile.use_name,
   };
   return { profile: result, providers, advisors };
 }
@@ -173,6 +183,10 @@ export async function updateProfile(
        auto_continue_seconds = CASE WHEN $5 THEN $6::integer ELSE auto_continue_seconds END,
        jev_diffs = COALESCE($7, jev_diffs),
        ship_failing_checks = COALESCE($8, ship_failing_checks),
+       personality = COALESCE($9, personality),
+       spark_enabled = COALESCE($10, spark_enabled),
+       team_mode = COALESCE($11, team_mode),
+       use_name = COALESCE($12, use_name),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -184,12 +198,34 @@ export async function updateProfile(
       update.autoContinueSeconds ?? null,
       update.jevDiffs ?? null,
       update.shipFailingChecks ?? null,
+      update.personality ?? null,
+      update.sparkEnabled ?? null,
+      update.teamMode ?? null,
+      update.useName ?? null,
     ],
   );
 }
 
 export async function shipsFailingChecks(db: Queryable, workspaceId: string): Promise<boolean> {
   return (await ensureProfile(db, workspaceId)).ship_failing_checks;
+}
+
+export interface SparkPreferences extends SparkSessionPrefs {
+  sparkEnabled: boolean;
+}
+
+export async function sparkPreferences(
+  db: Queryable,
+  workspaceId: string,
+): Promise<SparkPreferences> {
+  const profile = await ensureProfile(db, workspaceId);
+  return {
+    displayName: profile.display_name,
+    personality: profile.personality,
+    teamMode: profile.team_mode,
+    useName: profile.use_name,
+    sparkEnabled: profile.spark_enabled,
+  };
 }
 
 export async function autoContinueSeconds(
