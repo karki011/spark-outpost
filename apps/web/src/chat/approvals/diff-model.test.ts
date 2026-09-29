@@ -51,10 +51,15 @@ describe('buildDiff', () => {
   });
 
   it('falls back to remove-then-add for very large rewrites', () => {
-    const before = Array.from({ length: 3000 }, (_, index) => `old ${index}`).join('\n');
-    const after = Array.from({ length: 3000 }, (_, index) => `new ${index}`).join('\n');
-    const model = buildDiff(before, after);
-    expect([model.added, model.removed]).toEqual([3000, 3000]);
+    const rewrite = (removed: number) =>
+      buildDiff(
+        ['kept', ...Array.from({ length: removed }, (_, index) => `old ${index}`)].join('\n'),
+        'kept\nnew\n',
+      );
+    expect(kinds(rewrite(1999).rows.slice(0, 1))).toEqual(['same:kept']);
+    const model = rewrite(2000);
+    expect(model.rows.some((row) => row.kind === 'same')).toBe(false);
+    expect([model.added, model.removed]).toEqual([2, 2001]);
   });
 });
 

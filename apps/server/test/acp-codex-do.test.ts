@@ -90,7 +90,7 @@ async function run(prompt: string, approvals: PermissionGate, projectRoots = [ro
 const SCRIPT =
   '#codex ls -la;;cat README.md;;patch notes.txt;;echo hi > shell.txt;;cat .env;;pnpm add left-pad';
 
-describe('Codex Do through the fake agent', () => {
+describe('Codex Do through the fake agent', { timeout: 20_000 }, () => {
   it('switches to the ask-every-action mode before prompting', async () => {
     const { stub } = levelGate('asks');
     const result = await run('#codex ls', stub);

@@ -65,7 +65,7 @@ async function runScenario(codeScan: CodeScanner, scenario: Scenario) {
   return { orchestration, runId };
 }
 
-describe('code scan in shadow mode', () => {
+describe('code scan in shadow mode', { timeout: 60_000 }, () => {
   it('records the scan next to a Do task without changing the task', async () => {
     const scanner = createCodeScanner(t.db, { deadlineMs: 10_000 });
     const { orchestration, runId } = await runScenario(scanner, NORMAL);

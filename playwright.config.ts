@@ -53,6 +53,7 @@ const shutdown = { signal: 'SIGTERM', timeout: 5_000 } as const;
 
 export default defineConfig({
   testDir: 'tests/browser',
+  globalSetup: './tests/browser/single-worker.ts',
   outputDir: slot === 0 ? 'test-results' : `test-results/slot-${slot}`,
   timeout: 30_000,
   retries: 0,

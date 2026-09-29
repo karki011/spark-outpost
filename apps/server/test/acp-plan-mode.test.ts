@@ -53,7 +53,7 @@ async function planTurn(pick: (request: ApprovalRequest) => GateAnswer) {
   return { requests, text, error };
 }
 
-describe("Claude's plan mode over ACP", () => {
+describe("Claude's plan mode over ACP", { timeout: 20_000 }, () => {
   it('sends the plan to the gate with every option the agent offers, then keeps running', async () => {
     const { requests, text, error } = await planTurn((request) => ({
       outcome: 'selected',

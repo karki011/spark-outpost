@@ -84,7 +84,7 @@ async function run(scenario: Scenario, script: JevScript, routing: 'auto' | 'pin
 const asked = (script: JevScript, key: string) =>
   script.calls.filter((call) => call.questions.includes(key));
 
-describe('Jev routing in shadow mode', () => {
+describe('Jev routing in shadow mode', { timeout: 60_000 }, () => {
   it('records scan, file ranking and both route variants without changing the Builder', async () => {
     const script: JevScript = {
       calls: [],

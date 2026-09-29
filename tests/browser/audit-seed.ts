@@ -1,6 +1,5 @@
 import { chainRows } from '../../apps/server/src/audit/hash-chain.ts';
-import { createDb } from '../../apps/server/src/persistence/db.ts';
-import { testDatabaseUrl } from './database.ts';
+import { openTestDb } from './database.ts';
 
 const SESSION = 'sess_audit_1';
 
@@ -54,7 +53,7 @@ export interface SeededRun {
 }
 
 export async function seedAuditLog(): Promise<SeededRun> {
-  const db = createDb(testDatabaseUrl());
+  const db = openTestDb();
   try {
     const { rows } = await db.query<{ id: string; conversation_id: string; started_at: Date }>(
       'SELECT id, conversation_id, started_at FROM runs ORDER BY created_at DESC LIMIT 1',
@@ -116,7 +115,7 @@ export async function seedAuditLog(): Promise<SeededRun> {
 }
 
 export async function tamperAuditLog(runId: string): Promise<void> {
-  const db = createDb(testDatabaseUrl());
+  const db = openTestDb();
   try {
     await db.query(
       `UPDATE run_protocol_log SET payload = jsonb_set(payload, '{params,sessionId}', '"forged"')

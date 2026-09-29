@@ -109,7 +109,7 @@ describe('the loop guard', () => {
   it('stops a Builder that repeats itself and asks at Balanced; Continue resumes with a note', async () => {
     await start();
     script.scenario = TRIVIAL;
-    const looping = withTag(TRIVIAL, '#repeat 8');
+    const looping = withTag(TRIVIAL, '#repeat');
     const { conversationId, runId } = await startScenario(t, root, looping, 'balanced');
     const answers: Answerer = (approval) =>
       approval.kind === 'stuck'
@@ -125,7 +125,7 @@ describe('the loop guard', () => {
   it('stops with a report at Full auto', async () => {
     await start();
     script.scenario = TRIVIAL;
-    const looping = withTag(TRIVIAL, '#repeat 8');
+    const looping = withTag(TRIVIAL, '#repeat');
     const { conversationId, runId } = await startScenario(t, root, looping, 'full-auto');
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
     expect(asked).toEqual([]);

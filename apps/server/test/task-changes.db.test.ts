@@ -96,7 +96,7 @@ async function changes(taskId: string): Promise<TaskChanges> {
   return taskChangesSchema.parse((await get(`/api/tasks/${taskId}/changes`).expect(200)).body);
 }
 
-describe('task changes', () => {
+describe('task changes', { timeout: 60_000 }, () => {
   it('splits git changes by run and counts lines', async () => {
     const root = join(base, 'repo');
     await mkdir(root);
@@ -238,6 +238,7 @@ describe('task changes', () => {
       'a',
     ]);
     const { taskId, runs } = await twoRunTask();
+    await worker.stop();
     const [lane, fix] = runs;
     const copy = worktreePath(root, lane);
     const branch = branchName(taskId, 'Bolt');

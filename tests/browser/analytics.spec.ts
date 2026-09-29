@@ -34,6 +34,7 @@ async function blocking(page: Page, screen: string) {
   const results = await new AxeBuilder({ page })
     .include('main')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .setLegacyMode(true)
     .analyze();
   return results.violations
     .filter((violation) => BLOCKING.has(violation.impact ?? ''))
@@ -105,6 +106,7 @@ test.describe('with three months of history', () => {
 
   for (const theme of ['apricot', 'aurora'] as const) {
     test(`has no serious axe issues in ${theme}`, async ({ page }) => {
+      test.setTimeout(60_000);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await openAnalytics(page);
       await page.evaluate((skin) => (document.documentElement.dataset.skin = skin), theme);
@@ -227,7 +229,7 @@ test('shows skeletons matching the layout on a cold load, then real data', async
   await expect(overviewPanel.locator('.an-skel-card').first()).toBeVisible();
   await expect(overviewPanel.getByText(/Loading .*…/)).toHaveCount(4);
   await expect(main.getByRole('region', { name: 'Harness health' })).toContainText('of 100', {
-    timeout: 5000,
+    timeout: 15_000,
   });
   await expect(overviewPanel).toHaveAttribute('aria-busy', 'false');
   await expect(overviewPanel.locator('.an-skel-card')).toHaveCount(0);

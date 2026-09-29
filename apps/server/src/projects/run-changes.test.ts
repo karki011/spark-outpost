@@ -16,7 +16,7 @@ async function repo(): Promise<string> {
   return root;
 }
 
-describe('reading a run’s changes while its folder may vanish', () => {
+describe('reading a run’s changes while its folder may vanish', { timeout: 20_000 }, () => {
   it('gives nothing, quietly, when the folder was removed while git ran', async () => {
     const root = await repo();
     const ref = await takeGitSnapshot(root, 'run-1');

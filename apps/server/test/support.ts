@@ -6,6 +6,7 @@ import { ensureLocalWorkspace, sendUserMessage } from '../src/persistence/conver
 import { runMigrations } from '../src/persistence/migrate.ts';
 import { saveConnection } from '../src/persistence/setup.ts';
 import type { RunInput } from '../src/workflow/run-input.ts';
+import { truncateTables } from '../src/persistence/truncate.ts';
 
 export interface TestDb {
   db: Db;
@@ -13,20 +14,42 @@ export interface TestDb {
   cleanup(): Promise<void>;
 }
 
-export function testDatabaseUrl(): string {
+function suiteDatabaseUrl(): string {
   const url = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!url)
     throw new Error('pnpm test:db requires DATABASE_URL or TEST_DATABASE_URL. Run pnpm db:setup.');
   return url;
 }
 
-async function admin<T>(url: string, work: (client: pg.Client) => Promise<T>): Promise<T> {
-  const client = new pg.Client({ connectionString: url });
-  await client.connect();
+export function testDatabaseUrl(): string {
+  const url = new URL(suiteDatabaseUrl());
+  const worker = process.env.VITEST_POOL_ID;
+  if (worker) url.pathname = `${url.pathname}_w${worker}`;
+  return url.toString();
+}
+
+const ALREADY_EXISTS = new Set(['42P04', '23505']);
+
+export async function ensureWorkerDatabase(): Promise<void> {
+  const url = testDatabaseUrl();
+  const name = new URL(url).pathname.slice(1);
+  await admin(suiteDatabaseUrl(), async (server) => {
+    const { rowCount } = await server.query('SELECT 1 FROM pg_database WHERE datname = $1', [name]);
+    if (rowCount) return;
+    await server.query(`CREATE DATABASE ${pg.escapeIdentifier(name)}`).catch((error: unknown) => {
+      if (!ALREADY_EXISTS.has((error as { code?: string }).code ?? '')) throw error;
+    });
+  });
+}
+
+const CONNECT_TRIES = 7;
+
+async function admin<T>(url: string, work: (server: Db) => Promise<T>): Promise<T> {
+  const server = createDb(url, { max: 1, connectTries: CONNECT_TRIES });
   try {
-    return await work(client);
+    return await work(server);
   } finally {
-    await client.end();
+    await server.end();
   }
 }
 
@@ -42,20 +65,50 @@ export async function dropTestSchema(schema: string): Promise<void> {
 }
 
 export function schemaDb(schema: string): Db {
-  return createDb(testDatabaseUrl(), { searchPath: schema, max: POOL_MAX.test });
+  return createDb(testDatabaseUrl(), {
+    searchPath: schema,
+    max: POOL_MAX.test,
+    connectTries: CONNECT_TRIES,
+  });
+}
+
+const spareSchemas: string[] = [];
+
+async function emptyTables(db: Db, schema: string): Promise<void> {
+  const { rows } = await db.query<{ name: string }>(
+    `SELECT tablename AS name FROM pg_tables
+     WHERE schemaname = $1 AND tablename <> 'schema_migrations'`,
+    [schema],
+  );
+  await truncateTables(
+    db,
+    rows.map((row) => row.name),
+  );
+}
+
+async function openSchema(url: string): Promise<{ schema: string; db: Db }> {
+  const spare = spareSchemas.pop();
+  const schema = spare ?? `test_${randomUUID().replaceAll('-', '')}`;
+  if (!spare) await admin(url, (server) => server.query(`CREATE SCHEMA ${schema}`));
+  const db = createDb(url, { searchPath: schema, max: POOL_MAX.test, connectTries: CONNECT_TRIES });
+  if (spare) await emptyTables(db, schema);
+  else await runMigrations(db);
+  return { schema, db };
 }
 
 export async function createTestDb(): Promise<TestDb> {
-  const schema = await createTestSchema();
-  const db = schemaDb(schema);
-  await runMigrations(db);
+  const url = testDatabaseUrl();
+  const { schema, db } = await openSchema(url);
   const workspaceId = await ensureLocalWorkspace(db);
+  let closed = false;
   return {
     db,
     workspaceId,
     async cleanup() {
+      if (closed) return;
+      closed = true;
       await db.end();
-      await dropTestSchema(schema);
+      spareSchemas.push(schema);
     },
   };
 }
@@ -112,9 +165,17 @@ export function chatTurnInput(
   };
 }
 
+export async function dropSpareSchemas(): Promise<void> {
+  const schemas = spareSchemas.splice(0);
+  if (schemas.length === 0) return;
+  await admin(testDatabaseUrl(), (server) =>
+    server.query(`DROP SCHEMA ${schemas.join(', ')} CASCADE`),
+  );
+}
+
 export async function eventually<T>(
   check: () => Promise<T | null | undefined | false>,
-  timeoutMs = 5000,
+  timeoutMs = 15_000,
 ): Promise<T> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
+import type { Db } from '../../apps/server/src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
-import { testDatabaseUrl } from './database.ts';
+import { openTestDb } from './database.ts';
 
 export interface SeedApproval {
   kind: string;
@@ -87,7 +87,7 @@ async function insertApproval(
 }
 
 export async function seedChats(chats: readonly SeedChat[]): Promise<string[]> {
-  const db = createDb(testDatabaseUrl());
+  const db = openTestDb();
   try {
     const workspaceId = await ensureLocalWorkspace(db);
     const ids: string[] = [];

@@ -81,6 +81,15 @@ function begin(tag: string, level: InvolvementLevel) {
   return startScenario(t, root, withTag(REVIEWED, tag), level);
 }
 
+function drive(
+  conversationId: string,
+  runId: string,
+  answer: Answerer = answerEverything,
+  timeoutMs = 110_000,
+) {
+  return driveToEnd(t, conversationId, runId, answer, timeoutMs);
+}
+
 async function configureCheck(source: string): Promise<void> {
   await writeFile(join(root, 'check.mjs'), source);
   await setCheckCommands(t, root, ['node check.mjs']);
@@ -149,7 +158,7 @@ describe('Critic → fix rounds', () => {
     await configureCheck(PASSING_CHECK);
     await start({ policy: JEV_SAYS_BUGS });
     const { conversationId, runId } = await begin('#bugreview', 'hands-off');
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    const { asked, orchestration } = await drive(conversationId, runId);
     expect(orchestration.status).toBe('succeeded');
 
     const rows = await children(runId);
@@ -185,7 +194,7 @@ describe('Critic → fix rounds', () => {
   it('fixes in round 2 by the rules alone, without Jev, at Full auto', async () => {
     await start({ jev: false });
     const { conversationId, runId } = await begin('Have it reviewed. #bugrounds 2', 'full-auto');
-    const { asked } = await driveToEnd(t, conversationId, runId);
+    const { asked } = await drive(conversationId, runId);
     expect(asked).toEqual([]);
     expect(await roles(runId)).toEqual([
       'builder',
@@ -214,7 +223,7 @@ describe('Critic → fix rounds', () => {
   it('stops early when the same findings come back after a fix', async () => {
     await start({ policy: JEV_SAYS_BUGS });
     const { conversationId, runId } = await begin('#stuckreview', 'hands-off');
-    await driveToEnd(t, conversationId, runId);
+    await drive(conversationId, runId);
     expect(await roles(runId)).toEqual(['builder', 'critic', 'builder', 'critic']);
     expect(await adviceActions(runId)).toEqual([
       [1, 'fix'],
@@ -228,7 +237,7 @@ describe('Critic → fix rounds', () => {
   it('stops after three fix rounds, shows the remaining concerns and asks to keep at Auto-edit', async () => {
     await start({ policy: JEV_SAYS_BUGS });
     const { conversationId, runId } = await begin('#bugrounds 9', 'hands-off');
-    const { asked } = await driveToEnd(t, conversationId, runId);
+    const { asked } = await drive(conversationId, runId, answerEverything, 170_000);
     expect(asked.map((approval) => approval.kind)).toEqual(['accept']);
     expect(asked[0]!.reason).toContain('Automatic asks because the Critic still has concerns.');
     expect(asked[0]!.options.map((option) => option.optionId)).toContain(
@@ -250,7 +259,7 @@ describe('Critic → fix rounds', () => {
     await configureCheck(FAILS_AFTER_REVIEW_FIX);
     await start({ policy: JEV_SAYS_BUGS });
     const { conversationId, runId } = await begin('#bugreview', 'full-auto');
-    await driveToEnd(t, conversationId, runId);
+    await drive(conversationId, runId);
     expect(await roles(runId)).toEqual(['builder', 'critic', 'builder', 'builder', 'builder']);
     expect(await checkStatuses()).toEqual(['passed', 'failed', 'failed', 'failed']);
     expect(await reply(runId)).toContain(
@@ -261,7 +270,7 @@ describe('Critic → fix rounds', () => {
   it('runs no fix turn for style-only concerns or a looks-good review', async () => {
     await start();
     const style = await begin('#stylereview', 'balanced');
-    await driveToEnd(t, style.conversationId, style.runId);
+    await drive(style.conversationId, style.runId);
     expect(await roles(style.runId)).toEqual(['builder', 'critic']);
     expect((await findingAdvice(style.runId))[0]?.body.answer).toMatchObject({
       fixable: 0,
@@ -269,7 +278,7 @@ describe('Critic → fix rounds', () => {
     });
 
     const good = await begin('', 'balanced');
-    await driveToEnd(t, good.conversationId, good.runId);
+    await drive(good.conversationId, good.runId);
     expect(await roles(good.runId)).toEqual(['builder', 'critic']);
     expect(await findingAdvice(good.runId)).toEqual([]);
   }, 120_000);
@@ -277,7 +286,7 @@ describe('Critic → fix rounds', () => {
   it("reports the rerun's hardening findings instead of fixing them at Auto-edit, even when Jev says bug (N2)", async () => {
     await start({ policy: { finding_1: 0.95, finding_2: 0.95, finding_3: 0.95 } });
     const { conversationId, runId } = await begin('#hardeningreview', 'hands-off');
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    const { asked, orchestration } = await drive(conversationId, runId);
     expect(orchestration.status).toBe('succeeded');
     expect(await roles(runId)).toEqual(['builder', 'critic']);
     expect(asked.filter((approval) => approval.kind === 'accept')).toEqual([]);
@@ -293,7 +302,7 @@ describe('Critic → fix rounds', () => {
   it('lets Jev overrule the rules when it is sure a finding is not a bug', async () => {
     await start({ policy: { finding_1: 0.1, finding_2: 0.05 } });
     const { conversationId, runId } = await begin('#bugreview', 'hands-off');
-    await driveToEnd(t, conversationId, runId);
+    await drive(conversationId, runId);
     expect(await roles(runId)).toEqual(['builder', 'critic']);
   }, 120_000);
 
@@ -307,7 +316,7 @@ describe('Critic → fix rounds', () => {
       fixed = true;
       return { optionId: CHECKPOINT_OPTION.fixFindings };
     };
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
+    const { asked, orchestration } = await drive(conversationId, runId, answers);
     const [offer, after] = asked.filter((approval) => approval.kind === 'accept');
     expect(offer!.options.map((option) => [option.optionId, option.name])).toEqual([
       [CHECKPOINT_OPTION.keep, 'Keep'],
@@ -333,7 +342,7 @@ describe('the task budget', () => {
   it('refuses the first fix turn once the Builder and Critic spent the cap, and Stop ends on the keep card', async () => {
     await start({ policy: JEV_SAYS_BUGS, costCapUsd: 0.2004 });
     const { conversationId, runId } = await begin('#bugreview #cost', 'hands-off');
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, stopAtBudget);
+    const { asked, orchestration } = await drive(conversationId, runId, stopAtBudget);
     expect(asked.map((approval) => approval.kind)).toEqual(['budget', 'accept']);
     expect(orchestration).toMatchObject({ status: 'succeeded', budget: { exceeded: 'cost' } });
     expect(await roles(runId)).toEqual(['builder', 'critic']);
@@ -347,7 +356,7 @@ describe('the task budget', () => {
     await configureCheck(PASSING_CHECK);
     await start({ policy: JEV_SAYS_BUGS, costCapUsd: 0.1 });
     const { conversationId, runId } = await begin('#bugrounds 2 #fixcost', 'hands-off');
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, stopAtBudget);
+    const { asked, orchestration } = await drive(conversationId, runId, stopAtBudget);
     const cards = asked.filter((approval) => approval.kind !== 'execute');
     expect(cards.map((approval) => approval.kind)).toEqual(['accept']);
     expect(cards[0]!.reason).toContain('Automatic asks because the Critic still has concerns.');
@@ -365,7 +374,7 @@ describe('the task budget', () => {
     await configureCheck(PASSING_CHECK);
     await start({ policy: JEV_SAYS_BUGS, fixRound: { toolCalls: 1 } });
     const { conversationId, runId } = await begin('#bugrounds 9 #slowfix', 'hands-off');
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    const { asked, orchestration } = await drive(conversationId, runId);
     expect(orchestration.status).toBe('succeeded');
     expect(orchestration.budget.exceeded).toBeNull();
     expect(await roles(runId)).toEqual(['builder', 'critic', 'builder']);
@@ -384,7 +393,7 @@ describe('the task budget', () => {
   it('does not start a fix round by itself when too little of the run budget is left for one', async () => {
     await start({ policy: JEV_SAYS_BUGS, fixRound: { toolCalls: 10_000 } });
     const { conversationId, runId } = await begin('#bugreview', 'hands-off');
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    const { asked, orchestration } = await drive(conversationId, runId);
     expect(orchestration.status).toBe('succeeded');
     expect(await roles(runId)).toEqual(['builder', 'critic']);
     expect(asked.map((approval) => approval.kind)).toEqual(['accept']);
