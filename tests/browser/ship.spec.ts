@@ -58,9 +58,11 @@ test('Ship from the keep card commits the task file and opens a draft PR', async
 
   const open = page.locator('.ship-btn');
   await expect(open).toHaveText('Open draft PR');
+  await expect(open).not.toHaveAttribute('aria-controls');
   await open.click();
   await expect(open).toHaveAttribute('aria-expanded', 'true');
   const panel = page.getByRole('group', { name: 'Ship this task' });
+  await expect(panel).toHaveAttribute('id', (await open.getAttribute('aria-controls')) ?? '');
   await expect(panel.locator('.ship-facts')).toContainText(/Branch\s*spark\/tidy-the-notes/);
   await expect(panel.locator('.ship-facts')).toContainText('into main');
   await expect(panel.getByRole('list', { name: 'Files to commit' })).toHaveText(/notes\.txt/);
@@ -85,6 +87,7 @@ test('Ship from the keep card commits the task file and opens a draft PR', async
   await expect(chip).toContainText('acme/widgets#1');
   await expect(chip).toHaveAttribute('href', 'https://github.com/acme/widgets/pull/1');
   await expect(open).toHaveText('Update draft PR');
+  await expect(open).toBeFocused();
 
   const pulls = (await (await page.request.get(`${STUB_URL}/github-test/pulls`)).json()) as {
     title: string;
