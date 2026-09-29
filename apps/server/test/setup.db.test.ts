@@ -55,12 +55,8 @@ describe('setup state', () => {
       shipFailingChecks: true,
       personality: 'friendly',
       sparkEnabled: true,
-      teamMode: true,
-      useName: true,
       defaultLevel: 'hands-off',
       spendCapUsd: null,
-      criticEnabled: true,
-      criticOtherProvider: true,
       morningBrief: true,
       morningBriefTime: '07:00',
     });

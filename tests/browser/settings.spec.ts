@@ -45,9 +45,6 @@ test('the name saves from Spark settings and Spark greets you by first name', as
   await spark.getByLabel('What should Spark call you?', { exact: true }).fill('Hazel Moss');
   await expect(spark.locator('.spark-preview')).toContainText('Hi Hazel 👋');
   await expect(page.getByText('Changes save automatically.')).toBeVisible();
-  await expect(spark.getByRole('switch', { name: 'Call me by name' })).toHaveAccessibleDescription(
-    'Agents call you Hazel.',
-  );
   const profile = page.getByRole('navigation', { name: 'Main' }).getByRole('button', {
     name: 'Your profile, Hazel Moss',
   });
@@ -66,10 +63,11 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   await expect(spark.getByRole('tab', { name: 'Profile' })).toHaveCount(0);
 
   const sparkSwitch = spark.getByRole('switch', { name: 'Spark', exact: true });
-  const team = spark.getByRole('switch', { name: 'Work like a team' });
-  const useName = spark.getByRole('switch', { name: 'Call me by name' });
-  for (const toggle of [sparkSwitch, team, useName]) {
-    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  await expect(sparkSwitch).toHaveAttribute('aria-checked', 'true');
+  const switches = spark.getByRole('switch');
+  await expect(switches).toHaveCount(3);
+  for (const removed of ['Call me by name', 'Work like a team', 'Critic']) {
+    await expect(spark.getByText(removed, { exact: true })).toHaveCount(0);
   }
   await expect(sparkSwitch).toHaveAccessibleDescription(
     'Spark reads, routes and reviews your work.',
@@ -83,8 +81,6 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   await expect(sparkSwitch).toHaveAttribute('aria-checked', 'false');
   await expect(sparkSwitch).toHaveAccessibleDescription('Chats go straight to the agent you pick.');
   await expect(spark.locator('.spark-preview .scout')).toHaveClass(/sleep/);
-  await team.click();
-  await expect(team).toHaveAttribute('aria-checked', 'false');
 
   const personality = spark.getByRole('radiogroup', { name: 'Personality' });
   await personality.getByRole('radio', { name: 'Just the facts' }).click();
@@ -99,7 +95,7 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
 
   await expect
     .poll(async () => (await (await page.request.get('/api/setup')).json()).profile)
-    .toMatchObject({ sparkEnabled: false, teamMode: false, useName: true, personality: 'facts' });
+    .toMatchObject({ sparkEnabled: false, personality: 'facts' });
 
   await expect(spark.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
   const wait = spark.getByRole('radiogroup', { name: 'If you don’t answer a question' });

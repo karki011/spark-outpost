@@ -70,8 +70,6 @@ describe('the Spark decisions migration', () => {
       displayName: 'Hazel',
       defaultLevel: 'full-auto',
       spendCapUsd: null,
-      criticEnabled: true,
-      criticOtherProvider: true,
       morningBrief: true,
       morningBriefTime: '07:00',
     });
@@ -103,16 +101,12 @@ describe('Spark decision settings', () => {
     const { body } = await send('patch', '/api/profile', {
       defaultLevel: 'full-auto',
       spendCapUsd: 2.5,
-      criticEnabled: false,
-      criticOtherProvider: false,
       morningBrief: false,
       morningBriefTime: '08:30',
     }).expect(200);
     expect(body.profile).toMatchObject({
       defaultLevel: 'full-auto',
       spendCapUsd: 2.5,
-      criticEnabled: false,
-      criticOtherProvider: false,
       morningBrief: false,
       morningBriefTime: '08:30',
     });

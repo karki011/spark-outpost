@@ -35,37 +35,6 @@ test('the default autonomy is one setting that new chats start with', async ({ p
   expect(defaults.level).toBe('balanced');
 });
 
-test('the Critic rows save, and follow Spark and the Critic switch', async ({ page }) => {
-  const spark = await openSpark(page);
-  const critic = spark.getByRole('switch', { name: 'Critic', exact: true });
-  const other = spark.getByRole('switch', {
-    name: 'Use a different provider for the Critic when one’s connected',
-  });
-  await expect(critic).toHaveAttribute('aria-checked', 'true');
-  await expect(other).toHaveAttribute('aria-checked', 'true');
-  await expect(critic).toHaveAccessibleDescription('A second agent reviews bigger changes.');
-
-  await spark.getByRole('button', { name: 'More about Critic', exact: true }).focus();
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('tooltip')).toContainText('a Critic agent reviews it');
-  await page.keyboard.press('Escape');
-
-  await other.click();
-  await expect(other).toHaveAttribute('aria-checked', 'false');
-  await expect(other).toHaveAccessibleDescription('The Critic uses the chat’s agent.');
-  await critic.click();
-  await expect(critic).toHaveAttribute('aria-checked', 'false');
-  await expect(other).toBeDisabled();
-  await expect(other).toHaveAccessibleDescription('Turn on the Critic to use this.');
-  await expect
-    .poll(() => savedProfile(page))
-    .toMatchObject({ criticEnabled: false, criticOtherProvider: false });
-
-  await spark.getByRole('switch', { name: 'Spark', exact: true }).click();
-  await expect(critic).toBeDisabled();
-  await expect(critic).toHaveAccessibleDescription('Spark is off, so no Critic runs.');
-});
-
 test('the spend cap turns on with an amount you can change', async ({ page }) => {
   const spark = await openSpark(page);
   const cap = spark.getByRole('switch', { name: 'Spend cap per task' });

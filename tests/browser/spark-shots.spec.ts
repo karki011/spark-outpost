@@ -4,6 +4,8 @@ import { resetTestDatabase } from './database.ts';
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 
+test.use({ deviceScaleFactor: 2 });
+
 async function useTheme(page: Page, theme: string) {
   await page.evaluate((skin) => (document.documentElement.dataset.skin = skin), theme);
   await page.evaluate(() => document.fonts.ready);
@@ -26,20 +28,26 @@ test('Spark screenshots', async ({ page }) => {
     await panel.screenshot({ path: path.join(SHOTS, `spark-settings-${theme}.png`) });
   }
 
-  await useTheme(page, 'light');
-  const team = spark.getByRole('switch', { name: 'Work like a team' });
-  const row = spark
-    .locator('.set-row')
-    .filter({ has: page.getByRole('switch', { name: 'Work like a team' }) });
-  await row.screenshot({ path: path.join(SHOTS, 'blob-toggle-on-light.png') });
-  await team.click();
-  await page.waitForTimeout(900);
-  await row.screenshot({ path: path.join(SHOTS, 'blob-toggle-off-light.png') });
-  await useTheme(page, 'graphite');
-  await row.screenshot({ path: path.join(SHOTS, 'blob-toggle-off-graphite.png') });
-  await team.click();
-  await page.waitForTimeout(900);
-  await row.screenshot({ path: path.join(SHOTS, 'blob-toggle-on-graphite.png') });
+  const blobs = {
+    spark: 'Spark',
+    'spend-cap': 'Spend cap per task',
+    'morning-brief': 'Morning brief',
+  };
+  for (const [file, name] of Object.entries(blobs)) {
+    const toggle = spark.getByRole('switch', { name, exact: true });
+    const row = spark
+      .locator('.set-row')
+      .filter({ has: page.getByRole('switch', { name, exact: true }) });
+    for (let flip = 0; flip < 2; flip += 1) {
+      const state = (await toggle.getAttribute('aria-checked')) === 'true' ? 'on' : 'off';
+      for (const theme of ['light', 'graphite']) {
+        await useTheme(page, theme);
+        await row.screenshot({ path: path.join(SHOTS, `blob-${file}-${state}-${theme}.png`) });
+      }
+      await toggle.click();
+      await page.waitForTimeout(1200);
+    }
+  }
 
   await resetTestDatabase({ onboarded: false });
   await page.goto('/');

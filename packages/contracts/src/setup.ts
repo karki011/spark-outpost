@@ -112,20 +112,13 @@ export const profileSchema = z.object({
   shipFailingChecks: z.boolean().default(true),
   personality: personalitySchema.default(DEFAULT_PERSONALITY),
   sparkEnabled: z.boolean().default(true),
-  teamMode: z.boolean().default(true),
-  useName: z.boolean().default(true),
   defaultLevel: involvementLevelSchema.default(DEFAULT_INVOLVEMENT_LEVEL),
   spendCapUsd: spendCapUsdSchema.nullable().default(null),
-  criticEnabled: z.boolean().default(true),
-  criticOtherProvider: z.boolean().default(true),
   morningBrief: z.boolean().default(true),
   morningBriefTime: morningBriefTimeSchema.default(DEFAULT_MORNING_BRIEF_TIME),
 });
 export type Profile = z.infer<typeof profileSchema>;
-export type SparkSessionPrefs = Pick<
-  Profile,
-  'displayName' | 'personality' | 'teamMode' | 'useName'
->;
+export type SparkSessionPrefs = Pick<Profile, 'displayName' | 'personality'>;
 
 export const setupStateSchema = z.object({
   profile: profileSchema,
@@ -144,12 +137,8 @@ export const updateProfileRequestSchema = z
     shipFailingChecks: z.boolean(),
     personality: personalitySchema,
     sparkEnabled: z.boolean(),
-    teamMode: z.boolean(),
-    useName: z.boolean(),
     defaultLevel: involvementLevelSchema,
     spendCapUsd: spendCapUsdSchema.nullable(),
-    criticEnabled: z.boolean(),
-    criticOtherProvider: z.boolean(),
     morningBrief: z.boolean(),
     morningBriefTime: morningBriefTimeSchema,
   })

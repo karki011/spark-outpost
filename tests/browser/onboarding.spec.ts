@@ -287,7 +287,7 @@ test('a connected provider says what was checked and can send a test message', a
   await expect(claudeCard(page)).toContainText('Test message answered in');
 });
 
-test('Meet Spark sets the personality and the Spark switches, and the blob reacts', async ({
+test('Meet Spark sets the personality and the Spark switch, and the blob reacts', async ({
   page,
 }) => {
   await page.goto('/');
@@ -306,9 +306,8 @@ test('Meet Spark sets the personality and the Spark switches, and the blob react
   );
 
   const spark = dialog(page).getByRole('switch', { name: 'Spark', exact: true });
-  const team = dialog(page).getByRole('switch', { name: 'Work like a team' });
   await expect(spark).toHaveAttribute('aria-checked', 'true');
-  await expect(team).toHaveAttribute('aria-checked', 'true');
+  await expect(dialog(page).getByRole('switch')).toHaveCount(1);
   const saved = page.waitForResponse(
     (response) => response.url().endsWith('/api/profile') && response.ok(),
   );
@@ -323,8 +322,6 @@ test('Meet Spark sets the personality and the Spark switches, and the blob react
     displayName: 'Sam Rivera',
     personality: 'playful',
     sparkEnabled: false,
-    teamMode: true,
-    useName: true,
   });
   await continueButton(page).click();
   await expect(dialog(page).getByRole('heading', { name: 'Pick a theme' })).toBeVisible();

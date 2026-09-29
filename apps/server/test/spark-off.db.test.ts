@@ -131,7 +131,6 @@ describe('Spark off', () => {
   }, 60_000);
 
   it('keeps team mode and the name for Codex in its developer instructions', async () => {
-    await updateProfile(t.db, t.workspaceId, { useName: false });
     const { conversationId } = await linkedConversation(t, root);
     const sent = await sendUserMessage(
       t.db,
@@ -153,7 +152,7 @@ describe('Spark off', () => {
       developer_instructions?: string;
     };
     expect(config.developer_instructions).toContain('keep a short checklist');
-    expect(config.developer_instructions).not.toContain('Sam');
+    expect(config.developer_instructions).toContain("The user's name is Sam.");
     const logged = await eventually(async () => {
       const { entries } = await listProtocolLog(t.db, runId, {
         after: 0,

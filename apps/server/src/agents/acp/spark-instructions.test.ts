@@ -12,8 +12,6 @@ import {
 const PREFS: SparkSessionPrefs = {
   displayName: '  Sam Rivera ',
   personality: 'friendly',
-  teamMode: true,
-  useName: true,
 };
 
 describe('sparkInstructions', () => {
@@ -35,15 +33,11 @@ describe('sparkInstructions', () => {
     expect(text).not.toContain('Agent tool');
   });
 
-  it('leaves out the name when there is none or the user turned it off', () => {
-    expect(sparkInstructions({ ...PREFS, displayName: '   ' }, true)).not.toContain('name is');
-    expect(sparkInstructions({ ...PREFS, useName: false }, true)).not.toContain('Sam');
-  });
-
-  it('keeps only the tone when team mode and the name are off', () => {
-    const text = sparkInstructions({ ...PREFS, teamMode: false, useName: false }, true);
-    expect(text.split('\n')).toHaveLength(2);
-    expect(text).not.toContain('coordinator');
+  it('leaves out only the name line when no name is saved', () => {
+    const text = sparkInstructions({ ...PREFS, displayName: '   ' }, true);
+    expect(text).not.toContain('name is');
+    expect(text.split('\n')).toHaveLength(3);
+    expect(text).toContain('act as a coordinator');
   });
 
   it('keeps humour out of failures for every personality', () => {
@@ -82,20 +76,6 @@ describe('withClaudeSpark', () => {
     const merged = withClaudeSpark(null, PREFS, false)!;
     expect(merged.agentTool).toBe(false);
     expect(merged.appendPrompt).toContain('keep a short checklist');
-  });
-
-  it('keeps repository subagents when team mode is off', () => {
-    const repo = {
-      appendPrompt: null,
-      plugins: [],
-      hooks: null,
-      mcpNames: [],
-      skillTool: false,
-      agentTool: true,
-    };
-    const merged = withClaudeSpark(repo, { ...PREFS, teamMode: false }, true)!;
-    expect(merged.agentTool).toBe(true);
-    expect(merged.appendPrompt).not.toContain('coordinator');
   });
 
   it('changes nothing without preferences', () => {
