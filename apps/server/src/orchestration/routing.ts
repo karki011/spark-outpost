@@ -188,6 +188,12 @@ export function routeBuilder(
   return { ...route, pick: { ...route.pick, effort: builderEffort(context, route.pick) } };
 }
 
+export const SPARK_OFF_RULE = 'Spark off → your pick';
+
+export function soloRoute(context: RouteContext): MemberRoute {
+  return { pick: chatPick(context), routedBy: 'pinned', rule: SPARK_OFF_RULE, autoWouldUse: null };
+}
+
 const TRIVIAL_RULE = 'trivial → middle tier';
 
 function ruleRoute(

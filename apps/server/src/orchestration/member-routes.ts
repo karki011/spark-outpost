@@ -20,6 +20,7 @@ import {
   routeBuilder,
   routeCritic,
   routeMemberModel,
+  soloRoute,
   type MemberRoute,
   type RouteFacts,
 } from './routing.ts';
@@ -69,7 +70,7 @@ export function keepScoutSession(route: MemberRoute, session: ResumableSession |
 
 async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
   const facts = builderFacts(s);
-  const route = routeBuilder(s.route, facts, jevTier(s));
+  const route = s.flow.solo ? soloRoute(s.route) : routeBuilder(s.route, facts, jevTier(s));
   if (!s.taskId) return { route };
   const session = await resumableTask(
     s.deps.db,

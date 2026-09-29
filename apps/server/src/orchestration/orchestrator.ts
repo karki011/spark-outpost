@@ -1,11 +1,3 @@
-import {
-  askIntake,
-  saveIntake,
-  type IntakeDeps,
-  type IntakeResult,
-} from '../advisor/intake-recorder.ts';
-import type { IntakeContext } from '../persistence/advice.ts';
-import { ruleAdvisor } from '../advisor/advice.ts';
 import { newId } from '../persistence/ids.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { insertOrchestration } from '../persistence/orchestrations.ts';
@@ -14,11 +6,12 @@ import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
 import { currentTaskContext, startNewTask, taskForWorkingRun } from '../persistence/tasks.ts';
 import { revertRun } from '../projects/run-changes.ts';
 import { isGitWorkTree } from '../projects/snapshot.ts';
-import { startControl, type Append } from '../workflow/agent-turn.ts';
+import { runAgentTurn, startControl, type Append } from '../workflow/agent-turn.ts';
 import { APPROVAL_TIMEOUT_MESSAGE } from '../workflow/approval-gate.ts';
-import { closeMessage } from '../workflow/execute-run.ts';
+import { closeMessage, finishRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
-import { loadRunInput, type RunInput } from '../workflow/run-input.ts';
+import { loadRunInput } from '../workflow/run-input.ts';
+import { sparkPreferences } from '../persistence/setup.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
 import { checkBudget, fixRoundShort } from './budget-check.ts';
@@ -35,15 +28,8 @@ import { migrationByRule } from './risk-rules.ts';
 import { wrappedUp } from './wrap-up.ts';
 import { ask, assume, intakeResponse } from './checkpoint-asks.ts';
 import { assumptionLine, interpretations } from './clarify.ts';
-import { namedFiles } from './context.ts';
-import {
-  decideIntake,
-  readOnlyStart,
-  rulesAnswer,
-  type CurrentTask,
-  type IntakeDecisions,
-} from './intake.ts';
-import { ORCHESTRATION_JEV_TIMEOUT_MS } from './jev-calls.ts';
+import { readOnlyStart, type CurrentTask, type IntakeDecisions } from './intake.ts';
+import { orchestrationJevDeps, routeContext, runIntake } from './intake-run.ts';
 import { buildAndLand } from './land.ts';
 import {
   beginFixRound,
@@ -64,7 +50,6 @@ import { writePlanOnly } from './plan-only.ts';
 import { observePlanAgreement } from './plan-agreement.ts';
 import { refreshPlan } from './plan-progress.ts';
 import { wantsCritic } from './critic-rule.ts';
-import { routeBuilder, type RouteContext } from './routing.ts';
 import { buildInCopy, cleanupCopies, needsCopyFor, repoBusy } from './solo-copy.ts';
 import { autoKeep, shipFullAuto } from './full-auto-ship.ts';
 import {
@@ -89,59 +74,6 @@ import { verifyChange } from './verify.ts';
 
 const TASK_SESSION_CLOSED = 'task session closed';
 const NEW_TASK_STARTED = 'a new task started';
-
-function orchestrationJevDeps(deps: OrchestratorDeps): IntakeDeps | null {
-  if (!deps.intake) return null;
-  const own = deps.intake.deps.timeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS;
-  const timeoutMs = Math.min(own, deps.jevTimeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS);
-  return { ...deps.intake.deps, timeoutMs };
-}
-
-function routeContext(input: RunInput, context: IntakeContext): RouteContext {
-  return {
-    routing: context.routing,
-    chat: {
-      provider: input.provider,
-      model: input.settings.model,
-      modelLabel: input.settings.modelLabel,
-      effort: input.settings.effort,
-    },
-    providerEffort: context.defaultEfforts[input.provider] ?? null,
-    candidates: context.candidates,
-    request: input.userRequest,
-  };
-}
-
-async function runIntake(
-  deps: OrchestratorDeps,
-  input: RunInput,
-  append: Append,
-  current: CurrentTask | null,
-): Promise<{ intake: IntakeResult; decisions: IntakeDecisions }> {
-  const extra = {
-    firstMessage: input.history.length === 0,
-    currentTask: current
-      ? { previousRequest: current.previousRequest, summary: current.summary }
-      : null,
-  };
-  const asked = await askIntake(deps.db, orchestrationJevDeps(deps), input, extra);
-  const jev = asked.outcome.status === 'answered' ? asked.outcome.intake : null;
-  const decisions = decideIntake(jev, {
-    request: input.userRequest,
-    mode: input.mode ?? 'chat',
-    level: input.level,
-    firstMessage: extra.firstMessage,
-    namedFiles: namedFiles([input.userRequest]).length,
-    currentTask: current,
-  });
-  const pick = routeBuilder(routeContext(input, asked.context), decisions).pick;
-  const rules = rulesAnswer(ruleAdvisor(asked.request), decisions, pick);
-  const intake = await saveIntake(deps.db, input, append, asked, {
-    rules,
-    calls: decisions.calls,
-  });
-  return { intake, decisions };
-}
 
 async function ensureTask(s: Session, current: CurrentTask | null): Promise<void> {
   if (s.taskId) return;
@@ -335,9 +267,15 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const mode = input.mode ?? 'chat';
     const root = input.projectRoots[0];
     const doing = mode === 'do' && root !== undefined;
-    const scanning = doing ? startScan({ deps, input }, root, taskStartedAt) : null;
+    const solo = !(await sparkPreferences(deps.db, input.workspaceId)).sparkEnabled;
+    if (solo && !doing) {
+      const result = await runAgentTurn(deps, lease, input, append, control);
+      await finishRun(append, input.identity, result, true);
+      return;
+    }
+    const scanning = doing && !solo ? startScan({ deps, input }, root, taskStartedAt) : null;
     const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
-    const { intake, decisions } = await runIntake(deps, input, append, current);
+    const { intake, decisions } = await runIntake(deps, input, append, current, solo);
     await observePlanAgreement({ db: deps.db, runId: lease.runId, input, intake, append }).catch(
       (error: unknown) => console.error('Could not observe a plan agreement', error),
     );
@@ -359,9 +297,11 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const busy = git && !answers ? await repoBusy(deps.db, lease.runId, root) : false;
     const risky = doing ? riskyChange(decisions.destructive, input.userRequest) : null;
     const confirmFirst = risky && confirmsRiskyFirst(input.level) ? risky : null;
-    const jevDeps = orchestrationJevDeps(deps);
+    const jevDeps = solo ? null : orchestrationJevDeps(deps);
     const jev =
       jevDeps && intake.context.jevModel ? { deps: jevDeps, model: intake.context.jevModel } : null;
+    const reviewWanted =
+      decisions.review || risky !== null || (doing && migrationByRule(input.userRequest));
     const s: Session = {
       deps,
       lease,
@@ -372,13 +312,10 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       route: routeContext(input, intake.context),
       facts: { trivial: decisions.trivial, destructive: decisions.destructive },
       intake,
-      flow: initialFlow(
-        decisions.risk,
-        input.level,
-        decisions.review || risky !== null || (doing && migrationByRule(input.userRequest)),
-        jev !== null,
-        confirmFirst,
-      ),
+      flow: {
+        ...initialFlow(decisions.risk, input.level, reviewWanted, jev !== null, confirmFirst),
+        ...(solo ? { solo } : {}),
+      },
       risky,
       routes: new Map(),
       plan: [],
@@ -396,7 +333,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       liveCost: new Map(),
       checkpoints: 0,
       git,
-      checks: doing ? await projectChecks(deps.db, lease.runId, root) : null,
+      checks: doing && !solo ? await projectChecks(deps.db, lease.runId, root) : null,
       checkRounds: 0,
       checkBodies: [],
       checkLines: [],
@@ -417,12 +354,12 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       snapshotTaken: false,
       closeReason: null,
       observations: [],
-      jevDiffs: await jevDiffsAllowed(deps.db, input.workspaceId),
+      jevDiffs: !solo && (await jevDiffsAllowed(deps.db, input.workspaceId)),
     };
     session = s;
     observeScan(s, scanning);
     if (doing && !answers) {
-      decideBuildStyle(s);
+      if (!solo) decideBuildStyle(s);
       await ensureTask(s, current);
     }
     budgetTimer = setInterval(() => {
