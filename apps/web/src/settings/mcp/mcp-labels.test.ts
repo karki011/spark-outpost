@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { McpScanSource, UserMcpServer } from '@spark-outpost/contracts';
-import { scanLine, scopeLine, statusOf } from './mcp-labels.ts';
+import { scanFound, scanLine, scopeLine, statusOf } from './mcp-labels.ts';
 
 const PROJECT = '00000000-0000-4000-8000-000000000001';
 
@@ -71,5 +71,7 @@ describe('scanLine', () => {
       'Scanned 3 apps · found 3 servers in Codex and Cursor',
     );
     expect(scanLine([source('Codex', 0)])).toBe('Scanned 1 app · no MCP servers found');
+    expect(scanFound([source('Codex', 0)])).toBe(false);
+    expect(scanFound([source('Codex', 0), source('Cursor', 2)])).toBe(true);
   });
 });

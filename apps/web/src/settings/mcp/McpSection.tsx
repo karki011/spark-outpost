@@ -7,10 +7,14 @@ import { mcpApi } from '../../api/mcp.ts';
 import { projectKeys, projectsApi } from '../../api/projects.ts';
 import { ToastHost } from '../../conversations/Toast.tsx';
 import { useToast } from '../../conversations/use-toast.ts';
+import { atLeast } from '../../ui/at-least.ts';
+import { McpScanFailed, McpScanning } from './McpScanning.tsx';
 import { McpScanSummary } from './McpScanSummary.tsx';
 import { McpServerCard } from './McpServerCard.tsx';
 import { McpServerForm } from './McpServerForm.tsx';
 import { useMcpChange, useUserMcp } from './use-mcp.ts';
+
+const SCAN_MIN_MS = 600;
 
 type Editing = { server: UserMcpServer | null } | null;
 
@@ -36,7 +40,7 @@ export function McpSection() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [removing, setRemoving] = useState<ReadonlySet<string>>(new Set());
   const [dismissedScan, setDismissedScan] = useState<readonly McpScanSource[] | null>(null);
-  const scan = useMcpChange(() => mcpApi.scan());
+  const scan = useMcpChange(() => atLeast(mcpApi.scan(), SCAN_MIN_MS));
   const remove = useMcpChange((id: string) => mcpApi.remove(id));
   const save = useMcpChange((body: SaveUserMcpRequest) =>
     editing?.server ? mcpApi.edit(editing.server.id, body) : mcpApi.add(body),
@@ -99,7 +103,7 @@ export function McpSection() {
           Add server
         </button>
       </div>
-      {[scan.error, remove.error, list.error].map(
+      {[remove.error, list.error].map(
         (error) =>
           error && (
             <p key={error.message} className="mcp-error" role="alert">
@@ -107,8 +111,15 @@ export function McpSection() {
             </p>
           ),
       )}
-      {scanned && scanned !== dismissedScan && (
-        <McpScanSummary sources={scanned} onDismiss={() => setDismissedScan(scanned)} />
+      {scan.isPending ? (
+        <McpScanning />
+      ) : scan.isError ? (
+        <McpScanFailed message={scan.error.message} onDismiss={() => scan.reset()} />
+      ) : (
+        scanned &&
+        scanned !== dismissedScan && (
+          <McpScanSummary sources={scanned} onDismiss={() => setDismissedScan(scanned)} />
+        )
       )}
       {editing && (
         <McpServerForm

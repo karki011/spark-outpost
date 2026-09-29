@@ -17,6 +17,8 @@ const TOOL_LABELS: Record<string, string> = {
   windsurf: 'Windsurf',
 };
 
+export const SCAN_APPS = Object.values(TOOL_LABELS);
+
 export function sourceLabel(source: McpServerSource): string {
   if (source === 'user') return 'Added by you';
   if (source === 'project') return 'From the repo';
@@ -70,4 +72,8 @@ export function scanLine(sources: readonly McpScanSource[]): string {
   if (total === 0) return `${scanned} · no MCP servers found`;
   const where = listFormat.format(withServers.map((source) => source.label));
   return `${scanned} · found ${countLabel(total, 'server')} in ${where}`;
+}
+
+export function scanFound(sources: readonly McpScanSource[]): boolean {
+  return sources.some((source) => source.servers > 0);
 }

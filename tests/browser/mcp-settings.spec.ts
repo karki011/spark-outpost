@@ -48,8 +48,15 @@ test('Settings scans other apps, imports servers switched off and moves values t
   const dialog = await openMcpSettings(page);
   await expect(dialog).toContainText('No MCP servers yet');
   await dialog.getByRole('button', { name: 'Scan other apps' }).click();
+  const scanning = dialog.getByRole('status').filter({ hasText: 'Scanning other apps' });
+  await expect(scanning).toContainText(
+    /Checking (Claude Code|Claude Desktop|Cursor|VS Code|Codex|Windsurf)…/,
+  );
+  await expect(dialog.getByRole('button', { name: 'Scanning…' })).toBeDisabled();
   const scan = dialog.getByRole('status').filter({ hasText: 'Scanned' });
   await expect(scan).toContainText('found 1 server in Cursor');
+  await expect(scanning).toBeHidden();
+  await expect(scan.locator('.scout.happy')).toBeVisible();
   await scan.getByRole('button', { name: 'Details' }).click();
   await expect(scan.getByRole('listitem').filter({ hasText: 'Cursor' })).toContainText(
     '.cursor/mcp.json',
@@ -144,6 +151,18 @@ test('Settings adds a server by hand, keeps its secret out of the page and remov
   await expect
     .poll(async () => (await (await page.request.get('/api/mcp/servers')).json()).servers.length)
     .toBe(0);
+});
+
+test('the scan waiting state keeps still with reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const dialog = await openMcpSettings(page);
+  await dialog.getByRole('button', { name: 'Scan other apps' }).click();
+  await expect(dialog.getByRole('status').filter({ hasText: 'Scanning' })).toContainText(
+    'Checking your apps…',
+  );
+  await expect(dialog.getByRole('status').filter({ hasText: 'Scanned' })).toContainText(
+    'found 1 server in Cursor',
+  );
 });
 
 test('Settings fills the add form from a pasted README config', async ({ page }) => {

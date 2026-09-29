@@ -50,3 +50,66 @@
   grid-column: 1 / -1;
   font-size: 12px;
 }
+.mcp-scan.scanning,
+.mcp-scan.failed {
+  padding-right: 14px;
+}
+.mcp-blob {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 36px;
+}
+.mcp-blob .scout {
+  display: block;
+  cursor: default;
+}
+.mcp-blob-hop {
+  display: block;
+  transform-origin: 50% 100%;
+}
+.mcp-blob-shadow {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 20px;
+  height: 4px;
+  margin-left: -10px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 16%, transparent);
+}
+.mcp-blob.hopping .mcp-blob-hop {
+  animation: mcp-hop 0.84s ease-out infinite;
+}
+.mcp-blob.hopping .mcp-blob-shadow {
+  animation: mcp-hop-shadow 0.84s ease-out infinite;
+}
+@keyframes mcp-hop {
+  0%,
+  100% {
+    translate: 0 0;
+    scale: 1.08 0.9;
+  }
+  30% {
+    scale: 0.94 1.07;
+  }
+  50% {
+    translate: 0 -9px;
+    scale: 0.97 1.03;
+  }
+  78% {
+    translate: 0 0;
+    scale: 1.06 0.94;
+  }
+}
+@keyframes mcp-hop-shadow {
+  50% {
+    scale: 0.6 1;
+    opacity: 0.55;
+  }
+}
+.mcp-scan.scanning p {
+  color: var(--muted);
+}

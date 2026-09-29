@@ -4,7 +4,8 @@ import type { McpScanSource } from '@spark-outpost/contracts';
 import { countLabel } from '../../ui/count-label.ts';
 import { ChevronIcon, XIcon } from '../../ui/icons.tsx';
 import { shortHome } from './mcp-command-line.ts';
-import { scanLine } from './mcp-labels.ts';
+import { scanFound, scanLine } from './mcp-labels.ts';
+import { ScanBlob } from './McpScanning.tsx';
 
 interface McpScanSummaryProps {
   sources: readonly McpScanSource[];
@@ -20,6 +21,7 @@ export function McpScanSummary({ sources, onDismiss }: McpScanSummaryProps) {
   return (
     <div className={open ? 'mcp-scan open' : 'mcp-scan'} role="status">
       <div className="mcp-scan-row">
+        <ScanBlob mood={scanFound(sources) ? 'happy' : 'sad'} />
         <p>
           {scanLine(sources)}
           {warnings > 0 && <span className="mcp-bad"> · {countLabel(warnings, 'warning')}</span>}
