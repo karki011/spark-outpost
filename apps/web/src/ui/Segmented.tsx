@@ -9,7 +9,7 @@ interface SegmentedProps {
   ariaLabel: string;
   options: SegmentedOption[];
   value: string;
-  onChange: (id: string) => void;
+  onChange: (id: string, via: 'navigate' | 'activate') => void;
 }
 
 const STEPS: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
@@ -28,7 +28,7 @@ export function Segmented({ ariaLabel, options, value, onChange }: SegmentedProp
     if (next === null || count === 0) return;
     event.preventDefault();
     const option = options[next]!;
-    onChange(option.id);
+    onChange(option.id, 'navigate');
     const radios = event.currentTarget.querySelectorAll<HTMLElement>('[role="radio"]');
     radios[next]?.focus();
   };
@@ -52,7 +52,7 @@ export function Segmented({ ariaLabel, options, value, onChange }: SegmentedProp
           role="radio"
           aria-checked={option.id === value}
           data-option={option.id}
-          onClick={() => onChange(option.id)}
+          onClick={() => onChange(option.id, 'activate')}
         >
           {option.label}
         </button>

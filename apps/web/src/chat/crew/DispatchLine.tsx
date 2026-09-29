@@ -25,7 +25,7 @@ export function DispatchLine({ orchestration, advice, category }: DispatchLinePr
     confidence === undefined ? null : confidence.toFixed(2),
   ].filter(Boolean);
   const details = [
-    ...(advice ? adviceDetails(advice).filter((line) => !line.startsWith('Recorded only')) : []),
+    ...(advice ? adviceDetails(advice, { recordedRoute: false }) : []),
     ...whyLines(orchestration),
   ];
   return (

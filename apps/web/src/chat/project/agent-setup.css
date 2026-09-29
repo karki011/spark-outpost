@@ -110,7 +110,7 @@
   border-radius: 999px;
   background: var(--panel);
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 400;
 }
 .as-status {
@@ -160,7 +160,7 @@
 .as-list small,
 .as-servers small {
   color: var(--muted);
-  font-size: 11.5px;
+  font-size: 12px;
   overflow-wrap: anywhere;
 }
 .as-list b {

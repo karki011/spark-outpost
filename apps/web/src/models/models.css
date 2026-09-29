@@ -32,9 +32,9 @@
   white-space: nowrap;
   color: var(--muted);
   transition:
-    background-color 0.15s,
-    color 0.15s,
-    border-color 0.15s;
+    background-color 0.15s var(--out),
+    color 0.15s var(--out),
+    border-color 0.15s var(--out);
 }
 
 .mc-chip:hover {
@@ -70,7 +70,7 @@
   min-width: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 17px;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -133,7 +133,7 @@
 .mc-tag {
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 18px;
   white-space: nowrap;
   color: var(--muted);
@@ -234,7 +234,7 @@
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--panel);
-  transition: border-color 0.15s;
+  transition: border-color 0.15s var(--out);
 }
 
 .mc-card:hover,
@@ -258,7 +258,7 @@
 }
 
 .mc-facts dt {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--muted);
 }
 

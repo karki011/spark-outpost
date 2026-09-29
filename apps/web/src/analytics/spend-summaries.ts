@@ -14,11 +14,15 @@ export function treemapSummary(data: AnalyticsSpend): string {
 export function taskCostSummary(data: AnalyticsSpend): string {
   if (data.finishedTasks === 0) return 'No finished turns with an outcome yet.';
   const measured = data.perTask.filter((row) => row.tasks > 0 && row.meanUsd !== null);
-  const dearest = measured.reduce((best, row) => (row.meanUsd! > best.meanUsd! ? row : best));
   const perGood =
     data.costPerGoodUsd === null
       ? 'No turn had a good outcome yet.'
       : `Counting every finished turn, each good outcome cost ${usd(data.costPerGoodUsd)}.`;
+  const [first, ...others] = measured;
+  if (!first) {
+    return `${plural(data.finishedTasks, 'finished turn')}, none with a known cost yet. ${perGood}`;
+  }
+  const dearest = others.reduce((best, row) => (row.meanUsd! > best.meanUsd! ? row : best), first);
   return `${plural(data.finishedTasks, 'finished turn')}. ${verdictName(dearest.verdict)} turns cost the most on average, ${usd(dearest.meanUsd)}. ${perGood}`;
 }
 

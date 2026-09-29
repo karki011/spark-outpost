@@ -9,7 +9,7 @@
 .msg-actions.user {
   flex-direction: row-reverse;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s var(--out);
 }
 .msg.me:hover .msg-actions,
 .msg.me:focus-within .msg-actions {

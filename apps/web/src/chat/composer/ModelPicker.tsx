@@ -1,16 +1,14 @@
 import { useEffect, useId, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
-import { useMutation, useQueries, useQueryClient } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 import {
   DEFAULT_INVOLVEMENT_LEVEL,
   type ChatSettings,
-  type ConversationDetail,
   type Orchestration,
   type ProviderId,
   type ProviderSetup,
-  type UpdateChatSettingsRequest,
 } from '@spark-outpost/contracts';
-import { api, CAPABILITIES_STALE_MS, capabilitiesQuery, queryKeys } from '../../api/client.ts';
+import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../../api/client.ts';
 import { ProviderBlob } from '../../brand/ProviderBlob.tsx';
 import { countLabel } from '../../ui/count-label.ts';
 import { ChevronIcon } from '../../ui/icons.tsx';
@@ -25,21 +23,15 @@ import { PickerNav, type PickerRow, type PickerSection } from './PickerNav.tsx';
 import { ProviderSwitch } from './ProviderSwitch.tsx';
 import { ExitingInert } from './ExitingInert.tsx';
 import { autoThisTurn, autoWouldHaveUsed, builderRouteNote } from '../../crew/auto-route.ts';
-import { buttonLabel, currentModel, selectableEfforts, shortLabel } from './model-options.ts';
+import { buttonLabel, currentModel, selectableEfforts } from './model-options.ts';
+import { useChatSettingsUpdate, type PickerRequest } from './use-picker-command.ts';
 import { permissionSummary } from './mode-summary.ts';
 import './model-picker.css';
 
 const SECTIONS: PickerSection[] = ['model', 'effort', 'permission', 'options'];
 
-export interface PickerRequest {
-  section: PickerSection;
-  id: number;
-  value?: string;
-}
-
 interface ModelPickerProps {
   openRequest: PickerRequest | null;
-  onNotice: (message: string) => void;
   conversationId: string;
   settings: ChatSettings;
   providers: ProviderSetup[];
@@ -49,14 +41,12 @@ interface ModelPickerProps {
 
 export function ModelPicker({
   openRequest,
-  onNotice,
   conversationId,
   settings,
   providers,
   hasRepos,
   orchestration,
 }: ModelPickerProps) {
-  const queryClient = useQueryClient();
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
     HTMLDivElement
@@ -88,15 +78,7 @@ export function ModelPicker({
     capabilityQueries[providers.findIndex((entry) => entry.id === id)];
   const capabilitiesFor = (id: ProviderId) => queryFor(id)?.data;
 
-  const update = useMutation({
-    mutationFn: (change: UpdateChatSettingsRequest) =>
-      api.updateChatSettings(conversationId, change),
-    onSuccess: (next) =>
-      queryClient.setQueryData<ConversationDetail>(
-        queryKeys.conversation(conversationId),
-        (detail) => (detail ? { ...detail, settings: next } : detail),
-      ),
-  });
+  const update = useChatSettingsUpdate(conversationId);
 
   if (!provider) return null;
   const setup = providers.find((entry) => entry.id === provider);
@@ -118,26 +100,9 @@ export function ModelPicker({
 
   if (openRequest && openRequest.id !== handledRequest) {
     setHandledRequest(openRequest.id);
-    const wanted = openRequest.value?.trim().toLowerCase() ?? '';
-    const options = openRequest.section === 'effort' ? efforts : (capabilities?.models ?? []);
-    const match = wanted
-      ? options.find(
-          (option) =>
-            option.id.toLowerCase() === wanted || shortLabel(option.label).toLowerCase() === wanted,
-        )
-      : undefined;
-    if (match && openRequest.section === 'effort') {
-      update.mutate({ effort: match.id });
-      onNotice(`Effort set to ${match.label}.`);
-    } else if (match) {
-      update.mutate({ model: match.id, routing: 'pinned' });
-      onNotice(`Model set to ${shortLabel(match.label)}.`);
-    } else {
-      if (wanted) onNotice(`${setup?.name ?? 'This agent'} doesn't offer "${openRequest.value}".`);
-      setSection(openRequest.section);
-      setOpen(true);
-      setFocusRequest(openRequest.id);
-    }
+    setSection(openRequest.section);
+    setOpen(true);
+    setFocusRequest(openRequest.id);
   }
   const rows: PickerRow[] = [
     {

@@ -134,6 +134,41 @@ test('the Home composer starts a chat in the background, keeps its model and sta
   );
 });
 
+test('a sent Home message is not restored when its settings fail to carry over', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await openHome(page);
+  const composer = home(page).getByRole('region', { name: 'Start a new chat' });
+  const picker = composer.getByRole('button', { name: /^Model and effort/ });
+  await picker.click();
+  await page
+    .getByRole('dialog', { name: 'Model, effort, and permissions' })
+    .getByRole('radio', { name: /Fake Deep/ })
+    .click();
+  await expect(picker).toHaveAccessibleName('Model and effort: Fake Deep');
+  await page.keyboard.press('Escape');
+
+  let sent = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/messages')) sent += 1;
+  });
+  await page.route('**/api/conversations/*/settings', (route) =>
+    route.request().method() === 'PATCH'
+      ? route.fulfill({ status: 500, json: { error: 'Settings store is down' } })
+      : route.fallback(),
+  );
+  const input = composer.getByRole('textbox', { name: 'Message' });
+  await input.fill('Only send me once');
+  await input.press('Enter');
+
+  await expect(composer.getByRole('status').filter({ hasText: 'Started' })).toContainText(
+    'Started ‘Only send me once’ · Open · New chats use your default model again',
+  );
+  await expect(input).toHaveValue('');
+  expect(sent).toBe(1);
+});
+
 test('Needs you lists asking, then errors, then finished chats and jumps to the card', async ({
   page,
 }) => {

@@ -44,6 +44,7 @@ export function useSlash({
   const [selection, setSelection] = useState({ query: '', index: 0 });
   const pendingCaret = useRef<number | null>(null);
   const listId = useId();
+  if (dismissed && !draft.startsWith('/')) setDismissed(false);
   const all = useMemo(() => slashItems(agentCommands, context), [agentCommands, context]);
   const items = useMemo(() => filterSlashItems(all, query?.query ?? ''), [all, query]);
   const open = query !== null && !dismissed;
@@ -59,9 +60,7 @@ export function useSlash({
   }, [draft, textareaRef]);
 
   const sync = (textarea: HTMLTextAreaElement) => {
-    const found = findSlashQuery(textarea.value, textarea.selectionStart);
-    if (!textarea.value.startsWith('/')) setDismissed(false);
-    setQuery(found);
+    setQuery(findSlashQuery(textarea.value, textarea.selectionStart));
   };
 
   const pick = (item: SlashItem) => {

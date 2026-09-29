@@ -49,7 +49,7 @@ function categoryName(jev: NonNullable<AdviceSummary['jev']>): string {
   return jev.intent ? categoryLabel(jev.intent) : 'no category';
 }
 
-export function adviceDetails(advice: AdviceSummary): string[] {
+export function adviceDetails(advice: AdviceSummary, { recordedRoute = true } = {}): string[] {
   const { jev, rules } = advice;
   if (!jev) return [advice.jevError ?? 'Jev did not answer.', 'The rules decided everything.'];
   const lines = [`Category ${categoryName(jev)}`];
@@ -57,7 +57,7 @@ export function adviceDetails(advice: AdviceSummary): string[] {
   if (jev.injection !== null) {
     lines.push(`Attached text steering the agent: ${jev.injection.toFixed(2)}`);
   }
-  if (jev.tier && advice.routeGate) {
+  if (recordedRoute && jev.tier && advice.routeGate) {
     lines.push(
       `Jev would have used the ${jev.tier} tier (${advice.routeGate.confidence.toFixed(2)}), recorded only`,
     );

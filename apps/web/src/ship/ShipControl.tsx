@@ -1,5 +1,5 @@
 import './ship.css';
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   preferredShipMode,
@@ -171,8 +171,13 @@ export function ShipControl({
   const queryClient = useQueryClient();
   const panelId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const doneRef = useRef<HTMLParagraphElement>(null);
   const [open, setOpen] = useState(false);
   const [result, setResult] = useState<ShipResult | null>(null);
+
+  useEffect(() => {
+    if (result) (buttonRef.current ?? doneRef.current)?.focus();
+  }, [result]);
   const preview = useQuery({
     queryKey: shipKeys.preview(taskId),
     queryFn: () => shipApi.preview(taskId),
@@ -216,7 +221,7 @@ export function ShipControl({
         />
       )}
       {result && (
-        <p className="ship-done" role="status">
+        <p ref={doneRef} className="ship-done" role="status" tabIndex={-1}>
           {resultLine(result)}
         </p>
       )}
@@ -229,7 +234,7 @@ export function ShipControl({
           type="button"
           className={open ? 'btn line sm ship-btn' : 'btn primary sm ship-btn'}
           aria-expanded={open}
-          aria-controls={panelId}
+          aria-controls={open ? panelId : undefined}
           onClick={() => (open ? close() : setOpen(true))}
         >
           <BranchIcon />
