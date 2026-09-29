@@ -6,7 +6,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 import { crewAgents } from './crew-projection.ts';
 import { checkpoint, member, orchestration } from './test-orchestration.ts';
-import { doingLine, sceneChanges, type TvScene } from './tv-chatter.ts';
+import { doingLine, nextChatter, sceneChanges, trimChatter, type TvScene } from './tv-chatter.ts';
 import { askText, decisionLine, pendingAsks, roleSubtitle } from './tv-scene.ts';
 
 const BUILDER = '00000000-0000-4000-8000-0000000000a1';
@@ -33,7 +33,7 @@ describe('Agent TV handoffs and chatter', () => {
     const after = scene([member({ status: 'running', toolCalls: 0 })]);
     expect(sceneChanges(before, after)).toEqual({
       handoffs: [{ agentId: BUILDER, direction: 'out' }],
-      chatter: [{ agentId: 'jev', text: 'Over to Builder.' }],
+      chatter: [{ agentId: 'jev', text: 'Over to Builder.', pinned: true }],
     });
   });
 
@@ -53,7 +53,7 @@ describe('Agent TV handoffs and chatter', () => {
       ],
     });
     expect(sceneChanges(before, after).chatter).toEqual([
-      { agentId: BUILDER, text: 'Editing format.ts…' },
+      { agentId: BUILDER, text: 'Editing format.ts…', pinned: false },
     ]);
   });
 
@@ -62,10 +62,10 @@ describe('Agent TV handoffs and chatter', () => {
     const good = scene([{ ...critic, verdict: 'looks_good' }]);
     const worried = scene([{ ...critic, verdict: 'concerns' }]);
     expect(sceneChanges(before, good).chatter).toEqual([
-      { agentId: CRITIC, text: 'Looks good to me.' },
+      { agentId: CRITIC, text: 'Looks good to me.', pinned: true },
     ]);
     expect(sceneChanges(before, worried).chatter).toEqual([
-      { agentId: CRITIC, text: 'I have some concerns.' },
+      { agentId: CRITIC, text: 'I have some concerns.', pinned: true },
     ]);
   });
 
@@ -73,9 +73,42 @@ describe('Agent TV handoffs and chatter', () => {
     const before = scene([member({ status: 'running', toolCalls: 1 })]);
     const after = scene([member({ status: 'failed' })], 'Picked plan → execute · 0.86');
     expect(sceneChanges(before, after).chatter).toEqual([
-      { agentId: 'jev', text: 'Picked plan → execute · 0.86' },
-      { agentId: BUILDER, text: 'Hit a problem.' },
+      { agentId: 'jev', text: 'Picked plan → execute · 0.86', pinned: false },
+      { agentId: BUILDER, text: 'Hit a problem.', pinned: true },
     ]);
+  });
+
+  it('keeps handoffs and milestones in a burst and trims only the ordinary lines', () => {
+    const line = (text: string, pinned = false) => ({ agentId: BUILDER, text, pinned });
+    const burst = [
+      line('Reading a.ts…'),
+      line('Over to Builder.', true),
+      line('Reading b.ts…'),
+      line('Editing c.ts…'),
+      line('Running pnpm test…'),
+      line('Step done!', true),
+      line('Checking d.ts…'),
+    ];
+    expect(trimChatter(burst, 3).map((item) => item.text)).toEqual([
+      'Over to Builder.',
+      'Editing c.ts…',
+      'Running pnpm test…',
+      'Step done!',
+      'Checking d.ts…',
+    ]);
+    expect(trimChatter(burst.slice(0, 3), 3)).toEqual(burst.slice(0, 3));
+  });
+
+  it('skips lines from an agent whose question is showing, so they never hold up the rest', () => {
+    const jev = (text: string) => ({ agentId: 'jev', text, pinned: true });
+    const done = { agentId: CRITIC, text: 'Looks good to me.', pinned: true };
+    const queue = [jev('Over to Critic.'), done, jev('Sent Critic: review')];
+    expect(nextChatter(queue, new Set(['jev']))).toEqual({ line: done, rest: [] });
+    expect(nextChatter(queue, new Set())).toEqual({ line: queue[0], rest: queue.slice(1) });
+    expect(nextChatter([jev('Over to Critic.')], new Set(['jev']))).toEqual({
+      line: null,
+      rest: [],
+    });
   });
 
   it('turns a step into something an agent would say', () => {

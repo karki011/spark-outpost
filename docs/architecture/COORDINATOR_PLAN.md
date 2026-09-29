@@ -6,7 +6,7 @@ Read with [HARNESS_PLAN.md](HARNESS_PLAN.md) (the lean harness that runs today a
 
 ## Status (September 29, 2026)
 
-Built: C0 (contracts, validation, size, placement ladder, `coord-1` thresholds), C1 (shadow `parallel` rows, `pnpm coord:shadow`), C2 (pieces in order) and C3 (ownership and git guards). The worker's mode is `COORDINATOR_MODE` (`off`, `shadow`, `in_order`, `parallel`), default `shadow`; `parallel` behaves as `in_order` until C4. Spark off never engages the coordinator or records a shadow row. Migration `0059_coordinator.sql`.
+Built: C0 (contracts, validation, size, placement ladder, `coord-1` thresholds), C1 (shadow `parallel` rows, `pnpm coord:shadow`), C2 (pieces in order) and C3 (ownership and git guards). The worker's mode is `COORDINATOR_MODE` (`off`, `shadow`, `in_order`, `parallel`), default `shadow`; `parallel` behaves as `in_order` until C4. Spark off never engages the coordinator or records a shadow row. Migration `0063_coordinator.sql`.
 
 Where the build departs from this plan:
 

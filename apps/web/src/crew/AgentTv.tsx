@@ -102,7 +102,10 @@ export function AgentTv({
   const hidden = usePageHidden();
   const viewport = useViewport();
   const gaze = useMemo(() => (reduced ? null : new StageGaze()), [reduced]);
-  const events = useTvEvents({ agents: members, decision }, { muted, reduced, paused: hidden });
+  const events = useTvEvents(
+    { agents: members, decision },
+    { muted, reduced, paused: hidden, asking: Object.keys(asks) },
+  );
   const caption = tvCaption(members);
   const captionText = [caption.lead, caption.text].filter(Boolean).join(': ');
   const spoken = useThrottledText(captionText, CAPTION_THROTTLE_MS);

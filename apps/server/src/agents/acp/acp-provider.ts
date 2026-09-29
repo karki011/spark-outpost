@@ -14,7 +14,7 @@ import {
 import { supportsDo, type AgentDefinition, type AgentLaunch } from './agents.ts';
 import { AgentExitedError, startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
-import { withClaudeSpark, withCodexSpark } from './spark-instructions.ts';
+import { auditCodexInstructions, withClaudeSpark, withCodexSpark } from './spark-instructions.ts';
 import { Channel } from './channel.ts';
 import {
   contextSteps,
@@ -139,14 +139,10 @@ async function runSession(
           )
         : null;
     const mcpServers = repo?.mcpServers ?? namedMcpServers([], userMcp, reserved);
-    const env = await agentEnvironment(
-      options,
-      home,
-      browsing,
-      withCodexSpark(repo?.codex ?? null, turn.spark),
-      turn.builder === true,
-      turn.env,
-    );
+    const codex = withCodexSpark(repo?.codex ?? null, turn.spark);
+    if (definition.repoStyle === 'codex') auditCodexInstructions(turn.audit, codex);
+    const builder = turn.builder === true;
+    const env = await agentEnvironment(options, home, browsing, codex, builder, turn.env);
     agent = startAgentProcess(options.launch ?? definition.launch(), cwd, env, replay.observer);
     const notes = roots.length > 0 && !browsing ? [noFolderAccessNote(definition)] : [];
     if (roots.length < linked.length) notes.push(primaryOnlyNote(definition, roots[0]!));

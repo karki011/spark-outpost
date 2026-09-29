@@ -34,6 +34,12 @@ interface ProfileRow {
   spark_enabled: boolean;
   team_mode: boolean;
   use_name: boolean;
+  default_level: InvolvementLevel;
+  spend_cap_usd: string | null;
+  critic_enabled: boolean;
+  critic_other_provider: boolean;
+  morning_brief: boolean;
+  morning_brief_time: string;
 }
 
 interface ConnectionRow {
@@ -44,7 +50,6 @@ interface ConnectionRow {
   model: string | null;
   permission: string;
   agent_mode: string | null;
-  level: InvolvementLevel;
   effort: string | null;
   verified_at: Date;
   disconnected_at: Date | null;
@@ -75,7 +80,9 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
   ]);
   const { rows } = await db.query<ProfileRow>(
     `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
-       jev_diffs, ship_failing_checks, personality, spark_enabled, team_mode, use_name
+       jev_diffs, ship_failing_checks, personality, spark_enabled, team_mode, use_name,
+       default_level, spend_cap_usd, critic_enabled, critic_other_provider, morning_brief,
+       to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
   );
@@ -108,7 +115,6 @@ function toConnection(row: ConnectionRow | undefined): ProviderConnection | null
     model: usableDefault(row.provider, row.model),
     permission: row.permission,
     agentMode: row.agent_mode ?? defaultModeFor(row.provider),
-    level: row.level,
     effort: row.effort,
     verifiedAt: row.verified_at.toISOString(),
   };
@@ -118,7 +124,20 @@ function connectedIds(rows: ConnectionRow[]): ProviderId[] {
   return rows.filter((row) => !row.disconnected_at).map((row) => row.provider);
 }
 
-export async function getSetupState(db: Queryable, workspaceId: string): Promise<SetupState> {
+function savedSpendCap(profile: ProfileRow): number | null {
+  return profile.spend_cap_usd === null ? null : Number(profile.spend_cap_usd);
+}
+
+export function effectiveSpendCap(saved: number | null, serverCap: number | null): number | null {
+  if (saved === null) return serverCap;
+  return saved > 0 ? saved : null;
+}
+
+export async function getSetupState(
+  db: Queryable,
+  workspaceId: string,
+  serverSpendCapUsd: number | null = null,
+): Promise<SetupState> {
   const [profile, rows, advisors] = await Promise.all([
     ensureProfile(db, workspaceId),
     connectionRows(db, workspaceId),
@@ -154,6 +173,12 @@ export async function getSetupState(db: Queryable, workspaceId: string): Promise
     sparkEnabled: profile.spark_enabled,
     teamMode: profile.team_mode,
     useName: profile.use_name,
+    defaultLevel: profile.default_level,
+    spendCapUsd: effectiveSpendCap(savedSpendCap(profile), serverSpendCapUsd),
+    criticEnabled: profile.critic_enabled,
+    criticOtherProvider: profile.critic_other_provider,
+    morningBrief: profile.morning_brief,
+    morningBriefTime: profile.morning_brief_time,
   };
   return { profile: result, providers, advisors };
 }
@@ -187,6 +212,12 @@ export async function updateProfile(
        spark_enabled = COALESCE($10, spark_enabled),
        team_mode = COALESCE($11, team_mode),
        use_name = COALESCE($12, use_name),
+       default_level = COALESCE($13, default_level),
+       spend_cap_usd = CASE WHEN $14 THEN COALESCE($15::numeric, 0) ELSE spend_cap_usd END,
+       critic_enabled = COALESCE($16, critic_enabled),
+       critic_other_provider = COALESCE($17, critic_other_provider),
+       morning_brief = COALESCE($18, morning_brief),
+       morning_brief_time = COALESCE($19::time, morning_brief_time),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -202,6 +233,13 @@ export async function updateProfile(
       update.sparkEnabled ?? null,
       update.teamMode ?? null,
       update.useName ?? null,
+      update.defaultLevel ?? null,
+      update.spendCapUsd !== undefined,
+      update.spendCapUsd ?? null,
+      update.criticEnabled ?? null,
+      update.criticOtherProvider ?? null,
+      update.morningBrief ?? null,
+      update.morningBriefTime ?? null,
     ],
   );
 }
@@ -212,6 +250,9 @@ export async function shipsFailingChecks(db: Queryable, workspaceId: string): Pr
 
 export interface SparkPreferences extends SparkSessionPrefs {
   sparkEnabled: boolean;
+  criticEnabled: boolean;
+  criticOtherProvider: boolean;
+  savedSpendCapUsd: number | null;
 }
 
 export async function sparkPreferences(
@@ -225,7 +266,23 @@ export async function sparkPreferences(
     teamMode: profile.team_mode,
     useName: profile.use_name,
     sparkEnabled: profile.spark_enabled,
+    criticEnabled: profile.critic_enabled,
+    criticOtherProvider: profile.critic_other_provider,
+    savedSpendCapUsd: savedSpendCap(profile),
   };
+}
+
+export interface MorningBriefSetting {
+  enabled: boolean;
+  time: string;
+}
+
+export async function morningBriefSetting(
+  db: Queryable,
+  workspaceId: string,
+): Promise<MorningBriefSetting> {
+  const profile = await ensureProfile(db, workspaceId);
+  return { enabled: profile.morning_brief, time: profile.morning_brief_time };
 }
 
 export async function autoContinueSeconds(
@@ -381,7 +438,6 @@ export async function updateProviderDefaults(
   update: {
     model?: string | undefined;
     agentMode?: string | undefined;
-    level?: InvolvementLevel | undefined;
     effort?: string | null | undefined;
   },
 ): Promise<ProviderConnection> {
@@ -411,9 +467,8 @@ export async function updateProviderDefaults(
     `UPDATE provider_connections SET
        model = COALESCE($3, model),
        permission = COALESCE($4, permission),
-       effort = CASE WHEN $7 THEN $5 ELSE effort END,
-       level = COALESCE($6, level),
-       agent_mode = COALESCE($8, agent_mode)
+       effort = CASE WHEN $6 THEN $5 ELSE effort END,
+       agent_mode = COALESCE($7, agent_mode)
      WHERE workspace_id = $1 AND provider = $2
      RETURNING *`,
     [
@@ -422,7 +477,6 @@ export async function updateProviderDefaults(
       update.model ?? null,
       update.agentMode ? permissionFor(provider, update.agentMode, modes) : null,
       update.effort ?? null,
-      update.level ?? null,
       update.effort !== undefined,
       update.agentMode ?? null,
     ],

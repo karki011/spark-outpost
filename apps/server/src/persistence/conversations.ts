@@ -15,7 +15,7 @@ import { conversationAdvice } from './advice.ts';
 import { insertAnnotations } from './annotations.ts';
 import { conversationPlans } from './plan-documents.ts';
 import { conversationOrchestrations } from './orchestrations.ts';
-import { pendingApprovalsForConversation } from './approvals.ts';
+import { shownApprovalsForConversation } from './approvals.ts';
 import { attachmentsForMessages, linkAttachments } from './attachments.ts';
 import { resolveChatSettings } from './chat-settings.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
@@ -194,7 +194,7 @@ export async function getConversationDetail(
     resolveChatSettings(db, id),
   ]);
   const tasks = await taskOverviews(db, id);
-  const approvals = await pendingApprovalsForConversation(db, id);
+  const approvals = await shownApprovalsForConversation(db, id);
   const advice = await conversationAdvice(db, id);
   const orchestrations = await conversationOrchestrations(db, id);
   const plans = await conversationPlans(db, id);

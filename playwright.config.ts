@@ -15,6 +15,7 @@ import {
 } from './tests/browser/stub-config.ts';
 
 if (existsSync('.local/credentials.env')) process.loadEnvFile('.local/credentials.env');
+delete process.env.BACKUP_DIR;
 
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 const apiToken = randomBytes(32).toString('base64url');

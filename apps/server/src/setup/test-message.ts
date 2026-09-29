@@ -24,13 +24,6 @@ const PROMPT = 'Reply with the single word OK.';
 const CLI_TIMEOUT_MS = 90_000;
 const API_TIMEOUT_MS = 30_000;
 
-export function canSendTestMessage(
-  provider: ProviderId,
-  method: ProviderConnection['method'],
-): boolean {
-  return method === 'api_key' || provider === 'claude';
-}
-
 function answered(startedAt: number, model: string | null): TestOutcome {
   const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
   return {

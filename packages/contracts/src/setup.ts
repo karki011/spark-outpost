@@ -1,6 +1,12 @@
 import { z } from 'zod';
-import { involvementLevelSchema } from './approvals.ts';
-import { DEFAULT_PERSONALITY, personalitySchema } from './spark.ts';
+import { DEFAULT_INVOLVEMENT_LEVEL, involvementLevelSchema } from './approvals.ts';
+import {
+  DEFAULT_MORNING_BRIEF_TIME,
+  DEFAULT_PERSONALITY,
+  morningBriefTimeSchema,
+  personalitySchema,
+  spendCapUsdSchema,
+} from './spark.ts';
 
 export const providerIdSchema = z.enum(['claude', 'codex', 'zai']);
 export type ProviderId = z.infer<typeof providerIdSchema>;
@@ -50,7 +56,6 @@ export const providerConnectionSchema = z.object({
   model: z.string().nullable(),
   permission: z.string(),
   agentMode: z.string().nullable().default(null),
-  level: involvementLevelSchema,
   effort: z.string().nullable(),
   verifiedAt: z.string(),
 });
@@ -109,6 +114,12 @@ export const profileSchema = z.object({
   sparkEnabled: z.boolean().default(true),
   teamMode: z.boolean().default(true),
   useName: z.boolean().default(true),
+  defaultLevel: involvementLevelSchema.default(DEFAULT_INVOLVEMENT_LEVEL),
+  spendCapUsd: spendCapUsdSchema.nullable().default(null),
+  criticEnabled: z.boolean().default(true),
+  criticOtherProvider: z.boolean().default(true),
+  morningBrief: z.boolean().default(true),
+  morningBriefTime: morningBriefTimeSchema.default(DEFAULT_MORNING_BRIEF_TIME),
 });
 export type Profile = z.infer<typeof profileSchema>;
 export type SparkSessionPrefs = Pick<
@@ -135,6 +146,12 @@ export const updateProfileRequestSchema = z
     sparkEnabled: z.boolean(),
     teamMode: z.boolean(),
     useName: z.boolean(),
+    defaultLevel: involvementLevelSchema,
+    spendCapUsd: spendCapUsdSchema.nullable(),
+    criticEnabled: z.boolean(),
+    criticOtherProvider: z.boolean(),
+    morningBrief: z.boolean(),
+    morningBriefTime: morningBriefTimeSchema,
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
@@ -143,7 +160,6 @@ export const updateProviderDefaultsRequestSchema = z
   .object({
     model: z.string(),
     agentMode: z.string().min(1).max(200),
-    level: involvementLevelSchema,
     effort: z.string().min(1).max(40).nullable(),
   })
   .partial();

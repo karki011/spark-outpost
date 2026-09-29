@@ -1,5 +1,6 @@
 import type { Db } from '../persistence/db.ts';
 import { asLast, latestDigests } from '../persistence/digests.ts';
+import { morningBriefSetting } from '../persistence/setup.ts';
 import { morningDue } from './policy.ts';
 import { requestDigest } from './service.ts';
 
@@ -21,14 +22,16 @@ export function startMorningBrief(
   const tick = async () => {
     const now = new Date();
     if (triedOn === dayOf(now)) return;
+    const setting = await morningBriefSetting(db, workspaceId);
+    if (!setting.enabled) return;
     const { latest } = await latestDigests(db, workspaceId, now);
-    if (!morningDue(asLast(latest), now)) return;
+    if (!morningDue(asLast(latest), now, setting.time)) return;
     triedOn = dayOf(now);
     await refreshTickets().catch((error: unknown) => {
       console.error('Could not refresh tickets for the morning brief', error);
     });
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-    await requestDigest(db, workspaceId, 'morning', timeZone);
+    await requestDigest(db, workspaceId, 'morning', timeZone, new Date(), setting.time);
   };
   const timer = setInterval(() => {
     tick().catch((error: unknown) => console.error('The morning brief failed', error));

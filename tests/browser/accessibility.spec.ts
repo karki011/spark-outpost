@@ -131,7 +131,8 @@ for (const theme of THEMES) {
       .getByRole('navigation', { name: 'Main' })
       .getByRole('button', { name: /^Home/ })
       .click();
-    await expect(page.getByRole('region', { name: 'Needs you' })).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Needs you' })).toBeVisible();
+    await expect(page.locator('.feed-foot')).toBeVisible();
     await expect(page.getByRole('region', { name: 'Spend' }).locator('.cost-total')).toBeVisible();
     found.push(...(await blockingViolations(page, 'home')));
 
@@ -166,6 +167,45 @@ test('the Tickets screen has no serious colour-contrast or ARIA issues in any th
   await expect(page.getByRole('dialog', { name: /Take WEB-437/ })).toBeVisible();
   found.push(...(await blockingViolations(page, 'tickets search with confirm')));
 
+  expect(found).toEqual([]);
+});
+
+test('Home and the Tickets brief strip have no serious issues with a brief and a row action showing', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await resetTicketFakes();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'tickets'));
+  await connectTickets(page);
+  await openTickets(page);
+  await expect(page.locator('li[data-ticket$=":WEB-433"]')).toBeVisible({ timeout: 15_000 });
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Home/ })
+    .click();
+  const today = page.getByRole('region', { name: /^What needs you today/ });
+  await expect(today.getByRole('list', { name: 'Do these first' })).toBeVisible({
+    timeout: 15_000,
+  });
+  await today.locator('.lr-main').first().focus();
+  await expect(today.locator('.lr-acts').first()).toHaveCSS('opacity', '1');
+  const found = [];
+  for (const theme of ['light', 'graphite', 'contrast']) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `home brief ${theme}`)));
+  }
+
+  await today
+    .getByRole('button', { name: /^Open [A-Z]+-\d+$/ })
+    .first()
+    .click();
+  const strip = page.getByRole('main', { name: 'Tickets' }).locator('.brief');
+  await expect(strip.getByRole('listitem').first()).toBeVisible();
+  for (const theme of ['light', 'graphite', 'contrast']) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `tickets brief strip ${theme}`)));
+  }
   expect(found).toEqual([]);
 });
 

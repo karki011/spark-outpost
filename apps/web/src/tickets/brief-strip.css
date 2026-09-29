@@ -1,0 +1,131 @@
+.tk .brief {
+  margin: 12px 18px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+
+.tk .brief.off {
+  border-style: dashed;
+}
+
+.tk .brief-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 0 12px;
+}
+
+.tk .brief-h .scout {
+  flex-shrink: 0;
+}
+
+.tk .brief-h h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tk .brief-meta {
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tk .brief-h .sp {
+  flex: 1;
+}
+
+.tk .brief .hlink {
+  padding: 4px 6px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.tk .brief .hlink:hover:not(:disabled) {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.tk .brief .hlink:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tk .brief ol {
+  margin: 6px 0 0;
+  padding: 0 6px 6px;
+  list-style: none;
+}
+
+.tk .bi {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 7px 6px;
+  border-radius: var(--r-sm);
+}
+
+.tk .bi:hover {
+  background: var(--raise);
+}
+
+.tk .bi .num {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 6px;
+  background: var(--raise);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tk .bi p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.tk .bi .kref {
+  border-radius: 4px;
+  color: var(--accent-text);
+  font-family: 'Geist Mono', monospace;
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tk .bi .why-r {
+  justify-content: flex-start;
+  margin-top: 2px;
+}
+
+.tk .brief-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 10px;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.tk .brief-foot > :last-child {
+  margin-left: auto;
+}
+
+.tk .brief.off .brief-foot {
+  padding-top: 6px;
+}
+
+.tk .brief-sk {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px 12px;
+}

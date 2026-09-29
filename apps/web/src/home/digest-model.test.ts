@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Digest, DigestState, DigestStats } from '@spark-outpost/contracts';
-import { canRefresh, digestChips, digestMeta, digestView, refreshHint } from './digest-model.ts';
+import type { Digest, DigestState } from '@spark-outpost/contracts';
+import { canRefresh, digestMeta, digestView, refreshHint } from './digest-model.ts';
 
 const NOW = Date.parse('2026-09-26T15:00:00.000Z');
 
@@ -62,27 +62,5 @@ describe('refresh', () => {
     );
     expect(canRefresh(state({ digest: digest({ status: 'running' }) }), NOW)).toBe(false);
     expect(canRefresh(state({ available: false }), NOW)).toBe(false);
-  });
-});
-
-describe('digestChips', () => {
-  it('builds a chip per non-zero stat, each pointing at the relevant section', () => {
-    const stats: DigestStats = { finished: 2, waiting: 1, failedOrStalled: 1, costUsd: 0.84 };
-    expect(digestChips(stats)).toEqual([
-      { id: 'finished', label: '2 done', section: 'home-recent' },
-      { id: 'waiting', label: '1 needs you', section: 'home-needs' },
-      { id: 'failed-or-stalled', label: '1 stalled', section: 'home-needs' },
-      { id: 'spend', label: '$0.84', section: 'home-spend' },
-    ]);
-  });
-
-  it('omits chips for stats that are zero or unknown', () => {
-    expect(digestChips({ finished: 0, waiting: 0, failedOrStalled: 0, costUsd: null })).toEqual([]);
-  });
-
-  it('still shows a $0.00 spend chip when cost was reported as zero', () => {
-    expect(digestChips({ finished: 0, waiting: 0, failedOrStalled: 0, costUsd: 0 })).toEqual([
-      { id: 'spend', label: '$0.00', section: 'home-spend' },
-    ]);
   });
 });

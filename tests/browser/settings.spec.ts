@@ -157,7 +157,7 @@ test('provider setting dropdowns return focus to their trigger after a keyboard 
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   const claude = providers.locator('.pcard').filter({ hasText: 'Claude' });
   await claude.locator('.pc-head').click();
-  const rows = ['Claude default mode', 'Claude harness autonomy', 'Claude effort'];
+  const rows = ['Claude default mode', 'Claude effort'];
   if ((await claude.getByRole('button', { name: 'Claude model' }).count()) > 0) {
     rows.unshift('Claude model');
   }

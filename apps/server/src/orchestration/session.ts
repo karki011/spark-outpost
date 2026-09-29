@@ -20,6 +20,7 @@ import type { CodeScanner, ScanOutcome } from '../codescan/scanner.ts';
 import type { ProjectChecks } from '../checks/project-checks.ts';
 import { nextArtifactVersion, type ArtifactWrite } from '../persistence/artifacts.ts';
 import type { Lease } from '../persistence/jobs.ts';
+import { effectiveSpendCap } from '../persistence/setup.ts';
 import {
   loadOrchestration,
   updateOrchestration,
@@ -163,11 +164,15 @@ export function toolCallLimitFor(provider: string): number {
     : ORCHESTRATION_TOOL_CALL_LIMIT;
 }
 
-export function baseLimits(deps: OrchestratorDeps, provider: string): BudgetLimits {
+export function baseLimits(
+  deps: OrchestratorDeps,
+  provider: string,
+  savedSpendCapUsd: number | null,
+): BudgetLimits {
   return {
     activeLimitMs: deps.budget?.activeLimitMs ?? ORCHESTRATION_ACTIVE_LIMIT_MS,
     toolCallLimit: deps.budget?.toolCallLimit ?? toolCallLimitFor(provider),
-    costCapUsd: deps.budget?.costCapUsd ?? null,
+    costCapUsd: effectiveSpendCap(savedSpendCapUsd, deps.budget?.costCapUsd ?? null),
   };
 }
 

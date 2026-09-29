@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery, queryKeys } from '../api/client.ts';
 import {
-  AUTONOMY_LEVELS,
   type CapabilityOption,
   type Choice,
   type ProviderCapabilities,
@@ -33,8 +32,6 @@ function modeChoices(capabilities: ProviderCapabilities | undefined, current: st
     ),
   );
 }
-
-const AUTONOMY_CHOICES = AUTONOMY_LEVELS.map((info) => toChoice(info.id, info.label, info.hint));
 
 const PER_CHAT = 'per-chat';
 const PER_CHAT_NOTE = 'Each chat keeps its own effort, and Do-task Builders follow it.';
@@ -122,18 +119,6 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
               onChange={(id) => mutation.mutate({ agentMode: id })}
             />
           )}
-        </dd>
-        <dt>Harness autonomy</dt>
-        <dd>
-          <ChoicePicker
-            label={`${provider.name} harness autonomy`}
-            choices={AUTONOMY_CHOICES}
-            value={connection.level}
-            onChange={(id) => {
-              const level = AUTONOMY_LEVELS.find((info) => info.id === id);
-              if (level) mutation.mutate({ level: level.id });
-            }}
-          />
         </dd>
         <dt>Effort</dt>
         <dd>

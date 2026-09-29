@@ -158,6 +158,12 @@ export function countBy(tickets: readonly InboxTicket[]): Record<TicketSection, 
 export const ticketId = (ticket: { source: TicketSourceId; key: string }) =>
   `${ticket.source}:${ticket.key}`;
 
+const ITEM_PREFIX = 'ticket:';
+
+export function inboxIdOf(itemId: string): string | null {
+  return itemId.startsWith(ITEM_PREFIX) ? itemId.slice(ITEM_PREFIX.length) : null;
+}
+
 const WEB_LINK = /^https?:\/\//i;
 
 export function safeUrl(url: string | null | undefined): string | undefined {

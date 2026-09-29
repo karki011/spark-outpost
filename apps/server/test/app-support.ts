@@ -25,6 +25,7 @@ export interface TestAppOptions {
   githubApiUrl?: string;
   linearApiUrl?: string;
   locateGh?: () => Promise<string | null>;
+  serverSpendCapUsd?: number;
 }
 
 const unavailableProbe: AppOptions['probeCapabilities'] = () =>
@@ -59,6 +60,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     githubApiUrl: options.githubApiUrl,
     linearApiUrl: options.linearApiUrl,
     locateGh: options.locateGh ?? (async () => null),
+    serverSpendCapUsd: options.serverSpendCapUsd,
   });
 }
 
