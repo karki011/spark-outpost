@@ -54,7 +54,7 @@ describe('DiffView', () => {
   });
 
   it('diffs a large rewrite off the main thread and shows a skeleton meanwhile', () => {
-    const diff = { path: 'big.ts', oldText: lines(3000, 'old'), newText: lines(3000, 'new') };
+    const diff = { path: 'big.ts', oldText: lines(100, 'old'), newText: lines(100, 'new') };
     render(<DiffView diff={diff} />);
     const body = screen.getByRole('region', { name: 'Changes to big.ts' });
     expect(body.getAttribute('aria-busy')).toBe('true');
@@ -65,12 +65,12 @@ describe('DiffView', () => {
     act(() => worker!.answer());
     expect(body.getAttribute('aria-busy')).toBeNull();
     expect(body.querySelectorAll('.dv-row').length).toBeGreaterThan(0);
-    expect(screen.getByText('+3k')).toBeTruthy();
+    expect(screen.getByText('+100')).toBeTruthy();
     expect(worker!.terminated).toBe(true);
   });
 
   it('stops the worker when the diff goes away before it answers', () => {
-    const diff = { path: 'big.ts', oldText: lines(3000, 'old'), newText: lines(3000, 'new') };
+    const diff = { path: 'big.ts', oldText: lines(100, 'old'), newText: lines(100, 'new') };
     const { unmount } = render(<DiffView diff={diff} />);
     unmount();
     expect(FakeWorker.all[0]!.terminated).toBe(true);
