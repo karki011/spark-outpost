@@ -100,7 +100,7 @@ export async function dailySpend(
        COALESCE(sum(cost) FILTER (WHERE estimated), 0)::float8 AS estimated_usd
      FROM (
        SELECT to_char(r.created_at AT TIME ZONE $4, 'YYYY-MM-DD') AS day, true AS agent,
-         r.cost_usd AS cost, r.cost_source = 'estimated' AS estimated
+         r.cost_usd AS cost, r.cost_source IS NOT DISTINCT FROM 'estimated' AS estimated
        ${WORKSPACE_RUNS}
        UNION ALL
        SELECT to_char(r.created_at AT TIME ZONE $4, 'YYYY-MM-DD'), false, a.jev_cost_usd, true

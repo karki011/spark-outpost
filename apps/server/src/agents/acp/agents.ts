@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { ProviderId } from '@spark-outpost/contracts';
+import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { ClaudeRepoOptions, CodexRepoOptions, RepoStyle } from './repo-session.ts';
@@ -66,19 +67,7 @@ export const CLAUDE_DO_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
 const CLAUDE_DO_MODE = 'default';
 export const CODEX_DO_MODE = 'ask-every-action';
 
-export const BUILDER_PUBLISH_DENY_RULES = [
-  'Bash(git push:*)',
-  'Bash(git remote add:*)',
-  'Bash(git remote set-url:*)',
-  'Bash(git remote remove:*)',
-  'Bash(git remote rm:*)',
-  'Bash(git remote rename:*)',
-  'Bash(git send-email:*)',
-  'Bash(git request-pull:*)',
-  'Bash(gh:*)',
-  'Bash(hub:*)',
-  'Bash(glab:*)',
-] as const;
+export const BUILDER_PUBLISH_DENY_RULES = PUBLISH_COMMANDS.map((command) => `Bash(${command}:*)`);
 
 export function secretReadRules(extraRoots: readonly string[]): string[] {
   const underCwd = SECRET_FILE_PATTERNS.map((pattern) => `**/${pattern}`);

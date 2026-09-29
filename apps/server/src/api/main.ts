@@ -11,7 +11,7 @@ import { configuredBackup } from '../persistence/startup-backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
-import { keychainSecretStore, memorySecretStore } from '../setup/secrets.ts';
+import { configuredSecretStore } from '../setup/secrets.ts';
 import { loginShellSpawner } from '../terminal/pty.ts';
 import { ensureSpawnHelperExecutable } from '../terminal/pty-helper.ts';
 import { TerminalSessions } from '../terminal/sessions.ts';
@@ -45,10 +45,7 @@ const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.
 const appEvents = new AppEventFeed();
 const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
 
-const secrets =
-  config.SECRET_STORE === 'memory'
-    ? memorySecretStore()
-    : keychainSecretStore(config.KEYCHAIN_SERVICE);
+const secrets = configuredSecretStore(config);
 const app = createApp({
   db,
   hub,

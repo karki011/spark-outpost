@@ -1,5 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import type { McpCheck, McpScope, McpTransport } from '@spark-outpost/contracts';
+import { z } from 'zod';
+import {
+  mcpCheckSchema,
+  userMcpServerSchema,
+  type McpCheck,
+  type McpScope,
+  type McpTransport,
+} from '@spark-outpost/contracts';
 import { mcpFingerprint, storedMcpConfig, type McpServerConfig } from '../agent-config/mcp-json.ts';
 import { audit } from '../agent-config/store.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
@@ -40,10 +47,24 @@ interface ServerDbRow {
   source: string;
   name: string;
   transport: McpTransport;
-  config: Partial<StoredUserConfig>;
+  config: unknown;
   fingerprint: string;
-  last_check: McpCheck | null;
+  last_check: unknown;
 }
+
+const serverShape = userMcpServerSchema.shape;
+const configFieldsSchema = z.object({
+  command: serverShape.command.catch(null),
+  args: serverShape.args.catch([]),
+  url: serverShape.url.catch(null),
+  envNames: serverShape.envNames.catch([]),
+  headerNames: serverShape.headerNames.catch([]),
+  secretNames: serverShape.secretNames.catch([]),
+  importableNames: serverShape.importableNames.catch([]),
+  origin: serverShape.origin.catch(null),
+});
+const storedConfigSchema = configFieldsSchema.catch(() => configFieldsSchema.parse({}));
+const storedCheckSchema = mcpCheckSchema.nullable().catch(null);
 
 function toRow(row: ServerDbRow): UserMcpRow {
   return {
@@ -52,17 +73,8 @@ function toRow(row: ServerDbRow): UserMcpRow {
     name: row.name,
     transport: row.transport,
     fingerprint: row.fingerprint,
-    check: row.last_check,
-    config: {
-      command: row.config.command ?? null,
-      args: row.config.args ?? [],
-      url: row.config.url ?? null,
-      envNames: row.config.envNames ?? [],
-      headerNames: row.config.headerNames ?? [],
-      secretNames: row.config.secretNames ?? [],
-      importableNames: row.config.importableNames ?? [],
-      origin: row.config.origin ?? null,
-    },
+    check: storedCheckSchema.parse(row.last_check),
+    config: storedConfigSchema.parse(row.config),
   };
 }
 

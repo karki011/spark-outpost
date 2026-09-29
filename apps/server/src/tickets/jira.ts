@@ -25,6 +25,7 @@ const DETAIL_FIELDS = [
   'subtasks',
 ];
 
+const dateSchema = z.string().refine((value) => !Number.isNaN(Date.parse(value)));
 const statusSchema = z.object({
   name: z.string(),
   statusCategory: z.object({ key: z.string() }).optional(),
@@ -38,7 +39,7 @@ const sprintSchema = z
 const fieldsSchema = z.object({
   summary: z.string(),
   status: statusSchema,
-  updated: z.string(),
+  updated: dateSchema,
   priority: named,
   project: z.object({ key: z.string() }).nullable().optional(),
   [SPRINT_FIELD]: sprintSchema,
@@ -56,7 +57,7 @@ const detailSchema = z.object({
           z.object({
             author: z.object({ displayName: z.string() }).nullable().optional(),
             body: z.unknown(),
-            created: z.string(),
+            created: dateSchema,
           }),
         ),
       })

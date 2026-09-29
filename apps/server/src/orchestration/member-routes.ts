@@ -1,6 +1,6 @@
 import { agentLabel, nextCrewName, type AgentPick, type AgentRole } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../advisor/policy.ts';
-import { whyLine } from '../model-cards/why.ts';
+import { jevLabel, samePickModel, whyLine } from '../model-cards/why.ts';
 import { insertDecision, usedNames } from '../persistence/orchestrations.ts';
 import { complexByBreadth, complexByJev, firstSignal } from './builder-complexity.ts';
 import { belowFloor, floorReason, type FloorRole } from './model-floor.ts';
@@ -119,8 +119,8 @@ export function labelFor(role: AgentRole, pick: AgentPick, name: string): string
 
 function jevLine(route: MemberRoute): string {
   const jev = route.autoWouldUse;
-  if (!jev || jev.model === route.pick.model) return '';
-  return ` · Jev would have used ${jev.modelLabel ?? jev.model}`;
+  if (!jev || samePickModel(jev, route.pick)) return '';
+  return ` · Jev would have used ${jevLabel(jev, route.pick)}`;
 }
 
 export async function recordRoute(

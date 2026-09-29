@@ -1,5 +1,6 @@
 import os from 'node:os';
 import type { ProviderConnection, ProviderId } from '@spark-outpost/contracts';
+import { redactText } from '../audit/redact.ts';
 import { catalogEntry, type CatalogEntry } from '../providers/catalog.ts';
 import type { RunCommand } from './command.ts';
 import type { SecretStore } from './secrets.ts';
@@ -39,7 +40,7 @@ function answered(startedAt: number, model: string | null): TestOutcome {
 }
 
 function failedWith(reason: string): TestOutcome {
-  return { ok: false, message: `The test message failed: ${reason}` };
+  return { ok: false, message: `The test message failed: ${redactText(reason)}` };
 }
 
 function httpReason(entry: CatalogEntry, status: number): string {

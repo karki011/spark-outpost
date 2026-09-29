@@ -328,6 +328,7 @@ async function existingSend(
   const existing = message.rows[0];
   if (
     !existing ||
+    existing.role !== 'user' ||
     existing.conversation_id !== conversationId ||
     existing.content !== request.content
   ) {
@@ -345,5 +346,7 @@ async function existingSend(
     'SELECT * FROM runs WHERE user_message_id = $1 AND parent_run_id IS NULL',
     [request.id],
   );
-  return { message: toMessage(existing, attachments), run: toRun(run.rows[0]!) };
+  const sent = run.rows[0];
+  if (!sent) throw new MessageConflictError(request.id);
+  return { message: toMessage(existing, attachments), run: toRun(sent) };
 }

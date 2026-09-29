@@ -126,15 +126,20 @@ export function withTransaction<T>(db: Db, work: (client: DbClient) => Promise<T
 
 async function runTransaction<T>(db: Db, work: (client: DbClient) => Promise<T>): Promise<T> {
   const client = await db.connect();
+  let broken: Error | undefined;
   try {
     await client.query('BEGIN');
     const result = await work(client);
     await client.query('COMMIT');
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      broken = rollbackError as Error;
+    }
     throw error;
   } finally {
-    client.release();
+    client.release(broken);
   }
 }

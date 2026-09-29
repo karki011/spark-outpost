@@ -1,25 +1,37 @@
-import type { ProjectTrust } from '@spark-outpost/contracts';
+import { z } from 'zod';
+import { trustChangeSchema, type ProjectTrust } from '@spark-outpost/contracts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 import { classifyAllowRule } from './allow-rules.ts';
 import type { RepoScan } from './discovery.ts';
 import { redirectsFingerprint } from './redirects.ts';
 import { audit } from './store.ts';
-import { executableItems, trustFingerprint, type ExecutableItem, type TrustRow } from './trust.ts';
+import { executableItems, trustFingerprint, type TrustRow } from './trust.ts';
 
 interface TrustDbRow {
   project_id: string;
   trusted: boolean;
   fingerprint: string | null;
-  snapshot: ExecutableItem[];
+  snapshot: unknown;
   redirects_fingerprint: string | null;
   decided_at: Date;
 }
+
+const snapshotSchema = z
+  .array(
+    z.object({
+      kind: trustChangeSchema.shape.kind,
+      key: z.string(),
+      label: z.string(),
+      fingerprint: z.string(),
+    }),
+  )
+  .catch([]);
 
 function toTrust(row: TrustDbRow): TrustRow {
   return {
     trusted: row.trusted,
     fingerprint: row.fingerprint,
-    snapshot: row.snapshot,
+    snapshot: snapshotSchema.parse(row.snapshot),
     redirectsFingerprint: row.redirects_fingerprint,
     decidedAt: row.decided_at.toISOString(),
   };

@@ -3,8 +3,24 @@ import path from 'node:path';
 const CONTROL_OPERATORS = /[;&|\n]|\$\(|`|[<>]/;
 const SEPARATORS = new Set([';', '&', '|', '\n']);
 const REDIRECTS = new Set(['<', '>']);
-const WRAPPERS = new Set(['sudo', 'command', 'exec', 'nohup', 'time', 'env', 'xargs']);
-const DELETERS = new Set(['rm', 'rmdir', 'unlink', 'shred', 'srm', 'trash']);
+const WRAPPER_VALUE_FLAGS = new Map<string, ReadonlySet<string>>([
+  ['sudo', new Set(['-u', '-g', '-C', '-D', '-h', '-p', '-r', '-t', '-U', '--user', '--group'])],
+  ['doas', new Set(['-u', '-C'])],
+  ['command', new Set()],
+  ['exec', new Set(['-a'])],
+  ['nohup', new Set()],
+  ['time', new Set()],
+  ['env', new Set(['-u', '-C', '--unset', '--chdir'])],
+  ['nice', new Set(['-n', '--adjustment'])],
+  ['ionice', new Set(['-c', '-n', '--class', '--classdata'])],
+  ['timeout', new Set(['-s', '-k', '--signal', '--kill-after'])],
+  ['stdbuf', new Set(['-i', '-o', '-e', '--input', '--output', '--error'])],
+  ['caffeinate', new Set(['-t', '-w'])],
+  ['xargs', new Set(['-I', '-n', '-P', '-L', '-s', '-d', '-E', '-a', '--max-args', '--max-procs'])],
+]);
+const WRAPPER_OPERANDS = new Map([['timeout', 1]]);
+const ENV_SPLIT = /^(?:-S|--split-string)/;
+export const COMMAND_WRAPPERS: ReadonlySet<string> = new Set(WRAPPER_VALUE_FLAGS.keys());
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 
 export function normalizeCommand(command: string): string {
@@ -64,66 +80,43 @@ export function splitSimpleCommands(command: string): string[][] {
   return commands;
 }
 
-function programName(program: readonly string[]): string {
+export function programName(program: readonly string[]): string {
   return path.basename(program[0] ?? '');
 }
 
-export function programTokens(tokens: readonly string[]): string[] {
+export interface Unwrapped {
+  program: string[];
+  wrappers: string[];
+  splitsString: boolean;
+}
+
+export function unwrapCommand(tokens: readonly string[]): Unwrapped {
+  const wrappers: string[] = [];
+  let splitsString = false;
   let index = 0;
   while (index < tokens.length) {
     const token = tokens[index]!;
-    if (ASSIGNMENT.test(token)) index++;
-    else if (WRAPPERS.has(path.basename(token))) {
+    const wrapper = path.basename(token);
+    const valueFlags = WRAPPER_VALUE_FLAGS.get(wrapper);
+    if (ASSIGNMENT.test(token)) {
       index++;
-      while (index < tokens.length && tokens[index]!.startsWith('-')) index++;
-    } else break;
-  }
-  return tokens.slice(index);
-}
-
-export function isGitPush(command: string): boolean {
-  return splitSimpleCommands(command).some((tokens) => {
-    const program = programTokens(tokens);
-    if (programName(program) !== 'git') return false;
-    return program.slice(1).some((token) => token === 'push');
-  });
-}
-
-function isForceFlag(token: string): boolean {
-  if (token === '--force' || token === '--mirror') return true;
-  if (token.startsWith('--force-with-lease') || token === '--force-if-includes') return true;
-  return /^-[a-zA-Z]*f[a-zA-Z]*$/.test(token);
-}
-
-export function isGitForcePush(command: string): boolean {
-  return splitSimpleCommands(command).some((tokens) => {
-    const program = programTokens(tokens);
-    if (programName(program) !== 'git') return false;
-    const pushAt = program.indexOf('push');
-    if (pushAt < 1) return false;
-    return program.slice(pushAt + 1).some((token) => isForceFlag(token) || /^\+[^+]/.test(token));
-  });
-}
-
-export function deletedPaths(command: string): string[] {
-  return splitSimpleCommands(command).flatMap((tokens) => {
-    const program = programTokens(tokens);
-    const name = programName(program);
-    const args = program.slice(1);
-    if (DELETERS.has(name)) return args.filter((arg) => !arg.startsWith('-'));
-    if (name === 'find' && args.includes('-delete')) {
-      const searchRoots = args.slice(
-        0,
-        args.findIndex((arg) => arg.startsWith('-')),
-      );
-      return searchRoots.length > 0 ? searchRoots : ['.'];
+      continue;
     }
-    return [];
-  });
+    if (!valueFlags) break;
+    wrappers.push(wrapper);
+    index++;
+    while (index < tokens.length && tokens[index]!.startsWith('-')) {
+      const flag = tokens[index]!;
+      if (wrapper === 'env' && ENV_SPLIT.test(flag)) splitsString = true;
+      index += valueFlags.has(flag) ? 2 : 1;
+    }
+    index += WRAPPER_OPERANDS.get(wrapper) ?? 0;
+  }
+  return { program: tokens.slice(index), wrappers, splitsString };
 }
 
-export function commandWords(command: string): string[] {
-  return splitSimpleCommands(command).flat();
+export function programTokens(tokens: readonly string[]): string[] {
+  return unwrapCommand(tokens).program;
 }
 
 export function resolveCommandPath(word: string, cwd: string, home: string): string {
@@ -140,53 +133,5 @@ export function allowlistCovers(allowlist: readonly string[], command: string): 
     if (allowed === '' || hasControlOperators(allowed)) return false;
     if (normalized === allowed) return true;
     return normalized.startsWith(`${allowed} `) && !hasControlOperators(normalized);
-  });
-}
-
-const REMOTE_CHANGES = new Set([
-  'add',
-  'set-url',
-  'remove',
-  'rm',
-  'rename',
-  'set-head',
-  'set-branches',
-]);
-const HOSTING_CLIS = new Set(['gh', 'hub', 'glab', 'tea']);
-
-function gitSubcommand(args: readonly string[]): { name: string; rest: string[] } | null {
-  let index = 0;
-  while (index < args.length) {
-    const token = args[index]!;
-    if (token === '-C' || token === '-c' || token === '--git-dir' || token === '--work-tree') {
-      index += 2;
-    } else if (token.startsWith('-')) index += 1;
-    else return { name: token, rest: args.slice(index + 1) };
-  }
-  return null;
-}
-
-const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh']);
-
-function shellScript(program: readonly string[]): string | null {
-  if (!SHELLS.has(programName(program))) return null;
-  const flag = program.findIndex((token, index) => index > 0 && /^-[a-z]*c[a-z]*$/.test(token));
-  return flag > 0 ? (program[flag + 1] ?? null) : null;
-}
-
-export function publishesCode(command: string, depth = 0): boolean {
-  return splitSimpleCommands(command).some((tokens) => {
-    const program = programTokens(tokens);
-    const script = shellScript(program);
-    if (script !== null) return depth < 3 && publishesCode(script, depth + 1);
-    const name = programName(program);
-    if (HOSTING_CLIS.has(name)) return true;
-    if (name !== 'git') return false;
-    const sub = gitSubcommand(program.slice(1));
-    if (!sub) return false;
-    if (sub.name === 'push' || sub.name === 'send-email' || sub.name === 'request-pull') {
-      return true;
-    }
-    return sub.name === 'remote' && sub.rest.some((token) => REMOTE_CHANGES.has(token));
   });
 }
