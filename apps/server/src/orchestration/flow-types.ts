@@ -34,6 +34,8 @@ export type FlowAction =
     }
   | ({ type: 'spawn' } & Spawn)
   | { type: 'plan'; note: string | null }
+  | { type: 'plan_first'; note: string | null }
+  | { type: 'ask_agent'; then: ClarifiedStart }
   | { type: 'verify' }
   | { type: 'wrap_up' }
   | { type: 'keep'; approvedEach?: boolean }
@@ -49,15 +51,16 @@ export type FlowAction =
 
 export type AgentOutcome = 'succeeded' | 'failed' | 'cancelled';
 
-export type StartMode = 'answer' | 'build' | 'interpret' | 'clarify' | 'plan' | 'review';
+export type StartMode = 'answer' | 'build' | 'ask_agent' | 'plan_first' | 'plan' | 'review';
 
-export type ClarifiedStart = 'answer' | 'plan' | 'build';
+export type ClarifiedStart = 'answer' | 'plan' | 'build' | 'plan_first';
 
 export type ReadOnlyWork = 'plan' | 'review';
 
 export type FlowEvent =
-  | { type: 'start'; start: StartMode }
+  | { type: 'start'; start: StartMode; then?: ClarifiedStart }
   | { type: 'clarified'; start: ClarifiedStart | null }
+  | { type: 'unclear'; followUp: boolean }
   | {
       type: 'agent_done';
       role: AgentRole;
@@ -121,6 +124,7 @@ export interface FlowState {
   confirmFirst: string | null;
   solo?: boolean;
   missingContext?: string | null;
+  then?: ClarifiedStart;
 }
 
 export interface FlowResult {

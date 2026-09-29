@@ -37,6 +37,7 @@ export const CHECKPOINT_OPTION = {
   justAnswer: 'just_answer',
   makeChange: 'make_change',
   finishUnverified: 'finish_unverified',
+  useDefaults: 'defaults',
 } as const;
 
 export const clarifyOptionId = (index: number): string => `option:${index}`;

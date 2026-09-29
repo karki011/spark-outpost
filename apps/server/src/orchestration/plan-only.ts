@@ -37,7 +37,7 @@ export function planCard(version: number): CheckpointCard {
     payload: checkpointPayloadSchema.parse({ kind: 'plan', question: PLAN_QUESTION, reason }),
     options: [
       { optionId: CHECKPOINT_OPTION.approvePlan, name: 'Approve plan', kind: 'allow_once' },
-      { optionId: CHECKPOINT_OPTION.editPlan, name: 'Revise the plan', kind: 'allow_once' },
+      { optionId: CHECKPOINT_OPTION.editPlan, name: 'Revise', kind: 'allow_once' },
       { optionId: CHECKPOINT_OPTION.stop, name: 'Stop', kind: 'reject_once' },
     ],
   };
@@ -45,7 +45,7 @@ export function planCard(version: number): CheckpointCard {
 
 const originals = new WeakMap<Session, string>();
 
-async function closeReply(s: Session): Promise<string | null> {
+export async function closeReply(s: Session): Promise<string | null> {
   const message = s.message;
   if (!message) return null;
   await closeMessage(s.append, { messageId: message.id, text: message.text }, true);
@@ -71,7 +71,7 @@ async function propose(s: Session, body: string, messageId: string | null) {
 
 async function settle(s: Session, plan: PlanDocument, optionId: string): Promise<void> {
   const settled =
-    optionId === CHECKPOINT_OPTION.approvePlan
+    optionId === CHECKPOINT_OPTION.approvePlan || optionId === CHECKPOINT_OPTION.makeChange
       ? await approvePlanDocument(s.deps.db, plan.id, {
           by: 'user',
           option: optionId,
@@ -82,7 +82,11 @@ async function settle(s: Session, plan: PlanDocument, optionId: string): Promise
   await announcePlan(s.append, settled);
 }
 
-async function settleQuietly(s: Session, plan: PlanDocument, optionId: string): Promise<void> {
+export async function settleQuietly(
+  s: Session,
+  plan: PlanDocument,
+  optionId: string,
+): Promise<void> {
   try {
     await settle(s, plan, optionId);
   } catch (error) {
@@ -91,12 +95,18 @@ async function settleQuietly(s: Session, plan: PlanDocument, optionId: string): 
   }
 }
 
-export async function writePlanOnly(s: Session, note: string | null): Promise<FlowEvent> {
-  const hit = await checkBudget(s);
-  if (hit) return { type: 'budget_exceeded', limit: hit, unstarted: true };
+export type Drafted = { plan: PlanDocument } | { event: FlowEvent };
+
+export function originalPrompt(s: Session): string {
   const original = originals.get(s) ?? s.input.prompt;
   originals.set(s, original);
-  s.input = { ...s.input, prompt: planOnlyPrompt(original, note) };
+  return original;
+}
+
+export async function draftPlan(s: Session, prompt: string, note: string | null): Promise<Drafted> {
+  const hit = await checkBudget(s);
+  if (hit) return { event: { type: 'budget_exceeded', limit: hit, unstarted: true } };
+  s.input = { ...s.input, prompt };
   const { result } = await runMember(s, {
     role: 'scout',
     reason: note ? 'retry' : 'first',
@@ -106,26 +116,33 @@ export async function writePlanOnly(s: Session, note: string | null): Promise<Fl
   if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
   await publish(s);
   if (s.budgetHit && s.control.reason() === null) {
-    return { type: 'budget_exceeded', limit: s.budgetHit };
+    return { event: { type: 'budget_exceeded', limit: s.budgetHit } };
   }
   const body = result.text.trim();
   if (result.outcome !== 'succeeded' || !body) {
     return {
-      type: 'agent_done',
-      role: 'scout',
-      outcome: result.outcome === 'succeeded' ? 'failed' : result.outcome,
-      error: result.error ?? (body ? null : 'The planner replied without a plan.'),
+      event: {
+        type: 'agent_done',
+        role: 'scout',
+        outcome: result.outcome === 'succeeded' ? 'failed' : result.outcome,
+        error: result.error ?? (body ? null : 'The planner replied without a plan.'),
+      },
     };
   }
   const messageId = await closeReply(s);
-  let plan: PlanDocument;
   try {
-    plan = await propose(s, body, messageId);
+    return { plan: await propose(s, body, messageId) };
   } catch (error) {
     if (error instanceof LeaseLostError) throw error;
     await planSaveFailed(s.append, error);
-    return { type: 'agent_done', role: 'scout', outcome: 'succeeded' };
+    return { event: { type: 'agent_done', role: 'scout', outcome: 'succeeded' } };
   }
+}
+
+export async function writePlanOnly(s: Session, note: string | null): Promise<FlowEvent> {
+  const drafted = await draftPlan(s, planOnlyPrompt(originalPrompt(s), note), note);
+  if ('event' in drafted) return drafted.event;
+  const { plan } = drafted;
   s.flow = { ...s.flow, phase: 'waiting', waitingFor: 'plan' };
   await save(s);
   const answer = await askCard(s, planCard(plan.version));

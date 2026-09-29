@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'intent-1-answer-first';
+export const POLICY_VERSION = 'intent-2-clarify-plan-first';
 
 export type ActingQuestion =
   | 'question'

@@ -1,4 +1,5 @@
 import { ruleAdvisor } from '../advisor/advice.ts';
+import { agreedPlanFor } from '../plans/plan-staleness.ts';
 import {
   askIntake,
   previousReply,
@@ -38,7 +39,13 @@ export function routeContext(input: RunInput, context: IntakeContext): RouteCont
 }
 
 function soloDecisions(decisions: IntakeDecisions): IntakeDecisions {
-  return { ...decisions, start: 'build', assume: false, review: false };
+  return { ...decisions, start: 'build', then: 'build', review: false };
+}
+
+async function hasAgreedPlan(deps: OrchestratorDeps, input: RunInput): Promise<boolean> {
+  const root = input.projectRoots[0] ?? null;
+  const plan = await agreedPlanFor(deps.db, input.identity.threadId, root).catch(() => null);
+  return plan !== null;
 }
 
 export async function runIntake(
@@ -66,6 +73,7 @@ export async function runIntake(
     currentTask: current,
     previousReply: previousReply(input),
     change: input.startAs === 'change',
+    hasAgreedPlan: await hasAgreedPlan(deps, input),
   });
   const decisions = solo ? soloDecisions(decided) : decided;
   const pick = routeBuilder(routeContext(input, asked.context), decisions).pick;

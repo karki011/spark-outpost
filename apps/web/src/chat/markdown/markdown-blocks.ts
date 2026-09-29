@@ -1,3 +1,9 @@
+const CLARIFY_BLOCK = /\n*```clarify[\s\S]*?(?:\n```|$)\s*/g;
+
+export function withoutClarifyBlock(text: string): string {
+  return text.replace(CLARIFY_BLOCK, '\n').trimEnd();
+}
+
 const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 const LIST_ITEM = /^ {0,3}([-*+]|\d{1,9}[.)])(\s|$)/;
 const REFERENCE_DEFINITION = /^ {0,3}\[[^\]]+\]:/m;

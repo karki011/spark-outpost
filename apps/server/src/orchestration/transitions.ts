@@ -25,7 +25,7 @@ import {
 } from './checkpoint-policy.ts';
 import { criticFixFollowUp } from './context.ts';
 import { FOLLOW_UP_REASON } from './follow-up.ts';
-import { reviewExisting, writePlan } from './read-only-flow.ts';
+import { askAgent, planFirst, reviewExisting, writePlan } from './read-only-flow.ts';
 import {
   afterReview,
   canFixAgain,
@@ -363,6 +363,8 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
     );
   }
   if (event.kind === 'plan' && state.readOnly !== 'plan') {
+    const note = option === CHECKPOINT_OPTION.editPlan ? event.note?.trim() : null;
+    if (note) return planFirst(state, note);
     if (option !== CHECKPOINT_OPTION.makeChange)
       return finish(state, 'cancelled', 'You stopped it.');
     return build({ ...state, confirmFirst: null });
@@ -396,6 +398,7 @@ function clarified(state: FlowState, start: ClarifiedStart | null): FlowResult {
   if (start === null) return finish(state, 'cancelled', 'You stopped it.');
   if (start === 'answer') return answer(state);
   if (start === 'plan') return writePlan(state, null);
+  if (start === 'plan_first' || state.then === 'plan_first') return planFirst(state, null);
   return build(state);
 }
 
@@ -405,15 +408,14 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
       if (event.start === 'answer') return answer(state);
       if (event.start === 'plan') return writePlan(state, null);
       if (event.start === 'review') return reviewExisting(state);
-      if (event.start === 'interpret') {
-        return ask(state, 'clarify', 'The request does not say what to change.', {
-          interpret: true,
-        });
-      }
-      if (event.start === 'clarify') {
-        return ask(state, 'clarify', FOLLOW_UP_REASON, { followUp: true });
-      }
+      if (event.start === 'ask_agent') return askAgent(state, event.then ?? 'build');
+      if (event.start === 'plan_first') return planFirst(state, null);
       return build(state);
+    case 'unclear':
+      if (event.followUp) return ask(state, 'clarify', FOLLOW_UP_REASON, { followUp: true });
+      return ask(state, 'clarify', 'The request does not say what to change.', {
+        interpret: true,
+      });
     case 'clarified':
       return clarified(state, event.start);
     case 'agent_done':

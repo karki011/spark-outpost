@@ -274,11 +274,15 @@ export async function askCheckpoint(
   };
 }
 
-export async function askCard(s: Session, card: CheckpointCard): Promise<CheckpointAnswer> {
+export async function askCard(
+  s: Session,
+  card: CheckpointCard,
+  fallbackSeconds: number | null = null,
+): Promise<CheckpointAnswer> {
   await publish(s);
   s.checkpoints += 1;
   const seconds = card.payload.autoOption
-    ? await autoContinueSeconds(s.deps.db, s.input.workspaceId)
+    ? ((await autoContinueSeconds(s.deps.db, s.input.workspaceId)) ?? fallbackSeconds)
     : null;
   return askCheckpoint(
     {

@@ -63,7 +63,7 @@ async function run(
   harness = startOrchestrator(t, jevFetch({ calls: [], scenario }));
   const { conversationId, runId } = await startScenario(t, root, scenario, level);
   const done = await driveToEnd(t, conversationId, runId, answer);
-  const [reply] = await assistantReplies(t, runId);
+  const reply = (await assistantReplies(t, runId)).at(-1);
   return { ...done, reply: reply ?? '', runId };
 }
 

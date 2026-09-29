@@ -343,7 +343,23 @@ async function unstick(turn: RoleTurn): Promise<acp.StopReason> {
   return 'end_turn';
 }
 
+const FAKE_QUESTIONS = {
+  questions: [{ question: 'Which report?', options: ['Spend', 'Usage'], default: 'Spend' }],
+};
+
+async function askQuestions(turn: RoleTurn): Promise<acp.StopReason> {
+  const block = ['```clarify', JSON.stringify(FAKE_QUESTIONS), '```'].join('\n');
+  await turn.say(`1. Which report do you mean: Spend or Usage?\n\n${block}`);
+  return 'end_turn';
+}
+
+async function askNothing(turn: RoleTurn): Promise<acp.StopReason> {
+  await turn.say('I could not tell what to ask about.');
+  return 'end_turn';
+}
+
 export function roleFor(text: string): ((turn: RoleTurn) => Promise<acp.StopReason>) | null {
+  if (text.includes('```clarify')) return text.includes('#questions') ? askQuestions : askNothing;
   if (text.includes('You stopped before finishing')) return continueTodos;
   if (text.includes('The harness stopped your last turn')) return unstick;
   if (text.includes('The user asked for a fix')) return fixRequest;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { splitBlocks } from './markdown-blocks.ts';
+import { splitBlocks, withoutClarifyBlock } from './markdown-blocks.ts';
 
 describe('splitBlocks', () => {
   it('splits top-level blocks at blank lines and keeps the source intact', () => {
@@ -40,5 +40,14 @@ describe('splitBlocks', () => {
       expect(blocks.slice(0, sealed.length)).toEqual(sealed);
       sealed = blocks.slice(0, -1);
     }
+  });
+});
+
+describe('the clarify block', () => {
+  it('hides the machine-readable questions, also while they stream', () => {
+    const block = '```clarify\n{"questions":[]}\n```';
+    expect(withoutClarifyBlock(`1. Which report?\n\n${block}`)).toBe('1. Which report?');
+    expect(withoutClarifyBlock('1. Which report?\n\n```clarify\n{"quest')).toBe('1. Which report?');
+    expect(withoutClarifyBlock('```ts\nconst a = 1;\n```')).toBe('```ts\nconst a = 1;\n```');
   });
 });

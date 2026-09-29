@@ -3,7 +3,7 @@ import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remend from 'remend';
 import { CodeBlock } from './CodeBlock.tsx';
-import { splitBlocks } from './markdown-blocks.ts';
+import { splitBlocks, withoutClarifyBlock } from './markdown-blocks.ts';
 import './code-tokens.css';
 import './markdown.css';
 
@@ -73,7 +73,7 @@ const MarkdownBlock = memo(function MarkdownBlock({ text, streaming }: Required<
 });
 
 export const Markdown = memo(function Markdown({ text, streaming = false }: MarkdownProps) {
-  const blocks = splitBlocks(text);
+  const blocks = splitBlocks(withoutClarifyBlock(text));
   return (
     <div className="md">
       {blocks.map((block, index) => (

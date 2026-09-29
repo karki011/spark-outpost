@@ -133,6 +133,7 @@ const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.justAnswer]: 'Answered without changes.',
   [CHECKPOINT_OPTION.makeChange]: 'Making the change.',
   [CHECKPOINT_OPTION.finishUnverified]: 'Finished without verification.',
+  [CHECKPOINT_OPTION.useDefaults]: 'Went with the best guesses.',
 };
 
 const AUTO_LABELS: Record<string, string> = {
@@ -143,7 +144,14 @@ const AUTO_LABELS: Record<string, string> = {
   [CHECKPOINT_OPTION.finishUnverified]: 'Finish',
 };
 
+const COUNTDOWNS: Record<string, string> = {
+  [CHECKPOINT_OPTION.makeChange]: 'Building this plan in',
+  [CHECKPOINT_OPTION.useDefaults]: 'Going with my best guesses in',
+};
+
 export function autoLabel(optionId: string, seconds: number): string {
+  const countdown = COUNTDOWNS[optionId];
+  if (countdown) return `${countdown} ${seconds}s`;
   return `${AUTO_LABELS[optionId] ?? 'Continue'} (${seconds}s)`;
 }
 

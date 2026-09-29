@@ -75,18 +75,37 @@ describe('intake decisions', () => {
     ).toMatchObject({ start: 'build', destructive: true });
   });
 
-  it('asks one question for a vague follow-up with no referent, or answers at Full auto', () => {
+  it('asks the agent to clarify a vague follow-up with no referent, then plans first at Full auto', () => {
     const wrapUp = facts({ request: 'wrap up', previousReply: 'There is no src/dates.ts here.' });
-    expect(decideIntake(null, wrapUp).start).toBe('clarify');
+    expect(decideIntake(null, wrapUp)).toMatchObject({ start: 'ask_agent', then: 'build' });
     expect(decideIntake(null, wrapUp).calls.vague).toMatchObject({ rule: true, value: true });
     expect(decideIntake(jev({ vague: 0.9 }), { ...wrapUp, request: 'sort it' }).start).toBe(
-      'clarify',
+      'ask_agent',
     );
-    expect(decideIntake(null, { ...wrapUp, level: 'hands-off' }).start).toBe('clarify');
-    expect(decideIntake(null, { ...wrapUp, level: 'full-auto' }).start).toBe('answer');
+    expect(decideIntake(null, { ...wrapUp, level: 'hands-off' }).start).toBe('ask_agent');
+    expect(decideIntake(null, { ...wrapUp, level: 'full-auto' })).toMatchObject({
+      start: 'ask_agent',
+      then: 'plan_first',
+    });
     expect(decideIntake(jev({ vague: 0.05 }), wrapUp).start).toBe('build');
     const offered = { ...wrapUp, request: 'do it', previousReply: 'Want me to add the retry?' };
     expect(decideIntake(null, offered).start).toBe('build');
+  });
+
+  it('plans first for a big request at every level, and never when a plan is already agreed', () => {
+    const big = facts({
+      request:
+        'Add CSV export to the reports page, add a download button, update the docs and write a test',
+    });
+    for (const level of ['balanced', 'hands-off', 'full-auto'] as const) {
+      expect(decideIntake(null, { ...big, level }).start, level).toBe('plan_first');
+    }
+    expect(decideIntake(null, { ...big, hasAgreedPlan: true }).start).toBe('build');
+    expect(decideIntake(null, facts({ level: 'full-auto' })).start).toBe('build');
+    expect(
+      decideIntake(null, facts({ request: 'fix the typo in README line 3', level: 'full-auto' }))
+        .start,
+    ).toBe('build');
   });
 
   it('is destructive when either Jev or the keywords say so, never less', () => {
@@ -107,33 +126,26 @@ describe('intake decisions', () => {
     );
   });
 
-  it('asks what should change on a vague first message, or assumes by level', () => {
+  it('asks the agent to clarify a vague first message at every level', () => {
     const vague = facts({ request: 'Make the reports better', firstMessage: true });
-    expect(decideIntake(jev({ vague: 0.95 }), vague).start).toBe('interpret');
+    expect(decideIntake(jev({ vague: 0.95 }), vague)).toMatchObject({
+      start: 'ask_agent',
+      then: 'build',
+    });
     expect(decideIntake(jev({ vague: 0.95 }), { ...vague, level: 'full-auto' })).toMatchObject({
-      start: 'build',
-      assume: true,
+      start: 'ask_agent',
+      then: 'plan_first',
     });
-    expect(decideIntake(jev({ vague: 0.95 }), { ...vague, firstMessage: false }).start).toBe(
-      'clarify',
-    );
-  });
-
-  it('asks the clarify card at Auto-edit for the rerun\'s "Make it faster." (Jev vague 0.94)', () => {
-    const faster = facts({ request: 'Make it faster.', firstMessage: true, level: 'hands-off' });
+    const faster = { ...vague, request: 'Make it faster.', level: 'hands-off' as const };
     const decided = decideIntake(jev({ vague: 0.94, intent: 'refactor' }), faster);
-    expect(decided).toMatchObject({ start: 'interpret', assume: false });
+    expect(decided.start).toBe('ask_agent');
     expect(decided.calls.vague).toMatchObject({ jev: 0.94, value: true, source: 'jev' });
-    expect(decideIntake(null, faster)).toMatchObject({ start: 'interpret', assume: false });
-    expect(decideIntake(jev({ vague: 0.6 }), faster).start).toBe('interpret');
-    expect(decideIntake(jev({ vague: 0.94 }), { ...faster, level: 'full-auto' })).toMatchObject({
-      start: 'build',
-      assume: true,
-    });
+    expect(decideIntake(null, faster).start).toBe('ask_agent');
+    expect(decideIntake(jev({ vague: 0.6 }), faster).start).toBe('ask_agent');
     const clear = facts({
       request: 'The divider shows the wrong day after midnight. Fix it and add a test.',
       firstMessage: true,
-      level: 'hands-off',
+      level: 'full-auto',
     });
     expect(decideIntake(jev({ vague: 0.05 }), clear).start).toBe('build');
   });

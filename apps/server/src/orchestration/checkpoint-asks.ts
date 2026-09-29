@@ -71,7 +71,7 @@ export function intakeResponse(s: Session) {
   return s.intake.outcome.status === 'answered' ? s.intake.outcome.response : null;
 }
 
-function rewriteRequest(s: Session, rewrite: (text: string) => string): void {
+export function rewriteRequest(s: Session, rewrite: (text: string) => string): void {
   s.input = {
     ...s.input,
     userRequest: rewrite(s.input.userRequest),

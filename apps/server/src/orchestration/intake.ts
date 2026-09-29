@@ -8,7 +8,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { noulGate } from '../advisor/gate.ts';
 import { FOLLOW_UP_MINUTES, type ActingQuestion } from '../advisor/policy.ts';
-import { vagueByRule, vagueHandling } from './clarify.ts';
+import { vagueByRule } from './clarify.ts';
 import { vagueFollowUpByRule } from './follow-up.ts';
 import {
   asksForReview,
@@ -20,7 +20,8 @@ import {
   reviewsExistingByRule,
   trivialByRule,
 } from './risk-rules.ts';
-import type { StartMode } from './transitions.ts';
+import { bigByRule } from './builder-complexity.ts';
+import type { ClarifiedStart, StartMode } from './transitions.ts';
 
 export interface CurrentTask {
   taskId: string;
@@ -38,12 +39,13 @@ export interface IntakeFacts {
   currentTask: CurrentTask | null;
   previousReply?: string | null;
   change?: boolean;
+  hasAgreedPlan?: boolean;
   now?: Date;
 }
 
 export interface IntakeDecisions {
   start: StartMode;
-  assume: boolean;
+  then: ClarifiedStart;
   review: boolean;
   destructive: boolean;
   trivial: boolean;
@@ -81,18 +83,23 @@ function flaggedByRuleOrJev(entry: IntakeCall): boolean {
 interface StartSignals {
   planOnly: boolean;
   reviewOnly: boolean;
+  vague: boolean;
   answers: boolean;
-  unclearFollowUp: boolean;
-  interpret: boolean;
+  big: boolean;
 }
 
 function startMode(signals: StartSignals): StartMode {
   if (signals.planOnly) return 'plan';
   if (signals.reviewOnly) return 'review';
-  if (signals.unclearFollowUp) return 'clarify';
+  if (signals.vague) return 'ask_agent';
   if (signals.answers) return 'answer';
-  if (signals.interpret) return 'interpret';
+  if (signals.big) return 'plan_first';
   return 'build';
+}
+
+function afterClarifying(facts: IntakeFacts, answers: boolean, big: boolean): ClarifiedStart {
+  if (facts.level === 'full-auto' || big) return 'plan_first';
+  return answers ? 'answer' : 'build';
 }
 
 function answersFirst(question: IntakeCall, request: string): boolean {
@@ -125,7 +132,7 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   if (!doing) {
     return {
       start: 'answer',
-      assume: false,
+      then: 'answer',
       review: false,
       destructive: false,
       trivial: false,
@@ -170,7 +177,7 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     calls.change = USER_CHANGE;
     return {
       start: 'build',
-      assume: false,
+      then: 'build',
       review: review.value,
       destructive,
       trivial,
@@ -181,18 +188,11 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   }
   const existing = reviewsExistingByRule(facts.request);
   const reviewOnly = existing || (review.value && answers);
-  const asksFirst = vagueHandling(facts.level) === 'ask';
-  const unclearFollowUp = vague && !facts.firstMessage;
-  const start = startMode({
-    planOnly,
-    reviewOnly,
-    answers: answers || (unclearFollowUp && !asksFirst),
-    unclearFollowUp: unclearFollowUp && asksFirst,
-    interpret: vague && facts.firstMessage && asksFirst,
-  });
+  const big = !facts.hasAgreedPlan && bigByRule(facts.request) !== null;
+  const start = startMode({ planOnly, reviewOnly, vague, answers, big });
   return {
     start,
-    assume: vague && facts.firstMessage && start === 'build' && !asksFirst,
+    then: afterClarifying(facts, answers, big),
     review: review.value || start === 'review',
     destructive,
     trivial,

@@ -150,6 +150,9 @@ function ClarifyBody({ approval, decide }: { approval: CheckpointApproval; decid
         />
       )}
       <div className="appr-acts ck-foot">
+        <Action id={CHECKPOINT_OPTION.useDefaults} approval={approval} decide={decide}>
+          {optionName(approval, CHECKPOINT_OPTION.useDefaults)}
+        </Action>
         <Action id={CHECKPOINT_OPTION.clarifyRules} approval={approval} decide={decide}>
           Let the rules decide
         </Action>
@@ -233,11 +236,18 @@ function PlanBody({ approval, decide }: { approval: CheckpointApproval; decide: 
         Approve plan
       </Action>
       <Action id={CHECKPOINT_OPTION.makeChange} approval={approval} decide={decide} kind="primary">
-        Build it
+        {optionName(approval, CHECKPOINT_OPTION.makeChange)}
       </Action>
       {offers(approval, CHECKPOINT_OPTION.editPlan) && (
-        <button type="button" className="btn line sm" onClick={() => setRevising(true)}>
-          Revise
+        <button
+          type="button"
+          className="btn line sm"
+          onClick={() => {
+            decide.hold();
+            setRevising(true);
+          }}
+        >
+          {optionName(approval, CHECKPOINT_OPTION.editPlan)}
         </button>
       )}
       <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">

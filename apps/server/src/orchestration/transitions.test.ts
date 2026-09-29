@@ -154,7 +154,7 @@ describe('risky work asks before the Builder starts', () => {
 
   it('asks after the follow-up question too, but never for an answer', () => {
     const [, built] = run(risky('balanced'), [
-      { type: 'start', start: 'clarify' },
+      { type: 'unclear', followUp: true },
       { type: 'clarified', start: 'build' },
     ]);
     expect(built!.action).toMatchObject({ type: 'ask', kind: 'plan' });
@@ -265,7 +265,7 @@ describe('failures and retries', () => {
 
 describe('checkpoints', () => {
   it('asks one question for a vague follow-up, and answers, plans or builds from the reply', () => {
-    const [ask] = run(flow(), [{ type: 'start', start: 'clarify' }]);
+    const [ask] = run(flow(), [{ type: 'unclear', followUp: true }]);
     expect(ask!.action).toMatchObject({ type: 'ask', kind: 'clarify', followUp: true });
     expect(nextStep(ask!.state, { type: 'clarified', start: 'answer' }).action).toMatchObject({
       role: 'scout',
@@ -284,7 +284,7 @@ describe('checkpoints', () => {
   });
 
   it('asks for a reading of a vague request, then builds', () => {
-    const [ask] = run(flow(), [{ type: 'start', start: 'interpret' }]);
+    const [ask] = run(flow(), [{ type: 'unclear', followUp: false }]);
     expect(ask!.action).toMatchObject({ type: 'ask', kind: 'clarify', interpret: true });
   });
 

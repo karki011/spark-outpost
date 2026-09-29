@@ -127,6 +127,7 @@ export interface Session {
   unverified?: boolean;
   risky?: string | null;
   shipLine?: string | null;
+  prNotes?: string[];
   fixRound?: FixRound | null;
   passing?: PassingState | null;
   suggestions?: string[];

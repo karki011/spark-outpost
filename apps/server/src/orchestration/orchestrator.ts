@@ -28,8 +28,8 @@ import {
 import { missingContext } from './missing-context.ts';
 import { migrationByRule } from './risk-rules.ts';
 import { wrappedUp } from './wrap-up.ts';
-import { ask, assume, intakeResponse } from './checkpoint-asks.ts';
-import { assumptionLine, interpretations } from './clarify.ts';
+import { ask } from './checkpoint-asks.ts';
+import { assumptionLine } from './clarify.ts';
 import { readOnlyStart, type CurrentTask, type IntakeDecisions } from './intake.ts';
 import { orchestrationJevDeps, routeContext, runIntake } from './intake-run.ts';
 import { buildAndLand } from './land.ts';
@@ -47,8 +47,10 @@ import {
   projectBuildStyle,
   recordShortcuts,
 } from './build-style.ts';
-import { agreedPlanText, changesSoFar, checkCommands } from './member-prompts.ts';
+import { agreedPlanText, changesSoFar } from './member-prompts.ts';
 import { writePlanOnly } from './plan-only.ts';
+import { writePlanFirst } from './plan-first.ts';
+import { clarifyTurn } from './clarify-turn.ts';
 import { observePlanAgreement } from './plan-agreement.ts';
 import { refreshPlan } from './plan-progress.ts';
 import { wantsCritic } from './critic-rule.ts';
@@ -173,6 +175,10 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
     }
     case 'plan':
       return writePlanOnly(s, action.note);
+    case 'plan_first':
+      return writePlanFirst(s, action.note);
+    case 'ask_agent':
+      return clarifyTurn(s, action.then);
     case 'verify':
       return verifyChange(s);
     case 'wrap_up':
@@ -374,10 +380,6 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     budgetTimer = setInterval(() => {
       if (s.members.size > 0) void checkBudget(s).catch(() => undefined);
     }, deps.budgetPollMs ?? 1000);
-    if (decisions.assume) {
-      const [likely] = interpretations(intakeResponse(s), s.input.userRequest, checkCommands(s));
-      if (likely) await assume(s, likely);
-    }
     await drive(s, decisions);
   } catch (error) {
     if (error instanceof LeaseLostError || control.reason() === 'lease_lost') return;
@@ -397,7 +399,7 @@ async function settleSession(s: Session): Promise<void> {
 }
 
 async function drive(s: Session, decisions: IntakeDecisions): Promise<void> {
-  let result = nextStep(s.flow, { type: 'start', start: decisions.start });
+  let result = nextStep(s.flow, { type: 'start', start: decisions.start, then: decisions.then });
   for (;;) {
     s.flow = result.state;
     if (result.action.type === 'finish') {

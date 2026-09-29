@@ -102,6 +102,7 @@ async function ship(s: Session, failing: boolean): Promise<string> {
     s.unverified ? UNVERIFIED_NOTE : null,
     s.risky ? RISKY_PR_NOTE : null,
     s.assumption ? assumptionPrNote(s.assumption) : null,
+    ...(s.prNotes ?? []),
   ].filter((note): note is string => note !== null);
   const deps = shipDeps(s);
   const options = { keepCheckout: true, duringRun: true, notes };

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { RankedFile } from '../codescan/rank.ts';
 import type { ScanReport } from '../codescan/scan.ts';
 import {
+  bigByRule,
   broadRequest,
   complexByBreadth,
   complexByJev,
@@ -192,5 +193,19 @@ describe('complex by Jev', () => {
     const jev = complexByJev({ tier: 'top', routeConfidence: 0.9 });
     expect(firstSignal(null, undefined, jev)).toBe(jev);
     expect(firstSignal(null)).toBeNull();
+  });
+});
+
+describe('big requests plan first', () => {
+  it('needs several packages, three listed items or four steps', () => {
+    expect(bigByRule('Rename the helper across all the packages')).toBe('several packages');
+    expect(bigByRule('- add the column\n- update the API\n- show it in the table')).toBe(
+      'several parts',
+    );
+    expect(
+      bigByRule('Add CSV export, add a download button, update the docs and write a test'),
+    ).toBe('several parts');
+    expect(bigByRule('The divider is wrong after midnight. Fix it and add a test.')).toBeNull();
+    expect(bigByRule('fix the typo in README line 3')).toBeNull();
   });
 });

@@ -198,7 +198,15 @@ export async function insertChildRun(
 export interface NewDecision {
   runId: string;
   purpose:
-    'route' | 'policy' | 'verify' | 'finding' | 'scan' | 'rank' | 'route_shadow' | 'plan_agreed';
+    | 'route'
+    | 'policy'
+    | 'verify'
+    | 'finding'
+    | 'scan'
+    | 'rank'
+    | 'route_shadow'
+    | 'plan_agreed'
+    | 'clarify';
   childRunId: string | null;
   role: AgentRole | null;
   stepIndex: number | null;
@@ -294,7 +302,7 @@ async function assembleOrchestrations(db: Queryable, rows: readonly Orchestratio
     ),
     db.query<DecisionRow & { run_id: string }>(
       `SELECT * FROM run_advice WHERE run_id = ANY($1::uuid[])
-       AND purpose NOT IN ('scan', 'rank', 'route_shadow', 'plan_agreed')
+       AND purpose NOT IN ('scan', 'rank', 'route_shadow', 'plan_agreed', 'clarify')
        ORDER BY created_at`,
       [ids],
     ),
