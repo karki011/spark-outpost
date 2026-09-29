@@ -1,8 +1,26 @@
 # Coordinator plan
 
-Proposed on September 28, 2026. Design and implementation plan for **coordinator delegation**: one coordinator plans a story, splits it into Builder-sized pieces with declared file ownership, places each piece (one Builder in order, shared-tree Builders, or worktree Builders), steers them while they run, integrates their work as the only writer, runs the full checks and the Critic once, and reports. Docs only; nothing here is built yet.
+Proposed on September 28, 2026. Design and implementation plan for **coordinator delegation**: one coordinator plans a story, splits it into Builder-sized pieces with declared file ownership, places each piece (one Builder in order, shared-tree Builders, or worktree Builders), steers them while they run, integrates their work as the only writer, runs the full checks and the Critic once, and reports. Phases C0–C3 are built (see "Status" below); C4–C8 are not.
 
 Read with [HARNESS_PLAN.md](HARNESS_PLAN.md) (the lean harness that runs today and the "Removed in round 10" table), [ROUTING_PLAN.md](ROUTING_PLAN.md) (code scan, Builder floor, complexity rule), [LEAN_BUILD.md](LEAN_BUILD.md) (the old lane placement and shared-tree attribution) and [LEAD_MODE.md](LEAD_MODE.md) (a future design this plan replaces for large work). Evidence: [dev-day-2026-09-28.md](../benchmarks/dev-day-2026-09-28.md), [dev-day-2026-09-28-rerun.md](../benchmarks/dev-day-2026-09-28-rerun.md), [routing-live-2026-09-27.md](../benchmarks/routing-live-2026-09-27.md), [harness-e2e-lean-2026-09-27.md](../benchmarks/harness-e2e-lean-2026-09-27.md).
+
+## Status (September 29, 2026)
+
+Built: C0 (contracts, validation, size, placement ladder, `coord-1` thresholds), C1 (shadow `parallel` rows, `pnpm coord:shadow`), C2 (pieces in order) and C3 (ownership and git guards). The worker's mode is `COORDINATOR_MODE` (`off`, `shadow`, `in_order`, `parallel`), default `shadow`; `parallel` behaves as `in_order` until C4. Spark off never engages the coordinator or records a shadow row. Migration `0059_coordinator.sql`.
+
+Where the build departs from this plan:
+
+- **No Jev questions yet.** `too_big`, `split_worth_it` and `same_folder` are not asked; the ladder takes their answers as inputs (null today), and the shadow row records whether the size estimate sat in the `too_big` band.
+- **The coordinator turn is a fresh Ask session** (`${taskId}:coordinator`), not a resume of the session that wrote the agreed plan. The repair re-prompt repeats the full prompt with the validator's errors, so it works with or without a resumed session.
+- **The piece list is approved by the level** at every autonomy. The piece-list card (5+ pieces at Review each step) and the piece-list versions a steer creates come with C4 and C7; `piece_notes` exists but is unused.
+- **The integrator is a Builder turn recorded with the `integrator` role** and `resumeKey ${taskId}:integrator`; after integration every later Builder turn of the task (full-check fixes, Critic fix rounds, continues) runs in that session. The flow machine still treats these as Builder turns.
+- **Research pieces** run as Scout-role child runs in Ask mode, one at a time, and their replies reach later pieces as "Notes from Scouts".
+- **Pieces follow the task's copy.** When the level or mode needs a worktree copy (Full auto → PR, a mode that skips the gate, destructive work, a busy repo), every piece runs in that one copy and it merges back once at the end.
+- **Live updates ride on the orchestration snapshot**: `Orchestration.pieces` carries the current list, so there is no separate `pieces` activity type. `GET /api/tasks/:id/pieces` returns the list; `POST …/notes` is C7.
+- **Scoped checks** must name a path or package, run a test runner or one of the project's check programs, and not install, format or change files. They still go through the approval gate like any command.
+- **`task_pieces.check_status`** records each piece's scoped-check result for the board and the report (not in the section 8 schema).
+- **Repair budget.** Two fix turns per piece and two integration rounds are enforced; the "all repair at most half the story budget" cap is not.
+- **Ownership strikes.** Violations are counted and reported; the "two strikes → in order" fallback has no effect until parallel placement exists.
 
 ## Decisions in one place
 

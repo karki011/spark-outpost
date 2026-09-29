@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CheckBody, InvolvementLevel, PieceList } from '@spark-outpost/contracts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
+import { updateProfile } from '../src/persistence/setup.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { PIECE_OUTCOME_UNKNOWN, recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
@@ -215,6 +216,21 @@ describe('pieces in order', { timeout: 120_000 }, () => {
       ['api.ts'],
       ['view.ts'],
     ]);
+  });
+
+  it('never engages when Spark is off', async () => {
+    await updateProfile(t.db, t.workspaceId, { sparkEnabled: false });
+    const { conversationId, runId } = await begin('#pieces');
+    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    expect(orchestration.status).toBe('succeeded');
+    const roles = (await children(runId)).map((child) => child.role);
+    expect(roles).not.toContain('coordinator');
+    expect(orchestration.pieces).toBeUndefined();
+    const { rows } = await t.db.query(
+      `SELECT 1 FROM run_advice WHERE run_id = $1 AND purpose = 'parallel'`,
+      [runId],
+    );
+    expect(rows).toEqual([]);
   });
 
   it('marks the running piece failed with an unknown outcome after a crash', async () => {

@@ -17,8 +17,9 @@ describe('scopedCheckProblem', () => {
     ['pnpm test', /whole-project check/],
     ['pnpm check', /runs the whole project/],
     ['pnpm install', /installs packages/],
-    ['prettier --write apps/web/src/a.ts', /changes files/],
+    ['npx prettier --write apps/web/src/a.ts', /changes files/],
     ['pnpm vitest run', /names no path or package/],
+    ['rm -rf src/tags', /runs `rm`, which is not a test runner/],
   ])('refuses %s', (command, problem) => {
     expect(scopedCheckProblem(command, PROJECT)).toMatch(problem);
   });
