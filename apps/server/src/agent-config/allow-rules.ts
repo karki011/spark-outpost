@@ -6,7 +6,7 @@ import {
   normalizeCommand,
   splitSimpleCommands,
 } from '../approvals/commands.ts';
-import { publishesCode } from '../approvals/git-commands.ts';
+import { PUBLISH_COMMANDS, publishesCode } from '../approvals/git-commands.ts';
 import { isSecretPath } from '../projects/path-policy.ts';
 import { SECRET_FILE_PATTERNS } from '../projects/secret-files.ts';
 
@@ -19,20 +19,6 @@ export interface AllowRuleVerdict {
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const EVERYTHING = new Set(['', '*', '**', ':*']);
 const COMMAND_RUNNERS = new Set([...SHELLS, ...COMMAND_WRAPPERS, 'eval', 'source', '.']);
-const PUBLISH_COMMANDS = [
-  'git push',
-  'git remote add',
-  'git remote set-url',
-  'git remote remove',
-  'git remote rm',
-  'git remote rename',
-  'git send-email',
-  'git request-pull',
-  'gh',
-  'hub',
-  'glab',
-  'tea',
-];
 const SECRET_SAMPLES = SECRET_FILE_PATTERNS.map((pattern) => pattern.replace(/\*/g, 'x'));
 const RULE = /^([A-Za-z0-9_]+)(?:\((.*)\))?$/s;
 

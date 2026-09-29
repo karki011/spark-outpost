@@ -1,16 +1,15 @@
 import { commandTree } from './command-tree.ts';
 import { programName } from './commands.ts';
 
-const REMOTE_CHANGES = new Set([
-  'add',
-  'set-url',
-  'remove',
-  'rm',
-  'rename',
-  'set-head',
-  'set-branches',
-]);
-const HOSTING_CLIS = new Set(['gh', 'hub', 'glab', 'tea']);
+const GIT_PUBLISHES = ['push', 'send-email', 'request-pull'];
+const REMOTE_CHANGES = ['add', 'set-url', 'remove', 'rm', 'rename', 'set-head', 'set-branches'];
+const HOSTING_CLIS = ['gh', 'hub', 'glab', 'tea'];
+
+export const PUBLISH_COMMANDS: readonly string[] = [
+  ...GIT_PUBLISHES.map((sub) => `git ${sub}`),
+  ...REMOTE_CHANGES.map((change) => `git remote ${change}`),
+  ...HOSTING_CLIS,
+];
 
 function gitPrograms(command: string): string[][] {
   return commandTree(command).commands.filter((program) => programName(program) === 'git');
@@ -49,13 +48,11 @@ export function isGitForcePush(command: string): boolean {
 export function publishesCode(command: string): boolean {
   return commandTree(command).commands.some((program) => {
     const name = programName(program);
-    if (HOSTING_CLIS.has(name)) return true;
+    if (HOSTING_CLIS.includes(name)) return true;
     if (name !== 'git') return false;
     const sub = gitSubcommand(program.slice(1));
     if (!sub) return false;
-    if (sub.name === 'push' || sub.name === 'send-email' || sub.name === 'request-pull') {
-      return true;
-    }
-    return sub.name === 'remote' && sub.rest.some((token) => REMOTE_CHANGES.has(token));
+    if (GIT_PUBLISHES.includes(sub.name)) return true;
+    return sub.name === 'remote' && sub.rest.some((token) => REMOTE_CHANGES.includes(token));
   });
 }

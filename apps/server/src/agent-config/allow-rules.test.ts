@@ -33,6 +33,8 @@ describe('repo allow rules against the safety floor', () => {
     ['Bash(gh pr create:*)', 'Could push code or change remotes'],
     ['Bash(hub:*)', 'Could push code or change remotes'],
     ['Bash(glab mr create)', 'Could push code or change remotes'],
+    ['Bash(tea pulls create:*)', 'Could push code or change remotes'],
+    ['Bash(git remote set-head origin main)', 'Could push code or change remotes'],
     ['Bash(bash -c:*)', 'Can run any command'],
     ['Bash(sudo npm:*)', 'Can run any command'],
     ['Bash(timeout:*)', 'Can run any command'],

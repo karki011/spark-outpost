@@ -115,7 +115,12 @@ describe('Claude session options', () => {
   it('denies pushing, gh and remote changes to Builders, and only to Builders', () => {
     const builder = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
     const deny = builder.settings.permissions.deny as string[];
-    for (const rule of ['Bash(git push:*)', 'Bash(gh:*)', 'Bash(git remote add:*)']) {
+    for (const rule of [
+      'Bash(git push:*)',
+      'Bash(gh:*)',
+      'Bash(tea:*)',
+      'Bash(git remote add:*)',
+    ]) {
       expect(BUILDER_PUBLISH_DENY_RULES).toContain(rule);
       expect(deny).toContain(rule);
       expect(builder.disallowedTools).toContain(rule);
