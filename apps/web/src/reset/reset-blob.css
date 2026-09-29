@@ -276,27 +276,36 @@
 
 .reset-blob-stage {
   flex: none;
-  width: 210px;
-  height: 60px;
+  width: 220px;
+  height: 64px;
 }
 
 .reset-blob-stage .rb-roam {
-  left: 2px;
-  bottom: 6px;
+  left: 0;
+  bottom: 2px;
 }
 
 .grace-peek {
   position: absolute;
   right: 12px;
   bottom: 100%;
-  width: 52px;
-  height: 40px;
+  width: 58px;
+  height: 44px;
   overflow: hidden;
 }
 
 .grace-peek .rb-roam {
   left: 8px;
   bottom: -7px;
+}
+
+.rb[data-mood='scream'] .rb-hop {
+  scale: 1.35;
+  transform-origin: 30% 100%;
+}
+
+.rb[data-mood='scream'] .rb-bubble {
+  left: calc(100% + 12px);
 }
 
 @keyframes rb-pop {
@@ -361,7 +370,7 @@
     transform: translateY(0) scale(1.1, 0.9);
   }
   45% {
-    transform: translateY(-13px) scale(0.94, 1.08);
+    transform: translateY(-6px) scale(0.94, 1.08);
   }
 }
 
@@ -383,7 +392,7 @@
 
 @keyframes rb-roam {
   to {
-    transform: translateX(96px);
+    transform: translateX(90px);
   }
 }
 

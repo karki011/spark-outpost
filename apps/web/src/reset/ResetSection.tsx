@@ -76,7 +76,7 @@ export function ResetSection() {
         holdingHint="Keep holding. Let go now to cancel."
         releasedHint="Released early. Nothing happened."
         disabled={busy}
-        adornment={<ResetBlob mood={mood} size={36} className="reset-blob-stage" />}
+        adornment={<ResetBlob mood={mood} size={42} className="reset-blob-stage" />}
         onConfirm={() => setResetState({ phase: 'counting', keepApiKeys })}
         onHoldChange={onHoldChange}
       />

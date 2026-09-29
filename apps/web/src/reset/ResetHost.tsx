@@ -59,7 +59,7 @@ export function ResetHost() {
           onElapse={() => void runReset(state.keepApiKeys)}
           onUndo={idle}
           decoration={(secondsLeft) => (
-            <ResetBlob mood={graceBlobMood(secondsLeft)} size={36} className="grace-peek" />
+            <ResetBlob mood={graceBlobMood(secondsLeft)} size={40} className="grace-peek" />
           )}
         />
       )}

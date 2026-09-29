@@ -94,14 +94,17 @@ test('with reduced motion the blob only changes its face', async ({ page }) => {
           .map((animation) => animation.animationName),
       ),
     );
-  const box = await sectionBlob(page).locator('.rb-svg').boundingBox();
+  const blobBox = () => sectionBlob(page).locator('.rb-svg').boundingBox();
+  const calm = (await blobBox())!;
 
   await hold.hover();
   await page.mouse.down();
   await expect(sectionBlob(page)).toHaveAttribute('data-mood', 'scream');
   await expect(sectionBlob(page).locator('.rb-bubble')).toHaveText('AAAH!');
   expect(await animations()).toEqual([]);
-  expect(await sectionBlob(page).locator('.rb-svg').boundingBox()).toEqual(box);
+  const screaming = (await blobBox())!;
+  expect(screaming.x).toBeLessThan(calm.x);
+  expect(screaming.y + screaming.height).toBeCloseTo(calm.y + calm.height, 0);
   await expect(graceBar(page)).toBeVisible({ timeout: 3000 });
   await page.mouse.up();
   await expect(graceBar(page).locator('.rb')).toHaveAttribute('data-mood', 'plead');
