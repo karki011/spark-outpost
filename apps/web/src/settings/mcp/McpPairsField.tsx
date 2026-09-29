@@ -40,7 +40,7 @@ export function McpPairsField({
       {pairs.map((pair, index) => (
         <div key={pair.key} className="mcp-pair">
           <input
-            className="inp sm mono"
+            className="inp mono"
             aria-label={`${label} ${index + 1} name`}
             placeholder={namePlaceholder}
             spellCheck={false}
@@ -48,7 +48,7 @@ export function McpPairsField({
             onChange={(event) => update(pair.key, { name: event.target.value })}
           />
           <input
-            className="inp sm"
+            className="inp"
             type="password"
             autoComplete="off"
             aria-label={`${label} ${index + 1} value`}

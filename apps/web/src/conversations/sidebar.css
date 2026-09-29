@@ -80,7 +80,7 @@
 
 .search:focus-within {
   background: var(--raise);
-  box-shadow: inset 0 0 0 2px var(--accent);
+  box-shadow: var(--focus-ring);
   color: var(--muted);
 }
 

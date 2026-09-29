@@ -213,8 +213,6 @@
 .linkin {
   flex: 1;
   min-width: 0;
-  padding: 7px 10px;
-  font-size: 12.5px;
 }
 
 .linkform .wnote {

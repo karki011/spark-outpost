@@ -35,7 +35,7 @@ export function McpPasteConfig({ onFill }: { onFill: (server: PastedServer) => v
           <label htmlFor={`${ids}-text`}>Server JSON from a README</label>
           <textarea
             id={`${ids}-text`}
-            className="inp sm mono"
+            className="inp mono"
             rows={4}
             spellCheck={false}
             placeholder='{ "mcpServers": { "github": { "command": "npx", "args": ["-y", "…"] } } }'

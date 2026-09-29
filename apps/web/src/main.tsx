@@ -6,12 +6,9 @@ import { markConnectionRestored, reportRequestError } from './app/connection/con
 import { configureLiveQueries } from './app/live/use-app-events.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
 import { AppMotion } from './ui/transitions.tsx';
-import { trackInputModality } from './ui/input-modality.ts';
 import 'blobatar/motion.css';
 import './app/base.css';
 import './app/reduced-motion.css';
-
-trackInputModality();
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: reportRequestError, onSuccess: markConnectionRestored }),
