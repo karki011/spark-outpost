@@ -6,7 +6,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 import { crewAgents } from './crew-projection.ts';
 import { checkpoint, member, orchestration } from './test-orchestration.ts';
-import { doingLine, sceneChanges, trimChatter, type TvScene } from './tv-chatter.ts';
+import { doingLine, nextChatter, sceneChanges, trimChatter, type TvScene } from './tv-chatter.ts';
 import { askText, decisionLine, pendingAsks, roleSubtitle } from './tv-scene.ts';
 
 const BUILDER = '00000000-0000-4000-8000-0000000000a1';
@@ -73,7 +73,7 @@ describe('Agent TV handoffs and chatter', () => {
     const before = scene([member({ status: 'running', toolCalls: 1 })]);
     const after = scene([member({ status: 'failed' })], 'Picked plan → execute · 0.86');
     expect(sceneChanges(before, after).chatter).toEqual([
-      { agentId: 'jev', text: 'Picked plan → execute · 0.86', pinned: true },
+      { agentId: 'jev', text: 'Picked plan → execute · 0.86', pinned: false },
       { agentId: BUILDER, text: 'Hit a problem.', pinned: true },
     ]);
   });
@@ -97,6 +97,18 @@ describe('Agent TV handoffs and chatter', () => {
       'Checking d.ts…',
     ]);
     expect(trimChatter(burst.slice(0, 3), 3)).toEqual(burst.slice(0, 3));
+  });
+
+  it('skips lines from an agent whose question is showing, so they never hold up the rest', () => {
+    const jev = (text: string) => ({ agentId: 'jev', text, pinned: true });
+    const done = { agentId: CRITIC, text: 'Looks good to me.', pinned: true };
+    const queue = [jev('Over to Critic.'), done, jev('Sent Critic: review')];
+    expect(nextChatter(queue, new Set(['jev']))).toEqual({ line: done, rest: [] });
+    expect(nextChatter(queue, new Set())).toEqual({ line: queue[0], rest: queue.slice(1) });
+    expect(nextChatter([jev('Over to Critic.')], new Set(['jev']))).toEqual({
+      line: null,
+      rest: [],
+    });
   });
 
   it('turns a step into something an agent would say', () => {

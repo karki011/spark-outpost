@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  nextChatter,
   sceneChanges,
   trimChatter,
   type Chatter,
@@ -21,6 +22,7 @@ interface TvEventOptions {
   muted: boolean;
   reduced: boolean;
   paused: boolean;
+  asking: readonly string[];
 }
 
 const SHOW_MS = 3200;
@@ -33,8 +35,12 @@ function sceneKey(scene: TvScene): string {
   return `${agents.join('|')}#${scene.decision ?? ''}`;
 }
 
-export function useTvEvents(scene: TvScene, { muted, reduced, paused }: TvEventOptions): TvEvents {
+export function useTvEvents(
+  scene: TvScene,
+  { muted, reduced, paused, asking }: TvEventOptions,
+): TvEvents {
   const key = sceneKey(scene);
+  const askingKey = asking.join(' ');
   const [seen, setSeen] = useState({ key, scene });
   const [packets, setPackets] = useState<Packet[]>([]);
   const [queue, setQueue] = useState<Chatter[]>([]);
@@ -60,11 +66,12 @@ export function useTvEvents(scene: TvScene, { muted, reduced, paused }: TvEventO
   useEffect(() => {
     if (current || cooling || queue.length === 0) return;
     const timer = setTimeout(() => {
-      setCurrent(queue[0]!);
-      setQueue((existing) => existing.slice(1));
+      const { line, rest } = nextChatter(queue, new Set(askingKey.split(' ')));
+      setCurrent(line);
+      setQueue(rest);
     }, NEXT_MS);
     return () => clearTimeout(timer);
-  }, [current, cooling, queue]);
+  }, [current, cooling, queue, askingKey]);
 
   useEffect(() => {
     if (!current) return;

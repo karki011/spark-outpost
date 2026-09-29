@@ -101,7 +101,7 @@ export function sceneChanges(before: TvScene | null, after: TvScene): SceneChang
   const previous = new Map(before.agents.map((agent) => [agent.id, agent]));
   const changes: SceneChanges = { handoffs: [], chatter: [] };
   if (after.decision && after.decision !== before.decision) {
-    changes.chatter.push({ agentId: JEV_ID, text: after.decision, pinned: true });
+    changes.chatter.push({ agentId: JEV_ID, text: after.decision, pinned: false });
   }
   for (const agent of after.agents) {
     const earlier = previous.get(agent.id);
@@ -119,4 +119,12 @@ export function sceneChanges(before: TvScene | null, after: TvScene): SceneChang
 export function trimChatter(queue: readonly Chatter[], limit: number): Chatter[] {
   const kept = new Set(queue.filter((line) => !line.pinned).slice(-limit));
   return queue.filter((line) => line.pinned || kept.has(line));
+}
+
+export function nextChatter(
+  queue: readonly Chatter[],
+  asking: ReadonlySet<string>,
+): { line: Chatter | null; rest: Chatter[] } {
+  const speakable = queue.filter((line) => !asking.has(line.agentId));
+  return { line: speakable[0] ?? null, rest: speakable.slice(1) };
 }
