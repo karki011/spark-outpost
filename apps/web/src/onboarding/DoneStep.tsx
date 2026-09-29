@@ -1,7 +1,12 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { useQueries } from '@tanstack/react-query';
-import type { ProviderCapabilities, ProviderId, ProviderSetup } from '@spark-outpost/contracts';
+import type {
+  InvolvementLevel,
+  ProviderCapabilities,
+  ProviderId,
+  ProviderSetup,
+} from '@spark-outpost/contracts';
 import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { modeSummary } from '../chat/composer/mode-summary.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
@@ -16,6 +21,7 @@ interface DoneStepProps {
   displayName: string;
   providers: ProviderSetup[];
   defaultProvider: ProviderId | null;
+  level: InvolvementLevel;
 }
 
 interface SummaryItem {
@@ -29,6 +35,7 @@ function providerItem(
   provider: ProviderSetup,
   capabilities: ProviderCapabilities | undefined,
   isDefault: boolean,
+  level: InvolvementLevel,
 ): SummaryItem | null {
   const connection = provider.connection;
   if (!connection) return null;
@@ -42,7 +49,7 @@ function providerItem(
   const permission = modeSummary(
     provider.id,
     connection.agentMode ?? capabilities?.defaultMode ?? null,
-    connection.level,
+    level,
     capabilities?.modes ?? [],
   );
   return {
@@ -58,7 +65,7 @@ function providerItem(
   };
 }
 
-export function DoneStep({ displayName, providers, defaultProvider }: DoneStepProps) {
+export function DoneStep({ displayName, providers, defaultProvider, level }: DoneStepProps) {
   const scoutRef = useRef<HTMLDivElement>(null);
   const connected = providers.filter((provider) => provider.connection);
   const capabilities = useQueries({
@@ -110,6 +117,7 @@ export function DoneStep({ displayName, providers, defaultProvider }: DoneStepPr
         provider,
         capabilities[index]?.data,
         connected.length > 1 && provider.id === defaultProvider,
+        level,
       );
       return item ? [item] : [];
     }),

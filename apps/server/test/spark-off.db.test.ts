@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { modeForLegacy } from '@spark-outpost/contracts';
-import { sendUserMessage } from '../src/persistence/conversations.ts';
+import { CODEX_INSTRUCTIONS_METHOD } from '../src/agents/acp/spark-instructions.ts';
+import { listProtocolLog } from '../src/persistence/audit-log.ts';
+import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
-import { getRun } from '../src/persistence/runs.ts';
+import { getRun, requestCancel } from '../src/persistence/runs.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import {
   QUESTION,
@@ -115,6 +117,19 @@ describe('Spark off', () => {
     expect(route?.summary).toContain('Spark off → your pick');
   }, 60_000);
 
+  it('still asks before risky work at Review each step', async () => {
+    const { conversationId, runId } = await startScenario(t, root, RISKY, 'balanced');
+    const card = await eventually(async () => {
+      const detail = await getConversationDetail(t.db, conversationId);
+      return detail?.approvals.find((approval) => approval.status === 'pending') ?? null;
+    }, 30_000);
+    expect(card.kind).toBe('plan');
+    expect(jev.calls).toEqual([]);
+    expect(await childModels(runId)).toEqual([]);
+    await requestCancel(t.db, runId);
+    await finished(runId);
+  }, 60_000);
+
   it('keeps team mode and the name for Codex in its developer instructions', async () => {
     await updateProfile(t.db, t.workspaceId, { useName: false });
     const { conversationId } = await linkedConversation(t, root);
@@ -139,5 +154,18 @@ describe('Spark off', () => {
     };
     expect(config.developer_instructions).toContain('keep a short checklist');
     expect(config.developer_instructions).not.toContain('Sam');
+    const logged = await eventually(async () => {
+      const { entries } = await listProtocolLog(t.db, runId, {
+        after: 0,
+        limit: 50,
+        direction: 'harness',
+        method: CODEX_INSTRUCTIONS_METHOD,
+      });
+      return entries[0] ?? null;
+    });
+    expect(logged.payload).toEqual({
+      method: CODEX_INSTRUCTIONS_METHOD,
+      params: { developer_instructions: config.developer_instructions },
+    });
   }, 60_000);
 });

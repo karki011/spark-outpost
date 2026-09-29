@@ -10,10 +10,6 @@ const stateNames: Record<TaskItemState, string> = {
   failed: 'Not finished',
 };
 
-export function taskStateName(state: TaskItemState): string {
-  return stateNames[state];
-}
-
 export function TaskStateIcon({ state }: { state: TaskItemState }) {
   const label = stateNames[state];
   if (state === 'done') {

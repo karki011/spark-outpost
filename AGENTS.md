@@ -85,7 +85,7 @@ Read `docs/product/PLAN.md` for product direction and `docs/architecture/PROTOCO
 - Read `docs/KANBAN.md` before starting work; `docs/tasks/board.json` is the task source of truth.
 - Use `pnpm tasks move <ID> <status> "note"` to update progress and regenerate the board. Include acceptance evidence when marking done.
 - Run `pnpm test:db` for storage changes against an isolated PostgreSQL schema in `TEST_DATABASE_URL` (falls back to `DATABASE_URL`); `pnpm db:setup` writes both to `.local/credentials.env`.
-- Run `pnpm check` (format, lint, typecheck, source rules, contrast audit, ACP coverage, unit tests) and `pnpm test:browser` for browser behavior.
+- Run `pnpm check` (format, lint, typecheck, source rules, unused files and exports via knip, contrast audit, ACP coverage, unit tests) and `pnpm test:browser` for browser behavior.
 - Run `pnpm db:setup` once for the isolated native macOS PostgreSQL cluster, then `pnpm db:up`, `pnpm db:migrate` and `pnpm dev`. Stop only this cluster with `pnpm db:stop`; preserve `.local` data and ignored credentials. See `infra/local/README.md`.
 - Run `pnpm desktop:dev` for the Electron shell (dev channel, own data folder and bundled Postgres); see `docs/architecture/ELECTRON_PLAN.md`.
 - Do not create or publish a remote repository, push, or deploy without user authorization.

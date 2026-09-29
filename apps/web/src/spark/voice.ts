@@ -40,12 +40,16 @@ export function quietSummary({ personality }: Voice): string {
   return 'All quiet. Start something new below.';
 }
 
-export function quietCard({ personality, name }: Voice): string {
-  if (personality === 'playful') {
-    return `Nothing needs you${name ? `, ${name}` : ''}, and no agents are running. Enjoy the calm.`;
-  }
-  if (personality === 'facts') return 'Nothing needs you. No agents running.';
-  return 'All quiet. Nothing needs you and no agents are running.';
+export function nothingFlagged({ personality, name }: Voice): string {
+  if (personality === 'playful') return `Nothing is flagged${name ? `, ${name}` : ''}. Nice.`;
+  if (personality === 'facts') return 'Nothing flagged';
+  return 'Nothing is flagged';
+}
+
+export function briefOffLine({ personality }: Voice): string {
+  if (personality === 'playful') return 'The brief is napping. Rules still sort the list below.';
+  if (personality === 'facts') return 'Brief off. Rules sort the list.';
+  return 'The brief is off. Rules still sort the list below.';
 }
 
 export const PERSONALITY_HINTS: Record<Personality, string> = {

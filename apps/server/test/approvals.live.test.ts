@@ -78,7 +78,10 @@ describe('live Claude Do run with approvals', () => {
     try {
       for (let tick = 0; tick < 800; tick++) {
         const detail = await getConversationDetail(t.db, conversationId);
-        for (const approval of detail?.approvals ?? []) {
+        const pending = (detail?.approvals ?? []).filter(
+          (approval) => approval.status === 'pending',
+        );
+        for (const approval of pending) {
           const answer = answerFor(approval);
           await decideApproval(t.db, t.workspaceId, approval.id, answer);
           answered.push({ approval, answer });

@@ -57,6 +57,12 @@ describe('setup state', () => {
       sparkEnabled: true,
       teamMode: true,
       useName: true,
+      defaultLevel: 'hands-off',
+      spendCapUsd: null,
+      criticEnabled: true,
+      criticOtherProvider: true,
+      morningBrief: true,
+      morningBriefTime: '07:00',
     });
     expect(body.providers.map((provider: { id: string }) => provider.id)).toEqual([
       'claude',
@@ -108,7 +114,6 @@ describe('API key verification', () => {
       model: 'claude-opus-5-5',
       permission: 'do',
       agentMode: 'default',
-      level: 'hands-off',
       effort: 'medium',
     });
     expect(JSON.stringify(body)).not.toContain(VALID_CLAUDE_KEY);

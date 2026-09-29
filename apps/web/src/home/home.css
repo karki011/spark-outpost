@@ -147,11 +147,6 @@
   border-color: var(--accent);
 }
 
-.hcard.asking {
-  border-color: color-mix(in srgb, var(--warn) 50%, var(--line));
-  background: color-mix(in srgb, var(--warn) 6%, transparent);
-}
-
 .hblob {
   position: relative;
   flex-shrink: 0;
@@ -176,20 +171,8 @@
   box-shadow: 0 0 0 2px var(--panel);
 }
 
-.hdot.asking {
-  background: var(--warn);
-}
-
-.hdot.error {
-  background: var(--danger);
-}
-
-.hdot.done,
 .hdot.running {
   background: var(--accent);
-}
-
-.hdot.running {
   animation: hdot-pulse 1.4s ease-in-out infinite;
 }
 
@@ -221,14 +204,6 @@
   color: var(--faint);
 }
 
-.hcard.asking .hc-sub {
-  color: var(--warn);
-}
-
-.hcard.error .hc-sub {
-  color: var(--danger);
-}
-
 .go {
   flex-shrink: 0;
   min-height: 30px;
@@ -252,12 +227,6 @@
 
 .hcard:hover .go {
   border-color: var(--faint);
-}
-
-.hcard.asking .go {
-  border-color: transparent;
-  background: var(--text);
-  color: var(--panel);
 }
 
 .hprog {
@@ -295,26 +264,6 @@
   font-size: 13.5px;
 }
 
-.hquiet.compact {
-  padding: 9px 12px;
-  font-size: 13px;
-}
-
-.home-live > .hquiet {
-  margin-bottom: 30px;
-}
-
-.hpair {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  column-gap: 24px;
-  align-items: start;
-}
-
-.hpair > * {
-  min-width: 0;
-}
-
 .hsecondary .hsec-h h2 {
   color: var(--muted);
   font-size: 13.5px;
@@ -326,10 +275,6 @@
 
 .hsecondary .cost-total b {
   font-size: 20px;
-}
-
-.hquiet .ok {
-  color: var(--accent-text);
 }
 
 .mlist {
@@ -442,12 +387,6 @@
 
   .hcard:hover {
     transform: none;
-  }
-}
-
-@media (min-width: 1000px) {
-  .hpair {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

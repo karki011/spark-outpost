@@ -16,7 +16,7 @@ const DIRECTIONS: { id: ProtocolDirection | 'all'; label: string }[] = [
   { id: 'all', label: 'All entries' },
   { id: 'to_agent', label: 'To agent' },
   { id: 'from_agent', label: 'From agent' },
-  { id: 'harness', label: 'Harness checks' },
+  { id: 'harness', label: 'Harness' },
 ];
 
 function Json({ value }: { value: unknown }) {

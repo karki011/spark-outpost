@@ -66,21 +66,65 @@ function optionClass(allow: boolean, primary: boolean): string {
   return primary ? 'btn primary sm' : 'btn line sm';
 }
 
-export function ApprovalCard({ approval: incoming, provider, agent, repo }: ApprovalCardProps) {
-  const queryClient = useQueryClient();
+function subject(approval: Approval): string | null {
+  if (approval.payload.plan) return null;
+  if (approval.payload.command) return approval.payload.command;
+  if (approval.payload.paths.length > 0) return approval.payload.paths.join(', ');
+  return approval.kind === 'edit' ? null : approval.title;
+}
+
+function ResolvedApproval({ approval }: { approval: Approval }) {
   const headingId = useId();
+  const result = outcome(approval);
+  const shown = subject(approval);
+  const denied = result.icon === 'no';
+  return (
+    <div
+      className={denied ? 'appr resolved denied' : 'appr resolved'}
+      role="group"
+      aria-labelledby={headingId}
+      id={approvalAnchor(approval.id)}
+    >
+      <span className="ic" aria-hidden="true">
+        {denied ? <XIcon /> : <CheckIcon />}
+      </span>
+      <span id={headingId} className="appr-what">
+        <b>{heading(approval)}</b>
+        {shown && <code title={shown}>{shown}</code>}
+      </span>
+      <span className="appr-res" role="status">
+        <b>{result.label}</b>
+        {result.detail}
+      </span>
+    </div>
+  );
+}
+
+export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps) {
   const [local, setLocal] = useState<ApprovalDecidedValue | null>(null);
   const approval = local ? mergeDecision([incoming], local)[0]! : incoming;
+  if (approval.status !== 'pending') return <ResolvedApproval approval={approval} />;
+  return <PendingApproval approval={approval} onDecided={setLocal} {...rest} />;
+}
+
+function PendingApproval({
+  approval,
+  provider,
+  agent,
+  repo,
+  onDecided,
+}: ApprovalCardProps & { onDecided: (decided: ApprovalDecidedValue) => void }) {
+  const queryClient = useQueryClient();
+  const headingId = useId();
   const branch = useProjectBranch(repo?.id ?? null);
   const decide = useMutation({
     mutationFn: ({ optionId, scope }: { optionId: string; scope: ApprovalScope }) =>
       approvalsApi.decide(approval.id, { optionId, scope, payloadHash: approval.payloadHash }),
     onSuccess: (decided, { scope }) => {
-      setLocal(decided);
+      onDecided(decided);
       if (scope === 'project') void queryClient.invalidateQueries({ queryKey: projectKeys.all });
     },
   });
-  const pending = approval.status === 'pending';
   const options = shownOptions(approval);
   const firstAllow = options.findIndex(isAllow);
   const lastAllow = options.findLastIndex(isAllow);
@@ -92,25 +136,12 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
     !alwaysAsks && !plan && approval.kind === 'execute' && command
       ? projectAllowOption(approval.options)
       : undefined;
-  const result = outcome(approval);
-  const className = [
-    'appr',
-    pending ? '' : 'decided',
-    approval.status === 'denied' || approval.status === 'expired' ? 'denied' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
 
   return (
-    <div
-      className={className}
-      role="group"
-      aria-labelledby={headingId}
-      id={approvalAnchor(approval.id)}
-    >
+    <div className="appr" role="group" aria-labelledby={headingId} id={approvalAnchor(approval.id)}>
       <div className="appr-h">
         <span className="ic" aria-hidden="true">
-          <i className={pending ? 'appr-dia' : 'appr-dia still'} />
+          <i className="appr-dia" />
         </span>
         <span id={headingId}>
           <b>{heading(approval)}</b> {request(approval, agent ?? providerName(provider))}
@@ -158,41 +189,31 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
         <p>The change lands in your working tree. You can revert this run afterwards.</p>
       )}
       {alwaysAsks && <p className="appr-reason">{approval.reason}, whatever your permissions.</p>}
-      {pending ? (
-        <div className="appr-acts">
-          {options.map((option, index) => (
-            <Fragment key={option.optionId}>
+      <div className="appr-acts">
+        {options.map((option, index) => (
+          <Fragment key={option.optionId}>
+            <button
+              type="button"
+              className={optionClass(isAllow(option), index === firstAllow)}
+              disabled={decide.isPending || Boolean(option.unavailableReason)}
+              title={option.unavailableReason}
+              onClick={() => decide.mutate({ optionId: option.optionId, scope: 'once' })}
+            >
+              {option.name}
+            </button>
+            {index === lastAllow && projectAllow && (
               <button
                 type="button"
-                className={optionClass(isAllow(option), index === firstAllow)}
-                disabled={decide.isPending || Boolean(option.unavailableReason)}
-                title={option.unavailableReason}
-                onClick={() => decide.mutate({ optionId: option.optionId, scope: 'once' })}
+                className="btn line sm"
+                disabled={decide.isPending}
+                onClick={() => decide.mutate({ optionId: projectAllow.optionId, scope: 'project' })}
               >
-                {option.name}
+                Always allow in this project
               </button>
-              {index === lastAllow && projectAllow && (
-                <button
-                  type="button"
-                  className="btn line sm"
-                  disabled={decide.isPending}
-                  onClick={() =>
-                    decide.mutate({ optionId: projectAllow.optionId, scope: 'project' })
-                  }
-                >
-                  Always allow in this project
-                </button>
-              )}
-            </Fragment>
-          ))}
-        </div>
-      ) : (
-        <div className="appr-res" role="status">
-          {result.icon === 'ok' ? <CheckIcon /> : <XIcon />}
-          <b>{result.label}</b>
-          {result.detail}
-        </div>
-      )}
+            )}
+          </Fragment>
+        ))}
+      </div>
       {decide.isError && (
         <p className="appr-err" role="alert">
           {decide.error.message}

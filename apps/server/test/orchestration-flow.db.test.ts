@@ -55,7 +55,9 @@ async function start(options: { jev?: boolean; activeLimitMs?: number } = {}) {
 async function pending(conversationId: string, kind: Approval['kind']): Promise<Approval> {
   return eventually(async () => {
     const detail = await getConversationDetail(t.db, conversationId);
-    return detail?.approvals.find((approval) => approval.kind === kind);
+    return detail?.approvals.find(
+      (approval) => approval.kind === kind && approval.status === 'pending',
+    );
   }, 30_000);
 }
 

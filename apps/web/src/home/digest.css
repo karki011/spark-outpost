@@ -8,6 +8,12 @@
   flex-shrink: 0;
 }
 
+.hpanel .dg-head .hlink {
+  display: inline-flex;
+  margin: 0 -6px 0 0;
+  color: var(--muted);
+}
+
 .dg-meta {
   flex: 1;
   min-width: 0;
@@ -17,49 +23,18 @@
   font-variant-numeric: tabular-nums;
 }
 
-.dg-overview {
-  margin-top: 12px;
-}
-
 .dg-headline {
-  margin: 0;
+  margin: 12px 0 0;
   color: var(--text);
   font-size: 14.5px;
   font-weight: 500;
   line-height: 1.5;
 }
 
-.dg-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dg-chip {
-  min-height: 24px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--raise);
-  color: var(--muted);
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
-  transition: background-color 0.15s var(--out);
-}
-
-.dg-chip:hover {
-  color: var(--text);
-}
-
-.dg-toggle {
-  display: block;
+.hpanel .dg-toggle {
+  display: inline-flex;
   margin: 10px 0 0 -6px;
-}
-
-.dg-details {
-  animation: rise 0.2s var(--out) both;
+  color: var(--muted);
 }
 
 .dg-lines {
@@ -68,6 +43,10 @@
   margin: 12px 0 0;
   padding: 0;
   list-style: none;
+}
+
+.dg-lines[hidden] {
+  display: none;
 }
 
 .dg-lines li {
@@ -120,9 +99,31 @@ button.dg-line:hover {
   background: var(--raise);
 }
 
+.dg-next .num {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .dg-next-main {
   flex: 1;
   min-width: 0;
+}
+
+.dg-next-main .key {
+  margin-right: 6px;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--muted);
 }
 
 .dg-next-main b {
@@ -138,6 +139,7 @@ button.dg-line:hover {
   display: block;
   color: var(--muted);
   font-size: 12.5px;
+  line-height: 1.45;
 }
 
 .dg-error {
@@ -146,7 +148,27 @@ button.dg-line:hover {
   font-size: 13px;
 }
 
+.dg-error b {
+  color: var(--text);
+  font-weight: 500;
+}
+
 .dg-error .hlink {
+  margin: 0;
+  color: var(--accent-text);
+}
+
+.dg-off {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dg-off .hlink {
   margin: 0;
   color: var(--accent-text);
 }

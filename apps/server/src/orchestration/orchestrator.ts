@@ -276,7 +276,8 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const mode = input.mode ?? 'chat';
     const root = input.projectRoots[0];
     const doing = mode === 'do' && root !== undefined;
-    const solo = !(await sparkPreferences(deps.db, input.workspaceId)).sparkEnabled;
+    const prefs = await sparkPreferences(deps.db, input.workspaceId);
+    const solo = !prefs.sparkEnabled;
     if (solo && !doing) {
       const result = await runAgentTurn(deps, lease, input, append, control);
       await finishRun(append, input.identity, result, true);
@@ -296,7 +297,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     );
     const answers = decisions.start === 'answer';
     const git = doing && (await isGitWorkTree(root));
-    const limits = baseLimits(deps, input.provider);
+    const limits = baseLimits(deps, input.provider, prefs.savedSpendCapUsd);
     await insertOrchestration(deps.db, {
       runId: lease.runId,
       depth: readOnlyStart(decisions.start) ? 'direct' : 'execute',
@@ -324,12 +325,16 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       append,
       control,
       jev,
-      route: routeContext(input, intake.context),
+      route: {
+        ...routeContext(input, intake.context),
+        ...(prefs.criticOtherProvider ? {} : { criticSameProvider: true }),
+      },
       facts: { trivial: decisions.trivial, destructive: decisions.destructive },
       intake,
       flow: {
         ...initialFlow(decisions.risk, input.level, reviewWanted, jev !== null, confirmFirst),
         ...(solo ? { solo } : {}),
+        ...(prefs.criticEnabled ? {} : { skipCritic: true }),
       },
       risky,
       routes: new Map(),

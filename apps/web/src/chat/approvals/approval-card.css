@@ -11,6 +11,47 @@
 .appr.denied {
   background: color-mix(in srgb, var(--danger) 6%, var(--raise));
 }
+.appr.resolved {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 8px 0 4px;
+  padding: 7px 14px;
+  font-size: 13px;
+}
+.appr.resolved:not(.denied) {
+  background: color-mix(in srgb, var(--raise) 70%, var(--panel));
+}
+.appr.resolved .ic {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.appr-what {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+.appr-what b {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.appr-what code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.appr.resolved .appr-res {
+  padding: 0;
+}
 .appr-h {
   display: flex;
   align-items: center;

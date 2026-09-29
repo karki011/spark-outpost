@@ -9,12 +9,14 @@ import {
   type Language,
 } from '../markdown/highlighter.ts';
 import { formatCount } from '../changes/change-rules.ts';
-import { buildDiff, foldRows, paintLine, shownRows, type DiffRow } from './diff-model.ts';
+import { foldRows, paintLine, shownRows, type DiffRow } from './diff-model.ts';
+import { useDiffModel } from './use-diff-model.ts';
 
 const MARKS = { add: '+', remove: '−', same: ' ' } as const;
 const CHANGE_LABELS = { add: 'Added', remove: 'Removed' } as const;
 const CHUNK_ROWS = 300;
 const HIGHLIGHT_MAX_CHARS = 200 * 1024;
+const SKELETON_WIDTHS = ['62%', '48%', '71%', '35%', '56%'];
 
 function highlightable(diff: FileDiff): boolean {
   return (diff.oldText?.length ?? 0) + diff.newText.length <= HIGHLIGHT_MAX_CHARS;
@@ -106,9 +108,19 @@ function FoldRow({ count, onOpen }: { count: number; onOpen: () => void }) {
   );
 }
 
+function DiffSkeleton() {
+  return (
+    <div className="dv-skel" aria-hidden="true">
+      {SKELETON_WIDTHS.map((width) => (
+        <span key={width} style={{ width }} />
+      ))}
+    </div>
+  );
+}
+
 export function DiffView({ diff, fullPath }: { diff: FileDiff; fullPath?: string | undefined }) {
-  const model = useMemo(() => buildDiff(diff.oldText, diff.newText), [diff.oldText, diff.newText]);
-  const blocks = useMemo(() => foldRows(model.rows), [model.rows]);
+  const model = useDiffModel(diff.oldText, diff.newText);
+  const blocks = useMemo(() => (model ? foldRows(model.rows) : []), [model]);
   const highlighted = useHighlighted(diff, highlightable(diff) ? languageForPath(diff.path) : null);
   const [wrap, setWrap] = useState(false);
   const [opened, setOpened] = useState<ReadonlySet<number>>(new Set());
@@ -121,10 +133,12 @@ export function DiffView({ diff, fullPath }: { diff: FileDiff; fullPath?: string
       <figcaption>
         <code title={fullPath}>{diff.path}</code>
         {diff.oldText === null && <span className="dv-badge">New file</span>}
-        <span className="appr-count">
-          <span className="plus">+{formatCount(model.added)}</span>{' '}
-          <span className="minus">−{formatCount(model.removed)}</span>
-        </span>
+        {model && (
+          <span className="appr-count">
+            <span className="plus">+{formatCount(model.added)}</span>{' '}
+            <span className="minus">−{formatCount(model.removed)}</span>
+          </span>
+        )}
         <button
           type="button"
           className="dv-wrap"
@@ -139,8 +153,10 @@ export function DiffView({ diff, fullPath }: { diff: FileDiff; fullPath?: string
         className={wrap ? 'dv-body wrap' : 'dv-body'}
         role="region"
         aria-label={`Changes to ${diff.path}`}
+        aria-busy={model ? undefined : true}
         tabIndex={0}
       >
+        {!model && <DiffSkeleton />}
         <table>
           <tbody>
             {shown.items.map((item) =>

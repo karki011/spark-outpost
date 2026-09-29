@@ -1,64 +1,17 @@
 import { randomUUID } from 'node:crypto';
-import { cp, mkdtemp, readdir, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Db } from '../src/persistence/db.ts';
 import { resolveChatSettings } from '../src/persistence/chat-settings.ts';
 import { createConversation, ensureLocalWorkspace } from '../src/persistence/conversations.ts';
-import { migrationsDir, runMigrations } from '../src/persistence/migrate.ts';
+import { runMigrations } from '../src/persistence/migrate.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { getSetupState } from '../src/persistence/setup.ts';
 import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
-import {
-  connectCliProvider,
-  createTestDb,
-  createTestSchema,
-  dropTestSchema,
-  schemaDb,
-  type TestDb,
-} from './support.ts';
+import { migratedUpTo, oldConnection } from './migration-support.ts';
+import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
 
 const LEVELS_MIGRATION = '0049_levels_full_auto_ship.sql';
 const MODES_MIGRATION = '0050_provider_modes.sql';
-
-function migratedUpTo(migration: string) {
-  const state = { schema: '', db: null as unknown as Db, before: '' };
-  beforeEach(async () => {
-    state.schema = await createTestSchema();
-    state.db = schemaDb(state.schema);
-    state.before = await mkdtemp(path.join(tmpdir(), 'spark-migrations-'));
-    for (const name of await readdir(migrationsDir)) {
-      if (name.endsWith('.sql') && name < migration) {
-        await cp(path.join(migrationsDir, name), path.join(state.before, name));
-      }
-    }
-    await runMigrations(state.db, { dir: state.before });
-  });
-
-  afterEach(async () => {
-    await state.db.end();
-    await dropTestSchema(state.schema);
-    await rm(state.before, { recursive: true, force: true });
-  });
-  return state;
-}
-
-async function oldConnection(
-  db: Db,
-  workspaceId: string,
-  provider: string,
-  permission: string,
-  level: string,
-): Promise<void> {
-  await db.query(
-    `INSERT INTO provider_connections
-       (workspace_id, provider, method, detail, models, model, permission, level, effort, verified_at)
-     VALUES ($1, $2, 'cli', 'x', '[]', NULL, $3, $4, 'medium', now())`,
-    [workspaceId, provider, permission, level],
-  );
-}
 
 describe('removing Hands-on', () => {
   const state = migratedUpTo(LEVELS_MIGRATION);
@@ -89,11 +42,11 @@ describe('removing Hands-on', () => {
 
     await runMigrations(db);
 
-    const { rows } = await db.query<{ level: string }>(
-      'SELECT level FROM provider_connections WHERE workspace_id = $1',
+    const { rows } = await db.query<{ default_level: string }>(
+      'SELECT default_level FROM profiles WHERE workspace_id = $1',
       [workspaceId],
     );
-    expect(rows).toEqual([{ level: 'balanced' }]);
+    expect(rows).toEqual([{ default_level: 'balanced' }]);
     const overrides = await db.query<{ overrides: unknown }>(
       'SELECT overrides FROM conversations WHERE id = $1',
       [conversation.id],
@@ -108,18 +61,16 @@ describe('removing Hands-on', () => {
       level: 'balanced',
     });
     const setup = await getSetupState(db, workspaceId);
-    expect(setup.providers.find((entry) => entry.id === 'claude')?.connection?.level).toBe(
-      'balanced',
-    );
+    expect(setup.profile.defaultLevel).toBe('balanced');
     expect(setup.profile.shipFailingChecks).toBe(true);
     await expect(
       db.query(`UPDATE runs SET level = 'hands-on' WHERE id = $1`, [runId]),
     ).rejects.toThrow(/runs_level_check/);
     await expect(
-      db.query(`UPDATE provider_connections SET level = 'hands-on' WHERE workspace_id = $1`, [
+      db.query(`UPDATE profiles SET default_level = 'hands-on' WHERE workspace_id = $1`, [
         workspaceId,
       ]),
-    ).rejects.toThrow(/provider_connections_level_check/);
+    ).rejects.toThrow(/profiles_default_level_check/);
   });
 });
 
@@ -144,13 +95,13 @@ describe('provider modes from the old permission levels (migration 0050)', () =>
 
     await runMigrations(db);
 
-    const { rows } = await db.query<{ provider: string; agent_mode: string; level: string }>(
-      'SELECT provider, agent_mode, level FROM provider_connections ORDER BY provider',
+    const { rows } = await db.query<{ provider: string; agent_mode: string }>(
+      'SELECT provider, agent_mode FROM provider_connections ORDER BY provider',
     );
     expect(rows).toEqual([
-      { provider: 'claude', agent_mode: 'bypassPermissions', level: 'full-auto' },
-      { provider: 'codex', agent_mode: 'read-only', level: 'balanced' },
-      { provider: 'zai', agent_mode: 'acceptEdits', level: 'hands-off' },
+      { provider: 'claude', agent_mode: 'bypassPermissions' },
+      { provider: 'codex', agent_mode: 'read-only' },
+      { provider: 'zai', agent_mode: 'acceptEdits' },
     ]);
     const overrides = await db.query<{ overrides: unknown }>(
       'SELECT overrides FROM conversations WHERE id = $1',
@@ -165,14 +116,8 @@ describe('provider modes from the old permission levels (migration 0050)', () =>
     expect(await resolveChatSettings(db, conversation.id)).toMatchObject({
       agentMode: 'plan',
       permission: 'ask',
-      level: 'full-auto',
+      level: 'balanced',
     });
-    const fresh = await db.query<{ column_default: string }>(
-      `SELECT column_default FROM information_schema.columns
-       WHERE table_schema = $1 AND table_name = 'provider_connections' AND column_name = 'level'`,
-      [state.schema],
-    );
-    expect(fresh.rows[0]!.column_default).toContain('hands-off');
   });
 });
 

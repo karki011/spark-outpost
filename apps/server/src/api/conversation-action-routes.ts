@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
-  pinnedOrderRequestSchema,
   type AgentCommandsResponse,
+  conversationOrderRequestSchema,
   updateConversationRequestSchema,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
@@ -31,7 +31,7 @@ export function conversationActionRoutes({ db, workspaceId }: ConversationAction
   const router = Router();
 
   router.put('/conversations/pinned-order', async (req, res) => {
-    const { conversationIds } = parseBody(pinnedOrderRequestSchema, req);
+    const { conversationIds } = parseBody(conversationOrderRequestSchema, req);
     await orderPinned(db, workspaceId, conversationIds);
     res.status(204).end();
   });

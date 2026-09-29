@@ -1,5 +1,4 @@
 import {
-  isCheckApproval,
   isTerminalRunStatus,
   type Approval,
   type ConversationDetail,
@@ -16,7 +15,7 @@ import { RevertRun } from './approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from './changes/FilesChanged.tsx';
 import { CheckpointCard } from './checkpoints/CheckpointCard.tsx';
 import { isCheckpoint } from './checkpoints/checkpoint-model.ts';
-import { mergeCheckpoints } from './crew/crew-items.ts';
+import { mergeCheckpoints, shownApprovals } from './crew/crew-items.ts';
 import { MakeChange } from './make-change/MakeChange.tsx';
 import { MessageActions } from './message-actions/MessageActions.tsx';
 import { Markdown } from './markdown/Markdown.tsx';
@@ -79,11 +78,19 @@ function soloChild(run: Run, detail: ConversationDetail) {
   return { member, child };
 }
 
-function liveApprovals(stream: RunProjection, pending: readonly Approval[]): readonly Approval[] {
-  const extra = pending.filter(
-    (approval) => !stream.approvals.some((known) => known.id === approval.id),
+function turnApprovals(
+  run: Run,
+  detail: ConversationDetail,
+  stream: RunProjection,
+  memberRunId: string | null,
+): Approval[] {
+  const stored = detail.approvals.filter(
+    (approval) =>
+      (approval.runId === run.id || approval.runId === memberRunId) && !isCheckpoint(approval),
   );
-  return [...stream.approvals, ...extra];
+  if (isTerminalRunStatus(run.status)) return shownApprovals(stored);
+  const pendingCheckpoint = detail.orchestrations?.[run.id]?.pendingCheckpoint;
+  return shownApprovals(stored, stream.approvals, pendingCheckpoint ? [pendingCheckpoint] : []);
 }
 
 function turnStatus(run: Run, stream: RunProjection, waiting: boolean) {
@@ -102,12 +109,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
   const leads = streamLeads(stream, finished);
   const active = stream.status === 'connecting' || stream.status === 'running';
   const working = !finished && active;
-  const pendingCheckpoint = detail.orchestrations?.[run.id]?.pendingCheckpoint ?? null;
-  const pendingChecks = detail.approvals.filter(
-    (approval) => approval.runId === run.id && isCheckApproval(approval),
-  );
-  const pending = pendingCheckpoint ? [pendingCheckpoint, ...pendingChecks] : pendingChecks;
-  const approvals = finished ? [] : liveApprovals(stream, pending);
+  const approvals = turnApprovals(run, detail, stream, member?.runId ?? null);
   const waiting = working && hasPending(approvals);
   const { state, label } = turnStatus(run, stream, waiting);
 

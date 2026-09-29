@@ -180,7 +180,11 @@ describe('worker audit recording with an ACP agent', { timeout: 30_000 }, () => 
     expect(run.status).toBe('succeeded');
 
     const { entries: rows } = await page(runId, { limit: 500 });
-    const protocol = rows.filter((row) => row.kind !== 'stderr');
+    expect(rows[0]).toMatchObject({
+      direction: 'harness',
+      method: 'codex/developer_instructions',
+    });
+    const protocol = rows.filter((row) => row.kind !== 'stderr' && row.direction !== 'harness');
     expect(protocol[0]).toMatchObject({ direction: 'to_agent', method: 'initialize' });
     expect(protocol.at(-1)).toMatchObject({ direction: 'from_agent', method: 'session/prompt' });
     expect(rows.some((row) => row.kind === 'stderr')).toBe(true);
