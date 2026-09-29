@@ -16,6 +16,7 @@ import { formatTokens } from '../chat/composer/model-options.ts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { CostText } from './CostText.tsx';
 import './usage.css';
+import { EmptyScene } from '../brand/EmptyScene.tsx';
 
 type Range = 'last30Days' | 'allTime';
 
@@ -124,9 +125,7 @@ export function UsageSection() {
         />
       </div>
       {summary.isError && <p className="usage-empty">{summary.error.message}</p>}
-      {summary.data && rows.length === 0 && (
-        <p className="usage-empty">No replies in this period yet.</p>
-      )}
+      {summary.data && rows.length === 0 && <EmptyScene>No replies in this period yet.</EmptyScene>}
       {rows.length + advisors.length > 0 && (
         <ul className="usage-list" aria-label="Usage by provider">
           {rows.map((row) => (

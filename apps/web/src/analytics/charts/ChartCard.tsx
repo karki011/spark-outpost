@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from 'react';
 import { isSmallSample } from '@spark-outpost/contracts';
+import { EmptyScene } from '../../brand/EmptyScene.tsx';
 
 interface TableColumn<Row> {
   label: string;
@@ -68,7 +69,11 @@ function SampleFlag({ n, noun = 'runs' }: { n: number; noun?: string | undefined
 }
 
 export function EmptyChart({ children }: { children: ReactNode }) {
-  return <p className="an-empty">{children}</p>;
+  return (
+    <EmptyScene size="compact" className="an-empty">
+      {children}
+    </EmptyScene>
+  );
 }
 
 interface ChartCardProps<Row> {

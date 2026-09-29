@@ -1,4 +1,5 @@
 import type { InboxTicket, TicketSection } from '@spark-outpost/contracts';
+import { EmptyScene } from '../brand/EmptyScene.tsx';
 import { SectionHeader } from './SectionHeader.tsx';
 import {
   ageTitle,
@@ -23,6 +24,17 @@ interface InboxSectionsProps {
   onSelect: (ticket: InboxTicket) => void;
   onAction: (ticket: InboxTicket, action: RowAction) => void;
 }
+
+const EMPTY_TEXT: Record<TicketView, string> = {
+  inbox: 'Nothing assigned to you right now.',
+  attention: 'Nothing needs you right now.',
+  working: 'Nothing in progress.',
+  pr_ready: 'No draft pull requests waiting on you.',
+  in_review: 'Nothing in review.',
+  up_next: 'Nothing queued up next.',
+  done: 'Nothing finished in the last 7 days.',
+  snoozed: 'Nothing snoozed.',
+};
 
 function syncProblem(ticket: InboxTicket): string | null {
   const sync = ticket.lastSync;
@@ -103,7 +115,7 @@ export function InboxSections(props: InboxSectionsProps) {
                   : undefined
               }
             />
-            {open && rows.length === 0 && <p className="sec-empty">Nothing here right now.</p>}
+            {open && rows.length === 0 && <EmptyScene fill>{EMPTY_TEXT[view]}</EmptyScene>}
             {open && rows.length > 0 && (
               <ul id={listId} className="tk-rows">
                 {rows.map((ticket) => (

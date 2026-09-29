@@ -8,6 +8,7 @@ import {
   type TicketSearchResult,
   type TicketSourceId,
 } from '@spark-outpost/contracts';
+import { EmptyScene } from '../brand/EmptyScene.tsx';
 import { ToastHost } from '../conversations/Toast.tsx';
 import { useToast } from '../conversations/use-toast.ts';
 import { useMinuteClock } from '../ui/use-minute-clock.ts';
@@ -213,12 +214,10 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                     onClear={search.clear}
                   />
                 ) : tickets.length === 0 ? (
-                  <div className="tk-noresults">
-                    <p>Nothing is assigned to you in {label} right now.</p>
-                    <p className="tk-quiet">
-                      Search above to find a ticket and assign it to yourself.
-                    </p>
-                  </div>
+                  <EmptyScene fill>
+                    <b>Nothing is assigned to you in {label} right now.</b>
+                    Search above to find a ticket and assign it to yourself.
+                  </EmptyScene>
                 ) : (
                   <>
                     {view === 'inbox' && density === 'comfortable' && (
