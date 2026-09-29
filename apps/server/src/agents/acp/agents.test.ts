@@ -40,6 +40,13 @@ describe('Claude session options', () => {
       });
     }
     expect(project.tools).toEqual(['Read', 'Glob', 'Grep']);
+    expect(optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true)).tools).toEqual([
+      'Read',
+      'Glob',
+      'Grep',
+      'Write',
+      'ExitPlanMode',
+    ]);
     expect(chat.tools).toEqual([]);
   });
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   HISTORY_TURNS,
+  FINDING_KIND_RULE,
   INCREMENT_RULE,
+  MAKE_CHANGE_RULE,
   SHIP_RULE,
   PATCH_LIMIT,
   PLAN_FOLLOW_RULE,
@@ -10,6 +12,7 @@ import {
   checkFixFollowUp,
   criticPrompt,
   fixFollowUp,
+  makeChangeFollowUp,
   namedFiles,
 } from './context.ts';
 import { reviewFindings, reviewVerdict } from './review.ts';
@@ -43,6 +46,14 @@ describe('context assembly', () => {
     expect(prompt).toContain(`turn ${HISTORY_TURNS + 1}`);
     expect(prompt).toContain('## Checks the harness runs after you\n- `pnpm test`');
     expect(prompt).not.toContain('Architect');
+  });
+
+  it('tells the Builder the user chose to apply the previous answer, and includes it', () => {
+    expect(makeChangeFollowUp('Rename sum to add.')).toBe(
+      `${MAKE_CHANGE_RULE}\n\n## Answer to apply\nRename sum to add.`,
+    );
+    expect(makeChangeFollowUp(null)).toBe(MAKE_CHANGE_RULE);
+    expect(MAKE_CHANGE_RULE).toMatch(/Don't answer the question again or ask whether to make it/);
   });
 
   it('leaves out the earlier conversation when there is none, and carries your note', () => {
@@ -145,5 +156,14 @@ describe('review parsing', () => {
     expect(reviewFindings(text)).toEqual(['Missing test', 'Typo in name']);
     expect(reviewVerdict('**Verdict:** looks good')).toBe('looks_good');
     expect(reviewVerdict('I think it is fine')).toBe('unclear');
+  });
+});
+
+describe('the Critic finding schema (B3)', () => {
+  it('asks the Critic to tag each finding and keep concerns for bugs and missing behaviour', () => {
+    const prompt = criticPrompt({ request: 'r', plan: [], changes: [], patch: '', checks: [] });
+    expect(prompt).toContain(FINDING_KIND_RULE);
+    expect(FINDING_KIND_RULE).toMatch(/\[bug\].*\[missing\].*\[hardening\].*\[style\]/s);
+    expect(FINDING_KIND_RULE).toMatch(/"Verdict: concerns" only for \[bug\] or \[missing\]/);
   });
 });

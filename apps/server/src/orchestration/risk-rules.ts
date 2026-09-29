@@ -43,6 +43,14 @@ export function destructiveMigrationWording(request: string): boolean {
   return MIGRATION.test(request) && DESTRUCTIVE_SCHEMA_WORDING.test(request);
 }
 
+export function additiveMigrationWording(request: string): boolean {
+  return (
+    MIGRATION.test(request) &&
+    !DESTRUCTIVE_SCHEMA_WORDING.test(request) &&
+    !destructiveByRule(request)
+  );
+}
+
 const MIGRATION_FILE =
   /(?:^|\/)(?:migrations?|migrate|db\/migrate|alembic\/versions|schema)\/|\.sql$|(?:^|\/)schema\.prisma$/i;
 

@@ -7,6 +7,7 @@ import {
   SMALL_JEV_AT,
 } from '../advisor/policy.ts';
 import type { ScanReport } from '../codescan/scan.ts';
+import { namedFiles } from './context.ts';
 import { asksForTopModel, complexByRule, trivialByRule } from './risk-rules.ts';
 
 export type ComplexSource = 'user' | 'rules' | 'scan' | 'jev';
@@ -71,12 +72,46 @@ function multiPart(request: string): boolean {
 
 const BIG_ITEMS = 3;
 const BIG_STEPS = 4;
+const LISTED_TARGETS = 4;
+const FILE_LIST_TARGETS = 3;
+const MANY_FILES = 3;
+const ALSO_TARGETS = 4;
+const ALSO_LENGTH = 150;
+
+const CODE = /```[\s\S]*?(?:```|$)|`[^`\n]*`|\([^()\n]*\)|\{[^{}\n]*\}|\[[^[\]\n]*\]/g;
+const SENTENCE_BREAK = /[.!?]+(?=\s|$)|\n/;
+const CLAUSE_BREAK = /[,;:]|\band also\b|\bas well as\b/i;
+const ALSO = /\balso\b|\bas well as\b/i;
+const WORD = /[\p{L}\p{N}]+/gu;
+
+const CHANGE_TARGET =
+  /\b(?:add|build|create|implement|fix|write|refactor|remove|move|update|change|replace|migrate|convert|extract|split|wire|rename|document|cover|show|keep|parse|print|tests?|docs?|readme|section|text|messages?|errors?|help|subcommands?|commands?|endpoints?|pages?|buttons?|columns?|tables?|fields?|flags?|options?|filters?|parsing|cli|api|schema|components?|screens?|routes?|handlers?|scripts?)\b/i;
+
+function isTarget(clause: string): boolean {
+  if ((clause.match(WORD)?.length ?? 0) < 2) return false;
+  return CHANGE_TARGET.test(clause) || namedFiles([clause]).length > 0;
+}
+
+function targetsIn(sentence: string): number {
+  return sentence.split(CLAUSE_BREAK).filter(isTarget).length;
+}
+
+function bigProse(request: string): boolean {
+  const prose = request.replace(CODE, ' ');
+  const perSentence = prose.split(SENTENCE_BREAK).map(targetsIn);
+  const listed = Math.max(0, ...perSentence);
+  if (listed >= LISTED_TARGETS) return true;
+  if (listed >= FILE_LIST_TARGETS && namedFiles([prose]).length >= MANY_FILES) return true;
+  const targets = perSentence.reduce((sum, count) => sum + count, 0);
+  return ALSO.test(prose) && targets >= ALSO_TARGETS && prose.length >= ALSO_LENGTH;
+}
 
 export function bigByRule(request: string): string | null {
   if (complexByRule(request) === 'multi-package') return 'several packages';
   const items = request.match(LIST_ITEM)?.length ?? 0;
   const steps = request.match(STEP_VERB)?.length ?? 0;
-  return items >= BIG_ITEMS || steps >= BIG_STEPS ? 'several parts' : null;
+  if (items >= BIG_ITEMS || steps >= BIG_STEPS || bigProse(request)) return 'several parts';
+  return null;
 }
 
 export function broadRequest(

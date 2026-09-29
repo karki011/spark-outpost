@@ -1,4 +1,6 @@
 import type { RequestPermissionRequest, RequestPermissionResponse } from '@agentclientprotocol/sdk';
+import { exitPlanText } from '../../plans/plan-mode.ts';
+import type { ProviderOutput } from '../../providers/provider.ts';
 
 export interface PermissionDecision {
   response: RequestPermissionResponse;
@@ -22,4 +24,12 @@ export function declineInConversation(
       : { outcome: { outcome: 'cancelled' } },
     note: `Declined: ${title} (${inProject ? ASK_MODE_REASON : NO_FOLDER_REASON})`,
   };
+}
+
+export function nativePlan(request: RequestPermissionRequest, agentId: string): ProviderOutput[] {
+  const { toolCall } = request;
+  const plan = exitPlanText(toolCall.kind, toolCall.rawInput, toolCall.content);
+  if (!plan) return [];
+  const source = agentId === 'codex' ? 'codex' : 'claude_plan_mode';
+  return [{ kind: 'plan_proposed', plan, toolCallId: toolCall.toolCallId, source }];
 }

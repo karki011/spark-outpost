@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'intent-2-clarify-plan-first';
+export const POLICY_VERSION = 'intent-3-tagged-findings-prose-plans';
 
 export type ActingQuestion =
   | 'question'
@@ -71,7 +71,7 @@ export const ROUTER_TIER_OF_CARD: Readonly<Record<ModelTier, RouterTier | null>>
   frontier: null,
 };
 
-export const COORD_POLICY_VERSION = 'coord-1';
+export const COORD_POLICY_VERSION = 'coord-2';
 export const COORD_MAX_PIECES = 8;
 export const COORD_ENGAGE_PLAN_ITEMS = 4;
 export const COORD_ENGAGE_PLAN_AREAS = 2;

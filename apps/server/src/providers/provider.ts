@@ -3,6 +3,7 @@ import type {
   AgentModeOption,
   ConfigOptionInfo,
   ConfigValues,
+  PlanDocumentSource,
   PlanEntry,
   ProtocolDirection,
   RunMode,
@@ -67,6 +68,7 @@ export interface ProviderTurn {
   coordinated?: boolean;
   env?: Readonly<Record<string, string>>;
   worktree?: boolean;
+  planning?: boolean;
   modeRequests?: ModeRequests;
   approvals?: PermissionGate;
   askTitle?: boolean;
@@ -146,6 +148,7 @@ export type ProviderOutput =
       options?: ConfigValues;
     }
   | { kind: 'plan'; entries: PlanEntry[] }
+  | { kind: 'plan_proposed'; plan: string; toolCallId: string; source: PlanDocumentSource }
   | {
       kind: 'session';
       sessionId: string;

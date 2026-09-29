@@ -125,6 +125,7 @@ export async function ask(s: Session, action: Ask): Promise<FlowEvent> {
   if (action.kind === 'budget' && answer.optionId === CHECKPOINT_OPTION.continueBudget) {
     s.limits = extendLimits(s.limits, await budgetUsage(s), s.baseLimits);
     s.budgetHit = null;
+    s.capWaived = true;
     await save(s, {
       activeLimitMs: s.limits.activeLimitMs,
       toolCallLimit: s.limits.toolCallLimit,

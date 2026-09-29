@@ -58,6 +58,32 @@ describe('ship messages', () => {
     expect(body.endsWith(SHIP_FOOTER)).toBe(true);
   });
 
+  it('quotes each multi-line note whole, with only its first line in bold (B8)', () => {
+    const body = pullRequestBody({
+      ...summary,
+      notes: [
+        'Clarifying questions (no answer, went with the defaults):\n- Which rounding? → nearest\n- Keep the old name? → yes',
+        'Plan it followed:\n\n1. Add the CLI\n2. Add tests',
+      ],
+    });
+    expect(
+      body.startsWith(
+        [
+          '> **Clarifying questions (no answer, went with the defaults):**',
+          '> - Which rounding? → nearest',
+          '> - Keep the old name? → yes',
+          '',
+          '> **Plan it followed:**',
+          '>',
+          '> 1. Add the CLI',
+          '> 2. Add tests',
+          '',
+          '## Summary',
+        ].join('\n'),
+      ),
+    ).toBe(true);
+  });
+
   it('says when no checks ran and skips empty sections', () => {
     const body = pullRequestBody({
       ...summary,

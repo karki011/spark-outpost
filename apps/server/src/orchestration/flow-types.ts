@@ -68,6 +68,7 @@ export type FlowEvent =
       error?: string | null;
       open?: readonly string[];
       large?: boolean;
+      unchanged?: boolean;
       green?: boolean;
       verdict?: ReviewVerdict;
       fixable?: readonly string[];
@@ -118,6 +119,7 @@ export interface FlowState {
   verdicts: number;
   escalated: boolean;
   large: boolean;
+  unchanged?: boolean;
   review: ReviewLoop;
   shipping?: boolean;
   readOnly?: ReadOnlyWork;

@@ -79,10 +79,17 @@ function planSection(plan: PlanDocument): string[] {
   return lines;
 }
 
+function quotedNote(note: string): string {
+  const [title = '', ...rest] = note.trim().split('\n');
+  return [`**${title.trim()}**`, ...rest]
+    .map((line) => (line.trim() ? `> ${line}` : '>'))
+    .join('\n');
+}
+
 export function pullRequestBody(summary: ShipSummary): string {
   const sections: string[][] = [
     ...(summary.notes && summary.notes.length > 0
-      ? [summary.notes.map((note) => `> **${note}**`)]
+      ? [[summary.notes.map(quotedNote).join('\n\n')]]
       : []),
     ['## Summary', summary.summary ? clip(summary.summary, SUMMARY_MAX) : summary.title],
     filesSection(summary.files),

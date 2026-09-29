@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Db } from '../persistence/db.ts';
-import { checkBudget, meterSpend } from './budget-check.ts';
+import { checkBudget, checkBudgetBeforeCall, meterSpend, nextCallUsd } from './budget-check.ts';
 import type { Session } from './session.ts';
 
 interface SlowDb {
@@ -42,6 +42,8 @@ function session(db: Db, costCapUsd: number | null = null): Session {
     budgetHit: null,
     members: new Map(),
     liveCost: new Map(),
+    routes: new Map(),
+    input: { provider: 'codex', settings: { model: 'gpt-6-sol' } },
   } as unknown as Session;
 }
 
@@ -75,5 +77,28 @@ describe('meterSpend', () => {
     meterSpend(s);
     expect(s.budgetHit).toBe('cost');
     expect(stopped).toEqual(['a', 'b']);
+  });
+});
+
+describe('checkBudgetBeforeCall (B9)', () => {
+  it('prices the smallest fresh call from the model card', () => {
+    expect(nextCallUsd('codex', 'gpt-6-sol')).toBeCloseTo(0.02);
+    expect(nextCallUsd('codex', null)).toBe(0);
+  });
+
+  it('stops before a call whose floor would cross the cap, and not when it fits', async () => {
+    const tight = session(slowDb(0.004).db, 0.01);
+    expect(await checkBudgetBeforeCall(tight, 'scout')).toBe('cost');
+    expect(tight.budgetHit).toBe('cost');
+    const roomy = session(slowDb(0.004).db, 1);
+    expect(await checkBudgetBeforeCall(roomy, 'scout')).toBeNull();
+    expect(await checkBudgetBeforeCall(session(slowDb(0.004).db, null), 'scout')).toBeNull();
+  });
+
+  it('lets the next call start once after the user continues past the budget', async () => {
+    const s = session(slowDb(0.004).db, 0.01);
+    s.capWaived = true;
+    expect(await checkBudgetBeforeCall(s, 'critic')).toBeNull();
+    expect(await checkBudgetBeforeCall(s, 'critic')).toBe('cost');
   });
 });

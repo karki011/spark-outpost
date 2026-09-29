@@ -1,11 +1,12 @@
 import { Readable, Writable } from 'node:stream';
 import * as acp from '@agentclientprotocol/sdk';
-import { PLAN_MODE_TRIGGER, currentRequest, planModeTurn, planReplies } from './fake-acp-plans.ts';
+import { currentRequest, planReplies, planTurn } from './fake-acp-plans.ts';
 import { roleFor } from './fake-acp-roles.ts';
 import { coordinatorRoleFor } from './fake-acp-coordinator.ts';
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
+import { describeBlock } from './fake-acp-support.ts';
 import {
   createFakeSession,
   loadSessionAdvertised,
@@ -127,12 +128,6 @@ const promptCapabilities = JSON.parse(
 const sessionCapabilities = JSON.parse(
   process.env.FAKE_ACP_SESSION_CAPABILITIES ?? '{}',
 ) as acp.SessionCapabilities;
-
-function describeBlock(block: acp.ContentBlock): string {
-  if (block.type === 'image') return `image:${block.mimeType}:${block.data.length}`;
-  if (block.type === 'resource') return `resource:${block.resource.uri}`;
-  return block.type;
-}
 
 async function fileRequests(
   text: string,
@@ -289,7 +284,8 @@ async function turn(
   if (moded) return moded;
   const roleTurn = { text, sessionId, cwd: sessionCwd, client, update, say, signal };
   const asked = currentRequest(params.prompt);
-  if (asked.includes(PLAN_MODE_TRIGGER)) return planModeTurn(roleTurn, config.mode ?? '');
+  const planned = await planTurn(asked, roleTurn, config.mode ?? '');
+  if (planned) return planned;
   if (await planReplies(asked, say)) return 'end_turn';
   if (text.includes(FOUR_KINDS_TRIGGER)) return fourKindsTurn(sessionId, sessionCwd, client, say);
   const role = coordinatorRoleFor(text) ?? roleFor(text);

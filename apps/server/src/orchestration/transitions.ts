@@ -144,7 +144,7 @@ function afterBuilder(state: FlowState, large: boolean): FlowResult {
   if (state.review.fixing) {
     return spawn(state, { role: 'critic', reason: 'recheck', escalate: false });
   }
-  if ((state.reviewWanted || large) && !state.reviewed) {
+  if ((state.reviewWanted || large) && !state.reviewed && !state.unchanged) {
     return spawn(
       { ...state, reviewed: true },
       { role: 'critic', reason: 'first', escalate: false },
@@ -165,6 +165,7 @@ function builderDone(
     ...state,
     open: [...(event.open ?? state.open)],
     missingContext: event.missingContext ?? null,
+    unchanged: event.unchanged === true,
   };
   if (event.outcome === 'failed' && state.solo) {
     return finish(next, 'failed', event.error ?? 'The agent hit a problem.');

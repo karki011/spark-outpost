@@ -10,6 +10,7 @@ import {
   type AdviceBody,
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
+import { MAKE_CHANGE_RULE } from '../src/orchestration/context.ts';
 import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { getRun } from '../src/persistence/runs.ts';
@@ -134,6 +135,18 @@ describe('answer first, with "Make the change" one click away', () => {
     expect(built.orchestration.crew.map((member) => member.role)).toContain('builder');
     expect(await getRun(t.db, built.runId)).toMatchObject({ pickedMode: 'do', startAs: 'change' });
     expect((await adviceOf(built.runId)).calls?.change).toMatchObject({ source: 'user' });
+    const answer = await t.db.query<{ content: string }>(
+      `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant'`,
+      [answered.runId],
+    );
+    const builder = await t.db.query<{ prompt: string }>(
+      `SELECT prompt FROM runs WHERE parent_run_id = $1 AND role = 'builder'`,
+      [built.runId],
+    );
+    expect(builder.rows[0]?.prompt).toContain(MAKE_CHANGE_RULE);
+    expect(builder.rows[0]?.prompt).toContain(
+      `## Answer to apply\n${answer.rows[0]!.content.trim()}`,
+    );
   }, 90_000);
 });
 

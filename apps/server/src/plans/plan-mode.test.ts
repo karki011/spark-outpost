@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { exitPlanText, isExitPlanAllow } from './plan-mode.ts';
+import { exitPlanText, isExitPlanAllow, plansThisTurn } from './plan-mode.ts';
 
 describe('isExitPlanAllow', () => {
   it('counts every exit-plan choice as approval, including the clear-context ones', () => {
@@ -37,5 +37,29 @@ describe('exitPlanText', () => {
   it('ignores other tools and empty plans', () => {
     expect(exitPlanText('edit', { plan: 'x' }, content)).toBeNull();
     expect(exitPlanText('switch_mode', { plan: '  ' }, [])).toBeNull();
+  });
+});
+
+describe('which turns plan in the native plan mode (B5)', () => {
+  const ask = { mode: 'ask' as const, userRequest: 'What does divide return for 0?' };
+
+  it('plans every Ask turn of a Claude chat in Plan mode, and Codex Ask turns that ask for a plan', () => {
+    expect(plansThisTurn({ ...ask, provider: 'claude' })).toBe(true);
+    expect(plansThisTurn({ ...ask, provider: 'codex' })).toBe(false);
+    expect(
+      plansThisTurn({
+        ...ask,
+        provider: 'codex',
+        userRequest: 'Make a short plan for input checks. Plan only.',
+      }),
+    ).toBe(true);
+  });
+
+  it('never plans a Do turn by itself, and follows the harness when it says', () => {
+    expect(plansThisTurn({ provider: 'claude', mode: 'do', userRequest: 'Plan only.' })).toBe(
+      false,
+    );
+    expect(plansThisTurn({ ...ask, provider: 'claude', planning: false })).toBe(false);
+    expect(plansThisTurn({ ...ask, provider: 'codex', planning: true })).toBe(true);
   });
 });

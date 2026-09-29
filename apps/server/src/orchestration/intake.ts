@@ -13,6 +13,7 @@ import { vagueFollowUpByRule } from './follow-up.ts';
 import {
   asksForReview,
   buildsByRule,
+  additiveMigrationWording,
   destructiveByRule,
   followUpByRule,
   planOnlyByRule,
@@ -149,7 +150,8 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     facts,
     ruleRisk,
   );
-  const destructive = flaggedByRuleOrJev(destructiveCall);
+  const destructive =
+    flaggedByRuleOrJev(destructiveCall) && !additiveMigrationWording(facts.request);
   const risk: Risk = destructive ? 'destructive' : 'edits';
   const question = call(jev, 'question', 'question', questionByRule(facts.request), facts, risk);
   const review = call(jev, 'review', 'review', asksForReview(facts.request), facts, risk);

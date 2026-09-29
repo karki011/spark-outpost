@@ -5,7 +5,13 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type CheckBody, type InvolvementLevel } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
-import { BUG_FINDINGS, HARDENING_FINDINGS, ROUND_FINDINGS } from './fake-acp-roles.ts';
+import { nextCallUsd } from '../src/orchestration/budget-check.ts';
+import {
+  BUG_FINDINGS,
+  EDGE_FINDINGS,
+  HARDENING_FINDINGS,
+  ROUND_FINDINGS,
+} from './fake-acp-roles.ts';
 import {
   TRIVIAL,
   answerEverything,
@@ -299,6 +305,32 @@ describe('Critic → fix rounds', () => {
     expect(text).toContain(HARDENING_FINDINGS[0]!.slice(0, 60));
   }, 120_000);
 
+  it('runs no fix round at Full auto for tagged hardening and style findings on a passing build, even when Jev says bug (B3)', async () => {
+    await configureCheck("console.log('ok');\n");
+    await start({ policy: { finding_1: 0.95, finding_2: 0.95, finding_3: 0.95 } });
+    const { conversationId, runId } = await begin('#edgereview', 'full-auto');
+    const { orchestration } = await drive(conversationId, runId);
+    expect(orchestration.status).toBe('succeeded');
+    expect(await roles(runId)).toEqual(['builder', 'critic']);
+    expect(await checkStatuses()).toEqual(['passed']);
+    expect((await findingAdvice(runId))[0]?.body.answer).toMatchObject({
+      fixable: 0,
+      action: 'clean',
+    });
+    expect(await reply(runId)).toContain('Not fixed automatically: 2 AI review suggestions');
+  }, 120_000);
+
+  it('still reports hardening findings when the Critic says looks good (B3)', async () => {
+    await start({ policy: JEV_SAYS_BUGS });
+    const { conversationId, runId } = await begin('#edgegood', 'full-auto');
+    await drive(conversationId, runId);
+    expect(await roles(runId)).toEqual(['builder', 'critic']);
+    expect(await findingAdvice(runId)).toEqual([]);
+    const text = await reply(runId);
+    expect(text).toContain('Not fixed automatically: 2 AI review suggestions');
+    expect(text).toContain(EDGE_FINDINGS[0]!.slice(0, 60));
+  }, 120_000);
+
   it('lets Jev overrule the rules when it is sure a finding is not a bug', async () => {
     await start({ policy: { finding_1: 0.1, finding_2: 0.05 } });
     const { conversationId, runId } = await begin('#bugreview', 'hands-off');
@@ -340,7 +372,8 @@ describe('the task budget', () => {
     approval.kind === 'budget' ? { optionId: CHECKPOINT_OPTION.stop } : answerEverything(approval);
 
   it('refuses the first fix turn once the Builder and Critic spent the cap, and Stop ends on the keep card', async () => {
-    await start({ policy: JEV_SAYS_BUGS, costCapUsd: 0.2004 });
+    const builderAndCriticFloor = 0.2 + nextCallUsd('claude', 'sonnet');
+    await start({ policy: JEV_SAYS_BUGS, costCapUsd: builderAndCriticFloor + 0.0002 });
     const { conversationId, runId } = await begin('#bugreview #cost', 'hands-off');
     const { asked, orchestration } = await drive(conversationId, runId, stopAtBudget);
     expect(asked.map((approval) => approval.kind)).toEqual(['budget', 'accept']);

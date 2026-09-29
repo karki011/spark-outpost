@@ -22,6 +22,24 @@ describe('engagement', () => {
     ).toBe('requested');
   });
 
+  it.each([
+    'Split this into pieces: a sum helper, a mean helper, and a README section.',
+    'Split the work into 3 parts and build them in order.',
+    'Break this up into smaller tasks.',
+    'Break it down into separate pieces, please.',
+    'Do it in pieces.',
+  ])('engages on an explicit ask for pieces: %s (B6)', (request) => {
+    expect(engagement({ ...FACTS, request }).reason).toBe('requested');
+  });
+
+  it.each([
+    'Split the CSV rows on commas.',
+    'Add a helper that splits a string into pieces of 3 characters.',
+    'Break the loop when the list is empty.',
+  ])('leaves splitting data alone: %s', (request) => {
+    expect(engagement({ ...FACTS, request }).engage).toBe(false);
+  });
+
   it('engages for an agreed plan with 4 items in 2 areas, not in 1 area', () => {
     const twoAreas = [
       'Store it in `apps/server/src/a.ts`',

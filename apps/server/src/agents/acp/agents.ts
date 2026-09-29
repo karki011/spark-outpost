@@ -45,6 +45,7 @@ export interface AgentDefinition {
   projectSessionMeta?: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
+    planning?: boolean,
   ) => Record<string, unknown>;
   doSessionMeta?: (
     extraRoots: readonly string[],
@@ -69,6 +70,8 @@ const CLAUDE_DO_TOOLS = [
   'EnterPlanMode',
   'ExitPlanMode',
 ] as const;
+const CLAUDE_READ_TOOLS = ['Read', 'Glob', 'Grep'];
+const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'];
 export const CLAUDE_DO_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
 const CLAUDE_DO_MODE = 'default';
 
@@ -192,8 +195,17 @@ const claudeSessions = {
   conversationSessionMeta: (repo?: ClaudeRepoOptions | null) =>
     claudeSessionMeta([], [], [], repo ?? null),
   probeSessionMeta: claudeSessionMeta([], [], [], null, false, true),
-  projectSessionMeta: (extraRoots: readonly string[], repo?: ClaudeRepoOptions | null) =>
-    claudeSessionMeta(['Read', 'Glob', 'Grep'], extraRoots, [], repo ?? null),
+  projectSessionMeta: (
+    extraRoots: readonly string[],
+    repo?: ClaudeRepoOptions | null,
+    planning = false,
+  ) =>
+    claudeSessionMeta(
+      planning ? [...CLAUDE_READ_TOOLS, ...CLAUDE_PLAN_TOOLS] : CLAUDE_READ_TOOLS,
+      extraRoots,
+      [],
+      repo ?? null,
+    ),
   doSessionMeta: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,

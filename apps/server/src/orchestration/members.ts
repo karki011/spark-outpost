@@ -1,4 +1,7 @@
 import type { AgentRole, RunMode } from '@spark-outpost/contracts';
+import { findingKind } from '../advisor/finding-questions.ts';
+import { previousReply } from '../advisor/intake-recorder.ts';
+import { plansThisTurn } from '../plans/plan-mode.ts';
 import { insertChildRun, markInPlaceMember, mergeRoute } from '../persistence/orchestrations.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
@@ -6,7 +9,7 @@ import { runAgentTurn, type RunControl } from '../workflow/agent-turn.ts';
 import { takeSnapshot } from '../workflow/do-run.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
 import { meterSpend } from './budget-check.ts';
-import { checkFixFollowUp, fixFollowUp } from './context.ts';
+import { checkFixFollowUp, fixFollowUp, makeChangeFollowUp } from './context.ts';
 import { reviewNet } from './lean.ts';
 import { createLoopGuard, DEFAULT_LOOP_GUARD } from './loop-guard.ts';
 import {
@@ -121,9 +124,12 @@ async function runInPlace(
   });
   if (mode !== s.input.mode) await setRunMode(s, mode);
   const preamble = await agreedPlanText(s);
+  const { planning: drafting, ...facts } = s.input;
+  const planning = drafting === true || plansThisTurn(facts);
   const input = {
     ...s.input,
     mode,
+    planning,
     ...(preamble ? { preamble } : {}),
     settings: {
       ...s.input.settings,
@@ -175,6 +181,9 @@ function followUpFor(s: Session, spawn: Spawn, options: MemberOptions): string |
   if (spawn.role !== 'builder') return null;
   if (spawn.reason === 'fix') return fixFollowUp(spawn.note);
   if (spawn.reason === 'resume') return RESUME_FOLLOW_UP;
+  if (spawn.reason === 'first' && s.input.startAs === 'change') {
+    return makeChangeFollowUp(previousReply(s.input));
+  }
   if (spawn.reason === 'first' && s.continuesTask) return s.input.prompt;
   return null;
 }
@@ -294,6 +303,9 @@ async function afterCritic(s: Session, result: MemberResult, route: MemberRoute)
   const findings = reviewFindings(result.text);
   await mergeRoute(s.deps.db, result.runId, { verdict });
   s.findings = verdict === 'concerns' ? findings : [];
+  if (verdict === 'looks_good') {
+    s.suggestions = findings.filter((finding) => findingKind(finding) === 'suggestion');
+  }
   if (!s.taskId) return verdict;
   const body = {
     reviewer: route.pick,

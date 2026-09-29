@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { declineInConversation } from './permissions.ts';
+import { declineInConversation, nativePlan } from './permissions.ts';
 
 const toolCall = { toolCallId: 't', title: 'Write notes.txt' };
 
@@ -35,5 +35,41 @@ describe('conversation permission policy', () => {
       options: [{ optionId: 'ok', name: 'Yes', kind: 'allow_once' }],
     });
     expect(decision.response).toEqual({ outcome: { outcome: 'cancelled' } });
+  });
+});
+
+describe('a native plan offered in Ask (B5)', () => {
+  const planRequest = (
+    options: { optionId: string; name: string; kind: 'allow_once' | 'reject_once' }[],
+  ) => ({
+    sessionId: 's',
+    toolCall: {
+      toolCallId: 'plan-review:1',
+      title: 'Implement this plan?',
+      kind: 'switch_mode' as const,
+      rawInput: { plan: '1. Add a CLI\n2. Add tests' },
+    },
+    options,
+  });
+
+  it("captures Claude's ExitPlanMode and Codex's plan review with their source", () => {
+    const claude = planRequest([{ optionId: 'reject', name: 'No', kind: 'reject_once' }]);
+    expect(nativePlan(claude, 'claude')).toEqual([
+      {
+        kind: 'plan_proposed',
+        plan: '1. Add a CLI\n2. Add tests',
+        toolCallId: 'plan-review:1',
+        source: 'claude_plan_mode',
+      },
+    ]);
+    const codex = planRequest([{ optionId: 'revise_plan', name: 'No', kind: 'reject_once' }]);
+    expect(nativePlan(codex, 'codex')[0]).toMatchObject({ source: 'codex' });
+    expect(declineInConversation(codex, true).response).toEqual({
+      outcome: { outcome: 'selected', optionId: 'revise_plan' },
+    });
+  });
+
+  it('ignores other permission requests', () => {
+    expect(nativePlan({ sessionId: 's', toolCall, options: [] }, 'claude')).toEqual([]);
   });
 });

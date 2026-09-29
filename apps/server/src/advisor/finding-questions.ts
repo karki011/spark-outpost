@@ -31,10 +31,26 @@ const CONCRETE_WRONG =
 const REAL_VULNERABILITY =
   /\b(?:sql injection|command injection|shell injection|code injection|xss|cross[- ]site scripting|path traversal|directory traversal|remote code execution|privilege escalation|ssrf|open redirect|(?:auth(?:entication|orization)?|permission|access[- ]control) (?:bypass|checks? (?:is |are )?missing)|(?:bypass(?:es)?|skips) (?:the )?(?:auth\w*|permission checks?|access control)|(?:no|missing) (?:auth\w*|permission|access[- ]control) checks?|(?:leaks?|exposes?|logs?|returns?) (?:the )?(?:user's |users' )?(?:secrets?|credentials?|tokens?|passwords?|api keys?|password hashes)|(?:unescaped|not escaped|without escaping)\b[^.;]{0,40}\b(?:html|user input|markup))\b/i;
 
+const KIND_TAG = /^\W*\[(bug|missing|hardening|style)\]/i;
+
 export type FindingKind = 'bug' | 'suggestion' | 'style';
+
+const TAG_KINDS: Record<string, FindingKind> = {
+  bug: 'bug',
+  missing: 'bug',
+  hardening: 'suggestion',
+  style: 'style',
+};
+
+function taggedKind(text: string): FindingKind | null {
+  const tag = KIND_TAG.exec(text)?.[1]?.toLowerCase();
+  return tag ? TAG_KINDS[tag]! : null;
+}
 
 export function findingKind(finding: string): FindingKind {
   const text = finding.trim();
+  const tagged = taggedKind(text);
+  if (tagged) return tagged;
   if (!text || NIT_LABEL.test(text)) return 'style';
   if (REAL_VULNERABILITY.test(text)) return 'bug';
   if (HARDENING_WORDS.test(text) && !REQUIRED_WORDS.test(text) && !CONCRETE_WRONG.test(text)) {
@@ -101,15 +117,22 @@ function jevSays(noul: number | null): boolean | null {
   return null;
 }
 
+function jevMayPromote(finding: string, kind: FindingKind, checksPass: boolean): boolean {
+  return kind === 'style' && !checksPass && taggedKind(finding.trim()) === null;
+}
+
 export function readFindings(
   findings: readonly string[],
   response: SystemOneResponse | null,
+  { checksPass = false }: { checksPass?: boolean } = {},
 ): FindingReading[] {
   return findings.map((finding, index) => {
     const kind = findingKind(finding);
     const rules = kind === 'bug';
     const noul = validNoul(response, findingKey(index));
-    const jev = kind === 'suggestion' && jevSays(noul) === true ? null : jevSays(noul);
+    const said = jevSays(noul);
+    const ignored = said === true && !rules && !jevMayPromote(finding, kind, checksPass);
+    const jev = ignored ? null : said;
     return {
       finding,
       rules,

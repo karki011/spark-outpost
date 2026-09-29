@@ -9,6 +9,7 @@ const NOTE_LIMIT = 2_000;
 export const FINDINGS_LIMIT = 10;
 const CHECK_OUTPUT_LIMIT = 3_000;
 const FINDING_CHARACTER_LIMIT = 500;
+const ANSWER_LIMIT = 6_000;
 
 export interface HistoryTurn {
   role: 'user' | 'assistant';
@@ -124,6 +125,15 @@ function checkSection(commands: readonly string[] | undefined): string[] {
   ];
 }
 
+export const MAKE_CHANGE_RULE =
+  'The user read the earlier answer to this request and chose "Make the change". Apply the change that answer proposes to the files now. Don\'t answer the question again or ask whether to make it.';
+
+export function makeChangeFollowUp(answer: string | null): string {
+  const trimmed = answer?.trim();
+  if (!trimmed) return MAKE_CHANGE_RULE;
+  return `${MAKE_CHANGE_RULE}\n\n${section('Answer to apply', cap(trimmed, ANSWER_LIMIT))}`;
+}
+
 export function builderPrompt(context: BuilderContext): string {
   const parts = [
     'Role: Builder. Make the change the request asks for, then reply with what you changed.',
@@ -157,6 +167,9 @@ export const PLAN_FOLLOW_RULE =
 const VERDICT_RULE =
   'List findings as "- " bullets under a "Findings:" line, then end with exactly one line: "Verdict: looks good" or "Verdict: concerns".';
 
+export const FINDING_KIND_RULE =
+  'Start each finding with its kind: "[bug]" for behaviour the change gets wrong for the request (a wrong result, a crash, a failing check, or a vulnerability the change adds, such as SQL injection); "[missing]" for something the request or agreed plan asks for that the change lacks; "[hardening]" for robustness, security hardening, or edge-case inputs the request did not ask about; "[style]" for naming, structure or readability. Use "Verdict: concerns" only for [bug] or [missing] findings.';
+
 function reviewSections(context: Omit<CriticContext, 'request' | 'plan'>): string[] {
   return [
     section('Files changed', changeLines(context.changes)),
@@ -185,6 +198,7 @@ export function criticPrompt(context: CriticContext): string {
   return [
     'Role: Critic. Review the change below; do not change files. This is an AI review, not verification.',
     VERDICT_RULE,
+    FINDING_KIND_RULE,
     ...optional(criticStyle(context.buildStyle ?? 'off')),
     ...(context.agreedPlan ? [PLAN_FOLLOW_RULE] : []),
     section('Request', cap(context.request, REQUEST_LIMIT)),

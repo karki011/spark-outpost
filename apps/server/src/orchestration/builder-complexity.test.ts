@@ -209,3 +209,29 @@ describe('big requests plan first', () => {
     expect(bigByRule('fix the typo in README line 3')).toBeNull();
   });
 });
+
+const BIG_PROSE = [
+  'Turn mathlib into a full command-line tool: add a bin/mathlib.js CLI with argument parsing, --help text, one subcommand per function (add, subtract, multiply, divide), friendly error messages for bad input and division by zero, a CLI section in README.md, and tests for every subcommand and error case.',
+  'Build a CLI for mathlib. It should parse arguments and print help. Each function gets its own subcommand. Errors should be friendly. Also document it in README.md and add tests for every subcommand.',
+  'Give the invoices page a date filter and also a status filter, keep both in the URL, show the active filters as chips above the table, and cover the filters with tests.',
+  'Wire the new retry setting through src/config.ts, src/queue/worker.ts and src/api/settings.ts, and show it on the settings page.',
+];
+
+const SMALL_PROSE = [
+  "When I open Settings on a phone, the Save button, which sits at the bottom of the form, overlaps the footer, so I can't tap it. It started after the last layout change. Please fix it so the button stays above the footer.",
+  'The export fails with an error when the project name has a comma, the CSV ends up with an extra column, and the totals row is off by one. Fix it.',
+  'Bug: on Analytics a share of 2 out of 3 shows as 66%, but it should round to the nearest percent (67%). Fix it.',
+  'Add a dark mode toggle to the settings page, store the choice in localStorage, and apply it before React mounts.',
+  'Fix this crash:\n```\nTypeError: x is undefined\n    at parse (src/a.ts:3:1)\n    at load (src/b.ts:9:2)\n    at main (src/c.ts:1:1)\n```',
+  'Explain why sum, product, mean and median in src/stats.ts give different answers for an empty list, with an example for each.',
+];
+
+describe('big requests written as prose plan first (B4)', () => {
+  it.each(BIG_PROSE)('plans first: %s', (request) => {
+    expect(bigByRule(request)).toBe('several parts');
+  });
+
+  it.each(SMALL_PROSE)('builds straight away: %s', (request) => {
+    expect(bigByRule(request)).toBeNull();
+  });
+});

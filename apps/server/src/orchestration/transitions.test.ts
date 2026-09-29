@@ -119,6 +119,19 @@ describe('lean flow', () => {
     expect(small[1]!.action).toEqual({ type: 'wrap_up' });
   });
 
+  it('skips the Critic when the Builder changed no files, even for destructive work (B7)', () => {
+    const refused = run(initialFlow('destructive', 'balanced'), [
+      { type: 'start', start: 'build' },
+      built({ unchanged: true }),
+    ]);
+    expect(refused[1]!.action).toEqual({ type: 'wrap_up' });
+    const review = run(flow('balanced', true), [
+      { type: 'start', start: 'build' },
+      built({ unchanged: true }),
+    ]);
+    expect(review[1]!.action).toEqual({ type: 'wrap_up' });
+  });
+
   it('reviews once, then wraps up with the verdict', () => {
     const results = run(flow('balanced', true), [
       { type: 'start', start: 'build' },
