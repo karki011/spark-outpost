@@ -14,7 +14,7 @@ async function openReset(page: Page) {
   await expect(page.getByRole('button', { name: 'Keep this chat', exact: true })).toBeVisible();
   await page.evaluate(() => localStorage.setItem('spark-outpost.models.provider', 'claude'));
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('dialog', { name: 'Profile' }).getByRole('tab', { name: 'Reset' }).click();
+  await page.getByRole('dialog', { name: 'Spark' }).getByRole('tab', { name: 'Reset' }).click();
   const dialog = page.getByRole('dialog', { name: 'Reset' });
   await expect(dialog.getByText('What stays')).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Hold to reset' })).toBeVisible();
@@ -161,13 +161,15 @@ test('a full keyboard hold resets Spark to onboarding after the grace period', a
   );
   expect(reset.status()).toBe(200);
   expect(reset.request().postDataJSON()).toEqual({ keepApiKeys: false });
-  await expect(
-    page.locator('.onb').getByRole('heading', { name: 'Welcome to Spark Outpost' }),
-  ).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.onb').getByRole('heading', { name: 'Meet Spark' })).toBeVisible({
+    timeout: 15_000,
+  });
   expect(await page.evaluate(() => localStorage.getItem('spark-outpost.models.provider'))).toBe(
     null,
   );
-  await expect(page.locator('.onb').getByLabel('What should we call you?')).toHaveValue('');
+  await expect(
+    page.locator('.onb').getByLabel('What should Spark call you?', { exact: true }),
+  ).toHaveValue('');
 });
 
 for (const theme of ['light', 'graphite', 'contrast']) {

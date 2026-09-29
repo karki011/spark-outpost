@@ -14,6 +14,7 @@ import {
 import { supportsDo, type AgentDefinition, type AgentLaunch } from './agents.ts';
 import { AgentExitedError, startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
+import { withClaudeSpark, withCodexSpark } from './spark-instructions.ts';
 import { Channel } from './channel.ts';
 import {
   contextSteps,
@@ -142,7 +143,7 @@ async function runSession(
       options,
       home,
       browsing,
-      repo?.codex ?? null,
+      withCodexSpark(repo?.codex ?? null, turn.spark),
       turn.builder === true,
     );
     agent = startAgentProcess(options.launch ?? definition.launch(), cwd, env, replay.observer);
@@ -244,7 +245,7 @@ function sessionMeta(
   repo: ClaudeRepoOptions | null,
   builder = false,
 ) {
-  if (!policy) return definition.conversationSessionMeta ?? null;
+  if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   if (changing) return definition.doSessionMeta?.(extraRoots(policy), repo, builder) ?? null;
   return definition.projectSessionMeta?.(extraRoots(policy), repo) ?? null;
 }
@@ -395,7 +396,7 @@ async function converse(
         definition,
         policy,
         doing !== null,
-        workspace.repo?.claude ?? null,
+        withClaudeSpark(workspace.repo?.claude ?? null, turn.spark, policy !== null),
         turn.builder === true,
       ),
       init,

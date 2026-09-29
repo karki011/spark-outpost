@@ -1,5 +1,6 @@
 import { providerIdSchema, type AgentModeOption, type RunEvent } from '@spark-outpost/contracts';
 import { getCapabilities } from '../persistence/chat-settings.ts';
+import { sparkPreferences } from '../persistence/setup.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
@@ -244,6 +245,7 @@ export async function runAgentTurn(
       input.identity.threadId,
       await conversationProjectIds(deps.db, input.identity.threadId),
     ).catch(() => []);
+    const spark = await sparkPreferences(deps.db, input.workspaceId);
 
     for await (const output of provider.run({
       prompt: input.prompt,
@@ -263,6 +265,7 @@ export async function runAgentTurn(
       ...(session ? { session: session.target } : {}),
       ...(repo.length > 0 ? { repo } : {}),
       ...(userMcp.length > 0 ? { userMcp } : {}),
+      spark,
     })) {
       meter(output);
       if (control.signal.aborted) {

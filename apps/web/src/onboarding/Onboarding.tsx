@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { BlobScout, type ScoutMood } from '../brand/BlobScout.tsx';
 import { burst } from '../ui/sparks.ts';
-import { NameStep } from './NameStep.tsx';
+import { MeetSparkStep } from './MeetSparkStep.tsx';
 import { ProviderStep } from './ProviderStep.tsx';
 import { DoneStep } from './DoneStep.tsx';
 import { ThemeStep } from './ThemeStep.tsx';
@@ -14,7 +14,7 @@ import { Stepper } from './Stepper.tsx';
 import '../ui/controls.css';
 import './onboarding.css';
 
-const STEP_LABELS = ['Your name', 'Theme', 'AI provider', 'Tools', 'Done'];
+const STEP_LABELS = ['Meet Spark', 'Theme', 'AI provider', 'Tools', 'Done'];
 const PROVIDER_STEP = 2;
 const LEAVE_ANIMATION_MS = 250;
 
@@ -135,7 +135,8 @@ export function Onboarding({ onFinished }: OnboardingProps) {
                 transition={slide}
               >
                 {step === 0 && (
-                  <NameStep
+                  <MeetSparkStep
+                    profile={setup.data.profile}
                     displayName={displayName}
                     onDisplayNameChange={setDisplayName}
                     onEnter={handleNext}

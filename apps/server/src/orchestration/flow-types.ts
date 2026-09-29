@@ -115,6 +115,7 @@ export interface FlowState {
   shipping?: boolean;
   readOnly?: ReadOnlyWork;
   confirmFirst: string | null;
+  solo?: boolean;
 }
 
 export interface FlowResult {

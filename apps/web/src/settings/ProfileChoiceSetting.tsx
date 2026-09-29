@@ -15,7 +15,7 @@ interface ProfileChoiceSettingProps<T> {
   choices: ProfileChoice<T>[];
   label: string;
   info?: string;
-  hint: string;
+  hint: string | ((value: T) => string);
   toUpdate: (value: T) => UpdateProfileRequest;
 }
 
@@ -33,7 +33,7 @@ export function ProfileChoiceSetting<T>({
   return (
     <SettingRow
       label={label}
-      hint={setting.error ?? hint}
+      hint={setting.error ?? (typeof hint === 'string' ? hint : hint(current.value))}
       hintId={hintId}
       {...(info ? { info } : {})}
     >

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { involvementLevelSchema } from './approvals.ts';
+import { DEFAULT_PERSONALITY, personalitySchema } from './spark.ts';
 
 export const providerIdSchema = z.enum(['claude', 'codex', 'zai']);
 export type ProviderId = z.infer<typeof providerIdSchema>;
@@ -104,8 +105,16 @@ export const profileSchema = z.object({
   autoContinueSeconds: autoContinueSecondsSchema.default(DEFAULT_AUTO_CONTINUE_SECONDS),
   jevDiffs: z.boolean().default(true),
   shipFailingChecks: z.boolean().default(true),
+  personality: personalitySchema.default(DEFAULT_PERSONALITY),
+  sparkEnabled: z.boolean().default(true),
+  teamMode: z.boolean().default(true),
+  useName: z.boolean().default(true),
 });
 export type Profile = z.infer<typeof profileSchema>;
+export type SparkSessionPrefs = Pick<
+  Profile,
+  'displayName' | 'personality' | 'teamMode' | 'useName'
+>;
 
 export const setupStateSchema = z.object({
   profile: profileSchema,
@@ -122,6 +131,10 @@ export const updateProfileRequestSchema = z
     autoContinueSeconds: autoContinueSecondsSchema,
     jevDiffs: z.boolean(),
     shipFailingChecks: z.boolean(),
+    personality: personalitySchema,
+    sparkEnabled: z.boolean(),
+    teamMode: z.boolean(),
+    useName: z.boolean(),
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

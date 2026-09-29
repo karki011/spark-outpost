@@ -53,6 +53,10 @@ describe('setup state', () => {
       autoContinueSeconds: 10,
       jevDiffs: true,
       shipFailingChecks: true,
+      personality: 'friendly',
+      sparkEnabled: true,
+      teamMode: true,
+      useName: true,
     });
     expect(body.providers.map((provider: { id: string }) => provider.id)).toEqual([
       'claude',

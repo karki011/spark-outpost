@@ -23,7 +23,7 @@ async function chooseClaudeDefault(page: Page): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile' })
+    .getByRole('dialog', { name: 'Spark' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });

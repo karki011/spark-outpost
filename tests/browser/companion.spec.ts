@@ -160,10 +160,8 @@ test('hiding the companion and bringing it back from Settings', async ({ page })
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: 'Settings' })
     .click();
-  const settings = page.getByRole('dialog', { name: 'Profile' });
-  await settings.getByRole('tab', { name: 'Appearance' }).click();
-  const appearance = page.getByRole('dialog', { name: 'Appearance' });
-  await appearance
+  const settings = page.getByRole('dialog', { name: 'Spark' });
+  await settings
     .getByRole('radiogroup', { name: 'Status companion' })
     .getByRole('radio', { name: 'Show' })
     .click();

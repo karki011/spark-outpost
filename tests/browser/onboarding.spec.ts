@@ -11,18 +11,18 @@ test.beforeEach(async () => {
 
 const dialog = (page: Page) => page.locator('.onb');
 const continueButton = (page: Page) => dialog(page).getByRole('button', { name: 'Continue' });
+const nameField = (page: Page) =>
+  dialog(page).getByLabel('What should Spark call you?', { exact: true });
 const claudeCard = (page: Page) => dialog(page).locator('.pcard').filter({ hasText: 'Claude' });
 
 async function enterName(page: Page, name: string) {
   await page.goto('/');
-  await expect(
-    dialog(page).getByRole('heading', { name: 'Welcome to Spark Outpost' }),
-  ).toBeVisible();
+  await expect(dialog(page).getByRole('heading', { name: 'Meet Spark' })).toBeVisible();
   await expect(continueButton(page)).toBeDisabled();
   await expect(dialog(page)).toContainText('Enter your name to continue.');
-  await dialog(page).getByLabel('What should we call you?').fill(name);
-  await expect(dialog(page)).toContainText(`Nice to meet you, ${name.split(' ')[0]}`);
-  await dialog(page).getByLabel('What should we call you?').press('Enter');
+  await nameField(page).fill(name);
+  await expect(dialog(page)).toContainText(`Hi ${name.split(' ')[0]} 👋`);
+  await nameField(page).press('Enter');
   await expect(dialog(page).getByRole('heading', { name: 'Pick a theme' })).toBeVisible();
   await continueButton(page).click();
   await expect(
@@ -296,9 +296,52 @@ test('a connected provider says what was checked and can send a test message', a
   await expect(claudeCard(page)).toContainText('Test message answered in');
 });
 
+test('Meet Spark sets the personality and the Spark switches, and the blob reacts', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(dialog(page).getByRole('button', { name: /Step 1 of 5: Meet Spark/ })).toBeVisible();
+  await nameField(page).fill('Sam Rivera');
+  const preview = dialog(page).locator('.spark-preview');
+  await expect(preview).toContainText('Hi Sam 👋');
+
+  const personality = dialog(page).getByRole('radiogroup', { name: 'Personality' });
+  await expect(personality.getByRole('radio', { name: 'Friendly' })).toBeChecked();
+  await personality.getByRole('radio', { name: 'Playful' }).click();
+  await expect(preview).toContainText('Hey Sam! 👋 Ready when you are.');
+  await expect(preview.locator('.scout')).toHaveClass(/happy/);
+  await expect(personality).toHaveAccessibleDescription(
+    'Warm, a little humour, celebrates your wins.',
+  );
+
+  const spark = dialog(page).getByRole('switch', { name: 'Spark', exact: true });
+  const team = dialog(page).getByRole('switch', { name: 'Work like a team' });
+  await expect(spark).toHaveAttribute('aria-checked', 'true');
+  await expect(team).toHaveAttribute('aria-checked', 'true');
+  const saved = page.waitForResponse(
+    (response) => response.url().endsWith('/api/profile') && response.ok(),
+  );
+  await spark.press('Space');
+  await saved;
+  await expect(spark).toHaveAttribute('aria-checked', 'false');
+  await expect(preview.locator('.scout')).toHaveClass(/sleep/);
+  await expect(preview).toContainText('Spark is napping');
+
+  const profile = (await (await page.request.get('/api/setup')).json()).profile;
+  expect(profile).toMatchObject({
+    displayName: 'Sam Rivera',
+    personality: 'playful',
+    sparkEnabled: false,
+    teamMode: true,
+    useName: true,
+  });
+  await continueButton(page).click();
+  await expect(dialog(page).getByRole('heading', { name: 'Pick a theme' })).toBeVisible();
+});
+
 test('the theme step applies the chosen theme and remembers it', async ({ page }) => {
   await page.goto('/');
-  await dialog(page).getByLabel('What should we call you?').fill('Hazel');
+  await nameField(page).fill('Hazel');
   await continueButton(page).click();
   const previewBackground = (skin: string) =>
     dialog(page)

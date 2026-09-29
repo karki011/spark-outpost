@@ -129,6 +129,7 @@ function retry(state: FlowState, note: string | null = null): FlowResult {
 }
 
 function afterBuilder(state: FlowState, large: boolean): FlowResult {
+  if (state.solo) return wrapUp(state);
   if (state.review.fixing) {
     return spawn(state, { role: 'critic', reason: 'recheck', escalate: false });
   }
@@ -150,11 +151,14 @@ function builderDone(
   event: Extract<FlowEvent, { type: 'agent_done' }>,
 ): FlowResult {
   const next = { ...state, open: [...(event.open ?? state.open)] };
+  if (event.outcome === 'failed' && state.solo) {
+    return finish(next, 'failed', event.error ?? 'The agent hit a problem.');
+  }
   if (event.outcome === 'failed') {
     if (next.retries < MAX_REPAIR_RETRIES) return retry(next);
     return ask(next, 'retry', `Stopped after ${MAX_REPAIR_RETRIES} retries.`);
   }
-  if (next.open.length > 0 && next.continues < PLAN_CONTINUES) {
+  if (!state.solo && next.open.length > 0 && next.continues < PLAN_CONTINUES) {
     return spawn(
       { ...next, continues: next.continues + 1 },
       {

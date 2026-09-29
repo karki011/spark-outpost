@@ -21,6 +21,7 @@ export * from './roles.ts';
 export * from './run-events.ts';
 export * from './runs.ts';
 export * from './setup.ts';
+export * from './spark.ts';
 export * from './tasks.ts';
 export * from './terminal.ts';
 export * from './usage.ts';

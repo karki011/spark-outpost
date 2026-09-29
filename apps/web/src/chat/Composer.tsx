@@ -30,6 +30,7 @@ import { AttachmentChips } from './attachments/AttachmentChips.tsx';
 import type { AttachmentsState } from './attachments/use-attachments.ts';
 import { ContextRing } from './composer/ContextRing.tsx';
 import { ModelPicker } from './composer/ModelPicker.tsx';
+import { SparkOffChip } from '../spark/SparkOffChip.tsx';
 import {
   blockedMessage,
   clientCommand,
@@ -402,6 +403,7 @@ export function Composer({
           <span className={attachments.items.length > 0 ? 'hint shown' : 'hint'}>
             {composerHint(attachments)}
           </span>
+          <SparkOffChip />
           {settings && (
             <ModelPicker
               openRequest={picker.request}
