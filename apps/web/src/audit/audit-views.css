@@ -185,12 +185,8 @@
   flex: 1;
   min-width: 170px;
 }
-.lf .field-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
 .lf-q:focus-visible {
-  border-color: var(--accent-text);
+  border-color: var(--accent);
   box-shadow: var(--focus-ring);
 }
 .lbar {

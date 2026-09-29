@@ -433,6 +433,6 @@ body {
 
 :root,
 [data-skin] {
-  --focus-ring: 0 0 0 1px var(--accent-text), 0 0 0 4px var(--accent-soft);
+  --focus-ring: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-soft);
   --focus-ring-bad: 0 0 0 1px var(--danger), 0 0 0 4px var(--danger-soft);
 }

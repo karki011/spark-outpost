@@ -23,7 +23,7 @@
 }
 
 .composer:focus-within {
-  border-color: var(--accent-text);
+  border-color: var(--accent);
   box-shadow: var(--focus-ring);
 }
 

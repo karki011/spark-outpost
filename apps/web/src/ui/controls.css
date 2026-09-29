@@ -25,6 +25,15 @@
 .btn.primary:hover:not(:disabled) {
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
+.btn.primary:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 2px var(--accent-ink),
+    0 0 0 1px var(--accent);
+}
+.btn.danger:focus-visible {
+  outline-color: var(--danger);
+}
 .btn.ghost {
   color: var(--muted);
 }
@@ -87,7 +96,7 @@
 }
 .inp:focus-visible {
   outline: none;
-  border-color: var(--accent-text);
+  border-color: var(--accent);
   box-shadow: var(--focus-ring);
 }
 .inp.bad,

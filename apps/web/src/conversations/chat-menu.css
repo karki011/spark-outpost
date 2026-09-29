@@ -83,6 +83,9 @@
 .ctx .danger:focus-visible {
   background: var(--danger-soft);
 }
+.ctx .danger:focus-visible {
+  outline-color: var(--danger);
+}
 
 .ctx .back {
   color: var(--muted);
