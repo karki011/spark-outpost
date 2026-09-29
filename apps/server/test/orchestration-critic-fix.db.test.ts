@@ -352,7 +352,7 @@ describe('the task budget', () => {
     );
   }, 120_000);
 
-  it('does not fail when the budget runs out after a fix round that passed the checks: it keeps that state and asks to keep (N2)', async () => {
+  it('rolls a fix round cut by the run cost cap back to the state that passed the checks and asks to keep (N2)', async () => {
     await configureCheck(PASSING_CHECK);
     await start({ policy: JEV_SAYS_BUGS, costCapUsd: 0.1 });
     const { conversationId, runId } = await begin('#bugrounds 2 #fixcost', 'hands-off');
@@ -361,12 +361,12 @@ describe('the task budget', () => {
     expect(cards.map((approval) => approval.kind)).toEqual(['accept']);
     expect(cards[0]!.reason).toContain('Automatic asks because the Critic still has concerns.');
     expect(cards[0]!.reason).toContain(
-      "Stopped fix round 1: the run's cost budget ran out, so Spark Outpost kept the last state; checks pass.",
+      "Stopped fix round 1: the run's cost budget ran out, so Spark Outpost rolled its edits back to the last state that passed the checks.",
     );
     expect(orchestration).toMatchObject({ status: 'succeeded', budget: { exceeded: 'cost' } });
     expect(await roles(runId)).toEqual(['builder', 'critic', 'builder']);
     expect(orchestration.budget.costUsd).toBeGreaterThanOrEqual(0.2);
-    expect(await notes()).toContain('fixed the review findings');
+    expect(await notes()).not.toContain('fixed the review findings');
     expect(await reply(runId)).toContain('Stopped fix round 1');
   }, 120_000);
 

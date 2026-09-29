@@ -338,6 +338,7 @@ async function fixFindings(turn: RoleTurn): Promise<acp.StopReason> {
   if (prompts.some((prompt) => prompt.includes('#fixcost'))) {
     const cost = { amount: 0.2, currency: 'USD' };
     await turn.update({ sessionUpdate: 'usage_update', used: 1_000, size: 200_000, cost });
+    await stopped(turn.signal);
   }
   if (prompts.some((prompt) => prompt.includes('#slowfix'))) {
     for (;;) await sleep(50, turn.signal);

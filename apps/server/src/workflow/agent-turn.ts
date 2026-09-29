@@ -108,7 +108,7 @@ export interface TurnOptions {
   backupAlsoFor?: string;
   recordsPlan?: boolean;
   observeEdits?: EditObserver | undefined;
-  onLiveCost?: (usd: number) => void;
+  onLiveCost?: (usd: number, final: boolean) => void;
   stopNow?: AbortSignal;
 }
 
@@ -162,7 +162,7 @@ export async function runAgentTurn(
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
   const meter = (output: ProviderOutput) => {
-    if (live.observe(output)) options.onLiveCost?.(live.unreported());
+    if (live.observe(output)) options.onLiveCost?.(live.unreported(), output.kind === 'tokens');
   };
   const audit = createAuditRecorder({
     write: (entries) => insertProtocolEntries(deps.db, lease, entries),
@@ -174,7 +174,7 @@ export async function runAgentTurn(
     if (control.reason() === 'lease_lost') return audit.discard();
     await audit.close();
     const estimate = control.signal.aborted ? live.unreported() : 0;
-    options.onLiveCost?.(0);
+    options.onLiveCost?.(0, true);
     await recordRunMetrics(
       deps.db,
       lease.runId,

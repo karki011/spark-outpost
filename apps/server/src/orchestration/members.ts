@@ -64,10 +64,10 @@ function counter(s: Session, also?: (output: ProviderOutput) => void) {
   return { total, observe };
 }
 
-function liveCostOf(s: Session, runId: string): (usd: number) => void {
-  return (usd) => {
+function liveCostOf(s: Session, runId: string): (usd: number, final: boolean) => void {
+  return (usd, final) => {
     s.liveCost.set(runId, usd);
-    meterSpend(s);
+    if (!final) meterSpend(s);
   };
 }
 

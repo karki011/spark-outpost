@@ -304,7 +304,7 @@ async function assembleOrchestrations(db: Queryable, rows: readonly Orchestratio
     db.query<DecisionRow & { run_id: string }>(
       `SELECT * FROM run_advice WHERE run_id = ANY($1::uuid[])
        AND purpose NOT IN ('scan', 'rank', 'route_shadow', 'plan_agreed')
-       AND NOT (purpose = 'parallel' AND body->'answer'->>'shadow' = 'true')
+       AND NOT (purpose = 'parallel' AND COALESCE(body->'answer'->>'shadow', '') = 'true')
        ORDER BY created_at`,
       [ids],
     ),
