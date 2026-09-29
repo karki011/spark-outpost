@@ -297,7 +297,7 @@ async function withTaskIndex<T>(
       ? (
           await gitOut(
             root,
-            ['ls-files', '-z', '--', ...all],
+            ['ls-files', '-z', '--full-name', '--', ...all],
             'Listing the branch files',
             undefined,
             env,
