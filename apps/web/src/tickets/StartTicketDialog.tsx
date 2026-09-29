@@ -11,6 +11,7 @@ import { Segmented } from '../ui/Segmented.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import type { DetailTicket } from './TicketDetail.tsx';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
+import { BlobToggle } from '../brand/BlobToggle.tsx';
 
 interface StartTicketDialogProps {
   ticket: DetailTicket;
@@ -139,19 +140,25 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
             onChange={setProjectId}
           />
           <label className="check-row">
-            <input
-              type="checkbox"
+            <BlobToggle
+              size="sm"
+              label={`Move ${ticket.key} to In progress in ${source}`}
               checked={move}
-              onChange={(event) => setMove(event.target.checked)}
+              onChange={setMove}
             />
             Move {ticket.key} to In progress in {source}
           </label>
           {!ticket.mine && (
             <label className="check-row">
-              <input
-                type="checkbox"
+              <BlobToggle
+                size="sm"
+                label={
+                  owner
+                    ? `Take ${ticket.key} from ${owner} and assign it to me in ${source}`
+                    : `Assign ${ticket.key} to me in ${source}`
+                }
                 checked={assign}
-                onChange={(event) => setAssign(event.target.checked)}
+                onChange={setAssign}
               />
               {owner
                 ? `Take ${ticket.key} from ${owner} and assign it to me in ${source}`

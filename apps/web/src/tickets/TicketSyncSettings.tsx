@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { TicketConnection, UpdateTicketSettingsRequest } from '@spark-outpost/contracts';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
+import { BlobToggle } from '../brand/BlobToggle.tsx';
 
 type SyncKey = 'moveOnShip' | 'moveOnMerge';
 
@@ -35,12 +36,12 @@ export function TicketSyncSettings({ connection }: { connection: TicketConnectio
       {SWITCHES.map((item) => (
         <div key={item.key}>
           <label className="tk-switch">
-            <input
-              type="checkbox"
-              role="switch"
+            <BlobToggle
+              size="sm"
+              label={item.label}
               checked={checked(item.key)}
-              aria-describedby={`${id}-${item.key}`}
-              onChange={(event) => save.mutate({ [item.key]: event.target.checked })}
+              describedBy={`${id}-${item.key}`}
+              onChange={(next) => save.mutate({ [item.key]: next })}
             />
             <span>{item.label}</span>
           </label>

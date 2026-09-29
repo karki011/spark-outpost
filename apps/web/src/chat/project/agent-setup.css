@@ -193,62 +193,6 @@
   color: var(--warn);
 }
 
-.as-switch {
-  position: relative;
-  display: inline-flex;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-.as-switch input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  margin: 0;
-  opacity: 0;
-  cursor: inherit;
-}
-.as-track {
-  position: relative;
-  width: 30px;
-  height: 18px;
-  border-radius: 999px;
-  background: var(--line-strong);
-  transition: background 0.15s;
-}
-.as-track::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--panel);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s var(--out);
-}
-.as-switch input:checked + .as-track {
-  background: var(--accent);
-}
-.as-switch input:checked + .as-track::after {
-  transform: translateX(12px);
-}
-.as-switch input:focus-visible + .as-track {
-  outline: 2px solid var(--accent);
-  outline-offset: 0;
-}
-.as-switch input:checked:focus-visible + .as-track {
-  box-shadow: inset 0 0 0 2px var(--panel);
-}
-.as-switch input:disabled + .as-track {
-  opacity: 0.5;
-}
-.as-switch:has(input:disabled) {
-  cursor: not-allowed;
-}
-
 @media (max-width: 640px) {
   .mpop.setuppop {
     right: 0;
@@ -257,13 +201,6 @@
     margin: 0 8px;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .as-track,
-  .as-track::after {
-    transition: none;
-  }
-}
-
 .ctx-trust {
   flex-shrink: 0;
   margin-left: auto;

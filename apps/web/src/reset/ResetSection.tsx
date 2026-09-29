@@ -4,6 +4,7 @@ import { ResetBlob } from './ResetBlob.tsx';
 import { setResetState, useResetState } from './reset-store.ts';
 import { useResetBlobMood } from './use-reset-blob-mood.ts';
 import './reset.css';
+import { BlobToggle } from '../brand/BlobToggle.tsx';
 
 const REMOVED = [
   'Chats, projects, plans, tasks and tickets',
@@ -52,12 +53,13 @@ export function ResetSection() {
       </div>
       <div className="field reset-keep">
         <label className="check-row">
-          <input
-            type="checkbox"
+          <BlobToggle
+            size="sm"
+            label="Keep my API keys"
             checked={keepApiKeys}
             disabled={busy}
-            aria-describedby={keepHintId}
-            onChange={(event) => setKeepApiKeys(event.target.checked)}
+            describedBy={keepHintId}
+            onChange={setKeepApiKeys}
           />
           <span>Keep my API keys</span>
         </label>
