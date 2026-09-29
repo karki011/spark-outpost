@@ -90,6 +90,11 @@ export async function shipFullAuto(s: Session): Promise<FlowEvent> {
   return { type: 'shipped' };
 }
 
+export function shipFailureLine(error: unknown): string {
+  const reason = error instanceof Error ? error.message : String(error);
+  return `Full auto → PR kept the change but could not ship it: ${reason}`;
+}
+
 async function ship(s: Session, failing: boolean): Promise<string> {
   if (!s.taskId) return 'Full auto → PR kept the change, but it has no task to ship.';
   const notes = [
@@ -110,6 +115,6 @@ async function ship(s: Session, failing: boolean): Promise<string> {
     const result = await shipTask(deps, s.taskId, { mode, title: title.slice(0, 200) }, options);
     return shippedLine(result, plan, failing);
   } catch (error) {
-    return `Full auto → PR kept the change but could not ship it: ${(error as Error).message}`;
+    return shipFailureLine(error);
   }
 }
