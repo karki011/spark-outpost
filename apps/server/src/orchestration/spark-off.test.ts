@@ -35,6 +35,15 @@ describe('Spark off flow', () => {
     expect(done.action).toEqual({ type: 'wrap_up' });
   });
 
+  it('still asks before risky work at Review each step', () => {
+    const risky = {
+      ...initialFlow('destructive', 'balanced', true, false, 'Deletes files.'),
+      solo: true,
+    };
+    const started = nextStep(risky, { type: 'start', start: 'build' });
+    expect(started.action).toMatchObject({ type: 'ask', kind: 'plan', reason: 'Deletes files.' });
+  });
+
   it('keeps the Critic when Spark is on', () => {
     const on = initialFlow('destructive', 'hands-off', true);
     const started = nextStep(on, { type: 'start', start: 'build' });
