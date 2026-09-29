@@ -116,6 +116,23 @@ describe('intake decisions', () => {
     ).toBe('build');
   });
 
+  it('does not call an additive migration destructive, even when Jev does (N3)', () => {
+    const tags = facts({
+      request:
+        'Add tags to projects: a new migration that stores tags per project. Existing databases must upgrade and their projects start with no tags.',
+    });
+    expect(decideIntake(jev({ destructive: 0.95 }), tags)).toMatchObject({
+      destructive: false,
+      risk: 'edits',
+    });
+    const column = facts({ request: 'Add a migration that adds a nullable due_date column.' });
+    expect(decideIntake(jev({ destructive: 0.9 }), column).destructive).toBe(false);
+    const dropping = facts({ request: 'Add a migration that drops the legacy notes column.' });
+    expect(decideIntake(jev({ destructive: 0.9 }), dropping).destructive).toBe(true);
+    const renaming = facts({ request: 'Write a migration renaming the amount column to cents.' });
+    expect(decideIntake(jev({ destructive: 0.9 }), renaming).destructive).toBe(true);
+  });
+
   it('is destructive when either Jev or the keywords say so, never less', () => {
     const drop = facts({ request: 'Drop the legacy users table' });
     expect(decideIntake(jev({ destructive: 0.02 }), drop)).toMatchObject({
