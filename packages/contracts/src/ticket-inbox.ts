@@ -116,6 +116,20 @@ export const ticketLastSyncSchema = z.object({
 });
 export type TicketLastSync = z.infer<typeof ticketLastSyncSchema>;
 
+export const SNOOZE_MAX_DAYS = 90;
+
+export const ticketSnoozeSchema = z.object({
+  until: z.string(),
+  rules: z.array(attentionRuleSchema),
+});
+export type TicketSnooze = z.infer<typeof ticketSnoozeSchema>;
+
+export const snoozeTicketRequestSchema = z.object({
+  until: z.iso.datetime({ offset: true }),
+  rules: z.array(attentionRuleSchema).min(1).max(attentionRuleSchema.options.length),
+});
+export type SnoozeTicketRequest = z.infer<typeof snoozeTicketRequestSchema>;
+
 export const ticketAgeSchema = z.object({ at: z.string(), label: z.string() });
 export type TicketAge = z.infer<typeof ticketAgeSchema>;
 
@@ -130,6 +144,7 @@ export const inboxTicketSchema = ticketListItemSchema.extend({
     .nullable(),
   pullRequest: pullRequestStatusSchema.nullable(),
   lastSync: ticketLastSyncSchema.nullable(),
+  snooze: ticketSnoozeSchema.optional(),
 });
 export type InboxTicket = z.infer<typeof inboxTicketSchema>;
 

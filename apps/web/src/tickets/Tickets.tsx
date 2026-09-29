@@ -24,6 +24,7 @@ import {
   countBy,
   filterTickets,
   inboxIdOf,
+  snoozedTickets,
   ticketId,
   type RowAction,
   type TicketFilters,
@@ -192,6 +193,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                 view={view}
                 total={tickets.length}
                 counts={counts}
+                snoozed={snoozedTickets(tickets).length}
                 settings={settings}
                 onView={(next) => {
                   setView(next);
@@ -242,6 +244,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
               </div>
               {detail && (
                 <TicketDetail
+                  key={ticketId(detail)}
                   ticket={detail}
                   assigning={assigner.state.pending === ticketId(detail)}
                   confirming={assigner.isConfirming(detail, 'detail')}

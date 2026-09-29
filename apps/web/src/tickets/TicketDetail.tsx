@@ -10,6 +10,7 @@ import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { AssignConfirm } from './AssignConfirm.tsx';
+import { SnoozeButton, SnoozedNote, SnoozeError, useSnooze } from './SnoozeControl.tsx';
 import { Glyph, PriorityGlyph } from './ticket-icons.tsx';
 import { TicketBody } from './TicketBody.tsx';
 import { pullUrl, safeUrl } from './ticket-model.ts';
@@ -143,6 +144,7 @@ export function TicketDetail({
   const chat = inbox?.chat;
   const pr = safeUrl(inbox ? pullUrl(inbox) : null);
   const sync = inbox?.lastSync?.outcome === 'failed' ? inbox.lastSync : null;
+  const snoozing = useSnooze(inbox);
 
   return (
     <aside className="tk-detail" aria-label={`${ticket.key} details`}>
@@ -195,6 +197,9 @@ export function TicketDetail({
           <Glyph name="play" />
           {chat ? 'Start again' : 'Start work'}
         </button>
+        {inbox?.section === 'attention' && inbox.flags.length > 0 && (
+          <SnoozeButton ticket={inbox} snoozing={snoozing} />
+        )}
       </div>
       {confirming && (
         <AssignConfirm ticket={ticket} onCancel={onCancelConfirm} onConfirm={onConfirm} />
@@ -205,6 +210,8 @@ export function TicketDetail({
           <span>{assignError}</span>
         </div>
       )}
+      <SnoozeError snoozing={snoozing} />
+      {inbox && <SnoozedNote ticket={inbox} snoozing={snoozing} />}
       {inbox && <WhyBox ticket={inbox} />}
       {sync && (
         <div className="sync fail" role="alert">

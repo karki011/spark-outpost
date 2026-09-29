@@ -8,6 +8,8 @@ import {
   rowAction,
   safeUrl,
   searchGroup,
+  snoozeChoices,
+  snoozedTickets,
   whose,
 } from './ticket-model.ts';
 
@@ -125,5 +127,30 @@ describe('ticket rows', () => {
     expect(safeUrl(PR)).toBe(PR);
     expect(safeUrl('javascript:alert(1)')).toBeUndefined();
     expect(safeUrl(null)).toBeUndefined();
+  });
+});
+
+describe('snooze choices', () => {
+  it('offers three hours from now, tomorrow at 9 and next Monday at 9', () => {
+    const wednesday = new Date(2026, 8, 30, 14, 15);
+    const [later, tomorrow, nextWeek] = snoozeChoices(wednesday);
+    expect(later?.until).toEqual(new Date(2026, 8, 30, 17, 15));
+    expect(tomorrow?.until).toEqual(new Date(2026, 9, 1, 9, 0));
+    expect(nextWeek?.until).toEqual(new Date(2026, 9, 5, 9, 0));
+  });
+
+  it('skips to the following Monday when today is Monday', () => {
+    const monday = new Date(2026, 8, 28, 8, 0);
+    expect(snoozeChoices(monday)[2]?.until).toEqual(new Date(2026, 9, 5, 9, 0));
+  });
+
+  it('lists snoozed tickets soonest first', () => {
+    const snooze = (until: string) => ({ until, rules: ['review-slow' as const] });
+    const tickets = [
+      inbox({ key: 'WEB-1', snooze: snooze('2026-10-02T09:00:00.000Z') }),
+      inbox({ key: 'WEB-2' }),
+      inbox({ key: 'WEB-3', snooze: snooze('2026-09-29T09:00:00.000Z') }),
+    ];
+    expect(snoozedTickets(tickets).map((ticket) => ticket.key)).toEqual(['WEB-3', 'WEB-1']);
   });
 });

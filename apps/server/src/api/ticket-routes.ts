@@ -3,6 +3,7 @@ import {
   assignTicketRequestSchema,
   commentTicketRequestSchema,
   saveTicketConnectionRequestSchema,
+  snoozeTicketRequestSchema,
   startTicketRequestSchema,
   ticketKeySchema,
   ticketListQuerySchema,
@@ -29,6 +30,7 @@ import {
 import { loadInbox } from '../tickets/inbox.ts';
 import { listTickets, ticketView } from '../tickets/list.ts';
 import { searchTickets } from '../tickets/search.ts';
+import { snoozeProblem, snoozeTicket } from '../tickets/snooze.ts';
 import { TicketApiError, TicketConflictError, TicketNotConnectedError } from '../tickets/source.ts';
 import { startTicket } from '../tickets/start.ts';
 import { moveTicket } from '../tickets/sync.ts';
@@ -147,6 +149,19 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
     const { status } = parseBody(transitionTicketRequestSchema, req);
     const open = await requireSource(deps, sourceParam(req));
     res.json(await moveTicket(deps, open, keyParam(req), status, null));
+  });
+
+  router.put('/tickets/:source/:key/snooze', async (req, res) => {
+    const request = parseBody(snoozeTicketRequestSchema, req);
+    const problem = snoozeProblem(new Date(request.until), new Date());
+    if (problem) throw new BadRequestError(problem);
+    await snoozeTicket(deps, { source: sourceParam(req), key: keyParam(req) }, request);
+    res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
+  });
+
+  router.delete('/tickets/:source/:key/snooze', async (req, res) => {
+    await snoozeTicket(deps, { source: sourceParam(req), key: keyParam(req) }, null);
+    res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
   });
 
   router.post('/tickets/:source/:key/comments', async (req, res) => {

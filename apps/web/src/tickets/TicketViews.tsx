@@ -10,19 +10,21 @@ const ICONS: Record<TicketView, GlyphName> = {
   in_review: 'clock',
   up_next: 'play',
   done: 'box',
+  snoozed: 'snooze',
 };
 
 interface TicketViewsProps {
   view: TicketView;
   total: number;
   counts: Record<TicketSection, number>;
+  snoozed: number;
   settings: AttentionSettings;
   onView: (view: TicketView) => void;
 }
 
 const days = (count: number) => `${count} ${count === 1 ? 'day' : 'days'}`;
 
-export function TicketViews({ view, total, counts, settings, onView }: TicketViewsProps) {
+export function TicketViews({ view, total, counts, snoozed, settings, onView }: TicketViewsProps) {
   const items: { id: TicketView; label: string; count: number }[] = [
     { id: 'inbox', label: 'Inbox', count: total },
     ...SECTIONS.map((section) => ({
@@ -30,6 +32,9 @@ export function TicketViews({ view, total, counts, settings, onView }: TicketVie
       label: section.label,
       count: counts[section.id],
     })),
+    ...(snoozed > 0 || view === 'snoozed'
+      ? [{ id: 'snoozed' as const, label: 'Snoozed', count: snoozed }]
+      : []),
   ];
   return (
     <nav className="ib-nav" aria-label="Ticket views">

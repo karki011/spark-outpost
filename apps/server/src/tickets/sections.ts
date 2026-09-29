@@ -1,5 +1,6 @@
 import type { InboxTicket, TicketAge, TicketSection } from '@spark-outpost/contracts';
 import {
+  activeSnooze,
   attentionFlags,
   dueText,
   RULE_ORDER,
@@ -86,6 +87,7 @@ function upNext(facts: TicketFacts, now: Date): Placement {
 
 export function placeTicket(facts: TicketFacts, limits: Thresholds, now: Date): InboxTicket {
   const flags = attentionFlags(facts, limits, now);
+  const snooze = activeSnooze(facts, now);
   const lead = flags[0];
   const placement: Placement = lead
     ? {
@@ -110,6 +112,7 @@ export function placeTicket(facts: TicketFacts, limits: Thresholds, now: Date): 
       : null,
     pullRequest: facts.pullRequest,
     lastSync: facts.lastSync,
+    ...(snooze ? { snooze } : {}),
   };
 }
 

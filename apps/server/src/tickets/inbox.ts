@@ -156,6 +156,7 @@ async function factsFor(
         lastSync: syncs.get(ref) ?? null,
         statusSince: times.get(ref)?.statusSince?.toISOString() ?? null,
         assignedSince: times.get(ref)?.firstSeenAssignedAt?.toISOString() ?? null,
+        snooze: times.get(ref)?.snooze ?? null,
       };
     }),
   );

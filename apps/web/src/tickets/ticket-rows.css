@@ -412,3 +412,14 @@
     height: 30px;
   }
 }
+.snz-tag {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--raise);
+  font-size: 11.5px;
+  color: var(--muted);
+}

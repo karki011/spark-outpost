@@ -37,7 +37,10 @@ export const SECTIONS: readonly SectionMeta[] = [
   { id: 'done', label: 'Done recently', rule: 'Done in the last 7 days, most recent first.' },
 ];
 
-export type TicketView = 'inbox' | TicketSection;
+export type TicketView = 'inbox' | TicketSection | 'snoozed';
+
+export const SNOOZED_RULE =
+  'Snoozed by you. Each comes back when its time is up, or sooner if something new needs you.';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -169,3 +172,47 @@ const WEB_LINK = /^https?:\/\//i;
 export function safeUrl(url: string | null | undefined): string | undefined {
   return url && WEB_LINK.test(url) ? url : undefined;
 }
+
+export interface SnoozeChoice {
+  id: 'later' | 'tomorrow' | 'next-week';
+  label: string;
+  until: Date;
+}
+
+const LATER_HOURS = 3;
+const MORNING_HOUR = 9;
+
+export function morningOf(day: Date): Date {
+  const at = new Date(day);
+  at.setHours(MORNING_HOUR, 0, 0, 0);
+  return at;
+}
+
+function addDays(day: Date, days: number): Date {
+  const next = new Date(day);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+export function snoozeChoices(now: Date): SnoozeChoice[] {
+  const daysToMonday = (8 - now.getDay()) % 7 || 7;
+  return [
+    { id: 'later', label: 'Later today', until: new Date(now.getTime() + LATER_HOURS * HOUR) },
+    { id: 'tomorrow', label: 'Tomorrow', until: morningOf(addDays(now, 1)) },
+    { id: 'next-week', label: 'Next week', until: morningOf(addDays(now, daysToMonday)) },
+  ];
+}
+
+export function snoozeTime(until: Date, now: Date): string {
+  const time = until.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  if (until.toDateString() === now.toDateString()) return time;
+  if (until.getTime() - now.getTime() < 6 * DAY) {
+    return `${until.toLocaleDateString(undefined, { weekday: 'short' })} ${time}`;
+  }
+  return until.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+export const snoozedTickets = (tickets: readonly InboxTicket[]) =>
+  tickets
+    .filter((ticket) => ticket.snooze)
+    .toSorted((a, b) => (a.snooze?.until ?? '').localeCompare(b.snooze?.until ?? ''));

@@ -24,6 +24,7 @@ export interface TicketRowProps {
   more: string[];
   age: { text: string; title: string } | null;
   syncProblem?: string | null;
+  snoozedUntil?: string | null;
   selected: boolean;
   onSelect: () => void;
   action: RowButton | null;
@@ -70,6 +71,12 @@ export function TicketRow(props: TicketRowProps) {
             <span className="tk-more" title={props.more.join(' · ')}>
               +{props.more.length}
               <span className="sr-only">: {props.more.join(', ')}</span>
+            </span>
+          )}
+          {props.snoozedUntil && (
+            <span className="snz-tag" title={`Snoozed until ${props.snoozedUntil}`}>
+              <Glyph name="snooze" size={11} />
+              {props.snoozedUntil}
             </span>
           )}
           {props.syncProblem && (

@@ -7,6 +7,7 @@ import {
   type TicketChatState,
   type TicketLastSync,
   type TicketListItem,
+  type TicketSnooze,
 } from '@spark-outpost/contracts';
 
 export type Thresholds = Pick<AttentionSettings, 'idleDays' | 'dueDays' | 'reviewDays'>;
@@ -18,6 +19,12 @@ export interface TicketFacts {
   lastSync: TicketLastSync | null;
   statusSince: string | null;
   assignedSince: string | null;
+  snooze?: TicketSnooze | null;
+}
+
+export function activeSnooze(facts: TicketFacts, now: Date): TicketSnooze | null {
+  const snooze = facts.snooze;
+  return snooze && Date.parse(snooze.until) > now.getTime() ? snooze : null;
 }
 
 export const RULE_ORDER: readonly AttentionRule[] = [
@@ -198,5 +205,8 @@ export function attentionFlags(facts: TicketFacts, limits: Thresholds, now: Date
     ...workFlags(facts, limits, now),
     ...pullFlags(facts, limits, now),
   ];
-  return flags.toSorted((a, b) => RULE_ORDER.indexOf(a.rule) - RULE_ORDER.indexOf(b.rule));
+  const snoozed = activeSnooze(facts, now)?.rules ?? [];
+  return flags
+    .filter((entry) => !snoozed.includes(entry.rule))
+    .toSorted((a, b) => RULE_ORDER.indexOf(a.rule) - RULE_ORDER.indexOf(b.rule));
 }

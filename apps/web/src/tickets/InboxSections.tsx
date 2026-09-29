@@ -5,6 +5,9 @@ import {
   compactAge,
   rowAction,
   SECTIONS,
+  SNOOZED_RULE,
+  snoozedTickets,
+  snoozeTime,
   ticketId,
   type RowAction,
   type TicketView,
@@ -51,6 +54,7 @@ function InboxRow({
       more={ticket.flags.slice(1).map((flag) => flag.text)}
       age={ticket.age ? { text: compactAge(ticket.age.at), title: ageTitle(ticket.age) } : null}
       syncProblem={syncProblem(ticket)}
+      snoozedUntil={ticket.snooze ? snoozeTime(new Date(ticket.snooze.until), new Date()) : null}
       selected={selected}
       onSelect={onSelect}
       action={
@@ -69,14 +73,21 @@ function InboxRow({
 
 export function InboxSections(props: InboxSectionsProps) {
   const { tickets, view } = props;
-  const sections = SECTIONS.filter((section) => view === 'inbox' || section.id === view);
+  const sections =
+    view === 'snoozed'
+      ? [{ id: 'snoozed' as const, label: 'Snoozed', rule: SNOOZED_RULE }]
+      : SECTIONS.filter((section) => view === 'inbox' || section.id === view);
   return (
     <>
       {sections.map((section) => {
-        const rows = tickets.filter((ticket) => ticket.section === section.id);
+        const rows =
+          section.id === 'snoozed'
+            ? snoozedTickets(tickets)
+            : tickets.filter((ticket) => ticket.section === section.id);
         if (view === 'inbox' && rows.length === 0) return null;
         const listId = `tk-sec-${section.id}`;
-        const open = view !== 'inbox' || !props.collapsed.has(section.id);
+        const open =
+          view !== 'inbox' || section.id === 'snoozed' || !props.collapsed.has(section.id);
         return (
           <section key={section.id} aria-label={section.label}>
             <SectionHeader
@@ -86,7 +97,11 @@ export function InboxSections(props: InboxSectionsProps) {
               rule={section.rule}
               attention={section.id === 'attention'}
               expanded={open}
-              onToggle={view === 'inbox' ? () => props.onToggle(section.id) : undefined}
+              onToggle={
+                view === 'inbox' && section.id !== 'snoozed'
+                  ? () => props.onToggle(section.id)
+                  : undefined
+              }
             />
             {open && rows.length === 0 && <p className="sec-empty">Nothing here right now.</p>}
             {open && rows.length > 0 && (
