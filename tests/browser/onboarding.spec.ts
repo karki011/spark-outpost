@@ -96,8 +96,9 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(dialog(page).getByRole('heading', { name: 'Bring in your tools' })).toBeVisible();
   await expect(dialog(page).locator('.ccard')).toHaveCount(4);
   await expect(dialog(page).locator('.ccard').first()).toContainText('GitHub');
-  await expect(dialog(page).locator('.ccard').nth(1)).toContainText('Coming soon');
-  await expect(dialog(page).getByRole('button', { name: 'Connect' })).toHaveCount(0);
+  await expect(dialog(page).locator('.ccard').nth(1)).toContainText('Jira');
+  await expect(dialog(page).locator('.ccard').nth(3)).toContainText('Coming soon');
+  await expect(dialog(page).getByRole('button', { name: 'Connect', exact: true })).toHaveCount(2);
 
   await continueButton(page).click();
   await expect(dialog(page).getByRole('heading', { name: "You're all set, Hazel" })).toBeVisible();

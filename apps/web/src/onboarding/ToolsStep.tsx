@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { GitHubCard } from '../ship/GitHubCard.tsx';
+import { TicketSourceCard } from '../tickets/TicketSourceCard.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import './tools.css';
 
@@ -46,7 +47,7 @@ export const connectors: Connector[] = [
   {
     id: 'jira',
     name: 'Jira',
-    description: 'Read and update tickets, and link them to chats.',
+    description: 'Sort your tickets, search every issue you can see, and start work from one.',
     icon: (
       <ToolIcon>
         <path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" />
@@ -57,7 +58,7 @@ export const connectors: Connector[] = [
   {
     id: 'linear',
     name: 'Linear',
-    description: 'Pull issues into chats and move them through a cycle.',
+    description: 'Pull issues into chats, search your workspace, and move them along as you ship.',
     icon: (
       <ToolIcon>
         <circle cx="12" cy="12" r="9" />
@@ -80,10 +81,22 @@ export const connectors: Connector[] = [
 export function ConnectorGrid() {
   return (
     <ul className="cgrid">
-      {connectors.map((connector, index) =>
-        connector.id === 'github' ? (
-          <GitHubCard key={connector.id} icon={connector.icon} />
-        ) : (
+      {connectors.map((connector, index) => {
+        if (connector.id === 'github') {
+          return <GitHubCard key={connector.id} icon={connector.icon} />;
+        }
+        if (connector.id === 'jira' || connector.id === 'linear') {
+          return (
+            <TicketSourceCard
+              key={connector.id}
+              source={connector.id}
+              icon={connector.icon}
+              description={connector.description}
+              primary={connector.id === 'jira'}
+            />
+          );
+        }
+        return (
           <motion.li
             key={connector.id}
             className="ccard"
@@ -101,8 +114,8 @@ export function ConnectorGrid() {
               <span className="soon">Coming soon</span>
             </div>
           </motion.li>
-        ),
-      )}
+        );
+      })}
     </ul>
   );
 }
@@ -112,8 +125,8 @@ export function ToolsStep() {
     <>
       <h2 id="onbTitle">Bring in your tools</h2>
       <p className="lede">
-        GitHub connects now, so Ship can open draft pull requests. The other connectors will let
-        Spark read tickets and threads when you ask it to; they aren't ready yet.
+        GitHub lets Ship open draft pull requests. Jira and Linear bring your tickets into Spark.
+        Slack isn't ready yet.
       </p>
       <ConnectorGrid />
     </>

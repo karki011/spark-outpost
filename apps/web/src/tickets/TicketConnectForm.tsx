@@ -1,12 +1,39 @@
-import { useId, useState, type FormEvent } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   saveTicketConnectionRequestSchema,
   ticketSourceNames,
+  type SaveTicketConnectionRequest,
   type TicketConnections,
   type TicketSourceId,
 } from '@spark-outpost/contracts';
+import { ExternalLinkIcon } from '../ui/icons.tsx';
+import { atLeast } from '../ui/min-duration.ts';
+import { fadeReveal } from '../ui/transitions.tsx';
+import { ConnectBlob } from './ConnectBlob.tsx';
+import {
+  CELEBRATE_MS,
+  checkFailure,
+  MIN_CHECK_MS,
+  type CheckFailure,
+  type CheckMood,
+  type ConnectField,
+} from './connect-check.ts';
+import { jiraSiteHost, jiraSiteUrl } from './jira-site.ts';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
+import './connect.css';
+
+export const JIRA_TOKEN_URL = 'https://id.atlassian.com/manage-profile/security/api-tokens';
+export const LINEAR_KEY_URL = 'https://linear.app/settings/account/security';
 
 interface TicketConnectFormProps {
   source: TicketSourceId;
@@ -14,98 +41,246 @@ interface TicketConnectFormProps {
   onCancel?: () => void;
 }
 
-const HELP: Record<TicketSourceId, string> = {
-  linear: 'Create a personal API key in Linear under Settings → Security & access.',
-  jira: 'Create an Atlassian API token at id.atlassian.com under Security → API tokens. Spark checks it with Jira before saving.',
+interface FieldSpec {
+  key: ConnectField;
+  label: string;
+  placeholder: string;
+  type: 'text' | 'email' | 'password';
+  inputMode?: 'url' | 'email';
+  help: ReactNode;
+}
+
+function HelpLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a className="tk-help-link" href={href} target="_blank" rel="noreferrer">
+      {children}
+      <ExternalLinkIcon />
+      <span className="sr-only"> (opens in your browser)</span>
+    </a>
+  );
+}
+
+const FIELDS: Record<TicketSourceId, FieldSpec[]> = {
+  jira: [
+    {
+      key: 'siteUrl',
+      label: 'Site URL',
+      placeholder: 'yourcompany.atlassian.net',
+      type: 'text',
+      inputMode: 'url',
+      help: 'The address you open Jira at.',
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      placeholder: 'you@example.com',
+      type: 'email',
+      inputMode: 'email',
+      help: 'Use the email you sign in to Atlassian with.',
+    },
+    {
+      key: 'apiToken',
+      label: 'API token',
+      placeholder: 'Paste your API token',
+      type: 'password',
+      help: (
+        <>
+          <HelpLink href={JIRA_TOKEN_URL}>Create an API token</HelpLink> in your Atlassian account,
+          then paste it here.
+        </>
+      ),
+    },
+  ],
+  linear: [
+    {
+      key: 'apiKey',
+      label: 'API key',
+      placeholder: 'lin_api_…',
+      type: 'password',
+      help: (
+        <>
+          <HelpLink href={LINEAR_KEY_URL}>Create a personal API key</HelpLink> in Linear under
+          Settings → Security &amp; access.
+        </>
+      ),
+    },
+  ],
 };
 
-function fieldsFor(source: TicketSourceId, values: Record<string, string>) {
+function requestFor(source: TicketSourceId, values: Record<string, string>) {
   return source === 'linear'
     ? { source, apiKey: values.apiKey ?? '' }
     : {
         source,
-        siteUrl: values.siteUrl ?? '',
-        email: values.email ?? '',
+        siteUrl: jiraSiteUrl(values.siteUrl ?? ''),
+        email: (values.email ?? '').trim(),
         apiToken: values.apiToken ?? '',
       };
+}
+
+function statusLine(mood: CheckMood | null, name: string): string {
+  if (mood === 'checking') return `Checking with ${name}…`;
+  if (mood === 'happy') return 'Connected!';
+  return '';
 }
 
 export function TicketConnectForm({ source, onConnected, onCancel }: TicketConnectFormProps) {
   const id = useId();
   const queryClient = useQueryClient();
+  const firstRef = useRef<HTMLInputElement>(null);
   const [values, setValues] = useState<Record<string, string>>({});
-  const [problem, setProblem] = useState<string | null>(null);
+  const [invalid, setInvalid] = useState<CheckFailure | null>(null);
+  const [revealed, setRevealed] = useState(false);
   const name = ticketSourceNames[source];
   const connect = useMutation({
-    mutationFn: ticketsApi.connect,
-    onSuccess: async (connections) => {
-      setValues({});
-      await queryClient.invalidateQueries({ queryKey: ticketKeys.all });
-      onConnected?.(connections);
-    },
-    onError: (error: Error) => setProblem(error.message),
+    mutationFn: (body: SaveTicketConnectionRequest) =>
+      atLeast(ticketsApi.connect(body), MIN_CHECK_MS),
   });
+  const failure = invalid ?? (connect.isError ? checkFailure(source, connect.error) : null);
+  const busy = connect.isPending || connect.isSuccess;
+  let mood: CheckMood | null = null;
+  if (connect.isPending) mood = 'checking';
+  else if (connect.isSuccess) mood = 'happy';
+  else if (connect.isError && failure) mood = failure.mood;
+
+  const finish = useEffectEvent((connections: TicketConnections) => {
+    setValues({});
+    queryClient.setQueryData(ticketKeys.connections, connections);
+    void queryClient.invalidateQueries({ queryKey: ticketKeys.all });
+    onConnected?.(connections);
+  });
+
+  useEffect(() => {
+    firstRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const connections = connect.data;
+    if (!connections) return;
+    const timer = setTimeout(() => finish(connections), CELEBRATE_MS);
+    return () => clearTimeout(timer);
+  }, [connect.data]);
+
+  const failedField = failure?.field ?? null;
+  useEffect(() => {
+    if (failedField) document.getElementById(`${id}-${failedField}`)?.focus();
+  }, [failedField, id]);
+
+  const change = (key: ConnectField, value: string) => {
+    setValues((current) => ({ ...current, [key]: value }));
+    setInvalid(null);
+    if (connect.isError) connect.reset();
+  };
+
+  const tidySite = (value: string) => {
+    const host = jiraSiteHost(value);
+    if (host !== value) setValues((current) => ({ ...current, siteUrl: host }));
+  };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const parsed = saveTicketConnectionRequestSchema.safeParse(fieldsFor(source, values));
+    if (busy) return;
+    const parsed = saveTicketConnectionRequestSchema.safeParse(requestFor(source, values));
     if (!parsed.success) {
-      setProblem(parsed.error.issues[0]?.message ?? 'Check the fields.');
+      const issue = parsed.error.issues[0];
+      setInvalid({
+        message: issue?.message ?? 'Check the fields.',
+        field: (issue?.path[0] as ConnectField | undefined) ?? null,
+        mood: 'neutral',
+      });
+      connect.reset();
       return;
     }
-    setProblem(null);
+    setInvalid(null);
     connect.mutate(parsed.data);
   };
 
-  const field = (key: string, label: string, props: Record<string, string>) => (
-    <label className="field" htmlFor={`${id}-${key}`}>
-      <span>{label}</span>
-      <input
-        id={`${id}-${key}`}
-        className="inp"
-        value={values[key] ?? ''}
-        onChange={(event) => setValues((current) => ({ ...current, [key]: event.target.value }))}
-        disabled={connect.isPending}
-        autoComplete="off"
-        spellCheck={false}
-        {...props}
-      />
-    </label>
-  );
+  const field = (spec: FieldSpec, index: number) => {
+    const inputId = `${id}-${spec.key}`;
+    const helpId = `${inputId}-help`;
+    const errorId = `${inputId}-error`;
+    const error = failure?.field === spec.key ? failure.message : null;
+    const secret = spec.type === 'password';
+    return (
+      <div className="tk-field" key={spec.key}>
+        <label htmlFor={inputId}>{spec.label}</label>
+        <div className="tk-keyrow">
+          <input
+            ref={index === 0 ? firstRef : undefined}
+            id={inputId}
+            className={secret ? 'inp mono' : 'inp'}
+            type={secret && revealed ? 'text' : spec.type}
+            inputMode={spec.inputMode}
+            value={values[spec.key] ?? ''}
+            onChange={(event) => change(spec.key, event.target.value)}
+            onBlur={spec.key === 'siteUrl' ? (event) => tidySite(event.target.value) : undefined}
+            placeholder={spec.placeholder}
+            disabled={busy}
+            autoComplete="off"
+            spellCheck={false}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? `${errorId} ${helpId}` : helpId}
+          />
+          {secret && (
+            <button
+              type="button"
+              className="btn line sm"
+              onClick={() => setRevealed(!revealed)}
+              disabled={busy}
+            >
+              {revealed ? 'Hide' : 'Show'}
+            </button>
+          )}
+        </div>
+        <AnimatePresence initial={false}>
+          {error && (
+            <motion.p
+              key="error"
+              id={errorId}
+              className="tk-field-err"
+              role="alert"
+              {...fadeReveal}
+            >
+              {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
+        <p id={helpId} className="tk-field-help">
+          {spec.help}
+        </p>
+      </div>
+    );
+  };
 
   return (
-    <form className="tk-cform" onSubmit={submit} aria-label={`Connect ${name}`} noValidate>
-      {source === 'jira' ? (
-        <>
-          {field('siteUrl', 'Site URL', {
-            type: 'url',
-            placeholder: 'https://your-site.atlassian.net',
-          })}
-          {field('email', 'Email', { type: 'email', placeholder: 'you@example.com' })}
-          {field('apiToken', 'API token', {
-            type: 'password',
-            placeholder: 'Paste your API token',
-          })}
-        </>
-      ) : (
-        field('apiKey', 'API key', { type: 'password', placeholder: 'lin_api_…' })
-      )}
-      <p className="tk-hint">{HELP[source]}</p>
-      {problem && (
+    <form
+      className="tk-cform"
+      onSubmit={submit}
+      aria-label={`Connect ${name}`}
+      aria-busy={connect.isPending}
+      noValidate
+    >
+      {FIELDS[source].map(field)}
+      {failure && !failure.field && (
         <p className="tk-cform-err" role="alert">
-          {problem}
+          {failure.message}
         </p>
       )}
       <div className="tk-cform-acts">
-        <button type="submit" className="btn primary sm" disabled={connect.isPending}>
-          {connect.isPending ? `Checking with ${name}…` : 'Save and check'}
+        <button type="submit" className="btn primary sm" disabled={busy}>
+          {connect.isPending ? 'Checking…' : 'Save and check'}
         </button>
-        {connect.isPending && <span className="pdot" aria-hidden="true" />}
         {onCancel && (
-          <button type="button" className="btn ghost sm" onClick={onCancel}>
+          <button type="button" className="btn ghost sm" onClick={onCancel} disabled={busy}>
             Cancel
           </button>
         )}
+        <span className="tk-check">
+          <AnimatePresence>{mood && <ConnectBlob key="blob" mood={mood} />}</AnimatePresence>
+          <span className="tk-check-say" role="status">
+            {statusLine(mood, name)}
+          </span>
+        </span>
       </div>
       <p className="tk-hint">Keys stay in your macOS keychain and are never shown again.</p>
     </form>

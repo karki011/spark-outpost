@@ -18,27 +18,41 @@ test.beforeEach(async () => {
   await resetTicketFakes();
 });
 
-test('the connect form checks the key with Linear, then shows the inbox', async ({ page }) => {
+test('the empty state connects Jira first, then checks a Linear key', async ({ page }) => {
   await openTickets(page);
   await expect(page.getByRole('heading', { name: 'See your tickets here' })).toBeVisible();
+  const cta = page.locator('.tk-cta .btn');
+  await expect(cta.first()).toHaveText('Connect Jira');
+  await expect(cta.first()).toHaveClass(/primary/);
 
   await page.getByRole('button', { name: 'Connect Jira' }).click();
   const jira = page.getByRole('form', { name: 'Connect Jira' });
-  await expect(jira.getByLabel('Site URL')).toBeVisible();
-  await expect(jira).toContainText('Create an Atlassian API token at id.atlassian.com');
+  await expect(jira.getByLabel('Site URL')).toBeFocused();
+  await expect(jira.getByRole('link', { name: /Create an API token/ })).toHaveAttribute(
+    'href',
+    'https://id.atlassian.com/manage-profile/security/api-tokens',
+  );
   await jira.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('button', { name: 'Connect Jira' })).toBeFocused();
 
   await page.getByRole('button', { name: 'Connect Linear' }).click();
   const form = page.getByRole('form', { name: 'Connect Linear' });
+  await expect(form.getByRole('link', { name: /Create a personal API key/ })).toHaveAttribute(
+    'target',
+    '_blank',
+  );
   await form.getByRole('button', { name: 'Save and check' }).click();
   await expect(form.getByRole('alert')).toHaveText('Paste the full Linear API key.');
 
   await form.getByLabel('API key').fill('lin_api_wrong_0123456789abcdefghij');
   await form.getByRole('button', { name: 'Save and check' }).click();
+  await expect(form.getByRole('status')).toHaveText('Checking with Linear…');
   await expect(form.getByRole('alert')).toContainText('Linear rejected this key');
+  await expect(form.getByLabel('API key')).toHaveAttribute('aria-invalid', 'true');
 
   await form.getByLabel('API key').fill(LINEAR_KEY);
   await form.getByRole('button', { name: 'Save and check' }).click();
+  await expect(form.getByRole('status')).toHaveText('Connected!', { timeout: 10_000 });
   await expect(section(page, 'Needs attention')).toBeVisible({ timeout: 15_000 });
   await expect(row(page, 'ENG-1215')).toContainText('Due today');
 });
