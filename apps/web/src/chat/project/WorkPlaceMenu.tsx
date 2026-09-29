@@ -135,23 +135,23 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
             <small>{busy ? 'Switching…' : 'Your choice is remembered for this project'}</small>
           </span>
         </div>
-        <div className="pp-places" role="radiogroup" aria-label="Folder">
+        <div className="pp-places" role="radiogroup" aria-label="How Spark works">
           <PlaceCard
             checked={fresh}
             icon={<BranchIcon />}
-            title="Own folder"
-            detail="A new branch in a worktree. Your checkout stays as it is."
+            title="Work on a copy"
+            detail="Spark makes a separate copy on a new branch. Your files don't change until you bring the work over."
             busy={busy}
             onPick={() => pick({ place: 'worktree', branch: null })}
           />
           <PlaceCard
             checked={inCheckout}
             icon={<FolderIcon />}
-            title="Your folder"
+            title="Edit my files"
             detail={
               checkoutBranch
-                ? `Edits land on ${checkoutBranch}, live.`
-                : 'Edits land in your folder, live.'
+                ? `Spark changes your files directly, on ${checkoutBranch}. You see edits right away.`
+                : 'Spark changes your files directly. You see edits right away.'
             }
             busy={busy}
             onPick={() => pick({ place: 'checkout', branch: null })}
