@@ -10,6 +10,7 @@ import {
   deleteTicketConnection,
   getTicketConnection,
   listTicketConnections,
+  saveTicketAccountId,
   saveTicketConnection,
   updateTicketSettings,
   type TicketConnectionRow,
@@ -59,6 +60,7 @@ export async function ticketConnections(deps: TicketDeps): Promise<TicketConnect
       validatedAt: row.validatedAt.toISOString(),
       keySaved: (await savedSecret(deps, row.source)) !== null,
       moveOnShip: row.moveOnShip,
+      moveOnMerge: row.moveOnMerge,
       statusMap: row.statusMap,
     })),
   );
@@ -89,9 +91,9 @@ export async function saveConnection(
 ): Promise<TicketConnections> {
   const { row, secret } = requestedAccess(deps, request);
   const name = ticketSourceNames[row.source];
-  let account: string;
+  let who: { id: string; name: string };
   try {
-    account = (await sourceFor(deps, row, secret).whoami()).name;
+    who = await sourceFor(deps, row, secret).whoami();
   } catch (error) {
     await recordTicketEvent(deps.db, deps.workspaceId, {
       source: row.source,
@@ -108,12 +110,16 @@ export async function saveConnection(
     throw error;
   }
   await deps.secrets.set(secretIdFor(row.source), secret);
-  await saveTicketConnection(deps.db, deps.workspaceId, { ...row, account });
+  await saveTicketConnection(deps.db, deps.workspaceId, {
+    ...row,
+    account: who.name,
+    accountId: who.id,
+  });
   await recordTicketEvent(deps.db, deps.workspaceId, {
     source: row.source,
     action: 'connect',
     outcome: 'succeeded',
-    detail: { site: row.apiUrl, account },
+    detail: { site: row.apiUrl, account: who.name },
   });
   return ticketConnections(deps);
 }
@@ -178,4 +184,11 @@ export async function connectedSources(deps: TicketDeps): Promise<OpenSource[]> 
   const rows = await listTicketConnections(deps.db, deps.workspaceId);
   const open = await Promise.all(rows.map((row) => openSource(deps, row.source)));
   return open.filter((entry): entry is OpenSource => entry !== null);
+}
+
+export async function accountIdOf(deps: TicketDeps, open: OpenSource): Promise<string> {
+  if (open.connection.accountId) return open.connection.accountId;
+  const { id } = await open.source.whoami();
+  await saveTicketAccountId(deps.db, deps.workspaceId, open.connection.source, id);
+  return id;
 }

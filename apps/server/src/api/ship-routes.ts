@@ -34,8 +34,10 @@ export function shipErrorStatus(error: unknown): { status: number; message: stri
   return null;
 }
 
-function shipDeps(deps: ShipRouteDeps): ShipDeps {
-  const github: GitHubDeps = {
+export type GitHubRouteDeps = Omit<ShipRouteDeps, 'branchPrefix'>;
+
+export function gitHubDepsOf(deps: GitHubRouteDeps): GitHubDeps {
+  return {
     db: deps.db,
     workspaceId: deps.workspaceId,
     secrets: deps.secrets,
@@ -44,7 +46,10 @@ function shipDeps(deps: ShipRouteDeps): ShipDeps {
     apiUrl: deps.githubApiUrl,
     locateGh: deps.locateGh ?? (() => locateCli('gh', deps.runCommand, deps.loginShell)),
   };
-  return { ...github, branchPrefix: deps.branchPrefix ?? DEFAULT_BRANCH_PREFIX };
+}
+
+function shipDeps(deps: ShipRouteDeps): ShipDeps {
+  return { ...gitHubDepsOf(deps), branchPrefix: deps.branchPrefix ?? DEFAULT_BRANCH_PREFIX };
 }
 
 export function shipRoutes(routeDeps: ShipRouteDeps): Router {

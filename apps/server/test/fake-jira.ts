@@ -2,6 +2,12 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 
 export const JIRA_EMAIL = 'alex@example.test';
 export const JIRA_TOKEN = 'jira_fake_token_0123456789';
+export const JIRA_ME = 'acc-1';
+
+export const jiraPeople: Record<string, string> = {
+  'acc-1': 'Alex Example',
+  'acc-2': 'Jordan Lee',
+};
 
 type Category = 'new' | 'indeterminate' | 'done';
 
@@ -11,7 +17,11 @@ export interface FakeJiraIssue {
   description: unknown;
   status: string;
   updated: string;
-  assignedToMe: boolean;
+  assignee: string | null;
+  priority: string;
+  duedate: string | null;
+  resolutiondate: string | null;
+  labels: string[];
   comments: { author: string; body: unknown; created: string }[];
   remoteLinks: { globalId: string; url: string; title: string }[];
   subtasks: string[];
@@ -21,6 +31,7 @@ export interface FakeJira {
   workflows: Record<string, Record<string, Category>>;
   issues: FakeJiraIssue[];
   jql: string[];
+  denyAssign: Set<string>;
   handle(req: IncomingMessage, res: ServerResponse): Promise<void>;
 }
 
@@ -41,7 +52,11 @@ function seedIssues(): FakeJiraIssue[] {
     description: null,
     status: 'To Do',
     updated: '2026-09-20T10:00:00.000+0000',
-    assignedToMe: true,
+    assignee: JIRA_ME,
+    priority: 'Medium',
+    duedate: null,
+    resolutiondate: null,
+    labels: ['frontend'],
     comments: [],
     remoteLinks: [],
     subtasks: [],
@@ -67,7 +82,15 @@ function seedIssues(): FakeJiraIssue[] {
       subtasks: ['WEB-419'],
     },
     { ...base, key: 'WEB-419', summary: 'CSV header row', status: 'In Progress' },
-    { ...base, key: 'WEB-420', summary: 'Shipped last sprint', status: 'Done' },
+    {
+      ...base,
+      key: 'WEB-420',
+      summary: 'Shipped last sprint',
+      status: 'Done',
+      resolutiondate: '2026-09-26T09:00:00.000+0000',
+    },
+    { ...base, key: 'WEB-437', summary: 'Uploads over 2 GB fail', assignee: 'acc-2' },
+    { ...base, key: 'API-95', summary: 'Resumable uploads', assignee: null },
     {
       ...base,
       key: 'API-77',
@@ -93,7 +116,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
 }
 
 const EXPECTED_AUTH = `Basic ${Buffer.from(`${JIRA_EMAIL}:${JIRA_TOKEN}`).toString('base64')}`;
-const ISSUE = /^\/rest\/api\/3\/issue\/([^/]+)(?:\/(remotelink|transitions|comment))?$/;
+const ISSUE = /^\/rest\/api\/3\/issue\/([^/]+)(?:\/(remotelink|transitions|comment|assignee))?$/;
 
 export function fakeJira(): FakeJira {
   const workflows: Record<string, Record<string, Category>> = {
@@ -107,6 +130,7 @@ export function fakeJira(): FakeJira {
   };
   const issues = seedIssues();
   const jql: string[] = [];
+  const denyAssign = new Set<string>();
 
   const projectOf = (item: FakeJiraIssue) => item.key.split('-')[0]!;
   const categoryOf = (item: FakeJiraIssue) => workflows[projectOf(item)]![item.status]!;
@@ -120,12 +144,16 @@ export function fakeJira(): FakeJira {
       summary: item.summary,
       status: statusField(item),
       updated: item.updated,
-      priority: { name: 'Medium' },
+      priority: { name: item.priority },
       project: { key: projectOf(item) },
       customfield_10020: [{ name: 'Sprint 41', state: 'active' }],
       description: item.description,
-      assignee: { displayName: 'Alex Example' },
-      labels: ['frontend'],
+      assignee: item.assignee
+        ? { accountId: item.assignee, displayName: jiraPeople[item.assignee] ?? item.assignee }
+        : null,
+      duedate: item.duedate,
+      resolutiondate: item.resolutiondate,
+      labels: item.labels,
       comment: {
         comments: item.comments.map((c) => ({
           author: { displayName: c.author },
@@ -140,13 +168,24 @@ export function fakeJira(): FakeJira {
     };
   }
 
+  function assigneeMatches(item: FakeJiraIssue, query: string) {
+    if (query.includes('assignee != currentUser()')) {
+      return item.assignee !== null && item.assignee !== JIRA_ME;
+    }
+    if (query.includes('assignee = currentUser()')) return item.assignee === JIRA_ME;
+    if (query.includes('assignee is EMPTY')) return item.assignee === null;
+    return true;
+  }
+
   function search(query: string) {
     jql.push(query);
     const project = /project = "([^"]+)"/.exec(query)?.[1];
     const text = /text ~ "([^"]+)"/.exec(query)?.[1]?.toLowerCase();
+    const key = /key = "([^"]+)"/.exec(query)?.[1];
     const wantDone = query.includes('statusCategory = Done');
     return issues.filter((item) => {
-      if (!item.assignedToMe) return false;
+      if (!assigneeMatches(item, query)) return false;
+      if (key && item.key !== key) return false;
       if ((categoryOf(item) === 'done') !== wantDone) return false;
       if (project && projectOf(item) !== project) return false;
       return !text || item.summary.toLowerCase().includes(text);
@@ -184,6 +223,13 @@ export function fakeJira(): FakeJira {
       );
     }
     const body = await readJson(req);
+    if (sub === 'assignee' && req.method === 'PUT') {
+      if (denyAssign.has(projectOf(item))) {
+        return send(res, 403, { errorMessages: ['You do not have permission to assign issues.'] });
+      }
+      item.assignee = typeof body.accountId === 'string' ? body.accountId : null;
+      return send(res, 204);
+    }
     if (sub === 'remotelink') {
       const object = body.object as { url: string; title: string };
       const existing = item.remoteLinks.find((link) => link.globalId === body.globalId);
@@ -215,6 +261,7 @@ export function fakeJira(): FakeJira {
     workflows,
     issues,
     jql,
+    denyAssign,
     async handle(req, res) {
       if (req.headers.authorization !== EXPECTED_AUTH) {
         return send(res, 401, {

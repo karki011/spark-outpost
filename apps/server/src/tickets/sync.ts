@@ -16,6 +16,7 @@ export async function moveTicket(
   key: string,
   target: TicketStatus,
   taskId: string | null,
+  detail: Record<string, unknown> = {},
 ): Promise<TicketSync> {
   let sync: TicketSync;
   try {
@@ -40,7 +41,7 @@ export async function moveTicket(
     ticketKey: key,
     taskId,
     outcome: sync.outcome,
-    detail: { target, message: sync.message },
+    detail: { ...detail, target, message: sync.message },
   });
   return sync;
 }

@@ -12,6 +12,7 @@ export type AppView = 'home' | 'chats' | 'analytics' | 'tickets';
 interface RailProps {
   view: AppView;
   waiting: number;
+  ticketsWaiting: number;
   mood: ScoutMood;
   onView: (view: AppView) => void;
   onSettings: () => void;
@@ -93,7 +94,15 @@ function useIndicator(view: AppView) {
   return { railRef, box };
 }
 
-export function Rail({ view, waiting, mood, onView, onSettings, onProfile }: RailProps) {
+export function Rail({
+  view,
+  waiting,
+  ticketsWaiting,
+  mood,
+  onView,
+  onSettings,
+  onProfile,
+}: RailProps) {
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const name = setup.data?.profile.displayName.trim() || 'You';
   const { railRef, box } = useIndicator(view);
@@ -141,6 +150,14 @@ export function Rail({ view, waiting, mood, onView, onSettings, onProfile }: Rai
               aria-label={`${waiting} ${waiting === 1 ? 'chat needs' : 'chats need'} your input`}
             >
               {waiting}
+            </i>
+          )}
+          {item.id === 'tickets' && ticketsWaiting > 0 && (
+            <i
+              className="rbadge"
+              aria-label={`${ticketsWaiting} ${ticketsWaiting === 1 ? 'ticket needs' : 'tickets need'} attention`}
+            >
+              {ticketsWaiting}
             </i>
           )}
         </button>

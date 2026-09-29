@@ -14,7 +14,10 @@ export interface FakePull {
   head: string;
   base: string;
   draft: boolean;
-  state: 'open';
+  state: 'open' | 'closed';
+  merged?: boolean;
+  created_at?: string;
+  reviews?: { user: { login: string }; state: string }[];
   html_url: string;
   openedBy: string;
   via: 'gh_cli' | 'token';
@@ -55,7 +58,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   }
 }
 
-const REPO = /^\/repos\/([^/]+)\/([^/]+)(\/pulls(?:\/(\d+))?)?$/;
+const REPO = /^\/repos\/([^/]+)\/([^/]+)(\/pulls(?:\/(\d+))?)?(\/reviews)?$/;
 
 export function fakeGitHub(): FakeGitHub {
   const pulls: FakePull[] = [];
@@ -76,7 +79,27 @@ export function fakeGitHub(): FakeGitHub {
     match: RegExpExecArray,
     query: URLSearchParams,
   ) {
-    const [, owner, repo, , number] = match as unknown as [string, string, string, string, string?];
+    const [, owner, repo, , number, reviews] = match as unknown as [
+      string,
+      string,
+      string,
+      string,
+      string?,
+      string?,
+    ];
+    if (req.method === 'GET' && number) {
+      const pull = pulls.find(
+        (entry) => entry.owner === owner && entry.repo === repo && entry.number === Number(number),
+      );
+      if (!pull) return send(res, 404, { message: 'Not Found' });
+      if (reviews) return send(res, 200, pull.reviews ?? []);
+      return send(res, 200, {
+        ...pull,
+        merged: pull.merged ?? false,
+        merged_at: pull.merged ? '2026-09-28T09:00:00Z' : null,
+        created_at: pull.created_at ?? '2026-09-25T09:00:00Z',
+      });
+    }
     if (req.method === 'GET') {
       const head = query.get('head');
       return send(

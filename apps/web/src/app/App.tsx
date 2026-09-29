@@ -17,11 +17,12 @@ import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
 import { useSettingsRequests } from '../settings/settings-request.ts';
+import { Tickets } from '../tickets/Tickets.tsx';
+import { ticketKeys, ticketsApi } from '../tickets/tickets-api.ts';
 import { BackOnlineToast } from './connection/BackOnlineToast.tsx';
 import { markConnectionRestored, useConnection } from './connection/connection-store.ts';
 import { OfflineScreen } from './connection/OfflineScreen.tsx';
 import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
-import { ComingSoon } from './ComingSoon.tsx';
 import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
 import { Rail, type AppView } from './Rail.tsx';
@@ -49,6 +50,10 @@ function ChatShell({ entering }: { entering: boolean }) {
   });
   const chats = conversations.data ?? [];
   const waiting = attention(chats, null).count;
+  const inbox = useQuery({ queryKey: ticketKeys.inbox, queryFn: ticketsApi.inbox, enabled: false });
+  const ticketsWaiting = (inbox.data?.tickets ?? []).filter(
+    (ticket) => ticket.section === 'attention',
+  ).length;
   const layout = useSidebarLayoutState(waiting > 0);
   useAttentionTitle(waiting);
   const finished = chats.some((chat) => rowState(chat, false).tone === 'done');
@@ -103,6 +108,7 @@ function ChatShell({ entering }: { entering: boolean }) {
         <Rail
           view={view}
           waiting={waiting}
+          ticketsWaiting={ticketsWaiting}
           mood={mood}
           onView={(next) => {
             setView(next);
@@ -139,13 +145,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           />
         )}
         {view === 'analytics' && <Analytics />}
-        {view === 'tickets' && (
-          <ComingSoon
-            title="Tickets are coming soon"
-            text="Track work from your issue tracker next to the chats that fix it."
-            onChats={() => setView('chats')}
-          />
-        )}
+        {view === 'tickets' && <Tickets onOpenChat={openChat} />}
         {view === 'chats' && (
           <AgentTvHost
             activeId={activeId}

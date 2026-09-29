@@ -11,6 +11,15 @@ export interface PullRequest {
   number: number;
 }
 
+export interface PullRequestDetail extends PullRequest {
+  draft: boolean;
+  state: 'open' | 'closed';
+  merged: boolean;
+  createdAt: string;
+  mergedAt: string | null;
+  reviews: { user: string; state: string }[];
+}
+
 export interface NewPullRequest {
   title: string;
   body: string;
@@ -36,6 +45,7 @@ export interface GitHubConnection {
   whoami(): Promise<{ login: string }>;
   defaultBranch(repo: RepoRef): Promise<string>;
   findPullRequest(repo: RepoRef, head: string): Promise<PullRequest | null>;
+  getPullRequest(repo: RepoRef, number: number): Promise<PullRequestDetail>;
   createPullRequest(repo: RepoRef, pull: NewPullRequest): Promise<PullRequest>;
   updatePullRequest(
     repo: RepoRef,
@@ -56,6 +66,17 @@ export class GitHubApiError extends Error {
 const userSchema = z.object({ login: z.string().min(1) });
 const repoSchema = z.object({ default_branch: z.string().min(1) });
 const pullSchema = z.object({ html_url: z.string().url(), number: z.number().int().positive() });
+
+const pullDetailSchema = pullSchema.extend({
+  draft: z.boolean().optional(),
+  state: z.enum(['open', 'closed']),
+  merged: z.boolean().optional(),
+  merged_at: z.string().nullable().optional(),
+  created_at: z.string(),
+});
+const reviewsSchema = z.array(
+  z.object({ user: z.object({ login: z.string() }).nullable(), state: z.string() }),
+);
 
 const segment = (value: string) => encodeURIComponent(value);
 export const repoPath = (repo: RepoRef) => `/repos/${segment(repo.owner)}/${segment(repo.name)}`;
@@ -107,6 +128,27 @@ export function restConnection(
       const answer = await request('GET', `${repoPath(repo)}/pulls?${query.toString()}`);
       const pulls = parsed(z.array(pullSchema), 'looking for an open pull request', answer);
       return pulls[0] ? toPull(pulls[0]) : null;
+    },
+    async getPullRequest(repo, number) {
+      const path = `${repoPath(repo)}/pulls/${number}`;
+      const pull = parsed(pullDetailSchema, 'reading the pull request', await request('GET', path));
+      const reviews = parsed(
+        reviewsSchema,
+        'reading the pull request reviews',
+        await request('GET', `${path}/reviews?per_page=100`),
+      );
+      return {
+        ...toPull(pull),
+        draft: pull.draft ?? false,
+        state: pull.state,
+        merged: pull.merged ?? pull.merged_at != null,
+        createdAt: pull.created_at,
+        mergedAt: pull.merged_at ?? null,
+        reviews: reviews.map((review) => ({
+          user: review.user?.login ?? '',
+          state: review.state,
+        })),
+      };
     },
     async createPullRequest(repo, pull) {
       const answer = await request('POST', `${repoPath(repo)}/pulls`, { ...pull, draft: true });

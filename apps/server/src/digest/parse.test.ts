@@ -25,6 +25,7 @@ describe('parseDigestReply', () => {
         { text: 'Today you explored invalid dates.', chatId: null },
       ],
       suggestions: [{ chatId: KNOWN, reason: '3 of 4 steps done.', draft: "Let's continue." }],
+      items: [],
       structured: true,
     });
   });
@@ -96,6 +97,7 @@ describe('parseDigestReply', () => {
         { text: 'Today you read docs.', chatId: null },
       ],
       suggestions: [],
+      items: [],
       structured: false,
     });
     expect(parseDigestReply('{"lines": "not a list"}', ids, stats).structured).toBe(false);

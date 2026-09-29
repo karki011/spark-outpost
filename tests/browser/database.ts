@@ -35,6 +35,11 @@ const RESET_TABLES = [
   'advisor_connections',
   'profiles',
   'github_tokens',
+  'ticket_connections',
+  'ticket_events',
+  'tickets',
+  'attention_settings',
+  'attention_snapshots',
 ];
 const LEFTOVER_RUN_WAIT_MS = 5000;
 

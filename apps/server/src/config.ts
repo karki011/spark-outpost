@@ -74,6 +74,10 @@ const configSchema = z.object({
   BACKUP_DIR: z.string().min(1).optional(),
   WEB_ROOT: z.string().min(1).optional(),
   MCP_SCAN_HOME: z.string().min(1).optional(),
+  MORNING_BRIEF: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 });
 
 export type Config = z.infer<typeof configSchema>;

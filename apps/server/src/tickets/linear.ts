@@ -6,7 +6,16 @@ import type {
   TicketSummary,
 } from '@spark-outpost/contracts';
 import { callJson, failure, isOk } from './http.ts';
-import { matchesFilter, TicketApiError, type TicketFilter, type TicketSource } from './source.ts';
+import {
+  daysAgo,
+  KEY_QUERY,
+  matchesFilter,
+  SEARCH_PAGE_SIZE,
+  TicketApiError,
+  type TicketFilter,
+  type TicketSearchFilter,
+  type TicketSource,
+} from './source.ts';
 import {
   bucketOf,
   noStateMessage,
@@ -28,6 +37,11 @@ const issueSchema = z.object({
   url: z.string(),
   updatedAt: z.string(),
   priorityLabel: z.string().nullable().optional(),
+  priority: z.number().int().min(0).max(4).nullable().optional(),
+  dueDate: z.string().nullable().optional(),
+  completedAt: z.string().nullable().optional(),
+  assignee: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
+  labels: z.object({ nodes: z.array(z.object({ name: z.string() })) }).optional(),
   state: stateSchema,
   team: z.object({ key: z.string() }).nullable().optional(),
   cycle: z
@@ -38,8 +52,6 @@ const issueSchema = z.object({
 const nodes = <T extends z.ZodType>(item: T) => z.object({ nodes: z.array(item) });
 const detailSchema = issueSchema.extend({
   description: z.string().nullable().optional(),
-  assignee: z.object({ name: z.string() }).nullable().optional(),
-  labels: nodes(z.object({ name: z.string() })),
   comments: nodes(
     z.object({
       body: z.string(),
@@ -62,15 +74,19 @@ const successSchema = (field: string) =>
     Record<string, { success: boolean }>
   >;
 
-const ISSUE_FIELDS = `id identifier title url updatedAt priorityLabel
+const ISSUE_FIELDS = `id identifier title url updatedAt priorityLabel priority dueDate completedAt
+  assignee { id name } labels { nodes { name } }
   state { name type } team { key } cycle { name number }`;
 
 const VIEWER = 'query { viewer { id name email } }';
 const ASSIGNED = `query Assigned($first: Int!, $filter: IssueFilter) {
   viewer { assignedIssues(first: $first, filter: $filter, orderBy: updatedAt) {
     nodes { ${ISSUE_FIELDS} } } } }`;
+const SEARCH = `query Search($first: Int!, $filter: IssueFilter) {
+  issues(first: $first, filter: $filter, orderBy: updatedAt) { nodes { ${ISSUE_FIELDS} } } }`;
+const SUMMARY = `query Summary($id: String!) { issue(id: $id) { ${ISSUE_FIELDS} } }`;
 const ISSUE = `query Issue($id: String!) { issue(id: $id) { ${ISSUE_FIELDS}
-  description assignee { name } labels { nodes { name } }
+  description
   comments(first: 50) { nodes { body createdAt user { name } } }
   attachments { nodes { title url } }
   children { nodes { identifier title state { name type } } } } }`;
@@ -80,6 +96,8 @@ const MOVE = `mutation Move($id: String!, $stateId: String!) {
   issueUpdate(id: $id, input: { stateId: $stateId }) { success } }`;
 const COMMENT = `mutation Comment($issueId: String!, $body: String!) {
   commentCreate(input: { issueId: $issueId, body: $body }) { success } }`;
+const ASSIGN = `mutation Assign($id: String!, $assigneeId: String) {
+  issueUpdate(id: $id, input: { assigneeId: $assigneeId }) { success } }`;
 const LINK = `mutation Link($issueId: String!, $url: String!, $title: String!) {
   attachmentLinkURL(issueId: $issueId, url: $url, title: $title) { success } }`;
 
@@ -90,6 +108,23 @@ export function linearKind(type: string): StateKind {
   if (DONE_TYPES.includes(type)) return 'done';
   return 'todo';
 }
+
+export function linearTextFilter(q: string) {
+  const key = KEY_QUERY.exec(q.trim());
+  if (key) {
+    return { team: { key: { eqIgnoreCase: key[1] } }, number: { eq: Number(key[2]) } };
+  }
+  return {
+    or: [{ title: { containsIgnoreCase: q } }, { description: { containsIgnoreCase: q } }],
+  };
+}
+
+const ASSIGNEE_FILTERS = {
+  anyone: null,
+  me: { isMe: { eq: true } },
+  unassigned: { null: true },
+  others: { null: false, isMe: { eq: false } },
+} as const;
 
 function authError(errors: unknown): boolean {
   return JSON.stringify(errors ?? '')
@@ -145,11 +180,33 @@ export function linearSource(
       project: team,
       priority: issue.priorityLabel ?? null,
       sprint: issue.cycle ? (issue.cycle.name ?? `Cycle ${issue.cycle.number}`) : null,
+      priorityRank: issue.priority ?? 0,
+      assignedTo: issue.assignee ?? null,
+      labels: issue.labels?.nodes.map((label) => label.name) ?? [],
+      dueDate: issue.dueDate ?? null,
+      doneAt: issue.completedAt ?? null,
     };
   }
 
   function stateFilter(status: TicketStatus | undefined) {
     return status === 'done' ? { type: { in: DONE_TYPES } } : { type: { nin: DONE_TYPES } };
+  }
+
+  function searchFilter(filter: TicketSearchFilter) {
+    const assignee = ASSIGNEE_FILTERS[filter.assignee];
+    return {
+      state: stateFilter(filter.status),
+      ...(filter.project ? { team: { key: { eqIgnoreCase: filter.project } } } : {}),
+      ...(assignee ? { assignee } : {}),
+      ...(filter.q ? linearTextFilter(filter.q) : {}),
+    };
+  }
+
+  async function readSummary(key: string) {
+    const schema = z.object({ issue: issueSchema.nullable() });
+    const { issue } = await graphql(schema, SUMMARY, { id: key }, `reading ${key}`);
+    if (!issue) throw new TicketApiError(404, `Linear has no ticket ${key}.`);
+    return summary(issue);
   }
 
   return {
@@ -168,10 +225,28 @@ export function linearSource(
         filter: {
           state: stateFilter(filter.status),
           ...(filter.project ? { team: { key: { eqIgnoreCase: filter.project } } } : {}),
+          ...(filter.doneWithinDays
+            ? { completedAt: { gte: daysAgo(filter.doneWithinDays).toISOString() } }
+            : {}),
         },
       };
       const data = await graphql(schema, ASSIGNED, variables, 'listing your tickets');
       return data.viewer.assignedIssues.nodes.map(summary).filter((t) => matchesFilter(t, filter));
+    },
+    async search(filter) {
+      const schema = z.object({ issues: nodes(issueSchema) });
+      const variables = { first: SEARCH_PAGE_SIZE, filter: searchFilter(filter) };
+      const data = await graphql(schema, SEARCH, variables, 'searching tickets');
+      return data.issues.nodes.map(summary);
+    },
+    getSummary: readSummary,
+    async assign(key, accountId) {
+      await graphql(
+        successSchema('issueUpdate'),
+        ASSIGN,
+        { id: key, assigneeId: accountId },
+        `assigning ${key}`,
+      );
     },
     async getTicket(key) {
       const schema = z.object({ issue: detailSchema.nullable() });
@@ -182,7 +257,6 @@ export function linearSource(
         ...summary(issue),
         description: issue.description ?? '',
         assignee: issue.assignee?.name ?? null,
-        labels: issue.labels.nodes.map((label) => label.name),
         comments: issue.comments.nodes.map((comment) => ({
           author: comment.user?.name ?? null,
           body: comment.body,
