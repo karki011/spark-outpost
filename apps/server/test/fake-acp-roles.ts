@@ -175,6 +175,10 @@ async function push(turn: RoleTurn): Promise<void> {
 
 async function failWhenAsked(turn: RoleTurn): Promise<void> {
   if (turn.text.includes('#failstep 1')) throw new Error('Step 1 broke.');
+  if (turn.text.includes('#nofile') && !turn.text.includes('Note from the user')) {
+    await turn.say('There is no src/dates.ts in this repo.');
+    throw new Error('Gave up.');
+  }
   if (!turn.text.includes('#failonce 1')) return;
   const root = turn.cwd.split('/.spark/worktrees/')[0]!;
   const marker = join(root, '.git', 'failed-step-1');

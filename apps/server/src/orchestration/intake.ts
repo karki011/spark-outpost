@@ -7,10 +7,12 @@ import type {
   RunMode,
 } from '@spark-outpost/contracts';
 import { noulGate } from '../advisor/gate.ts';
-import type { ActingQuestion } from '../advisor/policy.ts';
+import { FOLLOW_UP_MINUTES, type ActingQuestion } from '../advisor/policy.ts';
 import { vagueByRule, vagueHandling } from './clarify.ts';
+import { vagueFollowUpByRule } from './follow-up.ts';
 import {
   asksForReview,
+  buildsByRule,
   destructiveByRule,
   followUpByRule,
   planOnlyByRule,
@@ -34,6 +36,8 @@ export interface IntakeFacts {
   firstMessage: boolean;
   namedFiles: number;
   currentTask: CurrentTask | null;
+  previousReply?: string | null;
+  change?: boolean;
   now?: Date;
 }
 
@@ -57,7 +61,7 @@ function call(
   rule: boolean,
   facts: IntakeFacts,
   risk: Risk,
-): IntakeCall & { asks: boolean } {
+): IntakeCall {
   const noul = jev?.[field] ?? null;
   const gated = noulGate(noul, question, facts.level, risk);
   const decided = gated.value;
@@ -67,17 +71,6 @@ function call(
     value: decided ?? rule,
     source: decided === null ? 'rules' : 'jev',
     gate: gated.gate,
-    asks: gated.gate?.decision === 'ask',
-  };
-}
-
-function plain(entry: IntakeCall & { asks: boolean }): IntakeCall {
-  return {
-    jev: entry.jev,
-    rule: entry.rule,
-    value: entry.value,
-    source: entry.source,
-    gate: entry.gate,
   };
 }
 
@@ -89,18 +82,42 @@ interface StartSignals {
   planOnly: boolean;
   reviewOnly: boolean;
   answers: boolean;
-  choose: boolean;
+  unclearFollowUp: boolean;
   interpret: boolean;
 }
 
 function startMode(signals: StartSignals): StartMode {
   if (signals.planOnly) return 'plan';
   if (signals.reviewOnly) return 'review';
+  if (signals.unclearFollowUp) return 'clarify';
   if (signals.answers) return 'answer';
-  if (signals.choose) return 'choose';
   if (signals.interpret) return 'interpret';
   return 'build';
 }
+
+function answersFirst(question: IntakeCall, request: string): boolean {
+  if (question.source === 'jev') return question.value;
+  if (question.jev !== null) return !buildsByRule(request);
+  return question.rule === true;
+}
+
+function recentTask(facts: IntakeFacts): boolean {
+  const last = facts.currentTask?.lastReplyAt;
+  if (!last) return false;
+  return (facts.now ?? new Date()).getTime() - last.getTime() <= FOLLOW_UP_MINUTES * 60_000;
+}
+
+function vagueRule(facts: IntakeFacts): boolean {
+  if (facts.firstMessage) return vagueByRule(facts.request, facts.namedFiles);
+  return vagueFollowUpByRule({
+    request: facts.request,
+    namedFiles: facts.namedFiles,
+    previousReply: facts.previousReply ?? null,
+    recentTask: recentTask(facts),
+  });
+}
+
+const USER_CHANGE: IntakeCall = { jev: null, rule: null, value: true, source: 'user', gate: null };
 
 export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeDecisions {
   const doing = facts.mode === 'do';
@@ -131,48 +148,54 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   const review = call(jev, 'review', 'review', asksForReview(facts.request), facts, risk);
   const planCall = call(jev, 'planOnly', 'plan_only', planOnlyByRule(facts.request), facts, risk);
   const planOnly = flaggedByRuleOrJev(planCall);
+  const answers = answersFirst(question, facts.request);
   const calls: Record<string, IntakeCall> = {
-    question: plain(question),
-    ...(planOnly ? { plan_only: plain({ ...planCall, value: planOnly }) } : {}),
-    review: plain(review),
-    destructive: plain({ ...destructiveCall, value: destructive }),
+    question: { ...question, value: answers },
+    ...(planOnly ? { plan_only: { ...planCall, value: planOnly } } : {}),
+    review: review,
+    destructive: { ...destructiveCall, value: destructive },
   };
-  let vague = false;
-  if (facts.firstMessage) {
-    const vagueCall = call(
-      jev,
-      'vague',
-      'vague',
-      vagueByRule(facts.request, facts.namedFiles),
-      facts,
-      risk,
-    );
-    vague = vagueCall.value;
-    calls.vague = plain(vagueCall);
-  }
+  const vagueCall = call(jev, 'vague', 'vague', vagueRule(facts), facts, risk);
+  calls.vague = vagueCall;
+  const vague = vagueCall.value;
   let continues: boolean | null = null;
   if (facts.currentTask) {
     const rule = followUpByRule(facts.request, facts.currentTask.lastReplyAt, facts.now);
     const continuesCall = call(jev, 'continuesTask', 'continues_task', rule, facts, risk);
     continues = continuesCall.value;
-    calls.continues_task = plain(continuesCall);
+    calls.continues_task = continuesCall;
   }
-  const answers = question.source === 'jev' ? question.value : question.rule === true;
+  const trivial = !destructive && trivialByRule(facts.request);
+  if (facts.change) {
+    calls.change = USER_CHANGE;
+    return {
+      start: 'build',
+      assume: false,
+      review: review.value,
+      destructive,
+      trivial,
+      continues,
+      risk,
+      calls,
+    };
+  }
   const existing = reviewsExistingByRule(facts.request);
   const reviewOnly = existing || (review.value && answers);
+  const asksFirst = vagueHandling(facts.level) === 'ask';
+  const unclearFollowUp = vague && !facts.firstMessage;
   const start = startMode({
     planOnly,
     reviewOnly,
-    answers,
-    choose: question.asks && !destructive,
-    interpret: vague && vagueHandling(facts.level) === 'ask',
+    answers: answers || (unclearFollowUp && !asksFirst),
+    unclearFollowUp: unclearFollowUp && asksFirst,
+    interpret: vague && facts.firstMessage && asksFirst,
   });
   return {
     start,
-    assume: vague && start === 'build' && vagueHandling(facts.level) === 'assume',
+    assume: vague && facts.firstMessage && start === 'build' && !asksFirst,
     review: review.value || start === 'review',
     destructive,
-    trivial: !destructive && trivialByRule(facts.request),
+    trivial,
     continues,
     risk,
     calls,

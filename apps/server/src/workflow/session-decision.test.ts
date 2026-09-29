@@ -95,6 +95,12 @@ describe('decideResume', () => {
 
   it.each<[string, Partial<DecisionInput>, string]>([
     ['settings changed', { hash: 'other' }, 'settings changed'],
+    [
+      'settings changed in the same folder',
+      { hash: 'other', cwd: '/work/app' },
+      'settings changed',
+    ],
+    ['the project folder changed', { hash: 'other', cwd: '/work/other' }, 'project changed'],
     ['idle', { now: new Date(now.getTime() + 31 * 60_000) }, 'idle'],
     ['another message came between', { previousMessageId: 'm-9' }, 'chat changed since'],
     [

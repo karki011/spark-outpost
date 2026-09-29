@@ -1,6 +1,7 @@
 import { agreedPlanFor } from '../plans/plan-staleness.ts';
 import { gitDiffBetween, gitDiffSince, headCommit } from '../projects/snapshot.ts';
 import { getSnapshot } from '../persistence/run-snapshots.ts';
+import { projectMoveNote } from '../workflow/project-move.ts';
 import { builderPrompt, criticPrompt, type ChangedFile } from './context.ts';
 import type { Session } from './session.ts';
 import type { Spawn } from './transitions.ts';
@@ -92,6 +93,7 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
   return builderPrompt({
     request,
     history: s.input.history,
+    projectNote: s.input.projectMove ? projectMoveNote(s.input.projectMove) : null,
     note: spawn.note,
     findings: [],
     buildStyle: s.buildStyle,

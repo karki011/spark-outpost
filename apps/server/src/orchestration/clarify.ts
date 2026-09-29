@@ -34,6 +34,9 @@ const FALLBACK_INTERPRETATIONS = [INTERPRETATIONS.feature!, INTERPRETATIONS.refa
 const VAGUE_GOAL =
   /\b(?:better|improve|improved|nicer|cleaner|clean up|tidy|polish|enhance|optimi[sz]e|modernise|modernize|fix it|sort out)\b/i;
 
+export const NO_TARGET =
+  /^\s*(?:(?:please|pls|can you|could you|just)\s+)*(?:(?:fix|do|handle|sort)\s+the\s+(?:thing|stuff|issue|problem|mess)s?|(?:clean|tidy)\s+(?:it|this|that|things)\s+up|sort\s+(?:it|this|that|things)\s+out)\b[\s.!?]*$/i;
+
 const SPEED_GOAL =
   /\b(?:faster|quicker|speedier|snappier|speed\s+(?:\w+\s+)?up|slow(?:er|ness)?|perf(?:ormance)?|latency|laggy|sluggish)\b/i;
 
@@ -89,7 +92,7 @@ export function vagueByRule(request: string, namedFiles: number): boolean {
   if (namedFiles > 0) return false;
   if (wordCount(request) > SHORT_REQUEST_WORDS) return false;
   if (asksForSpeed(request)) return !namesSpeedAngle(request);
-  return VAGUE_GOAL.test(request);
+  return VAGUE_GOAL.test(request) || NO_TARGET.test(request);
 }
 
 const SPEED_QUESTION =

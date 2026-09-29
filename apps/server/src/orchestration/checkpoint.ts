@@ -49,20 +49,6 @@ function payload(
   return checkpointPayloadSchema.parse(partial);
 }
 
-export function answerOrBuildCard(reason: string): CheckpointCard {
-  const question = 'Answer, or change the code?';
-  return {
-    kind: 'clarify',
-    title: question,
-    payload: payload({ kind: 'clarify', question, reason }),
-    options: [
-      allow(CHECKPOINT_OPTION.justAnswer, 'Just answer; change nothing'),
-      allow(CHECKPOINT_OPTION.makeChange, 'Make the change'),
-      stopOption,
-    ],
-  };
-}
-
 export const RISKY_CARD_TITLE = 'Start this risky change?';
 
 export function riskyCard(reason: string): CheckpointCard {

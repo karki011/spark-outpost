@@ -5,6 +5,7 @@ import {
   type Attachment,
   type InvolvementLevel,
   type RunMode,
+  type StartAs,
 } from '@spark-outpost/contracts';
 import {
   attachmentFilesForMessages,
@@ -37,6 +38,13 @@ export interface RunInput {
   resumeKey?: string | null;
   followUp?: string | null;
   preamble?: string | null;
+  startAs?: StartAs | null;
+  projectMove?: ProjectMove | null;
+}
+
+export interface ProjectMove {
+  from: string;
+  to: string;
 }
 
 interface RunRow {
@@ -53,6 +61,7 @@ interface RunRow {
   models: { id: string; label: string }[] | null;
   project_roots: string[];
   run_mode: RunMode | null;
+  start_as: StartAs | null;
   run_level: InvolvementLevel | null;
   agent_mode: string | null;
   config_values: ConfigValues | null;
@@ -125,7 +134,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
   const { rows } = await db.query<RunRow>(
     `SELECT r.user_message_id, r.conversation_id, c.workspace_id, r.provider, m.content,
             r.model AS run_model, r.effort AS run_effort,
-            r.mode AS run_mode, r.level AS run_level, r.agent_mode, r.config_values,
+            r.mode AS run_mode, r.start_as, r.level AS run_level, r.agent_mode, r.config_values,
             r.parent_run_id, r.prompt AS run_prompt, r.role AS run_role,
             r.route->>'name' AS run_name,
             r.route->>'resumeKey' AS resume_key, r.route->>'followUp' AS follow_up,
@@ -176,6 +185,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     copyOf: null,
     askTitle: row.title_source !== 'user',
     previousMessageId: history.rows.at(-1)?.id ?? null,
+    startAs: row.start_as,
   };
 }
 

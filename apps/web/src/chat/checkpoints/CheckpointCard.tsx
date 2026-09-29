@@ -124,22 +124,24 @@ function ClarifyBody({ approval, decide }: { approval: CheckpointApproval; decid
   const choices = approval.payload.checkpoint.choices;
   return (
     <>
-      <div className="appr-acts ck-choices">
-        {choices.map((choice, index) => (
-          <button
-            key={choice}
-            type="button"
-            className={index === 0 ? 'btn primary sm' : 'btn line sm'}
-            disabled={decide.busy}
-            onClick={() => decide(clarifyOptionId(index))}
-          >
-            {choice}
-          </button>
-        ))}
-      </div>
+      {choices.length > 0 && (
+        <div className="appr-acts ck-choices">
+          {choices.map((choice, index) => (
+            <button
+              key={choice}
+              type="button"
+              className={index === 0 ? 'btn primary sm' : 'btn line sm'}
+              disabled={decide.busy}
+              onClick={() => decide(clarifyOptionId(index))}
+            >
+              {choice}
+            </button>
+          ))}
+        </div>
+      )}
       {offers(approval, CHECKPOINT_OPTION.answer) && (
         <NoteForm
-          label="Or answer in your own words"
+          label={choices.length > 0 ? 'Or answer in your own words' : 'Answer in your own words'}
           initial=""
           submit="Send"
           busy={decide.busy}
@@ -148,17 +150,6 @@ function ClarifyBody({ approval, decide }: { approval: CheckpointApproval; decid
         />
       )}
       <div className="appr-acts ck-foot">
-        <Action
-          id={CHECKPOINT_OPTION.justAnswer}
-          approval={approval}
-          decide={decide}
-          kind="primary"
-        >
-          Just answer
-        </Action>
-        <Action id={CHECKPOINT_OPTION.makeChange} approval={approval} decide={decide}>
-          Make the change
-        </Action>
         <Action id={CHECKPOINT_OPTION.clarifyRules} approval={approval} decide={decide}>
           Let the rules decide
         </Action>

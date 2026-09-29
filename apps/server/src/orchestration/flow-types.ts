@@ -29,7 +29,8 @@ export type FlowAction =
       kind: CheckpointKind;
       reason: string;
       interpret?: boolean;
-      answerOrBuild?: boolean;
+      followUp?: boolean;
+      context?: boolean;
     }
   | ({ type: 'spawn' } & Spawn)
   | { type: 'plan'; note: string | null }
@@ -48,13 +49,15 @@ export type FlowAction =
 
 export type AgentOutcome = 'succeeded' | 'failed' | 'cancelled';
 
-export type StartMode = 'answer' | 'build' | 'interpret' | 'choose' | 'plan' | 'review';
+export type StartMode = 'answer' | 'build' | 'interpret' | 'clarify' | 'plan' | 'review';
+
+export type ClarifiedStart = 'answer' | 'plan' | 'build';
 
 export type ReadOnlyWork = 'plan' | 'review';
 
 export type FlowEvent =
   | { type: 'start'; start: StartMode }
-  | { type: 'clarified'; answer: boolean | null }
+  | { type: 'clarified'; start: ClarifiedStart | null }
   | {
       type: 'agent_done';
       role: AgentRole;
@@ -66,6 +69,7 @@ export type FlowEvent =
       verdict?: ReviewVerdict;
       fixable?: readonly string[];
       checksFailing?: boolean;
+      missingContext?: string | null;
     }
   | { type: 'verified'; accepted: Verdict | null; reasons: readonly string[] }
   | { type: 'looped'; summary: string; open?: readonly string[] }
@@ -116,6 +120,7 @@ export interface FlowState {
   readOnly?: ReadOnlyWork;
   confirmFirst: string | null;
   solo?: boolean;
+  missingContext?: string | null;
 }
 
 export interface FlowResult {

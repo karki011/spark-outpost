@@ -10,6 +10,7 @@ import { runAgentTurn, startControl, type Append } from '../workflow/agent-turn.
 import { APPROVAL_TIMEOUT_MESSAGE } from '../workflow/approval-gate.ts';
 import { closeMessage, finishRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
+import { noteProjectMove } from '../workflow/project-move.ts';
 import { loadRunInput } from '../workflow/run-input.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
@@ -24,6 +25,7 @@ import {
   KEPT_BY_AUTO_EDIT,
   riskyChange,
 } from './checkpoint-policy.ts';
+import { missingContext } from './missing-context.ts';
 import { migrationByRule } from './risk-rules.ts';
 import { wrappedUp } from './wrap-up.ts';
 import { ask, assume, intakeResponse } from './checkpoint-asks.ts';
@@ -116,6 +118,7 @@ async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEve
       ? { large: wantsCritic(changes.files, planned), green: isGreen(s, changes.files) }
       : {}),
     ...(s.checkBodies.at(-1)?.status === 'failed' ? { checksFailing: true } : {}),
+    missingContext: missingContext(result.text, result.error),
   };
 }
 
@@ -257,8 +260,8 @@ async function finish(
 
 export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise<void> {
   const taskStartedAt = Date.now();
-  const input = await loadRunInput(deps.db, lease.runId);
   const append: Append = (event, options) => appendRunEvent(deps.db, lease, event, options);
+  const input = await noteProjectMove(deps.db, await loadRunInput(deps.db, lease.runId), append);
   const control = startControl(deps, lease);
   let budgetTimer: NodeJS.Timeout | null = null;
   let session: Session | null = null;
@@ -275,7 +278,13 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     }
     const scanning = doing && !solo ? startScan({ deps, input }, root, taskStartedAt) : null;
     const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
-    const { intake, decisions } = await runIntake(deps, input, append, current, solo);
+    const { intake, decisions } = await runIntake(
+      deps,
+      input,
+      append,
+      input.projectMove ? null : current,
+      solo,
+    );
     await observePlanAgreement({ db: deps.db, runId: lease.runId, input, intake, append }).catch(
       (error: unknown) => console.error('Could not observe a plan agreement', error),
     );
@@ -320,7 +329,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       routes: new Map(),
       plan: [],
       taskId: null,
-      continuesTask: decisions.continues === true,
+      continuesTask: decisions.continues === true && !input.projectMove,
       message: null,
       results: [],
       findings: [],

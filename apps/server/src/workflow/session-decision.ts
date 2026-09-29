@@ -4,12 +4,13 @@ import { join } from 'node:path';
 import type { RunMode } from '@spark-outpost/contracts';
 import type { StoredSession } from '../providers/provider.ts';
 
-export const SESSION_IDLE_MS = 30 * 60 * 1000;
-export const SESSION_OPEN_LIMIT = 8;
+export const SESSION_IDLE_MS = 4 * 60 * 60 * 1000;
+export const SESSION_OPEN_LIMIT = 16;
 export const SESSION_WORKDIR_ROOT = join(tmpdir(), 'spark-outpost-sessions');
 
 export const RESUME_REASONS = {
   settings: 'settings changed',
+  project: 'project changed',
   moved: 'chat changed since',
   unfinished: 'last turn did not finish',
   idle: 'idle',
@@ -77,6 +78,7 @@ export interface DecisionInput {
   checksMessages: boolean;
   now: Date;
   idleMs: number;
+  cwd?: string | null;
 }
 
 export type ResumeDecision =
@@ -101,7 +103,8 @@ export function decideResume(input: DecisionInput): ResumeDecision {
     return fresh(RESUME_REASONS.idle);
   }
   if (stored.settingsHash !== input.hash) {
-    return fresh(RESUME_REASONS.settings);
+    const moved = input.cwd && input.cwd !== stored.cwd;
+    return fresh(moved ? RESUME_REASONS.project : RESUME_REASONS.settings);
   }
   if (stored.lastReplyHash === null) {
     return fresh(RESUME_REASONS.unfinished);

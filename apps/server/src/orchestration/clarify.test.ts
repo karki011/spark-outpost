@@ -38,6 +38,28 @@ describe('vague requests', () => {
   it('reads the rerun\'s "Make it faster." as vague by rule', () => {
     expect(vagueByRule('Make it faster.', 0)).toBe(true);
   });
+
+  it('reads "fix the thing", "sort it out" and "clean it up" with no named target as vague', () => {
+    for (const request of [
+      'fix the thing',
+      'do the thing',
+      'sort it out',
+      'clean it up',
+      'Can you tidy this up?',
+      'handle the stuff',
+    ]) {
+      expect(vagueByRule(request, 0), request).toBe(true);
+    }
+    for (const request of [
+      'fix the typo in README line 3',
+      'Fix the flaky parseDate test',
+      'remove the unused imports in the parser',
+      'sort the table by date',
+      'fix the thing in src/report.ts',
+    ]) {
+      expect(vagueByRule(request, request.includes('src/') ? 1 : 0), request).toBe(false);
+    }
+  });
 });
 
 describe('the interpretation question', () => {

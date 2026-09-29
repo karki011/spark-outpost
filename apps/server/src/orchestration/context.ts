@@ -30,6 +30,7 @@ export interface BuilderContext {
   buildStyle?: BuildStyle;
   checkCommands?: readonly string[];
   agreedPlan?: string | null;
+  projectNote?: string | null;
 }
 
 export interface CriticContext {
@@ -131,6 +132,7 @@ export function builderPrompt(context: BuilderContext): string {
     section('Request', cap(context.request, REQUEST_LIMIT)),
   ];
   if (context.agreedPlan) parts.push(context.agreedPlan);
+  if (context.projectNote) parts.push(context.projectNote);
   if (context.history.length > 0) {
     parts.push(section('Earlier conversation', historyLines(context.history)));
   }

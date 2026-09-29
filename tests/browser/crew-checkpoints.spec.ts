@@ -63,17 +63,25 @@ test('a vague request gets one short question with likely readings', async ({ pa
   ).toBeVisible({ timeout: 30_000 });
 });
 
-test('an unsure question asks whether to answer or change the code', async ({ page }) => {
-  test.setTimeout(60_000);
+test('an unsure request is answered first, and Make the change builds the same request', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
   await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Tidy the heading #build #unsure');
-  const clarify = card(page, /Jev has a question/);
-  await expect(clarify).toContainText('Answer, or change the code?', { timeout: 30_000 });
-  await expect(clarify.getByRole('button', { name: 'Just answer' })).toBeVisible();
-  await clarify.getByRole('button', { name: 'Make the change' }).click();
-  await expect(clarify).toContainText('Making the change.');
+  const makeChange = page.getByRole('button', { name: 'Make the change' });
+  await expect(makeChange).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Answered without changing files.')).toBeVisible();
+  await expect(card(page, /Jev has a question/)).toHaveCount(0);
+  expect(repo.notes()).toBe('start\n');
+  await makeChange.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.msg.me .bubble', { hasText: 'Tidy the heading' })).toHaveCount(2, {
+    timeout: 30_000,
+  });
   await allowEdit(page);
   await expect(card(page, /Keep these changes\?/)).toBeVisible({ timeout: 30_000 });
+  await expect(makeChange).toHaveCount(0);
   expect(repo.notes()).toBe('start\nstep 1\n');
 });
 

@@ -1,0 +1,215 @@
+import { randomUUID } from 'node:crypto';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  CHECKPOINT_OPTION,
+  clarifyOptionId,
+  modeForLegacy,
+  type AdviceBody,
+  type InvolvementLevel,
+} from '@spark-outpost/contracts';
+import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
+import { sendUserMessage } from '../src/persistence/conversations.ts';
+import { getRun } from '../src/persistence/runs.ts';
+import { createProject } from '../src/projects/projects.ts';
+import { linkedConversation } from './approval-support.ts';
+import {
+  TRIVIAL,
+  answerEverything,
+  connectProviders,
+  driveToEnd,
+  gitRepo,
+  jevFetch,
+  removeRepo,
+  startOrchestrator,
+  withTag,
+  type Answerer,
+  type Harness,
+  type JevScript,
+  type Scenario,
+} from './orchestration-support.ts';
+import { createTestDb, type TestDb } from './support.ts';
+
+let t: TestDb;
+let root: string;
+let other: string | null = null;
+let harness: Harness | null = null;
+let script: JevScript;
+let store: string;
+
+beforeEach(async () => {
+  t = await createTestDb();
+  root = await gitRepo();
+  script = { calls: [] };
+  store = mkdtempSync(join(tmpdir(), 'fake-acp-store-'));
+  await connectProviders(t);
+  harness = startOrchestrator(t, jevFetch(script), { sessions: store });
+});
+
+afterEach(async () => {
+  await harness?.stop();
+  harness = null;
+  await t.cleanup();
+  await removeRepo(root);
+  if (other) await removeRepo(other);
+  other = null;
+  rmSync(store, { recursive: true, force: true });
+});
+
+async function send(
+  conversationId: string,
+  scenario: Scenario,
+  level: InvolvementLevel = 'balanced',
+  extra: { startAs?: 'change' } = {},
+) {
+  script.scenario = scenario;
+  const sent = await sendUserMessage(
+    t.db,
+    conversationId,
+    { id: randomUUID(), content: scenario.text, ...extra },
+    {
+      provider: 'claude',
+      model: 'sonnet',
+      effort: 'medium',
+      permission: scenario.mode,
+      agentMode: modeForLegacy('claude', scenario.mode, level),
+      level,
+    },
+  );
+  return sent.run.id;
+}
+
+async function turn(
+  conversationId: string,
+  scenario: Scenario,
+  answer: Answerer = answerEverything,
+  level: InvolvementLevel = 'balanced',
+  extra: { startAs?: 'change' } = {},
+) {
+  const runId = await send(conversationId, scenario, level, extra);
+  const done = await driveToEnd(t, conversationId, runId, answer);
+  return { ...done, runId };
+}
+
+async function adviceOf(runId: string): Promise<AdviceBody> {
+  const { rows } = await t.db.query<{ body: AdviceBody }>(
+    `SELECT body FROM run_advice WHERE run_id = $1 AND purpose = 'intake'`,
+    [runId],
+  );
+  return rows[0]!.body;
+}
+
+const PLAN_TALK: Scenario = {
+  id: 'plan-talk',
+  text: 'give me plan we can integrate',
+  mode: 'do',
+  question: 0.38,
+  destructive: 0.05,
+  intent: 'feature',
+};
+
+describe('answer first, with "Make the change" one click away', () => {
+  it('answers an unsure Do request in place, then builds the same request on "change"', async () => {
+    const { conversationId } = await linkedConversation(t, root);
+    const answered = await turn(conversationId, PLAN_TALK);
+    expect(answered.asked).toEqual([]);
+    expect(answered.orchestration.crew.map((member) => member.role)).toEqual(['scout']);
+    const run = await getRun(t.db, answered.runId);
+    expect(run).toMatchObject({ mode: 'ask', pickedMode: 'do', startAs: null });
+    const advice = await adviceOf(answered.runId);
+    expect(advice.calls?.question).toMatchObject({ jev: 0.38, value: true, source: 'rules' });
+    expect(advice.notAsked).toMatchObject({ continues_task: 'no current task' });
+
+    const built = await turn(
+      conversationId,
+      withTag(PLAN_TALK, '#build'),
+      answerEverything,
+      'balanced',
+      {
+        startAs: 'change',
+      },
+    );
+    expect(built.orchestration.crew.map((member) => member.role)).toContain('builder');
+    expect(await getRun(t.db, built.runId)).toMatchObject({ pickedMode: 'do', startAs: 'change' });
+    expect((await adviceOf(built.runId)).calls?.change).toMatchObject({ source: 'user' });
+  }, 90_000);
+});
+
+describe('a vague follow-up', () => {
+  const WRAP_UP: Scenario = { id: 'wrap', text: 'wrap up', mode: 'do', destructive: 0.02 };
+
+  it('asks one question instead of building, and answers when the user picks that', async () => {
+    const { conversationId } = await linkedConversation(t, root);
+    await turn(conversationId, PLAN_TALK);
+    const pick: Answerer = (approval) =>
+      approval.kind === 'clarify' ? { optionId: clarifyOptionId(0) } : answerEverything(approval);
+    const { asked, orchestration, runId } = await turn(conversationId, WRAP_UP, pick);
+    const clarify = asked.find((approval) => approval.kind === 'clarify')!;
+    expect(clarify.title).toBe('Want me to answer, plan it, or make the change?');
+    expect(orchestration.crew.map((member) => member.role)).toEqual(['scout']);
+    expect((await adviceOf(runId)).calls?.vague).toMatchObject({ rule: true, value: true });
+    const { rows } = await t.db.query<{ default_option_id: string }>(
+      'SELECT default_option_id FROM approvals WHERE id = $1',
+      [clarify.id],
+    );
+    expect(rows[0]?.default_option_id).toBe(clarifyOptionId(0));
+  }, 90_000);
+});
+
+describe('missing context', () => {
+  it('asks where to look instead of retrying one tier up, then reruns at the same tier', async () => {
+    const { conversationId } = await linkedConversation(t, root);
+    const failing = withTag(TRIVIAL, '#build #nofile');
+    const answer: Answerer = (approval) =>
+      approval.kind === 'clarify'
+        ? { optionId: CHECKPOINT_OPTION.answer, note: 'the formatter is in notes.txt' }
+        : answerEverything(approval);
+    const { asked, orchestration } = await turn(conversationId, failing, answer);
+    const kinds = asked.map((approval) => approval.kind);
+    expect(kinds).toContain('clarify');
+    expect(kinds).not.toContain('retry');
+    const clarify = asked.find((approval) => approval.kind === 'clarify')!;
+    expect(clarify.title).toBe('What should the Builder look at?');
+    const { rows } = await t.db.query<{ default_option_id: string }>(
+      'SELECT default_option_id FROM approvals WHERE id = $1',
+      [clarify.id],
+    );
+    expect(rows[0]?.default_option_id).toBe(CHECKPOINT_OPTION.answer);
+    expect(clarify.payload.checkpoint?.reason).toBe('There is no src/dates.ts in this repo.');
+    expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
+      ['builder', 'sonnet'],
+      ['builder', 'sonnet'],
+    ]);
+    expect(orchestration.status).toBe('succeeded');
+  }, 90_000);
+});
+
+describe('the project changes mid-chat', () => {
+  it('records the roots per run, notes the move and starts a fresh session', async () => {
+    const { conversationId } = await linkedConversation(t, root);
+    const first = await turn(conversationId, PLAN_TALK);
+    expect(first.orchestration.status).toBe('succeeded');
+    other = await gitRepo();
+    const { project } = await createProject(t.db, t.workspaceId, other);
+    await setConversationProjects(t.db, t.workspaceId, conversationId, [project.id]);
+    const second = await turn(conversationId, PLAN_TALK);
+    const { rows } = await t.db.query<{ id: string; project_roots: string[] }>(
+      'SELECT id, project_roots FROM runs WHERE conversation_id = $1 AND parent_run_id IS NULL',
+      [conversationId],
+    );
+    expect(rows.find((row) => row.id === first.runId)?.project_roots).toEqual([root]);
+    expect(rows.find((row) => row.id === second.runId)?.project_roots).toEqual([other]);
+    const steps = await t.db.query<{ name: string }>(
+      `SELECT payload->>'stepName' AS name FROM run_events
+       WHERE run_id = $1 AND payload->>'stepName' IS NOT NULL`,
+      [second.runId],
+    );
+    const names = steps.rows.map((row) => row.name);
+    expect(names.some((name) => name.startsWith('Project changed since the last turn:'))).toBe(
+      true,
+    );
+    expect(names).toContain('Fresh session (project changed)');
+  }, 90_000);
+});

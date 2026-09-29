@@ -42,9 +42,51 @@ describe('intake decisions', () => {
     expect(decideIntake(jev({ question: 0.05 }), facts()).start).toBe('build');
   });
 
-  it('asks answer-or-build when unsure at Balanced, and uses the rule at Hands-off', () => {
-    expect(decideIntake(jev({ question: 0.6 }), facts()).start).toBe('choose');
-    expect(decideIntake(jev({ question: 0.6 }), facts({ level: 'hands-off' })).start).toBe('build');
+  it('answers when Jev is unsure, unless the request leads with a change verb', () => {
+    for (const level of ['balanced', 'hands-off', 'full-auto'] as const) {
+      const unsure = facts({ request: 'lets plan the agent md update', level });
+      expect(decideIntake(jev({ question: 0.52 }), unsure).start, level).toBe('answer');
+      expect(
+        decideIntake(jev({ question: 0.38 }), {
+          ...unsure,
+          request: 'give me plan we can integrate',
+        }).start,
+      ).toBe('answer');
+      expect(decideIntake(jev({ question: 0.6 }), facts({ level })).start, level).toBe('build');
+    }
+    const unsure = decideIntake(jev({ question: 0.36 }), facts({ request: 'any feedback' }));
+    expect(unsure.start).toBe('answer');
+    expect(unsure.calls.question).toMatchObject({ jev: 0.36, value: true, source: 'rules' });
+  });
+
+  it('answers plan and feedback wording by rule when Jev is not there', () => {
+    expect(
+      decideIntake(null, facts({ request: 'give me details summary of the repo' })).start,
+    ).toBe('answer');
+    expect(decideIntake(null, facts({ request: 'add simple test' })).start).toBe('build');
+  });
+
+  it('builds when the user asked for the change with "Make the change"', () => {
+    const decided = decideIntake(jev({ question: 0.95, planOnly: 0.9 }), facts({ change: true }));
+    expect(decided.start).toBe('build');
+    expect(decided.calls.change).toMatchObject({ value: true, source: 'user' });
+    expect(
+      decideIntake(null, facts({ request: 'Drop the users table', change: true })),
+    ).toMatchObject({ start: 'build', destructive: true });
+  });
+
+  it('asks one question for a vague follow-up with no referent, or answers at Full auto', () => {
+    const wrapUp = facts({ request: 'wrap up', previousReply: 'There is no src/dates.ts here.' });
+    expect(decideIntake(null, wrapUp).start).toBe('clarify');
+    expect(decideIntake(null, wrapUp).calls.vague).toMatchObject({ rule: true, value: true });
+    expect(decideIntake(jev({ vague: 0.9 }), { ...wrapUp, request: 'sort it' }).start).toBe(
+      'clarify',
+    );
+    expect(decideIntake(null, { ...wrapUp, level: 'hands-off' }).start).toBe('clarify');
+    expect(decideIntake(null, { ...wrapUp, level: 'full-auto' }).start).toBe('answer');
+    expect(decideIntake(jev({ vague: 0.05 }), wrapUp).start).toBe('build');
+    const offered = { ...wrapUp, request: 'do it', previousReply: 'Want me to add the retry?' };
+    expect(decideIntake(null, offered).start).toBe('build');
   });
 
   it('is destructive when either Jev or the keywords say so, never less', () => {
@@ -65,7 +107,7 @@ describe('intake decisions', () => {
     );
   });
 
-  it('only judges vagueness on the first message, then asks or assumes by level', () => {
+  it('asks what should change on a vague first message, or assumes by level', () => {
     const vague = facts({ request: 'Make the reports better', firstMessage: true });
     expect(decideIntake(jev({ vague: 0.95 }), vague).start).toBe('interpret');
     expect(decideIntake(jev({ vague: 0.95 }), { ...vague, level: 'full-auto' })).toMatchObject({
@@ -73,7 +115,7 @@ describe('intake decisions', () => {
       assume: true,
     });
     expect(decideIntake(jev({ vague: 0.95 }), { ...vague, firstMessage: false }).start).toBe(
-      'build',
+      'clarify',
     );
   });
 

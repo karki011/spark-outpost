@@ -1,6 +1,7 @@
 import { ruleAdvisor } from '../advisor/advice.ts';
 import {
   askIntake,
+  previousReply,
   saveIntake,
   type IntakeDeps,
   type IntakeResult,
@@ -63,6 +64,8 @@ export async function runIntake(
     firstMessage: extra.firstMessage,
     namedFiles: namedFiles([input.userRequest]).length,
     currentTask: current,
+    previousReply: previousReply(input),
+    change: input.startAs === 'change',
   });
   const decisions = solo ? soloDecisions(decided) : decided;
   const pick = routeBuilder(routeContext(input, asked.context), decisions).pick;
