@@ -27,8 +27,13 @@ export interface Engagement {
   tooBigUnsure: boolean;
 }
 
-const REQUESTED =
-  /\b(?:split (?:this|it|the work) up|in (?:\d+ |several |separate )?pieces|parallel builders|in worktrees|use (?:several|multiple|parallel) (?:builders|agents))\b/i;
+const SPLIT = '(?:split|break) (?:this|it|the work|the task|the change|the request)';
+const PIECES = '(?:\\d+ |several |separate |smaller )?(?:pieces|parts|chunks|tasks)';
+
+const REQUESTED = new RegExp(
+  `\\b(?:${SPLIT} (?:up|down)\\b|${SPLIT} (?:up |down )?into ${PIECES}\\b|in (?:\\d+ |several |separate )?pieces\\b|parallel builders|in worktrees|use (?:several|multiple|parallel) (?:builders|agents))`,
+  'i',
+);
 
 export function likelyFiles<T extends Pick<RankedFile, 'termsMatched' | 'score'>>(
   candidates: readonly T[],
