@@ -35,6 +35,18 @@ function row(piece: TaskPiece): string {
   ].join(' | ')} |`;
 }
 
+function violationLine(piece: TaskPiece): string[] {
+  return piece.violations.map((violation) => {
+    const owner = violation.owner ? `, ${violation.owner} owns it` : '';
+    return `\`${violation.path}\` ${violation.action} (${piece.key}${owner})`;
+  });
+}
+
+function ownership(list: PieceList): string | null {
+  const lines = list.pieces.flatMap(violationLine);
+  return lines.length > 0 ? `Changes outside a piece: ${lines.join('; ')}.` : null;
+}
+
 function unfinished(list: PieceList): string | null {
   const open = list.pieces.filter((piece) => piece.status !== 'landed');
   if (open.length === 0) return null;
@@ -62,7 +74,9 @@ export function pieceReport(facts: ReportFacts): string | null {
   const integration = list.integration
     ? `Integration: ${facts.integrator ?? 'the integrator'} — ${cell(list.integration)}`
     : null;
-  return [lines.join('\n'), integration, unfinished(list)].filter(Boolean).join('\n\n');
+  return [lines.join('\n'), integration, ownership(list), unfinished(list)]
+    .filter(Boolean)
+    .join('\n\n');
 }
 
 export function coordinationReport(coordination: Coordination | null | undefined): string | null {

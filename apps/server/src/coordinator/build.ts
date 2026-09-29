@@ -15,6 +15,7 @@ import { integratorSection } from './prompts.ts';
 import { coordinatorMode, mayCoordinate } from './shadow.ts';
 import type { Coordination } from './state.ts';
 import { writePieceList } from './turn.ts';
+import { builderEnvFor, projectSettings } from './builder-env.ts';
 
 const BUILDS_IN_PIECES = new Set(['first', 'retry']);
 
@@ -35,13 +36,18 @@ function pieceSite(s: Session): PieceSite {
   };
 }
 
-async function integratorSeat(s: Session): Promise<Seat> {
+async function integratorSeat(s: Session, coordination: Coordination): Promise<Seat> {
   const used = await usedNames(s.deps.db, s.taskId!, 'integrator');
+  const name = used[0] ?? nextCrewName('integrator', used);
   return {
     role: 'integrator',
-    name: used[0] ?? nextCrewName('integrator', used),
+    name,
     resumeKey: `${s.taskId}:integrator`,
     prompt: null,
+    route: {
+      guard: { coordinated: true, owned: null },
+      builderEnv: builderEnvFor(coordination.builderEnv, 1, name),
+    },
   };
 }
 
@@ -55,6 +61,7 @@ async function engage(s: Session): Promise<void> {
     list: written.ok ? written.value.list : null,
     fallback: written.ok ? null : written.reason,
     owned: written.ok ? written.value.owned : new Map(),
+    builderEnv: (await projectSettings(s.deps.db, s.lease.runId)).builderEnv,
     names: written.ok ? written.value.names : new Map(),
     scoutNotes: [],
     violations: 0,
@@ -82,7 +89,7 @@ async function integrate(
   coordination: Coordination,
   site: PieceSite,
 ): Promise<MemberResult | null> {
-  s.integrator = await integratorSeat(s);
+  s.integrator = await integratorSeat(s, coordination);
   coordination.integrator = s.integrator.name;
   const integration = coordination.list?.integration;
   if (!integration || coordination.integrated) return null;

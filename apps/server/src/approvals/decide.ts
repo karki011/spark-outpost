@@ -6,6 +6,7 @@ import { allowlistCovers, normalizeCommand, resolveCommandPath } from './command
 import { isGitForcePush, isGitPush, publishesCode } from './git-commands.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { isPackageInstall, isSafeRead } from './command-kinds.ts';
+import { pieceRefusal, type PieceGuard, type RelativeOf } from './piece-guard.ts';
 
 export interface RequestRoot {
   path: string;
@@ -115,6 +116,11 @@ function alwaysAskReason(request: ApprovalRequest): string | null {
 
 export interface DecideOptions {
   builder?: boolean;
+  piece?: PieceGuard;
+}
+
+export function relativeTo(roots: readonly RequestRoot[]): RelativeOf {
+  return (target) => place(roots, target).relative;
 }
 
 function refusal(request: ApprovalRequest, options: DecideOptions): string | null {
@@ -122,6 +128,10 @@ function refusal(request: ApprovalRequest, options: DecideOptions): string | nul
   if (options.builder && request.command && publishesCode(request.command)) {
     return BUILDER_PUBLISH_REASON;
   }
+  const piece = options.piece
+    ? pieceRefusal(request, options.piece, relativeTo(request.roots))
+    : null;
+  if (piece) return piece;
   if (request.toolKind === 'read' && request.paths.some((p) => outsideRoots(request, p))) {
     return 'Reads outside the project are refused';
   }

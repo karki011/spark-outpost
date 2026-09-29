@@ -145,6 +145,7 @@ async function runSession(
       browsing,
       withCodexSpark(repo?.codex ?? null, turn.spark),
       turn.builder === true,
+      turn.env,
     );
     agent = startAgentProcess(options.launch ?? definition.launch(), cwd, env, replay.observer);
     const notes = roots.length > 0 && !browsing ? [noFolderAccessNote(definition)] : [];
@@ -243,11 +244,12 @@ function sessionMeta(
   policy: PathPolicy | null,
   changing: boolean,
   repo: ClaudeRepoOptions | null,
-  builder = false,
+  { builder, coordinated }: Pick<ProviderTurn, 'builder' | 'coordinated'>,
 ) {
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
-  if (changing) return definition.doSessionMeta?.(extraRoots(policy), repo, builder) ?? null;
-  return definition.projectSessionMeta?.(extraRoots(policy), repo) ?? null;
+  const roots = extraRoots(policy);
+  if (changing) return definition.doSessionMeta?.(roots, repo, builder, coordinated) ?? null;
+  return definition.projectSessionMeta?.(roots, repo) ?? null;
 }
 
 function openedRoots(
@@ -397,7 +399,7 @@ async function converse(
         policy,
         doing !== null,
         withClaudeSpark(workspace.repo?.claude ?? null, turn.spark, policy !== null),
-        turn.builder === true,
+        turn,
       ),
       init,
       mcpServers: workspace.mcpServers,

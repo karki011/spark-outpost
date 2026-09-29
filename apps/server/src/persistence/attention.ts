@@ -26,6 +26,7 @@ const ATTENTION_BY_APPROVAL_KIND: Record<ApprovalKind, AttentionKind> = {
   merge_conflict: 'input',
   stuck: 'stuck',
   verify: 'input',
+  ownership: 'input',
 };
 
 function baseName(path: string): string {

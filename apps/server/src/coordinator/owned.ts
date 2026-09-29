@@ -1,4 +1,5 @@
 import { matchesGlob } from 'node:path';
+import { z } from 'zod';
 
 const GLOB = /[*?[{]/;
 
@@ -15,6 +16,15 @@ export interface PieceOwner extends OwnedSet {
 export interface OwnedFiles extends PieceOwner {
   others: readonly PieceOwner[];
 }
+
+const ownerSchema = z.object({
+  key: z.string(),
+  name: z.string().nullable(),
+  paths: z.array(z.string()),
+  globs: z.array(z.string()),
+});
+
+export const ownedFilesSchema = ownerSchema.extend({ others: z.array(ownerSchema) });
 
 export function isGlob(pattern: string): boolean {
   return GLOB.test(pattern);

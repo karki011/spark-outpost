@@ -26,6 +26,7 @@ export interface CheckTarget {
   name: string;
   cwd: string;
   copy: string | null;
+  env?: Readonly<Record<string, string>>;
 }
 
 function checkRequest(check: CheckCommand, target: CheckTarget, root: string): ApprovalRequest {
@@ -185,7 +186,12 @@ async function runOne(
   if (answer.outcome !== 'selected' || !answer.allowed) {
     return notRun(check, 'denied', answer.note ?? 'Not allowed.', approvalId);
   }
-  const run = await runCheck(check, { root, cwd: target.cwd, signal: s.control.signal });
+  const run = await runCheck(check, {
+    root,
+    cwd: target.cwd,
+    signal: s.control.signal,
+    ...(target.env ? { builderEnv: target.env } : {}),
+  });
   if (run.cancelled) return null;
   return resultOf(check, run, approvalId);
 }

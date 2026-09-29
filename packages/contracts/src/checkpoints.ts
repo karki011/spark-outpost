@@ -11,6 +11,7 @@ export const checkpointKindSchema = z.enum([
   'merge_conflict',
   'stuck',
   'verify',
+  'ownership',
 ]);
 export type CheckpointKind = z.infer<typeof checkpointKindSchema>;
 
@@ -37,6 +38,8 @@ export const CHECKPOINT_OPTION = {
   justAnswer: 'just_answer',
   makeChange: 'make_change',
   finishUnverified: 'finish_unverified',
+  keepInPiece: 'keep_in_piece',
+  revertFile: 'revert_file',
 } as const;
 
 export const clarifyOptionId = (index: number): string => `option:${index}`;

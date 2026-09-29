@@ -1,4 +1,6 @@
-import type * as acp from '@agentclientprotocol/sdk';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import * as acp from '@agentclientprotocol/sdk';
 import { write, type RoleTurn } from './fake-acp-roles.ts';
 
 export const PIECE_CHECK_SCRIPT = `import { readFileSync } from 'node:fs';
@@ -61,6 +63,39 @@ function untilStopped(signal: AbortSignal): Promise<void> {
   });
 }
 
+async function askToRun(turn: RoleTurn, command: string): Promise<void> {
+  const toolCall = {
+    toolCallId: `run-${command.replace(/\W+/g, '-')}`,
+    title: command,
+    kind: 'execute' as const,
+    status: 'pending' as const,
+    rawInput: { command },
+  };
+  await turn.update({ sessionUpdate: 'tool_call', ...toolCall });
+  const answer = (await turn.client.request(acp.methods.client.session.requestPermission, {
+    sessionId: turn.sessionId,
+    toolCall,
+    options: [
+      { optionId: 'yes', name: 'Yes', kind: 'allow_once' },
+      { optionId: 'no', name: 'No', kind: 'reject_once' },
+    ],
+  })) as acp.RequestPermissionResponse;
+  const allowed = answer.outcome.outcome === 'selected' && answer.outcome.optionId === 'yes';
+  await turn.update({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: toolCall.toolCallId,
+    status: allowed ? 'completed' : 'failed',
+  });
+}
+
+async function strayWrites(turn: RoleTurn, key: string): Promise<void> {
+  const tag = (name: string, piece: string) => turn.text.includes(name) && key === piece;
+  if (tag('#gitstash', 'P1')) await askToRun(turn, 'git stash');
+  if (tag('#strayedit', 'P2')) await write(turn, 'view.ts', 'edited by P2');
+  if (tag('#shellwrite', 'P2')) await writeFile(join(turn.cwd, 'view.ts'), 'shell write by P2\n');
+  if (tag('#shellstray', 'P2')) await writeFile(join(turn.cwd, 'stray.ts'), 'shell stray\n');
+}
+
 function pieceKey(text: string): string | null {
   return /## Your piece: (\w+)/.exec(text)?.[1] ?? null;
 }
@@ -78,9 +113,7 @@ async function piece(turn: RoleTurn): Promise<acp.StopReason> {
   const handoff =
     turn.text.includes('#handoff') && key === 'P1' && !turn.text.includes('## Handoff');
   if (turn.text.includes('#slowpiece') && key === 'P2') await untilStopped(turn.signal);
-  if (turn.text.includes('#strayfile') && key === 'P2') {
-    await write(turn, 'stray.ts', 'export const stray = 1;');
-  }
+  await strayWrites(turn, key);
   await write(turn, file, fixing ? 'fixed' : `built by ${key}`);
   if (!fixing && (breaks || handoff)) await write(turn, file, 'broken');
   if (handoff) {

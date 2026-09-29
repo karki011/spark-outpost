@@ -57,7 +57,15 @@ describe('pieceReport', () => {
       list: list(
         [
           piece('P1'),
-          piece('P2', { builderName: 'Rivet', check: 'failed', fixTurns: 2 }),
+          piece('P2', {
+            builderName: 'Rivet',
+            check: 'failed',
+            fixTurns: 2,
+            violations: [
+              { path: 'stray.ts', action: 'moved', owner: null },
+              { path: 'P3.ts', action: 'reverted', owner: 'P3' },
+            ],
+          }),
           piece('P3', {
             builderName: null,
             status: 'failed',
@@ -83,6 +91,9 @@ describe('pieceReport', () => {
       '| P3 · Piece P3 | — | in order | claude · sonnet | failed | 0 | none | — |',
     );
     expect(report).toContain('Integration: Weld — Wire the route');
+    expect(report).toContain(
+      'Changes outside a piece: `stray.ts` moved (P2); `P3.ts` reverted (P2, P3 owns it).',
+    );
     expect(report).toContain('Incomplete: P3 · Piece P3 (failed: Provider \\| crashed).');
   });
 

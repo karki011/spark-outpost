@@ -188,6 +188,27 @@ export function budgetCard(
   };
 }
 
+export function ownershipCard(agent: string, files: readonly string[]): CheckpointCard {
+  const named = files.map((file) => `\`${file}\``).join(', ');
+  const reason = `${agent} changed ${named}, which no piece owns.`;
+  return {
+    kind: 'ownership',
+    title: `${agent} changed a file outside its piece`,
+    payload: payload({
+      kind: 'ownership',
+      question: 'Keep it in the piece, revert it, or stop?',
+      reason,
+      agent,
+      files: files.map((path) => ({ path, change: 'modified' as const })),
+    }),
+    options: [
+      allow(CHECKPOINT_OPTION.keepInPiece, `Keep it in ${agent}'s piece`),
+      reject(CHECKPOINT_OPTION.revertFile, 'Revert that file'),
+      stopOption,
+    ],
+  };
+}
+
 export function mergeConflictCard(conflict: MergeConflict, reason: string): CheckpointCard {
   const { first, second } = conflict;
   const question = 'Which version should be kept?';

@@ -90,4 +90,3 @@ export const COORD_MAX_BUILDERS = 3;
 export const COORD_PIECE_FIX_TURNS = 2;
 export const COORD_INTEGRATION_ROUNDS = 2;
 export const COORD_HANDOFF_SHARE = 0.75;
-export const COORD_VIOLATION_STRIKES = 2;

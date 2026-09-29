@@ -242,6 +242,7 @@ export async function pieceListsForRuns(
 
 export interface PiecePatch {
   builderRunId?: string;
+  owns?: readonly string[];
   provider?: string;
   model?: string | null;
   attempts?: number;
@@ -254,6 +255,7 @@ export interface PiecePatch {
 
 const PATCH_COLUMNS: Record<keyof PiecePatch, string> = {
   builderRunId: 'builder_run_id',
+  owns: 'owns',
   provider: 'provider',
   model: 'model',
   attempts: 'attempts',

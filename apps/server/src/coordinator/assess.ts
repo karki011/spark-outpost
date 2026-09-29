@@ -11,6 +11,7 @@ import type { Session } from '../orchestration/session.ts';
 import { engagement, likelyFiles, type Engagement } from './engage.ts';
 import { placePieces, type PlaceablePiece, type Placement } from './placement.ts';
 import { budgetFor, lineCounter } from './project-facts.ts';
+import { projectSettings } from './builder-env.ts';
 import { sizeEstimate, type LineCount } from './size.ts';
 
 export interface Assessment {
@@ -79,7 +80,7 @@ export async function assess(s: Session): Promise<Assessment> {
           repoBusy: s.git ? await repoBusy(s.deps.db, s.lease.runId, root) : false,
           destructive: s.facts.destructive,
           skipsGate: modeNeedsWorktree(s.input.provider, s.input.agentMode),
-          stableCheckout: false,
+          stableCheckout: (await projectSettings(s.deps.db, s.lease.runId)).stableCheckout,
           wholeProjectChecks: (s.checks?.commands.length ?? 0) > 0,
           splitWorthIt: null,
           sameFolder: null,

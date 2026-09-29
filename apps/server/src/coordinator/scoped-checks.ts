@@ -11,6 +11,11 @@ function squash(command: string): string {
   return command.replace(/\s+/g, ' ').trim();
 }
 
+export function runsWholeProject(command: string): boolean {
+  const text = squash(command);
+  return isPackageInstall(text) || WHOLE_PROJECT.test(text);
+}
+
 export function scopedCheckProblem(
   command: string,
   projectChecks: readonly string[],

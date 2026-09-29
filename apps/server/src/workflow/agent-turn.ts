@@ -245,6 +245,7 @@ export async function runAgentTurn(
             copyOf: input.copyOf,
             observe: options.observeEdits,
             plans: plans.hooks,
+            piece: input.piece ?? undefined,
           })
         : undefined;
     turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
@@ -266,6 +267,8 @@ export async function runAgentTurn(
       audit,
       ...(input.mode ? { mode: input.mode } : {}),
       ...(writesCode(input.role) ? { builder: true } : {}),
+      ...(input.piece?.coordinated ? { coordinated: true } : {}),
+      ...(input.builderEnv ? { env: input.builderEnv } : {}),
       ...(input.copyOf !== null ? { worktree: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),

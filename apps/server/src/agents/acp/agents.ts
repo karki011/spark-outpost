@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { ProviderId } from '@spark-outpost/contracts';
-import { PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
+import { BUILDER_GIT_OPS, PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { ClaudeRepoOptions, CodexRepoOptions, RepoStyle } from './repo-session.ts';
@@ -45,6 +45,7 @@ export interface AgentDefinition {
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
     builder?: boolean,
+    coordinated?: boolean,
   ) => Record<string, unknown>;
   probeSessionMeta?: Record<string, unknown>;
   askMode: string;
@@ -69,6 +70,20 @@ export const CODEX_DO_MODE = 'ask-every-action';
 
 export const BUILDER_PUBLISH_DENY_RULES = PUBLISH_COMMANDS.map((command) => `Bash(${command}:*)`);
 
+export const BUILDER_GIT_DENY_RULES = [
+  ...BUILDER_GIT_OPS.map((op) => `Bash(git ${op}:*)`),
+  'Bash(git branch -d:*)',
+  'Bash(git branch -D:*)',
+  'Bash(git branch --delete:*)',
+];
+
+function builderDeny(builder: boolean, coordinated: boolean): string[] {
+  if (!builder) return [];
+  return coordinated
+    ? [...BUILDER_PUBLISH_DENY_RULES, ...BUILDER_GIT_DENY_RULES]
+    : BUILDER_PUBLISH_DENY_RULES;
+}
+
 export function secretReadRules(extraRoots: readonly string[]): string[] {
   const underCwd = SECRET_FILE_PATTERNS.map((pattern) => `**/${pattern}`);
   const underExtraRoots = extraRoots.flatMap((root) =>
@@ -77,9 +92,10 @@ export function secretReadRules(extraRoots: readonly string[]): string[] {
   return [...underCwd, ...underExtraRoots].map((pattern) => `Read(${pattern})`);
 }
 
-function repoTools(repo: ClaudeRepoOptions | null): string[] {
+function repoTools(repo: ClaudeRepoOptions | null, coordinated: boolean): string[] {
   if (!repo) return [];
-  return [...(repo.skillTool ? ['Skill'] : []), ...(repo.agentTool ? ['Agent'] : [])];
+  const agentTool = repo.agentTool && !coordinated;
+  return [...(repo.skillTool ? ['Skill'] : []), ...(agentTool ? ['Agent'] : [])];
 }
 
 export function claudeSessionMeta(
@@ -89,8 +105,9 @@ export function claudeSessionMeta(
   repo: ClaudeRepoOptions | null = null,
   builder = false,
   allowBypass = false,
+  coordinated = false,
 ): Record<string, unknown> {
-  const deny = [...secretReadRules(extraRoots), ...(builder ? BUILDER_PUBLISH_DENY_RULES : [])];
+  const deny = [...secretReadRules(extraRoots), ...builderDeny(builder, coordinated)];
   const askRules = [...ask, ...(repo?.mcpNames ?? []).map((name) => `mcp__${name}`)];
   const allowRules = [...(repo?.allowRules ?? [])];
   const plugins = repo?.plugins ?? [];
@@ -98,7 +115,7 @@ export function claudeSessionMeta(
     ...(repo?.appendPrompt ? { systemPrompt: { append: repo.appendPrompt } } : {}),
     claudeCode: {
       options: {
-        tools: [...tools, ...repoTools(repo)],
+        tools: [...tools, ...repoTools(repo, coordinated)],
         disallowedTools: deny,
         settingSources: [],
         ...(plugins.length > 0
@@ -176,6 +193,7 @@ const claudeSessions = {
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
     builder = false,
+    coordinated = false,
   ) =>
     claudeSessionMeta(
       CLAUDE_DO_TOOLS,
@@ -184,6 +202,7 @@ const claudeSessions = {
       repo ?? null,
       builder,
       true,
+      coordinated,
     ),
 } satisfies Partial<AgentDefinition>;
 

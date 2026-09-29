@@ -1,4 +1,9 @@
-import { failingChecks, type CheckBody, type TaskPiece } from '@spark-outpost/contracts';
+import {
+  failingChecks,
+  type CheckBody,
+  type PieceViolation,
+  type TaskPiece,
+} from '@spark-outpost/contracts';
 import { COORD_HANDOFF_SHARE, COORD_PIECE_FIX_TURNS } from '../advisor/policy.ts';
 import { configuredChecks } from '../checks/detect.ts';
 import { movePiece } from '../persistence/pieces.ts';
@@ -13,6 +18,8 @@ import { publish, type MemberResult, type Seat, type Session } from '../orchestr
 import type { Spawn } from '../orchestration/transitions.ts';
 import type { Coordination } from './state.ts';
 import { handoffSection, pieceSection, type LandedPiece } from './prompts.ts';
+import { builderEnvFor, withCheckLock } from './builder-env.ts';
+import { checkOwnership, ownedFilesFor, violationNote } from './ownership.ts';
 
 export interface PieceSite {
   cwd(): Promise<string>;
@@ -52,7 +59,14 @@ export async function changedFiles(cwd: string, before: string | null): Promise<
   if (!before) return [];
   const after = await workingTree(cwd).catch(() => null);
   if (!after || before === after) return [];
-  const output = await git(cwd, ['diff', '--name-only', '--no-renames', before, after]);
+  const output = await git(cwd, [
+    'diff',
+    '--name-only',
+    '--no-renames',
+    '--relative',
+    before,
+    after,
+  ]);
   return output.split('\n').filter(Boolean);
 }
 
@@ -96,60 +110,116 @@ function seatFor(
   generation: number,
   prompt: string,
 ): Seat {
+  const name = coordination.names.get(piece.key) ?? piece.key;
+  const guard = piece.research
+    ? {}
+    : { guard: { coordinated: true, owned: ownedFilesFor(coordination, piece) } };
   return {
     role: piece.research ? 'scout' : 'builder',
-    name: coordination.names.get(piece.key) ?? piece.key,
+    name,
     resumeKey: pieceKey(s.taskId!, piece.key, generation),
     prompt,
-    route: { pieceKey: piece.key, placement: piece.placement },
+    route: {
+      pieceKey: piece.key,
+      placement: piece.placement,
+      ...guard,
+      builderEnv: builderEnvFor(coordination.builderEnv, 1, name),
+    },
   };
+}
+
+interface PieceWork {
+  piece: TaskPiece;
+  coordination: Coordination;
+  site: PieceSite;
+  before: string | null;
+  violations: PieceViolation[];
+  note: string | null;
 }
 
 async function scopedChecks(
   s: Session,
-  piece: TaskPiece,
+  work: PieceWork,
   result: MemberResult,
-  site: PieceSite,
 ): Promise<CheckBody | null> {
+  const { piece, coordination, site } = work;
   if (piece.checks.length === 0) return null;
-  return runChecks(
-    s,
-    { runId: result.runId, name: result.name, cwd: await site.cwd(), copy: site.copy },
-    configuredChecks(piece.checks),
-  );
+  const target = {
+    runId: result.runId,
+    name: result.name,
+    cwd: await site.cwd(),
+    copy: site.copy,
+    env: builderEnvFor(coordination.builderEnv, 1, result.name),
+  };
+  const run = () => runChecks(s, target, configuredChecks(piece.checks));
+  if (coordination.builderEnv) return run();
+  return withCheckLock(s.deps.db, s.input.projectRoots[0]!, run);
 }
 
 async function fixTurn(
   s: Session,
   action: Spawn,
-  piece: TaskPiece,
-  coordination: Coordination,
+  work: PieceWork,
   turn: PieceTurn,
   failing: CheckBody,
-  site: PieceSite,
-  before: string | null,
 ): Promise<PieceTurn> {
+  const { piece, coordination, site } = work;
   const failures = checkFailureText(failingChecks(failing));
   const handoff = await contextOf(s, turn.result.runId);
   const generation = handoff ? turn.generation + 1 : turn.generation;
-  const prompt = handoff
-    ? `${await piecePrompt(s, piece, coordination)}\n\n${handoffSection(
-        await changedFiles(await site.cwd(), before),
-        failures,
-      )}`
-    : await piecePrompt(s, piece, coordination);
+  const sections = [await piecePrompt(s, piece, coordination)];
+  if (handoff) {
+    sections.push(handoffSection(await changedFiles(await site.cwd(), work.before), failures));
+  }
+  if (work.note) sections.push(work.note);
   const { result } = await runMember(
     s,
     { ...action, reason: 'fix', escalate: false, note: null },
     await site.place(),
-    { checkFailures: failures, seat: seatFor(s, piece, coordination, generation, prompt) },
+    {
+      checkFailures: failures,
+      seat: seatFor(s, piece, coordination, generation, sections.join('\n\n')),
+    },
   );
   return { generation, result };
+}
+
+async function guardTurn(s: Session, work: PieceWork): Promise<boolean> {
+  if (work.piece.research || !work.before) return true;
+  const cwd = await work.site.cwd();
+  const changed = await changedFiles(cwd, work.before);
+  const checked = await checkOwnership(s, work.coordination, work.piece, changed, cwd, work.before);
+  work.note = violationNote(checked.violations);
+  if (checked.violations.length > 0) {
+    work.violations.push(...checked.violations);
+    const owned = work.coordination.owned.get(work.piece.key);
+    await movePiece(s.deps.db, work.piece.id, ['running'], 'running', {
+      violations: work.violations,
+      ...(owned ? { owns: [...owned.paths, ...owned.globs] } : {}),
+    });
+  }
+  return checked.outcome !== 'stopped';
 }
 
 function stopped(s: Session): boolean {
   return s.control.signal.aborted || s.budgetHit !== null;
 }
+
+async function failPiece(
+  s: Session,
+  work: PieceWork,
+  result: MemberResult,
+  patch: { fixTurns?: number; note?: string | null } = {},
+): Promise<PieceOutcome> {
+  await movePiece(s.deps.db, work.piece.id, ['running'], 'failed', {
+    note: result.error,
+    ...patch,
+  });
+  await publish(s);
+  return { result, landed: false };
+}
+
+export const OWNERSHIP_STOP_NOTE = 'You stopped it at the ownership card.';
 
 export async function runPiece(
   s: Session,
@@ -163,40 +233,53 @@ export async function runPiece(
     attempts: piece.attempts + 1,
   });
   await publish(s);
-  const before = await treeOf(s, await site.cwd());
+  const work: PieceWork = {
+    piece,
+    coordination,
+    site,
+    before: await treeOf(s, await site.cwd()),
+    violations: [],
+    note: null,
+  };
   const prompt = await piecePrompt(s, piece, coordination);
   const first = await runMember(s, action, await site.place(), {
     seat: seatFor(s, piece, coordination, 1, prompt),
   });
   let turn: PieceTurn = { generation: 1, result: first.result };
   await movePiece(db, piece.id, ['running'], 'running', { builderRunId: turn.result.runId });
-  if (turn.result.outcome !== 'succeeded') {
-    await movePiece(db, piece.id, ['running'], 'failed', { note: turn.result.error });
-    await publish(s);
-    return { result: turn.result, landed: false };
+  if (turn.result.outcome !== 'succeeded') return failPiece(s, work, turn.result);
+  if (!(await guardTurn(s, work))) {
+    return failPiece(
+      s,
+      work,
+      { ...turn.result, outcome: 'cancelled' },
+      { note: OWNERSHIP_STOP_NOTE },
+    );
   }
   if (piece.research) coordination.scoutNotes.push(`${piece.key}: ${turn.result.text.trim()}`);
-  let checks = await scopedChecks(s, piece, turn.result, site);
+  let checks = await scopedChecks(s, work, turn.result);
   let fixes = 0;
   while (checks?.status === 'failed' && fixes < COORD_PIECE_FIX_TURNS) {
     if (stopped(s) || (await checkBudget(s))) break;
-    turn = await fixTurn(s, action, piece, coordination, turn, checks, site, before);
+    turn = await fixTurn(s, action, work, turn, checks);
     fixes += 1;
     if (turn.result.outcome !== 'succeeded') break;
-    checks = await scopedChecks(s, piece, turn.result, site);
+    if (!(await guardTurn(s, work))) {
+      return failPiece(
+        s,
+        work,
+        { ...turn.result, outcome: 'cancelled' },
+        { fixTurns: fixes, note: OWNERSHIP_STOP_NOTE },
+      );
+    }
+    checks = await scopedChecks(s, work, turn.result);
   }
-  if (turn.result.outcome !== 'succeeded') {
-    await movePiece(db, piece.id, ['running'], 'failed', {
-      fixTurns: fixes,
-      note: turn.result.error,
-    });
-    await publish(s);
-    return { result: turn.result, landed: false };
-  }
+  if (turn.result.outcome !== 'succeeded')
+    return failPiece(s, work, turn.result, { fixTurns: fixes });
   await movePiece(db, piece.id, ['running'], 'landed', {
     builderRunId: turn.result.runId,
     fixTurns: fixes,
-    filesChanged: await changedFiles(await site.cwd(), before),
+    filesChanged: await changedFiles(await site.cwd(), work.before),
     check: checks === null ? 'none' : checks.status === 'failed' ? 'failed' : 'passed',
   });
   await publish(s);

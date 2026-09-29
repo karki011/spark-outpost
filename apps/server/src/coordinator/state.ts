@@ -5,6 +5,7 @@ export interface Coordination {
   list: PieceList | null;
   fallback: string | null;
   owned: ReadonlyMap<string, OwnedSet>;
+  builderEnv: Record<string, string> | null;
   names: ReadonlyMap<string, string>;
   scoutNotes: string[];
   violations: number;

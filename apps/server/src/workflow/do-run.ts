@@ -1,5 +1,6 @@
 import type { AgentModeOption } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
+import type { PieceGuard } from '../approvals/piece-guard.ts';
 import { saveSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { backupBeforeEdit, snapshotRun } from '../projects/run-changes.ts';
 import type { PermissionGate } from '../providers/provider.ts';
@@ -25,6 +26,7 @@ export interface DoRunOptions {
   copyOf?: string | null | undefined;
   observe?: EditObserver | undefined;
   plans?: PlanModeHooks | undefined;
+  piece?: PieceGuard | undefined;
 }
 
 export async function takeSnapshot(db: Db, runId: string, root: string): Promise<RunSnapshot> {
@@ -58,6 +60,7 @@ export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGat
     copyOf: options.copyOf ?? null,
     ...(options.observe ? { observe: options.observe } : {}),
     ...(options.plans ? { plans: options.plans } : {}),
+    ...(options.piece ? { piece: options.piece } : {}),
     backup: async (paths) => {
       await backupBeforeEdit(options.db, options.runId, snapshot, paths);
       if (options.backupAlsoFor) {

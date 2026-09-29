@@ -10,9 +10,11 @@ import {
   type RunEvent,
 } from '@spark-outpost/contracts';
 import { normalizeCommand } from '../approvals/commands.ts';
+import { pieceRefusal, type PieceGuard } from '../approvals/piece-guard.ts';
 import {
   FS_WRITE_TOOL_KIND,
   decide,
+  relativeTo,
   type ApprovalRequest,
   type Decision,
   type RunRule,
@@ -72,6 +74,7 @@ export interface GateDeps {
   copyOf?: string | null;
   observe?: EditObserver;
   plans?: PlanModeHooks;
+  piece?: PieceGuard;
 }
 
 function relativeLabel(request: ApprovalRequest, target: string): string {
@@ -357,7 +360,11 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     const what = subject(request);
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
     if (request.kind === 'execute' && deps.copyOf) await awaitDepsPrep(deps.db, deps.runId);
+    const pieceRefused = deps.piece
+      ? pieceRefusal(request, deps.piece, relativeTo(request.roots))
+      : null;
     const covered =
+      pieceRefused === null &&
       request.toolKind === FS_WRITE_TOOL_KIND &&
       request.paths.length > 0 &&
       request.paths.every((target) => grants.has(target));
@@ -370,6 +377,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     const allowlist = [...projectAllowlist, ...(deps.extraAllowlist?.() ?? [])];
     const decision = decide(postureOf(request), request, runRules, allowlist, {
       builder: deps.builder === true,
+      ...(deps.piece ? { piece: deps.piece } : {}),
     });
     if (decision.verdict === 'ask') return ask(request, decision.reason, signal);
     if (decision.verdict === 'reject') {

@@ -371,6 +371,25 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
           </Action>
         </div>
       );
+    case 'ownership':
+      return (
+        <div className="appr-acts">
+          <Action
+            id={CHECKPOINT_OPTION.keepInPiece}
+            approval={approval}
+            decide={decide}
+            kind="primary"
+          >
+            {checkpoint.agent ? `Keep it in ${checkpoint.agent}’s piece` : 'Keep it in the piece'}
+          </Action>
+          <Action id={CHECKPOINT_OPTION.revertFile} approval={approval} decide={decide}>
+            Revert that file
+          </Action>
+          <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
+            Stop
+          </Action>
+        </div>
+      );
     case 'budget':
       return (
         <div className="appr-acts">
