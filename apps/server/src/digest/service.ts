@@ -75,6 +75,7 @@ export async function requestDigest(
   trigger: BriefTrigger,
   timeZone: string,
   now = new Date(),
+  morningTime?: string,
 ): Promise<DigestState> {
   const { state, provider, since } = await snapshot(db, workspaceId, now);
   if (!provider) return state;
@@ -87,7 +88,14 @@ export async function requestDigest(
   const flaggedChanged = attention.hash !== (lastHash ?? flaggedHash([]));
   const autoAfterMs = settings.briefIntervalMinutes ? settings.briefIntervalMinutes * 60_000 : null;
   const changed = state.newActivity || flaggedChanged;
-  const decision = decideDigest(trigger, asLast(state.digest), changed, now, autoAfterMs);
+  const decision = decideDigest(
+    trigger,
+    asLast(state.digest),
+    changed,
+    now,
+    autoAfterMs,
+    morningTime,
+  );
   if (decision !== 'start') return state;
   const chats = await loadActivity(db, workspaceId, since);
   const flagged = attention.items.slice(0, FLAGGED_LIMIT);

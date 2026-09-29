@@ -56,6 +56,15 @@ describe('morning brief', () => {
     expect(morningDue(readyAt(at(7, 30)), at(8))).toBe(false);
   });
 
+  it('is due after the time you saved instead', () => {
+    expect(morningDue(null, at(6, 29), '06:30')).toBe(false);
+    expect(morningDue(null, at(6, 30), '06:30')).toBe(true);
+    expect(morningDue(readyAt(at(6, 45)), at(9, 30), '09:15')).toBe(true);
+    expect(morningDue(readyAt(at(9, 20)), at(9, 30), '09:15')).toBe(false);
+    expect(decideDigest('morning', null, true, at(8), null, '09:00')).toBe('fresh');
+    expect(decideDigest('morning', null, true, at(9, 1), null, '09:00')).toBe('start');
+  });
+
   it('starts a morning brief only when something changed', () => {
     const last = readyAt(new Date(at(7).getTime() - 12 * 3_600_000));
     expect(decideDigest('morning', last, true, at(8))).toBe('start');
