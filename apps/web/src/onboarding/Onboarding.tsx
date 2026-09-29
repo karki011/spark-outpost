@@ -158,6 +158,7 @@ export function Onboarding({ onFinished }: OnboardingProps) {
                     displayName={displayName}
                     providers={providers}
                     defaultProvider={setup.data.profile.defaultProvider}
+                    level={setup.data.profile.defaultLevel}
                   />
                 )}
               </motion.div>

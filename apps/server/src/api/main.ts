@@ -79,6 +79,7 @@ const app = createApp({
   branchPrefix: config.BRANCH_PREFIX,
   githubApiUrl: config.GITHUB_API_URL,
   linearApiUrl: config.LINEAR_API_URL,
+  serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD,
   ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
 });
 const outcomeSweep = startOutcomeSweep(db, workspaceId, {

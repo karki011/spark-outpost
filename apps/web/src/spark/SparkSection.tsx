@@ -34,7 +34,7 @@ export function SparkSection({ setup }: { setup: SetupState }) {
         <h4 id="spark-work">How Spark works</h4>
         <SparkSwitch enabled={profile.sparkEnabled} />
         <TeamModeSetting enabled={profile.teamMode} />
-        <LevelSetting providers={setup.providers} defaultProvider={profile.defaultProvider} />
+        <LevelSetting level={profile.defaultLevel} />
         <AutoContinueSetting seconds={profile.autoContinueSeconds} />
         <FailingChecksSetting opensDraft={profile.shipFailingChecks} />
       </section>

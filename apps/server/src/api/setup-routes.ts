@@ -44,6 +44,7 @@ export interface SetupDeps {
   endpoints: ApiEndpoints;
   runCommand: RunCommand;
   loginShell: string | null;
+  serverSpendCapUsd?: number | undefined;
 }
 
 function providerParam(req: Request): ProviderId {
@@ -65,14 +66,15 @@ function writeEvent(res: Response, event: VerifyEvent) {
 export function setupRoutes(deps: SetupDeps): Router {
   const { db, workspaceId, secrets } = deps;
   const router = Router();
+  const setupState = () => getSetupState(db, workspaceId, deps.serverSpendCapUsd ?? null);
 
   router.get('/setup', async (_req, res) => {
-    res.json(await getSetupState(db, workspaceId));
+    res.json(await setupState());
   });
 
   router.patch('/profile', async (req, res) => {
     await updateProfile(db, workspaceId, parseBody(updateProfileRequestSchema, req));
-    res.json(await getSetupState(db, workspaceId));
+    res.json(await setupState());
   });
 
   function startVerification(id: ConnectableId, request: VerifyRequest): Verification {
@@ -134,7 +136,7 @@ export function setupRoutes(deps: SetupDeps): Router {
       secrets,
     });
     await recordTest(db, workspaceId, provider, outcome);
-    res.json(await getSetupState(db, workspaceId));
+    res.json(await setupState());
   });
 
   router.delete('/providers/:provider/connection', async (req, res) => {
@@ -143,7 +145,7 @@ export function setupRoutes(deps: SetupDeps): Router {
     if (advisor.success) await disconnectAdvisor(db, workspaceId, advisor.data);
     else await disconnectProvider(db, workspaceId, providerIdSchema.parse(provider));
     await secrets.delete(provider);
-    res.json(await getSetupState(db, workspaceId));
+    res.json(await setupState());
   });
 
   router.patch('/providers/:provider/defaults', async (req, res) => {
@@ -154,7 +156,7 @@ export function setupRoutes(deps: SetupDeps): Router {
       provider,
       parseBody(updateProviderDefaultsRequestSchema, req),
     );
-    res.json(await getSetupState(db, workspaceId));
+    res.json(await setupState());
   });
 
   return router;

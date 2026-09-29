@@ -1,4 +1,5 @@
 import {
+  DEFAULT_INVOLVEMENT_LEVEL,
   defaultModeFor,
   permissionFor,
   type AgentModeOption,
@@ -34,6 +35,7 @@ interface SettingsRow {
   model_routing?: ModelRouting | undefined;
   overrides: Overrides;
   default_provider: ProviderId | null;
+  default_level: InvolvementLevel | null;
 }
 
 interface ConnectionDefaults {
@@ -41,7 +43,6 @@ interface ConnectionDefaults {
   model: string | null;
   effort: string | null;
   agentMode: string | null;
-  level: InvolvementLevel;
   modes: AgentModeOption[];
   options: ConfigOptionInfo[];
 }
@@ -60,7 +61,8 @@ export class ConversationMissingError extends Error {}
 
 async function settingsRow(db: Queryable, conversationId: string): Promise<SettingsRow> {
   const { rows } = await db.query<SettingsRow>(
-    `SELECT c.workspace_id, c.provider, c.overrides, c.model_routing, p.default_provider
+    `SELECT c.workspace_id, c.provider, c.overrides, c.model_routing, p.default_provider,
+       p.default_level
      FROM conversations c LEFT JOIN profiles p ON p.workspace_id = c.workspace_id
      WHERE c.id = $1`,
     [conversationId],
@@ -81,7 +83,7 @@ async function connectionDefaults(
       options: ConfigOptionInfo[] | null;
     }
   >(
-    `SELECT pc.provider, pc.model, pc.effort, pc.agent_mode AS "agentMode", pc.level,
+    `SELECT pc.provider, pc.model, pc.effort, pc.agent_mode AS "agentMode",
        cap.efforts AS reported, cap.modes, cap.config_options AS options
      FROM provider_connections pc
      LEFT JOIN provider_capabilities cap
@@ -123,7 +125,7 @@ function effectiveSettings(
     effort: chosen.effort ?? connection.effort,
     permission: permissionFor(provider, agentMode, connection.modes),
     agentMode,
-    level: chosen.level ?? connection.level,
+    level: chosen.level ?? row.default_level ?? DEFAULT_INVOLVEMENT_LEVEL,
     options: chosen.options ?? {},
     ...(row.model_routing ? { routing: row.model_routing } : {}),
   };
@@ -138,12 +140,17 @@ export async function resolveChatSettings(
 }
 
 export async function draftChatSettings(db: Queryable, workspaceId: string): Promise<ChatSettings> {
-  const { rows } = await db.query<{ default_provider: ProviderId | null }>(
-    'SELECT default_provider FROM profiles WHERE workspace_id = $1',
+  const { rows } = await db.query<Pick<SettingsRow, 'default_provider' | 'default_level'>>(
+    'SELECT default_provider, default_level FROM profiles WHERE workspace_id = $1',
     [workspaceId],
   );
   return effectiveSettings(
-    { provider: null, overrides: {}, default_provider: rows[0]?.default_provider ?? null },
+    {
+      provider: null,
+      overrides: {},
+      default_provider: rows[0]?.default_provider ?? null,
+      default_level: rows[0]?.default_level ?? null,
+    },
     await connectionDefaults(db, workspaceId),
   );
 }
@@ -182,7 +189,13 @@ export async function updateChatSettings(
     [conversationId, provider, JSON.stringify(overrides), update.routing ?? null],
   );
   return effectiveSettings(
-    { provider, overrides, default_provider: row.default_provider, model_routing: routing },
+    {
+      provider,
+      overrides,
+      default_provider: row.default_provider,
+      default_level: row.default_level,
+      model_routing: routing,
+    },
     connections,
   );
 }
