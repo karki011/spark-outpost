@@ -1,9 +1,8 @@
 import { mkdtempSync, rmSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { BuildStyle, ReviewBody, ShortcutsBody } from '@spark-outpost/contracts';
+import type { ReviewBody, ShortcutsBody } from '@spark-outpost/contracts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { createProject } from '../src/projects/projects.ts';
 import {
@@ -50,13 +49,9 @@ function start(scenario: Scenario) {
   return script;
 }
 
-async function configure(style: BuildStyle, checks: string[] | null = []): Promise<void> {
+async function configure(checks: string[] | null = []): Promise<void> {
   const { project } = await createProject(t.db, t.workspaceId, root);
-  await t.db.query('UPDATE projects SET build_style = $2, check_commands = $3 WHERE id = $1', [
-    project.id,
-    style,
-    checks,
-  ]);
+  await t.db.query('UPDATE projects SET check_commands = $2 WHERE id = $1', [project.id, checks]);
 }
 
 async function builderPrompt(runId: string): Promise<string> {
@@ -68,16 +63,6 @@ async function builderPrompt(runId: string): Promise<string> {
 }
 
 describe('the lean build style', { timeout: 60_000 }, () => {
-  it('leaves an off project without the ladder and without markers', async () => {
-    await configure('off');
-    const script = start(TRIVIAL);
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'full-auto');
-    await driveToEnd(t, conversationId, runId);
-    expect(script.calls.some((call) => call.questions.includes('build_style'))).toBe(false);
-    expect(await builderPrompt(runId)).not.toContain('## Build style');
-    expect(await readFile(join(root, 'notes.txt'), 'utf8')).toBe('start\nstep 1\n');
-  });
-
   it('builds lean by default when the project never chose a style', async () => {
     start(TRIVIAL);
     const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'full-auto');
@@ -87,7 +72,7 @@ describe('the lean build style', { timeout: 60_000 }, () => {
   });
 
   it('tells the task Builder the ladder and harvests its lean: markers', async () => {
-    await configure('lean');
+    await configure();
     const marked = withTag(TRIVIAL, '#leanmark');
     start(marked);
     const { conversationId, runId } = await startScenario(t, root, marked, 'full-auto');
@@ -117,7 +102,7 @@ describe('the lean build style', { timeout: 60_000 }, () => {
   });
 
   it('eases to lite when the request asks for a complete version', async () => {
-    await configure('lean');
+    await configure();
     const full = withTag(TRIVIAL, 'Build the complete version.');
     start(full);
     const { conversationId, runId } = await startScenario(t, root, full, 'full-auto');
@@ -126,7 +111,7 @@ describe('the lean build style', { timeout: 60_000 }, () => {
   });
 
   it('adds the complexity lens to the single Critic pass and keeps its net line', async () => {
-    await configure('lean');
+    await configure();
     const reviewed = { ...COMPLEX, review: 0.95 };
     start(reviewed);
     const { conversationId, runId } = await startScenario(t, root, reviewed, 'full-auto');

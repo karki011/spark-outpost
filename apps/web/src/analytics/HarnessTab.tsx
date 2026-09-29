@@ -9,7 +9,6 @@ import {
   pickName,
   plural,
   signedScore,
-  usd,
   verdictName,
   winnerName,
 } from './analytics-model.ts';
@@ -24,12 +23,10 @@ import {
   disagreementSummary,
   flowSummary,
   frictionSummary,
-  leanSummary,
   tallyTip,
 } from './harness-summaries.ts';
 
 const AGREEMENT_LABELS = { same: 'Same pick', differs: 'Different pick', no_jev: 'No Jev answer' };
-const STYLE_LABELS = { off: 'Lean off', lite: 'Lite', lean: 'Lean' };
 
 function WinnerChip({ row }: { row: DisagreementRow }) {
   const side = row.winner === 'jev' || row.winner === 'rules';
@@ -110,7 +107,6 @@ function DisagreementTable({ rows }: { rows: readonly DisagreementRow[] }) {
 }
 
 export function HarnessTab({ data }: { data: AnalyticsHarness }) {
-  const buildingTurns = data.lean.reduce((sum, row) => sum + row.turns, 0);
   return (
     <div className="an-grid">
       <ChartCard
@@ -200,75 +196,6 @@ export function HarnessTab({ data }: { data: AnalyticsHarness }) {
           “Better outcome” compares the mean score of the turns where each pick actually ran; it
           needs 3 or more turns on each side and a gap of at least 0.2.
         </p>
-      </ChartCard>
-      <ChartCard
-        title="Lean and the Critic"
-        summary={leanSummary(data)}
-        n={buildingTurns}
-        noun="turns"
-        table={{
-          caption: 'Outcomes by build style',
-          columns: [
-            { label: 'Style', value: (row) => STYLE_LABELS[row.style] },
-            { label: 'Turns', value: (row) => row.turns, numeric: true },
-            { label: 'Kept', value: (row) => row.kept, numeric: true },
-            { label: 'Mean score', value: (row) => signedScore(row.meanScore), numeric: true },
-            { label: 'Mean cost', value: (row) => usd(row.meanCostUsd), numeric: true },
-            {
-              label: 'Lines the Critic would cut',
-              value: (row) => Math.abs(row.netLines),
-              numeric: true,
-            },
-          ],
-          rows: data.lean,
-        }}
-      >
-        {buildingTurns === 0 ? (
-          <EmptyChart>No building turns in this range.</EmptyChart>
-        ) : (
-          <>
-            <ScoreBars
-              ariaLabel="Mean outcome score by build style"
-              rows={data.lean.map((row) => ({
-                key: row.style,
-                label: STYLE_LABELS[row.style],
-                score: row.meanScore,
-                note: `${row.turns} · ${usd(row.meanCostUsd)}`,
-                tip: `${tallyTip(STYLE_LABELS[row.style], row)}, mean cost ${usd(row.meanCostUsd)}, ${row.kept} kept`,
-              }))}
-            />
-            <ScoreBars
-              ariaLabel="Mean outcome score with and without a Critic review"
-              rows={[
-                { key: 'reviewed', label: 'Reviewed', tally: data.critic.reviewed },
-                { key: 'unreviewed', label: 'Not reviewed', tally: data.critic.unreviewed },
-              ].map(({ key, label, tally }) => ({
-                key,
-                label,
-                score: tally.meanScore,
-                note: plural(tally.turns, 'turn'),
-                tip: tallyTip(label, tally),
-              }))}
-            />
-            <dl className="an-stats">
-              <div>
-                <dt>Reviews</dt>
-                <dd>{data.critic.reviews}</dd>
-              </div>
-              <div>
-                <dt>With concerns</dt>
-                <dd>
-                  {data.critic.concerns}{' '}
-                  <small>{percent(data.critic.concerns, data.critic.reviews)}</small>
-                </dd>
-              </div>
-              <div>
-                <dt>Findings</dt>
-                <dd>{data.critic.findings}</dd>
-              </div>
-            </dl>
-          </>
-        )}
       </ChartCard>
       <ChartCard
         title="Checks, loops and approvals"
