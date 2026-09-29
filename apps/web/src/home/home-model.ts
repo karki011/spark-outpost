@@ -3,23 +3,15 @@ import type { BlobExpression } from '../brand/blob-expression.ts';
 import { isRunning, needsInput, rowState } from '../conversations/row-state.ts';
 import { countLabel } from '../ui/count-label.ts';
 
-export function greeting(hour: number): string {
-  if (hour < 5) return 'Working late';
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
-}
-
-export function firstName(displayName: string): string {
-  return displayName.trim().split(/\s+/)[0] ?? '';
-}
-
 interface SummaryPart {
   text: string;
   strong: boolean;
 }
 
-export function summaryParts(chats: readonly ConversationSummary[]): SummaryPart[] {
+export function summaryParts(
+  chats: readonly ConversationSummary[],
+  quietLine: string,
+): SummaryPart[] {
   const active = chats.filter((chat) => !chat.archivedAt);
   const working = active.filter((chat) => isRunning(chat) && !needsInput(chat)).length;
   const asking = active.filter(needsInput).length;
@@ -27,7 +19,7 @@ export function summaryParts(chats: readonly ConversationSummary[]): SummaryPart
     working > 0 ? countLabel(working, 'agent is working', 'agents are working') : null,
     asking > 0 ? countLabel(asking, 'chat needs your input', 'chats need your input') : null,
   ].filter((bit): bit is string => bit !== null);
-  if (bits.length === 0) return [{ text: 'All quiet. Start something new below.', strong: false }];
+  if (bits.length === 0) return [{ text: quietLine, strong: false }];
   const parts = bits.flatMap((bit, index) => [
     ...(index > 0 ? [{ text: ' and ', strong: false }] : []),
     { text: bit, strong: true },

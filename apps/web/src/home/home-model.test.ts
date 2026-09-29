@@ -1,14 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import {
-  firstName,
-  greeting,
-  needsYou,
-  progressPercent,
-  recentChats,
-  runningNow,
-  summaryParts,
-} from './home-model.ts';
+import { needsYou, progressPercent, recentChats, runningNow, summaryParts } from './home-model.ts';
 
 let next = 0;
 
@@ -63,27 +55,9 @@ const failed = (title: string) =>
 const finished = (title: string) => chat({ title, unread: true, latestRun: run('succeeded') });
 const working = (title: string, extra = {}) => chat({ title, latestRun: run('running', extra) });
 
-describe('greeting', () => {
-  it('says working late before 5am and follows the time of day after', () => {
-    expect(greeting(0)).toBe('Working late');
-    expect(greeting(4)).toBe('Working late');
-    expect(greeting(5)).toBe('Good morning');
-    expect(greeting(11)).toBe('Good morning');
-    expect(greeting(12)).toBe('Good afternoon');
-    expect(greeting(17)).toBe('Good afternoon');
-    expect(greeting(18)).toBe('Good evening');
-    expect(greeting(23)).toBe('Good evening');
-  });
-
-  it('uses the first name only', () => {
-    expect(firstName('  Hari  Karki ')).toBe('Hari');
-    expect(firstName('')).toBe('');
-  });
-});
-
 describe('summaryParts', () => {
   const text = (chats: ConversationSummary[]) =>
-    summaryParts(chats)
+    summaryParts(chats, 'All quiet. Start something new below.')
       .map((part) => part.text)
       .join('');
 
@@ -97,7 +71,9 @@ describe('summaryParts', () => {
       '2 agents are working and 1 chat needs your input.',
     );
     expect(text([asking('A'), asking('B')])).toBe('2 chats need your input.');
-    expect(summaryParts([working('A'), asking('B')]).filter((part) => part.strong)).toHaveLength(2);
+    expect(
+      summaryParts([working('A'), asking('B')], '').filter((part) => part.strong),
+    ).toHaveLength(2);
   });
 
   it('ignores archived chats', () => {

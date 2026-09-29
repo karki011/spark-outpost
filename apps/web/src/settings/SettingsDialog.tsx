@@ -8,10 +8,8 @@ import { ProviderList } from '../providers/ProviderList.tsx';
 import { ThemeCards } from '../theme/ThemeCards.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
-import { CompanionSetting } from './CompanionSetting.tsx';
-import { FailingChecksSetting } from './FailingChecksSetting.tsx';
+import { SparkSection } from '../spark/SparkSection.tsx';
 import { JevSettings } from './JevSettings.tsx';
-import { ProfileSection } from './ProfileSection.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { ResetSection } from '../reset/ResetSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
@@ -19,16 +17,16 @@ import '../onboarding/tools.css';
 import './settings.css';
 
 export type SettingsSection =
-  'profile' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'mcp' | 'look' | 'reset';
+  'spark' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'mcp' | 'look' | 'reset';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   {
-    id: 'profile',
-    label: 'Profile',
+    id: 'spark',
+    label: 'Spark',
     icon: (
       <>
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 21a8 8 0 0 1 16 0" />
+        <path d="M4 15.5C4 11 7.4 8.5 12 8.5s8 2.5 8 7-3.4 5.5-8 5.5-8-1-8-5.5Z" />
+        <path d="M13.5 8.5c.4-2 1.6-3.3 3.5-3.7" />
       </>
     ),
   },
@@ -205,9 +203,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ ...reveal, duration: 0.15 }}
               >
-                {setup.data && section === 'profile' && (
-                  <ProfileSection displayName={setup.data.profile.displayName} />
-                )}
+                {setup.data && section === 'spark' && <SparkSection setup={setup.data} />}
                 {setup.data && section === 'ai' && (
                   <>
                     <p className="lede">
@@ -238,9 +234,6 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                       connectors aren't ready yet.
                     </p>
                     <ConnectorGrid />
-                    {setup.data && (
-                      <FailingChecksSetting opensDraft={setup.data.profile.shipFailingChecks} />
-                    )}
                   </>
                 )}
                 {section === 'mcp' && <McpSection />}
@@ -248,7 +241,6 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                   <>
                     <p className="lede">Pick a theme. It applies everywhere right away.</p>
                     <ThemeCards />
-                    <CompanionSetting />
                   </>
                 )}
                 {section === 'reset' && <ResetSection />}

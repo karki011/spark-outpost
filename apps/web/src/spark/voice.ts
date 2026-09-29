@@ -1,4 +1,5 @@
 import type { Personality } from '@spark-outpost/contracts';
+import type { ScoutMood } from '../brand/BlobScout.tsx';
 
 export interface Voice {
   personality: Personality;
@@ -52,3 +53,10 @@ export const PERSONALITY_HINTS: Record<Personality, string> = {
   friendly: 'Warm and to the point.',
   facts: 'Short answers, no small talk.',
 };
+
+export function sparkMood(personality: Personality, enabled: boolean): ScoutMood {
+  if (!enabled) return 'sleep';
+  if (personality === 'playful') return 'happy';
+  if (personality === 'facts') return 'working';
+  return null;
+}

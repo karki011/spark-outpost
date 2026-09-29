@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { greeting, hello, quietCard, quietSummary, timeOfDay } from './voice.ts';
+import { greeting, hello, quietCard, quietSummary, sparkMood, timeOfDay } from './voice.ts';
 
 describe('timeOfDay', () => {
   it('follows the clock', () => {
@@ -44,5 +44,14 @@ describe('quiet lines', () => {
     expect(quietSummary({ personality: 'facts', name: 'Sam' })).toBe('Nothing running.');
     expect(quietCard({ personality: 'playful', name: 'Sam' })).toContain('Nothing needs you, Sam');
     expect(quietCard({ personality: 'playful', name: '' })).toMatch(/^Nothing needs you, and/);
+  });
+});
+
+describe('sparkMood', () => {
+  it('sleeps when Spark is off and follows the personality when on', () => {
+    expect(sparkMood('playful', false)).toBe('sleep');
+    expect(sparkMood('playful', true)).toBe('happy');
+    expect(sparkMood('friendly', true)).toBeNull();
+    expect(sparkMood('facts', true)).toBe('working');
   });
 });

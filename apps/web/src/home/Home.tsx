@@ -11,14 +11,9 @@ import { DigestCard } from './DigestCard.tsx';
 import { HomeComposer } from './HomeComposer.tsx';
 import { CheckIcon } from '../ui/icons.tsx';
 import { NeedsYou, Quiet, RecentChats, RunningNow } from './HomeCards.tsx';
-import {
-  firstName,
-  greeting,
-  needsYou,
-  recentChats,
-  runningNow,
-  summaryParts,
-} from './home-model.ts';
+import { firstName } from '@spark-outpost/contracts';
+import { greeting, quietCard, quietSummary } from '../spark/voice.ts';
+import { needsYou, recentChats, runningNow, summaryParts } from './home-model.ts';
 import { ProviderStrip } from './ProviderStrip.tsx';
 import { SpendCard } from './SpendCard.tsx';
 
@@ -63,7 +58,10 @@ export function Home(props: HomeProps) {
   const entering = useEntering();
   const now = useMinuteClock();
 
-  const name = firstName(setup.data?.profile.displayName ?? '') || 'there';
+  const voice = {
+    personality: setup.data?.profile.personality ?? 'friendly',
+    name: firstName(setup.data?.profile.displayName ?? ''),
+  };
   const need = needsYou(chats);
   const running = runningNow(chats);
   const recent = recentChats(
@@ -91,13 +89,11 @@ export function Home(props: HomeProps) {
           <header className="home-hero">
             <div className="hh">
               <BlobScout size={54} mood={mood} lookAtPointer />
-              <h1 id="home-greet">
-                {greeting(new Date().getHours())}, {name}
-              </h1>
+              <h1 id="home-greet">{greeting(voice, new Date().getHours())}</h1>
             </div>
             <div className="home-sub">
               <p className="home-summary" aria-live="polite">
-                {summaryParts(chats).map((part, index) =>
+                {summaryParts(chats, quietSummary(voice)).map((part, index) =>
                   part.strong ? <b key={index}>{part.text}</b> : part.text,
                 )}
               </p>
@@ -113,7 +109,7 @@ export function Home(props: HomeProps) {
             {quiet ? (
               <Quiet>
                 <CheckIcon />
-                All quiet. Nothing needs you and no agents are running.
+                {quietCard(voice)}
               </Quiet>
             ) : (
               <div className="hpair">

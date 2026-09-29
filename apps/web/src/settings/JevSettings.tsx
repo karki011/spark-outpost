@@ -1,5 +1,4 @@
 import type { Profile } from '@spark-outpost/contracts';
-import { AutoContinueSetting } from './AutoContinueSetting.tsx';
 import { ProfileSwitchSetting } from './ProfileSwitchSetting.tsx';
 
 const DIFFS_INFO =
@@ -12,20 +11,17 @@ interface JevSettingsProps {
 
 export function JevSettings({ profile, jevConnected }: JevSettingsProps) {
   return (
-    <>
-      <AutoContinueSetting seconds={profile.autoContinueSeconds} />
-      <ProfileSwitchSetting
-        enabled={profile.jevDiffs}
-        label="Check changes with Jev"
-        info={DIFFS_INFO}
-        hint={
-          jevConnected
-            ? 'Diffs go to TypeSafe and are never used for training.'
-            : 'Connect Jev to use this.'
-        }
-        disabled={!jevConnected}
-        toUpdate={(value) => ({ jevDiffs: value })}
-      />
-    </>
+    <ProfileSwitchSetting
+      enabled={profile.jevDiffs}
+      label="Check changes with Jev"
+      info={DIFFS_INFO}
+      hint={
+        jevConnected
+          ? 'Diffs go to TypeSafe and are never used for training.'
+          : 'Connect Jev to use this.'
+      }
+      disabled={!jevConnected}
+      toUpdate={(value) => ({ jevDiffs: value })}
+    />
   );
 }

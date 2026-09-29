@@ -114,8 +114,8 @@ function ChatShell({ entering }: { entering: boolean }) {
             setView(next);
             if (next === 'chats' && layout.collapsed && !layout.narrow) layout.reveal();
           }}
-          onSettings={() => setSettings('profile')}
-          onProfile={() => setSettings('profile')}
+          onSettings={() => setSettings('spark')}
+          onProfile={() => setSettings('spark')}
         />
         <div className="view" hidden={view !== 'chats'}>
           <ConversationList

@@ -1,5 +1,9 @@
+import { useId } from 'react';
 import { companionPrefs, useCompanionPrefs } from '../companion/companion-prefs.ts';
 import { Segmented } from '../ui/Segmented.tsx';
+import { SettingRow } from './SettingRow.tsx';
+
+const LABEL = 'Status companion';
 
 const OPTIONS = [
   { id: 'show', label: 'Show' },
@@ -7,19 +11,21 @@ const OPTIONS = [
 ];
 
 export function CompanionSetting() {
+  const hintId = useId();
   const { hidden } = useCompanionPrefs();
   return (
-    <div className="field companion-setting">
-      <span>Status companion</span>
+    <SettingRow
+      label={LABEL}
+      hint="Scout floats in a corner outside open chats and shows what needs you and what’s running."
+      hintId={hintId}
+    >
       <Segmented
-        ariaLabel="Status companion"
+        ariaLabel={LABEL}
+        describedBy={hintId}
         options={OPTIONS}
         value={hidden ? 'hide' : 'show'}
         onChange={(id) => companionPrefs.setHidden(id === 'hide')}
       />
-      <p className="set-hint">
-        Scout floats in a corner outside open chats and shows what needs you and what’s running.
-      </p>
-    </div>
+    </SettingRow>
   );
 }
