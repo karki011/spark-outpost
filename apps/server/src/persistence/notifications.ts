@@ -25,8 +25,13 @@ export async function listen(
     onError?.(error);
   });
   client.on('notification', (message) => onPayload(message.payload ?? ''));
-  await client.connect();
-  await client.query(`LISTEN ${channel}`);
+  try {
+    await client.connect();
+    await client.query(`LISTEN ${channel}`);
+  } catch (error) {
+    await client.end().catch(() => undefined);
+    throw error;
+  }
   return {
     async close() {
       await client.end().catch(() => undefined);
