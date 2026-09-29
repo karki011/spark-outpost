@@ -1,4 +1,5 @@
 import path from 'node:path';
+import type { InvolvementLevel } from '@spark-outpost/contracts';
 import {
   hasControlOperators,
   programTokens,
@@ -165,4 +166,23 @@ function isInstall(tokens: readonly string[]): boolean {
 
 export function isPackageInstall(command: string): boolean {
   return splitSimpleCommands(command).some(isInstall);
+}
+
+const TEST_RUNNERS = [
+  'node --test',
+  'npm test',
+  'npm run test',
+  'pnpm test',
+  'pnpm run test',
+  'yarn test',
+  'bun test',
+  'pytest',
+  'python -m pytest',
+  'python3 -m pytest',
+  'go test',
+  'cargo test',
+] as const;
+
+export function testRunnerAllowlist(level: InvolvementLevel): readonly string[] {
+  return level === 'balanced' ? [] : TEST_RUNNERS;
 }

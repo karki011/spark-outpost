@@ -28,6 +28,7 @@ import {
   recordTokens,
   recordUsage,
 } from './run-metadata.ts';
+import { testRunnerAllowlist } from '../approvals/command-kinds.ts';
 import { proposedPlan } from '../plans/codex-plan.ts';
 import { createPlanRecorder } from './plan-recorder.ts';
 import { createTaskRecorder } from './task-recorder.ts';
@@ -234,7 +235,7 @@ export async function runAgentTurn(
             provider: input.provider,
             mode: input.agentMode,
             modes: await knownModes(deps.db, input),
-            extraAllowlist: () => trustedCommands,
+            extraAllowlist: () => [...trustedCommands, ...testRunnerAllowlist(input.level)],
             builder: writesCode(input.role),
             projectRoots: input.projectRoots,
             append,

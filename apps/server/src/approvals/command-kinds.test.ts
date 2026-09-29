@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { isPackageInstall, isSafeRead, type CommandPlace } from './command-kinds.ts';
+import {
+  isPackageInstall,
+  isSafeRead,
+  testRunnerAllowlist,
+  type CommandPlace,
+} from './command-kinds.ts';
+import { decide, NO_RUN_RULES, type ApprovalRequest } from './decide.ts';
 
 const ROOT = '/work/app';
 const place: CommandPlace = {
@@ -116,5 +122,42 @@ describe('isPackageInstall', () => {
 
   it('still asks when a lockfile install also names a package', () => {
     expect(isPackageInstall('pnpm install --frozen-lockfile zod')).toBe(true);
+  });
+});
+
+describe('test runners at Automatic (N4)', () => {
+  const run = (command: string): ApprovalRequest => ({
+    toolCallId: 't1',
+    rpcId: null,
+    kind: 'execute',
+    toolKind: 'execute',
+    title: command,
+    command,
+    cwd: ROOT,
+    paths: [],
+    diffs: [],
+    options: [],
+    roots: [{ path: ROOT, ignore: [] }],
+    home: '/Users/me',
+  });
+  const automatic = testRunnerAllowlist('hands-off');
+
+  it.each(['node --test', 'node --test test/math.test.js', 'pnpm test', 'npm test', 'pytest -q'])(
+    'runs %s without asking at Automatic',
+    (command) => {
+      expect(decide('edits', run(command), NO_RUN_RULES, automatic)).toEqual({
+        verdict: 'allow',
+        by: 'allowlist',
+      });
+    },
+  );
+
+  it('still asks for chained commands, installs, and anything at Review each step', () => {
+    expect(
+      decide('edits', run('node --test && rm -rf dist'), NO_RUN_RULES, automatic).verdict,
+    ).toBe('ask');
+    expect(decide('edits', run('npm install'), NO_RUN_RULES, automatic).verdict).toBe('ask');
+    expect(testRunnerAllowlist('balanced')).toEqual([]);
+    expect(testRunnerAllowlist('full-auto')).toEqual(automatic);
   });
 });
