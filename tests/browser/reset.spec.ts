@@ -30,6 +30,88 @@ function countResetRequests(page: Page) {
 }
 
 const graceBar = (page: Page) => page.locator('.toast.grace');
+const sectionBlob = (page: Page) => page.locator('.reset-blob-stage');
+
+async function recordMoods(page: Page) {
+  await sectionBlob(page).evaluate((blob) => {
+    const moods = [blob.getAttribute('data-mood')];
+    Object.assign(window, { blobMoods: moods });
+    new MutationObserver(() => {
+      const mood = blob.getAttribute('data-mood');
+      if (moods.at(-1) !== mood) moods.push(mood);
+    }).observe(blob, { attributes: true, attributeFilter: ['data-mood'] });
+  });
+  return () => page.evaluate(() => (window as unknown as { blobMoods: string[] }).blobMoods);
+}
+
+test('the blob frets while holding, sighs on release and cheers on Undo', async ({ page }) => {
+  test.setTimeout(60_000);
+  const hold = await openReset(page);
+  await expect(sectionBlob(page)).toHaveAttribute('data-mood', 'calm');
+  const moods = await recordMoods(page);
+
+  await hold.hover();
+  await page.mouse.down();
+  await expect(sectionBlob(page)).toHaveAttribute('data-mood', 'panic');
+  await expect(sectionBlob(page).locator('.rb-bubble')).toHaveText('Wait—');
+  await page.mouse.up();
+  await expect(sectionBlob(page)).toHaveAttribute('data-mood', 'relieved');
+  await expect(sectionBlob(page).locator('.rb-bubble')).toHaveText('Phew.');
+  await expect(sectionBlob(page)).toHaveAttribute('data-mood', 'calm', { timeout: 4000 });
+  expect(await moods()).toEqual(['calm', 'worried', 'panic', 'relieved', 'calm']);
+
+  await page.mouse.down();
+  await expect(graceBar(page)).toBeVisible({ timeout: 3000 });
+  await page.mouse.up();
+  expect(await moods()).toEqual([
+    'calm',
+    'worried',
+    'panic',
+    'relieved',
+    'calm',
+    'worried',
+    'panic',
+    'scream',
+    'away',
+  ]);
+  await expect(graceBar(page).locator('.rb')).toHaveAttribute('data-mood', 'plead');
+  await expect(graceBar(page).locator('.rb')).toHaveAttribute('aria-hidden', 'true');
+  await graceBar(page).getByRole('button', { name: 'Undo' }).click();
+  await expect(sectionBlob(page)).toHaveAttribute('data-mood', 'happy');
+  await expect(sectionBlob(page)).toHaveAttribute('data-mood', 'calm', { timeout: 4000 });
+});
+
+test('with reduced motion the blob only changes its face', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const hold = await openReset(page);
+  const animations = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('.rb')].flatMap((blob) =>
+        blob
+          .getAnimations({ subtree: true })
+          .filter((animation) => animation instanceof CSSAnimation)
+          .map((animation) => animation.animationName),
+      ),
+    );
+  const blobBox = () => sectionBlob(page).locator('.rb-svg').boundingBox();
+  const calm = (await blobBox())!;
+
+  await hold.hover();
+  await page.mouse.down();
+  await expect(sectionBlob(page)).toHaveAttribute('data-mood', 'scream');
+  await expect(sectionBlob(page).locator('.rb-bubble')).toHaveText('AAAH!');
+  expect(await animations()).toEqual([]);
+  const screaming = (await blobBox())!;
+  expect(screaming.x).toBeLessThan(calm.x);
+  expect(screaming.y + screaming.height).toBeCloseTo(calm.y + calm.height, 0);
+  await expect(graceBar(page)).toBeVisible({ timeout: 3000 });
+  await page.mouse.up();
+  await expect(graceBar(page).locator('.rb')).toHaveAttribute('data-mood', 'plead');
+  expect(await animations()).toEqual([]);
+  await graceBar(page).getByRole('button', { name: 'Undo' }).click();
+  await expect(graceBar(page)).toHaveCount(0);
+});
 
 test('letting go early or pressing Undo keeps every chat', async ({ page }) => {
   test.setTimeout(90_000);

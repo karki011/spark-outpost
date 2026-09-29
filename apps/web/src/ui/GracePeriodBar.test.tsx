@@ -14,6 +14,7 @@ function Bar({ shown }: { shown: boolean }) {
       seconds={10}
       onElapse={onElapse}
       onUndo={onUndo}
+      decoration={(secondsLeft) => <i data-testid="decoration">{secondsLeft}</i>}
     />
   ) : null;
 }
@@ -69,5 +70,12 @@ describe('GracePeriodBar', () => {
     view.rerender(<Bar shown={false} />);
     advance(5000);
     expect(onElapse).not.toHaveBeenCalled();
+  });
+
+  it('passes the seconds left to its decoration', () => {
+    render(<Bar shown />);
+    expect(screen.getByTestId('decoration').textContent).toBe('10');
+    advance(9000);
+    expect(screen.getByTestId('decoration').textContent).toBe('1');
   });
 });

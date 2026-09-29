@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import './scout.css';
 import { prefersReducedMotion } from '../ui/motion.ts';
+import { SCOUT_ANTENNA, SCOUT_BODY, SCOUT_SPARK } from './scout-shape.ts';
 
 export type ScoutMood = 'working' | 'alert' | 'happy' | 'sad' | 'sleep' | null;
 
@@ -86,21 +87,14 @@ export function BlobScout({
         <g className="sc-body">
           <path
             className="sc-ant"
-            d="M38 18C39 13 42 10 46 9"
+            d={SCOUT_ANTENNA}
             fill="none"
             stroke="var(--sc-a)"
             strokeWidth="3"
             strokeLinecap="round"
           />
-          <path
-            className="sc-spark"
-            d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"
-            fill="var(--sc-b)"
-          />
-          <path
-            d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"
-            fill="var(--sc-a)"
-          />
+          <path className="sc-spark" d={SCOUT_SPARK} fill="var(--sc-b)" />
+          <path d={SCOUT_BODY} fill="var(--sc-a)" />
           <g className="sc-cheeks">
             <circle cx="18.5" cy="46.5" r="2.7" />
             <circle cx="45.5" cy="46.5" r="2.7" />

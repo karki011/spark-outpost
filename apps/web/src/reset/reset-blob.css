@@ -1,0 +1,473 @@
+.rb {
+  --rb-body: var(--accent);
+  --rb-eye: var(--scout-eye);
+  position: relative;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.rb-roam {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  display: block;
+}
+
+.rb-hop {
+  display: block;
+  transform-origin: 50% 100%;
+}
+
+.rb-svg {
+  display: block;
+  overflow: visible;
+  transform-origin: 50% 90%;
+}
+
+.rb-skin,
+.rb-arm {
+  fill: var(--rb-body);
+}
+
+.rb-ant {
+  fill: none;
+  stroke: var(--rb-body);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transform-box: view-box;
+  transform-origin: 38px 19px;
+}
+
+.rb-spark {
+  fill: var(--warn);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.rb-part {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.rb-dots,
+.rb-wide,
+.rb-plead,
+.rb-fill {
+  fill: var(--rb-eye);
+}
+
+.rb-shine {
+  fill: var(--rb-body);
+}
+
+.rb-line {
+  fill: none;
+  stroke: var(--rb-eye);
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rb-brows {
+  stroke-width: 2.4;
+}
+
+.rb-cheeks {
+  fill: var(--warn);
+}
+
+.rb-tongue {
+  fill: var(--danger);
+}
+
+.rb-sweat {
+  fill: var(--c-codex);
+}
+
+.rb-puff {
+  fill: var(--line-strong);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.rb-look {
+  transition: transform 0.25s var(--out);
+}
+
+.rb-dots rect {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.rb-arm {
+  transform-box: view-box;
+  transform-origin: 52px 41px;
+  transform: rotate(30deg);
+}
+
+.rb-bubble {
+  position: absolute;
+  left: calc(100% + 2px);
+  bottom: 62%;
+  padding: 2px 8px 3px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px 10px 10px 3px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  transform-origin: 0 100%;
+  animation: rb-pop 0.28s var(--spring);
+}
+
+.rb[data-mood='calm'] .rb-dots,
+.rb[data-mood='away'] .rb-dots,
+.rb[data-mood='worried'] .rb-wide,
+.rb[data-mood='panic'] .rb-wide,
+.rb[data-mood='plead'] .rb-plead,
+.rb[data-mood='scream'] .rb-squeeze,
+.rb[data-mood='happy'] .rb-happy,
+.rb[data-mood='bye'] .rb-happy,
+.rb[data-mood='relieved'] .rb-closed,
+.rb[data-mood='worried'] .rb-brows,
+.rb[data-mood='panic'] .rb-brows,
+.rb[data-mood='plead'] .rb-brows,
+.rb[data-mood='worried'] .rb-wobble,
+.rb[data-mood='plead'] .rb-wobble,
+.rb[data-mood='panic'] .rb-o,
+.rb[data-mood='relieved'] .rb-o,
+.rb[data-mood='scream'] .rb-scream,
+.rb[data-mood='happy'] .rb-smile,
+.rb[data-mood='bye'] .rb-smile,
+.rb[data-mood='panic'] .rb-sweat,
+.rb[data-mood='scream'] .rb-sweat,
+.rb[data-mood='relieved'] .rb-puff,
+.rb[data-mood='bye'] .rb-arm {
+  opacity: 1;
+}
+
+.rb[data-mood='happy'] .rb-cheeks,
+.rb[data-mood='bye'] .rb-cheeks,
+.rb[data-mood='plead'] .rb-cheeks {
+  opacity: 0.55;
+}
+
+.rb[data-mood='relieved'] .rb-cheeks {
+  opacity: 0.3;
+}
+
+.rb[data-mood='scream'] .rb-bubble {
+  border-color: var(--danger);
+  color: var(--danger);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.rb[data-mood='calm'] .rb-look {
+  transform: translate(-2.6px, 0.6px);
+  animation: rb-glance 6s ease-in-out infinite;
+}
+
+.rb[data-mood='calm'] .rb-dots rect {
+  animation: rb-blink 4.8s infinite;
+}
+
+.rb[data-mood='calm'] .rb-svg {
+  animation: rb-breathe 3.4s ease-in-out infinite;
+}
+
+.rb[data-mood='worried'] .rb-look {
+  transform: translate(-1.6px, -0.6px);
+}
+
+.rb[data-mood='worried'] .rb-svg {
+  animation: rb-tremble 0.12s linear infinite;
+}
+
+.rb[data-mood='worried'] .rb-ant {
+  transform: rotate(-10deg);
+}
+
+.rb[data-mood='panic'] .rb-hop {
+  animation: rb-hop-panic 0.38s ease-in-out infinite;
+}
+
+.rb[data-mood='panic'] .rb-ant,
+.rb[data-mood='scream'] .rb-ant {
+  animation: rb-wiggle 0.2s ease-in-out infinite;
+}
+
+.rb[data-mood='panic'] .rb-sweat,
+.rb[data-mood='scream'] .rb-sweat {
+  animation: rb-drip 0.76s ease-in infinite;
+}
+
+.rb[data-mood='scream'] .rb-roam {
+  animation: rb-roam 0.9s ease-in-out infinite alternate;
+}
+
+.rb[data-mood='scream'] .rb-hop {
+  animation: rb-hop-scream 0.3s ease-out infinite;
+}
+
+.rb[data-mood='scream'] .rb-svg {
+  animation: rb-shake 0.1s linear infinite;
+}
+
+.rb[data-mood='scream'] .rb-spark {
+  animation: rb-flare 0.3s ease-in-out infinite;
+}
+
+.rb[data-mood='scream'] .rb-bubble {
+  animation:
+    rb-pop 0.28s var(--spring),
+    rb-shake 0.1s linear 0.28s infinite;
+}
+
+.rb[data-mood='relieved'] .rb-svg {
+  animation: rb-sigh 0.9s var(--out);
+}
+
+.rb[data-mood='relieved'] .rb-puff {
+  animation: rb-puff 1.2s var(--out) forwards;
+}
+
+.rb[data-mood='relieved'] .rb-ant {
+  transform: rotate(14deg);
+  transition: transform 0.4s var(--out);
+}
+
+.rb[data-mood='happy'] .rb-hop {
+  animation: rb-hop-happy 0.55s var(--spring) 2;
+}
+
+.rb[data-mood='away'] .rb-roam {
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 0.2s,
+    transform 0.2s var(--out);
+}
+
+.rb[data-mood='plead'] .rb-look {
+  transform: translate(-0.8px, 1.6px);
+}
+
+.rb[data-mood='plead'] .rb-hop {
+  animation: rb-hop-plead 1.4s ease-in-out infinite;
+}
+
+.rb[data-mood='plead'] .rb-ant {
+  transform: rotate(16deg);
+}
+
+.rb[data-mood='bye'] .rb-arm {
+  animation: rb-wave 0.28s ease-in-out infinite alternate;
+}
+
+.rb[data-mood='bye'] .rb-roam {
+  transform-origin: 50% 70%;
+  animation: rb-poof 0.3s ease-in 0.6s forwards;
+}
+
+.reset-blob-stage {
+  flex: none;
+  width: 220px;
+  height: 64px;
+}
+
+.reset-blob-stage .rb-roam {
+  left: 0;
+  bottom: 2px;
+}
+
+.grace-peek {
+  position: absolute;
+  right: 12px;
+  bottom: 100%;
+  width: 58px;
+  height: 44px;
+  overflow: hidden;
+}
+
+.grace-peek .rb-roam {
+  left: 8px;
+  bottom: -7px;
+}
+
+.rb[data-mood='scream'] .rb-hop {
+  scale: 1.35;
+  transform-origin: 30% 100%;
+}
+
+.rb[data-mood='scream'] .rb-bubble {
+  left: calc(100% + 12px);
+}
+
+@keyframes rb-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+@keyframes rb-glance {
+  0%,
+  45%,
+  100% {
+    transform: translate(-2.6px, 0.6px);
+  }
+  55%,
+  85% {
+    transform: translate(0.6px, -0.4px);
+  }
+}
+
+@keyframes rb-blink {
+  0%,
+  91%,
+  97%,
+  100% {
+    transform: scaleY(1);
+  }
+  94% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes rb-breathe {
+  50% {
+    transform: scale(1.03, 0.97);
+  }
+}
+
+@keyframes rb-tremble {
+  25% {
+    transform: translateX(-0.7px);
+  }
+  75% {
+    transform: translateX(0.7px);
+  }
+}
+
+@keyframes rb-hop-panic {
+  0%,
+  100% {
+    transform: translateY(0) scale(1.06, 0.94);
+  }
+  50% {
+    transform: translateY(-9px) scale(0.96, 1.04);
+  }
+}
+
+@keyframes rb-hop-scream {
+  0%,
+  100% {
+    transform: translateY(0) scale(1.1, 0.9);
+  }
+  45% {
+    transform: translateY(-6px) scale(0.94, 1.08);
+  }
+}
+
+@keyframes rb-hop-happy {
+  40% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes rb-hop-plead {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes rb-roam {
+  to {
+    transform: translateX(90px);
+  }
+}
+
+@keyframes rb-shake {
+  25% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(6deg);
+  }
+}
+
+@keyframes rb-wiggle {
+  50% {
+    transform: rotate(-16deg);
+  }
+}
+
+@keyframes rb-flare {
+  50% {
+    transform: scale(1.35) rotate(30deg);
+  }
+}
+
+@keyframes rb-drip {
+  from {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  to {
+    transform: translate(-2px, 8px);
+    opacity: 0;
+  }
+}
+
+@keyframes rb-sigh {
+  35% {
+    transform: scale(1.08, 0.88);
+  }
+}
+
+@keyframes rb-puff {
+  from {
+    transform: translate(4px, 0) scale(0.4);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.8;
+  }
+  to {
+    transform: translate(-3px, -3px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes rb-wave {
+  from {
+    transform: rotate(30deg);
+  }
+  to {
+    transform: rotate(75deg);
+  }
+}
+
+@keyframes rb-poof {
+  to {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rb *,
+  .rb *::before,
+  .rb *::after {
+    animation: none !important;
+  }
+}

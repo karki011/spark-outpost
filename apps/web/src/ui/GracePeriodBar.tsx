@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { motion } from 'motion/react';
 import { reveal } from './transitions.tsx';
 import './toast.css';
@@ -12,6 +12,7 @@ interface GracePeriodBarProps {
   seconds: number;
   onElapse: () => void;
   onUndo: () => void;
+  decoration?: (secondsLeft: number) => ReactNode;
 }
 
 export function GracePeriodBar({
@@ -20,6 +21,7 @@ export function GracePeriodBar({
   seconds,
   onElapse,
   onUndo,
+  decoration,
 }: GracePeriodBarProps) {
   const [left, setLeft] = useState(seconds);
   const undoRef = useRef<HTMLButtonElement>(null);
@@ -88,6 +90,7 @@ export function GracePeriodBar({
           { '--grace-ms': `${seconds * 1000}ms`, '--grace-left': left / seconds } as CSSProperties
         }
       />
+      {decoration?.(left)}
     </motion.div>
   );
 }
