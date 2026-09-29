@@ -12,7 +12,7 @@ import {
 import { LeaseLostError } from '../persistence/run-events.ts';
 import { closeMessage } from '../workflow/execute-run.ts';
 import { announcePlan, approvalCommit, planSaveFailed } from '../workflow/plan-recorder.ts';
-import { checkBudget } from './budget-check.ts';
+import { checkBudgetBeforeCall } from './budget-check.ts';
 import { askCard, CheckpointTimeout, type CheckpointCard } from './checkpoint.ts';
 import { runMember } from './members.ts';
 import { publish, save, type Session } from './session.ts';
@@ -101,7 +101,7 @@ export function originalPrompt(s: Session): string {
 }
 
 export async function draftPlan(s: Session, prompt: string, note: string | null): Promise<Drafted> {
-  const hit = await checkBudget(s);
+  const hit = await checkBudgetBeforeCall(s, 'scout');
   if (hit) return { event: { type: 'budget_exceeded', limit: hit, unstarted: true } };
   s.input = { ...s.input, prompt, planning: true };
   const { result } = await runMember(s, {

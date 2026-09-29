@@ -1,5 +1,6 @@
-import type { BudgetLimit } from '@spark-outpost/contracts';
+import type { AgentRole, BudgetLimit } from '@spark-outpost/contracts';
 import { spentUsd, waitedMs } from '../persistence/orchestrations.ts';
+import { cardPriceFor } from '../usage/prices.ts';
 import { activeTime, exceededLimit, type BudgetUsage } from './budget.ts';
 import { fixRoundLimits, save, type Session } from './session.ts';
 
@@ -87,4 +88,33 @@ async function measureBudget(s: Session): Promise<BudgetLimit | null> {
   }
   stopMembers(s);
   return s.budgetHit;
+}
+
+const CALL_FLOOR_TOKENS = 10_000;
+
+export function nextCallUsd(provider: string, model: string | null): number {
+  const price = cardPriceFor(provider, model);
+  return price ? (CALL_FLOOR_TOKENS * price.inputPerMillion) / 1_000_000 : 0;
+}
+
+function nextCallFor(s: Session, role: AgentRole): number {
+  const pick = s.routes.get(role)?.pick;
+  return pick
+    ? nextCallUsd(pick.provider, pick.model)
+    : nextCallUsd(s.input.provider, s.input.settings.model);
+}
+
+export async function checkBudgetBeforeCall(
+  s: Session,
+  role: AgentRole,
+): Promise<BudgetLimit | null> {
+  const hit = await checkBudget(s);
+  const cap = s.limits.costCapUsd;
+  const waived = s.capWaived === true;
+  s.capWaived = false;
+  if (hit || cap === null || waived) return hit;
+  if ((s.settledUsd ?? 0) + liveUsd(s) + nextCallFor(s, role) < cap) return null;
+  s.budgetHit = 'cost';
+  await save(s, { exceeded: 'cost' });
+  return 'cost';
 }

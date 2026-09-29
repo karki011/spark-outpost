@@ -15,7 +15,7 @@ import { loadRunInput } from '../workflow/run-input.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
-import { checkBudget, fixRoundShort } from './budget-check.ts';
+import { checkBudget, checkBudgetBeforeCall, fixRoundShort } from './budget-check.ts';
 import { checksFailing } from './check-results.ts';
 import { correctnessFindings, sessionReviewLine, suggestionsLine } from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
@@ -140,7 +140,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
     case 'ask':
       return ask(s, action);
     case 'spawn': {
-      const hit = await checkBudget(s);
+      const hit = await checkBudgetBeforeCall(s, action.role);
       if (hit) return { type: 'budget_exceeded', limit: hit, unstarted: true, ...cutFacts(s) };
       if (startsFixRound(s, action)) {
         const short = action.auto && !checksFailing(s) ? await fixRoundShort(s) : null;

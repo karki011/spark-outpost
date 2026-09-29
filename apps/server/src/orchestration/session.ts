@@ -126,6 +126,7 @@ export interface Session {
   members: Map<string, () => void>;
   liveCost: Map<string, number>;
   settledUsd?: number;
+  capWaived?: boolean;
   budgetChecks?: BudgetChecks;
   checkpoints: number;
   git: boolean;
