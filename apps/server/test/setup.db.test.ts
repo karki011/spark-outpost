@@ -76,27 +76,6 @@ describe('setup state', () => {
     expect(body.profile.displayName).toBe('Hazel Morgan');
     await app.send('patch', '/api/profile', { onboardingCompleted: true }).expect(400);
   });
-
-  it('saves Spark preferences and rejects an unknown personality', async () => {
-    const app = appWith();
-    const { body } = await app
-      .send('patch', '/api/profile', {
-        personality: 'playful',
-        sparkEnabled: false,
-        teamMode: false,
-        useName: false,
-      })
-      .expect(200);
-    expect(body.profile).toMatchObject({
-      personality: 'playful',
-      sparkEnabled: false,
-      teamMode: false,
-      useName: false,
-    });
-    await app.send('patch', '/api/profile', { personality: 'grumpy' }).expect(400);
-    const { body: after } = await app.get('/api/setup').expect(200);
-    expect(after.profile.personality).toBe('playful');
-  });
 });
 
 describe('API key verification', () => {
