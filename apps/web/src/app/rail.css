@@ -128,31 +128,6 @@
   animation: sb-viewin 0.25s var(--out);
 }
 
-.soon-page {
-  display: grid;
-  place-items: center;
-  padding: 40px 22px;
-  text-align: center;
-}
-
-.soon-in {
-  max-width: 420px;
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-}
-
-.soon-page h2 {
-  margin: 8px 0 0;
-  font-size: 21px;
-  font-weight: 600;
-}
-
-.soon-page p {
-  margin: 0 0 8px;
-  color: var(--muted);
-}
-
 @keyframes sb-viewin {
   from {
     opacity: 0;

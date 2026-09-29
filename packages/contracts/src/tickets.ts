@@ -154,13 +154,13 @@ export const jiraSiteUrlSchema = z
 export const saveTicketConnectionRequestSchema = z.discriminatedUnion('source', [
   z.object({
     source: z.literal('linear'),
-    apiKey: z.string().trim().min(20).max(400),
+    apiKey: z.string().trim().min(20, 'Paste the full Linear API key.').max(400),
   }),
   z.object({
     source: z.literal('jira'),
     siteUrl: jiraSiteUrlSchema,
-    email: z.email().max(320),
-    apiToken: z.string().trim().min(10).max(400),
+    email: z.email('Use the email you sign in to Jira with.').max(320),
+    apiToken: z.string().trim().min(10, 'Paste the full API token.').max(400),
   }),
 ]);
 export type SaveTicketConnectionRequest = z.infer<typeof saveTicketConnectionRequestSchema>;
