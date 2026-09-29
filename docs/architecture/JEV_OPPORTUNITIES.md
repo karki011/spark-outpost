@@ -488,7 +488,7 @@ Don't use Jev for these:
 | 9 Compaction                           | Earlier requests and reply tails                                             | Yes: history is on today's "never sent" list |
 | 11 Digest                              | Chat titles and reply tails across chats                                     | Yes                                          |
 
-Every new field must be pinned in a `*-questions.test.ts`, as JEV.md requires. Keep the 8,000-character caps, send diffs only while "Send code diffs to Jev for safety checks" is on, never send tool output or credentials, and keep ZDR (enterprise only) in mind. Routing through OpenRouter or Vercel AI Gateway would add a third party, so don't.
+Every new field must be pinned in a `*-questions.test.ts`, as JEV.md requires. Keep the 8,000-character caps, send diffs only while "Check changes with Jev" is on, never send tool output or credentials, and keep ZDR (enterprise only) in mind. Routing through OpenRouter or Vercel AI Gateway would add a third party, so don't.
 
 ### Batching
 

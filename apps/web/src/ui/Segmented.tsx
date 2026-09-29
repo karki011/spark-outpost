@@ -7,6 +7,7 @@ export interface SegmentedOption {
 
 interface SegmentedProps {
   ariaLabel: string;
+  describedBy?: string;
   options: SegmentedOption[];
   value: string;
   onChange: (id: string, via: 'navigate' | 'activate') => void;
@@ -14,7 +15,7 @@ interface SegmentedProps {
 
 const STEPS: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
 
-export function Segmented({ ariaLabel, options, value, onChange }: SegmentedProps) {
+export function Segmented({ ariaLabel, describedBy, options, value, onChange }: SegmentedProps) {
   const index = Math.max(
     0,
     options.findIndex((option) => option.id === value),
@@ -38,6 +39,7 @@ export function Segmented({ ariaLabel, options, value, onChange }: SegmentedProp
       style={{ '--n': options.length } as CSSProperties}
       role="radiogroup"
       aria-label={ariaLabel}
+      aria-describedby={describedBy}
       onKeyDown={onKeyDown}
     >
       <span

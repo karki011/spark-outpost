@@ -29,7 +29,7 @@ Files:
 
 ### Vendor facts (checked September 26, 2026)
 
-Prices are USD per million tokens (input / cached input / output). "Ids we see" are the values the ACP adapters offer (from `provider_capabilities`, captured September 26).
+Prices are USD per million tokens (input / cached input / output). "Ids we see" are the values the ACP adapters offer (from `provider_capabilities`, captured September 26). The cards name the GPT-6 family "GPT-6 Luna", "GPT-6 Sol" and "GPT-6 Astra" so it reads as a family next to GPT-5.6 in Settings → Models; the Codex agent offers them as "6 Luna", "6 Sol" and "6 Astra", which the cards still match.
 
 | Model         | Ids we see                    | Tier     | Price              | Context / max output | Speed (vendor)             | Reasoning                                       | Knowledge |
 | ------------- | ----------------------------- | -------- | ------------------ | -------------------- | -------------------------- | ----------------------------------------------- | --------- |
@@ -37,9 +37,9 @@ Prices are USD per million tokens (input / cached input / output). "Ids we see" 
 | Sonnet 5      | `sonnet`                      | mid      | 2 / 0.20 / 10      | 1M / 128K            | fast                       | adaptive; low to max, default high              | Jan 2026  |
 | Opus 5.5      | `opus[1m]`                    | top      | 4 / 0.20 / 20      | 1M / 128K            | moderate                   | always thinks; low to max, default **medium**   | Jun 2026  |
 | Fable 5.1     | `claude-fable-5-1[1m]`        | frontier | 10 / 0.25 / 50     | 1M / 128K            | slower                     | always thinks; low to max, default high         | Jun 2026  |
-| 6 Luna        | `gpt-6-luna`                  | small    | 0.10 / 0.01 / 0.50 | 1.05M / 128K         | fast (reasoning "High")    | none to max, default medium                     | May 2026  |
-| 6 Sol         | `gpt-6-sol`                   | mid      | 2 / 0.20 / 10      | 1.05M / 128K         | fast (reasoning "Highest") | none to max, default medium                     | Apr 2026  |
-| 6 Astra       | `gpt-6-astra` (Codex default) | frontier | 10 / 1 / 50        | 1.05M / 128K         | fast (reasoning "Highest") | low to max, no default stated                   | Apr 2026  |
+| GPT-6 Luna    | `gpt-6-luna`                  | small    | 0.10 / 0.01 / 0.50 | 1.05M / 128K         | fast (reasoning "High")    | none to max, default medium                     | May 2026  |
+| GPT-6 Sol     | `gpt-6-sol`                   | mid      | 2 / 0.20 / 10      | 1.05M / 128K         | fast (reasoning "Highest") | none to max, default medium                     | Apr 2026  |
+| GPT-6 Astra   | `gpt-6-astra` (Codex default) | frontier | 10 / 1 / 50        | 1.05M / 128K         | fast (reasoning "Highest") | low to max, no default stated                   | Apr 2026  |
 | GPT-5.6 Luna  | not offered                   | small    | 0.20 / 0.02 / 1.20 | 1.05M / 128K         | fast                       | none to max                                     | Feb 2026  |
 | GPT-5.6 Terra | not offered                   | mid      | 2 / 0.20 / 12      | 1.05M / 128K         | fast                       | none to max                                     | Feb 2026  |
 | GPT-5.6 Sol   | not offered                   | top      | 4 / 0.40 / 20      | 1.05M / 128K         | fast                       | none to max                                     | Feb 2026  |

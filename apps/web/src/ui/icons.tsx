@@ -244,3 +244,7 @@ export function AskIcon() {
     <StrokeIcon path="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12ZM10 9.5a2.2 2.2 0 1 1 3 2c-.6.3-1 .8-1 1.5M12 16h.01" />
   );
 }
+
+export function InfoIcon() {
+  return <StrokeIcon path="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 11v5M12 8h.01" />;
+}

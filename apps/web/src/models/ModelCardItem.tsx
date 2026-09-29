@@ -1,78 +1,59 @@
 import { useId, useState } from 'react';
 import type { ModelCardView } from '@spark-outpost/contracts';
 import { formatPrice, formatTokenCount, statLines } from './model-card-stats.ts';
+import { ModelBlob } from './ModelBlob.tsx';
 import {
-  benchmarkHeadline,
+  benchmarkBadge,
   effortRange,
-  retirementNote,
-  shortPrice,
-  tierNote,
+  metaLine,
+  modelTag,
+  retirementDetail,
+  roleLine,
+  usedBySpark,
 } from './model-list.ts';
 
-function Facts({ view }: { view: ModelCardView }) {
+function Meta({ view }: { view: ModelCardView }) {
   const { card } = view;
-  const defaultEffort = card.reasoning.defaultEffort;
+  const [price, context, speed] = metaLine(card);
   const priceTitle = card.price
     ? `${formatPrice(card.price.inputPerMillion)} in · ${formatPrice(card.price.cachedInputPerMillion)} cached · ${formatPrice(card.price.outputPerMillion)} out per million tokens`
     : undefined;
   return (
-    <dl className="mc-facts">
-      <div>
-        <dt>Speed</dt>
-        <dd>{card.speed}</dd>
-      </div>
-      <div>
-        <dt>Price</dt>
-        <dd title={priceTitle}>{shortPrice(card)}</dd>
-      </div>
-      <div>
-        <dt>Context</dt>
-        <dd title={`${formatTokenCount(card.maxOutputTokens)} max output`}>
-          {formatTokenCount(card.contextTokens)}
-        </dd>
-      </div>
-      <div>
-        <dt>Effort</dt>
-        <dd title={defaultEffort ? `default ${defaultEffort}` : undefined}>{effortRange(card)}</dd>
-      </div>
-    </dl>
-  );
-}
-
-function Headline({ view }: { view: ModelCardView }) {
-  const headline = benchmarkHeadline(view);
-  if (!headline) {
-    return <p className="mc-headline none">No benchmark runs yet: Jev sees vendor facts only.</p>;
-  }
-  return (
-    <p className="mc-headline">
-      <span className="mc-headline-text" title={headline.text}>
-        {headline.text}
-      </span>
-      {headline.anecdotal && <span className="mc-tag warn">anecdotal</span>}
+    <p className="mc-meta">
+      <span title={priceTitle}>{price}</span>
+      <span aria-hidden="true">·</span>
+      <span title={`${formatTokenCount(card.maxOutputTokens)} max output`}>{context}</span>
+      <span aria-hidden="true">·</span>
+      <span>{speed}</span>
     </p>
   );
 }
 
-function Warnings({ view }: { view: ModelCardView }) {
+function Badge({ view }: { view: ModelCardView }) {
+  const badge = benchmarkBadge(view);
+  if (!badge) return <span className="mc-badge none">Not benchmarked</span>;
+  return (
+    <span className={badge.anecdotal ? 'mc-badge warn' : 'mc-badge'} title={badge.detail}>
+      {badge.text}
+      <span className="sr-only">
+        {`, ${badge.detail}`}
+        {badge.anecdotal && ', anecdotal'}
+      </span>
+    </span>
+  );
+}
+
+function StaleNote({ view }: { view: ModelCardView }) {
   const { staleness } = view;
-  const retirement = retirementNote(view);
-  const notes = [
-    ...(retirement ? [retirement] : []),
-    ...(staleness.factsExpired
-      ? ['Facts are over 120 days old: Jev no longer sees its price']
-      : staleness.checkStale
-        ? [`Checked ${staleness.checkedDaysAgo} days ago`]
-        : []),
-  ];
-  if (notes.length === 0) return null;
+  const note = staleness.factsExpired
+    ? 'Facts are over 120 days old: Jev no longer sees its price'
+    : staleness.checkStale
+      ? `Checked ${staleness.checkedDaysAgo} days ago`
+      : null;
+  if (!note) return null;
   return (
     <p className="mc-warns" role="note">
-      {notes.map((note) => (
-        <span key={note} className="mc-tag warn">
-          {note}
-        </span>
-      ))}
+      <span className="mc-tag warn">{note}</span>
     </p>
   );
 }
@@ -136,8 +117,15 @@ function Sources({ view }: { view: ModelCardView }) {
 
 function Details({ view, id, open }: { view: ModelCardView; id: string; open: boolean }) {
   const { card } = view;
+  const defaultEffort = card.reasoning.defaultEffort;
+  const retirement = retirementDetail(card);
   return (
     <div className="mc-details" id={id} hidden={!open}>
+      <p className="mc-extra">
+        Effort {effortRange(card)}
+        {defaultEffort && ` (default ${defaultEffort})`}
+        {retirement && ` · ${retirement}`}
+      </p>
       <div className="mc-lists">
         <div>
           <h6>Good at</h6>
@@ -188,29 +176,38 @@ export function ModelCardItem({ view }: { view: ModelCardView }) {
   const [open, setOpen] = useState(false);
   const detailsId = useId();
   const headingId = `mc-${card.id.replace(/[^a-z0-9]+/gi, '-')}`;
-  const note = tierNote(card.tier);
+  const role = roleLine(view);
+  const tag = modelTag(view);
+  const quiet = !usedBySpark(view);
+  const classes = ['mc-card', quiet && 'quiet', open && 'open'].filter(Boolean).join(' ');
   return (
-    <li className={open ? 'mc-card open' : 'mc-card'} aria-labelledby={headingId}>
+    <li className={classes} aria-labelledby={headingId}>
       <div className="mc-head">
+        <ModelBlob provider={card.provider} tier={card.tier} retiring={view.staleness.retiring} />
         <h5 id={headingId}>{card.label}</h5>
         <span className={`mc-tier ${card.tier}`}>{card.tier} tier</span>
         {view.isDefault && <span className="mc-tag">default</span>}
         {!view.offered && <span className="mc-tag">not offered</span>}
       </div>
-      {note && <p className="mc-note">{note}</p>}
-      <Facts view={view} />
-      <Headline view={view} />
-      <Warnings view={view} />
-      <button
-        type="button"
-        className="mc-toggle"
-        aria-expanded={open}
-        aria-controls={detailsId}
-        onClick={() => setOpen((value) => !value)}
-      >
-        Details
-        <Chevron />
-      </button>
+      <p className="mc-role">
+        {role}
+        {tag && <span className={quiet ? 'mc-tag' : 'mc-tag warn'}>{tag}</span>}
+      </p>
+      <Meta view={view} />
+      <StaleNote view={view} />
+      <div className="mc-foot">
+        <button
+          type="button"
+          className="mc-toggle"
+          aria-expanded={open}
+          aria-controls={detailsId}
+          onClick={() => setOpen((value) => !value)}
+        >
+          Details
+          <Chevron />
+        </button>
+        <Badge view={view} />
+      </div>
       <Details view={view} id={detailsId} open={open} />
     </li>
   );

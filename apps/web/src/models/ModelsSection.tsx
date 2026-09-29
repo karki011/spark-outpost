@@ -3,27 +3,20 @@ import { useQuery } from '@tanstack/react-query';
 import type { ProviderCardsView } from '@spark-outpost/contracts';
 import { modelCardsApi, modelCardsKey } from '../api/model-cards.ts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
-import { Segmented } from '../ui/Segmented.tsx';
+import { InfoTip } from '../ui/InfoTip.tsx';
 import { ModelCardItem } from './ModelCardItem.tsx';
 import {
   ALL_PROVIDERS,
+  orderModels,
   readSavedProvider,
   shownProvider,
-  sortModels,
   writeSavedProvider,
-  type ModelSort,
 } from './model-list.ts';
 import { ProviderChips } from './ProviderChips.tsx';
 import { ProviderSummary } from './ProviderSummary.tsx';
 import './models.css';
 
-const SORTS: { id: ModelSort; label: string }[] = [
-  { id: 'tier', label: 'Tier' },
-  { id: 'price', label: 'Price' },
-  { id: 'speed', label: 'Speed' },
-];
-
-function ProviderModels({ view, sort }: { view: ProviderCardsView; sort: ModelSort }) {
+function ProviderModels({ view }: { view: ProviderCardsView }) {
   const headingId = useId();
   return (
     <section className="mc-provider" aria-labelledby={headingId}>
@@ -38,7 +31,7 @@ function ProviderModels({ view, sort }: { view: ProviderCardsView; sort: ModelSo
       </div>
       <ProviderSummary card={view.provider} />
       <ul className="mc-grid">
-        {sortModels(view.models, sort).map((model) => (
+        {orderModels(view.models).map((model) => (
           <ModelCardItem key={model.card.id} view={model} />
         ))}
       </ul>
@@ -55,7 +48,6 @@ function ProviderModels({ view, sort }: { view: ProviderCardsView; sort: ModelSo
 export function ModelsSection() {
   const cards = useQuery({ queryKey: modelCardsKey, queryFn: modelCardsApi.get });
   const [saved, setSaved] = useState(readSavedProvider);
-  const [sort, setSort] = useState<ModelSort>('tier');
   if (cards.isError) return <p className="set-hint">{cards.error.message}</p>;
   if (!cards.data) return <p className="set-hint">Loading model cards…</p>;
   const providers = cards.data.providers;
@@ -74,21 +66,15 @@ export function ModelsSection() {
   return (
     <div className="mc">
       <p className="lede">
-        Vendor facts checked {cards.data.checkedAt} and our benchmark results. The rules pick
-        models; Jev only reads these cards.
+        What each model costs, how it did on our benchmark, and when Spark uses it.
+        <InfoTip
+          topic="model cards"
+          text={`Vendor facts checked ${cards.data.checkedAt}. The rules pick models; Jev only reads these cards.`}
+        />
       </p>
       <ProviderChips providers={providers} value={selected} onChange={choose} />
-      <div className="mc-sort">
-        <span aria-hidden="true">Sort by</span>
-        <Segmented
-          ariaLabel="Sort models by"
-          options={SORTS}
-          value={sort}
-          onChange={(id) => setSort(SORTS.find((option) => option.id === id)?.id ?? 'tier')}
-        />
-      </div>
       {shown.map((view) => (
-        <ProviderModels key={view.provider.provider} view={view} sort={sort} />
+        <ProviderModels key={view.provider.provider} view={view} />
       ))}
     </div>
   );

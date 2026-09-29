@@ -245,12 +245,10 @@ test('provider tiles start collapsed and open one at a time', async ({ page }) =
   await expect(heads.nth(1)).toHaveAttribute('aria-expanded', 'false');
 });
 
-test('Jev connects with an API key as optional decisions and does not unlock chats', async ({
-  page,
-}) => {
+test('Jev connects with an API key as the advisor and does not unlock chats', async ({ page }) => {
   await enterName(page, 'Hazel');
   const jev = dialog(page).locator('.pcard').filter({ hasText: 'Jev' });
-  await expect(dialog(page).getByRole('heading', { name: 'Optional decisions' })).toBeVisible();
+  await expect(dialog(page).getByRole('heading', { name: 'Advisor' })).toBeVisible();
   await openTile(page, 'Jev');
   await expect(jev.getByRole('tab')).toHaveCount(0);
   await expect(jev.getByRole('link', { name: /TypeSafe console/ })).toHaveAttribute(

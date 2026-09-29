@@ -13,16 +13,27 @@ interface SetupSwitchProps {
   label: string;
   checked: boolean;
   disabled?: boolean;
+  id?: string;
+  describedBy?: string;
   onChange: (checked: boolean) => void;
 }
 
-export function SetupSwitch({ label, checked, disabled = false, onChange }: SetupSwitchProps) {
+export function SetupSwitch({
+  label,
+  checked,
+  disabled = false,
+  id,
+  describedBy,
+  onChange,
+}: SetupSwitchProps) {
   return (
     <label className="as-switch">
       <input
+        id={id}
         type="checkbox"
         role="switch"
         aria-label={label}
+        aria-describedby={describedBy}
         checked={checked}
         disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}

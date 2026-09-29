@@ -1,43 +1,47 @@
+import '../chat/project/agent-setup.css';
 import { useId } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UpdateProfileRequest } from '@spark-outpost/contracts';
-import { setupApi, setupKey } from '../api/setup.ts';
+import { SetupSwitch } from '../chat/project/SetupCard.tsx';
+import { SettingRow } from './SettingRow.tsx';
+import { useProfileSetting } from './use-profile-setting.ts';
 
 interface ProfileSwitchSettingProps {
   enabled: boolean;
   label: string;
+  info: string;
   hint: string;
+  disabled?: boolean;
   toUpdate: (value: boolean) => UpdateProfileRequest;
 }
 
 export function ProfileSwitchSetting({
   enabled,
   label,
+  info,
   hint,
+  disabled = false,
   toUpdate,
 }: ProfileSwitchSettingProps) {
+  const switchId = useId();
   const hintId = useId();
-  const queryClient = useQueryClient();
-  const save = useMutation({
-    mutationFn: (value: boolean) => setupApi.updateProfile(toUpdate(value)),
-    onSuccess: (state) => queryClient.setQueryData(setupKey, state),
-  });
-  const checked = save.isPending ? save.variables : enabled;
+  const setting = useProfileSetting(enabled, toUpdate);
   return (
-    <div className="field">
-      <label className="check-row">
-        <input
-          type="checkbox"
-          role="switch"
-          checked={checked}
-          aria-describedby={hintId}
-          onChange={(event) => save.mutate(event.target.checked)}
-        />
-        <span>{label}</span>
-      </label>
-      <p id={hintId} className="set-hint" aria-live="polite">
-        {save.isError ? save.error.message : hint}
-      </p>
-    </div>
+    <SettingRow
+      label={label}
+      controlId={switchId}
+      info={info}
+      hint={setting.error ?? hint}
+      hintId={hintId}
+      disabled={disabled}
+    >
+      <SetupSwitch
+        id={switchId}
+        label={label}
+        checked={setting.value}
+        disabled={disabled}
+        describedBy={hintId}
+        onChange={setting.set}
+      />
+    </SettingRow>
   );
 }

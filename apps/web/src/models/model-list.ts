@@ -1,5 +1,5 @@
 import type { ModelCard, ModelCardView, ModelTier } from '@spark-outpost/contracts';
-import { formatPrice, statLines } from './model-card-stats.ts';
+import { formatPrice, formatTokenCount, statLines } from './model-card-stats.ts';
 
 export const ALL_PROVIDERS = 'all';
 
@@ -25,49 +25,60 @@ export function shownProvider(saved: string, providers: readonly string[]): stri
   return providers.includes(saved) ? saved : ALL_PROVIDERS;
 }
 
-export type ModelSort = 'tier' | 'price' | 'speed';
-
 const TIER_ORDER: Record<ModelTier, number> = { small: 0, mid: 1, top: 2, frontier: 3 };
-const SPEED_ORDER: Record<ModelCard['speed'], number> = {
-  fastest: 0,
-  fast: 1,
-  moderate: 2,
-  slower: 3,
+
+const ROLES: Partial<Record<ModelTier, string>> = {
+  mid: 'Everyday Builder, Critic, answers',
+  top: 'Complex and risky work',
 };
 
-function blendedPrice(card: ModelCard): number {
-  return card.price
-    ? card.price.inputPerMillion + card.price.outputPerMillion
-    : Number.POSITIVE_INFINITY;
+const RETIREMENT_SHOWN_DAYS = 90;
+const DAY_MS = 86_400_000;
+
+export function usedBySpark(view: ModelCardView): boolean {
+  return ROLES[view.card.tier] !== undefined && !view.staleness.retiring;
 }
 
-const SORT_KEYS: Record<ModelSort, (card: ModelCard) => number> = {
-  tier: (card) => TIER_ORDER[card.tier],
-  price: blendedPrice,
-  speed: (card) => SPEED_ORDER[card.speed],
-};
-
-export function sortModels(models: readonly ModelCardView[], sort: ModelSort): ModelCardView[] {
-  const key = SORT_KEYS[sort];
-  return models.toSorted(
-    (a, b) => key(a.card) - key(b.card) || TIER_ORDER[a.card.tier] - TIER_ORDER[b.card.tier],
-  );
+export function orderModels(models: readonly ModelCardView[]): ModelCardView[] {
+  const rank = (view: ModelCardView) => (usedBySpark(view) ? 0 : 10) + TIER_ORDER[view.card.tier];
+  return models.toSorted((a, b) => rank(a) - rank(b));
 }
 
-const TIER_NOTES: Partial<Record<ModelTier, string>> = {
-  small: 'The harness never picks it; it runs only when you choose it for a chat.',
-  mid: 'Scouts, answers, Critics and everyday Builders run here.',
-  top: 'Builders move up to it for complex or destructive work.',
-  frontier: 'The rules never pick it; it runs only when you choose it for a chat.',
-};
+export function roleLine(view: ModelCardView): string | null {
+  return usedBySpark(view) ? (ROLES[view.card.tier] ?? null) : null;
+}
 
-export function tierNote(tier: ModelTier): string | null {
-  return TIER_NOTES[tier] ?? null;
+function shortDate(date: string, now: number): string {
+  const sameYear = date.slice(0, 4) === String(new Date(now).getUTCFullYear());
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    ...(sameYear ? {} : { year: 'numeric' }),
+    timeZone: 'UTC',
+  });
+}
+
+function retiresSoon(card: ModelCard, now: number): boolean {
+  if (!card.retiresNotBefore) return false;
+  return Date.parse(card.retiresNotBefore) - now <= RETIREMENT_SHOWN_DAYS * DAY_MS;
+}
+
+export function modelTag(view: ModelCardView, now: number = Date.now()): string | null {
+  if (retiresSoon(view.card, now)) return `Retiring ${shortDate(view.card.retiresNotBefore!, now)}`;
+  return usedBySpark(view) ? null : 'Only when you pick it';
+}
+
+export function retirementDetail(card: ModelCard): string | null {
+  return card.retiresNotBefore ? `Retires ${card.retiresNotBefore}` : null;
 }
 
 export function shortPrice(card: ModelCard): string {
   if (!card.price) return 'No price listed';
-  return `${formatPrice(card.price.inputPerMillion)} / ${formatPrice(card.price.outputPerMillion)} per M`;
+  return `${formatPrice(card.price.inputPerMillion)} / ${formatPrice(card.price.outputPerMillion)}`;
+}
+
+export function metaLine(card: ModelCard): string[] {
+  return [shortPrice(card), `${formatTokenCount(card.contextTokens)} context`, card.speed];
 }
 
 export function effortRange(card: ModelCard): string {
@@ -77,25 +88,21 @@ export function effortRange(card: ModelCard): string {
   return `${efforts[0]}–${efforts.at(-1)}`;
 }
 
-export interface Headline {
+export interface BenchmarkBadge {
   text: string;
+  detail: string;
   anecdotal: boolean;
 }
 
-export function benchmarkHeadline(view: ModelCardView): Headline | null {
+export function benchmarkBadge(view: ModelCardView): BenchmarkBadge | null {
   const best = statLines(view.stats).toSorted(
     (a, b) => b.passed / b.n - a.passed / a.n || b.n - a.n,
   )[0];
   if (!best) return null;
   const cost = `${best.estimated ? '~' : ''}$${best.meanCostUsd.toFixed(3)}`;
   return {
-    text: `Best ${best.passed}/${best.n} passed, ${cost} mean · ${best.label}`,
+    text: `${best.passed}/${best.n} passed`,
+    detail: `Best at ${best.label}, ${cost} mean`,
     anecdotal: best.anecdotal,
   };
-}
-
-export function retirementNote(view: ModelCardView): string | null {
-  const date = view.card.retiresNotBefore;
-  if (!date) return null;
-  return view.staleness.retiring ? `Retiring ${date} · not used by the harness` : `Retires ${date}`;
 }

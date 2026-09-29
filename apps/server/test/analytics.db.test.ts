@@ -238,7 +238,7 @@ describe('analytics spend', () => {
     expect(sonnet!.costUsd).toBeCloseTo(1.5, 6);
     expect(
       spend.leaves.find((leaf) => leaf.provider === 'codex' && leaf.project === 'spark-outpost'),
-    ).toMatchObject({ modelLabel: '6 Sol', estimatedUsd: 0.15, reportedUsd: 0 });
+    ).toMatchObject({ modelLabel: 'GPT-6 Sol', estimatedUsd: 0.15, reportedUsd: 0 });
     expect(spend.jev).toEqual({ calls: 6, costUsd: 0.03 });
     expect(spend.estimatedUsd).toBeCloseTo(0.15 + 0.03, 6);
     const good = spend.perTask.find((row) => row.verdict === 'good')!;
@@ -286,7 +286,7 @@ describe('analytics harness', () => {
         crew: 'Solo',
         depth: 'direct',
         outcome: 'unclear',
-        model: '6 Luna',
+        model: 'GPT-6 Luna',
       }),
     );
     expect(harness.confidence).toHaveLength(6);
