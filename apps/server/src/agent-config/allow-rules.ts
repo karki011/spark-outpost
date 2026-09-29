@@ -1,10 +1,12 @@
 import path from 'node:path';
+import { SHELLS } from '../approvals/command-tree.ts';
 import {
+  COMMAND_WRAPPERS,
   hasControlOperators,
   normalizeCommand,
-  publishesCode,
   splitSimpleCommands,
 } from '../approvals/commands.ts';
+import { publishesCode } from '../approvals/git-commands.ts';
 import { isSecretPath } from '../projects/path-policy.ts';
 import { SECRET_FILE_PATTERNS } from '../projects/secret-files.ts';
 
@@ -16,24 +18,7 @@ export interface AllowRuleVerdict {
 
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 const EVERYTHING = new Set(['', '*', '**', ':*']);
-const COMMAND_RUNNERS = new Set([
-  'bash',
-  'sh',
-  'zsh',
-  'fish',
-  'dash',
-  'ksh',
-  'eval',
-  'source',
-  '.',
-  'sudo',
-  'command',
-  'exec',
-  'nohup',
-  'time',
-  'env',
-  'xargs',
-]);
+const COMMAND_RUNNERS = new Set([...SHELLS, ...COMMAND_WRAPPERS, 'eval', 'source', '.']);
 const PUBLISH_COMMANDS = [
   'git push',
   'git remote add',

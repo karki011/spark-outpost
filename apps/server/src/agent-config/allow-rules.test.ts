@@ -35,6 +35,8 @@ describe('repo allow rules against the safety floor', () => {
     ['Bash(glab mr create)', 'Could push code or change remotes'],
     ['Bash(bash -c:*)', 'Can run any command'],
     ['Bash(sudo npm:*)', 'Can run any command'],
+    ['Bash(timeout:*)', 'Can run any command'],
+    ['Bash(nice:*)', 'Can run any command'],
     ['Bash(npm test && git push)', 'Chains or redirects commands'],
     ['Bash(git * main)', 'Has a wildcard in the middle'],
     ['Read(.env)', 'Could read secret files'],
