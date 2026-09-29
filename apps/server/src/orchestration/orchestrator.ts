@@ -71,6 +71,7 @@ import type { MemberOutcome } from './members.ts';
 import { jevDiffsAllowed, settleObservations } from './observe.ts';
 import { observeScan, startScan } from './observe-scan.ts';
 import { verifyChange } from './verify.ts';
+import { observeCoordination } from '../coordinator/shadow.ts';
 
 const TASK_SESSION_CLOSED = 'task session closed';
 const NEW_TASK_STARTED = 'a new task started';
@@ -143,6 +144,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
         }
         await beginFixRound(s);
       }
+      if (action.role === 'builder' && action.reason === 'first') observeCoordination(s);
       const copied = action.role === 'builder' && s.needsCopy;
       const outcome = copied ? await buildInCopy(s, action) : await buildAndLand(s, action);
       const { result } = outcome;

@@ -16,7 +16,7 @@ import {
 } from '../advisor/policy.ts';
 import type { ScanReport } from '../codescan/scan.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
-import type { CodeScanner } from '../codescan/scanner.ts';
+import type { CodeScanner, ScanOutcome } from '../codescan/scanner.ts';
 import type { ProjectChecks } from '../checks/project-checks.ts';
 import { nextArtifactVersion, type ArtifactWrite } from '../persistence/artifacts.ts';
 import type { Lease } from '../persistence/jobs.ts';
@@ -46,7 +46,10 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   codeScan?: CodeScanner;
   branchPrefix?: string;
   shipAccess?: ShipAccess;
+  coordinator?: CoordinatorMode;
 }
+
+export type CoordinatorMode = 'off' | 'shadow' | 'in_order' | 'parallel';
 
 export type ShipAccess = Omit<GitHubDeps, 'db' | 'workspaceId'>;
 
@@ -130,6 +133,7 @@ export interface Session {
   closeReason: string | null;
   observations: Promise<void>[];
   jevDiffs: boolean;
+  scan?: Promise<ScanOutcome> | null;
   scanReport?: ScanReport | null;
   unverified?: boolean;
   risky?: string | null;

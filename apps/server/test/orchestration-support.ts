@@ -307,6 +307,7 @@ export function startOrchestrator(
     cancelPollMs?: number;
     shipAccess?: OrchestratorDeps['shipAccess'];
     fixRound?: OrchestratorDeps['fixRound'];
+    coordinator?: OrchestratorDeps['coordinator'];
   } = {},
 ): Harness {
   const intake = fetcher
@@ -335,6 +336,7 @@ export function startOrchestrator(
     ...(options.codeScan ? { codeScan: options.codeScan } : {}),
     ...(options.shipAccess ? { shipAccess: options.shipAccess } : {}),
     ...(options.fixRound ? { fixRound: options.fixRound } : {}),
+    ...(options.coordinator ? { coordinator: options.coordinator } : {}),
   });
   return {
     worker,
@@ -364,8 +366,10 @@ export async function startScenario(
   routing: 'auto' | 'pinned' = 'auto',
   model = 'sonnet',
   agentMode: string | null = modeForLegacy('claude', scenario.mode, level),
+  prepare?: (conversationId: string) => Promise<void>,
 ) {
   const { conversationId } = await linkedConversation(t, root);
+  await prepare?.(conversationId);
   await t.db.query('UPDATE conversations SET model_routing = $2 WHERE id = $1', [
     conversationId,
     routing,

@@ -38,6 +38,7 @@ const worker = startWorker({
   concurrency: config.WORKER_CONCURRENCY,
   codeScan: createCodeScanner(db),
   branchPrefix: config.BRANCH_PREFIX,
+  coordinator: config.COORDINATOR_MODE,
   shipAccess: {
     secrets,
     runCommand,

@@ -85,6 +85,7 @@ export function startScan(
 
 export function observeScan(s: Session, scanning: Promise<ScanOutcome> | null): void {
   if (!scanning) return;
+  s.scan = scanning;
   void scanning.then((outcome) => {
     s.scanReport = outcome.report;
   });
