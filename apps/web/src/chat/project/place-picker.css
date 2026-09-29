@@ -16,9 +16,7 @@
   padding: 11px 12px 12px;
   border-radius: var(--r-sm);
   background: var(--raise);
-  box-shadow:
-    0 1px 2px color-mix(in srgb, #000 12%, transparent),
-    0 4px 14px color-mix(in srgb, #000 8%, transparent);
+  box-shadow: 0 1px 1px color-mix(in srgb, #000 10%, transparent);
   text-align: left;
   transition:
     background 0.15s,
@@ -27,15 +25,10 @@
 }
 .pp-card:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow:
-    0 2px 4px color-mix(in srgb, #000 14%, transparent),
-    0 10px 24px color-mix(in srgb, #000 12%, transparent);
+  box-shadow: 0 1px 2px color-mix(in srgb, #000 14%, transparent);
 }
 .pp-card[aria-checked='true'] {
   background: color-mix(in srgb, var(--accent) 12%, var(--raise));
-  box-shadow:
-    0 2px 4px color-mix(in srgb, #000 12%, transparent),
-    0 8px 22px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 .pp-card:focus-visible {
   outline: 2px solid var(--accent);
