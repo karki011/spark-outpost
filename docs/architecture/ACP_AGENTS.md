@@ -60,7 +60,7 @@ Code: `apps/server/src/projects/`, `apps/server/src/persistence/conversation-pro
 
 ## Do in project folders (M2)
 
-A chat linked to a project runs in Do mode when its agent mode (`overrides[provider].agentMode`, default from `provider_connections.agent_mode`) is not read-only; the harness autonomy is `.level`. The run records `runs.mode` (`chat`, `ask`, `do`), `runs.agent_mode` and `runs.level`. See [HARNESS_PLAN.md](HARNESS_PLAN.md#m2-status-september-26-2026) for the decision rules.
+A chat linked to a project runs in Do mode when its agent mode (`overrides[provider].agentMode`, default from `provider_connections.agent_mode`) is not read-only; the harness autonomy is `.level`, defaulting to `profiles.default_level`. The run records `runs.mode` (`chat`, `ask`, `do`), `runs.agent_mode` and `runs.level`. See [HARNESS_PLAN.md](HARNESS_PLAN.md#m2-status-september-26-2026) for the decision rules.
 
 - **Claude.** Same hardening as Ask, with `tools: ['Read','Glob','Grep','Edit','Write','Bash']` and `settings.permissions.ask: ['Bash','Edit','Write']`, so even read-only commands like `ls` reach `session/request_permission`. The chosen Claude mode is applied; Do sessions let the adapter offer Bypass permissions, and the ask rules keep every edit and command at the gate in every mode (HARNESS_PLAN, "Safety floor under the permissive modes"). The prompt note says the agent may change files and that a denied action must not be retried another way.
 - **Codex** (since September 26, [CODEX_DO.md](CODEX_DO.md)). Our codex-acp patch adds the mode `ask-every-action`:
