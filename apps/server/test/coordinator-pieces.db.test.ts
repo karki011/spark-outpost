@@ -92,13 +92,16 @@ async function pieceList(runId: string): Promise<PieceList> {
 }
 
 describe('pieces in order', { timeout: 120_000 }, () => {
-  it('lands a 3-piece story in dependency order, one fresh Builder per piece', async () => {
+  it('plans first, then splits the agreed plan into pieces and lands them in dependency order', async () => {
     const { conversationId, runId } = await begin('#pieces');
-    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
     expect(orchestration.status).toBe('succeeded');
+    expect(asked.map((approval) => approval.title)).toContain('Build this plan?');
     const crew = await children(runId);
     const pieces = crew.filter((child) => child.pieceKey);
     expect(crew[0]).toMatchObject({ role: 'coordinator', name: 'Atlas' });
+    expect(crew[0]!.prompt).toContain('## Agreed plan');
+    expect(crew[0]!.prompt).toContain('Store: build it in `store.ts`');
     expect(pieces.map((child) => [child.role, child.pieceKey, child.name])).toEqual([
       ['builder', 'P1', 'Bolt'],
       ['builder', 'P2', 'Rivet'],
@@ -107,7 +110,12 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(pieces[1]!.resumeKey).toMatch(/:piece:P2$/);
     expect(pieces[1]!.prompt).toContain('- P1 · Store: store.ts');
     const list = await pieceList(runId);
-    expect(list).toMatchObject({ version: 1, placement: 'in_order', status: 'approved' });
+    expect(list).toMatchObject({
+      version: 1,
+      planVersion: 1,
+      placement: 'in_order',
+      status: 'approved',
+    });
     expect(list.pieces.map((piece) => [piece.key, piece.status, piece.check])).toEqual([
       ['P1', 'landed', 'passed'],
       ['P2', 'landed', 'passed'],
@@ -122,7 +130,7 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(orchestration.crew.find((member) => member.pieceKey === 'P3')?.placement).toBe(
       'in_order',
     );
-    const [reply] = await assistantReplies(t, runId);
+    const reply = (await assistantReplies(t, runId)).at(-1);
     expect(reply).toContain('Pieces (3, in order, list v1)');
     expect(reply).toContain('| P2 · API | Rivet | in order |');
   });
@@ -175,7 +183,7 @@ describe('pieces in order', { timeout: 120_000 }, () => {
       [integrators[1]!.name, 'passed'],
     ]);
     expect(await readFile(join(root, 'glue.ts'), 'utf8')).toContain('glued');
-    const [reply] = await assistantReplies(t, runId);
+    const reply = (await assistantReplies(t, runId)).at(-1);
     expect(reply).toContain(`Integration: ${integrators[0]!.name}`);
   });
 
@@ -195,7 +203,7 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     const roles = (await children(runId)).map((child) => child.role);
     expect(roles.slice(0, 3)).toEqual(['coordinator', 'coordinator', 'builder']);
     expect(orchestration.pieces).toBeUndefined();
-    const [reply] = await assistantReplies(t, runId);
+    const reply = (await assistantReplies(t, runId)).at(-1);
     expect(reply).toContain('Coordinator: built with one Builder instead (the piece list was');
   });
 

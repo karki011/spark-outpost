@@ -129,9 +129,21 @@ async function integrator(turn: RoleTurn): Promise<acp.StopReason> {
   return 'end_turn';
 }
 
+export const FAKE_PIECES_PLAN = PIECES.map(
+  (piece, index) => `${index + 1}. ${piece.title}: build it in \`${piece.file}\``,
+).join('\n');
+
+const PLAN_FIRST_ASK = 'Before anything is built, write the plan.';
+
+async function planner(turn: RoleTurn): Promise<acp.StopReason> {
+  await turn.say(`# Plan\n\n${FAKE_PIECES_PLAN}`);
+  return 'end_turn';
+}
+
 export function coordinatorRoleFor(
   text: string,
 ): ((turn: RoleTurn) => Promise<acp.StopReason>) | null {
+  if (text.includes(PLAN_FIRST_ASK) && text.includes('#pieces')) return planner;
   if (text.includes('Role: Coordinator.')) return coordinator;
   if (pieceKey(text)) return piece;
   if (text.includes('Role: Integrator.')) return integrator;

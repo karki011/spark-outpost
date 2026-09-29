@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import {
   allowEdit,
   card,
@@ -7,6 +7,7 @@ import {
   resetCrew,
   send,
   type CrewRepo,
+  autoContinueAfter,
 } from './crew-engine.ts';
 
 let repo: CrewRepo;
@@ -18,13 +19,6 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.afterEach(() => repo.remove());
-
-async function autoContinueAfter(page: Page, seconds: number): Promise<void> {
-  const response = await page.request.patch('/api/profile', {
-    data: { autoContinueSeconds: seconds },
-  });
-  expect(response.ok()).toBe(true);
-}
 
 test('a vague request gets the agent’s own questions, and a quick reply builds it', async ({
   page,

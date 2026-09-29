@@ -102,7 +102,7 @@ describe('ownership and git guards', { timeout: 120_000 }, () => {
     ]);
     expect(list.pieces[1]!.filesChanged).toEqual(['api.ts']);
     expect(await readFile(join(root, 'view.ts'), 'utf8')).toBe('built by P3\n');
-    const [reply] = await assistantReplies(t, runId);
+    const reply = (await assistantReplies(t, runId)).at(-1);
     expect(reply).toContain('`view.ts` reverted (P2, Tack (P3) owns it)');
   });
 
