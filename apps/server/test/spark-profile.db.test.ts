@@ -40,7 +40,7 @@ describe('the Spark migration', () => {
     await rm(before, { recursive: true, force: true });
   });
 
-  it('gives existing profiles Friendly, Spark on, team mode and call me by name', async () => {
+  it('gives existing profiles Friendly and Spark on', async () => {
     const workspaceId = await ensureLocalWorkspace(db);
     await db.query(`INSERT INTO profiles (workspace_id, display_name) VALUES ($1, 'Hazel')`, [
       workspaceId,
@@ -53,8 +53,6 @@ describe('the Spark migration', () => {
       displayName: 'Hazel',
       personality: 'friendly',
       sparkEnabled: true,
-      teamMode: true,
-      useName: true,
     });
     await expect(
       db.query(`UPDATE profiles SET personality = 'grumpy' WHERE workspace_id = $1`, [workspaceId]),
@@ -78,14 +76,10 @@ describe('Spark preferences', () => {
     const { body } = await send('patch', '/api/profile', {
       personality: 'playful',
       sparkEnabled: false,
-      teamMode: false,
-      useName: false,
     }).expect(200);
     expect(body.profile).toMatchObject({
       personality: 'playful',
       sparkEnabled: false,
-      teamMode: false,
-      useName: false,
     });
     await send('patch', '/api/profile', { personality: 'grumpy' }).expect(400);
     const { body: after } = await get('/api/setup').expect(200);

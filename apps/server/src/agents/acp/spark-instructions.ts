@@ -20,10 +20,10 @@ const TONE: Record<Personality, string> = {
 };
 
 export function sparkInstructions(prefs: SparkSessionPrefs, subagents: boolean): string {
-  const name = prefs.useName ? firstName(prefs.displayName) : '';
+  const name = firstName(prefs.displayName);
   const lines = [
     HEADER,
-    ...(prefs.teamMode ? [subagents ? TEAM_WITH_SUBAGENTS : TEAM_WITHOUT_SUBAGENTS] : []),
+    subagents ? TEAM_WITH_SUBAGENTS : TEAM_WITHOUT_SUBAGENTS,
     ...(name
       ? [`The user's name is ${name}. Use it when you explain something or ask them a question.`]
       : []),
@@ -52,7 +52,7 @@ export function withClaudeSpark(
 ): ClaudeRepoOptions | null {
   if (!prefs) return repo;
   const base = repo ?? NO_CLAUDE_REPO;
-  const subagents = hasTools && (base.agentTool || prefs.teamMode);
+  const subagents = hasTools;
   return {
     ...base,
     appendPrompt: joined(base.appendPrompt, sparkInstructions(prefs, subagents)),

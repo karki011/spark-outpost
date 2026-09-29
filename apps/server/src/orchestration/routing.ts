@@ -30,7 +30,6 @@ export interface RouteContext {
   candidates: readonly AdvisorCandidate[];
   request?: string;
   now?: Date;
-  criticSameProvider?: boolean;
 }
 
 export interface MemberRoute {
@@ -63,7 +62,6 @@ function effortIds(candidate: AdvisorCandidate | undefined): string[] {
 }
 
 export function criticProvider(context: RouteContext): string {
-  if (context.criticSameProvider) return context.chat.provider;
   const other = context.candidates.find(
     (candidate) => candidate.provider !== context.chat.provider,
   );

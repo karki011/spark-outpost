@@ -1,12 +1,7 @@
 import '../spark/spark.css';
 import type { Profile } from '@spark-outpost/contracts';
 import { UserBlob } from '../brand/UserBlob.tsx';
-import {
-  NameSetting,
-  PersonalitySetting,
-  SparkSwitch,
-  TeamModeSetting,
-} from '../spark/SparkSettings.tsx';
+import { NameSetting, PersonalitySetting, SparkSwitch } from '../spark/SparkSettings.tsx';
 import { SparkPreview } from '../spark/SparkPreview.tsx';
 import { useReducedMotion } from '../ui/motion.ts';
 
@@ -68,7 +63,6 @@ export function MeetSparkStep({
       </div>
       <PersonalitySetting personality={profile.personality} />
       <SparkSwitch enabled={profile.sparkEnabled} />
-      <TeamModeSetting enabled={profile.teamMode} />
     </>
   );
 }

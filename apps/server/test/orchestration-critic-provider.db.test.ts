@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { updateProfile } from '../src/persistence/setup.ts';
 import {
   RISKY,
   connectProviders,
@@ -37,20 +36,8 @@ async function crew() {
   return orchestration.crew.map((member) => [member.role, member.provider]);
 }
 
-describe('Critic settings', () => {
-  it('sends risky work to a Critic on the other connected provider by default', async () => {
+describe('Critic provider', () => {
+  it('sends risky work to a Critic on the other connected provider', async () => {
     expect(await crew()).toContainEqual(['critic', 'codex']);
-  }, 60_000);
-
-  it('keeps the Critic on the chat’s provider when you turn that off', async () => {
-    await updateProfile(t.db, t.workspaceId, { criticOtherProvider: false });
-    expect(await crew()).toContainEqual(['critic', 'claude']);
-  }, 60_000);
-
-  it('skips the Critic when you turn it off', async () => {
-    await updateProfile(t.db, t.workspaceId, { criticEnabled: false });
-    const members = await crew();
-    expect(members.map(([role]) => role)).not.toContain('critic');
-    expect(members.map(([role]) => role)).toContain('builder');
   }, 60_000);
 });

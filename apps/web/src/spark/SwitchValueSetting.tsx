@@ -1,9 +1,10 @@
 import { useId, type ReactNode } from 'react';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { BlobToggle, type BlobKind } from '../brand/BlobToggle.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
 
 interface SwitchValueSettingProps {
   label: string;
+  blob: BlobKind;
   info: string;
   hint: string;
   on: boolean;
@@ -13,6 +14,7 @@ interface SwitchValueSettingProps {
 
 export function SwitchValueSetting({
   label,
+  blob,
   info,
   hint,
   on,
@@ -28,6 +30,7 @@ export function SwitchValueSetting({
         <BlobToggle
           id={switchId}
           label={label}
+          kind={blob}
           checked={on}
           describedBy={hintId}
           onChange={onToggle}

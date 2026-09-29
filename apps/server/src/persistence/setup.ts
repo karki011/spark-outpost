@@ -32,12 +32,8 @@ interface ProfileRow {
   ship_failing_checks: boolean;
   personality: Personality;
   spark_enabled: boolean;
-  team_mode: boolean;
-  use_name: boolean;
   default_level: InvolvementLevel;
   spend_cap_usd: string | null;
-  critic_enabled: boolean;
-  critic_other_provider: boolean;
   morning_brief: boolean;
   morning_brief_time: string;
 }
@@ -80,8 +76,8 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
   ]);
   const { rows } = await db.query<ProfileRow>(
     `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
-       jev_diffs, ship_failing_checks, personality, spark_enabled, team_mode, use_name,
-       default_level, spend_cap_usd, critic_enabled, critic_other_provider, morning_brief,
+       jev_diffs, ship_failing_checks, personality, spark_enabled, default_level,
+       spend_cap_usd, morning_brief,
        to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
@@ -171,12 +167,8 @@ export async function getSetupState(
     shipFailingChecks: profile.ship_failing_checks,
     personality: profile.personality,
     sparkEnabled: profile.spark_enabled,
-    teamMode: profile.team_mode,
-    useName: profile.use_name,
     defaultLevel: profile.default_level,
     spendCapUsd: effectiveSpendCap(savedSpendCap(profile), serverSpendCapUsd),
-    criticEnabled: profile.critic_enabled,
-    criticOtherProvider: profile.critic_other_provider,
     morningBrief: profile.morning_brief,
     morningBriefTime: profile.morning_brief_time,
   };
@@ -210,14 +202,10 @@ export async function updateProfile(
        ship_failing_checks = COALESCE($8, ship_failing_checks),
        personality = COALESCE($9, personality),
        spark_enabled = COALESCE($10, spark_enabled),
-       team_mode = COALESCE($11, team_mode),
-       use_name = COALESCE($12, use_name),
-       default_level = COALESCE($13, default_level),
-       spend_cap_usd = CASE WHEN $14 THEN COALESCE($15::numeric, 0) ELSE spend_cap_usd END,
-       critic_enabled = COALESCE($16, critic_enabled),
-       critic_other_provider = COALESCE($17, critic_other_provider),
-       morning_brief = COALESCE($18, morning_brief),
-       morning_brief_time = COALESCE($19::time, morning_brief_time),
+       default_level = COALESCE($11, default_level),
+       spend_cap_usd = CASE WHEN $12 THEN COALESCE($13::numeric, 0) ELSE spend_cap_usd END,
+       morning_brief = COALESCE($14, morning_brief),
+       morning_brief_time = COALESCE($15::time, morning_brief_time),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -231,13 +219,9 @@ export async function updateProfile(
       update.shipFailingChecks ?? null,
       update.personality ?? null,
       update.sparkEnabled ?? null,
-      update.teamMode ?? null,
-      update.useName ?? null,
       update.defaultLevel ?? null,
       update.spendCapUsd !== undefined,
       update.spendCapUsd ?? null,
-      update.criticEnabled ?? null,
-      update.criticOtherProvider ?? null,
       update.morningBrief ?? null,
       update.morningBriefTime ?? null,
     ],
@@ -250,8 +234,6 @@ export async function shipsFailingChecks(db: Queryable, workspaceId: string): Pr
 
 export interface SparkPreferences extends SparkSessionPrefs {
   sparkEnabled: boolean;
-  criticEnabled: boolean;
-  criticOtherProvider: boolean;
   savedSpendCapUsd: number | null;
 }
 
@@ -263,11 +245,7 @@ export async function sparkPreferences(
   return {
     displayName: profile.display_name,
     personality: profile.personality,
-    teamMode: profile.team_mode,
-    useName: profile.use_name,
     sparkEnabled: profile.spark_enabled,
-    criticEnabled: profile.critic_enabled,
-    criticOtherProvider: profile.critic_other_provider,
     savedSpendCapUsd: savedSpendCap(profile),
   };
 }

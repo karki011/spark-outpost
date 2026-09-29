@@ -1,7 +1,7 @@
 import '../chat/project/agent-setup.css';
 import { useId } from 'react';
 import type { UpdateProfileRequest } from '@spark-outpost/contracts';
-import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { BlobToggle, type BlobKind } from '../brand/BlobToggle.tsx';
 import { SetupSwitch } from '../chat/project/SetupCard.tsx';
 import { SettingRow } from './SettingRow.tsx';
 import { useProfileSetting } from './use-profile-setting.ts';
@@ -12,7 +12,7 @@ interface ProfileSwitchSettingProps {
   info: string;
   hint: string | ((enabled: boolean) => string);
   disabled?: boolean;
-  blob?: boolean;
+  blob?: BlobKind;
   toUpdate: (value: boolean) => UpdateProfileRequest;
 }
 
@@ -22,13 +22,20 @@ export function ProfileSwitchSetting({
   info,
   hint,
   disabled = false,
-  blob = false,
+  blob,
   toUpdate,
 }: ProfileSwitchSettingProps) {
   const switchId = useId();
   const hintId = useId();
   const setting = useProfileSetting(enabled, toUpdate);
-  const Toggle = blob ? BlobToggle : SetupSwitch;
+  const toggle = {
+    id: switchId,
+    label,
+    checked: setting.value,
+    disabled,
+    describedBy: hintId,
+    onChange: setting.set,
+  };
   return (
     <SettingRow
       label={label}
@@ -38,14 +45,7 @@ export function ProfileSwitchSetting({
       hintId={hintId}
       disabled={disabled}
     >
-      <Toggle
-        id={switchId}
-        label={label}
-        checked={setting.value}
-        disabled={disabled}
-        describedBy={hintId}
-        onChange={setting.set}
-      />
+      {blob ? <BlobToggle kind={blob} {...toggle} /> : <SetupSwitch {...toggle} />}
     </SettingRow>
   );
 }

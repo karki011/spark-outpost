@@ -48,6 +48,7 @@ export function SpendCapSetting({ usd }: { usd: number | null }) {
   return (
     <SwitchValueSetting
       label="Spend cap per task"
+      blob="coin"
       info={INFO}
       hint={hint}
       on={cap !== null}

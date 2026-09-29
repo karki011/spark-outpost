@@ -125,7 +125,6 @@ export interface FlowState {
   solo?: boolean;
   missingContext?: string | null;
   then?: ClarifiedStart;
-  skipCritic?: boolean;
 }
 
 export interface FlowResult {
