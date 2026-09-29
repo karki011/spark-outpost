@@ -175,10 +175,15 @@ test('Settings shows the GitHub connection and saves, then removes, a token', as
   await page.getByRole('tab', { name: 'Connectors' }).click();
   const card = page.locator('.gh-card');
   await expect(card.locator('.gh-badge')).toHaveText('Not connected');
+  const methods = card.getByRole('radiogroup', { name: 'How to connect GitHub' });
+  await expect(methods.getByRole('radio', { name: 'Personal token' })).toBeChecked();
+  await methods.getByRole('radio', { name: 'gh CLI' }).click();
   await expect(card).toContainText('Installed but not signed in');
+  await methods.getByRole('radio', { name: 'GitHub App' }).click();
   await expect(card.getByRole('region', { name: 'GitHub App' })).toContainText('Coming later');
+  await methods.getByRole('radio', { name: 'Personal token' }).click();
 
-  const token = card.getByLabel('GitHub personal access token');
+  const token = card.getByLabel('Personal access token');
   await token.fill('not-a-token');
   await expect(card.getByRole('button', { name: 'Verify token' })).toBeDisabled();
   await token.fill('github_pat_rejected_0123456789abcdef');
@@ -188,6 +193,8 @@ test('Settings shows the GitHub connection and saves, then removes, a token', as
   await token.fill('github_pat_11ABCDEFG0123456789_abcdefghijklmnop');
   await card.getByRole('button', { name: 'Verify token' }).click();
   await expect(card.locator('.gh-active')).toHaveText('Connected with a token as octo-token');
+  await expect(methods).toBeHidden();
+  await card.getByRole('button', { name: 'Manage token' }).click();
   await expect(card.locator('.gh-facts')).toContainText('Fine-grained token');
   await expect(card.locator('.gh-facts')).toContainText('2026');
   await expect(card).not.toContainText('github_pat_');
@@ -196,7 +203,12 @@ test('Settings shows the GitHub connection and saves, then removes, a token', as
   await expect(card.locator('.gh-active')).toHaveText('Not connected');
 
   writeFileSync(FAKE_GH_STATE, 'octo-cli');
+  await methods.getByRole('radio', { name: 'gh CLI' }).click();
   await card.getByRole('button', { name: 'Check again' }).click();
   await expect(card.locator('.gh-active')).toHaveText('Connected through the gh CLI as octo-cli');
+  await expect(methods).toBeHidden();
+  await card.getByRole('button', { name: 'Other ways to connect' }).click();
+  await expect(methods.getByRole('radio', { name: 'gh CLI' })).toBeChecked();
+  await expect(card).toContainText('Signed in as octo-cli');
   await expect(card.locator('.gh-badge')).toHaveText('Connected');
 });

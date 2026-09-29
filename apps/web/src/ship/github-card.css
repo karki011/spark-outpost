@@ -12,23 +12,77 @@
   background: var(--accent-soft);
   color: var(--accent-text);
 }
+.gh-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
 .gh-active {
   margin: 0;
   font-size: 13px;
   font-weight: 500;
 }
+.gh-disclose {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 0;
+  font-size: 12.5px;
+  color: var(--accent-text);
+  font-weight: 500;
+}
+.gh-disclose:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.gh-disclose .chev {
+  transition: transform 0.2s var(--out);
+}
+.gh-disclose[aria-expanded='true'] .chev {
+  transform: rotate(90deg);
+}
+.gh-collapse {
+  overflow: hidden;
+}
+.gh-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 2px;
+}
+.gh-body .seg {
+  max-width: 380px;
+}
 .gh-method {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
+  gap: 8px;
 }
-.gh-method h4 {
+.gh-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   margin: 0;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
+}
+.gh-state::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+.gh-state.ok::before {
+  background: var(--success);
+}
+.gh-state.warn::before {
+  background: var(--warn);
 }
 .gh-note,
 .gh-err {
@@ -36,6 +90,21 @@
   font-size: 12.5px;
   line-height: 1.45;
   color: var(--muted);
+}
+.gh-card .gh-body p {
+  flex: none;
+}
+.gh-card .gh-active,
+.gh-card .gh-state {
+  color: var(--text);
+}
+.gh-note code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--raise);
+  color: var(--text);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 11.5px;
 }
 .gh-err {
   color: var(--danger);
@@ -47,21 +116,29 @@
   align-items: flex-start;
   gap: 6px;
   width: 100%;
+  max-width: 520px;
+}
+.gh-label {
+  font-size: 12.5px;
+  font-weight: 500;
 }
 .gh-keyrow {
   display: flex;
   gap: 6px;
   width: 100%;
 }
-.gh-keyrow .inp,
-.gh-form > .inp {
+.gh-keyrow .inp {
   flex: 1;
-  width: 100%;
   min-width: 0;
 }
 .gh-host {
-  font-size: 12px;
-  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.gh-form > .btn.primary {
+  margin-top: 4px;
 }
 .gh-facts {
   display: grid;
