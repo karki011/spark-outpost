@@ -18,7 +18,7 @@ describe('branchRows', () => {
       'fix/typo',
       'release/2.0',
     ]);
-    expect(rows[0]?.tags).toEqual(['in your folder']);
+    expect(rows[0]?.tags).toEqual(['in my files']);
     expect(rows.at(-1)).toEqual({ name: 'release/2.0', remote: true, tags: ['remote'] });
   });
 

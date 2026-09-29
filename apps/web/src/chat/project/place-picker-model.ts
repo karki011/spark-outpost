@@ -9,9 +9,9 @@ export interface BranchRow {
 const ROWS_SHOWN = 50;
 
 export function placeLabel(workspace: ChatWorkspace, checkoutBranch: string | null): string {
-  if (workspace.requestedBranch) return `${workspace.requestedBranch} · own folder`;
-  if (workspace.place === 'checkout') return `${checkoutBranch ?? 'Checkout'} · your folder`;
-  return 'New branch · own folder';
+  if (workspace.requestedBranch) return `${workspace.requestedBranch} · copy`;
+  if (workspace.place === 'checkout') return `${checkoutBranch ?? 'Your branch'} · my files`;
+  return 'New branch · copy';
 }
 
 export function branchRows(
@@ -24,7 +24,7 @@ export function branchRows(
     ...branches.local.map((name) => ({
       name,
       remote: false,
-      tags: name === checkoutBranch ? ['in your folder'] : [],
+      tags: name === checkoutBranch ? ['in my files'] : [],
     })),
     ...branches.remote.map((name) => ({ name, remote: true, tags: ['remote'] })),
   ];
