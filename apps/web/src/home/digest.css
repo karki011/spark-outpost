@@ -58,7 +58,7 @@
   margin: 10px 0 0 -6px;
 }
 
-#digest-details {
+.dg-details {
   animation: rise 0.2s var(--out) both;
 }
 

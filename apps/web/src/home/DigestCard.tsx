@@ -1,5 +1,5 @@
 import './digest.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConversationSummary, Digest, DigestSuggestion } from '@spark-outpost/contracts';
@@ -102,11 +102,12 @@ function Chips({ chips }: { chips: readonly DigestChip[] }) {
 
 interface OverviewProps {
   digest: Digest;
+  detailsId: string;
   detailsOpen: boolean;
   onToggleDetails: () => void;
 }
 
-function Overview({ digest, detailsOpen, onToggleDetails }: OverviewProps) {
+function Overview({ digest, detailsId, detailsOpen, onToggleDetails }: OverviewProps) {
   const headline = digest.body?.headline;
   if (!headline) return null;
   return (
@@ -117,7 +118,7 @@ function Overview({ digest, detailsOpen, onToggleDetails }: OverviewProps) {
         type="button"
         className="hlink dg-toggle"
         aria-expanded={detailsOpen}
-        aria-controls="digest-details"
+        aria-controls={detailsOpen ? detailsId : undefined}
         onClick={onToggleDetails}
       >
         {detailsOpen ? 'Hide details' : 'Show details'}
@@ -136,6 +137,7 @@ export function DigestCard({ chats, now, onOpenChat, onContinue }: DigestCardPro
   const queryClient = useQueryClient();
   const [auditOpen, setAuditOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(readDetailsOpen);
+  const detailsId = useId();
   const digest = useQuery({
     queryKey: homeKeys.digest,
     queryFn: homeApi.digest,
@@ -209,9 +211,14 @@ export function DigestCard({ chats, now, onOpenChat, onContinue }: DigestCardPro
         )}
         {!writing && view === 'ready' && current && (
           <>
-            <Overview digest={current} detailsOpen={detailsOpen} onToggleDetails={toggleDetails} />
+            <Overview
+              digest={current}
+              detailsId={detailsId}
+              detailsOpen={detailsOpen}
+              onToggleDetails={toggleDetails}
+            />
             {detailsOpen && (
-              <div id="digest-details">
+              <div id={detailsId} className="dg-details">
                 <Lines digest={current} onOpenChat={onOpenChat} />
                 <Suggestions
                   suggestions={current.body?.suggestions ?? []}

@@ -75,15 +75,17 @@ test('the digest details collapse choice survives a reload', async ({ page }) =>
 
   const card = digest(page);
   await expect(card.locator('.dg-lines li')).toHaveCount(2, { timeout: 15_000 });
-  await expect(card.getByRole('button', { name: 'Hide details' })).toHaveAttribute(
-    'aria-expanded',
-    'true',
-  );
+  const hideButton = card.getByRole('button', { name: 'Hide details' });
+  await expect(hideButton).toHaveAttribute('aria-expanded', 'true');
+  const controlled = await hideButton.getAttribute('aria-controls');
+  expect(controlled).not.toBe('digest-details');
+  await expect(page.locator(`[id="${controlled}"] .dg-lines li`)).toHaveCount(2);
 
   await card.getByRole('button', { name: 'Hide details' }).click();
   await expect(card.locator('.dg-lines')).toHaveCount(0);
   const showButton = card.getByRole('button', { name: 'Show details' });
   await expect(showButton).toHaveAttribute('aria-expanded', 'false');
+  await expect(showButton).not.toHaveAttribute('aria-controls');
   await expect(card.locator('.dg-headline')).toBeVisible();
   await expect(card.locator('.dg-chip')).toHaveCount(1);
 
