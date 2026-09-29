@@ -75,7 +75,7 @@ it('opens the Full auto draft PR from the chat branch and leaves the checkout un
   expect(await readFile(path.join(repo.root, 'notes.txt'), 'utf8')).toBe('one\n');
   const detail = (await getConversationDetail(t.db, conversationId))!;
   const reply = detail.messages.map((message) => message.content).join('\n');
-  expect(reply).toContain(`The change is on ${copy.branch} in this chat's worktree.`);
+  expect(reply).toContain(`The change is on ${copy.branch} in this chat's copy of your project.`);
 }, 120_000);
 
 it('reverts a turn inside the chat worktree', async () => {
