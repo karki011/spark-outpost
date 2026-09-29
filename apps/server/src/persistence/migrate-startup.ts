@@ -2,7 +2,7 @@ import type { Db } from './db.ts';
 import { MigrationError, runMigrations } from './migrate.ts';
 
 export interface StartupMigrationOptions {
-  backup: () => Promise<string>;
+  backup?: (() => Promise<string>) | undefined;
   dir?: string;
 }
 
@@ -11,10 +11,11 @@ export interface StartupMigrationResult {
   backupPath: string | null;
 }
 
-function backupNote(backupPath: string | null): string {
-  return backupPath
-    ? `The backup taken before migrating is at ${backupPath}.`
-    : 'No backup was taken because the database was empty.';
+function backupNote(backupPath: string | null, enabled: boolean): string {
+  if (backupPath) return `The backup taken before migrating is at ${backupPath}.`;
+  return enabled
+    ? 'No backup was taken because the database was empty.'
+    : 'No backup was taken because BACKUP_DIR is not set.';
 }
 
 export async function migrateAtStartup(
@@ -22,9 +23,11 @@ export async function migrateAtStartup(
   options: StartupMigrationOptions,
 ): Promise<StartupMigrationResult> {
   let backupPath: string | null = null;
+  const { backup } = options;
   const beforeUpgrade = async (pending: string[]) => {
+    if (!backup) return;
     try {
-      backupPath = await options.backup();
+      backupPath = await backup();
     } catch (error) {
       throw new Error(
         `Could not back up the database before applying ${pending.join(', ')}; no migrations were applied. ${(error as Error).message}`,
@@ -40,7 +43,9 @@ export async function migrateAtStartup(
     return { applied, backupPath };
   } catch (error) {
     if (!(error instanceof MigrationError)) throw error;
-    throw new Error(`${error.message}. ${backupNote(backupPath)}`, { cause: error });
+    throw new Error(`${error.message}. ${backupNote(backupPath, Boolean(backup))}`, {
+      cause: error,
+    });
   }
 }
 
@@ -48,7 +53,9 @@ export async function migrateOrExit(db: Db, options: StartupMigrationOptions): P
   try {
     const { applied, backupPath } = await migrateAtStartup(db, options);
     if (applied.length === 0) return;
-    console.log(`Applied migrations: ${applied.join(', ')}. ${backupNote(backupPath)}`);
+    console.log(
+      `Applied migrations: ${applied.join(', ')}. ${backupNote(backupPath, Boolean(options.backup))}`,
+    );
   } catch (error) {
     console.error((error as Error).message);
     await db.end();

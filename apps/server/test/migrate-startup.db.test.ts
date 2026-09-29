@@ -119,6 +119,16 @@ describe('migrateAtStartup', () => {
     expect(await tableExists(db, 'tags')).toBe(true);
   });
 
+  it('applies pending migrations without a backup when none is configured', async () => {
+    await addMigration('0002_tags.sql', 'CREATE TABLE tags (id int PRIMARY KEY);');
+    const db = openDb();
+
+    const result = await migrateAtStartup(db, { dir: migrations });
+
+    expect(result).toEqual({ applied: ['0002_tags.sql'], backupPath: null });
+    expect(await tableExists(db, 'tags')).toBe(true);
+  });
+
   it('skips the backup when nothing is pending', async () => {
     let backupCalls = 0;
     const result = await migrateAtStartup(openDb(), {

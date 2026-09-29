@@ -7,7 +7,7 @@ import { pruneProtocolLog } from '../persistence/audit-log.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { startOutcomeSweep } from '../outcomes/sweep.ts';
-import { backupDatabase } from '../persistence/backup.ts';
+import { configuredBackup } from '../persistence/startup-backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
@@ -31,13 +31,7 @@ const apiToken = takeLaunchToken(
 );
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.api });
-await migrateOrExit(db, {
-  backup: () =>
-    backupDatabase({
-      databaseUrl: config.DATABASE_URL,
-      ...(config.BACKUP_DIR ? { dir: config.BACKUP_DIR } : {}),
-    }),
-});
+await migrateOrExit(db, { backup: configuredBackup(config) });
 
 const workspaceId = await ensureLocalWorkspace(db);
 await pruneEmptyConversations(db, workspaceId);
