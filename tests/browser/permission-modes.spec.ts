@@ -137,6 +137,10 @@ test("the approval card offers every option the agent sent, with the agent's wor
       timeout: 30_000,
     });
   }
+  await page.reload();
+  await expect(card(page, /Run a command\?/).getByRole('status')).toHaveText(
+    choices.map(([, , result]) => result),
+  );
 });
 
 test('retiring models stay hidden until you ask for them', async ({ page }) => {

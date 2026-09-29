@@ -17,6 +17,7 @@ import { Markdown } from '../markdown/Markdown.tsx';
 import { shownText, streamLeads, type RunStep } from '../run-projection.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { WorkLog } from '../WorkLog.tsx';
+import { shownApprovals } from './crew-items.ts';
 
 const EFFORT_SCALE = ['low', 'medium', 'high', 'xhigh', 'max'].map((id) => ({
   id,
@@ -126,7 +127,7 @@ function StreamedBody({
       steps={steps}
       text={shownText(stream, stored.text, !live)}
       error={leads ? stream.error : (stored.error ?? stream.error)}
-      approvals={leads ? stream.approvals : stored.approvals}
+      approvals={shownApprovals(stored.approvals, stream.approvals)}
     />
   );
 }

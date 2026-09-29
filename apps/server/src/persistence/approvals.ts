@@ -351,13 +351,14 @@ export async function expirePendingApprovals(
   return rows.length;
 }
 
-export async function pendingApprovalsForConversation(
+export async function shownApprovalsForConversation(
   db: Queryable,
   conversationId: string,
 ): Promise<Approval[]> {
   const { rows } = await db.query<ApprovalRow>(
     `SELECT a.* FROM approvals a JOIN runs r ON r.id = a.run_id
-     WHERE r.conversation_id = $1 AND a.status = 'pending' ORDER BY a.created_at`,
+     WHERE r.conversation_id = $1 AND (a.status = 'pending' OR a.decided_by = 'user')
+     ORDER BY a.created_at`,
     [conversationId],
   );
   return rows.map(toApproval);

@@ -162,7 +162,8 @@ export async function runLive(
   const asked: string[] = [];
   for (let tick = 0; tick < 3_000; tick++) {
     const detail = await getConversationDetail(t.db, conversationId);
-    for (const approval of detail?.approvals ?? []) {
+    const pending = (detail?.approvals ?? []).filter((approval) => approval.status === 'pending');
+    for (const approval of pending) {
       const choice = answer(approval);
       asked.push(`${approval.kind}: ${approval.title} -> ${choice.optionId}`);
       await decideApproval(t.db, t.workspaceId, approval.id, { scope: 'once', ...choice });

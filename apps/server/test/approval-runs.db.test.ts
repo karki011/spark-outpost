@@ -100,7 +100,14 @@ describe('Do runs with approvals', () => {
     }).expect(200);
     expect((await settled(runId)).status).toBe('succeeded');
     const detail = await getConversationDetail(t.db, conversationId);
-    expect(detail?.approvals).toEqual([]);
+    expect(detail?.approvals).toEqual([
+      expect.objectContaining({
+        id: approval.id,
+        status: 'allowed',
+        decidedBy: 'user',
+        decisionOptionId: 'allow',
+      }),
+    ]);
     const builder = await builderRunId(runId);
     expect(approval.runId).toBe(builder);
     expect(detail?.activity[builder]?.map((step) => step.name)).toContain(
@@ -127,6 +134,7 @@ describe('Do runs with approvals', () => {
       status: 'cancelled',
       decidedBy: 'stop',
     });
+    expect((await getConversationDetail(t.db, conversationId))?.approvals).toEqual([]);
   });
 
   it('fails the run when nobody answers in time', async () => {
