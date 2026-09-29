@@ -75,6 +75,12 @@ export const HARDENING_FINDINGS = [
   '`apps/web/src/analytics/spend-csv.ts:7`: A field containing `\\r` is left unquoted. Some CSV readers treat it as a row break, which can corrupt the exported rows.',
 ];
 
+export const EDGE_FINDINGS = [
+  '[hardening] `notes.txt:1`: running the file through a symlinked bin prints nothing instead of the result.',
+  "[hardening] `toString` is looked up on a plain object and runs `Object.prototype.toString` instead of printing 'Unknown command'.",
+  '[style] The command table could be a `Map`.',
+];
+
 const ASKED_TO_FIX = '## Findings the Builder was asked to fix';
 
 function reviewNumber(text: string): number {
@@ -103,6 +109,8 @@ function reviewFindings(text: string): { findings: string[]; concerns: boolean }
   }
   if (text.includes('#stylereview')) return { findings: STYLE_FINDINGS, concerns: true };
   if (text.includes('#hardeningreview')) return { findings: HARDENING_FINDINGS, concerns: true };
+  if (text.includes('#edgereview')) return { findings: EDGE_FINDINGS, concerns: true };
+  if (text.includes('#edgegood')) return { findings: EDGE_FINDINGS, concerns: false };
   if (text.includes('#concerns')) {
     return { findings: ['The divider test is missing'], concerns: true };
   }

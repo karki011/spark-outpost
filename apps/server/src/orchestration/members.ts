@@ -1,4 +1,5 @@
 import type { AgentRole, RunMode } from '@spark-outpost/contracts';
+import { findingKind } from '../advisor/finding-questions.ts';
 import { previousReply } from '../advisor/intake-recorder.ts';
 import { insertChildRun, markInPlaceMember, mergeRoute } from '../persistence/orchestrations.ts';
 import { requestCancel } from '../persistence/runs.ts';
@@ -295,6 +296,9 @@ async function afterCritic(s: Session, result: MemberResult, route: MemberRoute)
   const findings = reviewFindings(result.text);
   await mergeRoute(s.deps.db, result.runId, { verdict });
   s.findings = verdict === 'concerns' ? findings : [];
+  if (verdict === 'looks_good') {
+    s.suggestions = findings.filter((finding) => findingKind(finding) === 'suggestion');
+  }
   if (!s.taskId) return verdict;
   const body = {
     reviewer: route.pick,

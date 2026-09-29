@@ -55,7 +55,10 @@ export async function correctnessFindings(
         s.control.signal,
       )
     : null;
-  const readings = readFindings(shown, call?.status === 'answered' ? call.response : null);
+  const checksPass = checksPhrase(s.checkBodies) === 'checks pass';
+  const readings = readFindings(shown, call?.status === 'answered' ? call.response : null, {
+    checksPass,
+  });
   const fixable = readings.filter((reading) => reading.correct).map((reading) => reading.finding);
   s.suggestions = readings
     .filter((reading) => !reading.correct && reading.kind === 'suggestion')

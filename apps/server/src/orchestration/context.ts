@@ -167,6 +167,9 @@ export const PLAN_FOLLOW_RULE =
 const VERDICT_RULE =
   'List findings as "- " bullets under a "Findings:" line, then end with exactly one line: "Verdict: looks good" or "Verdict: concerns".';
 
+export const FINDING_KIND_RULE =
+  'Start each finding with its kind: "[bug]" for behaviour the change gets wrong for the request (a wrong result, a crash, a failing check, or a vulnerability the change adds, such as SQL injection); "[missing]" for something the request or agreed plan asks for that the change lacks; "[hardening]" for robustness, security hardening, or edge-case inputs the request did not ask about; "[style]" for naming, structure or readability. Use "Verdict: concerns" only for [bug] or [missing] findings.';
+
 function reviewSections(context: Omit<CriticContext, 'request' | 'plan'>): string[] {
   return [
     section('Files changed', changeLines(context.changes)),
@@ -195,6 +198,7 @@ export function criticPrompt(context: CriticContext): string {
   return [
     'Role: Critic. Review the change below; do not change files. This is an AI review, not verification.',
     VERDICT_RULE,
+    FINDING_KIND_RULE,
     ...optional(criticStyle(context.buildStyle ?? 'off')),
     ...(context.agreedPlan ? [PLAN_FOLLOW_RULE] : []),
     section('Request', cap(context.request, REQUEST_LIMIT)),

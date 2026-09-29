@@ -179,3 +179,52 @@ describe('asking Jev about findings', () => {
     expect(readings[0]!.rules).toBe(true);
   });
 });
+
+const LIVE_EDGE_CASES = [
+  '[hardening] `bin/mathlib.js:3`: the main-module check compares `process.argv[1]` to the file path, so running through a symlinked bin prints nothing instead of the result.',
+  "[hardening] `mathlib toString 1 2` looks the command up on a plain object and runs `Object.prototype.toString` instead of printing 'Unknown command'.",
+  "[hardening] `mathlib add ' ' 1` returns 1 instead of an error, and `Infinity` is accepted as a number.",
+];
+
+describe('the Critic tags each finding with its kind (B3)', () => {
+  it('reads the tag before the wording, so an edge case the request did not ask about is a suggestion', () => {
+    for (const finding of LIVE_EDGE_CASES) {
+      expect(findingKind(finding), finding).toBe('suggestion');
+    }
+    expect(findingKind('[bug] `divide(1, 0)` returns Infinity instead of throwing.')).toBe('bug');
+    expect(findingKind('[missing] The README has no CLI section the request asked for.')).toBe(
+      'bug',
+    );
+    expect(findingKind('[style] The switch could be a lookup table.')).toBe('style');
+    expect(findingKind('**[Bug]** `sum([])` crashes.')).toBe('bug');
+  });
+
+  it('never lets Jev turn a tagged hardening or style finding into a fix turn', () => {
+    const readings = readFindings(
+      [LIVE_EDGE_CASES[0]!, '[style] The helper could be shorter'],
+      answered({ finding_1: 0.95, finding_2: 0.95 }),
+    );
+    expect(readings.map((reading) => [reading.correct, reading.by])).toEqual([
+      [false, 'rules'],
+      [false, 'rules'],
+    ]);
+  });
+
+  it('lets Jev demote a tagged bug', () => {
+    const [reading] = readFindings(
+      ['[bug] `sum([])` returns 0 instead of throwing.'],
+      answered({ finding_1: 0.05 }),
+    );
+    expect([reading!.correct, reading!.by]).toEqual([false, 'jev']);
+  });
+
+  it('keeps Jev from promoting a style finding once the checks pass', () => {
+    const findings = ['The helper could be shorter'];
+    const sure = answered({ finding_1: 0.9 });
+    expect(readFindings(findings, sure)[0]!.correct).toBe(true);
+    expect(readFindings(findings, sure, { checksPass: true })[0]).toMatchObject({
+      correct: false,
+      by: 'rules',
+    });
+  });
+});

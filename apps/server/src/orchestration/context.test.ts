@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   HISTORY_TURNS,
+  FINDING_KIND_RULE,
   INCREMENT_RULE,
   MAKE_CHANGE_RULE,
   SHIP_RULE,
@@ -155,5 +156,14 @@ describe('review parsing', () => {
     expect(reviewFindings(text)).toEqual(['Missing test', 'Typo in name']);
     expect(reviewVerdict('**Verdict:** looks good')).toBe('looks_good');
     expect(reviewVerdict('I think it is fine')).toBe('unclear');
+  });
+});
+
+describe('the Critic finding schema (B3)', () => {
+  it('asks the Critic to tag each finding and keep concerns for bugs and missing behaviour', () => {
+    const prompt = criticPrompt({ request: 'r', plan: [], changes: [], patch: '', checks: [] });
+    expect(prompt).toContain(FINDING_KIND_RULE);
+    expect(FINDING_KIND_RULE).toMatch(/\[bug\].*\[missing\].*\[hardening\].*\[style\]/s);
+    expect(FINDING_KIND_RULE).toMatch(/"Verdict: concerns" only for \[bug\] or \[missing\]/);
   });
 });
