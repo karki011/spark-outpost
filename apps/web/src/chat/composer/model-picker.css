@@ -166,31 +166,7 @@
   padding-top: 6px;
   color: var(--faint);
 }
-.cswitch {
-  flex: none;
-  width: 30px;
-  height: 18px;
-  padding: 2px;
-  border-radius: 999px;
-  background: var(--line-strong);
-  transition: background 0.2s var(--out);
-}
-.cswitch i {
-  display: block;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--panel);
-  transition: transform 0.2s var(--out);
-}
-.copt[aria-checked='true'] .cswitch,
-.mretire[aria-checked='true'] .cswitch {
-  background: var(--accent);
-}
-.copt[aria-checked='true'] .cswitch i,
-.mretire[aria-checked='true'] .cswitch i {
-  transform: translateX(12px);
-}
+
 .mretire {
   display: flex;
   align-items: center;
