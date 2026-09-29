@@ -216,7 +216,3 @@
   color: var(--faint);
   transform: rotate(90deg);
 }
-.mpop.placepop {
-  left: 12px;
-  width: 300px;
-}

@@ -34,8 +34,8 @@ export const workspaceApi = {
       method: 'POST',
       body: '{}',
     }),
-  branches: (projectId: string): Promise<ProjectBranches> =>
-    request(projectBranchesSchema, `/projects/${projectId}/branches`),
+  branches: (projectId: string, fetch = false): Promise<ProjectBranches> =>
+    request(projectBranchesSchema, `/projects/${projectId}/branches${fetch ? '?fetch=1' : ''}`),
 };
 
 export function useChatWorkspace(conversationId: string, enabled = true) {
@@ -51,6 +51,16 @@ export function useProjectBranches(projectId: string | null, enabled: boolean) {
     queryKey: workspaceKeys.branches(projectId ?? ''),
     queryFn: () => workspaceApi.branches(projectId ?? ''),
     enabled: enabled && projectId !== null,
+  });
+}
+
+export function useFetchBranches(projectId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => workspaceApi.branches(projectId ?? '', true),
+    onSuccess: (branches) => {
+      queryClient.setQueryData(workspaceKeys.branches(projectId ?? ''), branches);
+    },
   });
 }
 

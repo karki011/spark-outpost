@@ -21,6 +21,22 @@ import { isGitWorkTree } from '../projects/snapshot.ts';
 import { paramId, parseBody } from './validation.ts';
 
 const run = promisify(execFile);
+const FETCH_TIMEOUT_MS = 20_000;
+
+async function hasRemote(root: string): Promise<boolean> {
+  const listed = await run('git', ['-C', root, 'remote']).catch(() => ({ stdout: '' }));
+  return listed.stdout.trim() !== '';
+}
+
+async function fetchRemotes(root: string): Promise<boolean> {
+  return run('git', ['-C', root, 'fetch', '--all', '--prune', '--quiet'], {
+    timeout: FETCH_TIMEOUT_MS,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+  }).then(
+    () => true,
+    () => false,
+  );
+}
 
 export type OpenFolder = (path: string) => Promise<void>;
 
@@ -141,15 +157,31 @@ export function chatWorkspaceRoutes({ db, workspaceId, openFolder }: ChatWorkspa
 
   router.get('/projects/:id/branches', async (req, res) => {
     const project = await getProject(db, workspaceId, paramId(req));
-    const empty: ProjectBranches = { current: null, local: [], remote: [] };
+    const empty: ProjectBranches = {
+      current: null,
+      local: [],
+      remote: [],
+      hasRemote: false,
+      fetchFailed: false,
+    };
     if (!(await isGitWorkTree(project.rootPath))) {
       res.json(empty);
       return;
     }
+    const remoteSet = await hasRemote(project.rootPath);
+    const fetchFailed =
+      remoteSet && req.query.fetch === '1' ? !(await fetchRemotes(project.rootPath)) : false;
     const branches = await listBranches(project.rootPath);
     const local = new Set(branches.local);
     const remote = [...branches.remote.keys()].filter((branch) => !local.has(branch));
-    res.json({ current: branches.current, local: branches.local, remote });
+    const body: ProjectBranches = {
+      current: branches.current,
+      local: branches.local,
+      remote,
+      hasRemote: remoteSet,
+      fetchFailed,
+    };
+    res.json(body);
   });
 
   return router;
