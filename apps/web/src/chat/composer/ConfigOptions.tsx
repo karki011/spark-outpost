@@ -6,6 +6,7 @@ import type {
   ConfigValues,
 } from '@spark-outpost/contracts';
 import { TickIcon } from '../../ui/icons.tsx';
+import { BlobSwitchFace } from '../../brand/BlobToggle.tsx';
 
 interface ConfigOptionsProps {
   options: ConfigOptionInfo[];
@@ -51,9 +52,7 @@ function SwitchOption({
         <b>{option.name}</b>
         {option.description && <small id={hintId}>{option.description}</small>}
       </span>
-      <span className="cswitch" aria-hidden="true">
-        <i />
-      </span>
+      <BlobSwitchFace checked={checked} />
     </button>
   );
 }

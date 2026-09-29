@@ -154,13 +154,6 @@
   cursor: pointer;
 }
 
-.check-row input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--accent);
-}
-
 .set-projects {
   margin: 0;
   padding: 0;

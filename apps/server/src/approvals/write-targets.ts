@@ -3,6 +3,9 @@ import { programName, resolveCommandPath } from './commands.ts';
 
 const UNKNOWN_WORD = /\$|`/;
 const REDIRECT = /(?:^|[^<>&\d])\d?>>?(?!&)\s*([^\s;&|<>()]+)/g;
+const REDIRECT_OPERATOR = /(?:^|[^<>&\d])\d?>>?(?!&)/g;
+const INPUT_OPERATOR = /(?:^|[^<])\d?<(?![<(&>])/g;
+const REDIRECT_TARGET = /^\s*(?:"([^"]*)"|'([^']*)'|([^\s;&|<>()]+))/;
 const INPUT = /<\s*([^\s;&|<>()]+)/g;
 const DISCARDED = new Set(['/dev/null', '/dev/stdout', '/dev/stderr']);
 const WRITERS = new Set(['touch', 'tee', 'rm', 'rmdir', 'unlink', 'mv', 'cp', 'truncate']);
@@ -58,6 +61,25 @@ function scripts(command: string): string[] {
     return script ? [script] : [];
   });
   return [command, ...nested];
+}
+
+function operatorTargets(command: string, operator: RegExp): Set<string> {
+  const targets = new Set<string>();
+  for (const script of scripts(command)) {
+    for (const match of unquoted(script).matchAll(operator)) {
+      const target = REDIRECT_TARGET.exec(script.slice(match.index + match[0].length));
+      if (target) targets.add(target[1] ?? target[2] ?? target[3]!);
+    }
+  }
+  return targets;
+}
+
+export function redirectTargets(command: string): Set<string> {
+  return operatorTargets(command, REDIRECT_OPERATOR);
+}
+
+export function inputTargets(command: string): Set<string> {
+  return operatorTargets(command, INPUT_OPERATOR);
 }
 
 export function writeTargets(command: string, cwd: string, home: string): string[] | null {

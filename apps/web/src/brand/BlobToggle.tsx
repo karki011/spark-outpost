@@ -3,11 +3,12 @@ import { useState } from 'react';
 import { useReducedMotion } from '../ui/motion.ts';
 import { SCOUT_ANTENNA, SCOUT_BODY, SCOUT_SPARK } from './scout-shape.ts';
 
-export type BlobKind = 'spark' | 'coin' | 'sun';
+export type BlobKind = 'spark' | 'coin' | 'sun' | 'plain';
 
 interface BlobToggleProps {
   label: string;
-  kind: BlobKind;
+  kind?: BlobKind;
+  size?: 'md' | 'sm';
   checked: boolean;
   onChange: (checked: boolean) => void;
   id?: string;
@@ -70,47 +71,81 @@ function AwakeFace({ kind }: { kind: BlobKind }) {
   );
 }
 
+function BlobPicture({ kind }: { kind: BlobKind }) {
+  return (
+    <svg className="btog-blob" viewBox="0 0 64 64" aria-hidden="true">
+      <g className="btog-hop">
+        {kind === 'sun' && <RisingSun />}
+        <g className="btog-body">
+          {kind === 'spark' && <SparkAntenna />}
+          <path className="btog-skin" d={SCOUT_BODY} />
+          <AwakeFace kind={kind} />
+          <path className="btog-line btog-asleep" d={SLEEPY_EYES} />
+          <ellipse className="btog-yawn" cx="32" cy="48.5" rx="3.2" ry="4" />
+          {kind === 'coin' && <HeldCoin />}
+        </g>
+      </g>
+      <path className="btog-z" d="M54 2.5H60L54 9H60" />
+    </svg>
+  );
+}
+
+function useLive(checked: boolean): boolean {
+  const reducedMotion = useReducedMotion();
+  const [first] = useState(checked);
+  const [changed, setChanged] = useState(false);
+  if (!changed && checked !== first) setChanged(true);
+  return changed && !reducedMotion;
+}
+
+function classesFor(size: 'md' | 'sm', live: boolean, extra = ''): string {
+  return ['btog', size === 'sm' ? 'sm' : '', live ? 'btog-live' : '', extra]
+    .filter(Boolean)
+    .join(' ');
+}
+
 export function BlobToggle({
   label,
-  kind,
+  kind = 'plain',
+  size = 'md',
   checked,
   onChange,
   id,
   describedBy,
   disabled = false,
 }: BlobToggleProps) {
-  const reducedMotion = useReducedMotion();
-  const [touched, setTouched] = useState(false);
-  const live = touched && !reducedMotion;
+  const live = useLive(checked);
   return (
     <button
       id={id}
       type="button"
       role="switch"
-      className={live ? 'btog btog-live' : 'btog'}
+      className={classesFor(size, live)}
+      data-on={checked}
       aria-checked={checked}
       aria-label={label}
       aria-describedby={describedBy}
       disabled={disabled}
-      onClick={() => {
-        setTouched(true);
-        onChange(!checked);
-      }}
+      onClick={() => onChange(!checked)}
     >
-      <svg className="btog-blob" viewBox="0 0 64 64" aria-hidden="true">
-        <g className="btog-hop">
-          {kind === 'sun' && <RisingSun />}
-          <g className="btog-body">
-            {kind === 'spark' && <SparkAntenna />}
-            <path className="btog-skin" d={SCOUT_BODY} />
-            <AwakeFace kind={kind} />
-            <path className="btog-line btog-asleep" d={SLEEPY_EYES} />
-            <ellipse className="btog-yawn" cx="32" cy="48.5" rx="3.2" ry="4" />
-            {kind === 'coin' && <HeldCoin />}
-          </g>
-        </g>
-        <path className="btog-z" d="M54 2.5H60L54 9H60" />
-      </svg>
+      <BlobPicture kind={kind} />
     </button>
+  );
+}
+
+export function BlobSwitchFace({
+  checked,
+  kind = 'plain',
+  size = 'sm',
+}: {
+  checked: boolean;
+  kind?: BlobKind;
+  size?: 'md' | 'sm';
+}) {
+  const live = useLive(checked);
+  return (
+    <span className={classesFor(size, live, 'btog-face')} data-on={checked} aria-hidden="true">
+      <BlobPicture kind={kind} />
+    </span>
   );
 }

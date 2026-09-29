@@ -80,10 +80,8 @@ Read `docs/product/PLAN.md` for product direction and `docs/architecture/PROTOCO
 - Document runnable development and verification commands as the repository is implemented; do not claim nonexistent commands or checks.
 - Keep secrets out of source control, logs, browser bundles, and agent-visible artifacts.
 
-## Task tracking and commands
+## Commands
 
-- Read `docs/KANBAN.md` before starting work; `docs/tasks/board.json` is the task source of truth.
-- Use `pnpm tasks move <ID> <status> "note"` to update progress and regenerate the board. Include acceptance evidence when marking done.
 - Run `pnpm test:db` for storage changes against an isolated PostgreSQL schema in `TEST_DATABASE_URL` (falls back to `DATABASE_URL`); `pnpm db:setup` writes both to `.local/credentials.env`.
 - Run `pnpm check` (format, lint, typecheck, source rules, unused files and exports via knip, contrast audit, ACP coverage, unit tests) and `pnpm test:browser` for browser behavior.
 - Run `pnpm db:setup` once for the isolated native macOS PostgreSQL cluster, then `pnpm db:up`, `pnpm db:migrate` and `pnpm dev`. Stop only this cluster with `pnpm db:stop`; preserve `.local` data and ignored credentials. See `infra/local/README.md`.

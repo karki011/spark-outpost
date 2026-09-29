@@ -7,6 +7,7 @@ import {
 } from '@spark-outpost/contracts';
 import { TickIcon } from '../../ui/icons.tsx';
 import { cleanDescription, optionLabel, retiringLabel, visibleModels } from './model-options.ts';
+import { BlobSwitchFace } from '../../brand/BlobToggle.tsx';
 
 interface ModelListProps {
   provider: ProviderSetup;
@@ -88,9 +89,7 @@ export function ModelList({
           aria-checked={showRetiring}
           onClick={() => setShowRetiring(!showRetiring)}
         >
-          <span className="cswitch" aria-hidden="true">
-            <i />
-          </span>
+          <BlobSwitchFace checked={showRetiring} />
           Show retiring models
         </button>
       )}

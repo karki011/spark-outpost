@@ -303,14 +303,9 @@
   font-size: 13px;
   color: var(--text);
 }
-.tk-switch input {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--accent);
-}
+
 .tk-switch + .tk-field-help {
-  margin: 2px 0 0 24px;
+  margin: 2px 0 0 42px;
 }
 .tk-empty .tk-cform p {
   margin: 0;

@@ -47,6 +47,10 @@ describe('decide() looks inside nested and wrapped commands', () => {
     'sudo -u root rm -rf /tmp/x',
     'rm -rf "$HOME/x"',
     'sh -c \'rm -rf "$1"\' _ /tmp/x',
+    'for x in 1; do rm -rf /tmp/x; done',
+    'if true; then rm -rf /tmp/x; fi',
+    'rm -rf $(echo /tmp/x)',
+    'rm -rf /tm`echo p`/x',
   ])('asks before deleting outside the repo: %s', (command) => {
     expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: OUTSIDE_DELETE_REASON });
   });
@@ -72,19 +76,21 @@ describe('decide() looks inside nested and wrapped commands', () => {
     'sh -c "sh -c \\"sh -c \'sh -c ls\'\\""',
     '$CMD /tmp/x',
     'env -S "rm -rf /tmp/x"',
+    '$(echo rm) -rf /tmp/x',
   ])('asks when a nested command cannot be read: %s', (command) => {
     expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: NESTED_COMMAND_REASON });
   });
 
-  it('refuses force pushes hidden in a shell', () => {
-    expect(fullAccess('sh -c "git push -f origin main"')).toEqual({
-      verdict: 'reject',
-      reason: FORCE_PUSH_REASON,
-    });
-  });
+  it.each(['sh -c "git push -f origin main"', 'if true; then git push -f origin main; fi'])(
+    'refuses force pushes hidden in a shell: %s',
+    (command) => {
+      expect(fullAccess(command)).toEqual({ verdict: 'reject', reason: FORCE_PUSH_REASON });
+    },
+  );
 
   it('refuses Builder publishing hidden behind eval or find', () => {
-    for (const command of ['eval git push', 'find . -maxdepth 0 -exec gh pr create \\;']) {
+    const hidden = ['eval git push', 'find . -maxdepth 0 -exec gh pr create \\;'];
+    for (const command of [...hidden, 'while true; do gh pr create; done']) {
       expect(decide('full_access', run(command), NO_RUN_RULES, [], { builder: true })).toEqual({
         verdict: 'reject',
         reason: BUILDER_PUBLISH_REASON,

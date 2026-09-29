@@ -3,6 +3,7 @@ import { programName, resolveCommandPath, splitSimpleCommands, unwrapCommand } f
 export interface CommandTree {
   commands: string[][];
   opaque: boolean;
+  fedByXargs: string[][];
 }
 
 const MAX_NESTING = 3;
@@ -33,7 +34,7 @@ function hidesCommands(script: string): boolean {
   return quote !== null;
 }
 
-function findRoots(args: readonly string[]): string[] {
+export function findRoots(args: readonly string[]): string[] {
   let index = 0;
   while (index < args.length && FIND_LEADING_OPTION.test(args[index]!)) index++;
   const roots: string[] = [];
@@ -45,7 +46,7 @@ function findRoots(args: readonly string[]): string[] {
   return roots.length > 0 ? roots : ['.'];
 }
 
-function findExecs(args: readonly string[]): string[][] {
+export function findExecs(args: readonly string[]): string[][] {
   const roots = findRoots(args);
   const execs: string[][] = [];
   for (let index = 0; index < args.length; index++) {
@@ -84,6 +85,7 @@ function addCommand(tree: CommandTree, tokens: readonly string[], depth: number)
   const name = programName(program);
   if (name === '') return;
   tree.commands.push(program);
+  if (wrappers.includes('xargs')) tree.fedByXargs.push(program);
   if (UNKNOWN_WORD.test(program[0]!)) tree.opaque = true;
   const runsCode = DELETERS.has(name) || SHELLS.has(name) || name === 'eval';
   if (wrappers.includes('xargs') && runsCode) tree.opaque = true;
@@ -103,7 +105,7 @@ function addScript(tree: CommandTree, script: string, depth: number): void {
 }
 
 export function commandTree(command: string): CommandTree {
-  const tree: CommandTree = { commands: [], opaque: false };
+  const tree: CommandTree = { commands: [], opaque: false, fedByXargs: [] };
   addScript(tree, command, 0);
   return tree;
 }

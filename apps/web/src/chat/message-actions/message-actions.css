@@ -44,6 +44,7 @@
 }
 
 .turn-foot {
+  container-type: inline-size;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -54,6 +55,12 @@
 .turn-foot > .crew-foot,
 .turn-foot > .revert-btn {
   margin-top: 0;
+}
+@container (max-width: 580px) {
+  .turn-foot > .run-meta,
+  .turn-foot > .crew-foot {
+    flex-basis: 100%;
+  }
 }
 .turn-foot > .crew-foot {
   margin-right: 6px;

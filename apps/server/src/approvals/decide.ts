@@ -7,6 +7,8 @@ import { isGitForcePush, isGitPush, publishesCode } from './git-commands.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { isPackageInstall, isSafeRead } from './command-kinds.ts';
 import { pieceRefusal, type PieceGuard, type RelativeOf } from './piece-guard.ts';
+import { diskLister, type FileLister } from './file-lister.ts';
+import { readConcern } from './file-reads.ts';
 
 export interface RequestRoot {
   path: string;
@@ -49,6 +51,7 @@ export const OUTSIDE_WRITE_REASON = 'Changing files outside the repo always asks
 export const SECRET_REASON = 'Secret files always ask';
 export const INSTALL_REASON = 'Installing packages always asks';
 export const NESTED_COMMAND_REASON = "Commands Spark can't see inside always ask";
+export const UNKNOWN_READ_REASON = "Spark can't tell which files this reads";
 export const SAFE_READ_WHY = 'a read-only command inside the project';
 
 interface Placement {
@@ -101,11 +104,24 @@ function deletesOutside(request: ApprovalRequest, tree: CommandTree | null): boo
   return targets === null || targets.some((target) => outsideRoots(request, target));
 }
 
-function alwaysAskReason(request: ApprovalRequest): string | null {
+function commandReads(request: ApprovalRequest, tree: CommandTree | null, files: FileLister) {
+  if (!request.command || !tree) return null;
+  return readConcern(request.command, tree, {
+    cwd: commandCwd(request),
+    home: request.home,
+    isSecret: (target) => isSecretTarget(request.roots, target),
+    files,
+  });
+}
+
+function alwaysAskReason(request: ApprovalRequest, files: FileLister): string | null {
   const tree = request.command ? commandTree(request.command) : null;
   if (deletesOutside(request, tree)) return OUTSIDE_DELETE_REASON;
   if (touchesSecret(request, tree)) return SECRET_REASON;
+  const reads = commandReads(request, tree, files);
+  if (reads === 'secret') return SECRET_REASON;
   if (tree?.opaque) return NESTED_COMMAND_REASON;
+  if (reads === 'unknown') return UNKNOWN_READ_REASON;
   if (request.command && isPackageInstall(request.command)) return INSTALL_REASON;
   const writes = request.kind === 'edit' || request.toolKind === 'move';
   if (writes && request.paths.some((target) => outsideRoots(request, target))) {
@@ -117,6 +133,7 @@ function alwaysAskReason(request: ApprovalRequest): string | null {
 export interface DecideOptions {
   builder?: boolean;
   piece?: PieceGuard;
+  files?: FileLister;
 }
 
 export function relativeTo(roots: readonly RequestRoot[]): RelativeOf {
@@ -201,7 +218,7 @@ export function decide(
   if (runRules.reject.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'reject', reason: RUN_REJECTED_REASON };
   }
-  const always = alwaysAskReason(request);
+  const always = alwaysAskReason(request, options.files ?? diskLister);
   if (always) return { verdict: 'ask', reason: always };
   if (runRules.allow.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
