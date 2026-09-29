@@ -5,7 +5,7 @@ import {
   type ProviderCapabilities,
   type ProviderSetup,
 } from '@spark-outpost/contracts';
-import { Tick } from './EffortOptions.tsx';
+import { TickIcon } from '../../ui/icons.tsx';
 import { cleanDescription, optionLabel, retiringLabel, visibleModels } from './model-options.ts';
 
 interface ModelListProps {
@@ -26,7 +26,7 @@ function AutoOption({ checked, onSelect }: { checked: boolean; onSelect: () => v
         <b>Auto</b>
         <small>Rules pick the size: smaller for trivial edits, top for destructive work.</small>
       </span>
-      <Tick />
+      <TickIcon />
     </button>
   );
 }
@@ -75,7 +75,7 @@ export function ModelList({
                 </b>
                 {description && <small title={description}>{description}</small>}
               </span>
-              <Tick />
+              <TickIcon />
             </button>
           );
         })}

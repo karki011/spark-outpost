@@ -1,4 +1,13 @@
 import { useId, type ReactNode } from 'react';
+import type { RepoAgentConfig } from '@spark-outpost/contracts';
+import type { AgentConfigChange } from './use-agent-config.ts';
+
+export interface SetupCardsProps {
+  config: RepoAgentConfig;
+  name: string;
+  busy: boolean;
+  onChange: (change: AgentConfigChange) => void;
+}
 
 interface SetupSwitchProps {
   label: string;

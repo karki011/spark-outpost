@@ -1,4 +1,3 @@
-import { useId } from 'react';
 import type { AnalyticsSpend } from '@spark-outpost/contracts';
 import { providerName } from '../chat/provider-name.ts';
 import { formatTokens } from '../chat/composer/model-options.ts';
@@ -6,8 +5,13 @@ import { plural, shortDate, usd, verdictName } from './analytics-model.ts';
 import { ChartCard, EmptyChart } from './charts/ChartCard.tsx';
 import { DailyStack } from './charts/DailyStack.tsx';
 import { HBars } from './charts/HBars.tsx';
-import { DotPattern, HatchPattern } from './charts/Patterns.tsx';
 import { SpendTreemap } from './charts/SpendTreemap.tsx';
+import {
+  useVerdictPatternIds,
+  verdictColor,
+  verdictFill,
+  VerdictPatterns,
+} from './charts/VerdictShape.tsx';
 import {
   savingsSummary,
   sourceSummary,
@@ -15,39 +19,21 @@ import {
   treemapSummary,
 } from './spend-summaries.ts';
 
-const VERDICT_COLORS = {
-  good: 'var(--success)',
-  mixed: 'var(--warn)',
-  unclear: 'var(--muted)',
-  bad: 'var(--danger)',
-};
-
 function TaskCosts({ data }: { data: AnalyticsSpend }) {
-  const base = useId();
-  const fills = {
-    good: VERDICT_COLORS.good,
-    mixed: `url(#${base}m)`,
-    unclear: 'var(--panel)',
-    bad: `url(#${base}b)`,
-  };
+  const ids = useVerdictPatternIds();
   const rows = data.perTask.filter((row) => row.tasks > 0);
   return (
     <HBars
       ariaLabel="Mean cost per finished turn by outcome"
-      defs={
-        <>
-          <DotPattern id={`${base}m`} color={VERDICT_COLORS.mixed} />
-          <HatchPattern id={`${base}b`} color={VERDICT_COLORS.bad} />
-        </>
-      }
+      defs={<VerdictPatterns ids={ids} />}
       bars={rows.map((row) => ({
         key: row.verdict,
         label: `${verdictName(row.verdict)} (${row.tasks})`,
         value: row.meanUsd ?? 0,
         valueText: usd(row.meanUsd),
         marker: row.medianUsd,
-        fill: fills[row.verdict],
-        stroke: row.verdict === 'good' ? undefined : VERDICT_COLORS[row.verdict],
+        fill: verdictFill(row.verdict, ids),
+        stroke: row.verdict === 'good' ? undefined : verdictColor(row.verdict),
         tip: `${verdictName(row.verdict)}: ${plural(row.tasks, 'turn')}, mean ${usd(row.meanUsd)}, median ${usd(row.medianUsd)}, ${usd(row.costUsd)} in total`,
       }))}
     />

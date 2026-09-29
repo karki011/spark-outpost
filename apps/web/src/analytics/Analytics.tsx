@@ -12,7 +12,8 @@ import { HarnessSkeleton } from './HarnessSkeleton.tsx';
 import { HarnessTab } from './HarnessTab.tsx';
 import { OverviewSkeleton } from './OverviewSkeleton.tsx';
 import { OverviewTab } from './OverviewTab.tsx';
-import { daysBefore, localToday, RangePicker } from './RangePicker.tsx';
+import { addIsoDays, localToday } from './calendar/date-math.ts';
+import { RangePicker } from './RangePicker.tsx';
 import { SpendSkeleton } from './SpendSkeleton.tsx';
 import { SpendTab } from './SpendTab.tsx';
 
@@ -49,7 +50,7 @@ export function Analytics() {
   const [tab, setTab] = useState<AnalyticsTab>('overview');
   const [choice, setChoice] = useState<RangeChoice>(() => {
     const to = localToday();
-    return { range: '30d', from: daysBefore(to, 13), to };
+    return { range: '30d', from: addIsoDays(to, -13), to };
   });
   const enabled = (id: AnalyticsTab) => tab === id && usable(choice);
   const options = { placeholderData: keepPreviousData, staleTime: 30_000 } as const;

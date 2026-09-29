@@ -54,6 +54,14 @@ export function findBlockComments(file: string, text: string, pattern: RegExp): 
   return violations;
 }
 
+export function findNativeSelects(file: string, text: string): SourceViolation[] {
+  return [...text.matchAll(/<select\b/g)].map((match) => ({
+    file,
+    line: text.slice(0, match.index).split('\n').length,
+    message: 'Native <select>; use ui/ChoicePicker.tsx',
+  }));
+}
+
 export function checkSource(file: string, text: string): SourceViolation[] {
   const violations: SourceViolation[] = [];
   const lines = lineCount(text);
@@ -61,6 +69,9 @@ export function checkSource(file: string, text: string): SourceViolation[] {
     violations.push({ file, line: MAX_LINES + 1, message: `${lines} lines exceeds ${MAX_LINES}` });
   }
   if (/\.(ts|tsx|js|mjs)$/.test(file)) violations.push(...findTsComments(file, text));
+  if (file.startsWith('apps/web/') && file.endsWith('.tsx')) {
+    violations.push(...findNativeSelects(file, text));
+  }
   if (file.endsWith('.css')) violations.push(...findBlockComments(file, text, /\/\*[\s\S]*?\*\//g));
   if (file.endsWith('.sql')) violations.push(...findBlockComments(file, text, /^\s*--.*$/gm));
   if (file.endsWith('.sh')) violations.push(...findBlockComments(file, text, /^\s*#(?!!).*$/gm));

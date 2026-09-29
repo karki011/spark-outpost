@@ -78,7 +78,7 @@ function FeedbackRow({
   const queryClient = useQueryClient();
   const labelId = useId();
   const commentId = useId();
-  const firstRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
   const reverted = variant === 'reverted';
   const [draft, setDraft] = useState<Draft>(() => draftOf(outcome, variant));
   const [commenting, setCommenting] = useState(reverted || Boolean(outcome.feedback?.comment));
@@ -93,7 +93,7 @@ function FeedbackRow({
   useEffect(() => {
     if (commenting || !refocusThumb.current) return;
     refocusThumb.current = false;
-    const row = firstRef.current;
+    const row = rowRef.current;
     const target =
       row?.querySelector<HTMLButtonElement>('.fb-thumb[aria-pressed="true"]') ??
       row?.querySelector<HTMLButtonElement>('.fb-thumb, .fb-link');
@@ -140,7 +140,7 @@ function FeedbackRow({
         .join(' ')}
       role="group"
       aria-labelledby={labelId}
-      ref={firstRef}
+      ref={rowRef}
     >
       <div className="fb-line">
         <span id={labelId} className={quiet ? 'sr-only' : 'fb-q'}>

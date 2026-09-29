@@ -1,15 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Box } from './tv-layout.ts';
 
-function subscribeVisibility(listener: () => void) {
-  document.addEventListener('visibilitychange', listener);
-  return () => document.removeEventListener('visibilitychange', listener);
-}
-
-export function usePageHidden(): boolean {
-  return useSyncExternalStore(subscribeVisibility, () => document.visibilityState === 'hidden');
-}
-
 function subscribeResize(listener: () => void) {
   window.addEventListener('resize', listener);
   return () => window.removeEventListener('resize', listener);

@@ -1,9 +1,8 @@
 import { useQueries } from '@tanstack/react-query';
 import { providerIdSchema, type CapabilityOption } from '@spark-outpost/contracts';
-import { api, queryKeys } from '../api/client.ts';
+import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { AGENT_DEFAULT, shortLabel } from '../chat/composer/model-options.ts';
 
-const HOUR = 60 * 60 * 1000;
 const CLAUDE_ID = /^(?:claude-)?(opus|sonnet|haiku|fable)(?:-(\d+))?(?:-(\d+))?/i;
 const GLM_ID = /^glm-([\d.]+)(-flashx?)?$/i;
 
@@ -41,9 +40,8 @@ export function useModelNamer(providers: readonly string[]): ModelNamer {
   });
   const queries = useQueries({
     queries: known.map((provider) => ({
-      queryKey: queryKeys.capabilities(provider),
-      queryFn: () => api.getCapabilities(provider),
-      staleTime: HOUR,
+      ...capabilitiesQuery(provider),
+      staleTime: CAPABILITIES_STALE_MS,
     })),
   });
   const options = new Map<string, readonly CapabilityOption[]>(

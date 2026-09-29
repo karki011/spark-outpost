@@ -1,6 +1,5 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
-import type { ProviderId } from '@spark-outpost/contracts';
-import { api, queryKeys } from '../api/client.ts';
+import { capabilitiesQuery } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
@@ -61,8 +60,7 @@ export function ProviderStrip({ onSettings }: { onSettings: () => void }) {
   const connected = (setup.data?.providers ?? []).filter((provider) => provider.connection);
   const capabilities = useQueries({
     queries: connected.map((provider) => ({
-      queryKey: queryKeys.capabilities(provider.id),
-      queryFn: () => api.getCapabilities(provider.id as ProviderId),
+      ...capabilitiesQuery(provider.id),
       retry: false,
     })),
   });

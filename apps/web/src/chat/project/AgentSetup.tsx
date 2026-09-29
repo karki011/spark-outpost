@@ -1,6 +1,7 @@
 import './agent-setup.css';
 import { useEffect, useId, useState, type RefObject } from 'react';
 import type { Project } from '@spark-outpost/contracts';
+import { wrapTabFocus } from '../../ui/focus-trap.ts';
 import { SlidersIcon } from '../../ui/icons.tsx';
 import { usePopover } from '../../ui/use-popover.ts';
 import { EverydayCards, HooksCard, IgnoredCard, McpCard } from './AgentSetupCards.tsx';
@@ -17,20 +18,7 @@ function useFocusTrap(panelRef: RefObject<HTMLElement | null>, open: boolean) {
     if (!open || !panel) return;
     const focusables = () => [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)];
     (focusables()[0] ?? panel).focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Tab') return;
-      const items = focusables();
-      const first = items[0];
-      const last = items.at(-1);
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
+    const onKeyDown = (event: KeyboardEvent) => wrapTabFocus(event, focusables);
     panel.addEventListener('keydown', onKeyDown);
     return () => panel.removeEventListener('keydown', onKeyDown);
   }, [panelRef, open]);

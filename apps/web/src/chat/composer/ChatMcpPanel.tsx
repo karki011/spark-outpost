@@ -14,6 +14,7 @@ interface ChatMcpPanelProps {
 }
 
 type UserRow = Extract<ChatMcpServer, { kind: 'user' }>;
+type ProjectRow = Extract<ChatMcpServer, { kind: 'project' }>;
 
 const VIA_LABELS: Record<UserRow['via'], string> = {
   chat: 'set for this chat',
@@ -29,13 +30,13 @@ function userDetail(server: UserRow): string {
   return parts.join(' · ');
 }
 
-function projectDetail(server: Extract<ChatMcpServer, { kind: 'project' }>): string {
-  const state = server.changed
-    ? 'changed, review it in Agent setup'
-    : server.enabled
-      ? 'on'
-      : 'off';
-  return `${server.projectName} repo · ${state}`;
+function projectState(server: ProjectRow): string {
+  if (server.changed) return 'changed, review it in Agent setup';
+  return server.enabled ? 'on' : 'off';
+}
+
+function projectDetail(server: ProjectRow): string {
+  return `${server.projectName} repo · ${projectState(server)}`;
 }
 
 export function ChatMcpPanel({ conversationId, onClose }: ChatMcpPanelProps) {

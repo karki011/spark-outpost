@@ -1,5 +1,5 @@
 import './thread.css';
-import { useCallback, useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { PERMISSION_DO, type ConversationDetail, type Project } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { ArrowDownIcon } from '../ui/icons.tsx';
@@ -26,7 +26,7 @@ interface ThreadProps {
   pendingMessage: OutgoingMessage | null;
   panelOpen?: boolean;
   onOpenTask?: (taskId: string) => void;
-  quotes?: QuotesState;
+  quotes: QuotesState;
 }
 
 export function Thread({
@@ -37,15 +37,7 @@ export function Thread({
   onOpenTask,
   quotes,
 }: ThreadProps) {
-  const { scrollerRef, away, follow, jumpToLatest } = useStickToBottom();
-  const quoteRootRef = useRef<HTMLDivElement | null>(null);
-  const threadRef = useCallback(
-    (scroller: HTMLDivElement | null) => {
-      quoteRootRef.current = scroller;
-      return scrollerRef(scroller);
-    },
-    [scrollerRef],
-  );
+  const { scrollerRef, scroller, away, follow, jumpToLatest } = useStickToBottom();
   const turns = buildTurns(detail);
   const parentOf = new Map(detail.runs.map((run) => [run.id, run.parentRunId ?? run.id]));
   const taskAfterRun = new Map(
@@ -108,7 +100,7 @@ export function Thread({
 
   return (
     <div className="thread-wrap">
-      <div className="thread" ref={threadRef}>
+      <div className="thread" ref={scrollerRef}>
         <div className="col">
           {turns.map(({ run, userMessage, assistantMessage }) => (
             <section
@@ -170,16 +162,12 @@ export function Thread({
           )}
         </div>
       </div>
-      {quotes && (
-        <>
-          <QuoteToolbar scrollerRef={quoteRootRef} quotes={quotes} />
-          <QuoteMarks
-            scrollerRef={quoteRootRef}
-            conversationId={detail.conversation.id}
-            pending={quotes.items}
-          />
-        </>
-      )}
+      <QuoteToolbar scrollerRef={scroller} quotes={quotes} />
+      <QuoteMarks
+        scrollerRef={scroller}
+        conversationId={detail.conversation.id}
+        pending={quotes.items}
+      />
       <button type="button" className={away ? 'jump show' : 'jump'} onClick={jumpToLatest}>
         <ArrowDownIcon />
         Jump to latest

@@ -61,6 +61,11 @@ function request(approval: Approval, agent: string) {
   return `${agent} wants to: ${approval.title}`;
 }
 
+function optionClass(allow: boolean, primary: boolean): string {
+  if (!allow) return 'btn ghost sm deny';
+  return primary ? 'btn primary sm' : 'btn line sm';
+}
+
 export function ApprovalCard({ approval: incoming, provider, agent, repo }: ApprovalCardProps) {
   const queryClient = useQueryClient();
   const headingId = useId();
@@ -159,13 +164,7 @@ export function ApprovalCard({ approval: incoming, provider, agent, repo }: Appr
             <Fragment key={option.optionId}>
               <button
                 type="button"
-                className={
-                  !isAllow(option)
-                    ? 'btn ghost sm deny'
-                    : index === firstAllow
-                      ? 'btn primary sm'
-                      : 'btn line sm'
-                }
+                className={optionClass(isAllow(option), index === firstAllow)}
                 disabled={decide.isPending || Boolean(option.unavailableReason)}
                 title={option.unavailableReason}
                 onClick={() => decide.mutate({ optionId: option.optionId, scope: 'once' })}

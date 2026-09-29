@@ -2,7 +2,7 @@ import '../tasks/cost-pane.css';
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { advisorLabel, type ProviderTotals, type SpendRange } from '@spark-outpost/contracts';
-import { providerName } from '../chat/provider-name.ts';
+import { providerColor, providerName } from '../chat/provider-name.ts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { CostText } from '../usage/CostText.tsx';
 import { costNote, formatCost } from '../usage/format.ts';
@@ -15,7 +15,6 @@ const RANGES = [
   { id: 'week', label: 'This week' },
 ];
 
-const sliceColor = (provider: string) => `var(--c-${provider}, var(--muted))`;
 const sliceName = (provider: string) =>
   provider === 'jev' ? advisorLabel(provider) : providerName(provider);
 
@@ -41,7 +40,7 @@ function SpendSplit({ rows, total }: { rows: readonly ProviderTotals[]; total: n
             key={row.provider}
             style={{
               width: `max(3px, ${((row.costUsd ?? 0) / total) * 100}%)`,
-              background: sliceColor(row.provider),
+              background: providerColor(row.provider),
             }}
           />
         ))}
@@ -49,7 +48,7 @@ function SpendSplit({ rows, total }: { rows: readonly ProviderTotals[]; total: n
       <ul className="cost-legend" aria-label="Cost by provider">
         {rows.map((row) => (
           <li key={row.provider}>
-            <i style={{ background: sliceColor(row.provider) }} />
+            <i style={{ background: providerColor(row.provider) }} />
             <span>{sliceName(row.provider)}</span>
             <SliceCost row={row} />
           </li>

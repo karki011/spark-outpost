@@ -1,13 +1,13 @@
 import type { AnnotationKind } from '@spark-outpost/contracts';
 
-export interface QuoteContent {
+interface QuoteContent {
   text: string;
   note: string;
 }
 
-export type QuotedSegment = { kind: 'lead' | 'quote' | 'text'; text: string };
+type QuotedSegment = { kind: 'lead' | 'quote' | 'text'; text: string };
 
-export const QUOTE_PREVIEW_LENGTH = 80;
+const QUOTE_PREVIEW_LENGTH = 80;
 export const LEAD_IN_LATEST = 'Comments on your previous reply:';
 export const LEAD_IN_EARLIER = 'Comments on earlier messages:';
 

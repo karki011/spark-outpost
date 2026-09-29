@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
 import { ChevronIcon } from '../../ui/icons.tsx';
+import { copyButtonText, useCopyFeedback } from '../../ui/use-copy-feedback.ts';
 import type { ConnectionFailure } from './connection-failure.ts';
 
 const RESTART_COMMAND = 'pnpm dev';
-
-type CopyState = 'idle' | 'copied' | 'failed';
 
 interface FailureDetailsProps {
   failure: ConnectionFailure;
@@ -12,20 +10,7 @@ interface FailureDetailsProps {
 }
 
 export function FailureDetails({ failure, failedAt }: FailureDetailsProps) {
-  const [copy, setCopy] = useState<CopyState>('idle');
-
-  useEffect(() => {
-    if (copy === 'idle') return;
-    const timeout = setTimeout(() => setCopy('idle'), 1600);
-    return () => clearTimeout(timeout);
-  }, [copy]);
-
-  const copyCommand = () => {
-    navigator.clipboard.writeText(RESTART_COMMAND).then(
-      () => setCopy('copied'),
-      () => setCopy('failed'),
-    );
-  };
+  const { state, copy } = useCopyFeedback();
 
   return (
     <details className="offline-details">
@@ -45,8 +30,8 @@ export function FailureDetails({ failure, failedAt }: FailureDetailsProps) {
         <span>
           If this keeps happening, restart it with <code>{RESTART_COMMAND}</code>
         </span>
-        <button type="button" className="btn line sm" onClick={copyCommand}>
-          {copy === 'copied' ? 'Copied' : copy === 'failed' ? 'Copy failed' : 'Copy'}
+        <button type="button" className="btn line sm" onClick={() => copy(RESTART_COMMAND)}>
+          {copyButtonText(state)}
         </button>
       </div>
     </details>

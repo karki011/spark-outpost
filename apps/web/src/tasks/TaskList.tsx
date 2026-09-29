@@ -120,16 +120,12 @@ function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[]
   );
 }
 
-interface RowsProps {
+interface TaskListProps {
   items: readonly TaskListItem[];
   roots: readonly string[];
 }
 
-function Rows({ items, roots }: RowsProps) {
-  return items.map((item) => <TaskRow key={item.id} item={item} roots={roots} />);
-}
-
-export function TaskList({ items, roots }: RowsProps) {
+export function TaskList({ items, roots }: TaskListProps) {
   const [showDone, setShowDone] = useState(readShowDone);
   const doneId = useId();
   const done = items.filter((item) => item.state === 'done');
@@ -153,14 +149,18 @@ export function TaskList({ items, roots }: RowsProps) {
           </button>
           {showDone && (
             <ul className="tlist" id={doneId} aria-label="Done">
-              <Rows items={done} roots={roots} />
+              {done.map((item) => (
+                <TaskRow key={item.id} item={item} roots={roots} />
+              ))}
             </ul>
           )}
         </>
       )}
       {rest.length > 0 ? (
         <ul className="tlist" aria-label="Remaining">
-          <Rows items={rest} roots={roots} />
+          {rest.map((item) => (
+            <TaskRow key={item.id} item={item} roots={roots} />
+          ))}
         </ul>
       ) : (
         <p className="wnote">All done.</p>

@@ -1,5 +1,13 @@
 import type { AnalyticsOverview } from '@spark-outpost/contracts';
-import { percent, plural, ratePercent, shortDate, signedScore, usd } from './analytics-model.ts';
+import {
+  percent,
+  plural,
+  ratedTurns,
+  ratePercent,
+  shortDate,
+  signedScore,
+  usd,
+} from './analytics-model.ts';
 import { ActivityHeatmap } from './charts/ActivityHeatmap.tsx';
 import { ChartCard, EmptyChart } from './charts/ChartCard.tsx';
 import { HealthGauge } from './charts/HealthGauge.tsx';
@@ -10,7 +18,7 @@ import { activitySummary, healthSummary, outcomeSummary, spendSummary } from './
 
 export function OverviewTab({ data }: { data: AnalyticsOverview }) {
   const { totals, days, health } = data;
-  const rated = totals.good + totals.bad + totals.mixed + totals.unclear;
+  const rated = ratedTurns(totals);
   return (
     <div className="an-grid">
       <ChartCard

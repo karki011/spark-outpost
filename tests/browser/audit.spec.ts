@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { seedAuditLog, tamperAuditLog } from './audit-seed.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
@@ -16,6 +16,14 @@ async function sendPlannedTask(page: Page) {
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible({ timeout: 20_000 });
+}
+
+async function pick(page: Page, scope: Locator, label: string, option: string) {
+  await scope.getByRole('button', { name: label, exact: true }).click();
+  await page
+    .getByRole('menu', { name: label })
+    .getByRole('menuitemradio', { name: option, exact: true })
+    .click();
 }
 
 const THEMES = [
@@ -90,11 +98,11 @@ test('the audit view summarises, times, lists, and exports a session', async ({ 
   const rows = dialog.getByRole('list', { name: 'Protocol messages' }).getByRole('listitem');
   await expect(rows).toHaveCount(4);
   await expect(dialog.locator('.lbar .chain')).toHaveText('Chain verified · 4 events');
-  await dialog.getByRole('combobox', { name: 'Direction' }).selectOption('from_agent');
+  await pick(page, dialog, 'Direction', 'From agent');
   await expect(rows).toHaveCount(3);
-  await dialog.getByRole('combobox', { name: 'Method' }).selectOption('session/update');
+  await pick(page, dialog, 'Method', 'session/update');
   await expect(rows).toHaveCount(1);
-  await dialog.getByRole('combobox', { name: 'Method' }).selectOption('');
+  await pick(page, dialog, 'Method', 'All methods');
   await dialog.getByRole('searchbox', { name: 'Filter by text' }).fill('pnpm test');
   await expect(rows).toHaveCount(1);
   const row = rows.first().getByRole('button');

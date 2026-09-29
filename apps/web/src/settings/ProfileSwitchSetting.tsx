@@ -1,15 +1,25 @@
 import { useId } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { UpdateProfileRequest } from '@spark-outpost/contracts';
 import { setupApi, setupKey } from '../api/setup.ts';
 
-export const JEV_DIFFS_DISCLOSURE =
-  'Sends the diff and file paths of each proposed edit to TypeSafe for observation-only checks that never block or allow anything, and the final diff of a change so Jev can verify it: a change Jev finds incomplete is redone once by a stronger model. TypeSafe does not train on it.';
+interface ProfileSwitchSettingProps {
+  enabled: boolean;
+  label: string;
+  hint: string;
+  toUpdate: (value: boolean) => UpdateProfileRequest;
+}
 
-export function JevDiffsSetting({ enabled }: { enabled: boolean }) {
+export function ProfileSwitchSetting({
+  enabled,
+  label,
+  hint,
+  toUpdate,
+}: ProfileSwitchSettingProps) {
   const hintId = useId();
   const queryClient = useQueryClient();
   const save = useMutation({
-    mutationFn: (value: boolean) => setupApi.updateProfile({ jevDiffs: value }),
+    mutationFn: (value: boolean) => setupApi.updateProfile(toUpdate(value)),
     onSuccess: (state) => queryClient.setQueryData(setupKey, state),
   });
   const checked = save.isPending ? save.variables : enabled;
@@ -23,10 +33,10 @@ export function JevDiffsSetting({ enabled }: { enabled: boolean }) {
           aria-describedby={hintId}
           onChange={(event) => save.mutate(event.target.checked)}
         />
-        <span>Send code diffs to Jev for safety checks</span>
+        <span>{label}</span>
       </label>
       <p id={hintId} className="set-hint" aria-live="polite">
-        {save.isError ? save.error.message : JEV_DIFFS_DISCLOSURE}
+        {save.isError ? save.error.message : hint}
       </p>
     </div>
   );

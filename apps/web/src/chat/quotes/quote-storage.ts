@@ -13,7 +13,7 @@ const storedQuotesSchema = z.array(
   }),
 );
 
-export function quotesKey(conversationId: string): string {
+function quotesKey(conversationId: string): string {
   return `spark-outpost.quotes.${conversationId}`;
 }
 

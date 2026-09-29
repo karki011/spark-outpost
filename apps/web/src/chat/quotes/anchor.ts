@@ -57,7 +57,7 @@ export function locateAnchor(text: string, anchor: TextAnchor): Located | null {
   return best;
 }
 
-export function rangeFromOffsets(root: Element, start: number, end: number): Range | null {
+function rangeFromOffsets(root: Element, start: number, end: number): Range | null {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const range = document.createRange();
   let seen = 0;

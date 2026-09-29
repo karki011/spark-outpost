@@ -18,9 +18,9 @@ export interface Quote {
   anchor: TextAnchor | null;
 }
 
-export type NewQuote = Omit<Quote, 'id'>;
+type NewQuote = Omit<Quote, 'id'>;
 
-export interface ComposedMessage {
+interface ComposedMessage {
   content: string;
   annotations: AnnotationInput[];
 }

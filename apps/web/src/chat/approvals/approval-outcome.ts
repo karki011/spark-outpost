@@ -1,6 +1,6 @@
 import type { Approval, ApprovalOption } from '@spark-outpost/contracts';
 
-export interface Outcome {
+interface Outcome {
   icon: 'ok' | 'no';
   label: string;
   detail: string;
@@ -61,22 +61,22 @@ function deniedDetail(approval: Approval): string {
   return approval.kind === 'execute' ? "The command didn't run." : "The change wasn't made.";
 }
 
+function chosenDetail(approval: Approval): string {
+  const forRun = approval.scope === 'run';
+  if (approval.status === 'allowed') return forRun ? 'Allowed for this run.' : '';
+  return `${deniedDetail(approval)}${forRun ? ' Rejected for the rest of this run.' : ''}`;
+}
+
 export function outcome(approval: Approval): Outcome {
   const chosen = chosenOption(approval);
   if (approval.payload.plan) return planOutcome(approval, chosen ? `Chose: ${chosen.name}. ` : '');
   const stopped = stoppedOutcome(approval);
   if (stopped) return stopped;
   if (chosen) {
-    const allowed = approval.status === 'allowed';
-    const forRun = approval.scope === 'run';
     return {
-      icon: allowed ? 'ok' : 'no',
+      icon: approval.status === 'allowed' ? 'ok' : 'no',
       label: `Chose: ${chosen.name}.`,
-      detail: allowed
-        ? forRun
-          ? 'Allowed for this run.'
-          : ''
-        : `${deniedDetail(approval)}${forRun ? ' Rejected for the rest of this run.' : ''}`,
+      detail: chosenDetail(approval),
     };
   }
   switch (approval.status) {

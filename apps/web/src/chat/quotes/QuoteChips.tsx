@@ -1,7 +1,6 @@
 import './quotes.css';
 import { useState } from 'react';
-import { XIcon } from '../../ui/icons.tsx';
-import { QuoteIcon } from './quote-icons.tsx';
+import { QuoteIcon, XIcon } from '../../ui/icons.tsx';
 import { quotePreview } from './quote-text.ts';
 import type { Quote } from './use-quotes.ts';
 

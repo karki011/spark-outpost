@@ -9,11 +9,10 @@ import {
   type MouseEvent,
   type RefObject,
 } from 'react';
-import { CommentIcon, CopyIcon } from '../../ui/icons.tsx';
+import { AskIcon, CommentIcon, CopyIcon, QuoteIcon } from '../../ui/icons.tsx';
 import type { AnnotationKind } from '@spark-outpost/contracts';
 import { createAnchor } from './anchor.ts';
 import { paintHighlight } from './highlight.ts';
-import { AskIcon, QuoteIcon } from './quote-icons.tsx';
 import {
   readMessageSelection,
   useSelectionCapture,
@@ -60,19 +59,18 @@ function keepSelection(event: MouseEvent) {
   if (!(event.target instanceof HTMLInputElement)) event.preventDefault();
 }
 
+function rovingTarget(key: string, index: number, count: number): number {
+  if (key === 'Home') return 0;
+  if (key === 'End') return count - 1;
+  if (key === 'ArrowRight') return (index + 1) % count;
+  return (index - 1 + count) % count;
+}
+
 function moveFocus(event: ReactKeyboardEvent<HTMLDivElement>) {
   if (!ROVING_KEYS.has(event.key) || event.target instanceof HTMLInputElement) return;
   const buttons = Array.from(event.currentTarget.querySelectorAll('button'));
   const index = buttons.indexOf(event.target as HTMLButtonElement);
-  const last = buttons.length - 1;
-  const next =
-    event.key === 'Home'
-      ? 0
-      : event.key === 'End'
-        ? last
-        : event.key === 'ArrowRight'
-          ? (index + 1) % buttons.length
-          : (index - 1 + buttons.length) % buttons.length;
+  const next = rovingTarget(event.key, index, buttons.length);
   event.preventDefault();
   buttons[next]?.focus();
 }

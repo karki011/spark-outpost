@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { finishedRunIds, runStatuses, type RunStatuses } from './companion-model.ts';
 
-export const CELEBRATE_MS = 1_600;
-export const ANNOUNCE_MS = 8_000;
+const CELEBRATE_MS = 1_600;
+const ANNOUNCE_MS = 8_000;
 const ANNOUNCE_SETTLE_MS = 1_000;
 
 export function useCelebration(chats: readonly ConversationSummary[]): boolean {
@@ -57,13 +57,4 @@ export function useThrottledAnnouncement(text: string, active: boolean): string 
   }, [text, active]);
 
   return active ? spoken : '';
-}
-
-function subscribeVisibility(listener: () => void) {
-  document.addEventListener('visibilitychange', listener);
-  return () => document.removeEventListener('visibilitychange', listener);
-}
-
-export function usePageHidden(): boolean {
-  return useSyncExternalStore(subscribeVisibility, () => document.hidden);
 }

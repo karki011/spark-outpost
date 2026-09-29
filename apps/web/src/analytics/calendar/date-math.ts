@@ -2,7 +2,7 @@ import { ANALYTICS_MAX_DAYS } from '@spark-outpost/contracts';
 
 const DAY_MS = 86_400_000;
 
-export function isoToUtcMs(iso: string): number {
+function isoToUtcMs(iso: string): number {
   return Date.parse(`${iso}T00:00:00Z`);
 }
 
@@ -12,6 +12,12 @@ export function addIsoDays(iso: string, days: number): string {
 
 export function isoSpanDays(from: string, to: string): number {
   return Math.round((isoToUtcMs(to) - isoToUtcMs(from)) / DAY_MS) + 1;
+}
+
+export function localToday(): string {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 }
 
 export function parseIsoLocal(iso: string): Date {
@@ -26,7 +32,7 @@ export function formatIsoLocal(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export interface CalendarPreset {
+interface CalendarPreset {
   id: string;
   label: string;
   range: (today: string) => { from: string; to: string };
@@ -72,15 +78,10 @@ export function isFutureIso(iso: string, todayIso: string): boolean {
   return iso > todayIso;
 }
 
-export function isCappedOut(
-  anchor: string | undefined,
-  candidateIso: string,
-  maxDays = ANALYTICS_MAX_DAYS,
-): boolean {
-  if (!anchor) return false;
+export function isCappedOut(anchor: string, candidateIso: string): boolean {
   const span =
     candidateIso >= anchor ? isoSpanDays(anchor, candidateIso) : isoSpanDays(candidateIso, anchor);
-  return span > maxDays;
+  return span > ANALYTICS_MAX_DAYS;
 }
 
 export function formatRangeLabel(from: string, to: string): string {

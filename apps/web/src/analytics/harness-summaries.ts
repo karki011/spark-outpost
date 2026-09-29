@@ -1,12 +1,5 @@
 import { GATE_LINES, type AnalyticsHarness, type OutcomeTally } from '@spark-outpost/contracts';
-import {
-  categoryName,
-  depthName,
-  percent,
-  plural,
-  signedScore,
-  verdictName,
-} from './analytics-model.ts';
+import { categoryName, depthName, percent, plural, signedScore } from './analytics-model.ts';
 
 function busiest<T>(paths: readonly T[], key: (path: T) => string, weight: (path: T) => number) {
   const totals = new Map<string, number>();
@@ -66,7 +59,7 @@ export function disagreementSummary(data: AnalyticsHarness): string {
 
 export function tallyTip(label: string, tally: OutcomeTally): string {
   if (tally.turns === 0) return `${label}: no turns`;
-  return `${label}: ${plural(tally.turns, 'turn')}, ${percent(tally.good, tally.turns)} ${verdictName('good').toLowerCase()}, mean score ${signedScore(tally.meanScore)}`;
+  return `${label}: ${plural(tally.turns, 'turn')}, ${percent(tally.good, tally.turns)} good, mean score ${signedScore(tally.meanScore)}`;
 }
 
 export function leanSummary(data: AnalyticsHarness): string {

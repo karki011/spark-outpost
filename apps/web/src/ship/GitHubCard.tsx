@@ -18,6 +18,16 @@ function day(iso: string): string {
   });
 }
 
+function ghCliLine(ghCli: GitHubConnectionStatus['ghCli']): string {
+  if (ghCli.login) {
+    return `Signed in as ${ghCli.login} on ${ghCli.host}. Spark runs gh and never reads its token.`;
+  }
+  if (ghCli.installed) {
+    return 'Installed but not signed in. Run gh auth login in a terminal, then check again.';
+  }
+  return 'Not installed. Install the GitHub CLI and run gh auth login to use your login.';
+}
+
 function activeLine(status: GitHubConnectionStatus): string {
   if (status.active === 'gh_cli') {
     return `Connected through the gh CLI as ${status.ghCli.login ?? 'you'}`;
@@ -176,13 +186,7 @@ export function GitHubCard({ icon }: { icon: ReactNode }) {
           </p>
           <section className="gh-method" aria-label="gh CLI">
             <h4>gh CLI</h4>
-            <p className="gh-note">
-              {data.ghCli.login
-                ? `Signed in as ${data.ghCli.login} on ${data.ghCli.host}. Spark runs gh and never reads its token.`
-                : data.ghCli.installed
-                  ? 'Installed but not signed in. Run gh auth login in a terminal, then check again.'
-                  : 'Not installed. Install the GitHub CLI and run gh auth login to use your login.'}
-            </p>
+            <p className="gh-note">{ghCliLine(data.ghCli)}</p>
             {!data.ghCli.login && (
               <button
                 type="button"

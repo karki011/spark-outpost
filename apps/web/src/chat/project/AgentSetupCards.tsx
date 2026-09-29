@@ -1,19 +1,9 @@
 import type { AgentConfigSwitch, RepoAgentConfig, RepoMcpServer } from '@spark-outpost/contracts';
-import { IGNORED_LABELS, ignoredCount } from './agent-setup.ts';
-import { SetupCard, SetupList, SetupSwitch } from './SetupCard.tsx';
-import type { AgentConfigChange } from './use-agent-config.ts';
-
-interface CardsProps {
-  config: RepoAgentConfig;
-  name: string;
-  busy: boolean;
-  onChange: (change: AgentConfigChange) => void;
-}
-
-const onOff = (on: boolean) => (on ? 'On' : 'Off');
+import { IGNORED_LABELS, ignoredCount, onOff } from './agent-setup.ts';
+import { SetupCard, SetupList, SetupSwitch, type SetupCardsProps } from './SetupCard.tsx';
 
 function switchFor(
-  { config, name, busy, onChange }: CardsProps,
+  { config, name, busy, onChange }: SetupCardsProps,
   key: AgentConfigSwitch,
   label: string,
 ) {
@@ -25,15 +15,33 @@ function switchFor(
   };
 }
 
-export function EverydayCards(props: CardsProps) {
+function definitionsCard(
+  props: SetupCardsProps,
+  setting: 'skills' | 'commands' | 'subagents',
+  title: string,
+) {
+  const items = props.config[setting];
+  return (
+    <SetupCard
+      title={title}
+      count={items.length}
+      toggle={items.length > 0 ? switchFor(props, setting, `Use ${setting}`) : undefined}
+    >
+      <SetupList
+        label={setting}
+        items={items.map((item) => ({ key: item.path, name: item.name, detail: item.description }))}
+      />
+    </SetupCard>
+  );
+}
+
+export function EverydayCards(props: SetupCardsProps) {
   const { config } = props;
   const files = config.instructions.map((file) => ({
     key: file.path,
     name: file.path,
     detail: file.nested ? 'read when working in that folder' : undefined,
   }));
-  const definitions = (items: RepoAgentConfig['skills']) =>
-    items.map((item) => ({ key: item.path, name: item.name, detail: item.description }));
   return (
     <>
       <SetupCard
@@ -51,38 +59,16 @@ export function EverydayCards(props: CardsProps) {
           <SetupList label="files" items={files} preview={4} />
         )}
       </SetupCard>
-      <SetupCard
-        title="Skills"
-        count={config.skills.length}
-        toggle={config.skills.length > 0 ? switchFor(props, 'skills', 'Use skills') : undefined}
-      >
-        <SetupList label="skills" items={definitions(config.skills)} />
-      </SetupCard>
-      <SetupCard
-        title="Commands"
-        count={config.commands.length}
-        toggle={
-          config.commands.length > 0 ? switchFor(props, 'commands', 'Use commands') : undefined
-        }
-      >
-        <SetupList label="commands" items={definitions(config.commands)} />
-      </SetupCard>
-      <SetupCard
-        title="Subagents"
-        count={config.subagents.length}
-        toggle={
-          config.subagents.length > 0 ? switchFor(props, 'subagents', 'Use subagents') : undefined
-        }
-      >
-        <SetupList label="subagents" items={definitions(config.subagents)} />
-      </SetupCard>
+      {definitionsCard(props, 'skills', 'Skills')}
+      {definitionsCard(props, 'commands', 'Commands')}
+      {definitionsCard(props, 'subagents', 'Subagents')}
     </>
   );
 }
 
 const TRUSTED_STATUS = 'On · trusted folder';
 
-export function HooksCard({ config, name, busy, onChange }: CardsProps) {
+export function HooksCard({ config, name, busy, onChange }: SetupCardsProps) {
   if (config.hooks.length === 0) return null;
   const { hooks, hooksChanged } = config.settings;
   const trusted = config.trust.state === 'trusted';
@@ -137,7 +123,7 @@ function serverDetail(server: RepoMcpServer): string {
   return `${target}${env}`;
 }
 
-export function McpCard({ config, name, busy, onChange }: CardsProps) {
+export function McpCard({ config, name, busy, onChange }: SetupCardsProps) {
   if (config.mcpServers.length === 0) return null;
   const on = config.mcpServers.filter((server) => server.enabled).length;
   const trusted = config.trust.state === 'trusted';

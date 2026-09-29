@@ -1,6 +1,6 @@
 import './tv-list.css';
 import { useId, useRef, useState } from 'react';
-import type { ConnectableId } from '@spark-outpost/contracts';
+import { connectableIdSchema } from '@spark-outpost/contracts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { formatDuration } from '../audit/audit-model.ts';
 import { ChevronIcon, TrashIcon } from '../ui/icons.tsx';
@@ -20,8 +20,6 @@ import {
   type TvRows,
 } from './tv-list.ts';
 
-const PROVIDERS: ReadonlySet<string> = new Set(['claude', 'codex', 'zai', 'jev']);
-
 interface TvListProps {
   rows: TvRows;
   cleared: ReadonlySet<string>;
@@ -33,13 +31,10 @@ interface TvListProps {
 }
 
 function RowBlob({ item }: { item: TvRow }) {
-  if (PROVIDERS.has(item.provider)) {
+  const known = connectableIdSchema.safeParse(item.provider);
+  if (known.success) {
     return (
-      <ProviderBlob
-        providerId={item.provider as ConnectableId}
-        size={28}
-        expression={crewExpression(item.state)}
-      />
+      <ProviderBlob providerId={known.data} size={28} expression={crewExpression(item.state)} />
     );
   }
   return <CrewBlob name={item.name} provider={item.provider} state={item.state} size={28} />;

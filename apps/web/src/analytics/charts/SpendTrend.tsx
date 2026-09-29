@@ -4,7 +4,7 @@ import { Mark, roveMarks } from './Mark.tsx';
 import { linear, movingAverage, niceMax, smoothPath } from './scale.ts';
 import { useChartWidth } from './use-chart-width.ts';
 
-export interface TrendPoint {
+interface TrendPoint {
   date: string;
   value: number;
 }

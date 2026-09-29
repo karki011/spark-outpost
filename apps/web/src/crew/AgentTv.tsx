@@ -15,6 +15,7 @@ import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
 import { useReducedMotion } from '../ui/motion.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
+import { usePageHidden } from '../ui/use-page-hidden.ts';
 import {
   clearTvFinished,
   closeAgentTv,
@@ -37,7 +38,7 @@ import { tvCaption } from './tv-caption.ts';
 import { StageGaze } from './tv-gaze.ts';
 import { clampToViewport, STAGES, watchStage } from './tv-layout.ts';
 import type { TvAsk } from './tv-scene.ts';
-import { usePageHidden, useThrottledText, useViewport } from './use-tv-env.ts';
+import { useThrottledText, useViewport } from './use-tv-env.ts';
 import { useTvEvents } from './use-tv-events.ts';
 
 export const TV_BUTTON_ID = 'agent-tv-button';
@@ -84,8 +85,16 @@ interface AgentTvProps {
   onStop(runId: string): void;
 }
 
-export function AgentTv(props: AgentTvProps) {
-  const { members, asks, decision, onPick, onAsk } = props;
+export function AgentTv({
+  members,
+  asks,
+  decision,
+  rows,
+  stopping,
+  onPick,
+  onAsk,
+  onStop,
+}: AgentTvProps) {
   const { position, size, watch, muted, view, cleared } = useAgentTv();
   const panel = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -263,12 +272,12 @@ export function AgentTv(props: AgentTvProps) {
         </div>
         {view === 'list' ? (
           <TvList
-            rows={props.rows}
+            rows={rows}
             cleared={cleared}
-            stopping={props.stopping}
+            stopping={stopping}
             onPick={onPick}
             onAsk={onAsk}
-            onStop={props.onStop}
+            onStop={onStop}
             onClear={clearTvFinished}
           />
         ) : (

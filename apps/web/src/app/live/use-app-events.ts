@@ -3,9 +3,9 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { parseAppEvent, type AppEvent } from '@spark-outpost/contracts';
 import { LIVE_ROOTS, isLiveQueryKey, mergeInvalidations } from './app-event-keys.ts';
 
-export const LIVE_STALE_MS = 5 * 60_000;
-export const FALLBACK_POLL_MS = 60_000;
-export const PAUSED_HINT_MS = 20_000;
+const LIVE_STALE_MS = 5 * 60_000;
+const FALLBACK_POLL_MS = 60_000;
+const PAUSED_HINT_MS = 20_000;
 const COALESCE_MS = 100;
 const RETRY_BASE_MS = 1_000;
 const RETRY_MAX_MS = 15_000;

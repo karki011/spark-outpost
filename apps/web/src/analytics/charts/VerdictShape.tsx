@@ -1,3 +1,7 @@
+import { useId } from 'react';
+import { capitalize, RATED_VERDICTS, type RatedVerdict } from '../analytics-model.ts';
+import { DotPattern, HatchPattern } from './Patterns.tsx';
+
 const COLORS: Record<string, string> = {
   good: 'var(--success)',
   mixed: 'var(--warn)',
@@ -7,6 +11,32 @@ const COLORS: Record<string, string> = {
 
 export function verdictColor(verdict: string): string {
   return COLORS[verdict] ?? 'var(--muted)';
+}
+
+interface VerdictPatternIds {
+  mixed: string;
+  bad: string;
+}
+
+export function useVerdictPatternIds(): VerdictPatternIds {
+  const base = useId();
+  return { mixed: `${base}m`, bad: `${base}b` };
+}
+
+export function VerdictPatterns({ ids }: { ids: VerdictPatternIds }) {
+  return (
+    <>
+      <DotPattern id={ids.mixed} color={verdictColor('mixed')} />
+      <HatchPattern id={ids.bad} color={verdictColor('bad')} />
+    </>
+  );
+}
+
+export function verdictFill(verdict: RatedVerdict, ids: VerdictPatternIds): string {
+  if (verdict === 'mixed') return `url(#${ids.mixed})`;
+  if (verdict === 'bad') return `url(#${ids.bad})`;
+  if (verdict === 'unclear') return 'var(--panel)';
+  return verdictColor('good');
 }
 
 export function VerdictShape({
@@ -51,12 +81,12 @@ export function VerdictShape({
 export function ShapeLegend() {
   return (
     <ul className="an-legend">
-      {(['good', 'mixed', 'unclear', 'bad'] as const).map((verdict) => (
+      {RATED_VERDICTS.map((verdict) => (
         <li key={verdict}>
           <svg width="14" height="14" aria-hidden="true">
             <VerdictShape verdict={verdict} x={7} y={7} />
           </svg>
-          {verdict.charAt(0).toUpperCase() + verdict.slice(1)}
+          {capitalize(verdict)}
         </li>
       ))}
     </ul>

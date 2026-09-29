@@ -3,12 +3,13 @@ import type { KeyboardEvent, Ref } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { AgentBlob } from '../brand/AgentBlob.tsx';
 import type { BlobExpression } from '../brand/blob-expression.ts';
+import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { CheckIcon } from '../ui/icons.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
 import type { RunItem } from '../home/home-model.ts';
 import { CORNERS, statusText, type CompanionFeed, type Corner } from './companion-model.ts';
 
-export const SECTION_LIMIT = 4;
+const SECTION_LIMIT = 4;
 
 const FOCUSABLE = 'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
@@ -37,18 +38,8 @@ function CornerIcon({ corner }: { corner: Corner }) {
 }
 
 function trapFocus(event: KeyboardEvent<HTMLDivElement>) {
-  if (event.key !== 'Tab') return;
-  const items = [...event.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE)];
-  const first = items[0];
-  const last = items.at(-1);
-  if (!first || !last) return;
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
+  const panel = event.currentTarget;
+  wrapTabFocus(event, () => [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)]);
 }
 
 interface PanelItem {
@@ -75,7 +66,7 @@ const fromRun = (item: RunItem): PanelItem => ({
   action: 'Watch',
 });
 
-export function panelSections(feed: CompanionFeed): SectionSpec[] {
+function panelSections(feed: CompanionFeed): SectionSpec[] {
   const sections: SectionSpec[] = [
     { key: 'needs', title: 'Needs you', tone: 'asking', counted: true, items: feed.needs },
     { key: 'failed', title: 'Failed', tone: 'error', counted: true, items: feed.errors },

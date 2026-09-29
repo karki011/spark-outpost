@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import { motion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
+import { wrapTabFocus } from '../ui/focus-trap.ts';
 import { reveal } from '../ui/transitions.tsx';
 import { auditApi, auditKeys } from './audit-api.ts';
 import { AuditExport } from './AuditExport.tsx';
@@ -32,18 +33,8 @@ interface AuditDialogProps {
 }
 
 function trapFocus(event: KeyboardEvent<HTMLDivElement>) {
-  if (event.key !== 'Tab') return;
-  const items = [...event.currentTarget.querySelectorAll<HTMLElement>(FOCUSABLE)];
-  const first = items[0];
-  const last = items.at(-1);
-  if (!first || !last) return;
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
+  const panel = event.currentTarget;
+  wrapTabFocus(event, () => [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)]);
 }
 
 function TabIcon({ path }: { path: string }): ReactNode {

@@ -1,7 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { isSmallSample } from '@spark-outpost/contracts';
 
-export interface TableColumn<Row> {
+interface TableColumn<Row> {
   label: string;
   value: (row: Row) => ReactNode;
   numeric?: boolean;
@@ -43,7 +43,7 @@ export function DataTable<Row>({ caption, columns, rows }: DataTableProps<Row>) 
   );
 }
 
-export function SampleFlag({ n, noun = 'runs' }: { n: number; noun?: string | undefined }) {
+function SampleFlag({ n, noun = 'runs' }: { n: number; noun?: string | undefined }) {
   if (!isSmallSample(n)) return null;
   return (
     <span className="an-flag">

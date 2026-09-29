@@ -22,7 +22,7 @@ const ISSUE_LABEL: Record<ProviderIssueKind, string> = {
   rate_limit: 'Rate limited',
 };
 
-export interface ModelOption {
+interface ModelOption {
   id: string;
   label: string | null;
 }

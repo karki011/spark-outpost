@@ -205,3 +205,12 @@ export const queryKeys = {
   capabilities: (provider: ProviderId) => ['capabilities', provider] as const,
   usageSummary: ['usage-summary'] as const,
 };
+
+export const CAPABILITIES_STALE_MS = 60 * 60 * 1000;
+
+export function capabilitiesQuery(provider: ProviderId) {
+  return {
+    queryKey: queryKeys.capabilities(provider),
+    queryFn: () => api.getCapabilities(provider),
+  };
+}

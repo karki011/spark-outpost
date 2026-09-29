@@ -77,16 +77,19 @@ export function pickLabel(pick: AgentPick | null): string | null {
   return [model, pick.effort].filter(Boolean).join(' · ') || null;
 }
 
-export function retryLine(payload: CheckpointPayload): string {
+function escalatedPick(payload: CheckpointPayload): string | null {
   const to = pickLabel(payload.to);
-  const from = pickLabel(payload.from);
-  if (!to || to === from) return 'Retry the step once more?';
-  return `Retry with ${to}?`;
+  return to && to !== pickLabel(payload.from) ? to : null;
+}
+
+export function retryLine(payload: CheckpointPayload): string {
+  const to = escalatedPick(payload);
+  return to ? `Retry with ${to}?` : 'Retry the step once more?';
 }
 
 export function escalateLabel(payload: CheckpointPayload): string {
-  const to = pickLabel(payload.to);
-  return to && to !== pickLabel(payload.from) ? `Retry with ${to}` : 'Retry one tier up';
+  const to = escalatedPick(payload);
+  return to ? `Retry with ${to}` : 'Retry one tier up';
 }
 
 function budgetAmount(limit: BudgetLimit, value: number): string {

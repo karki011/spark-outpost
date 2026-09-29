@@ -1,6 +1,7 @@
 import type { IgnoredSetting, RepoAgentConfig, TrustChange } from '@spark-outpost/contracts';
+import { countLabel } from '../../ui/count-label.ts';
 
-export type TrustPrompt = 'ask' | 'changed' | null;
+type TrustPrompt = 'ask' | 'changed' | null;
 
 export function trustPrompt(config: RepoAgentConfig): TrustPrompt {
   const { trust } = config;
@@ -9,14 +10,11 @@ export function trustPrompt(config: RepoAgentConfig): TrustPrompt {
   return trust.state === 'unset' ? 'ask' : null;
 }
 
-const plural = (count: number, one: string, many = `${one}s`) =>
-  `${count} ${count === 1 ? one : many}`;
-
 export function executableSummary(config: RepoAgentConfig): string {
   const parts = [
-    config.hooks.length > 0 ? plural(config.hooks.length, 'hook') : null,
-    config.allowRules.length > 0 ? plural(config.allowRules.length, 'allow rule') : null,
-    config.mcpServers.length > 0 ? plural(config.mcpServers.length, 'MCP server') : null,
+    config.hooks.length > 0 ? countLabel(config.hooks.length, 'hook') : null,
+    config.allowRules.length > 0 ? countLabel(config.allowRules.length, 'allow rule') : null,
+    config.mcpServers.length > 0 ? countLabel(config.mcpServers.length, 'MCP server') : null,
   ].filter((part): part is string => part !== null);
   return parts.length > 0 ? parts.join(', ') : 'Key or proxy settings only';
 }
@@ -60,4 +58,8 @@ export const IGNORED_LABELS: Record<IgnoredSetting['kind'], string> = {
 
 export function ignoredCount(config: RepoAgentConfig): number {
   return config.ignored.reduce((total, group) => total + group.items.length, 0);
+}
+
+export function onOff(on: boolean): string {
+  return on ? 'On' : 'Off';
 }

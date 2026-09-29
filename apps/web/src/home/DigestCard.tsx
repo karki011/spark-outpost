@@ -126,6 +126,12 @@ function Overview({ digest, detailsOpen, onToggleDetails }: OverviewProps) {
   );
 }
 
+function metaLine(writing: boolean, current: Digest | null, quiet: boolean): string {
+  if (writing) return 'Reading your recent work…';
+  if (current && !quiet) return digestMeta(current);
+  return 'Nothing new since your last digest.';
+}
+
 export function DigestCard({ chats, now, onOpenChat, onContinue }: DigestCardProps) {
   const queryClient = useQueryClient();
   const [auditOpen, setAuditOpen] = useState(false);
@@ -180,11 +186,7 @@ export function DigestCard({ chats, now, onOpenChat, onContinue }: DigestCardPro
         <div className="dg-head">
           <BlobScout size={28} mood={writing ? 'working' : null} />
           <p className="dg-meta" aria-live="polite">
-            {writing
-              ? 'Reading your recent work…'
-              : current && view !== 'quiet'
-                ? digestMeta(current)
-                : 'Nothing new since your last digest.'}
+            {metaLine(writing, current, view === 'quiet')}
           </p>
           {current?.conversationId && !writing && view === 'ready' && (
             <button type="button" className="hlink" onClick={() => setAuditOpen(true)}>

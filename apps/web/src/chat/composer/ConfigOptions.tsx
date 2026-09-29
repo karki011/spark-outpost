@@ -5,7 +5,7 @@ import type {
   ConfigValue,
   ConfigValues,
 } from '@spark-outpost/contracts';
-import { Tick } from './EffortOptions.tsx';
+import { TickIcon } from '../../ui/icons.tsx';
 
 interface ConfigOptionsProps {
   options: ConfigOptionInfo[];
@@ -93,7 +93,7 @@ function SelectOption({
                     <small title={choice.description}>{choice.description}</small>
                   )}
                 </span>
-                <Tick />
+                <TickIcon />
               </button>
             ))}
           </div>

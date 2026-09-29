@@ -1,20 +1,20 @@
-export interface CalendarDay {
+import { shortMonth } from '../analytics-model.ts';
+
+interface CalendarDay {
   date: string;
   value: number;
 }
 
-export interface CalendarCell extends CalendarDay {
+interface CalendarCell extends CalendarDay {
   col: number;
   row: number;
 }
 
-export interface CalendarLayout {
+interface CalendarLayout {
   cells: CalendarCell[];
   weeks: number;
   months: { col: number; label: string }[];
 }
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function weekdayIndex(date: string): number {
   return (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7;
@@ -31,7 +31,7 @@ export function calendarLayout(days: readonly CalendarDay[]): CalendarLayout {
   const months: CalendarLayout['months'] = [];
   let previous = '';
   for (const cell of cells) {
-    const label = MONTHS[Number(cell.date.slice(5, 7)) - 1]!;
+    const label = shortMonth(cell.date);
     if (label === previous) continue;
     previous = label;
     const last = months.at(-1);

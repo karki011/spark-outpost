@@ -7,21 +7,35 @@ import {
   type CSSProperties,
 } from 'react';
 import { createPortal } from 'react-dom';
-import type { Choice } from '@spark-outpost/contracts';
-import { ChevronIcon } from '../ui/icons.tsx';
-import { usePopover } from '../ui/use-popover.ts';
+import { ChevronIcon } from './icons.tsx';
+import { usePopover } from './use-popover.ts';
+
+export interface PickerChoice {
+  id: string;
+  label: string;
+  description?: string;
+  risky?: boolean;
+  unavailableReason?: string | null;
+}
 
 interface ChoicePickerProps {
   label: string;
-  choices: Choice[];
+  choices: readonly PickerChoice[];
   value: string;
+  placeholder?: string;
   onChange: (id: string) => void;
 }
 
 const GAP = 6;
 const MENU_MAX_HEIGHT = 320;
 
-export function ChoicePicker({ label, choices, value, onChange }: ChoicePickerProps) {
+export function ChoicePicker({
+  label,
+  choices,
+  value,
+  placeholder = 'Choose',
+  onChange,
+}: ChoicePickerProps) {
   const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
     HTMLButtonElement,
     HTMLDivElement
@@ -85,7 +99,7 @@ export function ChoicePicker({ label, choices, value, onChange }: ChoicePickerPr
         aria-controls={listId}
         onClick={toggle}
       >
-        <span className="field-value">{current?.label ?? 'Choose'}</span>
+        <span className="field-value">{current?.label ?? placeholder}</span>
         <ChevronIcon />
       </button>
       {current?.description && (
@@ -113,7 +127,7 @@ export function ChoicePicker({ label, choices, value, onChange }: ChoicePickerPr
               role="menuitemradio"
               aria-checked={choice.id === value}
               className={choice.risky ? 'warn' : undefined}
-              disabled={choice.unavailableReason !== null}
+              disabled={Boolean(choice.unavailableReason)}
               onClick={() => {
                 onChange(choice.id);
                 setOpen(false);

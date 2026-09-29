@@ -16,9 +16,7 @@ const DECISIONS: Record<string, string> = {
   fallback: 'the rules applied',
 };
 
-export function calibration(
-  points: readonly ConfidencePoint[],
-): { x: number; y: number; n: number }[] {
+function calibration(points: readonly ConfidencePoint[]): { x: number; y: number; n: number }[] {
   const bins = new Map<number, number[]>();
   for (const point of points) {
     if (point.score === null) continue;

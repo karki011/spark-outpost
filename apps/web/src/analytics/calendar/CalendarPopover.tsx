@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { DayPicker, type DateRange } from 'react-day-picker';
 import 'react-day-picker/style.css';
+import { wrapTabFocus } from '../../ui/focus-trap.ts';
 import {
   CALENDAR_PRESETS,
   formatIsoLocal,
@@ -49,28 +50,9 @@ export function CalendarPopover({
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const onTrapKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Tab') return;
-    const container = panelRef.current;
-    if (!container) return;
-    const focusable = focusableIn(container);
-    if (focusable.length === 0) return;
-    const first = focusable[0]!;
-    const last = focusable[focusable.length - 1]!;
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
-  };
+  const onTrapKeyDown = (event: KeyboardEvent<HTMLDivElement>) =>
+    wrapTabFocus(event, () => (panelRef.current ? focusableIn(panelRef.current) : []));
 
-  const anchorIso = draft?.from
-    ? formatIsoLocal(draft.from)
-    : draft?.to
-      ? formatIsoLocal(draft.to)
-      : undefined;
   const disabled = (date: Date) => {
     const iso = formatIsoLocal(date);
     if (isFutureIso(iso, today)) return true;
@@ -129,8 +111,10 @@ export function CalendarPopover({
           className="an-cal-grid"
         />
       </div>
-      {anchorIso && draft?.from && !draft?.to && (
-        <p className="an-cal-hint">Pick an end date within 366 days of {anchorIso}.</p>
+      {draft?.from && !draft?.to && (
+        <p className="an-cal-hint">
+          Pick an end date within 366 days of {formatIsoLocal(draft.from)}.
+        </p>
       )}
       <div className="an-cal-foot">
         <button type="button" className="btn ghost sm" onClick={onCancel}>

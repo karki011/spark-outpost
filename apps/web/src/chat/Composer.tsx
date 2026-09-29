@@ -24,7 +24,7 @@ import {
   type Run,
 } from '@spark-outpost/contracts';
 import { useQuery } from '@tanstack/react-query';
-import { api, queryKeys } from '../api/client.ts';
+import { CAPABILITIES_STALE_MS, capabilitiesQuery } from '../api/client.ts';
 import { usePopover } from '../ui/use-popover.ts';
 import { AttachmentChips } from './attachments/AttachmentChips.tsx';
 import type { AttachmentsState } from './attachments/use-attachments.ts';
@@ -81,9 +81,17 @@ interface ComposerProps {
 }
 
 const NO_COMMANDS: readonly AgentCommand[] = [];
-const CAPABILITIES_STALE_MS = 60 * 60 * 1000;
 
 const MAX_ROWS = 5;
+
+function focusAtEnd(input: HTMLTextAreaElement) {
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+}
+
+function focusMovesToSlashMenu(next: EventTarget | null): boolean {
+  return next instanceof Element && next.closest('.slashpop') !== null;
+}
 
 export function Composer({
   conversationId,
@@ -129,8 +137,7 @@ export function Composer({
   const [mcpOpen, setMcpOpen] = useState(false);
   const provider = settings?.provider ?? null;
   const capabilities = useQuery({
-    queryKey: queryKeys.capabilities(provider ?? 'claude'),
-    queryFn: () => api.getCapabilities(provider ?? 'claude'),
+    ...capabilitiesQuery(provider ?? 'claude'),
     staleTime: CAPABILITIES_STALE_MS,
     enabled: provider !== null,
   });
@@ -210,9 +217,7 @@ export function Composer({
     takeDraft(conversationId);
     requestAnimationFrame(() => {
       const input = textareaRef.current;
-      if (!input) return;
-      input.focus();
-      input.setSelectionRange(input.value.length, input.value.length);
+      if (input) focusAtEnd(input);
     });
   }, [pendingDraft, conversationId]);
 
@@ -220,9 +225,7 @@ export function Composer({
   useEffect(() => {
     if (focusRequest === 0) return;
     const input = textareaRef.current;
-    if (!input) return;
-    input.focus();
-    input.setSelectionRange(input.value.length, input.value.length);
+    if (input) focusAtEnd(input);
   }, [focusRequest]);
 
   const hasText = draft.trim().length > 0;
@@ -380,11 +383,7 @@ export function Composer({
             mention.sync(event.currentTarget);
           }}
           onBlur={(event) => {
-            if (!(
-              event.relatedTarget instanceof Element && event.relatedTarget.closest('.slashpop')
-            )) {
-              slash.dismiss();
-            }
+            if (!focusMovesToSlashMenu(event.relatedTarget)) slash.dismiss();
             mention.dismiss();
           }}
           onKeyDown={onKeyDown}

@@ -16,7 +16,7 @@ export function digestMeta(digest: Digest, timeZone?: string): string {
     .join(' · ');
 }
 
-export type DigestView = 'hidden' | 'loading' | 'writing' | 'ready' | 'failed' | 'quiet';
+type DigestView = 'hidden' | 'loading' | 'writing' | 'ready' | 'failed' | 'quiet';
 
 export function digestView(state: DigestState | undefined): DigestView {
   if (!state) return 'loading';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BlobScout } from '../../brand/BlobScout.tsx';
-import { usePageHidden } from '../../crew/use-tv-env.ts';
+import { usePageHidden } from '../../ui/use-page-hidden.ts';
 import { prefersReducedMotion, useReducedMotion } from '../../ui/motion.ts';
 import { describeFailure, type FailureKind } from './connection-failure.ts';
 import { markConnectionLost } from './connection-store.ts';

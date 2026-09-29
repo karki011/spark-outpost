@@ -3,7 +3,7 @@ import type { AnalyticsRange } from '@spark-outpost/contracts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { usePopover } from '../ui/use-popover.ts';
 import { CalendarPopover } from './calendar/CalendarPopover.tsx';
-import { formatRangeLabel, formatShortRange } from './calendar/date-math.ts';
+import { formatRangeLabel, formatShortRange, localToday } from './calendar/date-math.ts';
 import type { RangeChoice } from './analytics-api.ts';
 
 const PRESETS = [
@@ -11,15 +11,6 @@ const PRESETS = [
   { id: '30d', label: '30 days' },
   { id: '90d', label: '90 days' },
 ];
-
-export function localToday(now = new Date()): string {
-  const offset = now.getTimezoneOffset() * 60_000;
-  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
-}
-
-export function daysBefore(date: string, days: number): string {
-  return new Date(Date.parse(`${date}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
-}
 
 interface RangePickerProps {
   value: RangeChoice;
@@ -39,7 +30,10 @@ function customLabel(value: RangeChoice, today: string) {
 export function RangePicker({ value, onChange }: RangePickerProps) {
   const id = useId();
   const today = localToday();
-  const { open, setOpen, anchorRef, panelRef } = usePopover<HTMLDivElement, HTMLDivElement>();
+  const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
+    HTMLDivElement,
+    HTMLDivElement
+  >();
   const wasOpen = useRef(false);
   const invalid = value.range === 'custom' && value.from > value.to;
 
@@ -52,7 +46,7 @@ export function RangePicker({ value, onChange }: RangePickerProps) {
 
   const pick = (range: string) => {
     if (range === 'custom') {
-      setOpen((current) => !current);
+      toggle();
       return;
     }
     setOpen(false);

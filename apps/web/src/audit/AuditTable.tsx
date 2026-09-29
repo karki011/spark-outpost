@@ -1,15 +1,10 @@
 import '../usage/usage.css';
 import { useId, type ReactNode } from 'react';
+import { providerColor } from '../chat/provider-name.ts';
 import { costTip, type CostSourceLabel } from '../usage/format.ts';
 
 export function ProviderDot({ provider }: { provider: string }) {
-  return (
-    <i
-      className="pdot"
-      style={{ background: `var(--c-${provider}, var(--muted))` }}
-      aria-hidden="true"
-    />
-  );
+  return <i className="pdot" style={{ background: providerColor(provider) }} aria-hidden="true" />;
 }
 
 const sourceText: Record<string, string> = {

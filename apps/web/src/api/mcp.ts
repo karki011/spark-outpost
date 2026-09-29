@@ -10,7 +10,8 @@ import {
 import { request } from './client.ts';
 
 export const userMcpKey = ['mcp', 'servers'] as const;
-export const chatMcpKey = (conversationId: string) => ['mcp', 'chat', conversationId] as const;
+export const chatMcpRoot = ['mcp', 'chat'] as const;
+export const chatMcpKey = (conversationId: string) => [...chatMcpRoot, conversationId] as const;
 
 const send = (path: string, method: string, body?: object) =>
   request(userMcpListSchema, path, {

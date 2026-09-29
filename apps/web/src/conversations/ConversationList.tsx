@@ -17,8 +17,7 @@ import { useProjects } from '../chat/project/use-chat-repos.ts';
 import { PlusIcon } from '../ui/icons.tsx';
 import { isFiltering, matchesFilter, parseChatFilter } from '../categories/category-filter.ts';
 import { useDebouncedValue } from '../ui/use-debounced-value.ts';
-import { approvalAnchor } from '../crew/conversation-crew.ts';
-import { JUMP_TRIES, scrollToAnchor } from '../crew/scroll-to-anchor.ts';
+import { scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
 import { AttentionCard } from './AttentionCard.tsx';
 import { ChatMenu } from './ChatMenu.tsx';
 import type { MenuAnchor } from './MenuShell.tsx';
@@ -416,8 +415,7 @@ export function ConversationList({
           onJump={(chat) => {
             changeTab('active');
             openChat(chat.id);
-            const approvalId = chat.attention?.approvalId;
-            if (approvalId) scrollToAnchor(approvalAnchor(approvalId), JUMP_TRIES);
+            scrollToChatApproval(chat);
           }}
         />
         {conversations.isError && !isConnectionLoss(conversations.error) && (

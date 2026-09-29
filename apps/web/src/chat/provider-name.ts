@@ -8,3 +8,7 @@ const providerNames: Record<string, string> = {
 export function providerName(provider: string): string {
   return providerNames[provider] ?? provider;
 }
+
+export function providerColor(provider: string): string {
+  return `var(--c-${provider}, var(--muted))`;
+}

@@ -5,7 +5,7 @@ export interface Box {
   bottom: number;
 }
 
-export interface ToolbarPlacement {
+interface ToolbarPlacement {
   left: number;
   top: number;
   side: 'below' | 'above';
