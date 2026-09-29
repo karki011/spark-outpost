@@ -5,6 +5,7 @@ import {
   type AgentSettings,
   type ProviderCapabilityReport,
 } from '../../providers/provider.ts';
+import { PLAN_MODE_ID } from '../../plans/plan-mode.ts';
 import type { AgentDefinition } from './agents.ts';
 import { capabilitiesFrom, currentValues, isCoreOption } from './capabilities.ts';
 import {
@@ -33,10 +34,13 @@ export interface AppliedSettings {
   live: SettingsSession;
 }
 
+const COLLABORATION_CATEGORY = 'collaboration_mode';
+
 export interface ModeWish {
   wanted: string;
   fallback?: string;
   note?: string;
+  plan?: boolean;
 }
 
 type Requester = Pick<acp.ClientContext, 'request'>;
@@ -152,6 +156,9 @@ export async function applySessionSettings(
     );
   }
   await live.setMode(chosenMode);
+  notes.push(
+    ...(await applyPlanning(live, mode.plan === true, settings.options ?? {}, definition.name)),
+  );
 
   const wishes: ConfigWish[] = [
     { category: 'model', value: settings.model, label: settings.modelLabel },
@@ -189,6 +196,40 @@ export async function applySessionSettings(
     using: usingLabel(options, definition.name),
     live,
   };
+}
+
+function collaborationOption(
+  options: readonly acp.SessionConfigOption[],
+): acp.SessionConfigOption | undefined {
+  return options.find(
+    (option) =>
+      option.type === 'select' &&
+      option.category === COLLABORATION_CATEGORY &&
+      choices(option).some((choice) => choice.value === PLAN_MODE_ID),
+  );
+}
+
+async function applyPlanning(
+  live: SettingsSession,
+  plan: boolean,
+  chosen: ConfigValues,
+  agentName: string,
+): Promise<string[]> {
+  if (plan && offersMode(live.options(), PLAN_MODE_ID)) {
+    await live.setMode(PLAN_MODE_ID);
+    return [];
+  }
+  const collaboration = collaborationOption(live.options());
+  if (!collaboration) {
+    return plan ? [`${agentName} has no plan mode here; it plans in its read-only mode`] : [];
+  }
+  if (!plan && collaboration.id in chosen) return [];
+  const wanted = plan
+    ? PLAN_MODE_ID
+    : choices(collaboration).find((choice) => choice.value !== PLAN_MODE_ID)?.value;
+  if (wanted && collaboration.currentValue !== wanted)
+    await live.setValue(collaboration.id, wanted);
+  return [];
 }
 
 async function applyChange(

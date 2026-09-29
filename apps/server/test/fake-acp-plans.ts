@@ -4,6 +4,7 @@ import type { RoleTurn } from './fake-acp-roles.ts';
 export const PLAN_MODE_TRIGGER = '#planmode';
 export const PROPOSED_PLAN_TRIGGER = '#proposedplan';
 export const PLAN_REPLY_TRIGGER = '#planreply';
+export const NATIVE_PLAN_TRIGGER = '#nativeplan';
 
 export const FAKE_PLAN = [
   '# Add CSV export',
@@ -63,6 +64,18 @@ export async function planModeTurn(turn: RoleTurn, lockedMode: string): Promise<
   }
   await turn.update({ sessionUpdate: 'tool_call_update', toolCallId: 'plan1', status: 'failed' });
   await turn.say(`Kept planning (${chose}).`);
+  return 'end_turn';
+}
+
+export async function planTurn(
+  asked: string,
+  turn: RoleTurn,
+  mode: string,
+): Promise<acp.StopReason | null> {
+  if (asked.includes(PLAN_MODE_TRIGGER)) return planModeTurn(turn, mode);
+  if (!asked.includes(NATIVE_PLAN_TRIGGER)) return null;
+  if (mode === 'plan') return planModeTurn(turn, mode);
+  await turn.say(`Not in plan mode (${mode}).\n\n${FAKE_PLAN}`);
   return 'end_turn';
 }
 

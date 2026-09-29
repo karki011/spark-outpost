@@ -66,3 +66,27 @@ describe('the modes a running session may switch to', () => {
     expect(modeAllowed(codex, turn(null, true), true, true)('agent-full-access')).toBe(true);
   });
 });
+
+describe('planning in Ask (B5)', () => {
+  const { claude, codex } = agentDefinitions;
+  const planning = (mode: string | null): ProviderTurn => ({ ...turn(mode), planning: true });
+
+  it('asks for the native plan mode on a planning Ask turn in a project', () => {
+    expect(modeWish(claude, planning('default'), true, false)).toEqual({
+      wanted: 'default',
+      plan: true,
+    });
+    expect(modeWish(codex, planning(null), true, false)).toEqual({
+      wanted: 'read-only',
+      plan: true,
+    });
+  });
+
+  it('never plans in a plain chat or in Do', () => {
+    expect(modeWish(claude, planning('default'), false, false)).toEqual({ wanted: 'default' });
+    expect(modeWish(claude, planning('default'), true, true)).toEqual({
+      wanted: 'default',
+      fallback: 'default',
+    });
+  });
+});

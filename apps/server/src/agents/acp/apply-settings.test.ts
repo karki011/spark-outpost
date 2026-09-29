@@ -172,3 +172,77 @@ describe('applying chat settings', () => {
     );
   });
 });
+
+function planAgent(options: acp.SessionConfigOption[]) {
+  let current = options;
+  const calls: { method: string; params: Record<string, unknown> }[] = [];
+  const ctx = {
+    request: (method: string, params: Record<string, unknown>) => {
+      calls.push({ method, params });
+      current = current.map((option) =>
+        option.id === params.configId && option.type === 'select'
+          ? { ...option, currentValue: String(params.value) }
+          : option,
+      );
+      return Promise.resolve({ configOptions: current });
+    },
+  } as unknown as Pick<acp.ClientContext, 'request'>;
+  const session = {
+    sessionId: 's',
+    newSessionResponse: { sessionId: 's', configOptions: options } as acp.NewSessionResponse,
+  };
+  return { ctx, session, calls };
+}
+
+const collaboration = (value: string) =>
+  select('collaboration_mode', 'collaboration_mode', value, ['default', 'plan']);
+
+describe('entering the native plan mode (B5)', () => {
+  const claude = { ...agentDefinitions.claude, name: 'Claude' };
+
+  it('switches Claude to its plan mode after the Ask mode', async () => {
+    const { ctx, session, calls } = planAgent([
+      select('mode', 'mode', 'acceptEdits', ['default', 'acceptEdits', 'plan']),
+    ]);
+    const applied = await applySessionSettings(ctx, session, claude, settings, {
+      wanted: 'default',
+      plan: true,
+    });
+    expect(calls.map((call) => call.params.value)).toEqual(['default', 'plan']);
+    expect(applied.mode).toBe('plan');
+    expect(applied.notes).toEqual([]);
+  });
+
+  it("turns on Codex's Plan collaboration mode, and turns it off again for a later turn", async () => {
+    const planned = planAgent([
+      select('mode', 'mode', 'read-only', ['read-only', 'agent']),
+      collaboration('default'),
+    ]);
+    await applySessionSettings(planned.ctx, planned.session, definition, settings, {
+      wanted: 'read-only',
+      plan: true,
+    });
+    expect(planned.calls.map((call) => call.params)).toEqual([
+      { sessionId: 's', configId: 'collaboration_mode', value: 'plan' },
+    ]);
+    const later = planAgent([
+      select('mode', 'mode', 'read-only', ['read-only', 'agent']),
+      collaboration('plan'),
+    ]);
+    await applySessionSettings(later.ctx, later.session, definition, settings, {
+      wanted: 'read-only',
+    });
+    expect(later.calls.map((call) => call.params)).toEqual([
+      { sessionId: 's', configId: 'collaboration_mode', value: 'default' },
+    ]);
+  });
+
+  it('says so when the agent has no plan mode', async () => {
+    const { ctx, session } = planAgent([select('mode', 'mode', 'read-only', ['read-only'])]);
+    const applied = await applySessionSettings(ctx, session, definition, settings, {
+      wanted: 'read-only',
+      plan: true,
+    });
+    expect(applied.notes).toEqual(['Fake has no plan mode here; it plans in its read-only mode']);
+  });
+});

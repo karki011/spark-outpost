@@ -1,7 +1,13 @@
-import { PLAN_DOCUMENT_MAX_LENGTH } from '@spark-outpost/contracts';
+import {
+  modeForLegacy,
+  PERMISSION_ASK,
+  PLAN_DOCUMENT_MAX_LENGTH,
+  type RunMode,
+} from '@spark-outpost/contracts';
 import { objectFields } from '../agents/acp/object-fields.ts';
 
 const SWITCH_MODE_KIND = 'switch_mode';
+export const PLAN_MODE_ID = 'plan';
 const EXIT_PLAN_PREFIX = 'exit-plan-';
 export const ENTER_PLAN_MODE_TITLE = 'EnterPlanMode';
 export const ENTER_PLAN_MODE_WHY = 'planning changes no files';
@@ -29,4 +35,8 @@ export function exitPlanText(
     .join('\n\n');
   const text = (typeof input === 'string' && input.trim() ? input : shown).trim();
   return text ? text.slice(0, PLAN_DOCUMENT_MAX_LENGTH) : null;
+}
+
+export function readOnlyChatPlans(provider: string, mode: RunMode | null): boolean {
+  return mode === 'ask' && modeForLegacy(provider, PERMISSION_ASK, null) === PLAN_MODE_ID;
 }

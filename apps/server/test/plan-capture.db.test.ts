@@ -93,6 +93,16 @@ async function planAdvice(runId: string) {
   return rows;
 }
 
+async function switchedToPlan(runId: string): Promise<boolean> {
+  const { rows } = await t.db.query<{ payload: string }>(
+    `SELECT payload::text FROM run_protocol_log
+     WHERE run_id = $1 AND direction = 'to_agent'
+       AND method IN ('session/set_config_option', 'session/set_mode')`,
+    [runId],
+  );
+  return rows.some((row) => /"(?:value|modeId)":\s*"plan"/.test(row.payload));
+}
+
 const head = () => execFileSync('git', ['-C', root, 'rev-parse', 'HEAD']).toString().trim();
 
 const rejectPlans: Answerer = (approval: Approval) =>
@@ -158,6 +168,43 @@ describe("Claude's plan mode", { timeout: 60_000 }, () => {
       [third],
     );
     expect(rows[0]?.payload).toContain('## Agreed plan');
+  });
+});
+
+describe('native plan mode in Ask (B5)', { timeout: 60_000 }, () => {
+  beforeEach(() => connectProviders(t, false));
+
+  it('puts a read-only Claude chat in its plan mode and saves the plan it offers', async () => {
+    start(null);
+    const { conversationId } = await linkedConversation(t, root);
+    const runId = await say(conversationId, 'Plan CSV export #nativeplan', 'ask');
+    await finished(runId);
+    const [plan] = await planDocuments(t.db, conversationId);
+    expect(plan).toMatchObject({
+      status: 'proposed',
+      source: 'claude_plan_mode',
+      body: FAKE_PLAN,
+      sourceRunId: runId,
+    });
+    const replies = await assistantReplies(conversationId);
+    expect(replies.at(-1)?.content).toContain('Kept planning');
+    expect(await switchedToPlan(runId)).toBe(true);
+  });
+
+  it('drafts a plan-only request from a Do chat in plan mode and approves it from the plan card', async () => {
+    harness = startOrchestrator(t, null);
+    const { conversationId } = await linkedConversation(t, root);
+    const runId = await say(
+      conversationId,
+      "Plan adding CSV export. Plan only for now: don't change any files. #nativeplan",
+    );
+    const { asked } = await driveToEnd(t, conversationId, runId);
+    expect(asked.map((approval) => approval.title)).toEqual(['Approve the plan?']);
+    expect(await planDocuments(t.db, conversationId)).toEqual([
+      expect.objectContaining({ source: 'claude_plan_mode', body: FAKE_PLAN, status: 'approved' }),
+    ]);
+    expect(await switchedToPlan(runId)).toBe(true);
+    expect(execFileSync('git', ['-C', root, 'status', '--porcelain']).toString()).toBe('');
   });
 });
 

@@ -272,6 +272,7 @@ export async function runAgentTurn(
       ...(input.piece?.coordinated ? { coordinated: true } : {}),
       ...(input.builderEnv ? { env: input.builderEnv } : {}),
       ...(input.copyOf !== null ? { worktree: true } : {}),
+      ...(input.planning ? { planning: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
@@ -301,6 +302,9 @@ export async function runAgentTurn(
       await tasks.observe(output);
       if (output.kind === 'session') await session?.started(output);
       if (output.kind === 'commands') await session?.commands(output.commands);
+      if (output.kind === 'plan_proposed') {
+        await plans.propose(output.plan, output.source, output.toolCallId);
+      }
       if (output.kind === 'session_settings') {
         await recordSessionSettings(deps.db, lease.runId, output);
       }

@@ -23,7 +23,7 @@ import {
   type PromptSupport,
 } from './conversation-prompt.ts';
 import { assertProtocolVersion, failureError, toProviderError } from './errors.ts';
-import { declineInConversation } from './permissions.ts';
+import { declineInConversation, nativePlan } from './permissions.ts';
 import { applySessionSettings, modeName } from './apply-settings.ts';
 import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
 import { offeredCapabilities } from './capabilities.ts';
@@ -357,7 +357,8 @@ async function converse(
       if (signal.aborted) return { outcome: { outcome: 'cancelled' } };
       if (doing) return reviewPermission(ctx.params, ctx.requestId, doing);
       const decision = declineInConversation(ctx.params, policy !== null);
-      report(decision.note);
+      const plan = policy ? nativePlan(ctx.params, definition.id) : [];
+      push(plan.length > 0 ? plan : mapper.clientAction(decision.note));
       return decision.response;
     })
     .onRequest(acp.methods.client.fs.writeTextFile, (ctx) =>

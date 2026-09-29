@@ -188,7 +188,7 @@ const claudeSessions = {
     claudeSessionMeta([], [], [], repo ?? null),
   probeSessionMeta: claudeSessionMeta([], [], [], null, false, true),
   projectSessionMeta: (extraRoots: readonly string[], repo?: ClaudeRepoOptions | null) =>
-    claudeSessionMeta(['Read', 'Glob', 'Grep'], extraRoots, [], repo ?? null),
+    claudeSessionMeta(['Read', 'Glob', 'Grep', 'ExitPlanMode'], extraRoots, [], repo ?? null),
   doSessionMeta: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,

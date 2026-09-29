@@ -54,18 +54,15 @@ export async function closeReply(s: Session): Promise<string | null> {
 }
 
 async function propose(s: Session, body: string, messageId: string | null) {
-  const captured = await proposedPlanFromRun(s.deps.db, s.lease.runId);
-  const plan =
-    captured ??
-    (await insertPlanDocument(s.deps.db, {
-      conversationId: s.input.identity.threadId,
-      taskId: s.taskId,
-      source: 'chat',
-      body,
-      sourceRunId: s.lease.runId,
-      sourceMessageId: messageId,
-    }));
-  if (!captured) await announcePlan(s.append, plan);
+  const plan = await insertPlanDocument(s.deps.db, {
+    conversationId: s.input.identity.threadId,
+    taskId: s.taskId,
+    source: 'chat',
+    body,
+    sourceRunId: s.lease.runId,
+    sourceMessageId: messageId,
+  });
+  await announcePlan(s.append, plan);
   return plan;
 }
 
@@ -106,19 +103,21 @@ export function originalPrompt(s: Session): string {
 export async function draftPlan(s: Session, prompt: string, note: string | null): Promise<Drafted> {
   const hit = await checkBudget(s);
   if (hit) return { event: { type: 'budget_exceeded', limit: hit, unstarted: true } };
-  s.input = { ...s.input, prompt };
+  s.input = { ...s.input, prompt, planning: true };
   const { result } = await runMember(s, {
     role: 'scout',
     reason: note ? 'retry' : 'first',
     escalate: false,
     note,
   });
+  s.input = { ...s.input, planning: false };
   if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
   await publish(s);
   if (s.budgetHit && s.control.reason() === null) {
     return { event: { type: 'budget_exceeded', limit: s.budgetHit } };
   }
-  const body = result.text.trim();
+  const captured = await proposedPlanFromRun(s.deps.db, s.lease.runId);
+  const body = result.text.trim() || (captured?.body ?? '');
   if (result.outcome !== 'succeeded' || !body) {
     return {
       event: {
@@ -131,7 +130,7 @@ export async function draftPlan(s: Session, prompt: string, note: string | null)
   }
   const messageId = await closeReply(s);
   try {
-    return { plan: await propose(s, body, messageId) };
+    return { plan: captured ?? (await propose(s, body, messageId)) };
   } catch (error) {
     if (error instanceof LeaseLostError) throw error;
     await planSaveFailed(s.append, error);

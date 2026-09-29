@@ -42,6 +42,7 @@ export interface RunInput {
   piece?: PieceGuard | null;
   builderEnv?: Record<string, string> | null;
   startAs?: StartAs | null;
+  planning?: boolean;
   projectMove?: ProjectMove | null;
 }
 
