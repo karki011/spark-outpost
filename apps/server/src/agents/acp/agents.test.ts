@@ -4,13 +4,13 @@ import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   BUILDER_PUBLISH_DENY_RULES,
-  CODEX_DO_MODE,
   supportsDo,
   HIDE_CLAUDE_AUTH,
   agentDefinitions,
   claudeSessionMeta,
   secretReadRules,
 } from './agents.ts';
+import { CODEX_DO_MODE, codexPermissionProfiles } from './codex-permissions.ts';
 import { zaiEnvironment, zaiModelId } from './zai.ts';
 
 type ClaudeOptions = {
@@ -153,12 +153,15 @@ describe('Codex launch', () => {
     expect(JSON.parse(chat.CODEX_CONFIG ?? '{}')).toEqual({
       features: { shell_tool: false, unified_exec: false, skill_mcp_dependency_install: false },
       web_search: 'disabled',
+      default_permissions: 'read-only',
+      permissions: codexPermissionProfiles(),
     });
     const project = agentDefinitions.codex.conversationEnv?.('/tmp/run', true) ?? {};
     expect(project).toMatchObject({ INITIAL_AGENT_MODE: 'read-only' });
-    expect(JSON.parse(project.CODEX_CONFIG ?? '{}')).toEqual({
+    expect(JSON.parse(project.CODEX_CONFIG ?? '{}')).toMatchObject({
       features: { shell_tool: true, unified_exec: false, skill_mcp_dependency_install: false },
       web_search: 'disabled',
+      default_permissions: 'read-only',
     });
   });
 
@@ -194,6 +197,44 @@ describe('Codex launch', () => {
       expect(mode).toContain('networkAccess: false');
       expect(mode).toContain('excludeSlashTmp: true');
       expect(source).toContain('_AgentMode.ReadOnly, _AgentMode.AskEveryAction,');
+    });
+
+    it('gives every Codex mode a permission profile, so no turn falls back to a bare sandbox', () => {
+      const modes = block('static all() {');
+      const profiles = codexPermissionProfiles();
+      const ids = [...source.matchAll(/static (\w+) = new _AgentMode\(\s*"([^"]+)"/g)].map(
+        (match) => match[2]!,
+      );
+      expect(ids).toHaveLength(4);
+      for (const id of ids) expect(profiles).toHaveProperty(id);
+      expect(modes).toContain('_AgentMode.AgentFullAccess');
+    });
+
+    it('selects the named profile for a turn instead of the legacy sandbox policy', () => {
+      const method = source.slice(
+        source.indexOf('  turnSandbox(agentMode, cwd, additionalDirectories) {'),
+        source.indexOf('  async setCollaborationMode('),
+      );
+      const helpers = ['function uniqueStrings(', 'function isJsonObject('].map((marker) =>
+        source.slice(source.indexOf(marker), source.indexOf('\n}\n', source.indexOf(marker)) + 3),
+      );
+      const Client = new Function(
+        `function addAdditionalDirectoriesToSandboxPolicy(policy) { return policy; }
+        ${helpers.join('\n')}
+        return class { constructor(config) { this.config = config; }\n${method}\n};`,
+      )() as new (config: object) => {
+        turnSandbox: (mode: object, cwd: string, extra: string[]) => Record<string, unknown>;
+      };
+      const mode = { id: 'agent-full-access', sandboxPolicy: { type: 'dangerFullAccess' } };
+      const configured = new Client({ permissions: codexPermissionProfiles() });
+      expect(configured.turnSandbox(mode, '/work/app', ['/work/lib'])).toEqual({
+        permissions: 'agent-full-access',
+        runtimeWorkspaceRoots: ['/work/app', '/work/lib'],
+      });
+      expect(new Client({}).turnSandbox(mode, '/work/app', [])).toEqual({
+        sandboxPolicy: { type: 'dangerFullAccess' },
+      });
+      expect(source).toContain('...this.turnSandbox(agentMode, cwd, additionalDirectories),');
     });
 
     it('marks session roots untrusted so a repo’s .codex/config.toml is never loaded', () => {

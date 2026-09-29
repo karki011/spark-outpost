@@ -3,8 +3,13 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { ProviderId } from '@spark-outpost/contracts';
 import { BUILDER_GIT_OPS, PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
-import { SECRET_FILE_PATTERNS } from '../../projects/secret-files.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
+import {
+  CODEX_DO_MODE,
+  CODEX_READ_ONLY_MODE,
+  codexPermissionProfiles,
+  SECRET_GLOBS,
+} from './codex-permissions.ts';
 import type { ClaudeRepoOptions, CodexRepoOptions, RepoStyle } from './repo-session.ts';
 import { ZAI_EFFORTS, ZAI_MODELS, zaiLaunchEnvironment, zaiModelId } from './zai.ts';
 
@@ -66,7 +71,6 @@ const CLAUDE_DO_TOOLS = [
 ] as const;
 export const CLAUDE_DO_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
 const CLAUDE_DO_MODE = 'default';
-export const CODEX_DO_MODE = 'ask-every-action';
 
 export const BUILDER_PUBLISH_DENY_RULES = PUBLISH_COMMANDS.map((command) => `Bash(${command}:*)`);
 
@@ -85,11 +89,10 @@ function builderDeny(builder: boolean, coordinated: boolean): string[] {
 }
 
 export function secretReadRules(extraRoots: readonly string[]): string[] {
-  const underCwd = SECRET_FILE_PATTERNS.map((pattern) => `**/${pattern}`);
   const underExtraRoots = extraRoots.flatMap((root) =>
-    SECRET_FILE_PATTERNS.map((pattern) => `/${root}/**/${pattern}`),
+    SECRET_GLOBS.map((glob) => `/${root}/${glob}`),
   );
-  return [...underCwd, ...underExtraRoots].map((pattern) => `Read(${pattern})`);
+  return [...SECRET_GLOBS, ...underExtraRoots].map((pattern) => `Read(${pattern})`);
 }
 
 function repoTools(repo: ClaudeRepoOptions | null, coordinated: boolean): string[] {
@@ -147,6 +150,8 @@ export function codexConfig(browsing: boolean, repo: CodexRepoOptions | null): o
   return {
     features: { shell_tool: browsing, unified_exec: false, skill_mcp_dependency_install: false },
     web_search: 'disabled',
+    default_permissions: CODEX_READ_ONLY_MODE,
+    permissions: codexPermissionProfiles(),
     ...(repo && !repo.agentsMd ? { project_doc_max_bytes: 0 } : {}),
     ...(repo?.developerInstructions ? { developer_instructions: repo.developerInstructions } : {}),
     ...(repo && !repo.skills ? { skills: { include_instructions: false } } : {}),
@@ -159,7 +164,7 @@ function codexEnv(
   repo: CodexRepoOptions | null = null,
 ): Record<string, string> {
   return {
-    INITIAL_AGENT_MODE: 'read-only',
+    INITIAL_AGENT_MODE: CODEX_READ_ONLY_MODE,
     TMPDIR: workdir,
     CODEX_CONFIG: JSON.stringify(codexConfig(browsing, repo)),
   };
@@ -230,8 +235,8 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     name: 'Codex',
     launch: () => packageBin('@agentclientprotocol/codex-acp'),
     repoStyle: 'codex',
-    conversationMode: 'read-only',
-    askMode: 'read-only',
+    conversationMode: CODEX_READ_ONLY_MODE,
+    askMode: CODEX_READ_ONLY_MODE,
     readsProjectFolders: true,
     conversationEnv: codexEnv,
     doMode: CODEX_DO_MODE,
