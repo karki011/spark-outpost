@@ -101,7 +101,8 @@ export function benchAnswer(approval: Approval): { optionId: string; autoDenied:
 
 async function answerPending(env: BenchEnv, conversationId: string, asked: AskedItem[]) {
   const detail = await getConversationDetail(env.t.db, conversationId);
-  for (const approval of detail?.approvals ?? []) {
+  const pending = (detail?.approvals ?? []).filter((approval) => approval.status === 'pending');
+  for (const approval of pending) {
     const choice = benchAnswer(approval);
     asked.push({
       kind: approval.kind,

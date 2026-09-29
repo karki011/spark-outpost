@@ -94,6 +94,7 @@ function baseEnv(
     ORCHESTRATION_COST_CAP_USD: process.env.E2E_RUN_CAP_USD ?? '1.5',
   };
   delete env.TEST_DATABASE_URL;
+  delete env.BACKUP_DIR;
   for (const name of extras.unset ?? []) delete env[name];
   if (runtime === 'acp') return env;
   return {

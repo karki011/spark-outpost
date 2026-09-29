@@ -188,7 +188,10 @@ test('"Always allow in this project" adds the command to the allowlist', async (
   await expect(page.locator('.md', { hasText: 'Done. fake-run=allowed' }).nth(1)).toBeVisible({
     timeout: 15_000,
   });
-  await expect(card(page, /Run a command\?/)).toHaveCount(0);
+  await expect(card(page, /Run a command\?/)).toHaveCount(1);
+  await expect(card(page, /Run a command\?/).getByRole('status')).toContainText(
+    'Always allowed in this project.',
+  );
 
   await page.locator('.ctx-repo').click();
   await expect(

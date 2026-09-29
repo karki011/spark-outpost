@@ -27,13 +27,21 @@ export function mergeApprovals(...lists: readonly (readonly Approval[])[]): Appr
   return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+function answeredOrPending(approval: Approval): boolean {
+  return approval.status === 'pending' || approval.decidedBy === 'user' || isCheckpoint(approval);
+}
+
+export function shownApprovals(...lists: readonly (readonly Approval[])[]): Approval[] {
+  return mergeApprovals(...lists).filter(answeredOrPending);
+}
+
 export function turnApprovals(
   runIds: readonly string[],
   stored: readonly Approval[],
   streamed: readonly Approval[],
 ): Approval[] {
   const own = new Set(runIds);
-  return mergeApprovals(
+  return shownApprovals(
     stored.filter((approval) => own.has(approval.runId)),
     streamed,
   );

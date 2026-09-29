@@ -62,6 +62,25 @@
   color: var(--text);
 }
 .fb-note-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.18s var(--out),
+    opacity 0.18s var(--out),
+    visibility 0s linear 0.18s;
+}
+.fb-note-reveal.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    grid-template-rows 0.18s var(--out),
+    opacity 0.18s var(--out);
+}
+.fb-note-clip {
+  min-height: 0;
   overflow: hidden;
 }
 .fb-note {
@@ -86,4 +105,10 @@
 .fb-tick {
   width: 12px;
   height: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fb-note-reveal,
+  .fb-note-reveal.open {
+    transition: none;
+  }
 }
