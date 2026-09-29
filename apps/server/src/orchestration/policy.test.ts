@@ -10,6 +10,7 @@ import {
 } from './checkpoint-policy.ts';
 import {
   asksForReview,
+  buildsByRule,
   destructiveByRule,
   followUpByRule,
   isLargeDiff,
@@ -106,6 +107,28 @@ describe('risk rules', () => {
     expect(questionByRule('How does the retry logic work?')).toBe(true);
     expect(questionByRule('Can you add a retry?')).toBe(false);
     expect(questionByRule('Explain the retry logic')).toBe(false);
+  });
+
+  it('reads plan and feedback requests from the audit as answers, not changes', () => {
+    for (const request of [
+      'any feedback',
+      'lets plan how we update the agent md',
+      'give me plan we can integrate',
+      'give me details summary of the repo',
+      'What do you think of the parser?',
+    ]) {
+      expect(questionByRule(request), request).toBe(true);
+    }
+    expect(questionByRule('Any feedback? Then fix what you find')).toBe(false);
+  });
+
+  it('reads a request that leads with a change verb as a build', () => {
+    expect(buildsByRule('Add a CSV export to the reports page')).toBe(true);
+    expect(buildsByRule("Let's rename the parser module")).toBe(true);
+    expect(buildsByRule('Please fix the flaky test')).toBe(true);
+    expect(buildsByRule('lets plan the export')).toBe(false);
+    expect(buildsByRule('any feedback')).toBe(false);
+    expect(buildsByRule('The export looks slow to me')).toBe(false);
   });
 
   it('treats short references back, or a quick reply, as a follow-up', () => {

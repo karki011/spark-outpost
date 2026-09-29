@@ -79,7 +79,7 @@ export async function startTicket(
   const sent = await sendUserMessage(
     deps.db,
     request.conversationId,
-    { id: request.messageId, content: ticketRequest(ticket, request.mode) },
+    { id: request.messageId, content: ticketRequest(ticket, request.mode), source: 'ticket' },
     target,
     deps.workspaceId,
   );

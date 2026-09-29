@@ -10,6 +10,7 @@ import {
   PLAN_ONLY_QUESTION,
   QUESTION_QUESTION,
   REVIEW_QUESTION,
+  VAGUE_QUESTION,
   buildIntakeQuestions,
   parseIntakeAnswers,
   tierOptions,
@@ -17,6 +18,7 @@ import {
   validNoul,
   type SystemOneResponse,
 } from './intake-questions.ts';
+import { notAskedReasons } from './not-asked.ts';
 import { POLICY_VERSION } from './policy.ts';
 import { SPEED_ANGLES, SPEED_KEY } from '../orchestration/clarify.ts';
 
@@ -65,6 +67,7 @@ function answered(overrides: Partial<SystemOneResponse['answers']> = {}): System
       plan_only: noul(0.03),
       review: noul(0.02),
       destructive: noul(0.1),
+      vague: noul(0.05),
       tier: choice('mid', 0.7),
       ...overrides,
     } as SystemOneResponse['answers'],
@@ -86,12 +89,15 @@ describe('intake questions', () => {
       'plan_only',
       'review',
       'destructive',
+      'vague',
       'tier',
     ]);
     expect(asked.questions.question).toMatchObject({
       type: 'noul',
       instructions: QUESTION_QUESTION,
     });
+    expect(QUESTION_QUESTION).toContain('a plan or feedback');
+    expect(JSON.stringify(asked.questions.question)).toContain('any feedback on the parser?');
     expect(asked.questions.plan_only).toMatchObject({
       type: 'noul',
       instructions: PLAN_ONLY_QUESTION,
@@ -100,9 +106,12 @@ describe('intake questions', () => {
     expect(asked.questions.destructive).toMatchObject({ instructions: DESTRUCTIVE_QUESTION });
   });
 
-  it('asks about vagueness only on the first message, and about the task only when one exists', () => {
+  it('asks about vagueness on every Do turn, and about the task only when one exists', () => {
     const first = buildIntakeQuestions({ ...request, firstMessage: true });
-    expect(first.questions.vague).toBeDefined();
+    expect(String(first.questions.vague!.instructions)).toContain(VAGUE_QUESTION);
+    const later = buildIntakeQuestions({ ...request, task: 'wrap up', previousReply: 'Done.' });
+    expect(String(later.questions.vague!.instructions)).toContain('`previous_reply`');
+    expect(later.state.previous_reply).toBe('Done.');
     const follow = buildIntakeQuestions({
       ...request,
       currentTask: { previousRequest: 'Add a CSV export', summary: 'Added exportCsv.' },
@@ -271,6 +280,42 @@ describe('advice record', () => {
       differences: ['model'],
       routeGate: { decision: 'act', actAt: 0.9 },
     });
+  });
+
+  it('says why each question was not asked, so audits can tell skipped from not applicable', () => {
+    expect(notAskedReasons(request, buildIntakeQuestions(request))).toEqual({
+      continues_task: 'no current task',
+      plan_agreed: 'no previous reply',
+      injection: 'no attached text',
+      speed: 'not a first request to make something faster',
+    });
+    const ask = { ...request, mode: 'ask' as const };
+    expect(notAskedReasons(ask, buildIntakeQuestions(ask))).toMatchObject({
+      question: 'not a Do turn',
+      vague: 'not a Do turn',
+    });
+    const asked = buildIntakeQuestions(request);
+    const response = answered();
+    const body = adviceBody(
+      request,
+      {
+        status: 'answered',
+        model: response.model,
+        asked,
+        response,
+        intake: parseIntakeAnswers(request, asked, response),
+        latencyMs: 1,
+        usage: {
+          inputTokens: 900,
+          outputTokens: 0,
+          tokenSource: 'reported',
+          costUsd: 0.00004,
+          costSource: 'estimated',
+        },
+      },
+      { rules, calls: {} },
+    );
+    expect(body.notAsked).toMatchObject({ continues_task: 'no current task' });
   });
 
   it('records the rules alone when Jev is not connected, and the error when it failed', () => {

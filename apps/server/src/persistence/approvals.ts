@@ -97,6 +97,13 @@ export interface Settlement {
   note?: string | null;
 }
 
+export function defaultOption(approval: Pick<NewApproval, 'payload' | 'options'>): string | null {
+  const auto = approval.payload.checkpoint?.autoOption;
+  if (auto) return auto;
+  const allow = approval.options.find((option) => option.kind.startsWith('allow'));
+  return (allow ?? approval.options[0])?.optionId ?? null;
+}
+
 export async function insertApproval(
   db: Queryable,
   approval: NewApproval,
@@ -104,11 +111,13 @@ export async function insertApproval(
 ): Promise<Approval> {
   const { rows } = await db.query<ApprovalRow>(
     `INSERT INTO approvals (id, run_id, tool_call_id, rpc_id, kind, title, payload, payload_hash,
-       options, status, reason, decision_option_id, scope, decided_by, decided_at, auto_continue_at)
+       options, status, reason, decision_option_id, scope, decided_by, decided_at, auto_continue_at,
+       default_option_id)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
        CASE WHEN $10 = 'pending' THEN NULL ELSE now() END,
        CASE WHEN $10 = 'pending' AND $15::integer IS NOT NULL
-         THEN now() + make_interval(secs => $15::integer / 1000.0) END)
+         THEN now() + make_interval(secs => $15::integer / 1000.0) END,
+       $16)
      RETURNING *`,
     [
       newId(),
@@ -126,6 +135,7 @@ export async function insertApproval(
       settled ? (settled.scope ?? 'once') : null,
       settled?.decidedBy ?? null,
       approval.autoContinueMs ?? null,
+      defaultOption(approval),
     ],
   );
   return toApproval(rows[0]!);

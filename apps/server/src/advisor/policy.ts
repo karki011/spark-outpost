@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'fixturn-3-devday-rerun-nohaiku';
+export const POLICY_VERSION = 'intent-2-clarify-plan-first';
 
 export type ActingQuestion =
   | 'question'

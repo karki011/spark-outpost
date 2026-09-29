@@ -119,7 +119,7 @@ export const CATEGORY_CRITERIA: Record<Category, Description> = {
 };
 
 export const QUESTION_QUESTION =
-  'Does `task` ask only for an answer or explanation, with nothing in the project to change?';
+  'Does `task` ask only for an answer, an explanation, a plan or feedback, with nothing in the project to change yet?';
 export const PLAN_ONLY_QUESTION = 'Does `task` ask only for a plan, not changes yet?';
 export const VAGUE_QUESTION =
   'Is `task` too vague to act on without first asking the user what they want?';
@@ -151,11 +151,16 @@ function doModeQuestions(request: IntakeRequest): IntakeQuestions['questions'] {
   const questions: IntakeQuestions['questions'] = {
     question: noulQuestion(QUESTION_QUESTION, {
       true: {
-        what: 'It wants an answer: explain, describe, find or compare, and change nothing',
-        examples: ['How does the retry logic work?', 'Where is the config loaded?'],
+        what: 'It wants a reply: explain, describe, find, compare, summarise, plan or give feedback, and change nothing yet',
+        examples: [
+          'How does the retry logic work?',
+          "let's plan how we update AGENTS.md",
+          'give me a plan we can integrate',
+          'any feedback on the parser?',
+        ],
       },
       false: {
-        what: 'It wants files changed: add, fix, rename, update, remove or write something',
+        what: 'It wants files changed now: add, fix, rename, update, remove or write something',
         examples: ['Fix the typo in README.md', 'Add a test for parseDate'],
       },
     }),
@@ -201,16 +206,8 @@ function doModeQuestions(request: IntakeRequest): IntakeQuestions['questions'] {
       },
     }),
   };
-  if (request.firstMessage) {
-    questions.vague = noulQuestion(
-      `${VAGUE_QUESTION} Vague means it does not say what to change or what "done" looks like, so reasonable people would build quite different things.`,
-      {
-        true: 'Too vague: it needs one question first, such as which part or what outcome',
-        false: 'Clear enough: a competent developer would know what to do',
-      },
-    );
-    if (asksForSpeed(request.task)) questions[SPEED_KEY] = speedQuestion();
-  }
+  questions.vague = request.firstMessage ? firstVagueQuestion() : followUpVagueQuestion();
+  if (request.firstMessage && asksForSpeed(request.task)) questions[SPEED_KEY] = speedQuestion();
   if (request.currentTask) {
     questions.continues_task = noulQuestion(CONTINUES_QUESTION, {
       true: {
@@ -224,6 +221,32 @@ function doModeQuestions(request: IntakeRequest): IntakeQuestions['questions'] {
     });
   }
   return questions;
+}
+
+function firstVagueQuestion(): Record<string, unknown> {
+  return noulQuestion(
+    `${VAGUE_QUESTION} Vague means it does not say what to change or what "done" looks like, so reasonable people would build quite different things.`,
+    {
+      true: 'Too vague: it needs one question first, such as which part or what outcome',
+      false: 'Clear enough: a competent developer would know what to do',
+    },
+  );
+}
+
+function followUpVagueQuestion(): Record<string, unknown> {
+  return noulQuestion(
+    `${VAGUE_QUESTION} \`task\` is a follow-up: judge what it refers to with \`previous_reply\` and \`previous_request\` when they are given. Vague means it does not say what it refers to and they do not settle it.`,
+    {
+      true: {
+        what: 'It points at nothing clear: no earlier offer, change or file it could mean',
+        examples: ['wrap up', 'fix that', 'continue'],
+      },
+      false: {
+        what: 'It says what to do, or `previous_reply` offers exactly one thing it agrees to',
+        examples: ['do it (after "Want me to add the retry?")', 'fix the date test too'],
+      },
+    },
+  );
 }
 
 function planAgreedQuestion(): Record<string, unknown> {

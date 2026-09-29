@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CrewMember, OrchestrationDecision } from '@spark-outpost/contracts';
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
-import {
-  answerOrBuildCard,
-  clarifiedRequest,
-  mergeConflictCard,
-  retryCard,
-  stuckCard,
-} from './checkpoint.ts';
+import { clarifiedRequest, mergeConflictCard, retryCard, stuckCard } from './checkpoint.ts';
 import { finalText } from './final-message.ts';
 import { orchestrationTotals } from './view.ts';
 
@@ -90,14 +84,6 @@ describe('orchestration totals', () => {
 });
 
 describe('checkpoint cards', () => {
-  it('asks whether to answer or change the code', () => {
-    expect(answerOrBuildCard('unsure').options.map((option) => option.optionId)).toEqual([
-      CHECKPOINT_OPTION.justAnswer,
-      CHECKPOINT_OPTION.makeChange,
-      CHECKPOINT_OPTION.stop,
-    ]);
-  });
-
   it('offers Retry or Stop and report, and stops and reports by default', () => {
     const card = retryCard(null, null, 'Stopped after 2 retries.');
     expect(card.options.map((option) => option.optionId)).toEqual([

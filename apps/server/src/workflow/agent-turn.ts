@@ -39,6 +39,7 @@ import { loadRepoLaunch } from '../agent-config/launch.ts';
 import { commandAllowlistFromRules } from '../agent-config/allow-rules.ts';
 import { conversationProjectIds } from '../agent-config/store.ts';
 import { loadUserMcp } from '../mcp/launch.ts';
+import { withMoveNote } from './project-move.ts';
 
 export function writesCode(role: string | null | undefined): boolean {
   return role === 'builder' || role === 'integrator';
@@ -256,6 +257,7 @@ export async function runAgentTurn(
       await conversationProjectIds(deps.db, input.identity.threadId),
     ).catch(() => []);
     const spark = await sparkPreferences(deps.db, input.workspaceId);
+    const preamble = withMoveNote(input);
 
     for await (const output of provider.run({
       prompt: input.prompt,
@@ -273,7 +275,7 @@ export async function runAgentTurn(
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
-      ...(input.preamble ? { preamble: input.preamble } : {}),
+      ...(preamble ? { preamble } : {}),
       ...(session ? { session: session.target } : {}),
       ...(repo.length > 0 ? { repo } : {}),
       ...(userMcp.length > 0 ? { userMcp } : {}),

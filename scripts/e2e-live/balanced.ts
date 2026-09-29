@@ -80,17 +80,22 @@ function toolChoice(approval: Approval): UserChoice {
   };
 }
 
+const MAKE_THE_CHANGE = 'Make the change';
+
 export function balancedChoice(approval: Approval, intent: UserIntent | null = null): UserChoice {
   if (approval.kind === 'edit' || approval.kind === 'execute' || approval.kind === 'other') {
     return toolChoice(approval);
   }
   const waitForAuto = Boolean(approval.autoContinueAt);
-  if (approval.kind === 'clarify' && offered(approval, CHECKPOINT_OPTION.makeChange)) {
+  const choices = approval.payload.checkpoint?.choices ?? [];
+  const changeAt = choices.indexOf(MAKE_THE_CHANGE);
+  if (approval.kind === 'clarify' && changeAt >= 0) {
     const change = intent !== 'answer';
+    const index = change ? changeAt : 0;
     return {
-      optionId: change ? CHECKPOINT_OPTION.makeChange : CHECKPOINT_OPTION.justAnswer,
+      optionId: clarifyOptionId(index),
       scope: 'once',
-      label: change ? 'Make the change' : 'Just answer; change nothing',
+      label: choices[index]!,
       waitForAuto: false,
       why: change ? 'the developer asked for a change' : 'the developer asked a question',
     };

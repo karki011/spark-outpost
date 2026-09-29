@@ -1,11 +1,12 @@
 import { CHECKPOINT_OPTION, type AgentPick } from '@spark-outpost/contracts';
+import { chosenFollowUp, followUpCard } from './follow-up.ts';
+import { contextCard } from './missing-context.ts';
 import { runChanges } from '../projects/run-changes.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { extendLimits, usedAndAllowed } from './budget.ts';
 import { budgetUsage } from './budget-check.ts';
 import {
   acceptCard,
-  answerOrBuildCard,
   askCard,
   budgetCard,
   CheckpointTimeout,
@@ -37,7 +38,9 @@ function builderPick(s: Session): AgentPick | null {
 }
 
 async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
-  if (action.kind === 'clarify') return answerOrBuildCard(action.reason);
+  if (action.kind === 'clarify') {
+    return action.context ? contextCard(action.reason) : followUpCard(action.reason);
+  }
   if (action.kind === 'plan') return riskyCard(action.reason);
   if (action.kind === 'retry' || action.kind === 'verify') {
     const card = action.kind === 'retry' ? retryCard : verifyCard;
@@ -68,7 +71,7 @@ export function intakeResponse(s: Session) {
   return s.intake.outcome.status === 'answered' ? s.intake.outcome.response : null;
 }
 
-function rewriteRequest(s: Session, rewrite: (text: string) => string): void {
+export function rewriteRequest(s: Session, rewrite: (text: string) => string): void {
   s.input = {
     ...s.input,
     userRequest: rewrite(s.input.userRequest),
@@ -91,22 +94,31 @@ async function askInterpretation(s: Session, action: Ask): Promise<FlowEvent> {
   if (answer.type === 'stopped') return { type: 'stopped' };
   if (answer.type === 'timeout') throw new CheckpointTimeout();
   const picked = chosenInterpretation(card, answer.optionId, answer.note);
-  if (picked.type === 'stopped') return { type: 'clarified', answer: null };
+  if (picked.type === 'stopped') return { type: 'clarified', start: null };
   if (picked.type === 'assumed') await assume(s, picked.text);
   else rewriteRequest(s, (text) => clarifiedRequest(text, picked.text));
-  return { type: 'clarified', answer: false };
+  return { type: 'clarified', start: 'build' };
+}
+
+async function askFollowUp(s: Session, action: Ask): Promise<FlowEvent> {
+  const card = followUpCard(action.reason);
+  const answer = await askCard(s, card);
+  if (answer.type === 'stopped') return { type: 'stopped' };
+  if (answer.type === 'timeout') throw new CheckpointTimeout();
+  const picked = chosenFollowUp(card, answer.optionId, answer.note);
+  if (!picked) return { type: 'clarified', start: null };
+  const note = picked.note;
+  if (note) rewriteRequest(s, (text) => clarifiedRequest(text, note));
+  return { type: 'clarified', start: picked.start };
 }
 
 export async function ask(s: Session, action: Ask): Promise<FlowEvent> {
   if (action.interpret) return askInterpretation(s, action);
+  if (action.followUp) return askFollowUp(s, action);
   const card = withAutoOption(action, await cardFor(s, action));
   const answer = await askCard(s, card);
   if (answer.type === 'stopped') return { type: 'stopped' };
   if (answer.type === 'timeout') throw new CheckpointTimeout();
-  if (action.answerOrBuild) {
-    if (answer.optionId === CHECKPOINT_OPTION.stop) return { type: 'clarified', answer: null };
-    return { type: 'clarified', answer: answer.optionId === CHECKPOINT_OPTION.justAnswer };
-  }
   if (action.kind === 'verify' && answer.optionId === CHECKPOINT_OPTION.finishUnverified) {
     s.unverified = true;
   }

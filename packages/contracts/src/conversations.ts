@@ -7,7 +7,7 @@ import { categorySchema, titleSourceSchema } from './categories.ts';
 import { chatSettingsSchema } from './chat-settings.ts';
 import { orchestrationSchema } from './orchestration.ts';
 import { conversationPlansSchema } from './plans.ts';
-import { runSchema, runStatusSchema } from './runs.ts';
+import { messageSourceSchema, runSchema, runStatusSchema, startAsSchema } from './runs.ts';
 import { taskOverviewSchema } from './tasks.ts';
 import { conversationUsageSchema } from './usage.ts';
 
@@ -121,6 +121,8 @@ export const sendMessageRequestSchema = z
     content: z.string().trim().max(MESSAGE_MAX_LENGTH),
     attachmentIds: z.array(z.uuid()).max(ATTACHMENTS_PER_MESSAGE).default([]),
     annotations: z.array(annotationInputSchema).max(ANNOTATIONS_PER_MESSAGE).default([]),
+    startAs: startAsSchema.optional(),
+    source: messageSourceSchema.optional(),
   })
   .refine((request) => request.content.length > 0 || request.attachmentIds.length > 0, {
     message: 'Write a message or attach a file.',

@@ -124,6 +124,7 @@ export const adviceSummarySchema = z.object({
   purpose: z.literal('intake'),
   policyVersion: z.string().optional(),
   calls: z.record(z.string(), intakeCallSchema).optional(),
+  notAsked: z.record(z.string(), z.string()).optional(),
   routing: modelRoutingSchema,
   rules: intakeAnswerSchema,
   jev: jevIntakeSchema.nullable(),

@@ -12,6 +12,7 @@ import {
   type RunMode,
   type RunStatus,
   type RunUsage,
+  type StartAs,
   type TokenUsage,
 } from '@spark-outpost/contracts';
 import { toAttention, type PendingApprovalRow } from './attention.ts';
@@ -49,6 +50,8 @@ export interface RunRow {
   thought_tokens: number | null;
   cost_source?: CostSource | null;
   mode?: RunMode | null;
+  picked_mode?: RunMode | null;
+  start_as?: StartAs | null;
   level?: InvolvementLevel | null;
   snapshot_kind?: 'git' | 'files' | null;
   reverted_at?: Date | null;
@@ -113,6 +116,8 @@ export function toRun(row: RunRow): Run {
     effort: row.effort,
     usage: toRunUsage(row),
     mode: row.mode ?? null,
+    pickedMode: row.picked_mode ?? null,
+    startAs: row.start_as ?? null,
     level: row.level ?? null,
     snapshot: row.snapshot_kind ?? null,
     revertedAt: iso(row.reverted_at ?? null),

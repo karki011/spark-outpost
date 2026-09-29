@@ -152,10 +152,10 @@ describe('risky work asks before the Builder starts', () => {
     expect(stopped!.action).toMatchObject({ type: 'finish', status: 'cancelled' });
   });
 
-  it('asks after the answer-or-build card too, but never for an answer', () => {
+  it('asks after the follow-up question too, but never for an answer', () => {
     const [, built] = run(risky('balanced'), [
-      { type: 'start', start: 'choose' },
-      { type: 'clarified', answer: false },
+      { type: 'unclear', followUp: true },
+      { type: 'clarified', start: 'build' },
     ]);
     expect(built!.action).toMatchObject({ type: 'ask', kind: 'plan' });
     const [answer] = run(risky('balanced'), [{ type: 'start', start: 'answer' }]);
@@ -264,23 +264,27 @@ describe('failures and retries', () => {
 });
 
 describe('checkpoints', () => {
-  it('asks whether to answer or build when the question is unsure, and follows the reply', () => {
-    const [ask] = run(flow(), [{ type: 'start', start: 'choose' }]);
-    expect(ask!.action).toMatchObject({ type: 'ask', kind: 'clarify', answerOrBuild: true });
-    expect(nextStep(ask!.state, { type: 'clarified', answer: true }).action).toMatchObject({
+  it('asks one question for a vague follow-up, and answers, plans or builds from the reply', () => {
+    const [ask] = run(flow(), [{ type: 'unclear', followUp: true }]);
+    expect(ask!.action).toMatchObject({ type: 'ask', kind: 'clarify', followUp: true });
+    expect(nextStep(ask!.state, { type: 'clarified', start: 'answer' }).action).toMatchObject({
       role: 'scout',
     });
-    expect(nextStep(ask!.state, { type: 'clarified', answer: false }).action).toMatchObject({
+    expect(nextStep(ask!.state, { type: 'clarified', start: 'plan' }).action).toEqual({
+      type: 'plan',
+      note: null,
+    });
+    expect(nextStep(ask!.state, { type: 'clarified', start: 'build' }).action).toMatchObject({
       role: 'builder',
     });
-    expect(nextStep(ask!.state, { type: 'clarified', answer: null }).action).toMatchObject({
+    expect(nextStep(ask!.state, { type: 'clarified', start: null }).action).toMatchObject({
       type: 'finish',
       status: 'cancelled',
     });
   });
 
   it('asks for a reading of a vague request, then builds', () => {
-    const [ask] = run(flow(), [{ type: 'start', start: 'interpret' }]);
+    const [ask] = run(flow(), [{ type: 'unclear', followUp: false }]);
     expect(ask!.action).toMatchObject({ type: 'ask', kind: 'clarify', interpret: true });
   });
 

@@ -268,8 +268,8 @@ export async function startDigest(
     );
     await client.query(
       `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
-         mode, role)
-       VALUES ($1, $2, $3, $4, $5, $6, 'queued', 'chat', 'digest')`,
+         mode, role, picked_mode, source)
+       VALUES ($1, $2, $3, $4, $5, $6, 'queued', 'chat', 'digest', 'chat', 'digest')`,
       [runId, conversationId, messageId, digest.provider, digest.model, digest.effort],
     );
     await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [

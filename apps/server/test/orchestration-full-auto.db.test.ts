@@ -221,18 +221,19 @@ describe('Full auto runs to a draft PR', () => {
     expect(stub.github.pulls[0]!.body).toContain(`**${RISKY_PR_NOTE}**`);
   }, 120_000);
 
-  it('assumes the likeliest reading of a vague request and states it in the reply and the PR body', async () => {
+  it('assumes the likeliest reading of a vague request when the agent asks nothing, plans first, and states both in the PR body', async () => {
     await newRepo();
     await writeFile(ghState(), 'octo-cli');
     const text = 'Make it faster. #build';
     start({ scenario: { ...NORMAL, text, vague: 0.94, intent: 'refactor' } });
     const { orchestration, asked, reply } = await runFullAuto(text);
     expect(orchestration.status).toBe('succeeded');
-    expect(asked).toEqual([]);
+    expect(asked.map((approval) => approval.title)).toEqual(['Build this plan?']);
     expect(reply).toMatch(/Assumed you meant: .+\. Say so if you meant something else\./);
     const assumed = /Assumed you meant: (.+?)\. Say so/.exec(reply)![1]!;
     expect(stub.github.pulls).toHaveLength(1);
     expect(stub.github.pulls[0]!.body).toContain(`**${assumptionPrNote(assumed)}**`);
+    expect(stub.github.pulls[0]!.body).toContain('Plan it followed:');
   }, 120_000);
 
   it('pushes the branch without a PR when GitHub is not connected, and says so', async () => {

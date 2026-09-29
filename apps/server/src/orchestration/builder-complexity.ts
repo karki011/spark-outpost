@@ -69,6 +69,16 @@ function multiPart(request: string): boolean {
   );
 }
 
+const BIG_ITEMS = 3;
+const BIG_STEPS = 4;
+
+export function bigByRule(request: string): string | null {
+  if (complexByRule(request) === 'multi-package') return 'several packages';
+  const items = request.match(LIST_ITEM)?.length ?? 0;
+  const steps = request.match(STEP_VERB)?.length ?? 0;
+  return items >= BIG_ITEMS || steps >= BIG_STEPS ? 'several parts' : null;
+}
+
 export function broadRequest(
   request: string | undefined,
   jev: JevSize | null | undefined,

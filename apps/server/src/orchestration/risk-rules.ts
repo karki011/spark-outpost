@@ -175,8 +175,22 @@ export function planOnlyByRule(request: string): boolean {
   return !PLAN_THEN_BUILD.test(request);
 }
 
+const ASKS_FOR_ANSWER =
+  /\b(?:any (?:feedback|thoughts|ideas|suggestions|concerns)|what do you think|your (?:thoughts|opinion|take)|(?:give|show|tell) me (?:a |the |your |some )?(?:\w+\s+)?(?:plan|summary|overview|details|feedback)|let'?s (?:plan|discuss|think)|summari[sz]e)\b/i;
+
+const LEADS_WITH_BUILD = new RegExp(
+  `^\\s*(?:(?:please|can you|could you|would you|let'?s|go ahead and)\\s+)?${BUILD_VERB.source}`,
+  'i',
+);
+
 export function questionByRule(request: string): boolean {
+  if (THEN_CHANGE.test(request)) return false;
+  if (ASKS_FOR_ANSWER.test(request)) return true;
   return request.trim().endsWith('?') && !BUILD_VERB.test(request);
+}
+
+export function buildsByRule(request: string): boolean {
+  return LEADS_WITH_BUILD.test(request);
 }
 
 export function followUpByRule(

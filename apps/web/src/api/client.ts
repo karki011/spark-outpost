@@ -5,6 +5,7 @@ import {
   type AgentCommandsResponse,
   type AnnotationInput,
   type MessageAnnotation,
+  type StartAs,
   EMPTY_CONVERSATION_USAGE,
   UNTITLED_CONVERSATION,
   usageSummarySchema,
@@ -138,10 +139,18 @@ export const api = {
     content: string,
     attachmentIds: string[] = [],
     annotations: AnnotationInput[] = [],
+    startAs: StartAs | null = null,
   ): Promise<SendMessageResponse> =>
     request(sendMessageResponseSchema, `/conversations/${conversationId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ id, content, attachmentIds, annotations }),
+      body: JSON.stringify({
+        id,
+        content,
+        attachmentIds,
+        annotations,
+        source: 'ui',
+        ...(startAs ? { startAs } : {}),
+      }),
     }).then(saved(conversationId)),
   listAnnotations: async (conversationId: string): Promise<MessageAnnotation[]> => {
     if (drafts.has(conversationId)) return [];

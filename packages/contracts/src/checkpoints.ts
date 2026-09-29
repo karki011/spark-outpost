@@ -40,6 +40,7 @@ export const CHECKPOINT_OPTION = {
   finishUnverified: 'finish_unverified',
   keepInPiece: 'keep_in_piece',
   revertFile: 'revert_file',
+  useDefaults: 'defaults',
 } as const;
 
 export const clarifyOptionId = (index: number): string => `option:${index}`;

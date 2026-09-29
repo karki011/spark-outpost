@@ -1,4 +1,11 @@
-import type { FlowAction, FlowEvent, FlowResult, FlowState, Spawn } from './flow-types.ts';
+import type {
+  ClarifiedStart,
+  FlowAction,
+  FlowEvent,
+  FlowResult,
+  FlowState,
+  Spawn,
+} from './flow-types.ts';
 import {
   CHECKPOINT_OPTION,
   MAX_REPAIR_RETRIES,
@@ -17,7 +24,8 @@ import {
   type KeepFacts,
 } from './checkpoint-policy.ts';
 import { criticFixFollowUp } from './context.ts';
-import { reviewExisting, writePlan } from './read-only-flow.ts';
+import { FOLLOW_UP_REASON } from './follow-up.ts';
+import { askAgent, planFirst, reviewExisting, writePlan } from './read-only-flow.ts';
 import {
   afterReview,
   canFixAgain,
@@ -31,6 +39,7 @@ import {
 
 export type {
   AgentOutcome,
+  ClarifiedStart,
   FlowAction,
   FlowEvent,
   FlowResult,
@@ -152,10 +161,15 @@ function builderDone(
   state: FlowState,
   event: Extract<FlowEvent, { type: 'agent_done' }>,
 ): FlowResult {
-  const next = { ...state, open: [...(event.open ?? state.open)] };
+  const next = {
+    ...state,
+    open: [...(event.open ?? state.open)],
+    missingContext: event.missingContext ?? null,
+  };
   if (event.outcome === 'failed' && state.solo) {
     return finish(next, 'failed', event.error ?? 'The agent hit a problem.');
   }
+  if (event.outcome === 'failed' && next.missingContext) return askContext(next);
   if (event.outcome === 'failed') {
     if (next.retries < MAX_REPAIR_RETRIES) return retry(next);
     return ask(next, 'retry', `Stopped after ${MAX_REPAIR_RETRIES} retries.`);
@@ -256,9 +270,18 @@ function cutFixRound(
   };
 }
 
+function askContext(state: FlowState): FlowResult {
+  const missing = state.missingContext ?? '';
+  if (state.level === 'full-auto') {
+    return stopReport(state, `Stopped: the Builder is missing context. ${missing}`);
+  }
+  return ask(state, 'clarify', missing, { context: true });
+}
+
 function verified(state: FlowState, event: Extract<FlowEvent, { type: 'verified' }>): FlowResult {
   const next = { ...state, verdicts: state.verdicts + 1 };
   const action = cascadeAction(event.accepted, state.escalated);
+  if (action !== 'finish' && next.missingContext) return askContext(next);
   if (action === 'escalate') return escalateOnce(next, escalateFollowUp(event.reasons));
   if (action === 'ask') return ask(next, 'verify', DECLINED_REASON);
   return afterBuilder(next, state.large);
@@ -335,7 +358,15 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
     }
     return stopReport(state, `Stopped: ${state.loop ?? 'the Builder was repeating itself'}.`);
   }
+  if (event.kind === 'clarify') {
+    return spawn(
+      { ...state, retries: state.retries + 1, missingContext: null },
+      { role: 'builder', reason: 'retry', escalate: false, note: event.note },
+    );
+  }
   if (event.kind === 'plan' && state.readOnly !== 'plan') {
+    const note = option === CHECKPOINT_OPTION.editPlan ? event.note?.trim() : null;
+    if (note) return planFirst(state, note);
     if (option !== CHECKPOINT_OPTION.makeChange)
       return finish(state, 'cancelled', 'You stopped it.');
     return build({ ...state, confirmFirst: null });
@@ -365,26 +396,30 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
   return finish(state, 'succeeded');
 }
 
+function clarified(state: FlowState, start: ClarifiedStart | null): FlowResult {
+  if (start === null) return finish(state, 'cancelled', 'You stopped it.');
+  if (start === 'answer') return answer(state);
+  if (start === 'plan') return writePlan(state, null);
+  if (start === 'plan_first' || state.then === 'plan_first') return planFirst(state, null);
+  return build(state);
+}
+
 export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
   switch (event.type) {
     case 'start':
       if (event.start === 'answer') return answer(state);
       if (event.start === 'plan') return writePlan(state, null);
       if (event.start === 'review') return reviewExisting(state);
-      if (event.start === 'interpret') {
-        return ask(state, 'clarify', 'The request does not say what to change.', {
-          interpret: true,
-        });
-      }
-      if (event.start === 'choose') {
-        return ask(state, 'clarify', 'Not sure whether you want an answer or a change.', {
-          answerOrBuild: true,
-        });
-      }
+      if (event.start === 'ask_agent') return askAgent(state, event.then ?? 'build');
+      if (event.start === 'plan_first') return planFirst(state, null);
       return build(state);
+    case 'unclear':
+      if (event.followUp) return ask(state, 'clarify', FOLLOW_UP_REASON, { followUp: true });
+      return ask(state, 'clarify', 'The request does not say what to change.', {
+        interpret: true,
+      });
     case 'clarified':
-      if (event.answer === null) return finish(state, 'cancelled', 'You stopped it.');
-      return event.answer ? answer(state) : build(state);
+      return clarified(state, event.start);
     case 'agent_done':
       return agentDone(state, event);
     case 'looped':

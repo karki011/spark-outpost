@@ -92,7 +92,7 @@ export async function inProcessSession(
     const sent = await sendUserMessage(
       t.db,
       conversationId,
-      { id: randomUUID(), content: text },
+      { id: randomUUID(), content: text, source: 'bench' },
       { ...PINNED, permission: 'do', level: BENCH_LEVEL },
     );
     const lease = await claimNextJob(t.db, env.deps.leaseSeconds);

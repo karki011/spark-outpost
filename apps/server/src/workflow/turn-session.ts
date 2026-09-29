@@ -89,6 +89,7 @@ export async function prepareTurnSession(
     checksMessages: chatTurn,
     now,
     idleMs: limits.idleMs,
+    cwd: chatTurn ? (input.projectRoots[0] ?? null) : null,
   });
   const workdir = input.projectRoots.length === 0 ? sessionWorkdir(conversationId, key) : null;
   const commands = decision.resume && stored ? await sessionCommands(db, stored.id) : [];
