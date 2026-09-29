@@ -40,6 +40,10 @@ import { commandAllowlistFromRules } from '../agent-config/allow-rules.ts';
 import { conversationProjectIds } from '../agent-config/store.ts';
 import { loadUserMcp } from '../mcp/launch.ts';
 
+export function writesCode(role: string | null | undefined): boolean {
+  return role === 'builder' || role === 'integrator';
+}
+
 export type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
 
 export interface TurnDeps {
@@ -62,13 +66,16 @@ export interface RunControl {
   dispose(): void;
 }
 
-export function startControl(deps: TurnDeps, lease: Lease): RunControl {
+export function startControl(deps: TurnDeps, lease: Lease, stopNow?: AbortSignal): RunControl {
   const controller = new AbortController();
   let stopReason: StopReason | null = null;
   const stop = (reason: StopReason) => {
     stopReason ??= reason;
     controller.abort();
   };
+  const stopFromOutside = () => stop('cancelled');
+  if (stopNow?.aborted) stopFromOutside();
+  else stopNow?.addEventListener('abort', stopFromOutside, { once: true });
   const renewEveryMs = Math.max(1000, (deps.leaseSeconds * 1000) / 3);
   const heartbeat = setInterval(() => {
     renewLease(deps.db, lease, deps.leaseSeconds)
@@ -91,6 +98,7 @@ export function startControl(deps: TurnDeps, lease: Lease): RunControl {
     dispose() {
       clearInterval(heartbeat);
       clearInterval(cancelWatch);
+      stopNow?.removeEventListener('abort', stopFromOutside);
     },
   };
 }
@@ -100,7 +108,8 @@ export interface TurnOptions {
   backupAlsoFor?: string;
   recordsPlan?: boolean;
   observeEdits?: EditObserver | undefined;
-  onLiveCost?: (usd: number) => void;
+  onLiveCost?: (usd: number, final: boolean) => void;
+  stopNow?: AbortSignal;
 }
 
 export interface TurnResult {
@@ -153,7 +162,7 @@ export async function runAgentTurn(
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
   const meter = (output: ProviderOutput) => {
-    if (live.observe(output)) options.onLiveCost?.(live.unreported());
+    if (live.observe(output)) options.onLiveCost?.(live.unreported(), output.kind === 'tokens');
   };
   const audit = createAuditRecorder({
     write: (entries) => insertProtocolEntries(deps.db, lease, entries),
@@ -165,7 +174,7 @@ export async function runAgentTurn(
     if (control.reason() === 'lease_lost') return audit.discard();
     await audit.close();
     const estimate = control.signal.aborted ? live.unreported() : 0;
-    options.onLiveCost?.(0);
+    options.onLiveCost?.(0, true);
     await recordRunMetrics(
       deps.db,
       lease.runId,
@@ -225,7 +234,7 @@ export async function runAgentTurn(
             mode: input.agentMode,
             modes: await knownModes(deps.db, input),
             extraAllowlist: () => trustedCommands,
-            builder: input.role === 'builder',
+            builder: writesCode(input.role),
             projectRoots: input.projectRoots,
             append,
             waiters: deps.approvalWaiters,
@@ -236,6 +245,7 @@ export async function runAgentTurn(
             copyOf: input.copyOf,
             observe: options.observeEdits,
             plans: plans.hooks,
+            piece: input.piece ?? undefined,
           })
         : undefined;
     turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
@@ -256,7 +266,9 @@ export async function runAgentTurn(
       signal: control.signal,
       audit,
       ...(input.mode ? { mode: input.mode } : {}),
-      ...(input.role === 'builder' ? { builder: true } : {}),
+      ...(writesCode(input.role) ? { builder: true } : {}),
+      ...(input.piece?.coordinated ? { coordinated: true } : {}),
+      ...(input.builderEnv ? { env: input.builderEnv } : {}),
       ...(input.copyOf !== null ? { worktree: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
@@ -267,8 +279,8 @@ export async function runAgentTurn(
       ...(userMcp.length > 0 ? { userMcp } : {}),
       spark,
     })) {
-      meter(output);
       if (control.signal.aborted) {
+        meter(output);
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
         if (output.kind === 'usage') {
           await recordUsage(deps.db, lease.runId, session ? session.usage(output) : output);
@@ -283,6 +295,7 @@ export async function runAgentTurn(
         await recordUsage(deps.db, lease.runId, session ? session.usage(output) : output);
       }
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
+      meter(output);
       await tasks.observe(output);
       if (output.kind === 'session') await session?.started(output);
       if (output.kind === 'commands') await session?.commands(output.commands);

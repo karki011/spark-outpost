@@ -64,6 +64,8 @@ export interface ProviderTurn {
   audit?: ProtocolObserver;
   mode?: RunMode;
   builder?: boolean;
+  coordinated?: boolean;
+  env?: Readonly<Record<string, string>>;
   worktree?: boolean;
   modeRequests?: ModeRequests;
   approvals?: PermissionGate;

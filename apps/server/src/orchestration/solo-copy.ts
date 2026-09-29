@@ -119,7 +119,7 @@ function copyFor(s: Session, copies: Copies): NonNullable<Place['copy']> {
   };
 }
 
-async function placeFor(s: Session): Promise<Place> {
+export async function placeFor(s: Session): Promise<Place> {
   if (s.copyRunId) {
     const record = await getWorktree(s.deps.db, s.copyRunId);
     if (record) return { reuse: { runId: record.runId, branch: record.branch } };
@@ -167,7 +167,7 @@ function conflictLine(name: string, files: readonly string[]): string {
   return `${name}'s copy and your working tree both changed ${shown}${more}.`;
 }
 
-async function mergeCopy(s: Session, name: string): Promise<'merged' | 'stopped'> {
+export async function mergeCopy(s: Session, name: string): Promise<'merged' | 'stopped'> {
   const record = s.copyRunId ? await getWorktree(s.deps.db, s.copyRunId) : null;
   if (!record) return 'merged';
   const target = worktreePath(record.repoRoot, record.runId);

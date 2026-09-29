@@ -77,6 +77,7 @@ export interface RunOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
   env?: NodeJS.ProcessEnv;
+  builderEnv?: Readonly<Record<string, string>>;
 }
 
 export async function runCheck(check: CheckCommand, options: RunOptions): Promise<CheckRun> {
@@ -90,7 +91,7 @@ export async function runCheck(check: CheckCommand, options: RunOptions): Promis
     let settled = false;
     const child = spawn(check.argv[0]!, check.argv.slice(1), {
       cwd: options.cwd,
-      env: checkEnv(options.env),
+      env: { ...checkEnv(options.env), ...options.builderEnv },
       detached: true,
       stdio: ['ignore', 'pipe', 'pipe'],
     });

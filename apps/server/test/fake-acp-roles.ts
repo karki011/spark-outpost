@@ -215,7 +215,28 @@ async function spend(turn: RoleTurn): Promise<void> {
   await stopped(turn.signal);
 }
 
-async function write(turn: RoleTurn, file: string, line: string): Promise<boolean> {
+const METER_CALLS = 20;
+export const METER_CALL_USD = 0.03;
+
+async function meter(turn: RoleTurn): Promise<void> {
+  for (let call = 1; call <= METER_CALLS; call += 1) {
+    const cost = { amount: METER_CALL_USD * call, currency: 'USD' };
+    await turn.update({ sessionUpdate: 'usage_update', used: call * 1_000, size: 200_000, cost });
+    await readTool(turn, `src/meter-${call}.ts`, `meter-${call}`);
+    await sleep(100, turn.signal);
+  }
+}
+
+async function editAfterLoop(turn: RoleTurn): Promise<void> {
+  for (let index = 0; index < 6; index += 1) {
+    await readTool(turn, 'src/dates.ts', `loop-${index}`);
+  }
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  await write(turn, 'notes.txt', 'edited after the loop');
+  await stopped(turn.signal);
+}
+
+export async function write(turn: RoleTurn, file: string, line: string): Promise<boolean> {
   const target = join(turn.cwd, file);
   const before = await current(target);
   const toolCallId = `write-${line.replace(/\W+/g, '-')}`;
@@ -244,6 +265,8 @@ async function write(turn: RoleTurn, file: string, line: string): Promise<boolea
 export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   await failWhenAsked(turn);
   await repeatUntilStopped(turn);
+  if (turn.text.includes('#loopedit')) await editAfterLoop(turn);
+  if (turn.text.includes('#meter')) await meter(turn);
   const stopAfter = Number(/#stopafter (\d+)/.exec(turn.text)?.[1] ?? FAKE_TODOS.length);
   if (turn.text.includes('#todos')) await todos(turn, 0);
   if (!(await write(turn, 'notes.txt', 'step 1'))) return 'end_turn';
@@ -315,6 +338,7 @@ async function fixFindings(turn: RoleTurn): Promise<acp.StopReason> {
   if (prompts.some((prompt) => prompt.includes('#fixcost'))) {
     const cost = { amount: 0.2, currency: 'USD' };
     await turn.update({ sessionUpdate: 'usage_update', used: 1_000, size: 200_000, cost });
+    await stopped(turn.signal);
   }
   if (prompts.some((prompt) => prompt.includes('#slowfix'))) {
     for (;;) await sleep(50, turn.signal);

@@ -23,7 +23,14 @@ const WINNER_MARGIN = 0.2;
 const CONFIDENCE_POINTS_MAX = 400;
 const DISAGREEMENTS_MAX = 12;
 
-const ROLE_ORDER: AgentRole[] = ['scout', 'architect', 'builder', 'critic'];
+const ROLE_ORDER: AgentRole[] = [
+  'scout',
+  'architect',
+  'coordinator',
+  'builder',
+  'integrator',
+  'critic',
+];
 
 export function crewShape(roles: readonly AgentRole[], builders: number): string {
   if (roles.length === 0) return 'Solo';

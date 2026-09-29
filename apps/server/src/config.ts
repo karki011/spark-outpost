@@ -53,6 +53,7 @@ const configSchema = z.object({
   OUTCOME_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.2),
   ORCHESTRATION_COST_CAP_USD: z.coerce.number().positive().optional(),
   AGENT_RUNTIME: z.enum(['acp', 'fake']).default('acp'),
+  COORDINATOR_MODE: z.enum(['off', 'shadow', 'in_order', 'parallel']).default('shadow'),
   FAKE_ACP_AGENT: z.string().min(1).optional(),
   SECRET_STORE: z.enum(['keychain', 'memory']).default('keychain'),
   MEMORY_SECRETS: memorySecrets,

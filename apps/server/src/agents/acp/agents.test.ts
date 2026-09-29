@@ -131,6 +131,17 @@ describe('Claude session options', () => {
     const zai = optionsOf(agentDefinitions.zai.doSessionMeta?.([], null, true));
     expect(zai.settings.permissions.deny).toContain('Bash(gh:*)');
   });
+
+  it('also denies git state changes to Builders of a coordinated task', () => {
+    const coordinated = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
+    const deny = coordinated.settings.permissions.deny as string[];
+    for (const rule of ['Bash(git stash:*)', 'Bash(git checkout:*)', 'Bash(git branch -D:*)']) {
+      expect(deny).toContain(rule);
+    }
+    expect(deny).toContain('Bash(git push:*)');
+    const solo = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
+    expect(solo.settings.permissions.deny).not.toContain('Bash(git stash:*)');
+  });
 });
 
 describe('Codex launch', () => {

@@ -18,6 +18,7 @@ import {
   type Orchestration,
   type OrchestrationDecision,
   type OrchestrationTotals,
+  type PieceList,
   type RouteSource,
   type ReviewVerdict,
   type RunMode,
@@ -75,6 +76,8 @@ const routeFieldsSchema = z.object({
   copy: crew.copy.catch(undefined),
   sameProvider: crew.sameProvider.catch(undefined),
   routeNote: crew.routeNote.catch(undefined),
+  pieceKey: crew.pieceKey.catch(undefined),
+  placement: crew.placement.catch(undefined),
 });
 const storedRouteSchema = routeFieldsSchema.catch(() => routeFieldsSchema.parse({}));
 
@@ -133,6 +136,8 @@ export function toCrewMember(row: MemberRow): CrewMember {
     copy: route.copy ?? null,
     ...(route.sameProvider ? { sameProvider: true } : {}),
     ...(route.routeNote ? { routeNote: route.routeNote } : {}),
+    ...(route.pieceKey ? { pieceKey: route.pieceKey } : {}),
+    ...(route.placement ? { placement: route.placement } : {}),
   };
 }
 
@@ -302,6 +307,7 @@ export function buildOrchestration(
   crew: readonly CrewMember[],
   checkpoints: readonly Approval[],
   decisions: readonly OrchestrationDecision[],
+  pieces: PieceList | null = null,
 ): Orchestration {
   const totals = orchestrationTotals(crew, decisions);
   const live = LIVE.has(row.status);
@@ -324,6 +330,7 @@ export function buildOrchestration(
     checkpoints: [...checkpoints],
     pendingCheckpoint: checkpoints.find((checkpoint) => checkpoint.status === 'pending') ?? null,
     decisions: [...decisions],
+    ...(pieces ? { pieces } : {}),
     budget: {
       activeMs: row.active_ms,
       activeLimitMs: row.active_limit_ms,

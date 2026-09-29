@@ -1,0 +1,77 @@
+import {
+  BROAD_SCAN_SCORE,
+  COORD_ENGAGE_PLAN_AREAS,
+  COORD_ENGAGE_PLAN_ITEMS,
+  COORD_ENGAGE_SCAN_FILES,
+  COORD_ENGAGE_SCAN_PACKAGES,
+  COORD_TOO_BIG_BAND,
+} from '../advisor/policy.ts';
+import type { RankedFile } from '../codescan/rank.ts';
+import { areaOf } from '../orchestration/critic-rule.ts';
+import { namedFiles } from '../orchestration/context.ts';
+
+export type EngageReason = 'requested' | 'plan' | 'scan' | 'size';
+
+export interface EngageFacts {
+  request: string;
+  planItems: readonly string[];
+  likely: readonly Pick<RankedFile, 'path' | 'package'>[];
+  sizeEstimate: number;
+  budgetTokens: number;
+}
+
+export interface Engagement {
+  engage: boolean;
+  reason: EngageReason | null;
+  detail: string;
+  tooBigUnsure: boolean;
+}
+
+const REQUESTED =
+  /\b(?:split (?:this|it|the work) up|in (?:\d+ |several |separate )?pieces|parallel builders|in worktrees|use (?:several|multiple|parallel) (?:builders|agents))\b/i;
+
+export function likelyFiles<T extends Pick<RankedFile, 'termsMatched' | 'score'>>(
+  candidates: readonly T[],
+): T[] {
+  return candidates.filter((file) => file.termsMatched > 0 && file.score >= BROAD_SCAN_SCORE);
+}
+
+export function planAreas(items: readonly string[]): number {
+  return new Set(namedFiles(items).map(areaOf)).size;
+}
+
+export function engagement(facts: EngageFacts): Engagement {
+  const tooBigUnsure =
+    Math.abs(facts.sizeEstimate - facts.budgetTokens) <= facts.budgetTokens * COORD_TOO_BIG_BAND;
+  const result = (reason: EngageReason | null, detail: string): Engagement => ({
+    engage: reason !== null,
+    reason,
+    detail,
+    tooBigUnsure,
+  });
+  if (REQUESTED.test(facts.request)) return result('requested', 'the request asks for pieces');
+  const areas = planAreas(facts.planItems);
+  if (facts.planItems.length >= COORD_ENGAGE_PLAN_ITEMS && areas >= COORD_ENGAGE_PLAN_AREAS) {
+    return result(
+      'plan',
+      `the agreed plan has ${facts.planItems.length} open items in ${areas} areas`,
+    );
+  }
+  const packages = new Set(facts.likely.map((file) => file.package).filter((name) => name !== '.'));
+  if (
+    facts.likely.length >= COORD_ENGAGE_SCAN_FILES ||
+    packages.size >= COORD_ENGAGE_SCAN_PACKAGES
+  ) {
+    return result(
+      'scan',
+      `the code scan found ${facts.likely.length} likely files in ${packages.size} packages`,
+    );
+  }
+  if (facts.sizeEstimate > facts.budgetTokens) {
+    return result(
+      'size',
+      `about ${Math.round(facts.sizeEstimate / 1000)}K tokens, over the ${Math.round(facts.budgetTokens / 1000)}K Builder budget`,
+    );
+  }
+  return result(null, 'fits one Builder');
+}

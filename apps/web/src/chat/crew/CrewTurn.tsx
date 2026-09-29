@@ -12,6 +12,7 @@ import {
 import { agentAnchor } from '../../crew/conversation-crew.ts';
 import { crewTotals, totalsLine } from '../../crew/crew-model.ts';
 import { crewAgents, runAgent } from '../../crew/crew-projection.ts';
+import { PieceBoard } from '../../crew/PieceBoard.tsx';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from '../changes/FilesChanged.tsx';
@@ -132,6 +133,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
           category={run.category}
         />
         {taskCard}
+        {orchestration.pieces && <PieceBoard list={orchestration.pieces} />}
       </div>
       {items.map((item, index) => {
         if (item.kind === 'checkpoint') {

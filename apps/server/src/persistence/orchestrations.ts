@@ -22,6 +22,7 @@ import {
 } from '../orchestration/view.ts';
 import { toApproval, type ApprovalRow } from './approvals.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
+import { pieceListsForRuns } from './pieces.ts';
 import { newId } from './ids.ts';
 import type { Lease } from './jobs.ts';
 
@@ -198,7 +199,15 @@ export async function insertChildRun(
 export interface NewDecision {
   runId: string;
   purpose:
-    'route' | 'policy' | 'verify' | 'finding' | 'scan' | 'rank' | 'route_shadow' | 'plan_agreed';
+    | 'route'
+    | 'policy'
+    | 'verify'
+    | 'finding'
+    | 'scan'
+    | 'rank'
+    | 'route_shadow'
+    | 'plan_agreed'
+    | 'parallel';
   childRunId: string | null;
   role: AgentRole | null;
   stepIndex: number | null;
@@ -295,16 +304,19 @@ async function assembleOrchestrations(db: Queryable, rows: readonly Orchestratio
     db.query<DecisionRow & { run_id: string }>(
       `SELECT * FROM run_advice WHERE run_id = ANY($1::uuid[])
        AND purpose NOT IN ('scan', 'rank', 'route_shadow', 'plan_agreed')
+       AND NOT (purpose = 'parallel' AND COALESCE(body->'answer'->>'shadow', '') = 'true')
        ORDER BY created_at`,
       [ids],
     ),
   ]);
+  const pieces = await pieceListsForRuns(db, ids);
   return rows.map((row) =>
     buildOrchestration(
       row,
       members.rows.filter((member) => member.owner === row.run_id).map(toCrewMember),
       approvals.rows.filter((approval) => approval.run_id === row.run_id).map(toApproval),
       decisions.rows.filter((decision) => decision.run_id === row.run_id).map(toDecision),
+      pieces.get(row.run_id) ?? null,
     ),
   );
 }

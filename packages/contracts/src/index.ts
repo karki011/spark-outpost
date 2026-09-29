@@ -31,6 +31,7 @@ export * from './home.ts';
 export * from './digest.ts';
 export * from './outcomes.ts';
 export * from './plans.ts';
+export * from './pieces.ts';
 export * from './analytics.ts';
 export * from './analytics-spend.ts';
 export * from './analytics-harness.ts';

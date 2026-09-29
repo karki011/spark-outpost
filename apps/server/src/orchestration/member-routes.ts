@@ -90,6 +90,13 @@ async function scoutRoute(s: Session): Promise<ResolvedRoute> {
   return { route: kept.route, ...(kept.choice ? { session: kept.choice } : {}) };
 }
 
+export function seatRoute(s: Session, spawn: Spawn): ResolvedRoute {
+  const previous = s.routes.get('builder');
+  if (previous && spawn.escalate) return { route: escalateBuilder(s.route, previous) };
+  if (previous) return { route: previous };
+  return { route: routeBuilder(s.route, builderFacts(s), jevTier(s)) };
+}
+
 export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRoute> {
   const previous = s.routes.get(spawn.role);
   if (previous && spawn.escalate) {

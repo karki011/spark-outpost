@@ -78,7 +78,8 @@ export async function agentEnvironment(
   browsing = false,
   repo: CodexRepoOptions | null = null,
   builder = false,
+  extra: Readonly<Record<string, string>> = {},
 ): Promise<Record<string, string>> {
-  const env = await baseEnvironment(options, home, browsing, repo);
+  const env = { ...(await baseEnvironment(options, home, browsing, repo)), ...extra };
   return builder ? withoutPublishing(env, home) : env;
 }

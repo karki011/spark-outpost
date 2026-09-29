@@ -35,11 +35,15 @@ const TITLES: Record<CheckpointPayload['kind'], string> = {
   merge_conflict: 'The Builder’s copy and your files collided',
   stuck: 'The Builder was repeating itself',
   verify: 'Jev could not verify the change',
+  ownership: 'A Builder changed a file outside its piece',
 };
 
 export function checkpointTitle(payload: CheckpointPayload): string {
   if (payload.kind === 'stuck')
     return payload.agent ? `${payload.agent} was repeating itself` : TITLES.stuck;
+  if (payload.kind === 'ownership') {
+    return payload.agent ? `${payload.agent} changed a file outside its piece` : TITLES.ownership;
+  }
   if (payload.agent) return `${payload.agent} needs your input`;
   if (payload.kind === 'plan' && payload.question) return payload.question;
   return TITLES[payload.kind];
@@ -58,6 +62,7 @@ const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
   merge_conflict: 'Choose which version to keep',
   stuck: 'Continue, or stop and report',
   verify: 'Finish, retry one tier up, or stop',
+  ownership: 'Keep the file in the piece, revert it, or stop',
 };
 
 export function waitingLabel(payload: CheckpointPayload): string {

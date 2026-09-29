@@ -71,6 +71,9 @@ import type { MemberOutcome } from './members.ts';
 import { jevDiffsAllowed, settleObservations } from './observe.ts';
 import { observeScan, startScan } from './observe-scan.ts';
 import { verifyChange } from './verify.ts';
+import { observeCoordination } from '../coordinator/shadow.ts';
+import { coordinatedBuild } from '../coordinator/build.ts';
+import { coordinationReport } from '../coordinator/report.ts';
 
 const TASK_SESSION_CLOSED = 'task session closed';
 const NEW_TASK_STARTED = 'a new task started';
@@ -143,8 +146,11 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
         }
         await beginFixRound(s);
       }
+      if (action.role === 'builder' && action.reason === 'first') observeCoordination(s);
       const copied = action.role === 'builder' && s.needsCopy;
-      const outcome = copied ? await buildInCopy(s, action) : await buildAndLand(s, action);
+      const outcome =
+        (await coordinatedBuild(s, action)) ??
+        (copied ? await buildInCopy(s, action) : await buildAndLand(s, action));
       const { result } = outcome;
       if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
       await publish(s);
@@ -221,7 +227,8 @@ async function finish(
       : null;
   const suggested = verdict ? suggestionsLine(s.suggestions ?? []) : null;
   const shipped = s.shipLine ?? null;
-  const notes = [assumed, escalated, fixed, suggested, stopped, incomplete, shipped].filter(
+  const pieces = coordinationReport(s.coordination);
+  const notes = [pieces, assumed, escalated, fixed, suggested, stopped, incomplete, shipped].filter(
     (line): line is string => line !== null,
   );
   const text = withNotes(

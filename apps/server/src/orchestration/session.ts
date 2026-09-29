@@ -16,7 +16,7 @@ import {
 } from '../advisor/policy.ts';
 import type { ScanReport } from '../codescan/scan.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
-import type { CodeScanner } from '../codescan/scanner.ts';
+import type { CodeScanner, ScanOutcome } from '../codescan/scanner.ts';
 import type { ProjectChecks } from '../checks/project-checks.ts';
 import { nextArtifactVersion, type ArtifactWrite } from '../persistence/artifacts.ts';
 import type { Lease } from '../persistence/jobs.ts';
@@ -36,6 +36,7 @@ import type { ProjectStyle } from './lean.ts';
 import type { LoopGuardSettings } from './loop-guard.ts';
 import type { MemberRoute, RouteContext, RouteFacts } from './routing.ts';
 import type { FlowState } from './transitions.ts';
+import type { Coordination } from '../coordinator/state.ts';
 
 export interface OrchestratorDeps extends ExecuteRunDeps {
   budget?: Partial<BudgetLimits>;
@@ -47,7 +48,10 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   codeScan?: CodeScanner;
   branchPrefix?: string;
   shipAccess?: ShipAccess;
+  coordinator?: CoordinatorMode;
 }
+
+export type CoordinatorMode = 'off' | 'shadow' | 'in_order' | 'parallel';
 
 export type ShipAccess = Omit<GitHubDeps, 'db' | 'workspaceId'>;
 
@@ -61,6 +65,19 @@ export interface FixRound {
   toolCallsAt: number;
   activeMsAt: number;
   hit: BudgetLimit | null;
+}
+
+export interface Seat {
+  role: Extract<AgentRole, 'builder' | 'integrator' | 'coordinator' | 'scout'>;
+  name: string;
+  resumeKey: string;
+  prompt: string | null;
+  route?: Record<string, unknown>;
+}
+
+export interface BudgetChecks {
+  running: Promise<BudgetLimit | null> | null;
+  queued: Promise<BudgetLimit | null> | null;
 }
 
 export interface PassingState {
@@ -108,6 +125,8 @@ export interface Session {
   budgetHit: BudgetLimit | null;
   members: Map<string, () => void>;
   liveCost: Map<string, number>;
+  settledUsd?: number;
+  budgetChecks?: BudgetChecks;
   checkpoints: number;
   git: boolean;
   checks: ProjectChecks | null;
@@ -124,6 +143,7 @@ export interface Session {
   closeReason: string | null;
   observations: Promise<void>[];
   jevDiffs: boolean;
+  scan?: Promise<ScanOutcome> | null;
   scanReport?: ScanReport | null;
   unverified?: boolean;
   risky?: string | null;
@@ -131,6 +151,8 @@ export interface Session {
   fixRound?: FixRound | null;
   passing?: PassingState | null;
   suggestions?: string[];
+  integrator?: Seat | null;
+  coordination?: Coordination | null;
 }
 
 export const COMMAND_READER_TOOL_CALL_LIMIT = 120;

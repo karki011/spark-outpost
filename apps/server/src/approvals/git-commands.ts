@@ -63,3 +63,28 @@ export function publishesCode(command: string): boolean {
     return sub.name === 'remote' && sub.rest.some((token) => REMOTE_CHANGES.includes(token));
   });
 }
+
+export const BUILDER_GIT_OPS = [
+  'stash',
+  'checkout',
+  'switch',
+  'reset',
+  'restore',
+  'clean',
+  'commit',
+  'merge',
+  'rebase',
+  'cherry-pick',
+  'am',
+  'worktree',
+];
+
+const BRANCH_DELETE = new Set(['-d', '-D', '--delete']);
+
+export function changesGitState(command: string): boolean {
+  return gitSubcommands(command).some(
+    (sub) =>
+      BUILDER_GIT_OPS.includes(sub.name) ||
+      (sub.name === 'branch' && sub.rest.some((token) => BRANCH_DELETE.has(token))),
+  );
+}

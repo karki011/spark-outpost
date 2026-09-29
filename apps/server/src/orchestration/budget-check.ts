@@ -11,10 +11,11 @@ function liveUsd(s: Session): number {
 
 export async function budgetUsage(s: Session): Promise<BudgetUsage> {
   const waited = await waitedMs(s.deps.db, s.lease.runId);
+  s.settledUsd = await spentUsd(s.deps.db, s.lease.runId);
   return {
     activeMs: activeTime(Date.now() - s.startedAt, waited),
     toolCalls: s.toolCalls,
-    costUsd: (await spentUsd(s.deps.db, s.lease.runId)) + liveUsd(s),
+    costUsd: s.settledUsd + liveUsd(s),
   };
 }
 
@@ -35,7 +36,42 @@ export async function fixRoundShort(s: Session): Promise<BudgetLimit | null> {
   return null;
 }
 
-export async function checkBudget(s: Session): Promise<BudgetLimit | null> {
+function stopMembers(s: Session): void {
+  for (const abort of s.members.values()) abort();
+}
+
+export function meterSpend(s: Session): void {
+  const cap = s.limits.costCapUsd;
+  if (!s.budgetHit && cap !== null && (s.settledUsd ?? 0) + liveUsd(s) >= cap) {
+    s.budgetHit = 'cost';
+    stopMembers(s);
+    void save(s, { exceeded: 'cost' }).catch(() => undefined);
+    return;
+  }
+  void checkBudget(s).catch(() => undefined);
+}
+
+export function checkBudget(s: Session): Promise<BudgetLimit | null> {
+  const checks = (s.budgetChecks ??= { running: null, queued: null });
+  if (!checks.running) {
+    checks.running = measureBudget(s).finally(() => {
+      checks.running = null;
+    });
+    return checks.running;
+  }
+  checks.queued ??= checks.running
+    .then(
+      () => undefined,
+      () => undefined,
+    )
+    .then(() => {
+      checks.queued = null;
+      return checkBudget(s);
+    });
+  return checks.queued;
+}
+
+async function measureBudget(s: Session): Promise<BudgetLimit | null> {
   if (s.budgetHit) return s.budgetHit;
   const usage = await budgetUsage(s);
   await save(s, { activeMs: usage.activeMs });
@@ -49,6 +85,6 @@ export async function checkBudget(s: Session): Promise<BudgetLimit | null> {
     s.budgetHit = limit;
     await save(s, { exceeded: limit });
   }
-  for (const abort of s.members.values()) abort();
+  stopMembers(s);
   return s.budgetHit;
 }
