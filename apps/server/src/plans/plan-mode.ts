@@ -5,6 +5,7 @@ import {
   type RunMode,
 } from '@spark-outpost/contracts';
 import { objectFields } from '../agents/acp/object-fields.ts';
+import { planOnlyByRule } from '../orchestration/risk-rules.ts';
 
 const SWITCH_MODE_KIND = 'switch_mode';
 export const PLAN_MODE_ID = 'plan';
@@ -37,6 +38,16 @@ export function exitPlanText(
   return text ? text.slice(0, PLAN_DOCUMENT_MAX_LENGTH) : null;
 }
 
-export function readOnlyChatPlans(provider: string, mode: RunMode | null): boolean {
-  return mode === 'ask' && modeForLegacy(provider, PERMISSION_ASK, null) === PLAN_MODE_ID;
+export interface PlanningFacts {
+  planning?: boolean;
+  provider: string;
+  mode: RunMode | null;
+  userRequest: string;
+}
+
+export function plansThisTurn(facts: PlanningFacts): boolean {
+  if (facts.planning !== undefined) return facts.planning;
+  if (facts.mode !== 'ask') return false;
+  const planModeChat = modeForLegacy(facts.provider, PERMISSION_ASK, null) === PLAN_MODE_ID;
+  return planModeChat || planOnlyByRule(facts.userRequest);
 }

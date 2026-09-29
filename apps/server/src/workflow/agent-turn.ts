@@ -30,6 +30,7 @@ import {
 } from './run-metadata.ts';
 import { testRunnerAllowlist } from '../approvals/command-kinds.ts';
 import { proposedPlan } from '../plans/codex-plan.ts';
+import { plansThisTurn } from '../plans/plan-mode.ts';
 import { createPlanRecorder } from './plan-recorder.ts';
 import { createTaskRecorder } from './task-recorder.ts';
 import { createLiveCost } from '../usage/live-cost.ts';
@@ -273,7 +274,7 @@ export async function runAgentTurn(
       ...(input.piece?.coordinated ? { coordinated: true } : {}),
       ...(input.builderEnv ? { env: input.builderEnv } : {}),
       ...(input.copyOf !== null ? { worktree: true } : {}),
-      ...(input.planning ? { planning: true } : {}),
+      ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),

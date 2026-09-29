@@ -18,6 +18,7 @@ import {
 import { recordSessionCommands, sessionCommands } from '../persistence/session-commands.ts';
 import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import type { StopReason } from './agent-turn.ts';
+import { plansThisTurn } from '../plans/plan-mode.ts';
 import type { RunInput } from './run-input.ts';
 import {
   RESUME_REASONS,
@@ -78,7 +79,7 @@ export async function prepareTurnSession(
     model: input.settings.model,
     effort: input.settings.effort,
     mode: input.mode,
-    planning: false,
+    planning: plansThisTurn(input),
     roots: input.projectRoots,
   });
   const stored = await latestProviderSession(db, conversationId, key);

@@ -240,12 +240,12 @@ function sessionMeta(
   policy: PathPolicy | null,
   changing: boolean,
   repo: ClaudeRepoOptions | null,
-  { builder, coordinated }: Pick<ProviderTurn, 'builder' | 'coordinated'>,
+  { builder, coordinated, planning }: Pick<ProviderTurn, 'builder' | 'coordinated' | 'planning'>,
 ) {
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   const roots = extraRoots(policy);
   if (changing) return definition.doSessionMeta?.(roots, repo, builder, coordinated) ?? null;
-  return definition.projectSessionMeta?.(roots, repo) ?? null;
+  return definition.projectSessionMeta?.(roots, repo, planning === true) ?? null;
 }
 
 function openedRoots(

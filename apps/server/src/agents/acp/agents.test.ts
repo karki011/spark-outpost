@@ -39,7 +39,14 @@ describe('Claude session options', () => {
         disableBypassPermissionsMode: 'disable',
       });
     }
-    expect(project.tools).toEqual(['Read', 'Glob', 'Grep', 'ExitPlanMode']);
+    expect(project.tools).toEqual(['Read', 'Glob', 'Grep']);
+    expect(optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true)).tools).toEqual([
+      'Read',
+      'Glob',
+      'Grep',
+      'Write',
+      'ExitPlanMode',
+    ]);
     expect(chat.tools).toEqual([]);
   });
 
@@ -72,7 +79,7 @@ describe('Claude session options', () => {
 
   it('matches claudeSessionMeta for the project tools', () => {
     expect(agentDefinitions.claude.projectSessionMeta?.([])).toEqual(
-      claudeSessionMeta(['Read', 'Glob', 'Grep', 'ExitPlanMode'], []),
+      claudeSessionMeta(['Read', 'Glob', 'Grep'], []),
     );
   });
 

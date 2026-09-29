@@ -1,7 +1,7 @@
 import type { AgentRole, RunMode } from '@spark-outpost/contracts';
 import { findingKind } from '../advisor/finding-questions.ts';
 import { previousReply } from '../advisor/intake-recorder.ts';
-import { readOnlyChatPlans } from '../plans/plan-mode.ts';
+import { plansThisTurn } from '../plans/plan-mode.ts';
 import { insertChildRun, markInPlaceMember, mergeRoute } from '../persistence/orchestrations.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
@@ -121,7 +121,8 @@ async function runInPlace(
   if (mode !== s.input.mode)
     await s.deps.db.query('UPDATE runs SET mode = $2 WHERE id = $1', [s.lease.runId, mode]);
   const preamble = await agreedPlanText(s);
-  const planning = s.input.planning === true || readOnlyChatPlans(s.input.provider, s.input.mode);
+  const { planning: drafting, ...facts } = s.input;
+  const planning = drafting === true || plansThisTurn(facts);
   const input = {
     ...s.input,
     mode,
