@@ -310,12 +310,16 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       append,
       control,
       jev,
-      route: routeContext(input, intake.context),
+      route: {
+        ...routeContext(input, intake.context),
+        ...(prefs.criticOtherProvider ? {} : { criticSameProvider: true }),
+      },
       facts: { trivial: decisions.trivial, destructive: decisions.destructive },
       intake,
       flow: {
         ...initialFlow(decisions.risk, input.level, reviewWanted, jev !== null, confirmFirst),
         ...(solo ? { solo } : {}),
+        ...(prefs.criticEnabled ? {} : { skipCritic: true }),
       },
       risky,
       routes: new Map(),

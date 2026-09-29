@@ -49,6 +49,12 @@ describe('Spark off flow', () => {
     const started = nextStep(on, { type: 'start', start: 'build' });
     expect(nextStep(started.state, built()).action).toMatchObject({ role: 'critic' });
   });
+
+  it('wraps up without a Critic when you turn the Critic off', () => {
+    const off = { ...initialFlow('destructive', 'hands-off', true), skipCritic: true };
+    const started = nextStep(off, { type: 'start', start: 'build' });
+    expect(nextStep(started.state, built({ large: true })).action).toEqual({ type: 'wrap_up' });
+  });
 });
 
 describe('soloRoute', () => {
