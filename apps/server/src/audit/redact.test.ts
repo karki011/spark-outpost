@@ -17,6 +17,8 @@ describe('redactText', () => {
     ['github_pat_11ABCDEFG0123456789_abcdefghijklmnop', '[redacted:github_token]'],
     ['AKIAIOSFODNN7EXAMPLE', '[redacted:aws_key]'],
     ['ASIAIOSFODNN7EXAMPLE', '[redacted:aws_key]'],
+    ['xoxb-1234567890-0987654321-AbCdEfGhIjKl', '[redacted:slack_token]'],
+    ['xoxp-12345678901-abcdefABCDEF', '[redacted:slack_token]'],
     [
       'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U',
       '[redacted:jwt]',

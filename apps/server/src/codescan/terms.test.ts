@@ -2,6 +2,27 @@ import { describe, expect, it } from 'vitest';
 import { extractTerms, nameVariants, pascalForm, searchPatterns, spellings } from './terms.ts';
 
 describe('extractTerms', () => {
+  it('never turns secrets in the request into search terms', () => {
+    const secrets = [
+      'sk-ant-api03-AbCdEfGhIjKlMnOpQrStUv',
+      'ghp_abcdefghijklmnopqrstuvwxyz0123',
+      'github_pat_11ABCDEFG0123456789_abcdefghijklmnop',
+      'xoxb-1234567890-0987654321-AbCdEfGhIjKl',
+      'AKIAIOSFODNN7EXAMPLE',
+    ];
+    const terms = extractTerms(
+      `Wire the key \`${secrets[0]}\` into src/${secrets[1]}/client.ts, and use ${secrets[2]}, ${secrets[3]}, "${secrets[4]}" in fetchUser`,
+    );
+    const stored = JSON.stringify(terms);
+    const searched = searchPatterns(terms).join(' ');
+    for (const secret of secrets) {
+      expect(stored).not.toContain(secret);
+      expect(searched).not.toContain(secret);
+    }
+    expect(stored).not.toContain('redacted');
+    expect(terms.identifiers).toContain('fetchUser');
+  });
+
   it('pulls paths, file names and code-shaped words from a request', () => {
     const terms = extractTerms(
       'In apps/server/src/orchestration/orchestrator.ts, call recordScan from runIntake and update scan_results via the `ScanReport` type in lean.test.ts.',
