@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { requestCancel } from '../src/persistence/runs.ts';
+import { updateProfile } from '../src/persistence/setup.ts';
 import {
   COMPLEX,
   RISKY,
@@ -106,6 +107,24 @@ describe('cost cap', () => {
     });
     expect(builder!.costUsd).toBeGreaterThanOrEqual(COST_CAP);
     expect(builder!.costUsd).toBeLessThan(COST_CAP * 1.5);
+  }, 60_000);
+
+  it('stops a Builder at the spend cap saved in Settings, with no server cap', async () => {
+    start();
+    await updateProfile(t.db, t.workspaceId, { spendCapUsd: COST_CAP });
+    const { conversationId, runId } = await begin('#spend');
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, stopAtBudget);
+    expect(asked.map((approval) => approval.kind)).toEqual(['budget']);
+    expect(orchestration.budget).toMatchObject({ exceeded: 'cost', costCapUsd: COST_CAP });
+  }, 60_000);
+
+  it('runs past the server cap when the saved spend cap is Off', async () => {
+    start(COST_CAP, RISKY);
+    await updateProfile(t.db, t.workspaceId, { spendCapUsd: null });
+    const { conversationId, runId } = await begin('#cost', RISKY);
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, stopAtBudget);
+    expect(asked.map((approval) => approval.kind)).not.toContain('budget');
+    expect(orchestration.budget).toMatchObject({ exceeded: null, costCapUsd: null });
   }, 60_000);
 
   it('asks before the next step instead of starting it over the cap', async () => {
