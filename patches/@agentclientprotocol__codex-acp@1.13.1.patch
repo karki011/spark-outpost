@@ -1,5 +1,5 @@
 diff --git a/dist/index.js b/dist/index.js
-index 87213c3614d88e42ee858cc72bda040e2b81b0fe..ca84c860a3bc73bd51413de648cc9f86ffbe3586 100755
+index 87213c3614d88e42ee858cc72bda040e2b81b0fe..20ac247b9510685fa8149b5b7a9e511250090ad4 100755
 --- a/dist/index.js
 +++ b/dist/index.js
 @@ -27333,6 +27333,20 @@ function toTokenCount(usage) {
@@ -135,7 +135,29 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..ca84c860a3bc73bd51413de648cc9f86
      };
    }
    async getConfigMcpServerNames(projectPath) {
-@@ -39876,6 +39919,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -34133,13 +34176,20 @@ var CodexAcpClient = class {
+       input: input2,
+       approvalPolicy: agentMode.approvalPolicy,
+       approvalsReviewer: agentMode.approvalsReviewer,
+-      sandboxPolicy: addAdditionalDirectoriesToSandboxPolicy(agentMode.sandboxPolicy, additionalDirectories),
++      ...this.turnSandbox(agentMode, cwd, additionalDirectories),
+       summary: disableSummary ? "none" : "auto",
+       effort,
+       model: modelId.model,
+       serviceTier
+     }, onTurnStarted);
+   }
++  turnSandbox(agentMode, cwd, additionalDirectories) {
++    const profiles = isJsonObject(this.config["permissions"]) ? this.config["permissions"] : {};
++    if (!isJsonObject(profiles[agentMode.id])) {
++      return { sandboxPolicy: addAdditionalDirectoriesToSandboxPolicy(agentMode.sandboxPolicy, additionalDirectories) };
++    }
++    return { permissions: agentMode.id, runtimeWorkspaceRoots: uniqueStrings([cwd, ...additionalDirectories]) };
++  }
+   async setCollaborationMode(sessionId, mode, currentModelId) {
+     await this.codexClient.threadSettingsUpdate({
+       threadId: sessionId,
+@@ -39876,6 +39926,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
        const commandPromise = this.availableCommands.tryHandleCommand(params.prompt, sessionState, {
          onTurnStartPending: () => {
            sessionState.lastTokenUsage = null;
@@ -143,7 +165,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..ca84c860a3bc73bd51413de648cc9f86
            ensurePendingTurnStart();
          },
          onTurnStarted: (turnId, threadId) => {
-@@ -39947,7 +39991,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -39947,7 +39998,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
          await clearRecoveredSessionFailure(eventHandler);
          return {
            stopReason: "end_turn",
@@ -152,7 +174,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..ca84c860a3bc73bd51413de648cc9f86
            _meta: this.buildQuotaMeta(sessionState)
          };
        }
-@@ -39973,6 +40017,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -39973,6 +40024,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
          sessionState.currentModelSupportsFast
        );
        sessionState.lastTokenUsage = null;
@@ -160,7 +182,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..ca84c860a3bc73bd51413de648cc9f86
        ensurePendingTurnStart();
        const sendPromptPromise = this.runWithProcessCheck(
          () => this.codexAcpClient.sendPrompt(
-@@ -40144,7 +40189,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -40144,7 +40196,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
        );
        return {
          stopReason: "end_turn",
@@ -169,7 +191,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..ca84c860a3bc73bd51413de648cc9f86
          _meta: this.buildQuotaMeta(sessionState)
        };
      } catch (err) {
-@@ -40238,7 +40283,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -40238,7 +40290,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
    cancelledPromptResponse(sessionState) {
      return {
        stopReason: "cancelled",
@@ -178,7 +200,7 @@ index 87213c3614d88e42ee858cc72bda040e2b81b0fe..ca84c860a3bc73bd51413de648cc9f86
        _meta: this.buildQuotaMeta(sessionState)
      };
    }
-@@ -40249,7 +40294,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
+@@ -40249,7 +40301,7 @@ Check ${configPath} and project .codex directories, especially their config.toml
      }
      return {
        stopReason: "end_turn",

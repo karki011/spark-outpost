@@ -13,6 +13,8 @@ import {
 } from '../persistence/run-events.ts';
 import { ProviderError, type Provider, type ProviderOutput } from '../providers/provider.ts';
 import { createTitleFilter } from '../titles/title-line.ts';
+import { createRedactionFilter } from '../audit/redact-stream.ts';
+import { projectSecretValues } from '../audit/secret-values.ts';
 import { APPROVAL_TIMEOUT_MESSAGE, type EditObserver } from './approval-gate.ts';
 import type { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
@@ -211,6 +213,8 @@ export async function runAgentTurn(
   });
   const modeWatch =
     input.mode === 'do' ? watchModeRequests(deps.db, lease.runId, deps.cancelPollMs ?? 250) : null;
+  const redaction = createRedactionFilter(await projectSecretValues(input.projectRoots));
+  const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
   try {
     if (await isCancelRequested(deps.db, lease.runId)) control.stop('cancelled');
     if (control.signal.aborted && control.reason() !== 'lease_lost') {
@@ -307,9 +311,9 @@ export async function runAgentTurn(
       if (output.kind === 'instructions') {
         await recordFollowedInstructions(deps.db, lease.runId, output.files);
       }
-      if (output.kind === 'text_delta')
-        await say(titles ? titles.push(output.delta) : output.delta);
+      if (output.kind === 'text_delta') await sayText(redaction.push(output.delta));
     }
+    await sayText(redaction.finish());
     if (titles) {
       const ending = titles.finish();
       await say(ending.text);
@@ -328,6 +332,9 @@ export async function runAgentTurn(
       audit.discard();
       return result('lease_lost');
     }
+    await sayText(redaction.finish()).catch((failure: unknown) =>
+      console.error('Could not save the end of the reply', failure),
+    );
     await settleAudit();
     const reason = control.reason();
     if (reason === 'cancelled' || reason === 'budget') return ended(result('cancelled'));

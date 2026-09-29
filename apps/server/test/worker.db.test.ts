@@ -85,6 +85,22 @@ describe('worker', () => {
     expect(detail?.usageTotals).toMatchObject({ costUsd: FAKE_COST_USD, totalTokens: 1200 });
   });
 
+  it('redacts secrets in the reply before they reach the chat or its events', async () => {
+    start();
+    const secret = 'sk-proj-abcdefghijklmnopqrstuvwx';
+    const { conversationId, runId } = await send(`Repeat ${secret} please`);
+
+    expect((await settled(runId)).status).toBe('succeeded');
+    const detail = await getConversationDetail(t.db, conversationId);
+    const reply = detail?.messages.find((message) => message.role === 'assistant');
+    expect(reply?.content).toBe(fakeReply('Repeat [redacted:api_key] please'));
+    const { rows } = await t.db.query<{ payload: unknown }>(
+      `SELECT payload FROM run_events WHERE run_id = $1`,
+      [runId],
+    );
+    expect(JSON.stringify(rows)).not.toContain(secret);
+  });
+
   it('stops a run when cancellation is requested', async () => {
     start({ stepMs: 50, wordMs: 50 });
     const { runId } = await send('Take your time');

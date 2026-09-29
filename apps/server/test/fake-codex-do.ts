@@ -1,6 +1,7 @@
 import * as acp from '@agentclientprotocol/sdk';
+import { CODEX_SANDBOX_TRIGGER, runSandboxed } from './fake-codex-sandbox.ts';
 
-export const CODEX_DO_TRIGGER = '#codex ';
+const CODEX_DO_TRIGGER = '#codex ';
 
 const COMMAND_OPTIONS: acp.PermissionOption[] = [
   { optionId: 'allow_once', name: 'Yes, proceed', kind: 'allow_once' },
@@ -60,13 +61,30 @@ function actionFor(step: string, index: number, cwd: string): CodexAction {
   };
 }
 
-export async function codexDoTurn(
-  text: string,
-  cwd: string,
-  sessionId: string,
-  client: acp.AgentContext,
-  say: (chunk: string) => Promise<void>,
-): Promise<acp.StopReason> {
+interface CodexTurn {
+  text: string;
+  cwd: string;
+  sessionId: string;
+  client: acp.AgentContext;
+  say: (chunk: string) => Promise<void>;
+}
+
+export async function codexTurn(turn: CodexTurn, mode: string): Promise<acp.StopReason | null> {
+  if (turn.text.includes(CODEX_SANDBOX_TRIGGER)) {
+    await turn.say(runSandboxed(turn.text, turn.cwd, mode));
+    return 'end_turn';
+  }
+  if (!turn.text.includes(CODEX_DO_TRIGGER)) return null;
+  return codexDoTurn(turn);
+}
+
+async function codexDoTurn({
+  text,
+  cwd,
+  sessionId,
+  client,
+  say,
+}: CodexTurn): Promise<acp.StopReason> {
   const script = text.slice(text.indexOf(CODEX_DO_TRIGGER) + CODEX_DO_TRIGGER.length);
   const steps = script
     .split('\n')[0]!

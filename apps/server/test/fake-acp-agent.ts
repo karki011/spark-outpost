@@ -3,7 +3,7 @@ import * as acp from '@agentclientprotocol/sdk';
 import { PLAN_MODE_TRIGGER, currentRequest, planModeTurn, planReplies } from './fake-acp-plans.ts';
 import { roleFor } from './fake-acp-roles.ts';
 import { coordinatorRoleFor } from './fake-acp-coordinator.ts';
-import { CODEX_DO_TRIGGER, codexDoTurn } from './fake-codex-do.ts';
+import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
 import {
@@ -352,9 +352,8 @@ async function turn(
       await sleep(20, signal);
     }
   }
-  if (text.includes(CODEX_DO_TRIGGER)) {
-    return codexDoTurn(text, sessionCwd, sessionId, client, (chunk) => say(chunk));
-  }
+  const codexed = await codexTurn(roleTurn, config.mode ?? '');
+  if (codexed) return codexed;
   if (text.includes('#write')) {
     await update({
       sessionUpdate: 'tool_call',
