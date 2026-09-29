@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { connectorCard, connectorHead } from './connector-cards.ts';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { openChats } from './navigation.ts';
@@ -216,8 +217,8 @@ test('Settings → Connectors has no serious colour-contrast or ARIA issues', as
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('tab', { name: 'Connectors' }).click();
-  const jira = page.locator('.tk-src[data-source="jira"]');
-  await jira.getByRole('button', { name: 'Connect', exact: true }).click();
+  const jira = connectorCard(page, 'jira');
+  await connectorHead(jira).click();
   const form = jira.getByRole('form', { name: 'Connect Jira' });
   await form.getByLabel('Site URL').fill(STUB_URL);
   await form.getByLabel('Email').fill(JIRA_EMAIL);
@@ -234,7 +235,10 @@ test('Settings → Connectors has no serious colour-contrast or ARIA issues', as
   await page.reload();
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('tab', { name: 'Connectors' }).click();
-  await jira.getByRole('button', { name: 'Ticket updates' }).click();
+  await connectorHead(jira).click();
+  await expect(
+    jira.getByRole('switch', { name: 'Move tickets to Done when the PR merges' }),
+  ).toBeVisible();
   for (const theme of ['light', 'graphite', 'contrast']) {
     await useTheme(page, theme);
     found.push(...(await blockingViolations(page, `connectors connected ${theme}`)));

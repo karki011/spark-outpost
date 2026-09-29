@@ -136,6 +136,7 @@ interface AgentBlockProps {
   agent: CrewAgent;
   anchor: string;
   live: boolean;
+  settled?: boolean;
   collapsed: boolean;
   conversationId: string;
   steps: readonly RunStep[];
@@ -160,6 +161,7 @@ export function AgentBlock({
   agent,
   anchor,
   live,
+  settled = false,
   collapsed,
   conversationId,
   after,
@@ -198,7 +200,11 @@ export function AgentBlock({
     <div className="msg ai agent-block" data-agent={agent.id}>
       <AgentHead agent={agent} anchor={anchor} />
       <div id={bodyId}>
-        <StreamedBody agent={agent} live={live} conversationId={conversationId} {...body} />
+        {settled ? (
+          <AgentBody agent={agent} {...body} />
+        ) : (
+          <StreamedBody agent={agent} live={live} conversationId={conversationId} {...body} />
+        )}
       </div>
       {choice === true && (
         <button type="button" className="agent-unfold" onClick={() => setChoice(false)}>

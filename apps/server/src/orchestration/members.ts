@@ -97,6 +97,10 @@ function storedRoute(route: MemberRoute, name: string, extra: Record<string, unk
   };
 }
 
+export async function setRunMode(s: Session, mode: RunMode | null): Promise<void> {
+  await s.deps.db.query('UPDATE runs SET mode = $2 WHERE id = $1', [s.lease.runId, mode]);
+}
+
 async function runInPlace(
   s: Session,
   resolved: ResolvedRoute,
@@ -115,8 +119,7 @@ async function runInPlace(
     effort: route.pick.effort,
     route: storedRoute(route, name),
   });
-  if (mode !== s.input.mode)
-    await s.deps.db.query('UPDATE runs SET mode = $2 WHERE id = $1', [s.lease.runId, mode]);
+  if (mode !== s.input.mode) await setRunMode(s, mode);
   const preamble = await agreedPlanText(s);
   const input = {
     ...s.input,

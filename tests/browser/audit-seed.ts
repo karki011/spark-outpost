@@ -47,6 +47,14 @@ const MESSAGES: {
   },
 ];
 
+const APPROVAL_PAYLOAD = JSON.stringify({
+  command: 'pnpm test',
+  cwd: null,
+  paths: [],
+  diffs: [],
+  truncated: false,
+});
+
 export interface SeededRun {
   runId: string;
   conversationId: string;
@@ -103,10 +111,10 @@ export async function seedAuditLog(): Promise<SeededRun> {
     await db.query(
       `INSERT INTO approvals (id, run_id, tool_call_id, kind, title, payload, payload_hash,
          options, status, decided_by, decided_at, created_at)
-       VALUES (gen_random_uuid(), $1, 'call-1', 'execute', 'pnpm test', '{}', 'h', '[]',
+       VALUES (gen_random_uuid(), $1, 'call-1', 'execute', 'pnpm test', $3, 'h', '[]',
          'allowed', 'user', $2::timestamptz + interval '2 seconds',
          $2::timestamptz + interval '1 second')`,
-      [run.id, run.started_at],
+      [run.id, run.started_at, APPROVAL_PAYLOAD],
     );
     return { runId: run.id, conversationId: run.conversation_id };
   } finally {

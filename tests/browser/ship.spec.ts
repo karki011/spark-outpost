@@ -3,10 +3,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { git, repoWithRemote } from '../../apps/server/test/ship-support.ts';
+import { connectorCard, connectorHead, connectorStatus } from './connector-cards.ts';
 import { pickPermission } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
+
+const GITHUB_DESCRIPTION =
+  'Ship commits and pushes with your own Git. Opening a draft pull request needs GitHub.';
 
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 
@@ -176,8 +180,11 @@ test('Settings shows the GitHub connection and saves, then removes, a token', as
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('tab', { name: 'Connectors' }).click();
-  const card = page.locator('.gh-card');
-  await expect(card.locator('.gh-badge')).toHaveText('Not connected');
+  const card = connectorCard(page, 'github');
+  const status = connectorStatus(card);
+  await expect(status).toHaveText(GITHUB_DESCRIPTION);
+  await expect(card.locator('.pill-ok')).toHaveCount(0);
+  await connectorHead(card).click();
   const methods = card.getByRole('radiogroup', { name: 'How to connect GitHub' });
   await expect(methods.getByRole('radio', { name: 'Personal token' })).toBeChecked();
   await methods.getByRole('radio', { name: 'gh CLI' }).click();
@@ -195,23 +202,24 @@ test('Settings shows the GitHub connection and saves, then removes, a token', as
 
   await token.fill('github_pat_11ABCDEFG0123456789_abcdefghijklmnop');
   await card.getByRole('button', { name: 'Verify token' }).click();
-  await expect(card.locator('.gh-active')).toHaveText('Connected with a token as octo-token');
+  await expect(status).toHaveText('Connected with a token as octo-token');
+  await expect(card.locator('.pill-ok')).toHaveText('Connected');
   await expect(methods).toBeHidden();
-  await card.getByRole('button', { name: 'Manage token' }).click();
+  await connectorHead(card).click();
   await expect(card.locator('.gh-facts')).toContainText('Fine-grained token');
   await expect(card.locator('.gh-facts')).toContainText('2026');
   await expect(card).not.toContainText('github_pat_');
 
   await card.getByRole('button', { name: 'Remove token' }).click();
-  await expect(card.locator('.gh-active')).toHaveText('Not connected');
+  await expect(status).toHaveText(GITHUB_DESCRIPTION);
+  await expect(card.locator('.pill-ok')).toHaveCount(0);
 
   writeFileSync(FAKE_GH_STATE, 'octo-cli');
+  await connectorHead(card).click();
   await methods.getByRole('radio', { name: 'gh CLI' }).click();
   await card.getByRole('button', { name: 'Check again' }).click();
-  await expect(card.locator('.gh-active')).toHaveText('Connected through the gh CLI as octo-cli');
-  await expect(methods).toBeHidden();
-  await card.getByRole('button', { name: 'Other ways to connect' }).click();
+  await expect(status).toHaveText('Connected through the gh CLI as octo-cli');
   await expect(methods.getByRole('radio', { name: 'gh CLI' })).toBeChecked();
   await expect(card).toContainText('Signed in as octo-cli');
-  await expect(card.locator('.gh-badge')).toHaveText('Connected');
+  await expect(card.locator('.pill-ok')).toHaveText('Connected');
 });

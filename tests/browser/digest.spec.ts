@@ -118,17 +118,19 @@ test('with the brief off Home says so, sorts by rules and turns it back on', asy
     { title: 'Mock fetch retries', run: { status: 'failed', error: 'Rate limited.' } },
   ]);
   await decorateLatestRun(chat!, { provider: 'claude' });
-  await page.goto('/');
-  await page.request.patch('/api/tickets/attention-settings', { data: { briefEnabled: false } });
+  const off = await page.request.patch('/api/tickets/attention-settings', {
+    data: { briefEnabled: false },
+  });
+  expect(off.ok()).toBe(true);
   await openHome(page);
 
-  const off = today(page).locator('.dg-off');
-  await expect(off).toContainText('The brief is off. Rules still sort the list below.');
+  const notice = today(page).locator('.dg-off');
+  await expect(notice).toContainText('The brief is off. Rules still sort the list below.');
   await expect(today(page).getByRole('button', { name: 'Refresh' })).toBeDisabled();
   await expect(page.getByRole('list', { name: 'Needs you' })).toContainText('Mock fetch retries');
   expect((await (await page.request.get('/api/home/digest')).json()).digest).toBeNull();
 
-  await off.getByRole('button', { name: 'Turn on (about $0.01 each)' }).click();
-  await expect(off).toHaveCount(0);
+  await notice.getByRole('button', { name: 'Turn on (about $0.01 each)' }).click();
+  await expect(notice).toHaveCount(0);
   await expect(brief(page).locator('.dg-headline')).toBeVisible({ timeout: 15_000 });
 });

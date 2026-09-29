@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Approval } from '@spark-outpost/contracts';
-import { shownApprovals, turnApprovals } from './crew-items.ts';
+import type { Approval, CrewMember, Message } from '@spark-outpost/contracts';
+import { handOffAt, memberTexts, shownApprovals, turnApprovals } from './crew-items.ts';
 
 const approval = (
   id: string,
@@ -47,5 +47,38 @@ describe('shownApprovals', () => {
     const stopped = approval('a1', 'bolt-1', 'cancelled', 'stop');
     const allowlisted = approval('a22', 'bolt-1', 'allowed', 'allowlist');
     expect(shownApprovals([], [stopped, allowlisted])).toEqual([]);
+  });
+});
+
+const reply = (runId: string, content: string, second: number) =>
+  ({
+    role: 'assistant',
+    runId,
+    content,
+    createdAt: `2026-09-29T00:00:0${second}Z`,
+  }) as Message;
+
+describe('memberTexts', () => {
+  const crew = [
+    { runId: 'root', startedAt: '2026-09-29T00:00:01Z' },
+    { runId: 'bolt', startedAt: '2026-09-29T00:00:04Z' },
+  ] as CrewMember[];
+
+  it("keeps an in-place Scout to its own replies, not the turn's closing summary", () => {
+    const messages = [
+      reply('root', 'Which report?', 2),
+      reply('root', 'Spend, then.', 3),
+      reply('bolt', 'Done. fake-edit=allowed', 5),
+      reply('root', 'Done. fake-edit=allowed', 6),
+    ];
+    const texts = memberTexts(messages, 'root', handOffAt(crew, 'root'));
+    expect(texts.get('root')).toBe('Which report?\n\nSpend, then.');
+    expect(texts.get('bolt')).toBe('Done. fake-edit=allowed');
+  });
+
+  it('uses the latest root reply when nothing was handed off', () => {
+    const messages = [reply('root', 'Draft', 2), reply('root', 'Answer', 3)];
+    expect(handOffAt(crew.slice(0, 1), 'root')).toBeNull();
+    expect(memberTexts(messages, 'root', null).get('root')).toBe('Answer');
   });
 });

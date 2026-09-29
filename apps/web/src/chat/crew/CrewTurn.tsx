@@ -28,7 +28,9 @@ import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock, AgentHead } from './AgentBlock.tsx';
 import {
   crewItems,
+  handOffAt,
   lastAgentIndex,
+  memberTexts,
   mergeCheckpoints,
   turnApprovals,
   type CrewItem,
@@ -53,11 +55,8 @@ function newer(live: Orchestration | null, stored: Orchestration): Orchestration
 
 function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApprovals }: BodyProps) {
   const runsById = new Map(detail.runs.map((candidate) => [candidate.id, candidate]));
-  const textByRun = new Map(
-    detail.messages
-      .filter((message) => message.role === 'assistant' && message.runId)
-      .map((message) => [message.runId!, message.content]),
-  );
+  const handedOffAt = handOffAt(orchestration.crew, run.id);
+  const textByRun = memberTexts(detail.messages, run.id, handedOffAt);
   const agents = crewAgents(orchestration, detail.activity);
   const jev = agents[0]!;
   const crewRunIds = [run.id, ...orchestration.crew.map((member) => member.runId)];
@@ -109,6 +108,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         agent={agent}
         anchor={agentAnchor(orchestration.runId, member.runId)}
         live={!isTerminalRunStatus(member.status)}
+        settled={member.runId === run.id && handedOffAt !== null}
         collapsed={collapsible && agent.state === 'done'}
         conversationId={detail.conversation.id}
         steps={detail.activity[member.runId] ?? []}
