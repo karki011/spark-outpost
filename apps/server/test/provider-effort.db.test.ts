@@ -4,22 +4,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { loadIntakeContext } from '../src/persistence/advice.ts';
 import { saveCapabilities } from '../src/persistence/chat-settings.ts';
 import { createConversation } from '../src/persistence/conversations.ts';
-import { saveConnection } from '../src/persistence/setup.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
 let app: ReturnType<typeof createTestApp>;
 
 const option = (id: string) => ({ id, label: id, description: null });
 
-const connectClaude = () =>
-  saveConnection(t.db, t.workspaceId, 'claude', {
-    method: 'cli',
-    detail: 'claude 1.0',
-    summary: '',
-    models: [],
-  });
+const connectClaude = () => connectCliProvider(t, 'claude');
 
 beforeEach(async () => {
   t = await createTestDb();

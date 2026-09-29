@@ -15,15 +15,12 @@ import {
   type TurnAttachment,
 } from '../src/providers/provider.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
 const definition: AgentDefinition = {
   ...agentDefinitions.codex,
   name: 'Fake',
   ...FAKE_AGENT_MODES,
-};
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 const provider = createAcpProvider({ definition, launch, cancelGraceMs: 2_000 });
 const settings: AgentSettings = { method: 'cli', model: null, modelLabel: null, effort: null };
@@ -43,7 +40,7 @@ async function collect(prompt: string, options: Partial<AgentSettings> = {}, sig
   } catch (caught) {
     error = caught;
   }
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   return { outputs, text, error };
 }
 

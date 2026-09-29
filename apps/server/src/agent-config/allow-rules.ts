@@ -58,7 +58,7 @@ const dropped = (rule: string, reason: string): AllowRuleVerdict => ({
   reason,
 });
 
-export function commandPrefix(spec: string): string {
+function commandPrefix(spec: string): string {
   const trimmed = spec.trim();
   const withoutWildcard = trimmed.endsWith(':*')
     ? trimmed.slice(0, -2)

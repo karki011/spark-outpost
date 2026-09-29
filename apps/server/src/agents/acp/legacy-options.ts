@@ -1,4 +1,5 @@
 import type { NewSessionResponse, SessionConfigOption } from '@agentclientprotocol/sdk';
+import { objectFields } from './object-fields.ts';
 
 export const LEGACY_MODE_OPTION = 'spark-outpost/legacy-mode';
 export const LEGACY_MODEL_OPTION = 'spark-outpost/legacy-model';
@@ -27,18 +28,15 @@ const MODELS: LegacyShape = {
   idKey: 'modelId',
 };
 
-const record = (value: unknown): Record<string, unknown> =>
-  value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : {};
-
 const text = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
 function legacyOption(state: unknown, shape: LegacyShape): SessionConfigOption | null {
-  const fields = record(state);
+  const fields = objectFields(state);
   const current = text(fields[shape.currentKey]);
   const list = fields[shape.listKey];
   if (current === null || !Array.isArray(list)) return null;
   const options = list.flatMap((entry) => {
-    const item = record(entry);
+    const item = objectFields(entry);
     const value = text(item[shape.idKey]);
     const name = text(item.name);
     if (value === null || name === null) return [];
@@ -55,7 +53,7 @@ function legacyOption(state: unknown, shape: LegacyShape): SessionConfigOption |
 }
 
 export function legacyOptions(response: NewSessionResponse): SessionConfigOption[] {
-  const fields = record(response);
+  const fields = objectFields(response);
   return [legacyOption(fields.modes, MODES), legacyOption(fields.models, MODELS)].filter(
     (option) => option !== null,
   );

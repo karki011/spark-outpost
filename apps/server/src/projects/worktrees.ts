@@ -8,7 +8,7 @@ const run = promisify(execFile);
 const MAX_BUFFER = 64 * 1024 * 1024;
 
 export const WORKTREES_DIR = path.join('.spark', 'worktrees');
-export const RESULT_REF_PREFIX = 'refs/spark-outpost/builders/';
+const RESULT_REF_PREFIX = 'refs/spark-outpost/builders/';
 const EXCLUDE_LINE = '.spark/';
 
 export function worktreePath(root: string, runId: string): string {
@@ -107,7 +107,7 @@ export async function tryMerge(root: string, base: string, result: string): Prom
   }
 }
 
-function literal(paths: readonly string[]): string[] {
+function excludedPathspecs(paths: readonly string[]): string[] {
   return paths.map((file) => `:(exclude,top,literal)${file}`);
 }
 
@@ -125,7 +125,7 @@ export async function applyTree(
     to,
     '--',
     '.',
-    ...literal(skip),
+    ...excludedPathspecs(skip),
   ]);
   if (!patch.trim()) return;
   const top = await repoTop(root);

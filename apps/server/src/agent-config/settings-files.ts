@@ -1,5 +1,11 @@
 import type { IgnoredSetting, RepoHook } from '@spark-outpost/contracts';
-import { isRedirectCommand, isRedirectEnv, type RedirectSetting } from './redirects.ts';
+import { isRecord } from './records.ts';
+import {
+  REDIRECT_COMMANDS,
+  isRedirectCommand,
+  isRedirectEnv,
+  type RedirectSetting,
+} from './redirects.ts';
 
 export type HookEntry = Record<string, unknown>;
 export type HooksConfig = Record<string, HookEntry[]>;
@@ -18,22 +24,9 @@ export interface SettingsFileSummary {
   warnings: string[];
 }
 
-export const COMMAND_SETTINGS = [
-  'apiKeyHelper',
-  'awsAuthRefresh',
-  'awsCredentialExport',
-  'gcpAuthRefresh',
-  'otelHeadersHelper',
-  'proxyAuthHelper',
-  'statusLine',
-  'fileSuggestion',
-] as const;
+const COMMAND_SETTINGS = [...REDIRECT_COMMANDS, 'statusLine', 'fileSuggestion'] as const;
 
 const PREVIEW_MAX = 200;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export function preview(text: string): string {
   const oneLine = text.replace(/\s+/g, ' ').trim();

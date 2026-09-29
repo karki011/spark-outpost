@@ -18,12 +18,12 @@ import { runMember } from './members.ts';
 import { publish, save, type Session } from './session.ts';
 import type { FlowEvent } from './transitions.ts';
 
-export const PLAN_ONLY_NOTE =
+const PLAN_ONLY_NOTE =
   'The user asked for a plan only, not changes yet. Read the code you need, then reply with a step-by-step implementation plan: numbered steps that name the files to add or change, the tests to add, and any open questions. Do not change any files.';
 
-export const PLAN_QUESTION = 'Approve the plan?';
+const PLAN_QUESTION = 'Approve the plan?';
 
-export function planOnlyPrompt(prompt: string, note: string | null): string {
+function planOnlyPrompt(prompt: string, note: string | null): string {
   const base = `${prompt}\n\n${PLAN_ONLY_NOTE}`;
   if (!note) return base;
   return `${base}\n\nThe user asked for these changes to your previous plan:\n\n${note}\n\nReply with the whole revised plan.`;

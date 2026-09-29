@@ -14,15 +14,12 @@ import type {
   StoredSession,
 } from '../src/providers/provider.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
 const definition: AgentDefinition = {
   ...agentDefinitions.codex,
   name: 'Fake',
   ...FAKE_AGENT_MODES,
-};
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 const store = mkdtempSync(join(tmpdir(), 'fake-acp-store-'));
 const workdir = join(store, 'workdir');
@@ -69,7 +66,7 @@ async function turn(
     outputs.push(output);
   }
   await audit.close();
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   const steps = outputs.flatMap((output) => (output.kind === 'step_started' ? [output.name] : []));
   const opened = outputs.find((output) => output.kind === 'session');
   return { outputs, text, steps, opened, audit };

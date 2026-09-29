@@ -17,7 +17,11 @@ export const TIER_RANK: Readonly<Record<ModelTier, number>> = {
 export const FRONTIER_RANK = TIER_RANK.frontier;
 
 export const RETIRING_WITHIN_DAYS = 30;
-const DAY_MS = 86_400_000;
+export const DAY_MS = 86_400_000;
+
+export function utcDayStart(day: string): number {
+  return Date.parse(`${day}T00:00:00Z`);
+}
 
 export interface CardModel {
   id: string;
@@ -58,7 +62,7 @@ export function providerCard(provider: string): ProviderCard | null {
 export function cardRetiring(card: ModelCard, now: Date = new Date()): boolean {
   if (card.retiresNotBefore === null) return false;
   const horizon = now.getTime() + RETIRING_WITHIN_DAYS * DAY_MS;
-  return Date.parse(`${card.retiresNotBefore}T00:00:00Z`) <= horizon;
+  return utcDayStart(card.retiresNotBefore) <= horizon;
 }
 
 export function retiringOn(

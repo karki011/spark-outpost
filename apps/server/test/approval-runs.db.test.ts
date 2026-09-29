@@ -8,14 +8,14 @@ import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { claimNextJob } from '../src/persistence/jobs.ts';
 import { getRun, requestCancel } from '../src/persistence/runs.ts';
-import { insertApproval, getApproval } from '../src/persistence/approvals.ts';
+import { getApproval } from '../src/persistence/approvals.ts';
 import { FAKE_COMMAND, FAKE_EDIT_FILE } from '../src/providers/fake-approvals.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
 import { APPROVAL_TIMEOUT_MESSAGE } from '../src/workflow/approval-gate.ts';
 import { WAITING_OUTCOME_MESSAGE, recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
-import { doRun } from './approval-support.ts';
+import { doRun, insertCommandApproval } from './approval-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -144,16 +144,7 @@ describe('Do runs with approvals', () => {
     const { runId } = await doRun(t, root, '#approve');
     const lease = (await claimNextJob(t.db, 30))!;
     expect(lease.runId).toBe(runId);
-    const approval = await insertApproval(t.db, {
-      runId,
-      toolCallId: 'c1',
-      rpcId: null,
-      kind: 'execute',
-      title: 'ls',
-      payload: { command: 'ls', cwd: root, paths: [], diffs: [], truncated: false },
-      options: [{ optionId: 'allow', name: 'Allow', kind: 'allow_once' }],
-      reason: null,
-    });
+    const approval = await insertCommandApproval(t, runId, root, 'ls');
     await t.db.query(`UPDATE jobs SET lease_expires_at = now() - interval '1 second'`);
     expect(await recoverExpiredLeases(t.db)).toBe(1);
     expect(await getRun(t.db, runId)).toMatchObject({

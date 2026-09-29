@@ -1,22 +1,13 @@
 import { Router } from 'express';
-import { savePlanRequestSchema, type AgreedPlans } from '@spark-outpost/contracts';
+import { savePlanRequestSchema } from '@spark-outpost/contracts';
 import { conversationRoots } from '../persistence/conversation-projects.ts';
-import type { Db, Queryable } from '../persistence/db.ts';
-import { assistantMessage, planDocuments } from '../persistence/plan-documents.ts';
+import type { Db } from '../persistence/db.ts';
+import { assistantMessage } from '../persistence/plan-documents.ts';
 import { saveAgreedMessage } from '../plans/agreed-plans.ts';
-import { staleFiles } from '../plans/plan-staleness.ts';
 import { paramId, parseBody } from './validation.ts';
 
 export interface PlanRouteDeps {
   db: Db;
-}
-
-export async function agreedPlans(db: Queryable, conversationId: string): Promise<AgreedPlans> {
-  const documents = await planDocuments(db, conversationId);
-  const approved = documents.findLast((document) => document.status === 'approved');
-  if (!approved) return { documents, staleFiles: [] };
-  const [root] = await conversationRoots(db, conversationId);
-  return { documents, staleFiles: await staleFiles(root ?? null, approved) };
 }
 
 export function planRoutes({ db }: PlanRouteDeps): Router {

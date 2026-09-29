@@ -1,11 +1,10 @@
 import { readFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { defaultHomes } from '../../mcp/scan.ts';
 import { codexServerTable } from '../../mcp/sources.ts';
 
-export function codexConfigPath(env: Readonly<Record<string, string | undefined>>): string {
-  const home = env.CODEX_HOME || join(env.HOME || homedir(), '.codex');
-  return join(home, 'config.toml');
+function codexConfigPath(env: Readonly<Record<string, string | undefined>>): string {
+  return join(defaultHomes(env).codexHome, 'config.toml');
 }
 
 export async function codexUserMcpNames(

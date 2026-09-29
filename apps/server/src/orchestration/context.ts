@@ -1,13 +1,14 @@
 import type { BuildStyle } from '@spark-outpost/contracts';
 import { builderStyle, criticStyle } from './lean.ts';
 
-export const REQUEST_LIMIT = 8_000;
+const REQUEST_LIMIT = 8_000;
 export const HISTORY_TURNS = 6;
-export const HISTORY_TURN_LIMIT = 1_000;
+const HISTORY_TURN_LIMIT = 1_000;
 export const PATCH_LIMIT = 24_000;
-export const NOTE_LIMIT = 2_000;
+const NOTE_LIMIT = 2_000;
 export const FINDINGS_LIMIT = 10;
-export const CHECK_OUTPUT_LIMIT = 3_000;
+const CHECK_OUTPUT_LIMIT = 3_000;
+const FINDING_CHARACTER_LIMIT = 500;
 
 export interface HistoryTurn {
   role: 'user' | 'assistant';
@@ -88,6 +89,13 @@ export function namedFiles(steps: readonly string[]): string[] {
   return [...found].slice(0, 20);
 }
 
+function findingBullets(findings: readonly string[]): string {
+  return findings
+    .slice(0, FINDINGS_LIMIT)
+    .map((finding) => `- ${cap(finding, FINDING_CHARACTER_LIMIT)}`)
+    .join('\n');
+}
+
 function historyLines(history: readonly HistoryTurn[]): string {
   const recent = history.slice(-HISTORY_TURNS);
   if (recent.length === 0) return 'No earlier messages.';
@@ -127,10 +135,7 @@ export function builderPrompt(context: BuilderContext): string {
     parts.push(section('Earlier conversation', historyLines(context.history)));
   }
   if (context.findings.length > 0) {
-    const findings = context.findings
-      .slice(0, FINDINGS_LIMIT)
-      .map((finding) => `- ${cap(finding, 500)}`);
-    parts.push(section('Review findings to address', findings.join('\n')));
+    parts.push(section('Review findings to address', findingBullets(context.findings)));
   }
   if (context.note) parts.push(section('Note from the user', cap(context.note, NOTE_LIMIT)));
   parts.push(...checkSection(context.checkCommands));
@@ -166,11 +171,10 @@ function reviewSections(context: Omit<CriticContext, 'request' | 'plan'>): strin
 
 function previousFindingsSection(findings: readonly string[]): string[] {
   if (findings.length === 0) return [];
-  const lines = findings.slice(0, FINDINGS_LIMIT).map((finding) => `- ${cap(finding, 500)}`);
   return [
     section(
       'Findings the Builder was asked to fix',
-      `Check whether each is fixed now. Repeat any that remain in the same words.\n${lines.join('\n')}`,
+      `Check whether each is fixed now. Repeat any that remain in the same words.\n${findingBullets(findings)}`,
     ),
   ];
 }
@@ -223,6 +227,7 @@ export const CRITIC_FIX_LEAD =
   "The AI review of your change found these correctness problems. Fix each one without undoing the change's intent, add or adjust a test that shows it where the project has tests, then reply with what you changed.";
 
 export function criticFixFollowUp(findings: readonly string[]): string {
-  const lines = findings.slice(0, FINDINGS_LIMIT).map((finding) => `- ${cap(finding, 500)}`);
-  return [CRITIC_FIX_LEAD, section('Review findings to fix', lines.join('\n'))].join('\n\n');
+  return [CRITIC_FIX_LEAD, section('Review findings to fix', findingBullets(findings))].join(
+    '\n\n',
+  );
 }

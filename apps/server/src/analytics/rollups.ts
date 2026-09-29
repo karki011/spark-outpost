@@ -14,7 +14,7 @@ const KEYS: Record<RollupGroupBy, (fact: TurnFact) => string> = {
 const sum = (facts: readonly TurnFact[], value: (fact: TurnFact) => number) =>
   facts.reduce((total, fact) => total + value(fact), 0);
 
-export function rollupRow(key: string, facts: readonly TurnFact[]): RollupRow {
+function rollupRow(key: string, facts: readonly TurnFact[]): RollupRow {
   const tally = outcomeTally(facts);
   const fixLoops = facts.filter((fact) => checkRollup(fact.checks)?.fixLoop === true).length;
   return {

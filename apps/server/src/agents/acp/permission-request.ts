@@ -9,6 +9,7 @@ import {
 import type { ApprovalRequest, RequestRoot } from '../../approvals/decide.ts';
 import { exitPlanText } from '../../plans/plan-mode.ts';
 import type { GateAnswer } from '../../providers/provider.ts';
+import { objectFields } from './object-fields.ts';
 
 export interface RequestContext {
   rpcId: string | null;
@@ -19,9 +20,6 @@ export interface RequestContext {
 }
 
 const EDIT_KINDS = new Set(['edit', 'delete', 'move']);
-
-const record = (value: unknown): Record<string, unknown> =>
-  value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 
 function kindOf(toolKind: string | null): ApprovalKind {
   if (toolKind === 'execute') return 'execute';
@@ -66,7 +64,7 @@ function pathsOf(
   return [...new Set(candidates.map((candidate) => absolute(candidate, cwd)))];
 }
 
-export function approvalOptions(options: readonly acp.PermissionOption[]): ApprovalOption[] {
+function approvalOptions(options: readonly acp.PermissionOption[]): ApprovalOption[] {
   return options.flatMap((option) => {
     const kind = approvalOptionKindSchema.safeParse(option.kind);
     return kind.success ? [{ optionId: option.optionId, name: option.name, kind: kind.data }] : [];
@@ -80,7 +78,7 @@ export function approvalRequestFrom(
   const { toolCall } = params;
   const toolKind = toolCall.kind ?? null;
   const kind = kindOf(toolKind);
-  const rawInput = record(toolCall.rawInput);
+  const rawInput = objectFields(toolCall.rawInput);
   const title = toolCall.title?.trim() || 'an action';
   const cwdInput = rawInput.cwd;
   const cwd = typeof cwdInput === 'string' && path.isAbsolute(cwdInput) ? cwdInput : context.cwd;

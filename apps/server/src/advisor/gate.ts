@@ -1,8 +1,6 @@
 import type { Gate, InvolvementLevel, Risk } from '@spark-outpost/contracts';
 import { ACT_AT, ASK_AT, type ActingQuestion, type ObservedQuestion } from './policy.ts';
 
-export { ASK_AT };
-
 const ASKING_LEVELS: ReadonlySet<InvolvementLevel> = new Set(['balanced']);
 
 export function asksWhenUnsure(level: InvolvementLevel): boolean {

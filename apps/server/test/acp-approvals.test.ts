@@ -11,11 +11,8 @@ import {
   type ProviderOutput,
 } from '../src/providers/provider.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
-};
 const claude = createAcpProvider({
   definition: { ...agentDefinitions.claude, name: 'Fake', ...FAKE_AGENT_MODES },
   launch,
@@ -83,7 +80,7 @@ async function run(
   } catch (caught) {
     error = caught;
   }
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   const steps = outputs.flatMap((output) => (output.kind === 'step_started' ? [output.name] : []));
   return { text, steps, error };
 }

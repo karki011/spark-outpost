@@ -14,12 +14,12 @@ import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
 import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
 
 export const FAKE_PROVIDER_NAME = 'fake';
-export const FAKE_FAILURE_TRIGGER = '#fail';
-export const FAKE_PLAN_TRIGGER = '#plan';
-export const FAKE_TITLE_TRIGGER = '#title';
+const FAKE_FAILURE_TRIGGER = '#fail';
+const FAKE_PLAN_TRIGGER = '#plan';
+const FAKE_TITLE_TRIGGER = '#title';
 export const FAKE_TITLE = 'Tidy the fake reply';
 export const FAKE_PR_URL = 'https://github.com/spark-outpost/demo/pull/42';
-export const FAKE_PLAN_STEPS = ['Read the request', 'Look through the code', 'Write the answer'];
+const FAKE_PLAN_STEPS = ['Read the request', 'Look through the code', 'Write the answer'];
 export const FAKE_COST_USD = 0.0042;
 export const FAKE_TOKENS: TokenUsage = {
   input: 900,
@@ -65,6 +65,14 @@ function attachmentSteps(attachments: readonly NamedAttachment[]): ProviderOutpu
   ];
 }
 
+function replyOutputs(reply: string): ProviderOutput[] {
+  return [
+    ...reply.split(/(?<=\s)/).map((delta): ProviderOutput => ({ kind: 'text_delta', delta })),
+    { kind: 'usage', contextUsed: 12_000, contextSize: 200_000, costUsd: FAKE_COST_USD },
+    { kind: 'tokens', tokens: FAKE_TOKENS },
+  ];
+}
+
 const planUpdate = (done: number): ProviderOutput => ({
   kind: 'plan',
   entries: FAKE_PLAN_STEPS.map((content, index): PlanEntry => ({
@@ -96,7 +104,6 @@ export function fakeProviderPlan(
   projectRoots: readonly string[] = [],
 ): ProviderOutput[] {
   const reply = fakeReply(prompt, attachments, projectRoots) + planReply(prompt);
-  const words = reply.split(/(?<=\s)/);
   return [
     { kind: 'step_started', name: 'Reading your message' },
     { kind: 'step_finished', name: 'Reading your message' },
@@ -104,13 +111,11 @@ export function fakeProviderPlan(
     ...planSteps(prompt),
     { kind: 'step_started', name: 'Writing a reply' },
     { kind: 'step_finished', name: 'Writing a reply' },
-    ...words.map((delta): ProviderOutput => ({ kind: 'text_delta', delta })),
-    { kind: 'usage', contextUsed: 12_000, contextSize: 200_000, costUsd: FAKE_COST_USD },
-    { kind: 'tokens', tokens: FAKE_TOKENS },
+    ...replyOutputs(reply),
   ];
 }
 
-export const FAKE_DIGEST_TRIGGER = '<activity>';
+const FAKE_DIGEST_TRIGGER = '<activity>';
 export const FAKE_UNKNOWN_CHAT = '00000000-0000-4000-8000-00000000dead';
 
 interface FakeDigestChat {
@@ -129,7 +134,7 @@ function digestChats(prompt: string): FakeDigestChat[] {
   return (data.days ?? []).flatMap((day) => day.threads.flatMap((thread) => thread.chats));
 }
 
-export function fakeDigestReply(prompt: string): string {
+function fakeDigestReply(prompt: string): string {
   const chats = digestChats(prompt);
   const first = chats[0];
   const open = chats.find((chat) => chat.unfinished.length > 0);
@@ -154,14 +159,6 @@ export function fakeDigestReply(prompt: string): string {
       { chatId: FAKE_UNKNOWN_CHAT, reason: 'Made up.', draft: 'Made up.' },
     ],
   });
-}
-
-function replyOutputs(reply: string): ProviderOutput[] {
-  return [
-    ...reply.split(/(?<=\s)/).map((delta): ProviderOutput => ({ kind: 'text_delta', delta })),
-    { kind: 'usage', contextUsed: 12_000, contextSize: 200_000, costUsd: FAKE_COST_USD },
-    { kind: 'tokens', tokens: FAKE_TOKENS },
-  ];
 }
 
 export function fakeCapabilities(provider?: string): ProviderCapabilityReport {

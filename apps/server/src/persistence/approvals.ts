@@ -13,7 +13,7 @@ import {
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
 
-interface ApprovalRow {
+export interface ApprovalRow {
   id: string;
   run_id: string;
   tool_call_id: string;
@@ -136,6 +136,10 @@ export async function getApproval(db: Queryable, id: string): Promise<Approval |
   return rows[0] ? toApproval(rows[0]) : null;
 }
 
+async function notifyApprovalChanged(db: Queryable, id: string): Promise<void> {
+  await db.query(`SELECT pg_notify('approvals', $1)`, [id]);
+}
+
 export async function settlePending(
   db: Queryable,
   id: string,
@@ -154,7 +158,7 @@ export async function settlePending(
       settlement.note ?? null,
     ],
   );
-  if (rows[0]) await db.query(`SELECT pg_notify('approvals', $1)`, [id]);
+  if (rows[0]) await notifyApprovalChanged(db, id);
   return rows[0] ? toApproval(rows[0]) : null;
 }
 
@@ -174,7 +178,7 @@ export async function settleIfDue(
      RETURNING *`,
     [id, optionId],
   );
-  if (rows[0]) await db.query(`SELECT pg_notify('approvals', $1)`, [id]);
+  if (rows[0]) await notifyApprovalChanged(db, id);
   return rows[0] ? toApproval(rows[0]) : null;
 }
 
@@ -267,7 +271,7 @@ export async function decideApproval(
   });
 }
 
-export function scopeFor(option: ApprovalOption, requested: ApprovalScope): ApprovalScope {
+function scopeFor(option: ApprovalOption, requested: ApprovalScope): ApprovalScope {
   if (requested === 'project') return 'project';
   return option.kind.endsWith('_always') ? 'run' : requested;
 }
@@ -343,7 +347,7 @@ export async function expirePendingApprovals(
      WHERE run_id = $1 AND status = 'pending' RETURNING id`,
     [runId, decidedBy],
   );
-  for (const row of rows) await db.query(`SELECT pg_notify('approvals', $1)`, [row.id]);
+  for (const row of rows) await notifyApprovalChanged(db, row.id);
   return rows.length;
 }
 
@@ -357,12 +361,4 @@ export async function pendingApprovalsForConversation(
     [conversationId],
   );
   return rows.map(toApproval);
-}
-
-export async function hasPendingApproval(db: Queryable, runId: string): Promise<boolean> {
-  const { rows } = await db.query(
-    `SELECT 1 FROM approvals WHERE run_id = $1 AND status = 'pending' LIMIT 1`,
-    [runId],
-  );
-  return rows.length > 0;
 }

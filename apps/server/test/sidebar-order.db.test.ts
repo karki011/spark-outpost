@@ -5,9 +5,8 @@ import { join } from 'node:path';
 import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
-import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { createTestDb, startChat, type TestDb } from './support.ts';
 
 let t: TestDb;
 let app: ReturnType<typeof createTestApp>;
@@ -49,14 +48,7 @@ async function project(name: string): Promise<Project> {
 }
 
 async function chat(content: string, projectId: string): Promise<string> {
-  const id = randomUUID();
-  await sendUserMessage(
-    t.db,
-    id,
-    { id: randomUUID(), content },
-    { provider: 'fake' },
-    t.workspaceId,
-  );
+  const { conversationId: id } = await startChat(t, content);
   await request(app)
     .patch(`/api/conversations/${id}/settings`)
     .set(LOCAL_HEADERS)

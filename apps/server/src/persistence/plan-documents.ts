@@ -46,6 +46,8 @@ export interface NewPlanDocument {
 
 export class PlanDocumentError extends Error {}
 
+const NOT_AWAITING_APPROVAL = 'That plan is no longer waiting for approval.';
+
 function toPlanDocument(row: PlanDocumentRow): PlanDocument {
   return {
     id: row.id,
@@ -135,7 +137,7 @@ export async function approvePlanDocument(
       ],
     );
     const row = rows[0];
-    if (!row) throw new PlanDocumentError('That plan is no longer waiting for approval.');
+    if (!row) throw new PlanDocumentError(NOT_AWAITING_APPROVAL);
     await supersedeApproved(client, row.conversation_id, row.id);
     return toPlanDocument(row);
   });
@@ -152,7 +154,7 @@ export async function rejectPlanDocument(
     [id, approvalId],
   );
   const row = rows[0];
-  if (!row) throw new PlanDocumentError('That plan is no longer waiting for approval.');
+  if (!row) throw new PlanDocumentError(NOT_AWAITING_APPROVAL);
   return toPlanDocument(row);
 }
 

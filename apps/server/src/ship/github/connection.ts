@@ -58,7 +58,7 @@ const repoSchema = z.object({ default_branch: z.string().min(1) });
 const pullSchema = z.object({ html_url: z.string().url(), number: z.number().int().positive() });
 
 const segment = (value: string) => encodeURIComponent(value);
-const repoPath = (repo: RepoRef) => `/repos/${segment(repo.owner)}/${segment(repo.name)}`;
+export const repoPath = (repo: RepoRef) => `/repos/${segment(repo.owner)}/${segment(repo.name)}`;
 
 function errorMessage(action: string, response: GitHubResponse): string {
   const detail =

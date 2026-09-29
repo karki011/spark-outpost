@@ -11,8 +11,8 @@ import { planVersions } from '../persistence/artifacts.ts';
 import { addTaskLink, TaskNotFoundError } from '../persistence/tasks.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
 import { taskChangedFile, taskChanges } from '../projects/task-changes.ts';
+import { agreedPlans } from '../plans/agreed-plans.ts';
 import { findPullRequests } from '../tasks/pr-links.ts';
-import { agreedPlans } from './plan-routes.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
 
 export interface TaskRouteDeps {

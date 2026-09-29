@@ -4,15 +4,13 @@ import {
   type CardStaleness,
   type ModelCard,
   type ModelStat,
-  type ProviderCard,
 } from '@spark-outpost/contracts';
-import { cardRetiring } from './cards.ts';
+import { cardRetiring, DAY_MS, utcDayStart } from './cards.ts';
 
 export const MIN_STAT_SAMPLES = 3;
 export const STAT_MAX_AGE_DAYS = 90;
 export const CHECK_STALE_DAYS = 60;
 export const FACTS_EXPIRE_DAYS = 120;
-const DAY_MS = 86_400_000;
 
 export interface StatSummary {
   category: CardCategory;
@@ -23,7 +21,7 @@ export interface StatSummary {
 }
 
 function daysBetween(from: string, now: Date): number {
-  return Math.max(0, Math.floor((now.getTime() - Date.parse(`${from}T00:00:00Z`)) / DAY_MS));
+  return Math.max(0, Math.floor((now.getTime() - utcDayStart(from)) / DAY_MS));
 }
 
 function oldestCheck(card: ModelCard): string {
@@ -96,10 +94,10 @@ function statPiece(stat: StatSummary): string {
   return `bench ${stat.category} ${stat.passed}/${stat.n} ${cost} ${Math.round(stat.meanWallMs / 1000)}s`;
 }
 
-export function fitPieces(head: string, pieces: readonly string[], separator = '; '): string {
+export function fitPieces(head: string, pieces: readonly string[]): string {
   let text = head.slice(0, JEV_CARD_CHARACTERS);
   for (const piece of pieces) {
-    const next = `${text}${separator}${piece}`;
+    const next = `${text}; ${piece}`;
     if (next.length > JEV_CARD_CHARACTERS) continue;
     text = next;
   }
@@ -108,35 +106,17 @@ export function fitPieces(head: string, pieces: readonly string[], separator = '
 
 export function cardText(card: ModelCard, stat: StatSummary | null, now: Date): string {
   const stale = staleness(card, now);
-  const priced = card.price && !stale.factsExpired;
-  const head = `${card.label}: ${card.tier} tier, ${card.speed}${
-    priced
-      ? `, ${money(card.price!.inputPerMillion)}/${money(card.price!.outputPerMillion)} per M`
-      : ''
-  }`;
+  const price = stale.factsExpired ? null : card.price;
+  const priceText = price
+    ? `, ${money(price.inputPerMillion)}/${money(price.outputPerMillion)} per M`
+    : '';
+  const head = `${card.label}: ${card.tier} tier, ${card.speed}${priceText}`;
   const pieces = [
     ...(stale.factsExpired ? [] : [card.blurb]),
     ...(stat ? [statPiece(stat)] : []),
     ...(stale.retiring ? ['retiring'] : []),
   ];
   return fitPieces(head, pieces);
-}
-
-function asks(card: ProviderCard): string {
-  return card.asksBeforeCommands === 'every'
-    ? 'asks before every edit and command'
-    : 'asks only outside its sandbox';
-}
-
-export function providerText(card: ProviderCard, doAvailable: boolean): string {
-  const head = `${card.label}: ${doAvailable ? `can edit (Do), ${asks(card)}` : 'read-only here (no Do)'}`;
-  const [from, to] = card.coldStartSeconds;
-  return fitPieces(head, [
-    card.jevNote,
-    ...(card.resume === 'yes' ? ['resumes sessions'] : []),
-    `cost ${card.costSource}`,
-    `${from}-${to} s cold start`,
-  ]);
 }
 
 export function effortNote(cards: readonly ModelCard[]): string {

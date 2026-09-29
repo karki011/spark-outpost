@@ -5,7 +5,7 @@ import { track } from './observe.ts';
 import { observeRouting } from './observe-route.ts';
 import type { Session } from './session.ts';
 
-export const SCAN_TOP_FILES = 10;
+const SCAN_TOP_FILES = 10;
 
 function summaryOf(outcome: ScanOutcome): string {
   const report = outcome.report;
@@ -17,7 +17,7 @@ function summaryOf(outcome: ScanOutcome): string {
   return `Code scan ranked ${report.candidates.length} files in ${outcome.elapsedMs} ms${partial}; top: ${top}`;
 }
 
-export function scanAnswer(outcome: ScanOutcome): Record<string, unknown> {
+function scanAnswer(outcome: ScanOutcome): Record<string, unknown> {
   const report = outcome.report;
   const state = report ? renderJevState(report) : null;
   return {

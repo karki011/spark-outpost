@@ -5,7 +5,7 @@ import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { createTestApp, LOCAL_HEADERS } from './app-support.ts';
 import {
-  SCENARIOS,
+  TRIVIAL,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -14,11 +14,8 @@ import {
   startOrchestrator,
   startScenario,
   type Harness,
-  type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const TRIVIAL = SCENARIOS[1] as Scenario;
 
 let t: TestDb;
 let root: string;

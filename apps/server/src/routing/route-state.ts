@@ -1,10 +1,5 @@
 import { redactText } from '../audit/redact.ts';
-import {
-  estimateTokens,
-  fileLine,
-  namedSymbolsText,
-  UNTRUSTED_EVIDENCE,
-} from '../codescan/jev-state.ts';
+import { fitEvidence, namedSymbolsLines } from '../codescan/jev-state.ts';
 import type { RankedFile } from '../codescan/rank.ts';
 import type { ScanReport } from '../codescan/scan.ts';
 
@@ -36,34 +31,33 @@ export function headAndTail(text: string, max: number): string {
   return `${text.slice(0, head)}${GAP}${text.slice(text.length - (max - head))}`;
 }
 
-function excerpt(text: string, max: number): string {
+export function redactedExcerpt(text: string, max: number): string {
   return headAndTail(redactText(text).trim(), max);
 }
 
 export function routeState(facts: RouteInputs, variant: RouteVariant): Record<string, unknown> {
-  const state: Record<string, unknown> = { request: excerpt(facts.request, REQUEST_CHARACTERS) };
+  const state: Record<string, unknown> = {
+    request: redactedExcerpt(facts.request, REQUEST_CHARACTERS),
+  };
   if (variant === 'evidence' && facts.evidence) state.code_evidence = facts.evidence;
   if (facts.lastFailingCheck) {
-    state.last_failing_check = excerpt(facts.lastFailingCheck, CHECK_CHARACTERS);
+    state.last_failing_check = redactedExcerpt(facts.lastFailingCheck, CHECK_CHARACTERS);
   }
   const turns = facts.priorTurns.slice(-PRIOR_TURNS);
   if (turns.length > 0) {
     state.prior_turns = turns.map((turn) => ({
       role: turn.role,
-      text: excerpt(turn.content, TURN_CHARACTERS),
+      text: redactedExcerpt(turn.content, TURN_CHARACTERS),
     }));
   }
   return state;
 }
 
-function evidenceHeader(report: ScanReport, files: readonly RankedFile[]): string[] {
+function evidenceFacts(report: ScanReport, files: readonly RankedFile[]): string[] {
   const packages = [...new Set(files.map((file) => file.package))];
-  const symbols = namedSymbolsText(report.summary);
   return [
-    '<code_evidence>',
-    UNTRUSTED_EVIDENCE,
     `Packages touched by the likely files (${packages.length}): ${packages.join(', ')}`,
-    ...(symbols ? [`Named symbols: ${symbols}`] : []),
+    ...namedSymbolsLines(report.summary),
     `Uncommitted files in the repository: ${report.summary.uncommitted}.`,
     'Files most likely to change, most likely first (path | lines | symbols | referenced by | churn | package | why):',
   ];
@@ -74,16 +68,5 @@ export function evidenceText(
   files: readonly RankedFile[],
   budget: number = EVIDENCE_TOKENS,
 ): string {
-  const closing = '</code_evidence>';
-  const lines = evidenceHeader(report, files);
-  let used = estimateTokens(lines.join('\n')) + estimateTokens(closing) + 1;
-  for (const [index, file] of files.entries()) {
-    const line = fileLine(file, index + 1);
-    const cost = estimateTokens(line) + 1;
-    if (used + cost > budget) break;
-    lines.push(line);
-    used += cost;
-  }
-  lines.push(closing);
-  return lines.join('\n');
+  return fitEvidence(evidenceFacts(report, files), files, budget).text;
 }

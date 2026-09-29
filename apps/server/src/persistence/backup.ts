@@ -4,10 +4,10 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { migrationsDir } from './migrate.ts';
 
-const run = promisify(execFile);
+const execFileAsync = promisify(execFile);
 
-export const defaultBackupDir = path.resolve(migrationsDir, '../../../.local/backups');
-export const BACKUPS_KEPT = 5;
+const defaultBackupDir = path.resolve(migrationsDir, '../../../.local/backups');
+const BACKUPS_KEPT = 5;
 
 const HOMEBREW_CANDIDATES = ['brew', '/opt/homebrew/bin/brew', '/usr/local/bin/brew'];
 const POSTGRES_FORMULA = 'postgresql@17';
@@ -24,7 +24,7 @@ async function isExecutable(file: string): Promise<boolean> {
 async function homebrewPgDump(): Promise<string | null> {
   for (const brew of HOMEBREW_CANDIDATES) {
     try {
-      const { stdout } = await run(brew, ['--prefix', POSTGRES_FORMULA]);
+      const { stdout } = await execFileAsync(brew, ['--prefix', POSTGRES_FORMULA]);
       const candidate = path.join(stdout.trim(), 'bin', 'pg_dump');
       if (await isExecutable(candidate)) return candidate;
     } catch {
@@ -42,7 +42,7 @@ async function pathPgDump(): Promise<string | null> {
   return null;
 }
 
-export async function findPgDump(): Promise<string> {
+async function findPgDump(): Promise<string> {
   const found = (await homebrewPgDump()) ?? (await pathPgDump());
   if (!found) {
     throw new Error(`pg_dump was not found. Install it with: brew install ${POSTGRES_FORMULA}`);
@@ -78,9 +78,13 @@ export async function backupDatabase(options: BackupOptions): Promise<string> {
   const file = path.join(dir, `${database}-${timestamp(now())}.dump`);
   const partial = `${file}.partial`;
   try {
-    await run(pgDump, ['--format=custom', `--file=${partial}`, `--dbname=${url.toString()}`], {
-      env: { ...process.env, PGPASSWORD: password },
-    });
+    await execFileAsync(
+      pgDump,
+      ['--format=custom', `--file=${partial}`, `--dbname=${url.toString()}`],
+      {
+        env: { ...process.env, PGPASSWORD: password },
+      },
+    );
   } catch (error) {
     await rm(partial, { force: true });
     const detail = (error as { stderr?: string }).stderr?.trim() || (error as Error).message;

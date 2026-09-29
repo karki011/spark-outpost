@@ -2,11 +2,11 @@ import type { AgentPick } from '@spark-outpost/contracts';
 import { retiringOn } from '../model-cards/cards.ts';
 import { modelTier, tierLadder, type TierModel } from './tiers.ts';
 
-export const FLOOR_TIER = 1;
+const FLOOR_TIER = 1;
 
 export const FLOOR_REASON = "Builders don't run on the fast tier";
 
-export const READER_FLOOR_REASON = "the harness doesn't use the fast tier";
+const READER_FLOOR_REASON = "the harness doesn't use the fast tier";
 
 export type FloorRole = 'builder' | 'reader';
 
@@ -40,11 +40,11 @@ function withModel(pick: AgentPick, model: TierModel): AgentPick {
   return { ...pick, model: model.id, modelLabel: model.label };
 }
 
-export function pickTier(pick: AgentPick): number | null {
+function pickTier(pick: AgentPick): number | null {
   return pick.model === null ? null : modelTier(asModel(pick), pick.provider);
 }
 
-export function pickRetiring(pick: AgentPick, now: Date = new Date()): string | null {
+function pickRetiring(pick: AgentPick, now: Date = new Date()): string | null {
   return pick.model === null ? null : retiringOn(asModel(pick), pick.provider, now);
 }
 

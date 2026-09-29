@@ -8,7 +8,7 @@ import type { SecretStore } from '../setup/secrets.ts';
 
 export type AgentRuntime = 'acp' | 'fake';
 
-export const FAKE_ACP_TRIGGER = '#build';
+const FAKE_ACP_TRIGGER = '#build';
 
 type Secrets = Pick<SecretStore, 'get'>;
 
@@ -62,8 +62,9 @@ export function createProviders(
         definition.id,
         createAcpProvider({ definition, ...(secrets ? { secrets } : {}) }),
       );
-    } else if (!fakeAcpAgent) providers.set(definition.id, fake);
-    else {
+    } else if (!fakeAcpAgent) {
+      providers.set(definition.id, fake);
+    } else {
       const acp = fakeAcpProvider(definition, fakeAcpAgent, secrets);
       providers.set(definition.id, crewFake(fake, acp));
     }

@@ -7,7 +7,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { createTestDb, startChat, type TestDb } from './support.ts';
 
 let t: TestDb;
 let app: ReturnType<typeof createTestApp>;
@@ -48,15 +48,8 @@ const api = {
 };
 
 async function chat(content: string): Promise<{ id: string; runId: string }> {
-  const id = randomUUID();
-  const sent = await sendUserMessage(
-    t.db,
-    id,
-    { id: randomUUID(), content },
-    { provider: 'fake' },
-    t.workspaceId,
-  );
-  return { id, runId: sent.run.id };
+  const { conversationId, runId } = await startChat(t, content);
+  return { id: conversationId, runId };
 }
 
 async function finishRun(runId: string, status: 'succeeded' | 'failed', error: string | null) {

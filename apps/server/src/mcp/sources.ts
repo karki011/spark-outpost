@@ -1,7 +1,8 @@
 import { basename, join } from 'node:path';
 import { parse as parseToml } from 'smol-toml';
 import type { McpImportTool } from '@spark-outpost/contracts';
-import { isRecord, mcpServerFrom, type McpServerConfig } from '../agent-config/mcp-json.ts';
+import { mcpServerFrom, type McpServerConfig } from '../agent-config/mcp-json.ts';
+import { isRecord, stringMap } from '../agent-config/records.ts';
 import { parseJsonc } from './jsonc.ts';
 
 export interface ParsedServers {
@@ -86,16 +87,10 @@ function vscodeSettingsEntries(parsed: unknown): Entries {
   return [...objectEntries(nested), ...objectEntries(parsed['mcp.servers'])];
 }
 
-function stringTable(value: unknown): Record<string, string> {
-  return Object.fromEntries(
-    objectEntries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
-  );
-}
-
-export function codexEntry(entry: unknown): unknown {
+function codexEntry(entry: unknown): unknown {
   if (!isRecord(entry)) return entry;
-  const headers: Record<string, string> = { ...stringTable(entry.http_headers) };
-  for (const [header, variable] of Object.entries(stringTable(entry.env_http_headers))) {
+  const headers: Record<string, string> = { ...stringMap(entry.http_headers) };
+  for (const [header, variable] of Object.entries(stringMap(entry.env_http_headers))) {
     headers[header] = `\${${variable}}`;
   }
   if (typeof entry.bearer_token_env_var === 'string') {

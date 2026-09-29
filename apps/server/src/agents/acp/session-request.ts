@@ -21,11 +21,11 @@ export function supportsAdditionalDirectories(init: acp.InitializeResponse): boo
   return capability !== undefined && capability !== null;
 }
 
-export function oneRepoNote(agentName: string, cwd: string): string {
+function oneRepoNote(agentName: string, cwd: string): string {
   return `${agentName} can only open one repo per chat; using ${path.basename(cwd)}`;
 }
 
-export function unsupportedMcpNote(agentName: string, server: NamedMcpServer): string {
+function unsupportedMcpNote(agentName: string, server: NamedMcpServer): string {
   return `${agentName} can't use the ${server.config.transport.toUpperCase()} MCP server ${server.name}; skipped it`;
 }
 

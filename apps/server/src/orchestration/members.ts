@@ -1,12 +1,10 @@
 import type { AgentRole, RunMode } from '@spark-outpost/contracts';
-import { nextArtifactVersion } from '../persistence/artifacts.ts';
 import { insertChildRun, markInPlaceMember, mergeRoute } from '../persistence/orchestrations.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
 import { runAgentTurn, type RunControl } from '../workflow/agent-turn.ts';
 import { takeSnapshot } from '../workflow/do-run.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
-import { runEvents } from '../workflow/run-events.ts';
 import { checkFixFollowUp, fixFollowUp } from './context.ts';
 import { reviewNet } from './lean.ts';
 import { createLoopGuard, DEFAULT_LOOP_GUARD } from './loop-guard.ts';
@@ -22,7 +20,14 @@ import { editObserver } from './observe.ts';
 import { countOutput, counted } from './reads.ts';
 import { reviewFindings, reviewVerdict } from './review.ts';
 import type { MemberRoute } from './routing.ts';
-import { builderKey, fitToolLimit, publish, type MemberResult, type Session } from './session.ts';
+import {
+  appendNewArtifact,
+  builderKey,
+  fitToolLimit,
+  publish,
+  type MemberResult,
+  type Session,
+} from './session.ts';
 import type { Spawn } from './transitions.ts';
 
 export interface Place {
@@ -275,17 +280,7 @@ async function afterCritic(s: Session, result: MemberResult, route: MemberRoute)
     ...(route.pick.provider === s.input.provider ? { sameProvider: true } : {}),
     ...(s.buildStyle === 'off' ? {} : { net: reviewNet(result.text) }),
   };
-  const version = await nextArtifactVersion(s.deps.db, s.taskId, 'review');
-  await s.append(runEvents.activity('artifact:review', 'review', { version, body }), {
-    artifact: {
-      taskId: s.taskId,
-      kind: 'review',
-      body,
-      version,
-      overwrite: false,
-      supersedesPrevious: false,
-    },
-  });
+  await appendNewArtifact(s, s.taskId, 'review', body);
   return verdict;
 }
 

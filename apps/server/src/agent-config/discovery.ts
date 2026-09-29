@@ -1,10 +1,10 @@
-import { createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import type { IgnoredSetting, RepoHook, RepoInstructionFile } from '@spark-outpost/contracts';
 import { listProjectFiles } from '../codescan/git.ts';
+import { fingerprintOf } from './fingerprint.ts';
 import { parseFrontmatter } from './frontmatter.ts';
 import { readMcpJson, type McpServerConfig } from './mcp-json.ts';
 import type { RedirectSetting } from './redirects.ts';
@@ -38,7 +38,7 @@ export interface RepoScan {
   warnings: string[];
 }
 
-export const ROOT_INSTRUCTION_FILES = [
+const ROOT_INSTRUCTION_FILES = [
   'CLAUDE.md',
   '.claude/CLAUDE.md',
   'CLAUDE.local.md',
@@ -51,7 +51,7 @@ const CURSOR_RULES = '.cursor/rules';
 const SETTINGS_FILES = ['.claude/settings.json', '.claude/settings.local.json'] as const;
 const MCP_FILE = '.mcp.json';
 const CODEX_CONFIG = '.codex/config.toml';
-export const SKILL_DIRS = ['.claude/skills', '.agents/skills', '.codex/skills'] as const;
+const SKILL_DIRS = ['.claude/skills', '.agents/skills', '.codex/skills'] as const;
 const DEFINITION_DIRS = [...SKILL_DIRS, '.claude/commands', '.claude/agents', CURSOR_RULES];
 const MAX_FILE_BYTES = 256 * 1024;
 const MAX_ENTRIES = 200;
@@ -168,10 +168,6 @@ async function nestedInstructions(root: string): Promise<Stamp[]> {
     .slice(0, MAX_ENTRIES);
   const stamps = await Promise.all(nested.map((path) => stampOf(root, path)));
   return stamps.filter((stamp): stamp is Stamp => stamp !== null);
-}
-
-function fingerprintOf(value: unknown): string {
-  return createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 32);
 }
 
 async function scan(root: string, stamps: Stamp[], nested: Stamp[]): Promise<RepoScan> {

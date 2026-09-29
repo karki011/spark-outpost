@@ -12,11 +12,8 @@ import type { ProviderOutput, ProviderTurn } from '../src/providers/provider.ts'
 import { childEnvironment } from '../src/setup/environment.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { makeConfiguredRepo } from './repo-config-fixture.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
-};
 const claude: AgentDefinition = { ...agentDefinitions.claude, conversationMode: 'read-only' };
 
 const GITHUB_ID = '00000000-0000-4000-8000-0000000000a1';
@@ -100,7 +97,7 @@ async function session(definition: AgentDefinition, extra: Partial<ProviderTurn>
   })) {
     outputs.push(output);
   }
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   return JSON.parse(text.slice(text.indexOf('session=') + 'session='.length)) as Received;
 }
 

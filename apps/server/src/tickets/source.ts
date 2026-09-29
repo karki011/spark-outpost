@@ -54,3 +54,18 @@ export function matchesFilter(ticket: TicketSummary, filter: TicketFilter): bool
   const q = filter.q?.toLowerCase();
   return !q || `${ticket.key} ${ticket.title}`.toLowerCase().includes(q);
 }
+
+export function summaryOf(ticket: TicketDetail): TicketSummary {
+  return {
+    source: ticket.source,
+    key: ticket.key,
+    title: ticket.title,
+    status: ticket.status,
+    statusName: ticket.statusName,
+    url: ticket.url,
+    updatedAt: ticket.updatedAt,
+    project: ticket.project,
+    priority: ticket.priority,
+    sprint: ticket.sprint,
+  };
+}

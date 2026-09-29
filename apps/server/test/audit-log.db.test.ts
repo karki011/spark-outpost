@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
@@ -16,6 +15,7 @@ import { LeaseLostError } from '../src/persistence/run-events.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
+import { FAKE_ACP_LAUNCH } from './fake-acp-support.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
 
 let t: TestDb;
@@ -155,14 +155,7 @@ describe('worker audit recording with an ACP agent', { timeout: 30_000 }, () => 
   it('stores every protocol message and the settings, duration, and tool calls it used', async () => {
     const provider = createAcpProvider({
       definition: { ...agentDefinitions.codex, name: 'Fake', ...FAKE_AGENT_MODES },
-      launch: {
-        command: process.execPath,
-        args: [
-          '--import',
-          import.meta.resolve('tsx'),
-          join(import.meta.dirname, 'fake-acp-agent.ts'),
-        ],
-      },
+      launch: FAKE_ACP_LAUNCH,
     });
     worker = startWorker({
       db: t.db,

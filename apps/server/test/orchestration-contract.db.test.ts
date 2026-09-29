@@ -10,7 +10,8 @@ import { getConversationDetail, listConversations } from '../src/persistence/con
 import { getRun } from '../src/persistence/runs.ts';
 import { getTaskDetail } from '../src/persistence/task-views.ts';
 import {
-  SCENARIOS,
+  COMPLEX,
+  TRIVIAL,
   answerEverything,
   connectProviders,
   driveToEnd,
@@ -22,11 +23,8 @@ import {
   type Answerer,
   type Harness,
   type JevScript,
-  type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
-
-const [, TRIVIAL, , COMPLEX] = SCENARIOS as [Scenario, Scenario, Scenario, Scenario, Scenario];
 
 let t: TestDb;
 let root: string;

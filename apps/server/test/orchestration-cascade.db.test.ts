@@ -3,8 +3,9 @@ import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
 import { DECLINED_REASON, ESCALATED_NOTE } from '../src/orchestration/transitions.ts';
 import {
-  SCENARIOS,
+  NORMAL,
   answerEverything,
+  assistantReplies,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -15,11 +16,8 @@ import {
   type Answerer,
   type Harness,
   type JevScript,
-  type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const NORMAL = SCENARIOS[2] as Scenario;
 
 let t: TestDb;
 let root: string;
@@ -62,11 +60,7 @@ async function builders(runId: string) {
 }
 
 async function reply(runId: string): Promise<string> {
-  const { rows } = await t.db.query<{ content: string }>(
-    `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant'`,
-    [runId],
-  );
-  return rows.map((row) => row.content).join('\n');
+  return (await assistantReplies(t, runId)).join('\n');
 }
 
 async function runWith(script: Omit<JevScript, 'calls'>, level = 'full-auto' as const) {

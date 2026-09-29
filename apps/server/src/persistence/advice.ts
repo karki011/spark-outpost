@@ -41,18 +41,18 @@ export async function runAdvice(db: Queryable, runId: string): Promise<AdviceBod
   return rows[0]?.body ?? null;
 }
 
-interface UsageRow {
+export interface JevUsageRow {
   calls: number;
   input_tokens: number;
   cost_usd: number;
 }
 
-const USAGE_COLUMNS = `
+export const JEV_USAGE_COLUMNS = `
   count(*) FILTER (WHERE a.jev_status NOT IN ('not_connected', 'not_asked'))::int AS calls,
   COALESCE(sum(a.jev_input_tokens), 0)::int AS input_tokens,
   COALESCE(sum(a.jev_cost_usd), 0)::float8 AS cost_usd`;
 
-function toUsage(row: UsageRow | undefined): AdvisorUsage[] {
+function toUsage(row: JevUsageRow | undefined): AdvisorUsage[] {
   if (!row || row.calls === 0) return [];
   return [
     { advisor: 'jev', calls: row.calls, inputTokens: row.input_tokens, costUsd: row.cost_usd },
@@ -78,8 +78,8 @@ export async function conversationAdvice(
     const summary = adviceSummarySchema.safeParse(row.body);
     if (summary.success) byRun[row.run_id] = summary.data;
   }
-  const usage = await db.query<UsageRow>(
-    `SELECT ${USAGE_COLUMNS} FROM run_advice a JOIN runs r ON r.id = a.run_id
+  const usage = await db.query<JevUsageRow>(
+    `SELECT ${JEV_USAGE_COLUMNS} FROM run_advice a JOIN runs r ON r.id = a.run_id
      WHERE r.conversation_id = $1`,
     [conversationId],
   );
@@ -90,8 +90,8 @@ export async function advisorUsageForRuns(
   db: Queryable,
   runIds: readonly string[],
 ): Promise<AdvisorUsage[]> {
-  const { rows } = await db.query<UsageRow>(
-    `SELECT ${USAGE_COLUMNS} FROM run_advice a WHERE a.run_id = ANY($1::uuid[])`,
+  const { rows } = await db.query<JevUsageRow>(
+    `SELECT ${JEV_USAGE_COLUMNS} FROM run_advice a WHERE a.run_id = ANY($1::uuid[])`,
     [runIds],
   );
   return toUsage(rows[0]);
@@ -102,8 +102,8 @@ export async function advisorUsageSummary(
   workspaceId: string,
 ): Promise<{ last30Days: AdvisorUsage[]; allTime: AdvisorUsage[] }> {
   const query = (recentOnly: boolean) =>
-    db.query<UsageRow>(
-      `SELECT ${USAGE_COLUMNS} FROM run_advice a
+    db.query<JevUsageRow>(
+      `SELECT ${JEV_USAGE_COLUMNS} FROM run_advice a
        JOIN runs r ON r.id = a.run_id JOIN conversations c ON c.id = r.conversation_id
        WHERE c.workspace_id = $1
          AND ($2::boolean IS FALSE OR a.created_at >= now() - interval '30 days')`,

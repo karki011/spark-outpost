@@ -8,7 +8,7 @@ export function openEntries(entries: readonly PlanEntry[]): string[] {
     .map((entry) => entry.content.trim());
 }
 
-export async function builderPlan(s: Session, runIds: readonly string[]): Promise<PlanEntry[]> {
+async function builderPlan(s: Session, runIds: readonly string[]): Promise<PlanEntry[]> {
   if (!s.taskId) return [];
   const plan = await latestPlan(s.deps.db, s.taskId);
   if (!plan || !runIds.includes(plan.sourceRunId ?? '')) return [];

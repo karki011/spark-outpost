@@ -3,13 +3,13 @@ import {
   CATEGORY_CONFIDENCE_FLOOR,
   type AdviceBody,
   type Category,
-  type RunEvent,
 } from '@spark-outpost/contracts';
 import { insertAdvice, loadIntakeContext, type IntakeContext } from '../persistence/advice.ts';
 import { recordRunCategory } from '../persistence/auto-title.ts';
 import type { Db } from '../persistence/db.ts';
-import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts';
+import { LeaseLostError } from '../persistence/run-events.ts';
 import type { SecretStore } from '../setup/secrets.ts';
+import type { Append } from '../workflow/agent-turn.ts';
 import type { RunInput } from '../workflow/run-input.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { AdvisorError, AdvisorTimeoutError, type IntakeRequest } from './advice.ts';
@@ -21,8 +21,6 @@ import {
   type IntakeQuestions,
 } from './intake-questions.ts';
 import { askSystemOne, JEV_TIMEOUT_MS, jevUsage, requestModel } from './jev.ts';
-
-type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
 
 export interface IntakeDeps {
   db: Db;

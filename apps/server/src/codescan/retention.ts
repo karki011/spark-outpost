@@ -43,7 +43,3 @@ export async function evictBeyondCap(
   );
   return rows.map((row) => row.root_path);
 }
-
-export async function deleteIndexForRoot(db: Queryable, root: string): Promise<void> {
-  await db.query('DELETE FROM code_index_projects WHERE root_path = $1', [root]);
-}

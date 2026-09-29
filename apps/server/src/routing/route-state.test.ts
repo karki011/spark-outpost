@@ -8,7 +8,7 @@ import {
   routeState,
   type RouteInputs,
 } from './route-state.ts';
-import { rankedFile, scanReport } from './scan-fixtures.ts';
+import { rankedFile, scanReport } from '../codescan/scan-fixtures.ts';
 
 const inputs: RouteInputs = {
   request: 'Rename KpiCard to MetricCard across all libs',

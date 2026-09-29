@@ -64,6 +64,10 @@ export function splitSimpleCommands(command: string): string[][] {
   return commands;
 }
 
+function programName(program: readonly string[]): string {
+  return path.basename(program[0] ?? '');
+}
+
 export function programTokens(tokens: readonly string[]): string[] {
   let index = 0;
   while (index < tokens.length) {
@@ -80,7 +84,7 @@ export function programTokens(tokens: readonly string[]): string[] {
 export function isGitPush(command: string): boolean {
   return splitSimpleCommands(command).some((tokens) => {
     const program = programTokens(tokens);
-    if (path.basename(program[0] ?? '') !== 'git') return false;
+    if (programName(program) !== 'git') return false;
     return program.slice(1).some((token) => token === 'push');
   });
 }
@@ -94,7 +98,7 @@ function isForceFlag(token: string): boolean {
 export function isGitForcePush(command: string): boolean {
   return splitSimpleCommands(command).some((tokens) => {
     const program = programTokens(tokens);
-    if (path.basename(program[0] ?? '') !== 'git') return false;
+    if (programName(program) !== 'git') return false;
     const pushAt = program.indexOf('push');
     if (pushAt < 1) return false;
     return program.slice(pushAt + 1).some((token) => isForceFlag(token) || /^\+[^+]/.test(token));
@@ -104,7 +108,7 @@ export function isGitForcePush(command: string): boolean {
 export function deletedPaths(command: string): string[] {
   return splitSimpleCommands(command).flatMap((tokens) => {
     const program = programTokens(tokens);
-    const name = path.basename(program[0] ?? '');
+    const name = programName(program);
     const args = program.slice(1);
     if (DELETERS.has(name)) return args.filter((arg) => !arg.startsWith('-'));
     if (name === 'find' && args.includes('-delete')) {
@@ -165,7 +169,7 @@ function gitSubcommand(args: readonly string[]): { name: string; rest: string[] 
 const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ksh']);
 
 function shellScript(program: readonly string[]): string | null {
-  if (!SHELLS.has(path.basename(program[0] ?? ''))) return null;
+  if (!SHELLS.has(programName(program))) return null;
   const flag = program.findIndex((token, index) => index > 0 && /^-[a-z]*c[a-z]*$/.test(token));
   return flag > 0 ? (program[flag + 1] ?? null) : null;
 }
@@ -175,7 +179,7 @@ export function publishesCode(command: string, depth = 0): boolean {
     const program = programTokens(tokens);
     const script = shellScript(program);
     if (script !== null) return depth < 3 && publishesCode(script, depth + 1);
-    const name = path.basename(program[0] ?? '');
+    const name = programName(program);
     if (HOSTING_CLIS.has(name)) return true;
     if (name !== 'git') return false;
     const sub = gitSubcommand(program.slice(1));

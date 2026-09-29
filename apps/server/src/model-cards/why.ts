@@ -1,6 +1,5 @@
 import type { AgentPick, RouteSource } from '@spark-outpost/contracts';
 import { cardFor } from './cards.ts';
-import { tierInfo, type TierSource } from '../orchestration/tiers.ts';
 
 export interface WhyInput {
   pick: AgentPick;
@@ -16,10 +15,6 @@ function labelOf(pick: AgentPick): string {
 
 function pickModel(pick: AgentPick) {
   return { id: pick.model ?? '', label: pick.modelLabel ?? '' };
-}
-
-export function tierSourceOf(pick: AgentPick): TierSource {
-  return tierInfo(pickModel(pick), pick.provider).source;
 }
 
 export function whyLine(input: WhyInput): string {

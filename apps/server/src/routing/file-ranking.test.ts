@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { orderedPaths, predictedFiles, RANK_KEY, rankQuestions } from './file-ranking.ts';
-import { scanReport } from './scan-fixtures.ts';
+import { scanReport } from '../codescan/scan-fixtures.ts';
 
 describe('file ranking: one Choice over every candidate file', () => {
   it('offers each candidate path with its evidence, never its contents', () => {

@@ -4,7 +4,7 @@ import { planVersions } from '../src/persistence/artifacts.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { FAKE_TODOS } from './fake-acp-roles.ts';
 import {
-  SCENARIOS,
+  COMPLEX,
   answerEverything,
   connectProviders,
   driveToEnd,
@@ -16,11 +16,8 @@ import {
   type Answerer,
   type Harness,
   type JevScript,
-  type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const COMPLEX = SCENARIOS[3] as Scenario;
 
 let t: TestDb;
 let root: string;

@@ -51,7 +51,7 @@ export interface AgentDefinition {
   doPrimaryRootOnly?: boolean;
 }
 
-export const CLAUDE_DO_TOOLS = [
+const CLAUDE_DO_TOOLS = [
   'Read',
   'Glob',
   'Grep',
@@ -63,7 +63,7 @@ export const CLAUDE_DO_TOOLS = [
   'ExitPlanMode',
 ] as const;
 export const CLAUDE_DO_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
-export const CLAUDE_DO_MODE = 'default';
+const CLAUDE_DO_MODE = 'default';
 export const CODEX_DO_MODE = 'ask-every-action';
 
 export const BUILDER_PUBLISH_DENY_RULES = [

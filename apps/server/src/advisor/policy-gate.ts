@@ -3,10 +3,7 @@ import { redactText } from '../audit/redact.ts';
 import type { IntakeQuestions, SystemOneResponse } from './intake-questions.ts';
 import { validNoul } from './intake-questions.ts';
 import { POLICY_BLOCK_AT, POLICY_REVIEW_AT } from './policy.ts';
-import { noulQuestion } from './questions.ts';
-
-export const MAX_REQUEST_CHARACTERS = 4_000;
-export const MAX_DIFF_CHARACTERS = 24_000;
+import { capped, MAX_DIFF_CHARACTERS, MAX_REQUEST_CHARACTERS, noulQuestion } from './questions.ts';
 
 export const POLICY_KEYS = [
   'beyond_request',
@@ -22,10 +19,6 @@ export interface ProposedEdit {
   path: string;
   oldText: string | null;
   newText: string;
-}
-
-export function capped(text: string, limit: number): string {
-  return text.length > limit ? `${text.slice(0, limit)}\n[cut at ${limit} characters]` : text;
 }
 
 export function editDiff(edits: readonly ProposedEdit[]): string {

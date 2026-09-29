@@ -92,13 +92,19 @@ async function scoutRoute(s: Session): Promise<ResolvedRoute> {
 export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRoute> {
   const previous = s.routes.get(spawn.role);
   if (previous && spawn.escalate) {
-    const builder = spawn.role === 'builder';
-    return { route: (builder ? escalateBuilder : escalate)(s.route, previous) };
+    const route =
+      spawn.role === 'builder' ? escalateBuilder(s.route, previous) : escalate(s.route, previous);
+    return { route };
   }
   if (previous) return { route: previous };
   if (spawn.role === 'critic') return { route: routeCritic(s.route) };
   if (spawn.role === 'scout') return scoutRoute(s);
   return firstBuilderRoute(s);
+}
+
+export function escalatedBuilderPick(s: Session): AgentPick | null {
+  const previous = s.routes.get('builder');
+  return previous ? escalateBuilder(s.route, previous).pick : null;
 }
 
 export async function nameFor(s: Session, role: AgentRole): Promise<string> {

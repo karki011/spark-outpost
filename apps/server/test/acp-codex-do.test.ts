@@ -7,11 +7,8 @@ import { createAcpProvider, primaryOnlyNote } from '../src/agents/acp/acp-provid
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import { decide, NO_RUN_RULES, type ApprovalRequest } from '../src/approvals/decide.ts';
 import type { GateAnswer, PermissionGate, ProviderOutput } from '../src/providers/provider.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
-};
 const codex = createAcpProvider({
   definition: agentDefinitions.codex,
   launch,
@@ -82,7 +79,7 @@ async function run(prompt: string, approvals: PermissionGate, projectRoots = [ro
   } catch (caught) {
     error = caught;
   }
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   const steps = outputs.flatMap((output) => (output.kind === 'step_started' ? [output.name] : []));
   const settings = outputs.find((output) => output.kind === 'session_settings');
   const toolSteps = outputs.filter((output) => output.kind === 'step_started' && output.tool);

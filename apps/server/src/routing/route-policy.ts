@@ -57,12 +57,13 @@ function codePick(
   context: RouteContext,
   rule: MemberRoute,
   candidates: readonly RouteCandidate[],
+  chat: AgentPick,
 ): AgentPick | null {
-  const chat = withEffort(context, chatPick(context));
   if (kind === 'ask') return null;
   if (kind === 'destructive' || kind === 'pinned') return rule.pick;
-  if (kind === 'one_candidate' && candidates[0]) {
-    return builderRun(context, withEffort(context, pickOf(candidates[0], null)));
+  const onlyCandidate = candidates[0];
+  if (kind === 'one_candidate' && onlyCandidate) {
+    return builderRun(context, withEffort(context, pickOf(onlyCandidate, null)));
   }
   return builderRun(context, chat);
 }
@@ -82,6 +83,6 @@ export function routePolicy(
     baselineTier: candidateOf(candidates, chat)?.tier ?? null,
     chat,
     rule,
-    codePick: codePick(kind, context, rule, candidates),
+    codePick: codePick(kind, context, rule, candidates, chat),
   };
 }

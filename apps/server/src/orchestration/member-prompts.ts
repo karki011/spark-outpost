@@ -10,19 +10,38 @@ export interface ChangeSummary {
   patch: string;
 }
 
-export async function changesSoFar(s: Session): Promise<ChangeSummary> {
+interface GitSnapshot {
+  root: string;
+  ref: string;
+}
+
+async function gitSnapshot(s: Session): Promise<GitSnapshot | null> {
   const state = await getSnapshot(s.deps.db, s.input.workspaceId, s.lease.runId);
   const snapshot = state?.snapshot;
-  if (!snapshot || snapshot.kind !== 'git' || !snapshot.ref) return { files: [], patch: '' };
+  if (!snapshot || snapshot.kind !== 'git' || !snapshot.ref) return null;
+  return { root: snapshot.root, ref: snapshot.ref };
+}
+
+function originOf(
+  path: string,
+  ownPaths: ReadonlySet<string>,
+  beforePaths: ReadonlySet<string>,
+): NonNullable<ChangedFile['origin']> {
+  if (!beforePaths.has(path)) return 'task';
+  return ownPaths.has(path) ? 'both' : 'before';
+}
+
+export async function changesSoFar(s: Session): Promise<ChangeSummary> {
+  const snapshot = await gitSnapshot(s);
+  if (!snapshot) return { files: [], patch: '' };
   const diff = await gitDiffSince(snapshot.root, snapshot.ref).catch(() => null);
   return diff ? { files: diff.stats, patch: diff.patch } : { files: [], patch: '' };
 }
 
 export async function changesForReview(s: Session): Promise<ChangeSummary> {
   const own = await changesSoFar(s);
-  const state = await getSnapshot(s.deps.db, s.input.workspaceId, s.lease.runId);
-  const snapshot = state?.snapshot;
-  if (!snapshot || snapshot.kind !== 'git' || !snapshot.ref) return own;
+  const snapshot = await gitSnapshot(s);
+  if (!snapshot) return own;
   const head = await headCommit(snapshot.root).catch(() => null);
   if (!head) return own;
   const [all, before] = await Promise.all([
@@ -35,12 +54,7 @@ export async function changesForReview(s: Session): Promise<ChangeSummary> {
   return {
     files: all.stats.map((file) => ({
       ...file,
-      origin:
-        ownPaths.has(file.path) && beforePaths.has(file.path)
-          ? 'both'
-          : beforePaths.has(file.path)
-            ? 'before'
-            : 'task',
+      origin: originOf(file.path, ownPaths, beforePaths),
     })),
     patch: all.patch,
   };

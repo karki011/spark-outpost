@@ -1,13 +1,11 @@
-import { randomUUID } from 'node:crypto';
 import { chmod, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import pg from 'pg';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { backupDatabase } from '../src/persistence/backup.ts';
-import { createDb, POOL_MAX, type Db } from '../src/persistence/db.ts';
+import type { Db } from '../src/persistence/db.ts';
 import { migrateAtStartup } from '../src/persistence/migrate-startup.ts';
-import { testDatabaseUrl } from './support.ts';
+import { createTestSchema, dropTestSchema, schemaDb } from './support.ts';
 
 const FAKE_PG_DUMP = `#!/bin/sh
 for arg in "$@"; do
@@ -19,16 +17,6 @@ printf '%s\\n' "$*" > "$out"
 printf 'password=%s\\n' "$PGPASSWORD" >> "$out"
 `;
 
-async function admin(sql: string): Promise<void> {
-  const client = new pg.Client({ connectionString: testDatabaseUrl() });
-  await client.connect();
-  try {
-    await client.query(sql);
-  } finally {
-    await client.end();
-  }
-}
-
 let schema: string;
 let work: string;
 let migrations: string;
@@ -36,7 +24,7 @@ let backups: string;
 const pools: Db[] = [];
 
 function openDb(): Db {
-  const db = createDb(testDatabaseUrl(), { searchPath: schema, max: POOL_MAX.test });
+  const db = schemaDb(schema);
   pools.push(db);
   return db;
 }
@@ -61,8 +49,7 @@ async function appliedNames(db: Db): Promise<string[]> {
 }
 
 beforeEach(async () => {
-  schema = `test_${randomUUID().replaceAll('-', '')}`;
-  await admin(`CREATE SCHEMA ${schema}`);
+  schema = await createTestSchema();
   work = await mkdtemp(path.join(tmpdir(), 'spark-migrate-'));
   migrations = path.join(work, 'migrations');
   backups = path.join(work, 'backups');
@@ -73,7 +60,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await Promise.all(pools.splice(0).map((db) => db.end()));
-  await admin(`DROP SCHEMA ${schema} CASCADE`);
+  await dropTestSchema(schema);
   await rm(work, { recursive: true, force: true });
 });
 

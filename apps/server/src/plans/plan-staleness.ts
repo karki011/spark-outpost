@@ -13,7 +13,7 @@ export function staleAmong(named: readonly string[], changed: readonly string[])
   return named.filter((file) => changed.some((path) => sameFile(file, path)));
 }
 
-export async function changedSince(root: string, commit: string): Promise<string[]> {
+async function changedSince(root: string, commit: string): Promise<string[]> {
   const output = await git(root, ['diff', '--name-only', '--no-renames', '--relative', commit]);
   return output.split('\n').filter(Boolean);
 }

@@ -31,3 +31,5 @@ export const context = (routing: 'auto' | 'pinned'): RouteContext => ({
   providerEffort: null,
   candidates,
 });
+
+export const plainFacts = { trivial: false, destructive: false };

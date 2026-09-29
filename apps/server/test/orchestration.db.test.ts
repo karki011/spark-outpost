@@ -6,7 +6,10 @@ import { conversationAuditRuns, summarizeAudit } from '../src/persistence/audit-
 import { getTaskDetail } from '../src/persistence/task-views.ts';
 import {
   LEVELS,
+  QUESTION,
+  RISKY,
   SCENARIOS,
+  TRIVIAL,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -19,8 +22,8 @@ import {
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
-const B: AgentRole = 'builder';
-const C: AgentRole = 'critic';
+const BUILDER: AgentRole = 'builder';
+const CRITIC: AgentRole = 'critic';
 
 interface Expectation {
   crew: AgentRole[];
@@ -39,13 +42,13 @@ const EXPECTED: Record<string, Record<InvolvementLevel, Expectation>> = {
     'hands-off': { crew: ['scout'], asked: [] },
     'full-auto': { crew: ['scout'], asked: [] },
   },
-  trivial: asksEdits([B]),
-  normal: asksEdits([B]),
-  complex: asksEdits([B]),
+  trivial: asksEdits([BUILDER]),
+  normal: asksEdits([BUILDER]),
+  complex: asksEdits([BUILDER]),
   risky: {
-    balanced: { crew: [B, C], asked: ['plan', 'edit'] },
-    'hands-off': { crew: [B, C], asked: [] },
-    'full-auto': { crew: [B, C], asked: [] },
+    balanced: { crew: [BUILDER, CRITIC], asked: ['plan', 'edit'] },
+    'hands-off': { crew: [BUILDER, CRITIC], asked: [] },
+    'full-auto': { crew: [BUILDER, CRITIC], asked: [] },
   },
 };
 
@@ -120,7 +123,7 @@ describe.each(SCENARIOS)('$id', (scenario) => {
         expect(kept[0]!.reason, context).toContain('you approved every edit');
       }
 
-      const builders = expected.crew.filter((role) => role === B).length;
+      const builders = expected.crew.filter((role) => role === BUILDER).length;
       expect(notes.split('\n').filter((line) => line.startsWith('step')).length, context).toBe(
         builders,
       );
@@ -181,7 +184,7 @@ describe.each(SCENARIOS)('$id', (scenario) => {
 
 describe('rule routing on Auto', () => {
   it('routes a trivial fix to the middle tier and maps Jev’s small-tier pick there', async () => {
-    const { orchestration } = await runLevel(SCENARIOS[1]!, 'hands-off');
+    const { orchestration } = await runLevel(TRIVIAL, 'hands-off');
     expect(orchestration.depth).toBe('execute');
     expect(orchestration.crew).toEqual([
       expect.objectContaining({
@@ -199,7 +202,7 @@ describe('rule routing on Auto', () => {
   }, 60_000);
 
   it('answers on the middle tier when the chat is on Haiku and Auto picks', async () => {
-    const { orchestration } = await runLevel(SCENARIOS[0]!, 'balanced', 'auto', 'haiku');
+    const { orchestration } = await runLevel(QUESTION, 'balanced', 'auto', 'haiku');
     const note = "raised to Sonnet 5: the harness doesn't use the fast tier";
     expect(orchestration.crew).toEqual([
       expect.objectContaining({ role: 'scout', model: 'sonnet', routeNote: note }),
@@ -209,7 +212,7 @@ describe('rule routing on Auto', () => {
   }, 60_000);
 
   it('answers on Haiku when the user picked it, with a retiring note', async () => {
-    const { orchestration } = await runLevel(SCENARIOS[0]!, 'balanced', 'pinned', 'haiku');
+    const { orchestration } = await runLevel(QUESTION, 'balanced', 'pinned', 'haiku');
     const note = 'Haiku 4.5 retiring on 2026-10-15';
     expect(orchestration.crew).toEqual([
       expect.objectContaining({ role: 'scout', model: 'haiku', routeNote: note }),
@@ -219,7 +222,7 @@ describe('rule routing on Auto', () => {
   }, 60_000);
 
   it('runs destructive work on the top tier with a cross-provider Critic', async () => {
-    const { orchestration } = await runLevel(SCENARIOS[4]!, 'full-auto');
+    const { orchestration } = await runLevel(RISKY, 'full-auto');
     expect(orchestration.risk).toBe('destructive');
     expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
       ['builder', 'opus[1m]'],

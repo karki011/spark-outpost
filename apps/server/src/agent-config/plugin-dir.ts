@@ -30,7 +30,7 @@ export function pluginName(label: string, taken: ReadonlySet<string>): string {
   return name;
 }
 
-export function sanitizedDefinition(kind: Kind, text: string, note: string | null): string {
+function sanitizedDefinition(kind: Kind, text: string, note: string | null): string {
   const { fields, body } = parseFrontmatter(text);
   const kept = Object.fromEntries(
     Object.entries(fields).filter(([key]) =>

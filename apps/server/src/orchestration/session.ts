@@ -18,6 +18,7 @@ import type { ScanReport } from '../codescan/scan.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
 import type { CodeScanner } from '../codescan/scanner.ts';
 import type { ProjectChecks } from '../checks/project-checks.ts';
+import { nextArtifactVersion, type ArtifactWrite } from '../persistence/artifacts.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import {
   loadOrchestration,
@@ -188,4 +189,16 @@ export async function publish(s: Session, patch: OrchestrationPatch = {}): Promi
   const view = await loadOrchestration(s.deps.db, s.lease.runId);
   if (!view) return;
   await s.append(runEvents.activity(ORCHESTRATION_ACTIVITY, ORCHESTRATION_ACTIVITY, view));
+}
+
+export async function appendNewArtifact(
+  s: Pick<Session, 'deps' | 'append'>,
+  taskId: string,
+  kind: 'review' | 'check' | 'shortcuts',
+  body: ArtifactWrite['body'],
+): Promise<void> {
+  const version = await nextArtifactVersion(s.deps.db, taskId, kind);
+  await s.append(runEvents.activity(`artifact:${kind}`, kind, { version, body }), {
+    artifact: { taskId, kind, body, version, overwrite: false, supersedesPrevious: false },
+  });
 }

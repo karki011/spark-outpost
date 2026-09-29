@@ -46,7 +46,7 @@ interface ConnectionDefaults {
   options: ConfigOptionInfo[];
 }
 
-const EMPTY: ChatSettings = {
+const NO_CHAT_SETTINGS: ChatSettings = {
   provider: null,
   model: null,
   effort: null,
@@ -106,14 +106,14 @@ async function connectionDefaults(
   );
 }
 
-export function effectiveSettings(
+function effectiveSettings(
   row: Omit<SettingsRow, 'workspace_id'>,
   connections: ReadonlyMap<ProviderId, ConnectionDefaults>,
 ): ChatSettings {
   const pick = (id: ProviderId | null) => (id && connections.has(id) ? id : null);
   const provider =
     pick(row.provider) ?? pick(row.default_provider) ?? connections.keys().next().value ?? null;
-  if (!provider) return EMPTY;
+  if (!provider) return NO_CHAT_SETTINGS;
   const connection = connections.get(provider)!;
   const chosen = row.overrides[provider] ?? {};
   const agentMode = chosen.agentMode ?? connection.agentMode ?? defaultModeFor(provider);

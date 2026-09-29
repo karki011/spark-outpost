@@ -1,7 +1,7 @@
 import { approvedEveryEdit } from '../persistence/approvals.ts';
 import { runChanges } from '../projects/run-changes.ts';
+import { checksFailing } from './check-results.ts';
 import { confirmsRiskyFirst } from './checkpoint-policy.ts';
-import { checksFailing } from './full-auto-ship.ts';
 import { changesSoFar } from './member-prompts.ts';
 import { destructiveMigrationInPatch } from './risk-rules.ts';
 import type { Session } from './session.ts';

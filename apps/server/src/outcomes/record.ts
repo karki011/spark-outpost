@@ -23,12 +23,12 @@ import {
   type OutcomeRow,
 } from '../persistence/outcomes.ts';
 import { repoStillThere, runChanges } from '../projects/run-changes.ts';
-import { findKeptCommit, keptContent } from './commits.ts';
+import { findKeptCommit, keptContent, type KeptContent } from './commits.ts';
 import { deriveSignals, followUpWindowClosed, outcomeKind } from './derive.ts';
 import { FEEDBACK_SAMPLE_RATE, feedbackPrompt, polarityOf, scoreOutcome } from './signals.ts';
 
-export const COMMIT_CHECK_EVERY_MS = 10 * 60 * 1000;
-export const COMMIT_WATCH_MS = 14 * 24 * 60 * 60 * 1000;
+const COMMIT_CHECK_EVERY_MS = 10 * 60 * 1000;
+const COMMIT_WATCH_MS = 14 * 24 * 60 * 60 * 1000;
 
 export class OutcomeNotFoundError extends Error {
   constructor() {
@@ -49,13 +49,21 @@ export interface OutcomeOptions {
   checkCommits?: boolean;
 }
 
-function commitDue(row: OutcomeRow, signals: readonly { kind: string }[], now: Date): boolean {
+type SignalKinds = readonly { kind: string }[];
+
+function committedOrReverted(signals: SignalKinds): boolean {
+  return signals.some((signal) => signal.kind === 'committed' || signal.kind === 'reverted');
+}
+
+function commitWatchOver(kept: KeptContent, now: Date): boolean {
+  return now.getTime() - new Date(kept.at).getTime() > COMMIT_WATCH_MS;
+}
+
+function commitDue(row: OutcomeRow, signals: SignalKinds, now: Date): boolean {
   const kept = keptOf(row);
   if (!kept) return false;
-  if (signals.some((signal) => signal.kind === 'committed' || signal.kind === 'reverted')) {
-    return false;
-  }
-  if (now.getTime() - new Date(kept.at).getTime() > COMMIT_WATCH_MS) return false;
+  if (committedOrReverted(signals)) return false;
+  if (commitWatchOver(kept, now)) return false;
   const checked = row.commit_checked_at?.getTime() ?? 0;
   return now.getTime() - checked >= COMMIT_CHECK_EVERY_MS;
 }
@@ -85,13 +93,10 @@ async function checkCommit(db: Queryable, turn: TurnRow, row: OutcomeRow, now: D
   ]);
 }
 
-function settled(row: OutcomeRow, signals: readonly { kind: string }[], now: Date): boolean {
+function settled(row: OutcomeRow, signals: SignalKinds, now: Date): boolean {
   const kept = keptOf(row);
   if (!kept) return true;
-  if (signals.some((signal) => signal.kind === 'committed' || signal.kind === 'reverted')) {
-    return true;
-  }
-  return now.getTime() - new Date(kept.at).getTime() > COMMIT_WATCH_MS;
+  return committedOrReverted(signals) || commitWatchOver(kept, now);
 }
 
 export async function refreshOutcome(

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { modeForLegacy, type InvolvementLevel, type RunEvent } from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../src/approvals/decide.ts';
+import { insertApproval } from '../src/persistence/approvals.ts';
 import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
 import { createConversation, sendUserMessage } from '../src/persistence/conversations.ts';
 import type { AppendOptions } from '../src/persistence/run-events.ts';
@@ -64,6 +65,22 @@ export function commandRequest(root: string, command: string, id = 'call-1'): Ap
     roots: [{ path: root, ignore: [] }],
     home: homedir(),
   };
+}
+
+export function insertCommandApproval(t: TestDb, runId: string, root: string, command: string) {
+  return insertApproval(t.db, {
+    runId,
+    toolCallId: 'c1',
+    rpcId: null,
+    kind: 'execute',
+    title: command,
+    payload: { command, cwd: root, paths: [], diffs: [], truncated: false },
+    options: [
+      { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+      { optionId: 'reject', name: 'Deny', kind: 'reject_once' },
+    ],
+    reason: null,
+  });
 }
 
 export interface RecordedEvent {

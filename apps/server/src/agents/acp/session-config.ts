@@ -82,6 +82,14 @@ export function findOption<T extends { id: string; category?: string | null }>(
   );
 }
 
+export function currentValue(
+  options: readonly SessionConfigOption[],
+  category: string,
+): string | null {
+  const option = findOption(options, category);
+  return option && typeof option.currentValue === 'string' ? option.currentValue : null;
+}
+
 export function planConfig(
   options: readonly SessionConfigOption[],
   wishes: ConfigWish[],
