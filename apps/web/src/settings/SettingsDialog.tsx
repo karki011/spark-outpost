@@ -246,8 +246,8 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                 {section === 'tools' && (
                   <>
                     <p className="lede">
-                      GitHub connects now, so Ship can open draft pull requests. The other
-                      connectors aren't ready yet.
+                      GitHub lets Ship open draft pull requests. Jira and Linear bring your tickets
+                      into Spark. Slack isn't ready yet.
                     </p>
                     <ConnectorGrid />
                   </>

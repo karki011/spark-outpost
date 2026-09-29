@@ -16,6 +16,7 @@ import {
   type TicketSearchQuery,
   type TicketSourceId,
   type TicketView,
+  type UpdateTicketSettingsRequest,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
 
@@ -23,6 +24,16 @@ export const ticketKeys = {
   all: ['tickets'] as const,
   inbox: ['tickets', 'inbox'] as const,
   connections: ['tickets', 'connections'] as const,
+  disconnect: (source: TicketSourceId): Promise<TicketConnections> =>
+    request(ticketConnectionsSchema, `/tickets/connections/${source}`, { method: 'DELETE' }),
+  updateSettings: (
+    source: TicketSourceId,
+    body: UpdateTicketSettingsRequest,
+  ): Promise<TicketConnections> =>
+    request(ticketConnectionsSchema, `/tickets/connections/${source}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
   search: (query: TicketSearchQuery) => ['tickets', 'search', query] as const,
   view: (source: TicketSourceId, key: string) => ['tickets', 'view', source, key] as const,
 };
@@ -45,6 +56,16 @@ export const ticketsApi = {
   connect: (body: SaveTicketConnectionRequest): Promise<TicketConnections> =>
     request(ticketConnectionsSchema, `/tickets/connections/${body.source}`, {
       method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  disconnect: (source: TicketSourceId): Promise<TicketConnections> =>
+    request(ticketConnectionsSchema, `/tickets/connections/${source}`, { method: 'DELETE' }),
+  updateSettings: (
+    source: TicketSourceId,
+    body: UpdateTicketSettingsRequest,
+  ): Promise<TicketConnections> =>
+    request(ticketConnectionsSchema, `/tickets/connections/${source}`, {
+      method: 'PATCH',
       body: JSON.stringify(body),
     }),
   search: (query: TicketSearchQuery): Promise<TicketSearch> =>

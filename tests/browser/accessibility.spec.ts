@@ -4,7 +4,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { openChats } from './navigation.ts';
-import { connectTickets, openTickets, resetTicketFakes } from './ticket-seed.ts';
+import { connectTickets, openTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
+import { JIRA_EMAIL } from '../../apps/server/test/fake-jira.ts';
 
 const THEMES = [
   'light',
@@ -165,6 +166,39 @@ test('the Tickets screen has no serious colour-contrast or ARIA issues in any th
   await expect(page.getByRole('dialog', { name: /Take WEB-437/ })).toBeVisible();
   found.push(...(await blockingViolations(page, 'tickets search with confirm')));
 
+  expect(found).toEqual([]);
+});
+
+test('Settings → Connectors has no serious colour-contrast or ARIA issues', async ({ page }) => {
+  test.setTimeout(90_000);
+  await resetTicketFakes();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Connectors' }).click();
+  const jira = page.locator('.tk-src[data-source="jira"]');
+  await jira.getByRole('button', { name: 'Connect', exact: true }).click();
+  const form = jira.getByRole('form', { name: 'Connect Jira' });
+  await form.getByLabel('Site URL').fill(STUB_URL);
+  await form.getByLabel('Email').fill(JIRA_EMAIL);
+  await form.getByLabel('API token').fill('jira_wrong_token_0123456789');
+  await form.getByRole('button', { name: 'Save and check' }).click();
+  await expect(form.locator('.cb[data-mood="sad"]')).toBeVisible();
+  const found = [];
+  for (const theme of ['light', 'graphite', 'contrast']) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `connectors error ${theme}`)));
+  }
+
+  await connectTickets(page, ['jira']);
+  await page.reload();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Connectors' }).click();
+  await jira.getByRole('button', { name: 'Ticket updates' }).click();
+  for (const theme of ['light', 'graphite', 'contrast']) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `connectors connected ${theme}`)));
+  }
   expect(found).toEqual([]);
 });
 
