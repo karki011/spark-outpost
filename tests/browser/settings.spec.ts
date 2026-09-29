@@ -110,7 +110,34 @@ test('provider setting dropdowns return focus to their trigger after a keyboard 
   }
 });
 
-test('the Full auto failing-checks switch saves, and defaults to opening the draft PR', async ({
+test('Connectors sets what Full auto does when checks still fail, opening the draft PR by default', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Profile' })
+    .getByRole('tab', { name: /Connectors/ })
+    .click();
+  const connectors = page.getByRole('dialog', { name: 'Connectors' });
+  const choice = connectors.getByRole('radiogroup', {
+    name: 'When checks still fail in Full auto',
+  });
+  await expect(choice.getByRole('radio', { name: 'Open a draft PR' })).toBeChecked();
+  await expect(choice).toHaveAccessibleDescription(
+    'The draft PR is marked “Checks failing”. Full auto never merges.',
+  );
+  const saved = page.waitForResponse(
+    (response) => response.url().endsWith('/api/profile') && response.ok(),
+  );
+  await choice.getByRole('radio', { name: 'Stop and ask' }).click();
+  await saved;
+  await expect(choice.getByRole('radio', { name: 'Stop and ask' })).toBeChecked();
+  const profile = await page.request.get('/api/setup');
+  expect((await profile.json()).profile.shipFailingChecks).toBe(false);
+});
+
+test('Jev settings sit under the Jev card and explain themselves in info tips', async ({
   page,
 }) => {
   await page.goto('/');
@@ -120,17 +147,19 @@ test('the Full auto failing-checks switch saves, and defaults to opening the dra
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
-  const toggle = providers.getByRole('switch', {
-    name: 'Full auto opens a draft PR when checks still fail',
-  });
-  await expect(toggle).toBeChecked();
-  await expect(providers).toContainText('marks it "Checks failing"');
-  const saved = page.waitForResponse(
-    (response) => response.url().endsWith('/api/profile') && response.ok(),
-  );
-  await toggle.click();
-  await saved;
-  await expect(toggle).not.toBeChecked();
-  const profile = await page.request.get('/api/setup');
-  expect((await profile.json()).profile.shipFailingChecks).toBe(false);
+  const advisor = providers.getByRole('region', { name: 'Advisor' });
+  await expect(providers).not.toContainText('Full auto');
+  await expect(advisor.getByRole('switch', { name: 'Check changes with Jev' })).toBeDisabled();
+  await expect(advisor).toContainText('Connect Jev to use this.');
+  const wait = advisor.getByRole('radiogroup', { name: 'If you don’t answer a question' });
+  await expect(wait.getByRole('radio', { name: '10s' })).toBeChecked();
+  await expect(wait).toHaveAccessibleDescription('Spark picks the safe option.');
+
+  const info = advisor.getByRole('button', { name: 'More about If you don’t answer a question' });
+  await info.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('tooltip')).toContainText('Approvals always wait for you.');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+  await expect(providers).toBeVisible();
 });

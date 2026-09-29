@@ -1,0 +1,52 @@
+import { useId } from 'react';
+import type { UpdateProfileRequest } from '@spark-outpost/contracts';
+import { Segmented } from '../ui/Segmented.tsx';
+import { SettingRow } from './SettingRow.tsx';
+import { useProfileSetting } from './use-profile-setting.ts';
+
+export interface ProfileChoice<T> {
+  id: string;
+  label: string;
+  value: T;
+}
+
+interface ProfileChoiceSettingProps<T> {
+  saved: T;
+  choices: ProfileChoice<T>[];
+  label: string;
+  info?: string;
+  hint: string;
+  toUpdate: (value: T) => UpdateProfileRequest;
+}
+
+export function ProfileChoiceSetting<T>({
+  saved,
+  choices,
+  label,
+  info,
+  hint,
+  toUpdate,
+}: ProfileChoiceSettingProps<T>) {
+  const hintId = useId();
+  const setting = useProfileSetting(saved, toUpdate);
+  const current = choices.find((choice) => choice.value === setting.value) ?? choices[0]!;
+  return (
+    <SettingRow
+      label={label}
+      hint={setting.error ?? hint}
+      hintId={hintId}
+      {...(info ? { info } : {})}
+    >
+      <Segmented
+        ariaLabel={label}
+        describedBy={hintId}
+        options={choices}
+        value={current.id}
+        onChange={(id) => {
+          const choice = choices.find((entry) => entry.id === id);
+          if (choice) setting.set(choice.value);
+        }}
+      />
+    </SettingRow>
+  );
+}

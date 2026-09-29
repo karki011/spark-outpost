@@ -81,12 +81,22 @@ export function useTooltip(label: string, { side = 'bottom', keys }: TooltipOpti
     [cancel],
   );
 
+  const show = useCallback(
+    (element: HTMLElement) => {
+      cancel();
+      setAnchor(element.getBoundingClientRect());
+    },
+    [cancel],
+  );
+
   useEffect(() => cancel, [cancel]);
 
   useEffect(() => {
     if (!anchor) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') hide();
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      hide();
     };
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('scroll', hide, true);
@@ -120,5 +130,5 @@ export function useTooltip(label: string, { side = 'bottom', keys }: TooltipOpti
       )
     : null;
 
-  return { triggerProps, tooltip };
+  return { triggerProps, tooltip, show };
 }

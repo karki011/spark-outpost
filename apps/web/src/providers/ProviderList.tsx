@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type {
   AdvisorSetup,
   ConnectableId,
   ProviderId,
   ProviderSetup,
 } from '@spark-outpost/contracts';
+import { InfoTip } from '../ui/InfoTip.tsx';
 import { ProviderCard } from './ProviderCard.tsx';
 
 interface ProviderListProps {
@@ -13,6 +14,7 @@ interface ProviderListProps {
   defaultProvider: ProviderId | null;
   onVerifyStart?: () => void;
   onVerifyOutcome?: (outcome: 'success' | 'failure') => void;
+  advisorSettings?: ReactNode;
 }
 
 export function ProviderList({
@@ -21,6 +23,7 @@ export function ProviderList({
   defaultProvider,
   onVerifyStart,
   onVerifyOutcome,
+  advisorSettings,
 }: ProviderListProps) {
   const [openId, setOpenId] = useState<ConnectableId | null>(null);
   const connectedCount = providers.filter((provider) => provider.connection).length;
@@ -47,11 +50,14 @@ export function ProviderList({
       {advisors.length > 0 && (
         <section className="advisors" aria-labelledby="advisors-title">
           <h3 className="advisors-title" id="advisors-title">
-            Optional decisions
+            Advisor
           </h3>
           <p className="advisors-note">
-            A decision model that answers a few yes-or-no questions about each turn and records
-            which model it would have used. It doesn't answer chats.
+            Jev reads each request, asks when it’s unclear and checks finished changes.
+            <InfoTip
+              topic="Jev"
+              text="It never answers chats or approves anything. The rules pick the model."
+            />
           </p>
           {advisors.map((advisor) => (
             <ProviderCard
@@ -62,6 +68,7 @@ export function ProviderList({
               {...verifyHandlers}
             />
           ))}
+          {advisorSettings}
         </section>
       )}
     </>

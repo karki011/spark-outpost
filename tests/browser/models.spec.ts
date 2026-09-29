@@ -110,19 +110,24 @@ test('provider chips filter the cards, work from the keyboard and are remembered
   await expect(again.getByRole('region')).toHaveCount(3);
 });
 
-test('the rules pick models, so there is no frontier switch, and code diffs to Jev can be turned off', async ({
+test('the rules pick models, so there is no frontier switch, and Jev can stop checking changes', async ({
   page,
 }) => {
+  await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'], jev: true });
   const dialog = await openModels(page);
   await expect(dialog.getByRole('switch', { name: /Allow frontier models/ })).toHaveCount(0);
   await expect(dialog).toContainText('The rules pick models');
 
   await dialog.getByRole('tab', { name: /AI providers/ }).click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
-  const diffs = providers.getByRole('switch', { name: 'Send code diffs to Jev for safety checks' });
+  const diffs = providers.getByRole('switch', { name: 'Check changes with Jev' });
   await expect(diffs).toBeChecked();
   await expect(diffs).toHaveAccessibleDescription(
-    /observation-only checks.*redone once by a stronger model/,
+    'Diffs go to TypeSafe and are never used for training.',
+  );
+  const info = providers.getByRole('button', { name: 'More about Check changes with Jev' });
+  await expect(info).toHaveAccessibleDescription(
+    /observation only.*redone once by a stronger model/,
   );
   await diffs.focus();
   await page.keyboard.press('Space');
@@ -133,6 +138,6 @@ test('the rules pick models, so there is no frontier switch, and code diffs to J
   await expect(
     page
       .getByRole('dialog', { name: 'AI providers' })
-      .getByRole('switch', { name: 'Send code diffs to Jev for safety checks' }),
+      .getByRole('switch', { name: 'Check changes with Jev' }),
   ).not.toBeChecked();
 });

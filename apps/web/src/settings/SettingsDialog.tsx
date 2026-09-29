@@ -8,21 +8,20 @@ import { ProviderList } from '../providers/ProviderList.tsx';
 import { ThemeCards } from '../theme/ThemeCards.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
-import { AutoContinueSetting } from './AutoContinueSetting.tsx';
 import { CompanionSetting } from './CompanionSetting.tsx';
+import { JevSettings } from './JevSettings.tsx';
 import { ProfileSection } from './ProfileSection.tsx';
-import { ProfileSwitchSetting } from './ProfileSwitchSetting.tsx';
+import { ProfileChoiceSetting } from './ProfileChoiceSetting.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { ResetSection } from '../reset/ResetSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
 import '../onboarding/tools.css';
 import './settings.css';
 
-const JEV_DIFFS_DISCLOSURE =
-  'Sends the diff and file paths of each proposed edit to TypeSafe for observation-only checks that never block or allow anything, and the final diff of a change so Jev can verify it: a change Jev finds incomplete is redone once by a stronger model. TypeSafe does not train on it.';
-
-const SHIP_FAILING_CHECKS_HINT =
-  'When the project checks still fail after the fix turns, Full auto opens the draft PR anyway and marks it "Checks failing". Turn this off to stop at the keep card instead. Full auto never merges.';
+const FAILING_CHECKS_CHOICES = [
+  { id: 'open', label: 'Open a draft PR', value: true },
+  { id: 'stop', label: 'Stop and ask', value: false },
+];
 
 export type SettingsSection =
   'profile' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'mcp' | 'look' | 'reset';
@@ -217,26 +216,20 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                 {setup.data && section === 'ai' && (
                   <>
                     <p className="lede">
-                      Connect Claude, Codex, or both. Open a provider to test it, sign in again, or
-                      change its defaults for new chats.
+                      Connect Claude, Codex or both. Open one to test it or change its defaults.
                     </p>
                     <ProviderList
                       providers={setup.data.providers}
                       advisors={setup.data.advisors}
                       defaultProvider={setup.data.profile.defaultProvider}
-                    />
-                    <AutoContinueSetting seconds={setup.data.profile.autoContinueSeconds} />
-                    <ProfileSwitchSetting
-                      enabled={setup.data.profile.jevDiffs}
-                      label="Send code diffs to Jev for safety checks"
-                      hint={JEV_DIFFS_DISCLOSURE}
-                      toUpdate={(value) => ({ jevDiffs: value })}
-                    />
-                    <ProfileSwitchSetting
-                      enabled={setup.data.profile.shipFailingChecks}
-                      label="Full auto opens a draft PR when checks still fail"
-                      hint={SHIP_FAILING_CHECKS_HINT}
-                      toUpdate={(value) => ({ shipFailingChecks: value })}
+                      advisorSettings={
+                        <JevSettings
+                          profile={setup.data.profile}
+                          jevConnected={setup.data.advisors.some(
+                            (advisor) => advisor.id === 'jev' && advisor.connection,
+                          )}
+                        />
+                      }
                     />
                   </>
                 )}
@@ -250,6 +243,15 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                       connectors aren't ready yet.
                     </p>
                     <ConnectorGrid />
+                    {setup.data && (
+                      <ProfileChoiceSetting
+                        saved={setup.data.profile.shipFailingChecks}
+                        choices={FAILING_CHECKS_CHOICES}
+                        label="When checks still fail in Full auto"
+                        hint="The draft PR is marked “Checks failing”. Full auto never merges."
+                        toUpdate={(value) => ({ shipFailingChecks: value })}
+                      />
+                    )}
                   </>
                 )}
                 {section === 'mcp' && <McpSection />}
