@@ -30,7 +30,6 @@ Open http://127.0.0.1:5173. The first run shows onboarding: enter your name and 
 | `pnpm test:db`                                       | Database tests, each in an isolated schema; needs `pnpm db:up`                                                                                                  |
 | `pnpm test:browser`                                  | Playwright browser tests; starts the dev servers if they are not running; needs `pnpm db:up` and `pnpm db:migrate`                                              |
 | `pnpm db:setup` / `db:up` / `db:stop` / `db:migrate` | Local PostgreSQL cluster; see [infra/local/README.md](infra/local/README.md)                                                                                    |
-| `pnpm tasks move <ID> <status> "note"`               | Update [docs/tasks/board.json](docs/tasks/board.json) and regenerate [docs/KANBAN.md](docs/KANBAN.md)                                                           |
 | `pnpm bench:harness`                                 | Live harness-vs-direct benchmark (spends real provider credit; `--repeats`, `--budget`, `--resume`, `--report-only`); writes [docs/benchmarks](docs/benchmarks) |
 
 ## Layout

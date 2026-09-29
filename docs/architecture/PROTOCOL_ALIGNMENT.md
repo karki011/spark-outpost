@@ -50,7 +50,7 @@ Real providers run through ACP (Claude, Codex, Z.ai; see [ACP_AGENTS.md](ACP_AGE
 | App-wide status stream                    | F-10    |
 | A2A remote agents via `SUBAGENT_*` events | Phase 3 |
 
-Per-launch token authentication (F-9), the ACP client adapter (F-11, F-12), approvals through ACP `session/request_permission` with `CUSTOM` approval events (F-13) and usage and context readings (F-16) are built; their state is on [KANBAN.md](../KANBAN.md) and in [ACP_AGENTS.md](ACP_AGENTS.md).
+Per-launch token authentication (F-9), the ACP client adapter (F-11, F-12), approvals through ACP `session/request_permission` with `CUSTOM` approval events (F-13) and usage and context readings (F-16) are built; their state is in [ACP_AGENTS.md](ACP_AGENTS.md).
 
 ## Gates before a protocol claim
 
