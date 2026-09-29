@@ -45,6 +45,26 @@ describe('sending messages', () => {
     ).rejects.toBeInstanceOf(MessageConflictError);
   });
 
+  it('rejects a reused id that belongs to a message that is not a sent user message', async () => {
+    const conversation = await createConversation(t.db, t.workspaceId, randomUUID());
+    const reply = randomUUID();
+    const note = randomUUID();
+    await t.db.query(
+      `INSERT INTO messages (id, conversation_id, role, content)
+       VALUES ($1, $3, 'assistant', 'Done'), ($2, $3, 'user', 'No run')`,
+      [reply, note, conversation.id],
+    );
+
+    for (const [id, content] of [
+      [reply, 'Done'],
+      [note, 'No run'],
+    ] as const) {
+      await expect(
+        sendUserMessage(t.db, conversation.id, { id, content }, { provider: 'fake' }),
+      ).rejects.toBeInstanceOf(MessageConflictError);
+    }
+  });
+
   it('titles an untitled chat from its first message only', async () => {
     const conversation = await createConversation(t.db, t.workspaceId, randomUUID());
     await sendUserMessage(
