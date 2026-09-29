@@ -304,6 +304,7 @@ export function startOrchestrator(
     loopGuard?: OrchestratorDeps['loopGuard'];
     codeScan?: OrchestratorDeps['codeScan'];
     budgetPollMs?: number;
+    cancelPollMs?: number;
     shipAccess?: OrchestratorDeps['shipAccess'];
     fixRound?: OrchestratorDeps['fixRound'];
   } = {},
@@ -325,7 +326,7 @@ export function startOrchestrator(
     leaseSeconds: 30,
     concurrency: 8,
     pollMs: 20,
-    cancelPollMs: 20,
+    cancelPollMs: options.cancelPollMs ?? 20,
     approvalPollMs: 20,
     budgetPollMs: options.budgetPollMs ?? 50,
     ...(intake ? { intake } : {}),

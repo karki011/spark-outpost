@@ -35,7 +35,7 @@ export async function executeChildRun(
   const own: Append = (event, appendOptions) =>
     appendRunEvent(deps.db, lease, event, appendOptions);
   const append = parentAppend ? mirroringApprovals(own, parentAppend) : own;
-  const control = startControl(deps, lease);
+  const control = startControl(deps, lease, options.stopNow);
   try {
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
     const result = await runAgentTurn(deps, lease, input, append, control, options);

@@ -62,6 +62,11 @@ export interface FixRound {
   hit: BudgetLimit | null;
 }
 
+export interface BudgetChecks {
+  running: Promise<BudgetLimit | null> | null;
+  queued: Promise<BudgetLimit | null> | null;
+}
+
 export interface PassingState {
   tree: string;
   checkBodies: CheckBody[];
@@ -107,6 +112,8 @@ export interface Session {
   budgetHit: BudgetLimit | null;
   members: Map<string, () => void>;
   liveCost: Map<string, number>;
+  settledUsd?: number;
+  budgetChecks?: BudgetChecks;
   checkpoints: number;
   git: boolean;
   checks: ProjectChecks | null;

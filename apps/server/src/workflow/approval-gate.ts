@@ -366,6 +366,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       rules(),
       projectAllowlistForRun(deps.db, deps.runId),
     ]);
+    if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
     const allowlist = [...projectAllowlist, ...(deps.extraAllowlist?.() ?? [])];
     const decision = decide(postureOf(request), request, runRules, allowlist, {
       builder: deps.builder === true,

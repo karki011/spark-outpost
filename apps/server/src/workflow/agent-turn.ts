@@ -62,13 +62,16 @@ export interface RunControl {
   dispose(): void;
 }
 
-export function startControl(deps: TurnDeps, lease: Lease): RunControl {
+export function startControl(deps: TurnDeps, lease: Lease, stopNow?: AbortSignal): RunControl {
   const controller = new AbortController();
   let stopReason: StopReason | null = null;
   const stop = (reason: StopReason) => {
     stopReason ??= reason;
     controller.abort();
   };
+  const stopFromOutside = () => stop('cancelled');
+  if (stopNow?.aborted) stopFromOutside();
+  else stopNow?.addEventListener('abort', stopFromOutside, { once: true });
   const renewEveryMs = Math.max(1000, (deps.leaseSeconds * 1000) / 3);
   const heartbeat = setInterval(() => {
     renewLease(deps.db, lease, deps.leaseSeconds)
@@ -91,6 +94,7 @@ export function startControl(deps: TurnDeps, lease: Lease): RunControl {
     dispose() {
       clearInterval(heartbeat);
       clearInterval(cancelWatch);
+      stopNow?.removeEventListener('abort', stopFromOutside);
     },
   };
 }
@@ -101,6 +105,7 @@ export interface TurnOptions {
   recordsPlan?: boolean;
   observeEdits?: EditObserver | undefined;
   onLiveCost?: (usd: number) => void;
+  stopNow?: AbortSignal;
 }
 
 export interface TurnResult {
@@ -267,8 +272,8 @@ export async function runAgentTurn(
       ...(userMcp.length > 0 ? { userMcp } : {}),
       spark,
     })) {
-      meter(output);
       if (control.signal.aborted) {
+        meter(output);
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
         if (output.kind === 'usage') {
           await recordUsage(deps.db, lease.runId, session ? session.usage(output) : output);
@@ -283,6 +288,7 @@ export async function runAgentTurn(
         await recordUsage(deps.db, lease.runId, session ? session.usage(output) : output);
       }
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
+      meter(output);
       await tasks.observe(output);
       if (output.kind === 'session') await session?.started(output);
       if (output.kind === 'commands') await session?.commands(output.commands);

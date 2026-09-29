@@ -5,6 +5,7 @@ import type { ProviderOutput } from '../providers/provider.ts';
 import { runAgentTurn, type RunControl } from '../workflow/agent-turn.ts';
 import { takeSnapshot } from '../workflow/do-run.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
+import { meterSpend } from './budget-check.ts';
 import { checkFixFollowUp, fixFollowUp } from './context.ts';
 import { reviewNet } from './lean.ts';
 import { createLoopGuard, DEFAULT_LOOP_GUARD } from './loop-guard.ts';
@@ -63,6 +64,7 @@ function counter(s: Session, also?: (output: ProviderOutput) => void) {
 function liveCostOf(s: Session, runId: string): (usd: number) => void {
   return (usd) => {
     s.liveCost.set(runId, usd);
+    meterSpend(s);
   };
 }
 
@@ -217,10 +219,17 @@ async function runChild(
     },
     s.deps.leaseSeconds,
   );
-  const cancel = () => void requestCancel(s.deps.db, lease.runId).catch(() => undefined);
+  const stopNow = new AbortController();
+  const cancel = () => {
+    stopNow.abort();
+    void requestCancel(s.deps.db, lease.runId).catch(() => undefined);
+  };
   s.members.set(lease.runId, cancel);
   s.control.signal.addEventListener('abort', cancel, { once: true });
-  if (s.control.signal.aborted || s.budgetHit) await requestCancel(s.deps.db, lease.runId);
+  if (s.control.signal.aborted || s.budgetHit) {
+    stopNow.abort();
+    await requestCancel(s.deps.db, lease.runId);
+  }
   if (copy) await copy.prepare(lease.runId);
   fitToolLimit(s, route.pick.provider);
   await recordRoute(s, spawn.role, resolved, lease.runId, name);
@@ -237,6 +246,7 @@ async function runChild(
         onOutput: observe,
         onLiveCost: liveCostOf(s, lease.runId),
         backupAlsoFor: s.lease.runId,
+        stopNow: stopNow.signal,
         recordsPlan: spawn.role === 'builder',
         ...(spawn.role === 'builder' ? { observeEdits: editObserver(s, lease.runId) } : {}),
       },
