@@ -13,7 +13,6 @@ import { JevSettings } from './JevSettings.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { ResetSection } from '../reset/ResetSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
-import '../onboarding/tools.css';
 import './settings.css';
 
 export type SettingsSection =

@@ -1,26 +1,3 @@
-.ccard.gh-card {
-  grid-column: 1 / -1;
-}
-.gh-badge {
-  font-size: 12px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: var(--raise);
-  color: var(--muted);
-}
-.gh-badge.on {
-  background: var(--accent-soft);
-  color: var(--accent-text);
-}
-.gh-summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
 .gh-active {
   margin: 0;
   font-size: 13px;
@@ -91,11 +68,8 @@
   line-height: 1.45;
   color: var(--muted);
 }
-.gh-card .gh-body p {
-  flex: none;
-}
-.gh-card .gh-active,
-.gh-card .gh-state {
+.gh-active,
+.gh-body .gh-state {
   color: var(--text);
 }
 .gh-note code {

@@ -1,15 +1,16 @@
 import './github-card.css';
-import { useId, useState, type ReactNode } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { GitHubConnectionStatus } from '@spark-outpost/contracts';
-import { ChevronIcon } from '../ui/icons.tsx';
+import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
-import { fadeReveal } from '../ui/transitions.tsx';
 import { TokenDetails, TokenForm } from './GitHubTokenPanel.tsx';
 import { githubApi, shipKeys } from './ship-api.ts';
 
 type Method = 'gh' | 'token' | 'app';
+
+const DESCRIPTION =
+  'Ship commits and pushes with your own Git. Opening a draft pull request needs GitHub.';
 
 const METHODS: { id: Method; label: string }[] = [
   { id: 'gh', label: 'gh CLI' },
@@ -79,16 +80,22 @@ function GhCliPanel({
   );
 }
 
-export function GitHubCard({ icon }: { icon: ReactNode }) {
+export function GitHubCard({
+  icon,
+  open,
+  onToggle,
+}: {
+  icon: ReactNode;
+  open: boolean;
+  onToggle: () => void;
+}) {
   const queryClient = useQueryClient();
-  const bodyId = useId();
-  const [open, setOpen] = useState(false);
   const [choice, setChoice] = useState<Method | null>(null);
   const status = useQuery({ queryKey: shipKeys.github, queryFn: githubApi.connection });
   const saved = (next: GitHubConnectionStatus) => {
     queryClient.setQueryData(shipKeys.github, next);
     setChoice(null);
-    setOpen(false);
+    if (open) onToggle();
   };
   const save = useMutation({
     mutationFn: ({ token, host }: { token: string; host: string | undefined }) =>
@@ -98,77 +105,53 @@ export function GitHubCard({ icon }: { icon: ReactNode }) {
   const remove = useMutation({ mutationFn: githubApi.removeToken, onSuccess: saved });
   const data = status.data;
   const busy = save.isPending || remove.isPending;
-  const showBody = data !== undefined && (open || data.active === null);
   const method = choice ?? (data ? defaultMethod(data) : 'token');
   const methodLabel = METHODS.find((option) => option.id === method)?.label ?? '';
 
   return (
-    <li className={showBody ? 'ccard gh-card open' : 'ccard gh-card'}>
-      <div className="top">
-        <span className="plogo">{icon}</span>
-        <b>GitHub</b>
+    <ConnectorCard
+      connectorId="github"
+      name="GitHub"
+      icon={icon}
+      status={data?.active ? activeLine(data) : DESCRIPTION}
+      badge={status.isPending ? 'checking' : data?.active ? 'connected' : null}
+      open={open}
+      onToggle={onToggle}
+    >
+      <div className="cx-body gh-body">
+        {data?.active && <p>{DESCRIPTION}</p>}
+        {status.isError && <p className="gh-err">{status.error.message}</p>}
         {data && (
-          <span className={data.active ? 'gh-badge on' : 'gh-badge'}>
-            {data.active ? 'Connected' : 'Not connected'}
-          </span>
+          <>
+            <Segmented
+              ariaLabel="How to connect GitHub"
+              options={METHODS}
+              value={method}
+              onChange={(id) => setChoice(id as Method)}
+            />
+            <section className="gh-method" aria-label={methodLabel}>
+              {method === 'gh' && (
+                <GhCliPanel
+                  ghCli={data.ghCli}
+                  checking={status.isFetching}
+                  onCheck={() => void status.refetch()}
+                />
+              )}
+              {method === 'token' &&
+                (data.token ? (
+                  <TokenDetails token={data.token} busy={busy} onRemove={() => remove.mutate()} />
+                ) : (
+                  <TokenForm
+                    busy={busy}
+                    error={save.error?.message ?? null}
+                    onSave={(token, host) => save.mutate({ token, host })}
+                  />
+                ))}
+              {method === 'app' && <span className="cx-soon">Coming later</span>}
+            </section>
+          </>
         )}
       </div>
-      <p>Ship commits and pushes with your own Git. Opening a draft pull request needs GitHub.</p>
-      {status.isPending && <p className="gh-note">Checking…</p>}
-      {status.isError && <p className="gh-err">{status.error.message}</p>}
-      {data && (
-        <div className="gh-summary">
-          <p className="gh-active" role="status">
-            {activeLine(data)}
-          </p>
-          {data.active && (
-            <button
-              type="button"
-              className="gh-disclose"
-              aria-expanded={open}
-              aria-controls={bodyId}
-              onClick={() => setOpen(!open)}
-            >
-              {data.active === 'token' ? 'Manage token' : 'Other ways to connect'}
-              <ChevronIcon />
-            </button>
-          )}
-        </div>
-      )}
-      <AnimatePresence initial={false}>
-        {data && showBody && (
-          <motion.div key="body" id={bodyId} className="gh-collapse" {...fadeReveal}>
-            <div className="gh-body">
-              <Segmented
-                ariaLabel="How to connect GitHub"
-                options={METHODS}
-                value={method}
-                onChange={(id) => setChoice(id as Method)}
-              />
-              <section className="gh-method" aria-label={methodLabel}>
-                {method === 'gh' && (
-                  <GhCliPanel
-                    ghCli={data.ghCli}
-                    checking={status.isFetching}
-                    onCheck={() => void status.refetch()}
-                  />
-                )}
-                {method === 'token' &&
-                  (data.token ? (
-                    <TokenDetails token={data.token} busy={busy} onRemove={() => remove.mutate()} />
-                  ) : (
-                    <TokenForm
-                      busy={busy}
-                      error={save.error?.message ?? null}
-                      onSave={(token, host) => save.mutate({ token, host })}
-                    />
-                  ))}
-                {method === 'app' && <span className="soon">Coming later</span>}
-              </section>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </li>
+    </ConnectorCard>
   );
 }

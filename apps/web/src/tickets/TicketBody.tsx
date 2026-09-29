@@ -1,6 +1,9 @@
 import type { TicketView } from '@spark-outpost/contracts';
 import { ticketStatusLabels } from '@spark-outpost/contracts';
+import { useId, useState } from 'react';
+import { UserBlob } from '../brand/UserBlob.tsx';
 import { Markdown } from '../chat/markdown/Markdown.tsx';
+import { ChevronIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import { StatusCircle } from './ticket-icons.tsx';
 import { safeUrl } from './ticket-model.ts';
@@ -14,6 +17,8 @@ interface TicketBodyProps {
 }
 
 export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
+  const commentsId = useId();
+  const [commentsOpenFor, setCommentsOpenFor] = useState<string | null>(null);
   if (loading) {
     return (
       <section className="tk-sec" aria-busy="true">
@@ -36,6 +41,7 @@ export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
     );
   }
   const { ticket } = view;
+  const commentsOpen = commentsOpenFor === ticket.key;
   return (
     <>
       <section className="tk-sec">
@@ -43,7 +49,9 @@ export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
           Description <span className="live-note">Loaded from {source} just now</span>
         </h4>
         {ticket.description.trim() ? (
-          <Markdown text={ticket.description} />
+          <div className="tk-desc" tabIndex={0} aria-label="Description">
+            <Markdown text={ticket.description} />
+          </div>
         ) : (
           <p className="tk-quiet">No description.</p>
         )}
@@ -74,16 +82,33 @@ export function TicketBody({ view, loading, error, source }: TicketBodyProps) {
       )}
       {ticket.comments.length > 0 && (
         <section className="tk-sec">
-          <h4>Comments</h4>
-          {ticket.comments.map((comment, index) => (
-            <div key={`${comment.createdAt}-${index}`} className="cmt">
-              <div className="cb">
-                <b>{comment.author ?? 'Someone'}</b>
-                <time dateTime={comment.createdAt}>{relativeTime(comment.createdAt)}</time>
-                <p>{comment.body}</p>
-              </div>
-            </div>
-          ))}
+          <h4>
+            <button
+              type="button"
+              className="tk-cmt-toggle"
+              aria-expanded={commentsOpen}
+              aria-controls={commentsId}
+              onClick={() => setCommentsOpenFor(commentsOpen ? null : ticket.key)}
+            >
+              <ChevronIcon />
+              Comments
+              <span className="tk-cmt-count">{ticket.comments.length}</span>
+            </button>
+          </h4>
+          {commentsOpen && (
+            <ol id={commentsId} className="tk-cmts">
+              {ticket.comments.map((comment, index) => (
+                <li key={`${comment.createdAt}-${index}`} className="cmt">
+                  <div className="cmt-head">
+                    <UserBlob displayName={comment.author ?? 'Someone'} size={22} />
+                    <b>{comment.author ?? 'Someone'}</b>
+                    <time dateTime={comment.createdAt}>{relativeTime(comment.createdAt)}</time>
+                  </div>
+                  <Markdown text={comment.body} />
+                </li>
+              ))}
+            </ol>
+          )}
         </section>
       )}
     </>

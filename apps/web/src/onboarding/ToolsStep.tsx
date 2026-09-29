@@ -1,12 +1,11 @@
-import type { ReactNode } from 'react';
-import { motion } from 'motion/react';
+import { useState, type ReactNode } from 'react';
+import type { ConnectorId } from '../brand/ConnectorBlob.tsx';
+import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { GitHubCard } from '../ship/GitHubCard.tsx';
 import { TicketSourceCard } from '../tickets/TicketSourceCard.tsx';
-import { reveal } from '../ui/transitions.tsx';
-import './tools.css';
 
 export interface Connector {
-  id: string;
+  id: ConnectorId;
   name: string;
   description: string;
   icon: ReactNode;
@@ -79,11 +78,20 @@ export const connectors: Connector[] = [
 ];
 
 export function ConnectorGrid() {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const toggle = (id: string) => setOpenId((current) => (current === id ? null : id));
   return (
     <ul className="cgrid">
-      {connectors.map((connector, index) => {
+      {connectors.map((connector) => {
         if (connector.id === 'github') {
-          return <GitHubCard key={connector.id} icon={connector.icon} />;
+          return (
+            <GitHubCard
+              key={connector.id}
+              icon={connector.icon}
+              open={openId === connector.id}
+              onToggle={() => toggle(connector.id)}
+            />
+          );
         }
         if (connector.id === 'jira' || connector.id === 'linear') {
           return (
@@ -92,28 +100,20 @@ export function ConnectorGrid() {
               source={connector.id}
               icon={connector.icon}
               description={connector.description}
-              primary={connector.id === 'jira'}
+              open={openId === connector.id}
+              onToggle={() => toggle(connector.id)}
             />
           );
         }
         return (
-          <motion.li
+          <ConnectorCard
             key={connector.id}
-            className="ccard"
-            initial={{ opacity: 0, y: 14, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ ...reveal, delay: index * 0.07 }}
-            whileHover={{ y: -3 }}
-          >
-            <div className="top">
-              <span className="plogo">{connector.icon}</span>
-              <b>{connector.name}</b>
-            </div>
-            <p>{connector.description}</p>
-            <div className="row2">
-              <span className="soon">Coming soon</span>
-            </div>
-          </motion.li>
+            connectorId={connector.id}
+            name={connector.name}
+            icon={connector.icon}
+            status={connector.description}
+            badge="soon"
+          />
         );
       })}
     </ul>
