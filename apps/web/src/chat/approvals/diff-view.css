@@ -176,6 +176,31 @@
   color: var(--text);
 }
 
+.dv-skel {
+  display: grid;
+  gap: 9px;
+  padding: 12px 14px 12px 88px;
+}
+
+.dv-skel span {
+  height: 9px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+  animation: dv-skel 1.2s var(--out) infinite alternate;
+}
+
+@keyframes dv-skel {
+  to {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dv-skel span {
+    animation: none;
+  }
+}
+
 @media (max-width: 640px) {
   .dv-body {
     max-height: 360px;

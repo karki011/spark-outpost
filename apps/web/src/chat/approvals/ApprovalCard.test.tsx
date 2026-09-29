@@ -40,11 +40,11 @@ function show(shown: Approval) {
 describe('ApprovalCard', () => {
   it('offers the options while the approval waits', () => {
     const card = show(approval);
-    expect(within(card).getAllByRole('button').map((button) => button.textContent)).toEqual([
-      'Yes',
-      'Always allow in this project',
-      'No',
-    ]);
+    expect(
+      within(card)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Yes', 'Always allow in this project', 'No']);
     expect(within(card).queryByRole('status')).toBeNull();
   });
 
@@ -60,8 +60,6 @@ describe('ApprovalCard', () => {
     expect(within(card).queryAllByRole('button')).toEqual([]);
     expect(within(card).getByText('pnpm test').tagName).toBe('CODE');
     expect(within(card).queryByText(/Runs in/)).toBeNull();
-    expect(within(card).getByRole('status').textContent).toBe(
-      "Chose: No.The command didn't run.",
-    );
+    expect(within(card).getByRole('status').textContent).toBe("Chose: No.The command didn't run.");
   });
 });
