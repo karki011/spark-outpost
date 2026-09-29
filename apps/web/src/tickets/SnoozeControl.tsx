@@ -2,15 +2,18 @@ import './snooze.css';
 import { useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SNOOZE_MAX_DAYS, type InboxTicket, type TicketInbox } from '@spark-outpost/contracts';
+import { DayCalendar } from '../ui/DayCalendar.tsx';
+import { BackIcon } from '../ui/icons.tsx';
 import { usePopover } from '../ui/use-popover.ts';
 import { Glyph } from './ticket-icons.tsx';
 import { morningOf, snoozeChoices, snoozeTime } from './ticket-model.ts';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
 
-const DAY_MS = 24 * 3_600_000;
-
-const dateInput = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+function addDays(day: Date, days: number): Date {
+  const next = new Date(day);
+  next.setDate(next.getDate() + days);
+  return next;
+}
 
 function snoozedLocally(ticket: InboxTicket, until: Date): InboxTicket {
   const section =
@@ -90,10 +93,12 @@ export function SnoozeButton({ ticket, snoozing }: { ticket: InboxTicket; snoozi
     HTMLButtonElement,
     HTMLDivElement
   >();
-  const menuId = useId();
-  const dateId = useId();
+  const panelId = useId();
+  const [picking, setPicking] = useState(false);
+  const [day, setDay] = useState<Date | undefined>();
   const now = new Date();
-  const [day, setDay] = useState(() => dateInput(new Date(now.getTime() + 2 * DAY_MS)));
+  const first = addDays(now, 1);
+  const last = addDays(now, SNOOZE_MAX_DAYS - 1);
   const pick = (until: Date) => {
     setOpen(false);
     snoozing.snooze(until);
@@ -105,53 +110,73 @@ export function SnoozeButton({ ticket, snoozing }: { ticket: InboxTicket; snoozi
         ref={anchorRef}
         type="button"
         className="btn line sm"
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         aria-expanded={open}
-        aria-controls={menuId}
+        aria-controls={panelId}
         disabled={snoozing.pending}
-        onClick={toggle}
+        onClick={() => {
+          if (!open) {
+            setPicking(false);
+            setDay(undefined);
+          }
+          toggle();
+        }}
       >
         <Glyph name="snooze" />
         Remind me later
       </button>
       <div
         ref={panelRef}
-        id={menuId}
-        role="menu"
+        id={panelId}
+        role="dialog"
         aria-label={`Remind me about ${ticket.key}`}
-        className={open ? 'snz-menu open' : 'snz-menu'}
+        className={['snz-menu', open ? 'open' : '', picking ? 'picking' : '']
+          .filter(Boolean)
+          .join(' ')}
       >
-        {snoozeChoices(now).map((choice) => (
-          <button key={choice.id} type="button" role="menuitem" onClick={() => pick(choice.until)}>
-            <b>{choice.label}</b>
-            <small>{snoozeTime(choice.until, now)}</small>
-          </button>
-        ))}
-        <form
-          className="snz-pick"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const [year, month, date] = day.split('-').map(Number);
-            if (year && month && date) pick(morningOf(new Date(year, month - 1, date)));
-          }}
-        >
-          <label htmlFor={dateId}>Pick a day</label>
-          <span>
-            <input
-              id={dateId}
-              type="date"
-              className="inp"
-              value={day}
-              min={dateInput(new Date(now.getTime() + DAY_MS))}
-              max={dateInput(new Date(now.getTime() + (SNOOZE_MAX_DAYS - 1) * DAY_MS))}
-              onChange={(event) => setDay(event.target.value)}
-              required
-            />
-            <button type="submit" className="btn primary sm">
-              Snooze
+        {picking ? (
+          <>
+            <button type="button" className="snz-back" onClick={() => setPicking(false)}>
+              <BackIcon />
+              Pick a day
             </button>
-          </span>
-        </form>
+            <DayCalendar
+              mode="single"
+              selected={day}
+              onSelect={setDay}
+              defaultMonth={first}
+              startMonth={first}
+              endMonth={last}
+              disabled={[{ before: first }, { after: last }]}
+            />
+            <button
+              type="button"
+              className="btn primary sm snz-go"
+              disabled={!day}
+              onClick={() => day && pick(morningOf(day))}
+            >
+              {day ? `Snooze until ${snoozeTime(morningOf(day), now)}` : 'Choose a day'}
+            </button>
+          </>
+        ) : (
+          <>
+            {snoozeChoices(now).map((choice) => (
+              <button
+                key={choice.id}
+                type="button"
+                className="snz-opt"
+                onClick={() => pick(choice.until)}
+              >
+                <b>{choice.label}</b>
+                <small>{snoozeTime(choice.until, now)}</small>
+              </button>
+            ))}
+            <button type="button" className="snz-opt snz-more" onClick={() => setPicking(true)}>
+              <b>Pick a day…</b>
+              <small>9:00 AM</small>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

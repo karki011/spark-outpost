@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
-import { DayPicker, type DateRange } from 'react-day-picker';
-import 'react-day-picker/style.css';
+import type { DateRange } from 'react-day-picker';
+import { DayCalendar } from '../../ui/DayCalendar.tsx';
 import { wrapTabFocus } from '../../ui/focus-trap.ts';
 import {
   CALENDAR_PRESETS,
@@ -99,16 +99,13 @@ export function CalendarPopover({
             </button>
           ))}
         </div>
-        <DayPicker
+        <DayCalendar
           mode="range"
           selected={draft}
           onSelect={setDraft}
           disabled={disabled}
           defaultMonth={draft?.to ?? draft?.from ?? parseIsoLocal(today)}
           today={parseIsoLocal(today)}
-          showOutsideDays
-          fixedWeeks
-          className="an-cal-grid"
         />
       </div>
       {draft?.from && !draft?.to && (

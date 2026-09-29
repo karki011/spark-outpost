@@ -1,0 +1,79 @@
+.day-grid {
+  --rdp-accent-color: var(--accent);
+  --rdp-accent-background-color: var(--accent-soft);
+  --rdp-today-color: var(--accent-text);
+  --rdp-day_button-border: 2px solid transparent;
+  --rdp-selected-border: 2px solid var(--accent);
+  --rdp-disabled-opacity: 0.35;
+  --rdp-outside-opacity: 1;
+  --rdp-weekday-opacity: 1;
+  --rdp-range_middle-background-color: var(--accent-soft);
+  --rdp-range_middle-color: var(--accent-text);
+  --rdp-range_start-background: var(--accent-soft);
+  --rdp-range_start-color: var(--accent-ink);
+  --rdp-range_start-date-background-color: var(--accent);
+  --rdp-range_end-background: var(--accent-soft);
+  --rdp-range_end-color: var(--accent-ink);
+  --rdp-range_end-date-background-color: var(--accent);
+  --rdp-nav_button-width: 28px;
+  --rdp-nav_button-height: 28px;
+  --rdp-animation_duration: 0.2s;
+  --rdp-months-gap: 20px;
+  --rdp-day-width: 34px;
+  --rdp-day-height: 34px;
+  --rdp-day_button-width: 32px;
+  --rdp-day_button-height: 32px;
+  --rdp-nav-height: 32px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.day-grid .rdp-months {
+  flex-wrap: nowrap;
+}
+
+.day-grid .rdp-month_caption {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.day-grid .rdp-weekday {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.day-grid .rdp-button_previous,
+.day-grid .rdp-button_next {
+  border-radius: 999px;
+  color: var(--muted);
+}
+
+.day-grid .rdp-button_previous:hover:not([aria-disabled='true']),
+.day-grid .rdp-button_next:hover:not([aria-disabled='true']) {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.day-grid .rdp-chevron {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.day-grid .rdp-day_button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.day-grid .rdp-today:not(.rdp-outside) .rdp-day_button {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.day-grid .rdp-outside:not(.rdp-selected):not(.rdp-today) .rdp-day_button {
+  color: var(--faint);
+}
+
+.day-grid .rdp-selected:not(.rdp-range_middle) .rdp-day_button {
+  font-weight: 600;
+}
