@@ -1,3 +1,5 @@
+import { z } from 'zod';
+import { agentPickSchema } from '@spark-outpost/contracts';
 import type { RoutingLabelRow } from '../persistence/routing-labels.ts';
 
 export const TOP_K = 5;
@@ -19,37 +21,59 @@ export function atK(predicted: readonly string[], changed: readonly string[], k 
   };
 }
 
-interface PickFields {
-  provider?: string;
-  model?: string | null;
-  modelLabel?: string | null;
+const pickShape = agentPickSchema.shape;
+const pickFieldsSchema = z.object({
+  provider: pickShape.provider.optional().catch(undefined),
+  model: pickShape.model.optional().catch(undefined),
+  modelLabel: pickShape.modelLabel.optional().catch(undefined),
+});
+const optionalPick = pickFieldsSchema.nullable().optional().catch(undefined);
+const optionalNumber = z.number().nullable().optional().catch(undefined);
+
+const variantSchema = z.object({
+  status: z.string().optional().catch(undefined),
+  choice: z.string().nullable().optional().catch(undefined),
+  confidence: optionalNumber,
+  latencyMs: optionalNumber,
+  tokens: optionalNumber,
+  costUsd: optionalNumber,
+  selection: z
+    .object({ basis: z.string(), tier: z.string().nullable(), routeProbability: z.number() })
+    .nullable()
+    .optional()
+    .catch(undefined),
+  pick: optionalPick,
+  raisedTo: optionalPick,
+});
+
+const ruleRouteSchema = z.object({
+  pick: optionalPick,
+  rule: z.string().optional().catch(undefined),
+});
+
+type PickFields = z.infer<typeof pickFieldsSchema>;
+
+function parsed<T>(schema: z.ZodType<T>, value: unknown): T | null {
+  const result = schema.safeParse(value);
+  return result.success ? result.data : null;
 }
 
-interface Variant {
-  status?: string;
-  choice?: string | null;
-  confidence?: number | null;
-  latencyMs?: number | null;
-  tokens?: number | null;
-  costUsd?: number | null;
-  selection?: { basis: string; tier: string | null; routeProbability: number } | null;
-  pick?: PickFields;
-  raisedTo?: PickFields;
+function nameOf(pick: PickFields | null | undefined): string | null {
+  if (!pick) return null;
+  return pick.modelLabel ?? pick.model ?? pick.provider ?? null;
 }
 
-function pickName(pick: unknown): string | null {
-  const value = pick as PickFields | null | undefined;
-  if (!value) return null;
-  return value.modelLabel ?? value.model ?? value.provider ?? null;
+function pickName(raw: unknown): string | null {
+  return nameOf(parsed(pickFieldsSchema, raw));
 }
 
 function variantLabel(raw: unknown) {
-  const variant = raw as Variant | null | undefined;
+  const variant = parsed(variantSchema, raw);
   if (!variant) return null;
   return {
     status: variant.status ?? null,
-    pick: pickName(variant.pick),
-    runs: pickName(variant.raisedTo ?? variant.pick),
+    pick: nameOf(variant.pick),
+    runs: nameOf(variant.raisedTo ?? variant.pick),
     choice: variant.choice ?? null,
     confidence: variant.confidence ?? null,
     basis: variant.selection?.basis ?? null,
@@ -73,7 +97,7 @@ export function filesAtK(row: RankColumns, changed: readonly string[]) {
 export function toLabel(row: RoutingLabelRow) {
   const changed = row.changed_files ?? [];
   const known = row.changed_files !== null;
-  const rule = row.rule_route as { pick?: PickFields; rule?: string } | null;
+  const rule = parsed(ruleRouteSchema, row.rule_route);
   return {
     runId: row.run_id,
     taskId: row.task_id,
@@ -83,7 +107,7 @@ export function toLabel(row: RoutingLabelRow) {
     policyVersion: row.policy_version,
     policy: row.policy,
     candidates: row.candidates,
-    rule: { pick: pickName(rule?.pick), rule: rule?.rule ?? null },
+    rule: { pick: nameOf(rule?.pick), rule: rule?.rule ?? null },
     builder: pickName(row.builder_route),
     tierPick: pickName(row.tier_pick),
     codePick: pickName(row.code_pick),
