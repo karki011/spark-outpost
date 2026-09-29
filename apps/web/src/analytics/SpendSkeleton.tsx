@@ -18,7 +18,7 @@ export function SpendSkeleton() {
       <SkeletonCard title="reported and estimated">
         <SkelChartArea />
       </SkeletonCard>
-      <SkeletonCard title="what routing and resuming saved">
+      <SkeletonCard title="what resuming saved">
         <SkelBars rows={2} />
         <SkelTableRows rows={3} />
       </SkeletonCard>
