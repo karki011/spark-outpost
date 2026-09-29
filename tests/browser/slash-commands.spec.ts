@@ -120,3 +120,17 @@ test('typed harness-owned commands are blocked and /model opens the picker', asy
   await expect(page.getByRole('tab', { name: /Model/ })).toBeFocused();
   expect(sent).toBe(0);
 });
+
+test('the / menu opens again after dismissing it and sending', async ({ page }) => {
+  const input = await chatWithHistory(page);
+  const menu = page.getByRole('listbox', { name: 'Commands' });
+  await input.fill('/compact');
+  await expect(menu).toBeVisible();
+  await input.press('Escape');
+  await expect(menu).toBeHidden();
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(input).toHaveValue('');
+  await input.focus();
+  await page.keyboard.insertText('/');
+  await expect(menu).toBeVisible();
+});
