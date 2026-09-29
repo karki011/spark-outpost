@@ -218,11 +218,15 @@ export function AgentTv({
       >
         <div className="tv-h" onPointerDown={startDrag} onDoubleClick={redock}>
           <i className="tv-live" aria-hidden="true" />
-          <span title={watch ? undefined : 'Drag to move. Double-click to dock'}>
-            Agent TV <small>live</small>
+          <span
+            className="tv-title"
+            title={watch ? undefined : 'Drag to move. Double-click to dock'}
+          >
+            <span>
+              Agent TV <small>live</small>
+            </span>
             {branch && (
               <small className="tv-branch" title={branch}>
-                {' '}
                 · {branch}
               </small>
             )}

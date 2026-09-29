@@ -80,13 +80,21 @@
 }
 .tv-h > span {
   flex: 1;
-  min-width: 0;
   margin-left: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
+.tv-h > .tv-title {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
 .tv-branch {
+  flex: 1;
+  min-width: 0;
+  contain: inline-size;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: 'Geist Mono', ui-monospace, monospace;
 }
 .tv-h > .tv-size {
