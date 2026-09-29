@@ -40,9 +40,9 @@ test('clarify takes an answer in your own words and works from it', async ({ pag
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });
   await keep.getByRole('button', { name: 'Keep', exact: true }).click();
-  await expect(page.locator('.md', { hasText: 'Clarified: Only the top heading' })).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(
+    page.locator('.md', { hasText: 'Clarified: Only the top heading' }).first(),
+  ).toBeVisible({ timeout: 30_000 });
   expect(repo.notes()).toBe('start\nstep 1\n');
 });
 
@@ -59,7 +59,7 @@ test('a vague request gets one short question with likely readings', async ({ pa
   await expect(keep).toBeVisible({ timeout: 30_000 });
   await keep.getByRole('button', { name: 'Keep', exact: true }).click();
   await expect(
-    page.locator('.md', { hasText: 'Clarified: Add new behaviour or features' }),
+    page.locator('.md', { hasText: 'Clarified: Add new behaviour or features' }).first(),
   ).toBeVisible({ timeout: 30_000 });
 });
 
