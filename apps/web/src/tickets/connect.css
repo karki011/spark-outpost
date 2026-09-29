@@ -270,26 +270,8 @@
   }
 }
 
-.ccard.tk-src {
-  grid-column: 1 / -1;
-  animation: rise 0.35s var(--out) both;
-}
-.ccard.tk-src[data-source='linear'] {
-  animation-delay: 70ms;
-}
-.ccard.tk-src .top .btn {
+.tk-src-body .tk-cform p {
   flex: none;
-}
-.ccard.tk-src p.tk-field-help,
-.ccard.tk-src p.tk-field-err,
-.ccard.tk-src .tk-cform p {
-  flex: none;
-}
-.tk-src-sk {
-  width: 76px;
-  height: 26px;
-  border-radius: 999px;
-  background: var(--raise);
 }
 .tk-src-body {
   margin: 0 -4px;
@@ -308,15 +290,6 @@
 }
 .tk-src-body .tk-cform {
   max-width: 520px;
-}
-.tk-src-connected {
-  display: grid;
-  gap: 8px;
-}
-.tk-src-acts {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
 }
 .tk-sync {
   display: grid;

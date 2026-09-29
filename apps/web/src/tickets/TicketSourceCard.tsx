@@ -1,6 +1,6 @@
 import '../ship/github-card.css';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   ticketSourceNames,
@@ -8,9 +8,8 @@ import {
   type TicketConnections,
   type TicketSourceId,
 } from '@spark-outpost/contracts';
+import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { GracePeriodBar } from '../ui/GracePeriodBar.tsx';
-import { ChevronIcon } from '../ui/icons.tsx';
-import { fadeReveal, useExpandReveal } from '../ui/transitions.tsx';
 import { jiraSiteHost } from './jira-site.ts';
 import { TicketConnectForm } from './TicketConnectForm.tsx';
 import { TicketSyncSettings } from './TicketSyncSettings.tsx';
@@ -22,7 +21,8 @@ interface TicketSourceCardProps {
   source: TicketSourceId;
   icon: ReactNode;
   description: string;
-  primary?: boolean;
+  open: boolean;
+  onToggle: () => void;
 }
 
 function whereLine(connection: TicketConnection): string {
@@ -77,50 +77,36 @@ function useGracefulDisconnect(source: TicketSourceId) {
   };
 }
 
-function ConnectedSummary({ connection }: { connection: TicketConnection }) {
-  const name = ticketSourceNames[connection.source];
-  const settingsId = useId();
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const leave = useGracefulDisconnect(connection.source);
+function ConnectedBody({
+  description,
+  leave,
+  name,
+  connection,
+}: {
+  description: string;
+  leave: ReturnType<typeof useGracefulDisconnect>;
+  name: string;
+  connection: TicketConnection;
+}) {
   return (
-    <div className="tk-src-connected">
-      <div className="gh-summary">
-        <p className="gh-active">
-          {leave.pending ? `Disconnecting ${name}…` : whereLine(connection)}
-        </p>
-        <span className="tk-src-acts">
-          <button
-            type="button"
-            className="gh-disclose"
-            aria-expanded={settingsOpen}
-            aria-controls={settingsId}
-            onClick={() => setSettingsOpen(!settingsOpen)}
-          >
-            Ticket updates
-            <ChevronIcon />
-          </button>
-          <button
-            type="button"
-            className="btn ghost sm danger"
-            onClick={leave.start}
-            disabled={leave.pending}
-          >
-            Disconnect
-          </button>
-        </span>
-      </div>
+    <div className="cx-body">
+      <p>{description}</p>
+      <TicketSyncSettings connection={connection} />
       {leave.error && (
         <p className="gh-err" role="alert">
           {leave.error}
         </p>
       )}
-      <AnimatePresence initial={false}>
-        {settingsOpen && (
-          <motion.div key="settings" id={settingsId} className="gh-collapse" {...fadeReveal}>
-            <TicketSyncSettings connection={connection} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="cx-actions">
+        <button
+          type="button"
+          className="btn ghost sm danger"
+          onClick={leave.start}
+          disabled={leave.pending}
+        >
+          Disconnect
+        </button>
+      </div>
       <AnimatePresence>
         {leave.waiting && (
           <GracePeriodBar
@@ -137,58 +123,49 @@ function ConnectedSummary({ connection }: { connection: TicketConnection }) {
   );
 }
 
-export function TicketSourceCard({ source, icon, description, primary }: TicketSourceCardProps) {
-  const connectRef = useRef<HTMLButtonElement>(null);
-  const [connecting, setConnecting] = useState(false);
-  const expand = useExpandReveal();
+export function TicketSourceCard({
+  source,
+  icon,
+  description,
+  open,
+  onToggle,
+}: TicketSourceCardProps) {
   const status = useQuery({ queryKey: ticketKeys.connections, queryFn: ticketsApi.connections });
+  const leave = useGracefulDisconnect(source);
   const name = ticketSourceNames[source];
   const connection =
     status.data?.connections.find((entry) => entry.source === source && entry.keySaved) ?? null;
-  const summaryShown = connection !== null && !connecting;
-  const cancel = () => {
-    setConnecting(false);
-    requestAnimationFrame(() => connectRef.current?.focus());
-  };
+  const statusLine = leave.pending
+    ? `Disconnecting ${name}…`
+    : connection
+      ? whereLine(connection)
+      : description;
 
   return (
-    <li className={connecting ? 'ccard tk-src open' : 'ccard tk-src'} data-source={source}>
-      <div className="top">
-        <span className="plogo">{icon}</span>
-        <b>{name}</b>
-        {connection && <span className="gh-badge on">Connected</span>}
-        {status.isPending && <span className="tk-src-sk" aria-hidden="true" />}
-        {status.isSuccess && !connection && !connecting && (
-          <button
-            ref={connectRef}
-            type="button"
-            className={primary ? 'btn primary sm' : 'btn line sm'}
-            onClick={() => setConnecting(true)}
-          >
-            Connect
-          </button>
-        )}
-      </div>
-      <p>{description}</p>
+    <ConnectorCard
+      connectorId={source}
+      name={name}
+      icon={icon}
+      status={statusLine}
+      badge={status.isPending ? 'checking' : connection ? 'connected' : null}
+      open={open}
+      onToggle={onToggle}
+    >
       {status.isError && <p className="gh-err">{status.error.message}</p>}
-      <AnimatePresence initial={false} mode="wait">
-        {connecting && (
-          <motion.div key="form" className="gh-collapse" {...expand}>
-            <div className="tk-src-body">
-              <TicketConnectForm
-                source={source}
-                onConnected={() => setConnecting(false)}
-                onCancel={cancel}
-              />
-            </div>
-          </motion.div>
-        )}
-        {summaryShown && (
-          <motion.div key="summary" className="gh-collapse" {...expand}>
-            <ConnectedSummary connection={connection} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </li>
+      {connection ? (
+        <ConnectedBody
+          description={description}
+          leave={leave}
+          name={name}
+          connection={connection}
+        />
+      ) : (
+        status.isSuccess && (
+          <div className="tk-src-body">
+            <TicketConnectForm source={source} onConnected={onToggle} onCancel={onToggle} />
+          </div>
+        )
+      )}
+    </ConnectorCard>
   );
 }

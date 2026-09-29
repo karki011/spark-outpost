@@ -124,6 +124,45 @@ describe('attention rules', () => {
   });
 });
 
+describe('snoozed tickets', () => {
+  const later = (days: number) => new Date(now.getTime() + days * 24 * 3_600_000).toISOString();
+  const slowReview = { statusSince: daysAgo(5) };
+  const review = { status: 'in_review' as const };
+
+  it('hides the snoozed rule until the snooze ends', () => {
+    const snooze = { until: later(1), rules: ['review-slow' as const] };
+    const input = facts({ ...slowReview, snooze }, review);
+    expect(rules(input)).toEqual([]);
+    const placed = placeTicket(input, DEFAULT_ATTENTION_SETTINGS, now);
+    expect(placed.section).toBe('in_review');
+    expect(placed.snooze).toEqual(snooze);
+  });
+
+  it('brings the ticket back once the snooze ends', () => {
+    const input = facts(
+      { ...slowReview, snooze: { until: daysAgo(0.1), rules: ['review-slow'] } },
+      review,
+    );
+    expect(rules(input)).toEqual(['review-slow']);
+    const placed = placeTicket(input, DEFAULT_ATTENTION_SETTINGS, now);
+    expect(placed.section).toBe('attention');
+    expect(placed.snooze).toBeUndefined();
+  });
+
+  it('brings the ticket back early when a different rule fires', () => {
+    const input = facts(
+      {
+        ...slowReview,
+        pullRequest: pull('changes_requested'),
+        snooze: { until: later(3), rules: ['review-slow'] },
+      },
+      review,
+    );
+    expect(rules(input)).toEqual(['pr-changes']);
+    expect(placeTicket(input, DEFAULT_ATTENTION_SETTINGS, now).section).toBe('attention');
+  });
+});
+
 describe('inbox sections', () => {
   const place = (input: TicketFacts) => placeTicket(input, DEFAULT_ATTENTION_SETTINGS, now);
 

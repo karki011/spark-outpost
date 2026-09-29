@@ -1,4 +1,6 @@
 import type {
+  AttentionRule,
+  TicketSnooze,
   TicketSourceId,
   TicketStatus,
   TicketSummary,
@@ -60,6 +62,7 @@ export async function cacheTickets(
 export interface TicketTimes {
   statusSince: Date | null;
   firstSeenAssignedAt: Date | null;
+  snooze: TicketSnooze | null;
 }
 
 export async function ticketTimes(
@@ -72,17 +75,40 @@ export async function ticketTimes(
     key: string;
     status_since: Date | null;
     first_seen_assigned_at: Date | null;
+    snoozed_until: Date | null;
+    snoozed_rules: AttentionRule[];
   }>(
-    `SELECT source, key, status_since, first_seen_assigned_at FROM tickets
+    `SELECT source, key, status_since, first_seen_assigned_at, snoozed_until, snoozed_rules
+     FROM tickets
      WHERE workspace_id = $1 AND (source || ':' || key) = ANY($2::text[])`,
     [workspaceId, tickets.map((ticket) => ticketRef(ticket.source, ticket.key))],
   );
   return new Map(
     rows.map((row) => [
       ticketRef(row.source, row.key),
-      { statusSince: row.status_since, firstSeenAssignedAt: row.first_seen_assigned_at },
+      {
+        statusSince: row.status_since,
+        firstSeenAssignedAt: row.first_seen_assigned_at,
+        snooze: row.snoozed_until
+          ? { until: row.snoozed_until.toISOString(), rules: row.snoozed_rules }
+          : null,
+      },
     ]),
   );
+}
+
+export async function setTicketSnooze(
+  db: Queryable,
+  workspaceId: string,
+  ticket: { source: TicketSourceId; key: string },
+  snooze: { until: Date; rules: readonly AttentionRule[] } | null,
+): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE tickets SET snoozed_until = $4, snoozed_rules = $5
+     WHERE workspace_id = $1 AND source = $2 AND key = $3`,
+    [workspaceId, ticket.source, ticket.key, snooze?.until ?? null, snooze?.rules ?? []],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function setCachedStatus(

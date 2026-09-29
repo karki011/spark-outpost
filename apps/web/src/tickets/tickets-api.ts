@@ -10,6 +10,7 @@ import {
   type AssignTicketResponse,
   type AttentionSettings,
   type SaveTicketConnectionRequest,
+  type SnoozeTicketRequest,
   type StartTicketRequest,
   type StartTicketResponse,
   type TicketConnections,
@@ -92,6 +93,13 @@ export const ticketsApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  snooze: (source: TicketSourceId, key: string, body: SnoozeTicketRequest): Promise<TicketInbox> =>
+    request(ticketInboxSchema, `${ticketPath(source, key)}/snooze`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  unsnooze: (source: TicketSourceId, key: string): Promise<TicketInbox> =>
+    request(ticketInboxSchema, `${ticketPath(source, key)}/snooze`, { method: 'DELETE' }),
   start: (
     source: TicketSourceId,
     key: string,
