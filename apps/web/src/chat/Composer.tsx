@@ -29,7 +29,7 @@ import { usePopover } from '../ui/use-popover.ts';
 import { AttachmentChips } from './attachments/AttachmentChips.tsx';
 import type { AttachmentsState } from './attachments/use-attachments.ts';
 import { ContextRing } from './composer/ContextRing.tsx';
-import { ModelPicker, type PickerRequest } from './composer/ModelPicker.tsx';
+import { ModelPicker } from './composer/ModelPicker.tsx';
 import {
   blockedMessage,
   clientCommand,
@@ -42,6 +42,7 @@ import {
 } from './composer/slash.ts';
 import { SlashMenu } from './composer/SlashMenu.tsx';
 import { ChatMcpPanel } from './composer/ChatMcpPanel.tsx';
+import { usePickerCommand } from './composer/use-picker-command.ts';
 import { useSlash } from './composer/use-slash.ts';
 import { takeDraft, usePendingDraft } from './composer/pending-draft.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
@@ -133,13 +134,18 @@ export function Composer({
     textareaRef,
     onPick: addFromRepo,
   });
-  const [pickerRequest, setPickerRequest] = useState<PickerRequest | null>(null);
   const [mcpOpen, setMcpOpen] = useState(false);
   const provider = settings?.provider ?? null;
   const capabilities = useQuery({
     ...capabilitiesQuery(provider ?? 'claude'),
     staleTime: CAPABILITIES_STALE_MS,
     enabled: provider !== null,
+  });
+  const picker = usePickerCommand({
+    conversationId,
+    capabilities: capabilities.data,
+    agentName: providers.find((entry) => entry.id === provider)?.name ?? 'This agent',
+    notify: attachments.notify,
   });
   const canStartFresh = onStartFresh !== undefined;
   const hasSettings = settings !== null;
@@ -170,11 +176,7 @@ export function Composer({
       return null;
     }
     if (command === 'model' || command === 'effort') {
-      setPickerRequest({
-        section: command,
-        id: (pickerRequest?.id ?? 0) + 1,
-        ...(args ? { value: args } : {}),
-      });
+      picker.run(command, args);
       return null;
     }
     if (command === 'plan') {
@@ -402,8 +404,7 @@ export function Composer({
           </span>
           {settings && (
             <ModelPicker
-              openRequest={pickerRequest}
-              onNotice={attachments.notify}
+              openRequest={picker.request}
               conversationId={conversationId}
               settings={settings}
               providers={providers}
