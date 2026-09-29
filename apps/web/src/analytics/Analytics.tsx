@@ -2,6 +2,7 @@ import './analytics-charts.css';
 import './analytics.css';
 import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { RANGE_DAYS } from '@spark-outpost/contracts';
 import {
   analyticsApi,
   analyticsKeys,
@@ -50,7 +51,7 @@ export function Analytics() {
   const [tab, setTab] = useState<AnalyticsTab>('overview');
   const [choice, setChoice] = useState<RangeChoice>(() => {
     const to = localToday();
-    return { range: '30d', from: addIsoDays(to, -13), to };
+    return { range: '30d', from: addIsoDays(to, 1 - RANGE_DAYS['30d']), to };
   });
   const enabled = (id: AnalyticsTab) => tab === id && usable(choice);
   const options = { placeholderData: keepPreviousData, staleTime: 30_000 } as const;

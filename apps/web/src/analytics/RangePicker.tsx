@@ -1,9 +1,14 @@
 import { useEffect, useId, useRef } from 'react';
-import type { AnalyticsRange } from '@spark-outpost/contracts';
+import { RANGE_DAYS, type AnalyticsRange } from '@spark-outpost/contracts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { usePopover } from '../ui/use-popover.ts';
 import { CalendarPopover } from './calendar/CalendarPopover.tsx';
-import { formatRangeLabel, formatShortRange, localToday } from './calendar/date-math.ts';
+import {
+  addIsoDays,
+  formatRangeLabel,
+  formatShortRange,
+  localToday,
+} from './calendar/date-math.ts';
 import type { RangeChoice } from './analytics-api.ts';
 
 const PRESETS = [
@@ -36,6 +41,10 @@ export function RangePicker({ value, onChange }: RangePickerProps) {
   >();
   const wasOpen = useRef(false);
   const invalid = value.range === 'custom' && value.from > value.to;
+  const shown =
+    value.range === 'custom'
+      ? value
+      : { from: addIsoDays(today, 1 - RANGE_DAYS[value.range]), to: today };
 
   useEffect(() => {
     if (wasOpen.current && !open) {
@@ -44,9 +53,10 @@ export function RangePicker({ value, onChange }: RangePickerProps) {
     wasOpen.current = open;
   }, [open, anchorRef]);
 
-  const pick = (range: string) => {
+  const pick = (range: string, via: 'navigate' | 'activate') => {
     if (range === 'custom') {
-      toggle();
+      if (via === 'activate') toggle();
+      else setOpen(false);
       return;
     }
     setOpen(false);
@@ -65,8 +75,8 @@ export function RangePicker({ value, onChange }: RangePickerProps) {
         {open && (
           <CalendarPopover
             id={`${id}-cal`}
-            from={value.from}
-            to={value.to}
+            from={shown.from}
+            to={shown.to}
             today={today}
             panelRef={panelRef}
             onCancel={() => setOpen(false)}
