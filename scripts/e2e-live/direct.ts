@@ -12,7 +12,7 @@ import { requestCancel } from '../../apps/server/src/persistence/runs.ts';
 import { estimateCostUsd } from '../../apps/server/src/usage/prices.ts';
 import { executeChildRun } from '../../apps/server/src/workflow/execute-run.ts';
 import { orchestrate } from '../../apps/server/src/orchestration/orchestrator.ts';
-import type { BuildStyle } from '../../packages/contracts/src/index.ts';
+import { modeForLegacy, type BuildStyle } from '../../packages/contracts/src/index.ts';
 import { linkedConversation } from '../../apps/server/test/approval-support.ts';
 import { BENCH_LEVEL, PINNED, benchAnswer, type BenchEnv } from '../bench/live.ts';
 import type { AgentUsage } from '../bench/results.ts';
@@ -93,7 +93,12 @@ export async function inProcessSession(
       t.db,
       conversationId,
       { id: randomUUID(), content: text, source: 'bench' },
-      { ...PINNED, permission: 'do', level: BENCH_LEVEL },
+      {
+        ...PINNED,
+        permission: 'do',
+        agentMode: modeForLegacy(PINNED.provider, 'do', BENCH_LEVEL),
+        level: BENCH_LEVEL,
+      },
     );
     const lease = await claimNextJob(t.db, env.deps.leaseSeconds);
     if (lease?.runId !== sent.run.id) throw new Error('The direct arm could not claim its run.');
