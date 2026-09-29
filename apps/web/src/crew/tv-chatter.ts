@@ -14,6 +14,7 @@ export interface Handoff {
 export interface Chatter {
   agentId: string;
   text: string;
+  pinned: boolean;
 }
 
 export interface SceneChanges {
@@ -72,17 +73,17 @@ function crewChanges(before: CrewAgent | undefined, after: CrewAgent): SceneChan
   const busy = isBusy(after.state);
   if (busy && arrived(before)) {
     handoffs.push({ agentId: after.id, direction: 'out' });
-    chatter.push({ agentId: JEV_ID, text: `Over to ${after.name}.` });
+    chatter.push({ agentId: JEV_ID, text: `Over to ${after.name}.`, pinned: true });
   } else if (busy && before && isBusy(before.state) && before.line !== after.line) {
     if (!QUIET_LINES.has(after.line))
-      chatter.push({ agentId: after.id, text: doingLine(after.line) });
+      chatter.push({ agentId: after.id, text: doingLine(after.line), pinned: false });
   }
   if (after.state === 'done' && before && before.state !== 'done') {
     handoffs.push({ agentId: after.id, direction: 'in' });
-    chatter.push({ agentId: after.id, text: finishLine(after) });
+    chatter.push({ agentId: after.id, text: finishLine(after), pinned: true });
   }
   if (after.state === 'failed' && before && before.state !== 'failed') {
-    chatter.push({ agentId: after.id, text: 'Hit a problem.' });
+    chatter.push({ agentId: after.id, text: 'Hit a problem.', pinned: true });
   }
   return { handoffs, chatter };
 }
@@ -90,7 +91,7 @@ function crewChanges(before: CrewAgent | undefined, after: CrewAgent): SceneChan
 function jevChanges(before: CrewAgent | undefined, after: CrewAgent): Chatter[] {
   if (!before || before.line === after.line) return [];
   if (after.state === 'done' && after.line === 'ready for you') {
-    return [{ agentId: after.id, text: 'All done. Ready for you!' }];
+    return [{ agentId: after.id, text: 'All done. Ready for you!', pinned: true }];
   }
   return [];
 }
@@ -100,7 +101,7 @@ export function sceneChanges(before: TvScene | null, after: TvScene): SceneChang
   const previous = new Map(before.agents.map((agent) => [agent.id, agent]));
   const changes: SceneChanges = { handoffs: [], chatter: [] };
   if (after.decision && after.decision !== before.decision) {
-    changes.chatter.push({ agentId: JEV_ID, text: after.decision });
+    changes.chatter.push({ agentId: JEV_ID, text: after.decision, pinned: true });
   }
   for (const agent of after.agents) {
     const earlier = previous.get(agent.id);
@@ -113,4 +114,9 @@ export function sceneChanges(before: TvScene | null, after: TvScene): SceneChang
     changes.chatter.push(...chatter);
   }
   return changes;
+}
+
+export function trimChatter(queue: readonly Chatter[], limit: number): Chatter[] {
+  const kept = new Set(queue.filter((line) => !line.pinned).slice(-limit));
+  return queue.filter((line) => line.pinned || kept.has(line));
 }

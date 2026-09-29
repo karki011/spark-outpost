@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { sceneChanges, type Chatter, type Handoff, type TvScene } from './tv-chatter.ts';
+import {
+  sceneChanges,
+  trimChatter,
+  type Chatter,
+  type Handoff,
+  type TvScene,
+} from './tv-chatter.ts';
 
 export interface Packet extends Handoff {
   key: string;
@@ -46,7 +52,7 @@ export function useTvEvents(scene: TvScene, { muted, reduced, paused }: TvEventO
       setPackets((existing) => [...existing, ...fresh]);
     }
     if (!paused && !muted && changes.chatter.length > 0) {
-      setQueue((existing) => [...existing, ...changes.chatter].slice(-QUEUE_LIMIT));
+      setQueue((existing) => trimChatter([...existing, ...changes.chatter], QUEUE_LIMIT));
     }
   }
   if (muted && queue.length > 0) setQueue([]);
