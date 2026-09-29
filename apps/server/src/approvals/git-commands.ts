@@ -11,10 +11,6 @@ export const PUBLISH_COMMANDS: readonly string[] = [
   ...HOSTING_CLIS,
 ];
 
-function gitPrograms(command: string): string[][] {
-  return commandTree(command).commands.filter((program) => programName(program) === 'git');
-}
-
 function gitSubcommand(args: readonly string[]): { name: string; rest: string[] } | null {
   let index = 0;
   while (index < args.length) {
@@ -27,8 +23,22 @@ function gitSubcommand(args: readonly string[]): { name: string; rest: string[] 
   return null;
 }
 
+function gitSubcommands(command: string): { name: string; rest: string[] }[] {
+  return commandTree(command).commands.flatMap((program) => {
+    if (programName(program) !== 'git') return [];
+    const sub = gitSubcommand(program.slice(1));
+    return sub ? [sub] : [];
+  });
+}
+
+function pushArgs(command: string): string[][] {
+  return gitSubcommands(command)
+    .filter((sub) => sub.name === 'push')
+    .map((sub) => sub.rest);
+}
+
 export function isGitPush(command: string): boolean {
-  return gitPrograms(command).some((program) => program.slice(1).some((token) => token === 'push'));
+  return pushArgs(command).length > 0;
 }
 
 function isForceFlag(token: string): boolean {
@@ -38,20 +48,17 @@ function isForceFlag(token: string): boolean {
 }
 
 export function isGitForcePush(command: string): boolean {
-  return gitPrograms(command).some((program) => {
-    const pushAt = program.indexOf('push');
-    if (pushAt < 1) return false;
-    return program.slice(pushAt + 1).some((token) => isForceFlag(token) || /^\+[^+]/.test(token));
-  });
+  return pushArgs(command).some((args) =>
+    args.some((token) => isForceFlag(token) || /^\+[^+]/.test(token)),
+  );
 }
 
 export function publishesCode(command: string): boolean {
-  return commandTree(command).commands.some((program) => {
-    const name = programName(program);
-    if (HOSTING_CLIS.includes(name)) return true;
-    if (name !== 'git') return false;
-    const sub = gitSubcommand(program.slice(1));
-    if (!sub) return false;
+  const hosting = commandTree(command).commands.some((program) =>
+    HOSTING_CLIS.includes(programName(program)),
+  );
+  if (hosting) return true;
+  return gitSubcommands(command).some((sub) => {
     if (GIT_PUBLISHES.includes(sub.name)) return true;
     return sub.name === 'remote' && sub.rest.some((token) => REMOTE_CHANGES.includes(token));
   });

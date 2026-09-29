@@ -158,6 +158,21 @@ describe('decide() refuses force pushes in every mode', () => {
     }
   });
 
+  it('only treats the git push subcommand as a push', () => {
+    expect(decide('edits', run('git commit -m push'), NO_RUN_RULES, [])).toEqual({
+      verdict: 'ask',
+      reason: null,
+    });
+    expect(decide('full_access', run('git checkout -f push'), NO_RUN_RULES, [])).toEqual({
+      verdict: 'allow',
+      by: 'level',
+    });
+    expect(decide('edits', run('git -C sub push'), NO_RUN_RULES, [])).toEqual({
+      verdict: 'ask',
+      reason: PUSH_REASON,
+    });
+  });
+
   it('lets a normal push follow the mode and rules', () => {
     const push = run('git push -u origin feature');
     expect(decide('full_access', push, NO_RUN_RULES, [])).toEqual({
