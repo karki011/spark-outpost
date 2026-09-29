@@ -61,3 +61,24 @@
 .spark-off .scout {
   cursor: inherit;
 }
+.spark-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.spark-money {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.inp.spark-num {
+  width: 84px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.inp.spark-time {
+  width: 116px;
+  font-variant-numeric: tabular-nums;
+}
