@@ -1,4 +1,5 @@
 import type { AgentRole, RunMode } from '@spark-outpost/contracts';
+import { previousReply } from '../advisor/intake-recorder.ts';
 import { insertChildRun, markInPlaceMember, mergeRoute } from '../persistence/orchestrations.ts';
 import { requestCancel } from '../persistence/runs.ts';
 import type { ProviderOutput } from '../providers/provider.ts';
@@ -6,7 +7,7 @@ import { runAgentTurn, type RunControl } from '../workflow/agent-turn.ts';
 import { takeSnapshot } from '../workflow/do-run.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
 import { meterSpend } from './budget-check.ts';
-import { checkFixFollowUp, fixFollowUp } from './context.ts';
+import { checkFixFollowUp, fixFollowUp, makeChangeFollowUp } from './context.ts';
 import { reviewNet } from './lean.ts';
 import { createLoopGuard, DEFAULT_LOOP_GUARD } from './loop-guard.ts';
 import {
@@ -172,6 +173,9 @@ function followUpFor(s: Session, spawn: Spawn, options: MemberOptions): string |
   if (spawn.role !== 'builder') return null;
   if (spawn.reason === 'fix') return fixFollowUp(spawn.note);
   if (spawn.reason === 'resume') return RESUME_FOLLOW_UP;
+  if (spawn.reason === 'first' && s.input.startAs === 'change') {
+    return makeChangeFollowUp(previousReply(s.input));
+  }
   if (spawn.reason === 'first' && s.continuesTask) return s.input.prompt;
   return null;
 }

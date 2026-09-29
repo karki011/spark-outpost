@@ -9,6 +9,7 @@ const NOTE_LIMIT = 2_000;
 export const FINDINGS_LIMIT = 10;
 const CHECK_OUTPUT_LIMIT = 3_000;
 const FINDING_CHARACTER_LIMIT = 500;
+const ANSWER_LIMIT = 6_000;
 
 export interface HistoryTurn {
   role: 'user' | 'assistant';
@@ -122,6 +123,15 @@ function checkSection(commands: readonly string[] | undefined): string[] {
       commands.map((command) => `- \`${command}\``).join('\n'),
     ),
   ];
+}
+
+export const MAKE_CHANGE_RULE =
+  'The user read the earlier answer to this request and chose "Make the change". Apply the change that answer proposes to the files now. Don\'t answer the question again or ask whether to make it.';
+
+export function makeChangeFollowUp(answer: string | null): string {
+  const trimmed = answer?.trim();
+  if (!trimmed) return MAKE_CHANGE_RULE;
+  return `${MAKE_CHANGE_RULE}\n\n${section('Answer to apply', cap(trimmed, ANSWER_LIMIT))}`;
 }
 
 export function builderPrompt(context: BuilderContext): string {
