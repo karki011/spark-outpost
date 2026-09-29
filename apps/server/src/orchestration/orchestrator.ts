@@ -120,7 +120,11 @@ async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEve
     error: result.error,
     ...(open ? { open } : {}),
     ...(changes
-      ? { large: wantsCritic(changes.files, planned), green: isGreen(s, changes.files) }
+      ? {
+          large: wantsCritic(changes.files, planned),
+          green: isGreen(s, changes.files),
+          unchanged: changes.files.length === 0,
+        }
       : {}),
     ...(s.checkBodies.at(-1)?.status === 'failed' ? { checksFailing: true } : {}),
     missingContext: missingContext(result.text, result.error),
