@@ -95,9 +95,11 @@ async function run(
     `SELECT body FROM run_advice WHERE run_id = $1 AND purpose = 'clarify' ORDER BY created_at`,
     [runId],
   );
+  const root = await t.db.query<{ mode: string }>('SELECT mode FROM runs WHERE id = $1', [runId]);
   return {
     ...done,
     runId,
+    mode: root.rows[0]?.mode,
     builderPrompts: builders.rows.map((row) => row.prompt),
     clarify: clarify.rows.map((row) => row.body),
   };
@@ -114,6 +116,7 @@ describe('a vague request asks the agent to clarify first', () => {
         : answerEverything(approval);
     const done = await run(VAGUE, 'balanced', pick);
     expect(done.orchestration.status).toBe('succeeded');
+    expect(done.mode).toBe('do');
     const clarify = done.asked.find((approval) => approval.title === 'A few questions first')!;
     expect(clarify.payload.checkpoint).toMatchObject({
       choices: ['Spend', 'Usage'],

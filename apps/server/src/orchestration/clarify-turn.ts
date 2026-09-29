@@ -16,7 +16,7 @@ import {
 import { interpretations, vagueByRule, vagueHandling } from './clarify.ts';
 import { vagueFollowUpByRule } from './follow-up.ts';
 import { checkCommands } from './member-prompts.ts';
-import { runMember } from './members.ts';
+import { runMember, setRunMode } from './members.ts';
 import { closeReply } from './plan-only.ts';
 import { FULL_AUTO_PLAN_SECONDS } from './plan-first.ts';
 import { publish, type Session } from './session.ts';
@@ -39,6 +39,7 @@ async function askAgent(s: Session): Promise<Asked> {
   });
   s.input = { ...s.input, prompt: request };
   if (result.outcome === 'lease_lost') throw new LeaseLostError(s.lease);
+  await setRunMode(s, s.input.mode);
   await publish(s);
   const questions = result.outcome === 'succeeded' ? clarifyQuestions(result.text) : null;
   const messageId = await closeReply(s);

@@ -1,4 +1,4 @@
-import type { Approval, CrewMember } from '@spark-outpost/contracts';
+import type { Approval, CrewMember, Message } from '@spark-outpost/contracts';
 import { isCheckpoint, type CheckpointApproval } from '../checkpoints/checkpoint-model.ts';
 
 type AgentItem = { kind: 'agent'; member: CrewMember; checkpoints: CheckpointApproval[] };
@@ -81,4 +81,30 @@ export function crewItems(
 
 export function lastAgentIndex(items: readonly CrewItem[]): number {
   return items.findLastIndex((item) => item.kind === 'agent');
+}
+
+export function handOffAt(crew: readonly CrewMember[], rootRunId: string): string | null {
+  const starts = crew
+    .filter((member) => member.runId !== rootRunId && member.startedAt !== null)
+    .map((member) => member.startedAt!)
+    .sort();
+  return starts[0] ?? null;
+}
+
+export function memberTexts(
+  messages: readonly Message[],
+  rootRunId: string,
+  handedOffAt: string | null,
+): Map<string, string> {
+  const texts = new Map<string, string>();
+  for (const message of messages) {
+    if (message.role !== 'assistant' || !message.runId) continue;
+    if (message.runId !== rootRunId || handedOffAt === null) {
+      texts.set(message.runId, message.content);
+    } else if (message.createdAt < handedOffAt) {
+      const earlier = texts.get(rootRunId);
+      texts.set(rootRunId, earlier ? `${earlier}\n\n${message.content}` : message.content);
+    }
+  }
+  return texts;
 }
