@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { openChats } from './navigation.ts';
+import { connectTickets, openTickets, resetTicketFakes } from './ticket-seed.ts';
 
 const THEMES = [
   'light',
@@ -124,6 +125,36 @@ for (const theme of THEMES) {
     expect(found).toEqual([]);
   });
 }
+
+test('the Tickets screen has no serious colour-contrast or ARIA issues in any theme', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await resetTicketFakes();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openTickets(page);
+  await page.getByRole('button', { name: 'Connect Jira' }).click();
+  const found = await blockingViolations(page, 'tickets connect');
+
+  await connectTickets(page);
+  await openTickets(page);
+  const row = page.locator('li[data-ticket$=":WEB-433"]');
+  await row.getByRole('button').first().click({ timeout: 15_000 });
+  await expect(page.getByRole('complementary', { name: 'WEB-433 details' })).toBeVisible();
+  for (const theme of THEMES) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `tickets inbox ${theme}`)));
+  }
+
+  await useTheme(page, 'light');
+  await page.getByRole('searchbox').fill('upload');
+  await page.locator('li[data-ticket$=":WEB-437"]').hover();
+  await page.getByRole('button', { name: 'Assign WEB-437 to me' }).click();
+  await expect(page.getByRole('dialog', { name: /Take WEB-437/ })).toBeVisible();
+  found.push(...(await blockingViolations(page, 'tickets search with confirm')));
+
+  expect(found).toEqual([]);
+});
 
 test('interactive targets on the chat screen are at least 24 by 24 pixels', async ({ page }) => {
   await openWorkedChat(page);

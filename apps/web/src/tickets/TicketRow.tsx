@@ -52,7 +52,7 @@ export function TicketRow(props: TicketRowProps) {
     <li className={classes} data-ticket={props.id}>
       <button
         type="button"
-        className={props.status ? 'ir-main st' : 'ir-main'}
+        className={props.status ? 'ir-main with-status' : 'ir-main'}
         aria-current={props.selected ? 'true' : undefined}
         onClick={props.onSelect}
       >
@@ -67,7 +67,7 @@ export function TicketRow(props: TicketRowProps) {
           <i className={TONE_CLASS[props.tone]} aria-hidden="true" />
           <span className="txt">{props.reason}</span>
           {props.more.length > 0 && (
-            <span className="more" title={props.more.join(' · ')}>
+            <span className="tk-more" title={props.more.join(' · ')}>
               +{props.more.length}
               <span className="sr-only">: {props.more.join(', ')}</span>
             </span>

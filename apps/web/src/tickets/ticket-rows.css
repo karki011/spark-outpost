@@ -115,7 +115,7 @@
   text-align: left;
 }
 
-.tk .ir-main.st {
+.tk .ir-main.with-status {
   grid-template-columns: 10px 14px 16px 66px minmax(0, 1fr) auto 34px;
 }
 
@@ -194,7 +194,7 @@
   animation: tk-pulse 1.4s infinite;
 }
 
-.tk .more {
+.tk .tk-more {
   font-size: 12px;
   color: var(--faint);
   font-variant-numeric: tabular-nums;
@@ -371,7 +371,7 @@
 
 @media (max-width: 900px) {
   .tk .ir-main,
-  .tk .ir-main.st {
+  .tk .ir-main.with-status {
     grid-template-columns: 16px 58px minmax(0, 1fr) 34px;
     grid-template-areas:
       'pri key title age'

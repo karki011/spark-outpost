@@ -10,7 +10,7 @@ import { ExternalLinkIcon } from '../ui/icons.tsx';
 import { relativeTime } from '../ui/relative-time.ts';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { AssignConfirm } from './AssignConfirm.tsx';
-import { Glyph, PriorityGlyph, StatusCircle } from './ticket-icons.tsx';
+import { Glyph, PriorityGlyph } from './ticket-icons.tsx';
 import { TicketBody } from './TicketBody.tsx';
 import { pullUrl, safeUrl } from './ticket-model.ts';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
@@ -215,8 +215,7 @@ export function TicketDetail({
       <dl className="tk-props">
         <dt>Status</dt>
         <dd>
-          <StatusCircle status={ticket.status} label={ticketStatusLabels[ticket.status]} />
-          {ticketStatusLabels[ticket.status]}
+          <span className={`tk-pill ${ticket.status}`}>{ticketStatusLabels[ticket.status]}</span>
           <span className="native-l">
             {source}: {ticket.statusName}
           </span>

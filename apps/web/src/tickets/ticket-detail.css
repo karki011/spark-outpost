@@ -332,6 +332,7 @@
   margin: 12px 0 0;
   font-size: 13px;
   font-weight: 500;
+  color: var(--text);
 }
 
 .tk .check-row {
@@ -395,4 +396,44 @@
     left: 0;
     width: auto;
   }
+}
+
+.tk .tk-detail .md h1,
+.tk .tk-detail .md h2,
+.tk .tk-detail .md h3,
+.tk .tk-detail .md h4 {
+  margin: 14px 0 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tk .tk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--raise);
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.tk .tk-pill::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tk .tk-pill.in_progress {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.tk .tk-pill.in_review {
+  background: color-mix(in srgb, var(--warn) 13%, transparent);
+  color: var(--warn);
 }
