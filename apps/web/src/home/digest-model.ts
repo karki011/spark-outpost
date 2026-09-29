@@ -1,4 +1,4 @@
-import type { Digest, DigestState, DigestStats } from '@spark-outpost/contracts';
+import type { Digest, DigestState } from '@spark-outpost/contracts';
 import { formatCost } from '../usage/format.ts';
 
 export function digestMeta(digest: Digest, timeZone?: string): string {
@@ -37,31 +37,4 @@ export function refreshHint(state: DigestState | undefined, now: number): string
   if (!state?.refreshableAt) return null;
   const minutes = Math.ceil((Date.parse(state.refreshableAt) - now) / 60_000);
   return minutes > 0 ? `You can refresh in ${minutes} min` : null;
-}
-
-export interface DigestChip {
-  id: string;
-  label: string;
-  section: string;
-}
-
-export function digestChips(stats: DigestStats): DigestChip[] {
-  const chips: DigestChip[] = [];
-  if (stats.finished > 0) {
-    chips.push({ id: 'finished', label: `${stats.finished} done`, section: 'home-recent' });
-  }
-  if (stats.waiting > 0) {
-    chips.push({ id: 'waiting', label: `${stats.waiting} needs you`, section: 'home-needs' });
-  }
-  if (stats.failedOrStalled > 0) {
-    chips.push({
-      id: 'failed-or-stalled',
-      label: `${stats.failedOrStalled} stalled`,
-      section: 'home-needs',
-    });
-  }
-  if (stats.costUsd !== null) {
-    chips.push({ id: 'spend', label: formatCost(stats.costUsd), section: 'home-spend' });
-  }
-  return chips;
 }

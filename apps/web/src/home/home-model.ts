@@ -6,28 +6,39 @@ import { countLabel } from '../ui/count-label.ts';
 interface SummaryPart {
   text: string;
   strong: boolean;
+  link?: boolean;
 }
 
 export function summaryParts(
   chats: readonly ConversationSummary[],
+  flagged: number,
   quietLine: string,
 ): SummaryPart[] {
   const active = chats.filter((chat) => !chat.archivedAt);
   const working = active.filter((chat) => isRunning(chat) && !needsInput(chat)).length;
-  const asking = active.filter(needsInput).length;
-  const bits = [
-    working > 0 ? countLabel(working, 'agent is working', 'agents are working') : null,
-    asking > 0 ? countLabel(asking, 'chat needs your input', 'chats need your input') : null,
-  ].filter((bit): bit is string => bit !== null);
+  const bits: SummaryPart[] = [];
+  if (flagged > 0) {
+    bits.push({
+      text: countLabel(flagged, 'thing needs you', 'things need you'),
+      strong: true,
+      link: true,
+    });
+  }
+  if (working > 0) {
+    bits.push({
+      text: countLabel(working, 'agent is working', 'agents are working'),
+      strong: true,
+    });
+  }
   if (bits.length === 0) return [{ text: quietLine, strong: false }];
   const parts = bits.flatMap((bit, index) => [
     ...(index > 0 ? [{ text: ' and ', strong: false }] : []),
-    { text: bit, strong: true },
+    bit,
   ]);
   return [...parts, { text: '.', strong: false }];
 }
 
-type NeedTone = 'asking' | 'error' | 'done';
+export type NeedTone = 'asking' | 'error' | 'done';
 
 export interface NeedItem {
   chat: ConversationSummary;

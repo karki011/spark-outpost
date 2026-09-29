@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { greeting, hello, quietCard, quietSummary, sparkMood, timeOfDay } from './voice.ts';
+import {
+  briefOffLine,
+  greeting,
+  hello,
+  nothingFlagged,
+  quietSummary,
+  sparkMood,
+  timeOfDay,
+} from './voice.ts';
 
 describe('timeOfDay', () => {
   it('follows the clock', () => {
@@ -40,10 +48,25 @@ describe('quiet lines', () => {
   it('keeps the friendly wording and trims the facts wording', () => {
     const friendly = { personality: 'friendly' as const, name: 'Sam' };
     expect(quietSummary(friendly)).toBe('All quiet. Start something new below.');
-    expect(quietCard(friendly)).toBe('All quiet. Nothing needs you and no agents are running.');
     expect(quietSummary({ personality: 'facts', name: 'Sam' })).toBe('Nothing running.');
-    expect(quietCard({ personality: 'playful', name: 'Sam' })).toContain('Nothing needs you, Sam');
-    expect(quietCard({ personality: 'playful', name: '' })).toMatch(/^Nothing needs you, and/);
+    expect(nothingFlagged(friendly)).toBe('Nothing is flagged');
+    expect(nothingFlagged({ personality: 'playful', name: 'Sam' })).toBe(
+      'Nothing is flagged, Sam. Nice.',
+    );
+    expect(nothingFlagged({ personality: 'playful', name: '' })).toBe('Nothing is flagged. Nice.');
+    expect(nothingFlagged({ personality: 'facts', name: 'Sam' })).toBe('Nothing flagged');
+  });
+});
+
+describe('briefOffLine', () => {
+  it('says the rules still sort the list in every personality', () => {
+    expect(briefOffLine({ personality: 'friendly', name: 'Sam' })).toBe(
+      'The brief is off. Rules still sort the list below.',
+    );
+    expect(briefOffLine({ personality: 'playful', name: 'Sam' })).toMatch(/napping/);
+    expect(briefOffLine({ personality: 'facts', name: 'Sam' })).toBe(
+      'Brief off. Rules sort the list.',
+    );
   });
 });
 

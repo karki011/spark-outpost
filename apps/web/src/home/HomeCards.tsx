@@ -1,10 +1,9 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
 import { AgentBlob } from '../brand/AgentBlob.tsx';
-import type { BlobExpression } from '../brand/blob-expression.ts';
 import { activeLabel } from '../conversations/recency.ts';
-import { CheckIcon, FolderIcon } from '../ui/icons.tsx';
-import type { NeedItem, RunItem } from './home-model.ts';
+import { FolderIcon } from '../ui/icons.tsx';
+import type { RunItem } from './home-model.ts';
 
 type ProjectName = (chat: ConversationSummary) => string;
 type OpenChat = (chat: ConversationSummary) => void;
@@ -14,16 +13,26 @@ const stagger = (index: number) => ({ '--i': index }) as CSSProperties;
 interface HomeSectionProps {
   id: string;
   title: string;
+  count?: number;
   action?: ReactNode;
   className?: string;
   children: ReactNode;
 }
 
-export function HomeSection({ id, title, action, className = '', children }: HomeSectionProps) {
+export function HomeSection(props: HomeSectionProps) {
+  const { id, title, count, action, className = '', children } = props;
   return (
     <section className={`hsec ${className}`.trim()} aria-labelledby={id}>
       <div className="hsec-h">
-        <h2 id={id}>{title}</h2>
+        <h2 id={id}>
+          {title}
+          {count !== undefined && (
+            <>
+              {' '}
+              <span className="n">{count}</span>
+            </>
+          )}
+        </h2>
         {action}
       </div>
       {children}
@@ -31,98 +40,11 @@ export function HomeSection({ id, title, action, className = '', children }: Hom
   );
 }
 
-interface QuietProps {
-  children: ReactNode;
-  index?: number;
-  compact?: boolean;
-}
-
-export function Quiet({ children, index = 0, compact = false }: QuietProps) {
+function Quiet({ children, index }: { children: ReactNode; index: number }) {
   return (
-    <p className={compact ? 'hquiet compact' : 'hquiet'} style={stagger(index)}>
+    <p className="hquiet" style={stagger(index)}>
       {children}
     </p>
-  );
-}
-
-interface CardProps {
-  chat: ConversationSummary;
-  tone: string;
-  provider: string | null;
-  expression: BlobExpression;
-  sub: string;
-  action: string;
-  project: string;
-  index: number;
-  onOpen: OpenChat;
-  children?: ReactNode;
-}
-
-function HomeCard(props: CardProps) {
-  const { chat, tone, provider, expression, sub, action, project, index, onOpen } = props;
-  return (
-    <li className={`hcard ${tone}`} style={stagger(index)}>
-      <span className="hblob" aria-hidden="true">
-        {provider ? (
-          <AgentBlob provider={provider} size={34} expression={expression} />
-        ) : (
-          <span className="provider-dot" />
-        )}
-        <i className={`hdot ${tone}`} />
-      </span>
-      <span className="hc-main">
-        <b>{chat.title}</b>
-        <small>
-          <span className="pj">{project}</span>
-          <span className="hc-sub">{sub}</span>
-        </small>
-        {props.children}
-      </span>
-      <button
-        type="button"
-        className="go"
-        aria-label={`${action}: ${chat.title}`}
-        onClick={() => onOpen(chat)}
-      >
-        {action}
-      </button>
-    </li>
-  );
-}
-
-interface NeedsYouProps {
-  items: readonly NeedItem[];
-  projectName: ProjectName;
-  onOpen: OpenChat;
-}
-
-export function NeedsYou({ items, projectName, onOpen }: NeedsYouProps) {
-  return (
-    <HomeSection id="home-needs" title="Needs you">
-      {items.length === 0 ? (
-        <Quiet compact>
-          <CheckIcon />
-          Nothing needs you right now.
-        </Quiet>
-      ) : (
-        <ul className="hlist">
-          {items.map((item, index) => (
-            <HomeCard
-              key={item.chat.id}
-              chat={item.chat}
-              tone={item.tone}
-              provider={item.provider}
-              expression={item.expression}
-              sub={item.sub}
-              action={item.action}
-              project={projectName(item.chat)}
-              index={index}
-              onOpen={onOpen}
-            />
-          ))}
-        </ul>
-      )}
-    </HomeSection>
   );
 }
 
@@ -155,33 +77,60 @@ interface RunningNowProps {
   onOpen: OpenChat;
 }
 
-export function RunningNow({ items, offset, projectName, onOpen }: RunningNowProps) {
+interface RunCardProps {
+  item: RunItem;
+  project: string;
+  index: number;
+  onOpen: OpenChat;
+}
+
+function RunCard({ item, project, index, onOpen }: RunCardProps) {
+  const { chat, provider } = item;
   return (
-    <HomeSection id="home-running" title="Running now">
-      {items.length === 0 ? (
-        <Quiet compact index={offset}>
-          No agents running.
-        </Quiet>
-      ) : (
-        <ul className="hlist">
-          {items.map((item, index) => (
-            <HomeCard
-              key={item.chat.id}
-              chat={item.chat}
-              tone="running"
-              provider={item.provider}
-              expression="thinking"
-              sub={item.step}
-              action="Watch"
-              project={projectName(item.chat)}
-              index={offset + index}
-              onOpen={onOpen}
-            >
-              <Progress percent={item.percent} />
-            </HomeCard>
-          ))}
-        </ul>
-      )}
+    <li className="hcard running" style={stagger(index)}>
+      <span className="hblob" aria-hidden="true">
+        {provider ? (
+          <AgentBlob provider={provider} size={34} expression="thinking" />
+        ) : (
+          <span className="provider-dot" />
+        )}
+        <i className="hdot running" />
+      </span>
+      <span className="hc-main">
+        <b>{chat.title}</b>
+        <small>
+          <span className="pj">{project}</span>
+          {item.step}
+        </small>
+        <Progress percent={item.percent} />
+      </span>
+      <button
+        type="button"
+        className="go"
+        aria-label={`Watch: ${chat.title}`}
+        onClick={() => onOpen(chat)}
+      >
+        Watch
+      </button>
+    </li>
+  );
+}
+
+export function RunningNow({ items, offset, projectName, onOpen }: RunningNowProps) {
+  if (items.length === 0) return null;
+  return (
+    <HomeSection id="home-running" title="Running now" count={items.length}>
+      <ul className="hlist">
+        {items.map((item, index) => (
+          <RunCard
+            key={item.chat.id}
+            item={item}
+            project={projectName(item.chat)}
+            index={offset + index}
+            onOpen={onOpen}
+          />
+        ))}
+      </ul>
     </HomeSection>
   );
 }
@@ -236,5 +185,25 @@ export function RecentChats({ chats, offset, now, onOpen, onViewAll }: RecentCha
         </ul>
       )}
     </HomeSection>
+  );
+}
+
+const SKELETON_WIDTHS = [66, 50, 58, 72, 44];
+
+export function RecentSkeleton() {
+  return (
+    <section className="hsec" aria-hidden="true">
+      <div className="hsec-h">
+        <span className="hsk" style={{ width: 110, height: 14 }} />
+      </div>
+      <ul className="mlist">
+        {SKELETON_WIDTHS.map((width) => (
+          <li key={width} className="mrow">
+            <span className="hsk dot sm" />
+            <span className="hsk" style={{ width: `${width}%` }} />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

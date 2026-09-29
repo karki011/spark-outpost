@@ -1,5 +1,6 @@
 import {
   assignTicketResponseSchema,
+  attentionSettingsSchema,
   startTicketResponseSchema,
   ticketConnectionsSchema,
   ticketInboxSchema,
@@ -7,6 +8,7 @@ import {
   ticketViewSchema,
   type AssignTicketRequest,
   type AssignTicketResponse,
+  type AttentionSettings,
   type SaveTicketConnectionRequest,
   type StartTicketRequest,
   type StartTicketResponse,
@@ -16,6 +18,7 @@ import {
   type TicketSearchQuery,
   type TicketSourceId,
   type TicketView,
+  type UpdateAttentionSettings,
   type UpdateTicketSettingsRequest,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
@@ -24,6 +27,7 @@ export const ticketKeys = {
   all: ['tickets'] as const,
   inbox: ['tickets', 'inbox'] as const,
   connections: ['tickets', 'connections'] as const,
+  attentionSettings: ['tickets', 'attention-settings'] as const,
   disconnect: (source: TicketSourceId): Promise<TicketConnections> =>
     request(ticketConnectionsSchema, `/tickets/connections/${source}`, { method: 'DELETE' }),
   updateSettings: (
@@ -65,6 +69,13 @@ export const ticketsApi = {
     body: UpdateTicketSettingsRequest,
   ): Promise<TicketConnections> =>
     request(ticketConnectionsSchema, `/tickets/connections/${source}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  attentionSettings: (): Promise<AttentionSettings> =>
+    request(attentionSettingsSchema, '/tickets/attention-settings'),
+  updateAttentionSettings: (body: UpdateAttentionSettings): Promise<AttentionSettings> =>
+    request(attentionSettingsSchema, '/tickets/attention-settings', {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),

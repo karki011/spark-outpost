@@ -23,7 +23,22 @@ test.afterAll(() => {
 
 const home = (page: Page) =>
   page.getByRole('main', { name: /^Good (morning|afternoon|evening)|^Working late/ });
-const section = (page: Page, name: string) => home(page).getByRole('region', { name });
+const section = (page: Page, name: string | RegExp) => home(page).getByRole('region', { name });
+const today = (page: Page) => section(page, /^What needs you today/);
+const feed = (page: Page) => home(page).getByRole('list', { name: 'Needs you' });
+
+async function briefSettled(page: Page) {
+  await expect
+    .poll(
+      async () => {
+        const response = await page.request.get('/api/home/digest');
+        const state = (await response.json()) as { digest: { status: string } | null };
+        return state.digest?.status ?? 'none';
+      },
+      { timeout: 15_000 },
+    )
+    .toMatch(/^(ready|failed|none)$/);
+}
 
 async function openHome(page: Page) {
   await page.goto('/');
@@ -80,9 +95,11 @@ test('the quiet Home greets by name and says nothing needs you', async ({ page }
   await expect(home(page).locator('.home-summary')).toHaveText(
     'All quiet. Start something new below.',
   );
-  await expect(home(page)).toContainText('All quiet. Nothing needs you and no agents are running.');
-  await expect(section(page, 'Needs you')).toHaveCount(0);
-  await expect(section(page, 'Running now')).toHaveCount(0);
+  await briefSettled(page);
+  await expect(today(page)).toHaveCount(0);
+  await expect(section(page, 'Pick up where you left off')).toHaveCount(0);
+  await expect(home(page).locator('.hquiet')).toHaveCount(0);
+  await expect(section(page, /^Running now/)).toHaveCount(0);
   const recent = section(page, 'Recent chats').getByRole('button', {
     name: /Explain the checklist/,
   });
@@ -121,9 +138,11 @@ test('the Home composer starts a chat in the background, keeps its model and sta
   await expect(input).toHaveValue('');
   await expect(input).toBeFocused();
   await expect(home(page)).toBeVisible();
-  await expect(section(page, 'Running now').locator('.hcard').first()).toContainText(
-    'Summarise the home brief',
-  );
+  await expect(
+    section(page, /^Running now/)
+      .locator('.hcard')
+      .first(),
+  ).toContainText('Summarise the home brief');
   await expect(picker).toHaveAccessibleName('Model and effort: Fake Deep');
   await expect(composer.getByRole('button', { name: 'Choose project' })).toBeVisible();
 
@@ -169,7 +188,7 @@ test('a sent Home message is not restored when its settings fail to carry over',
   expect(sent).toBe(1);
 });
 
-test('Needs you lists asking, then errors, then finished chats and jumps to the card', async ({
+test('the Needs you feed lists asking, then errors, then finished chats and jumps to the card', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -186,29 +205,89 @@ test('Needs you lists asking, then errors, then finished chats and jumps to the 
   ]);
   await openHome(page);
 
-  await expect(home(page).locator('.home-summary')).toHaveText('1 chat needs your input.');
-  const needs = section(page, 'Needs you');
-  await expect(needs.locator('.hc-main b')).toHaveText([
+  await expect(home(page).locator('.home-summary')).toHaveText('3 things need you.');
+  await expect(today(page).getByRole('heading', { level: 2 })).toHaveText('What needs you today 3');
+  await home(page).getByRole('button', { name: '3 things need you' }).click();
+  await expect(feed(page).locator('.lr-main').first()).toBeFocused();
+  await expect(feed(page).locator('.lr-main .t')).toHaveText([
     'Deploy the site',
     'Mock fetch',
     'Ship the notes',
   ]);
-  await expect(needs.getByRole('button')).toHaveText(['Answer', 'See error', 'Review']);
-  await expect(needs.locator('.hcard').nth(0)).toContainText(
+  await expect(feed(page).locator('.why-r')).toHaveText([
     'Fake provider wants to run pnpm deploy',
-  );
-  await expect(needs.locator('.hcard').nth(1)).toContainText('Stopped: rate limit reached');
-  await expect(needs.locator('.hcard').nth(2)).toContainText('Finished · open to review');
+    'Stopped: rate limit reached',
+    'Finished · open to review',
+  ]);
+  await expect(feed(page).locator('.age').first()).toHaveText(/^(now|\d+m)$/);
+  await expect(feed(page).locator('.qa')).toHaveText(['Answer', 'See error', 'Review']);
+  await expect(home(page).locator('.hcard')).toHaveCount(0);
+  await expect(home(page).locator('.hquiet')).toHaveCount(0);
 
-  await needs.getByRole('button', { name: 'Answer: Deploy the site' }).click();
+  const first = feed(page).locator('.lr-main').first();
+  await first.focus();
+  const answer = feed(page).getByRole('button', { name: 'Answer: Deploy the site' });
+  await expect(answer).toHaveCSS('opacity', '1');
+  await expect(feed(page).locator('.why-r').first()).toBeHidden();
+  await answer.click();
   await expect(page.locator('.chat-title')).toHaveText('Deploy the site');
   const approval = page.getByRole('group', { name: /Run a command\?/ });
   await expect(approval).toBeInViewport();
   await expect(approval).toHaveClass(/flash/);
 
   await openHome(page);
-  await section(page, 'Needs you').getByRole('button', { name: 'See error: Mock fetch' }).click();
+  await feed(page).locator('.lrow', { hasText: 'Mock fetch' }).hover();
+  await feed(page).getByRole('button', { name: 'See error: Mock fetch' }).click();
   await expect(page.locator('.chat-title')).toHaveText('Mock fetch');
+});
+
+test('the Connect Linear or Jira line dismisses for the account and opens Tickets', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedChats([{ title: 'Mock fetch', run: { status: 'failed', error: 'Rate limit.' } }]);
+  await openHome(page);
+
+  const hint = today(page).locator('.feed-foot');
+  await expect(hint).toContainText(
+    'Tickets and pull requests from Linear or Jira can show here too.',
+  );
+  await hint.getByRole('button', { name: 'Connect' }).click();
+  await expect(page.getByRole('heading', { name: 'See your tickets here' })).toBeVisible();
+
+  await openHome(page);
+  await hint.getByRole('button', { name: 'Don’t show this again' }).click();
+  await expect(hint).toHaveCount(0);
+  const saved = await page.request.get('/api/tickets/attention-settings');
+  expect(((await saved.json()) as { connectHintDismissed: boolean }).connectHintDismissed).toBe(
+    true,
+  );
+  await page.evaluate(() => localStorage.clear());
+  await openHome(page);
+  await expect(feed(page)).toBeVisible();
+  await expect(today(page).locator('.feed-foot')).toHaveCount(0);
+});
+
+test('Home shows skeletons shaped like its sections while chats load', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedChats([{ title: 'Mock fetch', run: { status: 'failed', error: 'Rate limit.' } }]);
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route('**/api/conversations', async (route) => {
+    await held;
+    await route.fallback();
+  });
+  await page.goto('/');
+  const live = home(page).locator('.home-live');
+  await expect(live).toHaveAttribute('aria-busy', 'true');
+  await expect(
+    home(page).getByRole('status').filter({ hasText: 'Loading what needs you' }),
+  ).toBeAttached();
+  await expect(home(page).locator('.sk-rows .lrow')).toHaveCount(4);
+  await expect(home(page).locator('.hsk').first()).toBeVisible();
+  release();
+  await expect(feed(page).locator('.lrow')).toHaveCount(1);
+  await expect(live).toHaveAttribute('aria-busy', 'false');
 });
 
 test('Running now shows the step and plan progress, and updates live', async ({ page }) => {
@@ -226,7 +305,9 @@ test('Running now shows the step and plan progress, and updates live', async ({ 
   await openHome(page);
 
   await expect(home(page).locator('.home-summary')).toHaveText('2 agents are working.');
-  const running = section(page, 'Running now');
+  await expect(today(page)).toHaveCount(0);
+  const running = section(page, /^Running now/);
+  await expect(running.getByRole('heading', { level: 2 })).toHaveText('Running now 2');
   const card = running.locator('.hcard', { hasText: 'Filter chips overflow' });
   await expect(card).toContainText('Reading FilterBar.tsx');
   await expect(card.getByRole('progressbar', { name: 'Plan progress' })).toHaveAttribute(
@@ -238,9 +319,7 @@ test('Running now shows the step and plan progress, and updates live', async ({ 
   ).toHaveAccessibleName('Progress, no plan yet');
 
   await setRun(runningId!, 'succeeded');
-  await expect(
-    section(page, 'Needs you').getByRole('button', { name: 'Review: Filter chips overflow' }),
-  ).toBeVisible({
+  await expect(feed(page).locator('.lrow', { hasText: 'Filter chips overflow' })).toBeVisible({
     timeout: 10_000,
   });
   await expect(running.locator('.hcard')).toHaveCount(1);
@@ -272,9 +351,7 @@ test('the spend card splits today by provider, Jev included', async ({ page }) =
     output: 3_000,
   });
   await openHome(page);
-  await expect(section(page, 'Digest').locator('.dg-lines li').first()).toBeVisible({
-    timeout: 15_000,
-  });
+  await briefSettled(page);
   await openHome(page);
 
   const spend = section(page, 'Spend');

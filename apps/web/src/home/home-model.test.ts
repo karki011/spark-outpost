@@ -57,23 +57,25 @@ const working = (title: string, extra = {}) => chat({ title, latestRun: run('run
 
 describe('summaryParts', () => {
   const text = (chats: ConversationSummary[]) =>
-    summaryParts(chats, 'All quiet. Start something new below.')
+    summaryParts(chats, needsYou(chats).length, 'All quiet. Start something new below.')
       .map((part) => part.text)
       .join('');
 
   it('is quiet when nothing runs or waits', () => {
-    expect(text([finished('Done'), chat()])).toBe('All quiet. Start something new below.');
+    expect(text([chat()])).toBe('All quiet. Start something new below.');
   });
 
-  it('counts working agents and chats that need input, in the right number', () => {
+  it('counts everything that needs you, then working agents, in the right number', () => {
     expect(text([working('A')])).toBe('1 agent is working.');
     expect(text([working('A'), working('B'), asking('C')])).toBe(
-      '2 agents are working and 1 chat needs your input.',
+      '1 thing needs you and 2 agents are working.',
     );
-    expect(text([asking('A'), asking('B')])).toBe('2 chats need your input.');
-    expect(
-      summaryParts([working('A'), asking('B')], '').filter((part) => part.strong),
-    ).toHaveLength(2);
+    expect(text([asking('A'), finished('B')])).toBe('2 things need you.');
+    const parts = summaryParts([working('A'), asking('B')], 1, '');
+    expect(parts.filter((part) => part.strong)).toHaveLength(2);
+    expect(parts.filter((part) => part.link).map((part) => part.text)).toEqual([
+      '1 thing needs you',
+    ]);
   });
 
   it('ignores archived chats', () => {

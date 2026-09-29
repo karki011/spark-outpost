@@ -3,9 +3,9 @@ const DETAILS_KEY = 'spark-outpost.digest.details-open';
 export function readDetailsOpen(): boolean {
   try {
     const saved = localStorage.getItem(DETAILS_KEY);
-    return saved === null ? true : saved === '1';
+    return saved === '1';
   } catch {
-    return true;
+    return false;
   }
 }
 

@@ -151,3 +151,53 @@ test('Start from a ticket creates a linked chat', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Start with a plan' }).click();
   await expect(page.locator('.chat-title')).toContainText('ENG-1210', { timeout: 15_000 });
 });
+
+test('the Tickets strip shows the Home brief, and each side links to the other', async ({
+  page,
+}) => {
+  await connectTickets(page);
+  await seedAssignedSince([['WEB-433', 3]]);
+  await openTickets(page);
+  await expect(section(page, 'Needs attention').locator('li')).toHaveCount(3, { timeout: 15_000 });
+  await expect(main(page).locator('.brief')).toHaveCount(0);
+
+  const rail = page.getByRole('navigation', { name: 'Main' });
+  await rail.getByRole('button', { name: /^Home/ }).click();
+  const pickup = page.getByRole('region', { name: 'Pick up where you left off' });
+  const items = pickup.getByRole('list', { name: 'Pick up where you left off' });
+  await expect(items.getByRole('listitem')).toHaveCount(3, { timeout: 15_000 });
+  await expect(items).toContainText('WEB-433');
+  await expect(items).toContainText('Session expires during long uploads');
+  await expect(items).toContainText('Handle WEB-433: Urgent · not started.');
+  await expect(pickup.locator('.dg-meta')).toHaveText(/^Nothing is flagged · Generated /);
+  await expect(pickup).not.toContainText('FAKE-404');
+
+  await items.getByRole('button', { name: 'Open WEB-433' }).click();
+  await expect(page.getByRole('complementary', { name: 'WEB-433 details' })).toBeVisible();
+  const strip = main(page).getByRole('region', { name: 'What needs you today' });
+  await expect(strip.getByRole('listitem')).toHaveCount(3);
+  await expect(strip).toContainText('Handle WEB-433: Urgent · not started.');
+  await expect(strip.getByRole('button', { name: 'Start WEB-433' })).toBeVisible();
+  await strip.getByRole('button', { name: 'Show ENG-1215' }).click();
+  await expect(page.getByRole('complementary', { name: 'ENG-1215 details' })).toBeVisible();
+
+  await main(page).getByRole('radio', { name: 'Compact' }).click();
+  await expect(strip).toHaveCount(0);
+  await main(page).getByRole('radio', { name: 'Comfortable' }).click();
+  await strip.getByRole('button', { name: 'Full brief on Home' }).click();
+  await expect(pickup).toBeVisible();
+});
+
+test('the Tickets strip says when the brief is off and turns it on', async ({ page }) => {
+  await connectTickets(page);
+  await page.request.patch('/api/tickets/attention-settings', { data: { briefEnabled: false } });
+  await openTickets(page);
+  const off = main(page).getByRole('region', { name: 'Brief is off' });
+  await expect(off).toContainText('The rules still flag tickets under Needs attention.', {
+    timeout: 15_000,
+  });
+  await off.getByRole('button', { name: 'Turn on' }).click();
+  await expect(main(page).getByRole('region', { name: 'What needs you today' })).toBeVisible({
+    timeout: 15_000,
+  });
+});
