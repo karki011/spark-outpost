@@ -36,6 +36,8 @@ export const projectBranchesSchema = z.object({
   current: z.string().nullable(),
   local: z.array(z.string()),
   remote: z.array(z.string()),
+  hasRemote: z.boolean().default(false),
+  fetchFailed: z.boolean().default(false),
 });
 export type ProjectBranches = z.infer<typeof projectBranchesSchema>;
 

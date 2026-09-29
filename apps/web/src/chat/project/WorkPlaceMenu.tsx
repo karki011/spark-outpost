@@ -1,10 +1,15 @@
-import { useId } from 'react';
-import type { ChatWorkspace, UpdateChatWorkspaceRequest } from '@spark-outpost/contracts';
+import './place-picker.css';
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import type { UpdateChatWorkspaceRequest } from '@spark-outpost/contracts';
 import { BranchIcon, ChevronIcon, FolderIcon, TickIcon } from '../../ui/icons.tsx';
 import { usePopover } from '../../ui/use-popover.ts';
-import { useChatWorkspace, useProjectBranches, useUpdateWorkspace } from './use-chat-workspace.ts';
-
-const BRANCHES_SHOWN = 30;
+import { branchRows, placeLabel } from './place-picker-model.ts';
+import {
+  useChatWorkspace,
+  useFetchBranches,
+  useProjectBranches,
+  useUpdateWorkspace,
+} from './use-chat-workspace.ts';
 
 interface WorkPlaceMenuProps {
   conversationId: string;
@@ -12,41 +17,45 @@ interface WorkPlaceMenuProps {
   checkoutBranch: string | null;
 }
 
-function placeLabel(workspace: ChatWorkspace, checkoutBranch: string | null): string {
-  if (workspace.requestedBranch) return `${workspace.requestedBranch} · worktree`;
-  if (workspace.place === 'checkout') return `${checkoutBranch ?? 'Checkout'} · your checkout`;
-  return 'New branch · worktree';
-}
-
-function Option({
+function PlaceCard({
   checked,
+  icon,
   title,
   detail,
   busy,
   onPick,
 }: {
   checked: boolean;
+  icon: ReactNode;
   title: string;
-  detail?: string;
+  detail: string;
   busy: boolean;
   onPick: () => void;
 }) {
   return (
     <button
       type="button"
-      role="menuitemradio"
-      className="mopt"
+      role="radio"
+      className="pp-card"
       aria-checked={checked}
       disabled={busy}
       onClick={onPick}
     >
-      <span>
-        <b>{title}</b>
-        {detail && <small>{detail}</small>}
+      <span className="pp-card-icon" aria-hidden="true">
+        {icon}
       </span>
+      <b>{title}</b>
+      <small>{detail}</small>
       <TickIcon />
     </button>
   );
+}
+
+function focusRow(list: HTMLElement | null, from: Element | null, step: 1 | -1) {
+  const rows = [...(list?.querySelectorAll<HTMLButtonElement>('.pp-row') ?? [])];
+  if (rows.length === 0) return;
+  const index = from ? rows.indexOf(from as HTMLButtonElement) : -1;
+  rows[Math.max(0, Math.min(rows.length - 1, index + step))]?.focus();
 }
 
 export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: WorkPlaceMenuProps) {
@@ -54,9 +63,13 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
     HTMLButtonElement,
     HTMLDivElement
   >();
-  const menuId = useId();
+  const panelId = useId();
+  const searchId = useId();
+  const listRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState('');
   const workspace = useChatWorkspace(conversationId);
   const branches = useProjectBranches(projectId, open);
+  const refresh = useFetchBranches(projectId);
   const update = useUpdateWorkspace(conversationId);
   const data = workspace.data;
   if (!data) return null;
@@ -73,22 +86,35 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
   };
   const fresh = data.place === 'worktree' && !data.requestedBranch;
   const inCheckout = data.place === 'checkout' && !data.requestedBranch;
-  const existing = [...(branches.data?.local ?? []), ...(branches.data?.remote ?? [])].slice(
-    0,
-    BRANCHES_SHOWN,
-  );
+  const list = branches.data;
+  const rows = list ? branchRows(list, query, checkoutBranch) : [];
+  const total = list ? list.local.length + list.remote.length : 0;
+  const busy = update.isPending;
+
+  const onListKey = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    const fromSearch = (event.target as HTMLElement).id === searchId;
+    focusRow(
+      listRef.current,
+      fromSearch ? null : document.activeElement,
+      event.key === 'ArrowDown' ? 1 : -1,
+    );
+  };
+
   return (
     <>
       <button
         ref={anchorRef}
         type="button"
         className="ctx-branch ctx-place"
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         aria-expanded={open}
-        aria-controls={menuId}
+        aria-controls={panelId}
         aria-label={`Where this chat works: ${placeLabel(data, checkoutBranch)}`}
         onClick={() => {
           update.reset();
+          setQuery('');
           toggle();
         }}
       >
@@ -98,45 +124,116 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
       </button>
       <div
         ref={panelRef}
-        id={menuId}
-        className={open ? 'mpop left placepop open' : 'mpop left placepop'}
-        role="menu"
+        id={panelId}
+        className={open ? 'mpop left picker placepicker open' : 'mpop left picker placepicker'}
+        role="dialog"
         aria-label="Where this chat works"
       >
-        <Option
-          checked={fresh}
-          title="New branch in a worktree"
-          detail="Your checkout stays as it is"
-          busy={update.isPending}
-          onPick={() => pick({ place: 'worktree', branch: null })}
-        />
-        <Option
-          checked={inCheckout}
-          title="Work in my checkout"
-          detail={checkoutBranch ? `Edits land on ${checkoutBranch}` : 'Edits land in your folder'}
-          busy={update.isPending}
-          onPick={() => pick({ place: 'checkout', branch: null })}
-        />
-        {existing.length > 0 && <div className="mgroup">Work on an existing branch</div>}
-        {existing.map((branch) => (
-          <Option
-            key={branch}
-            checked={data.requestedBranch === branch}
-            title={branch}
-            {...(branch === checkoutBranch ? { detail: 'Checked out in your folder' } : {})}
-            busy={update.isPending}
-            onPick={() => pick({ branch })}
+        <div className="picker-top">
+          <span className="picker-title">
+            Where this chat works
+            <small>{busy ? 'Switching…' : 'Your choice is remembered for this project'}</small>
+          </span>
+        </div>
+        <div className="pp-places" role="radiogroup" aria-label="Folder">
+          <PlaceCard
+            checked={fresh}
+            icon={<BranchIcon />}
+            title="Own folder"
+            detail="A new branch in a worktree. Your checkout stays as it is."
+            busy={busy}
+            onPick={() => pick({ place: 'worktree', branch: null })}
           />
-        ))}
+          <PlaceCard
+            checked={inCheckout}
+            icon={<FolderIcon />}
+            title="Your folder"
+            detail={
+              checkoutBranch
+                ? `Edits land on ${checkoutBranch}, live.`
+                : 'Edits land in your folder, live.'
+            }
+            busy={busy}
+            onPick={() => pick({ place: 'checkout', branch: null })}
+          />
+        </div>
+        <div className="pp-branches">
+          <div className="pp-head">
+            <span>Continue a branch</span>
+            {list?.hasRemote && (
+              <button
+                type="button"
+                className="pp-fetch"
+                disabled={refresh.isPending}
+                onClick={() => refresh.mutate()}
+              >
+                {refresh.isPending ? 'Fetching…' : 'Fetch'}
+              </button>
+            )}
+          </div>
+          {total > 6 && (
+            <>
+              <label htmlFor={searchId} className="sr-only">
+                Find a branch
+              </label>
+              <input
+                id={searchId}
+                type="search"
+                className="inp pp-search"
+                placeholder="Find a branch"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={onListKey}
+              />
+            </>
+          )}
+          <div
+            ref={listRef}
+            className="pp-list"
+            role="radiogroup"
+            aria-label="Existing branches"
+            onKeyDown={onListKey}
+          >
+            {branches.isPending && <p className="mempty">Reading branches…</p>}
+            {list && total === 0 && <p className="mempty">No other branches yet.</p>}
+            {list && total > 0 && rows.length === 0 && (
+              <p className="mempty">No branch matches “{query.trim()}”.</p>
+            )}
+            {rows.map((row) => (
+              <button
+                key={`${row.remote ? 'r' : 'l'}:${row.name}`}
+                type="button"
+                role="radio"
+                className="pp-row"
+                aria-checked={data.requestedBranch === row.name}
+                disabled={busy}
+                onClick={() => pick({ branch: row.name })}
+              >
+                <BranchIcon />
+                <span className="pp-name" title={row.name}>
+                  {row.name}
+                </span>
+                {row.tags.map((tag) => (
+                  <span key={tag} className="mtag">
+                    {tag}
+                  </span>
+                ))}
+                <TickIcon />
+              </button>
+            ))}
+          </div>
+          {(refresh.data?.fetchFailed || refresh.isError) && (
+            <p className="mpop-error" role="alert">
+              Couldn’t reach the remote. Showing the branches this repo already knows.
+            </p>
+          )}
+        </div>
         {update.isError && (
           <p className="mpop-error" role="alert">
             {update.error.message}
           </p>
         )}
-        <p className="eff-note">
-          Worktree or checkout is remembered for this project. A chat keeps its branch once it
-          starts changing files.
-        </p>
+        <p className="pp-foot">A chat keeps its branch once it starts changing files.</p>
       </div>
     </>
   );
