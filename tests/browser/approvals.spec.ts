@@ -276,6 +276,7 @@ test('Codex offers Do with its own copy and sandbox note', async ({ page }) => {
   );
   await expect(panel.getByRole('note')).toHaveCount(0);
   await expect(panel).toContainText('Agent asks before edits and commands');
+  await pickAutonomy(page, 'Review each step');
   await shot(page, 'codex-do');
   await page.keyboard.press('Escape');
   await send(page, 'Run the tests #approve');
