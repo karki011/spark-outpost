@@ -136,3 +136,56 @@ export function UseNameSetting({
     />
   );
 }
+
+const CRITIC_INFO =
+  'After the Builder finishes a bigger or risky change, a Critic agent reviews it and can send fixes back to the Builder. Off: Spark wraps up after the Builder. Asking Spark to review code still runs a review.';
+
+const SPARK_OFF_HINT = 'Spark is off, so no Critic runs.';
+
+export function CriticSetting({ enabled, sparkOn }: { enabled: boolean; sparkOn: boolean }) {
+  return (
+    <ProfileSwitchSetting
+      blob
+      enabled={enabled}
+      disabled={!sparkOn}
+      label="Critic"
+      info={CRITIC_INFO}
+      hint={(on) => {
+        if (!sparkOn) return SPARK_OFF_HINT;
+        return on ? 'A second agent reviews bigger changes.' : 'Changes aren’t reviewed.';
+      }}
+      toUpdate={(value) => ({ criticEnabled: value })}
+    />
+  );
+}
+
+const OTHER_PROVIDER_INFO =
+  'With another agent connected, the Critic runs on it, for example Codex reviewing Claude’s work, so a different model family checks the change. Off: the Critic uses the chat’s agent, one model tier up when there is one.';
+
+export function CriticProviderSetting({
+  enabled,
+  criticOn,
+  sparkOn,
+}: {
+  enabled: boolean;
+  criticOn: boolean;
+  sparkOn: boolean;
+}) {
+  return (
+    <ProfileSwitchSetting
+      blob
+      enabled={enabled}
+      disabled={!sparkOn || !criticOn}
+      label="Use a different provider for the Critic when one’s connected"
+      info={OTHER_PROVIDER_INFO}
+      hint={(on) => {
+        if (!sparkOn) return SPARK_OFF_HINT;
+        if (!criticOn) return 'Turn on the Critic to use this.';
+        return on
+          ? 'A second opinion from another model family.'
+          : 'The Critic uses the chat’s agent.';
+      }}
+      toUpdate={(value) => ({ criticOtherProvider: value })}
+    />
+  );
+}

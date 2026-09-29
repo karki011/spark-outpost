@@ -116,6 +116,7 @@ export interface FlowState {
   readOnly?: ReadOnlyWork;
   confirmFirst: string | null;
   solo?: boolean;
+  skipCritic?: boolean;
 }
 
 export interface FlowResult {

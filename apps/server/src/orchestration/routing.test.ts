@@ -61,6 +61,14 @@ describe('rule routes', () => {
     expect(pick.effort).toBe('high');
   });
 
+  it('keeps the Critic on the chat’s provider, one tier up, when you turn that off', () => {
+    const same = { ...context('auto'), criticSameProvider: true };
+    expect(criticProvider(same)).toBe('claude');
+    const pick = routeCritic(same).pick;
+    expect(pick.provider).toBe('claude');
+    expect(pick.model).not.toBe(same.chat.model);
+  });
+
   it('escalates the previous pick one tier up, then raises effort', () => {
     const haiku = { provider: 'claude', model: 'haiku', modelLabel: 'Haiku 4.5', effort: 'low' };
     const first: MemberRoute = { pick: haiku, routedBy: 'rules', rule: 'x', autoWouldUse: null };

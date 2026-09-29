@@ -1,4 +1,5 @@
 import { firstName, type Personality, type SparkSessionPrefs } from '@spark-outpost/contracts';
+import type { ProtocolObserver } from '../../providers/provider.ts';
 import type { ClaudeRepoOptions, CodexRepoOptions } from './repo-session.ts';
 
 export const SPARK_INSTRUCTIONS_MAX_LENGTH = 1024;
@@ -75,4 +76,17 @@ export function withCodexSpark(
     ...base,
     developerInstructions: joined(base.developerInstructions, sparkInstructions(prefs, false)),
   };
+}
+
+export const CODEX_INSTRUCTIONS_METHOD = 'codex/developer_instructions';
+
+export function auditCodexInstructions(
+  audit: ProtocolObserver | undefined,
+  codex: CodexRepoOptions | null,
+): void {
+  if (!audit || !codex?.developerInstructions) return;
+  audit.message('harness', {
+    method: CODEX_INSTRUCTIONS_METHOD,
+    params: { developer_instructions: codex.developerInstructions },
+  });
 }

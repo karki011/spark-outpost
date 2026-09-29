@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { SparkSessionPrefs } from '@spark-outpost/contracts';
 import {
+  CODEX_INSTRUCTIONS_METHOD,
   SPARK_INSTRUCTIONS_MAX_LENGTH,
+  auditCodexInstructions,
   sparkInstructions,
   withClaudeSpark,
   withCodexSpark,
@@ -115,5 +117,26 @@ describe('withCodexSpark', () => {
     )!;
     expect(merged.developerInstructions).toMatch(/^Repo rules\n\n# Working with the user/);
     expect(merged.agentsMd).toBe(false);
+  });
+});
+
+describe('auditCodexInstructions', () => {
+  it('records the developer instructions Codex gets as a harness entry', () => {
+    const messages: unknown[][] = [];
+    const audit = { message: (...args: unknown[]) => messages.push(args), stderr: () => undefined };
+    auditCodexInstructions(audit, withCodexSpark(null, PREFS));
+    expect(messages).toHaveLength(1);
+    const [direction, message] = messages[0]!;
+    expect(direction).toBe('harness');
+    expect(message).toMatchObject({ method: CODEX_INSTRUCTIONS_METHOD });
+    expect(JSON.stringify(message)).toContain('keep a short checklist');
+  });
+
+  it('records nothing when no instructions are sent', () => {
+    const messages: unknown[] = [];
+    const audit = { message: (...args: unknown[]) => messages.push(args), stderr: () => undefined };
+    auditCodexInstructions(audit, null);
+    auditCodexInstructions(undefined, withCodexSpark(null, PREFS));
+    expect(messages).toEqual([]);
   });
 });

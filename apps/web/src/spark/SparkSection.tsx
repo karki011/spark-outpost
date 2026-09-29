@@ -5,7 +5,10 @@ import { AutoContinueSetting } from '../settings/AutoContinueSetting.tsx';
 import { CompanionSetting } from '../settings/CompanionSetting.tsx';
 import { FailingChecksSetting } from '../settings/FailingChecksSetting.tsx';
 import { LevelSetting } from './LevelSetting.tsx';
+import { MorningBriefSetting } from './MorningBriefSetting.tsx';
 import {
+  CriticProviderSetting,
+  CriticSetting,
   NameSetting,
   PersonalitySetting,
   SparkSwitch,
@@ -13,6 +16,7 @@ import {
   UseNameSetting,
 } from './SparkSettings.tsx';
 import { SparkPreview } from './SparkPreview.tsx';
+import { SpendCapSetting } from './SpendCapSetting.tsx';
 
 export function SparkSection({ setup }: { setup: SetupState }) {
   const { profile } = setup;
@@ -34,12 +38,20 @@ export function SparkSection({ setup }: { setup: SetupState }) {
         <h4 id="spark-work">How Spark works</h4>
         <SparkSwitch enabled={profile.sparkEnabled} />
         <TeamModeSetting enabled={profile.teamMode} />
-        <LevelSetting providers={setup.providers} defaultProvider={profile.defaultProvider} />
+        <LevelSetting level={profile.defaultLevel} />
+        <CriticSetting enabled={profile.criticEnabled} sparkOn={profile.sparkEnabled} />
+        <CriticProviderSetting
+          enabled={profile.criticOtherProvider}
+          criticOn={profile.criticEnabled}
+          sparkOn={profile.sparkEnabled}
+        />
+        <SpendCapSetting usd={profile.spendCapUsd} />
         <AutoContinueSetting seconds={profile.autoContinueSeconds} />
         <FailingChecksSetting opensDraft={profile.shipFailingChecks} />
       </section>
       <section className="spark-group" aria-labelledby="spark-around">
         <h4 id="spark-around">Around the app</h4>
+        <MorningBriefSetting enabled={profile.morningBrief} time={profile.morningBriefTime} />
         <CompanionSetting />
       </section>
     </>

@@ -129,7 +129,7 @@ function retry(state: FlowState, note: string | null = null): FlowResult {
 }
 
 function afterBuilder(state: FlowState, large: boolean): FlowResult {
-  if (state.solo) return wrapUp(state);
+  if (state.solo || state.skipCritic) return wrapUp(state);
   if (state.review.fixing) {
     return spawn(state, { role: 'critic', reason: 'recheck', escalate: false });
   }

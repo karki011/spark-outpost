@@ -81,16 +81,7 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   ]);
   await page.getByRole('menuitemradio', { name: /^Accept edits/ }).click();
   await expect(mode).toHaveText('Accept edits');
-  const autonomy = claudeCard(page).getByRole('button', { name: 'Claude harness autonomy' });
-  await expect(autonomy).toHaveText('Automatic');
-  await autonomy.click();
-  await expect(page.getByRole('menuitemradio')).toHaveText([
-    /^Review each step/,
-    /^Automatic/,
-    /^Full auto → PR/,
-  ]);
-  await page.getByRole('menuitemradio', { name: /^Review each step/ }).click();
-  await expect(autonomy).toHaveText('Review each step');
+  await expect(claudeCard(page).getByRole('button', { name: /harness autonomy/ })).toHaveCount(0);
 
   await continueButton(page).click();
   await expect(dialog(page).getByRole('heading', { name: 'Bring in your tools' })).toBeVisible();
@@ -104,7 +95,7 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(dialog(page).getByRole('heading', { name: "You're all set, Hazel" })).toBeVisible();
   await expect(dialog(page)).toContainText('Claude via API key');
   await expect(dialog(page)).toContainText(
-    'Claude Sonnet 5, high effort, Accept edits · Review each step',
+    'Claude Sonnet 5, high effort, Accept edits · Automatic',
   );
   await expect(dialog(page)).toContainText('Tools coming soon');
 

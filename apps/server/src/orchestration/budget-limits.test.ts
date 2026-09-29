@@ -11,7 +11,7 @@ import { fixRoundExceeded } from './budget-check.ts';
 import type { OrchestratorDeps, Session } from './session.ts';
 
 function session(deps: OrchestratorDeps, provider: string, extended = 0) {
-  const base = baseLimits(deps, provider);
+  const base = baseLimits(deps, provider, null);
   const limits = { ...base, toolCallLimit: base.toolCallLimit + extended };
   return { deps, baseLimits: base, limits } as Session;
 }
@@ -24,7 +24,15 @@ describe('tool-call budget per provider', () => {
 
   it('keeps a configured limit for every provider', () => {
     const deps = { budget: { toolCallLimit: 7 } } as OrchestratorDeps;
-    expect(baseLimits(deps, 'codex').toolCallLimit).toBe(7);
+    expect(baseLimits(deps, 'codex', null).toolCallLimit).toBe(7);
+  });
+
+  it('lets the spend cap saved in Settings replace the server cap, with 0 meaning Off', () => {
+    const deps = { budget: { costCapUsd: 5 } } as OrchestratorDeps;
+    expect(baseLimits(deps, 'claude', null).costCapUsd).toBe(5);
+    expect(baseLimits(deps, 'claude', 2).costCapUsd).toBe(2);
+    expect(baseLimits(deps, 'claude', 0).costCapUsd).toBeNull();
+    expect(baseLimits({} as OrchestratorDeps, 'claude', 1.5).costCapUsd).toBe(1.5);
   });
 
   it("raises a Claude chat's budget when a Codex member joins the crew, once", () => {

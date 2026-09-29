@@ -173,10 +173,16 @@ test('Settings sets the default mode and autonomy that new chats start with', as
   await mode.click();
   await page.getByRole('menuitemradio', { name: /^Accept edits/ }).click();
   await expect(mode).toHaveText('Accept edits');
-  const autonomy = claude.getByRole('button', { name: 'Claude harness autonomy' });
-  await autonomy.click();
-  await page.getByRole('menuitemradio', { name: /^Review each step/ }).click();
-  await expect(autonomy).toHaveText('Review each step');
+  await expect(claude.getByRole('button', { name: 'Claude harness autonomy' })).toHaveCount(0);
+  await providers.getByRole('tab', { name: 'Spark' }).click();
+  const autonomy = page
+    .getByRole('dialog', { name: 'Spark' })
+    .getByRole('radiogroup', { name: 'How much Spark does alone' });
+  const saved = page.waitForResponse(
+    (response) => response.url().endsWith('/api/profile') && response.ok(),
+  );
+  await autonomy.getByRole('radio', { name: 'Review each step' }).click();
+  await saved;
   await page.keyboard.press('Escape');
 
   await linkedChat(page, repo);
