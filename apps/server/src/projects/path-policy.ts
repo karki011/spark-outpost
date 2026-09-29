@@ -45,7 +45,7 @@ export function parseSparkIgnore(text: string): string[] {
     .filter((line) => line !== '' && !line.startsWith('#') && !line.startsWith('!'));
 }
 
-function globToRegExp(glob: string): RegExp {
+export function globToRegExp(glob: string): RegExp {
   let source = '';
   for (let index = 0; index < glob.length; index++) {
     const char = glob[index]!;

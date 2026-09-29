@@ -21,7 +21,9 @@ const WRAPPER_VALUE_FLAGS = new Map<string, ReadonlySet<string>>([
 const WRAPPER_OPERANDS = new Map([['timeout', 1]]);
 const ENV_SPLIT = /^(?:-S|--split-string)/;
 export const COMMAND_WRAPPERS: ReadonlySet<string> = new Set(WRAPPER_VALUE_FLAGS.keys());
+const SUBSTITUTION = '$(';
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+const SHELL_KEYWORDS = new Set(['do', 'then', 'else', 'elif', 'if', 'while', 'until', '!', '{']);
 
 export function normalizeCommand(command: string): string {
   return command.trim().replace(/\s+/g, ' ');
@@ -37,6 +39,7 @@ export function splitSimpleCommands(command: string): string[][] {
   let current = '';
   let quote: '"' | "'" | null = null;
   let started = false;
+  let inBackticks = false;
   const endToken = () => {
     if (started) tokens.push(current);
     current = '';
@@ -62,11 +65,17 @@ export function splitSimpleCommands(command: string): string[][] {
     } else if (char === '\\' && index + 1 < command.length) {
       current += command[++index];
       started = true;
-    } else if (SEPARATORS.has(char) || char === '(' || char === ')' || char === '`') {
+    } else if (char === '`' || (char === '$' && command[index + 1] === '(')) {
+      const opens = char === '$' || !inBackticks;
+      if (char === '`') inBackticks = !inBackticks;
+      else index++;
+      if (opens) {
+        current += SUBSTITUTION;
+        started = true;
+      }
       endCommand();
-    } else if (char === '$' && command[index + 1] === '(') {
+    } else if (SEPARATORS.has(char) || char === '(' || char === ')') {
       endCommand();
-      index++;
     } else if (REDIRECTS.has(char)) {
       endToken();
     } else if (/\s/.test(char)) {
@@ -98,7 +107,7 @@ export function unwrapCommand(tokens: readonly string[]): Unwrapped {
     const token = tokens[index]!;
     const wrapper = path.basename(token);
     const valueFlags = WRAPPER_VALUE_FLAGS.get(wrapper);
-    if (ASSIGNMENT.test(token)) {
+    if (ASSIGNMENT.test(token) || SHELL_KEYWORDS.has(token)) {
       index++;
       continue;
     }

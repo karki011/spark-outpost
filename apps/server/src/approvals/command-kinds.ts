@@ -34,6 +34,10 @@ export interface CommandPlace {
 
 const isFlag = (token: string) => token.startsWith('-');
 
+export function grepRecurses(args: readonly string[]): boolean {
+  return args.some((arg) => RECURSIVE_GREP.has(arg) || /^-[a-zA-Z]*[rR]/.test(arg));
+}
+
 function flagValue(token: string): string | null {
   const equals = token.indexOf('=');
   return token.startsWith('--') && equals > 0 ? token.slice(equals + 1) : null;
@@ -46,7 +50,7 @@ function argumentsAllowed(program: string, args: readonly string[]): boolean {
     case 'tree':
       return !args.some((arg) => arg === '-o' || arg.startsWith('-o'));
     case 'grep':
-      return !args.some((arg) => RECURSIVE_GREP.has(arg) || /^-[a-zA-Z]*[rR]/.test(arg));
+      return !grepRecurses(args);
     case 'sed':
       return (
         args[0] === '-n' && SED_PRINT.test(args[1] ?? '') && args.slice(2).every((a) => !isFlag(a))
