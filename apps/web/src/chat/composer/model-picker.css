@@ -36,10 +36,6 @@
   place-items: center;
   border-radius: 50%;
 }
-.pswitch button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
 .pswitch-ring {
   position: absolute;
   inset: 0;
@@ -85,7 +81,7 @@
 }
 .pnav button[aria-disabled='true'] {
   opacity: 0.45;
-  cursor: default;
+  cursor: not-allowed;
 }
 .pnav button:focus-visible {
   outline: 2px solid var(--accent);

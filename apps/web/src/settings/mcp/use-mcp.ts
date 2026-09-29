@@ -11,10 +11,7 @@ export function useMcpChange<T>(run: (input: T) => Promise<UserMcpList>) {
   return useMutation({
     mutationFn: run,
     onSuccess: (list) => {
-      queryClient.setQueryData(userMcpKey, (current: UserMcpList | undefined) => ({
-        ...list,
-        scan: list.scan ?? current?.scan ?? null,
-      }));
+      queryClient.setQueryData(userMcpKey, list);
       void queryClient.invalidateQueries({ queryKey: chatMcpRoot });
     },
   });

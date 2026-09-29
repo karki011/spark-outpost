@@ -1,6 +1,5 @@
 import type {
   McpCheck,
-  McpScanSource,
   McpServerSource,
   McpTransport,
   UserMcpServer,
@@ -16,8 +15,6 @@ const TOOL_LABELS: Record<string, string> = {
   codex: 'Codex',
   windsurf: 'Windsurf',
 };
-
-export const SCAN_APPS = Object.values(TOOL_LABELS);
 
 export function sourceLabel(source: McpServerSource): string {
   if (source === 'user') return 'Added by you';
@@ -61,19 +58,4 @@ export function scopeLine(server: UserMcpServer): string {
   if (globalOn)
     return differing ? `All chats · off in ${countLabel(differing, 'project')}` : 'All chats';
   return differing ? countLabel(differing, 'project') : 'Off';
-}
-
-const listFormat = new Intl.ListFormat('en', { type: 'conjunction' });
-
-export function scanLine(sources: readonly McpScanSource[]): string {
-  const withServers = sources.filter((source) => source.servers > 0);
-  const total = withServers.reduce((sum, source) => sum + source.servers, 0);
-  const scanned = `Scanned ${countLabel(sources.length, 'app')}`;
-  if (total === 0) return `${scanned} · no MCP servers found`;
-  const where = listFormat.format(withServers.map((source) => source.label));
-  return `${scanned} · found ${countLabel(total, 'server')} in ${where}`;
-}
-
-export function scanFound(sources: readonly McpScanSource[]): boolean {
-  return sources.some((source) => source.servers > 0);
 }

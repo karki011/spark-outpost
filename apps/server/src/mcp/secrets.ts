@@ -44,13 +44,6 @@ export async function deleteMcpSecrets(store: SecretStore, serverId: string): Pr
   await store.delete(secretId(serverId)).catch(() => undefined);
 }
 
-export function mergeSecrets(current: McpSecretValues, added: McpSecretValues): McpSecretValues {
-  return {
-    env: { ...current.env, ...added.env },
-    headers: { ...current.headers, ...added.headers },
-  };
-}
-
 export function keepNames(
   values: McpSecretValues,
   envNames: readonly string[],

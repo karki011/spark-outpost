@@ -12,11 +12,6 @@
   border-radius: 4px;
 }
 
-.toast.grace button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 .toast.grace .tbar {
   height: 3px;
   border-radius: 0 0 var(--r-sm) var(--r-sm);

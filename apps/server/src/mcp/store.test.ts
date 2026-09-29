@@ -36,8 +36,6 @@ describe('listUserMcp', () => {
       envNames: ['TOKEN'],
       headerNames: [],
       secretNames: [],
-      importableNames: [],
-      origin: null,
     });
     expect(server?.check).toEqual(check);
   });
@@ -54,8 +52,6 @@ describe('listUserMcp', () => {
       envNames: [],
       headerNames: [],
       secretNames: [],
-      importableNames: [],
-      origin: null,
     });
     expect(server?.check).toBeNull();
     const [empty] = await listUserMcp(returning(null, null), 'w');

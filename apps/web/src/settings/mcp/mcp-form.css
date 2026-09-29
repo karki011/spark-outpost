@@ -32,18 +32,6 @@
   color: var(--muted);
   margin-bottom: 5px;
 }
-.mcp-form .inp.sm {
-  padding: 6px 9px;
-  font-size: 13px;
-}
-.mcp-form .mono {
-  font-family: var(--mcp-mono);
-  font-size: 12.5px;
-}
-.mcp-form .inp[aria-invalid='true'] {
-  border-color: var(--danger);
-  box-shadow: 0 0 0 1px var(--danger);
-}
 .mcp-form-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;

@@ -47,7 +47,7 @@ export function storedMcpConfig(server: Omit<McpServerConfig, 'fingerprint'>) {
   };
 }
 
-export function mcpServerFrom(name: string, entry: unknown): McpServerConfig | string {
+function mcpServerFrom(name: string, entry: unknown): McpServerConfig | string {
   if (!isRecord(entry)) return `MCP server "${name}" is not an object, so it was skipped.`;
   const transport = transportOf(entry);
   if (!transport) return `MCP server "${name}" has no command or URL, so it was skipped.`;

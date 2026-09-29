@@ -2,7 +2,6 @@ import type { SaveUserMcpRequest } from '@spark-outpost/contracts';
 import { BadRequestError } from '../api/validation.ts';
 import type { Db, Queryable } from '../persistence/db.ts';
 import type { SecretStore } from '../setup/secrets.ts';
-import type { ScannedServer } from './scan.ts';
 import {
   deleteMcpSecrets,
   readMcpSecrets,
@@ -18,51 +17,6 @@ import {
   deleteUserMcp,
   type UserMcpRow,
 } from './store.ts';
-
-function withValues(map: Record<string, string>): string[] {
-  return Object.entries(map)
-    .filter(([, value]) => value !== '')
-    .map(([name]) => name);
-}
-
-async function storedSecretNames(
-  db: Queryable,
-  workspaceId: string,
-  source: string,
-  name: string,
-): Promise<string[]> {
-  const { rows } = await db.query<{ names: string[] | null }>(
-    `SELECT config->'secretNames' AS names FROM mcp_servers
-      WHERE workspace_id = $1 AND source = $2 AND name = $3`,
-    [workspaceId, source, name],
-  );
-  return rows[0]?.names ?? [];
-}
-
-export async function importScanned(
-  db: Queryable,
-  workspaceId: string,
-  found: ScannedServer,
-): Promise<string> {
-  const { server } = found;
-  const source = `imported:${found.tool}`;
-  const names = [...Object.keys(server.env), ...Object.keys(server.headers)];
-  const kept = (await storedSecretNames(db, workspaceId, source, server.name)).filter((name) =>
-    names.includes(name),
-  );
-  const importable = [...new Set([...withValues(server.env), ...withValues(server.headers)])];
-  return upsertUserMcp(db, workspaceId, {
-    source,
-    name: server.name,
-    transport: server.transport,
-    config: storedUserConfig(server, {
-      secretNames: kept,
-      importableNames: importable.sort(),
-      origin: found.origin,
-    }),
-    fingerprint: userFingerprint(server),
-  });
-}
 
 export interface SaveDeps {
   db: Db;
@@ -113,11 +67,7 @@ export async function saveManualServer(
   const saved = {
     name: server.name,
     transport: server.transport,
-    config: storedUserConfig(server, {
-      secretNames: secretNames(values),
-      importableNames: [],
-      origin: null,
-    }),
+    config: storedUserConfig(server, secretNames(values)),
     fingerprint: userFingerprint(server),
   };
   if (existing) {

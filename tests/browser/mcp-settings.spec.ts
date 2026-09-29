@@ -1,34 +1,30 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
-import { MCP_SCAN_HOME } from './stub-config.ts';
 
 const ECHO = path.resolve('apps/server/test/echo-mcp-server.mjs');
-const TOKEN = 'cursor-secret-value';
-
-test.beforeAll(() => {
-  rmSync(MCP_SCAN_HOME, { recursive: true, force: true });
-  mkdirSync(path.join(MCP_SCAN_HOME, '.cursor'), { recursive: true });
-  writeFileSync(
-    path.join(MCP_SCAN_HOME, '.cursor', 'mcp.json'),
-    JSON.stringify({
-      mcpServers: {
-        'cursor-echo': { command: process.execPath, args: [ECHO], env: { ECHO_TOKEN: TOKEN } },
-      },
-    }),
-  );
-});
-
-test.afterAll(() => {
-  rmSync(MCP_SCAN_HOME, { recursive: true, force: true });
-});
+const TOKEN = 'echo-secret-value';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
 });
+
+async function addEcho(page: Page) {
+  const response = await page.request.post('/api/mcp/servers', {
+    data: {
+      name: 'echo-mcp',
+      transport: 'stdio',
+      command: process.execPath,
+      args: [ECHO],
+      url: null,
+      env: { ECHO_TOKEN: TOKEN },
+      headers: {},
+    },
+  });
+  expect(response.ok(), await response.text()).toBe(true);
+}
 
 async function openMcpSettings(page: Page) {
   await openChats(page);
@@ -42,32 +38,22 @@ async function openMcpSettings(page: Page) {
   return dialog;
 }
 
-test('Settings scans other apps, imports servers switched off and moves values to the keychain', async ({
+test('Settings lists a server switched off, turns it on for all chats and tests it', async ({
   page,
 }) => {
+  const empty = await openMcpSettings(page);
+  await expect(empty).toContainText('No MCP servers yet');
+  await expect(empty.getByRole('button', { name: /Scan/ })).toHaveCount(0);
+  await addEcho(page);
+  await page.reload();
   const dialog = await openMcpSettings(page);
-  await expect(dialog).toContainText('No MCP servers yet');
-  await dialog.getByRole('button', { name: 'Scan other apps' }).click();
-  const scanning = dialog.getByRole('status').filter({ hasText: 'Scanning other apps' });
-  await expect(scanning).toContainText(
-    /Checking (Claude Code|Claude Desktop|Cursor|VS Code|Codex|Windsurf)…/,
-  );
-  await expect(dialog.getByRole('button', { name: 'Scanning…' })).toBeDisabled();
-  const scan = dialog.getByRole('status').filter({ hasText: 'Scanned' });
-  await expect(scan).toContainText('found 1 server in Cursor');
-  await expect(scanning).toBeHidden();
-  await expect(scan.locator('.scout.happy')).toBeVisible();
-  await scan.getByRole('button', { name: 'Details' }).click();
-  await expect(scan.getByRole('listitem').filter({ hasText: 'Cursor' })).toContainText(
-    '.cursor/mcp.json',
-  );
-  const card = dialog.getByRole('region', { name: 'cursor-echo' });
-  const head = card.getByRole('button', { name: /^cursor-echo/ });
-  await expect(head).toContainText('From Cursor');
+  const card = dialog.getByRole('region', { name: 'echo-mcp' });
+  const head = card.getByRole('button', { name: /^echo-mcp/ });
+  await expect(head).toContainText('Added by you');
   await expect(head).toContainText('Not tested');
   await expect(head).toContainText('Off');
   await expect(head).toHaveAttribute('aria-expanded', 'false');
-  const allChats = card.getByRole('switch', { name: 'Use cursor-echo in all chats' });
+  const allChats = card.getByRole('switch', { name: 'Use echo-mcp in all chats' });
   await expect(allChats).not.toBeChecked();
   await allChats.click();
   await expect(allChats).toBeChecked();
@@ -79,12 +65,8 @@ test('Settings scans other apps, imports servers switched off and moves values t
   await expect(card.getByRole('button', { name: 'Copy command' })).toBeVisible();
   await card.getByRole('button', { name: '1 environment variable' }).click();
   const env = card.getByRole('list', { name: 'Environment variables' });
-  await expect(env).toHaveText('ECHO_TOKEN');
-  await expect(card).not.toContainText(TOKEN);
-
-  await card.getByRole('button', { name: 'Copy value to keychain' }).click();
   await expect(env).toHaveText('ECHO_TOKENin keychain');
-  await expect(card.getByRole('button', { name: /Copy value/ })).toBeHidden();
+  await expect(card).not.toContainText(TOKEN);
 
   await card.getByRole('button', { name: 'Test connection' }).click();
   await expect(card).toContainText('Connected · 2 tools');
@@ -153,18 +135,6 @@ test('Settings adds a server by hand, keeps its secret out of the page and remov
     .toBe(0);
 });
 
-test('the scan waiting state keeps still with reduced motion', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  const dialog = await openMcpSettings(page);
-  await dialog.getByRole('button', { name: 'Scan other apps' }).click();
-  await expect(dialog.getByRole('status').filter({ hasText: 'Scanning' })).toContainText(
-    'Checking your apps…',
-  );
-  await expect(dialog.getByRole('status').filter({ hasText: 'Scanned' })).toContainText(
-    'found 1 server in Cursor',
-  );
-});
-
 test('Settings fills the add form from a pasted README config', async ({ page }) => {
   const dialog = await openMcpSettings(page);
   await dialog.getByRole('button', { name: 'Add server' }).click();
@@ -188,8 +158,7 @@ test('Settings fills the add form from a pasted README config', async ({ page })
 test('/mcp lists the chat’s servers, switches one for this chat and links to Settings', async ({
   page,
 }) => {
-  const scan = await page.request.post('/api/mcp/scan', { data: {} });
-  expect(scan.ok(), await scan.text()).toBe(true);
+  await addEcho(page);
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
   const input = page.getByRole('textbox', { name: 'Message' });
@@ -197,9 +166,9 @@ test('/mcp lists the chat’s servers, switches one for this chat and links to S
   await input.press('Enter');
   const panel = page.getByRole('dialog', { name: 'MCP servers in this chat' });
   await expect(panel).toBeVisible();
-  await expect(panel).toContainText('cursor-echo');
+  await expect(panel).toContainText('echo-mcp');
   await expect(panel).toContainText('off by default');
-  const toggle = panel.getByRole('switch', { name: 'Use cursor-echo in this chat' });
+  const toggle = panel.getByRole('switch', { name: 'Use echo-mcp in this chat' });
   await expect(toggle).not.toBeChecked();
   await toggle.click();
   await expect(panel).toContainText('set for this chat');

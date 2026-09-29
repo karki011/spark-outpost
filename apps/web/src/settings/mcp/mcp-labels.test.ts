@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { McpScanSource, UserMcpServer } from '@spark-outpost/contracts';
-import { scanFound, scanLine, scopeLine, statusOf } from './mcp-labels.ts';
+import type { UserMcpServer } from '@spark-outpost/contracts';
+import { scopeLine, statusOf } from './mcp-labels.ts';
 
 const PROJECT = '00000000-0000-4000-8000-000000000001';
 
@@ -16,8 +16,6 @@ function server(change: Partial<UserMcpServer> = {}): UserMcpServer {
     envNames: [],
     headerNames: [],
     secretNames: [],
-    importableNames: [],
-    origin: null,
     fingerprint: 'f1',
     global: null,
     projects: [],
@@ -53,25 +51,5 @@ describe('scopeLine', () => {
         server({ global: enabled, projects: [{ ...enabled, enabled: false, projectId: PROJECT }] }),
       ),
     ).toBe('All chats · off in 1 project');
-  });
-});
-
-describe('scanLine', () => {
-  const source = (label: string, servers: number): McpScanSource => ({
-    tool: 'cursor',
-    label,
-    path: `/x/${label}`,
-    found: servers > 0,
-    servers,
-    warnings: [],
-  });
-
-  it('counts the apps and names where servers were found', () => {
-    expect(scanLine([source('Codex', 2), source('Cursor', 1), source('VS Code', 0)])).toBe(
-      'Scanned 3 apps · found 3 servers in Codex and Cursor',
-    );
-    expect(scanLine([source('Codex', 0)])).toBe('Scanned 1 app · no MCP servers found');
-    expect(scanFound([source('Codex', 0)])).toBe(false);
-    expect(scanFound([source('Codex', 0), source('Cursor', 2)])).toBe(true);
   });
 });

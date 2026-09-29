@@ -2,19 +2,14 @@ import '../../chat/project/agent-setup.css';
 import './mcp.css';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { McpScanSource, SaveUserMcpRequest, UserMcpServer } from '@spark-outpost/contracts';
+import type { SaveUserMcpRequest, UserMcpServer } from '@spark-outpost/contracts';
 import { mcpApi } from '../../api/mcp.ts';
 import { projectKeys, projectsApi } from '../../api/projects.ts';
 import { ToastHost } from '../../conversations/Toast.tsx';
 import { useToast } from '../../conversations/use-toast.ts';
-import { atLeast } from '../../ui/at-least.ts';
-import { McpScanFailed, McpScanning } from './McpScanning.tsx';
-import { McpScanSummary } from './McpScanSummary.tsx';
 import { McpServerCard } from './McpServerCard.tsx';
 import { McpServerForm } from './McpServerForm.tsx';
 import { useMcpChange, useUserMcp } from './use-mcp.ts';
-
-const SCAN_MIN_MS = 600;
 
 type Editing = { server: UserMcpServer | null } | null;
 
@@ -39,14 +34,11 @@ export function McpSection() {
   const [editing, setEditing] = useState<Editing>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [removing, setRemoving] = useState<ReadonlySet<string>>(new Set());
-  const [dismissedScan, setDismissedScan] = useState<readonly McpScanSource[] | null>(null);
-  const scan = useMcpChange(() => atLeast(mcpApi.scan(), SCAN_MIN_MS));
   const remove = useMcpChange((id: string) => mcpApi.remove(id));
   const save = useMcpChange((body: SaveUserMcpRequest) =>
     editing?.server ? mcpApi.edit(editing.server.id, body) : mcpApi.add(body),
   );
   const servers = (list.data?.servers ?? []).filter((server) => !removing.has(server.id));
-  const scanned = list.data?.scan;
 
   const markRemoving = (id: string, on: boolean) =>
     setRemoving((current) => {
@@ -79,19 +71,12 @@ export function McpSection() {
   return (
     <div className="mcp-section">
       <p className="lede">
+        Add a server, or use Paste config in the form to bring one over from another app’s JSON.
         Servers start off. Turn one on for all chats, some projects, or one chat with /mcp; tool
         calls still ask first except at Full auto. Repo .mcp.json servers live in each project’s
         Agent setup.
       </p>
       <div className="mcp-actions">
-        <button
-          type="button"
-          className="btn line sm"
-          disabled={scan.isPending}
-          onClick={() => scan.mutate()}
-        >
-          {scan.isPending ? 'Scanning…' : 'Scan other apps'}
-        </button>
         <button
           type="button"
           className="btn primary sm"
@@ -111,16 +96,6 @@ export function McpSection() {
             </p>
           ),
       )}
-      {scan.isPending ? (
-        <McpScanning />
-      ) : scan.isError ? (
-        <McpScanFailed message={scan.error.message} onDismiss={() => scan.reset()} />
-      ) : (
-        scanned &&
-        scanned !== dismissedScan && (
-          <McpScanSummary sources={scanned} onDismiss={() => setDismissedScan(scanned)} />
-        )
-      )}
       {editing && (
         <McpServerForm
           key={editing.server?.id ?? 'new'}
@@ -133,7 +108,9 @@ export function McpSection() {
       )}
       {list.isPending && <SkeletonRows />}
       {list.data && servers.length === 0 && !editing && (
-        <p className="mcp-empty">No MCP servers yet. Scan your other apps or add one.</p>
+        <p className="mcp-empty">
+          No MCP servers yet. Add one, or paste a config from another app.
+        </p>
       )}
       <div className="mcp-list">
         {servers.map((server) => (

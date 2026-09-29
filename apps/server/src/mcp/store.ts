@@ -18,8 +18,6 @@ export interface StoredUserConfig {
   envNames: string[];
   headerNames: string[];
   secretNames: string[];
-  importableNames: string[];
-  origin: string | null;
 }
 
 export interface UserMcpRow {
@@ -60,8 +58,6 @@ const configFieldsSchema = z.object({
   envNames: serverShape.envNames.catch([]),
   headerNames: serverShape.headerNames.catch([]),
   secretNames: serverShape.secretNames.catch([]),
-  importableNames: serverShape.importableNames.catch([]),
-  origin: serverShape.origin.catch(null),
 });
 const storedConfigSchema = configFieldsSchema.catch(() => configFieldsSchema.parse({}));
 const storedCheckSchema = mcpCheckSchema.nullable().catch(null);
@@ -86,9 +82,9 @@ export function userFingerprint(server: Omit<McpServerConfig, 'fingerprint'>): s
 
 export function storedUserConfig(
   server: Omit<McpServerConfig, 'fingerprint'>,
-  extra: Pick<StoredUserConfig, 'secretNames' | 'importableNames' | 'origin'>,
+  secretNames: string[],
 ): StoredUserConfig {
-  return { ...storedMcpConfig(server), ...extra };
+  return { ...storedMcpConfig(server), secretNames };
 }
 
 const SERVER_COLUMNS = 'id, source, name, transport, config, fingerprint, last_check';
@@ -182,14 +178,6 @@ export async function updateUserMcp(
             updated_at = now()
       WHERE id = $1`,
     [id, server.name, server.transport, server.config, server.fingerprint],
-  );
-}
-
-export async function setSecretNames(db: Queryable, id: string, names: string[]): Promise<void> {
-  await db.query(
-    `UPDATE mcp_servers SET config = jsonb_set(config, '{secretNames}', $2::jsonb)
-      WHERE id = $1`,
-    [id, JSON.stringify(names)],
   );
 }
 

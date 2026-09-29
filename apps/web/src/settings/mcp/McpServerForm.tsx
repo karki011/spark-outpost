@@ -118,7 +118,7 @@ export function McpServerForm({ server, busy, error, onSave, onCancel }: McpServ
           <label htmlFor={`${ids}-name-input`}>Name</label>
           <input
             id={`${ids}-name-input`}
-            className="inp sm mono"
+            className="inp mono"
             value={name}
             placeholder="github"
             spellCheck={false}
@@ -147,7 +147,7 @@ export function McpServerForm({ server, busy, error, onSave, onCancel }: McpServ
           <label htmlFor={`${ids}-command-input`}>Command</label>
           <input
             id={`${ids}-command-input`}
-            className="inp sm mono"
+            className="inp mono"
             value={commandLine}
             placeholder="npx -y @modelcontextprotocol/server-github"
             spellCheck={false}
@@ -172,7 +172,7 @@ export function McpServerForm({ server, busy, error, onSave, onCancel }: McpServ
           <label htmlFor={`${ids}-url-input`}>URL</label>
           <input
             id={`${ids}-url-input`}
-            className="inp sm mono"
+            className="inp mono"
             type="url"
             value={url}
             placeholder="https://example.com/mcp"

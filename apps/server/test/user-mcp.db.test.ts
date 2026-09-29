@@ -6,7 +6,6 @@ import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { ChatMcpList, Project, UserMcpList, UserMcpServer } from '@spark-outpost/contracts';
 import { loadUserMcp } from '../src/mcp/launch.ts';
-import { scanHomesAt } from '../src/mcp/scan.ts';
 import { createConversation } from '../src/persistence/conversations.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
@@ -19,14 +18,11 @@ let t: TestDb;
 let secrets: SecretStore;
 let app: ReturnType<typeof createTestApp>;
 let base: string;
-let home: string;
 let folder: string;
 
 beforeAll(async () => {
   base = await realpath(await mkdtemp(join(tmpdir(), 'spark-user-mcp-db-')));
-  home = join(base, 'home');
   folder = join(base, 'repo');
-  await mkdir(join(home, '.cursor'), { recursive: true });
   await mkdir(folder);
 });
 
@@ -34,21 +30,10 @@ afterAll(async () => {
   await rm(base, { recursive: true, force: true });
 });
 
-async function writeCursor(extraArg = '') {
-  const args = [ECHO, join(base, 'started'), ...(extraArg ? [extraArg] : [])];
-  await writeFile(
-    join(home, '.cursor', 'mcp.json'),
-    JSON.stringify({
-      mcpServers: { echo: { command: process.execPath, args, env: { ECHO_TOKEN: TOKEN } } },
-    }),
-  );
-}
-
 beforeEach(async () => {
   t = await createTestDb();
   secrets = memorySecretStore();
-  app = createTestApp(t, { secrets, mcpHomes: scanHomesAt(home) });
-  await writeCursor();
+  app = createTestApp(t, { secrets });
 });
 
 afterEach(async () => {
@@ -59,8 +44,18 @@ const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
 const send = (method: 'post' | 'put' | 'delete', path: string, body: object = {}) =>
   request(app)[method](path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
 
-async function scanned(): Promise<UserMcpServer> {
-  const list = (await send('post', '/api/mcp/scan').expect(200)).body as UserMcpList;
+const echoBody = (extraArg = '') => ({
+  name: 'echo',
+  transport: 'stdio',
+  command: process.execPath,
+  args: [ECHO, join(base, 'started'), ...(extraArg ? [extraArg] : [])],
+  url: null,
+  env: { ECHO_TOKEN: TOKEN },
+  headers: {},
+});
+
+async function added(): Promise<UserMcpServer> {
+  const list = (await send('post', '/api/mcp/servers', echoBody()).expect(201)).body as UserMcpList;
   return list.servers.find((server) => server.name === 'echo')!;
 }
 
@@ -86,42 +81,32 @@ async function chatWith(projectId: string | null): Promise<string> {
 }
 
 describe('user-level MCP servers', () => {
-  it('imports scanned servers switched off, with value names but never the values', async () => {
-    const response = await send('post', '/api/mcp/scan').expect(200);
-    const list = response.body as UserMcpList;
-    expect(list.scan?.find((source) => source.tool === 'cursor')).toMatchObject({
-      found: true,
-      servers: 1,
-    });
-    const echo = list.servers[0]!;
-    expect(echo).toMatchObject({
-      source: 'imported:cursor',
-      transport: 'stdio',
-      envNames: ['ECHO_TOKEN'],
-      secretNames: [],
-      importableNames: ['ECHO_TOKEN'],
-      global: null,
-    });
-    expect(JSON.stringify(response.body)).not.toContain(TOKEN);
-    expect(await everythingStored()).not.toContain(TOKEN);
-    expect(await loadUserMcp(t.db, await chatWith(null), [])).toEqual([]);
-  });
-
-  it('copies confirmed values into the keychain only', async () => {
-    const echo = await scanned();
-    const list = (
-      await send('post', `/api/mcp/servers/${echo.id}/copy-secrets`, {
-        fingerprint: echo.fingerprint,
-        names: ['ECHO_TOKEN'],
-      }).expect(200)
-    ).body as UserMcpList;
-    expect(list.servers[0]).toMatchObject({ secretNames: ['ECHO_TOKEN'], importableNames: [] });
-    expect(await secrets.get(`mcp:${echo.id}`)).toContain(TOKEN);
-    expect(await everythingStored()).not.toContain(TOKEN);
-    await send('post', `/api/mcp/servers/${echo.id}/copy-secrets`, {
-      fingerprint: 'stale',
-      names: ['ECHO_TOKEN'],
-    }).expect(409);
+  it('keeps servers imported earlier as read-only entries', async () => {
+    await t.db.query(
+      `INSERT INTO mcp_servers (id, workspace_id, source, name, transport, config, fingerprint)
+       VALUES (gen_random_uuid(), $1, 'imported:cursor', 'old', 'stdio', $2, 'fp-old')`,
+      [
+        t.workspaceId,
+        {
+          command: 'old-mcp',
+          args: [],
+          url: null,
+          envNames: [],
+          headerNames: [],
+          secretNames: [],
+          importableNames: ['OLD_TOKEN'],
+          origin: '/home/.cursor/mcp.json',
+        },
+      ],
+    );
+    const list = (await get('/api/mcp/servers').expect(200)).body as UserMcpList;
+    expect(list.servers).toEqual([
+      expect.objectContaining({ source: 'imported:cursor', name: 'old', global: null }),
+    ]);
+    expect(list.servers[0]).not.toHaveProperty('importableNames');
+    expect(list).not.toHaveProperty('scan');
+    await send('put', `/api/mcp/servers/${list.servers[0]!.id}`, echoBody()).expect(400);
+    await send('post', '/api/mcp/scan').expect(404);
   });
 
   it('adds a server by hand with its secret in the keychain, and tests the connection', async () => {
@@ -180,7 +165,7 @@ describe('user-level MCP servers', () => {
   });
 
   it('turns on per scope: all chats, a project override and a chat override', async () => {
-    const echo = await scanned();
+    const echo = await added();
     const project = (await send('post', '/api/projects', { rootPath: folder }).expect(201))
       .body as Project;
     const inProject = await chatWith(project.id);
@@ -220,7 +205,7 @@ describe('user-level MCP servers', () => {
   });
 
   it('switches a server off everywhere once its config changes, until it is reviewed again', async () => {
-    const echo = await scanned();
+    const echo = await added();
     await send('put', `/api/mcp/servers/${echo.id}/enable`, {
       scope: 'global',
       enabled: true,
@@ -229,8 +214,9 @@ describe('user-level MCP servers', () => {
     const chat = await chatWith(null);
     expect(await loadUserMcp(t.db, chat, [])).toHaveLength(1);
 
-    await writeCursor('--changed');
-    const changed = await scanned();
+    const edited = await send('put', `/api/mcp/servers/${echo.id}`, echoBody('--changed'));
+    expect(edited.status).toBe(200);
+    const changed = (edited.body as UserMcpList).servers[0]!;
     expect(changed.id).toBe(echo.id);
     expect(changed.fingerprint).not.toBe(echo.fingerprint);
     expect(changed.global).toEqual({ enabled: false, changed: true });

@@ -19,10 +19,6 @@ interface McpServerCardProps {
   onRemove: (server: UserMcpServer) => void;
 }
 
-function fileName(path: string): string {
-  return path.split('/').at(-1) ?? path;
-}
-
 export function McpServerCard({
   server,
   projects,
@@ -35,13 +31,7 @@ export function McpServerCard({
   const bodyId = useId();
   const enable = useMcpChange((body: McpEnableRequest) => mcpApi.enable(server.id, body));
   const test = useMcpChange(() => mcpApi.test(server.id));
-  const copy = useMcpChange(() =>
-    mcpApi.copySecrets(server.id, {
-      fingerprint: server.fingerprint,
-      names: server.importableNames,
-    }),
-  );
-  const failure = [enable, test, copy].find((mutation) => mutation.isError)?.error;
+  const failure = [enable, test].find((mutation) => mutation.isError)?.error;
   const globalOn = server.global?.enabled ?? false;
   const status = test.isPending ? { tone: 'none', text: 'Testing…' } : statusOf(server);
 
@@ -91,22 +81,6 @@ export function McpServerCard({
                   The config changed since you turned it on, so it is off. Review it, then turn it
                   on again.
                 </p>
-              )}
-              {server.importableNames.length > 0 && server.origin && (
-                <div className="mcp-import">
-                  <p>
-                    {fileName(server.origin)} has values for {server.importableNames.join(', ')}.
-                    Copy them to your keychain so this server gets them?
-                  </p>
-                  <button
-                    type="button"
-                    className="btn line sm"
-                    disabled={copy.isPending}
-                    onClick={() => copy.mutate()}
-                  >
-                    Copy {server.importableNames.length === 1 ? 'value' : 'values'} to keychain
-                  </button>
-                </div>
               )}
               <McpServerDetails server={server} />
               <McpProjectOverrides

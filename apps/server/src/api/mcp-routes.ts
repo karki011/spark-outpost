@@ -1,10 +1,8 @@
 import { Router, type Request } from 'express';
 import {
-  mcpCopySecretsRequestSchema,
   mcpEnableRequestSchema,
   saveUserMcpRequestSchema,
   type ChatMcpServer,
-  type McpScanSource,
   type UserMcpList,
 } from '@spark-outpost/contracts';
 import { repoScanner, type RepoScanner } from '../agent-config/discovery.ts';
@@ -12,9 +10,7 @@ import { conversationProjectIds, enabledProjectMcp } from '../agent-config/store
 import { effectiveFor, userServerView } from '../mcp/effective.ts';
 import { launchOf, resolveUserServer } from '../mcp/launch.ts';
 import { probeMcpServer, type ProbeResult } from '../mcp/probe.ts';
-import { defaultHomes, findScanned, scanUserMcp } from '../mcp/scan.ts';
-import { deleteMcpSecrets, mergeSecrets, readMcpSecrets, writeMcpSecrets } from '../mcp/secrets.ts';
-import type { SourceHomes } from '../mcp/sources.ts';
+import { deleteMcpSecrets } from '../mcp/secrets.ts';
 import {
   GLOBAL_KEY,
   deleteUserMcp,
@@ -22,12 +18,10 @@ import {
   getUserMcp,
   listUserMcp,
   recordCheck,
-  setSecretNames,
   setUserEnablement,
-  userFingerprint,
   type UserMcpRow,
 } from '../mcp/store.ts';
-import { importScanned, saveManualServer } from '../mcp/save.ts';
+import { saveManualServer } from '../mcp/save.ts';
 import type { McpServerConfig } from '../agent-config/mcp-json.ts';
 import type { Db } from '../persistence/db.ts';
 import { getProject } from '../projects/projects.ts';
@@ -39,7 +33,6 @@ export interface McpRouteDeps {
   db: Db;
   workspaceId: string;
   secrets: SecretStore;
-  mcpHomes?: SourceHomes;
   probeMcp?: (server: McpServerConfig) => Promise<ProbeResult>;
   scanner?: RepoScanner;
 }
@@ -48,7 +41,6 @@ export function mcpRoutes({
   db,
   workspaceId,
   secrets,
-  mcpHomes = defaultHomes(),
   probeMcp = probeMcpServer,
   scanner = repoScanner,
 }: McpRouteDeps): Router {
@@ -63,9 +55,9 @@ export function mcpRoutes({
     return { servers, enablements };
   };
 
-  const list = async (scan: McpScanSource[] | null = null): Promise<UserMcpList> => {
+  const list = async (): Promise<UserMcpList> => {
     const { servers, enablements } = await userServers();
-    return { servers: servers.map((server) => userServerView(server, enablements)), scan };
+    return { servers: servers.map((server) => userServerView(server, enablements)) };
   };
 
   const projectServers = async (projectIds: readonly string[]): Promise<ChatMcpServer[]> => {
@@ -102,12 +94,6 @@ export function mcpRoutes({
     res.json(await list());
   });
 
-  router.post('/mcp/scan', async (_req, res) => {
-    const scan = await scanUserMcp(mcpHomes);
-    for (const found of scan.servers) await importScanned(db, workspaceId, found);
-    res.json(await list(scan.sources));
-  });
-
   router.post('/mcp/servers', async (req, res) => {
     const body = parseBody(saveUserMcpRequestSchema, req);
     await saveManualServer({ db, workspaceId, secrets }, null, body);
@@ -117,7 +103,9 @@ export function mcpRoutes({
   router.put('/mcp/servers/:id', async (req, res) => {
     const server = await serverOf(req);
     if (server.source !== 'user') {
-      throw new BadRequestError('Imported servers change when you scan again, not here.');
+      throw new BadRequestError(
+        'Servers imported from another app cannot be edited. Remove it and add it again yourself.',
+      );
     }
     const body = parseBody(saveUserMcpRequestSchema, req);
     await saveManualServer({ db, workspaceId, secrets }, server, body);
@@ -146,35 +134,6 @@ export function mcpRoutes({
       scopeKey,
       enabled: body.enabled,
     });
-    res.json(await list());
-  });
-
-  router.post('/mcp/servers/:id/copy-secrets', async (req, res) => {
-    const server = await serverOf(req);
-    const body = parseBody(mcpCopySecretsRequestSchema, req);
-    const tool = server.source.replace(/^imported:/, '');
-    const found = await findScanned(mcpHomes, tool, server.name);
-    if (!found || server.source === 'user') {
-      throw new BadRequestError('This server is no longer in the file it came from.');
-    }
-    if (
-      body.fingerprint !== server.fingerprint ||
-      userFingerprint(found.server) !== server.fingerprint
-    ) {
-      throw new AgentConfigConflictError('This MCP server changed. Scan again, then review it.');
-    }
-    const pick = (map: Record<string, string>) =>
-      Object.fromEntries(
-        Object.entries(map).filter(([name, value]) => body.names.includes(name) && value !== ''),
-      );
-    const values = mergeSecrets(await readMcpSecrets(secrets, server.id), {
-      env: pick(found.server.env),
-      headers: pick(found.server.headers),
-    });
-    await writeMcpSecrets(secrets, server.id, values);
-    await setSecretNames(db, server.id, [
-      ...new Set([...Object.keys(values.env), ...Object.keys(values.headers)]),
-    ]);
     res.json(await list());
   });
 

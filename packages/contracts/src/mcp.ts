@@ -7,17 +7,6 @@ import {
   SERVER_FINGERPRINT_MESSAGE,
 } from './agent-config.ts';
 
-export const MCP_IMPORT_TOOLS = [
-  'claude-code',
-  'claude-desktop',
-  'cursor',
-  'vscode',
-  'codex',
-  'windsurf',
-] as const;
-export const mcpImportToolSchema = z.enum(MCP_IMPORT_TOOLS);
-export type McpImportTool = z.infer<typeof mcpImportToolSchema>;
-
 export const MCP_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const variableName = z.string().regex(/^[A-Za-z_][A-Za-z0-9_.-]{0,127}$/);
 const headerName = z.string().regex(/^[A-Za-z0-9!#$%&'*+.^_`|~-]{1,128}$/);
@@ -48,8 +37,6 @@ export const userMcpServerSchema = z.object({
   envNames: z.array(z.string()),
   headerNames: z.array(z.string()),
   secretNames: z.array(z.string()),
-  importableNames: z.array(z.string()),
-  origin: z.string().nullable(),
   fingerprint: z.string(),
   global: mcpEnablementSchema.nullable(),
   projects: z.array(mcpEnablementSchema.extend({ projectId: z.uuid() })),
@@ -57,19 +44,8 @@ export const userMcpServerSchema = z.object({
 });
 export type UserMcpServer = z.infer<typeof userMcpServerSchema>;
 
-export const mcpScanSourceSchema = z.object({
-  tool: mcpImportToolSchema,
-  label: z.string(),
-  path: z.string(),
-  found: z.boolean(),
-  servers: z.number().int().nonnegative(),
-  warnings: z.array(z.string()),
-});
-export type McpScanSource = z.infer<typeof mcpScanSourceSchema>;
-
 export const userMcpListSchema = z.object({
   servers: z.array(userMcpServerSchema),
-  scan: z.array(mcpScanSourceSchema).nullable(),
 });
 export type UserMcpList = z.infer<typeof userMcpListSchema>;
 
@@ -110,12 +86,6 @@ export const mcpEnableRequestSchema = z
     message: SERVER_FINGERPRINT_MESSAGE,
   });
 export type McpEnableRequest = z.infer<typeof mcpEnableRequestSchema>;
-
-export const mcpCopySecretsRequestSchema = z.object({
-  fingerprint: fingerprintSchema,
-  names: z.array(z.string().max(128)).max(64),
-});
-export type McpCopySecretsRequest = z.infer<typeof mcpCopySecretsRequestSchema>;
 
 export const chatMcpViaSchema = z.enum(['chat', 'project', 'global', 'off']);
 export type ChatMcpVia = z.infer<typeof chatMcpViaSchema>;

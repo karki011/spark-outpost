@@ -119,12 +119,6 @@
 button.tvl-ask:hover {
   filter: brightness(1.08);
 }
-button.tvl-ask:focus-visible,
-.tvl-open:focus-visible,
-.tvl-toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
 .tvl-out.passed {
   background: var(--accent-soft);
   color: var(--accent-text);

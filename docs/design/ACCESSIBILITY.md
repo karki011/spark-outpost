@@ -116,7 +116,7 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 
 ## Focus and targets
 
-- Every interactive element shows a focus ring that is at least 2px of `--accent` and at least 3:1. The global `:focus-visible` outline covers most controls. Inputs that draw their own ring use a 1px accent border plus a 1px accent shadow, which makes 2px. Menu items keep the outline rather than relying on a hover tint.
+- Every interactive element shows a focus ring that is at least 2px of `--accent` and at least 3:1, on keyboard focus only (`:focus-visible`). The global rule in `app/base.css` draws a 2px outline with `outline-offset: -1px`, so it sits on the element's own border instead of floating outside it; there is no second ring. Primary buttons, whose fill is the accent, get an inset `--accent-ink` ring instead, and danger controls use `--danger`. Text fields never get that outline. They share one treatment instead: the border turns `--accent` and `--focus-ring` (from `theme.css`) adds a 1px `--accent` shadow plus a soft `--accent-soft` halo, so the solid ring is 2px with no gap. `.inp` uses it in `ui/controls.css`; wrappers such as the composer and the sidebar search apply the same token on `:focus-within`, and invalid fields use `--focus-ring-bad`. Menu items keep the outline rather than relying on a hover tint.
 - Targets are at least 24×24px (WCAG 2.5.8), and a browser test enforces this on the chat screen. Following Fitts's law, key actions are larger: Send, New chat and primary buttons are at least 32px tall.
 
 ## Motion

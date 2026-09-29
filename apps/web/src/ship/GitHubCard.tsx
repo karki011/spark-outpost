@@ -1,31 +1,49 @@
 import './github-card.css';
 import { useId, useState, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  githubTokenHint,
-  type GitHubConnectionStatus,
-  type GitHubTokenInfo,
-} from '@spark-outpost/contracts';
+import type { GitHubConnectionStatus } from '@spark-outpost/contracts';
+import { ChevronIcon } from '../ui/icons.tsx';
+import { Segmented } from '../ui/Segmented.tsx';
+import { fadeReveal } from '../ui/transitions.tsx';
+import { TokenDetails, TokenForm } from './GitHubTokenPanel.tsx';
 import { githubApi, shipKeys } from './ship-api.ts';
 
-const ACCESS_LABELS = { push: 'can push', read: 'read only', none: 'no access' } as const;
+type Method = 'gh' | 'token' | 'app';
 
-function day(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+const METHODS: { id: Method; label: string }[] = [
+  { id: 'gh', label: 'gh CLI' },
+  { id: 'token', label: 'Personal token' },
+  { id: 'app', label: 'GitHub App' },
+];
+
+function defaultMethod(status: GitHubConnectionStatus): Method {
+  if (status.active === 'token') return 'token';
+  return status.ghCli.login ? 'gh' : 'token';
 }
 
-function ghCliLine(ghCli: GitHubConnectionStatus['ghCli']): string {
+function ghCliState(ghCli: GitHubConnectionStatus['ghCli']): { tone: string; line: string } {
   if (ghCli.login) {
-    return `Signed in as ${ghCli.login} on ${ghCli.host}. Spark runs gh and never reads its token.`;
+    return { tone: 'ok', line: `Signed in as ${ghCli.login} on ${ghCli.host}.` };
   }
+  if (ghCli.installed) return { tone: 'warn', line: 'Installed but not signed in.' };
+  return { tone: 'off', line: 'Not installed.' };
+}
+
+function ghCliHowTo(ghCli: GitHubConnectionStatus['ghCli']): ReactNode {
+  if (ghCli.login) return 'Spark runs gh and never reads its token.';
   if (ghCli.installed) {
-    return 'Installed but not signed in. Run gh auth login in a terminal, then check again.';
+    return (
+      <>
+        Run <code>gh auth login</code> in a terminal, then check again.
+      </>
+    );
   }
-  return 'Not installed. Install the GitHub CLI and run gh auth login to use your login.';
+  return (
+    <>
+      Install the GitHub CLI and run <code>gh auth login</code> to use your login.
+    </>
+  );
 }
 
 function activeLine(status: GitHubConnectionStatus): string {
@@ -38,124 +56,40 @@ function activeLine(status: GitHubConnectionStatus): string {
   return 'Not connected';
 }
 
-function TokenDetails({
-  token,
-  onRemove,
-  busy,
+function GhCliPanel({
+  ghCli,
+  checking,
+  onCheck,
 }: {
-  token: GitHubTokenInfo;
-  onRemove: () => void;
-  busy: boolean;
+  ghCli: GitHubConnectionStatus['ghCli'];
+  checking: boolean;
+  onCheck: () => void;
 }) {
-  return (
-    <div className="gh-token">
-      <dl className="gh-facts">
-        <dt>Host</dt>
-        <dd>{token.host}</dd>
-        <dt>Access</dt>
-        <dd>{token.scopes.length > 0 ? token.scopes.join(', ') : 'Fine-grained token'}</dd>
-        <dt>Expires</dt>
-        <dd>{token.expiresAt ? day(token.expiresAt) : 'No expiry reported'}</dd>
-        {token.repos.map((repo) => (
-          <Row key={repo.repo} label={repo.repo}>
-            {ACCESS_LABELS[repo.access]}
-          </Row>
-        ))}
-      </dl>
-      <button type="button" className="btn ghost sm danger" onClick={onRemove} disabled={busy}>
-        Remove token
-      </button>
-    </div>
-  );
-}
-
-function Row({ label, children }: { label: string; children: ReactNode }) {
+  const state = ghCliState(ghCli);
   return (
     <>
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </>
-  );
-}
-
-function TokenForm({
-  onSave,
-  busy,
-  error,
-}: {
-  onSave: (token: string, host: string | undefined) => void;
-  busy: boolean;
-  error: string | null;
-}) {
-  const [token, setToken] = useState('');
-  const [host, setHost] = useState('');
-  const [show, setShow] = useState(false);
-  const hostId = useId();
-  const hint = githubTokenHint(token);
-  const submit = () => {
-    if (hint.valid && !busy) onSave(token.trim(), host.trim() || undefined);
-  };
-  return (
-    <div className="gh-form">
-      <div className="gh-keyrow">
-        <input
-          className="inp"
-          type={show ? 'text' : 'password'}
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') submit();
-          }}
-          placeholder="github_pat_…"
-          autoComplete="off"
-          spellCheck={false}
-          aria-label="GitHub personal access token"
-          disabled={busy}
-        />
-        <button
-          type="button"
-          className="btn line sm"
-          onClick={() => setShow(!show)}
-          disabled={busy}
-        >
-          {show ? 'Hide' : 'Show'}
+      <p className={`gh-state ${state.tone}`}>{state.line}</p>
+      <p className="gh-note">{ghCliHowTo(ghCli)}</p>
+      {!ghCli.login && (
+        <button type="button" className="btn line sm" onClick={onCheck} disabled={checking}>
+          Check again
         </button>
-      </div>
-      <label className="gh-host" htmlFor={hostId}>
-        GitHub Enterprise host (leave empty for github.com)
-      </label>
-      <input
-        id={hostId}
-        className="inp"
-        value={host}
-        onChange={(event) => setHost(event.target.value)}
-        placeholder="github.com"
-        autoComplete="off"
-        spellCheck={false}
-        disabled={busy}
-      />
-      <p className="gh-note">{hint.message}</p>
-      {error && (
-        <p className="gh-err" role="alert">
-          {error}
-        </p>
       )}
-      <button
-        type="button"
-        className="btn primary sm"
-        onClick={submit}
-        disabled={busy || !hint.valid}
-      >
-        {busy ? 'Verifying…' : 'Verify token'}
-      </button>
-    </div>
+    </>
   );
 }
 
 export function GitHubCard({ icon }: { icon: ReactNode }) {
   const queryClient = useQueryClient();
+  const bodyId = useId();
+  const [open, setOpen] = useState(false);
+  const [choice, setChoice] = useState<Method | null>(null);
   const status = useQuery({ queryKey: shipKeys.github, queryFn: githubApi.connection });
-  const saved = (next: GitHubConnectionStatus) => queryClient.setQueryData(shipKeys.github, next);
+  const saved = (next: GitHubConnectionStatus) => {
+    queryClient.setQueryData(shipKeys.github, next);
+    setChoice(null);
+    setOpen(false);
+  };
   const save = useMutation({
     mutationFn: ({ token, host }: { token: string; host: string | undefined }) =>
       githubApi.saveToken(host ? { token, host } : { token }),
@@ -164,9 +98,12 @@ export function GitHubCard({ icon }: { icon: ReactNode }) {
   const remove = useMutation({ mutationFn: githubApi.removeToken, onSuccess: saved });
   const data = status.data;
   const busy = save.isPending || remove.isPending;
+  const showBody = data !== undefined && (open || data.active === null);
+  const method = choice ?? (data ? defaultMethod(data) : 'token');
+  const methodLabel = METHODS.find((option) => option.id === method)?.label ?? '';
 
   return (
-    <li className="ccard gh-card">
+    <li className={showBody ? 'ccard gh-card open' : 'ccard gh-card'}>
       <div className="top">
         <span className="plogo">{icon}</span>
         <b>GitHub</b>
@@ -180,42 +117,58 @@ export function GitHubCard({ icon }: { icon: ReactNode }) {
       {status.isPending && <p className="gh-note">Checking…</p>}
       {status.isError && <p className="gh-err">{status.error.message}</p>}
       {data && (
-        <>
+        <div className="gh-summary">
           <p className="gh-active" role="status">
             {activeLine(data)}
           </p>
-          <section className="gh-method" aria-label="gh CLI">
-            <h4>gh CLI</h4>
-            <p className="gh-note">{ghCliLine(data.ghCli)}</p>
-            {!data.ghCli.login && (
-              <button
-                type="button"
-                className="btn line sm"
-                onClick={() => void status.refetch()}
-                disabled={status.isFetching}
-              >
-                Check again
-              </button>
-            )}
-          </section>
-          <section className="gh-method" aria-label="Personal access token">
-            <h4>Personal access token</h4>
-            {data.token ? (
-              <TokenDetails token={data.token} busy={busy} onRemove={() => remove.mutate()} />
-            ) : (
-              <TokenForm
-                busy={busy}
-                error={save.error?.message ?? null}
-                onSave={(token, host) => save.mutate({ token, host })}
-              />
-            )}
-          </section>
-          <section className="gh-method" aria-label="GitHub App">
-            <h4>GitHub App</h4>
-            <span className="soon">Coming later</span>
-          </section>
-        </>
+          {data.active && (
+            <button
+              type="button"
+              className="gh-disclose"
+              aria-expanded={open}
+              aria-controls={bodyId}
+              onClick={() => setOpen(!open)}
+            >
+              {data.active === 'token' ? 'Manage token' : 'Other ways to connect'}
+              <ChevronIcon />
+            </button>
+          )}
+        </div>
       )}
+      <AnimatePresence initial={false}>
+        {data && showBody && (
+          <motion.div key="body" id={bodyId} className="gh-collapse" {...fadeReveal}>
+            <div className="gh-body">
+              <Segmented
+                ariaLabel="How to connect GitHub"
+                options={METHODS}
+                value={method}
+                onChange={(id) => setChoice(id as Method)}
+              />
+              <section className="gh-method" aria-label={methodLabel}>
+                {method === 'gh' && (
+                  <GhCliPanel
+                    ghCli={data.ghCli}
+                    checking={status.isFetching}
+                    onCheck={() => void status.refetch()}
+                  />
+                )}
+                {method === 'token' &&
+                  (data.token ? (
+                    <TokenDetails token={data.token} busy={busy} onRemove={() => remove.mutate()} />
+                  ) : (
+                    <TokenForm
+                      busy={busy}
+                      error={save.error?.message ?? null}
+                      onSave={(token, host) => save.mutate({ token, host })}
+                    />
+                  ))}
+                {method === 'app' && <span className="soon">Coming later</span>}
+              </section>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </li>
   );
 }

@@ -62,8 +62,6 @@
 .allow-add .inp {
   flex: 1;
   min-width: 0;
-  padding: 6px 9px;
-  font-size: 13px;
 }
 .allow-note {
   margin: 6px 0 0;

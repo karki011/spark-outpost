@@ -185,10 +185,9 @@
   flex: 1;
   min-width: 170px;
 }
-.lf .field-button:focus-visible,
 .lf-q:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 .lbar {
   display: flex;

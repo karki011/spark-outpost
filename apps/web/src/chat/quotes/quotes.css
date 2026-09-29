@@ -85,7 +85,7 @@
   outline: 0;
 }
 .qt-note input:focus-visible {
-  box-shadow: inset 0 0 0 1px var(--accent);
+  box-shadow: var(--focus-ring);
 }
 .qt-save {
   background: var(--accent);

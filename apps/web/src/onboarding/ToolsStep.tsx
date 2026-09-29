@@ -31,17 +31,6 @@ function ToolIcon({ children }: { children: ReactNode }) {
 
 export const connectors: Connector[] = [
   {
-    id: 'jira',
-    name: 'Jira',
-    description: 'Read and update tickets, and link them to chats.',
-    icon: (
-      <ToolIcon>
-        <path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" />
-        <path d="M10 9v6" />
-      </ToolIcon>
-    ),
-  },
-  {
     id: 'github',
     name: 'GitHub',
     description: 'Open pull requests, read diffs, and check CI.',
@@ -51,6 +40,17 @@ export const connectors: Connector[] = [
         <circle cx="6" cy="19" r="2" />
         <circle cx="18" cy="7" r="2" />
         <path d="M6 7v10M18 9c0 5-7 3-7 8" />
+      </ToolIcon>
+    ),
+  },
+  {
+    id: 'jira',
+    name: 'Jira',
+    description: 'Read and update tickets, and link them to chats.',
+    icon: (
+      <ToolIcon>
+        <path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" />
+        <path d="M10 9v6" />
       </ToolIcon>
     ),
   },
