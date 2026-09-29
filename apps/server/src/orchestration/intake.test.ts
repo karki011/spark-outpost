@@ -90,6 +90,14 @@ describe('intake decisions', () => {
     expect(decideIntake(jev({ vague: 0.05 }), wrapUp).start).toBe('build');
     const offered = { ...wrapUp, request: 'do it', previousReply: 'Want me to add the retry?' };
     expect(decideIntake(null, offered).start).toBe('build');
+    const task = { taskId: 't', previousRequest: 'Add a retry', summary: '', lastReplyAt: null };
+    const resumed = decideIntake(jev({ continuesTask: 0.95 }), {
+      ...wrapUp,
+      request: 'continue',
+      currentTask: task,
+    });
+    expect(resumed.start).toBe('build');
+    expect(resumed.calls.vague).toMatchObject({ rule: true, value: false });
   });
 
   it('plans first for a big request at every level, and never when a plan is already agreed', () => {

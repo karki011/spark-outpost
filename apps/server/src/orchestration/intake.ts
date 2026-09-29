@@ -162,9 +162,6 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     review: review,
     destructive: { ...destructiveCall, value: destructive },
   };
-  const vagueCall = call(jev, 'vague', 'vague', vagueRule(facts), facts, risk);
-  calls.vague = vagueCall;
-  const vague = vagueCall.value;
   let continues: boolean | null = null;
   if (facts.currentTask) {
     const rule = followUpByRule(facts.request, facts.currentTask.lastReplyAt, facts.now);
@@ -172,6 +169,9 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     continues = continuesCall.value;
     calls.continues_task = continuesCall;
   }
+  const vagueCall = call(jev, 'vague', 'vague', vagueRule(facts), facts, risk);
+  const vague = vagueCall.value && !(continues === true && !facts.firstMessage);
+  calls.vague = { ...vagueCall, value: vague };
   const trivial = !destructive && trivialByRule(facts.request);
   if (facts.change) {
     calls.change = USER_CHANGE;
