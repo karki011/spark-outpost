@@ -236,7 +236,7 @@ async function editAfterLoop(turn: RoleTurn): Promise<void> {
   await stopped(turn.signal);
 }
 
-async function write(turn: RoleTurn, file: string, line: string): Promise<boolean> {
+export async function write(turn: RoleTurn, file: string, line: string): Promise<boolean> {
   const target = join(turn.cwd, file);
   const before = await current(target);
   const toolCallId = `write-${line.replace(/\W+/g, '-')}`;

@@ -8,6 +8,7 @@ import {
 import type { Db } from '../persistence/db.ts';
 import { advisorUsageForRuns } from '../persistence/advice.ts';
 import { planVersions } from '../persistence/artifacts.ts';
+import { currentPieceList } from '../persistence/pieces.ts';
 import { addTaskLink, TaskNotFoundError } from '../persistence/tasks.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
 import { taskChangedFile, taskChanges } from '../projects/task-changes.ts';
@@ -33,6 +34,15 @@ export function taskRoutes({ db, workspaceId }: TaskRouteDeps): Router {
       agreedPlans: await agreedPlans(db, task.conversationId),
       advisors: await advisorUsageForRuns(db, task.runIds),
     });
+  });
+
+  router.get('/tasks/:id/pieces', async (req, res) => {
+    const list = await currentPieceList(db, paramId(req));
+    if (!list) {
+      res.status(404).json({ error: 'This task has no piece list.' });
+      return;
+    }
+    res.json(list);
   });
 
   router.get('/tasks/:id/changes', async (req, res) => {

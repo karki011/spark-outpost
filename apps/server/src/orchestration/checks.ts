@@ -190,13 +190,18 @@ async function runOne(
   return resultOf(check, run, approvalId);
 }
 
-export async function runChecks(s: Session, target: CheckTarget): Promise<CheckBody | null> {
+export async function runChecks(
+  s: Session,
+  target: CheckTarget,
+  scoped: readonly CheckCommand[] | null = null,
+): Promise<CheckBody | null> {
   const root = s.input.projectRoots[0];
-  if (!s.checks || !root) return null;
+  const commands = scoped ?? s.checks?.commands;
+  if (!commands || !root) return null;
   s.checkRounds += 1;
   const round = s.checkRounds;
   const results: CheckResult[] = [];
-  for (const check of s.checks.commands) {
+  for (const check of commands) {
     const result = await runOne(s, check, target, root);
     if (!result) return null;
     results.push(result);

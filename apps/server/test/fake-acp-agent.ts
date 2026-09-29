@@ -2,6 +2,7 @@ import { Readable, Writable } from 'node:stream';
 import * as acp from '@agentclientprotocol/sdk';
 import { PLAN_MODE_TRIGGER, currentRequest, planModeTurn, planReplies } from './fake-acp-plans.ts';
 import { roleFor } from './fake-acp-roles.ts';
+import { coordinatorRoleFor } from './fake-acp-coordinator.ts';
 import { CODEX_DO_TRIGGER, codexDoTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
@@ -291,7 +292,7 @@ async function turn(
   if (asked.includes(PLAN_MODE_TRIGGER)) return planModeTurn(roleTurn, config.mode ?? '');
   if (await planReplies(asked, say)) return 'end_turn';
   if (text.includes(FOUR_KINDS_TRIGGER)) return fourKindsTurn(sessionId, sessionCwd, client, say);
-  const role = roleFor(text);
+  const role = coordinatorRoleFor(text) ?? roleFor(text);
   if (role) return role(roleTurn);
   if (text.includes('#blocks')) {
     await say(JSON.stringify(params.prompt.map(describeBlock)));

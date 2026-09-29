@@ -14,6 +14,7 @@ import {
   nameFor,
   recordRoute,
   resolveRoute,
+  seatRoute,
   type ResolvedRoute,
 } from './member-routes.ts';
 import { agreedPlanText, promptFor } from './member-prompts.ts';
@@ -27,6 +28,7 @@ import {
   fitToolLimit,
   publish,
   type MemberResult,
+  type Seat,
   type Session,
 } from './session.ts';
 import type { Spawn } from './transitions.ts';
@@ -38,6 +40,7 @@ export interface Place {
 
 export interface MemberOptions {
   checkFailures?: string;
+  seat?: Seat;
 }
 
 export interface MemberOutcome {
@@ -49,7 +52,7 @@ const RESUME_FOLLOW_UP = 'Continue where you stopped, then reply with what you c
 
 function modeFor(s: Session, role: AgentRole): RunMode {
   if (s.input.projectRoots.length === 0) return 'chat';
-  return role === 'builder' ? 'do' : 'ask';
+  return role === 'builder' || role === 'integrator' ? 'do' : 'ask';
 }
 
 function counter(s: Session, also?: (output: ProviderOutput) => void) {
@@ -186,19 +189,23 @@ async function runChild(
   options: MemberOptions,
 ): Promise<MemberResult> {
   const { route } = resolved;
-  const mode = modeFor(s, spawn.role);
+  const seat = options.seat ?? null;
+  const role = seat?.role ?? spawn.role;
+  const mode = modeFor(s, role);
   const copy = place?.reuse ? null : (place?.copy?.(name) ?? null);
   const branch = place?.reuse?.branch ?? copy?.branch ?? null;
-  const label = labelFor(spawn.role, route.pick, name);
+  const label = labelFor(role, route.pick, name);
   if (mode === 'do') await ensureParentSnapshot(s);
   const followUp = followUpFor(s, spawn, options);
-  const resumeKey = spawn.role === 'builder' && s.taskId ? builderKey(s.taskId) : null;
+  const resumeKey =
+    seat?.resumeKey ?? (spawn.role === 'builder' && s.taskId ? builderKey(s.taskId) : null);
   const attempt = s.results.filter((result) => result.role === spawn.role).length + 1;
+  const prompt = seat?.prompt ?? (await promptFor(s, spawn));
   const lease = await insertChildRun(
     s.deps.db,
     {
       parentRunId: s.lease.runId,
-      role: spawn.role,
+      role,
       stepIndex: 0,
       attempt,
       agentLabel: label,
@@ -206,8 +213,9 @@ async function runChild(
       model: route.pick.model,
       effort: route.pick.effort,
       mode,
-      prompt: withFollowUp(await promptFor(s, spawn), followUp, s.input.prompt),
+      prompt: withFollowUp(prompt, followUp, s.input.prompt),
       route: storedRoute(route, name, {
+        ...seat?.route,
         ...(branch ? { copy: branch } : {}),
         ...(resumeKey ? { resumeKey } : {}),
         ...(followUp ? { followUp } : {}),
@@ -230,9 +238,12 @@ async function runChild(
     stopNow.abort();
     await requestCancel(s.deps.db, lease.runId);
   }
-  if (copy) await copy.prepare(lease.runId);
+  if (copy) {
+    await copy.prepare(lease.runId);
+    s.copyRunId ??= lease.runId;
+  }
   fitToolLimit(s, route.pick.provider);
-  await recordRoute(s, spawn.role, resolved, lease.runId, name);
+  await recordRoute(s, role, resolved, lease.runId, name);
   await publish(s);
   const settings =
     s.deps.loopGuard === false ? null : { ...DEFAULT_LOOP_GUARD, ...s.deps.loopGuard };
@@ -247,7 +258,7 @@ async function runChild(
         onLiveCost: liveCostOf(s, lease.runId),
         backupAlsoFor: s.lease.runId,
         stopNow: stopNow.signal,
-        recordsPlan: spawn.role === 'builder',
+        recordsPlan: spawn.role === 'builder' && (!seat || seat.role === 'integrator'),
         ...(spawn.role === 'builder' ? { observeEdits: editObserver(s, lease.runId) } : {}),
       },
       s.append,
@@ -294,19 +305,25 @@ async function afterCritic(s: Session, result: MemberResult, route: MemberRoute)
   return verdict;
 }
 
+function seatFor(s: Session, spawn: Spawn, options: MemberOptions): MemberOptions {
+  if (options.seat || spawn.role !== 'builder' || !s.integrator) return options;
+  return { ...options, seat: s.integrator };
+}
+
 export async function runMember(
   s: Session,
   spawn: Spawn,
   place: Place | null = null,
   options: MemberOptions = {},
 ): Promise<MemberOutcome> {
-  const resolved = await resolveRoute(s, spawn);
-  s.routes.set(spawn.role, resolved.route);
-  const name = await nameFor(s, spawn.role);
+  const seated = seatFor(s, spawn, options);
+  const resolved = seated.seat ? seatRoute(s, spawn) : await resolveRoute(s, spawn);
+  if (seated.seat?.role !== 'coordinator') s.routes.set(spawn.role, resolved.route);
+  const name = seated.seat?.name ?? (await nameFor(s, spawn.role));
   const result =
     spawn.role === 'scout'
       ? await runInPlace(s, resolved, name)
-      : await runChild(s, spawn, resolved, name, place, options);
+      : await runChild(s, spawn, resolved, name, place, seated);
   s.results.push(result);
   if (result.outcome === 'lease_lost') return { result };
   if (spawn.role === 'critic') {

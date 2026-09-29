@@ -1,11 +1,14 @@
 import { expirePendingApprovals } from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
 import { findExpiredLeases, type Lease } from '../persistence/jobs.ts';
+import { failRunningPieces } from '../persistence/pieces.ts';
 import { LeaseLostError, appendRunEvent } from '../persistence/run-events.ts';
 import { runEvents } from './run-events.ts';
 
 export const OUTCOME_UNKNOWN_MESSAGE =
   'The worker stopped while this run was in progress, so its outcome is unknown. Nothing was retried automatically.';
+
+export const PIECE_OUTCOME_UNKNOWN = 'Outcome unknown: the worker stopped while this piece ran.';
 
 export const WAITING_OUTCOME_MESSAGE = `${OUTCOME_UNKNOWN_MESSAGE} It was waiting for your approval, so that action never ran.`;
 
@@ -15,6 +18,7 @@ export async function recoverExpiredLeases(db: Db): Promise<number> {
   for (const lease of expired) {
     if (await markOutcomeUnknown(db, lease)) recovered += 1;
   }
+  if (recovered > 0) await failRunningPieces(db, PIECE_OUTCOME_UNKNOWN);
   return recovered;
 }
 

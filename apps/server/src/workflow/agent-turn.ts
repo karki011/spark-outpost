@@ -40,6 +40,10 @@ import { commandAllowlistFromRules } from '../agent-config/allow-rules.ts';
 import { conversationProjectIds } from '../agent-config/store.ts';
 import { loadUserMcp } from '../mcp/launch.ts';
 
+export function writesCode(role: string | null | undefined): boolean {
+  return role === 'builder' || role === 'integrator';
+}
+
 export type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
 
 export interface TurnDeps {
@@ -230,7 +234,7 @@ export async function runAgentTurn(
             mode: input.agentMode,
             modes: await knownModes(deps.db, input),
             extraAllowlist: () => trustedCommands,
-            builder: input.role === 'builder',
+            builder: writesCode(input.role),
             projectRoots: input.projectRoots,
             append,
             waiters: deps.approvalWaiters,
@@ -261,7 +265,7 @@ export async function runAgentTurn(
       signal: control.signal,
       audit,
       ...(input.mode ? { mode: input.mode } : {}),
-      ...(input.role === 'builder' ? { builder: true } : {}),
+      ...(writesCode(input.role) ? { builder: true } : {}),
       ...(input.copyOf !== null ? { worktree: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),

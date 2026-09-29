@@ -10,7 +10,7 @@ import { approvalSchema, involvementLevelSchema, runModeSchema } from './approva
 import { costSourceSchema, totalCostSourceSchema } from './audit.ts';
 import { runStatusSchema } from './runs.ts';
 import { agentPickSchema, budgetLimitSchema, routeSourceSchema } from './checkpoints.ts';
-import { piecePlacementSchema } from './pieces.ts';
+import { pieceListSchema, piecePlacementSchema } from './pieces.ts';
 import { agentRoleSchema } from './roles.ts';
 
 export const orchestrationPhaseSchema = z.enum([
@@ -164,6 +164,7 @@ export const orchestrationSchema = z.object({
   checkpoints: z.array(approvalSchema),
   pendingCheckpoint: approvalSchema.nullable(),
   decisions: z.array(orchestrationDecisionSchema),
+  pieces: pieceListSchema.optional(),
   budget: orchestrationBudgetSchema,
   totals: orchestrationTotalsSchema,
   error: z.string().nullable(),

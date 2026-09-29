@@ -22,6 +22,7 @@ import {
 } from '../orchestration/view.ts';
 import { toApproval, type ApprovalRow } from './approvals.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
+import { pieceListsForRuns } from './pieces.ts';
 import { newId } from './ids.ts';
 import type { Lease } from './jobs.ts';
 
@@ -308,12 +309,14 @@ async function assembleOrchestrations(db: Queryable, rows: readonly Orchestratio
       [ids],
     ),
   ]);
+  const pieces = await pieceListsForRuns(db, ids);
   return rows.map((row) =>
     buildOrchestration(
       row,
       members.rows.filter((member) => member.owner === row.run_id).map(toCrewMember),
       approvals.rows.filter((approval) => approval.run_id === row.run_id).map(toApproval),
       decisions.rows.filter((decision) => decision.run_id === row.run_id).map(toDecision),
+      pieces.get(row.run_id) ?? null,
     ),
   );
 }

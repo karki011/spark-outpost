@@ -35,6 +35,7 @@ import type { ProjectStyle } from './lean.ts';
 import type { LoopGuardSettings } from './loop-guard.ts';
 import type { MemberRoute, RouteContext, RouteFacts } from './routing.ts';
 import type { FlowState } from './transitions.ts';
+import type { Coordination } from '../coordinator/state.ts';
 
 export interface OrchestratorDeps extends ExecuteRunDeps {
   budget?: Partial<BudgetLimits>;
@@ -63,6 +64,14 @@ export interface FixRound {
   toolCallsAt: number;
   activeMsAt: number;
   hit: BudgetLimit | null;
+}
+
+export interface Seat {
+  role: Extract<AgentRole, 'builder' | 'integrator' | 'coordinator' | 'scout'>;
+  name: string;
+  resumeKey: string;
+  prompt: string | null;
+  route?: Record<string, unknown>;
 }
 
 export interface BudgetChecks {
@@ -141,6 +150,8 @@ export interface Session {
   fixRound?: FixRound | null;
   passing?: PassingState | null;
   suggestions?: string[];
+  integrator?: Seat | null;
+  coordination?: Coordination | null;
 }
 
 export const COMMAND_READER_TOOL_CALL_LIMIT = 120;
