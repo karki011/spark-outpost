@@ -8,7 +8,7 @@ const run = promisify(execFile);
 const MAX_BUFFER = 64 * 1024 * 1024;
 
 export const WORKTREES_DIR = path.join('.spark', 'worktrees');
-const RESULT_REF_PREFIX = 'refs/spark-outpost/builders/';
+export const RESULT_REF_PREFIX = 'refs/spark-outpost/builders/';
 const EXCLUDE_LINE = '.spark/';
 
 export function worktreePath(root: string, runId: string): string {
