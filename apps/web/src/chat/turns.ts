@@ -24,10 +24,6 @@ export function topLevelRuns(detail: ConversationDetail): Run[] {
   return detail.runs.filter((run) => !run.parentRunId);
 }
 
-export function childRuns(detail: ConversationDetail, parentId: string): Run[] {
-  return detail.runs.filter((run) => run.parentRunId === parentId);
-}
-
 export function activeRun(detail: ConversationDetail | undefined): Run | null {
   const latest = detail ? topLevelRuns(detail).at(-1) : undefined;
   const active =

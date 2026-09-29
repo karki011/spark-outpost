@@ -1,0 +1,36 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    ".": {
+      "entry": [
+        "scripts/*.ts",
+        "scripts/codescan/{bench,load,requests}.ts",
+        "scripts/e2e-live/{rescore,stub}.ts",
+        "scripts/e2e-live/dev-day/rescore-day.ts",
+        "scripts/routing/{live,live-score}.ts",
+        "tests/browser/*.spec.ts",
+        "tests/browser/provider-stub.ts",
+        "tests/browser/bin/gh-fake.ts"
+      ],
+      "project": ["scripts/**/*.ts", "tests/**/*.ts"],
+      "ignore": ["scripts/bench/fixture/**", "scripts/e2e-live/dev-day/fixtures/**"]
+    },
+    "apps/server": {
+      "entry": ["test/fake-*.ts", "test/echo-mcp-server.mjs"],
+      "project": ["src/**/*.ts", "test/**/*.{ts,mjs}"],
+      "ignoreDependencies": ["@agentclientprotocol/claude-agent-acp", "@vscode/tree-sitter-wasm"]
+    },
+    "apps/web": {
+      "entry": ["src/chat/approvals/diff-worker.ts"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "apps/desktop": {
+      "entry": ["src/server-entry.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/contracts": {
+      "project": ["src/**/*.ts"]
+    }
+  }
+}
