@@ -34,8 +34,14 @@
 }
 
 .hold-btn:focus-visible {
-  outline: 2px solid var(--danger);
-  outline-offset: 2px;
+  outline: none;
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent);
+}
+
+.hold-btn[data-phase='holding']:focus-visible,
+.hold-btn[data-phase='done']:focus-visible {
+  box-shadow: none;
 }
 
 .hold-btn:active:not(:disabled) {

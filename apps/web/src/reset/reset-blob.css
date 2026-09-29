@@ -283,6 +283,17 @@
 .reset-blob-stage .rb-roam {
   left: 0;
   bottom: 2px;
+  transition:
+    opacity 0.7s var(--out),
+    transform 0.9s var(--spring);
+}
+
+.reset-blob-stage[data-mood='calm'] .rb-roam {
+  opacity: 0;
+  transform: translate(-18px, 10px) scale(0.4);
+  transition:
+    opacity 0.5s var(--out),
+    transform 0.6s var(--out);
 }
 
 .grace-peek {
@@ -469,5 +480,9 @@
   .rb *::before,
   .rb *::after {
     animation: none !important;
+  }
+
+  .reset-blob-stage[data-mood='calm'] .rb-roam {
+    transform: none;
   }
 }
