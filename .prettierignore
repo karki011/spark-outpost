@@ -2,7 +2,5 @@ pnpm-lock.yaml
 docs/design/
 .local/
 dist/
-docs/KANBAN.md
-docs/tasks/board.json
 docs/reference/acp/schema.json
 docs/benchmarks/

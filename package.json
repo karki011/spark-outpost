@@ -25,7 +25,6 @@
     "db:up": "bash infra/local/up.sh",
     "db:stop": "bash infra/local/stop.sh",
     "db:migrate": "pnpm --filter @spark-outpost/server db:migrate",
-    "tasks": "tsx scripts/tasks.ts",
     "acp:coverage": "tsx scripts/acp-coverage.ts",
     "bench:ingest": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/bench-ingest.ts",
     "jev:thresholds": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/jev-thresholds.ts",

@@ -1,7 +1,6 @@
 # Spark Outpost — product and implementation plan
 
 Date: 2026-09-24, revised 2026-09-25 (protocol stack, database portability, desktop shell, mockup alignment)
-Status: foundation scaffold started; see ../KANBAN.md for implementation status.
 Working tagline: A home base for autonomous work.
 
 ## 1. Product
