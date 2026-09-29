@@ -14,6 +14,8 @@ Jev is not a chat or coding LLM. It doesn't generate text, stream, call tools, o
 
 ## Role
 
+- **Spark off.** With the Spark switch off (Settings → Spark, `profiles.spark_enabled`) Jev is not called at all: no intake, no clarifying questions, no verdict and no diff observation. See HARNESS_PLAN.md, "Spark settings, Spark off and session instructions".
+
 - **(a) Chat provider: no.** Nothing in the API can answer a chat.
 - **(b) Router: observed only since round 10.** Routing is a documented pattern (https://docs.typesafe.ai/patterns/intent-routing, https://docs.typesafe.ai/patterns/confidence-routing), but rules-only routing was cheaper at the same pass rate, so the rules pick the model and Jev's tier pick is recorded for comparison. Jev acts only on the intake questions listed below.
 
