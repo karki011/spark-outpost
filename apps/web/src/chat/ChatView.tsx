@@ -144,7 +144,7 @@ export function ChatView({ conversationId }: { conversationId: string }) {
             {detail.error.message}
           </p>
         )}
-        {detail.data && (
+        {detail.data ? (
           <Thread
             detail={detail.data}
             repos={repos}
@@ -153,6 +153,8 @@ export function ChatView({ conversationId }: { conversationId: string }) {
             onOpenTask={panel.openTask}
             quotes={quotes}
           />
+        ) : (
+          <div className="thread-wrap" aria-busy={detail.isPending} />
         )}
         <Composer
           conversationId={conversationId}

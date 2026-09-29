@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client.ts';
 import { markConnectionRestored } from './connection-store.ts';
+import { PanicScout } from './PanicScout.tsx';
 import { reconnectLabel, useAutoRetry } from './use-auto-retry.ts';
 import './connection.css';
 
@@ -17,7 +18,7 @@ export function ReconnectBanner() {
       <span className="sr-only" role="status">
         Lost the connection to the server. Reconnecting.
       </span>
-      <span className="spin" aria-hidden="true" />
+      <PanicScout fixing={retry.retrying} />
       <b>{reconnectLabel(retry)}</b>
       <small>Your chat stays open.</small>
       <button
