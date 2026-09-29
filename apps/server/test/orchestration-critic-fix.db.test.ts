@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type CheckBody, type InvolvementLevel } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
+import { nextCallUsd } from '../src/orchestration/budget-check.ts';
 import {
   BUG_FINDINGS,
   EDGE_FINDINGS,
@@ -371,7 +372,8 @@ describe('the task budget', () => {
     approval.kind === 'budget' ? { optionId: CHECKPOINT_OPTION.stop } : answerEverything(approval);
 
   it('refuses the first fix turn once the Builder and Critic spent the cap, and Stop ends on the keep card', async () => {
-    await start({ policy: JEV_SAYS_BUGS, costCapUsd: 0.2004 });
+    const builderAndCriticFloor = 0.2 + nextCallUsd('claude', 'sonnet');
+    await start({ policy: JEV_SAYS_BUGS, costCapUsd: builderAndCriticFloor + 0.0002 });
     const { conversationId, runId } = await begin('#bugreview #cost', 'hands-off');
     const { asked, orchestration } = await drive(conversationId, runId, stopAtBudget);
     expect(asked.map((approval) => approval.kind)).toEqual(['budget', 'accept']);
