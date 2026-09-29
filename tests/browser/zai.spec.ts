@@ -15,7 +15,7 @@ async function openProviders(page: Page) {
   await openChats(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
-    .getByRole('dialog', { name: 'Profile' })
+    .getByRole('dialog', { name: 'Spark' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
   return page.getByRole('dialog', { name: 'AI providers' });
