@@ -21,16 +21,24 @@ export async function cacheTickets(
   db: Queryable,
   workspaceId: string,
   tickets: readonly TicketSummary[],
+  options: { assignedToMe?: boolean } = {},
 ): Promise<void> {
   if (tickets.length === 0) return;
   await db.query(
-    `INSERT INTO tickets (workspace_id, source, key, title, status, status_name, url, updated_at)
-     SELECT $1, t.source, t.key, t.title, t.status, t.status_name, t.url, t.updated_at
+    `INSERT INTO tickets (workspace_id, source, key, title, status, status_name, url, updated_at,
+       status_since, first_seen_assigned_at)
+     SELECT $1, t.source, t.key, t.title, t.status, t.status_name, t.url, t.updated_at,
+       t.updated_at, CASE WHEN $3 THEN now() END
      FROM jsonb_to_recordset($2::jsonb) AS t (source text, key text, title text, status text,
        status_name text, url text, updated_at timestamptz)
      ON CONFLICT (workspace_id, source, key) DO UPDATE SET title = EXCLUDED.title,
        status = EXCLUDED.status, status_name = EXCLUDED.status_name, url = EXCLUDED.url,
-       updated_at = EXCLUDED.updated_at, cached_at = now()`,
+       updated_at = EXCLUDED.updated_at, cached_at = now(),
+       status_since = CASE WHEN tickets.status = EXCLUDED.status
+         THEN COALESCE(tickets.status_since, EXCLUDED.status_since) ELSE now() END,
+       first_seen_assigned_at = CASE WHEN $3
+         THEN COALESCE(tickets.first_seen_assigned_at, now())
+         ELSE tickets.first_seen_assigned_at END`,
     [
       workspaceId,
       JSON.stringify(
@@ -44,7 +52,36 @@ export async function cacheTickets(
           updated_at: ticket.updatedAt,
         })),
       ),
+      options.assignedToMe === true,
     ],
+  );
+}
+
+export interface TicketTimes {
+  statusSince: Date | null;
+  firstSeenAssignedAt: Date | null;
+}
+
+export async function ticketTimes(
+  db: Queryable,
+  workspaceId: string,
+  tickets: readonly { source: TicketSourceId; key: string }[],
+): Promise<Map<string, TicketTimes>> {
+  const { rows } = await db.query<{
+    source: TicketSourceId;
+    key: string;
+    status_since: Date | null;
+    first_seen_assigned_at: Date | null;
+  }>(
+    `SELECT source, key, status_since, first_seen_assigned_at FROM tickets
+     WHERE workspace_id = $1 AND (source || ':' || key) = ANY($2::text[])`,
+    [workspaceId, tickets.map((ticket) => ticketRef(ticket.source, ticket.key))],
+  );
+  return new Map(
+    rows.map((row) => [
+      ticketRef(row.source, row.key),
+      { statusSince: row.status_since, firstSeenAssignedAt: row.first_seen_assigned_at },
+    ]),
   );
 }
 
@@ -54,7 +91,8 @@ export async function setCachedStatus(
   ticket: { source: TicketSourceId; key: string; status: TicketStatus; statusName: string },
 ): Promise<void> {
   await db.query(
-    `UPDATE tickets SET status = $4, status_name = $5, cached_at = now()
+    `UPDATE tickets SET status_since = CASE WHEN status = $4 THEN status_since ELSE now() END,
+       status = $4, status_name = $5, cached_at = now()
      WHERE workspace_id = $1 AND source = $2 AND key = $3`,
     [workspaceId, ticket.source, ticket.key, ticket.status, ticket.statusName],
   );

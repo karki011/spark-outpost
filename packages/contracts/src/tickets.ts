@@ -29,6 +29,11 @@ export const ticketKeySchema = z
   .max(TICKET_KEY_MAX_LENGTH)
   .regex(/^[A-Za-z][A-Za-z0-9_]*-\d+$/, 'Use a ticket key such as ENG-12.');
 
+export const ticketPersonSchema = z.object({ id: z.string(), name: z.string() });
+export type TicketPerson = z.infer<typeof ticketPersonSchema>;
+
+export const TICKET_PRIORITY_NONE = 0;
+
 export const ticketSummarySchema = z.object({
   source: ticketSourceIdSchema,
   key: z.string(),
@@ -40,6 +45,11 @@ export const ticketSummarySchema = z.object({
   project: z.string().nullable(),
   priority: z.string().nullable(),
   sprint: z.string().nullable(),
+  priorityRank: z.number().int().min(0).max(4),
+  assignedTo: ticketPersonSchema.nullable(),
+  labels: z.array(z.string()),
+  dueDate: z.string().nullable(),
+  doneAt: z.string().nullable(),
 });
 export type TicketSummary = z.infer<typeof ticketSummarySchema>;
 
@@ -64,7 +74,6 @@ export type TicketSubtask = z.infer<typeof ticketSubtaskSchema>;
 export const ticketDetailSchema = ticketSummarySchema.extend({
   description: z.string(),
   assignee: z.string().nullable(),
-  labels: z.array(z.string()),
   comments: z.array(ticketCommentSchema),
   links: z.array(ticketRefSchema),
   subtasks: z.array(ticketSubtaskSchema),
@@ -122,6 +131,7 @@ export const ticketConnectionSchema = z.object({
   validatedAt: z.string(),
   keySaved: z.boolean(),
   moveOnShip: z.boolean(),
+  moveOnMerge: z.boolean(),
   statusMap: ticketStatusMapSchema,
 });
 export type TicketConnection = z.infer<typeof ticketConnectionSchema>;
@@ -158,9 +168,10 @@ export type SaveTicketConnectionRequest = z.infer<typeof saveTicketConnectionReq
 export const updateTicketSettingsRequestSchema = z
   .object({
     moveOnShip: z.boolean().optional(),
+    moveOnMerge: z.boolean().optional(),
     statusMap: ticketStatusMapSchema.optional(),
   })
-  .refine((body) => body.moveOnShip !== undefined || body.statusMap !== undefined, {
+  .refine((body) => Object.values(body).some((value) => value !== undefined), {
     message: 'Change at least one setting.',
   });
 export type UpdateTicketSettingsRequest = z.infer<typeof updateTicketSettingsRequestSchema>;

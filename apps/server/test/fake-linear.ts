@@ -1,6 +1,14 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 export const LINEAR_KEY = 'lin_api_fake_0123456789abcdefghij';
+export const LINEAR_ME = 'user-1';
+
+export const linearPeople: Record<string, string> = {
+  'user-1': 'Alex Example',
+  'user-2': 'Jordan Lee',
+};
+
+const PRIORITY_LABELS = ['No priority', 'Urgent', 'High', 'Medium', 'Low'];
 
 export interface FakeLinearState {
   id: string;
@@ -16,7 +24,11 @@ export interface FakeLinearIssue {
   team: string;
   stateId: string;
   updatedAt: string;
-  assignedToMe: boolean;
+  assigneeId: string | null;
+  priority: number;
+  dueDate: string | null;
+  completedAt: string | null;
+  labels: string[];
   comments: { body: string; createdAt: string; user: string }[];
   attachments: { title: string; url: string }[];
   children: string[];
@@ -61,7 +73,11 @@ const issue = (
   team: fields.identifier.split('-')[0]!,
   stateId: 'eng-todo',
   updatedAt: '2026-09-20T10:00:00.000Z',
-  assignedToMe: true,
+  assigneeId: LINEAR_ME,
+  priority: 2,
+  dueDate: null,
+  completedAt: null,
+  labels: ['bug'],
   comments: [],
   attachments: [],
   children: [],
@@ -87,12 +103,18 @@ function seedIssues(): FakeLinearIssue[] {
       stateId: 'eng-progress',
       updatedAt: '2026-09-25T09:00:00.000Z',
     }),
-    issue({ identifier: 'ENG-14', title: 'Old cleanup', stateId: 'eng-done' }),
+    issue({
+      identifier: 'ENG-14',
+      title: 'Old cleanup',
+      stateId: 'eng-done',
+      completedAt: '2026-09-27T08:00:00.000Z',
+    }),
     issue({
       identifier: 'ENG-15',
       title: 'Someone else’s ticket',
-      assignedToMe: false,
+      assigneeId: 'user-2',
     }),
+    issue({ identifier: 'ENG-16', title: 'Unowned upload bug', assigneeId: null }),
     issue({
       identifier: 'OPS-4',
       title: 'Rotate staging certificates',
@@ -125,6 +147,15 @@ interface StateFilter {
   type?: { in?: string[]; nin?: string[] };
 }
 
+interface IssueFilter {
+  state?: StateFilter;
+  team?: { key?: { eqIgnoreCase?: string } };
+  completedAt?: { gte?: string };
+  assignee?: { isMe?: { eq?: boolean }; null?: boolean };
+  number?: { eq?: number };
+  or?: { title?: { containsIgnoreCase?: string } }[];
+}
+
 export function fakeLinear(): FakeLinear {
   const teams = seedTeams();
   const issues = seedIssues();
@@ -143,7 +174,14 @@ export function fakeLinear(): FakeLinear {
       title: item.title,
       url: `https://linear.app/acme/issue/${item.identifier}`,
       updatedAt: item.updatedAt,
-      priorityLabel: 'High',
+      priorityLabel: PRIORITY_LABELS[item.priority] ?? null,
+      priority: item.priority,
+      dueDate: item.dueDate,
+      completedAt: item.completedAt,
+      assignee: item.assigneeId
+        ? { id: item.assigneeId, name: linearPeople[item.assigneeId] ?? item.assigneeId }
+        : null,
+      labels: { nodes: item.labels.map((name) => ({ name })) },
       state: { id: current.id, name: current.name, type: current.type },
       team: { key: item.team },
       cycle: { name: null, number: 7 },
@@ -154,8 +192,6 @@ export function fakeLinear(): FakeLinear {
     return {
       ...node(item),
       description: item.description,
-      assignee: { name: 'Alex Example' },
-      labels: { nodes: [{ name: 'bug' }] },
       comments: { nodes: item.comments.map((c) => ({ ...c, user: { name: c.user } })) },
       attachments: { nodes: item.attachments },
       children: {
@@ -167,19 +203,35 @@ export function fakeLinear(): FakeLinear {
     };
   }
 
-  function assigned(variables: Record<string, unknown>) {
-    const filter = (variables.filter ?? {}) as {
-      state?: StateFilter;
-      team?: { key?: { eqIgnoreCase?: string } };
-    };
+  function assigneeMatches(item: FakeLinearIssue, filter: IssueFilter['assignee']) {
+    if (!filter) return true;
+    if (filter.null !== undefined && (item.assigneeId === null) !== filter.null) return false;
+    const isMe = filter.isMe?.eq;
+    return isMe === undefined || (item.assigneeId === LINEAR_ME) === isMe;
+  }
+
+  function matches(item: FakeLinearIssue, filter: IssueFilter) {
+    const type = stateOf(item).type;
     const team = filter.team?.key?.eqIgnoreCase?.toUpperCase();
-    return issues.filter((item) => {
-      const type = stateOf(item).type;
-      if (!item.assignedToMe) return false;
-      if (filter.state?.type?.in && !filter.state.type.in.includes(type)) return false;
-      if (filter.state?.type?.nin?.includes(type)) return false;
-      return !team || item.team === team;
-    });
+    const text = filter.or?.[0]?.title?.containsIgnoreCase?.toLowerCase();
+    if (filter.state?.type?.in && !filter.state.type.in.includes(type)) return false;
+    if (filter.state?.type?.nin?.includes(type)) return false;
+    if (team && item.team !== team) return false;
+    if (filter.completedAt?.gte && (item.completedAt ?? '') < filter.completedAt.gte) return false;
+    if (filter.number?.eq !== undefined && !item.identifier.endsWith(`-${filter.number.eq}`)) {
+      return false;
+    }
+    if (text && !`${item.title} ${item.description}`.toLowerCase().includes(text)) return false;
+    return assigneeMatches(item, filter.assignee);
+  }
+
+  function assigned(variables: Record<string, unknown>) {
+    const filter = (variables.filter ?? {}) as IssueFilter;
+    return issues.filter((item) => item.assigneeId === LINEAR_ME && matches(item, filter));
+  }
+
+  function searched(variables: Record<string, unknown>) {
+    return issues.filter((item) => matches(item, (variables.filter ?? {}) as IssueFilter));
   }
 
   function answer(operation: string, variables: Record<string, unknown>): unknown {
@@ -191,6 +243,13 @@ export function fakeLinear(): FakeLinear {
         return { viewer: { assignedIssues: { nodes: assigned(variables).map(node) } } };
       case 'Issue':
         return { issue: target ? detail(target) : null };
+      case 'Summary':
+        return { issue: target ? node(target) : null };
+      case 'Search':
+        return { issues: { nodes: searched(variables).map(node) } };
+      case 'Assign':
+        target!.assigneeId = variables.assigneeId === null ? null : String(variables.assigneeId);
+        return { issueUpdate: { success: true } };
       case 'States':
         return target
           ? {

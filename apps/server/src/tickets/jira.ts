@@ -2,7 +2,16 @@ import { z } from 'zod';
 import type { TicketDetail, TicketStatusMap, TicketSummary } from '@spark-outpost/contracts';
 import { callJson, failure, isOk, type JsonCall } from './http.ts';
 import { adfToText, textToAdf } from './jira-adf.ts';
-import { matchesFilter, TicketApiError, type TicketFilter, type TicketSource } from './source.ts';
+import { JIRA_EXTRA_FIELDS, jiraExtraFieldsShape, jiraExtras } from './jira-fields.ts';
+import {
+  KEY_QUERY,
+  matchesFilter,
+  SEARCH_PAGE_SIZE,
+  TicketApiError,
+  type TicketFilter,
+  type TicketSearchFilter,
+  type TicketSource,
+} from './source.ts';
 import {
   bucketOf,
   noStateMessage,
@@ -15,7 +24,15 @@ import {
 const NAME = 'Jira';
 const PAGE_SIZE = 100;
 const SPRINT_FIELD = 'customfield_10020';
-const SUMMARY_FIELDS = ['summary', 'status', 'updated', 'priority', 'project', SPRINT_FIELD];
+const SUMMARY_FIELDS = [
+  'summary',
+  'status',
+  'updated',
+  'priority',
+  'project',
+  SPRINT_FIELD,
+  ...JIRA_EXTRA_FIELDS,
+];
 const DETAIL_FIELDS = [
   ...SUMMARY_FIELDS,
   'description',
@@ -42,6 +59,7 @@ const fieldsSchema = z.object({
   priority: named,
   project: z.object({ key: z.string() }).nullable().optional(),
   [SPRINT_FIELD]: sprintSchema,
+  ...jiraExtraFieldsShape,
 });
 const issueSchema = z.object({ key: z.string(), fields: fieldsSchema });
 const detailSchema = z.object({
@@ -98,6 +116,26 @@ export function assignedJql(filter: TicketFilter): string {
   clauses.push(filter.status === 'done' ? 'statusCategory = Done' : 'statusCategory != Done');
   if (filter.project) clauses.push(`project = ${jqlString(filter.project)}`);
   if (filter.q) clauses.push(`text ~ ${jqlString(filter.q)}`);
+  if (filter.doneWithinDays) clauses.push(`resolved >= -${filter.doneWithinDays}d`);
+  return `${clauses.join(' AND ')} ORDER BY updated DESC`;
+}
+
+const ASSIGNEE_JQL = {
+  anyone: null,
+  me: 'assignee = currentUser()',
+  unassigned: 'assignee is EMPTY',
+  others: 'assignee != currentUser() AND assignee is not EMPTY',
+} as const;
+
+export function searchJql(filter: TicketSearchFilter): string {
+  const clauses: string[] = [];
+  const q = filter.q.trim();
+  if (KEY_QUERY.test(q)) clauses.push(`key = ${jqlString(q.toUpperCase())}`);
+  else if (q) clauses.push(`text ~ ${jqlString(q)}`);
+  clauses.push(filter.status === 'done' ? 'statusCategory = Done' : 'statusCategory != Done');
+  if (filter.project) clauses.push(`project = ${jqlString(filter.project)}`);
+  const assignee = ASSIGNEE_JQL[filter.assignee];
+  if (assignee) clauses.push(assignee);
   return `${clauses.join(' AND ')} ORDER BY updated DESC`;
 }
 
@@ -155,7 +193,21 @@ export function jiraSource(
       project,
       priority: issue.fields.priority?.name ?? null,
       sprint: sprint?.name ?? null,
+      ...jiraExtras(issue.fields),
     };
+  }
+
+  async function searchIssues(jql: string, maxResults: number, action: string) {
+    const answer = await call(
+      z.object({ issues: z.array(issueSchema) }),
+      {
+        method: 'POST',
+        path: '/rest/api/3/search/jql',
+        body: { jql, fields: SUMMARY_FIELDS, maxResults },
+      },
+      action,
+    );
+    return answer.issues.map(summary);
   }
 
   return {
@@ -169,16 +221,26 @@ export function jiraSource(
       return { id: me.accountId, name: me.emailAddress ?? me.displayName };
     },
     async listAssigned(filter) {
-      const answer = await call(
-        z.object({ issues: z.array(issueSchema) }),
-        {
-          method: 'POST',
-          path: '/rest/api/3/search/jql',
-          body: { jql: assignedJql(filter), fields: SUMMARY_FIELDS, maxResults: PAGE_SIZE },
-        },
-        'listing your tickets',
+      const found = await searchIssues(assignedJql(filter), PAGE_SIZE, 'listing your tickets');
+      return found.filter((ticket) => matchesFilter(ticket, filter));
+    },
+    async search(filter) {
+      return searchIssues(searchJql(filter), SEARCH_PAGE_SIZE, 'searching tickets');
+    },
+    async getSummary(key) {
+      const issue = await call(
+        issueSchema,
+        { method: 'GET', path: `${issuePath(key)}?fields=${SUMMARY_FIELDS.join(',')}` },
+        `reading ${key}`,
       );
-      return answer.issues.map(summary).filter((ticket) => matchesFilter(ticket, filter));
+      return summary(issue);
+    },
+    async assign(key, accountId) {
+      await call(
+        null,
+        { method: 'PUT', path: `${issuePath(key)}/assignee`, body: { accountId } },
+        `assigning ${key}`,
+      );
     },
     async getTicket(key) {
       const fields = DETAIL_FIELDS.join(',');

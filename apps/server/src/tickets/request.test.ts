@@ -13,6 +13,10 @@ const ticket: TicketDetail = {
   project: 'WEB',
   priority: 'Medium',
   sprint: 'Sprint 41',
+  priorityRank: 3,
+  assignedTo: null,
+  dueDate: null,
+  doneAt: null,
   description:
     'People want a spreadsheet.\n\n### Acceptance criteria\n\n- A Download CSV button\n- Columns match\n\n### Notes\n\nKeep it small.',
   assignee: 'Alex Example',
