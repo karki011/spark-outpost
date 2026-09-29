@@ -9,19 +9,14 @@ import { ThemeCards } from '../theme/ThemeCards.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
 import { CompanionSetting } from './CompanionSetting.tsx';
+import { FailingChecksSetting } from './FailingChecksSetting.tsx';
 import { JevSettings } from './JevSettings.tsx';
 import { ProfileSection } from './ProfileSection.tsx';
-import { ProfileChoiceSetting } from './ProfileChoiceSetting.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { ResetSection } from '../reset/ResetSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
 import '../onboarding/tools.css';
 import './settings.css';
-
-const FAILING_CHECKS_CHOICES = [
-  { id: 'open', label: 'Open a draft PR', value: true },
-  { id: 'stop', label: 'Stop and ask', value: false },
-];
 
 export type SettingsSection =
   'profile' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'mcp' | 'look' | 'reset';
@@ -244,13 +239,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                     </p>
                     <ConnectorGrid />
                     {setup.data && (
-                      <ProfileChoiceSetting
-                        saved={setup.data.profile.shipFailingChecks}
-                        choices={FAILING_CHECKS_CHOICES}
-                        label="When checks still fail in Full auto"
-                        hint="The draft PR is marked “Checks failing”. Full auto never merges."
-                        toUpdate={(value) => ({ shipFailingChecks: value })}
-                      />
+                      <FailingChecksSetting opensDraft={setup.data.profile.shipFailingChecks} />
                     )}
                   </>
                 )}
