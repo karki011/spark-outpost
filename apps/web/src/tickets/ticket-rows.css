@@ -74,14 +74,6 @@
   background: var(--raise);
 }
 
-.tk .sec-empty {
-  margin: 0;
-  padding: 12px 18px;
-  font-size: 13px;
-  color: var(--faint);
-  border-bottom: 1px solid var(--line);
-}
-
 .tk .irow {
   --row-bg: var(--panel);
   position: relative;

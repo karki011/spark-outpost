@@ -1,0 +1,180 @@
+.es {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 28px 16px 32px;
+  text-align: center;
+}
+.es.fill {
+  flex: 1;
+  align-content: center;
+  padding-bottom: max(32px, 24vh);
+}
+.es-stage {
+  position: relative;
+}
+.es-ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line) 20%, var(--line) 80%, transparent);
+}
+.es-player,
+.es-scout {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+}
+.es-scout .scout {
+  cursor: pointer;
+}
+.es-hop {
+  display: grid;
+  transform-origin: 50% 100%;
+}
+.es-shadow {
+  width: 70%;
+  height: 5px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.es-ball {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--warn);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--warn) 55%, transparent);
+}
+.es-ball-free,
+.es-hero {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+}
+.es-hero {
+  width: 40px;
+  height: 40px;
+  opacity: 0;
+  pointer-events: none;
+}
+.es-hero.on {
+  opacity: 1;
+}
+.es-hero svg {
+  position: relative;
+}
+.es-cape {
+  position: absolute;
+  top: 10px;
+  left: -14px;
+  width: 30px;
+  height: 22px;
+  border-radius: 4px 14px 14px 4px;
+  clip-path: polygon(100% 0, 100% 100%, 0 80%, 12% 50%, 0 20%);
+  transform-origin: 100% 50%;
+  animation: es-cape 0.25s ease-in-out infinite alternate;
+}
+.es-hero::after {
+  content: '';
+  position: absolute;
+  top: 18px;
+  right: 100%;
+  width: 46px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 25%, transparent));
+}
+.es-text {
+  max-width: 360px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.es-text p {
+  margin: 0 0 12px;
+}
+.es-text b {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.es.compact {
+  gap: 6px;
+  padding: 14px 12px 18px;
+}
+.juggle {
+  width: 150px;
+  height: 76px;
+}
+.juggle .es-ground {
+  bottom: 12px;
+}
+.juggle .es-player {
+  left: 60px;
+  bottom: 12px;
+}
+.juggle .es-hop {
+  animation: es-hop 1.1s var(--out) infinite;
+}
+.juggle .es-ball-x {
+  position: absolute;
+  left: 70px;
+  bottom: 39px;
+}
+.juggle .es-ball-y {
+  display: block;
+  animation: es-y 1.1s infinite;
+}
+
+.tk .ib-main:has(.es.fill) {
+  display: flex;
+  flex-direction: column;
+}
+.tk .ib-main:has(.es.fill) > section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes es-cape {
+  to {
+    transform: scaleY(0.75) skewY(-6deg);
+  }
+}
+@keyframes es-y {
+  0% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+  }
+  50% {
+    transform: translateY(-38px);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.3);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+@keyframes es-hop {
+  0% {
+    transform: translateY(0) scale(1.06, 0.92);
+  }
+  8% {
+    transform: translateY(-7px) scale(0.96, 1.05);
+  }
+  18% {
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .juggle .es-hop,
+  .juggle .es-ball-y,
+  .es-cape {
+    animation: none;
+  }
+}

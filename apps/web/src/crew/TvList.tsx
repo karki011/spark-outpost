@@ -19,6 +19,7 @@ import {
   type TvRow,
   type TvRows,
 } from './tv-list.ts';
+import { EmptyScene } from '../brand/EmptyScene.tsx';
 
 interface TvListProps {
   rows: TvRows;
@@ -188,7 +189,7 @@ export function TvList({ rows, cleared, stopping, onPick, onAsk, onStop, onClear
             ))}
           </ul>
         ) : (
-          <p className="tvl-empty">Nothing running right now.</p>
+          <EmptyScene>Nothing running right now.</EmptyScene>
         )}
       </section>
       {finished.length > 0 && (

@@ -11,6 +11,7 @@ import { useDebouncedValue } from '../ui/use-debounced-value.ts';
 import { auditApi, auditKeys, type LogFilters } from './audit-api.ts';
 import { clockTime, entrySummary, jsonTokens } from './audit-model.ts';
 import { BadgeView, runBadge, type ChainChecks } from './ChainBadge.tsx';
+import { EmptyScene } from '../brand/EmptyScene.tsx';
 
 const DIRECTIONS: { id: ProtocolDirection | 'all'; label: string }[] = [
   { id: 'all', label: 'All entries' },
@@ -119,7 +120,7 @@ export function AuditLogs({
     getNextPageParam: (page) => page.nextAfter ?? undefined,
     enabled: runId !== '',
   });
-  if (!run) return <p className="aud-empty">No runs in this chat yet.</p>;
+  if (!run) return <EmptyScene>No runs in this chat yet.</EmptyScene>;
   const entries = log.data?.pages.flatMap((page) => page.entries) ?? [];
   const check = checks.get(run.runId);
   const brokenFrom = check && !check.intact ? (check.firstBrokenSeq ?? 0) : Infinity;

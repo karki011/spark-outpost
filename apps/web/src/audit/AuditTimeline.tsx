@@ -11,6 +11,7 @@ import {
   type AuditTurn,
 } from './audit-model.ts';
 import { ProviderDot } from './AuditTable.tsx';
+import { EmptyScene } from '../brand/EmptyScene.tsx';
 
 function useNow(live: boolean): number {
   const [now, setNow] = useState(() => Date.now());
@@ -94,7 +95,7 @@ export function AuditTimeline({ runs }: { runs: readonly AuditRunSummary[] }) {
   const turns = auditTurns(runs);
   const providers = [...new Set(runs.map((run) => run.provider))];
   const waited = runs.some((run) => run.approvalWaits.length > 0);
-  if (turns.length === 0) return <p className="aud-empty">No runs in this chat yet.</p>;
+  if (turns.length === 0) return <EmptyScene>No runs in this chat yet.</EmptyScene>;
   return (
     <>
       <p className="lede">

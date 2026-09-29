@@ -187,10 +187,6 @@ button.tvl-ask:hover {
   opacity: 0.5;
   cursor: progress;
 }
-.tvl-empty {
-  margin: 4px 4px 2px;
-  color: var(--faint);
-}
 .tvl-fin {
   margin-top: 10px;
 }

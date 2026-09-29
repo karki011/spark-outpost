@@ -83,16 +83,6 @@
   color: var(--muted);
 }
 
-.tk .tk-noresults {
-  padding: 32px 18px;
-  text-align: center;
-  color: var(--muted);
-}
-
-.tk .tk-noresults p {
-  margin: 0 0 12px;
-}
-
 .tk .sk-sec {
   display: flex;
   align-items: center;

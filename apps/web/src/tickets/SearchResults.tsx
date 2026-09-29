@@ -1,3 +1,4 @@
+import { EmptyScene } from '../brand/EmptyScene.tsx';
 import {
   ticketSourceNames,
   ticketStatusLabels,
@@ -131,14 +132,14 @@ export function SearchResults(props: SearchResultsProps) {
         </p>
       ))}
       {count === 0 && (
-        <div className="tk-noresults">
+        <EmptyScene>
           <p>
             Nothing in {props.sourcesLabel} matches &ldquo;{props.query}&rdquo;.
           </p>
           <button type="button" className="btn line sm" onClick={props.onClear}>
             Clear search
           </button>
-        </div>
+        </EmptyScene>
       )}
       {SEARCH_GROUPS.map((group) => {
         const rows = results.tickets.filter((ticket) => searchGroup(ticket) === group.id);
