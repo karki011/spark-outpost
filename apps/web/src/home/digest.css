@@ -46,7 +46,7 @@
   color: var(--muted);
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
-  transition: background-color 0.15s;
+  transition: background-color 0.15s var(--out);
 }
 
 .dg-chip:hover {

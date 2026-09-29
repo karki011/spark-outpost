@@ -22,7 +22,7 @@
   opacity: 1;
   transform: none;
   transition:
-    opacity 0.15s,
+    opacity 0.15s var(--out),
     transform 0.18s var(--out);
 }
 
@@ -36,7 +36,7 @@
   font-size: 13px;
   white-space: nowrap;
   color: var(--text);
-  transition: background 0.15s;
+  transition: background 0.15s var(--out);
 }
 .qt-btn svg {
   color: var(--muted);
@@ -190,6 +190,7 @@
 }
 .qc-note {
   max-width: 420px;
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -133,9 +133,9 @@
   border: 1px solid var(--line);
   border-radius: var(--r);
   transition:
-    border-color 0.2s,
+    border-color 0.2s var(--out),
     transform 0.2s var(--out),
-    background-color 0.2s;
+    background-color 0.2s var(--out);
 }
 
 .hcard:hover {
@@ -239,8 +239,8 @@
   font-weight: 500;
   white-space: nowrap;
   transition:
-    border-color 0.2s,
-    background-color 0.2s;
+    border-color 0.2s var(--out),
+    background-color 0.2s var(--out);
 }
 
 .go::after {
@@ -347,7 +347,7 @@
   border-radius: var(--r-sm);
   font-size: 14px;
   text-align: left;
-  transition: background-color 0.15s;
+  transition: background-color 0.15s var(--out);
 }
 
 .mrow:hover {
