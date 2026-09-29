@@ -26,28 +26,28 @@ afterEach(() => {
 });
 
 describe('digest details preference', () => {
-  it('defaults to open the first time', () => {
-    expect(readDetailsOpen()).toBe(true);
-  });
-
-  it('remembers a closed choice', () => {
-    writeDetailsOpen(false);
+  it('defaults to closed the first time', () => {
     expect(readDetailsOpen()).toBe(false);
   });
 
-  it('remembers a reopened choice', () => {
-    writeDetailsOpen(false);
+  it('remembers an opened choice', () => {
     writeDetailsOpen(true);
     expect(readDetailsOpen()).toBe(true);
   });
 
-  it('falls back to open when storage throws', () => {
+  it('remembers a closed choice', () => {
+    writeDetailsOpen(true);
+    writeDetailsOpen(false);
+    expect(readDetailsOpen()).toBe(false);
+  });
+
+  it('falls back to closed when storage throws', () => {
     vi.stubGlobal('localStorage', {
       getItem: () => {
         throw new Error('blocked');
       },
     });
-    expect(readDetailsOpen()).toBe(true);
+    expect(readDetailsOpen()).toBe(false);
   });
 
   it('does not throw when storage is unwritable', () => {

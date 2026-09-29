@@ -10,6 +10,8 @@ import {
 } from '@spark-outpost/contracts';
 import { ToastHost } from '../conversations/Toast.tsx';
 import { useToast } from '../conversations/use-toast.ts';
+import { useMinuteClock } from '../ui/use-minute-clock.ts';
+import { BriefStrip } from './BriefStrip.tsx';
 import { ConnectTickets } from './ConnectTickets.tsx';
 import { InboxSections } from './InboxSections.tsx';
 import { SearchResults } from './SearchResults.tsx';
@@ -21,6 +23,7 @@ import {
   ALL_FILTERS,
   countBy,
   filterTickets,
+  inboxIdOf,
   ticketId,
   type RowAction,
   type TicketFilters,
@@ -39,7 +42,9 @@ import './ticket-search.css';
 import './ticket-detail.css';
 
 interface TicketsProps {
+  focusId: string | null;
   onOpenChat: (conversationId: string) => void;
+  onHome: () => void;
 }
 
 const INBOX_STALE_MS = 60_000;
@@ -62,7 +67,7 @@ function moveSelection(event: KeyboardEvent<HTMLElement>) {
   next.click();
 }
 
-export function Tickets({ onOpenChat }: TicketsProps) {
+export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
   const connections = useQuery({
     queryKey: ticketKeys.connections,
     queryFn: ticketsApi.connections,
@@ -77,13 +82,14 @@ export function Tickets({ onOpenChat }: TicketsProps) {
   const [view, setView] = useState<TicketView>('inbox');
   const [filters, setFilters] = useState<TicketFilters>(ALL_FILTERS);
   const [collapsed, setCollapsed] = useState<ReadonlySet<TicketSection>>(new Set(['done']));
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState(() => (focusId ? inboxIdOf(focusId) : null));
   const [starting, setStarting] = useState<DetailTicket | null>(null);
   const [density, setDensity] = useDensity();
   const searchRef = useRef<HTMLInputElement>(null);
   const toaster = useToast();
   const assigner = useAssign(toaster.show);
   const search = useTicketSearch(filters, connected);
+  const now = useMinuteClock();
 
   useEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent) => {
@@ -212,15 +218,26 @@ export function Tickets({ onOpenChat }: TicketsProps) {
                     </p>
                   </div>
                 ) : (
-                  <InboxSections
-                    tickets={tickets}
-                    view={view}
-                    collapsed={collapsed}
-                    selectedId={selectedId}
-                    onToggle={toggleSection}
-                    onSelect={(ticket) => setSelectedId(ticketId(ticket))}
-                    onAction={act}
-                  />
+                  <>
+                    {view === 'inbox' && density === 'comfortable' && (
+                      <BriefStrip
+                        tickets={tickets}
+                        now={now}
+                        onSelect={(ticket) => setSelectedId(ticketId(ticket))}
+                        onAction={act}
+                        onHome={onHome}
+                      />
+                    )}
+                    <InboxSections
+                      tickets={tickets}
+                      view={view}
+                      collapsed={collapsed}
+                      selectedId={selectedId}
+                      onToggle={toggleSection}
+                      onSelect={(ticket) => setSelectedId(ticketId(ticket))}
+                      onAction={act}
+                    />
+                  </>
                 )}
               </div>
               {detail && (

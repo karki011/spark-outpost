@@ -44,6 +44,7 @@ function ChatShell({ entering }: { entering: boolean }) {
     saveView(next);
   }, []);
   const [homeDraftId, setHomeDraftId] = useState(newDraftId);
+  const [ticketFocus, setTicketFocus] = useState<string | null>(null);
   const conversations = useQuery({
     queryKey: queryKeys.conversations,
     queryFn: api.listConversations,
@@ -134,18 +135,32 @@ function ChatShell({ entering }: { entering: boolean }) {
         {view === 'home' && (
           <Home
             chats={chats}
+            loading={conversations.isPending}
             mood={mood}
             draftId={homeDraftId}
             onOpenChat={openAtCard}
             onRotateDraft={setHomeDraftId}
             onOpenId={openChat}
             onChats={() => setView('chats')}
+            onTickets={(itemId) => {
+              setTicketFocus(itemId);
+              setView('tickets');
+            }}
             onUsage={() => setSettings('usage')}
             onProviders={() => setSettings('ai')}
           />
         )}
         {view === 'analytics' && <Analytics />}
-        {view === 'tickets' && <Tickets onOpenChat={openChat} />}
+        {view === 'tickets' && (
+          <Tickets
+            focusId={ticketFocus}
+            onOpenChat={openChat}
+            onHome={() => {
+              setTicketFocus(null);
+              setView('home');
+            }}
+          />
+        )}
         {view === 'chats' && (
           <AgentTvHost
             activeId={activeId}

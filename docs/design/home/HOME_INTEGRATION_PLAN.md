@@ -103,6 +103,16 @@ Running now is only for work that is executing right now: chats with a queued or
 5. **PRs**: rows from `task_links` now. The `review-slow`, `pr-changes` and `pr-ci` rules come after the PR status reader.
 6. **Tickets inbox brief strip** reads the same brief (no model call of its own).
 
+## Build status (September 29, 2026)
+
+Step 1 is built, with the Tickets inbox brief strip from step 6. Decisions taken: brief items also stay in the feed; the brief refreshes at most every 30 minutes on open and once in the morning (the server job already did this); the section is hidden when nothing needs you and nothing is left to pick up; Up next stays in Tickets only; dismissing "Connect Linear or Jira" is stored per account (`connectHintDismissed` in the tickets attention settings); the brief replaces the Digest card.
+
+- **Home:** one "What needs you today" section (`NeedsToday.tsx`, model in `needs-model.ts`). The summary line counts every flagged item and links to the feed. The brief panel (`BriefPanel.tsx`) holds the numbered items: the digest's chat suggestions (Answer when the chat is asking, Continue with the draft otherwise) and its ticket items (Open, which opens the ticket in Tickets). "Show what happened since you were away (N)" is closed by default. The lean feed (`NeedsFeed.tsx`) has chat rows only, the sort rule in an info tip and the Connect line. Running now is full width, counted and hidden when empty. Skeletons cover the summary, brief, rows and Recent chats while chats load. The brief-off line offers Turn on.
+- **Tickets:** `BriefStrip.tsx` shows the ticket items of the same brief above the sections (Inbox view, Comfortable density), with each ticket's rule reason and quick action, Refresh, and "Full brief on Home". It never starts a brief on its own.
+- **Screens:** `docs/design/home/screens/` has the app (`home-*`, `tickets-brief-strip-*`) in light and graphite next to the mockup (`mockup-*`, light and dark). `SPARK_SHOTS=<folder> pnpm test:browser tests/browser/home-shots.spec.ts` rewrites them.
+
+Still to build: steps 2 to 5, the brief settings gear, and ticket keys on Running cards. Known gap: a brief written when Home opens before the Tickets inbox has refreshed the flagged set only sees the previous snapshot; step 2's `GET /attention` fixes that.
+
 ## Open questions
 
 1. Should the brief's numbered items stay in the feed too (as mocked, so the list is complete when the brief fails), or be hidden from the feed while the brief is fresh?

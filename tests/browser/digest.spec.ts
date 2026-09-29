@@ -3,7 +3,8 @@ import { resetTestDatabase } from './database.ts';
 import { decorateLatestRun } from './home-seed.ts';
 import { seedChats } from './sidebar-seed.ts';
 
-const digest = (page: Page) => page.getByRole('region', { name: 'Digest' });
+const today = (page: Page) => page.getByRole('region', { name: /^What needs you today/ });
+const brief = (page: Page) => today(page).locator('.hpanel.dg');
 
 async function openHome(page: Page) {
   await page.goto('/');
@@ -13,7 +14,7 @@ async function openHome(page: Page) {
     .click();
 }
 
-test('Home writes a digest on open and Continue prefills the chat without sending', async ({
+test('Home writes a brief on open and Continue prefills the chat without sending', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
@@ -25,28 +26,30 @@ test('Home writes a digest on open and Continue prefills the chat without sendin
   await decorateLatestRun(explored!, { provider: 'claude', costUsd: 0.84 });
   await openHome(page);
 
-  const card = digest(page);
-  await expect(card.locator('.dg-lines li')).toHaveCount(2, { timeout: 15_000 });
-  await expect(card).toContainText(/Generated .* · \$0\.004/);
-  await expect(card.locator('.dg-headline')).toHaveText(
+  const panel = brief(page);
+  await expect(panel.locator('.dg-headline')).toHaveText(
     '1 chat finished, 1 chat failed or stalled, $0.84 spent.',
+    { timeout: 15_000 },
   );
-  const chips = card.locator('.dg-chip');
-  await expect(chips).toHaveCount(3);
-  await expect(chips).toHaveText(['1 done', '1 stalled', '$0.84']);
-  await expect(card.getByRole('button', { name: /^Today you worked on / })).toBeVisible();
-  await expect(card.getByText('This line points at a chat that does not exist.')).toBeVisible();
+  await expect(panel.locator('.dg-meta')).toHaveText(/^Generated .* · \$0\.004/);
+  await expect(panel.locator('.dg-chip')).toHaveCount(0);
+  await expect(today(page).getByRole('button', { name: 'Refresh' })).toBeDisabled();
+
+  const away = panel.getByRole('button', { name: 'Show what happened since you were away (2)' });
+  await expect(away).toHaveAttribute('aria-expanded', 'false');
+  await expect(panel.locator('.dg-lines')).toBeHidden();
+  await away.click();
+  await expect(panel.getByRole('button', { name: /^Today you worked on / })).toBeVisible();
+  await expect(panel.getByText('This line points at a chat that does not exist.')).toBeVisible();
   await expect(
-    card.getByRole('button', { name: 'This line points at a chat that does not exist.' }),
+    panel.getByRole('button', { name: 'This line points at a chat that does not exist.' }),
   ).toHaveCount(0);
-  await expect(card.getByRole('button', { name: 'Refresh' })).toBeDisabled();
 
-  const detailsToggle = card.getByRole('button', { name: 'Hide details' });
-  await expect(detailsToggle).toHaveAttribute('aria-expanded', 'true');
-
-  const next = card.getByRole('list', { name: 'Pick up where you left off' });
+  const next = panel.getByRole('list', { name: 'Do these first' });
   await expect(next.getByRole('listitem')).toHaveCount(1);
+  await expect(next).toContainText('Mock fetch retries');
   await expect(next).toContainText('Unfinished: last run failed.');
+  await expect(page.getByRole('list', { name: 'Needs you' })).toContainText('Mock fetch retries');
   await next.getByRole('button', { name: 'Continue Mock fetch retries' }).click();
 
   await expect(page.locator('.chat-title')).toHaveText('Mock fetch retries');
@@ -60,44 +63,39 @@ test('Home writes a digest on open and Continue prefills the chat without sendin
   await expect(page.locator('.bubble')).toHaveCount(1);
 
   await openHome(page);
-  await expect(card.locator('.dg-lines li')).toHaveCount(2);
-  await card.getByRole('button', { name: 'Audit' }).click();
+  await expect(panel.locator('.dg-headline')).toBeVisible();
+  await panel.getByRole('button', { name: 'Audit' }).click();
   await expect(page.getByRole('dialog', { name: 'Audit this chat' })).toBeVisible();
 });
 
-test('the digest details collapse choice survives a reload', async ({ page }) => {
+test('the "since you were away" choice survives a reload', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
-  const [explored] = await seedChats([
-    { title: 'Explore invalid dates', run: { status: 'succeeded' } },
+  const [failed] = await seedChats([
+    { title: 'Explore invalid dates', run: { status: 'failed', error: 'Stopped.' } },
   ]);
-  await decorateLatestRun(explored!, { provider: 'claude' });
+  await decorateLatestRun(failed!, { provider: 'claude' });
   await openHome(page);
 
-  const card = digest(page);
-  await expect(card.locator('.dg-lines li')).toHaveCount(2, { timeout: 15_000 });
-  const hideButton = card.getByRole('button', { name: 'Hide details' });
-  await expect(hideButton).toHaveAttribute('aria-expanded', 'true');
-  const controlled = await hideButton.getAttribute('aria-controls');
-  expect(controlled).not.toBe('digest-details');
-  await expect(page.locator(`[id="${controlled}"] .dg-lines li`)).toHaveCount(2);
-
-  await card.getByRole('button', { name: 'Hide details' }).click();
-  await expect(card.locator('.dg-lines')).toHaveCount(0);
-  const showButton = card.getByRole('button', { name: 'Show details' });
-  await expect(showButton).toHaveAttribute('aria-expanded', 'false');
-  await expect(showButton).not.toHaveAttribute('aria-controls');
-  await expect(card.locator('.dg-headline')).toBeVisible();
-  await expect(card.locator('.dg-chip')).toHaveCount(1);
+  const panel = brief(page);
+  const show = panel.getByRole('button', { name: /^Show what happened since you were away/ });
+  await show.click({ timeout: 15_000 });
+  const hide = panel.getByRole('button', { name: /^Hide what happened/ });
+  await expect(hide).toHaveAttribute('aria-expanded', 'true');
+  const controlled = await hide.getAttribute('aria-controls');
+  await expect(page.locator(`[id="${controlled}"] li`)).toHaveCount(2);
 
   await openHome(page);
-  await expect(card.getByRole('button', { name: 'Show details' })).toBeVisible();
-  await expect(card.locator('.dg-lines')).toHaveCount(0);
-
-  await card.getByRole('button', { name: 'Show details' }).click();
-  await expect(card.locator('.dg-lines li')).toHaveCount(2);
+  await expect(panel.locator('.dg-lines li')).toHaveCount(2);
+  await panel.getByRole('button', { name: /^Hide what happened/ }).click();
+  await expect(panel.locator('.dg-lines')).toBeHidden();
+  await openHome(page);
+  await expect(
+    panel.getByRole('button', { name: /^Show what happened since you were away/ }),
+  ).toHaveAttribute('aria-expanded', 'false');
+  await expect(panel.locator('.dg-lines')).toBeHidden();
 });
 
-test('a failed digest shows a quiet error and never blocks Home', async ({ page }) => {
+test('a failed brief keeps the list complete and never blocks Home', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   const [chat] = await seedChats([
     { title: 'Break the build #fail', run: { status: 'failed', error: 'Tests failed.' } },
@@ -105,10 +103,32 @@ test('a failed digest shows a quiet error and never blocks Home', async ({ page 
   await decorateLatestRun(chat!, { provider: 'claude' });
   await openHome(page);
 
-  const card = digest(page);
-  await expect(card.locator('.dg-error')).toContainText('#fail', { timeout: 15_000 });
-  await expect(card.locator('.dg-error')).toContainText(/You can refresh in \d+ min/);
-  await expect(page.getByRole('region', { name: 'Needs you' })).toContainText(
+  const error = brief(page).locator('.dg-error');
+  await expect(error).toContainText('#fail', { timeout: 15_000 });
+  await expect(error).toContainText('The list below is complete; only the summary is missing.');
+  await expect(error).toContainText(/You can refresh in \d+ min/);
+  await expect(page.getByRole('list', { name: 'Needs you' })).toContainText(
     'Break the build #fail',
   );
+});
+
+test('with the brief off Home says so, sorts by rules and turns it back on', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  const [chat] = await seedChats([
+    { title: 'Mock fetch retries', run: { status: 'failed', error: 'Rate limited.' } },
+  ]);
+  await decorateLatestRun(chat!, { provider: 'claude' });
+  await page.goto('/');
+  await page.request.patch('/api/tickets/attention-settings', { data: { briefEnabled: false } });
+  await openHome(page);
+
+  const off = today(page).locator('.dg-off');
+  await expect(off).toContainText('The brief is off. Rules still sort the list below.');
+  await expect(today(page).getByRole('button', { name: 'Refresh' })).toBeDisabled();
+  await expect(page.getByRole('list', { name: 'Needs you' })).toContainText('Mock fetch retries');
+  expect((await (await page.request.get('/api/home/digest')).json()).digest).toBeNull();
+
+  await off.getByRole('button', { name: 'Turn on (about $0.01 each)' }).click();
+  await expect(off).toHaveCount(0);
+  await expect(brief(page).locator('.dg-headline')).toBeVisible({ timeout: 15_000 });
 });
