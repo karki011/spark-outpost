@@ -161,7 +161,7 @@ export async function sendApiTurn(
   const sent = await api.call<{ run: { id: string } }>(
     'POST',
     `/conversations/${chat.conversationId}/messages`,
-    { id: randomUUID(), content: text },
+    { id: randomUUID(), content: text, source: 'e2e' },
   );
   const outcome: TurnOutcome = {
     runId: sent.run.id,

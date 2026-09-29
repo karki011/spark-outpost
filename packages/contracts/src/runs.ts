@@ -28,6 +28,12 @@ export function isTerminalRunStatus(status: RunStatus): status is TerminalRunSta
   return terminalStatuses.has(status);
 }
 
+export const startAsSchema = z.enum(['change']);
+export type StartAs = z.infer<typeof startAsSchema>;
+
+export const messageSourceSchema = z.enum(['ui', 'e2e', 'bench']);
+export type MessageSource = z.infer<typeof messageSourceSchema>;
+
 export const runSchema = z.object({
   id: z.uuid(),
   conversationId: z.uuid(),
@@ -43,6 +49,8 @@ export const runSchema = z.object({
   effort: z.string().nullable(),
   usage: runUsageSchema.nullable(),
   mode: runModeSchema.nullable(),
+  pickedMode: runModeSchema.nullable().optional(),
+  startAs: startAsSchema.nullable().optional(),
   level: involvementLevelSchema.nullable(),
   snapshot: z.enum(['git', 'files']).nullable(),
   revertedAt: z.string().nullable(),

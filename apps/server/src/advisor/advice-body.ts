@@ -9,6 +9,7 @@ import {
 import type { IntakeRequest } from './advice.ts';
 import { gate } from './gate.ts';
 import type { IntakeQuestions, SystemOneResponse } from './intake-questions.ts';
+import { notAskedReasons } from './not-asked.ts';
 import { POLICY_VERSION } from './policy.ts';
 
 export type JevOutcome =
@@ -73,6 +74,7 @@ export function adviceBody(
     latencyMs: outcome.latencyMs,
     state: outcome.asked?.state ?? null,
     questions: outcome.asked?.questions ?? null,
+    ...(outcome.asked ? { notAsked: notAskedReasons(request, outcome.asked) } : {}),
   };
   if (outcome.status !== 'answered') return { ...base, ...sent, jevError: outcome.error };
   const route = outcome.intake.routeConfidence;

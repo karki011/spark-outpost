@@ -164,7 +164,7 @@ export class HarnessDay implements ArmDay {
     const sent = await this.api.call<{ run: { id: string } }>(
       'POST',
       `/conversations/${chat.conversationId}/messages`,
-      { id: randomUUID(), content: turn.text, annotations: toAnnotation(turn) },
+      { id: randomUUID(), content: turn.text, annotations: toAnnotation(turn), source: 'e2e' },
     );
     const runId = sent.run.id;
     const outcome: TurnOutcome = {

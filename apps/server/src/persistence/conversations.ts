@@ -7,6 +7,7 @@ import {
   type RunMode,
   type ConversationDetail,
   type ConversationSummary,
+  type MessageSource,
   type SendMessageRequest,
   type SendMessageResponse,
 } from '@spark-outpost/contracts';
@@ -242,9 +243,13 @@ async function runMode(
   return permission === PERMISSION_DO ? 'do' : 'ask';
 }
 
-export type SendMessageInput = Omit<SendMessageRequest, 'attachmentIds' | 'annotations'> & {
+export type SendMessageInput = Omit<
+  SendMessageRequest,
+  'attachmentIds' | 'annotations' | 'source'
+> & {
   attachmentIds?: readonly string[];
   annotations?: SendMessageRequest['annotations'];
+  source?: MessageSource | 'ticket' | undefined;
 };
 
 export async function sendUserMessage(
@@ -285,8 +290,10 @@ export async function sendUserMessage(
     const mode = await runMode(client, conversationId, target.permission ?? null);
     const run = await client.query<RunRow>(
       `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
-         task_id, plan_version, mode, level, agent_mode, config_values)
-       VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10, $11, $12) RETURNING *`,
+         task_id, plan_version, mode, level, agent_mode, config_values,
+         picked_mode, start_as, source)
+       VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10, $11, $12, $9, $13, $14)
+       RETURNING *`,
       [
         runId,
         conversationId,
@@ -300,6 +307,8 @@ export async function sendUserMessage(
         mode === 'do' ? (target.level ?? null) : null,
         mode === 'do' ? (target.agentMode ?? null) : null,
         JSON.stringify(target.options ?? {}),
+        mode === 'do' ? (request.startAs ?? null) : null,
+        request.source ?? null,
       ],
     );
     await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [

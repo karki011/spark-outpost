@@ -140,7 +140,7 @@ export async function runLiveCell(
   const sent = await sendUserMessage(
     t.db,
     conversationId,
-    { id: randomUUID(), content: prompt },
+    { id: randomUUID(), content: prompt, source: 'bench' },
     {
       ...PINNED,
       permission: 'do',
