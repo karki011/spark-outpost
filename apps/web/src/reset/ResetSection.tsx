@@ -1,6 +1,8 @@
 import { useId, useState } from 'react';
 import { HoldToConfirm } from '../ui/HoldToConfirm.tsx';
+import { ResetBlob } from './ResetBlob.tsx';
 import { setResetState, useResetState } from './reset-store.ts';
+import { useResetBlobMood } from './use-reset-blob-mood.ts';
 import './reset.css';
 
 const REMOVED = [
@@ -22,6 +24,7 @@ export function ResetSection() {
   const [keepApiKeys, setKeepApiKeys] = useState(false);
   const keepHintId = useId();
   const busy = state.phase === 'counting' || state.phase === 'resetting';
+  const [mood, onHoldChange] = useResetBlobMood(state.phase);
 
   return (
     <>
@@ -73,7 +76,9 @@ export function ResetSection() {
         holdingHint="Keep holding. Let go now to cancel."
         releasedHint="Released early. Nothing happened."
         disabled={busy}
+        adornment={<ResetBlob mood={mood} size={36} className="reset-blob-stage" />}
         onConfirm={() => setResetState({ phase: 'counting', keepApiKeys })}
+        onHoldChange={onHoldChange}
       />
     </>
   );
