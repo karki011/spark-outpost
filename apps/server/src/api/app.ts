@@ -6,6 +6,7 @@ import { approvalRoutes } from './approval-routes.ts';
 import { attachmentRoutes } from './attachment-routes.ts';
 import { auditRoutes } from './audit-routes.ts';
 import { chatSettingsRoutes, type ChatSettingsDeps } from './chat-settings-routes.ts';
+import { chatWorkspaceRoutes, type ChatWorkspaceDeps } from './chat-workspace-routes.ts';
 import { conversationActionRoutes } from './conversation-action-routes.ts';
 import { homeRoutes } from './home-routes.ts';
 import { mcpRoutes, type McpRouteDeps } from './mcp-routes.ts';
@@ -31,6 +32,7 @@ export interface AppOptions
     ShipRouteDeps,
     TicketRouteDeps,
     ChatSettingsDeps,
+    Pick<ChatWorkspaceDeps, 'openFolder'>,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
     Pick<McpRouteDeps, 'probeMcp'> {
   terminals: TerminalSessions;
@@ -52,6 +54,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', apiRoutes(options));
   app.use('/api', setupRoutes(options));
   app.use('/api', chatSettingsRoutes(options));
+  app.use('/api', chatWorkspaceRoutes(options));
   app.use('/api', conversationActionRoutes(options));
   app.use('/api', projectRoutes(options));
   app.use('/api', agentConfigRoutes(options));

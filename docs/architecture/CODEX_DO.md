@@ -4,6 +4,8 @@ Can Codex build (Do mode) under Spark Outpost's approval gate? Probed live on Se
 
 **Update, September 28, 2026: provider permission modes.** The picker now shows Codex's own modes (Read-only, Ask every time, Approve for me, Full access); the chat's mode decides what Codex asks, and the harness autonomy (Review each step, Automatic, Full auto → PR) decides the rest ([HARNESS_PLAN.md](HARNESS_PLAN.md#provider-permission-modes-september-28-2026)). Ask every time still sends every action to the gate and may run on the checkout. Approve for me and Full access don't reach the gate, so they run only in a worktree copy, and a live switch to them on the checkout is refused. Ask before edits maps to Ask every time, Auto-edit and Full auto to Approve for me.
 
+**Update, September 29, 2026: chat worktrees.** Every Do chat in a git project now works in its own worktree on its own `spark/…` branch by default ([HARNESS_PLAN.md, Chat worktrees](HARNESS_PLAN.md#current-architecture-the-lean-harness-round-10-september-27-2026)). That worktree counts as the worktree for `modeNeedsWorktree`: Approve for me and Full access run in it directly, with no extra per-run copy and no merge back into your checkout. The per-run copy described below still applies when you choose "Work in my checkout" or the chat works on your checked-out branch in place.
+
 **Status: implemented September 26, 2026.** The user approved the proposal with two changes: safe reads use the same rule for every provider, and package installs always ask for every provider unless they only restore the lockfile. What shipped and the live check are at the end.
 
 ## Short answer

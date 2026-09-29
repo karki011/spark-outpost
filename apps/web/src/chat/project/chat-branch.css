@@ -1,0 +1,44 @@
+.chat-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+.chat-branch > svg {
+  flex-shrink: 0;
+  color: var(--faint);
+}
+.chat-branch-name {
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+.chat-branch-kind {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.chat-branch-open {
+  width: 24px;
+  height: 24px;
+}
+.chat-branch-open svg {
+  width: 13px;
+  height: 13px;
+}
+@media (max-width: 640px) {
+  .chat-branch-kind {
+    display: none;
+  }
+  .chat-branch-name {
+    max-width: 120px;
+  }
+}

@@ -23,6 +23,7 @@ interface RootRow {
   repo_root: string | null;
   merged_at: Date | null;
   removed_at: Date | null;
+  chat_path: string | null;
 }
 
 const COPY_MARKER = `${path.sep}${WORKTREES_DIR}${path.sep}`;
@@ -34,13 +35,16 @@ export function projectRoot(root: string): string {
 
 async function roots(db: Queryable, taskId: string) {
   const { rows } = await db.query<RootRow>(
-    `SELECT r.snapshot_root, w.repo_root, w.merged_at, w.removed_at
+    `SELECT r.snapshot_root, w.repo_root, w.merged_at, w.removed_at, cw.path AS chat_path
      FROM runs r LEFT JOIN run_worktrees w ON w.run_id = r.id
+     LEFT JOIN chat_worktrees cw ON cw.path = COALESCE(w.repo_root, r.snapshot_root)
+       AND cw.removed_at IS NULL AND NOT cw.in_place
      WHERE r.task_id = $1 AND r.snapshot_root IS NOT NULL AND r.reverted_at IS NULL`,
     [taskId],
   );
+  const rootOf = (row: RootRow) => row.chat_path ?? projectRoot(row.repo_root ?? row.snapshot_root);
   return {
-    roots: [...new Set(rows.map((row) => projectRoot(row.repo_root ?? row.snapshot_root)))],
+    roots: [...new Set(rows.map(rootOf))],
     unmergedCopy: rows.some(
       (row) => row.repo_root !== null && row.merged_at === null && row.removed_at === null,
     ),

@@ -200,3 +200,23 @@
     max-width: 110px;
   }
 }
+
+.ctx-place {
+  border-radius: var(--r-sm);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.ctx-place:hover,
+.ctx-place[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  color: var(--text);
+}
+.ctx-place .chev {
+  color: var(--faint);
+  transform: rotate(90deg);
+}
+.mpop.placepop {
+  left: 12px;
+  width: 300px;
+}

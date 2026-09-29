@@ -103,10 +103,13 @@ test('Ship from the keep card commits the task file and opens a draft PR', async
   expect(pulls).toHaveLength(1);
   expect(pulls[0]).toMatchObject({ title: 'Tidy the notes', draft: true, base: 'main' });
   expect(pulls[0]!.via).toBe('gh_cli');
-  expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe(pulls[0]!.head);
-  expect(git(repo.root, 'show', '--name-only', '--format=', 'HEAD')).toBe('notes.txt');
+  await expect(page.locator('.head .chat-branch-name')).toHaveText(pulls[0]!.head);
+  expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
+  expect(git(repo.root, 'show', '--name-only', '--format=', pulls[0]!.head)).toBe('notes.txt');
   expect(git(repo.root, 'diff', '--name-only')).toBe('mine.txt');
-  expect(git(repo.bare, 'rev-parse', pulls[0]!.head)).toBe(git(repo.root, 'rev-parse', 'HEAD'));
+  expect(git(repo.bare, 'rev-parse', pulls[0]!.head)).toBe(
+    git(repo.root, 'rev-parse', pulls[0]!.head),
+  );
 
   await page.getByRole('button', { name: 'Review all changes' }).click();
   const workPanel = page.getByRole('complementary', { name: 'Work panel' });
@@ -127,8 +130,9 @@ test('Ship offers push only when GitHub is not connected', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: /^Pushed spark\// })).toBeVisible({
     timeout: 15_000,
   });
-  const branch = git(repo.root, 'symbolic-ref', '--short', 'HEAD');
-  expect(git(repo.bare, 'rev-parse', branch)).toBe(git(repo.root, 'rev-parse', 'HEAD'));
+  const branch = (await page.locator('.head .chat-branch-name').textContent()) ?? '';
+  expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
+  expect(git(repo.bare, 'rev-parse', branch)).toBe(git(repo.root, 'rev-parse', branch));
 });
 
 test('Full auto runs to a draft PR: the reply and the auto-kept card show the PR link', async ({
@@ -160,7 +164,7 @@ test('Full auto runs to a draft PR: the reply and the auto-kept card show the PR
   const keep = page.getByRole('group', { name: /Keep these changes\?/ });
   await expect(keep).toContainText('Kept by Full auto → PR.');
   await expect(keep).toContainText('Opened draft PR #1: https://github.com/acme/widgets/pull/1');
-  await expect(keep).toContainText('Your checkout stays on main');
+  await expect(keep).toContainText(/The change is on spark\/\S+ in this chat's worktree\./);
   const chip = keep.locator('.ship .lchip');
   await expect(chip).toContainText('acme/widgets#1');
   await expect(chip).toHaveAttribute('href', 'https://github.com/acme/widgets/pull/1');

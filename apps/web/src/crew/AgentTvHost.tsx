@@ -64,6 +64,7 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
       stopping={stop.isPending ? (stop.variables ?? null) : null}
       onStop={(runId) => stop.mutate(runId)}
       decision={lastDecisionLine(orchestration)}
+      branch={source?.conversation.branch ?? null}
       onPick={(agentId) => jump(agentAnchor(orchestration.runId, agentId))}
       onAsk={(approvalId) => jump(approvalAnchor(approvalId))}
     />

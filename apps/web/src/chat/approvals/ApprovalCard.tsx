@@ -27,6 +27,12 @@ interface ApprovalCardProps {
   repo: Project | null;
 }
 
+const WORKTREE_SEGMENT = '/.spark/worktrees/';
+
+function inWorktree(cwd: string | null): boolean {
+  return cwd?.includes(WORKTREE_SEGMENT) ?? false;
+}
+
 export function displayCwd(cwd: string | null, repo: Project | null): string | null {
   if (!cwd) return repo?.displayPath ?? null;
   if (repo && (cwd === repo.rootPath || cwd.startsWith(`${repo.rootPath}/`))) {
@@ -116,7 +122,8 @@ function PendingApproval({
 }: ApprovalCardProps & { onDecided: (decided: ApprovalDecidedValue) => void }) {
   const queryClient = useQueryClient();
   const headingId = useId();
-  const branch = useProjectBranch(repo?.id ?? null);
+  const checkoutBranch = useProjectBranch(repo?.id ?? null);
+  const branch = inWorktree(approval.payload.cwd) ? null : checkoutBranch;
   const decide = useMutation({
     mutationFn: ({ optionId, scope }: { optionId: string; scope: ApprovalScope }) =>
       approvalsApi.decide(approval.id, { optionId, scope, payloadHash: approval.payloadHash }),

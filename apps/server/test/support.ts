@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import pg from 'pg';
-import type { ProviderId } from '@spark-outpost/contracts';
+import { workPlaceSchema, type ProviderId, type WorkPlace } from '@spark-outpost/contracts';
 import { createDb, POOL_MAX, type Db } from '../src/persistence/db.ts';
 import { ensureLocalWorkspace, sendUserMessage } from '../src/persistence/conversations.ts';
 import { runMigrations } from '../src/persistence/migrate.ts';
@@ -96,9 +96,11 @@ async function openSchema(url: string): Promise<{ schema: string; db: Db }> {
   return { schema, db };
 }
 
-export async function createTestDb(): Promise<TestDb> {
+export async function createTestDb(options: { workPlace?: WorkPlace } = {}): Promise<TestDb> {
   const url = testDatabaseUrl();
   const { schema, db } = await openSchema(url);
+  const place = workPlaceSchema.parse(options.workPlace ?? 'checkout');
+  await db.query(`ALTER TABLE projects ALTER COLUMN work_place SET DEFAULT '${place}'`);
   const workspaceId = await ensureLocalWorkspace(db);
   let closed = false;
   return {

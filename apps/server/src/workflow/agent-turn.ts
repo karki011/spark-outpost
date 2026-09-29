@@ -277,7 +277,7 @@ export async function runAgentTurn(
       ...(writesCode(input.role) ? { builder: true } : {}),
       ...(input.piece?.coordinated ? { coordinated: true } : {}),
       ...(input.builderEnv ? { env: input.builderEnv } : {}),
-      ...(input.copyOf !== null ? { worktree: true } : {}),
+      ...(input.copyOf !== null || input.chatWorktree ? { worktree: true } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),

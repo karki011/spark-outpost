@@ -2,11 +2,12 @@ import './context-bar.css';
 import { useId, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import type { Project } from '@spark-outpost/contracts';
-import { BranchIcon, ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
+import { ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
 import { AgentSetup } from './AgentSetup.tsx';
 import { FolderDialog } from './FolderDialog.tsx';
 import { RepoMenu } from './RepoMenu.tsx';
+import { WorkPlaceMenu } from './WorkPlaceMenu.tsx';
 import { recentProjects, repoSummary } from './repo-list.ts';
 import { useChatRepos, useProjectBranch, useProjects, type RepoRequest } from './use-chat-repos.ts';
 
@@ -77,12 +78,12 @@ export function ContextBar({ conversationId, repos, popover }: ContextBarProps) 
           <span className="ctx-name">{primary ? repoSummary(names) : 'Choose project'}</span>
           <ChevronIcon />
         </button>
-        {branch && (
-          <span className="ctx-branch" title={`Current branch: ${branch}`}>
-            <BranchIcon />
-            <span className="sr-only">Branch</span>
-            <span className="ctx-branch-name">{branch}</span>
-          </span>
+        {primary && (
+          <WorkPlaceMenu
+            conversationId={conversationId}
+            projectId={primary.id}
+            checkoutBranch={branch}
+          />
         )}
         {primary && <AgentSetup key={primary.id} repos={repos} />}
       </div>

@@ -44,6 +44,7 @@ export interface RunInput {
   startAs?: StartAs | null;
   planning?: boolean;
   projectMove?: ProjectMove | null;
+  chatWorktree?: boolean;
 }
 
 export interface ProjectMove {
@@ -78,6 +79,7 @@ interface RunRow {
   resume_key: string | null;
   follow_up: string | null;
   worktree_path: string | null;
+  in_chat_worktree: boolean;
   title_source: string;
 }
 
@@ -150,10 +152,19 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             c.title_source,
             pc.method, pc.model, pc.effort, pc.models,
             ARRAY(
-              SELECT p.root_path FROM conversation_projects cp
+              SELECT COALESCE(cw.path, p.root_path) FROM conversation_projects cp
               JOIN projects p ON p.id = cp.project_id
+              LEFT JOIN chat_worktrees cw ON cw.conversation_id = cp.conversation_id
+               AND cw.project_id = cp.project_id AND cw.removed_at IS NULL AND NOT cw.in_place
               WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at
-            ) AS project_roots
+            ) AS project_roots,
+            EXISTS (
+              SELECT 1 FROM chat_worktrees cw
+              WHERE cw.conversation_id = c.id AND cw.removed_at IS NULL AND NOT cw.in_place
+                AND cw.project_id = (
+                  SELECT cp.project_id FROM conversation_projects cp WHERE cp.conversation_id = c.id
+                  ORDER BY cp.position, cp.created_at LIMIT 1)
+            ) AS in_chat_worktree
      FROM runs r
      JOIN messages m ON m.id = r.user_message_id
      JOIN conversations c ON c.id = r.conversation_id
@@ -193,6 +204,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     askTitle: row.title_source !== 'user',
     previousMessageId: history.rows.at(-1)?.id ?? null,
     startAs: row.start_as,
+    chatWorktree: row.in_chat_worktree,
   };
 }
 
@@ -239,5 +251,6 @@ function childInput(runId: string, row: RunRow): RunInput {
       .nullable()
       .catch(null)
       .parse(row.builder_env ?? null),
+    chatWorktree: row.in_chat_worktree,
   };
 }

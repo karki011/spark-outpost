@@ -10,6 +10,7 @@ import {
 import { getTaskShip, shipState, type TaskShip } from '../persistence/task-ships.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
+import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
 import { taskChanges } from '../projects/task-changes.ts';
 import { shipBranchName } from './branch.ts';
 import { shipCandidates } from './files.ts';
@@ -180,6 +181,21 @@ export async function planShip(
   if (facts.unmergedCopy) return blockedPlan(start, BLOCKED.unmergedCopy);
   const root = shipped?.rootPath ?? facts.roots[0] ?? null;
   if (!root) return blockedPlan(start, BLOCKED.noChanges);
+  const chat = await chatWorktreeAt(deps.db, root);
+  if (!chat) return planFrom(deps, start, facts, root, null);
+  const onChat = { ...start, branch: chat.branch, keepCheckout: false };
+  return planFrom(deps, onChat, facts, root, chat.baseBranch);
+}
+
+async function planFrom(
+  deps: ShipDeps,
+  start: Pick<ShipPlan, 'task' | 'branch' | 'shipped' | 'keepCheckout'>,
+  facts: ShipTaskFacts,
+  root: string,
+  baseHint: string | null,
+): Promise<ShipPlan> {
+  const { shipped, branch, keepCheckout } = start;
+  const taskId = start.task.id;
   const repo = await repoState(root);
   if (!repo) return blockedPlan({ ...start, root }, BLOCKED.notRepo);
   if (!repo.head) return blockedPlan({ ...start, root, repo }, BLOCKED.noCommits);
@@ -215,7 +231,8 @@ export async function planShip(
   const plan: ShipPlan = {
     ...context,
     branchExists: exists,
-    baseBranch: shipped?.baseBranch ?? (await baseBranch(root, remote, repo.branch, branch)),
+    baseBranch:
+      shipped?.baseBranch ?? (await baseBranch(root, remote, baseHint ?? repo.branch, branch)),
     remote,
     remoteRepo,
     github,

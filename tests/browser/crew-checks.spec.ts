@@ -1,5 +1,3 @@
-import { writeFileSync } from 'node:fs';
-import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
   CREW_REQUEST,
@@ -49,7 +47,7 @@ test('a failing check goes back to the Builder, and the work panel shows both ro
   page,
 }) => {
   test.setTimeout(120_000);
-  writeFileSync(path.join(repo.root, 'check.mjs'), FAILS_UNTIL_FIXED);
+  repo.commit('check.mjs', FAILS_UNTIL_FIXED);
   await crewChat(page, repo, 'Full auto');
   const command = `${process.execPath} check.mjs`;
   await useChecks(page, [command]);
@@ -77,7 +75,7 @@ test('Accept edits, review each step: the check approval shows in the thread, Re
   page,
 }) => {
   test.setTimeout(120_000);
-  writeFileSync(path.join(repo.root, 'check.mjs'), FAILS_UNTIL_FIXED);
+  repo.commit('check.mjs', FAILS_UNTIL_FIXED);
   await crewChat(page, repo, 'Review keep');
   const command = `${process.execPath} check.mjs`;
   await useChecks(page, [command]);
