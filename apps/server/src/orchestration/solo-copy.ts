@@ -54,6 +54,10 @@ export async function repoBusy(db: Db, runId: string, root: string): Promise<boo
        JOIN projects p ON p.id = cp.project_id
        WHERE r.id <> $1 AND r.parent_run_id IS NULL AND r.mode = 'do'
          AND r.status IN ('running', 'awaiting_approval') AND p.root_path = $2
+         AND NOT EXISTS (
+           SELECT 1 FROM chat_worktrees cw
+           WHERE cw.conversation_id = r.conversation_id AND cw.project_id = p.id
+             AND cw.removed_at IS NULL AND NOT cw.in_place)
      ) AS busy`,
     [runId, root],
   );

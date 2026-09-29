@@ -33,6 +33,8 @@ import { Composer } from './Composer.tsx';
 import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
+import { ChatBranch } from './project/ChatBranch.tsx';
+import { useChatWorkspace } from './project/use-chat-workspace.ts';
 import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
 import { activeRun } from './turns.ts';
@@ -109,6 +111,8 @@ export function ChatView({ conversationId }: { conversationId: string }) {
         else panel.setOpen(true);
       }
     : null;
+  const workspace = useChatWorkspace(conversationId, Boolean(detail.data?.conversation.branch));
+  const chatBranch = workspace.data?.current ?? null;
   const canAudit = (detail.data?.runs.length ?? 0) > 0;
   const openAudit = canAudit ? () => setAuditOpen(true) : undefined;
 
@@ -130,6 +134,7 @@ export function ChatView({ conversationId }: { conversationId: string }) {
           >
             {title}
           </h1>
+          {chatBranch && <ChatBranch conversationId={conversationId} branch={chatBranch} />}
           <div className="head-r">
             <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
             {openAudit && (
@@ -193,7 +198,10 @@ export function ChatView({ conversationId }: { conversationId: string }) {
           onClose={() => panel.setOpen(false)}
           orchestration={taskCrew}
           agents={taskCrew ? crew : []}
-          roots={repos.map((repo) => repo.rootPath)}
+          roots={[
+            ...(chatBranch?.worktree ? [chatBranch.path] : []),
+            ...repos.map((repo) => repo.rootPath),
+          ]}
           runs={detail.data?.runs ?? []}
           width={panel.width}
           onWidth={panel.setWidth}

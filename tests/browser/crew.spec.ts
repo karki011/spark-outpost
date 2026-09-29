@@ -79,7 +79,7 @@ test('Manual, review each step: one task Builder with an edit approval, the Crit
   await expect(waiting).toContainText('Waiting for you: Write notes.txt');
   await expect(waiting.getByText('Waiting for you: Write notes.txt')).toHaveAttribute(
     'title',
-    path.join(repo.root, 'notes.txt'),
+    path.join(repo.work(), 'notes.txt'),
   );
 
   await work.getByRole('tab', { name: 'Crew' }).click();

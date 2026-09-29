@@ -26,6 +26,7 @@ export interface TestAppOptions {
   linearApiUrl?: string;
   locateGh?: () => Promise<string | null>;
   serverSpendCapUsd?: number;
+  openFolder?: AppOptions['openFolder'];
 }
 
 const unavailableProbe: AppOptions['probeCapabilities'] = () =>
@@ -61,13 +62,14 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     linearApiUrl: options.linearApiUrl,
     locateGh: options.locateGh ?? (async () => null),
     serverSpendCapUsd: options.serverSpendCapUsd,
+    ...(options.openFolder ? { openFolder: options.openFolder } : {}),
   });
 }
 
 export function localClient(app: ReturnType<typeof createTestApp>) {
   return {
     get: (path: string) => request(app).get(path).set(LOCAL_HEADERS),
-    send: (method: 'post' | 'patch' | 'delete', path: string, body: object = {}) =>
+    send: (method: 'post' | 'put' | 'patch' | 'delete', path: string, body: object = {}) =>
       request(app)[method](path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body),
   };
 }

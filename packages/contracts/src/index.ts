@@ -12,6 +12,7 @@ export * from './audit.ts';
 export * from './categories.ts';
 export * from './changes.ts';
 export * from './chat-settings.ts';
+export * from './chat-workspace.ts';
 export * from './checks.ts';
 export * from './checkpoints.ts';
 export * from './conversations.ts';

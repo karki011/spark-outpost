@@ -1,5 +1,14 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, type Page } from '@playwright/test';
@@ -12,9 +21,20 @@ export const CREW_REQUEST = 'Move date handling into one module and update every
 
 export interface CrewRepo {
   root: string;
+  work(): string;
   notes(): string;
   file(relative: string): string;
+  commit(relative: string, text: string): void;
   remove(): void;
+}
+
+export function chatFolder(root: string): string {
+  const copies = path.join(root, '.spark', 'worktrees');
+  if (!existsSync(copies)) return root;
+  const newest = readdirSync(copies)
+    .map((name) => path.join(copies, name))
+    .toSorted((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
+  return newest ?? root;
 }
 
 export function crewRepo(): CrewRepo {
@@ -27,8 +47,14 @@ export function crewRepo(): CrewRepo {
   git('commit', '-qm', 'base');
   return {
     root,
-    notes: () => readFileSync(path.join(root, 'notes.txt'), 'utf8'),
-    file: (relative) => readFileSync(path.join(root, relative), 'utf8'),
+    work: () => chatFolder(root),
+    notes: () => readFileSync(path.join(chatFolder(root), 'notes.txt'), 'utf8'),
+    file: (relative) => readFileSync(path.join(chatFolder(root), relative), 'utf8'),
+    commit: (relative, text) => {
+      writeFileSync(path.join(root, relative), text);
+      git('add', relative);
+      git('commit', '-qm', `add ${relative}`);
+    },
     remove: () => rmSync(root, { recursive: true, force: true }),
   };
 }

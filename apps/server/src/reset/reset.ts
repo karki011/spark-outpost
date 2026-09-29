@@ -4,6 +4,8 @@ import type { SecretId, SecretStore } from '../setup/secrets.ts';
 import { storedSecretIds } from './secrets.ts';
 import { stopActiveWork } from './stop-work.ts';
 import { wipeAppData } from './wipe.ts';
+import { allLiveChatWorktrees, type ChatWorktree } from '../persistence/chat-worktrees.ts';
+import { releaseOnDisk } from '../projects/chat-worktree-cleanup.ts';
 import { ownedWorktrees, removeOwnedWorktree, type OwnedWorktree } from './worktrees.ts';
 
 export const RUN_SETTLE_MS = 5000;
@@ -47,6 +49,20 @@ async function removeWorktrees(worktrees: readonly OwnedWorktree[], problems: st
   return removed;
 }
 
+async function removeChatCopies(copies: readonly ChatWorktree[], problems: string[]) {
+  let removed = 0;
+  for (const copy of copies) {
+    try {
+      const released = await releaseOnDisk(copy, 'reset');
+      if (released.removed) removed += 1;
+      if (released.saved) problems.push(`Saved uncommitted chat work on ${copy.branch}.`);
+    } catch {
+      problems.push(`Couldn't fully remove the ${copy.branch} worktree in ${copy.repoRoot}.`);
+    }
+  }
+  return removed;
+}
+
 export async function resetSparkOutpost(
   deps: ResetDeps,
   { keepApiKeys }: { keepApiKeys: boolean },
@@ -57,8 +73,10 @@ export async function resetSparkOutpost(
   deps.stopTerminals();
   const secretIds = await storedSecretIds(deps.db, keepApiKeys);
   const worktrees = await ownedWorktrees(deps.db);
+  const chatCopies = await allLiveChatWorktrees(deps.db);
   await wipeAppData(deps.db, deps.workspaceId);
   const secretsRemoved = await removeSecrets(deps.secrets, secretIds, problems);
-  const worktreesRemoved = await removeWorktrees(worktrees, problems);
+  const worktreesRemoved =
+    (await removeWorktrees(worktrees, problems)) + (await removeChatCopies(chatCopies, problems));
   return { secretsRemoved, worktreesRemoved, problems };
 }

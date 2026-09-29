@@ -1,5 +1,3 @@
-import { writeFileSync } from 'node:fs';
-import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { PIECE_CHECK_SCRIPT } from '../../apps/server/test/fake-acp-coordinator.ts';
 import {
@@ -17,7 +15,7 @@ let repo: CrewRepo;
 test.beforeEach(async ({ page }) => {
   await resetCrew();
   repo = crewRepo();
-  writeFileSync(path.join(repo.root, 'piece-check.mjs'), PIECE_CHECK_SCRIPT);
+  repo.commit('piece-check.mjs', PIECE_CHECK_SCRIPT);
   await page.setViewportSize({ width: 1400, height: 900 });
 });
 

@@ -65,10 +65,16 @@ function pullRequestLine(result: ShipResult, failing: boolean): string {
   return `${verb} draft PR #${pull.number}${marked}: ${pull.url}`;
 }
 
+function checkoutLine(current: string | null, branch: string): string {
+  if (current === branch) return `The change is on ${branch} in this chat's worktree.`;
+  if (current) {
+    return `Your checkout stays on ${current} with the change in your working tree; the PR branch is ${branch}.`;
+  }
+  return `The branch is ${branch}.`;
+}
+
 function shippedLine(result: ShipResult, plan: ShipPlan, failing: boolean): string {
-  const checkout = plan.repo?.branch
-    ? `Your checkout stays on ${plan.repo.branch} with the change in your working tree; the PR branch is ${result.branch}.`
-    : `The branch is ${result.branch}.`;
+  const checkout = checkoutLine(plan.repo?.branch ?? null, result.branch);
   if (result.pullRequest) return `${pullRequestLine(result, failing)}\n\n${checkout}`;
   const why = plan.notes[0] ? ` ${plan.notes[0]}` : '';
   if (result.pushed) {

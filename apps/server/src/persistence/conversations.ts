@@ -19,6 +19,7 @@ import { conversationOrchestrations } from './orchestrations.ts';
 import { shownApprovalsForConversation } from './approvals.ts';
 import { attachmentsForMessages, linkAttachments } from './attachments.ts';
 import { resolveChatSettings } from './chat-settings.ts';
+import { withChatBranches } from './chat-worktrees.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
 import { containsPattern } from './like-pattern.ts';
@@ -137,7 +138,7 @@ export async function listConversations(
      ORDER BY c.pinned_at DESC NULLS LAST, c.updated_at DESC LIMIT 500`,
     [workspaceId, text, containsPattern(text)],
   );
-  return rows.map(toConversationSummary);
+  return withChatBranches(db, rows.map(toConversationSummary));
 }
 
 export async function getSummary(db: Queryable, id: string): Promise<ConversationSummary | null> {
@@ -177,7 +178,9 @@ export async function getConversationDetail(
   db: Queryable,
   id: string,
 ): Promise<ConversationDetail | null> {
-  const conversation = await getSummary(db, id);
+  const summary = await getSummary(db, id);
+  if (!summary) return null;
+  const [conversation] = await withChatBranches(db, [summary]);
   if (!conversation) return null;
   const [messages, runs, steps, settings] = await Promise.all([
     db.query<MessageRow>(

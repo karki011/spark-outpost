@@ -12,6 +12,7 @@ import { closeMessage, finishRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { noteProjectMove } from '../workflow/project-move.ts';
 import { loadRunInput } from '../workflow/run-input.ts';
+import { placeChatOrStop } from './chat-place.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
@@ -278,14 +279,18 @@ async function finish(
 export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise<void> {
   const taskStartedAt = Date.now();
   const append: Append = (event, options) => appendRunEvent(deps.db, lease, event, options);
-  const input = await noteProjectMove(deps.db, await loadRunInput(deps.db, lease.runId), append);
+  let input = await noteProjectMove(deps.db, await loadRunInput(deps.db, lease.runId), append);
   const control = startControl(deps, lease);
   let budgetTimer: NodeJS.Timeout | null = null;
   let session: Session | null = null;
   try {
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
+    const placed = await placeChatOrStop(deps, input, append);
+    if (!placed) return;
+    input = placed.input;
     const mode = input.mode ?? 'chat';
     const root = input.projectRoots[0];
+    const repoRoot = placed.repoRoot ?? root;
     const doing = mode === 'do' && root !== undefined;
     const prefs = await sparkPreferences(deps.db, input.workspaceId);
     const solo = !prefs.sparkEnabled;
@@ -294,7 +299,8 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       await finishRun(append, input.identity, result, true);
       return;
     }
-    const scanning = doing && !solo ? startScan({ deps, input }, root, taskStartedAt) : null;
+    const scanning =
+      doing && !solo && repoRoot ? startScan({ deps, input }, repoRoot, taskStartedAt) : null;
     const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
     const { intake, decisions } = await runIntake(
       deps,
@@ -369,6 +375,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       assumption: null,
       needsCopy:
         git &&
+        !input.chatWorktree &&
         needsCopyFor({
           provider: input.provider,
           agentMode: input.agentMode,

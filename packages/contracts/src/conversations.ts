@@ -69,6 +69,7 @@ export const conversationSummarySchema = z.object({
   attention: conversationAttentionSchema.nullable().default(null),
   titleSource: titleSourceSchema.default('message'),
   category: categorySchema.nullable().default(null),
+  branch: z.string().nullable().optional(),
 });
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
 

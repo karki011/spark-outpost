@@ -83,6 +83,7 @@ interface AgentTvProps {
   onPick(id: string): void;
   onAsk(approvalId: string): void;
   onStop(runId: string): void;
+  branch?: string | null;
 }
 
 export function AgentTv({
@@ -94,6 +95,7 @@ export function AgentTv({
   onPick,
   onAsk,
   onStop,
+  branch = null,
 }: AgentTvProps) {
   const { position, size, watch, muted, view, cleared } = useAgentTv();
   const panel = useRef<HTMLDivElement>(null);
@@ -216,8 +218,18 @@ export function AgentTv({
       >
         <div className="tv-h" onPointerDown={startDrag} onDoubleClick={redock}>
           <i className="tv-live" aria-hidden="true" />
-          <span title={watch ? undefined : 'Drag to move. Double-click to dock'}>
-            Agent TV <small>live</small>
+          <span
+            className="tv-title"
+            title={watch ? undefined : 'Drag to move. Double-click to dock'}
+          >
+            <span>
+              Agent TV <small>live</small>
+            </span>
+            {branch && (
+              <small className="tv-branch" title={branch}>
+                · {branch}
+              </small>
+            )}
           </span>
           <span className="tv-view" {...viewTip.triggerProps}>
             <Segmented

@@ -1,4 +1,5 @@
 import { ShipControl } from '../../ship/ShipControl.tsx';
+import { BringChanges } from './BringChanges.tsx';
 import type { KeepCardHost } from './feedback-host.ts';
 import { TurnFeedback } from './TurnFeedback.tsx';
 
@@ -13,6 +14,7 @@ export function KeepCardFooter({ runId, host, taskId, conversationId }: KeepCard
   return (
     <>
       <TurnFeedback runId={runId} variant={host.variant} />
+      {host.variant === 'kept' && <BringChanges conversationId={conversationId} />}
       {host.variant === 'kept' && taskId && (
         <ShipControl taskId={taskId} conversationId={conversationId} />
       )}
