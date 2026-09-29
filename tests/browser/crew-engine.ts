@@ -42,6 +42,13 @@ export async function resetCrew(): Promise<void> {
   });
 }
 
+export async function autoContinueAfter(page: Page, seconds: number): Promise<void> {
+  const response = await page.request.patch('/api/profile', {
+    data: { autoContinueSeconds: seconds },
+  });
+  expect(response.ok()).toBe(true);
+}
+
 export async function linkedChat(page: Page, repo: CrewRepo): Promise<void> {
   const response = await page.request.post('/api/projects', { data: { rootPath: repo.root } });
   expect(response.ok()).toBe(true);

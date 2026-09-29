@@ -444,7 +444,7 @@ export async function artifactBodies<T>(t: TestDb, kind: string): Promise<T[]> {
 
 export async function assistantReplies(t: TestDb, runId: string): Promise<string[]> {
   const { rows } = await t.db.query<{ content: string }>(
-    `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant'`,
+    `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant' ORDER BY created_at`,
     [runId],
   );
   return rows.map((row) => row.content);

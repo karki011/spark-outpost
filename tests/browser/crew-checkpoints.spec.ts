@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import {
   CREW_REQUEST,
   agentBlock,
@@ -10,6 +10,7 @@ import {
   resetCrew,
   send,
   type CrewRepo,
+  autoContinueAfter,
 } from './crew-engine.ts';
 
 let repo: CrewRepo;
@@ -207,13 +208,6 @@ test('Review each step: "Fix these findings" on the keep card sends the review b
   await again.getByRole('button', { name: 'Keep', exact: true }).click();
   expect(repo.notes()).toBe('start\nstep 1\nfixed the review findings\n');
 });
-
-async function autoContinueAfter(page: Page, seconds: number): Promise<void> {
-  const response = await page.request.patch('/api/profile', {
-    data: { autoContinueSeconds: seconds },
-  });
-  expect(response.ok()).toBe(true);
-}
 
 test('an unanswered Jev question counts down and continues with the rules', async ({ page }) => {
   test.setTimeout(60_000);
