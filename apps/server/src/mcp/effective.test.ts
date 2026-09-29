@@ -16,8 +16,6 @@ const server: UserMcpRow = {
     envNames: ['GITHUB_TOKEN', 'LOG'],
     headerNames: [],
     secretNames: ['GITHUB_TOKEN'],
-    importableNames: ['GITHUB_TOKEN', 'LOG'],
-    origin: '/home/.cursor/mcp.json',
   },
 };
 
@@ -65,9 +63,5 @@ describe('which scope decides whether a user-level server runs', () => {
     const view = userServerView(server, [...rows, row('project', PROJECT, true, 'fp-old')]);
     expect(view.global).toEqual({ enabled: false, changed: true });
     expect(view.projects).toEqual([{ projectId: PROJECT, enabled: false, changed: true }]);
-  });
-
-  it('offers to copy only values that are not in the keychain yet', () => {
-    expect(userServerView(server, []).importableNames).toEqual(['LOG']);
   });
 });

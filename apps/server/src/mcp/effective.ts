@@ -43,10 +43,6 @@ export function userServerView(server: UserMcpRow, rows: readonly EnablementRow[
     envNames: server.config.envNames,
     headerNames: server.config.headerNames,
     secretNames: server.config.secretNames,
-    importableNames: server.config.importableNames.filter(
-      (name) => !server.config.secretNames.includes(name),
-    ),
-    origin: server.config.origin,
     fingerprint: server.fingerprint,
     global: global ? enablementOf(server, global) : null,
     projects: mine

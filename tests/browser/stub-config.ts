@@ -27,11 +27,6 @@ export const FAKE_CODEX_STATE = path.join(
   slot === 0 ? 'spark-outpost-fake-codex-logged-in' : `spark-outpost-fake-codex-logged-in-${slot}`,
 );
 
-export const MCP_SCAN_HOME = path.join(
-  os.tmpdir(),
-  slot === 0 ? 'spark-outpost-mcp-home' : `spark-outpost-mcp-home-${slot}`,
-);
-
 export const FAKE_GH_STATE = path.join(
   os.tmpdir(),
   slot === 0 ? 'spark-outpost-fake-gh-login' : `spark-outpost-fake-gh-login-${slot}`,

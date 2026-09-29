@@ -10,8 +10,6 @@ export interface StoredUserConfig {
   envNames: string[];
   headerNames: string[];
   secretNames: string[];
-  importableNames: string[];
-  origin: string | null;
 }
 
 export interface UserMcpRow {
@@ -59,8 +57,6 @@ function toRow(row: ServerDbRow): UserMcpRow {
       envNames: row.config.envNames ?? [],
       headerNames: row.config.headerNames ?? [],
       secretNames: row.config.secretNames ?? [],
-      importableNames: row.config.importableNames ?? [],
-      origin: row.config.origin ?? null,
     },
   };
 }
@@ -73,7 +69,7 @@ export function userFingerprint(server: Omit<McpServerConfig, 'fingerprint'>): s
 
 export function storedUserConfig(
   server: Omit<McpServerConfig, 'fingerprint'>,
-  extra: Pick<StoredUserConfig, 'secretNames' | 'importableNames' | 'origin'>,
+  secretNames: string[],
 ): StoredUserConfig {
   return {
     command: server.command,
@@ -81,7 +77,7 @@ export function storedUserConfig(
     url: server.url,
     envNames: Object.keys(server.env).sort(),
     headerNames: Object.keys(server.headers).sort(),
-    ...extra,
+    secretNames,
   };
 }
 
@@ -176,14 +172,6 @@ export async function updateUserMcp(
             updated_at = now()
       WHERE id = $1`,
     [id, server.name, server.transport, server.config, server.fingerprint],
-  );
-}
-
-export async function setSecretNames(db: Queryable, id: string, names: string[]): Promise<void> {
-  await db.query(
-    `UPDATE mcp_servers SET config = jsonb_set(config, '{secretNames}', $2::jsonb)
-      WHERE id = $1`,
-    [id, JSON.stringify(names)],
   );
 }
 

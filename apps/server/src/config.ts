@@ -73,7 +73,6 @@ const configSchema = z.object({
     .default(DEFAULT_BRANCH_PREFIX),
   BACKUP_DIR: z.string().min(1).optional(),
   WEB_ROOT: z.string().min(1).optional(),
-  MCP_SCAN_HOME: z.string().min(1).optional(),
 });
 
 export type Config = z.infer<typeof configSchema>;

@@ -32,7 +32,7 @@ export interface AppOptions
     TicketRouteDeps,
     ChatSettingsDeps,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
-    Pick<McpRouteDeps, 'mcpHomes' | 'probeMcp'> {
+    Pick<McpRouteDeps, 'probeMcp'> {
   terminals: TerminalSessions;
   appEvents: AppEventFeed;
   port: number;

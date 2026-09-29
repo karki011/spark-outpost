@@ -1,11 +1,7 @@
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { API_TOKEN_HEADER } from '@spark-outpost/contracts';
 import { AppEventFeed } from '../src/api/app-events.ts';
 import { createApp, type AppOptions } from '../src/api/app.ts';
 import { RunEventHub } from '../src/api/run-event-hub.ts';
-import { scanHomesAt } from '../src/mcp/scan.ts';
-import type { SourceHomes } from '../src/mcp/sources.ts';
 import type { CommandResult, RunCommand } from '../src/setup/command.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { loginShellSpawner } from '../src/terminal/pty.ts';
@@ -28,7 +24,6 @@ export interface TestAppOptions {
   githubApiUrl?: string;
   linearApiUrl?: string;
   locateGh?: () => Promise<string | null>;
-  mcpHomes?: SourceHomes;
 }
 
 const unavailableProbe: AppOptions['probeCapabilities'] = () =>
@@ -63,6 +58,5 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     githubApiUrl: options.githubApiUrl,
     linearApiUrl: options.linearApiUrl,
     locateGh: options.locateGh ?? (async () => null),
-    mcpHomes: options.mcpHomes ?? scanHomesAt(join(tmpdir(), 'spark-no-mcp-home')),
   });
 }

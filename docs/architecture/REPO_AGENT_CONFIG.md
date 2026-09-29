@@ -91,12 +91,12 @@ The context bar's sliders button ("Agent setup for <project>") opens a popover w
 - Integration without a live model: `test/acp-repo-config.test.ts` checks the `_meta`, `CODEX_CONFIG` and `mcpServers` the fake ACP agent receives.
 - DB: `test/agent-config.db.test.ts` (API, fingerprints, audit, cascade, launch, trust grant, change, key and traffic confirmation, revoke).
 - Browser: `tests/browser/agent-setup.spec.ts`, `tests/browser/mcp-settings.spec.ts`.
-- User-level MCP: `mcp/scan.test.ts` (each app's file under a temporary HOME, nothing run), `mcp/effective.test.ts`, `mcp/secrets.test.ts`, `mcp/probe.test.ts`, `agents/acp/codex-mcp.test.ts`, `test/acp-user-mcp.test.ts` (what the fake agent receives), `test/user-mcp.db.test.ts` (API, scopes, fingerprints, no values in the database or audit).
+- User-level MCP: `mcp/effective.test.ts`, `mcp/secrets.test.ts`, `mcp/probe.test.ts`, `agents/acp/codex-mcp.test.ts`, `test/acp-user-mcp.test.ts` (what the fake agent receives), `test/user-mcp.db.test.ts` (API, scopes, fingerprints, no values in the database or audit).
 - Live, September 28, Haiku 4.5, throwaway repo in the session scratchpad, about $0.05 in total: with defaults, Claude answered with the CLAUDE.md codeword, listed the skill as `live-repo:zebra-stripes` and the MCP tool `mcp__echo__echo`, and the `UserPromptSubmit` hook did not run. With hooks approved it ran.
 
 ## User-level MCP servers
 
-Servers that belong to the user rather than a repo: imported from other apps or added by hand in Settings → MCP servers, and turned on for all chats, per project or per chat.
+Servers that belong to the user rather than a repo: added by hand or from a pasted config in Settings → MCP servers, and turned on for all chats, per project or per chat.
 
 ### Did agents already load the user's global MCP servers?
 
@@ -114,15 +114,15 @@ Checked September 28, 2026 with the marker technique above: a temporary `HOME` a
 
 So Claude was already consistent; Codex was not. Now, for every Codex process (chats, Builders, the capability probe), `agent-env.ts` reads the names under `[mcp_servers]` in `$CODEX_HOME/config.toml` (default `~/.codex`) and sets each to `enabled = false` in `CODEX_CONFIG`; codex-acp keeps those entries next to the ACP servers ([PATCHES.md](PATCHES.md) part 6). A Spark server whose name clashes with one of them is renamed `<name>_spark`, so it is never dropped or merged with the user's entry. `APP_SERVER_LOGS` is removed from Codex's environment because codex-acp logs the full `thread/start` config there. We kept the user's `CODEX_HOME` rather than a harness-managed copy: Codex rotates refresh tokens in `auth.json` and keeps session rollouts there, so a copy would break sign-in and resume.
 
-### Scan (read only)
+### Adding servers
 
-`mcp/scan.ts` reads, never runs: `~/.claude.json` (`mcpServers` and each `projects[path].mcpServers`, a clashing per-project name becomes `<name>-<folder>`), Claude Desktop's `claude_desktop_config.json`, `~/.cursor/mcp.json`, VS Code's user `mcp.json` (`servers`) and `settings.json` (`mcp.servers`, JSON with comments), `$CODEX_HOME/config.toml` (`[mcp_servers.*]`; `bearer_token_env_var` and `env_http_headers` become `${VAR}` header references) and Windsurf's `~/.codeium/windsurf/mcp_config.json` (`serverUrl`). Files over 16 MB are skipped; bad files become warnings. Project `.mcp.json` files are not shown here; they stay in each project's Agent setup.
+Users add servers by hand in Settings → MCP servers, or paste a README-style JSON config into the add form, which fills the fields in the browser. Spark does not read other apps' MCP config files (Claude Code, Claude Desktop, Cursor, VS Code, Codex, Windsurf). Servers imported by an earlier version keep their `imported:<tool>` source and "From <app>" label; they can be tested, switched and removed but not edited. Project `.mcp.json` files are not shown here; they stay in each project's Agent setup.
 
-Scanning imports every server as `imported:<tool>`, switched off. A later scan updates the stored config; if it changed, the fingerprint changes and every switch for it reads as "changed" and off until the user turns it on again. Removing an imported server and scanning again brings it back, off.
+The only user-level file Spark reads for MCP is `$CODEX_HOME/config.toml`, for the server names it turns off in Codex sessions (above).
 
 ### Secrets
 
-The database keeps env and header names only (`config.envNames`, `headerNames`, plus `secretNames` for names with a stored value and `importableNames` for names the source file has values for). Values live in the keychain under `KEYCHAIN_SERVICE`, one entry per server (`mcp:<server id>`, JSON of env and headers). For an imported server, values move only when the user clicks "Copy values to keychain", which re-reads the file and refuses if the config changed since the scan. The fingerprint of a user-level server covers name, transport, command, args, URL and value names, not values, so rotating a token needs no review. Values are resolved in the worker when the agent starts; `session/new`, `session/load` and `session/resume` audit entries have every MCP env and header value replaced with `[redacted:mcp_secret]`. Removing a server deletes its keychain entry.
+The database keeps env and header names only (`config.envNames`, `headerNames`, plus `secretNames` for names with a stored value). Values live in the keychain under `KEYCHAIN_SERVICE`, one entry per server (`mcp:<server id>`, JSON of env and headers). The fingerprint of a user-level server covers name, transport, command, args, URL and value names, not values, so rotating a token needs no review. Values are resolved in the worker when the agent starts; `session/new`, `session/load` and `session/resume` audit entries have every MCP env and header value replaced with `[redacted:mcp_secret]`. Removing a server deletes its keychain entry.
 
 ### Scopes
 

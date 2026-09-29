@@ -21,7 +21,6 @@ import { probeCapabilities } from '../agents/acp/probe.ts';
 import { fakeCapabilities } from '../providers/fake.ts';
 import { AppEventFeed, listenForAppEvents } from './app-events.ts';
 import { createApp } from './app.ts';
-import { scanHomesAt } from '../mcp/scan.ts';
 import { takeLaunchToken } from './launch-token.ts';
 import { RunEventHub } from './run-event-hub.ts';
 
@@ -79,7 +78,6 @@ const app = createApp({
   githubApiUrl: config.GITHUB_API_URL,
   linearApiUrl: config.LINEAR_API_URL,
   ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
-  ...(config.MCP_SCAN_HOME ? { mcpHomes: scanHomesAt(config.MCP_SCAN_HOME) } : {}),
 });
 const outcomeSweep = startOutcomeSweep(db, workspaceId, {
   sampleRate: config.OUTCOME_SAMPLE_RATE,
