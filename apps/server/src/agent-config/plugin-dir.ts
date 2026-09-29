@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { access, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import type { ScannedDefinition } from './discovery.ts';
 import { parseFrontmatter, renderFrontmatter } from './frontmatter.ts';
 import type { RepoRootLaunch } from './launch.ts';
@@ -44,10 +44,30 @@ function skillDir(definition: ScannedDefinition): string {
   return definition.path.slice(0, definition.path.lastIndexOf('/'));
 }
 
-function outputPath(kind: Kind, definition: ScannedDefinition): string {
-  if (kind === 'skills') return `skills/${definition.name.replace(/[/\\]/g, '-')}/SKILL.md`;
-  if (kind === 'commands') return `commands/${definition.name.split(':').join('/')}.md`;
-  return `agents/${definition.path.slice(definition.path.lastIndexOf('/') + 1)}`;
+const SAFE_SEGMENT = /^[A-Za-z0-9._-]+$/;
+
+function safeSegment(segment: string): boolean {
+  return SAFE_SEGMENT.test(segment) && segment !== '.' && segment !== '..';
+}
+
+function safePath(prefix: string, segments: readonly string[], suffix: string): string | null {
+  if (!segments.every(safeSegment)) return null;
+  return `${prefix}/${segments.join('/')}${suffix}`;
+}
+
+function outputPath(kind: Kind, definition: ScannedDefinition): string | null {
+  if (kind === 'skills') return safePath('skills', [definition.name], '/SKILL.md');
+  if (kind === 'commands') return safePath('commands', definition.name.split(':'), '.md');
+  return safePath('agents', [definition.path.slice(definition.path.lastIndexOf('/') + 1)], '');
+}
+
+function insideDir(dir: string, path: string): string {
+  const target = resolve(dir, path);
+  const rel = relative(dir, target);
+  if (rel === '' || rel === '..' || rel.startsWith(`..${sep}`) || resolve(rel) === rel) {
+    throw new Error(`Plugin file path escapes the plugin folder: ${path}`);
+  }
+  return target;
 }
 
 async function definitionFiles(
@@ -59,7 +79,7 @@ async function definitionFiles(
   const seen = new Set<string>();
   for (const definition of definitions) {
     const path = outputPath(kind, definition);
-    if (seen.has(path)) continue;
+    if (path === null || seen.has(path)) continue;
     seen.add(path);
     let text: string;
     try {
@@ -107,9 +127,10 @@ export async function writePluginDir(
   const target = join(base, hash);
   if (await exists(target)) return target;
   const staging = join(base, `.staging-${randomUUID()}`);
-  for (const file of files) {
-    await mkdir(dirname(join(staging, file.path)), { recursive: true });
-    await writeFile(join(staging, file.path), file.text);
+  const targets = files.map((file) => ({ path: insideDir(staging, file.path), text: file.text }));
+  for (const file of targets) {
+    await mkdir(dirname(file.path), { recursive: true });
+    await writeFile(file.path, file.text);
   }
   try {
     await rename(staging, target);
