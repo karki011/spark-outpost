@@ -69,13 +69,3 @@
   color: var(--faint);
   line-height: 1.4;
 }
-.build-style {
-  margin-top: 4px;
-  border-top: 1px solid var(--line);
-  padding: 8px 10px 6px;
-}
-.build-style-t {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 13px;
-}

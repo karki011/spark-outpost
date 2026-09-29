@@ -7,7 +7,6 @@ import {
   projectSchema,
   removedProjectSchema,
   type Attachment,
-  type BuildStyle,
   type FolderListing,
   type Project,
   type ProjectFilesResponse,
@@ -46,11 +45,6 @@ function withQuery(path: string, params: Record<string, string | null>): string 
 
 export const projectsApi = {
   list: (): Promise<Project[]> => request(z.array(projectSchema), '/projects'),
-  setBuildStyle: (projectId: string, buildStyle: BuildStyle): Promise<Project> =>
-    request(projectSchema, `/projects/${projectId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ buildStyle }),
-    }),
   create: (rootPath: string): Promise<Project> =>
     request(projectSchema, '/projects', { method: 'POST', body: JSON.stringify({ rootPath }) }),
   rename: (projectId: string, name: string): Promise<Project> =>
