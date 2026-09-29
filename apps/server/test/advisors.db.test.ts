@@ -2,7 +2,7 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { VerifyEvent } from '@spark-outpost/contracts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
-import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
+import { createTestApp, jsonResponse, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 const FAKE_JEV_KEY = 'fake-typesafe-key-0000000000009z8y';
@@ -18,13 +18,6 @@ beforeEach(async () => {
 afterEach(async () => {
   await t.cleanup();
 });
-
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
-}
 
 const typesafeModels = {
   models: [

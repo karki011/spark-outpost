@@ -1,7 +1,7 @@
 import type { OutcomeTally, VerdictCounts } from '@spark-outpost/contracts';
 import type { CheckFact, TurnFact } from './facts.ts';
 
-export function emptyVerdicts(): VerdictCounts {
+function emptyVerdicts(): VerdictCounts {
   return { good: 0, bad: 0, mixed: 0, unclear: 0 };
 }
 

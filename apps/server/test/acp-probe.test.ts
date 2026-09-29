@@ -1,15 +1,11 @@
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { agentDefinitions, type AgentDefinition } from '../src/agents/acp/agents.ts';
 import { probeCapabilities } from '../src/agents/acp/probe.ts';
 import { ProviderError } from '../src/providers/provider.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
+import { FAKE_ACP_LAUNCH as launch } from './fake-acp-support.ts';
 
 const definition: AgentDefinition = { ...agentDefinitions.codex, name: 'Fake' };
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
-};
 const probe = (env: Record<string, string> = {}) =>
   probeCapabilities(definition, { launch, env: { ...childEnvironment(process.env), ...env } });
 

@@ -5,7 +5,7 @@ import {
   type ProviderCardsView,
   type ProviderId,
 } from '@spark-outpost/contracts';
-import { cardFor, VENDOR_CARDS } from './cards.ts';
+import { cardFor, providerCard, VENDOR_CARDS } from './cards.ts';
 import { cardText, staleness, statFor, usableStats } from './card-text.ts';
 
 export interface ProviderSnapshot {
@@ -23,7 +23,7 @@ function providerView(
   stats: readonly ModelStat[],
   now: Date,
 ): ProviderCardsView | null {
-  const provider = VENDOR_CARDS.providers.find((card) => card.provider === snapshot.provider);
+  const provider = providerCard(snapshot.provider);
   if (!provider) return null;
   const cards = VENDOR_CARDS.cards.filter((card) => card.provider === snapshot.provider);
   const offered = snapshot.models.filter((model) => model.id !== AGENT_DEFAULT_MODEL);

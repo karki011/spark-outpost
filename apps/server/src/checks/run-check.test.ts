@@ -82,6 +82,7 @@ describe('running a check', () => {
       GITHUB_TOKEN: 'y',
       DATABASE_URL: 'postgres://',
       PGPASSWORD: 'z',
+      MEMORY_SECRETS: '{"jev":"k"}',
     });
     expect(env).toEqual({ PATH: '/bin', CI: '1', NO_COLOR: '1', FORCE_COLOR: '0' });
   });

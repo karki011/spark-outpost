@@ -8,7 +8,8 @@ import { getRun, requestCancel } from '../src/persistence/runs.ts';
 import { runChanges, revertRun } from '../src/projects/run-changes.ts';
 import { recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import {
-  SCENARIOS,
+  COMPLEX,
+  TRIVIAL,
   answerEverything,
   connectProviders,
   driveToEnd,
@@ -17,14 +18,12 @@ import {
   removeRepo,
   startOrchestrator,
   startScenario,
+  withTag,
   type Answerer,
   type Harness,
   type JevScript,
-  type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
-
-const [, TRIVIAL, , COMPLEX] = SCENARIOS as [Scenario, Scenario, Scenario, Scenario, Scenario];
 
 let t: TestDb;
 let root: string;
@@ -53,8 +52,6 @@ async function start(options: { jev?: boolean; activeLimitMs?: number } = {}) {
   );
 }
 
-const withText = (scenario: Scenario, text: string): Scenario => ({ ...scenario, text });
-
 async function pending(conversationId: string, kind: Approval['kind']): Promise<Approval> {
   return eventually(async () => {
     const detail = await getConversationDetail(t.db, conversationId);
@@ -75,7 +72,7 @@ describe('repair and escalation', () => {
   it('retries a failed Builder one tier up twice by rule, then stops and reports by default', async () => {
     await start();
     script.scenario = TRIVIAL;
-    const failing = withText(TRIVIAL, `${TRIVIAL.text} #failstep 1`);
+    const failing = withTag(TRIVIAL, '#failstep 1');
     const { conversationId, runId } = await startScenario(t, root, failing, 'hands-off');
     const answers: Answerer = (approval) =>
       approval.kind === 'retry'
@@ -99,7 +96,7 @@ describe('repair and escalation', () => {
   it('recovers from one failure by retrying one tier up without asking', async () => {
     await start();
     script.scenario = TRIVIAL;
-    const flaky = withText(TRIVIAL, `${TRIVIAL.text} #failonce 1`);
+    const flaky = withTag(TRIVIAL, '#failonce 1');
     const { conversationId, runId } = await startScenario(t, root, flaky, 'balanced');
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
     expect(asked.map((approval) => approval.kind)).toEqual(['edit']);
@@ -112,7 +109,7 @@ describe('the loop guard', () => {
   it('stops a Builder that repeats itself and asks at Balanced; Continue resumes with a note', async () => {
     await start();
     script.scenario = TRIVIAL;
-    const looping = withText(TRIVIAL, `${TRIVIAL.text} #repeat 8`);
+    const looping = withTag(TRIVIAL, '#repeat');
     const { conversationId, runId } = await startScenario(t, root, looping, 'balanced');
     const answers: Answerer = (approval) =>
       approval.kind === 'stuck'
@@ -128,7 +125,7 @@ describe('the loop guard', () => {
   it('stops with a report at Full auto', async () => {
     await start();
     script.scenario = TRIVIAL;
-    const looping = withText(TRIVIAL, `${TRIVIAL.text} #repeat 8`);
+    const looping = withTag(TRIVIAL, '#repeat');
     const { conversationId, runId } = await startScenario(t, root, looping, 'full-auto');
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
     expect(asked).toEqual([]);
@@ -184,7 +181,7 @@ describe('checkpoints', () => {
 
   it('stops at the time budget and asks before continuing', async () => {
     await start({ activeLimitMs: 1_500 });
-    const scenario = withText(COMPLEX, `${COMPLEX.text} #slowbuild`);
+    const scenario = withTag(COMPLEX, '#slowbuild');
     script.scenario = COMPLEX;
     const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
     const answers: Answerer = (approval) =>
@@ -234,7 +231,7 @@ describe('stop and recovery', () => {
   it('stops the active Builder when you press Stop', async () => {
     await start();
     script.scenario = COMPLEX;
-    const scenario = withText(COMPLEX, `${COMPLEX.text} #slowbuild`);
+    const scenario = withTag(COMPLEX, '#slowbuild');
     const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
     const builder = await activeBuilder(runId);
     await requestCancel(t.db, runId);
@@ -247,7 +244,7 @@ describe('stop and recovery', () => {
   it('marks the orchestration and its active child outcome unknown after a crash', async () => {
     await start();
     script.scenario = COMPLEX;
-    const scenario = withText(COMPLEX, `${COMPLEX.text} #slowbuild`);
+    const scenario = withTag(COMPLEX, '#slowbuild');
     const { runId } = await startScenario(t, root, scenario, 'hands-off');
     const builder = await activeBuilder(runId);
     await t.db.query(`UPDATE jobs SET lease_expires_at = now() - interval '1 second'`);

@@ -69,20 +69,41 @@ export async function runTask(db: Queryable, runId: string): Promise<RunTask | n
   return row?.task_id ? { taskId: row.task_id, planVersion: row.plan_version } : null;
 }
 
+async function lockRunConversation(
+  db: Queryable,
+  runId: string,
+): Promise<{ conversation_id: string; task_id: string | null }> {
+  const { rows } = await db.query<{ conversation_id: string; task_id: string | null }>(
+    `SELECT r.conversation_id, r.task_id FROM runs r
+     JOIN conversations c ON c.id = r.conversation_id
+     WHERE r.id = $1 FOR UPDATE OF c`,
+    [runId],
+  );
+  const run = rows[0];
+  if (!run) throw new Error(`Run ${runId} was not found.`);
+  return run;
+}
+
+async function insertTask(
+  db: Queryable,
+  taskId: string,
+  conversationId: string,
+  request: string,
+): Promise<void> {
+  await db.query('INSERT INTO tasks (id, conversation_id, title) VALUES ($1, $2, $3)', [
+    taskId,
+    conversationId,
+    taskTitle(request),
+  ]);
+}
+
 export async function taskForWorkingRun(
   db: Db,
   runId: string,
   request: string,
 ): Promise<{ task: RunTask; opened: boolean }> {
   return withTransaction(db, async (client) => {
-    const { rows } = await client.query<{ conversation_id: string; task_id: string | null }>(
-      `SELECT r.conversation_id, r.task_id FROM runs r
-       JOIN conversations c ON c.id = r.conversation_id
-       WHERE r.id = $1 FOR UPDATE OF c`,
-      [runId],
-    );
-    const run = rows[0];
-    if (!run) throw new Error(`Run ${runId} was not found.`);
+    const run = await lockRunConversation(client, runId);
     if (run.task_id) {
       return {
         task: { taskId: run.task_id, planVersion: await currentPlanVersion(client, run.task_id) },
@@ -92,11 +113,7 @@ export async function taskForWorkingRun(
     const choice = chooseTask(await latestTask(client, run.conversation_id), true);
     const taskId = choice.kind === 'join' ? choice.taskId : newId();
     if (choice.kind === 'open') {
-      await client.query('INSERT INTO tasks (id, conversation_id, title) VALUES ($1, $2, $3)', [
-        taskId,
-        run.conversation_id,
-        taskTitle(request),
-      ]);
+      await insertTask(client, taskId, run.conversation_id, request);
     }
     const planVersion = await currentPlanVersion(client, taskId);
     await client.query('UPDATE runs SET task_id = $2, plan_version = $3 WHERE id = $1', [
@@ -153,14 +170,7 @@ export async function startNewTask(
   request: string,
 ): Promise<{ taskId: string; closed: string | null }> {
   return withTransaction(db, async (client) => {
-    const { rows } = await client.query<{ conversation_id: string; task_id: string | null }>(
-      `SELECT r.conversation_id, r.task_id FROM runs r
-       JOIN conversations c ON c.id = r.conversation_id
-       WHERE r.id = $1 FOR UPDATE OF c`,
-      [runId],
-    );
-    const run = rows[0];
-    if (!run) throw new Error(`Run ${runId} was not found.`);
+    const run = await lockRunConversation(client, runId);
     if (run.task_id) {
       await client.query(
         `UPDATE tasks SET status = 'closed', closed_at = now()
@@ -169,11 +179,7 @@ export async function startNewTask(
       );
     }
     const taskId = newId();
-    await client.query('INSERT INTO tasks (id, conversation_id, title) VALUES ($1, $2, $3)', [
-      taskId,
-      run.conversation_id,
-      taskTitle(request),
-    ]);
+    await insertTask(client, taskId, run.conversation_id, request);
     await client.query('UPDATE runs SET task_id = $2, plan_version = NULL WHERE id = $1', [
       runId,
       taskId,

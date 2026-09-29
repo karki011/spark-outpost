@@ -6,7 +6,7 @@ import { configuredBackup } from '../persistence/startup-backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
-import { keychainSecretStore, memorySecretStore } from '../setup/secrets.ts';
+import { configuredSecretStore } from '../setup/secrets.ts';
 import { locateCli } from '../setup/verify.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createProviders } from './providers.ts';
@@ -17,10 +17,7 @@ const db = createDb(config.DATABASE_URL, { max: POOL_MAX.worker });
 await migrateOrExit(db, { backup: configuredBackup(config) });
 
 const approvalWaiters = new ApprovalWaiters();
-const secrets =
-  config.SECRET_STORE === 'memory'
-    ? memorySecretStore(config.MEMORY_SECRETS)
-    : keychainSecretStore(config.KEYCHAIN_SERVICE);
+const secrets = configuredSecretStore(config);
 const intake = createIntakeRecorder({
   db,
   secrets,

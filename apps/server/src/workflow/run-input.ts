@@ -72,7 +72,7 @@ interface HistoryRow {
   content: string;
 }
 
-export const RESENT_ATTACHMENT_TURNS = 3;
+const RESENT_ATTACHMENT_TURNS = 3;
 
 const toTurnAttachment = ({ name, mediaType, kind, data }: AttachmentFile): TurnAttachment => ({
   name,

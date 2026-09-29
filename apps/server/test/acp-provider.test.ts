@@ -15,15 +15,12 @@ import {
   type TurnAttachment,
 } from '../src/providers/provider.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
 const definition: AgentDefinition = {
   ...agentDefinitions.codex,
   name: 'Fake',
   ...FAKE_AGENT_MODES,
-};
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
 };
 const provider = createAcpProvider({ definition, launch, cancelGraceMs: 2_000 });
 const settings: AgentSettings = { method: 'cli', model: null, modelLabel: null, effort: null };
@@ -43,7 +40,7 @@ async function collect(prompt: string, options: Partial<AgentSettings> = {}, sig
   } catch (caught) {
     error = caught;
   }
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   return { outputs, text, error };
 }
 
@@ -162,34 +159,30 @@ describe('ACP provider against a fake agent over stdio', { timeout: 20_000 }, ()
     expect(Date.now() - abortedAt).toBeLessThan(4_000);
   }, 15_000);
 
-  it('turns agent failures into readable provider errors', async () => {
-    const crash = await collect('#crash');
-    expect(crash.error).toBeInstanceOf(ProviderError);
-    expect((crash.error as Error).message).toBe(
-      'Fake stopped unexpectedly (exit code 3). Try again.',
-    );
-
-    const auth = await collect('#auth');
-    expect((auth.error as Error).message).toBe(
-      "Fake isn't signed in. Open Settings, reconnect Fake, and try again.",
-    );
-
-    const failed = await collect('#failure');
-    expect((failed.error as Error).message).toBe(
+  it.each([
+    ['#crash', 'Fake stopped unexpectedly (exit code 3). Try again.'],
+    ['#auth', "Fake isn't signed in. Open Settings, reconnect Fake, and try again."],
+    [
+      '#failure',
       "Fake couldn't sign in (unexpected status 401 Unauthorized). Open Settings, reconnect Fake, and try again.",
-    );
-    expect(failed.outputs).toContainEqual({
+    ],
+    [
+      '#silent',
+      "Fake finished without a reply. It may not be able to reach its model, so check that it's signed in and try again.",
+    ],
+    ['#refuse', 'Fake declined to answer this request.'],
+  ])('turns the agent failure %s into a readable provider error', async (prompt, message) => {
+    const { error } = await collect(prompt);
+    expect(error).toBeInstanceOf(ProviderError);
+    expect((error as Error).message).toBe(message);
+  });
+
+  it('warns while the agent reconnects to its model before failing', async () => {
+    const { outputs } = await collect('#failure');
+    expect(outputs).toContainEqual({
       kind: 'step_started',
       name: 'Warning: Reconnecting to the model',
     });
-
-    const silent = await collect('#silent');
-    expect((silent.error as Error).message).toBe(
-      "Fake finished without a reply. It may not be able to reach its model, so check that it's signed in and try again.",
-    );
-
-    const refusal = await collect('#refuse');
-    expect((refusal.error as Error).message).toBe('Fake declined to answer this request.');
   });
 
   it('refuses API key connections before starting an agent', async () => {

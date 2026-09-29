@@ -6,7 +6,6 @@ import { CHECKPOINT_OPTION, type Approval } from '@spark-outpost/contracts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { getTaskShip } from '../src/persistence/task-ships.ts';
-import { createProject } from '../src/projects/projects.ts';
 import { BUILDER_PUBLISH_REASON } from '../src/approvals/decide.ts';
 import { RISKY_PR_NOTE } from '../src/orchestration/checkpoint-policy.ts';
 import { assumptionPrNote } from '../src/orchestration/clarify.ts';
@@ -20,17 +19,17 @@ import {
   UNVERIFIED_NOTE,
 } from '../src/orchestration/full-auto-ship.ts';
 import {
-  SCENARIOS,
+  NORMAL,
   answerEverything,
   connectProviders,
   driveToEnd,
   jevFetch,
+  setCheckCommands,
   startOrchestrator,
   startScenario,
   type Answerer,
   type Harness,
   type JevScript,
-  type Scenario,
 } from './orchestration-support.ts';
 import {
   FAKE_GH,
@@ -42,8 +41,6 @@ import {
   type TestRepo,
 } from './ship-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const NORMAL = SCENARIOS.find((scenario) => scenario.id === 'normal') as Scenario;
 
 let t: TestDb;
 let base: string;
@@ -133,11 +130,7 @@ async function runFullAuto(text = NORMAL.text, answer: Answerer = answerEverythi
 
 async function configureCheck(source: string): Promise<void> {
   await writeFile(path.join(repo.root, 'check.mjs'), source);
-  const { project } = await createProject(t.db, t.workspaceId, repo.root);
-  await t.db.query('UPDATE projects SET check_commands = $2 WHERE id = $1', [
-    project.id,
-    ['node check.mjs'],
-  ]);
+  await setCheckCommands(t, repo.root, ['node check.mjs']);
 }
 
 const remoteBranches = () =>

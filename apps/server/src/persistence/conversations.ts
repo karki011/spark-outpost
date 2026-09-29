@@ -20,6 +20,7 @@ import { attachmentsForMessages, linkAttachments } from './attachments.ts';
 import { resolveChatSettings } from './chat-settings.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
+import { containsPattern } from './like-pattern.ts';
 import { taskForNewRun } from './tasks.ts';
 import { taskOverviews } from './task-views.ts';
 import { conversationUsage } from './usage.ts';
@@ -98,10 +99,6 @@ const summaryQuery = `
     ORDER BY a.created_at, a.id LIMIT 1
   ) p ON true`;
 
-function likePattern(search: string): string {
-  return `%${search.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
-}
-
 export class ConversationNotFoundError extends Error {
   constructor(id: string) {
     super(`Conversation ${id} was not found.`);
@@ -137,7 +134,7 @@ export async function listConversations(
          SELECT 1 FROM messages m WHERE m.conversation_id = c.id AND m.content ILIKE $3
        ))
      ORDER BY c.pinned_at DESC NULLS LAST, c.updated_at DESC LIMIT 500`,
-    [workspaceId, text, likePattern(text)],
+    [workspaceId, text, containsPattern(text)],
   );
   return rows.map(toConversationSummary);
 }
@@ -331,6 +328,7 @@ async function existingSend(
   const existing = message.rows[0];
   if (
     !existing ||
+    existing.role !== 'user' ||
     existing.conversation_id !== conversationId ||
     existing.content !== request.content
   ) {
@@ -348,5 +346,7 @@ async function existingSend(
     'SELECT * FROM runs WHERE user_message_id = $1 AND parent_run_id IS NULL',
     [request.id],
   );
-  return { message: toMessage(existing, attachments), run: toRun(run.rows[0]!) };
+  const sent = run.rows[0];
+  if (!sent) throw new MessageConflictError(request.id);
+  return { message: toMessage(existing, attachments), run: toRun(sent) };
 }

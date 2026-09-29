@@ -1,18 +1,23 @@
 import { Router, type Request } from 'express';
 import {
+  assignTicketRequestSchema,
   commentTicketRequestSchema,
   saveTicketConnectionRequestSchema,
   startTicketRequestSchema,
   ticketKeySchema,
   ticketListQuerySchema,
+  ticketSearchQuerySchema,
   ticketSourceIdSchema,
   transitionTicketRequestSchema,
+  updateAttentionSettingsSchema,
   updateTicketSettingsRequestSchema,
 } from '@spark-outpost/contracts';
-import type { Db } from '../persistence/db.ts';
+import {
+  getAttentionSettings,
+  updateAttentionSettings,
+} from '../persistence/attention-settings.ts';
 import { recordTicketEvent } from '../persistence/ticket-events.ts';
-import type { SecretStore } from '../setup/secrets.ts';
-import type { ApiEndpoints } from '../setup/verify.ts';
+import { assignTicket } from '../tickets/assign.ts';
 import {
   changeSettings,
   removeConnection,
@@ -21,18 +26,17 @@ import {
   ticketConnections,
   type TicketDeps,
 } from '../tickets/connections.ts';
+import { loadInbox } from '../tickets/inbox.ts';
 import { listTickets, ticketView } from '../tickets/list.ts';
+import { searchTickets } from '../tickets/search.ts';
 import { TicketApiError, TicketConflictError, TicketNotConnectedError } from '../tickets/source.ts';
 import { startTicket } from '../tickets/start.ts';
 import { moveTicket } from '../tickets/sync.ts';
 import { resolveRunTarget } from './run-target.ts';
+import { gitHubDepsOf, type GitHubRouteDeps } from './ship-routes.ts';
 import { BadRequestError, parseBody } from './validation.ts';
 
-export interface TicketRouteDeps {
-  db: Db;
-  workspaceId: string;
-  secrets: SecretStore;
-  endpoints: ApiEndpoints;
+export interface TicketRouteDeps extends GitHubRouteDeps {
   fixedRunProvider?: string;
   linearApiUrl?: string | undefined;
 }
@@ -96,6 +100,32 @@ export function ticketRoutes(routeDeps: TicketRouteDeps): Router {
       'Check the ticket filters.',
     );
     res.json(await listTickets(deps, query));
+  });
+
+  router.get('/tickets/inbox', async (_req, res) => {
+    res.json(await loadInbox({ ...deps, github: gitHubDepsOf(routeDeps) }));
+  });
+
+  router.get('/tickets/search', async (req, res) => {
+    const query = parseOr400(
+      ticketSearchQuerySchema.safeParse(req.query),
+      'Check the search and its filters.',
+    );
+    res.json(await searchTickets(deps, query));
+  });
+
+  router.get('/tickets/attention-settings', async (_req, res) => {
+    res.json(await getAttentionSettings(deps.db, deps.workspaceId));
+  });
+
+  router.patch('/tickets/attention-settings', async (req, res) => {
+    const update = parseBody(updateAttentionSettingsSchema, req);
+    res.json(await updateAttentionSettings(deps.db, deps.workspaceId, update));
+  });
+
+  router.post('/tickets/:source/:key/assign', async (req, res) => {
+    const request = parseBody(assignTicketRequestSchema, req);
+    res.json(await assignTicket(deps, sourceParam(req), keyParam(req), request));
   });
 
   router.get('/tickets/:source/:key', async (req, res) => {

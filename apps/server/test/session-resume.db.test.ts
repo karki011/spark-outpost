@@ -13,7 +13,16 @@ import { STOPPED_NOTE } from '../src/workflow/session-decision.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { CLAUDE_MODELS, connectProviders } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
+import { FAKE_ACP_LAUNCH } from './fake-acp-support.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
+
+const CLAUDE_TARGET = {
+  provider: 'claude',
+  model: 'sonnet',
+  effort: 'medium',
+  permission: 'ask',
+  level: 'balanced',
+} as const;
 
 let t: TestDb;
 let worker: Worker;
@@ -22,14 +31,7 @@ let store: string;
 function fakeClaude(): Provider {
   return createAcpProvider({
     definition: { ...agentDefinitions.claude, ...FAKE_AGENT_MODES },
-    launch: {
-      command: process.execPath,
-      args: [
-        '--import',
-        import.meta.resolve('tsx'),
-        join(import.meta.dirname, 'fake-acp-agent.ts'),
-      ],
-    },
+    launch: FAKE_ACP_LAUNCH,
     cancelGraceMs: 2_000,
     env: {
       ...(process.env as Record<string, string>),
@@ -65,7 +67,7 @@ async function say(conversationId: string, content: string) {
     t.db,
     conversationId,
     { id: randomUUID(), content },
-    { provider: 'claude', model: 'sonnet', effort: 'medium', permission: 'ask', level: 'balanced' },
+    CLAUDE_TARGET,
   );
   worker.wake();
   const run = await eventually(async () => {
@@ -123,13 +125,7 @@ describe('a chat turn the user stopped', { timeout: 60_000 }, () => {
       t.db,
       id,
       { id: randomUUID(), content: 'Tell me a long story #slow' },
-      {
-        provider: 'claude',
-        model: 'sonnet',
-        effort: 'medium',
-        permission: 'ask',
-        level: 'balanced',
-      },
+      CLAUDE_TARGET,
     );
     worker.wake();
     await eventually(async () => {

@@ -9,7 +9,7 @@ import { listProjects } from '../../projects/projects.ts';
 import type { RunCommand } from '../../setup/command.ts';
 import type { SecretStore } from '../../setup/secrets.ts';
 import { pickRemote } from '../git.ts';
-import { apiBaseFor, parseRemoteUrl, type RemoteRepo } from '../remote.ts';
+import { apiBaseFor, parseRemoteUrl, repoSlug, type RemoteRepo } from '../remote.ts';
 import { restConnection, type GitHubConnection } from './connection.ts';
 import { validateToken } from './token.ts';
 import { ghCliRequest, tokenRequest } from './transports.ts';
@@ -94,7 +94,7 @@ async function projectRepos(deps: GitHubDeps, host: string): Promise<RemoteRepo[
   for (const project of await listProjects(deps.db, deps.workspaceId)) {
     const remote = await pickRemote(project.rootPath, null).catch(() => null);
     const repo = remote ? parseRemoteUrl(remote.url) : null;
-    if (repo?.host === host) repos.set(`${repo.owner}/${repo.name}`, repo);
+    if (repo?.host === host) repos.set(repoSlug(repo), repo);
   }
   return [...repos.values()];
 }

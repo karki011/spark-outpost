@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { fingerprintOf } from './fingerprint.ts';
 
 export interface RedirectSetting {
   kind: 'env' | 'command';
@@ -54,7 +54,7 @@ export function redirectsFingerprint(settings: readonly RedirectSetting[]): stri
     setting.value,
     setting.source,
   ]);
-  return createHash('sha256').update(JSON.stringify(canonical)).digest('hex').slice(0, 32);
+  return fingerprintOf(canonical);
 }
 
 export function redirectSettingsOf(settings: readonly RedirectSetting[]): RedirectSettings {

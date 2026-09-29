@@ -1,4 +1,5 @@
 import { PROTOCOL_VERSION, RequestError, type InitializeResponse } from '@agentclientprotocol/sdk';
+import { redactText } from '../../audit/redact.ts';
 import { ProviderError } from '../../providers/provider.ts';
 import { AgentExitedError } from './agent-process.ts';
 import type { AgentFailure } from './session-updates.ts';
@@ -16,7 +17,7 @@ function errorText(error: unknown): string {
   return error.message;
 }
 
-export function isRateLimited(error: unknown): boolean {
+function isRateLimited(error: unknown): boolean {
   if (error instanceof Error) {
     const fields = error as Error & { code?: unknown; status?: unknown };
     if (fields.code === RATE_LIMITED || fields.status === RATE_LIMITED) return true;
@@ -34,7 +35,7 @@ export function toProviderError(agentName: string, error: unknown, stderrTail: s
       `${agentName} isn't signed in. Open Settings, reconnect ${agentName}, and try again.`,
     );
   }
-  if (stderrTail.trim()) console.error(`${agentName} agent stderr:\n${stderrTail}`);
+  if (stderrTail.trim()) console.error(`${agentName} agent stderr:\n${redactText(stderrTail)}`);
   if (error instanceof AgentExitedError) {
     return new ProviderError(
       `${agentName} stopped unexpectedly (exit code ${error.exitCode ?? 'none'}). Try again.`,
@@ -44,22 +45,21 @@ export function toProviderError(agentName: string, error: unknown, stderrTail: s
   if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
     return new ProviderError(`The ${agentName} agent could not start. Reinstall Spark Outpost.`);
   }
-  const detail = error instanceof Error ? error.message : String(error);
+  const detail = redactText(error instanceof Error ? error.message : String(error));
   return new ProviderError(`${agentName} reported an error: ${detail.slice(0, MAX_DETAIL)}`);
 }
 
 export function failureError(agentName: string, failure: AgentFailure): ProviderError {
+  const title = redactText(failure.title).slice(0, MAX_DETAIL);
   if (failure.category === 'auth_required') {
     return new ProviderError(
-      `${agentName} couldn't sign in (${failure.title.slice(0, MAX_DETAIL)}). Open Settings, reconnect ${agentName}, and try again.`,
+      `${agentName} couldn't sign in (${title}). Open Settings, reconnect ${agentName}, and try again.`,
     );
   }
   if (isRateLimited(failure.category) || isRateLimited(failure.title)) {
     return rateLimited(agentName);
   }
-  return new ProviderError(
-    `${agentName} stopped with an error: ${failure.title.slice(0, MAX_DETAIL)}`,
-  );
+  return new ProviderError(`${agentName} stopped with an error: ${title}`);
 }
 
 export function assertProtocolVersion(agentName: string, init: InitializeResponse): void {

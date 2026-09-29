@@ -11,16 +11,18 @@ import {
   type DigestStats,
   type DigestSuggestion,
 } from '@spark-outpost/contracts';
+import type { FlaggedItem } from '../persistence/attention-settings.ts';
+import { briefItems } from './brief-items.ts';
 import { fallbackHeadline } from './stats.ts';
+import { ellipsize, oneLine } from './text.ts';
 
 function clip(text: string, max: number): string {
-  const clean = text.replace(/\s+/g, ' ').trim();
-  return clean.length <= max ? clean : `${clean.slice(0, max - 1).trimEnd()}…`;
+  return ellipsize(oneLine(text), max);
 }
 
 function headlineOf(raw: string | undefined, stats: DigestStats): string {
-  const clean = raw?.replace(/\s+/g, ' ').trim();
-  if (clean && clean.length > 0 && clean.length <= DIGEST_HEADLINE_MAX_LENGTH) return clean;
+  const clean = oneLine(raw ?? '');
+  if (clean.length > 0 && clean.length <= DIGEST_HEADLINE_MAX_LENGTH) return clean;
   return fallbackHeadline(stats);
 }
 
@@ -35,6 +37,7 @@ function structured(
   text: string,
   chatIds: ReadonlySet<string>,
   stats: DigestStats,
+  flagged: readonly FlaggedItem[],
 ): DigestBody | null {
   const json = jsonPart(text);
   if (!json) return null;
@@ -53,7 +56,8 @@ function structured(
     }))
     .filter((line) => line.text.length > 0)
     .slice(0, DIGEST_LINES_MAX);
-  if (lines.length === 0) return null;
+  const items = briefItems(reply.data.items, flagged);
+  if (lines.length === 0 && items.length === 0) return null;
   const suggestions: DigestSuggestion[] = [];
   for (const suggestion of reply.data.suggestions) {
     const reason = clip(suggestion.reason, DIGEST_REASON_MAX_LENGTH);
@@ -64,7 +68,13 @@ function structured(
       suggestions.push({ chatId: suggestion.chatId, reason, draft });
     }
   }
-  return { headline: headlineOf(reply.data.headline, stats), lines, suggestions, structured: true };
+  return {
+    headline: headlineOf(reply.data.headline, stats),
+    lines,
+    suggestions,
+    items,
+    structured: true,
+  };
 }
 
 function bullets(text: string, stats: DigestStats): DigestBody {
@@ -74,13 +84,20 @@ function bullets(text: string, stats: DigestStats): DigestBody {
     .filter((line) => line.length > 0 && !/^[{}[\]]/.test(line))
     .slice(0, DIGEST_LINES_MAX)
     .map((line): DigestLine => ({ text: clip(line, DIGEST_LINE_MAX_LENGTH), chatId: null }));
-  return { headline: fallbackHeadline(stats), lines, suggestions: [], structured: false };
+  return {
+    headline: fallbackHeadline(stats),
+    lines,
+    suggestions: [],
+    items: [],
+    structured: false,
+  };
 }
 
 export function parseDigestReply(
   text: string,
   chatIds: ReadonlySet<string>,
   stats: DigestStats,
+  flagged: readonly FlaggedItem[] = [],
 ): DigestBody {
-  return structured(text, chatIds, stats) ?? bullets(text, stats);
+  return structured(text, chatIds, stats, flagged) ?? bullets(text, stats);
 }

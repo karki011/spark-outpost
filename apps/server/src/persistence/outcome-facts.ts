@@ -54,7 +54,7 @@ async function accepts(db: Queryable, runId: string) {
     .map((row) => ({ optionId: row.decision_option_id, decidedAt: row.decided_at }));
 }
 
-export function finalCheckStatus(bodies: readonly unknown[]): CheckStatus | null {
+function finalCheckStatus(bodies: readonly unknown[]): CheckStatus | null {
   const latest = new Map<string, CheckStatus>();
   for (const raw of bodies) {
     const body = checkBodySchema.safeParse(raw);
@@ -103,7 +103,7 @@ interface FollowUpRow {
   intake: boolean;
 }
 
-const TERMINAL = ['succeeded', 'failed', 'cancelled', 'outcome_unknown'];
+const TERMINAL_STATUSES = ['succeeded', 'failed', 'cancelled', 'outcome_unknown'];
 
 async function followUps(db: Queryable, turn: TurnRow) {
   if (!turn.finished_at) return [];
@@ -130,7 +130,7 @@ async function followUps(db: Queryable, turn: TurnRow) {
       runId: row.id,
       text: row.text,
       category: category.success ? category.data : null,
-      classified: row.intake || TERMINAL.includes(row.status),
+      classified: row.intake || TERMINAL_STATUSES.includes(row.status),
       sameChat: row.conversation_id === turn.conversation_id,
       createdAt: row.created_at,
     };

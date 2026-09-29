@@ -1,6 +1,5 @@
 import type { AgentPick, RouteSource } from '@spark-outpost/contracts';
 import { cardFor } from './cards.ts';
-import { tierInfo, type TierSource } from '../orchestration/tiers.ts';
 
 export interface WhyInput {
   pick: AgentPick;
@@ -18,8 +17,13 @@ function pickModel(pick: AgentPick) {
   return { id: pick.model ?? '', label: pick.modelLabel ?? '' };
 }
 
-export function tierSourceOf(pick: AgentPick): TierSource {
-  return tierInfo(pickModel(pick), pick.provider).source;
+export function samePickModel(a: AgentPick, b: AgentPick): boolean {
+  return a.provider === b.provider && a.model === b.model;
+}
+
+export function jevLabel(jev: AgentPick, pick: AgentPick): string {
+  const label = labelOf(jev);
+  return jev.provider === pick.provider ? label : `${label} (${jev.provider})`;
 }
 
 export function whyLine(input: WhyInput): string {
@@ -32,6 +36,6 @@ export function whyLine(input: WhyInput): string {
       : `Why ${label}: rule ${input.rule}${tier}`;
   const head = input.note ? `${base} · ${input.note}` : base;
   const jev = input.autoWouldUse;
-  if (!jev || jev.model === input.pick.model) return head;
-  return `${head} · Jev would have used ${labelOf(jev)}`;
+  if (!jev || samePickModel(jev, input.pick)) return head;
+  return `${head} · Jev would have used ${jevLabel(jev, input.pick)}`;
 }

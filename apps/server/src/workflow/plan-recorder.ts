@@ -1,4 +1,4 @@
-import type { PlanDocument, PlanDocumentSource, RunEvent } from '@spark-outpost/contracts';
+import type { PlanDocument, PlanDocumentSource } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import {
   approvePlanDocument,
@@ -6,15 +6,13 @@ import {
   latestPlanBody,
   rejectPlanDocument,
 } from '../persistence/plan-documents.ts';
-import type { AppendOptions } from '../persistence/run-events.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
 import { isExitPlanAllow } from '../plans/plan-mode.ts';
 import { headCommit } from '../projects/snapshot.ts';
 import type { GateAnswer } from '../providers/provider.ts';
+import type { Append } from './agent-turn.ts';
 import type { PlanModeHooks } from './approval-gate.ts';
 import { runEvents } from './run-events.ts';
-
-type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
 
 export const PLAN_SAVE_FAILED = 'Error: Could not save the plan';
 
@@ -97,22 +95,26 @@ export function createPlanRecorder(deps: PlanRecorderDeps): PlanRecorder {
     }
   };
 
+  const settlePlan = async (
+    planId: string,
+    answer: Extract<GateAnswer, { outcome: 'selected' }>,
+  ): Promise<PlanDocument | null> => {
+    const approvalId = answer.approvalId ?? null;
+    if (!answer.allowed) return rejectPlanDocument(deps.db, planId, approvalId);
+    if (!isExitPlanAllow(answer.optionId)) return null;
+    return approvePlanDocument(deps.db, planId, {
+      by: 'user',
+      option: answer.optionId,
+      runId: deps.runId,
+      commit: await approvalCommit(deps.root).catch(() => null),
+      approvalId,
+    });
+  };
+
   const decided = async (planId: string, answer: GateAnswer) => {
     if (answer.outcome !== 'selected') return;
-    const approvalId = answer.approvalId ?? null;
     try {
-      const plan =
-        answer.allowed && isExitPlanAllow(answer.optionId)
-          ? await approvePlanDocument(deps.db, planId, {
-              by: 'user',
-              option: answer.optionId,
-              runId: deps.runId,
-              commit: await approvalCommit(deps.root).catch(() => null),
-              approvalId,
-            })
-          : answer.allowed
-            ? null
-            : await rejectPlanDocument(deps.db, planId, approvalId);
+      const plan = await settlePlan(planId, answer);
       if (plan) await announce(plan);
     } catch (error) {
       await failed(error);

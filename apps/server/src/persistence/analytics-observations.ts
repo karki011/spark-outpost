@@ -1,21 +1,21 @@
 import type { AnalyticsWindow, ObservationSummary } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
-import { WINDOW_FILTER, windowParams } from './analytics-facts.ts';
+import { WINDOW_FILTER, windowParams } from './analytics-window.ts';
 
-interface ObservationRowData {
+interface ObservationRow {
   would: string | null;
   actual: string;
   count: number;
 }
 
-async function rows(
+async function observationRows(
   db: Queryable,
   workspaceId: string,
   window: AnalyticsWindow,
   purpose: 'policy' | 'verify',
   actual: string,
-): Promise<ObservationRowData[]> {
-  const { rows: found } = await db.query<ObservationRowData>(
+): Promise<ObservationRow[]> {
+  const { rows } = await db.query<ObservationRow>(
     `SELECT a.body->'answer'->>'would' AS would, ${actual} AS actual, count(*)::int AS count
      FROM run_advice a JOIN runs r ON r.id = a.run_id
      JOIN conversations c ON c.id = r.conversation_id
@@ -25,10 +25,10 @@ async function rows(
      GROUP BY 1, 2 ORDER BY 3 DESC`,
     windowParams(workspaceId, window),
   );
-  return found;
+  return rows;
 }
 
-function summary(found: readonly ObservationRowData[]): ObservationSummary {
+function toObservationSummary(found: readonly ObservationRow[]): ObservationSummary {
   const checked = found.filter((row) => row.would !== null);
   return {
     checks: checked.reduce((sum, row) => sum + row.count, 0),
@@ -51,8 +51,8 @@ export async function observationSummaries(
   window: AnalyticsWindow,
 ): Promise<{ policy: ObservationSummary; verify: ObservationSummary }> {
   const [policy, verify] = await Promise.all([
-    rows(db, workspaceId, window, 'policy', APPROVAL_OUTCOME),
-    rows(db, workspaceId, window, 'verify', `COALESCE(o.verdict, 'pending')`),
+    observationRows(db, workspaceId, window, 'policy', APPROVAL_OUTCOME),
+    observationRows(db, workspaceId, window, 'verify', `COALESCE(o.verdict, 'pending')`),
   ]);
-  return { policy: summary(policy), verify: summary(verify) };
+  return { policy: toObservationSummary(policy), verify: toObservationSummary(verify) };
 }

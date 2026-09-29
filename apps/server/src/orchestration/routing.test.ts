@@ -7,10 +7,8 @@ import {
   routeCritic,
   type MemberRoute,
 } from './routing.ts';
-import { candidates, context } from './route-fixtures.ts';
+import { candidates, context, plainFacts } from './route-fixtures.ts';
 import { escalatedEffort } from './tiers.ts';
-
-const plain = { trivial: false, destructive: false };
 
 describe('rule routes', () => {
   it('keeps a pinned model whatever the rules or Jev say', () => {
@@ -24,7 +22,7 @@ describe('rule routes', () => {
   });
 
   it('uses the chat model on Auto, the middle tier for trivial work and the top tier for destructive', () => {
-    expect(routeBuilder(context('auto'), plain)).toMatchObject({
+    expect(routeBuilder(context('auto'), plainFacts)).toMatchObject({
       routedBy: 'rules',
       rule: 'chat model',
       pick: { model: 'sonnet' },
@@ -43,7 +41,7 @@ describe('rule routes', () => {
   });
 
   it('records Jev’s tier pick without ever running it', () => {
-    const route = routeBuilder(context('auto'), plain, 'top');
+    const route = routeBuilder(context('auto'), plainFacts, 'top');
     expect(route.pick.model).toBe('sonnet');
     expect(route.autoWouldUse).toMatchObject({ model: 'opus[1m]', modelLabel: 'Opus 5.5' });
     expect(jevTierPick(context('auto'), null)).toBeNull();

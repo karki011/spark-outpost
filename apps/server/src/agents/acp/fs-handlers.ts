@@ -22,6 +22,11 @@ function projectLabel(policy: PathPolicy, file: ResolvedPath): string {
   return policy.roots.length > 1 ? `${path.basename(file.root)}/${file.relative}` : file.relative;
 }
 
+function refusedPath(requested: string, error: PathRefusedError, report: Report): acp.RequestError {
+  report(`Refused \`${requested}\` (${error.reason})`);
+  return acp.RequestError.invalidParams({ path: requested }, error.message);
+}
+
 export async function readTextFile(
   policy: PathPolicy,
   params: acp.ReadTextFileRequest,
@@ -32,10 +37,7 @@ export async function readTextFile(
     report(`Read \`${projectLabel(policy, file)}\``);
     return { content: file.content };
   } catch (error) {
-    if (error instanceof PathRefusedError) {
-      report(`Refused \`${params.path}\` (${error.reason})`);
-      throw acp.RequestError.invalidParams({ path: params.path }, error.message);
-    }
+    if (error instanceof PathRefusedError) throw refusedPath(params.path, error, report);
     if (isMissing(error)) throw acp.RequestError.resourceNotFound(params.path);
     throw acp.RequestError.internalError(undefined, 'The file could not be read.');
   }
@@ -78,10 +80,7 @@ export async function writeTextFile(
   try {
     resolved = await resolveInProject(policy, params.path, 'write');
   } catch (error) {
-    if (error instanceof PathRefusedError) {
-      report(`Refused \`${params.path}\` (${error.reason})`);
-      throw acp.RequestError.invalidParams({ path: params.path }, error.message);
-    }
+    if (error instanceof PathRefusedError) throw refusedPath(params.path, error, report);
     throw error;
   }
   const target = resolved.absolute;

@@ -1,3 +1,4 @@
+import { stringMap } from '../agent-config/records.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 
 export interface McpSecretValues {
@@ -5,18 +6,9 @@ export interface McpSecretValues {
   headers: Record<string, string>;
 }
 
-export const EMPTY_SECRETS: McpSecretValues = { env: {}, headers: {} };
+const EMPTY_SECRETS: McpSecretValues = { env: {}, headers: {} };
 
 const secretId = (serverId: string) => `mcp:${serverId}` as const;
-
-function stringMap(value: unknown): Record<string, string> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
-  return Object.fromEntries(
-    Object.entries(value).filter(
-      (entry): entry is [string, string] => typeof entry[1] === 'string',
-    ),
-  );
-}
 
 export async function readMcpSecrets(
   store: Pick<SecretStore, 'get'> | undefined,

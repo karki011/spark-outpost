@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { fakeGitHub } from '../../apps/server/test/fake-github.ts';
 import { jevAnswers, type StubRequest } from './jev-stub.ts';
 import { REJECTED_KEY_MARKER, STUB_PORT } from './stub-config.ts';
+import { ticketFakes } from './ticket-stub.ts';
 
 const anthropicModels = {
   data: [
@@ -40,6 +41,7 @@ function credential(req: IncomingMessage): string {
 }
 
 let github = fakeGitHub();
+const tickets = ticketFakes();
 
 const server = createServer((req, res) => {
   const path = (req.url ?? '').split('?')[0];
@@ -52,6 +54,15 @@ const server = createServer((req, res) => {
   if (path?.startsWith('/github/')) {
     return void github.handle(req, res, (req.url ?? '').slice('/github'.length));
   }
+  if (path === '/tickets-test/reset') {
+    tickets.reset();
+    return send(res, 200, { ok: true });
+  }
+  if (path === '/tickets-test/deny-assign') {
+    tickets.denyAssign('API');
+    return send(res, 200, { ok: true });
+  }
+  if (path && tickets.handles(path)) return void tickets.handle(req, res, path);
   if (credential(req).includes(REJECTED_KEY_MARKER))
     return send(res, 401, { error: 'invalid key' });
   if (path === '/anthropic/v1/models') return send(res, 200, anthropicModels);

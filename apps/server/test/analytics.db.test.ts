@@ -36,10 +36,10 @@ const builder = (model: string, costUsd: number, extra = {}) => ({
 });
 
 async function seedScenario() {
-  const app1 = await seedProjectChat(t.db, t.workspaceId, 'spark-outpost');
+  const projectChat = await seedProjectChat(t.db, t.workspaceId, 'spark-outpost');
   const loose = await seedProjectChat(t.db, t.workspaceId, null);
   const turn = (overrides: Partial<AnalyticsTurn>): AnalyticsTurn => ({
-    conversationId: app1,
+    conversationId: projectChat,
     createdAt: hoursAgo(2),
     category: 'bug_fix',
     ...overrides,
@@ -248,6 +248,22 @@ describe('analytics spend', () => {
     expect(spend.costPerGoodUsd).toBeCloseTo((3 * 0.56 + 3 * 0.05 + 0.02) / 3, 6);
     expect(spend.resume).toMatchObject({ resumedRuns: 3, sessionRuns: 6, cachedTokens: 3_000_000 });
     expect(spend.resume.savedUsd).toBeCloseTo(3 * 1.8, 6);
+  });
+
+  it('counts cost with no recorded source as reported, once', async () => {
+    const chat = await seedProjectChat(t.db, t.workspaceId, null);
+    const runId = await seedAnalyticsTurn(t.db, {
+      conversationId: chat,
+      createdAt: new Date('2026-03-10T12:00:00Z'),
+      costUsd: 2,
+    });
+    await t.db.query('UPDATE runs SET cost_source = NULL WHERE id = $1', [runId]);
+    const response = await get(
+      '/api/analytics/spend?range=custom&from=2026-03-10&to=2026-03-10&tz=UTC',
+    ).expect(200);
+    const spend = analyticsSpendSchema.parse(response.body);
+    expect(spend.days).toEqual([{ date: '2026-03-10', reportedUsd: 2, estimatedUsd: 0 }]);
+    expect(spend.leaves.reduce((sum, leaf) => sum + leaf.reportedUsd, 0)).toBe(2);
   });
 });
 

@@ -30,6 +30,7 @@ interface HomeComposerProps {
 interface Started {
   id: string;
   title: string;
+  kept: boolean;
 }
 
 function carriedSettings(detail: ConversationDetail | undefined): UpdateChatSettingsRequest | null {
@@ -78,11 +79,16 @@ export function HomeComposer(props: HomeComposerProps) {
         message.attachments.map((attachment) => attachment.id),
       );
       const next = newDraftId();
-      if (carried) await api.updateChatSettings(next, carried);
-      return { next, title: titleFromMessage(message.content) };
+      const kept = carried
+        ? await api.updateChatSettings(next, carried).then(
+            () => true,
+            () => false,
+          )
+        : true;
+      return { next, kept, title: titleFromMessage(message.content) };
     },
-    onSuccess: async ({ next, title }) => {
-      setStarted({ id: draftId, title });
+    onSuccess: async ({ next, kept, title }) => {
+      setStarted({ id: draftId, title, kept });
       onRotate(next);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.conversation(draftId) }),
@@ -117,6 +123,7 @@ export function HomeComposer(props: HomeComposerProps) {
             <button type="button" className="hlink" onClick={() => onOpenId(started.id)}>
               Open
             </button>
+            {!started.kept && ' · New chats use your default model again'}
           </span>
         )}
       </p>

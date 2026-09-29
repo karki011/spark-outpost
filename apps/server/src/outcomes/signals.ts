@@ -9,7 +9,7 @@ import type {
   OutcomeVerdict,
 } from '@spark-outpost/contracts';
 
-export const SIGNAL_WEIGHTS: Record<OutcomeSignalKind, number> = {
+const SIGNAL_WEIGHTS: Record<OutcomeSignalKind, number> = {
   kept: 1,
   checks_passed: 1,
   quiet_24h: 0.5,
@@ -43,7 +43,7 @@ const SIGNAL_LABELS: Record<OutcomeSignalKind, string> = {
   pr_review_comments: 'The pull request got review comments',
 };
 
-export const FEEDBACK_WEIGHT = 3;
+const FEEDBACK_WEIGHT = 3;
 
 export function polarityOf(kind: OutcomeSignalKind): -1 | 0 | 1 {
   return Math.sign(SIGNAL_WEIGHTS[kind]) as -1 | 0 | 1;
@@ -133,7 +133,7 @@ export function correctionPattern(text: string): string | null {
 
 const MIN_WORD_LENGTH = 3;
 const MIN_WORDS = 3;
-export const RE_ASK_SIMILARITY = 0.6;
+const RE_ASK_SIMILARITY = 0.6;
 
 function words(text: string): Set<string> {
   return new Set(

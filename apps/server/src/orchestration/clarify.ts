@@ -8,9 +8,10 @@ import {
 } from '@spark-outpost/contracts';
 import type { SystemOneResponse } from '../advisor/intake-questions.ts';
 import type { CheckpointCard } from './checkpoint.ts';
+import { wordCount } from './risk-rules.ts';
 
-export const INTERPRETATION_QUESTION = 'What should change?';
-export const MIN_INTERPRETATIONS = 2;
+const INTERPRETATION_QUESTION = 'What should change?';
+const MIN_INTERPRETATIONS = 2;
 export const MAX_INTERPRETATIONS = 4;
 const LIKELY_ENOUGH = 0.1;
 const SHORT_REQUEST_WORDS = 10;
@@ -76,10 +77,6 @@ const ANGLES: Record<SpeedAngle, AngleText> = {
 
 const DEFAULT_SPEED_ORDER: readonly SpeedAngle[] = ['startup', 'page_load', 'tests', 'build'];
 
-function words(request: string): number {
-  return request.trim().split(/\s+/).filter(Boolean).length;
-}
-
 export function asksForSpeed(request: string): boolean {
   return SPEED_GOAL.test(request);
 }
@@ -90,12 +87,12 @@ function namesSpeedAngle(request: string): boolean {
 
 export function vagueByRule(request: string, namedFiles: number): boolean {
   if (namedFiles > 0) return false;
-  if (words(request) > SHORT_REQUEST_WORDS) return false;
+  if (wordCount(request) > SHORT_REQUEST_WORDS) return false;
   if (asksForSpeed(request)) return !namesSpeedAngle(request);
   return VAGUE_GOAL.test(request);
 }
 
-export const SPEED_QUESTION =
+const SPEED_QUESTION =
   'The user asked to make something faster without saying what. Which kind of speed is `task` most likely about?';
 
 export function speedQuestion(): Record<string, unknown> {
@@ -133,7 +130,7 @@ function angleText(angle: SpeedAngle, checks: readonly string[]): string {
     : `Build: make \`${command}\` faster`;
 }
 
-export function speedInterpretations(
+function speedInterpretations(
   response: SystemOneResponse | null,
   checks: readonly string[] = [],
 ): string[] {

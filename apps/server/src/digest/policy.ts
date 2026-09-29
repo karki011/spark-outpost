@@ -1,10 +1,11 @@
 import type { DigestStatus, DigestTrigger } from '@spark-outpost/contracts';
 
 const MINUTE = 60_000;
-export const DIGEST_AUTO_AFTER_MS = 60 * MINUTE;
+export const DIGEST_AUTO_AFTER_MS = 30 * MINUTE;
+export const MORNING_HOUR = 7;
 export const DIGEST_MIN_GAP_MS = 10 * MINUTE;
-export const DIGEST_DEFAULT_WINDOW_MS = 24 * 60 * MINUTE;
-export const DIGEST_MAX_WINDOW_MS = 7 * 24 * 60 * MINUTE;
+const DIGEST_DEFAULT_WINDOW_MS = 24 * 60 * MINUTE;
+const DIGEST_MAX_WINDOW_MS = 7 * 24 * 60 * MINUTE;
 
 export interface LastDigest {
   status: DigestStatus;
@@ -23,16 +24,27 @@ export function refreshableAt(last: LastDigest | null): Date | null {
   return last ? new Date(last.createdAt.getTime() + DIGEST_MIN_GAP_MS) : null;
 }
 
+export type BriefTrigger = DigestTrigger | 'morning';
+
+export function morningDue(last: LastDigest | null, now: Date): boolean {
+  const morning = new Date(now);
+  morning.setHours(MORNING_HOUR, 0, 0, 0);
+  if (now < morning) return false;
+  return !last || last.createdAt < morning;
+}
+
 export function decideDigest(
-  trigger: DigestTrigger,
+  trigger: BriefTrigger,
   last: LastDigest | null,
-  newActivity: boolean,
+  changed: boolean,
   now: Date,
+  autoAfterMs: number | null = DIGEST_AUTO_AFTER_MS,
 ): DigestDecision {
   if (last?.status === 'running') return 'running';
   const age = last ? now.getTime() - last.createdAt.getTime() : Infinity;
   if (age < DIGEST_MIN_GAP_MS) return 'throttled';
-  if (!newActivity) return 'quiet';
-  if (trigger === 'open' && age < DIGEST_AUTO_AFTER_MS) return 'fresh';
+  if (!changed) return 'quiet';
+  if (trigger === 'morning') return morningDue(last, now) ? 'start' : 'fresh';
+  if (trigger === 'open' && (autoAfterMs === null || age < autoAfterMs)) return 'fresh';
   return 'start';
 }

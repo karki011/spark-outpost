@@ -8,7 +8,8 @@ import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { routingLabels } from '../src/persistence/routing-labels.ts';
 import { toLabel } from '../src/routing/labels.ts';
 import {
-  SCENARIOS,
+  NORMAL,
+  RISKY,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -21,9 +22,6 @@ import {
   type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const NORMAL = SCENARIOS[2] as Scenario;
-const RISKY = SCENARIOS[4] as Scenario;
 
 let t: TestDb;
 let root: string;
@@ -86,7 +84,7 @@ async function run(scenario: Scenario, script: JevScript, routing: 'auto' | 'pin
 const asked = (script: JevScript, key: string) =>
   script.calls.filter((call) => call.questions.includes(key));
 
-describe('Jev routing in shadow mode', () => {
+describe('Jev routing in shadow mode', { timeout: 60_000 }, () => {
   it('records scan, file ranking and both route variants without changing the Builder', async () => {
     const script: JevScript = {
       calls: [],

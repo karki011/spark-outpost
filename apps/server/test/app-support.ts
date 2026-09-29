@@ -1,3 +1,4 @@
+import request from 'supertest';
 import { API_TOKEN_HEADER } from '@spark-outpost/contracts';
 import { AppEventFeed } from '../src/api/app-events.ts';
 import { createApp, type AppOptions } from '../src/api/app.ts';
@@ -58,5 +59,20 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     githubApiUrl: options.githubApiUrl,
     linearApiUrl: options.linearApiUrl,
     locateGh: options.locateGh ?? (async () => null),
+  });
+}
+
+export function localClient(app: ReturnType<typeof createTestApp>) {
+  return {
+    get: (path: string) => request(app).get(path).set(LOCAL_HEADERS),
+    send: (method: 'post' | 'patch' | 'delete', path: string, body: object = {}) =>
+      request(app)[method](path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body),
+  };
+}
+
+export function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
   });
 }

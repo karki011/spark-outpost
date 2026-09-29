@@ -1,10 +1,14 @@
+import { z } from 'zod';
 import {
   MAX_REPAIR_RETRIES,
+  adviceSummarySchema,
   agentLabel,
   agentName,
+  crewMemberSchema,
   depthLabel,
   mergeCostSource,
-  type AdviceBody,
+  orchestrationDecisionSchema,
+  type AdviceSummary,
   type AgentPick,
   type AgentRole,
   type Approval,
@@ -59,8 +63,42 @@ export interface MemberRow {
   finished_at: Date | null;
 }
 
+const crew = crewMemberSchema.shape;
+const routeFieldsSchema = z.object({
+  name: crew.name.optional().catch(undefined),
+  routedBy: crew.routedBy.optional().catch(undefined),
+  autoWouldUse: crew.autoWouldUse.optional().catch(undefined),
+  planStep: crew.planStep.optional().catch(undefined),
+  modelLabel: crew.modelLabel.optional().catch(undefined),
+  quality: crew.quality.optional().catch(undefined),
+  verdict: crew.verdict.optional().catch(undefined),
+  copy: crew.copy.catch(undefined),
+  sameProvider: crew.sameProvider.catch(undefined),
+  routeNote: crew.routeNote.catch(undefined),
+});
+const storedRouteSchema = routeFieldsSchema.catch(() => routeFieldsSchema.parse({}));
+
+const decision = orchestrationDecisionSchema.shape;
+const decisionBodySchema = z
+  .object({
+    summary: decision.summary.catch(''),
+    applied: decision.applied.catch('rules'),
+    gate: decision.gate.catch(null),
+    jevError: decision.jevError.catch(null),
+    latencyMs: decision.latencyMs.catch(null),
+    answer: decision.answer.catch({}),
+  })
+  .catch(() => ({
+    summary: '',
+    applied: 'rules' as const,
+    gate: null,
+    jevError: null,
+    latencyMs: null,
+    answer: {},
+  }));
+
 export function toCrewMember(row: MemberRow): CrewMember {
-  const route = row.route ?? {};
+  const route = storedRouteSchema.parse(row.route ?? {});
   const modelLabel = route.modelLabel ?? null;
   return {
     runId: row.id,
@@ -191,7 +229,7 @@ function callLine(key: string, call: IntakeCall): string {
 }
 
 function intakeSummary(
-  body: AdviceBody,
+  body: AdviceSummary,
 ): Pick<OrchestrationDecision, 'summary' | 'applied' | 'gate' | 'answer'> {
   const answer = body.jev ?? body.rules;
   const applied = body.wouldApply === 'jev' ? 'jev' : body.wouldApply === 'ask' ? 'asked' : 'rules';
@@ -220,24 +258,16 @@ export function toDecision(row: DecisionRow): OrchestrationDecision {
     costUsd: row.jev_cost_usd === null ? null : Number(row.jev_cost_usd),
     createdAt: row.created_at.toISOString(),
   };
-  if (row.purpose === 'intake') {
-    const advice = body as unknown as AdviceBody;
+  const advice = row.purpose === 'intake' ? adviceSummarySchema.safeParse(body) : null;
+  if (advice?.success) {
     return {
       ...shared,
-      ...intakeSummary(advice),
-      jevError: advice.jevError,
-      latencyMs: advice.latencyMs,
+      ...intakeSummary(advice.data),
+      jevError: advice.data.jevError,
+      latencyMs: advice.data.latencyMs,
     };
   }
-  return {
-    ...shared,
-    summary: String(body.summary ?? ''),
-    applied: (body.applied as OrchestrationDecision['applied']) ?? 'rules',
-    gate: (body.gate as OrchestrationDecision['gate']) ?? null,
-    jevError: (body.jevError as string | null) ?? null,
-    latencyMs: (body.latencyMs as number | null) ?? null,
-    answer: (body.answer as Record<string, unknown>) ?? {},
-  };
+  return { ...shared, ...decisionBodySchema.parse(body) };
 }
 
 export interface OrchestrationRow {

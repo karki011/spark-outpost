@@ -1,5 +1,6 @@
-import { createHash } from 'node:crypto';
 import type { McpTransport } from '@spark-outpost/contracts';
+import { fingerprintOf } from './fingerprint.ts';
+import { isRecord, stringMap } from './records.ts';
 
 export interface McpServerConfig {
   name: string;
@@ -17,19 +18,6 @@ export interface McpJsonSummary {
   warnings: string[];
 }
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function stringMap(value: unknown): Record<string, string> {
-  if (!isRecord(value)) return {};
-  return Object.fromEntries(
-    Object.entries(value).filter(
-      (entry): entry is [string, string] => typeof entry[1] === 'string',
-    ),
-  );
-}
-
 function transportOf(entry: Record<string, unknown>): McpTransport | null {
   if (entry.type === 'http' || entry.type === 'sse' || entry.type === 'stdio') return entry.type;
   if (typeof entry.command === 'string') return 'stdio';
@@ -38,7 +26,7 @@ function transportOf(entry: Record<string, unknown>): McpTransport | null {
 }
 
 export function mcpFingerprint(config: Omit<McpServerConfig, 'fingerprint'>): string {
-  const canonical = JSON.stringify([
+  return fingerprintOf([
     config.name,
     config.transport,
     config.command,
@@ -47,7 +35,16 @@ export function mcpFingerprint(config: Omit<McpServerConfig, 'fingerprint'>): st
     Object.entries(config.env).sort(),
     Object.entries(config.headers).sort(),
   ]);
-  return createHash('sha256').update(canonical).digest('hex').slice(0, 32);
+}
+
+export function storedMcpConfig(server: Omit<McpServerConfig, 'fingerprint'>) {
+  return {
+    command: server.command,
+    args: server.args,
+    url: server.url,
+    envNames: Object.keys(server.env).sort(),
+    headerNames: Object.keys(server.headers).sort(),
+  };
 }
 
 function mcpServerFrom(name: string, entry: unknown): McpServerConfig | string {
@@ -92,18 +89,6 @@ export function readMcpJson(text: string, source: string): McpJsonSummary {
 }
 
 const REFERENCE = /\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g;
-
-export function referencedNames(config: McpServerConfig): string[] {
-  const texts = [
-    config.command ?? '',
-    config.url ?? '',
-    ...config.args,
-    ...Object.values(config.env),
-    ...Object.values(config.headers),
-  ];
-  const names = texts.flatMap((text) => [...text.matchAll(REFERENCE)].map((match) => match[1]!));
-  return [...new Set(names)].sort();
-}
 
 export function expandReferences(text: string, env: Readonly<Record<string, string>>): string {
   return text.replace(REFERENCE, (_whole, name: string, fallback: string | undefined) => {

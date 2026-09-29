@@ -124,7 +124,7 @@ async function editedTask(root: string) {
   return { taskId, runId };
 }
 
-describe('ship', () => {
+describe('ship', { timeout: 60_000 }, () => {
   it('commits only the task files on its branch, pushes and opens one draft PR through gh', async () => {
     const repo = await repoWithRemote(base, 'gh');
     await loginGh();

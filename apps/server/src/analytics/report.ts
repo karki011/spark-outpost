@@ -50,7 +50,7 @@ export async function rollupReport(
   return { window, groupBy: by, rows: rollups(facts, by) };
 }
 
-export function overviewDays(
+function overviewDays(
   window: AnalyticsWindow,
   facts: readonly TurnFact[],
   spend: readonly DailySpend[],
@@ -76,6 +76,13 @@ export function overviewDays(
   });
 }
 
+function spendTotals(days: readonly DailySpend[]) {
+  return {
+    reported: days.reduce((sum, day) => sum + day.reportedUsd, 0),
+    estimated: days.reduce((sum, day) => sum + day.estimatedUsd, 0),
+  };
+}
+
 export async function overviewReport(
   db: Queryable,
   workspaceId: string,
@@ -91,8 +98,7 @@ export async function overviewReport(
   const checks = checkSummary(facts);
   const kept = facts.filter((fact) => fact.kept).length;
   const reverted = facts.filter((fact) => fact.reverted).length;
-  const reported = spend.reduce((sum, day) => sum + day.reportedUsd, 0);
-  const estimated = spend.reduce((sum, day) => sum + day.estimatedUsd, 0);
+  const { reported, estimated } = spendTotals(spend);
   const settled = facts.filter((fact) => fact.verdict !== null);
   const wait = waitSummary(waits);
   return {
@@ -131,7 +137,7 @@ export async function overviewReport(
   };
 }
 
-export function taskCosts(facts: readonly TurnFact[]): TaskCost[] {
+function taskCosts(facts: readonly TurnFact[]): TaskCost[] {
   const finished = groupBy(
     facts.filter((fact) => fact.verdict !== null),
     (fact) => fact.verdict!,
@@ -166,8 +172,7 @@ export async function spendReport(
     sessionRuns(db, workspaceId, window),
   ]);
   const perTask = taskCosts(facts);
-  const reported = days.reduce((sum, day) => sum + day.reportedUsd, 0);
-  const estimated = days.reduce((sum, day) => sum + day.estimatedUsd, 0);
+  const { reported, estimated } = spendTotals(days);
   const finished = perTask.reduce((sum, row) => sum + row.tasks, 0);
   const good = perTask.find((row) => row.verdict === 'good');
   const finishedCost = perTask.reduce((sum, row) => sum + row.costUsd, 0);

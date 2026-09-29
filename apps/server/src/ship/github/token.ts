@@ -1,7 +1,13 @@
 import { z } from 'zod';
 import type { GitHubRepoAccess, GitHubTokenInfo } from '@spark-outpost/contracts';
 import { repoSlug } from '../remote.ts';
-import { GitHubApiError, restConnection, type GitHubRequest, type RepoRef } from './connection.ts';
+import {
+  GitHubApiError,
+  repoPath,
+  restConnection,
+  type GitHubRequest,
+  type RepoRef,
+} from './connection.ts';
 
 export const REPO_CHECK_LIMIT = 10;
 
@@ -28,10 +34,7 @@ export function parseScopes(header: string | null): string[] {
 }
 
 async function repoAccess(request: GitHubRequest, repo: RepoRef): Promise<GitHubRepoAccess> {
-  const answer = await request(
-    'GET',
-    `/repos/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`,
-  );
+  const answer = await request('GET', repoPath(repo));
   if (answer.status !== 200) return { repo: repoSlug(repo), access: 'none' };
   const permissions = permissionsSchema.safeParse(answer.data);
   const push = permissions.success && permissions.data.permissions?.push === true;

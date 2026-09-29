@@ -35,6 +35,8 @@ const serverEnv = {
   MEMORY_SECRETS: JSON.stringify({ jev: 'browser-test-jev-key', zai: 'browser-test-zai-key' }),
   AGENT_RUNTIME: 'fake',
   OUTCOME_SAMPLE_RATE: '0',
+  MORNING_BRIEF: 'false',
+  LINEAR_API_URL: `${STUB_URL}/linear/graphql`,
   FAKE_ACP_AGENT: path.resolve('apps/server/test/fake-acp-agent.ts'),
   FAKE_ACP_MODELS: JSON.stringify(FAKE_ACP_MODELS),
   FAKE_ACP_MODES: JSON.stringify(FAKE_ACP_MODES),
@@ -51,6 +53,7 @@ const shutdown = { signal: 'SIGTERM', timeout: 5_000 } as const;
 
 export default defineConfig({
   testDir: 'tests/browser',
+  globalSetup: './tests/browser/single-worker.ts',
   outputDir: slot === 0 ? 'test-results' : `test-results/slot-${slot}`,
   timeout: 30_000,
   retries: 0,

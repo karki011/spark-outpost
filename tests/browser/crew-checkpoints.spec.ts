@@ -96,7 +96,7 @@ test('the loop guard stops a Builder that repeats itself, and Continue resumes i
 }) => {
   test.setTimeout(60_000);
   await crewChat(page, repo, 'Ask before edits');
-  await send(page, 'Fix the divider #build #repeat 8');
+  await send(page, 'Fix the divider #build #repeat');
   const stuck = card(page, /Bolt was repeating itself/);
   await expect(stuck).toBeVisible({ timeout: 30_000 });
   await stuck.getByRole('button', { name: 'Continue' }).click();

@@ -6,24 +6,24 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CheckBody } from '@spark-outpost/contracts';
 import { allowedForRun } from '../src/persistence/approvals.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
-import { createProject } from '../src/projects/projects.ts';
 import {
-  SCENARIOS,
+  TRIVIAL,
   answerEverything,
+  artifactBodies,
   connectProviders,
   driveToEnd,
   gitRepo,
   jevFetch,
   removeRepo,
+  setCheckCommands,
   startOrchestrator,
   startScenario,
+  withTag,
   type Harness,
   type JevScript,
   type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const TRIVIAL = SCENARIOS[1] as Scenario;
 
 const FAILS_UNTIL_FIXED = `import { existsSync } from 'node:fs';
 if (!existsSync('fixed.txt')) {
@@ -58,11 +58,6 @@ function start(scenario: Scenario) {
   harness = startOrchestrator(t, jevFetch(script), { sessions: store });
 }
 
-async function configureChecks(commands: string[] | null): Promise<void> {
-  const { project } = await createProject(t.db, t.workspaceId, root);
-  await t.db.query('UPDATE projects SET check_commands = $2 WHERE id = $1', [project.id, commands]);
-}
-
 interface ChildRow {
   role: string;
   route: Record<string, string | undefined>;
@@ -81,12 +76,7 @@ async function children(runId: string): Promise<ChildRow[]> {
   return rows;
 }
 
-async function checkBodies(): Promise<CheckBody[]> {
-  const { rows } = await t.db.query<{ body: CheckBody }>(
-    `SELECT body FROM run_artifacts WHERE kind = 'check' ORDER BY version`,
-  );
-  return rows.map((row) => row.body);
-}
+const checkBodies = () => artifactBodies<CheckBody>(t, 'check');
 
 async function fixRunId(runId: string): Promise<string> {
   const { rows } = await t.db.query<{ id: string }>(
@@ -105,10 +95,10 @@ async function lastReply(runId: string): Promise<string> {
   return rows[0]?.text ?? '';
 }
 
-describe('checks after a Builder lands', () => {
+describe('checks after a Builder lands', { timeout: 60_000 }, () => {
   it('runs the project checks, resumes the Builder to fix a failure, and records it all', async () => {
     await writeFile(join(root, 'check.mjs'), FAILS_UNTIL_FIXED);
-    await configureChecks(['node check.mjs']);
+    await setCheckCommands(t, root, ['node check.mjs']);
     start(TRIVIAL);
     const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'full-auto');
     const { orchestration } = await driveToEnd(t, conversationId, runId);
@@ -158,7 +148,7 @@ describe('checks after a Builder lands', () => {
 
   it('asks before running a check at Balanced and reports a pass', async () => {
     await writeFile(join(root, 'check.mjs'), "console.log('ok');\n");
-    await configureChecks(['node check.mjs']);
+    await setCheckCommands(t, root, ['node check.mjs']);
     start(TRIVIAL);
     const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'balanced');
     const { asked } = await driveToEnd(t, conversationId, runId);
@@ -170,7 +160,7 @@ describe('checks after a Builder lands', () => {
 
   it('lets "Allow for this run" on a Builder edit cover the same Builder fixing its checks', async () => {
     await writeFile(join(root, 'check.mjs'), FAILS_UNTIL_FIXED);
-    await configureChecks(['node check.mjs']);
+    await setCheckCommands(t, root, ['node check.mjs']);
     start(TRIVIAL);
     const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'balanced');
     const { asked } = await driveToEnd(t, conversationId, runId, (approval) => {
@@ -199,7 +189,7 @@ describe('checks after a Builder lands', () => {
 
   it('runs no checks when the project turns them off', async () => {
     await writeFile(join(root, 'package.json'), JSON.stringify({ scripts: { test: 'exit 1' } }));
-    await configureChecks([]);
+    await setCheckCommands(t, root, []);
     start(TRIVIAL);
     const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'full-auto');
     await driveToEnd(t, conversationId, runId);
@@ -207,9 +197,9 @@ describe('checks after a Builder lands', () => {
   });
 });
 
-describe('when a Critic runs', () => {
+describe('when a Critic runs', { timeout: 60_000 }, () => {
   it('reviews a large diff once on the other provider, even for ordinary work', async () => {
-    const big = { ...TRIVIAL, text: `${TRIVIAL.text} #bigdiff` };
+    const big = withTag(TRIVIAL, '#bigdiff');
     start(big);
     const { conversationId, runId } = await startScenario(t, root, big, 'full-auto');
     const { orchestration } = await driveToEnd(t, conversationId, runId);

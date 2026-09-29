@@ -15,9 +15,9 @@ const TRIVIAL_VERB =
 
 const REFERS_BACK = /\b(?:it|that|this|them|those|these|also|again|instead|same|too|as well)\b/i;
 
-export const TRIVIAL_MAX_WORDS = 25;
+const TRIVIAL_MAX_WORDS = 25;
 
-function words(text: string): number {
+export function wordCount(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
@@ -130,7 +130,7 @@ export function asksForTopModel(request: string, topFamilies: readonly string[] 
 
 export function trivialByRule(request: string): boolean {
   if (destructiveByRule(request)) return false;
-  if (words(request) > TRIVIAL_MAX_WORDS) return false;
+  if (wordCount(request) > TRIVIAL_MAX_WORDS) return false;
   if (namedFiles([request]).length > 1) return false;
   return TRIVIAL_VERB.test(request);
 }
@@ -186,7 +186,7 @@ export function followUpByRule(
 ): boolean {
   const recent =
     lastReplyAt !== null && now.getTime() - lastReplyAt.getTime() <= FOLLOW_UP_MINUTES * 60_000;
-  const short = words(message) <= FOLLOW_UP_WORDS && REFERS_BACK.test(message);
+  const short = wordCount(message) <= FOLLOW_UP_WORDS && REFERS_BACK.test(message);
   return recent || short;
 }
 

@@ -1,3 +1,5 @@
+import { REDACTED_MARKER, redactText } from '../audit/redact.ts';
+
 export interface RequestTerms {
   paths: string[];
   fileNames: string[];
@@ -120,7 +122,20 @@ function wordTerms(text: string, terms: RequestTerms): void {
   }
 }
 
+const holdsSecret = (term: string) => redactText(term) !== term;
+
+function withoutSecrets(terms: RequestTerms): RequestTerms {
+  return {
+    paths: terms.paths.filter((term) => !holdsSecret(term)),
+    fileNames: terms.fileNames.filter((term) => !holdsSecret(term)),
+    identifiers: terms.identifiers.filter((term) => !holdsSecret(term)),
+    phrases: terms.phrases.filter((term) => !holdsSecret(term)),
+    words: terms.words.filter((term) => !holdsSecret(term)),
+  };
+}
+
 export function extractTerms(request: string): RequestTerms {
+  const text = redactText(request).replace(REDACTED_MARKER, ' ');
   const terms: RequestTerms = {
     paths: [],
     fileNames: [],
@@ -128,11 +143,11 @@ export function extractTerms(request: string): RequestTerms {
     phrases: [],
     words: [],
   };
-  quotedTerms(request, terms);
-  pathTerms(request, terms);
-  identifierTerms(request, terms);
-  wordTerms(request, terms);
-  return terms;
+  quotedTerms(text, terms);
+  pathTerms(text, terms);
+  identifierTerms(text, terms);
+  wordTerms(text, terms);
+  return withoutSecrets(terms);
 }
 
 function words(term: string): string[] {
@@ -160,10 +175,12 @@ export function pascalForm(term: string): string {
   return parts.map(capitalise).join('');
 }
 
+export function spellings(term: string): string[] {
+  return /[-_]/.test(term) ? nameVariants(term) : [term];
+}
+
 export function searchPatterns(terms: RequestTerms): string[] {
-  const names = terms.identifiers.flatMap((term) =>
-    term.includes('-') || term.includes('_') ? nameVariants(term) : [term],
-  );
+  const names = terms.identifiers.flatMap(spellings);
   const files = terms.fileNames.flatMap((name) => {
     const stem = name.slice(0, name.lastIndexOf('.'));
     return stem.length >= 4 ? [name, `/${stem}`] : [name];

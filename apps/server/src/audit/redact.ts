@@ -1,6 +1,7 @@
 import { isSecretPath } from '../projects/path-policy.ts';
 
 export const redacted = (kind: string) => `[redacted:${kind}]`;
+export const REDACTED_MARKER = /\[redacted:[a-z_]+\]/g;
 
 interface TextRule {
   kind: string;
@@ -62,6 +63,7 @@ const TEXT_RULES: TextRule[] = [
   },
   { kind: 'github_token', pattern: /\bgithub_pat_[A-Za-z0-9_]{20,}/g },
   { kind: 'github_token', pattern: /\bgh[pousr]_[A-Za-z0-9]{20,}/g },
+  { kind: 'slack_token', pattern: /\bxox[abposr]-[A-Za-z0-9-]{10,}/g },
   { kind: 'api_key', pattern: /\bsk-[A-Za-z0-9_-]{16,}/g },
   { kind: 'aws_key', pattern: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g },
   {
@@ -115,7 +117,7 @@ export function redactValue(value: unknown): unknown {
   return result;
 }
 
-export function looksLikeSecretPath(candidate: string): boolean {
+function looksLikeSecretPath(candidate: string): boolean {
   const trimmed = candidate.replace(/^['"`]+|['"`;,)]+$/g, '');
   if (trimmed === '' || trimmed.length > 4096) return false;
   return isSecretPath(trimmed.replaceAll('\\', '/'));

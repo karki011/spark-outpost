@@ -6,10 +6,11 @@ import type {
 } from '@agentclientprotocol/sdk';
 import type { ConfigValues, PlanEntry } from '@spark-outpost/contracts';
 import type { ProviderOutput } from '../../providers/provider.ts';
-import { findOption } from './session-config.ts';
-import { isCoreOption } from './capabilities.ts';
+import { currentValue } from './session-config.ts';
+import { currentValues } from './capabilities.ts';
 import { findPullRequests } from '../../tasks/pr-links.ts';
 import { agentCommands } from './slash-commands.ts';
+import { objectFields } from './object-fields.ts';
 
 export const THINKING_STEP = 'Thinking';
 export const FAILED_PREFIX = 'Failed: ';
@@ -50,19 +51,11 @@ function settingsFrom(
   options: readonly SessionConfigOption[],
   previous: TrackedSettings,
 ): TrackedSettings {
-  const text = (category: string, fallback: string | null) => {
-    const option = findOption(options, category);
-    return option && typeof option.currentValue === 'string' ? option.currentValue : fallback;
-  };
-  const values: ConfigValues = { ...previous.values };
-  for (const option of options) {
-    if (!isCoreOption(options, option)) values[option.id] = option.currentValue;
-  }
   return {
-    model: text('model', previous.model),
-    effort: text('thought_level', previous.effort),
-    mode: text('mode', previous.mode),
-    values,
+    model: currentValue(options, 'model') ?? previous.model,
+    effort: currentValue(options, 'thought_level') ?? previous.effort,
+    mode: currentValue(options, 'mode') ?? previous.mode,
+    values: { ...previous.values, ...currentValues(options) },
   };
 }
 
@@ -74,11 +67,10 @@ interface ReportedFailure extends AgentFailure {
   severity: string;
 }
 
-const record = (value: unknown): Record<string, unknown> =>
-  value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : {};
-
 export function sessionFailure(meta: unknown): ReportedFailure | null {
-  const failure = record(record(record(record(meta).jetbrains).air).sessionFailure);
+  const failure = objectFields(
+    objectFields(objectFields(objectFields(meta).jetbrains).air).sessionFailure,
+  );
   const { severity, title, category } = failure;
   if (typeof severity !== 'string' || typeof title !== 'string') return null;
   return { severity, title, category: typeof category === 'string' ? category : 'provider_error' };

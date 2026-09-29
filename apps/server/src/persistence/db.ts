@@ -103,13 +103,17 @@ class RetryingPool extends pg.Pool {
   }
 }
 
+export function searchPathOptions(searchPath: string | undefined): { options?: string } {
+  return searchPath ? { options: `-c search_path=${searchPath}` } : {};
+}
+
 export function createDb(connectionString: string, options: DbOptions = {}): Db {
   const { searchPath, max = POOL_MAX.script, connectTries = 5, retryBaseMs = 200 } = options;
   return new RetryingPool(
     {
       connectionString,
       max,
-      ...(searchPath ? { options: `-c search_path=${searchPath}` } : {}),
+      ...searchPathOptions(searchPath),
     },
     connectTries,
     retryBaseMs,
@@ -122,15 +126,20 @@ export function withTransaction<T>(db: Db, work: (client: DbClient) => Promise<T
 
 async function runTransaction<T>(db: Db, work: (client: DbClient) => Promise<T>): Promise<T> {
   const client = await db.connect();
+  let broken: Error | undefined;
   try {
     await client.query('BEGIN');
     const result = await work(client);
     await client.query('COMMIT');
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackError) {
+      broken = rollbackError as Error;
+    }
     throw error;
   } finally {
-    client.release();
+    client.release(broken);
   }
 }

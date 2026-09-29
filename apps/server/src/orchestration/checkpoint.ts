@@ -3,19 +3,24 @@ import {
   checkpointPayloadSchema,
   type AgentPick,
   type ApprovalOption,
+  type BudgetLimit,
   type CheckpointKind,
   type CheckpointPayload,
   type MergeConflict,
   type RunChange,
 } from '@spark-outpost/contracts';
-import { insertApproval, settleIfDue, settlePending } from '../persistence/approvals.ts';
+import {
+  insertApproval,
+  settleIfDue,
+  settlePending,
+  type NewApproval,
+} from '../persistence/approvals.ts';
 import type { Db } from '../persistence/db.ts';
 import { autoContinueSeconds } from '../persistence/setup.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
 import type { Append } from '../workflow/agent-turn.ts';
-import { waitForApproval } from '../workflow/approval-waiters.ts';
 import { APPROVAL_POLL_MS, APPROVAL_TIMEOUT_MS } from '../workflow/approval-gate.ts';
-import { ApprovalWaiters } from '../workflow/approval-waiters.ts';
+import { ApprovalWaiters, waitForApproval } from '../workflow/approval-waiters.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { publish, type Session } from './session.ts';
 
@@ -69,12 +74,16 @@ export function riskyCard(reason: string): CheckpointCard {
   };
 }
 
+function retryTarget(to: AgentPick | null): string {
+  return to?.modelLabel ? ` with ${to.modelLabel}` : ' one tier up';
+}
+
 export function retryCard(
   from: AgentPick | null,
   to: AgentPick | null,
   reason: string,
 ): CheckpointCard {
-  const question = `Retry${to?.modelLabel ? ` with ${to.modelLabel}` : ' one tier up'}?`;
+  const question = `Retry${retryTarget(to)}?`;
   return {
     kind: 'retry',
     title: question,
@@ -123,7 +132,7 @@ export function verifyCard(
     title,
     payload: payload({
       kind: 'verify',
-      question: `Finish as it is, or retry${to?.modelLabel ? ` with ${to.modelLabel}` : ' one tier up'}?`,
+      question: `Finish as it is, or retry${retryTarget(to)}?`,
       reason,
       from,
       to,
@@ -161,7 +170,7 @@ export function acceptCard(
 }
 
 export function budgetCard(
-  limit: 'time' | 'tool_calls' | 'cost',
+  limit: BudgetLimit,
   used: number,
   allowed: number,
   reason: string,
@@ -220,13 +229,13 @@ async function emit(deps: CheckpointDeps, ...args: Parameters<Append>): Promise<
   }
 }
 
-export async function askCheckpoint(
-  deps: CheckpointDeps,
+export function checkpointApproval(
+  runId: string,
   card: CheckpointCard,
   sequence: number,
-): Promise<CheckpointAnswer> {
-  const pending = await insertApproval(deps.db, {
-    runId: deps.runId,
+): NewApproval {
+  return {
+    runId,
     toolCallId: `checkpoint:${card.kind}:${sequence}`,
     rpcId: null,
     kind: card.kind,
@@ -241,6 +250,16 @@ export async function askCheckpoint(
     },
     options: card.options,
     reason: card.payload.reason,
+  };
+}
+
+export async function askCheckpoint(
+  deps: CheckpointDeps,
+  card: CheckpointCard,
+  sequence: number,
+): Promise<CheckpointAnswer> {
+  const pending = await insertApproval(deps.db, {
+    ...checkpointApproval(deps.runId, card, sequence),
     autoContinueMs: card.payload.autoOption ? (deps.autoContinueMs ?? null) : null,
   });
   await deps.append(runEvents.approvalRequested(pending), {

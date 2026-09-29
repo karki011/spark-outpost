@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseLog, parseStatus } from './git.ts';
-import { churnByFile, coChanged } from './history.ts';
 import { manifestName, packageMatcher, readLayout } from './layout.ts';
-import { ownersMatcher, parseCodeowners } from './owners.ts';
-import { skipReason } from './skip.ts';
-import { isTestFile, pairTests } from './test-pairs.ts';
+import { ownersMatcher } from './owners.ts';
 
 describe('readLayout', () => {
   const files: Record<string, string> = {
@@ -43,81 +39,5 @@ describe('readLayout', () => {
     expect(manifestName('pyproject.toml', '[project]\nname = "tool"\n')).toBe('tool');
     expect(manifestName('Cargo.toml', '[workspace]\nmembers = []\n')).toBeNull();
     expect(manifestName('package.json', 'not json')).toBeNull();
-  });
-});
-
-describe('CODEOWNERS', () => {
-  it('lets the last matching rule win and supports globs', () => {
-    const ownersOf = ownersMatcher(
-      parseCodeowners('# comment\n*.ts @ts\ndocs/ @docs\n/apps/**/api/ @api\n'),
-    );
-    expect(ownersOf('src/a.ts')).toEqual(['@ts']);
-    expect(ownersOf('docs/guide.md')).toEqual(['@docs']);
-    expect(ownersOf('apps/web/api/client.ts')).toEqual(['@api']);
-    expect(ownersOf('README.md')).toEqual([]);
-  });
-});
-
-describe('pairTests', () => {
-  it('pairs sources with tests by name, nearby or in the same package', () => {
-    const paths = [
-      'src/chart.ts',
-      'src/chart.test.ts',
-      'src/util/index.ts',
-      'src/other/index.test.ts',
-      'src/store.ts',
-      'test/store.db.test.ts',
-      'pkg/server.go',
-      'pkg/server_test.go',
-      'app/models.py',
-      'tests/test_models.py',
-      'src/lonely.ts',
-    ];
-    const tested = pairTests(paths, () => 'one');
-    expect([...tested].sort()).toEqual([
-      'app/models.py',
-      'pkg/server.go',
-      'src/chart.ts',
-      'src/store.ts',
-    ]);
-    expect(isTestFile('src/__tests__/chart.ts')).toBe(true);
-    expect(isTestFile('src/chart.ts')).toBe(false);
-  });
-});
-
-describe('skipReason', () => {
-  it('skips dependencies, build output, lockfiles, generated and binary files', () => {
-    expect(skipReason('node_modules/x/index.js')).toBe('directory');
-    expect(skipReason('apps/web/dist/main.js')).toBe('directory');
-    expect(skipReason('pnpm-lock.yaml')).toBe('lockfile');
-    expect(skipReason('public/app.min.js')).toBe('generated');
-    expect(skipReason('assets/logo.png')).toBe('binary');
-    expect(skipReason('src/build-style.ts')).toBeNull();
-  });
-});
-
-describe('git output', () => {
-  it('parses porcelain status including renames', () => {
-    expect(parseStatus(' M src/a.ts\0R  src/new.ts\0src/old.ts\0?? notes.md\0')).toEqual([
-      'src/a.ts',
-      'src/new.ts',
-      'notes.md',
-    ]);
-  });
-
-  it('parses log records into commits and derives churn and co-change', () => {
-    const commits = parseLog(
-      '\u001e200\n\na.ts\nb.ts\n\u001e100\n\na.ts\nc.ts\n\u001e50\n\nd.ts\n',
-    );
-    expect(commits).toEqual([
-      { at: 200, files: ['a.ts', 'b.ts'] },
-      { at: 100, files: ['a.ts', 'c.ts'] },
-      { at: 50, files: ['d.ts'] },
-    ]);
-    expect(churnByFile(commits).get('a.ts')).toBe(2);
-    expect([...coChanged(commits, new Set(['a.ts']))]).toEqual([
-      ['b.ts', 1],
-      ['c.ts', 1],
-    ]);
   });
 });

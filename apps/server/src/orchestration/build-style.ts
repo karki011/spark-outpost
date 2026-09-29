@@ -3,12 +3,10 @@ import {
   DEFAULT_BUILD_STYLE,
   type ShortcutsBody,
 } from '@spark-outpost/contracts';
-import { nextArtifactVersion } from '../persistence/artifacts.ts';
 import type { Queryable } from '../persistence/db.ts';
-import { runEvents } from '../workflow/run-events.ts';
 import { harvestShortcuts, ruleBuildStyle, type ProjectStyle } from './lean.ts';
 import { changesSoFar } from './member-prompts.ts';
-import type { Session } from './session.ts';
+import { appendNewArtifact, type Session } from './session.ts';
 
 export const NO_PROJECT_STYLE: ProjectStyle = { style: 'off', source: 'project setting' };
 
@@ -40,16 +38,6 @@ export async function recordShortcuts(s: Session): Promise<ShortcutsBody | null>
   const entries = harvestShortcuts(patch);
   if (entries.length === 0) return null;
   const body: ShortcutsBody = { runId: s.lease.runId, style: s.buildStyle, entries };
-  const version = await nextArtifactVersion(s.deps.db, s.taskId, 'shortcuts');
-  await s.append(runEvents.activity('artifact:shortcuts', 'shortcuts', { version, body }), {
-    artifact: {
-      taskId: s.taskId,
-      kind: 'shortcuts',
-      body,
-      version,
-      overwrite: false,
-      supersedesPrevious: false,
-    },
-  });
+  await appendNewArtifact(s, s.taskId, 'shortcuts', body);
   return body;
 }

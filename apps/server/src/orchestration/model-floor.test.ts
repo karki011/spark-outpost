@@ -7,7 +7,7 @@ import type { ScanReport } from '../codescan/scan.ts';
 import { complexByBreadth } from './builder-complexity.ts';
 import { keepBuilderSession } from './member-routes.ts';
 import { floorPick, FLOOR_REASON, floorText } from './model-floor.ts';
-import { candidates, context } from './route-fixtures.ts';
+import { candidates, context, plainFacts } from './route-fixtures.ts';
 import {
   builderTierPick,
   escalateBuilder,
@@ -20,8 +20,6 @@ import {
 } from './routing.ts';
 import { routeVariant, variantLine } from '../routing/route-answer.ts';
 import { routePolicy } from '../routing/route-policy.ts';
-
-const plain = { trivial: false, destructive: false };
 const claude = candidates[0]!;
 const [HAIKU, SONNET, OPUS] = claude.models as [
   (typeof claude.models)[0],
@@ -115,13 +113,13 @@ describe('the Builder floor, by tier', () => {
 
 describe('every path that picks a Builder model', () => {
   it('raises the rule route when the chat is on the fast tier', () => {
-    const route = routeBuilder(onHaiku(), plain);
+    const route = routeBuilder(onHaiku(), plainFacts);
     expect(route).toMatchObject({ rule: 'chat model', pick: { model: 'sonnet' }, note: RAISED });
     expect(route.pick.effort).toBe('medium');
   });
 
   it('raises a pinned fast-tier model too', () => {
-    expect(routeBuilder(onHaiku('pinned'), plain)).toMatchObject({
+    expect(routeBuilder(onHaiku('pinned'), plainFacts)).toMatchObject({
       routedBy: 'pinned',
       pick: { model: 'sonnet' },
       note: RAISED,
@@ -129,7 +127,7 @@ describe('every path that picks a Builder model', () => {
   });
 
   it('raises Jev’s tier pick, recorded or acted on', () => {
-    expect(routeBuilder(context('auto'), plain, 'small').autoWouldUse?.model).toBe('sonnet');
+    expect(routeBuilder(context('auto'), plainFacts, 'small').autoWouldUse?.model).toBe('sonnet');
     expect(builderTierPick(context('auto'), 'small')?.model).toBe('sonnet');
     expect(builderTierPick(context('auto'), 'top')?.model).toBe('opus[1m]');
   });
@@ -152,7 +150,7 @@ describe('every path that picks a Builder model', () => {
   });
 
   it('does not resume a fast-tier Builder session', () => {
-    const route = routeBuilder(context('auto'), plain);
+    const route = routeBuilder(context('auto'), plainFacts);
     const kept = keepBuilderSession(route, { pick: pick(HAIKU), contextTokens: 1 }, null);
     expect(kept.route.pick.model).toBe('sonnet');
     expect(kept.choice).toMatchObject({ kept: false, reason: FLOOR_REASON });
@@ -170,13 +168,13 @@ describe('every path that picks a Builder model', () => {
   });
 
   it('raises the shadow route’s code pick and Jev’s route answer', () => {
-    expect(routePolicy(onHaiku(), plain, false)).toMatchObject({
+    expect(routePolicy(onHaiku(), plainFacts, false)).toMatchObject({
       kind: 'no_jev',
       chat: { model: 'haiku' },
       codePick: { model: 'sonnet' },
       rule: { pick: { model: 'sonnet' } },
     });
-    const policy = routePolicy(context('auto'), plain, true);
+    const policy = routePolicy(context('auto'), plainFacts, true);
     const call: JevCall = {
       status: 'answered',
       asked: null,
@@ -210,16 +208,16 @@ describe('every path that picks a Builder model', () => {
   });
 
   it('puts the note in the why line', () => {
-    const route = routeBuilder(onHaiku(), plain);
+    const route = routeBuilder(onHaiku(), plainFacts);
     expect(whyLine(route)).toBe(`Why Sonnet 5: rule chat model · mid tier · ${RAISED}`);
   });
 });
 
 describe('complex work goes to the top tier', () => {
   it('uses the middle tier for everyday work', () => {
-    expect(routeBuilder(onHaiku('auto', 'add a total row to the report'), plain).pick.model).toBe(
-      'sonnet',
-    );
+    expect(
+      routeBuilder(onHaiku('auto', 'add a total row to the report'), plainFacts).pick.model,
+    ).toBe('sonnet');
   });
 
   it.each([
@@ -229,7 +227,7 @@ describe('complex work goes to the top tier', () => {
     ['use the strongest model to redesign parsing', 'asked for the top model'],
     ['please use opus for this one', 'asked for the top model'],
   ])('%s → top tier (%s)', (request, reason) => {
-    const route = routeBuilder(onHaiku('auto', request), plain);
+    const route = routeBuilder(onHaiku('auto', request), plainFacts);
     expect(route).toMatchObject({
       rule: `complex → top tier (${reason})`,
       pick: { model: 'opus[1m]' },
@@ -239,7 +237,7 @@ describe('complex work goes to the top tier', () => {
 
   it('takes the scan and confident Jev signals through the facts', () => {
     const scan = { source: 'scan' as const, reason: 'matches in 4 packages' };
-    expect(routeBuilder(context('auto'), { ...plain, complex: scan })).toMatchObject({
+    expect(routeBuilder(context('auto'), { ...plainFacts, complex: scan })).toMatchObject({
       rule: 'complex → top tier (matches in 4 packages)',
       pick: { model: 'opus[1m]' },
     });
@@ -273,16 +271,16 @@ describe('complex work goes to the top tier', () => {
       request,
       { tier: 'mid', routeConfidence: 0.9 },
     );
-    const route = routeBuilder(context('auto'), { ...plain, complex: breadth.complex }, 'mid');
+    const route = routeBuilder(context('auto'), { ...plainFacts, complex: breadth.complex }, 'mid');
     expect(route).toMatchObject({ rule: 'chat model', pick: { model: 'sonnet' } });
   });
 
   it('keeps destructive wording and a pinned model as they are', () => {
     const request = 'drop the legacy table in a migration';
-    expect(routeBuilder(onHaiku('auto', request), { ...plain, destructive: true }).rule).toBe(
+    expect(routeBuilder(onHaiku('auto', request), { ...plainFacts, destructive: true }).rule).toBe(
       'destructive → top tier',
     );
-    expect(routeBuilder(onHaiku('pinned', 'write a migration'), plain)).toMatchObject({
+    expect(routeBuilder(onHaiku('pinned', 'write a migration'), plainFacts)).toMatchObject({
       routedBy: 'pinned',
       pick: { model: 'sonnet' },
     });

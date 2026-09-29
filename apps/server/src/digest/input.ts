@@ -1,4 +1,6 @@
 import { redactText } from '../audit/redact.ts';
+import type { FlaggedItem } from '../persistence/attention-settings.ts';
+import { ellipsize, oneLine } from './text.ts';
 
 export const DIGEST_CHAT_LIMIT = 20;
 export const DIGEST_INPUT_MAX_CHARS = 12_000;
@@ -32,6 +34,7 @@ export interface ActivitySnapshot {
   until: string;
   timeZone: string;
   chats: ActivityChat[];
+  flagged?: readonly FlaggedItem[];
 }
 
 export interface DigestPrompt {
@@ -43,12 +46,11 @@ const OFFER =
   /\?\s*$|\b(want me to|shall i|should i|would you like|do you want|let me know if|i can also)\b/i;
 
 function clip(text: string, max: number): string {
-  const clean = redactText(text).replace(/\s+/g, ' ').trim();
-  return clean.length <= max ? clean : `${clean.slice(0, max - 1).trimEnd()}…`;
+  return ellipsize(oneLine(redactText(text)), max);
 }
 
 function tail(text: string, max: number): string {
-  const clean = redactText(text).replace(/\s+/g, ' ').trim();
+  const clean = oneLine(redactText(text));
   return clean.length <= max ? clean : `…${clean.slice(clean.length - max + 1).trimStart()}`;
 }
 
@@ -128,15 +130,31 @@ function grouped(chats: readonly ActivityChat[], snapshot: ActivitySnapshot) {
   }));
 }
 
+function flaggedData(item: FlaggedItem) {
+  return {
+    itemId: item.itemId,
+    key: item.key,
+    title: clip(item.title, TITLE_CHARS),
+    status: item.status,
+    priority: item.priority,
+    dueDate: item.dueDate,
+    project: item.project,
+    pullRequest: item.pullRequest,
+    flags: item.flags,
+  };
+}
+
 function dataBlock(chats: readonly ActivityChat[], snapshot: ActivitySnapshot): string {
+  const flagged = snapshot.flagged ?? [];
   const data = {
     window: { from: snapshot.since, to: snapshot.until },
     days: grouped(chats, snapshot),
+    ...(flagged.length > 0 ? { flagged: flagged.map(flaggedData) } : {}),
   };
   return JSON.stringify(data).replaceAll('<', '\\u003c').replaceAll('>', '\\u003e');
 }
 
-export function fittedChats(snapshot: ActivitySnapshot): ActivityChat[] {
+function fittedChats(snapshot: ActivitySnapshot): ActivityChat[] {
   const newest = snapshot.chats
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, DIGEST_CHAT_LIMIT);
@@ -160,10 +178,15 @@ Reply with only a JSON object, with no other text and no code fence:
 {"headline":"...","lines":[{"text":"...","chatId":"<id or null>"}],"suggestions":[{"chatId":"<id>","reason":"...","draft":"..."}]}
 Give each line the chatId of the chat it is mostly about, and use null only when a line covers several chats equally. Use only chat ids that appear in the data. Keep the headline under 140 characters, each line under 280 characters, each reason under 200 and each draft under 600.`;
 
+const BRIEF_INSTRUCTIONS = `The data also has "flagged": tickets that fixed rules flagged as needing the person, each with an itemId and the rules' reasons. Add "items" to the JSON object: 1 to 5 of them in the order to tackle them, as {"itemId":"<itemId>","text":"..."}, each one sentence under 240 characters on what to do next and why. Use only itemIds from the data, and mention only ticket keys, pull request numbers and day counts that appear in the data. If there are no chats, "lines" may be an empty list.`;
+
 export function buildDigestPrompt(snapshot: ActivitySnapshot): DigestPrompt {
   const chats = fittedChats(snapshot);
+  const instructions = snapshot.flagged?.length
+    ? `${INSTRUCTIONS}\n\n${BRIEF_INSTRUCTIONS}`
+    : INSTRUCTIONS;
   return {
-    prompt: `${INSTRUCTIONS}\n\n<activity>\n${dataBlock(chats, snapshot)}\n</activity>`,
+    prompt: `${instructions}\n\n<activity>\n${dataBlock(chats, snapshot)}\n</activity>`,
     chatIds: chats.map((chat) => chat.id),
   };
 }

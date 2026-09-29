@@ -13,13 +13,13 @@ export function counted(): Counted {
   return { value: 0, tools: [], reads: [] };
 }
 
-export function isFileRead(name: string, toolKind: string | undefined): boolean {
+function isFileRead(name: string, toolKind: string | undefined): boolean {
   if (toolKind === 'read') return true;
   if (toolKind && toolKind !== 'execute' && toolKind !== 'other') return false;
   return READ_TITLE.test(name) || READ_COMMAND.test(name);
 }
 
-export function readTarget(name: string): string {
+function readTarget(name: string): string {
   const quoted = /`([^`]+)`/.exec(name)?.[1];
   const target = quoted ?? name.replace(READ_TITLE, '').trim();
   return target.split(/\s+/).at(-1)?.split('/').at(-1) ?? target;

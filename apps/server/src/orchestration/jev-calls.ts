@@ -31,6 +31,11 @@ const notConnected: JevCall = {
   model: null,
 };
 
+function failureMessage(error: unknown, signal: AbortSignal): string {
+  if (error instanceof AdvisorError) return error.message;
+  return signal.aborted ? 'Stopped.' : 'Jev failed unexpectedly.';
+}
+
 export async function callJev(
   access: JevAccess | null,
   build: () => IntakeQuestions,
@@ -66,18 +71,11 @@ export async function callJev(
       usage: jevUsage(asked, response),
     };
   } catch (error) {
-    const timedOut = error instanceof AdvisorTimeoutError;
-    const message =
-      error instanceof AdvisorError
-        ? error.message
-        : signal.aborted
-          ? 'Stopped.'
-          : 'Jev failed unexpectedly.';
     return {
       ...base,
-      status: timedOut ? 'timed_out' : 'failed',
+      status: error instanceof AdvisorTimeoutError ? 'timed_out' : 'failed',
       asked,
-      error: message,
+      error: failureMessage(error, signal),
       latencyMs: Date.now() - startedAt,
     };
   }

@@ -68,22 +68,13 @@ export function oneTierUp<T extends TierModel>(
 
 const EFFORT_ORDER = ['low', 'medium', 'high', 'xhigh', 'max'];
 
-export function effortRank(effort: string | null): number {
+function effortRank(effort: string | null): number {
   return effort === null ? -1 : EFFORT_ORDER.indexOf(effort);
 }
 
-export function middleTier<T extends TierModel>(
-  models: readonly T[],
-  provider: string | null = null,
-): T | null {
-  return tierLadder(models, provider).find((model) => modelTier(model, provider) === 1) ?? null;
-}
-
 export function strongerEffort(efforts: readonly string[], current: string | null): string | null {
-  const index = current === null ? -1 : EFFORT_ORDER.indexOf(current);
-  return (
-    efforts.find((effort) => EFFORT_ORDER.indexOf(effort) > index && effort !== 'max') ?? current
-  );
+  const index = effortRank(current);
+  return efforts.find((effort) => effortRank(effort) > index && effort !== 'max') ?? current;
 }
 
 export function highEffort(efforts: readonly string[]): string | null {

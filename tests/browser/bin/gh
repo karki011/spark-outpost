@@ -1,2 +1,2 @@
 #!/bin/sh
-exec "${FAKE_GH_NODE:?}" --import tsx "$(dirname "$0")/gh-fake.ts" "$@"
+exec "${FAKE_GH_NODE:?}" "$(dirname "$0")/gh-fake.ts" "$@"

@@ -11,7 +11,7 @@ function digest(overrides: Partial<Digest> = {}): Digest {
     createdAt: '2026-09-26T14:41:00.000Z',
     finishedAt: '2026-09-26T14:42:00.000Z',
     since: '2026-09-25T14:42:00.000Z',
-    body: { headline: 'Quiet day.', lines: [], suggestions: [], structured: true },
+    body: { headline: 'Quiet day.', lines: [], suggestions: [], items: [], structured: true },
     error: null,
     provider: 'claude',
     modelLabel: 'Haiku 4.5',

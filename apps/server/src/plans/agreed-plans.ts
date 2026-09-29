@@ -1,13 +1,16 @@
-import type { PlanDocument, PlanDocumentSource } from '@spark-outpost/contracts';
-import type { Db } from '../persistence/db.ts';
+import type { AgreedPlans, PlanDocument, PlanDocumentSource } from '@spark-outpost/contracts';
+import { conversationRoots } from '../persistence/conversation-projects.ts';
+import type { Db, Queryable } from '../persistence/db.ts';
 import {
   approvePlanDocument,
   insertPlanDocument,
+  planDocuments,
   planForMessage,
   proposedPlanFromRun,
   type AssistantMessage,
 } from '../persistence/plan-documents.ts';
 import { headCommit } from '../projects/snapshot.ts';
+import { staleFiles } from './plan-staleness.ts';
 
 export interface AgreementSource {
   by: 'user' | 'jev';
@@ -41,4 +44,12 @@ export async function saveAgreedMessage(
     sourceMessageId: message.id,
     approval,
   });
+}
+
+export async function agreedPlans(db: Queryable, conversationId: string): Promise<AgreedPlans> {
+  const documents = await planDocuments(db, conversationId);
+  const approved = documents.findLast((document) => document.status === 'approved');
+  if (!approved) return { documents, staleFiles: [] };
+  const [root] = await conversationRoots(db, conversationId);
+  return { documents, staleFiles: await staleFiles(root ?? null, approved) };
 }

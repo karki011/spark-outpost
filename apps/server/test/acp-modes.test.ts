@@ -12,11 +12,8 @@ import type {
 } from '../src/providers/provider.ts';
 import { childEnvironment } from '../src/setup/environment.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
-};
 const env = {
   ...childEnvironment(process.env),
   FAKE_ACP_MODES: JSON.stringify([
@@ -91,7 +88,7 @@ async function run(
   } catch (caught) {
     error = caught;
   }
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   const steps = outputs.flatMap((output) => (output.kind === 'step_started' ? [output.name] : []));
   const settings = outputs.filter((output) => output.kind === 'session_settings');
   const capabilities = outputs.find((output) => output.kind === 'capabilities');

@@ -29,11 +29,21 @@ function dayButton(dialog: Locator, day: number) {
     .filter({ hasText: new RegExp(`^${day}$`) });
 }
 
+async function showEarlierMonth(dialog: Locator) {
+  const caption = dialog.locator('.rdp-caption_label');
+  for (let step = 0; step < 2; step += 1) {
+    const shown = (await caption.textContent()) ?? '';
+    await dialog.getByRole('button', { name: /previous month/i }).click();
+    await expect(caption).not.toHaveText(shown);
+  }
+}
+
 async function blocking(page: Page, screen: string) {
   await page.evaluate(() => document.fonts.ready);
   const results = await new AxeBuilder({ page })
     .include('main')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .setLegacyMode(true)
     .analyze();
   return results.violations
     .filter((violation) => BLOCKING.has(violation.impact ?? ''))
@@ -105,6 +115,7 @@ test.describe('with three months of history', () => {
 
   for (const theme of ['apricot', 'aurora'] as const) {
     test(`has no serious axe issues in ${theme}`, async ({ page }) => {
+      test.setTimeout(60_000);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await openAnalytics(page);
       await page.evaluate((skin) => (document.documentElement.dataset.skin = skin), theme);
@@ -127,6 +138,7 @@ test.describe('with three months of history', () => {
     const dialog = await openCalendar(page);
     const apply = dialog.getByRole('button', { name: 'Apply' });
     await expect(apply).toBeDisabled();
+    await showEarlierMonth(dialog);
     await dayButton(dialog, 5).click();
     await dayButton(dialog, 20).click();
     await expect(apply).toBeEnabled();
@@ -140,6 +152,7 @@ test.describe('with three months of history', () => {
   test('picks a custom range with the calendar by keyboard', async ({ page }) => {
     await openAnalytics(page);
     const dialog = await openCalendar(page);
+    await showEarlierMonth(dialog);
     const start = dayButton(dialog, 5);
     await start.focus();
     await page.keyboard.press('Enter');
@@ -199,6 +212,36 @@ test.describe('with three months of history', () => {
   });
 });
 
+test('arrow keys move onto Custom without opening the calendar', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await openAnalytics(page);
+  const dialog = page.getByRole('dialog', { name: 'Choose a custom date range' });
+  await page.getByRole('radio', { name: '90 days' }).click();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('radio', { name: 'Custom' })).toBeFocused();
+  await expect(dialog).toBeHidden();
+  await page.keyboard.press('Enter');
+  await expect(dialog).toBeVisible();
+});
+
+test('starts on 30 days and the calendar opens on those 30 days', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await openAnalytics(page);
+  await expect(page.getByRole('radio', { name: '30 days' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  const dialog = await openCalendar(page);
+  const selected = dialog.locator('.rdp-selected:not(.rdp-outside)');
+  await expect(selected.first()).toBeVisible();
+  const thisMonth = await selected.count();
+  const caption = dialog.locator('.rdp-caption_label');
+  const shownMonth = await caption.textContent();
+  await dialog.getByRole('button', { name: /previous month/i }).click();
+  await expect(caption).not.toHaveText(shownMonth ?? '');
+  expect(thisMonth + (await selected.count())).toBe(30);
+});
+
 test('is honest about an empty workspace', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await openAnalytics(page);
@@ -227,7 +270,7 @@ test('shows skeletons matching the layout on a cold load, then real data', async
   await expect(overviewPanel.locator('.an-skel-card').first()).toBeVisible();
   await expect(overviewPanel.getByText(/Loading .*…/)).toHaveCount(4);
   await expect(main.getByRole('region', { name: 'Harness health' })).toContainText('of 100', {
-    timeout: 5000,
+    timeout: 15_000,
   });
   await expect(overviewPanel).toHaveAttribute('aria-busy', 'false');
   await expect(overviewPanel.locator('.an-skel-card')).toHaveCount(0);

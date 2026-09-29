@@ -113,7 +113,7 @@ const APPROVAL_STATES: Record<ApprovalStatus, TaskItemState> = {
   expired: 'failed',
 };
 
-const DECISIONS: Record<ApprovalStatus, string> = {
+const DECISION_LABELS: Record<ApprovalStatus, string> = {
   pending: 'Waiting for you',
   allowed: 'Allowed',
   denied: 'Denied',
@@ -122,7 +122,7 @@ const DECISIONS: Record<ApprovalStatus, string> = {
 };
 
 function approvalDecision(row: ApprovalEventRow): string {
-  const decision = DECISIONS[row.status];
+  const decision = DECISION_LABELS[row.status];
   return row.option_name ? `${decision}: ${row.option_name}` : decision;
 }
 
@@ -159,12 +159,21 @@ function checkOutput(tails: readonly string[]): string | undefined {
   return text.length > CHECK_OUTPUT_SHOWN ? `…${text.slice(-CHECK_OUTPUT_SHOWN)}` : text;
 }
 
-async function checkEvents(db: Queryable, taskId: string): Promise<TaskListEvent[]> {
+async function taskArtifactBodies(
+  db: Queryable,
+  taskId: string,
+  kind: 'check' | 'shortcuts',
+): Promise<{ version: number; body: unknown }[]> {
   const { rows } = await db.query<{ version: number; body: unknown }>(
-    `SELECT version, body FROM run_artifacts WHERE task_id = $1 AND kind = 'check'
+    `SELECT version, body FROM run_artifacts WHERE task_id = $1 AND kind = $2
      ORDER BY version`,
-    [taskId],
+    [taskId, kind],
   );
+  return rows;
+}
+
+async function checkEvents(db: Queryable, taskId: string): Promise<TaskListEvent[]> {
+  const rows = await taskArtifactBodies(db, taskId, 'check');
   return rows.flatMap((row) => {
     const parsed = checkBodySchema.safeParse(row.body);
     if (!parsed.success) return [];
@@ -186,11 +195,7 @@ async function checkEvents(db: Queryable, taskId: string): Promise<TaskListEvent
 }
 
 async function shortcutEvents(db: Queryable, taskId: string): Promise<TaskListEvent[]> {
-  const { rows } = await db.query<{ version: number; body: unknown }>(
-    `SELECT version, body FROM run_artifacts WHERE task_id = $1 AND kind = 'shortcuts'
-     ORDER BY version`,
-    [taskId],
-  );
+  const rows = await taskArtifactBodies(db, taskId, 'shortcuts');
   return rows.flatMap((row) => {
     const parsed = shortcutsBodySchema.safeParse(row.body);
     if (!parsed.success) return [];

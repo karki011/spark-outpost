@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { parseAppEvent } from '@spark-outpost/contracts';
 import { listen, type NotificationListener } from '../persistence/notifications.ts';
 
-export const APP_EVENT_CLIENT_LIMIT = 32;
+const APP_EVENT_CLIENT_LIMIT = 32;
 const HEARTBEAT_MS = 15_000;
 const CLIENT_RETRY_MS = 2_000;
 const RELISTEN_MS = 2_000;

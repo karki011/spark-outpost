@@ -30,7 +30,7 @@ export class RunNotFoundError extends Error {
 
 export class RevertConflictError extends Error {}
 
-export const REMOVED_FOLDER_REASON =
+const REMOVED_FOLDER_REASON =
   'The folder this run worked in was removed, so it cannot be reverted on its own.';
 
 export interface SnapshotSource {
@@ -133,6 +133,17 @@ async function loadState(db: Queryable, workspaceId: string, runId: string) {
   return state;
 }
 
+function unrevertibleReason(run: {
+  working: boolean;
+  revertedAt: string | null;
+  files: readonly RunChange[];
+}): string | null {
+  if (run.working) return 'The run is still working.';
+  if (run.revertedAt) return 'This run was already reverted.';
+  if (run.files.length === 0) return 'No files changed since the run started.';
+  return null;
+}
+
 export async function runChanges(
   db: Queryable,
   workspaceId: string,
@@ -167,14 +178,11 @@ export async function runChanges(
       : (await backupChanges(await listBackups(db, runId), snapshot.root)).map((c) => c.change);
   if (files === null) return removed([]);
   const status = runStatusSchema.parse(state.status);
-  const reason =
-    !live && !isTerminalRunStatus(status)
-      ? 'The run is still working.'
-      : revertedAt
-        ? 'This run was already reverted.'
-        : files.length === 0
-          ? 'No files changed since the run started.'
-          : null;
+  const reason = unrevertibleReason({
+    working: !live && !isTerminalRunStatus(status),
+    revertedAt,
+    files,
+  });
   return { revertible: reason === null, revertedAt, files, reason };
 }
 

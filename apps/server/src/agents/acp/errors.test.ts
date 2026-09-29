@@ -1,5 +1,5 @@
 import { RequestError } from '@agentclientprotocol/sdk';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { failureError, toProviderError } from './errors.ts';
 
 const message = (error: unknown) => toProviderError('Fake', error, '').message;
@@ -26,6 +26,27 @@ describe('agent error messages', () => {
     );
     expect(failureError('Fake', { category: 'provider_error', title: 'Boom' }).message).toBe(
       'Fake stopped with an error: Boom',
+    );
+  });
+
+  it('redacts secrets in agent stderr and error text', () => {
+    const key = 'sk-ant-api03-AbCdEfGhIjKlMnOpQrStUv';
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      const error = toProviderError(
+        'Fake',
+        new Error(`bad key ${key}`),
+        `auth failed for ${key}\n`,
+      );
+      const printed = logged.mock.calls.flat().join(' ');
+      expect(printed).toContain('[redacted:api_key]');
+      expect(printed).not.toContain(key);
+      expect(error.message).toBe('Fake reported an error: bad key [redacted:api_key]');
+    } finally {
+      logged.mockRestore();
+    }
+    expect(failureError('Fake', { category: 'provider_error', title: key }).message).toBe(
+      'Fake stopped with an error: [redacted:api_key]',
     );
   });
 });

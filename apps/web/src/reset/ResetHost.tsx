@@ -4,6 +4,8 @@ import { GracePeriodBar } from '../ui/GracePeriodBar.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { clearLocalAppData, saveResetNotice, takeResetNotice } from './local-data.ts';
 import { resetSparkOutpost } from './reset-api.ts';
+import { graceBlobMood } from './reset-blob-mood.ts';
+import { ResetBlob } from './ResetBlob.tsx';
 import { setResetState, useResetState } from './reset-store.ts';
 import '../ui/toast.css';
 import './reset.css';
@@ -56,6 +58,9 @@ export function ResetHost() {
           seconds={GRACE_SECONDS}
           onElapse={() => void runReset(state.keepApiKeys)}
           onUndo={idle}
+          decoration={(secondsLeft) => (
+            <ResetBlob mood={graceBlobMood(secondsLeft)} size={40} className="grace-peek" />
+          )}
         />
       )}
       {state.phase === 'resetting' && (

@@ -1,6 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import type { McpCheck, McpScope, McpTransport } from '@spark-outpost/contracts';
-import { mcpFingerprint, type McpServerConfig } from '../agent-config/mcp-json.ts';
+import { z } from 'zod';
+import {
+  mcpCheckSchema,
+  userMcpServerSchema,
+  type McpCheck,
+  type McpScope,
+  type McpTransport,
+} from '@spark-outpost/contracts';
+import { mcpFingerprint, storedMcpConfig, type McpServerConfig } from '../agent-config/mcp-json.ts';
+import { audit } from '../agent-config/store.ts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
 
 export interface StoredUserConfig {
@@ -37,10 +45,22 @@ interface ServerDbRow {
   source: string;
   name: string;
   transport: McpTransport;
-  config: Partial<StoredUserConfig>;
+  config: unknown;
   fingerprint: string;
-  last_check: McpCheck | null;
+  last_check: unknown;
 }
+
+const serverShape = userMcpServerSchema.shape;
+const configFieldsSchema = z.object({
+  command: serverShape.command.catch(null),
+  args: serverShape.args.catch([]),
+  url: serverShape.url.catch(null),
+  envNames: serverShape.envNames.catch([]),
+  headerNames: serverShape.headerNames.catch([]),
+  secretNames: serverShape.secretNames.catch([]),
+});
+const storedConfigSchema = configFieldsSchema.catch(() => configFieldsSchema.parse({}));
+const storedCheckSchema = mcpCheckSchema.nullable().catch(null);
 
 function toRow(row: ServerDbRow): UserMcpRow {
   return {
@@ -49,15 +69,8 @@ function toRow(row: ServerDbRow): UserMcpRow {
     name: row.name,
     transport: row.transport,
     fingerprint: row.fingerprint,
-    check: row.last_check,
-    config: {
-      command: row.config.command ?? null,
-      args: row.config.args ?? [],
-      url: row.config.url ?? null,
-      envNames: row.config.envNames ?? [],
-      headerNames: row.config.headerNames ?? [],
-      secretNames: row.config.secretNames ?? [],
-    },
+    check: storedCheckSchema.parse(row.last_check),
+    config: storedConfigSchema.parse(row.config),
   };
 }
 
@@ -71,14 +84,7 @@ export function storedUserConfig(
   server: Omit<McpServerConfig, 'fingerprint'>,
   secretNames: string[],
 ): StoredUserConfig {
-  return {
-    command: server.command,
-    args: server.args,
-    url: server.url,
-    envNames: Object.keys(server.env).sort(),
-    headerNames: Object.keys(server.headers).sort(),
-    secretNames,
-  };
+  return { ...storedMcpConfig(server), secretNames };
 }
 
 const SERVER_COLUMNS = 'id, source, name, transport, config, fingerprint, last_check';
@@ -214,29 +220,26 @@ export async function setUserEnablement(
         [server.id, change.scope, change.scopeKey, change.enabled, server.fingerprint],
       );
     }
-    await client.query(
-      `INSERT INTO agent_config_audit (id, workspace_id, project_id, subject, target, enabled, detail)
-       VALUES ($1, $2, $3, 'mcp', $4, $5, $6)`,
-      [
-        randomUUID(),
-        workspaceId,
-        change.scope === 'project' ? change.scopeKey : null,
-        server.name,
-        change.enabled === true,
-        {
-          scope: change.scope,
-          scopeKey: change.scopeKey,
-          cleared: change.enabled === null,
-          source: server.source,
-          transport: server.transport,
-          fingerprint: server.fingerprint,
-          command: server.config.command,
-          args: server.config.args,
-          url: server.config.url,
-          envNames: server.config.envNames,
-          headerNames: server.config.headerNames,
-        },
-      ],
+    await audit(
+      client,
+      workspaceId,
+      change.scope === 'project' ? change.scopeKey : null,
+      'mcp',
+      change.enabled === true,
+      server.name,
+      {
+        scope: change.scope,
+        scopeKey: change.scopeKey,
+        cleared: change.enabled === null,
+        source: server.source,
+        transport: server.transport,
+        fingerprint: server.fingerprint,
+        command: server.config.command,
+        args: server.config.args,
+        url: server.config.url,
+        envNames: server.config.envNames,
+        headerNames: server.config.headerNames,
+      },
     );
   });
 }

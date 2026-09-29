@@ -44,7 +44,7 @@ import type { FlowAction } from './transitions.ts';
 
 type BuilderSpawn = Extract<FlowAction, { type: 'spawn' }>;
 
-export const MAIN_COPY = 'your version';
+const MAIN_COPY = 'your version';
 
 export async function repoBusy(db: Db, runId: string, root: string): Promise<boolean> {
   const { rows } = await db.query<{ busy: boolean }>(

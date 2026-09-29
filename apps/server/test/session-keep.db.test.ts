@@ -10,7 +10,7 @@ import { requestCancel } from '../src/persistence/runs.ts';
 import { KEPT_FOR_SESSION } from '../src/orchestration/session-keep.ts';
 import { STOPPED_NOTE, STOPPED_REPLY } from '../src/workflow/session-decision.ts';
 import {
-  SCENARIOS,
+  TRIVIAL,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -18,14 +18,12 @@ import {
   removeRepo,
   startOrchestrator,
   startScenario,
+  withTag,
   type Harness,
   type JevScript,
-  type Scenario,
 } from './orchestration-support.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
-
-const TRIVIAL = SCENARIOS[1] as Scenario;
 
 let t: TestDb;
 let root: string;
@@ -172,7 +170,7 @@ function fakePrompts(sessionId: string): string[] {
 
 async function stopMidBuild(script: JevScript) {
   harness = startOrchestrator(t, jevFetch(script), { sessions: store });
-  const slow = { ...TRIVIAL, text: `${TRIVIAL.text} #slowbuild` };
+  const slow = withTag(TRIVIAL, '#slowbuild');
   const first = await startScenario(t, root, slow, 'hands-off');
   await eventually(async () => {
     const rows = await builderSessions(first.conversationId);
@@ -246,7 +244,7 @@ describe('deleting a chat mid-run', () => {
   it('refuses while the run is active, then deletes the chat and its sessions once it stopped', async () => {
     const script: JevScript = { calls: [], scenario: TRIVIAL };
     harness = startOrchestrator(t, jevFetch(script), { sessions: store });
-    const slow = { ...TRIVIAL, text: `${TRIVIAL.text} #slowbuild` };
+    const slow = withTag(TRIVIAL, '#slowbuild');
     const { conversationId, runId } = await startScenario(t, root, slow, 'hands-off');
     await eventually(async () => {
       const { rows } = await t.db.query(

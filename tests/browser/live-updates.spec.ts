@@ -1,6 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { createDb } from '../../apps/server/src/persistence/db.ts';
-import { resetTestDatabase, testDatabaseUrl } from './database.ts';
+import { openTestDb, resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
 
 const QUIET_WINDOW_MS = 5_000;
@@ -10,7 +9,7 @@ const home = (page: Page) =>
 const section = (page: Page, name: string) => home(page).getByRole('region', { name });
 
 async function sql(text: string, values: unknown[] = []) {
-  const db = createDb(testDatabaseUrl());
+  const db = openTestDb();
   try {
     await db.query(text, values);
   } finally {

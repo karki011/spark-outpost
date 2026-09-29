@@ -11,6 +11,7 @@ import {
   type CostSource,
   type RunMode,
 } from '@spark-outpost/contracts';
+import { groupBy } from '../analytics/tally.ts';
 import type { Queryable } from './db.ts';
 
 interface RunAuditRow {
@@ -88,7 +89,7 @@ function toRunSummary(row: RunAuditRow, approvalWaits: ApprovalWait[]): AuditRun
   };
 }
 
-export const ORCHESTRATION_ROLE = 'Orchestration';
+const ORCHESTRATION_ROLE = 'Orchestration';
 
 function roleOf(row: RunAuditRow): string {
   const role = agentRoleSchema.safeParse(row.agent_role);
@@ -154,7 +155,7 @@ export async function conversationAuditRuns(
   return rows.map((row) => toRunSummary(row, waits.get(row.id) ?? []));
 }
 
-export function auditTotals(runs: readonly AuditRunSummary[]): AuditTotals {
+function auditTotals(runs: readonly AuditRunSummary[]): AuditTotals {
   const totals: AuditTotals = {
     runs: 0,
     inputTokens: 0,
@@ -186,13 +187,8 @@ export function auditTotals(runs: readonly AuditRunSummary[]): AuditTotals {
   return totals;
 }
 
-function groupBy<T>(items: readonly T[], key: (item: T) => string): T[][] {
-  const groups = new Map<string, T[]>();
-  for (const item of items) {
-    const name = key(item);
-    groups.set(name, [...(groups.get(name) ?? []), item]);
-  }
-  return [...groups.values()];
+function groupsOf<T>(items: readonly T[], key: (item: T) => string): T[][] {
+  return [...groupBy(items, key).values()];
 }
 
 export function summarizeAudit(
@@ -202,15 +198,11 @@ export function summarizeAudit(
   return {
     conversationId,
     totals: auditTotals(runs),
-    byProvider: groupBy(runs, (run) => run.provider).map((group) => ({
+    byProvider: groupsOf(runs, (run) => run.provider).map((group) => ({
       provider: group[0]!.provider,
       ...auditTotals(group),
     })),
-    byModel: groupBy(runs, (run) => JSON.stringify([run.provider, run.model])).map((group) => ({
-      provider: group[0]!.provider,
-      model: group[0]!.model,
-      ...auditTotals(group),
-    })),
+    byModel: byModel(runs),
     runs: [...runs],
     byRole: byRole(runs),
     orchestrations: orchestrationTotals(runs),
@@ -218,8 +210,16 @@ export function summarizeAudit(
 }
 
 function byRole(runs: readonly AuditRunSummary[]) {
-  return groupBy(runs, (run) => run.role).map((group) => ({
+  return groupsOf(runs, (run) => run.role).map((group) => ({
     role: group[0]!.role,
+    ...auditTotals(group),
+  }));
+}
+
+function byModel(runs: readonly AuditRunSummary[]) {
+  return groupsOf(runs, (run) => JSON.stringify([run.provider, run.model])).map((group) => ({
+    provider: group[0]!.provider,
+    model: group[0]!.model,
     ...auditTotals(group),
   }));
 }
@@ -236,13 +236,7 @@ function orchestrationTotals(runs: readonly AuditRunSummary[]) {
       runId: parent.runId,
       totals: auditTotals(members),
       byRole: byRole(members),
-      byModel: groupBy(members, (run) => JSON.stringify([run.provider, run.model])).map(
-        (group) => ({
-          provider: group[0]!.provider,
-          model: group[0]!.model,
-          ...auditTotals(group),
-        }),
-      ),
+      byModel: byModel(members),
     };
   });
 }

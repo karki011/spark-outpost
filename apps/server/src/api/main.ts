@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { DEV_API_TOKEN_FILE } from '@spark-outpost/contracts';
 import { loadConfig } from '../config.ts';
+import { startMorningBrief } from '../digest/morning.ts';
 import { ensureLocalWorkspace, pruneEmptyConversations } from '../persistence/conversations.ts';
 import { pruneUnlinkedAttachments } from '../persistence/attachments.ts';
 import { pruneProtocolLog } from '../persistence/audit-log.ts';
@@ -11,7 +12,7 @@ import { configuredBackup } from '../persistence/startup-backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
 import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
-import { keychainSecretStore, memorySecretStore } from '../setup/secrets.ts';
+import { configuredSecretStore } from '../setup/secrets.ts';
 import { loginShellSpawner } from '../terminal/pty.ts';
 import { ensureSpawnHelperExecutable } from '../terminal/pty-helper.ts';
 import { TerminalSessions } from '../terminal/sessions.ts';
@@ -22,6 +23,8 @@ import { fakeCapabilities } from '../providers/fake.ts';
 import { AppEventFeed, listenForAppEvents } from './app-events.ts';
 import { createApp } from './app.ts';
 import { takeLaunchToken } from './launch-token.ts';
+import { gitHubDepsOf } from './ship-routes.ts';
+import { loadInbox } from '../tickets/inbox.ts';
 import { RunEventHub } from './run-event-hub.ts';
 
 const apiToken = takeLaunchToken(
@@ -44,22 +47,21 @@ const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.
 const appEvents = new AppEventFeed();
 const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);
 
-const secrets =
-  config.SECRET_STORE === 'memory'
-    ? memorySecretStore()
-    : keychainSecretStore(config.KEYCHAIN_SERVICE);
+const secrets = configuredSecretStore(config);
+const endpoints = {
+  anthropicBaseUrl: config.ANTHROPIC_BASE_URL,
+  openaiBaseUrl: config.OPENAI_BASE_URL,
+  typesafeBaseUrl: config.TYPESAFE_BASE_URL,
+  zaiBaseUrl: config.ZAI_BASE_URL,
+  fetch,
+};
+const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const app = createApp({
   db,
   hub,
   workspaceId,
   secrets,
-  endpoints: {
-    anthropicBaseUrl: config.ANTHROPIC_BASE_URL,
-    openaiBaseUrl: config.OPENAI_BASE_URL,
-    typesafeBaseUrl: config.TYPESAFE_BASE_URL,
-    zaiBaseUrl: config.ZAI_BASE_URL,
-    fetch,
-  },
+  endpoints,
   runCommand,
   probeCapabilities: async (provider) => ({
     provider,
@@ -67,7 +69,7 @@ const app = createApp({
       ? fakeCapabilities(provider)
       : await probeCapabilities(agentDefinitions[provider], { secrets })),
   }),
-  loginShell: config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null,
+  loginShell,
   terminals,
   appEvents,
   port: config.API_PORT,
@@ -82,6 +84,19 @@ const app = createApp({
 const outcomeSweep = startOutcomeSweep(db, workspaceId, {
   sampleRate: config.OUTCOME_SAMPLE_RATE,
 });
+const githubDeps = { db, workspaceId, secrets, endpoints, runCommand, loginShell };
+const morningBrief = config.MORNING_BRIEF
+  ? startMorningBrief(db, workspaceId, () =>
+      loadInbox({
+        db,
+        workspaceId,
+        secrets,
+        fetch,
+        linearApiUrl: config.LINEAR_API_URL,
+        github: gitHubDepsOf({ ...githubDeps, githubApiUrl: config.GITHUB_API_URL }),
+      }),
+    )
+  : null;
 
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
   console.log(`API listening on http://${config.API_HOST}:${config.API_PORT}`);
@@ -95,6 +110,7 @@ attachTerminalSockets(server, terminals, {
 const shutdown = async () => {
   terminals.killAll();
   outcomeSweep.stop();
+  morningBrief?.stop();
   server.close();
   server.closeAllConnections();
   await listener.close();

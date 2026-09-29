@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { catalogEntry } from '../providers/catalog.ts';
 import { detectHint } from './hints.ts';
+import { descendantsOf } from './process-group.ts';
 import { shellEnvironment } from './pty.ts';
 
 const claude = catalogEntry('claude');
@@ -83,8 +84,7 @@ describe('shellEnvironment', () => {
 });
 
 describe('descendantsOf', () => {
-  it('finds children and grandchildren but not unrelated processes', async () => {
-    const { descendantsOf } = await import('./process-group.ts');
+  it('finds children and grandchildren but not unrelated processes', () => {
     const table: Array<[number, number]> = [
       [10, 1],
       [11, 10],

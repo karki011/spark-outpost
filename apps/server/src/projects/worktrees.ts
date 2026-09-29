@@ -107,7 +107,7 @@ export async function tryMerge(root: string, base: string, result: string): Prom
   }
 }
 
-function literal(paths: readonly string[]): string[] {
+function excludedPathspecs(paths: readonly string[]): string[] {
   return paths.map((file) => `:(exclude,top,literal)${file}`);
 }
 
@@ -125,7 +125,7 @@ export async function applyTree(
     to,
     '--',
     '.',
-    ...literal(skip),
+    ...excludedPathspecs(skip),
   ]);
   if (!patch.trim()) return;
   const top = await repoTop(root);

@@ -1,8 +1,10 @@
+import { createRequire } from 'node:module';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { openChats } from './navigation.ts';
+import { connectTickets, openTickets, resetTicketFakes } from './ticket-seed.ts';
 
 const THEMES = [
   'light',
@@ -20,6 +22,15 @@ const THEMES = [
 ] as const;
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const BLOCKING_IMPACTS = new Set(['serious', 'critical']);
+
+const axeCore = createRequire(import.meta.resolve('@axe-core/playwright'))('axe-core') as {
+  getRules(tags: string[]): { ruleId: string }[];
+};
+const isColourOrAria = (rule: string) => rule === 'color-contrast' || rule.startsWith('aria-');
+const CHECKED_RULES = axeCore
+  .getRules(WCAG_TAGS)
+  .map((rule) => rule.ruleId)
+  .filter(isColourOrAria);
 
 const TEXT_SPACING_CSS = `
   * { line-height: 1.5 !important; letter-spacing: 0.12em !important; word-spacing: 0.16em !important; }
@@ -55,8 +66,7 @@ async function useTheme(page: Page, theme: string) {
 }
 
 function isBlocking(violation: { id: string; impact?: string | null }): boolean {
-  const colourOrAria = violation.id === 'color-contrast' || violation.id.startsWith('aria-');
-  return colourOrAria && BLOCKING_IMPACTS.has(violation.impact ?? '');
+  return isColourOrAria(violation.id) && BLOCKING_IMPACTS.has(violation.impact ?? '');
 }
 
 async function settle(page: Page) {
@@ -73,7 +83,10 @@ async function settle(page: Page) {
 
 async function blockingViolations(page: Page, screen: string) {
   await settle(page);
-  const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+  const results = await new AxeBuilder({ page })
+    .withRules(CHECKED_RULES)
+    .setLegacyMode(true)
+    .analyze();
   return results.violations.filter(isBlocking).map((violation) => ({
     screen,
     rule: violation.id,
@@ -124,6 +137,36 @@ for (const theme of THEMES) {
     expect(found).toEqual([]);
   });
 }
+
+test('the Tickets screen has no serious colour-contrast or ARIA issues in any theme', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await resetTicketFakes();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openTickets(page);
+  await page.getByRole('button', { name: 'Connect Jira' }).click();
+  const found = await blockingViolations(page, 'tickets connect');
+
+  await connectTickets(page);
+  await openTickets(page);
+  const row = page.locator('li[data-ticket$=":WEB-433"]');
+  await row.getByRole('button').first().click({ timeout: 15_000 });
+  await expect(page.getByRole('complementary', { name: 'WEB-433 details' })).toBeVisible();
+  for (const theme of THEMES) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `tickets inbox ${theme}`)));
+  }
+
+  await useTheme(page, 'light');
+  await page.getByRole('searchbox').fill('upload');
+  await page.locator('li[data-ticket$=":WEB-437"]').hover();
+  await page.getByRole('button', { name: 'Assign WEB-437 to me' }).click();
+  await expect(page.getByRole('dialog', { name: /Take WEB-437/ })).toBeVisible();
+  found.push(...(await blockingViolations(page, 'tickets search with confirm')));
+
+  expect(found).toEqual([]);
+});
 
 test('interactive targets on the chat screen are at least 24 by 24 pixels', async ({ page }) => {
   await openWorkedChat(page);

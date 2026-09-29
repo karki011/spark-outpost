@@ -4,6 +4,7 @@ import { stripVTControlCharacters } from 'node:util';
 import { CHECK_OUTPUT_TAIL_BYTES } from '@spark-outpost/contracts';
 import { isSensitiveEnvKey, redactText, storableText } from '../audit/redact.ts';
 import { relativeInside } from '../projects/path-policy.ts';
+import { isSecretEnvName } from '../setup/environment.ts';
 import type { CheckCommand } from './detect.ts';
 
 export const CHECK_TIMEOUT_MS = 120_000;
@@ -32,7 +33,7 @@ export async function insideProject(root: string, cwd: string): Promise<boolean>
 
 export function checkEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   const kept = Object.entries(env).filter(
-    ([key]) => !isSensitiveEnvKey(key) && !DATABASE_ENV.test(key),
+    ([key]) => !isSensitiveEnvKey(key) && !isSecretEnvName(key) && !DATABASE_ENV.test(key),
   );
   return { ...Object.fromEntries(kept), CI: '1', NO_COLOR: '1', FORCE_COLOR: '0' };
 }

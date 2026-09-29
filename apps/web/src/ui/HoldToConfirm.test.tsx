@@ -1,13 +1,17 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { HoldToConfirm } from './HoldToConfirm.tsx';
+import { HoldToConfirm, type HoldChange } from './HoldToConfirm.tsx';
 
 let onConfirm: ReturnType<typeof vi.fn<() => void>>;
+let onHoldChange: ReturnType<typeof vi.fn<(change: HoldChange) => void>>;
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  vi.useFakeTimers({
+    toFake: ['setTimeout', 'clearTimeout', 'Date', 'requestAnimationFrame', 'cancelAnimationFrame'],
+  });
   onConfirm = vi.fn<() => void>();
+  onHoldChange = vi.fn<(change: HoldChange) => void>();
   render(
     <HoldToConfirm
       label="Hold to reset"
@@ -16,6 +20,7 @@ beforeEach(() => {
       releasedHint="Released early. Nothing happened."
       holdMs={1500}
       onConfirm={onConfirm}
+      onHoldChange={onHoldChange}
     />,
   );
 });
@@ -72,5 +77,26 @@ describe('HoldToConfirm', () => {
     fireEvent.blur(button());
     advance(2000);
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('reports hold progress, an early release and completion', () => {
+    const lastChange = () => onHoldChange.mock.lastCall?.[0];
+    fireEvent.pointerDown(button(), { button: 0, pointerId: 1 });
+    expect(lastChange()).toEqual({ phase: 'holding', progress: 0 });
+    advance(750);
+    expect(lastChange()?.phase).toBe('holding');
+    expect(lastChange()?.progress).toBeCloseTo(0.5, 1);
+    fireEvent.pointerUp(button(), { button: 0, pointerId: 1 });
+    expect(lastChange()?.phase).toBe('released');
+    expect(lastChange()?.progress).toBeCloseTo(0.5, 1);
+    const calls = onHoldChange.mock.calls.length;
+    advance(1000);
+    expect(onHoldChange.mock.calls.length).toBe(calls);
+
+    fireEvent.pointerDown(button(), { button: 0, pointerId: 1 });
+    advance(1500);
+    expect(lastChange()).toEqual({ phase: 'done', progress: 1 });
+    fireEvent.pointerUp(button(), { button: 0, pointerId: 1 });
+    expect(lastChange()).toEqual({ phase: 'idle', progress: 0 });
   });
 });

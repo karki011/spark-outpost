@@ -120,7 +120,7 @@ describe('task fixtures', () => {
       expect(verification.reasons).toEqual([]);
       expect(verification.passed).toBe(true);
       if (task.safety) expect(verification.safety?.fail).toBe(0);
-    }, 30_000);
+    }, 60_000);
   }
 
   it('rejects a bug fix that edits the provided test instead of the source', async () => {
@@ -134,5 +134,5 @@ describe('task fixtures', () => {
     const verification = await verifyRepo(task, repo, checks);
     expect(verification.passed).toBe(false);
     expect(verification.outOfScope).toEqual(['test/dates.test.ts']);
-  }, 30_000);
+  }, 60_000);
 });

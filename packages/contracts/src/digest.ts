@@ -7,6 +7,8 @@ export const DIGEST_LINE_MAX_LENGTH = 280;
 export const DIGEST_REASON_MAX_LENGTH = 200;
 export const DIGEST_DRAFT_MAX_LENGTH = 600;
 export const DIGEST_HEADLINE_MAX_LENGTH = 140;
+export const DIGEST_ITEMS_MAX = 5;
+export const DIGEST_ITEM_MAX_LENGTH = 240;
 
 export const digestLineSchema = z.object({
   text: z.string().trim().min(1).max(DIGEST_LINE_MAX_LENGTH),
@@ -21,10 +23,17 @@ export const digestSuggestionSchema = z.object({
 });
 export type DigestSuggestion = z.infer<typeof digestSuggestionSchema>;
 
+export const digestItemSchema = z.object({
+  itemId: z.string().min(1).max(200),
+  text: z.string().trim().min(1).max(DIGEST_ITEM_MAX_LENGTH),
+});
+export type DigestItem = z.infer<typeof digestItemSchema>;
+
 export const digestBodySchema = z.object({
   headline: z.string().trim().min(1).max(DIGEST_HEADLINE_MAX_LENGTH),
   lines: z.array(digestLineSchema).max(DIGEST_LINES_MAX),
   suggestions: z.array(digestSuggestionSchema).max(DIGEST_SUGGESTIONS_MAX),
+  items: z.array(digestItemSchema).max(DIGEST_ITEMS_MAX).default([]),
   structured: z.boolean(),
 });
 export type DigestBody = z.infer<typeof digestBodySchema>;
@@ -38,10 +47,11 @@ export const digestReplySchema = z.object({
         chatId: z.string().nullable().optional(),
       }),
     )
-    .min(1),
+    .default([]),
   suggestions: z
     .array(z.object({ chatId: z.string(), reason: z.string(), draft: z.string() }))
     .default([]),
+  items: z.array(z.object({ itemId: z.string(), text: z.string() })).default([]),
 });
 export type DigestReply = z.infer<typeof digestReplySchema>;
 

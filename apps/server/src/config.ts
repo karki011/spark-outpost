@@ -73,6 +73,10 @@ const configSchema = z.object({
     .default(DEFAULT_BRANCH_PREFIX),
   BACKUP_DIR: z.string().min(1).optional(),
   WEB_ROOT: z.string().min(1).optional(),
+  MORNING_BRIEF: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
 });
 
 export type Config = z.infer<typeof configSchema>;

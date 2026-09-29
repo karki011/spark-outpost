@@ -1,6 +1,6 @@
 import { agentLabel, nextCrewName, type AgentPick, type AgentRole } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../advisor/policy.ts';
-import { whyLine } from '../model-cards/why.ts';
+import { jevLabel, samePickModel, whyLine } from '../model-cards/why.ts';
 import { insertDecision, usedNames } from '../persistence/orchestrations.ts';
 import { complexByBreadth, complexByJev, firstSignal } from './builder-complexity.ts';
 import { belowFloor, floorReason, type FloorRole } from './model-floor.ts';
@@ -92,13 +92,19 @@ async function scoutRoute(s: Session): Promise<ResolvedRoute> {
 export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRoute> {
   const previous = s.routes.get(spawn.role);
   if (previous && spawn.escalate) {
-    const builder = spawn.role === 'builder';
-    return { route: (builder ? escalateBuilder : escalate)(s.route, previous) };
+    const route =
+      spawn.role === 'builder' ? escalateBuilder(s.route, previous) : escalate(s.route, previous);
+    return { route };
   }
   if (previous) return { route: previous };
   if (spawn.role === 'critic') return { route: routeCritic(s.route) };
   if (spawn.role === 'scout') return scoutRoute(s);
   return firstBuilderRoute(s);
+}
+
+export function escalatedBuilderPick(s: Session): AgentPick | null {
+  const previous = s.routes.get('builder');
+  return previous ? escalateBuilder(s.route, previous).pick : null;
 }
 
 export async function nameFor(s: Session, role: AgentRole): Promise<string> {
@@ -113,8 +119,8 @@ export function labelFor(role: AgentRole, pick: AgentPick, name: string): string
 
 function jevLine(route: MemberRoute): string {
   const jev = route.autoWouldUse;
-  if (!jev || jev.model === route.pick.model) return '';
-  return ` · Jev would have used ${jev.modelLabel ?? jev.model}`;
+  if (!jev || samePickModel(jev, route.pick)) return '';
+  return ` · Jev would have used ${jevLabel(jev, route.pick)}`;
 }
 
 export async function recordRoute(

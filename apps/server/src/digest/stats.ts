@@ -1,5 +1,6 @@
 import { DIGEST_HEADLINE_MAX_LENGTH, type DigestStats } from '@spark-outpost/contracts';
 import type { ActivityChat } from './input.ts';
+import { ellipsize } from './text.ts';
 
 export const EMPTY_DIGEST_STATS: DigestStats = {
   finished: 0,
@@ -40,8 +41,5 @@ export function fallbackHeadline(stats: DigestStats): string {
   const activity = parts.length > 0 ? parts.join(', ') : 'Nothing new';
   const spend =
     stats.costUsd !== null && stats.costUsd > 0 ? `, ${formatUsd(stats.costUsd)} spent` : '';
-  const line = `${activity}${spend}.`;
-  return line.length <= DIGEST_HEADLINE_MAX_LENGTH
-    ? line
-    : `${line.slice(0, DIGEST_HEADLINE_MAX_LENGTH - 1).trimEnd()}…`;
+  return ellipsize(`${activity}${spend}.`, DIGEST_HEADLINE_MAX_LENGTH);
 }

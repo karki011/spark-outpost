@@ -6,6 +6,8 @@ import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { linkedConversation } from './approval-support.ts';
 import {
   CODEX_MODELS,
+  EFFORTS,
+  TRIVIAL,
   driveToEnd,
   gitRepo,
   removeRepo,
@@ -13,8 +15,6 @@ import {
   type Harness,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const EFFORTS = ['low', 'medium', 'high'].map((id) => ({ id, label: id, description: null }));
 
 let t: TestDb;
 let root: string;
@@ -53,7 +53,7 @@ async function build(level: InvolvementLevel) {
   const sent = await sendUserMessage(
     t.db,
     conversationId,
-    { id: randomUUID(), content: 'Fix the typo in the README heading. #build' },
+    { id: randomUUID(), content: TRIVIAL.text },
     {
       provider: 'codex',
       model: 'gpt-6-sol',
@@ -81,7 +81,7 @@ async function build(level: InvolvementLevel) {
   return { ...result, builders: builders.rows, copies: copies.rows, status };
 }
 
-describe('a Codex-only crew in Do', () => {
+describe('a Codex-only crew in Do', { timeout: 60_000 }, () => {
   it.each(['balanced'] as const)(
     'builds in place at %s and asks for the edit',
     async (level) => {

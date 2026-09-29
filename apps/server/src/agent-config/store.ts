@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { AgentConfigSwitch } from '@spark-outpost/contracts';
 import { withTransaction, type Db, type Queryable } from '../persistence/db.ts';
-import type { McpServerConfig } from './mcp-json.ts';
+import { storedMcpConfig, type McpServerConfig } from './mcp-json.ts';
 
 export interface AgentSettingsRow {
   instructions: boolean;
@@ -59,7 +59,7 @@ export async function agentSettingsFor(
 export async function audit(
   db: Queryable,
   workspaceId: string,
-  projectId: string,
+  projectId: string | null,
   subject: string,
   enabled: boolean,
   target: string | null = null,
@@ -115,16 +115,6 @@ export async function updateAgentSettings(
   });
 }
 
-function storedConfig(server: McpServerConfig) {
-  return {
-    command: server.command,
-    args: server.args,
-    url: server.url,
-    envNames: Object.keys(server.env).sort(),
-    headerNames: Object.keys(server.headers).sort(),
-  };
-}
-
 export async function setProjectMcpServer(
   db: Db,
   workspaceId: string,
@@ -147,7 +137,7 @@ export async function setProjectMcpServer(
         projectId,
         server.name,
         server.transport,
-        storedConfig(server),
+        storedMcpConfig(server),
         server.fingerprint,
       ],
     );
@@ -161,7 +151,7 @@ export async function setProjectMcpServer(
     await audit(client, workspaceId, projectId, 'mcp', enabled, server.name, {
       fingerprint: server.fingerprint,
       transport: server.transport,
-      ...storedConfig(server),
+      ...storedMcpConfig(server),
     });
   });
 }

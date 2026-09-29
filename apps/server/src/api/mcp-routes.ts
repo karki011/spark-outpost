@@ -46,13 +46,42 @@ export function mcpRoutes({
 }: McpRouteDeps): Router {
   const router = Router();
 
-  const list = async (): Promise<UserMcpList> => {
+  const userServers = async () => {
     const servers = await listUserMcp(db, workspaceId);
-    const rows = await enablementsFor(
+    const enablements = await enablementsFor(
       db,
       servers.map((server) => server.id),
     );
-    return { servers: servers.map((server) => userServerView(server, rows)) };
+    return { servers, enablements };
+  };
+
+  const list = async (): Promise<UserMcpList> => {
+    const { servers, enablements } = await userServers();
+    return { servers: servers.map((server) => userServerView(server, enablements)) };
+  };
+
+  const projectServers = async (projectIds: readonly string[]): Promise<ChatMcpServer[]> => {
+    const servers: ChatMcpServer[] = [];
+    const approved = await enabledProjectMcp(db, projectIds);
+    for (const projectId of projectIds) {
+      const project = await getProject(db, workspaceId, projectId).catch(() => null);
+      const scan = project ? await scanner.scan(project.rootPath).catch(() => null) : null;
+      if (!project || !scan) continue;
+      const enabled = approved.get(projectId) ?? new Map<string, string>();
+      for (const server of scan.mcpServers) {
+        const reviewed = enabled.get(server.name);
+        servers.push({
+          kind: 'project',
+          projectId,
+          projectName: project.name,
+          name: server.name,
+          transport: server.transport,
+          enabled: reviewed === server.fingerprint,
+          changed: reviewed !== undefined && reviewed !== server.fingerprint,
+        });
+      }
+    }
+    return servers;
   };
 
   const serverOf = async (req: Request): Promise<UserMcpRow> => {
@@ -122,11 +151,7 @@ export function mcpRoutes({
   router.get('/conversations/:id/mcp', async (req, res) => {
     const chatId = paramId(req);
     const projectIds = await conversationProjectIds(db, chatId);
-    const users = await listUserMcp(db, workspaceId);
-    const rows = await enablementsFor(
-      db,
-      users.map((server) => server.id),
-    );
+    const { servers: users, enablements } = await userServers();
     const servers: ChatMcpServer[] = users.map((server) => ({
       kind: 'user',
       id: server.id,
@@ -134,28 +159,10 @@ export function mcpRoutes({
       source: server.source,
       transport: server.transport,
       fingerprint: server.fingerprint,
-      ...effectiveFor(server, rows, chatId, projectIds),
+      ...effectiveFor(server, enablements, chatId, projectIds),
       check: server.check,
     }));
-    const approved = await enabledProjectMcp(db, projectIds);
-    for (const projectId of projectIds) {
-      const project = await getProject(db, workspaceId, projectId).catch(() => null);
-      const scan = project ? await scanner.scan(project.rootPath).catch(() => null) : null;
-      if (!project || !scan) continue;
-      const enabled = approved.get(projectId) ?? new Map<string, string>();
-      for (const server of scan.mcpServers) {
-        const reviewed = enabled.get(server.name);
-        servers.push({
-          kind: 'project',
-          projectId,
-          projectName: project.name,
-          name: server.name,
-          transport: server.transport,
-          enabled: reviewed === server.fingerprint,
-          changed: reviewed !== undefined && reviewed !== server.fingerprint,
-        });
-      }
-    }
+    servers.push(...(await projectServers(projectIds)));
     res.json({ servers });
   });
 

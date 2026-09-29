@@ -3,7 +3,7 @@ import { modelLabel } from '../analytics/facts.ts';
 import type { SessionRun } from '../analytics/resume.ts';
 import { groupBy, roundTo } from '../analytics/tally.ts';
 import type { Queryable } from './db.ts';
-import { WINDOW_FILTER, windowParams } from './analytics-facts.ts';
+import { WINDOW_FILTER, windowParams } from './analytics-window.ts';
 
 const WORKSPACE_RUNS = `FROM runs r JOIN conversations c ON c.id = r.conversation_id
   WHERE c.workspace_id = $1 AND ${WINDOW_FILTER}`;
@@ -100,7 +100,7 @@ export async function dailySpend(
        COALESCE(sum(cost) FILTER (WHERE estimated), 0)::float8 AS estimated_usd
      FROM (
        SELECT to_char(r.created_at AT TIME ZONE $4, 'YYYY-MM-DD') AS day, true AS agent,
-         r.cost_usd AS cost, r.cost_source = 'estimated' AS estimated
+         r.cost_usd AS cost, r.cost_source IS NOT DISTINCT FROM 'estimated' AS estimated
        ${WORKSPACE_RUNS}
        UNION ALL
        SELECT to_char(r.created_at AT TIME ZONE $4, 'YYYY-MM-DD'), false, a.jev_cost_usd, true
@@ -134,18 +134,6 @@ export async function jevSpend(
   );
   const row = rows[0];
   return { calls: row?.calls ?? 0, costUsd: roundTo(row?.cost_usd ?? 0, 6) };
-}
-
-export async function windowBounds(
-  db: Queryable,
-  window: AnalyticsWindow,
-): Promise<{ since: Date; until: Date }> {
-  const { rows } = await db.query<{ since: Date; until: Date }>(
-    `SELECT ($1::date)::timestamp AT TIME ZONE $3 AS since,
-       ($2::date + 1)::timestamp AT TIME ZONE $3 AS until`,
-    [window.from, window.to, window.timeZone],
-  );
-  return rows[0]!;
 }
 
 interface SessionRow {

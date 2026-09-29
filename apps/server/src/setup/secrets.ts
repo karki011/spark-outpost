@@ -1,5 +1,6 @@
 import { Entry } from '@napi-rs/keyring';
 import type { ConnectableId, TicketSourceId } from '@spark-outpost/contracts';
+import type { Config } from '../config.ts';
 
 export type TicketSecretId = `ticket:${TicketSourceId}`;
 export type SecretId = ConnectableId | 'github' | TicketSecretId | `mcp:${string}`;
@@ -47,4 +48,12 @@ export function memorySecretStore(seed: Partial<Record<SecretId, string>> = {}):
       secrets.delete(provider);
     },
   };
+}
+
+export function configuredSecretStore(
+  config: Pick<Config, 'SECRET_STORE' | 'MEMORY_SECRETS' | 'KEYCHAIN_SERVICE'>,
+): SecretStore {
+  return config.SECRET_STORE === 'memory'
+    ? memorySecretStore(config.MEMORY_SECRETS)
+    : keychainSecretStore(config.KEYCHAIN_SERVICE);
 }

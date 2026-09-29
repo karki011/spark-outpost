@@ -2,9 +2,8 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import { createTestDb, startChat, type TestDb } from './support.ts';
 
 let t: TestDb;
 let app: ReturnType<typeof createTestApp>;
@@ -31,15 +30,7 @@ const order = (conversationIds: unknown) =>
     .send({ conversationIds });
 
 async function chat(content: string): Promise<string> {
-  const id = randomUUID();
-  await sendUserMessage(
-    t.db,
-    id,
-    { id: randomUUID(), content },
-    { provider: 'fake' },
-    t.workspaceId,
-  );
-  return id;
+  return (await startChat(t, content)).conversationId;
 }
 
 async function pinnedOrders(): Promise<Record<string, number | null>> {

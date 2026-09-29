@@ -1,7 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
-import { createDb } from '../../apps/server/src/persistence/db.ts';
 import { fakeReply } from '../../apps/server/src/providers/fake.ts';
-import { resetTestDatabase, testDatabaseUrl } from './database.ts';
+import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
 const MAX_FRAME_GROWTH = 200;
@@ -73,7 +72,7 @@ function detailResponse(page: Page, conversationPath: string, timeout?: number) 
 }
 
 async function touchConversation(id: string) {
-  const db = createDb(testDatabaseUrl());
+  const db = openTestDb();
   try {
     await db.query('UPDATE conversations SET updated_at = now() WHERE id = $1', [id]);
   } finally {

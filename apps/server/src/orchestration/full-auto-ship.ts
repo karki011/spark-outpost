@@ -1,9 +1,4 @@
-import {
-  CHECKPOINT_OPTION,
-  preferredShipMode,
-  type ShipMode,
-  type ShipResult,
-} from '@spark-outpost/contracts';
+import { CHECKPOINT_OPTION, preferredShipMode, type ShipResult } from '@spark-outpost/contracts';
 import { insertApproval } from '../persistence/approvals.ts';
 import { shipsFailingChecks } from '../persistence/setup.ts';
 import { runChanges } from '../projects/run-changes.ts';
@@ -14,10 +9,10 @@ import { planShip, type ShipDeps, type ShipPlan } from '../ship/prepare.ts';
 import { shipTask } from '../ship/service.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { checkBudget } from './budget-check.ts';
-import { acceptCard } from './checkpoint.ts';
+import { checksFailing } from './check-results.ts';
+import { acceptCard, checkpointApproval } from './checkpoint.ts';
 import { RISKY_PR_NOTE } from './checkpoint-policy.ts';
 import { assumptionPrNote } from './clarify.ts';
-import { latestChecks } from './final-message.ts';
 import { sessionReviewLine } from './critic-fix.ts';
 import { publish, type Session } from './session.ts';
 import type { FlowEvent } from './transitions.ts';
@@ -43,10 +38,6 @@ function shipDeps(s: Session): ShipDeps {
   };
 }
 
-export function checksFailing(s: Session): boolean {
-  return latestChecks(s.checkBodies).some((body) => body.status === 'failed');
-}
-
 export async function autoKeep(
   s: Session,
   keptBy: 'balanced' | 'hands-off' | 'full-auto',
@@ -59,32 +50,12 @@ export async function autoKeep(
   s.checkpoints += 1;
   const kept = await insertApproval(
     s.deps.db,
-    {
-      runId: s.lease.runId,
-      toolCallId: `checkpoint:${card.kind}:${s.checkpoints}`,
-      rpcId: null,
-      kind: card.kind,
-      title: card.title,
-      payload: {
-        command: null,
-        cwd: null,
-        paths: [],
-        diffs: [],
-        truncated: false,
-        checkpoint: card.payload,
-      },
-      options: card.options,
-      reason: card.payload.reason,
-    },
+    checkpointApproval(s.lease.runId, card, s.checkpoints),
     { status: 'allowed', decidedBy: 'level', optionId: CHECKPOINT_OPTION.keep },
   );
   await s.append(runEvents.approvalRequested(kept));
   await s.append(runEvents.approvalDecided(kept));
   await publish(s);
-}
-
-function modeFor(plan: ShipPlan): ShipMode | null {
-  return preferredShipMode(plan.modes);
 }
 
 function pullRequestLine(result: ShipResult, failing: boolean): string {
@@ -119,6 +90,11 @@ export async function shipFullAuto(s: Session): Promise<FlowEvent> {
   return { type: 'shipped' };
 }
 
+export function shipFailureLine(error: unknown): string {
+  const reason = error instanceof Error ? error.message : String(error);
+  return `Full auto → PR kept the change but could not ship it: ${reason}`;
+}
+
 async function ship(s: Session, failing: boolean): Promise<string> {
   if (!s.taskId) return 'Full auto → PR kept the change, but it has no task to ship.';
   const notes = [
@@ -131,7 +107,7 @@ async function ship(s: Session, failing: boolean): Promise<string> {
   const options = { keepCheckout: true, duringRun: true, notes };
   try {
     const plan = await planShip(deps, s.taskId, options);
-    const mode = plan.blocked ? null : modeFor(plan);
+    const mode = plan.blocked ? null : preferredShipMode(plan.modes);
     if (!mode) {
       return `Full auto → PR kept the change but did not ship it: ${plan.blocked?.message ?? plan.notes[0] ?? 'there is nothing to ship.'}`;
     }
@@ -139,6 +115,6 @@ async function ship(s: Session, failing: boolean): Promise<string> {
     const result = await shipTask(deps, s.taskId, { mode, title: title.slice(0, 200) }, options);
     return shippedLine(result, plan, failing);
   } catch (error) {
-    return `Full auto → PR kept the change but could not ship it: ${(error as Error).message}`;
+    return shipFailureLine(error);
   }
 }

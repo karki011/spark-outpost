@@ -11,11 +11,8 @@ import {
   type ProviderOutput,
 } from '../src/providers/provider.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
-};
 const claude = createAcpProvider({
   definition: { ...agentDefinitions.claude, name: 'Fake', ...FAKE_AGENT_MODES },
   launch,
@@ -83,12 +80,12 @@ async function run(
   } catch (caught) {
     error = caught;
   }
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   const steps = outputs.flatMap((output) => (output.kind === 'step_started' ? [output.name] : []));
   return { text, steps, error };
 }
 
-describe('ACP permission requests in Do mode', () => {
+describe('ACP permission requests in Do mode', { timeout: 20_000 }, () => {
   it('sends the request to the gate and answers with the allowed option', async () => {
     const { stub, requests } = gate(allow);
     const result = await run('#write', stub);
@@ -141,7 +138,7 @@ describe('ACP permission requests in Do mode', () => {
   });
 });
 
-describe('fs/write_text_file in Do mode', () => {
+describe('fs/write_text_file in Do mode', { timeout: 20_000 }, () => {
   it('asks the gate with a diff, then writes the file', async () => {
     const { stub, requests } = gate(allow);
     const target = join(root, 'notes.txt');

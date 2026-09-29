@@ -8,6 +8,7 @@ import { CHAIN_START, chainRows, verifyChain, type HashedRow } from '../audit/ha
 import type { ProtocolEntry } from '../audit/protocol-entry.ts';
 import { withTransaction, type Db, type DbClient, type Queryable } from './db.ts';
 import type { Lease } from './jobs.ts';
+import { containsPattern } from './like-pattern.ts';
 import { assertLeaseHeld } from './run-events.ts';
 
 interface LogRow {
@@ -45,7 +46,7 @@ function toHashedRow(row: LogRow): HashedRow {
   };
 }
 
-export function toLogEntry(row: LogRow): ProtocolLogEntry {
+function toLogEntry(row: LogRow): ProtocolLogEntry {
   return toHashedRow(row) as ProtocolLogEntry;
 }
 
@@ -123,10 +124,6 @@ async function writeEntries(
   );
 }
 
-function escapeLike(text: string): string {
-  return text.replace(/[\\%_]/g, (character) => `\\${character}`);
-}
-
 export async function listProtocolLog(
   db: Queryable,
   runId: string,
@@ -143,7 +140,7 @@ export async function listProtocolLog(
     conditions.push(`method = $${params.length}`);
   }
   if (query.q) {
-    params.push(`%${escapeLike(query.q)}%`);
+    params.push(containsPattern(query.q));
     conditions.push(`payload::text ILIKE $${params.length}`);
   }
   params.push(query.limit + 1);

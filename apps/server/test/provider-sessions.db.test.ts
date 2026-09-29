@@ -6,17 +6,21 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createConversation } from '../src/persistence/conversations.ts';
 import { evictBeyondLimit, latestProviderSession } from '../src/persistence/provider-sessions.ts';
-import { saveConnection } from '../src/persistence/setup.ts';
 import { createProject } from '../src/projects/projects.ts';
 import type { RunInput } from '../src/workflow/run-input.ts';
 import { SESSION_WORKDIR_ROOT } from '../src/workflow/session-decision.ts';
 import { prepareTurnSession, sweepSessions } from '../src/workflow/turn-session.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
-import { createTestDb, type TestDb } from './support.ts';
+import {
+  chatTurnInput,
+  connectCliProvider,
+  createTestDb,
+  SESSION_LIMITS,
+  type TestDb,
+} from './support.ts';
 
 let t: TestDb;
 let app: ReturnType<typeof createTestApp>;
-const limits = { idleMs: 30 * 60_000, openLimit: 8 };
 
 beforeEach(async () => {
   t = await createTestDb();
@@ -46,33 +50,11 @@ async function message(conversationId: string, role: 'user' | 'assistant', conte
   return id;
 }
 
-function chatInput(conversationId: string, previousMessageId: string | null): RunInput {
-  return {
-    identity: { runId: randomUUID(), threadId: conversationId },
-    workspaceId: t.workspaceId,
-    prompt: 'next',
-    attachments: [],
-    provider: 'claude',
-    history: [],
-    settings: { method: 'cli', model: 'sonnet', modelLabel: 'Sonnet', effort: 'medium' },
-    projectRoots: [],
-    mode: 'chat',
-    level: 'balanced',
-    agentMode: null,
-    parentRunId: null,
-    userRequest: 'next',
-    role: null,
-    copyOf: null,
-    askTitle: false,
-    previousMessageId,
-  };
-}
-
 const usage = (costUsd: number | null) =>
   ({ kind: 'usage', contextUsed: 10, contextSize: 100, costUsd }) as const;
 
 async function completeTurn(input: RunInput, sessionId: string, reply: string, cost = 0.015) {
-  const turn = await prepareTurnSession(t.db, input, limits);
+  const turn = await prepareTurnSession(t.db, input, SESSION_LIMITS);
   if (!turn) throw new Error('The turn was not tracked.');
   await turn.started({
     kind: 'session',
@@ -92,12 +74,16 @@ describe('provider sessions across chat turns', () => {
   it('resumes the next turn and starts fresh once the chat moves on', async () => {
     const id = await conversation();
     await message(id, 'user', 'hi');
-    const first = await completeTurn(chatInput(id, null), 's-1', 'Hello.');
+    const first = await completeTurn(chatTurnInput(t, id, null), 's-1', 'Hello.');
     expect(first.turn.target).toMatchObject({ resume: null, freshReason: null });
     expect(first.turn.target.workdir?.startsWith(SESSION_WORKDIR_ROOT)).toBe(true);
 
     await message(id, 'user', 'again');
-    const second = await prepareTurnSession(t.db, chatInput(id, first.messageId), limits);
+    const second = await prepareTurnSession(
+      t.db,
+      chatTurnInput(t, id, first.messageId),
+      SESSION_LIMITS,
+    );
     expect(second?.target.resume).toEqual({
       sessionId: 's-1',
       cwd: first.turn.target.workdir,
@@ -105,28 +91,37 @@ describe('provider sessions across chat turns', () => {
     });
 
     await message(id, 'user', 'a queued message');
-    const moved = await prepareTurnSession(t.db, chatInput(id, randomUUID()), limits);
+    const moved = await prepareTurnSession(
+      t.db,
+      chatTurnInput(t, id, randomUUID()),
+      SESSION_LIMITS,
+    );
     expect(moved?.target).toMatchObject({ resume: null, freshReason: 'chat changed since' });
   });
 
   it('records only the new cost when the agent reports a cumulative session cost', async () => {
     const id = await conversation();
-    const first = await completeTurn(chatInput(id, null), 's-1', 'Hello.', 0.015);
+    const first = await completeTurn(chatTurnInput(t, id, null), 's-1', 'Hello.', 0.015);
     expect(first.recorded.costUsd).toBe(0.015);
-    const second = await completeTurn(chatInput(id, first.messageId), 's-1', 'Again.', 0.0164);
+    const second = await completeTurn(
+      chatTurnInput(t, id, first.messageId),
+      's-1',
+      'Again.',
+      0.0164,
+    );
     expect(second.turn.target.resume?.sessionId).toBe('s-1');
     expect(second.recorded.costUsd).toBeCloseTo(0.0014, 6);
     expect(second.turn.usage(usage(null)).costUsd).toBeNull();
-    const fresh = await completeTurn(chatInput(id, randomUUID()), 's-2', 'New.', 0.02);
+    const fresh = await completeTurn(chatTurnInput(t, id, randomUUID()), 's-2', 'New.', 0.02);
     expect(fresh.recorded.costUsd).toBe(0.02);
   });
 
   it('starts fresh after a changed model and keeps one open session per key', async () => {
     const id = await conversation();
-    const first = await completeTurn(chatInput(id, null), 's-1', 'Hello.');
-    const input = chatInput(id, first.messageId);
+    const first = await completeTurn(chatTurnInput(t, id, null), 's-1', 'Hello.');
+    const input = chatTurnInput(t, id, first.messageId);
     const changed = { ...input, settings: { ...input.settings, model: 'opus' } };
-    const turn = await prepareTurnSession(t.db, changed, limits);
+    const turn = await prepareTurnSession(t.db, changed, SESSION_LIMITS);
     expect(turn?.target).toMatchObject({ resume: null, freshReason: 'settings changed' });
     await turn?.started({
       kind: 'session',
@@ -147,7 +142,7 @@ describe('provider sessions across chat turns', () => {
 
   it('closes the session when the turn fails', async () => {
     const id = await conversation();
-    const turn = await prepareTurnSession(t.db, chatInput(id, null), limits);
+    const turn = await prepareTurnSession(t.db, chatTurnInput(t, id, null), SESSION_LIMITS);
     await turn?.started({
       kind: 'session',
       sessionId: 's-1',
@@ -157,13 +152,13 @@ describe('provider sessions across chat turns', () => {
       freshReason: null,
     });
     await turn?.finished({ outcome: 'failed', messageId: null, text: '' });
-    const next = await prepareTurnSession(t.db, chatInput(id, null), limits);
+    const next = await prepareTurnSession(t.db, chatTurnInput(t, id, null), SESSION_LIMITS);
     expect(next?.target).toMatchObject({ resume: null, freshReason: 'last turn did not finish' });
   });
 
   it('saves no session when the chat was deleted while the turn ran', async () => {
     const id = await conversation();
-    const turn = await prepareTurnSession(t.db, chatInput(id, null), limits);
+    const turn = await prepareTurnSession(t.db, chatTurnInput(t, id, null), SESSION_LIMITS);
     await t.db.query('DELETE FROM conversations WHERE id = $1', [id]);
     await turn?.started({
       kind: 'session',
@@ -180,12 +175,12 @@ describe('provider sessions across chat turns', () => {
 
   it('tracks orchestration children only when they carry a resume key', async () => {
     const id = await conversation();
-    const child = { ...chatInput(id, null), parentRunId: randomUUID(), mode: 'do' as const };
-    expect(await prepareTurnSession(t.db, child, limits)).toBeNull();
+    const child = { ...chatTurnInput(t, id, null), parentRunId: randomUUID(), mode: 'do' as const };
+    expect(await prepareTurnSession(t.db, child, SESSION_LIMITS)).toBeNull();
     const keyed = { ...child, resumeKey: 'task-1:builder:Bolt', followUp: 'Fix the findings.' };
     const first = await completeTurn(keyed, 'b-1', 'Done.');
     expect(first.turn.target.followUp).toBe('Fix the findings.');
-    const again = await prepareTurnSession(t.db, keyed, limits);
+    const again = await prepareTurnSession(t.db, keyed, SESSION_LIMITS);
     expect(again?.target.resume?.sessionId).toBe('b-1');
     const stored = await latestProviderSession(t.db, id, 'key:task-1:builder:Bolt');
     expect(stored?.lastMessageId).toBeNull();
@@ -235,7 +230,7 @@ describe('provider session lifecycle', () => {
     await t.db.query(`UPDATE provider_sessions SET workdir = $1 WHERE session_id = 'idle'`, [
       folder,
     ]);
-    expect(await sweepSessions(t.db, limits)).toBe(2);
+    expect(await sweepSessions(t.db, SESSION_LIMITS)).toBe(2);
     expect(await openIds()).toEqual(['recent']);
     expect(existsSync(folder)).toBe(false);
     const { rows } = await t.db.query(
@@ -249,7 +244,7 @@ describe('provider session lifecycle', () => {
     await openSession(id, 'old', 90);
     const outside = mkdtempSync(join(tmpdir(), 'not-a-session-'));
     await t.db.query(`UPDATE provider_sessions SET workdir = $1`, [outside]);
-    await sweepSessions(t.db, limits);
+    await sweepSessions(t.db, SESSION_LIMITS);
     expect(existsSync(outside)).toBe(true);
     rmSync(outside, { recursive: true, force: true });
   });
@@ -257,12 +252,7 @@ describe('provider session lifecycle', () => {
 
 describe('closing sessions from the chat', () => {
   it('closes on changed settings or repos, Start fresh and archive, but not on a no-op', async () => {
-    await saveConnection(t.db, t.workspaceId, 'claude', {
-      method: 'cli',
-      detail: 'claude 1.0',
-      summary: '',
-      models: [],
-    });
+    await connectCliProvider(t, 'claude');
     const id = await conversation();
     const reopen = async (sessionId: string) =>
       t.db.query(

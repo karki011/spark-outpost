@@ -1,4 +1,5 @@
 import { checkLine, type CheckBody, type ReviewVerdict } from '@spark-outpost/contracts';
+import { latestChecks } from './check-results.ts';
 import type { MemberResult } from './session.ts';
 
 const VERDICTS: Record<ReviewVerdict, string> = {
@@ -6,12 +7,6 @@ const VERDICTS: Record<ReviewVerdict, string> = {
   concerns: 'concerns',
   unclear: 'unclear',
 };
-
-export function latestChecks(bodies: readonly CheckBody[]): CheckBody[] {
-  const latest = new Map<string, CheckBody>();
-  for (const body of bodies) latest.set(`${body.name}:${body.copy ?? ''}`, body);
-  return [...latest.values()];
-}
 
 export function finalText(
   results: readonly MemberResult[],

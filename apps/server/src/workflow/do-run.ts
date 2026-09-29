@@ -1,9 +1,9 @@
-import type { AgentModeOption, RunEvent } from '@spark-outpost/contracts';
+import type { AgentModeOption } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
-import type { AppendOptions } from '../persistence/run-events.ts';
 import { saveSnapshot, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { backupBeforeEdit, snapshotRun } from '../projects/run-changes.ts';
 import type { PermissionGate } from '../providers/provider.ts';
+import type { Append } from './agent-turn.ts';
 import { createApprovalGate, type EditObserver, type PlanModeHooks } from './approval-gate.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 
@@ -16,7 +16,7 @@ export interface DoRunOptions {
   builder?: boolean | undefined;
   extraAllowlist?: (() => readonly string[]) | undefined;
   projectRoots: readonly string[];
-  append: (event: RunEvent, options?: AppendOptions) => Promise<number>;
+  append: Append;
   waiters?: ApprovalWaiters | undefined;
   pollMs?: number | undefined;
   timeoutMs?: number | undefined;

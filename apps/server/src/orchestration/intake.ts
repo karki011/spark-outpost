@@ -81,6 +81,27 @@ function plain(entry: IntakeCall & { asks: boolean }): IntakeCall {
   };
 }
 
+function flaggedByRuleOrJev(entry: IntakeCall): boolean {
+  return entry.rule === true || (entry.source === 'jev' && entry.value);
+}
+
+interface StartSignals {
+  planOnly: boolean;
+  reviewOnly: boolean;
+  answers: boolean;
+  choose: boolean;
+  interpret: boolean;
+}
+
+function startMode(signals: StartSignals): StartMode {
+  if (signals.planOnly) return 'plan';
+  if (signals.reviewOnly) return 'review';
+  if (signals.answers) return 'answer';
+  if (signals.choose) return 'choose';
+  if (signals.interpret) return 'interpret';
+  return 'build';
+}
+
 export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeDecisions {
   const doing = facts.mode === 'do';
   const ruleRisk: Risk = doing ? 'edits' : 'read-only';
@@ -104,13 +125,12 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     facts,
     ruleRisk,
   );
-  const destructive =
-    destructiveCall.rule === true || (destructiveCall.source === 'jev' && destructiveCall.value);
+  const destructive = flaggedByRuleOrJev(destructiveCall);
   const risk: Risk = destructive ? 'destructive' : 'edits';
   const question = call(jev, 'question', 'question', questionByRule(facts.request), facts, risk);
   const review = call(jev, 'review', 'review', asksForReview(facts.request), facts, risk);
   const planCall = call(jev, 'planOnly', 'plan_only', planOnlyByRule(facts.request), facts, risk);
-  const planOnly = planCall.rule === true || (planCall.source === 'jev' && planCall.value);
+  const planOnly = flaggedByRuleOrJev(planCall);
   const calls: Record<string, IntakeCall> = {
     question: plain(question),
     ...(planOnly ? { plan_only: plain({ ...planCall, value: planOnly }) } : {}),
@@ -140,17 +160,13 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   const answers = question.source === 'jev' ? question.value : question.rule === true;
   const existing = reviewsExistingByRule(facts.request);
   const reviewOnly = existing || (review.value && answers);
-  const start: StartMode = planOnly
-    ? 'plan'
-    : reviewOnly
-      ? 'review'
-      : answers
-        ? 'answer'
-        : question.asks && !destructive
-          ? 'choose'
-          : vague && vagueHandling(facts.level) === 'ask'
-            ? 'interpret'
-            : 'build';
+  const start = startMode({
+    planOnly,
+    reviewOnly,
+    answers,
+    choose: question.asks && !destructive,
+    interpret: vague && vagueHandling(facts.level) === 'ask',
+  });
   return {
     start,
     assume: vague && start === 'build' && vagueHandling(facts.level) === 'assume',

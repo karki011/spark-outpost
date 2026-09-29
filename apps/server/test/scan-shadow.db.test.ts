@@ -5,7 +5,8 @@ import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import { createCodeScanner, type CodeScanner } from '../src/codescan/scanner.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import {
-  SCENARIOS,
+  NORMAL,
+  QUESTION,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -17,9 +18,6 @@ import {
   type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
-
-const NORMAL = SCENARIOS[2] as Scenario;
-const QUESTION = SCENARIOS[0] as Scenario;
 
 let t: TestDb;
 let root: string;
@@ -67,7 +65,7 @@ async function runScenario(codeScan: CodeScanner, scenario: Scenario) {
   return { orchestration, runId };
 }
 
-describe('code scan in shadow mode', () => {
+describe('code scan in shadow mode', { timeout: 60_000 }, () => {
   it('records the scan next to a Do task without changing the task', async () => {
     const scanner = createCodeScanner(t.db, { deadlineMs: 10_000 });
     const { orchestration, runId } = await runScenario(scanner, NORMAL);

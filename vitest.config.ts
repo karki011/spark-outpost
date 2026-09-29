@@ -25,6 +25,7 @@ export default defineConfig({
         test: {
           name: 'db',
           include: ['{apps/server,scripts}/**/*.db.test.ts'],
+          setupFiles: ['apps/server/test/worker-database.ts'],
           environment: 'node',
           maxWorkers: 8,
           testTimeout: 20_000,

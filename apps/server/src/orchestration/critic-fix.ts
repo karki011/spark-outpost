@@ -4,12 +4,12 @@ import {
   readFindings,
   type FindingReading,
 } from '../advisor/finding-questions.ts';
+import { latestChecks } from './check-results.ts';
 import { FINDINGS_LIMIT } from './context.ts';
-import { latestChecks } from './final-message.ts';
 import { callJev } from './jev-calls.ts';
 import { agreedPlanText, changesForReview } from './member-prompts.ts';
 import { DIFFS_OFF, recordAdvice } from './observe.ts';
-import { reviewAction, reviewLine, type ReviewAction } from './review-loop.ts';
+import { findingList, reviewAction, reviewLine, type ReviewAction } from './review-loop.ts';
 import type { MemberResult, Session } from './session.ts';
 
 const ACTION_TEXT: Record<ReviewAction, string> = {
@@ -93,18 +93,8 @@ export function sessionReviewLine(s: Session): string | null {
   return reviewLine(s.flow.review, checksPhrase(s.checkBodies));
 }
 
-const SHOWN_SUGGESTIONS = 3;
-
 export function suggestionsLine(suggestions: readonly string[]): string | null {
   if (suggestions.length === 0) return null;
-  const shown = suggestions.slice(0, SHOWN_SUGGESTIONS).map((finding) => {
-    const trimmed = finding.trim();
-    return trimmed.length > 160 ? `${trimmed.slice(0, 160)}…` : trimmed;
-  });
-  const more =
-    suggestions.length > SHOWN_SUGGESTIONS
-      ? ` and ${suggestions.length - SHOWN_SUGGESTIONS} more`
-      : '';
   const noun = suggestions.length === 1 ? 'suggestion' : 'suggestions';
-  return `Not fixed automatically: ${suggestions.length} AI review ${noun} about hardening or robustness that the request didn't ask for: ${shown.join('; ')}${more}. Ask if you want ${suggestions.length === 1 ? 'it' : 'them'} done.`;
+  return `Not fixed automatically: ${suggestions.length} AI review ${noun} about hardening or robustness that the request didn't ask for: ${findingList(suggestions)}. Ask if you want ${suggestions.length === 1 ? 'it' : 'them'} done.`;
 }

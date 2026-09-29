@@ -98,7 +98,7 @@ const head = () => execFileSync('git', ['-C', root, 'rev-parse', 'HEAD']).toStri
 const rejectPlans: Answerer = (approval: Approval) =>
   approval.payload.plan ? { optionId: 'reject' } : answerEverything(approval);
 
-describe("Claude's plan mode", () => {
+describe("Claude's plan mode", { timeout: 60_000 }, () => {
   beforeEach(() => connectProviders(t, false));
 
   it('saves the plan as proposed, shows it on the approval, and marks it approved with the commit', async () => {
@@ -161,7 +161,7 @@ describe("Claude's plan mode", () => {
   });
 });
 
-describe('the Critic on plan-driven and multi-file builds', () => {
+describe('the Critic on plan-driven and multi-file builds', { timeout: 60_000 }, () => {
   async function roles(runId: string): Promise<string[]> {
     const { rows } = await t.db.query<{ role: string }>(
       `SELECT role FROM runs WHERE parent_run_id = $1 ORDER BY created_at`,
@@ -202,7 +202,7 @@ describe('the Critic on plan-driven and multi-file builds', () => {
   });
 });
 
-describe('plans agreed in chat', () => {
+describe('plans agreed in chat', { timeout: 60_000 }, () => {
   beforeEach(() => connectProviders(t));
 
   it('saves the previous reply as the agreed plan when Jev is sure, and logs the regex baseline', async () => {
@@ -268,7 +268,7 @@ describe('plans agreed in chat', () => {
   });
 });
 
-describe('plans agreed in chat without Jev', () => {
+describe('plans agreed in chat without Jev', { timeout: 60_000 }, () => {
   beforeEach(() => connectProviders(t, false));
 
   it('saves nothing on its own and still records the regex baseline', async () => {

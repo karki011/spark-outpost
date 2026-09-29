@@ -1,13 +1,9 @@
 import type { NewSessionResponse, SessionConfigOption } from '@agentclientprotocol/sdk';
-import type { AgentModeOption, ConfigOptionInfo } from '@spark-outpost/contracts';
+import type { AgentModeOption, ConfigOptionInfo, ConfigValues } from '@spark-outpost/contracts';
 import type { CapabilityChoice, ProviderCapabilityReport } from '../../providers/provider.ts';
 import type { AgentOffers } from './agents.ts';
 import { sessionOptions } from './legacy-options.ts';
-import { choices, findOption } from './session-config.ts';
-
-function optionsFor(options: readonly SessionConfigOption[], category: string) {
-  return findOption(options, category);
-}
+import { choices, currentValue, findOption } from './session-config.ts';
 
 function toChoices(option: SessionConfigOption | undefined): CapabilityChoice[] {
   if (!option) return [];
@@ -20,21 +16,19 @@ function toChoices(option: SessionConfigOption | undefined): CapabilityChoice[] 
 
 const LEGACY = /^(older|legacy|deprecated)\b/i;
 
-export function isLegacy(choice: CapabilityChoice): boolean {
+function isLegacy(choice: CapabilityChoice): boolean {
   return LEGACY.test(choice.description?.trim() ?? '');
 }
 
-function currentOf(options: readonly SessionConfigOption[], category: string): string | null {
-  const option = optionsFor(options, category);
-  return option && typeof option.currentValue === 'string' ? option.currentValue : null;
+function defaultModelAmong(
+  models: readonly CapabilityChoice[],
+  preferred: string | null,
+): string | null {
+  return models.some((choice) => choice.id === preferred) ? preferred : (models[0]?.id ?? null);
 }
 
-function currentModel(options: readonly SessionConfigOption[]): string | null {
-  return currentOf(options, 'model');
-}
-
-export function modesFrom(options: readonly SessionConfigOption[]): AgentModeOption[] {
-  const mode = optionsFor(options, 'mode');
+function modesFrom(options: readonly SessionConfigOption[]): AgentModeOption[] {
+  const mode = findOption(options, 'mode');
   if (!mode) return [];
   return choices(mode).map((choice) => ({
     id: choice.value,
@@ -44,7 +38,7 @@ export function modesFrom(options: readonly SessionConfigOption[]): AgentModeOpt
   }));
 }
 
-export const CORE_CATEGORIES = ['mode', 'model', 'thought_level'] as const;
+const CORE_CATEGORIES = ['mode', 'model', 'thought_level'] as const;
 
 export function isCoreOption(
   options: readonly SessionConfigOption[],
@@ -53,7 +47,7 @@ export function isCoreOption(
   return CORE_CATEGORIES.some((category) => findOption(options, category) === option);
 }
 
-export function configInfo(option: SessionConfigOption): ConfigOptionInfo {
+function configInfo(option: SessionConfigOption): ConfigOptionInfo {
   const base = {
     id: option.id,
     name: option.name,
@@ -76,7 +70,15 @@ export function configInfo(option: SessionConfigOption): ConfigOptionInfo {
   };
 }
 
-export function extraOptions(options: readonly SessionConfigOption[]): ConfigOptionInfo[] {
+export function currentValues(options: readonly SessionConfigOption[]): ConfigValues {
+  return Object.fromEntries(
+    options
+      .filter((option) => !isCoreOption(options, option))
+      .map((option) => [option.id, option.currentValue]),
+  );
+}
+
+function extraOptions(options: readonly SessionConfigOption[]): ConfigOptionInfo[] {
   return options
     .filter((option) => !isCoreOption(options, option))
     .filter((option) => option.type === 'boolean' || option.type === 'select')
@@ -87,16 +89,13 @@ export function capabilitiesFrom(
   options: readonly SessionConfigOption[],
   defaultsFrom: readonly SessionConfigOption[] = options,
 ): ProviderCapabilityReport {
-  const current = currentModel(defaultsFrom);
-  const models = toChoices(optionsFor(options, 'model')).filter((choice) => !isLegacy(choice));
+  const models = toChoices(findOption(options, 'model')).filter((choice) => !isLegacy(choice));
   return {
     models,
-    efforts: toChoices(optionsFor(options, 'thought_level')),
-    defaultModel: models.some((choice) => choice.id === current)
-      ? current
-      : (models[0]?.id ?? null),
+    efforts: toChoices(findOption(options, 'thought_level')),
+    defaultModel: defaultModelAmong(models, currentValue(defaultsFrom, 'model')),
     modes: modesFrom(options),
-    defaultMode: currentOf(defaultsFrom, 'mode'),
+    defaultMode: currentValue(defaultsFrom, 'mode'),
     options: extraOptions(defaultsFrom),
   };
 }
@@ -116,8 +115,6 @@ export function offeredCapabilities(
     ...report,
     models,
     efforts,
-    defaultModel: models.some((choice) => choice.id === report.defaultModel)
-      ? report.defaultModel
-      : (models[0]?.id ?? null),
+    defaultModel: defaultModelAmong(models, report.defaultModel),
   };
 }

@@ -1,16 +1,9 @@
 import path from 'node:path';
 import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark-outpost/contracts';
 import { isSecretPath, refusalFor, relativeInside } from '../projects/path-policy.ts';
-import {
-  allowlistCovers,
-  commandWords,
-  deletedPaths,
-  isGitForcePush,
-  isGitPush,
-  normalizeCommand,
-  publishesCode,
-  resolveCommandPath,
-} from './commands.ts';
+import { commandTree, deleteTargets, treeWords, type CommandTree } from './command-tree.ts';
+import { allowlistCovers, normalizeCommand, resolveCommandPath } from './commands.ts';
+import { isGitForcePush, isGitPush, publishesCode } from './git-commands.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { isPackageInstall, isSafeRead } from './command-kinds.ts';
 
@@ -54,6 +47,7 @@ export const OUTSIDE_DELETE_REASON = 'Deleting outside the repo always asks';
 export const OUTSIDE_WRITE_REASON = 'Changing files outside the repo always asks';
 export const SECRET_REASON = 'Secret files always ask';
 export const INSTALL_REASON = 'Installing packages always asks';
+export const NESTED_COMMAND_REASON = "Commands Spark can't see inside always ask";
 export const SAFE_READ_WHY = 'a read-only command inside the project';
 
 interface Placement {
@@ -81,11 +75,11 @@ function commandCwd(request: ApprovalRequest): string {
   return request.cwd ?? request.roots[0]?.path ?? request.home;
 }
 
-function touchesSecret(request: ApprovalRequest): boolean {
+function touchesSecret(request: ApprovalRequest, tree: CommandTree | null): boolean {
   if (request.paths.some((target) => isSecretTarget(request.roots, target))) return true;
-  if (!request.command) return false;
+  if (!tree) return false;
   const cwd = commandCwd(request);
-  return commandWords(request.command)
+  return treeWords(tree)
     .filter((word) => word !== '' && !word.startsWith('-'))
     .some((word) => {
       if (isSecretPath(path.basename(word))) return true;
@@ -97,18 +91,20 @@ function outsideRoots(request: ApprovalRequest, target: string): boolean {
   return place(request.roots, target).relative === null;
 }
 
-export function alwaysAskReason(request: ApprovalRequest): string | null {
-  if (request.command) {
-    const cwd = commandCwd(request);
-    const deleted = deletedPaths(request.command).map((word) =>
-      resolveCommandPath(word, cwd, request.home),
-    );
-    if (deleted.some((target) => outsideRoots(request, target))) return OUTSIDE_DELETE_REASON;
-  }
+function deletesOutside(request: ApprovalRequest, tree: CommandTree | null): boolean {
   if (request.toolKind === 'delete' && request.paths.some((p) => outsideRoots(request, p))) {
-    return OUTSIDE_DELETE_REASON;
+    return true;
   }
-  if (touchesSecret(request)) return SECRET_REASON;
+  if (!tree) return false;
+  const targets = deleteTargets(tree, commandCwd(request), request.home);
+  return targets === null || targets.some((target) => outsideRoots(request, target));
+}
+
+function alwaysAskReason(request: ApprovalRequest): string | null {
+  const tree = request.command ? commandTree(request.command) : null;
+  if (deletesOutside(request, tree)) return OUTSIDE_DELETE_REASON;
+  if (touchesSecret(request, tree)) return SECRET_REASON;
+  if (tree?.opaque) return NESTED_COMMAND_REASON;
   if (request.command && isPackageInstall(request.command)) return INSTALL_REASON;
   const writes = request.kind === 'edit' || request.toolKind === 'move';
   if (writes && request.paths.some((target) => outsideRoots(request, target))) {
@@ -204,7 +200,7 @@ export function decide(
     return { verdict: 'allow', by: 'level', why: ENTER_PLAN_MODE_WHY };
   }
   if (modeAllows(posture, request)) return { verdict: 'allow', by: 'level' };
-  if (request.kind === 'edit') return posture === 'denies' ? denied() : ASK;
+  if (request.kind === 'edit') return unapproved(posture);
   if (request.kind === 'execute') {
     if (request.command && isGitPush(request.command)) {
       const listed = allowlistCovers(allowlist, request.command);
@@ -217,11 +213,11 @@ export function decide(
     }
     const listed = request.command !== null && allowlistCovers(allowlist, request.command);
     if (listed) return { verdict: 'allow', by: 'allowlist' };
-    return posture === 'denies' ? denied() : ASK;
+    return unapproved(posture);
   }
-  return posture === 'denies' ? denied() : ASK;
+  return unapproved(posture);
 }
 
-function denied(): Decision {
-  return { verdict: 'reject', reason: DENIES_REASON };
+function unapproved(posture: ModePosture): Decision {
+  return posture === 'denies' ? { verdict: 'reject', reason: DENIES_REASON } : ASK;
 }

@@ -235,7 +235,10 @@ test('collapses the sidebar, remembers it, and opens a drawer on small screens',
     .getByRole('navigation', { name: 'Main' })
     .getByRole('button', { name: 'Tickets' })
     .click();
-  await expect(page.getByRole('heading', { name: 'Tickets are coming soon' })).toBeVisible();
-  await page.getByRole('button', { name: 'Go to Chats' }).click();
+  await expect(page.getByRole('heading', { name: 'See your tickets here' })).toBeVisible();
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('button', { name: /^Chats/ })
+    .click();
   await expect(page.locator('.chat-title')).toHaveText('Second chat');
 });

@@ -2,9 +2,9 @@ import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { parse as parseToml } from 'smol-toml';
-import { isRecord } from '../../agent-config/mcp-json.ts';
+import { isRecord } from '../../agent-config/records.ts';
 
-export function codexConfigPath(env: Readonly<Record<string, string | undefined>>): string {
+function codexConfigPath(env: Readonly<Record<string, string | undefined>>): string {
   const home = env.CODEX_HOME || join(env.HOME || homedir(), '.codex');
   return join(home, 'config.toml');
 }

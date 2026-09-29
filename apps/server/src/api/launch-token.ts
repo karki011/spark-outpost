@@ -9,7 +9,7 @@ export function createLaunchToken(): string {
   return randomBytes(32).toString('base64url');
 }
 
-export function writeTokenFile(file: string, token: string): void {
+function writeTokenFile(file: string, token: string): void {
   mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
   const staged = `${file}.${process.pid}`;
   rmSync(staged, { force: true });

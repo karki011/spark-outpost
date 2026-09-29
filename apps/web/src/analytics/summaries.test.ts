@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import type { AnalyticsHarness, HealthScore, OverviewDay } from '@spark-outpost/contracts';
+import type {
+  AnalyticsHarness,
+  AnalyticsSpend,
+  HealthScore,
+  OverviewDay,
+} from '@spark-outpost/contracts';
 import { categoryName, depthName, duration, signedScore, shortDate } from './analytics-model.ts';
 import { disagreementSummary, flowSummary } from './harness-summaries.ts';
+import { taskCostSummary } from './spend-summaries.ts';
 import { activitySummary, healthSummary, spendSummary } from './summaries.ts';
 
 const day = (date: string, turns: number, costUsd: number): OverviewDay => ({
@@ -106,5 +112,25 @@ describe('analytics text alternatives', () => {
       'Plan → execute',
     ]);
     expect([duration(null), duration(42_000), duration(125_000)]).toEqual(['—', '42s', '2m 5s']);
+  });
+
+  it('describes cost per finished turn even when no turn has a mean cost', () => {
+    const spend: AnalyticsSpend = {
+      window: { range: '30d', from: '2026-08-30', to: '2026-09-28', days: 30, timeZone: 'UTC' },
+      totalUsd: 0,
+      reportedUsd: 0,
+      estimatedUsd: 0,
+      unpricedRuns: 2,
+      jev: { calls: 0, costUsd: 0 },
+      leaves: [],
+      days: [],
+      perTask: [{ verdict: 'good', tasks: 2, costUsd: 0, meanUsd: null, medianUsd: null }],
+      finishedTasks: 2,
+      costPerGoodUsd: null,
+      resume: { resumedRuns: 0, sessionRuns: 0, cachedTokens: 0, savedUsd: 0 },
+    };
+    expect(taskCostSummary(spend)).toBe(
+      '2 finished turns, none with a known cost yet. No turn had a good outcome yet.',
+    );
   });
 });

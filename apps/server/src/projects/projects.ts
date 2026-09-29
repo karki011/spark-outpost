@@ -94,6 +94,18 @@ export async function projectRoot(rootPath: string): Promise<string> {
   return root;
 }
 
+export async function projectRowAt(
+  db: Queryable,
+  workspaceId: string,
+  root: string,
+): Promise<ProjectRow | undefined> {
+  const { rows } = await db.query<ProjectRow>(
+    `SELECT ${PROJECT_COLUMNS} FROM projects WHERE workspace_id = $1 AND root_path = $2`,
+    [workspaceId, root],
+  );
+  return rows[0];
+}
+
 export async function createProject(
   db: Queryable,
   workspaceId: string,
@@ -107,11 +119,8 @@ export async function createProject(
     [newId(), workspaceId, path.basename(root), root],
   );
   if (inserted.rows[0]) return { project: toProject(inserted.rows[0], home), created: true };
-  const { rows } = await db.query<ProjectRow>(
-    `SELECT ${PROJECT_COLUMNS} FROM projects WHERE workspace_id = $1 AND root_path = $2`,
-    [workspaceId, root],
-  );
-  return { project: toProject(rows[0]!, home), created: false };
+  const existing = await projectRowAt(db, workspaceId, root);
+  return { project: toProject(existing!, home), created: false };
 }
 
 export interface ProjectChange {

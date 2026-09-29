@@ -3,6 +3,7 @@ import { clarifyOptionId } from '@spark-outpost/contracts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import {
   answerEverything,
+  assistantReplies,
   connectProviders,
   driveToEnd,
   gitRepo,
@@ -62,11 +63,8 @@ async function run(
   harness = startOrchestrator(t, jevFetch({ calls: [], scenario }));
   const { conversationId, runId } = await startScenario(t, root, scenario, level);
   const done = await driveToEnd(t, conversationId, runId, answer);
-  const { rows } = await t.db.query<{ content: string }>(
-    `SELECT content FROM messages WHERE run_id = $1 AND role = 'assistant'`,
-    [runId],
-  );
-  return { ...done, reply: rows[0]?.content ?? '', runId };
+  const [reply] = await assistantReplies(t, runId);
+  return { ...done, reply: reply ?? '', runId };
 }
 
 describe('a vague request', () => {

@@ -19,10 +19,14 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await worker?.stop();
-  worker = null;
+  await stopWorker();
   await t.cleanup();
 });
+
+async function stopWorker() {
+  await worker?.stop();
+  worker = null;
+}
 
 function startFakeWorker() {
   const fake = createFakeProvider({ stepMs: 0, wordMs: 0 });
@@ -113,12 +117,12 @@ describe('home digest', () => {
     await connectClaude();
     const done = await chat('Refactor the date formatter');
     const failed = await chat('Mock fetch retries', 'failed', 'Claude is rate limited.');
-    startFakeWorker();
 
     const started = await state(post('open'));
     expect(started.digest).toMatchObject({ status: 'running', provider: 'claude' });
     expect(started.digest?.modelLabel).toBe('Sonnet 5');
 
+    startFakeWorker();
     const result = await ready();
     const digest = result.digest!;
     expect(digest.status).toBe('ready');
@@ -171,9 +175,11 @@ describe('home digest', () => {
     expect(cached.newActivity).toBe(true);
     expect(await digestCount()).toBe(1);
 
+    await stopWorker();
     const refreshed = await state(post('refresh'));
     expect(refreshed.digest?.status).toBe('running');
     expect(await digestCount()).toBe(2);
+    startFakeWorker();
     await ready();
 
     const hourAgo = `created_at - interval '61 minutes'`;
@@ -186,9 +192,11 @@ describe('home digest', () => {
     expect(await digestCount()).toBe(2);
 
     await chat('Tidy the exports');
+    await stopWorker();
     const again = await state(post('open'));
     expect(again.digest?.status).toBe('running');
     expect(await digestCount()).toBe(3);
+    startFakeWorker();
     await ready();
   });
 

@@ -9,7 +9,7 @@ import { routePolicy } from '../routing/route-policy.ts';
 import type { JevCall } from './jev-calls.ts';
 import { keepScoutSession } from './member-routes.ts';
 import { floorModel, floorPick, floorText, harnessModels } from './model-floor.ts';
-import { candidates, context } from './route-fixtures.ts';
+import { candidates, context, plainFacts } from './route-fixtures.ts';
 import {
   escalate,
   routeBuilder,
@@ -20,7 +20,6 @@ import {
 
 const TODAY = new Date('2026-09-28T12:00:00Z');
 const BEFORE_WINDOW = new Date('2026-08-01T12:00:00Z');
-const plain = { trivial: false, destructive: false };
 const claude = candidates[0]!;
 const [HAIKU, SONNET] = claude.models as [
   (typeof claude.models)[0],
@@ -102,35 +101,35 @@ describe('retiring models', () => {
 
 describe('read-only roles on the middle tier', () => {
   it('runs a Scout on the middle tier when the harness chooses', () => {
-    expect(routeMemberModel(onChat(pick(HAIKU)), plain)).toMatchObject({
+    expect(routeMemberModel(onChat(pick(HAIKU)), plainFacts)).toMatchObject({
       routedBy: 'rules',
       rule: 'chat model',
       pick: { model: 'sonnet', modelLabel: 'Sonnet 5' },
       note: "raised to Sonnet 5: the harness doesn't use the fast tier",
     });
-    const luna = routeMemberModel(onChat(pick(codexModels[2]!, 'codex')), plain);
+    const luna = routeMemberModel(onChat(pick(codexModels[2]!, 'codex')), plainFacts);
     expect(luna.pick.model).toBe('gpt-6-sol');
-    const sonnet = routeMemberModel(onChat(pick(SONNET)), plain);
+    const sonnet = routeMemberModel(onChat(pick(SONNET)), plainFacts);
     expect(sonnet.pick.model).toBe('sonnet');
     expect(sonnet.note).toBeUndefined();
   });
 
   it('runs a model the user picked for the chat, with a retiring note', () => {
-    expect(routeMemberModel(onChat(pick(HAIKU), 'pinned'), plain)).toMatchObject({
+    expect(routeMemberModel(onChat(pick(HAIKU), 'pinned'), plainFacts)).toMatchObject({
       routedBy: 'pinned',
       pick: { model: 'haiku' },
       note: 'Haiku 4.5 retiring on 2026-10-15',
     });
-    expect(routeMemberModel(onChat(pick(SONNET), 'pinned'), plain).note).toBeUndefined();
+    expect(routeMemberModel(onChat(pick(SONNET), 'pinned'), plainFacts).note).toBeUndefined();
   });
 
   it('records Jev’s small-tier pick for a Scout as the middle tier', () => {
-    const route = routeMemberModel(onChat(pick(SONNET)), plain, 'small');
+    const route = routeMemberModel(onChat(pick(SONNET)), plainFacts, 'small');
     expect(route.autoWouldUse?.model).toBe('sonnet');
   });
 
   it('does not resume a Scout session on the fast tier', () => {
-    const route = routeMemberModel(onChat(pick(SONNET)), plain);
+    const route = routeMemberModel(onChat(pick(SONNET)), plainFacts);
     const kept = keepScoutSession(route, { pick: pick(HAIKU), contextTokens: 1 });
     expect(kept.route.pick.model).toBe('sonnet');
     expect(kept.choice).toMatchObject({
@@ -148,7 +147,7 @@ describe('read-only roles on the middle tier', () => {
     const onSol = onChat(pick(codexModels[3]!, 'codex'));
     const soloCodex: RouteContext = { ...onSol, candidates: [codex] };
     expect(routeCritic(soloCodex).pick.model).toBe('gpt-5.6-sol');
-    const first = routeBuilder(soloCodex, plain);
+    const first = routeBuilder(soloCodex, plainFacts);
     expect(escalate(soloCodex, first).pick.model).toBe('gpt-5.6-sol');
     const critic = routeCritic({ ...onChat(pick(SONNET)), candidates: [claude, codex] }).pick;
     expect(critic).toMatchObject({ provider: 'codex', model: 'gpt-6-sol' });
@@ -172,7 +171,7 @@ describe('Jev’s route picks', () => {
 
   it('records a retiring pick and maps what would run to the middle tier', () => {
     const route = onChat(pick(SONNET));
-    const policy = routePolicy(route, plain, true);
+    const policy = routePolicy(route, plainFacts, true);
     const variant = routeVariant(call('codex/gpt-5.5'), policy, route);
     expect(variant.pick.model).toBe('gpt-5.5');
     expect(variant.raisedTo?.model).toBe('gpt-6-sol');

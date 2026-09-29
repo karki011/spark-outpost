@@ -60,6 +60,10 @@ export interface SystemOneRequest {
   questions: Record<string, unknown>;
 }
 
+function jevTimedOut(): AdvisorTimeoutError {
+  return new AdvisorTimeoutError('Jev did not answer in time.');
+}
+
 function wait(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(done, ms);
@@ -93,7 +97,7 @@ async function post(
     });
   } catch (error) {
     if (signal.aborted) throw error;
-    if (timeout.aborted) throw new AdvisorTimeoutError('Jev did not answer in time.');
+    if (timeout.aborted) throw jevTimedOut();
     throw new AdvisorError("Couldn't reach TypeSafe.", { cause: error });
   }
 }
@@ -103,13 +107,13 @@ async function acquire(limiter: JevLimiter, signal: AbortSignal, timeout: AbortS
     return await limiter.acquire(AbortSignal.any([signal, timeout]));
   } catch (error) {
     if (signal.aborted) throw error;
-    throw new AdvisorTimeoutError('Jev did not answer in time.');
+    throw jevTimedOut();
   }
 }
 
 async function answeredResponse(response: Response, timeout: AbortSignal) {
   const json: unknown = await response.json().catch(() => null);
-  if (timeout.aborted) throw new AdvisorTimeoutError('Jev did not answer in time.');
+  if (timeout.aborted) throw jevTimedOut();
   const parsed = systemOneResponseSchema.safeParse(json);
   if (!parsed.success) throw new AdvisorError('Jev returned an answer in an unexpected shape.');
   noteJevVersion(parsed.data.model);
@@ -133,7 +137,7 @@ export async function askSystemOne(
         await response.body?.cancel().catch(() => undefined);
         await wait(delay, AbortSignal.any([signal, timeout])).catch((error: unknown) => {
           if (signal.aborted) throw error;
-          throw new AdvisorTimeoutError('Jev did not answer in time.');
+          throw jevTimedOut();
         });
         response = await post(options, body, signal, timeout);
       }

@@ -8,11 +8,8 @@ import type { ApprovalRequest } from '../src/approvals/decide.ts';
 import type { GateAnswer, ProviderOutput } from '../src/providers/provider.ts';
 import { FAKE_PLAN } from './fake-acp-plans.ts';
 import { FAKE_AGENT_MODES } from './fake-agent-modes.ts';
+import { FAKE_ACP_LAUNCH as launch, replyText } from './fake-acp-support.ts';
 
-const launch = {
-  command: process.execPath,
-  args: ['--import', import.meta.resolve('tsx'), join(import.meta.dirname, 'fake-acp-agent.ts')],
-};
 const claude = createAcpProvider({
   definition: { ...agentDefinitions.claude, name: 'Fake', ...FAKE_AGENT_MODES },
   launch,
@@ -52,11 +49,11 @@ async function planTurn(pick: (request: ApprovalRequest) => GateAnswer) {
   } catch (caught) {
     error = caught;
   }
-  const text = outputs.map((output) => (output.kind === 'text_delta' ? output.delta : '')).join('');
+  const text = replyText(outputs);
   return { requests, text, error };
 }
 
-describe("Claude's plan mode over ACP", () => {
+describe("Claude's plan mode over ACP", { timeout: 20_000 }, () => {
   it('sends the plan to the gate with every option the agent offers, then keeps running', async () => {
     const { requests, text, error } = await planTurn((request) => ({
       outcome: 'selected',

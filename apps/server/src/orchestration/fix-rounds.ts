@@ -1,7 +1,7 @@
 import { gitChanges, revertGitChanges } from '../projects/snapshot.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { budgetUsage } from './budget-check.ts';
-import { checksFailing } from './full-auto-ship.ts';
+import { checksFailing } from './check-results.ts';
 import { treeOf } from './land.ts';
 import type { Session } from './session.ts';
 import type { FlowAction, FlowEvent } from './transitions.ts';

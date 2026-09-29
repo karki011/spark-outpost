@@ -1,4 +1,9 @@
-import { askIntake, saveIntake, type IntakeResult } from '../advisor/intake-recorder.ts';
+import {
+  askIntake,
+  saveIntake,
+  type IntakeDeps,
+  type IntakeResult,
+} from '../advisor/intake-recorder.ts';
 import type { IntakeContext } from '../persistence/advice.ts';
 import { ruleAdvisor } from '../advisor/advice.ts';
 import { newId } from '../persistence/ids.ts';
@@ -17,6 +22,7 @@ import { loadRunInput, type RunInput } from '../workflow/run-input.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
 import { checkBudget, fixRoundShort } from './budget-check.ts';
+import { checksFailing } from './check-results.ts';
 import { correctnessFindings, sessionReviewLine, suggestionsLine } from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
 import {
@@ -60,7 +66,7 @@ import { refreshPlan } from './plan-progress.ts';
 import { wantsCritic } from './critic-rule.ts';
 import { routeBuilder, type RouteContext } from './routing.ts';
 import { buildInCopy, cleanupCopies, needsCopyFor, repoBusy } from './solo-copy.ts';
-import { autoKeep, checksFailing, shipFullAuto } from './full-auto-ship.ts';
+import { autoKeep, shipFullAuto } from './full-auto-ship.ts';
 import {
   baseLimits,
   builderKey,
@@ -81,12 +87,14 @@ import { jevDiffsAllowed, settleObservations } from './observe.ts';
 import { observeScan, startScan } from './observe-scan.ts';
 import { verifyChange } from './verify.ts';
 
-export const TASK_SESSION_CLOSED = 'task session closed';
-export const NEW_TASK_STARTED = 'a new task started';
+const TASK_SESSION_CLOSED = 'task session closed';
+const NEW_TASK_STARTED = 'a new task started';
 
-function jevTimeout(deps: OrchestratorDeps): number {
-  const own = deps.intake?.deps.timeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS;
-  return Math.min(own, deps.jevTimeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS);
+function orchestrationJevDeps(deps: OrchestratorDeps): IntakeDeps | null {
+  if (!deps.intake) return null;
+  const own = deps.intake.deps.timeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS;
+  const timeoutMs = Math.min(own, deps.jevTimeoutMs ?? ORCHESTRATION_JEV_TIMEOUT_MS);
+  return { ...deps.intake.deps, timeoutMs };
 }
 
 function routeContext(input: RunInput, context: IntakeContext): RouteContext {
@@ -116,8 +124,7 @@ async function runIntake(
       ? { previousRequest: current.previousRequest, summary: current.summary }
       : null,
   };
-  const jevDeps = deps.intake ? { ...deps.intake.deps, timeoutMs: jevTimeout(deps) } : null;
-  const asked = await askIntake(deps.db, jevDeps, input, extra);
+  const asked = await askIntake(deps.db, orchestrationJevDeps(deps), input, extra);
   const jev = asked.outcome.status === 'answered' ? asked.outcome.intake : null;
   const decisions = decideIntake(jev, {
     request: input.userRequest,
@@ -352,13 +359,9 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const busy = git && !answers ? await repoBusy(deps.db, lease.runId, root) : false;
     const risky = doing ? riskyChange(decisions.destructive, input.userRequest) : null;
     const confirmFirst = risky && confirmsRiskyFirst(input.level) ? risky : null;
+    const jevDeps = orchestrationJevDeps(deps);
     const jev =
-      deps.intake && intake.context.jevModel
-        ? {
-            deps: { ...deps.intake.deps, timeoutMs: jevTimeout(deps) },
-            model: intake.context.jevModel,
-          }
-        : null;
+      jevDeps && intake.context.jevModel ? { deps: jevDeps, model: intake.context.jevModel } : null;
     const s: Session = {
       deps,
       lease,
