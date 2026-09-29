@@ -1,0 +1,30 @@
+import { isPackageInstall } from '../approvals/command-kinds.ts';
+
+export const FULL_CHECKS_REASON = 'the coordinator runs the full checks after integration';
+
+const MUTATING_FLAG = /(?:^|\s)(?:--write|-w|--fix|-u|--update(?:-snapshots)?)(?=\s|$)/;
+const WHOLE_PROJECT = /^(?:pnpm|npm|yarn|bun)\s+(?:run\s+)?(?:check|ci|verify|format|lint:fix)\s*$/;
+const NARROWING_FLAG = /(?:^|\s)(?:--filter|-F|--project|--dir|-C|--workspace)[=\s]+\S+/;
+const PATH_WORD = /(?:^|\s)[./\w@-]*(?:\/[\w.@-]+|\.[cm]?[jt]sx?|\.py|\.go|\.rs|\.rb)(?=\s|$)/;
+
+function squash(command: string): string {
+  return command.replace(/\s+/g, ' ').trim();
+}
+
+export function scopedCheckProblem(
+  command: string,
+  projectChecks: readonly string[],
+): string | null {
+  const text = squash(command);
+  if (!text) return 'is empty';
+  if (isPackageInstall(text)) return `installs packages; ${FULL_CHECKS_REASON}`;
+  if (MUTATING_FLAG.test(text)) return 'changes files; a scoped check only reads';
+  if (WHOLE_PROJECT.test(text)) return `runs the whole project; ${FULL_CHECKS_REASON}`;
+  if (projectChecks.some((check) => squash(check) === text)) {
+    return `is a whole-project check; narrow it to the piece's files (${FULL_CHECKS_REASON})`;
+  }
+  if (!NARROWING_FLAG.test(text) && !PATH_WORD.test(text)) {
+    return 'names no path or package to narrow it to the piece';
+  }
+  return null;
+}

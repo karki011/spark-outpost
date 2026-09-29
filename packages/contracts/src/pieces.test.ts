@@ -1,0 +1,57 @@
+import { describe, expect, it } from 'vitest';
+import { pieceBoard, type TaskPiece } from './pieces.ts';
+
+function piece(key: string, extra: Partial<TaskPiece> = {}): TaskPiece {
+  return {
+    id: '00000000-0000-4000-8000-000000000000',
+    key,
+    title: `Piece ${key}`,
+    goal: 'Goal',
+    owns: ['a.ts', 'b.ts'],
+    reads: [],
+    dependsOn: [],
+    contract: null,
+    contractVersion: 1,
+    acceptance: [],
+    checks: [],
+    research: false,
+    sizeEstimate: 20_000,
+    placement: 'in_order',
+    provider: 'claude',
+    model: 'sonnet',
+    builderRunId: null,
+    builderName: null,
+    status: 'pending',
+    attempts: 0,
+    fixTurns: 0,
+    filesChanged: [],
+    violations: [],
+    check: null,
+    costUsd: null,
+    landedAt: null,
+    note: null,
+    ...extra,
+  };
+}
+
+describe('pieceBoard', () => {
+  it('shows what each piece waits on, its placement and folds landed rows', () => {
+    const rows = pieceBoard({
+      pieces: [
+        piece('P1', { status: 'landed', builderName: 'Bolt', check: 'passed', costUsd: 0.4 }),
+        piece('P2', { dependsOn: ['P1'], status: 'running', builderName: 'Rivet' }),
+        piece('P3', { dependsOn: ['P1', 'P2'], placement: 'shared' }),
+        piece('P4', { placement: 'worktree', builderName: 'Tack' }),
+        piece('R1', { placement: 'read_only', research: true, owns: [] }),
+      ],
+    });
+    expect(rows.map((row) => [row.key, row.status, row.placement, row.folded])).toEqual([
+      ['P1', 'landed', 'in order', true],
+      ['P2', 'running', 'in order', false],
+      ['P3', 'waiting on P2', 'shared tree · owns 2 files', false],
+      ['P4', 'ready', "Tack's copy", false],
+      ['R1', 'ready', 'read-only', false],
+    ]);
+    expect(rows[0]).toMatchObject({ builder: 'Bolt', check: 'scoped check passed', tone: 'done' });
+  });
+});

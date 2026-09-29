@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
-export const agentRoleSchema = z.enum(['scout', 'architect', 'builder', 'critic']);
+export const agentRoleSchema = z.enum([
+  'scout',
+  'architect',
+  'builder',
+  'critic',
+  'coordinator',
+  'integrator',
+]);
 export type AgentRole = z.infer<typeof agentRoleSchema>;
 
 const ROLE_LABELS: Record<AgentRole, string> = {
@@ -8,6 +15,8 @@ const ROLE_LABELS: Record<AgentRole, string> = {
   architect: 'Architect',
   builder: 'Builder',
   critic: 'Critic',
+  coordinator: 'Coordinator',
+  integrator: 'Integrator',
 };
 
 export const CREW_NAMES: Record<AgentRole, readonly string[]> = {
@@ -15,6 +24,8 @@ export const CREW_NAMES: Record<AgentRole, readonly string[]> = {
   architect: ['Sketch', 'Ada', 'Blue'],
   builder: ['Bolt', 'Rivet', 'Tack', 'Chip', 'Nut'],
   critic: ['Hawk', 'Owl', 'Lynx'],
+  coordinator: ['Atlas', 'Juno', 'Vega'],
+  integrator: ['Weld', 'Knot', 'Seam'],
 };
 
 export const JEV_NAME = 'Jev';

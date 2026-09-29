@@ -70,3 +70,24 @@ export const ROUTER_TIER_OF_CARD: Readonly<Record<ModelTier, RouterTier | null>>
   top: 'top',
   frontier: null,
 };
+
+export const COORD_POLICY_VERSION = 'coord-1';
+export const COORD_MAX_PIECES = 8;
+export const COORD_ENGAGE_PLAN_ITEMS = 4;
+export const COORD_ENGAGE_PLAN_AREAS = 2;
+export const COORD_ENGAGE_SCAN_FILES = 12;
+export const COORD_ENGAGE_SCAN_PACKAGES = 3;
+export const COORD_TOO_BIG_BAND = 0.2;
+export const COORD_BUILDER_BUDGET_SHARE = 0.5;
+export const COORD_BUILDER_BUDGET_CAP = 150_000;
+export const COORD_LARGE_PIECE_TOKENS = 40_000;
+export const COORD_LARGE_PIECE_FILES = 5;
+export const COORD_LONG_PIECE_TOKENS = 90_000;
+export const COORD_CRITICAL_PATH_SAVING = 0.35;
+export const COORD_SPLIT_UNSURE_AT = 0.2;
+export const COORD_JEV_ACT_AT = 0.8;
+export const COORD_MAX_BUILDERS = 3;
+export const COORD_PIECE_FIX_TURNS = 2;
+export const COORD_INTEGRATION_ROUNDS = 2;
+export const COORD_HANDOFF_SHARE = 0.75;
+export const COORD_VIOLATION_STRIKES = 2;
