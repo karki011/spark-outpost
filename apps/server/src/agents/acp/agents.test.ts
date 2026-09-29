@@ -27,7 +27,7 @@ const optionsOf = (meta: Record<string, unknown> | undefined) =>
 
 describe('Claude session options', () => {
   const project = optionsOf(agentDefinitions.claude.projectSessionMeta?.(['/work/lib']));
-  const chat = optionsOf(agentDefinitions.claude.conversationSessionMeta);
+  const chat = optionsOf(agentDefinitions.claude.conversationSessionMeta?.());
 
   it('ignores repo and user settings, blocks bypass mode and reads outside the roots', () => {
     for (const options of [project, chat]) {
@@ -318,7 +318,7 @@ describe('Z.ai launch', () => {
     expect(zai.launch().args.at(-1)).toBe(HIDE_CLAUDE_AUTH);
     expect(agentDefinitions.claude.launch().args).not.toContain(HIDE_CLAUDE_AUTH);
     expect(zai.conversationMode).toBe('default');
-    expect(zai.conversationSessionMeta).toEqual(agentDefinitions.claude.conversationSessionMeta);
+    expect(zai.conversationSessionMeta).toBe(agentDefinitions.claude.conversationSessionMeta);
     expect(zai.projectSessionMeta?.(['/w'])).toEqual(
       agentDefinitions.claude.projectSessionMeta?.(['/w']),
     );

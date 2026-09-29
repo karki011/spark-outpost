@@ -6,6 +6,7 @@ import type {
   PlanEntry,
   ProtocolDirection,
   RunMode,
+  SparkSessionPrefs,
   TaskLinkSource,
   TokenUsage,
 } from '@spark-outpost/contracts';
@@ -71,6 +72,7 @@ export interface ProviderTurn {
   preamble?: string;
   repo?: RepoLaunch;
   userMcp?: readonly UserMcpLaunch[];
+  spark?: SparkSessionPrefs;
 }
 
 export type GateAnswer =

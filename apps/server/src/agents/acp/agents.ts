@@ -31,7 +31,7 @@ export interface AgentDefinition {
   conversationMode: string;
   readsProjectFolders: boolean;
   repoStyle: RepoStyle;
-  conversationSessionMeta?: Record<string, unknown>;
+  conversationSessionMeta?: (repo?: ClaudeRepoOptions | null) => Record<string, unknown>;
   conversationEnv?: (
     workdir: string,
     browsing?: boolean,
@@ -167,7 +167,8 @@ const claudeSessions = {
   doMode: CLAUDE_DO_MODE,
   usageReadings: 'start_and_end',
   readsProjectFolders: true,
-  conversationSessionMeta: claudeSessionMeta([], []),
+  conversationSessionMeta: (repo?: ClaudeRepoOptions | null) =>
+    claudeSessionMeta([], [], [], repo ?? null),
   probeSessionMeta: claudeSessionMeta([], [], [], null, false, true),
   projectSessionMeta: (extraRoots: readonly string[], repo?: ClaudeRepoOptions | null) =>
     claudeSessionMeta(['Read', 'Glob', 'Grep'], extraRoots, [], repo ?? null),
