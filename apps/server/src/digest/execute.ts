@@ -1,5 +1,10 @@
 import type { Lease } from '../persistence/jobs.ts';
-import { digestChatIds, digestStatsByRun, finishDigest } from '../persistence/digests.ts';
+import {
+  digestChatIds,
+  digestFlaggedByRun,
+  digestStatsByRun,
+  finishDigest,
+} from '../persistence/digests.ts';
 import { executeChildRun, type ExecuteRunDeps } from '../workflow/execute-run.ts';
 import { parseDigestReply } from './parse.ts';
 
@@ -12,11 +17,12 @@ export async function executeDigest(deps: ExecuteRunDeps, lease: Lease): Promise
     await finishDigest(deps.db, lease.runId, { error: result.error ?? FAILED });
     return;
   }
-  const [chatIds, stats] = await Promise.all([
+  const [chatIds, stats, flagged] = await Promise.all([
     digestChatIds(deps.db, lease.runId),
     digestStatsByRun(deps.db, lease.runId),
+    digestFlaggedByRun(deps.db, lease.runId),
   ]);
   await finishDigest(deps.db, lease.runId, {
-    body: parseDigestReply(result.text, chatIds, stats),
+    body: parseDigestReply(result.text, chatIds, stats, flagged),
   });
 }

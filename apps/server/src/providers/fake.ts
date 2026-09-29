@@ -124,18 +124,33 @@ interface FakeDigestChat {
   unfinished: string[];
 }
 
-function digestChats(prompt: string): FakeDigestChat[] {
+interface FakeDigestData {
+  days?: { threads: { chats: FakeDigestChat[] }[] }[];
+  flagged?: { itemId: string; key: string; flags: { text: string }[] }[];
+}
+
+function digestData(prompt: string): FakeDigestData {
   const start = prompt.lastIndexOf('<activity>\n');
   const end = prompt.lastIndexOf('\n</activity>');
   const block = start >= 0 && end > start ? prompt.slice(start + 11, end) : '{}';
-  const data = JSON.parse(block) as {
-    days?: { threads: { chats: FakeDigestChat[] }[] }[];
-  };
-  return (data.days ?? []).flatMap((day) => day.threads.flatMap((thread) => thread.chats));
+  return JSON.parse(block) as FakeDigestData;
+}
+
+export const FAKE_UNKNOWN_ITEM = 'ticket:linear:FAKE-404';
+
+function fakeBriefItems(data: FakeDigestData) {
+  return [
+    ...(data.flagged ?? []).map((item) => ({
+      itemId: item.itemId,
+      text: `Handle ${item.key}: ${item.flags[0]?.text ?? 'flagged'}.`,
+    })),
+    { itemId: FAKE_UNKNOWN_ITEM, text: 'Made up.' },
+  ];
 }
 
 function fakeDigestReply(prompt: string): string {
-  const chats = digestChats(prompt);
+  const data = digestData(prompt);
+  const chats = (data.days ?? []).flatMap((day) => day.threads.flatMap((thread) => thread.chats));
   const first = chats[0];
   const open = chats.find((chat) => chat.unfinished.length > 0);
   return JSON.stringify({
@@ -158,6 +173,7 @@ function fakeDigestReply(prompt: string): string {
         : []),
       { chatId: FAKE_UNKNOWN_CHAT, reason: 'Made up.', draft: 'Made up.' },
     ],
+    items: fakeBriefItems(data),
   });
 }
 

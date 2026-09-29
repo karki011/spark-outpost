@@ -9,6 +9,7 @@ import {
   type DigestStatus,
 } from '@spark-outpost/contracts';
 import type { ActivityChat, ChatState } from '../digest/input.ts';
+import { flaggedItemSchema, type FlaggedItem } from './attention-settings.ts';
 import type { LastDigest } from '../digest/policy.ts';
 import { EMPTY_DIGEST_STATS } from '../digest/stats.ts';
 import { listConversations } from './conversations.ts';
@@ -234,6 +235,8 @@ export interface NewDigest {
   prompt: string;
   chatIds: readonly string[];
   stats: DigestStats;
+  flagged: readonly FlaggedItem[];
+  flaggedHash: string;
 }
 
 export async function startDigest(
@@ -275,8 +278,8 @@ export async function startDigest(
     ]);
     await client.query(
       `INSERT INTO digests (id, workspace_id, conversation_id, run_id, status, since, until,
-         chat_ids, provider, model, model_label, stats)
-       VALUES ($1, $2, $3, $4, 'running', $5, $6, $7, $8, $9, $10, $11)`,
+         chat_ids, provider, model, model_label, stats, flagged, flagged_hash)
+       VALUES ($1, $2, $3, $4, 'running', $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         digestId,
         workspaceId,
@@ -289,6 +292,8 @@ export async function startDigest(
         digest.model,
         digest.modelLabel,
         JSON.stringify(digest.stats),
+        JSON.stringify(digest.flagged),
+        digest.flaggedHash,
       ],
     );
     await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);
@@ -309,6 +314,24 @@ export async function digestChatIds(db: Queryable, runId: string): Promise<Set<s
     [runId],
   );
   return new Set(rows[0]?.chat_ids ?? []);
+}
+
+export async function digestFlaggedByRun(db: Queryable, runId: string): Promise<FlaggedItem[]> {
+  const { rows } = await db.query<{ flagged: unknown }>(
+    'SELECT flagged FROM digests WHERE run_id = $1',
+    [runId],
+  );
+  const parsed = flaggedItemSchema.array().safeParse(rows[0]?.flagged ?? []);
+  return parsed.success ? parsed.data : [];
+}
+
+export async function lastFlaggedHash(db: Queryable, workspaceId: string): Promise<string | null> {
+  const { rows } = await db.query<{ flagged_hash: string | null }>(
+    `SELECT flagged_hash FROM digests WHERE workspace_id = $1
+     ORDER BY created_at DESC LIMIT 1`,
+    [workspaceId],
+  );
+  return rows[0]?.flagged_hash ?? null;
 }
 
 export async function digestStatsByRun(db: Queryable, runId: string): Promise<DigestStats> {
