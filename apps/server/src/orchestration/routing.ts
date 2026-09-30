@@ -29,6 +29,7 @@ import {
   scoreEscalation,
   stayedRule,
   type Escalation,
+  type MeasuredArm,
   type PriorEscalation,
 } from './escalation.ts';
 import type { RouteScore } from './route-score.ts';
@@ -75,6 +76,7 @@ export interface RouteFacts {
   ratings?: Ratings | null;
   session?: ResumableSession | null;
   prior?: PriorEscalation | null;
+  arm?: MeasuredArm | null;
 }
 
 export const DESTRUCTIVE_RULE = 'destructive → top tier';
@@ -323,6 +325,7 @@ function scoredBuilder(
     },
     facts.prior ?? null,
     effortIds(candidateFor(context, provider)),
+    facts.arm ?? null,
   );
   if (!scored) return null;
   const { score, escalation } = scored;

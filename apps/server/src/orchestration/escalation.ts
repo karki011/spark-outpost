@@ -117,16 +117,42 @@ function decide(
   return { kind: 'stay', score: full, ...plain };
 }
 
+export const MEASURED_ARMS = ['stay', 'switch', 'compact', 'brief'] as const;
+export type MeasuredArm = (typeof MEASURED_ARMS)[number];
+
+function strongest(score: RouteScore): RouteScore {
+  const top = [...score.ranked].sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier])[0];
+  return top ? { ...score, pick: top } : score;
+}
+
+function forced(
+  input: ScoreInput & { session: ResumableSession },
+  full: RouteScore,
+  arm: MeasuredArm,
+): Decision {
+  const plain = { kind: arm, sticky: false, effort: null };
+  if (arm === 'stay') return { ...plain, score: withPick(full, input.session.pick.model ?? '') };
+  if (arm === 'switch') return { ...plain, score: strongest(full) };
+  const handoff = scoreRoute({
+    ...input,
+    switchUsd: (model) => handoffCostUsd(input.session, model),
+  });
+  return { ...plain, score: strongest(handoff ?? full) };
+}
+
 export function scoreEscalation(
   input: ScoreInput,
   prior: PriorEscalation | null,
   efforts: readonly string[],
+  arm: MeasuredArm | null = null,
 ): EscalatedScore | null {
   const full = scoreRoute(input);
   if (!full) return null;
   const session = input.session;
   if (!session) return stayOnPrior(full, prior);
-  const decision = decide({ ...input, session }, full, prior, efforts);
+  const decision = arm
+    ? forced({ ...input, session }, full, arm)
+    : decide({ ...input, session }, full, prior, efforts);
   const target = { id: decision.score.pick.id, label: decision.score.pick.label };
   const escalation: Escalation = {
     kind: decision.kind,
