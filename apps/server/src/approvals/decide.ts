@@ -45,7 +45,7 @@ export type RunRule =
 export type Decision =
   | { verdict: 'allow'; by: 'level' | 'run_rule' | 'allowlist'; why?: string }
   | { verdict: 'reject'; reason: string }
-  | { verdict: 'ask'; reason: string | null; forcePush?: string[] };
+  | { verdict: 'ask'; reason: string | null; forcePush?: string[]; because?: string };
 
 export const FS_WRITE_TOOL_KIND = 'write_text_file';
 
@@ -61,6 +61,9 @@ export const UNKNOWN_READ_REASON = "Spark can't tell which files this reads";
 export const HIDDEN_CODE_REASON = "Runs code Spark can't see";
 export const SAFE_READ_WHY = 'a read-only command inside the project';
 export const WORKTREE_AUTO_WHY = "Automatic in this chat's worktree";
+export const ASK_AUTO_WHY = 'Automatic in an Ask turn';
+export const ASK_TURN_ASKS =
+  'Spark asks before commands in a question turn at Review each step, unless they only read files';
 
 export function forcePushReason(branches: readonly string[]): string {
   return `This rewrites history on ${branches.join(', ')} on the remote`;
@@ -148,6 +151,7 @@ export interface DecideOptions {
   piece?: PieceGuard;
   files?: FileLister;
   askRun?: boolean;
+  askAutoWhy?: string | null;
   worktreeAuto?: boolean;
   defaultBranch?: string | null;
 }
@@ -275,6 +279,10 @@ export function decide(
     }
     const listed = request.command !== null && allowlistCovers(allowlist, request.command);
     if (listed) return { verdict: 'allow', by: 'allowlist' };
+    if (options.askRun && options.askAutoWhy) {
+      return { verdict: 'allow', by: 'level', why: options.askAutoWhy };
+    }
+    if (options.askRun) return { verdict: 'ask', reason: null, because: ASK_TURN_ASKS };
     return unapproved(posture);
   }
   return unapproved(posture);

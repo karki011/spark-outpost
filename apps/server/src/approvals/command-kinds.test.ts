@@ -65,6 +65,56 @@ describe('isSafeRead', () => {
     expect(isSafeRead(command, place)).toBe(false);
   });
 
+  it.each([
+    'ls .claude/skills/ 2>/dev/null; ls libs/features/budgets libs/features/budgets/src',
+    "wc -l docs/project/ARCHITECTURE.md && grep -n '^#' docs/project/ARCHITECTURE.md",
+    'ls apps libs libs/* | head -80',
+    'ls src >/dev/null 2>&1 || ls lib',
+    'cat README.md &>/dev/null',
+    'git log --oneline 2>&1 | head -5',
+    'cat a.txt | sort | uniq -c | sort -rn | head',
+    'ls src | wc -l',
+    'grep -n TODO src/index.ts | cut -d: -f1 | tail -3',
+    "cat package.json | jq '.scripts'",
+    "cat notes.txt | awk '{print $1}' | tr a-z A-Z",
+    "cat notes.txt | sed 's/a/b/g'",
+    "sed -n '/start/,/end/p' notes.txt",
+    'git diff | rg -n TODO',
+    'ls src\nls lib',
+  ])('allows the compound read %s', (command) => {
+    expect(isSafeRead(command, place)).toBe(true);
+  });
+
+  it.each([
+    ['output to a file', 'ls > out.txt'],
+    ['output to a file next to a discarded one', 'ls 2>/dev/null > out.txt'],
+    ['appending to a file', 'cat a.txt >> b.txt'],
+    ['a path that only starts like /dev/null', 'ls >/dev/nullx'],
+    ['an input redirect', 'wc -l < notes.txt'],
+    ['a background job', 'ls & rm -rf build'],
+    ['a subshell', '(ls)'],
+    ['a chain with a write', 'ls; rm x'],
+    ['a chain with an unknown program', 'grep -n x a.txt || curl https://example.com'],
+    ['a pipe into a shell', 'cat script.txt | sh'],
+    ['a pipe into xargs', 'ls | xargs cat'],
+    ['tee', 'ls | tee out.txt'],
+    ['sort writing a file', 'cat a.txt | sort -o out.txt'],
+    ['uniq writing a file', 'uniq a.txt b.txt'],
+    ['sed in place in a pipe', 'ls && sed -i s/a/b/ notes.txt'],
+    ['sed writing a file', "cat a.txt | sed 's/a/b/w out.txt'"],
+    ['sed running a command', "cat a.txt | sed 's/a/b/e'"],
+    ['awk running a command', 'cat a.txt | awk \'{system("rm x")}\''],
+    ['awk writing a file', 'cat a.txt | awk \'{print > "out.txt"}\''],
+    ['awk from a program file', 'awk -f prog.awk a.txt'],
+    ['ripgrep with a preprocessor', 'cat a.txt | rg --pre ./run KEY'],
+    ['ripgrep searching paths', 'cat a.txt | rg KEY src'],
+    ['a variable', 'ls "$HOME"'],
+    ['a read outside the project in a pipe', 'cat /etc/hosts | head'],
+    ['an unterminated quote', "ls 'src"],
+  ])('refuses %s', (_label, command) => {
+    expect(isSafeRead(command, place)).toBe(false);
+  });
+
   it('refuses any command when the working directory is outside the project', () => {
     expect(isSafeRead('ls', { ...place, cwd: '/tmp' })).toBe(false);
   });

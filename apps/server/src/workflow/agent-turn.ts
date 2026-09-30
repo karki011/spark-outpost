@@ -272,7 +272,7 @@ export async function runAgentTurn(
             piece: input.piece ?? undefined,
           })
         : asking
-          ? prepareAskRun(gateOptions)
+          ? prepareAskRun({ ...gateOptions, conversationId: input.identity.threadId })
           : undefined;
     turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
     const session = turnSession;

@@ -74,6 +74,12 @@ function request(approval: Approval, agent: string) {
   return `${agent} wants to: ${approval.title}`;
 }
 
+function commandNoteEnding(approval: Approval): string {
+  if (approval.reason !== null) return '.';
+  if (approval.payload.asksBecause) return `. ${approval.payload.asksBecause}.`;
+  return ", and this one isn't on the project's allowlist yet.";
+}
+
 function optionClass(allow: boolean, primary: boolean): string {
   if (!allow) return 'btn ghost sm deny';
   return primary ? 'btn primary sm' : 'btn line sm';
@@ -210,7 +216,7 @@ function PendingApproval({
             </>
           )}
           {commandSandboxNote(provider)}
-          {alwaysAsks ? '.' : ", and this one isn't on the project's allowlist yet."}
+          {commandNoteEnding(approval)}
         </p>
       )}
       {approval.kind === 'edit' && (

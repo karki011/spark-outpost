@@ -7,6 +7,7 @@ import type { PermissionGate } from '../providers/provider.ts';
 import type { Append } from './agent-turn.ts';
 import { createApprovalGate, type EditObserver, type PlanModeHooks } from './approval-gate.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
+import { askTurnAutoWhy } from './ask-auto.ts';
 
 export interface AskRunOptions {
   db: Db;
@@ -20,6 +21,10 @@ export interface AskRunOptions {
   pollMs?: number | undefined;
   timeoutMs?: number | undefined;
   onTimeout: () => void;
+}
+
+export interface AskTurnOptions extends AskRunOptions {
+  conversationId: string;
 }
 
 export interface DoRunOptions extends AskRunOptions {
@@ -60,11 +65,18 @@ function gateBasics(options: AskRunOptions) {
   };
 }
 
-export function prepareAskRun(options: AskRunOptions): PermissionGate {
+export function prepareAskRun(options: AskTurnOptions): PermissionGate {
   return createApprovalGate({
     ...gateBasics(options),
     posture: 'read_only',
     askRun: true,
+    askAuto: () =>
+      askTurnAutoWhy({
+        db: options.db,
+        conversationId: options.conversationId,
+        provider: options.provider,
+        modes: options.modes ?? [],
+      }),
     backup: async () => undefined,
   });
 }

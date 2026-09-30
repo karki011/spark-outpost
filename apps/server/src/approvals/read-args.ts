@@ -1,4 +1,4 @@
-import { grepRecurses } from './command-kinds.ts';
+import { grepRecurses } from './read-operands.ts';
 import { programName } from './commands.ts';
 
 export interface ReadArgs {
