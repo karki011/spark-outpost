@@ -119,7 +119,7 @@ describe('Agent TV list rows', () => {
     });
     expect(rowUsage(running[1]!)).toEqual(['12.4K tokens', '$0.03', '3 tool uses']);
     expect(finished).toHaveLength(1);
-    expect(finished[0]).toMatchObject({ name: 'Wren', role: 'Scout', durationMs: 38_000 });
+    expect(finished[0]).toMatchObject({ name: 'Wren', role: 'Reader', durationMs: 38_000 });
     expect(outcomeOf(finished[0]!.state)).toBe('passed');
   });
 

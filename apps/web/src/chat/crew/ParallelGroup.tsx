@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
 import { crewStateWord, roleLabel, type CrewAgent } from '../../crew/crew-model.ts';
+import { CrewName } from './CrewHint.tsx';
 
 const SETTLED = new Set<CrewAgent['state']>(['done', 'failed', 'stopped']);
 
@@ -39,7 +40,7 @@ export function ParallelGroup({ agents, labels, renderMember }: ParallelGroupPro
               <CrewBlob name={agent.name} provider={agent.provider} state={agent.state} size={20} />
             </span>
             <span className="agent-who">
-              <span className="agent-name">{agent.name}</span>
+              <CrewName name={agent.name} />
               <span className="agent-role">{labels.get(agent.id) ?? roleLabel(agent)}</span>
             </span>
             <span className={`agent-state ${agent.state}`}>{crewStateWord(agent.state)}</span>

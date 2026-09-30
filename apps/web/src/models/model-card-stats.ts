@@ -16,7 +16,7 @@ export interface StatLine {
 
 const ROLE_WORDS: Record<ModelStat['role'], string> = {
   direct: 'alone',
-  scout: 'as Scout',
+  scout: 'as Reader',
   architect: 'as Architect',
   builder: 'as Builder',
   critic: 'as Critic',

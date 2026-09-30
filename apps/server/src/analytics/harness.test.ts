@@ -21,7 +21,7 @@ describe('crew shape and flow', () => {
     expect(crewShape(['critic', 'builder', 'architect'], 2)).toBe(
       'Architect + Builder ×2 + Critic',
     );
-    expect(crewShape(['scout', 'builder'], 1)).toBe('Scout + Builder');
+    expect(crewShape(['scout', 'builder'], 1)).toBe('Reader + Builder');
   });
 
   it('merges identical paths and marks turns without an outcome as pending', () => {

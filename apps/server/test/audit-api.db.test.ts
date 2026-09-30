@@ -234,7 +234,7 @@ describe('audit API', () => {
       'estimated',
       'not_reported',
     ]);
-    expect(rows.map((row) => cell(row, 'role'))).toEqual(['Scout', 'Scout', 'Scout']);
+    expect(rows.map((row) => cell(row, 'role'))).toEqual(['Reader', 'Reader', 'Reader']);
     expect(cell(rows[0]!, 'cost_usd')).toBe('0.02');
     expect(cell(rows[2]!, 'cost_usd')).toBe('');
     expect(cell(rows[1]!, 'thinking_tokens')).toBe('500');

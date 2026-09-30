@@ -68,7 +68,7 @@ test('the audit view summarises, times, lists, and exports a session', async ({ 
   const panel = page.getByRole('complementary', { name: 'Work panel' });
   await panel.getByRole('tab', { name: 'Crew' }).click();
   const crew = panel.getByRole('list', { name: 'Crew' });
-  await expect(crew).toContainText('Scout');
+  await expect(crew).toContainText('Reader');
   await expect(crew).toContainText('gpt-6-sol · high');
   await expect(crew).toContainText('~$0.004');
   await shot(page, 'crew');
@@ -83,7 +83,7 @@ test('the audit view summarises, times, lists, and exports a session', async ({ 
   await expect(dialog.locator('.set-head .chain')).toHaveText('Hash chain verified · 4 events');
   await expect(dialog.locator('.astat').first()).toContainText('~$0.004');
   const byRun = dialog.getByRole('region', { name: 'By run' });
-  await expect(byRun).toContainText('Scout');
+  await expect(byRun).toContainText('Reader');
   await expect(byRun.locator('.srctag.est')).toHaveAttribute('title', /list price/);
   await shot(page, 'summary');
 

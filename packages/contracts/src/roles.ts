@@ -11,7 +11,7 @@ export const agentRoleSchema = z.enum([
 export type AgentRole = z.infer<typeof agentRoleSchema>;
 
 const ROLE_LABELS: Record<AgentRole, string> = {
-  scout: 'Scout',
+  scout: 'Reader',
   architect: 'Architect',
   builder: 'Builder',
   critic: 'Critic',
@@ -26,6 +26,15 @@ export const CREW_NAMES: Record<AgentRole, readonly string[]> = {
   critic: ['Hawk', 'Owl', 'Lynx'],
   coordinator: ['Atlas', 'Juno', 'Vega'],
   integrator: ['Weld', 'Knot', 'Seam'],
+};
+
+const ROLE_DUTIES: Record<AgentRole, string> = {
+  scout: 'reads and answers',
+  architect: 'plans the change',
+  builder: 'makes the change',
+  critic: 'reviews the change',
+  coordinator: 'splits the work into pieces',
+  integrator: 'joins the pieces',
 };
 
 export const JEV_NAME = 'Jev';
@@ -61,4 +70,14 @@ export function agentLabel(
 ): string {
   const who = name && name !== ROLE_LABELS[role] ? [name, ROLE_LABELS[role]] : [ROLE_LABELS[role]];
   return [...who, modelLabel, effort].filter((part): part is string => Boolean(part)).join(' · ');
+}
+
+export function crewRole(name: string): AgentRole | null {
+  const base = name.replace(/ \d+$/, '');
+  return agentRoleSchema.options.find((role) => CREW_NAMES[role].includes(base)) ?? null;
+}
+
+export function crewTitle(name: string, role: AgentRole | null = crewRole(name)): string {
+  if (!role) return name;
+  return `${name} · ${ROLE_LABELS[role]} — ${ROLE_DUTIES[role]}`;
 }
