@@ -138,6 +138,14 @@
   color: var(--text);
   font-weight: 600;
 }
+.seg button[data-label]::after {
+  content: attr(data-label);
+  display: block;
+  height: 0;
+  overflow: hidden;
+  font-weight: 600;
+  visibility: hidden;
+}
 .seg-ind {
   position: absolute;
   top: 3px;
