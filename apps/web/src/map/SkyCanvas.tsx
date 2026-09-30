@@ -2,8 +2,7 @@ import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 import { bindInput } from './engine-input.ts';
 import { MapEngine, type EngineCallbacks } from './engine.ts';
 import type { MapView, Rect } from './frame.ts';
-import type { ShortcutKeys } from '../ui/Keys.tsx';
-import { useTooltip } from '../ui/Tooltip.tsx';
+import { ZoomButton } from './ZoomButton.tsx';
 
 export interface SkyHandle {
   showBridge: (key: string | null) => void;
@@ -33,34 +32,6 @@ function overlayRects(stage: HTMLElement): Rect[] {
       box.bottom - origin.top + OVERLAY_GAP,
     ];
   });
-}
-
-interface ZoomButtonProps {
-  label: string;
-  keys: ShortcutKeys;
-  path: string;
-  onClick: () => void;
-}
-
-function ZoomButton({ label, keys, path, onClick }: ZoomButtonProps) {
-  const { triggerProps, tooltip } = useTooltip(label, { side: 'top', keys });
-  return (
-    <>
-      <button type="button" aria-label={label} {...triggerProps} onClick={onClick}>
-        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d={path}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-      {tooltip}
-    </>
-  );
 }
 
 function useLatest<T>(value: T) {

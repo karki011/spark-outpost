@@ -121,7 +121,10 @@ class Builder {
       if (group.projectId !== projectId) continue;
       const areas = group.areaKeys
         .map((key) => scene.areas[scene.areaByKey.get(key) ?? -1])
-        .filter((entry) => entry !== undefined && filters.categories.has(entry.area.category));
+        .filter(
+          (entry): entry is SceneArea =>
+            entry !== undefined && filters.categories.has(entry.area.category),
+        );
       if (areas.length === 0) continue;
       if (areas.length === 1) {
         this.area(areas[0]!, parent);

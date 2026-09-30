@@ -162,7 +162,10 @@ export function outlineRows(
         group,
         areas: group.areaKeys
           .map((key) => scene.areas[scene.areaByKey.get(key) ?? -1])
-          .filter((entry) => entry !== undefined && filters.categories.has(entry.area.category)),
+          .filter(
+            (entry): entry is SceneArea =>
+              entry !== undefined && filters.categories.has(entry.area.category),
+          ),
       }))
       .filter((unit) => unit.areas.length > 0)
       .map((unit): Unit => (unit.areas.length === 1 ? { area: unit.areas[0]! } : unit));

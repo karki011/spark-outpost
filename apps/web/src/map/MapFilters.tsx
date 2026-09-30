@@ -15,7 +15,7 @@ interface MapFiltersProps {
   bridges: readonly Bridge[] | null;
   unmatched: number | null;
   unmatchedOpen: boolean;
-  legend: boolean;
+  legend: boolean | null;
   onFilters: (filters: Filters) => void;
   onUnmatched: () => void;
   onLegend: () => void;
@@ -141,7 +141,7 @@ export function MapFilters(props: MapFiltersProps) {
         </div>
       )}
       <span className="map-sp" />
-      <LegendButton shown={props.legend} onClick={props.onLegend} />
+      {props.legend !== null && <LegendButton shown={props.legend} onClick={props.onLegend} />}
     </div>
   );
 }
