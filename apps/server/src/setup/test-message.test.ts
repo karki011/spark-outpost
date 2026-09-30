@@ -37,4 +37,26 @@ describe('sendTestMessage', () => {
       message: 'The test message failed: Invalid API key [redacted:api_key]',
     });
   });
+
+  it('asks the Claude CLI with the smallest model', async () => {
+    const calls: string[][] = [];
+    const run: RunCommand = async (file, args) => {
+      if (file === '/usr/bin/which')
+        return { code: 0, stdout: '/usr/local/bin/claude\n', stderr: '' };
+      calls.push(args);
+      return {
+        code: 0,
+        stdout: JSON.stringify({ result: 'OK', modelUsage: { 'claude-haiku-4-5': {} } }),
+        stderr: '',
+      };
+    };
+    const outcome = await sendTestMessage('claude', connection, {
+      run,
+      loginShell: null,
+      endpoints: {} as never,
+      secrets: memorySecretStore(),
+    });
+    expect(calls[0]).toEqual(expect.arrayContaining(['--model', 'haiku']));
+    expect(outcome.message).toMatch(/by claude-haiku-4-5$/);
+  });
 });
