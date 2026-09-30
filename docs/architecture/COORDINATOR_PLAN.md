@@ -53,7 +53,7 @@ Still open in code:
 - **Provider fallback wait.** With no provider left a piece fails at once; the 10-minute wait and the retry card are not built.
 - **`builder_env`** has no UI.
 - **Turn-off criteria not met yet.** The first story benchmark (section 9) failed the criteria for parallel placement and for pieces in order, with most coordinated runs never running pieces (B3). The user kept `parallel` as the default; the criteria are judged again after a re-run with B1–B3 fixed.
-- **Story benchmark re-run.** B1–B3 are fixed (see "Fixed after the first story benchmark" under Status) and checked with fake providers only; the live arms have not been re-run.
+- **Story benchmark re-run.** B1–B3 are fixed (see "Fixed after the first story benchmark" under Status) and checked with fake providers only; the live arms have not been re-run. The fake dry run (all arms, one run each plus Full auto → PR) now moves arm d's Codex piece to Claude in both runs; before, the stack's fake agent never played Codex, so arm d's rate limit never fired. In the dry run, arm c at Full auto → PR still keeps the change without a PR ("changed files in more than one folder"), as it did before these fixes.
 - **The PR body's piece table** has not been seen in a live run.
 
 ## Decisions in one place
