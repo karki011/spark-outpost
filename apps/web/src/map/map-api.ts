@@ -34,8 +34,8 @@ export const FIRST_PAGE = 120;
 export const mapKeys = {
   all: ['map'] as const,
   project: (projectId: string) => ['map', 'project', projectId] as const,
-  area: (projectId: string, areaId: string, limit: number) =>
-    ['map', 'area', projectId, areaId, limit] as const,
+  area: (projectId: string, areaId: string, limit: number, version: string) =>
+    ['map', 'area', projectId, areaId, limit, version] as const,
   links: (projectIds: readonly string[]) => ['map', 'links', ...projectIds] as const,
   unmatched: (projectIds: readonly string[]) => ['map', 'unmatched', ...projectIds] as const,
 };
