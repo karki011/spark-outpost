@@ -108,6 +108,16 @@ function kindCounts(files: readonly FixtureFile[]): Record<MapFileKind, number> 
   ) as Record<MapFileKind, number>;
 }
 
+function latestChange(files: readonly FixtureFile[]): string | null {
+  return (
+    files
+      .map((file) => file.lastChangedAt)
+      .filter((at) => at !== null)
+      .sort()
+      .at(-1) ?? null
+  );
+}
+
 function commonFolder(paths: readonly string[]): string {
   const parts = paths.map((p) => p.split('/').slice(0, -1));
   const first = parts[0] ?? [];
@@ -186,6 +196,7 @@ function projectFromLayout(
       importance: list[0]?.importance ?? 0,
       topFiles: list.slice(0, 5).map((f) => f.path),
       kindCounts: kindCounts(list),
+      lastChangedAt: latestChange(list),
       x: group.cx,
       y: group.cy,
       radius: group.r,
@@ -438,6 +449,7 @@ export function syntheticFixture(
       importance: 1,
       topFiles: list.slice(0, 5).map((f) => f.path),
       kindCounts: kindCounts(list),
+      lastChangedAt: null,
       x,
       y,
       radius: areaRadius,

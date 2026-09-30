@@ -42,6 +42,7 @@ export function sampleArea(area: SampleArea): MapArea {
     kindCounts: Object.fromEntries(
       MAP_FILE_KINDS.map((kind) => [kind, area.files.filter((file) => file.kind === kind).length]),
     ) as Record<MapFileKind, number>,
+    lastChangedAt: null,
     x: area.x,
     y: area.y,
     radius: 40,
