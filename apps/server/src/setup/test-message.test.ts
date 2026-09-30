@@ -38,7 +38,7 @@ describe('sendTestMessage', () => {
     });
   });
 
-  it('asks the Claude CLI with the smallest model', async () => {
+  it('asks the Claude CLI with the cheapest model the harness still uses', async () => {
     const calls: string[][] = [];
     const run: RunCommand = async (file, args) => {
       if (file === '/usr/bin/which')
@@ -50,13 +50,28 @@ describe('sendTestMessage', () => {
         stderr: '',
       };
     };
-    const outcome = await sendTestMessage('claude', connection, {
+    const models = [
+      { id: 'haiku', label: 'Haiku 4.5' },
+      { id: 'sonnet', label: 'Sonnet 5' },
+      { id: 'opus', label: 'Opus 5.5' },
+    ];
+    await sendTestMessage(
+      'claude',
+      { ...connection, models },
+      {
+        run,
+        loginShell: null,
+        endpoints: {} as never,
+        secrets: memorySecretStore(),
+      },
+    );
+    expect(calls[0]).toEqual(expect.arrayContaining(['--model', 'sonnet']));
+    await sendTestMessage('claude', connection, {
       run,
       loginShell: null,
       endpoints: {} as never,
       secrets: memorySecretStore(),
     });
-    expect(calls[0]).toEqual(expect.arrayContaining(['--model', 'haiku']));
-    expect(outcome.message).toMatch(/by claude-haiku-4-5$/);
+    expect(calls[1]).not.toContain('--model');
   });
 });
