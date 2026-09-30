@@ -58,7 +58,7 @@ const LEVELS = [
 ];
 const MORE_STEP = 48;
 const FIRST_ZOOM = 0.5;
-const FOCUS_TRIES = 12;
+const FOCUS_TRIES = 45;
 const NOT_NAVIGABLE = new Set(['project', 'loading']);
 
 function reducedMotion(): boolean {
@@ -198,12 +198,10 @@ function TreeCanvas({
       if (element && (force || !outside) && document.activeElement !== element) {
         element.focus({ preventScroll: true });
       }
-      if (element && settled && document.activeElement === element) {
-        pendingFocus.current = null;
-        return;
-      }
       tries += 1;
       if (tries < FOCUS_TRIES) frame = requestAnimationFrame(attempt);
+      else if (settled && element && document.activeElement === element)
+        pendingFocus.current = null;
     };
     frame = requestAnimationFrame(attempt);
     return () => cancelAnimationFrame(frame);
@@ -216,6 +214,7 @@ function TreeCanvas({
       void flow.fitView({ padding: 0.12, duration: 0, maxZoom: 1, minZoom: fitMin.current });
     }
     if (!layout.fresh) return;
+    if (pendingFocus.current) ensureVisible(pendingFocus.current.id);
     const target = revealTarget;
     if (target && centred.current !== handled && layout.result[target]) {
       centred.current = handled;
@@ -229,7 +228,18 @@ function TreeCanvas({
       const box = boxes.get(opened);
       if (box) void flow.fitBounds(box, { padding: 0.12, duration });
     }
-  }, [layout, nodes.length, flow, centreOn, moveTo, duration, revealTarget, handled, boxes]);
+  }, [
+    layout,
+    nodes.length,
+    flow,
+    centreOn,
+    moveTo,
+    ensureVisible,
+    duration,
+    revealTarget,
+    handled,
+    boxes,
+  ]);
 
   if (reveal && reveal.nonce !== handled) {
     setHandled(reveal.nonce);
