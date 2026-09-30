@@ -13,6 +13,7 @@ import type {
 } from '@spark-outpost/contracts';
 import type { RepoLaunch } from '../agent-config/launch.ts';
 import type { UserMcpLaunch } from '../mcp/launch.ts';
+import type { SparkScope } from '../spark-mcp/deps.ts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
 
 export interface TurnAttachment {
@@ -83,6 +84,7 @@ export interface ProviderTurn {
   repo?: RepoLaunch;
   userMcp?: readonly UserMcpLaunch[];
   spark?: SparkSessionPrefs;
+  sparkScope?: SparkScope;
 }
 
 export type GateAnswer =

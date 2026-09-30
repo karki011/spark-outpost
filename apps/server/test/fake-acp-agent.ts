@@ -6,6 +6,7 @@ import { coordinatorRoleFor, steerParams, steerRequest } from './fake-acp-coordi
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
+import { sparkTurn } from './fake-acp-spark.ts';
 import { describeBlock } from './fake-acp-support.ts';
 import {
   createFakeSession,
@@ -318,6 +319,8 @@ async function turn(
     await fileRequests(text, sessionId, client, say);
     return 'end_turn';
   }
+  const sparked = await sparkTurn(text, sessionRequest?.mcpServers, update, say);
+  if (sparked) return sparked;
   if (text.includes('#auth')) throw acp.RequestError.authRequired();
   if (text.includes('#refuse')) return 'refusal';
   if (text.includes('#secret')) return leakSecrets(update, say);

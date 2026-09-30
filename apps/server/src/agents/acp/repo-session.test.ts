@@ -270,6 +270,15 @@ describe('MCP servers in the session request', () => {
     ]);
   });
 
+  it('collapses double underscores so a server name cannot pose as another server’s tools', () => {
+    const echo = scan.mcpServers.find((server) => server.name === 'echo')!;
+    const user = [
+      { ...echo, name: 'spark__evil' },
+      { ...echo, name: 'a..b' },
+    ];
+    expect(namedMcpServers([], user).map((server) => server.name)).toEqual(['spark_evil', 'a_b']);
+  });
+
   it('expands references from the environment but never passes secrets', () => {
     const echo = scan.mcpServers.find((server) => server.name === 'echo')!;
     const server = acpMcpServer({ name: 'echo', config: echo }, { HOME: '/Users/me' });

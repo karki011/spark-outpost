@@ -48,7 +48,7 @@ function mergedHooks(launch: RepoLaunch): HooksConfig | null {
   return Object.keys(merged).length > 0 ? merged : null;
 }
 
-const safeName = (name: string) => name.replace(/[^A-Za-z0-9_-]/g, '_');
+const safeName = (name: string) => name.replace(/[^A-Za-z0-9_-]/g, '_').replace(/_{2,}/g, '_');
 
 export function namedMcpServers(
   launch: RepoLaunch,

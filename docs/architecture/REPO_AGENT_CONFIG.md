@@ -140,6 +140,19 @@ Settings → Test connection starts the server through the MCP SDK client with a
 
 `/mcp` in the composer opens "MCP servers in this chat": each user-level server with its source, which switch decides it and its last test, a switch for this chat and Reset (back to the project or all-chats setting); the linked repos' servers read only, with their state; and "Manage in Settings".
 
+## Spark's own tools (`spark` MCP server)
+
+Every agent session Spark launches (chat, Ask, Do, Builders; Claude, Z.ai and Codex) gets a built-in, read-only MCP server named `spark`, so agents can answer questions about Spark itself.
+
+- **Tools**: `spark_providers`, `spark_connectors`, `spark_settings`, `spark_projects`, `spark_map`, `spark_chats`, `spark_chat`, `spark_audit`, `spark_tickets`, `spark_analytics`, `spark_activity`, `spark_brief` (`apps/server/src/spark-mcp/tools/`). Each reuses the functions behind the matching API route. All carry `readOnlyHint: true`; none changes anything, except that `spark_tickets` refreshes the same ticket cache the Tickets page refreshes.
+- **Transport and auth**: the worker starts one Streamable HTTP MCP listener on `127.0.0.1` with a random port (`spark-mcp/host.ts`, stateless, JSON responses). Each agent turn gets a fresh 32-byte bearer token scoped to the workspace, chat and run; it is revoked when the turn ends. Requests need the exact `127.0.0.1:<port>` Host, no `Origin` header, POST only, and a live token. The Spark API launch token is never shared.
+- **No approval cards**: Claude and Z.ai get the server in ACP `mcpServers` and an `allow: ["mcp__spark"]` rule. User and repo servers can't take the name: `spark` is reserved (a clash becomes `<name>_spark`) and runs of `_` in server names collapse to one, so `spark__x` can't pose as `mcp__spark__…`. Codex gets it in `CODEX_CONFIG` `mcp_servers.spark` with `default_tools_approval_mode = "approve"` (not through ACP, which would replace that entry); if the user's own Codex config has a `spark` server, ours is `spark_outpost`. Agents without HTTP MCP skip it without a note.
+- **Output**: compact JSON, passed through `redactValue`, with lists and texts cut until the result fits 20,000 characters, and paging (`offset`, `nextOffset`) where lists grow. Chat messages are clipped per message.
+- **Instructions**: when the server is attached, the Spark instructions add one line pointing at the `spark_*` tools (649 of 1,024 characters at the longest).
+- **Audit**: tool calls are ordinary ACP tool calls, so they land in the run's protocol log and steps like any other; the session token in `session/new` is redacted like other MCP header values.
+- **Tests**: `spark-mcp/format.test.ts`, `spark-mcp/host.test.ts`, `agents/acp/spark-tools.test.ts`, `test/spark-mcp-setup.db.test.ts`, `test/spark-mcp-chats.db.test.ts`, `test/acp-spark-tools.db.test.ts` (fake agent calls a tool over HTTP; Claude allow rule; Codex config; token revoked after the turn).
+- **Live, September 30, Haiku 4.5, scratch repo, $0.036**: asked "Which AI providers and ticket connectors are connected?", Claude called `mcp__spark__spark_providers` and `mcp__spark__spark_connectors` without a permission request and answered from them. Codex's `default_tools_approval_mode` has not been checked live yet.
+
 ## Limitations
 
 - Off means "not given to the agent", not "hidden": with instructions off, the live Claude run read CLAUDE.md with its Read tool and still answered with the codeword.

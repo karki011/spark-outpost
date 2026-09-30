@@ -13,6 +13,7 @@ import { ApprovalWaiters } from './approval-waiters.ts';
 import { createProviders } from './providers.ts';
 import { startWorker } from './worker.ts';
 import { Slots } from '../orchestration/slots.ts';
+import { startSparkMcpHost } from '../spark-mcp/host.ts';
 
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.worker });
@@ -28,11 +29,24 @@ const intake = createIntakeRecorder({
 });
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const codeScan = createCodeScanner(db);
+const sparkTools = await startSparkMcpHost({
+  db,
+  secrets,
+  fetch,
+  linearApiUrl: config.LINEAR_API_URL,
+  github: {
+    runCommand,
+    apiUrl: config.GITHUB_API_URL,
+    locateGh: () => locateCli('gh', runCommand, loginShell),
+  },
+  serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD ?? null,
+  branchPrefix: config.BRANCH_PREFIX,
+});
 const worker = startWorker({
   db,
   approvalWaiters,
   intake,
-  providers: createProviders(config.AGENT_RUNTIME, config.FAKE_ACP_AGENT, secrets),
+  providers: createProviders(config.AGENT_RUNTIME, config.FAKE_ACP_AGENT, secrets, sparkTools),
   leaseSeconds: config.LEASE_SECONDS,
   sessionLimits: {
     idleMs: config.SESSION_IDLE_MINUTES * 60_000,
@@ -73,6 +87,7 @@ const shutdown = async () => {
   await approvalListener.close();
   await projectMap.stop();
   await worker.stop();
+  await sparkTools.close();
   await db.end();
   process.exit(0);
 };
