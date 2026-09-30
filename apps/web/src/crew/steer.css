@@ -1,0 +1,17 @@
+.steer-target {
+  flex-shrink: 0;
+  width: 168px;
+  margin-left: 6px;
+}
+.steer-target .field-button {
+  padding-block: 5px;
+  font-size: 12.5px;
+}
+@media (max-width: 560px) {
+  .steer-target {
+    width: 124px;
+  }
+}
+.steer-target .note {
+  display: none;
+}
