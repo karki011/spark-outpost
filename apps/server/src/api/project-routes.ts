@@ -7,6 +7,7 @@ import {
   projectOrderRequestSchema,
   removedProjectSchema,
   updateProjectRequestSchema,
+  type ProjectFileContent,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { saveAttachment } from '../persistence/attachments.ts';
@@ -122,6 +123,22 @@ export function projectRoutes({ db, workspaceId }: ProjectRouteDeps): Router {
   router.get('/projects/:id/files', async (req, res) => {
     const policy = await openProject(db, workspaceId, paramId(req));
     res.json(await listProjectFiles(policy.roots[0]!, queryText(req, 'query')));
+  });
+
+  router.get('/projects/:id/file', async (req, res) => {
+    const requested = queryText(req, 'path');
+    if (!requested) throw new BadRequestError('Name a file to open.');
+    const policy = await openProject(db, workspaceId, paramId(req));
+    const file = await readForAttachment(policy, requested);
+    if (file.data.includes(0)) {
+      throw new BadRequestError("That file isn't text, so it can't be shown here.");
+    }
+    const content: ProjectFileContent = {
+      path: file.relative,
+      text: file.data.toString('utf8'),
+      bytes: file.data.length,
+    };
+    res.json(content);
   });
 
   router.post('/projects/:id/attachments', async (req, res) => {

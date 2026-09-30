@@ -1,0 +1,124 @@
+.fsheet {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: min(640px, calc(100vw - 20px));
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, #000 8%, transparent),
+    0 18px 48px -12px color-mix(in srgb, #000 28%, transparent);
+  overflow: hidden;
+}
+.fsheet:focus-visible {
+  outline: none;
+}
+.fs-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 6px 20px;
+}
+.fs-title {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.fs-title b,
+.fs-title small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fs-title b {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 600;
+}
+.fs-title small {
+  color: var(--faint);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+.fs-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 20px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.fs-tools .seg {
+  width: 200px;
+}
+.fs-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.fs-body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 22px 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.fs-props {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+}
+.fs-props div {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+}
+.fs-props dt {
+  color: var(--faint);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+.fs-props dd {
+  margin: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.fs-source {
+  margin: -4px -6px 0;
+}
+.fs-state {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 72px 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.fs-state p,
+.fs-blank {
+  margin: 0;
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  .fsheet {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    height: 86vh;
+    border-radius: 20px 20px 0 0;
+  }
+  .fs-props div {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

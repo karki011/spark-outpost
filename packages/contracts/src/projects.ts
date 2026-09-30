@@ -67,5 +67,12 @@ export const attachProjectFileRequestSchema = z.object({
 });
 export type AttachProjectFileRequest = z.infer<typeof attachProjectFileRequestSchema>;
 
+export const projectFileContentSchema = z.object({
+  path: z.string(),
+  text: z.string(),
+  bytes: z.number().int().nonnegative(),
+});
+export type ProjectFileContent = z.infer<typeof projectFileContentSchema>;
+
 export const projectGitSchema = z.object({ branch: z.string().nullable() });
 export type ProjectGit = z.infer<typeof projectGitSchema>;

@@ -189,6 +189,36 @@ describe('project files', () => {
   });
 });
 
+describe('reading project files', () => {
+  const read = (id: string, path: string) =>
+    get(`/api/projects/${id}/file?path=${encodeURIComponent(path)}`);
+
+  it('returns a text file with its project-relative path', async () => {
+    const project = await linked();
+    const response = await read(project.id, 'README.md').expect(200);
+    expect(response.body).toEqual({ path: 'README.md', text: '# App\n', bytes: 6 });
+  });
+
+  it('refuses secrets, escapes, binary and missing files', async () => {
+    const project = await linked();
+    const cases: [string, string][] = [
+      ['.env', "Spark Outpost won't attach secret files like .env."],
+      ['../outside.txt', 'That file is outside the project folder.'],
+      ['logo.bin', "That file isn't text, so it can't be shown here."],
+      ['missing.md', "That file doesn't exist in the project."],
+    ];
+    for (const [path, message] of cases) {
+      const response = await read(project.id, path);
+      expect({ path, status: response.status, error: response.body.error }).toEqual({
+        path,
+        status: 400,
+        error: message,
+      });
+    }
+    await get(`/api/projects/${project.id}/file`).expect(400);
+  });
+});
+
 describe('attaching project files', () => {
   it('stores a text file with its source path', async () => {
     const project = await linked();

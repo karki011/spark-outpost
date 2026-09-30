@@ -7,6 +7,7 @@ import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import type { OutgoingMessage } from './ChatView.tsx';
 import { AdviceLine } from './AdviceLine.tsx';
 import { repoSummary } from './project/repo-list.ts';
+import { RepoKit } from './project/RepoKit.tsx';
 import { buildTurns } from './turns.ts';
 import { SoloTurn } from './SoloTurn.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
@@ -93,6 +94,7 @@ export function Thread({
               read or change files.
             </p>
           )}
+          {repos[0] && <RepoKit project={repos[0]} />}
         </div>
       </div>
     );

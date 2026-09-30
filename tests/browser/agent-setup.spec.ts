@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { makeConfiguredRepo } from '../../apps/server/test/repo-config-fixture.ts';
+import { FIXTURE_RULE, makeConfiguredRepo } from '../../apps/server/test/repo-config-fixture.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -82,7 +82,7 @@ test('shows what the repo gives the agents, with risky parts off and a dot on th
     '4 hooks, 6 allow rules, 3 MCP servers',
   );
   const allow = card(page, 'Allow rules');
-  await allow.getByText('Show 6 allow rules').click();
+  await allow.getByRole('button', { name: 'Show all 6 allow rules' }).click();
   await expect(allow).toContainText('Not applied: Could push code or change remotes');
   await expect(allow).toContainText('Applied when trusted');
   const keys = card(page, 'Keys and traffic');
@@ -142,6 +142,31 @@ test('keeps focus inside, closes on Escape and returns focus to the button', asy
   await page.keyboard.press('Escape');
   await expect(setup(page)).toBeHidden();
   await expect(setupButton(page)).toBeFocused();
+});
+
+test('opens repo files in a preview from the empty chat and from Agent setup', async ({ page }) => {
+  await chatWithRepo(page);
+  const kit = page.getByRole('region', { name: 'What app gives the agents' });
+  await kit.getByRole('button', { name: /Skills/ }).click();
+  await kit.getByRole('button', { name: /^zebra/ }).click();
+  const sheet = page.getByRole('dialog', { name: 'SKILL.md preview' });
+  await expect(sheet).toContainText('Draws zebras when asked about stripes');
+  await expect(sheet).toContainText('Draw a zebra.');
+  await sheet.getByRole('radio', { name: 'Source' }).click();
+  await expect(sheet).toContainText('name: zebra');
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+
+  await openSetup(page);
+  await setup(page)
+    .getByRole('button', { name: /^CLAUDE\.md/ })
+    .click();
+  await expect(setup(page)).toBeHidden();
+  const rules = page.getByRole('dialog', { name: 'CLAUDE.md preview' });
+  await expect(rules.getByRole('heading', { name: 'Rules' })).toBeVisible();
+  await expect(rules).toContainText(FIXTURE_RULE);
+  await rules.getByRole('button', { name: 'Close preview' }).click();
+  await expect(rules).toBeHidden();
 });
 
 test('fits a narrow window and a dark theme', async ({ page }) => {

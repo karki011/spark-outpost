@@ -8,6 +8,7 @@ import { EverydayCards, HooksCard, IgnoredCard, McpCard } from './AgentSetupCard
 import { needsAttention, trustPrompt } from './agent-setup.ts';
 import { AllowRulesCard, RedirectsCard, TrustCard } from './TrustCards.tsx';
 import { useAgentConfig, useAgentConfigChange } from './use-agent-config.ts';
+import { useOpenFile } from './file-sheet/FileSheet.tsx';
 
 const FOCUSABLE =
   'button:not([disabled]), input:not([disabled]), summary, [href], [tabindex]:not([tabindex="-1"])';
@@ -24,7 +25,7 @@ function useFocusTrap(panelRef: RefObject<HTMLElement | null>, open: boolean) {
   }, [panelRef, open]);
 }
 
-function RepoSetup({ project }: { project: Project }) {
+function RepoSetup({ project, onOpen }: { project: Project; onOpen: (path: string) => void }) {
   const config = useAgentConfig(project.id);
   const change = useAgentConfigChange(project.id);
   if (config.isPending) return <p className="as-empty">Looking at {project.name}…</p>;
@@ -40,6 +41,7 @@ function RepoSetup({ project }: { project: Project }) {
     name: project.name,
     busy: change.isPending,
     onChange: change.mutate,
+    onOpen,
   };
   return (
     <div className="as-cards">
@@ -75,6 +77,7 @@ export function AgentSetup({ repos }: { repos: Project[] }) {
   const config = useAgentConfig(primary.id);
   const attention = config.data ? needsAttention(config.data) : false;
   const prompt = config.data ? trustPrompt(config.data) : null;
+  const openFile = useOpenFile();
   useFocusTrap(panelRef, open);
   const openForPrimary = () => {
     setChosenId(primary.id);
@@ -128,7 +131,16 @@ export function AgentSetup({ repos }: { repos: Project[] }) {
             ))}
           </div>
         )}
-        {open && <RepoSetup key={shown.id} project={shown} />}
+        {open && (
+          <RepoSetup
+            key={shown.id}
+            project={shown}
+            onOpen={(path) => {
+              setOpen(false);
+              openFile?.(shown.id, path);
+            }}
+          />
+        )}
       </div>
     </>
   );
