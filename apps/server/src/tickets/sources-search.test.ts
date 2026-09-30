@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { JIRA_EMAIL, JIRA_TOKEN } from '../../test/fake-jira.ts';
 import { LINEAR_KEY } from '../../test/fake-linear.ts';
 import { startTicketStubs, type TicketStubs } from '../../test/ticket-support.ts';
@@ -58,7 +58,10 @@ describe('Linear search and assign', () => {
   });
 
   it('lists tickets done recently', async () => {
-    const done = await linear().listAssigned({ status: 'done', doneWithinDays: 7 });
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-09-30T12:00:00Z') });
+    const done = await linear()
+      .listAssigned({ status: 'done', doneWithinDays: 7 })
+      .finally(() => vi.useRealTimers());
     expect(done.map((ticket) => [ticket.key, ticket.doneAt])).toEqual([
       ['ENG-14', '2026-09-27T08:00:00.000Z'],
     ]);
