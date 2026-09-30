@@ -279,10 +279,7 @@ export async function runAgentTurn(
       settings: input.settings,
       projectRoots: input.projectRoots,
       signal: control.signal,
-      observe: (output) => {
-        meter(output);
-        options.onProduced?.(output);
-      },
+      ...(options.onProduced ? { observe: options.onProduced } : {}),
       audit,
       ...(input.mode ? { mode: input.mode } : {}),
       ...(writesCode(input.role) ? { builder: true } : {}),
@@ -301,6 +298,7 @@ export async function runAgentTurn(
       spark,
     })) {
       if (control.signal.aborted) {
+        meter(output);
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
         if (output.kind === 'usage') {
           await recordUsage(deps.db, lease.runId, session ? session.usage(output) : output);
@@ -315,6 +313,7 @@ export async function runAgentTurn(
         await recordUsage(deps.db, lease.runId, session ? session.usage(output) : output);
       }
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
+      meter(output);
       await tasks.observe(output);
       if (output.kind === 'session') await session?.started(output);
       if (output.kind === 'commands') await session?.commands(output.commands);
