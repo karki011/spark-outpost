@@ -1,12 +1,12 @@
 # Coordinator plan
 
-Design of **coordinator delegation**: one coordinator splits a story into Builder-sized pieces with declared file ownership, places each piece (one Builder in order, shared-tree Builders, or worktree Builders), steers them while they run, integrates their work as the only writer, runs the full checks and the Critic once, and reports. Phases C0–C7 are built; C8 (the UI polish and the story benchmark) is not.
+Design of **coordinator delegation**: one coordinator splits a story into Builder-sized pieces with declared file ownership, places each piece (one Builder in order, shared-tree Builders, or worktree Builders), steers them while they run, integrates their work as the only writer, runs the full checks and the Critic once, and reports. Phases C0–C8 are built. The C8 story benchmark ([story-2026-10-01.md](../benchmarks/story-2026-10-01.md)) found that parallel placement and pieces in order both fail their turn-off criteria (section 10); the defaults are unchanged pending that decision.
 
 Read with [HARNESS_PLAN.md](HARNESS_PLAN.md) (the lean harness around it) and [ROUTING_PLAN.md](ROUTING_PLAN.md) (code scan, Builder floor, complexity rule). Evidence: [routing-live-2026-09-27.md](../benchmarks/routing-live-2026-09-27.md), [harness-e2e-lean-2026-09-27.md](../benchmarks/harness-e2e-lean-2026-09-27.md).
 
 ## Status
 
-- **Mode.** `COORDINATOR_MODE` (`off`, `shadow`, `in_order`, `parallel`), default `parallel` (`apps/server/src/config.ts`); set `in_order` or `shadow` to override it, for example while debugging. The browser test server runs `parallel`. Spark off never engages the coordinator or records a shadow row. Thresholds are in `advisor/policy.ts` (`COORD_*`, policy `coord-2`).
+- **Mode.** `COORDINATOR_MODE` (`off`, `shadow`, `in_order`, `parallel`), default `parallel` (`apps/server/src/config.ts`); set `in_order` or `shadow` to override it, for example while debugging. `COORDINATOR_PLACEMENT` (`shared` or `worktree`, unset by default) forces the list placement under `parallel` for benchmarks (`forcedPlace` in `place-list.ts`); the project's parallel setting, one slot and the task copy still win. The browser test server runs `parallel`. Spark off never engages the coordinator or records a shadow row. Thresholds are in `advisor/policy.ts` (`COORD_*`, policy `coord-2`).
 - **Project settings.** `projects.parallel_pieces` defaults to true (`0077_builder_defaults.sql` flipped existing rows; the flag stays for the API and specs, with no UI; false gives "parallel pieces are off for this project"). `projects.piece_slots` (1–3, default 3) is "Builders at once" in Settings → Projects; 1 runs pieces in order. The same group has "Where Spark works" (`projects.work_place`: each chat in its own worktree, the default, or in my files). `stable_checkout` was dropped in `0077`: worktree-first chats already keep the user's folder untouched. `builder_env` has no UI.
 - **Migrations.** `0063_coordinator.sql`, `0069_parallel_pieces.sql`, `0070_piece_notes.sql`, `0077_builder_defaults.sql`.
 
@@ -20,7 +20,7 @@ What is built, and where:
 - **Main is the chat's root.** In a chat worktree the copies live under `<chat worktree>/.spark/worktrees/` and land into the chat worktree, never the user's checkout.
 - **Pieces follow the task's copy.** When the level or mode needs a task copy (only when the chat works in place: Full auto → PR, a mode that skips the gate, destructive work, a busy repo), every piece runs in that one copy, in order, and it merges back once at the end. Chats in their own worktree never need a task copy.
 - **The piece-list card** (checkpoint kind `pieces`: Build it, Build in order instead, Revise with a note, Stop) is asked at Review each step for a shared or worktree list or 5+ pieces; the proposed list shows on the board meanwhile. Revise re-runs the coordinator turn with the note as a new list version. Automatic and Full auto approve by level and show the board read-only.
-- **UI.** Shared-tree and worktree Builders fold into one "Working in parallel" group in the crew turn (`ParallelGroup`), each head labelled with its piece and placement; the piece board is `crew/PieceBoard.tsx`; the Agent TV list shows the same label; the report names the placement and lists merge conflicts and renumbered migrations.
+- **UI.** Shared-tree and worktree Builders fold into one "Working in parallel" group in the crew turn (`ParallelGroup`), each head labelled with its piece and placement; the piece board is `crew/PieceBoard.tsx` (every status has a symbol and a word, placement badge, provider and model, check, cost, and the reason for a failed or skipped piece); Agent TV has a coordinator scene (`crew/tv-coordinator.ts`, the hub layout in `tv-layout.ts`): the coordinator in the centre, one node per piece around it with the Builder, piece, placement, state and queued-notes badge, including pieces not started yet; the Agent TV list shows the same labels and states; the report names the placement and lists merge conflicts and renumbered migrations. Browser coverage: `pieces-parallel.spec.ts` (board states, TV scene, work panel tabs by keyboard, the piece-list card by keyboard, the merge-conflict card, the phone layout) and `steer.spec.ts`.
 - **Budget Continue** resumes cut pieces in their own sessions; pieces that never started begin fresh.
 - **Live updates** ride on the orchestration snapshot (`Orchestration.pieces`); there is no separate `pieces` activity type. `GET /api/tasks/:id/pieces` returns the list with a count of queued notes per piece.
 
@@ -46,7 +46,11 @@ Still open in code:
 - **Provider budget.** The per-provider share of the task budget and daily caps are not checked.
 - **Provider fallback wait.** With no provider left a piece fails at once; the 10-minute wait and the retry card are not built.
 - **`builder_env`** has no UI.
-- **C8 is not built.** `PieceBoard.tsx` exists, but Agent TV has no coordinator scene, and there is no story benchmark (`scripts/e2e-live/story/` does not exist; `scripts/coordinator/` has only `shadow.ts`). So the turn-off criteria in section 10 have never been evaluated, although `parallel` ships as the default.
+- **Turn-off decision pending.** The story benchmark (section 9) failed the criteria for parallel placement and for pieces in order; `parallel` still ships as the default until that is decided.
+- **Rate-limited Codex pieces land empty** (story benchmark B1): Codex's turn ends normally after its 429 retries, the piece lands with no files, and fallback never moves it.
+- **Shared-tree landing lost a piece's files** once at Full auto → PR (B2).
+- **Plan coverage is too strict** (B3): `covers()` fails implementation-level plan bullets, so 10 of 16 engaged stories fell back to one Builder after two coordinator turns.
+- **The PR body's piece table** has not been seen in a live run.
 
 ## Decisions in one place
 
@@ -157,7 +161,7 @@ Built on the kept worktree code: `projects/worktrees.ts` (`addWorktree`, `commit
 Follows the mockup (`docs/design/mockup/spark-outpost-mockup.html`) and `apps/web/src/crew/`.
 
 - **Crew turn.** A coordinator block with the **piece board** (`crew/PieceBoard.tsx`): one row per piece with title, Builder, placement badge ("in order", "shared tree", "Rivet's copy", "read-only"), provider and model, status, scoped check and cost. Parallel Builders show side by side in "Working in parallel".
-- **Agent TV** (C8, not built): the coordinator in the centre, Builders around it with their piece and placement.
+- **Agent TV** (C8): the coordinator in the centre, Builders around it with their piece, placement, state and queued notes.
 - **Cards per autonomy.**
 
 | Card                | Review each step                                             | Automatic                                  | Full auto → PR                        |
@@ -186,7 +190,7 @@ Edit and command approvals inside pieces follow the agent's mode as for one Buil
 
 ## 9. C8 and the story benchmark
 
-**C8 (not built).** Agent TV coordinator scene, piece board states, work panel tabs, and browser tests (the piece board, the piece-list card by keyboard, a conflict card, the phone layout), then the story benchmark.
+**C8 (built).** Agent TV coordinator scene, piece board states, work panel tabs, and browser tests (the piece board, the piece-list card by keyboard, a conflict card, the phone layout); the story benchmark is `pnpm e2e:story` (`scripts/e2e-live/story/`: fixture overlay, 10 hidden tests, reference, `--selftest`, fake dry run, `--merge`), first run in [story-2026-10-01.md](../benchmarks/story-2026-10-01.md).
 
 **The story benchmark** (planned at `scripts/e2e-live/story/`, reusing the dev-day driver and scorer). One story sized so that one Builder can still finish it but a coordinator would split it: in the `workbench` fixture, **"Project budgets"**: a migration adding `project_budgets`, a repository and API (`GET/PUT /api/projects/:id/budget`, 400 and 404 cases), a budget bar on the project page, an over-budget badge in the analytics list, a CSV column in the export, and tests for each. About 5 pieces, 2–3 independent once the table and API land. 10 hidden tests across the layers.
 
@@ -225,5 +229,7 @@ Each arm runs **n = 3** at Automatic (plus one Full auto → PR run per arm to c
 - **Keep only the shared tree** if merge conflicts show in more than 20% of worktree runs or dependency prep adds more than a minute per piece.
 - **Multi-provider assignment goes off** (the Critic stays cross-provider) if arm b does not beat the same placement on one provider, or its failures cluster on one provider's pieces.
 - **Anything that lowers the pass rate** against arm a is reverted, whatever it saves ([ROUTING_PLAN.md §4](ROUTING_PLAN.md#4-policy-that-stays-in-code)).
+
+**First evaluation (2026-10-01, [story-2026-10-01.md](../benchmarks/story-2026-10-01.md), n = 3–4, $27.58).** Every arm passed every Automatic run, and direct Claude was cheapest ($0.40 per pass against $2.95–4.52). Parallel shared tree: 4% slower than a2, so it fails. Parallel worktrees: 27% faster, under the 30% bar, and mostly load noise, so it fails. Pieces in order: fixed nothing one Builder got wrong, so it fails; one Builder passed 3/3 at lower cost, so the coordinator should engage only on request. The worktrees-only and shared-only rules were not triggered (0 violations, 0 conflicts). Multi-provider could not be judged (there was no one-provider shared arm), but the Codex fallback did not fire at all (B1). Caveats: only 6 of 16 engaged runs actually ran pieces (B3), and wall times were confounded by machine load. Recommended, not applied: `COORDINATOR_MODE` default `in_order` or `off` with engagement on request only, and no parallel default; fix B1–B3 before re-running.
 
 If it is turned off, placement rows 2 and 3, the group and merge code, and `piece_notes` go; the ownership guards and git-op refusals stay, since they protect one Builder too.

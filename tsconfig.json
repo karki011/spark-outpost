@@ -6,5 +6,11 @@
     "types": ["node"]
   },
   "include": ["scripts", "tests", "vitest.config.ts", "playwright.config.ts"],
-  "exclude": ["scripts/bench/fixture", "scripts/e2e-live/dev-day/fixtures"]
+  "exclude": [
+    "scripts/bench/fixture",
+    "scripts/e2e-live/dev-day/fixtures",
+    "scripts/e2e-live/story/fixture",
+    "scripts/e2e-live/story/hidden",
+    "scripts/e2e-live/story/reference"
+  ]
 }
