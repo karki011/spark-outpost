@@ -8,6 +8,13 @@ import { adviceDetails } from '../AdviceLine.tsx';
 
 const ROUTING = { auto: 'model by rules', pinned: 'pinned model' } as const;
 
+const PLAN: Record<Orchestration['depth'], string> = {
+  direct: 'Answer directly',
+  execute: 'Build it',
+  plan_execute: 'Plan, then build',
+  plan_execute_review: 'Plan, build, then review',
+};
+
 interface DispatchLineProps {
   orchestration: Orchestration;
   advice: AdviceSummary | undefined;
@@ -16,36 +23,36 @@ interface DispatchLineProps {
 
 export function DispatchLine({ orchestration, advice, category }: DispatchLineProps) {
   const tipId = useId();
-  const [lead, ...rest] = dispatchParts(orchestration, advice);
+  const parts = dispatchParts(orchestration, advice);
+  const size = parts.length > 1 ? parts[0] : null;
   const confidence = advice?.jev?.confidence;
-  const source = orchestration.depthSource === 'jev' ? 'Jev' : 'Fixed rules';
-  const tail = [
-    ...rest,
-    ROUTING[orchestration.routing],
-    confidence === undefined ? null : confidence.toFixed(2),
+  const summary = [
+    PLAN[orchestration.depth],
+    size,
+    confidence === undefined ? null : `${Math.round(confidence * 100)}% sure`,
+    orchestration.depthSource === 'jev' ? null : 'by rules',
   ].filter(Boolean);
   const details = [
+    `Model: ${ROUTING[orchestration.routing]}`,
     ...(advice ? adviceDetails(advice, { recordedRoute: false }) : []),
     ...whyLines(orchestration),
   ];
   return (
     <p className="jevline">
-      <span
-        className={details.length > 0 ? 'run-usage' : undefined}
-        tabIndex={details.length > 0 ? 0 : undefined}
-        aria-describedby={details.length > 0 ? tipId : undefined}
-      >
-        {source}: <b>{lead}</b>
-        {tail.length > 0 && ` · ${tail.join(' · ')}`}
-        {details.length > 0 && (
-          <span className="usage-tip" role="tooltip" id={tipId}>
-            {details.map((line) => (
-              <span key={line}>{line}</span>
-            ))}
-          </span>
-        )}
-      </span>{' '}
-      <CategoryChip category={category} />
+      <span className="run-usage" tabIndex={0} aria-describedby={tipId}>
+        {summary.join(' · ')}
+        <span className="usage-tip" role="tooltip" id={tipId}>
+          {details.map((line) => (
+            <span key={line}>{line}</span>
+          ))}
+        </span>
+      </span>
+      {category && (
+        <>
+          {' · '}
+          <CategoryChip category={category} />
+        </>
+      )}
     </p>
   );
 }
