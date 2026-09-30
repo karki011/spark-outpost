@@ -29,6 +29,18 @@ describe('agent error messages', () => {
     );
   });
 
+  it('maps the session failure categories codex-acp sends', () => {
+    const title = 'exceeded retry limit, last status: 429 Too Many Requests';
+    expect(failureError('Fake', { category: 'limit', title }).message).toBe(limited);
+    expect(failureError('Fake', { category: 'access', title: 'Unauthorized' }).message).toBe(
+      "Fake couldn't sign in (Unauthorized). Open Settings, reconnect Fake, and try again.",
+    );
+    expect(
+      failureError('Fake', { category: 'connection', title: 'Connection to Codex was lost.' })
+        .message,
+    ).toBe('Fake is not available right now (Connection to Codex was lost.). Try again.');
+  });
+
   it('redacts secrets in agent stderr and error text', () => {
     const key = 'sk-ant-api03-AbCdEfGhIjKlMnOpQrStUv';
     const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);

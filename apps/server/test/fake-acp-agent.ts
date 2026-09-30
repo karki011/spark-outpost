@@ -3,6 +3,7 @@ import * as acp from '@agentclientprotocol/sdk';
 import { currentRequest, planReplies, planTurn } from './fake-acp-plans.ts';
 import { roleFor } from './fake-acp-roles.ts';
 import { coordinatorRoleFor, steerParams, steerRequest } from './fake-acp-coordinator.ts';
+import { withTurnFailure } from './fake-acp-limits.ts';
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
@@ -477,7 +478,7 @@ acp
     try {
       recordPrompt(ctx.params.sessionId, text.join(''));
       const stopReason = await turn(ctx.params, ctx.client, controller.signal);
-      return { stopReason, usage: FAKE_USAGE };
+      return withTurnFailure(ctx.params.sessionId, { stopReason, usage: FAKE_USAGE });
     } catch (error) {
       if (controller.signal.aborted) {
         const unmetered = text.join('').includes('#spend');

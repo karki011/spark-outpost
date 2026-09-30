@@ -23,6 +23,8 @@ export interface AgentFailure {
 export interface UpdateMapper {
   map(update: SessionUpdate): ProviderOutput[];
   failure(): AgentFailure | null;
+  stalled(): AgentFailure | null;
+  stopped(meta: unknown): void;
   repliedWithText(): boolean;
   didWork(): boolean;
   trackSettings(settings: TrackedSettings, policy: ModePolicy): void;
@@ -75,6 +77,15 @@ export function sessionFailure(meta: unknown): ReportedFailure | null {
   if (typeof severity !== 'string' || typeof title !== 'string') return null;
   return { severity, title, category: typeof category === 'string' ? category : 'provider_error' };
 }
+
+const PROVIDER_ISSUES = new Set([
+  'limit',
+  'access',
+  'connection',
+  'rate_limited',
+  'auth_required',
+  'transport_lost',
+]);
 
 const ABSOLUTE_PATH = /(^|[\s(])(\/[^\s`'")]+)/g;
 
@@ -190,6 +201,7 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
   let wroteText = false;
   let worked = false;
   let failure: AgentFailure | null = null;
+  let warned: AgentFailure | null = null;
   let tracked: TrackedSettings | null = null;
   let policy: ModePolicy | null = null;
   let unsafeMode: string | null = null;
@@ -267,8 +279,16 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
       }),
     );
 
+  const progressed = (update: SessionUpdate) => {
+    if (update.sessionUpdate === 'tool_call') warned = null;
+    if (update.sessionUpdate === 'agent_message_chunk' && messageText(update.content) !== '') {
+      warned = null;
+    }
+  };
+
   return {
     map(update) {
+      progressed(update);
       switch (update.sessionUpdate) {
         case 'agent_thought_chunk': {
           if (thinking) return [];
@@ -331,6 +351,9 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
             failure = { category: reported.category, title: reported.title };
             return [];
           }
+          if (PROVIDER_ISSUES.has(reported.category)) {
+            warned = { category: reported.category, title: reported.title };
+          }
           return note(`Warning: ${reported.title}`);
         }
         case 'notice':
@@ -351,6 +374,12 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
       }
     },
     failure: () => failure,
+    stalled: () => warned,
+    stopped(meta) {
+      const reported = sessionFailure(meta);
+      if (reported?.severity !== 'error') return;
+      failure = { category: reported.category, title: reported.title };
+    },
     repliedWithText: () => wroteText,
     didWork: () => worked,
     trackSettings(settings, modes) {

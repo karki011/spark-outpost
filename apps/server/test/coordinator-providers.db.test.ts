@@ -86,4 +86,37 @@ describe('provider fallback for pieces', { timeout: 120_000 }, () => {
     expect(list.pieces[0]).toMatchObject({ status: 'landed', provider: 'claude', check: 'passed' });
     expect(list.pieces[0]!.filesChanged).toEqual(['store.ts']);
   });
+
+  it.each(['#turn429', '#retry429'])(
+    'moves a Codex piece whose turn ends normally after a 429 (%s)',
+    async (tag) => {
+      const { runId, orchestration } = await runOnCodex(`#pieces ${tag}`);
+      expect(orchestration.status).toBe('succeeded');
+      const p1 = (await children(t, runId)).filter((child) => child.pieceKey === 'P1');
+      expect(p1.map((child) => [child.provider, child.status])).toEqual([
+        ['codex', 'failed'],
+        ['claude', 'succeeded'],
+      ]);
+      expect(p1[0]!.error).toMatch(/rate limited/);
+      const list = await pieceList(t, runId);
+      expect(list.pieces[0]).toMatchObject({
+        status: 'landed',
+        provider: 'claude',
+        note: 'moved from Codex (rate limited)',
+      });
+      expect(list.pieces[0]!.filesChanged).toEqual(['store.ts']);
+    },
+  );
+
+  it('hands over the edits of a Codex turn that ended on a 429 after editing', async () => {
+    const { runId, orchestration } = await runOnCodex('#pieces #turn429after');
+    expect(orchestration.status).toBe('succeeded');
+    const p1 = (await children(t, runId)).filter((child) => child.pieceKey === 'P1');
+    expect(p1.map((child) => [child.provider, child.status])).toEqual([
+      ['codex', 'failed'],
+      ['claude', 'succeeded'],
+    ]);
+    expect(p1[1]!.prompt).toContain('## Handoff');
+    expect(p1[1]!.prompt).toContain('- store.ts');
+  });
 });
