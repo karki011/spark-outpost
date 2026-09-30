@@ -23,7 +23,11 @@ afterEach(async () => {
 async function placeWith(installed: boolean) {
   const { runId } = await doRun(t, folder);
   const input = await loadRunInput(t.db, runId);
-  return placeChat({ db: t.db, branchPrefix: 'spark', gitInstalled: async () => installed }, input);
+  return placeChat(
+    { db: t.db, branchPrefix: 'spark', gitInstalled: async () => installed },
+    input,
+    true,
+  );
 }
 
 describe('Do chats in a folder without git', () => {
