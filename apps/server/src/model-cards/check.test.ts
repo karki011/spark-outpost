@@ -47,15 +47,19 @@ describe('checkModelCards', () => {
     expect(result.failures[0]).toMatch(/^provider claude: checked 151 days ago, over 120: /);
   });
 
-  it('fails the day after a retirement date until the card is marked retired', () => {
+  it('warns from the day after a retirement date until the card is marked retired', () => {
     const onTheDay = checkModelCards(VENDOR_CARDS, new Date('2026-10-15T23:00:00Z'));
-    expect(onTheDay.failures).toEqual([
-      'gpt-5.5: retired on 2026-10-14; set "retired": true on its card and move defaults off it',
+    expect(onTheDay.failures).toEqual([]);
+    expect(onTheDay.warnings).toEqual([
+      'gpt-5.5: retired on 2026-10-14 and already treated as retired; set "retired": true and rewrite its card in the past tense',
     ]);
     const after = new Date('2026-10-16T00:00:00Z');
-    expect(checkModelCards(VENDOR_CARDS, after).failures.map((line) => line.split(':')[0])).toEqual(
-      ['claude-haiku-4-5', 'gpt-5.5'],
-    );
+    const retired = checkModelCards(VENDOR_CARDS, after);
+    expect(retired.failures).toEqual([]);
+    expect(retired.warnings.map((line) => line.split(':')[0])).toEqual([
+      'claude-haiku-4-5',
+      'gpt-5.5',
+    ]);
     const marked = markRetired(VENDOR_CARDS, ['claude-haiku-4-5', 'gpt-5.5']);
     expect(checkModelCards(marked, after)).toEqual({ warnings: [], failures: [] });
   });

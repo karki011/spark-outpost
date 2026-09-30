@@ -33,13 +33,29 @@ export function hasControlOperators(command: string): boolean {
   return CONTROL_OPERATORS.test(command);
 }
 
-export function splitSimpleCommands(command: string): string[][] {
-  const commands: string[][] = [];
+function isRedirectAmpersand(command: string, index: number): boolean {
+  const before = command[index - 1];
+  return before === '>' || before === '<' || command[index + 1] === '>';
+}
+
+export type StdinFrom = 'pipe' | 'group' | null;
+
+export interface SimpleCommand {
+  tokens: string[];
+  stdin: StdinFrom;
+  fragment: boolean;
+}
+
+export function splitCommandLine(command: string): SimpleCommand[] {
+  const commands: SimpleCommand[] = [];
   let tokens: string[] = [];
   let current = '';
   let quote: '"' | "'" | null = null;
   let started = false;
   let inBackticks = false;
+  let piped: StdinFrom = null;
+  let closedGroup = false;
+  let fragment = false;
   const endToken = () => {
     if (started) tokens.push(current);
     current = '';
@@ -47,7 +63,12 @@ export function splitSimpleCommands(command: string): string[][] {
   };
   const endCommand = () => {
     endToken();
-    if (tokens.length > 0) commands.push(tokens);
+    if (tokens.length > 0) {
+      commands.push({ tokens, stdin: piped, fragment });
+      piped = null;
+      closedGroup = false;
+      fragment = false;
+    }
     tokens = [];
   };
   for (let index = 0; index < command.length; index++) {
@@ -74,8 +95,21 @@ export function splitSimpleCommands(command: string): string[][] {
         started = true;
       }
       endCommand();
+      closedGroup = !opens;
+      fragment = !opens;
+    } else if (char === '&' && isRedirectAmpersand(command, index)) {
+      endToken();
+    } else if (char === '|') {
+      endCommand();
+      fragment = false;
+      if (command[index + 1] === '|') {
+        index++;
+        piped = null;
+      } else piped = closedGroup ? 'group' : 'pipe';
     } else if (SEPARATORS.has(char) || char === '(' || char === ')') {
       endCommand();
+      closedGroup = char === ')';
+      fragment = char === ')';
     } else if (REDIRECTS.has(char)) {
       endToken();
     } else if (/\s/.test(char)) {
@@ -87,6 +121,10 @@ export function splitSimpleCommands(command: string): string[][] {
   }
   endCommand();
   return commands;
+}
+
+export function splitSimpleCommands(command: string): string[][] {
+  return splitCommandLine(command).map((simple) => simple.tokens);
 }
 
 export function programName(program: readonly string[]): string {

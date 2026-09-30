@@ -1,28 +1,17 @@
 import path from 'node:path';
-import { findExecs, findRoots, type CommandTree } from './command-tree.ts';
+import { commandTree, findExecs, findRoots, type CommandTree } from './command-tree.ts';
 import { programName, programTokens, resolveCommandPath } from './commands.ts';
-import type { FileLister } from './file-lister.ts';
-import { heredocBodies, readsUnknownFiles } from './inline-code.ts';
 import { globToRegExp } from '../projects/path-policy.ts';
 import { plainRead, readArgs, type ReadArgs } from './read-args.ts';
+import { codeConcern, worst, type Concern, type ReadPlace } from './read-concern.ts';
+import { launchConcern } from './script-reads.ts';
 import { inputTargets, redirectTargets } from './write-targets.ts';
 
-export type ReadConcern = 'secret' | 'unknown';
-
-export interface ReadPlace {
-  cwd: string;
-  home: string;
-  isSecret: (target: string) => boolean;
-  files: FileLister;
-}
-
 type Loops = ReadonlyMap<string, readonly string[] | null>;
-type Concern = ReadConcern | null;
 
 const GLOB = /[*?[{]/;
 const UNKNOWN = /\$|`/;
 const VARIABLE = /\$(?:([A-Za-z_]\w*)|\{([A-Za-z_]\w*)\})/;
-const QUOTED = /(['"])([^'"\n]*)\1/g;
 const LOOPS = new Set(['for', 'select']);
 const MAX_WORDS = 256;
 const MAX_ROUNDS = 8;
@@ -53,15 +42,6 @@ function reassigned(tree: CommandTree, command: string, name: string): boolean {
   return tree.commands.some(
     (program) => REASSIGNERS.has(programName(program)) && program.slice(1).includes(name),
   );
-}
-
-function worst(concerns: Iterable<Concern>): Concern {
-  let found: Concern = null;
-  for (const concern of concerns) {
-    if (concern === 'secret') return 'secret';
-    found = concern ?? found;
-  }
-  return found;
 }
 
 function loopValues(tree: CommandTree, command: string): Loops {
@@ -161,18 +141,6 @@ function fileConcern(word: string, args: ReadArgs, loops: Loops, place: ReadPlac
   return worst(words.map((candidate) => wordConcern(candidate, args, place)));
 }
 
-function codeConcern(code: string, place: ReadPlace): Concern {
-  const literals = [...code.matchAll(QUOTED)].map((match) => match[2]!);
-  const named = literals.some(
-    (literal) =>
-      literal !== '' &&
-      !UNKNOWN.test(literal) &&
-      place.isSecret(resolveCommandPath(literal, place.cwd, place.home)),
-  );
-  if (named) return 'secret';
-  return readsUnknownFiles(code) ? 'unknown' : null;
-}
-
 function findConcern(program: readonly string[], loops: Loops, place: ReadPlace): Concern {
   const args = program.slice(1);
   const execsRead = findExecs(args).some((exec) => readArgs(programTokens(exec)) !== null);
@@ -194,19 +162,28 @@ function programConcern(program: string[], scan: ReadScan): Concern {
   const args = readArgs(program);
   if (!args) return null;
   if (scan.tree.fedByXargs.includes(program)) return 'unknown';
-  const code = args.stdinCode ? [...args.code, ...heredocBodies(scan.command)] : args.code;
   const files = args.files.filter((word) => !scan.redirects.has(word));
   return worst([
-    ...code.map((text) => codeConcern(text, place)),
+    ...args.code.map((text) => codeConcern(text, place)),
     ...files.map((word) => fileConcern(word, args, loops, place)),
   ]);
 }
 
-export function readConcern(command: string, tree: CommandTree, place: ReadPlace): Concern {
+export function readConcern(
+  command: string,
+  tree: CommandTree,
+  place: ReadPlace,
+  depth = 0,
+): Concern {
   const loops = loopValues(tree, command);
   const scan: ReadScan = { command, tree, loops, redirects: redirectTargets(command), place };
   const inputs = [...inputTargets(command)].map((word) =>
     fileConcern(word, PLAIN_READ, loops, place),
   );
-  return worst([...inputs, ...tree.commands.map((program) => programConcern(program, scan))]);
+  const shell = (script: string) => readConcern(script, commandTree(script), place, depth + 1);
+  return worst([
+    ...inputs,
+    ...tree.commands.map((program) => programConcern(program, scan)),
+    launchConcern(command, place, { depth, shell }),
+  ]);
 }

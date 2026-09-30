@@ -58,6 +58,7 @@ export const SECRET_REASON = 'Secret files always ask';
 export const INSTALL_REASON = 'Installing packages always asks';
 export const NESTED_COMMAND_REASON = "Commands Spark can't see inside always ask";
 export const UNKNOWN_READ_REASON = "Spark can't tell which files this reads";
+export const HIDDEN_CODE_REASON = "Runs code Spark can't see";
 export const SAFE_READ_WHY = 'a read-only command inside the project';
 export const WORKTREE_AUTO_WHY = "Automatic in this chat's worktree";
 
@@ -132,6 +133,7 @@ function alwaysAskReason(request: ApprovalRequest, files: FileLister): string | 
   const reads = commandReads(request, tree, files);
   if (reads === 'secret') return SECRET_REASON;
   if (tree?.opaque) return NESTED_COMMAND_REASON;
+  if (reads === 'hidden') return HIDDEN_CODE_REASON;
   if (reads === 'unknown') return UNKNOWN_READ_REASON;
   if (request.command && isPackageInstall(request.command)) return INSTALL_REASON;
   const writes = request.kind === 'edit' || request.toolKind === 'move';

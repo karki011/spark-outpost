@@ -1,9 +1,11 @@
-import { programName, resolveCommandPath, splitSimpleCommands, unwrapCommand } from './commands.ts';
+import { programName, resolveCommandPath, splitCommandLine, unwrapCommand } from './commands.ts';
 
 export interface CommandTree {
   commands: string[][];
   opaque: boolean;
   fedByXargs: string[][];
+  stdinFrom: Map<string[], string[] | null>;
+  fragments: string[][];
 }
 
 const MAX_NESTING = 3;
@@ -14,6 +16,7 @@ const FIND_EXECS = new Set(['-exec', '-execdir', '-ok', '-okdir']);
 const FIND_EXEC_ENDS = new Set([';', '+']);
 const FIND_LEADING_OPTION = /^-(?:[HLP]|O\d*)$/;
 const SHELL_SCRIPT_FLAG = /^-[a-z]*c[a-z]*$/;
+const STDIN_SCRIPT_FLAG = /^-[a-z]*s[a-z]*$/;
 const UNKNOWN_WORD = /\$|`/;
 
 function hidesCommands(script: string): boolean {
@@ -72,18 +75,19 @@ function addShell(tree: CommandTree, program: readonly string[], depth: number):
     else addScript(tree, script, depth + 1);
     return;
   }
-  if (program.slice(1).every((token) => token.startsWith('-'))) tree.opaque = true;
+  const readsStdin = program.some((token, index) => index > 0 && STDIN_SCRIPT_FLAG.test(token));
+  if (readsStdin || program.slice(1).every((token) => token.startsWith('-'))) tree.opaque = true;
 }
 
-function addCommand(tree: CommandTree, tokens: readonly string[], depth: number): void {
+function addCommand(tree: CommandTree, tokens: readonly string[], depth: number): string[] | null {
   if (depth > MAX_NESTING) {
     tree.opaque = true;
-    return;
+    return null;
   }
   const { program, wrappers, splitsString } = unwrapCommand(tokens);
   if (splitsString) tree.opaque = true;
   const name = programName(program);
-  if (name === '') return;
+  if (name === '') return null;
   tree.commands.push(program);
   if (wrappers.includes('xargs')) tree.fedByXargs.push(program);
   if (UNKNOWN_WORD.test(program[0]!)) tree.opaque = true;
@@ -94,6 +98,7 @@ function addCommand(tree: CommandTree, tokens: readonly string[], depth: number)
   else if (name === 'find') {
     for (const exec of findExecs(program.slice(1))) addCommand(tree, exec, depth + 1);
   }
+  return program;
 }
 
 function addScript(tree: CommandTree, script: string, depth: number): void {
@@ -101,11 +106,23 @@ function addScript(tree: CommandTree, script: string, depth: number): void {
     tree.opaque = true;
     return;
   }
-  for (const tokens of splitSimpleCommands(script)) addCommand(tree, tokens, depth);
+  let previous: string[] | null = null;
+  for (const { tokens, stdin, fragment } of splitCommandLine(script)) {
+    const program = addCommand(tree, tokens, depth);
+    if (program && stdin) tree.stdinFrom.set(program, stdin === 'pipe' ? previous : null);
+    if (program && fragment) tree.fragments.push(program);
+    previous = program;
+  }
 }
 
 export function commandTree(command: string): CommandTree {
-  const tree: CommandTree = { commands: [], opaque: false, fedByXargs: [] };
+  const tree: CommandTree = {
+    commands: [],
+    opaque: false,
+    fedByXargs: [],
+    stdinFrom: new Map(),
+    fragments: [],
+  };
   addScript(tree, command, 0);
   return tree;
 }
@@ -129,6 +146,16 @@ function changedDirs(program: readonly string[], dirs: string[], home: string): 
     target === undefined ? [home] : dirs.map((dir) => resolveCommandPath(target, dir, home));
   const all = [...new Set([...dirs, ...next])];
   return all.length > MAX_DIRS ? null : all;
+}
+
+export function commandDirs(tree: CommandTree, cwd: string, home: string): string[] | null {
+  let dirs: string[] | null = [cwd];
+  for (const program of tree.commands) {
+    const name = programName(program);
+    if (name === 'cd' || name === 'pushd') dirs = changedDirs(program, dirs, home);
+    if (dirs === null) return null;
+  }
+  return dirs;
 }
 
 export function deleteTargets(tree: CommandTree, cwd: string, home: string): string[] | null {
