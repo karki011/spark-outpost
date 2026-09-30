@@ -21,6 +21,7 @@ import {
   routeCritic,
   routeMemberModel,
   soloRoute,
+  type BuiltShare,
   type MemberRoute,
   type RouteFacts,
 } from './routing.ts';
@@ -90,6 +91,13 @@ async function scoutRoute(s: Session): Promise<ResolvedRoute> {
   return { route: kept.route, ...(kept.choice ? { session: kept.choice } : {}) };
 }
 
+function builtShares(s: Session): BuiltShare[] {
+  const pieces = s.coordination?.list?.pieces ?? [];
+  return pieces
+    .filter((piece) => piece.status === 'landed' && !piece.research && piece.provider)
+    .map((piece) => ({ provider: piece.provider!, files: piece.filesChanged.length }));
+}
+
 export function seatRoute(s: Session, spawn: Spawn): ResolvedRoute {
   const previous = s.routes.get('builder');
   if (previous && spawn.escalate) return { route: escalateBuilder(s.route, previous) };
@@ -105,7 +113,7 @@ export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRo
     return { route };
   }
   if (previous) return { route: previous };
-  if (spawn.role === 'critic') return { route: routeCritic(s.route) };
+  if (spawn.role === 'critic') return { route: routeCritic(s.route, builtShares(s)) };
   if (spawn.role === 'scout') return scoutRoute(s);
   return firstBuilderRoute(s);
 }

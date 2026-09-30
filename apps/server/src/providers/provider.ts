@@ -41,6 +41,10 @@ export interface ModeRequests {
   subscribe(listener: (mode: string) => void): () => void;
 }
 
+export interface SteerRequests {
+  attach(send: (text: string) => Promise<boolean>): () => void;
+}
+
 export interface StoredSession {
   sessionId: string;
   cwd: string;
@@ -70,6 +74,7 @@ export interface ProviderTurn {
   worktree?: boolean;
   planning?: boolean;
   modeRequests?: ModeRequests;
+  steering?: SteerRequests;
   approvals?: PermissionGate;
   askTitle?: boolean;
   session?: SessionTarget;

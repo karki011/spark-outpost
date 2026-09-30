@@ -8,7 +8,7 @@ import type { Spawn } from '../orchestration/transitions.ts';
 import { projectSettings } from './builder-env.ts';
 import { copySite, dropCopy, openCopies } from './group.ts';
 import { runPiece, type PieceSite } from './piece-run.ts';
-import { runReadySet } from './schedule.ts';
+import { runReadySet, type PieceEnd } from './schedule.ts';
 import { attributeShared, sharedBase, sharedSite } from './shared-landing.ts';
 import type { Coordination } from './state.ts';
 
@@ -110,8 +110,9 @@ export async function runPieces(
       narrowed: () => coordination.violations >= COORD_OWNERSHIP_STRIKES,
       settled: new Set(settled),
       stopped: () => stopped(s),
-      run: async (piece, slot) => {
+      run: async (piece, slot): Promise<PieceEnd> => {
         const current = coordination.list!.pieces.find((item) => item.key === piece.key)!;
+        if (current.status === 'skipped') return 'skipped';
         const next: Spawn =
           current.attempts === 0 && spawn.reason === 'resume'
             ? { ...spawn, reason: 'first' }
@@ -120,13 +121,14 @@ export async function runPieces(
         const site = current.research ? inOrder : await group.site(current, slot);
         const ran = await withAgentSlot(s, () => runPiece(s, next, current, coordination, site));
         coordination.list = await pieceListById(s.deps.db, list.id);
+        if (ran.skipped) return 'skipped';
         outcome.last = ran.result;
         if (!ran.landed) {
           outcome.failure ??= ran.result;
-          return false;
+          return 'failed';
         }
         await group.landed(current);
-        return true;
+        return 'landed';
       },
     });
   } finally {

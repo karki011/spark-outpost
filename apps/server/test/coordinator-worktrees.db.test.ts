@@ -16,7 +16,7 @@ import {
   pieceListOf,
   pieceRepo,
   projectFlags,
-} from './coordinator-support.ts';
+} from './coordinator-parallel-support.ts';
 import {
   answerEverything,
   assistantReplies,

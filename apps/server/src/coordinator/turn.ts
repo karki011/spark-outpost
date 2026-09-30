@@ -8,7 +8,9 @@ import { runMember } from '../orchestration/members.ts';
 import { seatRoute } from '../orchestration/member-routes.ts';
 import type { Seat, Session } from '../orchestration/session.ts';
 import type { Assessment } from './assess.ts';
+import { assignPieces } from './assign.ts';
 import { likelyFiles } from './engage.ts';
+import { assignFacts } from './provider-state.ts';
 import { isGlob, normalizeOwned, type OwnedSet } from './owned.ts';
 import { piecesHash, validatePieces, type CheckedPieces } from './pieces-validate.ts';
 import { budgetFor, lineCounter, projectFiles } from './project-facts.ts';
@@ -136,8 +138,13 @@ export async function writePieceList(
   const asked = await askForPieces(s, assessment, note);
   if (!asked.ok) return asked;
   const { pieces, integration } = asked.value;
-  const pick = seatRoute(s, { ...spawn, role: 'builder' }).route.pick;
   const place = await chooseListPlace(s, pieces);
+  const assigned = new Map(
+    assignPieces(pieces, await assignFacts(s, place.placement !== 'in_order')).map((entry) => [
+      entry.key,
+      entry.pick,
+    ]),
+  );
   const list = await insertPieceList(s.deps.db, {
     taskId: s.taskId!,
     orchestrationRunId: s.lease.runId,
@@ -152,8 +159,8 @@ export async function writePieceList(
       ...piece,
       owns: [...piece.owned.paths, ...piece.owned.globs],
       placement: piece.research ? 'read_only' : place.placement,
-      provider: pick.provider,
-      model: pick.model,
+      provider: assigned.get(piece.key)!.provider,
+      model: assigned.get(piece.key)!.model,
     })),
   });
   return {

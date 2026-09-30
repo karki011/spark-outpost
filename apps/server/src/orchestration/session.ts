@@ -75,6 +75,7 @@ export interface Seat {
   resumeKey: string;
   prompt: string | null;
   route?: Record<string, unknown>;
+  memberRoute?: MemberRoute;
 }
 
 export interface BudgetChecks {

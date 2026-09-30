@@ -81,13 +81,20 @@ function sessionEnv(store: string | undefined): Record<string, string> {
   };
 }
 
-function fakeAgent(id: 'claude' | 'codex', models: typeof CLAUDE_MODELS, store?: string): Provider {
+function fakeAgent(
+  id: 'claude' | 'codex',
+  models: typeof CLAUDE_MODELS,
+  store?: string,
+  extraEnv: Record<string, string> = {},
+): Provider {
   return createAcpProvider({
     definition: { ...agentDefinitions[id], ...FAKE_AGENT_MODES },
     launch,
     cancelGraceMs: 2_000,
     env: {
       ...(process.env as Record<string, string>),
+      ...extraEnv,
+      FAKE_ACP_PROVIDER: id,
       FAKE_ACP_MODELS: JSON.stringify(models.map((model) => [model.id, model.label])),
       ...sessionEnv(store),
     },
@@ -308,6 +315,7 @@ export function startOrchestrator(
     shipAccess?: OrchestratorDeps['shipAccess'];
     fixRound?: OrchestratorDeps['fixRound'];
     coordinator?: OrchestratorDeps['coordinator'];
+    agentEnv?: Record<string, string>;
   } = {},
 ): Harness {
   const intake = fetcher
@@ -321,8 +329,8 @@ export function startOrchestrator(
   const worker = startWorker({
     db: t.db,
     providers: new Map<string, Provider>([
-      ['claude', fakeAgent('claude', CLAUDE_MODELS, options.sessions)],
-      ['codex', fakeAgent('codex', CODEX_MODELS, options.sessions)],
+      ['claude', fakeAgent('claude', CLAUDE_MODELS, options.sessions, options.agentEnv)],
+      ['codex', fakeAgent('codex', CODEX_MODELS, options.sessions, options.agentEnv)],
     ]),
     leaseSeconds: 30,
     concurrency: 8,

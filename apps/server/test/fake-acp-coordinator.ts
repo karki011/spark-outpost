@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
@@ -106,6 +107,55 @@ function ownedFile(text: string): string {
   return owned ?? 'unknown.ts';
 }
 
+const steers: string[] = [];
+const steerWaiters = new Set<() => void>();
+
+export const steerParams = (params: unknown) =>
+  params as { prompt: { type: string; text?: string }[] };
+
+export function steerRequest(ctx: { params: ReturnType<typeof steerParams> }) {
+  steers.push(ctx.params.prompt.map((block) => block.text ?? '').join(''));
+  for (const wake of steerWaiters) wake();
+  return { outcome: 'injected' };
+}
+
+function mainRoot(cwd: string): string {
+  return cwd.split('/.spark/worktrees/')[0]!;
+}
+
+async function holdUntilReleased(turn: RoleTurn): Promise<string | null> {
+  const marker = join(mainRoot(turn.cwd), '.git', 'release-P2');
+  while (!existsSync(marker) && steers.length === 0 && !turn.signal.aborted) {
+    await new Promise<void>((resolve) => {
+      const wake = () => resolve();
+      steerWaiters.add(wake);
+      setTimeout(() => {
+        steerWaiters.delete(wake);
+        resolve();
+      }, 50);
+    });
+  }
+  return steers.shift() ?? null;
+}
+
+function rateLimited(turn: RoleTurn, key: string, tag: RegExp): boolean {
+  return process.env.FAKE_ACP_PROVIDER === 'codex' && key === 'P1' && tag.test(turn.text);
+}
+
+async function heldTurn(turn: RoleTurn, key: string, file: string): Promise<boolean> {
+  const noted = turn.text.includes('## Note from the coordinator');
+  if (turn.text.includes('#editslow') && key === 'P2') {
+    await write(turn, file, `started by ${key}`);
+    await untilStopped(turn.signal);
+    return true;
+  }
+  if (!turn.text.includes('#holdpiece') || key !== 'P2' || noted) return false;
+  await write(turn, file, `started by ${key}`);
+  const steer = await holdUntilReleased(turn);
+  if (steer) await write(turn, file, 'steered');
+  return false;
+}
+
 async function piece(turn: RoleTurn): Promise<acp.StopReason> {
   const key = pieceKey(turn.text)!;
   const file = ownedFile(turn.text);
@@ -113,10 +163,18 @@ async function piece(turn: RoleTurn): Promise<acp.StopReason> {
   const breaks = turn.text.includes('#piecefix') && key === 'P2';
   const handoff =
     turn.text.includes('#handoff') && key === 'P1' && !turn.text.includes('## Handoff');
+  if (rateLimited(turn, key, /#ratelimit(?!after)/))
+    throw new acp.RequestError(429, 'Too Many Requests');
   if (turn.text.includes('#slowpiece') && key === 'P2') await untilStopped(turn.signal);
   await pieceExtras(turn, key);
+  if (await heldTurn(turn, key, file)) return 'end_turn';
   await strayWrites(turn, key);
   await write(turn, file, fixing ? 'fixed' : `built by ${key}`);
+  if (rateLimited(turn, key, /#ratelimitafter/)) {
+    throw new acp.RequestError(429, 'Too Many Requests');
+  }
+  if (turn.text.includes('## Note from the coordinator')) await write(turn, file, 'noted');
+  if (existsSync(join(turn.cwd, 'main-change.txt'))) await write(turn, file, 'saw main');
   if (!fixing && (breaks || handoff)) await write(turn, file, 'broken');
   if (handoff) {
     await turn.update({ sessionUpdate: 'usage_update', used: 160_000, size: 200_000 });

@@ -32,7 +32,7 @@ describe('the ready-set scheduler', () => {
         events.push(`start ${item.key} in ${slot}`);
         await gates.get(item.key)!.wait;
         events.push(`end ${item.key}`);
-        return true;
+        return 'landed';
       },
     });
     await tick();
@@ -57,7 +57,7 @@ describe('the ready-set scheduler', () => {
         most = Math.max(most, running);
         await tick();
         running -= 1;
-        return true;
+        return 'landed';
       },
     });
     expect(most).toBe(2);
@@ -72,7 +72,7 @@ describe('the ready-set scheduler', () => {
       run: async (item) => {
         started.push(item.key);
         await tick();
-        return item.key !== 'P1';
+        return item.key === 'P1' ? 'failed' : 'landed';
       },
     });
     expect(started).toEqual(['P1', 'P2']);
@@ -89,10 +89,25 @@ describe('the ready-set scheduler', () => {
       run: async (item) => {
         started.push(item.key);
         stop = true;
-        return true;
+        return 'landed';
       },
     });
     expect(started).toEqual(['P2']);
+  });
+
+  it('lets the dependents of a skipped piece start', async () => {
+    const started: string[] = [];
+    const result = await runReadySet([piece('P1'), piece('P2', ['P1'])], {
+      limit: 2,
+      settled: new Set(),
+      stopped: () => false,
+      run: async (item) => {
+        started.push(item.key);
+        return item.key === 'P1' ? 'skipped' : 'landed';
+      },
+    });
+    expect(started).toEqual(['P1', 'P2']);
+    expect(result.failed).toBe(false);
   });
 
   it('runs one piece at a time once it is narrowed', async () => {
@@ -110,7 +125,7 @@ describe('the ready-set scheduler', () => {
         await tick();
         running -= 1;
         finished += 1;
-        return true;
+        return 'landed';
       },
     });
     expect(most).toBe(3);
@@ -127,7 +142,7 @@ describe('the ready-set scheduler', () => {
         if (item.key === 'P1') throw new Error('lease lost');
         await tick();
         finished.push(item.key);
-        return true;
+        return 'landed';
       },
     });
     await expect(run).rejects.toThrow('lease lost');

@@ -332,8 +332,13 @@ export async function runMember(
   options: MemberOptions = {},
 ): Promise<MemberOutcome> {
   const seated = seatFor(s, spawn, options);
-  const resolved = seated.seat ? seatRoute(s, spawn) : await resolveRoute(s, spawn);
-  if (seated.seat?.role !== 'coordinator') s.routes.set(spawn.role, resolved.route);
+  const own = seated.seat?.memberRoute;
+  const resolved = own
+    ? { route: own }
+    : seated.seat
+      ? seatRoute(s, spawn)
+      : await resolveRoute(s, spawn);
+  if (!own && seated.seat?.role !== 'coordinator') s.routes.set(spawn.role, resolved.route);
   const name = seated.seat?.name ?? (await nameFor(s, spawn.role));
   const result =
     spawn.role === 'scout'

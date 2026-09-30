@@ -8,14 +8,12 @@ import {
   unmergedPieceCopy,
 } from '../persistence/worktrees.ts';
 import { awaitDepsPrep } from '../projects/deps-prep.ts';
-import { commitTree, commitWorkingTree } from '../projects/snapshot.ts';
+import { commitTree } from '../projects/snapshot.ts';
 import {
-  applyTree,
   commitWorktree,
   excludeSparkDir,
   groupBase,
   repoTop,
-  tryMerge,
   worktreePath,
 } from '../projects/worktrees.ts';
 import { ensureParentSnapshot } from '../orchestration/members.ts';
@@ -23,7 +21,8 @@ import type { MemberResult, Session } from '../orchestration/session.ts';
 import { copyFor, removeCopy } from '../orchestration/solo-copy.ts';
 import { mergeIntoMain } from './merge.ts';
 import { renumberCopy } from './migrations.ts';
-import { changedFiles, type PieceSite, type SiteMerge } from './piece-run.ts';
+import { mergeMainInto } from './merge-main.ts';
+import { changedFiles, type PieceSite } from './piece-run.ts';
 import { projectFiles } from './project-facts.ts';
 import type { Coordination } from './state.ts';
 
@@ -34,7 +33,7 @@ interface CopyState {
   runId: string | null;
   branch: string | null;
   landed: boolean;
-  landedSince: string[];
+  mainMoved: boolean;
 }
 
 export interface Copies {
@@ -61,25 +60,14 @@ function projectPath(copies: Copies, runId: string): string {
   return path.join(worktreePath(copies.root, runId), path.relative(copies.top, copies.root));
 }
 
-function mainMergedNote(landed: readonly string[]): string {
-  return `## Note from the coordinator\nMain merged into your copy: ${landed.join(', ')} landed. Re-run your scoped checks against it.`;
-}
-
-async function mergeMain(s: Session, copies: Copies, state: CopyState): Promise<SiteMerge | null> {
-  if (!state.runId || state.landedSince.length === 0) return null;
-  const landed = state.landedSince.splice(0);
-  const target = projectPath(copies, state.runId);
-  const main = await commitWorkingTree(
-    copies.root,
-    [state.base],
-    `Spark Outpost: main for ${state.name}`,
-  );
-  const attempt = await tryMerge(target, state.base, main);
-  if (attempt.conflicts.length > 0) return null;
-  await applyTree(target, attempt.current, attempt.tree);
-  state.base = main;
-  await saveBase(s.deps.db, state.runId, main);
-  return { before: await commitTree(copies.root, main), note: mainMergedNote(landed) };
+async function mergeMain(s: Session, copies: Copies, state: CopyState): Promise<string | null> {
+  if (!state.runId || !state.mainMoved) return null;
+  state.mainMoved = false;
+  const merged = await mergeMainInto(projectPath(copies, state.runId), copies.root, state.base);
+  if (!merged.merged || !merged.main) return null;
+  state.base = merged.main;
+  await saveBase(s.deps.db, state.runId, merged.main);
+  return commitTree(copies.root, merged.main);
 }
 
 async function land(
@@ -111,7 +99,7 @@ async function land(
   await markMerged(s.deps.db, record.runId);
   state.landed = true;
   for (const other of copies.states.values()) {
-    if (!other.landed) other.landedSince.push(`${state.name}'s ${state.piece.title}`);
+    if (!other.landed) other.mainMoved = true;
   }
   return null;
 }
@@ -135,7 +123,7 @@ export async function copySite(
     runId: kept?.runId ?? null,
     branch: kept?.branch ?? null,
     landed: false,
-    landedSince: [],
+    mainMoved: false,
   };
   copies.states.set(piece.key, state);
   const make = copyFor(s, { root: copies.root, top: copies.top, base });

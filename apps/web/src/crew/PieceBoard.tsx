@@ -17,7 +17,9 @@ function money(usd: number | null): string | null {
 }
 
 function PieceRow({ row }: { row: PieceBoardRow }) {
-  const details = [row.builder, row.placement, row.check, money(row.costUsd)].filter(Boolean);
+  const details = [row.builder, row.placement, row.check, row.notes, money(row.costUsd)].filter(
+    Boolean,
+  );
   return (
     <li className={`piece-row ${row.tone}${row.folded ? ' folded' : ''}`}>
       <span className="piece-key">{row.key}</span>

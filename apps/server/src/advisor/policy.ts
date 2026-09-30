@@ -91,3 +91,5 @@ export const COORD_HANDOFF_SHARE = 0.75;
 export const COORD_CARD_PIECES = 5;
 export const COORD_INTEGRATOR_TRIES = 2;
 export const COORD_OWNERSHIP_STRIKES = 2;
+export const COORD_PROVIDER_HEALTH_MS = 10 * 60_000;
+export const COORD_NOTE_TURNS = 3;

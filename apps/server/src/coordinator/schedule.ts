@@ -10,8 +10,10 @@ export interface Schedule<T extends Schedulable> {
   narrowed?(): boolean;
   settled: ReadonlySet<string>;
   stopped(): boolean;
-  run(piece: T, slot: number): Promise<boolean>;
+  run(piece: T, slot: number): Promise<PieceEnd>;
 }
+
+export type PieceEnd = 'landed' | 'skipped' | 'failed';
 
 export interface Scheduled {
   landed: Set<string>;
@@ -35,9 +37,9 @@ export async function runReadySet<T extends Schedulable>(
   const errors: unknown[] = [];
   const start = (piece: T, slot: number) => {
     const done = schedule.run(piece, slot).then(
-      (ok) => {
-        if (ok) landed.add(piece.key);
-        else failed = true;
+      (end) => {
+        if (end === 'failed') failed = true;
+        else landed.add(piece.key);
       },
       (error: unknown) => {
         errors.push(error);

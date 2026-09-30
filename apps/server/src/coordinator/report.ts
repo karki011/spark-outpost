@@ -49,14 +49,32 @@ function ownership(list: PieceList): string | null {
   return lines.length > 0 ? `Changes outside a piece: ${lines.join('; ')}.` : null;
 }
 
+function named(pieces: readonly TaskPiece[], withStatus: boolean): string {
+  return pieces
+    .map((piece) => {
+      const why = piece.note ? `: ${cell(piece.note)}` : '';
+      const status = withStatus ? `${piece.status}${why}` : piece.note ? cell(piece.note) : '';
+      return `${piece.key} · ${cell(piece.title)}${status ? ` (${status})` : ''}`;
+    })
+    .join('; ');
+}
+
 function unfinished(list: PieceList): string | null {
-  const open = list.pieces.filter((piece) => piece.status !== 'landed');
-  if (open.length === 0) return null;
-  const named = open.map((piece) => {
-    const why = piece.note ? `: ${cell(piece.note)}` : '';
-    return `${piece.key} · ${cell(piece.title)} (${piece.status}${why})`;
-  });
-  return `Incomplete: ${named.join('; ')}.`;
+  const open = list.pieces.filter(
+    (piece) => piece.status !== 'landed' && piece.status !== 'skipped',
+  );
+  return open.length > 0 ? `Incomplete: ${named(open, true)}.` : null;
+}
+
+function skipped(list: PieceList): string | null {
+  const dropped = list.pieces.filter((piece) => piece.status === 'skipped');
+  return dropped.length > 0 ? `Skipped: ${named(dropped, false)}.` : null;
+}
+
+function landedNotes(list: PieceList): string | null {
+  const noted = list.pieces.filter((piece) => piece.status === 'landed' && piece.note);
+  if (noted.length === 0) return null;
+  return `Notes: ${noted.map((piece) => `${piece.key}: ${cell(piece.note!)}`).join('; ')}.`;
 }
 
 const PLACED: Record<PieceList['placement'], string> = {
@@ -108,6 +126,8 @@ export function pieceReport(facts: ReportFacts): string | null {
     conflictsLine(facts.conflicts ?? []),
     renumberedLine(facts.renumbered ?? []),
     ownership(list),
+    landedNotes(list),
+    skipped(list),
     unfinished(list),
   ]
     .filter(Boolean)
