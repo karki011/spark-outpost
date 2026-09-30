@@ -7,7 +7,7 @@ import type { Endpoint } from '../codescan/endpoints.ts';
 import { isTestFile } from '../codescan/test-pairs.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { httpFit, segments, type LinkFile, type LinkRepo } from './link-match.ts';
-import { loadLinkRepo } from './links.ts';
+import { loadLinkRepo, pairSignature, type LinkSide } from './links.ts';
 
 export interface UnmatchedRepo {
   projectId: string;
@@ -96,7 +96,7 @@ function ranked(items: Located[]): MapUnmatchedEndpoint[] {
 export function unmatchedEndpoints(
   repos: readonly UnmatchedRepo[],
   links: readonly StoredHttpLink[],
-): MapUnmatched {
+): Omit<MapUnmatched, 'pending'> {
   const called = new Set(links.map((link) => key(link.toRepo, link.toPath, link.toLine)));
   const reached = new Set(links.map((link) => key(link.fromRepo, link.fromPath, link.fromLine)));
   for (const repo of repos) matchWithin(repo, called, reached);
@@ -117,27 +117,56 @@ export function unmatchedEndpoints(
   };
 }
 
+async function pairsCurrent(db: Queryable, sides: readonly LinkSide[]): Promise<boolean> {
+  if (sides.length < 2) return true;
+  const { rows } = await db.query<{ repo_a: string; repo_b: string; signature: string }>(
+    `SELECT repo_a, repo_b, signature FROM map_link_pairs
+     WHERE repo_a = ANY($1::uuid[]) AND repo_b = ANY($1::uuid[])`,
+    [sides.map((side) => side.repoId)],
+  );
+  const stored = new Map(rows.map((row) => [`${row.repo_a}:${row.repo_b}`, row.signature]));
+  return sides.every((a, index) =>
+    sides
+      .slice(index + 1)
+      .every((b) => stored.get([a.repoId, b.repoId].sort().join(':')) === pairSignature(a, b)),
+  );
+}
+
 export async function mapUnmatched(
   db: Queryable,
   projects: readonly { id: string; rootPath: string }[],
 ): Promise<MapUnmatched> {
-  const { rows: found } = await db.query<{ id: string; root_path: string }>(
-    `SELECT id, root_path FROM map_repos
-     WHERE root_path = ANY($1::text[]) AND built_signature IS NOT NULL`,
+  const { rows: found } = await db.query<{
+    id: string;
+    root_path: string;
+    status: string;
+    built_signature: string | null;
+  }>(
+    `SELECT id, root_path, status, built_signature FROM map_repos
+     WHERE root_path = ANY($1::text[])`,
     [projects.map((project) => project.rootPath)],
   );
-  const byRoot = new Map(found.map((row) => [row.root_path, row.id]));
+  const byRoot = new Map(found.map((row) => [row.root_path, row]));
   const seen = new Set<string>();
   const sides = projects.flatMap((project) => {
-    const repoId = byRoot.get(project.rootPath);
-    if (!repoId || seen.has(repoId)) return [];
-    seen.add(repoId);
-    return [{ projectId: project.id, repoId, rootPath: project.rootPath }];
+    const repo = byRoot.get(project.rootPath);
+    if (!repo?.built_signature || seen.has(repo.id)) return [];
+    seen.add(repo.id);
+    return [
+      {
+        projectId: project.id,
+        repoId: repo.id,
+        rootPath: project.rootPath,
+        signature: repo.built_signature,
+      },
+    ];
   });
+  const allBuilt = projects.every((project) => byRoot.get(project.rootPath)?.status === 'ready');
+  const pending = !allBuilt || !(await pairsCurrent(db, sides));
   const repos = await Promise.all(
     sides.map(async (side) => ({
       projectId: side.projectId,
-      repo: await loadLinkRepo(db, { ...side, signature: '' }),
+      repo: await loadLinkRepo(db, side),
     })),
   );
   const ids = sides.map((side) => side.repoId);
@@ -153,7 +182,7 @@ export async function mapUnmatched(
      WHERE kind = 'http' AND from_repo = ANY($1::uuid[]) AND to_repo = ANY($1::uuid[])`,
     [ids],
   );
-  return unmatchedEndpoints(
+  const unmatched = unmatchedEndpoints(
     repos,
     rows.map((row) => ({
       fromRepo: row.from_repo,
@@ -164,4 +193,5 @@ export async function mapUnmatched(
       toLine: row.to_line,
     })),
   );
+  return { ...unmatched, pending };
 }

@@ -148,7 +148,8 @@ Reset empties all of these (it truncates every table it finds in `information_sc
 - `GET /api/map/unmatched?projects=<id>,<id>[,…]` (2–8 projects) → `routes` nothing calls and
   `calls` that reach no route (`projectId`, `method`, `path`, `file`, `line`, `confirmedBy`),
   each capped at `MAP_UNMATCHED_MAX` (200, most important files first) with `routeTotal` and
-  `callTotal`. A route counts as called when a stored `http` link reaches it or a call in its own
+  `callTotal`, and `pending: true` while any selected map is not `ready` or a repo pair's links
+  are missing or stale (the page hides the Unmatched chip until then). A route counts as called when a stored `http` link reaches it or a call in its own
   repo matches it; a call is matched the same way. Test files are ignored, and routes without a
   literal segment (`/`, `/:id`) are never listed. `confirmedBy` is always `null` for now: every
   route is "Possibly unused" until Jev can confirm.

@@ -340,6 +340,7 @@ export function combinedFixture(webId: string, serverId: string): MapFixture {
     calls: [],
     routeTotal: mock.unmatched.routes.length,
     callTotal: 0,
+    pending: false,
   };
   return fixture;
 }

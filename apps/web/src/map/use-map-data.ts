@@ -116,7 +116,7 @@ export function useMapData(projects: readonly Project[], selected: readonly stri
     error,
     scene,
     bridges,
-    unmatched: combined ? (unmatched.data ?? null) : null,
+    unmatched: combined && unmatched.data && !unmatched.data.pending ? unmatched.data : null,
     ...loader,
   };
 }
