@@ -24,6 +24,7 @@ import { git, headCommit, isGitWorkTree } from '../projects/snapshot.ts';
 import { prepareDependencies } from '../projects/worktree-deps.ts';
 import { DEFAULT_BRANCH_PREFIX, repoTop, worktreePath } from '../projects/worktrees.ts';
 import { shipBranchName } from '../ship/branch.ts';
+import { gitInstalled } from '../ship/git.ts';
 import type { Append } from '../workflow/agent-turn.ts';
 import { planNote } from '../workflow/plan-recorder.ts';
 import { runEvents } from '../workflow/run-events.ts';
@@ -33,9 +34,13 @@ import { decidePlace, namedBranch, type PlaceDecision } from './place-decision.t
 const WORKTREE_FAILED =
   "Couldn't set up a worktree for this chat, so nothing was changed. Choose Edit my files to work in place.";
 
+const GIT_MISSING_NOTE =
+  'Git isn’t installed, so this chat works directly in your folder instead of its own worktree. Install Apple’s command line tools with xcode-select --install, then start a new chat to give it its own copy.';
+
 interface ChatPlaceDeps {
   db: Queryable;
   branchPrefix: string;
+  gitInstalled?: () => Promise<boolean>;
 }
 
 interface PlacedChat {
@@ -246,7 +251,10 @@ export async function placeChat(deps: ChatPlaceDeps, input: RunInput): Promise<P
     return { input: inCopy(input, existing), repoRoot: existing.repoRoot, note: null };
   }
   const plain = { ...input, projectRoots: [root, ...input.projectRoots.slice(1)] };
-  if (!(await isGitWorkTree(root))) return { input: plain, repoRoot: root, note: null };
+  if (!(await isGitWorkTree(root))) {
+    const installed = await (deps.gitInstalled ?? gitInstalled)();
+    return { input: plain, repoRoot: root, note: installed ? null : GIT_MISSING_NOTE };
+  }
   return freshPlace(deps, plain, { conversationId, projectId, root });
 }
 

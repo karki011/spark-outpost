@@ -3,6 +3,7 @@ import type { ConnectorId } from '../brand/ConnectorBlob.tsx';
 import { ConnectorCard } from '../connectors/ConnectorCard.tsx';
 import { GitHubCard } from '../ship/GitHubCard.tsx';
 import { TicketSourceCard } from '../tickets/TicketSourceCard.tsx';
+import { GitCheck } from './GitCheck.tsx';
 
 export interface Connector {
   id: ConnectorId;
@@ -125,9 +126,10 @@ export function ToolsStep() {
     <>
       <h2 id="onbTitle">Bring in your tools</h2>
       <p className="lede">
-        GitHub lets Ship open draft pull requests. Jira and Linear bring your tickets into Spark.
-        Slack isn't ready yet.
+        Spark checks for Git first, since every Do chat works in its own git worktree. GitHub lets
+        Ship open draft pull requests. Jira and Linear bring your tickets into Spark.
       </p>
+      <GitCheck />
       <ConnectorGrid />
     </>
   );
