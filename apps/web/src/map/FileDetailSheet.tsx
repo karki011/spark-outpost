@@ -15,6 +15,7 @@ interface FileDetailSheetProps {
   changed: boolean;
   onClose: () => void;
   onGo: (file: number) => void;
+  onFocus: () => void;
   onOpenInChat: (projectId: string, path: string) => void;
   onCopied: () => void;
 }
@@ -84,6 +85,7 @@ export function FileDetailSheet({
   changed,
   onClose,
   onGo,
+  onFocus,
   onOpenInChat,
   onCopied,
 }: FileDetailSheetProps) {
@@ -211,6 +213,9 @@ export function FileDetailSheet({
             />
           </svg>
           Open in chat
+        </button>
+        <button type="button" className="map-btn" onClick={onFocus}>
+          Focus
         </button>
         <button type="button" className="map-btn" onClick={copy}>
           Copy path

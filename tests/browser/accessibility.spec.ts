@@ -6,6 +6,7 @@ import { connectorCard, connectorHead } from './connector-cards.ts';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { combinedFixture, monoFixture, REPO_ROOT, serveMap } from './map-fixture.ts';
+import { nxFixture } from './map-nx-fixture.ts';
 import { openChats } from './navigation.ts';
 import { connectTickets, openTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
 import { JIRA_EMAIL } from '../../apps/server/test/fake-jira.ts';
@@ -306,6 +307,7 @@ test('the Map has no serious colour-contrast or ARIA issues in any theme', async
   await page.addInitScript(
     (ids) => {
       localStorage.setItem('spark-outpost.view', 'map');
+      localStorage.setItem('spark-outpost.map-view', '"sky"');
       localStorage.setItem('spark-outpost.map-projects', JSON.stringify(ids));
     },
     [web],
@@ -345,6 +347,47 @@ test('the Map has no serious colour-contrast or ARIA issues in any theme', async
   for (const theme of ['light', 'graphite', 'contrast']) {
     await useTheme(page, theme);
     found.push(...(await blockingViolations(page, `map combined ${theme}`)));
+  }
+  expect(found).toEqual([]);
+});
+
+test('the Tree, Outline and Focus views have no serious issues in any theme', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const response = await page.request.post('/api/projects', { data: { rootPath: REPO_ROOT } });
+  const projectId = ((await response.json()) as { id: string }).id;
+  await serveMap(page, nxFixture(projectId));
+  await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'map'));
+  await page.goto('/');
+  const tree = page.getByRole('application', { name: /^Tree of/ });
+  await expect(tree.getByRole('button', { name: /^ui, group/ })).toBeVisible();
+  const found = [];
+  for (const theme of THEMES) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `map tree ${theme}`)));
+  }
+  await tree.getByRole('button', { name: /^ui, group/ }).focus();
+  await page.keyboard.press('Enter');
+  await expect(tree.getByRole('button', { name: /, area, / }).first()).toBeVisible();
+  for (const theme of ['light', 'graphite', 'contrast']) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `map tree open ${theme}`)));
+  }
+  await page.getByRole('radio', { name: 'Outline' }).click();
+  const outline = page.getByRole('tree', { name: /^Outline of/ });
+  await outline.getByRole('treeitem', { name: /^ui,/ }).click();
+  await expect(outline.locator('[aria-level="2"]').first()).toBeVisible();
+  for (const theme of THEMES) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `map outline ${theme}`)));
+  }
+  await page.getByRole('radio', { name: 'Focus' }).click();
+  await page.getByRole('list', { name: 'Suggested files' }).getByRole('button').first().click();
+  await expect(page.getByRole('region', { name: 'What breaks if I change this?' })).toBeVisible();
+  for (const theme of THEMES) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `map focus ${theme}`)));
   }
   expect(found).toEqual([]);
 });

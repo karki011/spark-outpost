@@ -4,7 +4,7 @@ import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { combinedFixture, monoFixture, REPO_ROOT } from './map-fixture.ts';
-import { addProject, openMap, screenshot, sky } from './map-page.ts';
+import { addProject, openMap, outline, screenshot, sky } from './map-page.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { MAP_ROOT_PREFIX } from './stub-config.ts';
 
@@ -223,21 +223,25 @@ test('two projects show separate skies joined by labelled bridges and a likely p
   );
 });
 
-test('on a phone the map opens as a list of areas, with the sky one tap away', async ({ page }) => {
+test('on a phone the map opens as an outline, with the other views one tap away', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const projectId = await addProject(page, REPO_ROOT);
-  await openMap(page, monoFixture(projectId));
-  const areas = page.getByRole('list', { name: 'Areas' });
-  await expect(areas).toBeVisible();
+  await openMap(page, monoFixture(projectId), 'graphite', undefined, { view: null });
+  const list = outline(page);
+  await expect(list).toBeVisible();
   await expect(sky(page)).toHaveCount(0);
-  await areas.getByRole('button', { name: /^Tickets/ }).click();
-  const files = page.getByRole('list', { name: 'Files in Tickets' });
-  await expect(files.getByRole('button').first()).toBeVisible();
-  await screenshot(page, 'phone-list-dark');
-  await files.getByRole('button').first().click();
+  await list.getByRole('treeitem', { name: /^apps, Feature, \d+ areas/ }).click();
+  const tickets = list.getByRole('treeitem', { name: /^Tickets,/ });
+  await tickets.click();
+  await expect(tickets).toHaveAttribute('aria-expanded', 'true');
+  const file = list.getByRole('treeitem', { name: /^apps\/web\/src\/tickets\// }).first();
+  await expect(file).toBeVisible();
+  await screenshot(page, 'map-view-outline-phone-dark');
+  await file.click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button', { name: 'Close file details' }).click();
-  await page.getByRole('button', { name: 'Back to all areas' }).click();
   await page.getByRole('radio', { name: 'Sky' }).click();
   await expect(sky(page)).toBeVisible();
   const overflow = await page.evaluate(
@@ -345,7 +349,11 @@ test('the real map builder fills the sky for a small repository', async ({ page 
   git('commit', '-qm', 'base');
   try {
     await addProject(page, root);
-    await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'map'));
+    await page.addInitScript(() => {
+      localStorage.setItem('spark-outpost.view', 'map');
+      localStorage.setItem('spark-outpost.map-view', '"sky"');
+      localStorage.setItem('spark-outpost.map-view', '"sky"');
+    });
     await page.goto('/');
     await expect(sky(page)).toHaveAccessibleName(/[1-9]\d* areas as constellations/, {
       timeout: 100_000,
@@ -403,6 +411,7 @@ test('the real builder lists routes nothing calls and calls with no route across
     const ids = [await addProject(page, roots[0]!), await addProject(page, roots[1]!)];
     await page.addInitScript((selected) => {
       localStorage.setItem('spark-outpost.view', 'map');
+      localStorage.setItem('spark-outpost.map-view', '"sky"');
       localStorage.setItem('spark-outpost.map-projects', JSON.stringify(selected));
     }, ids);
     await page.goto('/');

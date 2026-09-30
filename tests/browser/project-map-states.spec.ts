@@ -9,7 +9,7 @@ import {
   serveMap,
   type MapFixture,
 } from './map-fixture.ts';
-import { addProject, openMap, screenshot, sky } from './map-page.ts';
+import { addProject, openMap, screenshot, tree } from './map-page.ts';
 import { seedChats } from './sidebar-seed.ts';
 
 test.beforeEach(async () => {
@@ -105,7 +105,7 @@ test('a failed projects request offers a retry instead of the empty state', asyn
   await screenshot(page, 'map-unreachable-dark');
   await page.unroute(/\/api\/projects$/);
   await page.getByRole('button', { name: 'Try again' }).click();
-  await expect(sky(page)).toBeVisible();
+  await expect(tree(page)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Your code, as a night sky' })).toHaveCount(0);
 });
 

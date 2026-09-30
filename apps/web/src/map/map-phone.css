@@ -1,82 +1,18 @@
-.map-mode {
-  position: absolute;
-  left: 50%;
-  top: 10px;
-  z-index: 5;
-  width: 180px;
-  transform: translateX(-50%);
-}
-
-.map-mode .seg {
-  --n: 2;
-  background: var(--map-glass);
-}
-
-.map-phone {
-  position: absolute;
-  inset: 0;
-  padding: 52px 10px 16px;
-  overflow-y: auto;
-  background: var(--panel);
-}
-
-.map-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.map-list li button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 48px;
-  padding: 8px 6px;
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-}
-
-.map-list-main {
-  display: grid;
-  flex: 1;
-  min-width: 0;
-  gap: 2px;
-}
-
-.map-list-main b {
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.map-list-main small {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.map-list-skel {
-  padding: 16px 6px;
-  border-bottom: 1px solid var(--line);
-}
-
-.map-list-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 0 8px;
-}
-
-.map-list-head h2 {
-  flex: 1;
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-}
-
 @media (max-width: 640px) {
+  .map-views {
+    order: 10;
+    width: 100%;
+  }
+
+  .map-views .seg {
+    width: 100%;
+  }
+
+  .map-viewtip {
+    bottom: 12px;
+    max-width: calc(100% - 24px);
+  }
+
   .map-legend {
     right: 60px;
     width: auto;

@@ -144,6 +144,11 @@ Reset empties all of these (it truncates every table it finds in `information_sc
 - `GET /api/projects/:id/map/areas/:areaId?offset=&limit=` → the area plus its files by
   importance (area-local `x`, `y`, reasons) and import edges touching them, paginated (limit
   ≤ 500, `nextOffset`).
+- `GET /api/projects/:id/map/neighbors?path=&hops=1|2` → the files a file imports and the files
+  importing it within the hops (each with area, kind, importance, fan-in and hop; at most
+  `MAP_NEIGHBORS_MAX` (200) per side, with totals) and `impact`: direct dependents, all transitive
+  dependents (recursive over `map_edges`), how many areas they sit in, and the Core areas among
+  them. 404 when the file is not on the map. Areas also report `lastChangedAt`.
 - `PUT /api/projects/:id/map/areas/:areaId/category` with `{ "category": "core" | "shared" |
 "feature" | null }` sets or clears the override.
 - `GET /api/map/links?projects=<id>,<id>[,…]` (2–8 projects) → the maps' status, file-level links
@@ -189,8 +194,32 @@ each); 268 areas cost $0.079 (1.89M tokens).
 The Map item in the rail opens `MapPage` (`apps/web/src/map/`, wired in `apps/web/src/app/App.tsx`).
 It has:
 
-- a **Sky** view drawn on a canvas (`SkyCanvas.tsx`, `engine.ts`) and a **List** view
-  (`AreaList.tsx`), with search, filters by category and file kind, and a legend;
+- a view switcher (Tree · Focus · Outline · Sky; the last view is remembered per viewer in
+  `localStorage`, `map-views.ts`) with search, filters by category and file kind, and a first-time
+  tip per view (`ViewTip.tsx`, dismissals remembered per viewer);
+- **Tree** (the default, `tree/`): areas grouped by their top-level package or folder
+  (`groups.ts`: the folder trie is split largest group first, aiming for about 24 groups and never
+  more than 36; a split only happens when it yields at most 8 parts, unless there are fewer than 4
+  groups; parts under 0.5% of the files merge into one "Other in …" group for their parent). Each
+  group card shows its Core/Shared/Feature badge (the label source and confidence on hover), file
+  count, importance bar, kind mix and files changed in this chat; edges are area imports summed per
+  pair (Strong keeps about 1.2 edges per node per container, More 3, All everything). A group opens
+  into its areas (24 at a time), an area into folders below the files' shared prefix (when it has
+  more than 12 files) and files (24 at a time, loaded through the paginated area API). Layout is
+  dagre left to right on each container's two strongest outgoing edges per node, run in a Web Worker
+  (`tree-layout.ts`, `tree-layout-worker.ts`); tall ranks wrap into columns of six and very wide
+  chains fold into a grid. Drawn with React Flow (`@xyflow/react`, only visible nodes rendered,
+  minimap, zoom, compact cards when zoomed far out). Arrow keys move between cards, Enter opens,
+  Escape closes, F focuses a file; search opens the path to a file and centres it. Two projects sit
+  in two columns (callers first) with dashed link edges. React Flow and dagre load with the map
+  chunk only (the Map page and the tree are lazy chunks);
+- **Focus** (`focus/`): one file's imports on the left and importers on the right, 1 or 2 hops,
+  grouped by area with Core first, and "What breaks if I change this?" (direct and transitive
+  dependents, areas and Core areas affected) from `GET /api/projects/:id/map/neighbors`;
+- **Outline** (`outline/`): a virtualized tree list of groups, areas and files sortable by
+  importance, name, size or most recent change, and the phone default;
+- the **Sky** drawn on a canvas (`SkyView.tsx`, `SkyCanvas.tsx`, `engine.ts`) as an optional
+  overview;
 - a repo picker and cross-repo links (`bridges.ts`: http, graphql, package, env), with link,
   path and unmatched-endpoint panels (`CombinedPanels.tsx`);
 - build status: a toolbar pill with the current stage and overall progress

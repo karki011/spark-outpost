@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { rm } from 'node:fs/promises';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { MapArea, MapFile } from '@spark-outpost/contracts';
+import type { MapArea, MapFile, MapNeighbors } from '@spark-outpost/contracts';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import { coreImpact } from '../src/map/impact.ts';
 import { createTestApp, localClient } from './app-support.ts';
@@ -122,5 +122,53 @@ describe('map file facts', () => {
       areas: [],
       keyFiles: [],
     });
+  });
+
+  it('lists the files a file imports and the files that import it, with what breaks if it changes', async () => {
+    const { api, areas } = await built();
+    const server = areas.find((area) => area.root === 'server')!;
+    await api.send('put', `/api/projects/${projectId}/map/areas/${server.id}/category`, {
+      category: 'core',
+    });
+    const url = (path: string, hops: number) =>
+      `/api/projects/${projectId}/map/neighbors?path=${encodeURIComponent(path)}&hops=${hops}`;
+
+    const one = (await api.get(url('server/store/db.ts', 1))).body as MapNeighbors;
+    expect(one.imports).toEqual([]);
+    expect(one.importedBy.map((file) => file.path).sort()).toEqual([
+      'server/orders.ts',
+      'server/store/db.test.ts',
+      'server/store/orders.ts',
+      'server/store/users.ts',
+    ]);
+    expect(one.importedBy.every((file) => file.hop === 1)).toBe(true);
+    expect(one.impact).toMatchObject({ direct: 4, total: 5 });
+    expect(one.impact.coreAreas.map((area) => area.id)).toContain(server.id);
+
+    const two = (await api.get(url('server/store/db.ts', 2))).body as MapNeighbors;
+    expect(two.importedBy.find((file) => file.path === 'server/app.ts')).toMatchObject({ hop: 2 });
+    expect(two.importedByTotal).toBe(5);
+
+    const app = (await api.get(url('server/app.ts', 2))).body as MapNeighbors;
+    expect(app.imports.map((file) => [file.path, file.hop])).toEqual([
+      ['server/orders.ts', 1],
+      ['server/store/db.ts', 2],
+    ]);
+    expect(app.impact).toMatchObject({ direct: 0, total: 0, coreAreas: [] });
+
+    expect((await api.get(url('nope.ts', 1))).status).toBe(404);
+    expect((await api.get(url('server/app.ts', 3))).status).toBe(400);
+  });
+
+  it('reports when each area last changed', async () => {
+    const { areas, files } = await built();
+    for (const area of areas) {
+      const latest = [...files.values()]
+        .filter((file) => file.areaId === area.id)
+        .map((file) => file.lastChangedAt ?? '')
+        .sort()
+        .at(-1);
+      expect(area.lastChangedAt).toBe(latest || null);
+    }
   });
 });

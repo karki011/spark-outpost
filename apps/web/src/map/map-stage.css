@@ -10,6 +10,96 @@
   );
 }
 
+.map-stage[data-view='tree'],
+.map-stage[data-view='focus'] {
+  background: var(--bg);
+}
+
+.map-stage[data-view='outline'] {
+  background: var(--panel);
+}
+
+.map-views .seg {
+  width: 300px;
+}
+
+.map-viewtip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  width: fit-content;
+  margin: 0 auto;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(560px, calc(100% - 28px));
+  padding: 6px 6px 6px 14px;
+  animation: rise 0.35s var(--out);
+}
+
+.map-viewtip p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.map-tree-skel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 90px;
+  background: var(--bg);
+}
+
+.map-tree-skel div {
+  display: grid;
+  gap: 22px;
+}
+
+.map-tree-skel span {
+  display: grid;
+  align-content: center;
+  gap: 10px;
+  width: 220px;
+  height: 92px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel);
+}
+
+.map-skel-list {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: start;
+  background: var(--panel);
+}
+
+.map-skel-list span {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.map-skel-list .map-sk,
+.map-tree-skel .map-sk {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-viewtip {
+    animation: none;
+  }
+}
+
 .map-glass {
   border: 1px solid var(--map-glass-line);
   border-radius: var(--r);

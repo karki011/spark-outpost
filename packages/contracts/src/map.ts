@@ -65,6 +65,7 @@ export const mapAreaSchema = z.object({
   importance: z.number(),
   topFiles: z.array(z.string()),
   kindCounts: z.record(mapFileKindSchema, z.number().int()),
+  lastChangedAt: z.string().nullable(),
   x: z.number(),
   y: z.number(),
   radius: z.number(),
@@ -120,6 +121,40 @@ export const mapAreaDetailSchema = z.object({
 });
 export type MapAreaDetail = z.infer<typeof mapAreaDetailSchema>;
 export type MapFile = z.infer<typeof mapFileSchema>;
+
+export const MAP_NEIGHBORS_MAX = 200;
+
+export const mapNeighborsQuerySchema = z.object({
+  path: z.string().min(1).max(1024),
+  hops: z.coerce.number().int().min(1).max(2).default(1),
+});
+
+export const mapNeighborSchema = z.object({
+  path: z.string(),
+  areaId: z.string(),
+  kind: mapFileKindSchema,
+  importance: z.number(),
+  fanIn: z.number().int(),
+  hop: z.number().int().min(1).max(2),
+});
+export type MapNeighbor = z.infer<typeof mapNeighborSchema>;
+
+export const mapNeighborsSchema = z.object({
+  path: z.string(),
+  areaId: z.string(),
+  hops: z.number().int(),
+  imports: z.array(mapNeighborSchema),
+  importedBy: z.array(mapNeighborSchema),
+  importsTotal: z.number().int(),
+  importedByTotal: z.number().int(),
+  impact: z.object({
+    direct: z.number().int(),
+    total: z.number().int(),
+    areas: z.number().int(),
+    coreAreas: z.array(z.object({ id: z.string(), name: z.string(), files: z.number().int() })),
+  }),
+});
+export type MapNeighbors = z.infer<typeof mapNeighborsSchema>;
 
 export const mapCategoryOverrideRequestSchema = z.object({
   category: mapCategorySchema.nullable(),

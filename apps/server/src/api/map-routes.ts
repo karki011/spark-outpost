@@ -3,9 +3,11 @@ import {
   mapAreaFilesQuerySchema,
   mapCategoryOverrideRequestSchema,
   mapLinksQuerySchema,
+  mapNeighborsQuerySchema,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { areaDetail, findArea, mapLinks, projectMap, setAreaOverride } from '../map/read-store.ts';
+import { fileNeighbors } from '../map/neighbors.ts';
 import { mapUnmatched } from '../map/unmatched.ts';
 import { getProject } from '../projects/projects.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
@@ -51,6 +53,18 @@ export function mapRoutes({ db, workspaceId }: MapRouteDeps): Router {
       return;
     }
     res.json(await areaDetail(db, project.rootPath, area, query.data));
+  });
+
+  router.get('/projects/:id/map/neighbors', async (req, res) => {
+    const project = await getProject(db, workspaceId, paramId(req));
+    const query = mapNeighborsQuerySchema.safeParse(req.query);
+    if (!query.success) throw new BadRequestError('Pass a file path and hops of 1 or 2.');
+    const neighbors = await fileNeighbors(db, project.rootPath, query.data.path, query.data.hops);
+    if (!neighbors) {
+      res.status(404).json({ error: 'That file is not on the map.' });
+      return;
+    }
+    res.json(neighbors);
   });
 
   router.put('/projects/:id/map/areas/:areaId/category', async (req, res) => {

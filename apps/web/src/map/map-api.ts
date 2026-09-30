@@ -3,12 +3,14 @@ import {
   mapAreaDetailSchema,
   mapAreaSchema,
   mapLinksSchema,
+  mapNeighborsSchema,
   mapUnmatchedSchema,
   projectMapSchema,
   type MapArea,
   type MapAreaDetail,
   type MapCategory,
   type MapLinks,
+  type MapNeighbors,
   type MapUnmatched,
   type ProjectMap,
 } from '@spark-outpost/contracts';
@@ -23,6 +25,8 @@ export const mapKeys = {
     ['map', 'area', projectId, areaId, limit, version] as const,
   links: (projectIds: readonly string[]) => ['map', 'links', ...projectIds] as const,
   unmatched: (projectIds: readonly string[]) => ['map', 'unmatched', ...projectIds] as const,
+  neighbors: (projectId: string, path: string, hops: number, version: string) =>
+    ['map', 'neighbors', projectId, path, hops, version] as const,
 };
 
 async function allPages(projectId: string, areaId: string): Promise<MapAreaDetail> {
@@ -63,6 +67,11 @@ export const mapApi = {
       method: 'PUT',
       body: JSON.stringify({ category }),
     }),
+  neighbors: (projectId: string, path: string, hops: number): Promise<MapNeighbors> =>
+    request(
+      mapNeighborsSchema,
+      `/projects/${projectId}/map/neighbors?path=${encodeURIComponent(path)}&hops=${hops}`,
+    ),
   links: (projectIds: readonly string[]): Promise<MapLinks> =>
     request(mapLinksSchema, `/map/links?projects=${projectIds.join(',')}`),
   unmatched: (projectIds: readonly string[]): Promise<MapUnmatched> =>

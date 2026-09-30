@@ -3,9 +3,11 @@ import type { ReactNode, RefObject } from 'react';
 import type { Project, ProjectMap } from '@spark-outpost/contracts';
 import type { RepoFile } from '../chat/project/use-file-search.ts';
 import { SparkleIcon } from '../ui/icons.tsx';
+import { Segmented } from '../ui/Segmented.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import type { BuildStages } from './build-stages.ts';
 import type { FileKind } from './file-kind.ts';
+import { MAP_VIEWS, VIEW_LABELS, type MapViewId } from './map-views.ts';
 import { MapSearch } from './MapSearch.tsx';
 import { MapStatusPill } from './MapStatusPill.tsx';
 import { RepoPicker } from './RepoPicker.tsx';
@@ -17,6 +19,8 @@ interface MapHeaderProps {
   maps: readonly ProjectMap[];
   build: BuildStages;
   searchRef: RefObject<HTMLInputElement | null>;
+  view: MapViewId;
+  onView: (view: MapViewId) => void;
   changes: { on: boolean; count: number | null; chat: string | null };
   dependents: boolean;
   reviewOpen: boolean;
@@ -81,6 +85,14 @@ export function MapHeader(props: MapHeaderProps) {
     <header className="map-head">
       <h1 className="map-title">Map</h1>
       <RepoPicker projects={props.projects} selected={props.selected} onChange={props.onProjects} />
+      <div className="map-views">
+        <Segmented
+          ariaLabel="Show the map as"
+          options={MAP_VIEWS.map((id) => ({ id, label: VIEW_LABELS[id] }))}
+          value={props.view}
+          onChange={(id) => props.onView(id as MapViewId)}
+        />
+      </div>
       <MapSearch
         projects={props.chosen}
         inputRef={props.searchRef}

@@ -70,6 +70,7 @@ interface AreaRow {
   importance: number;
   top_files: string[];
   kind_counts: Partial<Record<MapFileKind, number>>;
+  last_changed_at: Date | null;
   rule_category: MapCategory;
   rule_kind: MapKind;
   x: number;
@@ -86,7 +87,10 @@ interface AreaRow {
 
 const AREA_SELECT = `SELECT a.id, a.root, a.source, a.package, a.reason, a.file_count, a.line_count,
     a.fan_in, a.fan_out, a.importance, a.top_files, a.kind_counts, a.rule_category, a.rule_kind,
-    a.x, a.y, a.radius, l.source AS label_source, l.category AS label_category, l.kind AS label_kind,
+    a.x, a.y, a.radius,
+    (SELECT max(f.last_changed_at) FROM map_files f
+      WHERE f.repo_id = a.repo_id AND f.area_id = a.id) AS last_changed_at,
+    l.source AS label_source, l.category AS label_category, l.kind AS label_kind,
     l.name AS label_name, l.description AS label_description,
     l.confidence AS label_confidence, o.category AS override_category
   FROM map_areas a
@@ -115,6 +119,7 @@ function toArea(row: AreaRow): MapArea {
     importance: row.importance,
     topFiles: row.top_files,
     kindCounts: { ...emptyKindCounts(), ...row.kind_counts },
+    lastChangedAt: row.last_changed_at?.toISOString() ?? null,
     x: row.x,
     y: row.y,
     radius: row.radius,

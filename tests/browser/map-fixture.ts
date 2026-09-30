@@ -12,6 +12,7 @@ import {
   type MapUnmatched,
   type ProjectMap,
 } from '../../packages/contracts/src/map.ts';
+import { fixtureNeighbors } from './map-neighbors.ts';
 
 type MockFile = [string, number, string, string, number, number, number, string | null, number];
 interface MockGroup {
@@ -50,9 +51,9 @@ function mockData(): MockData {
   return JSON.parse(json) as MockData;
 }
 
-const hex12 = (text: string) => createHash('sha1').update(text).digest('hex').slice(0, 12);
+export const hex12 = (text: string) => createHash('sha1').update(text).digest('hex').slice(0, 12);
 
-interface FixtureFile {
+export interface FixtureFile {
   path: string;
   kind: MapFileKind;
   lastChangedAt: string | null;
@@ -67,7 +68,7 @@ interface FixtureFile {
   lines: number;
 }
 
-interface FixtureProject {
+export interface FixtureProject {
   projectId: string;
   status: MapStatus;
   areas: MapArea[];
@@ -76,7 +77,7 @@ interface FixtureProject {
   edges: [string, string][];
 }
 
-function status(fileCount: number, areaCount: number, edgeCount: number): MapStatus {
+export function status(fileCount: number, areaCount: number, edgeCount: number): MapStatus {
   return {
     mapId: randomUUID(),
     status: 'ready',
@@ -102,10 +103,20 @@ function changedAt(data: MockData, day: string | null): string | null {
   return new Date(Date.now() - Math.round(age / DAY_MS) * DAY_MS).toISOString();
 }
 
-function kindCounts(files: readonly FixtureFile[]): Record<MapFileKind, number> {
+export function kindCounts(files: readonly FixtureFile[]): Record<MapFileKind, number> {
   return Object.fromEntries(
     MAP_FILE_KINDS.map((kind) => [kind, files.filter((file) => file.kind === kind).length]),
   ) as Record<MapFileKind, number>;
+}
+
+function latestChange(files: readonly FixtureFile[]): string | null {
+  return (
+    files
+      .map((file) => file.lastChangedAt)
+      .filter((at) => at !== null)
+      .sort()
+      .at(-1) ?? null
+  );
 }
 
 function commonFolder(paths: readonly string[]): string {
@@ -186,6 +197,7 @@ function projectFromLayout(
       importance: list[0]?.importance ?? 0,
       topFiles: list.slice(0, 5).map((f) => f.path),
       kindCounts: kindCounts(list),
+      lastChangedAt: latestChange(list),
       x: group.cx,
       y: group.cy,
       radius: group.r,
@@ -356,6 +368,17 @@ export async function serveMap(page: Page, fixture: MapFixture): Promise<void> {
       url.pathname.match(/\/api\/projects\/([^/]+)\/map(\/areas\/([^/]+)(\/category)?)?/) ?? [];
     if (fixture.delayMs) await new Promise((resolve) => setTimeout(resolve, fixture.delayMs));
     if (!projectId) return route.fallback();
+    if (url.pathname.endsWith('/map/neighbors')) {
+      const project = fixture.projects.get(projectId);
+      const found = project
+        ? fixtureNeighbors(
+            project,
+            url.searchParams.get('path') ?? '',
+            Number(url.searchParams.get('hops') ?? 1),
+          )
+        : null;
+      return found ? json(route, found) : json(route, { error: 'Not on the map.' }, 404);
+    }
     if (!areaId) return json(route, fixture.map(projectId));
     if (tail && route.request().method() === 'PUT') {
       const body = route.request().postDataJSON() as { category: MapArea['category'] | null };
@@ -438,6 +461,7 @@ export function syntheticFixture(
       importance: 1,
       topFiles: list.slice(0, 5).map((f) => f.path),
       kindCounts: kindCounts(list),
+      lastChangedAt: null,
       x,
       y,
       radius: areaRadius,

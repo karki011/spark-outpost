@@ -6,6 +6,9 @@ test.use({
   trace: 'off',
 });
 
+const PRODUCTION = Boolean(process.env.SPARK_WEB_BUILD);
+const TREE_TASK_MS = PRODUCTION ? 50 : 250;
+
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
 });
@@ -16,7 +19,10 @@ test('a 20,000 file map stays smooth while panning and zooming', async ({ page }
   const response = await page.request.post('/api/projects', { data: { rootPath: REPO_ROOT } });
   const projectId = ((await response.json()) as { id: string }).id;
   await serveMap(page, syntheticFixture(projectId, 20_000, 240));
-  await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'map'));
+  await page.addInitScript(() => {
+    localStorage.setItem('spark-outpost.view', 'map');
+    localStorage.setItem('spark-outpost.map-view', '"sky"');
+  });
   await page.goto('/');
   await expect(page.getByRole('application', { name: /240 areas/ })).toBeVisible();
   const box = (await page.locator('.map-stage').boundingBox())!;
@@ -56,4 +62,66 @@ test('a 20,000 file map stays smooth while panning and zooming', async ({ page }
   });
   expect(median).toBeLessThan(20);
   expect(perf.long.filter((duration) => duration > 50)).toEqual([]);
+});
+
+test('the tree of a 20,000 file map opens groups and pans without long main-thread tasks', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const response = await page.request.post('/api/projects', { data: { rootPath: REPO_ROOT } });
+  const projectId = ((await response.json()) as { id: string }).id;
+  await serveMap(page, syntheticFixture(projectId, 20_000, 240));
+  await page.addInitScript(() => {
+    localStorage.setItem('spark-outpost.view', 'map');
+    localStorage.setItem('spark-outpost.map-view', '"tree"');
+  });
+  await page.goto('/');
+  const tree = page.getByRole('application', { name: /^Tree of .*240 areas/ });
+  await expect(tree).toBeVisible();
+  await expect(tree.locator('[data-tree-node]').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Fit the whole tree' }).click();
+  const box = (await page.locator('.map-stage').boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  for (let step = 0; step < 4; step += 1) await page.mouse.wheel(0, step < 2 ? -120 : 120);
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => {
+    const record = { long: [] as number[] };
+    (window as unknown as { treePerf: typeof record }).treePerf = record;
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) record.long.push(entry.duration);
+    }).observe({ type: 'longtask' });
+  });
+  const started = Date.now();
+  await tree.getByRole('button', { name: /^Other in src, group of \d+ areas/ }).focus();
+  await page.keyboard.press('Enter');
+  await expect(
+    tree.getByRole('button', { name: /^Other in src, .*Press Escape to close/ }),
+  ).toBeVisible();
+  await expect(tree.getByRole('button', { name: /^Area \d+, area/ }).first()).toBeVisible();
+  const opened = Date.now() - started;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let step = 0; step < 40; step += 1) {
+    await page.mouse.move(x + Math.sin(step / 5) * 300, y + Math.cos(step / 5) * 160);
+  }
+  await page.mouse.up();
+  for (let step = 0; step < 12; step += 1) await page.mouse.wheel(0, step < 6 ? -200 : 200);
+  await tree
+    .getByRole('button', { name: /^Area \d+, area/ })
+    .first()
+    .focus();
+  await page.keyboard.press('Enter');
+  await expect(tree.locator('.react-flow__node-file').first()).toBeVisible({ timeout: 15_000 });
+  await page.waitForTimeout(500);
+  const long = await page.evaluate(
+    () => (window as unknown as { treePerf: { long: number[] } }).treePerf.long,
+  );
+  test.info().annotations.push({
+    type: 'tree',
+    description: `${PRODUCTION ? 'production' : 'development'} build: opened the group in ${opened} ms, long tasks ${JSON.stringify(long.map(Math.round))}`,
+  });
+  expect(long.filter((duration) => duration > TREE_TASK_MS)).toEqual([]);
 });

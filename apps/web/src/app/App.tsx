@@ -1,4 +1,4 @@
-import { useCallback, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useCallback, useState, type CSSProperties } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConversationSummary, SetupState } from '@spark-outpost/contracts';
@@ -14,7 +14,6 @@ import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';
 import { Home } from '../home/Home.tsx';
-import { MapPage } from '../map/MapPage.tsx';
 import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
@@ -32,6 +31,10 @@ import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { useAttentionTitle } from './use-attention-title.ts';
 import '../ui/controls.css';
+
+const MapPage = lazy(() =>
+  import('../map/MapPage.tsx').then((module) => ({ default: module.MapPage })),
+);
 
 function ChatShell({ entering }: { entering: boolean }) {
   const queryClient = useQueryClient();
@@ -178,7 +181,11 @@ function ChatShell({ entering }: { entering: boolean }) {
             }}
           />
         )}
-        {view === 'map' && <MapPage onOpenInChat={chatAboutFile} />}
+        {view === 'map' && (
+          <Suspense fallback={<main className="page" aria-label="Project map" aria-busy="true" />}>
+            <MapPage onOpenInChat={chatAboutFile} />
+          </Suspense>
+        )}
         {view === 'chats' && (
           <AgentTvHost
             activeId={activeId}
