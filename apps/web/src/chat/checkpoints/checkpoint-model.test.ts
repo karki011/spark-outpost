@@ -7,6 +7,8 @@ import {
   autoLabel,
   budgetLine,
   checkpointQuestion,
+  clarifyAnswer,
+  quickPicks,
   checkpointResult,
   checkpointTitle,
   isCheckpoint,
@@ -30,6 +32,36 @@ describe('checkpoint wording', () => {
     expect(checkpointTitle(payload)).toBe('Bolt needs your input');
     expect(waitingLabel(payload)).toBe('Answer Bolt');
     expect(checkpointTitle({ ...payload, agent: null })).toBe('Jev has a question');
+  });
+
+  it('titles the crew’s clarifying questions as Spark’s', () => {
+    const payload = checkpoint({
+      kind: 'clarify',
+      agent: 'Pip',
+      question: 'A few questions first',
+      questions: [{ question: 'Which report?', options: [], default: 'Spend' }],
+    }).payload.checkpoint!;
+    expect(checkpointTitle(payload)).toBe('Spark has a few questions');
+    expect(checkpointQuestion(payload)).toBeNull();
+    expect(waitingLabel(payload)).toBe('Answer Spark’s questions');
+  });
+
+  it('offers the best guess first among the quick answers', () => {
+    expect(
+      quickPicks({ question: 'Which?', options: ['Usage', 'Spend'], default: 'Spend' }),
+    ).toEqual(['Spend', 'Usage']);
+  });
+
+  it('sends only the questions answered, then the own words', () => {
+    const questions = [
+      { question: 'Which report?', options: [], default: 'Spend' },
+      { question: 'Which period?', options: [], default: 'This month' },
+    ];
+    expect(clarifyAnswer(questions, ['', ' Last year '], '')).toBe('Which period? → Last year');
+    expect(clarifyAnswer(questions, ['Usage', ''], ' keep it short ')).toBe(
+      'Which report? → Usage\nkeep it short',
+    );
+    expect(clarifyAnswer(questions, ['', ''], '  ')).toBe('');
   });
 
   it('does not repeat the title as the question', () => {
@@ -68,6 +100,17 @@ describe('checkpoint wording', () => {
       },
     );
     expect(checkpointResult(auto)).toBe('Continued automatically after 10s.');
+    const guessed = checkpoint(
+      { kind: 'clarify' },
+      {
+        status: 'allowed',
+        decidedBy: 'auto',
+        decisionOptionId: CHECKPOINT_OPTION.useDefaults,
+        createdAt: '2026-09-26T10:00:00.000Z',
+        autoContinueAt: '2026-09-26T10:00:10.000Z',
+      },
+    );
+    expect(checkpointResult(guessed)).toBe('Went with the best guesses after 10s.');
   });
 
   it('describes the budget that ran out', () => {

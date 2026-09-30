@@ -162,7 +162,7 @@ test('a Do chat with a worktree opens its terminal in the worktree', async ({ pa
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
-  const branch = (await page.locator('.head .chat-branch-name').textContent()) ?? '';
+  const branch = (await page.locator('.ctxbar .chat-branch .ctx-branch-name').textContent()) ?? '';
   expect(branch).toMatch(/^spark\//);
 
   await page.keyboard.press('Control+Backquote');

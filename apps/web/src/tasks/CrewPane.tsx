@@ -132,7 +132,7 @@ export function CrewPane({ runs, agents = [] }: CrewPaneProps) {
         })}
       </ul>
       <p className="wnote">
-        One row per agent run: answers are Scouts, changes are Builders, and reviews are Critics.
+        One row per agent run: answers are Readers, changes are Builders, and reviews are Critics.
       </p>
     </div>
   );

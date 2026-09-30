@@ -5,6 +5,7 @@ import {
   type Approval,
   type BudgetLimit,
   type CheckpointPayload,
+  type CheckpointQuestion,
 } from '@spark-outpost/contracts';
 import { formatDuration } from '../../audit/audit-model.ts';
 import { formatCost } from '../../usage/format.ts';
@@ -39,7 +40,14 @@ const TITLES: Record<CheckpointPayload['kind'], string> = {
   pieces: 'Build in pieces?',
 };
 
+export const SPARK_QUESTIONS_TITLE = 'Spark has a few questions';
+
+export function asksQuestions(payload: CheckpointPayload): boolean {
+  return payload.kind === 'clarify' && payload.questions.length > 0;
+}
+
 export function checkpointTitle(payload: CheckpointPayload): string {
+  if (asksQuestions(payload)) return SPARK_QUESTIONS_TITLE;
   if (payload.kind === 'stuck')
     return payload.agent ? `${payload.agent} was repeating itself` : TITLES.stuck;
   if (payload.kind === 'ownership') {
@@ -52,7 +60,25 @@ export function checkpointTitle(payload: CheckpointPayload): string {
   return TITLES[payload.kind];
 }
 
+export function quickPicks(question: CheckpointQuestion): string[] {
+  return [...new Set([question.default, ...question.options])];
+}
+
+export function clarifyAnswer(
+  questions: readonly CheckpointQuestion[],
+  answers: readonly string[],
+  ownWords: string,
+): string {
+  const answered = questions.flatMap((question, index) => {
+    const answer = answers[index]?.trim();
+    return answer ? [`${question.question} → ${answer}`] : [];
+  });
+  const own = ownWords.trim();
+  return [...answered, ...(own ? [own] : [])].join('\n');
+}
+
 export function checkpointQuestion(payload: CheckpointPayload): string | null {
+  if (asksQuestions(payload)) return null;
   return payload.question === checkpointTitle(payload) ? null : payload.question;
 }
 
@@ -70,6 +96,7 @@ const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
 };
 
 export function waitingLabel(payload: CheckpointPayload): string {
+  if (asksQuestions(payload)) return 'Answer Spark’s questions';
   if (payload.kind === 'stuck') {
     return payload.agent ? `Continue ${payload.agent}, or stop` : WAITING_LABELS.stuck;
   }
@@ -177,7 +204,11 @@ export function checkpointResult(approval: Approval): string {
   if (approval.status === 'expired') return 'Expired before you answered.';
   if (approval.decidedBy === 'auto') {
     const delay = autoDelaySeconds(approval);
-    return delay === null ? 'Continued automatically.' : `Continued automatically after ${delay}s.`;
+    const done =
+      approval.decisionOptionId === CHECKPOINT_OPTION.useDefaults
+        ? 'Went with the best guesses'
+        : 'Continued automatically';
+    return delay === null ? `${done}.` : `${done} after ${delay}s.`;
   }
   if (approval.decidedBy === 'level' && approval.decisionOptionId === CHECKPOINT_OPTION.keep) {
     const keptBy = approval.payload.checkpoint?.keptBy;

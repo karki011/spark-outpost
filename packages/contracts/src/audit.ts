@@ -32,7 +32,7 @@ export function mergeCostSource(
 }
 
 export function runRole(mode: RunMode | null): string {
-  return mode === 'do' ? 'Builder' : 'Scout';
+  return mode === 'do' ? 'Builder' : 'Reader';
 }
 
 export const protocolLogEntrySchema = z.object({

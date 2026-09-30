@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { AgentRole, InvolvementLevel } from '@spark-outpost/contracts';
+import { agentRoleLabel, type AgentRole, type InvolvementLevel } from '@spark-outpost/contracts';
 import { conversationAuditRuns, summarizeAudit } from '../src/persistence/audit-summary.ts';
 import { getTaskDetail } from '../src/persistence/task-views.ts';
 import {
@@ -156,7 +156,7 @@ describe.each(SCENARIOS)('$id', (scenario) => {
         context,
       ).toBe(expected.crew.length);
 
-      const labels = [...roles].map((role) => role.charAt(0).toUpperCase() + role.slice(1)).sort();
+      const labels = [...roles].map((role) => agentRoleLabel(role)).sort();
       if (expected.crew[0] !== 'scout') {
         const [audited] = audit.orchestrations ?? [];
         expect(audited?.totals.totalTokens, context).toBe(orchestration.totals.tokens);

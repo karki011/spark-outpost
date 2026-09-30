@@ -91,11 +91,19 @@ export const mergeConflictSchema = z.object({
 });
 export type MergeConflict = z.infer<typeof mergeConflictSchema>;
 
+export const checkpointQuestionSchema = z.object({
+  question: z.string(),
+  options: z.array(z.string()).default([]),
+  default: z.string(),
+});
+export type CheckpointQuestion = z.infer<typeof checkpointQuestionSchema>;
+
 export const checkpointPayloadSchema = z.object({
   kind: checkpointKindSchema,
   question: z.string(),
   reason: z.string(),
   choices: z.array(z.string()).default([]),
+  questions: z.array(checkpointQuestionSchema).default([]),
   plan: z.array(planEntrySchema).default([]),
   planVersion: z.number().int().positive().nullable().default(null),
   from: agentPickSchema.nullable().default(null),

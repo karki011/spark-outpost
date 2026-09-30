@@ -33,10 +33,12 @@ import { DropOverlay } from './attachments/DropOverlay.tsx';
 import { useAttachments } from './attachments/use-attachments.ts';
 import { useFileDrop } from './attachments/use-file-drop.ts';
 import { Composer } from './Composer.tsx';
+import { DockContext } from './dock/dock-context.ts';
+import { PendingDock } from './dock/PendingDock.tsx';
+import { usePendingDock } from './dock/use-pending-dock.ts';
 import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
-import { ChatBranch } from './project/ChatBranch.tsx';
 import { ChatTicketBar } from './tickets/ChatTicketBar.tsx';
 import { ChatTicketChips } from './tickets/ChatTicketChips.tsx';
 import { useChatTickets } from './tickets/use-chat-tickets.ts';
@@ -130,125 +132,128 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const canAudit = (detail.data?.runs.length ?? 0) > 0;
   const openAudit = canAudit ? () => setAuditOpen(true) : undefined;
   const tickets = useChatTickets(conversationId, (detail.data?.messages.length ?? 0) > 0);
+  const dock = usePendingDock();
 
   return (
     <ViewChangesContext value={viewChanges}>
-      <FileSheetProvider>
-        <main className="main" {...drop.handlers}>
-          <header className="head">
-            <SidebarToggle />
-            {repos.length > 0 && (
-              <span className="crumb" title={repos.map((repo) => repo.rootPath).join('\n')}>
-                {repoSummary(repos.map((repo) => repo.name))} /
-              </span>
-            )}
-            <h1
-              className="chat-title"
-              title={
-                detail.data?.conversation.titleSource === 'auto' ? 'Renamed by Spark' : undefined
-              }
-            >
-              {title}
-            </h1>
-            {chatBranch && <ChatBranch conversationId={conversationId} branch={chatBranch} />}
-            <ChatTicketChips chat={tickets} />
-            <div className="head-r">
-              <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
-              {openAudit && (
-                <ChatHeaderMenu onAudit={openAudit} onStartFresh={() => startFresh.mutate()} />
+      <DockContext value={dock.api}>
+        <FileSheetProvider>
+          <main className="main" {...drop.handlers}>
+            <header className="head">
+              <SidebarToggle />
+              {repos.length > 0 && (
+                <span className="crumb" title={repos.map((repo) => repo.rootPath).join('\n')}>
+                  {repoSummary(repos.map((repo) => repo.name))} /
+                </span>
               )}
-              <AgentTvButton conversationId={conversationId} agents={crew} />
-              <TerminalButton chatId={conversationId} />
-              <ThemePicker />
-            </div>
-          </header>
-          <ChatTicketBar chat={tickets} />
-          {detail.isError && !isConnectionLoss(detail.error) && (
-            <p className="error-line" role="alert">
-              {detail.error.message}
-            </p>
-          )}
-          {detail.data ? (
-            <Thread
-              detail={detail.data}
-              repos={repos}
-              pendingMessage={send.isPending ? send.variables : null}
-              panelOpen={panel.open}
-              onOpenTask={panel.openTask}
-              onOpenChat={onOpenChat}
-              quotes={quotes}
-            />
-          ) : (
-            <div className="thread-wrap" aria-busy={detail.isPending}>
-              {detail.isPending && (
-                <div className="thread-loading" role="status">
-                  <BlobScout size={48} mood="working" />
-                  <span>Opening this chat…</span>
-                </div>
-              )}
-            </div>
-          )}
-          <Composer
-            conversationId={conversationId}
-            repos={repos}
-            settings={detail.data?.settings ?? null}
-            providers={connected}
-            runs={detail.data?.runs ?? []}
-            orchestration={orchestration}
-            usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
-            busy={running !== null}
-            sending={send.isPending}
-            error={send.error?.message ?? stop.error?.message ?? null}
-            attachments={attachments}
-            quotes={quotes}
-            onSend={async (content, files, annotations) => {
-              await send.mutateAsync({ content, attachments: files, annotations });
-            }}
-            onStop={() => {
-              if (running) stop.mutate(running.id);
-            }}
-            steer={steer}
-            {...(openAudit ? { onAudit: openAudit } : {})}
-            onStartFresh={() => startFresh.mutate()}
-            agentCommands={commands.data?.commands ?? NO_COMMANDS}
-            agentName={providerName(
-              commands.data?.provider ?? detail.data?.settings.provider ?? '',
+              <h1
+                className="chat-title"
+                title={
+                  detail.data?.conversation.titleSource === 'auto' ? 'Renamed by Spark' : undefined
+                }
+              >
+                {title}
+              </h1>
+              <ChatTicketChips chat={tickets} />
+              <div className="head-r">
+                <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
+                {openAudit && (
+                  <ChatHeaderMenu onAudit={openAudit} onStartFresh={() => startFresh.mutate()} />
+                )}
+                <AgentTvButton conversationId={conversationId} agents={crew} />
+                <TerminalButton chatId={conversationId} />
+                <ThemePicker />
+              </div>
+            </header>
+            <ChatTicketBar chat={tickets} />
+            {detail.isError && !isConnectionLoss(detail.error) && (
+              <p className="error-line" role="alert">
+                {detail.error.message}
+              </p>
             )}
-          />
-          <TerminalDock chatId={conversationId} />
-          <DropOverlay visible={drop.dragging} />
-        </main>
-        {task && (
-          <WorkPanel
-            conversationId={conversationId}
-            task={task}
-            open={panel.open}
-            wide={panel.wide}
-            tab={panelTab}
-            onTab={setPanelTab}
-            onClose={() => panel.setOpen(false)}
-            orchestration={taskCrew}
-            agents={taskCrew ? crew : []}
-            roots={[
-              ...(chatBranch?.worktree ? [chatBranch.path] : []),
-              ...repos.map((repo) => repo.rootPath),
-            ]}
-            runs={detail.data?.runs ?? []}
-            width={panel.width}
-            onWidth={panel.setWidth}
-            {...(openAudit ? { onAudit: openAudit } : {})}
-          />
-        )}
-        <AnimatePresence>
-          {auditOpen && (
-            <AuditDialog
+            {detail.data ? (
+              <Thread
+                detail={detail.data}
+                repos={repos}
+                pendingMessage={send.isPending ? send.variables : null}
+                panelOpen={panel.open}
+                onOpenTask={panel.openTask}
+                onOpenChat={onOpenChat}
+                quotes={quotes}
+              />
+            ) : (
+              <div className="thread-wrap" aria-busy={detail.isPending}>
+                {detail.isPending && (
+                  <div className="thread-loading" role="status">
+                    <BlobScout size={48} mood="working" />
+                    <span>Opening this chat…</span>
+                  </div>
+                )}
+              </div>
+            )}
+            <PendingDock dock={dock} />
+            <Composer
               conversationId={conversationId}
-              title={title}
-              onClose={() => setAuditOpen(false)}
+              repos={repos}
+              settings={detail.data?.settings ?? null}
+              providers={connected}
+              runs={detail.data?.runs ?? []}
+              orchestration={orchestration}
+              usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
+              busy={running !== null}
+              sending={send.isPending}
+              error={send.error?.message ?? stop.error?.message ?? null}
+              attachments={attachments}
+              quotes={quotes}
+              onSend={async (content, files, annotations) => {
+                await send.mutateAsync({ content, attachments: files, annotations });
+              }}
+              onStop={() => {
+                if (running) stop.mutate(running.id);
+              }}
+              steer={steer}
+              {...(openAudit ? { onAudit: openAudit } : {})}
+              onStartFresh={() => startFresh.mutate()}
+              agentCommands={commands.data?.commands ?? NO_COMMANDS}
+              agentName={providerName(
+                commands.data?.provider ?? detail.data?.settings.provider ?? '',
+              )}
+            />
+            <TerminalDock chatId={conversationId} />
+            <DropOverlay visible={drop.dragging} />
+          </main>
+          {task && (
+            <WorkPanel
+              conversationId={conversationId}
+              task={task}
+              open={panel.open}
+              wide={panel.wide}
+              tab={panelTab}
+              onTab={setPanelTab}
+              onClose={() => panel.setOpen(false)}
+              orchestration={taskCrew}
+              agents={taskCrew ? crew : []}
+              roots={[
+                ...(chatBranch?.worktree ? [chatBranch.path] : []),
+                ...repos.map((repo) => repo.rootPath),
+              ]}
+              runs={detail.data?.runs ?? []}
+              width={panel.width}
+              onWidth={panel.setWidth}
+              {...(openAudit ? { onAudit: openAudit } : {})}
             />
           )}
-        </AnimatePresence>
-      </FileSheetProvider>
+          <AnimatePresence>
+            {auditOpen && (
+              <AuditDialog
+                conversationId={conversationId}
+                title={title}
+                onClose={() => setAuditOpen(false)}
+              />
+            )}
+          </AnimatePresence>
+        </FileSheetProvider>
+      </DockContext>
     </ViewChangesContext>
   );
 }

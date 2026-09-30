@@ -18,6 +18,7 @@ import { shownText, streamLeads, type RunStep } from '../run-projection.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { WorkLog } from '../WorkLog.tsx';
 import { shownApprovals } from './crew-items.ts';
+import { CrewName } from './CrewHint.tsx';
 
 const EFFORT_SCALE = ['low', 'medium', 'high', 'xhigh', 'max'].map((id) => ({
   id,
@@ -60,7 +61,7 @@ export function AgentHead({ agent, anchor }: { agent: CrewAgent; anchor: string 
         <CrewBlob name={agent.name} provider={agent.provider} state={agent.state} size={30} />
       </span>
       <span className="agent-who">
-        <span className="agent-name">{agent.name}</span>
+        <CrewName name={agent.name} />
         <span className="agent-role">{roleLabel(agent)}</span>
       </span>
       {live && <span className={`agent-state ${agent.state}`}>{crewStateWord(agent.state)}</span>}
@@ -185,7 +186,7 @@ export function AgentBlock({
           <span className="agent-ava sm" aria-hidden="true">
             <CrewBlob name={agent.name} provider={agent.provider} state={agent.state} size={20} />
           </span>
-          <span className="agent-name">{agent.name}</span>
+          <CrewName name={agent.name} />
           <span className="agent-role">{roleLabel(agent)}</span>
           <span className="fold-text">{firstLine(body.text) || agent.line}</span>
           <span className="fold-meta">{usageParts(agent).join(' · ')}</span>

@@ -103,8 +103,9 @@ export async function clarifyTurn(s: Session, then: ClarifiedStart): Promise<Flo
     const asked = await askAgent(s);
     if (asked.type === 'none')
       return round === 1 ? fallback(s, then) : { type: 'clarified', start: then };
-    const card = clarifyCard(asked.questions, s.input.level, asked.agent);
-    const answer = await askCard(s, card, FULL_AUTO_PLAN_SECONDS);
+    const card = clarifyCard(asked.questions, asked.agent);
+    const fallbackSeconds = s.input.level === 'full-auto' ? FULL_AUTO_PLAN_SECONDS : null;
+    const answer = await askCard(s, card, fallbackSeconds);
     if (answer.type === 'timeout') throw new CheckpointTimeout();
     const reply =
       answer.type === 'stopped'

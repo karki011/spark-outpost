@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agentLabel, crewName, nextCrewName } from './roles.ts';
+import { agentLabel, crewName, crewRole, crewTitle, nextCrewName } from './roles.ts';
 
 describe('crew names', () => {
   it('draws names from each role’s pool in order', () => {
@@ -31,5 +31,14 @@ describe('crew names', () => {
       'Bolt · Builder · Sonnet 5 · medium',
     );
     expect(agentLabel('critic', '6 Sol', null)).toBe('Critic · 6 Sol');
+  });
+
+  it('names what a crew member does, for tooltips', () => {
+    expect(crewRole('Pip')).toBe('scout');
+    expect(crewRole('Bolt 2')).toBe('builder');
+    expect(crewRole('Subash')).toBeNull();
+    expect(crewTitle('Pip')).toBe('Pip · Reader — reads and answers');
+    expect(crewTitle('Hawk 2')).toBe('Hawk 2 · Critic — reviews the change');
+    expect(crewTitle('Someone')).toBe('Someone');
   });
 });
