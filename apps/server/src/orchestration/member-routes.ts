@@ -16,6 +16,7 @@ import {
   escalate,
   escalateBuilder,
   routeBuilder,
+  rereviewCritic,
   routeCritic,
   routeMemberModel,
   soloRoute,
@@ -149,6 +150,9 @@ export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRo
     const route =
       spawn.role === 'builder' ? escalateBuilder(s.route, previous) : escalate(s.route, previous);
     return { route };
+  }
+  if (previous && spawn.role === 'critic' && s.flow.review.fixing) {
+    return { route: rereviewCritic(s.route, previous) };
   }
   if (previous) return { route: previous };
   if (spawn.role === 'critic') return { route: routeCritic(s.route, builtShares(s)) };

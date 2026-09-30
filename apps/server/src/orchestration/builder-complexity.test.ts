@@ -10,6 +10,7 @@ import {
   complexByScan,
   firstSignal,
   smallByRequest,
+  specByRule,
 } from './builder-complexity.ts';
 import { asksForTopModel, complexByRule } from './risk-rules.ts';
 
@@ -233,5 +234,37 @@ describe('big requests written as prose plan first (B4)', () => {
 
   it.each(SMALL_PROSE)('builds straight away: %s', (request) => {
     expect(bigByRule(request)).toBeNull();
+  });
+});
+
+const SPEC = [
+  'Add project budgets, end to end:',
+  '- Database: a migration `migrations/003_budgets.sql` with a `project_budgets` table.',
+  '- Repository: `src/budgets.ts` with `getBudget(db, id)` and `setBudget(db, id, amount)`.',
+  '- API in `src/api.ts`: `GET /projects/:id/budget` and `PUT /projects/:id/budget`.',
+  '- A `budget` column in the CSV export.',
+  '- Tests for each part under `test/`.',
+].join('\n');
+
+describe('a request that is already a spec is its own plan', () => {
+  it('counts listed parts that name files or code', () => {
+    expect(specByRule(SPEC)).toBe('5 of 5 listed parts name files or code');
+    expect(
+      specByRule('- add src/export.ts\n- wire it into src/api.ts\n- mention it somewhere'),
+    ).toBe('2 of 3 listed parts name files or code');
+  });
+
+  it('leaves loose lists, short lists and open questions to plan first', () => {
+    expect(specByRule('- add the column\n- update the API\n- show it in the table')).toBeNull();
+    expect(
+      specByRule('- add `src/a.ts`\n- add `src/b.ts`\n- polish it\n- make it nice'),
+    ).toBeNull();
+    expect(specByRule('- add `src/a.ts`\n- add `src/b.ts`')).toBeNull();
+    expect(specByRule(`${SPEC}\n\nShould the budget be per month?`)).toBeNull();
+    expect(specByRule(BIG_PROSE[3]!)).toBeNull();
+  });
+
+  it('ignores question marks inside code', () => {
+    expect(specByRule(`${SPEC}\n- Parse \`?page=2\` in \`src/api.ts\`.`)).not.toBeNull();
   });
 });

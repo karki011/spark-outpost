@@ -3,7 +3,16 @@ import {
   checkpointPayloadSchema,
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
+import { insertPlanDocument } from '../persistence/plan-documents.ts';
 import { autoContinueSeconds } from '../persistence/setup.ts';
+import {
+  announcePlan,
+  approvalCommit,
+  planNote,
+  planSaveFailed,
+} from '../workflow/plan-recorder.ts';
+import { LeaseLostError } from '../persistence/run-events.ts';
+import { specByRule } from './builder-complexity.ts';
 import { askCard, CheckpointTimeout, type CheckpointCard } from './checkpoint.ts';
 import { draftPlan, originalPrompt, settleQuietly } from './plan-only.ts';
 import { save, type Session } from './session.ts';
@@ -57,7 +66,48 @@ export function planPrNote(body: string): string {
   return `Plan it followed:\n\n${capped}`;
 }
 
+export const SPEC_PLAN_OPTION = 'request_is_plan';
+
+export function requestIsThePlan(level: InvolvementLevel, request: string): string | null {
+  if (level === 'balanced') return null;
+  return specByRule(request);
+}
+
+export function specPlanLine(reason: string, version: number | null): string {
+  const saved = version === null ? 'building it as written' : `saved as plan v${version}`;
+  return `Your request is already a plan (${reason}): ${saved}, no separate plan turn`;
+}
+
+async function adoptRequestAsPlan(s: Session, request: string, reason: string): Promise<FlowEvent> {
+  let version: number | null = null;
+  try {
+    const plan = await insertPlanDocument(s.deps.db, {
+      conversationId: s.input.identity.threadId,
+      taskId: s.taskId,
+      source: 'user',
+      body: request,
+      sourceRunId: s.lease.runId,
+      approval: {
+        by: 'user',
+        option: SPEC_PLAN_OPTION,
+        runId: s.lease.runId,
+        commit: await approvalCommit(s.input.projectRoots[0] ?? null).catch(() => null),
+      },
+    });
+    version = plan.version;
+    await announcePlan(s.append, plan);
+  } catch (error) {
+    if (error instanceof LeaseLostError) throw error;
+    await planSaveFailed(s.append, error);
+  }
+  await planNote(s.append, specPlanLine(reason, version));
+  s.prNotes = [...(s.prNotes ?? []), planPrNote(request)];
+  return { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.makeChange, note: null };
+}
+
 export async function writePlanFirst(s: Session, note: string | null): Promise<FlowEvent> {
+  const spec = note === null ? requestIsThePlan(s.input.level, s.input.userRequest) : null;
+  if (spec) return adoptRequestAsPlan(s, s.input.userRequest, spec);
   const original = originalPrompt(s);
   const drafted = await draftPlan(s, planFirstPrompt(original, note), note);
   s.input = { ...s.input, prompt: original };

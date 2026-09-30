@@ -6,6 +6,7 @@ import type {
   RouteTier,
 } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
+import { CRITIC_REREVIEW_EFFORT } from '../advisor/policy.ts';
 import { selectableModels, tierOptions } from '../advisor/intake-questions.ts';
 import { cardFor, TIER_RANK } from '../model-cards/cards.ts';
 import { firstReportedEffort } from '../providers/efforts.ts';
@@ -38,6 +39,7 @@ import { signalText, taskSignals, type TaskSignals } from './task-signals.ts';
 import {
   escalatedEffort,
   highEffort,
+  loweredEffort,
   modelTier,
   oneTierUp,
   strongerEffort,
@@ -427,6 +429,13 @@ export function routeCritic(context: RouteContext, built: readonly BuiltShare[] 
     autoWouldUse: null,
   };
   return floorReaderRoute(context, route);
+}
+
+export function rereviewCritic(context: RouteContext, previous: MemberRoute): MemberRoute {
+  const efforts = effortIds(candidateFor(context, previous.pick.provider));
+  const effort = loweredEffort(efforts, previous.pick.effort, CRITIC_REREVIEW_EFFORT);
+  if (effort === previous.pick.effort) return previous;
+  return { ...previous, pick: { ...previous.pick, effort } };
 }
 
 export function escalate(context: RouteContext, previous: MemberRoute): MemberRoute {
