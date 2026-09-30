@@ -18,6 +18,7 @@ const ATTENTION_BY_APPROVAL_KIND: Record<ApprovalKind, AttentionKind> = {
   edit: 'permission',
   execute: 'permission',
   other: 'permission',
+  spark_action: 'permission',
   clarify: 'input',
   plan: 'plan',
   retry: 'input',

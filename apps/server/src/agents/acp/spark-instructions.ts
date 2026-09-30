@@ -19,7 +19,14 @@ const TONE: Record<Personality, string> = {
   facts: 'Tone: terse and factual. No pleasantries or small talk.',
 };
 
-export function sparkInstructions(prefs: SparkSessionPrefs, subagents: boolean): string {
+const SPARK_TOOLS_LINE =
+  'For questions about Spark itself (providers, connectors, projects, chats, audit, tickets, analytics, settings, how it works), use the spark_* tools. Their ticket and PR actions run only after the user confirms a card.';
+
+export function sparkInstructions(
+  prefs: SparkSessionPrefs,
+  subagents: boolean,
+  sparkTools = false,
+): string {
   const name = firstName(prefs.displayName);
   const lines = [
     HEADER,
@@ -28,6 +35,7 @@ export function sparkInstructions(prefs: SparkSessionPrefs, subagents: boolean):
       ? [`The user's name is ${name}. Use it when you explain something or ask them a question.`]
       : []),
     TONE[prefs.personality],
+    ...(sparkTools ? [SPARK_TOOLS_LINE] : []),
   ];
   return lines.join('\n').slice(0, SPARK_INSTRUCTIONS_MAX_LENGTH);
 }
@@ -45,17 +53,28 @@ const NO_CLAUDE_REPO: ClaudeRepoOptions = {
   agentTool: false,
 };
 
+function withSparkServer(repo: ClaudeRepoOptions | null, sparkServer: string | null) {
+  if (!sparkServer) return repo;
+  const base = repo ?? NO_CLAUDE_REPO;
+  return { ...base, allowRules: [...(base.allowRules ?? []), `mcp__${sparkServer}`] };
+}
+
 export function withClaudeSpark(
   repo: ClaudeRepoOptions | null,
   prefs: SparkSessionPrefs | undefined,
   hasTools: boolean,
+  sparkServer: string | null = null,
 ): ClaudeRepoOptions | null {
-  if (!prefs) return repo;
-  const base = repo ?? NO_CLAUDE_REPO;
+  const allowed = withSparkServer(repo, sparkServer);
+  if (!prefs) return allowed;
+  const base = allowed ?? NO_CLAUDE_REPO;
   const subagents = hasTools;
   return {
     ...base,
-    appendPrompt: joined(base.appendPrompt, sparkInstructions(prefs, subagents)),
+    appendPrompt: joined(
+      base.appendPrompt,
+      sparkInstructions(prefs, subagents, sparkServer !== null),
+    ),
     agentTool: subagents,
   };
 }
@@ -69,12 +88,16 @@ const NO_CODEX_REPO: CodexRepoOptions = {
 export function withCodexSpark(
   repo: CodexRepoOptions | null,
   prefs: SparkSessionPrefs | undefined,
+  sparkTools = false,
 ): CodexRepoOptions | null {
   if (!prefs) return repo;
   const base = repo ?? NO_CODEX_REPO;
   return {
     ...base,
-    developerInstructions: joined(base.developerInstructions, sparkInstructions(prefs, false)),
+    developerInstructions: joined(
+      base.developerInstructions,
+      sparkInstructions(prefs, false, sparkTools),
+    ),
   };
 }
 

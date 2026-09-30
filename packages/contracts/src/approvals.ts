@@ -4,6 +4,7 @@ import { checkpointKindSchema, checkpointPayloadSchema } from './checkpoints.ts'
 import { INVOLVEMENT_LEVEL_IDS, type InvolvementLevel } from './involvement-levels.ts';
 import { workPlaceSchema } from './chat-workspace.ts';
 import { pieceSlotsSchema, projectNameSchema } from './projects.ts';
+import { SPARK_ACTION_KIND, sparkActionEditsSchema, sparkActionSchema } from './spark-actions.ts';
 
 export const runModeSchema = z.enum(['chat', 'ask', 'do']);
 export type RunMode = z.infer<typeof runModeSchema>;
@@ -62,6 +63,7 @@ export const approvalKindSchema = z.enum([
   'edit',
   'execute',
   'other',
+  SPARK_ACTION_KIND,
   ...checkpointKindSchema.options,
 ]);
 export type ApprovalKind = z.infer<typeof approvalKindSchema>;
@@ -123,6 +125,7 @@ export const approvalPayloadSchema = z.object({
   checkpoint: checkpointPayloadSchema.optional(),
   plan: z.string().optional(),
   forcePush: z.array(z.string()).optional(),
+  sparkAction: sparkActionSchema.optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
 
@@ -144,6 +147,7 @@ export const approvalSchema = z.object({
   createdAt: z.string(),
   note: z.string().nullable().optional(),
   autoContinueAt: z.string().nullable().optional(),
+  edits: sparkActionEditsSchema.nullable().optional(),
 });
 export type Approval = z.infer<typeof approvalSchema>;
 
@@ -160,6 +164,7 @@ export const approvalDecisionRequestSchema = z.object({
   scope: approvalScopeSchema.default('once'),
   payloadHash: z.string().min(1).max(200).optional(),
   note: z.string().trim().max(APPROVAL_NOTE_MAX_LENGTH).optional(),
+  edits: sparkActionEditsSchema.optional(),
 });
 export type ApprovalDecisionRequest = z.input<typeof approvalDecisionRequestSchema>;
 

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type {
+  TicketPriorityName,
   TicketDetail,
   TicketStatus,
   TicketStatusMap,
@@ -100,6 +101,33 @@ const ASSIGN = `mutation Assign($id: String!, $assigneeId: String) {
   issueUpdate(id: $id, input: { assigneeId: $assigneeId }) { success } }`;
 const LINK = `mutation Link($issueId: String!, $url: String!, $title: String!) {
   attachmentLinkURL(issueId: $issueId, url: $url, title: $title) { success } }`;
+
+const TEAM = `query Team($key: String!) {
+  teams(filter: { key: { eqIgnoreCase: $key } }) {
+    nodes { id key labels { nodes { id name } } } } }`;
+const CREATE = `mutation Create($input: IssueCreateInput!) {
+  issueCreate(input: $input) { success issue { identifier url } } }`;
+const teamSchema = z.object({
+  teams: nodes(
+    z.object({
+      id: z.string(),
+      key: z.string(),
+      labels: nodes(z.object({ id: z.string(), name: z.string() })),
+    }),
+  ),
+});
+const createdSchema = z.object({
+  issueCreate: z.object({
+    success: z.boolean(),
+    issue: z.object({ identifier: z.string(), url: z.string() }).nullable(),
+  }),
+});
+const LINEAR_PRIORITY: Record<TicketPriorityName, number> = {
+  urgent: 1,
+  high: 2,
+  medium: 3,
+  low: 4,
+};
 
 const DONE_TYPES = ['completed', 'canceled'];
 
@@ -309,6 +337,40 @@ export function linearSource(
         { issueId: key, body },
         `commenting on ${key}`,
       );
+    },
+    async create(ticket) {
+      const { teams } = await graphql(
+        teamSchema,
+        TEAM,
+        { key: ticket.project },
+        'finding the team',
+      );
+      const team = teams.nodes[0];
+      if (!team) throw new TicketApiError(404, `Linear has no team ${ticket.project}.`);
+      const known = new Map(team.labels.nodes.map((label) => [label.name.toLowerCase(), label.id]));
+      const labelIds = ticket.labels.flatMap((name) => known.get(name.toLowerCase()) ?? []);
+      const input = {
+        teamId: team.id,
+        title: ticket.title,
+        description: ticket.description,
+        ...(ticket.priority ? { priority: LINEAR_PRIORITY[ticket.priority] } : {}),
+        ...(labelIds.length > 0 ? { labelIds } : {}),
+        ...(ticket.assigneeId ? { assigneeId: ticket.assigneeId } : {}),
+      };
+      const { issueCreate } = await graphql(
+        createdSchema,
+        CREATE,
+        { input },
+        'creating the ticket',
+      );
+      if (!issueCreate.success || !issueCreate.issue) {
+        throw new TicketApiError(502, 'Linear did not create the ticket.');
+      }
+      return {
+        key: issueCreate.issue.identifier,
+        url: issueCreate.issue.url,
+        skippedLabels: ticket.labels.filter((name) => !known.has(name.toLowerCase())),
+      };
     },
     async linkPullRequest(key, pull) {
       await graphql(

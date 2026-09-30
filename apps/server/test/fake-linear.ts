@@ -141,6 +141,11 @@ function send(res: ServerResponse, status: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
+const TEAM_LABELS = [
+  { id: 'label-bug', name: 'bug' },
+  { id: 'label-feature', name: 'feature' },
+];
+
 const OPERATION = /^\s*(?:query|mutation)\s+(\w+)/;
 
 interface StateFilter {
@@ -234,6 +239,57 @@ export function fakeLinear(): FakeLinear {
     return issues.filter((item) => matches(item, (variables.filter ?? {}) as IssueFilter));
   }
 
+  function teamAnswer(key: string) {
+    const found = teams[key.toUpperCase()];
+    return {
+      teams: {
+        nodes: found
+          ? [
+              {
+                id: `team-${key.toUpperCase()}`,
+                key: key.toUpperCase(),
+                labels: { nodes: TEAM_LABELS },
+              },
+            ]
+          : [],
+      },
+    };
+  }
+
+  function created(raw: unknown): FakeLinearIssue {
+    const input = raw as {
+      teamId: string;
+      title: string;
+      description: string;
+      priority?: number;
+      labelIds?: string[];
+      assigneeId?: string;
+    };
+    const team = input.teamId.replace('team-', '');
+    const number = issues.filter((item) => item.team === team).length + 100;
+    const made: FakeLinearIssue = {
+      id: `id-${team}-${number}`,
+      identifier: `${team}-${number}`,
+      title: input.title,
+      description: input.description,
+      team,
+      stateId: teams[team]![0]!.id,
+      updatedAt: new Date().toISOString(),
+      assigneeId: input.assigneeId ?? null,
+      priority: input.priority ?? 0,
+      dueDate: null,
+      completedAt: null,
+      labels: (input.labelIds ?? []).map(
+        (id) => TEAM_LABELS.find((label) => label.id === id)?.name ?? id,
+      ),
+      comments: [],
+      attachments: [],
+      children: [],
+    };
+    issues.push(made);
+    return made;
+  }
+
   function answer(operation: string, variables: Record<string, unknown>): unknown {
     const target = find(variables.id ?? variables.issueId);
     switch (operation) {
@@ -270,6 +326,10 @@ export function fakeLinear(): FakeLinear {
           user: 'Alex Example',
         });
         return { commentCreate: { success: true } };
+      case 'Team':
+        return teamAnswer(String(variables.key));
+      case 'Create':
+        return { issueCreate: { success: true, issue: node(created(variables.input)) } };
       case 'Link':
         if (!target!.attachments.some((link) => link.url === variables.url)) {
           target!.attachments.push({ title: String(variables.title), url: String(variables.url) });

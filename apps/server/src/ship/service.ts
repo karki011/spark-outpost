@@ -51,8 +51,12 @@ function serialized<T>(taskId: string, work: () => Promise<T>): Promise<T> {
   return next;
 }
 
-export async function shipPreview(deps: ShipDeps, taskId: string): Promise<ShipPreview> {
-  return previewOf(await planShip(deps, taskId));
+export async function shipPreview(
+  deps: ShipDeps,
+  taskId: string,
+  options: ShipOptions = {},
+): Promise<ShipPreview> {
+  return previewOf(await planShip(deps, taskId, options));
 }
 
 async function pullRequestImpact(deps: ShipDeps, plan: ShipPlan, files: readonly ShipFile[]) {

@@ -3,7 +3,6 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
-import type { TokenUsage } from '@spark-outpost/contracts';
 import type { SecretStore } from '../../setup/secrets.ts';
 import {
   ProviderError,
@@ -15,6 +14,14 @@ import { supportsDo, type AgentDefinition, type AgentLaunch } from './agents.ts'
 import { AgentExitedError, startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
 import { auditCodexInstructions, withClaudeSpark, withCodexSpark } from './spark-instructions.ts';
+import {
+  openSparkTools,
+  sparkAcpServer,
+  sparkReserved,
+  withCodexSparkServer,
+  type SparkTools,
+  type SparkToolsAccess,
+} from './spark-tools.ts';
 import { Channel } from './channel.ts';
 import {
   contextSteps,
@@ -26,7 +33,7 @@ import { assertProtocolVersion, failureError, toProviderError } from './errors.t
 import { declineInConversation, nativePlan } from './permissions.ts';
 import { applySessionSettings, modeName } from './apply-settings.ts';
 import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
-import { offeredCapabilities } from './capabilities.ts';
+import { asReported } from './reported-output.ts';
 import { CLIENT_INFO, clientCapabilities } from './client-info.ts';
 import { readTextFile, refuseWrite } from './fs-handlers.ts';
 import {
@@ -68,6 +75,7 @@ export interface AcpProviderOptions {
   env?: Record<string, string>;
   secrets?: Pick<SecretStore, 'get'>;
   cancelGraceMs?: number;
+  sparkTools?: SparkToolsAccess;
 }
 
 const DEFAULT_CANCEL_GRACE_MS = 5_000;
@@ -113,6 +121,7 @@ async function runSession(
     outputs.forEach((output) => channel.push(asReported(definition, output)));
   let agent: AgentProcess | null = null;
   let scratch: string | null = null;
+  let spark: SparkTools | null = null;
   let graceTimer: NodeJS.Timeout | null = null;
   const onAbort = () => {
     graceTimer = setTimeout(() => agent?.kill(), options.cancelGraceMs ?? DEFAULT_CANCEL_GRACE_MS);
@@ -131,10 +140,12 @@ async function runSession(
     const cwd = policy ? primaryRoot(policy) : home;
     const replay = replayFilter(turn.audit);
     const userMcp = await resolveUserMcp(turn.userMcp ?? [], options.secrets);
-    const reserved =
+    const own =
       definition.repoStyle === 'codex'
         ? await codexUserMcpNames(options.env ?? childEnvironment(process.env))
         : [];
+    spark = openSparkTools(options.sparkTools, turn.sparkScope, own);
+    const reserved = sparkReserved(own);
     const repo =
       policy && turn.repo
         ? await prepareRepoSession(
@@ -145,16 +156,19 @@ async function runSession(
           )
         : null;
     const mcpServers = repo?.mcpServers ?? namedMcpServers([], userMcp, reserved);
-    const codex = withCodexSpark(repo?.codex ?? null, turn.spark);
+    const codex = withCodexSpark(repo?.codex ?? null, turn.spark, spark !== null);
     if (definition.repoStyle === 'codex') auditCodexInstructions(turn.audit, codex);
     const builder = turn.builder === true;
-    const env = await agentEnvironment(options, home, browsing, codex, builder, turn.env);
+    const env = withCodexSparkServer(
+      await agentEnvironment(options, home, browsing, codex, builder, turn.env),
+      definition.repoStyle === 'codex' ? spark : null,
+    );
     agent = startAgentProcess(options.launch ?? definition.launch(), cwd, env, replay.observer);
     const notes = roots.length > 0 && !browsing ? [noFolderAccessNote(definition)] : [];
     if (roots.length < linked.length) notes.push(primaryOnlyNote(definition, roots[0]!));
     const changing = policy !== null && turn.mode === 'do';
     if (changing) assertCanChange(definition, turn);
-    const workspace = { cwd, policy, notes, changing, replay, repo, mcpServers };
+    const workspace = { cwd, policy, notes, changing, replay, repo, mcpServers, spark };
     const stopReason = await Promise.race([
       converse(agent, definition, workspace, turn, signal, mapper, push),
       agent.exited,
@@ -189,29 +203,9 @@ async function runSession(
     signal.removeEventListener('abort', onAbort);
     if (graceTimer) clearTimeout(graceTimer);
     agent?.kill();
+    spark?.grant.revoke();
     if (scratch) await rm(scratch, { recursive: true, force: true });
   }
-}
-
-function asReported(definition: AgentDefinition, output: ProviderOutput): ProviderOutput {
-  if (output.kind === 'usage') {
-    const readings = definition.usageReadings ? { readings: definition.usageReadings } : {};
-    return { ...output, ...readings, ...(definition.estimatesCost ? { costUsd: null } : {}) };
-  }
-  if (output.kind === 'tokens' && definition.inputExcludesCache) {
-    return { ...output, tokens: withCachedInput(output.tokens) };
-  }
-  if (output.kind === 'capabilities') {
-    return { ...output, report: offeredCapabilities(output.report, definition.offers) };
-  }
-  if (output.kind === 'session_settings' && definition.usedModel) {
-    return { ...output, model: definition.usedModel(output.model) };
-  }
-  return output;
-}
-
-function withCachedInput(tokens: TokenUsage): TokenUsage {
-  return { ...tokens, input: tokens.input + (tokens.cachedRead ?? 0) };
 }
 
 async function exitOr(agent: AgentProcess, error: unknown): Promise<unknown> {
@@ -289,6 +283,7 @@ interface Workspace {
   replay: ReplayFilter;
   repo: RepoSession | null;
   mcpServers: NamedMcpServer[];
+  spark: SparkTools | null;
 }
 
 export function noFolderAccessNote(definition: AgentDefinition): string {
@@ -381,19 +376,20 @@ async function converse(
         `${definition.name} can't read images. Remove the image and try again.`,
       );
     }
+    const spark = sparkAcpServer(workspace.spark, definition, init);
+    const claude = withClaudeSpark(
+      workspace.repo?.claude ?? null,
+      turn.spark,
+      policy !== null,
+      spark?.name ?? null,
+    );
     const plan = newSessionRequest({
       agentName: definition.name,
       cwd: workspace.cwd,
       extraRoots: extraRoots(policy),
-      meta: sessionMeta(
-        definition,
-        policy,
-        doing !== null,
-        withClaudeSpark(workspace.repo?.claude ?? null, turn.spark, policy !== null),
-        turn,
-      ),
+      meta: sessionMeta(definition, policy, doing !== null, claude, turn),
       init,
-      mcpServers: workspace.mcpServers,
+      mcpServers: spark ? [...workspace.mcpServers, spark] : workspace.mcpServers,
     });
     const opened = await openSession(
       ctx,

@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+import { LINEAR_KEY } from './apps/server/test/fake-linear.ts';
 import { API_TOKEN_ENV } from './packages/contracts/src/api-token.ts';
 import {
   API_PORT,
@@ -35,7 +36,11 @@ const serverEnv = {
   API_PORT: String(API_PORT),
   ALLOWED_ORIGINS: `http://127.0.0.1:${WEB_PORT}`,
   SECRET_STORE: 'memory',
-  MEMORY_SECRETS: JSON.stringify({ jev: 'browser-test-jev-key', zai: 'browser-test-zai-key' }),
+  MEMORY_SECRETS: JSON.stringify({
+    jev: 'browser-test-jev-key',
+    zai: 'browser-test-zai-key',
+    'ticket:linear': LINEAR_KEY,
+  }),
   AGENT_RUNTIME: 'fake',
   COORDINATOR_MODE: 'parallel',
   OUTCOME_SAMPLE_RATE: '0',
@@ -46,6 +51,7 @@ const serverEnv = {
   FAKE_ACP_MODELS: JSON.stringify(FAKE_ACP_MODELS),
   FAKE_ACP_MODES: JSON.stringify(FAKE_ACP_MODES),
   FAKE_ACP_FAST: '1',
+  FAKE_ACP_MCP_CAPABILITIES: JSON.stringify({ http: true, sse: false }),
   ANTHROPIC_BASE_URL: `${STUB_URL}/anthropic`,
   OPENAI_BASE_URL: `${STUB_URL}/openai`,
   TYPESAFE_BASE_URL: `${STUB_URL}/typesafe`,

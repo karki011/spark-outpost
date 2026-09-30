@@ -1,6 +1,10 @@
 import { createHash } from 'node:crypto';
 import {
   NOTE_OPTIONS,
+  SPARK_ACTION_KIND,
+  applySparkEdits,
+  editableFields,
+  sparkActionEditsSchema,
   isCheckpointKind,
   type Approval,
   type ApprovalDecider,
@@ -9,6 +13,7 @@ import {
   type ApprovalPayload,
   type ApprovalScope,
   type ApprovalStatus,
+  type SparkActionEdits,
 } from '@spark-outpost/contracts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
@@ -31,6 +36,7 @@ export interface ApprovalRow {
   created_at: Date;
   note?: string | null;
   auto_continue_at?: Date | null;
+  edits?: SparkActionEdits | null;
 }
 
 export class ApprovalNotFoundError extends Error {
@@ -61,6 +67,7 @@ export function toApproval(row: ApprovalRow): Approval {
     createdAt: row.created_at.toISOString(),
     note: row.note ?? null,
     autoContinueAt: row.auto_continue_at?.toISOString() ?? null,
+    ...(row.edits ? { edits: row.edits } : {}),
   };
 }
 
@@ -95,6 +102,7 @@ export interface Settlement {
   optionId: string | null;
   scope?: ApprovalScope | null;
   note?: string | null;
+  edits?: SparkActionEdits | null;
 }
 
 export function defaultOption(approval: Pick<NewApproval, 'payload' | 'options'>): string | null {
@@ -157,7 +165,7 @@ export async function settlePending(
 ): Promise<Approval | null> {
   const { rows } = await db.query<ApprovalRow>(
     `UPDATE approvals SET status = $2, decided_by = $3, decision_option_id = $4,
-       scope = COALESCE($5, 'once'), note = $6, decided_at = now()
+       scope = COALESCE($5, 'once'), note = $6, edits = $7, decided_at = now()
      WHERE id = $1 AND status = 'pending' RETURNING *`,
     [
       id,
@@ -166,6 +174,7 @@ export async function settlePending(
       settlement.optionId,
       settlement.scope ?? null,
       settlement.note ?? null,
+      settlement.edits ? JSON.stringify(settlement.edits) : null,
     ],
   );
   if (rows[0]) await notifyApprovalChanged(db, id);
@@ -209,6 +218,7 @@ export interface UserDecision {
   scope: ApprovalScope;
   payloadHash?: string | undefined;
   note?: string | undefined;
+  edits?: SparkActionEdits | undefined;
 }
 
 function validateDecision(approval: Approval, decision: UserDecision): ApprovalOption {
@@ -233,10 +243,36 @@ function validateDecision(approval: Approval, decision: UserDecision): ApprovalO
   if (decision.scope === 'project' && (approval.kind !== 'execute' || !approval.payload.command)) {
     throw new ApprovalInputError('Only commands can be allowed for the whole project.');
   }
+  if (approval.kind === SPARK_ACTION_KIND) validateSparkDecision(approval, option, decision);
+  else if (decision.edits) throw new ApprovalInputError('Only Spark actions take edits.');
   if (isCheckpointKind(approval.kind) && NOTE_OPTIONS.includes(option.optionId)) {
     if (!decision.note?.trim()) throw new ApprovalInputError('This answer needs a note.');
   }
   return option;
+}
+
+function validateSparkDecision(
+  approval: Approval,
+  option: ApprovalOption,
+  decision: UserDecision,
+): void {
+  if (decision.scope !== 'once') throw new ApprovalInputError('Spark actions are allowed once.');
+  if (!decision.edits) return;
+  if (!option.kind.startsWith('allow')) {
+    throw new ApprovalInputError('Edits apply only when you confirm.');
+  }
+  const action = approval.payload.sparkAction!;
+  const edits = sparkActionEditsSchema.safeParse(decision.edits);
+  const allowed = editableFields(action.action);
+  const valid =
+    edits.success &&
+    Object.keys(edits.data).every((field) => allowed.includes(field as keyof SparkActionEdits));
+  try {
+    if (!valid) throw new Error('not editable');
+    applySparkEdits(action, edits.data);
+  } catch {
+    throw new ApprovalInputError('Check the edited fields.');
+  }
 }
 
 async function addToAllowlist(db: Queryable, runId: string, command: string): Promise<void> {
@@ -275,6 +311,7 @@ export async function decideApproval(
       optionId: option.optionId,
       scope: scopeFor(option, decision.scope),
       note: decision.note?.trim() || null,
+      edits: decision.edits ?? null,
     });
     if (!settled) throw new ApprovalConflictError('This approval was already answered.');
     if (decision.scope === 'project') {

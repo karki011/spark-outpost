@@ -1,0 +1,45 @@
+.sac-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 10px 14px 0;
+  font-size: 12.5px;
+}
+.sac-facts dt {
+  color: var(--muted);
+}
+.sac-facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sac-facts code {
+  font-size: 12px;
+}
+.sac-files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sac-files span,
+.sac-more {
+  color: var(--muted);
+}
+.sac-fields {
+  display: grid;
+  gap: 10px;
+  margin: 12px 14px 0;
+}
+.sac-fields textarea {
+  resize: vertical;
+}
+.sac-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+@media (max-width: 560px) {
+  .sac-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

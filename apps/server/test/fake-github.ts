@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { listPullsAnswer, pullJson, pullReadAnswer } from './fake-github-reads.ts';
 
 export const FAKE_GH_HEADER = 'x-fake-gh';
 export const REJECTED_TOKEN_MARKER = 'rejected';
@@ -22,6 +23,16 @@ export interface FakePull {
   html_url: string;
   openedBy: string;
   via: 'gh_cli' | 'token';
+  sha?: string;
+  updated_at?: string;
+  mergeable?: boolean | null;
+  mergeable_state?: string;
+  additions?: number;
+  deletions?: number;
+  files?: { filename: string; status: string; additions: number; deletions: number }[];
+  reviewComments?: { path: string; line: number | null; user: { login: string }; body: string }[];
+  issueComments?: { user: { login: string }; body: string }[];
+  checks?: { name: string; status: string; conclusion: string | null }[];
 }
 
 export interface FakeGitHub {
@@ -59,7 +70,6 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   }
 }
 
-const CHECK_RUNS = /^\/repos\/([^/]+)\/([^/]+)\/commits\/sha-(\d+)\/check-runs$/;
 const REPO = /^\/repos\/([^/]+)\/([^/]+)(\/pulls(?:\/(\d+))?)?(\/reviews)?$/;
 
 export function fakeGitHub(): FakeGitHub {
@@ -95,24 +105,11 @@ export function fakeGitHub(): FakeGitHub {
       );
       if (!pull) return send(res, 404, { message: 'Not Found' });
       if (reviews) return send(res, 200, pull.reviews ?? []);
-      return send(res, 200, {
-        ...pull,
-        head: { ref: pull.head, sha: `sha-${pull.number}` },
-        merged: pull.merged ?? false,
-        merged_at: pull.merged ? '2026-09-28T09:00:00Z' : null,
-        created_at: pull.created_at ?? '2026-09-25T09:00:00Z',
-      });
+      return send(res, 200, pullJson(pull));
     }
     if (req.method === 'GET') {
-      const head = query.get('head');
-      return send(
-        res,
-        200,
-        pulls.filter(
-          (pull) =>
-            pull.owner === owner && pull.repo === repo && `${pull.owner}:${pull.head}` === head,
-        ),
-      );
+      const answer = listPullsAnswer(pulls, owner, repo, query);
+      return send(res, answer.status, answer.body);
     }
     const body = await readJson(req);
     if (req.method === 'PATCH' && number) {
@@ -161,18 +158,9 @@ export function fakeGitHub(): FakeGitHub {
           },
         );
       }
-      const checks = CHECK_RUNS.exec(url.pathname);
-      if (checks) {
-        const pull = pulls.find(
-          (entry) =>
-            entry.owner === checks[1] &&
-            entry.repo === checks[2] &&
-            entry.number === Number(checks[3]),
-        );
-        if (!pull) return send(res, 404, { message: 'Not Found' });
-        const runs = pull.checkRuns ?? [];
-        return send(res, 200, { total_count: runs.length, check_runs: runs });
-      }
+      const read =
+        req.method === 'GET' ? pullReadAnswer(pulls, url.pathname, url.searchParams) : null;
+      if (read) return send(res, read.status, read.body);
       const match = REPO.exec(url.pathname);
       if (!match) return send(res, 404, { message: 'Not Found' });
       if (!match[3]) return repoAnswer(res, match[1]!, match[2]!);

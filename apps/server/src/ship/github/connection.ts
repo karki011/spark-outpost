@@ -43,6 +43,7 @@ export type GitHubRequest = (
 export interface GitHubConnection {
   method: GitHubMethod;
   host: string;
+  get<T>(path: string, schema: z.ZodType<T>, action: string): Promise<T>;
   whoami(): Promise<{ login: string }>;
   defaultBranch(repo: RepoRef): Promise<string>;
   findPullRequest(repo: RepoRef, head: string): Promise<PullRequest | null>;
@@ -144,6 +145,9 @@ export function restConnection(
   return {
     method,
     host,
+    async get(path, schema, action) {
+      return parsed(schema, action, await request('GET', path));
+    },
     async whoami() {
       return parsed(userSchema, 'checking who you are', await request('GET', '/user'));
     },

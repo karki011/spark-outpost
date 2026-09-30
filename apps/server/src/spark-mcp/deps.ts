@@ -1,0 +1,72 @@
+import type { Db } from '../persistence/db.ts';
+import type { ProtocolObserver } from '../providers/provider.ts';
+import type { Append } from '../workflow/agent-turn.ts';
+import type { ApprovalWaiters } from '../workflow/approval-waiters.ts';
+import type { GitHubDeps } from '../ship/github/access.ts';
+import type { SecretStore } from '../setup/secrets.ts';
+import type { TicketDeps } from '../tickets/connections.ts';
+import type { InboxDeps } from '../tickets/inbox.ts';
+
+export interface SparkToolDeps {
+  db: Db;
+  secrets: SecretStore;
+  fetch: typeof fetch;
+  linearApiUrl?: string | undefined;
+  github: Omit<GitHubDeps, 'db' | 'workspaceId' | 'secrets' | 'fetch'>;
+  serverSpendCapUsd: number | null;
+  branchPrefix?: string;
+  timeZone?: string;
+  now?: () => Date;
+}
+
+export interface SparkActionHooks {
+  append: Append;
+  waiters: ApprovalWaiters;
+  signal: AbortSignal;
+  timeoutMs: number;
+  pollMs: number;
+  audit?: ProtocolObserver | undefined;
+}
+
+export interface SparkScope {
+  workspaceId: string;
+  conversationId: string | null;
+  runId: string | null;
+  actions?: SparkActionHooks;
+}
+
+export function ticketDepsFor(deps: SparkToolDeps, scope: SparkScope): TicketDeps {
+  return {
+    db: deps.db,
+    workspaceId: scope.workspaceId,
+    secrets: deps.secrets,
+    fetch: deps.fetch,
+    linearApiUrl: deps.linearApiUrl,
+  };
+}
+
+export function gitHubDepsFor(deps: SparkToolDeps, scope: SparkScope): GitHubDeps {
+  return {
+    ...deps.github,
+    db: deps.db,
+    workspaceId: scope.workspaceId,
+    secrets: deps.secrets,
+    fetch: deps.fetch,
+  };
+}
+
+export function inboxDepsFor(deps: SparkToolDeps, scope: SparkScope): InboxDeps {
+  return {
+    ...ticketDepsFor(deps, scope),
+    github: gitHubDepsFor(deps, scope),
+    ...(deps.now ? { now: deps.now } : {}),
+  };
+}
+
+export function localTimeZone(deps: SparkToolDeps): string {
+  return deps.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
+}
+
+export function nowOf(deps: SparkToolDeps): Date {
+  return deps.now?.() ?? new Date();
+}

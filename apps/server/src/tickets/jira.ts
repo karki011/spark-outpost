@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import type { TicketDetail, TicketStatusMap, TicketSummary } from '@spark-outpost/contracts';
+import type {
+  TicketDetail,
+  TicketPriorityName,
+  TicketStatusMap,
+  TicketSummary,
+} from '@spark-outpost/contracts';
 import { callJson, failure, isOk, type JsonCall } from './http.ts';
 import { adfToText, textToAdf } from './jira-adf.ts';
 import { JIRA_EXTRA_FIELDS, jiraExtraFieldsShape, jiraExtras } from './jira-fields.ts';
@@ -22,6 +27,14 @@ import {
 } from './status.ts';
 
 const NAME = 'Jira';
+const DEFAULT_TYPE = 'Task';
+const JIRA_PRIORITY: Record<TicketPriorityName, string> = {
+  urgent: 'Highest',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+};
+const createdSchema = z.object({ key: z.string() });
 const PAGE_SIZE = 100;
 const SPRINT_FIELD = 'customfield_10020';
 const SUMMARY_FIELDS = [
@@ -324,6 +337,29 @@ export function jiraSource(
         { method: 'POST', path: `${issuePath(key)}/comment`, body: { body: textToAdf(body) } },
         `commenting on ${key}`,
       );
+    },
+    async create(ticket) {
+      const fields = {
+        project: { key: ticket.project },
+        summary: ticket.title,
+        description: textToAdf(ticket.description),
+        issuetype: { name: ticket.type ?? DEFAULT_TYPE },
+        ...(ticket.priority ? { priority: { name: JIRA_PRIORITY[ticket.priority] } } : {}),
+        ...(ticket.labels.length > 0
+          ? { labels: ticket.labels.map((label) => label.replace(/\s+/g, '-')) }
+          : {}),
+        ...(ticket.assigneeId ? { assignee: { accountId: ticket.assigneeId } } : {}),
+      };
+      const created = await call(
+        createdSchema,
+        { method: 'POST', path: '/rest/api/3/issue', body: { fields } },
+        'creating the ticket',
+      );
+      return {
+        key: created.key,
+        url: `${access.siteUrl}/browse/${created.key}`,
+        skippedLabels: [],
+      };
     },
     async linkPullRequest(key, pull) {
       await call(

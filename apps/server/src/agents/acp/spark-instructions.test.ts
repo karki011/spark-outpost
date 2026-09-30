@@ -9,6 +9,15 @@ import {
   withCodexSpark,
 } from './spark-instructions.ts';
 
+const NO_REPO = {
+  appendPrompt: null,
+  plugins: [],
+  hooks: null,
+  mcpNames: [],
+  skillTool: false,
+  agentTool: false,
+};
+
 const PREFS: SparkSessionPrefs = {
   displayName: '  Sam Rivera ',
   personality: 'friendly',
@@ -49,6 +58,14 @@ describe('sparkInstructions', () => {
     );
   });
 
+  it('points at the spark_* tools only when the session has them, without cutting the text', () => {
+    const longest = { ...PREFS, displayName: 'x'.repeat(40), personality: 'playful' as const };
+    const text = sparkInstructions(longest, true, true);
+    expect(text.endsWith('run only after the user confirms a card.')).toBe(true);
+    expect(text.length).toBeLessThanOrEqual(SPARK_INSTRUCTIONS_MAX_LENGTH);
+    expect(sparkInstructions(PREFS, true)).not.toContain('spark_*');
+  });
+
   it('stays within its length budget even with the longest name', () => {
     const longest = { ...PREFS, displayName: 'x'.repeat(40), personality: 'playful' as const };
     expect(sparkInstructions(longest, true).length).toBeLessThanOrEqual(
@@ -70,6 +87,19 @@ describe('withClaudeSpark', () => {
     const merged = withClaudeSpark(repo, PREFS, true)!;
     expect(merged.appendPrompt).toMatch(/^# Repository instructions\n\n# Working with the user/);
     expect(merged.agentTool).toBe(true);
+  });
+
+  it('allows the Spark server without an ask, even when no Spark preferences are set', () => {
+    expect(withClaudeSpark(null, undefined, false, 'spark')!.allowRules).toEqual(['mcp__spark']);
+    const merged = withClaudeSpark(
+      { ...NO_REPO, allowRules: ['Bash(npm test:*)'] },
+      PREFS,
+      true,
+      'spark',
+    )!;
+    expect(merged.allowRules).toEqual(['Bash(npm test:*)', 'mcp__spark']);
+    expect(merged.appendPrompt).toContain('spark_* tools');
+    expect(withClaudeSpark(null, undefined, false)).toBeNull();
   });
 
   it('never gives a chat session without tools the Agent tool', () => {

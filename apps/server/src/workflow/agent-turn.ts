@@ -15,8 +15,13 @@ import { ProviderError, type Provider, type ProviderOutput } from '../providers/
 import { createTitleFilter } from '../titles/title-line.ts';
 import { createRedactionFilter } from '../audit/redact-stream.ts';
 import { projectSecretValues } from '../audit/secret-values.ts';
-import { APPROVAL_TIMEOUT_MESSAGE, type EditObserver } from './approval-gate.ts';
-import type { ApprovalWaiters } from './approval-waiters.ts';
+import {
+  APPROVAL_POLL_MS,
+  APPROVAL_TIMEOUT_MESSAGE,
+  APPROVAL_TIMEOUT_MS,
+  type EditObserver,
+} from './approval-gate.ts';
+import { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
 import { prepareAskRun, prepareDoRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
@@ -312,6 +317,19 @@ export async function runAgentTurn(
       ...(repo.length > 0 ? { repo } : {}),
       ...(userMcp.length > 0 ? { userMcp } : {}),
       spark,
+      sparkScope: {
+        workspaceId: input.workspaceId,
+        conversationId: input.identity.threadId,
+        runId: lease.runId,
+        actions: {
+          append,
+          waiters: deps.approvalWaiters ?? new ApprovalWaiters(),
+          signal: control.signal,
+          timeoutMs: deps.approvalTimeoutMs ?? APPROVAL_TIMEOUT_MS,
+          pollMs: deps.approvalPollMs ?? APPROVAL_POLL_MS,
+          audit,
+        },
+      },
     })) {
       if (control.signal.aborted) {
         spend.read(output);

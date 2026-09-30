@@ -5,6 +5,7 @@ import { FAKE_PROVIDER_NAME, createFakeProvider } from '../providers/fake.ts';
 import type { Provider } from '../providers/provider.ts';
 import { childEnvironment } from '../setup/environment.ts';
 import type { SecretStore } from '../setup/secrets.ts';
+import type { SparkToolsAccess } from '../agents/acp/spark-tools.ts';
 
 export type AgentRuntime = 'acp' | 'fake';
 
@@ -27,7 +28,12 @@ function fakeKeyEnvironment(definition: AgentDefinition): Partial<AgentDefinitio
   };
 }
 
-function fakeAcpProvider(definition: AgentDefinition, script: string, secrets?: Secrets): Provider {
+function fakeAcpProvider(
+  definition: AgentDefinition,
+  script: string,
+  secrets?: Secrets,
+  sparkTools?: SparkToolsAccess,
+): Provider {
   return createAcpProvider({
     definition: {
       ...definition,
@@ -39,6 +45,7 @@ function fakeAcpProvider(definition: AgentDefinition, script: string, secrets?: 
     launch: { command: process.execPath, args: ['--import', import.meta.resolve('tsx'), script] },
     cancelGraceMs: 2_000,
     ...(secrets ? { secrets } : {}),
+    ...(sparkTools ? { sparkTools } : {}),
   });
 }
 
@@ -53,6 +60,7 @@ export function createProviders(
   runtime: AgentRuntime,
   fakeAcpAgent?: string,
   secrets?: Secrets,
+  sparkTools?: SparkToolsAccess,
 ): Map<string, Provider> {
   const fake = createFakeProvider();
   const providers = new Map<string, Provider>([[FAKE_PROVIDER_NAME, fake]]);
@@ -60,12 +68,16 @@ export function createProviders(
     if (runtime === 'acp') {
       providers.set(
         definition.id,
-        createAcpProvider({ definition, ...(secrets ? { secrets } : {}) }),
+        createAcpProvider({
+          definition,
+          ...(secrets ? { secrets } : {}),
+          ...(sparkTools ? { sparkTools } : {}),
+        }),
       );
     } else if (!fakeAcpAgent) {
       providers.set(definition.id, fake);
     } else {
-      const acp = fakeAcpProvider(definition, fakeAcpAgent, secrets);
+      const acp = fakeAcpProvider(definition, fakeAcpAgent, secrets, sparkTools);
       providers.set(definition.id, crewFake(fake, acp));
     }
   }

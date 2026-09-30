@@ -5,7 +5,15 @@ import { newId } from './ids.ts';
 import { ticketRef } from './tickets.ts';
 
 export type TicketAction =
-  'connect' | 'disconnect' | 'settings' | 'start' | 'transition' | 'comment' | 'link_pr' | 'assign';
+  | 'connect'
+  | 'disconnect'
+  | 'settings'
+  | 'start'
+  | 'transition'
+  | 'comment'
+  | 'link_pr'
+  | 'assign'
+  | 'create';
 
 export interface TicketEvent {
   source: TicketSourceId;
