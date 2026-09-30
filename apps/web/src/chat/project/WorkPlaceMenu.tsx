@@ -1,7 +1,8 @@
 import './place-picker.css';
-import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { UpdateChatWorkspaceRequest } from '@spark-outpost/contracts';
-import { BranchIcon, ChevronIcon, FolderIcon, TickIcon } from '../../ui/icons.tsx';
+import { BranchIcon, ChevronIcon, FolderIcon, PlusIcon, TickIcon } from '../../ui/icons.tsx';
+import { BlobScout } from '../../brand/BlobScout.tsx';
 import { usePopover } from '../../ui/use-popover.ts';
 import { branchRows, placeLabel } from './place-picker-model.ts';
 import {
@@ -15,40 +16,6 @@ interface WorkPlaceMenuProps {
   conversationId: string;
   projectId: string;
   checkoutBranch: string | null;
-}
-
-function PlaceCard({
-  checked,
-  icon,
-  title,
-  detail,
-  busy,
-  onPick,
-}: {
-  checked: boolean;
-  icon: ReactNode;
-  title: string;
-  detail: string;
-  busy: boolean;
-  onPick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      className="pp-card"
-      aria-checked={checked}
-      disabled={busy}
-      onClick={onPick}
-    >
-      <span className="pp-card-icon" aria-hidden="true">
-        {icon}
-      </span>
-      <b>{title}</b>
-      <small>{detail}</small>
-      <TickIcon />
-    </button>
-  );
 }
 
 function focusRow(list: HTMLElement | null, from: Element | null, step: 1 | -1) {
@@ -131,35 +98,17 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
       >
         <div className="picker-top">
           <span className="picker-title">
-            Where this chat works
-            <small>{busy ? 'Switching…' : 'Your choice is remembered for this project'}</small>
+            Branch
+            <small>
+              {busy
+                ? 'Switching…'
+                : "Spark works on a copy. Your files don't change until you bring the work over."}
+            </small>
           </span>
-        </div>
-        <div className="pp-places" role="radiogroup" aria-label="How Spark works">
-          <PlaceCard
-            checked={fresh}
-            icon={<BranchIcon />}
-            title="Work on a copy"
-            detail="Spark makes a separate copy on a new branch. Your files don't change until you bring the work over."
-            busy={busy}
-            onPick={() => pick({ place: 'worktree', branch: null })}
-          />
-          <PlaceCard
-            checked={inCheckout}
-            icon={<FolderIcon />}
-            title="Edit my files"
-            detail={
-              checkoutBranch
-                ? `Spark changes your files directly, on ${checkoutBranch}. You see edits right away.`
-                : 'Spark changes your files directly. You see edits right away.'
-            }
-            busy={busy}
-            onPick={() => pick({ place: 'checkout', branch: null })}
-          />
         </div>
         <div className="pp-branches">
           <div className="pp-head">
-            <span>Continue a branch</span>
+            <span>Start from</span>
             {list?.hasRemote && (
               <button
                 type="button"
@@ -167,7 +116,7 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
                 disabled={refresh.isPending}
                 onClick={() => refresh.mutate()}
               >
-                {refresh.isPending ? 'Fetching…' : 'Fetch'}
+                Fetch
               </button>
             )}
           </div>
@@ -194,8 +143,30 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
             aria-label="Existing branches"
             onKeyDown={onListKey}
           >
+            {!query.trim() && (
+              <button
+                type="button"
+                role="radio"
+                className="pp-row pp-new"
+                aria-checked={fresh}
+                disabled={busy}
+                onClick={() => pick({ place: 'worktree', branch: null })}
+              >
+                <PlusIcon />
+                <span className="pp-name">New branch</span>
+                <TickIcon />
+              </button>
+            )}
+            {refresh.isPending && (
+              <p className="pp-pulling" role="status">
+                <span className="pp-tug">
+                  <BlobScout size={22} mood="working" />
+                </span>
+                <i className="pp-rope" aria-hidden="true" />
+                Pulling branches from the remote…
+              </p>
+            )}
             {branches.isPending && <p className="mempty">Reading branches…</p>}
-            {list && total === 0 && <p className="mempty">No other branches yet.</p>}
             {list && total > 0 && rows.length === 0 && (
               <p className="mempty">No branch matches “{query.trim()}”.</p>
             )}
@@ -233,7 +204,30 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
             {update.error.message}
           </p>
         )}
-        <p className="pp-foot">A chat keeps its branch once it starts changing files.</p>
+        <div className="pp-foot">
+          <button
+            type="button"
+            className="pp-direct"
+            aria-pressed={inCheckout}
+            disabled={busy}
+            onClick={() =>
+              pick(
+                inCheckout
+                  ? { place: 'worktree', branch: null }
+                  : { place: 'checkout', branch: null },
+              )
+            }
+          >
+            <FolderIcon />
+            <span>
+              {inCheckout
+                ? `Editing your files directly${checkoutBranch ? ` on ${checkoutBranch}` : ''}`
+                : 'Edit my files directly instead'}
+            </span>
+            <TickIcon />
+          </button>
+          <p>A chat keeps its branch once it starts changing files.</p>
+        </div>
       </div>
     </>
   );
