@@ -106,9 +106,25 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
             </small>
           </span>
         </div>
+        <button
+          type="button"
+          className="pp-new"
+          aria-pressed={fresh}
+          disabled={busy}
+          onClick={() => pick({ place: 'worktree', branch: null })}
+        >
+          <span className="pp-new-icon" aria-hidden="true">
+            <PlusIcon />
+          </span>
+          <span className="pp-new-text">
+            <b>New branch{checkoutBranch ? ` from ${checkoutBranch}` : ''}</b>
+            <small>Spark names it from your first message, like spark/fix-login-3f9a</small>
+          </span>
+          <TickIcon />
+        </button>
         <div className="pp-branches">
           <div className="pp-head">
-            <span>Start from</span>
+            <span>Or continue a branch</span>
             {list?.hasRemote && (
               <button
                 type="button"
@@ -143,20 +159,6 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
             aria-label="Existing branches"
             onKeyDown={onListKey}
           >
-            {!query.trim() && (
-              <button
-                type="button"
-                role="radio"
-                className="pp-row pp-new"
-                aria-checked={fresh}
-                disabled={busy}
-                onClick={() => pick({ place: 'worktree', branch: null })}
-              >
-                <PlusIcon />
-                <span className="pp-name">New branch</span>
-                <TickIcon />
-              </button>
-            )}
             {refresh.isPending && (
               <p className="pp-pulling" role="status">
                 <span className="pp-tug">
