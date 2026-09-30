@@ -1,18 +1,19 @@
 import { useId, useState, type RefObject } from 'react';
 import type { Project } from '@spark-outpost/contracts';
 import { useFileSearch, type RepoFile } from '../chat/project/use-file-search.ts';
-import { baseName, fileKind, folderOf } from './file-kind.ts';
+import { baseName, folderOf, type FileKind } from './file-kind.ts';
 import { KindDot } from './JevLabel.tsx';
 
 interface MapSearchProps {
   projects: readonly Project[];
   inputRef: RefObject<HTMLInputElement | null>;
+  kindOf: (projectId: string, path: string) => FileKind | null;
   onPick: (file: RepoFile) => void;
 }
 
 const SHOWN = 8;
 
-export function MapSearch({ projects, inputRef, onPick }: MapSearchProps) {
+export function MapSearch({ projects, inputRef, kindOf, onPick }: MapSearchProps) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const listId = useId();
@@ -88,7 +89,7 @@ export function MapSearch({ projects, inputRef, onPick }: MapSearchProps) {
                 }}
                 onPointerEnter={() => search.setActive(index)}
               >
-                <KindDot kind={fileKind(file.path)} />
+                <KindDot kind={kindOf(file.projectId, file.path) ?? 'other'} />
                 <span className="map-mono map-nm">{baseName(file.path)}</span>
                 <span className="map-mono map-pt">
                   {projects.length > 1 ? `${file.repo} · ` : ''}

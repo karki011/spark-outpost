@@ -54,6 +54,7 @@ const KIND_MEANING = {
   data: 'Data: schema, persistence, contracts',
   test: 'Tests, seeds and stubs',
   config: 'Config, scripts and build',
+  other: 'Docs, assets and everything else',
 } as const;
 
 function Row({ symbol, children }: { symbol: ReactNode; children: ReactNode }) {

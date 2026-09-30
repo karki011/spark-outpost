@@ -6,6 +6,7 @@ import {
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { areaDetail, findArea, mapLinks, projectMap, setAreaOverride } from '../map/read-store.ts';
+import { mapUnmatched } from '../map/unmatched.ts';
 import { getProject } from '../projects/projects.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
 
@@ -26,6 +27,13 @@ function areaParam(req: Request): string {
 
 export function mapRoutes({ db, workspaceId }: MapRouteDeps): Router {
   const router = Router();
+
+  const selectedProjects = (req: Request) => {
+    const query = mapLinksQuerySchema.safeParse(req.query);
+    if (!query.success)
+      throw new BadRequestError('Pass 2 to 8 project ids in projects, comma separated.');
+    return Promise.all(query.data.projects.map((id) => getProject(db, workspaceId, id)));
+  };
 
   router.get('/projects/:id/map', async (req, res) => {
     const project = await getProject(db, workspaceId, paramId(req));
@@ -58,13 +66,13 @@ export function mapRoutes({ db, workspaceId }: MapRouteDeps): Router {
   });
 
   router.get('/map/links', async (req, res) => {
-    const query = mapLinksQuerySchema.safeParse(req.query);
-    if (!query.success)
-      throw new BadRequestError('Pass 2 to 8 project ids in projects, comma separated.');
-    const projects = await Promise.all(
-      query.data.projects.map((id) => getProject(db, workspaceId, id)),
-    );
+    const projects = await selectedProjects(req);
     res.json(await mapLinks(db, projects));
+  });
+
+  router.get('/map/unmatched', async (req, res) => {
+    const projects = await selectedProjects(req);
+    res.json(await mapUnmatched(db, projects));
   });
 
   return router;

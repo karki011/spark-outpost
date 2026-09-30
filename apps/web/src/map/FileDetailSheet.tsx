@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { FileBody } from '../chat/project/file-sheet/FileSheet.tsx';
 import { isMarkdown } from '../chat/project/file-sheet/front-matter.ts';
 import { XIcon } from '../ui/icons.tsx';
+import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { baseName, folderOf } from './file-kind.ts';
 import { JevLabel, KindDot, KindTag } from './JevLabel.tsx';
-import { CATEGORY_LABELS } from './map-model.ts';
-import { fileFacts } from './MapTooltip.tsx';
+import { CATEGORY_LABELS, fileFacts } from './map-model.ts';
 import type { Scene } from './scene.ts';
 
 interface FileDetailSheetProps {
@@ -89,6 +89,7 @@ export function FileDetailSheet({
 }: FileDetailSheetProps) {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const [view, setView] = useState('preview');
+  const now = useMinuteClock();
   const f = scene.files[file]!;
   const area = scene.areas[f.areaIndex]!.area;
   useEffect(() => {
@@ -152,7 +153,7 @@ export function FileDetailSheet({
           <h3 id="map-sheet-label">Jev’s label</h3>
           <div className="map-jevcard">
             <JevLabel area={area} size={24} />
-            <small>{fileFacts(f.reasons, f.lines)}</small>
+            <small>{fileFacts(f, now)}</small>
           </div>
         </section>
         <section className="map-sh-sec" aria-labelledby="map-sheet-preview">

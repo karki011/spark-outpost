@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { runChangeSchema } from './approvals.ts';
+import { coreImpactSchema } from './map.ts';
 
 export const CHANGED_FILE_TEXT_MAX_BYTES = 256 * 1024;
 export const CHANGED_FILE_FULL_MAX_BYTES = 4 * 1024 * 1024;
@@ -24,7 +25,10 @@ export const runFileChangesSchema = z.object({
 });
 export type RunFileChanges = z.infer<typeof runFileChangesSchema>;
 
-export const taskChangesSchema = z.object({ runs: z.array(runFileChangesSchema) });
+export const taskChangesSchema = z.object({
+  runs: z.array(runFileChangesSchema),
+  core: coreImpactSchema.nullable().optional(),
+});
 export type TaskChanges = z.infer<typeof taskChangesSchema>;
 
 export const changedFileQuerySchema = z.object({

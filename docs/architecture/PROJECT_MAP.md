@@ -59,7 +59,13 @@ page yet; the API and live events are in place for one.
    10% distinct authors (last 500 commits; author emails are stored only as short hashes), 10%
    CODEOWNERS, 15% path patterns (auth, migrations, schema, design system, CI, payments, entry
    points, build config), 10% age within the history window. Tests count half. Every score comes
-   with reasons ("imported by 34", "auth", "changed 12 times", "code owners").
+   with reasons ("imported by 34", "auth", "changed 12 times", "code owners"). Each file also keeps
+   its last change date, change count and distinct author count from the same history (counts
+   only; author emails stay hashed and are never stored on the map), and a **kind** (`ui`, `api`,
+   `data`, `test`, `config`, `other`, `map/file-kind.ts`): test paths first, then files that
+   define routes or mounts, then path patterns, then imports (UI libraries, database clients,
+   server frameworks) and backend folders or languages. Areas store per-kind file counts so the
+   page can show kind totals without loading every area.
 5. **Layout** (`map/layout.ts`). Seeded force layout (positions derived from path hashes), run in
    the worker between yields: files inside each area in area-local coordinates, then areas as a
    sky with radii from their content. Areas with more than 400 files use a golden-angle spiral
@@ -105,7 +111,7 @@ page yet; the API and live events are in place for one.
    - **env**: the same env key used on both sides after dropping public prefixes (`VITE_`,
      `NEXT_PUBLIC_`, `REACT_APP_`, …), excluding generic keys (0.4).
 
-## Storage (migration 0072)
+## Storage (migrations 0072, 0075)
 
 - `code_index_files.imports text[]`, `code_index_files.endpoints jsonb`.
 - `map_repos`: one row per repo root: status (`queued`, `building`, `paused`, `ready`,
@@ -113,6 +119,9 @@ page yet; the API and live events are in place for one.
   signatures, built commit, counts, per-phase timings and Jev totals, error.
 - `map_areas`, `map_files`, `map_edges`, `map_area_edges`: the current model and positions,
   replaced in one transaction per build (readers never see half a map).
+- 0075 adds `map_files.kind`, `last_changed_at`, `change_count`, `author_count` and
+  `map_areas.kind_counts`; `MAP_RULES_VERSION` moved to `map-rules-2` so every map rebuilds once
+  (labels are kept).
 - `map_labels`: per area label, source, confidence, the basis files and policy version.
 - `map_overrides`: user category overrides keyed by **root path and area id**, not by map row,
   so they survive rebuilds, rules changes and even removing and re-adding the project. Overrides
@@ -135,6 +144,18 @@ Reset empties all of these (it truncates every table it finds in `information_sc
 "feature" | null }` sets or clears the override.
 - `GET /api/map/links?projects=<id>,<id>[,…]` (2–8 projects) → the maps' status, file-level links
   (kind, label, both paths and areas, lines, confidence, source) and aggregated area links.
+
+- `GET /api/map/unmatched?projects=<id>,<id>[,…]` (2–8 projects) → `routes` nothing calls and
+  `calls` that reach no route (`projectId`, `method`, `path`, `file`, `line`, `confirmedBy`),
+  each capped at `MAP_UNMATCHED_MAX` (200, most important files first) with `routeTotal` and
+  `callTotal`. A route counts as called when a stored `http` link reaches it or a call in its own
+  repo matches it; a call is matched the same way. Test files are ignored, and routes without a
+  literal segment (`/`, `/:id`) are never listed. `confirmedBy` is always `null` for now: every
+  route is "Possibly unused" until Jev can confirm.
+- `GET /api/tasks/:id/changes` also returns `core`: the Core areas (effective category after
+  overrides) and key files (top 2% by importance) the task's non-reverted changes touch, or
+  `null`. It only highlights; approvals are unchanged. Ship adds the same facts as a
+  "Core impact" section to the PR description.
 
 Live updates: the worker sends `{ kind: 'map', mapId }` on the existing `changes` channel when a
 build starts a phase, every 500 ms of progress, on pause and resume, and when it finishes, so the

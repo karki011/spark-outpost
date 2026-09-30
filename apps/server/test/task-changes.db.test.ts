@@ -277,7 +277,7 @@ describe('task changes', { timeout: 60_000 }, () => {
 
   it('returns nothing for runs without changes and 404 for unknown tasks', async () => {
     const { taskId } = await twoRunTask();
-    expect(await changes(taskId)).toEqual({ runs: [] });
+    expect(await changes(taskId)).toEqual({ runs: [], core: null });
     await get(`/api/tasks/${randomUUID()}/changes`).expect(404);
   });
 });

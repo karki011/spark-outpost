@@ -2,12 +2,14 @@ import type {
   MapArea,
   MapAreaDetail,
   MapCategory,
+  MapFileKind,
   MapKind,
   MapLinks,
   MapStatus,
   ProjectMap,
 } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
+import { emptyKindCounts } from './file-kind.ts';
 import { nameCandidates } from './label-questions.ts';
 
 interface StatusRow {
@@ -65,6 +67,7 @@ interface AreaRow {
   fan_out: number;
   importance: number;
   top_files: string[];
+  kind_counts: Partial<Record<MapFileKind, number>>;
   rule_category: MapCategory;
   rule_kind: MapKind;
   x: number;
@@ -80,8 +83,8 @@ interface AreaRow {
 }
 
 const AREA_SELECT = `SELECT a.id, a.root, a.source, a.package, a.reason, a.file_count, a.line_count,
-    a.fan_in, a.fan_out, a.importance, a.top_files, a.rule_category, a.rule_kind, a.x, a.y,
-    a.radius, l.source AS label_source, l.category AS label_category, l.kind AS label_kind,
+    a.fan_in, a.fan_out, a.importance, a.top_files, a.kind_counts, a.rule_category, a.rule_kind,
+    a.x, a.y, a.radius, l.source AS label_source, l.category AS label_category, l.kind AS label_kind,
     l.name AS label_name, l.description AS label_description,
     l.confidence AS label_confidence, o.category AS override_category
   FROM map_areas a
@@ -109,6 +112,7 @@ function toArea(row: AreaRow): MapArea {
     fanOut: row.fan_out,
     importance: row.importance,
     topFiles: row.top_files,
+    kindCounts: { ...emptyKindCounts(), ...row.kind_counts },
     x: row.x,
     y: row.y,
     radius: row.radius,
@@ -155,6 +159,18 @@ export async function findArea(
   return rows[0] ? toArea(rows[0]) : null;
 }
 
+export async function areasById(
+  db: Queryable,
+  root: string,
+  areaIds: readonly string[],
+): Promise<MapArea[]> {
+  const { rows } = await db.query<AreaRow>(
+    `${AREA_SELECT} WHERE r.root_path = $1 AND a.id = ANY($2::text[])`,
+    [root, areaIds],
+  );
+  return rows.map(toArea);
+}
+
 export async function areaDetail(
   db: Queryable,
   root: string,
@@ -165,16 +181,20 @@ export async function areaDetail(
     path: string;
     area_id: string;
     language: string;
+    kind: MapFileKind;
     lines: number;
     fan_in: number;
     fan_out: number;
     importance: number;
     reasons: string[];
+    last_changed_at: Date | null;
+    change_count: number;
+    author_count: number;
     x: number;
     y: number;
   }>(
-    `SELECT f.path, f.area_id, f.language, f.lines, f.fan_in, f.fan_out, f.importance, f.reasons,
-       f.x, f.y
+    `SELECT f.path, f.area_id, f.language, f.kind, f.lines, f.fan_in, f.fan_out, f.importance,
+       f.reasons, f.last_changed_at, f.change_count, f.author_count, f.x, f.y
      FROM map_files f JOIN map_repos r ON r.id = f.repo_id
      WHERE r.root_path = $1 AND f.area_id = $2
      ORDER BY f.importance DESC, f.path OFFSET $3 LIMIT $4`,
@@ -194,11 +214,15 @@ export async function areaDetail(
       path: row.path,
       areaId: row.area_id,
       language: row.language,
+      kind: row.kind,
       lines: row.lines,
       fanIn: row.fan_in,
       fanOut: row.fan_out,
       importance: row.importance,
       reasons: row.reasons,
+      lastChangedAt: row.last_changed_at?.toISOString() ?? null,
+      changeCount: row.change_count,
+      authorCount: row.author_count,
       x: row.x,
       y: row.y,
     })),

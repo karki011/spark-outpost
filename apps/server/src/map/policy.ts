@@ -1,4 +1,4 @@
-export const MAP_RULES_VERSION = 'map-rules-1';
+export const MAP_RULES_VERSION = 'map-rules-2';
 export const MAP_LABEL_POLICY = 'map-label-1';
 export const MAP_LINK_POLICY = 'map-link-1';
 

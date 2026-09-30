@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scoreImportance } from './importance.ts';
+import { fileHistory, scoreImportance } from './importance.ts';
 
 describe('scoreImportance', () => {
   const paths = [
@@ -43,5 +43,22 @@ describe('scoreImportance', () => {
     expect(scores.get('src/util/pad.test.ts')?.reasons).toEqual([]);
     for (const { score } of scores.values()) expect(score).toBeGreaterThanOrEqual(0);
     for (const { score } of scores.values()) expect(score).toBeLessThanOrEqual(1);
+  });
+
+  it('keeps the last change, change count and distinct authors per file', () => {
+    const history = fileHistory([
+      { at: 300, files: ['a.ts', 'b.ts'], author: 'x' },
+      { at: 200, files: ['a.ts'], author: 'y' },
+      { at: 100, files: ['a.ts'], author: 'x' },
+      { at: 50, files: ['b.ts'] },
+    ]);
+    expect(history.get('a.ts')).toEqual({
+      count: 3,
+      first: 100,
+      last: 300,
+      authors: new Set(['x', 'y']),
+    });
+    expect(history.get('b.ts')).toMatchObject({ count: 2, last: 300 });
+    expect(history.get('b.ts')?.authors.size).toBe(1);
   });
 });

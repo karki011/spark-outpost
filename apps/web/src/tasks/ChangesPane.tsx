@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { isTerminalRunStatus, type RunFileChanges, type TaskRun } from '@spark-outpost/contracts';
 import { changeTotals, filesLabel } from '../chat/changes/change-rules.ts';
 import { Counts, FileChangeList } from '../chat/changes/FileChangeList.tsx';
+import { CoreImpactNote } from '../map/CoreImpactNote.tsx';
 import { ShipControl } from '../ship/ShipControl.tsx';
 import { crewNames } from './CrewPane.tsx';
 import { taskApi, taskKeys } from './task-api.ts';
@@ -51,6 +52,7 @@ export function ChangesPane({ taskId, conversationId, runs }: ChangesPaneProps) 
           </span>
         )}
       </div>
+      {groups.length > 0 && <CoreImpactNote impact={changes.data?.core} />}
       {changes.isPending && <p className="wnote first">Loading…</p>}
       {changes.isError && <p className="wnote first bad">{changes.error.message}</p>}
       {changes.data && groups.length === 0 && (

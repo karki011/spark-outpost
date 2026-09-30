@@ -3,6 +3,7 @@ import type { Project, ProjectMap } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import type { RepoFile } from '../chat/project/use-file-search.ts';
 import { MapStatusLine } from './BuildStatus.tsx';
+import type { FileKind } from './file-kind.ts';
 import { MapSearch } from './MapSearch.tsx';
 import { RepoPicker } from './RepoPicker.tsx';
 
@@ -16,6 +17,7 @@ interface MapHeaderProps {
   dependents: boolean;
   reviewOpen: boolean;
   onProjects: (ids: string[]) => void;
+  kindOf: (projectId: string, path: string) => FileKind | null;
   onPick: (file: RepoFile) => void;
   onChanges: (on: boolean) => void;
   onDependents: (on: boolean) => void;
@@ -31,7 +33,12 @@ export function MapHeader(props: MapHeaderProps) {
     <header className="map-head">
       <h1 className="map-title">Map</h1>
       <RepoPicker projects={props.projects} selected={props.selected} onChange={props.onProjects} />
-      <MapSearch projects={props.chosen} inputRef={props.searchRef} onPick={props.onPick} />
+      <MapSearch
+        projects={props.chosen}
+        inputRef={props.searchRef}
+        kindOf={props.kindOf}
+        onPick={props.onPick}
+      />
       <span className="map-sp" />
       <MapStatusLine maps={props.maps} />
       <span

@@ -64,19 +64,26 @@ function logShare(value: number, largest: number): number {
   return largest > 0 ? Math.log1p(value) / Math.log1p(largest) : 0;
 }
 
-interface Touches {
+export interface FileTouches {
   count: number;
   first: number;
+  last: number;
   authors: Set<string>;
 }
 
-function touchesByFile(history: readonly Commit[]): Map<string, Touches> {
-  const touches = new Map<string, Touches>();
+export function fileHistory(history: readonly Commit[]): Map<string, FileTouches> {
+  const touches = new Map<string, FileTouches>();
   for (const commit of history) {
     for (const path of commit.files) {
-      const entry = touches.get(path) ?? { count: 0, first: commit.at, authors: new Set<string>() };
+      const entry = touches.get(path) ?? {
+        count: 0,
+        first: commit.at,
+        last: commit.at,
+        authors: new Set<string>(),
+      };
       entry.count += 1;
       entry.first = Math.min(entry.first, commit.at);
+      entry.last = Math.max(entry.last, commit.at);
       if (commit.author) entry.authors.add(commit.author);
       touches.set(path, entry);
     }
@@ -99,7 +106,7 @@ export function pathWeight(path: string): { weight: number; reasons: string[] } 
 }
 
 export function scoreImportance(input: ImportanceInput): Map<string, FileImportance> {
-  const touches = touchesByFile(input.history);
+  const touches = fileHistory(input.history);
   const maxFanIn = largest(input.fanIn.values());
   const maxChurn = largest([...touches.values()].map((entry) => entry.count));
   const maxAuthors = largest([...touches.values()].map((entry) => entry.authors.size));

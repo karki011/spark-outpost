@@ -76,6 +76,9 @@ test('the sky shows each area as a constellation, with gold names and a legend',
     '2 min ago',
   );
   await expect(page.getByRole('button', { name: /^Core/ })).toHaveAttribute('aria-pressed', 'true');
+  const kinds = page.getByRole('group', { name: 'File kind' });
+  await expect(kinds.getByRole('button', { name: /^UI/ })).toHaveText(/^UI\s*[1-9][\d,]*$/);
+  await expect(kinds.getByRole('button', { name: /^Tests/ })).toHaveText(/^Tests\s*[1-9][\d,]*$/);
   await page.getByRole('button', { name: /^Feature/ }).click();
   await expect(page.getByRole('button', { name: /^Feature/ })).toHaveAttribute(
     'aria-pressed',
@@ -135,11 +138,15 @@ test('search flies to a file; hovering shows its details and clicking opens a re
   await expect(tip).toContainText('apps/web/src/tickets/ticket-model.ts');
   await expect(tip).toContainText(/files? depends? on this/);
   await expect(tip).toContainText('Feature · Tickets · 0.92');
+  await expect(tip).toContainText(
+    /Changed (today|yesterday|\d+ days ago|\w+ \d+) · \d+ commits? · \d+ authors?/,
+  );
   await screenshot(page, 'hover-dark');
   await page.mouse.click(x, y);
   const sheet = page.getByRole('dialog', { name: 'ticket-model.ts' });
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole('heading', { name: 'Depended on by' })).toBeVisible();
+  await expect(sheet).toContainText(/Changed .* · \d+ commits? · \d+ authors?/);
   await expect(sheet.locator('.map-preview')).toContainText('export', { timeout: 15_000 });
   await screenshot(page, 'sheet-dark');
   await sheet.getByRole('button', { name: 'Open in chat' }).click();
@@ -393,5 +400,62 @@ test('the real map builder fills the sky for a small repository', async ({ page 
     }).toPass();
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('the real builder lists routes nothing calls and calls with no route across two projects', async ({
+  page,
+}) => {
+  test.setTimeout(150_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const repos = {
+    web: {
+      'package.json': '{ "name": "shop-web" }\n',
+      'src/cart.ts':
+        "export const cart = () => fetch('/api/cart');\nexport const gone = () => fetch('/api/missing');\n",
+    },
+    api: {
+      'package.json': '{ "name": "shop-api" }\n',
+      'src/app.ts': [
+        "import express from 'express';",
+        'const app = express();',
+        "app.get('/api/cart', (req, res) => res.json([]));",
+        "app.get('/api/unused', (req, res) => res.json([]));",
+        'export default app;',
+      ].join('\n'),
+    },
+  };
+  const roots = Object.values(repos).map((files) => {
+    const root = mkdtempSync(MAP_ROOT_PREFIX);
+    for (const [file, text] of Object.entries(files)) {
+      mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+      writeFileSync(path.join(root, file), text);
+    }
+    const git = (...args: string[]) =>
+      execFileSync('git', ['-C', root, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args]);
+    git('init', '-q');
+    git('add', '-A');
+    git('commit', '-qm', 'base');
+    return root;
+  });
+  try {
+    const ids = [await addProject(page, roots[0]!), await addProject(page, roots[1]!)];
+    await page.addInitScript((selected) => {
+      localStorage.setItem('spark-outpost.view', 'map');
+      localStorage.setItem('spark-outpost.map-projects', JSON.stringify(selected));
+    }, ids);
+    await page.goto('/');
+    await expect(sky(page)).toHaveAccessibleName(/Combined map of/, { timeout: 100_000 });
+    const chip = page.getByRole('button', { name: /^Unmatched/ });
+    await expect(chip).toHaveText(/^Unmatched\s*2$/, { timeout: 100_000 });
+    await chip.click();
+    const panel = page.getByRole('region', { name: 'Unmatched' });
+    await expect(panel).toContainText('/api/unused');
+    await expect(panel.getByText('Possibly unused')).toBeVisible();
+    await expect(panel).not.toContainText('/api/cart');
+    await panel.getByRole('radio', { name: /^Calls with no route/ }).click();
+    await expect(panel).toContainText('/api/missing');
+  } finally {
+    for (const root of roots) rmSync(root, { recursive: true, force: true });
   }
 });

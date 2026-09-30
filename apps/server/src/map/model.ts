@@ -1,10 +1,11 @@
-import type { MapCategory, MapKind } from '@spark-outpost/contracts';
+import type { MapCategory, MapFileKind, MapKind } from '@spark-outpost/contracts';
 import type { Commit } from '../codescan/git.ts';
 import type { WorkspacePackage } from '../codescan/layout.ts';
 import { ownersMatcher, type OwnerRule } from '../codescan/owners.ts';
 import { buildAreas, type Area, type AreaSource } from './areas.ts';
 import { buildGraph, type SourceFile } from './graph.ts';
-import { scoreImportance } from './importance.ts';
+import { emptyKindCounts, fileKind } from './file-kind.ts';
+import { fileHistory, scoreImportance } from './importance.ts';
 import { extent, FILE_LAYOUT, layoutNodes, SKY_LAYOUT, type Point } from './layout.ts';
 import { AREA_TOP_FILES } from './policy.ts';
 import type { Resolver } from './resolve.ts';
@@ -14,11 +15,15 @@ export interface MapFile {
   path: string;
   areaId: string;
   language: string;
+  kind: MapFileKind;
   lines: number;
   fanIn: number;
   fanOut: number;
   importance: number;
   reasons: string[];
+  lastChangedAt: string | null;
+  changeCount: number;
+  authorCount: number;
   x: number;
   y: number;
 }
@@ -35,6 +40,7 @@ export interface MapAreaRow {
   fanOut: number;
   importance: number;
   topFiles: string[];
+  kindCounts: Record<MapFileKind, number>;
   ruleCategory: MapCategory;
   ruleKind: MapKind;
   x: number;
@@ -172,6 +178,7 @@ export async function buildModel(input: ModelInput): Promise<MapModel> {
     areas.flatMap((area) => area.files.map((path) => [path, area.id] as const)),
   );
   const byPath = new Map(input.files.map((file) => [file.path, file]));
+  const history = fileHistory(input.history);
   const importance = new Map([...scores].map(([path, value]) => [path, value.score]));
   const interArea = areaEdges(graph.edges, areaOf);
   const { usedBy, uses } = neighbourCounts(interArea);
@@ -196,6 +203,34 @@ export async function buildModel(input: ModelInput): Promise<MapModel> {
       usedBy: usedBy.get(area.id) ?? 0,
       uses: uses.get(area.id) ?? 0,
     };
+    const kindCounts = emptyKindCounts();
+    for (const path of area.files) {
+      const file = byPath.get(path);
+      const point = positions.get(path) ?? { x: 0, y: 0 };
+      const touches = history.get(path);
+      const fileType = fileKind({
+        path,
+        imports: file?.imports ?? [],
+        endpoints: file?.endpoints ?? [],
+      });
+      kindCounts[fileType] += 1;
+      files.push({
+        path,
+        areaId: area.id,
+        language: file?.language ?? 'text',
+        kind: fileType,
+        lines: file?.lines ?? 0,
+        fanIn: graph.fanIn.get(path) ?? 0,
+        fanOut: graph.fanOut.get(path) ?? 0,
+        importance: importance.get(path) ?? 0,
+        reasons: scores.get(path)?.reasons ?? [],
+        lastChangedAt: touches ? new Date(touches.last * 1000).toISOString() : null,
+        changeCount: touches?.count ?? 0,
+        authorCount: touches?.authors.size ?? 0,
+        x: point.x,
+        y: point.y,
+      });
+    }
     const kind = ruleKind(facts);
     rows.push({
       id: area.id,
@@ -213,28 +248,13 @@ export async function buildModel(input: ModelInput): Promise<MapModel> {
         .reduce((sum, edge) => sum + edge.weight, 0),
       importance: importance.get(ranked[0] ?? '') ?? 0,
       topFiles: ranked.slice(0, AREA_TOP_FILES),
+      kindCounts,
       ruleCategory: ruleCategory(facts, kind),
       ruleKind: kind,
       x: 0,
       y: 0,
       radius,
     });
-    for (const path of area.files) {
-      const file = byPath.get(path);
-      const point = positions.get(path) ?? { x: 0, y: 0 };
-      files.push({
-        path,
-        areaId: area.id,
-        language: file?.language ?? 'text',
-        lines: file?.lines ?? 0,
-        fanIn: graph.fanIn.get(path) ?? 0,
-        fanOut: graph.fanOut.get(path) ?? 0,
-        importance: importance.get(path) ?? 0,
-        reasons: scores.get(path)?.reasons ?? [],
-        x: point.x,
-        y: point.y,
-      });
-    }
   }
   skyLayout(input, rows, interArea);
   return { files, edges: graph.edges, areas: rows, areaEdges: interArea };
