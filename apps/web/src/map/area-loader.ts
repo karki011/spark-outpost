@@ -10,7 +10,7 @@ export interface LoadedArea {
   version: string;
 }
 
-type Fetch = (key: string, limit: number) => Promise<MapAreaDetail>;
+type Fetch = (key: string, limit: number, version: string) => Promise<MapAreaDetail>;
 type Deliver = (batch: ReadonlyMap<string, LoadedArea>) => void;
 
 function projectOf(key: string): string {
@@ -73,14 +73,22 @@ export class AreaLoader {
       if (!request) return;
       if ((this.loaded.get(request.key) ?? 0) >= request.limit) continue;
       this.inFlight.add(request.key);
-      const version = this.versions.get(projectOf(request.key)) ?? '';
-      this.fetch(request.key, request.limit)
+      const project = projectOf(request.key);
+      const version = this.versions.get(project) ?? '';
+      const current = () => (this.versions.get(project) ?? '') === version;
+      this.fetch(request.key, request.limit, version)
         .then((detail) => {
+          if (!current()) {
+            this.urgent.push(request);
+            return;
+          }
           this.loaded.set(request.key, detail.nextOffset === null ? Infinity : request.limit);
           this.pending.set(request.key, { detail, version });
           this.timer ??= setTimeout(() => this.flush(), FLUSH_MS);
         })
-        .catch(() => this.loaded.set(request.key, request.limit))
+        .catch(() => {
+          if (current()) this.loaded.set(request.key, request.limit);
+        })
         .finally(() => {
           this.inFlight.delete(request.key);
           this.pump();

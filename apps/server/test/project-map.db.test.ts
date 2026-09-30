@@ -1,7 +1,8 @@
 import { rm } from 'node:fs/promises';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
-import { queueRepo } from '../src/map/store.ts';
+import { MAP_RULES_VERSION } from '../src/map/policy.ts';
+import { queueRepo, syncRepos } from '../src/map/store.ts';
 import { listen } from '../src/persistence/notifications.ts';
 import { createTestApp, localClient } from './app-support.ts';
 import {
@@ -79,6 +80,16 @@ afterAll(async () => {
 });
 
 describe('project map builder', () => {
+  it('maps only projects under the root prefix when one is set', async () => {
+    await syncRepos(t.db, MAP_RULES_VERSION);
+    expect(await repo()).toBeDefined();
+    await syncRepos(t.db, MAP_RULES_VERSION, '/nowhere/');
+    const { rowCount } = await t.db.query('SELECT 1 FROM map_repos');
+    expect(rowCount).toBe(0);
+    await syncRepos(t.db, MAP_RULES_VERSION, root.slice(0, -2));
+    expect(await repo()).toMatchObject({ status: 'queued' });
+  });
+
   it('builds areas, import edges, layout and Jev labels, and serves them read-only', async () => {
     const jev = fakeJev();
     const { builder, scanner } = mapBuilder(t, jev.fetch);

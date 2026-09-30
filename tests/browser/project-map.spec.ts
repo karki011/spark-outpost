@@ -1,6 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
-import os from 'node:os';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
@@ -12,6 +11,7 @@ import {
   type MapFixture,
 } from './map-fixture.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { MAP_ROOT_PREFIX } from './stub-config.ts';
 
 const SHOTS = path.join(REPO_ROOT, 'docs/design/map/app-screens');
 const shoot = process.env.MAP_SCREENS === '1';
@@ -352,7 +352,7 @@ test('the first build fills a skeleton sky that lights up area by area', async (
 test('the real map builder fills the sky for a small repository', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1200, height: 800 });
-  const root = mkdtempSync(path.join(realpathSync(os.tmpdir()), 'spark-map-real-'));
+  const root = mkdtempSync(MAP_ROOT_PREFIX);
   const files: Record<string, string> = {
     'package.json': '{ "name": "shop", "type": "module" }\n',
     'web/pages/Cart.tsx':

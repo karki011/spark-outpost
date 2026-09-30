@@ -48,15 +48,23 @@ function toRepo(row: RawRepo): RepoRow {
   };
 }
 
-export async function syncRepos(db: Queryable, rulesVersion: string): Promise<void> {
+export async function syncRepos(
+  db: Queryable,
+  rulesVersion: string,
+  rootPrefix: string | null = null,
+): Promise<void> {
   await db.query(
     `INSERT INTO map_repos (root_path, rules_version)
      SELECT DISTINCT p.root_path, $1 FROM projects p
+     WHERE $2::text IS NULL OR starts_with(p.root_path, $2)
      ON CONFLICT (root_path) DO NOTHING`,
-    [rulesVersion],
+    [rulesVersion, rootPrefix],
   );
   await db.query(
-    `DELETE FROM map_repos r WHERE NOT EXISTS (SELECT 1 FROM projects p WHERE p.root_path = r.root_path)`,
+    `DELETE FROM map_repos r
+     WHERE NOT EXISTS (SELECT 1 FROM projects p WHERE p.root_path = r.root_path)
+        OR ($1::text IS NOT NULL AND NOT starts_with(r.root_path, $1))`,
+    [rootPrefix],
   );
 }
 

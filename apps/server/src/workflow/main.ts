@@ -54,7 +54,12 @@ const worker = startWorker({
     ? { budget: { costCapUsd: config.ORCHESTRATION_COST_CAP_USD } }
     : {}),
 });
-const projectMap = startMapScheduler({ db, scanner: codeScan, jev: intake.deps });
+const projectMap = startMapScheduler({
+  db,
+  scanner: codeScan,
+  jev: intake.deps,
+  rootPrefix: config.MAP_ROOT_PREFIX ?? null,
+});
 const listener = await listen(config.DATABASE_URL, 'jobs', () => worker.wake());
 const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) =>
   approvalWaiters.notify(id),

@@ -25,10 +25,10 @@ function useAreaLoader(maps: readonly ProjectMap[]) {
   const [loader] = useState(
     () =>
       new AreaLoader(
-        (key, limit) => {
+        (key, limit, version) => {
           const [projectId, areaId] = splitKey(key);
           return queryClient.fetchQuery({
-            queryKey: mapKeys.area(projectId, areaId, limit),
+            queryKey: mapKeys.area(projectId, areaId, limit, version),
             queryFn: () => mapApi.area(projectId, areaId, limit),
             staleTime: Infinity,
           });

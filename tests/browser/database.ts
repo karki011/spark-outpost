@@ -40,6 +40,8 @@ const RESET_TABLES = [
   'tickets',
   'attention_settings',
   'attention_snapshots',
+  'map_repos',
+  'map_overrides',
 ];
 const LEFTOVER_RUN_WAIT_MS = 5000;
 
