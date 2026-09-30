@@ -174,7 +174,7 @@ async function runSession(
       agent.exited,
     ]);
     push(mapper.finish(stopReason === 'cancelled'));
-    const failure = mapper.failure();
+    const failure = mapper.failure() ?? (stopReason === 'end_turn' ? mapper.stalled() : null);
     if (failure && stopReason !== 'cancelled') throw failureError(definition.name, failure);
     if (stopReason === 'end_turn' && !mapper.repliedWithText()) {
       if (!mapper.didWork()) {
@@ -470,6 +470,7 @@ async function converse(
           stopRequests?.();
           detachSteering();
           push(promptTokens(message.response.usage));
+          mapper.stopped(message.response._meta);
           if (turn.session) await closeQuietly(ctx, init, session.sessionId);
           return message.stopReason;
         }

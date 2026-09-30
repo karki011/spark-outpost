@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto';
 import { matchesGlob } from 'node:path';
 import { piecesBlockSchema, type PieceDraft } from '@spark-outpost/contracts';
 import { COORD_MAX_PIECES } from '../advisor/policy.ts';
-import { namedFiles } from '../orchestration/context.ts';
 import { findCycle, reaches, type Graph } from './graph.ts';
 import { isGlob, normalizeOwned, owns, sharedFiles, type OwnedSet } from './owned.ts';
+import { uncoveredSteps, type PlanStep } from './plan-coverage.ts';
 import { scopedCheckProblem } from './scoped-checks.ts';
 import { sizeEstimate, type LineCount } from './size.ts';
 
@@ -14,7 +14,7 @@ export interface ValidationFacts {
   lines: LineCount;
   budgetTokens: number;
   projectChecks: readonly string[];
-  planItems: readonly string[];
+  planSteps: readonly PlanStep[];
 }
 
 export interface CheckedPiece extends PieceDraft {
@@ -84,26 +84,7 @@ function ordered(graph: Graph, a: string, b: string): boolean {
   return reaches(graph, a, b) || reaches(graph, b, a);
 }
 
-const WORD = /[a-z][a-z0-9]{3,}/g;
-
-function words(text: string): Set<string> {
-  return new Set(text.toLowerCase().match(WORD) ?? []);
-}
-
-function covers(item: string, pieces: readonly CheckedPiece[]): boolean {
-  const named = namedFiles([item]);
-  if (named.some((file) => pieces.some((piece) => owns(piece.owned, file)))) return true;
-  const wanted = [...words(item)];
-  if (wanted.length === 0) return true;
-  return pieces.some((piece) => {
-    const text = words(
-      [piece.title, piece.goal, ...piece.acceptance, ...piece.owns, piece.contract ?? ''].join(' '),
-    );
-    return wanted.filter((word) => text.has(word)).length * 2 >= wanted.length;
-  });
-}
-
-function graphErrors(drafts: readonly PieceDraft[], errors: string[]): Graph {
+function graphErrors(drafts: readonly PieceDraft[], errors: string[]): Map<string, string[]> {
   const keys = new Set<string>();
   for (const piece of drafts) {
     if (keys.has(piece.key)) errors.push(`piece key ${piece.key} is used twice`);
@@ -126,7 +107,11 @@ function graphErrors(drafts: readonly PieceDraft[], errors: string[]): Graph {
   return graph;
 }
 
-function ownershipErrors(pieces: readonly CheckedPiece[], graph: Graph, errors: string[]): void {
+function ownershipErrors(
+  pieces: readonly CheckedPiece[],
+  graph: Map<string, string[]>,
+  errors: string[],
+): void {
   for (let a = 0; a < pieces.length; a += 1) {
     for (let b = a + 1; b < pieces.length; b += 1) {
       const left = pieces[a]!;
@@ -142,11 +127,15 @@ function ownershipErrors(pieces: readonly CheckedPiece[], graph: Graph, errors: 
   for (const reader of pieces) {
     for (const read of reader.reads) {
       const owner = pieces.find((piece) => piece !== reader && owns(piece.owned, read));
-      if (owner && !reaches(graph, reader.key, owner.key)) {
+      if (!owner || reaches(graph, reader.key, owner.key)) continue;
+      if (reaches(graph, owner.key, reader.key)) {
         errors.push(
-          `${reader.key} reads ${read}, which ${owner.key} owns; add ${owner.key} to its dependsOn`,
+          `${reader.key} reads ${read}, which ${owner.key} owns, but ${owner.key} already depends on ${reader.key}; move the shared part into one piece`,
         );
+        continue;
       }
+      graph.set(reader.key, [...(graph.get(reader.key) ?? []), owner.key]);
+      reader.dependsOn = [...reader.dependsOn, owner.key];
     }
   }
 }
@@ -196,8 +185,9 @@ export function validatePieces(block: unknown, facts: ValidationFacts): Validati
   });
   pieces.forEach((piece) => pieceErrors(piece, facts, errors));
   ownershipErrors(pieces, graph, errors);
-  const missing = facts.planItems.filter((item) => !covers(item, pieces));
-  for (const item of missing) errors.push(`no piece covers the plan item "${item}"`);
+  for (const step of uncoveredSteps(facts.planSteps, pieces)) {
+    errors.push(`no piece covers the plan item "${step.text}"`);
+  }
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, value: { pieces, integration: parsed.data.integration } };
 }

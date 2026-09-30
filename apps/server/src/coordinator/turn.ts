@@ -1,23 +1,26 @@
 import { matchesGlob } from 'node:path';
 import { nextCrewName, piecesBlockSchema, type PieceList } from '@spark-outpost/contracts';
 import { insertPieceList } from '../persistence/pieces.ts';
+import { proposedPlanFromRun, rejectPlanDocument } from '../persistence/plan-documents.ts';
 import { usedNames } from '../persistence/orchestrations.ts';
 import { isSecretPath } from '../projects/path-policy.ts';
 import { agreedPlanText, checkCommands } from '../orchestration/member-prompts.ts';
 import { runMember } from '../orchestration/members.ts';
 import { seatRoute } from '../orchestration/member-routes.ts';
-import type { Seat, Session } from '../orchestration/session.ts';
+import type { MemberResult, Seat, Session } from '../orchestration/session.ts';
 import type { Assessment } from './assess.ts';
 import { assignPieces } from './assign.ts';
 import { likelyFiles } from './engage.ts';
 import { assignFacts } from './provider-state.ts';
 import { isGlob, normalizeOwned, type OwnedSet } from './owned.ts';
 import { piecesHash, validatePieces, type CheckedPieces } from './pieces-validate.ts';
+import type { PlanStep } from './plan-coverage.ts';
 import { budgetFor, lineCounter, projectFiles } from './project-facts.ts';
 import { chooseListPlace, wantsListCard } from './place-list.ts';
 import { coordinatorPrompt, piecesBlockText, repairPrompt } from './prompts.ts';
 
 const LIKELY_SHOWN = 15;
+const PLAN_FILES_SHOWN = 30;
 const spawn = {
   role: 'coordinator' as const,
   reason: 'first' as const,
@@ -58,10 +61,18 @@ function pathsNamed(block: unknown, files: readonly string[]): string[] {
   });
 }
 
+async function replyText(s: Session, result: MemberResult): Promise<string> {
+  if (piecesBlockText(result.text) !== null) return result.text;
+  const proposed = await proposedPlanFromRun(s.deps.db, result.runId);
+  if (!proposed) return result.text;
+  await rejectPlanDocument(s.deps.db, proposed.id, null).catch(() => null);
+  return proposed.body;
+}
+
 async function checkBlock(
   s: Session,
   text: string,
-  facts: { files: string[]; budgetTokens: number; planItems: string[] },
+  facts: { files: string[]; budgetTokens: number; planSteps: readonly PlanStep[] },
 ) {
   const block = piecesBlockText(text);
   if (block === null) return { ok: false as const, errors: ['the reply has no JSON pieces block'] };
@@ -72,7 +83,7 @@ async function checkBlock(
     lines: await lineCounter(root, pathsNamed(block, facts.files)),
     budgetTokens: facts.budgetTokens,
     projectChecks: checkCommands(s),
-    planItems: facts.planItems,
+    planSteps: facts.planSteps,
   });
 }
 
@@ -94,6 +105,10 @@ async function askForPieces(
       request: s.input.userRequest,
       agreedPlan: await agreedPlanText(s),
       likelyFiles: likely.map((file) => ({ path: file.path, lines: file.lines })),
+      planFiles: [...new Set(assessment.planSteps.flatMap((step) => step.files))].slice(
+        0,
+        PLAN_FILES_SHOWN,
+      ),
       checks: checkCommands(s),
       budgetTokens,
     }),
@@ -106,10 +121,10 @@ async function askForPieces(
     if (result.outcome !== 'succeeded') {
       return { ok: false, reason: result.error ?? `the coordinator turn ${result.outcome}` };
     }
-    const checked = await checkBlock(s, result.text, {
+    const checked = await checkBlock(s, await replyText(s, result), {
       files,
       budgetTokens,
-      planItems: assessment.planItems,
+      planSteps: assessment.planSteps,
     });
     if (checked.ok) return checked;
     errors = checked.errors;

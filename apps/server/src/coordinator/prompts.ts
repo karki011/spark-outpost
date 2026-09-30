@@ -14,6 +14,7 @@ export interface CoordinatorContext {
   request: string;
   agreedPlan: string | null;
   likelyFiles: readonly { path: string; lines: number | null }[];
+  planFiles: readonly string[];
   checks: readonly string[];
   budgetTokens: number;
 }
@@ -57,9 +58,14 @@ export function coordinatorPrompt(context: CoordinatorContext): string {
     COORDINATOR_ROLE_LINE,
     `## Request\n${clip(context.request, REQUEST_LIMIT)}`,
     ...(context.agreedPlan ? [context.agreedPlan] : []),
+    ...(context.planFiles.length > 0
+      ? [
+          `## Files the agreed plan names\nEvery plan step that names one of these is covered by the piece that owns or reads it:\n${bullets(context.planFiles)}`,
+        ]
+      : []),
     ...(files.length > 0 ? [`## Files the code scan ranked likely\n${bullets(files)}`] : []),
     ...(context.checks.length > 0 ? [`## Project checks\n${bullets(context.checks)}`] : []),
-    `## Reply\nReply with one fenced \`${PIECES_FENCE}\` block and nothing else:\n\n${EXAMPLE}`,
+    `## Reply\nReply with one fenced \`${PIECES_FENCE}\` block and nothing else, in this message. Don't write a plan file or ask to leave plan mode: this reply is the plan.\n\n${EXAMPLE}`,
     `## Rules\n${bullets([
       `Split the work into pieces one Builder can finish, each under about ${Math.round(context.budgetTokens / 1000)}K tokens of context. Use one piece when the request fits one Builder. At most ${COORD_MAX_PIECES} pieces.`,
       'Every piece owns the files it changes, as paths relative to the project root (globs allowed). Two pieces may own the same file only when one depends on the other.',
@@ -68,6 +74,7 @@ export function coordinatorPrompt(context: CoordinatorContext): string {
       "checks are scoped commands narrowed to the piece's files, such as one test file. Never the whole project's checks, installs or formatters: the coordinator runs the full checks after integration.",
       'Mark a piece that only reads and reports with "research": true; it owns no files.',
       'integration says what glue is left once every piece has landed, or null.',
+      'Every step of the agreed plan needs a piece: a step is covered when a piece owns or reads a file the step names, or when its title, goal or acceptance says what the step does.',
     ])}`,
   ].join('\n\n');
 }

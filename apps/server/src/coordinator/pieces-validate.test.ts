@@ -16,7 +16,7 @@ const facts = (overrides: Partial<ValidationFacts> = {}): ValidationFacts => ({
   lines: () => 100,
   budgetTokens: 100_000,
   projectChecks: ['pnpm test'],
-  planItems: [],
+  planSteps: [],
   ...overrides,
 });
 
@@ -87,11 +87,24 @@ describe('validatePieces', () => {
   });
 
   it('makes a piece that reads another piece’s file depend on it', () => {
+    const result = validatePieces(
+      { pieces: [piece('P1'), piece('P2', { reads: ['apps/server/src/p1.ts'] })] },
+      facts(),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.pieces.map((entry) => entry.dependsOn)).toEqual([[], ['P1']]);
+  });
+
+  it('refuses a read that would close a dependency cycle', () => {
     const errors = errorsOf({
-      pieces: [piece('P1'), piece('P2', { reads: ['apps/server/src/p1.ts'] })],
+      pieces: [
+        piece('P1', { dependsOn: ['P2'] }),
+        piece('P2', { reads: ['apps/server/src/p1.ts'] }),
+      ],
     });
     expect(errors).toEqual([
-      'P2 reads apps/server/src/p1.ts, which P1 owns; add P1 to its dependsOn',
+      'P2 reads apps/server/src/p1.ts, which P1 owns, but P1 already depends on P2; move the shared part into one piece',
     ]);
   });
 
@@ -123,12 +136,25 @@ describe('validatePieces', () => {
     ]);
   });
 
-  it('checks that every open plan item has a piece', () => {
+  it('checks that every plan step has a piece', () => {
     const errors = errorsOf(
       { pieces: [piece('P1', { title: 'Tags table and repository' })] },
-      { planItems: ['Tags table and repository', 'Budget bar in the project page'] },
+      {
+        planSteps: [
+          { text: 'Tags table and repository', files: [] },
+          { text: 'Budget bar in the project page', files: [] },
+        ],
+      },
     );
     expect(errors).toEqual(['no piece covers the plan item "Budget bar in the project page"']);
+  });
+
+  it('counts a step covered when a piece owns a file the step or its section names', () => {
+    const step = {
+      text: 'Read the `amount` field before saving',
+      files: ['apps/server/src/p1.ts'],
+    };
+    expect(errorsOf({ pieces: [piece('P1')] }, { planSteps: [step] })).toEqual([]);
   });
 
   it('only lets research pieces own nothing', () => {

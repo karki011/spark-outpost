@@ -81,6 +81,16 @@ describe('decide() for a Builder of a coordinated task', () => {
     expect(verdict('full_access', run('echo x > src/api/extra.ts')).verdict).toBe('allow');
   });
 
+  it('allows a heredoc write of its own file whose text holds > and =', () => {
+    const command = [
+      "cat > src/api.ts <<'EOF'",
+      'export const ok = (n: number) => n >= 2;',
+      'EOF',
+      'node --test test/api.test.ts',
+    ].join('\n');
+    expect(verdict('full_access', run(command)).verdict).toBe('allow');
+  });
+
   it.each([
     'git stash',
     'git checkout main',

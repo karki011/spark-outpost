@@ -87,6 +87,52 @@ describe('ACP session update mapping', () => {
     expect(mapper.map({ sessionUpdate: 'session_info_update', title: 'Chat' })).toEqual([]);
   });
 
+  it('takes an error failure from the prompt response meta', () => {
+    const mapper = createUpdateMapper();
+    const failure = (severity: string) => ({
+      jetbrains: {
+        air: {
+          version: 1,
+          sessionFailure: {
+            severity,
+            category: 'limit',
+            title: 'exceeded retry limit, last status: 429 Too Many Requests',
+          },
+        },
+      },
+    });
+    mapper.stopped({ quota: { token_count: 1 } });
+    mapper.stopped(failure('warning'));
+    expect(mapper.failure()).toBeNull();
+    mapper.stopped(failure('error'));
+    expect(mapper.failure()).toEqual({
+      category: 'limit',
+      title: 'exceeded retry limit, last status: 429 Too Many Requests',
+    });
+  });
+
+  it('counts a provider warning with no progress after it as a stall', () => {
+    const warning = (category: string) => ({
+      sessionUpdate: 'session_info_update' as const,
+      _meta: {
+        jetbrains: {
+          air: { sessionFailure: { severity: 'warning', title: 'Retrying', category } },
+        },
+      },
+    });
+    const stalled = createUpdateMapper();
+    stalled.map(text('Looking at the files'));
+    stalled.map(warning('limit'));
+    expect(stalled.stalled()).toEqual({ category: 'limit', title: 'Retrying' });
+    const recovered = createUpdateMapper();
+    recovered.map(warning('connection'));
+    recovered.map(text('Back again'));
+    expect(recovered.stalled()).toBeNull();
+    const advisory = createUpdateMapper();
+    advisory.map(warning('unknown'));
+    expect(advisory.stalled()).toBeNull();
+  });
+
   it('shows notices as steps and never fails the turn on an advisory error notice', () => {
     const mapper = createUpdateMapper();
     const notice = (severity: string, title: string) =>

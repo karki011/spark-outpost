@@ -1,8 +1,10 @@
 import { existsSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { appendFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
 import { conflictTurn, parallelBlock, pieceExtras } from './fake-acp-parallel.ts';
+import { codexLimited, rateLimited } from './fake-acp-limits.ts';
+import { FAKE_PLAN_OPTIONS } from './fake-acp-plans.ts';
 import { write, type RoleTurn } from './fake-acp-roles.ts';
 
 export const PIECE_CHECK_SCRIPT = `import { readFileSync } from 'node:fs';
@@ -47,6 +49,23 @@ function repairing(text: string): boolean {
   return text.includes('## Problems with your last pieces block');
 }
 
+async function proposeInPlanMode(turn: RoleTurn, plan: string): Promise<void> {
+  const toolCall = {
+    toolCallId: 'coordinator-plan',
+    title: 'Approve Plan',
+    kind: 'switch_mode' as const,
+    status: 'pending' as const,
+    rawInput: { plan },
+  };
+  await turn.update({ sessionUpdate: 'tool_call', ...toolCall });
+  await turn.client.request(acp.methods.client.session.requestPermission, {
+    sessionId: turn.sessionId,
+    toolCall,
+    options: FAKE_PLAN_OPTIONS,
+  });
+  await turn.say('No response requested.');
+}
+
 async function coordinator(turn: RoleTurn): Promise<acp.StopReason> {
   const cyclic =
     turn.text.includes('#alwaysbad') || (turn.text.includes('#badpieces') && !repairing(turn.text));
@@ -54,7 +73,12 @@ async function coordinator(turn: RoleTurn): Promise<acp.StopReason> {
     pieces: PIECES.map((piece) => pieceJson(piece, cyclic)),
     integration: turn.text.includes('#glue') ? 'Wire the view into glue.ts' : null,
   };
-  await turn.say(`Here is the split.\n\n\`\`\`pieces\n${JSON.stringify(block, null, 2)}\n\`\`\``);
+  const split = `Here is the split.\n\n\`\`\`pieces\n${JSON.stringify(block, null, 2)}\n\`\`\``;
+  if (turn.text.includes('#planfile') && !repairing(turn.text)) {
+    await proposeInPlanMode(turn, split);
+    return 'end_turn';
+  }
+  await turn.say(split);
   return 'end_turn';
 }
 
@@ -65,7 +89,7 @@ function untilStopped(signal: AbortSignal): Promise<void> {
   });
 }
 
-async function askToRun(turn: RoleTurn, command: string): Promise<void> {
+async function askToRun(turn: RoleTurn, command: string): Promise<boolean> {
   const toolCall = {
     toolCallId: `run-${command.replace(/\W+/g, '-')}`,
     title: command,
@@ -88,6 +112,16 @@ async function askToRun(turn: RoleTurn, command: string): Promise<void> {
     toolCallId: toolCall.toolCallId,
     status: allowed ? 'completed' : 'failed',
   });
+  return allowed;
+}
+
+async function build(turn: RoleTurn, file: string, line: string): Promise<void> {
+  if (!turn.text.includes('#heredoc')) {
+    await write(turn, file, line);
+    return;
+  }
+  const command = `cat >> ${file} <<'EOF'\n${line}\nexport const ok = (n: number) => n >= 2;\nEOF`;
+  if (await askToRun(turn, command)) await appendFile(join(turn.cwd, file), `${line}\n`);
 }
 
 async function strayWrites(turn: RoleTurn, key: string): Promise<void> {
@@ -138,8 +172,10 @@ async function holdUntilReleased(turn: RoleTurn): Promise<string | null> {
   return steers.shift() ?? null;
 }
 
-function rateLimited(turn: RoleTurn, key: string, tag: RegExp): boolean {
-  return process.env.FAKE_ACP_PROVIDER === 'codex' && key === 'P1' && tag.test(turn.text);
+function changesNothing(turn: RoleTurn, key: string): boolean {
+  if (key !== 'P1') return false;
+  if (turn.text.includes('#nochangeever')) return true;
+  return turn.text.includes('#nochange') && !turn.text.includes('changed none of your files');
 }
 
 async function heldTurn(turn: RoleTurn, key: string, file: string): Promise<boolean> {
@@ -165,11 +201,16 @@ async function piece(turn: RoleTurn): Promise<acp.StopReason> {
     turn.text.includes('#handoff') && key === 'P1' && !turn.text.includes('## Handoff');
   if (rateLimited(turn, key, /#ratelimit(?!after)/))
     throw new acp.RequestError(429, 'Too Many Requests');
+  if (await codexLimited(turn, key, file)) return 'end_turn';
+  if (changesNothing(turn, key)) {
+    await turn.say(`The write to ${file} was refused, so I changed nothing.`);
+    return 'end_turn';
+  }
   if (turn.text.includes('#slowpiece') && key === 'P2') await untilStopped(turn.signal);
   await pieceExtras(turn, key);
   if (await heldTurn(turn, key, file)) return 'end_turn';
   await strayWrites(turn, key);
-  await write(turn, file, fixing ? 'fixed' : `built by ${key}`);
+  await build(turn, file, fixing ? 'fixed' : `built by ${key}`);
   if (rateLimited(turn, key, /#ratelimitafter/)) {
     throw new acp.RequestError(429, 'Too Many Requests');
   }

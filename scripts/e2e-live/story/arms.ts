@@ -67,7 +67,7 @@ export const STORY_ARMS: Record<StoryArmKey, StoryArm> = {
     placement: 'shared',
     codex: true,
     codexRateLimited: true,
-    fakeTags: `${SPLIT_TAGS} #ratelimit`,
+    fakeTags: `${SPLIT_TAGS} #turn429`,
     expectUsd: 3,
   },
   direct: {

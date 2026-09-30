@@ -1,7 +1,12 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { CheckBody, InvolvementLevel, PieceList } from '@spark-outpost/contracts';
+import {
+  CHECKPOINT_OPTION,
+  type CheckBody,
+  type InvolvementLevel,
+  type PieceList,
+} from '@spark-outpost/contracts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
@@ -9,6 +14,7 @@ import { PIECE_OUTCOME_UNKNOWN, recoverExpiredLeases } from '../src/workflow/rec
 import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
 import {
   NORMAL,
+  answerEverything,
   artifactBodies,
   assistantReplies,
   connectProviders,
@@ -20,6 +26,7 @@ import {
   startOrchestrator,
   startScenario,
   withTag,
+  type Answerer,
   type Harness,
 } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
@@ -151,6 +158,38 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(await readFile(join(root, 'api.ts'), 'utf8')).toMatch(/fixed\n$/);
   });
 
+  it('asks a piece that changed none of its files for the change before it lands', async () => {
+    const { conversationId, runId } = await begin('#pieces #nochange');
+    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    expect(orchestration.status).toBe('succeeded');
+    const p1 = (await children(runId)).filter((child) => child.pieceKey === 'P1');
+    expect(p1).toHaveLength(2);
+    expect(p1[1]!.prompt).toContain('changed none of your files');
+    const list = await pieceList(runId);
+    expect(list.pieces[0]).toMatchObject({
+      status: 'landed',
+      check: 'passed',
+      fixTurns: 1,
+      filesChanged: ['store.ts'],
+    });
+  });
+
+  it('never lands a piece that changes none of its files', async () => {
+    const { conversationId, runId } = await begin('#pieces #nochangeever');
+    const stopAtRetry: Answerer = (approval) =>
+      approval.kind === 'retry'
+        ? { optionId: CHECKPOINT_OPTION.stopReport }
+        : answerEverything(approval);
+    await driveToEnd(t, conversationId, runId, stopAtRetry, 90_000);
+    const list = await pieceList(runId);
+    expect(list.pieces[0]).toMatchObject({
+      status: 'failed',
+      note: 'The Builder changed none of its files.',
+      filesChanged: [],
+    });
+    expect(list.pieces.slice(1).map((piece) => piece.status)).not.toContain('landed');
+  });
+
   it('hands a piece to a fresh Builder once its context is 75% full', async () => {
     const { conversationId, runId } = await begin('#pieces #handoff');
     const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
@@ -194,6 +233,26 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(coordinators).toHaveLength(2);
     expect(coordinators[1]!.prompt).toContain('dependsOn has a cycle');
     expect((await pieceList(runId)).pieces).toHaveLength(3);
+  });
+
+  it('takes the piece list from a plan the coordinator proposed in plan mode', async () => {
+    const { conversationId, runId } = await begin('#pieces #planfile');
+    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    expect(orchestration.status).toBe('succeeded');
+    const crew = await children(runId);
+    expect(crew.filter((child) => child.role === 'coordinator')).toHaveLength(1);
+    const list = await pieceList(runId);
+    expect(list.pieces.map((piece) => [piece.key, piece.status])).toEqual([
+      ['P1', 'landed'],
+      ['P2', 'landed'],
+      ['P3', 'landed'],
+    ]);
+    const { rows } = await t.db.query<{ status: string }>(
+      `SELECT d.status FROM plan_documents d JOIN runs r ON r.id = d.source_run_id
+       WHERE r.parent_run_id = $1 AND r.role = 'coordinator'`,
+      [runId],
+    );
+    expect(rows.map((row) => row.status)).toEqual(['rejected']);
   });
 
   it('falls back to one Builder when the piece list stays invalid', async () => {

@@ -51,13 +51,16 @@ export function toProviderError(agentName: string, error: unknown, stderrTail: s
 
 export function failureError(agentName: string, failure: AgentFailure): ProviderError {
   const title = redactText(failure.title).slice(0, MAX_DETAIL);
-  if (failure.category === 'auth_required') {
+  if (failure.category === 'auth_required' || failure.category === 'access') {
     return new ProviderError(
       `${agentName} couldn't sign in (${title}). Open Settings, reconnect ${agentName}, and try again.`,
     );
   }
   if (isRateLimited(failure.category) || isRateLimited(failure.title)) {
     return rateLimited(agentName);
+  }
+  if (failure.category === 'connection' || failure.category === 'transport_lost') {
+    return new ProviderError(`${agentName} is not available right now (${title}). Try again.`);
   }
   return new ProviderError(`${agentName} stopped with an error: ${title}`);
 }
