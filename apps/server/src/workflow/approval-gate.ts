@@ -39,6 +39,8 @@ import type { Append } from './agent-turn.ts';
 import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approval-waiters.ts';
 import { runEvents } from './run-events.ts';
 
+const afterQueuedUpdates = () => new Promise<void>((resolve) => setImmediate(resolve));
+
 export const APPROVAL_TIMEOUT_MS = 30 * 60 * 1000;
 export const APPROVAL_POLL_MS = 1000;
 export const APPROVAL_TIMEOUT_MESSAGE = 'Approval timed out';
@@ -376,6 +378,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     signal: AbortSignal,
   ): Promise<GateAnswer> => {
     const what = subject(request);
+    await afterQueuedUpdates();
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
     if (request.kind === 'execute' && deps.copyOf) await awaitDepsPrep(deps.db, deps.runId);
     const pieceRefused = deps.piece

@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
 import type { ApprovalRequest } from '../src/approvals/decide.ts';
+import { createLoopGuard, DEFAULT_LOOP_GUARD } from '../src/orchestration/loop-guard.ts';
 import {
   type GateAnswer,
   type PermissionGate,
@@ -127,6 +128,32 @@ describe('ACP permission requests in Do mode', { timeout: 20_000 }, () => {
     const result = await run('#write', stub, { controller });
     expect(answers).toHaveLength(1);
     expect(result.error).toBeNull();
+  });
+
+  it('stops a looping Builder before its next edit even when the reader lags behind', async () => {
+    const controller = new AbortController();
+    const guard = createLoopGuard('Bolt', DEFAULT_LOOP_GUARD, () => controller.abort());
+    const seen: boolean[] = [];
+    const { stub } = gate(async (request, signal) => {
+      seen.push(signal.aborted);
+      return signal.aborted ? { outcome: 'cancelled', note: 'Stopped' } : allow(request, signal);
+    });
+    const outputs = claude.run({
+      prompt: '#build #loopedit',
+      history: [],
+      settings: { method: 'cli', model: null, modelLabel: null, effort: null },
+      projectRoots: [root],
+      signal: controller.signal,
+      observe: guard.observe,
+      mode: 'do',
+      approvals: stub,
+    });
+    for await (const output of outputs) {
+      if (output.kind === 'step_finished') await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+    expect(guard.tripped()).toMatch(/^Bolt repeated `Read `src\/dates.ts`` 5 times in a row$/);
+    expect(seen).toEqual([true]);
+    expect(await readFile(join(root, 'notes.txt'), 'utf8')).not.toContain('after the loop');
   });
 
   it('advertises file writes only in Do mode', async () => {

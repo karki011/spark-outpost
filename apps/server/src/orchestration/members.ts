@@ -58,10 +58,9 @@ function modeFor(s: Session, role: AgentRole): RunMode {
   return role === 'builder' || role === 'integrator' ? 'do' : 'ask';
 }
 
-function counter(s: Session, also?: (output: ProviderOutput) => void) {
+function counter(s: Session) {
   const total = counted();
   const observe = (output: ProviderOutput) => {
-    also?.(output);
     if (countOutput(total, output)) s.toolCalls += 1;
   };
   return { total, observe };
@@ -260,13 +259,14 @@ async function runChild(
   const settings =
     s.deps.loopGuard === false ? null : { ...DEFAULT_LOOP_GUARD, ...s.deps.loopGuard };
   const guard = createLoopGuard(name, spawn.role === 'builder' ? settings : null, cancel);
-  const { total, observe } = counter(s, guard.observe);
+  const { total, observe } = counter(s);
   try {
     const result = await executeChildRun(
       s.deps,
       lease,
       {
         onOutput: observe,
+        onProduced: guard.observe,
         onLiveCost: liveCostOf(s, lease.runId),
         backupAlsoFor: s.lease.runId,
         stopNow: stopNow.signal,

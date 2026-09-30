@@ -112,6 +112,7 @@ export function startControl(deps: TurnDeps, lease: Lease, stopNow?: AbortSignal
 
 export interface TurnOptions {
   onOutput?: (output: ProviderOutput) => void;
+  onProduced?: (output: ProviderOutput) => void;
   backupAlsoFor?: string;
   recordsPlan?: boolean;
   observeEdits?: EditObserver | undefined;
@@ -286,6 +287,7 @@ export async function runAgentTurn(
       settings: input.settings,
       projectRoots: input.projectRoots,
       signal: control.signal,
+      ...(options.onProduced ? { observe: options.onProduced } : {}),
       audit,
       ...(input.mode ? { mode: input.mode } : {}),
       ...(writesCode(input.role) ? { builder: true } : {}),

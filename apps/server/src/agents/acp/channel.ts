@@ -4,8 +4,11 @@ export class Channel<T> implements AsyncIterable<T> {
   private closed = false;
   private failure: unknown = null;
 
+  constructor(private readonly observe?: (item: T) => void) {}
+
   push(item: T): void {
     if (this.closed) return;
+    this.observe?.(item);
     this.items.push(item);
     this.wake();
   }
