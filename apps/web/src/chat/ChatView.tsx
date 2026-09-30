@@ -39,6 +39,7 @@ import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
 import { activeRun } from './turns.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
+import { BlobScout } from '../brand/BlobScout.tsx';
 
 const NO_REPOS: string[] = [];
 const NO_TASKS: TaskOverview[] = [];
@@ -161,7 +162,14 @@ export function ChatView({ conversationId }: { conversationId: string }) {
               quotes={quotes}
             />
           ) : (
-            <div className="thread-wrap" aria-busy={detail.isPending} />
+            <div className="thread-wrap" aria-busy={detail.isPending}>
+              {detail.isPending && (
+                <div className="thread-loading" role="status">
+                  <BlobScout size={48} mood="working" />
+                  <span>Opening this chat…</span>
+                </div>
+              )}
+            </div>
           )}
           <Composer
             conversationId={conversationId}

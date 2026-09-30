@@ -371,14 +371,14 @@ describe('test messages', () => {
     });
   });
 
-  it('uses the stored key and the chosen model for API key connections', async () => {
+  it('uses the stored key and the cheapest harness model for API key connections', async () => {
     const requests: Request[] = [];
     const app = appWith({
       fetch: async (input) => {
         const req = input as Request;
         requests.push(req);
         if (req.url.endsWith('/v1/messages'))
-          return jsonResponse(200, { model: 'claude-opus-5-5', content: [] });
+          return jsonResponse(200, { model: 'claude-sonnet-5', content: [] });
         return jsonResponse(200, anthropicModels);
       },
     });
@@ -387,7 +387,7 @@ describe('test messages', () => {
 
     const sent = requests.at(-1)!;
     expect(sent.headers.get('x-api-key')).toBe(VALID_CLAUDE_KEY);
-    expect(await sent.json()).toMatchObject({ model: 'claude-opus-5-5', max_tokens: 16 });
+    expect(await sent.json()).toMatchObject({ model: 'claude-sonnet-5', max_tokens: 16 });
     expect(body.providers[0].connection.lastTest).toMatchObject({ ok: true });
   });
 

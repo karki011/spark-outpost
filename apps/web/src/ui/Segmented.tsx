@@ -54,6 +54,7 @@ export function Segmented({ ariaLabel, describedBy, options, value, onChange }: 
           role="radio"
           aria-checked={option.id === value}
           data-option={option.id}
+          data-label={typeof option.label === 'string' ? option.label : undefined}
           onClick={() => onChange(option.id, 'activate')}
         >
           {option.label}
