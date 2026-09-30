@@ -26,10 +26,7 @@ function focusRow(list: HTMLElement | null, from: Element | null, step: 1 | -1) 
 }
 
 export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: WorkPlaceMenuProps) {
-  const { open, toggle, setOpen, anchorRef, panelRef } = usePopover<
-    HTMLButtonElement,
-    HTMLDivElement
-  >();
+  const { open, toggle, anchorRef, panelRef } = usePopover<HTMLButtonElement, HTMLDivElement>();
   const panelId = useId();
   const searchId = useId();
   const listRef = useRef<HTMLDivElement>(null);
@@ -44,12 +41,7 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
   if (!checkoutBranch && data.place === 'worktree' && !data.requestedBranch) return null;
 
   const pick = (body: UpdateChatWorkspaceRequest) => {
-    update.mutate(body, {
-      onSuccess: () => {
-        setOpen(false);
-        anchorRef.current?.focus();
-      },
-    });
+    update.mutate(body);
   };
   const fresh = data.place === 'worktree' && !data.requestedBranch;
   const inCheckout = data.place === 'checkout' && !data.requestedBranch;

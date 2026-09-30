@@ -101,6 +101,12 @@ test('Edit my files changes the checked-out branch and is remembered for the pro
     .getByRole('button', { name: /Edit my files directly/ })
     .click();
   await expect(place).toHaveText(/main · my files/);
+  await expect(
+    page.getByRole('dialog', { name: 'Where this chat works' }).getByRole('button', {
+      name: /Editing your files directly/,
+    }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
   await expect(place).toBeFocused();
   await sendAndKeep(page);
   await expect(page.locator('.head .chat-branch')).toHaveCount(0);
