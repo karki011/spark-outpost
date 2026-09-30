@@ -15,7 +15,13 @@ import {
   type SparkSessionPrefs,
   type UpdateProfileRequest,
 } from '@spark-outpost/contracts';
-import { effectiveDefaultModel, retiringOn, usableDefault } from '../model-cards/cards.ts';
+import {
+  effectiveDefaultModel,
+  retirementOf,
+  retirementText,
+  usableDefault,
+  type Retirement,
+} from '../model-cards/cards.ts';
 import { catalog, catalogEntry } from '../providers/catalog.ts';
 import { INITIAL_PROVIDER_EFFORT, reportedEfforts } from '../providers/efforts.ts';
 import type { TestOutcome } from '../setup/test-message.ts';
@@ -317,7 +323,7 @@ export async function saveConnection(
       INITIAL_PROVIDER_EFFORT,
       verified.summary,
       defaultMode,
-      verified.models.flatMap((model) => (retiringOn(model, provider) ? [model.id] : [])),
+      verified.models.flatMap((model) => (retirementOf(model, provider) ? [model.id] : [])),
     ],
   );
   return toConnection(rows[0])!;
@@ -404,9 +410,9 @@ async function reportsEffort(
   );
 }
 
-function retiringModel(connection: ConnectionRow, model: string): string | null {
+function retiringModel(connection: ConnectionRow, model: string): Retirement | null {
   const listed = connection.models.find((option) => option.id === model) ?? { id: model };
-  return retiringOn(listed, connection.provider);
+  return retirementOf(listed, connection.provider);
 }
 
 export async function updateProviderDefaults(
@@ -431,7 +437,7 @@ export async function updateProviderDefaults(
   const retiring = update.model ? retiringModel(current, update.model) : null;
   if (retiring) {
     throw new InvalidDefaultError(
-      `That model retires on ${retiring}, so it can't be the default. Pick it in a chat instead.`,
+      `That model ${retirementText(retiring, 'retires')}, so it can't be the default. Pick it in a chat instead.`,
     );
   }
   const modes = update.agentMode

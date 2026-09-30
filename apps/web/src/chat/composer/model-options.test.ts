@@ -123,9 +123,12 @@ describe('retiring models', () => {
     ]);
   });
 
-  it('labels a retiring model with its plain date', () => {
+  it('labels a retiring or retired model with its plain date', () => {
     expect(retiringLabel(models[0]!, now)).toBe('Retiring Oct 15, 2026');
-    expect(retiringLabel(models[2]!, now)).toBe('Retiring Jan 1, 2026');
+    expect(retiringLabel(models[2]!, now)).toBe('Retired Jan 1, 2026');
+    expect(
+      retiringLabel({ id: 'gone', label: 'Gone', description: null, retired: true }, now),
+    ).toBe('Retired');
     expect(retiringLabel(models[1]!, now)).toBeNull();
     expect(retiringLabel(models[3]!, now)).toBeNull();
   });

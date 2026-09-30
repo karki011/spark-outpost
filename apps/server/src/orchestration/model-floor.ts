@@ -1,5 +1,5 @@
 import type { AgentPick } from '@spark-outpost/contracts';
-import { retiringOn } from '../model-cards/cards.ts';
+import { retirementOf, retirementText, type Retirement } from '../model-cards/cards.ts';
 import { modelTier, tierLadder, type TierModel } from './tiers.ts';
 
 const FLOOR_TIER = 1;
@@ -13,10 +13,10 @@ export type FloorRole = 'builder' | 'reader';
 export type BuilderAim = 'floor' | 'top';
 
 export type FloorNote =
-  | { kind: 'raised'; from: string; to: string; retiring?: string; tierUnknown?: boolean }
+  | { kind: 'raised'; from: string; to: string; retiring?: Retirement; tierUnknown?: boolean }
   | { kind: 'tier_unknown'; model: string }
-  | { kind: 'no_stronger'; model: string; retiring?: string }
-  | { kind: 'retiring'; model: string; on: string };
+  | { kind: 'no_stronger'; model: string; retiring?: Retirement }
+  | { kind: 'retiring'; model: string; retiring: Retirement };
 
 export interface FlooredPick {
   pick: AgentPick;
@@ -44,8 +44,8 @@ function pickTier(pick: AgentPick): number | null {
   return pick.model === null ? null : modelTier(asModel(pick), pick.provider);
 }
 
-function pickRetiring(pick: AgentPick, now: Date = new Date()): string | null {
-  return pick.model === null ? null : retiringOn(asModel(pick), pick.provider, now);
+function pickRetiring(pick: AgentPick, now: Date = new Date()): Retirement | null {
+  return pick.model === null ? null : retirementOf(asModel(pick), pick.provider, now);
 }
 
 export function belowFloor(pick: AgentPick, now: Date = new Date()): boolean {
@@ -58,7 +58,7 @@ export function harnessModels<T extends TierModel>(
   provider: string,
   now: Date = new Date(),
 ): T[] {
-  return models.filter((model) => retiringOn(model, provider, now) === null);
+  return models.filter((model) => retirementOf(model, provider, now) === null);
 }
 
 function eligible<T extends TierModel>(models: readonly T[], provider: string, now: Date): T[] {
@@ -82,7 +82,7 @@ function unknownTier<T extends TierModel>(models: readonly T[], provider: string
 function raised(
   pick: AgentPick,
   model: TierModel,
-  retiring: string | null,
+  retiring: Retirement | null,
   tierUnknown = false,
 ): FlooredPick {
   const to = withModel(pick, model);
@@ -126,12 +126,12 @@ export function floorPick<T extends TierModel>(
 }
 
 export function retiringNote(pick: AgentPick, now: Date = new Date()): FloorNote | null {
-  const on = pickRetiring(pick, now);
-  return on ? { kind: 'retiring', model: labelOf(pick), on } : null;
+  const retiring = pickRetiring(pick, now);
+  return retiring ? { kind: 'retiring', model: labelOf(pick), retiring } : null;
 }
 
-function raiseReason(note: { from: string; retiring?: string }, role: FloorRole): string {
-  if (note.retiring) return `${note.from} retires on ${note.retiring}`;
+function raiseReason(note: { from: string; retiring?: Retirement }, role: FloorRole): string {
+  if (note.retiring) return `${note.from} ${retirementText(note.retiring, 'retires')}`;
   return role === 'builder' ? FLOOR_REASON : READER_FLOOR_REASON;
 }
 
@@ -152,9 +152,9 @@ export function floorText(note: FloorNote, role: FloorRole = 'builder'): string 
     case 'no_stronger': {
       const nothing = role === 'builder' ? 'no stronger model for Builders' : 'nothing stronger';
       const text = `kept ${note.model}: ${nothing}`;
-      return note.retiring ? `${text} · retiring on ${note.retiring}` : text;
+      return note.retiring ? `${text} · ${retirementText(note.retiring, 'retiring')}` : text;
     }
     case 'retiring':
-      return `${note.model} retiring on ${note.on}`;
+      return `${note.model} ${retirementText(note.retiring, 'retiring')}`;
   }
 }

@@ -1,6 +1,8 @@
 import {
+  retirementState,
   vendorCardsFileSchema,
   type ModelCard,
+  type RetirementState,
   type ModelTier,
   type ProviderCard,
 } from '@spark-outpost/contracts';
@@ -16,7 +18,6 @@ export const TIER_RANK: Readonly<Record<ModelTier, number>> = {
 };
 export const FRONTIER_RANK = TIER_RANK.frontier;
 
-export const RETIRING_WITHIN_DAYS = 30;
 export const DAY_MS = 86_400_000;
 
 export function utcDayStart(day: string): number {
@@ -60,18 +61,33 @@ export function providerCard(provider: string): ProviderCard | null {
 }
 
 export function cardRetiring(card: ModelCard, now: Date = new Date()): boolean {
-  if (card.retiresNotBefore === null) return false;
-  const horizon = now.getTime() + RETIRING_WITHIN_DAYS * DAY_MS;
-  return utcDayStart(card.retiresNotBefore) <= horizon;
+  return retirementState(card, now) !== null;
 }
 
-export function retiringOn(
+export function cardRetired(card: ModelCard, now: Date = new Date()): boolean {
+  return retirementState(card, now) === 'retired';
+}
+
+export interface Retirement {
+  state: RetirementState;
+  on: string | null;
+}
+
+export function retirementOf(
   model: CardModel,
   provider: string | null = null,
   now: Date = new Date(),
-): string | null {
+): Retirement | null {
   const card = cardFor(model, provider);
-  return card && cardRetiring(card, now) ? card.retiresNotBefore : null;
+  const state = card ? retirementState(card, now) : null;
+  return card && state ? { state, on: card.retiresNotBefore } : null;
+}
+
+export function retirementText(retirement: Retirement, verb: 'retiring' | 'retires'): string {
+  if (retirement.state === 'retired') {
+    return retirement.on ? `retired on ${retirement.on}` : 'retired';
+  }
+  return `${verb} on ${retirement.on}`;
 }
 
 export function usableDefault(
@@ -79,7 +95,7 @@ export function usableDefault(
   model: string | null,
   now: Date = new Date(),
 ): string | null {
-  return model !== null && retiringOn({ id: model }, provider, now) !== null ? null : model;
+  return model !== null && retirementOf({ id: model }, provider, now) !== null ? null : model;
 }
 
 export function isFrontier(model: CardModel, provider: string | null = null): boolean {
@@ -102,7 +118,7 @@ export function effectiveDefaultModel(
   }
   if (adapterDefault === null) return null;
   const fallback = models.find((model) => model.id === adapterDefault);
-  const retiring = retiringOn(fallback ?? { id: adapterDefault }, provider, now) !== null;
+  const retiring = retirementOf(fallback ?? { id: adapterDefault }, provider, now) !== null;
   if (!retiring && (!fallback || !isFrontier(fallback, provider))) return adapterDefault;
   const usable = models
     .map((model) => ({ model, card: cardFor(model, provider) }))

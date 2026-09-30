@@ -1,5 +1,6 @@
 import {
   isRetiring,
+  retirementState,
   type CapabilityOption,
   type ChatSettings,
   type ModelOption,
@@ -37,14 +38,17 @@ export function optionLabel(
 }
 
 export function retiringLabel(model: ModelOption, now: Date): string | null {
-  if (!model.retiresNotBefore || !isRetiring(model, now)) return null;
+  const state = retirementState(model, now);
+  if (!state) return null;
+  const word = state === 'retired' ? 'Retired' : 'Retiring';
+  if (!model.retiresNotBefore) return word;
   const date = new Date(`${model.retiresNotBefore}T00:00:00Z`).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     timeZone: 'UTC',
   });
-  return `Retiring ${date}`;
+  return `${word} ${date}`;
 }
 
 export function visibleModels(

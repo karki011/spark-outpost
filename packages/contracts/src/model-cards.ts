@@ -60,6 +60,7 @@ export const modelCardSchema = z.object({
   blurb: z.string().min(1).max(60),
   knowledgeCutoff: z.string(),
   retiresNotBefore: isoDateSchema.nullable(),
+  retired: z.boolean().optional(),
   sources: z.array(cardSourceSchema).min(1),
 });
 export type ModelCard = z.infer<typeof modelCardSchema>;
@@ -131,6 +132,7 @@ export const cardStalenessSchema = z.object({
   checkStale: z.boolean(),
   factsExpired: z.boolean(),
   retiring: z.boolean(),
+  retired: z.boolean(),
 });
 export type CardStaleness = z.infer<typeof cardStalenessSchema>;
 

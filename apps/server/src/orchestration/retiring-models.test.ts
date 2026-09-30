@@ -20,6 +20,7 @@ import {
 
 const TODAY = new Date('2026-09-28T12:00:00Z');
 const BEFORE_WINDOW = new Date('2026-08-01T12:00:00Z');
+const AFTER_RETIREMENT = new Date('2026-10-20T12:00:00Z');
 const claude = candidates[0]!;
 const [HAIKU, SONNET] = claude.models as [
   (typeof claude.models)[0],
@@ -96,6 +97,23 @@ describe('retiring models', () => {
     expect(floorPick(gpt55, codexModels, { aim: 'top', now: TODAY }).pick.model).toBe(
       'gpt-5.6-sol',
     );
+  });
+
+  it('treats a retired model like a retiring one, and says retired', () => {
+    expect(harnessModels(claude.models, 'claude', AFTER_RETIREMENT)).toEqual(
+      harnessModels(claude.models, 'claude', TODAY),
+    );
+    const gpt55 = floorPick(pick(codexModels[0]!, 'codex'), codexModels, {
+      now: AFTER_RETIREMENT,
+    });
+    expect(gpt55.pick.model).toBe('gpt-6-sol');
+    expect(floorText(gpt55.note!)).toBe('raised to 6 Sol: GPT-5.5 retired on 2026-10-14');
+    const kept = floorPick(pick(HAIKU), [HAIKU], { now: AFTER_RETIREMENT });
+    expect(floorText(kept.note!, 'reader')).toBe(
+      'kept Haiku 4.5: nothing stronger · retired on 2026-10-15',
+    );
+    const pinned = onChat(pick(HAIKU), 'pinned', AFTER_RETIREMENT);
+    expect(routeMemberModel(pinned, plainFacts).note).toBe('Haiku 4.5 retired on 2026-10-15');
   });
 });
 

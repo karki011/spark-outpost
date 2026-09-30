@@ -18,15 +18,27 @@ export type CapabilityOption = z.infer<typeof capabilityOptionSchema>;
 
 export const modelOptionSchema = capabilityOptionSchema.extend({
   retiresNotBefore: z.string().nullable().optional(),
+  retired: z.boolean().optional(),
 });
 export type ModelOption = z.infer<typeof modelOptionSchema>;
 
 export const RETIRING_WITHIN_DAYS = 30;
+const DAY_MS = 86_400_000;
 
-export function isRetiring(model: Pick<ModelOption, 'retiresNotBefore'>, now: Date): boolean {
-  if (!model.retiresNotBefore) return false;
-  const retires = Date.parse(`${model.retiresNotBefore}T00:00:00Z`);
-  return retires - now.getTime() <= RETIRING_WITHIN_DAYS * 86_400_000;
+export type RetirementState = 'retiring' | 'retired';
+
+type Retiree = Pick<ModelOption, 'retiresNotBefore' | 'retired'>;
+
+export function retirementState(model: Retiree, now: Date): RetirementState | null {
+  if (model.retired) return 'retired';
+  if (!model.retiresNotBefore) return null;
+  const left = Date.parse(`${model.retiresNotBefore}T00:00:00Z`) - now.getTime();
+  if (left <= -DAY_MS) return 'retired';
+  return left <= RETIRING_WITHIN_DAYS * DAY_MS ? 'retiring' : null;
+}
+
+export function isRetiring(model: Retiree, now: Date): boolean {
+  return retirementState(model, now) !== null;
 }
 
 export const providerCapabilitiesSchema = z.object({

@@ -1,4 +1,9 @@
-import type { ModelCard, ModelCardView, ModelTier } from '@spark-outpost/contracts';
+import {
+  retirementState,
+  type ModelCard,
+  type ModelCardView,
+  type ModelTier,
+} from '@spark-outpost/contracts';
 import { formatPrice, formatTokenCount, statLines } from './model-card-stats.ts';
 
 export const ALL_PROVIDERS = 'all';
@@ -63,13 +68,21 @@ function retiresSoon(card: ModelCard, now: number): boolean {
   return Date.parse(card.retiresNotBefore) - now <= RETIREMENT_SHOWN_DAYS * DAY_MS;
 }
 
+function retired(card: ModelCard, now: number): boolean {
+  return retirementState(card, new Date(now)) === 'retired';
+}
+
 export function modelTag(view: ModelCardView, now: number = Date.now()): string | null {
-  if (retiresSoon(view.card, now)) return `Retiring ${shortDate(view.card.retiresNotBefore!, now)}`;
+  const date = view.card.retiresNotBefore;
+  if (retired(view.card, now)) return date ? `Retired ${shortDate(date, now)}` : 'Retired';
+  if (retiresSoon(view.card, now)) return `Retiring ${shortDate(date!, now)}`;
   return usedBySpark(view) ? null : 'Only when you pick it';
 }
 
-export function retirementDetail(card: ModelCard): string | null {
-  return card.retiresNotBefore ? `Retires ${card.retiresNotBefore}` : null;
+export function retirementDetail(card: ModelCard, now: number = Date.now()): string | null {
+  const date = card.retiresNotBefore;
+  if (retired(card, now)) return date ? `Retired ${date}` : 'Retired';
+  return date ? `Retires ${date}` : null;
 }
 
 export function shortPrice(card: ModelCard): string {

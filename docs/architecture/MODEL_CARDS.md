@@ -137,6 +137,7 @@ modelCardSchema = z.object({
   strengths: z.array(z.string()).max(4), weakSpots: z.array(z.string()).max(4),
   blurb: z.string().max(60),                  // hand-written, goes into Jev's text
   knowledgeCutoff: z.string(), retiresNotBefore: z.string().nullable(),
+  retired: z.boolean().optional(),            // set once retiresNotBefore has passed
   sources: z.array(z.object({ url: z.string(), checkedAt: isoDate })).min(1),
 });
 
@@ -354,8 +355,10 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
 - **Vendor facts.** `checkedAt` is per source.
   - After 60 days Settings shows "Checked N days ago", and the card stays in use.
   - After 120 days the price and blurb are dropped from Jev's line (label, tier and speed stay), because an old price is worse than none.
-  - A dev-only check (`pnpm model-cards:check`) lists expired sources. There is no automatic network refresh, because vendor pages are HTML and change shape.
+  - `pnpm model-cards:check` (`scripts/model-cards-check.ts`, logic in `model-cards/check.ts`) runs inside `pnpm check` against today's date. It prints a WARN for every provider or model card whose oldest source is over 60 days old and still exits 0; over 120 days it FAILs. There is no automatic network refresh, because vendor pages are HTML and change shape.
 - **Retirement.** A card is retiring from 30 days before its `retiresNotBefore` (`cardRetiring`). From then the harness never picks it for any role, provider and chat defaults skip it, Settings → Models tags it "Retiring <date> · not used by the harness", and Jev's line adds "retiring". A user can still pick it for a chat, with a "retiring on <date>" note on the route. Haiku 4.5 (October 15, 2026) and GPT-5.5 (October 14, 2026) are retiring as of September 28, 2026.
+- **Retired.** A card is retired from the day after its `retiresNotBefore`, or whenever it has `"retired": true` (`cardRetired`, `retirementState` in contracts). A retired card is still counted as retiring, so the harness never picks it. The wording changes everywhere: Settings → Models and the chat model picker say "Retired <date>", the details say "Retired <date>", route and floor notes say "retired on <date>", and Jev's line drops the blurb and ends in "retired".
+- **The check forces the update.** `pnpm model-cards:check` FAILs for any card whose `retiresNotBefore` has passed while the card has no `"retired": true`. It passes on September 29, 2026, but fails from October 15, 2026 for GPT-5.5 and from October 16, 2026 for Haiku 4.5. When that happens, set `"retired": true` on the card, rewrite its blurb, strengths and weak spots in the past tense, re-check `checkedAt`, and update the browser specs that expect "Retiring Oct 15" (`models.spec.ts`, `permission-modes.spec.ts`).
 - **Label drift.** A capability snapshot label that matches no card label means the card is not applied (tier falls back to the pattern), and Settings shows "No card for Sonnet 5.5". This covers aliases such as `sonnet` and `opus[1m]` moving to a new model.
 - **Measured stats.**
   - Only rows recorded under the card's current label count; `agent_model` plus `measured_on` against the card's first `checkedAt` decides this.
