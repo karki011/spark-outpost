@@ -58,6 +58,7 @@ export function checkpoint(
         question: '',
         reason: '',
         choices: [],
+        questions: [],
         plan: [],
         planVersion: null,
         from: null,

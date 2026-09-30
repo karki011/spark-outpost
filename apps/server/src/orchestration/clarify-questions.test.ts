@@ -46,7 +46,7 @@ describe('the clarify turn', () => {
   });
 
   it('offers quick replies for a single question, and the best guesses', () => {
-    const card = clarifyCard(ONE, 'balanced');
+    const card = clarifyCard(ONE);
     expect(card).toMatchObject({ kind: 'clarify', title: 'A few questions first' });
     expect(card.payload.choices).toEqual(['Spend', 'Usage']);
     expect(card.payload.reason).toBe('Which report? (best guess: Spend)');
@@ -57,18 +57,19 @@ describe('the clarify turn', () => {
       CHECKPOINT_OPTION.useDefaults,
       CHECKPOINT_OPTION.stop,
     ]);
-    expect(card.payload.autoOption).toBeNull();
-    expect(clarifyCard(TWO, 'balanced').payload.choices).toEqual([]);
-    expect(clarifyCard(TWO, 'balanced', 'Wren').payload.agent).toBe('Wren');
+    expect(card.payload.questions).toEqual([
+      { question: 'Which report?', options: ['Spend', 'Usage'], default: 'Spend' },
+    ]);
+    expect(clarifyCard(TWO).payload.choices).toEqual([]);
+    expect(clarifyCard(TWO, 'Wren').payload.agent).toBe('Wren');
   });
 
-  it('goes with the best guesses by itself only at Full auto', () => {
-    expect(clarifyCard(TWO, 'full-auto').payload.autoOption).toBe(CHECKPOINT_OPTION.useDefaults);
-    expect(clarifyCard(TWO, 'hands-off').payload.autoOption).toBeNull();
+  it('offers the best guesses as the option to take when no answer comes', () => {
+    expect(clarifyCard(TWO).payload.autoOption).toBe(CHECKPOINT_OPTION.useDefaults);
   });
 
   it('turns the reply into answers, falling back to the defaults', () => {
-    const card = clarifyCard(ONE, 'balanced');
+    const card = clarifyCard(ONE);
     expect(clarifyReply(card, ONE, clarifyOptionId(1), null)).toEqual({
       kind: 'choice',
       text: 'Usage',

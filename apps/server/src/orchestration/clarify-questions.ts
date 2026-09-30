@@ -3,7 +3,6 @@ import {
   CHECKPOINT_OPTION,
   checkpointPayloadSchema,
   clarifyOptionId,
-  type InvolvementLevel,
 } from '@spark-outpost/contracts';
 import type { CheckpointCard } from './checkpoint.ts';
 
@@ -67,7 +66,6 @@ function guesses(questions: readonly ClarifyQuestion[]): string {
 
 export function clarifyCard(
   questions: readonly ClarifyQuestion[],
-  level: InvolvementLevel,
   agent: string | null = null,
 ): CheckpointCard {
   const choices = questions.length === 1 ? (questions[0]!.options ?? []) : [];
@@ -76,7 +74,12 @@ export function clarifyCard(
     question: CLARIFY_TITLE,
     reason: guesses(questions),
     choices,
-    autoOption: level === 'full-auto' ? CHECKPOINT_OPTION.useDefaults : null,
+    questions: questions.map((question) => ({
+      question: question.question,
+      options: question.options ?? [],
+      default: question.default,
+    })),
+    autoOption: CHECKPOINT_OPTION.useDefaults,
     agent,
   });
   return {

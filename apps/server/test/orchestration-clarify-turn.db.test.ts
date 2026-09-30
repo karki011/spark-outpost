@@ -120,8 +120,8 @@ describe('a vague request asks the agent to clarify first', () => {
     const clarify = done.asked.find((approval) => approval.title === 'A few questions first')!;
     expect(clarify.payload.checkpoint).toMatchObject({
       choices: ['Spend', 'Usage'],
-      reason: 'Which report? (best guess: Spend)',
-      autoOption: null,
+      questions: [{ question: 'Which report?', options: ['Spend', 'Usage'], default: 'Spend' }],
+      autoOption: CHECKPOINT_OPTION.useDefaults,
     });
     expect(done.builderPrompts[0]).toContain('The user answered: Usage');
     expect(done.clarify).toEqual([
@@ -142,6 +142,38 @@ describe('a vague request asks the agent to clarify first', () => {
     expect(done.clarify.map((body) => body.round)).toEqual([1, 2]);
     expect(done.orchestration.status).toBe('succeeded');
     expect(done.builderPrompts).toHaveLength(1);
+  }, 120_000);
+
+  it('goes with the best guesses after the answer wait at Automatic, and the card says so', async () => {
+    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
+    const done = await run(VAGUE, 'hands-off', (approval) =>
+      approval.title === 'A few questions first' ? null : answerEverything(approval),
+    );
+    expect(done.orchestration.status).toBe('succeeded');
+    const clarify = done.orchestration.checkpoints.find(
+      (approval) => approval.title === 'A few questions first',
+    )!;
+    expect(clarify).toMatchObject({
+      status: 'allowed',
+      decidedBy: 'auto',
+      decisionOptionId: CHECKPOINT_OPTION.useDefaults,
+    });
+    expect(clarify.autoContinueAt).not.toBeNull();
+    expect(done.clarify[0]).toMatchObject({ reply: 'defaults', defaultsUsed: true });
+    expect(done.builderPrompts[0]).toContain('No answer, so go with the defaults.');
+  }, 120_000);
+
+  it('waits for an answer when the answer wait is off, outside Full auto', async () => {
+    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: null });
+    const done = await run(VAGUE, 'hands-off', (approval) =>
+      approval.title === 'A few questions first'
+        ? { optionId: CHECKPOINT_OPTION.useDefaults }
+        : answerEverything(approval),
+    );
+    const clarify = done.orchestration.checkpoints.find(
+      (approval) => approval.title === 'A few questions first',
+    )!;
+    expect(clarify).toMatchObject({ decidedBy: 'user', autoContinueAt: null });
   }, 120_000);
 
   it('never asks about a clear request, even at Full auto', async () => {
