@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import { InfoIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { MAP_CATEGORIES, type MapCategory } from '@spark-outpost/contracts';
@@ -28,22 +28,31 @@ function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
   return next;
 }
 
+export function picked<T>(set: ReadonlySet<T>, value: T, all: readonly T[], only: boolean): Set<T> {
+  if (!only) return toggled(set, value);
+  return set.size === 1 && set.has(value) ? new Set(all) : new Set([value]);
+}
+
+const ONLY_HINT = 'Shift-click to show only this';
+
 interface ChipProps {
   pressed: boolean;
   color?: string;
   count?: number | null;
   disabled?: boolean;
-  onClick: () => void;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+  hint?: string;
   children: ReactNode;
 }
 
-function Chip({ pressed, color, count, disabled = false, onClick, children }: ChipProps) {
+function Chip({ pressed, color, count, disabled = false, onClick, hint, children }: ChipProps) {
   return (
     <button
       type="button"
       className="map-chip"
       aria-pressed={pressed}
       disabled={disabled}
+      title={hint}
       style={color ? ({ '--c': color } as CSSProperties) : undefined}
       onClick={onClick}
     >
@@ -84,8 +93,12 @@ export function MapFilters(props: MapFiltersProps) {
             pressed={filters.categories.has(category)}
             color="var(--map-gold)"
             count={props.categoryCounts?.[category] ?? null}
-            onClick={() =>
-              onFilters({ ...filters, categories: toggled(filters.categories, category) })
+            hint={ONLY_HINT}
+            onClick={(event) =>
+              onFilters({
+                ...filters,
+                categories: picked(filters.categories, category, MAP_CATEGORIES, event.shiftKey),
+              })
             }
           >
             <i className={`map-tier ${category}`} aria-hidden="true" />
@@ -101,7 +114,13 @@ export function MapFilters(props: MapFiltersProps) {
             pressed={filters.kinds.has(kind)}
             color={`var(--map-k-${kind})`}
             count={props.kindCounts?.[kind] ?? null}
-            onClick={() => onFilters({ ...filters, kinds: toggled(filters.kinds, kind) })}
+            hint={ONLY_HINT}
+            onClick={(event) =>
+              onFilters({
+                ...filters,
+                kinds: picked(filters.kinds, kind, FILE_KINDS, event.shiftKey),
+              })
+            }
           >
             <KindDot kind={kind} />
             {FILE_KIND_LABELS[kind]}
@@ -118,7 +137,13 @@ export function MapFilters(props: MapFiltersProps) {
               color={LINE_COLOR[kind]}
               count={linkCount(kind)}
               disabled={linkCount(kind) === 0}
-              onClick={() => onFilters({ ...filters, links: toggled(filters.links, kind) })}
+              hint={ONLY_HINT}
+              onClick={(event) =>
+                onFilters({
+                  ...filters,
+                  links: picked(filters.links, kind, LINK_KINDS, event.shiftKey),
+                })
+              }
             >
               <i
                 className={`map-line ${LINE_STYLE[kind]}`}
