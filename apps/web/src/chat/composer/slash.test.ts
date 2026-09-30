@@ -8,6 +8,7 @@ import {
   parseSlash,
   planPrompt,
   reviewPrompt,
+  skillCommand,
   slashItems,
   typedCommandNote,
 } from './slash.ts';
@@ -131,5 +132,43 @@ describe('helper text', () => {
     expect(typedCommandNote(parseSlash('/model sonnet'), items, 'Codex')).toBeNull();
     expect(typedCommandNote(parseSlash('/plan x'), items, 'Codex')).toBeNull();
     expect(typedCommandNote(parseSlash('hello'), items, 'Codex')).toBeNull();
+  });
+});
+
+describe('repo skills', () => {
+  const skills = [
+    {
+      name: 'add-provider',
+      description: 'Add a provider',
+      path: '.claude/skills/add-provider/SKILL.md',
+    },
+    { name: 'ship', description: '', path: '.claude/skills/ship/SKILL.md' },
+    { name: 'compact', description: 'Shadowed', path: '.claude/skills/compact/SKILL.md' },
+    { name: 'deploy', description: 'Plugin copy', path: '.claude/skills/deploy/SKILL.md' },
+    { name: 'plan', description: 'Clashes with ours', path: '.claude/skills/plan/SKILL.md' },
+    { name: 'ship', description: 'Duplicate', path: '.agents/skills/ship/SKILL.md' },
+  ];
+  const withPlugin = [...agent, { name: 'repo:deploy', description: 'Deploy', hint: null }];
+
+  it('lists skills after our commands, skipping ones we or the agent already offer', () => {
+    const items = slashItems(withPlugin, { ...context, skills });
+    const skillNames = items.filter((item) => item.source === 'skill').map((item) => item.name);
+    expect(skillNames).toEqual(['add-provider', 'ship']);
+    expect(items.map((item) => item.source).indexOf('skill')).toBe(6);
+    expect(items.find((item) => item.name === 'ship')).toMatchObject({
+      description: 'No description in the skill file',
+      detail: expect.stringContaining('.claude/skills/ship/SKILL.md'),
+    });
+  });
+
+  it('turns a picked skill into a plain request and leaves other text alone', () => {
+    const items = slashItems(agent, { ...context, skills });
+    expect(skillCommand(parseSlash('/add-provider gemini'), items)).toBe(
+      'Use the "add-provider" skill: gemini',
+    );
+    expect(skillCommand(parseSlash('/Ship'), items)).toBe('Use the "ship" skill.');
+    expect(skillCommand(parseSlash('/compact'), items)).toBeNull();
+    expect(skillCommand(parseSlash('hello'), items)).toBeNull();
+    expect(typedCommandNote(parseSlash('/ship'), items, 'Codex')).toBeNull();
   });
 });
