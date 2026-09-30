@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { RunMode } from '@spark-outpost/contracts';
+import { effortKeepsCache } from '../model-cards/cards.ts';
 import type { StoredSession } from '../providers/provider.ts';
 
 export const SESSION_IDLE_MS = 4 * 60 * 60 * 1000;
@@ -30,16 +31,22 @@ export interface SessionSettings {
   mode: RunMode | null;
   planning: boolean;
   roots: readonly string[];
+  keyed?: boolean;
 }
 
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex');
+
+function hashedEffort(settings: SessionSettings): string | null {
+  if (!settings.keyed || settings.model === null) return settings.effort;
+  return effortKeepsCache({ id: settings.model }, settings.provider) ? null : settings.effort;
+}
 
 export function settingsHash(settings: SessionSettings): string {
   return sha256(
     JSON.stringify([
       settings.provider,
       settings.model,
-      settings.effort,
+      hashedEffort(settings),
       settings.mode,
       settings.planning,
       [...settings.roots],

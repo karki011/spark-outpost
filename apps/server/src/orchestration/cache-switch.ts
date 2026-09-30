@@ -1,5 +1,9 @@
 import type { AgentPick, ModelCard } from '@spark-outpost/contracts';
-import { PROMPT_CACHE_TTL_MS } from '../advisor/policy.ts';
+import {
+  HANDOFF_TOKENS,
+  LOST_REASONING_CAP_TOKENS,
+  PROMPT_CACHE_TTL_MS,
+} from '../advisor/policy.ts';
 import { cardFor } from '../model-cards/cards.ts';
 import type { TierModel } from './tiers.ts';
 
@@ -7,6 +11,7 @@ export interface ResumableSession {
   pick: AgentPick;
   contextTokens: number;
   lastUsedAt?: Date | null;
+  reasoningTokens?: number | null;
 }
 
 export interface SessionChoice {
@@ -33,6 +38,11 @@ function writePrice(price: Price): number {
   return price.cacheWritePerMillion ?? price.inputPerMillion;
 }
 
+function lostReasoningUsd(session: ResumableSession, target: Price): number {
+  const tokens = Math.min(session.reasoningTokens ?? 0, LOST_REASONING_CAP_TOKENS);
+  return (tokens / 1_000_000) * target.outputPerMillion;
+}
+
 export function switchCostUsd(session: ResumableSession, to: TierModel, now: Date): number | null {
   if (to.id === session.pick.model) return 0;
   const from = sessionCard(session)?.price;
@@ -41,7 +51,18 @@ export function switchCostUsd(session: ResumableSession, to: TierModel, now: Dat
   const millions = session.contextTokens / 1_000_000;
   const stay =
     millions * (sessionWarm(session, now) ? from.cachedInputPerMillion : writePrice(from));
-  return Math.max(0, millions * writePrice(target) - stay);
+  return Math.max(0, millions * writePrice(target) - stay) + lostReasoningUsd(session, target);
+}
+
+export function handoffCostUsd(session: ResumableSession, to: TierModel): number | null {
+  if (to.id === session.pick.model) return 0;
+  const target = cardFor(to, session.pick.provider)?.price;
+  if (!target) return null;
+  return (HANDOFF_TOKENS / 1_000_000) * writePrice(target) + lostReasoningUsd(session, target);
+}
+
+export function labelOf(session: ResumableSession): string {
+  return session.pick.modelLabel ?? session.pick.model ?? 'the agent default';
 }
 
 export function contextText(tokens: number): string {
@@ -51,10 +72,6 @@ export function contextText(tokens: number): string {
 
 function stateOf(session: ResumableSession, now: Date): string {
   return sessionWarm(session, now) ? 'warm' : 'resumable';
-}
-
-function labelOf(session: ResumableSession): string {
-  return session.pick.modelLabel ?? session.pick.model ?? 'the agent default';
 }
 
 export function keptText(session: ResumableSession, now: Date): string {

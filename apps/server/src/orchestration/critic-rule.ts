@@ -1,4 +1,7 @@
+import { ESCALATE_AT } from '../advisor/policy.ts';
+import { ESCALATED_KINDS } from './escalation.ts';
 import { isLargeDiff, type DiffFile } from './risk-rules.ts';
+import type { MemberRoute } from './routing.ts';
 
 const ONE_LINER_LINES = 10;
 const FEATURE_FILES = 3;
@@ -26,9 +29,21 @@ export function isOneLiner(files: readonly DiffFile[]): boolean {
   return sourceFiles(files).length <= 1 && lines <= ONE_LINER_LINES;
 }
 
-export function wantsCritic(files: readonly DiffFile[], planned: boolean): boolean {
+export function escalatedHighStakes(route: MemberRoute | undefined): boolean {
+  const kind = route?.escalation?.kind;
+  const stakes = route?.score?.signals.stakes.value ?? 0;
+  return kind !== undefined && ESCALATED_KINDS.has(kind) && stakes >= ESCALATE_AT;
+}
+
+export function wantsCritic(
+  files: readonly DiffFile[],
+  planned: boolean,
+  highStakes = false,
+): boolean {
   if (isLargeDiff(files)) return true;
-  if (files.length === 0 || isOneLiner(files)) return false;
+  if (files.length === 0) return false;
+  if (highStakes) return true;
+  if (isOneLiner(files)) return false;
   if (planned) return true;
   const source = sourceFiles(files);
   if (source.length >= FEATURE_FILES) return true;

@@ -33,6 +33,7 @@
     "e2e:live": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/e2e-live/run.ts",
     "routing:labels": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/routing/labels.ts",
     "routing:replay": "node --import tsx scripts/routing/replay.ts",
+    "routing:escalation": "node --import tsx scripts/routing/escalation-dry.ts",
     "routing:ratings": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/routing/ratings-live.ts",
     "coord:shadow": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/coordinator/shadow.ts"
   },

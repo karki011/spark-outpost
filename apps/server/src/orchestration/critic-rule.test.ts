@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { areaOf, isOneLiner, wantsCritic } from './critic-rule.ts';
+import { areaOf, escalatedHighStakes, isOneLiner, wantsCritic } from './critic-rule.ts';
+import { candidates, plainFacts } from './route-fixtures.ts';
+import { routeBuilder, type RouteContext } from './routing.ts';
 
 const file = (path: string, additions = 10, deletions = 0) => ({ path, additions, deletions });
 
@@ -61,5 +63,46 @@ describe('wantsCritic', () => {
     expect(areaOf('src/a.ts')).toBe('src');
     expect(areaOf('apps/server/src/a.ts')).toBe('apps/server');
     expect(areaOf('packages/x')).toBe('packages');
+  });
+});
+
+describe('escalated high-stakes results', () => {
+  const now = new Date('2026-09-30T12:00:00Z');
+  const context: RouteContext = {
+    routing: 'auto',
+    chat: { provider: 'claude', model: 'sonnet', modelLabel: 'Sonnet 5', effort: 'medium' },
+    providerEffort: null,
+    candidates,
+    now,
+  };
+  const rated = (value: number) => ({ value, confidence: 0.9 });
+  const session = {
+    pick: { provider: 'claude', model: 'sonnet', modelLabel: 'Sonnet 5', effort: 'high' },
+    contextTokens: 180_000,
+    lastUsedAt: now,
+  };
+  const route = (stakes: number) =>
+    routeBuilder(context, {
+      ...plainFacts,
+      session,
+      ratings: {
+        complexity: rated(4),
+        stakes: rated(stakes),
+        ambiguity: rated(2),
+        contextDependence: rated(2),
+      },
+    });
+
+  it('sends an escalated result with stakes 4 or more to the Critic, even a one-liner', () => {
+    const typo = [file('src/ledger.ts', 1, 1)];
+    expect(escalatedHighStakes(route(4))).toBe(true);
+    expect(wantsCritic(typo, false, escalatedHighStakes(route(4)))).toBe(true);
+    expect(wantsCritic([], false, true)).toBe(false);
+  });
+
+  it('leaves lower-stakes escalations and plain routes to the usual rule', () => {
+    expect(escalatedHighStakes(route(2))).toBe(false);
+    expect(escalatedHighStakes(routeBuilder(context, plainFacts))).toBe(false);
+    expect(escalatedHighStakes(undefined)).toBe(false);
   });
 });

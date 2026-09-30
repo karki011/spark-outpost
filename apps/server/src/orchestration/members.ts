@@ -25,9 +25,12 @@ import { editObserver } from './observe.ts';
 import { countOutput, counted } from './reads.ts';
 import { reviewFindings, reviewVerdict } from './review.ts';
 import type { MemberRoute } from './routing.ts';
+import { HANDOFF_KINDS } from './escalation.ts';
+import { loadHandoff, type HandoffKind } from './handoff.ts';
 import {
   appendNewArtifact,
   builderKey,
+  escalatedKey,
   fitToolLimit,
   publish,
   type MemberResult,
@@ -88,6 +91,13 @@ function memberControl(s: Session): {
   };
 }
 
+function escalationOf(route: MemberRoute) {
+  const escalation = route.escalation;
+  if (!escalation || escalation.kind === 'stay') return {};
+  const { kind, to } = escalation;
+  return { escalation: { kind, model: to.model, modelLabel: to.modelLabel } };
+}
+
 function storedRoute(route: MemberRoute, name: string, extra: Record<string, unknown> = {}) {
   return {
     name,
@@ -95,8 +105,25 @@ function storedRoute(route: MemberRoute, name: string, extra: Record<string, unk
     autoWouldUse: route.autoWouldUse,
     modelLabel: route.pick.modelLabel,
     ...(route.note ? { routeNote: route.note } : {}),
+    ...escalationOf(route),
     ...extra,
   };
+}
+
+function handoffKind(route: MemberRoute): HandoffKind | null {
+  const kind = route.escalation?.kind;
+  return kind && HANDOFF_KINDS.has(kind) ? (kind as HandoffKind) : null;
+}
+
+async function handoffFor(s: Session, role: AgentRole, route: MemberRoute) {
+  const kind = role === 'builder' ? handoffKind(route) : null;
+  if (!kind) return null;
+  s.handoff ??= await loadHandoff(s, kind);
+  return s.handoff;
+}
+
+function builderSessionKey(taskId: string, route: MemberRoute): string {
+  return route.escalation?.kind === 'brief' ? escalatedKey(taskId) : builderKey(taskId);
 }
 
 export async function setRunMode(s: Session, mode: RunMode | null): Promise<void> {
@@ -174,21 +201,37 @@ export async function ensureParentSnapshot(s: Session): Promise<void> {
   await takeSnapshot(s.deps.db, s.lease.runId, root);
 }
 
-function followUpFor(s: Session, spawn: Spawn, options: MemberOptions): string | null {
+interface Opening {
+  route: MemberRoute;
+  handoff: string | null;
+}
+
+function followUpFor(
+  s: Session,
+  spawn: Spawn,
+  options: MemberOptions,
+  opening: Opening,
+): string | null {
   if (options.checkFailures) return checkFixFollowUp(options.checkFailures);
   if (spawn.followUp) return spawn.followUp;
   if (spawn.role !== 'builder') return null;
   if (spawn.reason === 'fix') return fixFollowUp(spawn.note);
   if (spawn.reason === 'resume') return RESUME_FOLLOW_UP;
+  if (spawn.reason === 'first' && opening.handoff) return opening.handoff;
   if (spawn.reason === 'first' && s.input.startAs === 'change') {
     return makeChangeFollowUp(previousReply(s.input));
   }
-  if (spawn.reason === 'first' && s.continuesTask) return s.input.prompt;
+  if (spawn.reason === 'first' && s.continuesTask) {
+    const handback = opening.route.handback;
+    return handback ? `${handback}\n\n${s.input.prompt}` : s.input.prompt;
+  }
   return null;
 }
 
 function withFollowUp(prompt: string, followUp: string | null, message: string): string {
-  return followUp && followUp !== message ? `${prompt}\n\n${followUp}` : prompt;
+  return followUp && followUp !== message && followUp !== prompt
+    ? `${prompt}\n\n${followUp}`
+    : prompt;
 }
 
 async function runChild(
@@ -207,11 +250,13 @@ async function runChild(
   const branch = place?.reuse?.branch ?? copy?.branch ?? null;
   const label = labelFor(role, route.pick, name);
   if (mode === 'do') await ensureParentSnapshot(s);
-  const followUp = followUpFor(s, spawn, options);
+  const handoff = seat ? null : await handoffFor(s, spawn.role, route);
+  const followUp = followUpFor(s, spawn, options, { route, handoff });
   const resumeKey =
-    seat?.resumeKey ?? (spawn.role === 'builder' && s.taskId ? builderKey(s.taskId) : null);
+    seat?.resumeKey ??
+    (spawn.role === 'builder' && s.taskId ? builderSessionKey(s.taskId, route) : null);
   const attempt = s.results.filter((result) => result.role === spawn.role).length + 1;
-  const prompt = seat?.prompt ?? (await promptFor(s, spawn));
+  const prompt = seat?.prompt ?? handoff ?? (await promptFor(s, spawn));
   const lease = await insertChildRun(
     s.deps.db,
     {

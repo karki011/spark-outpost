@@ -94,7 +94,8 @@ modelCardSchema = z.object({
   price: z.object({ inputPerMillion, cachedInputPerMillion, cacheWritePerMillion: nullable, outputPerMillion, note }).nullable(),
   contextTokens: z.number().int(), maxOutputTokens: z.number().int(),
   speed: z.enum(['fastest', 'fast', 'moderate', 'slower']),
-  reasoning: z.object({ mode, efforts: z.array(z.string()), defaultEffort: nullable, note }),
+  reasoning: z.object({ mode, efforts: z.array(z.string()), defaultEffort: nullable, note,
+    effortKeepsCache?: boolean }), // true: an effort change keeps the prompt cache (Opus 5.5), so a Builder session resumes across it
   strengths: z.array(z.string()).max(4), weakSpots: z.array(z.string()).max(4),
   blurb: z.string().max(60),                  // hand-written, goes into Jev's text
   knowledgeCutoff: z.string(), retiresNotBefore: z.string().nullable(),

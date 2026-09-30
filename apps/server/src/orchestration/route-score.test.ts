@@ -139,10 +139,19 @@ describe('quality minus cost', () => {
     );
   });
 
+  it('ranks by expected dollars: token cost plus the failure rate times the repair cost', () => {
+    const score = routeBuilder(chat('sonnet'), withRatings(ratings(2))).score!;
+    for (const model of score.ranked) {
+      expect(model.expectedUsd).toBeCloseTo(model.costUsd + (1 - model.quality) * 10, 9);
+      expect(model.utility).toBe(-model.expectedUsd);
+    }
+    expect(score.ranked[0]!.expectedUsd).toBeLessThanOrEqual(score.ranked[1]!.expectedUsd);
+  });
+
   it('explains the pick with the signals and the top scores', () => {
     const score = routeBuilder(chat('sonnet'), withRatings(ratings(2))).score!;
     expect(scoreText(score)).toMatch(
-      /^score complexity 2 \(Jev\), ambiguity 2 \(Jev\), stakes 2 \(Jev\), context 2 \(Jev\); repair \$10\.00: Sonnet 5 0\.98\d \(q 0\.99\d, \$0\.07\), Opus 5\.5 0\.98\d \(q 0\.99\d, \$0\.12\)$/,
+      /^score complexity 2 \(Jev\), ambiguity 2 \(Jev\), stakes 2 \(Jev\), context 2 \(Jev\); repair \$10\.00; expected cost incl\. repair: Sonnet 5 \$0\.11 \(q 0\.99\d, \$0\.07 tokens\), Opus 5\.5 \$0\.16 \(q 0\.99\d, \$0\.12 tokens\)$/,
     );
   });
 });
@@ -186,10 +195,19 @@ describe('the warm session', () => {
   it('stays when the context is large enough that switching costs more than it gains', () => {
     const route = routeBuilder(
       chat('sonnet'),
-      withRatings(ratings(4), { session: session('sonnet', 400_000) }),
+      withRatings(ratings(3, 3), { session: session('sonnet', 400_000) }),
     );
     expect(route).toMatchObject({ pick: { model: 'sonnet' }, rule: KEPT_FOR_SESSION });
     expect(route.sessionChoice?.reason).toBe('kept Sonnet 5: warm session, 400K context');
+  });
+
+  it('hands a hard follow-up at 400K to the stronger model through a brief instead', () => {
+    const route = routeBuilder(
+      chat('sonnet'),
+      withRatings(ratings(4), { session: session('sonnet', 400_000) }),
+    );
+    expect(route.pick.model).toBe('opus[1m]');
+    expect(route.escalation?.kind).toBe('brief');
   });
 
   it('does not resume a fast-tier session or one on another provider', () => {

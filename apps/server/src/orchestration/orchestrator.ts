@@ -55,7 +55,7 @@ import { writePlanFirst } from './plan-first.ts';
 import { clarifyTurn } from './clarify-turn.ts';
 import { observePlanAgreement } from './plan-agreement.ts';
 import { refreshPlan } from './plan-progress.ts';
-import { wantsCritic } from './critic-rule.ts';
+import { escalatedHighStakes, wantsCritic } from './critic-rule.ts';
 import { buildInCopy, cleanupCopies, needsCopyFor, repoBusy } from './solo-copy.ts';
 import { autoKeep, shipFullAuto } from './full-auto-ship.ts';
 import {
@@ -123,7 +123,7 @@ async function afterBuilder(s: Session, outcome: MemberOutcome): Promise<FlowEve
     ...(open ? { open } : {}),
     ...(changes
       ? {
-          large: wantsCritic(changes.files, planned),
+          large: wantsCritic(changes.files, planned, escalatedHighStakes(s.routes.get('builder'))),
           green: isGreen(s, changes.files),
           unchanged: changes.files.length === 0,
         }
