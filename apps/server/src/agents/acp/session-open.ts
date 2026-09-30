@@ -1,6 +1,6 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import * as acp from '@agentclientprotocol/sdk';
-import type { ProtocolObserver, StoredSession } from '../../providers/provider.ts';
+import type { ProtocolObserver, ProviderOutput, StoredSession } from '../../providers/provider.ts';
 
 export type ResumeMethod = 'resume' | 'load';
 
@@ -142,4 +142,26 @@ export async function closeQuietly(
   } finally {
     timer.abort();
   }
+}
+
+export function sessionOutput(
+  request: acp.NewSessionRequest,
+  opened: OpenedSession,
+  planned: string | null,
+): ProviderOutput {
+  return {
+    kind: 'session',
+    sessionId: opened.session.sessionId,
+    cwd: request.cwd,
+    additionalDirectories: [...(request.additionalDirectories ?? [])],
+    continued: opened.continued,
+    freshReason: opened.continued ? null : (opened.freshReason ?? planned),
+  };
+}
+
+export function sessionNote(opened: OpenedSession, planned: string | null): string | null {
+  if (opened.continued) return 'Continued session';
+  if (opened.freshReason === FRESH_REASONS.unsupported) return null;
+  const reason = opened.freshReason ?? planned;
+  return reason ? `Fresh session (${reason})` : null;
 }

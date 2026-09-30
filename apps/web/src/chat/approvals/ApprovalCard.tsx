@@ -12,6 +12,7 @@ import {
 import { approvalsApi } from '../../api/approvals.ts';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { projectKeys } from '../../api/projects.ts';
+import { HoldToConfirm } from '../../ui/HoldToConfirm.tsx';
 import { CheckIcon, XIcon } from '../../ui/icons.tsx';
 import { Markdown } from '../markdown/Markdown.tsx';
 import { providerName } from '../provider-name.ts';
@@ -48,6 +49,7 @@ function fullPath(approval: Approval, shown: string): string | undefined {
 
 function heading(approval: Approval): string {
   if (approval.payload.plan) return 'Approve the plan?';
+  if (approval.payload.forcePush) return 'Force push?';
   if (isCheckApproval(approval)) return 'Run a check?';
   if (approval.kind === 'execute') return 'Run a command?';
   if (approval.kind === 'edit') {
@@ -59,6 +61,7 @@ function heading(approval: Approval): string {
 function request(approval: Approval, agent: string) {
   if (approval.payload.plan) return `${agent} wrote a plan and wants to start building.`;
   if (isCheckApproval(approval)) return 'Jev wants to run a project check.';
+  if (approval.payload.forcePush) return `${agent} wants to rewrite history on the remote.`;
   if (approval.kind === 'execute') return `${agent} wants to run a command.`;
   if (approval.kind === 'edit') {
     const paths = approval.payload.paths;
@@ -132,7 +135,11 @@ function PendingApproval({
       if (scope === 'project') void queryClient.invalidateQueries({ queryKey: projectKeys.all });
     },
   });
-  const options = shownOptions(approval);
+  const forced = approval.payload.forcePush !== undefined;
+  const holdOption = forced
+    ? approval.options.find((option) => option.kind === 'allow_once')
+    : null;
+  const options = shownOptions(approval).filter((option) => !forced || !isAllow(option));
   const firstAllow = options.findIndex(isAllow);
   const lastAllow = options.findLastIndex(isAllow);
   const alwaysAsks = approval.reason !== null;
@@ -196,6 +203,16 @@ function PendingApproval({
         <p>The change lands in your working tree. You can revert this run afterwards.</p>
       )}
       {alwaysAsks && <p className="appr-reason">{approval.reason}, whatever your permissions.</p>}
+      {holdOption && (
+        <HoldToConfirm
+          label="Hold to force push"
+          hint="Press and hold for 1.5 seconds, with the mouse or Space."
+          holdingHint="Keep holding. Let go now to cancel."
+          releasedHint="Released early. Nothing was pushed."
+          disabled={decide.isPending}
+          onConfirm={() => decide.mutate({ optionId: holdOption.optionId, scope: 'once' })}
+        />
+      )}
       <div className="appr-acts">
         {options.map((option, index) => (
           <Fragment key={option.optionId}>

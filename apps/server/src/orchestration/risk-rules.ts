@@ -191,8 +191,19 @@ const LEADS_WITH_BUILD = new RegExp(
   'i',
 );
 
+const LEADS_WITH_RUN =
+  /^\s*(?:(?:please|now|can you|could you|would you|go ahead and|just)\s+)*(?:run|execute|fetch|curl)\b/i;
+const NAMED_COMMAND = /`[^`\n]+`|\bhttps?:\/\/\S+/g;
+
+export function runsCommandsByRule(request: string): boolean {
+  if (!LEADS_WITH_RUN.test(request)) return false;
+  const prose = request.replace(NAMED_COMMAND, ' ');
+  return prose !== request && !BUILD_VERB.test(prose);
+}
+
 export function questionByRule(request: string): boolean {
   if (THEN_CHANGE.test(request)) return false;
+  if (runsCommandsByRule(request)) return true;
   if (ASKS_FOR_ANSWER.test(request)) return true;
   return request.trim().endsWith('?') && !BUILD_VERB.test(request);
 }

@@ -29,7 +29,12 @@ import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
 import { offeredCapabilities } from './capabilities.ts';
 import { CLIENT_INFO, clientCapabilities } from './client-info.ts';
 import { readTextFile, refuseWrite } from './fs-handlers.ts';
-import { reviewPermission, writeWithApproval, type DoWorkspace } from './do-handlers.ts';
+import {
+  reviewPermission,
+  runsCommand,
+  writeWithApproval,
+  type DoWorkspace,
+} from './do-handlers.ts';
 import { projectPolicy, RootMissingError } from '../../projects/project-fs.ts';
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { newSessionRequest } from './session-request.ts';
@@ -44,11 +49,11 @@ import { codexUserMcpNames } from './codex-mcp.ts';
 import { resolveUserMcp } from '../../mcp/launch.ts';
 import { childEnvironment } from '../../setup/environment.ts';
 import {
-  FRESH_REASONS,
   closeQuietly,
   openSession,
   replayFilter,
-  type OpenedSession,
+  sessionNote,
+  sessionOutput,
   type ReplayFilter,
 } from './session-open.ts';
 import { createUpdateMapper, type UpdateMapper } from './session-updates.ts';
@@ -240,12 +245,18 @@ function sessionMeta(
   policy: PathPolicy | null,
   changing: boolean,
   repo: ClaudeRepoOptions | null,
-  { builder, coordinated, planning }: Pick<ProviderTurn, 'builder' | 'coordinated' | 'planning'>,
+  {
+    builder,
+    coordinated,
+    planning,
+    approvals,
+  }: Pick<ProviderTurn, 'builder' | 'coordinated' | 'planning' | 'approvals'>,
 ) {
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   const roots = extraRoots(policy);
   if (changing) return definition.doSessionMeta?.(roots, repo, builder, coordinated) ?? null;
-  return definition.projectSessionMeta?.(roots, repo, planning === true) ?? null;
+  const commands = approvals !== undefined;
+  return definition.projectSessionMeta?.(roots, repo, planning === true, commands) ?? null;
 }
 
 function openedRoots(
@@ -283,28 +294,6 @@ export function noFolderAccessNote(definition: AgentDefinition): string {
   return `${definition.name} can't browse project folders; attach files with @ instead`;
 }
 
-function sessionOutput(
-  request: acp.NewSessionRequest,
-  opened: OpenedSession,
-  planned: string | null,
-): ProviderOutput {
-  return {
-    kind: 'session',
-    sessionId: opened.session.sessionId,
-    cwd: request.cwd,
-    additionalDirectories: [...(request.additionalDirectories ?? [])],
-    continued: opened.continued,
-    freshReason: opened.continued ? null : (opened.freshReason ?? planned),
-  };
-}
-
-function sessionNote(opened: OpenedSession, planned: string | null): string | null {
-  if (opened.continued) return 'Continued session';
-  if (opened.freshReason === FRESH_REASONS.unsupported) return null;
-  const reason = opened.freshReason ?? planned;
-  return reason ? `Fresh session (${reason})` : null;
-}
-
 function promptSupport(init: acp.InitializeResponse): PromptSupport {
   const capabilities = init.agentCapabilities?.promptCapabilities;
   return {
@@ -339,8 +328,8 @@ async function converse(
   const { policy } = workspace;
   const report = (name: string) => push(mapper.clientAction(name));
   const annotate = (name: string) => push(mapper.note(name));
-  const doing: DoWorkspace | null =
-    workspace.changing && policy && turn.approvals
+  const gated: DoWorkspace | null =
+    policy && turn.approvals
       ? {
           policy,
           cwd: workspace.cwd,
@@ -351,13 +340,17 @@ async function converse(
           mode: () => mapper.currentMode(),
         }
       : null;
+  const doing = workspace.changing ? gated : null;
   const client = acp
     .client(CLIENT_INFO)
     .onRequest(acp.methods.client.session.requestPermission, (ctx) => {
       if (signal.aborted) return { outcome: { outcome: 'cancelled' } };
       if (doing) return reviewPermission(ctx.params, ctx.requestId, doing);
-      const decision = declineInConversation(ctx.params, policy !== null);
       const plan = policy ? nativePlan(ctx.params, definition.id) : [];
+      if (gated && plan.length === 0 && runsCommand(ctx.params)) {
+        return reviewPermission(ctx.params, ctx.requestId, gated);
+      }
+      const decision = declineInConversation(ctx.params, policy !== null);
       push(plan.length > 0 ? plan : mapper.clientAction(decision.note));
       return decision.response;
     })
@@ -453,6 +446,7 @@ async function converse(
         support,
         projectRoots: policy?.roots.map((root) => root.path) ?? [],
         changesAllowed: doing !== null,
+        commandsAllowed: gated !== null,
       };
       const history = continued ? [] : turn.history;
       for (const step of contextSteps(history, promptOptions)) push(mapper.note(step));

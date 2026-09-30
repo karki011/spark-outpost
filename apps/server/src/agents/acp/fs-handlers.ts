@@ -10,7 +10,8 @@ import {
   type ResolvedPath,
 } from '../../projects/path-policy.ts';
 import type { GateAnswer } from '../../providers/provider.ts';
-import { ASK_MODE_REASON, NO_FOLDER_REASON } from './permissions.ts';
+import { NO_FOLDER_REASON } from './permissions.ts';
+import { ASK_RUN_REASON } from '../../approvals/ask-run.ts';
 
 type Report = (name: string) => void;
 
@@ -48,7 +49,7 @@ export function refuseWrite(
   inProject: boolean,
   report: Report,
 ): never {
-  const reason = inProject ? ASK_MODE_REASON : NO_FOLDER_REASON;
+  const reason = inProject ? ASK_RUN_REASON : NO_FOLDER_REASON;
   report(`Declined: Write \`${params.path}\` (${reason})`);
   throw acp.RequestError.methodNotFound(acp.methods.client.fs.writeTextFile);
 }

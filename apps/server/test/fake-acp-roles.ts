@@ -156,13 +156,13 @@ function stopped(signal: AbortSignal) {
   });
 }
 
-async function push(turn: RoleTurn): Promise<void> {
+async function runCommand(turn: RoleTurn, toolCallId: string, command: string): Promise<void> {
   const toolCall = {
-    toolCallId: 'push-1',
-    title: 'git push origin main',
+    toolCallId,
+    title: command,
     kind: 'execute' as const,
     status: 'pending' as const,
-    rawInput: { command: 'git push origin main' },
+    rawInput: { command },
   };
   await turn.update({ sessionUpdate: 'tool_call', ...toolCall });
   const answer = (await turn.client.request(acp.methods.client.session.requestPermission, {
@@ -308,7 +308,8 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   if (turn.text.includes('#dropmigration')) {
     await write(turn, '005_drop_note.sql', 'ALTER TABLE projects DROP COLUMN note;');
   }
-  if (turn.text.includes('#push')) await push(turn);
+  if (turn.text.includes('#push')) await runCommand(turn, 'push-1', 'git push origin main');
+  if (turn.text.includes('#pnpmbuild')) await runCommand(turn, 'build-1', 'pnpm build');
   if (turn.text.includes('#spend')) await spend(turn);
   if (turn.text.includes('#slowbuild')) {
     for (;;) await sleep(50, turn.signal);

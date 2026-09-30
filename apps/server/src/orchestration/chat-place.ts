@@ -236,7 +236,11 @@ async function primaryProject(db: Queryable, conversationId: string) {
   return rows[0] ?? null;
 }
 
-export async function placeChat(deps: ChatPlaceDeps, input: RunInput): Promise<PlacedChat> {
+export async function placeChat(
+  deps: ChatPlaceDeps,
+  input: RunInput,
+  create: boolean,
+): Promise<PlacedChat> {
   const conversationId = input.identity.threadId;
   const project = input.mode === 'do' ? await primaryProject(deps.db, conversationId) : null;
   if (!project) return { input, repoRoot: input.projectRoots[0] ?? null, note: null };
@@ -246,7 +250,7 @@ export async function placeChat(deps: ChatPlaceDeps, input: RunInput): Promise<P
     return { input: inCopy(input, existing), repoRoot: existing.repoRoot, note: null };
   }
   const plain = { ...input, projectRoots: [root, ...input.projectRoots.slice(1)] };
-  if (!(await isGitWorkTree(root))) return { input: plain, repoRoot: root, note: null };
+  if (!create || !(await isGitWorkTree(root))) return { input: plain, repoRoot: root, note: null };
   return freshPlace(deps, plain, { conversationId, projectId, root });
 }
 
@@ -254,11 +258,13 @@ export async function placeChatOrStop(
   deps: { db: Queryable; branchPrefix?: string },
   input: RunInput,
   append: Append,
+  create: boolean,
 ): Promise<PlacedChat | null> {
   try {
     const placed = await placeChat(
       { db: deps.db, branchPrefix: deps.branchPrefix ?? DEFAULT_BRANCH_PREFIX },
       input,
+      create,
     );
     if (placed.note) await planNote(append, placed.note);
     return placed;

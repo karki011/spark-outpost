@@ -11,6 +11,7 @@ import { getConversationDetail, sendUserMessage } from '../src/persistence/conve
 import { createTestApp, localClient } from './app-support.ts';
 import { linkedConversation } from './approval-support.ts';
 import {
+  QUESTION,
   TRIVIAL,
   connectProviders,
   driveToEnd,
@@ -108,6 +109,25 @@ describe('a chat worktree per Do chat', () => {
     expect(again.id).toBe(copy.id);
     expect((await notes(copy.path)).match(/step 1/g)).toHaveLength(2);
     expect(await notes(root)).toBe('start\n');
+  });
+
+  it('answers a question without a worktree, and makes one once the chat changes files', async () => {
+    const asked = await startScenario(t, root, { ...QUESTION, mode: 'do' }, 'hands-off');
+    await driveToEnd(t, asked.conversationId, asked.runId);
+    expect(await primaryChatWorktree(t.db, asked.conversationId)).toBeNull();
+    expect(git(root, 'branch', '--list', 'spark/*')).toBe('');
+    await doTurn('#first', asked.conversationId);
+    const copy = await chatCopy(asked.conversationId);
+    expect(copy.branch).toMatch(/^spark\//);
+    expect(await notes(copy.path)).toContain('step 1');
+  });
+
+  it("runs commands without asking on Automatic in the chat's worktree", async () => {
+    await doTurn('#pnpmbuild');
+    const { rows } = await t.db.query<{ status: string; decided_by: string }>(
+      `SELECT status, decided_by FROM approvals WHERE payload->>'command' = 'pnpm build'`,
+    );
+    expect(rows).toEqual([{ status: 'allowed', decided_by: 'level' }]);
   });
 
   it('works on an existing branch the request names, in its own worktree', async () => {

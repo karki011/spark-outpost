@@ -41,6 +41,18 @@ describe('auto title decision', () => {
     expect(decideAutoTitle({ ...fresh, source: 'user' }, turn)).toBeNull();
   });
 
+  it('retitles a chat title once the chat turns into project work', () => {
+    const refused = {
+      title: 'Cannot run shell commands here',
+      source: 'auto' as const,
+      category: 'chat' as const,
+    };
+    expect(
+      decideAutoTitle(refused, { ...turn, suggested: 'Run ls and curl', category: 'setup' }),
+    ).toEqual({ title: 'Run ls and curl', origin: 'agent', category: 'setup' });
+    expect(decideAutoTitle(refused, { ...turn, category: 'chat' })).toBeNull();
+  });
+
   it('retitles an auto title only when the task clearly changed', () => {
     const titled = {
       title: 'Move date helpers',

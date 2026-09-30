@@ -60,7 +60,7 @@ const deny: Answer = async (request) => ({
 async function run(
   prompt: string,
   approvals: PermissionGate,
-  options: { provider?: typeof claude; controller?: AbortController } = {},
+  options: { provider?: typeof claude; controller?: AbortController; mode?: 'ask' | 'do' } = {},
 ) {
   const outputs: ProviderOutput[] = [];
   let error: unknown = null;
@@ -72,7 +72,7 @@ async function run(
       settings: { method: 'cli', model: null, modelLabel: null, effort: null },
       projectRoots: [root],
       signal: controller.signal,
-      mode: 'do',
+      mode: options.mode ?? 'do',
       approvals,
     })) {
       outputs.push(output);
@@ -176,5 +176,27 @@ describe('fs/write_text_file in Do mode', { timeout: 20_000 }, () => {
     expect(result.text).toContain('/tmp/elsewhere.txt=err:-32602');
     expect(requests).toHaveLength(0);
     expect(await readFile(join(root, '.env'), 'utf8')).toBe('TOKEN=abc');
+  });
+});
+
+describe('ACP permission requests in Ask mode', { timeout: 20_000 }, () => {
+  it('sends commands to the gate', async () => {
+    const { stub, requests } = gate(allow);
+    const result = await run('#command', stub, { mode: 'ask' });
+    expect(result.text).toContain('permission=yes');
+    expect(requests[0]).toMatchObject({
+      kind: 'execute',
+      command: 'curl -sI https://example.com',
+    });
+  });
+
+  it('declines edits without asking the gate', async () => {
+    const { stub, requests } = gate(allow);
+    const result = await run('#write', stub, { mode: 'ask' });
+    expect(result.text).toContain('permission=no');
+    expect(requests).toEqual([]);
+    expect(result.steps).toContain(
+      "Declined: Write notes.txt (Ask mode doesn't change files — use Make the change)",
+    );
   });
 });

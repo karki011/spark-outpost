@@ -42,6 +42,14 @@ describe('intake decisions', () => {
     expect(decideIntake(jev({ question: 0.05 }), facts()).start).toBe('build');
   });
 
+  it('answers a request to run commands without Jev, so it runs in Ask', () => {
+    const running = facts({ request: 'Run `ls -la` and `curl -sI https://example.com`' });
+    expect(decideIntake(null, running).start).toBe('answer');
+    expect(decideIntake(null, facts({ request: 'Run `pnpm test` and fix it' })).start).toBe(
+      'build',
+    );
+  });
+
   it('answers when Jev is unsure, unless the request leads with a change verb', () => {
     for (const level of ['balanced', 'hands-off', 'full-auto'] as const) {
       const unsure = facts({ request: 'lets plan the agent md update', level });
