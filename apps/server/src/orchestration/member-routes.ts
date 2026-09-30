@@ -3,15 +3,10 @@ import { POLICY_VERSION } from '../advisor/policy.ts';
 import { jevLabel, samePickModel, whyLine } from '../model-cards/why.ts';
 import { insertDecision, usedNames } from '../persistence/orchestrations.ts';
 import { complexByBreadth, complexByJev, firstSignal } from './builder-complexity.ts';
+import type { ResumableSession, SessionChoice } from './cache-switch.ts';
 import { belowFloor, floorReason, type FloorRole } from './model-floor.ts';
-import {
-  keepSession,
-  resumableChat,
-  resumableTask,
-  type KeptRoute,
-  type ResumableSession,
-  type SessionChoice,
-} from './session-keep.ts';
+import { SCORED_MODELS, scoreText } from './route-score.ts';
+import { keepSession, resumableChat, resumableTask, type KeptRoute } from './session-keep.ts';
 import {
   builderComplexity,
   DESTRUCTIVE_RULE,
@@ -41,7 +36,12 @@ export function builderFacts(s: Session): RouteFacts {
   const jev = s.intake.body.jev;
   const breadth = complexByBreadth(s.scanReport, s.input.userRequest, jev);
   const complex = firstSignal(breadth.complex, complexByJev(jev));
-  return { ...s.facts, complex, ...(breadth.setAside ? { setAside: breadth.setAside } : {}) };
+  return {
+    ...s.facts,
+    complex,
+    ratings: jev?.ratings ?? null,
+    ...(breadth.setAside ? { setAside: breadth.setAside } : {}),
+  };
 }
 
 function topReason(route: MemberRoute, facts: RouteFacts, s: Session): string | null {
@@ -69,16 +69,19 @@ export function keepScoutSession(route: MemberRoute, session: ResumableSession |
   return floorKept(route, keepSession(route, session), 'reader');
 }
 
+function resolvedFrom(route: MemberRoute): ResolvedRoute {
+  const { sessionChoice, ...rest } = route;
+  return { route: rest, ...(sessionChoice ? { session: sessionChoice } : {}) };
+}
+
 async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
   const facts = builderFacts(s);
-  const route = s.flow.solo ? soloRoute(s.route) : routeBuilder(s.route, facts, jevTier(s));
-  if (!s.taskId) return { route };
-  const session = await resumableTask(
-    s.deps.db,
-    s.input,
-    builderKey(s.taskId),
-    s.deps.sessionLimits?.idleMs,
-  );
+  if (s.flow.solo) return { route: soloRoute(s.route) };
+  const session = s.taskId
+    ? await resumableTask(s.deps.db, s.input, builderKey(s.taskId), s.deps.sessionLimits?.idleMs)
+    : null;
+  const route = routeBuilder(s.route, { ...facts, session }, jevTier(s));
+  if (route.score) return resolvedFrom(route);
   const kept = keepBuilderSession(route, session, topReason(route, facts, s));
   return { route: kept.route, ...(kept.choice ? { session: kept.choice } : {}) };
 }
@@ -151,6 +154,7 @@ export async function recordRoute(
   const sessionNote = resolved.session ? ` · ${resolved.session.reason}` : '';
   const floorNote = route.note ? ` · ${route.note}` : '';
   const jev = s.intake.body.jev;
+  const score = route.score;
   await insertDecision(s.deps.db, {
     runId: s.lease.runId,
     purpose: 'route',
@@ -177,7 +181,18 @@ export async function recordRoute(
         jevTier: jev?.tier ?? null,
         jevTierConfidence: jev?.routeConfidence ?? null,
         ...(resolved.session ? { session: resolved.session } : {}),
-        why: whyLine(route),
+        ...(score
+          ? {
+              signals: score.signals,
+              repairUsd: score.repairUsd,
+              scores: score.ranked.slice(0, SCORED_MODELS),
+            }
+          : {}),
+        why: whyLine({
+          ...route,
+          ...(resolved.session ? { sessionNote: resolved.session.reason } : {}),
+          ...(score ? { scoreNote: scoreText(score) } : {}),
+        }),
       },
     },
   });

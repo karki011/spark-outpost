@@ -100,7 +100,12 @@ describe('task-scoped Builder sessions', () => {
       `key:${firstBuilder.task_id}:builder`,
     ]);
 
-    script.scenario = { ...TRIVIAL, continuesTask: 0.95, tier: 'mid' };
+    script.scenario = {
+      ...TRIVIAL,
+      continuesTask: 0.95,
+      tier: 'mid',
+      ratings: { complexity: 1, ambiguity: 1, stakes: 1, context_dependence: 4 },
+    };
     const second = await secondTurn(
       first.conversationId,
       'Also make the heading shorter and keep the tone. #build',
@@ -111,7 +116,18 @@ describe('task-scoped Builder sessions', () => {
     expect(await sessionSteps(second.runId)).toContain('Continued session');
     const route = second.orchestration.decisions.find((decision) => decision.kind === 'route');
     expect(route?.answer.rule).toBe(KEPT_FOR_SESSION);
-    expect(route?.answer.session).toMatchObject({ kept: true, session: { model: 'opus[1m]' } });
+    expect(route?.answer.session).toMatchObject({
+      kept: true,
+      reason: expect.stringMatching(/^kept Opus 5\.5: warm session, .*K context$/),
+      session: { model: 'opus[1m]' },
+    });
+    expect(route?.answer.signals).toMatchObject({
+      complexity: { value: 1, source: 'jev' },
+      contextDependence: { value: 4, source: 'jev' },
+    });
+    expect(route?.answer.scores).toMatchObject([{ id: 'sonnet' }, { id: 'opus[1m]' }]);
+    expect(route?.answer.why).toContain('kept Opus 5.5: warm session');
+    expect(route?.answer.why).toContain('score complexity 1 (Jev)');
     const intake = second.orchestration.decisions.find((decision) => decision.kind === 'intake');
     expect(intake?.summary).toContain('same task (jev 0.95)');
   }, 60_000);

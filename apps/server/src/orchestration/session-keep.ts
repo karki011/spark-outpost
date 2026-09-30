@@ -5,20 +5,10 @@ import { latestProviderSession } from '../persistence/provider-sessions.ts';
 import { agentKey, decideResume, settingsHash } from '../workflow/session-decision.ts';
 import { DEFAULT_SWEEP_LIMITS } from '../workflow/turn-session.ts';
 import type { RunInput } from '../workflow/run-input.ts';
+import { keptText, leftText, type ResumableSession, type SessionChoice } from './cache-switch.ts';
 import type { MemberRoute } from './routing.ts';
 
 export const KEPT_FOR_SESSION = 'kept model to resume session';
-
-export interface ResumableSession {
-  pick: AgentPick;
-  contextTokens: number;
-}
-
-export interface SessionChoice {
-  kept: boolean;
-  reason: string;
-  session: AgentPick;
-}
 
 export interface KeptRoute {
   route: MemberRoute;
@@ -39,6 +29,7 @@ export function keepSession(
   route: MemberRoute,
   session: ResumableSession | null,
   needsTop: boolean | string = false,
+  now: Date = new Date(),
 ): KeptRoute {
   if (!session || route.routedBy === 'pinned' || route.routedBy === 'fixed') {
     return { route, choice: null };
@@ -47,10 +38,14 @@ export function keepSession(
   if (route.pick.provider !== session.pick.provider) return { route, choice: null };
   if (needsTop && tierOf(route.pick) !== tierOf(session.pick)) {
     const reason = typeof needsTop === 'string' ? needsTop : 'destructive work needs the top tier';
-    return { route, choice: { kept: false, reason, session: session.pick } };
+    return {
+      route,
+      choice: { kept: false, reason: leftText(reason, session, now), session: session.pick },
+    };
   }
   const kept = { ...route, pick: session.pick, rule: KEPT_FOR_SESSION };
-  return { route: kept, choice: { kept: true, reason: KEPT_FOR_SESSION, session: session.pick } };
+  const reason = keptText(session, now);
+  return { route: kept, choice: { kept: true, reason, session: session.pick } };
 }
 
 interface PreviousRow {
@@ -59,6 +54,7 @@ interface PreviousRow {
   model_label: string | null;
   effort: string | null;
   context_tokens: number | null;
+  finished_at: Date | null;
 }
 
 async function resumable(
@@ -97,12 +93,13 @@ async function resumable(
       effort: previous.effort,
     },
     contextTokens: previous.context_tokens ?? 0,
+    lastUsedAt: previous.finished_at ?? stored.lastUsedAt,
   };
 }
 
 const PREVIOUS_COLUMNS = `r.provider, r.model, r.route->>'modelLabel' AS model_label, r.effort,
-  (coalesce(r.input_tokens, 0) + coalesce(r.cached_read_tokens, 0)
-    + coalesce(r.cached_write_tokens, 0))::int AS context_tokens`;
+  r.finished_at, coalesce(r.context_used, coalesce(r.input_tokens, 0)
+    + coalesce(r.cached_read_tokens, 0) + coalesce(r.cached_write_tokens, 0))::int AS context_tokens`;
 
 export async function resumableTask(
   db: Queryable,

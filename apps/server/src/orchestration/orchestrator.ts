@@ -358,7 +358,12 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       control,
       jev,
       route: routeContext(input, intake.context),
-      facts: { trivial: decisions.trivial, destructive: decisions.destructive },
+      facts: {
+        trivial: decisions.trivial,
+        destructive: decisions.destructive,
+        vague: decisions.calls.vague?.value === true,
+        continues: decisions.continues,
+      },
       intake,
       flow: {
         ...initialFlow(decisions.risk, input.level, reviewWanted, jev !== null, confirmFirst),
