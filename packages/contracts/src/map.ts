@@ -20,6 +20,10 @@ export const MAP_KINDS = [
 export const mapKindSchema = z.enum(MAP_KINDS);
 export type MapKind = z.infer<typeof mapKindSchema>;
 
+export const MAP_FILE_KINDS = ['ui', 'api', 'data', 'test', 'config', 'other'] as const;
+export const mapFileKindSchema = z.enum(MAP_FILE_KINDS);
+export type MapFileKind = z.infer<typeof mapFileKindSchema>;
+
 export const mapBuildStatusSchema = z.enum(['queued', 'building', 'paused', 'ready', 'failed']);
 export const mapPhaseSchema = z.enum(['index', 'graph', 'labels', 'links', 'done']);
 
@@ -59,6 +63,7 @@ export const mapAreaSchema = z.object({
   fanOut: z.number().int(),
   importance: z.number(),
   topFiles: z.array(z.string()),
+  kindCounts: z.record(mapFileKindSchema, z.number().int()),
   x: z.number(),
   y: z.number(),
   radius: z.number(),
@@ -83,11 +88,15 @@ export const mapFileSchema = z.object({
   path: z.string(),
   areaId: z.string(),
   language: z.string(),
+  kind: mapFileKindSchema,
   lines: z.number().int(),
   fanIn: z.number().int(),
   fanOut: z.number().int(),
   importance: z.number(),
   reasons: z.array(z.string()),
+  lastChangedAt: z.string().nullable(),
+  changeCount: z.number().int(),
+  authorCount: z.number().int(),
   x: z.number(),
   y: z.number(),
 });
@@ -109,6 +118,7 @@ export const mapAreaDetailSchema = z.object({
   nextOffset: z.number().int().nullable(),
 });
 export type MapAreaDetail = z.infer<typeof mapAreaDetailSchema>;
+export type MapFile = z.infer<typeof mapFileSchema>;
 
 export const mapCategoryOverrideRequestSchema = z.object({
   category: mapCategorySchema.nullable(),
@@ -162,3 +172,29 @@ export const mapLinksSchema = z.object({
   areaLinks: z.array(mapAreaLinkSchema),
 });
 export type MapLinks = z.infer<typeof mapLinksSchema>;
+
+export const MAP_UNMATCHED_MAX = 200;
+
+export const mapUnmatchedEndpointSchema = z.object({
+  projectId: z.uuid(),
+  method: z.string(),
+  path: z.string(),
+  file: z.string(),
+  line: z.number().int().nullable(),
+  confirmedBy: z.enum(['jev']).nullable(),
+});
+export type MapUnmatchedEndpoint = z.infer<typeof mapUnmatchedEndpointSchema>;
+
+export const mapUnmatchedSchema = z.object({
+  routes: z.array(mapUnmatchedEndpointSchema),
+  calls: z.array(mapUnmatchedEndpointSchema),
+  routeTotal: z.number().int(),
+  callTotal: z.number().int(),
+});
+export type MapUnmatched = z.infer<typeof mapUnmatchedSchema>;
+
+export const coreImpactSchema = z.object({
+  areas: z.array(z.object({ id: z.string(), name: z.string(), files: z.number().int() })),
+  keyFiles: z.array(z.string()),
+});
+export type CoreImpact = z.infer<typeof coreImpactSchema>;

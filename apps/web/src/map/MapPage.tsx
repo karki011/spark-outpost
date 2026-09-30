@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { MAP_CATEGORIES } from '@spark-outpost/contracts';
+import { MAP_CATEGORIES, type MapUnmatchedEndpoint } from '@spark-outpost/contracts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import type { RepoFile } from '../chat/project/use-file-search.ts';
@@ -14,7 +14,6 @@ import { BridgeList, PathCard, UnmatchedPanel } from './CombinedPanels.tsx';
 import { FileDetailSheet } from './FileDetailSheet.tsx';
 import { FILE_KINDS } from './file-kind.ts';
 import type { MapFilters as Filters, MapView } from './frame.ts';
-import type { UnmatchedEndpoint } from './map-api.ts';
 import { categoryCounts, highlights, kindCounts } from './map-model.ts';
 import { MapFilters } from './MapFilters.tsx';
 import { MapHeader } from './MapHeader.tsx';
@@ -269,7 +268,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
     setHover(null);
   };
 
-  const pickUnmatched = (endpoint: UnmatchedEndpoint) =>
+  const pickUnmatched = (endpoint: MapUnmatchedEndpoint) =>
     goToFile(endpoint.projectId, endpoint.file);
   const legendShown = (legend ?? (!combined && !phone)) && !pathBridge && !skeleton;
   const fileCount = data.maps.reduce((sum, map) => sum + (map.status?.fileCount ?? 0), 0);
@@ -310,6 +309,10 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
           setSheetKey(null);
           setPathKey(null);
         }}
+        kindOf={(projectId, path) => {
+          const index = scene.fileByKey.get(fileKey(projectId, path));
+          return index === undefined ? null : scene.files[index]!.kind;
+        }}
         onPick={(file: RepoFile) => goToFile(file.projectId, file.path)}
         onChanges={(on) => {
           setChangesOn(on);
@@ -327,9 +330,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
         categoryCounts={counts.categories}
         kindCounts={counts.kinds}
         bridges={combined ? data.bridges : null}
-        unmatched={
-          data.unmatched ? data.unmatched.routes.length + data.unmatched.calls.length : null
-        }
+        unmatched={data.unmatched ? data.unmatched.routeTotal + data.unmatched.callTotal : null}
         unmatchedOpen={unmatchedOpen}
         legend={legendShown}
         onFilters={setFilters}

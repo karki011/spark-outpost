@@ -16,6 +16,7 @@
   --map-k-data: #8a6000;
   --map-k-test: #b72e76;
   --map-k-config: #6448c8;
+  --map-k-other: var(--muted);
   --map-bridge: #0a6680;
   --map-event: #7438b8;
   --map-types: #7a5400;
@@ -47,6 +48,7 @@
     --map-k-data: #f5cb45;
     --map-k-test: #ff7ac6;
     --map-k-config: #b49cff;
+    --map-k-other: var(--muted);
     --map-bridge: #6fd3ff;
     --map-event: #c19bff;
     --map-types: #eab52e;
@@ -83,6 +85,7 @@
   --map-k-data: #f5cb45;
   --map-k-test: #ff7ac6;
   --map-k-config: #b49cff;
+  --map-k-other: var(--muted);
   --map-bridge: #6fd3ff;
   --map-event: #c19bff;
   --map-types: #eab52e;
@@ -113,6 +116,7 @@
   --map-k-data: #6b4a00;
   --map-k-test: #9c0058;
   --map-k-config: #4a2db0;
+  --map-k-other: var(--muted);
   --map-bridge: #004f66;
   --map-event: #5a1fa0;
   --map-types: #5c3d00;

@@ -17,6 +17,7 @@ import { applySteer, SteerError } from '../coordinator/steer.ts';
 import { classifySteer } from '../coordinator/steer-rules.ts';
 import { addTaskLink, TaskNotFoundError } from '../persistence/tasks.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
+import { taskCoreImpact } from '../map/impact.ts';
 import { taskChangedFile, taskChanges } from '../projects/task-changes.ts';
 import { agreedPlans } from '../plans/agreed-plans.ts';
 import { findPullRequests } from '../tasks/pr-links.ts';
@@ -79,7 +80,9 @@ export function taskRoutes({ db, workspaceId }: TaskRouteDeps): Router {
   });
 
   router.get('/tasks/:id/changes', async (req, res) => {
-    res.json(await taskChanges(db, workspaceId, paramId(req)));
+    const taskId = paramId(req);
+    const changes = await taskChanges(db, workspaceId, taskId);
+    res.json({ ...changes, core: await taskCoreImpact(db, taskId, changes) });
   });
 
   router.get('/tasks/:id/changes/file', async (req, res) => {

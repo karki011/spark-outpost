@@ -3,6 +3,9 @@ import { EDGES, PROJECT, SERVER, WEB, sampleArea, sampleDetail, sampleMap } from
 import {
   areaForPath,
   categoryCounts,
+  changedAgo,
+  coreImpactText,
+  fileFacts,
   highlights,
   kindCounts,
   needsCheck,
@@ -39,14 +42,21 @@ describe('map model', () => {
     ]);
   });
 
-  it('counts files per category from the area totals and per kind once all are loaded', () => {
+  it('counts files per category and per kind from the area totals before files load', () => {
     expect(categoryCounts(buildScene(input, new Map()))).toEqual({
       core: 3,
       shared: 0,
       feature: 4,
     });
-    expect(kindCounts(buildScene(input, new Map()))).toBeNull();
-    expect(kindCounts(buildScene(input, loaded))).toMatchObject({ test: 1, ui: 1 });
+    expect(kindCounts(buildScene([], new Map()))).toBeNull();
+    expect(kindCounts(buildScene(input, new Map()))).toEqual({
+      ui: 2,
+      api: 3,
+      data: 1,
+      test: 1,
+      config: 0,
+      other: 0,
+    });
   });
 
   it('puts the least confident areas first and flags those below 0.70', () => {
@@ -59,6 +69,49 @@ describe('map model', () => {
     expect(needsCheck(sampleArea(WEB))).toBe(true);
     expect(needsCheck({ ...sampleArea(WEB), categorySource: 'override' })).toBe(false);
     expect(needsCheck(sampleArea(SERVER))).toBe(false);
+  });
+});
+
+describe('file facts', () => {
+  const now = new Date(2026, 8, 30, 15, 0).getTime();
+  const file = {
+    changeCount: 5,
+    authorCount: 1,
+    reasons: ['auth', 'changed 5 times'],
+    lines: 1200,
+  };
+
+  it('says when a file last changed, how often and by how many people', () => {
+    const lastChangedAt = new Date(2026, 8, 27, 9, 0).toISOString();
+    expect(fileFacts({ ...file, lastChangedAt }, now)).toBe(
+      'Changed 3 days ago · 5 commits · 1 author',
+    );
+    expect(changedAgo(new Date(2026, 8, 30, 1, 0).toISOString(), now)).toBe('today');
+    expect(changedAgo(new Date(2026, 8, 29, 23, 0).toISOString(), now)).toBe('yesterday');
+    expect(changedAgo(new Date(2026, 7, 2).toISOString(), now)).toBe('Aug 2');
+  });
+
+  it('falls back to the importance reasons without history', () => {
+    expect(fileFacts({ ...file, lastChangedAt: null }, now)).toBe('auth · 1,200 lines');
+  });
+});
+
+describe('coreImpactText', () => {
+  const area = (name: string) => ({ id: name, name, files: 1 });
+
+  it('names the Core areas a change touches and counts key files', () => {
+    expect(coreImpactText({ areas: [area('auth'), area('persistence')], keyFiles: [] })).toBe(
+      'Touches Core: auth, persistence',
+    );
+    expect(
+      coreImpactText({
+        areas: ['a', 'b', 'c', 'd', 'e'].map(area),
+        keyFiles: ['server/db.ts'],
+      }),
+    ).toBe('Touches Core: a, b, c, 2 more · 1 key file');
+    expect(coreImpactText({ areas: [], keyFiles: ['server/db.ts', 'web/main.tsx'] })).toBe(
+      'Touches key files: db.ts, main.tsx',
+    );
   });
 });
 

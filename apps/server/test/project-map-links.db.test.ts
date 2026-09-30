@@ -186,6 +186,32 @@ describe('cross-repo links', () => {
     expect(JSON.stringify(linkQuestions[0]?.state)).toContain('collection');
   });
 
+  it('lists routes nothing calls and calls that reach no route across the selected projects', async () => {
+    const be = await project(BACKEND, 'shop-api');
+    const fe = await project(FRONTEND, 'shop-web');
+    const { builder, scanner } = mapBuilder(t, fakeJev(pickOrders).fetch);
+    await builder.runOnce();
+    await builder.runOnce();
+    await scanner.idle();
+
+    const api = localClient(createTestApp(t));
+    const response = await api.get(`/api/map/unmatched?projects=${fe},${be}`);
+    expect(response.status).toBe(200);
+    const show = (entries: { projectId: string; method: string; path: string; file: string }[]) =>
+      entries.map(
+        (entry) =>
+          `${entry.projectId === be ? 'api' : 'web'} ${entry.method} ${entry.path} ${entry.file}`,
+      );
+    expect(show(response.body.routes).sort()).toEqual([
+      'api GET /health src/routes/health.ts',
+      'api GET /users/:userId src/routes/users.ts',
+    ]);
+    expect(show(response.body.calls)).toEqual(['web POST /v1/charges src/api/orders.ts']);
+    expect(response.body).toMatchObject({ routeTotal: 2, callTotal: 1 });
+    expect(response.body.routes[0].confirmedBy).toBeNull();
+    expect((await api.get(`/api/map/unmatched?projects=${fe}`)).status).toBe(400);
+  });
+
   it('recomputes links only when either side changes and rejects bad selections', async () => {
     const be = await project(BACKEND, 'shop-api');
     const fe = await project(FRONTEND, 'shop-web');

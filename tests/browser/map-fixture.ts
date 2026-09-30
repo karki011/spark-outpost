@@ -2,12 +2,15 @@ import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Page, Route } from '@playwright/test';
-import type {
-  MapArea,
-  MapAreaDetail,
-  MapLinks,
-  MapStatus,
-  ProjectMap,
+import {
+  MAP_FILE_KINDS,
+  type MapArea,
+  type MapAreaDetail,
+  type MapFileKind,
+  type MapLinks,
+  type MapStatus,
+  type MapUnmatched,
+  type ProjectMap,
 } from '../../packages/contracts/src/map.ts';
 
 type MockFile = [string, number, string, string, number, number, number, string | null, number];
@@ -25,6 +28,7 @@ interface MockLayout {
   cross?: [number, number, number][];
 }
 interface MockData {
+  repo: { built: string };
   areas: { id: string; name: string; tier: 'core' | 'shared' | 'feature'; conf: number }[];
   files: MockFile[];
   edges: [number, number][];
@@ -50,6 +54,10 @@ const hex12 = (text: string) => createHash('sha1').update(text).digest('hex').sl
 
 interface FixtureFile {
   path: string;
+  kind: MapFileKind;
+  lastChangedAt: string | null;
+  changeCount: number;
+  authorCount: number;
   x: number;
   y: number;
   importance: number;
@@ -83,6 +91,20 @@ function status(fileCount: number, areaCount: number, edgeCount: number): MapSta
     timings: {},
     error: null,
   };
+}
+
+const DAY_MS = 86_400_000;
+
+function changedAt(data: MockData, day: string | null): string | null {
+  if (!day) return null;
+  const age = Date.parse(`${data.repo.built}T12:00:00`) - Date.parse(`${day}T12:00:00`);
+  return new Date(Date.now() - Math.round(age / DAY_MS) * DAY_MS).toISOString();
+}
+
+function kindCounts(files: readonly FixtureFile[]): Record<MapFileKind, number> {
+  return Object.fromEntries(
+    MAP_FILE_KINDS.map((kind) => [kind, files.filter((file) => file.kind === kind).length]),
+  ) as Record<MapFileKind, number>;
 }
 
 function commonFolder(paths: readonly string[]): string {
@@ -124,10 +146,14 @@ function projectFromLayout(
     const meta = data.areas[group.area]!;
     const list = indices
       .map((index): FixtureFile => {
-        const [p, , , , fanIn, churn, authors, , importance] = data.files[index]!;
+        const [p, , kind, , fanIn, churn, authors, lastChanged, importance] = data.files[index]!;
         const [x, y] = layout.pos[index]!;
         return {
           path: rel(p),
+          kind: kind as MapFileKind,
+          lastChangedAt: changedAt(data, lastChanged),
+          changeCount: churn,
+          authorCount: authors,
           x: x - group.cx,
           y: y - group.cy,
           importance,
@@ -158,6 +184,7 @@ function projectFromLayout(
       fanOut: 0,
       importance: list[0]?.importance ?? 0,
       topFiles: list.slice(0, 5).map((f) => f.path),
+      kindCounts: kindCounts(list),
       x: group.cx,
       y: group.cy,
       radius: group.r,
@@ -186,7 +213,7 @@ function projectFromLayout(
 export class MapFixture {
   readonly projects = new Map<string, FixtureProject>();
   links: MapLinks | null = null;
-  unmatched: unknown = null;
+  unmatched: MapUnmatched | null = null;
   changedPaths: string[] = [];
   delayMs = 0;
 
@@ -311,6 +338,8 @@ export function combinedFixture(webId: string, serverId: string): MapFixture {
       confirmedBy: index === 0 ? 'jev' : null,
     })),
     calls: [],
+    routeTotal: mock.unmatched.routes.length,
+    callTotal: 0,
   };
   return fixture;
 }
@@ -373,6 +402,10 @@ export function syntheticFixture(
       if (i > 0) edges.push([path, name(root, Math.floor((i - 1) / 2))]);
       return {
         path,
+        kind: i % 5 === 0 ? 'ui' : 'api',
+        lastChangedAt: null,
+        changeCount: 0,
+        authorCount: 0,
         x,
         y,
         importance: 1 / (1 + i * 0.08),
@@ -402,6 +435,7 @@ export function syntheticFixture(
       fanOut: 0,
       importance: 1,
       topFiles: list.slice(0, 5).map((f) => f.path),
+      kindCounts: kindCounts(list),
       x,
       y,
       radius: areaRadius,

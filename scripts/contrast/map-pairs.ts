@@ -19,7 +19,7 @@ export const MAP: Pair[] = [
   pair('bridge-on-sky', 'link between projects', 'var(--map-bridge)', SKY, 'ui'),
   pair('event-on-sky', 'GraphQL link', 'var(--map-event)', SKY, 'ui'),
   pair('types-on-sky', 'shared package link', 'var(--map-types)', SKY, 'ui'),
-  ...(['ui', 'api', 'data', 'test', 'config'] as const).map((kind) =>
+  ...(['ui', 'api', 'data', 'test', 'config', 'other'] as const).map((kind) =>
     pair(`kind-${kind}-on-sky`, `${kind} file`, `var(--map-k-${kind})`, SKY, 'ui'),
   ),
   ...[1, 2, 3, 4].map((n) =>

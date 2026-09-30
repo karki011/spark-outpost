@@ -7,6 +7,7 @@ import type {
   TaskLink,
 } from '@spark-outpost/contracts';
 import { redactValue } from '../audit/redact.ts';
+import { coreImpact, hasCoreImpact } from '../map/impact.ts';
 import { insertFinishedRunEntries } from '../persistence/audit-log.ts';
 import { latestApprovedPlan } from '../persistence/plan-documents.ts';
 import { saveTaskShip, type TaskShip } from '../persistence/task-ships.ts';
@@ -53,6 +54,16 @@ export async function shipPreview(deps: ShipDeps, taskId: string): Promise<ShipP
   return previewOf(await planShip(deps, taskId));
 }
 
+async function pullRequestImpact(deps: ShipDeps, plan: ShipPlan, files: readonly ShipFile[]) {
+  if (!plan.root) return null;
+  const impact = await coreImpact(
+    deps.db,
+    plan.root,
+    files.map((file) => file.path),
+  );
+  return hasCoreImpact(impact) ? impact : null;
+}
+
 async function summaryFor(
   deps: ShipDeps,
   plan: ShipPlan,
@@ -70,6 +81,7 @@ async function summaryFor(
     costUsd: plan.task.costUsd,
     costEstimated: plan.task.costSource === 'estimated' || plan.task.costSource === 'mixed',
     plan: await latestApprovedPlan(deps.db, plan.task.conversationId),
+    coreImpact: await pullRequestImpact(deps, plan, files),
   };
   return summary;
 }

@@ -1,4 +1,11 @@
-import type { MapArea, MapAreaDetail, MapCategory, ProjectMap } from '@spark-outpost/contracts';
+import {
+  MAP_FILE_KINDS,
+  type MapArea,
+  type MapAreaDetail,
+  type MapCategory,
+  type MapFileKind,
+  type ProjectMap,
+} from '@spark-outpost/contracts';
 
 export const PROJECT = '11111111-1111-4111-8111-111111111111';
 export const OTHER = '22222222-2222-4222-8222-222222222222';
@@ -10,7 +17,7 @@ interface SampleArea {
   confidence?: number | null;
   x: number;
   y: number;
-  files: { path: string; x: number; y: number; importance: number }[];
+  files: { path: string; kind: MapFileKind; x: number; y: number; importance: number }[];
 }
 
 export function sampleArea(area: SampleArea): MapArea {
@@ -32,6 +39,9 @@ export function sampleArea(area: SampleArea): MapArea {
     fanOut: 0,
     importance: Math.max(0, ...area.files.map((file) => file.importance)),
     topFiles: area.files.map((file) => file.path).slice(0, 5),
+    kindCounts: Object.fromEntries(
+      MAP_FILE_KINDS.map((kind) => [kind, area.files.filter((file) => file.kind === kind).length]),
+    ) as Record<MapFileKind, number>,
     x: area.x,
     y: area.y,
     radius: 40,
@@ -63,6 +73,9 @@ export function sampleDetail(
       fanIn: edges.filter(([, to]) => to === file.path).length,
       fanOut: edges.filter(([from]) => from === file.path).length,
       reasons: [],
+      lastChangedAt: null,
+      changeCount: 0,
+      authorCount: 0,
     })),
     edges: edges
       .filter(([from, to]) => files.some((file) => file.path === from || file.path === to))
@@ -80,10 +93,16 @@ export const WEB: SampleArea = {
   x: 100,
   y: 0,
   files: [
-    { path: 'apps/web/src/tickets/Tickets.tsx', x: 0, y: 0, importance: 0.9 },
-    { path: 'apps/web/src/tickets/tickets-api.ts', x: 10, y: 4, importance: 0.7 },
-    { path: 'apps/web/src/tickets/ticket-model.ts', x: -8, y: 6, importance: 0.5 },
-    { path: 'apps/web/src/tickets/ticket-model.test.ts', x: 4, y: -9, importance: 0.1 },
+    { path: 'apps/web/src/tickets/Tickets.tsx', kind: 'ui', x: 0, y: 0, importance: 0.9 },
+    { path: 'apps/web/src/tickets/tickets-api.ts', kind: 'api', x: 10, y: 4, importance: 0.7 },
+    { path: 'apps/web/src/tickets/ticket-model.ts', kind: 'ui', x: -8, y: 6, importance: 0.5 },
+    {
+      path: 'apps/web/src/tickets/ticket-model.test.ts',
+      kind: 'test',
+      x: 4,
+      y: -9,
+      importance: 0.1,
+    },
   ],
 };
 
@@ -95,9 +114,9 @@ export const SERVER: SampleArea = {
   x: -100,
   y: 20,
   files: [
-    { path: 'apps/server/src/tickets/routes.ts', x: 0, y: 0, importance: 0.8 },
-    { path: 'apps/server/src/tickets/store.ts', x: 6, y: 6, importance: 0.6 },
-    { path: 'apps/server/src/persistence/tickets.ts', x: -6, y: 6, importance: 0.4 },
+    { path: 'apps/server/src/tickets/routes.ts', kind: 'api', x: 0, y: 0, importance: 0.8 },
+    { path: 'apps/server/src/tickets/store.ts', kind: 'api', x: 6, y: 6, importance: 0.6 },
+    { path: 'apps/server/src/persistence/tickets.ts', kind: 'data', x: -6, y: 6, importance: 0.4 },
   ],
 };
 

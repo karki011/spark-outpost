@@ -1,6 +1,6 @@
 import type { MapArea, MapAreaDetail, ProjectMap } from '@spark-outpost/contracts';
 import { constellation, type Constellation } from './constellation.ts';
-import { baseName, fileKind, type FileKind } from './file-kind.ts';
+import { baseName, type FileKind } from './file-kind.ts';
 
 export interface SceneProject {
   projectId: string;
@@ -40,6 +40,9 @@ export interface SceneFile {
   lines: number;
   language: string;
   reasons: string[];
+  lastChangedAt: string | null;
+  changeCount: number;
+  authorCount: number;
   kind: FileKind;
 }
 
@@ -69,16 +72,6 @@ const PROJECT_GAP = 0.3;
 const AREA_PAD = 14;
 const CROSS_PER_AREA = 2;
 const EDGE_KEY = 2 ** 26;
-const kinds = new Map<string, FileKind>();
-
-function kindOf(path: string): FileKind {
-  let kind = kinds.get(path);
-  if (!kind) {
-    kind = fileKind(path);
-    kinds.set(path, kind);
-  }
-  return kind;
-}
 
 function projectExtent(areas: readonly MapArea[]) {
   if (areas.length === 0) return { cx: 0, cy: 0, radius: 400 };
@@ -170,7 +163,10 @@ function addFiles(scene: Scene, area: SceneArea, detail: MapAreaDetail) {
       lines: file.lines,
       language: file.language,
       reasons: file.reasons,
-      kind: kindOf(file.path),
+      lastChangedAt: file.lastChangedAt,
+      changeCount: file.changeCount,
+      authorCount: file.authorCount,
+      kind: file.kind,
     });
     scene.outs.push([]);
     scene.ins.push([]);

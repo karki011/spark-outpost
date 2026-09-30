@@ -1,7 +1,9 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { LINK_LABELS, type Bridge } from './bridges.ts';
 import { baseName, folderOf } from './file-kind.ts';
+import { useMinuteClock } from '../ui/use-minute-clock.ts';
 import { JevLabel, KindTag } from './JevLabel.tsx';
+import { fileFacts } from './map-model.ts';
 import type { Scene } from './scene.ts';
 
 export type TooltipTarget =
@@ -17,12 +19,8 @@ interface MapTooltipProps {
 
 const OFFSET = 16;
 
-export function fileFacts(reasons: readonly string[], lines: number): string {
-  const facts = reasons.filter((reason) => !reason.startsWith('imported by'));
-  return [...facts, `${lines.toLocaleString('en-US')} lines`].join(' · ');
-}
-
 function FileTip({ scene, index, changed }: { scene: Scene; index: number; changed: boolean }) {
+  const now = useMinuteClock();
   const file = scene.files[index]!;
   const area = scene.areas[file.areaIndex]!.area;
   return (
@@ -34,7 +32,7 @@ function FileTip({ scene, index, changed }: { scene: Scene; index: number; chang
       <div className="map-tip-big">
         <strong>{file.fanIn}</strong> {file.fanIn === 1 ? 'file depends' : 'files depend'} on this
       </div>
-      <div className="map-tip-sub">{fileFacts(file.reasons, file.lines)}</div>
+      <div className="map-tip-sub">{fileFacts(file, now)}</div>
       {changed && <div className="map-tip-sub map-warm">Changed in this chat</div>}
       <div className="map-tip-row">
         <KindTag kind={file.kind} />

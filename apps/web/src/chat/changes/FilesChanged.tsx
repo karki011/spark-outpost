@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { TaskChanges, TaskOverview } from '@spark-outpost/contracts';
 import { taskApi, taskKeys } from '../../tasks/task-api.ts';
+import { CoreImpactNote } from '../../map/CoreImpactNote.tsx';
 import { useViewChanges } from '../../tasks/view-changes.ts';
 import { changeTotals, filesLabel } from './change-rules.ts';
 import { Counts, FileChangeList, type FileEntry } from './FileChangeList.tsx';
@@ -55,6 +56,7 @@ export function FilesChanged({ taskId, runIds, listed = runIds }: FilesChangedPr
           </button>
         )}
       </div>
+      <CoreImpactNote impact={changes.data?.core} />
       {list && <FileChangeList taskId={taskId} entries={shown} />}
       {list && listable.length > shown.length && (
         <button type="button" className="fchg-more" onClick={() => setAll(true)}>

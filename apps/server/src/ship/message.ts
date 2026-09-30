@@ -1,4 +1,4 @@
-import type { PlanDocument, ReviewBody, ShipFile } from '@spark-outpost/contracts';
+import type { CoreImpact, PlanDocument, ReviewBody, ShipFile } from '@spark-outpost/contracts';
 import { outlinePlan } from '../plans/agreed-block.ts';
 
 export const SHIP_FOOTER = '🤖 Generated with Spark Outpost';
@@ -18,6 +18,7 @@ export interface ShipSummary {
   costEstimated: boolean;
   plan: PlanDocument | null;
   notes?: readonly string[];
+  coreImpact?: CoreImpact | null;
 }
 
 const VERDICTS: Record<ReviewBody['verdict'], string> = {
@@ -67,6 +68,21 @@ function filesSection(files: readonly ShipFile[]): string[] {
   return ['## Changed files', ...(shown.length > 0 ? shown : ['No new files in this push.'])];
 }
 
+function coreImpactSection(impact: CoreImpact): string[] {
+  const lines = ['## Core impact'];
+  if (impact.areas.length > 0) {
+    const areas = impact.areas.map(
+      (area) => `${area.name} (${area.files} file${area.files === 1 ? '' : 's'})`,
+    );
+    lines.push(`Touches Core: ${areas.join(', ')}.`);
+  }
+  if (impact.keyFiles.length > 0) {
+    lines.push(`Key files: ${impact.keyFiles.map((path) => `\`${path}\``).join(', ')}`);
+  }
+  lines.push('Highlighted from the project map for review; no extra approval was needed.');
+  return lines;
+}
+
 function planSection(plan: PlanDocument): string[] {
   const outline = outlinePlan(plan.body);
   const day = (plan.approvedAt ?? plan.createdAt).slice(0, 10);
@@ -93,6 +109,7 @@ export function pullRequestBody(summary: ShipSummary): string {
       : []),
     ['## Summary', summary.summary ? clip(summary.summary, SUMMARY_MAX) : summary.title],
     filesSection(summary.files),
+    ...(summary.coreImpact ? [coreImpactSection(summary.coreImpact)] : []),
     [
       '## Checks',
       ...(summary.checks.length > 0

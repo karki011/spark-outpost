@@ -33,7 +33,7 @@ export function projectRoot(root: string): string {
   return at >= 0 ? root.slice(0, at) : root;
 }
 
-async function roots(db: Queryable, taskId: string) {
+export async function taskRoots(db: Queryable, taskId: string) {
   const { rows } = await db.query<RootRow>(
     `SELECT r.snapshot_root, w.repo_root, w.merged_at, w.removed_at, cw.path AS chat_path
      FROM runs r LEFT JOIN run_worktrees w ON w.run_id = r.id
@@ -95,7 +95,7 @@ export async function shipTaskFacts(db: Queryable, taskId: string): Promise<Ship
   ]);
   return {
     running: active.rows[0]?.running ?? false,
-    ...(await roots(db, taskId)),
+    ...(await taskRoots(db, taskId)),
     summary: summary.rows[0]?.content ?? null,
     checks: await checkLines(db, taskId),
     review: await lastReview(db, taskId),

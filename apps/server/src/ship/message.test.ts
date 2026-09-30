@@ -98,6 +98,30 @@ describe('ship messages', () => {
     expect(body).not.toContain('Critic');
     expect(body).not.toContain('Agreed plan');
     expect(body).not.toContain('Cost');
+    expect(body).not.toContain('Core impact');
+  });
+
+  it('highlights Core areas and key files the change touches, after the file list', () => {
+    const body = pullRequestBody({
+      ...summary,
+      coreImpact: {
+        areas: [
+          { id: 'a1', name: 'Auth', files: 2 },
+          { id: 'a2', name: 'Persistence', files: 1 },
+        ],
+        keyFiles: ['server/db.ts'],
+      },
+    });
+    expect(body).toContain(
+      [
+        '## Core impact',
+        'Touches Core: Auth (2 files), Persistence (1 file).',
+        'Key files: `server/db.ts`',
+        'Highlighted from the project map for review; no extra approval was needed.',
+      ].join('\n'),
+    );
+    expect(body.indexOf('## Core impact')).toBeGreaterThan(body.indexOf('## Changed files'));
+    expect(body.indexOf('## Core impact')).toBeLessThan(body.indexOf('## Checks'));
   });
 
   it('keeps the commit subject short and puts checks and review notes in the body', () => {

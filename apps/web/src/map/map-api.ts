@@ -1,33 +1,18 @@
-import { z } from 'zod';
 import {
   MAP_AREA_FILES_LIMIT,
   mapAreaDetailSchema,
   mapAreaSchema,
   mapLinksSchema,
+  mapUnmatchedSchema,
   projectMapSchema,
   type MapArea,
   type MapAreaDetail,
   type MapCategory,
   type MapLinks,
+  type MapUnmatched,
   type ProjectMap,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
-
-const unmatchedEndpointSchema = z.object({
-  projectId: z.uuid(),
-  method: z.string(),
-  path: z.string(),
-  file: z.string(),
-  line: z.number().int().nullable(),
-  confirmedBy: z.enum(['jev']).nullable(),
-});
-export type UnmatchedEndpoint = z.infer<typeof unmatchedEndpointSchema>;
-
-const mapUnmatchedSchema = z.object({
-  routes: z.array(unmatchedEndpointSchema),
-  calls: z.array(unmatchedEndpointSchema),
-});
-export type MapUnmatched = z.infer<typeof mapUnmatchedSchema>;
 
 export const FIRST_PAGE = 120;
 

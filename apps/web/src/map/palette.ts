@@ -98,6 +98,7 @@ export function readPalette(host: HTMLElement): Palette {
       data: read('--map-k-data'),
       test: read('--map-k-test'),
       config: read('--map-k-config'),
+      other: read('--map-k-other'),
     },
     tints: [1, 2, 3, 4].map((n) => read(`--map-tint-${n}`)),
     dark: luminance(colors.sky1) < 0.4,

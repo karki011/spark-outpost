@@ -1,11 +1,11 @@
 import { Fragment, useState } from 'react';
+import type { MapUnmatched, MapUnmatchedEndpoint } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { InfoTip } from '../ui/InfoTip.tsx';
 import { MoveIcon, XIcon } from '../ui/icons.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
 import type { Bridge } from './bridges.ts';
 import { baseName } from './file-kind.ts';
-import type { MapUnmatched, UnmatchedEndpoint } from './map-api.ts';
 import type { Scene } from './scene.ts';
 
 interface BridgeListProps {
@@ -91,14 +91,15 @@ export function PathCard({ scene, bridge, path, onStep, onClose }: PathCardProps
 
 interface UnmatchedPanelProps {
   unmatched: MapUnmatched;
-  onPick: (endpoint: UnmatchedEndpoint) => void;
-  onHover: (endpoint: UnmatchedEndpoint | null) => void;
+  onPick: (endpoint: MapUnmatchedEndpoint) => void;
+  onHover: (endpoint: MapUnmatchedEndpoint | null) => void;
   onClose: () => void;
 }
 
 export function UnmatchedPanel({ unmatched, onPick, onHover, onClose }: UnmatchedPanelProps) {
   const [tab, setTab] = useState<'routes' | 'calls'>('routes');
   const list = tab === 'routes' ? unmatched.routes : unmatched.calls;
+  const total = tab === 'routes' ? unmatched.routeTotal : unmatched.callTotal;
   return (
     <section className="map-unm map-glass" aria-labelledby="map-unm-title" data-map-overlay>
       <div className="map-unm-h">
@@ -116,8 +117,8 @@ export function UnmatchedPanel({ unmatched, onPick, onHover, onClose }: Unmatche
       <Segmented
         ariaLabel="Unmatched kind"
         options={[
-          { id: 'routes', label: `Routes nobody calls · ${unmatched.routes.length}` },
-          { id: 'calls', label: `Calls with no route · ${unmatched.calls.length}` },
+          { id: 'routes', label: `Routes nobody calls · ${unmatched.routeTotal}` },
+          { id: 'calls', label: `Calls with no route · ${unmatched.callTotal}` },
         ]}
         value={tab}
         onChange={(id) => setTab(id === 'calls' ? 'calls' : 'routes')}
@@ -153,12 +154,13 @@ export function UnmatchedPanel({ unmatched, onPick, onHover, onClose }: Unmatche
           <BlobScout size={22} mood="happy" />
           <span>
             {tab === 'routes'
-              ? 'Every route is called from another project.'
+              ? 'Every route is called from the projects on the map.'
               : 'Every call reaches a route.'}
           </span>
         </div>
       )}
       <p className="map-note">
+        {list.length < total && `Showing the ${list.length} most important of ${total}. `}
         Matched by method and path in the source. Downloads, uploads and streams opened another way
         can show up here.
       </p>

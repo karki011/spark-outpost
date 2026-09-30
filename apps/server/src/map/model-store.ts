@@ -34,14 +34,18 @@ export async function writeModel(
         area_id: file.areaId,
         fan_in: file.fanIn,
         fan_out: file.fanOut,
+        last_changed_at: file.lastChangedAt,
+        change_count: file.changeCount,
+        author_count: file.authorCount,
       })),
-      `INSERT INTO map_files (repo_id, path, area_id, language, lines, fan_in, fan_out, importance,
-         reasons, x, y)
-       SELECT $1, r.path, r.area_id, r.language, r.lines, r.fan_in, r.fan_out, r.importance,
-         r.reasons, r.x, r.y
+      `INSERT INTO map_files (repo_id, path, area_id, language, kind, lines, fan_in, fan_out,
+         importance, reasons, last_changed_at, change_count, author_count, x, y)
+       SELECT $1, r.path, r.area_id, r.language, r.kind, r.lines, r.fan_in, r.fan_out,
+         r.importance, r.reasons, r.last_changed_at, r.change_count, r.author_count, r.x, r.y
        FROM jsonb_to_recordset($2::jsonb) AS r (path text, area_id text, language text,
-         lines integer, fan_in integer, fan_out integer, importance real, reasons text[],
-         x real, y real)`,
+         kind text, lines integer, fan_in integer, fan_out integer, importance real,
+         reasons text[], last_changed_at timestamptz, change_count integer,
+         author_count integer, x real, y real)`,
       repoId,
     );
     await insertBatches(
@@ -60,18 +64,20 @@ export async function writeModel(
         fan_in: area.fanIn,
         fan_out: area.fanOut,
         top_files: area.topFiles,
+        kind_counts: area.kindCounts,
         rule_category: area.ruleCategory,
         rule_kind: area.ruleKind,
       })),
       `INSERT INTO map_areas (repo_id, id, root, source, package, reason, file_count, line_count,
-         fan_in, fan_out, importance, top_files, rule_category, rule_kind, x, y, radius)
+         fan_in, fan_out, importance, top_files, kind_counts, rule_category, rule_kind, x, y,
+         radius)
        SELECT $1, r.id, r.root, r.source, r.package, r.reason, r.file_count, r.line_count,
-         r.fan_in, r.fan_out, r.importance, r.top_files, r.rule_category, r.rule_kind, r.x, r.y,
-         r.radius
+         r.fan_in, r.fan_out, r.importance, r.top_files, r.kind_counts, r.rule_category,
+         r.rule_kind, r.x, r.y, r.radius
        FROM jsonb_to_recordset($2::jsonb) AS r (id text, root text, source text, package text,
          reason text, file_count integer, line_count integer, fan_in integer, fan_out integer,
-         importance real, top_files text[], rule_category text, rule_kind text, x real, y real,
-         radius real)`,
+         importance real, top_files text[], kind_counts jsonb, rule_category text,
+         rule_kind text, x real, y real, radius real)`,
       repoId,
     );
     await insertBatches(
