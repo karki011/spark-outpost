@@ -9,9 +9,9 @@ export interface BranchRow {
 const ROWS_SHOWN = 50;
 
 export function placeLabel(workspace: ChatWorkspace, checkoutBranch: string | null): string {
-  if (workspace.requestedBranch) return `${workspace.requestedBranch} · copy`;
+  if (workspace.requestedBranch) return workspace.requestedBranch;
   if (workspace.place === 'checkout') return `${checkoutBranch ?? 'Your branch'} · my files`;
-  return 'New branch · copy';
+  return 'New branch';
 }
 
 export function branchRows(
