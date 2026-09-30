@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   BUILDER_PUBLISH_REASON,
-  FORCE_PUSH_REASON,
   NESTED_COMMAND_REASON,
   NO_RUN_RULES,
   OUTSIDE_DELETE_REASON,
@@ -9,6 +8,7 @@ import {
   decide,
   type ApprovalRequest,
 } from './decide.ts';
+import { PLAIN_FORCE_REASON } from './git-commands.ts';
 
 const ROOT = '/work/app';
 
@@ -84,9 +84,16 @@ describe('decide() looks inside nested and wrapped commands', () => {
   it.each(['sh -c "git push -f origin main"', 'if true; then git push -f origin main; fi'])(
     'refuses force pushes hidden in a shell: %s',
     (command) => {
-      expect(fullAccess(command)).toEqual({ verdict: 'reject', reason: FORCE_PUSH_REASON });
+      expect(fullAccess(command)).toEqual({ verdict: 'reject', reason: PLAIN_FORCE_REASON });
     },
   );
+
+  it('asks before a lease force push hidden in a shell', () => {
+    expect(fullAccess('sh -c "git push --force-with-lease origin feature"')).toMatchObject({
+      verdict: 'ask',
+      forcePush: ['feature'],
+    });
+  });
 
   it('refuses Builder publishing hidden behind eval or find', () => {
     const hidden = ['eval git push', 'find . -maxdepth 0 -exec gh pr create \\;'];

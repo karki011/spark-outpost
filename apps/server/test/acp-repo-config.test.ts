@@ -115,7 +115,7 @@ describe('repo agent config reaches the agent over ACP', { timeout: 20_000 }, ()
     });
   });
 
-  it('denies pushing, gh and remote changes to a Builder session, not to other Do sessions', async () => {
+  it('denies gh and remote changes to a Builder session, not to other Do sessions', async () => {
     const repo = [await rootLaunch(scan, DEFAULT_AGENT_SETTINGS, enabled())];
     const approvals = {
       review: async () => ({ outcome: 'cancelled' as const, note: 'not used' }),
@@ -127,8 +127,14 @@ describe('repo agent config reaches the agent over ACP', { timeout: 20_000 }, ()
       };
       return settings.permissions.deny;
     };
-    expect(await denied(true)).toEqual(expect.arrayContaining([...BUILDER_PUBLISH_DENY_RULES]));
-    expect(await denied(false)).not.toContain('Bash(git push:*)');
+    const builderDenies = await denied(true);
+    expect(builderDenies).toEqual(
+      expect.arrayContaining(
+        BUILDER_PUBLISH_DENY_RULES.filter((rule) => rule !== 'Bash(git push:*)'),
+      ),
+    );
+    expect(builderDenies).not.toContain('Bash(git push:*)');
+    expect(await denied(false)).not.toContain('Bash(gh:*)');
   });
 
   it('passes approved hooks through and sends nothing extra when all switches are off', async () => {

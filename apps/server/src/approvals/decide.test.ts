@@ -6,7 +6,6 @@ import {
   NESTED_COMMAND_REASON,
   OUTSIDE_DELETE_REASON,
   OUTSIDE_WRITE_REASON,
-  FORCE_PUSH_REASON,
   PUSH_REASON,
   SAFE_READ_WHY,
   SECRET_REASON,
@@ -140,24 +139,7 @@ describe('decide() run rules', () => {
   });
 });
 
-describe('decide() refuses force pushes in every mode', () => {
-  it.each([
-    'git push --force',
-    'git push -f origin main',
-    'git push -fu origin feature',
-    'git push --force-with-lease origin main',
-    'git push --mirror backup',
-    'git push origin +main',
-    'git add . && git -C sub push --force',
-  ])('%s', (command) => {
-    for (const level of EVERY_MODE) {
-      expect(decide(level, run(command), allowing(ruleFor(run(command))!), ['git'])).toEqual({
-        verdict: 'reject',
-        reason: FORCE_PUSH_REASON,
-      });
-    }
-  });
-
+describe('decide() for git push', () => {
   it('only treats the git push subcommand as a push', () => {
     expect(decide('edits', run('git commit -m push'), NO_RUN_RULES, [])).toEqual({
       verdict: 'ask',

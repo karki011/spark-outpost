@@ -6,13 +6,26 @@ export const HISTORY_BUDGET_BYTES = 36_000;
 export const CHAT_ONLY_NOTE =
   'You are answering in a Spark Outpost chat that has no project folder. You cannot read or change files, run commands, or browse the web here, so do not attempt tool calls. Reply in plain text and Markdown only.';
 
-export function projectNote(roots: readonly string[]): string {
+const ASK_COMMANDS =
+  'Spark Outpost runs read-only commands directly and asks the user before any other command, so a command may wait or be denied.';
+const ASK_NO_CHANGES =
+  'If the request needs file changes, say so and tell the user to press Make the change.';
+
+export function projectNote(roots: readonly string[], commands = false): string {
   const [primary, ...others] = roots;
-  if (others.length === 0) {
-    return `You are answering in a Spark Outpost chat linked to the project folder ${primary} in Ask mode. You may read files inside this folder, but you must not create, change, or delete files, and you must not read files outside it. Reply in plain text and Markdown.`;
+  const single = others.length === 0;
+  const where = single ? 'this folder' : 'these folders';
+  const reads = commands
+    ? `You may read files and run shell commands inside ${where}: ${ASK_COMMANDS}`
+    : `You may read files inside ${where}.`;
+  const through = commands ? ' (including through commands)' : '';
+  const outside = single ? 'it' : 'them';
+  const limits = `You must not create, change, or delete files${through}, and you must not read files outside ${outside}. ${ASK_NO_CHANGES}`;
+  if (single) {
+    return `You are answering in a Spark Outpost chat linked to the project folder ${primary} in Ask mode. ${reads} ${limits} Reply in plain text and Markdown.`;
   }
   const listed = [`${primary} (primary, your working directory)`, ...others].join(', ');
-  return `You are answering in a Spark Outpost chat linked to these project folders in Ask mode: ${listed}. You may read files inside these folders, but you must not create, change, or delete files, and you must not read files outside them. Relative paths are inside the primary folder. Reply in plain text and Markdown.`;
+  return `You are answering in a Spark Outpost chat linked to these project folders in Ask mode: ${listed}. ${reads} ${limits} Relative paths are inside the primary folder. Reply in plain text and Markdown.`;
 }
 
 export function doProjectNote(roots: readonly string[]): string {
@@ -35,6 +48,7 @@ export interface PromptOptions {
   budget?: number;
   projectRoots?: readonly string[];
   changesAllowed?: boolean;
+  commandsAllowed?: boolean;
 }
 
 type Part = string | acp.ContentBlock;
@@ -152,7 +166,9 @@ export function conversationBlocks(
   const currentParts = current.flatMap((attachment) => attachmentParts(attachment, support));
   const { kept, omitted } = keptHistory(history, budget);
   const roots = options.projectRoots ?? [];
-  const projectIntro = options.changesAllowed ? doProjectNote(roots) : projectNote(roots);
+  const projectIntro = options.changesAllowed
+    ? doProjectNote(roots)
+    : projectNote(roots, options.commandsAllowed === true);
   const intro = roots.length > 0 ? projectIntro : CHAT_ONLY_NOTE;
   if (kept.length === 0 && omitted === 0) {
     return toBlocks([intro, prompt, ...currentParts]);

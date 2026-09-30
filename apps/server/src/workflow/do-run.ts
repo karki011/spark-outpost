@@ -8,20 +8,24 @@ import type { Append } from './agent-turn.ts';
 import { createApprovalGate, type EditObserver, type PlanModeHooks } from './approval-gate.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 
-export interface DoRunOptions {
+export interface AskRunOptions {
   db: Db;
   runId: string;
   provider: string;
   mode: string | null;
   modes?: readonly AgentModeOption[] | undefined;
-  builder?: boolean | undefined;
   extraAllowlist?: (() => readonly string[]) | undefined;
-  projectRoots: readonly string[];
   append: Append;
   waiters?: ApprovalWaiters | undefined;
   pollMs?: number | undefined;
   timeoutMs?: number | undefined;
   onTimeout: () => void;
+}
+
+export interface DoRunOptions extends AskRunOptions {
+  builder?: boolean | undefined;
+  worktreeAuto?: boolean | undefined;
+  projectRoots: readonly string[];
   backupAlsoFor?: string | undefined;
   copyOf?: string | null | undefined;
   observe?: EditObserver | undefined;
@@ -40,23 +44,39 @@ export async function takeSnapshot(db: Db, runId: string, root: string): Promise
   }
 }
 
-export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGate | undefined> {
-  const root = options.projectRoots[0];
-  if (!root) return undefined;
-  const snapshot = await takeSnapshot(options.db, options.runId, root);
-  return createApprovalGate({
+function gateBasics(options: AskRunOptions) {
+  return {
     db: options.db,
     runId: options.runId,
     provider: options.provider,
     mode: options.mode,
     ...(options.modes ? { modes: options.modes } : {}),
     ...(options.extraAllowlist ? { extraAllowlist: options.extraAllowlist } : {}),
-    builder: options.builder === true,
     append: options.append,
     waiters: options.waiters ?? new ApprovalWaiters(),
     ...(options.pollMs === undefined ? {} : { pollMs: options.pollMs }),
     ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
     onTimeout: options.onTimeout,
+  };
+}
+
+export function prepareAskRun(options: AskRunOptions): PermissionGate {
+  return createApprovalGate({
+    ...gateBasics(options),
+    posture: 'read_only',
+    askRun: true,
+    backup: async () => undefined,
+  });
+}
+
+export async function prepareDoRun(options: DoRunOptions): Promise<PermissionGate | undefined> {
+  const root = options.projectRoots[0];
+  if (!root) return undefined;
+  const snapshot = await takeSnapshot(options.db, options.runId, root);
+  return createApprovalGate({
+    ...gateBasics(options),
+    builder: options.builder === true,
+    worktreeAuto: options.worktreeAuto === true,
     copyOf: options.copyOf ?? null,
     ...(options.observe ? { observe: options.observe } : {}),
     ...(options.plans ? { plans: options.plans } : {}),

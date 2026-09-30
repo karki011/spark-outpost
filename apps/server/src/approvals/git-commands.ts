@@ -41,27 +41,112 @@ export function isGitPush(command: string): boolean {
   return pushArgs(command).length > 0;
 }
 
-function isForceFlag(token: string): boolean {
-  if (token === '--force' || token === '--mirror') return true;
-  if (token.startsWith('--force-with-lease') || token === '--force-if-includes') return true;
-  return /^-[a-zA-Z]*f[a-zA-Z]*$/.test(token);
+export const MIRROR_PUSH_REASON = 'Mirror pushes are refused';
+export const PLAIN_FORCE_REASON =
+  'Plain force pushes are refused; use git push --force-with-lease <remote> <branch> instead';
+export const UNNAMED_FORCE_REASON =
+  'Force pushes must name the branch: git push --force-with-lease <remote> <branch>';
+const PROTECTED_BRANCHES = ['main', 'master'];
+
+export function protectedForceReason(branch: string): string {
+  return `Force pushes to ${branch} are refused`;
 }
 
-export function isGitForcePush(command: string): boolean {
-  return pushArgs(command).some((args) =>
-    args.some((token) => isForceFlag(token) || /^\+[^+]/.test(token)),
+export type ForcePush = { kind: 'refuse'; reason: string } | { kind: 'ask'; branches: string[] };
+
+const PUSH_VALUE_FLAGS = new Set(['-o', '--push-option', '--repo', '--receive-pack', '--exec']);
+const EVERY_REF_FLAGS = new Set(['--all', '--branches', '--tags']);
+
+interface PushShape {
+  plain: boolean;
+  lease: boolean;
+  mirror: boolean;
+  everyRef: boolean;
+  refspecs: string[];
+}
+
+function pushShape(args: readonly string[]): PushShape {
+  const shape: PushShape = {
+    plain: false,
+    lease: false,
+    mirror: false,
+    everyRef: false,
+    refspecs: [],
+  };
+  const positional: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index]!;
+    if (PUSH_VALUE_FLAGS.has(token)) index += 1;
+    else if (token === '--mirror') shape.mirror = true;
+    else if (EVERY_REF_FLAGS.has(token)) shape.everyRef = true;
+    else if (token.startsWith('--force-with-lease')) shape.lease = true;
+    else if (token === '--force' || /^-[a-zA-Z]*f[a-zA-Z]*$/.test(token)) shape.plain = true;
+    else if (!token.startsWith('-')) positional.push(token);
+  }
+  shape.refspecs = positional.slice(1);
+  if (shape.refspecs.some((refspec) => refspec.startsWith('+'))) shape.plain = true;
+  return shape;
+}
+
+function destination(refspec: string): string | null {
+  const bare = refspec.replace(/^\+/, '');
+  const colon = bare.indexOf(':');
+  const target = (colon === -1 ? bare : bare.slice(colon + 1)).replace(/^refs\/heads\//, '');
+  if (!target || target === 'HEAD' || target === '@' || target.startsWith('refs/')) return null;
+  return target;
+}
+
+function forcePushOf(shape: PushShape, protectedBranches: readonly string[]): ForcePush | null {
+  if (shape.mirror) return { kind: 'refuse', reason: MIRROR_PUSH_REASON };
+  if (!shape.plain && !shape.lease) return null;
+  if (shape.plain) return { kind: 'refuse', reason: PLAIN_FORCE_REASON };
+  const branches = shape.refspecs.map(destination);
+  if (shape.everyRef || branches.length === 0 || branches.includes(null)) {
+    return { kind: 'refuse', reason: UNNAMED_FORCE_REASON };
+  }
+  const named = branches.filter((branch): branch is string => branch !== null);
+  const guarded = named.find((branch) => protectedBranches.includes(branch));
+  if (guarded) return { kind: 'refuse', reason: protectedForceReason(guarded) };
+  return { kind: 'ask', branches: named };
+}
+
+export function forcePush(command: string, defaultBranch: string | null = null): ForcePush | null {
+  const protectedBranches: string[] = [
+    ...PROTECTED_BRANCHES,
+    ...(defaultBranch ? [defaultBranch] : []),
+  ];
+  const found = pushArgs(command).flatMap(
+    (args) => forcePushOf(pushShape(args), protectedBranches) ?? [],
   );
+  const refused = found.find((entry) => entry.kind === 'refuse');
+  if (refused) return refused;
+  if (found.length === 0) return null;
+  return {
+    kind: 'ask',
+    branches: found.flatMap((entry) => (entry.kind === 'ask' ? entry.branches : [])),
+  };
 }
 
-export function publishesCode(command: string): boolean {
+function publishes(command: string, publishing: readonly string[]): boolean {
   const hosting = commandTree(command).commands.some((program) =>
     HOSTING_CLIS.includes(programName(program)),
   );
   if (hosting) return true;
   return gitSubcommands(command).some((sub) => {
-    if (GIT_PUBLISHES.includes(sub.name)) return true;
+    if (publishing.includes(sub.name)) return true;
     return sub.name === 'remote' && sub.rest.some((token) => REMOTE_CHANGES.includes(token));
   });
+}
+
+export function publishesCode(command: string): boolean {
+  return publishes(command, GIT_PUBLISHES);
+}
+
+export function publishesBesidesPush(command: string): boolean {
+  return publishes(
+    command,
+    GIT_PUBLISHES.filter((name) => name !== 'push'),
+  );
 }
 
 export const BUILDER_GIT_OPS = [
@@ -87,4 +172,11 @@ export function changesGitState(command: string): boolean {
       BUILDER_GIT_OPS.includes(sub.name) ||
       (sub.name === 'branch' && sub.rest.some((token) => BRANCH_DELETE.has(token))),
   );
+}
+
+const REPO_WRITES = ['add', 'rm', 'mv', 'apply', 'pull', 'tag', 'init', 'clone'];
+
+export function writesRepo(command: string): boolean {
+  if (changesGitState(command)) return true;
+  return gitSubcommands(command).some((sub) => REPO_WRITES.includes(sub.name));
 }

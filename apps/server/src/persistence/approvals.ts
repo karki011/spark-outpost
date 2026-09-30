@@ -227,6 +227,9 @@ function validateDecision(approval: Approval, decision: UserDecision): ApprovalO
   if (option.kind === 'reject_once' && decision.scope !== 'once') {
     throw new ApprovalInputError('A denial applies once.');
   }
+  if (approval.payload.forcePush && decision.scope !== 'once') {
+    throw new ApprovalInputError('A force push is allowed one at a time.');
+  }
   if (decision.scope === 'project' && (approval.kind !== 'execute' || !approval.payload.command)) {
     throw new ApprovalInputError('Only commands can be allowed for the whole project.');
   }

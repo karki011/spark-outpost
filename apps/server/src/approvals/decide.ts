@@ -3,12 +3,19 @@ import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark
 import { isSecretPath, refusalFor, relativeInside } from '../projects/path-policy.ts';
 import { commandTree, deleteTargets, treeWords, type CommandTree } from './command-tree.ts';
 import { allowlistCovers, normalizeCommand, resolveCommandPath } from './commands.ts';
-import { isGitForcePush, isGitPush, publishesCode } from './git-commands.ts';
+import {
+  forcePush,
+  isGitPush,
+  publishesBesidesPush,
+  publishesCode,
+  type ForcePush,
+} from './git-commands.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
 import { isPackageInstall, isSafeRead } from './command-kinds.ts';
 import { pieceRefusal, type PieceGuard, type RelativeOf } from './piece-guard.ts';
 import { diskLister, type FileLister } from './file-lister.ts';
 import { readConcern } from './file-reads.ts';
+import { askRunRefusal } from './ask-run.ts';
 
 export interface RequestRoot {
   path: string;
@@ -38,12 +45,11 @@ export type RunRule =
 export type Decision =
   | { verdict: 'allow'; by: 'level' | 'run_rule' | 'allowlist'; why?: string }
   | { verdict: 'reject'; reason: string }
-  | { verdict: 'ask'; reason: string | null };
+  | { verdict: 'ask'; reason: string | null; forcePush?: string[] };
 
 export const FS_WRITE_TOOL_KIND = 'write_text_file';
 
 export const PUSH_REASON = 'Pushing publishes outside this computer';
-export const FORCE_PUSH_REASON = 'Force pushes are refused';
 export const BUILDER_PUBLISH_REASON =
   "Builders don't push, open pull requests or change remotes: Spark Outpost commits, pushes and opens the PR when the task is done";
 export const OUTSIDE_DELETE_REASON = 'Deleting outside the repo always asks';
@@ -53,6 +59,11 @@ export const INSTALL_REASON = 'Installing packages always asks';
 export const NESTED_COMMAND_REASON = "Commands Spark can't see inside always ask";
 export const UNKNOWN_READ_REASON = "Spark can't tell which files this reads";
 export const SAFE_READ_WHY = 'a read-only command inside the project';
+export const WORKTREE_AUTO_WHY = "Automatic in this chat's worktree";
+
+export function forcePushReason(branches: readonly string[]): string {
+  return `This rewrites history on ${branches.join(', ')} on the remote`;
+}
 
 interface Placement {
   relative: string | null;
@@ -134,17 +145,31 @@ export interface DecideOptions {
   builder?: boolean;
   piece?: PieceGuard;
   files?: FileLister;
+  askRun?: boolean;
+  worktreeAuto?: boolean;
+  defaultBranch?: string | null;
 }
 
 export function relativeTo(roots: readonly RequestRoot[]): RelativeOf {
   return (target) => place(roots, target).relative;
 }
 
-function refusal(request: ApprovalRequest, options: DecideOptions): string | null {
-  if (request.command && isGitForcePush(request.command)) return FORCE_PUSH_REASON;
+function soloLeasePush(command: string, options: DecideOptions, forced: ForcePush | null) {
+  if (forced?.kind !== 'ask' || options.piece?.coordinated) return false;
+  return !publishesBesidesPush(command);
+}
+
+function refusal(
+  request: ApprovalRequest,
+  options: DecideOptions,
+  forced: ForcePush | null,
+): string | null {
   if (options.builder && request.command && publishesCode(request.command)) {
-    return BUILDER_PUBLISH_REASON;
+    if (!soloLeasePush(request.command, options, forced)) return BUILDER_PUBLISH_REASON;
   }
+  const asking = options.askRun ? askRunRefusal(request, commandCwd(request), request.home) : null;
+  if (asking) return asking;
+  if (forced?.kind === 'refuse') return forced.reason;
   const piece = options.piece
     ? pieceRefusal(request, options.piece, relativeTo(request.roots))
     : null;
@@ -213,10 +238,14 @@ export function decide(
   allowlist: readonly string[],
   options: DecideOptions = {},
 ): Decision {
-  const refused = refusal(request, options);
+  const forced = request.command ? forcePush(request.command, options.defaultBranch ?? null) : null;
+  const refused = refusal(request, options, forced);
   if (refused) return { verdict: 'reject', reason: refused };
   if (runRules.reject.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'reject', reason: RUN_REJECTED_REASON };
+  }
+  if (forced?.kind === 'ask') {
+    return { verdict: 'ask', reason: forcePushReason(forced.branches), forcePush: forced.branches };
   }
   const always = alwaysAskReason(request, options.files ?? diskLister);
   if (always) return { verdict: 'ask', reason: always };
@@ -226,10 +255,14 @@ export function decide(
   if (request.kind === 'other' && request.title === ENTER_PLAN_MODE_TITLE) {
     return { verdict: 'allow', by: 'level', why: ENTER_PLAN_MODE_WHY };
   }
+  const pushes = request.command !== null && isGitPush(request.command);
+  if (options.worktreeAuto && !pushes) {
+    return { verdict: 'allow', by: 'level', why: WORKTREE_AUTO_WHY };
+  }
   if (modeAllows(posture, request)) return { verdict: 'allow', by: 'level' };
   if (request.kind === 'edit') return unapproved(posture);
   if (request.kind === 'execute') {
-    if (request.command && isGitPush(request.command)) {
+    if (request.command && pushes) {
       const listed = allowlistCovers(allowlist, request.command);
       return listed
         ? { verdict: 'allow', by: 'allowlist' }

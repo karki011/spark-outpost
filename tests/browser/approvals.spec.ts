@@ -311,3 +311,53 @@ test('the approval card works on a phone and in every theme', async ({ page }) =
   }
   await approval.getByRole('button', { name: 'Deny' }).click();
 });
+
+test('asks to hold before a force push and never offers Always allow', async ({ page }) => {
+  await doChat(page);
+  await send(page, 'Update the branch #leasepush');
+  const approval = card(page, /Force push\?/);
+  await expect(approval).toBeVisible({ timeout: 15_000 });
+  await expect(approval.locator('pre')).toHaveText('$ git push --force-with-lease origin feature');
+  await expect(approval).toContainText(
+    'This rewrites history on feature on the remote, whatever your permissions.',
+  );
+  await expect(approval.getByRole('button', { name: /Always allow/ })).toHaveCount(0);
+  await expect(approval.getByRole('button', { name: 'Allow', exact: true })).toHaveCount(0);
+  const hold = approval.getByRole('button', { name: 'Hold to force push' });
+  await hold.focus();
+  await page.keyboard.down(' ');
+  await page.waitForTimeout(300);
+  await page.keyboard.up(' ');
+  await expect(approval).toContainText('Released early. Nothing was pushed.');
+  await expect(approval.getByRole('status')).toHaveCount(0);
+  await hold.focus();
+  await page.keyboard.down(' ');
+  await expect(card(page, /Force push\?/).getByRole('status')).toContainText('Chose: Allow.', {
+    timeout: 5_000,
+  });
+  await page.keyboard.up(' ');
+  await expect(page.locator('.md', { hasText: 'Done. fake-force-push=allowed' })).toBeVisible({
+    timeout: 15_000,
+  });
+});
+
+test('asks before a command in an Ask chat', async ({ page }) => {
+  const response = await page.request.post('/api/projects', { data: { rootPath: appRoot } });
+  expect(response.ok()).toBe(true);
+  await openChats(page);
+  await page.getByRole('button', { name: 'New chat' }).first().click();
+  await page.locator('.ctx-repo').click();
+  const menu = page.getByRole('dialog', { name: 'Project folders' });
+  await menu.getByRole('button', { name: /^app/ }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: /^Model and effort/ })).toContainText('Plan');
+  await send(page, 'Check the site #curl');
+  const approval = card(page, /Run a command\?/);
+  await expect(approval).toBeVisible({ timeout: 15_000 });
+  await expect(approval.locator('pre')).toHaveText('$ curl -sI https://example.com');
+  await approval.getByRole('button', { name: 'Allow', exact: true }).click();
+  await expect(page.locator('.md', { hasText: 'Done. fake-curl=allowed' })).toBeVisible({
+    timeout: 15_000,
+  });
+  expect(readFileSync(notes(), 'utf8')).toBe('Remember the milk\n');
+});

@@ -1,6 +1,7 @@
 import type { RequestPermissionRequest, RequestPermissionResponse } from '@agentclientprotocol/sdk';
 import { exitPlanText } from '../../plans/plan-mode.ts';
 import type { ProviderOutput } from '../../providers/provider.ts';
+import { ASK_RUN_REASON } from '../../approvals/ask-run.ts';
 
 export interface PermissionDecision {
   response: RequestPermissionResponse;
@@ -8,7 +9,6 @@ export interface PermissionDecision {
 }
 
 export const NO_FOLDER_REASON = 'this chat has no project folder';
-export const ASK_MODE_REASON = 'Ask mode only reads files; switch to Do to allow changes';
 
 export function declineInConversation(
   request: RequestPermissionRequest,
@@ -22,7 +22,7 @@ export function declineInConversation(
     response: reject
       ? { outcome: { outcome: 'selected', optionId: reject.optionId } }
       : { outcome: { outcome: 'cancelled' } },
-    note: `Declined: ${title} (${inProject ? ASK_MODE_REASON : NO_FOLDER_REASON})`,
+    note: `Declined: ${title} (${inProject ? ASK_RUN_REASON : NO_FOLDER_REASON})`,
   };
 }
 

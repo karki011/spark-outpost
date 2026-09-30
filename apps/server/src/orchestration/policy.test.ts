@@ -16,6 +16,7 @@ import {
   isLargeDiff,
   planOnlyByRule,
   questionByRule,
+  runsCommandsByRule,
   reviewsExistingByRule,
   trivialByRule,
 } from './risk-rules.ts';
@@ -120,6 +121,24 @@ describe('risk rules', () => {
       expect(questionByRule(request), request).toBe(true);
     }
     expect(questionByRule('Any feedback? Then fix what you find')).toBe(false);
+  });
+
+  it('reads a request to run named commands or fetch a URL as an answer', () => {
+    for (const request of [
+      'Run `ls -la` and `curl -sI https://example.com | head -3`',
+      'Now please run `git log --oneline -5`',
+      'fetch https://example.com/status.json',
+    ]) {
+      expect(runsCommandsByRule(request), request).toBe(true);
+      expect(questionByRule(request), request).toBe(true);
+    }
+    for (const request of [
+      'Run the tests',
+      'Run `pnpm test` and fix the failures',
+      'Add a `--verbose` flag',
+    ]) {
+      expect(runsCommandsByRule(request), request).toBe(false);
+    }
   });
 
   it('reads a request that leads with a change verb as a build', () => {

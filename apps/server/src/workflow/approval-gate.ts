@@ -10,6 +10,8 @@ import {
   type RunEvent,
 } from '@spark-outpost/contracts';
 import { normalizeCommand } from '../approvals/commands.ts';
+import { forcePush } from '../approvals/git-commands.ts';
+import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { pieceRefusal, type PieceGuard } from '../approvals/piece-guard.ts';
 import {
   FS_WRITE_TOOL_KIND,
@@ -64,6 +66,8 @@ export interface GateDeps {
   modes?: readonly AgentModeOption[];
   posture?: ModePosture;
   builder?: boolean;
+  askRun?: boolean;
+  worktreeAuto?: boolean;
   extraAllowlist?: () => readonly string[];
   append: Append;
   waiters: ApprovalWaiters;
@@ -111,7 +115,7 @@ export function subject(request: ApprovalRequest): string {
   return request.title.trim() || 'an action';
 }
 
-function approvalPayload(request: ApprovalRequest): ApprovalPayload {
+function approvalPayload(request: ApprovalRequest, rewrites: string[] | null): ApprovalPayload {
   let budget = DIFF_BUDGET;
   let truncated = false;
   const cut = (text: string) => {
@@ -137,7 +141,14 @@ function approvalPayload(request: ApprovalRequest): ApprovalPayload {
     diffs,
     truncated,
     ...(request.plan ? { plan: request.plan } : {}),
+    ...(rewrites ? { forcePush: rewrites } : {}),
   };
+}
+
+async function forcePushDefault(request: ApprovalRequest): Promise<string | null> {
+  const root = request.roots[0]?.path;
+  if (!root || !request.command || forcePush(request.command)?.kind !== 'ask') return null;
+  return defaultBranch(root).catch(() => null);
 }
 
 function allowOption(options: readonly ApprovalOption[]): ApprovalOption | undefined {
@@ -175,14 +186,20 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
   const grants = new Set<string>();
   let waiting = 0;
 
-  const newApproval = (request: ApprovalRequest, reason: string | null): NewApproval => ({
+  const newApproval = (
+    request: ApprovalRequest,
+    reason: string | null,
+    rewrites: string[] | null = null,
+  ): NewApproval => ({
     runId: deps.runId,
     toolCallId: request.toolCallId,
     rpcId: request.rpcId,
     kind: request.kind,
     title: displayTitle(request, deps.copyOf ?? null),
-    payload: approvalPayload(request),
-    options: request.options,
+    payload: approvalPayload(request, rewrites),
+    options: rewrites
+      ? request.options.filter((option) => option.kind !== 'allow_always')
+      : request.options,
     reason,
   });
 
@@ -337,8 +354,9 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     request: ApprovalRequest,
     reason: string | null,
     signal: AbortSignal,
+    rewrites: string[] | null,
   ): Promise<GateAnswer> => {
-    const pending = await insertApproval(deps.db, newApproval(request, reason));
+    const pending = await insertApproval(deps.db, newApproval(request, reason, rewrites));
     observe(request, { verdict: 'ask', by: null, approvalId: pending.id });
     waiting += 1;
     let result: WaitResult;
@@ -377,9 +395,14 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     const allowlist = [...projectAllowlist, ...(deps.extraAllowlist?.() ?? [])];
     const decision = decide(postureOf(request), request, runRules, allowlist, {
       builder: deps.builder === true,
+      askRun: deps.askRun === true,
+      worktreeAuto: deps.worktreeAuto === true,
+      defaultBranch: await forcePushDefault(request),
       ...(deps.piece ? { piece: deps.piece } : {}),
     });
-    if (decision.verdict === 'ask') return ask(request, decision.reason, signal);
+    if (decision.verdict === 'ask') {
+      return ask(request, decision.reason, signal, decision.forcePush ?? null);
+    }
     if (decision.verdict === 'reject') {
       const denied = await insertApproval(deps.db, newApproval(request, decision.reason), {
         status: 'denied',

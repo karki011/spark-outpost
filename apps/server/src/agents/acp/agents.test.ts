@@ -83,6 +83,12 @@ describe('Claude session options', () => {
     );
   });
 
+  it('gives Ask turns with an approval gate a shell whose every command asks the gate', () => {
+    const asking = optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true, true));
+    expect(asking.tools).toEqual(['Read', 'Glob', 'Grep', 'Bash', 'Write', 'ExitPlanMode']);
+    expect(asking.settings.permissions.ask).toEqual(['Bash']);
+  });
+
   it('gives Do runs the edit, shell and todo tools and forces every change to ask, in every mode', () => {
     const options = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
     expect(options.tools).toEqual([
@@ -119,15 +125,12 @@ describe('Claude session options', () => {
     expect(agentDefinitions.codex.askMode).toBe('read-only');
   });
 
-  it('denies pushing, gh and remote changes to Builders, and only to Builders', () => {
+  it('denies gh and remote changes to Builders, and only to Builders', () => {
     const builder = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
     const deny = builder.settings.permissions.deny as string[];
-    for (const rule of [
-      'Bash(git push:*)',
-      'Bash(gh:*)',
-      'Bash(tea:*)',
-      'Bash(git remote add:*)',
-    ]) {
+    expect(BUILDER_PUBLISH_DENY_RULES).toContain('Bash(git push:*)');
+    expect(deny).not.toContain('Bash(git push:*)');
+    for (const rule of ['Bash(gh:*)', 'Bash(tea:*)', 'Bash(git remote add:*)']) {
       expect(BUILDER_PUBLISH_DENY_RULES).toContain(rule);
       expect(deny).toContain(rule);
       expect(builder.disallowedTools).toContain(rule);

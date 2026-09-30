@@ -276,14 +276,43 @@ describe('approval gate', () => {
     expect(await answer).toMatchObject({ allowed: false });
   });
 
-  it('refuses a force push even in Full auto', async () => {
+  it('refuses a plain force push even in Full auto', async () => {
     const run = await doRun(t, root, 'go', 'full-auto');
     const { gate } = gateFor(run.runId, 'full-auto');
     const answer = await gate.review(
-      commandRequest(root, 'git push --force origin main'),
+      commandRequest(root, 'git push --force origin feature'),
       new AbortController().signal,
     );
     expect(answer).toMatchObject({ allowed: false });
+  });
+
+  it('asks once, never for the run, before a lease force push even in Full auto', async () => {
+    const run = await doRun(t, root, 'go', 'full-auto');
+    const { gate, waiters } = gateFor(run.runId, 'full-auto');
+    const request = commandRequest(root, 'git push --force-with-lease origin feature');
+    const answer = gate.review(
+      {
+        ...request,
+        options: [
+          ...request.options,
+          { optionId: 'always', name: 'Always allow', kind: 'allow_always' },
+        ],
+      },
+      new AbortController().signal,
+    );
+    const id = await pendingFor(run.runId);
+    const pending = await getApproval(t.db, id);
+    expect(pending).toMatchObject({
+      reason: 'This rewrites history on feature on the remote',
+      payload: { forcePush: ['feature'] },
+    });
+    expect(pending?.options.map((option) => option.kind)).toEqual(['allow_once', 'reject_once']);
+    await expect(
+      decideApproval(t.db, t.workspaceId, id, { optionId: 'allow', scope: 'run' }),
+    ).rejects.toBeInstanceOf(ApprovalInputError);
+    await decideApproval(t.db, t.workspaceId, id, { optionId: 'allow', scope: 'once' });
+    waiters.notify(id);
+    expect(await answer).toMatchObject({ allowed: true });
   });
 
   it('answers cancelled and marks the approval cancelled when the run stops', async () => {
