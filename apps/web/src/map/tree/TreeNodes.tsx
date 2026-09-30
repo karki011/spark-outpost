@@ -1,17 +1,30 @@
-import { createContext, useContext, type ReactNode } from 'react';
-import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { createContext, memo, useContext, useSyncExternalStore, type ReactNode } from 'react';
+import { Handle, Position, useStore, type Node, type NodeProps } from '@xyflow/react';
 import { MAP_CATEGORIES, type MapArea, type MapCategory } from '@spark-outpost/contracts';
 import { ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
-import { useTooltip } from '../../ui/Tooltip.tsx';
 import { FILE_KINDS, FILE_KIND_LABELS, type FileKind } from '../file-kind.ts';
 import { KindDot } from '../JevLabel.tsx';
 import { CATEGORY_LABELS, confidenceText, labelSource } from '../map-model.ts';
-import type { Scene } from '../scene.ts';
 import type { TreeItem } from './tree-model.ts';
 
+export class ActiveStore {
+  private listeners = new Set<() => void>();
+  constructor(public active: string | null = null) {}
+
+  set(id: string | null): void {
+    if (id === this.active) return;
+    this.active = id;
+    for (const listener of this.listeners) listener();
+  }
+
+  subscribe = (listener: () => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
+}
+
 export interface TreeActions {
-  scene: Scene;
-  active: string | null;
+  active: ActiveStore;
   maxImportance: number;
   setActive: (id: string) => void;
 }
@@ -24,8 +37,12 @@ function useTree(): TreeActions {
 
 export type FlowNode = Node<{ item: TreeItem }>;
 
+const NUMBER = new Intl.NumberFormat('en-US');
+const COMPACT_BELOW = 0.45;
 const plural = (count: number, word: string) =>
-  `${count.toLocaleString('en-US')} ${word}${count === 1 ? '' : 's'}`;
+  `${NUMBER.format(count)} ${word}${count === 1 ? '' : 's'}`;
+const compactZoom = (state: { transform: [number, number, number] }) =>
+  state.transform[2] < COMPACT_BELOW;
 
 function Handles() {
   return (
@@ -65,26 +82,31 @@ export function groupTierTip(areas: readonly MapArea[], category: MapCategory): 
 }
 
 function Tier({ category, tip }: { category: MapCategory; tip: string }) {
-  const { triggerProps, tooltip } = useTooltip(tip);
   return (
-    <>
-      <span className="map-tn-tier" {...triggerProps}>
-        <i className={`map-tier ${category}`} aria-hidden="true" />
-        {CATEGORY_LABELS[category]}
-      </span>
-      {tooltip}
-    </>
+    <span className="map-tn-tier" data-tip={tip}>
+      <i className={`map-tier ${category}`} aria-hidden="true" />
+      {CATEGORY_LABELS[category]}
+    </span>
   );
 }
 
 function KindMix({ counts }: { counts: Record<FileKind, number> }) {
-  const shares = FILE_KINDS.filter((kind) => counts[kind] > 0);
+  const kinds = FILE_KINDS.filter((kind) => counts[kind] > 0);
+  const total = kinds.reduce((sum, kind) => sum + counts[kind], 0) || 1;
+  const ends = kinds.map((_, index) =>
+    kinds.slice(0, index + 1).reduce((sum, kind) => sum + counts[kind], 0),
+  );
+  const percent = (value: number) => `${((value / total) * 100).toFixed(1)}%`;
+  const stops = kinds.map(
+    (kind, index) =>
+      `var(--map-k-${kind}) ${percent(ends[index]! - counts[kind])} ${percent(ends[index]!)}`,
+  );
   return (
-    <span className="map-tn-kinds" aria-hidden="true">
-      {shares.map((kind) => (
-        <i key={kind} style={{ flex: counts[kind], background: `var(--map-k-${kind})` }} />
-      ))}
-    </span>
+    <span
+      className="map-tn-kinds"
+      aria-hidden="true"
+      style={{ background: `linear-gradient(90deg, ${stops.join(', ')})` }}
+    />
   );
 }
 
@@ -104,7 +126,7 @@ interface ShellProps {
 
 function Shell({ item, label, expanded, className, children }: ShellProps) {
   const tree = useTree();
-  const active = tree.active === item.id;
+  const active = useSyncExternalStore(tree.active.subscribe, () => tree.active.active === item.id);
   return (
     <div
       className={className}
@@ -128,11 +150,15 @@ function Changed({ count }: { count: number }) {
 
 function Importance({ value }: { value: number }) {
   const tree = useTree();
-  const share = Math.max(0.04, Math.min(1, value / (tree.maxImportance || 1)));
+  const share = Math.round(Math.max(0.04, Math.min(1, value / (tree.maxImportance || 1))) * 100);
   return (
-    <span className="map-tn-imp" aria-hidden="true">
-      <i style={{ width: `${Math.round(share * 100)}%` }} />
-    </span>
+    <span
+      className="map-tn-imp"
+      aria-hidden="true"
+      style={{
+        background: `linear-gradient(90deg, var(--map-gold) ${share}%, var(--raise) ${share}%)`,
+      }}
+    />
   );
 }
 
@@ -185,6 +211,7 @@ function unitLabel(facts: UnitFacts, open: boolean): string {
 }
 
 function UnitNode({ data }: NodeProps<FlowNode>) {
+  const compact = useStore(compactZoom);
   const { item } = data;
   const facts = unitFacts(item)!;
   if (item.container) {
@@ -203,6 +230,21 @@ function UnitNode({ data }: NodeProps<FlowNode>) {
       </div>
     );
   }
+  if (compact) {
+    return (
+      <Shell
+        item={item}
+        label={unitLabel(facts, false)}
+        expanded={false}
+        className={`map-tn map-tn-unit compact ${item.kind} ${facts.category}`}
+      >
+        <b className="map-tn-name">{facts.name}</b>
+        <span className="map-tn-count">{NUMBER.format(facts.files)}</span>
+        {facts.changed > 0 && <span className="map-tn-dot" aria-hidden="true" />}
+        <Handles />
+      </Shell>
+    );
+  }
   return (
     <Shell
       item={item}
@@ -212,7 +254,7 @@ function UnitNode({ data }: NodeProps<FlowNode>) {
     >
       <span className="map-tn-row">
         <b className="map-tn-name">{facts.name}</b>
-        <span className="map-tn-count">{facts.files.toLocaleString('en-US')}</span>
+        <span className="map-tn-count">{NUMBER.format(facts.files)}</span>
       </span>
       <span className="map-tn-path">{facts.path}</span>
       <span className="map-tn-row">
@@ -263,17 +305,15 @@ function FolderNode({ data }: NodeProps<FlowNode>) {
 }
 
 function FileNode({ data }: NodeProps<FlowNode>) {
-  const tree = useTree();
   const { item } = data;
   if (item.kind !== 'file') return null;
-  const file = tree.scene.files[item.file]!;
-  const label = `${file.path}, ${FILE_KIND_LABELS[file.kind]}, ${plural(file.fanIn, 'file')} depend on this${item.changed ? ', changed in this chat' : ''}. Enter shows details, F focuses it.`;
+  const label = `${item.path}, ${FILE_KIND_LABELS[item.fileKind]}, ${plural(item.fanIn, 'file')} depend on this${item.changed ? ', changed in this chat' : ''}. Enter shows details, F focuses it.`;
   return (
     <Shell item={item} label={label} className="map-tn map-tn-file">
-      <KindDot kind={file.kind} />
-      <span className="map-tn-fname map-mono">{file.name}</span>
+      <KindDot kind={item.fileKind} />
+      <span className="map-tn-fname map-mono">{item.name}</span>
       {item.changed && <span className="map-tn-dot" aria-hidden="true" />}
-      <span className="map-tn-count">{file.fanIn}</span>
+      <span className="map-tn-count">{item.fanIn}</span>
       <Handles />
     </Shell>
   );
@@ -282,13 +322,10 @@ function FileNode({ data }: NodeProps<FlowNode>) {
 function MoreNode({ data }: NodeProps<FlowNode>) {
   const { item } = data;
   if (item.kind !== 'more') return null;
+  const text = `${plural(item.hidden, `more ${item.unit}`)}`;
   return (
-    <Shell
-      item={item}
-      label={`Show ${plural(item.hidden, 'more file')}`}
-      className="map-tn map-tn-more"
-    >
-      +{plural(item.hidden, 'more file')}
+    <Shell item={item} label={`Show ${text}`} className="map-tn map-tn-more">
+      +{text}
       <Handles />
     </Shell>
   );
@@ -318,12 +355,14 @@ function ProjectNode({ data }: NodeProps<FlowNode>) {
   );
 }
 
+const Unit = memo(UnitNode);
+
 export const NODE_TYPES = {
-  group: UnitNode,
-  area: UnitNode,
-  folder: FolderNode,
-  file: FileNode,
-  more: MoreNode,
-  loading: LoadingNode,
-  project: ProjectNode,
+  group: Unit,
+  area: Unit,
+  folder: memo(FolderNode),
+  file: memo(FileNode),
+  more: memo(MoreNode),
+  loading: memo(LoadingNode),
+  project: memo(ProjectNode),
 };

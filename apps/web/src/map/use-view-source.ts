@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import type { Bridge } from './bridges.ts';
 import type { MapFilters } from './frame.ts';
-import type { MapGroup } from './groups.ts';
+import type { ProjectMap } from '@spark-outpost/contracts';
+import { groupAreas, type MapGroup } from './groups.ts';
 import { areaForPath } from './map-model.ts';
 import type { TreeSource } from './tree/tree-model.ts';
 import type { ChatChanges } from './use-chat-changes.ts';
@@ -29,6 +30,22 @@ function callersFirst(
   return [...projects]
     .sort((a, b) => (calls.get(b.id) ?? 0) - (calls.get(a.id) ?? 0))
     .map((project) => ({ projectId: project.id, name: project.name }));
+}
+
+export function useGroups(maps: readonly ProjectMap[]): MapGroup[] {
+  return useMemo(
+    () =>
+      groupAreas(
+        maps.flatMap((map) =>
+          map.areas.map((area) => ({
+            key: `${map.projectId}:${area.id}`,
+            projectId: map.projectId,
+            area,
+          })),
+        ),
+      ),
+    [maps],
+  );
 }
 
 export function useViewSource({

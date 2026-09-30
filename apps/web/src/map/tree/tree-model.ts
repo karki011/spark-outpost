@@ -1,5 +1,6 @@
 import type { MapArea, MapAreaDetail } from '@spark-outpost/contracts';
 import type { Bridge, LinkKind } from '../bridges.ts';
+import type { FileKind } from '../file-kind.ts';
 import type { MapFilters } from '../frame.ts';
 import type { MapGroup } from '../groups.ts';
 import { areaForPath } from '../map-model.ts';
@@ -18,8 +19,16 @@ export type TreeItem = Base &
     | { kind: 'group'; group: MapGroup; areas: MapArea[]; files: number; changed: number }
     | { kind: 'area'; area: MapArea; changed: number }
     | { kind: 'folder'; path: string; files: number; changed: number }
-    | { kind: 'file'; file: number; changed: boolean }
-    | { kind: 'more'; hidden: number; owner: string }
+    | {
+        kind: 'file';
+        file: number;
+        path: string;
+        name: string;
+        fileKind: FileKind;
+        fanIn: number;
+        changed: boolean;
+      }
+    | { kind: 'more'; hidden: number; owner: string; unit: 'file' | 'area' }
     | { kind: 'loading' }
   );
 
@@ -66,6 +75,7 @@ export interface TreeSource {
 export type EdgeLevel = 'strong' | 'more' | 'all';
 
 export const FILE_LIMIT = 24;
+export const AREA_LIMIT = 24;
 const FOLDERS_ABOVE = 12;
 const MIN_EDGES = 6;
 const EDGE_FACTOR: Record<EdgeLevel, number> = { strong: 1.2, more: 3, all: Infinity };
@@ -151,10 +161,28 @@ class Builder {
           0,
         ),
       });
-      for (const entry of areas) {
-        if (expanded) this.area(entry, group.id);
-        else this.areaRep.set(entry.key, group.id);
+      if (!expanded) {
+        for (const entry of areas) this.areaRep.set(entry.key, group.id);
+        continue;
       }
+      const limit = this.state.limits.get(group.id) ?? AREA_LIMIT;
+      const shown = areas.filter(
+        (entry, index) => index < limit || this.state.pinned.has(entry.key),
+      );
+      for (const entry of shown) this.area(entry, group.id);
+      const hidden = areas.filter((entry) => !shown.includes(entry));
+      if (hidden.length === 0) continue;
+      const id = moreId(group.id);
+      this.add({
+        id,
+        parent: group.id,
+        container: false,
+        kind: 'more',
+        hidden: hidden.length,
+        owner: group.id,
+        unit: 'area',
+      });
+      for (const entry of hidden) this.areaRep.set(entry.key, id);
     }
   }
 
@@ -217,20 +245,33 @@ class Builder {
     );
     const hidden = files.filter((file) => !shown.includes(file));
     for (const file of shown) {
-      const id = fileNodeId(scene.files[file]!.key);
+      const facts = scene.files[file]!;
+      const id = fileNodeId(facts.key);
       this.add({
         id,
         parent,
         container: false,
         kind: 'file',
         file,
+        path: facts.path,
+        name: facts.name,
+        fileKind: facts.kind,
+        fanIn: facts.fanIn,
         changed: this.source.changed.has(file),
       });
       this.fileRep.set(file, id);
     }
     if (hidden.length === 0) return;
     const id = moreId(parent);
-    this.add({ id, parent, container: false, kind: 'more', hidden: hidden.length, owner: parent });
+    this.add({
+      id,
+      parent,
+      container: false,
+      kind: 'more',
+      hidden: hidden.length,
+      owner: parent,
+      unit: 'file',
+    });
     for (const file of hidden) this.fileRep.set(file, id);
   }
 

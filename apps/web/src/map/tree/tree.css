@@ -71,6 +71,28 @@
   border-radius: var(--r);
 }
 
+.map-tn-unit.compact {
+  flex-direction: row;
+  align-items: center;
+  border-left-width: 4px;
+}
+
+.map-tn-unit.compact .map-tn-name {
+  font-size: 22px;
+}
+
+.map-tn-unit.compact .map-tn-count {
+  font-size: 18px;
+}
+
+.map-tn-unit.compact.core {
+  border-left-color: var(--map-gold);
+}
+
+.map-tn-unit.compact.shared {
+  border-left-color: color-mix(in srgb, var(--map-gold) 60%, var(--line));
+}
+
 .map-tn-unit.core {
   border-color: color-mix(in srgb, var(--map-gold) 55%, var(--line));
 }
@@ -159,24 +181,12 @@
 .map-tn-imp {
   flex: 0 0 64px;
   height: 5px;
-  overflow: hidden;
   border-radius: 999px;
-  background: var(--raise);
-}
-
-.map-tn-imp i {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--map-gold);
 }
 
 .map-tn-kinds {
-  display: flex;
   flex: 1;
-  gap: 1px;
   height: 5px;
-  overflow: hidden;
   border-radius: 999px;
 }
 

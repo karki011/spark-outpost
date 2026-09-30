@@ -106,7 +106,9 @@ export default defineConfig({
       gracefulShutdown: shutdown,
     },
     {
-      command: `${node} node_modules/vite/bin/vite.js`,
+      command: process.env.SPARK_WEB_BUILD
+        ? `${node} node_modules/vite/bin/vite.js build && ${node} node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port ${WEB_PORT} --strictPort`
+        : `${node} node_modules/vite/bin/vite.js`,
       cwd: 'apps/web',
       env: {
         SPARK_WEB_PORT: String(WEB_PORT),
@@ -115,7 +117,7 @@ export default defineConfig({
       },
       url: `http://127.0.0.1:${WEB_PORT}`,
       reuseExistingServer: false,
-      timeout: 60_000,
+      timeout: process.env.SPARK_WEB_BUILD ? 300_000 : 60_000,
       gracefulShutdown: shutdown,
     },
   ],

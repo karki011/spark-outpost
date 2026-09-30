@@ -13,7 +13,6 @@ import { FileDetailSheet } from './FileDetailSheet.tsx';
 import { FILE_KINDS } from './file-kind.ts';
 import { FocusView, type FocusTarget } from './focus/FocusView.tsx';
 import type { MapFilters as Filters } from './frame.ts';
-import { groupAreas } from './groups.ts';
 import { categoryCounts, highlights, kindCounts, needsCheck } from './map-model.ts';
 import { useMapView, useViewTips, type MapViewId } from './map-views.ts';
 import { MapEmpty, MapUnreachable, projectListView } from './MapEmpty.tsx';
@@ -29,7 +28,7 @@ import { useChatChanges } from './use-chat-changes.ts';
 import { useLocate, type Wanted } from './use-locate.ts';
 import { useMapData } from './use-map-data.ts';
 import { useMapSelection, usePhone } from './use-map-selection.ts';
-import { useViewSource } from './use-view-source.ts';
+import { useGroups, useViewSource } from './use-view-source.ts';
 import { ViewSkeleton } from './ViewSkeleton.tsx';
 import { ViewTip } from './ViewTip.tsx';
 import './map.css';
@@ -131,7 +130,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
     }
   }, [phase, scene.areas.length]);
 
-  const groups = useMemo(() => groupAreas(scene.areas), [scene.areas]);
+  const groups = useGroups(data.maps);
   const sheetIndex = sheetKey ? (scene.fileByKey.get(sheetKey) ?? null) : null;
   const flagged = useMemo(() => {
     const files = new Set<number>();

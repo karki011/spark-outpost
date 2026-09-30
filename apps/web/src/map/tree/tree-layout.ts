@@ -37,6 +37,8 @@ const COLUMN_GAP = 180;
 const ASPECT = 1.8;
 const BACKBONE = 2;
 const PER_COLUMN = 6;
+const MAX_ASPECT = 4;
+const WIDE_AFTER = 12;
 
 interface Size {
   width: number;
@@ -135,6 +137,12 @@ function arrange(
   const connected = ids.filter((id) => linked.has(id));
   const loose = ids.filter((id) => !linked.has(id));
   const top = connected.length > 0 ? layered(connected, sizes, links) : grid([], sizes);
+  if (connected.length > WIDE_AFTER && top.width > top.height * MAX_ASPECT) {
+    const order = [...connected].sort(
+      (a, b) => top.at.get(a)!.x - top.at.get(b)!.x || top.at.get(a)!.y - top.at.get(b)!.y,
+    );
+    return grid([...order, ...loose], sizes);
+  }
   const bottom = grid(loose, sizes);
   const offset = top.height > 0 && bottom.height > 0 ? top.height + RANK_GAP / 2 : top.height;
   const at = new Map(top.at);

@@ -156,4 +156,41 @@ describe('buildTree', () => {
     ]);
     expect(graph.items.filter((item) => item.parent === `d:${key}:forms`)).toHaveLength(7);
   });
+
+  it('shows the first areas of a big group and gathers the rest in a more node', () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({
+      id: `${i}`.padStart(12, 'd'),
+      root: `src/pkg/area-${i}`,
+      x: 0,
+      y: 0,
+      files: [
+        {
+          path: `src/pkg/area-${i}/a.ts`,
+          kind: 'api' as const,
+          x: 0,
+          y: 0,
+          importance: 1 - i / 100,
+        },
+      ],
+    }));
+    const manyScene = buildScene(
+      [{ projectId: PROJECT, name: 'App', map: sampleMap(PROJECT, many) }],
+      new Map(),
+    );
+    const pool = {
+      ...groupAreas(manyScene.areas)[0]!,
+      id: 'g:pool',
+      areaKeys: manyScene.areas.map((entry) => entry.key),
+    };
+    const manyGroups = [pool];
+    const hiddenKey = areaKey(PROJECT, many[29]!.id);
+    const graph = buildTree(
+      source({ scene: manyScene, groups: manyGroups, areaLinks: [], details: new Map() }),
+      state([pool.id], [hiddenKey]),
+    );
+    const inside = graph.items.filter((item) => item.parent === pool.id);
+    expect(inside.filter((item) => item.kind === 'area')).toHaveLength(25);
+    expect(inside.find((item) => item.kind === 'more')).toMatchObject({ hidden: 5, unit: 'area' });
+    expect(inside.some((item) => item.id === hiddenKey)).toBe(true);
+  });
 });

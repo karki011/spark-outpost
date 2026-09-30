@@ -10,6 +10,7 @@ function signature(input: LayoutInput): string {
 export interface TreeLayout {
   result: LayoutResult;
   signature: string;
+  fresh: boolean;
 }
 
 interface Reply {
@@ -19,7 +20,7 @@ interface Reply {
 
 export function useTreeLayout(input: LayoutInput): TreeLayout | null {
   const key = useMemo(() => signature(input), [input]);
-  const [layout, setLayout] = useState<TreeLayout | null>(null);
+  const [layout, setLayout] = useState<Omit<TreeLayout, 'fresh'> | null>(null);
   const worker = useRef<Worker | null>(null);
   const asked = useRef({ id: 0, key: '' });
 
@@ -45,5 +46,8 @@ export function useTreeLayout(input: LayoutInput): TreeLayout | null {
     worker.current.postMessage({ id: asked.current.id, input });
   }, [key, input]);
 
-  return layout;
+  return useMemo(
+    () => (layout ? { ...layout, fresh: layout.signature === key } : null),
+    [layout, key],
+  );
 }

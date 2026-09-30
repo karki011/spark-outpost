@@ -11,10 +11,18 @@ import {
   type Edge,
 } from '@xyflow/react';
 import { Segmented } from '../../ui/Segmented.tsx';
+import { useTooltip } from '../../ui/Tooltip.tsx';
 import { ZoomButton } from '../ZoomButton.tsx';
-import { NODE_TYPES, TreeContext, type FlowNode, type TreeActions } from './TreeNodes.tsx';
-import { HEADER, type LayoutResult } from './tree-layout.ts';
 import {
+  ActiveStore,
+  NODE_TYPES,
+  TreeContext,
+  type FlowNode,
+  type TreeActions,
+} from './TreeNodes.tsx';
+import { HEADER, type LayoutResult, type Placed } from './tree-layout.ts';
+import {
+  AREA_LIMIT,
   buildTree,
   FILE_LIMIT,
   revealIds,
@@ -48,7 +56,7 @@ const LEVELS = [
   { id: 'all', label: 'All' },
 ];
 const MORE_STEP = 48;
-const FIRST_ZOOM = 0.65;
+const FIRST_ZOOM = 0.5;
 const FOCUS_TRIES = 12;
 const NOT_NAVIGABLE = new Set(['project', 'loading']);
 
@@ -71,6 +79,31 @@ function absolute(items: readonly TreeItem[], result: LayoutResult): Map<string,
     });
   }
   return boxes;
+}
+
+function samePlace(node: FlowNode, placed: Placed): boolean {
+  return (
+    node.position.x === placed.x &&
+    node.position.y === placed.y &&
+    node.width === placed.width &&
+    node.height === placed.height
+  );
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+  return a.every((value, index) => value === b[index]);
+}
+
+function sameItem(a: TreeItem, b: TreeItem): boolean {
+  const left = a as unknown as Record<string, unknown>;
+  const right = b as unknown as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return (
+    keys.length === Object.keys(right).length &&
+    keys.every((key) => sameValue(left[key], right[key]))
+  );
 }
 
 function nameOf(item: TreeItem): string {
@@ -103,6 +136,8 @@ function TreeCanvas({
   const [pinned, setPinned] = useState<ReadonlySet<string>>(new Set());
   const [active, setActive] = useState<string | null>(null);
   const [level, setLevel] = useState<EdgeLevel>('strong');
+  const [tipText, setTipText] = useState('');
+  const tip = useTooltip(tipText);
   const pendingFocus = useRef<string | null>(null);
   const [handled, setHandled] = useState(0);
   const [revealTarget, setRevealTarget] = useState<string | null>(null);
@@ -126,28 +161,31 @@ function TreeCanvas({
 
   const duration = reducedMotion() ? 0 : 280;
 
+  const [nodeCache] = useState(() => new Map<string, FlowNode>());
   const nodes = useMemo<FlowNode[]>(() => {
     if (!layout) return [];
     return graph.items.flatMap((item) => {
       const placed = layout.result[item.id];
       if (!placed || (item.parent && !layout.result[item.parent])) return [];
-      return [
-        {
-          id: item.id,
-          type: item.kind,
-          position: { x: placed.x, y: placed.y },
-          ...(item.parent ? { parentId: item.parent } : {}),
-          data: { item },
-          width: placed.width,
-          height: placed.height,
-          style: { width: placed.width, height: placed.height },
-          draggable: false,
-          selectable: false,
-          focusable: false,
-        },
-      ];
+      const cached = nodeCache.get(item.id);
+      if (cached && samePlace(cached, placed) && sameItem(cached.data.item, item)) return [cached];
+      const node: FlowNode = {
+        id: item.id,
+        type: item.kind,
+        position: { x: placed.x, y: placed.y },
+        ...(item.parent ? { parentId: item.parent } : {}),
+        data: { item },
+        width: placed.width,
+        height: placed.height,
+        style: { width: placed.width, height: placed.height },
+        draggable: false,
+        selectable: false,
+        focusable: false,
+      };
+      nodeCache.set(item.id, node);
+      return [node];
     });
-  }, [graph.items, layout]);
+  }, [graph.items, layout, nodeCache]);
 
   const edges = useMemo<Edge[]>(() => {
     const shown = visibleEdges(graph, level).filter(
@@ -156,7 +194,7 @@ function TreeCanvas({
     const max = Math.max(1, ...shown.filter((edge) => !edge.bridge).map((edge) => edge.weight));
     const title = (id: string) => {
       const item = byId.get(id);
-      if (item?.kind === 'file') return source.scene.files[item.file]!.name;
+      if (item?.kind === 'file') return item.name;
       return item ? nameOf(item) : id;
     };
     return shown.map((edge) => ({
@@ -169,7 +207,7 @@ function TreeCanvas({
       focusable: false,
       selectable: false,
     }));
-  }, [graph, level, layout, byId, source.scene]);
+  }, [graph, level, layout, byId]);
 
   const centreOn = useCallback(
     (id: string, zoom?: number) => {
@@ -238,6 +276,7 @@ function TreeCanvas({
       fitted.current = true;
       void flow.fitView({ padding: 0.12, duration: 0, maxZoom: 1, minZoom: fitMin.current });
     }
+    if (!layout.fresh) return;
     const target = revealTarget;
     if (target && centred.current !== handled && layout.result[target]) {
       centred.current = handled;
@@ -259,7 +298,7 @@ function TreeCanvas({
     const file = reveal.file !== undefined;
     const opened = file ? expand : expand.filter((id) => id !== reveal.area);
     setExpanded((previous) => new Set([...previous, ...opened]));
-    if (file) setPinned((previous) => new Set([...previous, target]));
+    setPinned((previous) => new Set([...previous, reveal.area, ...(file ? [target] : [])]));
     setRevealTarget(target);
   }
   useEffect(() => {
@@ -273,8 +312,9 @@ function TreeCanvas({
         return;
       }
       if (item.kind === 'more') {
+        const base = item.unit === 'area' ? AREA_LIMIT : FILE_LIMIT;
         setLimits((previous) =>
-          new Map(previous).set(item.owner, (previous.get(item.owner) ?? FILE_LIMIT) + MORE_STEP),
+          new Map(previous).set(item.owner, (previous.get(item.owner) ?? base) + MORE_STEP),
         );
         return;
       }
@@ -343,14 +383,12 @@ function TreeCanvas({
     }
   };
 
+  const [activeStore] = useState(() => new ActiveStore());
+  useEffect(() => activeStore.set(current), [activeStore, current]);
+  const maxImportance = Math.max(0, ...source.scene.areas.map((entry) => entry.area.importance));
   const actions = useMemo<TreeActions>(
-    () => ({
-      scene: source.scene,
-      active: current,
-      maxImportance: Math.max(0, ...source.scene.areas.map((entry) => entry.area.importance)),
-      setActive,
-    }),
-    [source.scene, current],
+    () => ({ active: activeStore, maxImportance, setActive }),
+    [activeStore, maxImportance],
   );
 
   return (
@@ -363,7 +401,17 @@ function TreeCanvas({
       aria-describedby="map-tree-help"
       aria-busy={!layout || undefined}
       onKeyDown={onKeyDown}
+      onPointerOver={(event) => {
+        const anchor = (event.target as HTMLElement).closest<HTMLElement>('[data-tip]');
+        if (!anchor) return;
+        setTipText(anchor.dataset.tip ?? '');
+        tip.show(anchor);
+      }}
+      onPointerOut={(event) => {
+        if ((event.target as HTMLElement).closest('[data-tip]')) tip.triggerProps.onPointerLeave();
+      }}
     >
+      {tip.tooltip}
       <p id="map-tree-help" className="sr-only">
         Arrow keys move between boxes. Enter opens a group, area or folder, or shows a file. Escape
         closes. F focuses a file. Plus and minus zoom, 0 fits the tree.

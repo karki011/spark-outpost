@@ -81,4 +81,16 @@ describe('layoutTree', () => {
     expect(result.web!.y).toBe(result.server!.y);
     expect(result.server!.x).toBeGreaterThan(result.web!.x + result.web!.width);
   });
+
+  it('folds a long import chain into a grid instead of one very wide row', () => {
+    const nodes = Array.from({ length: 40 }, (_, i) => leaf(`n${i}`));
+    const edges = nodes
+      .slice(1)
+      .map((node, i) => ({ source: node.id, target: `n${i}`, weight: 1 }));
+    const result = layoutTree({ nodes, edges, columns: false });
+    const placed = Object.values(result);
+    const width = Math.max(...placed.map((p) => p.x + p.width));
+    const height = Math.max(...placed.map((p) => p.y + p.height));
+    expect(width / height).toBeLessThan(4);
+  });
 });
