@@ -33,10 +33,22 @@ const refresh = (runId: string, options = {}) =>
 const put = (path: string, body: object) =>
   request(app).put(path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
 const get = (path: string) => request(app).get(path).set(LOCAL_HEADERS);
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+
+async function twoEarlierTurns(conversationId: string) {
+  for (const minutes of [30, 20]) {
+    await seedTurn(t.db, conversationId, {
+      depth: 'direct',
+      request: `Earlier ${minutes}`,
+      createdAt: minutesAgo(minutes),
+    });
+  }
+}
 
 describe('outcome lifecycle', () => {
   it('records a kept change, asks once, and keeps feedback changeable', async () => {
     const conversationId = await seedConversation(t.db, t.workspaceId);
+    await twoEarlierTurns(conversationId);
     const taskId = await seedTask(t.db, conversationId);
     const runId = await seedTurn(t.db, conversationId, { taskId });
     await seedAccept(t.db, runId, 'keep');
@@ -88,21 +100,26 @@ describe('outcome lifecycle', () => {
 
   it('hides the prompt when the signals agree, unless the turn is sampled', async () => {
     const conversationId = await seedConversation(t.db, t.workspaceId);
-    const agreeing = async () => {
+    await twoEarlierTurns(conversationId);
+    const agreeing = async (minutes: number) => {
       const taskId = await seedTask(t.db, conversationId);
-      const runId = await seedTurn(t.db, conversationId, { taskId });
+      const runId = await seedTurn(t.db, conversationId, {
+        taskId,
+        createdAt: minutesAgo(minutes),
+      });
       await seedAccept(t.db, runId, 'keep');
       await seedCheck(t.db, taskId, runId, 'passed');
       return runId;
     };
-    const hidden = await refresh(await agreeing());
+    const hidden = await refresh(await agreeing(10));
     expect(hidden).toMatchObject({ prompt: null, verdict: 'good' });
-    const sampled = await refresh(await agreeing(), { random: () => 0.05 });
+    const sampled = await refresh(await agreeing(5), { random: () => 0.05 });
     expect(sampled!.prompt).toBe('sampled');
   });
 
   it('asks under an answer, never for a failed run, and not before a run ends', async () => {
     const conversationId = await seedConversation(t.db, t.workspaceId);
+    await twoEarlierTurns(conversationId);
     const answer = await seedTurn(t.db, conversationId, { depth: 'direct' });
     expect(await refresh(answer)).toMatchObject({ kind: 'answer', prompt: 'mixed' });
     const failed = await seedTurn(t.db, conversationId, { status: 'failed' });
@@ -114,8 +131,36 @@ describe('outcome lifecycle', () => {
     await put(`/api/runs/${answer}/feedback`, { rating: 'meh' }).expect(400);
   });
 
+  it('asks from the third turn on, at most once every three turns', async () => {
+    const conversationId = await seedConversation(t.db, t.workspaceId);
+    const prompts: (string | null)[] = [];
+    for (let turn = 1; turn <= 11; turn += 1) {
+      const runId = await seedTurn(t.db, conversationId, {
+        depth: 'direct',
+        request: `Turn ${turn}`,
+        createdAt: minutesAgo(60 - turn),
+      });
+      prompts.push((await refresh(runId))!.prompt);
+      if (turn === 8) await put(`/api/runs/${runId}/feedback`, { rating: 'up' }).expect(200);
+    }
+    expect(prompts).toEqual([
+      null,
+      null,
+      'mixed',
+      null,
+      null,
+      'mixed',
+      null,
+      null,
+      null,
+      null,
+      'mixed',
+    ]);
+  });
+
   it('records a revert and the reasons given', async () => {
     const conversationId = await seedConversation(t.db, t.workspaceId);
+    await twoEarlierTurns(conversationId);
     const runId = await seedTurn(t.db, conversationId, { taskId: null });
     await seedAccept(t.db, runId, 'revert');
     expect(await refresh(runId)).toMatchObject({ kind: 'change', prompt: 'mixed', verdict: 'bad' });

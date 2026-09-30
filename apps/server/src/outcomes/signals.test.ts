@@ -4,6 +4,7 @@ import {
   agreement,
   classifyFollowUp,
   correctionPattern,
+  FEEDBACK_TURN_SPACING,
   feedbackPrompt,
   requestSimilarity,
   scoreOutcome,
@@ -115,6 +116,8 @@ describe('when to show thumbs', () => {
     succeeded: true,
     signals: kinds('kept'),
     askedInTask: false,
+    turnNumber: FEEDBACK_TURN_SPACING,
+    askedRecently: false,
     roll: 0.99,
     sampleRate: 0.2,
   };
@@ -138,5 +141,14 @@ describe('when to show thumbs', () => {
     expect(feedbackPrompt({ ...base, askedInTask: true })).toBeNull();
     expect(feedbackPrompt({ ...base, kind: 'other' })).toBeNull();
     expect(feedbackPrompt({ ...base, succeeded: false })).toBeNull();
+  });
+
+  it('asks at most once every three turns, never on the first two', () => {
+    expect(FEEDBACK_TURN_SPACING).toBe(3);
+    expect(feedbackPrompt({ ...base, turnNumber: 1 })).toBeNull();
+    expect(feedbackPrompt({ ...base, turnNumber: 2, roll: 0 })).toBeNull();
+    expect(feedbackPrompt({ ...base, turnNumber: 3 })).toBe('mixed');
+    expect(feedbackPrompt({ ...base, turnNumber: 7, askedRecently: true })).toBeNull();
+    expect(feedbackPrompt({ ...base, turnNumber: 7 })).toBe('mixed');
   });
 });

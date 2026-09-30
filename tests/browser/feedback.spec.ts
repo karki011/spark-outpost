@@ -14,10 +14,21 @@ test.afterEach(() => repo.remove());
 
 const keepCard = (page: Page) =>
   page.getByRole('group', { name: 'Keep these changes?', exact: true });
-const askHow = (page: Page) => page.getByRole('group', { name: 'How did it go?' });
+
+async function ask(page: Page, text: string, turns: number): Promise<void> {
+  await send(page, text);
+  await expect(page.locator('.turn-foot')).toHaveCount(turns, { timeout: 60_000 });
+  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 60_000 });
+}
+
+async function twoEarlierTurns(page: Page): Promise<void> {
+  await ask(page, 'What does the divider component do?', 1);
+  await ask(page, 'Where is the header styled?', 2);
+}
 
 async function keptChange(page: Page, choice: 'Keep' | 'Revert'): Promise<void> {
   await crewChat(page, repo, 'Review keep');
+  if (choice === 'Keep') await twoEarlierTurns(page);
   await send(page, 'Fix the divider #build');
   await expect(keepCard(page)).toBeVisible({ timeout: 30_000 });
   await keepCard(page).getByRole('button', { name: choice, exact: true }).click();
@@ -25,10 +36,11 @@ async function keptChange(page: Page, choice: 'Keep' | 'Revert'): Promise<void> 
 }
 
 test('asks how it went after Keep, and the answer can be changed later', async ({ page }) => {
-  test.setTimeout(60_000);
+  test.setTimeout(240_000);
   await keptChange(page, 'Keep');
   const feedback = keepCard(page).getByRole('group', { name: 'How did it go?' });
   await expect(feedback).toBeVisible({ timeout: 15_000 });
+  await expect(feedback.locator('.fb-q')).toHaveText('How did it go?');
   const good = feedback.getByRole('button', { name: 'Good result' });
   await good.focus();
   await page.keyboard.press('Enter');
@@ -78,14 +90,29 @@ test('after Revert, asks what went wrong with reasons and a comment', async ({ p
   );
 });
 
-test('shows a quiet thumbs row under an answer', async ({ page }) => {
+test('keeps the thumbs in the token row, nudging only from the third turn', async ({ page }) => {
+  test.setTimeout(90_000);
   await openChats(page);
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await send(page, 'What does the divider component do?');
-  await expect(page.locator('.md', { hasText: 'You wrote' })).toBeVisible({ timeout: 15_000 });
-  const feedback = askHow(page);
+  await twoEarlierTurns(page);
+  await ask(page, 'What does the badge component do?', 3);
+  const turns = page.locator('.turn-foot');
+  await expect(turns.nth(0).locator('.fb')).toHaveClass(/quiet/, { timeout: 15_000 });
+  await expect(turns.nth(1).locator('.fb')).toHaveClass(/quiet/);
+  const feedback = turns.nth(2).getByRole('group', { name: 'How did it go?' });
   await expect(feedback).toBeVisible({ timeout: 15_000 });
-  await feedback.getByRole('button', { name: 'Bad result' }).click();
+  await expect(feedback).not.toHaveClass(/quiet/);
+  await expect(page.locator('.fb-q')).toHaveCount(0);
+  await page.mouse.move(0, 0);
+  await expect(feedback).toHaveCSS('opacity', '1');
+
+  const bad = feedback.getByRole('button', { name: 'Bad result' });
+  const meta = (await turns.nth(2).locator('.run-meta').boundingBox())!;
+  const thumb = (await bad.boundingBox())!;
+  expect(Math.abs(meta.y + meta.height / 2 - (thumb.y + thumb.height / 2))).toBeLessThan(6);
+  expect(thumb.x).toBeGreaterThan(meta.x + meta.width);
+
+  await bad.click();
   await expect(feedback.getByRole('group', { name: 'Reasons' })).toBeVisible();
   await feedback.getByRole('button', { name: 'Add a comment' }).click();
   await feedback.getByRole('textbox', { name: 'Comment (optional)' }).fill('Too vague');
@@ -94,9 +121,10 @@ test('shows a quiet thumbs row under an answer', async ({ page }) => {
 });
 
 test('stays quiet when the signals agree: just the thumbs', async ({ page }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(240_000);
   repo.commit('check.mjs', "console.log('ok');\n");
   await crewChat(page, repo, 'Review keep');
+  await twoEarlierTurns(page);
   const listed = await page.request.get('/api/projects');
   const project = ((await listed.json()) as { id: string; rootPath: string }[]).find(
     (candidate) => candidate.rootPath === repo.root,

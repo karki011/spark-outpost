@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TurnOutcome } from '@spark-outpost/contracts';
 import { outcomeKeys } from '../../api/outcomes.ts';
+import type { FeedbackVariant } from './feedback-host.ts';
 import { TurnFeedback } from './TurnFeedback.tsx';
 
 afterEach(cleanup);
@@ -22,15 +23,17 @@ const outcome = {
   signals: [],
 } as unknown as TurnOutcome;
 
-function show() {
+function show(changes: Partial<TurnOutcome> = {}, variant: FeedbackVariant = 'turn') {
   const client = new QueryClient();
-  client.setQueryData(outcomeKeys.run(runId), { outcome });
+  client.setQueryData(outcomeKeys.run(runId), { outcome: { ...outcome, ...changes } });
   render(
     <QueryClientProvider client={client}>
-      <TurnFeedback runId={runId} variant="turn" />
+      <TurnFeedback runId={runId} variant={variant} />
     </QueryClientProvider>,
   );
 }
+
+const group = (name: string) => screen.getByRole('group', { name });
 
 const note = () => screen.getByLabelText('Comment (optional)', { selector: 'textarea' });
 const reveal = () => note().closest('.fb-note-reveal') as HTMLElement;
@@ -51,5 +54,23 @@ describe('TurnFeedback comment', () => {
     expect(reveal().className).not.toContain('open');
     expect(reveal().style.height).toBe('');
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Good result' }));
+  });
+});
+
+describe('TurnFeedback under a turn', () => {
+  it('never shows the question, and stays quiet unless the turn was nudged', () => {
+    show({ prompt: 'sampled', feedback: null });
+    expect(group('How did it go?').className).not.toContain('quiet');
+    expect(screen.getByText('How did it go?').className).toBe('sr-only');
+    cleanup();
+
+    show({ prompt: null, feedback: null });
+    expect(group('How did it go?').className).toContain('quiet');
+    expect(screen.getByText('How did it go?').className).toBe('sr-only');
+  });
+
+  it('still asks out loud on the keep card when nudged', () => {
+    show({ prompt: 'mixed', feedback: null }, 'kept');
+    expect(screen.getByText('How did it go?').className).toBe('fb-q');
   });
 });

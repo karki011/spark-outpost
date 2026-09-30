@@ -69,10 +69,10 @@
 .turn-foot > .revert-done {
   flex-basis: 100%;
 }
+.turn-foot > .fb {
+  margin: 0;
+}
 .turn-foot > .fb.quiet {
-  flex-basis: auto;
-  order: 1;
-  margin: 0 0 0 auto;
   opacity: 0;
   transition: opacity 0.15s var(--out);
 }
@@ -81,16 +81,13 @@ section:hover .turn-foot > .fb.quiet,
 .turn-foot > .fb.quiet.rated {
   opacity: 1;
 }
-.turn-foot > .fb.quiet.open {
+.turn-foot > .fb.open {
   flex-basis: 100%;
 }
-.turn-foot > .fb.quiet.open .fb-line {
-  justify-content: flex-end;
-}
-.turn-foot > .fb.quiet .fb-thumb {
+.turn-foot > .fb .fb-thumb {
   padding: 4px;
 }
-.turn-foot > .fb.quiet .fb-thumb svg {
+.turn-foot > .fb .fb-thumb svg {
   width: 12px;
   height: 12px;
 }
@@ -103,9 +100,6 @@ section:hover .turn-foot > .fb.quiet,
   .turn-foot > .fb.quiet {
     transition: none;
   }
-}
-.turn-foot > .fb {
-  flex-basis: 100%;
 }
 .turn-foot:has(> .crew-foot) {
   margin-top: 14px;
