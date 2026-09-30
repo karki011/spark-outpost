@@ -54,6 +54,7 @@ interface PreviousRow {
   model_label: string | null;
   effort: string | null;
   context_tokens: number | null;
+  reasoning_tokens: number | null;
   finished_at: Date | null;
 }
 
@@ -75,6 +76,7 @@ async function resumable(
     mode,
     planning: false,
     roots: input.projectRoots,
+    keyed: key !== null,
   });
   const decision = decideResume({
     stored,
@@ -93,12 +95,13 @@ async function resumable(
       effort: previous.effort,
     },
     contextTokens: previous.context_tokens ?? 0,
+    reasoningTokens: previous.reasoning_tokens,
     lastUsedAt: previous.finished_at ?? stored.lastUsedAt,
   };
 }
 
 const PREVIOUS_COLUMNS = `r.provider, r.model, r.route->>'modelLabel' AS model_label, r.effort,
-  r.finished_at, coalesce(r.context_used, coalesce(r.input_tokens, 0)
+  r.finished_at, r.thought_tokens AS reasoning_tokens, coalesce(r.context_used, coalesce(r.input_tokens, 0)
     + coalesce(r.cached_read_tokens, 0) + coalesce(r.cached_write_tokens, 0))::int AS context_tokens`;
 
 export async function resumableTask(

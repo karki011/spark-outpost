@@ -38,6 +38,16 @@ describe('settingsHash', () => {
     expect(settingsHash({ ...settings, ...change })).not.toBe(settingsHash(settings));
   });
 
+  it('keeps a keyed session across an effort change only where the cache survives it', () => {
+    const opus = { ...settings, model: 'opus[1m]', keyed: true };
+    expect(settingsHash({ ...opus, effort: 'high' })).toBe(settingsHash(opus));
+    expect(settingsHash({ ...opus, keyed: false, effort: 'high' })).not.toBe(
+      settingsHash({ ...opus, keyed: false }),
+    );
+    const sonnet = { ...settings, keyed: true };
+    expect(settingsHash({ ...sonnet, effort: 'high' })).not.toBe(settingsHash(sonnet));
+  });
+
   it('changes when the primary repo changes', () => {
     const two = { ...settings, roots: ['/work/app', '/work/lib'] };
     expect(settingsHash({ ...two, roots: ['/work/lib', '/work/app'] })).not.toBe(settingsHash(two));

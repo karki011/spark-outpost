@@ -82,6 +82,7 @@ export async function prepareTurnSession(
     mode: input.mode,
     planning: plansThisTurn(input),
     roots: input.projectRoots,
+    keyed: !chatTurn,
   });
   const stored = await latestProviderSession(db, conversationId, key);
   const decision = decideResume({

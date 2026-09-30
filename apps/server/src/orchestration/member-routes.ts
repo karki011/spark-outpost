@@ -1,9 +1,12 @@
 import { agentLabel, nextCrewName, type AgentPick, type AgentRole } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../advisor/policy.ts';
+import type { Queryable } from '../persistence/db.ts';
 import { jevLabel, samePickModel, whyLine } from '../model-cards/why.ts';
 import { insertDecision, usedNames } from '../persistence/orchestrations.ts';
 import { complexByBreadth, complexByJev, firstSignal } from './builder-complexity.ts';
 import type { ResumableSession, SessionChoice } from './cache-switch.ts';
+import { ESCALATED_KINDS, type EscalationKind, type PriorEscalation } from './escalation.ts';
+import { handbackNote } from './handoff.ts';
 import { belowFloor, floorReason, type FloorRole } from './model-floor.ts';
 import { SCORED_MODELS, scoreText } from './route-score.ts';
 import { keepSession, resumableChat, resumableTask, type KeptRoute } from './session-keep.ts';
@@ -74,14 +77,46 @@ function resolvedFrom(route: MemberRoute): ResolvedRoute {
   return { route: rest, ...(sessionChoice ? { session: sessionChoice } : {}) };
 }
 
+interface EscalationRow {
+  escalation: { kind: EscalationKind; model: string; modelLabel: string | null } | null;
+}
+
+export async function priorEscalation(
+  db: Queryable,
+  taskId: string,
+): Promise<PriorEscalation | null> {
+  const { rows } = await db.query<EscalationRow>(
+    `SELECT route->'escalation' AS escalation FROM runs
+     WHERE task_id = $1 AND role = 'builder' AND parent_run_id IS NOT NULL
+     ORDER BY created_at DESC LIMIT 50`,
+    [taskId],
+  );
+  const index = rows.findIndex((row) => row.escalation && ESCALATED_KINDS.has(row.escalation.kind));
+  const found = rows[index]?.escalation;
+  if (!found) return null;
+  return { ...found, unseen: index === 0 };
+}
+
+function withHandback(
+  s: Session,
+  route: MemberRoute,
+  session: ResumableSession | null,
+  prior: PriorEscalation | null,
+): MemberRoute {
+  if (!session || prior?.kind !== 'brief' || !prior.unseen) return route;
+  if (route.pick.model !== session.pick.model) return route;
+  return { ...route, handback: handbackNote(prior.modelLabel ?? prior.model, s.input.history) };
+}
+
 async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
   const facts = builderFacts(s);
   if (s.flow.solo) return { route: soloRoute(s.route) };
   const session = s.taskId
     ? await resumableTask(s.deps.db, s.input, builderKey(s.taskId), s.deps.sessionLimits?.idleMs)
     : null;
-  const route = routeBuilder(s.route, { ...facts, session }, jevTier(s));
-  if (route.score) return resolvedFrom(route);
+  const prior = s.taskId ? await priorEscalation(s.deps.db, s.taskId) : null;
+  const route = routeBuilder(s.route, { ...facts, session, prior }, jevTier(s));
+  if (route.score) return resolvedFrom(withHandback(s, route, session, prior));
   const kept = keepBuilderSession(route, session, topReason(route, facts, s));
   return { route: kept.route, ...(kept.choice ? { session: kept.choice } : {}) };
 }
@@ -181,6 +216,7 @@ export async function recordRoute(
         jevTier: jev?.tier ?? null,
         jevTierConfidence: jev?.routeConfidence ?? null,
         ...(resolved.session ? { session: resolved.session } : {}),
+        ...(route.escalation ? { escalation: route.escalation } : {}),
         ...(score
           ? {
               signals: score.signals,

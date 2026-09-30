@@ -56,14 +56,14 @@ function optional(text: string | null): string[] {
   return text ? [text] : [];
 }
 
-function cap(text: string, limit: number): string {
+export function cap(text: string, limit: number): string {
   const trimmed = text.trim();
   return trimmed.length > limit
     ? `${trimmed.slice(0, limit)}\n[cut at ${limit} characters]`
     : trimmed;
 }
 
-function section(title: string, body: string): string {
+export function section(title: string, body: string): string {
   return `## ${title}\n${body}`;
 }
 

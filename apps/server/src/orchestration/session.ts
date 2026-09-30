@@ -159,6 +159,7 @@ export interface Session {
   suggestions?: string[];
   integrator?: Seat | null;
   coordination?: Coordination | null;
+  handoff?: string | null;
 }
 
 export const COMMAND_READER_TOOL_CALL_LIMIT = 120;
@@ -204,6 +205,10 @@ export function fitToolLimit(s: Session, provider: string): void {
 
 export function builderKey(taskId: string): string {
   return `${taskId}:builder`;
+}
+
+export function escalatedKey(taskId: string): string {
+  return `${taskId}:escalated`;
 }
 
 export async function save(s: Session, patch: OrchestrationPatch = {}): Promise<void> {
