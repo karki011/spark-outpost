@@ -68,6 +68,17 @@ export const fileKey = (projectId: string, path: string) => `${projectId}:${path
 const PROJECT_GAP = 0.3;
 const AREA_PAD = 14;
 const CROSS_PER_AREA = 2;
+const EDGE_KEY = 2 ** 26;
+const kinds = new Map<string, FileKind>();
+
+function kindOf(path: string): FileKind {
+  let kind = kinds.get(path);
+  if (!kind) {
+    kind = fileKind(path);
+    kinds.set(path, kind);
+  }
+  return kind;
+}
 
 function projectExtent(areas: readonly MapArea[]) {
   if (areas.length === 0) return { cx: 0, cy: 0, radius: 400 };
@@ -159,7 +170,7 @@ function addFiles(scene: Scene, area: SceneArea, detail: MapAreaDetail) {
       lines: file.lines,
       language: file.language,
       reasons: file.reasons,
-      kind: fileKind(file.path),
+      kind: kindOf(file.path),
     });
     scene.outs.push([]);
     scene.ins.push([]);
@@ -168,12 +179,12 @@ function addFiles(scene: Scene, area: SceneArea, detail: MapAreaDetail) {
   area.complete = detail.nextOffset === null;
 }
 
-function addEdges(scene: Scene, projectId: string, detail: MapAreaDetail, seen: Set<string>) {
+function addEdges(scene: Scene, projectId: string, detail: MapAreaDetail, seen: Set<number>) {
   for (const edge of detail.edges) {
     const from = scene.fileByKey.get(fileKey(projectId, edge.from));
     const to = scene.fileByKey.get(fileKey(projectId, edge.to));
     if (from === undefined || to === undefined || from === to) continue;
-    const id = `${from}>${to}`;
+    const id = from * EDGE_KEY + to;
     if (seen.has(id)) continue;
     seen.add(id);
     scene.outs[from]!.push(to);
@@ -248,7 +259,7 @@ export function buildScene(
     const detail = details.get(area.key);
     if (detail) addFiles(scene, area, detail);
   }
-  const seen = new Set<string>();
+  const seen = new Set<number>();
   for (const area of scene.areas) {
     const detail = details.get(area.key);
     if (!detail) continue;

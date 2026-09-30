@@ -148,6 +148,13 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
         : showUnmatched
           ? UNMATCHED_W
           : 0;
+  const counts = useMemo(
+    () => ({
+      categories: scene.areas.length > 0 ? categoryCounts(scene) : null,
+      kinds: kindCounts(scene),
+    }),
+    [scene],
+  );
   const skeleton = data.pending || (scene.areas.length === 0 && phase !== 'failed');
 
   const view = useMemo<MapView>(
@@ -324,8 +331,8 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
       />
       <MapFilters
         filters={filters}
-        categoryCounts={categoryCounts(scene)}
-        kindCounts={kindCounts(scene)}
+        categoryCounts={counts.categories}
+        kindCounts={counts.kinds}
         bridges={combined ? data.bridges : null}
         unmatched={
           data.unmatched ? data.unmatched.routes.length + data.unmatched.calls.length : null
@@ -418,7 +425,6 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
         {!listMode && showUnmatched && data.unmatched && (
           <UnmatchedPanel
             unmatched={data.unmatched}
-            projectNames={new Map(data.projects.map((p) => [p.id, p.name]))}
             onPick={pickUnmatched}
             onHover={(endpoint) =>
               setFlagHover(endpoint ? fileKey(endpoint.projectId, endpoint.file) : null)

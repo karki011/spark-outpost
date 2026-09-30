@@ -1,16 +1,38 @@
 import { clamp } from './camera.ts';
 import { areaOnScreen } from './draw-sky.ts';
 import { shortName } from './file-kind.ts';
-import { LABEL_ALPHA, fileVisible, type Frame } from './frame.ts';
+import { LABEL_ALPHA, fileVisible, type Frame, type Rect } from './frame.ts';
 import { placeLabels, splitName, type LabelRequest, type Obstacle } from './labels.ts';
 import { STAR_NAMES_PX } from './lod.ts';
 import type { SceneArea } from './scene.ts';
 
 const CATEGORY_RANK = { core: 3, shared: 2, feature: 1 } as const;
+const splitCache = new Map<string, string[]>();
+
+function nameLines(name: string): string[] {
+  let split = splitCache.get(name);
+  if (!split) {
+    split = splitName(name.toUpperCase());
+    splitCache.set(name, split);
+  }
+  return split;
+}
 const MIN_LABEL_FILES = 3;
 
+const widths = new Map<string, number>();
+
 function fontSize(frame: Frame): number {
-  return clamp(11 * Math.pow(frame.zoom, 0.25), 11, 15);
+  return Math.round(clamp(11 * Math.pow(frame.zoom, 0.25), 11, 15) * 2) / 2;
+}
+
+function textWidth(ctx: CanvasRenderingContext2D, text: string): number {
+  const key = `${ctx.font}|${ctx.letterSpacing}|${text}`;
+  let width = widths.get(key);
+  if (width === undefined) {
+    width = ctx.measureText(text).width;
+    widths.set(key, width);
+  }
+  return width;
 }
 
 function labelCircle(frame: Frame, area: SceneArea): { x: number; y: number; r: number } {
@@ -70,9 +92,9 @@ export function drawAreaLabels(frame: Frame): void {
   const requests: LabelRequest[] = [];
   for (const area of shown) {
     if (area.area.fileCount < MIN_LABEL_FILES && !highlighted(frame, area.index)) continue;
-    const lines = splitName(area.area.name.toUpperCase());
+    const lines = nameLines(area.area.name);
     words.set(area.index, lines);
-    const width = Math.max(...lines.map((text) => ctx.measureText(text).width)) + 12;
+    const width = Math.max(...lines.map((text) => textWidth(ctx, text))) + 12;
     requests.push({
       id: area.index,
       width,
@@ -82,10 +104,12 @@ export function drawAreaLabels(frame: Frame): void {
     });
   }
   const visibleWidth = frame.viewport.width - frame.viewport.inset;
-  const placements = placeLabels(requests, obstacles(frame, shown), {
-    width: visibleWidth,
-    height: frame.viewport.height,
-  });
+  const placements = placeLabels(
+    requests,
+    obstacles(frame, shown),
+    { width: visibleWidth, height: frame.viewport.height },
+    frame.reserved,
+  );
   const open = frame.network?.areaIndex ?? -1;
   for (const placement of placements) {
     const area = view.scene.areas[placement.id]!;
@@ -159,7 +183,7 @@ export function drawStarNames(frame: Frame): void {
       names.set(star, name);
       requests.push({
         id: star,
-        width: ctx.measureText(name).width + 8,
+        width: textWidth(ctx, name) + 8,
         height: 14,
         x: frame.sx(x),
         y: frame.sy(y),
@@ -169,15 +193,14 @@ export function drawStarNames(frame: Frame): void {
     }
   }
   if (requests.length === 0) return;
-  const reserved = frame.labels.map((r): [number, number, number, number] => [
-    r.x,
-    r.y,
-    r.x + r.w,
-    r.y + r.h,
-  ]);
+  const reserved: Rect[] = [
+    ...frame.reserved,
+    ...frame.labels.map((r): Rect => [r.x, r.y, r.x + r.w, r.y + r.h]),
+  ];
+  const stars = requests.map((request) => ({ x: request.x, y: request.y, weight: 4 }));
   const placements = placeLabels(
     requests,
-    [],
+    stars,
     { width: frame.viewport.width - frame.viewport.inset, height: frame.viewport.height },
     reserved,
   );

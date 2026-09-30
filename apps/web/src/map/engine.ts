@@ -11,19 +11,19 @@ import {
   type Camera,
   type Viewport,
 } from './camera.ts';
-import { drawBridges, drawBridgeSparks } from './draw-bridges.ts';
+import { drawBridgeLabels, drawBridges, drawBridgeSparks } from './draw-bridges.ts';
 import { drawAreaLabels, drawStarNames } from './draw-labels.ts';
 import { drawNetwork } from './draw-network.ts';
 import { drawOverlay, overlayAnimates } from './draw-overlay.ts';
+import { drawBackground } from './draw-grid.ts';
 import {
   areaOnScreen,
-  drawBackground,
   drawConstellations,
   drawCrossLines,
   drawSkeleton,
   drawStars,
 } from './draw-sky.ts';
-import type { Frame, HoverTarget, LabelRect, BridgeGeometry, MapView } from './frame.ts';
+import type { BridgeGeometry, Frame, HoverTarget, LabelRect, MapView, Rect } from './frame.ts';
 import type { LoadCandidate } from './lod.ts';
 import { carryOver } from './carry-over.ts';
 import { NetworkRunner, networkBounds, networkFor, remapNetwork, type Network } from './network.ts';
@@ -42,6 +42,7 @@ export interface EngineCallbacks {
   announce: (text: string) => void;
   revealed: (shown: number, total: number, last: number) => void;
   wantFiles: (candidates: LoadCandidate[]) => void;
+  reserved: () => Rect[];
 }
 
 const TRANSITION_MS = 900;
@@ -70,8 +71,6 @@ export class MapEngine {
   drawn = new Uint8Array(0);
   reduced: boolean;
   private readonly context: CanvasRenderingContext2D;
-  private readonly base: HTMLCanvasElement;
-  private readonly baseContext: CanvasRenderingContext2D;
   private readonly runner: NetworkRunner;
   private palette: Palette;
   private dpr = 1;
@@ -83,7 +82,7 @@ export class MapEngine {
   pinned: { index: number; at: number } | null = null;
   private stars = new Uint8Array(0);
   private spatial: PointIndex | null = null;
-  private baseDirty = true;
+  private dirty = true;
   private requested = 0;
   private lastTime = 0;
   private lastLod = 0;
@@ -94,8 +93,6 @@ export class MapEngine {
     this.canvas = canvas;
     this.callbacks = callbacks;
     this.context = canvas.getContext('2d')!;
-    this.base = document.createElement('canvas');
-    this.baseContext = this.base.getContext('2d')!;
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.palette = readPalette(canvas.parentElement ?? document.body);
     this.runner = new NetworkRunner((update) => {
@@ -126,10 +123,8 @@ export class MapEngine {
   resize(width: number, height: number): void {
     this.dpr = Math.min(2, devicePixelRatio || 1);
     this.viewport = { ...this.viewport, width, height };
-    for (const canvas of [this.canvas, this.base]) {
-      canvas.width = Math.round(width * this.dpr);
-      canvas.height = Math.round(height * this.dpr);
-    }
+    this.canvas.width = Math.round(width * this.dpr);
+    this.canvas.height = Math.round(height * this.dpr);
     if (this.view) this.fitK = fitZoom(this.view.scene.bounds, this.viewport, this.pad());
     if (this.view && this.autoFit && !this.network) this.camera = this.fitCamera();
     this.invalidate();
@@ -348,7 +343,7 @@ export class MapEngine {
   }
 
   invalidate(): void {
-    this.baseDirty = true;
+    this.dirty = true;
     this.request();
   }
 
@@ -380,6 +375,7 @@ export class MapEngine {
       drawn: this.drawn,
       labels: [],
       bridgeGeometry: [],
+      reserved: [],
     };
   }
 
@@ -414,7 +410,8 @@ export class MapEngine {
     const ctx = frame.ctx;
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.drawn.fill(0);
-    drawBackground(frame);
+    frame.reserved.push(...this.callbacks.reserved());
+    drawBackground(frame, this.dpr);
     drawSkeleton(frame);
     drawCrossLines(frame);
     if (frame.view.bridges.length > 0) drawBridges(frame);
@@ -422,6 +419,7 @@ export class MapEngine {
     drawStars(frame);
     drawNetwork(frame);
     drawAreaLabels(frame);
+    if (frame.view.bridges.length > 0) drawBridgeLabels(frame);
     drawStarNames(frame);
     this.labels = frame.labels;
     this.bridgeGeometry = frame.bridgeGeometry;
@@ -431,21 +429,13 @@ export class MapEngine {
     this.requested = 0;
     if (!this.view || this.viewport.width === 0) return;
     const moving = this.step(now);
-    if (moving) this.baseDirty = true;
-    const base = this.frame(this.baseContext, now);
-    if (this.baseDirty) {
-      this.drawBase(base);
-      this.baseDirty = false;
-      this.maybeLoad(now);
-    }
-    const ctx = this.context;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(this.base, 0, 0);
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    const overlay = { ...base, ctx, labels: this.labels, bridgeGeometry: this.bridgeGeometry };
-    drawBridgeSparks(overlay);
-    drawOverlay(overlay);
-    if (moving || overlayAnimates(overlay)) this.request();
+    const frame = this.frame(this.context, now);
+    this.drawBase(frame);
+    if (this.dirty || moving) this.maybeLoad(now);
+    this.dirty = false;
+    drawBridgeSparks(frame);
+    drawOverlay(frame);
+    if (moving || overlayAnimates(frame)) this.request();
   };
 
   private maybeLoad(now: number): void {
@@ -460,7 +450,7 @@ export class MapEngine {
 
   private emitLoad(): void {
     if (!this.view) return;
-    const frame = this.frame(this.baseContext, performance.now());
+    const frame = this.frame(this.context, performance.now());
     this.callbacks.wantFiles(
       this.view.scene.areas.map((area) => ({
         key: area.key,

@@ -1,5 +1,11 @@
+const SPAN = 1 << 20;
+
+function cellKey(cx: number, cy: number): number {
+  return (cx + SPAN / 2) * SPAN + (cy + SPAN / 2);
+}
+
 export class PointIndex {
-  private readonly cells = new Map<string, number[]>();
+  private readonly cells = new Map<number, number[]>();
 
   constructor(
     private readonly size: number,
@@ -15,8 +21,8 @@ export class PointIndex {
     }
   }
 
-  private key(x: number, y: number): string {
-    return `${Math.floor(x / this.size)},${Math.floor(y / this.size)}`;
+  private key(x: number, y: number): number {
+    return cellKey(Math.floor(x / this.size), Math.floor(y / this.size));
   }
 
   nearest(x: number, y: number, reach: (index: number) => number, maxReach: number): number {
@@ -28,7 +34,7 @@ export class PointIndex {
     const y1 = Math.floor((y + maxReach) / this.size);
     for (let cx = x0; cx <= x1; cx += 1) {
       for (let cy = y0; cy <= y1; cy += 1) {
-        for (const index of this.cells.get(`${cx},${cy}`) ?? []) {
+        for (const index of this.cells.get(cellKey(cx, cy)) ?? []) {
           const dx = this.xs[index]! - x;
           const dy = this.ys[index]! - y;
           const distance = dx * dx + dy * dy;

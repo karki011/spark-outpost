@@ -344,3 +344,79 @@ export async function serveMap(page: Page, fixture: MapFixture): Promise<void> {
     return body ? json(route, body) : json(route, { error: 'Not found' }, 404);
   });
 }
+
+const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+
+function spiral(index: number, spacing: number): [number, number] {
+  const radius = spacing * Math.sqrt(index + 0.5);
+  return [Math.cos(index * GOLDEN) * radius, Math.sin(index * GOLDEN) * radius];
+}
+
+export function syntheticFixture(
+  projectId: string,
+  fileCount: number,
+  areaCount: number,
+): MapFixture {
+  const fixture = new MapFixture();
+  const perArea = Math.ceil(fileCount / areaCount);
+  const areaRadius = Math.sqrt(perArea) * 7 + 14;
+  const name = (root: string, i: number) =>
+    i % 5 === 0 ? `${root}/View-${i}.tsx` : `${root}/part-${i}.ts`;
+  const files = new Map<string, FixtureFile[]>();
+  const edges: [string, string][] = [];
+  const areas: MapArea[] = Array.from({ length: areaCount }, (_, a) => {
+    const id = hex12(`${projectId}:area-${a}`);
+    const root = `src/area-${a}`;
+    const list = Array.from({ length: perArea }, (_, i): FixtureFile => {
+      const [x, y] = spiral(i, 7);
+      const path = name(root, i);
+      if (i > 0) edges.push([path, name(root, Math.floor((i - 1) / 2))]);
+      return {
+        path,
+        x,
+        y,
+        importance: 1 / (1 + i * 0.08),
+        fanIn: Math.max(0, perArea - i) % 17,
+        fanOut: 1,
+        reasons: [`imported by ${i % 17}`],
+        lines: 40,
+      };
+    });
+    files.set(id, list);
+    const [x, y] = spiral(a, areaRadius * 1.9);
+    return {
+      id,
+      root,
+      source: 'folder',
+      package: '',
+      reason: 'folder',
+      name: `Area ${a}`,
+      description: '',
+      category: (['core', 'shared', 'feature'] as const)[a % 3]!,
+      categorySource: 'rules',
+      kind: 'ui',
+      confidence: 0.5 + (a % 50) / 100,
+      fileCount: list.length,
+      lineCount: list.length * 40,
+      fanIn: 0,
+      fanOut: 0,
+      importance: 1,
+      topFiles: list.slice(0, 5).map((f) => f.path),
+      x,
+      y,
+      radius: areaRadius,
+    };
+  });
+  const areaEdges = areas
+    .slice(1)
+    .map((area, index) => ({ from: area.id, to: areas[index]!.id, weight: 6 }));
+  fixture.add({
+    projectId,
+    status: status(perArea * areaCount, areaCount, edges.length),
+    areas,
+    areaEdges,
+    files,
+    edges,
+  });
+  return fixture;
+}
