@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import type * as acp from '@agentclientprotocol/sdk';
 import { write, type RoleTurn } from './fake-acp-roles.ts';
@@ -12,7 +12,8 @@ interface ParallelPiece {
 }
 
 const RESUMED = 'Continue where you stopped';
-const HOLD_MS: Record<string, number> = { P1: 700, P2: 1_400 };
+const HOLD_MS = 700;
+const STORE_WAIT_MS = 30_000;
 
 function parallelPieces(text: string): ParallelPiece[] {
   const migrations = text.includes('#migrations');
@@ -89,6 +90,19 @@ function mainOfCopy(cwd: string): string {
   return resolve(cwd, '..', '..', '..');
 }
 
+async function builtStore(folder: string): Promise<boolean> {
+  const text = await readFile(join(folder, 'store.ts'), 'utf8').catch(() => '');
+  return text.includes('built by P1') || text.includes('reconciled');
+}
+
+async function afterStore(turn: RoleTurn): Promise<void> {
+  const until = Date.now() + STORE_WAIT_MS;
+  while (Date.now() < until && !turn.signal.aborted) {
+    if ((await builtStore(turn.cwd)) || (await builtStore(mainOfCopy(turn.cwd)))) return;
+    await pause(50, turn.signal);
+  }
+}
+
 async function spendContext(turn: RoleTurn): Promise<void> {
   await turn.update({ sessionUpdate: 'usage_update', used: 100_000, size: 200_000 });
   await turn.update({
@@ -103,8 +117,8 @@ async function spendContext(turn: RoleTurn): Promise<void> {
 export async function pieceExtras(turn: RoleTurn, key: string): Promise<void> {
   const tagged = (tag: string) => turn.text.includes(tag);
   const firstTurn = !turn.text.includes(RESUMED) && !turn.text.includes('checks failed');
-  const hold = HOLD_MS[key];
-  if (tagged('#parallel') && hold && firstTurn) await pause(hold, turn.signal);
+  if (tagged('#parallel') && key === 'P1' && firstTurn) await pause(HOLD_MS, turn.signal);
+  if (tagged('#parallel') && key === 'P2' && firstTurn) await afterStore(turn);
   if (tagged('#slowpieces') && key !== 'P3') await untilStopped(turn.signal);
   if (tagged('#piecebudget') && key !== 'P3' && firstTurn) {
     if (key === 'P1') await spendContext(turn);
