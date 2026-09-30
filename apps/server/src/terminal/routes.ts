@@ -1,9 +1,10 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { z } from 'zod';
 import {
   createShellRequestSchema,
   createTerminalRequestSchema,
   type CreateShellResponse,
+  type ShellBusyResponse,
 } from '@spark-outpost/contracts';
 import { BadRequestError, parseBody } from '../api/validation.ts';
 import type { Queryable } from '../persistence/db.ts';
@@ -15,6 +16,12 @@ export interface TerminalRouteDeps {
   db: Queryable;
   workspaceId: string;
   terminals: TerminalSessions;
+}
+
+function sessionId(req: Request): string {
+  const id = z.uuid().safeParse(req.params.id);
+  if (!id.success) throw new BadRequestError('The id must be a UUID.');
+  return id.data;
 }
 
 export function terminalRoutes({ db, workspaceId, terminals }: TerminalRouteDeps): Router {
@@ -37,10 +44,13 @@ export function terminalRoutes({ db, workspaceId, terminals }: TerminalRouteDeps
     res.status(201).json(response);
   });
 
+  router.get('/terminal/sessions/:id/busy', (req, res) => {
+    const response: ShellBusyResponse = { command: terminals.runningCommand(sessionId(req)) };
+    res.json(response);
+  });
+
   router.delete('/terminal/sessions/:id', (req, res) => {
-    const id = z.uuid().safeParse(req.params.id);
-    if (!id.success) throw new BadRequestError('The id must be a UUID.');
-    terminals.kill(id.data);
+    terminals.kill(sessionId(req));
     res.status(204).end();
   });
 

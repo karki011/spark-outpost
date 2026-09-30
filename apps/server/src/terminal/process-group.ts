@@ -1,4 +1,17 @@
 import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+
+export interface ProcessRow {
+  pid: number;
+  ppid: number;
+  foregroundGroup: number;
+  args: string;
+}
+
+const PS_LINE = /^(\d+)\s+(\d+)\s+(-?\d+)\s+(.*)$/;
+const INTERPRETERS = /^(node|bun|deno|python[\d.]*|ruby|perl)$/;
+const SCRIPT_EXTENSION = /\.(c?js|mjs|py|rb)$/;
+const COMMAND_MAX_LENGTH = 60;
 
 export function isAlive(pid: number): boolean {
   try {
@@ -11,10 +24,10 @@ export function isAlive(pid: number): boolean {
 
 export function descendantsOf(
   root: number,
-  table: ReadonlyArray<[pid: number, ppid: number]>,
+  table: ReadonlyArray<Pick<ProcessRow, 'pid' | 'ppid'>>,
 ): number[] {
   const children = new Map<number, number[]>();
-  for (const [pid, ppid] of table) children.set(ppid, [...(children.get(ppid) ?? []), pid]);
+  for (const { pid, ppid } of table) children.set(ppid, [...(children.get(ppid) ?? []), pid]);
   const found: number[] = [];
   const queue = [root];
   while (queue.length > 0) {
@@ -26,15 +39,51 @@ export function descendantsOf(
   return found;
 }
 
-function processTable(): Array<[number, number]> {
+export function commandLabel(args: string): string {
+  const [program = '', ...rest] = args.trim().split(/\s+/);
+  const name = path.basename(program).replace(/^-/, '');
+  const [script, ...scriptArgs] = rest;
+  const words =
+    INTERPRETERS.test(name) && script?.includes('/')
+      ? [path.basename(script).replace(SCRIPT_EXTENSION, ''), ...scriptArgs]
+      : [name, ...rest];
+  const label = words.join(' ');
+  return label.length > COMMAND_MAX_LENGTH ? `${label.slice(0, COMMAND_MAX_LENGTH - 1)}…` : label;
+}
+
+export function runningCommand(root: number, table: readonly ProcessRow[]): string | null {
+  const descendants = new Set(descendantsOf(root, table));
+  const running = table.filter((row) => descendants.has(row.pid));
+  const foreground = table.find((row) => row.pid === root)?.foregroundGroup;
+  const main =
+    running.find((row) => row.pid === foreground) ??
+    running.find((row) => row.ppid === root) ??
+    running[0];
+  return main ? commandLabel(main.args) : null;
+}
+
+export function processTable(): ProcessRow[] {
+  let output: string;
   try {
-    return execFileSync('/bin/ps', ['-A', '-o', 'pid=,ppid='], { encoding: 'utf8' })
-      .trim()
-      .split('\n')
-      .map((line) => line.trim().split(/\s+/).map(Number) as [number, number]);
+    output = execFileSync('/bin/ps', ['-A', '-o', 'pid=,ppid=,tpgid=,args='], {
+      encoding: 'utf8',
+    });
   } catch {
     return [];
   }
+  const rows: ProcessRow[] = [];
+  for (const line of output.split('\n')) {
+    const match = PS_LINE.exec(line.trim());
+    if (!match) continue;
+    const [, pid, ppid, foregroundGroup, args] = match;
+    rows.push({
+      pid: Number(pid),
+      ppid: Number(ppid),
+      foregroundGroup: Number(foregroundGroup),
+      args: args ?? '',
+    });
+  }
+  return rows;
 }
 
 function signal(pid: number, name: NodeJS.Signals) {

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import '@xterm/xterm/css/xterm.css';
 import '../terminal.css';
 import './terminal-dock.css';
@@ -8,15 +8,23 @@ import { DockResizer } from './DockResizer.tsx';
 import { useDockHeight } from './dock-height.ts';
 import {
   attachedShell,
+  chatOf,
   closeShell,
   hideShells,
   newShell,
   parkHost,
   selectShell,
+  shellCommand,
   useChatShells,
   type ShellTab,
 } from './shell-store.ts';
+import { StopShellConfirm } from './StopShellConfirm.tsx';
 import { TERMINAL_BUTTON_ID, TERMINAL_DOCK_ID } from './TerminalButton.tsx';
+
+interface Stopping {
+  tabId: string;
+  command: string;
+}
 
 export function tabNames(tabs: readonly ShellTab[]): Map<string, string> {
   const seen = new Map<string, number>();
@@ -35,11 +43,13 @@ function DockTab({
   tab,
   name,
   active,
+  onClose,
 }: {
   chatId: string;
   tab: ShellTab;
   name: string;
   active: boolean;
+  onClose: () => void;
 }) {
   const classes = ['term-tab', active ? 'on' : '', tab.status === 'ended' ? 'ended' : ''];
   return (
@@ -65,7 +75,8 @@ function DockTab({
         type="button"
         className="term-tab-x"
         aria-label={`Close ${name}`}
-        onClick={() => closeShell(chatId, tab.id)}
+        data-tab={tab.id}
+        onClick={onClose}
       >
         <XIcon />
       </button>
@@ -76,7 +87,10 @@ function DockTab({
 export function TerminalDock({ chatId }: { chatId: string }) {
   const shells = useChatShells(chatId);
   const [height, setHeight] = useDockHeight();
+  const section = useRef<HTMLElement>(null);
   const body = useRef<HTMLDivElement>(null);
+  const [stopping, setStopping] = useState<Stopping | null>(null);
+  const [announcement, setAnnouncement] = useState('');
   const addTip = useTooltip('New terminal');
   const hideTip = useTooltip('Hide terminal');
   const active = shells.tabs.find((tab) => tab.id === shells.activeId) ?? null;
@@ -93,9 +107,37 @@ export function TerminalDock({ chatId }: { chatId: string }) {
 
   if (!shells.open) return null;
   const names = tabNames(shells.tabs);
+  const stoppingTab = shells.tabs.find(
+    (tab) => tab.id === stopping?.tabId && tab.status === 'open',
+  );
+
+  const requestClose = async (tab: ShellTab) => {
+    const command = await shellCommand(chatId, tab.id);
+    if (!command) {
+      closeShell(chatId, tab.id);
+      return;
+    }
+    const name = names.get(tab.id) ?? 'Terminal';
+    setAnnouncement(`${command} is still running in ${name}. Hold to stop it, or keep it running.`);
+    setStopping({ tabId: tab.id, command });
+  };
+
+  const keepRunning = ({ tabId, command }: Stopping) => {
+    setStopping(null);
+    setAnnouncement(`${command} keeps running.`);
+    section.current?.querySelector<HTMLButtonElement>(`.term-tab-x[data-tab="${tabId}"]`)?.focus();
+  };
+
+  const stop = ({ tabId, command }: Stopping) => {
+    setStopping(null);
+    setAnnouncement(`Stopped ${command}.`);
+    closeShell(chatId, tabId, true);
+    if (chatOf(chatId).tabs.length === 0) document.getElementById(TERMINAL_BUTTON_ID)?.focus();
+  };
 
   return (
     <section
+      ref={section}
       id={TERMINAL_DOCK_ID}
       className="term-dock"
       aria-label="Terminal"
@@ -111,6 +153,7 @@ export function TerminalDock({ chatId }: { chatId: string }) {
               tab={tab}
               name={names.get(tab.id) ?? 'Terminal'}
               active={tab.id === activeId}
+              onClose={() => void requestClose(tab)}
             />
           ))}
           <button
@@ -155,6 +198,18 @@ export function TerminalDock({ chatId }: { chatId: string }) {
         {hideTip.tooltip}
       </div>
       <div className="term-dock-body" ref={body} />
+      {stopping && stoppingTab && (
+        <StopShellConfirm
+          key={stopping.tabId}
+          command={stopping.command}
+          name={names.get(stoppingTab.id) ?? 'Terminal'}
+          onStop={() => stop(stopping)}
+          onKeep={() => keepRunning(stopping)}
+        />
+      )}
+      <p className="sr-only" aria-live="polite">
+        {announcement}
+      </p>
       {active?.status === 'ended' && (
         <p className="term-dock-ended" role="status">
           <span>{active.notice}</span>

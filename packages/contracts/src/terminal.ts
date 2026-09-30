@@ -36,6 +36,11 @@ export const createShellResponseSchema = z.object({
 });
 export type CreateShellResponse = z.infer<typeof createShellResponseSchema>;
 
+export const shellBusyResponseSchema = z.object({
+  command: z.string().nullable(),
+});
+export type ShellBusyResponse = z.infer<typeof shellBusyResponseSchema>;
+
 export const terminalEndReasonSchema = z.enum([
   'exited',
   'closed',

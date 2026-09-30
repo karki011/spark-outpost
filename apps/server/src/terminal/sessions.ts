@@ -8,7 +8,7 @@ import type {
 } from '@spark-outpost/contracts';
 import { catalogEntry, type CatalogEntry } from '../providers/catalog.ts';
 import { detectHint } from './hints.ts';
-import { killProcessTree } from './process-group.ts';
+import { killProcessTree, processTable, runningCommand } from './process-group.ts';
 import type { PtyProcess, SpawnPty } from './pty.ts';
 
 export interface TerminalClient {
@@ -170,6 +170,12 @@ export class TerminalSessions {
     if (!session) return false;
     this.end(session, 'closed', null);
     return true;
+  }
+
+  runningCommand(id: string): string | null {
+    const session = this.sessions.get(id);
+    if (session?.kind.type !== 'shell' || !session.pty) return null;
+    return runningCommand(session.pty.pid, processTable());
   }
 
   endChat(conversationId: string): number {
