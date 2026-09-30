@@ -36,7 +36,8 @@ import { TvList } from './TvList.tsx';
 import type { TvRows } from './tv-list.ts';
 import { tvCaption } from './tv-caption.ts';
 import { StageGaze } from './tv-gaze.ts';
-import { clampToViewport, STAGES, watchStage } from './tv-layout.ts';
+import type { PieceTag } from './tv-coordinator.ts';
+import { clampToViewport, hubStage, STAGES, watchStage } from './tv-layout.ts';
 import type { TvAsk } from './tv-scene.ts';
 import { useThrottledText, useViewport } from './use-tv-env.ts';
 import { useTvEvents } from './use-tv-events.ts';
@@ -79,6 +80,7 @@ interface AgentTvProps {
   asks: Record<string, TvAsk>;
   decision: string | null;
   rows: TvRows;
+  tags?: Record<string, PieceTag> | null;
   stopping: string | null;
   onPick(id: string): void;
   onAsk(approvalId: string): void;
@@ -91,6 +93,7 @@ export function AgentTv({
   asks,
   decision,
   rows,
+  tags = null,
   stopping,
   onPick,
   onAsk,
@@ -112,7 +115,8 @@ export function AgentTv({
   const captionText = [caption.lead, caption.text].filter(Boolean).join(': ');
   const spoken = useThrottledText(captionText, CAPTION_THROTTLE_MS);
   const narrow = viewport.width <= 640;
-  const metrics = watch ? watchStage(viewport) : STAGES[narrow ? 's' : size];
+  const baseMetrics = watch ? watchStage(viewport) : STAGES[narrow ? 's' : size];
+  const metrics = tags ? hubStage(baseMetrics) : baseMetrics;
   const viewTip = useTooltip(view === 'list' ? 'List view' : 'Stage view');
   const sizeTip = useTooltip('Small / Medium / Large TV');
   const muteTip = useTooltip(muted ? 'Show speech bubbles' : 'Mute speech bubbles');
@@ -304,6 +308,7 @@ export function AgentTv({
             chatter={events.chatter}
             packets={events.packets}
             gaze={gaze}
+            tags={tags}
             reduced={reduced}
             selected={selected}
             onSelect={setSelected}

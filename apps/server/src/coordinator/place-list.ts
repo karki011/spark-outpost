@@ -1,7 +1,7 @@
 import { CHECKPOINT_OPTION, type ListPlacement, type PieceList } from '@spark-outpost/contracts';
 import { COORD_CARD_PIECES } from '../advisor/policy.ts';
 import { askCard, CheckpointTimeout, piecesCard } from '../orchestration/checkpoint.ts';
-import type { Session } from '../orchestration/session.ts';
+import type { ForcedPlacement, Session } from '../orchestration/session.ts';
 import { placementFacts } from './assess.ts';
 import { projectSettings } from './builder-env.ts';
 import type { CheckedPiece } from './pieces-validate.ts';
@@ -14,6 +14,18 @@ export interface ListPlace {
 }
 
 const IN_ORDER_REASON = 'pieces run in order, one Builder at a time';
+
+const FORCED_LABEL: Record<ForcedPlacement, string> = {
+  shared: 'the shared tree',
+  worktree: 'worktrees',
+};
+
+export function forcedPlace(placement: ForcedPlacement): ListPlace {
+  return {
+    placement,
+    reason: `placement forced to ${FORCED_LABEL[placement]} by COORDINATOR_PLACEMENT`,
+  };
+}
 
 export async function chooseListPlace(
   s: Session,
@@ -28,6 +40,7 @@ export async function chooseListPlace(
     return { placement: 'in_order', reason: 'this project runs one Builder at a time' };
   }
   if (s.needsCopy) return { placement: 'in_order', reason: 'every piece runs in the task copy' };
+  if (s.deps.forcedPlacement) return forcedPlace(s.deps.forcedPlacement);
   const placed = placePieces(
     pieces.map((piece) => ({
       key: piece.key,

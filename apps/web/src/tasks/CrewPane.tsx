@@ -43,11 +43,16 @@ const crewTones: Record<CrewState, string> = {
   queued: 'pending',
 };
 
-function jobLine(agent: CrewAgent): string {
-  return `${roleLabel(agent)} · ${modelLabel(agent)}`;
+function jobLine(agent: CrewAgent, piece: string | undefined): string {
+  return [piece ?? roleLabel(agent), modelLabel(agent)].join(' · ');
 }
 
-function OrchestratedCrew({ agents }: { agents: readonly CrewAgent[] }) {
+interface OrchestratedCrewProps {
+  agents: readonly CrewAgent[];
+  labels: ReadonlyMap<string, string>;
+}
+
+function OrchestratedCrew({ agents, labels }: OrchestratedCrewProps) {
   return (
     <div className="wsec">
       <div className="wsec-h">
@@ -67,7 +72,7 @@ function OrchestratedCrew({ agents }: { agents: readonly CrewAgent[] }) {
                   {crewStateWord(agent.state)}
                 </span>
               </b>
-              <small>{jobLine(agent)}</small>
+              <small>{jobLine(agent, labels.get(agent.id))}</small>
             </span>
             <span className="num">
               {agent.tokens === null ? '—' : `${formatTokens(agent.tokens)} tok`}
@@ -92,10 +97,11 @@ function OrchestratedCrew({ agents }: { agents: readonly CrewAgent[] }) {
 interface CrewPaneProps {
   runs: readonly TaskRun[];
   agents?: readonly CrewAgent[];
+  labels?: ReadonlyMap<string, string> | undefined;
 }
 
-export function CrewPane({ runs, agents = [] }: CrewPaneProps) {
-  if (agents.length > 0) return <OrchestratedCrew agents={agents} />;
+export function CrewPane({ runs, agents = [], labels = new Map() }: CrewPaneProps) {
+  if (agents.length > 0) return <OrchestratedCrew agents={agents} labels={labels} />;
   const names = crewNames(runs);
   return (
     <div className="wsec">

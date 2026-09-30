@@ -136,7 +136,9 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
           category={run.category}
         />
         {taskCard}
-        {orchestration.pieces && <PieceBoard list={orchestration.pieces} />}
+        {orchestration.pieces && (
+          <PieceBoard list={orchestration.pieces} crew={orchestration.crew} />
+        )}
       </div>
       {items.map((item, index) => {
         if (item.kind === 'checkpoint') {

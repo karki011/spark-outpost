@@ -110,12 +110,15 @@ export interface PieceBoardRow {
   key: string;
   title: string;
   builder: string | null;
+  provider: string | null;
+  model: string | null;
   placement: string;
   status: string;
   tone: PieceTone;
   check: string | null;
   costUsd: number | null;
   notes: string | null;
+  note: string | null;
   folded: boolean;
 }
 
@@ -177,11 +180,14 @@ export function pieceBoard(list: Pick<PieceList, 'pieces'>): PieceBoardRow[] {
     key: piece.key,
     title: piece.title,
     builder: piece.builderName,
+    provider: piece.provider,
+    model: piece.model,
     placement: placementLabel(piece),
     ...statusOf(piece, landed),
     check: checkLabel(piece),
     costUsd: piece.costUsd,
     notes: notesLabel(piece.notesQueued),
+    note: piece.status === 'failed' || piece.status === 'skipped' ? piece.note : null,
     folded: piece.status === 'landed',
   }));
 }

@@ -25,7 +25,7 @@ import { runSession, sessionCap, type ArmState, type DayRecord } from './session
 
 export const DEV_DAY_HARD_CAP_USD = 25;
 
-async function stackSecrets(runtime: Runtime): Promise<Record<string, string>> {
+export async function stackSecrets(runtime: Runtime): Promise<Record<string, string>> {
   const secrets: Record<string, string> = { github: FAKE_GITHUB_TOKEN };
   if (runtime === 'fake') return secrets;
   const keychain = keychainSecretStore();
@@ -36,7 +36,11 @@ async function stackSecrets(runtime: Runtime): Promise<Record<string, string>> {
   return secrets;
 }
 
-async function connectFakeGitHub(stack: Stack, ghHome: string, run: DayRun): Promise<void> {
+export async function connectFakeGitHub(
+  stack: Stack,
+  ghHome: string,
+  run: Pick<DayRun, 'setup'>,
+): Promise<void> {
   const api = new Api(stack.urls.api, stack.apiToken);
   const saved = await api.call<{ active: string | null; ghCli: { login: string | null } }>(
     'PUT',
@@ -54,7 +58,7 @@ async function connectFakeGitHub(stack: Stack, ghHome: string, run: DayRun): Pro
     : `exit ${gh.status}: ${`${gh.stdout}${gh.stderr}`.trim().split('\n')[0]?.slice(0, 160) ?? ''}`;
 }
 
-const GITHUB_TOKEN_ENV = [
+export const GITHUB_TOKEN_ENV = [
   'GH_TOKEN',
   'GITHUB_TOKEN',
   'GH_ENTERPRISE_TOKEN',

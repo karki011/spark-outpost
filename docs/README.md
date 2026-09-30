@@ -35,6 +35,7 @@ What each document is for. Each one describes what runs today plus its open item
 
 Raw round data stays next to each report; `apps/server/src/model-cards/measured-seed.json` cites the `harness-vs-direct-2026-09-26*.json` files.
 
+- [story-2026-10-01.md](benchmarks/story-2026-10-01.md): the C8 story benchmark (Project budgets, six arms) and the §10 turn-off evaluation for coordinator delegation.
 - [e2e-2026-09-29.md](benchmarks/e2e-2026-09-29.md): latest end-to-end verification: deterministic suites, the live provider × feature matrix, and the dev-day rerun with all three arms.
 - [dev-day-PLAN.md](benchmarks/dev-day-PLAN.md): the live dev-day e2e plan used by `pnpm e2e:live`.
 - [harness-e2e-lean-2026-09-27.md](benchmarks/harness-e2e-lean-2026-09-27.md) and [harness-e2e-live-2026-09-26.md](benchmarks/harness-e2e-live-2026-09-26.md): evidence for the lean harness.

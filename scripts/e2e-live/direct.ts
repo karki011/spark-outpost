@@ -84,10 +84,6 @@ export async function inProcessSession(
     conversationId,
     routing,
   ]);
-  await t.db.query('UPDATE projects SET build_style = $2 WHERE root_path = $1', [
-    repo,
-    options.buildStyle,
-  ]);
   const send = async (text: string, sendOptions: SendOptions = {}): Promise<DirectTurn> => {
     const sent = await sendUserMessage(
       t.db,

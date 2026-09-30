@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TaskPiece } from '@spark-outpost/contracts';
-import { listQuestion, widestLevel } from './place-list.ts';
+import { forcedPlace, listQuestion, widestLevel } from './place-list.ts';
 
 const piece = (key: string, dependsOn: string[] = [], research = false) =>
   ({ key, dependsOn, research }) as TaskPiece;
@@ -28,6 +28,18 @@ describe('the piece-list card question', () => {
     const pieces = [piece('R1', [], true), piece('P1'), piece('P2')];
     expect(listQuestion({ placement: 'shared', pieces }, 3)).toBe(
       'Build in 3 pieces, 2 at once in the shared tree?',
+    );
+  });
+});
+
+describe('a forced placement', () => {
+  it('keeps the placement and says it was forced', () => {
+    expect(forcedPlace('worktree')).toEqual({
+      placement: 'worktree',
+      reason: 'placement forced to worktrees by COORDINATOR_PLACEMENT',
+    });
+    expect(forcedPlace('shared').reason).toBe(
+      'placement forced to the shared tree by COORDINATOR_PLACEMENT',
     );
   });
 });

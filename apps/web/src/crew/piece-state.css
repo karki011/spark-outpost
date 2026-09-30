@@ -1,0 +1,39 @@
+.piece-state {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.piece-state[data-state]::before {
+  margin-right: 3px;
+  color: inherit;
+  font-weight: 700;
+}
+.piece-state[data-state='waiting'] {
+  color: var(--faint);
+}
+.piece-state[data-state='waiting']::before {
+  content: '○' / '';
+}
+.piece-state[data-state='running'] {
+  color: var(--accent-text);
+}
+.piece-state[data-state='running']::before {
+  content: '●' / '';
+}
+.piece-state[data-state='landed'] {
+  color: var(--success);
+}
+.piece-state[data-state='landed']::before {
+  content: '✓' / '';
+}
+.piece-state[data-state='skipped'] {
+  color: var(--muted);
+}
+.piece-state[data-state='skipped']::before {
+  content: '–' / '';
+}
+.piece-state[data-state='failed'] {
+  color: var(--danger);
+}
+.piece-state[data-state='failed']::before {
+  content: '✕' / '';
+}

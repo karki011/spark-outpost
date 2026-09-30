@@ -79,6 +79,47 @@ export function stageLayout(count: number, stage: StageMetrics): StageLayout {
   return { jev, seats, radius };
 }
 
+const SPOKE_LABEL = 64;
+const DIAGONAL_ROOM = 1.15;
+
+function hubReach(stage: StageMetrics): number {
+  return (stage.crewSize / 2 + SPOKE_LABEL + stage.jevSize / 2) * DIAGONAL_ROOM;
+}
+
+export function hubStage(stage: StageMetrics): StageMetrics {
+  const top = stage.crewSize / 2 + 6;
+  const bottom = stage.crewSize / 2 + SPOKE_LABEL;
+  const needed = Math.ceil(top + bottom + hubReach(stage) * 2);
+  return { ...stage, height: Math.max(stage.height, needed) };
+}
+
+function spokeAngles(count: number): number[] {
+  const offset = count % 2 === 0 ? 0.5 : 0;
+  return Array.from(
+    { length: count },
+    (_, index) => -Math.PI / 2 + (2 * Math.PI * (index + offset)) / count,
+  );
+}
+
+export function hubLayout(count: number, stage: StageMetrics): StageLayout {
+  const top = stage.crewSize / 2 + 6;
+  const bottom = stage.height - stage.crewSize / 2 - SPOKE_LABEL;
+  const hub = { x: Math.round(stage.width / 2), y: Math.round((top + bottom) / 2) };
+  const radiusX = Math.max(0, stage.width / 2 - stage.labelWidth / 2);
+  const radiusY = Math.max(0, (bottom - top) / 2);
+  const seats = spokeAngles(count).map((angle) => {
+    const outX = Math.cos(angle);
+    const outY = Math.sin(angle);
+    return {
+      x: Math.round(hub.x + radiusX * outX),
+      y: Math.round(hub.y + radiusY * outY),
+      outX: Math.round(outX * 100) / 100,
+      outY: Math.round(outY * 100) / 100,
+    };
+  });
+  return { jev: hub, seats, radius: Math.round(Math.min(radiusX, radiusY)) };
+}
+
 export function handoffPath(from: Seat, to: Seat, bend = 0.22): string {
   const midX = (from.x + to.x) / 2;
   const midY = (from.y + to.y) / 2;

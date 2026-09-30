@@ -100,7 +100,7 @@ function prepareTurns(
   return { turns, interventions };
 }
 
-function failed(error: string): ArmSessionResult {
+export function failed(error: string): ArmSessionResult {
   return {
     ...NO_HARNESS_EVIDENCE,
     logs: [],
@@ -115,7 +115,7 @@ function failed(error: string): ArmSessionResult {
   };
 }
 
-function shipEvidence(
+export function shipEvidence(
   session: DaySession,
   repo: DayRepo,
   stub: GitHubStub,

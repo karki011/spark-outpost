@@ -27,6 +27,7 @@ export interface CrewAgent {
   durationMs: number | null;
   sameProvider?: boolean;
   routeNote?: string;
+  title?: string;
 }
 
 export const SAME_PROVIDER_REVIEW = 'same provider, no cross-model review';

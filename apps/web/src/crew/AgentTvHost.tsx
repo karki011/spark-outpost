@@ -11,6 +11,8 @@ import {
 } from './conversation-crew.ts';
 import { busyCount } from './crew-model.ts';
 import { scrollToAnchor } from './scroll-to-anchor.ts';
+import { JEV_ID } from './crew-projection.ts';
+import { coordinatorScene } from './tv-coordinator.ts';
 import { tvListRows } from './tv-list.ts';
 import { lastDecisionLine, pendingAsks } from './tv-scene.ts';
 
@@ -54,18 +56,23 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
     scrollToAnchor(anchor);
   };
 
-  const asks = pendingAsks(source, orchestration, agents);
+  const scene = coordinatorScene(orchestration, agents, source?.activity);
+  const members = scene?.members ?? agents;
+  const asks = pendingAsks(source, orchestration, members);
+  const runIds = new Set(orchestration.crew.map((member) => member.runId));
+  const anchored = (agentId: string) => (runIds.has(agentId) ? agentId : JEV_ID);
 
   return (
     <AgentTv
-      members={agents}
+      members={members}
       asks={asks}
-      rows={tvListRows(source, orchestration, agents, asks)}
+      tags={scene?.tags ?? null}
+      rows={tvListRows(source, orchestration, members, asks)}
       stopping={stop.isPending ? (stop.variables ?? null) : null}
       onStop={(runId) => stop.mutate(runId)}
       decision={lastDecisionLine(orchestration)}
       branch={source?.conversation.branch ?? null}
-      onPick={(agentId) => jump(agentAnchor(orchestration.runId, agentId))}
+      onPick={(agentId) => jump(agentAnchor(orchestration.runId, anchored(agentId)))}
       onAsk={(approvalId) => jump(approvalAnchor(approvalId))}
     />
   );

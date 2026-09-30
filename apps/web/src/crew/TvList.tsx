@@ -1,4 +1,5 @@
 import './tv-list.css';
+import './piece-state.css';
 import { useId, useRef, useState } from 'react';
 import { connectableIdSchema } from '@spark-outpost/contracts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
@@ -127,7 +128,17 @@ function Row({
         </div>
         <div className="tvl-meta">
           <span>{item.dispatcher ? 'Dispatcher' : 'Agent'}</span>
-          {item.piece && <span className="tvl-piece">{item.piece}</span>}
+          {item.piece && <span className="tvl-piece">{item.piece.label}</span>}
+          {item.piece && (
+            <span className="piece-state" data-state={item.piece.state}>
+              {item.piece.state}
+            </span>
+          )}
+          {item.piece && item.piece.notes > 0 && (
+            <span className="tvl-notes">
+              {item.piece.notes} {item.piece.notes === 1 ? 'note' : 'notes'} queued
+            </span>
+          )}
           {finished ? (
             item.durationMs !== null && <span>{formatDuration(item.durationMs)}</span>
           ) : item.startedAt !== null ? (
@@ -152,7 +163,7 @@ function Row({
           </button>
         </div>
       </div>
-      {!finished && <StopButton item={item} stopping={stopping} onStop={onStop} />}
+      {!finished && item.runId && <StopButton item={item} stopping={stopping} onStop={onStop} />}
     </li>
   );
 }

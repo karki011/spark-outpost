@@ -54,6 +54,7 @@ const configSchema = z.object({
   ORCHESTRATION_COST_CAP_USD: z.coerce.number().positive().optional(),
   AGENT_RUNTIME: z.enum(['acp', 'fake']).default('acp'),
   COORDINATOR_MODE: z.enum(['off', 'shadow', 'in_order', 'parallel']).default('parallel'),
+  COORDINATOR_PLACEMENT: z.enum(['shared', 'worktree']).optional(),
   PARALLEL_AGENT_LIMIT: z.coerce.number().int().min(1).max(32).default(6),
   FAKE_ACP_AGENT: z.string().min(1).optional(),
   SECRET_STORE: z.enum(['keychain', 'memory']).default('keychain'),

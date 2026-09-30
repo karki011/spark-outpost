@@ -31,6 +31,7 @@
     "jev:thresholds": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/jev-thresholds.ts",
     "bench:harness": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/bench-harness.ts",
     "e2e:live": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/e2e-live/run.ts",
+    "e2e:story": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/e2e-live/story/cli.ts",
     "routing:labels": "node --env-file-if-exists=.local/credentials.env --import tsx scripts/routing/labels.ts",
     "routing:replay": "node --import tsx scripts/routing/replay.ts",
     "routing:escalation": "node --import tsx scripts/routing/escalation-dry.ts",

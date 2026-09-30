@@ -15,7 +15,13 @@
         "tests/browser/bin/gh-fake.ts"
       ],
       "project": ["scripts/**/*.ts", "tests/**/*.ts"],
-      "ignore": ["scripts/bench/fixture/**", "scripts/e2e-live/dev-day/fixtures/**"]
+      "ignore": [
+        "scripts/bench/fixture/**",
+        "scripts/e2e-live/dev-day/fixtures/**",
+        "scripts/e2e-live/story/fixture/**",
+        "scripts/e2e-live/story/hidden/**",
+        "scripts/e2e-live/story/reference/**"
+      ]
     },
     "apps/server": {
       "entry": ["test/fake-*.ts", "test/echo-mcp-server.mjs"],

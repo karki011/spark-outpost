@@ -9,6 +9,10 @@ export interface Decide {
   hold(): void;
 }
 
+function focusOnMount(element: HTMLTextAreaElement | null) {
+  element?.focus();
+}
+
 export function NoteForm({
   label,
   initial,
@@ -40,6 +44,7 @@ export function NoteForm({
         {label}
       </label>
       <textarea
+        ref={onCancel ? focusOnMount : undefined}
         id={id}
         className="inp"
         rows={Math.min(8, Math.max(2, initial.split('\n').length + 1))}
