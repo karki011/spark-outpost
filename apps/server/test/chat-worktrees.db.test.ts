@@ -24,6 +24,9 @@ import {
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
+// Each test sets up real git worktrees; a loaded machine can take well past the 20 s default.
+const WORKTREE_TEST_MS = 60_000;
+
 let t: TestDb;
 let root: string;
 let harness: Harness | null = null;
@@ -81,7 +84,7 @@ async function chatCopy(conversationId: string) {
   return copy;
 }
 
-describe('a chat worktree per Do chat', () => {
+describe('a chat worktree per Do chat', { timeout: WORKTREE_TEST_MS }, () => {
   it('gives two chats on one repo their own worktree and branch, and leaves the checkout alone', async () => {
     const [first, second] = await Promise.all([doTurn('#first'), doTurn('#second')]);
     const one = await chatCopy(first.conversationId);
@@ -163,7 +166,7 @@ describe('a chat worktree per Do chat', () => {
   });
 });
 
-describe('the chat branch after the turn', () => {
+describe('the chat branch after the turn', { timeout: WORKTREE_TEST_MS }, () => {
   it('brings the changes into the checkout on request, and refuses while the checkout is dirty', async () => {
     const opened: string[] = [];
     const app = localClient(
