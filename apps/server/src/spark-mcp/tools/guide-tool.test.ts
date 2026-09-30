@@ -1,7 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import { guideSections } from '../guide/sections.ts';
+import { searchGuide } from '../guide/search.ts';
 import type { SparkToolContext } from '../tool.ts';
 import { guideTool } from './guide-tool.ts';
+
+const SETTING_LABELS = [
+  'AI providers',
+  'Models',
+  'Usage',
+  'Projects',
+  'Connectors',
+  'MCP servers',
+  'Appearance',
+  'Reset',
+  'What should Spark call you?',
+  'Personality',
+  'How much Spark does alone',
+  'Spend cap per task',
+  'If you don’t answer a question',
+  'When checks still fail in Full auto',
+  'Morning brief',
+  'Status companion',
+  'Check changes with Jev',
+  'Builders at once',
+  'Where Spark works',
+  'Keep my API keys',
+];
 
 const context: SparkToolContext = {
   deps: {} as never,
@@ -66,5 +90,44 @@ describe('guideTool', () => {
   it('keeps the whole index well under 20,000 characters', () => {
     const totalChars = guideSections.reduce((sum, section) => sum + section.text.length, 0);
     expect(totalChars).toBeLessThan(20_000);
+  });
+
+  it('answers how to make Builders run one at a time from the Builders at once section', async () => {
+    for (const query of [
+      'How do I make Builders run one at a time?',
+      'builders at once',
+      'run builders serial instead of parallel',
+      'parallel builder slots',
+    ]) {
+      const result = (await guideTool.run({ query }, context)) as { matches: { id: string }[] };
+      expect(result.matches[0]?.id, query).toBe('builders-at-once');
+    }
+  });
+
+  it.each([
+    ['where spark works', 'worktrees'],
+    ['work in my files instead of a worktree', 'worktrees'],
+    ['force push hold card', 'safety-floor'],
+    ['Ask mode run a command', 'ask-vs-do'],
+    ['today so far', 'today-so-far'],
+    ['link a ticket to a chat', 'tickets'],
+    ['map page unmatched api', 'map'],
+    ['spark action card confirm', 'spark-own-tools'],
+    ['urgent ticket not started', 'attention-brief'],
+  ])('finds %s in the %s section', (query, id) => {
+    const top = searchGuide(guideSections, query, 3).map((result) => result.id);
+    expect(top).toContain(id);
+  });
+
+  it.each(SETTING_LABELS)('covers the setting "%s" in a section that search finds', (label) => {
+    const covering = guideSections.filter((section) =>
+      section.text.toLowerCase().includes(label.toLowerCase()),
+    );
+    expect(covering.length, label).toBeGreaterThan(0);
+    const top = searchGuide(guideSections, label, 5).map((result) => result.id);
+    expect(
+      covering.some((section) => top.includes(section.id)),
+      label,
+    ).toBe(true);
   });
 });

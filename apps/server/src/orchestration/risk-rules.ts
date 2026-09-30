@@ -201,11 +201,15 @@ export function runsCommandsByRule(request: string): boolean {
   return prose !== request && !BUILD_VERB.test(prose);
 }
 
+const ASKS_HOW_OR_WHY =
+  /^\s*(?:how (?:do|does|did|should|to|is|are)\b|how (?:can|could|would)\b(?! you\b)|what(?:['’]s)?\b(?! if\b)|why\b(?! (?:not|don['’]?t|can['’]?t|won['’]?t)\b)|where\b|when\b|which\b|who\b|(?:is|are) there\b|(?:does|do|is|are|should) (?:spark|i|it|we|the|builders?)\b|(?:can|could) (?:spark|i|builders?)\b)/i;
+
 export function questionByRule(request: string): boolean {
   if (THEN_CHANGE.test(request)) return false;
   if (runsCommandsByRule(request)) return true;
   if (ASKS_FOR_ANSWER.test(request)) return true;
-  return request.trim().endsWith('?') && !BUILD_VERB.test(request);
+  if (!request.trim().endsWith('?')) return false;
+  return ASKS_HOW_OR_WHY.test(request) || !BUILD_VERB.test(request);
 }
 
 export function buildsByRule(request: string): boolean {

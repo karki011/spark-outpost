@@ -206,6 +206,12 @@ describe('spark_tickets', () => {
     }>();
     expect(body.connected).toEqual(['linear']);
     expect(body.items[0]).toMatchObject({ key: 'ENG-99', priority: 'Urgent' });
+    expect(body).not.toHaveProperty('highestPriority');
+
+    const inbox = (await tools!.call('spark_tickets')).json<{
+      highestPriority: { key: string; priority: string }[];
+    }>();
+    expect(inbox.highestPriority[0]).toMatchObject({ key: 'ENG-99', priority: 'Urgent' });
   });
 
   it('says when no ticket source is connected', async () => {

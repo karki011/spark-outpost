@@ -14,6 +14,7 @@ export interface SparkToolDeps {
   linearApiUrl?: string | undefined;
   github: Omit<GitHubDeps, 'db' | 'workspaceId' | 'secrets' | 'fetch'>;
   serverSpendCapUsd: number | null;
+  parallelBuilders?: boolean;
   branchPrefix?: string;
   timeZone?: string;
   now?: () => Date;

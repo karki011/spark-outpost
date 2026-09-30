@@ -40,6 +40,13 @@ function ticketLine(ticket: InboxTicket) {
   };
 }
 
+const TOP_PRIORITY_COUNT = 5;
+
+function priorityLine(ticket: InboxTicket) {
+  const { key, title, priority, section, url } = ticketLine(ticket);
+  return { key, title, priority, section, url };
+}
+
 async function tickets(
   context: SparkToolContext,
   args: {
@@ -58,18 +65,23 @@ async function tickets(
       (!args.source || ticket.source === args.source) &&
       (args.includeDone || args.section === 'done' || ticket.section !== 'done'),
   );
-  const ordered =
-    args.sort === 'priority' ? matching.toSorted((a, b) => urgency(a) - urgency(b)) : matching;
+  const byPriority = matching.toSorted((a, b) => urgency(a) - urgency(b));
+  const ordered = args.sort === 'priority' ? byPriority : matching;
   const shown = page(ordered, args.offset, args.limit);
+  const topPriority = byPriority
+    .filter((ticket) => ticket.priorityRank > 0 && ticket.section !== 'done')
+    .slice(0, TOP_PRIORITY_COUNT)
+    .map(priorityLine);
   return {
     connected: inbox.sources,
     ...(inbox.sources.length === 0
-      ? { note: 'No ticket source is connected. Connect Jira or Linear in Settings → Tickets.' }
+      ? { note: 'No ticket source is connected. Connect Jira or Linear in Settings → Connectors.' }
       : {}),
     problems: inbox.errors,
     syncedAt: inbox.syncedAt,
     ...shown,
     items: shown.items.map(ticketLine),
+    ...(args.sort === 'inbox' && topPriority.length > 0 ? { highestPriority: topPriority } : {}),
   };
 }
 
@@ -138,11 +150,14 @@ export const workTools = [
     name: 'spark_tickets',
     title: 'Tickets',
     description:
-      "The user's Jira and Linear tickets as Spark's Tickets inbox sorts them: needs attention first (overdue, stale, blocked, urgent not started), then working, PR ready, in review, up next. sort=priority puts urgent and high first. Each ticket has its status, priority, why it is flagged, due date, linked chat and PR. Fetches fresh data from the connected sources.",
+      "The user's Jira and Linear tickets as Spark's Tickets inbox sorts them: needs attention first, then working, PR ready, in review, up next. A ticket needs attention when a linked chat is asking or stopped with an error, a sync to the tracker failed, it is blocked, it is due soon or overdue, its PR has changes requested or is approved, it has sat in review too long, or it is Urgent or High and still not started some days after it was assigned (the idle-days setting). An urgent ticket assigned today is not flagged yet. For the highest-priority or most urgent ticket, pass sort=priority (Urgent, High, Medium, Low, then none); with the default inbox order the answer also lists highestPriority, the top open tickets by priority. Each ticket has its status, priority, why it is flagged, due date, linked chat and PR. Fetches fresh data from the connected sources.",
     input: {
       section: ticketSectionSchema.optional().describe('Only one inbox section.'),
       source: ticketSourceIdSchema.optional(),
-      sort: z.enum(['inbox', 'priority']).default('inbox'),
+      sort: z
+        .enum(['inbox', 'priority'])
+        .default('inbox')
+        .describe('priority: most urgent first. inbox: the Tickets page order.'),
       includeDone: z.boolean().default(false),
       limit: limitInput(15, 50),
       offset: offsetInput,

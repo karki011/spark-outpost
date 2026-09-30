@@ -444,6 +444,9 @@ async function converse(
         projectRoots: policy?.roots.map((root) => root.path) ?? [],
         changesAllowed: doing !== null,
         commandsAllowed: gated !== null,
+        toolsAvailable:
+          plan.request.mcpServers.length > 0 ||
+          (definition.repoStyle === 'codex' && workspace.spark !== null),
       };
       const history = continued ? [] : turn.history;
       for (const step of contextSteps(history, promptOptions)) push(mapper.note(step));
