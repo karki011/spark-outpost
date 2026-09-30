@@ -11,6 +11,7 @@ import { locateCli } from '../setup/verify.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createProviders } from './providers.ts';
 import { startWorker } from './worker.ts';
+import { Slots } from '../orchestration/slots.ts';
 
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.worker });
@@ -39,6 +40,7 @@ const worker = startWorker({
   codeScan: createCodeScanner(db),
   branchPrefix: config.BRANCH_PREFIX,
   coordinator: config.COORDINATOR_MODE,
+  agentSlots: new Slots(config.PARALLEL_AGENT_LIMIT),
   shipAccess: {
     secrets,
     runCommand,

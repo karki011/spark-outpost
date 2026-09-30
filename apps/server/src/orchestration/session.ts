@@ -37,6 +37,7 @@ import type { LoopGuardSettings } from './loop-guard.ts';
 import type { MemberRoute, RouteContext, RouteFacts } from './routing.ts';
 import type { FlowState } from './transitions.ts';
 import type { Coordination } from '../coordinator/state.ts';
+import type { Slots } from './slots.ts';
 
 export interface OrchestratorDeps extends ExecuteRunDeps {
   budget?: Partial<BudgetLimits>;
@@ -49,6 +50,7 @@ export interface OrchestratorDeps extends ExecuteRunDeps {
   branchPrefix?: string;
   shipAccess?: ShipAccess;
   coordinator?: CoordinatorMode;
+  agentSlots?: Slots;
 }
 
 export type CoordinatorMode = 'off' | 'shadow' | 'in_order' | 'parallel';

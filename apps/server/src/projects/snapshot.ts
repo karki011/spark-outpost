@@ -92,7 +92,7 @@ export async function workingTree(root: string): Promise<string> {
 
 export const HARNESS_COMMIT_EMAIL = 'snapshots@spark-outpost.local';
 
-const HARNESS_AUTHOR = {
+export const HARNESS_AUTHOR = {
   GIT_AUTHOR_NAME: 'Spark Outpost',
   GIT_AUTHOR_EMAIL: HARNESS_COMMIT_EMAIL,
   GIT_COMMITTER_NAME: 'Spark Outpost',
