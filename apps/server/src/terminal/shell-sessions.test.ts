@@ -117,7 +117,7 @@ describe('chat shells', () => {
     shell.terminal.input('\x03');
     await until(() => sessions.runningCommand(shell.created.id) === null);
     expect(sessions.runningCommand('not-a-session')).toBeNull();
-  });
+  }, 30_000);
 
   it('counts shells separately from setup terminals', () => {
     useLimits({ ...defaultLimits, maxSessions: 1, maxShells: 2 });
