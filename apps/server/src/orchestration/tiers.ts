@@ -81,6 +81,15 @@ export function highEffort(efforts: readonly string[]): string | null {
   return efforts.includes('high') ? 'high' : (efforts.at(-1) ?? null);
 }
 
+export function loweredEffort(
+  efforts: readonly string[],
+  current: string | null,
+  target: string,
+): string | null {
+  if (!efforts.includes(target)) return current;
+  return effortRank(current) > effortRank(target) ? target : current;
+}
+
 const ESCALATION_FLOOR = 'medium';
 
 export function escalatedEffort(efforts: readonly string[], current: string | null): string | null {

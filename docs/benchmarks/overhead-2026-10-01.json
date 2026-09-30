@@ -1,0 +1,7631 @@
+{
+ "version": 1,
+ "kind": "overhead",
+ "date": "2026-10-01",
+ "branch": "chore/spark-overhead",
+ "base": "checkpoint/harness-m6-round3",
+ "policyVersion": "overhead-1-spec-plan-rereview",
+ "rates": {
+  "hourlyUsd": 100,
+  "interventionMinutes": 1,
+  "failedStoryMinutes": 30
+ },
+ "method": "Per-turn tokens, cost and timing from the Claude Code transcripts (~/.claude/projects/<run worktree>/*.jsonl incl. subagents) and Codex rollouts (~/.codex/sessions, matched by cwd) of every story run; Claude cost recomputed from model-card prices with 1h cache writes at 2x input (matches the CLI cost-state to the cent); Codex cost from token counts at card prices. Wall time: union of turn spans per phase; orchestration = wall minus all turn spans (session spawns, Jev, checks, cards, git).",
+ "before": {
+  "source": "docs/benchmarks/story-2026-10-01.json (Automatic runs)",
+  "arms": {
+   "a": {
+    "runs": 2,
+    "passes": 2,
+    "spend": 1.21,
+    "meanCost": 0.607,
+    "meanWall": 185,
+    "interventions": 0,
+    "devUsd": 0.0,
+    "costPerPass": 0.61,
+    "phases": {
+     "plan": {
+      "cost": 0,
+      "wall": 0
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0.38,
+      "wall": 57.0
+     },
+     "review": {
+      "cost": 0.223,
+      "wall": 108.0
+     },
+     "orchestration": {
+      "cost": 0.004,
+      "wall": 20.0
+     }
+    }
+   },
+   "direct": {
+    "runs": 2,
+    "passes": 2,
+    "spend": 0.75,
+    "meanCost": 0.374,
+    "meanWall": 116,
+    "interventions": 0,
+    "devUsd": 0.0,
+    "costPerPass": 0.37,
+    "phases": {
+     "plan": {
+      "cost": 0,
+      "wall": 0
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0,
+      "wall": 0
+     },
+     "review": {
+      "cost": 0,
+      "wall": 0
+     },
+     "orchestration": {
+      "cost": 0.002,
+      "wall": 4.0
+     }
+    }
+   }
+  },
+  "runs": [
+   {
+    "arm": "a",
+    "rep": 1,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 471.855,
+    "recordedCost": 1.04022746,
+    "jev": 0.00122346,
+    "interventions": [
+     "checkpoint: plan: Build it",
+     "checkpoint: accept: Keep"
+    ],
+    "idle": 91.7,
+    "load": null,
+    "phases": {
+     "plan": {
+      "cost": 0.3983,
+      "wall": 124.9
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0.4409,
+      "wall": 63.1
+     },
+     "review": {
+      "cost": 0.1683,
+      "wall": 192.3
+     },
+     "orchestration": {
+      "cost": 0.0329,
+      "wall": 91.6
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.2511,
+      "wall": 51.2,
+      "turns": 3,
+      "calls": 4,
+      "out": 4930,
+      "cacheRead": 105722,
+      "cacheWrite": 45165,
+      "input": 8,
+      "tools": {
+       "Agent": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1471,
+      "wall": 75.8,
+      "turns": 1,
+      "calls": 4,
+      "out": 7116,
+      "cacheRead": 56802,
+      "cacheWrite": 25811,
+      "input": 8,
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      }
+     },
+     "builder": {
+      "cost": 0.4409,
+      "wall": 63.1,
+      "turns": 1,
+      "calls": 6,
+      "out": 7132,
+      "cacheRead": 130589,
+      "cacheWrite": 34017,
+      "input": 12,
+      "tools": {
+       "Bash": 4,
+       "Edit": 4,
+       "Write": 1
+      }
+     },
+     "critic": {
+      "cost": 0.1201,
+      "wall": 169.8,
+      "turns": 1,
+      "calls": 4,
+      "out": 2967,
+      "cacheRead": 105472,
+      "cacheWrite": 0,
+      "input": 34680,
+      "tools": {
+       "tool": 3
+      }
+     },
+     "builder-fix": {
+      "cost": 0.0482,
+      "wall": 15.3,
+      "turns": 1,
+      "calls": 2,
+      "out": 943,
+      "cacheRead": 69064,
+      "cacheWrite": 1945,
+      "input": 4,
+      "tools": {
+       "Edit": 1,
+       "Bash": 1
+      }
+     },
+     "critic-rereview": {
+      "cost": 0.0,
+      "wall": 7.2,
+      "turns": 1,
+      "calls": 0,
+      "out": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0,
+      "tools": {
+       "tool": 0
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 20.2,
+      "dur": 14.1,
+      "calls": 2,
+      "cost": 0.1474,
+      "u": {
+       "in": 4,
+       "cr": 31655,
+       "cw1": 33007,
+       "cw5": 0,
+       "out": 899
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3016
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 32.2,
+      "dur": 75.8,
+      "calls": 4,
+      "cost": 0.1471,
+      "u": {
+       "in": 8,
+       "cr": 56802,
+       "cw1": 0,
+       "cw5": 25811,
+       "out": 7116
+      },
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      },
+      "promptChars": 2129
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 108.6,
+      "dur": 37.1,
+      "calls": 2,
+      "cost": 0.1038,
+      "u": {
+       "in": 4,
+       "cr": 74067,
+       "cw1": 12158,
+       "cw5": 0,
+       "out": 4031
+      },
+      "tools": {
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 18382
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 145.8,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 157.7,
+      "dur": 63.1,
+      "calls": 6,
+      "cost": 0.4409,
+      "u": {
+       "in": 12,
+       "cr": 130589,
+       "cw1": 34017,
+       "cw5": 0,
+       "out": 7132
+      },
+      "tools": {
+       "Bash": 4,
+       "Edit": 4,
+       "Write": 1
+      },
+      "promptChars": 6517
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 237.3,
+      "dur": 169.8,
+      "calls": 4,
+      "cost": 0.1201,
+      "u": {
+       "in": 34680,
+       "cr": 105472,
+       "out": 2967,
+       "reason": 2447
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 18160
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 431.4,
+      "dur": 15.3,
+      "calls": 2,
+      "cost": 0.0482,
+      "u": {
+       "in": 4,
+       "cr": 69064,
+       "cw1": 1945,
+       "cw5": 0,
+       "out": 943
+      },
+      "tools": {
+       "Edit": 1,
+       "Bash": 1
+      },
+      "promptChars": 555
+     },
+     {
+      "label": "critic-rereview",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 461.9,
+      "dur": 7.2,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {
+       "tool": 0
+      },
+      "promptChars": 18829
+     }
+    ]
+   },
+   {
+    "arm": "c",
+    "rep": 1,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 331.317,
+    "recordedCost": 1.5382272160000003,
+    "jev": 0.000342216,
+    "interventions": [
+     "checkpoint: plan: Build it",
+     "checkpoint: budget: Stop"
+    ],
+    "idle": 94.5,
+    "load": null,
+    "phases": {
+     "plan": {
+      "cost": 0.1758,
+      "wall": 43.8
+     },
+     "coordinator": {
+      "cost": 0.4053,
+      "wall": 65.3
+     },
+     "build": {
+      "cost": 0.927,
+      "wall": 121.6
+     },
+     "review": {
+      "cost": 0.0981,
+      "wall": 5.9
+     },
+     "orchestration": {
+      "cost": 0.0003,
+      "wall": 94.7
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.1758,
+      "wall": 43.8,
+      "turns": 2,
+      "calls": 5,
+      "out": 4850,
+      "cacheRead": 168573,
+      "cacheWrite": 23383,
+      "input": 10,
+      "tools": {
+       "Bash": 1,
+       "Read": 13,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "coordinator": {
+      "cost": 0.4054,
+      "wall": 65.3,
+      "turns": 3,
+      "calls": 7,
+      "out": 7005,
+      "cacheRead": 113887,
+      "cacheWrite": 30307,
+      "input": 12,
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "piece-builder": {
+      "cost": 0.5956,
+      "wall": 60.1,
+      "turns": 4,
+      "calls": 13,
+      "out": 7840,
+      "cacheRead": 240495,
+      "cacheWrite": 48826,
+      "input": 26,
+      "tools": {
+       "Bash": 9
+      }
+     },
+     "scout-2": {
+      "cost": 0.251,
+      "wall": 44.8,
+      "turns": 2,
+      "calls": 4,
+      "out": 4968,
+      "cacheRead": 76462,
+      "cacheWrite": 17042,
+      "input": 8,
+      "tools": {
+       "Glob": 1,
+       "Read": 15,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "integrator": {
+      "cost": 0.0804,
+      "wall": 16.9,
+      "turns": 1,
+      "calls": 3,
+      "out": 934,
+      "cacheRead": 53203,
+      "cacheWrite": 6382,
+      "input": 6,
+      "tools": {
+       "Bash": 2
+      }
+     },
+     "critic": {
+      "cost": 0.0981,
+      "wall": 5.9,
+      "turns": 1,
+      "calls": 1,
+      "out": 7,
+      "cacheRead": 13726,
+      "cacheWrite": 11896,
+      "input": 2,
+      "tools": {
+       "Read": 3
+      }
+     },
+     "critic-rereview": {
+      "cost": 0.0,
+      "wall": 0.0,
+      "turns": 1,
+      "calls": 0,
+      "out": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "input": 0,
+      "tools": {}
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 9.1,
+      "dur": 43.8,
+      "calls": 5,
+      "cost": 0.1758,
+      "u": {
+       "in": 10,
+       "cr": 168573,
+       "cw1": 23383,
+       "cw5": 0,
+       "out": 4850
+      },
+      "tools": {
+       "Bash": 1,
+       "Read": 13,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 3016
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 52.9,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 64.0,
+      "dur": 35.9,
+      "calls": 5,
+      "cost": 0.3053,
+      "u": {
+       "in": 10,
+       "cr": 88351,
+       "cw1": 25536,
+       "cw5": 0,
+       "out": 4167
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6282
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 99.9,
+      "dur": 7.5,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 108.9,
+      "dur": 21.9,
+      "calls": 1,
+      "cost": 0.1,
+      "u": {
+       "in": 2,
+       "cr": 25536,
+       "cw1": 4771,
+       "cw5": 0,
+       "out": 2838
+      },
+      "tools": {},
+      "promptChars": 7535
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 146.2,
+      "dur": 18.3,
+      "calls": 3,
+      "cost": 0.2309,
+      "u": {
+       "in": 6,
+       "cr": 42808,
+       "cw1": 23578,
+       "cw5": 0,
+       "out": 1684
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 9158
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 147.1,
+      "dur": 21.8,
+      "calls": 3,
+      "cost": 0.1122,
+      "u": {
+       "in": 6,
+       "cr": 57489,
+       "cw1": 7668,
+       "cw5": 0,
+       "out": 1968
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 8074
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 182.0,
+      "dur": 18.6,
+      "calls": 3,
+      "cost": 0.1162,
+      "u": {
+       "in": 6,
+       "cr": 58827,
+       "cw1": 8551,
+       "cw5": 0,
+       "out": 1801
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 8739
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 194.5,
+      "dur": 24.7,
+      "calls": 4,
+      "cost": 0.1363,
+      "u": {
+       "in": 8,
+       "cr": 81371,
+       "cw1": 9029,
+       "cw5": 0,
+       "out": 2387
+      },
+      "tools": {
+       "Bash": 3
+      },
+      "promptChars": 8841
+     },
+     {
+      "label": "scout-2",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 236.0,
+      "dur": 44.8,
+      "calls": 4,
+      "cost": 0.251,
+      "u": {
+       "in": 8,
+       "cr": 76462,
+       "cw1": 17042,
+       "cw5": 0,
+       "out": 4968
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 15,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 3737
+     },
+     {
+      "label": "scout-2",
+      "model": null,
+      "effort": null,
+      "start": 280.9,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "integrator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 290.0,
+      "dur": 16.9,
+      "calls": 3,
+      "cost": 0.0804,
+      "u": {
+       "in": 6,
+       "cr": 53203,
+       "cw1": 6382,
+       "cw5": 0,
+       "out": 934
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 3169
+     },
+     {
+      "label": "critic",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 323.1,
+      "dur": 5.9,
+      "calls": 1,
+      "cost": 0.0981,
+      "u": {
+       "in": 2,
+       "cr": 13726,
+       "cw1": 11896,
+       "cw5": 0,
+       "out": 7
+      },
+      "tools": {
+       "Read": 3
+      },
+      "promptChars": 18952
+     },
+     {
+      "label": "critic-rereview",
+      "model": null,
+      "effort": null,
+      "start": 329.8,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 29
+     }
+    ]
+   },
+   {
+    "arm": "d",
+    "rep": 1,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 365.15,
+    "recordedCost": 1.054314948,
+    "jev": 0.001095948,
+    "interventions": [
+     "checkpoint: plan: Build it",
+     "checkpoint: accept: Keep"
+    ],
+    "idle": 81.3,
+    "load": null,
+    "phases": {
+     "plan": {
+      "cost": 0.317,
+      "wall": 140.6
+     },
+     "coordinator": {
+      "cost": 0.2794,
+      "wall": 53.9
+     },
+     "build": {
+      "cost": 0.3731,
+      "wall": 68.6
+     },
+     "review": {
+      "cost": 0.048,
+      "wall": 20.6
+     },
+     "orchestration": {
+      "cost": 0.0369,
+      "wall": 81.4
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.1713,
+      "wall": 56.5,
+      "turns": 3,
+      "calls": 5,
+      "out": 4361,
+      "cacheRead": 167629,
+      "cacheWrite": 23542,
+      "input": 10,
+      "tools": {
+       "Agent": 1,
+       "Read": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1456,
+      "wall": 86.5,
+      "turns": 1,
+      "calls": 5,
+      "out": 6341,
+      "cacheRead": 82307,
+      "cacheWrite": 26275,
+      "input": 10,
+      "tools": {
+       "Bash": 2,
+       "Read": 13
+      }
+     },
+     "coordinator": {
+      "cost": 0.2794,
+      "wall": 53.9,
+      "turns": 2,
+      "calls": 5,
+      "out": 6415,
+      "cacheRead": 96302,
+      "cacheWrite": 16475,
+      "input": 10,
+      "tools": {
+       "Glob": 1,
+       "Read": 3,
+       "Grep": 1
+      }
+     },
+     "builder": {
+      "cost": 0.3731,
+      "wall": 68.6,
+      "turns": 1,
+      "calls": 7,
+      "out": 8186,
+      "cacheRead": 180347,
+      "cacheWrite": 21660,
+      "input": 14,
+      "tools": {
+       "Bash": 4,
+       "Grep": 1,
+       "Write": 3,
+       "Edit": 8
+      }
+     },
+     "critic": {
+      "cost": 0.048,
+      "wall": 20.6,
+      "turns": 1,
+      "calls": 1,
+      "out": 303,
+      "cacheRead": 5632,
+      "cacheWrite": 0,
+      "input": 21937,
+      "tools": {
+       "tool": 1
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 11.1,
+      "dur": 16.4,
+      "calls": 2,
+      "cost": 0.067,
+      "u": {
+       "in": 4,
+       "cr": 52793,
+       "cw1": 11863,
+       "cw5": 0,
+       "out": 895
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3017
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 25.1,
+      "dur": 86.5,
+      "calls": 5,
+      "cost": 0.1456,
+      "u": {
+       "in": 10,
+       "cr": 82307,
+       "cw1": 0,
+       "cw5": 26275,
+       "out": 6341
+      },
+      "tools": {
+       "Bash": 2,
+       "Read": 13
+      },
+      "promptChars": 2046
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 112.9,
+      "dur": 40.1,
+      "calls": 3,
+      "cost": 0.1044,
+      "u": {
+       "in": 6,
+       "cr": 114836,
+       "cw1": 11679,
+       "cw5": 0,
+       "out": 3466
+      },
+      "tools": {
+       "Read": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 16329
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 153.0,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 171.5,
+      "dur": 28.3,
+      "calls": 4,
+      "cost": 0.1648,
+      "u": {
+       "in": 8,
+       "cr": 73387,
+       "cw1": 11079,
+       "cw5": 0,
+       "out": 3073
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 3,
+       "Grep": 1
+      },
+      "promptChars": 6283
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 213.8,
+      "dur": 25.6,
+      "calls": 1,
+      "cost": 0.1146,
+      "u": {
+       "in": 2,
+       "cr": 22915,
+       "cw1": 5396,
+       "cw5": 0,
+       "out": 3342
+      },
+      "tools": {},
+      "promptChars": 8131
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 252.6,
+      "dur": 68.6,
+      "calls": 7,
+      "cost": 0.3731,
+      "u": {
+       "in": 14,
+       "cr": 180347,
+       "cw1": 21660,
+       "cw5": 0,
+       "out": 8186
+      },
+      "tools": {
+       "Bash": 4,
+       "Grep": 1,
+       "Write": 3,
+       "Edit": 8
+      },
+      "promptChars": 6518
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 341.2,
+      "dur": 20.6,
+      "calls": 1,
+      "cost": 0.048,
+      "u": {
+       "in": 21937,
+       "cr": 5632,
+       "out": 303,
+       "reason": 42
+      },
+      "tools": {
+       "tool": 1
+      },
+      "promptChars": 18912
+     }
+    ]
+   },
+   {
+    "arm": "d",
+    "rep": 2,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 276.866,
+    "recordedCost": 0.8038452619999998,
+    "jev": 0.0005422620000000001,
+    "interventions": [
+     "checkpoint: plan: Build it",
+     "checkpoint: accept: Keep"
+    ],
+    "idle": 67.2,
+    "load": null,
+    "phases": {
+     "plan": {
+      "cost": 0.2182,
+      "wall": 69.3
+     },
+     "coordinator": {
+      "cost": 0.2348,
+      "wall": 44.4
+     },
+     "build": {
+      "cost": 0.2961,
+      "wall": 64.6
+     },
+     "review": {
+      "cost": 0.0469,
+      "wall": 31.3
+     },
+     "orchestration": {
+      "cost": 0.008,
+      "wall": 67.3
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.2182,
+      "wall": 69.3,
+      "turns": 2,
+      "calls": 5,
+      "out": 7855,
+      "cacheRead": 168814,
+      "cacheWrite": 26466,
+      "input": 10,
+      "tools": {
+       "Bash": 1,
+       "Read": 13,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "coordinator": {
+      "cost": 0.2347,
+      "wall": 44.4,
+      "turns": 3,
+      "calls": 6,
+      "out": 4139,
+      "cacheRead": 99046,
+      "cacheWrite": 16513,
+      "input": 10,
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "builder": {
+      "cost": 0.2961,
+      "wall": 64.6,
+      "turns": 1,
+      "calls": 6,
+      "out": 6257,
+      "cacheRead": 146882,
+      "cacheWrite": 17697,
+      "input": 12,
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      }
+     },
+     "critic": {
+      "cost": 0.0469,
+      "wall": 31.3,
+      "turns": 1,
+      "calls": 1,
+      "out": 210,
+      "cacheRead": 5632,
+      "cacheWrite": 0,
+      "input": 21853,
+      "tools": {
+       "tool": 1
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 15.0,
+      "dur": 69.3,
+      "calls": 5,
+      "cost": 0.2182,
+      "u": {
+       "in": 10,
+       "cr": 168814,
+       "cw1": 26466,
+       "cw5": 0,
+       "out": 7855
+      },
+      "tools": {
+       "Bash": 1,
+       "Read": 13,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 3017
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 84.4,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 98.1,
+      "dur": 23.6,
+      "calls": 4,
+      "cost": 0.1677,
+      "u": {
+       "in": 8,
+       "cr": 74102,
+       "cw1": 13108,
+       "cw5": 0,
+       "out": 2398
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6169
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 121.7,
+      "dur": 7.0,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 129.8,
+      "dur": 13.8,
+      "calls": 1,
+      "cost": 0.0671,
+      "u": {
+       "in": 2,
+       "cr": 24944,
+       "cw1": 3405,
+       "cw5": 0,
+       "out": 1741
+      },
+      "tools": {},
+      "promptChars": 5764
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 153.6,
+      "dur": 64.6,
+      "calls": 6,
+      "cost": 0.2961,
+      "u": {
+       "in": 12,
+       "cr": 146882,
+       "cw1": 17697,
+       "cw5": 0,
+       "out": 6257
+      },
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      },
+      "promptChars": 6404
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 241.5,
+      "dur": 31.3,
+      "calls": 1,
+      "cost": 0.0469,
+      "u": {
+       "in": 21853,
+       "cr": 5632,
+       "out": 210,
+       "reason": 58
+      },
+      "tools": {
+       "tool": 1
+      },
+      "promptChars": 18387
+     }
+    ]
+   },
+   {
+    "arm": "d",
+    "rep": 3,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 624.889,
+    "recordedCost": 1.7093027159999998,
+    "jev": 0.0011087160000000003,
+    "interventions": [
+     "checkpoint: plan: Build it",
+     "checkpoint: accept: Keep"
+    ],
+    "idle": 161.3,
+    "load": null,
+    "phases": {
+     "plan": {
+      "cost": 0.3965,
+      "wall": 172.0
+     },
+     "coordinator": {
+      "cost": 0.2814,
+      "wall": 72.0
+     },
+     "build": {
+      "cost": 0.9437,
+      "wall": 193.2
+     },
+     "review": {
+      "cost": 0.0418,
+      "wall": 26.5
+     },
+     "orchestration": {
+      "cost": 0.0459,
+      "wall": 161.2
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.2196,
+      "wall": 75.4,
+      "turns": 3,
+      "calls": 4,
+      "out": 7577,
+      "cacheRead": 129761,
+      "cacheWrite": 29474,
+      "input": 8,
+      "tools": {
+       "Agent": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1768,
+      "wall": 100.0,
+      "turns": 1,
+      "calls": 4,
+      "out": 9691,
+      "cacheRead": 61536,
+      "cacheWrite": 27024,
+      "input": 8,
+      "tools": {
+       "Bash": 2,
+       "Read": 13
+      }
+     },
+     "coordinator": {
+      "cost": 0.2814,
+      "wall": 72.0,
+      "turns": 3,
+      "calls": 6,
+      "out": 6474,
+      "cacheRead": 100077,
+      "cacheWrite": 16486,
+      "input": 10,
+      "tools": {
+       "Glob": 1,
+       "Read": 4,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "piece-builder": {
+      "cost": 0.3517,
+      "wall": 74.2,
+      "turns": 4,
+      "calls": 8,
+      "out": 4995,
+      "cacheRead": 119986,
+      "cacheWrite": 18673,
+      "input": 42137,
+      "tools": {
+       "tool": 2,
+       "Bash": 4,
+       "Edit": 2
+      }
+     },
+     "scout-2": {
+      "cost": 0.2152,
+      "wall": 37.1,
+      "turns": 2,
+      "calls": 5,
+      "out": 3871,
+      "cacheRead": 100010,
+      "cacheWrite": 14719,
+      "input": 10,
+      "tools": {
+       "Glob": 1,
+       "Read": 12,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "integrator": {
+      "cost": 0.0793,
+      "wall": 19.6,
+      "turns": 1,
+      "calls": 4,
+      "out": 1174,
+      "cacheRead": 72888,
+      "cacheWrite": 5149,
+      "input": 8,
+      "tools": {
+       "Bash": 2,
+       "Grep": 1
+      }
+     },
+     "builder": {
+      "cost": 0.2976,
+      "wall": 62.2,
+      "turns": 1,
+      "calls": 5,
+      "out": 5938,
+      "cacheRead": 118184,
+      "cacheWrite": 19394,
+      "input": 10,
+      "tools": {
+       "Bash": 3,
+       "Edit": 5,
+       "Write": 1
+      }
+     },
+     "critic": {
+      "cost": 0.0418,
+      "wall": 26.5,
+      "turns": 1,
+      "calls": 1,
+      "out": 214,
+      "cacheRead": 9088,
+      "cacheWrite": 0,
+      "input": 18933,
+      "tools": {
+       "tool": 1
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 31.5,
+      "dur": 16.8,
+      "calls": 2,
+      "cost": 0.0677,
+      "u": {
+       "in": 4,
+       "cr": 52794,
+       "cw1": 11909,
+       "cw5": 0,
+       "out": 948
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3017
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 44.9,
+      "dur": 100.0,
+      "calls": 4,
+      "cost": 0.1768,
+      "u": {
+       "in": 8,
+       "cr": 61536,
+       "cw1": 0,
+       "cw5": 27024,
+       "out": 9691
+      },
+      "tools": {
+       "Bash": 2,
+       "Read": 13
+      },
+      "promptChars": 2380
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 145.8,
+      "dur": 58.6,
+      "calls": 2,
+      "cost": 0.152,
+      "u": {
+       "in": 4,
+       "cr": 76967,
+       "cw1": 17565,
+       "cw5": 0,
+       "out": 6629
+      },
+      "tools": {
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 24906
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 204.4,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 224.0,
+      "dur": 29.8,
+      "calls": 4,
+      "cost": 0.1783,
+      "u": {
+       "in": 8,
+       "cr": 76367,
+       "cw1": 11874,
+       "cw5": 0,
+       "out": 3400
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 4,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6283
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 253.9,
+      "dur": 17.8,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 273.1,
+      "dur": 24.4,
+      "calls": 1,
+      "cost": 0.1031,
+      "u": {
+       "in": 2,
+       "cr": 23710,
+       "cw1": 4612,
+       "cw5": 0,
+       "out": 3074
+      },
+      "tools": {},
+      "promptChars": 6957
+     },
+     {
+      "label": "piece-builder",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "start": 312.8,
+      "dur": 32.2,
+      "calls": 1,
+      "cost": 0.0502,
+      "u": {
+       "in": 23857,
+       "cr": 0,
+       "out": 245,
+       "reason": 25
+      },
+      "tools": {
+       "tool": 1
+      },
+      "promptChars": 8106
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 322.4,
+      "dur": 27.5,
+      "calls": 3,
+      "cost": 0.137,
+      "u": {
+       "in": 6,
+       "cr": 56209,
+       "cw1": 10083,
+       "cw5": 0,
+       "out": 2255
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 8854
+     },
+     {
+      "label": "piece-builder",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "start": 369.5,
+      "dur": 37.2,
+      "calls": 1,
+      "cost": 0.0411,
+      "u": {
+       "in": 18268,
+       "cr": 5632,
+       "out": 347,
+       "reason": 36
+      },
+      "tools": {
+       "tool": 1
+      },
+      "promptChars": 8391
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 381.0,
+      "dur": 23.2,
+      "calls": 3,
+      "cost": 0.1233,
+      "u": {
+       "in": 6,
+       "cr": 58145,
+       "cw1": 8590,
+       "cw5": 0,
+       "out": 2148
+      },
+      "tools": {
+       "Bash": 2,
+       "Edit": 2
+      },
+      "promptChars": 8778
+     },
+     {
+      "label": "scout-2",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 426.6,
+      "dur": 37.1,
+      "calls": 5,
+      "cost": 0.2152,
+      "u": {
+       "in": 10,
+       "cr": 100010,
+       "cw1": 14719,
+       "cw5": 0,
+       "out": 3871
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 12,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 4228
+     },
+     {
+      "label": "scout-2",
+      "model": null,
+      "effort": null,
+      "start": 463.7,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "integrator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 484.8,
+      "dur": 19.6,
+      "calls": 4,
+      "cost": 0.0793,
+      "u": {
+       "in": 8,
+       "cr": 72888,
+       "cw1": 5149,
+       "cw5": 0,
+       "out": 1174
+      },
+      "tools": {
+       "Bash": 2,
+       "Grep": 1
+      },
+      "promptChars": 3176
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 520.4,
+      "dur": 62.2,
+      "calls": 5,
+      "cost": 0.2976,
+      "u": {
+       "in": 10,
+       "cr": 118184,
+       "cw1": 19394,
+       "cw5": 0,
+       "out": 5938
+      },
+      "tools": {
+       "Bash": 3,
+       "Edit": 5,
+       "Write": 1
+      },
+      "promptChars": 6813
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 595.6,
+      "dur": 26.5,
+      "calls": 1,
+      "cost": 0.0418,
+      "u": {
+       "in": 18933,
+       "cr": 9088,
+       "out": 214,
+       "reason": 40
+      },
+      "tools": {
+       "tool": 1
+      },
+      "promptChars": 20149
+     }
+    ]
+   },
+   {
+    "arm": "a",
+    "rep": 1,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 834.591,
+    "recordedCost": 1.1961040859999998,
+    "jev": 0.001339086,
+    "interventions": [
+     "checkpoint: plan: Build it"
+    ],
+    "idle": 94.7,
+    "load": null,
+    "phases": {
+     "plan": {
+      "cost": 0.3076,
+      "wall": 114.3
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0.3109,
+      "wall": 59.0
+     },
+     "review": {
+      "cost": 0.5434,
+      "wall": 566.5
+     },
+     "orchestration": {
+      "cost": 0.0342,
+      "wall": 94.8
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.1667,
+      "wall": 43.8,
+      "turns": 3,
+      "calls": 5,
+      "out": 4257,
+      "cacheRead": 169301,
+      "cacheWrite": 22572,
+      "input": 10,
+      "tools": {
+       "Agent": 1,
+       "Write": 1,
+       "Grep": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1409,
+      "wall": 72.6,
+      "turns": 1,
+      "calls": 4,
+      "out": 6298,
+      "cacheRead": 57854,
+      "cacheWrite": 26552,
+      "input": 8,
+      "tools": {
+       "Bash": 2,
+       "Read": 14
+      }
+     },
+     "builder": {
+      "cost": 0.3109,
+      "wall": 59.0,
+      "turns": 1,
+      "calls": 6,
+      "out": 6760,
+      "cacheRead": 145990,
+      "cacheWrite": 18304,
+      "input": 12,
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      }
+     },
+     "critic": {
+      "cost": 0.1815,
+      "wall": 184.3,
+      "turns": 1,
+      "calls": 5,
+      "out": 3196,
+      "cacheRead": 96128,
+      "cacheWrite": 0,
+      "input": 65151,
+      "tools": {
+       "tool": 4
+      }
+     },
+     "builder-fix": {
+      "cost": 0.0885,
+      "wall": 24.1,
+      "turns": 2,
+      "calls": 4,
+      "out": 1579,
+      "cacheRead": 138206,
+      "cacheWrite": 3657,
+      "input": 8,
+      "tools": {
+       "Bash": 2
+      }
+     },
+     "critic-rereview": {
+      "cost": 0.2734,
+      "wall": 358.0,
+      "turns": 2,
+      "calls": 8,
+      "out": 6164,
+      "cacheRead": 177664,
+      "cacheWrite": 0,
+      "input": 88115,
+      "tools": {
+       "tool": 6
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 14.8,
+      "dur": 12.2,
+      "calls": 2,
+      "cost": 0.0652,
+      "u": {
+       "in": 4,
+       "cr": 52791,
+       "cw1": 11731,
+       "cw5": 0,
+       "out": 775
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3018
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 25.0,
+      "dur": 72.6,
+      "calls": 4,
+      "cost": 0.1409,
+      "u": {
+       "in": 8,
+       "cr": 57854,
+       "cw1": 0,
+       "cw5": 26552,
+       "out": 6298
+      },
+      "tools": {
+       "Bash": 2,
+       "Read": 14
+      },
+      "promptChars": 1745
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 97.9,
+      "dur": 31.5,
+      "calls": 3,
+      "cost": 0.1015,
+      "u": {
+       "in": 6,
+       "cr": 116510,
+       "cw1": 10841,
+       "cw5": 0,
+       "out": 3482
+      },
+      "tools": {
+       "Write": 1,
+       "Grep": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 16295
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 129.5,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 139.3,
+      "dur": 59.0,
+      "calls": 6,
+      "cost": 0.3109,
+      "u": {
+       "in": 12,
+       "cr": 145990,
+       "cw1": 18304,
+       "cw5": 0,
+       "out": 6760
+      },
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      },
+      "promptChars": 6315
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 208.1,
+      "dur": 184.3,
+      "calls": 5,
+      "cost": 0.1815,
+      "u": {
+       "in": 65151,
+       "cr": 96128,
+       "out": 3196,
+       "reason": 2544
+      },
+      "tools": {
+       "tool": 4
+      },
+      "promptChars": 19143
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 401.1,
+      "dur": 10.7,
+      "calls": 2,
+      "cost": 0.046,
+      "u": {
+       "in": 4,
+       "cr": 67247,
+       "cw1": 2082,
+       "cw5": 0,
+       "out": 792
+      },
+      "tools": {
+       "Bash": 1
+      },
+      "promptChars": 672
+     },
+     {
+      "label": "critic-rereview",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 423.3,
+      "dur": 198.6,
+      "calls": 4,
+      "cost": 0.1812,
+      "u": {
+       "in": 66357,
+       "cr": 65152,
+       "out": 3544,
+       "reason": 2797
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 19998
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 646.2,
+      "dur": 13.5,
+      "calls": 2,
+      "cost": 0.0425,
+      "u": {
+       "in": 4,
+       "cr": 70959,
+       "cw1": 1575,
+       "cw5": 0,
+       "out": 787
+      },
+      "tools": {
+       "Bash": 1
+      },
+      "promptChars": 492
+     },
+     {
+      "label": "critic-rereview",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 670.3,
+      "dur": 159.4,
+      "calls": 4,
+      "cost": 0.0922,
+      "u": {
+       "in": 21758,
+       "cr": 112512,
+       "out": 2620,
+       "reason": 1801
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 20047
+     }
+    ]
+   },
+   {
+    "arm": "a",
+    "rep": 2,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 714.234,
+    "recordedCost": 0.9623406219999998,
+    "jev": 0.001070622,
+    "interventions": [
+     "checkpoint: plan: Build it",
+     "checkpoint: accept: Keep"
+    ],
+    "idle": 154.4,
+    "load": null,
+    "phases": {
+     "plan": {
+      "cost": 0.359,
+      "wall": 141.7
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0.3109,
+      "wall": 65.6
+     },
+     "review": {
+      "cost": 0.2595,
+      "wall": 352.5
+     },
+     "orchestration": {
+      "cost": 0.0329,
+      "wall": 154.4
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.214,
+      "wall": 69.2,
+      "turns": 3,
+      "calls": 5,
+      "out": 7162,
+      "cacheRead": 172075,
+      "cacheWrite": 26980,
+      "input": 10,
+      "tools": {
+       "Agent": 1,
+       "Grep": 2,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.145,
+      "wall": 75.4,
+      "turns": 1,
+      "calls": 3,
+      "out": 7146,
+      "cacheRead": 34727,
+      "cacheWrite": 26653,
+      "input": 6,
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      }
+     },
+     "builder": {
+      "cost": 0.3109,
+      "wall": 65.6,
+      "turns": 1,
+      "calls": 6,
+      "out": 6860,
+      "cacheRead": 144884,
+      "cacheWrite": 18089,
+      "input": 12,
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      }
+     },
+     "critic": {
+      "cost": 0.1121,
+      "wall": 166.9,
+      "turns": 1,
+      "calls": 5,
+      "out": 2599,
+      "cacheRead": 136832,
+      "cacheWrite": 0,
+      "input": 29372,
+      "tools": {
+       "tool": 4
+      }
+     },
+     "builder-fix": {
+      "cost": 0.0498,
+      "wall": 19.8,
+      "turns": 1,
+      "calls": 2,
+      "out": 1072,
+      "cacheRead": 67037,
+      "cacheWrite": 1871,
+      "input": 4,
+      "tools": {
+       "Bash": 1
+      }
+     },
+     "critic-rereview": {
+      "cost": 0.0976,
+      "wall": 165.8,
+      "turns": 1,
+      "calls": 5,
+      "out": 1144,
+      "cacheRead": 97280,
+      "cacheWrite": 0,
+      "input": 33372,
+      "tools": {
+       "tool": 4
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 36.7,
+      "dur": 15.1,
+      "calls": 2,
+      "cost": 0.0657,
+      "u": {
+       "in": 4,
+       "cr": 52798,
+       "cw1": 11762,
+       "cw5": 0,
+       "out": 807
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3018
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 48.9,
+      "dur": 75.4,
+      "calls": 3,
+      "cost": 0.145,
+      "u": {
+       "in": 6,
+       "cr": 34727,
+       "cw1": 0,
+       "cw5": 26653,
+       "out": 7146
+      },
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      },
+      "promptChars": 1822
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 126.5,
+      "dur": 54.1,
+      "calls": 3,
+      "cost": 0.1483,
+      "u": {
+       "in": 6,
+       "cr": 119277,
+       "cw1": 15218,
+       "cw5": 0,
+       "out": 6355
+      },
+      "tools": {
+       "Grep": 2,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 18139
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 180.6,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 210.7,
+      "dur": 65.6,
+      "calls": 6,
+      "cost": 0.3109,
+      "u": {
+       "in": 12,
+       "cr": 144884,
+       "cw1": 18089,
+       "cw5": 0,
+       "out": 6860
+      },
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      },
+      "promptChars": 6089
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 297.7,
+      "dur": 166.9,
+      "calls": 5,
+      "cost": 0.1121,
+      "u": {
+       "in": 29372,
+       "cr": 136832,
+       "out": 2599,
+       "reason": 1474
+      },
+      "tools": {
+       "tool": 4
+      },
+      "promptChars": 18553
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 498.8,
+      "dur": 19.8,
+      "calls": 2,
+      "cost": 0.0498,
+      "u": {
+       "in": 4,
+       "cr": 67037,
+       "cw1": 1871,
+       "cw5": 0,
+       "out": 1072
+      },
+      "tools": {
+       "Bash": 1
+      },
+      "promptChars": 764
+     },
+     {
+      "label": "critic-rereview",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 543.1,
+      "dur": 165.8,
+      "calls": 5,
+      "cost": 0.0976,
+      "u": {
+       "in": 33372,
+       "cr": 97280,
+       "out": 1144,
+       "reason": 298
+      },
+      "tools": {
+       "tool": 4
+      },
+      "promptChars": 19968
+     }
+    ]
+   },
+   {
+    "arm": "c",
+    "rep": 1,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 367.184,
+    "recordedCost": 1.2223383939999999,
+    "jev": 0.000548394,
+    "interventions": [
+     "checkpoint: plan: Build it"
+    ],
+    "idle": 60.6,
+    "load": null,
+    "phases": {
+     "plan": {
+      "cost": 0.3809,
+      "wall": 159.0
+     },
+     "coordinator": {
+      "cost": 0.2695,
+      "wall": 55.9
+     },
+     "build": {
+      "cost": 0.3237,
+      "wall": 60.9
+     },
+     "review": {
+      "cost": 0.2054,
+      "wall": 30.8
+     },
+     "orchestration": {
+      "cost": 0.0428,
+      "wall": 60.6
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.2576,
+      "wall": 97.8,
+      "turns": 3,
+      "calls": 5,
+      "out": 10014,
+      "cacheRead": 168438,
+      "cacheWrite": 30926,
+      "input": 10,
+      "tools": {
+       "Agent": 1,
+       "Read": 8,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1234,
+      "wall": 63.8,
+      "turns": 1,
+      "calls": 4,
+      "out": 4598,
+      "cacheRead": 57258,
+      "cacheWrite": 26375,
+      "input": 8,
+      "tools": {
+       "Bash": 2,
+       "Read": 13
+      }
+     },
+     "coordinator": {
+      "cost": 0.2695,
+      "wall": 55.9,
+      "turns": 3,
+      "calls": 7,
+      "out": 5385,
+      "cacheRead": 123804,
+      "cacheWrite": 17128,
+      "input": 12,
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "builder": {
+      "cost": 0.3237,
+      "wall": 60.9,
+      "turns": 1,
+      "calls": 6,
+      "out": 7014,
+      "cacheRead": 151901,
+      "cacheWrite": 19130,
+      "input": 12,
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      }
+     },
+     "critic": {
+      "cost": 0.2054,
+      "wall": 30.8,
+      "turns": 1,
+      "calls": 3,
+      "out": 3090,
+      "cacheRead": 68106,
+      "cacheWrite": 16250,
+      "input": 6,
+      "tools": {
+       "Read": 3,
+       "Grep": 1,
+       "Glob": 1
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 22.4,
+      "dur": 12.8,
+      "calls": 2,
+      "cost": 0.0667,
+      "u": {
+       "in": 4,
+       "cr": 52795,
+       "cw1": 11843,
+       "cw5": 0,
+       "out": 881
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3018
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 32.6,
+      "dur": 63.8,
+      "calls": 4,
+      "cost": 0.1234,
+      "u": {
+       "in": 8,
+       "cr": 57258,
+       "cw1": 0,
+       "cw5": 26375,
+       "out": 4598
+      },
+      "tools": {
+       "Bash": 2,
+       "Read": 13
+      },
+      "promptChars": 2057
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 96.6,
+      "dur": 85.0,
+      "calls": 3,
+      "cost": 0.1908,
+      "u": {
+       "in": 6,
+       "cr": 115643,
+       "cw1": 19083,
+       "cw5": 0,
+       "out": 9133
+      },
+      "tools": {
+       "Read": 8,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 12008
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 181.6,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 194.0,
+      "dur": 31.1,
+      "calls": 5,
+      "cost": 0.1942,
+      "u": {
+       "in": 10,
+       "cr": 99292,
+       "cw1": 12676,
+       "cw5": 0,
+       "out": 3644
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6284
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 225.2,
+      "dur": 11.6,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 237.7,
+      "dur": 13.2,
+      "calls": 1,
+      "cost": 0.0753,
+      "u": {
+       "in": 2,
+       "cr": 24512,
+       "cw1": 4452,
+       "cw5": 0,
+       "out": 1741
+      },
+      "tools": {},
+      "promptChars": 5878
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 260.1,
+      "dur": 60.9,
+      "calls": 6,
+      "cost": 0.3237,
+      "u": {
+       "in": 12,
+       "cr": 151901,
+       "cw1": 19130,
+       "cw5": 0,
+       "out": 7014
+      },
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      },
+      "promptChars": 6519
+     },
+     {
+      "label": "critic",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 334.1,
+      "dur": 30.8,
+      "calls": 3,
+      "cost": 0.2054,
+      "u": {
+       "in": 6,
+       "cr": 68106,
+       "cw1": 16250,
+       "cw5": 0,
+       "out": 3090
+      },
+      "tools": {
+       "Read": 3,
+       "Grep": 1,
+       "Glob": 1
+      },
+      "promptChars": 18643
+     }
+    ]
+   },
+   {
+    "arm": "a2",
+    "rep": 1,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 399.413,
+    "recordedCost": 1.03181777,
+    "jev": 0.00126777,
+    "interventions": [
+     "checkpoint: plan: Build it"
+    ],
+    "idle": 56.0,
+    "load": [
+     40,
+     204
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.2872,
+      "wall": 103.8
+     },
+     "coordinator": {
+      "cost": 0.2485,
+      "wall": 45.2
+     },
+     "build": {
+      "cost": 0.3665,
+      "wall": 69.2
+     },
+     "review": {
+      "cost": 0.0911,
+      "wall": 125.1
+     },
+     "orchestration": {
+      "cost": 0.0385,
+      "wall": 56.1
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.1521,
+      "wall": 40.7,
+      "turns": 3,
+      "calls": 4,
+      "out": 4050,
+      "cacheRead": 125384,
+      "cacheWrite": 21615,
+      "input": 8,
+      "tools": {
+       "Agent": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1351,
+      "wall": 65.3,
+      "turns": 1,
+      "calls": 4,
+      "out": 5575,
+      "cacheRead": 58988,
+      "cacheWrite": 27024,
+      "input": 8,
+      "tools": {
+       "Bash": 3,
+       "Read": 13
+      }
+     },
+     "coordinator": {
+      "cost": 0.2485,
+      "wall": 45.2,
+      "turns": 3,
+      "calls": 8,
+      "out": 4278,
+      "cacheRead": 151507,
+      "cacheWrite": 16570,
+      "input": 14,
+      "tools": {
+       "Glob": 1,
+       "Read": 7,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "builder": {
+      "cost": 0.3665,
+      "wall": 69.2,
+      "turns": 1,
+      "calls": 6,
+      "out": 8218,
+      "cacheRead": 147300,
+      "cacheWrite": 21585,
+      "input": 12,
+      "tools": {
+       "Bash": 3,
+       "Write": 2,
+       "Edit": 11
+      }
+     },
+     "critic": {
+      "cost": 0.0911,
+      "wall": 125.1,
+      "turns": 1,
+      "calls": 3,
+      "out": 2630,
+      "cacheRead": 69888,
+      "cacheWrite": 0,
+      "input": 25428,
+      "tools": {
+       "tool": 2
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 11.3,
+      "dur": 12.9,
+      "calls": 2,
+      "cost": 0.0673,
+      "u": {
+       "in": 4,
+       "cr": 52809,
+       "cw1": 11883,
+       "cw5": 0,
+       "out": 915
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3021
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 22.0,
+      "dur": 65.3,
+      "calls": 4,
+      "cost": 0.1351,
+      "u": {
+       "in": 8,
+       "cr": 58988,
+       "cw1": 0,
+       "cw5": 27024,
+       "out": 5575
+      },
+      "tools": {
+       "Bash": 3,
+       "Read": 13
+      },
+      "promptChars": 2149
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 87.7,
+      "dur": 27.8,
+      "calls": 2,
+      "cost": 0.0848,
+      "u": {
+       "in": 4,
+       "cr": 72575,
+       "cw1": 9732,
+       "cw5": 0,
+       "out": 3135
+      },
+      "tools": {
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 14347
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 115.5,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 29
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 122.2,
+      "dur": 24.5,
+      "calls": 6,
+      "cost": 0.188,
+      "u": {
+       "in": 12,
+       "cr": 125531,
+       "cw1": 14140,
+       "cw5": 0,
+       "out": 2485
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 7,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6287
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 146.7,
+      "dur": 6.4,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 153.9,
+      "dur": 14.3,
+      "calls": 1,
+      "cost": 0.0605,
+      "u": {
+       "in": 2,
+       "cr": 25976,
+       "cw1": 2430,
+       "cw5": 0,
+       "out": 1793
+      },
+      "tools": {},
+      "promptChars": 5878
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 188.5,
+      "dur": 69.2,
+      "calls": 6,
+      "cost": 0.3665,
+      "u": {
+       "in": 12,
+       "cr": 147300,
+       "cw1": 21585,
+       "cw5": 0,
+       "out": 8218
+      },
+      "tools": {
+       "Bash": 3,
+       "Write": 2,
+       "Edit": 11
+      },
+      "promptChars": 6522
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 271.9,
+      "dur": 125.1,
+      "calls": 3,
+      "cost": 0.0911,
+      "u": {
+       "in": 25428,
+       "cr": 69888,
+       "out": 2630,
+       "reason": 2144
+      },
+      "tools": {
+       "tool": 2
+      },
+      "promptChars": 18542
+     }
+    ]
+   },
+   {
+    "arm": "a2",
+    "rep": 2,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 683.537,
+    "recordedCost": 1.7347517780000001,
+    "jev": 0.00044977800000000007,
+    "interventions": [
+     "checkpoint: plan: Build it",
+     "checkpoint: accept: Keep"
+    ],
+    "idle": 165.3,
+    "load": [
+     204,
+     16
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.347,
+      "wall": 137.1
+     },
+     "coordinator": {
+      "cost": 0.3234,
+      "wall": 71.6
+     },
+     "build": {
+      "cost": 0.7399,
+      "wall": 137.1
+     },
+     "review": {
+      "cost": 0.2724,
+      "wall": 172.4
+     },
+     "orchestration": {
+      "cost": 0.0521,
+      "wall": 165.3
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.1894,
+      "wall": 56.9,
+      "turns": 3,
+      "calls": 4,
+      "out": 5983,
+      "cacheRead": 127711,
+      "cacheWrite": 26009,
+      "input": 8,
+      "tools": {
+       "Agent": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1576,
+      "wall": 82.2,
+      "turns": 1,
+      "calls": 4,
+      "out": 7974,
+      "cacheRead": 57237,
+      "cacheWrite": 26565,
+      "input": 8,
+      "tools": {
+       "Bash": 2,
+       "Read": 14
+      }
+     },
+     "coordinator": {
+      "cost": 0.3234,
+      "wall": 71.5,
+      "turns": 3,
+      "calls": 7,
+      "out": 7263,
+      "cacheRead": 124713,
+      "cacheWrite": 19145,
+      "input": 12,
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "piece-builder": {
+      "cost": 0.5416,
+      "wall": 110.8,
+      "turns": 4,
+      "calls": 15,
+      "out": 9713,
+      "cacheRead": 300973,
+      "cacheWrite": 35882,
+      "input": 30,
+      "tools": {
+       "Bash": 11
+      }
+     },
+     "builder-fix": {
+      "cost": 0.1538,
+      "wall": 36.9,
+      "turns": 4,
+      "calls": 8,
+      "out": 2338,
+      "cacheRead": 216161,
+      "cacheWrite": 7970,
+      "input": 16,
+      "tools": {
+       "Bash": 4
+      }
+     },
+     "builder": {
+      "cost": 0.1982,
+      "wall": 26.2,
+      "turns": 1,
+      "calls": 6,
+      "out": 2501,
+      "cacheRead": 150488,
+      "cacheWrite": 14753,
+      "input": 12,
+      "tools": {
+       "Bash": 4,
+       "Write": 2
+      }
+     },
+     "critic": {
+      "cost": 0.1187,
+      "wall": 135.5,
+      "turns": 1,
+      "calls": 4,
+      "out": 3875,
+      "cacheRead": 100864,
+      "cacheWrite": 0,
+      "input": 29885,
+      "tools": {
+       "tool": 3
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 20.7,
+      "dur": 12.4,
+      "calls": 2,
+      "cost": 0.0664,
+      "u": {
+       "in": 4,
+       "cr": 52797,
+       "cw1": 11817,
+       "cw5": 0,
+       "out": 858
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3021
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 31.1,
+      "dur": 82.2,
+      "calls": 4,
+      "cost": 0.1576,
+      "u": {
+       "in": 8,
+       "cr": 57237,
+       "cw1": 0,
+       "cw5": 26565,
+       "out": 7974
+      },
+      "tools": {
+       "Bash": 2,
+       "Read": 14
+      },
+      "promptChars": 1909
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 115.0,
+      "dur": 44.5,
+      "calls": 2,
+      "cost": 0.123,
+      "u": {
+       "in": 4,
+       "cr": 74914,
+       "cw1": 14192,
+       "cw5": 0,
+       "out": 5125
+      },
+      "tools": {
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 20511
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 159.4,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 175.7,
+      "dur": 39.8,
+      "calls": 5,
+      "cost": 0.235,
+      "u": {
+       "in": 10,
+       "cr": 98314,
+       "cw1": 14563,
+       "cw5": 0,
+       "out": 4942
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6287
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 215.5,
+      "dur": 13.5,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 230.8,
+      "dur": 18.3,
+      "calls": 1,
+      "cost": 0.0884,
+      "u": {
+       "in": 2,
+       "cr": 26399,
+       "cw1": 4582,
+       "cw5": 0,
+       "out": 2321
+      },
+      "tools": {},
+      "promptChars": 7345
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 268.6,
+      "dur": 26.9,
+      "calls": 3,
+      "cost": 0.1351,
+      "u": {
+       "in": 6,
+       "cr": 55721,
+       "cw1": 9673,
+       "cw5": 0,
+       "out": 2326
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 8218
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 311.8,
+      "dur": 29.8,
+      "calls": 4,
+      "cost": 0.1358,
+      "u": {
+       "in": 8,
+       "cr": 81420,
+       "cw1": 8288,
+       "cw5": 0,
+       "out": 2657
+      },
+      "tools": {
+       "Bash": 3
+      },
+      "promptChars": 8874
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 359.1,
+      "dur": 12.1,
+      "calls": 2,
+      "cost": 0.0418,
+      "u": {
+       "in": 4,
+       "cr": 49701,
+       "cw1": 2109,
+       "cw5": 0,
+       "out": 751
+      },
+      "tools": {
+       "Bash": 1
+      },
+      "promptChars": 2013
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 385.1,
+      "dur": 9.5,
+      "calls": 2,
+      "cost": 0.0369,
+      "u": {
+       "in": 4,
+       "cr": 53790,
+       "cw1": 1942,
+       "cw5": 0,
+       "out": 529
+      },
+      "tools": {
+       "Bash": 1
+      },
+      "promptChars": 2013
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 409.4,
+      "dur": 22.9,
+      "calls": 3,
+      "cost": 0.1058,
+      "u": {
+       "in": 6,
+       "cr": 57392,
+       "cw1": 7372,
+       "cw5": 0,
+       "out": 1765
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 8098
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 442.5,
+      "dur": 31.3,
+      "calls": 5,
+      "cost": 0.165,
+      "u": {
+       "in": 10,
+       "cr": 106440,
+       "cw1": 10549,
+       "cw5": 0,
+       "out": 2965
+      },
+      "tools": {
+       "Bash": 4
+      },
+      "promptChars": 8721
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 483.7,
+      "dur": 9.2,
+      "calls": 2,
+      "cost": 0.0418,
+      "u": {
+       "in": 4,
+       "cr": 54282,
+       "cw1": 2165,
+       "cw5": 0,
+       "out": 682
+      },
+      "tools": {
+       "Bash": 1
+      },
+      "promptChars": 2039
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 498.9,
+      "dur": 6.1,
+      "calls": 2,
+      "cost": 0.0332,
+      "u": {
+       "in": 4,
+       "cr": 58388,
+       "cw1": 1754,
+       "cw5": 0,
+       "out": 376
+      },
+      "tools": {
+       "Bash": 1
+      },
+      "promptChars": 2039
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 512.4,
+      "dur": 26.2,
+      "calls": 6,
+      "cost": 0.1982,
+      "u": {
+       "in": 12,
+       "cr": 150488,
+       "cw1": 14753,
+       "cw5": 0,
+       "out": 2501
+      },
+      "tools": {
+       "Bash": 4,
+       "Write": 2
+      },
+      "promptChars": 9700
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 543.5,
+      "dur": 135.5,
+      "calls": 4,
+      "cost": 0.1187,
+      "u": {
+       "in": 29885,
+       "cr": 100864,
+       "out": 3875,
+       "reason": 3210
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 18432
+     }
+    ]
+   },
+   {
+    "arm": "a2",
+    "rep": 3,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 356.335,
+    "recordedCost": 1.072532844,
+    "jev": 0.0005998440000000001,
+    "interventions": [
+     "checkpoint: plan: Build it"
+    ],
+    "idle": 36.9,
+    "load": [
+     16,
+     67
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.297,
+      "wall": 104.8
+     },
+     "coordinator": {
+      "cost": 0.2895,
+      "wall": 54.7
+     },
+     "build": {
+      "cost": 0.341,
+      "wall": 62.0
+     },
+     "review": {
+      "cost": 0.1102,
+      "wall": 98.0
+     },
+     "orchestration": {
+      "cost": 0.0348,
+      "wall": 36.8
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.1518,
+      "wall": 36.7,
+      "turns": 3,
+      "calls": 4,
+      "out": 3694,
+      "cacheRead": 126337,
+      "cacheWrite": 22395,
+      "input": 8,
+      "tools": {
+       "Agent": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1452,
+      "wall": 69.6,
+      "turns": 1,
+      "calls": 4,
+      "out": 6676,
+      "cacheRead": 58739,
+      "cacheWrite": 26675,
+      "input": 8,
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      }
+     },
+     "coordinator": {
+      "cost": 0.2895,
+      "wall": 54.7,
+      "turns": 3,
+      "calls": 7,
+      "out": 6090,
+      "cacheRead": 126381,
+      "cacheWrite": 17795,
+      "input": 12,
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "builder": {
+      "cost": 0.341,
+      "wall": 62.0,
+      "turns": 1,
+      "calls": 8,
+      "out": 6939,
+      "cacheRead": 208514,
+      "cacheWrite": 20058,
+      "input": 16,
+      "tools": {
+       "Bash": 5,
+       "Edit": 4
+      }
+     },
+     "critic": {
+      "cost": 0.1102,
+      "wall": 98.0,
+      "turns": 1,
+      "calls": 4,
+      "out": 2835,
+      "cacheRead": 95104,
+      "cacheWrite": 0,
+      "input": 31411,
+      "tools": {
+       "tool": 3
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 6.4,
+      "dur": 11.5,
+      "calls": 2,
+      "cost": 0.066,
+      "u": {
+       "in": 4,
+       "cr": 52803,
+       "cw1": 11801,
+       "cw5": 0,
+       "out": 819
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3021
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 16.4,
+      "dur": 69.6,
+      "calls": 4,
+      "cost": 0.1452,
+      "u": {
+       "in": 8,
+       "cr": 58739,
+       "cw1": 0,
+       "cw5": 26675,
+       "out": 6676
+      },
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      },
+      "promptChars": 1896
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 86.1,
+      "dur": 25.2,
+      "calls": 2,
+      "cost": 0.0858,
+      "u": {
+       "in": 4,
+       "cr": 73534,
+       "cw1": 10594,
+       "cw5": 0,
+       "out": 2875
+      },
+      "tools": {
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 16846
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 111.3,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 117.3,
+      "dur": 35.3,
+      "calls": 5,
+      "cost": 0.2217,
+      "u": {
+       "in": 10,
+       "cr": 99194,
+       "cw1": 15351,
+       "cw5": 0,
+       "out": 3949
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6287
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 152.6,
+      "dur": 3.6,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 156.7,
+      "dur": 15.8,
+      "calls": 1,
+      "cost": 0.0678,
+      "u": {
+       "in": 2,
+       "cr": 27187,
+       "cw1": 2444,
+       "cw5": 0,
+       "out": 2141
+      },
+      "tools": {},
+      "promptChars": 5878
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 178.5,
+      "dur": 62.0,
+      "calls": 8,
+      "cost": 0.341,
+      "u": {
+       "in": 16,
+       "cr": 208514,
+       "cw1": 20058,
+       "cw5": 0,
+       "out": 6939
+      },
+      "tools": {
+       "Bash": 5,
+       "Edit": 4
+      },
+      "promptChars": 6522
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 256.1,
+      "dur": 98.0,
+      "calls": 4,
+      "cost": 0.1102,
+      "u": {
+       "in": 31411,
+       "cr": 95104,
+       "out": 2835,
+       "reason": 2131
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 17847
+     }
+    ]
+   },
+   {
+    "arm": "b",
+    "rep": 1,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 431.682,
+    "recordedCost": 1.080219142,
+    "jev": 0.0006741420000000001,
+    "interventions": [
+     "checkpoint: plan: Build it"
+    ],
+    "idle": 80.9,
+    "load": [
+     75,
+     219
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.3084,
+      "wall": 120.5
+     },
+     "coordinator": {
+      "cost": 0.3033,
+      "wall": 58.4
+     },
+     "build": {
+      "cost": 0.3212,
+      "wall": 60.8
+     },
+     "review": {
+      "cost": 0.1124,
+      "wall": 111.0
+     },
+     "orchestration": {
+      "cost": 0.0348,
+      "wall": 81.0
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.1593,
+      "wall": 42.7,
+      "turns": 3,
+      "calls": 4,
+      "out": 4011,
+      "cacheRead": 127246,
+      "cacheWrite": 23426,
+      "input": 8,
+      "tools": {
+       "Agent": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1492,
+      "wall": 79.9,
+      "turns": 1,
+      "calls": 3,
+      "out": 7422,
+      "cacheRead": 35102,
+      "cacheWrite": 27164,
+      "input": 6,
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      }
+     },
+     "coordinator": {
+      "cost": 0.3033,
+      "wall": 58.4,
+      "turns": 2,
+      "calls": 6,
+      "out": 6997,
+      "cacheRead": 124332,
+      "cacheWrite": 17304,
+      "input": 12,
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Write": 1
+      }
+     },
+     "builder": {
+      "cost": 0.3212,
+      "wall": 60.8,
+      "turns": 1,
+      "calls": 7,
+      "out": 6785,
+      "cacheRead": 173699,
+      "cacheWrite": 18832,
+      "input": 14,
+      "tools": {
+       "Bash": 4,
+       "Grep": 1,
+       "Edit": 4,
+       "Write": 1
+      }
+     },
+     "critic": {
+      "cost": 0.1124,
+      "wall": 111.0,
+      "turns": 1,
+      "calls": 4,
+      "out": 2952,
+      "cacheRead": 105472,
+      "cacheWrite": 0,
+      "input": 30900,
+      "tools": {
+       "tool": 3
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 16.4,
+      "dur": 15.1,
+      "calls": 2,
+      "cost": 0.0674,
+      "u": {
+       "in": 4,
+       "cr": 52797,
+       "cw1": 11890,
+       "cw5": 0,
+       "out": 931
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3020
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 29.4,
+      "dur": 79.9,
+      "calls": 3,
+      "cost": 0.1492,
+      "u": {
+       "in": 6,
+       "cr": 35102,
+       "cw1": 0,
+       "cw5": 27164,
+       "out": 7422
+      },
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      },
+      "promptChars": 2303
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 110.2,
+      "dur": 27.6,
+      "calls": 2,
+      "cost": 0.0918,
+      "u": {
+       "in": 4,
+       "cr": 74449,
+       "cw1": 11536,
+       "cw5": 0,
+       "out": 3080
+      },
+      "tools": {
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 19351
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 137.8,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 153.2,
+      "dur": 36.6,
+      "calls": 5,
+      "cost": 0.2039,
+      "u": {
+       "in": 10,
+       "cr": 99769,
+       "cw1": 12727,
+       "cw5": 0,
+       "out": 4105
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Write": 1
+      },
+      "promptChars": 6286
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 203.4,
+      "dur": 21.8,
+      "calls": 1,
+      "cost": 0.0994,
+      "u": {
+       "in": 2,
+       "cr": 24563,
+       "cw1": 4577,
+       "cw5": 0,
+       "out": 2892
+      },
+      "tools": {},
+      "promptChars": 6689
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 243.0,
+      "dur": 60.8,
+      "calls": 7,
+      "cost": 0.3212,
+      "u": {
+       "in": 14,
+       "cr": 173699,
+       "cw1": 18832,
+       "cw5": 0,
+       "out": 6785
+      },
+      "tools": {
+       "Bash": 4,
+       "Grep": 1,
+       "Edit": 4,
+       "Write": 1
+      },
+      "promptChars": 6521
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 318.5,
+      "dur": 111.0,
+      "calls": 4,
+      "cost": 0.1124,
+      "u": {
+       "in": 30900,
+       "cr": 105472,
+       "out": 2952,
+       "reason": 2234
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 17557
+     }
+    ]
+   },
+   {
+    "arm": "b",
+    "rep": 2,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 641.875,
+    "recordedCost": 1.55808538,
+    "jev": 0.0011083800000000002,
+    "interventions": [
+     "checkpoint: plan: Build it"
+    ],
+    "idle": 100.4,
+    "load": [
+     219,
+     227
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.2925,
+      "wall": 139.3
+     },
+     "coordinator": {
+      "cost": 0.2853,
+      "wall": 62.3
+     },
+     "build": {
+      "cost": 0.6858,
+      "wall": 154.0
+     },
+     "review": {
+      "cost": 0.2087,
+      "wall": 185.9
+     },
+     "orchestration": {
+      "cost": 0.086,
+      "wall": 100.4
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.2168,
+      "wall": 74.5,
+      "turns": 3,
+      "calls": 5,
+      "out": 6841,
+      "cacheRead": 169767,
+      "cacheWrite": 28614,
+      "input": 10,
+      "tools": {
+       "Agent": 1,
+       "Read": 10,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.0756,
+      "wall": 67.5,
+      "turns": 1,
+      "calls": 4,
+      "out": 26,
+      "cacheRead": 56898,
+      "cacheWrite": 25585,
+      "input": 8,
+      "tools": {
+       "Bash": 1,
+       "Read": 13
+      }
+     },
+     "coordinator": {
+      "cost": 0.2852,
+      "wall": 62.3,
+      "turns": 3,
+      "calls": 7,
+      "out": 6158,
+      "cacheRead": 122176,
+      "cacheWrite": 17198,
+      "input": 12,
+      "tools": {
+       "Glob": 1,
+       "Read": 4,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "piece-builder": {
+      "cost": 0.5551,
+      "wall": 126.6,
+      "turns": 4,
+      "calls": 22,
+      "out": 9942,
+      "cacheRead": 488790,
+      "cacheWrite": 21249,
+      "input": 62111,
+      "tools": {
+       "tool": 11,
+       "Bash": 5,
+       "Glob": 1,
+       "Write": 4
+      }
+     },
+     "integrator": {
+      "cost": 0.1307,
+      "wall": 27.4,
+      "turns": 2,
+      "calls": 6,
+      "out": 1924,
+      "cacheRead": 117828,
+      "cacheWrite": 8576,
+      "input": 12,
+      "tools": {
+       "Bash": 4
+      }
+     },
+     "critic": {
+      "cost": 0.1077,
+      "wall": 88.2,
+      "turns": 1,
+      "calls": 4,
+      "out": 2938,
+      "cacheRead": 100224,
+      "cacheWrite": 0,
+      "input": 29120,
+      "tools": {
+       "tool": 3
+      }
+     },
+     "critic-rereview": {
+      "cost": 0.101,
+      "wall": 97.7,
+      "turns": 1,
+      "calls": 5,
+      "out": 1757,
+      "cacheRead": 132096,
+      "cacheWrite": 0,
+      "input": 28513,
+      "tools": {
+       "tool": 4
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 16.3,
+      "dur": 14.8,
+      "calls": 2,
+      "cost": 0.0673,
+      "u": {
+       "in": 4,
+       "cr": 52799,
+       "cw1": 11872,
+       "cw5": 0,
+       "out": 920
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3020
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 28.4,
+      "dur": 67.5,
+      "calls": 4,
+      "cost": 0.0756,
+      "u": {
+       "in": 8,
+       "cr": 56898,
+       "cw1": 0,
+       "cw5": 25585,
+       "out": 26
+      },
+      "tools": {
+       "Bash": 1,
+       "Read": 13
+      },
+      "promptChars": 2127
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 96.3,
+      "dur": 59.7,
+      "calls": 3,
+      "cost": 0.1496,
+      "u": {
+       "in": 6,
+       "cr": 116968,
+       "cw1": 16742,
+       "cw5": 0,
+       "out": 5921
+      },
+      "tools": {
+       "Read": 10,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 12043
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 156.0,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 164.1,
+      "dur": 30.1,
+      "calls": 5,
+      "cost": 0.1854,
+      "u": {
+       "in": 10,
+       "cr": 98214,
+       "cw1": 12126,
+       "cw5": 0,
+       "out": 3434
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 4,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6170
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 194.2,
+      "dur": 12.1,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 207.4,
+      "dur": 20.1,
+      "calls": 1,
+      "cost": 0.0999,
+      "u": {
+       "in": 2,
+       "cr": 23962,
+       "cw1": 5072,
+       "cw5": 0,
+       "out": 2724
+      },
+      "tools": {},
+      "promptChars": 8297
+     },
+     {
+      "label": "piece-builder",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "start": 238.1,
+      "dur": 66.2,
+      "calls": 6,
+      "cost": 0.1038,
+      "u": {
+       "in": 30366,
+       "cr": 131200,
+       "out": 1684,
+       "reason": 189
+      },
+      "tools": {
+       "tool": 5
+      },
+      "promptChars": 8243
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 242.2,
+      "dur": 38.8,
+      "calls": 6,
+      "cost": 0.2218,
+      "u": {
+       "in": 12,
+       "cr": 130708,
+       "cw1": 13305,
+       "cw5": 0,
+       "out": 4459
+      },
+      "tools": {
+       "Bash": 3,
+       "Glob": 1,
+       "Write": 4
+      },
+      "promptChars": 8873
+     },
+     {
+      "label": "piece-builder",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "start": 290.8,
+      "dur": 73.9,
+      "calls": 7,
+      "cost": 0.1161,
+      "u": {
+       "in": 31727,
+       "cr": 168576,
+       "out": 1890,
+       "reason": 256
+      },
+      "tools": {
+       "tool": 6
+      },
+      "promptChars": 8498
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 293.4,
+      "dur": 20.7,
+      "calls": 3,
+      "cost": 0.1134,
+      "u": {
+       "in": 6,
+       "cr": 58306,
+       "cw1": 7944,
+       "cw5": 0,
+       "out": 1909
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 9048
+     },
+     {
+      "label": "integrator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 379.6,
+      "dur": 9.6,
+      "calls": 3,
+      "cost": 0.061,
+      "u": {
+       "in": 6,
+       "cr": 53584,
+       "cw1": 4726,
+       "cw5": 0,
+       "out": 621
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 3254
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 401.8,
+      "dur": 88.2,
+      "calls": 4,
+      "cost": 0.1077,
+      "u": {
+       "in": 29120,
+       "cr": 100224,
+       "out": 2938,
+       "reason": 2369
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 19347
+     },
+     {
+      "label": "integrator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 508.1,
+      "dur": 17.8,
+      "calls": 3,
+      "cost": 0.0697,
+      "u": {
+       "in": 6,
+       "cr": 64244,
+       "cw1": 3850,
+       "cw5": 0,
+       "out": 1303
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 576
+     },
+     {
+      "label": "critic-rereview",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 541.5,
+      "dur": 97.7,
+      "calls": 5,
+      "cost": 0.101,
+      "u": {
+       "in": 28513,
+       "cr": 132096,
+       "out": 1757,
+       "reason": 797
+      },
+      "tools": {
+       "tool": 4
+      },
+      "promptChars": 20150
+     }
+    ]
+   },
+   {
+    "arm": "b",
+    "rep": 3,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 422.371,
+    "recordedCost": 1.2053543719999997,
+    "jev": 0.000540372,
+    "interventions": [
+     "checkpoint: plan: Build it"
+    ],
+    "idle": 46.8,
+    "load": [
+     227,
+     21
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.3973,
+      "wall": 179.7
+     },
+     "coordinator": {
+      "cost": 0.304,
+      "wall": 54.8
+     },
+     "build": {
+      "cost": 0.289,
+      "wall": 53.9
+     },
+     "review": {
+      "cost": 0.1777,
+      "wall": 87.2
+     },
+     "orchestration": {
+      "cost": 0.0374,
+      "wall": 46.8
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.2273,
+      "wall": 84.5,
+      "turns": 3,
+      "calls": 4,
+      "out": 8622,
+      "cacheRead": 127995,
+      "cacheWrite": 28871,
+      "input": 8,
+      "tools": {
+       "Agent": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.17,
+      "wall": 97.9,
+      "turns": 1,
+      "calls": 5,
+      "out": 8371,
+      "cacheRead": 86316,
+      "cacheWrite": 27603,
+      "input": 10,
+      "tools": {
+       "Bash": 2,
+       "Read": 15
+      }
+     },
+     "coordinator": {
+      "cost": 0.304,
+      "wall": 54.8,
+      "turns": 3,
+      "calls": 7,
+      "out": 6001,
+      "cacheRead": 129560,
+      "cacheWrite": 19758,
+      "input": 12,
+      "tools": {
+       "Glob": 1,
+       "Read": 9,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "builder": {
+      "cost": 0.289,
+      "wall": 53.9,
+      "turns": 1,
+      "calls": 4,
+      "out": 6431,
+      "cacheRead": 91765,
+      "cacheWrite": 17746,
+      "input": 8,
+      "tools": {
+       "Bash": 4,
+       "Edit": 3
+      }
+     },
+     "critic": {
+      "cost": 0.1777,
+      "wall": 87.2,
+      "turns": 1,
+      "calls": 4,
+      "out": 3193,
+      "cacheRead": 64384,
+      "cacheWrite": 0,
+      "input": 66447,
+      "tools": {
+       "tool": 3
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 15.0,
+      "dur": 15.8,
+      "calls": 2,
+      "cost": 0.0667,
+      "u": {
+       "in": 4,
+       "cr": 52800,
+       "cw1": 11859,
+       "cw5": 0,
+       "out": 874
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3020
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 28.1,
+      "dur": 97.9,
+      "calls": 5,
+      "cost": 0.17,
+      "u": {
+       "in": 10,
+       "cr": 86316,
+       "cw1": 0,
+       "cw5": 27603,
+       "out": 8371
+      },
+      "tools": {
+       "Bash": 2,
+       "Read": 15
+      },
+      "promptChars": 2107
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 126.9,
+      "dur": 68.7,
+      "calls": 2,
+      "cost": 0.1606,
+      "u": {
+       "in": 4,
+       "cr": 75195,
+       "cw1": 17012,
+       "cw5": 0,
+       "out": 7748
+      },
+      "tools": {
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 20928
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 195.6,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 205.4,
+      "dur": 34.6,
+      "calls": 5,
+      "cost": 0.2248,
+      "u": {
+       "in": 10,
+       "cr": 102449,
+       "cw1": 15275,
+       "cw5": 0,
+       "out": 4106
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 9,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6286
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 240.1,
+      "dur": 5.9,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 246.8,
+      "dur": 14.3,
+      "calls": 1,
+      "cost": 0.0792,
+      "u": {
+       "in": 2,
+       "cr": 27111,
+       "cw1": 4483,
+       "cw5": 0,
+       "out": 1895
+      },
+      "tools": {},
+      "promptChars": 5878
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 270.0,
+      "dur": 53.9,
+      "calls": 4,
+      "cost": 0.289,
+      "u": {
+       "in": 8,
+       "cr": 91765,
+       "cw1": 17746,
+       "cw5": 0,
+       "out": 6431
+      },
+      "tools": {
+       "Bash": 4,
+       "Edit": 3
+      },
+      "promptChars": 6521
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 332.2,
+      "dur": 87.2,
+      "calls": 4,
+      "cost": 0.1777,
+      "u": {
+       "in": 66447,
+       "cr": 64384,
+       "out": 3193,
+       "reason": 2446
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 18261
+     }
+    ]
+   },
+   {
+    "arm": "direct",
+    "rep": 1,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 165.779,
+    "recordedCost": 0.500631,
+    "jev": 0,
+    "interventions": [],
+    "idle": 10.3,
+    "load": [
+     25,
+     27
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0,
+      "wall": 0
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0,
+      "wall": 0
+     },
+     "review": {
+      "cost": 0,
+      "wall": 0
+     },
+     "orchestration": {
+      "cost": 0.0017,
+      "wall": 10.3
+     }
+    },
+    "components": {
+     "agent": {
+      "cost": 0.4989,
+      "wall": 155.5,
+      "turns": 1,
+      "calls": 20,
+      "out": 14955,
+      "cacheRead": 740689,
+      "cacheWrite": 50285,
+      "input": 40,
+      "tools": {
+       "Bash": 4,
+       "Read": 14,
+       "Write": 3,
+       "Edit": 12
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "agent",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 9.7,
+      "dur": 155.5,
+      "calls": 20,
+      "cost": 0.4989,
+      "u": {
+       "in": 40,
+       "cr": 740689,
+       "cw1": 50285,
+       "cw5": 0,
+       "out": 14955
+      },
+      "tools": {
+       "Bash": 4,
+       "Read": 14,
+       "Write": 3,
+       "Edit": 12
+      },
+      "promptChars": 2665
+     }
+    ]
+   },
+   {
+    "arm": "direct",
+    "rep": 2,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 127.925,
+    "recordedCost": 0.329086,
+    "jev": 0,
+    "interventions": [],
+    "idle": 9.2,
+    "load": [
+     27,
+     127
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0,
+      "wall": 0
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0,
+      "wall": 0
+     },
+     "review": {
+      "cost": 0,
+      "wall": 0
+     },
+     "orchestration": {
+      "cost": 0.0017,
+      "wall": 9.1
+     }
+    },
+    "components": {
+     "agent": {
+      "cost": 0.3274,
+      "wall": 118.8,
+      "turns": 1,
+      "calls": 16,
+      "out": 10797,
+      "cacheRead": 550507,
+      "cacheWrite": 27307,
+      "input": 32,
+      "tools": {
+       "Bash": 3,
+       "Read": 14,
+       "Write": 3,
+       "Edit": 8
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "agent",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 8.6,
+      "dur": 118.8,
+      "calls": 16,
+      "cost": 0.3274,
+      "u": {
+       "in": 32,
+       "cr": 550507,
+       "cw1": 27307,
+       "cw5": 0,
+       "out": 10797
+      },
+      "tools": {
+       "Bash": 3,
+       "Read": 14,
+       "Write": 3,
+       "Edit": 8
+      },
+      "promptChars": 2665
+     }
+    ]
+   },
+   {
+    "arm": "direct",
+    "rep": 3,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 128.519,
+    "recordedCost": 0.371638,
+    "jev": 0,
+    "interventions": [],
+    "idle": 16.1,
+    "load": [
+     138,
+     149
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0,
+      "wall": 0
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0,
+      "wall": 0
+     },
+     "review": {
+      "cost": 0,
+      "wall": 0
+     },
+     "orchestration": {
+      "cost": 0.0017,
+      "wall": 16.1
+     }
+    },
+    "components": {
+     "agent": {
+      "cost": 0.3699,
+      "wall": 112.4,
+      "turns": 1,
+      "calls": 18,
+      "out": 11962,
+      "cacheRead": 652075,
+      "cacheWrite": 29952,
+      "input": 36,
+      "tools": {
+       "Bash": 4,
+       "Read": 14,
+       "Write": 3,
+       "Edit": 9,
+       "Grep": 1
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "agent",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 15.4,
+      "dur": 112.4,
+      "calls": 18,
+      "cost": 0.3699,
+      "u": {
+       "in": 36,
+       "cr": 652075,
+       "cw1": 29952,
+       "cw5": 0,
+       "out": 11962
+      },
+      "tools": {
+       "Bash": 4,
+       "Read": 14,
+       "Write": 3,
+       "Edit": 9,
+       "Grep": 1
+      },
+      "promptChars": 2665
+     }
+    ]
+   },
+   {
+    "arm": "c",
+    "rep": 1,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 349.466,
+    "recordedCost": 1.37174195,
+    "jev": 0.00043995000000000004,
+    "interventions": [
+     "checkpoint: plan: Build it"
+    ],
+    "idle": 91.7,
+    "load": [
+     76,
+     121
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.3475,
+      "wall": 135.2
+     },
+     "coordinator": {
+      "cost": 0.2038,
+      "wall": 40.4
+     },
+     "build": {
+      "cost": 0.5866,
+      "wall": 61.8
+     },
+     "review": {
+      "cost": 0.1777,
+      "wall": 20.5
+     },
+     "orchestration": {
+      "cost": 0.0562,
+      "wall": 91.6
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.2099,
+      "wall": 70.8,
+      "turns": 3,
+      "calls": 4,
+      "out": 7929,
+      "cacheRead": 125985,
+      "cacheWrite": 26346,
+      "input": 8,
+      "tools": {
+       "Agent": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1376,
+      "wall": 65.6,
+      "turns": 1,
+      "calls": 3,
+      "out": 6385,
+      "cacheRead": 34707,
+      "cacheWrite": 26706,
+      "input": 6,
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      }
+     },
+     "coordinator": {
+      "cost": 0.2038,
+      "wall": 40.4,
+      "turns": 1,
+      "calls": 4,
+      "out": 4408,
+      "cacheRead": 75847,
+      "cacheWrite": 12560,
+      "input": 8,
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1
+      }
+     },
+     "piece-builder": {
+      "cost": 0.4838,
+      "wall": 44.0,
+      "turns": 4,
+      "calls": 13,
+      "out": 8064,
+      "cacheRead": 251950,
+      "cacheWrite": 34006,
+      "input": 26,
+      "tools": {
+       "Bash": 8,
+       "Grep": 1
+      }
+     },
+     "integrator": {
+      "cost": 0.1028,
+      "wall": 17.7,
+      "turns": 1,
+      "calls": 4,
+      "out": 1252,
+      "cacheRead": 76294,
+      "cacheWrite": 7814,
+      "input": 8,
+      "tools": {
+       "Bash": 3,
+       "Edit": 1
+      }
+     },
+     "critic": {
+      "cost": 0.1777,
+      "wall": 20.5,
+      "turns": 1,
+      "calls": 2,
+      "out": 2103,
+      "cacheRead": 40243,
+      "cacheWrite": 15947,
+      "input": 4,
+      "tools": {
+       "Read": 2,
+       "Grep": 1
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 13.9,
+      "dur": 10.9,
+      "calls": 2,
+      "cost": 0.0654,
+      "u": {
+       "in": 4,
+       "cr": 52809,
+       "cw1": 11770,
+       "cw5": 0,
+       "out": 776
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3018
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 23.6,
+      "dur": 65.6,
+      "calls": 3,
+      "cost": 0.1376,
+      "u": {
+       "in": 6,
+       "cr": 34707,
+       "cw1": 0,
+       "cw5": 26706,
+       "out": 6385
+      },
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      },
+      "promptChars": 1716
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 89.3,
+      "dur": 59.9,
+      "calls": 2,
+      "cost": 0.1445,
+      "u": {
+       "in": 4,
+       "cr": 73176,
+       "cw1": 14576,
+       "cw5": 0,
+       "out": 7153
+      },
+      "tools": {
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 16312
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 149.2,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 161.9,
+      "dur": 40.4,
+      "calls": 4,
+      "cost": 0.2038,
+      "u": {
+       "in": 8,
+       "cr": 75847,
+       "cw1": 12560,
+       "cw5": 0,
+       "out": 4408
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 6,
+       "Grep": 1
+      },
+      "promptChars": 5781
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 217.1,
+      "dur": 20.3,
+      "calls": 4,
+      "cost": 0.1269,
+      "u": {
+       "in": 8,
+       "cr": 78073,
+       "cw1": 9399,
+       "cw5": 0,
+       "out": 1802
+      },
+      "tools": {
+       "Bash": 2,
+       "Grep": 1
+      },
+      "promptChars": 7799
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 217.6,
+      "dur": 21.4,
+      "calls": 3,
+      "cost": 0.1172,
+      "u": {
+       "in": 6,
+       "cr": 57690,
+       "cw1": 7922,
+       "cw5": 0,
+       "out": 2115
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 8036
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 256.4,
+      "dur": 22.2,
+      "calls": 3,
+      "cost": 0.1233,
+      "u": {
+       "in": 6,
+       "cr": 57708,
+       "cw1": 8206,
+       "cw5": 0,
+       "out": 2306
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 8269
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 256.5,
+      "dur": 18.8,
+      "calls": 3,
+      "cost": 0.1164,
+      "u": {
+       "in": 6,
+       "cr": 58479,
+       "cw1": 8479,
+       "cw5": 0,
+       "out": 1841
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 8112
+     },
+     {
+      "label": "integrator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 294.5,
+      "dur": 17.7,
+      "calls": 4,
+      "cost": 0.1028,
+      "u": {
+       "in": 8,
+       "cr": 76294,
+       "cw1": 7814,
+       "cw5": 0,
+       "out": 1252
+      },
+      "tools": {
+       "Bash": 3,
+       "Edit": 1
+      },
+      "promptChars": 3384
+     },
+     {
+      "label": "critic",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 326.3,
+      "dur": 20.5,
+      "calls": 2,
+      "cost": 0.1777,
+      "u": {
+       "in": 4,
+       "cr": 40243,
+       "cw1": 15947,
+       "cw5": 0,
+       "out": 2103
+      },
+      "tools": {
+       "Read": 2,
+       "Grep": 1
+      },
+      "promptChars": 20859
+     }
+    ]
+   },
+   {
+    "arm": "c",
+    "rep": 2,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 357.343,
+    "recordedCost": 1.19844841,
+    "jev": 0.00034041000000000003,
+    "interventions": [
+     "checkpoint: plan: Build it"
+    ],
+    "idle": 75.9,
+    "load": [
+     121,
+     211
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.3286,
+      "wall": 123.8
+     },
+     "coordinator": {
+      "cost": 0.2981,
+      "wall": 65.6
+     },
+     "build": {
+      "cost": 0.3088,
+      "wall": 61.2
+     },
+     "review": {
+      "cost": 0.2189,
+      "wall": 30.9
+     },
+     "orchestration": {
+      "cost": 0.0441,
+      "wall": 75.8
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.173,
+      "wall": 45.9,
+      "turns": 3,
+      "calls": 4,
+      "out": 4780,
+      "cacheRead": 127955,
+      "cacheWrite": 24898,
+      "input": 8,
+      "tools": {
+       "Agent": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1556,
+      "wall": 79.7,
+      "turns": 1,
+      "calls": 3,
+      "out": 8056,
+      "cacheRead": 34898,
+      "cacheWrite": 27238,
+      "input": 6,
+      "tools": {
+       "Bash": 2,
+       "Read": 14
+      }
+     },
+     "coordinator": {
+      "cost": 0.2981,
+      "wall": 65.6,
+      "turns": 3,
+      "calls": 7,
+      "out": 6044,
+      "cacheRead": 126717,
+      "cacheWrite": 18973,
+      "input": 12,
+      "tools": {
+       "Glob": 1,
+       "Read": 9,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "builder": {
+      "cost": 0.3088,
+      "wall": 61.2,
+      "turns": 1,
+      "calls": 7,
+      "out": 6718,
+      "cacheRead": 172576,
+      "cacheWrite": 17488,
+      "input": 14,
+      "tools": {
+       "Bash": 6
+      }
+     },
+     "critic": {
+      "cost": 0.2189,
+      "wall": 30.9,
+      "turns": 1,
+      "calls": 3,
+      "out": 3127,
+      "cacheRead": 68661,
+      "cacheWrite": 17831,
+      "input": 6,
+      "tools": {
+       "Read": 4,
+       "Grep": 1
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 10.8,
+      "dur": 12.9,
+      "calls": 2,
+      "cost": 0.0674,
+      "u": {
+       "in": 4,
+       "cr": 52805,
+       "cw1": 11896,
+       "cw5": 0,
+       "out": 922
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3018
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 22.0,
+      "dur": 79.7,
+      "calls": 3,
+      "cost": 0.1556,
+      "u": {
+       "in": 6,
+       "cr": 34898,
+       "cw1": 0,
+       "cw5": 27238,
+       "out": 8056
+      },
+      "tools": {
+       "Bash": 2,
+       "Read": 14
+      },
+      "promptChars": 2245
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 102.0,
+      "dur": 32.9,
+      "calls": 2,
+      "cost": 0.1056,
+      "u": {
+       "in": 4,
+       "cr": 75150,
+       "cw1": 13002,
+       "cw5": 0,
+       "out": 3858
+      },
+      "tools": {
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 20645
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 134.9,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 29
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 152.1,
+      "dur": 38.0,
+      "calls": 5,
+      "cost": 0.2214,
+      "u": {
+       "in": 10,
+       "cr": 100414,
+       "cw1": 14467,
+       "cw5": 0,
+       "out": 4276
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 9,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6284
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 190.1,
+      "dur": 14.6,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 206.2,
+      "dur": 13.0,
+      "calls": 1,
+      "cost": 0.0767,
+      "u": {
+       "in": 2,
+       "cr": 26303,
+       "cw1": 4506,
+       "cw5": 0,
+       "out": 1768
+      },
+      "tools": {},
+      "promptChars": 5878
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 232.6,
+      "dur": 61.2,
+      "calls": 7,
+      "cost": 0.3088,
+      "u": {
+       "in": 14,
+       "cr": 172576,
+       "cw1": 17488,
+       "cw5": 0,
+       "out": 6718
+      },
+      "tools": {
+       "Bash": 6
+      },
+      "promptChars": 6519
+     },
+     {
+      "label": "critic",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 323.2,
+      "dur": 30.9,
+      "calls": 3,
+      "cost": 0.2189,
+      "u": {
+       "in": 6,
+       "cr": 68661,
+       "cw1": 17831,
+       "cw5": 0,
+       "out": 3127
+      },
+      "tools": {
+       "Read": 4,
+       "Grep": 1
+      },
+      "promptChars": 18769
+     }
+    ]
+   },
+   {
+    "arm": "a",
+    "rep": 1,
+    "level": "fullAuto",
+    "ship": true,
+    "passed": true,
+    "wall": 536.864,
+    "recordedCost": 1.0636050099999999,
+    "jev": 0.00113001,
+    "interventions": [],
+    "idle": 120.0,
+    "load": [
+     265,
+     370
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.3556,
+      "wall": 143.1
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0.3627,
+      "wall": 79.7
+     },
+     "review": {
+      "cost": 0.3117,
+      "wall": 194.1
+     },
+     "orchestration": {
+      "cost": 0.0336,
+      "wall": 120.0
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.2296,
+      "wall": 80.2,
+      "turns": 3,
+      "calls": 5,
+      "out": 8362,
+      "cacheRead": 166992,
+      "cacheWrite": 28128,
+      "input": 10,
+      "tools": {
+       "Agent": 1,
+       "Read": 5,
+       "Glob": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.126,
+      "wall": 65.4,
+      "turns": 1,
+      "calls": 4,
+      "out": 4737,
+      "cacheRead": 58694,
+      "cacheWrite": 26733,
+      "input": 8,
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      }
+     },
+     "builder": {
+      "cost": 0.3627,
+      "wall": 79.7,
+      "turns": 1,
+      "calls": 8,
+      "out": 7720,
+      "cacheRead": 218682,
+      "cacheWrite": 20567,
+      "input": 16,
+      "tools": {
+       "Bash": 7,
+       "Edit": 3
+      }
+     },
+     "critic": {
+      "cost": 0.1604,
+      "wall": 83.8,
+      "turns": 1,
+      "calls": 3,
+      "out": 2924,
+      "cacheRead": 39040,
+      "cacheWrite": 0,
+      "input": 61653,
+      "tools": {
+       "tool": 2
+      }
+     },
+     "builder-fix": {
+      "cost": 0.0434,
+      "wall": 12.3,
+      "turns": 1,
+      "calls": 2,
+      "out": 643,
+      "cacheRead": 71823,
+      "cacheWrite": 2025,
+      "input": 4,
+      "tools": {
+       "Bash": 1
+      }
+     },
+     "critic-rereview": {
+      "cost": 0.1079,
+      "wall": 98.0,
+      "turns": 1,
+      "calls": 4,
+      "out": 3171,
+      "cacheRead": 106368,
+      "cacheWrite": 0,
+      "input": 27474,
+      "tools": {
+       "tool": 3
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 24.5,
+      "dur": 13.4,
+      "calls": 2,
+      "cost": 0.0656,
+      "u": {
+       "in": 4,
+       "cr": 52825,
+       "cw1": 11787,
+       "cw5": 0,
+       "out": 784
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3062
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 35.4,
+      "dur": 65.4,
+      "calls": 4,
+      "cost": 0.126,
+      "u": {
+       "in": 8,
+       "cr": 58694,
+       "cw1": 0,
+       "cw5": 26733,
+       "out": 4737
+      },
+      "tools": {
+       "Bash": 1,
+       "Read": 14
+      },
+      "promptChars": 1816
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 101.3,
+      "dur": 66.8,
+      "calls": 3,
+      "cost": 0.164,
+      "u": {
+       "in": 6,
+       "cr": 114167,
+       "cw1": 16341,
+       "cw5": 0,
+       "out": 7578
+      },
+      "tools": {
+       "Read": 5,
+       "Glob": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 12311
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 168.2,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 201.5,
+      "dur": 79.7,
+      "calls": 8,
+      "cost": 0.3627,
+      "u": {
+       "in": 16,
+       "cr": 218682,
+       "cw1": 20567,
+       "cw5": 0,
+       "out": 7720
+      },
+      "tools": {
+       "Bash": 7,
+       "Edit": 3
+      },
+      "promptChars": 6563
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 296.6,
+      "dur": 83.8,
+      "calls": 3,
+      "cost": 0.1604,
+      "u": {
+       "in": 61653,
+       "cr": 39040,
+       "out": 2924,
+       "reason": 2340
+      },
+      "tools": {
+       "tool": 2
+      },
+      "promptChars": 20578
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 406.9,
+      "dur": 12.3,
+      "calls": 2,
+      "cost": 0.0434,
+      "u": {
+       "in": 4,
+       "cr": 71823,
+       "cw1": 2025,
+       "cw5": 0,
+       "out": 643
+      },
+      "tools": {
+       "Bash": 1
+      },
+      "promptChars": 408
+     },
+     {
+      "label": "critic-rereview",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 431.9,
+      "dur": 98.0,
+      "calls": 4,
+      "cost": 0.1079,
+      "u": {
+       "in": 27474,
+       "cr": 106368,
+       "out": 3171,
+       "reason": 2638
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 21119
+     }
+    ]
+   },
+   {
+    "arm": "a2",
+    "rep": 1,
+    "level": "fullAuto",
+    "ship": true,
+    "passed": true,
+    "wall": 391.713,
+    "recordedCost": 1.0516207340000001,
+    "jev": 0.000538734,
+    "interventions": [],
+    "idle": 63.9,
+    "load": [
+     373,
+     73
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.3194,
+      "wall": 128.9
+     },
+     "coordinator": {
+      "cost": 0.2194,
+      "wall": 41.4
+     },
+     "build": {
+      "cost": 0.3137,
+      "wall": 56.2
+     },
+     "review": {
+      "cost": 0.1569,
+      "wall": 101.4
+     },
+     "orchestration": {
+      "cost": 0.0424,
+      "wall": 63.8
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.1704,
+      "wall": 49.0,
+      "turns": 3,
+      "calls": 5,
+      "out": 4373,
+      "cacheRead": 168325,
+      "cacheWrite": 23257,
+      "input": 10,
+      "tools": {
+       "Agent": 1,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1489,
+      "wall": 81.9,
+      "turns": 1,
+      "calls": 4,
+      "out": 6707,
+      "cacheRead": 61646,
+      "cacheWrite": 27795,
+      "input": 8,
+      "tools": {
+       "Bash": 2,
+       "Read": 16
+      }
+     },
+     "coordinator": {
+      "cost": 0.2194,
+      "wall": 41.4,
+      "turns": 3,
+      "calls": 8,
+      "out": 3548,
+      "cacheRead": 145654,
+      "cacheWrite": 14911,
+      "input": 14,
+      "tools": {
+       "Glob": 1,
+       "Read": 5,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "builder": {
+      "cost": 0.3137,
+      "wall": 56.2,
+      "turns": 1,
+      "calls": 6,
+      "out": 6478,
+      "cacheRead": 148300,
+      "cacheWrite": 19309,
+      "input": 12,
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      }
+     },
+     "critic": {
+      "cost": 0.1569,
+      "wall": 101.4,
+      "turns": 1,
+      "calls": 6,
+      "out": 4112,
+      "cacheRead": 167296,
+      "cacheWrite": 0,
+      "input": 41156,
+      "tools": {
+       "tool": 5
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 18.0,
+      "dur": 14.0,
+      "calls": 2,
+      "cost": 0.0654,
+      "u": {
+       "in": 4,
+       "cr": 52833,
+       "cw1": 11783,
+       "cw5": 0,
+       "out": 766
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3063
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 30.0,
+      "dur": 81.9,
+      "calls": 4,
+      "cost": 0.1489,
+      "u": {
+       "in": 8,
+       "cr": 61646,
+       "cw1": 0,
+       "cw5": 27795,
+       "out": 6707
+      },
+      "tools": {
+       "Bash": 2,
+       "Read": 16
+      },
+      "promptChars": 1764
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 112.6,
+      "dur": 35.0,
+      "calls": 3,
+      "cost": 0.1051,
+      "u": {
+       "in": 6,
+       "cr": 115492,
+       "cw1": 11474,
+       "cw5": 0,
+       "out": 3607
+      },
+      "tools": {
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 17258
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 147.6,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 29
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 173.4,
+      "dur": 20.3,
+      "calls": 6,
+      "cost": 0.1615,
+      "u": {
+       "in": 12,
+       "cr": 121378,
+       "cw1": 12440,
+       "cw5": 0,
+       "out": 1883
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 5,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6329
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 193.7,
+      "dur": 8.2,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 202.4,
+      "dur": 12.9,
+      "calls": 1,
+      "cost": 0.0579,
+      "u": {
+       "in": 2,
+       "cr": 24276,
+       "cw1": 2471,
+       "cw5": 0,
+       "out": 1665
+      },
+      "tools": {},
+      "promptChars": 5918
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 222.3,
+      "dur": 56.2,
+      "calls": 6,
+      "cost": 0.3137,
+      "u": {
+       "in": 12,
+       "cr": 148300,
+       "cw1": 19309,
+       "cw5": 0,
+       "out": 6478
+      },
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      },
+      "promptChars": 6564
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 283.8,
+      "dur": 101.4,
+      "calls": 6,
+      "cost": 0.1569,
+      "u": {
+       "in": 41156,
+       "cr": 167296,
+       "out": 4112,
+       "reason": 3039
+      },
+      "tools": {
+       "tool": 5
+      },
+      "promptChars": 17948
+     }
+    ]
+   },
+   {
+    "arm": "b",
+    "rep": 1,
+    "level": "fullAuto",
+    "ship": true,
+    "passed": true,
+    "wall": 401.466,
+    "recordedCost": 0.9995029139999999,
+    "jev": 0.000550914,
+    "interventions": [],
+    "idle": 68.8,
+    "load": [
+     64,
+     179
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.3458,
+      "wall": 140.2
+     },
+     "coordinator": {
+      "cost": 0.2116,
+      "wall": 47.3
+     },
+     "build": {
+      "cost": 0.3014,
+      "wall": 57.7
+     },
+     "review": {
+      "cost": 0.1038,
+      "wall": 87.6
+     },
+     "orchestration": {
+      "cost": 0.0369,
+      "wall": 68.7
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.1928,
+      "wall": 58.6,
+      "turns": 3,
+      "calls": 5,
+      "out": 5480,
+      "cacheRead": 171655,
+      "cacheWrite": 25902,
+      "input": 10,
+      "tools": {
+       "Agent": 1,
+       "Read": 2,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.153,
+      "wall": 83.6,
+      "turns": 1,
+      "calls": 4,
+      "out": 7322,
+      "cacheRead": 61109,
+      "cacheWrite": 27034,
+      "input": 8,
+      "tools": {
+       "Bash": 2,
+       "Read": 13
+      }
+     },
+     "coordinator": {
+      "cost": 0.2116,
+      "wall": 47.2,
+      "turns": 3,
+      "calls": 6,
+      "out": 3764,
+      "cacheRead": 97221,
+      "cacheWrite": 14602,
+      "input": 10,
+      "tools": {
+       "Glob": 1,
+       "Read": 4,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "builder": {
+      "cost": 0.3014,
+      "wall": 57.7,
+      "turns": 1,
+      "calls": 6,
+      "out": 6353,
+      "cacheRead": 146517,
+      "cacheWrite": 18124,
+      "input": 12,
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      }
+     },
+     "critic": {
+      "cost": 0.1038,
+      "wall": 87.6,
+      "turns": 1,
+      "calls": 4,
+      "out": 2758,
+      "cacheRead": 107136,
+      "cacheWrite": 0,
+      "input": 27376,
+      "tools": {
+       "tool": 3
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 7.2,
+      "dur": 14.0,
+      "calls": 2,
+      "cost": 0.0683,
+      "u": {
+       "in": 4,
+       "cr": 52831,
+       "cw1": 12004,
+       "cw5": 0,
+       "out": 971
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3062
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 19.2,
+      "dur": 83.6,
+      "calls": 4,
+      "cost": 0.153,
+      "u": {
+       "in": 8,
+       "cr": 61109,
+       "cw1": 0,
+       "cw5": 27034,
+       "out": 7322
+      },
+      "tools": {
+       "Bash": 2,
+       "Read": 13
+      },
+      "promptChars": 2263
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 103.3,
+      "dur": 44.6,
+      "calls": 3,
+      "cost": 0.1245,
+      "u": {
+       "in": 6,
+       "cr": 118824,
+       "cw1": 13898,
+       "cw5": 0,
+       "out": 4509
+      },
+      "tools": {
+       "Read": 2,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 18577
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 147.9,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 29
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 171.6,
+      "dur": 20.4,
+      "calls": 4,
+      "cost": 0.1466,
+      "u": {
+       "in": 8,
+       "cr": 74042,
+       "cw1": 11343,
+       "cw5": 0,
+       "out": 2049
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 4,
+       "Grep": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 6292
+     },
+     {
+      "label": "coordinator",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 192.0,
+      "dur": 13.0,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 206.3,
+      "dur": 13.9,
+      "calls": 1,
+      "cost": 0.065,
+      "u": {
+       "in": 2,
+       "cr": 23179,
+       "cw1": 3259,
+       "cw5": 0,
+       "out": 1715
+      },
+      "tools": {},
+      "promptChars": 5882
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 238.4,
+      "dur": 57.7,
+      "calls": 6,
+      "cost": 0.3014,
+      "u": {
+       "in": 12,
+       "cr": 146517,
+       "cw1": 18124,
+       "cw5": 0,
+       "out": 6353
+      },
+      "tools": {
+       "Bash": 5,
+       "Edit": 3
+      },
+      "promptChars": 6527
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 307.4,
+      "dur": 87.6,
+      "calls": 4,
+      "cost": 0.1038,
+      "u": {
+       "in": 27376,
+       "cr": 107136,
+       "out": 2758,
+       "reason": 2160
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 18746
+     }
+    ]
+   },
+   {
+    "arm": "c",
+    "rep": 1,
+    "level": "fullAuto",
+    "ship": true,
+    "passed": true,
+    "wall": 259.276,
+    "recordedCost": 0.8369730900000001,
+    "jev": 0.00034209,
+    "interventions": [],
+    "idle": 64.7,
+    "load": [
+     171,
+     173
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.3037,
+      "wall": 108.1
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0.2883,
+      "wall": 57.4
+     },
+     "review": {
+      "cost": 0.2034,
+      "wall": 29.0
+     },
+     "orchestration": {
+      "cost": 0.0416,
+      "wall": 64.8
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.1726,
+      "wall": 43.2,
+      "turns": 3,
+      "calls": 5,
+      "out": 4538,
+      "cacheRead": 166634,
+      "cacheWrite": 23469,
+      "input": 10,
+      "tools": {
+       "Agent": 1,
+       "Read": 2,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1311,
+      "wall": 66.4,
+      "turns": 1,
+      "calls": 3,
+      "out": 5545,
+      "cacheRead": 34778,
+      "cacheWrite": 27490,
+      "input": 6,
+      "tools": {
+       "Bash": 2,
+       "Read": 14
+      }
+     },
+     "builder": {
+      "cost": 0.2883,
+      "wall": 57.4,
+      "turns": 1,
+      "calls": 5,
+      "out": 6330,
+      "cacheRead": 116091,
+      "cacheWrite": 17308,
+      "input": 10,
+      "tools": {
+       "Bash": 5
+      }
+     },
+     "critic": {
+      "cost": 0.2034,
+      "wall": 29.0,
+      "turns": 1,
+      "calls": 2,
+      "out": 2876,
+      "cacheRead": 37323,
+      "cacheWrite": 17299,
+      "input": 4,
+      "tools": {
+       "Read": 2,
+       "Grep": 1
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 15.4,
+      "dur": 10.8,
+      "calls": 2,
+      "cost": 0.066,
+      "u": {
+       "in": 4,
+       "cr": 52818,
+       "cw1": 11818,
+       "cw5": 0,
+       "out": 819
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3062
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 24.8,
+      "dur": 66.4,
+      "calls": 3,
+      "cost": 0.1311,
+      "u": {
+       "in": 6,
+       "cr": 34778,
+       "cw1": 0,
+       "cw5": 27490,
+       "out": 5545
+      },
+      "tools": {
+       "Bash": 2,
+       "Read": 14
+      },
+      "promptChars": 1853
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 91.4,
+      "dur": 32.3,
+      "calls": 3,
+      "cost": 0.1066,
+      "u": {
+       "in": 6,
+       "cr": 113816,
+       "cw1": 11651,
+       "cw5": 0,
+       "out": 3719
+      },
+      "tools": {
+       "Read": 2,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 14476
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 123.8,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 147.2,
+      "dur": 57.4,
+      "calls": 5,
+      "cost": 0.2883,
+      "u": {
+       "in": 10,
+       "cr": 116091,
+       "cw1": 17308,
+       "cw5": 0,
+       "out": 6330
+      },
+      "tools": {
+       "Bash": 5
+      },
+      "promptChars": 6251
+     },
+     {
+      "label": "critic",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 223.0,
+      "dur": 29.0,
+      "calls": 2,
+      "cost": 0.2034,
+      "u": {
+       "in": 4,
+       "cr": 37323,
+       "cw1": 17299,
+       "cw5": 0,
+       "out": 2876
+      },
+      "tools": {
+       "Read": 2,
+       "Grep": 1
+      },
+      "promptChars": 18755
+     }
+    ]
+   },
+   {
+    "arm": "d",
+    "rep": 1,
+    "level": "fullAuto",
+    "ship": true,
+    "passed": false,
+    "wall": 562.18,
+    "recordedCost": 1.5094322700000002,
+    "jev": 0.00024927,
+    "interventions": [],
+    "idle": 173.0,
+    "load": [
+     138,
+     293
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0.3162,
+      "wall": 139.8
+     },
+     "coordinator": {
+      "cost": 0.2906,
+      "wall": 54.5
+     },
+     "build": {
+      "cost": 0.7717,
+      "wall": 174.0
+     },
+     "review": {
+      "cost": 0.0804,
+      "wall": 20.9
+     },
+     "orchestration": {
+      "cost": 0.0506,
+      "wall": 173.0
+     }
+    },
+    "components": {
+     "plan-first": {
+      "cost": 0.1803,
+      "wall": 51.1,
+      "turns": 3,
+      "calls": 4,
+      "out": 5161,
+      "cacheRead": 128083,
+      "cacheWrite": 25770,
+      "input": 8,
+      "tools": {
+       "Agent": 1,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "explore-sub": {
+      "cost": 0.1358,
+      "wall": 90.8,
+      "turns": 1,
+      "calls": 4,
+      "out": 8511,
+      "cacheRead": 76832,
+      "cacheWrite": 14104,
+      "input": 8,
+      "tools": {
+       "Bash": 1,
+       "Read": 18
+      }
+     },
+     "coordinator": {
+      "cost": 0.2906,
+      "wall": 54.5,
+      "turns": 2,
+      "calls": 5,
+      "out": 6589,
+      "cacheRead": 97348,
+      "cacheWrite": 17414,
+      "input": 10,
+      "tools": {
+       "Glob": 1,
+       "Read": 4,
+       "Grep": 1
+      }
+     },
+     "piece-builder": {
+      "cost": 0.3847,
+      "wall": 70.1,
+      "turns": 4,
+      "calls": 10,
+      "out": 6019,
+      "cacheRead": 175045,
+      "cacheWrite": 20125,
+      "input": 37070,
+      "tools": {
+       "tool": 2,
+       "Bash": 6
+      }
+     },
+     "builder-fix": {
+      "cost": 0.0804,
+      "wall": 20.9,
+      "turns": 2,
+      "calls": 4,
+      "out": 1287,
+      "cacheRead": 110944,
+      "cacheWrite": 4056,
+      "input": 8,
+      "tools": {
+       "Bash": 2
+      }
+     },
+     "scout-2": {
+      "cost": 0.2147,
+      "wall": 57.0,
+      "turns": 4,
+      "calls": 8,
+      "out": 3844,
+      "cacheRead": 144099,
+      "cacheWrite": 13614,
+      "input": 14,
+      "tools": {
+       "Glob": 1,
+       "Read": 2,
+       "Grep": 2,
+       "Write": 1,
+       "ExitPlanMode": 1
+      }
+     },
+     "integrator": {
+      "cost": 0.1724,
+      "wall": 47.0,
+      "turns": 2,
+      "calls": 6,
+      "out": 2877,
+      "cacheRead": 124004,
+      "cacheWrite": 11250,
+      "input": 12,
+      "tools": {
+       "Bash": 4
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 6.7,
+      "dur": 10.6,
+      "calls": 2,
+      "cost": 0.0647,
+      "u": {
+       "in": 4,
+       "cr": 52826,
+       "cw1": 11707,
+       "cw5": 0,
+       "out": 727
+      },
+      "tools": {
+       "Agent": 1
+      },
+      "promptChars": 3062
+     },
+     {
+      "label": "explore-sub",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 15.2,
+      "dur": 90.8,
+      "calls": 4,
+      "cost": 0.1358,
+      "u": {
+       "in": 8,
+       "cr": 76832,
+       "cw1": 0,
+       "cw5": 14104,
+       "out": 8511
+      },
+      "tools": {
+       "Bash": 1,
+       "Read": 18
+      },
+      "promptChars": 1650
+     },
+     {
+      "label": "plan-first",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 106.3,
+      "dur": 40.5,
+      "calls": 2,
+      "cost": 0.1157,
+      "u": {
+       "in": 4,
+       "cr": 75257,
+       "cw1": 14063,
+       "cw5": 0,
+       "out": 4434
+      },
+      "tools": {
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 21742
+     },
+     {
+      "label": "plan-first",
+      "model": null,
+      "effort": null,
+      "start": 146.8,
+      "dur": 0.0,
+      "calls": 0,
+      "cost": 0.0,
+      "u": {},
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 166.6,
+      "dur": 30.9,
+      "calls": 4,
+      "cost": 0.1825,
+      "u": {
+       "in": 8,
+       "cr": 73299,
+       "cw1": 12213,
+       "cw5": 0,
+       "out": 3504
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 4,
+       "Grep": 1
+      },
+      "promptChars": 6328
+     },
+     {
+      "label": "coordinator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 209.8,
+      "dur": 23.6,
+      "calls": 1,
+      "cost": 0.1081,
+      "u": {
+       "in": 2,
+       "cr": 24049,
+       "cw1": 5201,
+       "cw5": 0,
+       "out": 3085
+      },
+      "tools": {},
+      "promptChars": 6970
+     },
+     {
+      "label": "piece-builder",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "start": 245.7,
+      "dur": 13.8,
+      "calls": 1,
+      "cost": 0.0399,
+      "u": {
+       "in": 18111,
+       "cr": 5632,
+       "out": 257,
+       "reason": 18
+      },
+      "tools": {
+       "tool": 1
+      },
+      "promptChars": 8229
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 250.5,
+      "dur": 22.7,
+      "calls": 3,
+      "cost": 0.1373,
+      "u": {
+       "in": 6,
+       "cr": 56390,
+       "cw1": 9998,
+       "cw5": 0,
+       "out": 2299
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 8533
+     },
+     {
+      "label": "piece-builder",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "start": 283.4,
+      "dur": 12.3,
+      "calls": 1,
+      "cost": 0.0424,
+      "u": {
+       "in": 18943,
+       "cr": 5632,
+       "out": 334,
+       "reason": 19
+      },
+      "tools": {
+       "tool": 1
+      },
+      "promptChars": 8418
+     },
+     {
+      "label": "piece-builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 290.1,
+      "dur": 35.8,
+      "calls": 5,
+      "cost": 0.1651,
+      "u": {
+       "in": 10,
+       "cr": 107391,
+       "cw1": 10127,
+       "cw5": 0,
+       "out": 3129
+      },
+      "tools": {
+       "Bash": 4
+      },
+      "promptChars": 9029
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 344.1,
+      "dur": 12.9,
+      "calls": 2,
+      "cost": 0.0443,
+      "u": {
+       "in": 4,
+       "cr": 53386,
+       "cw1": 2080,
+       "cw5": 0,
+       "out": 847
+      },
+      "tools": {
+       "Bash": 1
+      },
+      "promptChars": 2016
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 374.4,
+      "dur": 8.0,
+      "calls": 2,
+      "cost": 0.0361,
+      "u": {
+       "in": 4,
+       "cr": 57558,
+       "cw1": 1976,
+       "cw5": 0,
+       "out": 440
+      },
+      "tools": {
+       "Bash": 1
+      },
+      "promptChars": 2016
+     },
+     {
+      "label": "scout-2",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 397.8,
+      "dur": 23.5,
+      "calls": 5,
+      "cost": 0.1462,
+      "u": {
+       "in": 10,
+       "cr": 94966,
+       "cw1": 10134,
+       "cw5": 0,
+       "out": 2307
+      },
+      "tools": {
+       "Glob": 1,
+       "Read": 2,
+       "Grep": 2,
+       "Write": 1,
+       "ExitPlanMode": 1
+      },
+      "promptChars": 4388
+     },
+     {
+      "label": "scout-2",
+      "model": "<synthetic>",
+      "effort": null,
+      "start": 421.3,
+      "dur": 17.1,
+      "calls": 1,
+      "cost": 0.0,
+      "u": {
+       "in": 0,
+       "cr": 0,
+       "cw1": 0,
+       "cw5": 0,
+       "out": 0
+      },
+      "tools": {},
+      "promptChars": 42
+     },
+     {
+      "label": "scout-2",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 439.3,
+      "dur": 8.6,
+      "calls": 1,
+      "cost": 0.0323,
+      "u": {
+       "in": 2,
+       "cr": 23865,
+       "cw1": 1403,
+       "cw5": 0,
+       "out": 817
+      },
+      "tools": {},
+      "promptChars": 2352
+     },
+     {
+      "label": "scout-2",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 463.5,
+      "dur": 7.9,
+      "calls": 1,
+      "cost": 0.0361,
+      "u": {
+       "in": 2,
+       "cr": 25268,
+       "cw1": 2077,
+       "cw5": 0,
+       "out": 720
+      },
+      "tools": {},
+      "promptChars": 2351
+     },
+     {
+      "label": "integrator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 493.5,
+      "dur": 23.3,
+      "calls": 3,
+      "cost": 0.0808,
+      "u": {
+       "in": 6,
+       "cr": 53047,
+       "cw1": 6005,
+       "cw5": 0,
+       "out": 1107
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 3239
+     },
+     {
+      "label": "integrator",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 534.5,
+      "dur": 23.6,
+      "calls": 3,
+      "cost": 0.0916,
+      "u": {
+       "in": 6,
+       "cr": 70957,
+       "cw1": 5245,
+       "cw5": 0,
+       "out": 1770
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 2282
+     }
+    ]
+   }
+  ]
+ },
+ "interventionsBefore": {
+  "plan: Build it": 16,
+  "accept: Keep": 6,
+  "budget: Stop": 1,
+  "harnessRuns": 16
+ },
+ "after": {
+  "spendUsd": 1.962,
+  "capUsd": 8,
+  "arms": {
+   "a": {
+    "runs": 2,
+    "passes": 2,
+    "spend": 1.214,
+    "meanCost": 0.607,
+    "meanWall": 185,
+    "interventions": 0,
+    "costPerPass": 0.61
+   },
+   "direct": {
+    "runs": 2,
+    "passes": 2,
+    "spend": 0.747,
+    "meanCost": 0.374,
+    "meanWall": 116,
+    "interventions": 0,
+    "costPerPass": 0.37
+   }
+  },
+  "runs": [
+   {
+    "arm": "a",
+    "rep": 1,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 152.45,
+    "recordedCost": 0.586374696,
+    "jev": 0.000633696,
+    "interventions": [],
+    "idle": 21.5,
+    "load": [
+     23,
+     7
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0,
+      "wall": 0
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0.4342,
+      "wall": 56.5
+     },
+     "review": {
+      "cost": 0.1489,
+      "wall": 74.5
+     },
+     "orchestration": {
+      "cost": 0.0033,
+      "wall": 21.4
+     }
+    },
+    "components": {
+     "builder": {
+      "cost": 0.4342,
+      "wall": 56.5,
+      "turns": 1,
+      "calls": 6,
+      "out": 7041,
+      "cacheRead": 136028,
+      "cacheWrite": 33270,
+      "input": 12,
+      "tools": {
+       "Bash": 4,
+       "Edit": 4
+      }
+     },
+     "critic": {
+      "cost": 0.1489,
+      "wall": 74.5,
+      "turns": 1,
+      "calls": 4,
+      "out": 2607,
+      "cacheRead": 76928,
+      "cacheWrite": 0,
+      "input": 53702,
+      "tools": {
+       "tool": 3
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 9.1,
+      "dur": 56.5,
+      "calls": 6,
+      "cost": 0.4342,
+      "u": {
+       "in": 12,
+       "cr": 136028,
+       "cw1": 33270,
+       "cw5": 0,
+       "out": 7041
+      },
+      "tools": {
+       "Bash": 4,
+       "Edit": 4
+      },
+      "promptChars": 6022
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 77.0,
+      "dur": 74.5,
+      "calls": 4,
+      "cost": 0.1489,
+      "u": {
+       "in": 53702,
+       "cr": 76928,
+       "out": 2607,
+       "reason": 1920
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 18240
+     }
+    ]
+   },
+   {
+    "arm": "a",
+    "rep": 2,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 216.978,
+    "recordedCost": 0.62768416,
+    "jev": 0.00111216,
+    "interventions": [],
+    "idle": 17.5,
+    "load": [
+     7,
+     7
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0,
+      "wall": 0
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0.3262,
+      "wall": 58.1
+     },
+     "review": {
+      "cost": 0.2977,
+      "wall": 141.3
+     },
+     "orchestration": {
+      "cost": 0.0038,
+      "wall": 17.6
+     }
+    },
+    "components": {
+     "builder": {
+      "cost": 0.3262,
+      "wall": 58.1,
+      "turns": 1,
+      "calls": 8,
+      "out": 6891,
+      "cacheRead": 202158,
+      "cacheWrite": 18490,
+      "input": 16,
+      "tools": {
+       "Bash": 5,
+       "Edit": 4
+      }
+     },
+     "critic": {
+      "cost": 0.1258,
+      "wall": 78.6,
+      "turns": 1,
+      "calls": 4,
+      "out": 2969,
+      "cacheRead": 90624,
+      "cacheWrite": 0,
+      "input": 39017,
+      "tools": {
+       "tool": 3
+      }
+     },
+     "builder-fix": {
+      "cost": 0.0971,
+      "wall": 23.8,
+      "turns": 1,
+      "calls": 3,
+      "out": 2383,
+      "cacheRead": 102861,
+      "cacheWrite": 3604,
+      "input": 6,
+      "tools": {
+       "Bash": 2
+      }
+     },
+     "critic-rereview": {
+      "cost": 0.0748,
+      "wall": 38.9,
+      "turns": 1,
+      "calls": 3,
+      "out": 1104,
+      "cacheRead": 69376,
+      "cacheWrite": 0,
+      "input": 24920,
+      "tools": {
+       "tool": 2
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "builder",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 3.9,
+      "dur": 58.1,
+      "calls": 8,
+      "cost": 0.3262,
+      "u": {
+       "in": 16,
+       "cr": 202158,
+       "cw1": 18490,
+       "cw5": 0,
+       "out": 6891
+      },
+      "tools": {
+       "Bash": 5,
+       "Edit": 4
+      },
+      "promptChars": 6022
+     },
+     {
+      "label": "critic",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "start": 66.0,
+      "dur": 78.6,
+      "calls": 4,
+      "cost": 0.1258,
+      "u": {
+       "in": 39017,
+       "cr": 90624,
+       "out": 2969,
+       "reason": 2030
+      },
+      "tools": {
+       "tool": 3
+      },
+      "promptChars": 17693
+     },
+     {
+      "label": "builder-fix",
+      "model": "claude-opus-5-5",
+      "effort": null,
+      "start": 148.6,
+      "dur": 23.8,
+      "calls": 3,
+      "cost": 0.0971,
+      "u": {
+       "in": 6,
+       "cr": 102861,
+       "cw1": 3604,
+       "cw5": 0,
+       "out": 2383
+      },
+      "tools": {
+       "Bash": 2
+      },
+      "promptChars": 494
+     },
+     {
+      "label": "critic-rereview",
+      "model": "gpt-6-sol",
+      "effort": "medium",
+      "start": 176.5,
+      "dur": 38.9,
+      "calls": 3,
+      "cost": 0.0748,
+      "u": {
+       "in": 24920,
+       "cr": 69376,
+       "out": 1104,
+       "reason": 641
+      },
+      "tools": {
+       "tool": 2
+      },
+      "promptChars": 18794
+     }
+    ]
+   },
+   {
+    "arm": "direct",
+    "rep": 1,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 116.87,
+    "recordedCost": 0.417262,
+    "jev": 0,
+    "interventions": [],
+    "idle": 3.4,
+    "load": [
+     7,
+     39
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0,
+      "wall": 0
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0,
+      "wall": 0
+     },
+     "review": {
+      "cost": 0,
+      "wall": 0
+     },
+     "orchestration": {
+      "cost": 0.0018,
+      "wall": 3.4
+     }
+    },
+    "components": {
+     "agent": {
+      "cost": 0.4155,
+      "wall": 113.5,
+      "turns": 1,
+      "calls": 20,
+      "out": 10996,
+      "cacheRead": 659083,
+      "cacheWrite": 43421,
+      "input": 40,
+      "tools": {
+       "Bash": 5,
+       "Write": 3,
+       "Edit": 11
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "agent",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 2.8,
+      "dur": 113.5,
+      "calls": 20,
+      "cost": 0.4155,
+      "u": {
+       "in": 40,
+       "cr": 659083,
+       "cw1": 43421,
+       "cw5": 0,
+       "out": 10996
+      },
+      "tools": {
+       "Bash": 5,
+       "Write": 3,
+       "Edit": 11
+      },
+      "promptChars": 2663
+     }
+    ]
+   },
+   {
+    "arm": "direct",
+    "rep": 2,
+    "level": "autoEdit",
+    "ship": false,
+    "passed": true,
+    "wall": 115.233,
+    "recordedCost": 0.3302,
+    "jev": 0,
+    "interventions": [],
+    "idle": 5.5,
+    "load": [
+     42,
+     23
+    ],
+    "phases": {
+     "plan": {
+      "cost": 0,
+      "wall": 0
+     },
+     "coordinator": {
+      "cost": 0,
+      "wall": 0
+     },
+     "build": {
+      "cost": 0,
+      "wall": 0
+     },
+     "review": {
+      "cost": 0,
+      "wall": 0
+     },
+     "orchestration": {
+      "cost": 0.0017,
+      "wall": 5.5
+     }
+    },
+    "components": {
+     "agent": {
+      "cost": 0.3285,
+      "wall": 109.7,
+      "turns": 1,
+      "calls": 15,
+      "out": 11337,
+      "cacheRead": 515444,
+      "cacheWrite": 27990,
+      "input": 30,
+      "tools": {
+       "Bash": 2,
+       "Read": 14,
+       "Write": 3,
+       "Edit": 11
+      }
+     }
+    },
+    "turns": [
+     {
+      "label": "agent",
+      "model": "claude-sonnet-5",
+      "effort": null,
+      "start": 5.0,
+      "dur": 109.7,
+      "calls": 15,
+      "cost": 0.3285,
+      "u": {
+       "in": 30,
+       "cr": 515444,
+       "cw1": 27990,
+       "cw5": 0,
+       "out": 11337
+      },
+      "tools": {
+       "Bash": 2,
+       "Read": 14,
+       "Write": 3,
+       "Edit": 11
+      },
+      "promptChars": 2663
+     }
+    ]
+   }
+  ]
+ }
+}

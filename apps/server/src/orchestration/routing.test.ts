@@ -3,6 +3,7 @@ import {
   criticProvider,
   escalate,
   jevTierPick,
+  rereviewCritic,
   routeBuilder,
   routeCritic,
   type MemberRoute,
@@ -59,6 +60,15 @@ describe('rule routes', () => {
     expect(pick.provider).toBe('claude');
     expect(pick.model).not.toBe(alone.chat.model);
     expect(pick.effort).toBe('high');
+  });
+
+  it('re-reviews a fix at medium effort on the same Critic', () => {
+    const first = routeCritic(context('auto'));
+    const again = rereviewCritic(context('auto'), first);
+    expect(again.pick).toEqual({ ...first.pick, effort: 'medium' });
+    expect(rereviewCritic(context('auto'), again)).toBe(again);
+    const low: MemberRoute = { ...first, pick: { ...first.pick, effort: 'low' } };
+    expect(rereviewCritic(context('auto'), low)).toBe(low);
   });
 
   it('sends the Critic to a provider that built no piece, else the smallest share', () => {

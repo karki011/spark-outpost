@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'route-score-2-escalation-routes';
+export const POLICY_VERSION = 'overhead-1-spec-plan-rereview';
 
 export type ActingQuestion =
   | 'question'
@@ -43,6 +43,7 @@ export const CRITIC_FIX_ROUNDS = 3;
 export const FIX_ROUND_TOOL_SHARE = 0.25;
 export const FIX_ROUND_MIN_TOOL_CALLS = 20;
 export const FIX_ROUND_ACTIVE_MS = 4 * 60 * 1000;
+export const CRITIC_REREVIEW_EFFORT = 'medium';
 export const PLAN_CONTINUES = 2;
 export const MAX_VERDICTS = 2;
 export const LOOP_STREAK = 5;

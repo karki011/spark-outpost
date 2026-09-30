@@ -5,7 +5,11 @@ import {
   planFirstCard,
   planFirstPrompt,
   planPrNote,
+  requestIsThePlan,
+  specPlanLine,
 } from './plan-first.ts';
+
+const SPEC = '- `src/a.ts` with `a()`\n- `src/b.ts` with `b()`\n- tests in `test/a.test.ts`';
 
 describe('the plan-first card', () => {
   it('builds by itself at Full auto when the countdown runs out', () => {
@@ -42,5 +46,21 @@ describe('the plan-first card', () => {
   it('puts the plan in the PR body, capped', () => {
     expect(planPrNote('1. Add export')).toBe('Plan it followed:\n\n1. Add export');
     expect(planPrNote('x'.repeat(10_000)).length).toBeLessThan(4_100);
+  });
+});
+
+describe('a request that is already a spec', () => {
+  it('is the plan at Automatic and Full auto, not at Review each step', () => {
+    expect(requestIsThePlan('hands-off', SPEC)).toBe('3 of 3 listed parts name files or code');
+    expect(requestIsThePlan('full-auto', SPEC)).not.toBeNull();
+    expect(requestIsThePlan('balanced', SPEC)).toBeNull();
+    expect(requestIsThePlan('hands-off', '- add a\n- add b\n- add c')).toBeNull();
+  });
+
+  it('says why there was no plan turn', () => {
+    expect(specPlanLine('3 of 3 listed parts name files or code', 2)).toBe(
+      'Your request is already a plan (3 of 3 listed parts name files or code): saved as plan v2, no separate plan turn',
+    );
+    expect(specPlanLine('x', null)).toContain('building it as written');
   });
 });
