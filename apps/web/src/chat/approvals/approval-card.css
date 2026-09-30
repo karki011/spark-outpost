@@ -130,6 +130,9 @@
   color: var(--warn);
   font-weight: 500;
 }
+.appr .appr-observed {
+  color: var(--muted);
+}
 .appr-plan {
   margin: 10px 14px 0;
   padding: 4px 12px;

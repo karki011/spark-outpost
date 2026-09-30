@@ -10,6 +10,7 @@ export const FAKE_EDIT_TRIGGER = '#edit';
 export const FAKE_PUSH_TRIGGER = '#push';
 export const FAKE_FORCE_PUSH_TRIGGER = '#leasepush';
 export const FAKE_CURL_TRIGGER = '#curl';
+export const FAKE_READ_ENV_TRIGGER = '#readenv';
 export const FAKE_COMMAND = 'pnpm test -- groupMessages';
 export const FAKE_EDIT_FILE = 'notes.txt';
 
@@ -26,6 +27,7 @@ export function wantsApproval(prompt: string): boolean {
     FAKE_PUSH_TRIGGER,
     FAKE_FORCE_PUSH_TRIGGER,
     FAKE_CURL_TRIGGER,
+    FAKE_READ_ENV_TRIGGER,
   ];
   return triggers.some((trigger) => prompt.includes(trigger));
 }
@@ -79,6 +81,7 @@ async function fakeRequests(
   if (prompt.includes(FAKE_COMMAND_TRIGGER)) requests.push(command('fake-run', FAKE_COMMAND));
   if (prompt.includes(FAKE_PUSH_TRIGGER))
     requests.push(command('fake-push', 'git push origin main'));
+  if (prompt.includes(FAKE_READ_ENV_TRIGGER)) requests.push(command('fake-read-env', 'cat .env'));
   if (prompt.includes(FAKE_CURL_TRIGGER)) {
     requests.push(command('fake-curl', 'curl -sI https://example.com'));
   }
