@@ -88,15 +88,15 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     expect(reply).toContain('| P2 · API | Rivet | shared tree · owns 3 files |');
   });
 
-  it('keeps pieces in order while the project has parallel pieces off', async () => {
-    await projectFlags(t, root, { parallel: false });
+  it('keeps pieces in order while the project runs one Builder at a time', async () => {
+    await projectFlags(t, root, { slots: 1 });
     const { conversationId, runId } = await begin('');
     const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
     expect(orchestration.status).toBe('succeeded');
     const list = await pieceListOf(t, runId);
     expect(list).toMatchObject({
       placement: 'in_order',
-      placementReason: 'parallel pieces are off for this project',
+      placementReason: 'this project runs one Builder at a time',
     });
     const runs = await crewRuns(t, runId);
     const first = (key: string) => runs.find((run) => run.pieceKey === key)!;

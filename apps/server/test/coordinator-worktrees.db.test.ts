@@ -38,7 +38,7 @@ async function setUp(workPlace?: 'worktree') {
   root = await gitRepo();
   await pieceRepo(root);
   await connectProviders(t);
-  await projectFlags(t, root, { parallel: true, stableCheckout: true });
+  await projectFlags(t, root, { parallel: true });
 }
 
 afterEach(async () => {
@@ -49,7 +49,12 @@ afterEach(async () => {
 });
 
 async function begin(tags: string, costCapUsd?: number) {
-  const begun = beginPieces(t, root, tags, costCapUsd === undefined ? {} : { costCapUsd });
+  const begun = beginPieces(
+    t,
+    root,
+    `#manifest ${tags}`,
+    costCapUsd === undefined ? {} : { costCapUsd },
+  );
   harness = begun.harness;
   return begun.started;
 }
@@ -107,7 +112,7 @@ describe('worktree parallel pieces', { timeout: 120_000 }, () => {
       const list = await pieceListOf(t, runId);
       expect(list).toMatchObject({
         placement: 'worktree',
-        placementReason: 'the project keeps its checkout stable',
+        placementReason: 'P2 owns package.json, a manifest',
       });
       expect(list.pieces.map((piece) => [piece.key, piece.status, piece.filesChanged])).toEqual([
         ['P1', 'landed', ['store.ts']],

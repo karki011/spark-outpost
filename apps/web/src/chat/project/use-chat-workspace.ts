@@ -10,6 +10,7 @@ import {
   type UpdateChatWorkspaceRequest,
 } from '@spark-outpost/contracts';
 import { queryKeys, request } from '../../api/client.ts';
+import { projectKeys } from '../../api/projects.ts';
 
 export const workspaceKeys = {
   chat: (conversationId: string) => ['conversations', conversationId, 'workspace'] as const,
@@ -68,8 +69,9 @@ export function useUpdateWorkspace(conversationId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: UpdateChatWorkspaceRequest) => workspaceApi.update(conversationId, body),
-    onSuccess: (workspace) => {
+    onSuccess: (workspace, body) => {
       queryClient.setQueryData(workspaceKeys.chat(conversationId), workspace);
+      if (body.place) void queryClient.invalidateQueries({ queryKey: projectKeys.all });
     },
   });
 }

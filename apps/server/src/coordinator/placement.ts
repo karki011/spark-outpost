@@ -46,7 +46,6 @@ export interface PlacementFacts {
   repoBusy: boolean;
   destructive: boolean;
   skipsGate: boolean;
-  stableCheckout: boolean;
   wholeProjectChecks: boolean;
   splitWorthIt: number | null;
   sameFolder: number | null;
@@ -129,8 +128,6 @@ function isolationReason(
   pieces: readonly PlaceablePiece[],
   facts: PlacementFacts,
 ): { reason: string; blockerOnly: boolean } | null {
-  if (facts.stableCheckout)
-    return { reason: 'the project keeps its checkout stable', blockerOnly: false };
   if (facts.repoBusy) return { reason: 'another task is working in this repo', blockerOnly: false };
   if (facts.skipsGate) {
     return { reason: "the agent's mode skips the approval gate", blockerOnly: false };

@@ -17,6 +17,7 @@ const STORE_WAIT_MS = 30_000;
 
 function parallelPieces(text: string): ParallelPiece[] {
   const migrations = text.includes('#migrations');
+  const manifest = text.includes('#manifest');
   return [
     {
       key: 'P1',
@@ -33,6 +34,7 @@ function parallelPieces(text: string): ParallelPiece[] {
         'api-types.ts',
         'api-routes.ts',
         ...(migrations ? ['migrations/0002_api.sql'] : []),
+        ...(manifest ? ['package.json'] : []),
       ],
       dependsOn: [],
       size: 'L',

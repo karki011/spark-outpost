@@ -177,10 +177,6 @@
 .set-builders .set-row {
   padding: 10px 0;
 }
-.set-tip-anchor {
-  display: inline-flex;
-  border-radius: 999px;
-}
 .set-project:first-child {
   border-top: 0;
 }

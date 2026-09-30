@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { checkCommandsSchema } from './checks.ts';
 import { checkpointKindSchema, checkpointPayloadSchema } from './checkpoints.ts';
 import { INVOLVEMENT_LEVEL_IDS, type InvolvementLevel } from './involvement-levels.ts';
+import { workPlaceSchema } from './chat-workspace.ts';
 import { pieceSlotsSchema, projectNameSchema } from './projects.ts';
 
 export const runModeSchema = z.enum(['chat', 'ask', 'do']);
@@ -189,7 +190,7 @@ export const updateProjectRequestSchema = z
     checkCommands: checkCommandsSchema.nullable().optional(),
     parallelPieces: z.boolean().optional(),
     pieceSlots: pieceSlotsSchema.optional(),
-    stableCheckout: z.boolean().optional(),
+    workPlace: workPlaceSchema.optional(),
   })
   .refine((body) => Object.values(body).some((value) => value !== undefined));
 export type UpdateProjectRequest = z.input<typeof updateProjectRequestSchema>;

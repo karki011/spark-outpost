@@ -20,6 +20,8 @@
   --warn: #8a4a00;
   --warn-ink: #fff;
   --success: #007460;
+  --switch-on: #1a7a3c;
+  --switch-on-ink: #fff;
   --code: #f5f6f8;
   --scout-eye: #0c0f12;
   --r: 14px;
@@ -57,6 +59,8 @@
     --warn: #e8b04b;
     --warn-ink: #1b1300;
     --success: #34c3a3;
+    --switch-on: #52c77f;
+    --switch-on-ink: #0b1f14;
     --code: #0e1215;
     --c-claude: oklch(0.68 0.15 40);
     --c-codex: oklch(0.64 0.12 225);
@@ -88,6 +92,8 @@
   --warn: #e8b04b;
   --warn-ink: #1b1300;
   --success: #34c3a3;
+  --switch-on: #52c77f;
+  --switch-on-ink: #0b1f14;
   --code: #0e1215;
 }
 
@@ -113,6 +119,8 @@
   --warn: #7d4e00;
   --warn-ink: #fff;
   --success: #1f7335;
+  --switch-on: var(--success);
+  --switch-on-ink: #fff;
   --code: #faf2eb;
   --r: 20px;
   --r-sm: 12px;
@@ -140,6 +148,8 @@
   --warn: #f5c26b;
   --warn-ink: #1b1300;
   --success: #6fdca0;
+  --switch-on: var(--success);
+  --switch-on-ink: #0b1f14;
   --code: #0b0b10;
 }
 
@@ -165,6 +175,8 @@
   --warn: #864800;
   --warn-ink: #fff;
   --success: #00763a;
+  --switch-on: var(--success);
+  --switch-on-ink: #fff;
   --code: #f3f6fa;
   --scout-eye: #fff;
   --r: 10px;
@@ -193,6 +205,8 @@
   --warn: #f0c05a;
   --warn-ink: #1b1300;
   --success: #a9d67a;
+  --switch-on: var(--success);
+  --switch-on-ink: #0b1f14;
   --code: #10130c;
 }
 
@@ -218,6 +232,8 @@
   --warn: #7f4c00;
   --warn-ink: #fff;
   --success: #17713c;
+  --switch-on: var(--success);
+  --switch-on-ink: #fff;
   --code: #f0f7f6;
   --scout-eye: #fff;
   --scroll-thumb: color-mix(in srgb, var(--muted) 34%, transparent);
@@ -248,6 +264,8 @@
   --warn: #f2c46d;
   --warn-ink: #1d1400;
   --success: #86d4a6;
+  --switch-on: var(--success);
+  --switch-on-ink: #0b1f14;
   --code: #120d14;
   --scout-eye: #150f17;
   --scroll-thumb: color-mix(in srgb, var(--muted) 42%, transparent);
@@ -278,6 +296,8 @@
   --warn: #7a4f00;
   --warn-ink: #fff;
   --success: #2c6e3a;
+  --switch-on: var(--success);
+  --switch-on-ink: #fff;
   --code: #f3f6ee;
   --scout-eye: #0c0f12;
   --scroll-thumb: color-mix(in srgb, var(--muted) 34%, transparent);
@@ -308,6 +328,8 @@
   --warn: #f4c26a;
   --warn-ink: #1b1300;
   --success: #78d694;
+  --switch-on: var(--success);
+  --switch-on-ink: #0b1f14;
   --code: #0d0a21;
   --scout-eye: #110f26;
   --scroll-thumb: color-mix(in srgb, var(--muted) 42%, transparent);
@@ -338,6 +360,8 @@
   --warn: #7a4f00;
   --warn-ink: #fff;
   --success: #1d6e38;
+  --switch-on: var(--success);
+  --switch-on-ink: #fff;
   --code: #f7f5ff;
   --scout-eye: #fff;
   --scroll-thumb: color-mix(in srgb, var(--muted) 34%, transparent);
@@ -380,6 +404,8 @@
   --warn: #845400;
   --warn-ink: #fff;
   --success: #006b1f;
+  --switch-on: var(--success);
+  --switch-on-ink: #fff;
   --code: #f5f5f5;
   --scout-eye: #fff;
   --scroll-thumb: var(--faint);
@@ -415,6 +441,8 @@ body {
   --warn: #8a4a00;
   --warn-ink: #fff;
   --success: #007460;
+  --switch-on: #1a7a3c;
+  --switch-on-ink: #fff;
   --code: #f5f6f8;
   --scout-eye: #0c0f12;
   --r: 14px;

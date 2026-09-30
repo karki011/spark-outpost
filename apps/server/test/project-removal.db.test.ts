@@ -95,24 +95,48 @@ describe('renaming a project', () => {
 
   it('saves the Builder settings and leaves the rest alone', async () => {
     const appRepo = await project(folders.app);
+    expect(appRepo).toMatchObject({ parallelPieces: true, pieceSlots: 3 });
+    expect(appRepo).not.toHaveProperty('stableCheckout');
     const path = `/api/projects/${appRepo.id}`;
-    const on = await send('patch', path, { parallelPieces: true, pieceSlots: 2 }).expect(200);
-    expect(on.body).toMatchObject({ parallelPieces: true, pieceSlots: 2, stableCheckout: false });
-    const stable = await send('patch', path, { stableCheckout: true }).expect(200);
-    expect(stable.body).toMatchObject({
+    const one = await send('patch', path, { pieceSlots: 1 }).expect(200);
+    expect(one.body).toMatchObject({ parallelPieces: true, pieceSlots: 1, workPlace: 'checkout' });
+    const place = await send('patch', path, { workPlace: 'worktree' }).expect(200);
+    expect(place.body).toMatchObject({
       parallelPieces: true,
-      pieceSlots: 2,
-      stableCheckout: true,
+      pieceSlots: 1,
+      workPlace: 'worktree',
     });
     const { rows } = await t.db.query(
-      'SELECT parallel_pieces, piece_slots, stable_checkout FROM projects WHERE id = $1',
+      'SELECT parallel_pieces, piece_slots, work_place FROM projects WHERE id = $1',
       [appRepo.id],
     );
-    expect(rows[0]).toEqual({ parallel_pieces: true, piece_slots: 2, stable_checkout: true });
+    expect(rows[0]).toEqual({ parallel_pieces: true, piece_slots: 1, work_place: 'worktree' });
     await send('patch', path, { pieceSlots: 0 }).expect(400);
     await send('patch', path, { pieceSlots: 4 }).expect(400);
     await send('patch', path, { pieceSlots: 1.5 }).expect(400);
     await send('patch', path, { parallelPieces: 'yes' }).expect(400);
+    await send('patch', path, { workPlace: 'elsewhere' }).expect(400);
+    await send('patch', path, { stableCheckout: true }).expect(400);
+  });
+
+  it('shares where Spark works with the chat place picker', async () => {
+    const appRepo = await project(folders.app);
+    const chat = randomUUID();
+    await link(chat, [appRepo.id]);
+    await send('patch', `/api/projects/${appRepo.id}`, { workPlace: 'worktree' }).expect(200);
+    const workspace = await get(`/api/conversations/${chat}/workspace`).expect(200);
+    expect(workspace.body).toMatchObject({ place: 'worktree' });
+
+    const other = randomUUID();
+    await link(other, [appRepo.id]);
+    await request(app)
+      .put(`/api/conversations/${other}/workspace`)
+      .set(LOCAL_HEADERS)
+      .set('Origin', ORIGIN)
+      .send({ place: 'checkout' })
+      .expect(200);
+    const projects = (await get('/api/projects').expect(200)).body as Project[];
+    expect(projects.find((candidate) => candidate.id === appRepo.id)?.workPlace).toBe('checkout');
   });
 
   it('tells the settings whether the server runs Builders in parallel', async () => {
@@ -146,8 +170,9 @@ describe('removing and restoring a project', () => {
     await send('patch', `/api/projects/${appRepo.id}`, {
       name: 'Main app',
       commandAllowlist: ['pnpm lint'],
-      parallelPieces: true,
+      parallelPieces: false,
       pieceSlots: 1,
+      workPlace: 'worktree',
     }).expect(200);
     const [first, second, third] = [randomUUID(), randomUUID(), randomUUID()];
     await link(first, [appRepo.id, libRepo.id]);
@@ -168,8 +193,9 @@ describe('removing and restoring a project', () => {
       ...appRepo,
       name: 'Main app',
       commandAllowlist: ['pnpm lint'],
-      parallelPieces: true,
+      parallelPieces: false,
       pieceSlots: 1,
+      workPlace: 'worktree',
     });
     expect(await linkedIds(first)).toEqual([appRepo.id, libRepo.id]);
     expect(await linkedIds(second)).toEqual([libRepo.id, appRepo.id]);

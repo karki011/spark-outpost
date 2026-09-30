@@ -82,7 +82,7 @@ export function ProjectsSection() {
             project={project}
             trust={byProject.get(project.id)}
             busy={revoke.isPending}
-            parallelAvailable={setup.data?.parallelBuilders ?? false}
+            parallelAvailable={setup.data?.parallelBuilders ?? true}
             onRevoke={() => revoke.mutate(project.id)}
           />
         ))}

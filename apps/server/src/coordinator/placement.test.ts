@@ -12,7 +12,6 @@ const FACTS: PlacementFacts = {
   repoBusy: false,
   destructive: false,
   skipsGate: false,
-  stableCheckout: false,
   wholeProjectChecks: false,
   splitWorthIt: null,
   sameFolder: null,
@@ -95,7 +94,6 @@ describe('placePieces', () => {
   });
 
   it.each([
-    [{ stableCheckout: true }, 'the project keeps its checkout stable'],
     [{ repoBusy: true }, 'another task is working in this repo'],
     [{ skipsGate: true }, "the agent's mode skips the approval gate"],
     [{ destructive: true }, 'the story deletes, migrates or rewrites data'],
