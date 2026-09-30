@@ -57,6 +57,7 @@ const LEVELS = [
 ];
 const MORE_STEP = 48;
 const FIRST_ZOOM = 0.5;
+const PLAIN_NODE = { 'aria-roledescription': undefined };
 const FOCUS_TRIES = 12;
 const NOT_NAVIGABLE = new Set(['project', 'loading']);
 
@@ -181,6 +182,7 @@ function TreeCanvas({
         draggable: false,
         selectable: false,
         focusable: false,
+        domAttributes: PLAIN_NODE,
       };
       nodeCache.set(item.id, node);
       return [node];
