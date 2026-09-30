@@ -1,4 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { InfoIcon } from '../ui/icons.tsx';
+import { useTooltip } from '../ui/Tooltip.tsx';
 import { MAP_CATEGORIES, type MapCategory } from '@spark-outpost/contracts';
 import { LINK_KINDS, LINK_LABELS, type Bridge, type LinkKind } from './bridges.ts';
 import { FILE_KINDS, FILE_KIND_LABELS, type FileKind } from './file-kind.ts';
@@ -139,9 +141,26 @@ export function MapFilters(props: MapFiltersProps) {
         </div>
       )}
       <span className="map-sp" />
-      <Chip pressed={props.legend} onClick={props.onLegend}>
-        Legend
-      </Chip>
+      <LegendButton shown={props.legend} onClick={props.onLegend} />
     </div>
+  );
+}
+
+function LegendButton({ shown, onClick }: { shown: boolean; onClick: () => void }) {
+  const { triggerProps, tooltip } = useTooltip(shown ? 'Hide the legend' : 'How to read the map');
+  return (
+    <>
+      <button
+        type="button"
+        className="map-icon-btn map-legend-btn"
+        aria-label="Legend"
+        aria-pressed={shown}
+        {...triggerProps}
+        onClick={onClick}
+      >
+        <InfoIcon />
+      </button>
+      {tooltip}
+    </>
   );
 }

@@ -47,7 +47,7 @@ const HISTORY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export interface IndexOptions {
   fileCap?: number;
   parserVersion?: string;
-  pace?: () => Promise<void>;
+  pace?: (done: number, total: number) => Promise<void>;
 }
 
 export interface IndexOutcome {
@@ -224,7 +224,7 @@ export async function indexProject(
   const plan = planRefresh(cached, selected, changed);
   const totals = { parsed: 0, unchanged: 0, missing: 0 };
   for (let start = 0; start < plan.read.length; start += WRITE_BATCH) {
-    await options.pace?.();
+    await options.pace?.(start, plan.read.length);
     const results = await parseFiles(root, plan.read.slice(start, start + WRITE_BATCH));
     const written = await writeResults(context, results);
     totals.parsed += written.parsed;

@@ -58,6 +58,14 @@ export function briefOffLine({ personality }: Voice): string {
   return 'The brief is off. Rules still sort the list below.';
 }
 
+export function mapIntro({ personality }: Voice): string {
+  if (personality === 'playful')
+    return 'Spark turns each project into a sky of little constellations, so you can spot what’s core, what’s shared, and what a chat touched.';
+  if (personality === 'facts')
+    return 'Each project is mapped into areas: core, shared and feature, plus what a chat changed.';
+  return 'Spark maps each project into areas so you can see what’s core, what’s shared, and what a chat touched.';
+}
+
 export const PERSONALITY_HINTS: Record<Personality, string> = {
   playful: 'Warm, a little humour, celebrates your wins.',
   friendly: 'Warm and to the point.',

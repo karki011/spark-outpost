@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { connectorCard, connectorHead } from './connector-cards.ts';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
-import { combinedFixture, REPO_ROOT, serveMap } from './map-fixture.ts';
+import { combinedFixture, monoFixture, REPO_ROOT, serveMap } from './map-fixture.ts';
 import { openChats } from './navigation.ts';
 import { connectTickets, openTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
 import { JIRA_EMAIL } from '../../apps/server/test/fake-jira.ts';
@@ -345,6 +345,40 @@ test('the Map has no serious colour-contrast or ARIA issues in any theme', async
   for (const theme of ['light', 'graphite', 'contrast']) {
     await useTheme(page, theme);
     found.push(...(await blockingViolations(page, `map combined ${theme}`)));
+  }
+  expect(found).toEqual([]);
+});
+
+test('the empty Map and the build card have no serious issues in any theme', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'map'));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Your code, as a night sky' })).toBeVisible();
+  const found = [];
+  for (const theme of [...THEMES, 'dark']) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `map empty ${theme}`)));
+  }
+  const response = await page.request.post('/api/projects', { data: { rootPath: REPO_ROOT } });
+  const projectId = ((await response.json()) as { id: string }).id;
+  const fixture = monoFixture(projectId);
+  const map = fixture.projects.get(projectId)!;
+  map.areas = [];
+  map.status = {
+    ...map.status,
+    status: 'building',
+    phase: 'labels',
+    progress: { done: 34, total: 268 },
+    jevAreas: 268,
+  };
+  await serveMap(page, fixture);
+  await page.reload();
+  await expect(page.getByText('Jev is labelling areas · 34 / 268')).toBeVisible();
+  for (const theme of [...THEMES, 'dark']) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `map build card ${theme}`)));
   }
   expect(found).toEqual([]);
 });

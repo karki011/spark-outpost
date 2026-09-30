@@ -259,12 +259,3 @@
   background: var(--map-gold);
   transition: width 0.5s var(--out);
 }
-
-.map-empty-page {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 12px;
-  flex: 1;
-  color: var(--muted);
-}

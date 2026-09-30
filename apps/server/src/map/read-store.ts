@@ -25,6 +25,7 @@ interface StatusRow {
   area_count: number;
   edge_count: number;
   timings: Record<string, number>;
+  jev_areas: number | null;
   error: string | null;
 }
 
@@ -41,6 +42,7 @@ function toStatus(row: StatusRow): MapStatus {
     areaCount: row.area_count,
     edgeCount: row.edge_count,
     timings: row.timings,
+    jevAreas: row.jev_areas,
     error: row.error,
   };
 }
@@ -48,7 +50,7 @@ function toStatus(row: StatusRow): MapStatus {
 export async function mapStatus(db: Queryable, root: string): Promise<MapStatus | null> {
   const { rows } = await db.query<StatusRow>(
     `SELECT id, status, phase, progress_done, progress_total, rules_version, built_commit,
-       built_at, file_count, area_count, edge_count, timings, error
+       built_at, file_count, area_count, edge_count, timings, jev_areas, error
      FROM map_repos WHERE root_path = $1`,
     [root],
   );

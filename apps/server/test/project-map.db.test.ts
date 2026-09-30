@@ -50,9 +50,11 @@ async function repo() {
     phase: string;
     area_count: number;
     edge_count: number;
-  }>('SELECT id, status, phase, area_count, edge_count FROM map_repos WHERE root_path = $1', [
-    root,
-  ]);
+    jev_areas: number | null;
+  }>(
+    'SELECT id, status, phase, area_count, edge_count, jev_areas FROM map_repos WHERE root_path = $1',
+    [root],
+  );
   return rows[0]!;
 }
 
@@ -245,6 +247,19 @@ describe('project map builder', () => {
     }
   });
 
+  it('records that no areas go to Jev when Jev is not connected', async () => {
+    await t.db.query('UPDATE advisor_connections SET disconnected_at = now()');
+    const jev = fakeJev();
+    const { builder, scanner } = mapBuilder(t, jev.fetch);
+    await builder.runOnce();
+    await scanner.idle();
+    expect(await repo()).toMatchObject({ status: 'ready', jev_areas: 0 });
+    expect(jev.requests).toHaveLength(0);
+    const { id } = await repo();
+    await queueRepo(t.db, id, 'again');
+    expect((await repo()).jev_areas).toBeNull();
+  });
+
   it('resumes an interrupted build from the phase it reached without repeating finished labels', async () => {
     let calls = 0;
     let stop: () => void = () => undefined;
@@ -256,7 +271,7 @@ describe('project map builder', () => {
     stop = () => first.builder.stop();
     expect(await first.builder.runOnce()).toBe(true);
     await first.scanner.idle();
-    expect(await repo()).toMatchObject({ status: 'building', phase: 'labels' });
+    expect(await repo()).toMatchObject({ status: 'building', phase: 'labels', jev_areas: 5 });
     const labelled = await t.db.query('SELECT area_id FROM map_labels');
     expect(labelled.rows).toHaveLength(2);
 

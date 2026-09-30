@@ -45,7 +45,7 @@ export interface LabelDeps {
   signal: AbortSignal;
   read: ReadContent;
   ignore: readonly string[];
-  progress: (done: number, total: number) => Promise<void>;
+  progress: (done: number, total: number, jevAreas?: number) => Promise<void>;
 }
 
 export interface LabelTotals {
@@ -212,7 +212,7 @@ export async function labelAreas(deps: LabelDeps): Promise<LabelTotals> {
     needsLabel(stored.get(area.id), area.ranked.slice(0, LABEL_BASIS_FILES), jevReady),
   );
   const totals: LabelTotals = { asked: 0, inputTokens: 0, costUsd: 0 };
-  await deps.progress(0, todo.length);
+  await deps.progress(0, todo.length, jevReady ? Math.min(todo.length, LABEL_MAX_AREAS) : 0);
   for (const [index, area] of todo.entries()) {
     const useJev = jevReady && index < LABEL_MAX_AREAS;
     if (useJev) await deps.gate.step();
