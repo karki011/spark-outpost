@@ -81,7 +81,7 @@ async function* runTurn(options: AcpProviderOptions, turn: ProviderTurn) {
       `Chats through a ${options.definition.name} API key aren't supported yet. Reconnect ${options.definition.name} with the local CLI.`,
     );
   }
-  const channel = new Channel<ProviderOutput>();
+  const channel = new Channel<ProviderOutput>(turn.observe);
   const abort = new AbortController();
   const forwardAbort = () => abort.abort();
   turn.signal.addEventListener('abort', forwardAbort, { once: true });

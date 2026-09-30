@@ -66,6 +66,7 @@ export interface ProviderTurn {
   settings: AgentSettings;
   projectRoots?: readonly string[];
   signal: AbortSignal;
+  observe?: (output: ProviderOutput) => void;
   audit?: ProtocolObserver;
   mode?: RunMode;
   builder?: boolean;

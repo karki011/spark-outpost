@@ -265,33 +265,41 @@ export function createFakeProvider(timing: FakeProviderTiming = defaultTiming): 
   return {
     name: FAKE_PROVIDER_NAME,
     async *run(turn: ProviderTurn) {
-      if (turn.prompt.includes(FAKE_FAILURE_TRIGGER)) {
-        await delay(timing.stepMs, undefined, { signal: turn.signal });
-        throw new ProviderError(
-          'The fake provider failed on purpose because the message contains #fail.',
-        );
-      }
-      if (wantsApproval(turn.prompt)) {
-        await delay(timing.stepMs, undefined, { signal: turn.signal });
-        yield* fakeApprovalTurn(turn);
-        return;
-      }
-      if (turn.repo) yield { kind: 'instructions', files: followedFiles(turn.repo) };
-      const titled = turn.askTitle && turn.prompt.includes(FAKE_TITLE_TRIGGER);
-      const outputs = turn.prompt.includes(FAKE_DIGEST_TRIGGER)
-        ? replyOutputs(fakeDigestReply(turn.prompt))
-        : fakeProviderPlan(turn.prompt, turn.attachments, turn.projectRoots);
-      if (titled) outputs.push({ kind: 'text_delta', delta: `\n\nTitle: ${FAKE_TITLE}` });
-      for (const output of outputs) {
-        const wait =
-          output.kind === 'step_started' ||
-          output.kind === 'step_finished' ||
-          output.kind === 'plan'
-            ? timing.stepMs
-            : timing.wordMs;
-        await delay(wait, undefined, { signal: turn.signal });
+      for await (const output of fakeTurn(turn, timing)) {
+        turn.observe?.(output);
         yield output;
       }
     },
   };
+}
+
+async function* fakeTurn(
+  turn: ProviderTurn,
+  timing: FakeProviderTiming,
+): AsyncGenerator<ProviderOutput> {
+  if (turn.prompt.includes(FAKE_FAILURE_TRIGGER)) {
+    await delay(timing.stepMs, undefined, { signal: turn.signal });
+    throw new ProviderError(
+      'The fake provider failed on purpose because the message contains #fail.',
+    );
+  }
+  if (wantsApproval(turn.prompt)) {
+    await delay(timing.stepMs, undefined, { signal: turn.signal });
+    yield* fakeApprovalTurn(turn);
+    return;
+  }
+  if (turn.repo) yield { kind: 'instructions', files: followedFiles(turn.repo) };
+  const titled = turn.askTitle && turn.prompt.includes(FAKE_TITLE_TRIGGER);
+  const outputs = turn.prompt.includes(FAKE_DIGEST_TRIGGER)
+    ? replyOutputs(fakeDigestReply(turn.prompt))
+    : fakeProviderPlan(turn.prompt, turn.attachments, turn.projectRoots);
+  if (titled) outputs.push({ kind: 'text_delta', delta: `\n\nTitle: ${FAKE_TITLE}` });
+  for (const output of outputs) {
+    const wait =
+      output.kind === 'step_started' || output.kind === 'step_finished' || output.kind === 'plan'
+        ? timing.stepMs
+        : timing.wordMs;
+    await delay(wait, undefined, { signal: turn.signal });
+    yield output;
+  }
 }
