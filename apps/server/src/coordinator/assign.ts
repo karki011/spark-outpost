@@ -22,12 +22,10 @@ export interface AssignablePiece {
 export interface PieceAssignment {
   key: string;
   pick: AgentPick;
-  reason: string;
 }
 
 interface Option {
   provider: string;
-  name: string;
   pick: AgentPick;
 }
 
@@ -39,10 +37,6 @@ function nowOf(facts: AssignFacts): Date {
 
 function candidateFor(facts: AssignFacts, provider: string): AdvisorCandidate | undefined {
   return facts.route.candidates.find((candidate) => candidate.provider === provider);
-}
-
-function nameOf(facts: AssignFacts, provider: string): string {
-  return candidateFor(facts, provider)?.name ?? provider;
 }
 
 export function builderStrength(candidate: AdvisorCandidate): number {
@@ -101,46 +95,26 @@ export function eligibleProviders(
   ];
   return ordered.flatMap((provider) => {
     const pick = pickFor(facts, provider);
-    return pick ? [{ provider, name: nameOf(facts, provider), pick }] : [];
+    return pick ? [{ provider, pick }] : [];
   });
-}
-
-function chatReason(facts: AssignFacts, first: Option): string {
-  if (first.provider === facts.builder.provider) return 'in order → the chat provider';
-  const why = facts.unhealthy.get(facts.builder.provider) ?? 'unavailable';
-  return `in order → ${first.name} (${nameOf(facts, facts.builder.provider)} ${why})`;
 }
 
 export function assignPieces(
   pieces: readonly AssignablePiece[],
   facts: AssignFacts,
 ): PieceAssignment[] {
-  const fixed = (reason: string) =>
-    pieces.map((piece) => ({ key: piece.key, pick: facts.builder, reason }));
-  if (facts.route.routing === 'pinned') return fixed('pinned model');
-  const options = eligibleProviders(facts);
-  const first = options[0];
-  if (!first) return fixed('no other provider is healthy');
-  if (!facts.parallel) {
-    return pieces.map((piece) => ({
-      key: piece.key,
-      pick: first.pick,
-      reason: chatReason(facts, first),
-    }));
+  const options = facts.route.routing === 'pinned' ? [] : eligibleProviders(facts);
+  const first = options[0]?.pick ?? facts.builder;
+  if (!facts.parallel || options.length === 0) {
+    return pieces.map((piece) => ({ key: piece.key, pick: first }));
   }
   const building = pieces
     .filter((piece) => !piece.research)
     .sort((a, b) => b.sizeEstimate - a.sizeEstimate || a.key.localeCompare(b.key));
   const spread = new Map(
-    building.map((piece, index) => [piece.key, options[index % options.length]!]),
+    building.map((piece, index) => [piece.key, options[index % options.length]!.pick]),
   );
-  return pieces.map((piece) => {
-    const option = spread.get(piece.key) ?? first;
-    const reason = piece.research
-      ? 'read-only → the first healthy provider'
-      : `parallel → ${option.name} (spread by size)`;
-    return { key: piece.key, pick: option.pick, reason };
-  });
+  return pieces.map((piece) => ({ key: piece.key, pick: spread.get(piece.key) ?? first }));
 }
 
 export function fallbackPick(facts: AssignFacts, tried: ReadonlySet<string>): Option | null {

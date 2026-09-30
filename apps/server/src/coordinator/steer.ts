@@ -139,7 +139,9 @@ export async function applySteer(
     return response(plan, [], `Queued for the coordinator: ${quote(plan.body)} (at integration)`);
   }
   if (plan.kind === 'skip') {
-    return skip(db, list, targets(list, plan)[0]!, plan);
+    const piece = list.pieces.find((entry) => entry.key === plan.target);
+    if (!piece) throw new SteerError(404, `There is no piece ${plan.target}.`);
+    return skip(db, list, piece, plan);
   }
   const pieces = targets(list, plan);
   if (pieces.length === 0) throw new SteerError(409, 'No piece is still open.');

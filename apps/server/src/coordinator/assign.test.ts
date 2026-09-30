@@ -59,7 +59,6 @@ describe('assignPieces', () => {
   it('keeps pieces in order on the chat provider and its routed Builder pick', () => {
     const assigned = assignPieces(pieces, facts());
     expect(assigned.every((entry) => entry.pick === SONNET)).toBe(true);
-    expect(assigned[0]!.reason).toBe('in order → the chat provider');
   });
 
   it('pins every piece to the pinned model, whatever else is connected', () => {
@@ -79,7 +78,6 @@ describe('assignPieces', () => {
     ]);
     const codex = assigned[0]!.pick;
     expect(codex).toMatchObject({ provider: 'codex', model: 'gpt-6-sol', modelLabel: '6 Sol' });
-    expect(assigned[0]!.reason).toBe('parallel → Codex (spread by size)');
   });
 
   it('gives another provider its top tier for complex work and never its fast tier', () => {
@@ -105,7 +103,6 @@ describe('assignPieces', () => {
       facts({ unhealthy: new Map([['claude', 'rate limited']]) }),
     );
     expect(new Set(assigned.map((entry) => entry.pick.provider))).toEqual(new Set(['codex']));
-    expect(assigned[0]!.reason).toBe('in order → Codex (Claude rate limited)');
   });
 
   it('stays on the chat pick when no provider is healthy', () => {
@@ -114,7 +111,7 @@ describe('assignPieces', () => {
       ['codex', 'signed out'],
     ]);
     const assigned = assignPieces(pieces, facts({ unhealthy: down }));
-    expect(assigned[0]).toMatchObject({ pick: SONNET, reason: 'no other provider is healthy' });
+    expect(assigned[0]).toMatchObject({ pick: SONNET });
   });
 
   it('prefers the stronger Builder, then the less loaded provider, among the others', () => {

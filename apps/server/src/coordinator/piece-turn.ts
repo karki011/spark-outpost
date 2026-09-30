@@ -10,10 +10,16 @@ import { checkFixFollowUp } from '../orchestration/context.ts';
 import { runMember } from '../orchestration/members.ts';
 import type { MemberResult, Seat, Session } from '../orchestration/session.ts';
 import type { Spawn } from '../orchestration/transitions.ts';
-import { interruptedSection, moveAfterFailure, moveOnRequest, type Moved } from './fallback.ts';
+import {
+  interruptedSection,
+  moveAfterFailure,
+  moveOnRequest,
+  pieceChanges,
+  type Moved,
+} from './fallback.ts';
 import { mergeMainInto } from './merge-main.ts';
 import { deliverable, noteSection } from './notes.ts';
-import { changedFiles, type PieceSite } from './piece-run.ts';
+import type { PieceSite } from './piece-run.ts';
 import { providerFailure } from './provider-state.ts';
 import { revertFile } from './ownership.ts';
 import { skipWithDependents } from './skip.ts';
@@ -62,7 +68,7 @@ async function refresh(s: Session, work: TurnWork): Promise<void> {
 async function skip(s: Session, work: TurnWork, notes: readonly StoredNote[]): Promise<TurnEnd> {
   const cwd = await work.site.cwd();
   if (work.before) {
-    for (const file of await changedFiles(cwd, work.before)) {
+    for (const file of await pieceChanges(cwd, work.before, work.coordination, work.piece)) {
       await revertFile(cwd, work.before, file);
     }
   }
@@ -144,7 +150,7 @@ function followUp(notes: readonly StoredNote[], turn: Turn, merge: string | null
 async function runOnce(s: Session, work: TurnWork, turn: Turn): Promise<MemberResult | 'skip'> {
   await refresh(s, work);
   let notes = await pendingPieceNotes(s.deps.db, work.piece.id);
-  if (notes.some((note) => note.kind === 'skip')) return 'skip';
+  if (work.piece.status === 'skipped' || notes.some((note) => note.kind === 'skip')) return 'skip';
   await reassignIfAsked(s, work, turn, notes);
   await leaveUnhealthy(s, work, turn);
   notes = deliverable(await pendingPieceNotes(s.deps.db, work.piece.id));
@@ -207,7 +213,10 @@ export async function pieceTurn(
         return skip(s, work, await pendingPieceNotes(s.deps.db, work.piece.id));
       }
       if (!interrupt) return end;
-      const files = work.before ? await changedFiles(await work.site.cwd(), work.before) : [];
+      const cwd = await work.site.cwd();
+      const files = work.before
+        ? await pieceChanges(cwd, work.before, work.coordination, work.piece)
+        : [];
       turn.sections = [await work.brief(work.piece), interruptedSection(files)];
       continue;
     }

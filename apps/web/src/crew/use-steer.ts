@@ -14,29 +14,39 @@ export interface SteerControl {
   status: string | null;
 }
 
+interface Steer {
+  runId: string;
+  taskId: string;
+  text: string;
+  target: SteerTarget;
+}
+
 export function useSteer(
   conversationId: string,
   orchestration: Orchestration | null,
 ): SteerControl | null {
   const queryClient = useQueryClient();
-  const [target, setTarget] = useState<SteerTarget>(STEER_AUTO);
+  const [picked, setPicked] = useState<{ runId: string; target: SteerTarget } | null>(null);
   const steer = useMutation({
-    mutationFn: ({ taskId, text }: { taskId: string; text: string }) =>
-      taskApi.steer(taskId, { text, target }),
+    mutationFn: ({ taskId, text, target }: Steer) => taskApi.steer(taskId, { text, target }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) }),
   });
   const list = steerablePieces(orchestration);
   const taskId = orchestration?.taskId;
-  if (!list || !taskId) return null;
+  if (!orchestration || !list || !taskId) return null;
+  const { runId } = orchestration;
   const choices = steerChoices(list);
+  const wanted = picked?.runId === runId ? picked.target : STEER_AUTO;
+  const target = choices.some((choice) => choice.id === wanted) ? wanted : STEER_AUTO;
+  const current = steer.variables?.runId === runId;
   return {
     choices,
-    target: choices.some((choice) => choice.id === target) ? target : STEER_AUTO,
-    onTarget: setTarget,
+    target,
+    onTarget: (next) => setPicked({ runId, target: next }),
     send: async (text) => {
-      await steer.mutateAsync({ taskId, text });
+      await steer.mutateAsync({ runId, taskId, text, target });
     },
-    status: steer.error?.message ?? steer.data?.reply ?? null,
+    status: current ? (steer.error?.message ?? steer.data?.reply ?? null) : null,
   };
 }

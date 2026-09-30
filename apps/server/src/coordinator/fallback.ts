@@ -4,6 +4,7 @@ import { git, workingTree } from '../projects/snapshot.ts';
 import type { Session } from '../orchestration/session.ts';
 import { fallbackPick, providerOption } from './assign.ts';
 import { changedFiles, type PieceSite } from './piece-run.ts';
+import { owns } from './owned.ts';
 import { assignFacts } from './provider-state.ts';
 import type { Coordination } from './state.ts';
 
@@ -42,11 +43,30 @@ export function interruptedSection(files: readonly string[]): string {
   ].join('\n\n');
 }
 
-async function diffStat(cwd: string, before: string): Promise<string> {
+async function diffStat(cwd: string, before: string, files: readonly string[]): Promise<string> {
   const after = await workingTree(cwd).catch(() => null);
   if (!after || after === before) return '';
-  const stat = await git(cwd, ['diff', '--stat', '--no-renames', '--relative', before, after]);
+  const stat = await git(cwd, [
+    'diff',
+    '--stat',
+    '--no-renames',
+    '--relative',
+    before,
+    after,
+    '--',
+    ...files,
+  ]);
   return stat.trim().slice(0, STAT_LIMIT);
+}
+
+export async function pieceChanges(
+  cwd: string,
+  before: string,
+  coordination: Coordination,
+  piece: TaskPiece,
+): Promise<string[]> {
+  const owned = coordination.owned.get(piece.key) ?? { paths: piece.owns, globs: [] };
+  return (await changedFiles(cwd, before)).filter((file) => owns(owned, file));
 }
 
 export function providerName(s: Session, provider: string | null): string {
@@ -65,13 +85,13 @@ export interface MoveContext {
 async function handoffFor(s: Session, move: MoveContext, why: string): Promise<string | null> {
   if (!move.before) return null;
   const cwd = await move.site.cwd();
-  const files = await changedFiles(cwd, move.before);
+  const files = await pieceChanges(cwd, move.before, move.coordination, move.piece);
   if (files.length === 0) return null;
   return providerHandoffSection({
     from: providerName(s, move.piece.provider),
     why,
     files,
-    stat: await diffStat(cwd, move.before),
+    stat: await diffStat(cwd, move.before, files),
     lastCheck: move.lastCheck,
     acceptance: move.piece.acceptance,
   });
