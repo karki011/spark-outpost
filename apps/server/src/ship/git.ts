@@ -3,9 +3,15 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { ShipFile } from '@spark-outpost/contracts';
+import {
+  GIT_INSTALL_COMMAND,
+  GIT_INSTALL_HINT,
+  type GitStatus,
+  type ShipFile,
+} from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
 import { HARNESS_COMMIT_EMAIL } from '../projects/snapshot.ts';
+import { runCommand, type RunCommand } from '../setup/command.ts';
 
 const QUICK_MS = 15_000;
 const SLOW_MS = 120_000;
@@ -73,8 +79,47 @@ async function gitMaybe(root: string, args: string[]): Promise<string | null> {
   return result.code === 0 ? result.stdout.trim() || null : null;
 }
 
+const GIT_VERSION = /git version (\d+(?:\.\d+)*)/;
+const INSTALLER_MS = 10_000;
+
+export function parseGitVersion(output: string): string | null {
+  return GIT_VERSION.exec(output)?.[1] ?? null;
+}
+
+export async function gitStatus(
+  run: RunCommand = runCommand,
+  platform: NodeJS.Platform = process.platform,
+): Promise<GitStatus> {
+  const result = await run('git', ['--version'], QUICK_MS);
+  const installed = result.code === 0;
+  return {
+    installed,
+    version: installed ? parseGitVersion(result.stdout) : null,
+    canInstall: platform === 'darwin',
+  };
+}
+
 export async function gitInstalled(): Promise<boolean> {
-  return (await runGit('.', ['--version'])).code === 0;
+  return (await gitStatus()).installed;
+}
+
+export class GitInstallerError extends Error {}
+
+export async function openGitInstaller(
+  run: RunCommand,
+  platform: NodeJS.Platform = process.platform,
+): Promise<GitStatus> {
+  const status = await gitStatus(run, platform);
+  if (status.installed) return status;
+  if (!status.canInstall) throw new GitInstallerError(GIT_INSTALL_HINT);
+  const [file = '', ...args] = GIT_INSTALL_COMMAND.split(' ');
+  const opened = await run(file, args, INSTALLER_MS);
+  if (opened.code !== 0) {
+    throw new GitInstallerError(
+      `Couldn’t open Apple’s installer. Run ${GIT_INSTALL_COMMAND} in Terminal instead.`,
+    );
+  }
+  return status;
 }
 
 export interface RepoState {

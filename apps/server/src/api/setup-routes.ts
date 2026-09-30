@@ -28,6 +28,7 @@ import { advisorEntry, catalogEntry } from '../providers/catalog.ts';
 import type { RunCommand } from '../setup/command.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import { sendTestMessage } from '../setup/test-message.ts';
+import { GitInstallerError, gitStatus, openGitInstaller } from '../ship/git.ts';
 import {
   verifyApiKey,
   verifyCli,
@@ -70,6 +71,19 @@ export function setupRoutes(deps: SetupDeps): Router {
 
   router.get('/setup', async (_req, res) => {
     res.json(await setupState());
+  });
+
+  router.get('/setup/git', async (_req, res) => {
+    res.json(await gitStatus(deps.runCommand));
+  });
+
+  router.post('/setup/git/install', async (_req, res) => {
+    try {
+      res.json(await openGitInstaller(deps.runCommand));
+    } catch (error) {
+      if (error instanceof GitInstallerError) throw new BadRequestError(error.message);
+      throw error;
+    }
   });
 
   router.patch('/profile', async (req, res) => {

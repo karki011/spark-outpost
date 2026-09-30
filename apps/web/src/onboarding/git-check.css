@@ -1,0 +1,48 @@
+.git-card {
+  margin-bottom: 18px;
+  animation: rise 0.35s var(--out) both;
+}
+.git-card .pc-head {
+  padding: 8px 16px 8px 8px;
+}
+.git-blob {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 46px;
+  flex: none;
+}
+.git-missing {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.git-missing > p:first-child {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.git-missing .gh-note:empty {
+  display: none;
+}
+.git-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.git-cmd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.git-cmd code {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--raise);
+  color: var(--text);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12.5px;
+}
