@@ -52,7 +52,12 @@ export interface OutgoingMessage {
   annotations?: AnnotationInput[];
 }
 
-export function ChatView({ conversationId }: { conversationId: string }) {
+interface ChatViewProps {
+  conversationId: string;
+  onOpenChat: (conversationId: string) => void;
+}
+
+export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: queryKeys.conversation(conversationId),
@@ -161,6 +166,7 @@ export function ChatView({ conversationId }: { conversationId: string }) {
               pendingMessage={send.isPending ? send.variables : null}
               panelOpen={panel.open}
               onOpenTask={panel.openTask}
+              onOpenChat={onOpenChat}
               quotes={quotes}
             />
           ) : (

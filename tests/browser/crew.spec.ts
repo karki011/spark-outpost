@@ -197,7 +197,7 @@ test('on a phone the crew fits and Agent TV opens as a sheet that stays across c
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.getByRole('button', { name: 'Agent TV' }).click();
   await page.getByRole('button', { name: 'New chat' }).first().click();
-  await expect(page.getByRole('heading', { name: 'What should we work on?' })).toBeVisible();
+  await expect(page.getByText('What should we work on?')).toBeVisible();
   await expect(tv).toBeVisible();
   await tv.getByRole('button', { name: /^Bolt,/ }).click();
   await tv

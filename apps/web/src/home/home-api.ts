@@ -4,9 +4,11 @@ import {
   type DigestState,
   type DigestTrigger,
   spendSummarySchema,
+  todaySummarySchema,
   type ProviderHealth,
   type SpendRange,
   type SpendSummary,
+  type TodaySummary,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
 
@@ -16,6 +18,7 @@ export const homeKeys = {
   spend: (range: SpendRange) => ['home', 'spend', range] as const,
   health: ['home', 'provider-health'] as const,
   digest: ['home', 'digest'] as const,
+  today: ['home', 'today'] as const,
 };
 
 export function viewerTimeZone(): string {
@@ -27,6 +30,11 @@ export const homeApi = {
     request(
       spendSummarySchema,
       `/usage/spend?${new URLSearchParams({ range, tz: viewerTimeZone() }).toString()}`,
+    ),
+  today: (): Promise<TodaySummary> =>
+    request(
+      todaySummarySchema,
+      `/home/today?${new URLSearchParams({ tz: viewerTimeZone() }).toString()}`,
     ),
   health: (): Promise<ProviderHealth> => request(providerHealthSchema, '/providers/health'),
   digest: (): Promise<DigestState> => request(digestStateSchema, '/home/digest'),

@@ -22,8 +22,18 @@
   align-items: center;
   gap: 6px;
   text-align: center;
-  padding: 16vh 12px 0;
+  padding: clamp(16px, 9vh, 120px) 12px 16px;
   animation: rise 0.25s var(--out);
+}
+
+@media (max-height: 820px) {
+  .empty {
+    padding-top: 4px;
+  }
+
+  .empty .kit {
+    margin-top: 14px;
+  }
 }
 
 .empty h2 {

@@ -40,6 +40,12 @@ export function quietSummary({ personality }: Voice): string {
   return 'All quiet. Start something new below.';
 }
 
+export function quietToday({ personality }: Voice): string {
+  if (personality === 'playful') return 'Nothing else on the go today. A blank page, all yours.';
+  if (personality === 'facts') return 'No other chats today.';
+  return 'Nothing else on the go today. A fresh start.';
+}
+
 export function nothingFlagged({ personality, name }: Voice): string {
   if (personality === 'playful') return `Nothing is flagged${name ? `, ${name}` : ''}. Nice.`;
   if (personality === 'facts') return 'Nothing flagged';

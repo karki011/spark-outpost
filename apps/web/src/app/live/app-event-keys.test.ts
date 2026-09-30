@@ -17,6 +17,7 @@ const cached: Record<string, QueryKey> = {
   spendToday: ['home', 'spend', 'today'],
   spendWeek: ['home', 'spend', 'week'],
   health: ['home', 'provider-health'],
+  today: ['home', 'today'],
   task: ['tasks', 'task-1'],
   auditA: ['audit', A, 'summary'],
   auditB: ['audit', B, 'summary'],
@@ -47,7 +48,7 @@ const event = (kind: AppEvent['kind'], conversationId: string | null = A): AppEv
 });
 
 describe('app event invalidation', () => {
-  it('a finished run refreshes the chat, the sidebar, Home spend and health, and its outcome', async () => {
+  it('a finished run refreshes the chat, the sidebar, Home spend, health and today, and its outcome', async () => {
     expect(await invalidatedBy(event('run'))).toEqual(
       [
         'analytics',
@@ -59,6 +60,7 @@ describe('app event invalidation', () => {
         'spendToday',
         'spendWeek',
         'task',
+        'today',
         'usage',
       ].sort(),
     );
@@ -80,8 +82,14 @@ describe('app event invalidation', () => {
     expect(await invalidatedBy(event('step'))).toEqual(['auditA', 'detailA', 'list']);
   });
 
-  it('an approval also refreshes tasks', async () => {
-    expect(await invalidatedBy(event('approval'))).toEqual(['auditA', 'detailA', 'list', 'task']);
+  it('an approval also refreshes tasks and the day so far', async () => {
+    expect(await invalidatedBy(event('approval'))).toEqual([
+      'auditA',
+      'detailA',
+      'list',
+      'task',
+      'today',
+    ]);
   });
 
   it('orchestration progress refreshes only that chat', async () => {
@@ -93,7 +101,7 @@ describe('app event invalidation', () => {
   });
 
   it('task changes without a chat leave every chat detail alone', async () => {
-    expect(await invalidatedBy(event('task', null))).toEqual(['list', 'task']);
+    expect(await invalidatedBy(event('task', null))).toEqual(['list', 'task', 'today']);
   });
 
   it('a recorded outcome refreshes that run outcome and analytics', async () => {

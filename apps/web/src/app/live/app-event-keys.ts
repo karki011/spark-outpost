@@ -34,6 +34,7 @@ const tasks: Invalidation = { queryKey: taskKeys.all };
 const spend: Invalidation = { queryKey: homeKeys.spendAll };
 const health: Invalidation = { queryKey: homeKeys.health, exact: true };
 const digest: Invalidation = { queryKey: homeKeys.digest, exact: true };
+const today: Invalidation = { queryKey: homeKeys.today, exact: true };
 const usage: Invalidation = { queryKey: queryKeys.usageSummary, exact: true };
 const analytics: Invalidation = { queryKey: analyticsKeys.all };
 
@@ -58,6 +59,7 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
         ...conversationScoped(event, true),
         tasks,
         spend,
+        today,
         health,
         usage,
         analytics,
@@ -66,11 +68,11 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
     case 'step':
       return [list, ...conversationScoped(event, true)];
     case 'approval':
-      return [list, ...conversationScoped(event, true), tasks];
+      return [list, ...conversationScoped(event, true), tasks, today];
     case 'orchestration':
       return conversationScoped(event, false);
     case 'task':
-      return [list, ...conversationScoped(event, false), tasks];
+      return [list, ...conversationScoped(event, false), tasks, today];
     case 'digest':
       return [digest, spend];
     case 'outcome':

@@ -16,6 +16,45 @@ export const spendSummarySchema = z.object({
 });
 export type SpendSummary = z.infer<typeof spendSummarySchema>;
 
+export const TODAY_CHATS_MAX = 4;
+
+const countSchema = z.number().int().nonnegative();
+
+export const todayChatStateSchema = z.enum([
+  'waiting',
+  'running',
+  'failed',
+  'stalled',
+  'finished',
+  'idle',
+]);
+export type TodayChatState = z.infer<typeof todayChatStateSchema>;
+
+export const todayChatSchema = z.object({
+  id: z.uuid(),
+  title: z.string(),
+  project: z.string().nullable(),
+  state: todayChatStateSchema,
+  kept: countSchema,
+  prs: countSchema,
+  tickets: countSchema,
+  updatedAt: z.string(),
+});
+export type TodayChat = z.infer<typeof todayChatSchema>;
+
+export const todaySummarySchema = z.object({
+  since: z.string(),
+  chats: countSchema,
+  waiting: countSchema,
+  kept: countSchema,
+  prs: countSchema,
+  tickets: countSchema,
+  costUsd: z.number().nullable(),
+  costSource: totalCostSourceSchema.nullable(),
+  recent: z.array(todayChatSchema).max(TODAY_CHATS_MAX),
+});
+export type TodaySummary = z.infer<typeof todaySummarySchema>;
+
 export const providerIssueKindSchema = z.enum(['auth', 'usage_limit', 'rate_limit']);
 export type ProviderIssueKind = z.infer<typeof providerIssueKindSchema>;
 
