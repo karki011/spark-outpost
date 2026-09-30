@@ -6,6 +6,9 @@ export const HISTORY_BUDGET_BYTES = 36_000;
 export const CHAT_ONLY_NOTE =
   'You are answering in a Spark Outpost chat that has no project folder. You cannot read or change files, run commands, or browse the web here, so do not attempt tool calls. Reply in plain text and Markdown only.';
 
+export const CHAT_TOOLS_NOTE =
+  "You are answering in a Spark Outpost chat that has no project folder. You cannot read or change files, run shell commands, or browse the web here. You may call the tools this session offers, such as Spark Outpost's own spark_* tools for questions about Spark; do not try any other tools. Reply in plain text and Markdown.";
+
 const ASK_COMMANDS =
   'Spark Outpost runs read-only commands directly and asks the user before any other command, so a command may wait or be denied.';
 const ASK_NO_CHANGES =
@@ -49,6 +52,7 @@ export interface PromptOptions {
   projectRoots?: readonly string[];
   changesAllowed?: boolean;
   commandsAllowed?: boolean;
+  toolsAvailable?: boolean;
 }
 
 type Part = string | acp.ContentBlock;
@@ -169,7 +173,8 @@ export function conversationBlocks(
   const projectIntro = options.changesAllowed
     ? doProjectNote(roots)
     : projectNote(roots, options.commandsAllowed === true);
-  const intro = roots.length > 0 ? projectIntro : CHAT_ONLY_NOTE;
+  const chatIntro = options.toolsAvailable ? CHAT_TOOLS_NOTE : CHAT_ONLY_NOTE;
+  const intro = roots.length > 0 ? projectIntro : chatIntro;
   if (kept.length === 0 && omitted === 0) {
     return toBlocks([intro, prompt, ...currentParts]);
   }

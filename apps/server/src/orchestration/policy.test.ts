@@ -110,6 +110,35 @@ describe('risk rules', () => {
     expect(questionByRule('Explain the retry logic')).toBe(false);
   });
 
+  it.each([
+    'How do I make Builders run one at a time?',
+    'How can I make the Critic skip small changes?',
+    'How do you add a project?',
+    'What does Full auto → PR do when checks fail?',
+    "What's the best way to add a migration?",
+    'Why did it create a worktree?',
+    'Can Spark make a draft PR by itself?',
+    'Can I change where Spark works?',
+    'Is there a way to make Builders run in order?',
+    'Should we split the parser before we add tests?',
+    'Where do I change the spend cap?',
+  ])('reads the how-to question "%s" as a question even with a build verb', (request) => {
+    expect(questionByRule(request)).toBe(true);
+  });
+
+  it.each([
+    'Can you make the button blue?',
+    'Could you add a retry to the fetch?',
+    'Would you rename the parser module?',
+    'How can you fix the flaky test?',
+    'Why not add a retry?',
+    'What if you remove the cache?',
+    'How do I make builders run in order? Then change it for me.',
+    'Make the Builders run one at a time',
+  ])('reads the request "%s" as a change', (request) => {
+    expect(questionByRule(request)).toBe(false);
+  });
+
   it('reads plan and feedback requests from the audit as answers, not changes', () => {
     for (const request of [
       'any feedback',

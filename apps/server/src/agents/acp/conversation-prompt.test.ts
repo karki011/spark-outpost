@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { TurnAttachment } from '../../providers/provider.ts';
 import {
   CHAT_ONLY_NOTE,
+  CHAT_TOOLS_NOTE,
   contextSteps,
   conversationBlocks,
   conversationPrompt,
@@ -25,6 +26,22 @@ const full = { image: true, embeddedContext: true };
 describe('conversation prompt', () => {
   it('sends the chat-only note and the message when there is no history', () => {
     expect(conversationPrompt([], 'Hi')).toBe(`${CHAT_ONLY_NOTE}\n\nHi`);
+  });
+
+  it('lets a chat without a folder use the tools its session offers, but not change files', () => {
+    const [withTools] = conversationBlocks([], 'Hi', { toolsAvailable: true });
+    expect(withTools).toEqual({ type: 'text', text: `${CHAT_TOOLS_NOTE}\n\nHi` });
+    expect(CHAT_TOOLS_NOTE).toContain('spark_* tools');
+    expect(CHAT_TOOLS_NOTE).toContain('cannot read or change files');
+    expect(CHAT_TOOLS_NOTE).not.toMatch(/do not attempt tool calls/);
+    expect(CHAT_ONLY_NOTE).toMatch(/do not attempt tool calls/);
+    const [project] = conversationBlocks([], 'Hi', {
+      projectRoots: ['/work/app'],
+      toolsAvailable: true,
+    });
+    expect(project?.type === 'text' && project.text.startsWith(projectNote(['/work/app']))).toBe(
+      true,
+    );
   });
 
   it('replaces the chat-only note with the read-only folder note in a project', () => {

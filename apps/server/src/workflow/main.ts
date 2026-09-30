@@ -40,6 +40,7 @@ const sparkTools = await startSparkMcpHost({
     locateGh: () => locateCli('gh', runCommand, loginShell),
   },
   serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD ?? null,
+  parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   branchPrefix: config.BRANCH_PREFIX,
 });
 const worker = startWorker({

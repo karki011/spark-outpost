@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Project } from '@spark-outpost/contracts';
+import { PIECE_SLOTS_MAX, type Project, type WorkPlace } from '@spark-outpost/contracts';
 import { conversationProjectIds } from '../../agent-config/store.ts';
 import { groupBy } from '../../analytics/tally.ts';
 import { mapStatus, projectMap } from '../../map/read-store.ts';
@@ -10,16 +10,22 @@ import type { SparkScope } from '../deps.ts';
 import { page } from '../format.ts';
 import { limitInput, sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 
+const AT_ONCE =
+  'Pieces of a big plan run at the same time, up to this many. Change it in Settings → Projects → Builders at once.';
+const IN_ORDER =
+  'Pieces of a big plan run one at a time, in order. Change it in Settings → Projects → Builders at once.';
+const SERVER_IN_ORDER =
+  "Spark's server is set to run pieces one at a time (COORDINATOR_MODE), so Builders work in order whatever the project setting says.";
+
 interface ProjectFactsRow {
   id: string;
-  work_place: string;
   chats: number;
   live_worktrees: number;
 }
 
 async function projectFacts(db: Queryable, workspaceId: string) {
   const { rows } = await db.query<ProjectFactsRow>(
-    `SELECT p.id, p.work_place,
+    `SELECT p.id,
        (SELECT count(*)::int FROM conversation_projects cp WHERE cp.project_id = p.id) AS chats,
        (SELECT count(*)::int FROM chat_worktrees w
          WHERE w.project_id = p.id AND w.removed_at IS NULL) AS live_worktrees
@@ -56,6 +62,18 @@ export async function findProject(
   throw new SparkToolError('This chat has no project. Pass a project name or id.');
 }
 
+function whereSparkWorks(place: WorkPlace | undefined) {
+  return place === 'checkout'
+    ? 'In my files (new chats edit the checkout directly)'
+    : 'Each chat in its own worktree (a git worktree on its own branch; the checkout stays as it is)';
+}
+
+function buildersAtOnce(project: Project, parallel: boolean) {
+  if (!parallel) return { value: 1, note: SERVER_IN_ORDER };
+  const value = project.parallelPieces === false ? 1 : (project.pieceSlots ?? PIECE_SLOTS_MAX);
+  return { value, note: value === 1 ? IN_ORDER : AT_ONCE };
+}
+
 async function projects({ deps, scope }: SparkToolContext, limit: number) {
   const [all, facts, linked] = await Promise.all([
     listProjects(deps.db, scope.workspaceId),
@@ -76,7 +94,8 @@ async function projects({ deps, scope }: SparkToolContext, limit: number) {
         path: project.displayPath,
         inThisChat: linked.includes(project.id),
         defaultBranch: branch,
-        chatsWorkIn: fact?.work_place === 'checkout' ? 'the checkout' : 'a chat worktree',
+        whereSparkWorks: whereSparkWorks(project.workPlace),
+        buildersAtOnce: buildersAtOnce(project, deps.parallelBuilders !== false),
         liveChatWorktrees: fact?.live_worktrees ?? 0,
         chats: fact?.chats ?? 0,
         checkCommands: project.checkCommands ?? null,
@@ -134,7 +153,7 @@ export const projectTools = [
     name: 'spark_projects',
     title: 'Projects',
     description:
-      'Projects linked in Spark: name, path, default branch, whether chats work in a chat worktree or the checkout, chat count, check commands and Map status.',
+      'Projects linked in Spark: name, path, default branch, Settings → Projects choices (Where Spark works: each chat in its own worktree or in my files; Builders at once: 1 at a time in order, or up to 2 or 3 in parallel), chat count, check commands and Map status.',
     input: { limit: limitInput(30, 100) },
     run: (args, context) => projects(context, args.limit),
   }),
