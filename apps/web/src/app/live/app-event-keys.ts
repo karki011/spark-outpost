@@ -4,6 +4,7 @@ import { analyticsKeys } from '../../analytics/analytics-api.ts';
 import { queryKeys } from '../../api/client.ts';
 import { outcomeKeys } from '../../api/outcomes.ts';
 import { auditKeys } from '../../audit/audit-api.ts';
+import { mapKeys } from '../../map/map-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 
@@ -75,7 +76,7 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
     case 'outcome':
       return [...outcome(event), analytics];
     case 'map':
-      return [];
+      return [{ queryKey: mapKeys.all }];
   }
 }
 

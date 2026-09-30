@@ -46,12 +46,19 @@ function fileName(path: string): { name: string; folder: string } {
     : { name: path.slice(slash + 1), folder: path.slice(0, slash) };
 }
 
-function FileBody({ file, view }: { file: OpenFile; view: string }) {
+interface FileBodyProps {
+  file: OpenFile;
+  view: string;
+  loading?: ReactNode;
+}
+
+export function FileBody({ file, view, loading }: FileBodyProps) {
   const content = useQuery({
     queryKey: projectKeys.file(file.projectId, file.path),
     queryFn: () => projectsApi.file(file.projectId, file.path),
   });
   if (content.isPending) {
+    if (loading) return loading;
     return (
       <div className="fs-state" role="status">
         <BlobScout size={40} mood="working" />
