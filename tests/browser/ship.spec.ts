@@ -41,7 +41,7 @@ async function keptChange(page: Page, root: string) {
   await pickPermission(page, 'Ask before edits');
   await page.keyboard.press('Escape');
   const input = page.getByRole('textbox', { name: 'Message' });
-  await input.fill('Tidy the notes #edit #plan');
+  await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
   await page
     .getByRole('group', { name: /Change a file\?/ })
@@ -67,7 +67,9 @@ test('Ship from the keep card commits the task file and opens a draft PR', async
   await expect(open).toHaveAttribute('aria-expanded', 'true');
   const panel = page.getByRole('group', { name: 'Ship this task' });
   await expect(panel).toHaveAttribute('id', (await open.getAttribute('aria-controls')) ?? '');
-  await expect(panel.locator('.ship-facts')).toContainText(/Branch\s*spark\/tidy-the-notes/);
+  await expect(panel.locator('.ship-facts')).toContainText(
+    /Branch\s*spark\/add-a-line-to-the-notes/,
+  );
   await expect(panel.locator('.ship-facts')).toContainText('into main');
   await expect(panel.getByRole('list', { name: 'Files to commit' })).toHaveText(/notes\.txt/);
   await expect(panel.getByRole('list', { name: 'Files to commit' })).not.toContainText('mine');
@@ -156,7 +158,7 @@ test('Full auto runs to a draft PR: the reply and the auto-kept card show the PR
   await page.keyboard.press('Escape');
   await expect(button).toContainText('· Bypass permissions · Full auto → PR');
   const input = page.getByRole('textbox', { name: 'Message' });
-  await input.fill('Tidy the notes #edit #plan');
+  await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
 
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });

@@ -121,7 +121,7 @@ test('shows the diff for an edit and leaves the file alone after Deny', async ({
   const original = Array.from({ length: 30 }, (_, index) => `Note ${index + 1}`).join('\n');
   writeFileSync(notes(), `${original}\n`);
   await doChat(page);
-  await send(page, 'Tidy the notes #edit');
+  await send(page, 'Add a line to the notes #edit');
   const approval = card(page, /Change a file\?/);
   await expect(approval).toBeVisible({ timeout: 15_000 });
   const figure = approval.getByRole('figure');
@@ -216,7 +216,7 @@ test('Stop while waiting cancels the approval and the run', async ({ page }) => 
 
 test('reverts an allowed edit after one confirmation', async ({ page }) => {
   await doChat(page);
-  await send(page, 'Tidy the notes #edit');
+  await send(page, 'Add a line to the notes #edit');
   await card(page, /Change a file\?/)
     .getByRole('button', { name: 'Allow', exact: true })
     .click();

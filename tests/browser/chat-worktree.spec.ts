@@ -35,7 +35,7 @@ async function chatOn(page: Page, root: string) {
 
 async function sendAndKeep(page: Page) {
   const input = page.getByRole('textbox', { name: 'Message' });
-  await input.fill('Tidy the notes #edit #plan');
+  await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
   await page
     .getByRole('group', { name: /Change a file\?/ })
@@ -68,7 +68,7 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
 
   await sendAndKeep(page);
   const chip = page.locator('.head .chat-branch');
-  await expect(chip).toContainText(/spark\/tidy-the-notes[a-z-]*-[0-9a-f]{8}/);
+  await expect(chip).toContainText(/spark\/add-a-line-to-the-notes[a-z-]*-[0-9a-f]{8}/);
   await expect(chip).toContainText('· worktree');
   await expect(chip.getByRole('button', { name: 'Open this chat’s worktree' })).toBeVisible();
   await expect(place).toHaveCount(0);
