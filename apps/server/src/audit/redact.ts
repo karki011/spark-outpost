@@ -101,6 +101,32 @@ export function redactText(text: string): string {
   return result;
 }
 
+const VALUE_GROUP: Record<string, number> = { env: 3, json_field: 2 };
+const PLACEHOLDER =
+  /^(?:\[redacted:|[<${(*]|x{3,}|\.{3})|^(?:your|my|some|example|sample|placeholder|changeme|change_me|dummy|fake|test|todo|none|null|undefined|true|false)(?:[\W_]|$)/i;
+
+function looksSecret(raw: string): boolean {
+  const value = raw.trim().replace(/^['"]|['"]$/g, '');
+  if (value.length < 8 || /\s/.test(value) || PLACEHOLDER.test(value)) return false;
+  return /\d/.test(value) || value.length >= 20;
+}
+
+export function secretKinds(text: string): string[] {
+  const kinds = new Set<string>();
+  for (const rule of TEXT_RULES) {
+    for (const match of text.matchAll(rule.pattern)) {
+      const [whole, ...groups] = match;
+      if (whole.startsWith('[redacted:')) continue;
+      const strings = groups.filter((value): value is string => typeof value === 'string');
+      if (rule.replace && rule.replace(whole, ...strings) === whole) continue;
+      const valueAt = VALUE_GROUP[rule.kind];
+      if (valueAt !== undefined && !looksSecret(groups[valueAt] ?? '')) continue;
+      kinds.add(rule.kind);
+    }
+  }
+  return [...kinds];
+}
+
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
 
 export function storableText(text: string): string {

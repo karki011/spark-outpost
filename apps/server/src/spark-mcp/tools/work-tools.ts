@@ -148,6 +148,7 @@ async function brief({ deps, scope }: SparkToolContext) {
 export const workTools = [
   sparkTool({
     name: 'spark_tickets',
+    privateData: true,
     title: 'Tickets',
     description:
       "The user's Jira and Linear tickets as Spark's Tickets inbox sorts them: needs attention first, then working, PR ready, in review, up next. A ticket needs attention when a linked chat is asking or stopped with an error, a sync to the tracker failed, it is blocked, it is due soon or overdue, its PR has changes requested or is approved, it has sat in review too long, or it is Urgent or High and still not started some days after it was assigned (the idle-days setting). An urgent ticket assigned today is not flagged yet. For the highest-priority or most urgent ticket, pass sort=priority (Urgent, High, Medium, Low, then none); with the default inbox order the answer also lists highestPriority, the top open tickets by priority. Each ticket has its status, priority, why it is flagged, due date, linked chat and PR. Fetches fresh data from the connected sources.",
@@ -177,6 +178,7 @@ export const workTools = [
   }),
   sparkTool({
     name: 'spark_activity',
+    privateData: true,
     title: 'Recent activity',
     description:
       'Chats active in the last N hours with their state (waiting, running, failed, stalled, finished), what they wait on, errors, plan progress, files changed, checks, last reply and cost, plus totals.',
@@ -193,6 +195,7 @@ export const workTools = [
   }),
   sparkTool({
     name: 'spark_brief',
+    privateData: true,
     title: 'Morning brief',
     description:
       "The latest Spark brief (the morning digest of chats and tickets): when it was written, what it said, whether there is newer activity, and the tickets currently flagged for attention. Read only; it doesn't write a new brief.",

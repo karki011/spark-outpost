@@ -6,6 +6,7 @@ import type { GitHubDeps } from '../ship/github/access.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import type { TicketDeps } from '../tickets/connections.ts';
 import type { InboxDeps } from '../tickets/inbox.ts';
+import type { RunObservations } from '../observations/run-observations.ts';
 
 export interface SparkToolDeps {
   db: Db;
@@ -34,6 +35,7 @@ export interface SparkScope {
   conversationId: string | null;
   runId: string | null;
   actions?: SparkActionHooks;
+  observations?: RunObservations | undefined;
 }
 
 export function ticketDepsFor(deps: SparkToolDeps, scope: SparkScope): TicketDeps {

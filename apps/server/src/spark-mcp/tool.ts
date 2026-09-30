@@ -12,6 +12,7 @@ export interface SparkTool {
   title: string;
   description: string;
   acts?: boolean;
+  privateData?: boolean;
   input: z.ZodRawShape;
   run(args: unknown, context: SparkToolContext): Promise<unknown>;
 }

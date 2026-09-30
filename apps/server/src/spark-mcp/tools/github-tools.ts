@@ -121,6 +121,7 @@ async function pullRequest(
 export const githubTools = [
   sparkTool({
     name: 'spark_pull_requests',
+    privateData: true,
     title: 'Pull requests',
     description:
       "Pull requests on a project's GitHub repo (default: this chat's project, open ones): number, title, author, draft, head → base, dates, review state, CI (passing, failing with names, pending, none) and whether it can merge.",
@@ -133,6 +134,7 @@ export const githubTools = [
   }),
   sparkTool({
     name: 'spark_pr',
+    privateData: true,
     title: 'Pull request',
     description:
       "One pull request on a project's GitHub repo: title, body, state, author, branches, size, checks, reviews, and paged changed files, review comments and comments. offset/limit page all three lists together.",
