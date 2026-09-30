@@ -1,24 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import '@xterm/xterm/css/xterm.css';
-import type {
-  ProviderId,
-  TerminalEndReason,
-  TerminalHint,
-  TerminalStep,
-} from '@spark-outpost/contracts';
+import type { ProviderId, TerminalHint, TerminalStep } from '@spark-outpost/contracts';
 import { LabelText } from '../providers/LabelText.tsx';
 import { CheckIcon, XIcon } from '../ui/icons.tsx';
+import { createTerminalSession } from './terminal-api.ts';
 import { openTerminal, type TerminalConnection } from './terminal-connection.ts';
+import { endMessages } from './terminal-messages.ts';
 import './terminal.css';
-
-const endMessages: Record<TerminalEndReason, string> = {
-  exited: 'The shell exited.',
-  closed: 'Terminal closed.',
-  disconnected: 'Terminal closed.',
-  idle: 'Closed after 10 minutes without input.',
-  time_limit: 'Closed after 30 minutes.',
-  shutdown: 'Closed because Spark Outpost stopped.',
-};
 
 const problemHints = new Set(['npm_missing', 'npm_permissions', 'cli_not_found']);
 
@@ -75,10 +63,10 @@ export function TerminalPanel({
 
   useEffect(() => {
     if (!screen.current) return;
-    const opened = openTerminal(provider, step, screen.current, {
-      onOpen: (next) => {
+    const opened = openTerminal(() => createTerminalSession(provider, step), screen.current, {
+      onOpen: (created) => {
         setStatus('open');
-        setCommand(next);
+        setCommand(created.command);
       },
       onCommandRun: () => setRan(true),
       onHint: setHint,

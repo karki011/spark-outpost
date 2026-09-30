@@ -18,6 +18,24 @@ export const createTerminalResponseSchema = z.object({
 });
 export type CreateTerminalResponse = z.infer<typeof createTerminalResponseSchema>;
 
+export const createShellRequestSchema = z.strictObject({
+  conversationId: z.uuid().nullable().default(null),
+});
+export type CreateShellRequest = z.input<typeof createShellRequestSchema>;
+
+export const shellFolderKindSchema = z.enum(['worktree', 'project', 'home']);
+export type ShellFolderKind = z.infer<typeof shellFolderKindSchema>;
+
+export const createShellResponseSchema = z.object({
+  id: z.uuid(),
+  token: z.string(),
+  cwd: z.string(),
+  label: z.string(),
+  kind: shellFolderKindSchema,
+  note: z.string().nullable(),
+});
+export type CreateShellResponse = z.infer<typeof createShellResponseSchema>;
+
 export const terminalEndReasonSchema = z.enum([
   'exited',
   'closed',
@@ -25,6 +43,8 @@ export const terminalEndReasonSchema = z.enum([
   'idle',
   'time_limit',
   'shutdown',
+  'folder_removed',
+  'chat_removed',
 ]);
 export type TerminalEndReason = z.infer<typeof terminalEndReasonSchema>;
 

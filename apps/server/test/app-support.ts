@@ -28,6 +28,7 @@ export interface TestAppOptions {
   serverSpendCapUsd?: number;
   parallelBuilders?: boolean;
   openFolder?: AppOptions['openFolder'];
+  terminals?: TerminalSessions;
 }
 
 const unavailableProbe: AppOptions['probeCapabilities'] = () =>
@@ -55,7 +56,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
       fetch: options.fetch ?? (() => Promise.reject(new Error('Network disabled in tests'))),
     },
     runCommand: options.runCommand ?? (async () => notFound),
-    terminals: new TerminalSessions(loginShellSpawner('/bin/sh')),
+    terminals: options.terminals ?? new TerminalSessions(loginShellSpawner('/bin/sh')),
     appEvents: options.appEvents ?? new AppEventFeed(),
     loginShell: '/bin/zsh',
     probeCapabilities: options.probeCapabilities ?? unavailableProbe,
