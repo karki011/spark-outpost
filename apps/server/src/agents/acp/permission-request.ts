@@ -64,6 +64,19 @@ function pathsOf(
   return [...new Set(candidates.map((candidate) => absolute(candidate, cwd)))];
 }
 
+const MCP_TITLE = /^mcp__(.+?)__/;
+
+function mcpServerOf(params: acp.RequestPermissionRequest, title: string): string | null {
+  const claude = objectFields(objectFields(params.toolCall._meta).claudeCode).mcpServer;
+  const claudeName = objectFields(claude).name;
+  if (typeof claudeName === 'string' && claudeName.trim()) return claudeName.trim();
+  const titled = MCP_TITLE.exec(title)?.[1];
+  if (titled) return titled;
+  if (objectFields(params._meta).is_mcp_tool_approval !== true) return null;
+  const serverName = objectFields(params.toolCall.rawInput).serverName;
+  return typeof serverName === 'string' && serverName.trim() ? serverName.trim() : 'unknown';
+}
+
 function approvalOptions(options: readonly acp.PermissionOption[]): ApprovalOption[] {
   return options.flatMap((option) => {
     const kind = approvalOptionKindSchema.safeParse(option.kind);
@@ -85,6 +98,7 @@ export function approvalRequestFrom(
   const diffs = diffsOf(toolCall.content, cwd);
   const plan = exitPlanText(toolKind, toolCall.rawInput, toolCall.content);
   const options = approvalOptions(params.options);
+  const mcpServer = mcpServerOf(params, title);
   return {
     toolCallId: toolCall.toolCallId,
     rpcId: context.rpcId,
@@ -99,6 +113,7 @@ export function approvalRequestFrom(
     roots: context.roots,
     home: context.home,
     ...(plan ? { plan } : {}),
+    ...(mcpServer ? { mcpServer } : {}),
     ...(context.mode !== undefined ? { mode: context.mode } : {}),
   };
 }

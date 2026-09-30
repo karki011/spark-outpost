@@ -11,7 +11,7 @@ export const PUBLISH_COMMANDS: readonly string[] = [
   ...HOSTING_CLIS,
 ];
 
-function gitSubcommand(args: readonly string[]): { name: string; rest: string[] } | null {
+export function gitSubcommand(args: readonly string[]): { name: string; rest: string[] } | null {
   let index = 0;
   while (index < args.length) {
     const token = args[index]!;
