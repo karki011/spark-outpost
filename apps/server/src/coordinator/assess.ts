@@ -9,7 +9,12 @@ import { routeBuilder } from '../orchestration/routing.ts';
 import { repoBusy } from '../orchestration/solo-copy.ts';
 import type { Session } from '../orchestration/session.ts';
 import { engagement, likelyFiles, type Engagement } from './engage.ts';
-import { placePieces, type PlaceablePiece, type Placement } from './placement.ts';
+import {
+  placePieces,
+  type PlaceablePiece,
+  type Placement,
+  type PlacementFacts,
+} from './placement.ts';
 import { budgetFor, lineCounter } from './project-facts.ts';
 import { projectSettings } from './builder-env.ts';
 import { sizeEstimate, type LineCount } from './size.ts';
@@ -43,6 +48,20 @@ function planPieces(items: readonly string[], lines: LineCount): PlaceablePiece[
   return pieces;
 }
 
+export async function placementFacts(s: Session): Promise<PlacementFacts> {
+  const root = s.input.projectRoots[0]!;
+  return {
+    git: s.git,
+    repoBusy: s.git ? await repoBusy(s.deps.db, s.lease.runId, root) : false,
+    destructive: s.facts.destructive,
+    skipsGate: modeNeedsWorktree(s.input.provider, s.input.agentMode),
+    stableCheckout: (await projectSettings(s.deps.db, s.lease.runId)).stableCheckout,
+    wholeProjectChecks: (s.checks?.commands.length ?? 0) > 0,
+    splitWorthIt: null,
+    sameFolder: null,
+  };
+}
+
 async function awaitScan(s: Session) {
   const outcome = await (s.scan ?? Promise.resolve(null));
   return outcome?.report ?? null;
@@ -73,19 +92,7 @@ export async function assess(s: Session): Promise<Assessment> {
     budgetTokens,
   });
   const pieces = planPieces(planItems, lines);
-  const placement =
-    pieces.length > 1
-      ? placePieces(pieces, {
-          git: s.git,
-          repoBusy: s.git ? await repoBusy(s.deps.db, s.lease.runId, root) : false,
-          destructive: s.facts.destructive,
-          skipsGate: modeNeedsWorktree(s.input.provider, s.input.agentMode),
-          stableCheckout: (await projectSettings(s.deps.db, s.lease.runId)).stableCheckout,
-          wholeProjectChecks: (s.checks?.commands.length ?? 0) > 0,
-          splitWorthIt: null,
-          sameFolder: null,
-        })
-      : null;
+  const placement = pieces.length > 1 ? placePieces(pieces, await placementFacts(s)) : null;
   return {
     engagement: engaged,
     placement,

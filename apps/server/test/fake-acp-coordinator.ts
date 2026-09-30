@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
+import { conflictTurn, parallelBlock, pieceExtras } from './fake-acp-parallel.ts';
 import { write, type RoleTurn } from './fake-acp-roles.ts';
 
 export const PIECE_CHECK_SCRIPT = `import { readFileSync } from 'node:fs';
@@ -48,7 +49,7 @@ function repairing(text: string): boolean {
 async function coordinator(turn: RoleTurn): Promise<acp.StopReason> {
   const cyclic =
     turn.text.includes('#alwaysbad') || (turn.text.includes('#badpieces') && !repairing(turn.text));
-  const block = {
+  const block = parallelBlock(turn.text) ?? {
     pieces: PIECES.map((piece) => pieceJson(piece, cyclic)),
     integration: turn.text.includes('#glue') ? 'Wire the view into glue.ts' : null,
   };
@@ -113,6 +114,7 @@ async function piece(turn: RoleTurn): Promise<acp.StopReason> {
   const handoff =
     turn.text.includes('#handoff') && key === 'P1' && !turn.text.includes('## Handoff');
   if (turn.text.includes('#slowpiece') && key === 'P2') await untilStopped(turn.signal);
+  await pieceExtras(turn, key);
   await strayWrites(turn, key);
   await write(turn, file, fixing ? 'fixed' : `built by ${key}`);
   if (!fixing && (breaks || handoff)) await write(turn, file, 'broken');
@@ -124,6 +126,8 @@ async function piece(turn: RoleTurn): Promise<acp.StopReason> {
 }
 
 async function integrator(turn: RoleTurn): Promise<acp.StopReason> {
+  const settled = await conflictTurn(turn);
+  if (settled) return settled;
   await write(turn, 'glue.ts', 'export const glued = true;');
   await turn.say('Wired the pieces together in glue.ts.');
   return 'end_turn';

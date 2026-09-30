@@ -150,3 +150,7 @@ export async function saveDepsWait(db: Queryable, runId: string, waitedMs: numbe
     waitedMs,
   ]);
 }
+
+export async function saveBase(db: Queryable, runId: string, commit: string): Promise<void> {
+  await db.query('UPDATE run_worktrees SET base_commit = $2 WHERE run_id = $1', [runId, commit]);
+}

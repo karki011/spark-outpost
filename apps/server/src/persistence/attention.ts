@@ -27,6 +27,7 @@ const ATTENTION_BY_APPROVAL_KIND: Record<ApprovalKind, AttentionKind> = {
   stuck: 'stuck',
   verify: 'input',
   ownership: 'input',
+  pieces: 'plan',
 };
 
 function baseName(path: string): string {

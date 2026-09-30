@@ -1,6 +1,23 @@
 import type { PieceList } from '@spark-outpost/contracts';
 import type { OwnedSet } from './owned.ts';
 
+export interface Renumbered {
+  piece: string;
+  from: string;
+  to: string;
+}
+
+export interface Conflict {
+  piece: string;
+  files: string[];
+  resolvedBy: 'integrator' | 'you' | null;
+}
+
+export interface SharedBase {
+  root: string;
+  commit: string;
+}
+
 export interface Coordination {
   list: PieceList | null;
   fallback: string | null;
@@ -12,4 +29,7 @@ export interface Coordination {
   integrated: boolean;
   integrator: string | null;
   base: string | null;
+  sharedBase?: SharedBase;
+  renumbered?: Renumbered[];
+  conflicts?: Conflict[];
 }

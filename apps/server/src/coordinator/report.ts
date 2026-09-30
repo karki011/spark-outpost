@@ -1,10 +1,12 @@
 import { placementLabel, type PieceList, type TaskPiece } from '@spark-outpost/contracts';
-import type { Coordination } from './state.ts';
+import type { Conflict, Coordination, Renumbered } from './state.ts';
 
 export interface ReportFacts {
   list: PieceList | null;
   fallback: string | null;
   integrator: string | null;
+  renumbered?: readonly Renumbered[];
+  conflicts?: readonly Conflict[];
 }
 
 function cell(text: string): string {
@@ -57,6 +59,32 @@ function unfinished(list: PieceList): string | null {
   return `Incomplete: ${named.join('; ')}.`;
 }
 
+const PLACED: Record<PieceList['placement'], string> = {
+  in_order: 'in order',
+  shared: 'in the shared tree',
+  worktree: 'in worktrees',
+};
+
+function renumberedLine(renumbered: readonly Renumbered[]): string | null {
+  if (renumbered.length === 0) return null;
+  const named = renumbered.map((item) => `\`${item.from}\` → \`${item.to}\` (${item.piece})`);
+  return `Renumbered migrations: ${named.join('; ')}.`;
+}
+
+const RESOLVED_BY: Record<NonNullable<Conflict['resolvedBy']>, string> = {
+  integrator: 'resolved by the integrator',
+  you: 'settled by you',
+};
+
+function conflictsLine(conflicts: readonly Conflict[]): string | null {
+  if (conflicts.length === 0) return null;
+  const named = conflicts.map((conflict) => {
+    const how = conflict.resolvedBy ? RESOLVED_BY[conflict.resolvedBy] : 'not resolved';
+    return `${conflict.piece} (${conflict.files.map((file) => `\`${file}\``).join(', ')}) ${how}`;
+  });
+  return `Merge conflicts: ${named.join('; ')}.`;
+}
+
 export function pieceReport(facts: ReportFacts): string | null {
   if (!facts.list) {
     return facts.fallback
@@ -65,7 +93,7 @@ export function pieceReport(facts: ReportFacts): string | null {
   }
   const list = facts.list;
   const lines = [
-    `Pieces (${list.pieces.length}, ${list.placement === 'in_order' ? 'in order' : list.placement}, list v${list.version}):`,
+    `Pieces (${list.pieces.length}, ${PLACED[list.placement]}, list v${list.version}):`,
     '',
     '| Piece | Builder | Placement | Model | Status | Files | Scoped check | Cost |',
     '| --- | --- | --- | --- | --- | --- | --- | --- |',
@@ -74,7 +102,14 @@ export function pieceReport(facts: ReportFacts): string | null {
   const integration = list.integration
     ? `Integration: ${facts.integrator ?? 'the integrator'} — ${cell(list.integration)}`
     : null;
-  return [lines.join('\n'), integration, ownership(list), unfinished(list)]
+  return [
+    lines.join('\n'),
+    integration,
+    conflictsLine(facts.conflicts ?? []),
+    renumberedLine(facts.renumbered ?? []),
+    ownership(list),
+    unfinished(list),
+  ]
     .filter(Boolean)
     .join('\n\n');
 }
@@ -85,5 +120,7 @@ export function coordinationReport(coordination: Coordination | null | undefined
     list: coordination.list,
     fallback: coordination.fallback,
     integrator: coordination.integrated ? coordination.integrator : null,
+    renumbered: coordination.renumbered ?? [],
+    conflicts: coordination.conflicts ?? [],
   });
 }
