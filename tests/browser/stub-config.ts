@@ -18,6 +18,17 @@ function portSlot(): number {
 export const slot = portSlot();
 const base = slot === 0 ? null : 20_000 + slot * 10;
 
+function slotDatabaseUrl(): string | null {
+  const url = process.env.TEST_DATABASE_URL;
+  if (!url || slot === 0) return url ?? null;
+  const parsed = new URL(url);
+  if (parsed.pathname.slice(1) !== 'spark_outpost_test') return url;
+  parsed.pathname = `/spark_outpost_test_slot${slot}`;
+  return parsed.toString();
+}
+
+export const TEST_DATABASE_URL = slotDatabaseUrl();
+
 export const STUB_PORT = base ?? 4399;
 export const API_PORT = base === null ? 4319 : base + 1;
 export const WEB_PORT = base === null ? 5174 : base + 2;

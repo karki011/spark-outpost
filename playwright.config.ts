@@ -11,6 +11,7 @@ import {
   FAKE_GH_STATE,
   slot,
   STUB_PORT,
+  TEST_DATABASE_URL,
   WEB_PORT,
 } from './tests/browser/stub-config.ts';
 
@@ -29,7 +30,7 @@ const serverEnv = {
   FAKE_GH_API: `${STUB_URL}/github`,
   GITHUB_API_URL: `${STUB_URL}/github`,
   SHELL: '/bin/sh',
-  DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
+  DATABASE_URL: TEST_DATABASE_URL ?? '',
   API_PORT: String(API_PORT),
   ALLOWED_ORIGINS: `http://127.0.0.1:${WEB_PORT}`,
   SECRET_STORE: 'memory',
@@ -74,9 +75,14 @@ export default defineConfig({
       gracefulShutdown: shutdown,
     },
     {
-      command: `${serverCommand('src/persistence/migrate-cli.ts')} && ${serverCommand('src/api/main.ts')}`,
+      command: `${node} --import tsx ../../tests/browser/ensure-database.ts && ${serverCommand('src/persistence/migrate-cli.ts')} && ${serverCommand('src/api/main.ts')}`,
       cwd: 'apps/server',
-      env: { ...serverEnv, [API_TOKEN_ENV]: apiToken },
+      env: {
+        ...serverEnv,
+        [API_TOKEN_ENV]: apiToken,
+        SPARK_TEST_PORT_SLOT: String(slot),
+        TEST_DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
+      },
       url: `http://127.0.0.1:${API_PORT}/api/health`,
       reuseExistingServer: false,
       timeout: 60_000,

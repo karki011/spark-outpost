@@ -1,12 +1,12 @@
 import { rmSync } from 'node:fs';
-import { CREW_CATALOG, FAKE_CODEX_STATE, FAKE_GH_STATE } from './stub-config.ts';
+import { CREW_CATALOG, FAKE_CODEX_STATE, FAKE_GH_STATE, TEST_DATABASE_URL } from './stub-config.ts';
 import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { truncateTables } from '../../apps/server/src/persistence/truncate.ts';
 import { FAKE_CLAUDE_MODES, FAKE_CODEX_MODES } from '../../apps/server/src/providers/fake.ts';
 
 export function testDatabaseUrl(): string {
-  const url = process.env.TEST_DATABASE_URL;
+  const url = TEST_DATABASE_URL;
   if (!url)
     throw new Error('Browser tests need TEST_DATABASE_URL. Run pnpm db:setup and pnpm db:up.');
   return url;
