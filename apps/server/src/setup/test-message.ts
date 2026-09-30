@@ -21,6 +21,8 @@ export interface TestOutcome {
 }
 
 const PROMPT = 'Reply with the single word OK.';
+const CLAUDE_TEST_MODEL = 'haiku';
+const CLAUDE_API_TEST_MODEL = 'claude-haiku-4-5';
 const CLI_TIMEOUT_MS = 90_000;
 const API_TIMEOUT_MS = 30_000;
 
@@ -66,7 +68,11 @@ async function testClaudeCli(entry: CatalogEntry, deps: TestMessageDeps): Promis
   const path = await locateCli(entry.cli, deps.run, deps.loginShell);
   if (!path) return failedWith(`\`${entry.cli}\` is no longer on your PATH.`);
   const startedAt = Date.now();
-  const result = await deps.run(path, ['-p', PROMPT, '--output-format', 'json'], CLI_TIMEOUT_MS);
+  const result = await deps.run(
+    path,
+    ['-p', PROMPT, '--model', CLAUDE_TEST_MODEL, '--output-format', 'json'],
+    CLI_TIMEOUT_MS,
+  );
   if (result.timedOut) {
     return failedWith(`\`${entry.cli}\` didn't answer within ${CLI_TIMEOUT_MS / 1000} seconds.`);
   }
@@ -191,7 +197,7 @@ function keyedTestRequest(
         `${deps.endpoints.anthropicBaseUrl}/v1/messages`,
         { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
         {
-          model,
+          model: CLAUDE_API_TEST_MODEL,
           max_tokens: 16,
           messages: [{ role: 'user', content: PROMPT }],
         },
