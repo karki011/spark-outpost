@@ -190,12 +190,15 @@ describe('cross-repo links', () => {
     const be = await project(BACKEND, 'shop-api');
     const fe = await project(FRONTEND, 'shop-web');
     const { builder, scanner } = mapBuilder(t, fakeJev(pickOrders).fetch);
+    const api = localClient(createTestApp(t));
+    const unmatched = () => api.get(`/api/map/unmatched?projects=${fe},${be}`);
+    expect((await unmatched()).body).toMatchObject({ pending: true, routeTotal: 0 });
     await builder.runOnce();
+    expect((await unmatched()).body.pending).toBe(true);
     await builder.runOnce();
     await scanner.idle();
 
-    const api = localClient(createTestApp(t));
-    const response = await api.get(`/api/map/unmatched?projects=${fe},${be}`);
+    const response = await unmatched();
     expect(response.status).toBe(200);
     const show = (entries: { projectId: string; method: string; path: string; file: string }[]) =>
       entries.map(
@@ -207,7 +210,7 @@ describe('cross-repo links', () => {
       'api GET /users/:userId src/routes/users.ts',
     ]);
     expect(show(response.body.calls)).toEqual(['web POST /v1/charges src/api/orders.ts']);
-    expect(response.body).toMatchObject({ routeTotal: 2, callTotal: 1 });
+    expect(response.body).toMatchObject({ routeTotal: 2, callTotal: 1, pending: false });
     expect(response.body.routes[0].confirmedBy).toBeNull();
     expect((await api.get(`/api/map/unmatched?projects=${fe}`)).status).toBe(400);
   });

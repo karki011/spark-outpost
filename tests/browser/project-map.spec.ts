@@ -450,8 +450,10 @@ test('the real builder lists routes nothing calls and calls with no route across
     await expect(chip).toHaveText(/^Unmatched\s*2$/, { timeout: 100_000 });
     await chip.click();
     const panel = page.getByRole('region', { name: 'Unmatched' });
-    await expect(panel).toContainText('/api/unused');
-    await expect(panel.getByText('Possibly unused')).toBeVisible();
+    await expect(
+      panel.getByRole('button', { name: /^GET \/api\/unused Possibly unused/ }),
+    ).toBeVisible();
+    await expect(panel.getByRole('listitem')).toHaveCount(1);
     await expect(panel).not.toContainText('/api/cart');
     await panel.getByRole('radio', { name: /^Calls with no route/ }).click();
     await expect(panel).toContainText('/api/missing');

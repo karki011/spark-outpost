@@ -190,6 +190,7 @@ export const mapUnmatchedSchema = z.object({
   calls: z.array(mapUnmatchedEndpointSchema),
   routeTotal: z.number().int(),
   callTotal: z.number().int(),
+  pending: z.boolean(),
 });
 export type MapUnmatched = z.infer<typeof mapUnmatchedSchema>;
 
