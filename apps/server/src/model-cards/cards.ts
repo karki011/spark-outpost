@@ -98,6 +98,10 @@ export function usableDefault(
   return model !== null && retirementOf({ id: model }, provider, now) !== null ? null : model;
 }
 
+export function effortKeepsCache(model: CardModel, provider: string | null = null): boolean {
+  return cardFor(model, provider)?.reasoning.effortKeepsCache === true;
+}
+
 export function isFrontier(model: CardModel, provider: string | null = null): boolean {
   return cardFor(model, provider)?.tier === 'frontier';
 }

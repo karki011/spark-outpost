@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'route-score-1-cache-aware';
+export const POLICY_VERSION = 'route-score-2-escalation-routes';
 
 export type ActingQuestion =
   | 'question'
@@ -79,6 +79,12 @@ export const ROUTE_ADEQUATE_LOSS = 0.0002;
 export const TRIVIAL_OVERRIDE_AT = 3;
 export const ROUTE_MEASURED_MIN = 10;
 export const PROMPT_CACHE_TTL_MS = 5 * 60_000;
+export const ESCALATE_AT = 4;
+export const RAISE_EFFORT_AT = 3;
+export const HANDOFF_CONTEXT_TOKENS = 100_000;
+export const COMPACT_CONTEXT_DEPENDENCE = 4;
+export const HANDOFF_TOKENS = 25_000;
+export const LOST_REASONING_CAP_TOKENS = 32_000;
 
 export const ROUTER_TIERS = ['micro', 'low', 'mid', 'top'] as const;
 export type RouterTier = (typeof ROUTER_TIERS)[number];

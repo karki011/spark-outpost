@@ -54,6 +54,7 @@ export const modelCardSchema = z.object({
     efforts: z.array(z.string()),
     defaultEffort: z.string().nullable(),
     note: z.string(),
+    effortKeepsCache: z.boolean().optional(),
   }),
   strengths: z.array(z.string()).max(4),
   weakSpots: z.array(z.string()).max(4),

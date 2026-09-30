@@ -195,10 +195,19 @@ describe('the warm session', () => {
   it('stays when the context is large enough that switching costs more than it gains', () => {
     const route = routeBuilder(
       chat('sonnet'),
-      withRatings(ratings(4), { session: session('sonnet', 400_000) }),
+      withRatings(ratings(3, 3), { session: session('sonnet', 400_000) }),
     );
     expect(route).toMatchObject({ pick: { model: 'sonnet' }, rule: KEPT_FOR_SESSION });
     expect(route.sessionChoice?.reason).toBe('kept Sonnet 5: warm session, 400K context');
+  });
+
+  it('hands a hard follow-up at 400K to the stronger model through a brief instead', () => {
+    const route = routeBuilder(
+      chat('sonnet'),
+      withRatings(ratings(4), { session: session('sonnet', 400_000) }),
+    );
+    expect(route.pick.model).toBe('opus[1m]');
+    expect(route.escalation?.kind).toBe('brief');
   });
 
   it('does not resume a fast-tier session or one on another provider', () => {

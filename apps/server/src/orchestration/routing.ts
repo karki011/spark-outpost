@@ -23,7 +23,15 @@ import {
   type FloorRole,
   type FlooredPick,
 } from './model-floor.ts';
-import { scoreRoute, type RouteScore } from './route-score.ts';
+import {
+  escalationChoice,
+  escalationRule,
+  scoreEscalation,
+  stayedRule,
+  type Escalation,
+  type PriorEscalation,
+} from './escalation.ts';
+import type { RouteScore } from './route-score.ts';
 import { KEPT_FOR_SESSION } from './session-keep.ts';
 import { signalText, taskSignals, type TaskSignals } from './task-signals.ts';
 import {
@@ -53,6 +61,8 @@ export interface MemberRoute {
   note?: string;
   score?: RouteScore;
   sessionChoice?: SessionChoice;
+  escalation?: Escalation;
+  handback?: string;
 }
 
 export interface RouteFacts {
@@ -64,6 +74,7 @@ export interface RouteFacts {
   continues?: boolean | null;
   ratings?: Ratings | null;
   session?: ResumableSession | null;
+  prior?: PriorEscalation | null;
 }
 
 export const DESTRUCTIVE_RULE = 'destructive → top tier';
@@ -300,28 +311,42 @@ function scoredBuilder(
   if (!chat.pick.model) return null;
   const warm = usableSession(context, facts.session);
   const eligible = builderModels(models, provider, now);
-  const score = scoreRoute({
-    provider,
-    models: eligible,
-    chat: asTierModel(chat.pick),
-    session: warm.session,
-    signals: taskSignals({ ...facts, complex }, facts.ratings),
-    stats: candidateFor(context, provider)?.stats ?? [],
-    now,
-  });
-  if (!score) return null;
+  const scored = scoreEscalation(
+    {
+      provider,
+      models: eligible,
+      chat: asTierModel(chat.pick),
+      session: warm.session,
+      signals: taskSignals({ ...facts, complex }, facts.ratings),
+      stats: candidateFor(context, provider)?.stats ?? [],
+      now,
+    },
+    facts.prior ?? null,
+    effortIds(candidateFor(context, provider)),
+  );
+  if (!scored) return null;
+  const { score, escalation } = scored;
   const kept = warm.session?.pick.model === score.pick.id ? warm.session : null;
   const pick = kept?.pick ?? { ...chat.pick, model: score.pick.id, modelLabel: score.pick.label };
   const ruled = scoredRule(score, facts, complex, eligible);
   const plain = ruled === CHAT_RULE || ruled === TRIVIAL_RULE;
-  const rule = facts.setAside && plain ? `${ruled} (${facts.setAside})` : ruled;
-  const choice = sessionChoiceFor(score, warm.session, rule, now) ?? warm.choice;
+  const rule =
+    (escalation && escalationRule(escalation)) ??
+    (scored.stayedOn ? stayedRule(scored.stayedOn) : null) ??
+    (facts.setAside && plain ? `${ruled} (${facts.setAside})` : ruled);
+  const escalated =
+    escalation && warm.session ? escalationChoice(escalation, warm.session, now) : null;
+  const choice = escalated ?? sessionChoiceFor(score, warm.session, rule, now) ?? warm.choice;
+  const effort = escalation?.kind === 'effort' ? escalation.to.effort : null;
   const route: MemberRoute = {
     ...base,
-    pick: kept ? pick : { ...pick, effort: builderEffort(context, pick) },
+    pick: kept
+      ? { ...pick, effort: effort ?? pick.effort }
+      : { ...pick, effort: builderEffort(context, pick) },
     rule,
     score,
     ...(choice ? { sessionChoice: choice } : {}),
+    ...(escalation ? { escalation } : {}),
   };
   delete route.note;
   if (ruled === CHAT_RULE && chat.note && pick.model === chat.pick.model) {

@@ -242,7 +242,8 @@
         "mode": "adaptive-always",
         "efforts": ["low", "medium", "high", "xhigh", "max"],
         "defaultEffort": "medium",
-        "note": "Thinking cannot be turned off; effort is the only depth control and it thinks more per turn than Opus 5 at the same level."
+        "note": "Thinking cannot be turned off; effort is the only depth control and it thinks more per turn than Opus 5 at the same level.",
+        "effortKeepsCache": true
       },
       "strengths": [
         "Long-running agentic coding and knowledge work",
@@ -265,6 +266,10 @@
         {
           "url": "https://platform.claude.com/docs/en/models/opus-5-5/whats-new-opus-5-5",
           "checkedAt": "2026-09-26"
+        },
+        {
+          "url": "https://code.claude.com/docs/en/prompt-caching",
+          "checkedAt": "2026-09-30"
         },
         {
           "url": "https://platform.claude.com/docs/en/about-claude/models/choosing-a-model",
