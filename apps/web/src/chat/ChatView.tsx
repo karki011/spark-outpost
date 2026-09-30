@@ -36,7 +36,6 @@ import { Composer } from './Composer.tsx';
 import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
-import { ChatBranch } from './project/ChatBranch.tsx';
 import { ChatTicketBar } from './tickets/ChatTicketBar.tsx';
 import { ChatTicketChips } from './tickets/ChatTicketChips.tsx';
 import { useChatTickets } from './tickets/use-chat-tickets.ts';
@@ -150,7 +149,6 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             >
               {title}
             </h1>
-            {chatBranch && <ChatBranch conversationId={conversationId} branch={chatBranch} />}
             <ChatTicketChips chat={tickets} />
             <div className="head-r">
               <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />

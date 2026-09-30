@@ -5,11 +5,13 @@ import type { Project } from '@spark-outpost/contracts';
 import { ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
 import { AgentSetup } from './AgentSetup.tsx';
+import { ChatBranch } from './ChatBranch.tsx';
 import { FolderDialog } from './FolderDialog.tsx';
 import { RepoMenu } from './RepoMenu.tsx';
 import { WorkPlaceMenu } from './WorkPlaceMenu.tsx';
 import { recentProjects, repoSummary } from './repo-list.ts';
 import { useChatRepos, useProjectBranch, useProjects, type RepoRequest } from './use-chat-repos.ts';
+import { useChatWorkspace } from './use-chat-workspace.ts';
 
 type RepoPopover = ReturnType<typeof usePopover<HTMLButtonElement, HTMLDivElement>>;
 
@@ -29,6 +31,7 @@ export function ContextBar({ conversationId, repos, popover }: ContextBarProps) 
   const menuId = useId();
   const primary = repos[0] ?? null;
   const branch = useProjectBranch(primary?.id ?? null);
+  const current = useChatWorkspace(conversationId, primary !== null).data?.current ?? null;
   const linkedIds = new Set(repos.map((repo) => repo.id));
   const recent = recentProjects(projects.data ?? [], linkedIds, RECENT_LIMIT);
   const names = repos.map((repo) => repo.name);
@@ -78,7 +81,10 @@ export function ContextBar({ conversationId, repos, popover }: ContextBarProps) 
           <span className="ctx-name">{primary ? repoSummary(names) : 'Choose project'}</span>
           <ChevronIcon />
         </button>
-        {primary && (
+        {primary && current && (
+          <ChatBranch conversationId={conversationId} branch={current} checkoutBranch={branch} />
+        )}
+        {primary && !current && (
           <WorkPlaceMenu
             conversationId={conversationId}
             projectId={primary.id}

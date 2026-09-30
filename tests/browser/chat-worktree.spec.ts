@@ -67,12 +67,23 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
   await expect(place).toBeFocused();
 
   await sendAndKeep(page);
-  const chip = page.locator('.head .chat-branch');
+  const chip = page.getByRole('button', { name: /^This chat’s branch/ });
   await expect(chip).toContainText(/spark\/add-a-line-to-the-notes[a-z-]*-[0-9a-f]{8}/);
   await expect(chip).toContainText('· worktree');
-  await expect(chip.getByRole('button', { name: 'Open this chat’s worktree' })).toBeVisible();
+  await expect(page.locator('.head .chat-branch')).toHaveCount(0);
   await expect(place).toHaveCount(0);
-  const branch = (await chip.locator('.chat-branch-name').textContent()) ?? '';
+  await chip.click();
+  const branchMenu = page.getByRole('dialog', { name: 'This chat’s branch' });
+  await expect(branchMenu).toContainText('Where this chat works is set once it has a branch.');
+  await expect(branchMenu.getByRole('button', { name: 'Open the worktree folder' })).toBeVisible();
+  await expect(branchMenu.getByRole('button', { name: 'Copy branch name' })).toBeVisible();
+  await expect(branchMenu.getByRole('button', { name: 'Bring changes into main' })).toBeVisible();
+  if (process.env.SPARK_SHOTS) {
+    await page.screenshot({ path: `${process.env.SPARK_SHOTS}/docked-branch-menu.png` });
+  }
+  await page.keyboard.press('Escape');
+  await expect(chip).toBeFocused();
+  const branch = (await chip.locator('.ctx-branch-name').textContent()) ?? '';
   expect(readFileSync(path.join(repo.root, 'notes.txt'), 'utf8')).toBe('one\n');
   expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
 

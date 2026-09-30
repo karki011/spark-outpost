@@ -114,7 +114,9 @@ test('Start work links the chat, Ship puts the PR on the ticket, and a merge mov
   });
   await askBeforeEdits(page);
   await editAndKeep(page, 'Add a line to the notes #edit #plan');
-  await expect(page.locator('.head .chat-branch-name')).toHaveText(/^spark\/eng-1210-/);
+  await expect(page.locator('.ctxbar .chat-branch .ctx-branch-name')).toHaveText(
+    /^spark\/eng-1210-/,
+  );
   await shipDraft(page);
   const [pull] = await pulls(page);
   expect(pull!.head).toMatch(/^spark\/eng-1210-/);
@@ -169,7 +171,7 @@ test('a chat that fixes a ticket links itself, shows on the ticket and ships wit
 
   await editAndKeep(page, 'Fix the session expiry bug in WEB-433 #edit #plan');
   await expect(chip(page, 'WEB-433')).toContainText('Session expires during long uploads');
-  await expect(page.locator('.head .chat-branch-name')).toHaveText(
+  await expect(page.locator('.ctxbar .chat-branch .ctx-branch-name')).toHaveText(
     /^spark\/web-433-fix-the-session-expiry-bug/,
   );
   await shipDraft(page);

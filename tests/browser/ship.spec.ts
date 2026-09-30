@@ -105,7 +105,7 @@ test('Ship from the keep card commits the task file and opens a draft PR', async
   expect(pulls).toHaveLength(1);
   expect(pulls[0]).toMatchObject({ title: 'Tidy the notes', draft: true, base: 'main' });
   expect(pulls[0]!.via).toBe('gh_cli');
-  await expect(page.locator('.head .chat-branch-name')).toHaveText(pulls[0]!.head);
+  await expect(page.locator('.ctxbar .chat-branch .ctx-branch-name')).toHaveText(pulls[0]!.head);
   expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
   expect(git(repo.root, 'show', '--name-only', '--format=', pulls[0]!.head)).toBe('notes.txt');
   expect(git(repo.root, 'diff', '--name-only')).toBe('mine.txt');
@@ -132,7 +132,7 @@ test('Ship offers push only when GitHub is not connected', async ({ page }) => {
   await expect(page.getByRole('status').filter({ hasText: /^Pushed spark\// })).toBeVisible({
     timeout: 15_000,
   });
-  const branch = (await page.locator('.head .chat-branch-name').textContent()) ?? '';
+  const branch = (await page.locator('.ctxbar .chat-branch .ctx-branch-name').textContent()) ?? '';
   expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
   expect(git(repo.bare, 'rev-parse', branch)).toBe(git(repo.root, 'rev-parse', branch));
 });
