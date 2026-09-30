@@ -13,8 +13,6 @@ test.beforeEach(async () => {
 test('a 20,000 file map stays smooth while panning and zooming', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1440, height: 900 });
-  const logs: string[] = [];
-  page.on('console', (m) => { if (m.text().startsWith('PERF')) logs.push(`${Date.now()} ${m.text()}`); });
   const response = await page.request.post('/api/projects', { data: { rootPath: REPO_ROOT } });
   const projectId = ((await response.json()) as { id: string }).id;
   await serveMap(page, syntheticFixture(projectId, 20_000, 240));
@@ -52,12 +50,10 @@ test('a 20,000 file map stays smooth while panning and zooming', async ({ page }
   );
   const frames = perf.frames.slice(1).sort((a, b) => a - b);
   const median = frames[Math.floor(frames.length / 2)]!;
-  console.log(
-    `frames ${frames.length}, median ${median.toFixed(1)} ms, p95 ${frames[Math.floor(frames.length * 0.95)]!.toFixed(1)} ms, long tasks ${JSON.stringify(perf.long.map(Math.round))}`,
-  );
-  const perfLog = await page.evaluate(() => (window as unknown as { perfLog: string[] }).perfLog);
-  console.log(perfLog.filter((l) => Number(l.split(' ')[2]) > 10).join('\n'));
-  console.log('longstarts', JSON.stringify(await page.evaluate(() => performance.getEntriesByType('longtask').map((e) => [Math.round(e.startTime), Math.round(e.duration)]))));
+  test.info().annotations.push({
+    type: 'frames',
+    description: `frames ${frames.length}, median ${median.toFixed(1)} ms, p95 ${frames[Math.floor(frames.length * 0.95)]!.toFixed(1)} ms, long tasks ${JSON.stringify(perf.long.map(Math.round))}`,
+  });
   expect(median).toBeLessThan(20);
   expect(perf.long.filter((duration) => duration > 50)).toEqual([]);
 });

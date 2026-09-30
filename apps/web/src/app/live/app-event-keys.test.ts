@@ -24,6 +24,8 @@ const cached: Record<string, QueryKey> = {
   analytics: ['analytics', 'overview', '7d', ''],
   usage: ['usage-summary'],
   setup: ['setup'],
+  mapProject: ['map', 'project', A],
+  mapArea: ['map', 'area', A, 'aaaaaaaaaaaa', 120],
 };
 
 async function invalidatedBy(...events: AppEvent[]): Promise<string[]> {
@@ -60,6 +62,10 @@ describe('app event invalidation', () => {
         'usage',
       ].sort(),
     );
+  });
+
+  it('map progress refreshes every map on screen and nothing else', async () => {
+    expect(await invalidatedBy(event('map', null))).toEqual(['mapArea', 'mapProject']);
   });
 
   it('a digest status change refreshes the digest and its spend', async () => {
