@@ -9,6 +9,7 @@ export const appEventKindSchema = z.enum([
   'task',
   'digest',
   'outcome',
+  'map',
 ]);
 export type AppEventKind = z.infer<typeof appEventKindSchema>;
 
@@ -16,6 +17,7 @@ export const appEventSchema = z.object({
   kind: appEventKindSchema,
   conversationId: z.uuid().nullable(),
   runId: z.uuid().nullable(),
+  mapId: z.uuid().optional(),
 });
 export type AppEvent = z.infer<typeof appEventSchema>;
 

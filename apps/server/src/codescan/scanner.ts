@@ -1,5 +1,5 @@
 import type { Queryable } from '../persistence/db.ts';
-import { indexProject, type IndexOutcome } from './indexer.ts';
+import { indexProject, type IndexOptions, type IndexOutcome } from './indexer.ts';
 import { scanRequest, type ScanReport } from './scan.ts';
 
 export const SCAN_DEADLINE_MS = 2500;
@@ -18,8 +18,13 @@ export interface ScanOutcome {
 
 export interface CodeScanner {
   scan(root: string, request: string, startedAt?: number): Promise<ScanOutcome>;
-  ensureIndexed(root: string): Promise<IndexOutcome | null>;
+  ensureIndexed(root: string, request?: IndexRequest): Promise<IndexOutcome | null>;
   idle(): Promise<void>;
+}
+
+export interface IndexRequest {
+  fresh?: boolean;
+  pace?: IndexOptions['pace'];
 }
 
 export interface ScannerOptions {
@@ -75,12 +80,13 @@ export function createCodeScanner(db: Queryable, options: ScannerOptions = {}): 
   const lastIndexed = new Map<string, number>();
   let lane: Promise<unknown> = Promise.resolve();
 
-  function ensureIndexed(root: string): Promise<IndexOutcome | null> {
+  function ensureIndexed(root: string, request: IndexRequest = {}): Promise<IndexOutcome | null> {
     const running = indexing.get(root);
     if (running) return running;
-    if (Date.now() - (lastIndexed.get(root) ?? 0) < refreshEveryMs) return Promise.resolve(null);
+    const recent = Date.now() - (lastIndexed.get(root) ?? 0) < refreshEveryMs;
+    if (recent && !request.fresh) return Promise.resolve(null);
     const work = lane
-      .then(() => indexProject(db, root))
+      .then(() => indexProject(db, root, request.pace ? { pace: request.pace } : {}))
       .catch((error: unknown) => {
         console.error(`Could not index ${root}`, error);
         return null;

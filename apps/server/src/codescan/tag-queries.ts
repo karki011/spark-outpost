@@ -1,6 +1,6 @@
 import type { SymbolLanguage } from './languages.ts';
 
-export const PARSER_VERSION = 'web-tree-sitter@0.27.0+tree-sitter-wasm@0.3.1+tags@2';
+export const PARSER_VERSION = 'web-tree-sitter@0.27.0+tree-sitter-wasm@0.3.1+tags@2+imports@1';
 
 export const DEFINITION_KINDS = [
   'function',
@@ -124,6 +124,33 @@ const REFERENCE_NODES: Record<SymbolLanguage, readonly string[]> = {
   php: ['name'],
   bash: ['command_name'],
 };
+
+const SCRIPT_IMPORTS = `
+(import_statement source: (string (string_fragment) @import))
+(export_statement source: (string (string_fragment) @import))
+(call_expression function: (import) arguments: (arguments (string (string_fragment) @import)))
+(call_expression function: (identifier) @_fn arguments: (arguments . (string (string_fragment) @import)) (#eq? @_fn "require"))
+`;
+
+const IMPORTS: Partial<Record<SymbolLanguage, string>> = {
+  typescript: SCRIPT_IMPORTS,
+  tsx: SCRIPT_IMPORTS,
+  javascript: SCRIPT_IMPORTS,
+  python: `
+(import_statement name: (dotted_name) @import)
+(import_statement name: (aliased_import name: (dotted_name) @import))
+(import_from_statement module_name: (_) @from name: (dotted_name) @name)
+(import_from_statement module_name: (_) @from name: (aliased_import name: (dotted_name) @name))
+(import_from_statement module_name: (_) @from (wildcard_import))
+`,
+  go: `
+(import_spec path: (interpreted_string_literal) @import)
+`,
+};
+
+export function importQuery(language: SymbolLanguage): string | null {
+  return IMPORTS[language] ?? null;
+}
 
 export function definitionQuery(language: SymbolLanguage): string {
   return DEFINITIONS[language];

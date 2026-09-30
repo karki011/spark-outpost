@@ -74,6 +74,8 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return [digest, spend];
     case 'outcome':
       return [...outcome(event), analytics];
+    case 'map':
+      return [];
   }
 }
 
