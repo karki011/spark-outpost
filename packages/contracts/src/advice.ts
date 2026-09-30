@@ -63,6 +63,23 @@ export type RouteTier = z.infer<typeof routeTierSchema>;
 
 const noul = z.number().min(0).max(1);
 
+export const RATING_KEYS = ['complexity', 'ambiguity', 'stakes', 'contextDependence'] as const;
+export type RatingKey = (typeof RATING_KEYS)[number];
+
+export const ratingSchema = z.object({
+  value: z.number().int().min(1).max(5),
+  confidence: z.number().min(0).max(1),
+});
+export type Rating = z.infer<typeof ratingSchema>;
+
+export const ratingsSchema = z.object({
+  complexity: ratingSchema.optional(),
+  ambiguity: ratingSchema.optional(),
+  stakes: ratingSchema.optional(),
+  contextDependence: ratingSchema.optional(),
+});
+export type Ratings = z.infer<typeof ratingsSchema>;
+
 export const jevIntakeSchema = intakeAnswerSchema.extend({
   scope: scopeSchema.nullable().optional(),
   reviewExisting: noul.optional(),
@@ -75,6 +92,7 @@ export const jevIntakeSchema = intakeAnswerSchema.extend({
   continuesTask: noul.optional(),
   planAgreed: noul.optional(),
   tier: routeTierSchema.nullable().optional(),
+  ratings: ratingsSchema.optional(),
   invalid: z.array(z.string()).optional(),
   confidence: z.number().min(0).max(1),
   routeConfidence: z.number().min(0).max(1).nullable(),

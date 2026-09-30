@@ -7,6 +7,8 @@ export interface WhyInput {
   rule: string;
   autoWouldUse: AgentPick | null;
   note?: string;
+  sessionNote?: string;
+  scoreNote?: string;
 }
 
 function labelOf(pick: AgentPick): string {
@@ -34,8 +36,10 @@ export function whyLine(input: WhyInput): string {
     input.routedBy === 'pinned'
       ? `Why ${label}: pinned in this chat`
       : `Why ${label}: rule ${input.rule}${tier}`;
-  const head = input.note ? `${base} · ${input.note}` : base;
+  const parts = [base, input.note, input.sessionNote, input.scoreNote].filter(Boolean);
   const jev = input.autoWouldUse;
-  if (!jev || samePickModel(jev, input.pick)) return head;
-  return `${head} · Jev would have used ${jevLabel(jev, input.pick)}`;
+  if (jev && !samePickModel(jev, input.pick)) {
+    parts.push(`Jev would have used ${jevLabel(jev, input.pick)}`);
+  }
+  return parts.join(' · ');
 }

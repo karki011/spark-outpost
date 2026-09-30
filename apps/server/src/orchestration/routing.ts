@@ -1,18 +1,31 @@
-import type { AgentPick, ModelRouting, RouteSource, RouteTier } from '@spark-outpost/contracts';
+import type {
+  AgentPick,
+  ModelRouting,
+  Ratings,
+  RouteSource,
+  RouteTier,
+} from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
 import { selectableModels, tierOptions } from '../advisor/intake-questions.ts';
-import { cardFor } from '../model-cards/cards.ts';
+import { cardFor, TIER_RANK } from '../model-cards/cards.ts';
 import { firstReportedEffort } from '../providers/efforts.ts';
 import { complexByRequest, firstSignal, type ComplexSignal } from './builder-complexity.ts';
+import { keptText, leftText, type ResumableSession, type SessionChoice } from './cache-switch.ts';
 import {
+  belowFloor,
+  builderModels,
   floorModel,
   floorPick,
+  floorReason,
   floorText,
   harnessModels,
   retiringNote,
   type FloorRole,
   type FlooredPick,
 } from './model-floor.ts';
+import { scoreRoute, type RouteScore } from './route-score.ts';
+import { KEPT_FOR_SESSION } from './session-keep.ts';
+import { signalText, taskSignals, type TaskSignals } from './task-signals.ts';
 import {
   escalatedEffort,
   highEffort,
@@ -38,6 +51,8 @@ export interface MemberRoute {
   rule: string;
   autoWouldUse: AgentPick | null;
   note?: string;
+  score?: RouteScore;
+  sessionChoice?: SessionChoice;
 }
 
 export interface RouteFacts {
@@ -45,9 +60,15 @@ export interface RouteFacts {
   destructive: boolean;
   complex?: ComplexSignal | null;
   setAside?: string;
+  vague?: boolean;
+  continues?: boolean | null;
+  ratings?: Ratings | null;
+  session?: ResumableSession | null;
 }
 
 export const DESTRUCTIVE_RULE = 'destructive → top tier';
+const TRIVIAL_RULE = 'trivial → middle tier';
+const CHAT_RULE = 'chat model';
 
 function candidateFor(context: RouteContext, provider: string): AdvisorCandidate | undefined {
   return context.candidates.find((candidate) => candidate.provider === provider);
@@ -199,14 +220,114 @@ export function routeBuilder(
 ): MemberRoute {
   const base = ruleRoute(context, facts, jevTier);
   const complex = base.routedBy === 'pinned' ? null : builderComplexity(context, facts);
+  const autoWouldUse = flooredOrNull(context, base.autoWouldUse);
+  const scored = scoredBuilder(context, facts, { ...base, autoWouldUse }, complex);
+  if (scored) return scored;
   const floored = floorPick(base.pick, modelsFor(context, base.pick.provider), {
     aim: complex ? 'top' : 'floor',
     now: nowOf(context),
   });
   const rule = builderRule(base, complex, facts);
-  const autoWouldUse = flooredOrNull(context, base.autoWouldUse);
   const route = withNote({ ...base, rule, autoWouldUse }, floored, 'builder');
   return { ...route, pick: { ...route.pick, effort: builderEffort(context, route.pick) } };
+}
+
+function asTierModel(pick: AgentPick) {
+  return { id: pick.model ?? '', label: pick.modelLabel ?? pick.model ?? '' };
+}
+
+function drivers(signals: TaskSignals): string {
+  const rated = Object.entries(signals).filter(([, signal]) => signal.source === 'jev');
+  return rated.length > 0 ? signalText(signals) : `${signalText(signals)}, rules only`;
+}
+
+function scoredRule(
+  score: RouteScore,
+  facts: RouteFacts,
+  complex: ComplexSignal | null,
+  ladder: readonly { id: string }[],
+): string {
+  const up = TIER_RANK[score.pick.tier] - TIER_RANK[score.base.tier];
+  const keptSession = score.anchor === 'session' && score.pick.id === score.base.id;
+  if (keptSession) return KEPT_FOR_SESSION;
+  const highest = score.pick.id === ladder.at(-1)?.id;
+  if (complex && (highest || TIER_RANK[score.pick.tier] >= TIER_RANK.top)) {
+    return `complex → top tier (${complex.reason})`;
+  }
+  if (up > 0) return `score → ${score.pick.tier} tier (${drivers(score.signals)})`;
+  if (facts.trivial && score.pick.id === ladder[0]?.id) return TRIVIAL_RULE;
+  if (up < 0) return `simple → ${score.pick.tier} tier (${drivers(score.signals)})`;
+  return CHAT_RULE;
+}
+
+function usableSession(
+  context: RouteContext,
+  session: ResumableSession | null | undefined,
+): { session: ResumableSession | null; choice: SessionChoice | null } {
+  if (!session || session.pick.provider !== context.chat.provider) {
+    return { session: null, choice: null };
+  }
+  if (!belowFloor(session.pick, nowOf(context))) return { session, choice: null };
+  const reason = floorReason(session.pick, 'builder', nowOf(context));
+  return { session: null, choice: { kept: false, reason, session: session.pick } };
+}
+
+function sessionChoiceFor(
+  score: RouteScore,
+  session: ResumableSession | null,
+  rule: string,
+  now: Date,
+): SessionChoice | null {
+  if (!session || score.anchor !== 'session') return null;
+  if (score.pick.id === score.base.id) {
+    return { kept: true, reason: keptText(session, now), session: session.pick };
+  }
+  return { kept: false, reason: leftText(rule, session, now), session: session.pick };
+}
+
+function scoredBuilder(
+  context: RouteContext,
+  facts: RouteFacts,
+  base: MemberRoute,
+  complex: ComplexSignal | null,
+): MemberRoute | null {
+  if (base.routedBy === 'pinned' || base.rule === DESTRUCTIVE_RULE) return null;
+  if (complex?.source === 'user') return null;
+  const now = nowOf(context);
+  const provider = context.chat.provider;
+  const models = modelsFor(context, provider);
+  const chat = floorPick(chatPick(context), models, { now });
+  if (!chat.pick.model) return null;
+  const warm = usableSession(context, facts.session);
+  const eligible = builderModels(models, provider, now);
+  const score = scoreRoute({
+    provider,
+    models: eligible,
+    chat: asTierModel(chat.pick),
+    session: warm.session,
+    signals: taskSignals({ ...facts, complex }, facts.ratings),
+    stats: candidateFor(context, provider)?.stats ?? [],
+    now,
+  });
+  if (!score) return null;
+  const kept = warm.session?.pick.model === score.pick.id ? warm.session : null;
+  const pick = kept?.pick ?? { ...chat.pick, model: score.pick.id, modelLabel: score.pick.label };
+  const ruled = scoredRule(score, facts, complex, eligible);
+  const plain = ruled === CHAT_RULE || ruled === TRIVIAL_RULE;
+  const rule = facts.setAside && plain ? `${ruled} (${facts.setAside})` : ruled;
+  const choice = sessionChoiceFor(score, warm.session, rule, now) ?? warm.choice;
+  const route: MemberRoute = {
+    ...base,
+    pick: kept ? pick : { ...pick, effort: builderEffort(context, pick) },
+    rule,
+    score,
+    ...(choice ? { sessionChoice: choice } : {}),
+  };
+  delete route.note;
+  if (ruled === CHAT_RULE && chat.note && pick.model === chat.pick.model) {
+    route.note = floorText(chat.note, 'builder');
+  }
+  return route;
 }
 
 export const SPARK_OFF_RULE = 'Spark off → your pick';
@@ -214,8 +335,6 @@ export const SPARK_OFF_RULE = 'Spark off → your pick';
 export function soloRoute(context: RouteContext): MemberRoute {
   return { pick: chatPick(context), routedBy: 'pinned', rule: SPARK_OFF_RULE, autoWouldUse: null };
 }
-
-const TRIVIAL_RULE = 'trivial → middle tier';
 
 function ruleRoute(
   context: RouteContext,
@@ -241,7 +360,7 @@ function ruleRoute(
   if (middle) {
     return { pick: withModel(chat, middle), routedBy: 'rules', rule: TRIVIAL_RULE, autoWouldUse };
   }
-  return { pick: chat, routedBy: 'rules', rule: 'chat model', autoWouldUse };
+  return { pick: chat, routedBy: 'rules', rule: CHAT_RULE, autoWouldUse };
 }
 
 export function routeMemberModel(

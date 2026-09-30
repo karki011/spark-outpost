@@ -51,6 +51,11 @@ const request: IntakeRequest = {
 };
 
 const noul = (value: number) => ({ type: 'noul' as const, noul: value });
+const score = (value: number, confidence = 0.8) => ({
+  type: 'score' as const,
+  score: value,
+  confidence,
+});
 const choice = (value: string, confidence = 0.9) => ({
   type: 'choice' as const,
   choice: value,
@@ -69,6 +74,10 @@ function answered(overrides: Partial<SystemOneResponse['answers']> = {}): System
       destructive: noul(0.1),
       vague: noul(0.05),
       tier: choice('mid', 0.7),
+      complexity: score(2),
+      ambiguity: score(1),
+      stakes: score(1),
+      context_dependence: score(1),
       ...overrides,
     } as SystemOneResponse['answers'],
     usage: { input_tokens: 900 },
@@ -90,6 +99,10 @@ describe('intake questions', () => {
       'review',
       'destructive',
       'vague',
+      'complexity',
+      'ambiguity',
+      'stakes',
+      'context_dependence',
       'tier',
     ]);
     expect(asked.questions.question).toMatchObject({
@@ -206,6 +219,12 @@ describe('intake answers', () => {
       routeConfidence: 0.7,
       depth: 'execute',
       risk: 'edits',
+      ratings: {
+        complexity: { value: 3, confidence: 0.8 },
+        ambiguity: { value: 2, confidence: 0.8 },
+        stakes: { value: 2, confidence: 0.8 },
+        contextDependence: { value: 2, confidence: 0.8 },
+      },
     });
     expect(intake.invalid).toBeUndefined();
   });

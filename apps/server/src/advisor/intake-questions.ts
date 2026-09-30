@@ -15,6 +15,7 @@ import {
 import { cardFor } from '../model-cards/cards.ts';
 import { noulQuestion, type Description } from './questions.ts';
 import { cardText, statFor, usableStats } from '../model-cards/card-text.ts';
+import { parseRatings, ratingQuestions } from './rating-questions.ts';
 import { asksForSpeed, SPEED_KEY, speedQuestion } from '../orchestration/clarify.ts';
 import { tierLadder } from '../orchestration/tiers.ts';
 
@@ -207,6 +208,7 @@ function doModeQuestions(request: IntakeRequest): IntakeQuestions['questions'] {
     }),
   };
   questions.vague = request.firstMessage ? firstVagueQuestion() : followUpVagueQuestion();
+  Object.assign(questions, ratingQuestions());
   if (request.firstMessage && asksForSpeed(request.task)) questions[SPEED_KEY] = speedQuestion();
   if (request.currentTask) {
     questions.continues_task = noulQuestion(CONTINUES_QUESTION, {
@@ -395,7 +397,7 @@ export function parseIntakeAnswers(
   asked: IntakeQuestions,
   response: SystemOneResponse,
 ): JevIntake {
-  const invalid: IntakeKey[] = [];
+  const invalid: string[] = [];
   const read = (key: IntakeKey): number | null => {
     if (!asked.questions[key]) return null;
     const value = validNoul(response, key);
@@ -423,6 +425,8 @@ export function parseIntakeAnswers(
     ...(tier ? { tier: tier.confidence } : {}),
   };
   const doing = request.mode === 'do';
+  const rated = parseRatings(asked.questions, response);
+  invalid.push(...rated.invalid);
   return {
     intent: intent?.value ?? null,
     complexity: null,
@@ -441,6 +445,7 @@ export function parseIntakeAnswers(
     ...noulField('continuesTask', read('continues_task')),
     ...noulField('planAgreed', read('plan_agreed')),
     tier: tier?.value ?? null,
+    ...(Object.keys(rated.ratings).length > 0 ? { ratings: rated.ratings } : {}),
     confidence: intent?.confidence ?? 0,
     routeConfidence: tier?.confidence ?? null,
     confidences,

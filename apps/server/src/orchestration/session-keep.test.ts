@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentPick } from '@spark-outpost/contracts';
 import type { MemberRoute } from './routing.ts';
-import { KEPT_FOR_SESSION, keepSession, type ResumableSession } from './session-keep.ts';
+import type { ResumableSession } from './cache-switch.ts';
+import { KEPT_FOR_SESSION, keepSession } from './session-keep.ts';
 
 const HAIKU_LOW: AgentPick = {
   provider: 'claude',
@@ -36,7 +37,10 @@ describe('keeping the task session on Auto', () => {
     const kept = keepSession(route(HAIKU_LOW), session(SONNET_HIGH));
     expect(kept.route.pick).toEqual(SONNET_HIGH);
     expect(kept.route.rule).toBe(KEPT_FOR_SESSION);
-    expect(kept.choice).toMatchObject({ kept: true, reason: KEPT_FOR_SESSION });
+    expect(kept.choice).toMatchObject({
+      kept: true,
+      reason: 'kept Sonnet 5: resumable session, 20K context',
+    });
   });
 
   it('moves to the top tier for destructive work even if the session is lost', () => {

@@ -61,7 +61,11 @@ export function harnessModels<T extends TierModel>(
   return models.filter((model) => retirementOf(model, provider, now) === null);
 }
 
-function eligible<T extends TierModel>(models: readonly T[], provider: string, now: Date): T[] {
+export function builderModels<T extends TierModel>(
+  models: readonly T[],
+  provider: string,
+  now: Date,
+): T[] {
   return tierLadder(harnessModels(models, provider, now), provider).filter(
     (model) => (modelTier(model, provider) ?? -1) >= FLOOR_TIER,
   );
@@ -72,7 +76,7 @@ export function floorModel<T extends TierModel>(
   provider: string,
   now: Date = new Date(),
 ): T | null {
-  return eligible(models, provider, now)[0] ?? null;
+  return builderModels(models, provider, now)[0] ?? null;
 }
 
 function unknownTier<T extends TierModel>(models: readonly T[], provider: string): T[] {
@@ -103,7 +107,7 @@ export function floorPick<T extends TierModel>(
 ): FlooredPick {
   const tier = pickTier(pick);
   const retiring = pickRetiring(pick, now);
-  const known = eligible(models, pick.provider, now);
+  const known = builderModels(models, pick.provider, now);
   if (aim === 'top') {
     const top = known.at(-1);
     if (top && (tier === null || retiring || tier < (modelTier(top, pick.provider) ?? 0))) {

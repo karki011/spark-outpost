@@ -118,6 +118,7 @@ export interface Scenario {
   intentConfidence?: number;
   intentProbabilities?: Record<string, number>;
   speed?: Record<string, number>;
+  ratings?: Partial<Record<'complexity' | 'ambiguity' | 'stakes' | 'context_dependence', number>>;
 }
 
 export const QUESTION: Scenario = {
@@ -241,6 +242,9 @@ function intakeAnswers(scenario: Scenario, questions: Record<string, unknown>): 
     answers.tier = choice(scenario.tier, scenario.tierConfidence ?? 0.95);
   }
   if (questions.injection) answers.injection = noul(0.05);
+  for (const [key, value] of Object.entries(scenario.ratings ?? {})) {
+    if (questions[key]) answers[key] = { type: 'score', score: value - 1, confidence: 0.9 };
+  }
   if (questions.speed && scenario.speed) {
     const [top] = Object.entries(scenario.speed).sort(([, a], [, b]) => b - a);
     answers.speed = {

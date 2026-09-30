@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'intent-3-tagged-findings-prose-plans';
+export const POLICY_VERSION = 'route-score-1-cache-aware';
 
 export type ActingQuestion =
   | 'question'
@@ -60,6 +60,25 @@ export const BROAD_SCAN_FILES = 15;
 export const BROAD_SCAN_PACKAGES = 3;
 export const BROAD_SCAN_SCORE = 0.35;
 export const SMALL_JEV_AT = 0.8;
+
+export const RATING_ACT_AT = 0.5;
+
+export const ROUTE_REPAIR_USD = 10;
+export const ROUTE_STAKES_WEIGHT = [0.5, 1, 1.5, 3, 10] as const;
+export const ROUTE_SIZE_WEIGHT = [0.25, 1, 1.5, 2, 3] as const;
+export const ROUTE_TRAJECTORY_MTOK = [0.052, 0.09, 0.17, 0.32, 0.65] as const;
+export const ROUTE_TOKEN_MIX = { cachedRead: 0.85, cacheWrite: 0.12, output: 0.03 } as const;
+export const ROUTE_FAILURE: Readonly<Record<ModelTier, readonly number[]>> = {
+  small: [0.02, 0.05, 0.18, 0.3, 0.45],
+  mid: [0.003, 0.0045, 0.008, 0.04, 0.1],
+  top: [0.003, 0.004, 0.007, 0.015, 0.04],
+  frontier: [0.003, 0.004, 0.006, 0.01, 0.025],
+};
+export const ROUTE_UNCLEAR_STEP = 0.25;
+export const ROUTE_ADEQUATE_LOSS = 0.0002;
+export const TRIVIAL_OVERRIDE_AT = 3;
+export const ROUTE_MEASURED_MIN = 10;
+export const PROMPT_CACHE_TTL_MS = 5 * 60_000;
 
 export const ROUTER_TIERS = ['micro', 'low', 'mid', 'top'] as const;
 export type RouterTier = (typeof ROUTER_TIERS)[number];

@@ -172,7 +172,11 @@ describe('every path that picks a Builder model', () => {
     );
     expect(complex).toMatchObject({
       route: { pick: { model: 'opus[1m]' } },
-      choice: { kept: false, reason: 'complex work (migration) needs the top tier' },
+      choice: {
+        kept: false,
+        reason:
+          'complex work (migration) needs the top tier; left the resumable Sonnet 5 session (under 1K context)',
+      },
     });
   });
 
