@@ -43,7 +43,8 @@ function LastTest({
   if (pending) {
     return (
       <span className="test-pending">
-        <TestPing providerId={providerId} /> Sending. This uses a small amount of your usage.
+        <TestPing providerId={providerId} />
+        <span className="sr-only">Sending a test message</span>
       </span>
     );
   }

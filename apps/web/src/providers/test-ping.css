@@ -2,7 +2,7 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 .tp-send,
 .tp-reply {
@@ -17,7 +17,7 @@
 }
 .tp-wire {
   position: relative;
-  width: 44px;
+  width: 120px;
   height: 8px;
 }
 .tp-wire::before {
@@ -48,17 +48,17 @@
     opacity: 1;
   }
   42% {
-    transform: translateX(34px) scale(1);
+    transform: translateX(110px) scale(1);
     opacity: 1;
     background: var(--accent);
   }
   48% {
-    transform: translateX(34px) scale(0.6);
+    transform: translateX(110px) scale(0.6);
     opacity: 0;
     background: var(--success);
   }
   58% {
-    transform: translateX(34px) scale(1);
+    transform: translateX(110px) scale(1);
     opacity: 1;
     background: var(--success);
   }
