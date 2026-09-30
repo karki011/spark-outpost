@@ -42,7 +42,7 @@ async function editedChat(page: Page) {
   await expect(picker).toBeVisible();
   await page.keyboard.press('Escape');
   const input = page.getByRole('textbox', { name: 'Message' });
-  await input.fill('Tidy the notes #edit #plan');
+  await input.fill('Add a line to the notes #edit #plan');
   await input.press('Enter');
   await page
     .getByRole('group', { name: /Change a file\?/ })
