@@ -232,6 +232,7 @@ test('on a phone the map opens as an outline, with the other views one tap away'
   const list = outline(page);
   await expect(list).toBeVisible();
   await expect(sky(page)).toHaveCount(0);
+  await list.getByRole('treeitem', { name: /^apps, Feature, \d+ areas/ }).click();
   const tickets = list.getByRole('treeitem', { name: /^Tickets,/ });
   await tickets.click();
   await expect(tickets).toHaveAttribute('aria-expanded', 'true');
@@ -410,6 +411,7 @@ test('the real builder lists routes nothing calls and calls with no route across
     const ids = [await addProject(page, roots[0]!), await addProject(page, roots[1]!)];
     await page.addInitScript((selected) => {
       localStorage.setItem('spark-outpost.view', 'map');
+      localStorage.setItem('spark-outpost.map-view', '"sky"');
       localStorage.setItem('spark-outpost.map-projects', JSON.stringify(selected));
     }, ids);
     await page.goto('/');

@@ -90,7 +90,7 @@ function TreeCanvas({
   const [level, setLevel] = useState<EdgeLevel>('strong');
   const [tipText, setTipText] = useState('');
   const tip = useTooltip(tipText);
-  const pendingFocus = useRef<string | null>(null);
+  const pendingFocus = useRef<{ id: string; force: boolean } | null>(null);
   const [handled, setHandled] = useState(0);
   const [revealTarget, setRevealTarget] = useState<string | null>(null);
   const centred = useRef(0);
@@ -173,25 +173,32 @@ function TreeCanvas({
   );
 
   const moveTo = useCallback(
-    (id: string) => {
+    (id: string, force = false) => {
       setActive(id);
-      pendingFocus.current = id;
+      pendingFocus.current = { id, force };
       ensureVisible(id);
     },
     [ensureVisible],
   );
 
+  const settled = layout?.fresh ?? false;
   useEffect(() => {
-    const id = pendingFocus.current;
-    if (!id) return;
+    const pending = pendingFocus.current;
+    if (!pending) return;
+    const { id, force } = pending;
     let tries = 0;
     let frame = 0;
     const attempt = () => {
       const element = wrapRef.current?.querySelector<HTMLElement>(
         `[data-tree-node="${CSS.escape(id)}"]`,
       );
-      if (element) {
+      const outside =
+        document.activeElement !== document.body &&
+        !wrapRef.current?.contains(document.activeElement);
+      if (element && (force || !outside) && document.activeElement !== element) {
         element.focus({ preventScroll: true });
+      }
+      if (element && settled && document.activeElement === element) {
         pendingFocus.current = null;
         return;
       }
@@ -200,7 +207,7 @@ function TreeCanvas({
     };
     frame = requestAnimationFrame(attempt);
     return () => cancelAnimationFrame(frame);
-  }, [active, nodes]);
+  }, [active, nodes, settled]);
 
   useEffect(() => {
     if (!layout || nodes.length === 0) return;
@@ -213,7 +220,7 @@ function TreeCanvas({
     if (target && centred.current !== handled && layout.result[target]) {
       centred.current = handled;
       centreOn(target, Math.max(flow.getZoom(), 0.9));
-      moveTo(target);
+      moveTo(target, true);
       return;
     }
     const opened = fitTo.current;
@@ -254,7 +261,7 @@ function TreeCanvas({
       const opening = !expanded.has(item.id);
       if (opening && item.kind === 'area') require([item.id]);
       if (opening) fitTo.current = item.id;
-      pendingFocus.current = item.id;
+      pendingFocus.current = { id: item.id, force: false };
       setExpanded((previous) => toggled(previous, item.id));
       announce(`${nameOf(item)} ${opening ? 'opened' : 'closed'}.`);
     },
@@ -318,9 +325,13 @@ function TreeCanvas({
   const [activeStore] = useState(() => new ActiveStore());
   useEffect(() => activeStore.set(current), [activeStore, current]);
   const maxImportance = Math.max(0, ...source.scene.areas.map((entry) => entry.area.importance));
+  const focusedNode = useCallback((id: string) => {
+    if (pendingFocus.current?.id !== id) pendingFocus.current = null;
+    setActive(id);
+  }, []);
   const actions = useMemo<TreeActions>(
-    () => ({ active: activeStore, maxImportance, setActive }),
-    [activeStore, maxImportance],
+    () => ({ active: activeStore, maxImportance, setActive: focusedNode }),
+    [activeStore, maxImportance, focusedNode],
   );
 
   return (
