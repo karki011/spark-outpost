@@ -47,7 +47,9 @@ describe('POST /api/reset', () => {
   it('empties every app table and keeps the migration history', async () => {
     const { mcpId } = await seedAppData(t);
     const before = await rowCounts(t);
-    for (const table of ['conversations', 'messages', 'runs', 'jobs', 'profiles', 'projects'])
+    const seeded = ['conversations', 'messages', 'runs', 'jobs', 'profiles', 'projects'];
+    const mapTables = ['map_repos', 'map_areas', 'map_files', 'map_labels', 'map_overrides'];
+    for (const table of [...seeded, ...mapTables, 'map_jev_calls', 'map_link_pairs', 'map_links'])
       expect(before[table], table).toBeGreaterThan(0);
 
     const response = await postReset(t, storedSecrets(mcpId), { keepApiKeys: false });

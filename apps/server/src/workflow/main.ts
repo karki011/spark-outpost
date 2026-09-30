@@ -8,6 +8,7 @@ import { listen } from '../persistence/notifications.ts';
 import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
 import { locateCli } from '../setup/verify.ts';
+import { startMapScheduler } from '../map/scheduler.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createProviders } from './providers.ts';
 import { startWorker } from './worker.ts';
@@ -25,6 +26,7 @@ const intake = createIntakeRecorder({
   baseUrl: config.TYPESAFE_BASE_URL,
 });
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
+const codeScan = createCodeScanner(db);
 const worker = startWorker({
   db,
   approvalWaiters,
@@ -36,7 +38,7 @@ const worker = startWorker({
     openLimit: config.SESSION_OPEN_LIMIT,
   },
   concurrency: config.WORKER_CONCURRENCY,
-  codeScan: createCodeScanner(db),
+  codeScan,
   branchPrefix: config.BRANCH_PREFIX,
   coordinator: config.COORDINATOR_MODE,
   shipAccess: {
@@ -50,6 +52,7 @@ const worker = startWorker({
     ? { budget: { costCapUsd: config.ORCHESTRATION_COST_CAP_USD } }
     : {}),
 });
+const projectMap = startMapScheduler({ db, scanner: codeScan, jev: intake.deps });
 const listener = await listen(config.DATABASE_URL, 'jobs', () => worker.wake());
 const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) =>
   approvalWaiters.notify(id),
@@ -61,6 +64,7 @@ console.log(
 const shutdown = async () => {
   await listener.close();
   await approvalListener.close();
+  await projectMap.stop();
   await worker.stop();
   await db.end();
   process.exit(0);

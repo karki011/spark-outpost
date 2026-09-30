@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { rgPath } from '@vscode/ripgrep';
 import { runCommand } from './processes.ts';
 
@@ -7,6 +8,7 @@ export const MAX_COMMIT_FILES = 100;
 export interface Commit {
   at: number;
   files: string[];
+  author?: string;
 }
 
 const RECORD = '\u001e';
@@ -77,13 +79,20 @@ export async function workingChanges(root: string, signal?: AbortSignal): Promis
   }
 }
 
+function authorKey(email: string): string {
+  return createHash('sha1').update(email.trim().toLowerCase()).digest('hex').slice(0, 10);
+}
+
 export function parseLog(output: string): Commit[] {
   const commits: Commit[] = [];
   for (const record of output.split(RECORD)) {
     const lines = record.split('\n').filter((line) => line.length > 0);
-    const at = Number(lines[0]);
+    const [time, email] = (lines[0] ?? '').split('\t');
+    const at = Number(time);
     if (!Number.isFinite(at) || lines.length < 2) continue;
-    commits.push({ at, files: lines.slice(1) });
+    const commit: Commit = { at, files: lines.slice(1) };
+    if (email) commit.author = authorKey(email);
+    commits.push(commit);
   }
   return commits;
 }
@@ -95,7 +104,7 @@ export async function recentHistory(root: string): Promise<Commit[]> {
       `-n${HISTORY_COMMITS}`,
       '--no-merges',
       '--name-only',
-      `--format=${RECORD}%ct`,
+      `--format=${RECORD}%ct%x09%ae`,
     ]);
     return parseLog(output).filter((commit) => commit.files.length <= MAX_COMMIT_FILES);
   } catch {

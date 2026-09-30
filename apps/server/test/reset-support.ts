@@ -29,8 +29,54 @@ export async function seedRun(t: TestDb): Promise<string> {
   return sent.run.id;
 }
 
+async function seedMap(t: TestDb): Promise<void> {
+  const repos = [randomUUID(), randomUUID()].sort();
+  for (const [index, id] of repos.entries()) {
+    await t.db.query(
+      `INSERT INTO map_repos (id, root_path, rules_version, status) VALUES ($1, $2, 'r', 'ready')`,
+      [id, `/tmp/spark-reset-map-${index}`],
+    );
+    await t.db.query(
+      `INSERT INTO map_areas (repo_id, id, root, source, package, reason, file_count, line_count,
+         fan_in, fan_out, importance, rule_category, rule_kind, x, y, radius)
+       VALUES ($1, 'a1', 'src', 'folder', '.', 'folder src', 1, 1, 0, 0, 0, 'core', 'domain', 0, 0, 1)`,
+      [id],
+    );
+    await t.db.query(
+      `INSERT INTO map_files (repo_id, path, area_id, language, lines, fan_in, fan_out, importance, x, y)
+       VALUES ($1, 'src/a.ts', 'a1', 'typescript', 1, 0, 0, 0, 0, 0)`,
+      [id],
+    );
+  }
+  await t.db.query(
+    `INSERT INTO map_labels (repo_id, area_id, source, category, kind, name, description, policy_version)
+     VALUES ($1, 'a1', 'rules', 'core', 'domain', 'Src', 'd', 'p')`,
+    [repos[0]],
+  );
+  await t.db.query(
+    `INSERT INTO map_overrides (root_path, area_id, category) VALUES ('/tmp/spark-reset-map-0', 'a1', 'shared')`,
+  );
+  await t.db.query(
+    `INSERT INTO map_jev_calls (repo_id, purpose, subject, jev_status, policy_version)
+     VALUES ($1, 'area_label', 'a1', 'failed', 'p')`,
+    [repos[0]],
+  );
+  await t.db.query('INSERT INTO map_link_pairs (repo_a, repo_b, signature) VALUES ($1, $2, $3)', [
+    repos[0],
+    repos[1],
+    's',
+  ]);
+  await t.db.query(
+    `INSERT INTO map_links (repo_a, repo_b, from_repo, to_repo, kind, label, from_path, to_path,
+       from_area, to_area, confidence, source)
+     VALUES ($1, $2, $1, $2, 'http', 'GET /a', 'src/a.ts', 'src/a.ts', 'a1', 'a1', 0.9, 'rules')`,
+    [repos[0], repos[1]],
+  );
+}
+
 export async function seedAppData(t: TestDb): Promise<{ mcpId: string }> {
   await seedRun(t);
+  await seedMap(t);
   await seedModelStats(t.db);
   await updateProfile(t.db, t.workspaceId, { displayName: 'Hari' });
   await t.db.query(
