@@ -4,7 +4,7 @@ import { VIEW_LABELS, VIEW_TIPS, type MapViewId } from './map-views.ts';
 export function ViewTip({ view, onDismiss }: { view: MapViewId; onDismiss: () => void }) {
   return (
     <aside
-      className="map-tip map-glass"
+      className="map-viewtip map-glass"
       aria-label={`${VIEW_LABELS[view]} view tip`}
       data-map-overlay
     >

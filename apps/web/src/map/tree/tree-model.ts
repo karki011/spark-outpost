@@ -1,7 +1,7 @@
 import type { MapArea, MapAreaDetail } from '@spark-outpost/contracts';
 import type { Bridge, LinkKind } from '../bridges.ts';
 import type { MapFilters } from '../frame.ts';
-import { areaRoot, type MapGroup } from '../groups.ts';
+import type { MapGroup } from '../groups.ts';
 import { areaForPath } from '../map-model.ts';
 import { fileKey, type Scene, type SceneArea } from '../scene.ts';
 import type { LayoutInput } from './tree-layout.ts';
@@ -84,9 +84,16 @@ export const fileNodeId = (key: string) => `f:${key}`;
 const folderId = (areaKey: string, folder: string) => `d:${areaKey}:${folder}`;
 const moreId = (owner: string) => `m:${owner}`;
 
-export function folderIn(area: MapArea, path: string): string {
-  const root = areaRoot(area);
-  const rel = root && path.startsWith(`${root}/`) ? path.slice(root.length + 1) : path;
+export function folderBase(paths: readonly string[]): string {
+  const dirs = paths.map((path) => path.split('/').slice(0, -1));
+  const first = dirs[0] ?? [];
+  let length = 0;
+  while (length < first.length && dirs.every((dir) => dir[length] === first[length])) length += 1;
+  return first.slice(0, length).join('/');
+}
+
+export function folderIn(base: string, path: string): string {
+  const rel = base && path.startsWith(`${base}/`) ? path.slice(base.length + 1) : path;
   const slash = rel.indexOf('/');
   return slash < 0 ? '' : rel.slice(0, slash);
 }
@@ -172,9 +179,10 @@ class Builder {
     const files = entry.files
       .filter((file) => filters.kinds.has(scene.files[file]!.kind))
       .sort((a, b) => scene.files[b]!.importance - scene.files[a]!.importance);
+    const base = folderBase(entry.files.map((file) => scene.files[file]!.path));
     const byFolder = new Map<string, number[]>();
     for (const file of files) {
-      const folder = folderIn(entry.area, scene.files[file]!.path);
+      const folder = folderIn(base, scene.files[file]!.path);
       byFolder.set(folder, [...(byFolder.get(folder) ?? []), file]);
     }
     if (files.length <= FOLDERS_ABOVE || byFolder.size < 2) {
@@ -377,8 +385,9 @@ export function revealIds(
   const ids = [...(group ? [group.id] : []), areaKey];
   if (file === undefined) return { expand: ids, target: areaKey };
   const entry = scene.files[file]!;
-  const area = scene.areas[entry.areaIndex]!.area;
-  const folder = folderIn(area, entry.path);
+  const area = scene.areas[entry.areaIndex]!;
+  const base = folderBase(area.files.map((index) => scene.files[index]!.path));
+  const folder = folderIn(base, entry.path);
   if (folder) ids.push(folderId(areaKey, folder));
   return { expand: ids, target: fileNodeId(entry.key) };
 }

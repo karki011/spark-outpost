@@ -13,7 +13,6 @@ export interface TreeActions {
   scene: Scene;
   active: string | null;
   maxImportance: number;
-  activate: (item: TreeItem) => void;
   setActive: (id: string) => void;
 }
 
@@ -116,10 +115,6 @@ function Shell({ item, label, expanded, className, children }: ShellProps) {
       aria-label={label}
       aria-expanded={expanded}
       onFocus={() => tree.setActive(item.id)}
-      onClick={() => {
-        tree.setActive(item.id);
-        tree.activate(item);
-      }}
     >
       {children}
     </div>

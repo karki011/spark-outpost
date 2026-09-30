@@ -35,6 +35,8 @@ const GAP = 22;
 const RANK_GAP = 90;
 const COLUMN_GAP = 180;
 const ASPECT = 1.8;
+const BACKBONE = 2;
+const PER_COLUMN = 6;
 
 interface Size {
   width: number;
@@ -76,26 +78,58 @@ function layered(
     graph.setEdge(source, target, { weight: Math.max(1, Math.round(Math.log2(weight + 1))) });
   }
   layout(graph);
-  const at = new Map<string, { x: number; y: number }>();
-  let width = 0;
-  let height = 0;
+  const ranks = new Map<number, string[]>();
   for (const id of ids) {
-    const node = graph.node(id);
-    const size = sizes.get(id)!;
-    const x = node.x - size.width / 2;
-    const y = node.y - size.height / 2;
-    at.set(id, { x, y });
-    width = Math.max(width, x + size.width);
-    height = Math.max(height, y + size.height);
+    const rank = Math.round(graph.node(id).x);
+    ranks.set(rank, [...(ranks.get(rank) ?? []), id]);
   }
-  return { width, height, at };
+  const chunks = [...ranks]
+    .sort((a, b) => a[0] - b[0])
+    .map(([, members]) => {
+      const sorted = members.sort((a, b) => graph.node(a).y - graph.node(b).y);
+      const count = Math.ceil(sorted.length / PER_COLUMN);
+      const size = Math.ceil(sorted.length / count);
+      return Array.from({ length: count }, (_, i) => sorted.slice(i * size, (i + 1) * size));
+    });
+  const stackHeight = (column: readonly string[]) =>
+    column.reduce((sum, id) => sum + sizes.get(id)!.height + GAP, -GAP);
+  const height = Math.max(0, ...chunks.flat().map(stackHeight));
+  const at = new Map<string, { x: number; y: number }>();
+  let x = 0;
+  for (const rank of chunks) {
+    for (const column of rank) {
+      let y = (height - stackHeight(column)) / 2;
+      const width = Math.max(...column.map((id) => sizes.get(id)!.width));
+      for (const id of column) {
+        at.set(id, { x, y });
+        y += sizes.get(id)!.height + GAP;
+      }
+      x += width + GAP;
+    }
+    x += RANK_GAP - GAP;
+  }
+  return { width: Math.max(0, x - RANK_GAP), height, at };
+}
+
+function backbone(links: ReadonlyMap<string, number>): Map<string, number> {
+  const kept = new Map<string, number>();
+  const outgoing = new Map<string, number>();
+  const sorted = [...links].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  for (const [key, weight] of sorted) {
+    const [source, target] = key.split('\u0000') as [string, string];
+    if ((outgoing.get(source) ?? 0) >= BACKBONE || kept.has(`${target}\u0000${source}`)) continue;
+    outgoing.set(source, (outgoing.get(source) ?? 0) + 1);
+    kept.set(key, weight);
+  }
+  return kept;
 }
 
 function arrange(
   ids: readonly string[],
   sizes: ReadonlyMap<string, Size>,
-  links: ReadonlyMap<string, number>,
+  all: ReadonlyMap<string, number>,
 ): Block {
+  const links = backbone(all);
   const linked = new Set<string>();
   for (const key of links.keys()) for (const id of key.split('\u0000')) linked.add(id);
   const connected = ids.filter((id) => linked.has(id));

@@ -22,7 +22,8 @@ export interface MapGroup {
 }
 
 export const MAX_GROUPS = 36;
-const TARGET_GROUPS = 24;
+const TARGET_GROUPS = 30;
+const SPLIT_PIECES = 8;
 const SPLIT_AREAS = 4;
 const MIN_GROUPS = 4;
 const SPLIT_SHARE = 1 / 20;
@@ -98,13 +99,13 @@ function partOf(trie: Trie): Part {
 
 function entries(trie: Trie): Part[] {
   const parts = [...trie.children.values()].map(partOf);
-  if (trie.own.length > 0) {
+  for (const entry of trie.own) {
     parts.push({
       path: trie.path,
-      areas: trie.own,
+      areas: [entry],
       trie: null,
       pooled: false,
-      files: trie.own.reduce((sum, entry) => sum + entry.area.fileCount, 0),
+      files: entry.area.fileCount,
       stuck: false,
     });
   }
@@ -126,9 +127,9 @@ function pool(path: string, parts: readonly Part[]): Part[] {
   ];
 }
 
-function split(part: Part, total: number, room: number): Part[] | null {
+function split(part: Part, total: number, room: number, forced: boolean): Part[] | null {
   const pieces = entries(part.trie!);
-  if (pieces.length < 2) return null;
+  if (pieces.length < 2 || (!forced && pieces.length > SPLIT_PIECES)) return null;
   const tinyBelow = Math.max(TINY_FLOOR, total * TINY_SHARE);
   const large = pieces.filter((piece) => piece.files >= tinyBelow);
   let keep = large.length >= 2 ? large : pieces;
@@ -157,7 +158,8 @@ function splitParts(areas: readonly GroupableArea[]): Part[] {
       )
       .sort((a, b) => b.files - a.files)[0];
     if (!candidate) return parts;
-    const pieces = split(candidate, total, MAX_GROUPS - (parts.length - 1));
+    const forced = parts.length < MIN_GROUPS;
+    const pieces = split(candidate, total, MAX_GROUPS - (parts.length - 1), forced);
     if (!pieces) {
       candidate.stuck = true;
       continue;
@@ -176,9 +178,17 @@ function dominant(areas: readonly GroupableArea[]): MapCategory {
   );
 }
 
+const GENERIC = new Set(['src', 'lib', 'libs', 'source', 'app', 'apps', 'packages', 'modules']);
+
+function shortName(path: string): string {
+  const segments = path.split('/').filter(Boolean);
+  while (segments.length > 1 && GENERIC.has(segments.at(-1)!)) segments.pop();
+  return segments.at(-1) ?? '(root)';
+}
+
 function groupName(part: Part): string {
-  if (part.pooled) return part.path ? `Other in ${part.path.split('/').pop()}` : 'Other';
-  return part.path.split('/').pop() || '(root)';
+  if (part.pooled) return part.path ? `Other in ${shortName(part.path)}` : 'Other';
+  return shortName(part.path);
 }
 
 function toGroup(projectId: string, part: Part): MapGroup {

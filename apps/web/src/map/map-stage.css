@@ -23,21 +23,23 @@
   width: 300px;
 }
 
-.map-tip {
+.map-viewtip {
   position: absolute;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 18px;
+  width: fit-content;
+  margin: 0 auto;
   z-index: 4;
   display: flex;
   align-items: center;
   gap: 8px;
   max-width: min(560px, calc(100% - 28px));
   padding: 6px 6px 6px 14px;
-  transform: translateX(-50%);
   animation: rise 0.35s var(--out);
 }
 
-.map-tip p {
+.map-viewtip p {
   margin: 0;
   font-size: 12.5px;
   line-height: 1.45;
@@ -93,7 +95,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .map-tip {
+  .map-viewtip {
     animation: none;
   }
 }

@@ -8,7 +8,7 @@
     width: 100%;
   }
 
-  .map-tip {
+  .map-viewtip {
     bottom: 12px;
     max-width: calc(100% - 24px);
   }

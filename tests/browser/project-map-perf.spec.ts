@@ -16,7 +16,10 @@ test('a 20,000 file map stays smooth while panning and zooming', async ({ page }
   const response = await page.request.post('/api/projects', { data: { rootPath: REPO_ROOT } });
   const projectId = ((await response.json()) as { id: string }).id;
   await serveMap(page, syntheticFixture(projectId, 20_000, 240));
-  await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'map'));
+  await page.addInitScript(() => {
+    localStorage.setItem('spark-outpost.view', 'map');
+    localStorage.setItem('spark-outpost.map-view', '"sky"');
+  });
   await page.goto('/');
   await expect(page.getByRole('application', { name: /240 areas/ })).toBeVisible();
   const box = (await page.locator('.map-stage').boundingBox())!;

@@ -123,4 +123,37 @@ describe('buildTree', () => {
     const graph = buildTree(source(), state(expand, [target]));
     expect(graph.items.some((item) => item.id === target)).toBe(true);
   });
+
+  it('splits a big area into its folders below the shared prefix', () => {
+    const big = {
+      id: 'cccccccccccc',
+      root: 'libs/ui',
+      x: 0,
+      y: 0,
+      files: Array.from({ length: 14 }, (_, i) => ({
+        path: `libs/ui/src/${i % 2 ? 'forms' : 'tables'}/part-${i}.tsx`,
+        kind: 'ui' as const,
+        x: 0,
+        y: 0,
+        importance: 1 - i / 20,
+      })),
+    };
+    const bigMap = sampleMap(PROJECT, [big]);
+    const key = areaKey(PROJECT, big.id);
+    const bigScene = buildScene(
+      [{ projectId: PROJECT, name: 'App', map: bigMap }],
+      new Map([[key, sampleDetail(big, [])]]),
+    );
+    const bigGroups = groupAreas(bigScene.areas);
+    const graph = buildTree(
+      source({ scene: bigScene, groups: bigGroups, areaLinks: [], details: new Map() }),
+      state([key, `d:${key}:forms`]),
+    );
+    const folders = graph.items.filter((item) => item.kind === 'folder');
+    expect(folders.map((item) => item.kind === 'folder' && [item.path, item.files])).toEqual([
+      ['forms', 7],
+      ['tables', 7],
+    ]);
+    expect(graph.items.filter((item) => item.parent === `d:${key}:forms`)).toHaveLength(7);
+  });
 });

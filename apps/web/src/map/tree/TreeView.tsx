@@ -48,6 +48,7 @@ const LEVELS = [
   { id: 'all', label: 'All' },
 ];
 const MORE_STEP = 48;
+const FIRST_ZOOM = 0.65;
 const FOCUS_TRIES = 12;
 const NOT_NAVIGABLE = new Set(['project', 'loading']);
 
@@ -108,6 +109,7 @@ function TreeCanvas({
   const centred = useRef(0);
   const fitTo = useRef<string | null>(null);
   const fitted = useRef(false);
+  const fitMin = useRef(FIRST_ZOOM);
 
   const graph = useMemo(
     () => buildTree(source, { expanded, limits, pinned }),
@@ -152,16 +154,22 @@ function TreeCanvas({
       (edge) => layout?.result[edge.source] && layout.result[edge.target],
     );
     const max = Math.max(1, ...shown.filter((edge) => !edge.bridge).map((edge) => edge.weight));
+    const title = (id: string) => {
+      const item = byId.get(id);
+      if (item?.kind === 'file') return source.scene.files[item.file]!.name;
+      return item ? nameOf(item) : id;
+    };
     return shown.map((edge) => ({
       id: edge.id,
       source: edge.source,
       target: edge.target,
+      ariaLabel: `${title(edge.source)} ${edge.bridge ? 'calls' : 'imports'} ${title(edge.target)}`,
       className: edge.bridge ? 'map-te bridge' : 'map-te',
       style: { strokeWidth: edge.bridge ? 2 : 1 + 3 * Math.sqrt(edge.weight / max) },
       focusable: false,
       selectable: false,
     }));
-  }, [graph, level, layout]);
+  }, [graph, level, layout, byId, source.scene]);
 
   const centreOn = useCallback(
     (id: string, zoom?: number) => {
@@ -228,7 +236,7 @@ function TreeCanvas({
     if (!layout || nodes.length === 0) return;
     if (!fitted.current) {
       fitted.current = true;
-      void flow.fitView({ padding: 0.12, duration: 0, maxZoom: 1 });
+      void flow.fitView({ padding: 0.12, duration: 0, maxZoom: 1, minZoom: fitMin.current });
     }
     const target = revealTarget;
     if (target && centred.current !== handled && layout.result[target]) {
@@ -238,11 +246,12 @@ function TreeCanvas({
       return;
     }
     const opened = fitTo.current;
-    if (opened && layout.result[opened]) {
+    if (opened && layout.result[opened] && !layout.result[`l:${opened}`]) {
       fitTo.current = null;
-      void flow.fitView({ nodes: [{ id: opened }], padding: 0.2, duration, maxZoom: 1.1 });
+      const box = boxes.get(opened);
+      if (box) void flow.fitBounds(box, { padding: 0.12, duration });
     }
-  }, [layout, nodes.length, flow, centreOn, moveTo, duration, revealTarget, handled]);
+  }, [layout, nodes.length, flow, centreOn, moveTo, duration, revealTarget, handled, boxes]);
 
   if (reveal && reveal.nonce !== handled) {
     setHandled(reveal.nonce);
@@ -273,6 +282,7 @@ function TreeCanvas({
       const opening = !expanded.has(item.id);
       if (opening && item.kind === 'area') require([item.id]);
       if (opening) fitTo.current = item.id;
+      pendingFocus.current = item.id;
       setExpanded((previous) => toggled(previous, item.id));
       announce(`${nameOf(item)} ${opening ? 'opened' : 'closed'}.`);
     },
@@ -338,10 +348,9 @@ function TreeCanvas({
       scene: source.scene,
       active: current,
       maxImportance: Math.max(0, ...source.scene.areas.map((entry) => entry.area.importance)),
-      activate,
       setActive,
     }),
-    [source.scene, current, activate],
+    [source.scene, current],
   );
 
   return (
@@ -378,6 +387,12 @@ function TreeCanvas({
           minZoom={0.05}
           maxZoom={1.6}
           proOptions={{ hideAttribution: true }}
+          onNodeClick={(event, node) => {
+            const target = (event.target as HTMLElement).closest<HTMLElement>('[data-tree-node]');
+            if (target?.dataset.treeNode !== node.id) return;
+            setActive(node.id);
+            activate(node.data.item);
+          }}
         >
           <Background variant={BackgroundVariant.Dots} gap={24} size={1.2} />
           <MiniMap
@@ -408,6 +423,7 @@ function TreeCanvas({
               setExpanded(new Set());
               setPinned(new Set());
               fitted.current = false;
+              fitMin.current = 0;
             }}
           >
             Close all
