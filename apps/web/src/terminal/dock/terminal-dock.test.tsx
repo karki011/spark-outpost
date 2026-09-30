@@ -14,9 +14,11 @@ interface FakeConnection {
 }
 
 const opened: FakeConnection[] = [];
+const running = new Map<string, string>();
 
 vi.mock('../terminal-api.ts', () => ({
   createShell: (chatId: string | null) => Promise.resolve({ chatId }),
+  runningCommand: (sessionId: string) => Promise.resolve(running.get(sessionId) ?? null),
 }));
 
 vi.mock('../terminal-connection.ts', () => ({
@@ -58,7 +60,7 @@ const store = await import('./shell-store.ts');
 function started(connection: FakeConnection, change: Partial<CreateShellResponse> = {}) {
   act(() =>
     connection.handlers.onOpen({
-      id: crypto.randomUUID(),
+      id: `session-${opened.indexOf(connection)}`,
       token: 't',
       cwd: '/Users/me/widgets',
       label: 'my files · widgets',
@@ -83,11 +85,17 @@ function Chat({ id }: { id: string }) {
 }
 
 const dock = () => screen.queryByRole('region', { name: 'Terminal' });
+const closeTab = (name: string) =>
+  act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: `Close ${name}` }));
+    await Promise.resolve();
+  });
 const toggleKey = () =>
   fireEvent.keyDown(document.body, { key: '`', code: 'Backquote', ctrlKey: true });
 
 beforeEach(() => {
   opened.length = 0;
+  running.clear();
 });
 
 afterEach(() => {
@@ -131,7 +139,7 @@ describe('chat terminal dock', () => {
     expect(opened).toHaveLength(1);
   });
 
-  it('adds and closes tabs, closing the shell with its tab', () => {
+  it('adds and closes tabs, closing the shell with its tab', async () => {
     render(<Chat id="a" />);
     fireEvent.click(screen.getByRole('button', { name: 'Terminal' }));
     started(opened[0]!);
@@ -140,15 +148,65 @@ describe('chat terminal dock', () => {
     const second = screen.getByRole('button', { name: 'my files · widgets (2)' });
     expect(second.getAttribute('aria-pressed')).toBe('true');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close my files · widgets (2)' }));
+    await closeTab('my files · widgets (2)');
     expect(opened[1]!.disposed).toBe(true);
     expect(opened[0]!.disposed).toBe(false);
     expect(
       screen.getByRole('button', { name: 'my files · widgets' }).getAttribute('aria-pressed'),
     ).toBe('true');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close my files · widgets' }));
+    await closeTab('my files · widgets');
     expect(dock()).toBeNull();
+  });
+
+  it('asks before stopping a busy shell, and keeps it running on request', async () => {
+    render(<Chat id="a" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Terminal' }));
+    started(opened[0]!);
+    running.set('session-0', 'pnpm dev');
+
+    await closeTab('my files · widgets');
+    const confirm = screen.getByRole('group', { name: 'Stop pnpm dev?' });
+    expect(confirm.textContent).toContain('still running in my files · widgets');
+    expect(document.activeElement?.textContent).toBe('Hold to stop');
+    expect(screen.getByText(/pnpm dev is still running/).getAttribute('aria-live')).toBe('polite');
+    expect(opened[0]!.disposed).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Keep running' }));
+    expect(screen.queryByRole('group', { name: 'Stop pnpm dev?' })).toBeNull();
+    expect(opened[0]!.disposed).toBe(false);
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Close my files · widgets' }),
+    );
+
+    await closeTab('my files · widgets');
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+    expect(screen.queryByRole('group', { name: 'Stop pnpm dev?' })).toBeNull();
+    expect(opened[0]!.disposed).toBe(false);
+  });
+
+  it('stops a busy shell after a full hold', async () => {
+    render(<Chat id="a" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Terminal' }));
+    started(opened[0]!);
+    fireEvent.click(screen.getByRole('button', { name: 'New terminal' }));
+    started(opened[1]!);
+    running.set('session-0', 'sleep 100');
+
+    await closeTab('my files · widgets');
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const hold = screen.getByRole('button', { name: 'Hold to stop' });
+    fireEvent.keyDown(hold, { key: ' ' });
+    act(() => vi.advanceTimersByTime(1000));
+    expect(opened[0]!.disposed).toBe(false);
+    act(() => vi.advanceTimersByTime(500));
+    vi.useRealTimers();
+
+    expect(opened[0]!.disposed).toBe(true);
+    expect(opened[1]!.disposed).toBe(false);
+    expect(screen.queryByRole('group', { name: 'Stop sleep 100?' })).toBeNull();
+    expect(screen.getByText('Stopped sleep 100.').getAttribute('aria-live')).toBe('polite');
+    expect(opened[1]!.focused).toBeGreaterThan(0);
   });
 
   it('keeps each chat’s terminals to itself', () => {

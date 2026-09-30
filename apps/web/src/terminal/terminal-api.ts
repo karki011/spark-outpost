@@ -1,6 +1,7 @@
 import {
   createShellResponseSchema,
   createTerminalResponseSchema,
+  shellBusyResponseSchema,
   type CreateShellResponse,
   type CreateTerminalResponse,
   type ProviderId,
@@ -28,6 +29,11 @@ export function createShell(conversationId: string | null): Promise<CreateShellR
     method: 'POST',
     body: JSON.stringify({ conversationId }),
   });
+}
+
+export async function runningCommand(sessionId: string): Promise<string | null> {
+  const busy = await request(shellBusyResponseSchema, `/terminal/sessions/${sessionId}/busy`);
+  return busy.command;
 }
 
 export function streamUrl(session: TerminalTicket, cols: number, rows: number): string {

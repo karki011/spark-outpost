@@ -104,6 +104,21 @@ describe('chat shells', () => {
     expect(shell.messages.at(-1)).toMatchObject({ reason: 'folder_removed' });
   });
 
+  it('reports the command a shell is running, and nothing once it finishes', async () => {
+    useLimits();
+    const shell = openShell(null);
+    shell.terminal.input('echo "ready-$((2 + 2))"\r');
+    await until(() => shell.screen.text.includes('ready-4'));
+    expect(sessions.runningCommand(shell.created.id)).toBeNull();
+
+    shell.terminal.input('sleep 100\r');
+    await until(() => sessions.runningCommand(shell.created.id) === 'sleep 100');
+
+    shell.terminal.input('\x03');
+    await until(() => sessions.runningCommand(shell.created.id) === null);
+    expect(sessions.runningCommand('not-a-session')).toBeNull();
+  });
+
   it('counts shells separately from setup terminals', () => {
     useLimits({ ...defaultLimits, maxSessions: 1, maxShells: 2 });
     sessions.create('claude');

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { catalogEntry } from '../providers/catalog.ts';
 import { detectHint } from './hints.ts';
-import { descendantsOf } from './process-group.ts';
 import { shellEnvironment } from './pty.ts';
 
 const claude = catalogEntry('claude');
@@ -80,18 +79,5 @@ describe('shellEnvironment', () => {
     expect(env).not.toHaveProperty('ANTHROPIC_API_KEY');
     expect(env).not.toHaveProperty('GITHUB_TOKEN');
     expect(env.TERM).toBe('xterm-256color');
-  });
-});
-
-describe('descendantsOf', () => {
-  it('finds children and grandchildren but not unrelated processes', () => {
-    const table: Array<[number, number]> = [
-      [10, 1],
-      [11, 10],
-      [12, 11],
-      [13, 10],
-      [20, 1],
-    ];
-    expect(descendantsOf(10, table).sort()).toEqual([11, 12, 13]);
   });
 });

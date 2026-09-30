@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { CreateShellResponse, ShellFolderKind } from '@spark-outpost/contracts';
-import { createShell } from '../terminal-api.ts';
+import { createShell, runningCommand } from '../terminal-api.ts';
 import { openTerminal, type TerminalConnection } from '../terminal-connection.ts';
 import { endMessages } from '../terminal-messages.ts';
 
@@ -8,6 +8,7 @@ export type ShellStatus = 'starting' | 'open' | 'ended';
 
 export interface ShellTab {
   id: string;
+  sessionId: string | null;
   label: string | null;
   cwd: string | null;
   kind: ShellFolderKind | null;
@@ -70,6 +71,7 @@ export function parkHost(host: HTMLDivElement): void {
 
 function started(chatId: string, tabId: string, created: CreateShellResponse) {
   updateTab(chatId, tabId, {
+    sessionId: created.id,
     label: created.label,
     cwd: created.cwd,
     kind: created.kind,
@@ -94,6 +96,7 @@ export function newShell(chatId: string): string {
   parkHost(host);
   const tab: ShellTab = {
     id,
+    sessionId: null,
     label: null,
     cwd: null,
     kind: null,
@@ -113,7 +116,17 @@ export function newShell(chatId: string): string {
   return id;
 }
 
-export function closeShell(chatId: string, tabId: string): void {
+export async function shellCommand(chatId: string, tabId: string): Promise<string | null> {
+  const tab = chatOf(chatId).tabs.find((other) => other.id === tabId);
+  if (tab?.status !== 'open' || !tab.sessionId) return null;
+  try {
+    return await runningCommand(tab.sessionId);
+  } catch {
+    return null;
+  }
+}
+
+export function closeShell(chatId: string, tabId: string, focusNext = false): void {
   const chat = chatOf(chatId);
   const index = chat.tabs.findIndex((tab) => tab.id === tabId);
   if (index === -1) return;
@@ -124,7 +137,9 @@ export function closeShell(chatId: string, tabId: string): void {
   const tabs = chat.tabs.filter((other) => other.id !== tabId);
   const neighbour = tabs[Math.min(index, tabs.length - 1)] ?? null;
   const activeId = chat.activeId === tabId ? (neighbour?.id ?? null) : chat.activeId;
+  if (focusNext && activeId !== chat.activeId) focusWanted = activeId;
   setChat(chatId, { open: chat.open && tabs.length > 0, tabs, activeId });
+  if (focusNext && activeId === chat.activeId && activeId) connections.get(activeId)?.focus();
 }
 
 export function selectShell(chatId: string, tabId: string): void {

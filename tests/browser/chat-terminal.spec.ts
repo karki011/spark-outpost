@@ -62,6 +62,24 @@ async function newChatIn(page: Page, root: string) {
   await page.keyboard.press('Escape');
 }
 
+async function createdShellId(page: Page): Promise<string> {
+  const response = await page.waitForResponse(
+    (candidate) => candidate.url().endsWith('/api/terminal/shells') && candidate.status() === 201,
+  );
+  return ((await response.json()) as { id: string }).id;
+}
+
+async function runSleep(page: Page, sessionId: string) {
+  await page.keyboard.type('sleep 100');
+  await page.keyboard.press('Enter');
+  await expect
+    .poll(async () => {
+      const busy = await page.request.get(`/api/terminal/sessions/${sessionId}/busy`);
+      return ((await busy.json()) as { command: string | null }).command;
+    })
+    .toBe('sleep 100');
+}
+
 async function runPwd(page: Page, marker: string) {
   await expect(dock(page).locator('.term-light.open')).toBeVisible();
   await page.keyboard.type(`echo "${marker}:$(pwd)"`);
@@ -162,15 +180,57 @@ test('a Do chat with a worktree opens its terminal in the worktree', async ({ pa
   await shot(page, 'worktree');
 });
 
+test('closing a tab that is running something asks first', async ({ page }) => {
+  await page.setViewportSize({ width: 1300, height: 860 });
+  await newChat(page);
+  await terminalButton(page).click();
+  await expect(dock(page).locator('.term-light.open')).toBeVisible();
+  const created = createdShellId(page);
+  await dock(page).getByRole('button', { name: 'New terminal' }).click();
+  const id = await created;
+  await expect(dock(page).locator('.term-light.open')).toHaveCount(2);
+  await runSleep(page, id);
+
+  const tabs = dock(page).getByRole('group', { name: 'Terminals' });
+  const closeBusy = tabs.getByRole('button', { name: 'Close ~ (2)' });
+  const confirm = dock(page).getByRole('group', { name: 'Stop sleep 100?' });
+  await closeBusy.click();
+  await expect(confirm).toBeVisible();
+  await expect(confirm.getByRole('button', { name: 'Hold to stop' })).toBeFocused();
+  await shot(page, 'stop-confirm');
+
+  await confirm.getByRole('button', { name: 'Keep running' }).click();
+  await expect(confirm).toHaveCount(0);
+  await expect(closeBusy).toBeFocused();
+  await expect(tabs.getByRole('button', { name: '~ (2)', exact: true })).toBeVisible();
+
+  await closeBusy.click();
+  await expect(confirm.getByRole('button', { name: 'Hold to stop' })).toBeFocused();
+  await page.keyboard.down('Space');
+  await page.waitForTimeout(1700);
+  await page.keyboard.up('Space');
+  await expect(tabs.getByRole('button', { name: '~ (2)', exact: true })).toHaveCount(0);
+  await expect(confirm).toHaveCount(0);
+
+  await tabs.getByRole('button', { name: 'Close ~', exact: true }).click();
+  await expect(dock(page)).toHaveCount(0);
+  await expect(terminalButton(page)).not.toHaveClass(/running/);
+});
+
 test('the terminal panel has no serious contrast or ARIA issues in any theme', async ({ page }) => {
   test.setTimeout(120_000);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1300, height: 860 });
   await newChat(page);
+  const created = createdShellId(page);
   await terminalButton(page).click();
+  const id = await created;
   await expect(dock(page).locator('.term-light.open')).toBeVisible();
   await runPwd(page, 'a11y');
   await expect(screenText(page)).toContainText('a11y:');
+  await runSleep(page, id);
+  await dock(page).getByRole('button', { name: 'Close ~' }).click();
+  await expect(dock(page).getByRole('group', { name: 'Stop sleep 100?' })).toBeVisible();
 
   const found: { skin: string; rule: string; targets: string[] }[] = [];
   for (const skin of SKINS) {
