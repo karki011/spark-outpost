@@ -3,6 +3,7 @@ import { gitDiffBetween, gitDiffSince, headCommit } from '../projects/snapshot.t
 import { getSnapshot } from '../persistence/run-snapshots.ts';
 import { projectMoveNote } from '../workflow/project-move.ts';
 import { builderPrompt, criticPrompt, type ChangedFile } from './context.ts';
+import { pieceReviews } from '../coordinator/critic-pieces.ts';
 import type { Session } from './session.ts';
 import type { Spawn } from './transitions.ts';
 
@@ -80,6 +81,7 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
   if (spawn.role === 'critic') {
     const changes = await changesForReview(s);
     return criticPrompt({
+      pieces: pieceReviews(s.coordination?.list, changes.patch),
       request,
       plan: s.plan.map((entry) => entry.content),
       changes: changes.files,

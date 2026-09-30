@@ -34,7 +34,14 @@ export interface BuilderContext {
   projectNote?: string | null;
 }
 
+export interface PieceReview {
+  heading: string;
+  contract: string;
+  patch: string;
+}
+
 export interface CriticContext {
+  pieces?: readonly PieceReview[] | null;
   request: string;
   plan: readonly string[];
   changes: readonly ChangedFile[];
@@ -170,13 +177,26 @@ const VERDICT_RULE =
 export const FINDING_KIND_RULE =
   'Start each finding with its kind: "[bug]" for behaviour the change gets wrong for the request (a wrong result, a crash, a failing check, or a vulnerability the change adds, such as SQL injection); "[missing]" for something the request or agreed plan asks for that the change lacks; "[hardening]" for robustness, security hardening, or edge-case inputs the request did not ask about; "[style]" for naming, structure or readability. Use "Verdict: concerns" only for [bug] or [missing] findings.';
 
+function diffBlock(patch: string): string {
+  return patch.trim() ? `\`\`\`diff\n${cap(patch, PATCH_LIMIT)}\n\`\`\`` : 'No diff.';
+}
+
+export const PIECE_REVIEW_RULE =
+  'The diff is too large for one block, so it is split by piece. Review each piece against its own contract, then give one verdict for the whole change.';
+
+function diffSection(context: Omit<CriticContext, 'request' | 'plan'>): string {
+  if (!context.pieces || context.pieces.length === 0)
+    return section('Diff', diffBlock(context.patch));
+  const parts = context.pieces.map(
+    (piece) => `### ${piece.heading}\n${piece.contract}\n\n${diffBlock(piece.patch)}`,
+  );
+  return section('Diff by piece', [PIECE_REVIEW_RULE, ...parts].join('\n\n'));
+}
+
 function reviewSections(context: Omit<CriticContext, 'request' | 'plan'>): string[] {
   return [
     section('Files changed', changeLines(context.changes)),
-    section(
-      'Diff',
-      context.patch.trim() ? `\`\`\`diff\n${cap(context.patch, PATCH_LIMIT)}\n\`\`\`` : 'No diff.',
-    ),
+    diffSection(context),
     section(
       'Check results',
       context.checks.length > 0 ? context.checks.join('\n') : 'No checks ran.',

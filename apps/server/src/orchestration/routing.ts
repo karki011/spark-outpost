@@ -61,11 +61,32 @@ function effortIds(candidate: AdvisorCandidate | undefined): string[] {
   return candidate?.efforts.map((effort) => effort.id) ?? [];
 }
 
-export function criticProvider(context: RouteContext): string {
-  const other = context.candidates.find(
-    (candidate) => candidate.provider !== context.chat.provider,
-  );
-  return other?.provider ?? context.chat.provider;
+export interface BuiltShare {
+  provider: string;
+  files: number;
+}
+
+function smallestShare(context: RouteContext, built: readonly BuiltShare[]): string {
+  const share = (provider: string) =>
+    built
+      .filter((entry) => entry.provider === provider)
+      .reduce((sum, entry) => sum + entry.files, 0);
+  const ranked = context.candidates
+    .map((candidate) => candidate.provider)
+    .sort(
+      (a, b) =>
+        share(a) - share(b) ||
+        Number(a === context.chat.provider) - Number(b === context.chat.provider),
+    );
+  return ranked[0] ?? context.chat.provider;
+}
+
+export function criticProvider(context: RouteContext, built: readonly BuiltShare[] = []): string {
+  const builders = new Set([context.chat.provider, ...built.map((entry) => entry.provider)]);
+  const fresh = context.candidates.find((candidate) => !builders.has(candidate.provider));
+  if (fresh) return fresh.provider;
+  if (context.candidates.length < 2) return context.chat.provider;
+  return smallestShare(context, built);
 }
 
 export function chatPick(context: RouteContext): AgentPick {
@@ -231,8 +252,11 @@ export function routeMemberModel(
   return floorReaderRoute(context, ruleRoute(context, facts, jevTier));
 }
 
-export function ruleCriticPick(context: RouteContext): AgentPick {
-  const provider = criticProvider(context);
+export function ruleCriticPick(
+  context: RouteContext,
+  built: readonly BuiltShare[] = [],
+): AgentPick {
+  const provider = criticProvider(context, built);
   const candidate = candidateFor(context, provider);
   const effort = highEffort(effortIds(candidate)) ?? 'high';
   const models = modelsFor(context, provider);
@@ -248,9 +272,9 @@ export function ruleCriticPick(context: RouteContext): AgentPick {
   return { provider, model: middle?.id ?? null, modelLabel: middle?.label ?? null, effort };
 }
 
-export function routeCritic(context: RouteContext): MemberRoute {
+export function routeCritic(context: RouteContext, built: readonly BuiltShare[] = []): MemberRoute {
   const route: MemberRoute = {
-    pick: ruleCriticPick(context),
+    pick: ruleCriticPick(context, built),
     routedBy: 'rules',
     rule: 'critic',
     autoWouldUse: null,
