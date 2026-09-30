@@ -43,6 +43,7 @@ function fakeAcpProvider(
       ...fakeKeyEnvironment(definition),
     },
     launch: { command: process.execPath, args: ['--import', import.meta.resolve('tsx'), script] },
+    env: { ...childEnvironment(process.env), FAKE_ACP_PROVIDER: definition.id },
     cancelGraceMs: 2_000,
     ...(secrets ? { secrets } : {}),
     ...(sparkTools ? { sparkTools } : {}),
