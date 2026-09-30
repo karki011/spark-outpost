@@ -12,12 +12,15 @@ import { assess, recordAssessment } from './assess.ts';
 import { dependencyOrder } from './graph.ts';
 import { landedPieces, runPiece, type PieceSite } from './piece-run.ts';
 import { integratorSection } from './prompts.ts';
+import { noteSection } from './notes.ts';
+import { markNotesDelivered, pendingListNotes } from '../persistence/piece-notes.ts';
 import { coordinatorMode, mayCoordinate } from './shadow.ts';
 import type { Coordination } from './state.ts';
 import { writePieceList } from './turn.ts';
 import { builderEnvFor, projectSettings } from './builder-env.ts';
 
 const BUILDS_IN_PIECES = new Set(['first', 'retry']);
+const NO_GLUE = 'No glue was planned; act on the notes below.';
 
 function stopped(s: Session): boolean {
   return s.control.signal.aborted || s.budgetHit !== null;
@@ -68,6 +71,7 @@ async function engage(s: Session): Promise<void> {
     integrated: false,
     integrator: null,
     base: await treeOf(s, root),
+    unhealthy: new Map(),
   };
   await publish(s);
 }
@@ -91,12 +95,20 @@ async function integrate(
 ): Promise<MemberResult | null> {
   s.integrator = await integratorSeat(s, coordination);
   coordination.integrator = s.integrator.name;
-  const integration = coordination.list?.integration;
-  if (!integration || coordination.integrated) return null;
-  const prompt = `${integratorSection(integration, landedPieces(coordination))}\n\n## Request\n${s.input.userRequest}`;
+  const integration = coordination.list?.integration ?? null;
+  const notes = coordination.list ? await pendingListNotes(s.deps.db, coordination.list.id) : [];
+  if ((!integration && notes.length === 0) || coordination.integrated) return null;
+  const section = integratorSection(integration ?? NO_GLUE, landedPieces(coordination));
+  const noted = noteSection(notes);
+  const prompt = `${section}${noted ? `\n\n${noted}` : ''}\n\n## Request\n${s.input.userRequest}`;
   const { result } = await runMember(s, action, await site.place(), {
     seat: { ...s.integrator, prompt },
   });
+  await markNotesDelivered(
+    s.deps.db,
+    notes.map((note) => note.id),
+    result.runId,
+  );
   coordination.integrated = result.outcome === 'succeeded';
   return result;
 }
@@ -120,6 +132,7 @@ async function buildInPieces(
     const outcome = await runPiece(s, spawn, current, coordination, site);
     spawn = { ...action, escalate: false };
     coordination.list = await pieceListById(s.deps.db, coordination.list!.id);
+    if (outcome.skipped) continue;
     last = outcome.result;
     if (!outcome.landed) return { result: outcome.result };
   }

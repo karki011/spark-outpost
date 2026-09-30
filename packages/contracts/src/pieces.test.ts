@@ -30,6 +30,7 @@ function piece(key: string, extra: Partial<TaskPiece> = {}): TaskPiece {
     costUsd: null,
     landedAt: null,
     note: null,
+    notesQueued: 0,
     ...extra,
   };
 }
@@ -39,7 +40,12 @@ describe('pieceBoard', () => {
     const rows = pieceBoard({
       pieces: [
         piece('P1', { status: 'landed', builderName: 'Bolt', check: 'passed', costUsd: 0.4 }),
-        piece('P2', { dependsOn: ['P1'], status: 'running', builderName: 'Rivet' }),
+        piece('P2', {
+          dependsOn: ['P1'],
+          status: 'running',
+          builderName: 'Rivet',
+          notesQueued: 2,
+        }),
         piece('P3', { dependsOn: ['P1', 'P2'], placement: 'shared' }),
         piece('P4', { placement: 'worktree', builderName: 'Tack' }),
         piece('R1', { placement: 'read_only', research: true, owns: [] }),
@@ -53,5 +59,6 @@ describe('pieceBoard', () => {
       ['R1', 'ready', 'read-only', false],
     ]);
     expect(rows[0]).toMatchObject({ builder: 'Bolt', check: 'scoped check passed', tone: 'done' });
+    expect(rows.map((row) => row.notes)).toEqual([null, '2 notes queued', null, null, null]);
   });
 });

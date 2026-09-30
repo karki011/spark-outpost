@@ -33,6 +33,7 @@ import { reviewPermission, writeWithApproval, type DoWorkspace } from './do-hand
 import { projectPolicy, RootMissingError } from '../../projects/project-fs.ts';
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { newSessionRequest } from './session-request.ts';
+import { attachSteering } from './steering.ts';
 import {
   namedMcpServers,
   prepareRepoSession,
@@ -467,12 +468,14 @@ async function converse(
       const blocks = continued
         ? followUpBlocks(text, promptOptions)
         : conversationBlocks(history, text, promptOptions);
+      const detachSteering = attachSteering(ctx, init, session.sessionId, turn.steering);
       const prompt = session.prompt(blocks);
       const promptFailure = prompt.then(() => new Promise<never>(() => undefined));
       for (;;) {
         const message = await Promise.race([session.nextUpdate(), promptFailure]);
         if (message.kind === 'stop') {
           stopRequests?.();
+          detachSteering();
           push(promptTokens(message.response.usage));
           if (turn.session) await closeQuietly(ctx, init, session.sessionId);
           return message.stopReason;

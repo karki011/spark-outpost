@@ -2,7 +2,7 @@ import { Readable, Writable } from 'node:stream';
 import * as acp from '@agentclientprotocol/sdk';
 import { currentRequest, planReplies, planTurn } from './fake-acp-plans.ts';
 import { roleFor } from './fake-acp-roles.ts';
-import { coordinatorRoleFor } from './fake-acp-coordinator.ts';
+import { coordinatorRoleFor, steerParams, steerRequest } from './fake-acp-coordinator.ts';
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
@@ -408,8 +408,10 @@ acp
           ? { mcpCapabilities: JSON.parse(process.env.FAKE_ACP_MCP_CAPABILITIES) as object }
           : {}),
       },
+      ...(process.env.FAKE_ACP_STEERING ? { _meta: { steering: { supported: true } } } : {}),
     };
   })
+  .onRequest('_session/steering', steerParams, steerRequest)
   .onRequest(acp.methods.agent.session.new, (ctx) => {
     sessionRequest = { meta: ctx.params._meta ?? null, mcpServers: ctx.params.mcpServers };
     sessionCwd = ctx.params.cwd;
