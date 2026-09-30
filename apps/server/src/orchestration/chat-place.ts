@@ -265,12 +265,14 @@ export async function placeChat(
   return freshPlace(deps, plain, { conversationId, projectId, root });
 }
 
-export async function placeChatOrStop(
-  deps: { db: Queryable; branchPrefix?: string },
+type PlaceDeps = { db: Queryable; branchPrefix?: string };
+
+export async function placeChatOrFailure(
+  deps: PlaceDeps,
   input: RunInput,
   append: Append,
   create: boolean,
-): Promise<PlacedChat | null> {
+): Promise<PlacedChat | { failed: string }> {
   try {
     const placed = await placeChat(
       { db: deps.db, branchPrefix: deps.branchPrefix ?? DEFAULT_BRANCH_PREFIX },
@@ -281,10 +283,20 @@ export async function placeChatOrStop(
     return placed;
   } catch (error) {
     const reason = error instanceof Error ? error.message.split('\n')[0] : String(error);
-    const message = `${WORKTREE_FAILED} ${reason}`;
-    await append(runEvents.error(message, 'orchestration_failed'), {
-      transition: { status: 'failed', error: message },
-    });
-    return null;
+    return { failed: `${WORKTREE_FAILED} ${reason}` };
   }
+}
+
+export async function placeChatOrStop(
+  deps: PlaceDeps,
+  input: RunInput,
+  append: Append,
+  create: boolean,
+): Promise<PlacedChat | null> {
+  const placed = await placeChatOrFailure(deps, input, append, create);
+  if (!('failed' in placed)) return placed;
+  await append(runEvents.error(placed.failed, 'orchestration_failed'), {
+    transition: { status: 'failed', error: placed.failed },
+  });
+  return null;
 }

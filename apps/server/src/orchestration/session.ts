@@ -141,6 +141,7 @@ export interface Session {
   buildStyle: BuildStyle;
   assumption: string | null;
   needsCopy: boolean;
+  placeLater?: boolean;
   copyRunId: string | null;
   copyMerged?: string;
   snapshotTaken: boolean;

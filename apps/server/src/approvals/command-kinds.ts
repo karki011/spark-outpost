@@ -1,30 +1,15 @@
 import path from 'node:path';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
 import {
-  hasControlOperators,
   programTokens,
   resolveCommandPath,
   splitSimpleCommands,
+  type SimpleCommand,
 } from './commands.ts';
+import { readPipeline } from './read-pipeline.ts';
+import { LISTERS, readOperands } from './read-operands.ts';
 
 const GLOB = /[*?[{]/;
-const LISTERS = new Set(['ls', 'pwd', 'stat', 'tree', 'find', 'wc']);
-const CONTENT_READERS = new Set(['cat', 'head', 'tail', 'grep', 'sed', 'git']);
-const GIT_READS = new Set(['status', 'diff', 'log', 'show', 'branch']);
-const GIT_BRANCH_FLAGS = new Set(['-a', '-r', '-v', '-vv', '--all', '--list', '--show-current']);
-const RECURSIVE_GREP = new Set(['-r', '-R', '--recursive', '--dereference-recursive']);
-const FIND_ACTIONS = new Set([
-  '-exec',
-  '-execdir',
-  '-ok',
-  '-okdir',
-  '-delete',
-  '-fprint',
-  '-fprint0',
-  '-fprintf',
-  '-fls',
-]);
-const SED_PRINT = /^\d+(,\d+)?p$/;
 
 export interface CommandPlace {
   cwd: string;
@@ -34,66 +19,20 @@ export interface CommandPlace {
 
 const isFlag = (token: string) => token.startsWith('-');
 
-export function grepRecurses(args: readonly string[]): boolean {
-  return args.some((arg) => RECURSIVE_GREP.has(arg) || /^-[a-zA-Z]*[rR]/.test(arg));
-}
-
-function flagValue(token: string): string | null {
-  const equals = token.indexOf('=');
-  return token.startsWith('--') && equals > 0 ? token.slice(equals + 1) : null;
-}
-
-function argumentsAllowed(program: string, args: readonly string[]): boolean {
-  switch (program) {
-    case 'find':
-      return !args.some((arg) => FIND_ACTIONS.has(arg));
-    case 'tree':
-      return !args.some((arg) => arg === '-o' || arg.startsWith('-o'));
-    case 'grep':
-      return !grepRecurses(args);
-    case 'sed':
-      return (
-        args[0] === '-n' && SED_PRINT.test(args[1] ?? '') && args.slice(2).every((a) => !isFlag(a))
-      );
-    case 'git':
-      return gitArgumentsAllowed(args);
-    default:
-      return true;
-  }
-}
-
-function gitArgumentsAllowed(args: readonly string[]): boolean {
-  const [subcommand, ...rest] = args;
-  if (!subcommand || !GIT_READS.has(subcommand)) return false;
-  if (rest.some((arg) => arg === '--output' || arg.startsWith('--output=') || arg.includes(':'))) {
-    return false;
-  }
-  if (subcommand === 'branch') return rest.every((arg) => GIT_BRANCH_FLAGS.has(arg));
-  return true;
-}
-
-function pathWords(program: string, args: readonly string[]): string[] {
-  if (program === 'git') return args.slice(1).filter((arg) => !isFlag(arg) && arg !== '--');
-  if (program === 'sed') return args.slice(2);
-  const values = args.map(flagValue).filter((value): value is string => value !== null);
-  return [...args.filter((arg) => !isFlag(arg)), ...values];
-}
-
-export function isSafeRead(command: string, place: CommandPlace): boolean {
-  if (hasControlOperators(command)) return false;
-  const commands = splitSimpleCommands(command);
-  if (commands.length !== 1) return false;
-  const tokens = commands[0]!;
+function stageIsSafeRead({ tokens, stdin }: SimpleCommand, place: CommandPlace): boolean {
   if (programTokens(tokens).length !== tokens.length) return false;
   const [program, ...args] = tokens;
   if (!program || program.includes('/')) return false;
-  if (!LISTERS.has(program) && !CONTENT_READERS.has(program)) return false;
-  if (!argumentsAllowed(program, args)) return false;
-  if (CONTENT_READERS.has(program) && args.some((arg) => GLOB.test(arg))) return false;
+  const operands = readOperands(program, args, stdin === 'pipe');
+  if (!operands) return false;
+  if (!LISTERS.has(program) && operands.some((word) => GLOB.test(word))) return false;
+  return operands.every((word) => place.inside(resolveCommandPath(word, place.cwd, place.home)));
+}
+
+export function isSafeRead(command: string, place: CommandPlace): boolean {
   if (!place.inside(place.cwd)) return false;
-  return pathWords(program, args).every((word) =>
-    place.inside(resolveCommandPath(word, place.cwd, place.home)),
-  );
+  const stages = readPipeline(command);
+  return stages !== null && stages.every((stage) => stageIsSafeRead(stage, place));
 }
 
 const PACKAGE_MANAGERS = new Set(['npm', 'pnpm', 'yarn', 'bun']);

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ASK_AUTO_WHY,
+  ASK_TURN_ASKS,
   INSTALL_REASON,
   NO_RUN_RULES,
   PUSH_REASON,
@@ -48,12 +50,10 @@ describe('decide() in an Ask run', () => {
     expect(asking('git status')).toEqual({ verdict: 'allow', by: 'level', why: SAFE_READ_WHY });
   });
 
-  it('asks before any other command', () => {
-    expect(asking('curl -sI https://example.com | head -3')).toEqual({
-      verdict: 'ask',
-      reason: null,
-    });
-    expect(asking('pnpm test')).toEqual({ verdict: 'ask', reason: null });
+  it('asks before any other command and says why', () => {
+    const asked = { verdict: 'ask', reason: null, because: ASK_TURN_ASKS };
+    expect(asking('curl -sI https://example.com | head -3')).toEqual(asked);
+    expect(asking('pnpm test')).toEqual(asked);
   });
 
   it.each([
@@ -85,6 +85,65 @@ describe('decide() in an Ask run', () => {
 
   it('keeps the safety floor', () => {
     expect(asking('cat .env')).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+  });
+});
+
+const REPORTED_READS = [
+  'ls .claude/skills/ 2>/dev/null; ls libs/features/budgets libs/features/budgets/src',
+  "wc -l docs/project/ARCHITECTURE.md && grep -n '^#' docs/project/ARCHITECTURE.md",
+  'ls apps libs libs/* | head -80',
+];
+
+describe('decide() in an Ask run at Automatic and Full auto', () => {
+  const automatic = (command: string) =>
+    decide('read_only', run(command), NO_RUN_RULES, [], {
+      askRun: true,
+      askAutoWhy: ASK_AUTO_WHY,
+    });
+
+  it('runs other commands without asking', () => {
+    const allowed = { verdict: 'allow', by: 'level', why: ASK_AUTO_WHY };
+    expect(automatic('curl -sI https://example.com')).toEqual(allowed);
+    expect(automatic('pnpm test')).toEqual(allowed);
+  });
+
+  it('still refuses commands that change files', () => {
+    expect(automatic('rm x')).toEqual({ verdict: 'reject', reason: ASK_RUN_REASON });
+    expect(automatic('git push origin feature')).toEqual({
+      verdict: 'reject',
+      reason: ASK_RUN_REASON,
+    });
+  });
+
+  it('keeps the safety floor', () => {
+    expect(automatic('cat .env')).toEqual({ verdict: 'ask', reason: SECRET_REASON });
+  });
+
+  it('still runs read-only commands as safe reads', () => {
+    expect(automatic('git status')).toEqual({ verdict: 'allow', by: 'level', why: SAFE_READ_WHY });
+  });
+
+  it("names the agent's mode when that is what lets the command run", () => {
+    const options = { askRun: true, askAutoWhy: 'Auto mode' };
+    expect(decide('read_only', run('pnpm test'), NO_RUN_RULES, [], options)).toEqual({
+      verdict: 'allow',
+      by: 'level',
+      why: 'Auto mode',
+    });
+  });
+});
+
+describe('decide() in an Ask run at Review each step', () => {
+  it('asks before a command that is not a safe read', () => {
+    expect(asking('curl -sI https://example.com')).toEqual({
+      verdict: 'ask',
+      reason: null,
+      because: ASK_TURN_ASKS,
+    });
+  });
+
+  it.each(REPORTED_READS)('runs the read-only compound command %s', (command) => {
+    expect(asking(command)).toEqual({ verdict: 'allow', by: 'level', why: SAFE_READ_WHY });
   });
 });
 

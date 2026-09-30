@@ -10,7 +10,7 @@ export const CHAT_TOOLS_NOTE =
   "You are answering in a Spark Outpost chat that has no project folder. You cannot read or change files, run shell commands, or browse the web here. You may call the tools this session offers, such as Spark Outpost's own spark_* tools for questions about Spark; do not try any other tools. Reply in plain text and Markdown.";
 
 const ASK_COMMANDS =
-  'Spark Outpost runs read-only commands directly and asks the user before any other command, so a command may wait or be denied.';
+  'Spark Outpost runs read-only commands directly and may ask the user before other commands, so a command may wait or be denied.';
 const ASK_NO_CHANGES =
   'If the request needs file changes, say so and tell the user to press Make the change.';
 

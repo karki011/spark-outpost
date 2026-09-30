@@ -49,7 +49,7 @@ Spark uses Jev for a handful of concrete judgments per Do turn: whether a messag
     ],
     text: `A chat without a linked project answers from the conversation; it can't touch files or run commands, but agents can still use Spark's own spark_* tools. Link one or more project folders and a chat becomes Ask or Do, depending on the agent mode you pick.
 
-Ask: the agent reads inside the folders and runs read-only commands directly; any other command shows a "Run a command?" card, and anything that changes files, installs or pushes is refused — press Make the change to turn it into Do work. Do: the agent may also edit files and run commands.
+Ask: the agent reads the folders and runs read-only commands directly. Other commands run without asking at Automatic or in an Auto or Bypass mode, and show a "Run a command?" card otherwise. Changing files, installing or pushing is refused — press Make the change for Do work. Do: the agent may also edit files and run commands.
 
 Agent modes come from the provider, with its own names: Claude offers Manual (default), Accept edits, Plan, Auto and Bypass permissions; Codex offers Read-only, Ask every time, Approve for me and Full access. Read-only modes are Ask; the rest are Do. The harness autonomy level is a separate choice.`,
   },
@@ -70,7 +70,7 @@ Agent modes come from the provider, with its own names: Claude offers Manual (de
 
 Review each step: you decide whether to keep the changes, see the Critic's findings before any fix, and get a card before risky work starts.
 
-Automatic (default): runs commands in this chat's worktree without asking; still asks for risky ones and for pushes. Changes are kept when the checks pass, the Critic's findings are fixed in a loop, and risky work runs in a worktree copy. Revert is always there.
+Automatic (default): runs commands without asking in this chat's worktree and in Ask turns (which never change files); still asks for risky ones and for pushes. Changes are kept when the checks pass, the Critic's findings are fixed in a loop, and risky work runs in a worktree copy. Revert is always there.
 
 Full auto → PR: Automatic, in a worktree copy, then Ship commits, pushes the task branch and opens a draft PR. Nothing ever merges. Settings → Spark → When checks still fail in Full auto picks Open a draft PR (marked "Checks failing") or Stop and ask.
 

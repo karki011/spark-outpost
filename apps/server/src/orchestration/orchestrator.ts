@@ -12,7 +12,7 @@ import { closeMessage, finishRun } from '../workflow/execute-run.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { noteProjectMove } from '../workflow/project-move.ts';
 import { loadRunInput } from '../workflow/run-input.ts';
-import { placeChatOrStop } from './chat-place.ts';
+import { placeChatOrFailure, placeChatOrStop } from './chat-place.ts';
 import { linkTicketForBuild } from '../tickets/chat-link.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
@@ -137,6 +137,15 @@ function isGreen(s: Session, files: readonly unknown[]): boolean {
   return files.length > 0 && s.checkBodies.at(-1)?.status !== 'failed';
 }
 
+async function placeBeforeBuilding(s: Session): Promise<string | null> {
+  s.placeLater = false;
+  const placed = await placeChatOrFailure(s.deps, s.input, s.append, true);
+  if ('failed' in placed) return placed.failed;
+  s.input = placed.input;
+  if (placed.input.chatWorktree) s.needsCopy = false;
+  return null;
+}
+
 async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null> {
   switch (action.type) {
     case 'ask':
@@ -144,6 +153,13 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
     case 'spawn': {
       const hit = await checkBudgetBeforeCall(s, action.role);
       if (hit) return { type: 'budget_exceeded', limit: hit, unstarted: true, ...cutFacts(s) };
+      if (s.placeLater && action.role !== 'scout' && action.role !== 'critic') {
+        const failed = await placeBeforeBuilding(s);
+        if (failed) {
+          await finish(s, 'failed', failed);
+          return null;
+        }
+      }
       if (startsFixRound(s, action)) {
         const short = action.auto && !checksFailing(s) ? await fixRoundShort(s) : null;
         if (short) {
@@ -313,6 +329,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       (error: unknown) => console.error('Could not observe a plan agreement', error),
     );
     const answers = decisions.start === 'answer';
+    const placeLater = decisions.start === 'ask_agent';
     if (doing && !readOnlyStart(decisions.start)) {
       await linkTicketForBuild(deps.db, {
         workspaceId: input.workspaceId,
@@ -322,6 +339,8 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       }).catch((error: unknown) =>
         console.error('Could not link the ticket for this build', error),
       );
+    }
+    if (doing && !readOnlyStart(decisions.start) && !placeLater) {
       const created = await placeChatOrStop(deps, input, append, true);
       if (!created) return;
       input = created.input;
@@ -400,6 +419,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
           busy,
         }),
       copyRunId: null,
+      ...(doing && placeLater ? { placeLater } : {}),
       snapshotTaken: false,
       closeReason: null,
       observations: [],

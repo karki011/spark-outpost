@@ -308,7 +308,7 @@ export async function sendUserMessage(
         task?.planVersion ?? null,
         mode,
         mode === 'do' ? (target.level ?? null) : null,
-        mode === 'do' ? (target.agentMode ?? null) : null,
+        target.agentMode ?? null,
         JSON.stringify(target.options ?? {}),
         mode === 'do' ? (request.startAs ?? null) : null,
         request.source ?? null,

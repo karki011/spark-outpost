@@ -69,6 +69,7 @@ export interface GateDeps {
   posture?: ModePosture;
   builder?: boolean;
   askRun?: boolean;
+  askAuto?: () => Promise<string | null>;
   worktreeAuto?: boolean;
   extraAllowlist?: () => readonly string[];
   append: Append;
@@ -117,7 +118,9 @@ export function subject(request: ApprovalRequest): string {
   return request.title.trim() || 'an action';
 }
 
-function approvalPayload(request: ApprovalRequest, rewrites: string[] | null): ApprovalPayload {
+type Asking = Pick<Extract<Decision, { verdict: 'ask' }>, 'forcePush' | 'because'>;
+
+function approvalPayload(request: ApprovalRequest, asking: Asking): ApprovalPayload {
   let budget = DIFF_BUDGET;
   let truncated = false;
   const cut = (text: string) => {
@@ -143,7 +146,8 @@ function approvalPayload(request: ApprovalRequest, rewrites: string[] | null): A
     diffs,
     truncated,
     ...(request.plan ? { plan: request.plan } : {}),
-    ...(rewrites ? { forcePush: rewrites } : {}),
+    ...(asking.forcePush ? { forcePush: asking.forcePush } : {}),
+    ...(asking.because ? { asksBecause: asking.because } : {}),
   };
 }
 
@@ -191,15 +195,15 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
   const newApproval = (
     request: ApprovalRequest,
     reason: string | null,
-    rewrites: string[] | null = null,
+    asking: Asking = {},
   ): NewApproval => ({
     runId: deps.runId,
     toolCallId: request.toolCallId,
     rpcId: request.rpcId,
     kind: request.kind,
     title: displayTitle(request, deps.copyOf ?? null),
-    payload: approvalPayload(request, rewrites),
-    options: rewrites
+    payload: approvalPayload(request, asking),
+    options: asking.forcePush
       ? request.options.filter((option) => option.kind !== 'allow_always')
       : request.options,
     reason,
@@ -356,9 +360,9 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     request: ApprovalRequest,
     reason: string | null,
     signal: AbortSignal,
-    rewrites: string[] | null,
+    asking: Asking,
   ): Promise<GateAnswer> => {
-    const pending = await insertApproval(deps.db, newApproval(request, reason, rewrites));
+    const pending = await insertApproval(deps.db, newApproval(request, reason, asking));
     observe(request, { verdict: 'ask', by: null, approvalId: pending.id });
     waiting += 1;
     let result: WaitResult;
@@ -399,12 +403,13 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     const decision = decide(postureOf(request), request, runRules, allowlist, {
       builder: deps.builder === true,
       askRun: deps.askRun === true,
+      askAutoWhy: request.kind === 'execute' && deps.askAuto ? await deps.askAuto() : null,
       worktreeAuto: deps.worktreeAuto === true,
       defaultBranch: await forcePushDefault(request),
       ...(deps.piece ? { piece: deps.piece } : {}),
     });
     if (decision.verdict === 'ask') {
-      return ask(request, decision.reason, signal, decision.forcePush ?? null);
+      return ask(request, decision.reason, signal, decision);
     }
     if (decision.verdict === 'reject') {
       const denied = await insertApproval(deps.db, newApproval(request, decision.reason), {

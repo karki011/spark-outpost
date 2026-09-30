@@ -5,7 +5,11 @@ import { join } from 'node:path';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
-import { getConversationDetail } from '../src/persistence/conversations.ts';
+import { randomUUID } from 'node:crypto';
+import { modeForLegacy, type InvolvementLevel } from '@spark-outpost/contracts';
+import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
+import { ASK_TURN_ASKS } from '../src/approvals/decide.ts';
+import { updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { claimNextJob } from '../src/persistence/jobs.ts';
 import { getRun, requestCancel } from '../src/persistence/runs.ts';
 import { getApproval } from '../src/persistence/approvals.ts';
@@ -15,8 +19,8 @@ import { APPROVAL_TIMEOUT_MESSAGE } from '../src/workflow/approval-gate.ts';
 import { WAITING_OUTCOME_MESSAGE, recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
 import { createTestApp, ORIGIN, LOCAL_HEADERS } from './app-support.ts';
-import { doRun, insertCommandApproval } from './approval-support.ts';
-import { createTestDb, eventually, type TestDb } from './support.ts';
+import { doRun, insertCommandApproval, linkedConversation } from './approval-support.ts';
+import { connectCliProvider, createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
 let root: string;
@@ -163,6 +167,51 @@ describe('Do runs with approvals', () => {
       status: 'expired',
       decidedBy: 'recovery',
     });
+  });
+});
+
+async function askRun(level: InvolvementLevel) {
+  const linked = await linkedConversation(t, root);
+  await connectCliProvider(t, 'claude');
+  await updateChatSettings(t.db, linked.conversationId, { level });
+  const sent = await sendUserMessage(
+    t.db,
+    linked.conversationId,
+    { id: randomUUID(), content: 'Check the site #curl' },
+    {
+      provider: 'fake',
+      permission: 'ask',
+      agentMode: modeForLegacy('claude', 'ask', level),
+      level,
+    },
+  );
+  return { conversationId: linked.conversationId, runId: sent.run.id };
+}
+
+describe('Ask runs with commands', () => {
+  it('runs a command without asking at Automatic', async () => {
+    start();
+    const { conversationId, runId } = await askRun('hands-off');
+    expect((await settled(runId)).status).toBe('succeeded');
+    const detail = await getConversationDetail(t.db, conversationId);
+    expect(detail?.approvals.filter((approval) => approval.decidedBy !== 'level')).toEqual([]);
+    expect(detail?.activity[runId]?.map((step) => step.name)).toContain(
+      'Allowed `curl -sI https://example.com` (Automatic in an Ask turn)',
+    );
+    expect(await readFile(join(root, FAKE_EDIT_FILE), 'utf8')).toBe('original\n');
+  });
+
+  it('asks before the same command at Review each step', async () => {
+    start();
+    const { conversationId, runId } = await askRun('balanced');
+    const approval = await waitingApproval(conversationId);
+    expect(approval).toMatchObject({
+      kind: 'execute',
+      reason: null,
+      payload: { command: 'curl -sI https://example.com', asksBecause: ASK_TURN_ASKS },
+    });
+    await post(`/api/approvals/${approval.id}/decision`, { optionId: 'reject' }).expect(200);
+    expect((await settled(runId)).status).toBe('succeeded');
   });
 });
 

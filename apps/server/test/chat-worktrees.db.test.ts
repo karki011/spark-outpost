@@ -22,6 +22,7 @@ import {
   startScenario,
   withTag,
   type Harness,
+  type Scenario,
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
@@ -57,6 +58,15 @@ async function doTurn(text: string, conversationId?: string) {
     : await startScenario(t, root, scenario, 'hands-off');
   await driveToEnd(t, started.conversationId, started.runId);
   return started;
+}
+
+async function startVague(scenario: Scenario) {
+  await harness?.stop();
+  harness = startOrchestrator(t, jevFetch({ calls: [], scenario }));
+  const asked = await startScenario(t, root, scenario, 'hands-off');
+  const done = await driveToEnd(t, asked.conversationId, asked.runId);
+  expect(done.asked.map((approval) => approval.kind)).toContain('clarify');
+  return { ...asked, ...done };
 }
 
 async function continueChat(conversationId: string, text: string) {
@@ -122,6 +132,38 @@ describe('a chat worktree per Do chat', { timeout: WORKTREE_TEST_MS }, () => {
     const copy = await chatCopy(asked.conversationId);
     expect(copy.branch).toMatch(/^spark\//);
     expect(await notes(copy.path)).toContain('step 1');
+  });
+
+  it('answers a vague question after clarifying without making a worktree', async () => {
+    const vague = {
+      ...TRIVIAL,
+      text: 'Tell me more about this repo #questions',
+      question: 0.97,
+      vague: 0.95,
+    };
+    const asked = await startVague(vague);
+    expect(asked.orchestration.status).toBe('succeeded');
+    expect(asked.orchestration.crew.map((member) => member.role)).not.toContain('builder');
+    const { rows } = await t.db.query('SELECT id FROM chat_worktrees WHERE conversation_id = $1', [
+      asked.conversationId,
+    ]);
+    expect(rows).toEqual([]);
+    expect(git(root, 'branch', '--list', 'spark/*')).toBe('');
+  });
+
+  it('makes the worktree only when a clarified request starts building', async () => {
+    const vague = { ...TRIVIAL, text: 'Make the reports better #build #questions', vague: 0.95 };
+    const asked = await startVague(vague);
+    const clarify = asked.asked.find((approval) => approval.kind === 'clarify')!;
+    const copy = await chatCopy(asked.conversationId);
+    expect(await notes(copy.path)).toContain('step 1');
+    expect(await notes(root)).toBe('start\n');
+    const { rows } = await t.db.query<{ created_at: Date; decided_at: Date }>(
+      `SELECT w.created_at, a.decided_at FROM chat_worktrees w, approvals a
+       WHERE w.id = $1 AND a.id = $2`,
+      [copy.id, clarify.id],
+    );
+    expect(rows[0]!.created_at.getTime()).toBeGreaterThanOrEqual(rows[0]!.decided_at.getTime());
   });
 
   it("runs commands without asking on Automatic in the chat's worktree", async () => {

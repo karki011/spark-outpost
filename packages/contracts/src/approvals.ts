@@ -36,7 +36,7 @@ export const AUTONOMY_LEVELS: readonly InvolvementLevelInfo[] = [
   {
     id: 'hands-off',
     label: 'Automatic',
-    hint: "Runs commands in this chat's worktree without asking; still asks for risky ones. Changes are kept when the checks pass, the Critic's findings are fixed in a loop, and risky work runs in a worktree copy. Revert is always there.",
+    hint: "Runs commands without asking in this chat's worktree and in Ask turns; still asks for risky ones. Changes are kept when the checks pass, the Critic's findings are fixed in a loop, and risky work runs in a worktree copy. Revert is always there.",
   },
   {
     id: 'full-auto',
@@ -125,6 +125,7 @@ export const approvalPayloadSchema = z.object({
   checkpoint: checkpointPayloadSchema.optional(),
   plan: z.string().optional(),
   forcePush: z.array(z.string()).optional(),
+  asksBecause: z.string().optional(),
   sparkAction: sparkActionSchema.optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;

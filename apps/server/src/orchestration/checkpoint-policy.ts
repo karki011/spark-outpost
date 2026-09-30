@@ -32,6 +32,10 @@ export function autoInWorktree(level: InvolvementLevel, inChatWorktree: boolean)
   return inChatWorktree && level !== 'balanced';
 }
 
+export function autoInAsk(level: InvolvementLevel): boolean {
+  return level !== 'balanced';
+}
+
 export function copiesRiskyWork(level: InvolvementLevel): boolean {
   return level !== 'balanced';
 }

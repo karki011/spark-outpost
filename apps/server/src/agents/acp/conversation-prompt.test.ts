@@ -60,7 +60,7 @@ describe('conversation prompt', () => {
   it('tells an Ask turn with an approval gate that it may run commands, but never change files', () => {
     const note = projectNote(['/work/app'], true);
     expect(note).toContain('run shell commands');
-    expect(note).toContain('asks the user before any other command');
+    expect(note).toContain('may ask the user before other commands');
     expect(note).toContain('including through commands');
     expect(note).toContain('press Make the change');
     expect(projectNote(['/work/app'])).not.toContain('shell commands');

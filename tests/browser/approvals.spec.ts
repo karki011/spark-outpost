@@ -341,7 +341,7 @@ test('asks to hold before a force push and never offers Always allow', async ({ 
   });
 });
 
-test('asks before a command in an Ask chat', async ({ page }) => {
+async function askChat(page: Page, autonomy: string) {
   const response = await page.request.post('/api/projects', { data: { rootPath: appRoot } });
   expect(response.ok()).toBe(true);
   await openChats(page);
@@ -351,6 +351,15 @@ test('asks before a command in an Ask chat', async ({ page }) => {
   await menu.getByRole('button', { name: /^app/ }).click();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: /^Model and effort/ })).toContainText('Plan');
+  await page.getByRole('button', { name: /^Model and effort/ }).click();
+  const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
+  await panel.getByRole('tab', { name: /Permissions/ }).click();
+  await pickAutonomy(page, autonomy);
+  await page.keyboard.press('Escape');
+}
+
+test('asks before a command in an Ask chat at Review each step', async ({ page }) => {
+  await askChat(page, 'Review each step');
   await send(page, 'Check the site #curl');
   const approval = card(page, /Run a command\?/);
   await expect(approval).toBeVisible({ timeout: 15_000 });
@@ -359,5 +368,15 @@ test('asks before a command in an Ask chat', async ({ page }) => {
   await expect(page.locator('.md', { hasText: 'Done. fake-curl=allowed' })).toBeVisible({
     timeout: 15_000,
   });
+  expect(readFileSync(notes(), 'utf8')).toBe('Remember the milk\n');
+});
+
+test('runs a command in an Ask chat at Automatic without asking', async ({ page }) => {
+  await askChat(page, 'Automatic');
+  await send(page, 'Check the site #curl');
+  await expect(page.locator('.md', { hasText: 'Done. fake-curl=allowed' })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(card(page, /Run a command\?/)).toHaveCount(0);
   expect(readFileSync(notes(), 'utf8')).toBe('Remember the milk\n');
 });
