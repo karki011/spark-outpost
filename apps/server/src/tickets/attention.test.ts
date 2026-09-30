@@ -53,6 +53,7 @@ const pull = (state: PullRequestStatus['state']): PullRequestStatus => ({
   state,
   openedAt: daysAgo(4),
   mergedAt: state === 'merged' ? daysAgo(0) : null,
+  checks: null,
 });
 
 const work = [{ taskId: TASK, conversationId: CHAT, startedAt: daysAgo(2), pullRequests: [] }];

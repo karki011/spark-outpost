@@ -30,6 +30,7 @@ export interface TicketRowProps {
   action: RowButton | null;
   pinned?: ReactNode;
   below?: ReactNode;
+  links?: ReactNode;
 }
 
 const TONE_CLASS: Record<RowTone, string> = {
@@ -40,10 +41,11 @@ const TONE_CLASS: Record<RowTone, string> = {
 };
 
 export function TicketRow(props: TicketRowProps) {
-  const { action, pinned, below } = props;
+  const { action, pinned, below, links } = props;
   const classes = [
     'irow',
     action ? 'acts' : '',
+    links ? 'with-links' : '',
     props.selected ? 'sel' : '',
     pinned ? 'pinned' : '',
   ]
@@ -90,6 +92,7 @@ export function TicketRow(props: TicketRowProps) {
           {props.age?.text}
         </span>
       </button>
+      {links}
       {(action || pinned) && (
         <div className={pinned ? 'ir-acts pin' : 'ir-acts'}>
           {pinned ??

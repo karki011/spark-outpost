@@ -18,6 +18,7 @@ export interface FakePull {
   merged?: boolean;
   created_at?: string;
   reviews?: { user: { login: string }; state: string }[];
+  checkRuns?: { status: string; conclusion: string | null }[];
   html_url: string;
   openedBy: string;
   via: 'gh_cli' | 'token';
@@ -58,6 +59,7 @@ async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> 
   }
 }
 
+const CHECK_RUNS = /^\/repos\/([^/]+)\/([^/]+)\/commits\/sha-(\d+)\/check-runs$/;
 const REPO = /^\/repos\/([^/]+)\/([^/]+)(\/pulls(?:\/(\d+))?)?(\/reviews)?$/;
 
 export function fakeGitHub(): FakeGitHub {
@@ -95,6 +97,7 @@ export function fakeGitHub(): FakeGitHub {
       if (reviews) return send(res, 200, pull.reviews ?? []);
       return send(res, 200, {
         ...pull,
+        head: { ref: pull.head, sha: `sha-${pull.number}` },
         merged: pull.merged ?? false,
         merged_at: pull.merged ? '2026-09-28T09:00:00Z' : null,
         created_at: pull.created_at ?? '2026-09-25T09:00:00Z',
@@ -157,6 +160,18 @@ export function fakeGitHub(): FakeGitHub {
             ...(who.scopes ? { 'x-oauth-scopes': who.scopes } : {}),
           },
         );
+      }
+      const checks = CHECK_RUNS.exec(url.pathname);
+      if (checks) {
+        const pull = pulls.find(
+          (entry) =>
+            entry.owner === checks[1] &&
+            entry.repo === checks[2] &&
+            entry.number === Number(checks[3]),
+        );
+        if (!pull) return send(res, 404, { message: 'Not Found' });
+        const runs = pull.checkRuns ?? [];
+        return send(res, 200, { total_count: runs.length, check_runs: runs });
       }
       const match = REPO.exec(url.pathname);
       if (!match) return send(res, 404, { message: 'Not Found' });

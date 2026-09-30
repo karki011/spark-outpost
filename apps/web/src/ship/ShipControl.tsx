@@ -13,6 +13,7 @@ import {
 import { queryKeys } from '../api/client.ts';
 import { LinkChip } from '../tasks/LinksPane.tsx';
 import { taskKeys } from '../tasks/task-api.ts';
+import { ticketKeys } from '../tickets/tickets-api.ts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { BranchIcon } from '../ui/icons.tsx';
 import { shipApi, shipKeys } from './ship-api.ts';
@@ -195,6 +196,7 @@ export function ShipControl({
         queryClient.invalidateQueries({ queryKey: shipKeys.preview(taskId) }),
         queryClient.invalidateQueries({ queryKey: taskKeys.task(taskId) }),
         queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) }),
+        queryClient.invalidateQueries({ queryKey: ticketKeys.all }),
       ]);
     },
   });

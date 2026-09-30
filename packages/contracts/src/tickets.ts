@@ -81,7 +81,7 @@ export const ticketDetailSchema = ticketSummarySchema.extend({
 export type TicketDetail = z.infer<typeof ticketDetailSchema>;
 
 export const ticketWorkSchema = z.object({
-  taskId: z.uuid(),
+  taskId: z.uuid().nullable(),
   conversationId: z.uuid(),
   startedAt: z.string(),
   pullRequests: z.array(ticketRefSchema),

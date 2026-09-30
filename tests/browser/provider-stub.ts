@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { fakeGitHub } from '../../apps/server/test/fake-github.ts';
+import { fakeGitHub, type FakePull } from '../../apps/server/test/fake-github.ts';
 import { jevAnswers, type StubRequest } from './jev-stub.ts';
 import { REJECTED_KEY_MARKER, STUB_PORT } from './stub-config.ts';
 import { ticketFakes } from './ticket-stub.ts';
@@ -41,12 +41,23 @@ function credential(req: IncomingMessage): string {
 }
 
 let github = fakeGitHub();
+
+async function updatePull(req: IncomingMessage, res: ServerResponse, number: number) {
+  let text = '';
+  for await (const chunk of req) text += String(chunk);
+  const pull = github.pulls.find((entry) => entry.number === number);
+  if (!pull) return send(res, 404, { error: 'no such pull request' });
+  Object.assign(pull, JSON.parse(text || '{}') as Partial<FakePull>);
+  send(res, 200, pull);
+}
 const tickets = ticketFakes();
 
 const server = createServer((req, res) => {
   const path = (req.url ?? '').split('?')[0];
   if (path === '/health') return send(res, 200, { ok: true });
   if (path === '/github-test/pulls') return send(res, 200, github.pulls);
+  const pullNumber = /^\/github-test\/pulls\/(\d+)$/.exec(path ?? '')?.[1];
+  if (pullNumber && req.method === 'POST') return void updatePull(req, res, Number(pullNumber));
   if (path === '/github-test/reset') {
     github = fakeGitHub();
     return send(res, 200, { ok: true });

@@ -5,6 +5,7 @@ import type { AppEventFeed } from './app-events.ts';
 import { approvalRoutes } from './approval-routes.ts';
 import { attachmentRoutes } from './attachment-routes.ts';
 import { auditRoutes } from './audit-routes.ts';
+import { chatTicketRoutes, ticketMentionWarmer } from './chat-ticket-routes.ts';
 import { chatSettingsRoutes, type ChatSettingsDeps } from './chat-settings-routes.ts';
 import { chatWorkspaceRoutes, type ChatWorkspaceDeps } from './chat-workspace-routes.ts';
 import { conversationActionRoutes } from './conversation-action-routes.ts';
@@ -52,7 +53,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', attachmentRoutes(options));
   app.use(express.json({ limit: '256kb' }));
   app.get('/api/events', (req, res) => options.appEvents.subscribe(req, res));
-  app.use('/api', apiRoutes(options));
+  app.use('/api', apiRoutes({ ...options, warmTicketMentions: ticketMentionWarmer(options) }));
   app.use('/api', setupRoutes(options));
   app.use('/api', chatSettingsRoutes(options));
   app.use('/api', chatWorkspaceRoutes(options));
@@ -65,6 +66,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', taskRoutes(options));
   app.use('/api', shipRoutes(options));
   app.use('/api', ticketRoutes(options));
+  app.use('/api', chatTicketRoutes(options));
   app.use('/api', planRoutes(options));
   app.use('/api', approvalRoutes(options));
   app.use('/api', modelCardRoutes(options));

@@ -13,6 +13,7 @@ import { runEvents } from '../workflow/run-events.ts';
 import { noteProjectMove } from '../workflow/project-move.ts';
 import { loadRunInput } from '../workflow/run-input.ts';
 import { placeChatOrStop } from './chat-place.ts';
+import { linkTicketForBuild } from '../tickets/chat-link.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
 import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
@@ -313,6 +314,14 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     );
     const answers = decisions.start === 'answer';
     if (doing && !readOnlyStart(decisions.start)) {
+      await linkTicketForBuild(deps.db, {
+        workspaceId: input.workspaceId,
+        conversationId: input.identity.threadId,
+        request: input.userRequest,
+        builds: decisions.start === 'build' || decisions.start === 'plan_first',
+      }).catch((error: unknown) =>
+        console.error('Could not link the ticket for this build', error),
+      );
       const created = await placeChatOrStop(deps, input, append, true);
       if (!created) return;
       input = created.input;

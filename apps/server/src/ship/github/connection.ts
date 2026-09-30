@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { GitHubMethod } from '@spark-outpost/contracts';
+import type { GitHubMethod, PullRequestChecks } from '@spark-outpost/contracts';
 
 export interface RepoRef {
   owner: string;
@@ -18,6 +18,7 @@ export interface PullRequestDetail extends PullRequest {
   createdAt: string;
   mergedAt: string | null;
   reviews: { user: string; state: string }[];
+  checks: PullRequestChecks | null;
 }
 
 export interface NewPullRequest {
@@ -73,10 +74,27 @@ const pullDetailSchema = pullSchema.extend({
   merged: z.boolean().optional(),
   merged_at: z.string().nullable().optional(),
   created_at: z.string(),
+  head: z
+    .object({ sha: z.string().min(1) })
+    .optional()
+    .catch(undefined),
 });
 const reviewsSchema = z.array(
   z.object({ user: z.object({ login: z.string() }).nullable(), state: z.string() }),
 );
+
+const checkRunsSchema = z.object({
+  check_runs: z.array(z.object({ status: z.string(), conclusion: z.string().nullable() })),
+});
+
+const FAILED_CONCLUSIONS = new Set(['failure', 'timed_out', 'cancelled', 'action_required']);
+
+function checksOf(runs: z.infer<typeof checkRunsSchema>['check_runs']) {
+  if (runs.length === 0) return null;
+  if (runs.some((run) => FAILED_CONCLUSIONS.has(run.conclusion ?? ''))) return 'failing';
+  if (runs.some((run) => run.status !== 'completed')) return 'pending';
+  return 'passing';
+}
 
 const segment = (value: string) => encodeURIComponent(value);
 export const repoPath = (repo: RepoRef) => `/repos/${segment(repo.owner)}/${segment(repo.name)}`;
@@ -113,6 +131,16 @@ export function restConnection(
   host: string,
   request: GitHubRequest,
 ): GitHubConnection {
+  async function readChecks(repo: RepoRef, sha: string | undefined) {
+    if (!sha) return null;
+    const answer = await request(
+      'GET',
+      `${repoPath(repo)}/commits/${segment(sha)}/check-runs?per_page=100`,
+    ).catch(() => null);
+    const parsed = answer && answer.status === 200 ? checkRunsSchema.safeParse(answer.data) : null;
+    return parsed?.success ? checksOf(parsed.data.check_runs) : null;
+  }
+
   return {
     method,
     host,
@@ -148,6 +176,7 @@ export function restConnection(
           user: review.user?.login ?? '',
           state: review.state,
         })),
+        checks: await readChecks(repo, pull.head?.sha),
       };
     },
     async createPullRequest(repo, pull) {

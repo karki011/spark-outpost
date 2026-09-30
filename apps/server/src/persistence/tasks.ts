@@ -6,6 +6,7 @@ import {
   type TaskLinkSource,
 } from '@spark-outpost/contracts';
 import { chooseTask, type TaskRef } from '../tasks/rules.ts';
+import { linkTaskToChatTickets } from './chat-tickets.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { newId } from './ids.ts';
 
@@ -95,6 +96,7 @@ async function insertTask(
     conversationId,
     taskTitle(request),
   ]);
+  await linkTaskToChatTickets(db, taskId, conversationId);
 }
 
 export async function taskForWorkingRun(

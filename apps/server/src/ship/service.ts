@@ -30,6 +30,7 @@ import {
   planShip,
   previewOf,
   ShipBlockedError,
+  shipTitle,
   type ShipDeps,
   type ShipOptions,
   type ShipPlan,
@@ -82,6 +83,7 @@ async function summaryFor(
     costEstimated: plan.task.costSource === 'estimated' || plan.task.costSource === 'mixed',
     plan: await latestApprovedPlan(deps.db, plan.task.conversationId),
     coreImpact: await pullRequestImpact(deps, plan, files),
+    tickets: plan.tickets,
   };
   return summary;
 }
@@ -238,7 +240,7 @@ async function runShip(
   if (!plan.modes.includes(request.mode)) {
     throw new ShipBlockedError(plan.notes[0] ?? 'That kind of ship isn’t available for this task.');
   }
-  const title = request.title ?? plan.task.title;
+  const title = shipTitle(plan, request.title);
   const progress: Progress = {
     ship: plan.shipped ?? {
       rootPath: plan.root!,
