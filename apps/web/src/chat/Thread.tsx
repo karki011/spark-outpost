@@ -2,6 +2,8 @@ import './thread.css';
 import { useEffect } from 'react';
 import { PERMISSION_DO, type ConversationDetail, type Project } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
+import { useVoice } from '../spark/use-voice.ts';
+import { greeting } from '../spark/voice.ts';
 import { ArrowDownIcon } from '../ui/icons.tsx';
 import { MessageAttachments } from './attachments/MessageAttachments.tsx';
 import type { OutgoingMessage } from './ChatView.tsx';
@@ -10,6 +12,7 @@ import { repoSummary } from './project/repo-list.ts';
 import { RepoKit } from './project/RepoKit.tsx';
 import { buildTurns } from './turns.ts';
 import { SoloTurn } from './SoloTurn.tsx';
+import { TodaySoFar } from './today/TodaySoFar.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
 import { TaskCard } from '../tasks/TaskCard.tsx';
 import { CrewTurn } from './crew/CrewTurn.tsx';
@@ -27,6 +30,7 @@ interface ThreadProps {
   pendingMessage: OutgoingMessage | null;
   panelOpen?: boolean;
   onOpenTask?: (taskId: string) => void;
+  onOpenChat: (conversationId: string) => void;
   quotes: QuotesState;
 }
 
@@ -36,8 +40,10 @@ export function Thread({
   pendingMessage,
   panelOpen = false,
   onOpenTask,
+  onOpenChat,
   quotes,
 }: ThreadProps) {
+  const voice = useVoice();
   const { scrollerRef, scroller, away, follow, jumpToLatest } = useStickToBottom();
   const turns = buildTurns(detail);
   const parentOf = new Map(detail.runs.map((run) => [run.id, run.parentRunId ?? run.id]));
@@ -73,28 +79,32 @@ export function Thread({
   if (turns.length === 0 && !pendingMessage) {
     return (
       <div className="thread-wrap">
-        <div className="empty">
-          <BlobScout size={64} />
-          <h2>What should we work on?</h2>
-          {repos.length > 0 ? (
-            <p>
-              New chat in <b>{repoSummary(repos.map((repo) => repo.name))}</b>.{' '}
-              {detail.settings.permission === PERMISSION_DO ? (
-                <>Your AI can change files here, and asks first as your permissions say.</>
-              ) : (
-                <>
-                  Your AI can read {repos.length === 1 ? "this folder's" : "these folders'"} files
-                  but won't change them.
-                </>
-              )}
-            </p>
-          ) : (
-            <p>
-              Chats here have no project folder yet, so your AI can answer and explain but can't
-              read or change files.
-            </p>
-          )}
-          {repos[0] && <RepoKit project={repos[0]} />}
+        <div className="thread">
+          <div className="empty">
+            <BlobScout size={64} />
+            <h2>{greeting(voice, new Date().getHours())}</h2>
+            <p className="empty-ask">What should we work on?</p>
+            {repos.length > 0 ? (
+              <p>
+                New chat in <b>{repoSummary(repos.map((repo) => repo.name))}</b>.{' '}
+                {detail.settings.permission === PERMISSION_DO ? (
+                  <>Your AI can change files here, and asks first as your permissions say.</>
+                ) : (
+                  <>
+                    Your AI can read {repos.length === 1 ? "this folder's" : "these folders'"} files
+                    but won't change them.
+                  </>
+                )}
+              </p>
+            ) : (
+              <p>
+                Chats here have no project folder yet, so your AI can answer and explain but can't
+                read or change files.
+              </p>
+            )}
+            <TodaySoFar voice={voice} onOpenChat={onOpenChat} />
+            {repos[0] && <RepoKit project={repos[0]} />}
+          </div>
         </div>
       </div>
     );

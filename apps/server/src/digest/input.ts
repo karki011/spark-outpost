@@ -1,3 +1,4 @@
+import type { TodayChatState } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
 import type { FlaggedItem } from '../persistence/attention-settings.ts';
 import { ellipsize, oneLine } from './text.ts';
@@ -10,7 +11,7 @@ const ERROR_CHARS = 200;
 const STEP_CHARS = 100;
 const OPEN_STEPS = 3;
 
-export type ChatState = 'waiting' | 'running' | 'failed' | 'stalled' | 'finished' | 'idle';
+export type ChatState = TodayChatState;
 
 export interface ActivityChat {
   id: string;

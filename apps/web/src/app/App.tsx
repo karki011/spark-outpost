@@ -134,7 +134,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           />
           <div className="scrim" aria-hidden="true" onClick={layout.closeDrawer} />
           {activeId ? (
-            <ChatView key={activeId} conversationId={activeId} />
+            <ChatView key={activeId} conversationId={activeId} onOpenChat={openChat} />
           ) : (
             <main className="main" aria-busy="true" />
           )}

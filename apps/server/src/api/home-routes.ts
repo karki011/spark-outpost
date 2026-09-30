@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { digestTriggerSchema, spendRangeSchema } from '@spark-outpost/contracts';
 import { digestState, requestDigest } from '../digest/service.ts';
+import { todaySummary } from '../digest/today.ts';
 import type { Db } from '../persistence/db.ts';
 import { providerIssues } from '../persistence/provider-health.ts';
 import { spendSummary } from '../persistence/spend.ts';
@@ -27,6 +28,10 @@ export function homeRoutes({ db, workspaceId }: HomeRouteDeps): Router {
 
   router.get('/home/digest', async (_req, res) => {
     res.json(await digestState(db, workspaceId));
+  });
+
+  router.get('/home/today', async (req, res) => {
+    res.json(await todaySummary(db, workspaceId, timeZoneParam(req.query.tz)));
   });
 
   router.post('/home/digest', async (req, res) => {

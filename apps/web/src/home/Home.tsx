@@ -3,11 +3,11 @@ import './home-panels.css';
 import './home-needs.css';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { firstName, ticketItemId, type ConversationSummary } from '@spark-outpost/contracts';
-import { setupApi, setupKey } from '../api/setup.ts';
+import { ticketItemId, type ConversationSummary } from '@spark-outpost/contracts';
 import { BlobScout, type ScoutMood } from '../brand/BlobScout.tsx';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import { queueDraft } from '../chat/composer/pending-draft.ts';
+import { useVoice } from '../spark/use-voice.ts';
 import { greeting, quietSummary } from '../spark/voice.ts';
 import { ticketKeys, ticketsApi } from '../tickets/tickets-api.ts';
 import { prefersReducedMotion } from '../ui/motion.ts';
@@ -81,16 +81,12 @@ function useTicketTitles() {
 
 export function Home(props: HomeProps) {
   const { chats, mood, draftId, onOpenChat } = props;
-  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const projects = useProjects();
   const projectList = projects.data ?? [];
   const entering = useEntering();
   const now = useMinuteClock();
 
-  const voice = {
-    personality: setup.data?.profile.personality ?? 'friendly',
-    name: firstName(setup.data?.profile.displayName ?? ''),
-  };
+  const voice = useVoice();
   const need = needsYou(chats);
   const running = runningNow(chats);
   const recent = recentChats(

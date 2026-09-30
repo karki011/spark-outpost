@@ -124,6 +124,7 @@ export const setupStateSchema = z.object({
   profile: profileSchema,
   providers: z.array(providerSetupSchema),
   advisors: z.array(advisorSetupSchema),
+  parallelBuilders: z.boolean().optional(),
 });
 export type SetupState = z.infer<typeof setupStateSchema>;
 

@@ -5,6 +5,7 @@ import {
   hello,
   nothingFlagged,
   quietSummary,
+  quietToday,
   sparkMood,
   timeOfDay,
 } from './voice.ts';
@@ -55,6 +56,8 @@ describe('quiet lines', () => {
     );
     expect(nothingFlagged({ personality: 'playful', name: '' })).toBe('Nothing is flagged. Nice.');
     expect(nothingFlagged({ personality: 'facts', name: 'Sam' })).toBe('Nothing flagged');
+    expect(quietToday(friendly)).toBe('Nothing else on the go today. A fresh start.');
+    expect(quietToday({ personality: 'facts', name: 'Sam' })).toBe('No other chats today.');
   });
 });
 

@@ -26,6 +26,7 @@ export interface TestAppOptions {
   linearApiUrl?: string;
   locateGh?: () => Promise<string | null>;
   serverSpendCapUsd?: number;
+  parallelBuilders?: boolean;
   openFolder?: AppOptions['openFolder'];
 }
 
@@ -62,6 +63,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     linearApiUrl: options.linearApiUrl,
     locateGh: options.locateGh ?? (async () => null),
     serverSpendCapUsd: options.serverSpendCapUsd,
+    parallelBuilders: options.parallelBuilders,
     ...(options.openFolder ? { openFolder: options.openFolder } : {}),
   });
 }
