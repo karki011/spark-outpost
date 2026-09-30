@@ -238,7 +238,7 @@ test('on a phone the map opens as an outline, with the other views one tap away'
   await expect(tickets).toHaveAttribute('aria-expanded', 'true');
   const file = list.getByRole('treeitem', { name: /^apps\/web\/src\/tickets\// }).first();
   await expect(file).toBeVisible();
-  await screenshot(page, 'phone-outline-dark');
+  await screenshot(page, 'map-view-outline-phone-dark');
   await file.click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button', { name: 'Close file details' }).click();

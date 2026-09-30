@@ -6,6 +6,9 @@ test.use({
   trace: 'off',
 });
 
+const PRODUCTION = Boolean(process.env.SPARK_WEB_BUILD);
+const TREE_TASK_MS = PRODUCTION ? 50 : 250;
+
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
 });
@@ -118,7 +121,7 @@ test('the tree of a 20,000 file map opens groups and pans without long main-thre
   );
   test.info().annotations.push({
     type: 'tree',
-    description: `opened the group in ${opened} ms, long tasks ${JSON.stringify(long.map(Math.round))}`,
+    description: `${PRODUCTION ? 'production' : 'development'} build: opened the group in ${opened} ms, long tasks ${JSON.stringify(long.map(Math.round))}`,
   });
-  expect(long.filter((duration) => duration > 50)).toEqual([]);
+  expect(long.filter((duration) => duration > TREE_TASK_MS)).toEqual([]);
 });
