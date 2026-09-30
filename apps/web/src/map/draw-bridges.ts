@@ -1,6 +1,6 @@
 import { bridgeCurve, curvePoint, endpoint, type Bridge, type LinkKind } from './bridges.ts';
 import { clamp } from './camera.ts';
-import type { Frame } from './frame.ts';
+import type { Frame, Rect } from './frame.ts';
 import type { Palette } from './palette.ts';
 
 const SAMPLES = 24;
@@ -70,11 +70,11 @@ export function drawBridges(frame: Frame): void {
     ctx.setLineDash([]);
   }
   ctx.globalAlpha = 1;
-  drawBridgeLabels(frame, hovered);
 }
 
-function drawBridgeLabels(frame: Frame, hovered: string | null) {
+export function drawBridgeLabels(frame: Frame): void {
   const { ctx, palette, view } = frame;
+  const hovered = hoveredKey(frame);
   const shown = frame.bridgeGeometry
     .slice()
     .sort((a, b) => b.bridge.links.length - a.bridge.links.length)
@@ -86,12 +86,10 @@ function drawBridgeLabels(frame: Frame, hovered: string | null) {
   }
   ctx.font = '500 11px Geist Mono, monospace';
   ctx.textAlign = 'left';
-  const taken: [number, number, number, number][] = frame.labels.map((r) => [
-    r.x,
-    r.y,
-    r.x + r.w,
-    r.y + r.h,
-  ]);
+  const taken: Rect[] = [
+    ...frame.reserved,
+    ...frame.labels.map((r): Rect => [r.x, r.y, r.x + r.w, r.y + r.h]),
+  ];
   for (const { bridge, points } of shown) {
     const [x, y] = points[SAMPLES / 2]!;
     const text = labelText(bridge);

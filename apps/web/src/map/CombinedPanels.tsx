@@ -55,7 +55,7 @@ export function PathCard({ scene, bridge, path, onStep, onClose }: PathCardProps
   const callerFirst = path.length > 0 && scene.files[path[0]!]!.kind === 'ui' && path.length > 2;
   const roles = callerFirst ? ROLES : ROLES.slice(1);
   return (
-    <nav className="map-pathcard map-glass" aria-label="Likely path">
+    <nav className="map-pathcard map-glass" aria-label="Likely path" data-map-overlay>
       <span className="map-path-head">
         <small>Likely path</small>
         <span className="map-mono">{bridge.links[0]!.label}</span>
@@ -84,23 +84,16 @@ export function PathCard({ scene, bridge, path, onStep, onClose }: PathCardProps
 
 interface UnmatchedPanelProps {
   unmatched: MapUnmatched;
-  projectNames: ReadonlyMap<string, string>;
   onPick: (endpoint: UnmatchedEndpoint) => void;
   onHover: (endpoint: UnmatchedEndpoint | null) => void;
   onClose: () => void;
 }
 
-export function UnmatchedPanel({
-  unmatched,
-  projectNames,
-  onPick,
-  onHover,
-  onClose,
-}: UnmatchedPanelProps) {
+export function UnmatchedPanel({ unmatched, onPick, onHover, onClose }: UnmatchedPanelProps) {
   const [tab, setTab] = useState<'routes' | 'calls'>('routes');
   const list = tab === 'routes' ? unmatched.routes : unmatched.calls;
   return (
-    <section className="map-unm map-glass" aria-labelledby="map-unm-title">
+    <section className="map-unm map-glass" aria-labelledby="map-unm-title" data-map-overlay>
       <div className="map-unm-h">
         <h3 id="map-unm-title">Unmatched</h3>
         <span className="map-sp" />
@@ -132,16 +125,17 @@ export function UnmatchedPanel({
                 onPointerEnter={() => onHover(endpoint)}
                 onFocus={() => onHover(endpoint)}
               >
-                <span className={`map-meth ${endpoint.method}`}>{endpoint.method}</span>
-                <span className="map-ep">{endpoint.path}</span>
-                {tab === 'routes' && (
-                  <span className={endpoint.confirmedBy ? 'map-flag sure' : 'map-flag'}>
-                    {endpoint.confirmedBy ? 'Unused' : 'Possibly unused'}
-                  </span>
-                )}
-                <span className="map-fl">
-                  {baseName(endpoint.file)}
-                  {projectNames.size > 1 ? ` · ${projectNames.get(endpoint.projectId) ?? ''}` : ''}
+                <span className="map-meth">{endpoint.method}</span>
+                <span className="map-ep-col">
+                  <span className="map-ep">{endpoint.path}</span>
+                  <small>
+                    {tab === 'routes' && (
+                      <span className={endpoint.confirmedBy ? 'map-flag sure' : 'map-flag'}>
+                        {endpoint.confirmedBy ? 'Unused' : 'Possibly unused'} ·{' '}
+                      </span>
+                    )}
+                    <span className="map-fl">{baseName(endpoint.file)}</span>
+                  </small>
                 </span>
               </button>
             </li>

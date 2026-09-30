@@ -247,3 +247,15 @@
   width: min(340px, calc(100% - 28px));
   transform: translateX(-50%);
 }
+
+.map-ep-col {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.map-ep-col small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

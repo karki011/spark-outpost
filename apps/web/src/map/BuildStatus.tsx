@@ -90,7 +90,7 @@ interface SparkSayProps {
 export function SparkSay({ maps, phase, progress, revealed }: SparkSayProps) {
   if (revealed && revealed.shown >= revealed.total) {
     return (
-      <div className="map-say map-glass" role="status">
+      <div className="map-say map-glass" role="status" data-map-overlay>
         <BlobScout size={34} mood="happy" />
         <p>All {revealed.total} areas are on the map. Click a gold name to look inside.</p>
       </div>
@@ -98,7 +98,7 @@ export function SparkSay({ maps, phase, progress, revealed }: SparkSayProps) {
   }
   if (revealed) {
     return (
-      <div className="map-say map-glass" role="status">
+      <div className="map-say map-glass" role="status" data-map-overlay>
         <BlobScout size={34} mood="working" />
         <div>
           <p>
@@ -124,7 +124,7 @@ export function SparkSay({ maps, phase, progress, revealed }: SparkSayProps) {
       ? 'Your project is in line for its first map.'
       : 'I’m reading your project and sorting it into areas. Each one lights up when it’s done.';
   return (
-    <div className="map-say map-glass" role="status">
+    <div className="map-say map-glass" role="status" data-map-overlay>
       <BlobScout size={34} mood={paused ? 'sleep' : 'working'} />
       <div>
         <p>{message}</p>

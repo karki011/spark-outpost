@@ -103,7 +103,8 @@ export function MapTooltip({ target, scene, changed, bounds }: MapTooltipProps) 
     <div
       ref={ref}
       className={valid ? 'map-tip map-glass show' : 'map-tip map-glass'}
-      role="tooltip"
+      role={valid ? 'tooltip' : undefined}
+      aria-hidden={!valid}
       style={place}
     >
       {valid && file !== undefined && (

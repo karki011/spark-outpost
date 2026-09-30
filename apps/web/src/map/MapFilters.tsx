@@ -8,7 +8,7 @@ import { CATEGORY_LABELS } from './map-model.ts';
 
 interface MapFiltersProps {
   filters: Filters;
-  categoryCounts: Record<MapCategory, number>;
+  categoryCounts: Record<MapCategory, number> | null;
   kindCounts: Record<FileKind, number> | null;
   bridges: readonly Bridge[] | null;
   unmatched: number | null;
@@ -81,7 +81,7 @@ export function MapFilters(props: MapFiltersProps) {
             key={category}
             pressed={filters.categories.has(category)}
             color="var(--map-gold)"
-            count={props.categoryCounts[category]}
+            count={props.categoryCounts?.[category] ?? null}
             onClick={() =>
               onFilters({ ...filters, categories: toggled(filters.categories, category) })
             }

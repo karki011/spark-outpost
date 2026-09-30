@@ -19,7 +19,7 @@ export function AreaCrumb({
   const project =
     scene.projects.length > 1 ? scene.projects.find((p) => p.projectId === entry.projectId) : null;
   return (
-    <div className="map-crumb map-glass">
+    <div className="map-crumb map-glass" data-map-overlay>
       <button
         type="button"
         className="map-back"
@@ -149,7 +149,7 @@ export function MapLegend({
   onHide: () => void;
 }) {
   return (
-    <section className="map-legend map-glass" aria-labelledby="map-legend-title">
+    <section className="map-legend map-glass" aria-labelledby="map-legend-title" data-map-overlay>
       <h3 id="map-legend-title">
         {area ? 'Area' : 'How to read the sky'}
         <button type="button" aria-label="Hide legend" onClick={onHide}>

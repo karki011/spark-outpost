@@ -1,5 +1,6 @@
 import type { MapCategory } from '@spark-outpost/contracts';
 import type { Bridge, LinkKind } from './bridges.ts';
+import { clipSegment } from './clip.ts';
 import type { Camera, Viewport } from './camera.ts';
 import type { FileKind } from './file-kind.ts';
 import type { Network } from './network.ts';
@@ -45,6 +46,8 @@ export interface BridgeGeometry {
   points: [number, number][];
 }
 
+export type Rect = [number, number, number, number];
+
 export interface Frame {
   ctx: CanvasRenderingContext2D;
   palette: Palette;
@@ -68,6 +71,7 @@ export interface Frame {
   drawn: Uint8Array;
   labels: LabelRect[];
   bridgeGeometry: BridgeGeometry[];
+  reserved: Rect[];
 }
 
 export const CATEGORY_ALPHA: Record<MapCategory, number> = { core: 1, shared: 0.74, feature: 0.5 };
@@ -87,4 +91,16 @@ export function line(frame: Frame, a: [number, number], b: [number, number]): vo
   ctx.moveTo(frame.sx(a[0]), frame.sy(a[1]));
   ctx.lineTo(frame.sx(b[0]), frame.sy(b[1]));
   ctx.stroke();
+}
+
+export function dashedLine(frame: Frame, a: [number, number], b: [number, number]): void {
+  const clipped = clipSegment(a, b, frame.viewport.width, frame.viewport.height);
+  if (!clipped) return;
+  const { ctx } = frame;
+  ctx.lineDashOffset = Math.hypot(clipped[0][0] - a[0], clipped[0][1] - a[1]);
+  ctx.beginPath();
+  ctx.moveTo(clipped[0][0], clipped[0][1]);
+  ctx.lineTo(clipped[1][0], clipped[1][1]);
+  ctx.stroke();
+  ctx.lineDashOffset = 0;
 }

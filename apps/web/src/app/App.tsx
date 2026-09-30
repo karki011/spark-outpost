@@ -180,7 +180,7 @@ function ChatShell({ entering }: { entering: boolean }) {
         )}
         <StatusCompanion
           chats={chats}
-          visible={view !== 'chats' || activeId === null}
+          visible={view !== 'map' && (view !== 'chats' || activeId === null)}
           onOpenChat={openAtCard}
           onHome={() => setView('home')}
         />

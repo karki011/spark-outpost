@@ -1,7 +1,7 @@
 import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 import { bindInput } from './engine-input.ts';
 import { MapEngine, type EngineCallbacks } from './engine.ts';
-import type { MapView } from './frame.ts';
+import type { MapView, Rect } from './frame.ts';
 
 export interface SkyHandle {
   showBridge: (key: string | null) => void;
@@ -14,10 +14,24 @@ interface SkyCanvasProps {
   label: string;
   revealNonce: number;
   flyTarget: { file: number; nonce: number } | null;
-  callbacks: EngineCallbacks;
+  callbacks: Omit<EngineCallbacks, 'reserved'>;
 }
 
 const ZOOM_STEP = 1.6;
+const OVERLAY_GAP = 6;
+
+function overlayRects(stage: HTMLElement): Rect[] {
+  const origin = stage.getBoundingClientRect();
+  return [...stage.querySelectorAll<HTMLElement>('[data-map-overlay]')].map((element) => {
+    const box = element.getBoundingClientRect();
+    return [
+      box.left - origin.left - OVERLAY_GAP,
+      box.top - origin.top - OVERLAY_GAP,
+      box.right - origin.left + OVERLAY_GAP,
+      box.bottom - origin.top + OVERLAY_GAP,
+    ];
+  });
+}
 
 function useLatest<T>(value: T) {
   const ref = useRef(value);
@@ -55,6 +69,7 @@ export function SkyCanvas({
       announce: (text) => latest.current.announce(text),
       revealed: (shown, total, last) => latest.current.revealed(shown, total, last),
       wantFiles: (candidates) => latest.current.wantFiles(candidates),
+      reserved: () => overlayRects(canvas.parentElement!),
     });
     engineRef.current = engine;
     const unbind = bindInput(engine);
@@ -64,6 +79,8 @@ export function SkyCanvas({
       engine.resize(rect.width, rect.height);
     });
     resize.observe(stage);
+    const overlays = new MutationObserver(() => engine.invalidate());
+    overlays.observe(stage, { childList: true });
     const themes = new MutationObserver(() => engine.refreshPalette());
     themes.observe(document.documentElement, { attributes: true, attributeFilter: ['data-skin'] });
     const dark = matchMedia('(prefers-color-scheme: dark)');
@@ -79,6 +96,7 @@ export function SkyCanvas({
     return () => {
       unbind();
       resize.disconnect();
+      overlays.disconnect();
       themes.disconnect();
       dark.removeEventListener('change', repaint);
       motion.removeEventListener('change', setMotion);
@@ -124,7 +142,7 @@ export function SkyCanvas({
         Left and right arrows move between areas or files. Enter opens the one in focus. Escape goes
         back. Shift with arrows pans, plus and minus zoom, 0 fits the map.
       </p>
-      <div className="map-zoom map-glass" role="group" aria-label="Zoom">
+      <div className="map-zoom map-glass" role="group" aria-label="Zoom" data-map-overlay>
         <button
           type="button"
           aria-label="Zoom in"
