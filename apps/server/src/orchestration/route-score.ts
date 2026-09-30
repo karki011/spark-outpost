@@ -23,6 +23,7 @@ export interface ScoredModel {
   quality: number;
   costUsd: number;
   switchUsd: number;
+  expectedUsd: number;
   utility: number;
 }
 
@@ -43,6 +44,7 @@ export interface ScoreInput {
   signals: TaskSignals;
   stats: readonly ModelStat[];
   now: Date;
+  switchUsd?: (model: TierModel) => number | null;
 }
 
 const level = (value: number) => Math.min(5, Math.max(1, Math.round(value))) - 1;
@@ -98,14 +100,21 @@ export function trajectoryUsd(card: ModelCard, signals: TaskSignals): number | n
   return ROUTE_TRAJECTORY_MTOK[level(signals.complexity.value)]! * blended;
 }
 
+function switchFor(input: ScoreInput, model: TierModel): number | null {
+  if (!input.session) return 0;
+  if (input.switchUsd) return input.switchUsd(model);
+  return switchCostUsd(input.session, model, input.now);
+}
+
 function scoreModel(model: TierModel, input: ScoreInput, repair: number): ScoredModel | null {
   const card = cardFor(model, input.provider);
   const cost = card ? trajectoryUsd(card, input.signals) : null;
   if (!card || cost === null) return null;
-  const switchUsd = input.session ? switchCostUsd(input.session, model, input.now) : 0;
+  const switchUsd = switchFor(input, model);
   if (switchUsd === null) return null;
   const quality = 1 - failureRate(card, input.signals, input.stats, input.now);
   const costUsd = cost + switchUsd;
+  const expectedUsd = costUsd + (1 - quality) * repair;
   return {
     id: model.id,
     label: model.label,
@@ -113,7 +122,8 @@ function scoreModel(model: TierModel, input: ScoreInput, repair: number): Scored
     quality,
     costUsd,
     switchUsd,
-    utility: quality - costUsd / repair,
+    expectedUsd,
+    utility: -expectedUsd,
   };
 }
 
@@ -149,12 +159,12 @@ export function scoreRoute(input: ScoreInput): RouteScore | null {
 
 function modelText(model: ScoredModel): string {
   const moving = model.switchUsd > 0 ? ` incl. ${usd(model.switchUsd)} switch` : '';
-  return `${model.label} ${model.utility.toFixed(3)} (q ${model.quality.toFixed(3)}, ${usd(model.costUsd)}${moving})`;
+  return `${model.label} ${usd(model.expectedUsd)} (q ${model.quality.toFixed(3)}, ${usd(model.costUsd)} tokens${moving})`;
 }
 
 export const SCORED_MODELS = 3;
 
 export function scoreText(score: RouteScore): string {
   const ranked = score.ranked.slice(0, SCORED_MODELS).map(modelText).join(', ');
-  return `score ${signalText(score.signals)}; repair ${usd(score.repairUsd)}: ${ranked}`;
+  return `score ${signalText(score.signals)}; repair ${usd(score.repairUsd)}; expected cost incl. repair: ${ranked}`;
 }
