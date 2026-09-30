@@ -1,0 +1,117 @@
+.test-ping {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+.tp-send,
+.tp-reply {
+  display: grid;
+  transform-origin: 50% 100%;
+}
+.tp-send {
+  animation: tp-send 2.4s ease-in-out infinite;
+}
+.tp-reply {
+  animation: tp-reply 2.4s ease-in-out infinite;
+}
+.tp-wire {
+  position: relative;
+  width: 44px;
+  height: 8px;
+}
+.tp-wire::before {
+  content: '';
+  position: absolute;
+  inset: 3px 0 auto;
+  border-top: 2px dotted var(--line-strong);
+}
+.tp-note {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: tp-note 2.4s ease-in-out infinite;
+}
+@keyframes tp-note {
+  0%,
+  8% {
+    transform: translateX(0) scale(0.6);
+    opacity: 0;
+    background: var(--accent);
+  }
+  14% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  42% {
+    transform: translateX(34px) scale(1);
+    opacity: 1;
+    background: var(--accent);
+  }
+  48% {
+    transform: translateX(34px) scale(0.6);
+    opacity: 0;
+    background: var(--success);
+  }
+  58% {
+    transform: translateX(34px) scale(1);
+    opacity: 1;
+    background: var(--success);
+  }
+  88% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+  94%,
+  100% {
+    transform: translateX(0) scale(0.6);
+    opacity: 0;
+    background: var(--success);
+  }
+}
+@keyframes tp-send {
+  0%,
+  100% {
+    transform: none;
+  }
+  6% {
+    transform: translateX(2px) scale(1.08, 0.92);
+  }
+  12% {
+    transform: translateX(-1px);
+  }
+  90% {
+    transform: none;
+  }
+  95% {
+    transform: translateY(-4px) scale(0.95, 1.06);
+  }
+}
+@keyframes tp-reply {
+  0%,
+  40%,
+  60%,
+  100% {
+    transform: none;
+  }
+  46% {
+    transform: translateY(-4px) scale(0.95, 1.06);
+  }
+  54% {
+    transform: translateX(-2px) scale(1.08, 0.92);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-send,
+  .tp-reply,
+  .tp-note {
+    animation: none;
+  }
+  .tp-note {
+    opacity: 0;
+  }
+}

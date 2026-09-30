@@ -8,6 +8,7 @@ import { easeOut } from '../ui/transitions.tsx';
 import { LabelText } from './LabelText.tsx';
 import { MoreMenu } from './MoreMenu.tsx';
 import { ProviderDefaults } from './ProviderDefaults.tsx';
+import { TestPing } from './TestPing.tsx';
 
 interface ConnectedSummaryProps {
   provider: ProviderSetup;
@@ -29,10 +30,12 @@ export function Detail({ term, children }: { term: string; children: ReactNode }
 }
 
 function LastTest({
+  providerId,
   connection,
   pending,
   error,
 }: {
+  providerId: ProviderSetup['id'];
   connection: ProviderConnection;
   pending: boolean;
   error: string | null;
@@ -40,8 +43,7 @@ function LastTest({
   if (pending) {
     return (
       <span className="test-pending">
-        <span className="spin" aria-hidden="true" /> Sending. This uses a small amount of your
-        usage.
+        <TestPing providerId={providerId} /> Sending. This uses a small amount of your usage.
       </span>
     );
   }
@@ -105,6 +107,7 @@ export function ConnectedSummary({
                     transition={{ duration: 0.2, ease: easeOut }}
                   >
                     <LastTest
+                      providerId={provider.id}
                       connection={connection}
                       pending={test.isPending}
                       error={test.isError ? test.error.message : null}
