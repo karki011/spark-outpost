@@ -108,7 +108,7 @@ test('Review each step asks for the split before building it, answered by keyboa
   const build = split.getByRole('button', { name: 'Build it' });
   await build.focus();
   await page.keyboard.press('Enter');
-  await expect(split).toContainText('Build it');
+  await expect(split.getByRole('status')).toBeVisible();
 
   await allowChecksUntil(page, board(page), '3 pieces, in the shared tree · 3 landed');
   await expect(parallelGroup(page)).toBeVisible();
