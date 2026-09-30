@@ -82,11 +82,25 @@ describe('card text for Jev', () => {
   });
 
   it('marks a model retiring within 30 days', () => {
-    const afterRetirement = new Date('2026-10-20T00:00:00Z');
-    expect(staleness(haiku, afterRetirement).retiring).toBe(true);
-    expect(cardText(haiku, null, afterRetirement)).toMatch(/; retiring$/);
-    expect(staleness(haiku, new Date('2026-09-28T00:00:00Z')).retiring).toBe(true);
+    const today = new Date('2026-09-28T00:00:00Z');
+    expect(staleness(haiku, today)).toMatchObject({ retiring: true, retired: false });
+    expect(cardText(haiku, null, today)).toMatch(/; retiring$/);
     expect(staleness(haiku, new Date('2026-09-01T00:00:00Z')).retiring).toBe(false);
+  });
+
+  it('says retired, without the blurb, once the date has passed or the card is marked', () => {
+    const onTheDay = new Date('2026-10-15T12:00:00Z');
+    expect(staleness(haiku, onTheDay).retired).toBe(false);
+    const afterRetirement = new Date('2026-10-16T00:00:00Z');
+    expect(staleness(haiku, afterRetirement)).toMatchObject({ retiring: true, retired: true });
+    expect(cardText(haiku, null, afterRetirement)).toBe(
+      'Haiku 4.5: small tier, fastest, $1/$5 per M; retired',
+    );
+    const marked = { ...sonnet, retired: true };
+    expect(staleness(marked, onTheDay)).toMatchObject({ retiring: true, retired: true });
+    expect(cardText(marked, null, onTheDay)).toBe(
+      'Sonnet 5: mid tier, fast, $2/$10 per M; retired',
+    );
   });
 
   it('notes default efforts and models without an effort setting', () => {

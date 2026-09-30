@@ -276,10 +276,14 @@ export async function getCapabilities(
   if (!row) return null;
   return {
     provider,
-    models: row.models.map((model) => ({
-      ...model,
-      retiresNotBefore: cardFor(model, provider)?.retiresNotBefore ?? null,
-    })),
+    models: row.models.map((model) => {
+      const card = cardFor(model, provider);
+      return {
+        ...model,
+        retiresNotBefore: card?.retiresNotBefore ?? null,
+        ...(card?.retired ? { retired: true } : {}),
+      };
+    }),
     efforts: row.efforts,
     defaultModel: effectiveDefaultModel(provider, row.models, row.default_model),
     agentDefaultModel: row.default_model,

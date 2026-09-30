@@ -1,11 +1,12 @@
 import {
   JEV_CARD_CHARACTERS,
   type CardCategory,
+  type CardSource,
   type CardStaleness,
   type ModelCard,
   type ModelStat,
 } from '@spark-outpost/contracts';
-import { cardRetiring, DAY_MS, utcDayStart } from './cards.ts';
+import { cardRetired, cardRetiring, DAY_MS, utcDayStart } from './cards.ts';
 
 export const MIN_STAT_SAMPLES = 3;
 export const STAT_MAX_AGE_DAYS = 90;
@@ -24,17 +25,23 @@ function daysBetween(from: string, now: Date): number {
   return Math.max(0, Math.floor((now.getTime() - utcDayStart(from)) / DAY_MS));
 }
 
-function oldestCheck(card: ModelCard): string {
-  return card.sources.map((source) => source.checkedAt).sort()[0]!;
-}
+type SourceAge = Pick<CardStaleness, 'checkedDaysAgo' | 'checkStale' | 'factsExpired'>;
 
-export function staleness(card: ModelCard, now: Date): CardStaleness {
-  const checkedDaysAgo = daysBetween(oldestCheck(card), now);
+export function sourceAge(sources: readonly CardSource[], now: Date): SourceAge {
+  const oldest = sources.map((source) => source.checkedAt).sort()[0]!;
+  const checkedDaysAgo = daysBetween(oldest, now);
   return {
     checkedDaysAgo,
     checkStale: checkedDaysAgo > CHECK_STALE_DAYS,
     factsExpired: checkedDaysAgo > FACTS_EXPIRE_DAYS,
+  };
+}
+
+export function staleness(card: ModelCard, now: Date): CardStaleness {
+  return {
+    ...sourceAge(card.sources, now),
     retiring: cardRetiring(card, now),
+    retired: cardRetired(card, now),
   };
 }
 
@@ -112,9 +119,9 @@ export function cardText(card: ModelCard, stat: StatSummary | null, now: Date): 
     : '';
   const head = `${card.label}: ${card.tier} tier, ${card.speed}${priceText}`;
   const pieces = [
-    ...(stale.factsExpired ? [] : [card.blurb]),
+    ...(stale.factsExpired || stale.retired ? [] : [card.blurb]),
     ...(stat ? [statPiece(stat)] : []),
-    ...(stale.retiring ? ['retiring'] : []),
+    ...(stale.retiring ? [stale.retired ? 'retired' : 'retiring'] : []),
   ];
   return fitPieces(head, pieces);
 }

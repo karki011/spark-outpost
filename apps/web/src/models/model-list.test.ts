@@ -71,7 +71,13 @@ const view = (cardOverrides: Partial<ModelCard>, stats: ModelStat[] = []): Model
   card: card(cardOverrides),
   offered: true,
   isDefault: false,
-  staleness: { checkedDaysAgo: 1, checkStale: false, factsExpired: false, retiring: false },
+  staleness: {
+    checkedDaysAgo: 1,
+    checkStale: false,
+    factsExpired: false,
+    retiring: false,
+    retired: false,
+  },
   jevText: '',
   stats,
 });
@@ -141,8 +147,21 @@ describe('model list', () => {
     expect(modelTag(view({ retiresNotBefore: '2027-01-10' }), Date.parse('2026-12-01'))).toBe(
       'Retiring Jan 10, 2027',
     );
-    expect(retirementDetail(card({ retiresNotBefore: '2027-06-30' }))).toBe('Retires 2027-06-30');
-    expect(retirementDetail(card({}))).toBeNull();
+    expect(retirementDetail(card({ retiresNotBefore: '2027-06-30' }), now)).toBe(
+      'Retires 2027-06-30',
+    );
+    expect(retirementDetail(card({}), now)).toBeNull();
+  });
+
+  it('says retired once the date has passed or the card is marked retired', () => {
+    const after = Date.parse('2026-10-16T00:00:00Z');
+    const haiku = { tier: 'small' as const, retiresNotBefore: '2026-10-15' };
+    expect(modelTag(view(haiku), Date.parse('2026-10-15T23:00:00Z'))).toBe('Retiring Oct 15');
+    expect(modelTag(view(haiku), after)).toBe('Retired Oct 15');
+    expect(retirementDetail(card(haiku), after)).toBe('Retired 2026-10-15');
+    const marked = { retiresNotBefore: '2026-11-01', retired: true };
+    expect(modelTag(view(marked), Date.parse('2026-09-28T12:00:00Z'))).toBe('Retired Nov 1');
+    expect(retirementDetail(card({ retired: true }), after)).toBe('Retired');
   });
 
   it('remembers the provider filter and falls back to all when storage or provider is gone', () => {

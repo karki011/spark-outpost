@@ -41,8 +41,7 @@ export const PRICE_TABLE = {
   label:
     'Estimated prices in USD per million tokens at the standard short-context rate. Not a bill; prices come from the model cards (apps/server/src/model-cards/vendor-cards.json).',
   asOf: VENDOR_CARDS.checkedAt,
-  source:
-    'OpenAI API pricing, Standard processing, https://developers.openai.com/api/docs/pricing, checked 2026-09-26. Long-context, priority, regional, and FedRAMP rates are higher and not modelled. Z.ai GLM pay-as-you-go pricing, https://docs.z.ai/guides/overview/pricing, checked 2026-09-26; GLM Coding Plan usage is a subscription quota, so the estimate overstates it.',
+  source: `OpenAI API pricing, Standard processing, https://developers.openai.com/api/docs/pricing, checked ${VENDOR_CARDS.checkedAt}. Long-context, priority, regional, and FedRAMP rates are higher and not modelled. Z.ai GLM pay-as-you-go pricing, https://docs.z.ai/guides/overview/pricing, checked ${VENDOR_CARDS.checkedAt}; GLM Coding Plan usage is a subscription quota, so the estimate overstates it.`,
   prices: cardPrices(),
 };
 
