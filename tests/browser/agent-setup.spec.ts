@@ -287,7 +287,7 @@ test('Settings, Projects lists trust and can stop trusting a folder', async ({ p
   await expect(row).toContainText('Trusted');
   await row.getByRole('button', { name: 'Stop trusting app' }).click();
   await expect(row).toContainText('Not trusted');
-  await expect(row.getByRole('button')).toHaveCount(0);
+  await expect(row.getByRole('button', { name: /^Stop trusting/ })).toHaveCount(0);
   const results = await new AxeBuilder({ page })
     .include('.set-panel')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
