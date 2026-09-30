@@ -85,6 +85,10 @@ test('first run goes through name, provider, defaults, and done, then opens the 
 
   await continueButton(page).click();
   await expect(dialog(page).getByRole('heading', { name: 'Bring in your tools' })).toBeVisible();
+  const git = dialog(page).getByRole('region', { name: 'Git' });
+  await expect(git).toContainText('Spark is looking for Git…');
+  await expect(git).toContainText(/Git \d+\.\d+/);
+  await expect(git).toContainText('Found');
   const tools = dialog(page).locator('.cx-card');
   await expect(tools).toHaveCount(4);
   await expect(tools.first()).toContainText('GitHub');
@@ -98,7 +102,9 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(dialog(page)).toContainText(
     'Claude Sonnet 5, high effort, Accept edits · Automatic',
   );
-  await expect(dialog(page)).toContainText('Tools coming soon');
+  await expect(dialog(page)).toContainText('Connect tools anytime in Settings');
+  await expect(dialog(page)).not.toContainText('Tools coming soon');
+  await expect(dialog(page).locator('.done-list')).toContainText(/Git \d+\.\d+/);
 
   await dialog(page).getByRole('button', { name: 'Open Spark Outpost' }).click();
   await expect(page.locator('.onb')).toHaveCount(0);
@@ -381,4 +387,37 @@ test('with two providers connected, the default is set from inside a provider ca
 
   await page.reload();
   await expect(codexCard.locator('.tag-default')).toHaveText('Default');
+});
+
+test('without git, the tools step explains why and setup can still finish', async ({ page }) => {
+  await resetTestDatabase({ onboarded: false, connected: ['claude'] });
+  let installed = false;
+  await page.route('**/api/setup/git', (route) =>
+    route.fulfill({
+      json: { installed, version: installed ? '2.47.1' : null, canInstall: true },
+    }),
+  );
+  await page.route('**/api/setup/git/install', (route) =>
+    route.fulfill({ json: { installed: false, version: null, canInstall: true } }),
+  );
+  await page.goto('/');
+  await continueButton(page).click();
+  const git = dialog(page).getByRole('region', { name: 'Git' });
+  await expect(git).toContainText('Git not installed');
+  await expect(git).toContainText('its own git worktree');
+  await git.getByRole('button', { name: 'Install Xcode Command Line Tools' }).click();
+  await expect(git).toContainText('Follow Apple’s installer');
+
+  await continueButton(page).click();
+  await expect(dialog(page).locator('.done-list')).toContainText('Git not installed');
+  await expect(dialog(page).locator('.done-list')).toContainText('Needed for Do chats');
+
+  await dialog(page).getByRole('button', { name: 'Back' }).click();
+  installed = true;
+  await git.getByRole('button', { name: 'Check again' }).click();
+  await expect(git).toContainText('Git 2.47.1');
+  await continueButton(page).click();
+  await expect(dialog(page).locator('.done-list')).toContainText('Git 2.47.1');
+  await dialog(page).getByRole('button', { name: 'Open Spark Outpost' }).click();
+  await expect(page.locator('.onb')).toHaveCount(0);
 });

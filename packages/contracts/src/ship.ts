@@ -4,6 +4,14 @@ import { taskLinkSchema } from './tasks.ts';
 
 export const GIT_INSTALL_HINT =
   'Git is not installed. Install Apple’s command line tools by running `xcode-select --install` in Terminal, then try again.';
+export const GIT_INSTALL_COMMAND = 'xcode-select --install';
+
+export const gitStatusSchema = z.object({
+  installed: z.boolean(),
+  version: z.string().nullable(),
+  canInstall: z.boolean(),
+});
+export type GitStatus = z.infer<typeof gitStatusSchema>;
 
 export const SHIP_TITLE_MAX_LENGTH = 200;
 

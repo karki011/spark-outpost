@@ -133,3 +133,21 @@
     animation: none;
   }
 }
+.git-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  color: var(--warn);
+}
+.git-dot[data-found='true'] {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+.git-dot svg {
+  width: 15px;
+  height: 15px;
+}

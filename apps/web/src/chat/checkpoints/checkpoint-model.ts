@@ -36,6 +36,7 @@ const TITLES: Record<CheckpointPayload['kind'], string> = {
   stuck: 'The Builder was repeating itself',
   verify: 'Jev could not verify the change',
   ownership: 'A Builder changed a file outside its piece',
+  pieces: 'Build in pieces?',
 };
 
 export function checkpointTitle(payload: CheckpointPayload): string {
@@ -45,7 +46,9 @@ export function checkpointTitle(payload: CheckpointPayload): string {
     return payload.agent ? `${payload.agent} changed a file outside its piece` : TITLES.ownership;
   }
   if (payload.agent) return `${payload.agent} needs your input`;
-  if (payload.kind === 'plan' && payload.question) return payload.question;
+  if ((payload.kind === 'plan' || payload.kind === 'pieces') && payload.question) {
+    return payload.question;
+  }
   return TITLES[payload.kind];
 }
 
@@ -63,6 +66,7 @@ const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
   stuck: 'Continue, or stop and report',
   verify: 'Finish, retry one tier up, or stop',
   ownership: 'Keep the file in the piece, revert it, or stop',
+  pieces: 'Build it, build in order, revise, or stop',
 };
 
 export function waitingLabel(payload: CheckpointPayload): string {

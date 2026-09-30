@@ -4,6 +4,7 @@ import type { SymbolLanguage } from './languages.ts';
 import {
   definitionKind,
   definitionQuery,
+  importQuery,
   referenceQuery,
   type DefinitionKind,
 } from './tag-queries.ts';
@@ -11,6 +12,7 @@ import {
 export const MIN_NAME_LENGTH = 3;
 export const MAX_DEFINITIONS = 1000;
 export const MAX_REFERENCES = 2000;
+export const MAX_IMPORTS = 300;
 
 export interface Definition {
   name: string;
@@ -20,12 +22,14 @@ export interface Definition {
 export interface FileSymbols {
   definitions: Definition[];
   references: string[];
+  imports: string[];
 }
 
 interface LoadedLanguage {
   parser: Parser;
   definitions: Query;
   references: Query;
+  imports: Query | null;
 }
 
 const require = createRequire(import.meta.url);
@@ -42,10 +46,12 @@ async function load(language: SymbolLanguage): Promise<LoadedLanguage> {
   const grammar = await Language.load(grammarPath(language));
   const parser = new Parser();
   parser.setLanguage(grammar);
+  const imports = importQuery(language);
   return {
     parser,
     definitions: new Query(grammar, definitionQuery(language)),
     references: new Query(grammar, referenceQuery(language)),
+    imports: imports ? new Query(grammar, imports) : null,
   };
 }
 
@@ -107,6 +113,32 @@ function collectReferences(
   return [...names];
 }
 
+function pythonFromImport(from: string, name: string | undefined): string[] {
+  if (name === undefined) return [from];
+  const joined = from.endsWith('.') ? `${from}${name}` : `${from}.${name}`;
+  return /^\.+$/.test(from) ? [joined] : [from, joined];
+}
+
+function importSpecs(captures: readonly { name: string; node: Node }[]): string[] {
+  const byName = new Map(captures.map((capture) => [capture.name, capture.node.text]));
+  const from = byName.get('from');
+  if (from !== undefined) return pythonFromImport(from, byName.get('name'));
+  const spec = byName.get('import');
+  return spec === undefined ? [] : [spec.replace(/^"|"$/g, '')];
+}
+
+function collectImports(tools: LoadedLanguage, tree: Parameters<Query['matches']>[0]): string[] {
+  if (!tools.imports) return [];
+  const specs = new Set<string>();
+  for (const match of tools.imports.matches(tree)) {
+    for (const spec of importSpecs(match.captures)) {
+      if (spec.length > 0) specs.add(spec);
+    }
+    if (specs.size >= MAX_IMPORTS) break;
+  }
+  return [...specs];
+}
+
 export async function extractSymbols(
   language: SymbolLanguage,
   source: string,
@@ -114,11 +146,15 @@ export async function extractSymbols(
 ): Promise<FileSymbols> {
   const tools = await languageFor(language);
   const tree = tools.parser.parse(source);
-  if (!tree) return { definitions: [], references: [] };
+  if (!tree) return { definitions: [], references: [], imports: [] };
   try {
     const definitions = collectDefinitions(tools, tree.rootNode, testFile);
     const defined = new Set(definitions.map((definition) => definition.name));
-    return { definitions, references: collectReferences(tools, tree.rootNode, defined) };
+    return {
+      definitions,
+      references: collectReferences(tools, tree.rootNode, defined),
+      imports: collectImports(tools, tree.rootNode),
+    };
   } finally {
     tree.delete();
   }

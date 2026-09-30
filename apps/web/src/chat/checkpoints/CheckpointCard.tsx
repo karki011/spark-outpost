@@ -221,7 +221,11 @@ function PlanBody({ approval, decide }: { approval: CheckpointApproval; decide: 
   if (revising) {
     return (
       <NoteForm
-        label="What should change in the plan?"
+        label={
+          approval.payload.checkpoint.kind === 'pieces'
+            ? 'What should change in the split?'
+            : 'What should change in the plan?'
+        }
         initial=""
         submit="Revise the plan"
         busy={decide.busy}
@@ -237,6 +241,9 @@ function PlanBody({ approval, decide }: { approval: CheckpointApproval; decide: 
       </Action>
       <Action id={CHECKPOINT_OPTION.makeChange} approval={approval} decide={decide} kind="primary">
         {optionName(approval, CHECKPOINT_OPTION.makeChange)}
+      </Action>
+      <Action id={CHECKPOINT_OPTION.buildInOrder} approval={approval} decide={decide}>
+        {optionName(approval, CHECKPOINT_OPTION.buildInOrder)}
       </Action>
       {offers(approval, CHECKPOINT_OPTION.editPlan) && (
         <button
@@ -321,6 +328,7 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
     case 'clarify':
       return <ClarifyBody approval={approval} decide={decide} />;
     case 'plan':
+    case 'pieces':
       return <PlanBody approval={approval} decide={decide} />;
     case 'accept':
       return <AcceptBody approval={approval} decide={decide} />;

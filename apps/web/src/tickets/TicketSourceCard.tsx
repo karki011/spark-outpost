@@ -25,7 +25,7 @@ interface TicketSourceCardProps {
   onToggle: () => void;
 }
 
-function whereLine(connection: TicketConnection): string {
+export function whereLine(connection: TicketConnection): string {
   const place = connection.siteUrl
     ? jiraSiteHost(connection.siteUrl)
     : ticketSourceNames[connection.source];

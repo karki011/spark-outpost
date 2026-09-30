@@ -48,6 +48,37 @@ describe('ApprovalCard', () => {
     expect(within(card).queryByRole('status')).toBeNull();
   });
 
+  it('asks to hold before a force push and offers no plain or project allow', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ApprovalCard
+          approval={{
+            ...approval,
+            title: 'git push --force-with-lease origin feature',
+            payload: {
+              ...approval.payload,
+              command: 'git push --force-with-lease origin feature',
+              forcePush: ['feature'],
+            },
+            reason: 'This rewrites history on feature on the remote',
+          }}
+          provider="claude"
+          agent="Bolt"
+          repo={null}
+        />
+      </QueryClientProvider>,
+    );
+    const card = screen.getByRole('group', { name: /Force push\?/ });
+    expect(
+      within(card)
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['Hold to force push', 'No']);
+    expect(card.textContent).toContain(
+      'This rewrites history on feature on the remote, whatever your permissions.',
+    );
+  });
+
   it('folds an answered approval into one resolved line with the command and the choice', () => {
     const card = show({
       ...approval,

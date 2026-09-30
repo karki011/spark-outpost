@@ -50,7 +50,7 @@ interface FieldSpec {
   help: ReactNode;
 }
 
-function HelpLink({ href, children }: { href: string; children: ReactNode }) {
+export function HelpLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <a className="tk-help-link" href={href} target="_blank" rel="noreferrer">
       {children}

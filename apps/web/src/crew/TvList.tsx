@@ -127,6 +127,7 @@ function Row({
         </div>
         <div className="tvl-meta">
           <span>{item.dispatcher ? 'Dispatcher' : 'Agent'}</span>
+          {item.piece && <span className="tvl-piece">{item.piece}</span>}
           {finished ? (
             item.durationMs !== null && <span>{formatDuration(item.durationMs)}</span>
           ) : item.startedAt !== null ? (

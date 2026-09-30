@@ -50,7 +50,7 @@ export interface AutoTitle {
 }
 
 function taskChanged(before: Category | null, now: Category | null): boolean {
-  if (!before || !now || before === 'chat' || now === 'chat') return false;
+  if (!before || !now || now === 'chat') return false;
   return before !== now;
 }
 

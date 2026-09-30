@@ -40,6 +40,20 @@ describe('conversation prompt', () => {
     expect(projectNote(['/work/app'])).toMatch(/must not create, change, or delete files/);
   });
 
+  it('tells an Ask turn with an approval gate that it may run commands, but never change files', () => {
+    const note = projectNote(['/work/app'], true);
+    expect(note).toContain('run shell commands');
+    expect(note).toContain('asks the user before any other command');
+    expect(note).toContain('including through commands');
+    expect(note).toContain('press Make the change');
+    expect(projectNote(['/work/app'])).not.toContain('shell commands');
+    const [first] = conversationBlocks([], 'Hi', {
+      projectRoots: ['/work/app'],
+      commandsAllowed: true,
+    });
+    expect(first?.type === 'text' && first.text.startsWith(note)).toBe(true);
+  });
+
   it('lists every linked folder and marks the primary one', () => {
     const note = projectNote(['/work/app', '/work/lib']);
     expect(note).toContain('/work/app (primary, your working directory), /work/lib');

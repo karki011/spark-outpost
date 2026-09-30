@@ -105,7 +105,7 @@ export function Onboarding({ onFinished }: OnboardingProps) {
       : step === PROVIDER_STEP && connected.length === 0
         ? 'Connect at least one provider to continue.'
         : step === 3
-          ? 'Nothing to connect yet.'
+          ? 'Everything here is optional.'
           : '';
 
   return (

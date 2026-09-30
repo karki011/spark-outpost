@@ -36,7 +36,7 @@ const serverEnv = {
   SECRET_STORE: 'memory',
   MEMORY_SECRETS: JSON.stringify({ jev: 'browser-test-jev-key', zai: 'browser-test-zai-key' }),
   AGENT_RUNTIME: 'fake',
-  COORDINATOR_MODE: 'in_order',
+  COORDINATOR_MODE: 'parallel',
   OUTCOME_SAMPLE_RATE: '0',
   MORNING_BRIEF: 'false',
   LINEAR_API_URL: `${STUB_URL}/linear/graphql`,

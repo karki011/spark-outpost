@@ -1,4 +1,4 @@
-import type { ConversationDetail, Run } from '@spark-outpost/contracts';
+import type { ConversationDetail, Orchestration, Run } from '@spark-outpost/contracts';
 import { describe, expect, it } from 'vitest';
 import { crewAgents } from './crew-projection.ts';
 import { checkpoint, member, orchestration } from './test-orchestration.ts';
@@ -34,6 +34,7 @@ function item(overrides: Partial<TvRow>): TvRow {
     durationMs: null,
     ask: null,
     dispatcher: false,
+    piece: null,
     order: 1,
     ...overrides,
   };
@@ -130,6 +131,36 @@ describe('Agent TV list rows', () => {
     const ask = { approvalId: pending.id, text: 'Needs you: keep going?' };
     const { running } = tvListRows(detail(), turn, agents, { [builder.runId]: ask });
     expect(running[0]).toMatchObject({ name: 'Builder', state: 'waiting', ask });
+  });
+
+  it('labels each Builder with its piece and placement', () => {
+    const bolt = member({
+      status: 'running',
+      finishedAt: null,
+      pieceKey: 'P1',
+      placement: 'shared',
+    });
+    const rivet = member({
+      runId: '00000000-0000-4000-8000-0000000000a3',
+      name: 'Rivet',
+      status: 'running',
+      finishedAt: null,
+      pieceKey: 'P2',
+      placement: 'worktree',
+    });
+    const pieces = {
+      pieces: [
+        { key: 'P1', placement: 'shared', owns: ['a.ts', 'b.ts'], builderName: 'Bolt' },
+        { key: 'P2', placement: 'worktree', owns: ['c.ts'], builderName: 'Rivet' },
+      ],
+    } as Orchestration['pieces'];
+    const turn = orchestration({ crew: [bolt, rivet], pieces });
+    const { running } = tvListRows(detail(), turn, crewAgents(turn), {});
+    expect(running.map((row) => [row.name, row.piece])).toEqual([
+      ['Jev', null],
+      ['Builder', 'P1 · shared tree · owns 2 files'],
+      ['Rivet', "P2 · Rivet's copy"],
+    ]);
   });
 
   it('moves the whole turn to finished once it ends, stopped or failed', () => {

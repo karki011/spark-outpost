@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { extractEndpoints, type Endpoint } from './endpoints.ts';
 import { extensionOf, symbolLanguage } from './languages.ts';
 import { looksBinary, looksGenerated } from './skip.ts';
 import { extractSymbols, type Definition } from './symbols.ts';
@@ -22,6 +23,8 @@ export type FileResult =
       language: string;
       definitions: Definition[];
       references: string[];
+      imports: string[];
+      endpoints: Endpoint[];
     };
 
 const BINARY_PROBE_BYTES = 8000;
@@ -49,16 +52,22 @@ export async function readAndParse(root: string, job: FileJob): Promise<FileResu
   const hash = createHash('sha1').update(bytes).digest('hex');
   if (hash === job.knownHash) return { path: job.path, status: 'unchanged' };
   const base = { path: job.path, status: 'parsed' as const, hash };
+  const empty = { definitions: [], references: [], imports: [] };
   if (looksBinary(bytes.subarray(0, BINARY_PROBE_BYTES))) {
-    return { ...base, lines: 0, language: 'binary', definitions: [], references: [] };
+    return { ...base, ...empty, lines: 0, language: 'binary', endpoints: [] };
   }
   const text = bytes.toString('utf8');
   const lines = countLines(text);
   const language = symbolLanguage(job.path);
-  if (!language || looksGenerated(text)) {
-    const label = language ? 'generated' : extensionOf(job.path) || 'text';
-    return { ...base, lines, language: label, definitions: [], references: [] };
+  if (!language) {
+    const endpoints = extractEndpoints(job.path, text, null, []);
+    return { ...base, ...empty, lines, language: extensionOf(job.path) || 'text', endpoints };
+  }
+  if (looksGenerated(text)) {
+    const endpoints = extractEndpoints(job.path, text, language, []);
+    return { ...base, ...empty, lines, language: 'generated', endpoints };
   }
   const symbols = await extractSymbols(language, text, isTestFile(job.path));
-  return { ...base, lines, language, ...symbols };
+  const endpoints = extractEndpoints(job.path, text, language, symbols.imports);
+  return { ...base, lines, language, ...symbols, endpoints };
 }

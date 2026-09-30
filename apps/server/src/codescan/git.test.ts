@@ -13,10 +13,10 @@ describe('git output', () => {
 
   it('parses log records into commits and derives churn and co-change', () => {
     const commits = parseLog(
-      '\u001e200\n\na.ts\nb.ts\n\u001e100\n\na.ts\nc.ts\n\u001e50\n\nd.ts\n',
+      '\u001e200\tAda@Example.com\n\na.ts\nb.ts\n\u001e100\n\na.ts\nc.ts\n\u001e50\n\nd.ts\n',
     );
     expect(commits).toEqual([
-      { at: 200, files: ['a.ts', 'b.ts'] },
+      { at: 200, files: ['a.ts', 'b.ts'], author: expect.stringMatching(/^[0-9a-f]{10}$/) },
       { at: 100, files: ['a.ts', 'c.ts'] },
       { at: 50, files: ['d.ts'] },
     ]);

@@ -28,6 +28,10 @@ export function confirmsRiskyFirst(level: InvolvementLevel): boolean {
   return level === 'balanced';
 }
 
+export function autoInWorktree(level: InvolvementLevel, inChatWorktree: boolean): boolean {
+  return inChatWorktree && level !== 'balanced';
+}
+
 export function copiesRiskyWork(level: InvolvementLevel): boolean {
   return level !== 'balanced';
 }

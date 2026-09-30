@@ -1,4 +1,5 @@
 import type { Queryable } from '../persistence/db.ts';
+import type { Endpoint } from './endpoints.ts';
 import type { Commit } from './git.ts';
 import type { ProjectLayout } from './layout.ts';
 import type { CachedFile } from './refresh-plan.ts';
@@ -33,6 +34,8 @@ export interface FileRow {
   def_ids: number[];
   def_kinds: number[];
   ref_ids: number[];
+  imports: string[];
+  endpoints: Endpoint[];
 }
 
 interface ProjectRow {
@@ -153,17 +156,19 @@ export async function upsertFiles(
   if (rows.length === 0) return;
   await db.query(
     `INSERT INTO code_index_files (project_id, path, size, mtime_ms, content_hash, parser_version,
-       language, package, lines, has_test, def_ids, def_kinds, ref_ids)
+       language, package, lines, has_test, def_ids, def_kinds, ref_ids, imports, endpoints)
      SELECT $1, r.path, r.size, r.mtime_ms, r.content_hash, r.parser_version, r.language,
-       r.package, r.lines, r.has_test, r.def_ids, r.def_kinds, r.ref_ids
+       r.package, r.lines, r.has_test, r.def_ids, r.def_kinds, r.ref_ids, r.imports, r.endpoints
      FROM jsonb_to_recordset($2::jsonb) AS r (path text, size integer, mtime_ms bigint,
        content_hash text, parser_version text, language text, package text, lines integer,
-       has_test boolean, def_ids integer[], def_kinds smallint[], ref_ids integer[])
+       has_test boolean, def_ids integer[], def_kinds smallint[], ref_ids integer[],
+       imports text[], endpoints jsonb)
      ON CONFLICT (project_id, path) DO UPDATE SET size = EXCLUDED.size,
        mtime_ms = EXCLUDED.mtime_ms, content_hash = EXCLUDED.content_hash,
        parser_version = EXCLUDED.parser_version, language = EXCLUDED.language,
        package = EXCLUDED.package, lines = EXCLUDED.lines, has_test = EXCLUDED.has_test,
-       def_ids = EXCLUDED.def_ids, def_kinds = EXCLUDED.def_kinds, ref_ids = EXCLUDED.ref_ids`,
+       def_ids = EXCLUDED.def_ids, def_kinds = EXCLUDED.def_kinds, ref_ids = EXCLUDED.ref_ids,
+       imports = EXCLUDED.imports, endpoints = EXCLUDED.endpoints`,
     [projectId, JSON.stringify(rows)],
   );
 }
