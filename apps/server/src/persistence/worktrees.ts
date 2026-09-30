@@ -154,3 +154,18 @@ export async function saveDepsWait(db: Queryable, runId: string, waitedMs: numbe
 export async function saveBase(db: Queryable, runId: string, commit: string): Promise<void> {
   await db.query('UPDATE run_worktrees SET base_commit = $2 WHERE run_id = $1', [runId, commit]);
 }
+
+export async function unmergedPieceCopy(
+  db: Queryable,
+  orchestrationRunId: string,
+  pieceKey: string,
+): Promise<WorktreeRecord | null> {
+  const { rows } = await db.query<WorktreeRow>(
+    `SELECT w.* FROM run_worktrees w JOIN runs r ON r.id = w.run_id
+     WHERE w.orchestration_run_id = $1 AND r.route->>'pieceKey' = $2
+       AND w.removed_at IS NULL AND w.merged_at IS NULL
+     ORDER BY w.created_at DESC LIMIT 1`,
+    [orchestrationRunId, pieceKey],
+  );
+  return rows[0] ? toRecord(rows[0]) : null;
+}

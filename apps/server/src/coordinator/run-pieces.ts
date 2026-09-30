@@ -1,4 +1,5 @@
 import type { TaskPiece } from '@spark-outpost/contracts';
+import { COORD_OWNERSHIP_STRIKES } from '../advisor/policy.ts';
 import { pieceListById } from '../persistence/pieces.ts';
 import { providerIssues } from '../persistence/provider-health.ts';
 import type { MemberResult, Session } from '../orchestration/session.ts';
@@ -34,6 +35,10 @@ export async function pieceSlots(s: Session): Promise<number> {
   return limited ? 1 : slots;
 }
 
+function cutByBudget(s: Session): boolean {
+  return s.budgetHit !== null && s.control.reason() === null;
+}
+
 function stopped(s: Session): boolean {
   return s.control.signal.aborted || s.budgetHit !== null;
 }
@@ -67,7 +72,7 @@ async function worktreeGroup(s: Session, coordination: Coordination): Promise<Pi
     limit: await pieceSlots(s),
     site: (piece, slot) => copySite(s, coordination, copies, piece, slot),
     landed: (piece) => dropCopy(s, copies, piece.key),
-    close: () => cleanupCopies(s),
+    close: () => (cutByBudget(s) ? Promise.resolve() : cleanupCopies(s)),
   };
 }
 
@@ -102,6 +107,7 @@ export async function runPieces(
   try {
     await runReadySet(list.pieces, {
       limit: group.limit,
+      narrowed: () => coordination.violations >= COORD_OWNERSHIP_STRIKES,
       settled: new Set(settled),
       stopped: () => stopped(s),
       run: async (piece, slot) => {
@@ -111,7 +117,7 @@ export async function runPieces(
             ? { ...spawn, reason: 'first' }
             : spawn;
         spawn = { ...action, escalate: false };
-        const site = await group.site(current, slot);
+        const site = current.research ? inOrder : await group.site(current, slot);
         const ran = await withAgentSlot(s, () => runPiece(s, next, current, coordination, site));
         coordination.list = await pieceListById(s.deps.db, list.id);
         outcome.last = ran.result;

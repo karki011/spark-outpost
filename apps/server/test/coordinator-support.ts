@@ -22,6 +22,7 @@ export interface PieceRun {
   pieceKey: string | null;
   resumeKey: string | null;
   slot: string | null;
+  worktreeRun: string | null;
   prompt: string;
   status: string;
   startedAt: Date | null;
@@ -70,6 +71,7 @@ export async function crewRuns(t: TestDb, runId: string): Promise<PieceRun[]> {
       pieceKey: (row.route.pieceKey as string | undefined) ?? null,
       resumeKey: (row.route.resumeKey as string | undefined) ?? null,
       slot: env?.SPARK_BUILDER_SLOT ?? null,
+      worktreeRun: (row.route.worktreeRun as string | undefined) ?? null,
       prompt: row.prompt,
       status: row.status,
       startedAt: row.started_at,

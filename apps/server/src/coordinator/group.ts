@@ -1,6 +1,12 @@
 import path from 'node:path';
 import type { TaskPiece } from '@spark-outpost/contracts';
-import { getWorktree, markMerged, saveBase, saveResult } from '../persistence/worktrees.ts';
+import {
+  getWorktree,
+  markMerged,
+  saveBase,
+  saveResult,
+  unmergedPieceCopy,
+} from '../persistence/worktrees.ts';
 import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { commitTree, commitWorkingTree } from '../projects/snapshot.ts';
 import {
@@ -118,13 +124,16 @@ export async function copySite(
   slot: number,
 ): Promise<PieceSite> {
   const name = coordination.names.get(piece.key) ?? piece.key;
-  const base = await serial(copies, () => groupBase(copies.root, `${s.lease.runId} ${piece.key}`));
+  const kept = await unmergedPieceCopy(s.deps.db, s.lease.runId, piece.key);
+  const base =
+    kept?.baseCommit ??
+    (await serial(copies, () => groupBase(copies.root, `${s.lease.runId} ${piece.key}`)));
   const state: CopyState = {
     piece,
     name,
     base,
-    runId: null,
-    branch: null,
+    runId: kept?.runId ?? null,
+    branch: kept?.branch ?? null,
     landed: false,
     landedSince: [],
   };

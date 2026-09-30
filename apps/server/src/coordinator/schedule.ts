@@ -7,6 +7,7 @@ export interface Schedulable {
 
 export interface Schedule<T extends Schedulable> {
   limit: number;
+  narrowed?(): boolean;
   settled: ReadonlySet<string>;
   stopped(): boolean;
   run(piece: T, slot: number): Promise<boolean>;
@@ -53,7 +54,8 @@ export async function runReadySet<T extends Schedulable>(
     );
   };
   for (;;) {
-    while (!failed && !schedule.stopped() && free.length > 0) {
+    const open = () => (schedule.narrowed?.() ? running.size === 0 : free.length > 0);
+    while (!failed && !schedule.stopped() && open()) {
       const next = waiting.findIndex((piece) => isReady(piece, landed, keys));
       if (next === -1) break;
       const [piece] = waiting.splice(next, 1);

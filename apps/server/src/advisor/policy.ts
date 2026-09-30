@@ -90,3 +90,4 @@ export const COORD_PIECE_FIX_TURNS = 2;
 export const COORD_HANDOFF_SHARE = 0.75;
 export const COORD_CARD_PIECES = 5;
 export const COORD_INTEGRATOR_TRIES = 2;
+export const COORD_OWNERSHIP_STRIKES = 2;
