@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -69,3 +69,5 @@ export const FAKE_ACP_MODES: [string, string, string | null, string | null][] = 
   ['agent', 'Agent', null, null],
   ['yolo', 'Yolo', 'Custom mode from the fake agent', 'full_access'],
 ];
+
+export const MAP_ROOT_PREFIX = path.join(realpathSync(os.tmpdir()), 'spark-map-real-');

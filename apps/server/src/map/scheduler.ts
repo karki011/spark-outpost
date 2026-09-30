@@ -35,6 +35,7 @@ export interface MapSchedulerOptions {
   db: Db;
   scanner: CodeScanner;
   jev: IntakeDeps | null;
+  rootPrefix?: string | null;
   pollMs?: number;
   checkEveryMs?: number;
   budget?: number;
@@ -142,7 +143,7 @@ export function createMapBuilder(options: MapSchedulerOptions): MapBuilder {
   }
 
   async function runOnce(): Promise<boolean> {
-    await syncRepos(db, MAP_RULES_VERSION);
+    await syncRepos(db, MAP_RULES_VERSION, options.rootPrefix ?? null);
     if (await agentsBusy(db)) return false;
     const repo = (await pendingRepo(db)) ?? (await staleRepo());
     if (!repo) return false;

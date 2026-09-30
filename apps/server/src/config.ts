@@ -74,6 +74,7 @@ const configSchema = z.object({
     .regex(/^[a-z0-9][a-z0-9-]*$/)
     .default(DEFAULT_BRANCH_PREFIX),
   BACKUP_DIR: z.string().min(1).optional(),
+  MAP_ROOT_PREFIX: z.string().min(1).optional(),
   WEB_ROOT: z.string().min(1).optional(),
   MORNING_BRIEF: z
     .enum(['true', 'false'])
