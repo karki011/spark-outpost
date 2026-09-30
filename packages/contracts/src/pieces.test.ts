@@ -61,4 +61,19 @@ describe('pieceBoard', () => {
     expect(rows[0]).toMatchObject({ builder: 'Bolt', check: 'scoped check passed', tone: 'done' });
     expect(rows.map((row) => row.notes)).toEqual([null, '2 notes queued', null, null, null]);
   });
+
+  it('keeps the reason only for a piece that failed or was skipped', () => {
+    const rows = pieceBoard({
+      pieces: [
+        piece('P1', { status: 'failed', note: 'scoped check failed twice' }),
+        piece('P2', { status: 'skipped', note: 'skipped by you' }),
+        piece('P3', { status: 'running', note: 'stale' }),
+      ],
+    });
+    expect(rows.map((row) => [row.status, row.note])).toEqual([
+      ['failed', 'scoped check failed twice'],
+      ['skipped', 'skipped by you'],
+      ['running', null],
+    ]);
+  });
 });

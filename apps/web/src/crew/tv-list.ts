@@ -1,5 +1,7 @@
 import {
   isTerminalRunStatus,
+  pieceBoard,
+  placementLabel,
   type ConversationDetail,
   type Orchestration,
   type TotalCostSource,
@@ -8,8 +10,8 @@ import { formatTokens } from '../chat/composer/model-options.ts';
 import { countLabel } from '../ui/count-label.ts';
 import { formatCost } from '../usage/format.ts';
 import { isBusy, isDispatcher, modelLabel, type CrewAgent, type CrewState } from './crew-model.ts';
-import { jevAgent, runAgent } from './crew-projection.ts';
-import { pieceLabels } from './piece-labels.ts';
+import { JEV_ID, jevAgent, runAgent } from './crew-projection.ts';
+import { pieceTag, waitingAgent, type PieceTag } from './tv-coordinator.ts';
 import { roleSubtitle, type TvAsk } from './tv-scene.ts';
 
 type TvOutcome = 'passed' | 'failed' | 'stopped';
@@ -33,8 +35,12 @@ export interface TvRow {
   durationMs: number | null;
   ask: TvAsk | null;
   dispatcher: boolean;
-  piece: string | null;
+  piece: TvRowPiece | null;
   order: number;
+}
+
+export interface TvRowPiece extends PieceTag {
+  label: string;
 }
 
 export interface TvRows {
@@ -97,7 +103,7 @@ export function tvListRows(
   asks: Record<string, TvAsk>,
 ): TvRows {
   const activity = detail?.activity ?? {};
-  const pieces = pieceLabels(orchestration);
+  const pieces = rowPieces(orchestration);
   const crew = orchestration.crew.map((member, index) =>
     row(runAgent(member, orchestration, activity[member.runId] ?? []), {
       key: member.runId,
@@ -106,7 +112,7 @@ export function tvListRows(
       startedAt: time(member.startedAt),
       finishedAt: time(member.finishedAt),
       order: index + 1,
-      piece: pieces.get(member.runId) ?? null,
+      piece: (member.pieceKey && pieces.get(member.pieceKey)) || null,
       ask: asks[member.runId],
     }),
   );
@@ -131,7 +137,44 @@ export function tvListRows(
   if (turnActive) running.push(jev);
   else finished.push(jev);
   for (const item of crew) (FINISHED.has(item.state) ? finished : running).push(item);
+  running.push(...unstartedRows(orchestration, pieces, crew.length + 1));
   return { running: sortRunning(running), finished: sortFinished(finished) };
+}
+
+function rowPieces(orchestration: Orchestration): Map<string, TvRowPiece> {
+  const pieces = orchestration.pieces?.pieces ?? [];
+  return new Map(
+    pieces.map((piece) => [
+      piece.key,
+      { ...pieceTag(piece), label: `${piece.key} · ${piece.title} · ${placementLabel(piece)}` },
+    ]),
+  );
+}
+
+function unstartedRows(
+  orchestration: Orchestration,
+  pieces: ReadonlyMap<string, TvRowPiece>,
+  firstOrder: number,
+): TvRow[] {
+  const list = orchestration.pieces;
+  if (!list) return [];
+  const started = new Set(orchestration.crew.map((member) => member.pieceKey));
+  const board = pieceBoard(list);
+  return list.pieces.flatMap((piece, index) => {
+    if (started.has(piece.key)) return [];
+    const agent = waitingAgent(piece, board[index]!.status);
+    const item = row(agent, {
+      key: agent.id,
+      runId: '',
+      toolCalls: null,
+      startedAt: null,
+      finishedAt: null,
+      order: firstOrder + index,
+      piece: pieces.get(piece.key) ?? null,
+      ask: undefined,
+    });
+    return [{ ...item, agentId: JEV_ID }];
+  });
 }
 
 function turnState(status: Orchestration['status']): CrewState {

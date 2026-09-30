@@ -150,17 +150,36 @@ describe('Agent TV list rows', () => {
     });
     const pieces = {
       pieces: [
-        { key: 'P1', placement: 'shared', owns: ['a.ts', 'b.ts'], builderName: 'Bolt' },
-        { key: 'P2', placement: 'worktree', owns: ['c.ts'], builderName: 'Rivet' },
+        {
+          key: 'P1',
+          title: 'Store',
+          status: 'landed',
+          dependsOn: [],
+          placement: 'shared',
+          owns: ['a.ts', 'b.ts'],
+          builderName: 'Bolt',
+          notesQueued: 0,
+        },
+        {
+          key: 'P2',
+          title: 'API',
+          status: 'running',
+          dependsOn: [],
+          placement: 'worktree',
+          owns: ['c.ts'],
+          builderName: 'Rivet',
+          notesQueued: 1,
+        },
       ],
-    } as Orchestration['pieces'];
+    } as unknown as Orchestration['pieces'];
     const turn = orchestration({ crew: [bolt, rivet], pieces });
     const { running } = tvListRows(detail(), turn, crewAgents(turn), {});
-    expect(running.map((row) => [row.name, row.piece])).toEqual([
-      ['Jev', null],
-      ['Builder', 'P1 · shared tree · owns 2 files'],
-      ['Rivet', "P2 · Rivet's copy"],
+    expect(running.map((row) => [row.name, row.piece?.label, row.piece?.state])).toEqual([
+      ['Jev', undefined, undefined],
+      ['Builder', 'P1 · Store · shared tree · owns 2 files', 'landed'],
+      ['Rivet', "P2 · API · Rivet's copy", 'running'],
     ]);
+    expect(running[2]!.piece?.notes).toBe(1);
   });
 
   it('moves the whole turn to finished once it ends, stopped or failed', () => {

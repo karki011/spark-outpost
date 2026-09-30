@@ -10,6 +10,7 @@ import {
   type TaskOverview,
 } from '@spark-outpost/contracts';
 import type { CrewAgent } from '../crew/crew-model.ts';
+import { pieceLabels } from '../crew/piece-labels.ts';
 import { ShieldIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { ChangesPane } from './ChangesPane.tsx';
@@ -34,6 +35,16 @@ const tabNames: Record<WorkTab, string> = {
   changes: 'Changes',
   cost: 'Cost',
 };
+
+const TAB_STEPS: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1 };
+
+function tabAfterKey(tabs: readonly WorkTab[], current: WorkTab, key: string): WorkTab | null {
+  if (key === 'Home') return tabs[0]!;
+  if (key === 'End') return tabs.at(-1)!;
+  const step = TAB_STEPS[key];
+  if (!step) return null;
+  return tabs[(tabs.indexOf(current) + step + tabs.length) % tabs.length]!;
+}
 
 function statusPill(task: TaskOverview): { className: string; label: string } {
   if (task.summary.waiting > 0) return { className: 'spill rev', label: 'Needs you' };
@@ -109,10 +120,9 @@ export function WorkPanel({
   }, [open, wide]);
 
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-    if (step === 0) return;
+    const next = tabAfterKey(tabs, current, event.key);
+    if (!next) return;
     event.preventDefault();
-    const next = tabs[(tabs.indexOf(current) + step + tabs.length) % tabs.length]!;
     setTab(next);
     document.getElementById(`wtab-${next}`)?.focus();
   };
@@ -188,7 +198,13 @@ export function WorkPanel({
             </div>
             <div className="wpane" id="wpane" role="tabpanel" aria-labelledby={`wtab-${current}`}>
               {current === 'tasks' && <TaskList items={items} roots={roots} />}
-              {current === 'crew' && agents.length > 0 && <CrewPane runs={[]} agents={agents} />}
+              {current === 'crew' && agents.length > 0 && (
+                <CrewPane
+                  runs={[]}
+                  agents={agents}
+                  labels={orchestration ? pieceLabels(orchestration) : undefined}
+                />
+              )}
               {current !== 'tasks' &&
                 current !== 'changes' &&
                 !(current === 'crew' && agents.length > 0) &&

@@ -14,13 +14,15 @@ export interface TvAsk {
   text: string;
 }
 
-export function roleTitle(agent: Pick<CrewAgent, 'role'>): string {
+export function roleTitle(agent: Pick<CrewAgent, 'role' | 'title'>): string {
+  if (agent.title) return agent.title;
   if (isDispatcher(agent)) return 'Dispatcher';
   const role = agentRoleSchema.safeParse(agent.role);
   return role.success ? agentRoleLabel(role.data) : agent.role;
 }
 
-export function roleSubtitle(agent: Pick<CrewAgent, 'role' | 'name'>): string | null {
+export function roleSubtitle(agent: Pick<CrewAgent, 'role' | 'name' | 'title'>): string | null {
+  if (agent.title) return agent.title;
   const title = roleTitle(agent);
   return agent.name.startsWith(title) || isDispatcher(agent) ? null : title;
 }

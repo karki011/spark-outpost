@@ -1,3 +1,5 @@
+import './piece-state.css';
+import './tv-hub.css';
 import {
   useCallback,
   useEffect,
@@ -11,6 +13,7 @@ import * as poses from 'blobatar/expression';
 import { crewExpression, crewHue, isDispatcher, type CrewAgent } from './crew-model.ts';
 import { crewSeed } from './CrewBlob.tsx';
 import { roleSubtitle } from './tv-scene.ts';
+import { pieceTagText, type PieceTag } from './tv-coordinator.ts';
 import type { CrewSeat, Seat } from './tv-layout.ts';
 
 export type TvMood =
@@ -53,11 +56,31 @@ function hoverMood(agent: CrewAgent): TvMood | null {
   return null;
 }
 
+function PieceLines({ tag }: { tag: PieceTag }) {
+  const title = `${tag.key} · ${tag.title}`;
+  return (
+    <>
+      <small className="tv-piece" title={title}>
+        {title}
+      </small>
+      <small className="tv-state">
+        <span className="piece-state" data-state={tag.state}>
+          {tag.state}
+        </span>
+      </small>
+      <small className="tv-place" title={tag.place}>
+        {tag.place}
+      </small>
+    </>
+  );
+}
+
 interface TvNodeProps {
   agent: CrewAgent;
   seat: Seat | CrewSeat;
   size: number;
   index: number;
+  tag: PieceTag | null;
   selected: boolean;
   reduced: boolean;
   bubbleId: string;
@@ -68,7 +91,7 @@ interface TvNodeProps {
 }
 
 export function TvNode(props: TvNodeProps) {
-  const { agent, seat, size, index, selected, reduced, bubbleId, onBlob, onRedraw } = props;
+  const { agent, seat, size, index, tag, selected, reduced, bubbleId, onBlob, onRedraw } = props;
   const [mood, setMood] = useState<TvMood | null>(null);
   const [hovered, setHovered] = useState(false);
   const squash = useRef<HTMLSpanElement>(null);
@@ -130,7 +153,8 @@ export function TvNode(props: TvNodeProps) {
       style={style}
       data-agent={agent.id}
       data-role={agent.role}
-      aria-label={`${agent.name}, ${agent.line}. ${selected ? 'Go to in chat' : 'Show details'}`}
+      data-piece={tag?.key}
+      aria-label={`${agent.name}, ${tag ? pieceTagText(tag) : agent.line}. ${selected ? 'Go to in chat' : 'Show details'}`}
       aria-expanded={selected}
       aria-controls={selected ? bubbleId : undefined}
       onClick={click}
@@ -151,6 +175,11 @@ export function TvNode(props: TvNodeProps) {
             aria-hidden="true"
           />
         </span>
+        {tag && tag.notes > 0 && (
+          <span className="tv-notes" aria-hidden="true">
+            {tag.notes}
+          </span>
+        )}
         {agent.state === 'stopped' && (
           <span className="tv-z" aria-hidden="true">
             z<i>z</i>
@@ -158,11 +187,17 @@ export function TvNode(props: TvNodeProps) {
         )}
       </span>
       <b>{agent.name}</b>
-      {subtitle && <small className="tv-role">{subtitle}</small>}
-      <small className="tv-line" title={agent.line}>
-        <i />
-        {agent.line}
-      </small>
+      {tag ? (
+        <PieceLines tag={tag} />
+      ) : (
+        <>
+          {subtitle && <small className="tv-role">{subtitle}</small>}
+          <small className="tv-line" title={agent.line}>
+            <i />
+            {agent.line}
+          </small>
+        </>
+      )}
     </button>
   );
 }

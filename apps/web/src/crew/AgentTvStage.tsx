@@ -4,9 +4,11 @@ import { AskBubble, ChatBubble, DetailBubble } from './TvBubble.tsx';
 import { TvNode } from './TvNode.tsx';
 import type { Chatter } from './tv-chatter.ts';
 import type { StageGaze, GazeAim } from './tv-gaze.ts';
+import type { PieceTag } from './tv-coordinator.ts';
 import {
   bubbleBox,
   handoffPath,
+  hubLayout,
   textWidth,
   stageLayout,
   type Seat,
@@ -41,6 +43,7 @@ export interface StageProps {
   chatter: Chatter | null;
   packets: readonly Packet[];
   gaze: StageGaze | null;
+  tags: Record<string, PieceTag> | null;
   reduced: boolean;
   selected: string | null;
   onSelect(id: string | null): void;
@@ -55,11 +58,11 @@ function seatOf(layout: StageLayout, crew: readonly CrewAgent[], id: string): Se
 }
 
 export function AgentTvStage(props: StageProps) {
-  const { members, metrics, asks, chatter, gaze, reduced, selected } = props;
+  const { members, metrics, asks, chatter, gaze, tags, reduced, selected } = props;
   const bubbleId = useId();
   const jev = members.find(isDispatcher);
   const crew = members.filter((member) => !isDispatcher(member));
-  const layout = stageLayout(crew.length, metrics);
+  const layout = tags ? hubLayout(crew.length, metrics) : stageLayout(crew.length, metrics);
   const focus = crew.find((member) => isBusy(member.state))?.id ?? null;
   const sizeOf = (id: string) => (jev?.id === id ? metrics.jevSize : metrics.crewSize);
 
@@ -102,6 +105,7 @@ export function AgentTvStage(props: StageProps) {
       seat={seat}
       size={sizeOf(agent.id)}
       index={index}
+      tag={tags?.[agent.id] ?? null}
       selected={selected === agent.id}
       reduced={reduced}
       bubbleId={bubbleId}
@@ -114,7 +118,7 @@ export function AgentTvStage(props: StageProps) {
 
   return (
     <div
-      className="tv-stage"
+      className={tags ? 'tv-stage hub' : 'tv-stage'}
       style={
         {
           width: metrics.width,

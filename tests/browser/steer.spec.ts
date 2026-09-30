@@ -64,6 +64,27 @@ test('steering a running piece from the chat queues a note it reads at its next 
   await expect(input).toHaveValue('');
   await expect(api).toContainText('1 note queued');
 
+  await page.getByRole('button', { name: 'Agent TV' }).click();
+  const tv = page.getByRole('dialog', { name: 'Agent TV' });
+  await tv.getByRole('radio', { name: 'Stage' }).click();
+  await expect(tv.locator('.tv-n.jev')).toContainText('Coordinator');
+  const spoke = (key: string) => tv.locator(`.tv-n[data-piece="${key}"]`);
+  await expect(spoke('P1')).toHaveAttribute('aria-label', /P1 Store, in order, landed\./);
+  await expect(spoke('P2')).toHaveAttribute(
+    'aria-label',
+    /^Rivet, P2 API, in order, running, 1 note queued\./,
+  );
+  await expect(spoke('P2').locator('.tv-notes')).toHaveText('1');
+  await expect(spoke('P3')).toHaveAttribute('aria-label', /P3 View, in order, waiting\./);
+  await expect(spoke('P3').locator('.piece-state')).toHaveText('waiting');
+  await expect(spoke('P3')).toContainText('in order');
+  await tv.getByRole('radio', { name: 'List' }).click();
+  const rivet = tv.getByRole('listitem', { name: /^Rivet/ });
+  await expect(rivet).toContainText('P2 · API · in order');
+  await expect(rivet.locator('.piece-state')).toHaveText('running');
+  await expect(rivet).toContainText('1 note queued');
+  await tv.getByRole('button', { name: 'Close Agent TV' }).click();
+
   writeFileSync(path.join(repo.root, '.git', 'release-P2'), 'go');
   await expect(board).toContainText('3 pieces, in order · 3 landed', { timeout: 60_000 });
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
