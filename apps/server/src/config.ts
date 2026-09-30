@@ -12,7 +12,7 @@ const providerUrl = z
   .transform((value) => value.replace(/\/$/, ''));
 
 const memorySecretsSchema = z.partialRecord(
-  z.union([connectableIdSchema, z.literal('github')]),
+  z.union([connectableIdSchema, z.literal('github'), z.enum(['ticket:linear', 'ticket:jira'])]),
   z.string().min(1),
 );
 

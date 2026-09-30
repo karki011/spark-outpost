@@ -194,7 +194,7 @@ describe('spark_projects and spark_map', () => {
 });
 
 describe('the Spark tools server', () => {
-  it('lists every tool as read-only and stops answering once the grant is revoked', async () => {
+  it('marks only the confirmed actions as not read-only and stops answering once the grant is revoked', async () => {
     const harness = await startSparkTools(t);
     tools = harness;
     const grant = harness.host.grant({
@@ -207,22 +207,35 @@ describe('the Spark tools server', () => {
     expect(listed.tools.map((tool) => tool.name).sort()).toEqual([
       'spark_activity',
       'spark_analytics',
+      'spark_assign_ticket',
       'spark_audit',
       'spark_brief',
       'spark_chat',
       'spark_chats',
+      'spark_comment_ticket',
       'spark_connectors',
+      'spark_create_ticket',
       'spark_guide',
       'spark_map',
+      'spark_open_pr',
       'spark_pr',
       'spark_projects',
       'spark_providers',
       'spark_pull_requests',
       'spark_settings',
       'spark_tickets',
+      'spark_transition_ticket',
+    ]);
+    const acting = listed.tools.filter((tool) => tool.annotations?.readOnlyHint === false);
+    expect(acting.map((tool) => tool.name).sort()).toEqual([
+      'spark_assign_ticket',
+      'spark_comment_ticket',
+      'spark_create_ticket',
+      'spark_open_pr',
+      'spark_transition_ticket',
     ]);
     for (const tool of listed.tools) {
-      expect(tool.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
+      expect(tool.annotations).toMatchObject({ destructiveHint: false });
     }
     grant.revoke();
     await expect(client.listTools()).rejects.toThrow();

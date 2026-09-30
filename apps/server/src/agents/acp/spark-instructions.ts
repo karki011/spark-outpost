@@ -20,7 +20,7 @@ const TONE: Record<Personality, string> = {
 };
 
 const SPARK_TOOLS_LINE =
-  'For questions about Spark itself (providers, connectors, projects, chats, audit, tickets, analytics, settings, how it works), use the read-only spark_* tools.';
+  'For questions about Spark itself (providers, connectors, projects, chats, audit, tickets, analytics, settings, how it works), use the spark_* tools. Their ticket and PR actions run only after the user confirms a card.';
 
 export function sparkInstructions(
   prefs: SparkSessionPrefs,

@@ -4,12 +4,14 @@ import type { SparkScope, SparkToolDeps } from './deps.ts';
 export interface SparkToolContext {
   deps: SparkToolDeps;
   scope: SparkScope;
+  signal?: AbortSignal;
 }
 
 export interface SparkTool {
   name: string;
   title: string;
   description: string;
+  acts?: boolean;
   input: z.ZodRawShape;
   run(args: unknown, context: SparkToolContext): Promise<unknown>;
 }

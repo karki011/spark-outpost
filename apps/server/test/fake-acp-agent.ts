@@ -281,6 +281,8 @@ async function turn(
     );
     return 'end_turn';
   }
+  const sparked = await sparkTurn(text, sessionRequest?.mcpServers, update, say);
+  if (sparked) return sparked;
   const moded = await modeTurn({ text, config, options: configOptions, update, say, signal });
   if (moded) return moded;
   const roleTurn = { text, sessionId, cwd: sessionCwd, client, update, say, signal };
@@ -319,8 +321,6 @@ async function turn(
     await fileRequests(text, sessionId, client, say);
     return 'end_turn';
   }
-  const sparked = await sparkTurn(text, sessionRequest?.mcpServers, update, say);
-  if (sparked) return sparked;
   if (text.includes('#auth')) throw acp.RequestError.authRequired();
   if (text.includes('#refuse')) return 'refusal';
   if (text.includes('#secret')) return leakSecrets(update, say);

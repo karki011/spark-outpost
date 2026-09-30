@@ -2,14 +2,17 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { SparkScope, SparkToolDeps } from '../src/spark-mcp/deps.ts';
+import type { Approval, RunEvent } from '@spark-outpost/contracts';
+import { decideApproval, getApproval, type UserDecision } from '../src/persistence/approvals.ts';
+import type { SparkActionHooks, SparkScope, SparkToolDeps } from '../src/spark-mcp/deps.ts';
+import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { startSparkMcpHost, type SparkGrant, type SparkMcpHost } from '../src/spark-mcp/host.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
-import type { TestDb } from './support.ts';
+import { eventually, type TestDb } from './support.ts';
 
 export interface SparkToolsHarness {
   host: SparkMcpHost;
-  call(name: string, args?: Record<string, unknown>): Promise<CallResult>;
+  call(name: string, args?: Record<string, unknown>, signal?: AbortSignal): Promise<CallResult>;
   close(): Promise<void>;
 }
 
@@ -59,8 +62,12 @@ export async function startSparkTools(
   const client = await connectClient(grant);
   return {
     host,
-    async call(name, args = {}) {
-      const result = (await client.callTool({ name, arguments: args })) as CallToolResult;
+    async call(name, args = {}, signal) {
+      const result = (await client.callTool(
+        { name, arguments: args },
+        undefined,
+        signal ? { signal } : {},
+      )) as CallToolResult;
       const first = result.content[0];
       const text = first?.type === 'text' ? first.text : '';
       return {
@@ -74,4 +81,50 @@ export async function startSparkTools(
       await host.close();
     },
   };
+}
+
+export interface RecordedHooks {
+  hooks: SparkActionHooks;
+  events: RunEvent[];
+  audited: unknown[];
+  stop(): void;
+}
+
+export function recordedHooks(): RecordedHooks {
+  const events: RunEvent[] = [];
+  const audited: unknown[] = [];
+  const controller = new AbortController();
+  return {
+    events,
+    audited,
+    stop: () => controller.abort(),
+    hooks: {
+      append: async (event) => events.push(event),
+      waiters: new ApprovalWaiters(),
+      signal: controller.signal,
+      timeoutMs: 15_000,
+      pollMs: 25,
+      audit: { message: (_direction, message) => audited.push(message), stderr: () => undefined },
+    },
+  };
+}
+
+export async function pendingCard(t: TestDb): Promise<Approval> {
+  const approval = await eventually(async () => {
+    const { rows } = await t.db.query<{ id: string }>(
+      `SELECT id FROM approvals WHERE kind = 'spark_action' AND status = 'pending'`,
+    );
+    return rows[0] ? getApproval(t.db, rows[0].id) : null;
+  }, 10_000);
+  return approval!;
+}
+
+export async function answerCard(
+  t: TestDb,
+  optionId: string,
+  extra: Omit<UserDecision, 'optionId' | 'scope'> = {},
+): Promise<Approval> {
+  const card = await pendingCard(t);
+  await decideApproval(t.db, t.workspaceId, card.id, { optionId, scope: 'once', ...extra });
+  return card;
 }

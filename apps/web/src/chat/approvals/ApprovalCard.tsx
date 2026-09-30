@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   commandSandboxNote,
   isCheckApproval,
+  sparkActionLabels,
   type Approval,
   type ApprovalDecidedValue,
   type ApprovalScope,
@@ -20,6 +21,7 @@ import { useProjectBranch } from '../project/use-chat-repos.ts';
 import { mergeDecision } from './approval-events.ts';
 import { isAllow, outcome, projectAllowOption, shownOptions } from './approval-outcome.ts';
 import { DiffView } from './DiffView.tsx';
+import { SparkActionCard } from './SparkActionCard.tsx';
 
 interface ApprovalCardProps {
   approval: Approval;
@@ -48,6 +50,8 @@ function fullPath(approval: Approval, shown: string): string | undefined {
 }
 
 function heading(approval: Approval): string {
+  const action = approval.payload.sparkAction;
+  if (action) return sparkActionLabels[action.action].question;
   if (approval.payload.plan) return 'Approve the plan?';
   if (approval.payload.forcePush) return 'Force push?';
   if (isCheckApproval(approval)) return 'Run a check?';
@@ -76,6 +80,7 @@ function optionClass(allow: boolean, primary: boolean): string {
 }
 
 function subject(approval: Approval): string | null {
+  if (approval.payload.sparkAction) return approval.title;
   if (approval.payload.plan) return null;
   if (approval.payload.command) return approval.payload.command;
   if (approval.payload.paths.length > 0) return approval.payload.paths.join(', ');
@@ -113,6 +118,15 @@ export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps)
   const [local, setLocal] = useState<ApprovalDecidedValue | null>(null);
   const approval = local ? mergeDecision([incoming], local)[0]! : incoming;
   if (approval.status !== 'pending') return <ResolvedApproval approval={approval} />;
+  if (approval.payload.sparkAction) {
+    return (
+      <SparkActionCard
+        approval={approval}
+        agent={rest.agent ?? providerName(rest.provider)}
+        onDecided={setLocal}
+      />
+    );
+  }
   return <PendingApproval approval={approval} onDecided={setLocal} {...rest} />;
 }
 

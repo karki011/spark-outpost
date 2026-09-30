@@ -1,4 +1,5 @@
 import type {
+  TicketPriorityName,
   TicketAssigneeFilter,
   TicketDetail,
   TicketRef,
@@ -35,6 +36,22 @@ export interface TransitionResult {
   message: string | null;
 }
 
+export interface NewTicket {
+  project: string;
+  title: string;
+  description: string;
+  type: string | null;
+  priority: TicketPriorityName | null;
+  labels: readonly string[];
+  assigneeId: string | null;
+}
+
+export interface CreatedTicket {
+  key: string;
+  url: string;
+  skippedLabels: string[];
+}
+
 export interface TicketSource {
   id: TicketSourceId;
   whoami(): Promise<TicketAccount>;
@@ -46,6 +63,7 @@ export interface TicketSource {
   transition(key: string, status: TicketStatus): Promise<TransitionResult>;
   comment(key: string, body: string): Promise<void>;
   linkPullRequest(key: string, pull: TicketRef): Promise<void>;
+  create(ticket: NewTicket): Promise<CreatedTicket>;
 }
 
 export class TicketApiError extends Error {

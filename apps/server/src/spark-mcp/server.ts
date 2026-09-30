@@ -5,6 +5,8 @@ import { redactText } from '../audit/redact.ts';
 import type { SparkScope, SparkToolDeps } from './deps.ts';
 import { renderResult } from './format.ts';
 import { SparkToolError, type SparkTool, type SparkToolContext } from './tool.ts';
+import { pullRequestActionTool } from './actions/pr-action.ts';
+import { ticketActionTools } from './actions/ticket-actions.ts';
 import { auditTool } from './tools/audit-tool.ts';
 import { guideTool } from './tools/guide-tool.ts';
 import { chatTools } from './tools/chat-tools.ts';
@@ -23,16 +25,25 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   ...workTools,
   guideTool,
   ...githubTools,
+  ...ticketActionTools,
+  pullRequestActionTool,
 ];
 
 const INSTRUCTIONS =
-  'Tools about Spark Outpost itself, the app running this session: providers, connectors, projects, chats, audit, tickets, pull requests, analytics, activity, the brief, settings and a guide to how Spark works. They are read-only and never change anything. Results are JSON, paged and redacted.';
+  'Tools about Spark Outpost itself, the app running this session: providers, connectors, projects, chats, audit, tickets, pull requests, analytics, activity, the brief, settings and a guide to how Spark works. The read tools never change anything. The action tools (create, comment on, move or assign a ticket; open a draft PR) only propose: the user confirms each one on a card before Spark does it. Results are JSON, paged and redacted.';
 
 const READ_ONLY = {
   readOnlyHint: true,
   destructiveHint: false,
   idempotentHint: true,
   openWorldHint: false,
+} as const;
+
+const CONFIRMED_ACTION = {
+  readOnlyHint: false,
+  destructiveHint: false,
+  idempotentHint: false,
+  openWorldHint: true,
 } as const;
 
 function failure(error: unknown): CallToolResult {
@@ -57,7 +68,11 @@ export async function callSparkTool(
   }
 }
 
-export function sparkMcpServer(deps: SparkToolDeps, scope: SparkScope): McpServer {
+export function sparkMcpServer(
+  deps: SparkToolDeps,
+  scope: SparkScope,
+  stopped?: AbortSignal,
+): McpServer {
   const server = new McpServer(
     { name: 'spark-outpost', version: '1.0.0' },
     { instructions: INSTRUCTIONS, capabilities: { tools: {} } },
@@ -70,9 +85,13 @@ export function sparkMcpServer(deps: SparkToolDeps, scope: SparkScope): McpServe
         title: tool.title,
         description: tool.description,
         inputSchema: tool.input,
-        annotations: { title: tool.title, ...READ_ONLY },
+        annotations: { title: tool.title, ...(tool.acts ? CONFIRMED_ACTION : READ_ONLY) },
       },
-      (args: unknown) => callSparkTool(tool, args, context),
+      (args: unknown, extra: { signal: AbortSignal }) =>
+        callSparkTool(tool, args, {
+          ...context,
+          signal: stopped ? AbortSignal.any([extra.signal, stopped]) : extra.signal,
+        }),
     );
   }
   return server;

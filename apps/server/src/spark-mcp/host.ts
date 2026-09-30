@@ -45,11 +45,38 @@ function bearer(req: IncomingMessage): string | null {
   return match?.[1] ?? null;
 }
 
+function message(body: unknown): { method?: unknown; id?: unknown; params?: unknown } {
+  return body !== null && typeof body === 'object' ? body : {};
+}
+
+function toolCallId(body: unknown): string | null {
+  const { method, id } = message(body);
+  return method === 'tools/call' && (typeof id === 'string' || typeof id === 'number')
+    ? String(id)
+    : null;
+}
+
+function cancelledId(body: unknown): string | null {
+  const { method, params } = message(body);
+  if (method !== 'notifications/cancelled' || params === null || typeof params !== 'object') {
+    return null;
+  }
+  const { requestId } = params as { requestId?: unknown };
+  return typeof requestId === 'string' || typeof requestId === 'number' ? String(requestId) : null;
+}
+
 export async function startSparkMcpHost(deps: SparkToolDeps): Promise<SparkMcpHost> {
   const grants = new Map<string, SparkScope>();
   let host = '';
 
-  const serve = async (req: IncomingMessage, res: ServerResponse, scope: SparkScope) => {
+  const calls = new Map<string, AbortController>();
+
+  const serve = async (
+    req: IncomingMessage,
+    res: ServerResponse,
+    scope: SparkScope,
+    grant: string,
+  ) => {
     let body: unknown;
     try {
       body = await readJson(req);
@@ -57,9 +84,17 @@ export async function startSparkMcpHost(deps: SparkToolDeps): Promise<SparkMcpHo
       reply(res, 400, 'Send one JSON-RPC message as JSON.');
       return;
     }
-    const server = sparkMcpServer(deps, scope);
+    const cancelled = cancelledId(body);
+    if (cancelled !== null) calls.get(`${grant}:${cancelled}`)?.abort();
+    const call = toolCallId(body);
+    const key = call === null ? null : `${grant}:${call}`;
+    const controller = new AbortController();
+    if (key) calls.set(key, controller);
+    const server = sparkMcpServer(deps, scope, controller.signal);
     const transport = new StreamableHTTPServerTransport({ enableJsonResponse: true });
     res.on('close', () => {
+      controller.abort();
+      if (key && calls.get(key) === controller) calls.delete(key);
       void transport.close();
       void server.close();
     });
@@ -73,10 +108,11 @@ export async function startSparkMcpHost(deps: SparkToolDeps): Promise<SparkMcpHo
       return reply(res, 403, 'Only local agent sessions can call Spark tools.');
     }
     const token = bearer(req);
-    const scope = token ? grants.get(digest(token)) : undefined;
+    const grant = token ? digest(token) : '';
+    const scope = grants.get(grant);
     if (!scope) return reply(res, 401, 'This Spark session has ended or the token is wrong.');
     if (req.method !== 'POST') return reply(res, 405, 'Spark tools answer POST requests only.');
-    await serve(req, res, scope);
+    await serve(req, res, scope, grant);
   };
 
   const server = createServer((req, res) => {

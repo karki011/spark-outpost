@@ -1,0 +1,338 @@
+import './spark-action-card.css';
+import { useId, useState, type ReactNode } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import {
+  editableFields,
+  sparkActionLabels,
+  ticketPriorityNameSchema,
+  ticketSourceNames,
+  ticketStatusLabels,
+  ticketStatusSchema,
+  type Approval,
+  type ApprovalDecidedValue,
+  type SparkAction,
+  type SparkActionEdits,
+} from '@spark-outpost/contracts';
+import { approvalsApi } from '../../api/approvals.ts';
+import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
+import { approvalAnchor } from '../../crew/conversation-crew.ts';
+import { isAllow } from './approval-outcome.ts';
+
+interface Draft {
+  title: string;
+  description: string;
+  body: string;
+  type: string | null;
+  priority: string;
+  labels: string;
+  status: string;
+}
+
+const FILES_SHOWN = 8;
+
+const STATUS_CHOICES = ticketStatusSchema.options.map((status) => ({
+  id: status,
+  label: ticketStatusLabels[status],
+}));
+
+const PRIORITY_CHOICES = [
+  { id: '', label: 'None' },
+  ...ticketPriorityNameSchema.options.map((priority) => ({
+    id: priority,
+    label: priority[0]!.toUpperCase() + priority.slice(1),
+  })),
+];
+
+function draftOf(action: SparkAction): Draft {
+  return {
+    title: 'title' in action ? action.title : '',
+    description: action.action === 'create_ticket' ? action.description : '',
+    body: 'body' in action ? action.body : '',
+    type: action.action === 'create_ticket' ? action.type : null,
+    priority: action.action === 'create_ticket' ? (action.priority ?? '') : '',
+    labels: action.action === 'create_ticket' ? action.labels.join(', ') : '',
+    status: action.action === 'transition_ticket' ? action.status : '',
+  };
+}
+
+function editsOf(action: SparkAction, draft: Draft): SparkActionEdits {
+  const before = draftOf(action);
+  const edits: SparkActionEdits = {};
+  for (const field of editableFields(action.action)) {
+    if (draft[field] === before[field]) continue;
+    if (field === 'labels') {
+      edits.labels = draft.labels
+        .split(',')
+        .map((label) => label.trim())
+        .filter(Boolean);
+    } else if (field === 'priority') {
+      edits.priority = ticketPriorityNameSchema.safeParse(draft.priority).data ?? null;
+    } else if (field === 'status') {
+      edits.status = ticketStatusSchema.parse(draft.status);
+    } else if (field === 'type') {
+      edits.type = draft.type?.trim() || null;
+    } else {
+      edits[field] = draft[field];
+    }
+  }
+  return edits;
+}
+
+function Fact({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </>
+  );
+}
+
+function TicketLink({ ticket }: { ticket: { key: string; title: string; url: string | null } }) {
+  const text = `${ticket.key} · ${ticket.title}`;
+  return ticket.url ? (
+    <a href={ticket.url} target="_blank" rel="noreferrer">
+      {text}
+    </a>
+  ) : (
+    <span>{text}</span>
+  );
+}
+
+function Facts({ action }: { action: SparkAction }) {
+  switch (action.action) {
+    case 'create_ticket':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Where">
+            {ticketSourceNames[action.source]} · {action.project}
+          </Fact>
+          <Fact label="Assignee">{action.assignToMe ? 'You' : 'Nobody'}</Fact>
+        </dl>
+      );
+    case 'comment_ticket':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Ticket">
+            <TicketLink ticket={action.ticket} />
+          </Fact>
+        </dl>
+      );
+    case 'transition_ticket':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Ticket">
+            <TicketLink ticket={action.ticket} />
+          </Fact>
+          <Fact label="Now">{action.from}</Fact>
+        </dl>
+      );
+    case 'assign_ticket':
+      return (
+        <dl className="sac-facts">
+          <Fact label="Ticket">
+            <TicketLink ticket={action.ticket} />
+          </Fact>
+          <Fact label="Now">{action.currentAssignee ?? 'Unassigned'}</Fact>
+          <Fact label="After">{action.to === 'me' ? 'You' : 'Unassigned'}</Fact>
+        </dl>
+      );
+    case 'open_pr':
+      return (
+        <dl className="sac-facts">
+          {action.repo && <Fact label="Repository">{action.repo}</Fact>}
+          <Fact label="Branch">
+            <code>{action.branch}</code>
+            {action.base && (
+              <>
+                {' '}
+                into <code>{action.base}</code>
+              </>
+            )}
+          </Fact>
+          <Fact label="Files">
+            <ul className="sac-files">
+              {action.files.slice(0, FILES_SHOWN).map((file) => (
+                <li key={file.path}>
+                  <code>{file.path}</code> <span>{file.change}</span>
+                </li>
+              ))}
+            </ul>
+            {action.files.length + action.moreFiles > FILES_SHOWN && (
+              <span className="sac-more">
+                and {action.files.length + action.moreFiles - FILES_SHOWN} more
+              </span>
+            )}
+          </Fact>
+        </dl>
+      );
+  }
+}
+
+function takeover(action: SparkAction): string | null {
+  if (action.action !== 'assign_ticket' || action.to !== 'me' || !action.currentAssignee) {
+    return null;
+  }
+  return `${action.ticket.key} is assigned to ${action.currentAssignee}. Confirming takes it over.`;
+}
+
+interface FieldsProps {
+  action: SparkAction;
+  draft: Draft;
+  onChange: (next: Draft) => void;
+  disabled: boolean;
+}
+
+function Fields({ action, draft, onChange, disabled }: FieldsProps) {
+  const id = useId();
+  const fields = editableFields(action.action);
+  const set = (field: keyof Draft) => (value: string) => onChange({ ...draft, [field]: value });
+  return (
+    <div className="sac-fields">
+      {fields.includes('title') && (
+        <label className="field" htmlFor={`${id}-title`}>
+          <span>Title</span>
+          <input
+            id={`${id}-title`}
+            className="inp"
+            value={draft.title}
+            disabled={disabled}
+            onChange={(event) => set('title')(event.target.value)}
+          />
+        </label>
+      )}
+      {(fields.includes('description') || fields.includes('body')) && (
+        <label className="field" htmlFor={`${id}-text`}>
+          <span>{action.action === 'comment_ticket' ? 'Comment' : 'Description'}</span>
+          <textarea
+            id={`${id}-text`}
+            className="inp"
+            rows={5}
+            value={fields.includes('body') ? draft.body : draft.description}
+            disabled={disabled}
+            onChange={(event) =>
+              set(fields.includes('body') ? 'body' : 'description')(event.target.value)
+            }
+          />
+        </label>
+      )}
+      {fields.includes('status') && (
+        <div className="field">
+          <span>Move to</span>
+          <ChoicePicker
+            label="Move to"
+            choices={STATUS_CHOICES}
+            value={draft.status}
+            onChange={set('status')}
+          />
+        </div>
+      )}
+      {fields.includes('priority') && (
+        <div className="sac-row">
+          <label className="field" htmlFor={`${id}-type`}>
+            <span>Type</span>
+            <input
+              id={`${id}-type`}
+              className="inp"
+              placeholder={
+                action.action === 'create_ticket' && action.source === 'jira' ? 'Task' : 'None'
+              }
+              value={draft.type ?? ''}
+              disabled={disabled}
+              onChange={(event) => set('type')(event.target.value)}
+            />
+          </label>
+          <div className="field">
+            <span>Priority</span>
+            <ChoicePicker
+              label="Priority"
+              choices={PRIORITY_CHOICES}
+              value={draft.priority}
+              onChange={set('priority')}
+            />
+          </div>
+          <label className="field" htmlFor={`${id}-labels`}>
+            <span>Labels</span>
+            <input
+              id={`${id}-labels`}
+              className="inp"
+              placeholder="Comma separated"
+              value={draft.labels}
+              disabled={disabled}
+              onChange={(event) => set('labels')(event.target.value)}
+            />
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function SparkActionCard({
+  approval,
+  agent,
+  onDecided,
+}: {
+  approval: Approval;
+  agent: string;
+  onDecided: (decided: ApprovalDecidedValue) => void;
+}) {
+  const action = approval.payload.sparkAction!;
+  const headingId = useId();
+  const [draft, setDraft] = useState(() => draftOf(action));
+  const decide = useMutation({
+    mutationFn: (optionId: string) => {
+      const allowing = approval.options.some(
+        (option) => option.optionId === optionId && isAllow(option),
+      );
+      const edits = allowing ? editsOf(action, draft) : {};
+      return approvalsApi.decide(approval.id, {
+        optionId,
+        scope: 'once',
+        payloadHash: approval.payloadHash,
+        ...(Object.keys(edits).length > 0 ? { edits } : {}),
+      });
+    },
+    onSuccess: onDecided,
+  });
+  const warning = takeover(action);
+  const blankTitle = editableFields(action.action).includes('title') && !draft.title.trim();
+  return (
+    <div
+      className="appr sac"
+      role="group"
+      aria-labelledby={headingId}
+      id={approvalAnchor(approval.id)}
+    >
+      <div className="appr-h">
+        <span className="ic" aria-hidden="true">
+          <i className="appr-dia" />
+        </span>
+        <span id={headingId}>
+          <b>{sparkActionLabels[action.action].question}</b> {agent} asks Spark to do this for you.
+        </span>
+      </div>
+      <Facts action={action} />
+      <Fields action={action} draft={draft} onChange={setDraft} disabled={decide.isPending} />
+      {warning && <p className="appr-reason">{warning}</p>}
+      <p className="sac-note">Nothing happens until you confirm. You can edit it first.</p>
+      <div className="appr-acts">
+        {approval.options.map((option) => (
+          <button
+            key={option.optionId}
+            type="button"
+            className={isAllow(option) ? 'btn primary sm' : 'btn ghost sm deny'}
+            disabled={decide.isPending || (isAllow(option) && blankTitle)}
+            onClick={() => decide.mutate(option.optionId)}
+          >
+            {option.name}
+          </button>
+        ))}
+      </div>
+      {decide.isError && (
+        <p className="appr-err" role="alert">
+          {decide.error.message}
+        </p>
+      )}
+    </div>
+  );
+}

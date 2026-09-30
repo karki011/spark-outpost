@@ -61,7 +61,7 @@ describe('sparkInstructions', () => {
   it('points at the spark_* tools only when the session has them, without cutting the text', () => {
     const longest = { ...PREFS, displayName: 'x'.repeat(40), personality: 'playful' as const };
     const text = sparkInstructions(longest, true, true);
-    expect(text.endsWith('use the read-only spark_* tools.')).toBe(true);
+    expect(text.endsWith('run only after the user confirms a card.')).toBe(true);
     expect(text.length).toBeLessThanOrEqual(SPARK_INSTRUCTIONS_MAX_LENGTH);
     expect(sparkInstructions(PREFS, true)).not.toContain('spark_*');
   });

@@ -257,6 +257,38 @@ export function fakeJira(): FakeJira {
     send(res, 405, { errorMessages: ['Method not allowed'] });
   }
 
+  function createIssue(res: ServerResponse, body: Record<string, unknown>) {
+    const fields = body.fields as {
+      project: { key: string };
+      summary: string;
+      description: unknown;
+      priority?: { name: string };
+      labels?: string[];
+      assignee?: { accountId: string };
+    };
+    if (!workflows[fields.project.key]) {
+      return send(res, 400, { errors: { project: 'valid project is required' } });
+    }
+    const number = issues.filter((item) => projectOf(item) === fields.project.key).length + 100;
+    const key = `${fields.project.key}-${number}`;
+    issues.push({
+      key,
+      summary: fields.summary,
+      description: fields.description,
+      status: Object.keys(workflows[fields.project.key]!)[0]!,
+      updated: new Date().toISOString(),
+      assignee: fields.assignee?.accountId ?? null,
+      priority: fields.priority?.name ?? 'Medium',
+      duedate: null,
+      resolutiondate: null,
+      labels: fields.labels ?? [],
+      comments: [],
+      remoteLinks: [],
+      subtasks: [],
+    });
+    return send(res, 201, { id: String(issues.length), key, self: `/rest/api/3/issue/${key}` });
+  }
+
   return {
     workflows,
     issues,
@@ -282,6 +314,9 @@ export function fakeJira(): FakeJira {
         return send(res, 200, {
           issues: found.map((item) => ({ key: item.key, fields: fields(item) })),
         });
+      }
+      if (url.pathname === '/rest/api/3/issue' && req.method === 'POST') {
+        return createIssue(res, await readJson(req));
       }
       const match = ISSUE.exec(url.pathname);
       if (match) return issueRoute(req, res, match[1]!, match[2]);
