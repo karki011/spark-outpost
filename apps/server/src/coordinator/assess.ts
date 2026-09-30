@@ -9,6 +9,7 @@ import { routeBuilder } from '../orchestration/routing.ts';
 import { repoBusy } from '../orchestration/solo-copy.ts';
 import type { Session } from '../orchestration/session.ts';
 import { engagement, likelyFiles, type Engagement } from './engage.ts';
+import { planSteps, type PlanStep } from './plan-coverage.ts';
 import {
   placePieces,
   type PlaceablePiece,
@@ -23,6 +24,7 @@ export interface Assessment {
   placement: Placement | null;
   plan: Pick<PlanDocument, 'id' | 'version'> | null;
   planItems: string[];
+  planSteps: PlanStep[];
   likelyFiles: number;
   sizeEstimate: number;
   budgetTokens: number;
@@ -70,6 +72,7 @@ export async function assess(s: Session): Promise<Assessment> {
   const report = await awaitScan(s);
   const plan = await latestApprovedPlan(s.deps.db, s.input.identity.threadId);
   const planItems = plan ? outlinePlan(plan.body).open : [];
+  const steps = plan ? planSteps(plan.body) : [];
   const likely = likelyFiles(report?.candidates ?? []);
   const known = new Map(
     (report?.candidates ?? []).flatMap((file) =>
@@ -96,6 +99,7 @@ export async function assess(s: Session): Promise<Assessment> {
     placement,
     plan: plan ? { id: plan.id, version: plan.version } : null,
     planItems,
+    planSteps: steps,
     likelyFiles: likely.length,
     sizeEstimate: size,
     budgetTokens,
