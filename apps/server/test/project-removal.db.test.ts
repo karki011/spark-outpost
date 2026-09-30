@@ -93,6 +93,35 @@ describe('renaming a project', () => {
     await send('patch', path, { checkCommands: ['   '] }).expect(400);
   });
 
+  it('saves the Builder settings and leaves the rest alone', async () => {
+    const appRepo = await project(folders.app);
+    const path = `/api/projects/${appRepo.id}`;
+    const on = await send('patch', path, { parallelPieces: true, pieceSlots: 2 }).expect(200);
+    expect(on.body).toMatchObject({ parallelPieces: true, pieceSlots: 2, stableCheckout: false });
+    const stable = await send('patch', path, { stableCheckout: true }).expect(200);
+    expect(stable.body).toMatchObject({
+      parallelPieces: true,
+      pieceSlots: 2,
+      stableCheckout: true,
+    });
+    const { rows } = await t.db.query(
+      'SELECT parallel_pieces, piece_slots, stable_checkout FROM projects WHERE id = $1',
+      [appRepo.id],
+    );
+    expect(rows[0]).toEqual({ parallel_pieces: true, piece_slots: 2, stable_checkout: true });
+    await send('patch', path, { pieceSlots: 0 }).expect(400);
+    await send('patch', path, { pieceSlots: 4 }).expect(400);
+    await send('patch', path, { pieceSlots: 1.5 }).expect(400);
+    await send('patch', path, { parallelPieces: 'yes' }).expect(400);
+  });
+
+  it('tells the settings whether the server runs Builders in parallel', async () => {
+    const setup = (options: { parallelBuilders?: boolean }) =>
+      request(createTestApp(t, options)).get('/api/setup').set(LOCAL_HEADERS).expect(200);
+    expect((await setup({})).body.parallelBuilders).toBe(false);
+    expect((await setup({ parallelBuilders: true })).body.parallelBuilders).toBe(true);
+  });
+
   it('has no build style to set', async () => {
     const appRepo = await project(folders.app);
     const path = `/api/projects/${appRepo.id}`;
@@ -117,6 +146,8 @@ describe('removing and restoring a project', () => {
     await send('patch', `/api/projects/${appRepo.id}`, {
       name: 'Main app',
       commandAllowlist: ['pnpm lint'],
+      parallelPieces: true,
+      pieceSlots: 1,
     }).expect(200);
     const [first, second, third] = [randomUUID(), randomUUID(), randomUUID()];
     await link(first, [appRepo.id, libRepo.id]);
@@ -137,6 +168,8 @@ describe('removing and restoring a project', () => {
       ...appRepo,
       name: 'Main app',
       commandAllowlist: ['pnpm lint'],
+      parallelPieces: true,
+      pieceSlots: 1,
     });
     expect(await linkedIds(first)).toEqual([appRepo.id, libRepo.id]);
     expect(await linkedIds(second)).toEqual([libRepo.id, appRepo.id]);

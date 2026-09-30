@@ -13,10 +13,14 @@ export interface ProjectRow {
   created_at: Date;
   command_allowlist: string[];
   check_commands: string[] | null;
+  parallel_pieces: boolean;
+  piece_slots: number;
+  stable_checkout: boolean;
   last_used_at?: Date;
 }
 
-export const PROJECT_COLUMNS = 'id, name, root_path, created_at, command_allowlist, check_commands';
+export const PROJECT_COLUMNS =
+  'id, name, root_path, created_at, command_allowlist, check_commands, parallel_pieces, piece_slots, stable_checkout';
 
 export class ProjectNotFoundError extends Error {
   constructor() {
@@ -40,6 +44,9 @@ export function toProject(row: ProjectRow, home: string): Project {
     ...(row.last_used_at ? { lastUsedAt: row.last_used_at.toISOString() } : {}),
     commandAllowlist: row.command_allowlist,
     checkCommands: row.check_commands,
+    parallelPieces: row.parallel_pieces,
+    pieceSlots: row.piece_slots,
+    stableCheckout: row.stable_checkout,
   };
 }
 
@@ -117,6 +124,9 @@ export interface ProjectChange {
   name?: string | undefined;
   commandAllowlist?: readonly string[] | undefined;
   checkCommands?: readonly string[] | null | undefined;
+  parallelPieces?: boolean | undefined;
+  pieceSlots?: number | undefined;
+  stableCheckout?: boolean | undefined;
 }
 
 export async function updateProject(
@@ -128,7 +138,9 @@ export async function updateProject(
   const { rows } = await db.query<ProjectRow>(
     `UPDATE projects
      SET name = COALESCE($3, name), command_allowlist = COALESCE($4, command_allowlist),
-         check_commands = CASE WHEN $5 THEN $6::text[] ELSE check_commands END
+         check_commands = CASE WHEN $5 THEN $6::text[] ELSE check_commands END,
+         parallel_pieces = COALESCE($7, parallel_pieces), piece_slots = COALESCE($8, piece_slots),
+         stable_checkout = COALESCE($9, stable_checkout)
      WHERE id = $1 AND workspace_id = $2
      RETURNING ${PROJECT_COLUMNS}`,
     [
@@ -138,6 +150,9 @@ export async function updateProject(
       change.commandAllowlist ?? null,
       change.checkCommands !== undefined,
       change.checkCommands ?? null,
+      change.parallelPieces ?? null,
+      change.pieceSlots ?? null,
+      change.stableCheckout ?? null,
     ],
   );
   if (!rows[0]) throw new ProjectNotFoundError();

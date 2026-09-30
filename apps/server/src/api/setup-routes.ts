@@ -46,6 +46,7 @@ export interface SetupDeps {
   runCommand: RunCommand;
   loginShell: string | null;
   serverSpendCapUsd?: number | undefined;
+  parallelBuilders?: boolean | undefined;
 }
 
 function providerParam(req: Request): ProviderId {
@@ -67,7 +68,10 @@ function writeEvent(res: Response, event: VerifyEvent) {
 export function setupRoutes(deps: SetupDeps): Router {
   const { db, workspaceId, secrets } = deps;
   const router = Router();
-  const setupState = () => getSetupState(db, workspaceId, deps.serverSpendCapUsd ?? null);
+  const setupState = async () => ({
+    ...(await getSetupState(db, workspaceId, deps.serverSpendCapUsd ?? null)),
+    parallelBuilders: deps.parallelBuilders ?? false,
+  });
 
   router.get('/setup', async (_req, res) => {
     res.json(await setupState());

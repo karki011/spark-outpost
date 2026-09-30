@@ -2,6 +2,9 @@ import { z } from 'zod';
 
 export const PROJECT_FILES_LIMIT = 50;
 export const CONVERSATION_PROJECTS_MAX = 8;
+export const PIECE_SLOTS_MAX = 3;
+
+export const pieceSlotsSchema = z.number().int().min(1).max(PIECE_SLOTS_MAX);
 
 export const projectSchema = z.object({
   id: z.uuid(),
@@ -12,6 +15,9 @@ export const projectSchema = z.object({
   lastUsedAt: z.string().optional(),
   commandAllowlist: z.array(z.string()),
   checkCommands: z.array(z.string()).nullable().optional(),
+  parallelPieces: z.boolean().optional(),
+  pieceSlots: pieceSlotsSchema.optional(),
+  stableCheckout: z.boolean().optional(),
 });
 export type Project = z.infer<typeof projectSchema>;
 

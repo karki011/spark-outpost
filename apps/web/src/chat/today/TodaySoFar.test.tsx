@@ -62,7 +62,7 @@ function serve(body: unknown, status = 200) {
   const pending = new Promise<Response>((resolve) => {
     answer = resolve;
   });
-  const fetch = vi.fn(() => pending);
+  const fetch = vi.fn<(url: string) => Promise<Response>>(() => pending);
   vi.stubGlobal('fetch', fetch);
   return {
     fetch,

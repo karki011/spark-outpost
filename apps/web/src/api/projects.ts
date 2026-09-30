@@ -14,8 +14,14 @@ import {
   type ProjectFilesResponse,
   type ProjectGit,
   type RemovedProject,
+  type UpdateProjectRequest,
 } from '@spark-outpost/contracts';
 import { request } from './client.ts';
+
+export type BuilderSettings = Pick<
+  UpdateProjectRequest,
+  'parallelPieces' | 'pieceSlots' | 'stableCheckout'
+>;
 
 export const projectKeys = {
   all: ['projects'] as const,
@@ -61,6 +67,11 @@ export const projectsApi = {
     request(projectSchema, '/projects/restore', {
       method: 'POST',
       body: JSON.stringify(removed),
+    }),
+  updateBuilders: (projectId: string, change: BuilderSettings): Promise<Project> =>
+    request(projectSchema, `/projects/${projectId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(change),
     }),
   order: (projectIds: string[]): Promise<null> =>
     request(z.null(), '/projects/order', { method: 'PUT', body: JSON.stringify({ projectIds }) }),
