@@ -18,10 +18,7 @@ import {
 } from '@spark-outpost/contracts';
 import { request } from './client.ts';
 
-export type BuilderSettings = Pick<
-  UpdateProjectRequest,
-  'parallelPieces' | 'pieceSlots' | 'stableCheckout'
->;
+export type BuilderSettings = Pick<UpdateProjectRequest, 'pieceSlots' | 'workPlace'>;
 
 export const projectKeys = {
   all: ['projects'] as const,

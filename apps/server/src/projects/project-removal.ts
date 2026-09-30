@@ -1,5 +1,6 @@
 import {
   CONVERSATION_PROJECTS_MAX,
+  DEFAULT_WORK_PLACE,
   PIECE_SLOTS_MAX,
   type Project,
   type RemovedProject,
@@ -78,7 +79,7 @@ async function insertProject(
   const inserted = await client.query<ProjectRow>(
     `INSERT INTO projects
        (id, workspace_id, name, root_path, created_at, command_allowlist, check_commands,
-        parallel_pieces, piece_slots, stable_checkout)
+        parallel_pieces, piece_slots, work_place)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      ON CONFLICT DO NOTHING RETURNING ${PROJECT_COLUMNS}`,
     [
@@ -89,9 +90,9 @@ async function insertProject(
       project.createdAt,
       project.commandAllowlist,
       project.checkCommands ?? null,
-      project.parallelPieces ?? false,
+      project.parallelPieces ?? true,
       project.pieceSlots ?? PIECE_SLOTS_MAX,
-      project.stableCheckout ?? false,
+      project.workPlace ?? DEFAULT_WORK_PLACE,
     ],
   );
   if (inserted.rows[0]) return inserted.rows[0];

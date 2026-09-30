@@ -20,8 +20,12 @@ export async function chooseListPlace(
   pieces: readonly CheckedPiece[],
 ): Promise<ListPlace> {
   if (coordinatorMode(s) !== 'parallel') return { placement: 'in_order', reason: IN_ORDER_REASON };
-  if (!(await projectSettings(s.deps.db, s.lease.runId)).parallel) {
+  const settings = await projectSettings(s.deps.db, s.lease.runId);
+  if (!settings.parallel) {
     return { placement: 'in_order', reason: 'parallel pieces are off for this project' };
+  }
+  if (settings.slots < 2) {
+    return { placement: 'in_order', reason: 'this project runs one Builder at a time' };
   }
   if (s.needsCopy) return { placement: 'in_order', reason: 'every piece runs in the task copy' };
   const placed = placePieces(

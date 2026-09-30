@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Project } from '@spark-outpost/contracts';
@@ -15,9 +15,9 @@ const PROJECT: Project = {
   createdAt: '2026-09-30T00:00:00.000Z',
   commandAllowlist: [],
   checkCommands: null,
-  parallelPieces: false,
+  parallelPieces: true,
   pieceSlots: 3,
-  stableCheckout: false,
+  workPlace: 'worktree',
 };
 
 afterEach(() => {
@@ -51,50 +51,52 @@ function show(project: Project, available: boolean) {
   );
 }
 
-const parallel = () => screen.getByRole('switch', { name: 'Let Builders work in parallel in app' });
+const slotsPicker = () => screen.getByRole('button', { name: 'Builders at once in app' });
+const placePicker = () => screen.getByRole('button', { name: 'Where Spark works in app' });
 
 describe('Builder settings for a project', () => {
-  it('turns parallel Builders on and saves only that setting', async () => {
+  it('runs Builders in parallel by default with no on/off switch', () => {
+    server();
+    show(PROJECT, true);
+    expect(screen.queryByRole('switch')).toBeNull();
+    expect(slotsPicker().textContent).toContain('Up to 3 at once');
+    expect(screen.getByText(/run at the same time/)).toBeTruthy();
+  });
+
+  it('picks how many Builders run at once, and 1 means in order', async () => {
     const bodies = server();
     show(PROJECT, true);
-    expect(parallel().getAttribute('aria-checked')).toBe('false');
-    expect(screen.queryByRole('button', { name: 'How many at once in app' })).toBeNull();
-
-    fireEvent.click(parallel());
-    await vi.waitFor(() => expect(bodies).toEqual([{ parallelPieces: true }]), SETTLE);
+    fireEvent.click(slotsPicker());
+    fireEvent.click(screen.getByRole('menuitemradio', { name: '1 at a time, in order' }));
+    await vi.waitFor(() => expect(bodies).toEqual([{ pieceSlots: 1 }]), SETTLE);
+    cleanup();
+    show({ ...PROJECT, pieceSlots: 1 }, true);
+    expect(slotsPicker().textContent).toContain('1 at a time, in order');
+    expect(screen.getByText('Pieces of a big plan run one after another.')).toBeTruthy();
   });
 
-  it('picks how many pieces run at once from the app dropdown', async () => {
-    const bodies = server();
-    show({ ...PROJECT, parallelPieces: true }, true);
-    const picker = screen.getByRole('button', { name: 'How many at once in app' });
-    expect(picker.textContent).toContain('Up to 3 at once');
-
-    fireEvent.click(picker);
-    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Up to 2 at once' }));
-    await vi.waitFor(() => expect(bodies).toEqual([{ pieceSlots: 2 }]), SETTLE);
-  });
-
-  it('keeps the toggle off and explains why when the server runs pieces one at a time', () => {
-    vi.useFakeTimers();
-    server();
-    show({ ...PROJECT, parallelPieces: true }, false);
-    expect(parallel().hasAttribute('disabled')).toBe(true);
-    expect(parallel().getAttribute('aria-checked')).toBe('false');
-    expect(screen.queryByRole('button', { name: 'How many at once in app' })).toBeNull();
-
-    const anchor = parallel().parentElement!;
-    fireEvent.pointerEnter(anchor, { pointerType: 'mouse' });
-    act(() => {
-      vi.advanceTimersByTime(500);
-    });
-    expect(screen.getByRole('tooltip').textContent).toContain('COORDINATOR_MODE=parallel');
-  });
-
-  it('keeps the folder untouched when asked', async () => {
+  it('shows one at a time and explains why when the server runs pieces in order', () => {
     const bodies = server();
     show(PROJECT, false);
-    fireEvent.click(screen.getByRole('switch', { name: 'Keep this folder untouched: app' }));
-    await vi.waitFor(() => expect(bodies).toEqual([{ stableCheckout: true }]), SETTLE);
+    expect(slotsPicker().textContent).toContain('1 at a time, in order');
+    expect(screen.getByText(/COORDINATOR_MODE/, { selector: 'p' })).toBeTruthy();
+    fireEvent.click(slotsPicker());
+    const three = screen.getByRole('menuitemradio', { name: /Up to 3 at once/ });
+    expect(three.hasAttribute('disabled')).toBe(true);
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /1 at a time/ }));
+    expect(bodies).toEqual([]);
+  });
+
+  it('works in its own worktree by default and can switch to the folder itself', async () => {
+    const bodies = server();
+    show(PROJECT, true);
+    expect(placePicker().textContent).toContain('Each chat in its own worktree (recommended)');
+    fireEvent.click(placePicker());
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'In my files' }));
+    await vi.waitFor(() => expect(bodies).toEqual([{ workPlace: 'checkout' }]), SETTLE);
+    cleanup();
+    show({ ...PROJECT, workPlace: 'checkout' }, true);
+    expect(placePicker().textContent).toContain('In my files');
+    expect(screen.getByText('New chats edit the files in this folder directly.')).toBeTruthy();
   });
 });

@@ -1,6 +1,7 @@
 .btog {
   --btog-body: var(--line-strong);
   --btog-extra: color-mix(in srgb, var(--line-strong) 65%, var(--panel));
+  --btog-ink: var(--scout-eye);
   --btog-delay: 0s;
   display: inline-grid;
   place-items: center;
@@ -15,8 +16,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 .btog[data-on='true'] {
-  --btog-body: var(--accent);
+  --btog-body: var(--switch-on);
   --btog-extra: var(--warn);
+  --btog-ink: var(--switch-on-ink);
 }
 .btog-live[data-on='false'] {
   --btog-delay: 0.55s;
@@ -136,13 +138,13 @@
 }
 .btog-line {
   fill: none;
-  stroke: var(--scout-eye);
+  stroke: var(--btog-ink);
   stroke-width: 3.4;
   stroke-linecap: round;
 }
 .btog-eye,
 .btog-mouth {
-  fill: var(--scout-eye);
+  fill: var(--btog-ink);
 }
 .btog-cheek {
   fill: var(--warn);
@@ -160,7 +162,7 @@
   opacity: 1;
 }
 .btog-yawn {
-  fill: var(--scout-eye);
+  fill: var(--btog-ink);
   opacity: 0;
   transform-box: fill-box;
   transform-origin: center;

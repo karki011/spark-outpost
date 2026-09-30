@@ -1,7 +1,12 @@
 import { realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import type { Project } from '@spark-outpost/contracts';
+import {
+  DEFAULT_WORK_PLACE,
+  workPlaceSchema,
+  type Project,
+  type WorkPlace,
+} from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
 import { FolderError, realDirectory } from './folders.ts';
@@ -15,12 +20,12 @@ export interface ProjectRow {
   check_commands: string[] | null;
   parallel_pieces: boolean;
   piece_slots: number;
-  stable_checkout: boolean;
+  work_place: string;
   last_used_at?: Date;
 }
 
 export const PROJECT_COLUMNS =
-  'id, name, root_path, created_at, command_allowlist, check_commands, parallel_pieces, piece_slots, stable_checkout';
+  'id, name, root_path, created_at, command_allowlist, check_commands, parallel_pieces, piece_slots, work_place';
 
 export class ProjectNotFoundError extends Error {
   constructor() {
@@ -46,7 +51,7 @@ export function toProject(row: ProjectRow, home: string): Project {
     checkCommands: row.check_commands,
     parallelPieces: row.parallel_pieces,
     pieceSlots: row.piece_slots,
-    stableCheckout: row.stable_checkout,
+    workPlace: workPlaceSchema.catch(DEFAULT_WORK_PLACE).parse(row.work_place),
   };
 }
 
@@ -126,7 +131,7 @@ export interface ProjectChange {
   checkCommands?: readonly string[] | null | undefined;
   parallelPieces?: boolean | undefined;
   pieceSlots?: number | undefined;
-  stableCheckout?: boolean | undefined;
+  workPlace?: WorkPlace | undefined;
 }
 
 export async function updateProject(
@@ -140,7 +145,7 @@ export async function updateProject(
      SET name = COALESCE($3, name), command_allowlist = COALESCE($4, command_allowlist),
          check_commands = CASE WHEN $5 THEN $6::text[] ELSE check_commands END,
          parallel_pieces = COALESCE($7, parallel_pieces), piece_slots = COALESCE($8, piece_slots),
-         stable_checkout = COALESCE($9, stable_checkout)
+         work_place = COALESCE($9, work_place)
      WHERE id = $1 AND workspace_id = $2
      RETURNING ${PROJECT_COLUMNS}`,
     [
@@ -152,7 +157,7 @@ export async function updateProject(
       change.checkCommands ?? null,
       change.parallelPieces ?? null,
       change.pieceSlots ?? null,
-      change.stableCheckout ?? null,
+      change.workPlace ?? null,
     ],
   );
   if (!rows[0]) throw new ProjectNotFoundError();

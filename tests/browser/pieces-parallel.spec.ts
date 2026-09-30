@@ -8,9 +8,7 @@ import {
   resetCrew,
   send,
   type CrewRepo,
-  type Level,
 } from './crew-engine.ts';
-import { openTestDb } from './database.ts';
 
 const REQUEST = 'Split this up: build a store, add an API and add a view. #build #pieces #parallel';
 
@@ -24,19 +22,6 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.afterEach(() => repo.remove());
-
-async function parallelChat(page: Page, level: Level, stableCheckout = false): Promise<void> {
-  await crewChat(page, repo, level);
-  const db = openTestDb();
-  try {
-    await db.query(
-      'UPDATE projects SET parallel_pieces = true, stable_checkout = $2 WHERE root_path = $1',
-      [repo.root, stableCheckout],
-    );
-  } finally {
-    await db.end();
-  }
-}
 
 async function buildThePlan(page: Page): Promise<void> {
   const plan = card(page, /Build this plan\?/);
@@ -62,7 +47,7 @@ const parallelGroup = (page: Page) =>
 
 test('Automatic builds independent pieces side by side in the shared tree', async ({ page }) => {
   test.setTimeout(150_000);
-  await parallelChat(page, 'Auto-edit');
+  await crewChat(page, repo, 'Auto-edit');
   await send(page, REQUEST);
   await buildThePlan(page);
 
@@ -95,7 +80,7 @@ test('Review each step asks for the split before building it, answered by keyboa
   page,
 }) => {
   test.setTimeout(150_000);
-  await parallelChat(page, 'Review keep');
+  await crewChat(page, repo, 'Review keep');
   await send(page, REQUEST);
 
   await buildThePlan(page);
@@ -117,8 +102,8 @@ test('Review each step asks for the split before building it, answered by keyboa
 test('Full auto builds each piece in its own copy of the chat worktree', async ({ page }) => {
   test.setTimeout(150_000);
   await autoContinueAfter(page, 3);
-  await parallelChat(page, 'Full auto', true);
-  await send(page, REQUEST);
+  await crewChat(page, repo, 'Full auto');
+  await send(page, `${REQUEST} #manifest`);
 
   await expect(board(page)).toContainText('3 pieces, in worktrees · 3 landed', {
     timeout: 90_000,

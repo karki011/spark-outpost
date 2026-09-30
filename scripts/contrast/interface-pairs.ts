@@ -118,6 +118,15 @@ export const FORMS: Pair[] = [
     kind: 'text',
   },
   ...onEach('Forms', 'form.field-border', 'var(--line-strong)', ['canvas', 'panel', 'raise'], 'ui'),
+  ...onEach('Forms', 'form.switch-on', 'var(--switch-on)', ['panel', 'raise'], 'ui'),
+  {
+    id: 'form.switch-on-face',
+    group: 'Forms',
+    label: 'switch face (switch-on-ink on switch-on)',
+    fg: 'var(--switch-on-ink)',
+    bg: ['var(--switch-on)'],
+    kind: 'ui',
+  },
   {
     id: 'form.selected-border',
     group: 'Forms',

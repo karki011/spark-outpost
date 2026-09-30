@@ -38,14 +38,14 @@ export async function pieceRepo(root: string): Promise<void> {
 export async function projectFlags(
   t: TestDb,
   root: string,
-  flags: { parallel?: boolean; stableCheckout?: boolean; slots?: number },
+  flags: { parallel?: boolean; slots?: number },
 ): Promise<void> {
   const { project } = await createProject(t.db, t.workspaceId, root);
-  await t.db.query(
-    `UPDATE projects SET parallel_pieces = $2, stable_checkout = $3, piece_slots = $4
-     WHERE id = $1`,
-    [project.id, flags.parallel ?? true, flags.stableCheckout ?? false, flags.slots ?? 3],
-  );
+  await t.db.query('UPDATE projects SET parallel_pieces = $2, piece_slots = $3 WHERE id = $1', [
+    project.id,
+    flags.parallel ?? true,
+    flags.slots ?? 3,
+  ]);
 }
 
 export async function crewRuns(t: TestDb, runId: string): Promise<PieceRun[]> {

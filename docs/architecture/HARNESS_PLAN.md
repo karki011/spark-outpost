@@ -151,7 +151,7 @@ Four Spark rows were defaults nobody should need to turn off, so they are no lon
 - **Team line.** Every session gets the coordinator line (Claude's Agent tool whenever the session has tools).
 - **Critic.** Runs whenever Spark is on and the work calls for review; Spark off still skips it (`FlowState.solo`).
 - **Critic provider.** The Critic always runs on another connected provider when there is one, otherwise on the chat's provider one tier up (`routing.ts` `criticProvider`).
-- **Blob switches.** The remaining switches (Spark, Spend cap per task, Morning brief) are standalone blobs (`brand/BlobToggle.tsx`): asleep, grey and slumped with a drifting "z" when off; a click makes it jump awake in colour, a second click makes it yawn back to sleep. Each wears its own accessory (the Spark antenna, a coin, a small sun). With reduced motion the state changes instantly.
+- **Blob switches.** The remaining switches (Spark, Spend cap per task, Morning brief) are standalone blobs (`brand/BlobToggle.tsx`): asleep, grey and slumped with a drifting "z" when off; a click makes it jump awake in green (`--switch-on`, with `--switch-on-ink` for its face), a second click makes it yawn back to sleep. Each wears its own accessory (the Spark antenna, a coin, a small sun). With reduced motion the state changes instantly.
 - **Tests.** Unit: `spark-instructions.test.ts`, `routing.test.ts`, web `BlobToggle.test.tsx`. DB: `orchestration-critic-provider.db.test.ts`, `spark-profile.db.test.ts`, `spark-decisions.db.test.ts`, `setup.db.test.ts`, `spark-off.db.test.ts`. Browser: `settings.spec.ts`, `spark-decisions.spec.ts`, `onboarding.spec.ts`, `accessibility.spec.ts`.
 
 ### Removed in round 10
