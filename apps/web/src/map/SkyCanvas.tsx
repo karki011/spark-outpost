@@ -2,6 +2,8 @@ import { useEffect, useImperativeHandle, useRef, type Ref } from 'react';
 import { bindInput } from './engine-input.ts';
 import { MapEngine, type EngineCallbacks } from './engine.ts';
 import type { MapView, Rect } from './frame.ts';
+import type { ShortcutKeys } from '../ui/Keys.tsx';
+import { useTooltip } from '../ui/Tooltip.tsx';
 
 export interface SkyHandle {
   showBridge: (key: string | null) => void;
@@ -31,6 +33,34 @@ function overlayRects(stage: HTMLElement): Rect[] {
       box.bottom - origin.top + OVERLAY_GAP,
     ];
   });
+}
+
+interface ZoomButtonProps {
+  label: string;
+  keys: ShortcutKeys;
+  path: string;
+  onClick: () => void;
+}
+
+function ZoomButton({ label, keys, path, onClick }: ZoomButtonProps) {
+  const { triggerProps, tooltip } = useTooltip(label, { side: 'top', keys });
+  return (
+    <>
+      <button type="button" aria-label={label} {...triggerProps} onClick={onClick}>
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d={path}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      {tooltip}
+    </>
+  );
 }
 
 function useLatest<T>(value: T) {
@@ -143,52 +173,24 @@ export function SkyCanvas({
         back. Shift with arrows pans, plus and minus zoom, 0 fits the map.
       </p>
       <div className="map-zoom map-glass" role="group" aria-label="Zoom" data-map-overlay>
-        <button
-          type="button"
-          aria-label="Zoom in"
+        <ZoomButton
+          label="Zoom in"
+          keys={['+']}
+          path="M12 5v14M5 12h14"
           onClick={() => engineRef.current?.zoomBy(ZOOM_STEP)}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M12 5v14M5 12h14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-        <button
-          type="button"
-          aria-label="Zoom out"
+        />
+        <ZoomButton
+          label="Zoom out"
+          keys={['−']}
+          path="M5 12h14"
           onClick={() => engineRef.current?.zoomBy(1 / ZOOM_STEP)}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M5 12h14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-        <button
-          type="button"
-          aria-label="Fit the whole map"
+        />
+        <ZoomButton
+          label="Fit the whole map"
+          keys={['0']}
+          path="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
           onClick={() => engineRef.current?.fitAll()}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+        />
       </div>
     </>
   );

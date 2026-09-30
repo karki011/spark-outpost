@@ -6,6 +6,7 @@ import type { Palette } from './palette.ts';
 const SAMPLES = 24;
 const LABELLED = 4;
 const WEAK_LINK = 0.5;
+const LABEL_SPOTS = [12, 10, 14, 8, 16, 6, 18];
 
 function colorOf(palette: Palette, kind: LinkKind): string {
   if (kind === 'graphql') return palette.event;
@@ -90,16 +91,20 @@ export function drawBridgeLabels(frame: Frame): void {
     ...frame.reserved,
     ...frame.labels.map((r): Rect => [r.x, r.y, r.x + r.w, r.y + r.h]),
   ];
+  const overlaps = (rect: Rect) =>
+    taken.some((r) => rect[0] < r[2] && rect[2] > r[0] && rect[1] < r[3] && rect[3] > r[1]);
   for (const { bridge, points } of shown) {
-    const [x, y] = points[SAMPLES / 2]!;
     const text = labelText(bridge);
     const width = ctx.measureText(text).width + 14;
-    const rect: [number, number, number, number] = [x - width / 2, y - 10, x + width / 2, y + 10];
     const on = bridge.key === hovered || bridge.key === view.pathBridge;
-    const blocked = taken.some(
-      (r) => rect[0] < r[2] && rect[2] > r[0] && rect[1] < r[3] && rect[3] > r[1],
-    );
-    if (blocked && !on) continue;
+    const spots = LABEL_SPOTS.map((sample): Rect => {
+      const [px, py] = points[sample]!;
+      return [px - width / 2, py - 10, px + width / 2, py + 10];
+    });
+    const free = spots.find((spot) => !overlaps(spot));
+    if (!free && !on) continue;
+    const rect = free ?? spots[0]!;
+    const y = rect[1] + 10;
     taken.push(rect);
     ctx.globalAlpha = 0.95;
     ctx.fillStyle = palette.pill;

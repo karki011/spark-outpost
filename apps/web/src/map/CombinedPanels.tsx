@@ -1,5 +1,6 @@
 import { Fragment, useState } from 'react';
 import { BlobScout } from '../brand/BlobScout.tsx';
+import { InfoTip } from '../ui/InfoTip.tsx';
 import { MoveIcon, XIcon } from '../ui/icons.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
 import type { Bridge } from './bridges.ts';
@@ -57,7 +58,13 @@ export function PathCard({ scene, bridge, path, onStep, onClose }: PathCardProps
   return (
     <nav className="map-pathcard map-glass" aria-label="Likely path" data-map-overlay>
       <span className="map-path-head">
-        <small>Likely path</small>
+        <small>
+          Likely path{' '}
+          <InfoTip
+            topic="the likely path"
+            text="Traced from imports and route definitions in the code. It shows how a request probably flows, not a recorded run."
+          />
+        </small>
         <span className="map-mono">{bridge.links[0]!.label}</span>
       </span>
       {path.map((file, step) => (

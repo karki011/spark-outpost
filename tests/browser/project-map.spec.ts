@@ -1,4 +1,6 @@
-import { mkdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
@@ -36,6 +38,7 @@ async function openMap(page: Page, fixture: MapFixture, theme = 'graphite', proj
     { skin: theme, ids: projects ?? null },
   );
   await page.goto('/');
+  await expect(sky(page).or(page.getByRole('list', { name: 'Areas' }))).toBeVisible();
 }
 
 async function screenshot(page: Page, name: string) {
@@ -90,6 +93,7 @@ test('arrows walk the areas, Enter opens one as a network and Escape goes back',
   await page.setViewportSize({ width: 1440, height: 900 });
   const projectId = await addProject(page, REPO_ROOT);
   await openMap(page, monoFixture(projectId));
+  await expect(sky(page)).toHaveAccessibleName(/21 areas/);
   await sky(page).focus();
   await page.keyboard.press('ArrowRight');
   await expect(live(page)).toContainText(/area, \d+ files\. Press Enter to open\./);
@@ -221,11 +225,14 @@ test('two projects show separate skies joined by labelled bridges and a likely p
   await page.keyboard.press('Escape');
   await expect(sky(page)).toHaveAccessibleName(/Combined map of web and server/);
   await expect(page.getByRole('button', { name: /^HTTP API/ })).toContainText(/\d+/);
+  await screenshot(page, 'combined-light');
   const unmatched = page.getByRole('region', { name: 'Unmatched' });
+  await expect(unmatched).toHaveCount(0);
+  await page.getByRole('button', { name: /^Unmatched/ }).click();
   await expect(unmatched).toContainText('Routes nobody calls');
   await expect(unmatched.getByText('Possibly unused').first()).toBeVisible();
-  await expect(unmatched.getByText(/^Unused$/)).toBeVisible();
-  await screenshot(page, 'combined-light');
+  await expect(unmatched.getByText(/^Unused ·/)).toBeVisible();
+  await screenshot(page, 'combined-unmatched-light');
   const links = page.getByRole('list', { name: 'Links between projects' });
   const busiest = links.getByRole('button').first();
   await busiest.focus();
@@ -302,14 +309,12 @@ test('with reduced motion the sky holds still, even with changes lit', async ({ 
   await openMap(page, fixture);
   await page.getByRole('switch', { name: /Show changes from this chat/ }).click();
   await expect(page.locator('.map-cnt')).toHaveText(String(fixture.changedPaths.length));
-  await page.waitForTimeout(500);
-  expect(await canvasFrames(page)).toBe(true);
+  await expect.poll(() => canvasFrames(page), { timeout: 15_000 }).toBe(true);
   await sky(page).focus();
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('Enter');
   await expect(page.locator('.map-crumb')).toBeVisible();
-  await page.waitForTimeout(300);
-  expect(await canvasFrames(page)).toBe(true);
+  await expect.poll(() => canvasFrames(page), { timeout: 15_000 }).toBe(true);
 });
 
 test('the first build fills a skeleton sky that lights up area by area', async ({ page }) => {
@@ -342,4 +347,51 @@ test('the first build fills a skeleton sky that lights up area by area', async (
   ).toBeVisible({
     timeout: 15_000,
   });
+});
+
+test('the real map builder fills the sky for a small repository', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1200, height: 800 });
+  const root = mkdtempSync(path.join(realpathSync(os.tmpdir()), 'spark-map-real-'));
+  const files: Record<string, string> = {
+    'package.json': '{ "name": "shop", "type": "module" }\n',
+    'web/pages/Cart.tsx':
+      "import { total } from '../lib/prices.ts';\nexport const Cart = () => total([1]);\n",
+    'web/pages/Home.tsx': "import { Cart } from './Cart.tsx';\nexport const Home = () => Cart();\n",
+    'web/lib/prices.ts':
+      "import { round } from '../../shared/math.ts';\nexport const total = (xs: number[]) => round(xs.reduce((a, b) => a + b, 0));\n",
+    'server/routes/cart.ts':
+      "import { round } from '../../shared/math.ts';\nexport const cart = () => round(2);\n",
+    'server/db/store.ts':
+      "import { cart } from '../routes/cart.ts';\nexport const store = () => cart();\n",
+    'shared/math.ts': 'export const round = (n: number) => Math.round(n);\n',
+  };
+  for (const [file, text] of Object.entries(files)) {
+    mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
+    writeFileSync(path.join(root, file), text);
+  }
+  const git = (...args: string[]) =>
+    execFileSync('git', ['-C', root, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args]);
+  git('init', '-q');
+  git('add', '-A');
+  git('commit', '-qm', 'base');
+  try {
+    await addProject(page, root);
+    await page.addInitScript(() => localStorage.setItem('spark-outpost.view', 'map'));
+    await page.goto('/');
+    await expect(sky(page)).toHaveAccessibleName(/[1-9]\d* areas as constellations/, {
+      timeout: 100_000,
+    });
+    await expect(page.getByRole('status').filter({ hasText: 'Map built' })).toBeVisible();
+    await sky(page).focus();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.map-crumb')).toBeVisible();
+    await expect(async () => {
+      await page.keyboard.press('ArrowRight');
+      await expect(page.getByRole('tooltip')).toContainText(/on this/, { timeout: 1000 });
+    }).toPass();
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

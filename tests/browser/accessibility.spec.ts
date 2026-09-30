@@ -340,6 +340,7 @@ test('the Map has no serious colour-contrast or ARIA issues in any theme', async
   await page.getByRole('button', { name: /^Projects on the map/ }).click();
   await page.getByRole('menuitemcheckbox', { name: /^server/ }).click();
   await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: /^Unmatched/ }).click();
   await expect(page.getByRole('region', { name: 'Unmatched' })).toBeVisible();
   for (const theme of ['light', 'graphite', 'contrast']) {
     await useTheme(page, theme);

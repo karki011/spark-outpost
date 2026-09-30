@@ -71,7 +71,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [legend, setLegend] = useState<boolean | null>(null);
   const [pathKey, setPathKey] = useState<string | null>(null);
-  const [unmatchedOpen, setUnmatchedOpen] = useState(true);
+  const [unmatchedOpen, setUnmatchedOpen] = useState(false);
   const [flagHover, setFlagHover] = useState<string | null>(null);
   const [hover, setHover] = useState<TooltipTarget | null>(null);
   const [announcement, setAnnouncement] = useState('');
@@ -273,13 +273,6 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
     goToFile(endpoint.projectId, endpoint.file);
   const legendShown = (legend ?? (!combined && !phone)) && !pathBridge && !skeleton;
   const fileCount = data.maps.reduce((sum, map) => sum + (map.status?.fileCount ?? 0), 0);
-  const reviewItems = scene.areas.map((entry) => ({
-    key: entry.key,
-    area: entry.area,
-    projectName: combined
-      ? (data.projects.find((p) => p.id === entry.projectId)?.name ?? null)
-      : null,
-  }));
   const label = combined
     ? `Combined map of ${data.projects.map((p) => p.name).join(' and ')}: ${scene.areas.length} areas, ${data.bridges.length} links.`
     : `Project map of ${data.projects[0]?.name ?? 'your project'}: ${scene.areas.length} areas as constellations.`;
@@ -465,7 +458,13 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
         )}
         {reviewOpen && (
           <ReviewAreas
-            items={reviewItems}
+            items={scene.areas.map((entry) => ({
+              key: entry.key,
+              area: entry.area,
+              projectName: combined
+                ? (data.projects.find((p) => p.id === entry.projectId)?.name ?? null)
+                : null,
+            }))}
             fileCount={fileCount}
             onClose={() => setReviewOpen(false)}
             onShow={(key) => {

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { MAP_CATEGORIES, type MapArea, type MapCategory } from '@spark-outpost/contracts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
 import { XIcon } from '../ui/icons.tsx';
+import { InfoTip } from '../ui/InfoTip.tsx';
 import { Segmented } from '../ui/Segmented.tsx';
 import { Confidence } from './JevLabel.tsx';
 import { CATEGORY_LABELS, labelSource, needsCheck, reviewOrder } from './map-model.ts';
@@ -49,7 +50,11 @@ export function ReviewAreas({ items, fileCount, onClose, onShow, onCategory }: R
           <p>
             Jev grouped {fileCount.toLocaleString('en-US')} files into {items.length} areas. Mark
             each one Core, Shared or Feature if Jev got it wrong. The map redraws as you go. Least
-            sure first.
+            sure first.{' '}
+            <InfoTip
+              topic="confidence"
+              text="How sure Jev is about each label, from 0 to 1. Below 0.70 the area is marked Check this."
+            />
           </p>
         </div>
         <button type="button" className="map-icon-btn" aria-label="Close review" onClick={onClose}>

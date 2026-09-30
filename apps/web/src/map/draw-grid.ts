@@ -10,8 +10,16 @@ interface Dust {
 
 interface GridSprite {
   canvas: HTMLCanvasElement;
+  radius: number;
   color: string;
   dpr: number;
+}
+
+function bucket(radius: number): number {
+  const steps = Math.ceil(
+    Math.log(Math.max(radius, BUCKET_BASE) / BUCKET_BASE) / Math.log(BUCKET_STEP),
+  );
+  return BUCKET_BASE * BUCKET_STEP ** steps;
 }
 
 const DUST: Dust[] = (() => {
@@ -25,8 +33,9 @@ const DUST: Dust[] = (() => {
   });
 })();
 
-const SPRITE_RADIUS = 640;
-const SPRITE_STRETCH = 1.4;
+const BUCKET_BASE = 64;
+const BUCKET_STEP = 1.25;
+const SPRITE_MAX_RADIUS = 900;
 const sprites = new Map<string, GridSprite>();
 
 type Stroke = (from: [number, number], to: [number, number]) => void;
@@ -63,10 +72,10 @@ function paintGrid(
   ring(x, y, radius);
 }
 
-function sprite(project: SceneProject, color: string, dpr: number): GridSprite {
+function sprite(project: SceneProject, radius: number, color: string, dpr: number): GridSprite {
   const cached = sprites.get(project.projectId);
-  if (cached && cached.color === color && cached.dpr === dpr) return cached;
-  const half = SPRITE_RADIUS + 4;
+  if (cached?.radius === radius && cached.color === color && cached.dpr === dpr) return cached;
+  const half = radius + 4;
   const canvas = cached?.canvas ?? document.createElement('canvas');
   canvas.width = Math.ceil(half * 2 * dpr);
   canvas.height = canvas.width;
@@ -86,8 +95,8 @@ function sprite(project: SceneProject, color: string, dpr: number): GridSprite {
     ctx.lineTo(to[0], to[1]);
     ctx.stroke();
   };
-  paintGrid(ctx, half, half, SPRITE_RADIUS, ring, stroke);
-  const next = { canvas, color, dpr };
+  paintGrid(ctx, half, half, radius, ring, stroke);
+  const next = { canvas, radius, color, dpr };
   sprites.set(project.projectId, next);
   return next;
 }
@@ -104,10 +113,11 @@ function drawProjectGrid(
   const y = frame.sy(project.cy);
   const radius = project.radius * frame.camera.k;
   ctx.globalAlpha = alpha;
-  if (radius <= SPRITE_RADIUS * SPRITE_STRETCH) {
-    const cached = sprite(project, color, dpr);
-    const size = (cached.canvas.width / dpr) * (radius / SPRITE_RADIUS);
-    ctx.drawImage(cached.canvas, x - size / 2, y - size / 2, size, size);
+  const spriteRadius = bucket(radius);
+  if (spriteRadius <= SPRITE_MAX_RADIUS) {
+    const cached = sprite(project, spriteRadius, color, dpr);
+    const drawn = (cached.canvas.width / dpr) * (radius / spriteRadius);
+    ctx.drawImage(cached.canvas, x - drawn / 2, y - drawn / 2, drawn, drawn);
     return;
   }
   ctx.strokeStyle = color;

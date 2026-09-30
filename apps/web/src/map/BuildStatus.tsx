@@ -88,6 +88,15 @@ interface SparkSayProps {
 }
 
 export function SparkSay({ maps, phase, progress, revealed }: SparkSayProps) {
+  const empty = phase === 'ready' && maps.every((map) => map.areas.length === 0);
+  if (empty) {
+    return (
+      <div className="map-say map-glass" role="status" data-map-overlay>
+        <BlobScout size={34} mood="sleep" />
+        <p>There is nothing to map here yet. Spark found no source files it could read.</p>
+      </div>
+    );
+  }
   if (revealed && revealed.shown >= revealed.total) {
     return (
       <div className="map-say map-glass" role="status" data-map-overlay>

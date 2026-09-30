@@ -2,7 +2,7 @@ import type { MapAreaDetail } from '@spark-outpost/contracts';
 import { loadRequests, type LoadCandidate, type LoadRequest } from './lod.ts';
 
 const CONCURRENCY = 4;
-const FLUSH_MS = 60;
+const FLUSH_MS = 150;
 const QUEUED = 64;
 
 export interface LoadedArea {
