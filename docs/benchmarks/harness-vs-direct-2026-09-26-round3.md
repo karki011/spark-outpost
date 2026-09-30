@@ -283,7 +283,7 @@ No approval requests were auto-denied.
 
 ### Method
 
-Same runner, fixture and verification as the [tuned run](harness-vs-direct-2026-09-26-tuned.md): fresh git repos under the session scratchpad, the server's real code path against an isolated PostgreSQL schema, Claude Sonnet 5 at medium effort in Do mode at Full auto, the visible suite plus hidden checks that fail before the run and pass with a reference solution. The harness runs with the round-3 rules in [HARNESS_PLAN.md](../architecture/HARNESS_PLAN.md#harness-round-3-jev-scope-architect-and-parallelism-september-26-2026). The new tasks ran first, then a regression subset: 20 runs, one repeat per cell except P1 (two), $3.30 of the $4.00 cap. H2 and T2 to T5 were not re-run; the baseline table compares H1, H3 and T1 with the tuned run.
+Same runner, fixture and verification as the tuned run (report removed; data in [harness-vs-direct-2026-09-26-tuned.json](harness-vs-direct-2026-09-26-tuned.json)): fresh git repos under the session scratchpad, the server's real code path against an isolated PostgreSQL schema, Claude Sonnet 5 at medium effort in Do mode at Full auto, the visible suite plus hidden checks that fail before the run and pass with a reference solution. The harness runs with the round-3 rules in [HARNESS_PLAN.md](../architecture/HARNESS_PLAN.md). The new tasks ran first, then a regression subset: 20 runs, one repeat per cell except P1 (two), $3.30 of the $4.00 cap. H2 and T2 to T5 were not re-run; the baseline table compares H1, H3 and T1 with the tuned run.
 
 Which task exercises which feature:
 

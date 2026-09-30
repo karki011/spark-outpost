@@ -3,8 +3,8 @@
 The Project Map is a background, read-mostly model of each linked repository: every indexed file,
 its resolved imports, the areas the files group into, how important each file is, stable 2D
 positions for a "sky" of areas and the files inside them, Jev labels per area, and links between
-repositories (a front end calling a back end, shared packages, shared env keys). There is no UI
-page yet; the API and live events are in place for one.
+repositories (a front end calling a back end, shared packages, shared env keys). The Map page in
+the web app draws it (see [The UI page](#the-ui-page)).
 
 ## Where it runs
 
@@ -180,14 +180,17 @@ The first full index dominates time and memory (tree-sitter parse worker); later
 under ~300 MB. Jev labelling: 86 areas cost $0.026 (630k input tokens, ~7.3k per area, ~230 ms
 each); 268 areas cost $0.079 (1.89M tokens).
 
-## For the UI page
+## The UI page
 
-- Draw areas from `GET …/map` at their `x`, `y`, `radius`; weight area edges; colour by
-  category; mark `categorySource` (override, Jev, rules) and show the confidence.
-- Fetch files per area on zoom or selection (`…/areas/:areaId`), offset by the area's position;
-  page through large areas with `nextOffset`.
-- Subscribe to app events of kind `map` and refetch the map with the matching `mapId`; show
-  `status`/`phase`/`progress` while building and "paused while agents run".
-- Category override control per area (PUT with `null` to reset).
-- A repo picker for links, drawing `areaLinks` across maps and listing file links with their
-  labels (e.g. `GET /api/orders/:id`) and confidence; hide or dim links under 0.5.
+The Map item in the rail opens `MapPage` (`apps/web/src/map/`, wired in `apps/web/src/app/App.tsx`).
+It has:
+
+- a **Sky** view drawn on a canvas (`SkyCanvas.tsx`, `engine.ts`) and a **List** view
+  (`AreaList.tsx`), with search, filters by category and file kind, and a legend;
+- a repo picker and cross-repo links (`bridges.ts`: http, graphql, package, env), with link,
+  path and unmatched-endpoint panels (`CombinedPanels.tsx`);
+- build status with progress and "paused while agents run" (`BuildStatus.tsx`);
+- an area review with the per-area category override (`ReviewAreas.tsx`, `use-area-review.ts`);
+- a file detail sheet that can open the file in a chat, and highlights for files changed in the
+  latest chat and their dependents (`FileDetailSheet.tsx`, `use-chat-changes.ts`,
+  `CoreImpactNote.tsx`).

@@ -54,7 +54,7 @@ Sources: https://docs.z.ai/guides/llm/glm-5.3, https://docs.z.ai/guides/vlm/glm-
 
 - Cache storage is "limited-time free". The caching page says hits cost "usually 50%" of input, but the price table's rates are about 19%; the estimate uses the table.
 - The Coding Plan is a subscription with 5-hour and weekly quotas instead of per-token billing. GLM-5.3 uses 3× quota at peak (Monday to Friday, 14:00–18:00 UTC+8) and 1× off-peak; Flash 1.2× and 0.4×. Using up the quota never charges the account balance.
-- Spark Outpost estimates every Z.ai run from tokens at the pay-as-you-go rates and labels it `estimated`. Claude Code's own cost figure uses Anthropic prices, so it is ignored. On a Coding Plan the estimate overstates the real charge.
+- Spark Outpost estimates every Z.ai run from tokens at the pay-as-you-go rates in `apps/server/src/model-cards/vendor-cards.json` (the source for `usage/prices.ts`) and labels it `estimated`. Claude Code's own cost figure uses Anthropic prices, so it is ignored. On a Coding Plan the estimate overstates the real charge.
 
 Source: https://docs.z.ai/guides/overview/pricing, https://docs.z.ai/devpack/overview, https://docs.z.ai/devpack/notice/usage-revision
 
@@ -62,7 +62,7 @@ Source: https://docs.z.ai/guides/overview/pricing, https://docs.z.ai/devpack/ove
 
 - **Rate limits and concurrency:** no public numbers. Concurrency quotas differ by user and plan; excess requests "may fail or need to wait in queue" (https://docs.z.ai/guides/overview/concept-param). The per-key limits are only in the console.
 - **Coding Plan quotas:** Lite about 80 prompts per 5 hours, Pro about 400, Max about 1,600 (weekly about 5× that).
-- **Tools:** at most 128 functions; `tool_choice` supports only `auto` (https://docs.z.ai/api-reference/llm/chat-completion). Claude Code's tool list for our runs is 0 to 6 tools.
+- **Tools:** at most 128 functions; `tool_choice` supports only `auto` (https://docs.z.ai/api-reference/llm/chat-completion). Claude Code's tool list for our runs varies by session: 0 built-in tools in a chat, up to a handful in a project, plus the `spark` MCP server every session gets (see [REPO_AGENT_CONFIG.md](../../architecture/REPO_AGENT_CONFIG.md#sparks-own-tools-spark-mcp-server)).
 
 ## Thinking
 

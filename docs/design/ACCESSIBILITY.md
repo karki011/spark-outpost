@@ -98,7 +98,7 @@ The allowlist in `scripts/contrast/pairs.ts` is deliberately short, and every en
 - `offline.zz`: the decorative, `aria-hidden` "z" glyphs on the offline mascot.
 - `provider.cost-tier-shade`: the lighter tier shades in the cost bar, which repeat what the legend text says.
 
-`tests/browser/accessibility.spec.ts` runs axe-core on the main screens (chat with work panel, Settings and Home) in all twelve themes. It fails on any serious or critical `color-contrast` or `aria-*` violation.
+`tests/browser/accessibility.spec.ts` runs axe-core on the main screens (chat with work panel, Settings, Home and Tickets) in all twelve themes. It fails on any serious or critical `color-contrast` or `aria-*` violation.
 
 ## Typography
 

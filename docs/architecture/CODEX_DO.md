@@ -1,12 +1,8 @@
-# Codex Do: live probe and proposal
+# Codex Do: live probe and what shipped
 
-Can Codex build (Do mode) under Spark Outpost's approval gate? Probed live on September 26, 2026 against codex-acp 1.13.1 (with our read-only patch) and the `codex app-server` it bundles, `@openai/codex` 0.156.1. See [ACP agents](ACP_AGENTS.md#do-in-project-folders-m2) and [agent adapters](AGENT_ADAPTERS.md) for the background.
+Can Codex build (Do mode) under Spark Outpost's approval gate? Probed live on September 26, 2026 against codex-acp 1.13.1 (with our read-only patch) and the `codex app-server` it bundles, `@openai/codex` 0.156.1. See [ACP agents](ACP_AGENTS.md#do-in-project-folders-m2) and [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md#adapter-capabilities) for the background, and [PATCHES.md](PATCHES.md) for the patch that shipped from this probe.
 
-**Update, September 28, 2026: provider permission modes.** The picker now shows Codex's own modes (Read-only, Ask every time, Approve for me, Full access); the chat's mode decides what Codex asks, and the harness autonomy (Review each step, Automatic, Full auto → PR) decides the rest ([HARNESS_PLAN.md](HARNESS_PLAN.md#provider-permission-modes-september-28-2026)). Ask every time still sends every action to the gate and may run on the checkout. Approve for me and Full access don't reach the gate, so they run only in a worktree copy, and a live switch to them on the checkout is refused. Ask before edits maps to Ask every time, Auto-edit and Full auto to Approve for me.
-
-**Update, September 29, 2026: chat worktrees.** Every Do chat in a git project now works in its own worktree on its own `spark/…` branch by default ([HARNESS_PLAN.md, Chat worktrees](HARNESS_PLAN.md#current-architecture-the-lean-harness-round-10-september-27-2026)). That worktree counts as the worktree for `modeNeedsWorktree`: Approve for me and Full access run in it directly, with no extra per-run copy and no merge back into your checkout. The per-run copy described below still applies when you choose "Work in my checkout" or the chat works on your checked-out branch in place.
-
-**Status: implemented September 26, 2026.** The user approved the proposal with two changes: safe reads use the same rule for every provider, and package installs always ask for every provider unless they only restore the lockfile. What shipped and the live check are at the end.
+**Status: implemented September 26, 2026**, then superseded by provider permission modes (September 28) and chat worktrees (September 29): the picker now shows Codex's own modes (Read-only, Ask every time, Approve for me, Full access), and a Do chat in a git project works in its own worktree by default ([HARNESS_PLAN.md](HARNESS_PLAN.md#current-architecture-the-lean-harness-round-10-september-27-2026)). Ask every time still sends every action to the gate; Approve for me and Full access don't, so they run only in a worktree copy.
 
 ## Short answer
 
@@ -61,103 +57,25 @@ More rows:
   - `ls /Users/Shared` asked, then "Operation not permitted", so reads outside the workspace are blocked.
   - `cat /private/tmp/…/outside/.env` succeeded, because `:minimal` covers the temp folders. Without `:minimal` even `ls` failed.
   - An allowed write outside the repo succeeded.
-  - It's promising but not ready:
-    - Omitting the per-turn policy lets `~/.codex/config.toml` apply. The user's has `sandbox_mode = "danger-full-access"` and `approval_policy = "never"`, so a profile that fails to load fails open.
-    - Escalated commands bypass it.
-    - The docs report deny globs broken on some versions ([openai/codex#22179](https://github.com/openai/codex/issues/22179)).
+  - Promising, and shipped September 29 as patch part 7 ([PATCHES.md](PATCHES.md)): a per-mode profile denies secret file patterns under the project roots for every command, closing the indirect-read gap this probe found.
 - **Docs vs. binary.** Codex's docs list `untrusted` as retired for `config.toml`. The app-server protocol still accepts it per turn in 0.156.1 and in the 0.157.0 CLI on this machine (the `AskForApproval` schema is `untrusted | on-request | never | granular`). `granular` can't ask before sandboxed commands.
-
-## The patch (in `patches/@agentclientprotocol__codex-acp@1.13.1.patch`)
-
-What each part changes, what guards it and when it can go is tracked in [PATCHES.md](PATCHES.md).
-
-About 25 changed lines in `dist/index.js`, prototyped in `scratchpad/codex-do/proposed-patch-addition.diff` and checked live: `ls`, `apply_patch`, `cat .env` and an outside write all asked, and a denied `echo` failed while the turn ended normally.
-
-1. **New mode `ask-every-action`** ("Ask every time"): `approvalPolicy: "untrusted"`, `approvalsReviewer: "user"`, `workspaceWrite` with `writableRoots: []`, `networkAccess: false`, `excludeSlashTmp: true` and `excludeTmpdirEnvVar: false`. The private `TMPDIR` stays writable, but not `/tmp`. It's added to `AgentMode.all()`, and the other modes are unchanged.
-2. **`decline` option.** `decline` ("No, continue without it", `reject_once`) is added to command and file-change approvals when Codex doesn't offer it, placed before `cancel`, so our gate's first `reject_once` means "skip this and carry on" instead of ending the turn.
-3. **Usage per turn** (added September 27). codex-acp answers a prompt with the usage of the turn's last model request only. The patch sums the turn's requests from `thread/tokenUsage/updated` (the change in the thread total, or the last request when no total was seen yet, so repeated updates add nothing) and reports that sum. Input is still reported without its cached part, so the harness adds the cached tokens back before estimating the cost.
-
-Maintenance:
-
-- The patch touches three code blocks for the mode and the `decline` option, plus the token-usage handler, the turn start and the prompt responses for usage.
-- A unit test fails if the mode or the `decline` option is missing, like today's read-only check.
-- Upstream PR #480 (a `workspace-write` mode) doesn't replace it: that mode is still `on-request`. The patch can go only when codex-acp ships an "ask for everything" mode and a continue-on-deny option. Both are worth an upstream issue.
-- Risk: a future Codex drops `untrusted` from the protocol. Pin `@openai/codex` through codex-acp's exact version, and add a live test that fails if `ls` stops asking.
-
-## Proposal: Codex Do by involvement level (September 26; superseded by provider modes)
-
-Codex Do runs in the `ask-every-action` mode, and every command and patch reaches `decide()`. The levels then mean the same as for Claude. Differences (level names as of September 26; the update at the top describes today's modes and autonomy):
-
-| Level     | Codex Do                                                                                   | What Codex asks (picker copy)                                                                                                                                                        |
-| --------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Hands-on  | Supported                                                                                  | "Codex asks before every command, including reading files with `ls` or `cat`, and before every edit."                                                                                |
-| Balanced  | Supported. Safe read commands in the project are allowed (see below); everything else asks | "Codex reads project files without asking. It asks before every edit and every other command, unless the command is on this project's allowlist."                                    |
-| Hands-off | Supported, in a worktree                                                                   | "Codex reads and edits in a separate copy without asking. It asks before commands that aren't on the allowlist. You keep or revert the copy at the end."                             |
-| Full auto | Supported, in a worktree                                                                   | "Codex works in a separate copy without asking, except for pushing, deleting outside the repo and secret files. An allowed command may leave Codex's sandbox and reach the network." |
-
-Guardrails:
-
-- **Safe reads.** Codex has no file-reading tool: its reads are commands. Claude's Read, Glob and Grep never ask at any level. For Codex, Balanced and above auto-allow a command only when our own classifier (`approvals/commands.ts`, not Codex's parse) finds all of these:
-  - a single simple command from a fixed read-only list (`ls`, `cat`, `head`, `tail`, `wc`, `pwd`, `rg`/`grep` without `--pre`, `find` without `-exec`/`-delete`/`-fprint`, `git status|diff|log|show|branch`, `sed -n` without `w`)
-  - no redirects, pipes into writers or substitutions
-  - every path inside the roots
-  - no secret names (these already always ask)
-
-  Hands-on asks for these too. This also closes the direct `cat .env` path: it always asks.
-
-- **Always a worktree at Hands-off and Full auto.** There, allowed commands run without a person looking, and an allowed command can leave the sandbox. The worktree keeps changes out of the main checkout until Keep. Hands-on and Balanced may run in place, where the git snapshot plus Keep or Revert cover it, as for Claude. Simplest option: always a worktree for Codex Builders. It costs a worktree even for one-step work, and ignored files (`node_modules`, `.env`) are missing, so checks that need them fail. That's a plus for secrets, a minus for checks.
-- **Network off.** The sandbox default. The card says: "Runs in Codex's sandbox without network. If Codex asked to leave the sandbox, allowing it also allows network and writes anywhere." Package installs hang when sandboxed. Proposed: add "Installing packages always asks" (`npm|pnpm|yarn|bun install|add`, `pip install`, `brew install`, `cargo add|install`, `go get`) to `alwaysAskReason`, for every provider.
-- **Writes and non-safe commands reach our gate.** Verified above. As a backstop, the provider stops a Codex Do run whose applied mode isn't `ask-every-action`, which the existing mode lock and `unsafeModeChange()` already do.
-- **Deny.** With the `decline` option the turn continues, as with Claude. If the patch loses `decline`, a Codex turn ending `cancelled` without our Stop becomes "Codex stopped after a denied action" (finished, not cancelled).
-- **Checks, Critic and Keep/Revert afterwards,** unchanged. The Critic sees the diff and the check results.
-- **Disclosure** in the picker, Settings and the first approval card of a Codex Do run: "Codex can read any file on this computer inside its sandbox. Spark Outpost asks before each command that names a secret file, but can't see what a script or search reads. Its sandbox is not limited to this project for reads."
-- **Extra repos.** `additionalDirectories` become writable roots under `workspaceWrite`. Pass only the primary repo, or the worktree, to Codex Do. Extra repos stay read context through the prompt, and the note says Codex can only change the primary repo.
-- **Ask stays** on the patched `read-only` mode (unchanged). Chat stays on today's lockdown.
-
-## Proposal: Codex as the only provider
-
-- **Builders:** Codex in `ask-every-action` at the chat's level, as above.
-- **Scout:** Codex in Ask (patched `read-only`), as today.
-- **Architect:** Codex in Ask, at the top Codex tier and high effort unless pinned (`tiers.ts` already ranks the Codex models). Codex sends ACP `plan` updates from its plan tool, and the numbered-list fallback covers a missing plan. Claude's task tools aren't needed.
-- **Critic:** `criticProvider()` already falls back to the chat's provider when no other one is connected. Changes:
-  - Prefer a different model than the Builder's: a higher tier or effort.
-  - Label it "Review by Codex (same provider, no cross-model review)" on the crew block, in the review artifact and in the audit view.
-  - Keep "AI review, not verification".
-- **Jev** routes among Codex's models only. Intake, gating and checkpoints are unchanged.
-- **Mixed crews:** with Claude or Z.ai also connected, Builders stay on the chat's provider, and the Critic stays the first other connected provider.
-- **Setup:** a user with only Codex connected gets Do in the picker, with the disclosure, instead of today's "Use Claude for Do".
 
 ## What shipped
 
-- **Patch.** `ask-every-action` and the `decline` option, as above. `agents.test.ts` fails if the read-only sandbox, the new mode's policy and sandbox, or the `decline` ordering is missing.
-- **Agent definition** (`agents.ts`): Codex has `doMode: 'ask-every-action'` (its asking mode) and `doPrimaryRootOnly`. Claude and Z.ai keep `doSessionMeta`, and `supportsDo()` covers both. `session-modes.ts` applies the chat's chosen mode, falls back to the asking mode when the mode is unavailable, and refuses a worktree-only mode outside a worktree (`modeNeedsWorktree`).
-- **Decisions** (`approvals/command-kinds.ts`, `decide.ts`): `isSafeRead` and `isPackageInstall`, for every provider. A safe read is allowed with the reason "a read-only command inside the project" (`decided_by = 'level'`) in every mode whose requests reach the gate. An install asks with "Installing packages always asks" at every level, ahead of run rules and the allowlist.
-- **Worktrees** (`orchestration/solo-copy.ts`): a Codex Builder in Approve for me or Full access (including a retry or fix) runs as a child in its own worktree, as does every Full auto → PR task. Checks and fixes run there. The copy is merged into the working tree after each Builder turn (since round 10, a conflict with your own edits offers Keep your version, Keep Bolt's or Stop; there is no reconciling Builder) and removed before the turn finishes. Keep or Revert covers it through the orchestration snapshot. The same copy now also serves destructive work and a second task running in the same repo.
-- **Single-provider crews.** `ruleCriticPick` gives a same-provider Critic the tier above the chat model at high effort. `sameProvider` is recorded on the Critic's route and review body. The crew block reads "Critic (same provider, no cross-model review)".
-- **Copy** (`packages/contracts/src/approvals.ts`):
-  - `commandSandboxNote(provider)` replaces "Commands aren't sandboxed" on Codex command cards. The per-level hints and the picker disclosure went with the provider-modes picker, which shows Codex's own mode descriptions.
-- **Tests.**
-  - Unit: `command-kinds.test.ts`, `decide.test.ts`, `agents.test.ts`, `routing.test.ts`, `approvals-copy.test.ts` and `crew-projection.test.ts`.
-  - Fake-agent provider: `test/acp-codex-do.test.ts`, which simulates Codex's options and `cancel`.
-  - DB: `test/codex-crew.db.test.ts`, plus the updated `approvals.db.test.ts` and `chat-settings.db.test.ts`.
-  - Browser: `approvals.spec.ts` (a Codex command card shows the sandbox note) and `permission-modes.spec.ts` (Codex's modes in the picker).
+The patch adds two things to `patches/@agentclientprotocol__codex-acp@1.13.1.patch` (full detail in [PATCHES.md](PATCHES.md) parts 2 and 3): a new mode `ask-every-action` (`approvalPolicy: "untrusted"`, workspace-write with no network or `/tmp`), and a `decline` option ahead of `cancel` on command and file-change approvals, so a denial lets Codex continue instead of ending its turn. A third part (usage summed per turn) and a fourth (named permission profiles, closing the indirect secret-read gap above) followed later, also in PATCHES.md.
+
+- **Agent definition** (`agents.ts`): Codex has `doMode: 'ask-every-action'` and `doPrimaryRootOnly`. `session-modes.ts` applies the chat's chosen mode, falls back to the asking mode when the mode is unavailable, and refuses a worktree-only mode outside a worktree.
+- **Decisions** (`approvals/command-kinds.ts`, `decide.ts`): a safe read-only command inside the project is allowed at every level whose requests reach the gate; a package install always asks unless it only restores the lockfile.
+- **Worktrees** (`orchestration/solo-copy.ts`): a Codex Builder in Approve for me or Full access runs as a child in its own worktree, as does every Full auto → PR task; Checks and fixes run there, and the copy merges into the working tree after each Builder turn.
+- **Tests.** Unit: `command-kinds.test.ts`, `decide.test.ts`, `agents.test.ts`, `routing.test.ts`. Fake-agent provider: `test/acp-codex-do.test.ts`. DB: `test/codex-crew.db.test.ts`, `approvals.db.test.ts`, `chat-settings.db.test.ts`. Browser: `approvals.spec.ts`, `permission-modes.spec.ts`.
 
 ### Live check (September 26)
 
-`test/codex-do.live.test.ts` ran in scratch repos under the session scratchpad on the ChatGPT login, with `gpt-6-luna` · low and no Jev. Task: `ls`, `cat README.md`, append a line, `git status --short`. Every Codex tool call had an approval row with the same tool-call id. The rows use the level names of the time; `0049_levels_full_auto_ship.sql` and `0050_provider_modes.sql` map Hands-on and Balanced to Ask every time with Review each step, and Hands-off and Full auto to Approve for me with Automatic and Full auto → PR.
+`test/codex-do.live.test.ts` ran in scratch repos under the session scratchpad on the ChatGPT login, with `gpt-6-luna` · low and no Jev. Task: `ls`, `cat README.md`, append a line, `git status --short`. Every Codex tool call had an approval row with the same tool-call id, at every level tried (in place and in a worktree). Codex usage for the check was about $0.03 API-equivalent, against the $0.50 cap.
 
-| Level     | Where    | Receipts                                                                               | Tokens |
-| --------- | -------- | -------------------------------------------------------------------------------------- | ------ |
-| Hands-on  | in place | `ls`, `cat`, the edit and `git status`: all decided by the user                        | 17.2K  |
-| Balanced  | in place | `ls`, `cat` and `git status` allowed as safe reads; the shell edit decided by the user | 17.2K  |
-| Hands-off | worktree | all 4 allowed by the level, in Bolt's copy, then merged                                | 17.3K  |
-| Full auto | worktree | all 4 allowed by the level, in Bolt's copy, then merged                                | 17.6K  |
+## Still open
 
-Codex usage for Phase A and B together was about $0.03 API-equivalent, against the $0.50 cap.
-
-### Still open
-
-- Codex's sandbox can read any file. Indirect secret reads by searches and scripts aren't visible to us.
+- Codex's sandbox can read any file. Indirect secret reads by searches and scripts are now blocked at the OS level for the patterns in `SECRET_FILE_PATTERNS` (PATCHES.md part 7), but not for `.sparkignore` entries or files outside the project roots.
 - An escalated command leaves the sandbox after one approval, and the request doesn't show it.
 - Safe reads are judged lexically. A symlink inside the project that points outside is not resolved, which applies to Claude's Bash too.
 - `npx`, `pnpm dlx` and similar download-and-run commands aren't treated as installs.

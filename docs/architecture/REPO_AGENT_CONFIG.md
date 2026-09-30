@@ -1,6 +1,6 @@
 # Repo agent configuration
 
-How Claude and Codex use a linked repo's own agent setup (instructions, skills, commands, subagents, hooks, MCP servers) without letting the repo loosen Spark Outpost's rules. Checked September 28, 2026 against `@agentclientprotocol/claude-agent-acp` 0.81.2 (Claude Agent SDK 0.3.280, Claude Code CLI 2.1.280) and `@agentclientprotocol/codex-acp` 1.13.1 (Codex 0.156.1, patched).
+How Claude and Codex use a linked repo's own agent setup (instructions, skills, commands, subagents, hooks, MCP servers) without letting the repo loosen Spark Outpost's rules. Checked September 28, 2026 against `@agentclientprotocol/claude-agent-acp` 0.81.2 (Claude Agent SDK 0.3.280, Claude Code CLI 2.1.280) and `@agentclientprotocol/codex-acp` 1.13.1 (Codex 0.156.1, patched); Spark's own tools section checked September 30, 2026.
 
 ## Policy
 
@@ -142,7 +142,7 @@ Settings → Test connection starts the server through the MCP SDK client with a
 
 ## Spark's own tools (`spark` MCP server)
 
-Every agent session Spark launches (chat, Ask, Do, Builders; Claude, Z.ai and Codex) gets a built-in MCP server named `spark`, read-only except for actions the user confirms on a card,, so agents can answer questions about Spark itself.
+Every agent session Spark launches (chat, Ask, Do, Builders; Claude, Z.ai and Codex) gets a built-in MCP server named `spark`, read-only except for actions the user confirms on a card, so agents can answer questions about Spark itself.
 
 - **Tools**: `spark_providers`, `spark_connectors`, `spark_settings`, `spark_projects`, `spark_map`, `spark_chats`, `spark_chat`, `spark_audit`, `spark_tickets`, `spark_analytics`, `spark_activity`, `spark_brief` (`apps/server/src/spark-mcp/tools/`). Each reuses the functions behind the matching API route. These read tools carry `readOnlyHint: true` and change nothing, except that `spark_tickets` refreshes the same ticket cache the Tickets page refreshes.
 - **Action tools**: `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket` (Jira and Linear through Spark's connectors) and `spark_open_pr` (Ship's draft PR for the chat's latest task: commit, push the task's own branch, open a draft PR). They never act on their own: each inserts a `spark_action` approval with a preview of exactly what will change (source, project or ticket, current status or assignee, branch, base and files), the call waits for the user's answer, and only a confirm runs it. The user can edit the text fields first (title, description or comment, type, priority, labels, target status); edits are validated against the action's editable fields and stored in `approvals.edits` (migration 0073). There is no "Always allow", the scope is always once, levels never decide these cards, and assigning shows the current owner so taking someone else's ticket is explicit. Results go back to the agent (key and URL, PR URL and number, or "declined"), each action is written to the run's protocol log as `spark/<action>` (redacted), and ticket actions also to `ticket_events` (new action `create`). Sessions without a run to show the card in refuse these tools. Codex gets `tool_timeout_sec = 3600` for the Spark server so a waiting card doesn't time the call out.

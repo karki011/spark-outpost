@@ -17,7 +17,7 @@ No server work runs in Electron's main process. It drives the windows, menus and
 
 ### Database: keep Postgres, bundle it
 
-The server depends on `LISTEN/NOTIFY` (live updates between the API and the worker), `FOR UPDATE SKIP LOCKED` (the job queue) and every migration (plain SQL). PGlite allows one connection per instance, and our API and worker are separate processes. SQLite would mean rewriting the migrations, the live-update channel and the job queue. See [ROUTING_PLAN.md](ROUTING_PLAN.md), section 10.
+The server depends on `LISTEN/NOTIFY` (live updates between the API and the worker), `FOR UPDATE SKIP LOCKED` (the job queue) and every migration (plain SQL). PGlite allows one connection per instance, and our API and worker are separate processes. SQLite would mean rewriting the migrations, the live-update channel and the job queue.
 
 - **Source:** pin one [`embedded-postgres`](https://www.npmjs.com/package/embedded-postgres) version (its current release is a beta), or ship the same per-platform binaries ourselves. About 30–40 MB per platform.
 - **Data:** in the app's folder, `~/Library/Application Support/Spark Outpost` on macOS, never inside a project.
@@ -43,8 +43,8 @@ How it works today (web milestone):
 Users can't run `pnpm db:migrate`. At startup:
 
 1. One process takes a lock and checks for pending migrations; the other waits.
-2. If any are pending, it backs up the database first and keeps the last few backups.
-3. It applies them. A failure stops startup with a readable error and keeps the backup.
+2. If any are pending and `BACKUP_DIR` is set, it backs up the database first (`pg_dump`) and keeps the last few backups. The desktop shell sets `BACKUP_DIR` to its `backups/` folder; `pnpm dev` and test databases take no backup (`persistence/startup-backup.ts`).
+3. It applies them. A failure stops startup with a readable error and keeps any backup.
 
 The same change fixes the dev problem where a pull with a new migration crashed the API (502s).
 
@@ -106,7 +106,7 @@ The rule for every new feature: anything that stores data, opens a port, names a
 `pnpm desktop:dev` builds the web app, bundles the main process with esbuild and starts Electron from `apps/desktop`. Run from source, it is always the **dev** channel; only `app.isPackaged` selects **prod**.
 
 - **Channel** (`apps/desktop/src/channel.ts`): the one place that names the app, app ID, DEV badge, data folder, keychain service, link scheme and branch prefix. The data folder is `~/Library/Application Support/Spark Outpost Dev`; it holds the Chromium profile, `postgres/` (data dir), `postgres-password` (0600), `backups/` and `logs/`. One running copy per channel (`requestSingleInstanceLock` on the channel's userData).
-- **Server hooks for the channel:** the API and worker read `KEYCHAIN_SERVICE`, `BRANCH_PREFIX` (`spark-dev/…` branches), `BACKUP_DIR` and, for the API, `WEB_ROOT`. The defaults keep `pnpm dev` unchanged (`Spark Outpost`, `spark/…`, `.local/backups`, no static files).
+- **Server hooks for the channel:** the API and worker read `KEYCHAIN_SERVICE`, `BRANCH_PREFIX` (`spark-dev/…` branches), `BACKUP_DIR` and, for the API, `WEB_ROOT`. The defaults keep `pnpm dev` unchanged (`Spark Outpost`, `spark/…`, no backups, no static files).
 - **Postgres:** `embedded-postgres` pinned at `17.10.0-beta.17` (same major as the dev cluster), initdb with `--locale=C --encoding=UTF8` and `LC_ALL=en_US.UTF-8`, `listen_addresses=127.0.0.1`, no Unix socket, scram password, random free port per launch. A Postgres left running by a killed launch is stopped before starting. The library's own exit hooks are removed so shutdown order stays ours.
 - **API and worker:** each runs in `utilityProcess.fork` (no server work in main) through `dist/server-entry.js`, which registers `tsx` and imports the unchanged `apps/server/src/api/main.ts` / `workflow/main.ts`. Env: `DATABASE_URL`, random `API_PORT`, `ALLOWED_ORIGINS` = the API origin, and `SPARK_API_TOKEN` (API only; the worker never sees it). F-24 migrate-at-startup runs as-is. Inherited `DATABASE_URL`, `SECRET_STORE` and similar are dropped, and `.local/credentials.env` is never loaded, so the shell cannot reach the web dev database.
 - **Supervision:** a crashed API or worker restarts with backoff (0.5 s doubling to 30 s, reset after a minute up, give up after 5 quick crashes with a dialog showing its last output). An API exit before it first answers `/api/health` stops startup with that output instead of retrying (so a failing migration is not backed up and retried in a loop).

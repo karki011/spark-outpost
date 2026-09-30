@@ -1,6 +1,6 @@
 # Analytics and harness optimizer plan
 
-Proposed on September 26, 2026. The goal is an Analytics page that shows where time, money and quality go, and an "Optimize workflow" button that tunes this user's harness from what actually worked for them. Both rest on one thing the harness did not have before: an outcome-quality signal per task. [HARNESS_PLAN.md](HARNESS_PLAN.md) describes the harness itself, and [JEV.md](JEV.md) describes Jev.
+The goal is an Analytics page that shows where time, money and quality go, and an "Optimize workflow" button that tunes this user's harness from what actually worked for them. Both rest on one thing the harness did not have before: an outcome-quality signal per task. [HARNESS_PLAN.md](HARNESS_PLAN.md) describes the harness itself, and [JEV.md](JEV.md) describes Jev.
 
 ## Ground rules
 
@@ -12,14 +12,14 @@ Proposed on September 26, 2026. The goal is an Analytics page that shows where t
 
 ## Phases
 
-| Phase                                     | Status                  | What lands                                                                                                                                          |
-| ----------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Signals                                | **Done** (September 26) | `task_outcomes`, `outcome_signals`, implicit signals, thumbs feedback, the outcome and report API                                                   |
-| 2. Aggregation                            | **Done** (September 27) | Rollups by day, project, provider, model, category and Jev decision; rule vs Jev pick against outcomes; per-profile-version slices wait for phase 6 |
-| 3. Overview, Spend and Harness tabs       | **Done** (September 27) | The first Analytics screens on the phase 2 rollups                                                                                                  |
-| 4. Sessions                               | Planned                 | Flight recorder and friction metrics                                                                                                                |
-| 5. Anomalies and Ask                      | Planned                 | Deterministic anomaly detection, "Ask about this view"                                                                                              |
-| 6. Profile, recommendations and optimizer | Planned                 | Versioned harness profile per project, recommendations, the "Optimize workflow" button                                                              |
+| Phase                                     | Status   | What lands                                                                                                                                          |
+| ----------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Signals                                | **Done** | `task_outcomes`, `outcome_signals`, implicit signals, thumbs feedback, the outcome and report API                                                   |
+| 2. Aggregation                            | **Done** | Rollups by day, project, provider, model, category and Jev decision; rule vs Jev pick against outcomes; per-profile-version slices wait for phase 6 |
+| 3. Overview, Spend and Harness tabs       | **Done** | The first Analytics screens on the phase 2 rollups                                                                                                  |
+| 4. Sessions                               | Planned  | Flight recorder and friction metrics                                                                                                                |
+| 5. Anomalies and Ask                      | Planned  | Deterministic anomaly detection, "Ask about this view"                                                                                              |
+| 6. Profile, recommendations and optimizer | Planned  | Versioned harness profile per project, recommendations, the "Optimize workflow" button                                                              |
 
 ## Phase 1: outcome signals (done)
 
@@ -76,11 +76,11 @@ Each signal is stored once with its time, its source and a small detail object. 
 - **Where.** An Analytics item in the rail, between Chats and Tickets, with Overview, Spend and Harness tabs and a 7, 30, 90 days or custom range. Sessions, Insights and Ask are not shown as tabs yet; a line under the tabs says they come next.
 - **Overview.** Harness health (gauge, the five parts with their details and weights, and "How the score is computed"), a calendar of turns per day (square size encodes the count), the spend trend with a 7-day average, and keep and first-time pass rates with the good, mixed, unclear and bad split.
 - **Spend.** A treemap by project → provider → model (provider colour on the tile edge, name and cost on a light tint), cost per finished turn by outcome (mean bar, median tick, cost per good outcome), reported against estimated per day (estimated hatched), and resumed sessions with the estimated cache saving. Routing savings went with Jev's routing in round 10.
-- **Harness.** The routing flow (Sankey; focusing or hovering a bar lights its turns, more than 7 values per stage fold into Other), Jev's confidence against outcome score with the tier act line (0.9, observed only; `GATE_LINES`) and a mean-score curve, rule vs Jev agreement and the disagreement table with who did better, Lean off, lite and lean with the Critic's value, and checks, loops and approval waits.
+- **Harness.** The routing flow (Sankey over request category → depth → crew → model → outcome, `FLOW_STAGES`; focusing or hovering a bar lights its turns, more than 7 values per stage fold into Other), Jev's confidence against outcome score with the tier act line (0.9, observed only; `GATE_LINES`) and a mean-score curve, rule vs Jev agreement and the disagreement table with who did better, checks, loops and approval waits, and the observation card (below). The `/harness` response also carries Lean and Critic tallies, which the tab doesn't show.
 - **Accessibility.** Every chart card has a summary sentence written from the data, a "Show data table" toggle, and a Small sample flag below 10. Marks are one tab stop per chart with arrow, Home and End keys, each with a label and the shared tooltip on focus and hover. Outcomes use a shape or pattern as well as colour (circle, diamond, ring and cross; solid, dotted, hollow and hatched), and estimated spend is hatched. The new colour pairs are in `scripts/contrast/analytics-pairs.ts`. Motion is a 200 ms fade and rise of the tab panel and 250 ms bar growth, transform and opacity only, and none under reduced motion. Wide charts (the calendar and the flow) scroll inside their card on a phone.
 - **Tests.** Unit: window, health, harness aggregations, resume savings, calendar, treemap and Sankey layouts, and the summary sentences. DB: `analytics.db.test.ts` (empty workspace, a known scenario for every endpoint, time zones, custom ranges, validation, workspace isolation, 90 days of realistic history). Browser: `analytics.spec.ts` (tabs, data tables, keyboard marks, axe in Apricot and Aurora, phone width, empty state).
 
-### Harness tab since round 10
+### Harness tab: rules-only routing
 
 - **Rule vs Jev** now compares the rules' model with Jev's observed tier pick (Jev never routes), and a table gives **cost per verified completion** by agreement: the turns' total cost including Jev, divided by the turns whose outcome is good.
 - **Observation mode: would have asked or blocked.** The edit gate's would-be action (allow, ask, block) against what happened to the approval (allowed by the rules, you allowed, you denied, refused), and the verifier's would-be action (pass, flag, review) against the turn's outcome. Rows skipped with code diffs off are counted apart.
@@ -89,17 +89,17 @@ Each signal is stored once with its time, its source and a small detail object. 
 
 ## Analytics tabs
 
-| Tab          | Shows                                                                                                                                                                                                          |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Overview** | Outcome score trend, good/bad/mixed split, keep and revert rates, cost per good outcome, the three largest changes this week                                                                                   |
-| **Spend**    | Cost by provider, model, role and category (reported vs estimated kept apart), Jev's own cost, cost per kept change, what routing saved against the pinned model                                               |
-| **Harness**  | The routing flow (intake → depth → roles → models → outcome), Jev confidence against outcome with the tier act line drawn (0.9, observed only), and rule pick vs Jev pick against outcomes                     |
-| **Sessions** | A flight recorder per turn (intake, checkpoints, agents, checks, keep, follow-ups on one timeline) and friction metrics: approval wait, checkpoints per turn, retries, corrections, time to Keep, check rounds |
-| **Insights** | Anomalies, recommendations, and the Optimize workflow entry point                                                                                                                                              |
+| Tab          | Shows                                                                                                                                                                                                                            |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Overview** | Outcome score trend, good/bad/mixed split, keep and revert rates, cost per good outcome, the three largest changes this week                                                                                                     |
+| **Spend**    | Cost by provider, model, role and category (reported vs estimated kept apart), Jev's own cost, cost per kept change                                                                                                              |
+| **Harness**  | The routing flow (category → depth → crew → model → outcome), Jev confidence against outcome with the tier act line drawn (0.9, observed only), rule pick vs Jev's observed tier pick against outcomes, and the observation card |
+| **Sessions** | A flight recorder per turn (intake, checkpoints, agents, checks, keep, follow-ups on one timeline) and friction metrics: approval wait, checkpoints per turn, retries, corrections, time to Keep, check rounds                   |
+| **Insights** | Anomalies, recommendations, and the Optimize workflow entry point                                                                                                                                                                |
 
 ## Ask about this view
 
-- One text box on every tab. It uses the default provider's cheapest model (Haiku for Claude, the fast tier for Codex and Z.ai), in chat mode with no tools.
+- One text box on every tab. It uses a low-cost model of the default provider that the model floor allows (never a retiring one), in chat mode with no tools.
 - The context is a structured snapshot of the view, not the database: the tab, the filters, the rows and totals on screen, and the definitions of each metric and signal. The user can open "What was sent" before and after asking.
 - Comments and request text are included only when the view shows them, inside an `untrusted` block that the prompt treats as data, never as instructions.
 - The answer is labelled as an AI answer with its cost, and it can cite only numbers in the snapshot.
@@ -116,7 +116,7 @@ Each signal is stored once with its time, its source and a small detail object. 
 
 ## The "Optimize workflow" button
 
-- **Harness profile.** A versioned, per-project record of the tunable harness settings that today are constants or chat settings: the Jev gate lines, depth rules, when to use an Architect and a Critic, the parallel thresholds, lean build, check commands and when checks run, the default models per role, and the command allowlist (which the optimizer can only read or narrow). Version 1 is today's behaviour.
+- **Harness profile.** A versioned, per-project record of the tunable harness settings that today are constants or chat settings: the Jev act lines (`advisor/policy.ts`), when a Critic runs, the trivial and complex-work routing rules, check commands and when checks run, the default models per role, and the command allowlist (which the optimizer can only read or narrow). Version 1 is today's behaviour.
 - **Proposals.** The button computes proposals against the current profile version, each estimated from the recorded counterfactuals: "raising the act line to 0.92 would have sent 14 turns to the rules; those turns had a 0.4 lower mean score with Jev's pick".
 - **Review.** The user sees each change as a before/after diff with its evidence, and accepts all, some or none. Nothing applies without that.
 - **Apply and measure.** Accepting creates a new profile version. Analytics then compares turns before and after that version on the same categories and projects, and shows the difference once each side has enough turns.
