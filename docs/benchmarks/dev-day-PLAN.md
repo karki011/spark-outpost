@@ -6,7 +6,7 @@ Codex. Fourteen sessions run in order; some continue earlier ones. It answers on
 over a realistic day, which arm gets the most work right, and what does each right answer cost
 once the developer's own time is counted?
 
-Status: run live on 2026-09-28, see [dev-day-2026-09-28.md](dev-day-2026-09-28.md); harness rerun after the fixes in [dev-day-2026-09-28-rerun.md](dev-day-2026-09-28-rerun.md) (`--day-level` plays the day at another level). The dry run (`AGENT_RUNTIME=fake`) executes every session on every
+Status: this is the live plan used by `pnpm e2e:live --blocks dev-day`. The latest run is the three-arm rerun in [e2e-2026-09-29.md](e2e-2026-09-29.md) (part 3, with per-session scores in [e2e-2026-09-29.json](e2e-2026-09-29.json)). The dry run (`AGENT_RUNTIME=fake`) executes every session on every
 arm end to end and renders the report. Code: `scripts/e2e-live/dev-day/`.
 
 ## How to run
@@ -21,7 +21,7 @@ pnpm e2e:live --blocks dev-day --selftest --dir /private/tmp/dev-day-selftest
 # Dry run, no spend
 AGENT_RUNTIME=fake pnpm e2e:live --blocks dev-day --dir /private/tmp/dev-day-dry --label dry --timeout-min 3
 
-# Live (after the permission rename and Ship merge; see the checklist below)
+# Live
 pnpm e2e:live --blocks dev-day --live --dir /private/tmp/dev-day-live --label live --shots
 ```
 
@@ -134,21 +134,11 @@ From `--plan` (Sonnet-class Builders, medium effort):
 
 The biggest single items are s11 (harness $1.80) and s04 (harness $1.20).
 
-## After the permission rename and Full auto → draft PR merge
+## Remaining checklist item
 
-1. `dev-day/levels.ts`: set each level's `permission` and `level` to the new values (Ask, Ask
-   before edits, Auto-edit, Full auto; Hands-on is gone) and check `DIRECT_LEVEL_LABEL` against
-   `BENCH_LEVEL` in `scripts/bench/live.ts` (today `'full-auto'`).
-2. `balanced.ts` answers checkpoints like a Balanced user; confirm the renamed levels keep the
-   same checkpoint kinds and option ids.
-3. Ship: confirm `POST/GET /tasks/:id/ship` and the `GITHUB_API_URL` override; confirm the secret
-   name for the GitHub token (the dry run adds `github` to `MEMORY_SECRETS` only when the app
-   accepts it). For the live run, make sure Ship reads the fake token (or an env override), not the
-   developer's real GitHub token from the keychain, and that it does not try the `gh` CLI for a
-   non-github.com host (the stack sets an empty `GH_CONFIG_DIR` and drops `GH_TOKEN`/`GITHUB_TOKEN`).
-4. If Full auto opens the draft PR on its own, keep s12's prompt as it is ("ship it as a draft
-   PR") so the arms stay comparable; if it needs a click, add that click to the harness driver and
-   count it as an intervention.
-5. Swap `github-stub.ts` for `apps/server/test/fake-github.ts` if it lands, so both fake the same
-   API surface.
-6. Re-run `--selftest` and a dry run, then the live run.
+The permission rename, the Full auto → draft PR merge, and the `levels.ts`/`balanced.ts`/Ship
+checks that used to be listed here are done, and the 2026-09-29 run used the new modes. Only one
+item is still open:
+
+- Swap `github-stub.ts` for `apps/server/test/fake-github.ts`, so both fake the same API surface.
+  `fake-github.ts` exists but `github-stub.ts` is still what the dev-day bench uses.

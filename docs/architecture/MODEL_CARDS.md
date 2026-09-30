@@ -1,18 +1,18 @@
 # Model cards
 
-Designed on September 26, 2026 (Phase 1: research, data and design) and built the same day (Phase 2, see [Built](#built-september-26-2026)). See [JEV.md](JEV.md) for Jev's questions and [HARNESS_PLAN.md](HARNESS_PLAN.md) for the routing rules that use tiers.
+Model cards hold vendor facts and our own benchmark numbers per model. See [JEV.md](JEV.md) for Jev's questions and [HARNESS_PLAN.md](HARNESS_PLAN.md) for the routing rules that use tiers.
 
-> **Round 10 (September 27, 2026): routing is rules-only.** A pinned model always runs; on Auto the rules pick the chat's model, the middle tier for a trivial edit and the top tier for destructive or complex work, and the harness never picks the fast tier or a retiring model ([ROUTING_PLAN.md §4](ROUTING_PLAN.md#4-policy-that-stays-in-code)). Jev answers one observed `tier` question (small, mid or top of the chat's provider, with the card lines below as option text) and its pick is recorded as "Jev would have used …" for the Harness tab's rule-vs-Jev comparison, never applied. The provider, per-provider model and effort questions, the routing gates and the frontier gate are gone, and so is the "Allow frontier models" switch (`profiles.allow_frontier`, dropped by `0039_lean_harness.sql`): pinning a frontier model still works. Cards still supply prices, tiers, the effective default model, Settings → Models and the tier question's text. Sections below that describe Jev picking models are history.
+> **Round 10 (September 27, 2026): routing is rules-only.** A pinned model always runs; on Auto the rules pick the chat's model, the middle tier for a trivial edit and the top tier for destructive or complex work, and the harness never picks the fast tier or a retiring model ([ROUTING_PLAN.md §4](ROUTING_PLAN.md#4-policy-that-stays-in-code)). Jev answers one observed `tier` question (small, mid or top of the chat's provider, with the card lines below as option text) and its pick is recorded as "Jev would have used …" for the Harness tab's rule-vs-Jev comparison, never applied. The provider, per-provider model and effort questions, the routing gates and the frontier gate are gone, and so is the "Allow frontier models" switch (`profiles.allow_frontier`, dropped by `0039_lean_harness.sql`): pinning a frontier model still works. Cards still supply prices, tiers, the effective default model, Settings → Models and the tier question's text. The sections below describe the cards as they work today.
 
 ## Why
 
-Before round 10, Jev picked the provider, model and effort for every agent. Today it sees only:
+Before cards, when Jev picked the provider, model and effort for every agent, it saw only:
 
 - the provider name
 - each model's id, label and the adapter's one-line description (for example "Sonnet 5 · Efficient for routine tasks")
 - the effort names
 
-Tiers come from a regex in `orchestration/tiers.ts` (`haiku|luna` is 0, `sonnet|sol` is 1, `opus|astra` is 2). So Jev knows nothing about price, speed, limits or how each model did on our own benchmark. The regex also gets some models wrong:
+Tiers came from a regex in `orchestration/tiers.ts` (`haiku|luna` is 0, `sonnet|sol` is 1, `opus|astra` is 2), now only the fallback. So Jev knew nothing about price, speed, limits or how each model did on our own benchmark. The regex also gets some models wrong:
 
 - **Fable 5.1 (`claude-fable-5-1[1m]`) has no tier.** It is left out of the ladder, and `notPricier` treats it as unknown.
 - **`gpt-5.6-sol` gets the middle tier**, but it is the 5.6 family's flagship ($4/$20, above 6 Sol's $2/$10).
@@ -20,11 +20,11 @@ Tiers come from a regex in `orchestration/tiers.ts` (`haiku|luna` is 0, `sonnet|
 
 A model card holds the vendor facts plus what we measured ourselves. Jev gets a short version of each card, and tiers come from the cards.
 
-## Data gathered (Phase 1)
+## Data gathered
 
 Files:
 
-- `apps/server/src/model-cards/vendor-cards.json`: vendor facts for 11 models and the 2 provider cards
+- `apps/server/src/model-cards/vendor-cards.json`: vendor facts for the Claude, Codex and Z.ai models and their provider cards
 - `apps/server/src/model-cards/measured-seed.json`: 30 measured rows from the three benchmark rounds that have JSON
 
 ### Vendor facts (checked September 26, 2026)
@@ -77,45 +77,6 @@ Strengths and weak spots per model are in the JSON. They are short phrases from 
 | Cold start           | 8–10 s                                                                                                                  | 4–9 s                                                                                                     |
 | Cost                 | reported                                                                                                                | estimated from tokens                                                                                     |
 
-### Measured (benchmark rounds baseline, tuned and round 3, all September 26, 2026)
-
-Fixture: Ledger Lite, Full auto. Pass is the whole run's hidden-test verification.
-
-- **Shared credit.** "Shared" counts rows from multi-agent runs, where the pass belongs to the crew.
-- **Cost and time.** Cost and wall time are the agent's own.
-- **Roles.** Direct is one Sonnet agent with no harness. Architect rows are the plan category, and Critic rows are review.
-
-| Model · effort    | Role      | Category    | n     | Pass  | Mean cost     | Mean wall | Shared | Rounds          |
-| ----------------- | --------- | ----------- | ----- | ----- | ------------- | --------- | ------ | --------------- |
-| Haiku 4.5 · low   | builder   | fix         | 6     | 6/6   | $0.023        | 10.5 s    | 0      | all three       |
-| Haiku 4.5 · low   | builder   | feature     | **1** | 1/1   | $0.039        | 28.1 s    | 1      | baseline        |
-| Sonnet 5 · medium | direct    | fix         | 15    | 15/15 | $0.081        | 26.2 s    | 0      | all three       |
-| Sonnet 5 · medium | builder   | fix         | 9     | 9/9   | $0.091        | 29.3 s    | 3      | all three       |
-| Sonnet 5 · medium | direct    | feature     | 16    | 14/16 | $0.120        | 52.6 s    | 0      | all three       |
-| Sonnet 5 · medium | builder   | feature     | 23    | 22/23 | $0.093        | 29.2 s    | 12     | all three       |
-| Sonnet 5 · medium | direct    | refactor    | 7     | 7/7   | $0.108        | 36.5 s    | 0      | baseline, tuned |
-| Sonnet 5 · medium | builder   | refactor    | 14    | 14/14 | $0.063        | 22.1 s    | 12     | baseline, tuned |
-| Sonnet 5 · medium | direct    | review      | **1** | 1/1   | $0.148        | 72.9 s    | 0      | round 3         |
-| Sonnet 5 · medium | builder   | review      | **1** | 1/1   | $0.127        | 55.6 s    | 0      | round 3         |
-| Sonnet 5 · medium | direct    | destructive | **2** | 2/2   | $0.120        | 41.1 s    | 0      | round 3         |
-| Sonnet 5 · medium | builder   | destructive | **2** | 2/2   | $0.112        | 35.9 s    | 1      | round 3         |
-| Sonnet 5 · high   | architect | plan        | 4     | 4/4   | $0.124        | 40.1 s    | 4      | tuned, round 3  |
-| Opus 5.5 · high   | architect | plan        | 10    | 10/10 | $0.171        | 36.6 s    | 10     | all three       |
-| 6 Sol · high      | critic    | review      | **1** | 1/1   | $0.004 (est.) | 34.8 s    | 1      | round 3         |
-
-What the data can and cannot say:
-
-- **Small samples.** Rows marked in bold have n ≤ 2 and are anecdotal. Only Sonnet 5 at medium has real samples across categories.
-- **Why pass rates barely differ.** Every failure is H3, the ledger migration: direct failed it 2 of 2 in the tuned round, and a Sonnet Builder once. So the pass rate separates tasks, not models. What the numbers do show is cost: Haiku fixes cost 27% of what a Sonnet fix costs and pass as often, and a Sonnet Architect costs 73% of an Opus one.
-- **No data at all** for these, so their cards carry vendor facts only:
-  - Fable 5.1
-  - Opus as a Builder
-  - Haiku on refactor, review or destructive work
-  - 6 Luna and 6 Astra
-  - Codex on anything but one review
-  - the question category (no round has a question task)
-- **Not ingested.** Round 4 and the lean A/B (in `harness-vs-direct-2026-09-26-round3.md` and `LEAN_BUILD.md`) only have Markdown summaries without per-agent rows. The runner writes JSON for every round from now on (below), so later rounds will be ingested.
-
 ## Design
 
 ### Schema (`packages/contracts/src/model-cards.ts`)
@@ -165,8 +126,8 @@ modelCardViewSchema   // what GET /api/model-cards returns: card, provider card,
 
 ### Where the cards live
 
-- **Vendor facts: a versioned file in the repo.** It lives at `apps/server/src/model-cards/vendor-cards.json`, is parsed with `vendorCardsFileSchema` at start-up, and fails loudly if invalid. A price or model change is a reviewed diff with new `sources[].checkedAt` dates. The GLM card is added from `docs/reference/zai/GLM_NOTES.md` in Phase 2.
-- **Measured stats: a database table.** Migration `00NN_model_stats.sql`, using the next free number at build time (0030 today, unless the GLM work takes it):
+- **Vendor facts: a versioned file in the repo.** It lives at `apps/server/src/model-cards/vendor-cards.json`, is parsed with `vendorCardsFileSchema` at start-up, and fails loudly if invalid. A price or model change is a reviewed diff with new `sources[].checkedAt` dates. Z.ai's cards (GLM-5.3-Flash small, GLM-5.3 top) and its provider card come from `docs/reference/zai/GLM_NOTES.md`; cards are matched per provider, label first, because Z.ai's adapter ids are Claude's slot names (`opus`, `haiku`).
+- **Measured stats: a database table.** Migration `0030_model_stats.sql`:
 
   ```sql
   create table model_stats (
@@ -185,7 +146,7 @@ modelCardViewSchema   // what GET /api/model-cards returns: card, provider card,
   - `measured-seed.json` is upserted by the same ingest function when the API starts, so a fresh database has the existing rounds and a re-run changes nothing.
   - Rows are keyed per round, so a round is replaced, never double-counted.
 
-- **`usage/prices.ts` reads prices from the cards** (Phase 2): `priceFor` looks up the card by `match`, so one table serves estimates and Jev. The current Codex numbers match the cards exactly.
+- **`usage/prices.ts` reads prices from the cards:** `priceFor` looks up the card by `match`, so one table serves estimates and Jev (with `cacheOutsideInput` for Z.ai).
 
 ### Compact card text for Jev
 
@@ -213,24 +174,16 @@ Rules for the measured piece:
 - **Minimum sample.** A stat is shown only when n ≥ 3 for that model, effort-agnostic role group and category.
 - **Role groups.** Builder and direct rows are one group, Architect rows are plan, and Critic rows are review.
 - **Freshness.** A stat is shown only when it was recorded against the card's current label (see Stale data).
-- **Which category.**
-  - In the intake batch, the intent is unknown when the model question is asked (same call), so the category with the most samples is used.
-  - In route calls, the intake's intent maps to a card category (question/research/chat/docs → question; bug_fix/debugging → fix; feature/setup → feature; refactor; review), and destructive risk overrides it.
-  - The Architect route uses plan, and the Critic uses review.
+- **Which category.** The intake's `tier` question has no category yet (it is asked in the same call as the intent), so the category with the most samples is used.
 
 Where the text goes:
 
-- **Intake** (`intake-questions.ts`, `routingQuestions`, removed in round 10):
-  - `provider` criteria become each provider card's `jevText` (≤ 160) instead of the bare name.
-  - `model_<provider>` criteria become `cardText` instead of `label: description`. The adapter description is used only when there is no card.
-  - `effort_<provider>` instructions gain the chosen-provider effort note, for example "Opus 5.5 defaults to medium; Haiku 4.5 ignores effort" (≤ 160).
-- **Routes** (`jev-questions.ts`, `buildRouteQuestions`, removed in round 10): the same card text per model option, with the slot's category.
-- **The Architect route** asks through the same builder with category `plan`, so Jev sees "Opus 5.5 … bench plan 10/10 ~$0.17" next to "Sonnet 5 … bench plan 4/4 ~$0.12". A provider's frontier cards are offered only when "Allow frontier models" is on for that provider (see below).
+- **Intake** (`advisor/intake-questions.ts`, `tierQuestion`): each option of the observed `tier` question (small, mid, top of the chat's provider) carries the model's card line (`modelOptionText`). The adapter's `label: description` is used only when there is no card.
+- **Settings → Models:** the "What Jev reads" disclosure shows the same line (`model-cards/view.ts`).
 
-What it costs, and what gets pinned:
+Pinning and privacy:
 
-- **Cost.** About 7 options × 160 characters, roughly 300 more input tokens per call: about $0.000013 per call at $0.042 per million tokens.
-- **Pinned keys.** `intake-questions.test.ts` and `jev-questions.test.ts` pin the new criteria text, as JEV.md requires for any new field sent.
+- **Pinned keys.** `intake-questions.test.ts` pins the criteria text, as JEV.md requires for any new field sent.
 - **Privacy.** No new data leaves the machine: cards are public vendor facts and aggregate benchmark numbers.
 
 ### Tiers from cards
@@ -257,73 +210,43 @@ How tiers are assigned (explicit per card in `vendor-cards.json`, reviewed with 
 
 What follows from the table:
 
-- **Codex has no top tier today.** Its ladder is 6 Luna then 6 Sol. So Codex's rule-based top tier (the Critic's fallback and escalation) is 6 Sol, and a Codex route reaches 6 Astra only through the frontier gate below. Before cards, the regex made Astra the top tier, so escalation from Sol could reach it.
+- **Codex has no top tier today.** Its ladder is 6 Luna then 6 Sol. So Codex's rule-based top tier (the Critic's fallback and escalation) is 6 Sol, and Codex runs 6 Astra only when the user pins it.
 - **Codex's own adapter default is 6 Astra.** The effective default (next section) replaces it with 6 Sol, so an unpinned Codex chat never runs Astra by accident.
 
 The lookup:
 
 - **Lookup.** `modelTier(model)` looks the card up (`match.ids` first, then an exact `match.labels` hit) and returns small 0, mid 1, top 2, frontier 3.
 - **Label mismatch.** An id match whose live label differs from every card label (say `sonnet` becomes "Sonnet 5.5") counts as **no card**.
-- **Fallback.** With no card, the old regex is the fallback, so unknown or renamed models keep today's behaviour. The fallback is recorded (`tierSource: 'card' | 'pattern' | 'none'`) on the route decision and shown in Settings. The regex never returns frontier.
-- **Frontier stays off the automatic ladder.** `tierLadder`, `topTier`, `middleTier` and `oneTierUp` use small, mid and top only. So the Architect's rule pick stays Opus 5.5, and neither escalation nor a rule ever moves to a frontier price.
+- **Fallback.** With no card, the old regex is the fallback, so unknown or renamed models keep today's behaviour. `tierInfo` reports which one decided (`'card' | 'pattern' | 'none'`), and Settings → Models lists models with no card. The regex never returns frontier.
+- **Frontier stays off the automatic ladder.** `tierLadder`, `topTier`, `middleTier` and `oneTierUp` use small, mid and top only. So neither escalation nor a rule ever moves to a frontier price.
 - **`notPricier`.** It uses card tiers first, then compares card prices when tiers are equal (so `gpt-5.6-sol` is pricier than `gpt-6-sol`).
 - **Several models in one tier.** When a provider offers more than one card in a tier, the ladder takes the first in the card file's order (newest generation first).
 
-### Effective default model (decided September 26, 2026)
+### Effective default model
 
 Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unpinned Codex chat, and every Codex run that falls back to the "agent default", ran the most expensive model. The effective default now comes from the cards.
 
 - **The rule.** `effectiveDefaultModel(provider, snapshot, cards)` (pure, in `model-cards/`) works in this order:
   1. The provider card's `everydayModel`, when the snapshot offers it. Codex's is `gpt-6-sol`. Claude's is `null`: its adapter default ("Default (recommended)", which resolves to Opus 5.5) is top tier and matches the vendor's own advice to start with Opus 5.5, so Claude is unchanged.
-  2. Otherwise the adapter's default, unless it resolves to a frontier card.
-  3. Otherwise the highest non-frontier model on the provider's ladder.
+  2. Otherwise the adapter's default, unless it resolves to a frontier or retiring card.
+  3. Otherwise the highest non-frontier, non-retiring model on the provider's ladder.
   4. Otherwise the adapter's default as today (no cards match).
 
-  A provider without cards (Z.ai until its card lands) keeps the adapter default.
+  A provider without cards keeps the adapter default.
 
 - **Where it applies.** Once, in `getCapabilities` (`persistence/chat-settings.ts`), so cached rows get it too. The snapshot keeps the adapter's value as a new optional `agentDefaultModel`, and `defaultModel` becomes the effective one. Every reader then follows without its own logic:
   - the run settings in `api/routes.ts`, which send the model explicitly, so the adapter never falls back to Astra
   - the composer picker (`model-options.ts`)
   - Provider defaults (`ProviderDefaults.tsx`)
-  - the connection default chosen at setup (`persistence/setup.ts`, today `models[0]`), which switches to the same function
+  - the connection default chosen at setup (`persistence/setup.ts`); an existing connection's saved model is left alone
 - **Picker.** The effective default is labelled "6 Sol (default)" in the model picker and in Provider defaults. Astra is listed as "6 Astra" with no default mark.
 - **Records.** `runs.used_model` is recorded as usual from the applied session settings, so a run that used the effective default reads `gpt-6-sol`.
-- **Astra stays reachable:**
-  - by pinning it in the picker or Provider defaults, or
-  - on Auto through the Codex frontier switch at 0.90 or more.
-
-### Allow frontier models, per provider (decided September 26, 2026; removed in round 10)
-
-- **The setting.** One "Allow frontier models" switch per connected provider, all off by default.
-  - Stored as `profiles.allow_frontier jsonb not null default '{}'` in the same migration as `model_stats`, for example `{"claude": false, "codex": true, "zai": false}`. A missing key means off.
-  - It lives on the profile rather than on the provider connection, so reconnecting a provider doesn't reset it. The API validates it with `z.record(providerIdSchema, z.boolean())`.
-  - A provider with no frontier card (Z.ai until its card says otherwise) shows no switch.
-- **Settings copy** (Settings → Models, at the top of each provider's group):
-  - Claude: "Allow frontier models. Lets Jev choose Fable 5.1 on Auto when it is sure (0.90), the same bar as any upgrade. Pinned chats can always use it."
-  - Codex: "Allow frontier models. Lets Jev choose 6 Astra on Auto when it is sure (0.90), the same bar as any upgrade. Codex only reads here, so this applies to Scouts, Architects and Critics, never to Builders."
-- **Off, for a provider:**
-  - That provider's frontier cards are left out of the `model_<provider>` and `model_<slot>` options sent to Jev, so Jev cannot pick one.
-  - A chat pinned to a frontier model still runs it, as any pinned model does.
-  - `autoWouldUse` then records a non-frontier pick.
-- **On, for a provider:** that provider's frontier cards are offered, and a Jev pick of one acts only when its confidence is at least **0.90** (`ACT_AT_FRONTIER` in `gate.ts`, equal to `ACT_AT`, the normal upgrade gate; lowered from 0.95 on September 27, 2026 at the user's request).
-  - The bar applies at every risk and level, including read-only (0.75 otherwise) and cheaper-pick routes (0.8 otherwise). A frontier pick is never a downgrade.
-  - Below 0.90 the rule's pick runs, and the decision reads as a fallback:
-    - Opus 5.5 for a Claude Architect
-    - the chat's model for Builders
-    - 6 Sol for a Codex Critic
-  - Destructive Architect routes keep the rule's tier (top tier, or Sonnet for destructive work that names its files or a narrow scope, round 7), so Jev's frontier pick is recorded but never applied there.
-  - Escalation (`oneTierUp`) never reaches frontier, even when the setting is on.
-- **Codex was read-only in our harness** (it had no Do when this was decided). So a Codex frontier pick can only apply to the read-only roles: Scout, Architect and Critic. Builders never run on Codex, whatever the setting. In practice today that means the Critic (Codex reviews Claude work) and the Scout of a Codex Ask chat. An Architect runs only in Do orchestrations, which stay on Claude while Codex has no Do.
-- **Recorded like every other Jev decision.**
-  - Each route that offered or picked a frontier model stores its gate in the `run_advice` route row with `actAt: 0.9`.
-  - The `answer` gains `frontier: { provider, allowed: boolean, offered: boolean, picked: boolean }`, so a benchmark can count how often Jev reached for a frontier model and whether it passed.
-  - The dispatch tooltip reads, for example, "Jev picked Fable 5.1 at 0.86 · frontier needs 0.90 · ran Opus 5.5", or "Frontier off for Claude" when Jev wasn't offered it.
-- **The intake's model pick** (Scout and the in-place Builder) uses the same bar: `routeWorker` gates a frontier pick at 0.90 before the usual gate.
+- **Astra stays reachable** by pinning it in the picker or Provider defaults.
 
 ### Benchmark runner writes measured stats
 
 - **When.** `scripts/bench` already writes `docs/benchmarks/<date>.json` with every agent's provider, model, effort, role, cost and duration. It runs against an isolated test database, so stats are written in a separate step, not in-run.
-- **How.** `ingestBenchmark(db, file)` (new, `apps/server/src/model-cards/ingest.ts`, pure grouping plus one upsert):
+- **How.** `ingestBenchmark(db, file)` (`apps/server/src/model-cards/ingest.ts`, pure grouping plus one upsert):
   - maps each task to a category (a `category` field on each `BenchTask`, replacing the mapping table above)
   - maps each agent's model to a card
   - groups rows, and upserts per round
@@ -331,24 +254,23 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
   - `pnpm bench:ingest <file…>` runs it against `DATABASE_URL`.
   - `bench:harness` calls it at the end unless `--no-ingest` is passed.
   - The seed file is regenerated from all ingested rounds with `pnpm bench:ingest --write-seed`.
-- **Round 4 and later.** Round 4 and the lean A/B were not saved as round JSON. From the next round on, every round is ingested.
 
 ### Settings → Models
 
-- **Where.** A new "Models" section in `SettingsDialog` (a tab next to Usage), read from `GET /api/model-cards`: the cards for connected providers, their stats and staleness.
+- **Where.** A "Models" section in `SettingsDialog` (a tab next to Usage), read from `GET /api/model-cards`: the cards for connected providers, their stats and staleness.
 - **Per provider:**
   - the provider card (Do, asks, sandbox, resume, review, cold start, cost source)
   - a list of model cards: label, tier chip, speed, price, context and max output, efforts with the default, strengths, weak spots, and sources with their checked dates
 - **Measured.** Each card has a small table by category (n, pass, mean cost, mean wall, rounds). n < 3 is labelled "anecdotal", and a model with no rows says so.
 - **"What Jev reads".** A disclosure per card shows the exact compact line and its character count, and the provider line.
-- **Accessibility.** Tier and staleness chips use semantic theme tokens, text is never shown by colour alone, and the section is a keyboard-navigable list. Each provider group starts with its own "Allow frontier models" switch (a labelled checkbox-style switch with its description tied through `aria-describedby`). It must pass `pnpm a11y:contrast` in all themes and has a hermetic browser test using the fake capability snapshot.
+- **Accessibility.** Tier and staleness chips use semantic theme tokens, text is never shown by colour alone, and the section is a keyboard-navigable list. It must pass `pnpm a11y:contrast` in all themes and has a hermetic browser test using the fake capability snapshot.
 
 ### "Why this model" in the dispatch tooltip
 
 - **What it shows.** The advice or route tooltip gains one line per pick, for example:
-  - "Why Sonnet 5: Jev 0.86 · mid tier · bench fix 24/24 ~$0.08"
-  - "Why Opus 5.5: rule top tier (vague request) · Jev picked Haiku 4.5 at 0.32, below the gate"
-- **Where it comes from.** The route decision already stores the pick, the rule, the gate and Jev's pick. Phase 2 adds `tierSource` and the `cardText` that Jev saw for the chosen option to `answer`, so the tooltip shows the stored record and not today's card.
+  - "Why Sonnet 5: rule trivial → middle tier · mid tier · Jev would have used Opus 5.5"
+  - "Why Opus 5.5: pinned in this chat"
+- **Where it comes from.** `model-cards/why.ts` (`whyLine`) builds it from the stored route decision: the pick, the rule, the card's tier, any floor or retiring note, and Jev's observed pick (`autoWouldUse`). `DispatchLine` lists every route's why line in its tooltip, named by crew member.
 
 ### Stale data
 
@@ -364,98 +286,15 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
   - Only rows recorded under the card's current label count; `agent_model` plus `measured_on` against the card's first `checkedAt` decides this.
   - Rows older than 90 days are shown in Settings but left out of Jev's line.
   - Only a new round replaces them.
-- **Models without cards** (a new Codex model, and GLM until its card lands) keep today's behaviour everywhere: `label: description`, the regex tier, and no stats.
+- **Models without cards** (for example a new Codex model) keep today's behaviour everywhere: `label: description`, the regex tier, and no stats.
 
-## Built (September 26, 2026)
+## Code
 
-Everything in the design landed, with these specifics and deviations:
-
-- **Code.**
-  - `packages/contracts/src/model-cards.ts` holds the schemas, including `allowFrontierSchema` and the `GET /api/model-cards` view.
-  - `apps/server/src/model-cards/` has:
-    - `cards.ts`: loading, provider-scoped matching, `effectiveDefaultModel`
-    - `card-text.ts`: Jev's lines, stat selection, staleness
-    - `categories.ts`: intent to card category
-    - `ingest.ts`: bench rounds and the seed
-    - `view.ts`
-    - `why.ts`: the route's `why` line and `frontier` record
-  - Also:
-    - `persistence/model-stats.ts`
-    - `api/model-card-routes.ts`: `GET /api/model-cards` and `PUT /api/model-cards/frontier/:provider {allowed}`
-    - migration `0030_model_stats.sql`, which also adds `profiles.allow_frontier`
-- **Z.ai.** The GLM tier table in `tiers.ts` is gone: Z.ai's two cards (GLM-5.3-Flash small, GLM-5.3 top) come from `GLM_NOTES.md`, and a `zai` provider card is added.
-  - Cards are matched per provider, label first, because Z.ai's adapter ids are Claude's slot names (`opus`, `haiku`).
-  - `usage/prices.ts` now builds its table from the Codex and Z.ai cards, with `cacheOutsideInput` for Z.ai.
-- **Tiers.** `modelTier`, `tierLadder`, `topTier`, `middleTier` and `oneTierUp` take the provider and use the card, with the regex as the fallback. `tierInfo` also reports the source.
-- **Provider line.** The provider line's Do part comes from the live catalog (`doAvailable`), so it follows Codex Do when that lands.
-- **Measured stats.** Stats are keyed by card id. A relabelled model therefore counts old stats only until they pass the 90-day limit; exact per-label counting is left out.
-- **Frontier gate.** `frontierGate` acts at 0.90 or more and otherwise falls back, and never asks. `routeGate` applies it to every Builder, Scout, Critic and Architect route whose Jev pick is frontier.
-- **Where the why line shows.** Route decisions store `why`, `tierSource` and, when a frontier model was involved, `frontier`. `DispatchLine` lists every route's `why` in its tooltip, named by crew member.
-- **Effective default.**
-  - `getCapabilities` returns the effective `defaultModel` plus `agentDefaultModel`.
-  - `saveConnection` picks the effective default for a new connection.
-  - The model picker and Provider defaults mark it "(default)".
-  - An existing connection's saved model is left alone. The user's Codex connection keeps `gpt-6-luna`.
-
-Tests:
-
-- **Unit:** `model-cards/{cards,card-text,frontier,ingest}.test.ts` and `apps/web/src/models/model-card-stats.test.ts`, plus `crew/why-lines.test.ts`, the `optionLabel` test, and updated `intake-questions`, `policy` and `prices` tests.
-- **DB:** `test/model-cards.db.test.ts` covers the idempotent seed, re-ingest replacing a round, the API view, the frontier switch reaching Jev's candidates, and an unpinned Codex chat sending `gpt-6-sol` while an Astra pin sends Astra.
-- **Browser:** `tests/browser/models.spec.ts` covers the cards, measured table, "What Jev reads" and the per-provider switches by keyboard, persisted across a reload. `accessibility.spec.ts` now scans Settings → Models in every theme.
-
-### Live check: Jev with and without cards
-
-Five tasks through the intake and, for the three that plan, an Architect route call; 20 calls, 20,200 input tokens, about $0.0008. Candidates: Claude (Opus 5.5, Fable 5.1, Sonnet 5, Haiku 4.5) and Codex (6 Astra, 6 Sol, 6 Luna).
-
-- **Without cards:** today's text, all models offered.
-- **With cards:** card lines, measured stats, frontier off, and Codex described as read-only.
-
-| Task                  | Provider (without → with)    | Claude model              | Codex model           | Architect                    |
-| --------------------- | ---------------------------- | ------------------------- | --------------------- | ---------------------------- |
-| typo fix              | claude 0.19 → claude 0.97    | haiku 0.97 → haiku 1.00   | luna 0.99 → luna 1.00 | –                            |
-| multi-file refactor   | claude 0.46 → claude 0.98    | sonnet 0.35 → sonnet 0.47 | sol 0.76 → sol 0.26   | sonnet 0.43 → sonnet 0.55    |
-| destructive migration | **codex 0.29 → claude 0.98** | sonnet 0.63 → sonnet 0.53 | sol 0.40 → luna 0.53  | **haiku 0.35 → sonnet 0.40** |
-| feature               | **codex 0.12 → claude 0.98** | sonnet 0.74 → sonnet 0.80 | sol 0.57 → luna 0.41  | sonnet 0.42 → sonnet 0.60    |
-| review (Ask)          | **claude 0.32 → codex 0.87** | opus 0.31 → sonnet 0.58   | sol 0.54 → sol 0.65   | –                            |
-
-- **The provider choice stops being a coin flip.** Confidence rose from 0.12–0.46 to 0.87–0.98. Jev now keeps edits on Claude (the only provider with Do) and sends a read-only review to Codex.
-- **Claude model picks barely moved.** Confidence changed by −0.10 to +0.27. The Architect pick is Sonnet 5 in all three planned tasks, at 0.40 to 0.60, still below the 0.9 gate, so the rule's Architect runs as before. Without cards, Jev picked Haiku to plan the destructive migration.
-- **Codex picks moved toward 6 Luna** on the destructive and feature tasks, at low confidence (0.41 to 0.53, below every gate). That likely follows from its "cheapest" line. Worth watching once Codex runs Builders.
-- **Frontier models were never picked**, as expected with frontier off. In the without-cards run, where they were offered, Jev never picked Fable or Astra either.
-- **Cost of the extra text:** about 83 more input tokens per intake call (1,629 to 1,712).
-
-## Phase 2 plan and tests
-
-1. **Contracts.** Add `model-cards.ts` with a contract test that parses both JSON files.
-2. **Server.** Add:
-   - `model-cards/` (load, match, `cardText`, `ingest`)
-   - the `model_stats` migration (plus `profiles.allow_frontier`) with the seed upsert on start-up
-   - the effective default model from the cards (`everydayModel`, applied in `getCapabilities`, with `agentDefaultModel` kept)
-   - the per-provider frontier gate (0.90) and the setting's API (`PATCH /api/profile {allowFrontier}`)
-   - `GET /api/model-cards`
-   - tiers from cards with the regex fallback
-   - `priceFor` from cards
-   - card text in the intake, route and Architect questions
-   - the GLM card
-3. **Bench.** A `category` on each task, `bench:ingest`, and ingest at the end of `bench:harness`.
-4. **Web.** Settings → Models, the "why" line in the dispatch tooltip, and "(default)" on the effective default in the model picker and Provider defaults.
-5. **Tests:**
-   - Unit:
-     - tiers from cards (Fable is frontier and off the ladder, `gpt-5.6-sol` is top, label drift falls back, unknown ids fall back)
-     - the frontier gate, per provider: Codex on and Claude off offers 6 Astra but not Fable; on, a frontier pick acts at 0.90 and falls back at 0.89 (read-only and cheaper-pick routes too); destructive keeps Opus; escalation never reaches frontier (Codex Sol has no tier up); the gate and `frontier` are recorded
-     - 6 Astra is frontier, so the Codex ladder is Luna then Sol
-     - `effectiveDefaultModel`: Codex with the adapter default Astra gives 6 Sol; Claude keeps its adapter default; a frontier adapter default without `everydayModel` gives the top non-frontier model; no cards keeps the adapter default
-     - `cardText` ≤ 160 for every card × category, with n < 3 hidden
-     - question text pinned
-     - ingest grouping from a fixture round
-   - DB:
-     - the seed is idempotent
-     - re-ingesting a round replaces it
-     - the API view
-     - an unpinned Codex chat sends `gpt-6-sol` in its run settings and records it as `used_model` (fake agent whose default is Astra); a chat pinned to Astra still runs Astra
-   - Browser: a hermetic test of the Models view (keyboard, the "What Jev reads" disclosure, stale and no-card states, and the per-provider frontier switches with Codex on and Claude off saved and reloaded).
-   - Existing: `pnpm check`, `pnpm test:db`, `pnpm test:browser` and `pnpm a11y:contrast`.
-6. **Live** (≤ $0.30, Jev only): 5 sample tasks through the intake and an Architect route call, with and without card text. The comparison covers the picks, confidences and the gate.
+- `packages/contracts/src/model-cards.ts`: the schemas and the `GET /api/model-cards` view.
+- `apps/server/src/model-cards/`: `cards.ts` (loading, provider-scoped matching, retirement, `effectiveDefaultModel`), `card-text.ts` (Jev's lines, stat selection, staleness), `ingest.ts` (bench rounds and the seed), `check.ts` (`pnpm model-cards:check`), `view.ts` and `why.ts`.
+- `orchestration/tiers.ts`: `modelTier`, `tierLadder`, `topTier`, `middleTier` and `oneTierUp` take the provider and use the card, with the regex as the fallback; `tierInfo` reports the source.
+- `persistence/model-stats.ts`, `api/model-card-routes.ts`, migration `0030_model_stats.sql`.
+- Web: `apps/web/src/models/` (Settings → Models).
 
 ## Open questions
 

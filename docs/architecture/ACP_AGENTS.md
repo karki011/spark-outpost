@@ -4,7 +4,7 @@ How Spark Outpost runs Claude, Codex and Z.ai (GLM) through the Agent Client Pro
 
 ## What runs today
 
-This is the harness's **simple path**: a chat without a linked project folder. One agent session answers from the saved conversation. There is no planner or reviewer yet.
+This is the harness's **simple path**: a chat without a linked project folder. One agent session answers from the saved conversation. Do sessions can run the orchestrator's Architect, Builder and Critic roles instead (see "Provider choice" below).
 
 ```
 message → run (Postgres) → worker claims job → ACP provider
@@ -38,7 +38,7 @@ Code:
 
 ## Ask in project folders (M1)
 
-A chat can be linked to one or more project folders (repos) with `PATCH /api/conversations/:id/settings {projectIds}`. The list is ordered and the first repo is the primary one. Links live in `conversation_projects (conversation_id, project_id, position)`. Its runs are in Ask mode: the agent may read inside the folders but not change anything. See [agent adapters](AGENT_ADAPTERS.md) for what each adapter really does.
+A chat can be linked to one or more project folders (repos) with `PATCH /api/conversations/:id/settings {projectIds}`. The list is ordered and the first repo is the primary one. Links live in `conversation_projects (conversation_id, project_id, position)`. Its runs are in Ask mode: the agent may read inside the folders but not change anything. See [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md#adapter-capabilities) for what each adapter really does.
 
 - **Session (Claude).** `cwd` is the primary repo's real root; the agent process also starts there. The other repos go in `session/new.additionalDirectories` (absolute paths) only when `initialize` advertises `agentCapabilities.sessionCapabilities.additionalDirectories`. claude-agent-acp 0.81.2 advertises it. When an agent doesn't, the run keeps only the primary repo and adds a step such as "Claude can only open one repo per chat; using spark-outpost". If a root is gone, the run fails with a readable error naming it.
 - **Session (Codex).** codex-acp 1.13.1's `read-only` mode is really a workspace-write sandbox rooted at `cwd`. We patch it (`patches/@agentclientprotocol__codex-acp@1.13.1.patch`, the same change as upstream [codex-acp#480](https://github.com/agentclientprotocol/codex-acp/pull/480)) so `read-only` is a `readOnly` sandbox: no writes, no network, reads allowed. Codex project runs start in the primary repo with `shell_tool` on, and get the other repos as `additionalDirectories`, which stay read-only because the adapter only widens `workspaceWrite` policies. A unit test fails if the patch is missing. Known gap: Codex's sandbox can read the whole disk, including secret files, so our secret-file list doesn't bind Codex. Remove this part of the patch when a codex-acp release includes #480; every patch part, its guard tests and the upgrade checklist are in [PATCHES.md](PATCHES.md).
@@ -50,7 +50,7 @@ A chat can be linked to one or more project folders (repos) with `PATCH /api/con
 - **Permissions.** In Ask, requests are still declined with reject-once; in a project the step says "Ask mode only reads files; switch to Do to allow changes". The safe-mode lock is unchanged. Do mode is described below.
 - **How Claude reads.** claude-agent-acp 0.81.2 never calls `fs/read_text_file`; it reads the disk with its own tools. Project runs get `tools: ['Read', 'Glob', 'Grep']` in `default` mode, and every Claude session (chat or project) is hardened through `_meta.claudeCode.options`:
   - `settingSources: []`, so the repo's and user's hooks, `env` and `apiKeyHelper` aren't loaded
-  - `allowDangerouslySkipPermissions: false` and `settings.permissions.disableBypassPermissionsMode: 'disable'`
+  - `allowDangerouslySkipPermissions: false` and `settings.permissions.disableBypassPermissionsMode: 'disable'` outside Do; Do sessions let the adapter offer Bypass permissions (see "Do in project folders" below)
   - `settings.permissions.blockReadsOutsideWorkingDirectories: true`
   - deny rules built from `projects/secret-files.ts`, in both `disallowedTools` and `settings.permissions.deny`, as `Read(**/<pattern>)` plus `Read(//<extra repo>/**/<pattern>)` for each extra repo. Claude's rules can't express exceptions, so `.env.example` stays denied for Claude even though our path policy allows it.
 - **Known gaps:** Claude's tools bypass our path policy; its deny rules, Grep/Glob coverage and outside-folder behaviour are unverified until the live test runs. Per the September 25 decisions, M1 ships without `sandbox-exec`.
@@ -61,7 +61,7 @@ Code: `apps/server/src/projects/`, `apps/server/src/persistence/conversation-pro
 
 ## Do in project folders (M2)
 
-A chat linked to a project runs in Do mode when its agent mode (`overrides[provider].agentMode`, default from `provider_connections.agent_mode`) is not read-only; the harness autonomy is `.level`, defaulting to `profiles.default_level`. The run records `runs.mode` (`chat`, `ask`, `do`), `runs.agent_mode` and `runs.level`. See [HARNESS_PLAN.md](HARNESS_PLAN.md#m2-status-september-26-2026) for the decision rules.
+A chat linked to a project runs in Do mode when its agent mode (`overrides[provider].agentMode`, default from `provider_connections.agent_mode`) is not read-only; the harness autonomy is `.level`, defaulting to `profiles.default_level`. The run records `runs.mode` (`chat`, `ask`, `do`), `runs.agent_mode` and `runs.level`. See [HARNESS_PLAN.md](HARNESS_PLAN.md#provider-permission-modes-september-28-2026) for the decision rules.
 
 - **Claude.** Same hardening as Ask, with `tools: ['Read','Glob','Grep','Edit','Write','Bash']` and `settings.permissions.ask: ['Bash','Edit','Write']`, so even read-only commands like `ls` reach `session/request_permission`. The chosen Claude mode is applied; Do sessions let the adapter offer Bypass permissions, and the ask rules keep every edit and command at the gate in every mode (HARNESS_PLAN, "Safety floor under the permissive modes"). The prompt note says the agent may change files and that a denied action must not be retried another way.
 - **Codex** (since September 26, [CODEX_DO.md](CODEX_DO.md)). Our codex-acp patch adds the mode `ask-every-action`:
@@ -90,7 +90,7 @@ A chat linked to a project runs in Do mode when its agent mode (`overrides[provi
   - The worker refreshes the cache on every run.
   - `GET /api/providers/:provider/capabilities?refresh=1` forces a new probe.
 - **Usage.** Each run saves what the agent reports, and there is no default cost cap. When the agent reports no cost (Codex), the cost is estimated from the tokens and `apps/server/src/usage/prices.ts`, and `costSource` says `estimated`.
-  - `usage_update` gives context used, window size, and cost in USD. Cost is cumulative for the session, and each run has its own session, so the latest value is the run's cost.
+  - `usage_update` gives context used, window size, and cost in USD, cumulative for the session. Since session resume (M6), a run may continue an earlier session, so this value is the session's running cost, not only the run's own.
   - The `session/prompt` response's `usage` gives input, output, total, cached read and write, and thinking tokens.
   - Each finished reply shows its tokens and cost, with a breakdown on hover or focus. The run's `usage.costSource` says whether the cost is `reported` or `estimated`; the web app does not label estimates yet.
   - The conversation detail includes `usageTotals`: the chat's cost and tokens, and per provider its runs, cost, tokens, and last context reading.
@@ -109,18 +109,12 @@ Z.ai is a third provider, `zai`, named "Z.ai (GLM)". It runs the same `claude-ag
   - `API_TIMEOUT_MS=3000000`, `CLAUDE_CODE_AUTO_COMPACT_WINDOW=1000000` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, as the Z.ai docs recommend
   - `CLAUDE_CONFIG_DIR` set to an isolated, `0700` config home (`$TMPDIR/spark-outpost-zai-claude`). Claude Code then reads no `~/.claude` settings, plugins or `.credentials.json`, and its keychain item name gets a hash suffix of that directory, so the user's `Claude Code-credentials` login is never looked up. The directory is shared by Z.ai runs so session resume works.
 - **No fallback to the Claude login.** Besides the clean environment, `claude-agent-acp` runs with `--hide-claude-auth`, which refuses any session whose account would bill a claude.ai subscription.
-- **Same hardening as Claude.** The Z.ai definition reuses Claude's session options: `settingSources: []`, the secret-file deny rules, `allowDangerouslySkipPermissions: false`, bypass disabled, `blockReadsOutsideWorkingDirectories`, the `default` mode lock, and Do with `ask: ['Bash','Edit','Write']` through the approval gate.
+- **Same hardening as Claude.** The Z.ai definition reuses Claude's session options: `settingSources: []`, the secret-file deny rules, `blockReadsOutsideWorkingDirectories`, the `default` mode lock, and Do with `ask: ['Bash','Edit','Write']` through the approval gate. Bypass stays disabled outside Do, as for Claude.
 - **Models and effort.** The adapter offers `default`, `opus`, `sonnet`, `haiku` and `claude-fable-5-1`. `offers` keeps only `opus` (GLM-5.3) and `haiku` (GLM-5.3-Flash), and the efforts Low, High and Max (GLM-5.3 has only these levels; High is the default). The probe and each run's capability report are filtered the same way, and the probe with the key spends nothing.
 - **Cost and model records.** Claude Code's reported cost uses Anthropic prices, so a Z.ai run drops it (`estimatesCost`), and the run is priced from its tokens at the GLM rates with `cost_source: 'estimated'`. `used_model` records the GLM model (`glm-5.3`, `glm-5.3-flash`) instead of the adapter's slot name.
 - **Tests.** `agents.test.ts` checks the environment against a parent full of Anthropic, Claude, AWS and OpenAI credentials; `test/acp-zai.test.ts` runs the provider and the probe against the fake agent (`#env` reports variable names, never values) and checks that the key is in no output, protocol message or stderr record; `test/zai-setup.db.test.ts` covers verification, errors, test messages, defaults, disconnect and the cost estimate; `tests/browser/zai.spec.ts` connects Z.ai in Settings with the fake runtime.
 - **Fake runtime.** `createProviders('fake', FAKE_ACP_AGENT, secrets)` passes the worker's secret store, so a Z.ai `#build` turn still needs a stored key. The fake agent gets the ordinary test environment and the GLM model list (`FAKE_ACP_MODELS`), never the key. Browser tests seed the worker's `MEMORY_SECRETS` with a dummy `zai` key; `test/acp-zai.test.ts` runs a fake GLM Builder turn through the approval gate.
-- **Live test (September 26, with the user's key, GLM-5.3-Flash at low effort, in a scratch git repo):**
-  - The app's own verify and "Send test message" went to `https://api.z.ai/api/anthropic` (the default `ZAI_BASE_URL`); the test message was answered by `glm-5.3` in 1.5 s.
-  - Ask ("what does math.js do?") ran Find and Read and answered in 10.4 s. Do ("make hello.txt read 'hello, GLM'") asked once for "Write hello.txt", was allowed by the gate, and made exactly that edit in 10.3 s.
-  - Tokens: 3,490 in, 6,464 cache reads, 102 out for Ask; 6,287 in, 7,680 cache reads, 161 out for Do. Estimated cost $0.0020 in total. The adapter reported no usable cost (dropped as designed); `used_model` was `glm-5.3-flash`. Z.ai reports cache reads through the Anthropic protocol.
-  - The adapter and Claude Code processes had only these credential-like variables: `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic` and `CLAUDE_CONFIG_DIR` set to the isolated directory; no `ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN` or other `CLAUDE_*` login variables. The adapter ran with `--hide-claude-auth`.
-  - `lsof -i` on the adapter's process tree, sampled every 0.3 s, showed connections only to `api.z.ai` (8.221.126.63 and 240b:4002:109:2b8:5400::202a); none to Anthropic's 160.79.104.10 or 2607:6bc0::10.
-  - The isolated config dir held `.claude.json` (no account fields), backups, session transcripts and no `.credentials.json`; no file in it contained the key, no keychain item exists for it, and the key appeared in no protocol message or stderr line.
+- **Live-tested (September 26)** with the user's key, GLM-5.3-Flash at low effort, in a scratch git repo: verify and a test message reached `https://api.z.ai/api/anthropic`; Ask and Do both worked (Do asked once for the write, then made exactly that edit). The adapter and Claude Code processes carried only Z.ai credential variables, `lsof` showed connections only to `api.z.ai`, and the isolated `CLAUDE_CONFIG_DIR` held no `.credentials.json` and no trace of the key in any file, keychain item, protocol message or stderr line.
 
 ## Audit recording
 
@@ -142,7 +136,7 @@ S1a records what every agent run says over ACP, for the audit view (S1c).
   - `GET /api/conversations/:id/audit/export.jsonl`: a streamed download, one `run` line per run followed by its `log` lines
   - `GET /api/conversations/:id/audit/export.csv`: one row per run with role, model, effort, mode, tokens, `cost_usd`, and `cost_source` (`reported`, `estimated`, or `not_reported`). Cells that start like a spreadsheet formula are prefixed with `'`
 - **Summary run fields for the audit view (S1c):** `role` (derived from `runs.mode` until roles exist: Do is Builder, Ask and Chat are Scout), `runMode`, `userMessageId` (the turn), `startedAt`, `finishedAt`, `approvalWaits` (approvals decided by the user, Stop, timeout, or recovery, and pending ones), and the distinct logged `methods`
-- **Estimate prices.** `usage/prices.ts` holds OpenAI's Standard short-context rates for the Codex models (`gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`), from https://developers.openai.com/api/docs/pricing, and Z.ai's pay-as-you-go rates for `glm-5.3` and `glm-5.3-flash`, from https://docs.z.ai/guides/overview/pricing, both checked 2026-09-26. GLM usage comes through the Anthropic protocol, where input tokens exclude cache reads and writes, so those prices set `cacheOutsideInput`: input and cache writes at the input price plus cache reads at the cached price. Any other model stays unpriced, so it shows "cost not reported" instead of a guess
+- **Estimate prices.** Rates now come from `apps/server/src/model-cards/vendor-cards.json` (`usage/prices.ts` reads them from there), covering the Codex models and Z.ai's `glm-5.3` and `glm-5.3-flash`. GLM usage comes through the Anthropic protocol, where input tokens exclude cache reads and writes, so those prices set `cacheOutsideInput`: input and cache writes at the input price plus cache reads at the cached price. Any other model stays unpriced, so it shows "cost not reported" instead of a guess
 - **Not recorded:** the capability probe's messages, stderr that arrives after the process is killed, and anything a provider does outside ACP. The fake provider records no protocol messages.
 
 ## Attachments
@@ -168,7 +162,7 @@ The mockup's work log ("Worked for 18s", a list of steps) is built from ACP sess
 
 Steps are stored as AG-UI `STEP_STARTED` / `STEP_FINISHED` run events. The conversation detail returns each run's step names (`activity`), so finished turns keep a collapsed "Worked for Ns", "Stopped after N steps", or "Failed after N steps" log. The live turn shows it open, with a spinner on the running step.
 
-In a chat there is little to show: Claude's tools are off, so a Claude chat usually has no steps. Codex shows thinking and sometimes a plan. Most activity arrives with the project-folder path.
+In a chat there is little to show: Claude's built-in tools are off, so a Claude chat usually has no steps beyond the `spark` MCP server's own tool calls (see [REPO_AGENT_CONFIG.md](REPO_AGENT_CONFIG.md#sparks-own-tools-spark-mcp-server)). Codex shows thinking and sometimes a plan. Most activity arrives with the project-folder path.
 
 ## Spike findings (claude-agent-acp 0.81.2, codex-acp 1.13.1, SDK 1.5.0)
 
@@ -186,7 +180,7 @@ In a chat there is little to show: Claude's tools are off, so a Claude chat usua
 
 ## Chat lockdown and known limits
 
-- **Claude:** built-in tools are turned off (`_meta.claudeCode.options.tools: []`, `strictMcpConfig`), so a chat cannot read or write files or run commands. Without a note in the prompt, Claude wrote fake tool-call markup as text. The prompt now says the chat has no project folder and no tools.
+- **Claude:** built-in tools are turned off (`_meta.claudeCode.options.tools: []`, `strictMcpConfig`), so a chat cannot read or write files or run commands beyond the `spark` MCP server every session gets (see REPO_AGENT_CONFIG.md). Without a note in the prompt, Claude wrote fake tool-call markup as text. The prompt now says the chat has no project folder and no tools of its own.
 - **Codex:** chats use the patched `read-only` mode, a real `readOnly` sandbox with no network (see "Session (Codex)" above and [PATCHES.md](PATCHES.md)). For chats, Spark Outpost also:
   - sets `INITIAL_AGENT_MODE=read-only`
   - points `TMPDIR` at the run's private folder
@@ -205,23 +199,10 @@ In a chat there is little to show: Claude's tools are off, so a Claude chat usua
 
 ## Tests
 
-- `pnpm test` includes:
-  - unit tests for update mapping, config planning, the permission policy, the conversation prompt, and the channel
-  - `test/acp-provider.test.ts`, which drives the real provider against `test/fake-acp-agent.ts` over stdio. It covers streaming, config, permission, cancel, crash, auth, and refusal cases.
-  - `test/acp-project.test.ts`, which runs the fake agent in a project folder: `cwd`, advertised capabilities, reads with `line`/`limit`, refused reads (`..`, symlink escape, `.env`), declined writes, and a missing root.
-  - `src/projects/path-policy.test.ts` for the path policy and `.sparkignore`.
-  - `src/approvals/decide.test.ts` for every mode posture, run rules, the allowlist and the always-ask list; `permission-request.test.ts` for the ACP mapping; `test/acp-approvals.test.ts`, which drives the fake agent in Do mode through allow, deny, cancel on Stop and approved, denied and refused `fs/write_text_file`; `src/approvals/command-kinds.test.ts` for safe reads and installs; `test/acp-codex-do.test.ts`, where the fake agent acts like Codex (`#codex`, `test/fake-codex-do.ts`: every command and patch asks with Codex's option ids, and `cancel` ends the turn).
-- `pnpm test:db` includes `test/approvals.db.test.ts` (the gate, run rules, the allowlist, decision races, payload hashes, Stop and the timeout) and `test/approval-runs.db.test.ts` (a worker run through the API decision, Stop while waiting, the timeout failing the run, crash recovery expiring approvals, and revert in and outside git).
-- `pnpm test:db` also includes `test/codex-crew.db.test.ts`: a Codex-only crew builds in place with Ask every time at Review each step, and in a merged and removed worktree with Approve for me at Automatic and Full auto → PR.
-- `pnpm test:live` includes `test/approvals.live.test.ts`: Claude in a temp git repo edits a file, runs `ls` and tries `git push`, and the run is reverted. `test/codex-do.live.test.ts` runs Codex Do (`gpt-6-luna` · low) at each level and checks that every Codex tool call has an approval receipt. Set `SPARK_LIVE_DIR` to keep its repos in a scratch folder.
-- The audit tests: unit tests for redaction, protocol entries, the hash chain, the recorder, and price estimates, and `test/acp-provider.test.ts` checks that every message is recorded in order with a secret in tool output redacted. `test/audit-log.db.test.ts` and `test/audit-api.db.test.ts` cover storage, paging, tamper detection, pruning, a worker run against the fake agent, the summary, and the export.
-- `pnpm test:db` covers run input: history, settings, and choosing the provider; `test/projects.db.test.ts` covers the folder picker, projects, file search, and project-file attachments.
-- `pnpm test:live` runs the installed Claude and Codex logins. Each provider gets:
-  - a conversation-context recall test
-  - a blocked file write outside the sandbox
-  - a cancel mid-reply that stops within 6 s
-
-  It uses a small amount of each account's usage.
+- `pnpm test` covers update mapping, config planning, the permission policy, the conversation prompt, the channel, the ACP provider against `test/fake-acp-agent.ts` (streaming, config, permission, cancel, crash, auth, refusal), project reads and writes, the path policy, and approval decisions (mode posture, run rules, allowlist, safe reads and installs) including a fake Codex Do agent.
+- `pnpm test:db` covers the approval gate end to end (run rules, races, payload hashes, Stop, timeout, revert in and outside git), a Codex-only crew in place and in a worktree, run input, and project/attachment routes.
+- `pnpm test:live` runs the installed Claude and Codex logins: a temp-repo edit, `ls`, a blocked `git push` with revert; Codex Do at each level with an approval receipt on every tool call; conversation-context recall; a blocked write outside the sandbox; and a cancel mid-reply. Set `SPARK_LIVE_DIR` to keep its repos in a scratch folder. It uses a small amount of each account's usage.
+- Audit tests cover redaction, protocol entries, the hash chain, the recorder, price estimates, storage, paging, tamper detection, pruning, the summary and the export.
 
 ## Known gaps against the ACP spec
 
@@ -239,10 +220,7 @@ Handled:
 - **Resource links** with an `http` or `https` URI are written as markdown links.
 - **Work without text.** `didWork()` is true after a tool call or a declined permission, so the provider can avoid the sign-in hint.
 
-Still open:
-
-- Persisted activity for finished runs marks every step done, so cancelled steps only show as not finished while the run is live.
-- `tool_call_update` title changes, tool-call `content` (diffs, terminals), `locations`, thought text and `plan_update`/`plan_removed` are ignored. `available_commands_update` feeds the composer's `/` menu (see [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md#slash-commands)). Non-link content blocks in agent messages are dropped.
+Still open: tracked surface by surface in [ACP_COVERAGE.md](ACP_COVERAGE.md#to-reach-full-support).
 
 ## Extensibility and other agents
 
@@ -255,8 +233,8 @@ Still open:
 
 ## Next
 
-1. **Codex Do upstream.** Ask codex-acp for an "ask for everything" mode and a continue-on-deny option, so our patch can go.
+1. **Codex Do upstream.** Filed as codex-acp issues #555 and #556, draft PRs #557 and #558; see [PATCHES.md](PATCHES.md) for status.
 2. **Elicitation.** Advertise `elicitation.form` and show `elicitation/create` as a card that answers `accept`, `decline`, or `cancel`. The spec forbids form mode for secrets.
 3. **Richer activity.** Show diffs and file locations from tool-call content, failed and cancelled steps, and the plan as a checklist.
-4. **Faster start:** ~~reuse ACP sessions with `session/resume` when the conversation hasn't changed~~ (done in M6, see HARNESS_PLAN.md). A warm agent process per provider (F-18) is still deferred: resume works across new processes, so it would only save process start.
+4. **A warm agent process per provider** (F-18) is still deferred: resume works across new processes, so it would only save process start.
 5. **API-key runs.**

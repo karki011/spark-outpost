@@ -248,7 +248,7 @@ Needs design before its phase (in this plan, missing from the mockup):
 - Agents connection screen and collaboration timeline for A2A (phase 3).
 - Goal, budget, and limits at intake; outcome-unknown and recovery states.
 
-In the mockup but deferred: Tickets (Jira, Linear) and working connectors. Keep the designs; hide Tickets until after phase 3. Onboarding shows the connectors step as a preview with "Coming soon" tiles and no Connect buttons (revised 2026-09-25), so nothing pretends to connect. Home depends on the app-wide status stream.
+Tickets and the Jira/Linear/GitHub connectors, shown deferred in the mockup, are now built (`apps/web/src/tickets/`). Home depends on the app-wide status stream.
 
 Mockup behaviors this plan overrides:
 
@@ -280,11 +280,9 @@ spark-outpost/
   docs/
     product/
     architecture/
-    decisions/
-    qa/
 ```
 
-Keep the worker entry point in `apps/server` initially. Add `apps/desktop` (the Electron shell) only when packaging is implemented. Add a shared UI package only when actual callers justify it. Share runtime-validated boundary contracts between web and server; do not expose backend internals through shared packages.
+Keep the worker entry point in `apps/server`. `apps/desktop` (the Electron shell) exists. Add a shared UI package only when actual callers justify it. Share runtime-validated boundary contracts between web and server; do not expose backend internals through shared packages.
 
 Use a pinned supported Node LTS release and pnpm version, strict TypeScript, formatting, linting, runtime input validation, unit/integration tests, and browser tests. Select exact libraries and versions during bootstrap rather than freezing unverified choices here.
 
@@ -297,6 +295,8 @@ Keep handwritten source and test files at or below 500 lines. Extract a shared c
 Make small coherent changes. Preserve behavior outside the approved scope. Test meaningful observable outcomes. Self-review gathers evidence; an independent reviewer supplies the independent verdict. Keep performance claims distinct from measurements and fixture tests distinct from live-provider acceptance.
 
 ## 14. Delivery sequence and exit criteria
+
+Status note: this table is the original forward plan and is not kept current phase by phase. As of this revision, Tickets, the connectors, `apps/desktop`, and embedded PostgreSQL for the desktop shell are already built, ahead of where phase numbering below would suggest. See [Protocol alignment](../architecture/PROTOCOL_ALIGNMENT.md) for current implementation status.
 
 | Phase                              | Deliverable                                                                                                                                                                                                                                              | Exit criterion                                                                                                                                              |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -356,7 +356,7 @@ The worker reaches the rest of the system only through PostgreSQL, so it can mov
 
 ## 17. Explicitly deferred
 
-Rust backend migration; Tauri; CopilotKit prebuilt UI components; `@ag-ui/a2a-middleware`; A2UI generated interfaces; Tickets and connectors (designed in the mockup); mobile clients; a terminal emulator; a visual workflow builder; arbitrary plugin registries; a public agent marketplace; multi-tenant hosted deployment; billing; Kubernetes; distributed schedulers; vector/graph infrastructure without a demonstrated retrieval need; fully automatic external publication.
+Rust backend migration; Tauri; CopilotKit prebuilt UI components; `@ag-ui/a2a-middleware`; A2UI generated interfaces; mobile clients; a terminal emulator; a visual workflow builder; arbitrary plugin registries; a public agent marketplace; multi-tenant hosted deployment; billing; Kubernetes; distributed schedulers; vector/graph infrastructure without a demonstrated retrieval need; fully automatic external publication.
 
 Do not defer basic recovery, permission enforcement, provider-independent caching, or evidence-backed completion. They are part of the first working product.
 
@@ -367,10 +367,9 @@ Do not defer basic recovery, permission enforcement, provider-independent cachin
 - ACP coverage results from the spike, and whether any capability needs a native-SDK adapter.
 - Job queue: handwritten or `graphile-worker` / `pg-boss`. Query layer: Drizzle or Kysely.
 - Initial permission defaults, spending limits, and live-test allowance.
-- Embedded PostgreSQL mechanism for Electron (`embedded-postgres` binary or PGlite; PGlite allows only one connection, so test it against the job queue), after the local web milestone.
 - Whether CopilotKit headless hooks earn adoption after phase 1. Paid boundaries: `selfManagedAgents` in production and `useThreads` require paid tiers.
 
-Decided 2026-09-25: ACP for coding agents, AG-UI to the UI, A2A only for remote agents, CopilotKit not adopted for phases 0–1, PostgreSQL everywhere, Electron as the preferred desktop shell.
+Decided 2026-09-25: ACP for coding agents, AG-UI to the UI, A2A only for remote agents, CopilotKit not adopted for phases 0–1, PostgreSQL everywhere, Electron as the preferred desktop shell. Also decided: `apps/desktop` uses the `embedded-postgres` binary.
 
 ## 19. Source notes
 
@@ -384,4 +383,4 @@ Sources support protocol and library facts; proposed architecture and acceptance
 - [TypeSafe JavaScript SDK](https://docs.typesafe.ai/sdk/javascript), [Choice](https://docs.typesafe.ai/primitives/choice), and [function-calling cookbook](https://docs.typesafe.ai/cookbooks/function_calling): typed semantic choices consumed by application code.
 - [Tauri Node sidecar guide](https://v2.tauri.app/learn/sidecar-nodejs/): the extra sidecar layer that made Tauri a weaker fit for a Node backend.
 
-This plan lives in the Spark Outpost repository. The Kanban board records actual delivery; later phases remain proposals. No domain has been purchased and no remote service has been published.
+This plan lives in the Spark Outpost repository; later phases remain proposals. No domain has been purchased and no remote service has been published.

@@ -1,6 +1,6 @@
 # Routing plan
 
-> **Status: rollout step 1 (shadow) built on September 27, 2026.** The code scan (step 0), the Jev file ranking and the route question run for every Do task and are recorded next to the rule route (`run_advice` purposes `scan`, `rank` and `route_shadow`; the `routing_labels` view; `pnpm routing:labels`). The Builder still runs on the rules in `orchestration/routing.ts` and `risk-rules.ts`. Results: [routing-shadow-2026-09-27.md](../benchmarks/routing-shadow-2026-09-27.md). **Since September 28 the Builder has a floor (policy `floor-1`):** it never runs on the small tier, and it gets the top tier only for complex work (section 4). Evidence: [routing-live-2026-09-27.md](../benchmarks/routing-live-2026-09-27.md). **Since September 28 (policy `fixturn-3-devday-rerun-nohaiku`) the harness never picks the fast tier or a retiring model for any role** (section 4, "Harness floor"): Haiku 4.5 retires on October 15, 2026.
+> **Status.** Rollout steps 0 (code scan, [codescan-2026-09-27.md](../benchmarks/codescan-2026-09-27.md)) and 1 (shadow, [routing-shadow-2026-09-27.md](../benchmarks/routing-shadow-2026-09-27.md)) are built: the scan, the Jev file ranking and the route question run for every Do task and are recorded next to the rule route (`run_advice` purposes `scan`, `rank` and `route_shadow`; the `routing_labels` view; `pnpm routing:labels`). The Builder still runs on the rules in `orchestration/routing.ts` and `risk-rules.ts`, with a floor: the harness never picks the fast tier or a retiring model for any role, and a Builder gets the top tier only for complex work (section 4; evidence in [routing-live-2026-09-27.md](../benchmarks/routing-live-2026-09-27.md)). Steps 2–5 are open.
 
 This plan replaces keyword routing with a Jev decision that uses codebase evidence, and then checks the result before paying for a stronger model. It draws on six routers read in full, including their code, fixtures and studies.
 
@@ -204,17 +204,13 @@ Every task records: candidates, Jev's distribution, the chosen route, the predic
 
 ### 7. Decompose later
 
-Only large, spread-out tasks (many ranked files in unrelated areas) get a planner and per-subtask routes. Not in the first cut.
+Superseded by the coordinator, which splits large tasks into pieces with their own Builders and is on by default (`COORDINATOR_MODE` defaults to `parallel` in `apps/server/src/config.ts`). See [COORDINATOR_PLAN.md](COORDINATOR_PLAN.md).
 
 ### 8. Without Jev
 
-Jev is optional: no key, the user turned it off, or the service is down. The harness still works:
+Jev is optional. With no key, or with the service down, the harness still works on the rules: the code policy still applies (a pin, destructive work → the top tier, the Builder floor, complex work → the top tier by rule and scan, the cost cap), the code scan still runs (it's local), vague requests aren't caught by Jev, and there is no diff verdict, so checks and up to 2 fix turns decide.
 
-- **The Builder subagent still runs,** one per Do task, with a worktree when the repo is busy.
-- **The model is the one the chat picked,** at the provider's default effort. The code policy still applies: a pin, destructive work → the top tier, the Builder floor and complex work → the top tier (by rule and scan), the cost cap.
-- **The code scan still runs** (it's local), and its evidence still goes to the Builder as a starting file list.
-- **No cascade, only checks:** checks run with up to 2 fix turns, and there is no rerun one tier up. There's no diff verdict, so a passing check is trusted.
-- **No intake questions:** vague requests aren't caught, and there's no injection check beyond the approval rules.
+**Spark off** (the user's switch) goes further: Jev is never called and no scan runs. The Builder runs once on the chat's own pick (`soloRoute`, rule "Spark off → your pick"), with no Critic, no retry one tier up and no "continue" for open plan items; risky work still asks first at Review each step. Where the Builder works (the chat's worktree or your checkout) follows the chat worktree rules in [HARNESS_PLAN.md](HARNESS_PLAN.md).
 
 We don't add a second LLM classifier as a fallback (pi has one). It would cost a model call per task and needs its own evaluation; the chat's model is a sound default.
 
@@ -228,25 +224,7 @@ A provider switch doesn't have to lose the conversation, but it does lose the pr
 
 ### 10. Desktop app (Electron) and the database
 
-The goal is an Electron app. The plan works there because Electron is also several processes:
-
-| Today                          | In Electron                         |
-| ------------------------------ | ----------------------------------- |
-| Browser tab (UI)               | Renderer process, same React app    |
-| API server                     | Separate process (`utilityProcess`) |
-| Workflow worker (scan, agents) | Separate process                    |
-
-The rule: **no server work in Electron's main process.** It drives the windows, menus and shortcuts, so blocking it freezes the app. ripgrep's binary must be unpacked from the app archive (`asarUnpack`) and built per CPU type, as VS Code does. `web-tree-sitter` is WebAssembly and needs no rebuild. `git` is detected at startup.
-
-**Database decision (recommended now): keep Postgres and bundle it.** The server depends on Postgres features: `LISTEN/NOTIFY` for live updates between the API and the worker (`persistence/*`, `api/app-events.ts`), `FOR UPDATE SKIP LOCKED` for the job queue (`persistence/jobs.ts`), and every migration.
-
-| Option                                                                                                                                                                           | Verdict                                                                                                                                                                                                                |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Real Postgres, bundled** ([`embedded-postgres`](https://www.npmjs.com/package/embedded-postgres), which ships per-platform Postgres binaries and runs them as a child process) | **Recommended.** No code changes; the API and worker keep separate connections. The npm package's current release is a beta, so pin a version, or ship the same binaries ourselves. About 30–40 MB added per platform. |
-| PGlite (Postgres compiled to WebAssembly)                                                                                                                                        | Same SQL, but one connection per database instance. Our API and worker are separate processes, so one would have to own the database and serve the other. Not proven for us.                                           |
-| SQLite                                                                                                                                                                           | Rewrite every migration, the live-update channel and the job queue. Too much for no user benefit.                                                                                                                      |
-
-Deciding now means the scan cache and everything else keep using Postgres without second-guessing. The packaging work itself waits until the app is ready to ship.
+See [ELECTRON_PLAN.md](ELECTRON_PLAN.md): the scan and agents stay out of Electron's main process, and the app keeps Postgres, bundled.
 
 ### 11. First test repo: `Cloudzero/feature-web-apps`
 
@@ -282,4 +260,4 @@ It's a good test of the monorepo signals: one request can touch one Nx project o
 - Should the verifier be Jev alone, or Jev plus the Critic for large diffs?
 - May `feature-web-apps` metadata (paths, symbol names, task text) be sent to Jev? (Section 11.)
 
-Decided since the first draft: the grammar package (section 2), effort from the provider default (section 1), user-driven provider switches with a handoff (section 9), running without Jev (section 8), and keeping Postgres for the desktop app (section 10).
+Decided since the first draft: the grammar package (section 2), effort from the provider default (section 1), user-driven provider switches with a handoff (section 9), running without Jev (section 8), keeping Postgres for the desktop app (section 10), and decomposition by the coordinator (section 7).

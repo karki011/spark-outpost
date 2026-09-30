@@ -6,11 +6,11 @@ Read this before changing persistence or agent integration. Product direction is
 
 | Package                                 | Version                                    | Used for                                                                                          |
 | --------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `@ag-ui/core`                           | 1.0.0 (MIT)                                | Event types and Zod schemas for every run event we store and stream                               |
-| `zod`                                   | 4.6.5                                      | Validation at API, event, and configuration boundaries                                            |
+| `@ag-ui/core`                           | `^1.0.0` in `package.json`, 1.0.0 resolved | Event types and Zod schemas for every run event we store and stream                               |
+| `zod`                                   | `^4.6.5` in `package.json`, 4.6.5 resolved | Validation at API, event, and configuration boundaries                                            |
 | PostgreSQL                              | 17 (Homebrew `postgresql@17`)              | Source of truth; matches the planned RDS major version                                            |
 | `@agentclientprotocol/sdk`              | 1.5.0                                      | ACP client in the worker ([ACP_AGENTS.md](ACP_AGENTS.md), [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md)) |
-| `@agentclientprotocol/claude-agent-acp` | 0.81.2                                     | Claude adapter                                                                                    |
+| `@agentclientprotocol/claude-agent-acp` | 0.81.2                                     | Claude adapter, also used for the Z.ai (GLM) provider                                             |
 | `@agentclientprotocol/codex-acp`        | 1.13.1 (patched, [PATCHES.md](PATCHES.md)) | Codex adapter                                                                                     |
 
 Not installed: `@ag-ui/client`, `@a2a-js/sdk`, CopilotKit.
@@ -54,6 +54,6 @@ Per-launch token authentication (F-9), the ACP client adapter (F-11, F-12), appr
 
 ## Gates before a protocol claim
 
-1. The SDK version is pinned in `package.json` and recorded above.
+1. The SDK version is pinned in `package.json` and recorded above. (`@ag-ui/core` and `zod` are caret ranges, not pinned; the lockfile currently resolves both to the versions above.)
 2. A test exercises the behavior through our code, not only the SDK's.
 3. Live-provider behavior is reported separately from fake-provider tests.

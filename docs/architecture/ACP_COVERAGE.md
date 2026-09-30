@@ -204,42 +204,33 @@ In [harness plan](HARNESS_PLAN.md) milestone order. Each item names the surface 
 
 **M1: Ask in a folder**
 
-1. ~~Treat a `notice` with `error` severity as advisory, and fail only on a stop reason, a JSON-RPC error or `sessionFailure`.~~ Done September 27. `session.notices` stays advertised: it is the unstable RFD field both adapters read (`session-update:notice`, `client-capability:session.notices`).
-2. ~~Check `protocolVersion` in the probe~~ (done September 27), log `agentInfo`, and send the real app version in `clientInfo` (`agent-method:initialize`).
-3. Keep reading updates after `session/cancel` until the prompt response, and mark open tool steps cancelled instead of dropping them (`client-notification:session/cancel`, `agent-notification:session/update`).
-4. Show `in_progress` plan entries differently from `pending`, and stop `finish()` from marking unfinished entries as done (`session-update:plan`, `plan-entry:status`).
-5. ~~Send `additionalDirectories` when the agent advertises it (`agent-capability:sessionCapabilities.additionalDirectories`).~~ Done for Claude; Codex uses it through the patched read-only mode (see [ACP_AGENTS.md](ACP_AGENTS.md)).
+1. Log `agentInfo`, and send the real app version in `clientInfo` (`agent-method:initialize`).
+2. Keep reading updates after `session/cancel` until the prompt response, and mark open tool steps cancelled instead of dropping them (`client-notification:session/cancel`, `agent-notification:session/update`).
+3. Show `in_progress` plan entries differently from `pending`, and stop `finish()` from marking unfinished entries as done (`session-update:plan`, `plan-entry:status`).
 
-**M2: Do with approvals (F-13)**
-
-6. ~~Replace the automatic decline with the approval card~~ (M2). Since provider permission modes (September 28) the card shows every option the agent sends, all four kinds, with the agent's labels, and sends the chosen one back (`client-method:session/request_permission`, `permission-option-kind:*`).
-7. ~~Handle `fs/write_text_file` inside the project path policy, create missing files, record a diff, and advertise `fs.writeTextFile` in Do mode~~ (M2; `client-method:fs/write_text_file`, `client-capability:fs.writeTextFile`). Neither pinned adapter calls it today.
+**M2: Do with approvals (F-13)** — done. The approval card shows every option the agent sends, and `fs/write_text_file` is handled inside the project path policy and advertised in Do mode (see [ACP_AGENTS.md](ACP_AGENTS.md#do-in-project-folders-m2)).
 
 **M3: Tool-call records and the "what changed" card**
 
-8. Keep `tool_call` and `tool_call_update` details: kind, title changes, content, diffs, locations and `rawOutput` exit codes (`session-update:tool_call`, `session-update:tool_call_update`, `tool-call-content:content`, `tool-call-content:diff`).
-9. Keep the thought text on the Thinking step (`session-update:agent_thought_chunk`).
-10. Render image and resource blocks in replies, and non-web `resource_link` URIs (`session-update:agent_message_chunk`, `content-block:image`, `content-block:resource`, `content-block:resource_link`).
-11. ~~Show plan entry priority~~ (`plan-entry:priority`).
+4. Keep `tool_call` and `tool_call_update` details: kind, title changes, content, diffs, locations and `rawOutput` exit codes (`session-update:tool_call`, `session-update:tool_call_update`, `tool-call-content:content`, `tool-call-content:diff`).
+5. Keep the thought text on the Thinking step (`session-update:agent_thought_chunk`).
+6. Render image and resource blocks in replies, and non-web `resource_link` URIs (`session-update:agent_message_chunk`, `content-block:image`, `content-block:resource`, `content-block:resource_link`).
 
 **M4: Budgets, concurrency and checks**
 
-12. ~~Record model and effort changes from `config_option_update`~~ (September 28: model, effort, mode and every other option are reported as session settings and recorded on the run; `session-update:config_option_update`).
-13. Read `session_info_update` titles and keep non-USD costs (`session-update:session_info_update`, `session-update:usage_update`).
+7. Read `session_info_update` titles and keep non-USD costs (`session-update:session_info_update`, `session-update:usage_update`).
 
 **M5: Context**
 
-14. ~~Warm sessions: call `session/resume` when advertised, or `session/load` with `user_message_chunk` replay when only `loadSession` is, then `session/close`.~~ Done in M6 (`provider_sessions`, `session-open.ts`). Still open: `session/delete` for throwaway sessions (`agent-method:session/delete`, `agent-capability:sessionCapabilities.delete`).
-15. Send @-mentioned project files as `resource_link` blocks (`content-block:resource_link`).
+8. `session/delete` for throwaway sessions (`agent-method:session/delete`, `agent-capability:sessionCapabilities.delete`).
+9. Send @-mentioned project files as `resource_link` blocks (`content-block:resource_link`).
 
 **M6: Review and isolation**
 
-16. No new schema surface. The reviewer is a fresh Ask run; revisit the unstable `session/fork` if it reaches the schema.
+10. No new schema surface. The reviewer is a fresh Ask run; revisit the unstable `session/fork` if it reaches the schema.
 
 **Deferred in the harness plan**
 
-17. Terminals: the `terminal` capability, `terminal/*` handlers with byte limits and character-boundary truncation, and embedded terminal content (`client-method:terminal/*`, `client-capability:terminal`, `tool-call-content:terminal`).
-18. Elicitation forms and URLs, after M2 (`client-method:elicitation/create`, `agent-notification:elicitation/complete`, `client-capability:elicitation.*`).
-19. ~~MCP servers per session~~ (project `.mcp.json` servers, opt-in per server, September 28, see [REPO_AGENT_CONFIG.md](REPO_AGENT_CONFIG.md)). ~~User-level servers from Settings~~ (`0053_user_mcp.sql`, see [REPO_AGENT_CONFIG.md](REPO_AGENT_CONFIG.md#user-level-mcp-servers)).
-20. Sign-in through ACP: `authenticate` for agent methods, terminal login from Settings, and API-key runs (`agent-method:authenticate`, `client-capability:auth.terminal`).
-21. Composer extras: ~~a `/` menu from `available_commands_update`~~ (done September 27, see [ACP_COMPLIANCE.md](ACP_COMPLIANCE.md#slash-commands)), ~~boolean config options such as fast mode, `model_config` and unknown categories~~ (September 28: advertised, reported, shown in the picker's Options and set per chat; `client-capability:session.configOptions.boolean`, `agent-method:session/set_config_option`), ~~the agent's own modes~~ (September 28: the picker lists the live modes with names, descriptions and `_meta.kind`).
+11. Terminals: the `terminal` capability, `terminal/*` handlers with byte limits and character-boundary truncation, and embedded terminal content (`client-method:terminal/*`, `client-capability:terminal`, `tool-call-content:terminal`).
+12. Elicitation forms and URLs, after M2 (`client-method:elicitation/create`, `agent-notification:elicitation/complete`, `client-capability:elicitation.*`).
+13. Sign-in through ACP: `authenticate` for agent methods, terminal login from Settings, and API-key runs (`agent-method:authenticate`, `client-capability:auth.terminal`).
