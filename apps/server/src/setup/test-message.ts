@@ -7,6 +7,7 @@ import type { SecretStore } from './secrets.ts';
 import { locateCli, type ApiEndpoints } from './verify.ts';
 import { zaiFailureReason, zaiMessageRequest } from './zai-key.ts';
 import { zaiModelId } from '../agents/acp/zai.ts';
+import { floorModel } from '../orchestration/model-floor.ts';
 
 export interface TestMessageDeps {
   run: RunCommand;
@@ -21,8 +22,6 @@ export interface TestOutcome {
 }
 
 const PROMPT = 'Reply with the single word OK.';
-const CLAUDE_TEST_MODEL = 'haiku';
-const CLAUDE_API_TEST_MODEL = 'claude-haiku-4-5';
 const CLI_TIMEOUT_MS = 90_000;
 const API_TIMEOUT_MS = 30_000;
 
@@ -32,6 +31,14 @@ function answered(startedAt: number, model: string | null): TestOutcome {
     ok: true,
     message: `Test message answered in ${seconds} s${model ? ` by ${model}` : ''}`,
   };
+}
+
+function testModel(provider: ProviderId, connection: ProviderConnection): string | null {
+  return floorModel(connection.models, provider)?.id ?? null;
+}
+
+function modelArgs(flag: string, model: string | null): string[] {
+  return model ? [flag, model] : [];
 }
 
 function failedWith(reason: string): TestOutcome {
@@ -64,13 +71,17 @@ function parseClaudeResult(stdout: string): ClaudeResult | null {
   }
 }
 
-async function testClaudeCli(entry: CatalogEntry, deps: TestMessageDeps): Promise<TestOutcome> {
+async function testClaudeCli(
+  entry: CatalogEntry,
+  model: string | null,
+  deps: TestMessageDeps,
+): Promise<TestOutcome> {
   const path = await locateCli(entry.cli, deps.run, deps.loginShell);
   if (!path) return failedWith(`\`${entry.cli}\` is no longer on your PATH.`);
   const startedAt = Date.now();
   const result = await deps.run(
     path,
-    ['-p', PROMPT, '--model', CLAUDE_TEST_MODEL, '--output-format', 'json'],
+    ['-p', PROMPT, ...modelArgs('--model', model), '--output-format', 'json'],
     CLI_TIMEOUT_MS,
   );
   if (result.timedOut) {
@@ -123,7 +134,11 @@ function codexError(events: unknown[]): string | null {
   return null;
 }
 
-async function testCodexCli(entry: CatalogEntry, deps: TestMessageDeps): Promise<TestOutcome> {
+async function testCodexCli(
+  entry: CatalogEntry,
+  model: string | null,
+  deps: TestMessageDeps,
+): Promise<TestOutcome> {
   const path = await locateCli(entry.cli, deps.run, deps.loginShell);
   if (!path) return failedWith(`\`${entry.cli}\` is no longer on your PATH.`);
   const startedAt = Date.now();
@@ -138,6 +153,7 @@ async function testCodexCli(entry: CatalogEntry, deps: TestMessageDeps): Promise
       '--json',
       '-C',
       os.tmpdir(),
+      ...modelArgs('-m', model),
       PROMPT,
     ],
     CLI_TIMEOUT_MS,
@@ -156,8 +172,8 @@ async function testCodexCli(entry: CatalogEntry, deps: TestMessageDeps): Promise
       error ?? (result.stderr.trim() || `\`${entry.cli}\` exited with code ${result.code}.`),
     );
   }
-  const model = events.map((event) => findString(event, 'model')).find(Boolean) ?? null;
-  return answered(startedAt, model);
+  const answeredBy = events.map((event) => findString(event, 'model')).find(Boolean) ?? model;
+  return answered(startedAt, answeredBy);
 }
 
 async function postJson(
@@ -197,7 +213,7 @@ function keyedTestRequest(
         `${deps.endpoints.anthropicBaseUrl}/v1/messages`,
         { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
         {
-          model: CLAUDE_API_TEST_MODEL,
+          model,
           max_tokens: 16,
           messages: [{ role: 'user', content: PROMPT }],
         },
@@ -221,11 +237,12 @@ async function testApiKey(
 ): Promise<TestOutcome> {
   const key = await deps.secrets.get(entry.id);
   if (!key) return failedWith('the stored key is missing from the keychain. Verify the key again.');
-  if (!connection.model) return failedWith('no default model is selected.');
+  const model = testModel(entry.id, connection) ?? connection.model;
+  if (!model) return failedWith('no default model is selected.');
   const startedAt = Date.now();
   let response: Response;
   try {
-    response = await keyedTestRequest(entry, key, connection.model, deps);
+    response = await keyedTestRequest(entry, key, model, deps);
   } catch {
     return failedWith(`couldn't reach ${entry.maker}. Check your internet connection.`);
   }
@@ -234,8 +251,7 @@ async function testApiKey(
     const zai = entry.id === 'zai' ? zaiFailureReason(response.status, payload) : null;
     return failedWith(zai ?? httpReason(entry, response.status));
   }
-  const model = typeof payload?.model === 'string' ? payload.model : connection.model;
-  return answered(startedAt, model);
+  return answered(startedAt, typeof payload?.model === 'string' ? payload.model : model);
 }
 
 export async function sendTestMessage(
@@ -245,5 +261,8 @@ export async function sendTestMessage(
 ): Promise<TestOutcome> {
   const entry = catalogEntry(provider);
   if (connection.method === 'api_key') return testApiKey(entry, connection, deps);
-  return provider === 'claude' ? testClaudeCli(entry, deps) : testCodexCli(entry, deps);
+  const model = testModel(provider, connection);
+  return provider === 'claude'
+    ? testClaudeCli(entry, model, deps)
+    : testCodexCli(entry, model, deps);
 }
