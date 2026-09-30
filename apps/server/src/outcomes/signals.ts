@@ -98,18 +98,22 @@ export function agreement(signals: readonly Scored[]): Agreement {
 }
 
 export const FEEDBACK_SAMPLE_RATE = 0.2;
+export const FEEDBACK_TURN_SPACING = 3;
 
 export interface PromptInput {
   kind: OutcomeKind;
   succeeded: boolean;
   signals: readonly Scored[];
   askedInTask: boolean;
+  turnNumber: number;
+  askedRecently: boolean;
   roll: number;
   sampleRate: number;
 }
 
 export function feedbackPrompt(input: PromptInput): FeedbackPrompt | null {
   if (input.kind === 'other' || !input.succeeded || input.askedInTask) return null;
+  if (input.turnNumber < FEEDBACK_TURN_SPACING || input.askedRecently) return null;
   if (agreement(input.signals) !== 'agree') return 'mixed';
   return input.roll < input.sampleRate ? 'sampled' : null;
 }

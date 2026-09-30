@@ -20,12 +20,19 @@ import {
   saveKeptContent,
   saveScore,
   toTurnOutcome,
+  turnPlace,
   type OutcomeRow,
 } from '../persistence/outcomes.ts';
 import { repoStillThere, runChanges } from '../projects/run-changes.ts';
 import { findKeptCommit, keptContent, type KeptContent } from './commits.ts';
 import { deriveSignals, followUpWindowClosed, outcomeKind } from './derive.ts';
-import { FEEDBACK_SAMPLE_RATE, feedbackPrompt, polarityOf, scoreOutcome } from './signals.ts';
+import {
+  FEEDBACK_SAMPLE_RATE,
+  FEEDBACK_TURN_SPACING,
+  feedbackPrompt,
+  polarityOf,
+  scoreOutcome,
+} from './signals.ts';
 
 const COMMIT_CHECK_EVERY_MS = 10 * 60 * 1000;
 const COMMIT_WATCH_MS = 14 * 24 * 60 * 60 * 1000;
@@ -124,6 +131,7 @@ export async function refreshOutcome(
       succeeded: facts.status === 'succeeded',
       signals,
       askedInTask: await askedInTask(db, runId, turn.task_id),
+      ...(await turnPlace(db, runId, FEEDBACK_TURN_SPACING - 1)),
       roll: (options.random ?? Math.random)(),
       sampleRate: options.sampleRate ?? FEEDBACK_SAMPLE_RATE,
     });

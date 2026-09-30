@@ -143,6 +143,34 @@ export async function askedInTask(db: Queryable, runId: string, taskId: string |
   return rows.length > 0;
 }
 
+export interface TurnPlace {
+  turnNumber: number;
+  askedRecently: boolean;
+}
+
+export async function turnPlace(
+  db: Queryable,
+  runId: string,
+  lookBack: number,
+): Promise<TurnPlace> {
+  const { rows } = await db.query<{ asked: boolean; turns: string }>(
+    `SELECT (o.prompt IS NOT NULL OR o.rating IS NOT NULL) AS asked, count(*) OVER () AS turns
+     FROM runs r
+     JOIN runs cur ON cur.id = $1
+     LEFT JOIN task_outcomes o ON o.run_id = r.id
+     WHERE r.conversation_id = cur.conversation_id AND r.parent_run_id IS NULL
+       AND r.role IS DISTINCT FROM 'digest'
+       AND (r.created_at, r.id) <= (cur.created_at, cur.id)
+     ORDER BY r.created_at DESC, r.id DESC
+     LIMIT $2`,
+    [runId, lookBack + 1],
+  );
+  return {
+    turnNumber: Number(rows[0]?.turns ?? 0),
+    askedRecently: rows.slice(1).some((row) => row.asked),
+  };
+}
+
 export async function decidePrompt(
   db: Queryable,
   runId: string,

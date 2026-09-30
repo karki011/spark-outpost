@@ -132,7 +132,7 @@ function FeedbackRow({
       ref={rowRef}
     >
       <div className="fb-line">
-        <span id={labelId} className={quiet ? 'sr-only' : 'fb-q'}>
+        <span id={labelId} className={quiet || variant === 'turn' ? 'sr-only' : 'fb-q'}>
           {reverted ? 'What went wrong?' : 'How did it go?'}
         </span>
         {!reverted && (
@@ -225,6 +225,9 @@ export function TurnFeedback({ runId, variant }: { runId: string; variant: Feedb
   });
   const outcome = query.data?.outcome ?? null;
   if (!outcome) return null;
-  const nudged = outcome.prompt !== null || outcome.feedback !== null;
-  return <FeedbackRow outcome={outcome} variant={variant} quiet={!nudged} />;
+  const quiet =
+    variant === 'turn'
+      ? outcome.prompt === null
+      : outcome.prompt === null && outcome.feedback === null;
+  return <FeedbackRow outcome={outcome} variant={variant} quiet={quiet} />;
 }
