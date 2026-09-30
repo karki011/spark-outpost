@@ -167,6 +167,7 @@ async function rangeAudit({ deps, scope }: SparkToolContext, days: number) {
 
 export const auditTool = sparkTool({
   name: 'spark_audit',
+  privateData: true,
   title: 'Audit',
   description:
     "Audit what agents did. For a chat (default: this chat) or one run: cost, tokens and time per run, model and role, the steps and tool calls each run took, declined actions, and approval cards with who decided them. With days and no chat or run: harness totals, approvals, checks, Critic and loops for that period, plus each active chat's cost and outcome. Use it to review what went right or wrong and how to tune Spark.",

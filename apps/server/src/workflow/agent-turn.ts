@@ -52,6 +52,8 @@ import { conversationProjectIds } from '../agent-config/store.ts';
 import { loadUserMcp } from '../mcp/launch.ts';
 import { withMoveNote } from './project-move.ts';
 import { autoInWorktree } from '../orchestration/checkpoint-policy.ts';
+import { createRunObservations } from '../observations/run-observations.ts';
+import { scannedObserver } from '../observations/output-scan.ts';
 
 export function writesCode(role: string | null | undefined): boolean {
   return role === 'builder' || role === 'integrator';
@@ -179,10 +181,17 @@ export async function runAgentTurn(
   const audit = createAuditRecorder({
     write: (entries) => insertProtocolEntries(deps.db, lease, entries),
   });
+  const observations = createRunObservations({
+    db: deps.db,
+    runId: lease.runId,
+    conversationId: input.identity.threadId,
+    audit,
+  });
   let auditSettled = false;
   const settleAudit = async () => {
     if (auditSettled) return;
     auditSettled = true;
+    await observations.settled();
     if (control.reason() === 'lease_lost') return audit.discard();
     await audit.close();
     const estimate = control.signal.aborted ? live.unreported() : 0;
@@ -227,7 +236,9 @@ export async function runAgentTurn(
         control.stop('cancelled'),
       )
     : null;
-  const redaction = createRedactionFilter(await projectSecretValues(input.projectRoots));
+  const secretValues = await projectSecretValues(input.projectRoots);
+  const redaction = createRedactionFilter(secretValues);
+  const observer = scannedObserver(audit, secretValues, observations.record);
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
   try {
     if (await isCancelRequested(deps.db, lease.runId)) control.stop('cancelled');
@@ -256,6 +267,7 @@ export async function runAgentTurn(
       pollMs: deps.approvalPollMs,
       timeoutMs: deps.approvalTimeoutMs,
       onTimeout: () => control.stop('approval_timeout'),
+      observations,
     };
     const asking = input.mode === 'ask' && input.role === null && input.projectRoots.length > 0;
     const approvals =
@@ -301,7 +313,7 @@ export async function runAgentTurn(
         spend.produced(output.kind === 'usage' && session ? session.usage(output) : output);
         options.onProduced?.(output);
       },
-      audit,
+      audit: observer,
       ...(input.mode ? { mode: input.mode } : {}),
       ...(writesCode(input.role) ? { builder: true } : {}),
       ...(input.piece?.coordinated ? { coordinated: true } : {}),
@@ -321,6 +333,7 @@ export async function runAgentTurn(
         workspaceId: input.workspaceId,
         conversationId: input.identity.threadId,
         runId: lease.runId,
+        observations,
         actions: {
           append,
           waiters: deps.approvalWaiters ?? new ApprovalWaiters(),

@@ -21,6 +21,7 @@ import { useProjectBranch } from '../project/use-chat-repos.ts';
 import { mergeDecision } from './approval-events.ts';
 import { isAllow, outcome, projectAllowOption, shownOptions } from './approval-outcome.ts';
 import { DiffView } from './DiffView.tsx';
+import { ObservedNote } from './ObservedNote.tsx';
 import { SparkActionCard } from './SparkActionCard.tsx';
 
 interface ApprovalCardProps {
@@ -223,6 +224,7 @@ function PendingApproval({
         <p>The change lands in your working tree. You can revert this run afterwards.</p>
       )}
       {alwaysAsks && <p className="appr-reason">{approval.reason}, whatever your permissions.</p>}
+      <ObservedNote observed={approval.payload.observed} />
       {holdOption && (
         <HoldToConfirm
           label="Hold to force push"

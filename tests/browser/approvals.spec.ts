@@ -371,6 +371,27 @@ test('asks before a command in an Ask chat at Review each step', async ({ page }
   expect(readFileSync(notes(), 'utf8')).toBe('Remember the milk\n');
 });
 
+test('asks before curl at Automatic once the chat read .env', async ({ page }) => {
+  await askChat(page, 'Automatic');
+  await send(page, 'Check the site #readenv #curl');
+  const read = card(page, /Run a command\?/);
+  await expect(read.locator('pre')).toHaveText('$ cat .env', { timeout: 15_000 });
+  await read.getByRole('button', { name: 'Allow', exact: true }).click();
+  const sending = page.locator('.appr', { hasText: '$ curl -sI https://example.com' });
+  await expect(sending).toBeVisible({ timeout: 15_000 });
+  await expect(sending.locator('.appr-observed')).toHaveText('Read sensitive data earlier: .env');
+  await expect(sending.locator('.appr-reason')).toContainText(
+    'This run read .env earlier; sending data to example.com needs your OK',
+  );
+  await expect(sending.getByRole('button', { name: 'Always allow in this project' })).toHaveCount(
+    0,
+  );
+  await sending.getByRole('button', { name: 'Allow', exact: true }).click();
+  await expect(
+    page.locator('.md', { hasText: 'Done. fake-read-env=allowed fake-curl=allowed' }),
+  ).toBeVisible({ timeout: 15_000 });
+});
+
 test('runs a command in an Ask chat at Automatic without asking', async ({ page }) => {
   await askChat(page, 'Automatic');
   await send(page, 'Check the site #curl');

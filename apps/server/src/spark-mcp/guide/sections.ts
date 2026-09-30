@@ -77,6 +77,12 @@ Full auto → PR: Automatic, in a worktree copy, then Ship commits, pushes the t
 The safety floor holds at every level.`,
   },
   {
+    id: 'read-then-send',
+    title: 'Read, then send',
+    keywords: ['exfiltration', 'curl', 'sensitive', 'network', 'egress', 'secret', 'send data'],
+    text: `Once a chat has seen sensitive data — a secret file you allowed, secret values in a tool's output (env, printenv, config dumps) or private work data from spark_tickets, spark_chat, spark_audit, spark_pr and similar tools — anything that sends data off this computer asks first, at every level including Full auto and Bypass permissions: curl, wget, ssh, scp, nc, dig, git push, gh and cloud CLIs, package publishing, one-liners that open connections, user MCP tools and web fetches. The card names what was read (never values) and where the data would go. Requests to localhost stay unasked; the allowlist, run rules and Always allow can't skip it.`,
+  },
+  {
     id: 'safety-floor',
     title: 'Approvals and the safety floor',
     keywords: [

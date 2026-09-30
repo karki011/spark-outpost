@@ -17,6 +17,7 @@ import { approvalsApi } from '../../api/approvals.ts';
 import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { isAllow } from './approval-outcome.ts';
+import { ObservedNote } from './ObservedNote.tsx';
 
 interface Draft {
   title: string;
@@ -314,6 +315,7 @@ export function SparkActionCard({
       <Facts action={action} />
       <Fields action={action} draft={draft} onChange={setDraft} disabled={decide.isPending} />
       {warning && <p className="appr-reason">{warning}</p>}
+      <ObservedNote observed={approval.payload.observed} />
       <p className="sac-note">Nothing happens until you confirm. You can edit it first.</p>
       <div className="appr-acts">
         {approval.options.map((option) => (

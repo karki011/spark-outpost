@@ -62,7 +62,14 @@ export async function callSparkTool(
   context: SparkToolContext,
 ): Promise<CallToolResult> {
   try {
-    return { content: [{ type: 'text', text: renderResult(await tool.run(args, context)) }] };
+    const text = renderResult(await tool.run(args, context));
+    if (tool.privateData) {
+      context.scope.observations?.record({
+        source: 'private_data',
+        label: `private work data (${tool.name})`,
+      });
+    }
+    return { content: [{ type: 'text', text }] };
   } catch (error) {
     return failure(error);
   }

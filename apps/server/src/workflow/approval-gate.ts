@@ -15,8 +15,10 @@ import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { pieceRefusal, type PieceGuard } from '../approvals/piece-guard.ts';
 import {
   FS_WRITE_TOOL_KIND,
+  SECRET_REASON,
   decide,
   relativeTo,
+  secretLabels,
   type ApprovalRequest,
   type Decision,
   type RunRule,
@@ -35,6 +37,7 @@ import type { Db } from '../persistence/db.ts';
 import { awaitDepsPrep } from '../projects/deps-prep.ts';
 import { LeaseLostError, type AppendOptions } from '../persistence/run-events.ts';
 import type { GateAnswer, PermissionGate } from '../providers/provider.ts';
+import type { RunObservations } from '../observations/run-observations.ts';
 import type { Append } from './agent-turn.ts';
 import { waitForApproval, type ApprovalWaiters, type WaitResult } from './approval-waiters.ts';
 import { runEvents } from './run-events.ts';
@@ -82,6 +85,7 @@ export interface GateDeps {
   observe?: EditObserver;
   plans?: PlanModeHooks;
   piece?: PieceGuard;
+  observations?: RunObservations | undefined;
 }
 
 function relativeLabel(request: ApprovalRequest, target: string): string {
@@ -118,7 +122,7 @@ export function subject(request: ApprovalRequest): string {
   return request.title.trim() || 'an action';
 }
 
-type Asking = Pick<Extract<Decision, { verdict: 'ask' }>, 'forcePush' | 'because'>;
+type Asking = Pick<Extract<Decision, { verdict: 'ask' }>, 'forcePush' | 'because' | 'observed'>;
 
 function approvalPayload(request: ApprovalRequest, asking: Asking): ApprovalPayload {
   let budget = DIFF_BUDGET;
@@ -148,6 +152,7 @@ function approvalPayload(request: ApprovalRequest, asking: Asking): ApprovalPayl
     ...(request.plan ? { plan: request.plan } : {}),
     ...(asking.forcePush ? { forcePush: asking.forcePush } : {}),
     ...(asking.because ? { asksBecause: asking.because } : {}),
+    ...(asking.observed ? { observed: asking.observed } : {}),
   };
 }
 
@@ -203,9 +208,10 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     kind: request.kind,
     title: displayTitle(request, deps.copyOf ?? null),
     payload: approvalPayload(request, asking),
-    options: asking.forcePush
-      ? request.options.filter((option) => option.kind !== 'allow_always')
-      : request.options,
+    options:
+      asking.forcePush || asking.observed
+        ? request.options.filter((option) => option.kind !== 'allow_always')
+        : request.options,
     reason,
   });
 
@@ -364,6 +370,14 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
   ): Promise<GateAnswer> => {
     const pending = await insertApproval(deps.db, newApproval(request, reason, asking));
     observe(request, { verdict: 'ask', by: null, approvalId: pending.id });
+    if (asking.observed) {
+      deps.observations?.egressAsked({
+        approvalId: pending.id,
+        subject: subject(request),
+        reason,
+        observed: asking.observed,
+      });
+    }
     waiting += 1;
     let result: WaitResult;
     try {
@@ -374,7 +388,13 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     } finally {
       waiting -= 1;
     }
-    return settle(pending, result, request);
+    const answer = await settle(pending, result, request);
+    if (answer.outcome === 'selected' && answer.allowed && reason === SECRET_REASON) {
+      for (const label of secretLabels(request)) {
+        deps.observations?.record({ source: 'secret_file', label });
+      }
+    }
+    return answer;
   };
 
   const decideRequest = async (
@@ -406,6 +426,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       askAutoWhy: request.kind === 'execute' && deps.askAuto ? await deps.askAuto() : null,
       worktreeAuto: deps.worktreeAuto === true,
       defaultBranch: await forcePushDefault(request),
+      observed: (await deps.observations?.labels()) ?? [],
       ...(deps.piece ? { piece: deps.piece } : {}),
     });
     if (decision.verdict === 'ask') {

@@ -179,6 +179,7 @@ const chatIdInput = z
 export const chatTools = [
   sparkTool({
     name: 'spark_chats',
+    privateData: true,
     title: 'Chats',
     description:
       'List or search Spark chats (title and message text): title, projects, last update, state (working, needs_you, failed, done, idle), provider, model, mode and autonomy. Newest first, paged.',
@@ -198,6 +199,7 @@ export const chatTools = [
   }),
   sparkTool({
     name: 'spark_chat',
+    privateData: true,
     title: 'Read a chat',
     description:
       'Read one chat: settings, cost, messages (the latest page by default; pass offset for earlier ones), its runs (status, provider, model, role, errors, cost) and approval cards. Defaults to this chat. Long messages are cut to maxChars; secrets are redacted.',

@@ -26,6 +26,54 @@ const exitPlanOptions = [
 ];
 
 describe('approvalRequestFrom', () => {
+  it('names the MCP server behind a tool call', () => {
+    const claude = approvalRequestFrom(
+      {
+        sessionId: 's',
+        toolCall: { toolCallId: 'a', title: 'mcp__linear__create_issue', kind: 'other' },
+        options,
+      },
+      context,
+    );
+    const claudeMeta = approvalRequestFrom(
+      {
+        sessionId: 's',
+        toolCall: {
+          toolCallId: 'b',
+          title: 'Create issue',
+          kind: 'other',
+          _meta: { claudeCode: { mcpServer: { name: 'jira', source: 'config' } } },
+        },
+        options,
+      },
+      context,
+    );
+    const codex = approvalRequestFrom(
+      {
+        sessionId: 's',
+        toolCall: {
+          toolCallId: 'c',
+          title: 'MCP tool call approval',
+          kind: 'execute',
+          rawInput: { serverName: 'github' },
+        },
+        _meta: { is_mcp_tool_approval: true },
+        options,
+      },
+      context,
+    );
+    const shell = approvalRequestFrom(
+      { sessionId: 's', toolCall: { toolCallId: 'd', title: 'ls', kind: 'execute' }, options },
+      context,
+    );
+    expect([claude, claudeMeta, codex, shell].map((request) => request.mcpServer)).toEqual([
+      'linear',
+      'jira',
+      'github',
+      undefined,
+    ]);
+  });
+
   it("carries Claude's plan and every option the agent offers", () => {
     const request = approvalRequestFrom(
       {

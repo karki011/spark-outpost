@@ -23,6 +23,7 @@ type Confirmation =
 interface ActionRun {
   runId: string;
   hooks: SparkActionHooks;
+  scope: SparkScope;
 }
 
 function actionRun(scope: SparkScope): ActionRun {
@@ -31,7 +32,7 @@ function actionRun(scope: SparkScope): ActionRun {
       'This session cannot ask the user to confirm, so Spark cannot take actions here.',
     );
   }
-  return { runId: scope.runId, hooks: scope.actions };
+  return { runId: scope.runId, hooks: scope.actions, scope };
 }
 
 async function quietly(work: Promise<unknown>): Promise<void> {
@@ -57,6 +58,7 @@ async function askToConfirm(
 ): Promise<Confirmation> {
   const { hooks } = run;
   const signal = caller ? AbortSignal.any([hooks.signal, caller]) : hooks.signal;
+  const observed = (await run.scope.observations?.labels()) ?? [];
   const pending = await insertApproval(deps.db, {
     runId: run.runId,
     toolCallId: `spark:${action.action}:${randomUUID()}`,
@@ -70,6 +72,7 @@ async function askToConfirm(
       diffs: [],
       truncated: false,
       sparkAction: action,
+      ...(observed.length > 0 ? { observed } : {}),
     },
     options: [
       {
