@@ -41,6 +41,7 @@ export * from './api-token.ts';
 export * from './ship.ts';
 export * from './tickets.ts';
 export * from './ticket-inbox.ts';
+export * from './chat-tickets.ts';
 export * from './reset.ts';
 export * from './steer.ts';
 export * from './map.ts';

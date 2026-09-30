@@ -4,6 +4,7 @@ import type {
   TicketDetail,
   TicketSourceId,
 } from '@spark-outpost/contracts';
+import { saveChatTicket } from '../persistence/chat-tickets.ts';
 import { setConversationProjects } from '../persistence/conversation-projects.ts';
 import {
   createConversation,
@@ -56,6 +57,7 @@ async function prepareTask(
     ]);
     await cacheTickets(client, deps.workspaceId, [summaryOf(ticket)]);
     await linkTaskTicket(client, deps.workspaceId, taskId, ticket);
+    await saveChatTicket(client, deps.workspaceId, conversationId, ticket, 'linked', 'start');
     await addTaskLink(client, taskId, {
       kind: 'link',
       url: ticket.url,

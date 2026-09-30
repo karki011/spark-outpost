@@ -1,0 +1,115 @@
+.tk .irow.with-links {
+  --links-w: 96px;
+}
+
+.tk .irow.with-links .ir-main {
+  padding-right: 8px;
+}
+
+.tk .ir-links {
+  width: var(--links-w);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  padding-right: 12px;
+}
+
+.tk .irow.with-links .ir-acts {
+  right: var(--links-w);
+}
+
+.tk .irl-chat,
+.tk .irl-pr {
+  position: relative;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.tk .irl-chat {
+  width: 26px;
+  justify-content: center;
+}
+
+.tk .irl-pr {
+  min-width: 52px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  font:
+    500 11.5px/1 'Geist Mono',
+    monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.tk .irl-chat:hover,
+.tk .irl-pr:hover {
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  color: var(--text);
+}
+
+.tk .irl-chat:focus-visible,
+.tk .irl-pr:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+}
+
+.tk .irl-chat i {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.tk .irl-chat.asking i {
+  background: var(--warn);
+}
+
+.tk .irl-chat.error i {
+  background: var(--danger);
+}
+
+.tk .irl-chat.running i {
+  background: var(--accent);
+  animation: tk-pulse 1.4s infinite;
+}
+
+.tk .irl-pr.open,
+.tk .irl-pr.good,
+.tk .irl-pr.merged {
+  color: var(--accent-text);
+}
+
+.tk .irl-pr.bad {
+  color: var(--danger);
+}
+
+.tk .irl-pr.warn {
+  color: var(--warn);
+}
+
+.tk .irl-pr.merged {
+  border-style: dashed;
+}
+
+@media (max-width: 900px) {
+  .tk .ir-links {
+    align-self: flex-start;
+    padding-top: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tk .irl-chat.running i {
+    animation: none;
+  }
+}

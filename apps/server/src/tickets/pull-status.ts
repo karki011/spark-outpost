@@ -50,6 +50,7 @@ async function readOne(
       state: pullRequestState(pull),
       openedAt: pull.createdAt,
       mergedAt: pull.mergedAt,
+      checks: pull.checks,
     };
   } catch {
     return null;

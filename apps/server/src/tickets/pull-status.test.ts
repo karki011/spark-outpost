@@ -11,6 +11,7 @@ const pull = (fields: Partial<PullRequestDetail> = {}): PullRequestDetail => ({
   createdAt: '2026-09-24T09:00:00Z',
   mergedAt: null,
   reviews: [],
+  checks: null,
   ...fields,
 });
 

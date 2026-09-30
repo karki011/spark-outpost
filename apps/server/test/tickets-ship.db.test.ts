@@ -8,6 +8,7 @@ import { shipResultSchema } from '@spark-outpost/contracts';
 import { getRun } from '../src/persistence/runs.ts';
 import { cacheTickets, linkTaskTicket } from '../src/persistence/tickets.ts';
 import { snapshotRun } from '../src/projects/run-changes.ts';
+import { linkTicketForBuild } from '../src/tickets/chat-link.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
 import { startWorker, type Worker } from '../src/workflow/worker.ts';
@@ -136,6 +137,49 @@ describe('Ship with a linked ticket', { timeout: 60_000 }, () => {
         },
       ],
     });
+  });
+
+  it('ships a chat linked by its build request with the key in branch, title and body', async () => {
+    await put('/api/tickets/connections/linear', { source: 'linear', apiKey: LINEAR_KEY }).expect(
+      200,
+    );
+    const repo = await repoWithRemote(base, 'mentioned');
+    const conversationId = randomUUID();
+    const sent = await post(`/api/conversations/${conversationId}/messages`, {
+      id: randomUUID(),
+      content: 'Fix the divider bug in ENG-12 #plan',
+    }).expect(201);
+    const runId = sent.body.run.id as string;
+    await eventually(async () => (await getRun(t.db, runId))?.finishedAt, 15_000);
+    await linkTicketForBuild(t.db, {
+      workspaceId: t.workspaceId,
+      conversationId,
+      request: 'Fix the divider bug in ENG-12 #plan',
+      builds: true,
+    });
+    const detail = (await get(`/api/conversations/${conversationId}`).expect(200)).body;
+    const taskId = detail.tasks[0].id as string;
+    await snapshotRun(t.db, runId, repo.root);
+    await write(repo.root, 'notes.txt', 'one\ntwo\n');
+
+    const preview = (await get(`/api/tasks/${taskId}/ship`).expect(200)).body;
+    expect(preview.branch).toMatch(/^spark\/eng-12-fix-the-divider-bug-in/);
+    expect(preview.title).toBe('Fix the divider bug in ENG-12 #plan');
+
+    await post(`/api/tasks/${taskId}/ship`, {
+      mode: 'draft_pr',
+      title: 'Fix the divider bug',
+    }).expect(200);
+    const pull = github.github.pulls[0]!;
+    expect(pull.title).toBe('ENG-12: Fix the divider bug');
+    expect(pull.head).toBe(preview.branch);
+    expect(pull.body).toContain('## Tickets\n- [ENG-12](https://linear.app/acme/issue/ENG-12)');
+    const issue = stubs.linear.issues.find((entry) => entry.identifier === 'ENG-12')!;
+    expect(issue.attachments).toEqual([
+      { title: 'acme/widgets#1', url: 'https://github.com/acme/widgets/pull/1' },
+    ]);
+    const tickets = (await get(`/api/conversations/${conversationId}/tickets`).expect(200)).body;
+    expect(tickets.linked).toEqual([expect.objectContaining({ key: 'ENG-12' })]);
   });
 
   it('still ships when the ticket source fails', async () => {

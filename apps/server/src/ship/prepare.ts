@@ -8,6 +8,9 @@ import {
   type TaskDetail,
 } from '@spark-outpost/contracts';
 import { getTaskShip, shipState, type TaskShip } from '../persistence/task-ships.ts';
+import { ticketsForTask, type CachedTicket } from '../persistence/tickets.ts';
+import { ticketBranchTitle } from '../tickets/chat-link.ts';
+import { titleWithKeys } from '../tickets/mentions.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
 import { chatWorktreeAt } from '../persistence/chat-worktrees.ts';
@@ -46,6 +49,7 @@ export interface ShipOptions {
 
 export interface ShipPlan {
   task: TaskDetail;
+  tickets: CachedTicket[];
   facts: ShipTaskFacts | null;
   root: string | null;
   repo: RepoState | null;
@@ -138,7 +142,7 @@ function modesFor(plan: Pick<ShipPlan, 'files' | 'remote' | 'remoteRepo' | 'gith
 }
 
 function blockedPlan(
-  base: Pick<ShipPlan, 'task' | 'branch' | 'shipped'> & Partial<ShipPlan>,
+  base: Pick<ShipPlan, 'task' | 'tickets' | 'branch' | 'shipped'> & Partial<ShipPlan>,
   blocked: ShipBlock,
 ): ShipPlan {
   return {
@@ -169,9 +173,16 @@ export async function planShip(
   const task = await getTaskDetail(deps.db, taskId);
   if (!task) throw new TaskNotFoundError(taskId);
   const shipped = await getTaskShip(deps.db, taskId);
-  const branch = shipped?.branch ?? shipBranchName(deps.branchPrefix, task.title, task.id);
+  const tickets = await ticketsForTask(deps.db, taskId);
+  const branch =
+    shipped?.branch ??
+    shipBranchName(
+      deps.branchPrefix,
+      await ticketBranchTitle(deps.db, task.conversationId, task.title),
+      task.id,
+    );
   const keepCheckout = options.keepCheckout ?? shipped?.keepsCheckout ?? false;
-  const start = { task, branch, shipped, keepCheckout };
+  const start = { task, tickets, branch, shipped, keepCheckout };
   if (!(await gitInstalled())) return blockedPlan(start, BLOCKED.gitMissing);
   const facts = await shipTaskFacts(deps.db, taskId);
   if (facts.running && !options.duringRun) {
@@ -189,7 +200,7 @@ export async function planShip(
 
 async function planFrom(
   deps: ShipDeps,
-  start: Pick<ShipPlan, 'task' | 'branch' | 'shipped' | 'keepCheckout'>,
+  start: Pick<ShipPlan, 'task' | 'tickets' | 'branch' | 'shipped' | 'keepCheckout'>,
   facts: ShipTaskFacts,
   root: string,
   baseHint: string | null,
@@ -243,11 +254,18 @@ async function planFrom(
   return { ...plan, modes: modesFor(plan), notes: modeNotes(plan) };
 }
 
+export function shipTitle(plan: Pick<ShipPlan, 'task' | 'tickets'>, title?: string): string {
+  return titleWithKeys(
+    title ?? plan.task.title,
+    plan.tickets.map((ticket) => ticket.key),
+  );
+}
+
 export function previewOf(plan: ShipPlan): ShipPreview {
   return {
     branch: plan.branch,
     baseBranch: plan.baseBranch,
-    title: plan.task.title,
+    title: shipTitle(plan),
     files: plan.files,
     skipped: plan.skipped,
     remote: plan.remote

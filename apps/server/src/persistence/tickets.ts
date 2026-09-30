@@ -179,7 +179,7 @@ export async function openTicketTask(
 interface WorkRow {
   source: TicketSourceId;
   ticket_key: string;
-  task_id: string;
+  task_id: string | null;
   conversation_id: string;
   created_at: Date;
   pull_requests: { title: string | null; url: string }[];
@@ -202,7 +202,15 @@ export async function ticketWork(
      WHERE tt.workspace_id = $1
        AND (tt.source || ':' || tt.ticket_key) = ANY($2::text[])
      GROUP BY tt.source, tt.ticket_key, tt.task_id, t.conversation_id, tt.created_at
-     ORDER BY tt.created_at`,
+     UNION ALL
+     SELECT ct.source, ct.ticket_key, NULL, ct.conversation_id, ct.created_at, '[]'::jsonb
+     FROM conversation_tickets ct
+     WHERE ct.workspace_id = $1 AND ct.state = 'linked'
+       AND (ct.source || ':' || ct.ticket_key) = ANY($2::text[])
+       AND NOT EXISTS (SELECT 1 FROM task_tickets tt JOIN tasks t ON t.id = tt.task_id
+         WHERE t.conversation_id = ct.conversation_id AND tt.source = ct.source
+           AND tt.ticket_key = ct.ticket_key)
+     ORDER BY created_at`,
     [workspaceId, tickets.map((ticket) => ticketRef(ticket.source, ticket.key))],
   );
   for (const row of rows) {

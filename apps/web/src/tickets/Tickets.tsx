@@ -106,6 +106,14 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
   }, []);
 
   const data = inbox.data;
+  const { setText: searchFor } = search;
+  const focusChecked = useRef(false);
+  useEffect(() => {
+    if (focusChecked.current || !data || !selectedId) return;
+    focusChecked.current = true;
+    if (data.tickets.some((ticket) => ticketId(ticket) === selectedId)) return;
+    searchFor(selectedId.slice(selectedId.indexOf(':') + 1));
+  }, [data, selectedId, searchFor]);
   const settings = data?.settings ?? DEFAULT_ATTENTION_SETTINGS;
   const sources = data?.sources ?? [];
   const label = sourcesLabel(sources);

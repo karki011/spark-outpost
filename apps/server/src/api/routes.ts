@@ -45,9 +45,11 @@ export interface RouteDeps {
   hub: RunEventHub;
   workspaceId: string;
   fixedRunProvider?: string;
+  warmTicketMentions?: (content: string) => Promise<void>;
 }
 
-export function apiRoutes({ db, hub, workspaceId, fixedRunProvider }: RouteDeps): Router {
+export function apiRoutes(deps: RouteDeps): Router {
+  const { db, hub, workspaceId, fixedRunProvider } = deps;
   const router = Router();
 
   const runTarget = (conversationId: string) =>
@@ -87,6 +89,7 @@ export function apiRoutes({ db, hub, workspaceId, fixedRunProvider }: RouteDeps)
     if (request.startAs === 'change' && target.permission !== PERMISSION_DO) {
       throw new BadRequestError('Switch the chat to Do to make the change.');
     }
+    await deps.warmTicketMentions?.(request.content);
     res.status(201).json(await sendUserMessage(db, conversationId, request, target, workspaceId));
   });
 

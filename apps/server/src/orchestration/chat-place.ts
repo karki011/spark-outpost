@@ -24,6 +24,7 @@ import { git, headCommit, isGitWorkTree } from '../projects/snapshot.ts';
 import { prepareDependencies } from '../projects/worktree-deps.ts';
 import { DEFAULT_BRANCH_PREFIX, repoTop, worktreePath } from '../projects/worktrees.ts';
 import { shipBranchName } from '../ship/branch.ts';
+import { ticketBranchTitle } from '../tickets/chat-link.ts';
 import { gitInstalled } from '../ship/git.ts';
 import type { Append } from '../workflow/agent-turn.ts';
 import { planNote } from '../workflow/plan-recorder.ts';
@@ -78,7 +79,8 @@ async function branchTitle(db: Queryable, conversationId: string, request: strin
   );
   const row = rows[0];
   const titled = row && row.title !== UNTITLED_CONVERSATION && row.title_source === 'user';
-  return titled ? row.title : request.slice(0, 80);
+  const title = titled ? row.title : request.slice(0, 80);
+  return ticketBranchTitle(db, conversationId, title);
 }
 
 async function startPoint(root: string, branches: BranchList, from: string | null) {

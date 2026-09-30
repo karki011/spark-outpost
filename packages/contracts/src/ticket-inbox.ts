@@ -63,6 +63,9 @@ export const pullRequestStateSchema = z.enum([
 ]);
 export type PullRequestState = z.infer<typeof pullRequestStateSchema>;
 
+export const pullRequestChecksSchema = z.enum(['passing', 'failing', 'pending']);
+export type PullRequestChecks = z.infer<typeof pullRequestChecksSchema>;
+
 export const pullRequestStatusSchema = z.object({
   url: z.string(),
   repo: z.string(),
@@ -70,6 +73,7 @@ export const pullRequestStatusSchema = z.object({
   state: pullRequestStateSchema,
   openedAt: z.string(),
   mergedAt: z.string().nullable(),
+  checks: pullRequestChecksSchema.nullable(),
 });
 export type PullRequestStatus = z.infer<typeof pullRequestStatusSchema>;
 

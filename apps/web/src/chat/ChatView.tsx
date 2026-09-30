@@ -35,6 +35,9 @@ import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
 import { ChatBranch } from './project/ChatBranch.tsx';
+import { ChatTicketBar } from './tickets/ChatTicketBar.tsx';
+import { ChatTicketChips } from './tickets/ChatTicketChips.tsx';
+import { useChatTickets } from './tickets/use-chat-tickets.ts';
 import { useChatWorkspace } from './project/use-chat-workspace.ts';
 import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
@@ -119,6 +122,7 @@ export function ChatView({ conversationId }: { conversationId: string }) {
   const chatBranch = workspace.data?.current ?? null;
   const canAudit = (detail.data?.runs.length ?? 0) > 0;
   const openAudit = canAudit ? () => setAuditOpen(true) : undefined;
+  const tickets = useChatTickets(conversationId, (detail.data?.messages.length ?? 0) > 0);
 
   return (
     <ViewChangesContext value={viewChanges}>
@@ -140,6 +144,7 @@ export function ChatView({ conversationId }: { conversationId: string }) {
               {title}
             </h1>
             {chatBranch && <ChatBranch conversationId={conversationId} branch={chatBranch} />}
+            <ChatTicketChips chat={tickets} />
             <div className="head-r">
               <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
               {openAudit && (
@@ -149,6 +154,7 @@ export function ChatView({ conversationId }: { conversationId: string }) {
               <ThemePicker />
             </div>
           </header>
+          <ChatTicketBar chat={tickets} />
           {detail.isError && !isConnectionLoss(detail.error) && (
             <p className="error-line" role="alert">
               {detail.error.message}

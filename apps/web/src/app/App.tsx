@@ -21,6 +21,7 @@ import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog
 import { useSettingsRequests } from '../settings/settings-request.ts';
 import { Tickets } from '../tickets/Tickets.tsx';
 import { ticketKeys, ticketsApi } from '../tickets/tickets-api.ts';
+import { useTicketRequests } from '../tickets/ticket-request.ts';
 import { BackOnlineToast } from './connection/BackOnlineToast.tsx';
 import { markConnectionRestored, useConnection } from './connection/connection-store.ts';
 import { OfflineScreen } from './connection/OfflineScreen.tsx';
@@ -47,6 +48,15 @@ function ChatShell({ entering }: { entering: boolean }) {
   }, []);
   const [homeDraftId, setHomeDraftId] = useState(newDraftId);
   const [ticketFocus, setTicketFocus] = useState<string | null>(null);
+  const openTicket = useCallback(
+    (itemId: string) => {
+      void queryClient.invalidateQueries({ queryKey: ticketKeys.all });
+      setTicketFocus(itemId);
+      setView('tickets');
+    },
+    [setView, queryClient],
+  );
+  useTicketRequests(openTicket);
   const conversations = useQuery({
     queryKey: queryKeys.conversations,
     queryFn: api.listConversations,

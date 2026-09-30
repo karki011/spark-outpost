@@ -18,6 +18,7 @@ export interface ShipSummary {
   costEstimated: boolean;
   plan: PlanDocument | null;
   notes?: readonly string[];
+  tickets?: readonly { key: string; title: string; url: string }[];
 }
 
 const VERDICTS: Record<ReviewBody['verdict'], string> = {
@@ -86,12 +87,23 @@ function quotedNote(note: string): string {
     .join('\n');
 }
 
+function ticketsSection(tickets: NonNullable<ShipSummary['tickets']>): string[][] {
+  if (tickets.length === 0) return [];
+  const lines = tickets.map((ticket) =>
+    /^https?:\/\//.test(ticket.url)
+      ? `- [${ticket.key}](${ticket.url}) ${ticket.title}`
+      : `- ${ticket.key} ${ticket.title}`,
+  );
+  return [['## Tickets', ...lines]];
+}
+
 export function pullRequestBody(summary: ShipSummary): string {
   const sections: string[][] = [
     ...(summary.notes && summary.notes.length > 0
       ? [[summary.notes.map(quotedNote).join('\n\n')]]
       : []),
     ['## Summary', summary.summary ? clip(summary.summary, SUMMARY_MAX) : summary.title],
+    ...ticketsSection(summary.tickets ?? []),
     filesSection(summary.files),
     [
       '## Checks',

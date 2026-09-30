@@ -13,6 +13,7 @@ import {
   type RowAction,
   type TicketView,
 } from './ticket-model.ts';
+import { RowLinks } from './RowLinks.tsx';
 import { TicketRow } from './TicketRow.tsx';
 
 interface InboxSectionsProps {
@@ -69,6 +70,13 @@ function InboxRow({
       snoozedUntil={ticket.snooze ? snoozeTime(new Date(ticket.snooze.until), new Date()) : null}
       selected={selected}
       onSelect={onSelect}
+      links={
+        <RowLinks
+          ticket={ticket}
+          onOpenChat={() => onAction({ kind: 'open-chat', label: 'Open chat' })}
+          onOpenPr={(url) => onAction({ kind: 'open-pr', label: 'Open PR', url })}
+        />
+      }
       action={
         action
           ? {

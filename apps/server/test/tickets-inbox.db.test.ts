@@ -216,6 +216,27 @@ describe('tickets inbox', () => {
     expect(rows[0]!.count).toBe(1);
   });
 
+  it('reads the check runs of a linked pull request', async () => {
+    await connect();
+    await connectGitHubToken();
+    fakePull(1, {});
+    await linkPull('ENG-12', 'https://github.com/acme/widgets/pull/1');
+    const checks = async () =>
+      (await inbox()).tickets.find((ticket) => ticket.key === 'ENG-12')!.pullRequest?.checks;
+    expect(await checks()).toBeNull();
+
+    const pull = github.github.pulls[0]!;
+    pull.checkRuns = [
+      { status: 'completed', conclusion: 'success' },
+      { status: 'in_progress', conclusion: null },
+    ];
+    expect(await checks()).toBe('pending');
+    pull.checkRuns[1] = { status: 'completed', conclusion: 'failure' };
+    expect(await checks()).toBe('failing');
+    pull.checkRuns[1] = { status: 'completed', conclusion: 'skipped' };
+    expect(await checks()).toBe('passing');
+  });
+
   it('shows Not available when the pull request cannot be read', async () => {
     await connect();
     await linkPull('ENG-12', 'https://github.com/acme/widgets/pull/9');
