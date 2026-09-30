@@ -27,7 +27,7 @@ export function BringChanges({ conversationId }: { conversationId: string }) {
   return (
     <div className="bring">
       <p className="bring-where">
-        Kept on <code>{current.branch}</code> in this chat&rsquo;s copy of your project.
+        Kept on <code>{current.branch}</code> in this chat&rsquo;s worktree.
       </p>
       {bring.data ? (
         <p ref={doneRef} className="bring-done" role="status" tabIndex={-1}>

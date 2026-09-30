@@ -11,8 +11,8 @@ interface ChatBranchProps {
 
 export function ChatBranch({ conversationId, branch }: ChatBranchProps) {
   const open = useOpenWorktree(conversationId);
-  const openTip = useTooltip('Open this chat’s copy');
-  const kind = branch.worktree ? 'copy' : 'my files';
+  const openTip = useTooltip('Open this chat’s worktree');
+  const kind = branch.worktree ? 'worktree' : 'my files';
   return (
     <span className="chat-branch" title={branch.path}>
       <BranchIcon />
@@ -24,7 +24,7 @@ export function ChatBranch({ conversationId, branch }: ChatBranchProps) {
           <button
             type="button"
             className="icon-btn chat-branch-open"
-            aria-label="Open this chat’s copy"
+            aria-label="Open this chat’s worktree"
             disabled={open.isPending}
             {...openTip.triggerProps}
             onClick={() => open.mutate()}

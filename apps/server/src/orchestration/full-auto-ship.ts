@@ -66,7 +66,7 @@ function pullRequestLine(result: ShipResult, failing: boolean): string {
 }
 
 function checkoutLine(current: string | null, branch: string): string {
-  if (current === branch) return `The change is on ${branch} in this chat's copy of your project.`;
+  if (current === branch) return `The change is on ${branch} in this chat's worktree.`;
   if (current) {
     return `Your checkout stays on ${current} with the change in your working tree; the PR branch is ${branch}.`;
   }

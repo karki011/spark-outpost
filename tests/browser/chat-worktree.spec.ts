@@ -69,15 +69,15 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
   await sendAndKeep(page);
   const chip = page.locator('.head .chat-branch');
   await expect(chip).toContainText(/spark\/tidy-the-notes[a-z-]*-[0-9a-f]{8}/);
-  await expect(chip).toContainText('· copy');
-  await expect(chip.getByRole('button', { name: 'Open this chat’s copy' })).toBeVisible();
+  await expect(chip).toContainText('· worktree');
+  await expect(chip.getByRole('button', { name: 'Open this chat’s worktree' })).toBeVisible();
   await expect(place).toHaveCount(0);
   const branch = (await chip.locator('.chat-branch-name').textContent()) ?? '';
   expect(readFileSync(path.join(repo.root, 'notes.txt'), 'utf8')).toBe('one\n');
   expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
 
   const keep = page.getByRole('group', { name: /Keep these changes\?/ });
-  await expect(keep).toContainText(`Kept on ${branch} in this chat’s copy of your project.`);
+  await expect(keep).toContainText(`Kept on ${branch} in this chat’s worktree.`);
   await expect(keep.locator('.ship-btn')).toHaveText('Push branch');
   await keep.getByRole('button', { name: 'Bring changes into main' }).click();
   const done = page.getByRole('status').filter({ hasText: 'Brought 1 file into main.' });
