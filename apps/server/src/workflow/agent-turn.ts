@@ -21,6 +21,7 @@ import { createAuditRecorder } from './audit-recorder.ts';
 import { prepareAskRun, prepareDoRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
 import { watchUrgentNotes } from './steer-requests.ts';
+import { createSpendMeter } from './spend-meter.ts';
 import { runEvents } from './run-events.ts';
 import type { RunInput } from './run-input.ts';
 import {
@@ -169,9 +170,7 @@ export async function runAgentTurn(
   });
   const startedAt = Date.now();
   const live = createLiveCost(input.provider, input.settings.model);
-  const meter = (output: ProviderOutput) => {
-    if (live.observe(output)) options.onLiveCost?.(live.unreported(), output.kind === 'tokens');
-  };
+  const spend = createSpendMeter(live, options.onLiveCost);
   const audit = createAuditRecorder({
     write: (entries) => insertProtocolEntries(deps.db, lease, entries),
   });
@@ -272,6 +271,11 @@ export async function runAgentTurn(
           : undefined;
     turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
     const session = turnSession;
+    const recordSpend = async (output: Extract<ProviderOutput, { kind: 'usage' }>) => {
+      const counted = session ? session.usage(output) : output;
+      spend.recording(counted);
+      await recordUsage(deps.db, lease.runId, counted);
+    };
     const userMcp = await loadUserMcp(
       deps.db,
       input.identity.threadId,
@@ -287,7 +291,11 @@ export async function runAgentTurn(
       settings: input.settings,
       projectRoots: input.projectRoots,
       signal: control.signal,
-      ...(options.onProduced ? { observe: options.onProduced } : {}),
+      observe: (output) => {
+        if (output.kind === 'session') session?.noteSession(output);
+        spend.produced(output.kind === 'usage' && session ? session.usage(output) : output);
+        options.onProduced?.(output);
+      },
       audit,
       ...(input.mode ? { mode: input.mode } : {}),
       ...(writesCode(input.role) ? { builder: true } : {}),
@@ -306,22 +314,18 @@ export async function runAgentTurn(
       spark,
     })) {
       if (control.signal.aborted) {
-        meter(output);
+        spend.read(output);
         if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
-        if (output.kind === 'usage') {
-          await recordUsage(deps.db, lease.runId, session ? session.usage(output) : output);
-        }
+        if (output.kind === 'usage') await recordSpend(output);
         continue;
       }
       options.onOutput?.(output);
       if (output.kind === 'step_started') await append(runEvents.stepStarted(output.name));
       if (output.kind === 'step_finished') await append(runEvents.stepFinished(output.name));
       if (output.kind === 'capabilities') await recordCapabilities(deps.db, input, output.report);
-      if (output.kind === 'usage') {
-        await recordUsage(deps.db, lease.runId, session ? session.usage(output) : output);
-      }
+      if (output.kind === 'usage') await recordSpend(output);
       if (output.kind === 'tokens') await recordTokens(deps.db, lease.runId, output);
-      meter(output);
+      spend.read(output);
       await tasks.observe(output);
       if (output.kind === 'session') await session?.started(output);
       if (output.kind === 'commands') await session?.commands(output.commands);

@@ -41,6 +41,7 @@ export interface TurnSession {
   target: SessionTarget;
   started(output: SessionOutput): Promise<void>;
   commands(commands: readonly AgentCommand[]): Promise<void>;
+  noteSession(output: SessionOutput): void;
   usage(output: UsageOutput): UsageOutput;
   finished(result: TurnEnd): Promise<void>;
 }
@@ -108,6 +109,9 @@ export async function prepareTurnSession(
   let rowId: string | null = null;
   let costBaseline = 0;
   let reportedCost: number | null = null;
+  const noteSession = (output: SessionOutput) => {
+    costBaseline = output.continued ? (stored?.reportedCostUsd ?? 0) : 0;
+  };
   return {
     target: {
       workdir,
@@ -115,8 +119,9 @@ export async function prepareTurnSession(
       freshReason: decision.freshReason,
       ...(followUp ? { followUp } : {}),
     },
+    noteSession,
     async started(output) {
-      costBaseline = output.continued ? (stored?.reportedCostUsd ?? 0) : 0;
+      noteSession(output);
       try {
         rowId = await startProviderSession(db, {
           conversationId,
