@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentPick } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
 import { whyLine } from '../model-cards/why.ts';
@@ -18,6 +18,15 @@ import {
   type MemberRoute,
   type RouteContext,
 } from './routing.ts';
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-09-29T12:00:00Z'));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 import { routeVariant, variantLine } from '../routing/route-answer.ts';
 import { routePolicy } from '../routing/route-policy.ts';
 const claude = candidates[0]!;

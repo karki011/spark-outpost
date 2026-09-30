@@ -31,6 +31,7 @@ const lister: FileLister = {
     return FILES.filter((file) => path.matchesGlob(file, absolute));
   },
   walk: (target) => FILES.filter((file) => file === target || file.startsWith(`${target}/`)),
+  script: () => null,
 };
 
 function run(command: string): ApprovalRequest {

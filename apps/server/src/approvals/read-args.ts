@@ -198,6 +198,8 @@ const READERS = new Map<string, Reader>([
   ['python3', PYTHON],
   ['node', NODE],
   ['bun', NODE],
+  ['tsx', NODE],
+  ['ts-node', NODE],
   ['ruby', SCRIPTED],
   ['perl', SCRIPTED],
   ['php', PHP],

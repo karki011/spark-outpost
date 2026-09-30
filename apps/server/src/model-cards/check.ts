@@ -42,8 +42,8 @@ export function checkModelCards(file: VendorCardsFile, now: Date): CardsCheck {
   }
   for (const card of file.cards) {
     if (!card.retired && cardRetired(card, now)) {
-      result.failures.push(
-        `${card.id}: retired on ${card.retiresNotBefore}; set "retired": true on its card and move defaults off it`,
+      result.warnings.push(
+        `${card.id}: retired on ${card.retiresNotBefore} and already treated as retired; set "retired": true and rewrite its card in the past tense`,
       );
     }
   }
