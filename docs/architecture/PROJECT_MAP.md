@@ -111,7 +111,7 @@ the web app draws it (see [The UI page](#the-ui-page)).
    - **env**: the same env key used on both sides after dropping public prefixes (`VITE_`,
      `NEXT_PUBLIC_`, `REACT_APP_`, …), excluding generic keys (0.4).
 
-## Storage (migrations 0072, 0075)
+## Storage (migrations 0072, 0075, 0078)
 
 - `code_index_files.imports text[]`, `code_index_files.endpoints jsonb`.
 - `map_repos`: one row per repo root: status (`queued`, `building`, `paused`, `ready`,
@@ -122,6 +122,10 @@ the web app draws it (see [The UI page](#the-ui-page)).
 - 0075 adds `map_files.kind`, `last_changed_at`, `change_count`, `author_count` and
   `map_areas.kind_counts`; `MAP_RULES_VERSION` moved to `map-rules-2` so every map rebuilds once
   (labels are kept).
+- 0078 adds `map_repos.jev_areas`: how many areas this build sends to Jev (`0` when Jev is not
+  connected, `NULL` until the labels phase starts; reset when a build is queued). The status
+  exposes it as `jevAreas` so the app says "Jev is labelling" only while Jev is really asked.
+  The index phase now reports files read against files to read.
 - `map_labels`: per area label, source, confidence, the basis files and policy version.
 - `map_overrides`: user category overrides keyed by **root path and area id**, not by map row,
   so they survive rebuilds, rules changes and even removing and re-adding the project. Overrides
@@ -189,7 +193,12 @@ It has:
   (`AreaList.tsx`), with search, filters by category and file kind, and a legend;
 - a repo picker and cross-repo links (`bridges.ts`: http, graphql, package, env), with link,
   path and unmatched-endpoint panels (`CombinedPanels.tsx`);
-- build status with progress and "paused while agents run" (`BuildStatus.tsx`);
+- build status: a toolbar pill with the current stage and overall progress
+  (`MapStatusPill.tsx`) and, on a first build, a card with one blob per stage (Reader, Tracer,
+  Jev, Linker in combined maps), a segmented bar and a rough time left (`build-stages.ts`,
+  `BuildStages.tsx`); "paused while agents run" puts every blob to sleep;
+- an empty state that explains the map and adds a project through the folder dialog, and a
+  retry state when the projects list cannot be loaded (`MapEmpty.tsx`, `SkyDoodle.tsx`);
 - an area review with the per-area category override (`ReviewAreas.tsx`, `use-area-review.ts`);
 - a file detail sheet that can open the file in a chat, and highlights for files changed in the
   latest chat and their dependents (`FileDetailSheet.tsx`, `use-chat-changes.ts`,

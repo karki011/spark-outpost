@@ -3,6 +3,7 @@ import {
   briefOffLine,
   greeting,
   hello,
+  mapIntro,
   nothingFlagged,
   quietSummary,
   quietToday,
@@ -70,6 +71,17 @@ describe('briefOffLine', () => {
     expect(briefOffLine({ personality: 'facts', name: 'Sam' })).toBe(
       'Brief off. Rules sort the list.',
     );
+  });
+});
+
+describe('mapIntro', () => {
+  it('explains core, shared and chat changes in every personality', () => {
+    for (const personality of ['friendly', 'playful', 'facts'] as const) {
+      const line = mapIntro({ personality, name: 'Sam' });
+      expect(line).toMatch(/core/i);
+      expect(line).toMatch(/chat/);
+    }
+    expect(mapIntro({ personality: 'playful', name: 'Sam' })).toMatch(/constellations/);
   });
 });
 

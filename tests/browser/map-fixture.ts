@@ -89,6 +89,7 @@ function status(fileCount: number, areaCount: number, edgeCount: number): MapSta
     areaCount,
     edgeCount,
     timings: {},
+    jevAreas: null,
     error: null,
   };
 }

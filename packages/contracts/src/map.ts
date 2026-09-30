@@ -39,6 +39,7 @@ export const mapStatusSchema = z.object({
   areaCount: z.number().int(),
   edgeCount: z.number().int(),
   timings: z.record(z.string(), z.number()),
+  jevAreas: z.number().int().nullable(),
   error: z.string().nullable(),
 });
 export type MapStatus = z.infer<typeof mapStatusSchema>;

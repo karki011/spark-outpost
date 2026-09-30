@@ -2,19 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MAP_CATEGORIES, type MapUnmatchedEndpoint } from '@spark-outpost/contracts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
-import { BlobScout } from '../brand/BlobScout.tsx';
 import type { RepoFile } from '../chat/project/use-file-search.ts';
 import { ToastHost } from '../conversations/Toast.tsx';
 import { useToast } from '../conversations/use-toast.ts';
 import { Segmented } from '../ui/Segmented.tsx';
 import { AreaList } from './AreaList.tsx';
 import { bridgeAreaKeys, LINK_KINDS, likelyPath } from './bridges.ts';
+import { buildStages } from './build-stages.ts';
 import { buildPhase, buildProgress, SparkSay } from './BuildStatus.tsx';
 import { BridgeList, PathCard, UnmatchedPanel } from './CombinedPanels.tsx';
 import { FileDetailSheet } from './FileDetailSheet.tsx';
 import { FILE_KINDS } from './file-kind.ts';
 import type { MapFilters as Filters, MapView } from './frame.ts';
-import { categoryCounts, highlights, kindCounts } from './map-model.ts';
+import { categoryCounts, highlights, kindCounts, needsCheck } from './map-model.ts';
+import { MapEmpty, MapUnreachable, projectListView } from './MapEmpty.tsx';
 import { MapFilters } from './MapFilters.tsx';
 import { MapHeader } from './MapHeader.tsx';
 import { AreaCrumb, MapLegend } from './MapOverlays.tsx';
@@ -47,9 +48,14 @@ const SHEET_W = 400;
 const REVIEW_W = 420;
 const UNMATCHED_W = 344;
 const WIDE = 900;
+const RETRY_MS = 5_000;
 
 export function MapPage({ onOpenInChat }: MapPageProps) {
-  const projectList = useQuery({ queryKey: projectKeys.all, queryFn: projectsApi.list });
+  const projectList = useQuery({
+    queryKey: projectKeys.all,
+    queryFn: projectsApi.list,
+    refetchInterval: (query) => (query.state.status === 'error' ? RETRY_MS : false),
+  });
   const projects = projectList.data ?? [];
   const { selected, choose } = useMapSelection(projects);
   const data = useMapData(projects, selected);
@@ -110,6 +116,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
   }, [combined, data.bridges, require]);
 
   const phase = buildPhase(data.maps);
+  const build = useMemo(() => buildStages(data.maps, combined), [data.maps, combined]);
   const building = useRef(false);
   useEffect(() => {
     if (phase === 'first' || phase === 'waiting') building.current = true;
@@ -277,16 +284,16 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
     : `Project map of ${data.projects[0]?.name ?? 'your project'}: ${scene.areas.length} areas as constellations.`;
   const listMode = phone && !skyOnPhone;
 
-  if (projectList.data && projects.length === 0) {
+  const listView = projectListView(projectList);
+  if (listView === 'unreachable') {
     return (
-      <main className="page map" aria-label="Project map">
-        <div className="map-empty-page">
-          <BlobScout size={48} mood="sleep" />
-          <p>Add a project to a chat and Spark will draw its map here.</p>
-        </div>
-      </main>
+      <MapUnreachable
+        retrying={projectList.isFetching}
+        onRetry={() => void projectList.refetch()}
+      />
     );
   }
+  if (listView === 'empty') return <MapEmpty />;
 
   return (
     <main className="page map" aria-label="Project map">
@@ -295,6 +302,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
         selected={selected}
         chosen={data.projects}
         maps={data.maps}
+        build={build}
         searchRef={searchRef}
         changes={{
           on: changesOn,
@@ -303,6 +311,7 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
         }}
         dependents={dependentsOn}
         reviewOpen={reviewOpen}
+        toCheck={scene.areas.filter((entry) => needsCheck(entry.area)).length}
         onProjects={(ids) => {
           choose(ids);
           setOpenKey(null);
@@ -408,13 +417,8 @@ export function MapPage({ onOpenInChat }: MapPageProps) {
             onHide={() => setLegend(false)}
           />
         )}
-        {!listMode && (
-          <SparkSay
-            maps={data.maps}
-            phase={phase}
-            progress={buildProgress(data.maps)}
-            revealed={revealed}
-          />
+        {!listMode && data.maps.length > 0 && (
+          <SparkSay maps={data.maps} phase={phase} build={build} revealed={revealed} />
         )}
         {!listMode && showUnmatched && data.unmatched && (
           <UnmatchedPanel

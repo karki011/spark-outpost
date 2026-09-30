@@ -95,7 +95,8 @@ export async function markChecked(db: Queryable, repoId: string): Promise<void> 
 export async function queueRepo(db: Queryable, repoId: string, signature: string): Promise<void> {
   await db.query(
     `UPDATE map_repos SET status = 'queued', phase = 'index', source_signature = $2,
-       progress_done = 0, progress_total = 0, error = NULL, checked_at = now(), updated_at = now()
+       progress_done = 0, progress_total = 0, jev_areas = NULL, error = NULL, checked_at = now(),
+       updated_at = now()
      WHERE id = $1`,
     [repoId, signature],
   );
@@ -106,6 +107,7 @@ export interface Progress {
   phase?: MapPhase;
   done?: number;
   total?: number;
+  jevAreas?: number;
 }
 
 export async function setProgress(
@@ -116,6 +118,7 @@ export async function setProgress(
   await db.query(
     `UPDATE map_repos SET status = COALESCE($2, status), phase = COALESCE($3, phase),
        progress_done = COALESCE($4, progress_done), progress_total = COALESCE($5, progress_total),
+       jev_areas = COALESCE($6, jev_areas),
        started_at = CASE WHEN $2 = 'building' AND status = 'queued' THEN now() ELSE started_at END,
        updated_at = now()
      WHERE id = $1`,
@@ -125,6 +128,7 @@ export async function setProgress(
       progress.phase ?? null,
       progress.done ?? null,
       progress.total ?? null,
+      progress.jevAreas ?? null,
     ],
   );
 }

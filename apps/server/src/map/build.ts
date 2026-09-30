@@ -40,8 +40,14 @@ export class MapSourceMissing extends Error {
 
 function progressReporter(deps: BuildDeps, repoId: string) {
   let lastAt = 0;
-  return async (phase: MapPhase, done: number, total: number) => {
-    await setProgress(deps.db, repoId, { status: 'building', phase, done, total });
+  return async (phase: MapPhase, done: number, total: number, jevAreas?: number) => {
+    await setProgress(deps.db, repoId, {
+      status: 'building',
+      phase,
+      done,
+      total,
+      ...(jevAreas === undefined ? {} : { jevAreas }),
+    });
     const now = Date.now();
     if (now - lastAt < PROGRESS_EVERY_MS && done !== total) return;
     lastAt = now;
@@ -115,7 +121,13 @@ export async function buildRepo(deps: BuildDeps, repo: RepoRow): Promise<Record<
     await deps.gate.step();
     if (phase === 'index') {
       await timed('indexMs', () =>
-        deps.scanner.ensureIndexed(repo.rootPath, { fresh: true, pace: () => deps.gate.yield() }),
+        deps.scanner.ensureIndexed(repo.rootPath, {
+          fresh: true,
+          pace: async (done, total) => {
+            await deps.gate.yield();
+            await report('index', done, total);
+          },
+        }),
       );
     }
     if (phase === 'graph') await timed('graphMs', () => graphPhase(deps, repo));
@@ -131,7 +143,7 @@ export async function buildRepo(deps: BuildDeps, repo: RepoRow): Promise<Record<
           signal: deps.signal,
           read: safeReader(repo.rootPath, ignore),
           ignore,
-          progress: (done, total) => report('labels', done, total),
+          progress: (done, total, jevAreas) => report('labels', done, total, jevAreas),
         }),
       );
       timings.jevCalls = totals.asked;

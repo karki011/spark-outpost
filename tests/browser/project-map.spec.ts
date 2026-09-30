@@ -3,52 +3,15 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
-import {
-  combinedFixture,
-  monoFixture,
-  REPO_ROOT,
-  serveMap,
-  type MapFixture,
-} from './map-fixture.ts';
+import { combinedFixture, monoFixture, REPO_ROOT } from './map-fixture.ts';
+import { addProject, openMap, screenshot, sky } from './map-page.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { MAP_ROOT_PREFIX } from './stub-config.ts';
-
-const SHOTS = process.env.SPARK_SHOTS ?? '';
-const shoot = SHOTS !== '';
-const SKY = /map of/;
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });
 });
 
-async function addProject(page: Page, rootPath: string): Promise<string> {
-  const response = await page.request.post('/api/projects', { data: { rootPath } });
-  expect(response.ok()).toBe(true);
-  return ((await response.json()) as { id: string }).id;
-}
-
-async function openMap(page: Page, fixture: MapFixture, theme = 'graphite', projects?: string[]) {
-  await serveMap(page, fixture);
-  await page.addInitScript(
-    ({ skin, ids }) => {
-      localStorage.setItem('spark-outpost.view', 'map');
-      localStorage.setItem('spark-outpost.theme', skin);
-      if (ids) localStorage.setItem('spark-outpost.map-projects', JSON.stringify(ids));
-    },
-    { skin: theme, ids: projects ?? null },
-  );
-  await page.goto('/');
-  await expect(sky(page).or(page.getByRole('list', { name: 'Areas' }))).toBeVisible();
-}
-
-async function screenshot(page: Page, name: string) {
-  if (!shoot) return;
-  mkdirSync(SHOTS, { recursive: true });
-  await page.waitForTimeout(1500);
-  await page.screenshot({ path: path.join(SHOTS, `${name}.png`) });
-}
-
-const sky = (page: Page) => page.getByRole('application', { name: SKY });
 const live = (page: Page) => page.locator('.map-stage [aria-live="polite"]').first();
 
 async function stageCentre(page: Page) {
@@ -72,9 +35,7 @@ test('the sky shows each area as a constellation, with gold names and a legend',
   await openMap(page, monoFixture(projectId));
   await expect(sky(page)).toHaveAccessibleName(/21 areas as constellations/);
   await expect(page.getByRole('region', { name: 'How to read the sky' })).toBeVisible();
-  await expect(page.getByRole('status').filter({ hasText: 'Map built' })).toContainText(
-    '2 min ago',
-  );
+  await expect(page.getByRole('button', { name: /^Updated/ })).toHaveText('Updated 2 min ago');
   await expect(page.getByRole('button', { name: /^Core/ })).toHaveAttribute('aria-pressed', 'true');
   const kinds = page.getByRole('group', { name: 'File kind' });
   await expect(kinds.getByRole('button', { name: /^UI/ })).toHaveText(/^UI\s*[1-9][\d,]*$/);
@@ -208,12 +169,12 @@ test('changes from this chat light up, with the files that depend on them on req
     }),
   );
   await openMap(page, fixture);
-  const changes = page.getByRole('switch', { name: /Show changes from this chat/ });
+  const changes = page.getByRole('switch', { name: /This chat’s changes/ });
   await expect(changes).toBeEnabled();
   await changes.click();
   await expect(page.locator('.map-cnt')).toHaveText(String(fixture.changedPaths.length));
   await expect(live(page)).toContainText('Files changed in this chat are lit up.');
-  const dependents = page.getByRole('switch', { name: 'Include files that depend on them' });
+  const dependents = page.getByRole('switch', { name: 'Include dependents' });
   await expect(dependents).not.toBeChecked();
   await dependents.click();
   await expect(dependents).toBeChecked();
@@ -314,7 +275,7 @@ test('with reduced motion the sky holds still, even with changes lit', async ({ 
     }),
   );
   await openMap(page, fixture);
-  await page.getByRole('switch', { name: /Show changes from this chat/ }).click();
+  await page.getByRole('switch', { name: /This chat’s changes/ }).click();
   await expect(page.locator('.map-cnt')).toHaveText(String(fixture.changedPaths.length));
   await expect.poll(() => canvasFrames(page), { timeout: 15_000 }).toBe(true);
   await sky(page).focus();
@@ -333,14 +294,14 @@ test('the first build fills a skeleton sky that lights up area by area', async (
   ready.status = {
     ...ready.status,
     status: 'building',
-    phase: 'graph',
-    progress: { done: 600, total: 1569 },
+    phase: 'labels',
+    progress: { done: 34, total: 268 },
+    jevAreas: 268,
   };
   ready.areas = [];
   await openMap(page, fixture);
-  const say = page.getByRole('status').filter({ hasText: 'I’m reading your project' });
-  await expect(say).toContainText('600 of 1,569 files');
-  await expect(page.getByRole('status').filter({ hasText: 'Building the map' })).toBeVisible();
+  await expect(page.getByText('Jev is labelling areas · 34 / 268')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Jev labelling… 34/268' })).toBeVisible();
   await screenshot(page, 'first-build-dark');
   ready.status = saved.status;
   ready.areas = saved.areas;
@@ -389,7 +350,7 @@ test('the real map builder fills the sky for a small repository', async ({ page 
     await expect(sky(page)).toHaveAccessibleName(/[1-9]\d* areas as constellations/, {
       timeout: 100_000,
     });
-    await expect(page.getByRole('status').filter({ hasText: 'Map built' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Updated/ })).toBeVisible();
     await sky(page).focus();
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
