@@ -144,6 +144,7 @@ test("the approval card offers every option the agent sent, with the agent's wor
 });
 
 test('retiring models stay hidden until you ask for them', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-29T12:00:00Z'));
   await linkedChat(page, repo);
   await pickerButton(page).click();
   const models = pickerPanel(page).getByRole('radiogroup', { name: 'Claude model' });
