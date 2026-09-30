@@ -31,7 +31,7 @@ import type { RunInput } from '../workflow/run-input.ts';
 import { decidePlace, namedBranch, type PlaceDecision } from './place-decision.ts';
 
 const WORKTREE_FAILED =
-  "Couldn't set up this chat's worktree, so nothing was changed. Choose Work in my checkout to work in place.";
+  "Couldn't set up a copy of your project for this chat, so nothing was changed. Choose Edit my files to work in place.";
 
 interface ChatPlaceDeps {
   db: Queryable;
@@ -168,7 +168,7 @@ async function restoreCopy(db: Queryable, record: ChatWorktree): Promise<boolean
 function placeNote(record: ChatWorktree, extra: string | null): string {
   const where = record.inPlace
     ? `Working on ${record.branch} in your checkout.`
-    : `Working on ${record.branch} in this chat's worktree.`;
+    : `Working on ${record.branch} in this chat's copy of your project.`;
   return extra ? `${where} ${extra}` : where;
 }
 

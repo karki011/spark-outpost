@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import { checkCommandsSchema } from './checks.ts';
-import { buildStyleSchema } from './lean.ts';
 import { checkpointKindSchema, checkpointPayloadSchema } from './checkpoints.ts';
 import { INVOLVEMENT_LEVEL_IDS, type InvolvementLevel } from './involvement-levels.ts';
 import { projectNameSchema } from './projects.ts';
@@ -187,14 +186,12 @@ export const updateProjectRequestSchema = z
     name: projectNameSchema.optional(),
     commandAllowlist: commandAllowlistSchema.optional(),
     checkCommands: checkCommandsSchema.nullable().optional(),
-    buildStyle: buildStyleSchema.optional(),
   })
   .refine(
     (body) =>
       body.name !== undefined ||
       body.commandAllowlist !== undefined ||
-      body.checkCommands !== undefined ||
-      body.buildStyle !== undefined,
+      body.checkCommands !== undefined,
   );
 export type UpdateProjectRequest = z.input<typeof updateProjectRequestSchema>;
 

@@ -62,22 +62,6 @@ export function tallyTip(label: string, tally: OutcomeTally): string {
   return `${label}: ${plural(tally.turns, 'turn')}, ${percent(tally.good, tally.turns)} good, mean score ${signedScore(tally.meanScore)}`;
 }
 
-export function leanSummary(data: AnalyticsHarness): string {
-  if (data.lean.length === 0) return 'No building turns in this range.';
-  const best = data.lean
-    .filter((row) => row.meanScore !== null)
-    .sort((a, b) => b.meanScore! - a.meanScore!)[0];
-  const parts = data.lean.map(
-    (row) => `${row.style} ${plural(row.turns, 'turn')} (mean ${signedScore(row.meanScore)})`,
-  );
-  const net = data.lean.reduce((sum, row) => sum + row.netLines, 0);
-  const critic =
-    data.critic.reviews === 0
-      ? 'The Critic did not review anything.'
-      : `The Critic reviewed ${plural(data.critic.reviews, 'change')}, raised concerns on ${data.critic.concerns} and listed ${plural(data.critic.findings, 'finding')}${net < 0 ? `; it saw ${Math.abs(net)} lines that could go` : ''}.`;
-  return `Build styles: ${parts.join(', ')}.${best ? ` ${best.style} scored best.` : ''} ${critic}`;
-}
-
 export function frictionSummary(data: AnalyticsHarness): string {
   const { checks, loops, approvals } = data;
   const checkLine =

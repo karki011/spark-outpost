@@ -13,10 +13,6 @@ export function HarnessSkeleton() {
         <SkelBars rows={3} />
         <SkelTableRows rows={4} />
       </SkeletonCard>
-      <SkeletonCard title="lean and the Critic">
-        <SkelBars rows={2} />
-        <SkelBars rows={2} />
-      </SkeletonCard>
       <SkeletonCard title="checks, loops and approvals">
         <SkelTableRows rows={4} />
         <SkelBars rows={3} />

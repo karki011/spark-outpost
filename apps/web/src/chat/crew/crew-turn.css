@@ -74,13 +74,16 @@
   font-variant-numeric: tabular-nums;
 }
 .jevline {
-  margin: 0;
-  font-size: 13.5px;
-  color: var(--muted);
+  margin: -4px 0 0 38px;
+  font-size: 12.5px;
+  color: var(--faint);
 }
-.jevline b {
-  color: var(--text);
-  font-weight: 500;
+.jevline .cat-chip {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: inherit;
 }
 .jevline .run-usage {
   display: inline-block;

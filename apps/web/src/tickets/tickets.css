@@ -168,11 +168,17 @@
 }
 
 .tk .ib-nav {
+  display: flex;
+  flex-direction: column;
   width: 208px;
   flex-shrink: 0;
   padding: 4px 8px 14px;
   overflow-y: auto;
   border-right: 1px solid var(--line);
+}
+
+.tk .ib-nav > * {
+  flex-shrink: 0;
 }
 
 .tk .ib-sec {
@@ -245,7 +251,8 @@
 }
 
 .tk .ib-foot {
-  margin: 18px 10px 0;
+  margin: auto 10px 0;
+  padding-top: 18px;
   font-size: 12px;
   line-height: 1.45;
   color: var(--faint);

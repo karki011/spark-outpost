@@ -93,17 +93,11 @@ describe('renaming a project', () => {
     await send('patch', path, { checkCommands: ['   '] }).expect(400);
   });
 
-  it('sets and validates the build style, keeping it through a rename', async () => {
+  it('has no build style to set', async () => {
     const appRepo = await project(folders.app);
     const path = `/api/projects/${appRepo.id}`;
-    expect(appRepo.buildStyle).toBeUndefined();
-    const lean = await send('patch', path, { buildStyle: 'lean' }).expect(200);
-    expect(lean.body.buildStyle).toBe('lean');
-    const renamed = await send('patch', path, { name: 'App' }).expect(200);
-    expect(renamed.body.buildStyle).toBe('lean');
-    await send('patch', path, { buildStyle: 'ultra' }).expect(400);
-    const off = await send('patch', path, { buildStyle: 'off' }).expect(200);
-    expect(off.body.buildStyle).toBe('off');
+    expect(appRepo).not.toHaveProperty('buildStyle');
+    await send('patch', path, { buildStyle: 'off' }).expect(400);
   });
 
   it('rejects blank, long, empty and unknown requests', async () => {
@@ -123,7 +117,6 @@ describe('removing and restoring a project', () => {
     await send('patch', `/api/projects/${appRepo.id}`, {
       name: 'Main app',
       commandAllowlist: ['pnpm lint'],
-      buildStyle: 'lite',
     }).expect(200);
     const [first, second, third] = [randomUUID(), randomUUID(), randomUUID()];
     await link(first, [appRepo.id, libRepo.id]);
@@ -144,7 +137,6 @@ describe('removing and restoring a project', () => {
       ...appRepo,
       name: 'Main app',
       commandAllowlist: ['pnpm lint'],
-      buildStyle: 'lite',
     });
     expect(await linkedIds(first)).toEqual([appRepo.id, libRepo.id]);
     expect(await linkedIds(second)).toEqual([libRepo.id, appRepo.id]);

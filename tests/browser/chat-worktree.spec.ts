@@ -54,29 +54,30 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
   const repo = await repoWithRemote(base, 'widgets');
   await chatOn(page, repo.root);
   const place = page.getByRole('button', { name: /^Where this chat works/ });
-  await expect(place).toHaveText(/New branch · worktree/);
+  await expect(place).toHaveText(/New branch · copy/);
   await place.click();
-  const menu = page.getByRole('menu', { name: 'Where this chat works' });
-  await expect(
-    menu.getByRole('menuitemradio', { name: /New branch in a worktree/ }),
-  ).toHaveAttribute('aria-checked', 'true');
-  await expect(menu.getByRole('menuitemradio', { name: /Work in my checkout/ })).toBeVisible();
-  await expect(menu.getByRole('menuitemradio', { name: /^main/ })).toBeVisible();
+  const menu = page.getByRole('dialog', { name: 'Where this chat works' });
+  await expect(menu.getByRole('radio', { name: /Work on a copy/ })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await expect(menu.getByRole('radio', { name: /Edit my files/ })).toBeVisible();
+  await expect(menu.getByRole('radio', { name: /^main/ })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(place).toBeFocused();
 
   await sendAndKeep(page);
   const chip = page.locator('.head .chat-branch');
   await expect(chip).toContainText(/spark\/tidy-the-notes[a-z-]*-[0-9a-f]{8}/);
-  await expect(chip).toContainText('· worktree');
-  await expect(chip.getByRole('button', { name: 'Open the worktree folder' })).toBeVisible();
+  await expect(chip).toContainText('· copy');
+  await expect(chip.getByRole('button', { name: 'Open this chat’s copy' })).toBeVisible();
   await expect(place).toHaveCount(0);
   const branch = (await chip.locator('.chat-branch-name').textContent()) ?? '';
   expect(readFileSync(path.join(repo.root, 'notes.txt'), 'utf8')).toBe('one\n');
   expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
 
   const keep = page.getByRole('group', { name: /Keep these changes\?/ });
-  await expect(keep).toContainText(`Kept on ${branch} in this chat’s worktree.`);
+  await expect(keep).toContainText(`Kept on ${branch} in this chat’s copy of your project.`);
   await expect(keep.locator('.ship-btn')).toHaveText('Push branch');
   await keep.getByRole('button', { name: 'Bring changes into main' }).click();
   const done = page.getByRole('status').filter({ hasText: 'Brought 1 file into main.' });
@@ -87,7 +88,7 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
   expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
 });
 
-test('Work in my checkout edits the checked-out branch and is remembered for the project', async ({
+test('Edit my files changes the checked-out branch and is remembered for the project', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
@@ -96,10 +97,10 @@ test('Work in my checkout edits the checked-out branch and is remembered for the
   const place = page.getByRole('button', { name: /^Where this chat works/ });
   await place.click();
   await page
-    .getByRole('menu', { name: 'Where this chat works' })
-    .getByRole('menuitemradio', { name: /Work in my checkout/ })
+    .getByRole('dialog', { name: 'Where this chat works' })
+    .getByRole('radio', { name: /Edit my files/ })
     .click();
-  await expect(place).toHaveText(/main · your checkout/);
+  await expect(place).toHaveText(/main · my files/);
   await expect(place).toBeFocused();
   await sendAndKeep(page);
   await expect(page.locator('.head .chat-branch')).toHaveCount(0);
@@ -115,6 +116,6 @@ test('Work in my checkout edits the checked-out branch and is remembered for the
     .click();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: /^Where this chat works/ })).toHaveText(
-    /main · your checkout/,
+    /main · my files/,
   );
 });

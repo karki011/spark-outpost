@@ -7,7 +7,7 @@ import { useBringChanges, useChatWorkspace } from '../project/use-chat-workspace
 function broughtLine(result: BringChangesResult): string {
   const count = result.files.length;
   const files = `${count} file${count === 1 ? '' : 's'}`;
-  const into = result.into ?? 'your checkout';
+  const into = result.into ?? 'my files';
   return `Brought ${files} into ${into}. They're uncommitted, ready for you to review and commit.`;
 }
 
@@ -23,11 +23,11 @@ export function BringChanges({ conversationId }: { conversationId: string }) {
   }, [bring.isSuccess]);
 
   if (!current?.worktree) return null;
-  const into = checkout ?? 'your checkout';
+  const into = checkout ?? 'my files';
   return (
     <div className="bring">
       <p className="bring-where">
-        Kept on <code>{current.branch}</code> in this chat&rsquo;s worktree.
+        Kept on <code>{current.branch}</code> in this chat&rsquo;s copy of your project.
       </p>
       {bring.data ? (
         <p ref={doneRef} className="bring-done" role="status" tabIndex={-1}>
