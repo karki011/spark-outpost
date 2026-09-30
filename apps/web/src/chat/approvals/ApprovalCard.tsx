@@ -15,6 +15,7 @@ import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { projectKeys } from '../../api/projects.ts';
 import { HoldToConfirm } from '../../ui/HoldToConfirm.tsx';
 import { CheckIcon, XIcon } from '../../ui/icons.tsx';
+import { Docked } from '../dock/Docked.tsx';
 import { Markdown } from '../markdown/Markdown.tsx';
 import { providerName } from '../provider-name.ts';
 import { useProjectBranch } from '../project/use-chat-repos.ts';
@@ -118,16 +119,19 @@ export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps)
   const [local, setLocal] = useState<ApprovalDecidedValue | null>(null);
   const approval = local ? mergeDecision([incoming], local)[0]! : incoming;
   if (approval.status !== 'pending') return <ResolvedApproval approval={approval} />;
-  if (approval.payload.sparkAction) {
-    return (
-      <SparkActionCard
-        approval={approval}
-        agent={rest.agent ?? providerName(rest.provider)}
-        onDecided={setLocal}
-      />
-    );
-  }
-  return <PendingApproval approval={approval} onDecided={setLocal} {...rest} />;
+  return (
+    <Docked id={approval.id} order={approval.createdAt} label={heading(approval)} pending>
+      {approval.payload.sparkAction ? (
+        <SparkActionCard
+          approval={approval}
+          agent={rest.agent ?? providerName(rest.provider)}
+          onDecided={setLocal}
+        />
+      ) : (
+        <PendingApproval approval={approval} onDecided={setLocal} {...rest} />
+      )}
+    </Docked>
+  );
 }
 
 function PendingApproval({

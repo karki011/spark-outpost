@@ -4,8 +4,9 @@ import { useId, useState, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   CHECKPOINT_OPTION,
-  clarifyOptionId,
+  crewTitle,
   type ApprovalDecidedValue,
+  type CheckpointPayload,
   type ConflictSide,
   type MergeConflict,
 } from '@spark-outpost/contracts';
@@ -16,8 +17,12 @@ import { useViewChanges } from '../../tasks/view-changes.ts';
 import { CheckIcon, XIcon } from '../../ui/icons.tsx';
 import { DiffView } from '../approvals/DiffView.tsx';
 import { mergeDecision } from '../approvals/approval-events.ts';
+import { CrewHint } from '../crew/CrewHint.tsx';
+import { Docked } from '../dock/Docked.tsx';
+import { Action, NoteForm, type Decide } from './card-parts.tsx';
+import { ClarifyBody } from './ClarifyBody.tsx';
 import {
-  autoLabel,
+  asksQuestions,
   budgetLine,
   checkpointQuestion,
   checkpointResult,
@@ -28,141 +33,7 @@ import {
   retryLine,
   type CheckpointApproval,
 } from './checkpoint-model.ts';
-import { useAutoContinue, type Countdown } from './use-auto-continue.ts';
-
-interface Decide {
-  (optionId: string, note?: string): void;
-  busy: boolean;
-  countdown: Countdown | null;
-  hold(): void;
-}
-
-function NoteForm({
-  label,
-  initial,
-  submit,
-  onSubmit,
-  onCancel,
-  onType,
-  busy,
-}: {
-  label: string;
-  initial: string;
-  submit: string;
-  onSubmit(note: string): void;
-  onCancel?: () => void;
-  onType?: () => void;
-  busy: boolean;
-}) {
-  const [note, setNote] = useState(initial);
-  const id = useId();
-  return (
-    <form
-      className="ck-note"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (note.trim()) onSubmit(note.trim());
-      }}
-    >
-      <label htmlFor={id} className="sr-only">
-        {label}
-      </label>
-      <textarea
-        id={id}
-        className="inp"
-        rows={Math.min(8, Math.max(2, initial.split('\n').length + 1))}
-        placeholder={label}
-        value={note}
-        onChange={(event) => {
-          setNote(event.target.value);
-          onType?.();
-        }}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-            event.currentTarget.form?.requestSubmit();
-          }
-        }}
-      />
-      <div className="ck-note-acts">
-        <button type="submit" className="btn primary sm" disabled={busy || !note.trim()}>
-          {submit}
-        </button>
-        {onCancel && (
-          <button type="button" className="btn ghost sm" onClick={onCancel}>
-            Cancel
-          </button>
-        )}
-      </div>
-    </form>
-  );
-}
-
-function Action({
-  id,
-  approval,
-  decide,
-  kind = 'line',
-  children,
-}: {
-  id: string;
-  approval: CheckpointApproval;
-  decide: Decide;
-  kind?: 'primary' | 'line' | 'stop';
-  children: ReactNode;
-}) {
-  if (!offers(approval, id)) return null;
-  const className = kind === 'stop' ? 'btn ghost sm deny' : `btn ${kind} sm`;
-  const counting = decide.countdown?.optionId === id ? decide.countdown : null;
-  return (
-    <button type="button" className={className} disabled={decide.busy} onClick={() => decide(id)}>
-      {counting ? <span className="ck-auto">{autoLabel(id, counting.seconds)}</span> : children}
-    </button>
-  );
-}
-
-function ClarifyBody({ approval, decide }: { approval: CheckpointApproval; decide: Decide }) {
-  const choices = approval.payload.checkpoint.choices;
-  return (
-    <>
-      {choices.length > 0 && (
-        <div className="appr-acts ck-choices">
-          {choices.map((choice, index) => (
-            <button
-              key={choice}
-              type="button"
-              className={index === 0 ? 'btn primary sm' : 'btn line sm'}
-              disabled={decide.busy}
-              onClick={() => decide(clarifyOptionId(index))}
-            >
-              {choice}
-            </button>
-          ))}
-        </div>
-      )}
-      {offers(approval, CHECKPOINT_OPTION.answer) && (
-        <NoteForm
-          label={choices.length > 0 ? 'Or answer in your own words' : 'Answer in your own words'}
-          initial=""
-          submit="Send"
-          busy={decide.busy}
-          onType={decide.hold}
-          onSubmit={(note) => decide(CHECKPOINT_OPTION.answer, note)}
-        />
-      )}
-      <div className="appr-acts ck-foot">
-        <Action id={CHECKPOINT_OPTION.useDefaults} approval={approval} decide={decide}>
-          {optionName(approval, CHECKPOINT_OPTION.useDefaults)}
-        </Action>
-        <Action id={CHECKPOINT_OPTION.clarifyRules} approval={approval} decide={decide}>
-          Let the rules decide
-        </Action>
-        <Action id={CHECKPOINT_OPTION.stop} approval={approval} decide={decide} kind="stop">
-          Stop
-        </Action>
-      </div>
-    </>
-  );
-}
+import { useAutoContinue } from './use-auto-continue.ts';
 
 function AcceptBody({ approval, decide }: { approval: CheckpointApproval; decide: Decide }) {
   const [fixing, setFixing] = useState(false);
@@ -418,6 +289,28 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
   }
 }
 
+function CheckpointHeading({ payload, title }: { payload: CheckpointPayload; title: string }) {
+  if (!payload.agent) return <b>{title}</b>;
+  const who = crewTitle(payload.agent);
+  return (
+    <CrewHint label={asksQuestions(payload) ? `Asked by ${who}` : who}>
+      <b>{title}</b>
+    </CrewHint>
+  );
+}
+
+function AskedList({ payload }: { payload: CheckpointPayload }) {
+  return (
+    <ol className="ck-asked">
+      {payload.questions.map((question) => (
+        <li key={question.question}>
+          {question.question} <span>Best guess: {question.default}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function lead(approval: CheckpointApproval): string | null {
   const checkpoint = approval.payload.checkpoint;
   if (checkpoint.kind === 'retry') return retryLine(checkpoint);
@@ -461,38 +354,45 @@ export function CheckpointCard({
   const stopped =
     approval.decisionOptionId === CHECKPOINT_OPTION.stop || approval.status !== 'allowed';
 
+  const title = checkpointTitle(checkpoint);
+  const questions = asksQuestions(checkpoint);
+
   return (
-    <div
-      className={pending ? `appr ck ${checkpoint.kind}` : `appr ck ${checkpoint.kind} decided`}
-      role="group"
-      aria-labelledby={headingId}
-      id={approvalAnchor(approval.id)}
-    >
-      <div className="appr-h">
-        <span className="ic" aria-hidden="true">
-          <i className={pending ? 'appr-dia' : 'appr-dia still'} />
-        </span>
-        <span id={headingId}>
-          <b>{checkpointTitle(checkpoint)}</b> {checkpointQuestion(checkpoint)}
-        </span>
-      </div>
-      {subtitle && <p className="ck-lead">{subtitle}</p>}
-      {checkpoint.reason && <p>{checkpoint.reason}</p>}
-      {pending ? (
-        <PendingBody approval={approval} decide={decide} />
-      ) : (
-        <div className="appr-res" role="status">
-          {stopped ? <XIcon /> : <CheckIcon />}
-          <b>{checkpointResult(approval)}</b>
-          {approval.note && <span className="ck-said">“{approval.note}”</span>}
+    <Docked id={approval.id} order={approval.createdAt} label={title} pending={pending}>
+      <div
+        className={pending ? `appr ck ${checkpoint.kind}` : `appr ck ${checkpoint.kind} decided`}
+        role="group"
+        aria-labelledby={headingId}
+        id={approvalAnchor(approval.id)}
+      >
+        <div className="appr-h">
+          <span className="ic" aria-hidden="true">
+            <i className={pending ? 'appr-dia' : 'appr-dia still'} />
+          </span>
+          <span id={headingId}>
+            <CheckpointHeading payload={checkpoint} title={title} />{' '}
+            {checkpointQuestion(checkpoint)}
+          </span>
         </div>
-      )}
-      {!pending && footer}
-      {mutation.isError && (
-        <p className="appr-err" role="alert">
-          {mutation.error.message}
-        </p>
-      )}
-    </div>
+        {subtitle && <p className="ck-lead">{subtitle}</p>}
+        {checkpoint.reason && !questions && <p>{checkpoint.reason}</p>}
+        {questions && !pending && <AskedList payload={checkpoint} />}
+        {pending ? (
+          <PendingBody approval={approval} decide={decide} />
+        ) : (
+          <div className="appr-res" role="status">
+            {stopped ? <XIcon /> : <CheckIcon />}
+            <b>{checkpointResult(approval)}</b>
+            {approval.note && <span className="ck-said">“{approval.note}”</span>}
+          </div>
+        )}
+        {!pending && footer}
+        {mutation.isError && (
+          <p className="appr-err" role="alert">
+            {mutation.error.message}
+          </p>
+        )}
+      </div>
+    </Docked>
   );
 }

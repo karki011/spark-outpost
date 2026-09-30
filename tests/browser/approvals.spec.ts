@@ -101,9 +101,12 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
   await shot(page, 'approval-command');
 
   await page.reload();
-  await expect(card(page, /Run a command\?/)).toBeVisible();
+  const docked = page.getByRole('region', { name: 'Waiting for you' });
+  await expect(docked.getByRole('group', { name: /Run a command\?/ })).toBeVisible();
   const allow = card(page, /Run a command\?/).getByRole('button', { name: 'Allow', exact: true });
-  await allow.focus();
+  await page.getByRole('button', { name: 'Waiting for your answer' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(allow).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(card(page, /Run a command\?/).getByRole('status')).toContainText('Chose: Allow.');
   await expect(page.locator('.md', { hasText: 'Done. fake-run=allowed' })).toBeVisible({

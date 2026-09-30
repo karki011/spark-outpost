@@ -113,3 +113,77 @@
 .ck-auto {
   font-variant-numeric: tabular-nums;
 }
+.ck-questions {
+  padding: 0 14px;
+}
+.ck-questions > .inp {
+  display: block;
+  margin-top: 10px;
+  min-height: 52px;
+  resize: vertical;
+  background: var(--panel);
+}
+.ck-questions .ck-foot {
+  padding-left: 0;
+  padding-right: 0;
+}
+.ck-q-list {
+  display: grid;
+  gap: 12px;
+  margin: 10px 0 0;
+  padding: 0 0 0 20px;
+  font-size: 13px;
+}
+.ck-q::marker {
+  color: var(--muted);
+  font-weight: 600;
+}
+.ck-q-text {
+  margin: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.ck-guess {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.ck-guess b {
+  color: var(--text);
+  font-weight: 500;
+}
+.ck-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.ck-pick {
+  padding: 3px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12.5px;
+}
+.ck-pick:hover {
+  border-color: var(--accent);
+}
+.ck-pick[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+  color: var(--accent-text);
+}
+.ck-q-answer {
+  margin-top: 6px;
+  background: var(--panel);
+}
+.ck-asked {
+  margin: 8px 14px 0 34px;
+  padding: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.ck-asked span {
+  color: var(--faint);
+}
