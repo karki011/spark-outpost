@@ -1,0 +1,261 @@
+.map-flist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-flist button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% + 12px);
+  margin: 0 -6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  text-align: left;
+}
+
+.map-flist button:hover {
+  background: var(--raise);
+}
+
+.map-flist .map-nm {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-weight: 400;
+  text-overflow: ellipsis;
+}
+
+.map-unm {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  width: 330px;
+  max-height: min(420px, calc(100% - 80px));
+  overflow: hidden;
+  animation: rise 0.35s var(--out);
+}
+
+.map-unm-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 6px 12px;
+}
+
+.map-unm-h h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.map-unm .seg {
+  --n: 2;
+  margin: 0 10px 6px;
+}
+
+.map-unm .seg button {
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.map-unm ul {
+  margin: 0;
+  padding: 0 6px 8px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.map-unm li button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 6px;
+  border-radius: 7px;
+  font-size: 12px;
+  text-align: left;
+}
+
+.map-unm li button:hover {
+  background: var(--map-gold-soft);
+}
+
+.map-ep {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-fl {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.map-flag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--warn);
+  white-space: nowrap;
+}
+
+.map-flag.sure {
+  color: var(--danger);
+}
+
+.map-meth {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--raise);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 17px;
+  color: var(--text);
+}
+
+.map-note {
+  margin: 0;
+  padding: 6px 12px 10px;
+  border-top: 1px solid var(--map-glass-line);
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.map-none {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.map-pathcard {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% - 120px);
+  padding: 8px 8px 8px 12px;
+  overflow-x: auto;
+  transform: translateX(-50%);
+  animation: rise 0.35s var(--out);
+}
+
+.map-path-head {
+  display: flex;
+  flex-direction: column;
+  margin-right: 4px;
+  padding-right: 10px;
+  border-right: 1px solid var(--map-glass-line);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.map-path-head small,
+.map-step small {
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.map-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 3px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.map-step:hover {
+  background: var(--map-gold-soft);
+}
+
+.map-step span {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.map-arrow {
+  flex-shrink: 0;
+  color: var(--faint);
+}
+
+.map-bridges {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 6;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  list-style: none;
+}
+
+.map-bridges:focus-within {
+  width: 320px;
+  height: auto;
+  max-height: min(360px, calc(100% - 28px));
+  padding: 6px;
+  overflow-y: auto;
+  clip-path: none;
+}
+
+.map-bridges button {
+  display: grid;
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 12px;
+  text-align: left;
+}
+
+.map-bridges button:focus-visible {
+  background: var(--map-gold-soft);
+}
+
+.map-bridges small {
+  color: var(--muted);
+}
+
+.map-toasts {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 20;
+  width: min(340px, calc(100% - 28px));
+  transform: translateX(-50%);
+}
+
+.map-ep-col {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.map-ep-col small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,0 +1,270 @@
+.map-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: clip;
+  background: radial-gradient(
+    circle farthest-corner at 50% 42%,
+    var(--map-sky-0),
+    var(--map-sky-1) 119%
+  );
+}
+
+.map-glass {
+  border: 1px solid var(--map-glass-line);
+  border-radius: var(--r);
+  background: var(--map-glass);
+  color: var(--text);
+  backdrop-filter: blur(10px);
+}
+
+.map-zoom {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px;
+}
+
+.map-zoom button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  color: var(--muted);
+}
+
+.map-zoom button:hover {
+  background: var(--map-gold-soft);
+  color: var(--text);
+}
+
+.map-legend {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 3;
+  width: 250px;
+  padding: 10px 12px 11px;
+  font-size: 12.5px;
+  animation: rise 0.35s var(--out);
+}
+
+.map-legend h3 {
+  display: flex;
+  align-items: center;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--map-gold);
+}
+
+.map-legend h3 button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  border-radius: 6px;
+  color: var(--faint);
+}
+
+.map-legend h3 button:hover {
+  background: var(--map-gold-soft);
+  color: var(--text);
+}
+
+.map-legend ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+
+.map-sym {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+}
+
+.map-sym .map-kdot {
+  width: 10px;
+  height: 10px;
+}
+
+.map-lg-star {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--map-star);
+}
+
+.map-lg-star.big {
+  width: 11px;
+  height: 11px;
+}
+
+.map-lg-ring {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--map-warm);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--map-warm);
+}
+
+.map-lg-abc {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--map-gold);
+}
+
+.map-crumb {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 28px);
+  padding: 8px 12px 8px 8px;
+  animation: rise 0.35s var(--out);
+}
+
+.map-crumb h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--map-gold);
+  white-space: nowrap;
+}
+
+.map-meta {
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.map-back {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  color: var(--muted);
+}
+
+.map-back:hover {
+  background: var(--map-gold-soft);
+  color: var(--text);
+}
+
+.map-kbar {
+  display: flex;
+  gap: 1px;
+  width: 120px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.map-jev {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.map-who {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--raise);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 17px;
+  color: var(--muted);
+}
+
+.map-conf {
+  font-variant-numeric: tabular-nums;
+}
+
+.map-conf.low,
+.map-warm {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.map-say {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 28px);
+  padding: 10px 16px 10px 10px;
+  transform: translateX(-50%);
+  animation: rise 0.45s var(--out);
+}
+
+.map-say p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.map-say small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.map-pbar {
+  height: 3px;
+  margin-top: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--map-glass-line);
+}
+
+.map-pbar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--map-gold);
+  transition: width 0.5s var(--out);
+}
+
+.map-empty-page {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  flex: 1;
+  color: var(--muted);
+}

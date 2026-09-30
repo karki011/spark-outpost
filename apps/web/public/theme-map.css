@@ -1,0 +1,126 @@
+:root {
+  --map-sky-0: #f7f1e3;
+  --map-sky-1: #ebe0c6;
+  --map-grid: rgba(74, 60, 34, 0.3);
+  --map-dust: rgba(74, 60, 34, 0.22);
+  --map-star: #18202d;
+  --map-star-line: rgba(24, 32, 45, 0.78);
+  --map-gold: #765000;
+  --map-gold-soft: rgba(118, 80, 0, 0.14);
+  --map-warm: #c2410c;
+  --map-cross: rgba(24, 32, 45, 0.2);
+  --map-skel: rgba(74, 60, 34, 0.4);
+  --map-glow: rgba(255, 244, 214, 0.9);
+  --map-k-ui: #0b7d53;
+  --map-k-api: #1f5fc0;
+  --map-k-data: #8a6000;
+  --map-k-test: #b72e76;
+  --map-k-config: #6448c8;
+  --map-bridge: #0a6680;
+  --map-event: #7438b8;
+  --map-types: #7a5400;
+  --map-tint-1: #08697d;
+  --map-tint-2: #7438b0;
+  --map-tint-3: #9a4f1f;
+  --map-tint-4: #2656b3;
+  --map-glass: rgba(255, 253, 247, 0.92);
+  --map-glass-line: rgba(74, 60, 34, 0.2);
+  --map-pill: rgba(255, 251, 240, 0.95);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-skin]) {
+    --map-sky-0: color-mix(in srgb, #10203f 80%, var(--bg));
+    --map-sky-1: color-mix(in srgb, #070e1f 80%, var(--bg));
+    --map-grid: rgba(98, 140, 204, 0.42);
+    --map-dust: rgba(120, 158, 220, 0.55);
+    --map-star: #f5f8ff;
+    --map-star-line: rgba(236, 242, 255, 0.72);
+    --map-gold: #eab52e;
+    --map-gold-soft: rgba(234, 181, 46, 0.14);
+    --map-warm: #ff8a3d;
+    --map-cross: rgba(150, 180, 230, 0.16);
+    --map-skel: rgba(120, 158, 220, 0.45);
+    --map-glow: rgba(255, 255, 255, 0.9);
+    --map-k-ui: #3ddc97;
+    --map-k-api: #5ab4ff;
+    --map-k-data: #f5cb45;
+    --map-k-test: #ff7ac6;
+    --map-k-config: #b49cff;
+    --map-bridge: #6fd3ff;
+    --map-event: #c19bff;
+    --map-types: #eab52e;
+    --map-tint-1: #5fd4c4;
+    --map-tint-2: #b69cff;
+    --map-tint-3: #f0a36b;
+    --map-tint-4: #7fb2ff;
+    --map-glass: color-mix(in srgb, rgba(12, 22, 44, 0.9) 85%, var(--panel));
+    --map-glass-line: rgba(120, 158, 220, 0.22);
+    --map-pill: rgba(10, 20, 40, 0.92);
+  }
+}
+
+[data-skin='graphite'],
+[data-skin='dark'],
+[data-skin='void'],
+[data-skin='moss'],
+[data-skin='plum'],
+[data-skin='aurora'] {
+  --map-sky-0: color-mix(in srgb, #10203f 80%, var(--bg));
+  --map-sky-1: color-mix(in srgb, #070e1f 80%, var(--bg));
+  --map-grid: rgba(98, 140, 204, 0.42);
+  --map-dust: rgba(120, 158, 220, 0.55);
+  --map-star: #f5f8ff;
+  --map-star-line: rgba(236, 242, 255, 0.72);
+  --map-gold: #eab52e;
+  --map-gold-soft: rgba(234, 181, 46, 0.14);
+  --map-warm: #ff8a3d;
+  --map-cross: rgba(150, 180, 230, 0.16);
+  --map-skel: rgba(120, 158, 220, 0.45);
+  --map-glow: rgba(255, 255, 255, 0.9);
+  --map-k-ui: #3ddc97;
+  --map-k-api: #5ab4ff;
+  --map-k-data: #f5cb45;
+  --map-k-test: #ff7ac6;
+  --map-k-config: #b49cff;
+  --map-bridge: #6fd3ff;
+  --map-event: #c19bff;
+  --map-types: #eab52e;
+  --map-tint-1: #5fd4c4;
+  --map-tint-2: #b69cff;
+  --map-tint-3: #f0a36b;
+  --map-tint-4: #7fb2ff;
+  --map-glass: color-mix(in srgb, rgba(12, 22, 44, 0.9) 85%, var(--panel));
+  --map-glass-line: rgba(120, 158, 220, 0.22);
+  --map-pill: rgba(10, 20, 40, 0.92);
+}
+
+[data-skin='contrast'] {
+  --map-sky-0: #fff;
+  --map-sky-1: #fff;
+  --map-grid: rgba(0, 0, 0, 0.45);
+  --map-dust: rgba(0, 0, 0, 0.25);
+  --map-star: #000;
+  --map-star-line: #000;
+  --map-gold: #5c3d00;
+  --map-gold-soft: rgba(92, 61, 0, 0.12);
+  --map-warm: #b83200;
+  --map-cross: rgba(0, 0, 0, 0.35);
+  --map-skel: rgba(0, 0, 0, 0.35);
+  --map-glow: rgba(0, 0, 0, 0);
+  --map-k-ui: #00663a;
+  --map-k-api: #0040c0;
+  --map-k-data: #6b4a00;
+  --map-k-test: #9c0058;
+  --map-k-config: #4a2db0;
+  --map-bridge: #004f66;
+  --map-event: #5a1fa0;
+  --map-types: #5c3d00;
+  --map-tint-1: #004f66;
+  --map-tint-2: #5a1fa0;
+  --map-tint-3: #7a3000;
+  --map-tint-4: #0040c0;
+  --map-glass: #fff;
+  --map-glass-line: #000;
+  --map-pill: #fff;
+}

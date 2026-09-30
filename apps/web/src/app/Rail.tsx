@@ -7,7 +7,7 @@ import { UserBlob } from '../brand/UserBlob.tsx';
 import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.tsx';
 import './rail.css';
 
-export type AppView = 'home' | 'chats' | 'analytics' | 'tickets';
+export type AppView = 'home' | 'chats' | 'analytics' | 'tickets' | 'map';
 
 interface RailProps {
   view: AppView;
@@ -66,6 +66,19 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
       <svg {...ICON}>
         <path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" />
         <path d="M10 9v6" />
+      </svg>
+    ),
+  },
+  {
+    id: 'map',
+    label: 'Map',
+    icon: (
+      <svg {...ICON}>
+        <path d="m5 18 5-9 7 3 2-7" />
+        <circle cx="5" cy="18" r="1.8" fill="currentColor" />
+        <circle cx="10" cy="9" r="1.8" fill="currentColor" />
+        <circle cx="17" cy="12" r="2.2" fill="currentColor" />
+        <circle cx="19" cy="5" r="1.4" fill="currentColor" />
       </svg>
     ),
   },

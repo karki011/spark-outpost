@@ -1,9 +1,11 @@
 import { createRequire } from 'node:module';
+import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { connectorCard, connectorHead } from './connector-cards.ts';
 import { resetTestDatabase } from './database.ts';
 import { seedChats } from './sidebar-seed.ts';
+import { combinedFixture, REPO_ROOT, serveMap } from './map-fixture.ts';
 import { openChats } from './navigation.ts';
 import { connectTickets, openTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
 import { JIRA_EMAIL } from '../../apps/server/test/fake-jira.ts';
@@ -289,4 +291,60 @@ test('the chat screen reflows at 200% zoom without horizontal scrolling', async 
   await expect(input).toBeInViewport();
   await input.fill('Still reachable');
   await expect(page.getByRole('button', { name: /^Send/ })).toBeInViewport();
+});
+
+test('the Map has no serious colour-contrast or ARIA issues in any theme', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const post = (rootPath: string) => page.request.post('/api/projects', { data: { rootPath } });
+  const web = ((await (await post(path.join(REPO_ROOT, 'apps/web'))).json()) as { id: string }).id;
+  const server = (
+    (await (await post(path.join(REPO_ROOT, 'apps/server'))).json()) as { id: string }
+  ).id;
+  await serveMap(page, combinedFixture(web, server));
+  await page.addInitScript(
+    (ids) => {
+      localStorage.setItem('spark-outpost.view', 'map');
+      localStorage.setItem('spark-outpost.map-projects', JSON.stringify(ids));
+    },
+    [web],
+  );
+  await page.goto('/');
+  await expect(page.getByRole('application', { name: /Project map of/ })).toBeVisible();
+  const found = [];
+  for (const theme of THEMES) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `map sky ${theme}`)));
+  }
+  await page.getByRole('button', { name: 'Review areas' }).click();
+  await expect(page.getByRole('dialog', { name: 'Review areas' })).toBeVisible();
+  for (const theme of ['light', 'graphite', 'contrast']) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `map review ${theme}`)));
+  }
+  await page.getByRole('button', { name: 'Close review' }).click();
+  await page.getByRole('combobox', { name: 'Find a file on the map' }).fill('client.ts');
+  await page
+    .getByRole('option', { name: /client\.ts/ })
+    .first()
+    .click();
+  const { x, y, width, height } = (await page.locator('.map-stage').boundingBox())!;
+  await page.mouse.click(x + width / 2, y + height / 2);
+  await expect(page.getByRole('dialog', { name: 'client.ts' })).toBeVisible();
+  for (const theme of ['light', 'graphite', 'contrast']) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `map file sheet ${theme}`)));
+  }
+  await page.getByRole('button', { name: 'Close file details' }).click();
+  await page.getByRole('button', { name: /^Projects on the map/ }).click();
+  await page.getByRole('menuitemcheckbox', { name: /^server/ }).click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: /^Unmatched/ }).click();
+  await expect(page.getByRole('region', { name: 'Unmatched' })).toBeVisible();
+  for (const theme of ['light', 'graphite', 'contrast']) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `map combined ${theme}`)));
+  }
+  expect(found).toEqual([]);
 });

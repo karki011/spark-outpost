@@ -6,6 +6,7 @@ import { Analytics } from '../analytics/Analytics.tsx';
 import { api, newDraftId, queryKeys } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { ChatView } from '../chat/ChatView.tsx';
+import { queueDraft } from '../chat/composer/pending-draft.ts';
 import { StatusCompanion } from '../companion/StatusCompanion.tsx';
 import { AgentTvHost } from '../crew/AgentTvHost.tsx';
 import { scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
@@ -13,6 +14,7 @@ import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';
 import { Home } from '../home/Home.tsx';
+import { MapPage } from '../map/MapPage.tsx';
 import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
@@ -75,6 +77,11 @@ function ChatShell({ entering }: { entering: boolean }) {
     void api
       .updateChatSettings(next, { projectIds: [projectId] })
       .then(() => queryClient.invalidateQueries({ queryKey: queryKeys.conversation(next) }));
+    return next;
+  };
+
+  const chatAboutFile = (projectId: string, path: string) => {
+    queueDraft(startDraftInProject(projectId), `About \`${path}\`: `);
   };
 
   const openChat = (id: string) => {
@@ -161,6 +168,7 @@ function ChatShell({ entering }: { entering: boolean }) {
             }}
           />
         )}
+        {view === 'map' && <MapPage onOpenInChat={chatAboutFile} />}
         {view === 'chats' && (
           <AgentTvHost
             activeId={activeId}
@@ -172,7 +180,7 @@ function ChatShell({ entering }: { entering: boolean }) {
         )}
         <StatusCompanion
           chats={chats}
-          visible={view !== 'chats' || activeId === null}
+          visible={view !== 'map' && (view !== 'chats' || activeId === null)}
           onOpenChat={openAtCard}
           onHome={() => setView('home')}
         />
