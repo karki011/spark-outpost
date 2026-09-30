@@ -38,6 +38,7 @@ import { useChatWorkspace } from './project/use-chat-workspace.ts';
 import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
 import { activeRun } from './turns.ts';
+import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
 
 const NO_REPOS: string[] = [];
 const NO_TASKS: TaskOverview[] = [];
@@ -118,105 +119,109 @@ export function ChatView({ conversationId }: { conversationId: string }) {
 
   return (
     <ViewChangesContext value={viewChanges}>
-      <main className="main" {...drop.handlers}>
-        <header className="head">
-          <SidebarToggle />
-          {repos.length > 0 && (
-            <span className="crumb" title={repos.map((repo) => repo.rootPath).join('\n')}>
-              {repoSummary(repos.map((repo) => repo.name))} /
-            </span>
-          )}
-          <h1
-            className="chat-title"
-            title={
-              detail.data?.conversation.titleSource === 'auto' ? 'Renamed by Spark' : undefined
-            }
-          >
-            {title}
-          </h1>
-          {chatBranch && <ChatBranch conversationId={conversationId} branch={chatBranch} />}
-          <div className="head-r">
-            <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
-            {openAudit && (
-              <ChatHeaderMenu onAudit={openAudit} onStartFresh={() => startFresh.mutate()} />
+      <FileSheetProvider>
+        <main className="main" {...drop.handlers}>
+          <header className="head">
+            <SidebarToggle />
+            {repos.length > 0 && (
+              <span className="crumb" title={repos.map((repo) => repo.rootPath).join('\n')}>
+                {repoSummary(repos.map((repo) => repo.name))} /
+              </span>
             )}
-            <AgentTvButton conversationId={conversationId} agents={crew} />
-            <ThemePicker />
-          </div>
-        </header>
-        {detail.isError && !isConnectionLoss(detail.error) && (
-          <p className="error-line" role="alert">
-            {detail.error.message}
-          </p>
-        )}
-        {detail.data ? (
-          <Thread
-            detail={detail.data}
-            repos={repos}
-            pendingMessage={send.isPending ? send.variables : null}
-            panelOpen={panel.open}
-            onOpenTask={panel.openTask}
-            quotes={quotes}
-          />
-        ) : (
-          <div className="thread-wrap" aria-busy={detail.isPending} />
-        )}
-        <Composer
-          conversationId={conversationId}
-          repos={repos}
-          settings={detail.data?.settings ?? null}
-          providers={connected}
-          runs={detail.data?.runs ?? []}
-          orchestration={orchestration}
-          usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
-          busy={running !== null}
-          sending={send.isPending}
-          error={send.error?.message ?? stop.error?.message ?? null}
-          attachments={attachments}
-          quotes={quotes}
-          onSend={async (content, files, annotations) => {
-            await send.mutateAsync({ content, attachments: files, annotations });
-          }}
-          onStop={() => {
-            if (running) stop.mutate(running.id);
-          }}
-          {...(openAudit ? { onAudit: openAudit } : {})}
-          onStartFresh={() => startFresh.mutate()}
-          agentCommands={commands.data?.commands ?? NO_COMMANDS}
-          agentName={providerName(commands.data?.provider ?? detail.data?.settings.provider ?? '')}
-        />
-        <DropOverlay visible={drop.dragging} />
-      </main>
-      {task && (
-        <WorkPanel
-          conversationId={conversationId}
-          task={task}
-          open={panel.open}
-          wide={panel.wide}
-          tab={panelTab}
-          onTab={setPanelTab}
-          onClose={() => panel.setOpen(false)}
-          orchestration={taskCrew}
-          agents={taskCrew ? crew : []}
-          roots={[
-            ...(chatBranch?.worktree ? [chatBranch.path] : []),
-            ...repos.map((repo) => repo.rootPath),
-          ]}
-          runs={detail.data?.runs ?? []}
-          width={panel.width}
-          onWidth={panel.setWidth}
-          {...(openAudit ? { onAudit: openAudit } : {})}
-        />
-      )}
-      <AnimatePresence>
-        {auditOpen && (
-          <AuditDialog
+            <h1
+              className="chat-title"
+              title={
+                detail.data?.conversation.titleSource === 'auto' ? 'Renamed by Spark' : undefined
+              }
+            >
+              {title}
+            </h1>
+            {chatBranch && <ChatBranch conversationId={conversationId} branch={chatBranch} />}
+            <div className="head-r">
+              <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
+              {openAudit && (
+                <ChatHeaderMenu onAudit={openAudit} onStartFresh={() => startFresh.mutate()} />
+              )}
+              <AgentTvButton conversationId={conversationId} agents={crew} />
+              <ThemePicker />
+            </div>
+          </header>
+          {detail.isError && !isConnectionLoss(detail.error) && (
+            <p className="error-line" role="alert">
+              {detail.error.message}
+            </p>
+          )}
+          {detail.data ? (
+            <Thread
+              detail={detail.data}
+              repos={repos}
+              pendingMessage={send.isPending ? send.variables : null}
+              panelOpen={panel.open}
+              onOpenTask={panel.openTask}
+              quotes={quotes}
+            />
+          ) : (
+            <div className="thread-wrap" aria-busy={detail.isPending} />
+          )}
+          <Composer
             conversationId={conversationId}
-            title={title}
-            onClose={() => setAuditOpen(false)}
+            repos={repos}
+            settings={detail.data?.settings ?? null}
+            providers={connected}
+            runs={detail.data?.runs ?? []}
+            orchestration={orchestration}
+            usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
+            busy={running !== null}
+            sending={send.isPending}
+            error={send.error?.message ?? stop.error?.message ?? null}
+            attachments={attachments}
+            quotes={quotes}
+            onSend={async (content, files, annotations) => {
+              await send.mutateAsync({ content, attachments: files, annotations });
+            }}
+            onStop={() => {
+              if (running) stop.mutate(running.id);
+            }}
+            {...(openAudit ? { onAudit: openAudit } : {})}
+            onStartFresh={() => startFresh.mutate()}
+            agentCommands={commands.data?.commands ?? NO_COMMANDS}
+            agentName={providerName(
+              commands.data?.provider ?? detail.data?.settings.provider ?? '',
+            )}
+          />
+          <DropOverlay visible={drop.dragging} />
+        </main>
+        {task && (
+          <WorkPanel
+            conversationId={conversationId}
+            task={task}
+            open={panel.open}
+            wide={panel.wide}
+            tab={panelTab}
+            onTab={setPanelTab}
+            onClose={() => panel.setOpen(false)}
+            orchestration={taskCrew}
+            agents={taskCrew ? crew : []}
+            roots={[
+              ...(chatBranch?.worktree ? [chatBranch.path] : []),
+              ...repos.map((repo) => repo.rootPath),
+            ]}
+            runs={detail.data?.runs ?? []}
+            width={panel.width}
+            onWidth={panel.setWidth}
+            {...(openAudit ? { onAudit: openAudit } : {})}
           />
         )}
-      </AnimatePresence>
+        <AnimatePresence>
+          {auditOpen && (
+            <AuditDialog
+              conversationId={conversationId}
+              title={title}
+              onClose={() => setAuditOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+      </FileSheetProvider>
     </ViewChangesContext>
   );
 }

@@ -3,12 +3,14 @@ import {
   attachmentSchema,
   folderListingSchema,
   projectGitSchema,
+  projectFileContentSchema,
   projectFilesResponseSchema,
   projectSchema,
   removedProjectSchema,
   type Attachment,
   type FolderListing,
   type Project,
+  type ProjectFileContent,
   type ProjectFilesResponse,
   type ProjectGit,
   type RemovedProject,
@@ -19,6 +21,7 @@ export const projectKeys = {
   all: ['projects'] as const,
   folders: (path: string | null) => ['folders', path] as const,
   files: (projectId: string, query: string) => ['project-files', projectId, query] as const,
+  file: (projectId: string, path: string) => ['project-file', projectId, path] as const,
   rename: (projectId: string, name: string): Promise<Project> =>
     request(projectSchema, `/projects/${projectId}`, {
       method: 'PATCH',
@@ -78,6 +81,8 @@ export const projectsApi = {
     request(projectFilesResponseSchema, withQuery(`/projects/${projectId}/files`, { query }), {
       signal,
     }),
+  file: (projectId: string, path: string): Promise<ProjectFileContent> =>
+    request(projectFileContentSchema, withQuery(`/projects/${projectId}/file`, { path })),
   attach: (
     projectId: string,
     path: string,

@@ -75,16 +75,13 @@
 .as-cards {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 .as-card {
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  background: var(--raise);
+  padding: 10px 6px 8px;
+  border-top: 1px solid var(--line);
 }
-.as-card.warn {
-  border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
+.as-card:first-of-type {
+  border-top: 0;
 }
 .as-head {
   display: flex;
@@ -95,19 +92,17 @@
 .as-head h3 {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 6px;
   margin: 0;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
 }
 .as-count {
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--panel);
-  color: var(--muted);
+  color: var(--faint);
   font-size: 12px;
   font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 .as-status {
   color: var(--faint);
@@ -139,11 +134,45 @@
   padding: 0;
   list-style: none;
 }
+.as-list {
+  margin: 4px -6px 0;
+}
 .as-list li {
-  display: flex;
-  flex-direction: column;
   min-width: 0;
-  padding: 3px 0;
+}
+.as-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 6px;
+  border-radius: var(--r-sm);
+  text-align: left;
+  transition: background 0.15s;
+}
+.as-row-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+button.as-row:hover,
+button.as-row:focus-visible {
+  background: var(--raise);
+}
+.as-open {
+  flex: none;
+  color: var(--faint);
+  opacity: 0;
+  transform: translateX(-3px);
+  transition:
+    opacity 0.15s,
+    transform 0.15s var(--out);
+}
+button.as-row:hover .as-open,
+button.as-row:focus-visible .as-open {
+  opacity: 1;
+  transform: none;
 }
 .as-list code,
 .as-servers code {
@@ -153,11 +182,26 @@
   font-family: 'Geist Mono', ui-monospace, monospace;
   font-size: 12px;
 }
-.as-list small,
 .as-servers small {
   color: var(--muted);
   font-size: 12px;
   overflow-wrap: anywhere;
+}
+.as-list small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.as-all {
+  margin-top: 2px;
+  padding: 2px 0;
+  color: var(--accent-text);
+  font-size: 12px;
+}
+.as-all:hover {
+  text-decoration: underline;
 }
 .as-list b {
   font-size: 12px;

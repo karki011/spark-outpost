@@ -29,7 +29,13 @@ function definitionsCard(
     >
       <SetupList
         label={setting}
-        items={items.map((item) => ({ key: item.path, name: item.name, detail: item.description }))}
+        onOpen={props.onOpen}
+        items={items.map((item) => ({
+          key: item.path,
+          name: item.name,
+          detail: item.description,
+          path: item.path,
+        }))}
       />
     </SetupCard>
   );
@@ -40,7 +46,8 @@ export function EverydayCards(props: SetupCardsProps) {
   const files = config.instructions.map((file) => ({
     key: file.path,
     name: file.path,
-    detail: file.nested ? 'read when working in that folder' : undefined,
+    detail: file.nested ? 'Read when working in that folder' : undefined,
+    path: file.path,
   }));
   return (
     <>
@@ -56,7 +63,7 @@ export function EverydayCards(props: SetupCardsProps) {
         {files.length === 0 ? (
           <p className="as-empty">No CLAUDE.md, AGENTS.md or rules files.</p>
         ) : (
-          <SetupList label="files" items={files} preview={4} />
+          <SetupList label="files" items={files} preview={4} onOpen={props.onOpen} />
         )}
       </SetupCard>
       {definitionsCard(props, 'skills', 'Skills')}
