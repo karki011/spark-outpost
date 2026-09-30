@@ -91,6 +91,10 @@ async function mergeMainFirst(
   const cwd = await work.site.cwd();
   const main = s.input.projectRoots[0]!;
   if (cwd === main) return null;
+  if (work.site.boundary) {
+    work.before = (await work.site.boundary()) ?? work.before;
+    return null;
+  }
   const merged = await mergeMainInto(cwd, main);
   if (merged.conflicts.length === 0) return null;
   return `Main could not be merged into your copy cleanly (${merged.conflicts.join(', ')}); keep going, and the coordinator reconciles them when your piece lands.`;

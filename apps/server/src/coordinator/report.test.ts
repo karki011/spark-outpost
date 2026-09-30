@@ -98,6 +98,26 @@ describe('pieceReport', () => {
     expect(report).toContain('Incomplete: P3 · Piece P3 (failed: Provider \\| crashed).');
   });
 
+  it('lists merge conflicts and renumbered migrations for worktree pieces', () => {
+    const report = pieceReport({
+      list: { ...list([piece('P1', { placement: 'worktree' })]), placement: 'worktree' },
+      fallback: null,
+      integrator: null,
+      conflicts: [
+        { piece: 'P1', files: ['store.ts'], resolvedBy: 'integrator' },
+        { piece: 'P2', files: ['api.ts'], resolvedBy: null },
+      ],
+      renumbered: [{ piece: 'P2', from: 'migrations/0002_api.sql', to: 'migrations/0003_api.sql' }],
+    })!;
+    expect(report).toContain('Pieces (1, in worktrees, list v2):');
+    expect(report).toContain(
+      'Merge conflicts: P1 (`store.ts`) resolved by the integrator; P2 (`api.ts`) not resolved.',
+    );
+    expect(report).toContain(
+      'Renumbered migrations: `migrations/0002_api.sql` → `migrations/0003_api.sql` (P2).',
+    );
+  });
+
   it('says why the coordinator fell back to one Builder', () => {
     expect(pieceReport({ list: null, fallback: 'the list had a cycle', integrator: null })).toBe(
       'Coordinator: built with one Builder instead (the list had a cycle).',

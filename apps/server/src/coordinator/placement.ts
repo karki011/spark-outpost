@@ -19,11 +19,15 @@ const GENERATED =
 const MIGRATIONS = /(?:^|\/)(?:migrations?|migrate|db\/migrate)\//i;
 const UNSURE_MARGIN = 0.1;
 
+export function inMigrationsFolder(file: string): boolean {
+  return MIGRATIONS.test(file);
+}
+
 export function sharedTreeBlocker(file: string): string | null {
   if (MANIFEST.test(file)) return 'a manifest';
   if (LOCKFILE.test(file)) return 'a lockfile';
   if (GENERATED.test(file)) return 'a generated file';
-  if (MIGRATIONS.test(file)) return 'a migration';
+  if (inMigrationsFolder(file)) return 'a migration';
   return null;
 }
 

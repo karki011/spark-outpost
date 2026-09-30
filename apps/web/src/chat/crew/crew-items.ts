@@ -6,7 +6,25 @@ type AgentItem = { kind: 'agent'; member: CrewMember; checkpoints: CheckpointApp
 type LooseItem =
   { kind: 'checkpoint'; approval: CheckpointApproval } | { kind: 'approval'; approval: Approval };
 
-export type CrewItem = AgentItem | LooseItem;
+type GroupItem = { kind: 'group'; members: AgentItem[] };
+
+export type CrewItem = AgentItem | LooseItem | GroupItem;
+
+const PARALLEL = new Set<CrewMember['placement']>(['shared', 'worktree']);
+
+function isParallel(item: CrewItem | undefined): item is AgentItem {
+  return item?.kind === 'agent' && PARALLEL.has(item.member.placement);
+}
+
+export function groupParallel(items: readonly CrewItem[]): CrewItem[] {
+  const members = items.filter(isParallel);
+  if (members.length < 2) return [...items];
+  const first = items.indexOf(members[0]!);
+  return items.flatMap((item, index) => {
+    if (index === first) return [{ kind: 'group' as const, members }];
+    return isParallel(item) ? [] : [item];
+  });
+}
 
 const STATUS_RANK: Record<Approval['status'], number> = {
   pending: 0,

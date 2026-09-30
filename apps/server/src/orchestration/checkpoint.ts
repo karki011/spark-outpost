@@ -195,6 +195,20 @@ export function ownershipCard(agent: string, files: readonly string[]): Checkpoi
   };
 }
 
+export function piecesCard(question: string, reason: string, parallel: boolean): CheckpointCard {
+  return {
+    kind: 'pieces',
+    title: question,
+    payload: payload({ kind: 'pieces', question, reason }),
+    options: [
+      allow(CHECKPOINT_OPTION.makeChange, 'Build it'),
+      ...(parallel ? [allow(CHECKPOINT_OPTION.buildInOrder, 'Build in order instead')] : []),
+      allow(CHECKPOINT_OPTION.editPlan, 'Revise'),
+      stopOption,
+    ],
+  };
+}
+
 export function mergeConflictCard(conflict: MergeConflict, reason: string): CheckpointCard {
   const { first, second } = conflict;
   const question = 'Which version should be kept?';

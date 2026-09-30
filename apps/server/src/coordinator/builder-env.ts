@@ -4,11 +4,20 @@ import type { Db, Queryable } from '../persistence/db.ts';
 export interface ProjectSettings {
   builderEnv: Record<string, string> | null;
   stableCheckout: boolean;
+  parallel: boolean;
+  slots: number;
 }
 
+const DEFAULT_PIECE_SLOTS = 3;
+
 export async function projectSettings(db: Queryable, runId: string): Promise<ProjectSettings> {
-  const { rows } = await db.query<{ builder_env: unknown; stable_checkout: boolean }>(
-    `SELECT p.builder_env, p.stable_checkout FROM runs r
+  const { rows } = await db.query<{
+    builder_env: unknown;
+    stable_checkout: boolean;
+    parallel_pieces: boolean;
+    piece_slots: number;
+  }>(
+    `SELECT p.builder_env, p.stable_checkout, p.parallel_pieces, p.piece_slots FROM runs r
      JOIN conversation_projects cp ON cp.conversation_id = r.conversation_id
      JOIN projects p ON p.id = cp.project_id
      WHERE r.id = $1
@@ -23,6 +32,8 @@ export async function projectSettings(db: Queryable, runId: string): Promise<Pro
       .catch(null)
       .parse(row?.builder_env ?? null),
     stableCheckout: row?.stable_checkout ?? false,
+    parallel: row?.parallel_pieces ?? false,
+    slots: row?.piece_slots ?? DEFAULT_PIECE_SLOTS,
   };
 }
 
