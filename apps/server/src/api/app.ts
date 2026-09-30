@@ -9,6 +9,7 @@ import { chatSettingsRoutes, type ChatSettingsDeps } from './chat-settings-route
 import { chatWorkspaceRoutes, type ChatWorkspaceDeps } from './chat-workspace-routes.ts';
 import { conversationActionRoutes } from './conversation-action-routes.ts';
 import { homeRoutes } from './home-routes.ts';
+import { mapRoutes } from './map-routes.ts';
 import { mcpRoutes, type McpRouteDeps } from './mcp-routes.ts';
 import { modelCardRoutes } from './model-card-routes.ts';
 import { outcomeRoutes, type OutcomeRouteDeps } from './outcome-routes.ts';
@@ -57,6 +58,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', chatWorkspaceRoutes(options));
   app.use('/api', conversationActionRoutes(options));
   app.use('/api', projectRoutes(options));
+  app.use('/api', mapRoutes(options));
   app.use('/api', agentConfigRoutes(options));
   app.use('/api', mcpRoutes(options));
   app.use('/api', auditRoutes(options));

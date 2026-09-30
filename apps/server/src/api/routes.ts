@@ -1,3 +1,4 @@
+import { SteerError } from '../coordinator/steer.ts';
 import { Router } from 'express';
 import {
   CONVERSATION_SEARCH_MAX_LENGTH,
@@ -153,6 +154,7 @@ export function statusForError(error: unknown): { status: number; message: strin
     return { status: 400, message: error.message };
   }
   if (error instanceof UploadTooLargeError) return { status: 413, message: error.message };
+  if (error instanceof SteerError) return { status: error.status, message: error.message };
   if (error instanceof TerminalLimitError) {
     return { status: 409, message: error.message };
   }

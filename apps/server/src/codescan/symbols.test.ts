@@ -108,4 +108,30 @@ describe('extractSymbols', () => {
     expect(symbols.definitions).toEqual([]);
     expect(symbols.references).toEqual([]);
   });
+
+  it('extracts import specifiers for scripts, Python and Go', async () => {
+    const script = await extractSymbols(
+      'tsx',
+      "import a from './a';\nimport type { B } from '@app/b';\nexport * from '../c.js';\nconst d = await import('./d');\nconst e = require('e');\nfoo('./not-an-import');",
+    );
+    expect(script.imports).toEqual(['./a', '@app/b', '../c.js', './d', 'e']);
+    const python = await extractSymbols(
+      'python',
+      'import os, pkg.mod as m\nfrom . import sibling\nfrom ..core.models import User, Order\nfrom api import *\n',
+    );
+    expect(python.imports).toEqual([
+      'os',
+      'pkg.mod',
+      '.sibling',
+      '..core.models',
+      '..core.models.User',
+      '..core.models.Order',
+      'api',
+    ]);
+    const go = await extractSymbols(
+      'go',
+      'package x\nimport (\n "fmt"\n y "example.com/app/store"\n)\n',
+    );
+    expect(go.imports).toEqual(['fmt', 'example.com/app/store']);
+  });
 });

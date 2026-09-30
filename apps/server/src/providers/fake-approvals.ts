@@ -8,6 +8,8 @@ import type { ProviderOutput, ProviderTurn } from './provider.ts';
 export const FAKE_COMMAND_TRIGGER = '#approve';
 export const FAKE_EDIT_TRIGGER = '#edit';
 export const FAKE_PUSH_TRIGGER = '#push';
+export const FAKE_FORCE_PUSH_TRIGGER = '#leasepush';
+export const FAKE_CURL_TRIGGER = '#curl';
 export const FAKE_COMMAND = 'pnpm test -- groupMessages';
 export const FAKE_EDIT_FILE = 'notes.txt';
 
@@ -18,9 +20,14 @@ const OPTIONS: ApprovalOption[] = [
 ];
 
 export function wantsApproval(prompt: string): boolean {
-  return [FAKE_COMMAND_TRIGGER, FAKE_EDIT_TRIGGER, FAKE_PUSH_TRIGGER].some((trigger) =>
-    prompt.includes(trigger),
-  );
+  const triggers = [
+    FAKE_COMMAND_TRIGGER,
+    FAKE_EDIT_TRIGGER,
+    FAKE_PUSH_TRIGGER,
+    FAKE_FORCE_PUSH_TRIGGER,
+    FAKE_CURL_TRIGGER,
+  ];
+  return triggers.some((trigger) => prompt.includes(trigger));
 }
 
 async function currentText(target: string): Promise<string | null> {
@@ -31,7 +38,11 @@ async function currentText(target: string): Promise<string | null> {
   }
 }
 
-async function fakeRequests(prompt: string, root: string): Promise<ApprovalRequest[]> {
+async function fakeRequests(
+  prompt: string,
+  root: string,
+  edits: boolean,
+): Promise<ApprovalRequest[]> {
   const base = {
     rpcId: null,
     options: OPTIONS,
@@ -50,7 +61,7 @@ async function fakeRequests(prompt: string, root: string): Promise<ApprovalReque
     diffs: [],
   });
   const requests: ApprovalRequest[] = [];
-  if (prompt.includes(FAKE_EDIT_TRIGGER)) {
+  if (edits && prompt.includes(FAKE_EDIT_TRIGGER)) {
     const target = path.join(root, FAKE_EDIT_FILE);
     const oldText = await currentText(target);
     requests.push({
@@ -68,6 +79,12 @@ async function fakeRequests(prompt: string, root: string): Promise<ApprovalReque
   if (prompt.includes(FAKE_COMMAND_TRIGGER)) requests.push(command('fake-run', FAKE_COMMAND));
   if (prompt.includes(FAKE_PUSH_TRIGGER))
     requests.push(command('fake-push', 'git push origin main'));
+  if (prompt.includes(FAKE_CURL_TRIGGER)) {
+    requests.push(command('fake-curl', 'curl -sI https://example.com'));
+  }
+  if (prompt.includes(FAKE_FORCE_PUSH_TRIGGER)) {
+    requests.push(command('fake-force-push', 'git push --force-with-lease origin feature'));
+  }
   return requests;
 }
 
@@ -84,7 +101,7 @@ export async function* fakeApprovalTurn(turn: ProviderTurn): AsyncGenerator<Prov
     return;
   }
   const outcomes: string[] = [];
-  for (const request of await fakeRequests(turn.prompt, root)) {
+  for (const request of await fakeRequests(turn.prompt, root, turn.mode === 'do')) {
     yield { kind: 'step_started', name: request.title, tool: true };
     const answer = await turn.approvals.review(request, turn.signal);
     yield { kind: 'step_finished', name: request.title };

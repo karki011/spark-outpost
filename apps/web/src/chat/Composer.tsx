@@ -32,6 +32,8 @@ import type { AttachmentsState } from './attachments/use-attachments.ts';
 import { ContextRing } from './composer/ContextRing.tsx';
 import { ModelPicker } from './composer/ModelPicker.tsx';
 import { SparkOffChip } from '../spark/SparkOffChip.tsx';
+import { SteerTarget } from '../crew/SteerTarget.tsx';
+import type { SteerControl } from '../crew/use-steer.ts';
 import {
   blockedMessage,
   clientCommand,
@@ -78,6 +80,7 @@ interface ComposerProps {
   ) => Promise<void>;
   quotes?: QuotesState;
   onStop: () => void;
+  steer?: SteerControl | null;
   onAudit?: () => void;
   onStartFresh?: () => void;
   agentCommands?: readonly AgentCommand[];
@@ -113,6 +116,7 @@ export function Composer({
   attachments,
   onSend,
   onStop,
+  steer = null,
   onAudit,
   onStartFresh,
   agentCommands = NO_COMMANDS,
@@ -238,13 +242,14 @@ export function Composer({
     if (input) focusAtEnd(input);
   }, [focusRequest]);
 
+  const steering = busy ? steer : null;
   const hasText = draft.trim().length > 0;
   const quoteItems = quotes?.items ?? [];
   const sendName = hasText ? 'Send' : sendLabel(quoteItems.map((quote) => quote.kind));
   const canSend =
     (hasText || attachments.items.length > 0 || quoteItems.length > 0) &&
     !sending &&
-    !busy &&
+    (!busy || (steering !== null && hasText)) &&
     !attachments.uploading &&
     !attachments.failed;
 
@@ -268,6 +273,11 @@ export function Composer({
   const submit = async () => {
     if (!canSend) return;
     const draftText = draft;
+    if (steering) {
+      setDraft('');
+      await steering.send(draftText).catch(() => setDraft(draftText));
+      return;
+    }
     const typed = outgoing();
     if (typed === null) return;
     const { content, annotations } = quotes?.compose(typed) ?? { content: typed, annotations: [] };
@@ -321,6 +331,11 @@ export function Composer({
         <p className="composer-notice" role="status">
           {attachments.notice}
         </p>
+        {steering?.status && (
+          <p className="composer-notice" role="status">
+            {steering.status}
+          </p>
+        )}
         {typedNote && !slash.open && (
           <p className="composer-notice" role="status">
             {typedNote}
@@ -380,9 +395,11 @@ export function Composer({
           rows={Math.min(MAX_ROWS, Math.max(1, draft.split('\n').length))}
           maxLength={MESSAGE_MAX_LENGTH}
           placeholder={
-            hasRepos
-              ? 'Ask anything, @ to add a file, / for commands'
-              : 'Ask anything, / for commands'
+            steering
+              ? 'Steer the pieces while they run'
+              : hasRepos
+                ? 'Ask anything, @ to add a file, / for commands'
+                : 'Ask anything, / for commands'
           }
           {...(slash.open ? slash.inputProps : mention.inputProps)}
           onChange={(event) => {
@@ -430,6 +447,9 @@ export function Composer({
             orchestration={orchestration}
             {...(onAudit ? { onAudit } : {})}
           />
+          {steering && (
+            <SteerTarget control={steering} ready={canSend} onSend={() => void submit()} />
+          )}
           {busy ? (
             <button type="button" className="send busy" aria-label="Stop" onClick={onStop}>
               <svg className="stop-ring" viewBox="0 0 32 32" aria-hidden="true">

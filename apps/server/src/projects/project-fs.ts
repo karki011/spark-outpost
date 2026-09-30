@@ -17,7 +17,7 @@ export interface ProjectText extends ResolvedPath {
   content: string;
 }
 
-async function readIgnore(root: string): Promise<string[]> {
+export async function readIgnore(root: string): Promise<string[]> {
   try {
     return parseSparkIgnore(await readFile(path.join(root, '.sparkignore'), 'utf8'));
   } catch {

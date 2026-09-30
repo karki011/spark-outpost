@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { useQueries } from '@tanstack/react-query';
 import type {
@@ -15,6 +15,7 @@ import { UserBlob } from '../brand/UserBlob.tsx';
 import { readTheme, themes } from '../theme/theme.ts';
 import { burstAt } from '../ui/sparks.ts';
 import { reveal } from '../ui/transitions.tsx';
+import { useGitItem, useToolItems, type SummaryItem } from './done-tools.tsx';
 import './done.css';
 
 interface DoneStepProps {
@@ -22,13 +23,6 @@ interface DoneStepProps {
   providers: ProviderSetup[];
   defaultProvider: ProviderId | null;
   level: InvolvementLevel;
-}
-
-interface SummaryItem {
-  key: string;
-  icon: ReactNode;
-  title: ReactNode;
-  detail: string;
 }
 
 function providerItem(
@@ -74,6 +68,8 @@ export function DoneStep({ displayName, providers, defaultProvider, level }: Don
       staleTime: CAPABILITIES_STALE_MS,
     })),
   });
+  const toolItems = useToolItems();
+  const gitItem = useGitItem();
   const firstName = displayName.trim().split(/\s+/)[0] ?? '';
   const themeId = readTheme();
   const theme = themes.find((option) => option.id === themeId) ?? themes[0];
@@ -121,12 +117,8 @@ export function DoneStep({ displayName, providers, defaultProvider, level }: Don
       );
       return item ? [item] : [];
     }),
-    {
-      key: 'tools',
-      icon: <span className="tools-dot" aria-hidden="true" />,
-      title: <b>Tools coming soon</b>,
-      detail: 'Jira, GitHub, Linear, and Slack will show up in Settings.',
-    },
+    ...(gitItem ? [gitItem] : []),
+    ...toolItems,
   ];
 
   return (

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Approval, CrewMember, Message } from '@spark-outpost/contracts';
-import { handOffAt, memberTexts, shownApprovals, turnApprovals } from './crew-items.ts';
+import {
+  crewItems,
+  groupParallel,
+  handOffAt,
+  memberTexts,
+  shownApprovals,
+  turnApprovals,
+} from './crew-items.ts';
+import { parallelTitle } from './ParallelGroup.tsx';
 
 const approval = (
   id: string,
@@ -80,5 +88,68 @@ describe('memberTexts', () => {
     const messages = [reply('root', 'Draft', 2), reply('root', 'Answer', 3)];
     expect(handOffAt(crew.slice(0, 1), 'root')).toBeNull();
     expect(memberTexts(messages, 'root', null).get('root')).toBe('Answer');
+  });
+});
+
+const crewMember = (runId: string, placement: CrewMember['placement'] = undefined) =>
+  ({ runId, placement, startedAt: null }) as CrewMember;
+
+describe('parallel piece Builders', () => {
+  it('folds the shared-tree and worktree Builders into one group where the first one starts', () => {
+    const items = groupParallel(
+      crewItems(
+        [
+          crewMember('coordinator'),
+          crewMember('bolt', 'shared'),
+          crewMember('rivet', 'shared'),
+          crewMember('tack', 'shared'),
+          crewMember('integrator'),
+        ],
+        [],
+      ),
+    );
+    expect(items.map((item) => item.kind)).toEqual(['agent', 'group', 'agent']);
+    const group = items[1];
+    expect(group?.kind === 'group' && group.members.map((entry) => entry.member.runId)).toEqual([
+      'bolt',
+      'rivet',
+      'tack',
+    ]);
+  });
+
+  it('keeps approvals that arrived between parallel Builders after the group', () => {
+    const later = { ...crewMember('tack', 'shared'), startedAt: '2026-09-27T00:00:09Z' };
+    const check = approval('c1', 'bolt');
+    const items = groupParallel(
+      crewItems([crewMember('bolt', 'shared'), crewMember('rivet', 'shared'), later], [], [check]),
+    );
+    expect(items.map((item) => item.kind)).toEqual(['group', 'approval']);
+    const group = items[0];
+    expect(group?.kind === 'group' && group.members.map((entry) => entry.member.runId)).toEqual([
+      'bolt',
+      'rivet',
+      'tack',
+    ]);
+  });
+
+  it('leaves pieces built in order and a lone parallel Builder as plain blocks', () => {
+    const items = groupParallel(
+      crewItems(
+        [crewMember('a', 'in_order'), crewMember('b', 'in_order'), crewMember('c', 'worktree')],
+        [],
+      ),
+    );
+    expect(items.map((item) => item.kind)).toEqual(['agent', 'agent', 'agent']);
+  });
+
+  it('names each Builder once in the group title', () => {
+    const agent = (name: string, state: 'working' | 'done') =>
+      ({ id: name + state, name, state }) as Parameters<typeof parallelTitle>[0][number];
+    expect(
+      parallelTitle([agent('Bolt', 'done'), agent('Rivet', 'working'), agent('Bolt', 'done')]),
+    ).toBe('Working in parallel: Bolt and Rivet');
+    expect(parallelTitle([agent('Bolt', 'done'), agent('Rivet', 'done')])).toBe(
+      'Worked in parallel: Bolt and Rivet',
+    );
   });
 });

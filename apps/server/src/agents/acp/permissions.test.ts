@@ -24,7 +24,7 @@ describe('conversation permission policy', () => {
       true,
     );
     expect(decision.note).toBe(
-      'Declined: Write notes.txt (Ask mode only reads files; switch to Do to allow changes)',
+      "Declined: Write notes.txt (Ask mode doesn't change files — use Make the change)",
     );
   });
 

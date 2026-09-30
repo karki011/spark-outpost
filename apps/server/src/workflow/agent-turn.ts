@@ -18,8 +18,9 @@ import { projectSecretValues } from '../audit/secret-values.ts';
 import { APPROVAL_TIMEOUT_MESSAGE, type EditObserver } from './approval-gate.ts';
 import type { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
-import { prepareDoRun } from './do-run.ts';
+import { prepareAskRun, prepareDoRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
+import { watchUrgentNotes } from './steer-requests.ts';
 import { runEvents } from './run-events.ts';
 import type { RunInput } from './run-input.ts';
 import {
@@ -44,6 +45,7 @@ import { commandAllowlistFromRules } from '../agent-config/allow-rules.ts';
 import { conversationProjectIds } from '../agent-config/store.ts';
 import { loadUserMcp } from '../mcp/launch.ts';
 import { withMoveNote } from './project-move.ts';
+import { autoInWorktree } from '../orchestration/checkpoint-policy.ts';
 
 export function writesCode(role: string | null | undefined): boolean {
   return role === 'builder' || role === 'integrator';
@@ -215,6 +217,11 @@ export async function runAgentTurn(
   });
   const modeWatch =
     input.mode === 'do' ? watchModeRequests(deps.db, lease.runId, deps.cancelPollMs ?? 250) : null;
+  const steerWatch = input.piece?.coordinated
+    ? watchUrgentNotes(deps.db, lease.runId, deps.cancelPollMs ?? 250, () =>
+        control.stop('cancelled'),
+      )
+    : null;
   const redaction = createRedactionFilter(await projectSecretValues(input.projectRoots));
   const sayText = (delta: string) => say(titles ? titles.push(delta) : delta);
   try {
@@ -232,29 +239,36 @@ export async function runAgentTurn(
       input.projectRoots,
     ).catch(() => []);
     const trustedCommands = commandAllowlistFromRules(repo.flatMap((root) => root.allowRules));
+    const gateOptions = {
+      db: deps.db,
+      runId: lease.runId,
+      provider: input.provider,
+      mode: input.agentMode,
+      modes: await knownModes(deps.db, input),
+      extraAllowlist: () => [...trustedCommands, ...testRunnerAllowlist(input.level)],
+      append,
+      waiters: deps.approvalWaiters,
+      pollMs: deps.approvalPollMs,
+      timeoutMs: deps.approvalTimeoutMs,
+      onTimeout: () => control.stop('approval_timeout'),
+    };
+    const asking = input.mode === 'ask' && input.role === null && input.projectRoots.length > 0;
     const approvals =
       input.mode === 'do'
         ? await prepareDoRun({
-            db: deps.db,
-            runId: lease.runId,
-            provider: input.provider,
-            mode: input.agentMode,
-            modes: await knownModes(deps.db, input),
-            extraAllowlist: () => [...trustedCommands, ...testRunnerAllowlist(input.level)],
+            ...gateOptions,
             builder: writesCode(input.role),
+            worktreeAuto: autoInWorktree(input.level, input.chatWorktree === true),
             projectRoots: input.projectRoots,
-            append,
-            waiters: deps.approvalWaiters,
-            pollMs: deps.approvalPollMs,
-            timeoutMs: deps.approvalTimeoutMs,
-            onTimeout: () => control.stop('approval_timeout'),
             backupAlsoFor: options.backupAlsoFor,
             copyOf: input.copyOf,
             observe: options.observeEdits,
             plans: plans.hooks,
             piece: input.piece ?? undefined,
           })
-        : undefined;
+        : asking
+          ? prepareAskRun(gateOptions)
+          : undefined;
     turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
     const session = turnSession;
     const userMcp = await loadUserMcp(
@@ -281,6 +295,7 @@ export async function runAgentTurn(
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
+      ...(steerWatch ? { steering: steerWatch } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(preamble ? { preamble } : {}),
       ...(session ? { session: session.target } : {}),
@@ -347,6 +362,7 @@ export async function runAgentTurn(
     return ended(result('failed', failureMessage(error, reason)));
   } finally {
     modeWatch?.dispose();
+    steerWatch?.dispose();
     audit.discard();
   }
 }

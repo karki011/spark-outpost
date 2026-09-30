@@ -44,7 +44,7 @@ import type { FlowAction } from './transitions.ts';
 
 type BuilderSpawn = Extract<FlowAction, { type: 'spawn' }>;
 
-const MAIN_COPY = 'your version';
+export const MAIN_COPY = 'your version';
 
 export async function repoBusy(db: Db, runId: string, root: string): Promise<boolean> {
   const { rows } = await db.query<{ busy: boolean }>(
@@ -83,13 +83,13 @@ export function needsCopyFor(facts: CopyFacts): boolean {
   );
 }
 
-interface Copies {
+export interface CopyBase {
   root: string;
   top: string;
   base: string;
 }
 
-async function prepareCopies(s: Session): Promise<Copies> {
+async function prepareCopies(s: Session): Promise<CopyBase> {
   const root = s.input.projectRoots[0]!;
   await ensureParentSnapshot(s);
   await excludeSparkDir(root);
@@ -97,7 +97,7 @@ async function prepareCopies(s: Session): Promise<Copies> {
   return { root, top, base };
 }
 
-function copyFor(s: Session, copies: Copies): NonNullable<Place['copy']> {
+export function copyFor(s: Session, copies: CopyBase): NonNullable<Place['copy']> {
   return (name) => {
     const branch = branchName(s.taskId, name, s.deps.branchPrefix);
     return {
@@ -137,32 +137,36 @@ async function textAt(root: string, commit: string, file: string): Promise<strin
   return content.toString('utf8');
 }
 
-async function describeConflict(
-  record: WorktreeRecord & { resultCommit: string },
-  name: string,
+export interface ConflictSides {
+  first: { name: string; runId: string | null };
+  second: { name: string; runId: string; result: string };
+}
+
+export async function describeConflict(
+  root: string,
+  sides: ConflictSides,
   attempt: MergeAttempt,
   base: string,
 ): Promise<MergeConflict> {
-  const root = record.repoRoot;
+  const { first, second } = sides;
   const files = await Promise.all(
     attempt.conflicts.map(async (file) => ({
       path: file,
       base: await textAt(root, base, file),
       first: {
-        name: MAIN_COPY,
-        runId: null,
+        ...first,
         diff: await fileDiff(root, base, attempt.current, file),
         text: await textAt(root, attempt.current, file),
       },
       second: {
-        name,
-        runId: record.runId,
-        diff: await fileDiff(root, base, record.resultCommit, file),
-        text: await textAt(root, record.resultCommit, file),
+        name: second.name,
+        runId: second.runId,
+        diff: await fileDiff(root, base, second.result, file),
+        text: await textAt(root, second.result, file),
       },
     })),
   );
-  return { first: MAIN_COPY, second: name, files };
+  return { first: first.name, second: second.name, files };
 }
 
 function conflictLine(name: string, files: readonly string[]): string {
@@ -189,7 +193,15 @@ export async function mergeCopy(s: Session, name: string): Promise<'merged' | 's
   await pinSnapshot(root, record.runId, attempt.current);
   await saveSnapshot(s.deps.db, record.runId, { kind: 'git', ref: attempt.current, root });
   if (attempt.conflicts.length > 0) {
-    const conflict = await describeConflict({ ...record, resultCommit }, name, attempt, base);
+    const conflict = await describeConflict(
+      root,
+      {
+        first: { name: MAIN_COPY, runId: null },
+        second: { name, runId: record.runId, result: resultCommit },
+      },
+      attempt,
+      base,
+    );
     const answer = await askCard(
       s,
       mergeConflictCard(conflict, conflictLine(name, attempt.conflicts)),
@@ -229,7 +241,7 @@ export async function buildInCopy(s: Session, action: BuilderSpawn): Promise<Mem
   };
 }
 
-async function removeCopy(db: Db, record: WorktreeRecord): Promise<void> {
+export async function removeCopy(db: Db, record: WorktreeRecord): Promise<void> {
   await settleDepsPrep(record.runId);
   await removeWorktree(record.repoRoot, worktreePath(record.repoRoot, record.runId), record.branch);
   await markRemoved(db, record.runId);

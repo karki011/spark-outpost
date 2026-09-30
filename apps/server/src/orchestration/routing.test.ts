@@ -61,6 +61,19 @@ describe('rule routes', () => {
     expect(pick.effort).toBe('high');
   });
 
+  it('sends the Critic to a provider that built no piece, else the smallest share', () => {
+    const zai = { ...candidates[0]!, provider: 'zai' as const, name: 'Z.ai' };
+    const three = { ...context('auto'), candidates: [...candidates, zai] };
+    const pieces = [
+      { provider: 'claude', files: 3 },
+      { provider: 'codex', files: 1 },
+    ];
+    expect(criticProvider(three, pieces)).toBe('zai');
+    expect(criticProvider(context('auto'), pieces)).toBe('codex');
+    expect(criticProvider(context('auto'), [{ provider: 'codex', files: 4 }])).toBe('claude');
+    expect(criticProvider(context('auto'), [{ provider: 'claude', files: 2 }])).toBe('codex');
+  });
+
   it('escalates the previous pick one tier up, then raises effort', () => {
     const haiku = { provider: 'claude', model: 'haiku', modelLabel: 'Haiku 4.5', effort: 'low' };
     const first: MemberRoute = { pick: haiku, routedBy: 'rules', rule: 'x', autoWouldUse: null };

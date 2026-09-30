@@ -28,6 +28,7 @@ import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock, AgentHead } from './AgentBlock.tsx';
 import {
   crewItems,
+  groupParallel,
   handOffAt,
   lastAgentIndex,
   memberTexts,
@@ -36,6 +37,8 @@ import {
   type CrewItem,
 } from './crew-items.ts';
 import { DispatchLine } from './DispatchLine.tsx';
+import { ParallelGroup } from './ParallelGroup.tsx';
+import { pieceLabels } from '../../crew/piece-labels.ts';
 
 interface CrewTurnProps {
   run: Run;
@@ -67,7 +70,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
     approvals,
   );
   const checkApprovals = approvals.filter(isCheckApproval);
-  const items = crewItems(orchestration.crew, checkpoints, checkApprovals);
+  const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals));
   const last = lastAgentIndex(items);
   const finished = isTerminalRunStatus(orchestration.status);
   const changeTask = taskForRuns(detail.tasks, crewRunIds);
@@ -138,6 +141,19 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
       {items.map((item, index) => {
         if (item.kind === 'checkpoint') {
           return checkpointCard(item.approval);
+        }
+        if (item.kind === 'group') {
+          const byRun = new Map(item.members.map((entry) => [entry.member.runId, entry]));
+          return (
+            <ParallelGroup
+              key={item.members[0]!.member.runId}
+              agents={item.members.map((entry) =>
+                runAgent(entry.member, orchestration, detail.activity[entry.member.runId] ?? []),
+              )}
+              labels={pieceLabels(orchestration)}
+              renderMember={(agent) => agentBlock(byRun.get(agent.id)!, false)}
+            />
+          );
         }
         if (item.kind === 'approval') {
           return (

@@ -12,6 +12,7 @@ export const checkpointKindSchema = z.enum([
   'stuck',
   'verify',
   'ownership',
+  'pieces',
 ]);
 export type CheckpointKind = z.infer<typeof checkpointKindSchema>;
 
@@ -40,6 +41,7 @@ export const CHECKPOINT_OPTION = {
   finishUnverified: 'finish_unverified',
   keepInPiece: 'keep_in_piece',
   revertFile: 'revert_file',
+  buildInOrder: 'build_in_order',
   useDefaults: 'defaults',
 } as const;
 

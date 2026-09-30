@@ -2,7 +2,7 @@ import { Readable, Writable } from 'node:stream';
 import * as acp from '@agentclientprotocol/sdk';
 import { currentRequest, planReplies, planTurn } from './fake-acp-plans.ts';
 import { roleFor } from './fake-acp-roles.ts';
-import { coordinatorRoleFor } from './fake-acp-coordinator.ts';
+import { coordinatorRoleFor, steerParams, steerRequest } from './fake-acp-coordinator.ts';
 import { codexTurn } from './fake-codex-do.ts';
 import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
@@ -350,17 +350,14 @@ async function turn(
   }
   const codexed = await codexTurn(roleTurn, config.mode ?? '');
   if (codexed) return codexed;
-  if (text.includes('#write')) {
-    await update({
-      sessionUpdate: 'tool_call',
-      toolCallId: 't1',
-      title: 'Write notes.txt',
-      kind: 'edit',
-      status: 'pending',
-    });
+  if (text.includes('#write') || text.includes('#command')) {
+    const tool = text.includes('#command')
+      ? { title: 'curl -sI https://example.com', kind: 'execute' as const }
+      : { title: 'Write notes.txt', kind: 'edit' as const };
+    await update({ sessionUpdate: 'tool_call', toolCallId: 't1', ...tool, status: 'pending' });
     const answer = await client.request(acp.methods.client.session.requestPermission, {
       sessionId,
-      toolCall: { toolCallId: 't1', title: 'Write notes.txt', kind: 'edit', status: 'pending' },
+      toolCall: { toolCallId: 't1', ...tool, status: 'pending' },
       options: [
         { optionId: 'yes', name: 'Yes', kind: 'allow_once' },
         { optionId: 'no', name: 'No', kind: 'reject_once' },
@@ -408,8 +405,10 @@ acp
           ? { mcpCapabilities: JSON.parse(process.env.FAKE_ACP_MCP_CAPABILITIES) as object }
           : {}),
       },
+      ...(process.env.FAKE_ACP_STEERING ? { _meta: { steering: { supported: true } } } : {}),
     };
   })
+  .onRequest('_session/steering', steerParams, steerRequest)
   .onRequest(acp.methods.agent.session.new, (ctx) => {
     sessionRequest = { meta: ctx.params._meta ?? null, mcpServers: ctx.params.mcpServers };
     sessionCwd = ctx.params.cwd;

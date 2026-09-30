@@ -46,6 +46,7 @@ export interface AgentDefinition {
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
     planning?: boolean,
+    commands?: boolean,
   ) => Record<string, unknown>;
   doSessionMeta?: (
     extraRoots: readonly string[],
@@ -71,6 +72,7 @@ const CLAUDE_DO_TOOLS = [
   'ExitPlanMode',
 ] as const;
 const CLAUDE_READ_TOOLS = ['Read', 'Glob', 'Grep'];
+const CLAUDE_COMMAND_TOOLS = ['Bash'];
 const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'];
 export const CLAUDE_DO_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
 const CLAUDE_DO_MODE = 'default';
@@ -84,11 +86,15 @@ export const BUILDER_GIT_DENY_RULES = [
   'Bash(git branch --delete:*)',
 ];
 
+const SOLO_BUILDER_DENY_RULES = BUILDER_PUBLISH_DENY_RULES.filter(
+  (rule) => rule !== 'Bash(git push:*)',
+);
+
 function builderDeny(builder: boolean, coordinated: boolean): string[] {
   if (!builder) return [];
   return coordinated
     ? [...BUILDER_PUBLISH_DENY_RULES, ...BUILDER_GIT_DENY_RULES]
-    : BUILDER_PUBLISH_DENY_RULES;
+    : SOLO_BUILDER_DENY_RULES;
 }
 
 export function secretReadRules(extraRoots: readonly string[]): string[] {
@@ -199,11 +205,16 @@ const claudeSessions = {
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
     planning = false,
+    commands = false,
   ) =>
     claudeSessionMeta(
-      planning ? [...CLAUDE_READ_TOOLS, ...CLAUDE_PLAN_TOOLS] : CLAUDE_READ_TOOLS,
+      [
+        ...CLAUDE_READ_TOOLS,
+        ...(commands ? CLAUDE_COMMAND_TOOLS : []),
+        ...(planning ? CLAUDE_PLAN_TOOLS : []),
+      ],
       extraRoots,
-      [],
+      commands ? CLAUDE_COMMAND_TOOLS : [],
       repo ?? null,
     ),
   doSessionMeta: (

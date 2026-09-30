@@ -285,13 +285,12 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
   let session: Session | null = null;
   try {
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
-    const placed = await placeChatOrStop(deps, input, append);
+    const placed = await placeChatOrStop(deps, input, append, false);
     if (!placed) return;
     input = placed.input;
     const mode = input.mode ?? 'chat';
-    const root = input.projectRoots[0];
-    const repoRoot = placed.repoRoot ?? root;
-    const doing = mode === 'do' && root !== undefined;
+    const repoRoot = placed.repoRoot ?? input.projectRoots[0];
+    const doing = mode === 'do' && input.projectRoots[0] !== undefined;
     const prefs = await sparkPreferences(deps.db, input.workspaceId);
     const solo = !prefs.sparkEnabled;
     if (solo && !doing) {
@@ -313,7 +312,14 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       (error: unknown) => console.error('Could not observe a plan agreement', error),
     );
     const answers = decisions.start === 'answer';
-    const git = doing && (await isGitWorkTree(root));
+    if (doing && !readOnlyStart(decisions.start)) {
+      const created = await placeChatOrStop(deps, input, append, true);
+      if (!created) return;
+      input = created.input;
+    }
+    const root = input.projectRoots[0];
+    const inProject = doing && root !== undefined;
+    const git = inProject && (await isGitWorkTree(root));
     const limits = baseLimits(deps, input.provider, prefs.savedSpendCapUsd);
     await insertOrchestration(deps.db, {
       runId: lease.runId,
@@ -366,7 +372,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       liveCost: new Map(),
       checkpoints: 0,
       git,
-      checks: doing && !solo ? await projectChecks(deps.db, lease.runId, root) : null,
+      checks: inProject && !solo ? await projectChecks(deps.db, lease.runId, root) : null,
       checkRounds: 0,
       checkBodies: [],
       checkLines: [],

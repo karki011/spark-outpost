@@ -8,10 +8,13 @@ import { runMember } from '../orchestration/members.ts';
 import { seatRoute } from '../orchestration/member-routes.ts';
 import type { Seat, Session } from '../orchestration/session.ts';
 import type { Assessment } from './assess.ts';
+import { assignPieces } from './assign.ts';
 import { likelyFiles } from './engage.ts';
+import { assignFacts } from './provider-state.ts';
 import { isGlob, normalizeOwned, type OwnedSet } from './owned.ts';
 import { piecesHash, validatePieces, type CheckedPieces } from './pieces-validate.ts';
 import { budgetFor, lineCounter, projectFiles } from './project-facts.ts';
+import { chooseListPlace, wantsListCard } from './place-list.ts';
 import { coordinatorPrompt, piecesBlockText, repairPrompt } from './prompts.ts';
 
 const LIKELY_SHOWN = 15;
@@ -73,21 +76,29 @@ async function checkBlock(
   });
 }
 
+function withRevision(prompt: string, note: string | null): string {
+  return note ? `${prompt}\n\n## The user asked for changes to the split\n${note}` : prompt;
+}
+
 async function askForPieces(
   s: Session,
   assessment: Assessment,
+  note: string | null,
 ): Promise<{ ok: true; value: CheckedPieces } | { ok: false; reason: string }> {
   const root = s.input.projectRoots[0]!;
   const files = await projectFiles(root);
   const budgetTokens = budgetFor(seatRoute(s, spawn).route.pick);
   const likely = likelyFiles(s.scanReport?.candidates ?? []).slice(0, LIKELY_SHOWN);
-  let prompt = coordinatorPrompt({
-    request: s.input.userRequest,
-    agreedPlan: await agreedPlanText(s),
-    likelyFiles: likely.map((file) => ({ path: file.path, lines: file.lines })),
-    checks: checkCommands(s),
-    budgetTokens,
-  });
+  let prompt = withRevision(
+    coordinatorPrompt({
+      request: s.input.userRequest,
+      agreedPlan: await agreedPlanText(s),
+      likelyFiles: likely.map((file) => ({ path: file.path, lines: file.lines })),
+      checks: checkCommands(s),
+      budgetTokens,
+    }),
+    note,
+  );
   let errors: string[] = [];
   for (let attempt = 0; attempt < 2; attempt += 1) {
     if (attempt > 0) prompt = repairPrompt(prompt, errors);
@@ -119,27 +130,37 @@ async function builderNames(s: Session, keys: readonly string[]): Promise<Map<st
   return names;
 }
 
-export async function writePieceList(s: Session, assessment: Assessment): Promise<PieceListResult> {
-  const asked = await askForPieces(s, assessment);
+export async function writePieceList(
+  s: Session,
+  assessment: Assessment,
+  note: string | null = null,
+): Promise<PieceListResult> {
+  const asked = await askForPieces(s, assessment, note);
   if (!asked.ok) return asked;
   const { pieces, integration } = asked.value;
-  const pick = seatRoute(s, { ...spawn, role: 'builder' }).route.pick;
+  const place = await chooseListPlace(s, pieces);
+  const assigned = new Map(
+    assignPieces(pieces, await assignFacts(s, place.placement !== 'in_order')).map((entry) => [
+      entry.key,
+      entry.pick,
+    ]),
+  );
   const list = await insertPieceList(s.deps.db, {
     taskId: s.taskId!,
     orchestrationRunId: s.lease.runId,
     planDocumentId: assessment.plan?.id ?? null,
     planVersion: assessment.plan?.version ?? null,
     piecesHash: piecesHash(pieces),
-    placement: 'in_order',
-    placementReason: 'pieces run in order, one Builder at a time',
+    placement: place.placement,
+    placementReason: place.reason,
     integration,
-    approvedBy: 'level',
+    approvedBy: wantsListCard(s, place.placement, pieces.length) ? null : 'level',
     pieces: pieces.map((piece) => ({
       ...piece,
       owns: [...piece.owned.paths, ...piece.owned.globs],
-      placement: piece.research ? 'read_only' : 'in_order',
-      provider: pick.provider,
-      model: pick.model,
+      placement: piece.research ? 'read_only' : place.placement,
+      provider: assigned.get(piece.key)!.provider,
+      model: assigned.get(piece.key)!.model,
     })),
   });
   return {

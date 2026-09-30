@@ -42,4 +42,5 @@ export * from './ship.ts';
 export * from './tickets.ts';
 export * from './ticket-inbox.ts';
 export * from './reset.ts';
+export * from './steer.ts';
 export * from './map.ts';

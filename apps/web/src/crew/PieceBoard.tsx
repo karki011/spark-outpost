@@ -17,7 +17,9 @@ function money(usd: number | null): string | null {
 }
 
 function PieceRow({ row }: { row: PieceBoardRow }) {
-  const details = [row.builder, row.placement, row.check, money(row.costUsd)].filter(Boolean);
+  const details = [row.builder, row.placement, row.check, row.notes, money(row.costUsd)].filter(
+    Boolean,
+  );
   return (
     <li className={`piece-row ${row.tone}${row.folded ? ' folded' : ''}`}>
       <span className="piece-key">{row.key}</span>
@@ -37,7 +39,7 @@ export function PieceBoard({ list }: { list: PieceList }) {
     <section className="piece-board" aria-label="Pieces">
       <p className="piece-board-head">
         {rows.length} {rows.length === 1 ? 'piece' : 'pieces'}, {PLACEMENTS[list.placement]} ·{' '}
-        {landed} landed
+        {list.status === 'proposed' ? 'waiting for your go-ahead' : `${landed} landed`}
       </p>
       <ol className="piece-rows">
         {rows.map((row) => (

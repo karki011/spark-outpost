@@ -47,7 +47,7 @@ function ghCliHowTo(ghCli: GitHubConnectionStatus['ghCli']): ReactNode {
   );
 }
 
-function activeLine(status: GitHubConnectionStatus): string {
+export function activeLine(status: GitHubConnectionStatus): string {
   if (status.active === 'gh_cli') {
     return `Connected through the gh CLI as ${status.ghCli.login ?? 'you'}`;
   }

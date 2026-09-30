@@ -15,6 +15,10 @@ export interface DoWorkspace {
   mode: () => string | null;
 }
 
+export function runsCommand(params: acp.RequestPermissionRequest): boolean {
+  return params.toolCall.kind === 'execute';
+}
+
 export async function reviewPermission(
   params: acp.RequestPermissionRequest,
   requestId: string | number | null | undefined,

@@ -83,6 +83,7 @@ interface PieceRow {
   cost_usd: string | null;
   landed_at: Date | null;
   note: string | null;
+  notes_queued: number;
 }
 
 function toPiece(row: PieceRow): TaskPiece {
@@ -114,6 +115,7 @@ function toPiece(row: PieceRow): TaskPiece {
     costUsd: row.cost_usd === null ? null : Number(row.cost_usd),
     landedAt: row.landed_at?.toISOString() ?? null,
     note: row.note,
+    notesQueued: row.notes_queued,
   };
 }
 
@@ -133,9 +135,14 @@ function toList(row: ListRow, pieces: readonly PieceRow[]): PieceList {
   });
 }
 
-const PIECE_COLUMNS = `p.*, b.route->>'name' AS builder_name,
+const PIECE_COLUMNS = `p.*, COALESCE(b.route->>'name',
+    (SELECT r.route->>'name' FROM runs r
+     WHERE r.parent_run_id = l.orchestration_run_id AND r.route->>'pieceKey' = p.key
+     ORDER BY r.created_at DESC LIMIT 1)) AS builder_name,
   (SELECT SUM(r.cost_usd) FROM runs r
-   WHERE r.parent_run_id = l.orchestration_run_id AND r.route->>'pieceKey' = p.key) AS cost_usd`;
+   WHERE r.parent_run_id = l.orchestration_run_id AND r.route->>'pieceKey' = p.key) AS cost_usd,
+  (SELECT COUNT(*)::int FROM piece_notes n
+   WHERE n.piece_id = p.id AND n.delivered_at IS NULL) AS notes_queued`;
 
 async function piecesOf(db: Queryable, listIds: readonly string[]): Promise<PieceRow[]> {
   if (listIds.length === 0) return [];
@@ -301,4 +308,32 @@ export async function failRunningPieces(db: Queryable, note: string): Promise<nu
     [note],
   );
   return rowCount ?? 0;
+}
+
+export interface ListDecision {
+  status: 'approved' | 'rejected';
+  approvedBy?: 'user' | 'level';
+  inOrder?: string;
+}
+
+export async function decidePieceList(
+  db: Db,
+  listId: string,
+  decision: ListDecision,
+): Promise<void> {
+  await withTransaction(db, async (client) => {
+    await client.query(
+      `UPDATE piece_lists SET status = $2, approved_by = $3,
+         placement = CASE WHEN $4::text IS NULL THEN placement ELSE 'in_order' END,
+         placement_reason = COALESCE($4, placement_reason)
+       WHERE id = $1 AND status = 'proposed'`,
+      [listId, decision.status, decision.approvedBy ?? null, decision.inOrder ?? null],
+    );
+    if (decision.inOrder === undefined) return;
+    await client.query(
+      `UPDATE task_pieces SET placement = 'in_order'
+       WHERE piece_list_id = $1 AND placement <> 'read_only'`,
+      [listId],
+    );
+  });
 }
