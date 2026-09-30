@@ -73,7 +73,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', homeRoutes(options));
   app.use('/api', outcomeRoutes(options));
   app.use('/api', analyticsRoutes(options));
-  app.use('/api', terminalRoutes(options.terminals));
+  app.use('/api', terminalRoutes(options));
   app.use('/api', resetRoutes({ ...options, stopTerminals: () => options.terminals.killAll() }));
   if (options.webRoot) app.use(webApp(options.webRoot));
   app.use((_req, res) => {

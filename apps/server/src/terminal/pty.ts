@@ -13,6 +13,7 @@ export interface PtyProcess {
 export interface PtyOptions {
   cols: number;
   rows: number;
+  cwd?: string;
 }
 
 export type SpawnPty = (options: PtyOptions) => PtyProcess;
@@ -22,12 +23,12 @@ export function shellEnvironment(env: NodeJS.ProcessEnv): Record<string, string>
 }
 
 export function loginShellSpawner(shell = process.env.SHELL || '/bin/zsh'): SpawnPty {
-  return ({ cols, rows }) => {
+  return ({ cols, rows, cwd }) => {
     const pty = spawnNodePty(shell, ['-l'], {
       name: 'xterm-256color',
       cols,
       rows,
-      cwd: os.homedir(),
+      cwd: cwd ?? os.homedir(),
       env: shellEnvironment(process.env),
     });
     return {

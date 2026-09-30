@@ -4,28 +4,28 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal } from '@xterm/xterm';
 import {
   terminalServerMessageSchema,
-  type CreateTerminalResponse,
-  type ProviderId,
   type TerminalClientMessage,
   type TerminalEndReason,
   type TerminalHint,
-  type TerminalStep,
 } from '@spark-outpost/contracts';
-import { createTerminalSession, deleteTerminalSession, streamUrl } from './terminal-api.ts';
+import { deleteTerminalSession, streamUrl, type TerminalTicket } from './terminal-api.ts';
 import { lineEditingSequence } from './terminal-keys.ts';
 import { openTerminalLink } from './terminal-links.ts';
 import { themeFromTokens } from './terminal-theme.ts';
 
-export interface TerminalHandlers {
-  onOpen(command: string): void;
-  onCommandRun(): void;
-  onHint(hint: TerminalHint): void;
+export interface TerminalHandlers<T extends TerminalTicket> {
+  onOpen(created: T): void;
+  onCommandRun?(): void;
+  onHint?(hint: TerminalHint): void;
   onEnded(reason: TerminalEndReason): void;
   onError(message: string): void;
 }
 
 export interface TerminalConnection {
   run(): void;
+  notice(text: string): void;
+  fit(): void;
+  focus(): void;
   close(): void;
   dispose(): void;
 }
@@ -64,11 +64,10 @@ function createTerminal(): Terminal {
   });
 }
 
-export function openTerminal(
-  provider: ProviderId,
-  step: TerminalStep,
+export function openTerminal<T extends TerminalTicket>(
+  start: () => Promise<T>,
   element: HTMLElement,
-  handlers: TerminalHandlers,
+  handlers: TerminalHandlers<T>,
 ): TerminalConnection {
   const abort = new AbortController();
   const terminal = createTerminal();
@@ -80,7 +79,7 @@ export function openTerminal(
   terminal.parser.registerOscHandler(OSC_CLIPBOARD, () => true);
 
   let socket: WebSocket | null = null;
-  let session: CreateTerminalResponse | null = null;
+  let session: T | null = null;
   let lastSize = '';
   let disposed = false;
 
@@ -90,7 +89,7 @@ export function openTerminal(
   const sendInput = (data: string) => {
     if (socket?.readyState !== WebSocket.OPEN) return;
     socket.send(encoder.encode(data));
-    if (data.includes('\r')) handlers.onCommandRun();
+    if (data.includes('\r')) handlers.onCommandRun?.();
   };
   const sendResize = () => {
     try {
@@ -127,7 +126,7 @@ export function openTerminal(
     return false;
   });
 
-  const connect = (created: CreateTerminalResponse) => {
+  const connect = (created: T) => {
     const ws = new WebSocket(streamUrl(created, terminal.cols, terminal.rows));
     ws.binaryType = 'arraybuffer';
     socket = ws;
@@ -136,7 +135,7 @@ export function openTerminal(
       'open',
       () => {
         sendResize();
-        handlers.onOpen(created.command);
+        handlers.onOpen(created);
         terminal.focus();
       },
       { signal },
@@ -150,7 +149,7 @@ export function openTerminal(
         }
         const message = terminalServerMessageSchema.safeParse(JSON.parse(event.data));
         if (!message.success) return;
-        if (message.data.type === 'hint') handlers.onHint(message.data.hint);
+        if (message.data.type === 'hint') handlers.onHint?.(message.data.hint);
         if (message.data.type === 'ended') handlers.onEnded(message.data.reason);
       },
       { signal },
@@ -165,7 +164,7 @@ export function openTerminal(
   };
 
   void Promise.resolve()
-    .then(() => (disposed ? null : createTerminalSession(provider, step)))
+    .then(() => (disposed ? null : start()))
     .then((created) => {
       if (!created) return;
       session = created;
@@ -184,6 +183,12 @@ export function openTerminal(
   return {
     run: () => {
       sendInput('\r');
+      terminal.focus();
+    },
+    notice: (text) => terminal.write(`\r\n\x1b[2m${text}\x1b[0m\r\n`),
+    fit: sendResize,
+    focus: () => {
+      sendResize();
       terminal.focus();
     },
     close: () => sendControl({ type: 'close' }),

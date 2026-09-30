@@ -6,6 +6,7 @@ export type ShortcutKeys = readonly string[];
 export const NEW_CHAT_KEYS: ShortcutKeys = MAC ? ['⌘', '⇧', 'O'] : ['Ctrl', 'Shift', 'O'];
 export const SEARCH_KEYS: ShortcutKeys = MAC ? ['⌘', 'K'] : ['Ctrl', 'K'];
 export const SIDEBAR_KEYS: ShortcutKeys = MAC ? ['⌘', 'B'] : ['Ctrl', 'B'];
+export const TERMINAL_KEYS: ShortcutKeys = MAC ? ['⌃', '`'] : ['Ctrl', '`'];
 
 export function keysText(keys: ShortcutKeys): string {
   return keys.join(MAC ? '' : ' ');

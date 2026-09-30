@@ -1,0 +1,241 @@
+.term-btn {
+  position: relative;
+}
+
+.term-btn[aria-pressed='true'] {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.term-btn.running::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--panel);
+}
+
+.term-park {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 900px;
+  height: 320px;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.term-dock {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: var(--term-h, 280px);
+  min-height: 140px;
+  max-height: calc(100% - 160px);
+  border-top: 1px solid var(--line);
+  background: var(--code);
+  animation: fade 0.15s var(--out);
+}
+
+.term-resize {
+  position: absolute;
+  z-index: 2;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: row-resize;
+  touch-action: none;
+}
+
+.term-dock:has(.term-resize:hover),
+.term-dock:has(.term-resize:focus-visible),
+.term-dock.dragging {
+  border-top-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+}
+
+.term-dock-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 4px 8px 4px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.term-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.term-tab {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  max-width: 260px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.term-tab:hover {
+  color: var(--text);
+}
+
+.term-tab.on {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.term-tab.ended .term-tab-name {
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+}
+
+.term-tab-pick {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 4px 0 10px;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.term-tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.term-tab-skel {
+  display: inline-block;
+  width: 88px;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--raise) 25%, var(--line) 50%, var(--raise) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+.term-tab-x {
+  width: 24px;
+  height: 24px;
+  margin-right: 2px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.term-tab-x svg {
+  width: 10px;
+  height: 10px;
+}
+
+.term-tab-x .xic {
+  color: inherit;
+}
+
+.term-tab-x:hover {
+  background: var(--line);
+  color: var(--text);
+}
+
+.term-add,
+.term-hide {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.term-where {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: right;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.term-hide {
+  margin-left: auto;
+}
+
+.term-dock-body {
+  flex: 1;
+  min-height: 0;
+  padding: 6px 4px 4px 12px;
+}
+
+.term-host {
+  width: 100%;
+  height: 100%;
+}
+
+.term-host .xterm-viewport {
+  background: transparent !important;
+}
+
+.term-dock-ended {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 6px 10px 6px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .term-dock {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    height: auto;
+    max-height: none;
+    border-top: 0;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .term-resize {
+    display: none;
+  }
+
+  .term-where {
+    display: none;
+  }
+
+  .term-tabs {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-tab-skel {
+    animation: none;
+  }
+}

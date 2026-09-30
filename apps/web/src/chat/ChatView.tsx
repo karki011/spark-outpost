@@ -22,6 +22,8 @@ import {
   latestOrchestration,
 } from '../crew/conversation-crew.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
+import { TerminalButton } from '../terminal/dock/TerminalButton.tsx';
+import { TerminalDock } from '../terminal/dock/TerminalDock.tsx';
 import { ThemePicker } from '../theme/ThemePicker.tsx';
 import { useTaskPanel } from '../tasks/work-panel-state.ts';
 import { ViewChangesContext } from '../tasks/view-changes.ts';
@@ -156,6 +158,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 <ChatHeaderMenu onAudit={openAudit} onStartFresh={() => startFresh.mutate()} />
               )}
               <AgentTvButton conversationId={conversationId} agents={crew} />
+              <TerminalButton chatId={conversationId} />
               <ThemePicker />
             </div>
           </header>
@@ -212,6 +215,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               commands.data?.provider ?? detail.data?.settings.provider ?? '',
             )}
           />
+          <TerminalDock chatId={conversationId} />
           <DropOverlay visible={drop.dragging} />
         </main>
         {task && (

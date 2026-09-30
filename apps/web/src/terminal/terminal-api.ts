@@ -1,10 +1,17 @@
 import {
+  createShellResponseSchema,
   createTerminalResponseSchema,
+  type CreateShellResponse,
   type CreateTerminalResponse,
   type ProviderId,
   type TerminalStep,
 } from '@spark-outpost/contracts';
 import { request } from '../api/client.ts';
+
+export interface TerminalTicket {
+  id: string;
+  token: string;
+}
 
 export function createTerminalSession(
   provider: ProviderId,
@@ -16,7 +23,14 @@ export function createTerminalSession(
   });
 }
 
-export function streamUrl(session: CreateTerminalResponse, cols: number, rows: number): string {
+export function createShell(conversationId: string | null): Promise<CreateShellResponse> {
+  return request(createShellResponseSchema, '/terminal/shells', {
+    method: 'POST',
+    body: JSON.stringify({ conversationId }),
+  });
+}
+
+export function streamUrl(session: TerminalTicket, cols: number, rows: number): string {
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const query = new URLSearchParams({
     token: session.token,

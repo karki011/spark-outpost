@@ -21,14 +21,20 @@ import { releaseConversation } from '../projects/chat-worktree-cleanup.ts';
 import { allowedCommands } from '../agents/acp/slash-commands.ts';
 import { resolveChatSettings } from '../persistence/chat-settings.ts';
 import { openChatCommands } from '../persistence/session-commands.ts';
+import type { TerminalSessions } from '../terminal/sessions.ts';
 import { paramId, parseBody } from './validation.ts';
 
 export interface ConversationActionDeps {
   db: Db;
   workspaceId: string;
+  terminals: Pick<TerminalSessions, 'endChat'>;
 }
 
-export function conversationActionRoutes({ db, workspaceId }: ConversationActionDeps): Router {
+export function conversationActionRoutes({
+  db,
+  workspaceId,
+  terminals,
+}: ConversationActionDeps): Router {
   const router = Router();
 
   router.put('/conversations/pinned-order', async (req, res) => {
@@ -75,6 +81,7 @@ export function conversationActionRoutes({ db, workspaceId }: ConversationAction
   router.delete('/conversations/:id', async (req, res) => {
     const id = paramId(req);
     const workdirs = await conversationWorkdirs(db, id);
+    terminals.endChat(id);
     await releaseConversation(db, id, 'deleted');
     await deleteConversation(db, workspaceId, id);
     await removeWorkdirs(workdirs);
