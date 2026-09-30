@@ -13,8 +13,8 @@ import {
 import { seedChats } from './sidebar-seed.ts';
 import { MAP_ROOT_PREFIX } from './stub-config.ts';
 
-const SHOTS = path.join(REPO_ROOT, 'docs/design/map/app-screens');
-const shoot = process.env.MAP_SCREENS === '1';
+const SHOTS = process.env.SPARK_SHOTS ?? '';
+const shoot = SHOTS !== '';
 const SKY = /map of/;
 
 test.beforeEach(async () => {

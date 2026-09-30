@@ -12,7 +12,7 @@
   - `blob-scout-lockup-dark.svg`, `blob-scout-lockup-light.svg`: mark with the "spark outpost" wordmark
   - `blob-scout-logo-guide.html`: the logo guide, with moods, colors, and usage rules
 - `tickets/`: the Tickets + Home-brief reference plan (`TICKETS_SCREEN_PLAN.md`) and its two mockups, `tickets-mockup-inbox.html` and `home-brief-mockup.html`.
-- `map/`: the Project Map design target. `project-map-mockup.html` is the mockup, built by `build-map-data.mjs` and loaded by `tests/browser/map-fixture.ts`. `screens/` holds mockup screenshots; `app-screens/` holds matching screenshots of the shipped app, written by `tests/browser/project-map.spec.ts` when run with `MAP_SCREENS=1` — compare the two side by side.
+- `map/`: the Project Map design target. `project-map-mockup.html` is the mockup, built by `build-map-data.mjs` and loaded by `tests/browser/map-fixture.ts`. To compare the app with it, run `tests/browser/project-map.spec.ts` with `SPARK_SHOTS` set to an output folder.
 - `ux/spark-outpost-ux-flow.md`: the UX flow and interaction spec (still-general sections only; see the note in that file for screens it no longer covers).
 - `ACCESSIBILITY.md`: the WCAG 2.2 AA colour, typography, focus, target and motion rules, and how `pnpm a11y:contrast` checks them.
 - `accessibility-report.html`: per-theme contrast ratios before and after the AA pass, with swatches and pass/fail status.
