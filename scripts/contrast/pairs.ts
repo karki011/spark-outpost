@@ -10,6 +10,7 @@ import {
   PROVIDERS,
   STATUS,
 } from './interface-pairs.ts';
+import { MAP } from './map-pairs.ts';
 import { surfaceText, type HuePair, type Pair, type PairKind } from './pair-types.ts';
 
 export type { HuePair, Pair, PairKind };
@@ -48,6 +49,7 @@ export const PAIRS: Pair[] = [
   ...DIFF,
   ...OFFLINE,
   ...AGENT_TV,
+  ...MAP,
 ];
 
 export const HUE_PAIRS: HuePair[] = [

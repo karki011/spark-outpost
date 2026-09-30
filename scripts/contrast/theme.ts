@@ -4,7 +4,7 @@ import { parseColor, type Rgba } from './color.ts';
 export type Tokens = Map<string, string>;
 type Block = { selector: string; media: string | undefined; declarations: Tokens };
 
-export const THEME_CSS = 'apps/web/public/theme.css';
+export const THEME_CSS = ['apps/web/public/theme.css', 'apps/web/public/theme-map.css'];
 export const COMPONENT_TOKEN_CSS = [
   'apps/web/src/chat/approvals/diff-view.css',
   'apps/web/src/chat/markdown/code-tokens.css',
@@ -79,7 +79,7 @@ function matchesTheme(block: Block, theme: ThemeId): boolean {
 
 export function themeTokens(theme: ThemeId, root = process.cwd()): Tokens {
   const tokens: Tokens = new Map();
-  const blocks = parseBlocks(readFileSync(`${root}/${THEME_CSS}`, 'utf8'));
+  const blocks = THEME_CSS.flatMap((file) => parseBlocks(readFileSync(`${root}/${file}`, 'utf8')));
   for (const block of blocks) {
     if (!matchesTheme(block, theme)) continue;
     for (const [name, value] of block.declarations) tokens.set(name, value);
