@@ -9,6 +9,7 @@ import { countLabel } from '../ui/count-label.ts';
 import { formatCost } from '../usage/format.ts';
 import { isBusy, isDispatcher, modelLabel, type CrewAgent, type CrewState } from './crew-model.ts';
 import { jevAgent, runAgent } from './crew-projection.ts';
+import { pieceLabels } from './piece-labels.ts';
 import { roleSubtitle, type TvAsk } from './tv-scene.ts';
 
 type TvOutcome = 'passed' | 'failed' | 'stopped';
@@ -32,6 +33,7 @@ export interface TvRow {
   durationMs: number | null;
   ask: TvAsk | null;
   dispatcher: boolean;
+  piece: string | null;
   order: number;
 }
 
@@ -57,7 +59,10 @@ function wallMs(startedAt: number | null, finishedAt: number | null, fallback: n
 
 function row(
   agent: CrewAgent,
-  extra: Pick<TvRow, 'key' | 'runId' | 'toolCalls' | 'startedAt' | 'finishedAt' | 'order'> & {
+  extra: Pick<
+    TvRow,
+    'key' | 'runId' | 'toolCalls' | 'startedAt' | 'finishedAt' | 'order' | 'piece'
+  > & {
     ask: TvAsk | undefined;
   },
 ): TvRow {
@@ -80,6 +85,7 @@ function row(
     durationMs: wallMs(extra.startedAt, extra.finishedAt, agent.durationMs),
     ask: extra.ask ?? null,
     dispatcher: agent.role === 'jev',
+    piece: extra.piece,
     order: extra.order,
   };
 }
@@ -91,6 +97,7 @@ export function tvListRows(
   asks: Record<string, TvAsk>,
 ): TvRows {
   const activity = detail?.activity ?? {};
+  const pieces = pieceLabels(orchestration);
   const crew = orchestration.crew.map((member, index) =>
     row(runAgent(member, orchestration, activity[member.runId] ?? []), {
       key: member.runId,
@@ -99,6 +106,7 @@ export function tvListRows(
       startedAt: time(member.startedAt),
       finishedAt: time(member.finishedAt),
       order: index + 1,
+      piece: pieces.get(member.runId) ?? null,
       ask: asks[member.runId],
     }),
   );
@@ -114,6 +122,7 @@ export function tvListRows(
       startedAt: time(parent?.startedAt),
       finishedAt: turnActive ? null : time(parent?.finishedAt),
       order: 0,
+      piece: null,
       ask: asks.jev,
     },
   );

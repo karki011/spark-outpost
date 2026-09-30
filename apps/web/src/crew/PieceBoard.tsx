@@ -37,7 +37,7 @@ export function PieceBoard({ list }: { list: PieceList }) {
     <section className="piece-board" aria-label="Pieces">
       <p className="piece-board-head">
         {rows.length} {rows.length === 1 ? 'piece' : 'pieces'}, {PLACEMENTS[list.placement]} ·{' '}
-        {landed} landed
+        {list.status === 'proposed' ? 'waiting for your go-ahead' : `${landed} landed`}
       </p>
       <ol className="piece-rows">
         {rows.map((row) => (
