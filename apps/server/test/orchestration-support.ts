@@ -319,6 +319,7 @@ export function startOrchestrator(
     shipAccess?: OrchestratorDeps['shipAccess'];
     fixRound?: OrchestratorDeps['fixRound'];
     coordinator?: OrchestratorDeps['coordinator'];
+    forcedPlacement?: OrchestratorDeps['forcedPlacement'];
     agentEnv?: Record<string, string>;
   } = {},
 ): Harness {
@@ -349,6 +350,7 @@ export function startOrchestrator(
     ...(options.shipAccess ? { shipAccess: options.shipAccess } : {}),
     ...(options.fixRound ? { fixRound: options.fixRound } : {}),
     ...(options.coordinator ? { coordinator: options.coordinator } : {}),
+    ...(options.forcedPlacement ? { forcedPlacement: options.forcedPlacement } : {}),
   });
   return {
     worker,

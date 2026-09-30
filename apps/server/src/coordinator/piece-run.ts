@@ -247,6 +247,29 @@ async function failPiece(
 }
 
 export const OWNERSHIP_STOP_NOTE = 'You stopped it at the ownership card.';
+export const NO_CHANGES_NOTE = 'The Builder changed none of its files.';
+
+export const NOTHING_CHANGED_SECTION = [
+  '## Note from the coordinator',
+  "Your last turn changed none of your files, so the piece can't land. Make the changes the piece needs now. If a tool call was refused, read the reason and use another way, such as the edit tool for each file.",
+].join('\n');
+
+function expectsChanges(piece: TaskPiece, action: Spawn): boolean {
+  return !piece.research && piece.owns.length > 0 && action.reason !== 'resume';
+}
+
+async function changedNothing(work: PieceWork): Promise<boolean> {
+  return (await pieceChanges(work)).length === 0;
+}
+
+async function nudgeTurn(s: Session, action: Spawn, work: PieceWork, turn: PieceTurn) {
+  const end = await pieceTurn(s, work, {
+    spawn: { ...action, reason: 'fix', escalate: false, note: null },
+    generation: turn.generation,
+    sections: [await work.brief(work.piece), NOTHING_CHANGED_SECTION],
+  });
+  return end.skipped ? null : { generation: end.generation, result: end.result };
+}
 
 export async function runPiece(
   s: Session,
@@ -289,8 +312,33 @@ export async function runPiece(
     );
   }
   if (piece.research) coordination.scoutNotes.push(`${piece.key}: ${turn.result.text.trim()}`);
-  let checks = await scopedChecks(s, work, turn.result);
   let fixes = 0;
+  if (expectsChanges(piece, action) && (await changedNothing(work)) && !stopped(s)) {
+    const nudged = await nudgeTurn(s, action, work, turn);
+    if (!nudged) return { skipped: true, landed: false };
+    turn = nudged;
+    fixes += 1;
+    if (turn.result.outcome !== 'succeeded') {
+      return failPiece(s, work, turn.result, { fixTurns: fixes });
+    }
+    if (!(await guardTurn(s, work))) {
+      return failPiece(
+        s,
+        work,
+        { ...turn.result, outcome: 'cancelled' },
+        { fixTurns: fixes, note: OWNERSHIP_STOP_NOTE },
+      );
+    }
+    if (await changedNothing(work)) {
+      return failPiece(
+        s,
+        work,
+        { ...turn.result, outcome: 'failed', error: NO_CHANGES_NOTE },
+        { fixTurns: fixes, note: NO_CHANGES_NOTE },
+      );
+    }
+  }
+  let checks = await scopedChecks(s, work, turn.result);
   while (checks?.status === 'failed' && fixes < COORD_PIECE_FIX_TURNS) {
     if (stopped(s) || (await checkBudget(s))) break;
     const fixed = await fixTurn(s, action, work, turn, checks);

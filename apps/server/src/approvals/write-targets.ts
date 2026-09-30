@@ -1,5 +1,6 @@
 import { commandTree, SHELLS } from './command-tree.ts';
 import { programName, resolveCommandPath } from './commands.ts';
+import { withoutHereText } from './inline-code.ts';
 
 const UNKNOWN_WORD = /\$|`/;
 const REDIRECT = /(?:^|[^<>&\d])\d?>>?(?!&)\s*([^\s;&|<>()]+)/g;
@@ -82,7 +83,8 @@ export function inputTargets(command: string): Set<string> {
   return operatorTargets(command, INPUT_OPERATOR);
 }
 
-export function writeTargets(command: string, cwd: string, home: string): string[] | null {
+export function writeTargets(written: string, cwd: string, home: string): string[] | null {
+  const command = withoutHereText(written);
   const tree = commandTree(command);
   if (tree.opaque) return null;
   const all = scripts(command);

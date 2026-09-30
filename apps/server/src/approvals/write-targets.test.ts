@@ -28,6 +28,24 @@ describe('writeTargets', () => {
     expect(at('bash -c "echo 1 > inner.ts"')).toEqual(['/repo/inner.ts']);
   });
 
+  it('names heredoc files but reads nothing inside the heredoc text', () => {
+    const command = [
+      "cat > src/budgets.ts <<'EOF'",
+      'export const ok = (a: number) => a >= 2 ? a : null;',
+      '  | { amount: number } > 0',
+      'EOF',
+      'cat > test/b.test.ts <<EOF',
+      'assert.ok(migrate(db).length >= 2);',
+      'EOF',
+      'node --test test/b.test.ts',
+    ].join('\n');
+    expect(at(command)).toEqual(['/repo/src/budgets.ts', '/repo/test/b.test.ts']);
+  });
+
+  it('gives up on a heredoc fed to a shell', () => {
+    expect(at("bash <<'EOF'\necho x > a.ts\nEOF")).toBeNull();
+  });
+
   it('gives up on words it cannot resolve', () => {
     expect(at('echo x > $OUT')).toBeNull();
     expect(at('bash -c "$(cat script)"')).toBeNull();
