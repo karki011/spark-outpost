@@ -102,7 +102,7 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
             <small>
               {busy
                 ? 'Switching…'
-                : "Spark works on a copy. Your files don't change until you bring the work over."}
+                : "Spark works in a git worktree, a separate copy. Your files don't change until you bring the work over."}
             </small>
           </span>
         </div>
@@ -118,7 +118,10 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
           </span>
           <span className="pp-new-text">
             <b>New branch{checkoutBranch ? ` from ${checkoutBranch}` : ''}</b>
-            <small>Spark names it from your first message, like spark/fix-login-3f9a</small>
+            <small>
+              New worktree. Spark names the branch from your first message, like
+              spark/fix-login-3f9a
+            </small>
           </span>
           <TickIcon />
         </button>
