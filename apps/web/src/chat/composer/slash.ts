@@ -1,4 +1,9 @@
-import { blockedReason, commandKey, type AgentCommand } from '@spark-outpost/contracts';
+import {
+  blockedReason,
+  commandKey,
+  type AgentCommand,
+  type RepoDefinition,
+} from '@spark-outpost/contracts';
 
 const CLIENT_COMMAND_NAMES = ['fresh', 'model', 'effort', 'plan', 'review', 'mcp'] as const;
 
@@ -9,13 +14,14 @@ export interface SlashItem {
   description: string;
   hint: string | null;
   detail: string;
-  source: 'client' | 'agent';
+  source: 'client' | 'agent' | 'skill';
 }
 
 export interface SlashContext {
   agentName: string;
   effortHint?: string | null;
   hidden?: ReadonlySet<ClientCommandName>;
+  skills?: readonly RepoDefinition[];
 }
 
 type ClientItem = Omit<SlashItem, 'source'> & { name: ClientCommandName };
@@ -85,6 +91,35 @@ function agentItem(command: AgentCommand, agentName: string): SlashItem {
   };
 }
 
+function skillItem(skill: RepoDefinition, agentName: string): SlashItem {
+  return {
+    name: skill.name,
+    description: skill.description || 'No description in the skill file',
+    hint: null,
+    detail: `Asks ${agentName} to use the repo skill in ${skill.path}. Anything after the name goes along with it.`,
+    source: 'skill',
+  };
+}
+
+function advertises(agent: readonly AgentCommand[], name: string): boolean {
+  const key = commandKey(name);
+  return agent.some((command) => {
+    const agentKey = commandKey(command.name);
+    return agentKey === key || agentKey.endsWith(`:${key}`);
+  });
+}
+
+function skillItems(agent: readonly AgentCommand[], context: SlashContext): SlashItem[] {
+  const seen = new Set<string>(CLIENT_COMMAND_NAMES);
+  return (context.skills ?? []).flatMap((skill) => {
+    const key = commandKey(skill.name);
+    if (!key || /\s/.test(key) || seen.has(key) || advertises(agent, key)) return [];
+    if (blockedReason(key) !== null) return [];
+    seen.add(key);
+    return [skillItem(skill, context.agentName)];
+  });
+}
+
 export interface SlashQuery {
   query: string;
   end: number;
@@ -105,7 +140,7 @@ export function slashItems(agent: readonly AgentCommand[], context: SlashContext
     .filter((command) => !CLIENT_NAMES.has(commandKey(command.name)))
     .filter((command) => blockedReason(command.name) === null)
     .map((command) => agentItem(command, context.agentName));
-  return [...client, ...agentItems];
+  return [...client, ...skillItems(agent, context), ...agentItems];
 }
 
 export function filterSlashItems(items: readonly SlashItem[], query: string): SlashItem[] {
@@ -163,4 +198,18 @@ export function reviewPrompt(args: string): string {
   return args
     ? `Review ${args} and give me a second opinion.`
     : 'Review the changes in this chat and give me a second opinion.';
+}
+
+function skillPrompt(name: string, args: string): string {
+  return args ? `Use the "${name}" skill: ${args}` : `Use the "${name}" skill.`;
+}
+
+export function skillCommand(
+  parsed: ParsedSlash | null,
+  items: readonly SlashItem[],
+): string | null {
+  if (!parsed) return null;
+  const key = commandKey(parsed.name);
+  const skill = items.find((item) => item.source === 'skill' && commandKey(item.name) === key);
+  return skill ? skillPrompt(skill.name, parsed.args) : null;
 }

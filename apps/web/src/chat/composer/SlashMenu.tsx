@@ -13,6 +13,11 @@ interface SlashMenuProps {
   onKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
 }
 
+function sourceLabel(item: SlashItem, agentName: string): string {
+  if (item.source === 'client') return 'Spark';
+  return item.source === 'skill' ? 'skill' : agentName;
+}
+
 export function SlashMenu({
   listId,
   items,
@@ -64,7 +69,7 @@ export function SlashMenu({
               </b>
               <small>{item.description}</small>
             </span>
-            <small className="slash-source">{item.source === 'client' ? 'Spark' : agentName}</small>
+            <small className="slash-source">{sourceLabel(item, agentName)}</small>
           </div>
         ))}
       </div>

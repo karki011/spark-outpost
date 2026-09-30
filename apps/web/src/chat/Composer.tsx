@@ -21,6 +21,7 @@ import {
   type Orchestration,
   type Project,
   type ProviderSetup,
+  type RepoDefinition,
   type Run,
 } from '@spark-outpost/contracts';
 import { useQuery } from '@tanstack/react-query';
@@ -39,6 +40,7 @@ import {
   parseSlash,
   planPrompt,
   reviewPrompt,
+  skillCommand,
   type ClientCommandName,
 } from './composer/slash.ts';
 import { SlashMenu } from './composer/SlashMenu.tsx';
@@ -50,6 +52,7 @@ import { PlusMenu } from './composer/PlusMenu.tsx';
 import { ContextBar } from './project/ContextBar.tsx';
 import { MentionPicker } from './project/MentionPicker.tsx';
 import { RepoFilePicker } from './project/RepoFilePicker.tsx';
+import { useAgentConfig } from './project/use-agent-config.ts';
 import { repoFileKey, type RepoFile } from './project/use-file-search.ts';
 import { useMention } from './project/use-mention.ts';
 import { QuoteChips } from './quotes/QuoteChips.tsx';
@@ -83,6 +86,7 @@ interface ComposerProps {
 }
 
 const NO_COMMANDS: readonly AgentCommand[] = [];
+const NO_SKILLS: readonly RepoDefinition[] = [];
 
 const MAX_ROWS = 5;
 
@@ -151,16 +155,19 @@ export function Composer({
   const canStartFresh = onStartFresh !== undefined;
   const hasSettings = settings !== null;
   const efforts = capabilities.data?.efforts;
+  const agentConfig = useAgentConfig(repos[0]?.id ?? null);
+  const skills = agentConfig.data?.settings.skills ? agentConfig.data.skills : NO_SKILLS;
   const slashContext = useMemo(
     () => ({
       agentName,
+      skills,
       effortHint: effortHint(efforts ?? []),
       hidden: new Set<ClientCommandName>([
         ...(canStartFresh ? [] : (['fresh'] as const)),
         ...(hasSettings ? [] : (['model', 'effort'] as const)),
       ]),
     }),
-    [agentName, efforts, canStartFresh, hasSettings],
+    [agentName, skills, efforts, canStartFresh, hasSettings],
   );
   const runClientCommand = (command: ClientCommandName, args = ''): string | null => {
     if (command === 'mcp') {
@@ -248,6 +255,8 @@ export function Composer({
       setDraft('');
       return runClientCommand(command, parsed.args);
     }
+    const skill = skillCommand(parsed, slash.all);
+    if (skill) return skill;
     const blocked = blockedMessage(parsed);
     if (blocked) {
       attachments.notify(blocked);
