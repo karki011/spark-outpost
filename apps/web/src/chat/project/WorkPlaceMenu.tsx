@@ -2,6 +2,8 @@ import './place-picker.css';
 import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { UpdateChatWorkspaceRequest } from '@spark-outpost/contracts';
 import { BranchIcon, ChevronIcon, FolderIcon, PlusIcon, TickIcon } from '../../ui/icons.tsx';
+import { Blobatar } from 'blobatar/react';
+import * as expressions from 'blobatar/expression';
 import { BlobScout } from '../../brand/BlobScout.tsx';
 import { usePopover } from '../../ui/use-popover.ts';
 import { branchRows, placeLabel } from './place-picker-model.ts';
@@ -49,6 +51,8 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
   const rows = list ? branchRows(list, query, checkoutBranch) : [];
   const total = list ? list.local.length + list.remote.length : 0;
   const busy = update.isPending;
+  const placeKey =
+    data.requestedBranch ?? (inCheckout ? (checkoutBranch ?? 'my files') : 'new branch');
 
   const onListKey = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
@@ -91,11 +95,20 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
         <div className="picker-top">
           <span className="picker-title">
             Branch
-            <small>
-              {busy
-                ? 'Switching…'
-                : "Spark works in a git worktree, a separate copy. Your files don't change until you bring the work over."}
-            </small>
+            <small>Works in a git worktree, so your files stay put.</small>
+          </span>
+          <span className="pp-blob" aria-hidden="true">
+            <span key={placeKey} className={busy ? 'pp-swap busy' : 'pp-swap'}>
+              <Blobatar
+                name={`place:${placeKey}`}
+                size={26}
+                animate="always"
+                expression={busy ? expressions.thinking : expressions.happy}
+              />
+            </span>
+          </span>
+          <span className="sr-only" role="status">
+            {busy ? 'Switching…' : ''}
           </span>
         </div>
         <button
@@ -177,7 +190,13 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
                 disabled={busy}
                 onClick={() => pick({ branch: row.name })}
               >
-                <BranchIcon />
+                <span className="pp-row-blob" aria-hidden="true">
+                  {data.requestedBranch === row.name ? (
+                    <Blobatar name={`place:${row.name}`} size={20} animate="always" />
+                  ) : (
+                    <BranchIcon />
+                  )}
+                </span>
                 <span className="pp-name" title={row.name}>
                   {row.name}
                 </span>
