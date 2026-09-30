@@ -2,6 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
+const BEFORE_HAIKU_RETIRES = new Date('2026-09-29T12:00:00Z');
+
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'], catalog: true });
 });
@@ -18,6 +20,7 @@ async function openModels(page: Page) {
 test('Models shows compact cards that expand to measured runs and what Jev reads', async ({
   page,
 }) => {
+  await page.clock.setFixedTime(BEFORE_HAIKU_RETIRES);
   const dialog = await openModels(page);
   const chips = dialog.getByRole('radiogroup', { name: 'Show models from' });
   await expect(chips.getByRole('radio', { name: /^All/ })).toBeChecked();

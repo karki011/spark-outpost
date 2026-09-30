@@ -14,6 +14,7 @@ import { setupApi, setupKey } from '../api/setup.ts';
 import { AuditDialog } from '../audit/AuditDialog.tsx';
 import { ChatHeaderMenu } from '../audit/ChatHeaderMenu.tsx';
 import { AgentTvButton } from '../crew/AgentTvButton.tsx';
+import { useSteer } from '../crew/use-steer.ts';
 import {
   belongsTo,
   conversationCrew,
@@ -101,6 +102,7 @@ export function ChatView({ conversationId }: { conversationId: string }) {
   const panel = useTaskPanel(detail.data?.tasks ?? NO_TASKS);
   const crew = conversationCrew(detail.data);
   const orchestration = latestOrchestration(detail.data);
+  const steer = useSteer(conversationId, running ? orchestration : null);
   const task = panel.task;
   const crewRun = crewOrchestration(detail.data);
   const taskCrew = task && crewRun && belongsTo(task, crewRun) ? crewRun : null;
@@ -190,6 +192,7 @@ export function ChatView({ conversationId }: { conversationId: string }) {
             onStop={() => {
               if (running) stop.mutate(running.id);
             }}
+            steer={steer}
             {...(openAudit ? { onAudit: openAudit } : {})}
             onStartFresh={() => startFresh.mutate()}
             agentCommands={commands.data?.commands ?? NO_COMMANDS}

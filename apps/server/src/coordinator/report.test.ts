@@ -31,6 +31,7 @@ function piece(key: string, extra: Partial<TaskPiece> = {}): TaskPiece {
     costUsd: 0.25,
     landedAt: null,
     note: null,
+    notesQueued: 0,
     ...extra,
   };
 }

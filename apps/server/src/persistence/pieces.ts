@@ -83,6 +83,7 @@ interface PieceRow {
   cost_usd: string | null;
   landed_at: Date | null;
   note: string | null;
+  notes_queued: number;
 }
 
 function toPiece(row: PieceRow): TaskPiece {
@@ -114,6 +115,7 @@ function toPiece(row: PieceRow): TaskPiece {
     costUsd: row.cost_usd === null ? null : Number(row.cost_usd),
     landedAt: row.landed_at?.toISOString() ?? null,
     note: row.note,
+    notesQueued: row.notes_queued,
   };
 }
 
@@ -133,9 +135,14 @@ function toList(row: ListRow, pieces: readonly PieceRow[]): PieceList {
   });
 }
 
-const PIECE_COLUMNS = `p.*, b.route->>'name' AS builder_name,
+const PIECE_COLUMNS = `p.*, COALESCE(b.route->>'name',
+    (SELECT r.route->>'name' FROM runs r
+     WHERE r.parent_run_id = l.orchestration_run_id AND r.route->>'pieceKey' = p.key
+     ORDER BY r.created_at DESC LIMIT 1)) AS builder_name,
   (SELECT SUM(r.cost_usd) FROM runs r
-   WHERE r.parent_run_id = l.orchestration_run_id AND r.route->>'pieceKey' = p.key) AS cost_usd`;
+   WHERE r.parent_run_id = l.orchestration_run_id AND r.route->>'pieceKey' = p.key) AS cost_usd,
+  (SELECT COUNT(*)::int FROM piece_notes n
+   WHERE n.piece_id = p.id AND n.delivered_at IS NULL) AS notes_queued`;
 
 async function piecesOf(db: Queryable, listIds: readonly string[]): Promise<PieceRow[]> {
   if (listIds.length === 0) return [];

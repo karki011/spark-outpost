@@ -83,6 +83,7 @@ export const taskPieceSchema = z.object({
   costUsd: z.number().nonnegative().nullable(),
   landedAt: z.string().nullable(),
   note: z.string().nullable(),
+  notesQueued: z.number().int().nonnegative().default(0),
 });
 export type TaskPiece = z.infer<typeof taskPieceSchema>;
 
@@ -114,6 +115,7 @@ export interface PieceBoardRow {
   tone: PieceTone;
   check: string | null;
   costUsd: number | null;
+  notes: string | null;
   folded: boolean;
 }
 
@@ -156,6 +158,11 @@ function statusOf(
   }
 }
 
+function notesLabel(count: number): string | null {
+  if (count === 0) return null;
+  return `${count} ${count === 1 ? 'note' : 'notes'} queued`;
+}
+
 function checkLabel(piece: TaskPiece): string | null {
   if (piece.check === 'passed') return 'scoped check passed';
   if (piece.check === 'failed') return 'scoped check failed';
@@ -174,6 +181,7 @@ export function pieceBoard(list: Pick<PieceList, 'pieces'>): PieceBoardRow[] {
     ...statusOf(piece, landed),
     check: checkLabel(piece),
     costUsd: piece.costUsd,
+    notes: notesLabel(piece.notesQueued),
     folded: piece.status === 'landed',
   }));
 }

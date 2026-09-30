@@ -88,3 +88,5 @@ export const COORD_SPLIT_UNSURE_AT = 0.2;
 export const COORD_JEV_ACT_AT = 0.8;
 export const COORD_PIECE_FIX_TURNS = 2;
 export const COORD_HANDOFF_SHARE = 0.75;
+export const COORD_PROVIDER_HEALTH_MS = 10 * 60_000;
+export const COORD_NOTE_TURNS = 3;

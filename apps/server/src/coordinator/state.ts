@@ -12,4 +12,5 @@ export interface Coordination {
   integrated: boolean;
   integrator: string | null;
   base: string | null;
+  unhealthy: Map<string, string>;
 }
