@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { InvolvementLevel, PieceList, SteerTarget } from '@spark-outpost/contracts';
 import { applySteer } from '../src/coordinator/steer.ts';
@@ -21,6 +22,7 @@ import {
   removeRepo,
   type Harness,
 } from './orchestration-support.ts';
+import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -219,5 +221,21 @@ describe('steering running pieces', { timeout: 120_000 }, () => {
     expect(await notesOf(started.runId)).toEqual([
       { kind: 'steer', delivered_run_id: runs[1]!.id },
     ]);
+  });
+
+  it('queues a note through the API while a piece runs and refuses once the pieces finish', async () => {
+    const started = await untilP2Started('#pieces #holdpiece');
+    const app = createTestApp(t);
+    const notes = `/api/tasks/${started.taskId}/pieces/P2/notes`;
+    const post = (path: string, body: object) =>
+      request(app).post(path).set(LOCAL_HEADERS).set('Origin', ORIGIN).send(body);
+    const queued = await post(notes, { kind: 'steer', body: 'Keep the old route' }).expect(202);
+    expect(queued.body).toMatchObject({ kind: 'steer', pieces: ['P2'] });
+    await post(notes, { kind: 'reassign', body: 'gemini' }).expect(400);
+    await post(`/api/tasks/${started.taskId}/steer`, { text: 'skip it' }).expect(400);
+    await release();
+    await finish(started);
+    const late = await post(notes, { kind: 'steer', body: 'One more thing' }).expect(409);
+    expect(late.body.error).toBe('The pieces have finished; send a new message instead.');
   });
 });
