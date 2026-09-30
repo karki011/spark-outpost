@@ -387,7 +387,6 @@ function TreeCanvas({
           zoomOnDoubleClick={false}
           minZoom={0.05}
           maxZoom={1.6}
-          proOptions={{ hideAttribution: true }}
           onNodeClick={(event, node) => {
             const target = (event.target as HTMLElement).closest<HTMLElement>('[data-tree-node]');
             if (target?.dataset.treeNode !== node.id) return;
