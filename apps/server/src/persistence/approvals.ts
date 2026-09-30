@@ -240,6 +240,9 @@ function validateDecision(approval: Approval, decision: UserDecision): ApprovalO
   if (approval.payload.forcePush && decision.scope !== 'once') {
     throw new ApprovalInputError('A force push is allowed one at a time.');
   }
+  if (approval.payload.observed && allowing && decision.scope !== 'once') {
+    throw new ApprovalInputError('After reading sensitive data, sending data out is allowed once.');
+  }
   if (decision.scope === 'project' && (approval.kind !== 'execute' || !approval.payload.command)) {
     throw new ApprovalInputError('Only commands can be allowed for the whole project.');
   }

@@ -126,6 +126,7 @@ export const approvalPayloadSchema = z.object({
   plan: z.string().optional(),
   forcePush: z.array(z.string()).optional(),
   asksBecause: z.string().optional(),
+  observed: z.array(z.string()).optional(),
   sparkAction: sparkActionSchema.optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;

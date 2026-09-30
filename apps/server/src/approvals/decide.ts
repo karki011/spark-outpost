@@ -16,6 +16,8 @@ import { pieceRefusal, type PieceGuard, type RelativeOf } from './piece-guard.ts
 import { diskLister, type FileLister } from './file-lister.ts';
 import { readConcern } from './file-reads.ts';
 import { askRunRefusal } from './ask-run.ts';
+import { egressOf } from './egress.ts';
+import { taintReason } from './taint.ts';
 
 export interface RequestRoot {
   path: string;
@@ -37,6 +39,7 @@ export interface ApprovalRequest {
   home: string;
   plan?: string | null;
   mode?: string | null;
+  mcpServer?: string | null;
 }
 
 export type RunRule =
@@ -45,7 +48,13 @@ export type RunRule =
 export type Decision =
   | { verdict: 'allow'; by: 'level' | 'run_rule' | 'allowlist'; why?: string }
   | { verdict: 'reject'; reason: string }
-  | { verdict: 'ask'; reason: string | null; forcePush?: string[]; because?: string };
+  | {
+      verdict: 'ask';
+      reason: string | null;
+      forcePush?: string[];
+      because?: string;
+      observed?: string[];
+    };
 
 export const FS_WRITE_TOOL_KIND = 'write_text_file';
 
@@ -154,6 +163,37 @@ export interface DecideOptions {
   askAutoWhy?: string | null;
   worktreeAuto?: boolean;
   defaultBranch?: string | null;
+  observed?: readonly string[];
+}
+
+function secretLabel(roots: readonly RequestRoot[], target: string): string {
+  return place(roots, target).relative ?? path.basename(target);
+}
+
+export function secretLabels(request: ApprovalRequest): string[] {
+  const secret = (target: string) => isSecretTarget(request.roots, target);
+  const cwd = commandCwd(request);
+  const words = request.command ? treeWords(commandTree(request.command)) : [];
+  const targets = [
+    ...request.paths,
+    ...words
+      .filter((word) => word !== '' && !word.startsWith('-'))
+      .map((word) => resolveCommandPath(word, cwd, request.home)),
+  ].filter(secret);
+  const labels = [...new Set(targets.map((target) => secretLabel(request.roots, target)))];
+  return labels.length > 0 ? labels : ['a secret file'];
+}
+
+function taintedEgress(
+  request: ApprovalRequest,
+  options: DecideOptions,
+  files: FileLister,
+): Decision | null {
+  const observed = options.observed ?? [];
+  if (observed.length === 0) return null;
+  const egress = egressOf(request, files);
+  if (!egress) return null;
+  return { verdict: 'ask', reason: taintReason(observed, egress), observed: [...observed] };
 }
 
 export function relativeTo(roots: readonly RequestRoot[]): RelativeOf {
@@ -253,7 +293,10 @@ export function decide(
   if (forced?.kind === 'ask') {
     return { verdict: 'ask', reason: forcePushReason(forced.branches), forcePush: forced.branches };
   }
-  const always = alwaysAskReason(request, options.files ?? diskLister);
+  const files = options.files ?? diskLister;
+  const tainted = taintedEgress(request, options, files);
+  if (tainted) return tainted;
+  const always = alwaysAskReason(request, files);
   if (always) return { verdict: 'ask', reason: always };
   if (runRules.allow.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
