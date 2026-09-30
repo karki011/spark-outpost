@@ -54,14 +54,14 @@ test('a Do chat works on its own branch in a worktree and brings the change in o
   const repo = await repoWithRemote(base, 'widgets');
   await chatOn(page, repo.root);
   const place = page.getByRole('button', { name: /^Where this chat works/ });
-  await expect(place).toHaveText(/New branch · copy/);
+  await expect(place).toHaveText(/New branch/);
   await place.click();
   const menu = page.getByRole('dialog', { name: 'Where this chat works' });
-  await expect(menu.getByRole('radio', { name: /Work on a copy/ })).toHaveAttribute(
-    'aria-checked',
+  await expect(menu.getByRole('button', { name: /^New branch/ })).toHaveAttribute(
+    'aria-pressed',
     'true',
   );
-  await expect(menu.getByRole('radio', { name: /Edit my files/ })).toBeVisible();
+  await expect(menu.getByRole('button', { name: /Edit my files directly/ })).toBeVisible();
   await expect(menu.getByRole('radio', { name: /^main/ })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(place).toBeFocused();
@@ -98,7 +98,7 @@ test('Edit my files changes the checked-out branch and is remembered for the pro
   await place.click();
   await page
     .getByRole('dialog', { name: 'Where this chat works' })
-    .getByRole('radio', { name: /Edit my files/ })
+    .getByRole('button', { name: /Edit my files directly/ })
     .click();
   await expect(place).toHaveText(/main · my files/);
   await expect(place).toBeFocused();
