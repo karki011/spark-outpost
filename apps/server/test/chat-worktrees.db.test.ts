@@ -24,7 +24,6 @@ import {
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
-// Each test sets up real git worktrees; a loaded machine can take well past the 20 s default.
 const WORKTREE_TEST_MS = 60_000;
 
 let t: TestDb;
