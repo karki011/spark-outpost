@@ -92,7 +92,7 @@ describe('Ask Spark', () => {
     expect(sent.status).toBe(201);
     expect(sent.body.run.provider).toBe('codex');
 
-    const turn = await eventually(() => turns[0]);
+    const turn = await eventually(async () => turns[0]);
     expect(turn.sparkScope).toMatchObject({ conversationId: id, readOnly: true });
     expect(turn.projectRoots ?? []).toEqual([]);
     expect(turn.repo).toBeUndefined();

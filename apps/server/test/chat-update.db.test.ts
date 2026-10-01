@@ -80,9 +80,9 @@ async function updateAdvice(runId: string) {
   return rows;
 }
 
-function client(fetch?: typeof fetch) {
+function client(jev?: typeof globalThis.fetch) {
   const secrets = memorySecretStore({ jev: 'fake-jev-key' });
-  return localClient(createTestApp(t, { secrets, ...(fetch ? { fetch } : {}) }));
+  return localClient(createTestApp(t, { secrets, ...(jev ? { fetch: jev } : {}) }));
 }
 
 describe('POST /api/conversations/:id/update', () => {
@@ -155,6 +155,7 @@ describe('POST /api/conversations/:id/update', () => {
         { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
         { optionId: 'reject', name: 'Deny', kind: 'reject_once' },
       ],
+      reason: null,
     });
 
     const response = await client(jevFetch({})).send(
