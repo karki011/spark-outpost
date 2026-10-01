@@ -56,7 +56,10 @@ async function query<T extends pg.QueryResultRow>(url: string, sql: string): Pro
   }
 }
 
-describe.skipIf(!suiteUrl)('update migration with a pg_dump backup', () => {
+// pg_dump and pg_restore against a real server are slow when the suite runs in parallel.
+const SLOW = 60_000;
+
+describe.skipIf(!suiteUrl)('update migration with a pg_dump backup', { timeout: SLOW }, () => {
   let work: string;
   let migrations: string;
   let userData: string;
@@ -79,7 +82,7 @@ describe.skipIf(!suiteUrl)('update migration with a pg_dump backup', () => {
       "CREATE TABLE notes (id int PRIMARY KEY, body text); INSERT INTO notes VALUES (1, 'kept');",
     );
     await migrate();
-  });
+  }, SLOW);
 
   afterEach(async () => {
     if (!databaseName) return;
@@ -87,7 +90,7 @@ describe.skipIf(!suiteUrl)('update migration with a pg_dump backup', () => {
       client.query(`DROP DATABASE IF EXISTS ${databaseName} WITH (FORCE)`),
     );
     await rm(work, { recursive: true, force: true });
-  });
+  }, SLOW);
 
   async function migrate() {
     const db = createDb(databaseUrl, { max: 1 });
