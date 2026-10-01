@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { scopedCheckProblem } from './scoped-checks.ts';
+import { docsOnly, scopedCheckProblem } from './scoped-checks.ts';
 
 const PROJECT = ['pnpm test', 'pnpm typecheck'];
 
@@ -22,5 +22,18 @@ describe('scopedCheckProblem', () => {
     ['rm -rf src/tags', /runs `rm`, which is not a test runner/],
   ])('refuses %s', (command, problem) => {
     expect(scopedCheckProblem(command, PROJECT)).toMatch(problem);
+  });
+});
+
+describe('docsOnly', () => {
+  it('holds when every owned file is docs or text', () => {
+    expect(docsOnly(['README.md'])).toBe(true);
+    expect(docsOnly(['docs/guide.mdx', 'docs/**/*.md', 'NOTES.txt', 'CHANGELOG'])).toBe(true);
+  });
+
+  it('fails for code, mixed or empty ownership', () => {
+    expect(docsOnly(['README.md', 'src/index.ts'])).toBe(false);
+    expect(docsOnly(['src/readme.ts'])).toBe(false);
+    expect(docsOnly([])).toBe(false);
   });
 });

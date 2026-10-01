@@ -226,6 +226,21 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(reply).toContain(`Integration: ${integrators[0]!.name}`);
   });
 
+  it('lands a docs-only piece without a scoped check and without a repair round', async () => {
+    const { conversationId, runId } = await begin('#pieces #docspiece');
+    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    expect(orchestration.status).toBe('succeeded');
+    const crew = await children(runId);
+    expect(crew.filter((child) => child.role === 'coordinator')).toHaveLength(1);
+    expect(crew.find((child) => child.pieceKey === 'P3')!.prompt).toContain(
+      'Scoped checks: none — docs only.',
+    );
+    const p3 = (await pieceList(runId)).pieces.find((piece) => piece.key === 'P3')!;
+    expect(p3).toMatchObject({ status: 'landed', checks: [], check: 'none', owns: ['README.md'] });
+    const reply = (await assistantReplies(t, runId)).at(-1);
+    expect(reply).toContain('| none — docs only |');
+  });
+
   it('asks the coordinator once to repair an invalid piece list', async () => {
     const { conversationId, runId } = await begin('#pieces #badpieces');
     await driveToEnd(t, conversationId, runId, undefined, 90_000);

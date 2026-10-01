@@ -5,7 +5,7 @@ import { COORD_MAX_PIECES } from '../advisor/policy.ts';
 import { findCycle, reaches, type Graph } from './graph.ts';
 import { isGlob, normalizeOwned, owns, sharedFiles, type OwnedSet } from './owned.ts';
 import { uncoveredSteps, type PlanStep } from './plan-coverage.ts';
-import { scopedCheckProblem } from './scoped-checks.ts';
+import { docsOnly, scopedCheckProblem } from './scoped-checks.ts';
 import { sizeEstimate, type LineCount } from './size.ts';
 
 export interface ValidationFacts {
@@ -158,6 +158,11 @@ function pieceErrors(piece: CheckedPiece, facts: ValidationFacts, errors: string
   }
 }
 
+function docsChecks(draft: PieceDraft, facts: ValidationFacts): string[] {
+  if (!docsOnly(draft.owns)) return draft.checks;
+  return draft.checks.filter((check) => scopedCheckProblem(check, facts.projectChecks) === null);
+}
+
 export function validatePieces(block: unknown, facts: ValidationFacts): Validation {
   const parsed = piecesBlockSchema.safeParse(block);
   if (!parsed.success) {
@@ -178,6 +183,7 @@ export function validatePieces(block: unknown, facts: ValidationFacts): Validati
     const reads = draft.reads.flatMap((read) => normalizeOwned(read) ?? []);
     return {
       ...draft,
+      checks: docsChecks(draft, facts),
       reads,
       owned,
       sizeEstimate: sizeEstimate({ owns: owned.paths, reads }, facts.lines),

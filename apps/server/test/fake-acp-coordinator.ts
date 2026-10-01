@@ -30,7 +30,15 @@ const PIECES: FakePiece[] = [
   { key: 'P3', title: 'View', file: 'view.ts', dependsOn: ['P2'] },
 ];
 
-function pieceJson(piece: FakePiece, cyclic: boolean) {
+const DOCS_PIECE: FakePiece = { key: 'P3', title: 'View', file: 'README.md', dependsOn: ['P2'] };
+
+function pieceJson(piece: FakePiece, cyclic: boolean, docs: boolean) {
+  if (docs && piece.key === DOCS_PIECE.key) {
+    return {
+      ...pieceJson(DOCS_PIECE, cyclic, false),
+      checks: [`grep -q ${DOCS_PIECE.key} ${DOCS_PIECE.file}`],
+    };
+  }
   return {
     key: piece.key,
     title: piece.title,
@@ -70,7 +78,7 @@ async function coordinator(turn: RoleTurn): Promise<acp.StopReason> {
   const cyclic =
     turn.text.includes('#alwaysbad') || (turn.text.includes('#badpieces') && !repairing(turn.text));
   const block = parallelBlock(turn.text) ?? {
-    pieces: PIECES.map((piece) => pieceJson(piece, cyclic)),
+    pieces: PIECES.map((piece) => pieceJson(piece, cyclic, turn.text.includes('#docspiece'))),
     integration: turn.text.includes('#glue') ? 'Wire the view into glue.ts' : null,
   };
   const split = `Here is the split.\n\n\`\`\`pieces\n${JSON.stringify(block, null, 2)}\n\`\`\``;

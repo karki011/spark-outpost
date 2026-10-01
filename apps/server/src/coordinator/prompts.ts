@@ -1,5 +1,6 @@
 import type { TaskPiece } from '@spark-outpost/contracts';
 import { COORD_MAX_PIECES } from '../advisor/policy.ts';
+import { DOCS_ONLY_CHECK, docsOnly } from './scoped-checks.ts';
 
 export const PIECES_FENCE = 'pieces';
 export const PIECE_HEADING = '## Your piece';
@@ -72,6 +73,7 @@ export function coordinatorPrompt(context: CoordinatorContext): string {
       'dependsOn lists the keys of pieces that must land first. A piece that reads a file another piece owns depends on that piece.',
       'contract names the interfaces the piece gives other pieces (names and signatures), not how to build them. acceptance lists observable results.',
       "checks are scoped commands narrowed to the piece's files, such as one test file. Never the whole project's checks, installs or formatters: the coordinator runs the full checks after integration.",
+      'A piece that only changes docs or text files (README.md, *.md, *.txt) needs no check: leave its checks empty.',
       'Mark a piece that only reads and reports with "research": true; it owns no files.',
       'integration says what glue is left once every piece has landed, or null.',
       'Every step of the agreed plan needs a piece: a step is covered when a piece owns or reads a file the step names, or when its title, goal or acceptance says what the step does.',
@@ -131,6 +133,8 @@ export function pieceSection(brief: PieceBrief): string {
   if (piece.acceptance.length > 0) parts.push(`Acceptance:\n${bullets(piece.acceptance)}`);
   if (piece.checks.length > 0) {
     parts.push(`Scoped checks (the harness runs them after your turn):\n${bullets(piece.checks)}`);
+  } else if (!piece.research && docsOnly(piece.owns)) {
+    parts.push(`Scoped checks: ${DOCS_ONLY_CHECK}.`);
   }
   const owners = brief.others.filter((other) => other.owns.length > 0);
   if (owners.length > 0) {
