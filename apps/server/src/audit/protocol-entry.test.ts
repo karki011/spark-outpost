@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { pastedSecretKinds } from '@spark-outpost/contracts';
 import { PAYLOAD_CAP_BYTES, capPayload, createProtocolRecorder } from './protocol-entry.ts';
 
 const at = new Date('2026-09-26T10:00:00.000Z');
@@ -23,6 +24,26 @@ describe('protocol entries', () => {
       { kind: 'error', method: null, rpcId: '8' },
     ]);
     expect(entries[0]!.sizeBytes).toBe(Buffer.byteLength(JSON.stringify(request)));
+  });
+
+  it('redacts a secret pasted into a chat message before it reaches the audit log', () => {
+    const recorder = createProtocolRecorder();
+    const text =
+      'Use sk-ant-api03-AbCdEfGhIjKlMnOpQrStUv1234\nGITHUB_TOKEN=a8f9c2d1e7b6a5f4c3d2e1f0';
+    const entry = recorder.entry(
+      'to_agent',
+      {
+        jsonrpc: '2.0',
+        id: 9,
+        method: 'session/prompt',
+        params: { prompt: [{ type: 'text', text }] },
+      },
+      at,
+    );
+    const stored = JSON.stringify(entry.payload);
+    expect(pastedSecretKinds(text)).toEqual(['api_key', 'env']);
+    expect(stored).toContain('Use [redacted:api_key]\\nGITHUB_TOKEN=[redacted:env]');
+    expect(pastedSecretKinds(stored)).toEqual([]);
   });
 
   it('does not confuse request ids from the two directions', () => {

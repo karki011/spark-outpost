@@ -10,6 +10,8 @@ import {
 import { api, capabilitiesQuery } from '../api/client.ts';
 import { shortLabel } from '../chat/composer/model-options.ts';
 import { providerName } from '../chat/provider-name.ts';
+import { SecretWarning } from '../ui/SecretWarning.tsx';
+import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { PanelTabs } from './PanelTabs.tsx';
 import type { Panel } from './island-model.ts';
 
@@ -52,6 +54,7 @@ export function QuickChat(props: QuickChatProps) {
   const textRef = useRef<HTMLTextAreaElement>(null);
   const chipRef = useRef<HTMLButtonElement>(null);
   const [menu, setMenu] = useState(false);
+  const secrets = useSecretGuard(draft.text);
   const defaults = useDefaults();
   const level = draft.level ?? defaults.level ?? 'hands-off';
   const levelInfo = AUTONOMY_LEVELS.find((info) => info.id === level) ?? AUTONOMY_LEVELS[1]!;
@@ -86,7 +89,7 @@ export function QuickChat(props: QuickChatProps) {
 
   const submit = () => {
     const content = draft.text.trim();
-    if (!content || send.isPending) return;
+    if (!content || send.isPending || secrets.blocks(draft.text)) return;
     send.mutate(content);
   };
 
@@ -121,6 +124,12 @@ export function QuickChat(props: QuickChatProps) {
             Following up in <b>{followUp.title}</b>
           </div>
         )}
+        <SecretWarning
+          guard={secrets}
+          input={textRef}
+          onText={(text) => onDraft({ ...draft, text })}
+          onSendAnyway={submit}
+        />
         <label className="sr-only" htmlFor="isl-qc-text">
           Message
         </label>
