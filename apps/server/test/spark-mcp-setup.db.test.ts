@@ -244,6 +244,7 @@ describe('the Spark tools server', () => {
       'spark_connectors',
       'spark_create_ticket',
       'spark_guide',
+      'spark_laws',
       'spark_map',
       'spark_models',
       'spark_open_pr',

@@ -79,6 +79,7 @@ export interface RouteFacts {
   session?: ResumableSession | null;
   prior?: PriorEscalation | null;
   arm?: MeasuredArm | null;
+  demoted?: ReadonlyMap<string, number> | null;
 }
 
 export const DESTRUCTIVE_RULE = 'destructive → top tier';
@@ -324,6 +325,7 @@ function scoredBuilder(
       signals: taskSignals({ ...facts, complex }, facts.ratings),
       stats: candidateFor(context, provider)?.stats ?? [],
       now,
+      demoted: facts.demoted ?? null,
     },
     facts.prior ?? null,
     effortIds(candidateFor(context, provider)),

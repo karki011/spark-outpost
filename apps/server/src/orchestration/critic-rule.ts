@@ -6,7 +6,7 @@ import type { MemberRoute } from './routing.ts';
 const ONE_LINER_LINES = 10;
 const FEATURE_FILES = 3;
 
-const TEST_FILE =
+export const TEST_FILE =
   /(?:^|\/)(?:tests?|__tests__|specs?|e2e)\/|\.(?:test|spec)\.[cm]?[jt]sx?$|_test\.(?:go|py|rb)$|(?:^|\/)test_[^/]+\.py$/;
 const NOT_SOURCE =
   /(?:^|\/)(?:pnpm-lock\.yaml|package-lock\.json|yarn\.lock|bun\.lockb?|Cargo\.lock|go\.sum|poetry\.lock|uv\.lock|Gemfile\.lock|composer\.lock)$|(?:^|\/)(?:dist|build|generated|__generated__)\/|\.min\.(?:js|css)$|\.snap$|\.(?:md|mdx|txt|rst)$/i;

@@ -27,6 +27,7 @@ export interface CrewAgent {
   durationMs: number | null;
   sameProvider?: boolean;
   routeNote?: string;
+  budget?: string;
   title?: string;
 }
 
@@ -96,7 +97,9 @@ export function usageParts(member: CrewAgent): string[] {
 }
 
 export function headerMeta(member: CrewAgent): string {
-  return [modelLabel(member), member.routeNote, ...usageParts(member)].filter(Boolean).join(' · ');
+  return [modelLabel(member), member.routeNote, member.budget, ...usageParts(member)]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 export interface CrewTotals {

@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'overhead-1-spec-plan-rereview';
+export const POLICY_VERSION = 'laws-1-universal-laws';
 
 export type ActingQuestion =
   | 'question'
@@ -142,3 +142,26 @@ export const COORD_PROVIDER_HEALTH_MS = 10 * 60_000;
 export const COORD_NOTE_TURNS = 3;
 export const COMPACT_SELF_DROP = 0.4;
 export const COMPACT_AGENT_WORKED = 0.8;
+
+export const LAW_REMOVED_BLOCK_LINES = 30;
+export const LAW_ITEMS_SHOWN = 8;
+export const LAW_SCOPE_ITEMS = 5;
+
+export const LAW_ESTIMATE_MIN_RUNS = 5;
+export const LAW_ESTIMATE_WINDOW = 20;
+export const LAW_ESTIMATE_LOW = 0.2;
+export const LAW_ESTIMATE_HIGH = 0.8;
+export const LAW_ROUGH_MINUTES = [3, 6, 12, 20, 35] as const;
+export const LAW_ROUGH_COST_PAD = 1.5;
+export const LAW_ROUGH_RANGE = [0.5, 2] as const;
+export const LAW_PAD_MIN_RUNS = 5;
+export const LAW_PAD_MAX = 3;
+
+export const LAW_BUDGET_SHARE = [0.3, 0.5, 0.75, 1, 1] as const;
+export const LAW_BUDGET_MIN_TOOL_CALLS = 10;
+export const LAW_BUDGET_MIN_MS = 3 * 60_000;
+
+export const LAW_DEMOTE_WINDOW = 20;
+export const LAW_DEMOTE_MIN_RUNS = 10;
+export const LAW_DEMOTE_MARGIN = 0.15;
+export const LAW_DEMOTE_FLOOR = 0.6;

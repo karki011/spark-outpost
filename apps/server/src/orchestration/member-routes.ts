@@ -25,6 +25,11 @@ import {
   type RouteFacts,
 } from './routing.ts';
 import { builderKey, type Session } from './session.ts';
+import { openBudget } from '../laws/builder-start.ts';
+import { demotionsFor } from '../laws/demotion-history.ts';
+import { demotedRates, withDemotion } from '../laws/demotion-route.ts';
+import { taskKind } from '../laws/task-kind.ts';
+import { budgetWhy } from '../laws/member-budget.ts';
 import type { Spawn } from './transitions.ts';
 
 export interface ResolvedRoute {
@@ -116,7 +121,10 @@ async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
     ? await resumableTask(s.deps.db, s.input, builderKey(s.taskId), s.deps.sessionLimits?.idleMs)
     : null;
   const prior = s.taskId ? await priorEscalation(s.deps.db, s.taskId) : null;
-  const route = routeBuilder(s.route, { ...facts, session, prior }, jevTier(s));
+  const demotions = await demotionsFor(s.deps.db, s.input.workspaceId, taskKind(s)).catch(() => []);
+  const demoted = demotedRates(demotions, s.route.chat.provider);
+  const routed = routeBuilder(s.route, { ...facts, session, prior, demoted }, jevTier(s));
+  const route = withDemotion(routed, demotions, s.route.chat.model);
   if (route.score) return resolvedFrom(withHandback(s, route, session, prior));
   const kept = keepBuilderSession(route, session, topReason(route, facts, s));
   return { route: kept.route, ...(kept.choice ? { session: kept.choice } : {}) };
@@ -186,6 +194,11 @@ function appliedBy(route: MemberRoute): 'pinned' | 'jev' | 'rules' {
   return 'rules';
 }
 
+function budgetNote(s: Session, role: AgentRole): { budgetNote?: string } {
+  const budget = role === 'builder' ? openBudget(s) : null;
+  return budget ? { budgetNote: budgetWhy(budget) } : {};
+}
+
 export async function recordRoute(
   s: Session,
   role: AgentRole,
@@ -237,6 +250,7 @@ export async function recordRoute(
           ...route,
           ...(resolved.session ? { sessionNote: resolved.session.reason } : {}),
           ...(score ? { scoreNote: scoreText(score) } : {}),
+          ...budgetNote(s, role),
         }),
       },
     },

@@ -17,6 +17,7 @@ import { askCard, CheckpointTimeout, type CheckpointCard } from './checkpoint.ts
 import { destructiveWork, heldCard } from './checkpoint-asks.ts';
 import { draftPlan, originalPrompt, settleQuietly } from './plan-only.ts';
 import { save, type Session } from './session.ts';
+import { ensureEstimate } from '../laws/estimate-history.ts';
 import type { FlowEvent } from './transitions.ts';
 
 export const FULL_AUTO_PLAN_SECONDS = 30;
@@ -122,6 +123,10 @@ function cardFor(s: Session, version: number, seconds: number | null): Checkpoin
   return heldCard(planFirstCard(version, 'balanced', null));
 }
 
+export function withEstimate(card: CheckpointCard, estimate: string | null): CheckpointCard {
+  return estimate ? { ...card, payload: { ...card.payload, estimate } } : card;
+}
+
 export async function writePlanFirst(s: Session, note: string | null): Promise<FlowEvent> {
   const held = destructiveWork(s);
   const spec = note === null && !held ? requestIsThePlan(s.input.level, s.input.userRequest) : null;
@@ -134,7 +139,10 @@ export async function writePlanFirst(s: Session, note: string | null): Promise<F
   s.flow = { ...s.flow, phase: 'waiting', waitingFor: 'plan' };
   await save(s);
   const seconds = await autoContinueSeconds(s.deps.db, s.input.workspaceId);
-  const card = cardFor(s, plan.version, seconds);
+  const card = withEstimate(
+    cardFor(s, plan.version, seconds),
+    (await ensureEstimate(s))?.text ?? null,
+  );
   const answer = await askCard(s, card, held ? null : fallbackSeconds(s.input.level));
   if (answer.type === 'timeout') throw new CheckpointTimeout();
   if (answer.type === 'stopped') {

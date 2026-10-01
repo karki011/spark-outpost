@@ -129,6 +129,8 @@ export const checkpointPayloadSchema = z.object({
   autoOption: z.string().nullable().default(null),
   waitsFor: z.string().nullable().default(null),
   keptBy: z.enum(INVOLVEMENT_LEVEL_IDS).nullable().default(null),
+  laws: z.array(z.string()).default([]),
+  estimate: z.string().nullable().default(null),
 });
 export type CheckpointPayload = z.infer<typeof checkpointPayloadSchema>;
 

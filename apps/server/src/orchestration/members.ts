@@ -28,6 +28,8 @@ import { countOutput, counted } from './reads.ts';
 import { reviewFindings, reviewVerdict } from './review.ts';
 import type { MemberRoute } from './routing.ts';
 import { HANDOFF_KINDS } from './escalation.ts';
+import { splitRemovals } from '../laws/critic-text.ts';
+import { crewBudget, startBuilderLaws } from '../laws/builder-start.ts';
 import { loadHandoff, type HandoffKind } from './handoff.ts';
 import {
   appendNewArtifact,
@@ -303,6 +305,9 @@ async function runChild(
     s.copyRunId ??= lease.runId;
   }
   fitToolLimit(s, route.pick.provider);
+  if (!seat) await startBuilderLaws(s, spawn, route, lease.runId);
+  const budget = seat ? null : crewBudget(s, spawn.role);
+  if (budget) await mergeRoute(s.deps.db, lease.runId, { budget });
   await recordRoute(s, role, resolved, lease.runId, name);
   await publish(s);
   const settings =
@@ -349,7 +354,9 @@ async function runChild(
 
 async function afterCritic(s: Session, result: MemberResult, route: MemberRoute) {
   const verdict = result.outcome === 'succeeded' ? reviewVerdict(result.text) : 'unclear';
-  const findings = reviewFindings(result.text);
+  const all = reviewFindings(result.text);
+  const { removed, rest: findings } = splitRemovals(all);
+  s.criticRemovals = result.outcome === 'succeeded' ? removed : null;
   await mergeRoute(s.deps.db, result.runId, { verdict });
   s.findings = verdict === 'concerns' ? findings : [];
   if (verdict === 'looks_good') {
@@ -359,7 +366,7 @@ async function afterCritic(s: Session, result: MemberResult, route: MemberRoute)
   const body = {
     reviewer: route.pick,
     verdict,
-    findings,
+    findings: all,
     text: result.text.slice(0, 64_000),
     label: 'AI review' as const,
     ...(route.pick.provider === s.input.provider ? { sameProvider: true } : {}),

@@ -37,6 +37,7 @@ function crewLine(member: CrewMember) {
     status: member.status,
     pickedBy: member.routedBy,
     ...(member.routeNote ? { why: member.routeNote } : {}),
+    ...(member.budget ? { budget: member.budget } : {}),
     ...(member.autoWouldUse ? { autoWouldUse: pickLabel(member.autoWouldUse) } : {}),
     ...(member.verdict ? { verdict: member.verdict } : {}),
     ...(member.error ? { error: member.error } : {}),

@@ -38,6 +38,7 @@ export interface StoredRoute {
   sameProvider?: boolean;
   fileReads?: number;
   routeNote?: string;
+  budget?: string;
 }
 
 export interface MemberRow {
@@ -76,6 +77,7 @@ const routeFieldsSchema = z.object({
   copy: crew.copy.catch(undefined),
   sameProvider: crew.sameProvider.catch(undefined),
   routeNote: crew.routeNote.catch(undefined),
+  budget: crew.budget.catch(undefined),
   pieceKey: crew.pieceKey.catch(undefined),
   placement: crew.placement.catch(undefined),
 });
@@ -136,6 +138,7 @@ export function toCrewMember(row: MemberRow): CrewMember {
     copy: route.copy ?? null,
     ...(route.sameProvider ? { sameProvider: true } : {}),
     ...(route.routeNote ? { routeNote: route.routeNote } : {}),
+    ...(route.budget ? { budget: route.budget } : {}),
     ...(route.pieceKey ? { pieceKey: route.pieceKey } : {}),
     ...(route.placement ? { placement: route.placement } : {}),
   };
