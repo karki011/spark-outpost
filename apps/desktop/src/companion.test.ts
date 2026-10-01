@@ -109,7 +109,7 @@ describe('desktop companion lifecycle', () => {
     expect(companion.setShortcut('quick', 'Space').ok).toBe(false);
     expect(companion.setShortcut('quick', 'Alt+Shift+Space')).toEqual({
       ok: false,
-      error: 'That shortcut already opens Sessions.',
+      error: 'This shortcut already opens Sessions.',
     });
   });
 

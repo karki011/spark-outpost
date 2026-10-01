@@ -48,7 +48,7 @@ const ACTION_NAMES: Record<ShortcutAction, string> = {
   sessions: 'Sessions',
 };
 
-export const SHORTCUT_TAKEN = 'Another app is using that shortcut. Pick a different one.';
+export const SHORTCUT_TAKEN = 'Another app is using this shortcut. Pick a different one.';
 export const SHORTCUT_INVALID = 'Use at least one modifier key with a letter, number or Space.';
 
 export function createCompanion(initial: CompanionSettings, effects: CompanionEffects): Companion {
@@ -132,7 +132,7 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
       const clash = SHORTCUT_ACTIONS.find(
         (other) => other !== action && settings.shortcuts[other] === next,
       );
-      if (clash) return { ok: false, error: `That shortcut already opens ${ACTION_NAMES[clash]}.` };
+      if (clash) return { ok: false, error: `This shortcut already opens ${ACTION_NAMES[clash]}.` };
       if (island && active.get(action) !== next) {
         const previous = active.get(action);
         unbind(action);
