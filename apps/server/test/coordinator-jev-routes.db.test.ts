@@ -233,7 +233,7 @@ describe('Jev routes parallel pieces', { timeout: 150_000 }, () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      policy: { P2_wide: 0.9 },
+      policy: { P1_wide: 0.05, P2_wide: 0.9, P3_wide: 0.05 },
     };
     const { runId, orchestration } = await runParallel('', script);
     expect(orchestration.status).toBe('succeeded');
