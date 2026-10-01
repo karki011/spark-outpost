@@ -13,6 +13,7 @@ import { assignPieces } from './assign.ts';
 import { likelyFiles } from './engage.ts';
 import { assignFacts } from './provider-state.ts';
 import { isGlob, normalizeOwned, type OwnedSet } from './owned.ts';
+import { routePieces } from './piece-jev.ts';
 import { piecesHash, validatePieces, type CheckedPieces } from './pieces-validate.ts';
 import type { PlanStep } from './plan-coverage.ts';
 import { budgetFor, lineCounter, projectFiles } from './project-facts.ts';
@@ -154,28 +155,27 @@ export async function writePieceList(
   if (!asked.ok) return asked;
   const { pieces, integration } = asked.value;
   const place = await chooseListPlace(s, pieces);
-  const assigned = new Map(
-    assignPieces(pieces, await assignFacts(s, place.placement !== 'in_order')).map((entry) => [
-      entry.key,
-      entry.pick,
-    ]),
-  );
+  const facts = await assignFacts(s, place.placement !== 'in_order');
+  const assigned = new Map(assignPieces(pieces, facts).map((entry) => [entry.key, entry.pick]));
+  const routed = await routePieces(s, pieces, place, assigned, facts);
+  const routes = new Map(routed.pieces.map((route) => [route.key, route]));
   const list = await insertPieceList(s.deps.db, {
     taskId: s.taskId!,
     orchestrationRunId: s.lease.runId,
     planDocumentId: assessment.plan?.id ?? null,
     planVersion: assessment.plan?.version ?? null,
     piecesHash: piecesHash(pieces),
-    placement: place.placement,
-    placementReason: place.reason,
+    placement: routed.placement,
+    placementReason: routed.reason,
     integration,
-    approvedBy: wantsListCard(s, place.placement, pieces.length) ? null : 'level',
+    approvedBy: wantsListCard(s, routed.placement, pieces.length) ? null : 'level',
     pieces: pieces.map((piece) => ({
       ...piece,
       owns: [...piece.owned.paths, ...piece.owned.globs],
-      placement: piece.research ? 'read_only' : place.placement,
-      provider: assigned.get(piece.key)!.provider,
-      model: assigned.get(piece.key)!.model,
+      placement: routes.get(piece.key)!.place.placement,
+      provider: routes.get(piece.key)!.model.pick.provider,
+      model: routes.get(piece.key)!.model.pick.model,
+      pickNote: routed.notes.get(piece.key) ?? null,
     })),
   });
   return {

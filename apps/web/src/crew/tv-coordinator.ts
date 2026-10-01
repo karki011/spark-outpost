@@ -16,6 +16,7 @@ export interface PieceTag {
   place: string;
   state: PieceState;
   notes: number;
+  pick: string | null;
 }
 
 export interface CoordinatorScene {
@@ -61,6 +62,7 @@ export function pieceTag(piece: TaskPiece): PieceTag {
     place: shortPlacement(piece),
     state: pieceState(piece.status),
     notes: piece.notesQueued,
+    pick: piece.pickNote,
   };
 }
 
@@ -147,5 +149,6 @@ export function coordinatorScene(
 
 export function pieceTagText(tag: PieceTag): string {
   const notes = tag.notes > 0 ? `, ${tag.notes} ${tag.notes === 1 ? 'note' : 'notes'} queued` : '';
-  return `${tag.key} ${tag.title}, ${tag.place}, ${tag.state}${notes}`;
+  const pick = tag.pick ? `, ${tag.pick}` : '';
+  return `${tag.key} ${tag.title}, ${tag.place}, ${tag.state}${notes}${pick}`;
 }

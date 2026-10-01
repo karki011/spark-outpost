@@ -185,6 +185,8 @@ export interface JevScript {
   verify?: number;
   verdicts?: { choice: string; confidence: number }[];
   choices?: Partial<Record<string, string>>;
+  scores?: Partial<Record<string, number>>;
+  topMass?: number;
 }
 
 interface AskedQuestion {
@@ -195,6 +197,7 @@ interface AskedQuestion {
 function preferredOption(key: string, options: readonly string[], script: JevScript): string {
   const wanted = script.choices?.[key];
   if (wanted && options.includes(wanted)) return wanted;
+  if (key.endsWith('_builder') && options.includes('uncertain')) return 'uncertain';
   return options.find((option) => option !== 'uncertain') ?? options[0]!;
 }
 
@@ -202,7 +205,7 @@ function spreadChoice(key: string, question: AskedQuestion, script: JevScript): 
   const options = Object.keys(question.criteria ?? {});
   const top = preferredOption(key, options, script);
   const rest = options.filter((option) => option !== top);
-  const topMass = rest.length > 0 ? 0.8 : 1;
+  const topMass = rest.length > 0 ? (script.topMass ?? 0.8) : 1;
   const probabilities: Record<string, number> = { [top]: topMass };
   for (const option of rest) probabilities[option] = (1 - topMass) / rest.length;
   const n = options.length;
@@ -270,9 +273,11 @@ function observedAnswers(script: JevScript, questions: Record<string, AskedQuest
         ? verdictAnswer(script)
         : question.type === 'choice'
           ? spreadChoice(key, question, script)
-          : noul(
-              script.policy?.[key] ?? (key.startsWith('unmet_') ? (script.verify ?? 0.05) : 0.05),
-            ),
+          : question.type === 'score'
+            ? { type: 'score', score: (script.scores?.[key] ?? 2) - 1, confidence: 0.9 }
+            : noul(
+                script.policy?.[key] ?? (key.startsWith('unmet_') ? (script.verify ?? 0.05) : 0.05),
+              ),
     ]),
   );
 }

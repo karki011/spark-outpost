@@ -17,7 +17,7 @@ import {
   type RouteVariant,
 } from '../routing/route-state.ts';
 import { callJev, type JevCall } from './jev-calls.ts';
-import { rankFiles, type Ranking } from './observe-rank.ts';
+import type { Ranking } from './observe-rank.ts';
 import { builderFacts } from './member-routes.ts';
 import { builderTierPick } from './routing.ts';
 import type { Session } from './session.ts';
@@ -131,12 +131,16 @@ async function record(
   });
 }
 
-export async function observeRouting(s: Session, report: ScanReport | null): Promise<void> {
+export async function observeRouting(
+  s: Session,
+  report: ScanReport | null,
+  ranked: Promise<Ranking>,
+): Promise<void> {
   const policy = routePolicy(s.route, builderFacts(s), s.jev !== null);
   const asking = policy.kind === 'ask';
   const facts = asking ? await routeFacts(s) : null;
   const textCall = facts ? askRoute(s, policy, facts, 'text') : null;
-  const ranking = await rankFiles(s, report);
+  const ranking = await ranked;
   const withEvidence =
     facts && report ? { ...facts, evidence: evidenceText(report, ranking.files) } : null;
   const evidenceCall = withEvidence ? askRoute(s, policy, withEvidence, 'evidence') : null;

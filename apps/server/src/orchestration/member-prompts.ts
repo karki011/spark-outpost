@@ -3,6 +3,7 @@ import { gitDiffBetween, gitDiffSince, headCommit } from '../projects/snapshot.t
 import { getSnapshot } from '../persistence/run-snapshots.ts';
 import { projectMoveNote } from '../workflow/project-move.ts';
 import { builderPrompt, criticPrompt, type ChangedFile } from './context.ts';
+import { awaitRanking, likelyFilesLine } from './likely-files.ts';
 import { pieceReviews } from '../coordinator/critic-pieces.ts';
 import type { Session } from './session.ts';
 import type { Spawn } from './transitions.ts';
@@ -101,5 +102,6 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
     buildStyle: s.buildStyle,
     checkCommands: checkCommands(s),
     agreedPlan,
+    likelyFiles: likelyFilesLine(await awaitRanking(s)),
   });
 }

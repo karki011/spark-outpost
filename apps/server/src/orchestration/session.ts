@@ -15,6 +15,7 @@ import {
   FIX_ROUND_TOOL_SHARE,
 } from '../advisor/policy.ts';
 import type { ScanReport } from '../codescan/scan.ts';
+import type { Ranking } from './observe-rank.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
 import type { CodeScanner, ScanOutcome } from '../codescan/scanner.ts';
 import type { ProjectChecks } from '../checks/project-checks.ts';
@@ -153,6 +154,7 @@ export interface Session {
   jevDiffs: boolean;
   scan?: Promise<ScanOutcome> | null;
   scanReport?: ScanReport | null;
+  ranking?: Promise<Ranking | null>;
   unverified?: boolean;
   risky?: string | null;
   shipLine?: string | null;

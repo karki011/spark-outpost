@@ -12,6 +12,7 @@ import { checkBudget } from '../orchestration/budget-check.ts';
 import { runChecks } from '../orchestration/checks.ts';
 import { builderPrompt, checkFailureText } from '../orchestration/context.ts';
 import { treeOf } from '../orchestration/land.ts';
+import { awaitRanking, likelyFilesLine } from '../orchestration/likely-files.ts';
 import { agreedPlanText } from '../orchestration/member-prompts.ts';
 import type { Place } from '../orchestration/members.ts';
 import { publish, type MemberResult, type Seat, type Session } from '../orchestration/session.ts';
@@ -19,6 +20,7 @@ import type { Spawn } from '../orchestration/transitions.ts';
 import type { Coordination } from './state.ts';
 import { handoffSection, pieceSection, type LandedPiece } from './prompts.ts';
 import { builderEnvFor, withCheckLock } from './builder-env.ts';
+import { owns } from './owned.ts';
 import { checkOwnership, ownedFilesFor, violationNote } from './ownership.ts';
 import { announceLanding } from './landing-notices.ts';
 import { pieceTurn, type TurnWork } from './piece-turn.ts';
@@ -97,6 +99,8 @@ async function piecePrompt(s: Session, piece: TaskPiece, coordination: Coordinat
     scoutNotes: coordination.scoutNotes.join('\n\n') || null,
   });
   if (piece.research) return `Request: ${s.input.userRequest}\n\n${brief}`;
+  const owned = coordination.owned.get(piece.key) ?? { paths: [], globs: [] };
+  const relevant = (path: string) => owns(owned, path) || piece.reads.includes(path);
   const base = builderPrompt({
     request: s.input.userRequest,
     history: [],
@@ -105,6 +109,7 @@ async function piecePrompt(s: Session, piece: TaskPiece, coordination: Coordinat
     buildStyle: s.buildStyle,
     checkCommands: [],
     agreedPlan: await agreedPlanText(s),
+    likelyFiles: likelyFilesLine(await awaitRanking(s), relevant),
   });
   return `${base}\n\n${brief}`;
 }

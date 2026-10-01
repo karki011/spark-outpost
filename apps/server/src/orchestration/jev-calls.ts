@@ -31,9 +31,15 @@ const notConnected: JevCall = {
   model: null,
 };
 
+function errorName(error: unknown): string {
+  return error instanceof Error ? error.constructor.name || error.name : typeof error;
+}
+
 function failureMessage(error: unknown, signal: AbortSignal): string {
-  if (error instanceof AdvisorError) return error.message;
-  return signal.aborted ? 'Stopped.' : 'Jev failed unexpectedly.';
+  if (error instanceof AdvisorError) return error.message || errorName(error);
+  if (signal.aborted) return 'Stopped.';
+  const message = error instanceof Error ? error.message : '';
+  return `Jev failed unexpectedly (${message || errorName(error)}).`;
 }
 
 export async function callJev(

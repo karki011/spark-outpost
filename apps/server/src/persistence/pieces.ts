@@ -26,6 +26,7 @@ export interface NewPiece {
   placement: PiecePlacement;
   provider: string | null;
   model: string | null;
+  pickNote?: string | null;
 }
 
 export interface NewPieceList {
@@ -84,6 +85,7 @@ interface PieceRow {
   landed_at: Date | null;
   note: string | null;
   notes_queued: number;
+  pick_note: string | null;
 }
 
 function toPiece(row: PieceRow): TaskPiece {
@@ -116,6 +118,7 @@ function toPiece(row: PieceRow): TaskPiece {
     landedAt: row.landed_at?.toISOString() ?? null,
     note: row.note,
     notesQueued: row.notes_queued,
+    pickNote: row.pick_note,
   };
 }
 
@@ -188,9 +191,9 @@ export async function insertPieceList(db: Db, list: NewPieceList): Promise<Piece
       await client.query(
         `INSERT INTO task_pieces (id, piece_list_id, position, key, title, goal, owns, reads,
            depends_on, contract, acceptance, checks, research, size_estimate, placement,
-           provider, model, status)
+           provider, model, pick_note, status)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-           'pending')`,
+           $18, 'pending')`,
         [
           newId(),
           id,
@@ -209,6 +212,7 @@ export async function insertPieceList(db: Db, list: NewPieceList): Promise<Piece
           piece.placement,
           piece.provider,
           piece.model,
+          piece.pickNote ?? null,
         ],
       );
     }

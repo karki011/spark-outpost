@@ -2,6 +2,7 @@ import { renderJevState } from '../codescan/jev-state.ts';
 import type { ScanOutcome } from '../codescan/scanner.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { track } from './observe.ts';
+import { rankFiles, type Ranking } from './observe-rank.ts';
 import { observeRouting } from './observe-route.ts';
 import type { Session } from './session.ts';
 
@@ -42,7 +43,11 @@ function scanAnswer(outcome: ScanOutcome): Record<string, unknown> {
   };
 }
 
-async function recordScan(s: Session, scanning: Promise<ScanOutcome>): Promise<void> {
+async function recordScan(
+  s: Session,
+  scanning: Promise<ScanOutcome>,
+  ranking: Promise<Ranking>,
+): Promise<void> {
   const outcome = await scanning;
   await insertDecision(s.deps.db, {
     runId: s.lease.runId,
@@ -63,7 +68,7 @@ async function recordScan(s: Session, scanning: Promise<ScanOutcome>): Promise<v
       answer: scanAnswer(outcome),
     },
   });
-  await observeRouting(s, outcome.report);
+  await observeRouting(s, outcome.report, ranking);
 }
 
 export function startScan(
@@ -89,5 +94,7 @@ export function observeScan(s: Session, scanning: Promise<ScanOutcome> | null): 
   void scanning.then((outcome) => {
     s.scanReport = outcome.report;
   });
-  track(s, recordScan(s, scanning));
+  const ranking = scanning.then((outcome) => rankFiles(s, outcome.report));
+  s.ranking = ranking.catch(() => null);
+  track(s, recordScan(s, scanning, ranking));
 }

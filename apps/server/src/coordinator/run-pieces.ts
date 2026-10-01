@@ -52,27 +52,28 @@ function inOrderGroup(site: PieceSite): PieceGroup {
   };
 }
 
-async function sharedGroup(s: Session, coordination: Coordination): Promise<PieceGroup> {
-  const base = await sharedBase(s, coordination);
+async function placedGroup(s: Session, coordination: Coordination): Promise<PieceGroup> {
+  const building = coordination.list!.pieces.filter((piece) => !piece.research);
+  const base = building.some((piece) => piece.placement === 'shared')
+    ? await sharedBase(s, coordination)
+    : null;
+  const copies = building.some((piece) => piece.placement === 'worktree')
+    ? await openCopies(s)
+    : null;
   let attributed = Promise.resolve();
   return {
     limit: await pieceSlots(s),
-    site: async (piece, slot) => sharedSite(coordination, base.root, piece, slot),
-    landed: () => {
+    site: async (piece, slot) =>
+      piece.placement === 'worktree'
+        ? copySite(s, coordination, copies!, piece, slot)
+        : sharedSite(coordination, base!.root, piece, slot),
+    landed: async (piece) => {
+      if (piece.placement === 'worktree') await dropCopy(s, copies!, piece.key);
+      if (!base) return;
       attributed = attributed.then(() => attributeShared(s, coordination));
-      return attributed;
+      await attributed;
     },
-    close: async () => undefined,
-  };
-}
-
-async function worktreeGroup(s: Session, coordination: Coordination): Promise<PieceGroup> {
-  const copies = await openCopies(s);
-  return {
-    limit: await pieceSlots(s),
-    site: (piece, slot) => copySite(s, coordination, copies, piece, slot),
-    landed: (piece) => dropCopy(s, copies, piece.key),
-    close: () => (cutByBudget(s) ? Promise.resolve() : cleanupCopies(s)),
+    close: () => (!copies || cutByBudget(s) ? Promise.resolve() : cleanupCopies(s)),
   };
 }
 
@@ -81,10 +82,8 @@ async function openGroup(
   coordination: Coordination,
   inOrder: PieceSite,
 ): Promise<PieceGroup> {
-  const placement = coordination.list!.placement;
-  if (placement === 'shared') return sharedGroup(s, coordination);
-  if (placement === 'worktree') return worktreeGroup(s, coordination);
-  return inOrderGroup(inOrder);
+  if (coordination.list!.placement === 'in_order') return inOrderGroup(inOrder);
+  return placedGroup(s, coordination);
 }
 
 function withAgentSlot<T>(s: Session, work: () => Promise<T>): Promise<T> {

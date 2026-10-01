@@ -94,9 +94,9 @@ export function beginPieces(
   t: TestDb,
   root: string,
   tags: string,
-  options: { level?: InvolvementLevel; costCapUsd?: number } = {},
+  options: { level?: InvolvementLevel; costCapUsd?: number; jev?: typeof fetch } = {},
 ): { harness: Harness; started: ReturnType<typeof startScenario> } {
-  const harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), {
+  const harness = startOrchestrator(t, options.jev ?? jevFetch({ calls: [], scenario: NORMAL }), {
     coordinator: 'parallel',
     ...(options.costCapUsd === undefined ? {} : { budget: { costCapUsd: options.costCapUsd } }),
   });

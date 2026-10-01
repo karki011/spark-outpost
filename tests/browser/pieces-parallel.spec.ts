@@ -144,7 +144,7 @@ test('Automatic builds independent pieces side by side in the shared tree', asyn
   await expect(tv.locator('.tv-n[data-piece]')).toHaveCount(3);
   await expect(spoke(page, 'P2')).toHaveAttribute(
     'aria-label',
-    /^Rivet, P2 API, shared tree, landed\. Show details$/,
+    /^Rivet, P2 API, shared tree, landed, Jev: Claude Sonnet 5 · complexity 2\/5, stakes 2\/5, 3 files\. Show details$/,
   );
   await expect(spoke(page, 'P1')).toContainText('P1 · Store');
   await expect(spoke(page, 'P1').locator('.piece-state')).toHaveText('landed');
@@ -170,6 +170,9 @@ test('Review each step asks for the split before building it, answered by keyboa
   await expect(split).toBeVisible({ timeout: 60_000 });
   await expect(board(page)).toContainText('waiting for your go-ahead');
   await expect(pieceRow(page, 'P3')).toContainText('waiting on P1');
+  await expect(pieceRow(page, 'P1').locator('.piece-pick')).toHaveText(
+    'Jev: Claude Sonnet 5 · complexity 2/5, stakes 2/5, 1 file',
+  );
   const build = split.getByRole('button', { name: 'Build it' });
   const inOrder = split.getByRole('button', { name: 'Build in order instead' });
   const revise = split.getByRole('button', { name: 'Revise' });
