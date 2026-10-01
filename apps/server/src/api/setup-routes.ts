@@ -22,8 +22,8 @@ import {
   getSetupState,
   saveConnection,
   updateProfile,
-  updateProviderDefaults,
 } from '../persistence/setup.ts';
+import { updateProviderDefaults } from '../persistence/provider-defaults.ts';
 import { advisorEntry, catalogEntry } from '../providers/catalog.ts';
 import type { RunCommand } from '../setup/command.ts';
 import type { SecretStore } from '../setup/secrets.ts';

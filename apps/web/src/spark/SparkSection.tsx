@@ -6,6 +6,7 @@ import { CompanionSetting } from '../settings/CompanionSetting.tsx';
 import { DesktopCompanionSetting } from '../settings/DesktopCompanionSetting.tsx';
 import { FailingChecksSetting } from '../settings/FailingChecksSetting.tsx';
 import { OpenPullRequestsAsSetting, PrFollowUpSettings } from '../settings/PullRequestSettings.tsx';
+import { CompactionSettings } from './CompactionSettings.tsx';
 import { LevelSetting } from './LevelSetting.tsx';
 import { MorningBriefSetting } from './MorningBriefSetting.tsx';
 import { NameSetting, PersonalitySetting, SparkSwitch } from './SparkSettings.tsx';
@@ -34,6 +35,7 @@ export function SparkSection({ setup }: { setup: SetupState }) {
         <SpendCapSetting usd={profile.spendCapUsd} />
         <AutoContinueSetting seconds={profile.autoContinueSeconds} />
       </section>
+      <CompactionSettings profile={profile} />
       <section className="spark-group" aria-labelledby="spark-prs">
         <h4 id="spark-prs">Pull requests</h4>
         <OpenPullRequestsAsSetting ready={profile.prReadyForReview} />

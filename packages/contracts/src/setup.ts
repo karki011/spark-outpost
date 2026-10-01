@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { DEFAULT_INVOLVEMENT_LEVEL, involvementLevelSchema } from './approvals.ts';
 import {
+  COMPACT_AT_DEFAULT,
+  COMPACT_WARN_DEFAULT,
+  compactAtPercentSchema,
+  compactWarnPercentSchema,
+} from './compaction.ts';
+import {
   DEFAULT_MORNING_BRIEF_TIME,
   DEFAULT_PERSONALITY,
   morningBriefTimeSchema,
@@ -121,6 +127,9 @@ export const profileSchema = z.object({
   spendCapUsd: spendCapUsdSchema.nullable().default(null),
   morningBrief: z.boolean().default(true),
   morningBriefTime: morningBriefTimeSchema.default(DEFAULT_MORNING_BRIEF_TIME),
+  compactWarnPercent: compactWarnPercentSchema.default(COMPACT_WARN_DEFAULT),
+  compactAtPercent: compactAtPercentSchema.default(COMPACT_AT_DEFAULT),
+  autoCompact: z.boolean().default(true),
 });
 export type Profile = z.infer<typeof profileSchema>;
 export type SparkSessionPrefs = Pick<Profile, 'displayName' | 'personality'>;
@@ -152,6 +161,9 @@ export const updateProfileRequestSchema = z
     spendCapUsd: spendCapUsdSchema.nullable(),
     morningBrief: z.boolean(),
     morningBriefTime: morningBriefTimeSchema,
+    compactWarnPercent: compactWarnPercentSchema,
+    compactAtPercent: compactAtPercentSchema,
+    autoCompact: z.boolean(),
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_COMPACTION_THRESHOLDS } from '@spark-outpost/contracts';
 import {
   agentCompactWorked,
   compactStep,
@@ -10,24 +11,46 @@ import {
 const at = (percent: number) => ({ used: percent * 2_000, size: 200_000 });
 
 describe('compactStep', () => {
-  const base = { level: 'hands-off', snoozed: false, cardPending: false } as const;
+  const base = {
+    level: 'hands-off',
+    snoozed: false,
+    cardPending: false,
+    thresholds: DEFAULT_COMPACTION_THRESHOLDS,
+  } as const;
 
-  it('does nothing below 85%, or without a reading', () => {
-    expect(compactStep({ ...base, reading: at(84) })).toBe('none');
+  it('does nothing below the default 80%, or without a reading', () => {
+    expect(compactStep({ ...base, reading: at(79) })).toBe('none');
     expect(compactStep({ ...base, reading: null })).toBe('none');
   });
 
   it('compacts by itself at Automatic and Full auto, and asks at Review each step', () => {
-    expect(compactStep({ ...base, reading: at(85) })).toBe('compact');
+    expect(compactStep({ ...base, reading: at(80) })).toBe('compact');
     expect(compactStep({ ...base, level: 'full-auto', reading: at(90) })).toBe('compact');
-    expect(compactStep({ ...base, level: 'balanced', reading: at(85) })).toBe('ask');
+    expect(compactStep({ ...base, level: 'balanced', reading: at(80) })).toBe('ask');
   });
 
-  it('waits for 95% after Keep going', () => {
-    expect(compactStep({ ...base, level: 'balanced', snoozed: true, reading: at(94) })).toBe(
-      'none',
+  it('waits for the compaction point plus 10 after Keep going', () => {
+    const snoozed = { ...base, level: 'balanced', snoozed: true } as const;
+    expect(compactStep({ ...snoozed, reading: at(89) })).toBe('none');
+    expect(compactStep({ ...snoozed, reading: at(90) })).toBe('ask');
+  });
+
+  it('follows custom thresholds and caps the second ask at 95%', () => {
+    const late = { ...DEFAULT_COMPACTION_THRESHOLDS, warnPercent: 80, compactPercent: 90 };
+    expect(compactStep({ ...base, thresholds: late, reading: at(89) })).toBe('none');
+    expect(compactStep({ ...base, thresholds: late, reading: at(90) })).toBe('compact');
+    const snoozed = { ...base, thresholds: late, snoozed: true };
+    expect(compactStep({ ...snoozed, reading: at(94) })).toBe('none');
+    expect(compactStep({ ...snoozed, reading: at(95) })).toBe('compact');
+  });
+
+  it('only asks when automatic compaction is off, at every autonomy level', () => {
+    const off = { ...DEFAULT_COMPACTION_THRESHOLDS, autoCompact: false };
+    expect(compactStep({ ...base, thresholds: off, reading: at(85) })).toBe('ask');
+    expect(compactStep({ ...base, thresholds: off, level: 'full-auto', reading: at(99) })).toBe(
+      'ask',
     );
-    expect(compactStep({ ...base, level: 'balanced', snoozed: true, reading: at(95) })).toBe('ask');
+    expect(compactStep({ ...base, thresholds: off, reading: at(79) })).toBe('none');
   });
 
   it('never acts while another card is pending', () => {

@@ -1,6 +1,7 @@
 import {
   AUTONOMY_LEVELS,
   autonomyLabel,
+  reaskPercent,
   ticketSourceIdSchema,
   ticketSourceNames,
   type ProviderSetup,
@@ -144,6 +145,12 @@ async function settings({ deps, scope }: SparkToolContext) {
     serverSpendCapUsd: deps.serverSpendCapUsd,
     morningBrief: { on: profile.morningBrief, time: profile.morningBriefTime },
     autoContinueSeconds: profile.autoContinueSeconds,
+    contextCompaction: {
+      warnAtPercent: profile.compactWarnPercent,
+      compactAtPercent: profile.compactAtPercent,
+      compactAutomatically: profile.autoCompact,
+      askAgainAfterKeepGoingAtPercent: reaskPercent(profile.compactAtPercent),
+    },
     jevReviewsDiffs: profile.jevDiffs,
     shipWithFailingChecks: profile.shipFailingChecks,
     openPullRequestsAs: profile.prReadyForReview ? 'ready for review' : 'draft',
@@ -185,7 +192,7 @@ export const setupTools = [
     name: 'spark_settings',
     title: 'Spark settings',
     description:
-      'Non-secret Settings → Spark values: whether Spark is on, default autonomy level (Review each step, Automatic, Full auto → PR) and what each means, personality, spend cap per task, auto-continue wait, what Full auto does when checks fail, morning brief time, new-chat defaults and ticket attention rules. Per-project Builders at once and Where Spark works are in spark_projects.',
+      'Non-secret Settings → Spark values: whether Spark is on, default autonomy level (Review each step, Automatic, Full auto → PR) and what each means, personality, spend cap per task, auto-continue wait, context compaction thresholds (warn, compact, automatic on or off), what Full auto does when checks fail, morning brief time, new-chat defaults and ticket attention rules. Per-project Builders at once and Where Spark works are in spark_projects.',
     input: {},
     run: (_args, context) => settings(context),
   }),

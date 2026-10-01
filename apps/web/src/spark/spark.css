@@ -78,6 +78,9 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.inp.spark-num.spark-pct {
+  width: 56px;
+}
 .inp.spark-time {
   width: 116px;
   font-variant-numeric: tabular-nums;

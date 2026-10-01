@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   buttonLabel,
   cleanDescription,
-  contextLevel,
   currentModel,
   formatTokens,
   meterLevel,
@@ -80,15 +79,10 @@ describe('composer model options', () => {
     expect(meterLevel(efforts, 'unknown')).toBe(0);
   });
 
-  it('formats token counts and context levels', () => {
+  it('formats token counts', () => {
     expect(formatTokens(950)).toBe('950');
     expect(formatTokens(18_783)).toBe('18.8K');
     expect(formatTokens(1_000_000)).toBe('1000K');
-    expect(contextLevel(10)).toBe('ok');
-    expect(contextLevel(69)).toBe('ok');
-    expect(contextLevel(70)).toBe('warm');
-    expect(contextLevel(85)).toBe('hot');
-    expect(contextLevel(90)).toBe('hot');
   });
 });
 
