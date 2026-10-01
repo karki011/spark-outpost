@@ -7,6 +7,14 @@ export async function getRun(db: Queryable, id: string): Promise<Run | null> {
   return rows[0] ? toRun(rows[0]) : null;
 }
 
+export async function countActiveRuns(db: Queryable): Promise<number> {
+  const { rows } = await db.query<{ count: number }>(
+    `SELECT count(*)::int AS count FROM runs
+     WHERE status IN ('queued', 'running', 'awaiting_approval')`,
+  );
+  return rows[0]?.count ?? 0;
+}
+
 export async function requestCancel(db: Queryable, id: string): Promise<Run | null> {
   const { rows } = await db.query<RunRow>(
     `UPDATE runs SET cancel_requested_at = COALESCE(cancel_requested_at, now())

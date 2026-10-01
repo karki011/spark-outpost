@@ -86,4 +86,5 @@ Read `docs/product/PLAN.md` for product direction and `docs/architecture/PROTOCO
 - Run `pnpm check` (format, lint, typecheck, source rules, unused files and exports via knip, contrast audit, ACP coverage, unit tests) and `pnpm test:browser` for browser behavior. Set `SPARK_WEB_BUILD=1` to run browser specs against a production build of the web app (the map perf spec holds the tree to 50 ms tasks there).
 - Run `pnpm db:setup` once for the isolated native macOS PostgreSQL cluster, then `pnpm db:up`, `pnpm db:migrate` and `pnpm dev`. Stop only this cluster with `pnpm db:stop`; preserve `.local` data and ignored credentials. See `infra/local/README.md`.
 - Run `pnpm desktop:dev` for the Electron shell (dev channel, own data folder and bundled Postgres); see `docs/architecture/ELECTRON_PLAN.md`.
+- Run `pnpm desktop:package` for an unsigned local build in `apps/desktop/release/` and `pnpm desktop:e2e-update` for the local update check; releases, signing and the update feed are in `docs/architecture/RELEASES.md`. Never publish a build without user authorization.
 - Do not create or publish a remote repository, push, or deploy without user authorization.

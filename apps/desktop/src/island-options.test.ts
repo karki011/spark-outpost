@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { islandWindowOptions, trayBitmap, trayTemplate } from './island-options.ts';
+import { islandWindowOptions, trayTemplate } from './island-options.ts';
 
 describe('island window options', () => {
   it('is a transparent, frameless, non-focusable panel that never resizes', () => {
@@ -48,14 +48,5 @@ describe('tray menu', () => {
   it('hides the companion toggle where the island is not available', () => {
     const items = trayTemplate({ appName: 'Spark', companionOn: false, supported: false }, actions);
     expect(items.some((item) => item.label === 'Show companion')).toBe(false);
-  });
-
-  it('draws an opaque Scout silhouette on a clear background', () => {
-    const pixels = trayBitmap(36);
-    const alpha = (x: number, y: number) => pixels[(y * 36 + x) * 4 + 3]!;
-    expect(pixels).toHaveLength(36 * 36 * 4);
-    expect(alpha(18, 24)).toBe(255);
-    expect(alpha(1, 1)).toBe(0);
-    expect(alpha(35, 35)).toBe(0);
   });
 });

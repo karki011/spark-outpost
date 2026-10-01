@@ -28,6 +28,9 @@ export function isTerminalRunStatus(status: RunStatus): status is TerminalRunSta
   return terminalStatuses.has(status);
 }
 
+export const activeRunsSchema = z.object({ activeRuns: z.number().int().nonnegative() });
+export type ActiveRuns = z.infer<typeof activeRunsSchema>;
+
 export const startAsSchema = z.enum(['change']);
 export type StartAs = z.infer<typeof startAsSchema>;
 

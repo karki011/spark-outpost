@@ -23,16 +23,16 @@ const launch: ServerLaunch = {
 };
 
 describe('server environment', () => {
-  it('points both processes at the channel database, keychain, branches and backups', () => {
+  it('points both processes at the channel database, keychain and branches', () => {
     for (const env of [apiEnv(launch), workerEnv(launch)]) {
       expect(env).toMatchObject({
         PATH: '/usr/bin',
         DATABASE_URL: launch.databaseUrl,
         KEYCHAIN_SERVICE: 'Spark Outpost Dev',
         BRANCH_PREFIX: 'spark-dev',
-        BACKUP_DIR: `${paths.userData}/backups`,
       });
       expect(env.SECRET_STORE).toBeUndefined();
+      expect(env.BACKUP_DIR).toBeUndefined();
     }
   });
 

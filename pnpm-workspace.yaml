@@ -5,6 +5,7 @@ allowBuilds:
   '@embedded-postgres/darwin-arm64': true
   '@embedded-postgres/darwin-x64': true
   electron: true
+  electron-winstaller: false
   esbuild: true
   node-pty: true
 patchedDependencies:

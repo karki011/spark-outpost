@@ -1,0 +1,132 @@
+.upd-blob {
+  color: var(--muted);
+}
+
+.upd-blob-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 30px;
+}
+
+.upd-blob .scout {
+  pointer-events: none;
+}
+
+.upd-blob.nudge .scout .sc-hop {
+  animation: sc-hop 0.55s var(--spring) 2;
+}
+
+.upd-blob-dot {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--rail);
+}
+
+.upd-blob-bar {
+  width: 30px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--raise);
+}
+
+.upd-blob-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.25s var(--out);
+}
+
+.upd-blob.downloading,
+.upd-blob.installing {
+  color: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.upd-blob:disabled {
+  cursor: progress;
+}
+
+.upd-toasts {
+  position: fixed;
+  left: 84px;
+  bottom: 16px;
+  z-index: 60;
+  width: 340px;
+}
+
+.upd-toasts:empty,
+.upd-toasts .toasts:empty {
+  display: none;
+}
+
+.upd-version {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.upd-notes {
+  margin-top: 12px;
+}
+
+.upd-notes a {
+  color: var(--accent-text);
+  text-underline-offset: 2px;
+}
+
+.upd-skeleton {
+  display: grid;
+  gap: 18px;
+  padding: 12px 0;
+}
+
+.upd-skeleton i {
+  position: relative;
+  display: block;
+  height: 14px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--raise);
+}
+
+.upd-skeleton i:nth-child(odd) {
+  width: 46%;
+}
+
+.upd-skeleton i:nth-child(even) {
+  width: 72%;
+  height: 10px;
+  margin-top: -12px;
+}
+
+.upd-skeleton i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--panel) 60%, transparent),
+    transparent
+  );
+  background-size: 250% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@media (max-width: 720px) {
+  .upd-toasts {
+    left: 16px;
+    right: 16px;
+    bottom: 76px;
+    width: auto;
+  }
+}

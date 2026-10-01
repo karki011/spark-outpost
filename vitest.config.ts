@@ -14,6 +14,7 @@ export default defineConfig({
             '**/*.db.test.ts',
             '**/*.live.test.ts',
             '**/node_modules/**',
+            'apps/desktop/release/**',
             'tests/browser/**',
             'scripts/bench/fixture/**',
             'scripts/e2e-live/dev-day/fixtures/**',
@@ -27,7 +28,7 @@ export default defineConfig({
       {
         test: {
           name: 'db',
-          include: ['{apps/server,scripts}/**/*.db.test.ts'],
+          include: ['{apps/server,apps/desktop/src,scripts}/**/*.db.test.ts'],
           setupFiles: ['apps/server/test/worker-database.ts'],
           environment: 'node',
           maxWorkers: 8,

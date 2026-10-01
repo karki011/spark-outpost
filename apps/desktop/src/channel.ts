@@ -65,3 +65,15 @@ export function channelPaths(appDataDir: string, config: ChannelConfig): Channel
     logs: path.join(userData, 'logs'),
   };
 }
+
+export interface ChannelIcons {
+  app: string;
+  tray: string;
+}
+
+export function channelIcons(assetsDir: string, config: ChannelConfig): ChannelIcons {
+  return {
+    app: path.join(assetsDir, config.badge ? 'icon-dev.png' : 'icon.png'),
+    tray: path.join(assetsDir, 'trayTemplate.png'),
+  };
+}

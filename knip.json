@@ -34,7 +34,7 @@
     },
     "apps/desktop": {
       "entry": ["src/server-entry.ts"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts", "scripts/**/*.ts"]
     },
     "packages/contracts": {
       "project": ["src/**/*.ts"]
