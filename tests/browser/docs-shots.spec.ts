@@ -182,6 +182,14 @@ test('Docs page review screenshots', async ({ page }) => {
   await page.goto('/#/docs/approvals#protected-paths');
   await expect(page.getByRole('heading', { name: 'Protected paths', level: 2 })).toBeFocused();
   await shoot(page, folder, 'docs-approvals');
+  await page.goto('/#/docs/getting-started');
+  await expect(page.getByRole('heading', { name: 'Getting started', level: 1 })).toBeVisible();
+  await shoot(page, folder, 'docs-get-started');
+  await page.goto('/#/docs/connect-a-provider');
+  await expect(
+    page.getByRole('heading', { name: 'Connect an AI provider', level: 1 }),
+  ).toBeVisible();
+  await shoot(page, folder, 'docs-connect-a-provider');
   await page.getByRole('searchbox', { name: 'Search the guide' }).fill('autonomy');
   await shoot(page, folder, 'docs-search');
   await page.setViewportSize({ width: 390, height: 844 });

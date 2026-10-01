@@ -1,7 +1,7 @@
 ---
 title: Providers and models
 section: Get started
-order: 120
+order: 180
 summary: Connect Claude, Codex and Z.ai, send a test message, pick the default model, mode and effort, and read model cards.
 ---
 

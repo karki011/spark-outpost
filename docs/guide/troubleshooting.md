@@ -19,4 +19,11 @@ summary: What to do when the server doesn't answer, a provider isn't signed in, 
 
 ## Too many terminals
 
+## Run setup again
+
+Setup has no replay button. It comes back in two cases:
+
+- You disconnect every provider. Spark Outpost needs at least one, so setup reopens at **AI provider**.
+- You reset Spark in **Settings → Reset**. This deletes your chats, projects and settings, so read the lists on that screen first.
+
 ## Start over

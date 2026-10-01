@@ -2,7 +2,7 @@
 
 This folder is the single source for the Spark Outpost user guide. The app bundles these pages into its **Docs** page, Spark's agents read them through the `spark_docs` tool, and a future website can render the same files.
 
-Status: **outline for review**. Three pages are written in full as a quality sample; every other page is a stub with its planned headings.
+Status: **outline for review**. Get started, Chats and Approvals are written in full; every other page is a stub with its planned headings.
 
 ## How the pages work
 
@@ -26,6 +26,7 @@ Status: **outline for review**. Three pages are written in full as a quality sam
 - A stub says `> **Coming soon.**` as its first line. Docs shows it with a "Soon" tag and `spark_docs` flags it `comingSoon`.
 - Screenshots live in `images/` as `<page>-<shot>-light.png` and `<page>-<shot>-dark.png`. Pages link the light one; the app swaps in the dark one when the theme is dark. Regenerate them with `pnpm docs:screenshots` (see `tests/browser/docs-shots.spec.ts`); it runs the app against a seeded demo test database, never your real data.
 - Write in second person, short and task-first: "To do X: 1. … 2. …". Use the app's exact labels in **bold**. No marketing.
+- Keep pages digestible: one job per page, a 1–2 line "what you'll do" lead with a time estimate ("About 1 minute"), numbered steps, paragraphs of 3 lines or fewer, at most one screenshot per step placed right after it, at most one `> **Tip:**`, and a closing `**Next:**` link when pages form a sequence.
 
 ## Sections and pages
 
@@ -33,10 +34,18 @@ Legend: **Written** is a full page; **Stub** has frontmatter, "Coming soon" and 
 
 ### Get started
 
-| Page                                        | Status  | Summary                                                                                                             | Screenshots                                                                                                                                                    |
-| ------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `getting-started` Getting started           | Written | Set up Spark Outpost in about two minutes: your name, a theme, a provider and your tools.                           | `getting-started-meet-spark`, `getting-started-theme`, `getting-started-provider`, `getting-started-defaults`, `getting-started-tools`, `getting-started-done` |
-| `providers-and-models` Providers and models | Stub    | Connect Claude, Codex and Z.ai, send a test message, pick the default model, mode and effort, and read model cards. | `providers-list`, `providers-test-message`, `providers-defaults`, `providers-model-card`                                                                       |
+Get started is a sequence: an overview page that lists the steps, then one short page per setup job, each ending with a **Next:** link.
+
+| Page                                          | Status  | Summary                                                                                                             | Screenshots                                                                              |
+| --------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `getting-started` Getting started             | Written | Set up Spark Outpost in about five minutes. Each step has its own short page.                                       | none                                                                                     |
+| `meet-spark` Meet Spark and pick a theme      | Written | Tell Spark your name, choose how it talks to you, and pick a theme.                                                 | `getting-started-meet-spark`, `getting-started-theme`                                    |
+| `connect-a-provider` Connect an AI provider   | Written | Connect Claude, Codex or Z.ai with the local CLI or an API key, then send a test message.                           | `getting-started-provider`                                                               |
+| `chat-defaults` Choose defaults for new chats | Written | Pick the model, mode and effort new chats start with, and see where to change them later.                           | `getting-started-defaults`                                                               |
+| `meet-jev` Jev, the advisor                   | Written | What Jev is, why it's optional, and how to connect it during setup.                                                 | none                                                                                     |
+| `bring-in-your-tools` Bring in your tools     | Written | Check that Git is found, and optionally connect GitHub, Jira and Linear.                                            | `getting-started-tools`                                                                  |
+| `first-chat` Your first chat                  | Written | Finish setup, send your first message and find what to read next.                                                   | `getting-started-done`, `chats-and-modes-new-chat`                                       |
+| `providers-and-models` Providers and models   | Stub    | Connect Claude, Codex and Z.ai, send a test message, pick the default model, mode and effort, and read model cards. | `providers-list`, `providers-test-message`, `providers-defaults`, `providers-model-card` |
 
 ### Work with Spark
 
@@ -92,3 +101,5 @@ Settings rows and info tips link here with a book icon (`apps/web/src/ui/DocLink
 | Settings → Projects → Where Spark works           | `spark-crew#where-spark-works`    |
 | Settings → Updates → Channel                      | `updates#stable-or-beta`          |
 | Map → what Jev reads info tip                     | `privacy-and-secrets#sparkignore` |
+
+Getting started links to `troubleshooting#run-setup-again` for when setup comes back.
