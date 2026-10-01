@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 import type { AppUpdater } from 'electron-updater';
 import type { UpdateStatus } from '@spark-outpost/contracts';
@@ -15,6 +16,7 @@ import {
   FIRST_CHECK_DELAY_MS,
   initialStatus,
   parseChannel,
+  updateErrorMessage,
 } from './update-state.ts';
 
 export interface UpdaterOptions {
@@ -59,7 +61,9 @@ function electronDriver(updater: AppUpdater, log: (line: string) => void, emit: 
     emit({ type: 'progress', percent: progress.percent }),
   );
   updater.on('update-downloaded', (info) => emit({ type: 'downloaded', version: info.version }));
-  updater.on('error', (error: Error) => emit({ type: 'error', message: error.message }));
+  updater.on('error', (error: Error) =>
+    emit({ type: 'error', message: updateErrorMessage(error.message) }),
+  );
   const driver: UpdateDriver = {
     configure(settings) {
       updater.channel = settings.channel;
@@ -112,7 +116,8 @@ const CHANNELS = [
 
 export async function startUpdater(options: UpdaterOptions): Promise<Updater> {
   const prefsFile = updatePrefsFile(options.userData);
-  const prefs = await loadPrefs(prefsFile);
+  const prefs = await loadPrefs(prefsFile, options.version);
+  if (!existsSync(prefsFile)) await savePrefs(prefsFile, prefs).catch(() => undefined);
   const preview = options.enabled ? null : previewPhase(options.preview);
   const offReason = preview
     ? null

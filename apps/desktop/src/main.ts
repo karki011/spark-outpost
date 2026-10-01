@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { app, BrowserWindow, dialog, shell } from 'electron';
+import { isBetaVersion } from '@spark-outpost/contracts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import { waitForApi } from './api-ready.ts';
 import { channelConfig, channelIcons, channelPaths, resolveChannel } from './channel.ts';
@@ -10,6 +11,9 @@ import { detectGit, GIT_MISSING } from './git.ts';
 import { appLayout } from './layout.ts';
 import { freePort, LOOPBACK } from './ports.ts';
 import { DUMP_TOOL_DIRS } from './data-backup.ts';
+import { FileLog } from './file-log.ts';
+import { startHelp, type Help } from './help.ts';
+import { aboutVersion } from './help-menu.ts';
 import { startDatabase, type Database, type DatabaseOptions } from './postgres.ts';
 import { apiEnv, POSTGRES_LOCALE, workerEnv, type ServerLaunch } from './server-env.ts';
 import { forkService, OutputTail } from './service.ts';
@@ -44,7 +48,7 @@ const icons = channelIcons(path.join(app.getAppPath(), 'assets'), config);
 app.setName(config.appName);
 app.setAboutPanelOptions({
   applicationName: config.appName,
-  applicationVersion: app.getVersion(),
+  ...aboutVersion(app.getVersion(), isBetaVersion(app.getVersion())),
   iconPath: icons.app,
 });
 app.setPath('userData', paths.userData);
@@ -58,10 +62,17 @@ let origin: string | null = null;
 let companionHost: CompanionHost | null = null;
 let failureHelp: string | null = null;
 let updater: Updater | null = null;
+let help: Help | null = null;
+const fileLog = new FileLog({ dir: paths.logs });
 
 function log(source: string) {
-  return (line: string) => console.log(`[${source}] ${line}`);
+  return (line: string) => {
+    console.log(`[${source}] ${line}`);
+    fileLog.write(source, line);
+  };
 }
+
+const mainLog = log('main');
 
 function supervise(name: string, entry: string, env: NodeJS.ProcessEnv, ready: () => boolean) {
   const tail = new OutputTail();
@@ -72,7 +83,7 @@ function supervise(name: string, entry: string, env: NodeJS.ProcessEnv, ready: (
         fail(`${name} stopped during startup (exit ${code}).`, tail.text());
         return;
       }
-      console.log(`[main] ${name} exited with ${code}; restarting in ${delayMs} ms.`);
+      mainLog(`${name} exited with ${code}; restarting in ${delayMs} ms.`);
     },
     onGiveUp: (code) => fail(`${name} keeps stopping (last exit ${code}).`, tail.text()),
   });
@@ -82,15 +93,17 @@ function supervise(name: string, entry: string, env: NodeJS.ProcessEnv, ready: (
 
 async function stopEverything(): Promise<void> {
   await Promise.all(supervisors.map((supervisor) => supervisor.stop()));
-  console.log('[main] API and worker stopped; stopping Postgres.');
+  mainLog('API and worker stopped; stopping Postgres.');
   await database?.stop();
   database = null;
-  console.log('[main] Stopped.');
+  mainLog('Stopped.');
 }
 
 function closeWindows(): void {
   updater?.dispose();
   updater = null;
+  help?.dispose();
+  help = null;
   companionHost?.dispose();
   companionHost = null;
   for (const open of BrowserWindow.getAllWindows()) open.destroy();
@@ -119,7 +132,10 @@ const shutdown = createShutdown({
 });
 
 function fail(message: string, detail: string): void {
-  if (!shutdown.failed.aborted) console.error(`[main] ${message}\n${detail}`);
+  if (!shutdown.failed.aborted) {
+    console.error(`[main] ${message}\n${detail}`);
+    fileLog.write('main', `${message}\n${detail}`);
+  }
   shutdown.fail(message, detail);
 }
 
@@ -197,6 +213,7 @@ async function launch(): Promise<void> {
     apiPort,
     apiOrigin: apiUrl,
     token,
+    version: app.getVersion(),
     webRoot: layout.webRoot,
     baseEnv: process.env,
   };
@@ -221,6 +238,16 @@ async function launch(): Promise<void> {
   attachApiToken(apiUrl, token);
   origin = apiUrl;
   showSpark();
+  help = startHelp({
+    version: app.getVersion(),
+    logsFolder: paths.logs,
+    apiUrl,
+    token,
+    trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
+    showSpark,
+    mainWindow: () => window,
+    log: log('help'),
+  });
   updater = await startUpdater({
     enabled: config.autoUpdate,
     version: app.getVersion(),
@@ -247,7 +274,7 @@ async function launch(): Promise<void> {
     showSpark,
     quit: () => app.quit(),
   });
-  console.log(`[main] ${config.appName} ready on ${apiUrl}; data in ${paths.userData}.`);
+  mainLog(`${config.appName} ${app.getVersion()} ready on ${apiUrl}; data in ${paths.userData}.`);
 }
 
 function showSpark(): void {

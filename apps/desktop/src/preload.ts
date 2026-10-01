@@ -37,6 +37,19 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     install: () => ipcRenderer.invoke(IPC.updatesInstall),
     onChange: (callback: (status: unknown) => void) => listen(IPC.updatesChanged, callback),
   },
+  help: {
+    info: () => ipcRenderer.invoke(IPC.helpInfo),
+    exportDiagnostics: () => ipcRenderer.invoke(IPC.helpExportDiagnostics),
+    showLogs: () => ipcRenderer.invoke(IPC.helpShowLogs),
+    onOpenFeedback: (callback: () => void) => {
+      const take = () =>
+        void ipcRenderer.invoke(IPC.helpPending).then((pending: unknown) => {
+          if (pending === true) callback();
+        });
+      take();
+      return listen(IPC.helpOpen, take);
+    },
+  },
   onOpenChat: (callback: (id: string) => void) => {
     const take = () =>
       void ipcRenderer.invoke(IPC.pendingChat).then((id: unknown) => {

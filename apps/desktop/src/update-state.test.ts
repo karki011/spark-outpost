@@ -6,6 +6,7 @@ import {
   parseChannel,
   reduceUpdate,
   updaterChannel,
+  updateErrorMessage,
   type UpdateEvent,
 } from './update-state.ts';
 
@@ -139,5 +140,18 @@ describe('installDecision', () => {
       status: 'unavailable',
       reason: 'No update is ready yet.',
     });
+  });
+});
+
+describe('updateErrorMessage', () => {
+  it('explains a channel with no release yet and keeps other errors as they are', () => {
+    expect(
+      updateErrorMessage(
+        'Cannot find channel "latest-mac.yml" update info: HttpError: 404 Not Found',
+      ),
+    ).toBe("There's no Stable release on the update feed yet. Check again later.");
+    expect(updateErrorMessage('net::ERR_INTERNET_DISCONNECTED')).toBe(
+      'net::ERR_INTERNET_DISCONNECTED',
+    );
   });
 });

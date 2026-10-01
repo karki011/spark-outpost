@@ -10,6 +10,7 @@ export interface ServerLaunch {
   apiPort: number;
   apiOrigin: string;
   token: string;
+  version: string;
   webRoot: string;
   baseEnv: NodeJS.ProcessEnv;
 }
@@ -30,6 +31,9 @@ const LAUNCHER_OWNED = [
   'BACKUP_DIR',
   'WEB_ROOT',
   'NODE_OPTIONS',
+  'SPARK_APP_VERSION',
+  'SPARK_LOG_DIR',
+  'SPARK_DATA_DIR',
 ];
 
 function inherited(baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
@@ -54,6 +58,9 @@ export function apiEnv(launch: ServerLaunch): NodeJS.ProcessEnv {
     API_PORT: String(launch.apiPort),
     ALLOWED_ORIGINS: launch.apiOrigin,
     WEB_ROOT: launch.webRoot,
+    SPARK_APP_VERSION: launch.version,
+    SPARK_LOG_DIR: launch.paths.logs,
+    SPARK_DATA_DIR: launch.paths.userData,
     [API_TOKEN_ENV]: launch.token,
   };
 }

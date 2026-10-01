@@ -2,6 +2,7 @@ import type { InstallResult, UpdateChannel, UpdateStatus } from '@spark-outpost/
 import type { UpdatePrefs } from './update-prefs.ts';
 import {
   installDecision,
+  updateErrorMessage,
   reduceUpdate,
   RUNS_RECHECK_MS,
   updaterChannel,
@@ -47,7 +48,7 @@ export interface UpdateController {
 }
 
 function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return updateErrorMessage(error instanceof Error ? error.message : String(error));
 }
 
 function defaultLater(run: () => void, ms: number): () => void {

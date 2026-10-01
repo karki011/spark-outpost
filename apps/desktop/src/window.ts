@@ -9,7 +9,7 @@ export interface WindowOptions {
 }
 
 function openOutside(url: string): void {
-  if (/^https?:\/\//.test(url)) void shell.openExternal(url);
+  if (/^(https?:\/\/|mailto:)/.test(url)) void shell.openExternal(url);
 }
 
 export function attachApiToken(origin: string, token: string): void {
