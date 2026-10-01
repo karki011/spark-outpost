@@ -79,6 +79,7 @@ import { coordinatedBuild } from '../coordinator/build.ts';
 import { coordinationReport } from '../coordinator/report.ts';
 import { piecesSummary } from '../coordinator/summary.ts';
 import { lawsNote } from '../laws/review.ts';
+import { ensureEstimate } from '../laws/estimate-history.ts';
 
 const TASK_SESSION_CLOSED = 'task session closed';
 const NEW_TASK_STARTED = 'a new task started';
@@ -172,7 +173,10 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
         }
         await beginFixRound(s);
       }
-      if (action.role === 'builder' && action.reason === 'first') observeCoordination(s);
+      if (action.role === 'builder' && action.reason === 'first') {
+        if (!s.flow.solo) await ensureEstimate(s);
+        observeCoordination(s);
+      }
       const copied = action.role === 'builder' && s.needsCopy;
       const outcome =
         (await coordinatedBuild(s, action)) ??

@@ -39,7 +39,7 @@ Every Do run records its estimate (`laws/estimate-history.ts`) under a key: the 
 - Otherwise a rule estimate labelled rough: 3, 6, 12, 20 or 35 minutes by complexity (`LAW_ROUGH_MINUTES`) and the route score's trajectory cost for the chat model × 1.5, with a ×0.5–×2 range.
 - **Padding:** each record keeps its unpadded estimate, so the median ratio of actual to estimated over the last 20 runs (at least 5) becomes a factor between 1 and 3 (`LAW_PAD_MAX`) applied to the next estimate, separately for time and cost; the text says "padded ×1.4".
 
-The estimate shows on the Build this plan? card (plan first and risky work) before anything is built.
+The estimate shows on the Build this plan? card (plan first and risky work) before anything is built. A Do run with no plan card records it before its first Builder starts, including a split run whose Builders work in pieces (the piece Builders don't get the per-Builder budget, so the estimate was missing there before October 1, 2026).
 
 ## 4. Parkinson's law: budgets scale with complexity
 

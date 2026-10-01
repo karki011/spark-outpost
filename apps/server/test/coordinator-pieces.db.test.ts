@@ -100,6 +100,37 @@ async function pieceList(runId: string): Promise<PieceList> {
 }
 
 describe('pieces in order', { timeout: 120_000 }, () => {
+  it('records the Hofstadter estimate when a split run skips the plan card (C2)', async () => {
+    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), {
+      coordinator: 'in_order',
+    });
+    const scenario = { ...NORMAL, text: 'Split this up into pieces. #build #pieces' };
+    const started = await startScenario(
+      t,
+      root,
+      scenario,
+      'hands-off',
+      'auto',
+      'sonnet',
+      'acceptEdits',
+    );
+    const { asked, orchestration } = await driveToEnd(
+      t,
+      started.conversationId,
+      started.runId,
+      undefined,
+      90_000,
+    );
+    expect(orchestration.status).toBe('succeeded');
+    expect(asked.map((approval) => approval.title)).not.toContain('Build this plan?');
+    expect((await children(started.runId)).some((child) => child.pieceKey)).toBe(true);
+    const { rows } = await t.db.query<{ body: { answer: { law: string } } }>(
+      `SELECT body FROM run_advice WHERE run_id = $1 AND purpose = 'law'`,
+      [started.runId],
+    );
+    expect(rows.filter((row) => row.body.answer.law === 'estimate')).toHaveLength(1);
+  });
+
   it('plans first, then splits the agreed plan into pieces and lands them in dependency order', async () => {
     const { conversationId, runId } = await begin('#pieces');
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
