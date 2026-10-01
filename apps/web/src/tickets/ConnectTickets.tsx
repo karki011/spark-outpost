@@ -73,7 +73,7 @@ export function ConnectTickets() {
         </AnimatePresence>
         <p className="tk-foot">
           Tokens stay in your macOS keychain. Spark changes a ticket only when you start work, open
-          a draft PR or assign it to yourself.
+          a PR or assign it to yourself.
         </p>
       </div>
     </div>

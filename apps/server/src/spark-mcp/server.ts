@@ -6,12 +6,14 @@ import type { SparkScope, SparkToolDeps } from './deps.ts';
 import { renderResult } from './format.ts';
 import { SparkToolError, type SparkTool, type SparkToolContext } from './tool.ts';
 import { pullRequestActionTool } from './actions/pr-action.ts';
+import { prFollowUpRoundTool } from './actions/pr-follow-up-action.ts';
 import { ticketActionTools } from './actions/ticket-actions.ts';
 import { attentionTool } from './tools/attention-tool.ts';
 import { auditTool } from './tools/audit-tool.ts';
 import { guideTool } from './tools/guide-tool.ts';
 import { chatTools } from './tools/chat-tools.ts';
 import { githubTools } from './tools/github-tools.ts';
+import { prFollowUpTool } from './tools/pr-follow-up-tool.ts';
 import { projectTools } from './tools/project-tools.ts';
 import { runTool } from './tools/run-tool.ts';
 import { setupTools } from './tools/setup-tools.ts';
@@ -35,12 +37,14 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   terminalTool,
   guideTool,
   ...githubTools,
+  prFollowUpTool,
   ...ticketActionTools,
   pullRequestActionTool,
+  prFollowUpRoundTool,
 ];
 
 const INSTRUCTIONS =
-  'Tools about Spark Outpost itself, the app running this session: what needs the user, chats, live runs (crew, pieces, Jev decisions), plans and files changed, audit, spend, analytics and outcomes, model cards, providers, connectors, projects and the Map, terminals, tickets, pull requests, activity, the brief, settings and a guide to how Spark works (spark_guide section spark-tools says which tool answers what). The read tools never change anything. The action tools (create, comment on, move or assign a ticket; open a draft PR) only propose: the user confirms each one on a card before Spark does it. Results are JSON, paged and redacted.';
+  'Tools about Spark Outpost itself, the app running this session: what needs the user, chats, live runs (crew, pieces, Jev decisions), plans and files changed, audit, spend, analytics and outcomes, model cards, providers, connectors, projects and the Map, terminals, tickets, pull requests and the follow-up on them, activity, the brief, settings and a guide to how Spark works (spark_guide section spark-tools says which tool answers what). The read tools never change anything. The action tools (create, comment on, move or assign a ticket; open a PR; request a PR follow-up round) only propose: the user confirms each one on a card before Spark does it. Results are JSON, paged and redacted.';
 
 const READ_ONLY = {
   readOnlyHint: true,

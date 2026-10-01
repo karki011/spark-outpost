@@ -88,7 +88,7 @@ it('keeps both sequential shared-tree pieces’ files through to the Full auto d
   ]);
   const copy = (await primaryChatWorktree(t.db, conversationId))!;
   expect(stub.github.pulls).toHaveLength(1);
-  expect(stub.github.pulls[0]).toMatchObject({ draft: true, head: copy.branch });
+  expect(stub.github.pulls[0]).toMatchObject({ draft: false, head: copy.branch });
   const shipped = git(repo.bare, 'diff', '--name-only', 'main', copy.branch).split('\n');
   expect(shipped).toEqual(expect.arrayContaining(['store.ts', 'api.ts', 'view.ts']));
   expect(git(repo.bare, 'show', `${copy.branch}:store.ts`)).toContain('built by P1');

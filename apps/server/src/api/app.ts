@@ -20,6 +20,7 @@ import { resetRoutes } from './reset-routes.ts';
 import { apiRoutes, statusForError, type RouteDeps } from './routes.ts';
 import { localRequestGuard, requireLaunchToken } from './security.ts';
 import { setupRoutes, type SetupDeps } from './setup-routes.ts';
+import { prFollowUpRoutes } from './pr-follow-up-routes.ts';
 import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
 import { planRoutes } from './plan-routes.ts';
 import { taskRoutes } from './task-routes.ts';
@@ -66,6 +67,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));
   app.use('/api', shipRoutes(options));
+  app.use('/api', prFollowUpRoutes(options));
   app.use('/api', ticketRoutes(options));
   app.use('/api', chatTicketRoutes(options));
   app.use('/api', planRoutes(options));

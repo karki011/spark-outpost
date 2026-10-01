@@ -54,6 +54,7 @@ export function asksPermission(chat: ConversationSummary): boolean {
 
 function waitingState(chat: ConversationSummary): RowState {
   const sub = attentionLine(chat.attention);
+  if (chat.attention?.prFeedback) return { tone: 'permission', label: 'PR feedback', sub };
   if (asksPermission(chat)) return { tone: 'permission', label: 'Asking permission', sub };
   if (chat.attention?.kind === 'stuck') return { tone: 'asking', label: 'Repeating itself', sub };
   return { tone: 'asking', label: 'Needs your input', sub };

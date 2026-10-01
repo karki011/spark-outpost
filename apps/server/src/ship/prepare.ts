@@ -46,6 +46,7 @@ export interface ShipOptions {
   duringRun?: boolean;
   notes?: readonly string[];
   exclude?: readonly string[];
+  draft?: boolean;
 }
 
 export interface ShipPlan {

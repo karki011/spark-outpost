@@ -5,6 +5,7 @@ import { queryKeys } from '../../api/client.ts';
 import { outcomeKeys } from '../../api/outcomes.ts';
 import { auditKeys } from '../../audit/audit-api.ts';
 import { mapKeys } from '../../map/map-api.ts';
+import { prWatchesKey } from '../../chat/pull-request/pr-follow-up-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 
@@ -79,6 +80,10 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return [...outcome(event), analytics];
     case 'map':
       return [{ queryKey: mapKeys.all }];
+    case 'pull_request':
+      return event.conversationId
+        ? [list, { queryKey: prWatchesKey(event.conversationId), exact: true }]
+        : [];
   }
 }
 

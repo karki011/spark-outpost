@@ -27,7 +27,7 @@ export const CHECKS_FAILING_NOTE = 'Checks failing';
 export const UNVERIFIED_NOTE = 'Jev could not verify this change';
 export const KEPT_BY_FULL_AUTO = 'Full auto → PR kept the changes and went on to ship them.';
 export const CHECKS_HOLD_REASON =
-  'The checks still fail after the fix turns, and Full auto → PR is set to stop before opening a draft PR when they do. Keep the change and ship it yourself, ask for a fix, or revert.';
+  'The checks still fail after the fix turns, and Full auto → PR is set to stop before opening a PR when they do. Keep the change and ship it yourself, ask for a fix, or revert.';
 
 function shipDeps(s: Session): ShipDeps {
   const access = s.deps.shipAccess ?? {
@@ -67,8 +67,9 @@ export async function autoKeep(
 function pullRequestLine(result: ShipResult, failing: boolean): string {
   const pull = result.pullRequest!;
   const verb = pull.created ? 'Opened' : 'Updated';
+  const kind = pull.draft ? 'draft PR' : 'PR';
   const marked = failing ? ', marked "Checks failing"' : '';
-  return `${verb} draft PR #${pull.number}${marked}: ${pull.url}`;
+  return `${verb} ${kind} #${pull.number}${marked}: ${pull.url}`;
 }
 
 function checkoutLine(current: string | null, branch: string): string {
@@ -150,7 +151,13 @@ async function ship(s: Session, failing: boolean, separate: readonly TaskPiece[]
   const deps = shipDeps(s);
   const pieceLines = await shipPieces(s, deps, separate, { duringRun: true, notes });
   const exclude = separate.flatMap((piece) => piece.filesChanged);
-  const options = { keepCheckout: true, duringRun: true, notes, exclude };
+  const options = {
+    keepCheckout: true,
+    duringRun: true,
+    notes,
+    exclude,
+    ...(failing ? { draft: true } : {}),
+  };
   const main = await shipMain(s, deps, failing, options, separate.length > 0);
   return [...pieceLines, ...(main ? [main] : [])].join('\n\n');
 }

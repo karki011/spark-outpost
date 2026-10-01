@@ -72,7 +72,7 @@ Review each step: you decide whether to keep the changes, see the Critic's findi
 
 Automatic (default): runs commands without asking in this chat's worktree and in Ask turns (which never change files); still asks for risky ones and for pushes. Changes are kept when the checks pass, the Critic's findings are fixed in a loop, and risky work runs in a worktree copy. Revert is always there.
 
-Full auto → PR: Automatic, in a worktree copy, then Ship commits, pushes the task branch and opens a draft PR. Nothing ever merges. Settings → Spark → When checks still fail in Full auto picks Open a draft PR (marked "Checks failing") or Stop and ask.
+Full auto → PR: Automatic, in a worktree copy, then Ship commits, pushes the task branch and opens a PR (Open pull requests as: ready or draft). Nothing ever merges. When checks still fail in Full auto: Open a draft PR (marked "Checks failing") or Stop and ask.
 
 The safety floor holds at every level.`,
   },
@@ -163,11 +163,17 @@ A Critic review — from a different provider when one is connected — runs for
   },
   {
     id: 'ship',
-    title: 'Ship: commit, push, draft PR',
-    keywords: ['ship', 'commit', 'push', 'draft pr', 'pull request', 'merge'],
-    text: `Ship turns a chat's changes into git history: commit only, push, or open a draft pull request. Ship never merges anything — that stays your decision. It refuses to push a branch that carries Spark's own internal snapshot commits, and only pushes its own single-level spark/<slug>-<id> branches, never a raw worktree branch.
+    title: 'Ship: commit, push, open a PR',
+    keywords: ['ship', 'commit', 'push', 'draft pr', 'pull request', 'merge', 'ready for review'],
+    text: `Ship turns a chat's changes into git history: commit only, push, or open a pull request. Settings → Spark → Open pull requests as picks Ready for review (default) or Draft; a Full auto PR whose checks still fail is always a draft marked "Checks failing". Ship never merges anything — that stays your decision. It refuses to push a branch that carries Spark's own internal snapshot commits, and only pushes its own single-level spark/<slug>-<id> branches, never a raw worktree branch.
 
-In a chat worktree, the keep card offers "Bring changes into <your branch>", "Open draft PR" (Ship), or leaving the work on the chat's own branch. At Full auto → PR, Ship runs automatically after an auto-decided keep: it opens a draft PR when GitHub is connected, otherwise pushes, or commits only when there's no remote — and the result always includes the link.`,
+In a chat worktree, the keep card offers "Bring changes into <your branch>", "Open PR" (Ship), or leaving the work on the chat's own branch. At Full auto → PR, Ship runs automatically after an auto-decided keep: it opens a PR when GitHub is connected, otherwise pushes, or commits only when there's no remote — and the result always includes the link.`,
+  },
+  {
+    id: 'pr-follow-up',
+    title: 'PR follow-up: Spark handles checks and review feedback',
+    keywords: ['follow up', 'review comments', 'failing checks', 'reply', 'copilot', 'coderabbit'],
+    text: `After Spark opens a PR from a chat it watches it until merged or closed: failing checks, review comments, reviews and PR comments, bots included. Jev triages each item (rules without Jev): fix, question, needs you, nit, already addressed, information. Spark acts only on failing checks and comments from people with write access; others are shown, never acted on, and disagreements go to you. A Builder fixes everything in one round in the chat's worktree; the push and replies ("Fixed in <sha>: …") need one confirm card in Review each step and Automatic, none in Full auto. Never force-pushes, merges, approves, resolves threads or dismisses reviews; 3 rounds per PR. Tools: spark_pr_follow_up, spark_pr_follow_up_round.`,
   },
   {
     id: 'tickets',
@@ -219,7 +225,7 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
 
 Read tools need no approval card; section spark-tools says which one answers which question.
 
-Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket, spark_assign_ticket and spark_open_pr. Each shows a card previewing exactly what will change; you may edit the text, and nothing happens until you confirm. There is no Always allow and autonomy levels never decide these cards. Every action is audited.`,
+Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket, spark_assign_ticket, spark_open_pr and spark_pr_follow_up_round. Each shows a card previewing exactly what will change; you may edit the text, and nothing happens until you confirm. There is no Always allow and autonomy levels never decide these cards. Every action is audited.`,
   },
   {
     id: 'spark-tools',
@@ -227,7 +233,7 @@ Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
     text: `Needs me? spark_attention: waiting cards, failed chats, flagged tickets. A chat's live run, crew, pieces, Jev's picks and every Jev decision: spark_run. Plan and files changed (line counts, never contents): spark_task. Chats and messages: spark_chats, spark_chat. What an agent did step by step: spark_audit. Recent work: spark_activity, spark_brief.
 Spend today or this week by provider, model or chat: spark_spend. Trends, cost per task, harness, outcomes and feedback: spark_analytics. Model price, strengths and pass rates: spark_models.
-Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what breaks if a file changes: spark_map with file. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. How Spark works: spark_guide.`,
+Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what breaks if a file changes: spark_map with file. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. What Spark is doing with a PR it opened (checks, comments, triage, rounds): spark_pr_follow_up. How Spark works: spark_guide.`,
   },
   {
     id: 'settings-spark',
@@ -242,7 +248,7 @@ Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: 
       'switch',
       'toggle',
     ],
-    text: `Settings → Spark groups: You and Spark (What should Spark call you?, Personality: Playful, Friendly or Just the facts); How Spark works (the Spark switch, How much Spark does alone, Spend cap per task, If you don’t answer a question: Off, 10s, 30s or 60s before Spark picks the safe option, When checks still fail in Full auto); Around the app (Morning brief and its time, Status companion: Scout floats in a corner outside open chats showing what needs you).
+    text: `Settings → Spark groups: You and Spark (What should Spark call you?, Personality: Playful, Friendly or Just the facts); How Spark works (the Spark switch, How much Spark does alone, Spend cap per task, If you don’t answer a question: Off, 10s, 30s or 60s before Spark picks the safe option); Pull requests (Open pull requests as: Ready for review or Draft, When checks still fail in Full auto, Follow up on pull requests with Fix failing checks, Handle review comments and Reply on GitHub threads); Around the app (Morning brief and its time, Status companion: Scout floats in a corner outside open chats showing what needs you).
 
 The Spark switch on: Jev reads each request, routing picks models, a Critic reviews bigger changes and Jev checks finished work. Off: chats go straight to the agent you pick. Approvals and safety apply either way. On/off switches are blob toggles that turn green when on.`,
   },

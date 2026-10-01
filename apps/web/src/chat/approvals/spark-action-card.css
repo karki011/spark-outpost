@@ -43,3 +43,30 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.sac-pr {
+  display: block;
+}
+.sac-pr-head {
+  margin: 0 0 6px;
+}
+.sac-items {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sac-check {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  cursor: pointer;
+}
+.sac-check input {
+  margin-top: 2px;
+}
+.sac-reply {
+  display: block;
+  color: var(--muted);
+}

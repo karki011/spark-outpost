@@ -239,7 +239,7 @@ const POSTURE_LINES: Readonly<Record<ModePosture, string>> = {
 const AUTONOMY_LINES: Readonly<Record<InvolvementLevel, string>> = {
   balanced: 'you review each step',
   'hands-off': 'kept automatically',
-  'full-auto': 'kept and opened as a draft PR',
+  'full-auto': 'kept and opened as a PR',
 };
 
 export interface CombinationFacts {

@@ -20,6 +20,13 @@ export interface TicketFacts {
   statusSince: string | null;
   assignedSince: string | null;
   snooze?: TicketSnooze | null;
+  prFeedback?: PrFeedbackWaiting | null;
+}
+
+export interface PrFeedbackWaiting {
+  number: number;
+  waiting: number;
+  since: string;
 }
 
 export function activeSnooze(facts: TicketFacts, now: Date): TicketSnooze | null {
@@ -30,6 +37,7 @@ export function activeSnooze(facts: TicketFacts, now: Date): TicketSnooze | null
 export const RULE_ORDER: readonly AttentionRule[] = [
   'chat-asking',
   'chat-error',
+  'pr-feedback',
   'sync-failed',
   'blocked',
   'high-idle',
@@ -109,6 +117,18 @@ function chatFlags(facts: TicketFacts): AttentionFlag[] {
     ];
   }
   return [];
+}
+
+function feedbackFlags({ prFeedback }: TicketFacts): AttentionFlag[] {
+  if (!prFeedback || prFeedback.waiting === 0) return [];
+  return [
+    flag(
+      'pr-feedback',
+      `PR #${prFeedback.number} feedback needs you`,
+      `Rule: Spark is following up on the linked pull request and ${plural(prFeedback.waiting, 'item')} need${prFeedback.waiting === 1 ? 's' : ''} your call.`,
+      prFeedback.since,
+    ),
+  ];
 }
 
 function syncFlags({ ticket, lastSync }: TicketFacts): AttentionFlag[] {
@@ -201,6 +221,7 @@ export function attentionFlags(facts: TicketFacts, limits: Thresholds, now: Date
   if (facts.ticket.status === 'done') return [];
   const flags = [
     ...chatFlags(facts),
+    ...feedbackFlags(facts),
     ...syncFlags(facts),
     ...workFlags(facts, limits, now),
     ...pullFlags(facts, limits, now),

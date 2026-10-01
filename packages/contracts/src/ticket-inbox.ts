@@ -80,6 +80,7 @@ export type PullRequestStatus = z.infer<typeof pullRequestStatusSchema>;
 export const attentionRuleSchema = z.enum([
   'chat-asking',
   'chat-error',
+  'pr-feedback',
   'sync-failed',
   'blocked',
   'high-idle',

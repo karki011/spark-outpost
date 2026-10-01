@@ -9,7 +9,7 @@ type SyncKey = 'moveOnShip' | 'moveOnMerge';
 const SWITCHES: { key: SyncKey; label: string; hint: string }[] = [
   {
     key: 'moveOnShip',
-    label: 'Move tickets to In review when a draft PR opens',
+    label: 'Move tickets to In review when a PR opens',
     hint: 'Spark also adds the PR link to the ticket.',
   },
   {

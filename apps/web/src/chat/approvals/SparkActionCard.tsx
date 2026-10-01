@@ -18,6 +18,7 @@ import { ChoicePicker } from '../../ui/ChoicePicker.tsx';
 import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { isAllow } from './approval-outcome.ts';
 import { ObservedNote } from './ObservedNote.tsx';
+import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
 
 interface Draft {
   title: string;
@@ -27,6 +28,7 @@ interface Draft {
   priority: string;
   labels: string;
   status: string;
+  skip: string[];
 }
 
 const FILES_SHOWN = 8;
@@ -53,6 +55,7 @@ function draftOf(action: SparkAction): Draft {
     priority: action.action === 'create_ticket' ? (action.priority ?? '') : '',
     labels: action.action === 'create_ticket' ? action.labels.join(', ') : '',
     status: action.action === 'transition_ticket' ? action.status : '',
+    skip: action.action === 'pr_follow_up' ? action.skip : [],
   };
 }
 
@@ -60,6 +63,10 @@ function editsOf(action: SparkAction, draft: Draft): SparkActionEdits {
   const before = draftOf(action);
   const edits: SparkActionEdits = {};
   for (const field of editableFields(action.action)) {
+    if (field === 'skip') {
+      if (draft.skip.length > 0) edits.skip = draft.skip;
+      continue;
+    }
     if (draft[field] === before[field]) continue;
     if (field === 'labels') {
       edits.labels = draft.labels
@@ -166,7 +173,25 @@ function Facts({ action }: { action: SparkAction }) {
           </Fact>
         </dl>
       );
+    case 'pr_follow_up_round':
+      return <PrRoundFacts action={action} />;
+    case 'pr_follow_up':
+      return null;
   }
+}
+
+function byline(action: SparkAction, agent: string): string {
+  if (action.action === 'pr_follow_up') {
+    return 'Spark fixed the PR feedback in this chat. Confirm to push and reply on GitHub.';
+  }
+  return `${agent} asks Spark to do this for you.`;
+}
+
+function confirmNote(action: SparkAction): string {
+  if (action.action === 'pr_follow_up') {
+    return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';
+  }
+  return 'Nothing happens until you confirm. You can edit it first.';
 }
 
 function takeover(action: SparkAction): string | null {
@@ -309,14 +334,22 @@ export function SparkActionCard({
           <i className="appr-dia" />
         </span>
         <span id={headingId}>
-          <b>{sparkActionLabels[action.action].question}</b> {agent} asks Spark to do this for you.
+          <b>{sparkActionLabels[action.action].question}</b> {byline(action, agent)}
         </span>
       </div>
       <Facts action={action} />
+      {action.action === 'pr_follow_up' && (
+        <PrFollowUpFacts
+          action={action}
+          skip={draft.skip}
+          disabled={decide.isPending}
+          onSkip={(skip) => setDraft({ ...draft, skip })}
+        />
+      )}
       <Fields action={action} draft={draft} onChange={setDraft} disabled={decide.isPending} />
       {warning && <p className="appr-reason">{warning}</p>}
       <ObservedNote observed={approval.payload.observed} />
-      <p className="sac-note">Nothing happens until you confirm. You can edit it first.</p>
+      <p className="sac-note">{confirmNote(action)}</p>
       <div className="appr-acts">
         {approval.options.map((option) => (
           <button

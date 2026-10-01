@@ -30,7 +30,7 @@ const EMPTY_TEXT: Record<TicketView, string> = {
   inbox: 'Nothing assigned to you right now.',
   attention: 'Nothing needs you right now.',
   working: 'Nothing in progress.',
-  pr_ready: 'No draft pull requests waiting on you.',
+  pr_ready: 'No pull requests waiting on you.',
   in_review: 'Nothing in review.',
   up_next: 'Nothing queued up next.',
   done: 'Nothing finished in the last 7 days.',

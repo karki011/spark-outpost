@@ -104,7 +104,7 @@ async function bring(db: Db, record: ChatWorktree): Promise<BringChangesResult |
     return `Your checkout has uncommitted changes (${list(outcome.files)}). Commit or stash them, then bring the changes into ${target}.`;
   }
   if (outcome.status === 'conflict') {
-    return `These files changed both here and in ${target}: ${list(outcome.files)}. Nothing was changed; open a draft PR or merge ${record.branch} yourself.`;
+    return `These files changed both here and in ${target}: ${list(outcome.files)}. Nothing was changed; open a PR or merge ${record.branch} yourself.`;
   }
   if (outcome.status === 'nothing') return `There are no new changes to bring into ${target}.`;
   await saveLanded(db, record.id, outcome.result);

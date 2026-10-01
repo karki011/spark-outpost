@@ -127,7 +127,7 @@ export function ToolsStep() {
       <h2 id="onbTitle">Bring in your tools</h2>
       <p className="lede">
         Spark checks for Git first, since every Do chat works in its own git worktree. GitHub lets
-        Ship open draft pull requests. Jira and Linear bring your tickets into Spark.
+        Ship open pull requests. Jira and Linear bring your tickets into Spark.
       </p>
       <GitCheck />
       <ConnectorGrid />

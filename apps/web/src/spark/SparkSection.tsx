@@ -5,6 +5,7 @@ import { AutoContinueSetting } from '../settings/AutoContinueSetting.tsx';
 import { CompanionSetting } from '../settings/CompanionSetting.tsx';
 import { DesktopCompanionSetting } from '../settings/DesktopCompanionSetting.tsx';
 import { FailingChecksSetting } from '../settings/FailingChecksSetting.tsx';
+import { OpenPullRequestsAsSetting, PrFollowUpSettings } from '../settings/PullRequestSettings.tsx';
 import { LevelSetting } from './LevelSetting.tsx';
 import { MorningBriefSetting } from './MorningBriefSetting.tsx';
 import { NameSetting, PersonalitySetting, SparkSwitch } from './SparkSettings.tsx';
@@ -32,7 +33,12 @@ export function SparkSection({ setup }: { setup: SetupState }) {
         <LevelSetting level={profile.defaultLevel} />
         <SpendCapSetting usd={profile.spendCapUsd} />
         <AutoContinueSetting seconds={profile.autoContinueSeconds} />
+      </section>
+      <section className="spark-group" aria-labelledby="spark-prs">
+        <h4 id="spark-prs">Pull requests</h4>
+        <OpenPullRequestsAsSetting ready={profile.prReadyForReview} />
         <FailingChecksSetting opensDraft={profile.shipFailingChecks} />
+        <PrFollowUpSettings profile={profile} />
       </section>
       <section className="spark-group" aria-labelledby="spark-around">
         <h4 id="spark-around">Around the app</h4>

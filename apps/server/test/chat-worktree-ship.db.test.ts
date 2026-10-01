@@ -59,7 +59,7 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-it('opens the Full auto draft PR from the chat branch and leaves the checkout untouched', async () => {
+it('opens the Full auto PR from the chat branch and leaves the checkout untouched', async () => {
   const repo = await repoWithRemote(base, 'full-auto');
   const { conversationId, runId } = await startScenario(t, repo.root, NORMAL, 'full-auto');
   const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
@@ -67,7 +67,7 @@ it('opens the Full auto draft PR from the chat branch and leaves the checkout un
   const copy = (await primaryChatWorktree(t.db, conversationId))!;
   expect(stub.github.pulls).toHaveLength(1);
   const pull = stub.github.pulls[0]!;
-  expect(pull).toMatchObject({ draft: true, head: copy.branch, base: 'main' });
+  expect(pull).toMatchObject({ draft: false, head: copy.branch, base: 'main' });
   expect(git(repo.bare, 'diff', '--name-only', 'main', copy.branch)).toBe('notes.txt');
   const authors = git(repo.bare, 'log', '--format=%ae', copy.branch).split('\n');
   expect(authors).not.toContain(HARNESS_COMMIT_EMAIL);

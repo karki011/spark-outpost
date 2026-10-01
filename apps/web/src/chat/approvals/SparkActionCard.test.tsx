@@ -137,10 +137,10 @@ describe('SparkActionCard', () => {
           files: [{ path: 'notes.txt', change: 'modified' }],
           moreFiles: 0,
         },
-        'Open a draft pull request? Tidy notes',
+        'Open a pull request? Tidy notes',
       ),
     );
-    const group = screen.getByRole('group', { name: /Open a draft pull request\?/ });
+    const group = screen.getByRole('group', { name: /Open a pull request\?/ });
     expect(group.textContent).toContain('spark/tidy-notes into main');
     expect(group.textContent).toContain('notes.txt modified');
     expect(within(group).getByLabelText('Description')).toHaveProperty('value', 'Why');

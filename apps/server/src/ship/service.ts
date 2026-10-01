@@ -11,6 +11,8 @@ import { coreImpact, hasCoreImpact } from '../map/impact.ts';
 import { insertFinishedRunEntries } from '../persistence/audit-log.ts';
 import { latestApprovedPlan } from '../persistence/plan-documents.ts';
 import { saveTaskShip, type TaskShip } from '../persistence/task-ships.ts';
+import { opensDraftPullRequests } from '../persistence/pr-settings.ts';
+import { watchPullRequest } from '../persistence/pr-watches.ts';
 import { addTaskLink } from '../persistence/tasks.ts';
 import { safeToPush } from './branch.ts';
 import {
@@ -97,7 +99,7 @@ interface Progress {
   commit: string | null;
   committedFiles: string[];
   pushed: boolean;
-  pullRequest: (PullRequest & { created: boolean }) | null;
+  pullRequest: (PullRequest & { created: boolean; draft?: boolean }) | null;
   link: TaskLink | null;
 }
 
@@ -163,24 +165,52 @@ async function pullRequestFiles(plan: ShipPlan, base: string): Promise<ShipFile[
   return filesBetween(root, plan.repo!.prefix, `refs/remotes/${remote}/${base}`, plan.branch);
 }
 
+async function draftFor(deps: ShipDeps, options: ShipOptions): Promise<boolean> {
+  return options.draft ?? (await opensDraftPullRequests(deps.db, deps.workspaceId));
+}
+
+async function watchShipped(
+  deps: ShipDeps,
+  plan: ShipPlan,
+  pull: PullRequest,
+  branch: string,
+  draft: boolean,
+) {
+  const repo = plan.remoteRepo!;
+  await watchPullRequest(deps.db, {
+    workspaceId: deps.workspaceId,
+    conversationId: plan.task.conversationId,
+    taskId: plan.task.id,
+    host: repo.host,
+    owner: repo.owner,
+    repo: repo.name,
+    number: pull.number,
+    url: pull.url,
+    branch,
+    draft,
+  });
+}
+
 async function pullRequestStep(
   deps: ShipDeps,
   plan: ShipPlan,
   title: string,
   progress: Progress,
-  notes: readonly string[],
+  options: ShipOptions,
 ) {
   const github = plan.github!;
   const repo = plan.remoteRepo!;
   const base = plan.baseBranch ?? (await github.defaultBranch(repo));
   if (base === plan.branch) throw new ShipBlockedError('The branch and its base are the same.');
-  const summary = await summaryFor(deps, plan, title, await pullRequestFiles(plan, base), notes);
+  const files = await pullRequestFiles(plan, base);
+  const summary = await summaryFor(deps, plan, title, files, options.notes ?? []);
   const body = pullRequestBody(summary);
   const existing = await github.findPullRequest(repo, plan.branch);
+  const draft = await draftFor(deps, options);
   const pull = existing
     ? await github.updatePullRequest(repo, existing.number, { title, body })
-    : await github.createPullRequest(repo, { title, body, head: plan.branch, base });
-  progress.pullRequest = { ...pull, created: existing === null };
+    : await github.createPullRequest(repo, { title, body, head: plan.branch, base, draft });
+  progress.pullRequest = existing ? { ...pull, created: false } : { ...pull, created: true, draft };
   progress.ship = { ...progress.ship, baseBranch: base, prUrl: pull.url, prNumber: pull.number };
   await saveTaskShip(deps.db, plan.task.id, progress.ship);
   const { link } = await addTaskLink(deps.db, plan.task.id, {
@@ -190,6 +220,7 @@ async function pullRequestStep(
     source: 'ship',
   });
   progress.link = link;
+  await watchShipped(deps, plan, pull, plan.branch, existing === null && draft);
   await syncTicketsAfterShip(deps, plan.task.id, { url: pull.url, title: link.title ?? pull.url });
 }
 
@@ -266,7 +297,7 @@ async function runShip(
   try {
     await commitStep(deps, plan, title, progress, notes);
     if (request.mode !== 'commit') await pushStep(deps, plan, progress);
-    if (request.mode === 'draft_pr') await pullRequestStep(deps, plan, title, progress, notes);
+    if (request.mode === 'draft_pr') await pullRequestStep(deps, plan, title, progress, options);
   } catch (error) {
     await audit(deps, plan, request.mode, progress, (error as Error).message);
     throw error;
@@ -339,22 +370,24 @@ async function runPieceShip(
   const base = plan.baseBranch ?? (await github.defaultBranch(repo));
   const body = pullRequestBody(summary);
   const existing = await github.findPullRequest(repo, branch);
+  const draft = await draftFor(deps, options);
   const pull = existing
     ? await github.updatePullRequest(repo, existing.number, { title, body })
-    : await github.createPullRequest(repo, { title, body, head: branch, base });
+    : await github.createPullRequest(repo, { title, body, head: branch, base, draft });
   const { link } = await addTaskLink(deps.db, plan.task.id, {
     kind: 'pr',
     url: pull.url,
     title: `${repoSlug(repo)}#${pull.number}`,
     source: 'ship',
   });
+  await watchShipped(deps, plan, pull, branch, existing === null && draft);
   return {
     mode: 'draft_pr',
     branch,
     commit,
     committedFiles: paths,
     pushed: true,
-    pullRequest: { ...pull, created: existing === null },
+    pullRequest: existing ? { ...pull, created: false } : { ...pull, created: true, draft },
     link,
   };
 }

@@ -12,6 +12,7 @@ import {
 import { getAttentionSettings, saveAttentionSnapshot } from '../persistence/attention-settings.ts';
 import type { FlaggedItem } from '../persistence/attention-settings.ts';
 import { listConversations } from '../persistence/conversations.ts';
+import { prFeedbackWaiting } from '../persistence/pr-watches.ts';
 import { lastTicketSyncs, mergeMoveTried } from '../persistence/ticket-events.ts';
 import { cacheTickets, ticketRef, ticketTimes, ticketWork } from '../persistence/tickets.ts';
 import type { GitHubDeps } from '../ship/github/access.ts';
@@ -124,10 +125,9 @@ async function factsFor(
     ...ticket,
     work: work.get(ticketRef(ticket.source, ticket.key)) ?? [],
   }));
-  const pulls = await readPullStatuses(
-    deps.github,
-    listed.flatMap((t) => latestPull(t) ?? []),
-  );
+  const pullUrls = listed.flatMap((t) => latestPull(t) ?? []);
+  const pulls = await readPullStatuses(deps.github, pullUrls);
+  const feedback = await prFeedbackWaiting(deps.db, deps.workspaceId, pullUrls);
   return Promise.all(
     listed.map(async (item): Promise<TicketFacts> => {
       const ref = ticketRef(item.source, item.key);
@@ -157,6 +157,7 @@ async function factsFor(
         statusSince: times.get(ref)?.statusSince?.toISOString() ?? null,
         assignedSince: times.get(ref)?.firstSeenAssignedAt?.toISOString() ?? null,
         snooze: times.get(ref)?.snooze ?? null,
+        prFeedback: pullUrl ? (feedback.get(pullUrl) ?? null) : null,
       };
     }),
   );

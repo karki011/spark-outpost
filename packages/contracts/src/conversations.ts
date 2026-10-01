@@ -35,6 +35,7 @@ export const conversationAttentionSchema = z.object({
   agentName: z.string().nullable(),
   provider: z.string().nullable(),
   approvalId: z.uuid().nullable(),
+  prFeedback: z.boolean().optional(),
 });
 export type ConversationAttention = z.infer<typeof conversationAttentionSchema>;
 

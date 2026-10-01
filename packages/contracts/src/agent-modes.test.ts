@@ -107,7 +107,7 @@ describe('the one-line summary', () => {
     expect(
       combinationLine({ provider: 'codex', mode: 'agent', level: 'full-auto', hasRepos: true }),
     ).toBe(
-      'Agent decides what to ask · kept and opened as a draft PR · in a worktree copy · Revert available',
+      'Agent decides what to ask · kept and opened as a PR · in a worktree copy · Revert available',
     );
   });
 

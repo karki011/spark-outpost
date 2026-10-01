@@ -31,6 +31,11 @@ interface SessionsProps {
   onReply: (chat: ConversationSummary) => void;
 }
 
+function waitingChip(chat: ConversationSummary): string {
+  if (chat.attention?.prFeedback) return 'PR feedback';
+  return chat.attention?.kind === 'input' ? 'Has a question' : 'Waiting for you';
+}
+
 function StateChip({ chat, state }: { chat: ConversationSummary; state: SessionState }) {
   switch (state) {
     case 'working':
@@ -41,11 +46,7 @@ function StateChip({ chat, state }: { chat: ConversationSummary; state: SessionS
         </span>
       );
     case 'waiting':
-      return (
-        <span className="isl-schip wait">
-          {chat.attention?.kind === 'input' ? 'Has a question' : 'Waiting for you'}
-        </span>
-      );
+      return <span className="isl-schip wait">{waitingChip(chat)}</span>;
     case 'failed':
       return <span className="isl-schip bad">Failed</span>;
     case 'done':

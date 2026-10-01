@@ -217,7 +217,7 @@ export function prSplitCard(pieces: readonly string[]): CheckpointCard {
     title: PR_SPLIT_TITLE,
     payload: payload({
       kind: 'pr_split',
-      question: `${pieces.join(', ')} were built in their own worktrees. Ship them in one draft PR, or one draft PR each?`,
+      question: `${pieces.join(', ')} were built in their own worktrees. Ship them in one PR, or one PR each?`,
       reason: 'Pieces built in the shared tree always go in the main PR.',
       autoOption: CHECKPOINT_OPTION.onePr,
     }),

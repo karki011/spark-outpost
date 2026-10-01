@@ -41,7 +41,7 @@ export const AUTONOMY_LEVELS: readonly InvolvementLevelInfo[] = [
   {
     id: 'full-auto',
     label: 'Full auto → PR',
-    hint: 'Automatic in a worktree copy, then opens a draft PR. Nothing ever merges.',
+    hint: 'Automatic in a worktree copy, then opens a PR. Nothing ever merges.',
   },
 ];
 
