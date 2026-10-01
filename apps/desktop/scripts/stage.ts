@@ -63,6 +63,7 @@ async function stageApp(stageDir: string, version: string): Promise<void> {
   const appDir = path.join(stageDir, 'app');
   await mkdir(appDir, { recursive: true });
   await cp(path.join(desktopDir, 'dist'), path.join(appDir, 'dist'), { recursive: true });
+  await cp(path.join(desktopDir, 'assets'), path.join(appDir, 'assets'), { recursive: true });
   const manifest = {
     name: 'spark-outpost',
     productName: 'Spark Outpost',
@@ -111,6 +112,7 @@ export async function packageDesktop(options: PackageOptions): Promise<string[]>
     archs: options.archs,
     env: options.env,
     entitlements: path.join(desktopDir, 'build/entitlements.mac.plist'),
+    icon: path.join(desktopDir, 'build/icon.icns'),
     ...(options.packageName ? { packageName: options.packageName } : {}),
     ...(options.formats ? { formats: options.formats } : {}),
     ...(options.appId ? { appId: options.appId } : {}),

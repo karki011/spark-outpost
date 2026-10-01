@@ -59,6 +59,7 @@ export interface BuilderOptions {
   archs: MacArch[];
   env: Env;
   entitlements: string;
+  icon: string;
   packageName?: string;
   appId?: string;
   formats?: ('zip' | 'dmg')[];
@@ -76,7 +77,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
     directories: { output: options.outputDir },
     npmRebuild: false,
     asar: false,
-    files: ['package.json', 'dist/**'],
+    files: ['package.json', 'dist/**', 'assets/**'],
     afterPack: (context) =>
       copyRuntime(options.stageDir, Arch[context.arch] as MacArch, resourcesDir(context)),
     artifactName: 'Spark-Outpost-${version}-${arch}.${ext}',
@@ -84,6 +85,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
     publish: feed ? [{ provider: 'generic', url: feed }] : null,
     mac: {
       category: 'public.app-category.developer-tools',
+      icon: options.icon,
       target: (options.formats ?? ['zip', 'dmg']).map((target) => ({
         target,
         arch: options.archs,

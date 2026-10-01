@@ -3,7 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { app, BrowserWindow, dialog, shell } from 'electron';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import { waitForApi } from './api-ready.ts';
-import { channelConfig, channelPaths, resolveChannel } from './channel.ts';
+import { channelConfig, channelIcons, channelPaths, resolveChannel } from './channel.ts';
 import { settingsFile } from './companion-settings.ts';
 import { startCompanionHost, type CompanionHost } from './desktop-companion.ts';
 import { detectGit, GIT_MISSING } from './git.ts';
@@ -39,8 +39,14 @@ const layout = appLayout({
 const serverDir = layout.serverDir;
 const bootstrap = path.join(import.meta.dirname, 'server-entry.js');
 const preload = path.join(import.meta.dirname, 'preload.cjs');
+const icons = channelIcons(path.join(app.getAppPath(), 'assets'), config);
 
 app.setName(config.appName);
+app.setAboutPanelOptions({
+  applicationName: config.appName,
+  applicationVersion: app.getVersion(),
+  iconPath: icons.app,
+});
 app.setPath('userData', paths.userData);
 app.setAppLogsPath(paths.logs);
 process.env.LC_ALL = POSTGRES_LOCALE;
@@ -170,6 +176,7 @@ async function migrateBeforeStart(launchInfo: ServerLaunch, options: DatabaseOpt
 }
 
 async function launch(): Promise<void> {
+  if (!app.isPackaged) app.dock?.setIcon(icons.app);
   if (config.badge) app.dock?.setBadge(config.badge);
   if (!(await detectGit())) await dialog.showMessageBox({ type: 'warning', ...GIT_MISSING });
 
@@ -220,6 +227,7 @@ async function launch(): Promise<void> {
     userData: paths.userData,
     feedUrl: await readFeedUrl(updateConfigFile(process.resourcesPath)),
     skippedVersion: await readSkippedVersion(skippedVersionFile(paths.userData)),
+    preview: app.isPackaged ? undefined : process.env.SPARK_UPDATE_PREVIEW,
     activeRuns: () => fetchActiveRuns(apiUrl, token),
     trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
     broadcast: (status) => {
@@ -235,6 +243,7 @@ async function launch(): Promise<void> {
     origin: apiUrl,
     preload,
     settingsPath: settingsFile(paths.userData),
+    trayIcon: icons.tray,
     showSpark,
     quit: () => app.quit(),
   });

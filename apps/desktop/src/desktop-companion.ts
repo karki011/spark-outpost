@@ -18,7 +18,7 @@ import {
 } from './companion-settings.ts';
 import { targetsApi } from './api-token.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
-import { trayBitmap, trayTemplate } from './island-options.ts';
+import { trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 
 interface CompanionHostOptions {
@@ -26,6 +26,7 @@ interface CompanionHostOptions {
   origin: string;
   preload: string;
   settingsPath: string;
+  trayIcon: string;
   showSpark: () => void;
   quit: () => void;
 }
@@ -37,7 +38,6 @@ export interface CompanionHost {
 
 const CHAT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DRAG_PHASES: readonly DragPhase[] = ['start', 'move', 'end'];
-const TRAY_PIXELS = 36;
 
 function isShortcutAction(value: unknown): value is ShortcutAction {
   return SHORTCUT_ACTIONS.some((action) => action === value);
@@ -49,12 +49,8 @@ function broadcast(channel: string, payload: unknown): void {
   }
 }
 
-function trayIcon() {
-  const image = nativeImage.createFromBitmap(trayBitmap(TRAY_PIXELS), {
-    width: TRAY_PIXELS,
-    height: TRAY_PIXELS,
-    scaleFactor: 2,
-  });
+function trayIcon(file: string) {
+  const image = nativeImage.createFromPath(file);
   image.setTemplateImage(true);
   return image;
 }
@@ -64,7 +60,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   let island: IslandWindow | null = null;
   let pendingChat: string | null = null;
   let saving = Promise.resolve();
-  const tray = new Tray(trayIcon());
+  const tray = new Tray(trayIcon(options.trayIcon));
   tray.setToolTip(options.appName);
 
   const fromSpark = (event: IpcMainEvent | IpcMainInvokeEvent) =>

@@ -49,6 +49,7 @@ describe('builderConfig', () => {
     electronVersion: '44.4.5',
     archs: ['x64', 'arm64'] as const,
     entitlements: '/build/entitlements.mac.plist',
+    icon: '/build/icon.icns',
   };
 
   it('names the packaged app after the prod channel and builds zip and dmg per arch', () => {
@@ -59,6 +60,7 @@ describe('builderConfig', () => {
       extraMetadata: { version: '0.2.0' },
       publish: null,
       mac: {
+        icon: '/build/icon.icns',
         identity: '-',
         notarize: false,
         target: [

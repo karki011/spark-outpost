@@ -9,7 +9,8 @@
     "dev": "pnpm build && electron .",
     "typecheck": "tsc -p tsconfig.json",
     "package": "node --import tsx scripts/package.ts",
-    "e2e:update": "node --import tsx scripts/e2e-update.ts"
+    "e2e:update": "node --import tsx scripts/e2e-update.ts",
+    "icons": "node --import tsx scripts/icons.ts"
   },
   "dependencies": {
     "@spark-outpost/contracts": "workspace:*",
@@ -22,6 +23,7 @@
     "@types/pg": "^8.23.1",
     "electron": "44.4.5",
     "electron-builder": "26.15.3",
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "sharp": "0.35.5"
   }
 }
