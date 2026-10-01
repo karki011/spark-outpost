@@ -22,6 +22,7 @@
 
 .isl-tabs button:hover {
   color: var(--text);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
 }
 
 .isl-tabs button[aria-selected='true'] {
@@ -41,7 +42,7 @@
 }
 
 .isl-qc {
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--composer-line);
   border-radius: var(--r);
   background: var(--panel);
   transition:
@@ -50,8 +51,8 @@
 }
 
 .isl-qc:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--composer-focus-line);
+  box-shadow: var(--composer-focus);
 }
 
 .isl-qc textarea {
@@ -165,6 +166,10 @@
     transform 0.2s var(--out);
 }
 
+.isl-send:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, var(--text));
+}
+
 .isl-send:disabled {
   opacity: 0.25;
   cursor: default;
@@ -237,7 +242,7 @@
   gap: 8px;
   height: 34px;
   padding: 0 11px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--composer-line);
   border-radius: 10px;
   background: var(--panel);
   color: var(--faint);
@@ -245,8 +250,8 @@
 }
 
 .isl-search:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--composer-focus-line);
+  box-shadow: var(--composer-focus);
 }
 
 .isl-search input {
@@ -356,26 +361,6 @@
   text-align: center;
   color: var(--muted);
   font-size: 12.5px;
-}
-
-.isl-back {
-  border: 0;
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 2px 4px;
-  margin: -2px 0 6px -4px;
-  border-radius: 6px;
-}
-
-.isl-back:hover {
-  color: var(--text);
-}
-
-.isl-back:focus-visible {
-  outline: 2px solid var(--accent);
 }
 
 .isl-shead {

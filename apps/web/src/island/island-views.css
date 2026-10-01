@@ -340,3 +340,24 @@
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+.isl-back {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+  margin: -2px 0 6px -4px;
+  border-radius: 6px;
+}
+
+.isl-back:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.isl-back:focus-visible {
+  outline: 2px solid var(--accent);
+}

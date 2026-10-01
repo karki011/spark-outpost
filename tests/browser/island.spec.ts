@@ -27,6 +27,38 @@ async function shot(page: Page, name: string) {
   });
 }
 
+async function fakeNonNotchDesktop(page: Page) {
+  await page.addInitScript(() => {
+    const now = new Date();
+    localStorage.setItem(
+      'spark-outpost.island',
+      JSON.stringify({
+        lastSeen: now.getTime(),
+        greetedDay: `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`,
+      }),
+    );
+    const focus: boolean[] = [];
+    const none = () => () => undefined;
+    Object.assign(window, {
+      islandFocus: focus,
+      sparkDesktop: {
+        platform: 'darwin',
+        companion: { get: async () => null, onChange: none },
+        island: {
+          geometry: async () => ({ notch: false, top: 24, notchWidth: 0, docked: true }),
+          onGeometry: none,
+          onCommand: none,
+          setInteractive: () => undefined,
+          setFocusable: (on: boolean) => focus.push(on),
+          drag: () => undefined,
+          openChat: () => undefined,
+        },
+        onOpenChat: none,
+      },
+    });
+  });
+}
+
 async function openIsland(page: Page) {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/island');
@@ -261,4 +293,50 @@ test('the island has no serious accessibility problems in its main views', async
   await page.keyboard.press('Meta+3');
   await check('ask');
   expect(views).toEqual([]);
+});
+
+test('without a notch the blob peeks on its own and the pill opens a focused chat', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeNonNotchDesktop(page);
+  await openIsland(page);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
+  await expect(island(page)).toHaveClass(/\bbare\b/);
+  await expect
+    .poll(() => island(page).evaluate((element) => getComputedStyle(element).backgroundColor))
+    .toBe('rgba(0, 0, 0, 0)');
+
+  const box = (await island(page).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, 10);
+  await expect(island(page)).toHaveAttribute('data-view', 'pill');
+  await expect(island(page)).not.toHaveClass(/\bbare\b/);
+  const pill = island(page).getByRole('button', { name: 'New chat' });
+  await expect(pill).toHaveCSS('cursor', 'pointer');
+  await expect.poll(async () => (await island(page).boundingBox())!.height).toBe(34);
+  await expect.poll(async () => (await island(page).boundingBox())!.width).toBeLessThan(200);
+  await pill.hover();
+  await expect(pill).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await pill.click();
+
+  const message = island(page).getByRole('textbox', { name: 'Message' });
+  await expect(message).toBeFocused();
+  const lastFocus = () =>
+    page.evaluate(() => (window as unknown as { islandFocus: boolean[] }).islandFocus.at(-1));
+  expect(await lastFocus()).toBe(true);
+  const hint = island(page).locator('.isl-khint');
+  await expect(hint).toContainText('new line');
+  const lines = await hint.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      height: element.getBoundingClientRect().height,
+      line: parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.4,
+      fits: element.scrollWidth <= element.clientWidth,
+    };
+  });
+  expect(lines.height).toBeLessThan(lines.line * 1.5);
+  expect(lines.fits).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(message).toHaveCount(0);
+  await expect.poll(lastFocus).toBe(false);
 });

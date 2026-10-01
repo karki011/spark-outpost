@@ -463,4 +463,7 @@ body {
 [data-skin] {
   --focus-ring: 0 0 0 1px var(--accent), 0 0 0 4px var(--accent-soft);
   --focus-ring-bad: 0 0 0 1px var(--danger), 0 0 0 4px var(--danger-soft);
+  --composer-line: color-mix(in srgb, var(--line-strong) 35%, var(--line));
+  --composer-focus-line: color-mix(in srgb, var(--accent) 55%, var(--line-strong));
+  --composer-focus: 0 0 0 3px var(--accent-soft);
 }

@@ -57,9 +57,7 @@ async function fakeDesktop(page: Page) {
   });
 }
 
-test('the desktop companion is off by default and its shortcuts appear only when it is on', async ({
-  page,
-}) => {
+test('the desktop companion shows its shortcuts only while it is on', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await fakeDesktop(page);
   await page.goto('/');

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createCompanion, SHORTCUT_TAKEN, type CompanionEffects } from './companion.ts';
-import { DEFAULT_SETTINGS, type CompanionSettings } from './companion-settings.ts';
+import { DEFAULT_SETTINGS, parseSettings, type CompanionSettings } from './companion-settings.ts';
 
-function setup(initial: Partial<CompanionSettings> = {}, taken: string[] = []) {
+function effectsFor(taken: string[] = []) {
   const registered = new Map<string, () => void>();
   const islands: { destroy: ReturnType<typeof vi.fn>; command: ReturnType<typeof vi.fn> }[] = [];
   const gone: (() => void)[] = [];
@@ -23,6 +23,11 @@ function setup(initial: Partial<CompanionSettings> = {}, taken: string[] = []) {
     save: vi.fn(),
     changed: vi.fn(),
   } satisfies CompanionEffects;
+  return { effects, registered, islands, gone };
+}
+
+function setup(initial: Partial<CompanionSettings> = {}, taken: string[] = []) {
+  const { effects, registered, islands, gone } = effectsFor(taken);
   const companion = createCompanion(
     { ...DEFAULT_SETTINGS, shortcuts: { ...DEFAULT_SETTINGS.shortcuts }, ...initial },
     effects,
@@ -32,15 +37,29 @@ function setup(initial: Partial<CompanionSettings> = {}, taken: string[] = []) {
 }
 
 describe('desktop companion lifecycle', () => {
-  it('stays off by default: no island window and no global shortcuts', () => {
-    const { companion, effects, registered } = setup();
+  it('is on by default and waits for the host before opening the island', () => {
+    const { effects, registered, islands } = effectsFor();
+    const companion = createCompanion(parseSettings(null), effects);
+    expect(companion.status()).toMatchObject({ enabled: true, calm: true });
+    expect(effects.openIsland).not.toHaveBeenCalled();
+    expect(registered.size).toBe(0);
+
+    companion.resume();
+    expect(islands).toHaveLength(1);
+    expect([...registered.keys()]).toEqual(['Alt+Space', 'Alt+Shift+Space']);
+    registered.get('Alt+Space')!();
+    expect(islands[0]!.command).toHaveBeenCalledWith('quick');
+  });
+
+  it('stays off when turned off: no island window and no global shortcuts', () => {
+    const { companion, effects, registered } = setup({ enabled: false });
     expect(companion.running()).toBe(false);
     expect(effects.openIsland).not.toHaveBeenCalled();
     expect(registered.size).toBe(0);
   });
 
   it('turning it on opens the island and registers both shortcuts live', () => {
-    const { companion, registered, islands, effects } = setup();
+    const { companion, registered, islands, effects } = setup({ enabled: false });
     const status = companion.setEnabled(true);
     expect(status.enabled).toBe(true);
     expect(islands).toHaveLength(1);
@@ -95,7 +114,7 @@ describe('desktop companion lifecycle', () => {
   });
 
   it('saves a changed shortcut while off without registering it', () => {
-    const { companion, registered } = setup();
+    const { companion, registered } = setup({ enabled: false });
     expect(companion.setShortcut('sessions', 'Alt+S')).toEqual({ ok: true });
     expect(registered.size).toBe(0);
     companion.setEnabled(true);

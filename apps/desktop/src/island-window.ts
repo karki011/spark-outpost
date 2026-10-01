@@ -13,6 +13,7 @@ import {
   type IslandGeometry,
   type Point,
 } from './island-geometry.ts';
+import { setIslandFocus } from './island-focus.ts';
 import { ISLAND_LEVEL, ISLAND_PATH, islandWindowOptions } from './island-options.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 import { guardNavigation } from './window.ts';
@@ -124,16 +125,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     setInteractive: (on) => {
       if (!window.isDestroyed()) window.setIgnoreMouseEvents(!on, { forward: true });
     },
-    setFocusable: (on) => {
-      if (window.isDestroyed()) return;
-      if (on) {
-        window.setFocusable(true);
-        window.focus();
-        return;
-      }
-      window.blur();
-      window.setFocusable(false);
-    },
+    setFocusable: (on) => setIslandFocus(window, on),
     drag: (phase, pointer) => {
       if (window.isDestroyed()) return;
       if (phase === 'start') {

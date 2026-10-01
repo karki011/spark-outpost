@@ -142,6 +142,13 @@ export const FORMS: Pair[] = [
     ['canvas', 'panel', 'raise', 'rail', 'code', 'selected'],
     'focus',
   ),
+  ...onEach(
+    'Focus',
+    'focus.composer',
+    'var(--composer-focus-line)',
+    ['canvas', 'panel', 'raise'],
+    'focus',
+  ),
   {
     id: 'disabled.button-label',
     group: 'Disabled (exempt)',

@@ -64,6 +64,10 @@ html[data-island] #root {
   border-color: transparent;
 }
 
+.isl.bare {
+  background: transparent;
+}
+
 .isl-ear {
   position: absolute;
   top: 0;
@@ -128,6 +132,40 @@ html[data-island] #root {
   transition: width 0.35s var(--out);
 }
 
+.isl[data-view='pill'] .isl-wing.r {
+  padding-right: 6px;
+}
+
+.isl-pill-btn {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.isl-pill-btn:hover {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text);
+}
+
+.isl-pill-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  color: var(--text);
+}
+
 .isl-wlabel {
   font-size: 12px;
   font-weight: 600;
@@ -166,10 +204,13 @@ html[data-island] #root {
   left: 0;
   right: 0;
   bottom: 7px;
+  padding: 0 16px;
   text-align: center;
   font-size: 10.5px;
   color: var(--faint);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   pointer-events: none;
   animation: isl-fade 0.3s 0.25s both;
 }

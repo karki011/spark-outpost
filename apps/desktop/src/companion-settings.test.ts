@@ -31,23 +31,39 @@ describe('companion shortcut config', () => {
 });
 
 describe('companion settings file', () => {
-  it('is off by default with the default shortcuts and a docked island', () => {
+  it('is on and calm by default with the default shortcuts and a docked island', () => {
     expect(parseSettings(null)).toEqual(DEFAULT_SETTINGS);
     expect(parseSettings('not json')).toEqual(DEFAULT_SETTINGS);
+    expect(DEFAULT_SETTINGS).toMatchObject({ enabled: true, calm: true });
+  });
+
+  it('keeps a choice the user already saved and defaults only the missing ones', () => {
+    expect(parseSettings(JSON.stringify({ enabled: false, calm: false }))).toMatchObject({
+      enabled: false,
+      calm: false,
+    });
+    expect(parseSettings(JSON.stringify({ enabled: false }))).toMatchObject({
+      enabled: false,
+      calm: true,
+    });
+    expect(parseSettings(JSON.stringify({ position: { docked: true } }))).toMatchObject({
+      enabled: true,
+      calm: true,
+    });
   });
 
   it('keeps valid values and repairs broken ones', () => {
     const parsed = parseSettings(
       JSON.stringify({
-        enabled: true,
+        enabled: false,
         calm: 'yes',
         shortcuts: { quick: 'Alt+J', sessions: 'Space' },
         position: { docked: false, x: 120.4, y: 'top' },
       }),
     );
     expect(parsed).toEqual({
-      enabled: true,
-      calm: false,
+      enabled: false,
+      calm: true,
       shortcuts: { quick: 'Alt+J', sessions: 'Alt+Shift+Space' },
       position: { docked: true },
     });
@@ -66,7 +82,7 @@ describe('companion settings file', () => {
     const file = path.join(folder, 'nested', 'companion.json');
     const settings = {
       ...DEFAULT_SETTINGS,
-      enabled: true,
+      enabled: false,
       position: { docked: false as const, x: 40, y: 200 },
     };
     await saveSettings(file, settings);

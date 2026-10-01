@@ -14,6 +14,7 @@ import {
   type PeekRow as PeekRowData,
 } from './island-model.ts';
 import { Kbd, RunDots } from './island-parts.tsx';
+import { keyHint } from './key-hints.tsx';
 import { PeekRow } from './PeekRow.tsx';
 import { QuickChat, type QuickDraft } from './QuickChat.tsx';
 import { Sessions } from './Sessions.tsx';
@@ -69,6 +70,9 @@ interface IslandShellProps {
 }
 
 const KHINT_HEIGHT = 18;
+const PILL_HEIGHT = 34;
+const PILL_INSET = 48;
+const PILL_MIN_WIDTH = 112;
 
 function hasCard(view: IslandView): boolean {
   return view.kind === 'card' || view.kind === 'moment' || view.kind === 'note';
@@ -77,7 +81,7 @@ function hasCard(view: IslandView): boolean {
 function scoutSpot(view: IslandView, width: number, top: number): ScoutSpot {
   if (view.kind === 'peek') return { x: width / 2 - 9, y: top - 13, size: 30 };
   if (hasCard(view)) return { x: 22, y: top + 8 + 14, size: 46 };
-  return { x: 10, y: Math.max(2, (top - 22) / 2), size: 22 };
+  return { x: view.kind === 'pill' ? 14 : 10, y: Math.max(2, (top - 22) / 2), size: 22 };
 }
 
 function wingsFor(props: IslandShellProps): { left: ReactNode; right: ReactNode } {
@@ -86,15 +90,23 @@ function wingsFor(props: IslandShellProps): { left: ReactNode; right: ReactNode 
     case 'pill':
       return {
         left: null,
-        right: greeting ? (
-          <span>{greeting}</span>
-        ) : waiting > 0 ? (
-          <>
-            <span className="isl-badge">{waiting}</span>
-            <span>need you</span>
-          </>
-        ) : (
-          <span>New chat</span>
+        right: (
+          <button
+            type="button"
+            className="isl-pill-btn"
+            onClick={() => props.onTab(waiting > 0 ? 'sessions' : 'quick')}
+          >
+            {greeting ? (
+              <span>{greeting}</span>
+            ) : waiting > 0 ? (
+              <>
+                <span className="isl-badge">{waiting}</span>
+                <span>need you</span>
+              </>
+            ) : (
+              <span>New chat</span>
+            )}
+          </button>
         ),
       };
     case 'live': {
@@ -190,43 +202,6 @@ function wingsFor(props: IslandShellProps): { left: ReactNode; right: ReactNode 
       };
     default:
       return { left: null, right: null };
-  }
-}
-
-function keyHint(view: IslandView): ReactNode {
-  switch (view.kind) {
-    case 'panel':
-      return view.panel === 'sessions' ? (
-        <>
-          <Kbd>↑</Kbd>
-          <Kbd>↓</Kbd> move · <Kbd>Enter</Kbd> open · <Kbd>⌘ 1</Kbd> chat · <Kbd>⌘ 3</Kbd> ask ·{' '}
-          <Kbd>Esc</Kbd> back / close
-        </>
-      ) : (
-        <>
-          <Kbd>Enter</Kbd> send · <Kbd>⌘ 2</Kbd> sessions · <Kbd>⌘ 3</Kbd> ask · <Kbd>Esc</Kbd>{' '}
-          close
-        </>
-      );
-    case 'card':
-      return view.card.kind === 'approval' ? (
-        <>
-          <Kbd>⌥ Space</Kbd> focus card · <Kbd>Y</Kbd> allow · <Kbd>N</Kbd> deny
-        </>
-      ) : view.card.kind === 'force' ? (
-        <>
-          <Kbd>⌥ Space</Kbd> focus card · <Kbd>N</Kbd> deny · hold the button to confirm
-        </>
-      ) : null;
-    case 'moment':
-    case 'overview':
-      return (
-        <>
-          <Kbd>⌥ Space</Kbd> chat · <Kbd>⌥ ⇧ Space</Kbd> sessions · <Kbd>Esc</Kbd> close
-        </>
-      );
-    default:
-      return null;
   }
 }
 
@@ -362,9 +337,12 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const { view, geometry } = props;
   const scoutRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
-  const top = geometry.top;
+  const wingRef = useRef<HTMLSpanElement>(null);
+  const hugsNotch = geometry.notch && geometry.docked;
+  const top = view.kind === 'pill' ? Math.max(geometry.top, PILL_HEIGHT) : geometry.top;
   const quiet = view.kind === 'peek' || view.kind === 'pill';
   const width = viewWidth(view, geometry.notchWidth);
+  const compactPill = view.kind === 'pill' && !hugsNotch;
   const hint = keyHint(view);
   const setTarget = useIslandShape(
     islandRef,
@@ -378,22 +356,33 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     const measure = () => {
       const body = quiet ? 0 : (viewRef.current?.scrollHeight ?? 0);
       const height = top + body + (hint && !quiet ? KHINT_HEIGHT : 0);
+      const fitted = compactPill
+        ? Math.max(PILL_MIN_WIDTH, PILL_INSET + (wingRef.current?.scrollWidth ?? 0))
+        : width;
       setTarget(
-        { width, height, radius: quiet ? 14 : 22, scout: scoutSpot(view, width, top) },
+        {
+          width: fitted,
+          height,
+          radius: view.kind === 'pill' ? 16 : quiet ? 14 : 22,
+          scout: scoutSpot(view, fitted, top),
+        },
         view.kind === 'peek' ? 0.62 : 0.5,
       );
     };
     measure();
-    const element = viewRef.current;
-    if (!element || typeof ResizeObserver === 'undefined') return;
+    const watched = [viewRef.current, compactPill ? wingRef.current : null].filter(
+      (element) => element !== null,
+    );
+    if (watched.length === 0 || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(measure);
-    observer.observe(element);
+    watched.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [view, width, top, quiet, hint, setTarget]);
+  }, [view, width, top, quiet, hint, compactPill, setTarget]);
 
   const classes = [
     'isl',
     view.kind === 'peek' ? 'peek' : '',
+    view.kind === 'peek' && geometry.docked && !geometry.notch ? 'bare' : '',
     !quiet ? 'lifted' : '',
     geometry.docked ? '' : 'floating',
   ].filter(Boolean);
@@ -417,7 +406,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
         style={
           {
             '--top': `${top}px`,
-            '--gap': `${geometry.notch && geometry.docked ? geometry.notchWidth : 0}px`,
+            '--gap': `${hugsNotch ? geometry.notchWidth : 0}px`,
             '--wl': hasCard(view) ? '14px' : '40px',
           } as CSSProperties
         }
@@ -431,7 +420,9 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
             </div>
             <div className="isl-gap" />
             <div className="isl-wing r">
-              <span className="isl-wr">{wings.right}</span>
+              <span ref={wingRef} className="isl-wr">
+                {wings.right}
+              </span>
             </div>
           </div>
           {!quiet && (

@@ -87,7 +87,14 @@ export function useIslandShape(
 
   useEffect(() => {
     apply();
-    return () => cancelAnimationFrame(frame.current);
+    if (!frame.current && Object.values(springs.current!).some((spring: Spring) => spring.busy)) {
+      last.current = performance.now();
+      frame.current = requestAnimationFrame(step.current);
+    }
+    return () => {
+      cancelAnimationFrame(frame.current);
+      frame.current = 0;
+    };
   }, [apply]);
 
   return useCallback(

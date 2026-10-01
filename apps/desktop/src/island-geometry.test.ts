@@ -46,6 +46,22 @@ describe('island placement', () => {
     expect(islandGeometry({ ...builtIn, workArea: builtIn.bounds }, true).top).toBe(32);
   });
 
+  it('treats a built-in display with a standard menu bar as having no notch', () => {
+    for (const menuBar of [22, 24, 25]) {
+      const intel = {
+        ...builtIn,
+        bounds: { x: 0, y: 0, width: 1440, height: 900 },
+        workArea: { x: 0, y: menuBar, width: 1440, height: 900 - menuBar },
+      };
+      expect(islandGeometry(intel, true)).toEqual({
+        notch: false,
+        top: Math.max(24, menuBar),
+        notchWidth: 0,
+        docked: true,
+      });
+    }
+  });
+
   it('docks centred on the top edge of the built-in display', () => {
     expect(placement({ docked: true }, [external, builtIn], 2)).toEqual({
       display: builtIn,
