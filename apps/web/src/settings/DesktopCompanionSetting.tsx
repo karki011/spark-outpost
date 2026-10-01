@@ -8,6 +8,7 @@ import {
 } from '../desktop/desktop-bridge.ts';
 import { acceleratorFromKey, shortcutKeys } from '../desktop/shortcut-keys.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
+import type { DocTarget } from '../ui/DocLink.tsx';
 import { Keys } from '../ui/Keys.tsx';
 import { SettingRow } from './SettingRow.tsx';
 
@@ -63,7 +64,12 @@ function ShortcutSetting({
         ? 'Press the new keys, or Escape to cancel.'
         : hint);
   return (
-    <SettingRow label={label} hint={shown} hintId={hintId}>
+    <SettingRow
+      label={label}
+      doc={{ page: 'companion-quick-chat', heading: 'change-a-shortcut' }}
+      hint={shown}
+      hintId={hintId}
+    >
       <span className="desk-shortcut">
         <Keys keys={shortcutKeys(accelerator)} />
         <button
@@ -93,11 +99,13 @@ function ShortcutSetting({
 
 function SwitchRow({
   label,
+  doc,
   hint,
   checked,
   onChange,
 }: {
   label: string;
+  doc: DocTarget;
   hint: string;
   checked: boolean;
   onChange: (on: boolean) => void;
@@ -105,7 +113,7 @@ function SwitchRow({
   const id = useId();
   const hintId = useId();
   return (
-    <SettingRow label={label} controlId={id} hint={hint} hintId={hintId}>
+    <SettingRow label={label} controlId={id} doc={doc} hint={hint} hintId={hintId}>
       <BlobToggle
         id={id}
         label={label}
@@ -126,6 +134,7 @@ export function DesktopCompanionSetting() {
     <>
       <SwitchRow
         label={LABEL}
+        doc={{ page: 'desktop-companion' }}
         hint={
           status.enabled
             ? 'Scout sits at the top of your screen, under the notch, and shows what needs you.'
@@ -141,6 +150,7 @@ export function DesktopCompanionSetting() {
           ))}
           <SwitchRow
             label="Calm mode"
+            doc={{ page: 'desktop-companion', heading: 'calm-mode' }}
             hint="Keeps the blobs still apart from what matters: no hops, waves or sparkles."
             checked={status.calm}
             onChange={(on) => void desktop.companion.setCalm(on)}
