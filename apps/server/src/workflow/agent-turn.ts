@@ -51,6 +51,7 @@ import { commandAllowlistFromRules } from '../agent-config/allow-rules.ts';
 import { conversationProjectIds } from '../agent-config/store.ts';
 import { loadUserMcp } from '../mcp/launch.ts';
 import { withMoveNote } from './project-move.ts';
+import { ASSISTANT_PREAMBLE } from '../companion/assistant.ts';
 import { autoInWorktree } from '../orchestration/checkpoint-policy.ts';
 import { createRunObservations } from '../observations/run-observations.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
@@ -293,13 +294,15 @@ export async function runAgentTurn(
       spend.recording(counted);
       await recordUsage(deps.db, lease.runId, counted);
     };
-    const userMcp = await loadUserMcp(
-      deps.db,
-      input.identity.threadId,
-      await conversationProjectIds(deps.db, input.identity.threadId),
-    ).catch(() => []);
+    const userMcp = input.assistant
+      ? []
+      : await loadUserMcp(
+          deps.db,
+          input.identity.threadId,
+          await conversationProjectIds(deps.db, input.identity.threadId),
+        ).catch(() => []);
     const spark = await sparkPreferences(deps.db, input.workspaceId);
-    const preamble = withMoveNote(input);
+    const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
 
     for await (const output of provider.run({
       prompt: input.prompt,
@@ -333,6 +336,7 @@ export async function runAgentTurn(
         workspaceId: input.workspaceId,
         conversationId: input.identity.threadId,
         runId: lease.runId,
+        ...(input.assistant ? { readOnly: true } : {}),
         observations,
         actions: {
           append,

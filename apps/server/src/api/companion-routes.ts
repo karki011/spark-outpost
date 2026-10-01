@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { AssistantUnavailableError, ensureAssistantChat } from '../companion/assistant.ts';
 import { chatUpdate } from '../companion/chat-update.ts';
 import type { Db } from '../persistence/db.ts';
 import type { SecretStore } from '../setup/secrets.ts';
@@ -31,6 +32,15 @@ export function companionRoutes(deps: CompanionRouteDeps): Router {
       return;
     }
     res.json(update);
+  });
+
+  router.post('/spark-assistant', async (_req, res) => {
+    try {
+      res.json({ conversationId: await ensureAssistantChat(deps.db, deps.workspaceId) });
+    } catch (error) {
+      if (!(error instanceof AssistantUnavailableError)) throw error;
+      res.status(409).json({ error: error.message });
+    }
   });
 
   return router;

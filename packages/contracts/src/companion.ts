@@ -9,3 +9,6 @@ export const chatUpdateSchema = z.object({
   createdAt: z.string(),
 });
 export type ChatUpdate = z.infer<typeof chatUpdateSchema>;
+
+export const sparkAssistantSchema = z.object({ conversationId: z.uuid() });
+export type SparkAssistant = z.infer<typeof sparkAssistantSchema>;
