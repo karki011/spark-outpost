@@ -1,6 +1,8 @@
 import './island.css';
 import './island-views.css';
 import './island-panels.css';
+import './island-work.css';
+import './island-peek.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ConversationSummary } from '@spark-outpost/contracts';

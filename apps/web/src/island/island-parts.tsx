@@ -79,13 +79,3 @@ export function elapsedText(startedAt: string | null, now: number): string {
   const seconds = Math.max(0, Math.floor((now - Date.parse(startedAt)) / 1000));
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
-
-export function useSecondClock(active: boolean): number {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!active) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [active]);
-  return now;
-}

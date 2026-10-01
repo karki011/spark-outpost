@@ -2,7 +2,6 @@ import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
 import { isRunning, rowState } from '../conversations/row-state.ts';
 
 export type Panel = 'quick' | 'sessions' | 'ask';
-export const PANELS: readonly Panel[] = ['quick', 'sessions', 'ask'];
 
 export type CardKind = 'approval' | 'force' | 'question' | 'open';
 

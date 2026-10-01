@@ -191,6 +191,15 @@ test('Ask answers instantly from Spark’s own state', async ({ page }) => {
   await expect
     .poll(async () => (await sql(`SELECT count(*)::int AS n FROM messages`)).rows[0]!.n)
     .toBe(1);
+
+  await ask.fill('Which provider did the most work this week?');
+  await page.keyboard.press('Enter');
+  await expect(island(page).locator('.isl-ask-a')).toHaveCount(2, { timeout: 20_000 });
+  const { rows } = await sql(
+    `SELECT c.title, r.provider FROM runs r JOIN conversations c ON c.id = r.conversation_id
+     JOIN profiles p ON p.assistant_conversation_id = c.id`,
+  );
+  expect(rows).toEqual([{ title: 'Ask Spark', provider: 'claude' }]);
 });
 
 test('active chats peek out beside Scout and hide while one is open', async ({ page }) => {

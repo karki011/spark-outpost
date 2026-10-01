@@ -81,8 +81,11 @@ export class Spring {
     }
     if (this.mode === 'curve') {
       const progress = Math.min(1, (now - this.startedAt) / this.duration);
+      if (progress >= 1) {
+        this.jump(this.target);
+        return;
+      }
       this.value = this.from + (this.target - this.from) * closeCurve(progress);
-      if (progress >= 1) this.mode = 'idle';
     }
   }
 }

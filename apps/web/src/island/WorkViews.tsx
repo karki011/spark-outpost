@@ -12,7 +12,7 @@ import type { Voice } from '../spark/voice.ts';
 import { formatCost } from '../usage/format.ts';
 import { crewLine, doneLine, type VoiceRole } from './crew-voice.ts';
 import { crewQuirk, isCheckStep } from './island-mood.ts';
-import type { Moment } from './island-model.ts';
+import { STREAK_SPARKLE, type Moment } from './island-model.ts';
 import { elapsedText, ProviderTag, Who } from './island-parts.tsx';
 import type { ChatAgent } from './use-island-data.ts';
 
@@ -308,7 +308,9 @@ export function MomentView({
           {meta.map((part) => (
             <span key={part}>{part}</span>
           ))}
-          {done && streak >= 3 && <span className="isl-streak">{streak} in a row</span>}
+          {done && streak >= STREAK_SPARKLE && (
+            <span className="isl-streak">{streak} in a row</span>
+          )}
         </div>
       )}
       <div className="isl-acts">
