@@ -32,7 +32,12 @@ test('settings opens from the sidebar and lets a CLI provider sign in again', as
   await expect(claude.locator('.xterm')).toHaveCount(0);
 
   await providers.getByRole('tab', { name: 'Appearance' }).click();
-  await expect(page.getByRole('dialog', { name: 'Appearance' }).locator('.tcard')).toHaveCount(12);
+  const cards = page.getByRole('dialog', { name: 'Appearance' }).locator('.tcard');
+  await expect(cards).toHaveCount(12);
+  const lefts = await cards.evaluateAll((all) =>
+    all.map((card) => Math.round(card.getBoundingClientRect().left)),
+  );
+  expect(new Set(lefts).size).toBe(4);
 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: 'Appearance' })).toHaveCount(0);
@@ -227,4 +232,36 @@ test('the Jev card keeps only its own switch and explains it in an info tip', as
   await page.keyboard.press('Escape');
   await expect(page.getByRole('tooltip')).toHaveCount(0);
   await expect(providers).toBeVisible();
+});
+
+test('a failed test message makes the provider blob wobble and shows the error', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page
+    .getByRole('dialog', { name: 'Spark' })
+    .getByRole('tab', { name: /AI providers/ })
+    .click();
+  const claude = page
+    .getByRole('dialog', { name: 'AI providers' })
+    .locator('.pcard')
+    .filter({ hasText: 'Claude' });
+  await claude.locator('.pc-head').click();
+  let answer = () => {};
+  const held = new Promise<void>((resolve) => (answer = resolve));
+  await page.route('**/api/providers/claude/test', async (route) => {
+    await held;
+    await route.continue();
+  });
+  await claude.getByRole('button', { name: 'Send test message' }).click();
+  await expect(claude.getByRole('button', { name: /^Asking Claude…/ })).toBeVisible();
+  await expect(claude.locator('.test-bubble')).toBeVisible();
+  answer();
+  await expect(claude.getByRole('region', { name: 'Connection' })).toContainText(
+    'The test message failed',
+  );
+  await expect(claude.locator('.plogo')).toHaveClass(/test-failed/);
+  await expect(claude.locator('.test-bubble')).toHaveCount(0);
+  await expect(claude.getByRole('button', { name: 'Send test message' })).toBeVisible();
 });

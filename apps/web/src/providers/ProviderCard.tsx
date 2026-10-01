@@ -19,6 +19,7 @@ import { TerminalPanel } from '../terminal/TerminalPanel.tsx';
 import { AdvisorSummary } from './AdvisorSummary.tsx';
 import { MethodPanel } from './MethodPanel.tsx';
 import { ConnectedSummary } from './ConnectedSummary.tsx';
+import { useTestMessage, type TestPhase } from './test-message.ts';
 import { VerifyLog } from './VerifyLog.tsx';
 import { appendLogLine, methodLabel, resolveLastLine, type VerifyLogLine } from './verify-log.ts';
 import '../ui/controls.css';
@@ -39,6 +40,8 @@ interface ProviderCardProps {
 }
 
 type ProviderMood = Extract<BlobExpression, 'idle' | 'thinking' | 'happy' | 'sad'>;
+
+const TEST_MOOD: Partial<Record<TestPhase, ProviderMood>> = { answered: 'happy', failed: 'sad' };
 
 export function ProviderCard({
   provider,
@@ -69,6 +72,7 @@ export function ProviderCard({
   const [failureCode, setFailureCode] = useState<VerifyFailureCode | null>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
   const nextLineId = useRef(0);
+  const test = useTestMessage();
 
   useEffect(() => {
     if (!celebrate) return;
@@ -188,11 +192,11 @@ export function ProviderCard({
   return (
     <div className={cardClasses} data-prov={provider.id}>
       <button type="button" className="pc-head" aria-expanded={open} onClick={onToggle}>
-        <span className="plogo">
+        <span className={test.phase === 'idle' ? 'plogo' : `plogo test-${test.phase}`}>
           <ProviderBlob
             providerId={provider.id}
             size={42}
-            expression={mood}
+            expression={TEST_MOOD[test.phase] ?? mood}
             animate={open ? 'always' : 'hover'}
           />
         </span>
@@ -234,6 +238,7 @@ export function ProviderCard({
                 <ConnectedSummary
                   provider={provider}
                   connection={provider.connection}
+                  test={test}
                   errorMessage={disconnectError}
                   canMakeDefault={canMakeDefault}
                   onSignInAgain={signInAgain}

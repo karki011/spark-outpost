@@ -1,11 +1,18 @@
 .themes-grid {
+  --tcard-gap: 10px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(max(150px, calc((100% - 3 * var(--tcard-gap)) / 4)), 1fr)
+  );
+  gap: var(--tcard-gap);
 }
 
 .tcard {
-  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 6px 6px 8px;
   border-radius: var(--r);
   border: 1px solid var(--line);
   text-align: left;
@@ -21,23 +28,34 @@
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+.tcard b,
+.tcard small {
+  padding: 0 4px;
+  overflow: hidden;
+}
+
 .tcard b {
   display: block;
-  padding: 10px 4px 0;
-  font-size: 14px;
+  padding-top: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
   font-weight: 500;
+  line-height: 1.35;
 }
 
 .tcard small {
-  display: block;
-  padding: 2px 4px 2px;
-  font-size: 12px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 11.5px;
+  line-height: 1.4;
   color: var(--muted);
 }
 
 .tprev {
   display: flex;
-  height: 116px;
+  height: 112px;
   border-radius: calc(var(--r-sm) + 2px);
   overflow: hidden;
   background: var(--bg);

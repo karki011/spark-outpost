@@ -8,11 +8,13 @@ import { easeOut } from '../ui/transitions.tsx';
 import { LabelText } from './LabelText.tsx';
 import { MoreMenu } from './MoreMenu.tsx';
 import { ProviderDefaults } from './ProviderDefaults.tsx';
-import { TestPing } from './TestPing.tsx';
+import { TestBubble } from './TestBubble.tsx';
+import type { TestMessage } from './test-message.ts';
 
 interface ConnectedSummaryProps {
   provider: ProviderSetup;
   connection: ProviderConnection;
+  test: TestMessage;
   errorMessage: string | null;
   canMakeDefault: boolean;
   onSignInAgain: () => void;
@@ -30,24 +32,17 @@ export function Detail({ term, children }: { term: string; children: ReactNode }
 }
 
 function LastTest({
-  providerId,
+  providerName,
   connection,
   pending,
   error,
 }: {
-  providerId: ProviderSetup['id'];
+  providerName: string;
   connection: ProviderConnection;
   pending: boolean;
   error: string | null;
 }) {
-  if (pending) {
-    return (
-      <span className="test-pending">
-        <TestPing providerId={providerId} />
-        <span className="sr-only">Sending a test message</span>
-      </span>
-    );
-  }
+  if (pending) return <span className="test-pending">Waiting for {providerName} to reply</span>;
   if (error) return <span className="test-bad">{error}</span>;
   const last = connection.lastTest;
   if (!last) return <span className="muted">Not sent yet</span>;
@@ -61,6 +56,7 @@ function LastTest({
 export function ConnectedSummary({
   provider,
   connection,
+  test,
   errorMessage,
   canMakeDefault,
   onSignInAgain,
@@ -68,15 +64,12 @@ export function ConnectedSummary({
   onDisconnect,
 }: ConnectedSummaryProps) {
   const queryClient = useQueryClient();
-  const test = useMutation({
-    mutationFn: () => setupApi.sendTestMessage(provider.id),
-    onSuccess: (state) => queryClient.setQueryData(setupKey, state),
-  });
   const makeDefault = useMutation({
     mutationFn: () => setupApi.updateProfile({ defaultProvider: provider.id }),
     onSuccess: (state) => queryClient.setQueryData(setupKey, state),
   });
   const isKey = connection.method === 'api_key';
+  const asking = test.phase === 'asking';
 
   return (
     <>
@@ -101,17 +94,17 @@ export function ConnectedSummary({
               <span aria-live="polite">
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.span
-                    key={test.isPending ? 'pending' : (connection.lastTest?.testedAt ?? 'none')}
+                    key={asking ? 'pending' : (connection.lastTest?.testedAt ?? 'none')}
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
                     transition={{ duration: 0.2, ease: easeOut }}
                   >
                     <LastTest
-                      providerId={provider.id}
+                      providerName={provider.name}
                       connection={connection}
-                      pending={test.isPending}
-                      error={test.isError ? test.error.message : null}
+                      pending={asking}
+                      error={test.error}
                     />
                   </motion.span>
                 </AnimatePresence>
@@ -123,12 +116,18 @@ export function ConnectedSummary({
         <div className="conn-actions">
           <button
             type="button"
-            className="btn sm line"
-            onClick={() => test.mutate()}
-            disabled={test.isPending}
+            className={asking ? 'btn sm line test-asking' : 'btn sm line'}
+            onClick={() => {
+              if (!asking) test.send(provider.id);
+            }}
+            aria-disabled={asking}
           >
-            {test.isPending ? 'Sending…' : 'Send test message'}
+            {asking ? `Asking ${provider.name}…` : 'Send test message'}
+            {asking && test.elapsedSeconds > 0 && (
+              <span className="test-elapsed">{test.elapsedSeconds} s</span>
+            )}
           </button>
+          <TestBubble phase={test.phase} />
           <MoreMenu
             label={`More ${provider.name} actions`}
             actions={[
