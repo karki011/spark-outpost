@@ -35,7 +35,9 @@ export function whyLine(input: WhyInput): string {
   const base =
     input.routedBy === 'pinned'
       ? `Why ${label}: pinned in this chat`
-      : `Why ${label}: rule ${input.rule}${tier}`;
+      : input.routedBy === 'jev'
+        ? `Why ${label}: ${input.rule}${tier}`
+        : `Why ${label}: rule ${input.rule}${tier}`;
   const parts = [base, input.note, input.sessionNote, input.scoreNote].filter(Boolean);
   const jev = input.autoWouldUse;
   if (jev && !samePickModel(jev, input.pick)) {

@@ -79,6 +79,25 @@ async function decision(runId: string): Promise<PieceDecision> {
   return rows[0]!;
 }
 
+interface RouteRecord {
+  child_run_id: string;
+  summary: string;
+  applied: string;
+  routed_by: string;
+  would_use: unknown;
+}
+
+async function routeRecords(runId: string): Promise<Map<string, RouteRecord>> {
+  const { rows } = await t.db.query<RouteRecord>(
+    `SELECT a.child_run_id, a.body->>'summary' AS summary, a.body->>'applied' AS applied,
+            r.route->>'routedBy' AS routed_by, r.route->'autoWouldUse' AS would_use
+     FROM run_advice a JOIN runs r ON r.id = a.child_run_id
+     WHERE a.run_id = $1 AND a.purpose = 'route'`,
+    [runId],
+  );
+  return new Map(rows.map((row) => [row.child_run_id, row]));
+}
+
 function failingPieceQuestions(script: JevScript, failure: 'status' | 'hang'): typeof fetch {
   const answer = jevFetch(script);
   return async (input, init) => {
@@ -143,6 +162,17 @@ describe('Jev routes each piece', { timeout: 150_000 }, () => {
       ['P2', 'claude'],
       ['P3', 'claude'],
     ]);
+    const records = await routeRecords(runId);
+    for (const builder of builders) {
+      const note = list.pieces.find((piece) => piece.key === builder.pieceKey)!.pickNote!;
+      expect(records.get(builder.id)).toMatchObject({
+        applied: 'jev',
+        routed_by: 'jev',
+        would_use: null,
+      });
+      expect(records.get(builder.id)!.summary).toContain(note);
+      expect(records.get(builder.id)!.summary).not.toContain('pinned');
+    }
 
     const recorded = await decision(runId);
     expect(recorded.jev_status).toBe('answered');

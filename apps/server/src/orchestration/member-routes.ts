@@ -181,6 +181,11 @@ function jevLine(route: MemberRoute): string {
   return ` · Jev would have used ${jevLabel(jev, route.pick)}`;
 }
 
+function appliedBy(route: MemberRoute): 'pinned' | 'jev' | 'rules' {
+  if (route.routedBy === 'pinned' || route.routedBy === 'jev') return route.routedBy;
+  return 'rules';
+}
+
 export async function recordRoute(
   s: Session,
   role: AgentRole,
@@ -206,7 +211,7 @@ export async function recordRoute(
     policyVersion: POLICY_VERSION,
     body: {
       summary: `${label} · ${route.rule}${floorNote}${jevLine(route)}${sessionNote}`,
-      applied: route.routedBy === 'pinned' ? 'pinned' : 'rules',
+      applied: appliedBy(route),
       gate: null,
       jevError: null,
       jevModel: s.intake.body.jevModel,
