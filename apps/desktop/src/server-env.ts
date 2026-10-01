@@ -45,7 +45,6 @@ export function workerEnv(launch: ServerLaunch): NodeJS.ProcessEnv {
     DATABASE_URL: launch.databaseUrl,
     KEYCHAIN_SERVICE: launch.config.keychainService,
     BRANCH_PREFIX: launch.config.branchPrefix,
-    BACKUP_DIR: launch.paths.backups,
   };
 }
 
