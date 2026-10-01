@@ -53,3 +53,4 @@ export * from './desktop-updates.ts';
 export * from './text-match.ts';
 export * from './guide.ts';
 export * from './guide-search.ts';
+export * from './secrets.ts';

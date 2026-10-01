@@ -32,12 +32,32 @@ function callText(key: string, call: IntakeCall): string {
   return `${call.value ? yes : no} (${call.source === 'jev' ? 'Jev' : 'rules'}${jev})`;
 }
 
+function withoutStop(text: string): string {
+  return text.trim().replace(/\.$/, '');
+}
+
+export function jevMissing(advice: AdviceSummary): string {
+  switch (advice.jevStatus) {
+    case 'timed_out':
+      return 'Jev timed out';
+    case 'failed':
+      return 'Jev failed';
+    case 'not_connected':
+      return 'Jev not connected';
+    default:
+      return advice.jevError ? `Jev not asked: ${withoutStop(advice.jevError)}` : 'Jev not asked';
+  }
+}
+
+function missingDetail(advice: AdviceSummary): string {
+  const failed = advice.jevStatus === 'failed' || advice.jevStatus === 'timed_out';
+  if (failed) return advice.jevError ?? 'Jev did not answer.';
+  return `${jevMissing(advice)}.`;
+}
+
 function headline(advice: AdviceSummary): string {
   const jev = advice.jev;
-  if (!jev) {
-    const reason = advice.jevStatus === 'timed_out' ? 'Jev timed out' : 'Jev unavailable';
-    return `${reason} · used the fixed rules`;
-  }
+  if (!jev) return `${jevMissing(advice)} · used the fixed rules`;
   const calls = Object.entries(advice.calls ?? {}).filter(([key]) => key !== 'vague');
   const [first] = calls;
   const head = first ? callText(...first) : categoryName(jev);
@@ -51,7 +71,7 @@ function categoryName(jev: NonNullable<AdviceSummary['jev']>): string {
 
 export function adviceDetails(advice: AdviceSummary, { recordedRoute = true } = {}): string[] {
   const { jev, rules } = advice;
-  if (!jev) return [advice.jevError ?? 'Jev did not answer.', 'The rules decided everything.'];
+  if (!jev) return [missingDetail(advice), 'The rules decided everything.'];
   const lines = [`Category ${categoryName(jev)}`];
   for (const [key, call] of Object.entries(advice.calls ?? {})) lines.push(callText(key, call));
   if (jev.injection !== null) {

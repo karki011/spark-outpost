@@ -2,7 +2,7 @@
 title: Privacy and secrets
 section: Stay in control
 order: 320
-summary: Where keys are stored, why to paste keys only in the app's key field, how Spark redacts secrets, .sparkignore, and what leaves your computer.
+summary: Where keys are stored, why to paste keys only in the app's key field, the warning when a message has a key in it, how Spark redacts secrets, .sparkignore, and what leaves your computer.
 ---
 
 You'll see where Spark Outpost keeps your keys, which files agents never read, and how to keep more files private. About 3 minutes.
@@ -21,7 +21,23 @@ When you connect a provider with **Local CLI**, the sign-in stays in that CLI. S
 2. Paste the key into the key field on the **API key** tab.
 3. Select **Verify key**.
 
-Never paste a key into a chat message. Chat text is sent to the agent's provider and saved with the chat, and Spark doesn't hide what you type there.
+Never paste a key into a chat message. Chat text is sent to the agent's provider and saved with the chat.
+
+### If you paste a key into a message
+
+When a message you're about to send looks like it has a secret in it, Spark holds it and shows a note above the box: "Paste API keys in Settings → AI providers instead." It checks for:
+
+- API keys and tokens, such as `sk-ant-…`, `sk-…`, `ghp_…`, `github_pat_…`, `AKIA…`, `xoxb-…` and JWTs;
+- private key blocks;
+- `KEY=value` lines with a secret-looking name and a long random value.
+
+Choose what to do:
+
+- **Remove it** (selected by default; press Enter): replaces each secret with `[removed]` so you can review the message and send it.
+- **Send anyway**: sends the message as you wrote it.
+- Press Escape to go back and edit the message yourself.
+
+The note shows in a chat, on Home, and in the island's **Quick chat** and **Ask**. If you send anyway, the audit log still stores the message with the secret redacted, but the provider and the saved chat get it as written.
 
 ## How Spark redacts secrets
 

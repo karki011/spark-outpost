@@ -32,6 +32,8 @@ import type { AttachmentsState } from './attachments/use-attachments.ts';
 import { ContextRing } from './composer/ContextRing.tsx';
 import { ModelPicker } from './composer/ModelPicker.tsx';
 import { SparkOffChip } from '../spark/SparkOffChip.tsx';
+import { SecretWarning } from '../ui/SecretWarning.tsx';
+import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { SteerTarget } from '../crew/SteerTarget.tsx';
 import type { SteerControl } from '../crew/use-steer.ts';
 import {
@@ -51,6 +53,7 @@ import { usePickerCommand } from './composer/use-picker-command.ts';
 import { useSlash } from './composer/use-slash.ts';
 import { takeDraft, usePendingDraft } from './composer/pending-draft.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
+import { SendButton } from './composer/SendButton.tsx';
 import type { AutonomyControl } from './project/AutonomyChip.tsx';
 import { ContextBar } from './project/ContextBar.tsx';
 import { MentionPicker } from './project/MentionPicker.tsx';
@@ -130,6 +133,7 @@ export function Composer({
   const [draft, setDraft] = useState('');
   const [repoOpen, setRepoOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const secrets = useSecretGuard(draft);
   const inputId = useId();
   const pendingDraft = usePendingDraft(conversationId);
   const repoPopover = usePopover<HTMLButtonElement, HTMLDivElement>();
@@ -274,7 +278,7 @@ export function Composer({
   };
 
   const submit = async () => {
-    if (!canSend) return;
+    if (!canSend || secrets.blocks(draft)) return;
     const draftText = draft;
     if (steering) {
       setDraft('');
@@ -323,6 +327,12 @@ export function Composer({
           {error}
         </p>
       )}
+      <SecretWarning
+        guard={secrets}
+        input={textareaRef}
+        onText={setDraft}
+        onSendAnyway={() => void submit()}
+      />
       <ContextBar
         conversationId={conversationId}
         repos={repos}
@@ -458,34 +468,13 @@ export function Composer({
           {steering && (
             <SteerTarget control={steering} ready={canSend} onSend={() => void submit()} />
           )}
-          {busy ? (
-            <button type="button" className="send busy" aria-label="Stop" onClick={onStop}>
-              <svg className="stop-ring" viewBox="0 0 32 32" aria-hidden="true">
-                <circle cx="16" cy="16" r="14" />
-              </svg>
-              <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-                <rect x="0.5" y="0.5" width="9" height="9" rx="2" fill="currentColor" />
-              </svg>
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="send"
-              aria-label={sendName}
-              title={sendName === 'Send' ? undefined : sendName}
-              disabled={!canSend}
-              onClick={() => void submit()}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-                <path
-                  d="M8 13V3M3.5 7.5 8 3l4.5 4.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                />
-              </svg>
-            </button>
-          )}
+          <SendButton
+            busy={busy}
+            label={sendName}
+            disabled={!canSend}
+            onSend={() => void submit()}
+            onStop={onStop}
+          />
         </div>
       </div>
     </div>

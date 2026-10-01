@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
+import { SecretWarning } from '../ui/SecretWarning.tsx';
+import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { fastAnswer, type FastChat, type FastState } from './ask-fast-path.ts';
 import { islandApi, islandKeys } from './island-api.ts';
 import type { Panel } from './island-model.ts';
@@ -64,6 +66,7 @@ export function AskSpark({ fast, waiting, focusDelay, onTab, onOpenChat }: AskSp
   const [text, setText] = useState('');
   const [instant, setInstant] = useState<Exchange[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const secrets = useSecretGuard(text);
   const run = assistant.detail?.conversation.latestRun;
   const thinking = run?.status === 'queued' || run?.status === 'running';
 
@@ -91,7 +94,7 @@ export function AskSpark({ fast, waiting, focusDelay, onTab, onOpenChat }: AskSp
 
   const submit = () => {
     const question = text.trim();
-    if (!question || ask.isPending || thinking) return;
+    if (!question || ask.isPending || thinking || secrets.blocks(text)) return;
     setText('');
     const answer = fastAnswer(question, fast);
     if (answer) {
@@ -165,6 +168,7 @@ export function AskSpark({ fast, waiting, focusDelay, onTab, onOpenChat }: AskSp
         ))}
       </div>
       <div className="isl-qc">
+        <SecretWarning guard={secrets} input={inputRef} onText={setText} onSendAnyway={submit} />
         <label className="sr-only" htmlFor="isl-ask-text">
           Ask Spark
         </label>

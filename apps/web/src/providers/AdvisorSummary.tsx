@@ -42,9 +42,8 @@ export function AdvisorSummary({
             <Detail term="Role">
               {advisor.role}
               <small className="note">
-                Answers a few questions per turn: is it a question, too vague, a review request,
-                destructive, or a follow-up. The rules still pick the model; Jev’s pick is recorded
-                only.
+                On Auto, its ratings feed a score that code uses to pick the model. The rules decide
+                whenever Jev is unsure.
               </small>
             </Detail>
             <Detail term="Sends">{JEV_SENDS}</Detail>

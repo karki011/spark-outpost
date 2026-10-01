@@ -38,7 +38,7 @@ async function fakeDesktop(page: Page) {
             if (accelerator === 'Alt+K')
               return {
                 ok: false,
-                error: 'Another app is using that shortcut. Pick a different one.',
+                error: 'Another app is using this shortcut. Pick a different one.',
               };
             status.shortcuts[action] =
               accelerator ?? (action === 'quick' ? 'Alt+Space' : 'Alt+Shift+Space');
@@ -76,7 +76,7 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
   await expect(spark.getByRole('button', { name: 'Reset Quick chat shortcut' })).toBeEnabled();
   await spark.getByRole('button', { name: 'Change Sessions shortcut' }).click();
   await page.keyboard.press('Alt+K');
-  await expect(spark).toContainText('Another app is using that shortcut.');
+  await expect(spark).toContainText('Another app is using this shortcut.');
 
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-checked', 'false');

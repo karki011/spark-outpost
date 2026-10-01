@@ -161,3 +161,8 @@
     display: none;
   }
 }
+
+.composer-wrap > .secret-warn {
+  max-width: 700px;
+  margin: 0 auto 8px;
+}

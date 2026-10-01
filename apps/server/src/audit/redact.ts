@@ -1,131 +1,14 @@
+import { redacted, redactText, sensitiveFieldKind } from '@spark-outpost/contracts';
 import { isSecretPath } from '../projects/path-policy.ts';
 
-export const redacted = (kind: string) => `[redacted:${kind}]`;
-export const REDACTED_MARKER = /\[redacted:[a-z_]+\]/g;
-
-interface TextRule {
-  kind: string;
-  pattern: RegExp;
-  replace?: (match: string, ...groups: string[]) => string;
-}
-
-const SENSITIVE_ENV_PARTS = new Set([
-  'KEY',
-  'APIKEY',
-  'TOKEN',
-  'SECRET',
-  'PASSWORD',
-  'PASSWD',
-  'PWD',
-  'CREDENTIAL',
-  'CREDENTIALS',
-  'AUTH',
-  'PRIVATE',
-]);
-
-const SENSITIVE_ENV_ENDINGS = ['KEY', 'TOKEN', 'SECRET', 'PASSWORD'];
-
-export function isSensitiveEnvKey(key: string): boolean {
-  const upper = key.toUpperCase();
-  if (upper.split(/[_.-]/).some((part) => SENSITIVE_ENV_PARTS.has(part))) return true;
-  return SENSITIVE_ENV_ENDINGS.some((ending) => upper.endsWith(ending));
-}
-
-const FIELD_KINDS: [RegExp, string][] = [
-  [/(apikey|accesskey|secretkey|privatekey)$/, 'api_key'],
-  [/token$/, 'token'],
-  [/(password|passwd)$/, 'password'],
-  [/(secret|secrets)$/, 'secret'],
-  [/authorization$/, 'authorization'],
-  [/(credential|credentials|cookie)$/, 'credential'],
-];
-
-export function sensitiveFieldKind(key: string): string | null {
-  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return FIELD_KINDS.find(([pattern]) => pattern.test(normalized))?.[1] ?? null;
-}
-
-const TEXT_RULES: TextRule[] = [
-  {
-    kind: 'private_key',
-    pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g,
-  },
-  { kind: 'jwt', pattern: /\beyJ[A-Za-z0-9_-]{5,}\.eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}/g },
-  {
-    kind: 'bearer',
-    pattern: /\b(Bearer)\s+(?=[A-Za-z._~+/=-]*\d)[A-Za-z0-9._~+/=-]{8,}/gi,
-    replace: (_match, scheme) => `${scheme} ${redacted('bearer')}`,
-  },
-  {
-    kind: 'github_token',
-    pattern: /\b(Authorization:\s*token)\s+[A-Za-z0-9_.-]{8,}/gi,
-    replace: (_match, header) => `${header} ${redacted('github_token')}`,
-  },
-  { kind: 'github_token', pattern: /\bgithub_pat_[A-Za-z0-9_]{20,}/g },
-  { kind: 'github_token', pattern: /\bgh[pousr]_[A-Za-z0-9]{20,}/g },
-  { kind: 'slack_token', pattern: /\bxox[abposr]-[A-Za-z0-9-]{10,}/g },
-  { kind: 'api_key', pattern: /\bsk-[A-Za-z0-9_-]{16,}/g },
-  { kind: 'api_key', pattern: /\b[rsp]k_(?:live|test)_[A-Za-z0-9]{16,}/g },
-  { kind: 'api_key', pattern: /\bAIza[0-9A-Za-z_-]{35}\b/g },
-  { kind: 'aws_key', pattern: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g },
-  {
-    kind: 'url_password',
-    pattern: /\b([a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:)([^\s@/]+)(@)/gi,
-    replace: (_match, before, _password, at) => `${before}${redacted('url_password')}${at}`,
-  },
-  {
-    kind: 'env',
-    pattern: /^([ \t]*(?:export[ \t]+)?)([A-Za-z_][A-Za-z0-9_.-]*)([ \t]*=[ \t]*)(.*\S.*)$/gm,
-    replace: (match, prefix, key, equals) =>
-      isSensitiveEnvKey(key) ? `${prefix}${key}${equals}${redacted('env')}` : match,
-  },
-  {
-    kind: 'json_field',
-    pattern: /("([^"\\]{1,80})"\s*:\s*)"((?:[^"\\]|\\.)*)"/g,
-    replace: (match, before, key) => {
-      const kind = sensitiveFieldKind(key);
-      return kind ? `${before}"${redacted(kind)}"` : match;
-    },
-  },
-];
-
-export function redactText(text: string): string {
-  let result = text;
-  for (const rule of TEXT_RULES) {
-    result = result.replace(rule.pattern, (match: string, ...rest: unknown[]) => {
-      if (match.startsWith('[redacted:')) return match;
-      const groups = rest.filter((value): value is string => typeof value === 'string');
-      return rule.replace ? rule.replace(match, ...groups) : redacted(rule.kind);
-    });
-  }
-  return result;
-}
-
-const VALUE_GROUP: Record<string, number> = { env: 3, json_field: 2 };
-const PLACEHOLDER =
-  /^(?:\[redacted:|[<${(*]|x{3,}|\.{3})|^(?:your|my|some|example|sample|placeholder|changeme|change_me|dummy|fake|test|todo|none|null|undefined|true|false)(?:[\W_]|$)/i;
-
-function looksSecret(raw: string): boolean {
-  const value = raw.trim().replace(/^['"]|['"]$/g, '');
-  if (value.length < 8 || /\s/.test(value) || PLACEHOLDER.test(value)) return false;
-  return /\d/.test(value) || value.length >= 20;
-}
-
-export function secretKinds(text: string): string[] {
-  const kinds = new Set<string>();
-  for (const rule of TEXT_RULES) {
-    for (const match of text.matchAll(rule.pattern)) {
-      const [whole, ...groups] = match;
-      if (whole.startsWith('[redacted:')) continue;
-      const strings = groups.filter((value): value is string => typeof value === 'string');
-      if (rule.replace && rule.replace(whole, ...strings) === whole) continue;
-      const valueAt = VALUE_GROUP[rule.kind];
-      if (valueAt !== undefined && !looksSecret(groups[valueAt] ?? '')) continue;
-      kinds.add(rule.kind);
-    }
-  }
-  return [...kinds];
-}
+export {
+  isSensitiveEnvKey,
+  redacted,
+  REDACTED_MARKER,
+  redactText,
+  secretKinds,
+  sensitiveFieldKind,
+} from '@spark-outpost/contracts';
 
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
 
