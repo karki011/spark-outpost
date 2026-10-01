@@ -17,6 +17,7 @@ export function AutoContinueSetting({ seconds }: { seconds: number | null }) {
       choices={WAIT_CHOICES}
       label="If you don’t answer a question"
       info={WAIT_INFO}
+      doc={{ page: 'approvals', heading: 'if-you-dont-answer' }}
       hint="Spark picks the safe option."
       toUpdate={(value) => ({ autoContinueSeconds: value })}
     />

@@ -242,6 +242,7 @@ describe('the Spark tools server', () => {
       'spark_comment_ticket',
       'spark_connectors',
       'spark_create_ticket',
+      'spark_docs',
       'spark_guide',
       'spark_map',
       'spark_models',

@@ -49,3 +49,6 @@ export * from './steer.ts';
 export * from './map.ts';
 export * from './companion.ts';
 export * from './desktop-updates.ts';
+export * from './text-match.ts';
+export * from './guide.ts';
+export * from './guide-search.ts';

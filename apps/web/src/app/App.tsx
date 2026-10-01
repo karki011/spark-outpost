@@ -22,11 +22,14 @@ import { scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
 import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
 import { SidebarLayoutProvider, useSidebarLayoutState } from '../conversations/sidebar-layout.tsx';
+import { isDocLinkOpen, leaveDocs, useDocLinks } from '../docs/doc-route.ts';
+import { DocsSkeleton } from '../docs/DocsSkeleton.tsx';
 import { Home } from '../home/Home.tsx';
 import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
 import { useSettingsRequests } from '../settings/settings-request.ts';
+import { DocsReachable } from '../ui/DocLink.tsx';
 import { Tickets } from '../tickets/Tickets.tsx';
 import { ticketKeys, ticketsApi } from '../tickets/tickets-api.ts';
 import { useTicketRequests } from '../tickets/ticket-request.ts';
@@ -45,6 +48,10 @@ const MapPage = lazy(() =>
   import('../map/MapPage.tsx').then((module) => ({ default: module.MapPage })),
 );
 
+const DocsPage = lazy(() =>
+  import('../docs/DocsPage.tsx').then((module) => ({ default: module.DocsPage })),
+);
+
 function ChatShell({ entering }: { entering: boolean }) {
   const queryClient = useQueryClient();
   const live = useAppEvents();
@@ -53,11 +60,18 @@ function ChatShell({ entering }: { entering: boolean }) {
   const [draftId, setDraftId] = useState(newDraftId);
   const [settings, setSettings] = useState<SettingsSection | null>(null);
   useSettingsRequests(setSettings);
-  const [view, setViewState] = useState<AppView>(readSavedView);
+  const [view, setViewState] = useState<AppView>(() =>
+    isDocLinkOpen() ? 'docs' : readSavedView(),
+  );
   const setView = useCallback((next: AppView) => {
     setViewState(next);
     saveView(next);
+    if (next !== 'docs') leaveDocs();
   }, []);
+  useDocLinks(() => {
+    setView('docs');
+    setSettings(null);
+  });
   const [homeDraftId, setHomeDraftId] = useState(newDraftId);
   const [ticketFocus, setTicketFocus] = useState<string | null>(null);
   const openTicket = useCallback(
@@ -201,6 +215,11 @@ function ChatShell({ entering }: { entering: boolean }) {
             <MapPage onOpenInChat={chatAboutFile} />
           </Suspense>
         )}
+        {view === 'docs' && (
+          <Suspense fallback={<DocsSkeleton />}>
+            <DocsPage />
+          </Suspense>
+        )}
         {view === 'chats' && (
           <AgentTvHost
             activeId={activeId}
@@ -263,7 +282,9 @@ export function App() {
   return (
     <>
       {setup.data.profile.onboardingCompleted ? (
-        <ChatShell entering={entering} />
+        <DocsReachable value>
+          <ChatShell entering={entering} />
+        </DocsReachable>
       ) : (
         <Onboarding onFinished={handleOnboardingFinished} />
       )}

@@ -37,9 +37,18 @@ function CodeElement({
   return <CodeBlock code={text.replace(/\n$/, '')} language={language} streaming={streaming} />;
 }
 
-const components: Components = {
+export const codeComponents: Components = {
   pre: ({ children }) => <>{children}</>,
   code: CodeElement,
+  table: ({ children }) => (
+    <div className="md-table">
+      <table>{children}</table>
+    </div>
+  ),
+};
+
+const components: Components = {
+  ...codeComponents,
   a: ({ href, children }) =>
     href && SAFE_LINK.test(href) ? (
       <a href={href} target="_blank" rel="noopener noreferrer">
@@ -53,14 +62,9 @@ const components: Components = {
       Image not loaded{alt ? `: ${alt}` : ''}
     </span>
   ),
-  table: ({ children }) => (
-    <div className="md-table">
-      <table>{children}</table>
-    </div>
-  ),
 };
 
-const remarkPlugins = [remarkGfm];
+export const remarkPlugins = [remarkGfm];
 
 const MarkdownBlock = memo(function MarkdownBlock({ text, streaming }: Required<MarkdownProps>) {
   return (

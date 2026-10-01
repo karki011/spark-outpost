@@ -57,6 +57,10 @@ async function stageArch(stageDir: string, arch: MacArch): Promise<void> {
   for await (const test of glob('src/**/*.test.ts', { cwd: serverDir })) {
     await rm(path.join(serverDir, test));
   }
+  await cp(path.join(repoRoot, 'docs/guide'), path.join(serverDir, 'guide'), {
+    recursive: true,
+    filter: (source) => !source.includes(`${path.sep}images`),
+  });
 }
 
 async function stageApp(stageDir: string, version: string): Promise<void> {

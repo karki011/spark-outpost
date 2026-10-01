@@ -57,6 +57,7 @@ export function ProviderList({
             <InfoTip
               topic="Jev"
               text="It never answers chats or approves anything. The rules pick the model."
+              doc={{ page: 'jev' }}
             />
           </p>
           {advisors.map((advisor) => (

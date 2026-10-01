@@ -233,7 +233,7 @@ Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
     text: `Needs me? spark_attention: waiting cards, failed chats, flagged tickets. A chat's live run, crew, pieces, Jev's picks and every Jev decision: spark_run. Plan and files changed (line counts, never contents): spark_task. Chats and messages: spark_chats, spark_chat. What an agent did step by step: spark_audit. Recent work: spark_activity, spark_brief.
 Spend today or this week by provider, model or chat: spark_spend. Trends, cost per task, harness, outcomes and feedback: spark_analytics. Model price, strengths and pass rates: spark_models.
-Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what breaks if a file changes: spark_map with file. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. What Spark is doing with a PR it opened (checks, comments, triage, rounds): spark_pr_follow_up. How Spark works: spark_guide.`,
+Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what breaks if a file changes: spark_map with file. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. What Spark is doing with a PR it opened (checks, comments, triage, rounds): spark_pr_follow_up. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
   },
   {
     id: 'settings-spark',

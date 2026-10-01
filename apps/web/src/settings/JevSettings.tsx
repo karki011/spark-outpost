@@ -23,6 +23,7 @@ export function JevSettings({ profile, jevConnected }: JevSettingsProps) {
       enabled={profile.jevDiffs}
       label="Check changes with Jev"
       info={DIFFS_INFO}
+      doc={{ page: 'jev', heading: 'check-changes-with-jev' }}
       hint={
         jevConnected
           ? 'Diffs go to TypeSafe and are never used for training.'

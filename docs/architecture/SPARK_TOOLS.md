@@ -40,6 +40,7 @@ Every agent session (Ask, Do, Builders, chats without a project) gets the `spark
 | Terminal sessions                                                                          | `spark_terminals`                                       | yes     | Name, folder, chat, opened, busy and the program name; never output                                    |
 | Tickets inbox, attention                                                                   | `spark_tickets`                                         | yes     | Actions: create, comment, transition, assign (confirm cards)                                           |
 | How Spark works                                                                            | `spark_guide`                                           | no      | Section `spark-tools` maps questions to tools                                                          |
+| User guide: the Docs page (`docs/guide/*.md`)                                              | `spark_docs`                                            | no      | List pages, search, read a page or one heading; returns `#/docs/<page>#<heading>` links                |
 
 ## Gaps
 
@@ -50,6 +51,10 @@ Every agent session (Ask, Do, Builders, chats without a project) gets the `spark
 - Ship preview (`/tasks/:id/ship`: what a commit or PR would include and why it is blocked) is not exposed; it runs git and GitHub calls.
 - Feedback comments and reasons are not shared; only counts (thumbs up and down) per group.
 - No new actions: steering pieces, answering cards, keep or revert, cancel and ship stay in the UI. Any future action must use the `spark_action` confirm card. `spark_pr_follow_up_round` only queues items and lets the follow-up worker start the round; the push and GitHub replies still go through their own card (or Full auto).
+
+## User guide
+
+`spark_docs` reads the same Markdown pages the Docs page bundles (`docs/guide/`, parsed by `packages/contracts/src/guide.ts`). In development it reads `docs/guide` from the repo; the desktop package copies the pages (not the images) to `server/guide`. Image references come back as `[Screenshot: alt]`. Pages that say "Coming soon" are flagged `comingSoon`.
 
 ## Terminal sessions
 
