@@ -291,3 +291,79 @@ export function shipTask(
 ): Promise<ShipResult> {
   return serialized(taskId, () => runShip(deps, taskId, request, options));
 }
+
+export interface ShipPiece {
+  key: string;
+  title: string;
+  files: readonly string[];
+}
+
+async function pushOwnBranch(deps: ShipDeps, plan: ShipPlan, branch: string): Promise<void> {
+  const remote = plan.remote!.name;
+  const defaultBranch = await remoteDefaultBranch(plan.root!, remote);
+  if (!safeToPush(branch, deps.branchPrefix, [plan.baseBranch, defaultBranch, 'main', 'master'])) {
+    throw new ShipBlockedError(`Ship only pushes its own ${deps.branchPrefix}/ branches.`);
+  }
+  await pushBranch(plan.root!, remote, branch);
+}
+
+async function runPieceShip(
+  deps: ShipDeps,
+  taskId: string,
+  piece: ShipPiece,
+  options: ShipOptions,
+): Promise<ShipResult> {
+  const plan = await planShip(deps, taskId, { ...options, keepCheckout: true });
+  if (plan.blocked) throw new ShipBlockedError(plan.blocked.message);
+  if (!plan.modes.includes('draft_pr')) {
+    throw new ShipBlockedError(plan.notes[0] ?? 'This task can’t open a pull request.');
+  }
+  const paths = plan.paths.filter((path) => piece.files.includes(path));
+  const files = plan.files.filter((file) => paths.includes(file.path));
+  const branch = `${plan.branch}-${piece.key.toLowerCase()}`;
+  const title = shipTitle(plan, `${plan.task.title}: ${piece.title}`);
+  const summary = await summaryFor(deps, plan, title, files, options.notes ?? []);
+  const commit = await commitOnBranch(
+    plan.root!,
+    plan.repo!.prefix,
+    paths,
+    branch,
+    plan.repo!.head!,
+    commitSubject(title),
+    commitBody(summary),
+  );
+  if (!commit) throw new ShipBlockedError(`${piece.key} has no changes to ship.`);
+  await pushOwnBranch(deps, plan, branch);
+  const github = plan.github!;
+  const repo = plan.remoteRepo!;
+  const base = plan.baseBranch ?? (await github.defaultBranch(repo));
+  const body = pullRequestBody(summary);
+  const existing = await github.findPullRequest(repo, branch);
+  const pull = existing
+    ? await github.updatePullRequest(repo, existing.number, { title, body })
+    : await github.createPullRequest(repo, { title, body, head: branch, base });
+  const { link } = await addTaskLink(deps.db, plan.task.id, {
+    kind: 'pr',
+    url: pull.url,
+    title: `${repoSlug(repo)}#${pull.number}`,
+    source: 'ship',
+  });
+  return {
+    mode: 'draft_pr',
+    branch,
+    commit,
+    committedFiles: paths,
+    pushed: true,
+    pullRequest: { ...pull, created: existing === null },
+    link,
+  };
+}
+
+export function shipPiece(
+  deps: ShipDeps,
+  taskId: string,
+  piece: ShipPiece,
+  options: ShipOptions = {},
+): Promise<ShipResult> {
+  return serialized(taskId, () => runPieceShip(deps, taskId, piece, options));
+}

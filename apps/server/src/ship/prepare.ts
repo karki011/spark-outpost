@@ -45,6 +45,7 @@ export interface ShipOptions {
   keepCheckout?: boolean;
   duringRun?: boolean;
   notes?: readonly string[];
+  exclude?: readonly string[];
 }
 
 export interface ShipPlan {
@@ -193,9 +194,18 @@ export async function planShip(
   const root = shipped?.rootPath ?? facts.roots[0] ?? null;
   if (!root) return blockedPlan(start, BLOCKED.noChanges);
   const chat = await chatWorktreeAt(deps.db, root);
-  if (!chat) return planFrom(deps, start, facts, root, null);
+  const exclude = options.exclude ?? [];
+  if (!chat) return planFrom(deps, start, facts, root, null, exclude);
   const onChat = { ...start, branch: chat.branch, keepCheckout: false };
-  return planFrom(deps, onChat, facts, root, chat.baseBranch);
+  return planFrom(deps, onChat, facts, root, chat.baseBranch, exclude);
+}
+
+function withoutExcluded(
+  candidates: ReturnType<typeof shipCandidates>,
+  exclude: readonly string[],
+): ReturnType<typeof shipCandidates> {
+  if (exclude.length === 0) return candidates;
+  return { ...candidates, paths: candidates.paths.filter((path) => !exclude.includes(path)) };
 }
 
 async function planFrom(
@@ -204,6 +214,7 @@ async function planFrom(
   facts: ShipTaskFacts,
   root: string,
   baseHint: string | null,
+  exclude: readonly string[],
 ): Promise<ShipPlan> {
   const { shipped, branch, keepCheckout } = start;
   const taskId = start.task.id;
@@ -211,7 +222,10 @@ async function planFrom(
   if (!repo) return blockedPlan({ ...start, root }, BLOCKED.notRepo);
   if (!repo.head) return blockedPlan({ ...start, root, repo }, BLOCKED.noCommits);
 
-  const candidates = shipCandidates(await taskChanges(deps.db, deps.workspaceId, taskId));
+  const candidates = withoutExcluded(
+    shipCandidates(await taskChanges(deps.db, deps.workspaceId, taskId)),
+    exclude,
+  );
   const exists = await branchExists(root, branch);
   const files = keepCheckout
     ? await filesAgainst(

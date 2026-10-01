@@ -29,6 +29,7 @@ const ATTENTION_BY_APPROVAL_KIND: Record<ApprovalKind, AttentionKind> = {
   verify: 'input',
   ownership: 'input',
   pieces: 'plan',
+  pr_split: 'input',
 };
 
 function baseName(path: string): string {
