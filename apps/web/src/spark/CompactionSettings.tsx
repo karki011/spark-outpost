@@ -94,7 +94,13 @@ function WarnSetting({ profile }: { profile: Profile }) {
   const hint =
     field.error ?? setting.error ?? `The context ring turns amber at ${setting.value}% full.`;
   return (
-    <SettingRow label="Warn when context is" info={WARN_INFO} hint={hint} hintId={hintId}>
+    <SettingRow
+      label="Warn when context is"
+      info={WARN_INFO}
+      doc={{ page: 'compaction', heading: 'change-when-spark-compacts' }}
+      hint={hint}
+      hintId={hintId}
+    >
       <PercentInput label="Warn when context is, in percent" field={field} hintId={hintId} />
     </SettingRow>
   );
@@ -120,6 +126,7 @@ function CompactAtSetting({ profile }: { profile: Profile }) {
       label="Compact automatically at"
       blob="plain"
       info={COMPACT_INFO}
+      doc={{ page: 'compaction', heading: 'change-when-spark-compacts' }}
       hint={hint}
       on={on.value}
       onToggle={(value) => {

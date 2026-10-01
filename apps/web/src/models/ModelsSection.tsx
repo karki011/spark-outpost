@@ -69,6 +69,7 @@ export function ModelsSection() {
         What each model costs, how it did on our benchmark, and when Spark uses it.
         <InfoTip
           topic="model cards"
+          doc={{ page: 'providers-and-models', heading: 'read-the-model-cards' }}
           text={`Vendor facts checked ${cards.data.checkedAt}. The rules pick models; Jev only reads these cards.`}
         />
       </p>

@@ -56,6 +56,17 @@ describe('the user guide', () => {
     }
   });
 
+  it('chains the Get started pages in order with a closing Next link', () => {
+    const steps = pages.filter((page) => page.section === 'Get started' && !page.comingSoon);
+    expect(steps.length).toBeGreaterThanOrEqual(5);
+    steps.slice(0, -1).forEach((page, index) => {
+      const next = steps[index + 1]!;
+      expect(page.body.trimEnd(), page.slug).toMatch(
+        new RegExp(`\\*\\*Next:\\*\\* \\[${next.title}\\]\\(${next.slug}\\.md\\)$`),
+      );
+    });
+  });
+
   it('has a light and a dark file for every screenshot a page shows', () => {
     for (const page of pages) {
       for (const match of page.body.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)) {

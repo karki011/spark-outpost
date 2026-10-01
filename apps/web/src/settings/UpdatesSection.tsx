@@ -134,6 +134,7 @@ function UpdateRows({ status }: { status: UpdateStatus }) {
           <SettingRow
             label={AUTO_DOWNLOAD}
             controlId={autoId}
+            doc={{ page: 'updates', heading: 'download-updates-automatically' }}
             hint={
               status.autoDownload
                 ? 'Updates download in the background; one click installs them.'

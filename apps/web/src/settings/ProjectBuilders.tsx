@@ -75,7 +75,12 @@ export function ProjectBuilders({ project, available }: { project: Project; avai
   const slotsHint = available ? (slots === 1 ? IN_ORDER_HINT : SLOTS_HINT) : SERVER_IN_ORDER;
   return (
     <div className="set-builders" role="group" aria-label={`Builders in ${project.name}`}>
-      <SettingRow label={SLOTS_LABEL} hint={settings.slotsError ?? slotsHint} hintId={slotsHintId}>
+      <SettingRow
+        label={SLOTS_LABEL}
+        doc={{ page: 'pieces', heading: 'choose-how-many-builders-run-at-once' }}
+        hint={settings.slotsError ?? slotsHint}
+        hintId={slotsHintId}
+      >
         <ChoicePicker
           label={`${SLOTS_LABEL} in ${project.name}`}
           choices={slotChoices(available)}
