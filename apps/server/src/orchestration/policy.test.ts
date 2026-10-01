@@ -12,6 +12,7 @@ import {
   asksForReview,
   buildsByRule,
   destructiveByRule,
+  destructiveTargets,
   followUpByRule,
   isLargeDiff,
   planOnlyByRule,
@@ -41,6 +42,17 @@ describe('risk rules', () => {
     ]) {
       expect(destructiveByRule(request), request).toBe(false);
     }
+  });
+
+  it('points destructive wording at the files named in the same line', () => {
+    const request = [
+      'Split this up into pieces:',
+      '- Add a migration `migrations/002_tags.sql` (`upload_key` REFERENCES uploads ON DELETE CASCADE).',
+      '- Add `src/slug.ts` exporting `slugify`. Add tests in `test/slug.test.ts`.',
+    ].join('\n');
+    expect(destructiveTargets(request)).toEqual(['migrations/002_tags.sql']);
+    expect(destructiveTargets('Delete src/old.ts. Then add src/new.ts.')).toEqual(['src/old.ts']);
+    expect(destructiveTargets('Add src/new.ts')).toEqual([]);
   });
 
   it('calls short, local wording and formatting fixes trivial', () => {

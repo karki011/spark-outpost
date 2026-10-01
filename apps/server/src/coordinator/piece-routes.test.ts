@@ -62,6 +62,7 @@ function rules(extra: Partial<RouteRules> = {}): RouteRules {
     routes,
     placement: 'shared',
     askPlacement: true,
+    requestDestructive: false,
     destructive: () => false,
     core: () => false,
     listIsolation: null,
@@ -172,6 +173,52 @@ describe('routePieceList', () => {
       reason:
         'reasoning 2.6, coding 3, context 2 → top tier (destructive) → Claude Opus 5.5 (only top-tier route)',
     });
+  });
+
+  it('keeps a request-wide destructive floor off the pieces it can be pinned to', () => {
+    const owned = routed(
+      [
+        ['P1', answer()],
+        ['P2', answer()],
+      ],
+      { requestDestructive: true, destructive: (entry) => entry.key === 'P1' },
+    );
+    expect(owned.pieces.map((entry) => [entry.key, entry.model.pick.model])).toEqual([
+      ['P1', 'opus[1m]'],
+      ['P2', 'gpt-6-sol'],
+    ]);
+    const migrate = answer({
+      kind: { choice: 'migrate', confidence: 1, probabilities: { migrate: 1 } },
+    });
+    const byJev = routed(
+      [
+        ['P1', migrate],
+        ['P2', answer()],
+      ],
+      { requestDestructive: true },
+    );
+    expect(byJev.pieces.map((entry) => entry.model.pick.model)).toEqual(['opus[1m]', 'gpt-6-sol']);
+    expect(byJev.pieces[0]!.model.reason).toContain('top tier (destructive)');
+    const stakes = routed(
+      [
+        ['P1', answer()],
+        ['P2', answer({ reliability: 0.7 })],
+      ],
+      { requestDestructive: true },
+    );
+    expect(stakes.pieces.map((entry) => entry.model.pick.model)).toEqual(['gpt-6-sol', 'opus[1m]']);
+  });
+
+  it('floors every building piece when the destructive request names none of them', () => {
+    const result = routed(
+      [
+        ['P1', answer()],
+        ['P2', answer()],
+      ],
+      { requestDestructive: true },
+    );
+    expect(result.pieces.map((entry) => entry.model.pick.model)).toEqual(['opus[1m]', 'opus[1m]']);
+    expect(result.pieces[1]!.model.demand).toMatchObject({ tier: 'top', raisedBy: 'destructive' });
   });
 
   it('places a wide or risky piece in its own worktree, leaving the list mixed', () => {

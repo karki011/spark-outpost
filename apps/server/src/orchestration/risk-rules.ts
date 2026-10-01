@@ -30,6 +30,11 @@ export function destructiveByRule(request: string): boolean {
   return DESTRUCTIVE.test(request) || namesSecret(request);
 }
 
+export function destructiveTargets(request: string): string[] {
+  const parts = request.split(/\n|(?<=[.!?;])\s+/);
+  return namedFiles(parts.filter((part) => destructiveByRule(part)));
+}
+
 const MIGRATION = /\bmigrat(?:e|es|ed|ing|ion|ions)\b|\bschema changes?\b|\balter table\b/i;
 
 const DESTRUCTIVE_SCHEMA_WORDING =

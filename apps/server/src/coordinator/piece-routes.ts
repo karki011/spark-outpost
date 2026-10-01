@@ -6,7 +6,13 @@ import { builderEffort, DESTRUCTIVE_RULE, type RouteContext } from '../orchestra
 import { pickOf } from '../routing/candidates.ts';
 import { reaches } from './graph.ts';
 import { sharedFiles, type OwnedSet } from './owned.ts';
-import { pickForDemand, pieceDemand, type Demand, type RoutePick } from './piece-demand.ts';
+import {
+  pickForDemand,
+  pieceDemand,
+  riskyAnswer,
+  type Demand,
+  type RoutePick,
+} from './piece-demand.ts';
 import {
   OWN_WORKTREE,
   SHARED_TREE,
@@ -29,6 +35,7 @@ export interface RouteRules<T extends RoutablePiece = RoutablePiece> {
   routes: readonly RouteOption[];
   placement: ListPlacement;
   askPlacement: boolean;
+  requestDestructive: boolean;
   destructive(piece: T): boolean;
   core(piece: T): boolean | null;
   listIsolation: string | null;
@@ -100,7 +107,7 @@ function demandReason(context: RouteContext, demand: Demand, chosen: RoutePick):
 
 function jevModel<T extends RoutablePiece>(
   rules: RouteRules<T>,
-  piece: T,
+  destructive: boolean,
   demand: Demand,
   chosen: RoutePick,
 ): ModelChoice {
@@ -108,7 +115,6 @@ function jevModel<T extends RoutablePiece>(
   const candidate = rules.route.candidates.find(
     (entry) => entry.provider === chosen.route.provider,
   );
-  const destructive = rules.destructive(piece);
   const floored = floorPick(jevPick, candidate ? selectableModels(candidate) : [], {
     aim: destructive ? 'top' : 'floor',
     now: rules.route.now ?? new Date(),
@@ -135,13 +141,11 @@ function chooseModel<T extends RoutablePiece>(
   rules: RouteRules<T>,
   jev: JevOutcome,
   piece: T,
+  destructive: boolean,
 ): ModelChoice {
   const answer = jev.answers?.get(piece.key);
   if (!answer) return rulesChoice(rules, piece, jev.failure ?? 'Jev was not asked');
-  const result = pieceDemand(answer, {
-    destructive: rules.destructive(piece),
-    core: rules.core(piece),
-  });
+  const result = pieceDemand(answer, { destructive, core: rules.core(piece) });
   if (!result.ok) return rulesChoice(rules, piece, result.reason);
   const chosen = pickForDemand(result.demand, rules.routes, rules.route.chat.provider);
   if (!chosen) {
@@ -152,7 +156,21 @@ function chooseModel<T extends RoutablePiece>(
       result.demand,
     );
   }
-  return jevModel(rules, piece, result.demand, chosen);
+  return jevModel(rules, destructive, result.demand, chosen);
+}
+
+function destructivePieces<T extends RoutablePiece>(
+  pieces: readonly T[],
+  rules: RouteRules<T>,
+  jev: JevOutcome,
+): Set<string> {
+  const building = pieces.filter((piece) => !piece.research);
+  const own = building.filter((piece) => {
+    const answer = jev.answers?.get(piece.key);
+    return rules.destructive(piece) || (answer !== undefined && riskyAnswer(answer));
+  });
+  const whole = own.length === 0 && rules.requestDestructive;
+  return new Set((whole ? building : own).map((piece) => piece.key));
 }
 
 function rulesPlace<T extends RoutablePiece>(
@@ -236,13 +254,14 @@ export function routePieceList<T extends RoutablePiece>(
   jev: JevOutcome,
   fileCount: (piece: T) => number,
 ): RoutedPieces {
+  const destructive = destructivePieces(pieces, rules, jev);
   const routes = pieces.map((piece): PieceRoute => {
     const answer = jev.answers?.get(piece.key);
     return {
       key: piece.key,
       model: piece.research
         ? rulesChoice(rules, piece, 'reads only')
-        : chooseModel(rules, jev, piece),
+        : chooseModel(rules, jev, piece, destructive.has(piece.key)),
       place: choosePlace(rules, answer, piece),
       answer: answer ?? null,
       files: fileCount(piece),

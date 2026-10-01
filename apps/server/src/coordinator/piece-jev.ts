@@ -7,6 +7,7 @@ import { insertDecision } from '../persistence/orchestrations.ts';
 import { callJev, type JevCall } from '../orchestration/jev-calls.ts';
 import { builderModels } from '../orchestration/model-floor.ts';
 import type { Session } from '../orchestration/session.ts';
+import { destructiveTargets } from '../orchestration/risk-rules.ts';
 import { routeCandidates } from '../routing/candidates.ts';
 import { placementFacts } from './assess.ts';
 import { measuredStrength, type AssignFacts } from './assign.ts';
@@ -167,8 +168,11 @@ async function record(
 }
 
 function destructive(s: Session) {
+  const targets = new Set(destructiveTargets(s.input.userRequest));
   return (piece: CheckedPiece) =>
-    s.facts.destructive || piece.owned.paths.some((path) => inMigrationsFolder(path));
+    [...piece.owned.paths, ...piece.owned.globs].some(
+      (path) => inMigrationsFolder(path) || targets.has(path),
+    );
 }
 
 export async function routePieces(
@@ -188,6 +192,7 @@ export async function routePieces(
     routes,
     placement: place.placement,
     askPlacement: place.placement !== 'in_order' && !s.deps.forcedPlacement,
+    requestDestructive: s.facts.destructive,
     destructive: isDestructive,
     core: (piece) => touchesCore(piece, fileFacts),
     listIsolation: listIsolation(pieces, placeFacts),
