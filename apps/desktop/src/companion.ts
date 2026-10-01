@@ -32,6 +32,7 @@ export interface CompanionEffects {
 }
 
 export interface Companion {
+  resume(): void;
   status(): CompanionStatus;
   running(): boolean;
   position(): IslandPosition;
@@ -105,9 +106,10 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     handle?.destroy();
   };
 
-  if (effects.supported && settings.enabled) start();
-
   return {
+    resume() {
+      if (effects.supported && settings.enabled) start();
+    },
     status,
     running: () => island !== null,
     position: () => settings.position,

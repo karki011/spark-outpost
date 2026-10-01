@@ -27,6 +27,7 @@ function setup(initial: Partial<CompanionSettings> = {}, taken: string[] = []) {
     { ...DEFAULT_SETTINGS, shortcuts: { ...DEFAULT_SETTINGS.shortcuts }, ...initial },
     effects,
   );
+  companion.resume();
   return { companion, effects, registered, islands, gone };
 }
 
@@ -118,6 +119,7 @@ describe('desktop companion lifecycle', () => {
       { ...DEFAULT_SETTINGS, enabled: true },
       { ...effects, supported: false },
     );
+    other.resume();
     expect(other.running()).toBe(false);
     expect(other.setEnabled(true).enabled).toBe(false);
     expect(companion.running()).toBe(true);

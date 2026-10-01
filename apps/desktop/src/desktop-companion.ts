@@ -124,6 +124,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     },
   });
   refreshTray(companion.status());
+  companion.resume();
 
   ipcMain.handle(IPC.companionGet, (event) => (fromSpark(event) ? companion.status() : null));
   ipcMain.handle(IPC.companionSetEnabled, (event, on: unknown) =>
