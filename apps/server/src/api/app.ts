@@ -10,6 +10,7 @@ import { chatSettingsRoutes, type ChatSettingsDeps } from './chat-settings-route
 import { chatWorkspaceRoutes, type ChatWorkspaceDeps } from './chat-workspace-routes.ts';
 import { companionRoutes } from './companion-routes.ts';
 import { conversationActionRoutes } from './conversation-action-routes.ts';
+import { diagnosticsRoutes, type DiagnosticsPlaces } from './diagnostics-routes.ts';
 import { homeRoutes } from './home-routes.ts';
 import { mapRoutes } from './map-routes.ts';
 import { mcpRoutes, type McpRouteDeps } from './mcp-routes.ts';
@@ -45,6 +46,7 @@ export interface AppOptions
   allowedOrigins: readonly string[];
   apiToken: string;
   webRoot?: string;
+  diagnostics?: DiagnosticsPlaces;
 }
 
 export function createApp(options: AppOptions) {
@@ -77,6 +79,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', companionRoutes(options));
   app.use('/api', outcomeRoutes(options));
   app.use('/api', analyticsRoutes(options));
+  app.use('/api', diagnosticsRoutes(options));
   app.use('/api', terminalRoutes(options));
   app.use('/api', resetRoutes({ ...options, stopTerminals: () => options.terminals.killAll() }));
   if (options.webRoot) app.use(webApp(options.webRoot));

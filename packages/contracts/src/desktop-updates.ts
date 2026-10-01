@@ -28,3 +28,11 @@ export type InstallResult =
   | { status: 'unavailable'; reason: string };
 
 export const WAITING_FOR_RUNS = 'Spark will update when your work finishes.';
+
+export function isBetaVersion(version: string): boolean {
+  return /^\d+\.\d+\.\d+-/.test(version);
+}
+
+export function defaultUpdateChannel(version: string): UpdateChannel {
+  return isBetaVersion(version) ? 'beta' : 'stable';
+}

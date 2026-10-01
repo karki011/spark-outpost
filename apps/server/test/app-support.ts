@@ -29,6 +29,7 @@ export interface TestAppOptions {
   parallelBuilders?: boolean;
   openFolder?: AppOptions['openFolder'];
   terminals?: TerminalSessions;
+  diagnostics?: AppOptions['diagnostics'];
 }
 
 const unavailableProbe: AppOptions['probeCapabilities'] = () =>
@@ -66,6 +67,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
     serverSpendCapUsd: options.serverSpendCapUsd,
     parallelBuilders: options.parallelBuilders,
     ...(options.openFolder ? { openFolder: options.openFolder } : {}),
+    ...(options.diagnostics ? { diagnostics: options.diagnostics } : {}),
   });
 }
 

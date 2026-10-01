@@ -77,6 +77,9 @@ const configSchema = z.object({
   BACKUP_DIR: z.string().min(1).optional(),
   MAP_ROOT_PREFIX: z.string().min(1).optional(),
   WEB_ROOT: z.string().min(1).optional(),
+  SPARK_APP_VERSION: z.string().min(1).optional(),
+  SPARK_LOG_DIR: z.string().min(1).optional(),
+  SPARK_DATA_DIR: z.string().min(1).optional(),
   MORNING_BRIEF: z
     .enum(['true', 'false'])
     .default('true')
