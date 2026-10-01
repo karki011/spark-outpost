@@ -133,7 +133,7 @@ test.describe('a finished crew', () => {
     await work.getByRole('tab', { name: 'Cost' }).click();
     const rows = work.getByRole('list', { name: 'Cost by agent' }).getByRole('listitem');
     await expect(rows).toHaveCount(3);
-    await expect(rows.nth(0)).toContainText('BoltBuilder · Sonnet 5');
+    await expect(rows.nth(0)).toContainText('BoltBuilder · Opus 5.5');
     await expect(rows.last()).toContainText('JevDispatcherestimated');
     for (const row of await rows.all()) {
       const height = (await row.boundingBox())!.height;
