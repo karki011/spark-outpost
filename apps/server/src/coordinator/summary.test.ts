@@ -161,6 +161,35 @@ describe('piecesSummary', () => {
     ]);
   });
 
+  it('leads each line with what was built, never a closing "Skipped" note (D, C2)', () => {
+    const summary = piecesSummary(coordination(C2_PIECES.slice(0, 2)), [
+      reply(
+        'builder',
+        'run-bolt',
+        'Bolt',
+        'Added `uploadsToCsv` with RFC 4180 quoting.\n\nSkipped: lines end with \\n, not \\r\\n. Add that if a reader needs it.',
+      ),
+      reply(
+        'builder',
+        'run-rivet',
+        'Rivet',
+        'Added a fixed-window RateLimiter.\n\nNothing was skipped.',
+      ),
+      reply(
+        'integrator',
+        'run-weld',
+        'Weld',
+        'No changes were needed.\n\nI skipped the optional database check.',
+      ),
+    ]);
+    expect(summary!.split('\n')).toEqual([
+      'Built in 2 pieces:',
+      '- P1 · CSV export of uploads (Bolt): Added uploadsToCsv with RFC 4180 quoting. Files: `src/csv-export.ts`, `test/csv-export.test.ts`. Scoped check: passed.',
+      '- P2 · Fixed-window rate limiter (Rivet): Added a fixed-window RateLimiter. Files: `src/rate-limit.ts`, `test/rate-limit.test.ts`. Scoped check: passed.',
+      '- Then Weld: No changes were needed.',
+    ]);
+  });
+
   it('says why a piece did not land and skips research pieces', () => {
     const summary = piecesSummary(
       coordination([

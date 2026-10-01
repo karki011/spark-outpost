@@ -42,8 +42,8 @@ export function laterTurnsLine(builders: readonly MemberResult[]): string | null
 function leadText(children: readonly MemberResult[], summary: string | null): string | undefined {
   const builders = children.filter((result) => result.role === 'builder');
   const main = mainBuild(builders);
+  if (summary) return summary;
   const later = laterTurnsLine(builders);
-  if (summary) return [summary, later].filter(Boolean).join('\n\n');
   if (!main) return children.findLast((result) => result.role === 'scout')?.text.trim();
   const continued = builders
     .slice(builders.indexOf(main) + 1)

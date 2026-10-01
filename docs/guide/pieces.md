@@ -65,6 +65,10 @@ While pieces run, the message box becomes a steering box. Under **Steer to**, pi
 
 Write "skip P3" to skip a piece, or "use Codex for P2" to move one. The reply above the message box says when it arrives, for example "Queued for Rivet: … (next turn)".
 
+## Read the reply
+
+When the pieces are joined, the reply has one line per piece: what its Builder built, the files it changed and its scoped check. Later turns, such as a fix after review, follow as "Then …" lines.
+
 ## Watch the crew in Agent TV
 
 Select **Agent TV** in the chat to see the Coordinator in the middle and the Builders around it. **Stage** shows them as a map, **List** as rows. Select a Builder to see its piece, model and state.
