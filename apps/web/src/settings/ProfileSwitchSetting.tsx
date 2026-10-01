@@ -2,6 +2,7 @@ import '../chat/project/agent-setup.css';
 import { useId } from 'react';
 import type { UpdateProfileRequest } from '@spark-outpost/contracts';
 import { BlobToggle, type BlobKind } from '../brand/BlobToggle.tsx';
+import type { DocTarget } from '../ui/DocLink.tsx';
 import type { TipContent } from '../ui/Tooltip.tsx';
 import { SettingRow } from './SettingRow.tsx';
 import { useProfileSetting } from './use-profile-setting.ts';
@@ -10,6 +11,7 @@ interface ProfileSwitchSettingProps {
   enabled: boolean;
   label: string;
   info: TipContent;
+  doc?: DocTarget;
   hint: string | ((enabled: boolean) => string);
   disabled?: boolean;
   blob?: BlobKind;
@@ -20,6 +22,7 @@ export function ProfileSwitchSetting({
   enabled,
   label,
   info,
+  doc,
   hint,
   disabled = false,
   blob,
@@ -41,6 +44,7 @@ export function ProfileSwitchSetting({
       label={label}
       controlId={switchId}
       info={info}
+      doc={doc}
       hint={setting.error ?? (typeof hint === 'string' ? hint : hint(setting.value))}
       hintId={hintId}
       disabled={disabled}

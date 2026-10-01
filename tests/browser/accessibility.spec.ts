@@ -249,6 +249,32 @@ test('Settings → Connectors has no serious colour-contrast or ARIA issues', as
   expect(found).toEqual([]);
 });
 
+test('the Docs page has no serious colour-contrast or ARIA issues in any theme', async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/#/docs/approvals#protected-paths');
+  const docs = page.getByRole('main', { name: 'Docs' });
+  await expect(docs.getByRole('heading', { name: 'Protected paths', level: 2 })).toBeFocused();
+  const found = [];
+  for (const theme of THEMES) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `docs page ${theme}`)));
+  }
+  await docs.getByRole('searchbox', { name: 'Search the guide' }).fill('autonomy');
+  await expect(docs.getByRole('list', { name: 'Search results' })).toBeVisible();
+  for (const theme of ['light', 'graphite', 'contrast']) {
+    await useTheme(page, theme);
+    found.push(...(await blockingViolations(page, `docs search ${theme}`)));
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await docs.getByRole('searchbox', { name: 'Search the guide' }).fill('');
+  await docs.getByRole('button', { name: 'Contents' }).click();
+  found.push(...(await blockingViolations(page, 'docs phone contents')));
+  expect(found).toEqual([]);
+});
+
 test('interactive targets on the chat screen are at least 24 by 24 pixels', async ({ page }) => {
   await openWorkedChat(page);
   const small = await page.evaluate(() => {

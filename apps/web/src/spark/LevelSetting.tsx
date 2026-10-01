@@ -18,6 +18,7 @@ export function LevelSetting({ level }: { level: InvolvementLevel }) {
       choices={CHOICES}
       label="How much Spark does alone"
       info={INFO}
+      doc={{ page: 'chats-and-modes', heading: 'spark-autonomy' }}
       hint="The default for new chats, whichever agent they use."
       toUpdate={(value) => ({ defaultLevel: value })}
     />

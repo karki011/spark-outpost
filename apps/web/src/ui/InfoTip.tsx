@@ -1,14 +1,16 @@
 import './info-tip.css';
 import { useId } from 'react';
+import { DocLink, type DocTarget } from './DocLink.tsx';
 import { InfoIcon } from './icons.tsx';
 import { tipText, useTooltip, type TipContent } from './Tooltip.tsx';
 
 interface InfoTipProps {
   topic: string;
   text: TipContent;
+  doc?: DocTarget | undefined;
 }
 
-export function InfoTip({ topic, text }: InfoTipProps) {
+export function InfoTip({ topic, text, doc }: InfoTipProps) {
   const textId = useId();
   const { triggerProps, tooltip, show } = useTooltip(text, { side: 'top' });
   return (
@@ -27,6 +29,7 @@ export function InfoTip({ topic, text }: InfoTipProps) {
         {tipText(text)}
       </span>
       {tooltip}
+      {doc && <DocLink topic={topic} doc={doc} />}
     </>
   );
 }

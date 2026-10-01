@@ -117,7 +117,12 @@ function UpdateRows({ status }: { status: UpdateStatus }) {
       {!off && (
         <>
           {offering && <GetUpdateRow status={status} />}
-          <SettingRow label="Channel" hint={CHANNEL_HINTS[status.channel]} hintId={channelHint}>
+          <SettingRow
+            label="Channel"
+            doc={{ page: 'updates', heading: 'stable-or-beta' }}
+            hint={CHANNEL_HINTS[status.channel]}
+            hintId={channelHint}
+          >
             <Segmented
               ariaLabel="Update channel"
               describedBy={channelHint}

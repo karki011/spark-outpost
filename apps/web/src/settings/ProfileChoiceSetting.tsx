@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import type { UpdateProfileRequest } from '@spark-outpost/contracts';
 import { Segmented } from '../ui/Segmented.tsx';
+import type { DocTarget } from '../ui/DocLink.tsx';
 import type { TipContent } from '../ui/Tooltip.tsx';
 import { SettingRow } from './SettingRow.tsx';
 import { useProfileSetting } from './use-profile-setting.ts';
@@ -16,6 +17,7 @@ interface ProfileChoiceSettingProps<T> {
   choices: ProfileChoice<T>[];
   label: string;
   info?: TipContent;
+  doc?: DocTarget;
   hint: string | ((value: T) => string);
   toUpdate: (value: T) => UpdateProfileRequest;
 }
@@ -25,6 +27,7 @@ export function ProfileChoiceSetting<T>({
   choices,
   label,
   info,
+  doc,
   hint,
   toUpdate,
 }: ProfileChoiceSettingProps<T>) {
@@ -37,6 +40,7 @@ export function ProfileChoiceSetting<T>({
       hint={setting.error ?? (typeof hint === 'string' ? hint : hint(current.value))}
       hintId={hintId}
       {...(info ? { info } : {})}
+      doc={doc}
     >
       <Segmented
         ariaLabel={label}

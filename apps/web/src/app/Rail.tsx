@@ -8,7 +8,7 @@ import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.
 import { UpdateBlob } from './UpdateBlob.tsx';
 import './rail.css';
 
-export type AppView = 'home' | 'chats' | 'analytics' | 'tickets' | 'map';
+export type AppView = 'home' | 'chats' | 'analytics' | 'tickets' | 'map' | 'docs';
 
 interface RailProps {
   view: AppView;
@@ -80,6 +80,16 @@ const VIEWS: { id: AppView; label: string; icon: ReactNode }[] = [
         <circle cx="10" cy="9" r="1.8" fill="currentColor" />
         <circle cx="17" cy="12" r="2.2" fill="currentColor" />
         <circle cx="19" cy="5" r="1.4" fill="currentColor" />
+      </svg>
+    ),
+  },
+  {
+    id: 'docs',
+    label: 'Docs',
+    icon: (
+      <svg {...ICON}>
+        <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5v-15Z" />
+        <path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 7h6M9 10.5h4" />
       </svg>
     ),
   },

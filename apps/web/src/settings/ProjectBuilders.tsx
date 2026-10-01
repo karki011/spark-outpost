@@ -87,6 +87,7 @@ export function ProjectBuilders({ project, available }: { project: Project; avai
       </SettingRow>
       <SettingRow
         label={PLACE_LABEL}
+        doc={{ page: 'spark-crew', heading: 'where-spark-works' }}
         hint={settings.placeError ?? PLACE_HINTS[settings.place]}
         hintId={placeHintId}
       >

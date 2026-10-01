@@ -248,3 +248,13 @@ export function AskIcon() {
 export function InfoIcon() {
   return <StrokeIcon path="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 11v5M12 8h.01" />;
 }
+
+export function BookIcon() {
+  return (
+    <StrokeIcon path="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5v-15ZM5 19.5A1.5 1.5 0 0 0 6.5 21H19M9 7h6" />
+  );
+}
+
+export function SearchIcon() {
+  return <StrokeIcon path="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm9 2-3.5-3.5" />;
+}
