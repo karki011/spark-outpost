@@ -36,43 +36,59 @@ Legend: **Written** is a full page; **Stub** has frontmatter, "Coming soon" and 
 
 Get started is a sequence: an overview page that lists the steps, then one short page per setup job, each ending with a **Next:** link.
 
-| Page                                          | Status  | Summary                                                                                                             | Screenshots                                                                              |
-| --------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `getting-started` Getting started             | Written | Set up Spark Outpost in about five minutes. Each step has its own short page.                                       | none                                                                                     |
-| `meet-spark` Meet Spark and pick a theme      | Written | Tell Spark your name, choose how it talks to you, and pick a theme.                                                 | `getting-started-meet-spark`, `getting-started-theme`                                    |
-| `connect-a-provider` Connect an AI provider   | Written | Connect Claude, Codex or Z.ai with the local CLI or an API key, then send a test message.                           | `getting-started-provider`                                                               |
-| `chat-defaults` Choose defaults for new chats | Written | Pick the model, mode and effort new chats start with, and see where to change them later.                           | `getting-started-defaults`                                                               |
-| `meet-jev` Jev, the advisor                   | Written | What Jev is, why it's optional, and how to connect it during setup.                                                 | none                                                                                     |
-| `bring-in-your-tools` Bring in your tools     | Written | Check that Git is found, and optionally connect GitHub, Jira and Linear.                                            | `getting-started-tools`                                                                  |
-| `first-chat` Your first chat                  | Written | Finish setup, send your first message and find what to read next.                                                   | `getting-started-done`, `chats-and-modes-new-chat`                                       |
-| `providers-and-models` Providers and models   | Stub    | Connect Claude, Codex and Z.ai, send a test message, pick the default model, mode and effort, and read model cards. | `providers-list`, `providers-test-message`, `providers-defaults`, `providers-model-card` |
+| Page                                          | Status  | Summary                                                                                   | Screenshots                                           |
+| --------------------------------------------- | ------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `getting-started` Getting started             | Written | Set up Spark Outpost in about five minutes. Each step has its own short page.             | none                                                  |
+| `meet-spark` Meet Spark and pick a theme      | Written | Tell Spark your name, choose how it talks to you, and pick a theme.                       | `getting-started-meet-spark`, `getting-started-theme` |
+| `connect-a-provider` Connect an AI provider   | Written | Connect Claude, Codex or Z.ai with the local CLI or an API key, then send a test message. | `getting-started-provider`                            |
+| `chat-defaults` Choose defaults for new chats | Written | Pick the model, mode and effort new chats start with, and see where to change them later. | `getting-started-defaults`                            |
+| `meet-jev` Jev, the advisor                   | Written | What Jev is, why it's optional, and how to connect it during setup.                       | none                                                  |
+| `bring-in-your-tools` Bring in your tools     | Written | Check that Git is found, and optionally connect GitHub, Jira and Linear.                  | `getting-started-tools`                               |
+| `first-chat` Your first chat                  | Written | Finish setup, send your first message and find what to read next.                         | `getting-started-done`, `chats-and-modes-new-chat`    |
+
+### How Spark works
+
+What Spark adds around the agent, in four short pages. Orders 191–194 place this section between Get started and Work with Spark.
+
+| Page                                                | Status  | Summary                                                                                                    | Screenshots                                               |
+| --------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `how-spark-works` Spark at a glance                 | Written | What Spark adds on top of Claude, Codex and Z.ai, one paragraph each, with links to the details.           | none                                                      |
+| `prompt-flow` What happens when you send a prompt   | Written | The path from the message box to a pull request, where each card can appear, and what changes without Jev. | `prompt-flow-crew-turn`                                   |
+| `permissions-and-autonomy` Permissions and autonomy | Written | The agent's mode and Spark autonomy, how they combine, and which cards never go on without you.            | `chats-and-modes-permissions`, `chats-and-modes-autonomy` |
+| `use-cases` Use cases                               | Written | Six short walkthroughs from a question to a Full auto pull request.                                        | none                                                      |
 
 ### Work with Spark
 
-| Page                                            | Status  | Summary                                                                                                                                             | Screenshots                                                                                                                                |
-| ----------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `chats-and-modes` Chats, modes and autonomy     | Written | Start a chat, link a project, pick the agent's mode and choose how much Spark does alone.                                                           | `chats-and-modes-new-chat`, `chats-and-modes-project`, `chats-and-modes-picker`, `chats-and-modes-permissions`, `chats-and-modes-autonomy` |
-| `spark-crew` The Spark crew                     | Stub    | How Spark splits bigger work into pieces for Builders, reviews it with a Critic and keeps it in a worktree; Builders at once and Where Spark works. | `spark-crew-pieces`, `spark-crew-work-panel`, `spark-crew-agent-tv`, `spark-crew-projects`                                                 |
-| `jev` Jev, Spark's advisor                      | Stub    | What Jev decides and what it never does, connecting it, Check changes with Jev, and what it costs.                                                  | `jev-advisor`, `jev-advice-line`                                                                                                           |
-| `ship-and-pull-requests` Ship and pull requests | Stub    | Commit, push and open a PR from a chat, ready or draft, and let Spark follow up on checks and review comments.                                      | `ship-popover`, `ship-pr-strip`, `ship-settings`                                                                                           |
-| `terminals` Terminals                           | Stub    | Open a terminal in the chat's worktree or project, run several, and stop a busy one safely.                                                         | `terminals-dock`, `terminals-stop`                                                                                                         |
-| `compaction` Long chats and compaction          | Stub    | How Spark keeps long chats within the model's context. Being built now; this page fills in when it ships.                                           | (after the feature lands)                                                                                                                  |
+| Page                                            | Status  | Summary                                                                                                                         | Screenshots                                                                                                                                |
+| ----------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `chats-and-modes` Chats, modes and autonomy     | Written | Start a chat, link a project, pick the agent's mode and choose how much Spark does alone.                                       | `chats-and-modes-new-chat`, `chats-and-modes-project`, `chats-and-modes-picker`, `chats-and-modes-permissions`, `chats-and-modes-autonomy` |
+| `providers-and-models` Providers and models     | Written | Manage Claude, Codex and Z.ai after setup, change the defaults for new chats, and read the model cards.                         | `providers-defaults`, `providers-model-cards`                                                                                              |
+| `auto-routing` Pick a model for a chat          | Written | Pin a model or let Auto pick one per request, set the effort, and read why Spark chose a model.                                 | `auto-routing-picker`                                                                                                                      |
+| `spark-crew` The Spark crew                     | Written | Who reads, builds and reviews your request, how Spark decides what to do, where the work happens, and how to keep or revert it. | `spark-crew-plan`                                                                                                                          |
+| `pieces` Big work in pieces                     | Written | How the coordinator splits big work into pieces, runs Builders in a shared tree or in worktrees, and ships one PR or several.   | `pieces-card`                                                                                                                              |
+| `jev` Jev, Spark's advisor                      | Written | What Jev decides and what it never does, how to connect it, Check changes with Jev, and what it costs.                          | `jev-advisor`                                                                                                                              |
+| `ship-and-pull-requests` Ship and pull requests | Written | Commit, push or open a pull request from a chat, and choose whether pull requests open ready for review or as drafts.           | `ship-panel`                                                                                                                               |
+| `pr-follow-up` Follow up on pull requests       | Written | Let Spark fix failing checks and answer review comments on its PRs, with a confirm card or by itself in Full auto.              | `pr-follow-up-strip`, `pr-follow-up-card`                                                                                                  |
+| `terminals` Terminals                           | Stub    | Open a terminal in the chat's worktree or project, run several, and stop a busy one safely.                                     | `terminals-dock`, `terminals-stop`                                                                                                         |
+| `compaction` Long chats and compaction          | Written | Watch the context ring, choose when Spark compacts a long chat, and read the summary it leaves behind.                          | `compaction-ring`, `compaction-card`, `compaction-divider`, `compaction-settings`                                                          |
 
 ### Stay in control
 
-| Page                                      | Status  | Summary                                                                                                                                    | Screenshots                                                                                              |
-| ----------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `approvals` Approvals and protected paths | Written | What Spark asks before it acts, how to answer an approval card, and which files always ask.                                                | `approvals-command`, `approvals-edit`, `approvals-instructions`, `approvals-hold`, `approvals-allowlist` |
-| `privacy-and-secrets` Privacy and secrets | Stub    | Where keys are stored, why to paste keys only in the app's key field, `.sparkignore`, what goes to Jev, and what Spark tools never return. | `privacy-key-field`, `privacy-map-note`                                                                  |
-| `guardrails` Guardrails (universal laws)  | Stub    | Rules every agent follows in every chat. Being built now; this page fills in when it ships.                                                | (after the feature lands)                                                                                |
+| Page                                                           | Status  | Summary                                                                                                                                    | Screenshots                                                                                              |
+| -------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `approvals` Approvals and protected paths                      | Written | What Spark asks before it acts, how to answer an approval card, and which files always ask.                                                | `approvals-command`, `approvals-edit`, `approvals-instructions`, `approvals-hold`, `approvals-allowlist` |
+| `privacy-and-secrets` Privacy and secrets                      | Stub    | Where keys are stored, why to paste keys only in the app's key field, `.sparkignore`, what goes to Jev, and what Spark tools never return. | `privacy-key-field`, `privacy-map-note`                                                                  |
+| `guardrails` Guardrails (universal laws)                       | Written | Five rules Spark applies around every Builder, and the two you meet on the keep card: unexplained removals and checks Spark runs itself.   | `guardrails-keep-card`                                                                                   |
+| `estimates-and-budgets` Estimates, budgets and model demotions | Written | Read the estimate on a plan card, answer the budget card, and see why Spark stopped using a model for a kind of task.                      | `guardrails-estimate`                                                                                    |
 
 ### Your tools
 
-| Page                                    | Status | Summary                                                                                                            | Screenshots                                                 |
-| --------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| `tickets-and-github` Tickets and GitHub | Stub   | Connect GitHub, Linear and Jira, work from the Tickets inbox, and start a chat from a ticket.                      | `tickets-connectors`, `tickets-inbox`, `tickets-start-work` |
-| `map` The Map                           | Stub   | See a project's areas and files, find what breaks if a file changes, and what Jev reads to label areas.            | `map-tree`, `map-focus`, `map-sky`                          |
-| `spark-tools` Spark tools for agents    | Stub   | The `spark_*` tools every agent gets: what they answer, what they never return, and the confirm cards for actions. | `spark-tools-action-card`                                   |
+| Page                                        | Status  | Summary                                                                                                              | Screenshots                        |
+| ------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `tickets-and-github` Tickets and GitHub     | Written | Connect GitHub so Spark can open pull requests, connect Jira or Linear, and keep tickets in step with pull requests. | `tickets-github`                   |
+| `tickets-inbox` Work from the Tickets inbox | Written | Find what needs you, start a chat from a ticket, and follow it through to a pull request.                            | `tickets-inbox`, `tickets-start`   |
+| `map` The Map                               | Stub    | See a project's areas and files, find what breaks if a file changes, and what Jev reads to label areas.              | `map-tree`, `map-focus`, `map-sky` |
+| `spark-tools` Spark tools for agents        | Stub    | The `spark_*` tools every agent gets: what they answer, what they never return, and the confirm cards for actions.   | `spark-tools-action-card`          |
 
 ### Desktop app
 
@@ -92,14 +108,20 @@ Get started is a sequence: an overview page that lists the steps, then one short
 
 Settings rows and info tips link here with a book icon (`apps/web/src/ui/DocLink.tsx`). A unit test checks each target page and heading exists.
 
-| Where                                             | Opens                             |
-| ------------------------------------------------- | --------------------------------- |
-| Settings → Spark → How much Spark does alone      | `chats-and-modes#spark-autonomy`  |
-| Settings → Spark → If you don't answer a question | `approvals#if-you-dont-answer`    |
-| Settings → AI providers → Advisor info tip        | `jev`                             |
-| Settings → AI providers → Check changes with Jev  | `jev#check-changes-with-jev`      |
-| Settings → Projects → Where Spark works           | `spark-crew#where-spark-works`    |
-| Settings → Updates → Channel                      | `updates#stable-or-beta`          |
-| Map → what Jev reads info tip                     | `privacy-and-secrets#sparkignore` |
+| Where                                                             | Opens                                                        |
+| ----------------------------------------------------------------- | ------------------------------------------------------------ |
+| Settings → Spark → How much Spark does alone                      | `chats-and-modes#spark-autonomy`                             |
+| Settings → Spark → If you don't answer a question                 | `approvals#if-you-dont-answer`                               |
+| Settings → AI providers → Advisor info tip                        | `jev`                                                        |
+| Settings → AI providers → Check changes with Jev                  | `jev#check-changes-with-jev`                                 |
+| Settings → Projects → Where Spark works                           | `spark-crew#where-spark-works`                               |
+| Settings → Projects → Builders at once                            | `pieces#choose-how-many-builders-run-at-once`                |
+| Settings → Spark → Warn when context is, Compact automatically at | `compaction#change-when-spark-compacts`                      |
+| Settings → Spark → Open pull requests as                          | `ship-and-pull-requests#ready-for-review-or-draft`           |
+| Settings → Spark → When checks still fail in Full auto            | `ship-and-pull-requests#when-checks-still-fail-in-full-auto` |
+| Settings → Spark → Follow up on pull requests                     | `pr-follow-up`                                               |
+| Settings → Models → model cards info tip                          | `providers-and-models#read-the-model-cards`                  |
+| Settings → Updates → Channel                                      | `updates#stable-or-beta`                                     |
+| Map → what Jev reads info tip                                     | `privacy-and-secrets#sparkignore`                            |
 
 Getting started links to `troubleshooting#run-setup-again` for when setup comes back.

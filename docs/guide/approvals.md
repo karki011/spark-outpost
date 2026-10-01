@@ -15,6 +15,8 @@ The approval checks run in Spark Outpost itself, not in the model. Nothing an ag
 - **Spark autonomy** sets what happens to the results. With **Review each step**, you also get a card before risky work starts. See [Spark autonomy](chats-and-modes.md#spark-autonomy).
 - **Protected paths** and a few risky actions always ask, in every mode and at every level. See [Protected paths](#protected-paths).
 
+For a side-by-side view of both settings, see [Permissions and autonomy](permissions-and-autonomy.md).
+
 ## Answer an approval card
 
 When an agent needs you, its card appears in the chat and docks above the message box under **Waiting for you**. The chat list shows **Asking permission**, and the **Chats** button in the rail shows a count.

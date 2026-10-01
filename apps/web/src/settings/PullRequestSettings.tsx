@@ -31,6 +31,7 @@ export function OpenPullRequestsAsSetting({ ready }: { ready: boolean }) {
       saved={ready}
       choices={OPEN_AS_CHOICES}
       label="Open pull requests as"
+      doc={{ page: 'ship-and-pull-requests', heading: 'ready-for-review-or-draft' }}
       hint={(value) =>
         value
           ? 'Reviewers are asked right away. A Full auto PR whose checks still fail opens as a draft marked “Checks failing”.'
@@ -49,6 +50,7 @@ export function PrFollowUpSettings({ profile }: { profile: Profile }) {
         enabled={profile.prFollowUp}
         label="Follow up on pull requests"
         info={FOLLOW_UP_INFO}
+        doc={{ page: 'pr-follow-up' }}
         hint={(on) =>
           on
             ? 'Spark fixes failing checks and review feedback, then pushes and replies.'
