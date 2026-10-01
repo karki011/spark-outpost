@@ -71,8 +71,8 @@ export function pieceRoute(s: Session, piece: TaskPiece): MemberRoute | null {
   const pick = { provider: piece.provider, model: piece.model, modelLabel: label, effort: null };
   return {
     pick: { ...pick, effort: builderEffort(s.route, pick) },
-    routedBy: 'rules',
-    rule: `piece → ${candidate?.name ?? piece.provider}`,
+    routedBy: piece.pickNote?.startsWith('Jev:') ? 'jev' : 'rules',
+    rule: piece.pickNote ?? `piece → ${candidate?.name ?? piece.provider}`,
     autoWouldUse: null,
   };
 }

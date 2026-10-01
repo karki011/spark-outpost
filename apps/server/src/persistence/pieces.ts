@@ -262,6 +262,7 @@ export interface PiecePatch {
   violations?: readonly PieceViolation[];
   check?: PieceCheck;
   note?: string | null;
+  pickNote?: string | null;
 }
 
 const PATCH_COLUMNS: Record<keyof PiecePatch, string> = {
@@ -275,6 +276,7 @@ const PATCH_COLUMNS: Record<keyof PiecePatch, string> = {
   violations: 'violations',
   check: 'check_status',
   note: 'note',
+  pickNote: 'pick_note',
 };
 
 function patchValue(key: keyof PiecePatch, value: unknown): unknown {
