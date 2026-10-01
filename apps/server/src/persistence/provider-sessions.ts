@@ -15,6 +15,9 @@ export interface ProviderSessionRecord {
   lastReplyHash: string | null;
   lastMessageContent: string | null;
   reportedCostUsd: number | null;
+  contextUsed: number | null;
+  contextSize: number | null;
+  compactSnoozed: boolean;
   createdAt: Date;
   lastUsedAt: Date;
   closedAt: Date | null;
@@ -35,6 +38,9 @@ interface SessionRow {
   last_reply_hash: string | null;
   last_message_content: string | null;
   reported_cost_usd: string | null;
+  context_used: number | null;
+  context_size: number | null;
+  compact_snoozed: boolean;
   created_at: Date;
   last_used_at: Date;
   closed_at: Date | null;
@@ -56,6 +62,9 @@ function toRecord(row: SessionRow): ProviderSessionRecord {
     lastReplyHash: row.last_reply_hash,
     lastMessageContent: row.last_message_content,
     reportedCostUsd: row.reported_cost_usd === null ? null : Number(row.reported_cost_usd),
+    contextUsed: row.context_used,
+    contextSize: row.context_size,
+    compactSnoozed: row.compact_snoozed,
     createdAt: row.created_at,
     lastUsedAt: row.last_used_at,
     closedAt: row.closed_at,
@@ -135,17 +144,67 @@ export async function startProviderSession(db: Db, start: SessionStart): Promise
   });
 }
 
+export interface ContextReading {
+  used: number;
+  size: number;
+}
+
 export async function finishProviderSession(
   db: Queryable,
   id: string,
-  finished: { lastMessageId: string | null; replyHash: string; reportedCostUsd: number | null },
+  finished: {
+    lastMessageId: string | null;
+    replyHash: string;
+    reportedCostUsd: number | null;
+    context?: ContextReading | null;
+  },
 ): Promise<void> {
   await db.query(
     `UPDATE provider_sessions SET last_message_id = $2, last_reply_hash = $3,
-            reported_cost_usd = $4, last_used_at = now()
+            reported_cost_usd = $4, last_used_at = now(),
+            context_used = COALESCE($5, context_used), context_size = COALESCE($6, context_size)
      WHERE id = $1 AND closed_at IS NULL`,
-    [id, finished.lastMessageId, finished.replyHash, finished.reportedCostUsd],
+    [
+      id,
+      finished.lastMessageId,
+      finished.replyHash,
+      finished.reportedCostUsd,
+      finished.context?.used ?? null,
+      finished.context?.size ?? null,
+    ],
   );
+}
+
+export async function openChatSessions(
+  db: Queryable,
+  conversationId: string,
+): Promise<ProviderSessionRecord[]> {
+  const { rows } = await db.query<SessionRow>(
+    `SELECT s.*, m.content AS last_message_content
+     FROM provider_sessions s
+     LEFT JOIN messages m ON m.id = s.last_message_id
+     WHERE s.conversation_id = $1 AND starts_with(s.agent_key, 'chat:') AND s.closed_at IS NULL
+     ORDER BY s.last_used_at DESC, s.created_at DESC`,
+    [conversationId],
+  );
+  return rows.map(toRecord);
+}
+
+export async function recordCompacted(
+  db: Queryable,
+  id: string,
+  context: ContextReading,
+): Promise<void> {
+  await db.query(
+    `UPDATE provider_sessions SET context_used = $2, context_size = $3, compact_snoozed = false,
+            last_used_at = now()
+     WHERE id = $1 AND closed_at IS NULL`,
+    [id, context.used, context.size],
+  );
+}
+
+export async function snoozeCompaction(db: Queryable, id: string): Promise<void> {
+  await db.query('UPDATE provider_sessions SET compact_snoozed = true WHERE id = $1', [id]);
 }
 
 export async function closeProviderSession(
@@ -184,6 +243,8 @@ export const SESSION_CLOSE_REASONS = {
   archived: 'chat archived',
   evicted: 'too many open sessions',
   orchestrationDone: 'orchestration finished',
+  compacted: 'compacted',
+  movedToFreshChat: 'moved to a fresh chat',
 } as const;
 
 export interface SweepLimits {

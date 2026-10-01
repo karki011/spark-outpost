@@ -8,6 +8,7 @@ export interface StoredFakeSession {
   directories: string[] | null;
   prompts: string[];
   closes: number;
+  used?: number;
 }
 
 const store = process.env.FAKE_ACP_SESSION_STORE ?? null;
@@ -74,4 +75,19 @@ export async function replayHistory(
       content: { type: 'text', text: `replayed reply ${index}` },
     });
   }
+}
+
+const memoryContext = new Map<string, number>();
+
+export function sessionContext(sessionId: string): number | null {
+  if (!store) return memoryContext.get(sessionId) ?? null;
+  return readFakeSession(sessionId).used ?? null;
+}
+
+export function recordContext(sessionId: string, used: number): void {
+  if (!store) {
+    memoryContext.set(sessionId, used);
+    return;
+  }
+  write(sessionId, { ...readFakeSession(sessionId), used });
 }

@@ -14,6 +14,7 @@ import {
 } from '../persistence/attachments.ts';
 import { usableDefault } from '../model-cards/cards.ts';
 import type { Db } from '../persistence/db.ts';
+import { latestSparkSeed } from '../persistence/compactions.ts';
 import { builderEnvSchema, pieceGuardSchema, type PieceGuard } from '../approvals/piece-guard.ts';
 import type { AgentSettings, ConversationTurn, TurnAttachment } from '../providers/provider.ts';
 import type { RunIdentity } from './run-events.ts';
@@ -46,6 +47,12 @@ export interface RunInput {
   projectMove?: ProjectMove | null;
   chatWorktree?: boolean;
   assistant?: boolean;
+  seed?: ChatSeed | null;
+}
+
+export interface ChatSeed {
+  text: string;
+  historyFrom: number;
 }
 
 export interface ProjectMove {
@@ -191,6 +198,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     [row.conversation_id, row.user_message_id],
   );
   const turns = await loadHistory(db, history.rows, row.user_message_id);
+  const seed = await chatSeed(db, row.conversation_id, history.rows);
   return {
     identity: { runId, threadId: row.conversation_id },
     workspaceId: row.workspace_id,
@@ -212,7 +220,21 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     previousMessageId: history.rows.at(-1)?.id ?? null,
     startAs: row.start_as,
     chatWorktree: row.in_chat_worktree,
+    seed,
   };
+}
+
+async function chatSeed(
+  db: Db,
+  conversationId: string,
+  rows: readonly HistoryRow[],
+): Promise<ChatSeed | null> {
+  const stored = await latestSparkSeed(db, conversationId);
+  if (!stored) return null;
+  const covered = stored.lastMessageId
+    ? rows.findIndex((row) => row.id === stored.lastMessageId)
+    : -1;
+  return { text: stored.summary, historyFrom: covered + 1 };
 }
 
 function settingsOf(row: RunRow): AgentSettings {

@@ -85,7 +85,9 @@ describe('composer model options', () => {
     expect(formatTokens(18_783)).toBe('18.8K');
     expect(formatTokens(1_000_000)).toBe('1000K');
     expect(contextLevel(10)).toBe('ok');
-    expect(contextLevel(60)).toBe('warm');
+    expect(contextLevel(69)).toBe('ok');
+    expect(contextLevel(70)).toBe('warm');
+    expect(contextLevel(85)).toBe('hot');
     expect(contextLevel(90)).toBe('hot');
   });
 });

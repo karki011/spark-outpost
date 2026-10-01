@@ -12,6 +12,12 @@ import { ProviderError } from './provider.ts';
 import { followedFiles } from '../agent-config/instructions.ts';
 import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
 import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
+import {
+  fakeCompactOutputs,
+  fakeCompactTurn,
+  fakeSessionOutputs,
+  withFakeContext,
+} from './fake-context.ts';
 
 export const FAKE_PROVIDER_NAME = 'fake';
 const FAKE_FAILURE_TRIGGER = '#fail';
@@ -288,11 +294,18 @@ async function* fakeTurn(
     yield* fakeApprovalTurn(turn);
     return;
   }
+  yield* fakeSessionOutputs(turn);
+  if (fakeCompactTurn(turn)) {
+    yield* fakeCompactOutputs();
+    return;
+  }
   if (turn.repo) yield { kind: 'instructions', files: followedFiles(turn.repo) };
   const titled = turn.askTitle && turn.prompt.includes(FAKE_TITLE_TRIGGER);
-  const outputs = turn.prompt.includes(FAKE_DIGEST_TRIGGER)
-    ? replyOutputs(fakeDigestReply(turn.prompt))
-    : fakeProviderPlan(turn.prompt, turn.attachments, turn.projectRoots);
+  const outputs = (
+    turn.prompt.includes(FAKE_DIGEST_TRIGGER)
+      ? replyOutputs(fakeDigestReply(turn.prompt))
+      : fakeProviderPlan(turn.prompt, turn.attachments, turn.projectRoots)
+  ).map((output) => withFakeContext(turn, output));
   if (titled) outputs.push({ kind: 'text_delta', delta: `\n\nTitle: ${FAKE_TITLE}` });
   for (const output of outputs) {
     const wait =

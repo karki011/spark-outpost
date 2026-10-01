@@ -14,6 +14,7 @@ export const checkpointKindSchema = z.enum([
   'ownership',
   'pieces',
   'pr_split',
+  'compact',
 ]);
 export type CheckpointKind = z.infer<typeof checkpointKindSchema>;
 
@@ -48,6 +49,9 @@ export const CHECKPOINT_OPTION = {
   separatePrs: 'separate_prs',
   alwaysOnePr: 'always_one_pr',
   alwaysSeparatePrs: 'always_separate_prs',
+  compactNow: 'compact_now',
+  freshChat: 'fresh_chat',
+  keepGoing: 'keep_going',
 } as const;
 
 export const clarifyOptionId = (index: number): string => `option:${index}`;

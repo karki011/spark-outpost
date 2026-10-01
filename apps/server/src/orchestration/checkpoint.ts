@@ -230,6 +230,26 @@ export function prSplitCard(pieces: readonly string[]): CheckpointCard {
   };
 }
 
+export const COMPACT_CARD_TITLE = 'This chat is almost full';
+
+export function compactCard(reason: string): CheckpointCard {
+  return {
+    kind: 'compact',
+    title: COMPACT_CARD_TITLE,
+    payload: payload({
+      kind: 'compact',
+      question: 'Compact it before your message?',
+      reason,
+      autoOption: CHECKPOINT_OPTION.keepGoing,
+    }),
+    options: [
+      allow(CHECKPOINT_OPTION.compactNow, 'Compact now'),
+      allow(CHECKPOINT_OPTION.freshChat, 'Start a fresh chat with a summary'),
+      reject(CHECKPOINT_OPTION.keepGoing, 'Keep going'),
+    ],
+  };
+}
+
 export function mergeConflictCard(conflict: MergeConflict, reason: string): CheckpointCard {
   const { first, second } = conflict;
   const question = 'Which version should be kept?';

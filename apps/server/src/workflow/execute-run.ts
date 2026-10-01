@@ -86,3 +86,16 @@ export async function finishRun(
     if (!(error instanceof LeaseLostError)) throw error;
   }
 }
+
+export async function failSafely(append: Append, error: unknown): Promise<void> {
+  console.error('Orchestration failed', error);
+  const message =
+    'The orchestration stopped with an unexpected error. Nothing after the last completed step was changed.';
+  try {
+    await append(runEvents.error(message, 'orchestration_failed'), {
+      transition: { status: 'failed', error: message },
+    });
+  } catch (appendError) {
+    if (!(appendError instanceof LeaseLostError)) throw appendError;
+  }
+}

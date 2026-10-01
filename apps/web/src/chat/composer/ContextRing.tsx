@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import {
+  COMPACT_AT_PERCENT,
   advisorLabel,
   type AdvisorUsage,
   type ConversationUsage,
@@ -25,8 +26,8 @@ const RING = 50.27;
 
 const NOTES = {
   ok: 'Plenty of room left in this chat.',
-  warm: 'Getting full. Older messages may be left out of what the AI sees.',
-  hot: 'Almost full. Replies can lose track of early details, so consider a new chat.',
+  warm: `Getting full. Spark compacts the chat at ${COMPACT_AT_PERCENT}%; the full transcript stays here.`,
+  hot: 'Almost full. Spark compacts the chat before your next message (at Review each step, it asks first).',
 } as const;
 
 interface ContextRingProps {

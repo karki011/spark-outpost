@@ -9,7 +9,8 @@ import { revertRun } from '../projects/run-changes.ts';
 import { isGitWorkTree } from '../projects/snapshot.ts';
 import { runAgentTurn, startControl, type Append } from '../workflow/agent-turn.ts';
 import { APPROVAL_TIMEOUT_MESSAGE } from '../workflow/approval-gate.ts';
-import { closeMessage, finishRun } from '../workflow/execute-run.ts';
+import { closeMessage, failSafely, finishRun } from '../workflow/execute-run.ts';
+import { prepareTurn } from '../compaction/prepare-turn.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { noteProjectMove } from '../workflow/project-move.ts';
 import { loadRunInput } from '../workflow/run-input.ts';
@@ -305,7 +306,9 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     await append(runEvents.started(input.identity), { transition: { status: 'running' } });
     const placed = await placeChatOrStop(deps, input, append, false);
     if (!placed) return;
-    input = placed.input;
+    const prepared = await prepareTurn(deps, lease, placed.input, append, control);
+    if (!prepared) return;
+    input = prepared;
     const mode = input.mode ?? 'chat';
     const repoRoot = placed.repoRoot ?? input.projectRoots[0];
     const doing = mode === 'do' && input.projectRoots[0] !== undefined;
@@ -481,18 +484,5 @@ async function drive(s: Session, decisions: IntakeDecisions): Promise<void> {
     if (!event) return;
     if (s.control.reason() === 'cancelled' && event.type !== 'stopped') event = { type: 'stopped' };
     result = nextStep(s.flow, event);
-  }
-}
-
-async function failSafely(append: Append, error: unknown): Promise<void> {
-  console.error('Orchestration failed', error);
-  const message =
-    'The orchestration stopped with an unexpected error. Nothing after the last completed step was changed.';
-  try {
-    await append(runEvents.error(message, 'orchestration_failed'), {
-      transition: { status: 'failed', error: message },
-    });
-  } catch (appendError) {
-    if (!(appendError instanceof LeaseLostError)) throw appendError;
   }
 }
