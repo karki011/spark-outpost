@@ -1,0 +1,64 @@
+.wauto {
+  margin: 0 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+.wauto-h {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.wauto-h button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px 8px 12px;
+  border-radius: var(--r-sm);
+  color: var(--text);
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.wauto-h button:hover {
+  background: var(--raise);
+}
+
+.wauto-now {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.wauto-h .chev {
+  flex-shrink: 0;
+  color: var(--faint);
+  transform: rotate(90deg);
+  transition: transform 0.2s var(--out);
+}
+
+.wauto-h [aria-expanded='true'] .chev {
+  transform: rotate(-90deg);
+}
+
+.wauto-body {
+  padding: 2px 10px 10px;
+}
+
+.wauto-body .wnote {
+  margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wauto-h .chev {
+    transition: none;
+  }
+}

@@ -95,6 +95,7 @@ export function useWorkPanelState(): WorkPanelState {
 
 export interface TaskPanel {
   task: TaskOverview | null;
+  available: boolean;
   open: boolean;
   wide: boolean;
   width: number | null;
@@ -103,17 +104,22 @@ export interface TaskPanel {
   openTask(taskId: string): void;
 }
 
-export function useTaskPanel(tasks: readonly TaskOverview[]): TaskPanel {
+export function useTaskPanel(tasks: readonly TaskOverview[], hasSettings: boolean): TaskPanel {
   const state = useWorkPanelState();
   const [chosen, setChosen] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const task = tasks.find((candidate) => candidate.id === chosen) ?? tasks.at(-1) ?? null;
   return {
     task,
-    open: state.open && task !== null,
+    available: task !== null || hasSettings,
+    open: task ? state.open : hasSettings && settingsOpen,
     wide: state.wide,
     width: state.width,
     setWidth: state.setWidth,
-    setOpen: state.setOpen,
+    setOpen(open) {
+      if (task) state.setOpen(open);
+      else setSettingsOpen(open);
+    },
     openTask(taskId) {
       setChosen(taskId);
       state.setOpen(true);

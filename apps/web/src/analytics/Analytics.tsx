@@ -21,7 +21,7 @@ import { SpendTab } from './SpendTab.tsx';
 const TABS: { id: AnalyticsTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'spend', label: 'Spend' },
-  { id: 'harness', label: 'Harness' },
+  { id: 'harness', label: 'Spark' },
 ];
 
 function usable(choice: RangeChoice): boolean {

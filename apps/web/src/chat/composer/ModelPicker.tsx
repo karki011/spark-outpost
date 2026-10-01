@@ -244,7 +244,6 @@ export function ModelPicker({
                         hasRepos={hasRepos}
                         loading={queryFor(provider)?.isFetching ?? false}
                         onMode={(next) => update.mutate({ agentMode: next })}
-                        onLevel={(next) => update.mutate({ level: next })}
                       />
                     )}
                     {activeSection === 'options' && (

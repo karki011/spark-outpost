@@ -9,7 +9,7 @@ import {
 export function OverviewSkeleton() {
   return (
     <div className="an-grid">
-      <SkeletonCard title="harness health" wide>
+      <SkeletonCard title="Spark health" wide>
         <SkelRings count={1} />
       </SkeletonCard>
       <SkeletonCard title="activity">

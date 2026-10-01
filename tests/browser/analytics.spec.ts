@@ -64,7 +64,7 @@ test.describe('with three months of history', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openAnalytics(page);
     const main = page.getByRole('main', { name: 'Analytics' });
-    await expect(main.getByRole('region', { name: 'Harness health' })).toContainText('of 100');
+    await expect(main.getByRole('region', { name: 'Spark health' })).toContainText('of 100');
 
     const activity = main.getByRole('region', { name: 'Activity' });
     await expect(activity.locator('.an-sum')).toContainText('turns on');
@@ -94,7 +94,7 @@ test.describe('with three months of history', () => {
       'per good outcome',
     );
 
-    await page.getByRole('tab', { name: 'Harness' }).click();
+    await page.getByRole('tab', { name: 'Spark' }).click();
     const flow = main.getByRole('region', { name: 'Routing flow' });
     await expect(
       flow
@@ -120,7 +120,7 @@ test.describe('with three months of history', () => {
       await openAnalytics(page);
       await page.evaluate((skin) => (document.documentElement.dataset.skin = skin), theme);
       const found = [];
-      for (const tab of ['Overview', 'Spend', 'Harness']) {
+      for (const tab of ['Overview', 'Spend', 'Spark']) {
         await page.getByRole('tab', { name: tab }).click();
         await expect(page.locator('.an-card').first()).toBeVisible();
         const toggles = page.getByRole('button', { name: 'Show data table' });
@@ -200,7 +200,7 @@ test.describe('with three months of history', () => {
   test('fits a phone without horizontal page scroll', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await openAnalytics(page);
-    for (const tab of ['Overview', 'Spend', 'Harness']) {
+    for (const tab of ['Overview', 'Spend', 'Spark']) {
       await page.getByRole('tab', { name: tab }).click();
       await expect(page.locator('.an-card').first()).toBeVisible();
       const overflow = await page.evaluate(() => {
@@ -247,7 +247,7 @@ test('is honest about an empty workspace', async ({ page }) => {
   await openAnalytics(page);
   const main = page.getByRole('main', { name: 'Analytics' });
   await expect(main.getByText('No turns in this range yet.')).toBeVisible();
-  await expect(main.getByRole('region', { name: 'Harness health' })).toContainText(
+  await expect(main.getByRole('region', { name: 'Spark health' })).toContainText(
     'Not enough data yet',
   );
   await page.getByRole('radio', { name: 'Custom' }).click();
@@ -269,7 +269,7 @@ test('shows skeletons matching the layout on a cold load, then real data', async
   await expect(overviewPanel).toHaveAttribute('aria-busy', 'true');
   await expect(overviewPanel.locator('.an-skel-card').first()).toBeVisible();
   await expect(overviewPanel.getByText(/Loading .*…/)).toHaveCount(4);
-  await expect(main.getByRole('region', { name: 'Harness health' })).toContainText('of 100', {
+  await expect(main.getByRole('region', { name: 'Spark health' })).toContainText('of 100', {
     timeout: 15_000,
   });
   await expect(overviewPanel).toHaveAttribute('aria-busy', 'false');

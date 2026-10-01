@@ -51,6 +51,7 @@ import { usePickerCommand } from './composer/use-picker-command.ts';
 import { useSlash } from './composer/use-slash.ts';
 import { takeDraft, usePendingDraft } from './composer/pending-draft.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
+import type { AutonomyControl } from './project/AutonomyChip.tsx';
 import { ContextBar } from './project/ContextBar.tsx';
 import { MentionPicker } from './project/MentionPicker.tsx';
 import { RepoFilePicker } from './project/RepoFilePicker.tsx';
@@ -83,6 +84,7 @@ interface ComposerProps {
   steer?: SteerControl | null;
   onAudit?: () => void;
   onStartFresh?: () => void;
+  autonomy?: AutonomyControl | null;
   agentCommands?: readonly AgentCommand[];
   agentName?: string;
   autoFocus?: boolean;
@@ -119,6 +121,7 @@ export function Composer({
   steer = null,
   onAudit,
   onStartFresh,
+  autonomy = null,
   agentCommands = NO_COMMANDS,
   agentName = 'Agent',
   autoFocus = true,
@@ -320,7 +323,12 @@ export function Composer({
           {error}
         </p>
       )}
-      <ContextBar conversationId={conversationId} repos={repos} popover={repoPopover} />
+      <ContextBar
+        conversationId={conversationId}
+        repos={repos}
+        popover={repoPopover}
+        autonomy={autonomy}
+      />
       <div className="composer">
         {quotes && <QuoteChips items={quotes.items} onRemove={quotes.remove} />}
         <AttachmentChips

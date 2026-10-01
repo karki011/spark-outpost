@@ -22,7 +22,7 @@ export function OverviewTab({ data }: { data: AnalyticsOverview }) {
   return (
     <div className="an-grid">
       <ChartCard
-        title="Harness health"
+        title="Spark health"
         className="an-wide"
         summary={healthSummary(health)}
         n={totals.turns}
@@ -32,10 +32,10 @@ export function OverviewTab({ data }: { data: AnalyticsOverview }) {
         <details className="an-how">
           <summary>How the score is computed</summary>
           <p>
-            Each part is a 0–100 score from what the harness recorded in this range: the share of
-            turns with a good outcome (mixed counts half), checks that passed on the first round,
-            turns that were not reverted or corrected, crew turns without a retry or fix round, and
-            how quickly approvals were answered (30 seconds or less scores 100, 10 minutes or more
+            Each part is a 0–100 score from what Spark recorded in this range: the share of turns
+            with a good outcome (mixed counts half), checks that passed on the first round, turns
+            that were not reverted or corrected, crew turns without a retry or fix round, and how
+            quickly approvals were answered (30 seconds or less scores 100, 10 minutes or more
             scores 0). The health score is their weighted average. A part with fewer than 5 turns is
             left out and the others are reweighted; without enough outcomes there is no score.
           </p>

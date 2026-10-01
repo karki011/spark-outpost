@@ -9,8 +9,8 @@ interface WorkPanelToggleProps {
 
 export function WorkPanelToggle({ panel, waiting: checkpoint = false }: WorkPanelToggleProps) {
   const tip = useTooltip(panel.open ? 'Hide work panel' : 'Show work panel');
-  if (!panel.task) return null;
-  const waiting = (checkpoint || panel.task.summary.waiting > 0) && !panel.open;
+  if (!panel.available) return null;
+  const waiting = (checkpoint || (panel.task?.summary.waiting ?? 0) > 0) && !panel.open;
   return (
     <>
       <button

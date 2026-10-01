@@ -1,7 +1,7 @@
 import { AUTONOMY_LEVELS, type InvolvementLevel } from '@spark-outpost/contracts';
 import { ProfileChoiceSetting } from '../settings/ProfileChoiceSetting.tsx';
 
-const INFO = `${AUTONOMY_LEVELS.map((level) => `${level.label}: ${level.hint}`).join(' ')} Each chat can pick its own in the chat’s permissions.`;
+const INFO = `${AUTONOMY_LEVELS.map((level) => `${level.label}: ${level.hint}`).join(' ')} Each chat can pick its own under Spark autonomy in the chat’s Work panel.`;
 const CHOICES = AUTONOMY_LEVELS.map((level) => ({
   id: level.id,
   label: level.label,
