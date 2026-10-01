@@ -124,10 +124,11 @@ function namesCode(item: string): boolean {
 
 export function specByRule(request: string): string | null {
   const items = request.split('\n').filter((line) => LIST_LINE.test(line));
-  if (items.length < BIG_ITEMS) return null;
+  if (items.length < MULTI_PART_ITEMS) return null;
   if (request.replace(CODE, ' ').includes('?')) return null;
   const concrete = items.filter(namesCode).length;
-  if (concrete < items.length * SPEC_ITEM_SHARE) return null;
+  const needed = items.length < BIG_ITEMS ? items.length : items.length * SPEC_ITEM_SHARE;
+  if (concrete < needed) return null;
   return `${concrete} of ${items.length} listed parts name files or code`;
 }
 

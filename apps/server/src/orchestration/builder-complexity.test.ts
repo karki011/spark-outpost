@@ -259,9 +259,16 @@ describe('a request that is already a spec is its own plan', () => {
     expect(
       specByRule('- add `src/a.ts`\n- add `src/b.ts`\n- polish it\n- make it nice'),
     ).toBeNull();
-    expect(specByRule('- add `src/a.ts`\n- add `src/b.ts`')).toBeNull();
+    expect(specByRule('- add `src/a.ts`\n- polish it')).toBeNull();
+    expect(specByRule('- add `src/a.ts`')).toBeNull();
     expect(specByRule(`${SPEC}\n\nShould the budget be per month?`)).toBeNull();
     expect(specByRule(BIG_PROSE[3]!)).toBeNull();
+  });
+
+  it('takes a two-part list when both parts name files or code', () => {
+    expect(specByRule('- add `src/a.ts`\n- add `src/b.ts`')).toBe(
+      '2 of 2 listed parts name files or code',
+    );
   });
 
   it('ignores question marks inside code', () => {

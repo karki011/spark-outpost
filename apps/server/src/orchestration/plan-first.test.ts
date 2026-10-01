@@ -32,10 +32,14 @@ describe('the plan-first card', () => {
     );
   });
 
-  it('waits for the user at Review each step and Automatic', () => {
-    for (const level of ['balanced', 'hands-off'] as const) {
-      expect(planFirstCard(1, level, 10).payload.autoOption).toBeNull();
-    }
+  it('counts down at Automatic like other cards, and waits at Review each step', () => {
+    const automatic = planFirstCard(1, 'hands-off', 10);
+    expect(automatic.payload.autoOption).toBe(CHECKPOINT_OPTION.makeChange);
+    expect(automatic.payload.reason).toContain('Automatic builds it in 10 s');
+    expect(planFirstCard(1, 'hands-off', null).payload.reason).toContain('Auto-continue is off');
+    const review = planFirstCard(1, 'balanced', 10);
+    expect(review.payload.autoOption).toBeNull();
+    expect(review.payload.reason).toContain('Build it, edit it, or stop.');
   });
 
   it('asks for a plan without changes, with the requested revision', () => {
@@ -55,6 +59,16 @@ describe('a request that is already a spec', () => {
     expect(requestIsThePlan('full-auto', SPEC)).not.toBeNull();
     expect(requestIsThePlan('balanced', SPEC)).toBeNull();
     expect(requestIsThePlan('hands-off', '- add a\n- add b\n- add c')).toBeNull();
+  });
+
+  it('counts a short list when every part names files or code (live run D)', () => {
+    const d = [
+      'Split this up into pieces, they are independent:',
+      '- Add a migration `migrations/002_upload_tags.sql` that creates an `upload_tags` table (`upload_key` TEXT referencing `uploads(key)` ON DELETE CASCADE, `tag` TEXT NOT NULL, primary key on both columns) and an index on `tag`.',
+      '- Add `src/slug.ts` exporting `slugify(text: string): string` (lower case, ASCII letters and digits, runs of anything else become one dash, no leading or trailing dash). Add tests in `test/slug.test.ts`.',
+    ].join('\n');
+    expect(requestIsThePlan('hands-off', d)).toBe('2 of 2 listed parts name files or code');
+    expect(requestIsThePlan('balanced', d)).toBeNull();
   });
 
   it('says why there was no plan turn', () => {
