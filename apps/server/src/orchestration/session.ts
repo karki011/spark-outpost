@@ -39,6 +39,9 @@ import type { MemberRoute, RouteContext, RouteFacts } from './routing.ts';
 import type { FlowState } from './transitions.ts';
 import type { Coordination } from '../coordinator/state.ts';
 import type { Slots } from './slots.ts';
+import type { LawReview } from '../laws/review.ts';
+import type { MemberBudget } from '../laws/member-budget.ts';
+import type { TaskEstimate } from '../laws/estimate.ts';
 
 export interface OrchestratorDeps extends ExecuteRunDeps {
   budget?: Partial<BudgetLimits>;
@@ -165,6 +168,10 @@ export interface Session {
   integrator?: Seat | null;
   coordination?: Coordination | null;
   handoff?: string | null;
+  laws?: LawReview | null;
+  criticRemovals?: string[] | null;
+  memberBudget?: MemberBudget | null;
+  estimate?: TaskEstimate | null;
 }
 
 export const COMMAND_READER_TOOL_CALL_LIMIT = 120;

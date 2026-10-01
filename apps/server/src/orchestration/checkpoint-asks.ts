@@ -29,6 +29,10 @@ import {
 import { checkCommands } from './member-prompts.ts';
 import { escalatedBuilderPick } from './member-routes.ts';
 import { save, type Session } from './session.ts';
+import { lawItems } from '../laws/review.ts';
+import { budgetStopLine, memberUsed } from '../laws/member-budget.ts';
+import { ensureEstimate } from '../laws/estimate-history.ts';
+import { withEstimate } from './plan-first.ts';
 import type { FlowAction, FlowEvent } from './transitions.ts';
 
 type Ask = Extract<FlowAction, { type: 'ask' }>;
@@ -41,25 +45,33 @@ async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
   if (action.kind === 'clarify') {
     return action.context ? contextCard(action.reason) : followUpCard(action.reason);
   }
-  if (action.kind === 'plan') return riskyCard(action.reason);
+  if (action.kind === 'plan') {
+    return withEstimate(riskyCard(action.reason), (await ensureEstimate(s))?.text ?? null);
+  }
   if (action.kind === 'retry' || action.kind === 'verify') {
     const card = action.kind === 'retry' ? retryCard : verifyCard;
     return card(builderPick(s), escalatedBuilderPick(s), action.reason);
   }
-  if (action.kind === 'stuck') {
-    const name = s.results.findLast((result) => result.role === 'builder')?.name ?? 'The Builder';
-    return stuckCard(name, action.reason);
-  }
+  if (action.kind === 'stuck') return stuckCard(builderName(s), action.reason);
   if (action.kind === 'accept') {
     const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
     const line = sessionReviewLine(s);
     const reason = line ? `${action.reason} ${line}` : action.reason;
-    return acceptCard(changes.files, reason, fixOptionLabel(s.flow.review));
+    return acceptCard(changes.files, reason, fixOptionLabel(s.flow.review), lawItems(s));
   }
   const usage = await budgetUsage(s);
   const limit = s.budgetHit ?? 'time';
+  const member = s.memberBudget?.hit && !s.memberBudget.closed ? s.memberBudget : null;
+  if (member) {
+    const { used, allowed } = memberUsed(member, limit, usage);
+    return budgetCard(limit, used, allowed, budgetStopLine(member, builderName(s)));
+  }
   const { used, allowed } = usedAndAllowed(limit, usage, s.limits);
   return budgetCard(limit, used, allowed, action.reason);
+}
+
+function builderName(s: Session): string {
+  return s.results.findLast((result) => result.role === 'builder')?.name ?? 'The Builder';
 }
 
 export function destructiveWork(s: Pick<Session, 'facts' | 'risky'>): boolean {
@@ -135,6 +147,7 @@ export async function ask(s: Session, action: Ask): Promise<FlowEvent> {
     s.limits = extendLimits(s.limits, await budgetUsage(s), s.baseLimits);
     s.budgetHit = null;
     s.capWaived = true;
+    if (s.memberBudget) s.memberBudget.closed = true;
     await save(s, {
       activeLimitMs: s.limits.activeLimitMs,
       toolCallLimit: s.limits.toolCallLimit,

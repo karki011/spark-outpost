@@ -82,6 +82,7 @@ import { observeCoordination } from '../coordinator/shadow.ts';
 import { coordinatedBuild } from '../coordinator/build.ts';
 import { coordinationReport } from '../coordinator/report.ts';
 import { piecesSummary } from '../coordinator/summary.ts';
+import { lawsNote } from '../laws/review.ts';
 
 const TASK_SESSION_CLOSED = 'task session closed';
 const NEW_TASK_STARTED = 'a new task started';
@@ -235,9 +236,10 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
   }
 }
 
-function withNotes(text: string, notes: readonly string[], hasMessage: boolean): string {
-  if (notes.length === 0) return text;
-  const joined = notes.join('\n\n');
+function withNotes(text: string, notes: readonly (string | null)[], hasMessage: boolean): string {
+  const shown = notes.filter((line): line is string => line !== null);
+  if (shown.length === 0) return text;
+  const joined = shown.join('\n\n');
   return text || hasMessage ? `${text}\n\n${joined}` : joined;
 }
 
@@ -261,9 +263,8 @@ async function finish(
   const suggested = verdict ? suggestionsLine(s.suggestions ?? []) : null;
   const shipped = s.shipLine ?? null;
   const pieces = coordinationReport(s.coordination);
-  const notes = [pieces, assumed, escalated, fixed, suggested, stopped, incomplete, shipped].filter(
-    (line): line is string => line !== null,
-  );
+  const laws = lawsNote(s);
+  const notes = [pieces, assumed, escalated, fixed, suggested, laws, stopped, incomplete, shipped];
   const prefs = await sparkPreferences(s.deps.db, s.input.workspaceId).catch(() => null);
   const summary = piecesSummary(s.coordination, s.results, prefs && firstName(prefs.displayName));
   const reply = finalText(s.results, verdict, s.findings, !!s.message, s.checkBodies, summary);

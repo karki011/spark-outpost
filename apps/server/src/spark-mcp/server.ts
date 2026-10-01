@@ -16,6 +16,7 @@ import { githubTools } from './tools/github-tools.ts';
 import { prFollowUpTool } from './tools/pr-follow-up-tool.ts';
 import { projectTools } from './tools/project-tools.ts';
 import { runTool } from './tools/run-tool.ts';
+import { lawsTool } from './tools/laws-tool.ts';
 import { setupTools } from './tools/setup-tools.ts';
 import { taskTool } from './tools/task-tool.ts';
 import { terminalTool } from './tools/terminal-tool.ts';
@@ -30,6 +31,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   ...chatTools,
   attentionTool,
   runTool,
+  lawsTool,
   taskTool,
   auditTool,
   ...workTools,

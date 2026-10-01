@@ -45,6 +45,7 @@ export interface ScoreInput {
   stats: readonly ModelStat[];
   now: Date;
   switchUsd?: (model: TierModel) => number | null;
+  demoted?: ReadonlyMap<string, number> | null;
 }
 
 const level = (value: number) => Math.min(5, Math.max(1, Math.round(value))) - 1;
@@ -112,7 +113,8 @@ function scoreModel(model: TierModel, input: ScoreInput, repair: number): Scored
   if (!card || cost === null) return null;
   const switchUsd = switchFor(input, model);
   if (switchUsd === null) return null;
-  const quality = 1 - failureRate(card, input.signals, input.stats, input.now);
+  const rated = 1 - failureRate(card, input.signals, input.stats, input.now);
+  const quality = Math.min(rated, input.demoted?.get(model.id) ?? 1);
   const costUsd = cost + switchUsd;
   const expectedUsd = costUsd + (1 - quality) * repair;
   return {

@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
 import { readFakeSession } from './fake-acp-sessions.ts';
+import { echoedRemovals, lawEdits } from './fake-acp-laws.ts';
 
 export const PLAN_FIRST_ASK = 'Before anything is built, write the plan.';
 
@@ -145,7 +146,9 @@ export async function critic(turn: RoleTurn): Promise<acp.StopReason> {
     const changed = /^diff --git a\/(\S+)/m.exec(turn.text)?.[1];
     if (changed) await readTool(turn, changed, 'critic-read');
   }
-  const { findings, concerns } = blindFindings(text, rechecking) ?? reviewFindings(text);
+  const reviewed = blindFindings(text, rechecking) ?? reviewFindings(text);
+  const findings = [...reviewed.findings, ...echoedRemovals(text)];
+  const { concerns } = reviewed;
   const lens = turn.text.includes('## Complexity (same review)')
     ? '- notes.txt:L2: shrink: two lines say the same\nnet: -2 lines possible\n'
     : '';
@@ -309,6 +312,7 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   const stopAfter = Number(/#stopafter (\d+)/.exec(turn.text)?.[1] ?? FAKE_TODOS.length);
   if (turn.text.includes('#todos')) await todos(turn, 0);
   if (!(await write(turn, 'notes.txt', 'step 1'))) return 'end_turn';
+  const lawReply = await lawEdits(turn);
   if (turn.text.includes('#touchmain')) {
     const main = turn.cwd.split('/.spark/worktrees/')[0]!;
     await writeFile(join(main, 'notes.txt'), 'start\nyour own edit\n');
@@ -349,7 +353,9 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   const clarified = /The user clarified: (.+)/.exec(turn.text)?.[1];
   const assumed = /assume the user means: (.+)/.exec(turn.text)?.[1];
   const heard = `${clarified ? ` Clarified: ${clarified}` : ''}${assumed ? ` Took it as: ${assumed}` : ''}`;
-  await turn.say(`Built it after ${priorPrompts(turn.sessionId)} earlier prompts.${heard}`);
+  await turn.say(
+    `Built it after ${priorPrompts(turn.sessionId)} earlier prompts.${heard}${lawReply}`,
+  );
   return 'end_turn';
 }
 

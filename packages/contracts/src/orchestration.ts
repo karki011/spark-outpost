@@ -106,6 +106,7 @@ export const crewMemberSchema = z.object({
   placement: piecePlacementSchema.optional(),
   sameProvider: z.boolean().optional(),
   routeNote: z.string().optional(),
+  budget: z.string().optional(),
 });
 export type CrewMember = z.infer<typeof crewMemberSchema>;
 

@@ -136,6 +136,7 @@ export function acceptCard(
   files: readonly RunChange[],
   reason: string,
   fixLabel: string | null = null,
+  laws: readonly string[] = [],
 ): CheckpointCard {
   return {
     kind: 'accept',
@@ -145,6 +146,7 @@ export function acceptCard(
       question: 'Keep these changes?',
       reason,
       files: [...files],
+      laws: [...laws],
     }),
     options: [
       allow(CHECKPOINT_OPTION.keep, 'Keep'),

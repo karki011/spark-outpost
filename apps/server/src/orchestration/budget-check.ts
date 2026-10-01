@@ -3,6 +3,7 @@ import { spentUsd, waitedMs } from '../persistence/orchestrations.ts';
 import { cardPriceFor } from '../usage/prices.ts';
 import { activeTime, exceededLimit, type BudgetUsage } from './budget.ts';
 import { fixRoundLimits, save, type Session } from './session.ts';
+import { memberBudgetExceeded } from '../laws/member-budget.ts';
 
 function liveUsd(s: Session): number {
   let total = 0;
@@ -78,8 +79,12 @@ async function measureBudget(s: Session): Promise<BudgetLimit | null> {
   await save(s, { activeMs: usage.activeMs });
   const limit = exceededLimit(usage, s.limits);
   const roundLimit = limit ? null : fixRoundExceeded(s, usage);
-  if (!limit && !roundLimit) return null;
-  if (roundLimit && s.fixRound) {
+  const memberLimit = limit || roundLimit ? null : memberBudgetExceeded(s.memberBudget, usage);
+  if (!limit && !roundLimit && !memberLimit) return null;
+  if (memberLimit && s.memberBudget) {
+    s.memberBudget.hit = memberLimit;
+    s.budgetHit = memberLimit;
+  } else if (roundLimit && s.fixRound) {
     s.fixRound.hit = roundLimit;
     s.budgetHit = roundLimit;
   } else if (limit) {

@@ -1,4 +1,5 @@
 import type { BuildStyle } from '@spark-outpost/contracts';
+import { REMOVAL_RULE } from '../laws/critic-text.ts';
 import { builderStyle, criticStyle } from './lean.ts';
 
 const REQUEST_LIMIT = 8_000;
@@ -10,6 +11,7 @@ export const FINDINGS_LIMIT = 10;
 const CHECK_OUTPUT_LIMIT = 3_000;
 const FINDING_CHARACTER_LIMIT = 500;
 const ANSWER_LIMIT = 6_000;
+const REPLY_LIMIT = 2_000;
 
 export interface HistoryTurn {
   role: 'user' | 'assistant';
@@ -51,6 +53,8 @@ export interface CriticContext {
   buildStyle?: BuildStyle;
   agreedPlan?: string | null;
   previousFindings?: readonly string[];
+  builderReply?: string | null;
+  removals?: readonly string[];
 }
 
 function optional(text: string | null): string[] {
@@ -212,6 +216,22 @@ function reviewSections(context: Omit<CriticContext, 'request' | 'plan'>): strin
   ];
 }
 
+function removalSections(context: CriticContext): string[] {
+  const reply = context.builderReply?.trim();
+  const removals = context.removals ?? [];
+  return [
+    ...(reply ? [section("Builder's reply", cap(reply, REPLY_LIMIT))] : []),
+    ...(removals.length > 0
+      ? [
+          section(
+            'Removals Spark found that nothing explains yet',
+            removals.map((removal) => `- ${removal}`).join('\n'),
+          ),
+        ]
+      : []),
+  ];
+}
+
 function previousFindingsSection(findings: readonly string[]): string[] {
   if (findings.length === 0) return [];
   return [
@@ -229,12 +249,14 @@ export function criticPrompt(context: CriticContext): string {
     FINDING_KIND_RULE,
     ALL_FINDINGS_RULE,
     IRREVERSIBLE_RULE,
+    REMOVAL_RULE,
     ...optional(criticStyle(context.buildStyle ?? 'off')),
     ...(context.agreedPlan ? [PLAN_FOLLOW_RULE] : []),
     section('Request', cap(context.request, REQUEST_LIMIT)),
     ...optional(context.agreedPlan ?? null),
     section('Plan', context.plan.length > 0 ? numbered(context.plan) : 'No plan was made.'),
     ...previousFindingsSection(context.previousFindings ?? []),
+    ...removalSections(context),
     ...reviewSections(context),
   ].join('\n\n');
 }

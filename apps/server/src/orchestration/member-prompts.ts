@@ -5,6 +5,8 @@ import { projectMoveNote } from '../workflow/project-move.ts';
 import { builderPrompt, criticPrompt, type ChangedFile } from './context.ts';
 import { awaitRanking, likelyFilesLine } from './likely-files.ts';
 import { pieceReviews } from '../coordinator/critic-pieces.ts';
+import { lawFacts } from '../laws/review.ts';
+import { removalFindings } from '../laws/removals.ts';
 import type { Session } from './session.ts';
 import type { Spawn } from './transitions.ts';
 
@@ -91,6 +93,8 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
       buildStyle: s.buildStyle,
       agreedPlan,
       previousFindings: s.flow.review.fixing ? s.flow.review.fixable : [],
+      builderReply: s.results.findLast((result) => result.role === 'builder')?.text ?? null,
+      removals: removalFindings(changes.patch, lawFacts(s, agreedPlan)).map((item) => item.text),
     });
   }
   return builderPrompt({
