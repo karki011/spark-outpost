@@ -84,6 +84,24 @@ export function isSecretPath(relative: string, ignore: readonly string[] = []): 
   return ignore.some((pattern) => matchesIgnore(relative, pattern));
 }
 
+export type ProtectedKind = 'instructions' | 'git_control';
+
+const INSTRUCTION_NAMES = new Set(['AGENTS.md', 'CLAUDE.md']);
+const INSTRUCTION_PREFIXES = ['.claude/', '.cursor/rules/', '.spark/'];
+const INSTRUCTION_FILES = new Set(['.github/copilot-instructions.md']);
+const GIT_HOOK = /^\.git\/hooks\/[^/]+$/;
+const GIT_CONFIG = '.git/config';
+const SPARK_WORKTREES = '.spark/worktrees/';
+
+export function protectedPath(relative: string): ProtectedKind | null {
+  if (GIT_HOOK.test(relative) || relative === GIT_CONFIG) return 'git_control';
+  const name = relative.split('/').pop() ?? '';
+  if (INSTRUCTION_NAMES.has(name) || INSTRUCTION_FILES.has(relative)) return 'instructions';
+  if (relative.startsWith(SPARK_WORKTREES)) return null;
+  const inside = INSTRUCTION_PREFIXES.some((prefix) => relative.startsWith(prefix));
+  return inside || INSTRUCTION_PREFIXES.includes(`${relative}/`) ? 'instructions' : null;
+}
+
 export function relativeInside(root: string, target: string): string | null {
   const relative = path.relative(root, target);
   if (relative === '' || path.isAbsolute(relative)) return null;
@@ -98,7 +116,8 @@ export function refusalFor(
 ): RefusalReason | null {
   if (relative === null) return 'outside the project';
   if (isSecretPath(relative, ignore)) return 'secret file';
-  if (access === 'write' && relative.split('/')[0] === '.git') return 'inside .git';
+  const git = relative.split('/')[0] === '.git';
+  if (access === 'write' && git && protectedPath(relative) === null) return 'inside .git';
   return null;
 }
 

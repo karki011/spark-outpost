@@ -1,6 +1,11 @@
 import path from 'node:path';
 import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark-outpost/contracts';
-import { isSecretPath, refusalFor, relativeInside } from '../projects/path-policy.ts';
+import {
+  isSecretPath,
+  protectedPath,
+  refusalFor,
+  relativeInside,
+} from '../projects/path-policy.ts';
 import { commandTree, deleteTargets, SHELLS, treeWords, type CommandTree } from './command-tree.ts';
 import { allowlistCovers, normalizeCommand, programName, resolveCommandPath } from './commands.ts';
 import {
@@ -8,6 +13,7 @@ import {
   isGitPush,
   publishesBesidesPush,
   publishesCode,
+  setsGitConfig,
   type ForcePush,
 } from './git-commands.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
@@ -55,6 +61,8 @@ export type Decision =
       verdict: 'ask';
       reason: string | null;
       forcePush?: string[];
+      instructionFiles?: string[];
+      gitControl?: string[];
       because?: string;
       observed?: string[];
     };
@@ -76,6 +84,13 @@ export const WORKTREE_AUTO_WHY = "Automatic in this chat's worktree";
 export const ASK_AUTO_WHY = 'Automatic in an Ask turn';
 export const ASK_TURN_ASKS =
   'Spark asks before commands in a question turn at Review each step, unless they only read files';
+
+export const INSTRUCTION_REASON =
+  'Agent instruction files (AGENTS.md, CLAUDE.md, .claude, .cursor/rules, .spark) always ask';
+export const GIT_CONTROL_REASON =
+  'Git runs hooks and settings from .git outside Spark on every commit, so changing them always asks';
+export const PIECE_PROTECTED_REASON =
+  "Pieces don't change agent instructions, git hooks or git config mid-story unless the piece owns that exact file";
 
 export function forcePushReason(branches: readonly string[]): string {
   return `This rewrites history on ${branches.join(', ')} on the remote`;
@@ -129,6 +144,30 @@ function deletesOutside(request: ApprovalRequest, tree: CommandTree | null): boo
   if (!tree) return false;
   const targets = deleteTargets(tree, commandCwd(request), request.home);
   return targets === null || targets.some((target) => outsideRoots(request, target));
+}
+
+interface Guarded {
+  instructions: string[];
+  gitControl: string[];
+}
+
+function writtenPaths(request: ApprovalRequest): string[] {
+  if (request.kind === 'edit' || request.toolKind === 'move') return request.paths;
+  if (!request.command) return [];
+  return writeTargets(request.command, commandCwd(request), request.home) ?? [];
+}
+
+export function guardedTargets(request: ApprovalRequest): Guarded {
+  const relatives = writtenPaths(request).flatMap((target) => {
+    const { relative } = place(request.roots, target);
+    return relative === null ? [] : [relative];
+  });
+  if (request.command && setsGitConfig(request.command)) relatives.push('.git/config');
+  const unique = [...new Set(relatives)];
+  return {
+    instructions: unique.filter((relative) => protectedPath(relative) === 'instructions'),
+    gitControl: unique.filter((relative) => protectedPath(relative) === 'git_control'),
+  };
 }
 
 function commandReads(request: ApprovalRequest, tree: CommandTree | null, files: FileLister) {
@@ -193,6 +232,7 @@ export interface DecideOptions {
   worktreeAuto?: boolean;
   defaultBranch?: string | null;
   observed?: readonly string[];
+  instructionGrants?: ReadonlySet<string>;
 }
 
 function secretLabel(roots: readonly RequestRoot[], target: string): string {
@@ -234,10 +274,19 @@ function soloLeasePush(command: string, options: DecideOptions, forced: ForcePus
   return !publishesBesidesPush(command);
 }
 
+function pieceProtected(guarded: Guarded, options: DecideOptions): boolean {
+  const owned = options.piece?.owned;
+  if (!owned) return false;
+  return [...guarded.instructions, ...guarded.gitControl].some(
+    (relative) => !owned.paths.includes(relative),
+  );
+}
+
 function refusal(
   request: ApprovalRequest,
   options: DecideOptions,
   forced: ForcePush | null,
+  guarded: Guarded,
 ): string | null {
   if (options.builder && request.command && publishesCode(request.command)) {
     if (!soloLeasePush(request.command, options, forced)) return BUILDER_PUBLISH_REASON;
@@ -245,6 +294,7 @@ function refusal(
   const asking = options.askRun ? askRunRefusal(request, commandCwd(request), request.home) : null;
   if (asking) return asking;
   if (forced?.kind === 'refuse') return forced.reason;
+  if (pieceProtected(guarded, options)) return PIECE_PROTECTED_REASON;
   const piece = options.piece
     ? pieceRefusal(request, options.piece, relativeTo(request.roots))
     : null;
@@ -314,13 +364,22 @@ export function decide(
   options: DecideOptions = {},
 ): Decision {
   const forced = request.command ? forcePush(request.command, options.defaultBranch ?? null) : null;
-  const refused = refusal(request, options, forced);
+  const guarded = guardedTargets(request);
+  const refused = refusal(request, options, forced, guarded);
   if (refused) return { verdict: 'reject', reason: refused };
   if (runRules.reject.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'reject', reason: RUN_REJECTED_REASON };
   }
   if (forced?.kind === 'ask') {
     return { verdict: 'ask', reason: forcePushReason(forced.branches), forcePush: forced.branches };
+  }
+  if (guarded.gitControl.length > 0) {
+    return { verdict: 'ask', reason: GIT_CONTROL_REASON, gitControl: guarded.gitControl };
+  }
+  const grants = options.instructionGrants ?? new Set<string>();
+  const ungranted = guarded.instructions.filter((relative) => !grants.has(relative));
+  if (ungranted.length > 0) {
+    return { verdict: 'ask', reason: INSTRUCTION_REASON, instructionFiles: guarded.instructions };
   }
   const files = options.files ?? diskLister;
   const tainted = taintedEgress(request, options, files);

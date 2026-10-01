@@ -7,6 +7,7 @@ import {
   PathRefusedError,
   isSecretPath,
   parseSparkIgnore,
+  protectedPath,
   refusalFor,
   relativeInside,
   resolveProjectPath,
@@ -112,9 +113,47 @@ describe('containment', () => {
   });
 
   it('refuses writes under .git but allows reading it', () => {
-    expect(refusalFor('.git/config', 'write', [])).toBe('inside .git');
+    expect(refusalFor('.git/HEAD', 'write', [])).toBe('inside .git');
+    expect(refusalFor('.git/hooks/pre-commit/x', 'write', [])).toBe('inside .git');
     expect(refusalFor('.git/HEAD', 'read', [])).toBeNull();
     expect(refusalFor('src/.gitkeep', 'write', [])).toBeNull();
+  });
+
+  it('leaves git hooks and git config to the approval card', () => {
+    expect(refusalFor('.git/config', 'write', [])).toBeNull();
+    expect(refusalFor('.git/hooks/pre-commit', 'write', [])).toBeNull();
+  });
+});
+
+describe('protected paths', () => {
+  it.each([
+    ['AGENTS.md', 'instructions'],
+    ['packages/api/AGENTS.md', 'instructions'],
+    ['CLAUDE.md', 'instructions'],
+    ['apps/web/CLAUDE.md', 'instructions'],
+    ['.claude/settings.json', 'instructions'],
+    ['.claude/agents/builder.md', 'instructions'],
+    ['.cursor/rules/style.mdc', 'instructions'],
+    ['.github/copilot-instructions.md', 'instructions'],
+    ['.spark/notes.md', 'instructions'],
+    ['.git/hooks/pre-commit', 'git_control'],
+    ['.git/config', 'git_control'],
+  ] as const)('%s is %s', (relative, kind) => {
+    expect(protectedPath(relative)).toBe(kind);
+  });
+
+  it.each([
+    'README.md',
+    'docs/guide/setup.md',
+    'docs/AGENTS.mdx',
+    'src/claude.ts',
+    '.cursor/settings.json',
+    '.github/workflows/ci.yml',
+    '.spark/worktrees/run-1/src/a.ts',
+    '.git/HEAD',
+    '.git/hooks/sample/x',
+  ])('%s is an ordinary path', (relative) => {
+    expect(protectedPath(relative)).toBeNull();
   });
 });
 
@@ -165,7 +204,7 @@ describe('resolveProjectPath with a fake filesystem', () => {
       absolute: '/work/app/src/new/a.ts',
       relative: 'src/new/a.ts',
     });
-    expect(await reason(policy, '/work/app/.git/hooks/pre-commit', 'write')).toBe('inside .git');
+    expect(await reason(policy, '/work/app/.git/HEAD', 'write')).toBe('inside .git');
   });
 });
 

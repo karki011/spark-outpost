@@ -77,7 +77,7 @@ export const approvalStatusSchema = z.enum([
 ]);
 export type ApprovalStatus = z.infer<typeof approvalStatusSchema>;
 
-export const approvalScopeSchema = z.enum(['once', 'run', 'project']);
+export const approvalScopeSchema = z.enum(['once', 'run', 'chat', 'project']);
 export type ApprovalScope = z.infer<typeof approvalScopeSchema>;
 
 export const approvalDeciderSchema = z.enum([
@@ -125,6 +125,8 @@ export const approvalPayloadSchema = z.object({
   checkpoint: checkpointPayloadSchema.optional(),
   plan: z.string().optional(),
   forcePush: z.array(z.string()).optional(),
+  instructionFiles: z.array(z.string()).optional(),
+  gitControl: z.array(z.string()).optional(),
   asksBecause: z.string().optional(),
   observed: z.array(z.string()).optional(),
   sparkAction: sparkActionSchema.optional(),
