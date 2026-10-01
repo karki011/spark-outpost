@@ -130,6 +130,25 @@ describe('retiring models as defaults', () => {
     expect(picked.body).toMatchObject({ model: 'haiku', routing: 'pinned' });
   });
 
+  it('starts a new connection on Opus 5.5 in Auto, and keeps saved choices on reconnect', async () => {
+    const fresh = await getSetupState(t.db, t.workspaceId);
+    expect(fresh.providers.find((entry) => entry.id === 'claude')?.connection).toMatchObject({
+      model: 'opus[1m]',
+      agentMode: 'auto',
+    });
+
+    await t.db.query(
+      `UPDATE provider_connections SET model = 'sonnet', agent_mode = 'default' WHERE workspace_id = $1`,
+      [t.workspaceId],
+    );
+    await saveConnection(t.db, t.workspaceId, 'claude', connection());
+    const kept = await getSetupState(t.db, t.workspaceId);
+    expect(kept.providers.find((entry) => entry.id === 'claude')?.connection).toMatchObject({
+      model: 'sonnet',
+      agentMode: 'default',
+    });
+  });
+
   it('never reads a stored retiring default back, and drops it on reconnect', async () => {
     await t.db.query(`UPDATE provider_connections SET model = 'haiku' WHERE workspace_id = $1`, [
       t.workspaceId,

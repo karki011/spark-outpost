@@ -51,7 +51,7 @@ Spark uses Jev for a handful of concrete judgments per Do turn: whether a messag
 
 Ask: the agent reads the folders and runs read-only commands directly. Other commands run without asking at Automatic or in an Auto or Bypass mode, and show a "Run a command?" card otherwise. Changing files, installing or pushing is refused — press Make the change for Do work. Do: the agent may also edit files and run commands.
 
-Agent modes come from the provider, with its own names: Claude offers Manual (default), Accept edits, Plan, Auto and Bypass permissions; Codex offers Read-only, Ask every time, Approve for me and Full access. Read-only modes are Ask; the rest are Do. The harness autonomy level is a separate choice.`,
+Agent modes come from the provider, with its own names: Claude offers Manual, Accept edits, Plan, Auto (default) and Bypass permissions; Codex offers Read-only, Ask every time, Approve for me and Full access. Read-only modes are Ask; the rest are Do. The harness autonomy level is a separate choice.`,
   },
   {
     id: 'autonomy-levels',

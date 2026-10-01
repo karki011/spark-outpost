@@ -41,7 +41,8 @@ describe('mode postures', () => {
   });
 
   it("starts new chats in each provider's own default mode", () => {
-    expect(defaultModeFor('claude')).toBe('default');
+    expect(defaultModeFor('claude')).toBe('auto');
+    expect(defaultModeFor('zai')).toBe('default');
     expect(defaultModeFor('codex')).toBe('agent');
     expect(defaultModeFor('fake')).toBeNull();
   });

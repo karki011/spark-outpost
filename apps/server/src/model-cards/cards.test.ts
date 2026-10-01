@@ -85,9 +85,9 @@ describe('effective default model', () => {
     expect(effectiveDefaultModel('codex', codex, 'gpt-6-astra')).toBe('gpt-6-sol');
   });
 
-  it("keeps Claude's adapter default, which is not frontier", () => {
-    expect(effectiveDefaultModel('claude', claude, 'default')).toBe('default');
-    expect(effectiveDefaultModel('claude', claude, 'sonnet')).toBe('sonnet');
+  it('starts Claude on Opus 5.5 whatever the adapter defaults to', () => {
+    expect(effectiveDefaultModel('claude', claude, 'default')).toBe('opus[1m]');
+    expect(effectiveDefaultModel('claude', claude, 'sonnet')).toBe('opus[1m]');
   });
 
   it('never defaults to a retiring model', () => {
@@ -95,7 +95,7 @@ describe('effective default model', () => {
     expect(effectiveDefaultModel('claude', claude, 'haiku', today)).toBe('opus[1m]');
     expect(effectiveDefaultModel('claude', [], 'haiku', today)).toBe('haiku');
     const earlier = new Date('2026-08-01T00:00:00Z');
-    expect(effectiveDefaultModel('claude', claude, 'haiku', earlier)).toBe('haiku');
+    expect(effectiveDefaultModel('claude', claude, 'haiku', earlier)).toBe('opus[1m]');
     const onlyRetiring = [{ id: 'gpt-5.5', label: 'GPT-5.5' }, ...codex];
     expect(effectiveDefaultModel('codex', onlyRetiring, 'gpt-5.5', today)).toBe('gpt-6-sol');
     expect(usableDefault('claude', 'haiku', today)).toBeNull();

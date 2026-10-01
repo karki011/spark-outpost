@@ -47,7 +47,10 @@ test("the picker lists the agent's own modes and says what each combination does
     /^Auto.*Claude handles permission decisions/,
     /^Bypass permissions.*Accepts all permissions/,
   ]);
-  await expect(modes.getByRole('radio', { name: 'Manual', exact: true })).toContainText('Default');
+  await expect(modes.getByRole('radio', { name: 'Auto', exact: true })).toContainText('Default');
+  await expect(modes.getByRole('radio', { name: 'Manual', exact: true })).not.toContainText(
+    'Default',
+  );
   await expect(modes.getByRole('radio', { name: 'Plan', exact: true })).toHaveAttribute(
     'aria-checked',
     'true',
