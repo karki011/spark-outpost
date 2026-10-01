@@ -33,7 +33,7 @@
       "project": ["src/**/*.{ts,tsx}"]
     },
     "apps/desktop": {
-      "entry": ["src/server-entry.ts"],
+      "entry": ["src/server-entry.ts", "src/preload.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/contracts": {

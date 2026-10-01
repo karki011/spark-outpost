@@ -28,7 +28,10 @@ export function createShutdown(effects: ShutdownEffects): Shutdown {
     },
     quit() {
       if (failure.signal.aborted) return;
-      void stopOnce().finally(() => effects.exit(0));
+      const first = stopping === null;
+      const stopped = stopOnce();
+      if (first) effects.closeWindow();
+      void stopped.finally(() => effects.exit(0));
     },
   };
 }

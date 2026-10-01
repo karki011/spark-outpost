@@ -64,3 +64,13 @@ it('exits 0 after stopping everything on a normal quit', async () => {
   expect(effects.stop).toHaveBeenCalledOnce();
   expect(effects.showError).not.toHaveBeenCalled();
 });
+
+it('closes every window once on a normal quit, even when closing quits again', async () => {
+  const { effects, shutdown } = setup();
+  effects.closeWindow.mockImplementation(() => shutdown.quit());
+
+  shutdown.quit();
+  await vi.waitFor(() => expect(effects.exit).toHaveBeenCalledWith(0));
+  expect(effects.closeWindow).toHaveBeenCalledOnce();
+  expect(effects.stop).toHaveBeenCalledOnce();
+});
