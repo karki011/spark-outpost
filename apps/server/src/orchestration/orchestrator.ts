@@ -241,11 +241,6 @@ function withNotes(text: string, notes: readonly string[], hasMessage: boolean):
   return text || hasMessage ? `${text}\n\n${joined}` : joined;
 }
 
-async function userFirstName(s: Session): Promise<string | null> {
-  const prefs = await sparkPreferences(s.deps.db, s.input.workspaceId).catch(() => null);
-  return prefs ? firstName(prefs.displayName) || null : null;
-}
-
 async function finish(
   s: Session,
   status: 'succeeded' | 'failed' | 'cancelled',
@@ -269,7 +264,8 @@ async function finish(
   const notes = [pieces, assumed, escalated, fixed, suggested, stopped, incomplete, shipped].filter(
     (line): line is string => line !== null,
   );
-  const summary = piecesSummary(s.coordination, s.results, await userFirstName(s));
+  const prefs = await sparkPreferences(s.deps.db, s.input.workspaceId).catch(() => null);
+  const summary = piecesSummary(s.coordination, s.results, prefs && firstName(prefs.displayName));
   const reply = finalText(s.results, verdict, s.findings, !!s.message, s.checkBodies, summary);
   const text = withNotes(reply, notes, s.message !== null);
   await publish(s, { phase: 'finished', error: status === 'failed' ? reason : null });
