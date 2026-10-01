@@ -19,6 +19,7 @@ import {
   planOnlyByRule,
   questionByRule,
   reviewsExistingByRule,
+  strongRemovalByRule,
   trivialByRule,
 } from './risk-rules.ts';
 import { bigByRule } from './builder-complexity.ts';
@@ -79,6 +80,12 @@ function call(
 
 function flaggedByRuleOrJev(entry: IntakeCall): boolean {
   return entry.rule === true || (entry.source === 'jev' && entry.value);
+}
+
+function flaggedDestructive(entry: IntakeCall, request: string): boolean {
+  const jevSaysSafe = entry.source === 'jev' && !entry.value;
+  if (jevSaysSafe) return entry.rule === true && strongRemovalByRule(request);
+  return flaggedByRuleOrJev(entry);
 }
 
 interface StartSignals {
@@ -158,7 +165,7 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     ruleRisk,
   );
   const destructive =
-    flaggedByRuleOrJev(destructiveCall) && !additiveMigrationWording(facts.request);
+    flaggedDestructive(destructiveCall, facts.request) && !additiveMigrationWording(facts.request);
   const risk: Risk = destructive ? 'destructive' : 'edits';
   const question = call(jev, 'question', 'question', questionByRule(facts.request), facts, risk);
   const review = call(jev, 'review', 'review', asksForReview(facts.request), facts, risk);

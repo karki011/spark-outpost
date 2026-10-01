@@ -155,6 +155,24 @@ describe('intake decisions', () => {
     expect(decideIntake(jev({ destructive: 0.9 }), renaming).destructive).toBe(true);
   });
 
+  it('lets a sure Jev overrule a weak keyword, but never strong evidence of data removal (D)', () => {
+    const button = facts({ request: 'Add a delete button to each upload row' });
+    expect(decideIntake(null, button).destructive).toBe(true);
+    expect(decideIntake(jev({ destructive: 0.05 }), button)).toMatchObject({
+      destructive: false,
+      risk: 'edits',
+    });
+    expect(decideIntake(jev({ destructive: 0.6 }), button).destructive).toBe(true);
+    const removal = facts({ request: 'Delete the old upload rows from the database' });
+    expect(decideIntake(jev({ destructive: 0.05 }), removal).destructive).toBe(true);
+    const cascade = facts({
+      request:
+        'Add a migration that creates an `upload_tags` table (`upload_key` referencing `uploads(key)` ON DELETE CASCADE).',
+    });
+    expect(decideIntake(null, cascade).destructive).toBe(false);
+    expect(decideIntake(jev({ destructive: 0.05 }), cascade).destructive).toBe(false);
+  });
+
   it('is destructive when either Jev or the keywords say so, never less', () => {
     const drop = facts({ request: 'Drop the legacy users table' });
     expect(decideIntake(jev({ destructive: 0.02 }), drop)).toMatchObject({

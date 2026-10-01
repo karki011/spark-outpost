@@ -60,7 +60,7 @@ Whatever the mode and level, these wait for your answer:
 
 - **Approval cards.** They expire after 30 minutes if nobody answers, and the request is declined.
 - **Protected paths**: secret files, agent instruction files, git hooks and config, force pushes, and sending data out after reading secrets. See [Approvals and protected paths](approvals.md).
-- **Destructive work.** Its plan card waits at every level.
+- **Destructive work.** Its plan card waits at every level. Work counts as destructive when it deletes, drops or truncates data. Creating a table whose foreign key says `ON DELETE CASCADE` doesn't count.
 - **Continue past the budget?** See [Budgets and the budget card](estimates-and-budgets.md#budgets-and-the-budget-card).
 - **Pushing PR fixes** at **Review each step** and **Automatic**: the **Address PR feedback?** card.
 
