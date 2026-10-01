@@ -11,6 +11,9 @@ const MAX_QUESTIONS = 3;
 const MAX_OPTIONS = 4;
 const TEXT_LIMIT = 300;
 
+export const CLARIFY_BUTTONS_RULE =
+  'Spark shows your questions on a card with the buttons "Answer in your own words", "Go with my best guesses" and "Stop", and builds the change itself once the user answers. When you say what happens next, name only those buttons. Do not tell the user to press "Make the change" or any other button, even if an earlier instruction says so.';
+
 export const CLARIFY_NOTE = [
   'The request is too vague to act on yet. Do not change any files.',
   'Read the code the request most likely refers to, then ask the user 1 to 3 short, specific questions that would settle what they want, each with your best guess as the default.',
@@ -19,6 +22,7 @@ export const CLARIFY_NOTE = [
   '{"questions":[{"question":"<your question>","options":["<quick reply>"],"default":"<your best guess>"}]}',
   '```',
   'Options are optional quick replies, at most 4 short ones.',
+  CLARIFY_BUTTONS_RULE,
 ].join('\n');
 
 const PLACEHOLDER = /^<.*>$/;

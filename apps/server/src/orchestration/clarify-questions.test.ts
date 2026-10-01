@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, clarifyOptionId } from '@spark-outpost/contracts';
 import {
+  CLARIFY_BUTTONS_RULE,
   CLARIFY_NOTE,
   clarifyCard,
   clarifyPrNote,
@@ -27,6 +28,13 @@ describe('the clarify turn', () => {
   it('asks for 1 to 3 questions with defaults in a machine block', () => {
     expect(CLARIFY_NOTE).toContain('```clarify');
     expect(CLARIFY_NOTE).toContain('Do not change any files');
+    expect(CLARIFY_NOTE).toContain(CLARIFY_BUTTONS_RULE);
+    expect(CLARIFY_BUTTONS_RULE).toContain('"Go with my best guesses"');
+    expect(CLARIFY_BUTTONS_RULE).toMatch(/Do not tell the user to press "Make the change"/);
+    const labels = clarifyCard([{ question: 'Which?', default: 'A' }]).options.map(
+      (option) => option.name,
+    );
+    for (const label of labels) expect(CLARIFY_BUTTONS_RULE).toContain(`"${label}"`);
   });
 
   it('reads the questions, and rejects anything malformed or empty', () => {
