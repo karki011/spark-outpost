@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'laws-1-universal-laws';
+export const POLICY_VERSION = 'laws-3-pinned-orchestrator';
 
 export type ActingQuestion =
   | 'question'
@@ -44,6 +44,11 @@ export const FIX_ROUND_TOOL_SHARE = 0.25;
 export const FIX_ROUND_MIN_TOOL_CALLS = 20;
 export const FIX_ROUND_ACTIVE_MS = 4 * 60 * 1000;
 export const CRITIC_REREVIEW_EFFORT = 'medium';
+export const CRITIC_RECHECK_LINE_SLACK = 3;
+export const CRITIC_SAME_CONCERN = 0.5;
+export const CRITIC_SMALL_DIFF_LINES = 150;
+export const CRITIC_SMALL_DIFF_SOURCE_FILES = 3;
+export const CRITIC_SMALL_DIFF_EFFORT = 'medium';
 export const PLAN_CONTINUES = 2;
 export const MAX_VERDICTS = 2;
 export const LOOP_STREAK = 5;
@@ -133,6 +138,7 @@ export const PIECE_BELOW_CHAT_MAX_RELIABILITY = 0.3;
 export const PIECE_BELOW_CHAT_MIN_CONFIDENCE = 0.6;
 export const PIECE_BELOW_CHAT_MEASURED_MIN = 10;
 export const PIECE_BELOW_CHAT_PASS_MARGIN = 0.05;
+export const TASK_BELOW_CHAT_MAX_STAKES = 2;
 export const COORD_PIECE_FIX_TURNS = 2;
 export const COORD_HANDOFF_SHARE = 0.75;
 export const COORD_CARD_PIECES = 5;
@@ -144,6 +150,7 @@ export const COMPACT_SELF_DROP = 0.4;
 export const COMPACT_AGENT_WORKED = 0.8;
 
 export const LAW_REMOVED_BLOCK_LINES = 30;
+export const LAW_RENAMED_BODY_SHARE = 0.6;
 export const LAW_ITEMS_SHOWN = 8;
 export const LAW_SCOPE_ITEMS = 5;
 

@@ -1,4 +1,8 @@
-import { ESCALATE_AT } from '../advisor/policy.ts';
+import {
+  CRITIC_SMALL_DIFF_LINES,
+  CRITIC_SMALL_DIFF_SOURCE_FILES,
+  ESCALATE_AT,
+} from '../advisor/policy.ts';
 import { ESCALATED_KINDS } from './escalation.ts';
 import { isLargeDiff, type DiffFile } from './risk-rules.ts';
 import type { MemberRoute } from './routing.ts';
@@ -48,4 +52,16 @@ export function wantsCritic(
   const source = sourceFiles(files);
   if (source.length >= FEATURE_FILES) return true;
   return new Set(source.map((file) => areaOf(file.path))).size >= 2;
+}
+
+export function smallReviewDiff(
+  files: readonly DiffFile[],
+  stakesFiles: ReadonlySet<string> = new Set(),
+): boolean {
+  if (files.length === 0 || files.some((file) => stakesFiles.has(file.path))) return false;
+  const counted = files.filter((file) => !NOT_SOURCE.test(file.path));
+  const lines = counted.reduce((total, file) => total + file.additions + file.deletions, 0);
+  return (
+    lines <= CRITIC_SMALL_DIFF_LINES && sourceFiles(files).length <= CRITIC_SMALL_DIFF_SOURCE_FILES
+  );
 }

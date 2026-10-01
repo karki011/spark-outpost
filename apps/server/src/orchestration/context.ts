@@ -53,6 +53,8 @@ export interface CriticContext {
   buildStyle?: BuildStyle;
   agreedPlan?: string | null;
   previousFindings?: readonly string[];
+  earlierNotes?: readonly string[];
+  fixPatch?: string | null;
   builderReply?: string | null;
   removals?: readonly string[];
 }
@@ -184,7 +186,10 @@ export const FINDING_KIND_RULE =
   'Start each finding with its kind: "[bug]" for behaviour the change gets wrong for the request (a wrong result, a crash, a failing check, or a vulnerability the change adds, such as SQL injection); "[missing]" for something the request or agreed plan asks for that the change lacks; "[hardening]" for robustness, security hardening, or edge-case inputs the request did not ask about; "[style]" for naming, structure or readability. Use "Verdict: concerns" only for [bug] or [missing] findings.';
 
 export const ALL_FINDINGS_RULE =
-  'List every concrete finding in this one review; there may not be another. Before you conclude, go through each changed file and enumerate its edge cases (empty and single inputs, zero and limit values, boundaries, line endings and special characters, error paths, concurrency) and check each one, then report all problems you found together, not only the first.';
+  'List every concrete finding in this one review; there may not be another. Check each changed file against the edge cases real callers hit (empty and single inputs, limits, boundaries, special characters, error paths) and report all problems together. Tag validation of zero, negative, NaN, infinite or fractional options the request never mentions as "[hardening]". Open a changed file only when the diff lacks context; do not explore the rest of the repository.';
+
+export const RECHECK_RULE =
+  'This is a recheck after a fix, not a new review. Do only two things: (a) for each finding the Builder was asked to fix, say whether it is fixed now, and repeat any that remain as "[bug]" in the same words; (b) raise a new "[bug]" only for a problem the fix diff itself introduced, judged against the original request. Do not re-review code the fix did not touch, do not look for new edge cases, and do not raise an earlier note again as a "[bug]". When every earlier finding is fixed and the fix added no bug, end with "Verdict: looks good".';
 
 export const IRREVERSIBLE_RULE =
   'Flag as a "[bug]" any irreversible data or schema change the user did not explicitly ask for: DELETE, DROP or TRUNCATE statements, destructive migrations, or code that removes stored data. Name the statement and what it would lose. A vague request such as "clean up" or a best guess the user never confirmed is not an explicit request.';
@@ -232,17 +237,48 @@ function removalSections(context: CriticContext): string[] {
   ];
 }
 
-function previousFindingsSection(findings: readonly string[]): string[] {
-  if (findings.length === 0) return [];
+function recheckSections(context: CriticContext): string[] {
+  const notes = context.earlierNotes ?? [];
+  const fix = context.fixPatch?.trim();
   return [
     section(
       'Findings the Builder was asked to fix',
-      `Check whether each is fixed now. Repeat any that remain in the same words, and list every other problem you find in the same review.\n${findingBullets(findings)}`,
+      `Check whether each is fixed now. Repeat any that remain in the same words.\n${findingBullets(context.previousFindings ?? [])}`,
+    ),
+    ...(notes.length > 0
+      ? [
+          section(
+            'Notes from earlier reviews (not bugs; do not raise again)',
+            findingBullets(notes),
+          ),
+        ]
+      : []),
+    ...removalSections(context),
+    section('Files changed', changeLines(context.changes)),
+    fix ? section('Fix diff', diffBlock(fix)) : diffSection(context),
+    section(
+      'Check results',
+      context.checks.length > 0 ? context.checks.join('\n') : 'No checks ran.',
     ),
   ];
 }
 
+function recheckPrompt(context: CriticContext): string {
+  return [
+    'Role: Critic. Recheck the fix below; do not change files. This is an AI review, not verification.',
+    VERDICT_RULE,
+    FINDING_KIND_RULE,
+    RECHECK_RULE,
+    IRREVERSIBLE_RULE,
+    REMOVAL_RULE,
+    section('Request', cap(context.request, REQUEST_LIMIT)),
+    ...optional(context.agreedPlan ?? null),
+    ...recheckSections(context),
+  ].join('\n\n');
+}
+
 export function criticPrompt(context: CriticContext): string {
+  if ((context.previousFindings ?? []).length > 0) return recheckPrompt(context);
   return [
     'Role: Critic. Review the change below; do not change files. This is an AI review, not verification.',
     VERDICT_RULE,
@@ -255,7 +291,6 @@ export function criticPrompt(context: CriticContext): string {
     section('Request', cap(context.request, REQUEST_LIMIT)),
     ...optional(context.agreedPlan ?? null),
     section('Plan', context.plan.length > 0 ? numbered(context.plan) : 'No plan was made.'),
-    ...previousFindingsSection(context.previousFindings ?? []),
     ...removalSections(context),
     ...reviewSections(context),
   ].join('\n\n');

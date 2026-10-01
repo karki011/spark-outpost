@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
-import { DECLINED_REASON, ESCALATED_NOTE } from '../src/orchestration/transitions.ts';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import {
+  DECLINED_REASON,
+  ESCALATED_NOTE,
+  UNCONFIRMED_REASON,
+} from '../src/orchestration/cascade.ts';
 import {
   NORMAL,
   answerEverything,
@@ -11,6 +17,7 @@ import {
   gitRepo,
   jevFetch,
   removeRepo,
+  setCheckCommands,
   startOrchestrator,
   startScenario,
   type Answerer,
@@ -105,6 +112,25 @@ describe('verified cascade', () => {
     expect(rows[0]!.body.summary).toContain('rerun one tier up with Opus 5.5');
     expect(rows[1]!.body.answer).toMatchObject({ round: 2, accepted: 'unsupported' });
     expect(await reply(runId)).toContain(ESCALATED_NOTE);
+  }, 60_000);
+
+  it("does not rerun when Jev names nothing missing for sure and Spark's checks pass (H)", async () => {
+    await writeFile(join(root, 'check.mjs'), "console.log('ok');\n");
+    await setCheckCommands(t, root, ['node check.mjs']);
+    const { conversationId, runId } = await runWith(
+      { verify: 0.72, verdicts: [{ choice: 'unsupported', confidence: 0.82 }] },
+      'full-auto',
+    );
+    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+    expect(orchestration.status).toBe('succeeded');
+    expect(await builders(runId)).toHaveLength(1);
+    const card = asked.find((approval) => approval.kind === 'verify')!;
+    expect(card.payload.checkpoint).toMatchObject({ reason: UNCONFIRMED_REASON });
+    expect((await verdicts(runId))[0]!.body.answer).toMatchObject({
+      action: 'ask',
+      evidence: { checksPass: true, criticConcerns: false, confidentUnmet: false },
+    });
+    expect(await reply(runId)).not.toContain(ESCALATED_NOTE);
   }, 60_000);
 
   it('asks the user with a clear card when Jev declines, and finishing keeps the change', async () => {

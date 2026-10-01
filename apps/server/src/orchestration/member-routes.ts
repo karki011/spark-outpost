@@ -18,12 +18,13 @@ import {
   routeBuilder,
   rereviewCritic,
   routeCritic,
-  routeMemberModel,
+  mainSessionRoute,
+  smallDiffCritic,
   soloRoute,
-  type BuiltShare,
   type MemberRoute,
   type RouteFacts,
 } from './routing.ts';
+import type { BuiltShare } from './critic-provider.ts';
 import { builderKey, type Session } from './session.ts';
 import { openBudget } from '../laws/builder-start.ts';
 import { demotionsFor } from '../laws/demotion-history.ts';
@@ -31,6 +32,9 @@ import { demotedRates, withDemotion } from '../laws/demotion-route.ts';
 import { taskKind } from '../laws/task-kind.ts';
 import { budgetWhy } from '../laws/member-budget.ts';
 import type { Spawn } from './transitions.ts';
+import { escalatedHighStakes, smallReviewDiff } from './critic-rule.ts';
+import { stakesFiles } from './critic-recheck.ts';
+import { changesForReview } from './member-prompts.ts';
 
 export interface ResolvedRoute {
   route: MemberRoute;
@@ -131,7 +135,7 @@ async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
 }
 
 async function scoutRoute(s: Session): Promise<ResolvedRoute> {
-  const route = routeMemberModel(s.route, { trivial: false, destructive: false }, jevTier(s));
+  const route = mainSessionRoute(s.route, jevTier(s));
   const mode = s.input.mode === 'do' ? 'ask' : (s.input.mode ?? 'chat');
   const session = await resumableChat(s.deps.db, s.input, mode, s.deps.sessionLimits?.idleMs);
   const kept = keepScoutSession(route, session);
@@ -145,7 +149,16 @@ function builtShares(s: Session): BuiltShare[] {
     .map((piece) => ({ provider: piece.provider!, files: piece.filesChanged.length }));
 }
 
+async function firstCriticRoute(s: Session): Promise<MemberRoute> {
+  const route = routeCritic(s.route, builtShares(s));
+  if (s.facts.destructive || escalatedHighStakes(s.routes.get('builder'))) return route;
+  const changes = await changesForReview(s).catch(() => null);
+  if (!changes || !smallReviewDiff(changes.files, stakesFiles(s.coordination))) return route;
+  return smallDiffCritic(s.route, route);
+}
+
 export function seatRoute(s: Session, spawn: Spawn): ResolvedRoute {
+  if (spawn.role === 'coordinator') return { route: mainSessionRoute(s.route, jevTier(s)) };
   const previous = s.routes.get('builder');
   if (previous && spawn.escalate) return { route: escalateBuilder(s.route, previous) };
   if (previous) return { route: previous };
@@ -163,7 +176,7 @@ export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRo
     return { route: rereviewCritic(s.route, previous) };
   }
   if (previous) return { route: previous };
-  if (spawn.role === 'critic') return { route: routeCritic(s.route, builtShares(s)) };
+  if (spawn.role === 'critic') return { route: await firstCriticRoute(s) };
   if (spawn.role === 'scout') return scoutRoute(s);
   return firstBuilderRoute(s);
 }

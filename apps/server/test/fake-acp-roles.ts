@@ -84,6 +84,16 @@ export const EDGE_FINDINGS = [
   '[style] The command table could be a `Map`.',
 ];
 
+export const SCOPE_FIRST = [
+  '[bug] `notes.txt:1`: the first line drops the closing period the request asked for.',
+  '[hardening] `notes.txt:1`: entries for expired keys stay in the map forever, so memory grows without bound.',
+];
+
+export const SCOPE_RECHECK = [
+  '[bug] `notes.txt:1`: expired keys are never removed from the map, so memory grows without bound.',
+  '[bug] `src/other.ts:40`: an untouched helper misses the empty-list case.',
+];
+
 const ASKED_TO_FIX = '## Findings the Builder was asked to fix';
 
 function reviewNumber(text: string): number {
@@ -104,6 +114,9 @@ function roundFindings(text: string): string[] {
 function reviewFindings(text: string): { findings: string[]; concerns: boolean } {
   const rechecking = text.includes(ASKED_TO_FIX);
   if (text.includes('#stuckreview')) return { findings: BUG_FINDINGS, concerns: true };
+  if (text.includes('#scopecreep')) {
+    return { findings: rechecking ? SCOPE_RECHECK : SCOPE_FIRST, concerns: true };
+  }
   if (text.includes('#bugrounds')) {
     const findings = roundFindings(text);
     if (findings.length > 0) return { findings, concerns: true };

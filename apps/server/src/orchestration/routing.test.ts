@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { criticProvider } from './critic-provider.ts';
 import {
-  criticProvider,
   escalate,
   jevTierPick,
+  mainSessionRoute,
+  MAIN_SESSION_RULE,
   rereviewCritic,
+  smallDiffCritic,
+  SMALL_DIFF_NOTE,
   routeBuilder,
   routeCritic,
   type MemberRoute,
@@ -12,13 +16,17 @@ import { candidates, context, plainFacts } from './route-fixtures.ts';
 import { escalatedEffort } from './tiers.ts';
 
 describe('rule routes', () => {
-  it('keeps a pinned model whatever the rules or Jev say', () => {
+  it('keeps a pinned model without Jev ratings, except for destructive work', () => {
     expect(
-      routeBuilder(context('pinned'), { trivial: true, destructive: true }, 'small'),
+      routeBuilder(context('pinned'), { trivial: true, destructive: false }, 'small'),
     ).toMatchObject({
       routedBy: 'pinned',
       pick: { model: 'sonnet' },
       autoWouldUse: { model: 'sonnet' },
+    });
+    expect(routeBuilder(context('pinned'), { trivial: false, destructive: true })).toMatchObject({
+      rule: 'destructive → top tier',
+      pick: { model: 'opus[1m]' },
     });
   });
 
@@ -48,6 +56,20 @@ describe('rule routes', () => {
     expect(jevTierPick(context('auto'), null)).toBeNull();
   });
 
+  it("keeps the main chat session on one model: the provider's default on Auto, the pin otherwise", () => {
+    const auto = { ...context('auto'), mainModel: 'opus[1m]' };
+    expect(mainSessionRoute(auto, 'small')).toMatchObject({
+      rule: MAIN_SESSION_RULE,
+      pick: { provider: 'claude', model: 'opus[1m]', modelLabel: 'Opus 5.5' },
+    });
+    expect(mainSessionRoute(context('auto')).pick.model).toBe('sonnet');
+    const pinned = { ...context('pinned'), mainModel: 'opus[1m]' };
+    expect(mainSessionRoute(pinned)).toMatchObject({
+      routedBy: 'pinned',
+      pick: { model: 'sonnet' },
+    });
+  });
+
   it('sends the Critic to the other connected provider', () => {
     expect(criticProvider(context('auto'))).toBe('codex');
     expect(routeCritic(context('auto')).pick).toMatchObject({
@@ -69,6 +91,14 @@ describe('rule routes', () => {
     expect(rereviewCritic(context('auto'), again)).toBe(again);
     const low: MemberRoute = { ...first, pick: { ...first.pick, effort: 'low' } };
     expect(rereviewCritic(context('auto'), low)).toBe(low);
+  });
+
+  it('runs the first review of a small diff at medium effort and says why (live run 4)', () => {
+    const first = routeCritic(context('auto'));
+    const small = smallDiffCritic(context('auto'), first);
+    expect(small.pick).toEqual({ ...first.pick, effort: 'medium' });
+    expect(small.note).toBe(SMALL_DIFF_NOTE);
+    expect(smallDiffCritic(context('auto'), small)).toBe(small);
   });
 
   it('sends the Critic to a provider that built no piece, else the smallest share', () => {

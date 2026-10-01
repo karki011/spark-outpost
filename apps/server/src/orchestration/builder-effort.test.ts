@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escalate, routeBuilder, routeMemberModel, type RouteContext } from './routing.ts';
+import { escalate, routeBuilder, mainSessionRoute, type RouteContext } from './routing.ts';
 import { context, plainFacts } from './route-fixtures.ts';
 
 function withEfforts(providerEffort: string | null, chatEffort: string | null): RouteContext {
@@ -54,6 +54,6 @@ describe('Builder effort', () => {
   });
 
   it('leaves other members on the chat effort', () => {
-    expect(routeMemberModel(withEfforts('low', 'high'), plainFacts).pick.effort).toBe('high');
+    expect(mainSessionRoute(withEfforts('low', 'high')).pick.effort).toBe('high');
   });
 });

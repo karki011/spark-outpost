@@ -36,6 +36,7 @@ import type { JevAccess } from './jev-calls.ts';
 import type { ProjectStyle } from './lean.ts';
 import type { LoopGuardSettings } from './loop-guard.ts';
 import type { MemberRoute, RouteContext, RouteFacts } from './routing.ts';
+import type { SpawnReason } from './flow-types.ts';
 import type { FlowState } from './transitions.ts';
 import type { Coordination } from '../coordinator/state.ts';
 import type { Slots } from './slots.ts';
@@ -108,6 +109,7 @@ export interface MemberResult {
   name: string;
   loop: string | null;
   copyRunId?: string;
+  reason?: SpawnReason;
 }
 
 export interface Session {
@@ -163,6 +165,9 @@ export interface Session {
   shipLine?: string | null;
   prNotes?: string[];
   fixRound?: FixRound | null;
+  fixTree?: string | null;
+  fixPatch?: string | null;
+  reviewNotes?: string[];
   passing?: PassingState | null;
   suggestions?: string[];
   integrator?: Seat | null;

@@ -9,6 +9,7 @@ import { runChanges, revertRun } from '../src/projects/run-changes.ts';
 import { recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import {
   COMPLEX,
+  NORMAL,
   TRIVIAL,
   answerEverything,
   connectProviders,
@@ -213,6 +214,19 @@ describe('routing', () => {
     ]);
     const route = orchestration.decisions.find((decision) => decision.kind === 'route');
     expect(route?.summary).toContain('Jev would have used Opus 5.5');
+  }, 60_000);
+
+  it("routes a pinned chat's Builder below the pin only when Jev rates it clearly simple", async () => {
+    await start();
+    const simple = { ...NORMAL, id: 'simple', ratings: { complexity: 1, stakes: 1 } };
+    script.scenario = simple;
+    const run = await startScenario(t, root, simple, 'hands-off', 'pinned', 'opus[1m]');
+    const { orchestration } = await driveToEnd(t, run.conversationId, run.runId);
+    expect(orchestration.crew).toEqual([
+      expect.objectContaining({ role: 'builder', model: 'sonnet', routedBy: 'jev' }),
+    ]);
+    const route = orchestration.decisions.find((decision) => decision.kind === 'route');
+    expect(route?.summary).toContain('Jev: clearly simple, below your pinned Opus 5.5');
   }, 60_000);
 
   it('falls back to the rules without Jev: a Do request runs one Builder', async () => {

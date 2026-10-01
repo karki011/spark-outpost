@@ -208,6 +208,37 @@ describe('native plan mode in Ask (B5)', { timeout: 60_000 }, () => {
   });
 });
 
+describe('a plan that arrives only in the ExitPlanMode call (D-noJev)', { timeout: 60_000 }, () => {
+  beforeEach(() => connectProviders(t, false));
+
+  for (const trigger of ['#plancallonly', '#planinfile']) {
+    it(`takes the plan from the tool call when the reply has no text (${trigger})`, async () => {
+      harness = startOrchestrator(t, null);
+      const { conversationId } = await linkedConversation(t, root);
+      const runId = await say(
+        conversationId,
+        `Plan adding CSV export. Plan only for now: don't change any files. ${trigger}`,
+      );
+      const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+      expect(orchestration.error).toBeNull();
+      expect(asked.map((approval) => approval.title)).toEqual(['Approve the plan?']);
+      expect(await planDocuments(t.db, conversationId)).toEqual([
+        expect.objectContaining({
+          source: 'claude_plan_mode',
+          body: FAKE_PLAN,
+          status: 'approved',
+        }),
+      ]);
+      const { rows } = await t.db.query<{ payload: string }>(
+        `SELECT payload::text FROM run_events WHERE run_id = $1 AND type = 'STEP_STARTED'`,
+        [runId],
+      );
+      const steps = rows.map((row) => row.payload).join('\n');
+      expect(steps).not.toContain("Ask mode doesn't change files");
+    });
+  }
+});
+
 describe('the Critic on plan-driven and multi-file builds', { timeout: 60_000 }, () => {
   async function roles(runId: string): Promise<string[]> {
     const { rows } = await t.db.query<{ role: string }>(

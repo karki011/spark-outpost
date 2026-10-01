@@ -342,7 +342,7 @@ async function converse(
     .onRequest(acp.methods.client.session.requestPermission, (ctx) => {
       if (signal.aborted) return { outcome: { outcome: 'cancelled' } };
       if (doing) return reviewPermission(ctx.params, ctx.requestId, doing);
-      const plan = policy ? nativePlan(ctx.params, definition.id) : [];
+      const plan = policy ? nativePlan(ctx.params, definition.id, mapper.shownPlan()) : [];
       if (gated && plan.length === 0 && runsCommand(ctx.params)) {
         return reviewPermission(ctx.params, ctx.requestId, gated);
       }

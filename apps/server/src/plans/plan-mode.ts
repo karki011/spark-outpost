@@ -38,6 +38,20 @@ export function exitPlanText(
   return text ? text.slice(0, PLAN_DOCUMENT_MAX_LENGTH) : null;
 }
 
+const PLAN_FILE = /(?:^|\/)\.claude\/plans\/[^/]+\.md$/;
+
+export function isExitPlanKind(toolKind: string | null | undefined): boolean {
+  return toolKind === SWITCH_MODE_KIND;
+}
+
+export function planFileText(rawInput: unknown): string | null {
+  const fields = objectFields(rawInput);
+  const { file_path: target, content } = fields;
+  if (typeof target !== 'string' || !PLAN_FILE.test(target)) return null;
+  if (typeof content !== 'string' || !content.trim()) return null;
+  return content.trim().slice(0, PLAN_DOCUMENT_MAX_LENGTH);
+}
+
 export interface PlanningFacts {
   planning?: boolean;
   provider: string;

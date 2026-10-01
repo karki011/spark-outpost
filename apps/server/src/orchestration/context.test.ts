@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   HISTORY_TURNS,
   ALL_FINDINGS_RULE,
+  RECHECK_RULE,
   FINDING_KIND_RULE,
   IRREVERSIBLE_RULE,
   INCREMENT_RULE,
@@ -106,7 +107,7 @@ describe('context assembly', () => {
     expect(prompt).toContain('Verdict: looks good" or "Verdict: concerns"');
     expect(prompt).toContain(`[cut at ${PATCH_LIMIT} characters]`);
     expect(prompt).toContain('## Check results\nNo checks ran.');
-    expect(prompt.length).toBeLessThan(PATCH_LIMIT + 2_000);
+    expect(prompt.length).toBeLessThan(PATCH_LIMIT + 2_200);
   });
 
   it('tells the Critic which changes were already there before the task', () => {
@@ -171,18 +172,33 @@ describe('the Critic finding schema (B3)', () => {
   });
 
   it('asks the Critic for every finding in one review, edge cases across each changed file (C2)', () => {
+    const prompt = criticPrompt({ request: 'r', plan: [], changes: [], patch: '', checks: [] });
+    expect(prompt).toContain(ALL_FINDINGS_RULE);
+    expect(ALL_FINDINGS_RULE).toMatch(/every concrete finding.*each changed file.*edge cases/s);
+    expect(ALL_FINDINGS_RULE).toMatch(/zero, negative, NaN.*"\[hardening\]"/s);
+    expect(criticFixFollowUp(['a', 'b'])).toContain('Fix all of them together in this turn');
+  });
+
+  it('turns a review after a fix into a recheck of the earlier findings and the fix diff (C)', () => {
     const prompt = criticPrompt({
       request: 'r',
       plan: [],
-      changes: [],
-      patch: '',
+      changes: [{ path: 'src/rate-limit.ts', additions: 9, deletions: 1 }],
+      patch: 'diff --git a/src/whole.ts b/src/whole.ts',
+      fixPatch: 'diff --git a/src/rate-limit.ts b/src/rate-limit.ts',
       checks: [],
       previousFindings: ['[bug] `\\r` is left unquoted'],
+      earlierNotes: ['[hardening] `windowMs: 0` resets every call'],
     });
-    expect(prompt).toContain(ALL_FINDINGS_RULE);
-    expect(ALL_FINDINGS_RULE).toMatch(/every concrete finding.*each changed file.*edge cases/s);
-    expect(prompt).toContain('list every other problem you find in the same review');
-    expect(criticFixFollowUp(['a', 'b'])).toContain('Fix all of them together in this turn');
+    expect(prompt).toContain(RECHECK_RULE);
+    expect(prompt).not.toContain(ALL_FINDINGS_RULE);
+    expect(prompt).toContain('## Findings the Builder was asked to fix');
+    expect(prompt).toContain(
+      '## Notes from earlier reviews (not bugs; do not raise again)\n- [hardening] `windowMs: 0` resets every call',
+    );
+    expect(prompt).toContain('## Fix diff\n```diff\ndiff --git a/src/rate-limit.ts');
+    expect(prompt).not.toContain('src/whole.ts');
+    expect(prompt).not.toContain('## Complexity');
   });
 
   it('asks the Critic to flag irreversible data or schema changes the user did not ask for (E)', () => {

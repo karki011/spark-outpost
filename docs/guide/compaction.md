@@ -45,7 +45,7 @@ A fresh chat and the old one link to each other: **Open the fresh chat** in the 
 
 ## Read the summary
 
-After a compaction, a divider sits above your message, for example "Compacted · 180K → 16K tokens". A summary Spark wrote says **Compacted with a Spark summary**.
+After a compaction, a divider sits above your message, for example "Compacted · 180K → 16K tokens". The second number is what the agent's context holds on the next reply, system prompt and tools included, so it shows once that reply ends. A summary Spark wrote says **Compacted with a Spark summary**.
 
 1. Select **View summary** on the divider to read what the agent now carries.
 2. Select **Hide summary** to fold it away.

@@ -16,7 +16,9 @@ const TESTS_PASS =
 const IS_DONE =
   /^[^.!?]{0,60}\s(?:is|are)\s+(?:now\s+)?(?:done|finished|complete|ready|in place)[.!]?$/i;
 const DONE = /^done[.!]?$/i;
-const STATUS_ONLY = [TESTS_PASS, IS_DONE, DONE];
+const SKIP_NOTE =
+  /^(?:skipped|not skipped|nothing (?:was |is )?skipped|nothing else (?:was )?skipped|left out|not done|still to do|left for later|what's left|not included|i (?:skipped|didn't|did not|left out)|i haven't)\b/i;
+const STATUS_ONLY = [TESTS_PASS, IS_DONE, DONE, SKIP_NOTE];
 
 function withoutVocative(sentence: string, name: string | null): string {
   if (!name) return sentence;
@@ -71,7 +73,7 @@ function finalSummary(text: string, name: string | null): string | null {
   const paragraphs = text.split(/\n\s*\n/).reverse();
   for (const paragraph of paragraphs) {
     const prose = paragraphText(paragraph);
-    const summary = prose ? paragraphSummary(prose, name) : null;
+    const summary = prose && !SKIP_NOTE.test(prose) ? paragraphSummary(prose, name) : null;
     if (summary) return summary;
   }
   return null;

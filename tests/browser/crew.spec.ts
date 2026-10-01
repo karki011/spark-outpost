@@ -113,7 +113,8 @@ test('Manual, review each step: one task Builder with an edit approval, the Crit
   await expect(keep).toBeVisible({ timeout: 30_000 });
   await expect(keep).toContainText('Kept: you approved every edit.');
   await expect(keep.getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
-  await expect(agentHead(page, 'Hawk')).toContainText('6 Solhigh effort');
+  await expect(agentHead(page, 'Hawk')).toContainText('6 Solmedium effort');
+  await expect(agentHead(page, 'Hawk')).toContainText('small diff: first review at medium effort');
   await expect(agentBlock(page, 'Hawk')).toContainText('Verdict: looks good');
   await shot(page, 'keep');
 

@@ -48,6 +48,8 @@ A Critic reviews bigger or riskier changes: large diffs, 3 or more source files,
 
 If the Critic finds problems, a Builder fixes them, up to 3 rounds. At **Review each step** you see the findings first and choose **Fix these findings**.
 
+After a fix, the Critic only rechecks: it confirms the earlier problems are fixed and looks for anything the fix itself broke. It doesn't start a new review of code the fix didn't touch. Hardening ideas the request didn't ask for, such as rejecting a zero or negative setting, are listed under **Not fixed automatically** instead of starting another round.
+
 ## Where Spark works
 
 By default, each chat that changes code gets its own git worktree on a new branch, so your own checkout stays as it is. To change this for a project:

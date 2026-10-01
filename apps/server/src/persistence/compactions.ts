@@ -127,7 +127,7 @@ export async function settleTokensAfter(
 ): Promise<void> {
   await db.query(
     `UPDATE compactions SET tokens_after = $2
-     WHERE run_id = $1 AND method = 'spark' AND tokens_after IS NULL`,
+     WHERE run_id = $1 AND method IN ('spark', 'agent') AND tokens_after IS NULL`,
     [runId, tokensAfter],
   );
 }

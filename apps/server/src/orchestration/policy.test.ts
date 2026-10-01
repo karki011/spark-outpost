@@ -11,8 +11,11 @@ import {
 import {
   asksForReview,
   buildsByRule,
+  additiveMigrationWording,
   destructiveByRule,
+  destructiveMigrationWording,
   destructiveTargets,
+  strongRemovalByRule,
   followUpByRule,
   isLargeDiff,
   planOnlyByRule,
@@ -47,12 +50,35 @@ describe('risk rules', () => {
   it('points destructive wording at the files named in the same line', () => {
     const request = [
       'Split this up into pieces:',
-      '- Add a migration `migrations/002_tags.sql` (`upload_key` REFERENCES uploads ON DELETE CASCADE).',
+      '- Add a migration `migrations/002_tags.sql` to drop the `legacy_tags` table.',
       '- Add `src/slug.ts` exporting `slugify`. Add tests in `test/slug.test.ts`.',
     ].join('\n');
     expect(destructiveTargets(request)).toEqual(['migrations/002_tags.sql']);
     expect(destructiveTargets('Delete src/old.ts. Then add src/new.ts.')).toEqual(['src/old.ts']);
     expect(destructiveTargets('Add src/new.ts')).toEqual([]);
+  });
+
+  it('reads ON DELETE CASCADE in a foreign key as additive, not destructive (D)', () => {
+    const request =
+      'Add a migration `migrations/002_upload_tags.sql` that creates an `upload_tags` table (`upload_key` TEXT referencing `uploads(key)` ON DELETE CASCADE, `tag` TEXT NOT NULL).';
+    expect(destructiveByRule(request)).toBe(false);
+    expect(destructiveMigrationWording(request)).toBe(false);
+    expect(additiveMigrationWording(request)).toBe(true);
+    expect(destructiveTargets(request)).toEqual([]);
+    expect(destructiveByRule('Add a foreign key with cascading deletes to orders')).toBe(false);
+    expect(destructiveByRule('Delete the rows older than 90 days')).toBe(true);
+    expect(destructiveByRule('Add a migration to drop the tags table')).toBe(true);
+  });
+
+  it('counts only strong wording as evidence of data removal', () => {
+    expect(strongRemovalByRule('DELETE FROM uploads WHERE size = 0')).toBe(true);
+    expect(strongRemovalByRule('Drop table legacy_tags')).toBe(true);
+    expect(strongRemovalByRule('Delete the old upload rows')).toBe(true);
+    expect(strongRemovalByRule('Truncate the audit log')).toBe(true);
+    expect(strongRemovalByRule('Rename the runs table column and migrate old rows')).toBe(true);
+    expect(strongRemovalByRule('Add a delete button to the upload list')).toBe(false);
+    expect(strongRemovalByRule('Handle the delete event in the queue')).toBe(false);
+    expect(strongRemovalByRule('Create tags with ON DELETE CASCADE')).toBe(false);
   });
 
   it('calls short, local wording and formatting fixes trivial', () => {

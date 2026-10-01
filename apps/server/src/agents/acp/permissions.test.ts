@@ -72,4 +72,26 @@ describe('a native plan offered in Ask (B5)', () => {
   it('ignores other permission requests', () => {
     expect(nativePlan({ sessionId: 's', toolCall, options: [] }, 'claude')).toEqual([]);
   });
+
+  it('falls back to the plan the tool call showed and never calls it a refused edit (D-noJev)', () => {
+    const request = {
+      sessionId: 's',
+      toolCall: {
+        toolCallId: 'p',
+        title: 'Approve Plan',
+        kind: 'switch_mode' as const,
+        rawInput: {},
+      },
+      options: [{ optionId: 'reject', name: 'No', kind: 'reject_once' as const }],
+    };
+    expect(nativePlan(request, 'claude')).toEqual([]);
+    expect(nativePlan(request, 'claude', '1. Add a CLI')[0]).toMatchObject({
+      kind: 'plan_proposed',
+      plan: '1. Add a CLI',
+    });
+    expect(nativePlan({ sessionId: 's', toolCall, options: [] }, 'claude', '1. Add')).toEqual([]);
+    expect(declineInConversation(request, true).note).toBe(
+      'Kept planning: Approve Plan (Spark asks about plans on its own card)',
+    );
+  });
 });

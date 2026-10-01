@@ -62,6 +62,8 @@ To check a connection, select **Send test message**. The card's **Last test** ro
 
 Spark never runs a Builder on a small, fast model, even when you pick one. It raises the Builder to the next model up and says so.
 
+The model you pick for a chat is the chat's own model, and it never changes during the chat. On **Auto**, the chat runs on the provider's default model and Auto only picks models for the helpers. Builders start from the chat's model and can move a tier down for clearly simple work or up for hard work. See [Builders in a pinned chat](auto-routing.md#builders-in-a-pinned-chat).
+
 > **Tip:** A provider marked **not connected** on Settings → Models still shows its cards, so you can compare before you connect it.
 
 **Next:** [Pick a model for a chat](auto-routing.md)

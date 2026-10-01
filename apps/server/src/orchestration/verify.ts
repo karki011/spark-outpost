@@ -9,7 +9,11 @@ import { changesForReview } from './member-prompts.ts';
 import { DIFFS_OFF, recordAdvice } from './observe.ts';
 import { escalatedBuilderPick } from './member-routes.ts';
 import type { Session } from './session.ts';
-import { cascadeAction, type CascadeAction, type FlowEvent } from './transitions.ts';
+import { ACT_AT } from '../advisor/policy.ts';
+import { checksPhrase } from './critic-fix.ts';
+import type { CascadeEvidence } from './flow-types.ts';
+import { cascadeAction, type CascadeAction } from './cascade.ts';
+import type { FlowEvent } from './transitions.ts';
 
 const NOT_VERIFIED: FlowEvent = { type: 'verified', accepted: null, reasons: [] };
 
@@ -61,7 +65,12 @@ export async function verifyChange(s: Session): Promise<FlowEvent> {
     s.control.signal,
   );
   const reading = readVerdict(requirements, call.status === 'answered' ? call.response : null);
-  const action = cascadeAction(reading.accepted, s.flow.escalated);
+  const evidence: CascadeEvidence = {
+    checksPass: checksPhrase(s.checkBodies) === 'checks pass',
+    criticConcerns: s.flow.review.fixable.length > 0,
+    confidentUnmet: reading.unmet.some((entry) => (entry.noul ?? 0) >= ACT_AT.verify),
+  };
+  const action = cascadeAction(reading.accepted, s.flow.escalated, evidence);
   const to = action === 'escalate' ? escalatedBuilderPick(s) : null;
   await recordAdvice(
     s,
@@ -77,9 +86,10 @@ export async function verifyChange(s: Session): Promise<FlowEvent> {
       would: reading.accepted ?? 'unverified',
       worst: reading.probabilities?.unsupported ?? null,
       action,
+      evidence,
       escalateTo: to,
     },
     reading.accepted ? 'jev' : 'rules',
   );
-  return { type: 'verified', accepted: reading.accepted, reasons: reading.reasons };
+  return { type: 'verified', accepted: reading.accepted, reasons: reading.reasons, evidence };
 }

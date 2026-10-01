@@ -1,4 +1,4 @@
-import { gitChanges, revertGitChanges } from '../projects/snapshot.ts';
+import { gitChanges, gitDiffBetween, revertGitChanges } from '../projects/snapshot.ts';
 import { runEvents } from '../workflow/run-events.ts';
 import { budgetUsage } from './budget-check.ts';
 import { checksFailing } from './check-results.ts';
@@ -26,6 +26,9 @@ export async function beginFixRound(s: Session): Promise<void> {
     activeMsAt: usage.activeMs,
     hit: null,
   };
+  const root = s.input.projectRoots[0];
+  s.fixTree = root ? await treeOf(s, root) : null;
+  s.fixPatch = null;
   if (checksFailing(s)) s.passing = null;
   else await notePassing(s);
 }
@@ -71,4 +74,14 @@ export async function restoreAfterCut(s: Session): Promise<FlowEvent> {
   await s.append(runEvents.stepStarted(note));
   await s.append(runEvents.stepFinished(note));
   return { type: 'restored', restored };
+}
+
+export async function fixDiff(s: Session): Promise<string | null> {
+  const root = s.input.projectRoots[0];
+  const from = s.fixTree;
+  if (!root || !from) return null;
+  const to = await treeOf(s, root);
+  if (!to) return null;
+  const diff = await gitDiffBetween(root, from, to).catch(() => null);
+  return diff?.patch.trim() ? diff.patch : null;
 }

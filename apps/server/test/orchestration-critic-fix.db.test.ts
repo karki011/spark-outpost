@@ -6,12 +6,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type CheckBody, type InvolvementLevel } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
 import { nextCallUsd } from '../src/orchestration/budget-check.ts';
-import { CRITIC_FIX_LEAD } from '../src/orchestration/context.ts';
+import { CRITIC_FIX_LEAD, RECHECK_RULE } from '../src/orchestration/context.ts';
 import {
   BUG_FINDINGS,
   EDGE_FINDINGS,
   HARDENING_FINDINGS,
   ROUND_FINDINGS,
+  SCOPE_FIRST,
+  SCOPE_RECHECK,
 } from './fake-acp-roles.ts';
 import {
   TRIVIAL,
@@ -228,6 +230,33 @@ describe('Critic → fix rounds', () => {
     expect(await reply(runId)).toContain(
       "Fixed after 2 review rounds: the Critic's last review found no correctness problems; no project checks ran.",
     );
+  }, 120_000);
+
+  it('converges: the recheck keeps no escalated note or bug in untouched code (C)', async () => {
+    await start({ jev: false });
+    const { conversationId, runId } = await begin('Have it reviewed. #scopecreep', 'hands-off');
+    await drive(conversationId, runId);
+    const rows = await children(runId);
+    expect(rows.map((row) => row.role)).toEqual(['builder', 'critic', 'builder', 'critic']);
+    expect(await adviceActions(runId)).toEqual([
+      [1, 'fix'],
+      [2, 'clean'],
+    ]);
+    const recheck = (await findingAdvice(runId))[1]!;
+    expect(recheck.body.summary).toContain("2 outside the recheck's scope");
+    const { rows: prompts } = await t.db.query<{ prompt: string }>(
+      `SELECT prompt FROM runs WHERE parent_run_id = $1 AND role = 'critic' ORDER BY created_at`,
+      [runId],
+    );
+    expect(prompts[1]!.prompt).toContain(RECHECK_RULE);
+    expect(prompts[1]!.prompt).toContain('## Fix diff');
+    expect(prompts[1]!.prompt).toContain(SCOPE_FIRST[1]);
+    const text = await reply(runId);
+    expect(text).toContain(
+      "Fixed after 1 review round: the Critic's last review found no correctness problems",
+    );
+    expect(text).toContain(SCOPE_RECHECK[1]);
+    expect(SCOPE_FIRST).toHaveLength(2);
   }, 120_000);
 
   it('stops early when the same findings come back after a fix', async () => {

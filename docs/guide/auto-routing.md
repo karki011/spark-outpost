@@ -7,7 +7,7 @@ summary: Pin a model or let Auto pick one per request, set the effort, and read 
 
 You'll choose a model and effort for one chat, and learn how **Auto** picks a model when you let it. About 3 minutes.
 
-A new chat starts on your default provider's model, for example Claude Opus 5.5, with its default mode, for Claude **Auto**. That model is pinned: Spark uses it until you change it.
+A new chat starts on your default provider's model, for example Claude Opus 5.5, with its default mode, for Claude **Auto**. That model is pinned: it's the chat's own model, the one that reads, plans and coordinates. Spark uses it until you change it.
 
 ## Pin a model or choose Auto
 
@@ -32,7 +32,9 @@ Higher effort is slower and costs more. Claude offers Low to Max, Codex Low to H
 
 ## How Auto picks a model
 
-On **Auto**, Spark picks from the chat provider's models for each request. Rules come first:
+Auto picks models for the helpers, never for the chat itself. The chat's own session, the one that reads, answers and coordinates, keeps one model for the whole chat: on **Auto** that's the provider's default model, for example Claude Opus 5.5, chosen when the chat first starts. Switching it would make the agent re-read everything, so even a trivial follow-up stays on it.
+
+For each Builder, piece, Critic and integrator, Spark picks from the chat provider's models per request. Rules come first:
 
 - **Destructive work**, such as deleting data, always goes to the top model.
 - **Trivial edits** go to a middle model.
@@ -49,9 +51,18 @@ The score needs four ratings of the request, from 1 to 5: complexity, ambiguity,
 
 Either way, code calculates the score and picks the model. Jev never picks it. See [Jev, Spark's advisor](jev.md).
 
+## Builders in a pinned chat
+
+Pinning picks the chat's own model, not every agent's. The Reader, the plan and the coordinator always use the pinned model. The Builder that makes the change starts from it too, and Spark moves it only when the request clearly calls for it:
+
+- **Clearly simple work**: with [Jev](jev.md) sure the request is low in complexity and stakes, the Builder can run one model down, for example "Why Sonnet 5: Jev: clearly simple, below your pinned Opus 5.5".
+- **Hard work**: when Jev rates the request hard, the Builder can step up a model, the same way it does on **Auto**.
+- **Destructive work** goes to the top model, and a trivial edit to a middle model when that's below your pin.
+
+Without Jev, or when Jev isn't sure, the Builder keeps your pinned model and the why-line says "pinned in this chat as the orchestrator's model". Pieces follow the same rule.
+
 ## What Auto never does
 
-- It never picks a model for a chat you pinned. Your model stays, and the why-line says "pinned in this chat".
 - It never runs a Builder on a small, fast model. If one would be picked, Spark raises it to the next model up and says so.
 - With the **Spark** switch off, there's no Auto routing: the chat uses your pick.
 

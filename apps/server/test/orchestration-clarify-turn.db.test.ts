@@ -138,7 +138,7 @@ describe('a vague request asks the agent to clarify first', () => {
     expect(clarify.payload.checkpoint).toMatchObject({
       choices: ['Spend', 'Usage'],
       questions: [{ question: 'Which report?', options: ['Spend', 'Usage'], default: 'Spend' }],
-      autoOption: CHECKPOINT_OPTION.useDefaults,
+      autoOption: null,
     });
     expect(done.builderPrompts[0]).toContain('The user answered: Usage');
     expect(done.clarify).toEqual([
@@ -178,6 +178,19 @@ describe('a vague request asks the agent to clarify first', () => {
     expect(clarify.autoContinueAt).not.toBeNull();
     expect(done.clarify[0]).toMatchObject({ reply: 'defaults', defaultsUsed: true });
     expect(done.builderPrompts[0]).toContain('No answer, so go with the defaults.');
+  }, 120_000);
+
+  it('waits at Review each step even when auto-continue is on', async () => {
+    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
+    const done = await run(VAGUE, 'balanced', (approval) =>
+      approval.title === 'A few questions first'
+        ? { optionId: CHECKPOINT_OPTION.useDefaults }
+        : answerEverything(approval),
+    );
+    const clarify = done.orchestration.checkpoints.find(
+      (approval) => approval.title === 'A few questions first',
+    )!;
+    expect(clarify).toMatchObject({ decidedBy: 'user', autoContinueAt: null });
   }, 120_000);
 
   it('waits for an answer when the answer wait is off, outside Full auto', async () => {

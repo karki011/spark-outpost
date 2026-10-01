@@ -1,4 +1,4 @@
-import { LAW_REMOVED_BLOCK_LINES } from '../advisor/policy.ts';
+import { LAW_REMOVED_BLOCK_LINES, LAW_RENAMED_BODY_SHARE } from '../advisor/policy.ts';
 import { TEST_FILE } from '../orchestration/critic-rule.ts';
 import { code, type LawFacts, type LawFinding, type LawKind } from './finding.ts';
 import { baseName, mentions, parsePatch, SNAPSHOT_FILE, type PatchFile } from './patch.ts';
@@ -20,6 +20,9 @@ const GUARD =
 
 const REMOVAL_WORDS =
   /\b(?:remov\w*|delet\w*|drop\w*|get rid|clean(?:ed|s|ing)? ?up|strip\w*|prun\w*|deprecat\w*|unused|no longer|replac\w*|mov(?:e|ed|es|ing)|inlin\w*|merg\w*|consolidat\w*|dead code|obsolete|redundant|superseded)\b/i;
+
+const DESCRIBES_CHANGE =
+  /\b(?:renam\w*|chang\w*|updat\w*|now|rewr(?:ote|ite|itten)\w*|switch\w*|convert\w*|expect\w*|adjust\w*|edit\w*|modif\w*|instead)\b/i;
 
 const BROAD_REMOVAL =
   /\b(?:dead code|unused (?:code|exports?|functions?|files?|helpers?|imports?)|remove (?:the )?(?:legacy|old|deprecated)\b)/i;
@@ -84,11 +87,54 @@ function fileRemovals(file: PatchFile, files: readonly PatchFile[]): Removal[] {
   ];
 }
 
+type NameReader = (lines: readonly string[]) => string[];
+
+function bodies(lines: readonly string[], read: NameReader): Map<string, string[]> {
+  const found = new Map<string, string[]>();
+  let current: string[] | null = null;
+  for (const line of lines) {
+    const [name] = read([line]);
+    if (name) {
+      current = [];
+      found.set(name, current);
+    } else if (current && line.trim().length > 2) {
+      current.push(
+        line
+          .trim()
+          .replace(/\d+(?:\.\d+)?/g, '0')
+          .replace(/\s+/g, ' '),
+      );
+    }
+  }
+  return found;
+}
+
+function bodyShare(before: readonly string[], after: readonly string[]): number {
+  if (before.length === 0) return 1;
+  const kept = new Set(after);
+  return before.filter((line) => kept.has(line)).length / before.length;
+}
+
+function renamed(name: string, file: PatchFile, read: NameReader): boolean {
+  const before = bodies(file.removed, read).get(name) ?? [];
+  const removedNames = new Set(read(file.removed));
+  return [...bodies(file.added, read)].some(
+    ([added, after]) =>
+      added !== name &&
+      !removedNames.has(added) &&
+      bodyShare(before, after) >= LAW_RENAMED_BODY_SHARE,
+  );
+}
+
 function symbolRemovals(file: PatchFile, addedEverywhere: string): Removal[] {
   const gone = (name: string) => !mentions(addedEverywhere, name);
-  const tests = TEST_FILE.test(file.path) ? testNames(file.removed).filter(gone) : [];
+  const tests = TEST_FILE.test(file.path)
+    ? testNames(file.removed).filter((name) => gone(name) && !renamed(name, file, testNames))
+    : [];
   const testSet = new Set(tests);
-  const symbols = declaredNames(file.removed).filter((name) => !testSet.has(name) && gone(name));
+  const symbols = declaredNames(file.removed).filter(
+    (name) => !testSet.has(name) && gone(name) && !renamed(name, file, declaredNames),
+  );
   return [
     ...tests.map((name) => ({
       kind: 'test' as const,
@@ -152,12 +198,19 @@ function sentencesNaming(text: string, removal: Removal): string[] {
   return text.split(/(?<=[.!?\n])\s+/).filter((sentence) => namesIt(sentence, removal));
 }
 
+function replyExplains(sentence: string, removal: Removal): boolean {
+  if (REMOVAL_WORDS.test(sentence)) return true;
+  if (removal.kind === 'file' || removal.kind === 'block') return false;
+  if (removal.name !== null && mentions(sentence, removal.name)) return true;
+  return DESCRIBES_CHANGE.test(sentence);
+}
+
 export function explained(removal: Removal, facts: LawFacts): boolean {
   if (BROAD_REMOVAL.test(facts.request)) return true;
   const asked = sentencesNaming(facts.request, removal);
   if (asked.some((sentence) => REMOVAL_WORDS.test(sentence))) return true;
   return facts.replies.some((reply) =>
-    sentencesNaming(reply, removal).some((sentence) => REMOVAL_WORDS.test(sentence)),
+    sentencesNaming(reply, removal).some((sentence) => replyExplains(sentence, removal)),
   );
 }
 

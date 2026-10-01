@@ -72,7 +72,7 @@ test('the ring warns at 60%, the card compacts at 80%, and the divider shows the
   await expect(page.locator('.mood', { hasText: 'done' })).toHaveCount(3, { timeout: 20_000 });
 
   const divider = page.getByRole('group', { name: 'Compacted' });
-  await expect(divider).toContainText('180K → 16K tokens');
+  await expect(divider).toContainText('180K → 12K tokens');
   const view = divider.getByRole('button', { name: 'View summary' });
   await view.click();
   await expect(divider.getByRole('button', { name: 'Hide summary' })).toHaveAttribute(

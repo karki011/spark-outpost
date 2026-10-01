@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
+import { cascadeAction, DECLINED_REASON, UNCONFIRMED_REASON } from './cascade.ts';
 import {
-  cascadeAction,
-  DECLINED_REASON,
   escalateFollowUp,
   initialFlow,
   nextStep,
@@ -130,5 +129,27 @@ describe('verified cascade', () => {
     expect(cascadeAction(null, false)).toBe('finish');
     expect(cascadeAction('unsupported', true)).toBe('finish');
     expect(cascadeAction('declined', true)).toBe('finish');
+  });
+
+  it("asks instead of rerunning when Jev names nothing missing for sure and Spark's checks pass (H)", () => {
+    const settled = { checksPass: true, criticConcerns: false, confidentUnmet: false };
+    expect(cascadeAction('unsupported', false, settled)).toBe('ask');
+    expect(cascadeAction('unsupported', false, { ...settled, checksPass: false })).toBe('escalate');
+    expect(cascadeAction('unsupported', false, { ...settled, criticConcerns: true })).toBe(
+      'escalate',
+    );
+    expect(cascadeAction('unsupported', false, { ...settled, confidentUnmet: true })).toBe(
+      'escalate',
+    );
+    expect(cascadeAction('declined', false, settled)).toBe('ask');
+    const unconfirmed: FlowEvent = {
+      type: 'verified',
+      accepted: 'unsupported',
+      reasons: [],
+      evidence: settled,
+    };
+    const [, , asked] = run(withJev(), [start, green, unconfirmed]);
+    expect(asked!.action).toEqual({ type: 'ask', kind: 'verify', reason: UNCONFIRMED_REASON });
+    expect(asked!.state.escalated).toBe(false);
   });
 });

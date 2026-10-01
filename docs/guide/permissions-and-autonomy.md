@@ -60,9 +60,11 @@ Whatever the mode and level, these wait for your answer:
 
 - **Approval cards.** They expire after 30 minutes if nobody answers, and the request is declined.
 - **Protected paths**: secret files, agent instruction files, git hooks and config, force pushes, and sending data out after reading secrets. See [Approvals and protected paths](approvals.md).
-- **Destructive work.** Its plan card waits at every level.
+- **Destructive work.** Its plan card waits at every level. Work counts as destructive when it deletes, drops or truncates data. Creating a table whose foreign key says `ON DELETE CASCADE` doesn't count.
 - **Continue past the budget?** See [Budgets and the budget card](estimates-and-budgets.md#budgets-and-the-budget-card).
 - **Pushing PR fixes** at **Review each step** and **Automatic**: the **Address PR feedback?** card.
+
+The model you pin is the chat's own model, the one that reads, plans and coordinates; Builders start from it. See [Builders in a pinned chat](auto-routing.md#builders-in-a-pinned-chat).
 
 **Full auto → PR** has firm limits too. It pushes only the chat's own branch and opens or updates its PR. It never merges, never force-pushes, and Builders never push or open PRs themselves.
 
@@ -70,13 +72,13 @@ Whatever the mode and level, these wait for your answer:
 
 **If you don't answer a question** in **Settings → Spark** sets how long Spark waits on its own questions: **Off**, **10s** (default), **30s** or **60s**. After that, Spark picks the safe option:
 
-| Card                                        | Spark picks                            |
-| ------------------------------------------- | -------------------------------------- |
-| **A few questions first**                   | The agent's best guesses               |
-| **Build this plan?** (Automatic, Full auto) | **Build this plan**                    |
-| A stuck or failing step                     | **Stop and report**                    |
-| **Jev could not verify the change**         | **Finish as it is**, marked unverified |
-| **This chat is almost full**                | **Keep going**                         |
+| Card                                             | Spark picks                            |
+| ------------------------------------------------ | -------------------------------------- |
+| **A few questions first** (Automatic, Full auto) | The agent's best guesses               |
+| **Build this plan?** (Automatic, Full auto)      | **Build this plan**                    |
+| A stuck or failing step                          | **Stop and report**                    |
+| **Jev could not verify the change**              | **Finish as it is**, marked unverified |
+| **This chat is almost full**                     | **Keep going**                         |
 
 With **Off**, these wait for you, except that **Full auto → PR** still builds a plan after 30 seconds. Approval cards never use this setting.
 

@@ -38,8 +38,9 @@ Spark reads the Builder's diff for removed files, functions, classes, exports, t
 A removal isn't flagged when:
 
 - your request asked for it, for example "delete src/legacy.ts" or "remove dead code";
-- the Builder said why in its reply, for example "Removed helperTotals because nothing calls it";
-- the code only moved: the same name shows up in the added lines.
+- the Builder said why in its reply, for example "Removed helperTotals because nothing calls it", or named the old code or described the change to its file, for example "the size test now expects 10 MB";
+- the code only moved: the same name shows up in the added lines;
+- the code was renamed: a test or function's body shows up again under a new name.
 
 When a Critic reviews the change, it makes the call on each removal instead of the rules.
 

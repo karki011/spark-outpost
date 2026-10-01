@@ -6,7 +6,7 @@ import type {
   RouteTier,
 } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
-import { CRITIC_REREVIEW_EFFORT } from '../advisor/policy.ts';
+import { CRITIC_REREVIEW_EFFORT, CRITIC_SMALL_DIFF_EFFORT } from '../advisor/policy.ts';
 import { selectableModels, tierOptions } from '../advisor/intake-questions.ts';
 import { cardFor, TIER_RANK } from '../model-cards/cards.ts';
 import { firstReportedEffort } from '../providers/efforts.ts';
@@ -34,7 +34,9 @@ import {
   type PriorEscalation,
 } from './escalation.ts';
 import type { RouteScore } from './route-score.ts';
+import { criticProvider, type BuiltShare } from './critic-provider.ts';
 import { KEPT_FOR_SESSION } from './session-keep.ts';
+import { jevRated, pinnedRule, pinnedStep, taskClearlySimple } from './pinned-builder.ts';
 import { signalText, taskSignals, type TaskSignals } from './task-signals.ts';
 import {
   escalatedEffort,
@@ -51,6 +53,7 @@ export interface RouteContext {
   routing: ModelRouting;
   chat: AgentPick;
   providerEffort: string | null;
+  mainModel?: string | null;
   candidates: readonly AdvisorCandidate[];
   request?: string;
   now?: Date;
@@ -96,34 +99,6 @@ function labelOf(candidate: AdvisorCandidate | undefined, model: string | null):
 
 function effortIds(candidate: AdvisorCandidate | undefined): string[] {
   return candidate?.efforts.map((effort) => effort.id) ?? [];
-}
-
-export interface BuiltShare {
-  provider: string;
-  files: number;
-}
-
-function smallestShare(context: RouteContext, built: readonly BuiltShare[]): string {
-  const share = (provider: string) =>
-    built
-      .filter((entry) => entry.provider === provider)
-      .reduce((sum, entry) => sum + entry.files, 0);
-  const ranked = context.candidates
-    .map((candidate) => candidate.provider)
-    .sort(
-      (a, b) =>
-        share(a) - share(b) ||
-        Number(a === context.chat.provider) - Number(b === context.chat.provider),
-    );
-  return ranked[0] ?? context.chat.provider;
-}
-
-export function criticProvider(context: RouteContext, built: readonly BuiltShare[] = []): string {
-  const builders = new Set([context.chat.provider, ...built.map((entry) => entry.provider)]);
-  const fresh = context.candidates.find((candidate) => !builders.has(candidate.provider));
-  if (fresh) return fresh.provider;
-  if (context.candidates.length < 2) return context.chat.provider;
-  return smallestShare(context, built);
 }
 
 export function chatPick(context: RouteContext): AgentPick {
@@ -234,7 +209,11 @@ export function routeBuilder(
   facts: RouteFacts,
   jevTier: RouteTier | null = null,
 ): MemberRoute {
-  const base = ruleRoute(context, facts, jevTier);
+  const ruled = ruleRoute(context, facts, jevTier);
+  const jevPinned = ruled.routedBy === 'pinned' ? pinnedByJev(context, facts, ruled) : null;
+  if (jevPinned) return jevPinned;
+  const base =
+    ruled.routedBy === 'pinned' ? pinnedRuleRoute(context, facts, jevTier, ruled) : ruled;
   const complex = base.routedBy === 'pinned' ? null : builderComplexity(context, facts);
   const autoWouldUse = flooredOrNull(context, base.autoWouldUse);
   const scored = scoredBuilder(context, facts, { ...base, autoWouldUse }, complex);
@@ -246,6 +225,18 @@ export function routeBuilder(
   const rule = builderRule(base, complex, facts);
   const route = withNote({ ...base, rule, autoWouldUse }, floored, 'builder');
   return { ...route, pick: { ...route.pick, effort: builderEffort(context, route.pick) } };
+}
+
+function pinnedByJev(context: RouteContext, facts: RouteFacts, base: MemberRoute) {
+  if (!jevRated(facts.ratings)) return null;
+  const complex = builderComplexity(context, facts);
+  const asRules: MemberRoute = { ...base, routedBy: 'rules', rule: CHAT_RULE };
+  const scored = scoredBuilder(context, facts, asRules, complex, true);
+  if (!scored) return null;
+  const step = pinnedStep(base.pick, scored.pick);
+  if (step === 'same' || (step === 'below' && !taskClearlySimple(facts.ratings))) return null;
+  const rule = scored.escalation ? scored.rule : pinnedRule(step, base.pick);
+  return { ...scored, routedBy: 'jev' as const, rule };
 }
 
 function asTierModel(pick: AgentPick) {
@@ -306,8 +297,10 @@ function scoredBuilder(
   facts: RouteFacts,
   base: MemberRoute,
   complex: ComplexSignal | null,
+  anchoredAtPin = false,
 ): MemberRoute | null {
   if (base.routedBy === 'pinned' || base.rule === DESTRUCTIVE_RULE) return null;
+  if (context.routing === 'pinned' && !anchoredAtPin) return null;
   if (complex?.source === 'user') return null;
   const now = nowOf(context);
   const provider = context.chat.provider;
@@ -368,6 +361,19 @@ export function soloRoute(context: RouteContext): MemberRoute {
   return { pick: chatPick(context), routedBy: 'pinned', rule: SPARK_OFF_RULE, autoWouldUse: null };
 }
 
+function pinnedRuleRoute(
+  context: RouteContext,
+  facts: RouteFacts,
+  jevTier: RouteTier | null,
+  pinned: MemberRoute,
+): MemberRoute {
+  const ruled = ruleRoute({ ...context, routing: 'auto' }, facts, jevTier);
+  if (facts.destructive) return ruled;
+  const trivialBelow =
+    ruled.rule === TRIVIAL_RULE && pinnedStep(pinned.pick, ruled.pick) === 'below';
+  return trivialBelow ? ruled : pinned;
+}
+
 function ruleRoute(
   context: RouteContext,
   facts: RouteFacts,
@@ -395,12 +401,24 @@ function ruleRoute(
   return { pick: chat, routedBy: 'rules', rule: CHAT_RULE, autoWouldUse };
 }
 
-export function routeMemberModel(
+export const MAIN_SESSION_RULE = "the chat's own model, kept for the whole chat";
+
+function mainPick(context: RouteContext): AgentPick {
+  const chat = chatPick(context);
+  const id = context.mainModel;
+  if (context.routing === 'pinned' || !id || id === chat.model) return chat;
+  const label = labelOf(candidateFor(context, chat.provider), id);
+  return { ...chat, model: id, modelLabel: label };
+}
+
+export function mainSessionRoute(
   context: RouteContext,
-  facts: RouteFacts,
   jevTier: RouteTier | null = null,
 ): MemberRoute {
-  return floorReaderRoute(context, ruleRoute(context, facts, jevTier));
+  const base = ruleRoute(context, { trivial: false, destructive: false }, jevTier);
+  if (base.routedBy === 'pinned') return floorReaderRoute(context, base);
+  const route: MemberRoute = { ...base, pick: mainPick(context), rule: MAIN_SESSION_RULE };
+  return floorReaderRoute(context, route);
 }
 
 export function ruleCriticPick(
@@ -438,6 +456,15 @@ export function rereviewCritic(context: RouteContext, previous: MemberRoute): Me
   const effort = loweredEffort(efforts, previous.pick.effort, CRITIC_REREVIEW_EFFORT);
   if (effort === previous.pick.effort) return previous;
   return { ...previous, pick: { ...previous.pick, effort } };
+}
+
+export const SMALL_DIFF_NOTE = 'small diff: first review at medium effort';
+
+export function smallDiffCritic(context: RouteContext, route: MemberRoute): MemberRoute {
+  const efforts = effortIds(candidateFor(context, route.pick.provider));
+  const effort = loweredEffort(efforts, route.pick.effort, CRITIC_SMALL_DIFF_EFFORT);
+  if (effort === route.pick.effort) return route;
+  return { ...route, pick: { ...route.pick, effort }, note: SMALL_DIFF_NOTE };
 }
 
 export function escalate(context: RouteContext, previous: MemberRoute): MemberRoute {
