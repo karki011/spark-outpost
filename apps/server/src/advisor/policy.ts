@@ -1,6 +1,6 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'laws-2-live-harness-4';
+export const POLICY_VERSION = 'laws-3-pinned-orchestrator';
 
 export type ActingQuestion =
   | 'question'
@@ -138,6 +138,7 @@ export const PIECE_BELOW_CHAT_MAX_RELIABILITY = 0.3;
 export const PIECE_BELOW_CHAT_MIN_CONFIDENCE = 0.6;
 export const PIECE_BELOW_CHAT_MEASURED_MIN = 10;
 export const PIECE_BELOW_CHAT_PASS_MARGIN = 0.05;
+export const TASK_BELOW_CHAT_MAX_STAKES = 2;
 export const COORD_PIECE_FIX_TURNS = 2;
 export const COORD_HANDOFF_SHARE = 0.75;
 export const COORD_CARD_PIECES = 5;

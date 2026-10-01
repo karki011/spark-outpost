@@ -35,7 +35,7 @@ export function whyLine(input: WhyInput): string {
   const tier = card ? ` · ${card.tier} tier` : '';
   const base =
     input.routedBy === 'pinned'
-      ? `Why ${label}: pinned in this chat`
+      ? `Why ${label}: pinned in this chat as the orchestrator's model`
       : input.routedBy === 'jev'
         ? `Why ${label}: ${input.rule}${tier}`
         : `Why ${label}: rule ${input.rule}${tier}`;

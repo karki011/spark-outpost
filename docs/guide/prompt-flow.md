@@ -13,7 +13,7 @@ Not every request takes every step. A question stops after step 1; a small fix s
 
 1. **Spark reads the request.** It decides: answer, ask a few questions first, plan first, or build. A line above the crew says what it chose, for example "Build it · 87% sure". See [How Spark decides what to do](spark-crew.md#how-spark-decides-what-to-do).
 2. **A plan, if needed.** Big or destructive work, or a request for a plan, gets the **Build this plan?** card with a time and cost estimate. Nothing changes until it's agreed.
-3. **Spark picks the model.** A pinned model stays; on **Auto**, Spark picks one for this request. The why-line says why. See [Pick a model for a chat](auto-routing.md).
+3. **Spark picks the model.** A pinned model stays for the chat itself, and the Builder starts from it, moving down only for clearly simple work or up for hard work. On **Auto**, Spark picks one for this request. The why-line says why. See [Pick a model for a chat](auto-routing.md).
 4. **A Builder makes the change** in the chat's worktree, within a budget of tool calls and time. Big work splits into pieces with several Builders. See [Big work in pieces](pieces.md).
 5. **Spark runs the checks itself**, such as your tests and lint. If they fail, the Builder gets up to 2 turns to fix them. Spark reports its own run, never the Builder's claim.
 6. **Jev checks the result**, if **Check changes with Jev** is on. A change Jev finds incomplete is redone once on a stronger model.

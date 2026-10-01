@@ -64,6 +64,8 @@ Whatever the mode and level, these wait for your answer:
 - **Continue past the budget?** See [Budgets and the budget card](estimates-and-budgets.md#budgets-and-the-budget-card).
 - **Pushing PR fixes** at **Review each step** and **Automatic**: the **Address PR feedback?** card.
 
+The model you pin is the chat's own model, the one that reads, plans and coordinates; Builders start from it. See [Builders in a pinned chat](auto-routing.md#builders-in-a-pinned-chat).
+
 **Full auto → PR** has firm limits too. It pushes only the chat's own branch and opens or updates its PR. It never merges, never force-pushes, and Builders never push or open PRs themselves.
 
 ## If you don't answer

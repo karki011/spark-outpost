@@ -21,10 +21,10 @@ import {
   routeMemberModel,
   smallDiffCritic,
   soloRoute,
-  type BuiltShare,
   type MemberRoute,
   type RouteFacts,
 } from './routing.ts';
+import type { BuiltShare } from './critic-provider.ts';
 import { builderKey, type Session } from './session.ts';
 import { openBudget } from '../laws/builder-start.ts';
 import { demotionsFor } from '../laws/demotion-history.ts';

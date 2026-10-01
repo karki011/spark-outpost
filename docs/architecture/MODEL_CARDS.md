@@ -270,7 +270,7 @@ Codex's adapter reports 6 Astra (frontier, $10/$50) as its default, so every unp
 
 - **What it shows.** The advice or route tooltip gains one line per pick, for example:
   - "Why Sonnet 5: rule trivial → middle tier · mid tier · Jev would have used Opus 5.5"
-  - "Why Opus 5.5: pinned in this chat"
+  - "Why Opus 5.5: pinned in this chat as the orchestrator's model"
 - **Where it comes from.** `model-cards/why.ts` (`whyLine`) builds it from the stored route decision: the pick, the rule, the card's tier, any floor or retiring note, and Jev's observed pick (`autoWouldUse`). `DispatchLine` lists every route's why line in its tooltip, named by crew member.
 
 ### Stale data

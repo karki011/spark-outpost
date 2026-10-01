@@ -194,15 +194,18 @@ describe('no ping-pong', () => {
 });
 
 describe('absolute rules', () => {
-  it('leaves pins, destructive work and an explicit ask for the top model alone', () => {
+  it('escalates hard work in a pinned chat by the same rules, and leaves destructive work alone', () => {
     const big = session(400_000);
     const pinned = routeBuilder(chat('sonnet', 'pinned'), {
       ...plainFacts,
       ratings: ratings(5, 5),
       session: big,
     });
-    expect(pinned).toMatchObject({ routedBy: 'pinned', pick: { model: 'sonnet' } });
-    expect(pinned.escalation).toBeUndefined();
+    expect(pinned).toMatchObject({ routedBy: 'jev', pick: { model: 'opus[1m]' } });
+    expect(pinned.escalation).toEqual(followUp(ratings(5, 5), big).escalation);
+    const unrated = routeBuilder(chat('sonnet', 'pinned'), { ...plainFacts, session: big });
+    expect(unrated).toMatchObject({ routedBy: 'pinned', pick: { model: 'sonnet' } });
+    expect(unrated.escalation).toBeUndefined();
     const destructive = followUp(ratings(5, 5), big, { destructive: true });
     expect(destructive.rule).toBe('destructive → top tier');
     expect(destructive.escalation).toBeUndefined();

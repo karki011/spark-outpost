@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { criticProvider } from './critic-provider.ts';
 import {
-  criticProvider,
   escalate,
   jevTierPick,
   rereviewCritic,
@@ -14,13 +14,17 @@ import { candidates, context, plainFacts } from './route-fixtures.ts';
 import { escalatedEffort } from './tiers.ts';
 
 describe('rule routes', () => {
-  it('keeps a pinned model whatever the rules or Jev say', () => {
+  it('keeps a pinned model without Jev ratings, except for destructive work', () => {
     expect(
-      routeBuilder(context('pinned'), { trivial: true, destructive: true }, 'small'),
+      routeBuilder(context('pinned'), { trivial: true, destructive: false }, 'small'),
     ).toMatchObject({
       routedBy: 'pinned',
       pick: { model: 'sonnet' },
       autoWouldUse: { model: 'sonnet' },
+    });
+    expect(routeBuilder(context('pinned'), { trivial: false, destructive: true })).toMatchObject({
+      rule: 'destructive → top tier',
+      pick: { model: 'opus[1m]' },
     });
   });
 
