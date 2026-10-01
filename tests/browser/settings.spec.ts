@@ -70,7 +70,7 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   const sparkSwitch = spark.getByRole('switch', { name: 'Spark', exact: true });
   await expect(sparkSwitch).toHaveAttribute('aria-checked', 'true');
   const switches = spark.getByRole('switch');
-  await expect(switches).toHaveCount(7);
+  await expect(switches).toHaveCount(8);
   for (const removed of ['Call me by name', 'Work like a team', 'Critic']) {
     await expect(spark.getByText(removed, { exact: true })).toHaveCount(0);
   }
@@ -265,4 +265,60 @@ test('a failed test message makes the provider blob wobble and shows the error',
   await expect(claude.locator('.plogo')).toHaveClass(/test-failed/);
   await expect(claude.locator('.test-bubble')).toHaveCount(0);
   await expect(claude.getByRole('button', { name: 'Send test message' })).toBeVisible();
+});
+
+test('context compaction thresholds validate inline and save from Spark settings', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const spark = page.getByRole('dialog', { name: 'Spark' });
+  const warn = spark.getByRole('textbox', { name: 'Warn when context is, in percent' });
+  const compact = spark.getByRole('textbox', { name: 'Compact automatically at, in percent' });
+  const saved = () =>
+    page.waitForResponse((response) => response.url().endsWith('/api/profile') && response.ok());
+  const profile = async () => (await (await page.request.get('/api/setup')).json()).profile;
+
+  await expect(warn).toHaveValue('60');
+  await expect(compact).toHaveValue('80');
+  await expect(warn).toHaveAccessibleDescription('The context ring turns amber at 60% full.');
+
+  await warn.fill('78');
+  await expect(warn).toHaveAttribute('aria-invalid', 'true');
+  await expect(warn).toHaveAccessibleDescription(
+    'Warn at least 5 points below the compaction point.',
+  );
+  await warn.fill('20');
+  await expect(warn).toHaveAccessibleDescription('Warn at a value from 30% to 90%.');
+  let save = saved();
+  await warn.fill('65');
+  await warn.press('Enter');
+  await save;
+  await expect(warn).not.toHaveAttribute('aria-invalid');
+  await expect(warn).toHaveAccessibleDescription('The context ring turns amber at 65% full.');
+
+  await compact.fill('96');
+  await expect(compact).toHaveAccessibleDescription('Compact at a value from 40% to 95%.');
+  save = saved();
+  await compact.fill('90');
+  await compact.blur();
+  await save;
+  await expect(compact).toHaveAccessibleDescription(
+    'Spark compacts at 90% (asks first at Review each step) and asks again at 95% after Keep going.',
+  );
+
+  const toggle = spark.getByRole('switch', { name: 'Compact automatically at' });
+  save = saved();
+  await toggle.click();
+  await save;
+  await expect(toggle).not.toBeChecked();
+  await expect(compact).toBeHidden();
+  await expect(toggle).toHaveAccessibleDescription(
+    'Spark only warns and offers the card at 90%; it never compacts by itself.',
+  );
+  expect(await profile()).toMatchObject({
+    compactWarnPercent: 65,
+    compactAtPercent: 90,
+    autoCompact: false,
+  });
 });

@@ -144,6 +144,29 @@ describe('spark_settings', () => {
     });
     expect(body.autonomyLevels).toHaveLength(3);
   });
+
+  it('returns the context compaction thresholds', async () => {
+    const read = async () =>
+      (await (tools ?? (await open())).call('spark_settings')).json<Record<string, unknown>>()
+        .contextCompaction;
+    expect(await read()).toEqual({
+      warnAtPercent: 60,
+      compactAtPercent: 80,
+      compactAutomatically: true,
+      askAgainAfterKeepGoingAtPercent: 90,
+    });
+    await updateProfile(t.db, t.workspaceId, {
+      compactWarnPercent: 70,
+      compactAtPercent: 90,
+      autoCompact: false,
+    });
+    expect(await read()).toEqual({
+      warnAtPercent: 70,
+      compactAtPercent: 90,
+      compactAutomatically: false,
+      askAgainAfterKeepGoingAtPercent: 95,
+    });
+  });
 });
 
 describe('spark_projects and spark_map', () => {

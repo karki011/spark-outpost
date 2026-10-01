@@ -231,15 +231,15 @@ Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket
     id: 'spark-tools',
     title: 'Which Spark tool answers which question',
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
-    text: `Needs me? spark_attention: waiting cards, failed chats, flagged tickets. A chat's live run, crew, pieces, Jev's picks and every Jev decision: spark_run. Plan and files changed (line counts, never contents): spark_task. Chats and messages: spark_chats, spark_chat. Compacted turns: spark_chat_history. What an agent did step by step: spark_audit. Recent work: spark_activity, spark_brief.
-Spend today or this week by provider, model or chat: spark_spend. Trends, cost per task, harness, outcomes and feedback: spark_analytics. Model price, strengths and pass rates: spark_models.
-Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what breaks if a file changes: spark_map with file. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. What Spark is doing with a PR it opened (checks, comments, triage, rounds): spark_pr_follow_up. Estimates, budgets, removal findings, demotions: spark_laws. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
+    text: `Needs me? spark_attention. A chat's live run, crew, pieces and Jev decisions: spark_run. Plan and files changed: spark_task. Chats and messages: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent work: spark_activity, spark_brief.
+Spend: spark_spend. Trends and outcomes: spark_analytics. Model price, strengths and pass rates: spark_models.
+Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what a file change breaks: spark_map. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. Spark's follow-up on its PRs: spark_pr_follow_up. Estimates, budgets, removal findings, demotions: spark_laws. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
   },
   {
     id: 'compaction',
     title: 'When a chat gets full: compaction',
     keywords: ['compact', 'compaction', 'context', 'full', 'ring', 'summary', 'tokens'],
-    text: `The context ring warns at 70%. At 85% Spark compacts between turns, never mid-turn: Review each step asks (Compact now, a fresh chat with a summary, or Keep going until 95%); Automatic compacts by itself with the agent's /compact or a Spark summary. A divider shows it. spark_chat_history reads every earlier turn.`,
+    text: `The ring warns at 60%; Spark compacts at 80% between turns (both in Settings → Spark, spark_settings). Review each step asks: Compact now, a fresh chat with a summary, or Keep going; Automatic uses the agent's /compact or a Spark summary; with automatic compaction off it always asks. A divider shows it. spark_chat_history reads earlier turns.`,
   },
   {
     id: 'settings-spark',

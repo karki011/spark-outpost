@@ -1,4 +1,9 @@
-import { CHECKPOINT_OPTION, type RunMode } from '@spark-outpost/contracts';
+import {
+  CHECKPOINT_OPTION,
+  reaskPercent,
+  type CompactionThresholds,
+  type RunMode,
+} from '@spark-outpost/contracts';
 import { resolveChatSettings } from '../persistence/chat-settings.ts';
 import { insertCompaction, pendingCardInChat } from '../persistence/compactions.ts';
 import type { Lease } from '../persistence/jobs.ts';
@@ -12,7 +17,7 @@ import {
   type ProviderSessionRecord,
 } from '../persistence/provider-sessions.ts';
 import { sessionCommands } from '../persistence/session-commands.ts';
-import { autoContinueSeconds } from '../persistence/setup.ts';
+import { autoContinueSeconds, compactionThresholds } from '../persistence/setup.ts';
 import { askCheckpoint, compactCard } from '../orchestration/checkpoint.ts';
 import { kilo } from '../orchestration/escalation.ts';
 import type { Append, RunControl, TurnDeps } from '../workflow/agent-turn.ts';
@@ -95,8 +100,12 @@ async function candidateFor(deps: TurnDeps, input: RunInput): Promise<Candidate 
   };
 }
 
-function cardReason(reading: ContextReading): string {
-  return `The agent's context is ${usedPercent(reading)}% full (${kilo(reading.used)} of ${kilo(reading.size)} tokens). Compacting keeps the full transcript in Spark; the agent carries on from a summary.`;
+function cardReason(reading: ContextReading, thresholds: CompactionThresholds): string {
+  const full = `The agent's context is ${usedPercent(reading)}% full (${kilo(reading.used)} of ${kilo(reading.size)} tokens).`;
+  const keeps =
+    'Compacting keeps the full transcript in Spark; the agent carries on from a summary.';
+  const manual = thresholds.autoCompact ? '' : ' Automatic compaction is off, so Spark asks first.';
+  return `${full} ${keeps}${manual}`;
 }
 
 async function notice(append: Append, text: string): Promise<void> {
@@ -111,6 +120,7 @@ async function askFirst(
   append: Append,
   control: Pick<RunControl, 'signal'>,
   reading: ContextReading,
+  thresholds: CompactionThresholds,
 ) {
   const seconds = await autoContinueSeconds(deps.db, input.workspaceId);
   return askCheckpoint(
@@ -124,7 +134,7 @@ async function askFirst(
       pollMs: deps.approvalPollMs ?? APPROVAL_POLL_MS,
       autoContinueMs: seconds === null ? null : seconds * 1000,
     },
-    compactCard(cardReason(reading)),
+    compactCard(cardReason(reading, thresholds), reaskPercent(thresholds.compactPercent)),
     1,
   );
 }
@@ -242,7 +252,9 @@ export async function compactBeforeTurn(
   const candidate = await candidateFor(deps, input);
   if (!candidate) return keep;
   const settings = await resolveChatSettings(deps.db, input.identity.threadId).catch(() => null);
+  const thresholds = await compactionThresholds(deps.db, input.workspaceId);
   const step = compactStep({
+    thresholds,
     reading: candidate.reading,
     level: settings?.level ?? input.level,
     snoozed: candidate.session.compactSnoozed,
@@ -250,7 +262,7 @@ export async function compactBeforeTurn(
   });
   if (step === 'none') return keep;
   if (step === 'compact') return compactNow(deps, lease, input, append, control, candidate);
-  const answer = await askFirst(deps, lease, input, append, control, candidate.reading);
+  const answer = await askFirst(deps, lease, input, append, control, candidate.reading, thresholds);
   if (answer.type === 'stopped') return { kind: 'stopped' };
   if (answer.type === 'timeout') return keep;
   if (answer.optionId === CHECKPOINT_OPTION.compactNow) {

@@ -1,9 +1,10 @@
 import {
+  compactionThresholdError,
   defaultModeFor,
   modePosture,
   permissionFor,
   type AgentModeOption,
-  type CapabilityOption,
+  type CompactionThresholds,
   type InvolvementLevel,
   type Personality,
   type Profile,
@@ -15,15 +16,9 @@ import {
   type SparkSessionPrefs,
   type UpdateProfileRequest,
 } from '@spark-outpost/contracts';
-import {
-  effectiveDefaultModel,
-  retirementOf,
-  retirementText,
-  usableDefault,
-  type Retirement,
-} from '../model-cards/cards.ts';
+import { effectiveDefaultModel, retirementOf, usableDefault } from '../model-cards/cards.ts';
 import { catalog, catalogEntry } from '../providers/catalog.ts';
-import { INITIAL_PROVIDER_EFFORT, reportedEfforts } from '../providers/efforts.ts';
+import { INITIAL_PROVIDER_EFFORT } from '../providers/efforts.ts';
 import type { TestOutcome } from '../setup/test-message.ts';
 import type { VerifiedConnection } from '../setup/verify.ts';
 import { listAdvisors } from './advisors.ts';
@@ -47,9 +42,12 @@ interface ProfileRow {
   spend_cap_usd: string | null;
   morning_brief: boolean;
   morning_brief_time: string;
+  compact_warn_percent: number;
+  compact_at_percent: number;
+  auto_compact: boolean;
 }
 
-interface ConnectionRow {
+export interface ConnectionRow {
   provider: ProviderId;
   method: 'cli' | 'api_key';
   detail: string;
@@ -89,7 +87,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
     `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
        jev_diffs, ship_failing_checks, pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
        pr_follow_up_reviews, pr_follow_up_replies, personality, spark_enabled, default_level,
-       spend_cap_usd, morning_brief,
+       spend_cap_usd, morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
        to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
@@ -97,7 +95,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
   return rows[0]!;
 }
 
-async function connectionRows(db: Queryable, workspaceId: string): Promise<ConnectionRow[]> {
+export async function connectionRows(db: Queryable, workspaceId: string): Promise<ConnectionRow[]> {
   const { rows } = await db.query<ConnectionRow>(
     'SELECT * FROM provider_connections WHERE workspace_id = $1',
     [workspaceId],
@@ -105,7 +103,7 @@ async function connectionRows(db: Queryable, workspaceId: string): Promise<Conne
   return rows;
 }
 
-function toConnection(row: ConnectionRow | undefined): ProviderConnection | null {
+export function toConnection(row: ConnectionRow | undefined): ProviderConnection | null {
   if (!row || row.disconnected_at) return null;
   return {
     method: row.method,
@@ -188,8 +186,19 @@ export async function getSetupState(
     spendCapUsd: effectiveSpendCap(savedSpendCap(profile), serverSpendCapUsd),
     morningBrief: profile.morning_brief,
     morningBriefTime: profile.morning_brief_time,
+    compactWarnPercent: profile.compact_warn_percent,
+    compactAtPercent: profile.compact_at_percent,
+    autoCompact: profile.auto_compact,
   };
   return { profile: result, providers, advisors };
+}
+
+function assertThresholds(profile: ProfileRow, update: UpdateProfileRequest): void {
+  const error = compactionThresholdError(
+    update.compactWarnPercent ?? profile.compact_warn_percent,
+    update.compactAtPercent ?? profile.compact_at_percent,
+  );
+  if (error) throw new InvalidDefaultError(error);
 }
 
 export async function updateProfile(
@@ -197,7 +206,7 @@ export async function updateProfile(
   workspaceId: string,
   update: UpdateProfileRequest,
 ): Promise<void> {
-  await ensureProfile(db, workspaceId);
+  assertThresholds(await ensureProfile(db, workspaceId), update);
   if (update.defaultProvider) {
     const connected = connectedIds(await connectionRows(db, workspaceId));
     if (!connected.includes(update.defaultProvider)) {
@@ -228,6 +237,9 @@ export async function updateProfile(
        pr_follow_up_checks = COALESCE($18, pr_follow_up_checks),
        pr_follow_up_reviews = COALESCE($19, pr_follow_up_reviews),
        pr_follow_up_replies = COALESCE($20, pr_follow_up_replies),
+       compact_warn_percent = COALESCE($21, compact_warn_percent),
+       compact_at_percent = COALESCE($22, compact_at_percent),
+       auto_compact = COALESCE($23, auto_compact),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -251,6 +263,9 @@ export async function updateProfile(
       update.prFollowUpChecks ?? null,
       update.prFollowUpReviews ?? null,
       update.prFollowUpReplies ?? null,
+      update.compactWarnPercent ?? null,
+      update.compactAtPercent ?? null,
+      update.autoCompact ?? null,
     ],
   );
 }
@@ -295,6 +310,18 @@ export async function autoContinueSeconds(
   workspaceId: string,
 ): Promise<number | null> {
   return (await ensureProfile(db, workspaceId)).auto_continue_seconds;
+}
+
+export async function compactionThresholds(
+  db: Queryable,
+  workspaceId: string,
+): Promise<CompactionThresholds> {
+  const profile = await ensureProfile(db, workspaceId);
+  return {
+    warnPercent: profile.compact_warn_percent,
+    compactPercent: profile.compact_at_percent,
+    autoCompact: profile.auto_compact,
+  };
 }
 
 export async function saveConnection(
@@ -387,104 +414,4 @@ export async function disconnectProvider(
      WHERE workspace_id = $1 AND provider = $2`,
     [workspaceId, provider],
   );
-}
-
-interface CapturedOptions {
-  models: CapabilityOption[];
-  efforts: CapabilityOption[];
-  modes: AgentModeOption[];
-}
-
-async function capabilityOptions(
-  db: Queryable,
-  workspaceId: string,
-  provider: ProviderId,
-): Promise<CapturedOptions | null> {
-  const { rows } = await db.query<CapturedOptions>(
-    `SELECT models, efforts, modes FROM provider_capabilities
-     WHERE workspace_id = $1 AND provider = $2`,
-    [workspaceId, provider],
-  );
-  return rows[0] ?? null;
-}
-
-async function offersModel(
-  db: Queryable,
-  workspaceId: string,
-  connection: ConnectionRow,
-  model: string,
-): Promise<boolean> {
-  if (connection.models.some((option) => option.id === model)) return true;
-  const captured = await capabilityOptions(db, workspaceId, connection.provider);
-  return captured?.models.some((option) => option.id === model) ?? false;
-}
-
-async function reportsEffort(
-  db: Queryable,
-  workspaceId: string,
-  provider: ProviderId,
-  effort: string,
-): Promise<boolean> {
-  const captured = await capabilityOptions(db, workspaceId, provider);
-  return reportedEfforts(provider, captured?.efforts ?? null).some(
-    (option) => option.id === effort,
-  );
-}
-
-function retiringModel(connection: ConnectionRow, model: string): Retirement | null {
-  const listed = connection.models.find((option) => option.id === model) ?? { id: model };
-  return retirementOf(listed, connection.provider);
-}
-
-export async function updateProviderDefaults(
-  db: Queryable,
-  workspaceId: string,
-  provider: ProviderId,
-  update: {
-    model?: string | undefined;
-    agentMode?: string | undefined;
-    effort?: string | null | undefined;
-  },
-): Promise<ProviderConnection> {
-  const entry = catalogEntry(provider);
-  const current = (await connectionRows(db, workspaceId)).find(
-    (row) => row.provider === provider && !row.disconnected_at,
-  );
-  if (!current)
-    throw new InvalidDefaultError(`Connect ${entry.name} before changing its defaults.`);
-  if (update.model && !(await offersModel(db, workspaceId, current, update.model))) {
-    throw new InvalidDefaultError(`${entry.name} does not offer that model.`);
-  }
-  const retiring = update.model ? retiringModel(current, update.model) : null;
-  if (retiring) {
-    throw new InvalidDefaultError(
-      `That model ${retirementText(retiring, 'retires')}, so it can't be the default. Pick it in a chat instead.`,
-    );
-  }
-  const modes = update.agentMode
-    ? ((await capabilityOptions(db, workspaceId, provider))?.modes ?? [])
-    : [];
-  if (update.agentMode) assertModeOffered(provider, update.agentMode, modes);
-  if (update.effort && !(await reportsEffort(db, workspaceId, provider, update.effort))) {
-    throw new InvalidDefaultError(`${entry.name} does not have that effort level.`);
-  }
-  const { rows } = await db.query<ConnectionRow>(
-    `UPDATE provider_connections SET
-       model = COALESCE($3, model),
-       permission = COALESCE($4, permission),
-       effort = CASE WHEN $6 THEN $5 ELSE effort END,
-       agent_mode = COALESCE($7, agent_mode)
-     WHERE workspace_id = $1 AND provider = $2
-     RETURNING *`,
-    [
-      workspaceId,
-      provider,
-      update.model ?? null,
-      update.agentMode ? permissionFor(provider, update.agentMode, modes) : null,
-      update.effort ?? null,
-      update.effort !== undefined,
-      update.agentMode ?? null,
-    ],
-  );
-  return toConnection(rows[0])!;
 }
