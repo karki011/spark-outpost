@@ -149,7 +149,9 @@ test('hiding the companion and bringing it back from Settings', async ({ page })
   await panel(page).getByRole('button', { name: 'Hide companion' }).click();
   await expect(companion(page)).toHaveCount(0);
   await expect(
-    page.locator('[aria-live="polite"]').filter({ hasText: 'companion hidden' }),
+    page.locator('[aria-live="polite"]').filter({
+      hasText: 'companion hidden. Turn it back on in Settings, Spark, Around the app.',
+    }),
   ).toHaveCount(1);
 
   await page.reload();
