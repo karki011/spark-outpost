@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AgentPick } from '@spark-outpost/contracts';
 import { context } from '../orchestration/route-fixtures.ts';
 import { OWN_WORKTREE, type PieceAnswer, type RouteOption } from './piece-questions.ts';
+import { MEASURED_BELOW_CHAT, NOT_CLEARLY_SIMPLE } from './piece-demand.ts';
 import { routePieceList, type RoutablePiece, type RouteRules } from './piece-routes.ts';
 
 const SONNET: AgentPick = {
@@ -306,5 +307,73 @@ describe('routePieceList', () => {
       'in_order',
       'read_only',
     ]);
+  });
+});
+
+describe('routing below the chat model (C2)', () => {
+  const opusChat = { ...context('pinned'), chat: { ...context('pinned').chat, model: 'opus[1m]' } };
+  const opusRules = (extra: Partial<RouteRules> = {}) => ({ route: opusChat, ...extra });
+  const DOCS = answer({
+    kind: { choice: 'docs', confidence: 1, probabilities: { docs: 1 } },
+    reasoning: score(1.9, 0.54),
+    coding: score(1, 1),
+    context: score(1.2),
+    reliability: 0.04,
+  });
+  const C2_CSV = answer({
+    reasoning: score(2.32, 0.57),
+    coding: score(2.36, 0.7),
+    context: score(1.76, 0.77),
+    reliability: 0.15,
+  });
+  const EASY = answer({ reasoning: score(1.5), coding: score(1.2), context: score(1) });
+
+  it('keeps a piece that is not clearly simple at the chat model’s tier', () => {
+    const result = routed([['P1', C2_CSV]], opusRules());
+    expect(result.pieces[0]!.model).toMatchObject({
+      pick: { model: 'opus[1m]' },
+      demand: { tier: 'top', raisedBy: NOT_CLEARLY_SIMPLE },
+    });
+    expect(result.pieces[0]!.model.reason).toContain(`top tier (${NOT_CLEARLY_SIMPLE})`);
+  });
+
+  it('lets docs work and confidently easy work go below it', () => {
+    const result = routed(
+      [
+        ['P1', DOCS],
+        ['P2', EASY],
+      ],
+      opusRules(),
+    );
+    expect(result.pieces.map((entry) => entry.model.pick.model)).toEqual([
+      'gpt-6-sol',
+      'gpt-6-sol',
+    ]);
+  });
+
+  it('keeps easy work on a core area, or rated with low confidence, at the chat tier', () => {
+    const core = routed([['P1', EASY]], opusRules({ core: () => true }));
+    expect(core.pieces[0]!.model.pick.model).toBe('opus[1m]');
+    const unsure = answer({ reasoning: score(1.5, 0.55), coding: score(1.2), context: score(1) });
+    expect(routed([['P1', unsure]], opusRules()).pieces[0]!.model.pick.model).toBe('opus[1m]');
+  });
+
+  it('never raises a piece whose route already matches the chat tier', () => {
+    expect(routed([['P1', C2_CSV]]).pieces[0]!.model.demand).toMatchObject({ raisedBy: null });
+  });
+
+  it('lets measured pass rates by task kind tighten or loosen the rule', () => {
+    const measured = (below: number) => () => ({ below, chat: 0.9, runs: 20 });
+    const tight = routed([['P1', EASY]], opusRules({ kindPassRates: measured(0.6) }));
+    expect(tight.pieces[0]!.model).toMatchObject({
+      pick: { model: 'opus[1m]' },
+      demand: { raisedBy: MEASURED_BELOW_CHAT },
+    });
+    const loose = routed([['P1', C2_CSV]], opusRules({ kindPassRates: measured(0.88) }));
+    expect(loose.pieces[0]!.model.pick.model).toBe('gpt-6-sol');
+    const thin = () => ({ below: 0.2, chat: 0.9, runs: 3 });
+    expect(
+      routed([['P1', EASY]], opusRules({ kindPassRates: thin })).pieces[0]!.model.pick.model,
+    ).toBe('gpt-6-sol');
   });
 });

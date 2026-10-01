@@ -1,4 +1,12 @@
 import {
+  PIECE_BELOW_CHAT_KIND_CONFIDENCE,
+  PIECE_BELOW_CHAT_KINDS,
+  PIECE_BELOW_CHAT_MAX_CODING,
+  PIECE_BELOW_CHAT_MAX_REASONING,
+  PIECE_BELOW_CHAT_MAX_RELIABILITY,
+  PIECE_BELOW_CHAT_MEASURED_MIN,
+  PIECE_BELOW_CHAT_MIN_CONFIDENCE,
+  PIECE_BELOW_CHAT_PASS_MARGIN,
   PIECE_CAPABILITY_LEAD,
   PIECE_DEEP_REASONING_AT,
   PIECE_DEMAND_WEIGHTS,
@@ -145,6 +153,65 @@ export function pieceDemand(answer: PieceAnswer, facts: PieceFacts): DemandResul
       raisedBy: raised ? floor.why : null,
     },
   };
+}
+
+export interface KindPassRates {
+  below: number;
+  chat: number;
+  runs: number;
+}
+
+export const NOT_CLEARLY_SIMPLE = 'not clearly simple, so not below the chat model';
+export const MEASURED_BELOW_CHAT = 'measured pass rate below the chat model';
+
+function simpleScore(signal: ScoreSignal | null, max: number): boolean {
+  return (
+    signal !== null && signal.confidence >= PIECE_BELOW_CHAT_MIN_CONFIDENCE && signal.mean <= max
+  );
+}
+
+function simpleKind(answer: PieceAnswer): boolean {
+  const kind = answer.kind;
+  if (typeof kind === 'string' || kind.confidence < PIECE_BELOW_CHAT_KIND_CONFIDENCE) return false;
+  return (PIECE_BELOW_CHAT_KINDS as readonly string[]).includes(kind.choice);
+}
+
+export function clearlySimple(answer: PieceAnswer, facts: PieceFacts): boolean {
+  if (simpleKind(answer)) return true;
+  return (
+    simpleScore(answer.reasoning, PIECE_BELOW_CHAT_MAX_REASONING) &&
+    simpleScore(answer.coding, PIECE_BELOW_CHAT_MAX_CODING) &&
+    answer.reliability !== null &&
+    answer.reliability < PIECE_BELOW_CHAT_MAX_RELIABILITY &&
+    facts.core !== true
+  );
+}
+
+function measuredEnough(measured: KindPassRates | null): measured is KindPassRates {
+  return measured !== null && measured.runs >= PIECE_BELOW_CHAT_MEASURED_MIN;
+}
+
+export function belowChatBlock(simple: boolean, measured: KindPassRates | null): string | null {
+  if (measuredEnough(measured)) {
+    const holds = measured.below >= measured.chat - PIECE_BELOW_CHAT_PASS_MARGIN;
+    return holds ? null : MEASURED_BELOW_CHAT;
+  }
+  return simple ? null : NOT_CLEARLY_SIMPLE;
+}
+
+function isDemandTier(tier: string): tier is DemandTier {
+  return (DEMAND_TIERS as readonly string[]).includes(tier);
+}
+
+export function atChatTier(
+  demand: Demand,
+  chosen: RoutePick,
+  chatTier: string | null,
+  block: string | null,
+): Demand | null {
+  if (block === null || chatTier === null || !isDemandTier(chatTier)) return null;
+  if (TIER_RANK[chosen.route.tier]! >= TIER_RANK[chatTier]!) return null;
+  return { ...demand, tier: chatTier, raisedBy: block };
 }
 
 function fits(route: RouteOption, capability: Capability): boolean {

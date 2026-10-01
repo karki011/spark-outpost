@@ -68,7 +68,7 @@ export interface PiecesStart {
   level?: InvolvementLevel;
   provider?: ProviderId;
   agentEnv?: Record<string, string>;
-  jev?: typeof fetch;
+  jev?: typeof fetch | null;
   codeScan?: OrchestratorDeps['codeScan'];
 }
 
@@ -80,7 +80,8 @@ export async function startPieces(
   tags: string,
   { level = 'hands-off', provider = 'claude', agentEnv, jev, codeScan }: PiecesStart = {},
 ): Promise<{ harness: Harness; conversationId: string; runId: string }> {
-  const harness = startOrchestrator(t, jev ?? jevFetch({ calls: [], scenario: NORMAL }), {
+  const fetcher = jev === undefined ? jevFetch({ calls: [], scenario: NORMAL }) : jev;
+  const harness = startOrchestrator(t, fetcher, {
     coordinator: 'in_order',
     ...(agentEnv ? { agentEnv } : {}),
     ...(codeScan ? { codeScan } : {}),

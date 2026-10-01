@@ -123,6 +123,7 @@ export const checkpointPayloadSchema = z.object({
   conflict: mergeConflictSchema.nullable().default(null),
   agent: z.string().nullable().default(null),
   autoOption: z.string().nullable().default(null),
+  waitsFor: z.string().nullable().default(null),
   keptBy: z.enum(INVOLVEMENT_LEVEL_IDS).nullable().default(null),
 });
 export type CheckpointPayload = z.infer<typeof checkpointPayloadSchema>;

@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
 import { readFakeSession } from './fake-acp-sessions.ts';
 
+export const PLAN_FIRST_ASK = 'Before anything is built, write the plan.';
+
 type Update = (value: acp.SessionUpdate) => Promise<void>;
 type Say = (chunk: string) => Promise<void>;
 
@@ -212,7 +214,7 @@ async function failWhenAsked(turn: RoleTurn): Promise<void> {
     await turn.say('There is no src/dates.ts in this repo.');
     throw new Error('Gave up.');
   }
-  if (!turn.text.includes('#failonce 1')) return;
+  if (!turn.text.includes('#failonce 1') || turn.text.includes(PLAN_FIRST_ASK)) return;
   const root = turn.cwd.split('/.spark/worktrees/')[0]!;
   const marker = join(root, '.git', 'failed-step-1');
   if (await current(marker)) return;
@@ -405,8 +407,19 @@ const FAKE_QUESTIONS = {
   questions: [{ question: 'Which report?', options: ['Spend', 'Usage'], default: 'Spend' }],
 };
 
+const OLD_ROWS_QUESTIONS = {
+  questions: [
+    {
+      question: 'Which old report rows should go?',
+      options: ['Older than 90 days', 'Older than a year'],
+      default: 'Delete rows older than 90 days',
+    },
+  ],
+};
+
 async function askQuestions(turn: RoleTurn): Promise<acp.StopReason> {
-  const block = ['```clarify', JSON.stringify(FAKE_QUESTIONS), '```'].join('\n');
+  const asked = turn.text.includes('#oldrows') ? OLD_ROWS_QUESTIONS : FAKE_QUESTIONS;
+  const block = ['```clarify', JSON.stringify(asked), '```'].join('\n');
   await turn.say(`1. Which report do you mean: Spend or Usage?\n\n${block}`);
   return 'end_turn';
 }

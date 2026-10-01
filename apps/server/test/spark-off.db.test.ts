@@ -79,7 +79,7 @@ describe('Spark on', () => {
     expect(jev.calls.length).toBeGreaterThan(0);
     const [reply] = await assistantReplies(t, runId);
     const append = sessionOf(reply!).meta?.systemPrompt?.append ?? '';
-    expect(append).toContain("The user's name is Sam.");
+    expect(append).toContain("The user's name is Sam; use it sparingly");
     expect(append).toContain('with the Agent tool');
     expect(append).toContain('light humour');
   }, 60_000);
@@ -101,7 +101,7 @@ describe('Spark off', () => {
     expect(await childModels(runId)).toEqual([]);
     const [reply] = await assistantReplies(t, runId);
     const append = sessionOf(reply!).meta?.systemPrompt?.append ?? '';
-    expect(append).toContain("The user's name is Sam.");
+    expect(append).toContain("The user's name is Sam; use it sparingly");
     expect(append).toContain('act as a coordinator');
   }, 60_000);
 
@@ -152,7 +152,7 @@ describe('Spark off', () => {
       developer_instructions?: string;
     };
     expect(config.developer_instructions).toContain('keep a short checklist');
-    expect(config.developer_instructions).toContain("The user's name is Sam.");
+    expect(config.developer_instructions).toContain("The user's name is Sam; use it sparingly");
     const logged = await eventually(async () => {
       const { entries } = await listProtocolLog(t.db, runId, {
         after: 0,

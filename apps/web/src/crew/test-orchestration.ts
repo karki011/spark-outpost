@@ -68,6 +68,7 @@ export function checkpoint(
         conflict: null,
         agent: null,
         autoOption: null,
+        waitsFor: null,
         keptBy: null,
         ...payload,
       },

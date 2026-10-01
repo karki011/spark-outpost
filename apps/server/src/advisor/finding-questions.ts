@@ -81,7 +81,7 @@ export function buildFindingQuestions(facts: FindingFacts): IntakeQuestions {
       {
         question: FINDING_QUESTION,
         finding: capped(redactText(finding), MAX_FINDING_CHARACTERS),
-        how: 'Yes only when the finding names behavior of `diff` that is wrong for `task` (or `plan`, when given): a bug, a wrong or failing result, a crash, or a requirement of `task` or `plan` the change misses. A finding that names an input and the wrong output it gives is a strong sign. No for hardening, security or robustness advice that `task` and `plan` do not ask for, such as neutralizing spreadsheet formulas in an export, quoting for some other reader, or cleanup timing, unless the change itself adds an exploitable hole such as SQL injection or an auth bypass.',
+        how: 'Yes only when the finding names behavior of `diff` that is wrong for `task` (or `plan`, when given): a bug, a wrong or failing result, a crash, or a requirement of `task` or `plan` the change misses, or an irreversible data or schema change (DELETE, DROP, TRUNCATE, a destructive migration) that `task` does not explicitly ask for. A finding that names an input and the wrong output it gives is a strong sign. No for hardening, security or robustness advice that `task` and `plan` do not ask for, such as neutralizing spreadsheet formulas in an export, quoting for some other reader, or cleanup timing, unless the change itself adds an exploitable hole such as SQL injection or an auth bypass.',
       },
       {
         true: 'A concrete correctness problem against the task or plan: wrong or failing behavior, a missed requirement, or a real vulnerability the change adds',

@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import { createCodeScanner } from '../src/codescan/scanner.ts';
+import { JEV_NOT_CONNECTED } from '../src/coordinator/piece-jev.ts';
 import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
 import { children, pieceList, startPieces } from './coordinator-support.ts';
 import {
@@ -112,7 +113,7 @@ function failingPieceQuestions(script: JevScript, failure: 'status' | 'hang'): t
   };
 }
 
-async function runInOrder(jev: typeof fetch) {
+async function runInOrder(jev: typeof fetch | null) {
   const started = await startPieces(t, root, '#pieces', { jev });
   harness = started.harness;
   const { orchestration } = await driveToEnd(
@@ -208,6 +209,17 @@ describe('Jev routes each piece', { timeout: 150_000 }, () => {
     expect(recorded.jev_status).toBe('failed');
     expect(recorded.body.jevError).toBe('TypeSafe responded with 503.');
     expect(recorded.body.applied).toBe('rules');
+  });
+
+  it('says Jev is not connected, on the pieces and in the summary alike', async () => {
+    const { runId, orchestration } = await runInOrder(null);
+    expect(orchestration.status).toBe('succeeded');
+    const recorded = await decision(runId);
+    expect(recorded.jev_status).toBe('not_connected');
+    expect(recorded.body.summary).toBe(`Piece routes by rules (${JEV_NOT_CONNECTED})`);
+    expect(new Set(recorded.body.answer.pieces.map((piece) => piece.reason))).toEqual(
+      new Set([JEV_NOT_CONNECTED]),
+    );
   });
 
   it('times out a silent Jev before the piece list waits on it', async () => {

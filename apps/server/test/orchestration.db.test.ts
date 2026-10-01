@@ -22,6 +22,7 @@ import {
 } from './orchestration-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
+const SCOUT: AgentRole = 'scout';
 const BUILDER: AgentRole = 'builder';
 const CRITIC: AgentRole = 'critic';
 
@@ -46,9 +47,9 @@ const EXPECTED: Record<string, Record<InvolvementLevel, Expectation>> = {
   normal: asksEdits([BUILDER]),
   complex: asksEdits([BUILDER]),
   risky: {
-    balanced: { crew: [BUILDER, CRITIC], asked: ['plan', 'edit'] },
-    'hands-off': { crew: [BUILDER, CRITIC], asked: [] },
-    'full-auto': { crew: [BUILDER, CRITIC], asked: [] },
+    balanced: { crew: [SCOUT, BUILDER, CRITIC], asked: ['plan', 'edit'] },
+    'hands-off': { crew: [SCOUT, BUILDER, CRITIC], asked: ['plan'] },
+    'full-auto': { crew: [SCOUT, BUILDER, CRITIC], asked: ['plan'] },
   },
 };
 
@@ -111,7 +112,8 @@ describe.each(SCENARIOS)('$id', (scenario) => {
       const kept = orchestration.checkpoints.filter(
         (approval) => approval.kind === 'accept' && approval.decidedBy === 'level',
       );
-      const keptBy = expected.crew[0] === 'scout' ? [] : [level];
+      const answersOnly = expected.crew.every((role) => role === SCOUT);
+      const keptBy = answersOnly ? [] : [level];
       expect(
         kept.map((approval) => approval.payload.checkpoint?.keptBy),
         context,
@@ -157,11 +159,12 @@ describe.each(SCENARIOS)('$id', (scenario) => {
       ).toBe(expected.crew.length);
 
       const labels = [...roles].map((role) => agentRoleLabel(role)).sort();
-      if (expected.crew[0] !== 'scout') {
+      if (!answersOnly) {
         const [audited] = audit.orchestrations ?? [];
         expect(audited?.totals.totalTokens, context).toBe(orchestration.totals.tokens);
         expect(audited?.byRole.map((group) => group.role).sort(), context).toEqual(labels);
-        expect(audit.runs.find((run) => run.runId === runId)?.role, context).toBe('Orchestration');
+        const rootRole = expected.crew[0] === SCOUT ? 'Reader' : 'Orchestration';
+        expect(audit.runs.find((run) => run.runId === runId)?.role, context).toBe(rootRole);
       } else {
         expect(
           audit.runs.map((run) => run.role),
@@ -225,6 +228,7 @@ describe('rule routing on Auto', () => {
     const { orchestration } = await runLevel(RISKY, 'full-auto');
     expect(orchestration.risk).toBe('destructive');
     expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
+      ['scout', 'sonnet'],
       ['builder', 'opus[1m]'],
       ['critic', 'gpt-6-sol'],
     ]);

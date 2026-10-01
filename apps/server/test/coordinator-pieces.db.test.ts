@@ -142,7 +142,7 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(reply).toContain('Pieces (3, in order, list v1)');
     expect(reply).toContain('| P2 · API | Rivet | in order |');
     expect(reply).toMatch(
-      /^Built in 3 pieces:\n- P1 · Store \(Bolt\): Built P1 in store\.ts\. Files: `store\.ts`\.\n- P2 · API \(Rivet\): Built P2 in api\.ts\. Files: `api\.ts`\.\n- P3 · View \(Tack\): Built P3 in view\.ts\. Files: `view\.ts`\./,
+      /^Built in 3 pieces:\n- P1 · Store \(Bolt\): Built P1 in store\.ts\. Files: `store\.ts`\. Scoped check: \w+\.\n- P2 · API \(Rivet\): Built P2 in api\.ts\. Files: `api\.ts`\. Scoped check: \w+\.\n- P3 · View \(Tack\): Built P3 in view\.ts\. Files: `view\.ts`\. Scoped check: \w+\./,
     );
   });
 
@@ -233,7 +233,13 @@ describe('pieces in order', { timeout: 120_000 }, () => {
   it('runs the integrator on the model the pieces shared and records why', async () => {
     await writeFile(join(root, 'check.mjs'), FAILS_UNTIL_FIXED);
     await setCheckCommands(t, root, ['node check.mjs']);
-    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), {
+    const easy = Object.fromEntries(
+      ['P1', 'P2', 'P3'].flatMap((key) => [
+        [`${key}_reasoning`, 1],
+        [`${key}_coding`, 1],
+      ]),
+    );
+    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL, scores: easy }), {
       coordinator: 'in_order',
     });
     const scenario = withTag(NORMAL, 'Split this up. #pieces #glue');

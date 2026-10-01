@@ -103,6 +103,13 @@ function afterClarifying(facts: IntakeFacts, answers: boolean, big: boolean): Cl
   return answers ? 'answer' : 'build';
 }
 
+function planFirstIfDestructive<T extends StartMode>(
+  start: T,
+  destructive: boolean,
+): T | 'plan_first' {
+  return destructive && start === 'build' ? 'plan_first' : start;
+}
+
 function answersFirst(question: IntakeCall, request: string): boolean {
   if (question.source === 'jev') return question.value;
   if (question.jev !== null) return !buildsByRule(request);
@@ -178,8 +185,8 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   if (facts.change) {
     calls.change = USER_CHANGE;
     return {
-      start: 'build',
-      then: 'build',
+      start: planFirstIfDestructive('build', destructive),
+      then: planFirstIfDestructive('build', destructive),
       review: review.value,
       destructive,
       trivial,
@@ -191,10 +198,13 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   const existing = reviewsExistingByRule(facts.request);
   const reviewOnly = existing || (review.value && answers);
   const big = !facts.hasAgreedPlan && bigByRule(facts.request) !== null;
-  const start = startMode({ planOnly, reviewOnly, vague, answers, big });
+  const start = planFirstIfDestructive(
+    startMode({ planOnly, reviewOnly, vague, answers, big }),
+    destructive,
+  );
   return {
     start,
-    then: afterClarifying(facts, answers, big),
+    then: planFirstIfDestructive(afterClarifying(facts, answers, big), destructive),
     review: review.value || start === 'review',
     destructive,
     trivial,

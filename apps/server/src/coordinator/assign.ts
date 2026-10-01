@@ -39,20 +39,34 @@ function candidateFor(facts: AssignFacts, provider: string): AdvisorCandidate | 
   return facts.route.candidates.find((candidate) => candidate.provider === provider);
 }
 
-export function measuredStrength(
+export interface MeasuredRate {
+  rate: number;
+  runs: number;
+}
+
+export function measuredRate(
   candidate: AdvisorCandidate,
   model: string | null = null,
-): number | null {
+  category: string | null = null,
+): MeasuredRate | null {
   const stats = (candidate.stats ?? []).filter(
     (stat) =>
       stat.role === 'builder' &&
       stat.provider === candidate.provider &&
-      (model === null || stat.agentModel === model),
+      (model === null || stat.agentModel === model) &&
+      (category === null || stat.category === category),
   );
   if (stats.length === 0) return null;
   const passed = stats.reduce((sum, stat) => sum + stat.passed, 0);
   const runs = stats.reduce((sum, stat) => sum + stat.n, 0);
-  return (passed + 1) / (runs + 2);
+  return { rate: (passed + 1) / (runs + 2), runs };
+}
+
+export function measuredStrength(
+  candidate: AdvisorCandidate,
+  model: string | null = null,
+): number | null {
+  return measuredRate(candidate, model)?.rate ?? null;
 }
 
 export function builderStrength(candidate: AdvisorCandidate): number {

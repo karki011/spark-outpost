@@ -17,7 +17,7 @@ import {
   verifyCard,
   type CheckpointCard,
 } from './checkpoint.ts';
-import { autoContinueOption } from './checkpoint-policy.ts';
+import { autoContinueOption, DESTRUCTIVE_WAIT } from './checkpoint-policy.ts';
 import { sessionReviewLine } from './critic-fix.ts';
 import { fixOptionLabel } from './review-loop.ts';
 import {
@@ -62,7 +62,16 @@ async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
   return budgetCard(limit, used, allowed, action.reason);
 }
 
-function withAutoOption(action: Ask, card: CheckpointCard): CheckpointCard {
+export function destructiveWork(s: Pick<Session, 'facts' | 'risky'>): boolean {
+  return s.facts.destructive || s.risky !== null;
+}
+
+export function heldCard(card: CheckpointCard): CheckpointCard {
+  return { ...card, payload: { ...card.payload, autoOption: null, waitsFor: DESTRUCTIVE_WAIT } };
+}
+
+function withAutoOption(s: Session, action: Ask, card: CheckpointCard): CheckpointCard {
+  if (action.kind === 'clarify' && destructiveWork(s)) return heldCard(card);
   const autoOption = autoContinueOption(action.kind, action.interpret ?? false);
   return autoOption ? { ...card, payload: { ...card.payload, autoOption } } : card;
 }
@@ -90,7 +99,7 @@ export async function assume(s: Session, interpretation: string): Promise<void> 
 async function askInterpretation(s: Session, action: Ask): Promise<FlowEvent> {
   const choices = interpretations(intakeResponse(s), s.input.userRequest, checkCommands(s));
   const card = interpretationCard(choices, action.reason);
-  const answer = await askCard(s, withAutoOption(action, card));
+  const answer = await askCard(s, withAutoOption(s, action, card));
   if (answer.type === 'stopped') return { type: 'stopped' };
   if (answer.type === 'timeout') throw new CheckpointTimeout();
   const picked = chosenInterpretation(card, answer.optionId, answer.note);
@@ -115,7 +124,7 @@ async function askFollowUp(s: Session, action: Ask): Promise<FlowEvent> {
 export async function ask(s: Session, action: Ask): Promise<FlowEvent> {
   if (action.interpret) return askInterpretation(s, action);
   if (action.followUp) return askFollowUp(s, action);
-  const card = withAutoOption(action, await cardFor(s, action));
+  const card = withAutoOption(s, action, await cardFor(s, action));
   const answer = await askCard(s, card);
   if (answer.type === 'stopped') return { type: 'stopped' };
   if (answer.type === 'timeout') throw new CheckpointTimeout();

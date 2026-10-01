@@ -7,7 +7,7 @@ import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { getTaskShip } from '../src/persistence/task-ships.ts';
 import { BUILDER_PUBLISH_REASON } from '../src/approvals/decide.ts';
-import { RISKY_PR_NOTE } from '../src/orchestration/checkpoint-policy.ts';
+import { DESTRUCTIVE_WAIT, RISKY_PR_NOTE } from '../src/orchestration/checkpoint-policy.ts';
 import { assumptionPrNote } from '../src/orchestration/clarify.ts';
 import { HARNESS_COMMIT_EMAIL } from '../src/projects/snapshot.ts';
 import { runCommand } from '../src/setup/command.ts';
@@ -208,15 +208,21 @@ describe('Full auto runs to a draft PR', () => {
     expect(authors.some((line) => line.includes(HARNESS_COMMIT_EMAIL))).toBe(false);
   }, 120_000);
 
-  it('builds risky work without a card at Full auto and flags it in the PR body', async () => {
+  it('waits on the plan card for destructive work at Full auto, then flags it in the PR body', async () => {
     await newRepo();
     await writeFile(ghState(), 'octo-cli');
+    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
     start();
     const { orchestration, asked } = await runFullAuto(
       'Rename the runs table column and migrate old rows. #build',
     );
     expect(orchestration.status).toBe('succeeded');
-    expect(asked).toEqual([]);
+    expect(asked.map((approval) => approval.title)).toEqual(['Build this plan?']);
+    expect(asked[0]!.payload.checkpoint).toMatchObject({
+      autoOption: null,
+      waitsFor: DESTRUCTIVE_WAIT,
+    });
+    expect(orchestration.checkpoints[0]).toMatchObject({ decidedBy: 'user', autoContinueAt: null });
     expect(stub.github.pulls).toHaveLength(1);
     expect(stub.github.pulls[0]!.body).toContain(`**${RISKY_PR_NOTE}**`);
   }, 120_000);

@@ -1,13 +1,22 @@
 import type { TaskPiece } from '@spark-outpost/contracts';
 import { escaped } from '../orchestration/risk-rules.ts';
 import type { MemberResult } from '../orchestration/session.ts';
+import { pieceCheckText } from './report.ts';
 import type { Coordination } from './state.ts';
 
 type Reply = Pick<MemberResult, 'role' | 'runId' | 'name' | 'outcome' | 'text' | 'inPlace'>;
 
-const SENTENCE_LIMIT = 160;
-const SENTENCE_END = /(?<=[.!?])\s/;
+const SUMMARY_LIMIT = 200;
+const SENTENCE_END = /(?<=[.!?])\s+/;
 const MARKUP = /^(?:[-*•]\s+|\d+[.)]\s+|>\s*)|\*\*|__|`/g;
+const LIST_ITEM = /^(?:[-*•]|\d+[.)])\s+/;
+const UNFINISHED = /^(?:now,?\s+|next,?\s+|then,?\s+)?(?:let me|let's|i'll|i will|i'm going to)\b/i;
+const TESTS_PASS =
+  /^(?:(?:all|both|the)\s+)?(?:\d+\s+)?(?:(?:scoped|unit|new)\s+)?(?:tests?|checks?|specs?)(?:\s+(?:now|still|all))?\s+(?:pass(?:es|ed)?|are passing|(?:are|is) green|succeed(?:s|ed)?)\b[^.!?]*[.!]?$/i;
+const IS_DONE =
+  /^[^.!?]{0,60}\s(?:is|are)\s+(?:now\s+)?(?:done|finished|complete|ready|in place)[.!]?$/i;
+const DONE = /^done[.!]?$/i;
+const STATUS_ONLY = [TESTS_PASS, IS_DONE, DONE];
 
 function withoutVocative(sentence: string, name: string | null): string {
   if (!name) return sentence;
@@ -22,16 +31,50 @@ function withoutVocative(sentence: string, name: string | null): string {
   return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
 
-function firstSentence(text: string, name: string | null): string | null {
-  const line = text
+function paragraphText(paragraph: string): string | null {
+  const lines = paragraph
     .split('\n')
-    .map((candidate) => candidate.replace(MARKUP, '').trim())
-    .find((candidate) => candidate !== '' && !candidate.startsWith('#'));
-  if (!line) return null;
-  const sentence = withoutVocative(line.split(SENTENCE_END)[0]!.trim(), name);
-  return sentence.length > SENTENCE_LIMIT
-    ? `${sentence.slice(0, SENTENCE_LIMIT - 1).trimEnd()}…`
-    : sentence;
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+  if (lines.length === 0 || lines.some((line) => line.startsWith('```'))) return null;
+  const prose = lines.filter((line) => !line.startsWith('#'));
+  if (prose.length === 0 || prose.every((line) => LIST_ITEM.test(line))) return null;
+  return prose.map((line) => line.replace(MARKUP, '').trim()).join(' ');
+}
+
+function telling(sentence: string): boolean {
+  return !UNFINISHED.test(sentence) && !STATUS_ONLY.some((status) => status.test(sentence));
+}
+
+function capped(sentences: readonly string[]): string {
+  const [first, ...rest] = sentences;
+  if (first!.length > SUMMARY_LIMIT) return `${first!.slice(0, SUMMARY_LIMIT - 1).trimEnd()}…`;
+  let text = first!;
+  for (const sentence of rest) {
+    if (text.length + 1 + sentence.length > SUMMARY_LIMIT) break;
+    text = `${text} ${sentence}`;
+  }
+  return text;
+}
+
+function paragraphSummary(text: string, name: string | null): string | null {
+  const sentences = text
+    .split(SENTENCE_END)
+    .map((sentence) => withoutVocative(sentence.trim(), name))
+    .filter((sentence) => sentence !== '' && telling(sentence));
+  if (sentences.length === 0) return null;
+  const summary = capped(sentences);
+  return /:\W*$/.test(summary) ? null : summary;
+}
+
+function finalSummary(text: string, name: string | null): string | null {
+  const paragraphs = text.split(/\n\s*\n/).reverse();
+  for (const paragraph of paragraphs) {
+    const prose = paragraphText(paragraph);
+    const summary = prose ? paragraphSummary(prose, name) : null;
+    if (summary) return summary;
+  }
+  return null;
 }
 
 function asSentence(text: string): string {
@@ -52,13 +95,14 @@ function pieceLine(piece: TaskPiece, replies: readonly Reply[], name: string | n
     return `${head}: ${piece.status}${piece.note ? ` — ${piece.note}` : ''}`;
   }
   const reply = replies.find((candidate) => belongsTo(piece, candidate));
-  const what = (reply && firstSentence(reply.text, name)) ?? piece.goal;
-  return `${head}: ${asSentence(what)} Files: ${fileList(piece.filesChanged)}.`;
+  const what = (reply && finalSummary(reply.text, name)) ?? piece.goal;
+  const files = `Files: ${fileList(piece.filesChanged)}.`;
+  return `${head}: ${asSentence(what)} ${files} Scoped check: ${pieceCheckText(piece)}.`;
 }
 
 function laterLine(reply: Reply, name: string | null): string | null {
-  const sentence = firstSentence(reply.text, name);
-  return sentence ? `- Then ${reply.name}: ${sentence}` : null;
+  const summary = finalSummary(reply.text, name);
+  return summary ? `- Then ${reply.name}: ${asSentence(summary)}` : null;
 }
 
 export function piecesSummary(

@@ -391,6 +391,11 @@ export function CheckpointCard({
           </span>
         </div>
         {subtitle && <p className="ck-lead">{subtitle}</p>}
+        {pending && checkpoint.waitsFor && (
+          <p className="ck-wait" role="status">
+            {checkpoint.waitsFor}
+          </p>
+        )}
         {checkpoint.reason && !questions && <p>{checkpoint.reason}</p>}
         {questions && !pending && <AskedList payload={checkpoint} />}
         {pending ? (

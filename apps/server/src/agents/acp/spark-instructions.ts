@@ -32,7 +32,7 @@ export function sparkInstructions(
     HEADER,
     subagents ? TEAM_WITH_SUBAGENTS : TEAM_WITHOUT_SUBAGENTS,
     ...(name
-      ? [`The user's name is ${name}. Use it when you explain something or ask them a question.`]
+      ? [`The user's name is ${name}; use it sparingly, not to open or close every reply.`]
       : []),
     TONE[prefs.personality],
     ...(sparkTools ? [SPARK_TOOLS_LINE] : []),

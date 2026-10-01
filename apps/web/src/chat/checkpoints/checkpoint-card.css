@@ -110,6 +110,10 @@
   background: var(--code);
   border-radius: var(--r-sm);
 }
+.ck .ck-wait {
+  color: var(--warn);
+  font-weight: 600;
+}
 .ck-auto {
   font-variant-numeric: tabular-nums;
 }

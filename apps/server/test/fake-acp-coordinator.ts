@@ -5,7 +5,7 @@ import * as acp from '@agentclientprotocol/sdk';
 import { conflictTurn, parallelBlock, pieceExtras } from './fake-acp-parallel.ts';
 import { codexLimited, rateLimited } from './fake-acp-limits.ts';
 import { FAKE_PLAN_OPTIONS } from './fake-acp-plans.ts';
-import { write, type RoleTurn } from './fake-acp-roles.ts';
+import { PLAN_FIRST_ASK, write, type RoleTurn } from './fake-acp-roles.ts';
 
 export const PIECE_CHECK_SCRIPT = `import { readFileSync } from 'node:fs';
 const file = process.argv[2];
@@ -246,8 +246,6 @@ async function integrator(turn: RoleTurn): Promise<acp.StopReason> {
 export const FAKE_PIECES_PLAN = PIECES.map(
   (piece, index) => `${index + 1}. ${piece.title}: build it in \`${piece.file}\``,
 ).join('\n');
-
-const PLAN_FIRST_ASK = 'Before anything is built, write the plan.';
 
 async function planner(turn: RoleTurn): Promise<acp.StopReason> {
   await turn.say(`# Plan\n\n${FAKE_PIECES_PLAN}`);

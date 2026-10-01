@@ -225,6 +225,11 @@ function QuestionChoices({
           </button>
         ))}
       </div>
+      {approval.status === 'pending' && approval.payload.checkpoint.waitsFor && (
+        <div className="isl-timer" role="status">
+          <span>{approval.payload.checkpoint.waitsFor}</span>
+        </div>
+      )}
       {(auto.countdown || paused) && (
         <div className="isl-timer">
           <span>

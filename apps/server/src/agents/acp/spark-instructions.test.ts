@@ -30,8 +30,9 @@ describe('sparkInstructions', () => {
     expect(text).toContain('with the Agent tool');
     expect(text).toContain('Answer simple questions directly without delegating.');
     expect(text).toContain(
-      "The user's name is Sam. Use it when you explain something or ask them a question.",
+      "The user's name is Sam; use it sparingly, not to open or close every reply.",
     );
+    expect(text).not.toMatch(/address the user|use it when/i);
     expect(text).toContain('Tone: warm and concise.');
     expect(text).not.toContain('Rivera');
   });

@@ -398,6 +398,19 @@ test('asks before an agent instruction file, with Allow once, for this chat, or 
   });
 });
 
+test('a shell write to an agent instruction file gets the same three choices', async ({ page }) => {
+  rmSync(path.join(appRoot, 'AGENTS.md'), { force: true });
+  await doChat(page);
+  await send(page, 'Note the test runner in the agent rules #shellinstructions');
+  const approval = card(page, /Change agent instructions\?/);
+  const buttons = ['Allow once', 'Allow for this chat', 'Deny'];
+  await expect(approval.getByRole('button')).toHaveText(buttons, { timeout: 15_000 });
+  await approval.getByRole('button', { name: 'Allow for this chat' }).click();
+  const done = page.locator('.md', { hasText: 'fake-instructions-shell=allowed' });
+  await expect(done).toBeVisible({ timeout: 15_000 });
+  expect(readFileSync(path.join(appRoot, 'AGENTS.md'), 'utf8')).toBe('- Tests use node --test.\n');
+});
+
 test('asks to hold before changing a git hook and allows it once only', async ({ page }) => {
   const hook = path.join(appRoot, '.git', 'hooks', 'pre-commit');
   rmSync(path.join(appRoot, '.git'), { recursive: true, force: true });

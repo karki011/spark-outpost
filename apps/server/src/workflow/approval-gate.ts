@@ -134,6 +134,18 @@ function onceOnly(asking: Asking): boolean {
   );
 }
 
+const PROTECTED_NAMES: Partial<Record<ApprovalOption['kind'], string>> = {
+  allow_once: 'Allow once',
+  reject_once: 'Deny',
+};
+
+function askedOptions(options: readonly ApprovalOption[], asking: Asking): ApprovalOption[] {
+  if (!onceOnly(asking)) return [...options];
+  const once = options.filter((option) => option.kind !== 'allow_always');
+  if (!asking.instructionFiles) return once;
+  return once.map((option) => ({ ...option, name: PROTECTED_NAMES[option.kind] ?? option.name }));
+}
+
 function approvalPayload(request: ApprovalRequest, asking: Asking): ApprovalPayload {
   let budget = DIFF_BUDGET;
   let truncated = false;
@@ -221,9 +233,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     kind: request.kind,
     title: displayTitle(request, deps.copyOf ?? null),
     payload: approvalPayload(request, asking),
-    options: onceOnly(asking)
-      ? request.options.filter((option) => option.kind !== 'allow_always')
-      : request.options,
+    options: askedOptions(request.options, asking),
     reason,
   });
 

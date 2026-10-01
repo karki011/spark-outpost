@@ -158,6 +158,33 @@ describe('agent instruction files', () => {
     waiters.notify(id);
     expect(await answer).toMatchObject({ allowed: false });
   });
+
+  it('offers a shell write the same Allow once, Allow for this chat and Deny as a file edit (F)', async () => {
+    const run = await doRun(t, root, 'go', 'hands-off');
+    const shell: ApprovalRequest = {
+      ...commandRequest(root, "echo '- Tests use node --test.' >> AGENTS.md"),
+      options: [
+        { optionId: 'allow-once', name: 'Yes', kind: 'allow_once' },
+        { optionId: 'reject', name: 'No', kind: 'reject_once' },
+      ],
+    };
+    const first = await answered(run.runId, shell, 'allow-once', 'chat');
+    expect(first.pending).toMatchObject({
+      reason: INSTRUCTION_REASON,
+      payload: { instructionFiles: ['AGENTS.md'] },
+    });
+    expect(first.pending?.options.map((option) => [option.kind, option.name])).toEqual([
+      ['allow_once', 'Allow once'],
+      ['reject_once', 'Deny'],
+    ]);
+    expect(first.answer).toMatchObject({ allowed: true });
+    const later = await sendDo(t, run.conversationId, 'again', 'hands-off');
+    const again = await gateFor(later).gate.review(
+      { ...shell, toolCallId: 'shell-2' },
+      new AbortController().signal,
+    );
+    expect(again).toMatchObject({ allowed: true });
+  });
 });
 
 describe('git hooks and git config', () => {
