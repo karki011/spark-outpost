@@ -20,7 +20,7 @@ const TONE: Record<Personality, string> = {
 };
 
 const SPARK_TOOLS_LINE =
-  'For questions about Spark itself (providers, connectors, projects, chats, audit, tickets, analytics, settings, how it works), use the spark_* tools. Their ticket and PR actions run only after the user confirms a card.';
+  'For any question about Spark itself (what needs the user, chats, runs, crew and Jev picks, plans, files changed, spend, outcomes, models, Map, terminals, tickets, PRs, settings, how it works), use the spark_* tools; spark_guide section spark-tools maps questions to tools. Their ticket and PR actions run only after the user confirms a card.';
 
 export function sparkInstructions(
   prefs: SparkSessionPrefs,

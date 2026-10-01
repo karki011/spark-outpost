@@ -107,6 +107,37 @@ describe('spark_chats and spark_chat', () => {
     expect(own.id).toBe(chat.conversationId);
     expect(missing).toMatchObject({ isError: true, text: 'That chat does not exist.' });
   });
+
+  it("shows the chat's branch and worktree", async () => {
+    const chat = await startChat(t, 'On a branch');
+    const projectId = randomUUID();
+    await t.db.query(
+      `INSERT INTO projects (id, workspace_id, name, root_path) VALUES ($1, $2, 'app', '/repo')`,
+      [projectId, t.workspaceId],
+    );
+    await t.db.query(
+      'INSERT INTO conversation_projects (conversation_id, project_id, position) VALUES ($1, $2, 0)',
+      [chat.conversationId, projectId],
+    );
+    await t.db.query(
+      `INSERT INTO chat_worktrees (id, conversation_id, project_id, repo_root, path, branch,
+         base_branch, base_commit, in_place, owns_branch)
+       VALUES ($1, $2, $3, '/repo', '/repo-wt/spark-1', 'spark/fix-login', 'main', 'abc', false,
+         true)`,
+      [randomUUID(), chat.conversationId, projectId],
+    );
+
+    const body = (await (await open(chat.conversationId)).call('spark_chat')).json<{
+      workspace: object;
+    }>();
+
+    expect(body.workspace).toEqual({
+      branch: 'spark/fix-login',
+      from: 'main',
+      where: 'its own worktree',
+      path: '/repo-wt/spark-1',
+    });
+  });
 });
 
 describe('spark_audit', () => {

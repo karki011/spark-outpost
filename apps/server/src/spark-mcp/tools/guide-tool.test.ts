@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { guideSections } from '../guide/sections.ts';
 import { searchGuide } from '../guide/search.ts';
+import { SPARK_TOOLS } from '../server.ts';
 import type { SparkToolContext } from '../tool.ts';
 import { guideTool } from './guide-tool.ts';
 
@@ -87,6 +88,13 @@ describe('guideTool', () => {
     }
   });
 
+  it('names every Spark tool in the spark-tools section', () => {
+    const index = guideSections.find((section) => section.id === 'spark-tools')!.text;
+    for (const tool of SPARK_TOOLS.filter((candidate) => !candidate.acts)) {
+      expect(index, tool.name).toMatch(new RegExp(`\\b${tool.name}\\b`));
+    }
+  });
+
   it('keeps the whole index well under 20,000 characters', () => {
     const totalChars = guideSections.reduce((sum, section) => sum + section.text.length, 0);
     expect(totalChars).toBeLessThan(20_000);
@@ -113,6 +121,7 @@ describe('guideTool', () => {
     ['link a ticket to a chat', 'tickets'],
     ['map page unmatched api', 'map'],
     ['spark action card confirm', 'spark-own-tools'],
+    ['which tool tells me what needs me', 'spark-tools'],
     ['urgent ticket not started', 'attention-brief'],
   ])('finds %s in the %s section', (query, id) => {
     const top = searchGuide(guideSections, query, 3).map((result) => result.id);

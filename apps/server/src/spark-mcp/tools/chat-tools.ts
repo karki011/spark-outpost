@@ -6,6 +6,7 @@ import {
   type Run,
 } from '@spark-outpost/contracts';
 import { resolveChatSettings } from '../../persistence/chat-settings.ts';
+import { primaryChatWorktree } from '../../persistence/chat-worktrees.ts';
 import { getConversationDetail, listConversations } from '../../persistence/conversations.ts';
 import { listProjects } from '../../projects/projects.ts';
 import type { SparkScope } from '../deps.ts';
@@ -119,6 +120,7 @@ async function chat(
     throw new SparkToolError('That chat does not exist.');
   }
   const { conversation, messages, runs, settings, approvals } = detail;
+  const tree = await primaryChatWorktree(deps.db, id);
   const offset = args.offset ?? Math.max(0, messages.length - args.limit);
   const shown = page(messages, offset, args.limit);
   return {
@@ -134,6 +136,15 @@ async function chat(
       autonomy: settings.level ? autonomyLabel(settings.level) : null,
     },
     costUsd: round(detail.usageTotals.costUsd),
+    workspace: tree
+      ? {
+          branch: tree.branch,
+          from: tree.baseBranch,
+          where: tree.inPlace ? 'in the checkout' : 'its own worktree',
+          path: tree.path,
+          ...(tree.landedCommit ? { broughtIntoCheckout: true } : {}),
+        }
+      : null,
     messages: {
       ...shown,
       ...(offset > 0 ? { earlierFrom: Math.max(0, offset - args.limit) } : {}),
@@ -202,7 +213,7 @@ export const chatTools = [
     privateData: true,
     title: 'Read a chat',
     description:
-      'Read one chat: settings, cost, messages (the latest page by default; pass offset for earlier ones), its runs (status, provider, model, role, errors, cost) and approval cards. Defaults to this chat. Long messages are cut to maxChars; secrets are redacted.',
+      'Read one chat: settings, cost, its branch and worktree, messages (the latest page by default; pass offset for earlier ones), its runs (status, provider, model, role, errors, cost) and approval cards. Defaults to this chat. Long messages are cut to maxChars; secrets are redacted.',
     input: {
       chat: chatIdInput,
       offset: z.number().int().min(0).optional().describe('First message to show (0 = oldest).'),
@@ -213,4 +224,4 @@ export const chatTools = [
   }),
 ];
 
-export { chatIdInput, inWorkspace };
+export { chatIdInput, chatState, inWorkspace };
