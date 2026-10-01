@@ -5,6 +5,7 @@ import {
   NO_RUN_RULES,
   OUTSIDE_DELETE_REASON,
   SECRET_REASON,
+  WORKTREE_AUTO_WHY,
   decide,
   type ApprovalRequest,
 } from './decide.ts';
@@ -115,5 +116,47 @@ describe('decide() looks inside nested and wrapped commands', () => {
     'env NODE_ENV=test pnpm test',
   ])('lets ordinary nested commands follow the mode: %s', (command) => {
     expect(fullAccess(command)).toEqual({ verdict: 'allow', by: 'level' });
+  });
+});
+
+const UNREADABLE_BODY = 'const quoted = (s) => `"${s.replace(/"/g, \'""\')}"`;\nconst it\'s = "odd';
+
+function heredoc(head: string, tail = ''): string {
+  return `${head} <<'EOF'\n${UNREADABLE_BODY}\nEOF${tail}`;
+}
+
+const inWorktree = (command: string) =>
+  decide('asks', run(command), NO_RUN_RULES, [], { worktreeAuto: true });
+
+describe('decide() treats a heredoc written to a file as a normal write', () => {
+  it.each([
+    heredoc('cat > src/csv-export.ts'),
+    heredoc('cat > src/a.ts', `\n${heredoc('cat > test/a.test.ts')}\nnode --test test/a.test.ts`),
+    heredoc('cat src/format.ts; cat > src/slug.ts'),
+    heredoc('cat >> docs/notes.md'),
+  ])('allows it at Automatic in the worktree: %s', (command) => {
+    expect(inWorktree(command)).toEqual({
+      verdict: 'allow',
+      by: 'level',
+      why: WORKTREE_AUTO_WHY,
+    });
+  });
+
+  it('follows the mode outside a worktree', () => {
+    expect(fullAccess(heredoc('cat > src/a.ts'))).toEqual({ verdict: 'allow', by: 'level' });
+  });
+
+  it.each([
+    heredoc('bash'),
+    heredoc('sh -s'),
+    heredoc('python3 -'),
+    heredoc('node'),
+    heredoc('cat > run.sh', '\nbash'),
+    heredoc('cat > /etc/hosts'),
+    heredoc('cat > ~/.zshrc'),
+    heredoc('cat > "$OUT"'),
+    heredoc('cat > ../other/file.ts'),
+  ])('still asks when the text runs as code or lands outside the project: %s', (command) => {
+    expect(inWorktree(command)).toEqual({ verdict: 'ask', reason: NESTED_COMMAND_REASON });
   });
 });

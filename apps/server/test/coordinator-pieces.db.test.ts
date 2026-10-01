@@ -244,6 +244,18 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(reply).toContain('| none — docs only |');
   });
 
+  it('asks about a heredoc file write like any other command, not as unreadable', async () => {
+    const { conversationId, runId } = await begin('#pieces #heredoc');
+    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    expect(orchestration.status).toBe('succeeded');
+    const { rows } = await t.db.query<{ reason: string | null }>(
+      `SELECT a.reason FROM approvals a JOIN runs r ON r.id = a.run_id
+       WHERE r.parent_run_id = $1 AND a.kind = 'execute' AND a.title LIKE 'cat >>%'`,
+      [runId],
+    );
+    expect(rows.map((row) => row.reason)).toEqual([null, null, null]);
+  });
+
   it('asks the coordinator once to repair an invalid piece list', async () => {
     const { conversationId, runId } = await begin('#pieces #badpieces');
     await driveToEnd(t, conversationId, runId, undefined, 90_000);

@@ -123,12 +123,15 @@ async function askToRun(turn: RoleTurn, command: string): Promise<boolean> {
   return allowed;
 }
 
+const UNREADABLE_LINE = "export const trim = (s: string) => s.replace(/^-|-$/g, '');";
+
 async function build(turn: RoleTurn, file: string, line: string): Promise<void> {
   if (!turn.text.includes('#heredoc')) {
     await write(turn, file, line);
     return;
   }
-  const command = `cat >> ${file} <<'EOF'\n${line}\nexport const ok = (n: number) => n >= 2;\nEOF`;
+  const body = `${line}\nexport const ok = (n: number) => n >= 2;\n${UNREADABLE_LINE}`;
+  const command = `cat >> ${file} <<'EOF'\n${body}\nEOF`;
   if (await askToRun(turn, command)) await appendFile(join(turn.cwd, file), `${line}\n`);
 }
 

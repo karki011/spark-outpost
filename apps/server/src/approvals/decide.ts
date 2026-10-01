@@ -1,8 +1,8 @@
 import path from 'node:path';
 import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark-outpost/contracts';
 import { isSecretPath, refusalFor, relativeInside } from '../projects/path-policy.ts';
-import { commandTree, deleteTargets, treeWords, type CommandTree } from './command-tree.ts';
-import { allowlistCovers, normalizeCommand, resolveCommandPath } from './commands.ts';
+import { commandTree, deleteTargets, SHELLS, treeWords, type CommandTree } from './command-tree.ts';
+import { allowlistCovers, normalizeCommand, programName, resolveCommandPath } from './commands.ts';
 import {
   forcePush,
   isGitPush,
@@ -17,7 +17,10 @@ import { diskLister, type FileLister } from './file-lister.ts';
 import { readConcern } from './file-reads.ts';
 import { askRunRefusal } from './ask-run.ts';
 import { egressOf } from './egress.ts';
+import { withoutHereText } from './inline-code.ts';
+import { readArgs } from './read-args.ts';
 import { taintReason } from './taint.ts';
+import { redirectTargets, writeTargets } from './write-targets.ts';
 
 export interface RequestRoot {
   path: string;
@@ -138,13 +141,39 @@ function commandReads(request: ApprovalRequest, tree: CommandTree | null, files:
   });
 }
 
+function runsHereText(program: readonly string[]): boolean {
+  return SHELLS.has(programName(program)) || readArgs(program)?.stdinCode === true;
+}
+
+function hereTextWritesInside(request: ApprovalRequest, command: string): boolean {
+  const clean = withoutHereText(command);
+  if (clean === command) return false;
+  const tree = commandTree(clean);
+  if (tree.opaque || tree.commands.some(runsHereText)) return false;
+  const redirects = [...redirectTargets(clean)].filter((word) => !word.startsWith('/dev/'));
+  if (redirects.some((word) => /\$|`/.test(word))) return false;
+  const cwd = commandCwd(request);
+  const written = writeTargets(command, cwd, request.home);
+  if (written === null) return false;
+  const targets = [
+    ...written,
+    ...redirects.map((word) => resolveCommandPath(word, cwd, request.home)),
+  ];
+  return targets.every((target) => !outsideRoots(request, target));
+}
+
+function hidesCommands(request: ApprovalRequest, tree: CommandTree | null): boolean {
+  if (!tree?.opaque || !request.command) return false;
+  return !hereTextWritesInside(request, request.command);
+}
+
 function alwaysAskReason(request: ApprovalRequest, files: FileLister): string | null {
   const tree = request.command ? commandTree(request.command) : null;
   if (deletesOutside(request, tree)) return OUTSIDE_DELETE_REASON;
   if (touchesSecret(request, tree)) return SECRET_REASON;
   const reads = commandReads(request, tree, files);
   if (reads === 'secret') return SECRET_REASON;
-  if (tree?.opaque) return NESTED_COMMAND_REASON;
+  if (hidesCommands(request, tree)) return NESTED_COMMAND_REASON;
   if (reads === 'hidden') return HIDDEN_CODE_REASON;
   if (reads === 'unknown') return UNKNOWN_READ_REASON;
   if (request.command && isPackageInstall(request.command)) return INSTALL_REASON;
