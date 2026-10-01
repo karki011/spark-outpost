@@ -1,6 +1,4 @@
 import {
-  COMPACT_AT_PERCENT,
-  COMPACT_WARN_PERCENT,
   isRetiring,
   retirementState,
   type CapabilityOption,
@@ -96,14 +94,6 @@ export function meterLevel(efforts: CapabilityOption[], effort: string | null, b
   const index = efforts.findIndex((option) => option.id === effort);
   if (index < 0 || efforts.length === 0) return 0;
   return Math.max(1, Math.round(((index + 1) / efforts.length) * bars));
-}
-
-export type ContextLevel = 'ok' | 'warm' | 'hot';
-
-export function contextLevel(percent: number): ContextLevel {
-  if (percent >= COMPACT_AT_PERCENT) return 'hot';
-  if (percent >= COMPACT_WARN_PERCENT) return 'warm';
-  return 'ok';
 }
 
 export function formatTokens(count: number): string {

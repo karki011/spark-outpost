@@ -239,7 +239,7 @@ Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: 
     id: 'compaction',
     title: 'When a chat gets full: compaction',
     keywords: ['compact', 'compaction', 'context', 'full', 'ring', 'summary', 'tokens'],
-    text: `The context ring warns at 70%. At 85% Spark compacts between turns, never mid-turn: Review each step asks (Compact now, a fresh chat with a summary, or Keep going until 95%); Automatic compacts by itself with the agent's /compact or a Spark summary. A divider shows it. spark_chat_history reads every earlier turn.`,
+    text: `The ring warns at 60%; Spark compacts at 80% between turns (both in Settings → Spark, spark_settings). Review each step asks: Compact now, a fresh chat with a summary, or Keep going; Automatic uses the agent's /compact or a Spark summary; with automatic compaction off it always asks. A divider shows it. spark_chat_history reads earlier turns.`,
   },
   {
     id: 'settings-spark',

@@ -72,6 +72,7 @@ export function checkpoint(
         keptBy: null,
         laws: [],
         estimate: null,
+        askAgainAt: null,
         ...payload,
       },
     },

@@ -1,6 +1,6 @@
 import {
-  COMPACT_AT_PERCENT,
-  COMPACT_SNOOZED_PERCENT,
+  reaskPercent,
+  type CompactionThresholds,
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
 import { COMPACT_AGENT_WORKED, COMPACT_SELF_DROP } from '../advisor/policy.ts';
@@ -13,6 +13,7 @@ export interface CompactFacts {
   level: InvolvementLevel;
   snoozed: boolean;
   cardPending: boolean;
+  thresholds: CompactionThresholds;
 }
 
 export function usedPercent(reading: ContextReading): number {
@@ -22,9 +23,10 @@ export function usedPercent(reading: ContextReading): number {
 
 export function compactStep(facts: CompactFacts): CompactStep {
   if (!facts.reading || facts.cardPending) return 'none';
-  const threshold = facts.snoozed ? COMPACT_SNOOZED_PERCENT : COMPACT_AT_PERCENT;
+  const { compactPercent, autoCompact } = facts.thresholds;
+  const threshold = facts.snoozed ? reaskPercent(compactPercent) : compactPercent;
   if (usedPercent(facts.reading) < threshold) return 'none';
-  return facts.level === 'balanced' ? 'ask' : 'compact';
+  return facts.level === 'balanced' || !autoCompact ? 'ask' : 'compact';
 }
 
 export function selfCompacted(

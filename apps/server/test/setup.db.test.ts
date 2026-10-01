@@ -64,6 +64,9 @@ describe('setup state', () => {
       spendCapUsd: null,
       morningBrief: true,
       morningBriefTime: '07:00',
+      compactWarnPercent: 60,
+      compactAtPercent: 80,
+      autoCompact: true,
     });
     expect(body.providers.map((provider: { id: string }) => provider.id)).toEqual([
       'claude',

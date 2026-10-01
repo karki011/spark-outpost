@@ -1,7 +1,11 @@
 import { useId } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
-  COMPACT_AT_PERCENT,
+  DEFAULT_COMPACTION_THRESHOLDS,
   advisorLabel,
+  contextLevel,
+  type CompactionThresholds,
+  type ContextLevel,
   type AdvisorUsage,
   type ConversationUsage,
   type Orchestration,
@@ -20,15 +24,34 @@ import {
   type TaskContext,
 } from '../../usage/format.ts';
 import '../../usage/usage.css';
-import { contextLevel, formatTokens } from './model-options.ts';
+import { setupApi, setupKey } from '../../api/setup.ts';
+import { formatTokens } from './model-options.ts';
 
 const RING = 50.27;
 
-const NOTES = {
-  ok: 'Plenty of room left in this chat.',
-  warm: `Getting full. Spark compacts the chat at ${COMPACT_AT_PERCENT}%; the full transcript stays here.`,
-  hot: 'Almost full. Spark compacts the chat before your next message (at Review each step, it asks first).',
-} as const;
+function ringNote(level: ContextLevel, thresholds: CompactionThresholds): string {
+  const at = thresholds.compactPercent;
+  if (level === 'ok') return 'Plenty of room left in this chat.';
+  if (level === 'warm') {
+    return thresholds.autoCompact
+      ? `Getting full. Spark compacts the chat at ${at}%; the full transcript stays here.`
+      : `Getting full. Spark asks about compacting at ${at}%; the full transcript stays here.`;
+  }
+  return thresholds.autoCompact
+    ? 'Almost full. Spark compacts the chat before your next message (at Review each step, it asks first).'
+    : 'Almost full. Spark asks before your next message whether to compact the chat.';
+}
+
+function useThresholds(): CompactionThresholds {
+  const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
+  const profile = setup.data?.profile;
+  if (!profile) return DEFAULT_COMPACTION_THRESHOLDS;
+  return {
+    warnPercent: profile.compactWarnPercent,
+    compactPercent: profile.compactAtPercent,
+    autoCompact: profile.autoCompact,
+  };
+}
 
 interface ContextRingProps {
   runs: Run[];
@@ -88,7 +111,8 @@ export function ContextRing({
   const used = reading?.used ?? 0;
   const size = reading?.size ?? 0;
   const percent = contextPercent(used, size);
-  const level = contextLevel(percent);
+  const thresholds = useThresholds();
+  const level = contextLevel(percent, thresholds);
   const label = ringLabel(task, reading, percent);
   const chat = chatLine(usageTotals);
   const showProviders = usageTotals.byProvider.length > 1;
@@ -150,7 +174,9 @@ export function ContextRing({
           </div>
         </div>
         <p className={`ctx-note ${level}`}>
-          {reading ? NOTES[level] : 'Send a message to see how much of the context window it uses.'}
+          {reading
+            ? ringNote(level, thresholds)
+            : 'Send a message to see how much of the context window it uses.'}
         </p>
         {chat && (
           <div className="ctx-usage">

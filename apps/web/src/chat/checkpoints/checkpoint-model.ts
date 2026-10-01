@@ -1,6 +1,5 @@
 import {
   CHECKPOINT_OPTION,
-  COMPACT_SNOOZED_PERCENT,
   isCheckpointKind,
   type AgentPick,
   type Approval,
@@ -177,7 +176,7 @@ const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.useDefaults]: 'Went with the best guesses.',
   [CHECKPOINT_OPTION.compactNow]: 'Compacted the chat.',
   [CHECKPOINT_OPTION.freshChat]: 'Started a fresh chat with a summary.',
-  [CHECKPOINT_OPTION.keepGoing]: `Kept going; Spark asks again at ${COMPACT_SNOOZED_PERCENT}%.`,
+  [CHECKPOINT_OPTION.keepGoing]: 'Kept going.',
 };
 
 const AUTO_LABELS: Record<string, string> = {
@@ -238,6 +237,10 @@ export function checkpointResult(approval: Approval): string {
       : `Kept ${conflict.first}’s change.`;
   }
   if (conflict && id === CHECKPOINT_OPTION.keepSecond) return `Kept ${conflict.second}’s change.`;
+  const askAgainAt = approval.payload.checkpoint?.askAgainAt;
+  if (id === CHECKPOINT_OPTION.keepGoing && askAgainAt) {
+    return `Kept going; Spark asks again at ${askAgainAt}%.`;
+  }
   const choices = approval.payload.checkpoint?.choices ?? [];
   const index = id.startsWith('option:') ? Number(id.slice('option:'.length)) : -1;
   if (index >= 0 && choices[index]) return `You chose: ${choices[index]}`;
