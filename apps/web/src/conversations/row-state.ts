@@ -36,6 +36,7 @@ export function attentionLine(attention: ConversationAttention | null): string {
   const name = attention.agentName;
   switch (attention.kind) {
     case 'permission':
+      if (attention.prFeedback) return 'Spark is ready to push PR fixes and replies';
       return `${speaker(attention)} wants to ${attention.title}`;
     case 'plan':
       return name ? `${name}’s plan is ready for review` : 'The plan is ready for review';

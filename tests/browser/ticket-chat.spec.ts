@@ -75,10 +75,12 @@ async function editAndKeep(page: Page, text: string) {
 async function shipDraft(page: Page) {
   await page.locator('.ship-btn').last().click();
   const panel = page.getByRole('group', { name: 'Ship this task' });
-  await panel.getByRole('button', { name: 'Open draft PR' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Opened draft PR #1.' })).toBeVisible({
-    timeout: 20_000,
-  });
+  await panel.getByRole('button', { name: 'Open PR' }).click();
+  await expect(page.getByRole('status').filter({ hasText: /Opened (draft )?PR #1\./ })).toBeVisible(
+    {
+      timeout: 20_000,
+    },
+  );
 }
 
 async function pulls(page: Page): Promise<FakePullSeen[]> {
@@ -117,6 +119,7 @@ test('Start work links the chat, Ship puts the PR on the ticket, and a merge mov
   await expect(page.locator('.ctxbar .chat-branch .ctx-branch-name')).toHaveText(
     /^spark\/eng-1210-/,
   );
+  await page.request.patch('/api/profile', { data: { prReadyForReview: false } });
   await shipDraft(page);
   const [pull] = await pulls(page);
   expect(pull!.head).toMatch(/^spark\/eng-1210-/);

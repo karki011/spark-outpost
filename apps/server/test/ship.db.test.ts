@@ -179,7 +179,7 @@ describe('ship', { timeout: 60_000 }, () => {
     );
 
     const pull = stub.github.pulls[0]!;
-    expect(pull).toMatchObject({ draft: true, base: 'main', head: before.branch, via: 'gh_cli' });
+    expect(pull).toMatchObject({ draft: false, base: 'main', head: before.branch, via: 'gh_cli' });
     expect(pull.body).toContain('- `notes.txt` (modified)');
     expect(pull.body).toContain('No project checks ran.');
     expect(pull.body.endsWith('🤖 Generated with Spark Outpost')).toBe(true);

@@ -129,6 +129,18 @@ describe('rowState while waiting', () => {
       sub: 'Sketch’s plan is ready for review',
     });
   });
+
+  it('labels a PR follow-up card as PR feedback', () => {
+    const feedback = chat({
+      needsInput: true,
+      attention: ask({ kind: 'permission', title: 'address PR feedback?', prFeedback: true }),
+    });
+    expect(rowState(feedback, false)).toEqual({
+      tone: 'permission',
+      label: 'PR feedback',
+      sub: 'Spark is ready to push PR fixes and replies',
+    });
+  });
 });
 
 describe('attention', () => {

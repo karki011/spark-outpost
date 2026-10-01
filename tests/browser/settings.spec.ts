@@ -70,7 +70,7 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   const sparkSwitch = spark.getByRole('switch', { name: 'Spark', exact: true });
   await expect(sparkSwitch).toHaveAttribute('aria-checked', 'true');
   const switches = spark.getByRole('switch');
-  await expect(switches).toHaveCount(3);
+  await expect(switches).toHaveCount(7);
   for (const removed of ['Call me by name', 'Work like a team', 'Critic']) {
     await expect(spark.getByText(removed, { exact: true })).toHaveCount(0);
   }
@@ -198,7 +198,7 @@ test('Spark sets what Full auto does when checks still fail, opening the draft P
   });
   await expect(choice.getByRole('radio', { name: 'Open a draft PR' })).toBeChecked();
   await expect(choice).toHaveAccessibleDescription(
-    'The draft PR is marked “Checks failing”. Full auto never merges.',
+    'That PR always opens as a draft marked “Checks failing”, even when PRs open ready for review. Full auto never merges.',
   );
   const saved = page.waitForResponse(
     (response) => response.url().endsWith('/api/profile') && response.ok(),

@@ -70,3 +70,10 @@
   display: block;
   color: var(--muted);
 }
+.sac-pr-head a {
+  color: var(--accent-text);
+}
+.sac-pr-head a:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+}

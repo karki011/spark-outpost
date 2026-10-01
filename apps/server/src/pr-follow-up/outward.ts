@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ShipPreview } from '@spark-outpost/contracts';
+import { redactText } from '../audit/redact.ts';
 import type { StoredFeedback, Watch } from '../persistence/pr-watches.ts';
 import { getTaskShip, saveTaskShip } from '../persistence/task-ships.ts';
 import { repoPath, type GitHubConnection } from '../ship/github/connection.ts';
@@ -60,8 +61,9 @@ export async function postReply(
   connection: GitHubConnection,
   watch: Watch,
   item: StoredFeedback,
-  text: string,
+  reply: string,
 ): Promise<string> {
+  const text = redactText(reply);
   const repo = { owner: watch.owner, name: watch.repo };
   const pull = `${repoPath(repo)}/pulls/${watch.number}`;
   if (item.kind === 'review_comment') {

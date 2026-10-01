@@ -10,7 +10,7 @@ import { openChats } from './navigation.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
 
 const GITHUB_DESCRIPTION =
-  'Ship commits and pushes with your own Git. Opening a draft pull request needs GitHub.';
+  'Ship commits and pushes with your own Git. Opening a pull request needs GitHub.';
 
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 
@@ -53,7 +53,7 @@ async function keptChange(page: Page, root: string) {
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
 }
 
-test('Ship from the keep card commits the task file and opens a draft PR', async ({ page }) => {
+test('Ship from the keep card commits the task file and opens a PR', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   const repo = await repoWithRemote(base, 'widgets');
   writeFileSync(path.join(repo.root, 'mine.txt'), 'my own edit\n');
@@ -61,7 +61,7 @@ test('Ship from the keep card commits the task file and opens a draft PR', async
   await keptChange(page, repo.root);
 
   const open = page.locator('.ship-btn');
-  await expect(open).toHaveText('Open draft PR');
+  await expect(open).toHaveText('Open PR');
   await expect(open).not.toHaveAttribute('aria-controls');
   await open.click();
   await expect(open).toHaveAttribute('aria-expanded', 'true');
@@ -73,7 +73,7 @@ test('Ship from the keep card commits the task file and opens a draft PR', async
   await expect(panel.locator('.ship-facts')).toContainText('into main');
   await expect(panel.getByRole('list', { name: 'Files to commit' })).toHaveText(/notes\.txt/);
   await expect(panel.getByRole('list', { name: 'Files to commit' })).not.toContainText('mine');
-  await expect(panel.getByRole('radio', { name: 'Draft PR' })).toHaveAttribute(
+  await expect(panel.getByRole('radio', { name: 'PR', exact: true })).toHaveAttribute(
     'aria-checked',
     'true',
   );
@@ -85,14 +85,14 @@ test('Ship from the keep card commits the task file and opens a draft PR', async
 
   await open.click();
   await panel.getByLabel('Pull request title').fill('Tidy the notes');
-  await panel.getByRole('button', { name: 'Open draft PR' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Opened draft PR #1.' })).toBeVisible({
+  await panel.getByRole('button', { name: 'Open PR' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Opened PR #1.' })).toBeVisible({
     timeout: 15_000,
   });
   const chip = page.locator('.ship .lchip');
   await expect(chip).toContainText('acme/widgets#1');
   await expect(chip).toHaveAttribute('href', 'https://github.com/acme/widgets/pull/1');
-  await expect(open).toHaveText('Update draft PR');
+  await expect(open).toHaveText('Update PR');
   await expect(open).toBeFocused();
 
   const pulls = (await (await page.request.get(`${STUB_URL}/github-test/pulls`)).json()) as {
@@ -103,7 +103,7 @@ test('Ship from the keep card commits the task file and opens a draft PR', async
     via: string;
   }[];
   expect(pulls).toHaveLength(1);
-  expect(pulls[0]).toMatchObject({ title: 'Tidy the notes', draft: true, base: 'main' });
+  expect(pulls[0]).toMatchObject({ title: 'Tidy the notes', draft: false, base: 'main' });
   expect(pulls[0]!.via).toBe('gh_cli');
   await expect(page.locator('.ctxbar .chat-branch .ctx-branch-name')).toHaveText(pulls[0]!.head);
   expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
@@ -137,7 +137,7 @@ test('Ship offers push only when GitHub is not connected', async ({ page }) => {
   expect(git(repo.bare, 'rev-parse', branch)).toBe(git(repo.root, 'rev-parse', branch));
 });
 
-test('Full auto runs to a draft PR: the reply and the auto-kept card show the PR link', async ({
+test('Full auto runs to a PR: the reply and the auto-kept card show the PR link', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
@@ -166,7 +166,7 @@ test('Full auto runs to a draft PR: the reply and the auto-kept card show the PR
   await expect(page.getByRole('group', { name: /Change a file\?/ })).toHaveCount(0);
   const keep = page.getByRole('group', { name: /Keep these changes\?/ });
   await expect(keep).toContainText('Kept by Full auto → PR.');
-  await expect(keep).toContainText('Opened draft PR #1: https://github.com/acme/widgets/pull/1');
+  await expect(keep).toContainText('Opened PR #1: https://github.com/acme/widgets/pull/1');
   await expect(keep).toContainText(/The change is on spark\/\S+ in this chat's worktree\./);
   const chip = keep.locator('.ship .lchip');
   await expect(chip).toContainText('acme/widgets#1');
@@ -178,7 +178,7 @@ test('Full auto runs to a draft PR: the reply and the auto-kept card show the PR
     head: string;
   }[];
   expect(pulls).toHaveLength(1);
-  expect(pulls[0]).toMatchObject({ draft: true, base: 'main' });
+  expect(pulls[0]).toMatchObject({ draft: false, base: 'main' });
   expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
   expect(git(repo.bare, 'diff', '--name-only', 'main', pulls[0]!.head)).toBe('notes.txt');
 });
