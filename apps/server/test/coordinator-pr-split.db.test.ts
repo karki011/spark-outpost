@@ -123,6 +123,23 @@ describe('one PR or separate PRs for worktree pieces', { timeout: 180_000 }, () 
     expect(await rememberedSplit()).toBeNull();
   });
 
+  it('waits for an answer when the auto-continue setting is off', async () => {
+    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: null });
+    const countdowns: (string | null | undefined)[] = [];
+    const onePr: Answerer = (approval: Approval) => {
+      if (approval.kind !== 'pr_split') return answerEverything(approval);
+      countdowns.push(approval.autoContinueAt);
+      return { optionId: CHECKPOINT_OPTION.onePr };
+    };
+    const { orchestration, runId } = await runWorktreePieces('one-pr-off', onePr);
+    expect(orchestration.status).toBe('succeeded');
+    expect(countdowns).toEqual([null]);
+    expect(await prSplitCards(runId)).toEqual([
+      { decided_by: 'user', decision_option_id: CHECKPOINT_OPTION.onePr },
+    ]);
+    expect(stub.github.pulls).toHaveLength(1);
+  });
+
   it('opens one draft PR per worktree piece and remembers the choice for the project', async () => {
     const separate: Answerer = (approval: Approval) =>
       approval.kind === 'pr_split'

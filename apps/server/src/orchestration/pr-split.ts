@@ -5,8 +5,6 @@ import type { Session } from './session.ts';
 
 export type PrSplit = 'one' | 'separate';
 
-export const PR_SPLIT_SECONDS = 10;
-
 const ANSWERS: Record<string, { split: PrSplit; remember: boolean }> = {
   [CHECKPOINT_OPTION.onePr]: { split: 'one', remember: false },
   [CHECKPOINT_OPTION.separatePrs]: { split: 'separate', remember: false },
@@ -46,7 +44,7 @@ export async function choosePrSplit(
 ): Promise<PrSplit | null> {
   const remembered = await rememberedSplit(s.deps.db, s.lease.runId);
   if (remembered) return remembered;
-  const answer = await askCard(s, prSplitCard(pieces.map((piece) => piece.key)), PR_SPLIT_SECONDS);
+  const answer = await askCard(s, prSplitCard(pieces.map((piece) => piece.key)));
   if (answer.type === 'stopped') return null;
   const chosen = answer.type === 'answered' ? ANSWERS[answer.optionId] : undefined;
   if (!chosen) return 'one';

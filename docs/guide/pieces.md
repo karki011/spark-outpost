@@ -73,7 +73,7 @@ Select **Agent TV** in the chat to see the Coordinator in the middle and the Bui
 
 At **Full auto → PR**, when 2 or more pieces were built in their own copies, Spark asks **One PR or separate PRs?**:
 
-- **One PR**: everything in one pull request. Spark picks this after 10 seconds if you don't answer.
+- **One PR**: everything in one pull request. If you don't answer, Spark picks this after the time in **If you don't answer a question** (**Settings → Spark**). With that setting **Off**, the card waits for you.
 - **Separate PRs**: one pull request per piece. Pieces built in the shared tree always go in the main PR.
 - **Always one PR here** or **Always separate PRs here**: remember the choice for this project and skip the card next time.
 
