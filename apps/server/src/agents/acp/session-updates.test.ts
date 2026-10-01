@@ -443,4 +443,29 @@ describe('ACP session update mapping', () => {
       target: '{"command":"ls"}',
     });
   });
+
+  it('remembers the plan an ExitPlanMode call or a plan file showed (D-noJev)', () => {
+    const mapper = createUpdateMapper();
+    expect(mapper.shownPlan()).toBeNull();
+    mapper.map({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'f',
+      title: 'Write',
+      kind: 'edit',
+      rawInput: { file_path: '/h/.claude/plans/a.md', content: '1. From the file' },
+    });
+    expect(mapper.shownPlan()).toBe('1. From the file');
+    mapper.map({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'p',
+      title: 'Approve Plan',
+      kind: 'switch_mode',
+    });
+    mapper.map({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'p',
+      rawInput: { plan: '1. From the call' },
+    });
+    expect(mapper.shownPlan()).toBe('1. From the call');
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { exitPlanText, isExitPlanAllow, plansThisTurn } from './plan-mode.ts';
+import { exitPlanText, isExitPlanAllow, planFileText, plansThisTurn } from './plan-mode.ts';
 
 describe('isExitPlanAllow', () => {
   it('counts every exit-plan choice as approval, including the clear-context ones', () => {
@@ -61,5 +61,15 @@ describe('which turns plan in the native plan mode (B5)', () => {
     );
     expect(plansThisTurn({ ...ask, provider: 'claude', planning: false })).toBe(false);
     expect(plansThisTurn({ ...ask, provider: 'codex', planning: true })).toBe(true);
+  });
+});
+
+describe('planFileText', () => {
+  it('reads a plan Claude writes to its plans folder and nothing else', () => {
+    const plan = { file_path: '/Users/a/.claude/plans/csv.md', content: ' 1. Add CSV \n' };
+    expect(planFileText(plan)).toBe('1. Add CSV');
+    expect(planFileText({ ...plan, file_path: '/repo/src/csv.md' })).toBeNull();
+    expect(planFileText({ ...plan, content: '  ' })).toBeNull();
+    expect(planFileText(null)).toBeNull();
   });
 });

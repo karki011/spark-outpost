@@ -11,6 +11,7 @@ import { currentValues } from './capabilities.ts';
 import { findPullRequests } from '../../tasks/pr-links.ts';
 import { agentCommands } from './slash-commands.ts';
 import { objectFields } from './object-fields.ts';
+import { exitPlanText, planFileText } from '../../plans/plan-mode.ts';
 
 export const THINKING_STEP = 'Thinking';
 export const FAILED_PREFIX = 'Failed: ';
@@ -30,6 +31,7 @@ export interface UpdateMapper {
   trackSettings(settings: TrackedSettings, policy: ModePolicy): void;
   unsafeModeChange(): string | null;
   currentMode(): string | null;
+  shownPlan(): string | null;
   note(name: string): ProviderOutput[];
   clientAction(name: string): ProviderOutput[];
   finish(cancelled?: boolean): ProviderOutput[];
@@ -205,6 +207,12 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
   let tracked: TrackedSettings | null = null;
   let policy: ModePolicy | null = null;
   let unsafeMode: string | null = null;
+  let plan: string | null = null;
+
+  const rememberPlan = (kind: string | null | undefined, rawInput: unknown, content: unknown) => {
+    const items = Array.isArray(content) ? (content as ToolCallContent[]) : null;
+    plan = exitPlanText(kind, rawInput, items) ?? planFileText(rawInput) ?? plan;
+  };
 
   const stopThinking = (): ProviderOutput[] => {
     if (!thinking) return [];
@@ -312,6 +320,7 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
           return [...stopThinking(), ...linked, { kind: 'text_delta', delta: separator + chunk }];
         }
         case 'tool_call': {
+          rememberPlan(update.kind, update.rawInput, update.content);
           const outputs = [...stopThinking(), ...finishTool(update.toolCallId)];
           const name = describeTool(update.title);
           worked = true;
@@ -331,6 +340,11 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
           return outputs;
         }
         case 'tool_call_update': {
+          rememberPlan(
+            update.kind ?? openTools.get(update.toolCallId)?.kind,
+            update.rawInput,
+            update.content,
+          );
           retarget(update);
           const linked = links(toolTexts(update.content, update.rawOutput));
           if (update.status === 'completed' || update.status === 'failed') {
@@ -388,6 +402,7 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
     },
     unsafeModeChange: () => unsafeMode,
     currentMode: () => tracked?.mode ?? null,
+    shownPlan: () => plan,
     note,
     clientAction(name) {
       worked = true;

@@ -5,6 +5,8 @@ export const PLAN_MODE_TRIGGER = '#planmode';
 export const PROPOSED_PLAN_TRIGGER = '#proposedplan';
 export const PLAN_REPLY_TRIGGER = '#planreply';
 export const NATIVE_PLAN_TRIGGER = '#nativeplan';
+export const PLAN_CALL_ONLY_TRIGGER = '#plancallonly';
+export const PLAN_FILE_TRIGGER = '#planinfile';
 
 export const FAKE_PLAN = [
   '# Add CSV export',
@@ -67,12 +69,46 @@ export async function planModeTurn(turn: RoleTurn, lockedMode: string): Promise<
   return 'end_turn';
 }
 
+async function silentExitPlan(turn: RoleTurn, inFile: boolean): Promise<acp.StopReason> {
+  await turn.update({ sessionUpdate: 'current_mode_update', currentModeId: 'plan' });
+  if (inFile) {
+    await turn.update({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'plan-file',
+      title: 'Write plan',
+      kind: 'edit',
+      status: 'completed',
+      rawInput: { file_path: '/Users/someone/.claude/plans/csv-export.md', content: FAKE_PLAN },
+    });
+  }
+  const shown = {
+    toolCallId: 'plan2',
+    title: 'Approve Plan',
+    kind: 'switch_mode' as const,
+    status: 'pending' as const,
+  };
+  await turn.update({
+    sessionUpdate: 'tool_call',
+    ...shown,
+    rawInput: inFile ? {} : { plan: FAKE_PLAN },
+  });
+  await turn.client.request(acp.methods.client.session.requestPermission, {
+    sessionId: turn.sessionId,
+    toolCall: { ...shown, rawInput: {} },
+    options: FAKE_PLAN_OPTIONS,
+  });
+  await turn.update({ sessionUpdate: 'tool_call_update', toolCallId: 'plan2', status: 'failed' });
+  return 'end_turn';
+}
+
 export async function planTurn(
   asked: string,
   turn: RoleTurn,
   mode: string,
 ): Promise<acp.StopReason | null> {
   if (asked.includes(PLAN_MODE_TRIGGER)) return planModeTurn(turn, mode);
+  if (asked.includes(PLAN_CALL_ONLY_TRIGGER)) return silentExitPlan(turn, false);
+  if (asked.includes(PLAN_FILE_TRIGGER)) return silentExitPlan(turn, true);
   if (!asked.includes(NATIVE_PLAN_TRIGGER)) return null;
   if (mode === 'plan') return planModeTurn(turn, mode);
   await turn.say(`Not in plan mode (${mode}).\n\n${FAKE_PLAN}`);
