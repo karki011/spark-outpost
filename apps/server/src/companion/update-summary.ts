@@ -24,22 +24,19 @@ export interface ChatFacts {
   quietMinutes: number | null;
 }
 
-const HEADLINES = ['on_track', 'needs_you', 'stuck', 'wrapping_up', 'done', 'failed'] as const;
-export type Headline = (typeof HEADLINES)[number];
+export type Headline = 'on_track' | 'needs_you' | 'stuck' | 'wrapping_up' | 'done' | 'failed';
 
-const NEXT_KEYS = [
-  'answer',
-  'finish_step',
-  'run_checks',
-  'fix_checks',
-  'review',
-  'keep',
-  'look_over',
-  'nothing',
-  'retry',
-  'start',
-] as const;
-type NextKey = (typeof NEXT_KEYS)[number];
+type NextKey =
+  | 'answer'
+  | 'finish_step'
+  | 'run_checks'
+  | 'fix_checks'
+  | 'review'
+  | 'keep'
+  | 'look_over'
+  | 'nothing'
+  | 'retry'
+  | 'start';
 
 export interface UpdatePlan {
   headlines: Headline[];

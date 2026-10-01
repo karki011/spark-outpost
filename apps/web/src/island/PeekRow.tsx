@@ -1,0 +1,138 @@
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import type { ConversationSummary } from '@spark-outpost/contracts';
+import { peekOffset, sessionState, type SessionState } from './island-model.ts';
+import { sessionExpression } from './island-mood.ts';
+import { SessionBlob } from './SessionBlob.tsx';
+
+const LEAVE_MS = 420;
+const STATE_WORDS: Record<SessionState, string> = {
+  working: 'working',
+  waiting: 'waiting for you',
+  done: 'done',
+  failed: 'failed',
+  idle: 'quiet',
+};
+
+interface PeekRowProps {
+  sessions: readonly ConversationSummary[];
+  more: number;
+  shown: boolean;
+  sleepy: boolean;
+  onOpen: (id: string) => void;
+  onMore: () => void;
+}
+
+interface Slot {
+  chat: ConversationSummary;
+  leaving: boolean;
+}
+
+function useSlots(sessions: readonly ConversationSummary[]): Slot[] {
+  const [leaving, setLeaving] = useState<ConversationSummary[]>([]);
+  const previous = useRef<readonly ConversationSummary[]>(sessions);
+  useEffect(() => {
+    const ids = new Set(sessions.map((chat) => chat.id));
+    const gone = previous.current.filter((chat) => !ids.has(chat.id));
+    previous.current = sessions;
+    if (gone.length === 0) return;
+    setLeaving((list) => [...list, ...gone]);
+    const timer = setTimeout(
+      () => setLeaving((list) => list.filter((chat) => !gone.includes(chat))),
+      LEAVE_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [sessions]);
+  return [
+    ...sessions.map((chat) => ({ chat, leaving: false })),
+    ...leaving
+      .filter((chat) => !sessions.some((live) => live.id === chat.id))
+      .map((chat) => ({ chat, leaving: true })),
+  ];
+}
+
+export function PeekRow({ sessions, more, shown, sleepy, onOpen, onMore }: PeekRowProps) {
+  const slots = useSlots(sessions);
+  const [focus, setFocus] = useState(0);
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const count = sessions.length + (more > 0 ? 1 : 0);
+  const current = Math.min(focus, Math.max(0, count - 1));
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    const next = (current + (event.key === 'ArrowRight' ? 1 : -1) + count) % count;
+    setFocus(next);
+    buttons.current[next]?.focus();
+  };
+
+  if (slots.length === 0 && more === 0) return null;
+  return (
+    <div
+      className="isl-peekrow"
+      role="toolbar"
+      aria-label="Active chats"
+      data-shown={shown || undefined}
+      onKeyDown={onKeyDown}
+    >
+      {slots.map(({ chat, leaving }, index) => {
+        const state = sessionState(chat);
+        const slot = leaving ? index : sessions.indexOf(chat);
+        const label = `Chat: ${chat.title}, ${STATE_WORDS[state]}`;
+        return (
+          <button
+            key={chat.id}
+            ref={(element) => {
+              if (!leaving) buttons.current[slot] = element;
+            }}
+            type="button"
+            className="isl-peekblob"
+            data-state={state}
+            data-leaving={leaving || undefined}
+            tabIndex={!leaving && shown && slot === current ? 0 : -1}
+            aria-label={label}
+            disabled={leaving || !shown}
+            style={{ '--x': `${peekOffset(slot)}px`, '--d': `${slot * 70}ms` } as CSSProperties}
+            onClick={() => onOpen(chat.id)}
+            onFocus={() => !leaving && setFocus(slot)}
+          >
+            <SessionBlob
+              chat={chat}
+              state={state}
+              size={22}
+              expression={sessionExpression(state, sleepy)}
+            />
+            {state === 'waiting' && (
+              <span className="isl-pb" aria-hidden="true">
+                !
+              </span>
+            )}
+            <span className="isl-tip" aria-hidden="true">
+              {chat.title} · {STATE_WORDS[state]}
+            </span>
+          </button>
+        );
+      })}
+      {more > 0 && (
+        <button
+          ref={(element) => {
+            buttons.current[sessions.length] = element;
+          }}
+          type="button"
+          className="isl-peekmore"
+          tabIndex={shown && current === sessions.length ? 0 : -1}
+          disabled={!shown}
+          aria-label={`${more} more active chats`}
+          style={
+            {
+              '--x': `${peekOffset(sessions.length)}px`,
+              '--d': `${sessions.length * 70}ms`,
+            } as CSSProperties
+          }
+          onClick={onMore}
+        >
+          +{more}
+        </button>
+      )}
+    </div>
+  );
+}
