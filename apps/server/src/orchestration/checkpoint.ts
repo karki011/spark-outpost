@@ -232,7 +232,7 @@ export function prSplitCard(pieces: readonly string[]): CheckpointCard {
 
 export const COMPACT_CARD_TITLE = 'This chat is almost full';
 
-export function compactCard(reason: string): CheckpointCard {
+export function compactCard(reason: string, askAgainAt: number): CheckpointCard {
   return {
     kind: 'compact',
     title: COMPACT_CARD_TITLE,
@@ -241,6 +241,7 @@ export function compactCard(reason: string): CheckpointCard {
       question: 'Compact it before your message?',
       reason,
       autoOption: CHECKPOINT_OPTION.keepGoing,
+      askAgainAt,
     }),
     options: [
       allow(CHECKPOINT_OPTION.compactNow, 'Compact now'),

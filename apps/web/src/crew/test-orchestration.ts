@@ -70,6 +70,7 @@ export function checkpoint(
         autoOption: null,
         waitsFor: null,
         keptBy: null,
+        askAgainAt: null,
         ...payload,
       },
     },

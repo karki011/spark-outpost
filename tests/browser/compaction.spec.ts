@@ -2,11 +2,23 @@ import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
-async function startAt(level: 'balanced' | 'hands-off') {
+interface Thresholds {
+  warn: number;
+  compact: number;
+  auto: boolean;
+}
+
+const DEFAULTS: Thresholds = { warn: 60, compact: 80, auto: true };
+
+async function startAt(level: 'balanced' | 'hands-off', thresholds = DEFAULTS) {
   await resetTestDatabase({ onboarded: true });
   const db = openTestDb();
   try {
-    await db.query('UPDATE profiles SET default_level = $1', [level]);
+    await db.query(
+      `UPDATE profiles SET default_level = $1, compact_warn_percent = $2,
+         compact_at_percent = $3, auto_compact = $4`,
+      [level, thresholds.warn, thresholds.compact, thresholds.auto],
+    );
   } finally {
     await db.end();
   }
@@ -25,7 +37,7 @@ async function sendAndWait(page: Page, text: string, turns: number) {
   await expect(page.locator('.mood', { hasText: 'done' })).toHaveCount(turns, { timeout: 20_000 });
 }
 
-test('the ring warns at 70%, the card compacts, and the divider shows the summary', async ({
+test('the ring warns at 60%, the card compacts at 80%, and the divider shows the summary', async ({
   page,
 }) => {
   await startAt('balanced');
@@ -35,7 +47,7 @@ test('the ring warns at 70%, the card compacts, and the divider shows the summar
   await expect(ring).toHaveAttribute('data-level', 'warm');
   await ring.click();
   await expect(page.getByRole('dialog', { name: 'Context window' })).toContainText(
-    'Getting full. Spark compacts the chat at 85%',
+    'Getting full. Spark compacts the chat at 80%',
   );
   await page.keyboard.press('Escape');
 
@@ -103,4 +115,36 @@ test('a fresh chat with a summary links both ways', async ({ page }) => {
   await expect(page.locator('.msg.me', { hasText: 'Carry on' })).toBeVisible();
   await seed.getByRole('button', { name: 'Open the earlier chat' }).click();
   await expect(page.getByRole('group', { name: 'Continued in a fresh chat' })).toBeVisible();
+});
+
+test('saved thresholds drive the ring, and with automatic compaction off Spark only asks', async ({
+  page,
+}) => {
+  await startAt('hands-off', { warn: 30, compact: 50, auto: false });
+  await newChat(page);
+  await sendAndWait(page, 'Sketch it #ctx40', 1);
+  const ring = page.getByRole('button', { name: /Context window: 40% used/ });
+  await expect(ring).toHaveAttribute('data-level', 'warm');
+  await ring.click();
+  await expect(page.getByRole('dialog', { name: 'Context window' })).toContainText(
+    'Getting full. Spark asks about compacting at 50%',
+  );
+  await page.keyboard.press('Escape');
+
+  await sendAndWait(page, 'More #ctx55', 2);
+  await expect(page.getByRole('button', { name: /Context window: 55% used/ })).toHaveAttribute(
+    'data-level',
+    'hot',
+  );
+  const input = page.getByRole('textbox', { name: 'Message' });
+  await input.fill('And then?');
+  await input.press('Enter');
+  const card = page.getByRole('group', { name: /This chat is almost full/ });
+  await expect(card).toContainText('Automatic compaction is off, so Spark asks first.', {
+    timeout: 20_000,
+  });
+  await card.getByRole('button', { name: /^Keep going/ }).click();
+  await expect(page.getByText('Kept going; Spark asks again at 60%.')).toBeVisible();
+  await expect(page.locator('.mood', { hasText: 'done' })).toHaveCount(3, { timeout: 20_000 });
+  await expect(page.getByRole('group', { name: /^Compacted/ })).toHaveCount(0);
 });

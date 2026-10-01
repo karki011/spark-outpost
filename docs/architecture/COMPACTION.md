@@ -6,10 +6,15 @@ Since October 1, 2026 (`apps/server/src/compaction/`, migration `0088_compaction
 
 - Checked only between turns: before a chat turn starts (`prepareTurn` in `orchestrate`, before intake), never mid-turn, and never while any approval card in the chat is pending.
 - The reading is the context the agent reported on the session's last turn (`provider_sessions.context_used` / `context_size`, written when the turn finishes). Only a session the coming turn would resume counts.
-- Thresholds (`@spark-outpost/contracts` `compaction.ts`): the ring warns at 70% (`COMPACT_WARN_PERCENT`, a quiet note), compaction starts at 85% (`COMPACT_AT_PERCENT`).
-- What happens at 85% follows the chat's autonomy:
-  - **Review each step:** the card "This chat is almost full" (checkpoint kind `compact`) offers **Compact now**, **Start a fresh chat with a summary** and **Keep going**. Keep going sets `provider_sessions.compact_snoozed`, so the card returns at 95% (`COMPACT_SNOOZED_PERCENT`). If you don't answer, the auto-continue setting picks Keep going.
+- Thresholds are settings (Settings → Spark → Context compaction, `profiles.compact_warn_percent`, `compact_at_percent`, `auto_compact`, migration `0090_compaction_settings.sql`), read by `compactionThresholds` before each turn:
+  - **Warn when context is** (default 60%, range 30–90): the ring turns amber and shows a quiet note.
+  - **Compact automatically at** (default 80%, range 40–95): compaction starts here. The warning must be at least 5 points below it. The server (`compactionThresholdError` in `@spark-outpost/contracts` `compaction.ts`, a 400 with the message) and the database both reject other values; the settings rows show the same message inline.
+  - Rows saved before the settings existed get the defaults.
+- What happens at the compaction point follows the chat's autonomy:
+  - **Review each step:** the card "This chat is almost full" (checkpoint kind `compact`) offers **Compact now**, **Start a fresh chat with a summary** and **Keep going**. Keep going sets `provider_sessions.compact_snoozed`, so the card returns at the compaction point plus 10, at most 95% (`reaskPercent`; 90% with the defaults). The card carries that point (`askAgainAt`) for its result line. If you don't answer, the auto-continue setting picks Keep going.
   - **Automatic / Full auto → PR:** Spark compacts before the turn and posts a step in the work log.
+  - **Automatic compaction off:** every autonomy level gets the card instead; Spark only warns and asks, never compacts by itself.
+- `spark_settings` returns the values as `contextCompaction`.
 
 ## How
 
@@ -29,16 +34,16 @@ The full transcript stays in `messages`. `spark_chat_history` returns any range 
 
 ## Testing
 
-- Unit: `compaction/policy.test.ts` (thresholds, autonomy, drop detection), `orchestration/handoff.test.ts` (the chat summary).
-- DB: `test/compaction.db.test.ts`, `test/compaction-card.db.test.ts`, `test/spark-mcp-history.db.test.ts`. The fake ACP agent reports usage when `FAKE_ACP_CONTEXT_SIZE` is set (`#ctx90` in a message sets 90%, `/compact` drops to 8%, `#selfcompact` to 10%) and advertises `/compact` through `FAKE_ACP_COMMANDS`.
-- Browser: `tests/browser/compaction.spec.ts` uses the in-process fake provider: a chat containing `#ctxNN` gets a resumable session, reports NN% and advertises `/compact`; `#nocompact` leaves the command out.
+- Unit: `contracts/compaction.test.ts` (validation, ring levels, the re-ask point), `compaction/policy.test.ts` (thresholds, autonomy, off, drop detection), `orchestration/handoff.test.ts` (the chat summary).
+- DB: `test/compaction.db.test.ts`, `test/compaction-card.db.test.ts`, `test/compaction-settings.db.test.ts` (custom thresholds, off, validation), `test/spark-mcp-history.db.test.ts`. The fake ACP agent reports usage when `FAKE_ACP_CONTEXT_SIZE` is set (`#ctx90` in a message sets 90%, `/compact` drops to 8%, `#selfcompact` to 10%) and advertises `/compact` through `FAKE_ACP_COMMANDS`.
+- Browser: `tests/browser/compaction.spec.ts` uses the in-process fake provider: a chat containing `#ctxNN` gets a resumable session, reports NN% and advertises `/compact`; `#nocompact` leaves the command out. `tests/browser/settings.spec.ts` changes the thresholds.
 
 ### A live check
 
 Not run as part of the suites; never against real work. Use a throwaway repo and chat:
 
 - **Self-compaction:** start the agent with a low compaction window so it compacts itself after a few turns, for example `CLAUDE_CODE_AUTO_COMPACT_WINDOW=40000` in the environment Spark launches Claude Code with (Z.ai already sets this variable, see `agents/acp/zai.ts`). When its reported context drops, the chat should show "The agent compacted its context".
-- **Spark's 85% path:** fill the context (paste or attach large files) until the ring passes 85%, then send one more message. At Automatic the work log shows "Sent /compact to the agent" and the divider; at Review each step the card asks first. Whether the adapter reports usage after `/compact` decides whether Spark keeps the agent's compaction or falls back to its own summary; record which one happened.
+- **Spark's compaction path:** fill the context (paste or attach large files) until the ring passes the compaction point (80% by default), then send one more message. At Automatic the work log shows "Sent /compact to the agent" and the divider; at Review each step the card asks first. Whether the adapter reports usage after `/compact` decides whether Spark keeps the agent's compaction or falls back to its own summary; record which one happened.
 
 ## Gaps
 

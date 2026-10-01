@@ -58,7 +58,7 @@ describe('the compaction card at Review each step', { timeout: 60_000 }, () => {
     expect((await compactionsOf(h, id)).map((row) => row.method)).toEqual(['agent']);
   });
 
-  it('keeps going, then asks again only at 95%', async () => {
+  it('keeps going, then asks again only at 90% (the default 80% plus 10)', async () => {
     h = await startCompactionHarness(['compact']);
     const id = await fullChat();
     const kept = await answer(await send(h, id, 'Next step'), CHECKPOINT_OPTION.keepGoing);
@@ -66,7 +66,7 @@ describe('the compaction card at Review each step', { timeout: 60_000 }, () => {
     expect(await compactionsOf(h, id)).toEqual([]);
     expect((await sessionsOf(h, id))[0]).toMatchObject({ compact_snoozed: true });
 
-    const quiet = await say(h, id, 'Keep at it #ctx96');
+    const quiet = await say(h, id, 'Keep at it #ctx92');
     expect(quiet.run.status).toBe('succeeded');
 
     const again = await send(h, id, 'Still there?');
