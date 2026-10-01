@@ -1,9 +1,11 @@
 import path from 'node:path';
-import { app, dialog, type BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import { apiOrigin } from './api-token.ts';
 import { waitForApi } from './api-ready.ts';
 import { channelConfig, channelPaths, resolveChannel } from './channel.ts';
+import { settingsFile } from './companion-settings.ts';
+import { startCompanionHost, type CompanionHost } from './desktop-companion.ts';
 import { detectGit, GIT_MISSING } from './git.ts';
 import { freePort, LOOPBACK } from './ports.ts';
 import { startDatabase, type Database } from './postgres.ts';
@@ -18,6 +20,7 @@ const paths = channelPaths(app.getPath('appData'), config);
 const repoRoot = path.resolve(app.getAppPath(), '../..');
 const serverDir = path.join(repoRoot, 'apps/server');
 const bootstrap = path.join(import.meta.dirname, 'server-entry.js');
+const preload = path.join(import.meta.dirname, 'preload.cjs');
 
 app.setName(config.appName);
 app.setPath('userData', paths.userData);
@@ -27,6 +30,8 @@ process.env.LC_ALL = POSTGRES_LOCALE;
 let database: Database | null = null;
 const supervisors: Supervisor[] = [];
 let window: BrowserWindow | null = null;
+let origin: string | null = null;
+let companionHost: CompanionHost | null = null;
 
 function log(source: string) {
   return (line: string) => console.log(`[${source}] ${line}`);
@@ -57,9 +62,15 @@ async function stopEverything(): Promise<void> {
   console.log('[main] Stopped.');
 }
 
+function closeWindows(): void {
+  companionHost?.dispose();
+  companionHost = null;
+  for (const open of BrowserWindow.getAllWindows()) open.destroy();
+}
+
 const shutdown = createShutdown({
   stop: stopEverything,
-  closeWindow: () => window?.destroy(),
+  closeWindow: closeWindows,
   showError: (message, detail) =>
     dialog.showMessageBox({
       type: 'error',
@@ -86,14 +97,14 @@ async function launch(): Promise<void> {
     log: log('postgres'),
   });
   const apiPort = await freePort();
-  const origin = apiOrigin(LOOPBACK, apiPort);
+  const apiUrl = apiOrigin(LOOPBACK, apiPort);
   const token = createLaunchToken();
   const launchInfo: ServerLaunch = {
     config,
     paths,
     databaseUrl: database.url,
     apiPort,
-    apiOrigin: origin,
+    apiOrigin: apiUrl,
     token,
     webRoot: path.join(repoRoot, 'apps/web/dist'),
     baseEnv: process.env,
@@ -106,7 +117,7 @@ async function launch(): Promise<void> {
     apiEnv(launchInfo),
     () => apiReady,
   );
-  await waitForApi(origin, token, shutdown.failed);
+  await waitForApi(apiUrl, token, shutdown.failed);
   apiReady = true;
   supervise(
     'Spark Outpost Worker',
@@ -115,23 +126,43 @@ async function launch(): Promise<void> {
     () => true,
   );
 
-  attachApiToken(origin, token);
-  window = openWindow({ config, origin });
-  window.on('closed', () => {
-    window = null;
+  attachApiToken(apiUrl, token);
+  origin = apiUrl;
+  showSpark();
+  companionHost = await startCompanionHost({
+    appName: config.appName,
+    origin: apiUrl,
+    preload,
+    settingsPath: settingsFile(paths.userData),
+    showSpark,
+    quit: () => app.quit(),
   });
-  console.log(`[main] ${config.appName} ready on ${origin}; data in ${paths.userData}.`);
+  console.log(`[main] ${config.appName} ready on ${apiUrl}; data in ${paths.userData}.`);
+}
+
+function showSpark(): void {
+  if (!origin || shutdown.failed.aborted) return;
+  if (!window) {
+    window = openWindow({ config, origin, preload });
+    window.on('closed', () => {
+      window = null;
+    });
+    return;
+  }
+  if (window.isMinimized()) window.restore();
+  window.show();
+  window.focus();
+  app.focus({ steal: true });
 }
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (!window) return;
-    if (window.isMinimized()) window.restore();
-    window.focus();
+  app.on('second-instance', showSpark);
+  app.on('activate', showSpark);
+  app.on('window-all-closed', () => {
+    if (!companionHost?.companion.running()) app.quit();
   });
-  app.on('window-all-closed', () => app.quit());
   for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => app.quit());
   app.on('before-quit', (event) => {
     event.preventDefault();

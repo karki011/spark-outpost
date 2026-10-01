@@ -34,6 +34,7 @@ export interface SparkScope {
   workspaceId: string;
   conversationId: string | null;
   runId: string | null;
+  readOnly?: boolean;
   actions?: SparkActionHooks;
   observations?: RunObservations | undefined;
 }

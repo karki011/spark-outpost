@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './app/App.tsx';
@@ -19,11 +19,22 @@ configureLiveQueries(queryClient);
 
 markScrollbarStyle();
 
+const IslandApp = lazy(() =>
+  import('./island/IslandApp.tsx').then((module) => ({ default: module.IslandApp })),
+);
+const island = window.location.pathname === '/island';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AppMotion>
-        <App />
+        {island ? (
+          <Suspense fallback={null}>
+            <IslandApp />
+          </Suspense>
+        ) : (
+          <App />
+        )}
       </AppMotion>
     </QueryClientProvider>
   </StrictMode>,

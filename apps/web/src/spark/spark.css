@@ -82,3 +82,9 @@
   width: 116px;
   font-variant-numeric: tabular-nums;
 }
+
+.desk-shortcut {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}

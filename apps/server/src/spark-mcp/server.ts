@@ -85,6 +85,10 @@ export async function callSparkTool(
   }
 }
 
+export function sparkToolsFor(scope: Pick<SparkScope, 'readOnly'>): readonly SparkTool[] {
+  return scope.readOnly ? SPARK_TOOLS.filter((tool) => !tool.acts) : SPARK_TOOLS;
+}
+
 export function sparkMcpServer(
   deps: SparkToolDeps,
   scope: SparkScope,
@@ -95,7 +99,7 @@ export function sparkMcpServer(
     { instructions: INSTRUCTIONS, capabilities: { tools: {} } },
   );
   const context = { deps, scope };
-  for (const tool of SPARK_TOOLS) {
+  for (const tool of sparkToolsFor(scope)) {
     server.registerTool(
       tool.name,
       {

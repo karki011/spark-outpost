@@ -10,6 +10,7 @@ import {
   PROVIDERS,
   STATUS,
 } from './interface-pairs.ts';
+import { ISLAND_PAIRS } from './island-pairs.ts';
 import { MAP } from './map-pairs.ts';
 import { surfaceText, type HuePair, type Pair, type PairKind } from './pair-types.ts';
 
@@ -50,6 +51,7 @@ export const PAIRS: Pair[] = [
   ...OFFLINE,
   ...AGENT_TV,
   ...MAP,
+  ...ISLAND_PAIRS,
 ];
 
 export const HUE_PAIRS: HuePair[] = [

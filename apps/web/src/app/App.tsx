@@ -1,4 +1,12 @@
-import { lazy, Suspense, useCallback, useState, type CSSProperties } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ConversationSummary, SetupState } from '@spark-outpost/contracts';
@@ -8,6 +16,7 @@ import { setupApi, setupKey } from '../api/setup.ts';
 import { ChatView } from '../chat/ChatView.tsx';
 import { queueDraft } from '../chat/composer/pending-draft.ts';
 import { StatusCompanion } from '../companion/StatusCompanion.tsx';
+import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { AgentTvHost } from '../crew/AgentTvHost.tsx';
 import { scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
 import { ConversationList } from '../conversations/ConversationList.tsx';
@@ -102,6 +111,12 @@ function ChatShell({ entering }: { entering: boolean }) {
     setView('chats');
     layout.closeDrawer();
   };
+
+  const openFromDesktop = useRef(openChat);
+  useEffect(() => {
+    openFromDesktop.current = openChat;
+  });
+  useEffect(() => sparkDesktop()?.onOpenChat((id) => openFromDesktop.current(id)), []);
 
   const openAtCard = (chat: ConversationSummary) => {
     openChat(chat.id);

@@ -45,6 +45,7 @@ export interface RunInput {
   planning?: boolean;
   projectMove?: ProjectMove | null;
   chatWorktree?: boolean;
+  assistant?: boolean;
 }
 
 export interface ProjectMove {
@@ -81,6 +82,7 @@ interface RunRow {
   worktree_path: string | null;
   in_chat_worktree: boolean;
   title_source: string;
+  assistant: boolean;
 }
 
 interface HistoryRow {
@@ -150,6 +152,10 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
             (SELECT w.path FROM run_worktrees w
              WHERE w.run_id = COALESCE((r.route->>'worktreeRun')::uuid, r.id)) AS worktree_path,
             c.title_source,
+            EXISTS (
+              SELECT 1 FROM profiles pf
+              WHERE pf.workspace_id = c.workspace_id AND pf.assistant_conversation_id = c.id
+            ) AS assistant,
             pc.method, pc.model, pc.effort, pc.models,
             ARRAY(
               SELECT COALESCE(cw.path, p.root_path) FROM conversation_projects cp
@@ -202,6 +208,7 @@ export async function loadRunInput(db: Db, runId: string): Promise<RunInput> {
     role: row.run_role,
     copyOf: null,
     askTitle: row.title_source !== 'user',
+    assistant: row.assistant,
     previousMessageId: history.rows.at(-1)?.id ?? null,
     startAs: row.start_as,
     chatWorktree: row.in_chat_worktree,

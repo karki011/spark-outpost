@@ -5,6 +5,7 @@ import type { ChannelConfig } from './channel.ts';
 export interface WindowOptions {
   config: ChannelConfig;
   origin: string;
+  preload: string;
 }
 
 function openOutside(url: string): void {
@@ -17,7 +18,19 @@ export function attachApiToken(origin: string, token: string): void {
   });
 }
 
-export function openWindow({ config, origin }: WindowOptions): BrowserWindow {
+export function guardNavigation(window: BrowserWindow, origin: string): void {
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    openOutside(url);
+    return { action: 'deny' };
+  });
+  window.webContents.on('will-navigate', (event, url) => {
+    if (targetsApi(url, origin)) return;
+    event.preventDefault();
+    openOutside(url);
+  });
+}
+
+export function openWindow({ config, origin, preload }: WindowOptions): BrowserWindow {
   const title = config.badge ? `${config.appName} — ${config.badge}` : config.appName;
   const window = new BrowserWindow({
     title,
@@ -27,6 +40,7 @@ export function openWindow({ config, origin }: WindowOptions): BrowserWindow {
     minHeight: 600,
     show: false,
     webPreferences: {
+      preload,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -37,15 +51,7 @@ export function openWindow({ config, origin }: WindowOptions): BrowserWindow {
     window.setTitle(title);
   });
   window.once('ready-to-show', () => window.show());
-  window.webContents.setWindowOpenHandler(({ url }) => {
-    openOutside(url);
-    return { action: 'deny' };
-  });
-  window.webContents.on('will-navigate', (event, url) => {
-    if (targetsApi(url, origin)) return;
-    event.preventDefault();
-    openOutside(url);
-  });
+  guardNavigation(window, origin);
   void window.loadURL(`${origin}/`);
   return window;
 }
