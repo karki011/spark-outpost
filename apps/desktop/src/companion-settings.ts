@@ -20,8 +20,8 @@ export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, string>> = {
 };
 
 export const DEFAULT_SETTINGS: CompanionSettings = {
-  enabled: false,
-  calm: false,
+  enabled: true,
+  calm: true,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   position: { docked: true },
 };
@@ -100,6 +100,10 @@ function parseShortcuts(value: unknown): Record<ShortcutAction, string> {
   return shortcuts.quick === shortcuts.sessions ? { ...DEFAULT_SHORTCUTS } : shortcuts;
 }
 
+function savedFlag(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
 export function parseSettings(raw: string | null): CompanionSettings {
   if (!raw) return { ...DEFAULT_SETTINGS, shortcuts: { ...DEFAULT_SHORTCUTS } };
   let value: unknown;
@@ -110,8 +114,8 @@ export function parseSettings(raw: string | null): CompanionSettings {
   }
   const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   return {
-    enabled: record.enabled === true,
-    calm: record.calm === true,
+    enabled: savedFlag(record.enabled, DEFAULT_SETTINGS.enabled),
+    calm: savedFlag(record.calm, DEFAULT_SETTINGS.calm),
     shortcuts: parseShortcuts(record.shortcuts),
     position: parsePosition(record.position),
   };

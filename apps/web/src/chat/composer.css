@@ -14,7 +14,7 @@
   container: composer / inline-size;
   max-width: 700px;
   margin: 0 auto;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--composer-line);
   border-radius: var(--r);
   background: var(--panel);
   transition:
@@ -23,8 +23,8 @@
 }
 
 .composer:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--focus-ring);
+  border-color: var(--composer-focus-line);
+  box-shadow: var(--composer-focus);
 }
 
 .composer textarea {

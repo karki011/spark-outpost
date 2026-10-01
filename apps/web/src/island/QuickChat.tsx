@@ -10,7 +10,6 @@ import {
 import { api, capabilitiesQuery } from '../api/client.ts';
 import { shortLabel } from '../chat/composer/model-options.ts';
 import { providerName } from '../chat/provider-name.ts';
-import { Kbd } from './island-parts.tsx';
 import { PanelTabs } from './PanelTabs.tsx';
 import type { Panel } from './island-model.ts';
 
@@ -234,12 +233,6 @@ export function QuickChat(props: QuickChatProps) {
           {send.error.message}
         </p>
       )}
-      <div className="isl-qfoot">
-        <span>
-          <Kbd>Shift Enter</Kbd> new line
-        </span>
-        <span>Draft is kept when you close</span>
-      </div>
     </div>
   );
 }
