@@ -14,6 +14,7 @@ export function finalText(
   findings: readonly string[],
   hasMessage: boolean,
   checks: readonly CheckBody[] = [],
+  summary: string | null = null,
 ): string {
   const children = results.filter((result) => !result.inPlace && result.outcome === 'succeeded');
   const latest = latestChecks(checks);
@@ -24,7 +25,8 @@ export function finalText(
   );
   const critic = children.findLast((result) => result.role === 'critic');
   const parts: string[] = [];
-  if (worker?.text.trim()) parts.push(worker.text.trim());
+  const lead = summary ?? worker?.text.trim();
+  if (lead) parts.push(lead);
   if (latest.length > 0) parts.push(latest.map(checkLine).join('\n'));
   const reviewOnly = !worker && critic?.text.trim();
   if (critic && reviewOnly) parts.push(critic.text.trim());

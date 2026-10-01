@@ -1,14 +1,18 @@
 import type { AgentPick, ListPlacement, PiecePlacement } from '@spark-outpost/contracts';
-import type { ChoiceDistribution, ChoiceIssue } from '../advisor/choice-answer.ts';
 import { selectableModels } from '../advisor/intake-questions.ts';
-import { COORD_JEV_ACT_AT, ROUTE_ACCEPT_CONFIDENCE } from '../advisor/policy.ts';
+import { PIECE_SHARED_AT, PIECE_WIDE_WORKTREE_AT } from '../advisor/policy.ts';
 import { FLOOR_REASON, floorPick } from '../orchestration/model-floor.ts';
 import { builderEffort, DESTRUCTIVE_RULE, type RouteContext } from '../orchestration/routing.ts';
 import { pickOf } from '../routing/candidates.ts';
-import { UNCERTAIN } from '../routing/route-question.ts';
 import { reaches } from './graph.ts';
 import { sharedFiles, type OwnedSet } from './owned.ts';
-import { OWN_WORKTREE, type PieceAnswer, type RouteOption } from './piece-questions.ts';
+import { pickForDemand, pieceDemand, type Demand, type RoutePick } from './piece-demand.ts';
+import {
+  OWN_WORKTREE,
+  SHARED_TREE,
+  type PieceAnswer,
+  type RouteOption,
+} from './piece-questions.ts';
 
 export type Decider = 'jev' | 'rules' | 'floor';
 
@@ -26,6 +30,7 @@ export interface RouteRules<T extends RoutablePiece = RoutablePiece> {
   placement: ListPlacement;
   askPlacement: boolean;
   destructive(piece: T): boolean;
+  core(piece: T): boolean | null;
   listIsolation: string | null;
   pieceIsolation(piece: T): string | null;
 }
@@ -40,6 +45,7 @@ export interface ModelChoice {
   jevPick: AgentPick | null;
   decidedBy: Decider;
   reason: string;
+  demand?: Demand;
 }
 
 export interface PlaceChoice {
@@ -53,8 +59,7 @@ export interface PieceRoute {
   key: string;
   model: ModelChoice;
   place: PlaceChoice;
-  complexity: number | null;
-  stakes: number | null;
+  answer: PieceAnswer | null;
   files: number;
 }
 
@@ -63,46 +68,46 @@ export interface RoutedPieces {
   placement: ListPlacement;
 }
 
-function confidenceText(value: number): string {
-  return value.toFixed(2);
-}
-
-function issueReason(issue: ChoiceIssue): string {
-  return `Jev's answer was unusable (${issue})`;
-}
-
-function ratingsReason(answer: PieceAnswer, files: number): string {
-  const parts = [
-    ...(answer.complexity === null ? [] : [`complexity ${answer.complexity}/5`]),
-    ...(answer.stakes === null ? [] : [`stakes ${answer.stakes}/5`]),
-    `${files} ${files === 1 ? 'file' : 'files'}`,
-  ];
-  return parts.join(', ');
-}
-
 function rulesChoice<T extends RoutablePiece>(
   rules: RouteRules<T>,
   piece: T,
   reason: string,
+  demand?: Demand,
 ): ModelChoice {
-  return { pick: rules.picks.get(piece.key)!, jevPick: null, decidedBy: 'rules', reason };
+  return {
+    pick: rules.picks.get(piece.key)!,
+    jevPick: null,
+    decidedBy: 'rules',
+    reason,
+    ...(demand ? { demand } : {}),
+  };
 }
 
 function withEffort(context: RouteContext, pick: AgentPick): AgentPick {
   return { ...pick, effort: builderEffort(context, pick) };
 }
 
+function routeLabel(context: RouteContext, route: RouteOption): string {
+  const provider = context.candidates.find((entry) => entry.provider === route.provider);
+  return `${provider?.name ?? route.provider} ${route.label}`;
+}
+
+function demandReason(context: RouteContext, demand: Demand, chosen: RoutePick): string {
+  const raised = demand.raisedBy ? ` (${demand.raisedBy})` : '';
+  const signals = demand.signals ? `${demand.signals} → ` : '';
+  return `${signals}${chosen.route.tier} tier${raised} → ${routeLabel(context, chosen.route)} (${chosen.why})`;
+}
+
 function jevModel<T extends RoutablePiece>(
   rules: RouteRules<T>,
   piece: T,
-  answer: PieceAnswer,
-  chosen: ChoiceDistribution,
-  files: number,
+  demand: Demand,
+  chosen: RoutePick,
 ): ModelChoice {
-  const offered = rules.routes.find((route) => route.id === chosen.choice);
-  if (!offered) return rulesChoice(rules, piece, issueReason('unknown-choice'));
-  const jevPick = withEffort(rules.route, pickOf(offered, null));
-  const candidate = rules.route.candidates.find((entry) => entry.provider === offered.provider);
+  const jevPick = withEffort(rules.route, pickOf(chosen.route, null));
+  const candidate = rules.route.candidates.find(
+    (entry) => entry.provider === chosen.route.provider,
+  );
   const destructive = rules.destructive(piece);
   const floored = floorPick(jevPick, candidate ? selectableModels(candidate) : [], {
     aim: destructive ? 'top' : 'floor',
@@ -114,26 +119,40 @@ function jevModel<T extends RoutablePiece>(
       jevPick,
       decidedBy: 'floor',
       reason: destructive ? DESTRUCTIVE_RULE : FLOOR_REASON,
+      demand,
     };
   }
-  return { pick: jevPick, jevPick, decidedBy: 'jev', reason: ratingsReason(answer, files) };
+  return {
+    pick: jevPick,
+    jevPick,
+    decidedBy: 'jev',
+    reason: demandReason(rules.route, demand, chosen),
+    demand,
+  };
 }
 
 function chooseModel<T extends RoutablePiece>(
   rules: RouteRules<T>,
   jev: JevOutcome,
   piece: T,
-  files: number,
 ): ModelChoice {
   const answer = jev.answers?.get(piece.key);
   if (!answer) return rulesChoice(rules, piece, jev.failure ?? 'Jev was not asked');
-  const builder = answer.builder;
-  if (typeof builder === 'string') return rulesChoice(rules, piece, issueReason(builder));
-  if (builder.choice === UNCERTAIN) return rulesChoice(rules, piece, 'Jev was unsure');
-  if (builder.confidence < ROUTE_ACCEPT_CONFIDENCE) {
-    return rulesChoice(rules, piece, `Jev was unsure (${confidenceText(builder.confidence)})`);
+  const result = pieceDemand(answer, {
+    destructive: rules.destructive(piece),
+    core: rules.core(piece),
+  });
+  if (!result.ok) return rulesChoice(rules, piece, result.reason);
+  const chosen = pickForDemand(result.demand, rules.routes, rules.route.chat.provider);
+  if (!chosen) {
+    return rulesChoice(
+      rules,
+      piece,
+      `no healthy ${result.demand.tier}-tier route or higher`,
+      result.demand,
+    );
   }
-  return jevModel(rules, piece, answer, builder, files);
+  return jevModel(rules, piece, result.demand, chosen);
 }
 
 function rulesPlace<T extends RoutablePiece>(
@@ -153,21 +172,20 @@ function choosePlace<T extends RoutablePiece>(
     return { placement: 'read_only', jev: null, decidedBy: 'rules', reason: 'reads only' };
   }
   if (!rules.askPlacement) return rulesPlace(rules, 'placement was not asked');
-  const placement = answer?.placement ?? null;
-  const jev = placement && typeof placement !== 'string' ? placement.choice : null;
+  const wide = answer?.wide ?? null;
+  const own = wide !== null && wide >= PIECE_WIDE_WORKTREE_AT;
+  const shared = wide !== null && wide <= PIECE_SHARED_AT;
+  const jev = own ? OWN_WORKTREE : shared ? SHARED_TREE : null;
   const hard = rules.listIsolation ?? rules.pieceIsolation(piece);
   if (hard) return { placement: 'worktree', jev, decidedBy: 'rules', reason: hard };
-  if (!placement) return rulesPlace(rules, 'Jev gave no placement');
-  if (typeof placement === 'string') return rulesPlace(rules, issueReason(placement));
-  if (placement.confidence < COORD_JEV_ACT_AT) {
-    return rulesPlace(rules, `Jev was unsure (${confidenceText(placement.confidence)})`, jev);
-  }
-  const own = placement.choice === OWN_WORKTREE;
+  if (wide === null) return rulesPlace(rules, 'Jev gave no placement');
+  const odds = `wide or risky ${wide.toFixed(2)}`;
+  if (!own && !shared) return rulesPlace(rules, `Jev was unsure (${odds})`);
   return {
     placement: own ? 'worktree' : 'shared',
     jev,
     decidedBy: 'jev',
-    reason: own ? 'own worktree' : 'shared tree',
+    reason: own ? `own worktree (${odds})` : `shared tree (${odds})`,
   };
 }
 
@@ -220,16 +238,14 @@ export function routePieceList<T extends RoutablePiece>(
 ): RoutedPieces {
   const routes = pieces.map((piece): PieceRoute => {
     const answer = jev.answers?.get(piece.key);
-    const files = fileCount(piece);
     return {
       key: piece.key,
       model: piece.research
         ? rulesChoice(rules, piece, 'reads only')
-        : chooseModel(rules, jev, piece, files),
+        : chooseModel(rules, jev, piece),
       place: choosePlace(rules, answer, piece),
-      complexity: answer?.complexity ?? null,
-      stakes: answer?.stakes ?? null,
-      files,
+      answer: answer ?? null,
+      files: fileCount(piece),
     };
   });
   if (rules.placement !== 'in_order') separateShared(pieces, routes);

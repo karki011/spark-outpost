@@ -99,6 +99,17 @@ describe('pieceReport', () => {
     expect(report).toContain('Incomplete: P3 · Piece P3 (failed: Provider \\| crashed).');
   });
 
+  it('marks a docs-only piece without a check', () => {
+    const report = pieceReport({
+      list: list([piece('P1', { owns: ['README.md'], filesChanged: ['README.md'], check: null })]),
+      fallback: null,
+      integrator: null,
+    })!;
+    expect(report).toContain(
+      '| P1 · Piece P1 | Bolt | in order | claude · sonnet | landed | 1 | none — docs only | $0.25 |',
+    );
+  });
+
   it('lists merge conflicts and renumbered migrations for worktree pieces', () => {
     const report = pieceReport({
       list: { ...list([piece('P1', { placement: 'worktree' })]), placement: 'worktree' },

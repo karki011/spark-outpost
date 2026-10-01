@@ -29,6 +29,14 @@ async function buildThePlan(page: Page): Promise<void> {
   await plan.getByRole('button', { name: 'Build this plan' }).click();
 }
 
+async function planBuildsByItself(page: Page): Promise<void> {
+  const plan = card(page, /Build this plan\?/);
+  await expect(plan.getByRole('button', { name: /^Building this plan in \d+s$/ })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(plan).toContainText(/Continued automatically after \d+s\./, { timeout: 15_000 });
+}
+
 async function allowChecksWhile(page: Page, settled: () => Promise<void>): Promise<void> {
   await expect(async () => {
     const pending = card(page, /^Run a check\?/).filter({
@@ -86,9 +94,10 @@ const parallelGroup = (page: Page) =>
 
 test('Automatic builds independent pieces side by side in the shared tree', async ({ page }) => {
   test.setTimeout(150_000);
+  await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Auto-edit');
   await send(page, REQUEST);
-  await buildThePlan(page);
+  await planBuildsByItself(page);
 
   await allowChecksUntil(page, board(page), '3 pieces, in the shared tree · 3 landed');
   await expect(board(page).getByRole('button')).toHaveCount(0);
@@ -144,7 +153,7 @@ test('Automatic builds independent pieces side by side in the shared tree', asyn
   await expect(tv.locator('.tv-n[data-piece]')).toHaveCount(3);
   await expect(spoke(page, 'P2')).toHaveAttribute(
     'aria-label',
-    /^Rivet, P2 API, shared tree, landed, Jev: Claude Sonnet 5 · complexity 2\/5, stakes 2\/5, 3 files\. Show details$/,
+    /^Rivet, P2 API, shared tree, landed, Jev: reasoning 2, coding 2, context 2 → mid tier → Claude Sonnet 5 \(the chat's provider\)\. Show details$/,
   );
   await expect(spoke(page, 'P1')).toContainText('P1 · Store');
   await expect(spoke(page, 'P1').locator('.piece-state')).toHaveText('landed');
@@ -171,7 +180,7 @@ test('Review each step asks for the split before building it, answered by keyboa
   await expect(board(page)).toContainText('waiting for your go-ahead');
   await expect(pieceRow(page, 'P3')).toContainText('waiting on P1');
   await expect(pieceRow(page, 'P1').locator('.piece-pick')).toHaveText(
-    'Jev: Claude Sonnet 5 · complexity 2/5, stakes 2/5, 1 file',
+    "Jev: reasoning 2, coding 2, context 2 → mid tier → Claude Sonnet 5 (the chat's provider)",
   );
   const build = split.getByRole('button', { name: 'Build it' });
   const inOrder = split.getByRole('button', { name: 'Build in order instead' });

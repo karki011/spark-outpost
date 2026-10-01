@@ -140,6 +140,9 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     const reply = (await assistantReplies(t, runId)).at(-1);
     expect(reply).toContain('Pieces (3, in order, list v1)');
     expect(reply).toContain('| P2 · API | Rivet | in order |');
+    expect(reply).toMatch(
+      /^Built in 3 pieces:\n- P1 · Store \(Bolt\): Built P1 in store\.ts\. Files: `store\.ts`\.\n- P2 · API \(Rivet\): Built P2 in api\.ts\. Files: `api\.ts`\.\n- P3 · View \(Tack\): Built P3 in view\.ts\. Files: `view\.ts`\./,
+    );
   });
 
   it('gives a piece whose scoped check fails a fix turn in the same session', async () => {
@@ -224,6 +227,33 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(await readFile(join(root, 'glue.ts'), 'utf8')).toContain('glued');
     const reply = (await assistantReplies(t, runId)).at(-1);
     expect(reply).toContain(`Integration: ${integrators[0]!.name}`);
+  });
+
+  it('lands a docs-only piece without a scoped check and without a repair round', async () => {
+    const { conversationId, runId } = await begin('#pieces #docspiece');
+    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    expect(orchestration.status).toBe('succeeded');
+    const crew = await children(runId);
+    expect(crew.filter((child) => child.role === 'coordinator')).toHaveLength(1);
+    expect(crew.find((child) => child.pieceKey === 'P3')!.prompt).toContain(
+      'Scoped checks: none — docs only.',
+    );
+    const p3 = (await pieceList(runId)).pieces.find((piece) => piece.key === 'P3')!;
+    expect(p3).toMatchObject({ status: 'landed', checks: [], check: 'none', owns: ['README.md'] });
+    const reply = (await assistantReplies(t, runId)).at(-1);
+    expect(reply).toContain('| none — docs only |');
+  });
+
+  it('asks about a heredoc file write like any other command, not as unreadable', async () => {
+    const { conversationId, runId } = await begin('#pieces #heredoc');
+    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    expect(orchestration.status).toBe('succeeded');
+    const { rows } = await t.db.query<{ reason: string | null }>(
+      `SELECT a.reason FROM approvals a JOIN runs r ON r.id = a.run_id
+       WHERE r.parent_run_id = $1 AND a.kind = 'execute' AND a.title LIKE 'cat >>%'`,
+      [runId],
+    );
+    expect(rows.map((row) => row.reason)).toEqual([null, null, null]);
   });
 
   it('asks the coordinator once to repair an invalid piece list', async () => {

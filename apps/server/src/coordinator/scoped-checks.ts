@@ -2,6 +2,10 @@ import path from 'node:path';
 import { isPackageInstall } from '../approvals/command-kinds.ts';
 
 export const FULL_CHECKS_REASON = 'the coordinator runs the full checks after integration';
+export const DOCS_ONLY_CHECK = 'none — docs only';
+
+const DOCS_FILE = /\.(?:md|mdx|markdown|txt|rst|adoc)$/i;
+const DOCS_NAME = /(?:^|\/)(?:README|CHANGELOG|CHANGES|LICENSE|NOTICE|AUTHORS|CONTRIBUTING)$/i;
 
 const MUTATING_FLAG = /(?:^|\s)(?:--write|-w|--fix|-u|--update(?:-snapshots)?)(?=\s|$)/;
 const WHOLE_PROJECT = /^(?:pnpm|npm|yarn|bun)\s+(?:run\s+)?(?:check|ci|verify|format|lint:fix)\s*$/;
@@ -42,6 +46,10 @@ function program(command: string): string {
 
 function squash(command: string): string {
   return command.replace(/\s+/g, ' ').trim();
+}
+
+export function docsOnly(paths: readonly string[]): boolean {
+  return paths.length > 0 && paths.every((file) => DOCS_FILE.test(file) || DOCS_NAME.test(file));
 }
 
 export function runsWholeProject(command: string): boolean {

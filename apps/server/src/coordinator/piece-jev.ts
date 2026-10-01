@@ -1,6 +1,8 @@
 import type { AgentPick, JevStatus } from '@spark-outpost/contracts';
+import type { AdvisorOption } from '../advisor/advice.ts';
 import { selectableModels } from '../advisor/intake-questions.ts';
-import { COORD_POLICY_VERSION } from '../advisor/policy.ts';
+import { COORD_POLICY_VERSION, ROUTE_TOKEN_MIX } from '../advisor/policy.ts';
+import { cardFor } from '../model-cards/cards.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { callJev, type JevCall } from '../orchestration/jev-calls.ts';
 import { builderModels } from '../orchestration/model-floor.ts';
@@ -10,10 +12,11 @@ import { placementFacts } from './assess.ts';
 import { measuredStrength, type AssignFacts } from './assign.ts';
 import type { ListPlace } from './place-list.ts';
 import { inMigrationsFolder, listIsolation, pieceIsolation } from './placement.ts';
-import { factPaths, loadFileFacts } from './piece-facts.ts';
+import { factPaths, loadFileFacts, type FileFacts } from './piece-facts.ts';
 import {
   pieceQuestions,
   readPieceAnswers,
+  touchesCore,
   type PieceAsk,
   type RouteOption,
 } from './piece-questions.ts';
@@ -31,6 +34,16 @@ export interface PiecePicks extends RoutedPieces {
   notes: Map<string, string | null>;
 }
 
+function blendedPrice(model: AdvisorOption, provider: string): number | null {
+  const price = cardFor(model, provider)?.price;
+  if (!price) return null;
+  return (
+    ROUTE_TOKEN_MIX.cachedRead * price.cachedInputPerMillion +
+    ROUTE_TOKEN_MIX.cacheWrite * (price.cacheWritePerMillion ?? price.inputPerMillion) +
+    ROUTE_TOKEN_MIX.output * price.outputPerMillion
+  );
+}
+
 function offeredRoutes(s: Session, facts: AssignFacts): RouteOption[] {
   const now = s.route.now ?? new Date();
   return routeCandidates(s.route.candidates).flatMap((route) => {
@@ -40,8 +53,18 @@ function offeredRoutes(s: Session, facts: AssignFacts): RouteOption[] {
       (model) => model.id === route.model,
     );
     if (!floorOk) return [];
+    const model = selectableModels(candidate).find((option) => option.id === route.model)!;
+    const card = cardFor(model, route.provider);
     const passRate = measuredStrength(candidate, route.model) ?? measuredStrength(candidate);
-    return [{ ...route, passRate }];
+    return [
+      {
+        ...route,
+        passRate,
+        strengths: card?.strengths ?? [],
+        contextTokens: card?.contextTokens ?? null,
+        priceUsd: blendedPrice(model, route.provider),
+      },
+    ];
   });
 }
 
@@ -71,8 +94,7 @@ function pickNote(s: Session, route: PieceRoute, asked: boolean): string | null 
   if (!asked || route.place.placement === 'read_only') return null;
   const { model, place } = route;
   const placed = place.decidedBy === 'jev' ? ` · ${place.reason}` : '';
-  if (model.decidedBy === 'jev')
-    return `Jev: ${pickLabel(s, model.pick)} · ${model.reason}${placed}`;
+  if (model.decidedBy === 'jev') return `Jev: ${model.reason}${placed}`;
   const overrode = model.jevPick ? ` (Jev picked ${pickLabel(s, model.jevPick)})` : '';
   return `Rules: ${pickLabel(s, model.pick)} · ${model.reason}${overrode}${placed}`;
 }
@@ -133,8 +155,8 @@ async function record(
           decidedBy: piece.model.decidedBy,
           reason: piece.model.reason,
           placement: piece.place,
-          complexity: piece.complexity,
-          stakes: piece.stakes,
+          signals: piece.answer,
+          demand: piece.model.demand ?? null,
         })),
       },
       state: call?.asked?.state ?? null,
@@ -159,6 +181,7 @@ export async function routePieces(
   const placeFacts = await placementFacts(s);
   const routes = offeredRoutes(s, facts);
   const isDestructive = destructive(s);
+  let fileFacts: ReadonlyMap<string, FileFacts> = new Map();
   const rules: RouteRules<CheckedPiece> = {
     route: s.route,
     picks: rulesPicks,
@@ -166,6 +189,7 @@ export async function routePieces(
     placement: place.placement,
     askPlacement: place.placement !== 'in_order' && !s.deps.forcedPlacement,
     destructive: isDestructive,
+    core: (piece) => touchesCore(piece, fileFacts),
     listIsolation: listIsolation(pieces, placeFacts),
     pieceIsolation: (piece) => pieceIsolation(piece, placeFacts),
   };
@@ -176,13 +200,13 @@ export async function routePieces(
     request: s.input.userRequest,
     pieces: building,
     facts: new Map(),
-    routes,
     placement: rules.askPlacement,
   };
   let call: JevCall | null = null;
   if (s.jev && !skipped) {
     const paths = building.flatMap((piece) => [...piece.owns, ...piece.reads]);
-    ask.facts = await loadFileFacts(s.deps.db, root, paths, s.scanReport?.candidates ?? []);
+    fileFacts = await loadFileFacts(s.deps.db, root, paths, s.scanReport?.candidates ?? []);
+    ask.facts = fileFacts;
     call = await callJev(s.jev, () => pieceQuestions(ask), s.control.signal);
   }
   const outcome = outcomeOf(call, ask, skipped);

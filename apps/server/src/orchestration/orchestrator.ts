@@ -80,6 +80,7 @@ import { verifyChange } from './verify.ts';
 import { observeCoordination } from '../coordinator/shadow.ts';
 import { coordinatedBuild } from '../coordinator/build.ts';
 import { coordinationReport } from '../coordinator/report.ts';
+import { piecesSummary } from '../coordinator/summary.ts';
 
 const TASK_SESSION_CLOSED = 'task session closed';
 const NEW_TASK_STARTED = 'a new task started';
@@ -262,11 +263,9 @@ async function finish(
   const notes = [pieces, assumed, escalated, fixed, suggested, stopped, incomplete, shipped].filter(
     (line): line is string => line !== null,
   );
-  const text = withNotes(
-    finalText(s.results, verdict, s.findings, s.message !== null, s.checkBodies),
-    notes,
-    s.message !== null,
-  );
+  const summary = piecesSummary(s.coordination, s.results);
+  const reply = finalText(s.results, verdict, s.findings, !!s.message, s.checkBodies, summary);
+  const text = withNotes(reply, notes, s.message !== null);
   await publish(s, { phase: 'finished', error: status === 'failed' ? reason : null });
   if (text) {
     if (!s.message) {

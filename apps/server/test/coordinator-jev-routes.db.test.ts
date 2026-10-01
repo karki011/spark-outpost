@@ -63,6 +63,8 @@ interface PieceDecision {
         jevPick: { model: string } | null;
         pick: { provider: string; model: string };
         placement: { placement: string; decidedBy: string };
+        signals: unknown;
+        demand: unknown;
       }[];
     };
   };
@@ -81,7 +83,7 @@ function failingPieceQuestions(script: JevScript, failure: 'status' | 'hang'): t
   const answer = jevFetch(script);
   return async (input, init) => {
     const body = JSON.parse(String(init?.body)) as { questions: Record<string, unknown> };
-    if (!Object.keys(body.questions).some((key) => key.endsWith('_builder'))) {
+    if (!Object.keys(body.questions).some((key) => key.endsWith('_reasoning'))) {
       return answer(input, init);
     }
     if (failure === 'status') return new Response('down', { status: 503 });
@@ -105,22 +107,23 @@ async function runInOrder(jev: typeof fetch) {
 }
 
 describe('Jev routes each piece', { timeout: 150_000 }, () => {
-  it('asks once for every piece and applies a different pick per piece', async () => {
+  it('asks once about every piece and composes a different pick per piece', async () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      choices: { P1_builder: 'codex/gpt-6-sol', P2_builder: 'claude/opus[1m]' },
-      scores: { P1_complexity: 2, P1_stakes: 3 },
+      scores: { P1_reasoning: 3.5, P1_coding: 2.5, P2_reasoning: 4.5 },
     };
     const { runId, orchestration } = await runInOrder(jevFetch(script));
     expect(orchestration.status).toBe('succeeded');
-    const batches = script.calls.filter((call) => call.questions.includes('P1_builder'));
+    const batches = script.calls.filter((call) => call.questions.includes('P1_reasoning'));
     expect(batches).toHaveLength(1);
     expect(batches[0]!.questions).toEqual(
-      expect.arrayContaining(['P1_complexity', 'P1_stakes', 'P2_builder', 'P3_builder']),
+      expect.arrayContaining(['P1_kind', 'P1_coding', 'P2_context', 'P3_reliability']),
     );
-    expect(batches[0]!.questions.some((key) => key.endsWith('_placement'))).toBe(false);
+    expect(batches[0]!.questions.some((key) => key.endsWith('_wide'))).toBe(false);
+    expect(batches[0]!.questions.some((key) => key.endsWith('_builder'))).toBe(false);
     expect(String(batches[0]!.state.pieces)).toContain('Piece P2: API');
+    expect(String(batches[0]!.state.pieces)).toContain('  Waits for: P1');
     expect(String(batches[0]!.state.pieces)).toContain('  - store.ts');
 
     const list = await pieceList(t, runId);
@@ -129,8 +132,11 @@ describe('Jev routes each piece', { timeout: 150_000 }, () => {
       ['P2', 'claude', 'opus[1m]'],
       ['P3', 'claude', 'sonnet'],
     ]);
-    expect(list.pieces[0]!.pickNote).toBe('Jev: Codex 6 Sol · complexity 2/5, stakes 3/5, 1 file');
-    expect(list.pieces[2]!.pickNote).toBe('Rules: Claude Sonnet 5 · Jev was unsure');
+    expect(list.pieces.map((piece) => piece.pickNote)).toEqual([
+      'Jev: reasoning 3.5, coding 2.5, context 2 → mid tier → Codex 6 Sol (strong at reasoning)',
+      'Jev: reasoning 4.5, coding 2, context 2 → top tier (deep reasoning) → Claude Opus 5.5 (only top-tier route)',
+      "Jev: reasoning 2, coding 2, context 2 → mid tier → Claude Sonnet 5 (the chat's provider)",
+    ]);
     const builders = (await children(t, runId)).filter((child) => child.pieceKey);
     expect(builders.map((child) => [child.pieceKey, child.provider])).toEqual([
       ['P1', 'codex'],
@@ -144,15 +150,18 @@ describe('Jev routes each piece', { timeout: 150_000 }, () => {
     expect(recorded.body.answer.pieces.map((piece) => [piece.key, piece.decidedBy])).toEqual([
       ['P1', 'jev'],
       ['P2', 'jev'],
-      ['P3', 'rules'],
+      ['P3', 'jev'],
     ]);
+    expect(recorded.body.answer.pieces[1]).toMatchObject({
+      signals: { reasoning: { mean: 4.5 }, coding: { mean: 2 } },
+      demand: { tier: 'top', raisedBy: 'deep reasoning', capability: 'reasoning' },
+    });
   });
 
   it('keeps the rules when Jev fails, and records why', async () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      choices: { P1_builder: 'codex/gpt-6-sol' },
     };
     const { runId, orchestration } = await runInOrder(failingPieceQuestions(script, 'status'));
     expect(orchestration.status).toBe('succeeded');
@@ -198,25 +207,25 @@ describe('Jev routes parallel pieces', { timeout: 150_000 }, () => {
     return { runId, orchestration };
   }
 
-  it('floors a piece that owns a migration to the top tier, whatever Jev picked', async () => {
+  it('sends a piece that owns a migration to the top tier, whatever its ratings', async () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      choices: { P1_builder: 'claude/sonnet', P3_builder: 'codex/gpt-6-sol' },
+      scores: { P3_reasoning: 3.5, P3_coding: 2.5 },
     };
     const { runId, orchestration } = await runParallel('#migrations', script);
     expect(orchestration.status).toBe('succeeded');
     const list = await pieceListOf(t, runId);
     expect(list.pieces[0]).toMatchObject({ provider: 'claude', model: 'opus[1m]' });
-    expect(list.pieces[0]!.pickNote).toBe(
-      'Rules: Claude Opus 5.5 · destructive → top tier (Jev picked Claude Sonnet 5)',
+    expect(list.pieces[0]!.pickNote).toContain(
+      'reasoning 2, coding 2, context 2 → top tier (destructive) → Claude Opus 5.5',
     );
     expect(list.pieces[2]).toMatchObject({ provider: 'codex', model: 'gpt-6-sol' });
     const recorded = await decision(runId);
     expect(recorded.body.answer.pieces[0]).toMatchObject({
-      decidedBy: 'floor',
-      jevPick: { model: 'sonnet' },
+      decidedBy: 'jev',
       pick: { model: 'opus[1m]' },
+      demand: { tier: 'top', raisedBy: 'destructive' },
     });
   });
 
@@ -224,8 +233,7 @@ describe('Jev routes parallel pieces', { timeout: 150_000 }, () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      topMass: 0.95,
-      choices: { P2_placement: 'own_worktree' },
+      policy: { P1_wide: 0.05, P2_wide: 0.9, P3_wide: 0.05 },
     };
     const { runId, orchestration } = await runParallel('', script);
     expect(orchestration.status).toBe('succeeded');

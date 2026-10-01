@@ -30,7 +30,15 @@ const PIECES: FakePiece[] = [
   { key: 'P3', title: 'View', file: 'view.ts', dependsOn: ['P2'] },
 ];
 
-function pieceJson(piece: FakePiece, cyclic: boolean) {
+const DOCS_PIECE: FakePiece = { key: 'P3', title: 'View', file: 'README.md', dependsOn: ['P2'] };
+
+function pieceJson(piece: FakePiece, cyclic: boolean, docs: boolean): Record<string, unknown> {
+  if (docs && piece.key === DOCS_PIECE.key) {
+    return {
+      ...pieceJson(DOCS_PIECE, cyclic, false),
+      checks: [`grep -q ${DOCS_PIECE.key} ${DOCS_PIECE.file}`],
+    };
+  }
   return {
     key: piece.key,
     title: piece.title,
@@ -70,7 +78,7 @@ async function coordinator(turn: RoleTurn): Promise<acp.StopReason> {
   const cyclic =
     turn.text.includes('#alwaysbad') || (turn.text.includes('#badpieces') && !repairing(turn.text));
   const block = parallelBlock(turn.text) ?? {
-    pieces: PIECES.map((piece) => pieceJson(piece, cyclic)),
+    pieces: PIECES.map((piece) => pieceJson(piece, cyclic, turn.text.includes('#docspiece'))),
     integration: turn.text.includes('#glue') ? 'Wire the view into glue.ts' : null,
   };
   const split = `Here is the split.\n\n\`\`\`pieces\n${JSON.stringify(block, null, 2)}\n\`\`\``;
@@ -115,12 +123,15 @@ async function askToRun(turn: RoleTurn, command: string): Promise<boolean> {
   return allowed;
 }
 
+const UNREADABLE_LINE = "export const trim = (s: string) => s.replace(/^-|-$/g, '');";
+
 async function build(turn: RoleTurn, file: string, line: string): Promise<void> {
   if (!turn.text.includes('#heredoc')) {
     await write(turn, file, line);
     return;
   }
-  const command = `cat >> ${file} <<'EOF'\n${line}\nexport const ok = (n: number) => n >= 2;\nEOF`;
+  const body = `${line}\nexport const ok = (n: number) => n >= 2;\n${UNREADABLE_LINE}`;
+  const command = `cat >> ${file} <<'EOF'\n${body}\nEOF`;
   if (await askToRun(turn, command)) await appendFile(join(turn.cwd, file), `${line}\n`);
 }
 

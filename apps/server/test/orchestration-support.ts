@@ -197,7 +197,6 @@ interface AskedQuestion {
 function preferredOption(key: string, options: readonly string[], script: JevScript): string {
   const wanted = script.choices?.[key];
   if (wanted && options.includes(wanted)) return wanted;
-  if (key.endsWith('_builder') && options.includes('uncertain')) return 'uncertain';
   return options.find((option) => option !== 'uncertain') ?? options[0]!;
 }
 
@@ -265,6 +264,14 @@ function verdictAnswer(script: JevScript): Answers[string] {
   return choice(next.choice, next.confidence);
 }
 
+const UNSURE_WIDE = 0.35;
+
+function defaultNoul(key: string, script: JevScript): number {
+  if (key.startsWith('unmet_')) return script.verify ?? 0.05;
+  if (key.endsWith('_wide')) return UNSURE_WIDE;
+  return 0.05;
+}
+
 function observedAnswers(script: JevScript, questions: Record<string, AskedQuestion>): Answers {
   return Object.fromEntries(
     Object.entries(questions).map(([key, question]) => [
@@ -275,9 +282,7 @@ function observedAnswers(script: JevScript, questions: Record<string, AskedQuest
           ? spreadChoice(key, question, script)
           : question.type === 'score'
             ? { type: 'score', score: (script.scores?.[key] ?? 2) - 1, confidence: 0.9 }
-            : noul(
-                script.policy?.[key] ?? (key.startsWith('unmet_') ? (script.verify ?? 0.05) : 0.05),
-              ),
+            : noul(script.policy?.[key] ?? defaultNoul(key, script)),
     ]),
   );
 }

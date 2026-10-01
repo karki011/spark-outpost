@@ -31,10 +31,21 @@ export function planFirstPrompt(prompt: string, note: string | null): string {
   return `${base}\n\nThe user asked for these changes to your previous plan:\n\n${note}\n\nReply with the whole revised plan.`;
 }
 
+const LEVEL_NAME: Partial<Record<InvolvementLevel, string>> = {
+  'hands-off': 'Automatic',
+  'full-auto': 'Full auto',
+};
+
 function waitLine(level: InvolvementLevel, seconds: number | null): string {
-  if (level !== 'full-auto') return 'Build it, edit it, or stop.';
-  if (seconds !== null) return `Full auto builds it in ${seconds} s unless you edit or stop it.`;
+  const name = LEVEL_NAME[level];
+  if (!name) return 'Build it, edit it, or stop.';
+  if (seconds !== null) return `${name} builds it in ${seconds} s unless you edit or stop it.`;
+  if (level !== 'full-auto') return 'Auto-continue is off: build it, edit it, or stop.';
   return `Auto-continue is off, so Full auto waits ${FULL_AUTO_PLAN_SECONDS} s, then builds it unless you edit or stop it.`;
+}
+
+function fallbackSeconds(level: InvolvementLevel): number | null {
+  return level === 'full-auto' ? FULL_AUTO_PLAN_SECONDS : null;
 }
 
 export function planFirstCard(
@@ -43,7 +54,7 @@ export function planFirstCard(
   seconds: number | null,
 ): CheckpointCard {
   const reason = `Saved as plan v${version}; nothing was changed yet. ${waitLine(level, seconds)}`;
-  const autoOption = level === 'full-auto' ? CHECKPOINT_OPTION.makeChange : null;
+  const autoOption = level === 'balanced' ? null : CHECKPOINT_OPTION.makeChange;
   return {
     kind: 'plan',
     title: PLAN_QUESTION,
@@ -117,7 +128,7 @@ export async function writePlanFirst(s: Session, note: string | null): Promise<F
   await save(s);
   const seconds = await autoContinueSeconds(s.deps.db, s.input.workspaceId);
   const card = planFirstCard(plan.version, s.input.level, seconds);
-  const answer = await askCard(s, card, FULL_AUTO_PLAN_SECONDS);
+  const answer = await askCard(s, card, fallbackSeconds(s.input.level));
   if (answer.type === 'timeout') throw new CheckpointTimeout();
   if (answer.type === 'stopped') {
     await settleQuietly(s, plan, CHECKPOINT_OPTION.stop);

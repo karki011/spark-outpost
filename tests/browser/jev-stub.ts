@@ -81,13 +81,17 @@ function spread(offered: readonly string[], value: string, confidence: number): 
 
 function pieceAnswer(key: string, question: StubQuestion): Answer | null {
   if (question.type === 'score') return { type: 'score', score: 1, confidence: 0.9 };
-  const offered = options(question);
-  if (key.endsWith('_builder')) {
-    const route = offered.find((option) => option !== 'uncertain')!;
-    return spread(offered, route, JEV_STUB_CONFIDENCE);
+  if (key.endsWith('_kind')) {
+    const offered = options(question);
+    return spread(offered, offered[0]!, JEV_STUB_CONFIDENCE);
   }
-  if (key.endsWith('_placement')) return spread(offered, offered[0]!, 0.6);
   return null;
+}
+
+function noulValue(key: string): number {
+  if (key.startsWith('finding_')) return 0.5;
+  if (key.endsWith('_wide')) return 0.35;
+  return 0.05;
 }
 
 export function jevAnswers(request: StubRequest): Record<string, Answer> {
@@ -96,7 +100,7 @@ export function jevAnswers(request: StubRequest): Record<string, Answer> {
   const answers = Object.fromEntries(
     Object.entries(request.questions).map(([key, question]) => [
       key,
-      pieceAnswer(key, question) ?? noul(key.startsWith('finding_') ? 0.5 : 0.05),
+      pieceAnswer(key, question) ?? noul(noulValue(key)),
     ]),
   );
   if (request.questions.verdict) answers.verdict = choice(verdictFor(task), 0.95);

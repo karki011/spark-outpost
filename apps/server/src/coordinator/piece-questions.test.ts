@@ -1,35 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { SystemOneResponse } from '../advisor/intake-questions.ts';
-import { RATING_QUESTIONS } from '../advisor/rating-questions.ts';
 import type { FileFacts } from './piece-facts.ts';
 import {
-  OWN_WORKTREE,
   pieceQuestions,
   piecesEvidence,
   readPieceAnswers,
-  SHARED_TREE,
+  TASK_KINDS,
+  touchesCore,
   type PieceAsk,
-  type RouteOption,
 } from './piece-questions.ts';
-
-const routes: RouteOption[] = [
-  {
-    id: 'claude/sonnet',
-    provider: 'claude',
-    model: 'sonnet',
-    label: 'Sonnet 5',
-    tier: 'mid',
-    passRate: null,
-  },
-  {
-    id: 'codex/gpt-6-sol',
-    provider: 'codex',
-    model: 'gpt-6-sol',
-    label: '6 Sol',
-    tier: 'mid',
-    passRate: 0.8333,
-  },
-];
 
 const facts: FileFacts = {
   lines: 120,
@@ -54,63 +33,75 @@ function ask(extra: Partial<PieceAsk> = {}): PieceAsk {
         goal: 'Store tags',
         owns: ['src/tags.ts', '.env', 'src/**/*.sql'],
         reads: ['src/db.ts'],
+        acceptance: ['Tags are lower case', 'Duplicates are dropped'],
+        dependsOn: [],
+        checks: ['pnpm vitest run src/tags.test.ts'],
+        sizeEstimate: 12_400,
       },
-      { key: 'P2', title: 'Tags API', goal: 'Serve tags', owns: ['src/api.ts'], reads: [] },
+      {
+        key: 'P2',
+        title: 'Tags docs',
+        goal: 'Describe tags',
+        owns: ['README.md'],
+        reads: [],
+        dependsOn: ['P1'],
+      },
     ],
     facts: new Map([['src/tags.ts', facts]]),
-    routes,
     placement: true,
     ...extra,
   };
 }
 
-function choice(value: string, confidence: number, options: readonly string[]) {
-  const probabilities = Object.fromEntries(
-    options.map((option) => [option, option === value ? 0.9 : 0.1 / (options.length - 1)]),
-  );
-  return { type: 'choice' as const, choice: value, confidence, probabilities };
-}
-
 describe('pieceQuestions', () => {
-  it('asks ratings, a route and a placement for every piece in one batch', () => {
+  it('asks only about the properties of each piece, in one batch', () => {
     const built = pieceQuestions(ask());
     expect(Object.keys(built.questions)).toEqual([
-      'P1_complexity',
-      'P1_stakes',
-      'P1_builder',
-      'P1_placement',
-      'P2_complexity',
-      'P2_stakes',
-      'P2_builder',
-      'P2_placement',
+      'P1_kind',
+      'P1_reasoning',
+      'P1_coding',
+      'P1_context',
+      'P1_reliability',
+      'P1_wide',
+      'P2_kind',
+      'P2_reasoning',
+      'P2_coding',
+      'P2_context',
+      'P2_reliability',
+      'P2_wide',
     ]);
-    const complexity = built.questions.P1_complexity!;
-    expect(complexity.type).toBe('score');
-    expect(complexity.criteria).toEqual([...RATING_QUESTIONS.complexity.levels]);
-    expect(String(complexity.instructions)).toContain('How much work is piece P1');
-    const builder = built.questions.P2_builder!.criteria as Record<string, Record<string, unknown>>;
-    expect(Object.keys(builder)).toEqual(['uncertain', 'claude/sonnet', 'codex/gpt-6-sol']);
-    expect(builder['codex/gpt-6-sol']!.builder_pass_rate).toBe(0.83);
-    expect(builder['claude/sonnet']).not.toHaveProperty('builder_pass_rate');
-    expect(Object.keys(built.questions.P1_placement!.criteria as object)).toEqual([
-      SHARED_TREE,
-      OWN_WORKTREE,
-    ]);
+    expect(Object.keys(built.questions.P1_kind!.criteria as object)).toEqual(
+      Object.keys(TASK_KINDS),
+    );
+    const reasoning = built.questions.P2_reasoning!;
+    expect(reasoning.type).toBe('score');
+    expect(String(reasoning.instructions)).toContain('piece P2');
+    expect(reasoning.criteria).toHaveLength(5);
+    expect(built.questions.P1_reliability!.type).toBe('noul');
+    const asked = JSON.stringify(built.questions);
+    expect(asked).not.toContain('claude/');
+    expect(asked).not.toContain('uncertain');
   });
 
-  it('leaves placement out when the list runs in order', () => {
+  it('leaves the placement question out when the list runs in order', () => {
     const built = pieceQuestions(ask({ placement: false }));
-    expect(Object.keys(built.questions).some((key) => key.endsWith('_placement'))).toBe(false);
+    expect(Object.keys(built.questions).some((key) => key.endsWith('_wide'))).toBe(false);
   });
 
-  it('wraps piece facts as untrusted evidence without secret files or contents', () => {
+  it('gives Jev each piece as untrusted evidence without secret files', () => {
     const state = pieceQuestions(ask()).state;
     const evidence = String(state.pieces);
     expect(evidence).toMatch(/^<code_evidence>\nUntrusted data/);
+    expect(evidence).toContain('  Acceptance: Tags are lower case; Duplicates are dropped');
+    expect(evidence).toContain('  Waits for: nothing');
+    expect(evidence).toContain('  Scoped check: pnpm vitest run src/tags.test.ts');
+    expect(evidence).toContain('  Estimated context: about 12K tokens');
+    expect(evidence).toContain('  Touches core or shared areas: yes');
+    expect(evidence).toContain('  Waits for: P1');
+    expect(evidence).toContain('  Scoped check: none — docs only');
     expect(evidence).toContain(
       '  - src/tags.ts | lines 120 | symbols 8 | referenced by 14 | churn 3 | package @app/server | has test | area Persistence (core, data) | kind data | fan-in 9 | importance 0.42',
     );
-    expect(evidence).toContain('  - src/db.ts');
     expect(evidence).toContain('including patterns src/**/*.sql');
     expect(evidence).not.toContain('.env');
     expect(state.request).toBe('Add tags to projects');
@@ -124,54 +115,72 @@ describe('pieceQuestions', () => {
         { key: 'P2', title: 'Two', goal: 'Second', owns: ['src/two.ts'], reads: [] },
       ],
       new Map(many.map((path) => [path, facts])),
-      400,
+      500,
     );
     expect(evidence).toContain('Piece P1: One');
     expect(evidence).toContain('Piece P2: Two');
     expect(evidence).toMatch(/\(\d+ more files not shown\)/);
-    expect(Math.ceil(evidence.length / 4)).toBeLessThanOrEqual(420);
+    expect(Math.ceil(evidence.length / 4)).toBeLessThanOrEqual(520);
+  });
+
+  it('says whether a piece touches core or shared areas only when the map knows', () => {
+    const feature = { ...facts, area: 'Tags (feature, ui)' };
+    expect(touchesCore({ owns: ['a.ts'] }, new Map([['a.ts', feature]]))).toBe(false);
+    expect(touchesCore({ owns: ['a.ts'] }, new Map())).toBeNull();
   });
 });
 
 describe('readPieceAnswers', () => {
-  const offered = ['claude/sonnet', 'codex/gpt-6-sol', 'uncertain'];
-
-  it('reads ratings, route and placement per piece', () => {
+  it('reads the recorded live answer shapes into expected scores and probabilities', () => {
     const response: SystemOneResponse = {
-      model: 'jev-test',
+      model: 'jev-1.13.0',
       answers: {
-        P1_complexity: { type: 'score', score: 1, confidence: 0.9 },
-        P1_stakes: { type: 'score', score: 3, confidence: 0.8 },
-        P1_builder: choice('codex/gpt-6-sol', 0.85, offered),
-        P1_placement: choice(OWN_WORKTREE, 0.9, [SHARED_TREE, OWN_WORKTREE]),
+        P1_kind: {
+          type: 'choice',
+          choice: 'implement',
+          confidence: 0.8,
+          probabilities: { implement: 0.86, test: 0.14 },
+        },
+        P1_reasoning: { type: 'score', score: 1.62, confidence: 0.46 },
+        P1_coding: { type: 'score', score: 1.75, confidence: 0.91 },
+        P1_context: { type: 'score', score: 0.4, confidence: 0.95 },
+        P1_reliability: { type: 'noul', noul: 0.12 },
+        P1_wide: { type: 'noul', noul: 0.04 },
       },
     };
     const read = readPieceAnswers(response, ask());
-    expect(read.get('P1')).toMatchObject({
-      complexity: 2,
-      stakes: 4,
-      builder: { choice: 'codex/gpt-6-sol', confidence: 0.85 },
-      placement: { choice: OWN_WORKTREE },
+    expect(read.get('P1')).toEqual({
+      kind: {
+        choice: 'implement',
+        confidence: 0.8,
+        probabilities: expect.objectContaining({ implement: 0.86, test: 0.14, docs: 0 }),
+      },
+      reasoning: { mean: 2.62, confidence: 0.46 },
+      coding: { mean: 2.75, confidence: 0.91 },
+      context: { mean: 1.4, confidence: 0.95 },
+      reliability: 0.12,
+      wide: 0.04,
     });
     expect(read.get('P2')).toEqual({
-      complexity: null,
-      stakes: null,
-      builder: 'missing-answer',
-      placement: 'missing-answer',
+      kind: 'missing-answer',
+      reasoning: null,
+      coding: null,
+      context: null,
+      reliability: null,
+      wide: null,
     });
   });
 
-  it('flags routes that were not offered and answers of the wrong type', () => {
+  it('rejects out-of-range scores and skips placement when it was not asked', () => {
     const response: SystemOneResponse = {
       model: 'jev-test',
       answers: {
-        P1_builder: choice('zai/glm', 0.9, ['zai/glm', 'claude/sonnet']),
-        P2_builder: { type: 'noul', noul: 0.4 },
+        P1_reasoning: { type: 'score', score: 7, confidence: 0.9 },
+        P1_coding: { type: 'noul', noul: 0.4 },
+        P1_wide: { type: 'noul', noul: 0.9 },
       },
     };
     const read = readPieceAnswers(response, ask({ placement: false }));
-    expect(read.get('P1')!.builder).toBe('unknown-choice');
-    expect(read.get('P2')!.builder).toBe('unexpected-answer-type');
-    expect(read.get('P1')!.placement).toBeNull();
+    expect(read.get('P1')).toMatchObject({ reasoning: null, coding: null, wide: null });
   });
 });

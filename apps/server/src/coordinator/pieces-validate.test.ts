@@ -136,6 +136,34 @@ describe('validatePieces', () => {
     ]);
   });
 
+  it('lets a docs-only piece go without a check and drops checks that are not test runners', () => {
+    const grep = "grep -q 'csv-export' README.md && grep -q 'rate-limit' README.md";
+    const result = validatePieces(
+      { pieces: [piece('P3', { owns: ['README.md'], checks: [grep] })] },
+      facts({ files: [...FILES, 'README.md'] }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.pieces[0]!.checks).toEqual([]);
+  });
+
+  it('still refuses a non-runner check on a piece that owns code', () => {
+    const errors = errorsOf(
+      {
+        pieces: [
+          piece('P1', {
+            owns: ['README.md', 'apps/server/src/p1.ts'],
+            checks: ['grep -q x README.md'],
+          }),
+        ],
+      },
+      { files: [...FILES, 'README.md'] },
+    );
+    expect(errors).toEqual([
+      "P1's check `grep -q x README.md` runs `grep`, which is not a test runner or one of the project's checks",
+    ]);
+  });
+
   it('checks that every plan step has a piece', () => {
     const errors = errorsOf(
       { pieces: [piece('P1', { title: 'Tags table and repository' })] },
