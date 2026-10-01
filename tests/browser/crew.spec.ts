@@ -72,7 +72,7 @@ test('Manual, review each step: one task Builder with an edit approval, the Crit
   ).toBeVisible();
   await expect(agentHead(page, 'Bolt')).toContainText('Waiting for you');
   await expect(agentHead(page, 'Bolt')).toContainText('Builder');
-  await expect(agentHead(page, 'Bolt')).toContainText('Sonnet 5high effort');
+  await expect(agentHead(page, 'Bolt')).toContainText('Opus 5.5high effort');
   await expect(
     page.getByRole('button', {
       name: /^Asking permission Move date.*Bolt wants to edit notes\.txt/,
@@ -92,7 +92,7 @@ test('Manual, review each step: one task Builder with an edit approval, the Crit
   await expect(crew).toHaveCount(2);
   await expect(crew.nth(0)).toContainText('Dispatcher · router');
   await expect(crew.nth(1)).toContainText('BoltWaiting for you');
-  await expect(crew.nth(1)).toContainText('Builder · Sonnet 5 · high');
+  await expect(crew.nth(1)).toContainText('Builder · Opus 5.5 · high');
 
   const tvButton = page.getByRole('button', { name: 'Agent TV' });
   await tvButton.click();

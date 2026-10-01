@@ -5,6 +5,10 @@ let repo: CrewRepo;
 
 test.beforeEach(async ({ page }) => {
   await resetCrew();
+  const sonnet = await page.request.patch('/api/providers/claude/defaults', {
+    data: { model: 'sonnet' },
+  });
+  expect(sonnet.ok()).toBe(true);
   repo = crewRepo();
   await page.setViewportSize({ width: 1400, height: 900 });
 });
