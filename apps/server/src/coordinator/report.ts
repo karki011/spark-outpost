@@ -18,7 +18,7 @@ function money(usd: number | null): string {
   return usd === null ? '—' : `$${usd.toFixed(2)}`;
 }
 
-function checkCell(piece: TaskPiece): string {
+export function pieceCheckText(piece: TaskPiece): string {
   if (piece.check === 'passed') return 'passed';
   if (piece.check === 'failed') return `failed after ${piece.fixTurns} fix turns`;
   if (piece.research) return 'read-only';
@@ -34,7 +34,7 @@ function row(piece: TaskPiece): string {
     model,
     piece.status,
     String(piece.filesChanged.length),
-    checkCell(piece),
+    pieceCheckText(piece),
     money(piece.costUsd),
   ].join(' | ')} |`;
 }

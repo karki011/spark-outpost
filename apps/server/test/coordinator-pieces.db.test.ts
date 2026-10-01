@@ -142,7 +142,7 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(reply).toContain('Pieces (3, in order, list v1)');
     expect(reply).toContain('| P2 · API | Rivet | in order |');
     expect(reply).toMatch(
-      /^Built in 3 pieces:\n- P1 · Store \(Bolt\): Built P1 in store\.ts\. Files: `store\.ts`\.\n- P2 · API \(Rivet\): Built P2 in api\.ts\. Files: `api\.ts`\.\n- P3 · View \(Tack\): Built P3 in view\.ts\. Files: `view\.ts`\./,
+      /^Built in 3 pieces:\n- P1 · Store \(Bolt\): Built P1 in store\.ts\. Files: `store\.ts`\. Scoped check: \w+\.\n- P2 · API \(Rivet\): Built P2 in api\.ts\. Files: `api\.ts`\. Scoped check: \w+\.\n- P3 · View \(Tack\): Built P3 in view\.ts\. Files: `view\.ts`\. Scoped check: \w+\./,
     );
   });
 

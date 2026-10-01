@@ -101,9 +101,9 @@ describe('piecesSummary', () => {
     expect(summary).toBe(
       [
         'Built in 3 pieces:',
-        '- P1 · CSV export of uploads (Bolt): Added uploadsToCsv with RFC 4180 quoting. Files: `src/csv-export.ts`, `test/csv-export.test.ts`.',
-        '- P2 · Fixed-window rate limiter (Rivet): Added a fixed-window RateLimiter. Files: `src/rate-limit.ts`, `test/rate-limit.test.ts`.',
-        '- P3 · README lists the new modules (Tack): Update README.md to list both modules. Files: `README.md`.',
+        '- P1 · CSV export of uploads (Bolt): Added uploadsToCsv with RFC 4180 quoting. Five tests cover it. Files: `src/csv-export.ts`, `test/csv-export.test.ts`. Scoped check: passed.',
+        '- P2 · Fixed-window rate limiter (Rivet): Added a fixed-window RateLimiter. Files: `src/rate-limit.ts`, `test/rate-limit.test.ts`. Scoped check: passed.',
+        '- P3 · README lists the new modules (Tack): Update README.md to list both modules. Files: `README.md`. Scoped check: none.',
         '- Then Rivet: Fixed the limit: 0 bug.',
       ].join('\n'),
     );
@@ -122,10 +122,42 @@ describe('piecesSummary', () => {
     );
     expect(summary!.split('\n')).toEqual([
       'Built in 2 pieces:',
-      '- P1 · CSV export of uploads (Bolt): I added migrations/002_upload_tags.sql. Files: `src/csv-export.ts`, `test/csv-export.test.ts`.',
-      '- P2 · Fixed-window rate limiter (Rivet): The slugify piece (P2) is in place. Files: `src/rate-limit.ts`, `test/rate-limit.test.ts`.',
+      '- P1 · CSV export of uploads (Bolt): I added migrations/002_upload_tags.sql. Files: `src/csv-export.ts`, `test/csv-export.test.ts`. Scoped check: passed.',
+      '- P2 · Fixed-window rate limiter (Rivet): Goal of P2. Files: `src/rate-limit.ts`, `test/rate-limit.test.ts`. Scoped check: passed.',
       '- Then Weld: I fixed the review finding.',
       '- Then Weld: Rechecked the E2E test naming.',
+    ]);
+  });
+
+  it('builds each line from the final summary, never a status line or a mid-turn fragment (C2)', () => {
+    const summary = piecesSummary(coordination(C2_PIECES), [
+      reply(
+        'builder',
+        'run-bolt',
+        'Bolt',
+        'P1 is finished.\n\nAdded `uploadsToCsv`, which quotes commas, quotes and newlines.\n\n- src/csv-export.ts\n- test/csv-export.test.ts\n\nAll 4 tests pass.',
+      ),
+      reply('builder', 'run-rivet', 'Rivet', 'Now let me check the window logic:'),
+      reply(
+        'builder',
+        'run-tack',
+        'Tack',
+        'Listed both modules in README.md.\n\nHere is the diff:',
+      ),
+      reply(
+        'integrator',
+        'run-weld',
+        'Weld',
+        'Fixed the CRLF quoting.\n\nNow let me add a test for this case.',
+      ),
+      reply('integrator', 'run-weld-2', 'Weld', 'All 19 tests pass.'),
+    ]);
+    expect(summary!.split('\n')).toEqual([
+      'Built in 3 pieces:',
+      '- P1 · CSV export of uploads (Bolt): Added uploadsToCsv, which quotes commas, quotes and newlines. Files: `src/csv-export.ts`, `test/csv-export.test.ts`. Scoped check: passed.',
+      '- P2 · Fixed-window rate limiter (Rivet): Goal of P2. Files: `src/rate-limit.ts`, `test/rate-limit.test.ts`. Scoped check: passed.',
+      '- P3 · README lists the new modules (Tack): Listed both modules in README.md. Files: `README.md`. Scoped check: none.',
+      '- Then Weld: Fixed the CRLF quoting.',
     ]);
   });
 
