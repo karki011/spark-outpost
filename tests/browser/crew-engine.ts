@@ -55,7 +55,7 @@ export function crewRepo(): CrewRepo {
       git('add', relative);
       git('commit', '-qm', `add ${relative}`);
     },
-    remove: () => rmSync(root, { recursive: true, force: true }),
+    remove: () => rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }),
   };
 }
 
