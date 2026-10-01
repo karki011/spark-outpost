@@ -149,6 +149,7 @@ export const COMPACT_SELF_DROP = 0.4;
 export const COMPACT_AGENT_WORKED = 0.8;
 
 export const LAW_REMOVED_BLOCK_LINES = 30;
+export const LAW_RENAMED_BODY_SHARE = 0.6;
 export const LAW_ITEMS_SHOWN = 8;
 export const LAW_SCOPE_ITEMS = 5;
 

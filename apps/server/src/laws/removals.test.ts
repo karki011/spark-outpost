@@ -35,6 +35,43 @@ index 1111111..2222222 100644
 -
 `;
 
+const renamedUploadTest = `diff --git a/test/upload.test.ts b/test/upload.test.ts
+index 1111111..2222222 100644
+--- a/test/upload.test.ts
++++ b/test/upload.test.ts
+@@ -3,6 +3,6 @@ import { MAX_UPLOAD_BYTES } from '../src/upload.ts';
+-test('max upload size is 5 MB', () => {
+-  assert.equal(MAX_UPLOAD_BYTES, 5 * 1024 * 1024);
+-  assert.ok(MAX_UPLOAD_BYTES > 0);
++test('max upload size is 10 MB', () => {
++  assert.equal(MAX_UPLOAD_BYTES, 10 * 1024 * 1024);
++  assert.ok(MAX_UPLOAD_BYTES > 0);
+ });
+`;
+
+const removedUploadTest = `diff --git a/test/upload.test.ts b/test/upload.test.ts
+index 1111111..2222222 100644
+--- a/test/upload.test.ts
++++ b/test/upload.test.ts
+@@ -3,6 +3,3 @@ import { MAX_UPLOAD_BYTES } from '../src/upload.ts';
+-test('max upload size is 5 MB', () => {
+-  assert.equal(MAX_UPLOAD_BYTES, 5 * 1024 * 1024);
+-  assert.ok(MAX_UPLOAD_BYTES > 0);
+-});
+`;
+
+const renamedFunction = `diff --git a/src/totals.ts b/src/totals.ts
+index 1111111..2222222 100644
+--- a/src/totals.ts
++++ b/src/totals.ts
+@@ -1,5 +1,5 @@
+-export function helperTotals(rows) {
++export function rowTotals(rows) {
+   const counted = rows.filter(Boolean);
+   return counted.length;
+ }
+`;
+
 const removedGuard = `diff --git a/src/routes.ts b/src/routes.ts
 index 1111111..2222222 100644
 --- a/src/routes.ts
@@ -109,9 +146,26 @@ describe('Chesterton removals', () => {
     expect(removalFindings(removedFunction, facts({ request: 'Remove dead code.' }))).toEqual([]);
   });
 
-  it('does not count a reply that names the code without saying it was removed', () => {
-    const replies = ['helperTotals now reads the cached rows.'];
-    expect(removalFindings(removedFunction, facts({ replies }))).toHaveLength(1);
+  it('counts a reply that names the old code as explaining it, but not one that never names it (B)', () => {
+    const named = ['helperTotals is folded into login, which now counts the rows.'];
+    expect(removalFindings(removedFunction, facts({ replies: named }))).toEqual([]);
+    const silent = ['Tidied the login flow.'];
+    expect(removalFindings(removedFunction, facts({ replies: silent }))).toHaveLength(1);
+  });
+
+  it('counts a reply sentence about the changed file as explaining a test change (B)', () => {
+    const replies = ['- `test/upload.test.ts`: the size test now expects 10 MB.'];
+    expect(removalFindings(removedUploadTest, facts({ replies }))).toEqual([]);
+    const silent = removalFindings(removedUploadTest, facts({ replies: ['Done.'] }));
+    expect(silent.filter((finding) => finding.kind === 'test')).toHaveLength(1);
+  });
+
+  it('treats a test or function whose body reappears under a new name as renamed (B)', () => {
+    expect(findRemovals(renamedUploadTest)).toEqual([]);
+    expect(findRemovals(renamedFunction)).toEqual([]);
+    expect(findRemovals(removedUploadTest).map((removal) => removal.text)).toContain(
+      'Removed test `max upload size is 5 MB` from `test/upload.test.ts` — why?',
+    );
   });
 
   it('treats a function that moved to another file as kept', () => {
