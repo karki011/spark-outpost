@@ -59,7 +59,13 @@ export async function startUpdater(options: UpdaterOptions): Promise<Updater> {
     feedUrl: options.feedUrl,
   });
   const apply = (event: UpdateEvent) => {
+    const before = status.phase;
     status = reduceUpdate(status, event);
+    if (status.phase !== before) {
+      options.log(
+        `Update ${status.phase}${status.availableVersion ? ` ${status.availableVersion}` : ''}.`,
+      );
+    }
     options.broadcast(status);
   };
   const autoUpdater = offReason ? null : await loadAutoUpdater();

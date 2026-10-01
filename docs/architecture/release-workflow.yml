@@ -1,0 +1,93 @@
+# Template for a macOS release workflow. It is not active: GitHub only runs
+# files in .github/workflows. To use it, copy it to
+# .github/workflows/desktop-release.yml after the one-time setup in
+# docs/architecture/RELEASES.md, add the secrets below in the repository
+# settings, and replace the upload step for the hosting you chose.
+#
+# Secrets (names only, values live in GitHub):
+#   CSC_LINK                 base64 of the Developer ID Application .p12
+#   CSC_KEY_PASSWORD         password of that .p12
+#   APPLE_API_KEY_BASE64     App Store Connect API key (.p8), base64
+#   APPLE_API_KEY_ID
+#   APPLE_API_ISSUER
+#   SPARK_UPDATE_FEED_URL    the one feed URL, if not committed in builder-config.ts
+#   RELEASES_TOKEN           token allowed to upload to the feed host
+
+name: Desktop release
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Upload the build to the update feed
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: macos-14
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm check
+
+      - name: Write the notarization API key
+        run: |
+          mkdir -p "$RUNNER_TEMP/apple"
+          echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/apple/AuthKey.p8"
+          echo "APPLE_API_KEY=$RUNNER_TEMP/apple/AuthKey.p8" >> "$GITHUB_ENV"
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+
+      - name: Build, sign and notarize x64 and arm64
+        run: pnpm desktop:package
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          SPARK_UPDATE_FEED_URL: ${{ secrets.SPARK_UPDATE_FEED_URL }}
+
+      - name: Verify signatures and notarization
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          for dir in mac mac-arm64; do
+            app="apps/desktop/release/$version/$dir/Spark Outpost.app"
+            codesign --verify --deep --strict --verbose=2 "$app"
+            spctl -a -vv "$app"
+          done
+          for dmg in apps/desktop/release/$version/*.dmg; do
+            xcrun stapler validate "$dmg"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spark-outpost-desktop
+          path: |
+            apps/desktop/release/*/*.zip
+            apps/desktop/release/*/*.blockmap
+            apps/desktop/release/*/*.dmg
+            apps/desktop/release/*/*-mac.yml
+            apps/desktop/release/*/release-notes.html
+
+      - name: Upload to the feed (channel files last)
+        if: ${{ inputs.publish }}
+        run: |
+          echo "Replace this step with the upload for the chosen host."
+          echo "Upload zips, blockmaps, dmgs and release-notes.html first, then *-mac.yml."
+          exit 1
+        env:
+          RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN }}

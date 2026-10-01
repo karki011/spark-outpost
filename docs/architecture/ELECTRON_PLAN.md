@@ -1,6 +1,6 @@
 # Electron plan
 
-> **Status: step 2 built (dev-runnable shell, not packaged).** Steps 1 (F-24, F-9) and 2 are done; step 3, packaging, is next. See [Step 2: the shell today](#step-2-the-shell-today). AGENTS.md sets the direction: Electron is a thin wrapper around the unchanged web app and Node service.
+> **Status: step 3 built locally, unsigned.** Steps 1 (F-24, F-9) and 2 are done. Step 3 packages an ad-hoc signed app with updates and a safe migration on update; signing, notarization and hosting wait on the user ([RELEASES.md](RELEASES.md)). See [Step 2: the shell today](#step-2-the-shell-today) and [Step 3: packaging and updates](#step-3-packaging-and-updates). AGENTS.md sets the direction: Electron is a thin wrapper around the unchanged web app and Node service.
 
 ## Decided
 
@@ -99,7 +99,7 @@ The rule for every new feature: anything that stores data, opens a port, names a
 
 1. F-24 (auto-migrate with backup) and F-9 (per-launch token): useful now, in the web app. **Done.**
 2. The Electron shell: renderer loading the built web app, API and worker in `utilityProcess`, bundled Postgres, git detection. **Done** (dev channel, run from source).
-3. Packaging: adapters, signing, notarization, updates.
+3. Packaging: adapters, signing, notarization, updates. **Built locally**; signing, notarization and hosting are the user's one-time setup in [RELEASES.md](RELEASES.md).
 
 ## Step 2: the shell today
 
@@ -116,13 +116,24 @@ The rule for every new feature: anything that stores data, opens a port, names a
 
 Verified on 2026-09-28 (Intel Mac, Electron 44.4.5 / Node 24.21): window loads onboarding; in-page `fetch('/api/health')` 200, `/api/setup` 200, `/api/events` stream opens; `window.require`/`process` undefined; direct `curl` without or with a wrong token gets 401; killing the worker with SIGKILL restarts it after 500 ms; quitting leaves no Electron, utility or Postgres processes. The terminal WebSocket through the injected header was not exercised live.
 
-### Left for packaging (step 3) and later
+## Step 3: packaging and updates
 
-- **Server as JS:** bundle or compile `apps/server` instead of registering `tsx` at runtime; resolve paths from `process.resourcesPath` instead of the repo root (`app.getAppPath()/../..`).
-- **ripgrep:** `@vscode/ripgrep`'s `rgPath` works from source. Packaged, add `asarUnpack: ["**/node_modules/@vscode/ripgrep/bin/**"]` and map `app.asar` → `app.asar.unpacked` in `rgPath` (both `codescan/ripgrep.ts` and `codescan/git.ts`), as VS Code does. The same applies to `node-pty`'s `spawn-helper`, the Postgres binaries and the tree-sitter wasm files.
-- **pg_dump:** `embedded-postgres` ships only `initdb`, `pg_ctl` and `postgres`. The pre-migration backup (F-24) finds `pg_dump` through Homebrew or PATH, which works on this dev machine but not for users; ship a matching `pg_dump` 17 or back up another way before the first migration after an update.
+`pnpm desktop:package` builds `apps/desktop/release/<version>/` (zip + dmg, x64 and arm64, plus `*-mac.yml`, blockmaps and `release-notes.html`). Details, signing and the release process are in [RELEASES.md](RELEASES.md).
+
+- **Layout:** `Contents/Resources/app` holds the bundled main process and its runtime `node_modules` (embedded-postgres, pg, tsx, electron-updater); `Contents/Resources/server` is a `pnpm deploy --prod --cpu=<arch>` of `apps/server` (TypeScript sources, migrations, adapters with the codex patch, node-pty prebuilds, ripgrep); `Contents/Resources/web` is the built web app. `layout.ts` picks these paths when packaged and the checkout paths from source. The packaged app is always the prod channel; `SPARK_APP_DATA` relocates its data folder for local tests.
+- **asar is off** so spawned binaries (Postgres, ripgrep, node-pty `spawn-helper`, adapters, esbuild for tsx) run as plain files without `app.asar.unpacked` path mapping; `embedded-postgres` derives its binary paths from its own location, which asarUnpack alone cannot fix.
+- **Agent adapters** start with `process.execPath`; inside Electron that is the helper binary, so their launch adds `ELECTRON_RUN_AS_NODE=1` (`scriptLaunch` in `agents/acp/agents.ts`). The adapter's own children inherit it, so an agent's shell command that starts an Electron app would run it as Node.
+- **Migrations on update:** before the API starts, the shell compares pending migrations, backs up (pg_dump 17 if found, else a cold copy of the stopped data folder), keeps three `update-*` backups, migrates once in a utility process and records the version in `migrated-version.json`; on failure it restores the backup, skips that version for updates and offers previous-version instructions. The API and worker no longer get `BACKUP_DIR`.
+- **Updates:** prod only, electron-updater generic provider at the one feed URL in `app-update.yml`; Stable/Beta, checks at launch and every 4 h, background download, install on quit or Restart to update only when `GET /api/runs/active` is 0.
+
+Verified on 2026-10-01 (Intel Mac, ad-hoc signed): the packaged x64 app starts its bundled Postgres, migrates a fresh database, starts the API and worker and shows onboarding; quitting stops everything. The bundled `claude-agent-acp` answers ACP `initialize` when started by the helper binary with `ELECTRON_RUN_AS_NODE=1`. The update and migration checks are listed in RELEASES.md.
+
+### Left for later
+
+- **Server as JS:** compile `apps/server` instead of registering `tsx` at runtime.
+- **pg_dump:** not bundled; `embedded-postgres` ships only `initdb`, `pg_ctl` and `postgres`. The update backup falls back to a cold copy; `Contents/Resources/postgres-tools/bin` is checked first if a matching pg_dump/pg_restore 17 is added later.
 - **PATH for GUI launches:** an app started from Finder gets a minimal PATH; agents, git and the CLI lookup need the login shell's PATH.
 - **Repo lock file** in `.git/` naming channel and run (isolation section): not built; the server has no hook for it yet (`repoBusy` only checks runs in its own database). TODO.
 - **Worktrees under the channel data folder:** branches are per channel now, but copies still live in `<repo>/.spark/worktrees/<runId>`.
 - **Link scheme:** `spark-outpost-dev://` is named but not registered with the OS (no handler yet).
-- Own dev icon, menu bar residency when the window closes, logs to `logs/` instead of stdout, import-a-copy from the installed app's database, a dev keychain service name for `pnpm dev`, signing, notarization, `electron-updater` (prod only), bundled agent adapters.
+- Own dev icon and app icon, menu bar residency when the window closes, logs to `logs/` instead of stdout, import-a-copy from the installed app's database, a dev keychain service name for `pnpm dev`, a Developer ID certificate and update hosting ([RELEASES.md](RELEASES.md)).

@@ -89,13 +89,20 @@ export interface PackageOptions {
   archs: MacArch[];
   outputDir: string;
   env: Record<string, string | undefined>;
+  packageName?: string;
+  appId?: string;
+  formats?: ('zip' | 'dmg')[];
+  prepareServer?: (serverDir: string) => Promise<void>;
 }
 
 export async function packageDesktop(options: PackageOptions): Promise<string[]> {
   const stageDir = path.join(releaseDir, 'stage');
   await rm(stageDir, { recursive: true, force: true });
   await stageApp(stageDir, options.version);
-  for (const arch of options.archs) await stageArch(stageDir, arch);
+  for (const arch of options.archs) {
+    await stageArch(stageDir, arch);
+    await options.prepareServer?.(path.join(stageDir, arch, 'server'));
+  }
   const config = builderConfig({
     stageDir,
     outputDir: options.outputDir,
@@ -104,11 +111,37 @@ export async function packageDesktop(options: PackageOptions): Promise<string[]>
     archs: options.archs,
     env: options.env,
     entitlements: path.join(desktopDir, 'build/entitlements.mac.plist'),
+    ...(options.packageName ? { packageName: options.packageName } : {}),
+    ...(options.formats ? { formats: options.formats } : {}),
+    ...(options.appId ? { appId: options.appId } : {}),
   });
-  return build({
+  const artifacts = await build({
     projectDir: path.join(stageDir, 'app'),
     targets: Platform.MAC.createTarget(),
     config,
     publish: 'never',
   });
+  await writeReleaseNotes(options.outputDir, options.version);
+  return artifacts;
+}
+
+function escapeHtml(text: string): string {
+  return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
+async function writeReleaseNotes(outputDir: string, version: string): Promise<void> {
+  const changelog = await readFile(path.join(desktopDir, 'CHANGELOG.md'), 'utf8');
+  const page = [
+    '<!doctype html>',
+    '<html lang="en">',
+    '<meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    `<title>Spark Outpost ${escapeHtml(version)} release notes</title>`,
+    '<body style="font: 15px/1.5 system-ui, sans-serif; max-width: 720px; margin: 32px auto; padding: 0 16px">',
+    `<pre style="white-space: pre-wrap; font: inherit">${escapeHtml(changelog)}</pre>`,
+    '</body>',
+    '</html>',
+    '',
+  ].join('\n');
+  await writeFile(path.join(outputDir, 'release-notes.html'), page);
 }

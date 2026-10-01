@@ -8,3 +8,4 @@ const db = createDb(config.DATABASE_URL);
 await migrateOrExit(db, { backup: configuredBackup(config) });
 console.log('Database is up to date.');
 await db.end();
+process.exit(0);

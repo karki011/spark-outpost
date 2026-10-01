@@ -59,6 +59,9 @@ export interface BuilderOptions {
   archs: MacArch[];
   env: Env;
   entitlements: string;
+  packageName?: string;
+  appId?: string;
+  formats?: ('zip' | 'dmg')[];
 }
 
 export function builderConfig(options: BuilderOptions): Configuration {
@@ -66,10 +69,10 @@ export function builderConfig(options: BuilderOptions): Configuration {
   const signing = signingPlan(options.env);
   const feed = updateFeedUrl(options.env);
   return {
-    appId: prod.appId,
+    appId: options.appId ?? prod.appId,
     productName: prod.appName,
     electronVersion: options.electronVersion,
-    extraMetadata: { version: options.version },
+    extraMetadata: { version: options.version, name: options.packageName ?? 'spark-outpost' },
     directories: { output: options.outputDir },
     npmRebuild: false,
     asar: false,
@@ -81,10 +84,10 @@ export function builderConfig(options: BuilderOptions): Configuration {
     publish: feed ? [{ provider: 'generic', url: feed }] : null,
     mac: {
       category: 'public.app-category.developer-tools',
-      target: [
-        { target: 'zip', arch: options.archs },
-        { target: 'dmg', arch: options.archs },
-      ],
+      target: (options.formats ?? ['zip', 'dmg']).map((target) => ({
+        target,
+        arch: options.archs,
+      })),
       ...(signing.adHoc ? { identity: '-' } : {}),
       notarize: signing.notarize,
       hardenedRuntime: true,
