@@ -1,10 +1,7 @@
 import type { CheckBody } from '@spark-outpost/contracts';
-import {
-  buildFindingQuestions,
-  readFindings,
-  type FindingReading,
-} from '../advisor/finding-questions.ts';
+import { buildFindingQuestions, readFindings } from '../advisor/finding-questions.ts';
 import { latestChecks } from './check-results.ts';
+import { scopeRecheck, type ScopedReading } from './critic-scope.ts';
 import { FINDINGS_LIMIT } from './context.ts';
 import { callJev } from './jev-calls.ts';
 import { agreedPlanText, changesForReview } from './member-prompts.ts';
@@ -23,7 +20,7 @@ const ACTION_TEXT: Record<ReviewAction, string> = {
 
 export function findingSummary(
   review: number,
-  readings: readonly FindingReading[],
+  readings: readonly ScopedReading[],
   action: ReviewAction,
   diffsOff: boolean,
 ): string {
@@ -32,11 +29,13 @@ export function findingSummary(
     (reading) => !reading.correct && reading.kind === 'suggestion',
   ).length;
   const reported = suggestions > 0 ? `, ${suggestions} reported as suggestions` : '';
+  const outside = readings.filter((reading) => reading.scope).length;
+  const scoped = outside > 0 ? `, ${outside} outside the recheck's scope` : '';
   const byJev = readings.filter((reading) => reading.by === 'jev').length;
   const source = byJev === 0 ? 'rules' : byJev === readings.length ? 'jev' : 'jev and rules';
   const skipped = diffsOff ? `, Jev ${DIFFS_OFF}` : '';
   const total = `${readings.length} finding${readings.length === 1 ? '' : 's'}`;
-  return `Review ${review}: correctness bugs ${fixable} of ${total} (${source}${skipped})${reported} → ${ACTION_TEXT[action]}`;
+  return `Review ${review}: correctness bugs ${fixable} of ${total} (${source}${skipped})${reported}${scoped} → ${ACTION_TEXT[action]}`;
 }
 
 export async function correctnessFindings(
@@ -56,13 +55,23 @@ export async function correctnessFindings(
       )
     : null;
   const checksPass = checksPhrase(s.checkBodies) === 'checks pass';
-  const readings = readFindings(shown, call?.status === 'answered' ? call.response : null, {
+  const read = readFindings(shown, call?.status === 'answered' ? call.response : null, {
     checksPass,
+    request: s.input.userRequest,
   });
+  const readings =
+    s.flow.review.fixRounds > 0
+      ? scopeRecheck(read, {
+          previous: s.flow.review.fixable,
+          notes: s.reviewNotes ?? [],
+          fixPatch: s.fixPatch ?? null,
+        })
+      : read;
   const fixable = readings.filter((reading) => reading.correct).map((reading) => reading.finding);
   s.suggestions = readings
     .filter((reading) => !reading.correct && reading.kind === 'suggestion')
     .map((reading) => reading.finding);
+  s.reviewNotes = [...(s.reviewNotes ?? []), ...s.suggestions];
   const review = s.flow.review.rounds.length + 1;
   const action = reviewAction(s.flow.review, 'concerns', fixable, s.input.level);
   await recordAdvice(

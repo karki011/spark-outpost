@@ -31,6 +31,20 @@ const CONCRETE_WRONG =
 const REAL_VULNERABILITY =
   /\b(?:sql injection|command injection|shell injection|code injection|xss|cross[- ]site scripting|path traversal|directory traversal|remote code execution|privilege escalation|ssrf|open redirect|(?:auth(?:entication|orization)?|permission|access[- ]control) (?:bypass|checks? (?:is |are )?missing)|(?:bypass(?:es)?|skips) (?:the )?(?:auth\w*|permission checks?|access control)|(?:no|missing) (?:auth\w*|permission|access[- ]control) checks?|(?:leaks?|exposes?|logs?|returns?) (?:the )?(?:user's |users' )?(?:secrets?|credentials?|tokens?|passwords?|api keys?|password hashes)|(?:unescaped|not escaped|without escaping)\b[^.;]{0,40}\b(?:html|user input|markup))\b/i;
 
+const DEGENERATE_VALUE =
+  /\b(?:zero|negative|nan|non-?finite|infinite|infinity|fractional|non-?integer|empty string)\b|`\w+:\s*(?:0|-\d+|NaN|Infinity)`/i;
+
+const VALIDATION_ADVICE =
+  /\b(?:validat\w*|unchecked|unvalidated|not checked|reject (?:a |an )?(?:zero|negative|non-?finite|fractional|invalid)|accept(?:s|ed)? (?:a |an )?(?:zero|negative|non-?finite|fractional|invalid)|an accepted (?:zero|negative|non-?finite|fractional))\b/i;
+
+const REQUEST_ASKS_VALIDATION =
+  /\b(?:validat\w*|reject\w*|invalid|throws?|errors? (?:on|for|when))\b/i;
+
+export function unaskedValidation(finding: string, request: string | null = null): boolean {
+  if (request && REQUEST_ASKS_VALIDATION.test(request)) return false;
+  return DEGENERATE_VALUE.test(finding) && VALIDATION_ADVICE.test(finding);
+}
+
 const KIND_TAG = /^\W*\[(bug|missing|hardening|style)\]/i;
 
 export type FindingKind = 'bug' | 'suggestion' | 'style';
@@ -47,12 +61,14 @@ function taggedKind(text: string): FindingKind | null {
   return tag ? TAG_KINDS[tag]! : null;
 }
 
-export function findingKind(finding: string): FindingKind {
+export function findingKind(finding: string, request: string | null = null): FindingKind {
   const text = finding.trim();
   const tagged = taggedKind(text);
+  if (tagged === 'bug' && unaskedValidation(text, request)) return 'suggestion';
   if (tagged) return tagged;
   if (!text || NIT_LABEL.test(text)) return 'style';
   if (REAL_VULNERABILITY.test(text)) return 'bug';
+  if (unaskedValidation(text, request)) return 'suggestion';
   if (HARDENING_WORDS.test(text) && !REQUIRED_WORDS.test(text) && !CONCRETE_WRONG.test(text)) {
     return 'suggestion';
   }
@@ -81,7 +97,7 @@ export function buildFindingQuestions(facts: FindingFacts): IntakeQuestions {
       {
         question: FINDING_QUESTION,
         finding: capped(redactText(finding), MAX_FINDING_CHARACTERS),
-        how: 'Yes only when the finding names behavior of `diff` that is wrong for `task` (or `plan`, when given): a bug, a wrong or failing result, a crash, or a requirement of `task` or `plan` the change misses, or an irreversible data or schema change (DELETE, DROP, TRUNCATE, a destructive migration) that `task` does not explicitly ask for. A finding that names an input and the wrong output it gives is a strong sign. No for hardening, security or robustness advice that `task` and `plan` do not ask for, such as neutralizing spreadsheet formulas in an export, quoting for some other reader, or cleanup timing, unless the change itself adds an exploitable hole such as SQL injection or an auth bypass.',
+        how: 'Yes only when the finding names behavior of `diff` that is wrong for `task` (or `plan`, when given): a bug, a wrong or failing result, a crash, or a requirement of `task` or `plan` the change misses, or an irreversible data or schema change (DELETE, DROP, TRUNCATE, a destructive migration) that `task` does not explicitly ask for. A finding that names an input and the wrong output it gives is a strong sign. No for hardening, security or robustness advice that `task` and `plan` do not ask for, or for validating degenerate inputs nobody realistic passes (zero, negative, NaN, infinite or fractional options) when `task` does not ask for validation, such as neutralizing spreadsheet formulas in an export, quoting for some other reader, or cleanup timing, unless the change itself adds an exploitable hole such as SQL injection or an auth bypass.',
       },
       {
         true: 'A concrete correctness problem against the task or plan: wrong or failing behavior, a missed requirement, or a real vulnerability the change adds',
@@ -124,10 +140,10 @@ function jevMayPromote(finding: string, kind: FindingKind, checksPass: boolean):
 export function readFindings(
   findings: readonly string[],
   response: SystemOneResponse | null,
-  { checksPass = false }: { checksPass?: boolean } = {},
+  { checksPass = false, request = null }: { checksPass?: boolean; request?: string | null } = {},
 ): FindingReading[] {
   return findings.map((finding, index) => {
-    const kind = findingKind(finding);
+    const kind = findingKind(finding, request);
     const rules = kind === 'bug';
     const noul = validNoul(response, findingKey(index));
     const said = jevSays(noul);

@@ -163,6 +163,9 @@ export interface Session {
   shipLine?: string | null;
   prNotes?: string[];
   fixRound?: FixRound | null;
+  fixTree?: string | null;
+  fixPatch?: string | null;
+  reviewNotes?: string[];
   passing?: PassingState | null;
   suggestions?: string[];
   integrator?: Seat | null;

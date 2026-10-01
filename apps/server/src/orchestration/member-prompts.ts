@@ -7,6 +7,7 @@ import { awaitRanking, likelyFilesLine } from './likely-files.ts';
 import { pieceReviews } from '../coordinator/critic-pieces.ts';
 import { lawFacts } from '../laws/review.ts';
 import { removalFindings } from '../laws/removals.ts';
+import { fixDiff } from './fix-rounds.ts';
 import type { Session } from './session.ts';
 import type { Spawn } from './transitions.ts';
 
@@ -83,6 +84,8 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
   const agreedPlan = await agreedPlanText(s);
   if (spawn.role === 'critic') {
     const changes = await changesForReview(s);
+    const rechecking = s.flow.review.fixing;
+    s.fixPatch = rechecking ? await fixDiff(s) : null;
     return criticPrompt({
       pieces: pieceReviews(s.coordination?.list, changes.patch),
       request,
@@ -92,7 +95,9 @@ export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
       checks: s.checkLines,
       buildStyle: s.buildStyle,
       agreedPlan,
-      previousFindings: s.flow.review.fixing ? s.flow.review.fixable : [],
+      previousFindings: rechecking ? s.flow.review.fixable : [],
+      earlierNotes: rechecking ? (s.reviewNotes ?? []) : [],
+      fixPatch: s.fixPatch,
       builderReply: s.results.findLast((result) => result.role === 'builder')?.text ?? null,
       removals: removalFindings(changes.patch, lawFacts(s, agreedPlan)).map((item) => item.text),
     });
