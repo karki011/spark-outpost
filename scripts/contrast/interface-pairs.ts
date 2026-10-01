@@ -241,6 +241,22 @@ export const PROVIDERS: Pair[] = [
     ),
   ),
   {
+    id: 'provider.test-typing-dots',
+    group: 'Provider colours',
+    label: 'typing dots in the test-message speech bubble',
+    fg: 'var(--muted)',
+    bg: ['var(--raise)'],
+    kind: 'ui',
+  },
+  {
+    id: 'provider.test-answered-check',
+    group: 'Provider colours',
+    label: 'answered check in the test-message speech bubble',
+    fg: 'var(--accent-text)',
+    bg: ['var(--raise)'],
+    kind: 'ui',
+  },
+  {
     id: 'provider.cost-tier-shade',
     group: 'Provider colours',
     label: 'cheapest-tier cost slice (36% shade) on the bar track',

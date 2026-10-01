@@ -121,7 +121,7 @@ export function Onboarding({ onFinished }: OnboardingProps) {
             Setup takes about two minutes. You can change any of it later.
           </p>
         </aside>
-        <main className="onb-main" aria-labelledby="onbTitle">
+        <main className={step === 1 ? 'onb-main wide' : 'onb-main'} aria-labelledby="onbTitle">
           <div className="onb-body">
             <AnimatePresence mode="popLayout" initial={false} custom={direction}>
               <motion.div
@@ -165,25 +165,27 @@ export function Onboarding({ onFinished }: OnboardingProps) {
             </AnimatePresence>
           </div>
           <div className="onb-foot">
-            <button
-              type="button"
-              className="btn ghost"
-              style={{ visibility: step === 0 ? 'hidden' : 'visible' }}
-              onClick={() => go(step - 1)}
-            >
-              Back
-            </button>
-            <span className="why" aria-live="polite">
-              {footerStatus}
-            </span>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={!canGoNext}
-              onClick={handleNext}
-            >
-              {step === STEP_LABELS.length - 1 ? 'Open Spark Outpost' : 'Continue'}
-            </button>
+            <div className="onb-foot-row">
+              <button
+                type="button"
+                className="btn ghost"
+                style={{ visibility: step === 0 ? 'hidden' : 'visible' }}
+                onClick={() => go(step - 1)}
+              >
+                Back
+              </button>
+              <span className="why" aria-live="polite">
+                {footerStatus}
+              </span>
+              <button
+                type="button"
+                className="btn primary"
+                disabled={!canGoNext}
+                onClick={handleNext}
+              >
+                {step === STEP_LABELS.length - 1 ? 'Open Spark Outpost' : 'Continue'}
+              </button>
+            </div>
           </div>
         </main>
       </div>

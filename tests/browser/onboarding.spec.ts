@@ -30,6 +30,13 @@ async function enterName(page: Page, name: string) {
   ).toBeVisible();
 }
 
+async function columnCount(page: Page) {
+  const lefts = await dialog(page)
+    .locator('.tcard')
+    .evaluateAll((cards) => cards.map((card) => Math.round(card.getBoundingClientRect().left)));
+  return new Set(lefts).size;
+}
+
 async function openTile(page: Page, name: string) {
   await dialog(page).locator('.pcard').filter({ hasText: name }).locator('.pc-head').click();
 }
@@ -284,10 +291,27 @@ test('a connected provider says what was checked and can send a test message', a
   await expect(details).toContainText('Keysk-ant-…4f2a');
   await expect(details).toContainText('CheckedVerified with Anthropic just now');
   await expect(details).toContainText('Last testNot sent yet');
+  let answer = () => {};
+  const held = new Promise<void>((resolve) => (answer = resolve));
+  await page.route('**/api/providers/claude/test', async (route) => {
+    await held;
+    await route.continue();
+  });
   await claudeCard(page).getByRole('button', { name: 'Send test message' }).click();
+  const asking = claudeCard(page).getByRole('button', { name: /^Asking Claude…/ });
+  await expect(asking).toHaveAttribute('aria-disabled', 'true');
+  await expect(asking).toContainText(/Asking Claude…1 s/);
+  await expect(details).toContainText('Last testWaiting for Claude to reply');
+  await expect(claudeCard(page).locator('.plogo')).toHaveClass(/test-asking/);
+  await expect(claudeCard(page).locator('.test-bubble i')).toHaveCount(3);
+  answer();
   await expect(details).toContainText(
     /Last testTest message answered in \d+\.\d s by claude-opus-5-5 · just now/,
   );
+  await expect(claudeCard(page).locator('.test-bubble.answered')).toBeVisible();
+  await expect(claudeCard(page).locator('.plogo')).toHaveClass(/test-answered/);
+  await expect(claudeCard(page).getByRole('button', { name: 'Send test message' })).toBeVisible();
+  await expect(claudeCard(page).locator('.test-bubble')).toHaveCount(0);
 
   await page.reload();
   await openTile(page, 'Claude');
@@ -350,6 +374,12 @@ test('the theme step applies the chosen theme and remembers it', async ({ page }
   expect(await previewBackground('aurora')).toBe('rgb(17, 15, 38)');
   expect(await previewBackground('iris')).toBe('rgb(243, 240, 254)');
   await expect(dialog(page).getByRole('radio')).toHaveCount(12);
+  expect(await columnCount(page)).toBe(4);
+  const preview = await dialog(page).locator('.tprev').first().boundingBox();
+  expect(preview?.height).toBeLessThanOrEqual(130);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(() => columnCount(page)).toBe(2);
+  await page.setViewportSize({ width: 1280, height: 720 });
 
   const apricot = dialog(page).getByRole('radio', { name: 'Apricot' });
   await apricot.click();
@@ -420,4 +450,26 @@ test('without git, the tools step explains why and setup can still finish', asyn
   await expect(dialog(page).locator('.done-list')).toContainText('Git 2.47.1');
   await dialog(page).getByRole('button', { name: 'Open Spark Outpost' }).click();
   await expect(page.locator('.onb')).toHaveCount(0);
+});
+
+test('each step centres its column in the panel and the footer lines up with it', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const expectCentred = async () => {
+    const body = await dialog(page).locator('.onb-body').boundingBox();
+    const pane = await dialog(page).locator('.pane').boundingBox();
+    const footer = await dialog(page).locator('.onb-foot-row').boundingBox();
+    if (!body || !pane || !footer) throw new Error('onboarding layout is missing');
+    expect(Math.abs(pane.x + pane.width / 2 - (body.x + body.width / 2))).toBeLessThan(10);
+    expect(Math.abs(footer.x - pane.x)).toBeLessThan(2);
+    expect(Math.abs(footer.width - pane.width)).toBeLessThan(2);
+  };
+  await nameField(page).fill('Hazel');
+  await expectCentred();
+  await continueButton(page).click();
+  await expect(dialog(page).getByRole('heading', { name: 'Pick a theme' })).toBeVisible();
+  await expect(dialog(page).locator('.pane')).toHaveCount(1);
+  await expectCentred();
 });
