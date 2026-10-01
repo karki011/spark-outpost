@@ -32,7 +32,7 @@ const PIECES: FakePiece[] = [
 
 const DOCS_PIECE: FakePiece = { key: 'P3', title: 'View', file: 'README.md', dependsOn: ['P2'] };
 
-function pieceJson(piece: FakePiece, cyclic: boolean, docs: boolean) {
+function pieceJson(piece: FakePiece, cyclic: boolean, docs: boolean): Record<string, unknown> {
   if (docs && piece.key === DOCS_PIECE.key) {
     return {
       ...pieceJson(DOCS_PIECE, cyclic, false),
