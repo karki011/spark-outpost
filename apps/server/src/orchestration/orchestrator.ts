@@ -68,13 +68,8 @@ import {
   type OrchestratorDeps,
   type Session,
 } from './session.ts';
-import {
-  ESCALATED_NOTE,
-  initialFlow,
-  nextStep,
-  type FlowAction,
-  type FlowEvent,
-} from './transitions.ts';
+import { ESCALATED_NOTE } from './cascade.ts';
+import { initialFlow, nextStep, type FlowAction, type FlowEvent } from './transitions.ts';
 import type { MemberOutcome } from './members.ts';
 import { jevDiffsAllowed, settleObservations } from './observe.ts';
 import { observeScan, startScan } from './observe-scan.ts';

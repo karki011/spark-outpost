@@ -42,7 +42,7 @@ The key is stored in your system keychain. To replace it or remove Jev, open the
 **Check changes with Jev** sits under **Advisor** in **Settings → AI providers**. It's on by default and needs Jev connected. With it on, Jev also gets code diffs:
 
 - **Proposed edits**: watched only, never blocked or allowed.
-- **Final diff**: verified. If Jev finds the change incomplete, a stronger model redoes it once.
+- **Final diff**: verified. If Jev finds the change incomplete, a stronger model redoes it once. If Jev can't say what's missing, your project's checks pass and the Critic has no concerns, you get the **Jev could not verify the change** card instead of a second Builder.
 - **Review findings**: Jev uses the diff to tell which ones need a fix.
 
 Turn it off to keep diffs on your computer. Jev then sees only your requests.

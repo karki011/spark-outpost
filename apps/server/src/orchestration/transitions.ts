@@ -14,7 +14,6 @@ import {
   type OrchestrationPhase,
 } from '@spark-outpost/contracts';
 import { MAX_VERDICTS, PLAN_CONTINUES } from '../advisor/policy.ts';
-import type { Verdict } from '../advisor/verify-questions.ts';
 import {
   asksToKeep,
   asksForLoop,
@@ -23,6 +22,7 @@ import {
   shipsByItself,
   type KeepFacts,
 } from './checkpoint-policy.ts';
+import { cascadeAction, DECLINED_REASON, UNCONFIRMED_REASON } from './cascade.ts';
 import { criticFixFollowUp } from './context.ts';
 import { FOLLOW_UP_REASON } from './follow-up.ts';
 import { askAgent, planFirst, reviewExisting, writePlan } from './read-only-flow.ts';
@@ -196,15 +196,6 @@ function builderDone(
   return afterBuilder(next, large);
 }
 
-export type CascadeAction = 'escalate' | 'ask' | 'finish';
-
-export function cascadeAction(accepted: Verdict | null, escalated: boolean): CascadeAction {
-  if (escalated) return 'finish';
-  if (accepted === 'unsupported') return 'escalate';
-  if (accepted === 'declined') return 'ask';
-  return 'finish';
-}
-
 export function escalateFollowUp(reasons: readonly string[]): string {
   const missing =
     reasons.length > 0
@@ -212,12 +203,6 @@ export function escalateFollowUp(reasons: readonly string[]): string {
       : ' A stated case, value or edge case looks missing or different from what was asked.';
   return `An independent check of your change against the request found that it does not yet do everything asked.${missing} Re-read the request, finish what is missing without undoing what works, then reply with what you changed.`;
 }
-
-export const ESCALATED_NOTE =
-  'The Builder ran again one tier up after Jev could not confirm the first attempt did everything asked.';
-
-export const DECLINED_REASON =
-  'Jev could not confirm the change does what you asked: the diff does not settle it, or the work looks refused or left unfinished on purpose.';
 
 function escalateOnce(state: FlowState, followUp: string): FlowResult {
   return spawn(
@@ -281,10 +266,13 @@ function askContext(state: FlowState): FlowResult {
 
 function verified(state: FlowState, event: Extract<FlowEvent, { type: 'verified' }>): FlowResult {
   const next = { ...state, verdicts: state.verdicts + 1 };
-  const action = cascadeAction(event.accepted, state.escalated);
+  const action = cascadeAction(event.accepted, state.escalated, event.evidence);
   if (action !== 'finish' && next.missingContext) return askContext(next);
   if (action === 'escalate') return escalateOnce(next, escalateFollowUp(event.reasons));
-  if (action === 'ask') return ask(next, 'verify', DECLINED_REASON);
+  if (action === 'ask') {
+    const reason = event.accepted === 'unsupported' ? UNCONFIRMED_REASON : DECLINED_REASON;
+    return ask(next, 'verify', reason);
+  }
   return afterBuilder(next, state.large);
 }
 

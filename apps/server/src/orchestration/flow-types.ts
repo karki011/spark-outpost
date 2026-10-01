@@ -14,6 +14,12 @@ import { IDLE_REVIEW, type ReviewLoop } from './review-loop.ts';
 export type SpawnReason =
   'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'unstick' | 'escalate' | 'recheck';
 
+export interface CascadeEvidence {
+  checksPass: boolean;
+  criticConcerns: boolean;
+  confidentUnmet: boolean;
+}
+
 export interface Spawn {
   role: AgentRole;
   reason: SpawnReason;
@@ -75,7 +81,12 @@ export type FlowEvent =
       checksFailing?: boolean;
       missingContext?: string | null;
     }
-  | { type: 'verified'; accepted: Verdict | null; reasons: readonly string[] }
+  | {
+      type: 'verified';
+      accepted: Verdict | null;
+      reasons: readonly string[];
+      evidence?: CascadeEvidence;
+    }
   | { type: 'looped'; summary: string; open?: readonly string[] }
   | { type: 'answered'; kind: CheckpointKind; optionId: string; note: string | null }
   | {
