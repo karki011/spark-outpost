@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { builderConfig, signingPlan, updateFeedUrl } from './builder-config.ts';
+import { builderConfig, releaseProblems, signingPlan, updateFeedUrl } from './builder-config.ts';
 
 const NOTARY = {
   APPLE_ID: 'me@example.com',
@@ -79,5 +79,32 @@ describe('builderConfig', () => {
     });
     expect(config.publish).toEqual([{ provider: 'generic', url: 'http://127.0.0.1:8080/feed' }]);
     expect(config.generateUpdatesFilesForAllChannels).toBe(true);
+  });
+});
+
+describe('releaseProblems', () => {
+  const ready = {
+    CSC_NAME: 'Developer ID Application: Me (TEAM123)',
+    ...NOTARY,
+    SPARK_UPDATE_FEED_URL: 'https://updates.example.com',
+  };
+
+  it('accepts a signed, notarized two-arch build with a feed', () => {
+    expect(releaseProblems(ready, ['x64', 'arm64'])).toEqual([]);
+  });
+
+  it('fails clearly without the Developer ID certificate', () => {
+    const problems = releaseProblems({ ...ready, CSC_NAME: undefined }, ['x64', 'arm64']);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/^CSC_NAME is not set\. .*Developer ID Application/);
+  });
+
+  it('names every other missing piece', () => {
+    const problems = releaseProblems({ CSC_NAME: ready.CSC_NAME }, ['arm64']);
+    expect(problems.map((problem) => problem.split('.')[0])).toEqual([
+      'Notarization credentials are missing',
+      'No update feed',
+      'A release builds Apple silicon and Intel together so one channel file lists both',
+    ]);
   });
 });

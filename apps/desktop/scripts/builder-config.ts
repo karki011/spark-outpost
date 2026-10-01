@@ -33,6 +33,33 @@ export function signingPlan(env: Env): SigningPlan {
   return { adHoc: false, notarize: hasNotaryCredentials(env) };
 }
 
+export const RELEASE_ARCHS: MacArch[] = ['x64', 'arm64'];
+
+export function releaseProblems(env: Env, archs: MacArch[]): string[] {
+  const problems: string[] = [];
+  if (!env.CSC_NAME && !env.CSC_LINK) {
+    problems.push(
+      'CSC_NAME is not set. A release must be signed with your Developer ID Application certificate: install it in the login keychain, then set CSC_NAME="Developer ID Application: <Name> (<TEAMID>)". For an unsigned local build, leave out --release.',
+    );
+  }
+  if (!hasNotaryCredentials(env)) {
+    problems.push(
+      'Notarization credentials are missing. Set APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD and APPLE_TEAM_ID (or APPLE_API_KEY, APPLE_API_KEY_ID and APPLE_API_ISSUER).',
+    );
+  }
+  if (!updateFeedUrl(env)) {
+    problems.push(
+      `No update feed. Set ${UPDATE_FEED_ENV} (or UPDATE_FEED_URL in apps/desktop/scripts/builder-config.ts) so the build writes the channel files and can update itself.`,
+    );
+  }
+  if (!RELEASE_ARCHS.every((arch) => archs.includes(arch))) {
+    problems.push(
+      'A release builds Apple silicon and Intel together so one channel file lists both. Leave out --arch.',
+    );
+  }
+  return problems;
+}
+
 export function updateFeedUrl(env: Env): string | null {
   const url = (env[UPDATE_FEED_ENV] ?? UPDATE_FEED_URL).trim().replace(/\/+$/, '');
   return url === '' ? null : url;
