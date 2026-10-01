@@ -6,7 +6,7 @@ import type {
   RouteTier,
 } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
-import { CRITIC_REREVIEW_EFFORT } from '../advisor/policy.ts';
+import { CRITIC_REREVIEW_EFFORT, CRITIC_SMALL_DIFF_EFFORT } from '../advisor/policy.ts';
 import { selectableModels, tierOptions } from '../advisor/intake-questions.ts';
 import { cardFor, TIER_RANK } from '../model-cards/cards.ts';
 import { firstReportedEffort } from '../providers/efforts.ts';
@@ -438,6 +438,15 @@ export function rereviewCritic(context: RouteContext, previous: MemberRoute): Me
   const effort = loweredEffort(efforts, previous.pick.effort, CRITIC_REREVIEW_EFFORT);
   if (effort === previous.pick.effort) return previous;
   return { ...previous, pick: { ...previous.pick, effort } };
+}
+
+export const SMALL_DIFF_NOTE = 'small diff: first review at medium effort';
+
+export function smallDiffCritic(context: RouteContext, route: MemberRoute): MemberRoute {
+  const efforts = effortIds(candidateFor(context, route.pick.provider));
+  const effort = loweredEffort(efforts, route.pick.effort, CRITIC_SMALL_DIFF_EFFORT);
+  if (effort === route.pick.effort) return route;
+  return { ...route, pick: { ...route.pick, effort }, note: SMALL_DIFF_NOTE };
 }
 
 export function escalate(context: RouteContext, previous: MemberRoute): MemberRoute {

@@ -19,6 +19,7 @@ import {
   rereviewCritic,
   routeCritic,
   routeMemberModel,
+  smallDiffCritic,
   soloRoute,
   type BuiltShare,
   type MemberRoute,
@@ -31,6 +32,9 @@ import { demotedRates, withDemotion } from '../laws/demotion-route.ts';
 import { taskKind } from '../laws/task-kind.ts';
 import { budgetWhy } from '../laws/member-budget.ts';
 import type { Spawn } from './transitions.ts';
+import { escalatedHighStakes, smallReviewDiff } from './critic-rule.ts';
+import { stakesFiles } from './critic-recheck.ts';
+import { changesForReview } from './member-prompts.ts';
 
 export interface ResolvedRoute {
   route: MemberRoute;
@@ -145,6 +149,14 @@ function builtShares(s: Session): BuiltShare[] {
     .map((piece) => ({ provider: piece.provider!, files: piece.filesChanged.length }));
 }
 
+async function firstCriticRoute(s: Session): Promise<MemberRoute> {
+  const route = routeCritic(s.route, builtShares(s));
+  if (s.facts.destructive || escalatedHighStakes(s.routes.get('builder'))) return route;
+  const changes = await changesForReview(s).catch(() => null);
+  if (!changes || !smallReviewDiff(changes.files, stakesFiles(s.coordination))) return route;
+  return smallDiffCritic(s.route, route);
+}
+
 export function seatRoute(s: Session, spawn: Spawn): ResolvedRoute {
   const previous = s.routes.get('builder');
   if (previous && spawn.escalate) return { route: escalateBuilder(s.route, previous) };
@@ -163,7 +175,7 @@ export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRo
     return { route: rereviewCritic(s.route, previous) };
   }
   if (previous) return { route: previous };
-  if (spawn.role === 'critic') return { route: routeCritic(s.route, builtShares(s)) };
+  if (spawn.role === 'critic') return { route: await firstCriticRoute(s) };
   if (spawn.role === 'scout') return scoutRoute(s);
   return firstBuilderRoute(s);
 }

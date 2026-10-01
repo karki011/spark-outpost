@@ -4,6 +4,8 @@ import {
   escalate,
   jevTierPick,
   rereviewCritic,
+  smallDiffCritic,
+  SMALL_DIFF_NOTE,
   routeBuilder,
   routeCritic,
   type MemberRoute,
@@ -69,6 +71,14 @@ describe('rule routes', () => {
     expect(rereviewCritic(context('auto'), again)).toBe(again);
     const low: MemberRoute = { ...first, pick: { ...first.pick, effort: 'low' } };
     expect(rereviewCritic(context('auto'), low)).toBe(low);
+  });
+
+  it('runs the first review of a small diff at medium effort and says why (live run 4)', () => {
+    const first = routeCritic(context('auto'));
+    const small = smallDiffCritic(context('auto'), first);
+    expect(small.pick).toEqual({ ...first.pick, effort: 'medium' });
+    expect(small.note).toBe(SMALL_DIFF_NOTE);
+    expect(smallDiffCritic(context('auto'), small)).toBe(small);
   });
 
   it('sends the Critic to a provider that built no piece, else the smallest share', () => {

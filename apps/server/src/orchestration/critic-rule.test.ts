@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { areaOf, escalatedHighStakes, isOneLiner, wantsCritic } from './critic-rule.ts';
+import {
+  areaOf,
+  escalatedHighStakes,
+  isOneLiner,
+  smallReviewDiff,
+  wantsCritic,
+} from './critic-rule.ts';
 import { candidates, plainFacts } from './route-fixtures.ts';
 import { routeBuilder, type RouteContext } from './routing.ts';
 
@@ -104,5 +110,35 @@ describe('escalated high-stakes results', () => {
     expect(escalatedHighStakes(route(2))).toBe(false);
     expect(escalatedHighStakes(routeBuilder(context, plainFacts))).toBe(false);
     expect(escalatedHighStakes(undefined)).toBe(false);
+  });
+});
+
+describe('a small diff for the first review (live run 4)', () => {
+  const file = (path: string, lines: number) => ({ path, additions: lines, deletions: 0 });
+
+  it('counts source and test lines, not lockfiles or docs, and at most three source files', () => {
+    const c = [
+      file('src/csv-export.ts', 19),
+      file('src/rate-limit.ts', 27),
+      file('test/csv-export.test.ts', 18),
+      file('test/rate-limit.test.ts', 18),
+      file('README.md', 2),
+    ];
+    expect(smallReviewDiff(c)).toBe(true);
+    expect(smallReviewDiff([...c, file('pnpm-lock.yaml', 4000)])).toBe(true);
+    expect(smallReviewDiff([file('src/a.ts', 151)])).toBe(false);
+    expect(
+      smallReviewDiff([
+        file('src/a.ts', 1),
+        file('src/b.ts', 1),
+        file('src/c.ts', 1),
+        file('src/d.ts', 1),
+      ]),
+    ).toBe(false);
+    expect(smallReviewDiff([])).toBe(false);
+  });
+
+  it('keeps high effort for files a top-tier piece owns', () => {
+    expect(smallReviewDiff([file('src/a.ts', 5)], new Set(['src/a.ts']))).toBe(false);
   });
 });
