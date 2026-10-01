@@ -1,11 +1,11 @@
 import './info-tip.css';
 import { useId } from 'react';
 import { InfoIcon } from './icons.tsx';
-import { useTooltip } from './Tooltip.tsx';
+import { tipText, useTooltip, type TipContent } from './Tooltip.tsx';
 
 interface InfoTipProps {
   topic: string;
-  text: string;
+  text: TipContent;
 }
 
 export function InfoTip({ topic, text }: InfoTipProps) {
@@ -24,7 +24,7 @@ export function InfoTip({ topic, text }: InfoTipProps) {
         <InfoIcon />
       </button>
       <span id={textId} hidden>
-        {text}
+        {tipText(text)}
       </span>
       {tooltip}
     </>

@@ -89,7 +89,8 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   const info = spark.getByRole('button', { name: 'More about Spark', exact: true });
   await info.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('tooltip')).toContainText('the routing rules pick the model');
+  await expect(page.getByRole('tooltip')).toContainText('rules pick the model');
+  await expect(page.getByRole('tooltip').getByRole('listitem')).toHaveText([/^On/, /^Off/]);
   await page.keyboard.press('Escape');
   await expect(spark).toBeVisible();
 

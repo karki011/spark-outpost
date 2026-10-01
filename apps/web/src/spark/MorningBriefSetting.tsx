@@ -3,8 +3,14 @@ import { morningBriefTimeSchema } from '@spark-outpost/contracts';
 import { useProfileSetting } from '../settings/use-profile-setting.ts';
 import { SwitchValueSetting } from './SwitchValueSetting.tsx';
 
-const INFO =
-  'Each morning after this time, Spark refreshes your tickets and writes a brief on Home of what changed since the last one, if anything did. Uses this computer’s time zone, and the app needs to be running; it checks every 10 minutes.';
+const INFO = {
+  items: [
+    { label: 'What', text: 'Spark refreshes your tickets and writes a brief on Home.' },
+    { label: 'When', text: 'Each morning after this time, in this computer’s time zone.' },
+    { label: 'Needs', text: 'The app running. Spark checks every 10 minutes.' },
+  ],
+  footer: 'No brief when nothing changed since the last one.',
+};
 
 function morningClock(time: string): string {
   const [hour = 0, minute = 0] = time.split(':').map(Number);

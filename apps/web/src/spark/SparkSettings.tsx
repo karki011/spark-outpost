@@ -65,21 +65,41 @@ const PERSONALITY_CHOICES: { id: Personality; label: string; value: Personality 
   { id: 'facts', label: 'Just the facts', value: 'facts' },
 ];
 
+const PERSONALITY_INFO = {
+  lead: 'How Spark talks in the app. Agents get a short tone line too.',
+  items: PERSONALITY_CHOICES.map((choice) => ({
+    label: choice.label,
+    text: PERSONALITY_HINTS[choice.value],
+  })),
+  footer: 'Errors always stay plain.',
+};
+
 export function PersonalitySetting({ personality }: { personality: Personality }) {
   return (
     <ProfileChoiceSetting
       saved={personality}
       choices={PERSONALITY_CHOICES}
       label="Personality"
-      info="Sets how Spark talks in the app and adds a short tone line to every agent session. Errors always stay plain."
+      info={PERSONALITY_INFO}
       hint={(value) => PERSONALITY_HINTS[value]}
       toUpdate={(value) => ({ personality: value })}
     />
   );
 }
 
-const SPARK_INFO =
-  'On: Jev reads each request and asks when something is unclear, the routing rules pick the model for each step, a Critic reviews bigger changes (on another connected agent when there is one) and Jev checks finished work. Off: chats go straight to the agent and model you picked, with no Jev questions, Critic or extra agents. Approvals and safety rules apply either way.';
+const SPARK_INFO = {
+  items: [
+    {
+      label: 'On',
+      text: 'Jev reads each request, rules pick the model, a Critic reviews and Jev checks the result.',
+    },
+    {
+      label: 'Off',
+      text: 'Chats go straight to your agent and model. No Jev, Critic or extra agents.',
+    },
+  ],
+  footer: 'Approvals and safety rules apply either way.',
+};
 
 export function SparkSwitch({ enabled }: { enabled: boolean }) {
   return (

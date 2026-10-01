@@ -90,8 +90,8 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
   await expect(panel).toBeVisible();
   const levels = panel.getByRole('radiogroup', { name: 'Spark autonomy' });
   await expect(levels.getByRole('radio')).toHaveText([
-    /^Review each step.*You decide whether to keep the changes/,
-    /^Automatic.*Runs commands without asking/,
+    /^Review each step.*You decide what to keep/,
+    /^Automatic.*Runs commands and keeps passing changes/,
     /^Full auto → PR.*opens a draft PR/,
   ]);
   const automatic = levels.getByRole('radio', { name: 'Automatic', exact: true });

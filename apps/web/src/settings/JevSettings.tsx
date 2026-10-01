@@ -1,8 +1,16 @@
 import type { Profile } from '@spark-outpost/contracts';
 import { ProfileSwitchSetting } from './ProfileSwitchSetting.tsx';
 
-const DIFFS_INFO =
-  'Proposed edits are checked by observation only and never blocked or allowed. The final diff is verified, and a change Jev finds incomplete is redone once by a stronger model. Jev also uses the diff to tell which review findings need a fix.';
+const DIFFS_INFO = {
+  items: [
+    { label: 'Proposed edits', text: 'Checked by observation only, never blocked or allowed.' },
+    {
+      label: 'Final diff',
+      text: 'Verified. If Jev finds it incomplete, a stronger model redoes it once.',
+    },
+    { label: 'Review findings', text: 'Jev uses the diff to tell which ones need a fix.' },
+  ],
+};
 
 interface JevSettingsProps {
   profile: Profile;

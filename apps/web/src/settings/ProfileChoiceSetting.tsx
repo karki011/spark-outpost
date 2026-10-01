@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import type { UpdateProfileRequest } from '@spark-outpost/contracts';
 import { Segmented } from '../ui/Segmented.tsx';
+import type { TipContent } from '../ui/Tooltip.tsx';
 import { SettingRow } from './SettingRow.tsx';
 import { useProfileSetting } from './use-profile-setting.ts';
 
@@ -14,7 +15,7 @@ interface ProfileChoiceSettingProps<T> {
   saved: T;
   choices: ProfileChoice<T>[];
   label: string;
-  info?: string;
+  info?: TipContent;
   hint: string | ((value: T) => string);
   toUpdate: (value: T) => UpdateProfileRequest;
 }
