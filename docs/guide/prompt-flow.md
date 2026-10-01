@@ -28,7 +28,7 @@ Not every request takes every step. A question stops after step 1; a small fix s
 
 | Step          | Card                             | Review each step               | Automatic                                      | Full auto → PR                      |
 | ------------- | -------------------------------- | ------------------------------ | ---------------------------------------------- | ----------------------------------- |
-| 1. Read       | **A few questions first**        | Waits, then uses best guesses  | Waits, then uses best guesses                  | Uses best guesses after a countdown |
+| 1. Read       | **A few questions first**        | Waits for you                  | Waits, then uses best guesses                  | Uses best guesses after a countdown |
 | 2. Plan       | **Build this plan?**             | Waits for you                  | Waits, then builds                             | Builds after a countdown            |
 | 2. Plan       | Destructive work                 | Waits for you                  | Waits for you                                  | Waits for you                       |
 | 4. Build      | Approval cards (commands, files) | Per the agent's mode           | Per the agent's mode                           | Per the agent's mode                |

@@ -32,7 +32,7 @@ async function shot(page: Page, name: string) {
 const dock = (page: Page) => page.getByRole('region', { name: 'Waiting for you' });
 const thread = (page: Page) => page.locator('.thread');
 
-test('the questions dock above the composer, and a quick answer goes back in the thread', async ({
+test('the questions dock above the composer at Review each step, wait without a countdown, and a quick answer goes back in the thread', async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -43,9 +43,8 @@ test('the questions dock above the composer, and a quick answer goes back in the
   await expect(questions).toBeVisible({ timeout: 30_000 });
   await expect(questions).toContainText('Which report?');
   await expect(questions).toContainText('Best guess: Spend');
-  await expect(
-    questions.getByRole('button', { name: /^Going with my best guesses in/ }),
-  ).toBeVisible();
+  await expect(questions.getByRole('button', { name: /best guesses in/ })).toHaveCount(0);
+  await expect(questions.getByRole('button', { name: 'Go with my best guesses' })).toBeVisible();
   await expect(thread(page).getByText('Which report do you mean: Spend or Usage?')).toBeVisible();
   await expect(thread(page).getByRole('button', { name: 'Waiting for your answer' })).toBeVisible();
   await expect(page.getByText('"questions"')).toHaveCount(0);

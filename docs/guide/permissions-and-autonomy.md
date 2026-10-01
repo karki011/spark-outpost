@@ -70,13 +70,13 @@ Whatever the mode and level, these wait for your answer:
 
 **If you don't answer a question** in **Settings → Spark** sets how long Spark waits on its own questions: **Off**, **10s** (default), **30s** or **60s**. After that, Spark picks the safe option:
 
-| Card                                        | Spark picks                            |
-| ------------------------------------------- | -------------------------------------- |
-| **A few questions first**                   | The agent's best guesses               |
-| **Build this plan?** (Automatic, Full auto) | **Build this plan**                    |
-| A stuck or failing step                     | **Stop and report**                    |
-| **Jev could not verify the change**         | **Finish as it is**, marked unverified |
-| **This chat is almost full**                | **Keep going**                         |
+| Card                                             | Spark picks                            |
+| ------------------------------------------------ | -------------------------------------- |
+| **A few questions first** (Automatic, Full auto) | The agent's best guesses               |
+| **Build this plan?** (Automatic, Full auto)      | **Build this plan**                    |
+| A stuck or failing step                          | **Stop and report**                    |
+| **Jev could not verify the change**              | **Finish as it is**, marked unverified |
+| **This chat is almost full**                     | **Keep going**                         |
 
 With **Off**, these wait for you, except that **Full auto → PR** still builds a plan after 30 seconds. Approval cards never use this setting.
 
