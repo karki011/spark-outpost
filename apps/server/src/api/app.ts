@@ -8,6 +8,7 @@ import { auditRoutes } from './audit-routes.ts';
 import { chatTicketRoutes, ticketMentionWarmer } from './chat-ticket-routes.ts';
 import { chatSettingsRoutes, type ChatSettingsDeps } from './chat-settings-routes.ts';
 import { chatWorkspaceRoutes, type ChatWorkspaceDeps } from './chat-workspace-routes.ts';
+import { companionRoutes } from './companion-routes.ts';
 import { conversationActionRoutes } from './conversation-action-routes.ts';
 import { homeRoutes } from './home-routes.ts';
 import { mapRoutes } from './map-routes.ts';
@@ -71,6 +72,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', approvalRoutes(options));
   app.use('/api', modelCardRoutes(options));
   app.use('/api', homeRoutes(options));
+  app.use('/api', companionRoutes(options));
   app.use('/api', outcomeRoutes(options));
   app.use('/api', analyticsRoutes(options));
   app.use('/api', terminalRoutes(options));

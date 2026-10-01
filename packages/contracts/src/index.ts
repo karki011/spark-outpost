@@ -46,3 +46,4 @@ export * from './chat-tickets.ts';
 export * from './reset.ts';
 export * from './steer.ts';
 export * from './map.ts';
+export * from './companion.ts';
