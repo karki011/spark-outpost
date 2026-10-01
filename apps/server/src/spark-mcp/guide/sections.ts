@@ -217,9 +217,17 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
     keywords: ['spark_', 'tools', 'mcp server', 'spark tools', 'self-service', 'action card'],
     text: `Every agent session Spark launches (chat, Ask, Do, Builders; Claude, Z.ai and Codex) gets a built-in MCP server named "spark", so agents can answer questions about Spark without guessing.
 
-Read tools: spark_providers, spark_connectors, spark_settings, spark_projects, spark_map, spark_chats, spark_chat, spark_audit, spark_tickets, spark_analytics, spark_activity, spark_brief, spark_pull_requests, spark_pr and spark_guide. They need no approval card.
+Read tools need no approval card; section spark-tools says which one answers which question.
 
 Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket, spark_assign_ticket and spark_open_pr. Each shows a card previewing exactly what will change; you may edit the text, and nothing happens until you confirm. There is no Always allow and autonomy levels never decide these cards. Every action is audited.`,
+  },
+  {
+    id: 'spark-tools',
+    title: 'Which Spark tool answers which question',
+    keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
+    text: `Needs me? spark_attention: waiting cards, failed chats, flagged tickets. A chat's live run, crew, pieces, Jev's picks and every Jev decision: spark_run. Plan and files changed (line counts, never contents): spark_task. Chats and messages: spark_chats, spark_chat. What an agent did step by step: spark_audit. Recent work: spark_activity, spark_brief.
+Spend today or this week by provider, model or chat: spark_spend. Trends, cost per task, harness, outcomes and feedback: spark_analytics. Model price, strengths and pass rates: spark_models.
+Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what breaks if a file changes: spark_map with file. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. How Spark works: spark_guide.`,
   },
   {
     id: 'settings-spark',

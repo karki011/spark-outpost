@@ -44,7 +44,7 @@ export const guideTool = sparkTool({
   name: 'spark_guide',
   title: 'Spark guide',
   description:
-    "Answers how-to and how-does-it-work questions about Spark Outpost itself, from a small curated index built from Spark's own docs (providers, agent modes and autonomy levels, approvals and safety, where Spark works and worktrees, Builders at once, the coordinator, Ship, tickets, the Map, every Settings section, MCP servers, analytics and more). Pass a `query` to search it, or `section` for one exact section by id.",
+    "Answers how-to and how-does-it-work questions about Spark Outpost itself, from a small curated index built from Spark's own docs (providers, agent modes and autonomy levels, approvals and safety, where Spark works and worktrees, Builders at once, the coordinator, Ship, tickets, the Map, every Settings section, MCP servers, analytics and more), plus section spark-tools: which spark_* tool answers which question. Pass a `query` to search it, or `section` for one exact section by id.",
   input: {
     query: z.string().max(300).optional(),
     section: z.string().max(80).optional(),

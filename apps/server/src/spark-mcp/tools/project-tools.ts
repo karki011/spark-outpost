@@ -1,7 +1,13 @@
 import { z } from 'zod';
-import { PIECE_SLOTS_MAX, type Project, type WorkPlace } from '@spark-outpost/contracts';
+import {
+  PIECE_SLOTS_MAX,
+  type MapNeighbor,
+  type Project,
+  type WorkPlace,
+} from '@spark-outpost/contracts';
 import { conversationProjectIds } from '../../agent-config/store.ts';
 import { groupBy } from '../../analytics/tally.ts';
+import { fileNeighbors } from '../../map/neighbors.ts';
 import { mapStatus, projectMap } from '../../map/read-store.ts';
 import type { Queryable } from '../../persistence/db.ts';
 import { defaultBranch } from '../../projects/chat-worktrees.ts';
@@ -116,12 +122,56 @@ async function projects({ deps, scope }: SparkToolContext, limit: number) {
   return { ...shown, items };
 }
 
-async function map(context: SparkToolContext, reference: string | undefined, limit: number) {
-  const project = await findProject(context, reference);
+function neighborLine(neighbor: MapNeighbor, areaNames: ReadonlyMap<string, string>) {
+  return {
+    path: neighbor.path,
+    area: areaNames.get(neighbor.areaId) ?? neighbor.areaId,
+    hop: neighbor.hop,
+    kind: neighbor.kind,
+    usedBy: neighbor.fanIn,
+  };
+}
+
+async function neighbors(context: SparkToolContext, project: Project, file: string, hops: number) {
+  const path = file.replace(/^\.\//, '');
+  const [found, built] = await Promise.all([
+    fileNeighbors(context.deps.db, project.rootPath, path, hops),
+    projectMap(context.deps.db, project.id, project.rootPath),
+  ]);
+  if (!found) {
+    throw new SparkToolError(
+      `${path} is not on ${project.name}'s map. Pass a path relative to the project folder, like src/app.ts.`,
+    );
+  }
+  const areaNames = new Map(built.areas.map((area) => [area.id, area.name]));
+  return {
+    project: project.name,
+    file: found.path,
+    area: areaNames.get(found.areaId) ?? found.areaId,
+    hops: found.hops,
+    imports: found.imports.map((neighbor) => neighborLine(neighbor, areaNames)),
+    importsTotal: found.importsTotal,
+    importedBy: found.importedBy.map((neighbor) => neighborLine(neighbor, areaNames)),
+    importedByTotal: found.importedByTotal,
+    whatBreaks: {
+      filesUsingItDirectly: found.impact.direct,
+      filesDependingOnItInAll: found.impact.total,
+      areas: found.impact.areas,
+      coreAreas: found.impact.coreAreas.map((area) => ({ name: area.name, files: area.files })),
+    },
+  };
+}
+
+async function map(
+  context: SparkToolContext,
+  args: { project?: string | undefined; file?: string | undefined; hops: number; limit: number },
+) {
+  const project = await findProject(context, args.project);
+  if (args.file) return neighbors(context, project, args.file, args.hops);
   const built = await projectMap(context.deps.db, project.id, project.rootPath);
   const areas = built.areas
     .toSorted((a, b) => b.importance - a.importance)
-    .slice(0, limit)
+    .slice(0, args.limit)
     .map((area) => ({
       id: area.id,
       name: area.name,
@@ -161,11 +211,17 @@ export const projectTools = [
     name: 'spark_map',
     title: 'Project map',
     description:
-      "A project's Map: its main areas (name, category, what it does, size, top files) and counts per category. Defaults to this chat's project.",
+      "A project's Map: its main areas (name, category, what it does, size, top files) and counts per category. With file: that file's neighbors on the Map, what it imports and what imports it (1 or 2 hops), and what breaks if it changes (how many files and which core areas depend on it). Defaults to this chat's project.",
     input: {
       project: z.string().max(200).optional().describe('Project name or id.'),
+      file: z
+        .string()
+        .max(1024)
+        .optional()
+        .describe('A file path relative to the project folder, for its neighbors.'),
+      hops: z.number().int().min(1).max(2).default(1),
       limit: limitInput(25, 80),
     },
-    run: (args, context) => map(context, args.project, args.limit),
+    run: (args, context) => map(context, args),
   }),
 ];

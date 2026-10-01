@@ -18,6 +18,7 @@ What each document is for. Each one describes what runs today plus its open item
 - [PROJECT_MAP.md](architecture/PROJECT_MAP.md): the Project Map builder, storage, API and page.
 - [ELECTRON_PLAN.md](architecture/ELECTRON_PLAN.md): the desktop shell and what packaging still needs.
 - [REPO_AGENT_CONFIG.md](architecture/REPO_AGENT_CONFIG.md): how a linked repo's agent config, MCP servers and Spark's own tools reach agents.
+- [SPARK_TOOLS.md](architecture/SPARK_TOOLS.md): which `spark_*` tool answers each area of the app, the safety rules they share, and the gaps.
 - [ACP_AGENTS.md](architecture/ACP_AGENTS.md): how Claude, Codex and Z.ai run over ACP.
 - [ACP_COMPLIANCE.md](architecture/ACP_COMPLIANCE.md): spec audit and what each adapter advertises.
 - [ACP_COVERAGE.md](architecture/ACP_COVERAGE.md): ACP client coverage table, generated and checked by `pnpm acp:coverage` from `acp-coverage.json`.
