@@ -56,6 +56,8 @@ function heading(approval: Approval): string {
   if (action) return sparkActionLabels[action.action].question;
   if (approval.payload.plan) return 'Approve the plan?';
   if (approval.payload.forcePush) return 'Force push?';
+  if (approval.payload.gitControl) return 'Change git hooks or config?';
+  if (approval.payload.instructionFiles) return 'Change agent instructions?';
   if (isCheckApproval(approval)) return 'Run a check?';
   if (approval.kind === 'execute') return 'Run a command?';
   if (approval.kind === 'edit') {
@@ -68,12 +70,21 @@ function request(approval: Approval, agent: string) {
   if (approval.payload.plan) return `${agent} wrote a plan and wants to start building.`;
   if (isCheckApproval(approval)) return 'Jev wants to run a project check.';
   if (approval.payload.forcePush) return `${agent} wants to rewrite history on the remote.`;
+  if (approval.payload.gitControl)
+    return `${agent} wants to change ${listed(approval.payload.gitControl)}.`;
+  if (approval.payload.instructionFiles) {
+    return `${agent} wants to change ${listed(approval.payload.instructionFiles)}, which steer every agent in this project.`;
+  }
   if (approval.kind === 'execute') return `${agent} wants to run a command.`;
   if (approval.kind === 'edit') {
     const paths = approval.payload.paths;
     return paths.length === 0 ? `${agent} wants to change files.` : `${agent} wants to edit:`;
   }
   return `${agent} wants to: ${approval.title}`;
+}
+
+function listed(files: readonly string[]): string {
+  return files.join(', ');
 }
 
 function commandNoteEnding(approval: Approval): string {
@@ -161,10 +172,16 @@ function PendingApproval({
     },
   });
   const forced = approval.payload.forcePush !== undefined;
-  const holdOption = forced
+  const gitControl = approval.payload.gitControl !== undefined;
+  const instructions = approval.payload.instructionFiles !== undefined;
+  const holdOption =
+    forced || gitControl ? approval.options.find((option) => option.kind === 'allow_once') : null;
+  const options = shownOptions(approval).filter(
+    (option) => !(forced || gitControl) || !isAllow(option),
+  );
+  const chatAllow = instructions
     ? approval.options.find((option) => option.kind === 'allow_once')
-    : null;
-  const options = shownOptions(approval).filter((option) => !forced || !isAllow(option));
+    : undefined;
   const firstAllow = options.findIndex(isAllow);
   const lastAllow = options.findLastIndex(isAllow);
   const alwaysAsks = approval.reason !== null;
@@ -229,12 +246,22 @@ function PendingApproval({
       )}
       {alwaysAsks && <p className="appr-reason">{approval.reason}, whatever your permissions.</p>}
       <ObservedNote observed={approval.payload.observed} />
+      {gitControl && (
+        <p className="appr-reason">
+          Git runs hooks and settings from .git on every commit, outside Spark&apos;s control and
+          approvals. Allow this once only if you have read the change.
+        </p>
+      )}
       {holdOption && (
         <HoldToConfirm
-          label="Hold to force push"
+          label={gitControl ? 'Hold to allow once' : 'Hold to force push'}
           hint="Press and hold for 1.5 seconds, with the mouse or Space."
           holdingHint="Keep holding. Let go now to cancel."
-          releasedHint="Released early. Nothing was pushed."
+          releasedHint={
+            gitControl
+              ? 'Released early. Nothing was changed.'
+              : 'Released early. Nothing was pushed.'
+          }
           disabled={decide.isPending}
           onConfirm={() => decide.mutate({ optionId: holdOption.optionId, scope: 'once' })}
         />
@@ -249,8 +276,18 @@ function PendingApproval({
               title={option.unavailableReason}
               onClick={() => decide.mutate({ optionId: option.optionId, scope: 'once' })}
             >
-              {option.name}
+              {instructions && isAllow(option) ? 'Allow once' : option.name}
             </button>
+            {index === lastAllow && chatAllow && (
+              <button
+                type="button"
+                className="btn line sm"
+                disabled={decide.isPending}
+                onClick={() => decide.mutate({ optionId: chatAllow.optionId, scope: 'chat' })}
+              >
+                Allow for this chat
+              </button>
+            )}
             {index === lastAllow && projectAllow && (
               <button
                 type="button"

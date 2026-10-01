@@ -180,3 +180,30 @@ export function writesRepo(command: string): boolean {
   if (changesGitState(command)) return true;
   return gitSubcommands(command).some((sub) => REPO_WRITES.includes(sub.name));
 }
+
+const CONFIG_ELSEWHERE = new Set(['--global', '--system', '--file', '-f', '--blob']);
+const CONFIG_WRITE_FLAGS = new Set([
+  '--add',
+  '--unset',
+  '--unset-all',
+  '--replace-all',
+  '--rename-section',
+  '--remove-section',
+  '--edit',
+  '-e',
+]);
+const CONFIG_WRITE_VERBS = new Set(['set', 'unset', 'edit', 'rename-section', 'remove-section']);
+const CONFIG_READ_VERBS = new Set(['get', 'list']);
+
+function configWrites(args: readonly string[]): boolean {
+  if (args.some((arg) => CONFIG_ELSEWHERE.has(arg) || arg.startsWith('--file='))) return false;
+  if (args.some((arg) => CONFIG_WRITE_FLAGS.has(arg))) return true;
+  const words = args.filter((arg) => !arg.startsWith('-'));
+  if (CONFIG_WRITE_VERBS.has(words[0] ?? '')) return true;
+  if (CONFIG_READ_VERBS.has(words[0] ?? '')) return false;
+  return words.length >= 2 && !args.some((arg) => arg.startsWith('--get') || arg === '-l');
+}
+
+export function setsGitConfig(command: string): boolean {
+  return gitSubcommands(command).some((sub) => sub.name === 'config' && configWrites(sub.rest));
+}

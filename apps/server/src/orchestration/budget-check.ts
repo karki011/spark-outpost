@@ -90,6 +90,14 @@ async function measureBudget(s: Session): Promise<BudgetLimit | null> {
   return s.budgetHit;
 }
 
+export async function roomForCall(s: Session, role: AgentRole): Promise<boolean> {
+  if (s.budgetHit) return false;
+  const usage = await budgetUsage(s);
+  if (exceededLimit(usage, s.limits) || fixRoundExceeded(s, usage)) return false;
+  const cap = s.limits.costCapUsd;
+  return cap === null || usage.costUsd + nextCallFor(s, role) < cap;
+}
+
 const CALL_FLOOR_TOKENS = 10_000;
 
 export function nextCallUsd(provider: string, model: string | null): number {

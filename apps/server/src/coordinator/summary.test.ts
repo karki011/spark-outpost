@@ -109,6 +109,26 @@ describe('piecesSummary', () => {
     );
   });
 
+  it("drops the user's name from the Builder's first sentence", () => {
+    const summary = piecesSummary(
+      coordination(C2_PIECES.slice(0, 2)),
+      [
+        reply('builder', 'run-bolt', 'Bolt', 'E2E, I added migrations/002_upload_tags.sql.'),
+        reply('builder', 'run-rivet', 'Rivet', 'Hi e2e: the slugify piece (P2) is in place.'),
+        reply('integrator', 'run-weld', 'Weld', 'I fixed the review finding, E2E. Tests pass.'),
+        reply('integrator', 'run-weld-2', 'Weld', 'Rechecked the E2E test naming.'),
+      ],
+      'E2E',
+    );
+    expect(summary!.split('\n')).toEqual([
+      'Built in 2 pieces:',
+      '- P1 · CSV export of uploads (Bolt): I added migrations/002_upload_tags.sql. Files: `src/csv-export.ts`, `test/csv-export.test.ts`.',
+      '- P2 · Fixed-window rate limiter (Rivet): The slugify piece (P2) is in place. Files: `src/rate-limit.ts`, `test/rate-limit.test.ts`.',
+      '- Then Weld: I fixed the review finding.',
+      '- Then Weld: Rechecked the E2E test naming.',
+    ]);
+  });
+
   it('says why a piece did not land and skips research pieces', () => {
     const summary = piecesSummary(
       coordination([

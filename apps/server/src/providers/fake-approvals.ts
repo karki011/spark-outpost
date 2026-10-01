@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type { ApprovalOption } from '@spark-outpost/contracts';
@@ -11,6 +11,8 @@ export const FAKE_PUSH_TRIGGER = '#push';
 export const FAKE_FORCE_PUSH_TRIGGER = '#leasepush';
 export const FAKE_CURL_TRIGGER = '#curl';
 export const FAKE_READ_ENV_TRIGGER = '#readenv';
+export const FAKE_INSTRUCTIONS_TRIGGER = '#instructions';
+export const FAKE_HOOK_TRIGGER = '#githook';
 export const FAKE_COMMAND = 'pnpm test -- groupMessages';
 export const FAKE_EDIT_FILE = 'notes.txt';
 
@@ -28,6 +30,8 @@ export function wantsApproval(prompt: string): boolean {
     FAKE_FORCE_PUSH_TRIGGER,
     FAKE_CURL_TRIGGER,
     FAKE_READ_ENV_TRIGGER,
+    FAKE_INSTRUCTIONS_TRIGGER,
+    FAKE_HOOK_TRIGGER,
   ];
   return triggers.some((trigger) => prompt.includes(trigger));
 }
@@ -62,21 +66,29 @@ async function fakeRequests(
     paths: [],
     diffs: [],
   });
-  const requests: ApprovalRequest[] = [];
-  if (edits && prompt.includes(FAKE_EDIT_TRIGGER)) {
-    const target = path.join(root, FAKE_EDIT_FILE);
+  const edit = async (id: string, file: string): Promise<ApprovalRequest> => {
+    const target = path.join(root, file);
     const oldText = await currentText(target);
-    requests.push({
+    return {
       ...base,
-      toolCallId: 'fake-edit',
+      toolCallId: id,
       kind: 'edit',
       toolKind: 'edit',
-      title: `Edit ${FAKE_EDIT_FILE}`,
+      title: `Edit ${file}`,
       command: null,
       cwd: null,
       paths: [target],
       diffs: [{ path: target, oldText, newText: `${oldText ?? ''}Edited by the fake agent\n` }],
-    });
+    };
+  };
+  const requests: ApprovalRequest[] = [];
+  if (edits && prompt.includes(FAKE_EDIT_TRIGGER))
+    requests.push(await edit('fake-edit', FAKE_EDIT_FILE));
+  if (edits && prompt.includes(FAKE_INSTRUCTIONS_TRIGGER)) {
+    requests.push(await edit('fake-instructions', 'AGENTS.md'));
+  }
+  if (edits && prompt.includes(FAKE_HOOK_TRIGGER)) {
+    requests.push(await edit('fake-hook', '.git/hooks/pre-commit'));
   }
   if (prompt.includes(FAKE_COMMAND_TRIGGER)) requests.push(command('fake-run', FAKE_COMMAND));
   if (prompt.includes(FAKE_PUSH_TRIGGER))
@@ -112,7 +124,10 @@ export async function* fakeApprovalTurn(turn: ProviderTurn): AsyncGenerator<Prov
     if (answer.outcome === 'cancelled') return;
     outcomes.push(`${request.toolCallId}=${answer.allowed ? 'allowed' : 'denied'}`);
     const diff = request.diffs[0];
-    if (answer.allowed && diff) await writeFile(diff.path, diff.newText);
+    if (answer.allowed && diff) {
+      await mkdir(path.dirname(diff.path), { recursive: true });
+      await writeFile(diff.path, diff.newText);
+    }
   }
   yield { kind: 'text_delta', delta: `Done. ${outcomes.join(' ')}` };
 }

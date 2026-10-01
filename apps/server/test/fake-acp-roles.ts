@@ -117,8 +117,33 @@ function reviewFindings(text: string): { findings: string[]; concerns: boolean }
   return { findings: ['The change matches the request'], concerns: false };
 }
 
+const RECHECK = 'You replied without opening any of the changed files.';
+
+export const BLIND_FINDING =
+  '[bug] `store.ts:1`: the stored value drops the last entry when the list has one item.';
+
+function recheckPaths(text: string): string[] {
+  const line = text.split('\n').find((entry) => entry.includes(RECHECK)) ?? '';
+  return [...line.matchAll(/`([^`]+)`/g)].map((match) => match[1]!);
+}
+
+function blindFindings(text: string, rechecking: boolean) {
+  if (!text.includes('#blindcritic') || text.includes(ASKED_TO_FIX)) return null;
+  return rechecking ? { findings: [BLIND_FINDING], concerns: true } : null;
+}
+
 export async function critic(turn: RoleTurn): Promise<acp.StopReason> {
-  const { findings, concerns } = reviewFindings(turn.text);
+  const rechecking = turn.text.includes(RECHECK);
+  const text = rechecking ? [...sessionPrompts(turn), turn.text].join('\n') : turn.text;
+  if (rechecking) {
+    for (const [index, path] of recheckPaths(turn.text).entries()) {
+      await readTool(turn, path, `recheck-${index}`);
+    }
+  } else if (!turn.text.includes('#blindcritic')) {
+    const changed = /^diff --git a\/(\S+)/m.exec(turn.text)?.[1];
+    if (changed) await readTool(turn, changed, 'critic-read');
+  }
+  const { findings, concerns } = blindFindings(text, rechecking) ?? reviewFindings(text);
   const lens = turn.text.includes('## Complexity (same review)')
     ? '- notes.txt:L2: shrink: two lines say the same\nnet: -2 lines possible\n'
     : '';

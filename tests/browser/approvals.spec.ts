@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
@@ -342,6 +350,82 @@ test('asks to hold before a force push and never offers Always allow', async ({ 
   await expect(page.locator('.md', { hasText: 'Done. fake-force-push=allowed' })).toBeVisible({
     timeout: 15_000,
   });
+});
+
+test('asks before an agent instruction file, with Allow once, for this chat, or Deny', async ({
+  page,
+}) => {
+  const agents = path.join(appRoot, 'AGENTS.md');
+  rmSync(agents, { force: true });
+  await doChat(page);
+  await send(page, 'Tighten the agent rules #instructions');
+  const approval = card(page, /Change agent instructions\?/);
+  await expect(approval).toBeVisible({ timeout: 15_000 });
+  await expect(approval).toContainText('wants to change AGENTS.md');
+  await expect(approval.getByRole('figure')).toContainText('Edited by the fake agent');
+  await expect(approval).toContainText('always ask, whatever your permissions.');
+  await expect(approval.getByRole('button', { name: /Always allow/ })).toHaveCount(0);
+  await expect(approval.getByRole('button', { name: 'Allow once' })).toBeVisible();
+  await expect(approval.getByRole('button', { name: 'Deny' })).toBeVisible();
+  await approval.getByRole('button', { name: 'Deny' }).click();
+  await expect(page.locator('.md', { hasText: 'fake-instructions=denied' })).toBeVisible({
+    timeout: 15_000,
+  });
+  expect(existsSync(agents)).toBe(false);
+
+  await send(page, 'Try again #instructions');
+  const chatAllow = card(page, /Change agent instructions\?/).getByRole('button', {
+    name: 'Allow for this chat',
+  });
+  await chatAllow.click({ timeout: 15_000 });
+  await expect(
+    card(page, /Change agent instructions\?/)
+      .getByRole('status')
+      .last(),
+  ).toContainText('Allowed for this chat.');
+  await expect(page.locator('.md', { hasText: 'fake-instructions=allowed' })).toBeVisible({
+    timeout: 15_000,
+  });
+  expect(readFileSync(agents, 'utf8')).toBe('Edited by the fake agent\n');
+
+  await send(page, 'Once more #instructions');
+  const third = card(page, /Change a file\?/);
+  await expect(third).toBeVisible({ timeout: 15_000 });
+  await expect(third).not.toContainText('always ask');
+  await third.getByRole('button', { name: 'Allow', exact: true }).click();
+  await expect(page.locator('.md', { hasText: 'fake-instructions=allowed' }).nth(1)).toBeVisible({
+    timeout: 15_000,
+  });
+});
+
+test('asks to hold before changing a git hook and allows it once only', async ({ page }) => {
+  const hook = path.join(appRoot, '.git', 'hooks', 'pre-commit');
+  rmSync(path.join(appRoot, '.git'), { recursive: true, force: true });
+  await doChat(page);
+  await send(page, 'Add a pre-commit hook #githook');
+  const approval = card(page, /Change git hooks or config\?/);
+  await expect(approval).toBeVisible({ timeout: 15_000 });
+  await expect(approval).toContainText('wants to change .git/hooks/pre-commit');
+  await expect(approval).toContainText('outside Spark');
+  await expect(approval.getByRole('button', { name: /Allow/ })).toHaveCount(0);
+  const hold = approval.getByRole('button', { name: 'Hold to allow once' });
+  await hold.focus();
+  await page.keyboard.down(' ');
+  await page.waitForTimeout(300);
+  await page.keyboard.up(' ');
+  await expect(approval).toContainText('Released early. Nothing was changed.');
+  expect(existsSync(hook)).toBe(false);
+  await hold.focus();
+  await page.keyboard.down(' ');
+  await expect(card(page, /Change git hooks or config\?/).getByRole('status')).toContainText(
+    'Chose: Allow.',
+    { timeout: 5_000 },
+  );
+  await page.keyboard.up(' ');
+  await expect(page.locator('.md', { hasText: 'fake-hook=allowed' })).toBeVisible({
+    timeout: 15_000,
+  });
+  expect(readFileSync(hook, 'utf8')).toBe('Edited by the fake agent\n');
 });
 
 async function askChat(page: Page, autonomy: string) {

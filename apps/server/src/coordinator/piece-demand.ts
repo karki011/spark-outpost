@@ -65,6 +65,10 @@ function kindOf(answer: PieceAnswer): TaskKind | null {
   return kind.choice as TaskKind;
 }
 
+export function riskyAnswer(answer: PieceAnswer): boolean {
+  return kindOf(answer) === 'migrate' || (answer.reliability ?? 0) >= PIECE_RELIABILITY_TOP_AT;
+}
+
 function weighted(answer: PieceAnswer): number | null {
   const parts = [
     { signal: answer.reasoning, weight: PIECE_DEMAND_WEIGHTS.reasoning },

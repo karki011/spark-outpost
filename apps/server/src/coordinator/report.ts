@@ -1,5 +1,5 @@
 import { placementLabel, type PieceList, type TaskPiece } from '@spark-outpost/contracts';
-import { DOCS_ONLY_CHECK, docsOnly } from './scoped-checks.ts';
+import { noCheckLabel } from './scoped-checks.ts';
 import type { Conflict, Coordination, Renumbered } from './state.ts';
 
 export interface ReportFacts {
@@ -22,7 +22,7 @@ function checkCell(piece: TaskPiece): string {
   if (piece.check === 'passed') return 'passed';
   if (piece.check === 'failed') return `failed after ${piece.fixTurns} fix turns`;
   if (piece.research) return 'read-only';
-  return docsOnly(piece.owns) ? DOCS_ONLY_CHECK : 'none';
+  return noCheckLabel(piece.owns);
 }
 
 function row(piece: TaskPiece): string {

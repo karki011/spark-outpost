@@ -11,7 +11,7 @@ import type { RouteCandidate } from '../routing/candidates.ts';
 import { redactedExcerpt, REQUEST_CHARACTERS } from '../routing/route-state.ts';
 import { isGlob } from './owned.ts';
 import { factPaths, type FileFacts } from './piece-facts.ts';
-import { DOCS_ONLY_CHECK, docsOnly } from './scoped-checks.ts';
+import { noCheckLabel } from './scoped-checks.ts';
 
 export const SHARED_TREE = 'shared_tree';
 export const OWN_WORKTREE = 'own_worktree';
@@ -123,7 +123,7 @@ function listed(items: readonly string[] | undefined, limit: number, empty: stri
 
 function checksLine(piece: JevPiece): string {
   if (piece.checks && piece.checks.length > 0) return listed(piece.checks, CHECK_CHARACTERS, '');
-  return docsOnly(piece.owns) ? DOCS_ONLY_CHECK : 'none';
+  return noCheckLabel(piece.owns);
 }
 
 function headLines(piece: JevPiece, facts: ReadonlyMap<string, FileFacts>): string[] {

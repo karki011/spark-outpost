@@ -1,10 +1,13 @@
 import path from 'node:path';
 import { isPackageInstall } from '../approvals/command-kinds.ts';
+import { inMigrationsFolder } from './placement.ts';
 
 export const FULL_CHECKS_REASON = 'the coordinator runs the full checks after integration';
-export const DOCS_ONLY_CHECK = 'none — docs only';
+const DOCS_ONLY_CHECK = 'none — docs only';
+const MIGRATION_ONLY_CHECK = 'none — migration; full checks run after landing';
 
 const DOCS_FILE = /\.(?:md|mdx|markdown|txt|rst|adoc)$/i;
+const SQL_FILE = /\.sql$/i;
 const DOCS_NAME = /(?:^|\/)(?:README|CHANGELOG|CHANGES|LICENSE|NOTICE|AUTHORS|CONTRIBUTING)$/i;
 
 const MUTATING_FLAG = /(?:^|\s)(?:--write|-w|--fix|-u|--update(?:-snapshots)?)(?=\s|$)/;
@@ -50,6 +53,15 @@ function squash(command: string): string {
 
 export function docsOnly(paths: readonly string[]): boolean {
   return paths.length > 0 && paths.every((file) => DOCS_FILE.test(file) || DOCS_NAME.test(file));
+}
+
+function migrationOnly(paths: readonly string[]): boolean {
+  return paths.length > 0 && paths.every((file) => inMigrationsFolder(file) || SQL_FILE.test(file));
+}
+
+export function noCheckLabel(paths: readonly string[]): string {
+  if (docsOnly(paths)) return DOCS_ONLY_CHECK;
+  return migrationOnly(paths) ? MIGRATION_ONLY_CHECK : 'none';
 }
 
 export function runsWholeProject(command: string): boolean {

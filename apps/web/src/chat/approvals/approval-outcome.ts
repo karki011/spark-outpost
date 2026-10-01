@@ -63,6 +63,7 @@ function deniedDetail(approval: Approval): string {
 
 function chosenDetail(approval: Approval): string {
   const forRun = approval.scope === 'run';
+  if (approval.status === 'allowed' && approval.scope === 'chat') return 'Allowed for this chat.';
   if (approval.status === 'allowed') return forRun ? 'Allowed for this run.' : '';
   return `${deniedDetail(approval)}${forRun ? ' Rejected for the rest of this run.' : ''}`;
 }
@@ -83,6 +84,9 @@ export function outcome(approval: Approval): Outcome {
     case 'allowed':
       if (approval.scope === 'run')
         return { icon: 'ok', label: 'Allowed for this run.', detail: '' };
+      if (approval.scope === 'chat') {
+        return { icon: 'ok', label: 'Allowed for this chat.', detail: '' };
+      }
       if (approval.scope === 'project') {
         return {
           icon: 'ok',

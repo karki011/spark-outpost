@@ -1,3 +1,4 @@
+import { firstName } from '@spark-outpost/contracts';
 import { newId } from '../persistence/ids.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import { insertOrchestration } from '../persistence/orchestrations.ts';
@@ -263,7 +264,8 @@ async function finish(
   const notes = [pieces, assumed, escalated, fixed, suggested, stopped, incomplete, shipped].filter(
     (line): line is string => line !== null,
   );
-  const summary = piecesSummary(s.coordination, s.results);
+  const prefs = await sparkPreferences(s.deps.db, s.input.workspaceId).catch(() => null);
+  const summary = piecesSummary(s.coordination, s.results, prefs && firstName(prefs.displayName));
   const reply = finalText(s.results, verdict, s.findings, !!s.message, s.checkBodies, summary);
   const text = withNotes(reply, notes, s.message !== null);
   await publish(s, { phase: 'finished', error: status === 'failed' ? reason : null });

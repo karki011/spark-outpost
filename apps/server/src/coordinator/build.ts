@@ -7,7 +7,7 @@ import { mergeCopy, placeFor } from '../orchestration/solo-copy.ts';
 import { publish, type MemberResult, type Session } from '../orchestration/session.ts';
 import type { Spawn } from '../orchestration/transitions.ts';
 import { assess, recordAssessment, type Assessment } from './assess.ts';
-import { integratorSeat } from './integrator.ts';
+import { integratorRoute, integratorSeat } from './integrator.ts';
 import { landedPieces, type PieceSite } from './piece-run.ts';
 import { askPieceList } from './place-list.ts';
 import { integratorSection } from './prompts.ts';
@@ -84,6 +84,7 @@ async function engage(s: Session): Promise<'stopped' | null> {
     owned: written.ok ? written.value.owned : new Map(),
     builderEnv: (await projectSettings(s.deps.db, s.lease.runId)).builderEnv,
     names: written.ok ? written.value.names : new Map(),
+    topTier: written.ok ? written.value.topTier : new Set(),
     scoutNotes: [],
     violations: 0,
     integrated: false,
@@ -121,7 +122,7 @@ async function integrate(
   const noted = noteSection(notes);
   const prompt = `${section}${noted ? `\n\n${noted}` : ''}\n\n## Request\n${s.input.userRequest}`;
   const { result } = await runMember(s, action, await site.place(), {
-    seat: { ...s.integrator, prompt },
+    seat: { ...s.integrator, prompt, memberRoute: integratorRoute(s, coordination, 'glue') },
   });
   await markNotesDelivered(
     s.deps.db,

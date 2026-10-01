@@ -240,6 +240,14 @@ function validateDecision(approval: Approval, decision: UserDecision): ApprovalO
   if (approval.payload.forcePush && decision.scope !== 'once') {
     throw new ApprovalInputError('A force push is allowed one at a time.');
   }
+  if (approval.payload.gitControl && decision.scope !== 'once') {
+    throw new ApprovalInputError('A change to git hooks or git config is allowed one at a time.');
+  }
+  if (decision.scope === 'chat' && !(approval.payload.instructionFiles && allowing)) {
+    throw new ApprovalInputError(
+      'Only changes to agent instruction files can be allowed for a chat.',
+    );
+  }
   if (approval.payload.observed && allowing && decision.scope !== 'once') {
     throw new ApprovalInputError('After reading sensitive data, sending data out is allowed once.');
   }
@@ -325,7 +333,7 @@ export async function decideApproval(
 }
 
 function scopeFor(option: ApprovalOption, requested: ApprovalScope): ApprovalScope {
-  if (requested === 'project') return 'project';
+  if (requested === 'project' || requested === 'chat') return requested;
   return option.kind.endsWith('_always') ? 'run' : requested;
 }
 
@@ -360,6 +368,17 @@ function memberApprovals(status: 'allowed' | 'denied') {
 }
 
 export const allowedForRun = memberApprovals('allowed');
+
+export async function chatInstructionGrants(db: Queryable, runId: string): Promise<Set<string>> {
+  const { rows } = await db.query<{ file: string }>(
+    `SELECT DISTINCT jsonb_array_elements_text(a.payload->'instructionFiles') AS file
+     FROM approvals a JOIN runs r ON r.id = a.run_id
+     WHERE r.conversation_id = (SELECT conversation_id FROM runs WHERE id = $1)
+       AND a.scope = 'chat' AND a.status = 'allowed'`,
+    [runId],
+  );
+  return new Set(rows.map((row) => row.file));
+}
 export const rejectedForRun = memberApprovals('denied');
 
 export async function approvedEveryEdit(

@@ -33,4 +33,5 @@ export interface Coordination {
   sharedBase?: SharedBase;
   renumbered?: Renumbered[];
   conflicts?: Conflict[];
+  topTier?: ReadonlySet<string>;
 }

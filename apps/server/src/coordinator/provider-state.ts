@@ -63,14 +63,15 @@ export async function assignFacts(
 }
 
 export function pieceRoute(s: Session, piece: TaskPiece): MemberRoute | null {
-  const base = seatRoute(s, BUILDER_SPAWN).route;
   if (!piece.provider || piece.research) return null;
-  if (piece.provider === base.pick.provider && piece.model === base.pick.model) return null;
+  const base = seatRoute(s, BUILDER_SPAWN).route;
+  const same = piece.provider === base.pick.provider && piece.model === base.pick.model;
+  if (same && !piece.pickNote) return null;
   const candidate = s.route.candidates.find((entry) => entry.provider === piece.provider);
   const label = candidate?.models.find((model) => model.id === piece.model)?.label ?? null;
   const pick = { provider: piece.provider, model: piece.model, modelLabel: label, effort: null };
   return {
-    pick: { ...pick, effort: builderEffort(s.route, pick) },
+    pick: same ? base.pick : { ...pick, effort: builderEffort(s.route, pick) },
     routedBy: piece.pickNote?.startsWith('Jev:') ? 'jev' : 'rules',
     rule: piece.pickNote ?? `piece → ${candidate?.name ?? piece.provider}`,
     autoWouldUse: null,

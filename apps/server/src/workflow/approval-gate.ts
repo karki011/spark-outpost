@@ -26,6 +26,7 @@ import {
 } from '../approvals/decide.ts';
 import {
   allowedForRun,
+  chatInstructionGrants,
   rejectedForRun,
   getApproval,
   insertApproval,
@@ -122,7 +123,16 @@ export function subject(request: ApprovalRequest): string {
   return request.title.trim() || 'an action';
 }
 
-type Asking = Pick<Extract<Decision, { verdict: 'ask' }>, 'forcePush' | 'because' | 'observed'>;
+type Asking = Pick<
+  Extract<Decision, { verdict: 'ask' }>,
+  'forcePush' | 'instructionFiles' | 'gitControl' | 'because' | 'observed'
+>;
+
+function onceOnly(asking: Asking): boolean {
+  return Boolean(
+    asking.forcePush || asking.observed || asking.gitControl || asking.instructionFiles,
+  );
+}
 
 function approvalPayload(request: ApprovalRequest, asking: Asking): ApprovalPayload {
   let budget = DIFF_BUDGET;
@@ -151,6 +161,8 @@ function approvalPayload(request: ApprovalRequest, asking: Asking): ApprovalPayl
     truncated,
     ...(request.plan ? { plan: request.plan } : {}),
     ...(asking.forcePush ? { forcePush: asking.forcePush } : {}),
+    ...(asking.instructionFiles ? { instructionFiles: asking.instructionFiles } : {}),
+    ...(asking.gitControl ? { gitControl: asking.gitControl } : {}),
     ...(asking.because ? { asksBecause: asking.because } : {}),
     ...(asking.observed ? { observed: asking.observed } : {}),
   };
@@ -189,6 +201,7 @@ function toRule(approval: Pick<Approval, 'kind' | 'title' | 'payload'>): RunRule
 function userNote(approval: Approval, what: string): string {
   if (approval.status === 'denied') return `Denied: ${what} (you denied it)`;
   if (approval.scope === 'run') return `Allowed ${what} (you allowed it for this run)`;
+  if (approval.scope === 'chat') return `Allowed ${what} (you allowed it for this chat)`;
   if (approval.scope === 'project') return `Allowed ${what} (you always allow it in this project)`;
   return `Allowed ${what} (you allowed it)`;
 }
@@ -208,10 +221,9 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
     kind: request.kind,
     title: displayTitle(request, deps.copyOf ?? null),
     payload: approvalPayload(request, asking),
-    options:
-      asking.forcePush || asking.observed
-        ? request.options.filter((option) => option.kind !== 'allow_always')
-        : request.options,
+    options: onceOnly(asking)
+      ? request.options.filter((option) => option.kind !== 'allow_always')
+      : request.options,
     reason,
   });
 
@@ -414,9 +426,10 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       request.paths.length > 0 &&
       request.paths.every((target) => grants.has(target));
     if (covered) return allow(request, `Wrote ${what.replace(/^Edit /, '')}`);
-    const [runRules, projectAllowlist] = await Promise.all([
+    const [runRules, projectAllowlist, instructionGrants] = await Promise.all([
       rules(),
       projectAllowlistForRun(deps.db, deps.runId),
+      chatInstructionGrants(deps.db, deps.runId),
     ]);
     if (signal.aborted) return { outcome: 'cancelled', note: `Cancelled: ${what} (stopped)` };
     const allowlist = [...projectAllowlist, ...(deps.extraAllowlist?.() ?? [])];
@@ -427,6 +440,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       worktreeAuto: deps.worktreeAuto === true,
       defaultBranch: await forcePushDefault(request),
       observed: (await deps.observations?.labels()) ?? [],
+      instructionGrants,
       ...(deps.piece ? { piece: deps.piece } : {}),
     });
     if (decision.verdict === 'ask') {

@@ -12,6 +12,7 @@ import { updateProfile } from '../src/persistence/setup.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { PIECE_OUTCOME_UNKNOWN, recoverExpiredLeases } from '../src/workflow/recovery.ts';
 import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
+import { BLIND_FINDING } from './fake-acp-roles.ts';
 import {
   NORMAL,
   answerEverything,
@@ -227,6 +228,62 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(await readFile(join(root, 'glue.ts'), 'utf8')).toContain('glued');
     const reply = (await assistantReplies(t, runId)).at(-1);
     expect(reply).toContain(`Integration: ${integrators[0]!.name}`);
+  });
+
+  it('runs the integrator on the model the pieces shared and records why', async () => {
+    await writeFile(join(root, 'check.mjs'), FAILS_UNTIL_FIXED);
+    await setCheckCommands(t, root, ['node check.mjs']);
+    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), {
+      coordinator: 'in_order',
+    });
+    const scenario = withTag(NORMAL, 'Split this up. #pieces #glue');
+    const started = await startScenario(t, root, scenario, 'hands-off', 'pinned', 'opus[1m]');
+    const { orchestration } = await driveToEnd(t, started.conversationId, started.runId);
+    expect(orchestration.status).toBe('succeeded');
+    const { rows } = await t.db.query<{ role: string; model: string; summary: string }>(
+      `SELECT r.role, r.model, a.body->>'summary' AS summary
+       FROM runs r JOIN run_advice a ON a.child_run_id = r.id AND a.purpose = 'route'
+       WHERE r.parent_run_id = $1 AND r.role IN ('builder', 'integrator') ORDER BY r.created_at`,
+      [started.runId],
+    );
+    expect(new Set(rows.filter((row) => row.role === 'builder').map((row) => row.model))).toEqual(
+      new Set(['sonnet']),
+    );
+    const integrators = rows.filter((row) => row.role === 'integrator');
+    expect(integrators.map((row) => row.model)).toEqual(['sonnet', 'sonnet']);
+    expect(integrators[0]!.summary).toContain(
+      'integrator follows the pieces · 3 of 3 pieces ran on this model; same model keeps the cache',
+    );
+  });
+
+  it('asks a Critic that opened no files to re-check the riskiest ones in its session', async () => {
+    harness = startOrchestrator(
+      t,
+      jevFetch({ calls: [], scenario: NORMAL, policy: { finding_1: 0.95 } }),
+      { coordinator: 'in_order' },
+    );
+    const scenario = withTag(NORMAL, 'Split this up. #pieces #blindcritic');
+    const { conversationId, runId } = await startScenario(t, root, scenario, 'hands-off');
+    const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
+    expect(orchestration.status).toBe('succeeded');
+    const { rows } = await t.db.query<{
+      route: Record<string, string>;
+      prompt: string;
+      tools: number;
+    }>(
+      `SELECT route, prompt, tool_call_count AS tools FROM runs
+       WHERE parent_run_id = $1 AND role = 'critic' ORDER BY created_at`,
+      [runId],
+    );
+    expect(rows).toHaveLength(4);
+    expect(rows.map((row) => row.tools > 0)).toEqual([false, true, false, true]);
+    expect(rows[0]!.route.resumeKey).toBe(rows[1]!.route.resumeKey);
+    expect(rows[2]!.route.resumeKey).not.toBe(rows[1]!.route.resumeKey);
+    expect(rows[1]!.prompt).toContain('You replied without opening any of the changed files.');
+    expect(rows[1]!.prompt).toMatch(/Open `[^\n]*`store\.ts`[^\n]* now and re-check/);
+    const reviews = await artifactBodies<{ verdict: string; findings: string[] }>(t, 'review');
+    expect(reviews.map((review) => review.verdict)).toEqual(['concerns', 'looks_good']);
+    expect(reviews[0]!.findings).toContain(BLIND_FINDING);
   });
 
   it('lands a docs-only piece without a scoped check and without a repair round', async () => {

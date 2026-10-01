@@ -30,4 +30,14 @@ describe('whyLine', () => {
     });
     expect(line).not.toContain('Jev');
   });
+
+  it('names Jev as the decider for a piece Jev routed', () => {
+    const line = whyLine({
+      pick: pick('claude', 'sonnet', 'Sonnet 5'),
+      routedBy: 'jev',
+      rule: 'Jev: coding 2.3 → low demand → Claude Sonnet 5',
+      autoWouldUse: null,
+    });
+    expect(line).toMatch(/^Why Sonnet 5: Jev: coding 2\.3/);
+  });
 });

@@ -265,7 +265,7 @@ describe('decide() always asks, in every mode', () => {
 
 describe('decide() refusals', () => {
   it('refuses edits inside .git', () => {
-    expect(decide('full_access', edit(`${ROOT}/.git/config`), NO_RUN_RULES, []).verdict).toBe(
+    expect(decide('full_access', edit(`${ROOT}/.git/HEAD`), NO_RUN_RULES, []).verdict).toBe(
       'reject',
     );
   });

@@ -98,7 +98,9 @@ function PendingInline({ chat }: { chat: ConversationSummary }) {
     (candidate) =>
       candidate.status === 'pending' &&
       candidate.kind === 'execute' &&
-      !candidate.payload.forcePush,
+      !candidate.payload.forcePush &&
+      !candidate.payload.gitControl &&
+      !candidate.payload.instructionFiles,
   );
   const armed = useArmed(approval?.id ?? 'none');
   const decide = useMutation({

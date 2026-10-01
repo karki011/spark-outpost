@@ -1,6 +1,6 @@
 import type { TaskPiece } from '@spark-outpost/contracts';
 import { COORD_MAX_PIECES } from '../advisor/policy.ts';
-import { DOCS_ONLY_CHECK, docsOnly } from './scoped-checks.ts';
+import { noCheckLabel } from './scoped-checks.ts';
 
 export const PIECES_FENCE = 'pieces';
 export const PIECE_HEADING = '## Your piece';
@@ -133,8 +133,8 @@ export function pieceSection(brief: PieceBrief): string {
   if (piece.acceptance.length > 0) parts.push(`Acceptance:\n${bullets(piece.acceptance)}`);
   if (piece.checks.length > 0) {
     parts.push(`Scoped checks (the harness runs them after your turn):\n${bullets(piece.checks)}`);
-  } else if (!piece.research && docsOnly(piece.owns)) {
-    parts.push(`Scoped checks: ${DOCS_ONLY_CHECK}.`);
+  } else if (!piece.research && noCheckLabel(piece.owns) !== 'none') {
+    parts.push(`Scoped checks: ${noCheckLabel(piece.owns)}.`);
   }
   const owners = brief.others.filter((other) => other.owns.length > 0);
   if (owners.length > 0) {
