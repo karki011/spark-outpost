@@ -39,7 +39,11 @@ export function terminalRoutes({ db, workspaceId, terminals }: TerminalRouteDeps
   router.post('/terminal/shells', async (req, res) => {
     const { conversationId } = parseBody(createShellRequestSchema, req);
     const folder = await shellFolder(db, workspaceId, conversationId);
-    const created = terminals.createShell({ cwd: folder.cwd, conversationId });
+    const created = terminals.createShell({
+      cwd: folder.cwd,
+      conversationId,
+      label: folder.label,
+    });
     const response: CreateShellResponse = { ...created, ...folder };
     res.status(201).json(response);
   });

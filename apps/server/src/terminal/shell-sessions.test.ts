@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { TerminalServerMessage } from '@spark-outpost/contracts';
 import { isAlive } from './process-group.ts';
 import { loginShellSpawner } from './pty.ts';
+import type { OpenShell } from '../persistence/terminal-shells.ts';
 import { defaultLimits, TerminalLimitError, TerminalSessions } from './sessions.ts';
 
 const size = { cols: 80, rows: 24 };
@@ -118,6 +119,35 @@ describe('chat shells', () => {
     await until(() => sessions.runningCommand(shell.created.id) === null);
     expect(sessions.runningCommand('not-a-session')).toBeNull();
   }, 30_000);
+
+  it('tells the watcher when a shell starts and ends, but not about setup terminals', async () => {
+    const opened: OpenShell[] = [];
+    const ended: string[] = [];
+    sessions = new TerminalSessions(loginShellSpawner('/bin/sh'), defaultLimits, {
+      opened: (shell) => opened.push(shell),
+      ended: (id) => ended.push(id),
+    });
+    const created = sessions.createShell({ cwd: folder, conversationId: 'chat-a', label: 'app' });
+    const setup = sessions.create('claude');
+    expect(opened).toEqual([]);
+
+    const terminal = sessions.attach(created.id, created.token, recorder().client, size);
+    sessions.attach(setup.id, setup.token, recorder().client, size);
+    expect(opened).toEqual([
+      {
+        id: created.id,
+        conversationId: 'chat-a',
+        label: 'app',
+        cwd: folder,
+        pid: expect.any(Number),
+      },
+    ]);
+    expect(isAlive(opened[0]!.pid)).toBe(true);
+
+    terminal.close();
+    sessions.kill(setup.id);
+    expect(ended).toEqual([created.id]);
+  });
 
   it('counts shells separately from setup terminals', () => {
     useLimits({ ...defaultLimits, maxSessions: 1, maxShells: 2 });

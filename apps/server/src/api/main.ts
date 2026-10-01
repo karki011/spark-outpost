@@ -15,7 +15,9 @@ import { runCommand } from '../setup/command.ts';
 import { configuredSecretStore } from '../setup/secrets.ts';
 import { loginShellSpawner } from '../terminal/pty.ts';
 import { ensureSpawnHelperExecutable } from '../terminal/pty-helper.ts';
-import { TerminalSessions } from '../terminal/sessions.ts';
+import { defaultLimits, TerminalSessions } from '../terminal/sessions.ts';
+import { shellRegistry } from '../terminal/shell-registry.ts';
+import { forgetAllShells } from '../persistence/terminal-shells.ts';
 import { attachTerminalSockets } from '../terminal/websocket.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
 import { probeCapabilities } from '../agents/acp/probe.ts';
@@ -42,7 +44,12 @@ await pruneProtocolLog(db, config.AUDIT_RETENTION_DAYS);
 await seedModelStats(db);
 const hub = new RunEventHub();
 ensureSpawnHelperExecutable();
-const terminals = new TerminalSessions(loginShellSpawner());
+await forgetAllShells(db, workspaceId);
+const terminals = new TerminalSessions(
+  loginShellSpawner(),
+  defaultLimits,
+  shellRegistry(db, workspaceId),
+);
 const listener = await listen(config.DATABASE_URL, 'run_events', (runId) => hub.notify(runId));
 const appEvents = new AppEventFeed();
 const appEventListener = await listenForAppEvents(config.DATABASE_URL, appEvents);

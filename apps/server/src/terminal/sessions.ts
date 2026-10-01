@@ -6,6 +6,7 @@ import type {
   TerminalServerMessage,
   TerminalStep,
 } from '@spark-outpost/contracts';
+import type { OpenShell } from '../persistence/terminal-shells.ts';
 import { catalogEntry, type CatalogEntry } from '../providers/catalog.ts';
 import { detectHint } from './hints.ts';
 import { killProcessTree, processTable, runningCommand } from './process-group.ts';
@@ -49,6 +50,7 @@ interface ShellKind {
   type: 'shell';
   cwd: string;
   conversationId: string | null;
+  label?: string | undefined;
 }
 
 interface Session {
@@ -69,6 +71,12 @@ interface Session {
 export interface ShellRequest {
   cwd: string;
   conversationId: string | null;
+  label?: string | undefined;
+}
+
+export interface ShellWatcher {
+  opened(shell: OpenShell): void;
+  ended(id: string): void;
 }
 
 export class TerminalLimitError extends Error {}
@@ -88,6 +96,7 @@ export class TerminalSessions {
   constructor(
     private readonly spawn: SpawnPty,
     private readonly limits: TerminalLimits = defaultLimits,
+    private readonly watcher: ShellWatcher | null = null,
   ) {}
 
   get activeCount(): number {
@@ -138,6 +147,15 @@ export class TerminalSessions {
     const kind = session.kind;
     const pty = this.spawn(kind.type === 'shell' ? { ...size, cwd: kind.cwd } : size);
     session.pty = pty;
+    if (kind.type === 'shell') {
+      this.watcher?.opened({
+        id: session.id,
+        conversationId: kind.conversationId,
+        label: kind.label ?? kind.cwd,
+        cwd: kind.cwd,
+        pid: pty.pid,
+      });
+    }
     let prefilled = kind.type === 'shell';
     pty.onData((data) => {
       this.handleOutput(session, data);
@@ -285,6 +303,7 @@ export class TerminalSessions {
     if (session.idleTimer) clearTimeout(session.idleTimer);
     if (session.quietTimer) clearTimeout(session.quietTimer);
     if (session.pty) killProcessTree(session.pty.pid);
+    if (session.pty && session.kind.type === 'shell') this.watcher?.ended(session.id);
     session.client?.send({ type: 'ended', reason, exitCode });
     session.client?.close();
     session.client = null;
