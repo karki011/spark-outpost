@@ -103,7 +103,7 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
             />
           )}
         </dd>
-        <dt>Default mode for new chats</dt>
+        <dt>Mode</dt>
         <dd>
           {modes.length === 0 ? (
             <span className="muted">
