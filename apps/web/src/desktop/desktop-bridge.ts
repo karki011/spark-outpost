@@ -1,4 +1,10 @@
-import type { InstallResult, UpdateChannel, UpdateStatus } from '@spark-outpost/contracts';
+import type {
+  DesktopHelpInfo,
+  DiagnosticsExport,
+  InstallResult,
+  UpdateChannel,
+  UpdateStatus,
+} from '@spark-outpost/contracts';
 
 export type IslandAction = 'quick' | 'sessions';
 
@@ -46,6 +52,12 @@ export interface SparkDesktop {
     setAutoDownload(on: boolean): Promise<UpdateStatus | null>;
     install(): Promise<InstallResult>;
     onChange(callback: (status: UpdateStatus) => void): Unsubscribe;
+  };
+  help?: {
+    info(): Promise<DesktopHelpInfo | null>;
+    exportDiagnostics(): Promise<DiagnosticsExport | null>;
+    showLogs(): Promise<void>;
+    onOpenFeedback(callback: () => void): Unsubscribe;
   };
   onOpenChat(callback: (id: string) => void): Unsubscribe;
 }

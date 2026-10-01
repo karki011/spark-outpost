@@ -1,0 +1,37 @@
+.help-feedback {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.help-feedback h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.help-feedback > .set-hint {
+  margin: -8px 0 0;
+}
+
+.help-text {
+  display: block;
+  resize: vertical;
+  min-height: 64px;
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 20px;
+}
+
+.help-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-result:empty {
+  display: none;
+}

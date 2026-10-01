@@ -114,6 +114,7 @@ export default defineConfig({
         SPARK_WEB_PORT: String(WEB_PORT),
         SPARK_API_PORT: String(API_PORT),
         [API_TOKEN_ENV]: apiToken,
+        VITE_SPARK_FEEDBACK_EMAIL: 'beta-feedback@example.test',
       },
       url: `http://127.0.0.1:${WEB_PORT}`,
       reuseExistingServer: false,

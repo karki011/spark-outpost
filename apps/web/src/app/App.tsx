@@ -29,6 +29,7 @@ import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
 import { useSettingsRequests } from '../settings/settings-request.ts';
+import { requestFeedback } from '../help/feedback-request.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { Tickets } from '../tickets/Tickets.tsx';
 import { ticketKeys, ticketsApi } from '../tickets/tickets-api.ts';
@@ -131,6 +132,7 @@ function ChatShell({ entering }: { entering: boolean }) {
     openFromDesktop.current = openChat;
   });
   useEffect(() => sparkDesktop()?.onOpenChat((id) => openFromDesktop.current(id)), []);
+  useEffect(() => sparkDesktop()?.help?.onOpenFeedback(requestFeedback), []);
 
   const openAtCard = (chat: ConversationSummary) => {
     openChat(chat.id);

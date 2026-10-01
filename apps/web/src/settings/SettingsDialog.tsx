@@ -14,10 +14,21 @@ import { ProjectsSection } from './ProjectsSection.tsx';
 import { ResetSection } from '../reset/ResetSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
 import { UpdatesSection, updatesAvailable } from './UpdatesSection.tsx';
+import { HelpSection } from '../help/HelpSection.tsx';
 import './settings.css';
 
 export type SettingsSection =
-  'spark' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'mcp' | 'look' | 'updates' | 'reset';
+  | 'spark'
+  | 'ai'
+  | 'models'
+  | 'usage'
+  | 'projects'
+  | 'tools'
+  | 'mcp'
+  | 'look'
+  | 'updates'
+  | 'help'
+  | 'reset';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   {
@@ -88,6 +99,16 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
       <>
         <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
         <path d="M21 3v5h-5M12 8v5l3 2" />
+      </>
+    ),
+  },
+  {
+    id: 'help',
+    label: 'Help',
+    icon: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .8-1 1.5v.4M12 16.8h.01" />
       </>
     ),
   },
@@ -255,6 +276,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                   </>
                 )}
                 {section === 'updates' && updatesAvailable() && <UpdatesSection />}
+                {section === 'help' && <HelpSection />}
                 {section === 'reset' && <ResetSection />}
               </motion.div>
             </AnimatePresence>
