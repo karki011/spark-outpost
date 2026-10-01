@@ -5,7 +5,7 @@ import type { ScoutMood } from '../brand/BlobScout.tsx';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import { UserBlob } from '../brand/UserBlob.tsx';
 import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.tsx';
-import { UpdateChip } from './UpdateChip.tsx';
+import { UpdateBlob } from './UpdateBlob.tsx';
 import './rail.css';
 
 export type AppView = 'home' | 'chats' | 'analytics' | 'tickets' | 'map';
@@ -177,7 +177,7 @@ export function Rail({
         </button>
       ))}
       <span className="rail-sp" />
-      <UpdateChip />
+      <UpdateBlob />
       <button type="button" className="rail-btn" onClick={onSettings}>
         <svg {...ICON}>
           <circle cx="12" cy="12" r="3" />

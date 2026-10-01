@@ -29,6 +29,15 @@ export class OutputTail {
   }
 }
 
+function forceKill(pid: number): boolean {
+  try {
+    process.kill(pid, 'SIGKILL');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function forkService(options: ServiceOptions, tail: OutputTail): Supervised {
   const child = utilityProcess.fork(options.bootstrap, [options.entry], {
     cwd: options.cwd,
@@ -54,7 +63,7 @@ export function forkService(options: ServiceOptions, tail: OutputTail): Supervis
       if (!running) return;
       child.kill();
       await Promise.race([exited, delay(STOP_TIMEOUT_MS)]);
-      if (running && child.pid) process.kill(child.pid, 'SIGKILL');
+      if (running && child.pid && !forceKill(child.pid)) return;
       await exited;
     },
   };

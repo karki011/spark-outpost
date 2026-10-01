@@ -11,88 +11,99 @@ import {
 
 const AT = new Date('2026-10-01T12:00:00.000Z');
 
-function run(events: UpdateEvent[], start?: Partial<UpdateStatus>): UpdateStatus {
-  const status = {
-    ...initialStatus({
-      currentVersion: '0.1.0',
-      channel: 'stable',
-      offReason: null,
-      feedUrl: 'https://updates.example.com/spark',
-    }),
-    ...start,
-  };
-  return events.reduce(reduceUpdate, status);
+function status(offReason: 'dev' | null = null): UpdateStatus {
+  return initialStatus({
+    currentVersion: '0.1.0',
+    channel: 'stable',
+    autoDownload: true,
+    offReason,
+    feedUrl: offReason ? null : 'https://updates.example.com/spark',
+  });
 }
 
+function run(events: UpdateEvent[], start = status()): UpdateStatus {
+  return events.reduce(reduceUpdate, start);
+}
+
+const READY: UpdateEvent[] = [
+  { type: 'available', version: '0.2.0' },
+  { type: 'download-started', version: '0.2.0' },
+  { type: 'downloaded', version: '0.2.0' },
+];
+
 describe('update status', () => {
-  it('moves from checking through download to ready', () => {
-    const status = run([
-      { type: 'checking', at: AT },
-      { type: 'available', version: '0.2.0' },
-      { type: 'progress', percent: 41.6 },
-      { type: 'downloaded', version: '0.2.0' },
-    ]);
-    expect(status).toMatchObject({
+  it('moves from checking through available and download to ready', () => {
+    expect(
+      run([
+        { type: 'checking', at: AT },
+        { type: 'available', version: '0.2.0' },
+        { type: 'download-started', version: '0.2.0' },
+        { type: 'progress', percent: 41.6 },
+      ]),
+    ).toMatchObject({ phase: 'downloading', progress: 42, lastCheckedAt: AT.toISOString() });
+    expect(run(READY)).toMatchObject({
       phase: 'ready',
       availableVersion: '0.2.0',
       progress: 100,
-      lastCheckedAt: AT.toISOString(),
       releaseNotesUrl: 'https://updates.example.com/spark/release-notes.html',
     });
   });
 
-  it('keeps a staged update ready through later checks and errors', () => {
-    const ready = run([
-      { type: 'available', version: '0.2.0' },
-      { type: 'downloaded', version: '0.2.0' },
-    ]);
-    const later = [
-      { type: 'checking', at: AT },
-      { type: 'not-available' },
-      { type: 'error', message: 'offline' },
-    ] as UpdateEvent[];
-    expect(later.reduce(reduceUpdate, ready)).toMatchObject({
-      phase: 'ready',
+  it('keeps a found or staged update through later checks', () => {
+    const later: UpdateEvent[] = [{ type: 'checking', at: AT }, { type: 'not-available' }];
+    expect(run(later, run([{ type: 'available', version: '0.2.0' }]))).toMatchObject({
+      phase: 'available',
       availableVersion: '0.2.0',
-      error: 'offline',
     });
+    expect(run(later, run(READY))).toMatchObject({ phase: 'ready' });
+  });
+
+  it('waits for running work, then installs', () => {
+    const waiting = run([...READY, { type: 'waiting' }]);
+    expect(waiting).toMatchObject({ phase: 'ready', installRequested: true, waitingForRuns: true });
+    expect(reduceUpdate(waiting, { type: 'installing' })).toMatchObject({
+      phase: 'installing',
+      waitingForRuns: false,
+    });
+  });
+
+  it('goes back to ready when the install step fails', () => {
+    expect(
+      run([...READY, { type: 'installing' }, { type: 'error', message: 'signature' }]),
+    ).toMatchObject({ phase: 'ready', installRequested: false, error: 'signature' });
   });
 
   it('shows a skipped version instead of downloading it', () => {
     expect(run([{ type: 'skipped', version: '0.2.0' }])).toMatchObject({
       phase: 'idle',
       skippedVersion: '0.2.0',
-      availableVersion: null,
     });
   });
 
-  it('never leaves the off state for a dev copy or a build without a feed', () => {
-    const off = initialStatus({
-      currentVersion: '0.0.0',
-      channel: 'stable',
-      offReason: 'dev',
-      feedUrl: null,
-    });
+  it('never leaves the off state for a dev copy, but keeps its settings', () => {
     const events: UpdateEvent[] = [
       { type: 'checking', at: AT },
       { type: 'available', version: '9.9.9' },
       { type: 'channel', channel: 'beta' },
+      { type: 'auto-download', on: false },
     ];
-    expect(events.reduce(reduceUpdate, off)).toMatchObject({
+    expect(run(events, status('dev'))).toMatchObject({
       phase: 'off',
       offReason: 'dev',
       channel: 'beta',
+      autoDownload: false,
       releaseNotesUrl: null,
     });
   });
 
-  it('clears a pending download when the channel changes', () => {
+  it('drops a found update when the channel changes', () => {
     expect(
       run([
         { type: 'available', version: '0.2.0-beta.1' },
+        { type: 'install-requested' },
         { type: 'channel', channel: 'stable' },
       ]),
-    ).toMatchObject({ phase: 'idle', availableVersion: null, channel: 'stable' });
+    ).toMatchObject({ phase: 'idle', availableVersion: null, installRequested: false });
   });
 });
 
@@ -111,34 +122,21 @@ describe('channel selection', () => {
 });
 
 describe('installDecision', () => {
-  const ready = run([
-    { type: 'available', version: '0.2.0' },
-    { type: 'downloaded', version: '0.2.0' },
-  ]);
+  const ready = run(READY);
+  const waiting = { status: 'waiting', reason: 'Spark will update when your work finishes.' };
 
   it('installs only a ready update with no active runs', () => {
-    expect(installDecision(ready, 0)).toEqual({ started: true });
+    expect(installDecision(ready, 0)).toEqual({ status: 'installing' });
   });
 
-  it('waits while runs are active', () => {
-    expect(installDecision(ready, 1)).toEqual({
-      started: false,
-      reason: '1 run is still working. Restart once they finish or you stop them.',
-    });
-    expect(installDecision(ready, 3)).toMatchObject({
-      started: false,
-      reason: expect.stringMatching(/^3 runs are still working/),
-    });
-  });
-
-  it('refuses when running work cannot be checked', () => {
-    expect(installDecision(ready, null)).toMatchObject({ started: false });
+  it('waits while runs are active or cannot be checked', () => {
+    expect(installDecision(ready, 2)).toEqual(waiting);
+    expect(installDecision(ready, null)).toEqual(waiting);
   });
 
   it('has nothing to install before the download finishes', () => {
-    const downloading = run([{ type: 'available', version: '0.2.0' }]);
-    expect(installDecision(downloading, 0)).toEqual({
-      started: false,
+    expect(installDecision(run([{ type: 'available', version: '0.2.0' }]), 0)).toEqual({
+      status: 'unavailable',
       reason: 'No update is ready yet.',
     });
   });

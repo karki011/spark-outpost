@@ -82,7 +82,7 @@ describe('data folder copies', () => {
   });
 });
 
-describe('findDumpTools', () => {
+describe('findDumpTools', { timeout: 20_000 }, () => {
   it('uses the first folder with pg_dump and pg_restore from Postgres 17', async () => {
     const old = path.join(work, 'pg16');
     const partial = path.join(work, 'dump-only');

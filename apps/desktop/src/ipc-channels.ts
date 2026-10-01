@@ -16,6 +16,7 @@ export const IPC = {
   updatesGet: 'updates:get',
   updatesCheck: 'updates:check',
   updatesSetChannel: 'updates:set-channel',
+  updatesSetAutoDownload: 'updates:set-auto-download',
   updatesInstall: 'updates:install',
   updatesChanged: 'updates:changed',
 } as const;

@@ -4,15 +4,15 @@ How the desktop app is packaged, signed, published and updated. The installed ap
 
 ## What exists today
 
-| Piece                     | Where                                                            | State                                                                                                  |
-| ------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Packaging                 | `pnpm desktop:package` (`apps/desktop/scripts/package.ts`)       | Works locally: zip + dmg for x64 and arm64, ad-hoc signed                                              |
-| Update feed URL           | `UPDATE_FEED_URL` in `apps/desktop/scripts/builder-config.ts`    | Empty until hosting is chosen; `SPARK_UPDATE_FEED_URL` overrides it per build                          |
-| Updater                   | `apps/desktop/src/updater.ts`                                    | electron-updater, generic provider, prod only                                                          |
-| Backup before migrating   | `apps/desktop/src/update-migration.ts`                           | pg_dump 17 when found, else a cold copy of the data folder; last 3 kept; restored if a migration fails |
-| Settings › Updates + chip | `apps/web/src/settings/UpdatesSection.tsx`, `app/UpdateChip.tsx` | Desktop only; hidden in the browser                                                                    |
-| Local end-to-end check    | `pnpm desktop:e2e-update`                                        | Builds 0.0.1–0.0.3, serves a local feed, checks detect → download → stage and the migration guard      |
-| CI template               | [release-workflow.yml](release-workflow.yml)                     | Not active: it sits outside `.github/workflows`                                                        |
+| Piece                            | Where                                                            | State                                                                                                  |
+| -------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Packaging                        | `pnpm desktop:package` (`apps/desktop/scripts/package.ts`)       | Works locally: zip + dmg for x64 and arm64, ad-hoc signed                                              |
+| Update feed URL                  | `UPDATE_FEED_URL` in `apps/desktop/scripts/builder-config.ts`    | Empty until hosting is chosen; `SPARK_UPDATE_FEED_URL` overrides it per build                          |
+| Updater                          | `apps/desktop/src/updater.ts`                                    | electron-updater, generic provider, prod only                                                          |
+| Backup before migrating          | `apps/desktop/src/update-migration.ts`                           | pg_dump 17 when found, else a cold copy of the data folder; last 3 kept; restored if a migration fails |
+| Settings › Updates + update blob | `apps/web/src/settings/UpdatesSection.tsx`, `app/UpdateBlob.tsx` | Desktop prod only; hidden in the browser and the dev app (preview with `SPARK_UPDATE_PREVIEW`)         |
+| Local end-to-end check           | `pnpm desktop:e2e-update`                                        | Builds 0.0.1–0.0.3, serves a local feed, checks detect → download → stage and the migration guard      |
+| CI template                      | [release-workflow.yml](release-workflow.yml)                     | Not active: it sits outside `.github/workflows`                                                        |
 
 ## One-time setup (the user)
 
@@ -71,9 +71,11 @@ Clients never downgrade (`allowDowngrade` is off, including when someone switche
 
 ## What the installed app does
 
-- Checks 15 s after launch and every 4 hours on the chosen channel (Settings › Updates: Stable or Beta, saved in `updates.json` in the data folder). Downloads in the background.
-- When the download is staged, the sidebar shows **Update** above Settings and a toast once per version. Settings › Updates shows the version, the channel, **Check now**, when it last checked and **Release notes**.
-- Installs on quit, or on **Restart to update**, only when `GET /api/runs/active` reports no queued, running or waiting runs. Otherwise Restart explains how many runs are working, and quitting just quits; the update installs on a later quit.
+- Checks 15 s after launch and every 4 hours on the chosen channel (Settings › Updates: Stable or Beta, saved in `updates.json` in the data folder). **Download updates automatically** is on by default; turned off, Spark only announces an update and downloads it when asked.
+- When an update is staged (or, with automatic downloads off, found), a small Spark blob with a dot sits above Settings in the rail and hops now and then (never with reduced motion or the companion's Calm mode). Its tooltip reads "New update ready — click to get the latest" with the version. A toast appears once per version.
+- Clicking the blob downloads the update if needed (the blob works, with a progress bar and percentage), then installs and restarts. If any run is queued, running or waiting (`GET /api/runs/active`), it says "Spark will update when your work finishes", waits, and rechecks every 15 s. Settings › Updates is the detailed view: version, **Get the update** / **Restart to update**, channel, automatic downloads, **Check now**, last checked, **Release notes**.
+- Quitting installs a staged update only when no run is active; otherwise it just quits and the update installs on a later quit.
+- Dev preview: `SPARK_UPDATE_PREVIEW=available` (or `ready`) `pnpm desktop:dev` fakes version `9.9.9-preview` in the dev app so the blob and Settings can be seen and screenshotted; it never installs anything.
 - On the first launch of a new version with pending migrations, before the API starts: back up (pg_dump 17 if found next to the app in `postgres-tools/bin` or from Homebrew `postgresql@17`; otherwise stop Postgres and copy the data folder), keep the newest 3 `update-*` backups in `backups/`, run the migrations once in a utility process, and record the version in `migrated-version.json`. A failure restores the backup and stops with a dialog.
 
 ## Local testing
@@ -94,7 +96,7 @@ Last run on an Intel Mac without a Developer ID (2026-10-01, x64, ad-hoc signed,
 | 0.0.3 with a failing migration restores the backup, writes the instructions, skips 0.0.3          | verified                                                                                                                                                                         |
 | 0.0.2 opens the restored data again; at most 3 update backups kept                                | verified                                                                                                                                                                         |
 
-Also checked by hand: a 0.0.2 install pointed at a feed with 0.0.3 downloads it and the window shows the Update chip state; the chip, toast and Settings › Updates are covered by `tests/browser/desktop-updates.spec.ts` with a fake updater. The cold-copy backup path is covered by unit tests, not by the packaged run (this machine has pg_dump 17).
+Also checked by hand: a 0.0.2 install pointed at a feed with 0.0.3 downloads it to the ready state; the blob states (available → downloading → ready → waiting → restarting), the toast and Settings › Updates are covered by `tests/browser/desktop-updates.spec.ts` with a fake updater (`SPARK_SHOTS_DIR=<dir>` saves a screenshot per state). The cold-copy backup path is covered by unit tests, not by the packaged run (this machine has pg_dump 17).
 
 ## Known gaps
 

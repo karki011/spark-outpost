@@ -1,18 +1,15 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
+import type { InstallResult } from '@spark-outpost/contracts';
 import { sparkDesktop } from './desktop-bridge.ts';
 
-export function useInstallUpdate() {
-  const [blocked, setBlocked] = useState<string | null>(null);
-  const [starting, setStarting] = useState(false);
-  const install = useCallback(async () => {
+export function useInstallUpdate(): () => Promise<InstallResult | null> {
+  return useCallback(async () => {
     const updates = sparkDesktop()?.updates;
-    if (!updates) return null;
-    setStarting(true);
-    const result = await updates.install();
-    setStarting(false);
-    const reason = result.started ? null : result.reason;
-    setBlocked(reason);
-    return reason;
+    return updates ? updates.install() : null;
   }, []);
-  return { install, blocked, starting };
+}
+
+export function installMessage(result: InstallResult | null): string | null {
+  if (!result) return null;
+  return result.status === 'waiting' || result.status === 'unavailable' ? result.reason : null;
 }

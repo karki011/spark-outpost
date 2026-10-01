@@ -1,24 +1,58 @@
-.upd-chip {
-  color: var(--accent-text);
+.upd-blob {
+  color: var(--muted);
 }
 
-.upd-chip-icon {
-  width: 28px;
-  height: 28px;
+.upd-blob-art {
+  position: relative;
   display: grid;
   place-items: center;
-  border-radius: 46% 54% 50% 50% / 56% 56% 44% 44%;
-  background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
-  transition: transform 0.2s var(--out);
+  width: 32px;
+  height: 30px;
 }
 
-.upd-chip:hover .upd-chip-icon {
-  transform: translateY(-2px);
+.upd-blob .scout {
+  pointer-events: none;
 }
 
-.upd-chip:disabled {
-  opacity: 0.6;
+.upd-blob.nudge .scout .sc-hop {
+  animation: sc-hop 0.55s var(--spring) 2;
+}
+
+.upd-blob-dot {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--rail);
+}
+
+.upd-blob-bar {
+  width: 30px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--raise);
+}
+
+.upd-blob-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.25s var(--out);
+}
+
+.upd-blob.downloading,
+.upd-blob.installing {
+  color: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.upd-blob:disabled {
+  cursor: progress;
 }
 
 .upd-toasts {
