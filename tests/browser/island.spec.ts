@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { openTestDb, resetTestDatabase } from './database.ts';
@@ -227,4 +228,35 @@ test('active chats peek out beside Scout and hide while one is open', async ({ p
   await first.focus();
   await page.keyboard.press('ArrowRight');
   await expect(row.getByRole('button', { name: /^Chat: / }).nth(1)).toBeFocused();
+});
+
+test('the island has no serious accessibility problems in its main views', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await seedChats([
+    {
+      title: 'Deploy the site',
+      run: { status: 'awaiting_approval' },
+      approval: { kind: 'execute', title: 'Deploy', command: 'pnpm deploy' },
+    },
+  ]);
+  await openIsland(page);
+  await expect(island(page)).toHaveAttribute('data-view', 'card');
+  const views: string[] = [];
+  const check = async (name: string) => {
+    await page.waitForTimeout(700);
+    const results = await new AxeBuilder({ page }).include('.isl-root').analyze();
+    for (const violation of results.violations) {
+      if (violation.impact === 'serious' || violation.impact === 'critical') {
+        views.push(`${name}: ${violation.id} ${violation.nodes.map((node) => `${node.target.join(' ')} ${node.any.map((check) => check.message).join(';')}`).join(' | ')}`);
+      }
+    }
+  };
+  await check('card');
+  await page.keyboard.press('Alt+Shift+Space');
+  await check('sessions');
+  await page.keyboard.press('Meta+1');
+  await check('quick chat');
+  await page.keyboard.press('Meta+3');
+  await check('ask');
+  expect(views).toEqual([]);
 });
