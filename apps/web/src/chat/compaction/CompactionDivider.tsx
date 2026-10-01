@@ -15,16 +15,16 @@ export function CompactionDivider({ compaction, onOpenChat }: CompactionDividerP
   const tokens = tokensLine(compaction);
   const from = compaction.fromConversationId;
   return (
-    <div className="cmp" role="group" aria-label={compactionTitle(compaction)}>
-      <div className="cmp-line">
-        <span className="cmp-rule" aria-hidden="true" />
-        <span className="cmp-label">
+    <div className="compact-divider" role="group" aria-label={compactionTitle(compaction)}>
+      <div className="compact-line">
+        <span className="compact-rule" aria-hidden="true" />
+        <span className="compact-label">
           <b>{compactionTitle(compaction)}</b>
-          {tokens && <span className="cmp-tokens">{tokens}</span>}
+          {tokens && <span className="compact-tokens">{tokens}</span>}
         </span>
-        <span className="cmp-rule" aria-hidden="true" />
+        <span className="compact-rule" aria-hidden="true" />
       </div>
-      <div className="cmp-acts">
+      <div className="compact-acts">
         {compaction.summary && (
           <button
             type="button"
@@ -43,7 +43,7 @@ export function CompactionDivider({ compaction, onOpenChat }: CompactionDividerP
         )}
       </div>
       {compaction.summary && (
-        <div id={summaryId} className="cmp-summary" hidden={!open}>
+        <div id={summaryId} className="compact-summary" hidden={!open}>
           {open && <Markdown text={compaction.summary} />}
         </div>
       )}
@@ -58,16 +58,16 @@ interface ContinuedDividerProps {
 
 export function ContinuedDivider({ continuation, onOpenChat }: ContinuedDividerProps) {
   return (
-    <div className="cmp" role="group" aria-label="Continued in a fresh chat">
-      <div className="cmp-line">
-        <span className="cmp-rule" aria-hidden="true" />
-        <span className="cmp-label">
+    <div className="compact-divider" role="group" aria-label="Continued in a fresh chat">
+      <div className="compact-line">
+        <span className="compact-rule" aria-hidden="true" />
+        <span className="compact-label">
           <b>Continued in a fresh chat</b>
-          <span className="cmp-tokens">{continuation.title}</span>
+          <span className="compact-tokens">{continuation.title}</span>
         </span>
-        <span className="cmp-rule" aria-hidden="true" />
+        <span className="compact-rule" aria-hidden="true" />
       </div>
-      <div className="cmp-acts">
+      <div className="compact-acts">
         <button
           type="button"
           className="btn ghost sm"
