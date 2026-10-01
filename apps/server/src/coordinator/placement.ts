@@ -124,17 +124,29 @@ function blockerOf(piece: PlaceablePiece): string | null {
   return null;
 }
 
+export function listIsolation(
+  pieces: readonly PlaceablePiece[],
+  facts: PlacementFacts,
+): string | null {
+  if (facts.repoBusy) return 'another task is working in this repo';
+  if (facts.skipsGate) return "the agent's mode skips the approval gate";
+  if (facts.destructive || pieces.some((piece) => piece.destructive)) {
+    return 'the story deletes, migrates or rewrites data';
+  }
+  return null;
+}
+
+export function pieceIsolation(piece: PlaceablePiece, facts: PlacementFacts): string | null {
+  if (isLong(piece, facts)) return `${piece.key} is a long piece`;
+  return blockerOf(piece);
+}
+
 function isolationReason(
   pieces: readonly PlaceablePiece[],
   facts: PlacementFacts,
 ): { reason: string; blockerOnly: boolean } | null {
-  if (facts.repoBusy) return { reason: 'another task is working in this repo', blockerOnly: false };
-  if (facts.skipsGate) {
-    return { reason: "the agent's mode skips the approval gate", blockerOnly: false };
-  }
-  if (facts.destructive || pieces.some((piece) => piece.destructive)) {
-    return { reason: 'the story deletes, migrates or rewrites data', blockerOnly: false };
-  }
+  const whole = listIsolation(pieces, facts);
+  if (whole) return { reason: whole, blockerOnly: false };
   const long = pieces.find((piece) => isLong(piece, facts));
   if (long) return { reason: `${long.key} is a long piece`, blockerOnly: false };
   const blocker = pieces.map(blockerOf).find((reason) => reason !== null);

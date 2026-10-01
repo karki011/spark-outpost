@@ -1,0 +1,206 @@
+import type { AgentPick, JevStatus } from '@spark-outpost/contracts';
+import { selectableModels } from '../advisor/intake-questions.ts';
+import { COORD_POLICY_VERSION } from '../advisor/policy.ts';
+import { insertDecision } from '../persistence/orchestrations.ts';
+import { callJev, type JevCall } from '../orchestration/jev-calls.ts';
+import { builderModels } from '../orchestration/model-floor.ts';
+import type { Session } from '../orchestration/session.ts';
+import { routeCandidates } from '../routing/candidates.ts';
+import { placementFacts } from './assess.ts';
+import { measuredStrength, type AssignFacts } from './assign.ts';
+import type { ListPlace } from './place-list.ts';
+import { inMigrationsFolder, listIsolation, pieceIsolation } from './placement.ts';
+import { factPaths, loadFileFacts } from './piece-facts.ts';
+import {
+  pieceQuestions,
+  readPieceAnswers,
+  type PieceAsk,
+  type RouteOption,
+} from './piece-questions.ts';
+import {
+  routePieceList,
+  type JevOutcome,
+  type PieceRoute,
+  type RoutedPieces,
+  type RouteRules,
+} from './piece-routes.ts';
+import type { CheckedPiece } from './pieces-validate.ts';
+
+export interface PiecePicks extends RoutedPieces {
+  reason: string;
+  notes: Map<string, string | null>;
+}
+
+function offeredRoutes(s: Session, facts: AssignFacts): RouteOption[] {
+  const now = s.route.now ?? new Date();
+  return routeCandidates(s.route.candidates).flatMap((route) => {
+    const candidate = s.route.candidates.find((entry) => entry.provider === route.provider)!;
+    if (facts.unhealthy.has(route.provider)) return [];
+    const floorOk = builderModels(selectableModels(candidate), route.provider, now).some(
+      (model) => model.id === route.model,
+    );
+    if (!floorOk) return [];
+    const passRate = measuredStrength(candidate, route.model) ?? measuredStrength(candidate);
+    return [{ ...route, passRate }];
+  });
+}
+
+function jevFailure(call: JevCall): string | null {
+  if (call.status === 'timed_out') return 'Jev timed out';
+  if (call.status === 'failed') return `Jev failed: ${call.error ?? 'unknown error'}`;
+  return null;
+}
+
+function outcomeOf(call: JevCall | null, ask: PieceAsk, skipped: string | null): JevOutcome {
+  if (!call) return { answers: null, failure: skipped };
+  if (call.status !== 'answered' || !call.response) {
+    return { answers: null, failure: jevFailure(call) };
+  }
+  return { answers: readPieceAnswers(call.response, ask), failure: null };
+}
+
+function providerName(s: Session, provider: string): string {
+  return s.route.candidates.find((entry) => entry.provider === provider)?.name ?? provider;
+}
+
+function pickLabel(s: Session, pick: AgentPick): string {
+  return `${providerName(s, pick.provider)} ${pick.modelLabel ?? pick.model ?? 'default'}`;
+}
+
+function pickNote(s: Session, route: PieceRoute, asked: boolean): string | null {
+  if (!asked || route.place.placement === 'read_only') return null;
+  const { model, place } = route;
+  const placed = place.decidedBy === 'jev' ? ` · ${place.reason}` : '';
+  if (model.decidedBy === 'jev')
+    return `Jev: ${pickLabel(s, model.pick)} · ${model.reason}${placed}`;
+  const overrode = model.jevPick ? ` (Jev picked ${pickLabel(s, model.jevPick)})` : '';
+  return `Rules: ${pickLabel(s, model.pick)} · ${model.reason}${overrode}${placed}`;
+}
+
+function skipReason(s: Session, building: number, routes: readonly RouteOption[]): string | null {
+  if (!s.jev) return null;
+  if (building === 0) return 'no pieces build';
+  if (routes.length === 0) return 'no eligible Builder routes';
+  return null;
+}
+
+function statusOf(s: Session, call: JevCall | null): JevStatus {
+  if (call) return call.status;
+  return s.jev ? 'not_asked' : 'not_connected';
+}
+
+function summaryOf(routed: RoutedPieces, outcome: JevOutcome, call: JevCall | null): string {
+  const byJev = routed.pieces.filter((piece) => piece.model.decidedBy === 'jev').length;
+  const building = routed.pieces.filter((piece) => piece.place.placement !== 'read_only').length;
+  if (!call || !outcome.answers) {
+    return `Piece routes by rules (${outcome.failure ?? 'Jev not connected'})`;
+  }
+  return `Jev picked ${byJev} of ${building} piece routes; the rest by rules or floors`;
+}
+
+async function record(
+  s: Session,
+  routed: RoutedPieces,
+  outcome: JevOutcome,
+  call: JevCall | null,
+  rules: RouteRules<CheckedPiece>,
+): Promise<void> {
+  await insertDecision(s.deps.db, {
+    runId: s.lease.runId,
+    purpose: 'piece_route',
+    childRunId: null,
+    role: 'builder',
+    stepIndex: null,
+    jevStatus: statusOf(s, call),
+    inputTokens: call?.usage?.inputTokens ?? null,
+    costUsd: call?.usage?.costUsd ?? null,
+    policyVersion: COORD_POLICY_VERSION,
+    body: {
+      summary: summaryOf(routed, outcome, call),
+      applied: routed.pieces.some((piece) => piece.model.decidedBy === 'jev') ? 'jev' : 'rules',
+      gate: null,
+      jevError: call?.error ?? outcome.failure,
+      jevModel: call?.model ?? null,
+      latencyMs: call?.latencyMs ?? null,
+      answer: {
+        placement: { rules: rules.placement, applied: routed.placement },
+        routes: rules.routes.map((route) => route.id),
+        pieces: routed.pieces.map((piece) => ({
+          key: piece.key,
+          rulesPick: rules.picks.get(piece.key) ?? null,
+          jevPick: piece.model.jevPick,
+          pick: piece.model.pick,
+          decidedBy: piece.model.decidedBy,
+          reason: piece.model.reason,
+          placement: piece.place,
+          complexity: piece.complexity,
+          stakes: piece.stakes,
+        })),
+      },
+      state: call?.asked?.state ?? null,
+      questions: call?.asked ? Object.keys(call.asked.questions) : null,
+      answers: call?.response?.answers ?? null,
+    },
+  });
+}
+
+function destructive(s: Session) {
+  return (piece: CheckedPiece) =>
+    s.facts.destructive || piece.owned.paths.some((path) => inMigrationsFolder(path));
+}
+
+export async function routePieces(
+  s: Session,
+  pieces: readonly CheckedPiece[],
+  place: ListPlace,
+  rulesPicks: ReadonlyMap<string, AgentPick>,
+  facts: AssignFacts,
+): Promise<PiecePicks> {
+  const placeFacts = await placementFacts(s);
+  const routes = offeredRoutes(s, facts);
+  const isDestructive = destructive(s);
+  const rules: RouteRules<CheckedPiece> = {
+    route: s.route,
+    picks: rulesPicks,
+    routes,
+    placement: place.placement,
+    askPlacement: place.placement !== 'in_order' && !s.deps.forcedPlacement,
+    destructive: isDestructive,
+    listIsolation: listIsolation(pieces, placeFacts),
+    pieceIsolation: (piece) => pieceIsolation(piece, placeFacts),
+  };
+  const building = pieces.filter((piece) => !piece.research);
+  const skipped = skipReason(s, building.length, routes);
+  const root = s.input.projectRoots[0]!;
+  const ask: PieceAsk = {
+    request: s.input.userRequest,
+    pieces: building,
+    facts: new Map(),
+    routes,
+    placement: rules.askPlacement,
+  };
+  let call: JevCall | null = null;
+  if (s.jev && !skipped) {
+    const paths = building.flatMap((piece) => [...piece.owns, ...piece.reads]);
+    ask.facts = await loadFileFacts(s.deps.db, root, paths, s.scanReport?.candidates ?? []);
+    call = await callJev(s.jev, () => pieceQuestions(ask), s.control.signal);
+  }
+  const outcome = outcomeOf(call, ask, skipped);
+  const routed = routePieceList(pieces, rules, outcome, (piece) => factPaths(piece.owns).length);
+  await record(s, routed, outcome, call, rules).catch((error: unknown) =>
+    console.error('Could not record the piece routes', error),
+  );
+  const asked = s.jev !== null;
+  const moved = routed.pieces.filter(
+    (piece) => piece.place.decidedBy === 'jev' && piece.place.placement !== place.placement,
+  );
+  const reason =
+    moved.length > 0
+      ? `${place.reason}; Jev moved ${moved.map((piece) => piece.key).join(', ')}`
+      : place.reason;
+  return {
+    ...routed,
+    reason,
+    notes: new Map(routed.pieces.map((piece) => [piece.key, pickNote(s, piece, asked)])),
+  };
+}

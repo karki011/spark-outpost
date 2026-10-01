@@ -111,6 +111,7 @@ async function moveTo(
     provider: target.provider,
     model: target.model,
     note,
+    pickNote: null,
   });
   return { moved: true, handoff };
 }

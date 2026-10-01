@@ -20,6 +20,7 @@ interface RankAnswer {
 export interface Ranking {
   files: RankedFile[];
   predicted: string[];
+  probabilities: Map<string, number>;
 }
 
 function rankAnswer(call: JevCall, offered: readonly string[]): RankAnswer {
@@ -112,7 +113,11 @@ export async function rankFiles(s: Session, report: ScanReport | null): Promise<
   if (!report || reason) {
     const predicted = predictedFiles(scanOrder);
     await record(s, report, null, predicted, reason);
-    return { files: report?.candidates.slice(0, RANK_PREDICTED_FILES) ?? [], predicted };
+    return {
+      files: report?.candidates.slice(0, RANK_PREDICTED_FILES) ?? [],
+      predicted,
+      probabilities: new Map(),
+    };
   }
   const call = await callJev(
     s.jev,
@@ -123,5 +128,9 @@ export async function rankFiles(s: Session, report: ScanReport | null): Promise<
   const predicted = predictedFiles(answer.order ?? scanOrder);
   await record(s, report, answer, predicted, null);
   const byPath = new Map(report.candidates.map((file) => [file.path, file]));
-  return { files: predicted.map((path) => byPath.get(path)!), predicted };
+  return {
+    files: predicted.map((path) => byPath.get(path)!),
+    predicted,
+    probabilities: new Map(answer.order ? answer.probabilities : []),
+  };
 }

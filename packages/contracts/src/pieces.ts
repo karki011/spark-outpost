@@ -84,6 +84,7 @@ export const taskPieceSchema = z.object({
   landedAt: z.string().nullable(),
   note: z.string().nullable(),
   notesQueued: z.number().int().nonnegative().default(0),
+  pickNote: z.string().nullable().default(null),
 });
 export type TaskPiece = z.infer<typeof taskPieceSchema>;
 
@@ -119,6 +120,7 @@ export interface PieceBoardRow {
   costUsd: number | null;
   notes: string | null;
   note: string | null;
+  pick: string | null;
   folded: boolean;
 }
 
@@ -188,6 +190,7 @@ export function pieceBoard(list: Pick<PieceList, 'pieces'>): PieceBoardRow[] {
     costUsd: piece.costUsd,
     notes: notesLabel(piece.notesQueued),
     note: piece.status === 'failed' || piece.status === 'skipped' ? piece.note : null,
+    pick: piece.pickNote,
     folded: piece.status === 'landed',
   }));
 }

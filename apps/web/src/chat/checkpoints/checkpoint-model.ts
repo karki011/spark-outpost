@@ -38,6 +38,7 @@ const TITLES: Record<CheckpointPayload['kind'], string> = {
   verify: 'Jev could not verify the change',
   ownership: 'A Builder changed a file outside its piece',
   pieces: 'Build in pieces?',
+  pr_split: 'One PR or separate PRs?',
 };
 
 export const SPARK_QUESTIONS_TITLE = 'Spark has a few questions';
@@ -93,6 +94,7 @@ const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
   verify: 'Finish, retry one tier up, or stop',
   ownership: 'Keep the file in the piece, revert it, or stop',
   pieces: 'Build it, build in order, revise, or stop',
+  pr_split: 'Choose one PR or separate PRs',
 };
 
 export function waitingLabel(payload: CheckpointPayload): string {
@@ -178,6 +180,7 @@ const AUTO_LABELS: Record<string, string> = {
   [CHECKPOINT_OPTION.letContinue]: 'Let it continue',
   [CHECKPOINT_OPTION.stopReport]: 'Stop and report',
   [CHECKPOINT_OPTION.finishUnverified]: 'Finish',
+  [CHECKPOINT_OPTION.onePr]: 'One PR',
 };
 
 const COUNTDOWNS: Record<string, string> = {

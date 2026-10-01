@@ -270,6 +270,22 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
           </Action>
         </div>
       );
+    case 'pr_split':
+      return (
+        <div className="appr-acts">
+          {approval.options.map((option, index) => (
+            <Action
+              key={option.optionId}
+              id={option.optionId}
+              approval={approval}
+              decide={decide}
+              kind={index === 0 ? 'primary' : 'line'}
+            >
+              {option.name}
+            </Action>
+          ))}
+        </div>
+      );
     case 'budget':
       return (
         <div className="appr-acts">

@@ -70,13 +70,33 @@ function verdictFor(task: string): string {
   return 'supported';
 }
 
+function spread(offered: readonly string[], value: string, confidence: number): Answer {
+  const rest = offered.filter((option) => option !== value);
+  const probabilities = Object.fromEntries([
+    [value, 0.9],
+    ...rest.map((option) => [option, 0.1 / rest.length]),
+  ]);
+  return { type: 'choice', choice: value, probabilities, confidence };
+}
+
+function pieceAnswer(key: string, question: StubQuestion): Answer | null {
+  if (question.type === 'score') return { type: 'score', score: 1, confidence: 0.9 };
+  const offered = options(question);
+  if (key.endsWith('_builder')) {
+    const route = offered.find((option) => option !== 'uncertain')!;
+    return spread(offered, route, JEV_STUB_CONFIDENCE);
+  }
+  if (key.endsWith('_placement')) return spread(offered, offered[0]!, 0.6);
+  return null;
+}
+
 export function jevAnswers(request: StubRequest): Record<string, Answer> {
   const task = String(request.state.task ?? '');
   if (request.questions.intent) return intakeAnswers(request, task);
   const answers = Object.fromEntries(
-    Object.keys(request.questions).map((key) => [
+    Object.entries(request.questions).map(([key, question]) => [
       key,
-      noul(key.startsWith('finding_') ? 0.5 : 0.05),
+      pieceAnswer(key, question) ?? noul(key.startsWith('finding_') ? 0.5 : 0.05),
     ]),
   );
   if (request.questions.verdict) answers.verdict = choice(verdictFor(task), 0.95);

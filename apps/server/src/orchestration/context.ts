@@ -32,6 +32,7 @@ export interface BuilderContext {
   checkCommands?: readonly string[];
   agreedPlan?: string | null;
   projectNote?: string | null;
+  likelyFiles?: string | null;
 }
 
 export interface PieceReview {
@@ -149,6 +150,7 @@ export function builderPrompt(context: BuilderContext): string {
     section('Request', cap(context.request, REQUEST_LIMIT)),
   ];
   if (context.agreedPlan) parts.push(context.agreedPlan);
+  if (context.likelyFiles) parts.push(context.likelyFiles);
   if (context.projectNote) parts.push(context.projectNote);
   if (context.history.length > 0) {
     parts.push(section('Earlier conversation', historyLines(context.history)));

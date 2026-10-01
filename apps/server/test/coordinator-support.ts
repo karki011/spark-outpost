@@ -6,6 +6,7 @@ import {
   type ProviderId,
 } from '@spark-outpost/contracts';
 import { sendUserMessage } from '../src/persistence/conversations.ts';
+import type { OrchestratorDeps } from '../src/orchestration/session.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { linkedConversation } from './approval-support.ts';
@@ -67,6 +68,8 @@ export interface PiecesStart {
   level?: InvolvementLevel;
   provider?: ProviderId;
   agentEnv?: Record<string, string>;
+  jev?: typeof fetch;
+  codeScan?: OrchestratorDeps['codeScan'];
 }
 
 const MODELS: Record<ProviderId, string> = { claude: 'sonnet', codex: 'gpt-6-sol', zai: 'glm' };
@@ -75,11 +78,12 @@ export async function startPieces(
   t: TestDb,
   root: string,
   tags: string,
-  { level = 'hands-off', provider = 'claude', agentEnv }: PiecesStart = {},
+  { level = 'hands-off', provider = 'claude', agentEnv, jev, codeScan }: PiecesStart = {},
 ): Promise<{ harness: Harness; conversationId: string; runId: string }> {
-  const harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), {
+  const harness = startOrchestrator(t, jev ?? jevFetch({ calls: [], scenario: NORMAL }), {
     coordinator: 'in_order',
     ...(agentEnv ? { agentEnv } : {}),
+    ...(codeScan ? { codeScan } : {}),
   });
   const scenario = withTag(NORMAL, `Split this up. ${tags}`);
   const { conversationId } = await linkedConversation(t, root);

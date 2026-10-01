@@ -53,6 +53,7 @@ function PieceRow({ row, crew }: { row: PieceBoardRow; crew: readonly CrewMember
         <span className="piece-place">{row.placement}</span>
         {shown.length > 0 && <span>{shown.join(' · ')}</span>}
       </span>
+      {row.pick && !row.folded && <span className="piece-pick">{row.pick}</span>}
       {row.note && <span className="piece-note">{row.note}</span>}
     </li>
   );

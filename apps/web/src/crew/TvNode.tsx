@@ -68,7 +68,7 @@ function PieceLines({ tag }: { tag: PieceTag }) {
           {tag.state}
         </span>
       </small>
-      <small className="tv-place" title={tag.place}>
+      <small className="tv-place" title={tag.pick ? `${tag.place} · ${tag.pick}` : tag.place}>
         {tag.place}
       </small>
     </>

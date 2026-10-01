@@ -39,14 +39,24 @@ function candidateFor(facts: AssignFacts, provider: string): AdvisorCandidate | 
   return facts.route.candidates.find((candidate) => candidate.provider === provider);
 }
 
-export function builderStrength(candidate: AdvisorCandidate): number {
+export function measuredStrength(
+  candidate: AdvisorCandidate,
+  model: string | null = null,
+): number | null {
   const stats = (candidate.stats ?? []).filter(
-    (stat) => stat.role === 'builder' && stat.provider === candidate.provider,
+    (stat) =>
+      stat.role === 'builder' &&
+      stat.provider === candidate.provider &&
+      (model === null || stat.agentModel === model),
   );
-  if (stats.length === 0) return UNKNOWN_STRENGTH;
+  if (stats.length === 0) return null;
   const passed = stats.reduce((sum, stat) => sum + stat.passed, 0);
   const runs = stats.reduce((sum, stat) => sum + stat.n, 0);
   return (passed + 1) / (runs + 2);
+}
+
+export function builderStrength(candidate: AdvisorCandidate): number {
+  return measuredStrength(candidate) ?? UNKNOWN_STRENGTH;
 }
 
 function otherProviderPick(facts: AssignFacts, candidate: AdvisorCandidate): AgentPick | null {

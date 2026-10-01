@@ -68,7 +68,7 @@ export function ratingQuestions(): Record<string, Record<string, unknown>> {
   );
 }
 
-function validScore(response: SystemOneResponse, key: string) {
+export function validScore(response: SystemOneResponse, key: string) {
   const answer = response.answers[key];
   if (answer?.type !== 'score') return null;
   const { score, confidence } = answer;

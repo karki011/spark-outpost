@@ -209,6 +209,27 @@ export function piecesCard(question: string, reason: string, parallel: boolean):
   };
 }
 
+const PR_SPLIT_TITLE = 'One PR or separate PRs?';
+
+export function prSplitCard(pieces: readonly string[]): CheckpointCard {
+  return {
+    kind: 'pr_split',
+    title: PR_SPLIT_TITLE,
+    payload: payload({
+      kind: 'pr_split',
+      question: `${pieces.join(', ')} were built in their own worktrees. Ship them in one draft PR, or one draft PR each?`,
+      reason: 'Pieces built in the shared tree always go in the main PR.',
+      autoOption: CHECKPOINT_OPTION.onePr,
+    }),
+    options: [
+      allow(CHECKPOINT_OPTION.onePr, 'One PR'),
+      allow(CHECKPOINT_OPTION.separatePrs, 'Separate PRs'),
+      allow(CHECKPOINT_OPTION.alwaysOnePr, 'Always one PR here'),
+      allow(CHECKPOINT_OPTION.alwaysSeparatePrs, 'Always separate PRs here'),
+    ],
+  };
+}
+
 export function mergeConflictCard(conflict: MergeConflict, reason: string): CheckpointCard {
   const { first, second } = conflict;
   const question = 'Which version should be kept?';

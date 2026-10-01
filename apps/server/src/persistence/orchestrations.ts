@@ -208,7 +208,8 @@ export interface NewDecision {
     | 'route_shadow'
     | 'plan_agreed'
     | 'parallel'
-    | 'clarify';
+    | 'clarify'
+    | 'piece_route';
   childRunId: string | null;
   role: AgentRole | null;
   stepIndex: number | null;
@@ -304,7 +305,8 @@ async function assembleOrchestrations(db: Queryable, rows: readonly Orchestratio
     ),
     db.query<DecisionRow & { run_id: string }>(
       `SELECT * FROM run_advice WHERE run_id = ANY($1::uuid[])
-       AND purpose NOT IN ('scan', 'rank', 'route_shadow', 'plan_agreed', 'clarify')
+       AND purpose NOT IN ('scan', 'rank', 'route_shadow', 'plan_agreed', 'clarify',
+         'piece_route')
        AND NOT (purpose = 'parallel' AND COALESCE(body->'answer'->>'shadow', '') = 'true')
        ORDER BY created_at`,
       [ids],

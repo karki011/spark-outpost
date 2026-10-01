@@ -69,13 +69,13 @@ test('steering a running piece from the chat queues a note it reads at its next 
   await tv.getByRole('radio', { name: 'Stage' }).click();
   await expect(tv.locator('.tv-n.jev')).toContainText('Coordinator');
   const spoke = (key: string) => tv.locator(`.tv-n[data-piece="${key}"]`);
-  await expect(spoke('P1')).toHaveAttribute('aria-label', /P1 Store, in order, landed\./);
+  await expect(spoke('P1')).toHaveAttribute('aria-label', /P1 Store, in order, landed, Jev: .+\./);
   await expect(spoke('P2')).toHaveAttribute(
     'aria-label',
-    /^Rivet, P2 API, in order, running, 1 note queued\./,
+    /^Rivet, P2 API, in order, running, 1 note queued, Jev: .+\./,
   );
   await expect(spoke('P2').locator('.tv-notes')).toHaveText('1');
-  await expect(spoke('P3')).toHaveAttribute('aria-label', /P3 View, in order, waiting\./);
+  await expect(spoke('P3')).toHaveAttribute('aria-label', /P3 View, in order, waiting, Jev: .+\./);
   await expect(spoke('P3').locator('.piece-state')).toHaveText('waiting');
   await expect(spoke('P3')).toContainText('in order');
   await tv.getByRole('radio', { name: 'List' }).click();
