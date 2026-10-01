@@ -67,6 +67,7 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(dialog(page).locator('.onb-foot .why')).toBeEmpty();
 
   const model = claudeCard(page).getByRole('button', { name: 'Claude model' });
+  await expect(model).toHaveText('Claude Opus 5.5');
   await model.click();
   await page.getByRole('menuitemradio', { name: /Claude Sonnet 5/ }).click();
   await expect(model).toHaveText('Claude Sonnet 5');
@@ -77,15 +78,19 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(effort).toHaveText('High');
   const mode = claudeCard(page).getByRole('button', { name: 'Claude default mode' });
   await expect(claudeCard(page).getByRole('button', { name: /permissions/i })).toHaveCount(0);
-  await expect(mode).toHaveText('Manual (default)');
+  await expect(mode).toHaveText('Auto (default)');
   await mode.click();
   await expect(page.getByRole('menuitemradio')).toHaveText([
-    /^Manual \(default\)Always ask before making changes/,
+    /^ManualAlways ask before making changes/,
     /^Accept edits/,
     /^Plan/,
-    /^Auto/,
+    /^Auto \(default\)/,
     /^Bypass permissions/,
   ]);
+  await expect(page.getByRole('menuitemradio', { name: /^Auto/ })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
   await page.getByRole('menuitemradio', { name: /^Accept edits/ }).click();
   await expect(mode).toHaveText('Accept edits');
   await expect(claudeCard(page).getByRole('button', { name: /harness autonomy/ })).toHaveCount(0);

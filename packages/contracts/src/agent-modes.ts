@@ -70,7 +70,7 @@ export interface ProviderModeTable {
 }
 
 const CLAUDE_MODES: ProviderModeTable = {
-  defaultMode: 'default',
+  defaultMode: 'auto',
   readOnlyMode: 'plan',
   askingMode: 'default',
   postures: {
@@ -84,6 +84,8 @@ const CLAUDE_MODES: ProviderModeTable = {
   gatesEveryMode: true,
   worktreeOnly: [],
 };
+
+const ZAI_MODES: ProviderModeTable = { ...CLAUDE_MODES, defaultMode: 'default' };
 
 const CODEX_MODES: ProviderModeTable = {
   defaultMode: 'agent',
@@ -101,7 +103,7 @@ const CODEX_MODES: ProviderModeTable = {
 
 const PROVIDER_MODES: Readonly<Record<string, ProviderModeTable>> = {
   claude: CLAUDE_MODES,
-  zai: CLAUDE_MODES,
+  zai: ZAI_MODES,
   codex: CODEX_MODES,
 };
 

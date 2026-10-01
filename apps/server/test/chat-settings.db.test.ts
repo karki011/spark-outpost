@@ -70,7 +70,7 @@ describe('chat settings', () => {
       model: null,
       effort: 'medium',
       permission: 'do',
-      agentMode: 'default',
+      agentMode: 'auto',
       level: 'hands-off',
       options: {},
       routing: 'pinned',
@@ -233,7 +233,7 @@ describe('chat settings', () => {
     }>('SELECT id, agent_mode, requested_mode FROM runs WHERE conversation_id = $1', [id]);
     const byId = new Map(rows.map((row) => [row.id, row]));
     expect(byId.get(first.body.run.id)).toMatchObject({
-      agent_mode: 'default',
+      agent_mode: 'auto',
       requested_mode: 'acceptEdits',
     });
     expect(byId.get(second.body.run.id)).toMatchObject({

@@ -109,7 +109,7 @@ describe('API key verification', () => {
       detail: 'sk-ant-…4f2a',
       model: 'claude-opus-5-5',
       permission: 'do',
-      agentMode: 'default',
+      agentMode: 'auto',
       effort: 'medium',
     });
     expect(JSON.stringify(body)).not.toContain(VALID_CLAUDE_KEY);
