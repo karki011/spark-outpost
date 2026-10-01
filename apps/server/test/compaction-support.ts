@@ -81,12 +81,7 @@ export async function newChat(h: CompactionHarness, level: InvolvementLevel): Pr
 }
 
 export async function send(h: CompactionHarness, conversationId: string, content: string) {
-  const sent = await sendUserMessage(
-    h.t.db,
-    conversationId,
-    { id: randomUUID(), content },
-    TARGET,
-  );
+  const sent = await sendUserMessage(h.t.db, conversationId, { id: randomUUID(), content }, TARGET);
   h.worker.wake();
   return sent.run.id;
 }

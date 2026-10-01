@@ -32,9 +32,7 @@ export interface BeforeTurnDeps extends TurnDeps {
 }
 
 export type BeforeTurn =
-  | { kind: 'continue'; input: RunInput }
-  | { kind: 'moved'; chat: FreshChat }
-  | { kind: 'stopped' };
+  { kind: 'continue'; input: RunInput } | { kind: 'moved'; chat: FreshChat } | { kind: 'stopped' };
 
 interface Candidate extends CompactTarget {
   reading: ContextReading;

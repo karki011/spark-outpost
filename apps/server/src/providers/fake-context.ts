@@ -7,7 +7,8 @@ const NO_COMPACT_TRIGGER = '#nocompact';
 export const FAKE_CONTEXT_SIZE = 200_000;
 const RESTING_PERCENT = 6;
 const COMPACTED_PERCENT = 8;
-export const FAKE_COMPACT_REPLY = 'Compacted the conversation: kept the requests, decisions and open work.';
+export const FAKE_COMPACT_REPLY =
+  'Compacted the conversation: kept the requests, decisions and open work.';
 
 type Usage = Extract<ProviderOutput, { kind: 'usage' }>;
 

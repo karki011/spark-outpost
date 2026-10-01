@@ -12,6 +12,7 @@ import { attentionTool } from './tools/attention-tool.ts';
 import { auditTool } from './tools/audit-tool.ts';
 import { guideTool } from './tools/guide-tool.ts';
 import { chatTools } from './tools/chat-tools.ts';
+import { historyTool } from './tools/history-tool.ts';
 import { githubTools } from './tools/github-tools.ts';
 import { prFollowUpTool } from './tools/pr-follow-up-tool.ts';
 import { projectTools } from './tools/project-tools.ts';
@@ -28,6 +29,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   ...setupTools,
   ...projectTools,
   ...chatTools,
+  historyTool,
   attentionTool,
   runTool,
   taskTool,
@@ -44,7 +46,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
 ];
 
 const INSTRUCTIONS =
-  'Tools about Spark Outpost itself, the app running this session: what needs the user, chats, live runs (crew, pieces, Jev decisions), plans and files changed, audit, spend, analytics and outcomes, model cards, providers, connectors, projects and the Map, terminals, tickets, pull requests and the follow-up on them, activity, the brief, settings and a guide to how Spark works (spark_guide section spark-tools says which tool answers what). The read tools never change anything. The action tools (create, comment on, move or assign a ticket; open a PR; request a PR follow-up round) only propose: the user confirms each one on a card before Spark does it. Results are JSON, paged and redacted.';
+  'Tools about Spark Outpost itself, the app running this session: what needs the user, chats and their full history (including turns compacted out of context), live runs (crew, pieces, Jev decisions), plans and files changed, audit, spend, analytics and outcomes, model cards, providers, connectors, projects and the Map, terminals, tickets, pull requests and the follow-up on them, activity, the brief, settings and a guide to how Spark works (spark_guide section spark-tools says which tool answers what). The read tools never change anything. The action tools (create, comment on, move or assign a ticket; open a PR; request a PR follow-up round) only propose: the user confirms each one on a card before Spark does it. Results are JSON, paged and redacted.';
 
 const READ_ONLY = {
   readOnlyHint: true,

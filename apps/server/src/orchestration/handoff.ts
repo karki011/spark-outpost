@@ -129,7 +129,9 @@ function requestsText(history: readonly HistoryTurn[]): string {
   const shown = asked.slice(-CHAT_REQUESTS).map((turn) => cap(turn.content, CHAT_REQUEST_LIMIT));
   const dropped = asked.length - shown.length;
   const lines = shown.map((request, index) => `${index + 1 + dropped}. ${request}`);
-  return dropped > 0 ? [`(${dropped} earlier requests not listed)`, ...lines].join('\n') : lines.join('\n');
+  return dropped > 0
+    ? [`(${dropped} earlier requests not listed)`, ...lines].join('\n')
+    : lines.join('\n');
 }
 
 export function chatSummaryPrompt(context: ChatSummaryContext): string {
