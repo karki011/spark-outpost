@@ -29,6 +29,13 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     drag: (phase: DragPhase, x: number, y: number) => ipcRenderer.send(IPC.islandDrag, phase, x, y),
     openChat: (id: string | null) => ipcRenderer.send(IPC.islandOpenChat, id),
   },
+  updates: {
+    get: () => ipcRenderer.invoke(IPC.updatesGet),
+    check: () => ipcRenderer.invoke(IPC.updatesCheck),
+    setChannel: (channel: string) => ipcRenderer.invoke(IPC.updatesSetChannel, channel),
+    install: () => ipcRenderer.invoke(IPC.updatesInstall),
+    onChange: (callback: (status: unknown) => void) => listen(IPC.updatesChanged, callback),
+  },
   onOpenChat: (callback: (id: string) => void) => {
     const take = () =>
       void ipcRenderer.invoke(IPC.pendingChat).then((id: unknown) => {

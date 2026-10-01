@@ -2,7 +2,6 @@ import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { app, BrowserWindow, dialog, shell } from 'electron';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
-import { apiOrigin } from './api-token.ts';
 import { waitForApi } from './api-ready.ts';
 import { channelConfig, channelPaths, resolveChannel } from './channel.ts';
 import { settingsFile } from './companion-settings.ts';
@@ -23,7 +22,11 @@ import {
   previousVersionInstructions,
 } from './update-failure.ts';
 import { readFeedUrl, updateConfigFile } from './update-feed.ts';
-import { guardMigrations } from './update-migration.ts';
+import { guardMigrations, readSkippedVersion, skippedVersionFile } from './update-migration.ts';
+import { startUpdater, type Updater } from './updater.ts';
+import { fetchActiveRuns } from './active-runs.ts';
+import { apiOrigin, targetsApi } from './api-token.ts';
+import { IPC } from './ipc-channels.ts';
 import { attachApiToken, openWindow } from './window.ts';
 
 const config = channelConfig(resolveChannel(app.isPackaged));
@@ -48,6 +51,7 @@ let window: BrowserWindow | null = null;
 let origin: string | null = null;
 let companionHost: CompanionHost | null = null;
 let failureHelp: string | null = null;
+let updater: Updater | null = null;
 
 function log(source: string) {
   return (line: string) => console.log(`[${source}] ${line}`);
@@ -79,6 +83,8 @@ async function stopEverything(): Promise<void> {
 }
 
 function closeWindows(): void {
+  updater?.dispose();
+  updater = null;
   companionHost?.dispose();
   companionHost = null;
   for (const open of BrowserWindow.getAllWindows()) open.destroy();
@@ -208,6 +214,22 @@ async function launch(): Promise<void> {
   attachApiToken(apiUrl, token);
   origin = apiUrl;
   showSpark();
+  updater = await startUpdater({
+    enabled: config.autoUpdate,
+    version: app.getVersion(),
+    userData: paths.userData,
+    feedUrl: await readFeedUrl(updateConfigFile(process.resourcesPath)),
+    skippedVersion: await readSkippedVersion(skippedVersionFile(paths.userData)),
+    activeRuns: () => fetchActiveRuns(apiUrl, token),
+    trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
+    broadcast: (status) => {
+      for (const open of BrowserWindow.getAllWindows()) {
+        if (!open.isDestroyed()) open.webContents.send(IPC.updatesChanged, status);
+      }
+    },
+    quit: () => shutdown.quit(),
+    log: log('updates'),
+  });
   companionHost = await startCompanionHost({
     appName: config.appName,
     origin: apiUrl,
@@ -245,6 +267,7 @@ if (!app.requestSingleInstanceLock()) {
   for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => app.quit());
   app.on('before-quit', (event) => {
     event.preventDefault();
+    if (updater?.takeOverQuit()) return;
     shutdown.quit();
   });
   app

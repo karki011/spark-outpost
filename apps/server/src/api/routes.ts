@@ -5,6 +5,7 @@ import {
   PERMISSION_DO,
   createConversationRequestSchema,
   sendMessageRequestSchema,
+  type ActiveRuns,
 } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import {
@@ -17,7 +18,7 @@ import {
 } from '../persistence/conversations.ts';
 import { ConversationBusyError } from '../persistence/conversation-actions.ts';
 import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
-import { getRun, requestCancel } from '../persistence/runs.ts';
+import { countActiveRuns, getRun, requestCancel } from '../persistence/runs.ts';
 import { loadOrchestration } from '../persistence/orchestrations.ts';
 import { advisorUsageSummary } from '../persistence/advice.ts';
 import { usageSummary } from '../persistence/usage.ts';
@@ -104,6 +105,11 @@ export function apiRoutes(deps: RouteDeps): Router {
       categoryUsage(db, workspaceId),
     ]);
     res.json({ ...summary, advisors, byCategory });
+  });
+
+  router.get('/runs/active', async (_req, res) => {
+    const activeRuns: ActiveRuns = { activeRuns: await countActiveRuns(db) };
+    res.json(activeRuns);
   });
 
   router.get('/runs/:id', async (req, res) => {
