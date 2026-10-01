@@ -146,6 +146,20 @@ describe('the final reply', () => {
     expect(text).toBe('Built it\n\nAI review by critic label: concerns.\n- Missing test');
   });
 
+  it('leads a split run with the piece summary instead of the last Builder', () => {
+    const text = finalText(
+      [result('builder', 'Fixed the limit: 0 bug'), result('critic', 'Verdict: looks good')],
+      'looks_good',
+      [],
+      false,
+      [],
+      'Built in 2 pieces:\n- P1 · CSV\n- P2 · Limiter',
+    );
+    expect(text).toBe(
+      'Built in 2 pieces:\n- P1 · CSV\n- P2 · Limiter\n\nAI review by critic label: looks good.',
+    );
+  });
+
   it('answers a review-only request with the Critic’s own findings (dev-day s07)', () => {
     const review =
       'Findings:\n- `plural()` now says "1 runs" is fine but returns the singular for 0\n- `median()` sorts in place\nVerdict: concerns';
