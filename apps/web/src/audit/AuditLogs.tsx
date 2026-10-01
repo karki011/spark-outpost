@@ -17,7 +17,7 @@ const DIRECTIONS: { id: ProtocolDirection | 'all'; label: string }[] = [
   { id: 'all', label: 'All entries' },
   { id: 'to_agent', label: 'To agent' },
   { id: 'from_agent', label: 'From agent' },
-  { id: 'harness', label: 'Harness' },
+  { id: 'harness', label: 'Spark' },
 ];
 
 function Json({ value }: { value: unknown }) {
@@ -45,7 +45,7 @@ const DIRECTION_ARROWS: Record<ProtocolLogEntry['direction'], string> = {
 const DIRECTION_TITLES: Record<ProtocolLogEntry['direction'], string> = {
   to_agent: 'To agent',
   from_agent: 'From agent',
-  harness: 'Harness',
+  harness: 'Spark',
 };
 
 function LogRow({ entry, broken }: { entry: ProtocolLogEntry; broken: boolean }) {

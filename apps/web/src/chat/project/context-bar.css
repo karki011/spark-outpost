@@ -216,3 +216,39 @@
   color: var(--faint);
   transform: rotate(90deg);
 }
+
+.ctx-autonomy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  min-width: 0;
+  margin-left: auto;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: 12px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.ctx-autonomy:hover {
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  color: var(--text);
+}
+.ctx-autonomy svg {
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  color: var(--faint);
+}
+.ctx-autonomy-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ctx-autonomy ~ .ctx-trust,
+.ctx-autonomy ~ .ctx-setup {
+  margin-left: 0;
+}

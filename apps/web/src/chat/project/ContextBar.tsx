@@ -5,6 +5,7 @@ import type { Project } from '@spark-outpost/contracts';
 import { ChevronIcon, FolderIcon } from '../../ui/icons.tsx';
 import type { usePopover } from '../../ui/use-popover.ts';
 import { AgentSetup } from './AgentSetup.tsx';
+import { AutonomyChip, type AutonomyControl } from './AutonomyChip.tsx';
 import { ChatBranch } from './ChatBranch.tsx';
 import { FolderDialog } from './FolderDialog.tsx';
 import { RepoMenu } from './RepoMenu.tsx';
@@ -19,11 +20,12 @@ interface ContextBarProps {
   conversationId: string;
   repos: Project[];
   popover: RepoPopover;
+  autonomy: AutonomyControl | null;
 }
 
 const RECENT_LIMIT = 5;
 
-export function ContextBar({ conversationId, repos, popover }: ContextBarProps) {
+export function ContextBar({ conversationId, repos, popover, autonomy }: ContextBarProps) {
   const { open, toggle, setOpen, anchorRef, panelRef } = popover;
   const [browsing, setBrowsing] = useState(false);
   const projects = useProjects();
@@ -91,6 +93,7 @@ export function ContextBar({ conversationId, repos, popover }: ContextBarProps) 
             checkoutBranch={branch}
           />
         )}
+        {primary && autonomy && <AutonomyChip {...autonomy} />}
         {primary && <AgentSetup key={primary.id} repos={repos} />}
       </div>
       <RepoMenu

@@ -67,13 +67,13 @@ async function doChat(page: Page) {
     'true',
   );
   await pickMode(page, 'Manual');
+  await expect(panel.getByRole('tab', { name: /Permissions/ })).toHaveText(/Manual$/);
   await pickAutonomy(page, 'Review each step');
-  await expect(panel.getByRole('tab', { name: /Permissions/ })).toContainText(
-    'Manual · Review each step',
+  await expect(page.getByRole('button', { name: /^Model and effort/ })).toHaveAccessibleName(
+    /· Manual$/,
   );
-  await expect(page.getByRole('button', { name: /^Model and effort/ })).toContainText(
-    '· Manual · Review each step',
-  );
+  await page.getByRole('button', { name: /^Model and effort/ }).click();
+  await panel.getByRole('tab', { name: /Permissions/ }).click();
   await shot(page, 'level-picker');
   await page.keyboard.press('Escape');
   return page.getByRole('textbox', { name: 'Message' });
@@ -354,11 +354,7 @@ async function askChat(page: Page, autonomy: string) {
   await menu.getByRole('button', { name: /^app/ }).click();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: /^Model and effort/ })).toContainText('Plan');
-  await page.getByRole('button', { name: /^Model and effort/ }).click();
-  const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
-  await panel.getByRole('tab', { name: /Permissions/ }).click();
   await pickAutonomy(page, autonomy);
-  await page.keyboard.press('Escape');
 }
 
 test('asks before a command in an Ask chat at Review each step', async ({ page }) => {

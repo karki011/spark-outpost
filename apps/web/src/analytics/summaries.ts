@@ -11,7 +11,7 @@ import {
 
 export function healthSummary(health: HealthScore): string {
   if (health.score === null) {
-    return 'There are not enough turns with a clear outcome yet to score the harness.';
+    return 'There are not enough turns with a clear outcome yet to score Spark.';
   }
   const scored = health.components.filter((part) => part.score !== null);
   const weakest = [...scored].sort((a, b) => a.score! - b.score!)[0];

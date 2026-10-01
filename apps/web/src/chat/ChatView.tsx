@@ -1,4 +1,5 @@
 import {
+  DEFAULT_INVOLVEMENT_LEVEL,
   EMPTY_CONVERSATION_USAGE,
   type AgentCommand,
   type AnnotationInput,
@@ -27,7 +28,8 @@ import { TerminalDock } from '../terminal/dock/TerminalDock.tsx';
 import { ThemePicker } from '../theme/ThemePicker.tsx';
 import { useTaskPanel } from '../tasks/work-panel-state.ts';
 import { ViewChangesContext } from '../tasks/view-changes.ts';
-import { WorkPanel, type WorkTab } from '../tasks/WorkPanel.tsx';
+import type { WorkTab } from '../tasks/TaskDetails.tsx';
+import { WorkPanel } from '../tasks/WorkPanel.tsx';
 import { WorkPanelToggle } from '../tasks/WorkPanelToggle.tsx';
 import { DropOverlay } from './attachments/DropOverlay.tsx';
 import { useAttachments } from './attachments/use-attachments.ts';
@@ -111,7 +113,10 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const running = activeRun(detail.data);
   const title = detail.data?.conversation.title ?? '';
   const repos = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_REPOS);
-  const panel = useTaskPanel(detail.data?.tasks ?? NO_TASKS);
+  const settings = detail.data?.settings ?? null;
+  const autonomyLevel =
+    repos.length > 0 && settings ? (settings.level ?? DEFAULT_INVOLVEMENT_LEVEL) : null;
+  const panel = useTaskPanel(detail.data?.tasks ?? NO_TASKS, autonomyLevel !== null);
   const crew = conversationCrew(detail.data);
   const orchestration = latestOrchestration(detail.data);
   const steer = useSteer(conversationId, running ? orchestration : null);
@@ -120,6 +125,11 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const taskCrew = task && crewRun && belongsTo(task, crewRun) ? crewRun : null;
   const [auditOpen, setAuditOpen] = useState(false);
   const [panelTab, setPanelTab] = useState<WorkTab>('tasks');
+  const [autonomyRequest, setAutonomyRequest] = useState(0);
+  const openAutonomy = () => {
+    panel.setOpen(true);
+    setAutonomyRequest((request) => request + 1);
+  };
   const viewChanges = task
     ? (taskId?: string) => {
         setPanelTab('changes');
@@ -195,7 +205,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             <Composer
               conversationId={conversationId}
               repos={repos}
-              settings={detail.data?.settings ?? null}
+              settings={settings}
               providers={connected}
               runs={detail.data?.runs ?? []}
               orchestration={orchestration}
@@ -214,6 +224,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               steer={steer}
               {...(openAudit ? { onAudit: openAudit } : {})}
               onStartFresh={() => startFresh.mutate()}
+              autonomy={autonomyLevel ? { level: autonomyLevel, onOpen: openAutonomy } : null}
               agentCommands={commands.data?.commands ?? NO_COMMANDS}
               agentName={providerName(
                 commands.data?.provider ?? detail.data?.settings.provider ?? '',
@@ -222,10 +233,13 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             <TerminalDock chatId={conversationId} />
             <DropOverlay visible={drop.dragging} />
           </main>
-          {task && (
+          {panel.available && (
             <WorkPanel
               conversationId={conversationId}
               task={task}
+              autonomy={
+                autonomyLevel ? { level: autonomyLevel, focusRequest: autonomyRequest } : null
+              }
               open={panel.open}
               wide={panel.wide}
               tab={panelTab}

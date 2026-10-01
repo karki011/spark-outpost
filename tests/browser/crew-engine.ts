@@ -123,11 +123,6 @@ const ACCESS: Record<'claude' | 'codex', Record<Permission, Access>> = {
   },
 };
 
-export function accessLabel(permission: Permission, provider: 'claude' | 'codex' = 'claude') {
-  const { mode, autonomy } = ACCESS[provider][permission];
-  return autonomy ? `${mode} · ${autonomy}` : mode;
-}
-
 export const pickerPanel = (page: Page) =>
   page.getByRole('dialog', { name: 'Model, effort, and permissions' });
 
@@ -140,13 +135,25 @@ export async function pickMode(page: Page, mode: string): Promise<void> {
   );
 }
 
+export const autonomyChip = (page: Page) => page.getByRole('button', { name: /^Spark autonomy: / });
+
+export const workPanel = (page: Page) => page.locator('#work-panel');
+
 export async function pickAutonomy(page: Page, autonomy: string): Promise<void> {
-  const levels = pickerPanel(page).getByRole('radiogroup', { name: 'Harness autonomy' });
-  await levels.getByRole('radio', { name: autonomy, exact: true }).click();
-  await expect(levels.getByRole('radio', { name: autonomy, exact: true })).toHaveAttribute(
-    'aria-checked',
-    'true',
-  );
+  if (await pickerPanel(page).isVisible()) await page.keyboard.press('Escape');
+  await expect(pickerPanel(page)).toBeHidden();
+  const panel = workPanel(page);
+  const wasOpen = await panel.evaluate((element) => element.classList.contains('on'));
+  await autonomyChip(page).click();
+  const levels = panel.getByRole('radiogroup', { name: 'Spark autonomy' });
+  const choice = levels.getByRole('radio', { name: autonomy, exact: true });
+  await choice.click();
+  await expect(choice).toHaveAttribute('aria-checked', 'true');
+  await expect(autonomyChip(page)).toHaveAccessibleName(`Spark autonomy: ${autonomy}`);
+  if (!wasOpen) {
+    await panel.getByRole('button', { name: 'Hide work panel' }).click();
+    await expect(panel).not.toHaveClass(/\bon\b/);
+  }
 }
 
 export async function pickPermission(
@@ -154,14 +161,15 @@ export async function pickPermission(
   permission: Permission,
   provider: 'claude' | 'codex' = 'claude',
 ): Promise<void> {
+  const { mode, autonomy } = ACCESS[provider][permission];
+  if (autonomy) {
+    await pickAutonomy(page, autonomy);
+    await page.getByRole('button', { name: /^Model and effort/ }).click();
+  }
   const panel = pickerPanel(page);
   await panel.getByRole('tab', { name: /Permissions/ }).click();
-  const { mode, autonomy } = ACCESS[provider][permission];
   await pickMode(page, mode);
-  if (autonomy) await pickAutonomy(page, autonomy);
-  await expect(panel.getByRole('tab', { name: /Permissions/ })).toContainText(
-    accessLabel(permission, provider),
-  );
+  await expect(panel.getByRole('tab', { name: /Permissions/ })).toContainText(mode);
 }
 
 export async function send(page: Page, text: string): Promise<void> {

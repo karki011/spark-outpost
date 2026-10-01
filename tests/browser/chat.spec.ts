@@ -155,7 +155,8 @@ test('the composer picks a model and effort per chat and shows context use', asy
   await expect(panel.getByRole('tab', { name: /Effort/ })).toContainText('Low');
   await panel.getByRole('tab', { name: /Permissions/ }).click();
   await expect(panel.getByRole('radiogroup', { name: 'Agent mode', exact: true })).toBeVisible();
-  await expect(panel.getByRole('radiogroup', { name: 'Harness autonomy' })).toBeVisible();
+  await expect(panel.getByRole('radiogroup', { name: /autonomy/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Spark autonomy/ })).toHaveCount(0);
   await expect(panel).toContainText('Plain chat: no project folder, so nothing can change');
   await expect(panel.getByRole('tab', { name: /Permissions/ })).toContainText('Chat');
   await page.keyboard.press('Escape');

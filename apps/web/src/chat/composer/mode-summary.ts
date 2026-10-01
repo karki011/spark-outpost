@@ -30,12 +30,7 @@ export function permissionSummary(
   settings: ChatSettings,
   capabilities: ProviderCapabilities | undefined,
 ): string {
-  return modeSummary(
-    settings.provider,
-    settings.agentMode,
-    settings.level,
-    capabilities?.modes ?? [],
-  );
+  return modeLabel(capabilities?.modes ?? [], settings.agentMode);
 }
 
 export function withCurrentMode(

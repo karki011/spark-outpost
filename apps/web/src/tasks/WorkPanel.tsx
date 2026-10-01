@@ -1,75 +1,26 @@
 import './task-card.css';
 import '../ui/panel-motion.css';
 import './work-panel.css';
-import { useEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import {
-  isTerminalRunStatus,
-  type Orchestration,
-  type Run,
-  type TaskOverview,
-} from '@spark-outpost/contracts';
+import { useEffect, useRef, type CSSProperties } from 'react';
+import type { InvolvementLevel, Orchestration, Run, TaskOverview } from '@spark-outpost/contracts';
 import type { CrewAgent } from '../crew/crew-model.ts';
-import { pieceLabels } from '../crew/piece-labels.ts';
 import { ShieldIcon } from '../ui/icons.tsx';
 import { useTooltip } from '../ui/Tooltip.tsx';
-import { ChangesPane } from './ChangesPane.tsx';
-import { CostPane } from './CostPane.tsx';
-import { CrewPane } from './CrewPane.tsx';
-import { LinksPane } from './LinksPane.tsx';
-import { PlanPane } from './PlanPane.tsx';
-import { taskApi, taskKeys } from './task-api.ts';
-import { progressPercent } from './TaskCard.tsx';
+import { AutonomySection } from './AutonomySection.tsx';
+import { TaskDetails, type WorkTab } from './TaskDetails.tsx';
 import { CloseIcon } from './TaskIcons.tsx';
-import { TaskList, WaitingItems } from './TaskList.tsx';
 import { WORK_PANEL_DEFAULT_WIDTH } from './work-panel-state.ts';
 import { WorkPanelResizer } from './WorkPanelResizer.tsx';
 
-export type WorkTab = 'tasks' | 'plan' | 'crew' | 'links' | 'changes' | 'cost';
-
-const tabNames: Record<WorkTab, string> = {
-  tasks: 'Tasks',
-  plan: 'Plan',
-  crew: 'Crew',
-  links: 'Links',
-  changes: 'Changes',
-  cost: 'Cost',
-};
-
-const TAB_STEPS: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1 };
-
-function tabAfterKey(tabs: readonly WorkTab[], current: WorkTab, key: string): WorkTab | null {
-  if (key === 'Home') return tabs[0]!;
-  if (key === 'End') return tabs.at(-1)!;
-  const step = TAB_STEPS[key];
-  if (!step) return null;
-  return tabs[(tabs.indexOf(current) + step + tabs.length) % tabs.length]!;
-}
-
-function statusPill(task: TaskOverview): { className: string; label: string } {
-  if (task.summary.waiting > 0) return { className: 'spill rev', label: 'Needs you' };
-  if (task.items.some((item) => item.state === 'active')) {
-    return { className: 'spill prog', label: 'Working' };
-  }
-  const lastRun = task.items.findLast((item) => item.id.startsWith('run:'));
-  if (lastRun?.state === 'failed') return { className: 'spill bad', label: 'Stopped' };
-  return { className: 'spill ok', label: 'Done' };
-}
-
-function orchestrationPill(
-  orchestration: Orchestration,
-  task: TaskOverview,
-): { className: string; label: string } {
-  if (task.summary.waiting > 0) return { className: 'spill rev', label: 'Needs you' };
-  if (orchestration.status === 'succeeded') return { className: 'spill ok', label: 'Done' };
-  if (isTerminalRunStatus(orchestration.status))
-    return { className: 'spill bad', label: 'Stopped' };
-  return { className: 'spill prog', label: 'Working' };
+interface AutonomySetting {
+  level: InvolvementLevel;
+  focusRequest: number;
 }
 
 interface WorkPanelProps {
   conversationId: string;
-  task: TaskOverview;
+  task: TaskOverview | null;
+  autonomy: AutonomySetting | null;
   open: boolean;
   wide: boolean;
   tab: WorkTab;
@@ -87,10 +38,11 @@ interface WorkPanelProps {
 export function WorkPanel({
   conversationId,
   task,
+  autonomy,
   open,
   wide,
   tab,
-  onTab: setTab,
+  onTab,
   onClose,
   onAudit,
   orchestration = null,
@@ -100,32 +52,22 @@ export function WorkPanel({
   width = null,
   onWidth,
 }: WorkPanelProps) {
-  const items = task.items;
   const heading = useRef<HTMLHeadingElement>(null);
+  const title = useRef<HTMLElement>(null);
   const closeTip = useTooltip('Hide work panel');
-  const detail = useQuery({
-    queryKey: taskKeys.task(task.id),
-    queryFn: () => taskApi.get(task.id),
-    enabled: open,
-  });
-  const tabs: WorkTab[] =
-    task.planVersion || task.agreedPlanVersion
-      ? ['tasks', 'plan', 'crew', 'links', 'changes', 'cost']
-      : ['tasks', 'crew', 'links', 'changes', 'cost'];
-  const current = tabs.includes(tab) ? tab : 'tasks';
-  const pill = orchestration ? orchestrationPill(orchestration, task) : statusPill(task);
 
   useEffect(() => {
-    if (open && !wide) heading.current?.focus();
+    if (open && !wide) (heading.current ?? title.current)?.focus();
   }, [open, wide]);
 
-  const onTabKey = (event: KeyboardEvent<HTMLButtonElement>) => {
-    const next = tabAfterKey(tabs, current, event.key);
-    if (!next) return;
-    event.preventDefault();
-    setTab(next);
-    document.getElementById(`wtab-${next}`)?.focus();
-  };
+  const autonomySection = autonomy && (
+    <AutonomySection
+      conversationId={conversationId}
+      level={autonomy.level}
+      initiallyOpen={task === null}
+      focusRequest={autonomy.focusRequest}
+    />
+  );
 
   return (
     <>
@@ -146,7 +88,9 @@ export function WorkPanel({
         <div className="wp-in">
           <span className="wp-grab" aria-hidden="true" />
           <div className="wp-head">
-            <b>Work</b>
+            <b ref={title} tabIndex={-1}>
+              Work
+            </b>
             <button
               type="button"
               className="icon-btn"
@@ -159,87 +103,26 @@ export function WorkPanel({
             {closeTip.tooltip}
           </div>
           <div className="wp-body">
-            <WaitingItems items={items} roots={roots} {...(wide ? {} : { onReview: onClose })} />
-            <section className="wtask">
-              <div className="wt-h">
-                <h2 ref={heading} tabIndex={-1}>
-                  {task.title}
-                </h2>
-                <span className={pill.className}>{pill.label}</span>
-              </div>
-              <p className="wprog">{task.summary.text}</p>
-              <div
-                className="wbar"
-                role="progressbar"
-                aria-label="Task progress"
-                aria-valuemin={0}
-                aria-valuemax={task.summary.total}
-                aria-valuenow={task.summary.done}
-              >
-                <i style={{ transform: `scaleX(${progressPercent(task) / 100})` }} />
-              </div>
-            </section>
-            <div className="wtabs" role="tablist" aria-label="Task details">
-              {tabs.map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  id={`wtab-${id}`}
-                  aria-selected={current === id}
-                  aria-controls="wpane"
-                  tabIndex={current === id ? 0 : -1}
-                  onClick={() => setTab(id)}
-                  onKeyDown={onTabKey}
-                >
-                  {tabNames[id]}
-                </button>
-              ))}
-            </div>
-            <div className="wpane" id="wpane" role="tabpanel" aria-labelledby={`wtab-${current}`}>
-              {current === 'tasks' && <TaskList items={items} roots={roots} />}
-              {current === 'crew' && agents.length > 0 && (
-                <CrewPane
-                  runs={[]}
-                  agents={agents}
-                  labels={orchestration ? pieceLabels(orchestration) : undefined}
-                />
-              )}
-              {current !== 'tasks' &&
-                current !== 'changes' &&
-                !(current === 'crew' && agents.length > 0) &&
-                !detail.data && (
-                  <p className="wsec wnote">{detail.isError ? detail.error.message : 'Loading…'}</p>
-                )}
-              {current === 'plan' && detail.data && (
-                <PlanPane
-                  taskId={task.id}
-                  versions={detail.data.planVersions}
-                  runs={detail.data.runs}
-                  agreed={detail.data.agreedPlans}
-                />
-              )}
-              {current === 'links' && detail.data && (
-                <LinksPane
-                  taskId={task.id}
-                  conversationId={conversationId}
-                  links={detail.data.links}
-                />
-              )}
-              {current === 'crew' && agents.length === 0 && detail.data && (
-                <CrewPane runs={detail.data.runs} />
-              )}
-              {current === 'changes' && (
-                <ChangesPane
-                  taskId={task.id}
-                  conversationId={conversationId}
-                  runs={detail.data?.runs ?? []}
-                />
-              )}
-              {current === 'cost' && detail.data && (
-                <CostPane task={detail.data} runs={runs} agents={agents} onAudit={onAudit} />
-              )}
-            </div>
+            {task ? (
+              <TaskDetails
+                conversationId={conversationId}
+                task={task}
+                open={open}
+                wide={wide}
+                tab={tab}
+                onTab={onTab}
+                onClose={onClose}
+                onAudit={onAudit}
+                orchestration={orchestration}
+                agents={agents}
+                roots={roots}
+                runs={runs}
+                heading={heading}
+                autonomy={autonomySection}
+              />
+            ) : (
+              autonomySection
+            )}
           </div>
           {onAudit && (
             <div className="wp-foot">

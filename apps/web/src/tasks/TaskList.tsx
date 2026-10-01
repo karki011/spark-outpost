@@ -42,7 +42,7 @@ function saveShowDone(show: boolean): void {
 }
 
 function agentLine(item: TaskListItem): string {
-  if (!item.agent) return 'Harness';
+  if (!item.agent) return 'Spark';
   const { provider, model, effort } = item.agent;
   return [providerLabel(provider), model, effort].filter(Boolean).join(' · ');
 }
