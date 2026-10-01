@@ -10,6 +10,7 @@ import { runAgentTurn, type RunControl } from '../workflow/agent-turn.ts';
 import { takeSnapshot } from '../workflow/do-run.ts';
 import { executeChildRun } from '../workflow/execute-run.ts';
 import { meterSpend } from './budget-check.ts';
+import { blindReview } from './critic-recheck.ts';
 import { checkFixFollowUp, fixFollowUp, makeChangeFollowUp } from './context.ts';
 import { reviewNet } from './lean.ts';
 import { createLoopGuard, DEFAULT_LOOP_GUARD } from './loop-guard.ts';
@@ -48,6 +49,7 @@ export interface Place {
 export interface MemberOptions {
   checkFailures?: string;
   seat?: Seat;
+  resumeKey?: string;
 }
 
 export interface MemberOutcome {
@@ -255,6 +257,7 @@ async function runChild(
   const followUp = followUpFor(s, spawn, options, { route, handoff });
   const resumeKey =
     seat?.resumeKey ??
+    options.resumeKey ??
     (spawn.role === 'builder' && s.taskId ? builderSessionKey(s.taskId, route) : null);
   const attempt = s.results.filter((result) => result.role === spawn.role).length + 1;
   const prompt = seat?.prompt ?? handoff ?? (await promptFor(s, spawn));
@@ -388,14 +391,24 @@ export async function runMember(
       : await resolveRoute(s, spawn);
   if (!own && seated.seat?.role !== 'coordinator') s.routes.set(spawn.role, resolved.route);
   const name = seated.seat?.name ?? (await nameFor(s, spawn.role));
+  const childOptions = spawn.role === 'critic' ? { ...seated, resumeKey: criticKey(s) } : seated;
   const result =
     spawn.role === 'scout'
       ? await runInPlace(s, resolved, name)
-      : await runChild(s, spawn, resolved, name, place, seated);
+      : await runChild(s, spawn, resolved, name, place, childOptions);
   s.results.push(result);
   if (result.outcome === 'lease_lost') return { result };
-  if (spawn.role === 'critic') {
-    return { result, verdict: await afterCritic(s, result, resolved.route) };
-  }
-  return { result };
+  if (spawn.role !== 'critic') return { result };
+  const followUp = await blindReview(s, result);
+  if (!followUp) return { result, verdict: await afterCritic(s, result, resolved.route) };
+  const recheck = await runChild(s, { ...spawn, followUp }, resolved, name, place, childOptions);
+  s.results.push(recheck);
+  if (recheck.outcome === 'lease_lost') return { result: recheck };
+  const final = recheck.outcome === 'succeeded' ? recheck : result;
+  return { result: final, verdict: await afterCritic(s, final, resolved.route) };
+}
+
+function criticKey(s: Session): string {
+  const reviews = s.results.filter((result) => result.role === 'critic').length;
+  return `${s.lease.runId}:critic:${reviews + 1}`;
 }

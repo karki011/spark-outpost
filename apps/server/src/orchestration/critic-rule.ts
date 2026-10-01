@@ -12,7 +12,7 @@ const NOT_SOURCE =
   /(?:^|\/)(?:pnpm-lock\.yaml|package-lock\.json|yarn\.lock|bun\.lockb?|Cargo\.lock|go\.sum|poetry\.lock|uv\.lock|Gemfile\.lock|composer\.lock)$|(?:^|\/)(?:dist|build|generated|__generated__)\/|\.min\.(?:js|css)$|\.snap$|\.(?:md|mdx|txt|rst)$/i;
 const PACKAGE_DIRS = new Set(['apps', 'packages', 'services', 'libs', 'crates', 'modules']);
 
-function sourceFiles(files: readonly DiffFile[]): DiffFile[] {
+export function sourceFiles(files: readonly DiffFile[]): DiffFile[] {
   return files.filter((file) => !TEST_FILE.test(file.path) && !NOT_SOURCE.test(file.path));
 }
 
