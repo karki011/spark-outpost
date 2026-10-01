@@ -337,9 +337,11 @@ export function ConversationList({
             pinned={loosePinned}
             unpinned={looseRest}
             empty={
-              chats.length === 0
-                ? 'No chats yet. Start one with New chat.'
-                : 'Drag a chat here to take it out of its project.'
+              chats.length > 0
+                ? 'Drag a chat here to take it out of its project.'
+                : projectList.length > 0
+                  ? null
+                  : 'No chats yet. Start one with New chat.'
             }
             searching={searching}
             over={over === NO_PROJECT}

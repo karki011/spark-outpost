@@ -154,7 +154,7 @@ test('drags a chat into a project and back out, with keyboard moves in the menu'
   const project = await createProject(page, 'web-apps');
   await page.reload();
   const group = sidebar(page).locator('.pblock', { hasText: project });
-  await expect(group).toContainText('No chats yet.');
+  await expect(group.getByRole('button', { name: 'New chat', exact: true })).toBeVisible();
 
   await dragTo(page, row(page, 'Loose chat'), group);
   await expect(group.getByRole('listitem')).toHaveText(['Loose chat']);

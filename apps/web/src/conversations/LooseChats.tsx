@@ -16,7 +16,7 @@ type RenderRows = (
 interface LooseChatsProps {
   pinned: readonly ConversationSummary[];
   unpinned: readonly ConversationSummary[];
-  empty: string;
+  empty: string | null;
   searching: boolean;
   over: boolean;
   folds: SidebarFolds;
@@ -40,8 +40,10 @@ export function LooseChats({
       aria-label="Chats"
       className={`cblock${over ? ' over' : ''}`}
     >
-      <hr className="chats-rule" />
-      {pinned.length + unpinned.length === 0 && <p className="pempty wide">{empty}</p>}
+      {(empty !== null || pinned.length + unpinned.length > 0) && <hr className="chats-rule" />}
+      {pinned.length + unpinned.length === 0 && empty !== null && (
+        <p className="pempty wide">{empty}</p>
+      )}
       {renderRows(pinnedIn(NO_PROJECT), pinned, { sortable: true, enabled: true })}
       {looseBuckets(unpinned).map((bucket) => {
         const key = `section:chats:${bucket.label}`;

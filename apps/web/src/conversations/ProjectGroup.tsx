@@ -139,11 +139,14 @@ export function ProjectGroup({
             ? children
             : !searching && (
                 <p className="pempty">
-                  No chats yet.{' '}
-                  <button type="button" onClick={onNewChat}>
-                    Start one
-                  </button>{' '}
-                  or drag one here.
+                  {over ? (
+                    'Drop to move it here'
+                  ) : (
+                    <button type="button" className="pnew" onClick={onNewChat}>
+                      <PlusIcon />
+                      New chat
+                    </button>
+                  )}
                 </p>
               )}
         </div>

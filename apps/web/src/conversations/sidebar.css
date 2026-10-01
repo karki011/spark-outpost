@@ -370,6 +370,31 @@
   font-weight: 500;
 }
 
+.pempty .pnew {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: -8px;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-weight: 400;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.pempty .pnew:hover,
+.pempty .pnew:focus-visible {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.pempty .pnew svg {
+  width: 13px;
+  height: 13px;
+}
+
 .drag-ghost {
   position: fixed;
   z-index: 70;
