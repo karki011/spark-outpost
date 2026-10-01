@@ -10,7 +10,8 @@ import type { Session } from '../orchestration/session.ts';
 import { destructiveTargets } from '../orchestration/risk-rules.ts';
 import { routeCandidates } from '../routing/candidates.ts';
 import { placementFacts } from './assess.ts';
-import { measuredStrength, type AssignFacts } from './assign.ts';
+import { measuredRate, measuredStrength, type AssignFacts } from './assign.ts';
+import type { KindPassRates } from './piece-demand.ts';
 import type { ListPlace } from './place-list.ts';
 import { inMigrationsFolder, listIsolation, pieceIsolation } from './placement.ts';
 import { factPaths, loadFileFacts, type FileFacts } from './piece-facts.ts';
@@ -20,6 +21,7 @@ import {
   touchesCore,
   type PieceAsk,
   type RouteOption,
+  type TaskKind,
 } from './piece-questions.ts';
 import {
   routePieceList,
@@ -67,6 +69,31 @@ function offeredRoutes(s: Session, facts: AssignFacts): RouteOption[] {
       },
     ];
   });
+}
+
+const MEASURED_CATEGORY: Partial<Record<TaskKind, string>> = {
+  implement: 'feature',
+  debug: 'fix',
+  refactor: 'refactor',
+};
+
+function kindPassRates(s: Session) {
+  const rateOf = (route: RouteOption, category: string) => {
+    const candidate = s.route.candidates.find((entry) => entry.provider === route.provider);
+    return candidate ? measuredRate(candidate, route.model, category) : null;
+  };
+  return (kind: TaskKind | null, below: RouteOption, chat: RouteOption): KindPassRates | null => {
+    const category = kind ? MEASURED_CATEGORY[kind] : undefined;
+    if (!category) return null;
+    const lower = rateOf(below, category);
+    const chatRate = rateOf(chat, category);
+    if (!lower || !chatRate) return null;
+    return {
+      below: lower.rate,
+      chat: chatRate.rate,
+      runs: Math.min(lower.runs, chatRate.runs),
+    };
+  };
 }
 
 function jevFailure(call: JevCall): string | null {
@@ -197,6 +224,7 @@ export async function routePieces(
     core: (piece) => touchesCore(piece, fileFacts),
     listIsolation: listIsolation(pieces, placeFacts),
     pieceIsolation: (piece) => pieceIsolation(piece, placeFacts),
+    kindPassRates: kindPassRates(s),
   };
   const building = pieces.filter((piece) => !piece.research);
   const skipped = skipReason(s, building.length, routes);

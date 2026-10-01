@@ -233,7 +233,13 @@ describe('pieces in order', { timeout: 120_000 }, () => {
   it('runs the integrator on the model the pieces shared and records why', async () => {
     await writeFile(join(root, 'check.mjs'), FAILS_UNTIL_FIXED);
     await setCheckCommands(t, root, ['node check.mjs']);
-    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), {
+    const easy = Object.fromEntries(
+      ['P1', 'P2', 'P3'].flatMap((key) => [
+        [`${key}_reasoning`, 1],
+        [`${key}_coding`, 1],
+      ]),
+    );
+    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL, scores: easy }), {
       coordinator: 'in_order',
     });
     const scenario = withTag(NORMAL, 'Split this up. #pieces #glue');

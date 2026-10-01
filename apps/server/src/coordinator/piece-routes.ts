@@ -7,10 +7,15 @@ import { pickOf } from '../routing/candidates.ts';
 import { reaches } from './graph.ts';
 import { sharedFiles, type OwnedSet } from './owned.ts';
 import {
+  atChatTier,
+  belowChatBlock,
+  clearlySimple,
   pickForDemand,
   pieceDemand,
   riskyAnswer,
   type Demand,
+  type KindPassRates,
+  type PieceFacts,
   type RoutePick,
 } from './piece-demand.ts';
 import {
@@ -18,6 +23,7 @@ import {
   SHARED_TREE,
   type PieceAnswer,
   type RouteOption,
+  type TaskKind,
 } from './piece-questions.ts';
 
 export type Decider = 'jev' | 'rules' | 'floor';
@@ -40,6 +46,11 @@ export interface RouteRules<T extends RoutablePiece = RoutablePiece> {
   core(piece: T): boolean | null;
   listIsolation: string | null;
   pieceIsolation(piece: T): string | null;
+  kindPassRates?(
+    kind: TaskKind | null,
+    below: RouteOption,
+    chat: RouteOption,
+  ): KindPassRates | null;
 }
 
 export interface JevOutcome {
@@ -150,18 +161,36 @@ function chooseModel<T extends RoutablePiece>(
 ): ModelChoice {
   const answer = jev.answers?.get(piece.key);
   if (!answer) return rulesChoice(rules, piece, jev.failure ?? 'Jev was not asked');
-  const result = pieceDemand(answer, { destructive, core: rules.core(piece) });
+  const facts = { destructive, core: rules.core(piece) };
+  const result = pieceDemand(answer, facts);
   if (!result.ok) return rulesChoice(rules, piece, result.reason);
-  const chosen = pickForDemand(result.demand, rules.routes, rules.route.chat.provider);
+  const first = pickForDemand(result.demand, rules.routes, rules.route.chat.provider);
+  const kept = first ? chatTierDemand(rules, answer, facts, result.demand, first) : null;
+  const demand = kept ?? result.demand;
+  const chosen = kept ? pickForDemand(kept, rules.routes, rules.route.chat.provider) : first;
   if (!chosen) {
-    return rulesChoice(
-      rules,
-      piece,
-      `no healthy ${result.demand.tier}-tier route or higher`,
-      result.demand,
-    );
+    return rulesChoice(rules, piece, `no healthy ${demand.tier}-tier route or higher`, demand);
   }
-  return jevModel(rules, destructive, result.demand, chosen);
+  return jevModel(rules, destructive, demand, chosen);
+}
+
+function chatRoute<T extends RoutablePiece>(rules: RouteRules<T>): RouteOption | null {
+  const { provider, model } = rules.route.chat;
+  return rules.routes.find((route) => route.provider === provider && route.model === model) ?? null;
+}
+
+function chatTierDemand<T extends RoutablePiece>(
+  rules: RouteRules<T>,
+  answer: PieceAnswer,
+  facts: PieceFacts,
+  demand: Demand,
+  chosen: RoutePick,
+): Demand | null {
+  const chat = chatRoute(rules);
+  if (!chat) return null;
+  const measured = rules.kindPassRates?.(demand.kind, chosen.route, chat) ?? null;
+  const block = belowChatBlock(clearlySimple(answer, facts), measured);
+  return atChatTier(demand, chosen, chat.tier, block);
 }
 
 function destructivePieces<T extends RoutablePiece>(
