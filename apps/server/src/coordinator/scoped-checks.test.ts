@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { docsOnly, scopedCheckProblem } from './scoped-checks.ts';
+import { docsOnly, noCheckLabel, scopedCheckProblem } from './scoped-checks.ts';
 
 const PROJECT = ['pnpm test', 'pnpm typecheck'];
 
@@ -35,5 +35,17 @@ describe('docsOnly', () => {
     expect(docsOnly(['README.md', 'src/index.ts'])).toBe(false);
     expect(docsOnly(['src/readme.ts'])).toBe(false);
     expect(docsOnly([])).toBe(false);
+  });
+});
+
+describe('noCheckLabel', () => {
+  it('says why a piece has no scoped check', () => {
+    expect(noCheckLabel(['README.md', 'docs/guide.md'])).toBe('none — docs only');
+    expect(noCheckLabel(['migrations/002_upload_tags.sql'])).toBe(
+      'none — migration; full checks run after landing',
+    );
+    expect(noCheckLabel(['db/schema.sql'])).toBe('none — migration; full checks run after landing');
+    expect(noCheckLabel(['migrations/002.sql', 'src/slug.ts'])).toBe('none');
+    expect(noCheckLabel([])).toBe('none');
   });
 });

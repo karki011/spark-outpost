@@ -154,7 +154,7 @@ describe('Jev routes each piece', { timeout: 150_000 }, () => {
     expect(list.pieces.map((piece) => piece.pickNote)).toEqual([
       'Jev: reasoning 3.5, coding 2.5, context 2 → mid tier → Codex 6 Sol (strong at reasoning)',
       'Jev: reasoning 4.5, coding 2, context 2 → top tier (deep reasoning) → Claude Opus 5.5 (only top-tier route)',
-      "Jev: reasoning 2, coding 2, context 2 → mid tier → Claude Sonnet 5 (the chat's provider)",
+      "Jev: reasoning 2, coding 2, context 2 → demand low → mid route → Claude Sonnet 5 (the chat's provider)",
     ]);
     const builders = (await children(t, runId)).filter((child) => child.pieceKey);
     expect(builders.map((child) => [child.pieceKey, child.provider])).toEqual([

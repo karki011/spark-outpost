@@ -99,10 +99,15 @@ function routeLabel(context: RouteContext, route: RouteOption): string {
   return `${provider?.name ?? route.provider} ${route.label}`;
 }
 
-function demandReason(context: RouteContext, demand: Demand, chosen: RoutePick): string {
+function tierText(demand: Demand, chosen: RoutePick): string {
   const raised = demand.raisedBy ? ` (${demand.raisedBy})` : '';
+  if (chosen.route.tier === demand.tier) return `${demand.tier} tier${raised}`;
+  return `demand ${demand.tier}${raised} → ${chosen.route.tier} route`;
+}
+
+function demandReason(context: RouteContext, demand: Demand, chosen: RoutePick): string {
   const signals = demand.signals ? `${demand.signals} → ` : '';
-  return `${signals}${chosen.route.tier} tier${raised} → ${routeLabel(context, chosen.route)} (${chosen.why})`;
+  return `${signals}${tierText(demand, chosen)} → ${routeLabel(context, chosen.route)} (${chosen.why})`;
 }
 
 function jevModel<T extends RoutablePiece>(

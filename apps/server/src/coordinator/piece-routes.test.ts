@@ -120,6 +120,16 @@ describe('routePieceList', () => {
     expect(result.pieces[0]!.answer).toEqual(answer());
   });
 
+  it('prints the demand tier and the route tier when they differ', () => {
+    const easy = answer({ reasoning: score(1.5), coding: score(1.2), context: score(1) });
+    const result = routed([['P1', easy]]);
+    expect(result.pieces[0]!.model).toMatchObject({
+      reason:
+        'reasoning 1.5, coding 1.2, context 1 → demand low → mid route → Codex 6 Sol (best pass rate)',
+      demand: { tier: 'low' },
+    });
+  });
+
   it('keeps the rules picks and records why when Jev did not answer', () => {
     const result = routePieceList(
       pieces,

@@ -130,7 +130,7 @@ export function complexByRule(request: string): ComplexRule | null {
   return null;
 }
 
-function escaped(word: string): string {
+export function escaped(word: string): string {
   return word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
