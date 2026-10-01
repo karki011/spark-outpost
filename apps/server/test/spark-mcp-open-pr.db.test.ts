@@ -137,7 +137,7 @@ describe('spark_open_pr', { timeout: 60_000 }, () => {
       number: 1,
       url: 'https://github.com/acme/widgets/pull/1',
     });
-    expect(stub.github.pulls[0]).toMatchObject({ title: 'Tidy the notes file', draft: true });
+    expect(stub.github.pulls[0]).toMatchObject({ title: 'Tidy the notes file', draft: false });
     expect(stub.github.pulls[0]!.body).toContain('Adds a second line to the notes.');
     expect(JSON.stringify(recorded.audited)).toContain('spark/open_pr');
   });

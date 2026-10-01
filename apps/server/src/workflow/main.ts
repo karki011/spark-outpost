@@ -14,6 +14,8 @@ import { createProviders } from './providers.ts';
 import { startWorker } from './worker.ts';
 import { Slots } from '../orchestration/slots.ts';
 import { startSparkMcpHost } from '../spark-mcp/host.ts';
+import { startPrFollowUp } from '../pr-follow-up/poller.ts';
+import { pollNowForApproval } from '../persistence/pr-watches.ts';
 
 const config = loadConfig();
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.worker });
@@ -76,10 +78,27 @@ const projectMap = startMapScheduler({
   jev: intake.deps,
   rootPrefix: config.MAP_ROOT_PREFIX ?? null,
 });
+const prFollowUp = startPrFollowUp({
+  db,
+  github: {
+    secrets,
+    runCommand,
+    fetch,
+    apiUrl: config.GITHUB_API_URL,
+    locateGh: () => locateCli('gh', runCommand, loginShell),
+  },
+  branchPrefix: config.BRANCH_PREFIX,
+  jev: intake.deps,
+});
 const listener = await listen(config.DATABASE_URL, 'jobs', () => worker.wake());
-const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) =>
-  approvalWaiters.notify(id),
-);
+const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) => {
+  approvalWaiters.notify(id);
+  void pollNowForApproval(db, id)
+    .then((found) => {
+      if (found) prFollowUp.wake();
+    })
+    .catch(() => undefined);
+});
 console.log(
   `Worker running with concurrency ${config.WORKER_CONCURRENCY} and ${config.AGENT_RUNTIME} agents.`,
 );
@@ -88,6 +107,7 @@ const shutdown = async () => {
   await listener.close();
   await approvalListener.close();
   await projectMap.stop();
+  await prFollowUp.stop();
   await worker.stop();
   await sparkTools.close();
   await db.end();

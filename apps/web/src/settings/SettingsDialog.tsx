@@ -241,8 +241,8 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                 {section === 'tools' && (
                   <>
                     <p className="lede">
-                      GitHub lets Ship open draft pull requests. Jira and Linear bring your tickets
-                      into Spark. Slack isn't ready yet.
+                      GitHub lets Ship open pull requests and Spark follow up on them. Jira and
+                      Linear bring your tickets into Spark. Slack isn't ready yet.
                     </p>
                     <ConnectorGrid />
                   </>

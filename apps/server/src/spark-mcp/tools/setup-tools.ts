@@ -146,6 +146,13 @@ async function settings({ deps, scope }: SparkToolContext) {
     autoContinueSeconds: profile.autoContinueSeconds,
     jevReviewsDiffs: profile.jevDiffs,
     shipWithFailingChecks: profile.shipFailingChecks,
+    openPullRequestsAs: profile.prReadyForReview ? 'ready for review' : 'draft',
+    prFollowUp: {
+      on: profile.prFollowUp,
+      fixFailingChecks: profile.prFollowUpChecks,
+      handleReviewComments: profile.prFollowUpReviews,
+      replyOnGitHub: profile.prFollowUpReplies,
+    },
     newChatDefaults: {
       provider: chatDefaults.provider,
       model: chatDefaults.model,

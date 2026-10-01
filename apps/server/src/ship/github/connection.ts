@@ -26,6 +26,7 @@ export interface NewPullRequest {
   body: string;
   head: string;
   base: string;
+  draft: boolean;
 }
 
 export interface GitHubResponse {
@@ -44,6 +45,12 @@ export interface GitHubConnection {
   method: GitHubMethod;
   host: string;
   get<T>(path: string, schema: z.ZodType<T>, action: string): Promise<T>;
+  post<T>(
+    path: string,
+    body: Record<string, string>,
+    schema: z.ZodType<T>,
+    action: string,
+  ): Promise<T>;
   whoami(): Promise<{ login: string }>;
   defaultBranch(repo: RepoRef): Promise<string>;
   findPullRequest(repo: RepoRef, head: string): Promise<PullRequest | null>;
@@ -148,6 +155,9 @@ export function restConnection(
     async get(path, schema, action) {
       return parsed(schema, action, await request('GET', path));
     },
+    async post(path, body, schema, action) {
+      return parsed(schema, action, await request('POST', path, body));
+    },
     async whoami() {
       return parsed(userSchema, 'checking who you are', await request('GET', '/user'));
     },
@@ -184,8 +194,9 @@ export function restConnection(
       };
     },
     async createPullRequest(repo, pull) {
-      const answer = await request('POST', `${repoPath(repo)}/pulls`, { ...pull, draft: true });
-      return toPull(parsed(pullSchema, 'opening the draft pull request', answer));
+      const answer = await request('POST', `${repoPath(repo)}/pulls`, { ...pull });
+      const kind = pull.draft ? 'draft pull request' : 'pull request';
+      return toPull(parsed(pullSchema, `opening the ${kind}`, answer));
     },
     async updatePullRequest(repo, number, update) {
       const answer = await request('PATCH', `${repoPath(repo)}/pulls/${number}`, update);

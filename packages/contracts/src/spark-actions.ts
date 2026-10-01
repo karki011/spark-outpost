@@ -68,12 +68,53 @@ export const openPullRequestActionSchema = z.object({
   moreFiles: z.number().int().nonnegative(),
 });
 
+export const PR_PUSH_ITEM = 'push';
+
+export const prFollowUpActionSchema = z.object({
+  action: z.literal('pr_follow_up'),
+  watchId: z.uuid(),
+  repo: z.string(),
+  number: z.number().int().positive(),
+  url: z.string(),
+  branch: z.string(),
+  push: z
+    .object({ files: z.array(z.string()).max(200), moreFiles: z.number().int().nonnegative() })
+    .nullable(),
+  items: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        label: z.string(),
+        author: z.string(),
+        where: z.string(),
+        what: z.string(),
+        reply: z.string().nullable(),
+      }),
+    )
+    .max(100),
+  skip: z.array(z.string().max(60)).max(101).default([]),
+});
+export type PrFollowUpAction = z.infer<typeof prFollowUpActionSchema>;
+
+export const prFollowUpRoundActionSchema = z.object({
+  action: z.literal('pr_follow_up_round'),
+  watchId: z.uuid(),
+  repo: z.string(),
+  number: z.number().int().positive(),
+  items: z
+    .array(z.object({ label: z.string(), author: z.string(), what: z.string() }))
+    .min(1)
+    .max(100),
+});
+
 export const sparkActionSchema = z.discriminatedUnion('action', [
   createTicketActionSchema,
   commentTicketActionSchema,
   transitionTicketActionSchema,
   assignTicketActionSchema,
   openPullRequestActionSchema,
+  prFollowUpActionSchema,
+  prFollowUpRoundActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
 export type SparkActionName = SparkAction['action'];
@@ -87,6 +128,7 @@ export const sparkActionEditsSchema = z
     priority: ticketPriorityNameSchema.nullable(),
     labels,
     status: ticketStatusSchema,
+    skip: z.array(z.string().max(60)).max(101),
   })
   .partial()
   .strict();
@@ -98,6 +140,8 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   transition_ticket: ['status'],
   assign_ticket: [],
   open_pr: ['title', 'body'],
+  pr_follow_up: ['skip'],
+  pr_follow_up_round: [],
 };
 
 export function editableFields(action: SparkActionName): readonly (keyof SparkActionEdits)[] {
@@ -118,5 +162,7 @@ export const sparkActionLabels: Record<SparkActionName, { question: string; conf
   comment_ticket: { question: 'Post this comment?', confirm: 'Post comment' },
   transition_ticket: { question: 'Move this ticket?', confirm: 'Move ticket' },
   assign_ticket: { question: 'Change who owns this ticket?', confirm: 'Assign' },
-  open_pr: { question: 'Open a draft pull request?', confirm: 'Open draft PR' },
+  open_pr: { question: 'Open a pull request?', confirm: 'Open PR' },
+  pr_follow_up: { question: 'Address PR feedback?', confirm: 'Push and reply' },
+  pr_follow_up_round: { question: 'Start a PR follow-up round?', confirm: 'Start round' },
 };

@@ -21,17 +21,19 @@ import { shipApi, shipKeys } from './ship-api.ts';
 const MODE_SHORT: Record<ShipMode, string> = {
   commit: 'Commit',
   push: 'Push',
-  draft_pr: 'Draft PR',
+  draft_pr: 'PR',
 };
 
 function modeLabel(mode: ShipMode, hasPullRequest: boolean): string {
-  if (mode === 'draft_pr' && hasPullRequest) return 'Update draft PR';
+  if (mode === 'draft_pr' && hasPullRequest) return 'Update PR';
   return shipModeLabels[mode];
 }
 
 function resultLine(result: ShipResult): string {
   if (result.pullRequest) {
-    return `${result.pullRequest.created ? 'Opened' : 'Updated'} draft PR #${result.pullRequest.number}.`;
+    const verb = result.pullRequest.created ? 'Opened' : 'Updated';
+    const kind = result.pullRequest.draft ? 'draft PR' : 'PR';
+    return `${verb} ${kind} #${result.pullRequest.number}.`;
   }
   if (result.pushed) return `Pushed ${result.branch}.`;
   return `Committed ${result.commit?.slice(0, 7) ?? ''} on ${result.branch}.`;

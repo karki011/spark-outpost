@@ -10,6 +10,7 @@ export interface PendingApprovalRow {
   pending_member: string | null;
   pending_asker: string | null;
   pending_provider: string | null;
+  pending_pr_feedback?: boolean | null;
 }
 
 const JEV = 'Jev';
@@ -76,5 +77,6 @@ export function toAttention(row: PendingApprovalRow): ConversationAttention | nu
     agentName: agentFor(row, kind),
     provider: kind === 'clarify' && !row.pending_asker ? 'jev' : row.pending_provider,
     approvalId: row.pending_id,
+    ...(row.pending_pr_feedback ? { prFeedback: true } : {}),
   };
 }

@@ -10,7 +10,7 @@ import { githubApi, shipKeys } from './ship-api.ts';
 type Method = 'gh' | 'token' | 'app';
 
 const DESCRIPTION =
-  'Ship commits and pushes with your own Git. Opening a draft pull request needs GitHub.';
+  'Ship commits and pushes with your own Git. Opening a pull request needs GitHub.';
 
 const METHODS: { id: Method; label: string }[] = [
   { id: 'gh', label: 'gh CLI' },

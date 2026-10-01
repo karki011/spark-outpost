@@ -36,6 +36,11 @@ interface ProfileRow {
   auto_continue_seconds: number | null;
   jev_diffs: boolean;
   ship_failing_checks: boolean;
+  pr_ready_for_review: boolean;
+  pr_follow_up: boolean;
+  pr_follow_up_checks: boolean;
+  pr_follow_up_reviews: boolean;
+  pr_follow_up_replies: boolean;
   personality: Personality;
   spark_enabled: boolean;
   default_level: InvolvementLevel;
@@ -82,7 +87,8 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
   ]);
   const { rows } = await db.query<ProfileRow>(
     `SELECT display_name, default_provider, onboarding_completed_at, auto_continue_seconds,
-       jev_diffs, ship_failing_checks, personality, spark_enabled, default_level,
+       jev_diffs, ship_failing_checks, pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
+       pr_follow_up_reviews, pr_follow_up_replies, personality, spark_enabled, default_level,
        spend_cap_usd, morning_brief,
        to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
@@ -171,6 +177,11 @@ export async function getSetupState(
     autoContinueSeconds: profile.auto_continue_seconds,
     jevDiffs: profile.jev_diffs,
     shipFailingChecks: profile.ship_failing_checks,
+    prReadyForReview: profile.pr_ready_for_review,
+    prFollowUp: profile.pr_follow_up,
+    prFollowUpChecks: profile.pr_follow_up_checks,
+    prFollowUpReviews: profile.pr_follow_up_reviews,
+    prFollowUpReplies: profile.pr_follow_up_replies,
     personality: profile.personality,
     sparkEnabled: profile.spark_enabled,
     defaultLevel: profile.default_level,
@@ -212,6 +223,11 @@ export async function updateProfile(
        spend_cap_usd = CASE WHEN $12 THEN COALESCE($13::numeric, 0) ELSE spend_cap_usd END,
        morning_brief = COALESCE($14, morning_brief),
        morning_brief_time = COALESCE($15::time, morning_brief_time),
+       pr_ready_for_review = COALESCE($16, pr_ready_for_review),
+       pr_follow_up = COALESCE($17, pr_follow_up),
+       pr_follow_up_checks = COALESCE($18, pr_follow_up_checks),
+       pr_follow_up_reviews = COALESCE($19, pr_follow_up_reviews),
+       pr_follow_up_replies = COALESCE($20, pr_follow_up_replies),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -230,6 +246,11 @@ export async function updateProfile(
       update.spendCapUsd ?? null,
       update.morningBrief ?? null,
       update.morningBriefTime ?? null,
+      update.prReadyForReview ?? null,
+      update.prFollowUp ?? null,
+      update.prFollowUpChecks ?? null,
+      update.prFollowUpReviews ?? null,
+      update.prFollowUpReplies ?? null,
     ],
   );
 }

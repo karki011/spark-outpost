@@ -22,7 +22,7 @@ export const SECTIONS: readonly SectionMeta[] = [
   {
     id: 'pr_ready',
     label: 'PR ready',
-    rule: 'A draft pull request from Ship is waiting for your next move.',
+    rule: 'A pull request from Ship is waiting for your next move.',
   },
   {
     id: 'in_review',

@@ -121,7 +121,7 @@ export const INCREMENT_RULE =
   'Work in a small increment: make this change and stop. If the request is a whole feature, do the first useful slice, say in one line what is left, and stop there. Plan for yourself only when the change needs several steps.';
 
 export const SHIP_RULE =
-  "Leave the change in the working tree. Don't commit, push, open a pull request, run `gh`, or change git remotes: Spark Outpost commits, pushes and opens the draft PR itself when the task is done, even when the request says to ship it.";
+  "Leave the change in the working tree. Don't commit, push, open a pull request, run `gh`, or change git remotes: Spark Outpost commits, pushes and opens the PR itself when the task is done, even when the request says to ship it.";
 
 function checkSection(commands: readonly string[] | undefined): string[] {
   if (!commands || commands.length === 0) return [];

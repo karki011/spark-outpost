@@ -78,10 +78,10 @@ async function openPr(
 
 export const pullRequestActionTool = sparkTool({
   name: 'spark_open_pr',
-  title: 'Open a draft PR',
+  title: 'Open a PR',
   acts: true,
   description:
-    "Open a draft pull request for this chat's changes through Spark's Ship flow (commit, push the task's own branch, open a draft PR; nothing merges). You propose the title and description; Spark shows the user a card with the branch, base and files, they may edit the text, and nothing happens until they confirm. The call waits and returns the PR URL and number, or that the user declined.",
+    "Open a pull request for this chat's changes through Spark's Ship flow (commit, push the task's own branch, open a PR, ready for review or draft per Settings → Spark → Open pull requests as; nothing merges). You propose the title and description; Spark shows the user a card with the branch, base and files, they may edit the text, and nothing happens until they confirm. The call waits and returns the PR URL and number, or that the user declined.",
   input: {
     title: z.string().trim().min(1).max(SPARK_TITLE_MAX),
     body: z.string().max(SPARK_TEXT_MAX).default('').describe('What changed and why.'),

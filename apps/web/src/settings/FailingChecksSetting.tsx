@@ -11,7 +11,7 @@ export function FailingChecksSetting({ opensDraft }: { opensDraft: boolean }) {
       saved={opensDraft}
       choices={FAILING_CHECKS_CHOICES}
       label="When checks still fail in Full auto"
-      hint="The draft PR is marked “Checks failing”. Full auto never merges."
+      hint="That PR always opens as a draft marked “Checks failing”, even when PRs open ready for review. Full auto never merges."
       toUpdate={(value) => ({ shipFailingChecks: value })}
     />
   );

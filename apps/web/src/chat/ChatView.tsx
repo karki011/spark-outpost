@@ -41,6 +41,7 @@ import { usePendingDock } from './dock/use-pending-dock.ts';
 import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
+import { PrStatusCard } from './pull-request/PrStatusCard.tsx';
 import { ChatTicketBar } from './tickets/ChatTicketBar.tsx';
 import { ChatTicketChips } from './tickets/ChatTicketChips.tsx';
 import { useChatTickets } from './tickets/use-chat-tickets.ts';
@@ -176,6 +177,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               </div>
             </header>
             <ChatTicketBar chat={tickets} />
+            <PrStatusCard conversationId={conversationId} />
             {detail.isError && !isConnectionLoss(detail.error) && (
               <p className="error-line" role="alert">
                 {detail.error.message}

@@ -241,6 +241,6 @@ describe('tickets inbox', () => {
     await connect();
     await linkPull('ENG-12', 'https://github.com/acme/widgets/pull/9');
     const item = (await inbox()).tickets.find((ticket) => ticket.key === 'ENG-12')!;
-    expect(item).toMatchObject({ section: 'pr_ready', reason: 'Draft PR', pullRequest: null });
+    expect(item).toMatchObject({ section: 'pr_ready', reason: 'PR opened', pullRequest: null });
   });
 });

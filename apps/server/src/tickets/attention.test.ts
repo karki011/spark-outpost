@@ -208,7 +208,7 @@ describe('inbox sections', () => {
     const linked = [{ ...work[0]!, pullRequests: [{ title: 'PR', url: pull('draft').url }] }];
     expect(place(facts({}, { work: linked }))).toMatchObject({
       section: 'pr_ready',
-      reason: 'Draft PR',
+      reason: 'PR opened',
     });
   });
 

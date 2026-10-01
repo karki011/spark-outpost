@@ -97,13 +97,15 @@ export const shipResultSchema = z.object({
   commit: z.string().nullable(),
   committedFiles: z.array(z.string()),
   pushed: z.boolean(),
-  pullRequest: shipPullRequestSchema.extend({ created: z.boolean() }).nullable(),
+  pullRequest: shipPullRequestSchema
+    .extend({ created: z.boolean(), draft: z.boolean().optional() })
+    .nullable(),
   link: taskLinkSchema.nullable(),
 });
 export type ShipResult = z.infer<typeof shipResultSchema>;
 
 export const shipModeLabels: Record<ShipMode, string> = {
-  draft_pr: 'Open draft PR',
+  draft_pr: 'Open PR',
   push: 'Push branch',
   commit: 'Commit',
 };

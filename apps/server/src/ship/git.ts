@@ -25,7 +25,7 @@ interface GitResult {
   stderr: string;
 }
 
-function runGit(
+export function runGit(
   root: string,
   args: string[],
   timeout = QUICK_MS,

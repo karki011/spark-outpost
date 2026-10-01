@@ -247,6 +247,8 @@ describe('the Spark tools server', () => {
       'spark_models',
       'spark_open_pr',
       'spark_pr',
+      'spark_pr_follow_up',
+      'spark_pr_follow_up_round',
       'spark_projects',
       'spark_providers',
       'spark_pull_requests',
@@ -264,6 +266,7 @@ describe('the Spark tools server', () => {
       'spark_comment_ticket',
       'spark_create_ticket',
       'spark_open_pr',
+      'spark_pr_follow_up_round',
       'spark_transition_ticket',
     ]);
     for (const tool of listed.tools) {

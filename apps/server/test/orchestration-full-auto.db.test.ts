@@ -147,7 +147,7 @@ function expectAutoKept(keep: readonly Approval[]) {
 }
 
 describe('Full auto runs to a draft PR', () => {
-  it('keeps the change, commits only the task file on its branch without switching the checkout, pushes and opens a draft PR', async () => {
+  it('keeps the change, commits only the task file on its branch without switching the checkout, pushes and opens a ready-for-review PR', async () => {
     await newRepo();
     await writeFile(ghState(), 'octo-cli');
     start();
@@ -158,10 +158,10 @@ describe('Full auto runs to a draft PR', () => {
 
     expect(stub.github.pulls).toHaveLength(1);
     const pull = stub.github.pulls[0]!;
-    expect(pull).toMatchObject({ draft: true, base: 'main', via: 'gh_cli' });
+    expect(pull).toMatchObject({ draft: false, base: 'main', via: 'gh_cli' });
     expect(pull.head).toMatch(new RegExp(`^spark/.+-${taskId!.replaceAll('-', '').slice(0, 8)}$`));
     expect(pull.title).not.toContain(CHECKS_FAILING_NOTE);
-    expect(reply).toContain(`Opened draft PR #${pull.number}: ${pull.html_url}`);
+    expect(reply).toContain(`Opened PR #${pull.number}: ${pull.html_url}`);
     expect(reply).toContain(`Your checkout stays on main`);
 
     expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
@@ -274,9 +274,10 @@ describe('Full auto runs to a draft PR', () => {
     const { reply, asked } = await runFullAuto();
     expect(asked).toEqual([]);
     const pull = stub.github.pulls[0]!;
+    expect(pull.draft).toBe(true);
     expect(pull.title.startsWith(`[${CHECKS_FAILING_NOTE}] `)).toBe(true);
     expect(pull.body).toContain(`**${CHECKS_FAILING_NOTE}**`);
-    expect(reply).toContain('marked "Checks failing"');
+    expect(reply).toContain('Opened draft PR #1, marked "Checks failing"');
   }, 120_000);
 
   it('stops at the keep card instead when the setting says not to ship failing checks', async () => {

@@ -10,6 +10,7 @@ export const appEventKindSchema = z.enum([
   'digest',
   'outcome',
   'map',
+  'pull_request',
 ]);
 export type AppEventKind = z.infer<typeof appEventKindSchema>;
 

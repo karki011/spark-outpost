@@ -57,7 +57,7 @@ function prReady(facts: TicketFacts): Placement | null {
   if (pull || linked.length === 0 || facts.ticket.status === 'in_review') return null;
   return {
     section: 'pr_ready',
-    reason: 'Draft PR',
+    reason: 'PR opened',
     tone: 'none',
     age: age(facts.ticket.work.at(-1)?.startedAt, 'Started'),
   };

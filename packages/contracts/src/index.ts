@@ -40,6 +40,7 @@ export * from './analytics-harness.ts';
 export * from './app-events.ts';
 export * from './api-token.ts';
 export * from './ship.ts';
+export * from './pr-follow-up.ts';
 export * from './tickets.ts';
 export * from './ticket-inbox.ts';
 export * from './chat-tickets.ts';

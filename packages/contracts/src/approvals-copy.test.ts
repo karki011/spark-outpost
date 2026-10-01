@@ -23,7 +23,7 @@ describe('harness autonomy', () => {
     const hints = Object.fromEntries(AUTONOMY_LEVELS.map((level) => [level.id, level.hint]));
     expect(hints.balanced).toMatch(/card before risky work/);
     expect(hints['hands-off']).toMatch(/worktree copy.*Revert/);
-    expect(hints['full-auto']).toMatch(/draft PR.*Nothing ever merges/);
+    expect(hints['full-auto']).toMatch(/opens a PR.*Nothing ever merges/);
   });
 
   it('reads the removed Hands-on level as Review each step', () => {
