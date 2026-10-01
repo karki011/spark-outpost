@@ -16,6 +16,16 @@ import { ZAI_EFFORTS, ZAI_MODELS, zaiLaunchEnvironment, zaiModelId } from './zai
 export interface AgentLaunch {
   command: string;
   args: string[];
+  env?: Record<string, string>;
+}
+
+export function scriptLaunch(
+  script: string,
+  execPath: string = process.execPath,
+  versions: Partial<Record<string, string>> = process.versions,
+): AgentLaunch {
+  const launch = { command: execPath, args: [script] };
+  return versions.electron ? { ...launch, env: { ELECTRON_RUN_AS_NODE: '1' } } : launch;
 }
 
 export interface AgentOffers {
@@ -188,7 +198,7 @@ function packageBin(packageName: string): AgentLaunch {
   };
   const bin = typeof manifest.bin === 'string' ? manifest.bin : Object.values(manifest.bin)[0];
   if (!bin) throw new Error(`${packageName} has no executable.`);
-  return { command: process.execPath, args: [join(dirname(manifestPath), bin)] };
+  return scriptLaunch(join(dirname(manifestPath), bin));
 }
 
 const claudeSessions = {
