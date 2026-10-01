@@ -95,7 +95,7 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
   await expect(levels.getByRole('radio')).toHaveText([
     /^Review each step.*You decide what to keep/,
     /^Automatic.*Runs commands and keeps passing changes/,
-    /^Full auto → PR.*opens a draft PR/,
+    /^Full auto → PR.*opens a PR/,
   ]);
   const automatic = levels.getByRole('radio', { name: 'Automatic', exact: true });
   await expect(automatic).toBeFocused();
