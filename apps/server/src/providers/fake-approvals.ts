@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import type { ApprovalOption } from '@spark-outpost/contracts';
@@ -12,9 +12,17 @@ export const FAKE_FORCE_PUSH_TRIGGER = '#leasepush';
 export const FAKE_CURL_TRIGGER = '#curl';
 export const FAKE_READ_ENV_TRIGGER = '#readenv';
 export const FAKE_INSTRUCTIONS_TRIGGER = '#instructions';
+export const FAKE_INSTRUCTIONS_SHELL_TRIGGER = '#shellinstructions';
 export const FAKE_HOOK_TRIGGER = '#githook';
 export const FAKE_COMMAND = 'pnpm test -- groupMessages';
 export const FAKE_EDIT_FILE = 'notes.txt';
+
+const SHELL_OPTIONS: ApprovalOption[] = [
+  { optionId: 'allow-once', name: 'Yes', kind: 'allow_once' },
+  { optionId: 'reject', name: 'No', kind: 'reject_once' },
+];
+
+const SHELL_INSTRUCTION_LINE = '- Tests use node --test.';
 
 const OPTIONS: ApprovalOption[] = [
   { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
@@ -31,6 +39,7 @@ export function wantsApproval(prompt: string): boolean {
     FAKE_CURL_TRIGGER,
     FAKE_READ_ENV_TRIGGER,
     FAKE_INSTRUCTIONS_TRIGGER,
+    FAKE_INSTRUCTIONS_SHELL_TRIGGER,
     FAKE_HOOK_TRIGGER,
   ];
   return triggers.some((trigger) => prompt.includes(trigger));
@@ -84,6 +93,10 @@ async function fakeRequests(
   const requests: ApprovalRequest[] = [];
   if (edits && prompt.includes(FAKE_EDIT_TRIGGER))
     requests.push(await edit('fake-edit', FAKE_EDIT_FILE));
+  if (edits && prompt.includes(FAKE_INSTRUCTIONS_SHELL_TRIGGER)) {
+    const write = `echo '${SHELL_INSTRUCTION_LINE}' >> AGENTS.md`;
+    requests.push({ ...command('fake-instructions-shell', write), options: SHELL_OPTIONS });
+  }
   if (edits && prompt.includes(FAKE_INSTRUCTIONS_TRIGGER)) {
     requests.push(await edit('fake-instructions', 'AGENTS.md'));
   }
@@ -123,6 +136,9 @@ export async function* fakeApprovalTurn(turn: ProviderTurn): AsyncGenerator<Prov
     yield* note(answer.note);
     if (answer.outcome === 'cancelled') return;
     outcomes.push(`${request.toolCallId}=${answer.allowed ? 'allowed' : 'denied'}`);
+    if (answer.allowed && request.toolCallId === 'fake-instructions-shell') {
+      await appendFile(path.join(root, 'AGENTS.md'), `${SHELL_INSTRUCTION_LINE}\n`);
+    }
     const diff = request.diffs[0];
     if (answer.allowed && diff) {
       await mkdir(path.dirname(diff.path), { recursive: true });
