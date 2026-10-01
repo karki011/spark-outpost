@@ -16,6 +16,13 @@ describe('engagement', () => {
     expect(engagement(FACTS)).toMatchObject({ engage: false, reason: null, tooBigUnsure: false });
   });
 
+  it('records why a small three-part plan stays on one Builder (live run C)', () => {
+    const plan = ['Add `src/csv-export.ts`', 'Add `src/rate-limit.ts`', 'Update `README.md`'];
+    expect(engagement({ ...FACTS, planItems: plan, sizeEstimate: 55_464 }).detail).toBe(
+      'fits one Builder: 3 plan items in 2 areas (splits at 4 in 2); 0 likely files in 0 packages (splits at 12 or 3); about 55K of 100K tokens',
+    );
+  });
+
   it('engages when the user asks for pieces', () => {
     expect(
       engagement({ ...FACTS, request: 'Split this up and use parallel builders' }).reason,

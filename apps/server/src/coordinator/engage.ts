@@ -78,5 +78,14 @@ export function engagement(facts: EngageFacts): Engagement {
       `about ${Math.round(facts.sizeEstimate / 1000)}K tokens, over the ${Math.round(facts.budgetTokens / 1000)}K Builder budget`,
     );
   }
-  return result(null, 'fits one Builder');
+  return result(null, oneBuilderDetail(facts, areas, packages.size));
+}
+
+function oneBuilderDetail(facts: EngageFacts, areas: number, packages: number): string {
+  const k = (tokens: number) => `${Math.round(tokens / 1000)}K`;
+  return [
+    `fits one Builder: ${facts.planItems.length} plan items in ${areas} areas (splits at ${COORD_ENGAGE_PLAN_ITEMS} in ${COORD_ENGAGE_PLAN_AREAS})`,
+    `${facts.likely.length} likely files in ${packages} packages (splits at ${COORD_ENGAGE_SCAN_FILES} or ${COORD_ENGAGE_SCAN_PACKAGES})`,
+    `about ${k(facts.sizeEstimate)} of ${k(facts.budgetTokens)} tokens`,
+  ].join('; ');
 }
