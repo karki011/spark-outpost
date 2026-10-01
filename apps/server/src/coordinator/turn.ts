@@ -33,6 +33,7 @@ export interface WrittenList {
   list: PieceList;
   owned: Map<string, OwnedSet>;
   names: Map<string, string>;
+  topTier: Set<string>;
 }
 
 export type PieceListResult = { ok: true; value: WrittenList } | { ok: false; reason: string };
@@ -186,6 +187,11 @@ export async function writePieceList(
       names: await builderNames(
         s,
         pieces.map((piece) => piece.key),
+      ),
+      topTier: new Set(
+        routed.pieces
+          .filter((route) => route.model.demand?.tier === 'top')
+          .map((route) => route.key),
       ),
     },
   };

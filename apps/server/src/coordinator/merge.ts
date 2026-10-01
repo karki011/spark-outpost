@@ -19,7 +19,7 @@ import { checkFailureText } from '../orchestration/context.ts';
 import { runMember } from '../orchestration/members.ts';
 import type { Session } from '../orchestration/session.ts';
 import { describeConflict, MAIN_COPY } from '../orchestration/solo-copy.ts';
-import { integratorSeat } from './integrator.ts';
+import { integratorRoute, integratorSeat } from './integrator.ts';
 import { runPieceChecks } from './piece-run.ts';
 import { BUILDER_GIT_RULE } from './prompts.ts';
 import type { Conflict, Coordination } from './state.ts';
@@ -89,7 +89,13 @@ async function integratorTry(
       followUp: reconcileText(conflict, failures),
     },
     null,
-    { seat: { ...seat, prompt: `${CONFLICT_ROLE_LINE}\n\n## Request\n${s.input.userRequest}` } },
+    {
+      seat: {
+        ...seat,
+        prompt: `${CONFLICT_ROLE_LINE}\n\n## Request\n${s.input.userRequest}`,
+        memberRoute: integratorRoute(s, coordination, 'conflict'),
+      },
+    },
   );
   if (result.outcome === 'cancelled' || result.outcome === 'lease_lost') return { kind: 'stopped' };
   if (result.outcome !== 'succeeded') {

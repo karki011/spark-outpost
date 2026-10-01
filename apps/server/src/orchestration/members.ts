@@ -1,5 +1,6 @@
 import type { AgentRole, RunMode } from '@spark-outpost/contracts';
 import { findingKind } from '../advisor/finding-questions.ts';
+import { integratorRoute } from '../coordinator/integrator.ts';
 import { previousReply } from '../advisor/intake-recorder.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import { insertChildRun, markInPlaceMember, mergeRoute } from '../persistence/orchestrations.ts';
@@ -367,7 +368,9 @@ async function afterCritic(s: Session, result: MemberResult, route: MemberRoute)
 
 function seatFor(s: Session, spawn: Spawn, options: MemberOptions): MemberOptions {
   if (options.seat || spawn.role !== 'builder' || !s.integrator) return options;
-  return { ...options, seat: s.integrator };
+  if (spawn.escalate || !s.coordination) return { ...options, seat: s.integrator };
+  const memberRoute = integratorRoute(s, s.coordination, 'fix');
+  return { ...options, seat: { ...s.integrator, memberRoute } };
 }
 
 export async function runMember(

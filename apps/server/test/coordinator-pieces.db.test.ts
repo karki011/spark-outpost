@@ -229,6 +229,32 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(reply).toContain(`Integration: ${integrators[0]!.name}`);
   });
 
+  it('runs the integrator on the model the pieces shared and records why', async () => {
+    await writeFile(join(root, 'check.mjs'), FAILS_UNTIL_FIXED);
+    await setCheckCommands(t, root, ['node check.mjs']);
+    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL }), {
+      coordinator: 'in_order',
+    });
+    const scenario = withTag(NORMAL, 'Split this up. #pieces #glue');
+    const started = await startScenario(t, root, scenario, 'hands-off', 'pinned', 'opus[1m]');
+    const { orchestration } = await driveToEnd(t, started.conversationId, started.runId);
+    expect(orchestration.status).toBe('succeeded');
+    const { rows } = await t.db.query<{ role: string; model: string; summary: string }>(
+      `SELECT r.role, r.model, a.body->>'summary' AS summary
+       FROM runs r JOIN run_advice a ON a.child_run_id = r.id AND a.purpose = 'route'
+       WHERE r.parent_run_id = $1 AND r.role IN ('builder', 'integrator') ORDER BY r.created_at`,
+      [started.runId],
+    );
+    expect(new Set(rows.filter((row) => row.role === 'builder').map((row) => row.model))).toEqual(
+      new Set(['sonnet']),
+    );
+    const integrators = rows.filter((row) => row.role === 'integrator');
+    expect(integrators.map((row) => row.model)).toEqual(['sonnet', 'sonnet']);
+    expect(integrators[0]!.summary).toContain(
+      'integrator follows the pieces · 3 of 3 pieces ran on this model; same model keeps the cache',
+    );
+  });
+
   it('lands a docs-only piece without a scoped check and without a repair round', async () => {
     const { conversationId, runId } = await begin('#pieces #docspiece');
     const { orchestration } = await driveToEnd(t, conversationId, runId, undefined, 90_000);
