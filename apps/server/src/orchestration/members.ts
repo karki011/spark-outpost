@@ -340,6 +340,7 @@ async function runChild(
       inPlace: false,
       name,
       loop: guard.tripped(),
+      reason: spawn.reason,
       ...(place?.reuse ? { copyRunId: place.reuse.runId } : {}),
     };
   } finally {

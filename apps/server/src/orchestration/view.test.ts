@@ -160,6 +160,47 @@ describe('the final reply', () => {
     );
   });
 
+  it('describes the whole change across fix rounds, with one line for the fixes (C)', () => {
+    const turn = (reason: 'first' | 'fix' | 'escalate', text: string) => ({
+      ...result('builder', text),
+      reason,
+    });
+    const built =
+      'I made all three changes.\n\n- `src/csv-export.ts`: uploadsToCsv.\n- `src/rate-limit.ts`: RateLimiter.\n- README lists both.';
+    const text = finalText(
+      [
+        turn('first', built),
+        result('critic', 'Verdict: concerns'),
+        turn('fix', 'Out-of-order calls no longer reopen a spent window. Added a test.'),
+        result('critic', 'Verdict: concerns'),
+        turn('fix', '- A call in an earlier window now counts against that window.'),
+        result('critic', 'Verdict: looks good'),
+      ],
+      'looks_good',
+      [],
+      false,
+    );
+    expect(text).toBe(
+      `${built}\n\nFixes after review and checks: Out-of-order calls no longer reopen a spent window. A call in an earlier window now counts against that window.\n\nAI review by critic label: looks good.`,
+    );
+  });
+
+  it('never leads with a recheck turn (H)', () => {
+    const text = finalText(
+      [
+        { ...result('builder', 'Added the export.'), reason: 'first' as const },
+        {
+          ...result('builder', 'I checked again and found nothing missing.'),
+          reason: 'escalate' as const,
+        },
+      ],
+      null,
+      [],
+      false,
+    );
+    expect(text.startsWith('Added the export.')).toBe(true);
+  });
+
   it('answers a review-only request with the Critic’s own findings (dev-day s07)', () => {
     const review =
       'Findings:\n- `plural()` now says "1 runs" is fine but returns the singular for 0\n- `median()` sorts in place\nVerdict: concerns';
