@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AdviceSummary, IntakeAnswer } from '@spark-outpost/contracts';
-import { adviceDetails } from './AdviceLine.tsx';
+import { adviceDetails, jevMissing } from './AdviceLine.tsx';
 
 const rules: IntakeAnswer = {
   intent: 'bug_fix',
@@ -49,5 +49,33 @@ describe('adviceDetails', () => {
     const lines = adviceDetails(advice, { recordedRoute: false });
     expect(lines.some((line) => line.includes('small tier'))).toBe(false);
     expect(lines.some((line) => line.startsWith('Rules ran: Claude'))).toBe(true);
+  });
+});
+
+describe('when Jev gave no answer', () => {
+  const without = (patch: Partial<AdviceSummary>): AdviceSummary => ({
+    ...advice,
+    jev: null,
+    routeGate: null,
+    ...patch,
+  });
+
+  it.each([
+    [without({ jevStatus: 'not_asked' }), 'Jev not asked'],
+    [
+      without({ jevStatus: 'not_asked', jevError: 'Spark is off for this chat.' }),
+      'Jev not asked: Spark is off for this chat',
+    ],
+    [without({ jevStatus: 'not_connected' }), 'Jev not connected'],
+    [without({ jevStatus: 'timed_out', jevError: 'Jev did not answer in time.' }), 'Jev timed out'],
+    [without({ jevStatus: 'failed', jevError: 'boom' }), 'Jev failed'],
+  ])('names why for %#', (summary, text) => {
+    expect(jevMissing(summary)).toBe(text);
+  });
+
+  it('says Jev was not asked rather than unavailable in the details', () => {
+    expect(adviceDetails(without({ jevStatus: 'not_asked' }))[0]).toBe('Jev not asked.');
+    expect(adviceDetails(without({ jevStatus: 'not_connected' }))[0]).toBe('Jev not connected.');
+    expect(adviceDetails(without({ jevStatus: 'failed', jevError: 'boom' }))[0]).toBe('boom');
   });
 });

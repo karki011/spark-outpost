@@ -37,5 +37,5 @@ test('shows nothing from Jev when Jev is not connected', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await sendInNewChat(page, 'Hello without Jev');
   await expect(page.locator('.mood', { hasText: 'done' })).toBeVisible();
-  await expect(page.getByText(/Jev:|Jev unavailable/)).toHaveCount(0);
+  await expect(page.getByText(/Jev:|Jev not|Jev failed/)).toHaveCount(0);
 });
