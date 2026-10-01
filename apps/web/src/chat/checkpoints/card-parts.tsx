@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from 'react';
+import type { CheckpointPayload } from '@spark-outpost/contracts';
 import { autoLabel, offers, type CheckpointApproval } from './checkpoint-model.ts';
 import type { Countdown } from './use-auto-continue.ts';
 
@@ -94,5 +95,38 @@ export function Action({
     <button type="button" className={className} disabled={decide.busy} onClick={() => decide(id)}>
       {counting ? <span className="ck-auto">{autoLabel(id, counting.seconds)}</span> : children}
     </button>
+  );
+}
+
+function InlineCode({ text }: { text: string }) {
+  return (
+    <>
+      {text
+        .split('`')
+        .map((part, index) =>
+          index % 2 === 1 ? <code key={index}>{part}</code> : <span key={index}>{part}</span>,
+        )}
+    </>
+  );
+}
+
+export function CheckpointNotes({ payload }: { payload: CheckpointPayload }) {
+  const headingId = useId();
+  return (
+    <>
+      {payload.estimate && <p className="ck-estimate">{payload.estimate}</p>}
+      {payload.laws.length > 0 && (
+        <div className="ck-laws">
+          <p id={headingId}>Worth a look before you keep this</p>
+          <ul aria-labelledby={headingId}>
+            {payload.laws.map((law) => (
+              <li key={law}>
+                <InlineCode text={law} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </>
   );
 }

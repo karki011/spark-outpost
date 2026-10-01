@@ -19,7 +19,7 @@ import { DiffView } from '../approvals/DiffView.tsx';
 import { mergeDecision } from '../approvals/approval-events.ts';
 import { CrewHint } from '../crew/CrewHint.tsx';
 import { Docked } from '../dock/Docked.tsx';
-import { Action, NoteForm, type Decide } from './card-parts.tsx';
+import { Action, CheckpointNotes, NoteForm, type Decide } from './card-parts.tsx';
 import { ClarifyBody } from './ClarifyBody.tsx';
 import {
   asksQuestions,
@@ -397,6 +397,7 @@ export function CheckpointCard({
           </p>
         )}
         {checkpoint.reason && !questions && <p>{checkpoint.reason}</p>}
+        <CheckpointNotes payload={checkpoint} />
         {questions && !pending && <AskedList payload={checkpoint} />}
         {pending ? (
           <PendingBody approval={approval} decide={decide} />

@@ -77,6 +77,7 @@ export function runAgent(
     durationMs: member.durationMs,
     ...(member.sameProvider ? { sameProvider: true } : {}),
     ...(member.routeNote ? { routeNote: member.routeNote } : {}),
+    ...(member.budget ? { budget: member.budget } : {}),
   };
 }
 
