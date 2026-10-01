@@ -24,7 +24,7 @@
     "test:db": "vitest run --project db",
     "test:live": "vitest run --project live",
     "test:browser": "playwright test",
-    "docs:screenshots": "SPARK_DOCS_SHOTS=1 playwright test tests/browser/docs-shots.spec.ts --workers=1",
+    "docs:screenshots": "SPARK_DOCS_SHOTS=1 playwright test tests/browser/docs-shots --workers=1",
     "db:setup": "bash infra/local/setup.sh",
     "db:up": "bash infra/local/up.sh",
     "db:stop": "bash infra/local/stop.sh",

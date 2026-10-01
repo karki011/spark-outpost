@@ -27,7 +27,7 @@ test('Docs opens from the rail, moves between pages and keeps a deep link per pa
     'page',
   );
   await expect(guideNav(page).getByRole('heading', { name: 'Stay in control' })).toBeVisible();
-  await expect(guideNav(page).getByRole('link', { name: /^Updates/ })).toContainText('Soon');
+  await expect(guideNav(page).getByRole('link', { name: /^Guardrails/ })).toContainText('Soon');
 
   await guideNav(page).getByRole('link', { name: 'Approvals and protected paths' }).click();
   await expect(pageTitle(page)).toHaveText('Approvals and protected paths');
@@ -52,7 +52,7 @@ test('Docs opens from the rail, moves between pages and keeps a deep link per pa
 
   await docs(page).getByRole('link', { name: /^Next/ }).click();
   await expect(pageTitle(page)).toHaveText('Privacy and secrets');
-  await expect(docs(page)).toContainText('Coming soon.');
+  await expect(docs(page).getByRole('heading', { name: 'Where your keys live' })).toBeVisible();
 
   await page.reload();
   await expect(pageTitle(page)).toHaveText('Privacy and secrets');

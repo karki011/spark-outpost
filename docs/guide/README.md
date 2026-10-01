@@ -55,51 +55,59 @@ Get started is a sequence: an overview page that lists the steps, then one short
 | `spark-crew` The Spark crew                     | Stub    | How Spark splits bigger work into pieces for Builders, reviews it with a Critic and keeps it in a worktree; Builders at once and Where Spark works. | `spark-crew-pieces`, `spark-crew-work-panel`, `spark-crew-agent-tv`, `spark-crew-projects`                                                 |
 | `jev` Jev, Spark's advisor                      | Stub    | What Jev decides and what it never does, connecting it, Check changes with Jev, and what it costs.                                                  | `jev-advisor`, `jev-advice-line`                                                                                                           |
 | `ship-and-pull-requests` Ship and pull requests | Stub    | Commit, push and open a PR from a chat, ready or draft, and let Spark follow up on checks and review comments.                                      | `ship-popover`, `ship-pr-strip`, `ship-settings`                                                                                           |
-| `terminals` Terminals                           | Stub    | Open a terminal in the chat's worktree or project, run several, and stop a busy one safely.                                                         | `terminals-dock`, `terminals-stop`                                                                                                         |
+| `terminals` Terminals                           | Written | Open a terminal in the chat's worktree or project, run several, and stop a busy one safely.                                                         | `terminals-dock`, `terminals-stop`                                                                                                         |
 | `compaction` Long chats and compaction          | Stub    | How Spark keeps long chats within the model's context. Being built now; this page fills in when it ships.                                           | (after the feature lands)                                                                                                                  |
 
 ### Stay in control
 
-| Page                                      | Status  | Summary                                                                                                                                    | Screenshots                                                                                              |
-| ----------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `approvals` Approvals and protected paths | Written | What Spark asks before it acts, how to answer an approval card, and which files always ask.                                                | `approvals-command`, `approvals-edit`, `approvals-instructions`, `approvals-hold`, `approvals-allowlist` |
-| `privacy-and-secrets` Privacy and secrets | Stub    | Where keys are stored, why to paste keys only in the app's key field, `.sparkignore`, what goes to Jev, and what Spark tools never return. | `privacy-key-field`, `privacy-map-note`                                                                  |
-| `guardrails` Guardrails (universal laws)  | Stub    | Rules every agent follows in every chat. Being built now; this page fills in when it ships.                                                | (after the feature lands)                                                                                |
+| Page                                      | Status  | Summary                                                                                                                                         | Screenshots                                                                                              |
+| ----------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `approvals` Approvals and protected paths | Written | What Spark asks before it acts, how to answer an approval card, and which files always ask.                                                     | `approvals-command`, `approvals-edit`, `approvals-instructions`, `approvals-hold`, `approvals-allowlist` |
+| `privacy-and-secrets` Privacy and secrets | Written | Where keys are stored, why to paste keys only in the app's key field, how Spark redacts secrets, `.sparkignore`, and what leaves your computer. | none                                                                                                     |
+| `guardrails` Guardrails (universal laws)  | Stub    | Rules every agent follows in every chat. Being built now; this page fills in when it ships.                                                     | (after the feature lands)                                                                                |
 
 ### Your tools
 
-| Page                                    | Status | Summary                                                                                                            | Screenshots                                                 |
-| --------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
-| `tickets-and-github` Tickets and GitHub | Stub   | Connect GitHub, Linear and Jira, work from the Tickets inbox, and start a chat from a ticket.                      | `tickets-connectors`, `tickets-inbox`, `tickets-start-work` |
-| `map` The Map                           | Stub   | See a project's areas and files, find what breaks if a file changes, and what Jev reads to label areas.            | `map-tree`, `map-focus`, `map-sky`                          |
-| `spark-tools` Spark tools for agents    | Stub   | The `spark_*` tools every agent gets: what they answer, what they never return, and the confirm cards for actions. | `spark-tools-action-card`                                   |
+| Page                                        | Status  | Summary                                                                                                                                     | Screenshots                                                 |
+| ------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `tickets-and-github` Tickets and GitHub     | Stub    | Connect GitHub, Linear and Jira, work from the Tickets inbox, and start a chat from a ticket.                                               | `tickets-connectors`, `tickets-inbox`, `tickets-start-work` |
+| `map` The Map                               | Written | Open a project's Map, see how it builds, and switch between the Tree, Focus, Outline and Sky views.                                         | `map-tree`                                                  |
+| `map-find-and-filter` Find files on the Map | Written | Find a file, filter by area and file kind (Shift-click to show only one), light up a chat's changes, and see what breaks if a file changes. | `map-focus`                                                 |
+| `map-areas` Map areas and what Jev reads    | Written | What Core, Shared and Feature mean, how to correct an area's label, and exactly what Jev reads to name areas.                               | `map-review`                                                |
+| `spark-tools` Spark tools for agents        | Written | What agents can look up about Spark, the confirm card they show before acting for you, and what they never see.                             | `spark-tools-action-card`                                   |
 
 ### Desktop app
 
-| Page                                      | Status | Summary                                                                                                   | Screenshots                                                                |
-| ----------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `desktop-companion` The desktop companion | Stub   | Scout under the notch: quick chat with ⌥Space, sessions with ⌥⇧Space, answering approvals, and Calm mode. | `companion-island-chat`, `companion-island-sessions`, `companion-settings` |
-| `updates` Updates                         | Stub   | How the desktop app updates itself, Stable or Beta, and what happens to running work.                     | `updates-section`, `updates-rail-blob`                                     |
+| Page                                                   | Status  | Summary                                                                                                                                         | Screenshots                                          |
+| ------------------------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `desktop-companion` The desktop companion              | Written | Scout at the top of your screen in the Mac app, session blobs, notch and no-notch displays, Calm mode, and the status companion inside the app. | `companion-settings`                                 |
+| `companion-quick-chat` Quick chat and Sessions         | Written | Start a chat with ⌥Space, find a chat and ask for an update with ⌥⇧Space, ask Spark about your chats, and change the shortcuts.                 | `companion-island-chat`, `companion-island-sessions` |
+| `companion-approvals` Answer approvals from the island | Written | Allow or deny with Y and N, answer questions, and hold to confirm a force push.                                                                 | `companion-island-card`                              |
+| `updates` Updates                                      | Written | How the desktop app updates itself, Stable or Beta, the update blob above Settings, and what happens to your data and running work.             | `updates-rail-blob`, `updates-section`               |
 
 ### Reference
 
-| Page                              | Status | Summary                                                                                                          | Screenshots                                            |
-| --------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `settings` Settings reference     | Stub   | Every Settings section and row, what it does and its default.                                                    | `settings-spark`, `settings-projects`                  |
-| `troubleshooting` Troubleshooting | Stub   | What to do when the server doesn't answer, a provider isn't signed in, a key is rejected or a shortcut is taken. | `troubleshooting-offline`, `troubleshooting-reconnect` |
+| Page                              | Status  | Summary                                                                                                                                                               | Screenshots |
+| --------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `settings` Settings reference     | Written | What each Settings section holds, its main defaults, and which page explains it.                                                                                      | none        |
+| `troubleshooting` Troubleshooting | Written | What to do when the app doesn't answer, a provider won't connect, no models show, a test message or run fails, the desktop app doesn't start, or a shortcut is taken. | none        |
 
 ## In-app links into the guide
 
 Settings rows and info tips link here with a book icon (`apps/web/src/ui/DocLink.tsx`). A unit test checks each target page and heading exists.
 
-| Where                                             | Opens                             |
-| ------------------------------------------------- | --------------------------------- |
-| Settings → Spark → How much Spark does alone      | `chats-and-modes#spark-autonomy`  |
-| Settings → Spark → If you don't answer a question | `approvals#if-you-dont-answer`    |
-| Settings → AI providers → Advisor info tip        | `jev`                             |
-| Settings → AI providers → Check changes with Jev  | `jev#check-changes-with-jev`      |
-| Settings → Projects → Where Spark works           | `spark-crew#where-spark-works`    |
-| Settings → Updates → Channel                      | `updates#stable-or-beta`          |
-| Map → what Jev reads info tip                     | `privacy-and-secrets#sparkignore` |
+| Where                                                | Opens                                    |
+| ---------------------------------------------------- | ---------------------------------------- |
+| Settings → Spark → How much Spark does alone         | `chats-and-modes#spark-autonomy`         |
+| Settings → Spark → If you don't answer a question    | `approvals#if-you-dont-answer`           |
+| Settings → AI providers → Advisor info tip           | `jev`                                    |
+| Settings → AI providers → Check changes with Jev     | `jev#check-changes-with-jev`             |
+| Settings → Projects → Where Spark works              | `spark-crew#where-spark-works`           |
+| Settings → Updates → Channel                         | `updates#stable-or-beta`                 |
+| Map → what Jev reads info tip                        | `privacy-and-secrets#sparkignore`        |
+| Settings → Spark → Show companion on desktop         | `desktop-companion`                      |
+| Settings → Spark → Quick chat and Sessions shortcuts | `companion-quick-chat#change-a-shortcut` |
+| Settings → Spark → Calm mode                         | `desktop-companion#calm-mode`            |
+| Settings → Updates → Download updates automatically  | `updates#download-updates-automatically` |
 
 Getting started links to `troubleshooting#run-setup-again` for when setup comes back.

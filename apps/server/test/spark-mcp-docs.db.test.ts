@@ -27,7 +27,7 @@ describe('spark_docs', () => {
     const { pages } = (await tools.call('spark_docs')).json<{ pages: Listed[] }>();
     expect(pages[0]).toMatchObject({ page: 'getting-started', section: 'Get started' });
     expect(pages.find((page) => page.page === 'approvals')).not.toHaveProperty('comingSoon');
-    expect(pages.find((page) => page.page === 'updates')).toMatchObject({ comingSoon: true });
+    expect(pages.find((page) => page.page === 'guardrails')).toMatchObject({ comingSoon: true });
     expect(pages.map((page) => page.page)).not.toContain('README');
   });
 
