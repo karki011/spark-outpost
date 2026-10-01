@@ -26,8 +26,8 @@
   font-weight: 600;
   color: var(--text);
 }
-.spark-name {
-  width: 220px;
+.inp.spark-name {
+  width: 330px;
 }
 @media (max-width: 560px) {
   .set-row:has(.spark-name) {
@@ -38,7 +38,7 @@
     grid-column: 1;
     margin-top: 8px;
   }
-  .spark-name {
+  .inp.spark-name {
     width: 100%;
   }
 }
