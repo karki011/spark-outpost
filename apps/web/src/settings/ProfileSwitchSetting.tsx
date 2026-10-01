@@ -2,13 +2,14 @@ import '../chat/project/agent-setup.css';
 import { useId } from 'react';
 import type { UpdateProfileRequest } from '@spark-outpost/contracts';
 import { BlobToggle, type BlobKind } from '../brand/BlobToggle.tsx';
+import type { TipContent } from '../ui/Tooltip.tsx';
 import { SettingRow } from './SettingRow.tsx';
 import { useProfileSetting } from './use-profile-setting.ts';
 
 interface ProfileSwitchSettingProps {
   enabled: boolean;
   label: string;
-  info: string;
+  info: TipContent;
   hint: string | ((enabled: boolean) => string);
   disabled?: boolean;
   blob?: BlobKind;

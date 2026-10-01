@@ -31,17 +31,17 @@ export const AUTONOMY_LEVELS: readonly InvolvementLevelInfo[] = [
   {
     id: 'balanced',
     label: 'Review each step',
-    hint: "You decide whether to keep the changes, see the Critic's findings before any fix, and get a card before risky work starts.",
+    hint: 'You decide what to keep and get a card before risky work starts.',
   },
   {
     id: 'hands-off',
     label: 'Automatic',
-    hint: "Runs commands without asking in this chat's worktree and in Ask turns; still asks for risky ones. Changes are kept when the checks pass, the Critic's findings are fixed in a loop, and risky work runs in a worktree copy. Revert is always there.",
+    hint: 'Runs commands and keeps passing changes. Risky work uses a worktree copy. Revert is always there.',
   },
   {
     id: 'full-auto',
     label: 'Full auto → PR',
-    hint: 'Automatic, in a worktree copy, then Ship commits, pushes the task branch and opens a draft PR. Nothing ever merges.',
+    hint: 'Automatic in a worktree copy, then opens a draft PR. Nothing ever merges.',
   },
 ];
 

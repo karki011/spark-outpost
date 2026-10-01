@@ -141,7 +141,7 @@ test('the rules pick models, so there is no frontier switch, and Jev can stop ch
   );
   const info = providers.getByRole('button', { name: 'More about Check changes with Jev' });
   await expect(info).toHaveAccessibleDescription(
-    /observation only.*redone once by a stronger model/,
+    /observation only.*a stronger model redoes it once/,
   );
   await diffs.focus();
   await page.keyboard.press('Space');

@@ -1,11 +1,12 @@
 import './setting-row.css';
 import type { ReactNode } from 'react';
 import { InfoTip } from '../ui/InfoTip.tsx';
+import type { TipContent } from '../ui/Tooltip.tsx';
 
 interface SettingRowProps {
   label: string;
   controlId?: string;
-  info?: string;
+  info?: TipContent;
   hint: string;
   hintId: string;
   disabled?: boolean;

@@ -1,11 +1,12 @@
 import { useId, type ReactNode } from 'react';
 import { BlobToggle, type BlobKind } from '../brand/BlobToggle.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
+import type { TipContent } from '../ui/Tooltip.tsx';
 
 interface SwitchValueSettingProps {
   label: string;
   blob: BlobKind;
-  info: string;
+  info: TipContent;
   hint: string;
   on: boolean;
   onToggle: (on: boolean) => void;

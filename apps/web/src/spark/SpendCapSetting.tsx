@@ -5,8 +5,15 @@ import { SwitchValueSetting } from './SwitchValueSetting.tsx';
 
 const DEFAULT_CAP_USD = 5;
 
-const INFO =
-  'When a task’s agent spend reaches this amount, Spark pauses it and asks whether to continue; continuing allows another round of the same amount. Spend is what the agents report, or an estimate from their token counts. Applies to tasks started after you change it. Direct chats with Spark off aren’t capped.';
+const INFO = {
+  lead: 'When a task’s agent spend reaches this amount, Spark pauses it and asks.',
+  items: [
+    { label: 'Continue', text: 'Allows another round of the same amount.' },
+    { label: 'Spend', text: 'What the agents report, or an estimate from their token counts.' },
+    { label: 'Applies to', text: 'Tasks started after you change it.' },
+  ],
+  footer: 'Direct chats with Spark off aren’t capped.',
+};
 
 const RANGE_HINT = `Enter an amount from $0.01 to $${SPEND_CAP_MAX_USD.toLocaleString('en-US')}.`;
 

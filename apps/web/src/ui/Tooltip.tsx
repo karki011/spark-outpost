@@ -18,6 +18,41 @@ const EDGE = 8;
 
 export type TooltipSide = 'top' | 'bottom';
 
+export interface TipItem {
+  label: string;
+  text: string;
+}
+
+export interface RichTip {
+  lead?: string;
+  items: readonly TipItem[];
+  footer?: string;
+}
+
+export type TipContent = string | RichTip;
+
+export function tipText(content: TipContent): string {
+  if (typeof content === 'string') return content;
+  const items = content.items.map((item) => `${item.label}: ${item.text}`);
+  return [content.lead, ...items, content.footer].filter(Boolean).join(' ');
+}
+
+function TipBody({ content }: { content: RichTip }) {
+  return (
+    <>
+      {content.lead && <p className="tip-lead">{content.lead}</p>}
+      <ul className="tip-list">
+        {content.items.map((item) => (
+          <li key={item.label}>
+            <b>{item.label}</b> {item.text}
+          </li>
+        ))}
+      </ul>
+      {content.footer && <p className="tip-foot">{content.footer}</p>}
+    </>
+  );
+}
+
 interface TooltipOptions {
   side?: TooltipSide;
   keys?: ShortcutKeys;
@@ -25,7 +60,7 @@ interface TooltipOptions {
 
 interface BubbleProps {
   id: string;
-  label: string;
+  label: TipContent;
   keys: ShortcutKeys | undefined;
   anchor: DOMRect;
   side: TooltipSide;
@@ -50,15 +85,16 @@ function TooltipBubble({ id, label, keys, anchor, side }: BubbleProps) {
     bubble.style.top = `${Math.round(top)}px`;
     bubble.dataset.placed = top === below ? 'below' : 'above';
   }, [anchor, side, label]);
+  const rich = typeof label !== 'string';
   return (
-    <div ref={ref} id={id} role="tooltip" className="tooltip">
-      {label}
+    <div ref={ref} id={id} role="tooltip" className={rich ? 'tooltip tip-rich' : 'tooltip'}>
+      {rich ? <TipBody content={label} /> : label}
       {keys && <Keys keys={keys} />}
     </div>
   );
 }
 
-export function useTooltip(label: string, { side = 'bottom', keys }: TooltipOptions = {}) {
+export function useTooltip(label: TipContent, { side = 'bottom', keys }: TooltipOptions = {}) {
   const id = useId();
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
