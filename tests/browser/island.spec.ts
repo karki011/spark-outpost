@@ -247,7 +247,9 @@ test('the island has no serious accessibility problems in its main views', async
     const results = await new AxeBuilder({ page }).include('.isl-root').analyze();
     for (const violation of results.violations) {
       if (violation.impact === 'serious' || violation.impact === 'critical') {
-        views.push(`${name}: ${violation.id} ${violation.nodes.map((node) => `${node.target.join(' ')} ${node.any.map((check) => check.message).join(';')}`).join(' | ')}`);
+        views.push(
+          `${name}: ${violation.id} ${violation.nodes.map((node) => `${node.target.join(' ')} ${node.any.map((check) => check.message).join(';')}`).join(' | ')}`,
+        );
       }
     }
   };
