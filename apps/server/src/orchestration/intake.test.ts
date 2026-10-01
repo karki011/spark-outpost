@@ -80,7 +80,21 @@ describe('intake decisions', () => {
     expect(decided.calls.change).toMatchObject({ value: true, source: 'user' });
     expect(
       decideIntake(null, facts({ request: 'Drop the users table', change: true })),
-    ).toMatchObject({ start: 'build', destructive: true });
+    ).toMatchObject({ start: 'plan_first', destructive: true });
+  });
+
+  it('plans first before any destructive build, at every level, also after clarifying (E)', () => {
+    const cleanup = 'Clean up the uploads table — drop the unused columns and old rows.';
+    for (const level of ['balanced', 'hands-off', 'full-auto'] as const) {
+      expect(decideIntake(null, facts({ request: 'Drop the users table', level }))).toMatchObject({
+        start: 'plan_first',
+        then: 'plan_first',
+        destructive: true,
+      });
+      expect(
+        decideIntake(jev({ vague: 0.9, destructive: 0.95 }), facts({ request: cleanup, level })),
+      ).toMatchObject({ start: 'ask_agent', then: 'plan_first', destructive: true });
+    }
   });
 
   it('asks the agent to clarify a vague follow-up with no referent, then plans first at Full auto', () => {

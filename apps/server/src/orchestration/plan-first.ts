@@ -14,6 +14,7 @@ import {
 import { LeaseLostError } from '../persistence/run-events.ts';
 import { specByRule } from './builder-complexity.ts';
 import { askCard, CheckpointTimeout, type CheckpointCard } from './checkpoint.ts';
+import { destructiveWork, heldCard } from './checkpoint-asks.ts';
 import { draftPlan, originalPrompt, settleQuietly } from './plan-only.ts';
 import { save, type Session } from './session.ts';
 import type { FlowEvent } from './transitions.ts';
@@ -116,8 +117,14 @@ async function adoptRequestAsPlan(s: Session, request: string, reason: string): 
   return { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.makeChange, note: null };
 }
 
+function cardFor(s: Session, version: number, seconds: number | null): CheckpointCard {
+  if (!destructiveWork(s)) return planFirstCard(version, s.input.level, seconds);
+  return heldCard(planFirstCard(version, 'balanced', null));
+}
+
 export async function writePlanFirst(s: Session, note: string | null): Promise<FlowEvent> {
-  const spec = note === null ? requestIsThePlan(s.input.level, s.input.userRequest) : null;
+  const held = destructiveWork(s);
+  const spec = note === null && !held ? requestIsThePlan(s.input.level, s.input.userRequest) : null;
   if (spec) return adoptRequestAsPlan(s, s.input.userRequest, spec);
   const original = originalPrompt(s);
   const drafted = await draftPlan(s, planFirstPrompt(original, note), note);
@@ -127,8 +134,8 @@ export async function writePlanFirst(s: Session, note: string | null): Promise<F
   s.flow = { ...s.flow, phase: 'waiting', waitingFor: 'plan' };
   await save(s);
   const seconds = await autoContinueSeconds(s.deps.db, s.input.workspaceId);
-  const card = planFirstCard(plan.version, s.input.level, seconds);
-  const answer = await askCard(s, card, fallbackSeconds(s.input.level));
+  const card = cardFor(s, plan.version, seconds);
+  const answer = await askCard(s, card, held ? null : fallbackSeconds(s.input.level));
   if (answer.type === 'timeout') throw new CheckpointTimeout();
   if (answer.type === 'stopped') {
     await settleQuietly(s, plan, CHECKPOINT_OPTION.stop);

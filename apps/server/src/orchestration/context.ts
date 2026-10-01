@@ -179,6 +179,9 @@ const VERDICT_RULE =
 export const FINDING_KIND_RULE =
   'Start each finding with its kind: "[bug]" for behaviour the change gets wrong for the request (a wrong result, a crash, a failing check, or a vulnerability the change adds, such as SQL injection); "[missing]" for something the request or agreed plan asks for that the change lacks; "[hardening]" for robustness, security hardening, or edge-case inputs the request did not ask about; "[style]" for naming, structure or readability. Use "Verdict: concerns" only for [bug] or [missing] findings.';
 
+export const IRREVERSIBLE_RULE =
+  'Flag as a "[bug]" any irreversible data or schema change the user did not explicitly ask for: DELETE, DROP or TRUNCATE statements, destructive migrations, or code that removes stored data. Name the statement and what it would lose. A vague request such as "clean up" or a best guess the user never confirmed is not an explicit request.';
+
 function diffBlock(patch: string): string {
   return patch.trim() ? `\`\`\`diff\n${cap(patch, PATCH_LIMIT)}\n\`\`\`` : 'No diff.';
 }
@@ -221,6 +224,7 @@ export function criticPrompt(context: CriticContext): string {
     'Role: Critic. Review the change below; do not change files. This is an AI review, not verification.',
     VERDICT_RULE,
     FINDING_KIND_RULE,
+    IRREVERSIBLE_RULE,
     ...optional(criticStyle(context.buildStyle ?? 'off')),
     ...(context.agreedPlan ? [PLAN_FOLLOW_RULE] : []),
     section('Request', cap(context.request, REQUEST_LIMIT)),

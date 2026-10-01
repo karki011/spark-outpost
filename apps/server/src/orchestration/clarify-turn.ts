@@ -1,7 +1,14 @@
 import { POLICY_VERSION } from '../advisor/policy.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { LeaseLostError } from '../persistence/run-events.ts';
-import { assume, intakeResponse, rewriteRequest } from './checkpoint-asks.ts';
+import {
+  assume,
+  destructiveWork,
+  heldCard,
+  intakeResponse,
+  rewriteRequest,
+} from './checkpoint-asks.ts';
+import { DESTRUCTIVE_CARD_REASON } from './checkpoint-policy.ts';
 import { askCard, CheckpointTimeout } from './checkpoint.ts';
 import {
   CLARIFY_NOTE,
@@ -19,6 +26,7 @@ import { checkCommands } from './member-prompts.ts';
 import { runMember, setRunMode } from './members.ts';
 import { closeReply } from './plan-only.ts';
 import { FULL_AUTO_PLAN_SECONDS } from './plan-first.ts';
+import { destructiveByRule } from './risk-rules.ts';
 import { publish, type Session } from './session.ts';
 import type { ClarifiedStart, FlowEvent } from './transitions.ts';
 
@@ -89,11 +97,30 @@ async function record(
   }).catch((error: unknown) => console.error('Could not record the clarify turn', error));
 }
 
+function defaultsText(questions: readonly ClarifyQuestion[]): string {
+  return questions.map((question) => `${question.question} ${question.default}`).join('\n');
+}
+
+function repliedText(questions: readonly ClarifyQuestion[], reply: ClarifyReply): string {
+  return reply.text ?? defaultsText(questions);
+}
+
+function markDestructive(s: Session): void {
+  s.facts = { ...s.facts, destructive: true };
+  s.risky ??= DESTRUCTIVE_CARD_REASON;
+  s.flow = { ...s.flow, reviewWanted: true };
+  if (s.git && !s.input.chatWorktree) s.needsCopy = true;
+}
+
+function afterAnswers(s: Session, then: ClarifiedStart): ClarifiedStart {
+  return then === 'build' && destructiveWork(s) ? 'plan_first' : then;
+}
+
 async function fallback(s: Session, then: ClarifiedStart): Promise<FlowEvent> {
   if (vagueHandling(s.input.level) === 'assume') {
     const [likely] = interpretations(intakeResponse(s), s.input.userRequest, checkCommands(s));
     if (likely) await assume(s, likely);
-    return { type: 'clarified', start: then };
+    return { type: 'clarified', start: afterAnswers(s, then) };
   }
   return { type: 'unclear', followUp: s.input.history.length > 0 };
 }
@@ -102,9 +129,11 @@ export async function clarifyTurn(s: Session, then: ClarifiedStart): Promise<Flo
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
     const asked = await askAgent(s);
     if (asked.type === 'none')
-      return round === 1 ? fallback(s, then) : { type: 'clarified', start: then };
-    const card = clarifyCard(asked.questions, asked.agent);
-    const fallbackSeconds = s.input.level === 'full-auto' ? FULL_AUTO_PLAN_SECONDS : null;
+      return round === 1 ? fallback(s, then) : { type: 'clarified', start: afterAnswers(s, then) };
+    const held = destructiveWork(s) || destructiveByRule(defaultsText(asked.questions));
+    const asking = clarifyCard(asked.questions, asked.agent);
+    const card = held ? heldCard(asking) : asking;
+    const fallbackSeconds = s.input.level === 'full-auto' && !held ? FULL_AUTO_PLAN_SECONDS : null;
     const answer = await askCard(s, card, fallbackSeconds);
     if (answer.type === 'timeout') throw new CheckpointTimeout();
     const reply =
@@ -114,6 +143,7 @@ export async function clarifyTurn(s: Session, then: ClarifiedStart): Promise<Flo
     await record(s, round, asked.questions, reply, asked.messageId);
     if (answer.type === 'stopped') return { type: 'stopped' };
     if (!reply) return { type: 'clarified', start: null };
+    if (destructiveByRule(repliedText(asked.questions, reply))) markDestructive(s);
     rewriteRequest(s, (text) => requestWithAnswers(text, asked.questions, reply));
     s.prNotes = [...(s.prNotes ?? []), clarifyPrNote(asked.questions, reply)];
     s.input = {
@@ -122,5 +152,5 @@ export async function clarifyTurn(s: Session, then: ClarifiedStart): Promise<Flo
     };
     if (!replyIsVague(reply)) break;
   }
-  return { type: 'clarified', start: then };
+  return { type: 'clarified', start: afterAnswers(s, then) };
 }

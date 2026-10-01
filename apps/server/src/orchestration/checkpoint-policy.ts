@@ -10,6 +10,7 @@ export const DESTRUCTIVE_CARD_REASON =
   'This change looks destructive: it can delete or rewrite data, files or history. The Builder works in a worktree copy on the top-tier model, and the Critic reviews the change before it lands.';
 export const MIGRATION_CARD_REASON =
   'This migration can rename, drop or rewrite what existing data depends on. The Critic reviews the change when the Builder is done.';
+export const DESTRUCTIVE_WAIT = 'Waiting for your answer — this would change data permanently';
 export const RISKY_PR_NOTE =
   'Risky change: destructive or a schema migration. Review it carefully before merging.';
 

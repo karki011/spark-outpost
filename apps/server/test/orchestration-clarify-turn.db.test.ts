@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, clarifyOptionId } from '@spark-outpost/contracts';
+import { DESTRUCTIVE_WAIT } from '../src/orchestration/checkpoint-policy.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { runCommand } from '../src/setup/command.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
@@ -104,6 +105,22 @@ async function run(
     clarify: clarify.rows.map((row) => row.body),
   };
 }
+
+const CLEANUP: Scenario = {
+  ...VAGUE,
+  id: 'cleanup',
+  text: 'Clean up the reports table — drop the old rows #build #questions',
+  destructive: 0.95,
+};
+
+const QUESTIONS_TITLE = 'A few questions first';
+const PLAN_TITLE = 'Build this plan?';
+
+const answerHeldCards: Answerer = (approval) => {
+  if (approval.title === QUESTIONS_TITLE) return { optionId: clarifyOptionId(1) };
+  if (approval.title === PLAN_TITLE) return { optionId: CHECKPOINT_OPTION.makeChange };
+  return answerEverything(approval);
+};
 
 const kinds = (asked: readonly { kind: string; title: string }[]) =>
   asked.map((approval) => `${approval.kind}: ${approval.title}`);
@@ -223,5 +240,57 @@ describe('Full auto: best guesses, plan first, then build and ship', () => {
     expect(await readFile(path.join(repo.root, 'notes.txt'), 'utf8').catch(() => '')).not.toContain(
       'step 1',
     );
+  }, 120_000);
+});
+
+describe('destructive work never runs on a countdown', () => {
+  it.each(['hands-off', 'full-auto'] as const)(
+    'holds the questions and the plan for your answer at %s, then builds',
+    async (level) => {
+      await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
+      const done = await run(CLEANUP, level, answerHeldCards);
+      expect(done.orchestration.status).toBe('succeeded');
+      const cards = done.orchestration.checkpoints.filter((approval) =>
+        [QUESTIONS_TITLE, PLAN_TITLE].includes(approval.title),
+      );
+      expect(cards.map((approval) => [approval.title, approval.decidedBy])).toEqual([
+        [QUESTIONS_TITLE, 'user'],
+        [PLAN_TITLE, 'user'],
+      ]);
+      for (const card of cards) {
+        expect(card.autoContinueAt).toBeNull();
+        expect(card.payload.checkpoint).toMatchObject({
+          autoOption: null,
+          waitsFor: DESTRUCTIVE_WAIT,
+        });
+      }
+      expect(done.builderPrompts[0]).toContain('The user answered: Usage');
+    },
+    120_000,
+  );
+
+  it('holds the questions when their best guesses would delete data, then plans first', async () => {
+    await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
+    const scenario = { ...VAGUE, text: 'Make the reports better #build #questions #oldrows' };
+    const done = await run(scenario, 'hands-off', (approval) => {
+      if (approval.title === QUESTIONS_TITLE) return { optionId: CHECKPOINT_OPTION.useDefaults };
+      return answerHeldCards(approval);
+    });
+    expect(done.orchestration.status).toBe('succeeded');
+    const [questions, plan] = done.orchestration.checkpoints;
+    expect(questions).toMatchObject({ title: QUESTIONS_TITLE, decidedBy: 'user' });
+    expect(questions!.payload.checkpoint).toMatchObject({ waitsFor: DESTRUCTIVE_WAIT });
+    expect(plan).toMatchObject({ title: PLAN_TITLE, decidedBy: 'user', autoContinueAt: null });
+    expect(done.builderPrompts).toHaveLength(1);
+  }, 120_000);
+
+  it('stops before any Builder when the destructive plan is stopped', async () => {
+    const done = await run(CLEANUP, 'full-auto', (approval) =>
+      approval.title === PLAN_TITLE
+        ? { optionId: CHECKPOINT_OPTION.stop }
+        : answerHeldCards(approval),
+    );
+    expect(done.orchestration.status).toBe('cancelled');
+    expect(done.builderPrompts).toEqual([]);
   }, 120_000);
 });

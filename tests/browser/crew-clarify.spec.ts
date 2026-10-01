@@ -13,6 +13,7 @@ import {
 
 const SHOTS = process.env.SPARK_SHOTS ?? '';
 const QUESTIONS = /Spark has a few questions/;
+const HELD = 'Waiting for your answer — this would change data permanently';
 
 let repo: CrewRepo;
 
@@ -117,4 +118,33 @@ test('Full auto counts down to the best guesses, then to building the plan', asy
   await expect(plan.getByRole('button', { name: 'Stop' })).toBeVisible();
   await expect(plan).toContainText('Continued automatically after 3s.', { timeout: 10_000 });
   await expect.poll(() => repo.notes(), { timeout: 30_000 }).toBe('start\nstep 1\n');
+});
+
+test('destructive work waits for your answer instead of counting down, then plans first', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await autoContinueAfter(page, 2);
+  await crewChat(page, repo, 'Auto-edit');
+  await send(page, 'Clean up the reports table — drop the old rows #build #vague #questions');
+  const questions = dock(page).getByRole('group', { name: QUESTIONS });
+  await expect(questions).toBeVisible({ timeout: 30_000 });
+  await expect(questions.getByRole('status')).toHaveText(HELD);
+  await expect(questions.getByRole('button', { name: /best guesses in/ })).toHaveCount(0);
+  await expect(questions.getByRole('button', { name: 'Go with my best guesses' })).toBeVisible();
+  await shot(page, 'held');
+  await page.waitForTimeout(3_000);
+  await expect(questions).toContainText('Which report?');
+  await expect(thread(page).getByText('Went with the best guesses')).toHaveCount(0);
+  await questions.getByRole('button', { name: 'Usage' }).click();
+  await questions.getByRole('button', { name: 'Send' }).click();
+
+  const plan = card(page, /Build this plan\?/);
+  await expect(plan.getByRole('status')).toHaveText(HELD, { timeout: 30_000 });
+  await expect(plan.getByRole('button', { name: /Building this plan in/ })).toHaveCount(0);
+  await page.waitForTimeout(3_000);
+  expect(repo.notes()).toBe('start\n');
+  await plan.getByRole('button', { name: 'Build this plan' }).click();
+  await expect(plan).not.toContainText(HELD);
+  await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
 });

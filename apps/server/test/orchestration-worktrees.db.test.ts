@@ -82,6 +82,7 @@ describe('the solo worktree copy', () => {
     const { orchestration, runId } = await run('#failonce 1');
     expect(orchestration.status).toBe('succeeded');
     expect(orchestration.crew.map((member) => [member.role, member.copy])).toEqual([
+      ['scout', null],
       ['builder', expect.stringMatching(/^spark\//)],
       ['builder', expect.stringMatching(/^spark\//)],
       ['critic', null],

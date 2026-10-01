@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   HISTORY_TURNS,
   FINDING_KIND_RULE,
+  IRREVERSIBLE_RULE,
   INCREMENT_RULE,
   MAKE_CHANGE_RULE,
   SHIP_RULE,
@@ -165,5 +166,11 @@ describe('the Critic finding schema (B3)', () => {
     expect(prompt).toContain(FINDING_KIND_RULE);
     expect(FINDING_KIND_RULE).toMatch(/\[bug\].*\[missing\].*\[hardening\].*\[style\]/s);
     expect(FINDING_KIND_RULE).toMatch(/"Verdict: concerns" only for \[bug\] or \[missing\]/);
+  });
+
+  it('asks the Critic to flag irreversible data or schema changes the user did not ask for (E)', () => {
+    const prompt = criticPrompt({ request: 'r', plan: [], changes: [], patch: '', checks: [] });
+    expect(prompt).toContain(IRREVERSIBLE_RULE);
+    expect(IRREVERSIBLE_RULE).toMatch(/\[bug\].*DELETE, DROP or TRUNCATE.*destructive migrations/s);
   });
 });

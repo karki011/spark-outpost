@@ -97,7 +97,7 @@ describe('a request that is already a spec', { timeout: 120_000 }, () => {
     expect(done.plans.map((plan) => [plan.source, plan.status])).toEqual([['chat', 'approved']]);
   });
 
-  it('is the agreed plan at Automatic for a two-part destructive spec (live run D)', async () => {
+  it('still asks Build this plan? for a destructive spec at Automatic (live runs D and E)', async () => {
     const text = [
       'Split this up into pieces, they are independent:',
       '- Add a migration `migrations/002_tags.sql` that will drop the `old_tags` table.',
@@ -105,10 +105,8 @@ describe('a request that is already a spec', { timeout: 120_000 }, () => {
     ].join('\n');
     const done = await run('hands-off', { ...NORMAL, id: 'spec-d', text });
     expect(done.orchestration.status).toBe('succeeded');
-    expect(done.titles).not.toContain('Build this plan?');
-    expect(done.plans.map((plan) => [plan.source, plan.status, plan.approved_option])).toEqual([
-      ['user', 'approved', SPEC_PLAN_OPTION],
-    ]);
+    expect(done.titles).toContain('Build this plan?');
+    expect(done.plans.map((plan) => [plan.source, plan.status])).toEqual([['chat', 'approved']]);
   });
 });
 
