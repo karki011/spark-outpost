@@ -1,3 +1,5 @@
+import type { InstallResult, UpdateChannel, UpdateStatus } from '@spark-outpost/contracts';
+
 export type IslandAction = 'quick' | 'sessions';
 
 export interface CompanionStatus {
@@ -36,6 +38,13 @@ export interface SparkDesktop {
     setFocusable(on: boolean): void;
     drag(phase: 'start' | 'move' | 'end', x: number, y: number): void;
     openChat(id: string | null): void;
+  };
+  updates: {
+    get(): Promise<UpdateStatus | null>;
+    check(): Promise<UpdateStatus | null>;
+    setChannel(channel: UpdateChannel): Promise<UpdateStatus | null>;
+    install(): Promise<InstallResult>;
+    onChange(callback: (status: UpdateStatus) => void): Unsubscribe;
   };
   onOpenChat(callback: (id: string) => void): Unsubscribe;
 }

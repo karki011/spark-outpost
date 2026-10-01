@@ -13,10 +13,11 @@ import { JevSettings } from './JevSettings.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { ResetSection } from '../reset/ResetSection.tsx';
 import { McpSection } from './mcp/McpSection.tsx';
+import { UpdatesSection, updatesAvailable } from './UpdatesSection.tsx';
 import './settings.css';
 
 export type SettingsSection =
-  'spark' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'mcp' | 'look' | 'reset';
+  'spark' | 'ai' | 'models' | 'usage' | 'projects' | 'tools' | 'mcp' | 'look' | 'updates' | 'reset';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   {
@@ -81,6 +82,16 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
     ),
   },
   {
+    id: 'updates',
+    label: 'Updates',
+    icon: (
+      <>
+        <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
+        <path d="M21 3v5h-5M12 8v5l3 2" />
+      </>
+    ),
+  },
+  {
     id: 'reset',
     label: 'Reset',
     icon: <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8M3 3v5h5" />,
@@ -97,7 +108,8 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const closeRef = useRef<HTMLButtonElement>(null);
   const connected = setup.data?.providers.filter((provider) => provider.connection).length ?? 0;
-  const title = SECTIONS.find((entry) => entry.id === section)?.label ?? '';
+  const sections = SECTIONS.filter((entry) => entry.id !== 'updates' || updatesAvailable());
+  const title = sections.find((entry) => entry.id === section)?.label ?? '';
 
   const onCloseRef = useRef(onClose);
 
@@ -138,7 +150,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
         <div className="set-nav">
           <h2>Settings</h2>
           <div role="tablist" aria-label="Settings sections" aria-orientation="vertical">
-            {SECTIONS.map((entry) => (
+            {sections.map((entry) => (
               <button
                 key={entry.id}
                 type="button"
@@ -242,6 +254,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                     <ThemeCards />
                   </>
                 )}
+                {section === 'updates' && updatesAvailable() && <UpdatesSection />}
                 {section === 'reset' && <ResetSection />}
               </motion.div>
             </AnimatePresence>
