@@ -14,6 +14,7 @@ export default defineConfig({
             '**/*.db.test.ts',
             '**/*.live.test.ts',
             '**/node_modules/**',
+            'apps/desktop/release/**',
             'tests/browser/**',
             'scripts/bench/fixture/**',
             'scripts/e2e-live/dev-day/fixtures/**',

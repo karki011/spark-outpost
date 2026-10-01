@@ -4,3 +4,4 @@ docs/design/
 dist/
 docs/reference/acp/schema.json
 docs/benchmarks/
+apps/desktop/release/

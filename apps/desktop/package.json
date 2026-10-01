@@ -5,19 +5,22 @@
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
-    "build": "esbuild src/main.ts src/server-entry.ts --bundle --platform=node --format=esm --target=node24 --outdir=dist --external:electron --external:embedded-postgres --external:pg --external:tsx && esbuild src/preload.ts --bundle --platform=node --format=cjs --target=node24 --outfile=dist/preload.cjs --external:electron",
+    "build": "esbuild src/main.ts src/server-entry.ts --bundle --platform=node --format=esm --target=node24 --outdir=dist --external:electron --external:embedded-postgres --external:pg --external:tsx --external:electron-updater && esbuild src/preload.ts --bundle --platform=node --format=cjs --target=node24 --outfile=dist/preload.cjs --external:electron",
     "dev": "pnpm build && electron .",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "package": "node --import tsx scripts/package.ts"
   },
   "dependencies": {
     "@spark-outpost/contracts": "workspace:*",
+    "electron-updater": "6.8.9",
     "embedded-postgres": "17.10.0-beta.17",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",
     "electron": "44.4.5",
-    "esbuild": "0.28.2",
-    "tsx": "^4.23.15"
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2"
   }
 }

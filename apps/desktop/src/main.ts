@@ -7,6 +7,7 @@ import { channelConfig, channelPaths, resolveChannel } from './channel.ts';
 import { settingsFile } from './companion-settings.ts';
 import { startCompanionHost, type CompanionHost } from './desktop-companion.ts';
 import { detectGit, GIT_MISSING } from './git.ts';
+import { appLayout } from './layout.ts';
 import { freePort, LOOPBACK } from './ports.ts';
 import { startDatabase, type Database } from './postgres.ts';
 import { apiEnv, POSTGRES_LOCALE, workerEnv, type ServerLaunch } from './server-env.ts';
@@ -16,9 +17,13 @@ import { Supervisor } from './supervisor.ts';
 import { attachApiToken, openWindow } from './window.ts';
 
 const config = channelConfig(resolveChannel(app.isPackaged));
-const paths = channelPaths(app.getPath('appData'), config);
-const repoRoot = path.resolve(app.getAppPath(), '../..');
-const serverDir = path.join(repoRoot, 'apps/server');
+const paths = channelPaths(process.env.SPARK_APP_DATA ?? app.getPath('appData'), config);
+const layout = appLayout({
+  isPackaged: app.isPackaged,
+  appPath: app.getAppPath(),
+  resourcesPath: process.resourcesPath,
+});
+const serverDir = layout.serverDir;
 const bootstrap = path.join(import.meta.dirname, 'server-entry.js');
 const preload = path.join(import.meta.dirname, 'preload.cjs');
 
@@ -106,7 +111,7 @@ async function launch(): Promise<void> {
     apiPort,
     apiOrigin: apiUrl,
     token,
-    webRoot: path.join(repoRoot, 'apps/web/dist'),
+    webRoot: layout.webRoot,
     baseEnv: process.env,
   };
 

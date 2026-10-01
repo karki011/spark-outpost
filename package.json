@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "pnpm --parallel --filter @spark-outpost/server --filter @spark-outpost/web dev",
     "desktop:dev": "pnpm --filter @spark-outpost/web build && pnpm --filter @spark-outpost/desktop dev",
+    "desktop:package": "pnpm --filter @spark-outpost/web build && pnpm --filter @spark-outpost/desktop build && pnpm --filter @spark-outpost/desktop package",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:source && pnpm model-cards:check && pnpm knip && pnpm a11y:contrast --quiet && pnpm acp:coverage && pnpm test",
     "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",
     "lint": "eslint .",
