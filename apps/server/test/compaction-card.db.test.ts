@@ -54,7 +54,9 @@ describe('the compaction card at Review each step', { timeout: 60_000 }, () => {
     const run = await answer(runId, CHECKPOINT_OPTION.compactNow);
 
     expect(run.status).toBe('succeeded');
-    expect(await stepsOf(h, runId)).toContain('Compacted the chat: 176K → 16K tokens');
+    expect(await stepsOf(h, runId)).toContain(
+      'Compacted the chat: 176K tokens → a ~16K summary; the size with the system prompt and tools shows after the next reply',
+    );
     expect((await compactionsOf(h, id)).map((row) => row.method)).toEqual(['agent']);
   });
 

@@ -165,14 +165,14 @@ async function compactWithAgent(
     agentKey: candidate.session.agentKey,
     method: 'agent',
     tokensBefore: candidate.reading.used,
-    tokensAfter: after.used,
+    tokensAfter: null,
     contextSize: after.size,
     summary: compacted.text || null,
     lastMessageId: input.previousMessageId ?? null,
   });
   await notice(
     append,
-    `Compacted the chat: ${kilo(candidate.reading.used)} → ${kilo(after.used)} tokens`,
+    `Compacted the chat: ${kilo(candidate.reading.used)} tokens → a ~${kilo(after.used)} summary; the size with the system prompt and tools shows after the next reply`,
   );
   return withAgentNote(input);
 }

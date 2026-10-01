@@ -38,7 +38,9 @@ describe('compaction at Automatic', { timeout: 60_000 }, () => {
 
     expect(next.run.status).toBe('succeeded');
     expect(next.steps).toContain('Sent /compact to the agent (180K tokens)');
-    expect(next.steps).toContain('Compacted the chat: 180K → 16K tokens');
+    expect(next.steps).toContain(
+      'Compacted the chat: 180K tokens → a ~16K summary; the size with the system prompt and tools shows after the next reply',
+    );
     const sessions = await sessionsOf(h, id);
     expect(sessions).toHaveLength(1);
     const prompts = promptsOf(h, sessions[0]!.session_id);
@@ -49,10 +51,11 @@ describe('compaction at Automatic', { timeout: 60_000 }, () => {
         method: 'agent',
         run_id: next.run.id,
         tokens_before: percentOf(90),
-        tokens_after: percentOf(8),
+        tokens_after: sessions[0]!.context_used,
         summary: FAKE_ACP_COMPACT_REPLY,
       }),
     ]);
+    expect(sessions[0]!.context_used).toBeGreaterThan(percentOf(8));
     const detail = await getConversationDetail(h.t.db, id);
     expect(detail?.compactions?.map((entry) => entry.method)).toEqual(['agent']);
   });
