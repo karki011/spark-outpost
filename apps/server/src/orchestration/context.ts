@@ -179,6 +179,9 @@ const VERDICT_RULE =
 export const FINDING_KIND_RULE =
   'Start each finding with its kind: "[bug]" for behaviour the change gets wrong for the request (a wrong result, a crash, a failing check, or a vulnerability the change adds, such as SQL injection); "[missing]" for something the request or agreed plan asks for that the change lacks; "[hardening]" for robustness, security hardening, or edge-case inputs the request did not ask about; "[style]" for naming, structure or readability. Use "Verdict: concerns" only for [bug] or [missing] findings.';
 
+export const ALL_FINDINGS_RULE =
+  'List every concrete finding in this one review; there may not be another. Before you conclude, go through each changed file and enumerate its edge cases (empty and single inputs, zero and limit values, boundaries, line endings and special characters, error paths, concurrency) and check each one, then report all problems you found together, not only the first.';
+
 export const IRREVERSIBLE_RULE =
   'Flag as a "[bug]" any irreversible data or schema change the user did not explicitly ask for: DELETE, DROP or TRUNCATE statements, destructive migrations, or code that removes stored data. Name the statement and what it would lose. A vague request such as "clean up" or a best guess the user never confirmed is not an explicit request.';
 
@@ -214,7 +217,7 @@ function previousFindingsSection(findings: readonly string[]): string[] {
   return [
     section(
       'Findings the Builder was asked to fix',
-      `Check whether each is fixed now. Repeat any that remain in the same words.\n${findingBullets(findings)}`,
+      `Check whether each is fixed now. Repeat any that remain in the same words, and list every other problem you find in the same review.\n${findingBullets(findings)}`,
     ),
   ];
 }
@@ -224,6 +227,7 @@ export function criticPrompt(context: CriticContext): string {
     'Role: Critic. Review the change below; do not change files. This is an AI review, not verification.',
     VERDICT_RULE,
     FINDING_KIND_RULE,
+    ALL_FINDINGS_RULE,
     IRREVERSIBLE_RULE,
     ...optional(criticStyle(context.buildStyle ?? 'off')),
     ...(context.agreedPlan ? [PLAN_FOLLOW_RULE] : []),
@@ -266,7 +270,7 @@ export function checkFixFollowUp(failures: string): string {
 }
 
 export const CRITIC_FIX_LEAD =
-  "The AI review of your change found these correctness problems. Fix each one without undoing the change's intent, add or adjust a test that shows it where the project has tests, then reply with what you changed.";
+  "The AI review of your change found these correctness problems. Fix all of them together in this turn, without undoing the change's intent; do not stop after the first. Add or adjust a test that shows each one where the project has tests, then reply with what you changed for each.";
 
 export function criticFixFollowUp(findings: readonly string[]): string {
   return [CRITIC_FIX_LEAD, section('Review findings to fix', findingBullets(findings))].join(

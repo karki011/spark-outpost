@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   HISTORY_TURNS,
+  ALL_FINDINGS_RULE,
   FINDING_KIND_RULE,
   IRREVERSIBLE_RULE,
   INCREMENT_RULE,
@@ -11,6 +12,7 @@ import {
   builderPrompt,
   checkFailureText,
   checkFixFollowUp,
+  criticFixFollowUp,
   criticPrompt,
   fixFollowUp,
   makeChangeFollowUp,
@@ -166,6 +168,21 @@ describe('the Critic finding schema (B3)', () => {
     expect(prompt).toContain(FINDING_KIND_RULE);
     expect(FINDING_KIND_RULE).toMatch(/\[bug\].*\[missing\].*\[hardening\].*\[style\]/s);
     expect(FINDING_KIND_RULE).toMatch(/"Verdict: concerns" only for \[bug\] or \[missing\]/);
+  });
+
+  it('asks the Critic for every finding in one review, edge cases across each changed file (C2)', () => {
+    const prompt = criticPrompt({
+      request: 'r',
+      plan: [],
+      changes: [],
+      patch: '',
+      checks: [],
+      previousFindings: ['[bug] `\\r` is left unquoted'],
+    });
+    expect(prompt).toContain(ALL_FINDINGS_RULE);
+    expect(ALL_FINDINGS_RULE).toMatch(/every concrete finding.*each changed file.*edge cases/s);
+    expect(prompt).toContain('list every other problem you find in the same review');
+    expect(criticFixFollowUp(['a', 'b'])).toContain('Fix all of them together in this turn');
   });
 
   it('asks the Critic to flag irreversible data or schema changes the user did not ask for (E)', () => {

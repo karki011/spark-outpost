@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type CheckBody, type InvolvementLevel } from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
 import { nextCallUsd } from '../src/orchestration/budget-check.ts';
+import { CRITIC_FIX_LEAD } from '../src/orchestration/context.ts';
 import {
   BUG_FINDINGS,
   EDGE_FINDINGS,
@@ -173,7 +174,10 @@ describe('Critic → fix rounds', () => {
     expect(fix?.route.name).toBe(first?.route.name);
     expect(fix?.route.resumeKey).toBe(`${fix?.task_id}:builder`);
     expect(fix?.route.followUp).toContain('## Review findings to fix');
+    expect(fix?.route.followUp).toContain(CRITIC_FIX_LEAD);
     for (const finding of BUG_FINDINGS) expect(fix?.route.followUp).toContain(finding);
+    expect(BUG_FINDINGS.length).toBeGreaterThan(1);
+    expect(rows.filter((row) => row.role === 'builder')).toHaveLength(2);
     expect(await notes()).toContain('fixed the review findings');
     expect(await checkStatuses()).toEqual(['passed', 'passed']);
 
