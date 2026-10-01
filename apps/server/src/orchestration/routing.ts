@@ -53,6 +53,7 @@ export interface RouteContext {
   routing: ModelRouting;
   chat: AgentPick;
   providerEffort: string | null;
+  mainModel?: string | null;
   candidates: readonly AdvisorCandidate[];
   request?: string;
   now?: Date;
@@ -400,12 +401,24 @@ function ruleRoute(
   return { pick: chat, routedBy: 'rules', rule: CHAT_RULE, autoWouldUse };
 }
 
-export function routeMemberModel(
+export const MAIN_SESSION_RULE = "the chat's own model, kept for the whole chat";
+
+function mainPick(context: RouteContext): AgentPick {
+  const chat = chatPick(context);
+  const id = context.mainModel;
+  if (context.routing === 'pinned' || !id || id === chat.model) return chat;
+  const label = labelOf(candidateFor(context, chat.provider), id);
+  return { ...chat, model: id, modelLabel: label };
+}
+
+export function mainSessionRoute(
   context: RouteContext,
-  facts: RouteFacts,
   jevTier: RouteTier | null = null,
 ): MemberRoute {
-  return floorReaderRoute(context, ruleRoute(context, facts, jevTier));
+  const base = ruleRoute(context, { trivial: false, destructive: false }, jevTier);
+  if (base.routedBy === 'pinned') return floorReaderRoute(context, base);
+  const route: MemberRoute = { ...base, pick: mainPick(context), rule: MAIN_SESSION_RULE };
+  return floorReaderRoute(context, route);
 }
 
 export function ruleCriticPick(

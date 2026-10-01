@@ -10,6 +10,7 @@ import {
   type ProviderModel,
 } from '@spark-outpost/contracts';
 import type { AdvisorCandidate } from '../advisor/advice.ts';
+import { effectiveDefaultModel } from '../model-cards/cards.ts';
 import { advisorEntry, catalogEntry } from '../providers/catalog.ts';
 import { reportedEfforts } from '../providers/efforts.ts';
 import { listModelStats } from './model-stats.ts';
@@ -118,6 +119,7 @@ interface CandidateRow {
   models: ProviderModel[];
   capability_models: CapabilityOption[] | null;
   capability_efforts: CapabilityOption[] | null;
+  capability_default_model: string | null;
   effort: string | null;
 }
 
@@ -138,11 +140,18 @@ function toCandidate(row: CandidateRow & { provider: ProviderId }): AdvisorCandi
   };
 }
 
+function defaultModelEntry(row: CandidateRow & { provider: ProviderId }): [string, string][] {
+  const models = row.capability_models ?? row.models;
+  const model = effectiveDefaultModel(row.provider, models, row.capability_default_model);
+  return model ? [[row.provider, model]] : [];
+}
+
 export interface IntakeContext {
   jevModel: string | null;
   routing: ModelRouting;
   candidates: AdvisorCandidate[];
   defaultEfforts: Readonly<Record<string, string>>;
+  defaultModels: Readonly<Record<string, string>>;
 }
 
 export async function loadIntakeContext(
@@ -153,7 +162,7 @@ export async function loadIntakeContext(
   const [candidates, jev, conversation, stats] = await Promise.all([
     db.query<CandidateRow>(
       `SELECT pc.provider, pc.models, pc.effort, cap.models AS capability_models,
-         cap.efforts AS capability_efforts
+         cap.efforts AS capability_efforts, cap.default_model AS capability_default_model
        FROM provider_connections pc
        LEFT JOIN provider_capabilities cap
          ON cap.workspace_id = pc.workspace_id AND cap.provider = pc.provider
@@ -183,5 +192,6 @@ export async function loadIntakeContext(
     defaultEfforts: Object.fromEntries(
       known.flatMap((row) => (row.effort ? [[row.provider, row.effort]] : [])),
     ),
+    defaultModels: Object.fromEntries(known.flatMap(defaultModelEntry)),
   };
 }

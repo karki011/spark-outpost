@@ -3,6 +3,8 @@ import { criticProvider } from './critic-provider.ts';
 import {
   escalate,
   jevTierPick,
+  mainSessionRoute,
+  MAIN_SESSION_RULE,
   rereviewCritic,
   smallDiffCritic,
   SMALL_DIFF_NOTE,
@@ -52,6 +54,20 @@ describe('rule routes', () => {
     expect(route.pick.model).toBe('sonnet');
     expect(route.autoWouldUse).toMatchObject({ model: 'opus[1m]', modelLabel: 'Opus 5.5' });
     expect(jevTierPick(context('auto'), null)).toBeNull();
+  });
+
+  it("keeps the main chat session on one model: the provider's default on Auto, the pin otherwise", () => {
+    const auto = { ...context('auto'), mainModel: 'opus[1m]' };
+    expect(mainSessionRoute(auto, 'small')).toMatchObject({
+      rule: MAIN_SESSION_RULE,
+      pick: { provider: 'claude', model: 'opus[1m]', modelLabel: 'Opus 5.5' },
+    });
+    expect(mainSessionRoute(context('auto')).pick.model).toBe('sonnet');
+    const pinned = { ...context('pinned'), mainModel: 'opus[1m]' };
+    expect(mainSessionRoute(pinned)).toMatchObject({
+      routedBy: 'pinned',
+      pick: { model: 'sonnet' },
+    });
   });
 
   it('sends the Critic to the other connected provider', () => {

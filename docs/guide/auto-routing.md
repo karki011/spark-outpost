@@ -32,7 +32,9 @@ Higher effort is slower and costs more. Claude offers Low to Max, Codex Low to H
 
 ## How Auto picks a model
 
-On **Auto**, Spark picks from the chat provider's models for each request. Rules come first:
+Auto picks models for the helpers, never for the chat itself. The chat's own session, the one that reads, answers and coordinates, keeps one model for the whole chat: on **Auto** that's the provider's default model, for example Claude Opus 5.5, chosen when the chat first starts. Switching it would make the agent re-read everything, so even a trivial follow-up stays on it.
+
+For each Builder, piece, Critic and integrator, Spark picks from the chat provider's models per request. Rules come first:
 
 - **Destructive work**, such as deleting data, always goes to the top model.
 - **Trivial edits** go to a middle model.

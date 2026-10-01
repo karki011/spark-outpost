@@ -18,7 +18,7 @@ import {
   routeBuilder,
   rereviewCritic,
   routeCritic,
-  routeMemberModel,
+  mainSessionRoute,
   smallDiffCritic,
   soloRoute,
   type MemberRoute,
@@ -135,7 +135,7 @@ async function firstBuilderRoute(s: Session): Promise<ResolvedRoute> {
 }
 
 async function scoutRoute(s: Session): Promise<ResolvedRoute> {
-  const route = routeMemberModel(s.route, { trivial: false, destructive: false }, jevTier(s));
+  const route = mainSessionRoute(s.route, jevTier(s));
   const mode = s.input.mode === 'do' ? 'ask' : (s.input.mode ?? 'chat');
   const session = await resumableChat(s.deps.db, s.input, mode, s.deps.sessionLimits?.idleMs);
   const kept = keepScoutSession(route, session);
@@ -158,6 +158,7 @@ async function firstCriticRoute(s: Session): Promise<MemberRoute> {
 }
 
 export function seatRoute(s: Session, spawn: Spawn): ResolvedRoute {
+  if (spawn.role === 'coordinator') return { route: mainSessionRoute(s.route, jevTier(s)) };
   const previous = s.routes.get('builder');
   if (previous && spawn.escalate) return { route: escalateBuilder(s.route, previous) };
   if (previous) return { route: previous };

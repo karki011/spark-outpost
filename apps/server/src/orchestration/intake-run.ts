@@ -33,6 +33,7 @@ export function routeContext(input: RunInput, context: IntakeContext): RouteCont
       effort: input.settings.effort,
     },
     providerEffort: context.defaultEfforts[input.provider] ?? null,
+    mainModel: context.defaultModels?.[input.provider] ?? null,
     candidates: context.candidates,
     request: input.userRequest,
   };

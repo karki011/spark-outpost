@@ -204,14 +204,13 @@ describe('rule routing on Auto', () => {
     expect(route?.answer).toMatchObject({ rule: 'trivial → middle tier', jevTier: 'small' });
   }, 60_000);
 
-  it('answers on the middle tier when the chat is on Haiku and Auto picks', async () => {
+  it("answers on the provider's default model in an Auto chat, whatever model the chat had", async () => {
     const { orchestration } = await runLevel(QUESTION, 'balanced', 'auto', 'haiku');
-    const note = "raised to Sonnet 5: the harness doesn't use the fast tier";
     expect(orchestration.crew).toEqual([
-      expect.objectContaining({ role: 'scout', model: 'sonnet', routeNote: note }),
+      expect.objectContaining({ role: 'scout', model: 'opus[1m]' }),
     ]);
     const route = orchestration.decisions.find((decision) => decision.kind === 'route');
-    expect(route?.summary).toContain(note);
+    expect(route?.summary).toContain("the chat's own model, kept for the whole chat");
   }, 60_000);
 
   it('answers on Haiku when the user picked it, with a retiring note', async () => {
@@ -228,7 +227,7 @@ describe('rule routing on Auto', () => {
     const { orchestration } = await runLevel(RISKY, 'full-auto');
     expect(orchestration.risk).toBe('destructive');
     expect(orchestration.crew.map((member) => [member.role, member.model])).toEqual([
-      ['scout', 'sonnet'],
+      ['scout', 'opus[1m]'],
       ['builder', 'opus[1m]'],
       ['critic', 'gpt-6-sol'],
     ]);

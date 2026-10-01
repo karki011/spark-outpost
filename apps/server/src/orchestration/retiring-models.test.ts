@@ -14,7 +14,7 @@ import {
   escalate,
   routeBuilder,
   routeCritic,
-  routeMemberModel,
+  mainSessionRoute,
   type RouteContext,
 } from './routing.ts';
 
@@ -113,41 +113,41 @@ describe('retiring models', () => {
       'kept Haiku 4.5: nothing stronger · retired on 2026-10-15',
     );
     const pinned = onChat(pick(HAIKU), 'pinned', AFTER_RETIREMENT);
-    expect(routeMemberModel(pinned, plainFacts).note).toBe('Haiku 4.5 retired on 2026-10-15');
+    expect(mainSessionRoute(pinned).note).toBe('Haiku 4.5 retired on 2026-10-15');
   });
 });
 
 describe('read-only roles on the middle tier', () => {
   it('runs a Scout on the middle tier when the harness chooses', () => {
-    expect(routeMemberModel(onChat(pick(HAIKU)), plainFacts)).toMatchObject({
+    expect(mainSessionRoute(onChat(pick(HAIKU)))).toMatchObject({
       routedBy: 'rules',
-      rule: 'chat model',
+      rule: "the chat's own model, kept for the whole chat",
       pick: { model: 'sonnet', modelLabel: 'Sonnet 5' },
       note: "raised to Sonnet 5: the harness doesn't use the fast tier",
     });
-    const luna = routeMemberModel(onChat(pick(codexModels[2]!, 'codex')), plainFacts);
+    const luna = mainSessionRoute(onChat(pick(codexModels[2]!, 'codex')));
     expect(luna.pick.model).toBe('gpt-6-sol');
-    const sonnet = routeMemberModel(onChat(pick(SONNET)), plainFacts);
+    const sonnet = mainSessionRoute(onChat(pick(SONNET)));
     expect(sonnet.pick.model).toBe('sonnet');
     expect(sonnet.note).toBeUndefined();
   });
 
   it('runs a model the user picked for the chat, with a retiring note', () => {
-    expect(routeMemberModel(onChat(pick(HAIKU), 'pinned'), plainFacts)).toMatchObject({
+    expect(mainSessionRoute(onChat(pick(HAIKU), 'pinned'))).toMatchObject({
       routedBy: 'pinned',
       pick: { model: 'haiku' },
       note: 'Haiku 4.5 retiring on 2026-10-15',
     });
-    expect(routeMemberModel(onChat(pick(SONNET), 'pinned'), plainFacts).note).toBeUndefined();
+    expect(mainSessionRoute(onChat(pick(SONNET), 'pinned')).note).toBeUndefined();
   });
 
   it('records Jev’s small-tier pick for a Scout as the middle tier', () => {
-    const route = routeMemberModel(onChat(pick(SONNET)), plainFacts, 'small');
+    const route = mainSessionRoute(onChat(pick(SONNET)), 'small');
     expect(route.autoWouldUse?.model).toBe('sonnet');
   });
 
   it('does not resume a Scout session on the fast tier', () => {
-    const route = routeMemberModel(onChat(pick(SONNET)), plainFacts);
+    const route = mainSessionRoute(onChat(pick(SONNET)));
     const kept = keepScoutSession(route, { pick: pick(HAIKU), contextTokens: 1 });
     expect(kept.route.pick.model).toBe('sonnet');
     expect(kept.choice).toMatchObject({
