@@ -102,8 +102,10 @@ function jevFailure(call: JevCall): string | null {
   return null;
 }
 
+export const JEV_NOT_CONNECTED = 'Jev not connected';
+
 function outcomeOf(call: JevCall | null, ask: PieceAsk, skipped: string | null): JevOutcome {
-  if (!call) return { answers: null, failure: skipped };
+  if (!call) return { answers: null, failure: skipped ?? JEV_NOT_CONNECTED };
   if (call.status !== 'answered' || !call.response) {
     return { answers: null, failure: jevFailure(call) };
   }
@@ -129,8 +131,8 @@ function pickNote(s: Session, route: PieceRoute, asked: boolean): string | null 
 
 function skipReason(s: Session, building: number, routes: readonly RouteOption[]): string | null {
   if (!s.jev) return null;
-  if (building === 0) return 'no pieces build';
-  if (routes.length === 0) return 'no eligible Builder routes';
+  if (building === 0) return 'Jev not asked: no pieces build';
+  if (routes.length === 0) return 'Jev not asked: no eligible Builder routes';
   return null;
 }
 
@@ -143,7 +145,7 @@ function summaryOf(routed: RoutedPieces, outcome: JevOutcome, call: JevCall | nu
   const byJev = routed.pieces.filter((piece) => piece.model.decidedBy === 'jev').length;
   const building = routed.pieces.filter((piece) => piece.place.placement !== 'read_only').length;
   if (!call || !outcome.answers) {
-    return `Piece routes by rules (${outcome.failure ?? 'Jev not connected'})`;
+    return `Piece routes by rules (${outcome.failure ?? JEV_NOT_CONNECTED})`;
   }
   return `Jev picked ${byJev} of ${building} piece routes; the rest by rules or floors`;
 }

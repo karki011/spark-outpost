@@ -160,7 +160,8 @@ function chooseModel<T extends RoutablePiece>(
   destructive: boolean,
 ): ModelChoice {
   const answer = jev.answers?.get(piece.key);
-  if (!answer) return rulesChoice(rules, piece, jev.failure ?? 'Jev was not asked');
+  if (!answer)
+    return rulesChoice(rules, piece, jev.failure ?? 'Jev not asked: no answer for this piece');
   const facts = { destructive, core: rules.core(piece) };
   const result = pieceDemand(answer, facts);
   if (!result.ok) return rulesChoice(rules, piece, result.reason);
