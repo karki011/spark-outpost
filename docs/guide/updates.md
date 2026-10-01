@@ -34,7 +34,7 @@ Spark checks again every 15 seconds and installs once nothing is running. If you
 1. Open **Settings → Updates**.
 2. Under **Channel**, pick:
    - **Stable**: tested releases only. This is the default.
-   - **Beta**: new features a little earlier. They can be rougher, and Stable releases still arrive.
+   - **Beta**: new features a little earlier. They can be rougher, and Stable releases still arrive. Beta builds (their version ends in `-beta.1`, `-beta.2`, …, and Settings shows a **Beta** label) start on this channel.
 
 ![Settings, Updates: Version, Update ready, Channel, Download updates automatically and Check for updates](images/updates-section-light.png)
 
