@@ -75,6 +75,7 @@ describe('risk rules', () => {
     expect(strongRemovalByRule('Drop table legacy_tags')).toBe(true);
     expect(strongRemovalByRule('Delete the old upload rows')).toBe(true);
     expect(strongRemovalByRule('Truncate the audit log')).toBe(true);
+    expect(strongRemovalByRule('Rename the runs table column and migrate old rows')).toBe(true);
     expect(strongRemovalByRule('Add a delete button to the upload list')).toBe(false);
     expect(strongRemovalByRule('Handle the delete event in the queue')).toBe(false);
     expect(strongRemovalByRule('Create tags with ON DELETE CASCADE')).toBe(false);

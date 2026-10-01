@@ -30,7 +30,7 @@ const FOREIGN_KEY_ACTION =
   /\bon\s+(?:delete|update)\s+(?:cascade|set\s+null|set\s+default|restrict|no\s+action)\b|\bcascad\w*\s+delet\w*|\bdelet\w*\s+cascad\w*/gi;
 
 const STRONG_REMOVAL =
-  /\b(?:drop\s+(?:table|column|schema|database|type)|delete\s+from|truncate(?:\s+table)?)\b|\b(?:delete|drop|remove|purge|wipe|erase|destroy|truncate)\w*\s+(?:(?!(?:to|for|on|in|of|with|at|by|button|event|handler|endpoint|action|icon|link|option|menu|modal|dialog|key|route|api|confirm\w*)\b)\w+\s+){0,3}(?:data|rows?|records?|tables?|columns?|database|db|files?|folders?|director(?:y|ies)|branch(?:es)?|history|users?|accounts?|uploads?|backups?|entries|logs?)\b|\brm\s+-\w*r|\breset\s+--hard\b|\bforce[- ]?push\b|\bpush\s+(?:-f|--force)\b|\brewrite (?:the )?(?:git )?history\b/i;
+  /\b(?:drop\s+(?:table|column|schema|database|type)|delete\s+from|truncate(?:\s+table)?)\b|\b(?:delete|drop|remove|purge|wipe|erase|destroy|truncate)\w*\s+(?:(?!(?:to|for|on|in|of|with|at|by|button|event|handler|endpoint|action|icon|link|option|menu|modal|dialog|key|route|api|confirm\w*)\b)\w+\s+){0,3}(?:data|rows?|records?|tables?|columns?|database|db|files?|folders?|director(?:y|ies)|branch(?:es)?|history|users?|accounts?|uploads?|backups?|entries|logs?)\b|\brenam\w*\b[^.\n]{0,40}\b(?:columns?|tables?)\b|\b(?:alter|change)\w*\b[^.\n]{0,40}\bcolumn\b[^.\n]{0,40}\btypes?\b|\bmigrat\w*\b[^.\n]{0,40}\b(?:data|rows?|records?)\b|\brm\s+-\w*r|\breset\s+--hard\b|\bforce[- ]?push\b|\bpush\s+(?:-f|--force)\b|\brewrite (?:the )?(?:git )?history\b/i;
 
 function withoutForeignKeyActions(text: string): string {
   return text.replace(FOREIGN_KEY_ACTION, ' ');
