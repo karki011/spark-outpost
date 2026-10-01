@@ -32,7 +32,7 @@ export function startAgentProcess(
 ): AgentProcess {
   const child: ChildProcessWithoutNullStreams = spawn(launch.command, launch.args, {
     cwd,
-    env,
+    env: { ...env, ...launch.env },
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   let stderr = '';
