@@ -172,7 +172,7 @@ export function scoreEscalation(
   return { score: decision.score, escalation, stayedOn: null };
 }
 
-function kilo(tokens: number): string {
+export function kilo(tokens: number): string {
   return `${Math.round(tokens / 1_000)}K`;
 }
 

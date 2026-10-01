@@ -21,6 +21,7 @@ import { attachmentsForMessages, linkAttachments } from './attachments.ts';
 import { resolveChatSettings } from './chat-settings.ts';
 import { withChatBranches } from './chat-worktrees.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
+import { listCompactions, listContinuations } from './compactions.ts';
 import { newId } from './ids.ts';
 import { containsPattern } from './like-pattern.ts';
 import { taskForNewRun } from './tasks.ts';
@@ -204,6 +205,10 @@ export async function getConversationDetail(
   const advice = await conversationAdvice(db, id);
   const orchestrations = await conversationOrchestrations(db, id);
   const plans = await conversationPlans(db, id);
+  const [compactions, continuedIn] = await Promise.all([
+    listCompactions(db, id),
+    listContinuations(db, id),
+  ]);
   const attachments = await attachmentsForMessages(
     db,
     messages.rows.map((message) => message.id),
@@ -222,6 +227,8 @@ export async function getConversationDetail(
     advice: advice.byRun,
     orchestrations,
     plans,
+    compactions,
+    continuedIn,
   };
 }
 

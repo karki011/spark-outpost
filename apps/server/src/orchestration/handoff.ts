@@ -16,18 +16,23 @@ import {
 import { agreedPlanText, checkCommands } from './member-prompts.ts';
 import type { Session } from './session.ts';
 
-export type HandoffKind = 'brief' | 'compact';
+export type HandoffKind = 'brief' | 'compact' | 'chat';
 
 export const HANDOFF_HEADINGS = {
   brief: '# Brief from the task so far',
   compact: '# Compacted handoff',
+  chat: '# Compacted chat summary',
 } as const;
+
+export const HISTORY_TOOL_NOTE =
+  'The full transcript is kept. Call the spark_chat_history tool to read earlier turns of this chat (by turn range or a search) or this summary when you need a detail it left out.';
 
 const ROLE_LINES: Record<HandoffKind, string> = {
   brief:
     'Role: Builder, brought in for a hard request in a long task. Another Builder’s session holds the full history; this brief is what you need from it. Make the change, then reply with what you changed.',
   compact:
     'Role: Builder, continuing this task from a compacted handoff. The earlier session was replaced by this summary: rules, decisions, open issues and the diff are kept as they were; stale tool output is dropped. Make the change, then reply with what you changed.',
+  chat: 'Earlier turns of this chat were compacted into this summary to free context. Requests, the agreed plan, open issues, the current diff and the most recent turns are kept as they were; stale tool output is dropped. Continue the conversation from here.',
 };
 
 const RULES_LINE =
@@ -36,7 +41,11 @@ const RULES_LINE =
 const TURNS: Record<HandoffKind, { count: number; limit: number }> = {
   brief: { count: 6, limit: 1_500 },
   compact: { count: 12, limit: 4_000 },
+  chat: { count: 12, limit: 4_000 },
 };
+
+const CHAT_REQUESTS = 30;
+const CHAT_REQUEST_LIMIT = 300;
 
 const REQUEST_LIMIT = 8_000;
 const REVIEW_FINDINGS = 10;
@@ -107,6 +116,48 @@ export function handoffPrompt(context: HandoffContext): string {
   return parts.join('\n\n');
 }
 
+export interface ChatSummaryContext {
+  history: readonly HistoryTurn[];
+  agreedPlan: string | null;
+  changes: readonly ChangedFile[];
+  patch: string;
+  openIssues: readonly string[];
+}
+
+function requestsText(history: readonly HistoryTurn[]): string {
+  const asked = history.filter((turn) => turn.role === 'user');
+  const shown = asked.slice(-CHAT_REQUESTS).map((turn) => cap(turn.content, CHAT_REQUEST_LIMIT));
+  const dropped = asked.length - shown.length;
+  const lines = shown.map((request, index) => `${index + 1 + dropped}. ${request}`);
+  return dropped > 0
+    ? [`(${dropped} earlier requests not listed)`, ...lines].join('\n')
+    : lines.join('\n');
+}
+
+export function chatSummaryPrompt(context: ChatSummaryContext): string {
+  const first = context.history.find((turn) => turn.role === 'user')?.content ?? '';
+  const files = context.changes.map(
+    (file) => `${file.path} (+${file.additions} -${file.deletions})`,
+  );
+  const parts = [
+    HANDOFF_HEADINGS.chat,
+    ROLE_LINES.chat,
+    HISTORY_TOOL_NOTE,
+    section('What the chat started with', first.trim() ? cap(first, REQUEST_LIMIT) : 'No request.'),
+    section('Requests so far', requestsText(context.history) || 'None.'),
+  ];
+  if (context.agreedPlan) parts.push(context.agreedPlan);
+  parts.push(section('Recent turns, verbatim', turnsText('chat', context.history)));
+  if (files.length > 0) parts.push(section('Files changed', bullets(files)));
+  if (context.patch.trim()) {
+    parts.push(section('Current diff', `\`\`\`diff\n${cap(context.patch, PATCH_LIMIT)}\n\`\`\``));
+  }
+  if (context.openIssues.length > 0) {
+    parts.push(section('Open issues', context.openIssues.join('\n\n')));
+  }
+  return parts.join('\n\n');
+}
+
 async function latestArtifact(db: Queryable, taskId: string, kind: 'check' | 'review') {
   const { rows } = await db.query<{ body: unknown }>(
     `SELECT body FROM run_artifacts WHERE task_id = $1 AND kind = $2
@@ -134,7 +185,7 @@ export async function openIssues(db: Queryable, taskId: string | null): Promise<
   return issues;
 }
 
-async function taskDiff(
+export async function taskDiff(
   root: string | undefined,
 ): Promise<{ files: ChangedFile[]; patch: string }> {
   const none = { files: [], patch: '' };

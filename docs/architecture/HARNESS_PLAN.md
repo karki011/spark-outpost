@@ -312,7 +312,9 @@ Jev is an advisor, never an executor or an authority. Today it answers the intak
 
 ### M6 status (September 26, 2026)
 
-Resumable sessions (`workflow/session-decision.ts`, `0026_provider_sessions.sql`). The `/` command menu and @-mentions of project files ship; `session/delete` and compaction are still open.
+Resumable sessions (`workflow/session-decision.ts`, `0026_provider_sessions.sql`). The `/` command menu and @-mentions of project files ship; `session/delete` is still open. Compaction is built (October 1, 2026): see the next item and [COMPACTION.md](COMPACTION.md).
+
+- **Compaction** (`compaction/`, `0088_compactions.sql`, details in [COMPACTION.md](COMPACTION.md)). Between turns only, on the chat's resumable session: the ring warns at 70%; at 85% Review each step asks with a card (Compact now, Start a fresh chat with a summary, Keep going, which waits until 95%) and Automatic and Full auto compact before the next turn. Spark sends the agent's own `/compact` in the same session when it is advertised and usage drops; otherwise it writes a summary from the transcript (`handoff.ts` kind `chat`), closes the session and seeds the fresh one. Never mid-turn, never with a card pending, never for coordinator pieces or Builder child runs. A drop of more than 40% between turns that Spark didn't ask for is recorded as the agent compacting itself. Every compaction is a `compactions` row and a divider in the chat; `spark_chat_history` reads any earlier turn and the summaries.
 
 - **What the adapters support.** claude-agent-acp 0.81.2 and codex-acp 1.13.1 (with our read-only patch) both advertise `loadSession`, `sessionCapabilities.resume` and `close`, and both resume a session in a **new agent process**: Claude reads the transcript Claude Code keeps under `~/.claude/projects`, and Codex calls `thread/resume` on its stored thread. So agent processes stay per run and there is no warm process pool. Claude's `closeSession` only knows sessions in its own process.
 - **Storage.** `provider_sessions (conversation_id, provider, agent_key, session_id, cwd, workdir, additional_dirs, settings_hash, last_message_id, last_reply_hash, reported_cost_usd, created_at, last_used_at, closed_at, close_reason)`, at most one open row per conversation and agent key. A chat turn's key is `chat:<mode>`; a child's is `key:<resumeKey>`.
@@ -442,7 +444,7 @@ Still open in code:
 
 - **GitHub App** via device flow for Ship: only a "GitHub App" option label exists (`GitHubCard.tsx`); it needs a registered app.
 - **Merging PRs** is not built. PR state, reviews and checks are read for the Tickets view only.
-- **Sessions (M6):** `session/delete` and compaction.
+- **Sessions (M6):** `session/delete`. Compaction is built; its gaps are in [COMPACTION.md](COMPACTION.md#gaps).
 - **Tickets:** a Jira Server and Data Center source (personal access token); `ticket_events` are not hash-chained and not in a run's audit log.
 - **Thresholds:** the `plan_agreed` 0.85 and 0.6 lines are unmeasured, and every Jev threshold is provisional until tuned on labelled rows (see the history-audit items above).
 - **One Do run per repo** is not enforced at claim time (`WORKER_CONCURRENCY` defaults to 2); worktrees are how two tasks share a repo.

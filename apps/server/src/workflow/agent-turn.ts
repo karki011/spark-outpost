@@ -307,7 +307,7 @@ export async function runAgentTurn(
     for await (const output of provider.run({
       prompt: input.prompt,
       attachments: input.attachments,
-      history: input.history,
+      history: input.seed ? input.history.slice(input.seed.historyFrom) : input.history,
       settings: input.settings,
       projectRoots: input.projectRoots,
       signal: control.signal,

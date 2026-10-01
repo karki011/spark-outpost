@@ -1,5 +1,6 @@
 import {
   CHECKPOINT_OPTION,
+  COMPACT_SNOOZED_PERCENT,
   isCheckpointKind,
   type AgentPick,
   type Approval,
@@ -39,6 +40,7 @@ const TITLES: Record<CheckpointPayload['kind'], string> = {
   ownership: 'A Builder changed a file outside its piece',
   pieces: 'Build in pieces?',
   pr_split: 'One PR or separate PRs?',
+  compact: 'This chat is almost full',
 };
 
 export const SPARK_QUESTIONS_TITLE = 'Spark has a few questions';
@@ -95,6 +97,7 @@ const WAITING_LABELS: Record<CheckpointPayload['kind'], string> = {
   ownership: 'Keep the file in the piece, revert it, or stop',
   pieces: 'Build it, build in order, revise, or stop',
   pr_split: 'Choose one PR or separate PRs',
+  compact: 'Compact, start fresh, or keep going',
 };
 
 export function waitingLabel(payload: CheckpointPayload): string {
@@ -172,6 +175,9 @@ const RESULTS: Record<string, string> = {
   [CHECKPOINT_OPTION.makeChange]: 'Making the change.',
   [CHECKPOINT_OPTION.finishUnverified]: 'Finished without verification.',
   [CHECKPOINT_OPTION.useDefaults]: 'Went with the best guesses.',
+  [CHECKPOINT_OPTION.compactNow]: 'Compacted the chat.',
+  [CHECKPOINT_OPTION.freshChat]: 'Started a fresh chat with a summary.',
+  [CHECKPOINT_OPTION.keepGoing]: `Kept going; Spark asks again at ${COMPACT_SNOOZED_PERCENT}%.`,
 };
 
 const AUTO_LABELS: Record<string, string> = {
@@ -181,6 +187,7 @@ const AUTO_LABELS: Record<string, string> = {
   [CHECKPOINT_OPTION.stopReport]: 'Stop and report',
   [CHECKPOINT_OPTION.finishUnverified]: 'Finish',
   [CHECKPOINT_OPTION.onePr]: 'One PR',
+  [CHECKPOINT_OPTION.keepGoing]: 'Keep going',
 };
 
 const COUNTDOWNS: Record<string, string> = {

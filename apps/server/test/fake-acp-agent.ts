@@ -9,6 +9,7 @@ import { FOUR_KINDS_TRIGGER, fourKindsTurn } from './fake-acp-four-kinds.ts';
 import { modeTurn } from './fake-acp-modes.ts';
 import { sparkTurn } from './fake-acp-spark.ts';
 import { describeBlock } from './fake-acp-support.ts';
+import { commandTurn, reportContext } from './fake-acp-context.ts';
 import {
   createFakeSession,
   loadSessionAdvertised,
@@ -98,17 +99,6 @@ const configOptions = (): acp.SessionConfigOption[] => [
   ]),
   ...fastOption(),
 ];
-
-const advertisedCommands = JSON.parse(process.env.FAKE_ACP_COMMANDS ?? '[]') as string[];
-
-function slashCommand(prompt: acp.ContentBlock[]): { name: string; rest: string } | null {
-  const first = prompt[0];
-  if (first?.type !== 'text') return null;
-  const trimmed = first.text.trim();
-  if (!trimmed.startsWith('/')) return null;
-  const [name = '', ...rest] = trimmed.slice(1).split(/\s+/);
-  return { name: name.toLowerCase(), rest: rest.join(' ') };
-}
 
 let clientCapabilities: unknown = null;
 let sessionCwd = '';
@@ -260,21 +250,9 @@ async function turn(
       content: { type: 'text', text: chunk },
     });
 
-  if (advertisedCommands.length > 0) {
-    await update({
-      sessionUpdate: 'available_commands_update',
-      availableCommands: advertisedCommands.map((name) => ({
-        name,
-        description: `Run ${name}`,
-        input: name === 'review' ? { hint: 'what to review' } : null,
-      })),
-    });
-  }
-  const command = slashCommand(params.prompt);
-  if (command && advertisedCommands.includes(command.name)) {
-    await say(`command=/${command.name} args=${command.rest}`);
-    return 'end_turn';
-  }
+  await reportContext(sessionId, currentRequest(params.prompt), update);
+  const commanded = await commandTurn(params.prompt, update, say);
+  if (commanded) return commanded;
   if (text.includes('#silent')) return 'end_turn';
   if (text.includes('#recall')) {
     await say(

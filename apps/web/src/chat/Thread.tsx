@@ -11,6 +11,8 @@ import { AdviceLine } from './AdviceLine.tsx';
 import { repoSummary } from './project/repo-list.ts';
 import { RepoKit } from './project/RepoKit.tsx';
 import { buildTurns } from './turns.ts';
+import { CompactionDivider, ContinuedDivider } from './compaction/CompactionDivider.tsx';
+import { compactionsByRun } from './compaction/compaction-text.ts';
 import { SoloTurn } from './SoloTurn.tsx';
 import { TodaySoFar } from './today/TodaySoFar.tsx';
 import { useStickToBottom } from './use-stick-to-bottom.ts';
@@ -46,6 +48,7 @@ export function Thread({
   const voice = useVoice();
   const { scrollerRef, scroller, away, follow, jumpToLatest } = useStickToBottom();
   const turns = buildTurns(detail);
+  const compactions = compactionsByRun(detail.compactions);
   const parentOf = new Map(detail.runs.map((run) => [run.id, run.parentRunId ?? run.id]));
   const taskAfterRun = new Map(
     detail.tasks.map((task) => {
@@ -120,6 +123,13 @@ export function Thread({
               aria-label="Turn"
               data-assistant-message-id={assistantMessage?.id}
             >
+              {compactions.get(run.id)?.map((compaction) => (
+                <CompactionDivider
+                  key={compaction.id}
+                  compaction={compaction}
+                  onOpenChat={onOpenChat}
+                />
+              ))}
               {userMessage && (
                 <div className="msg me" data-message-id={userMessage.id}>
                   <MessageAttachments attachments={userMessage.attachments} />
@@ -160,6 +170,15 @@ export function Thread({
                   {taskCard(run.id)}
                 </>
               )}
+              {detail.continuedIn
+                ?.filter((continuation) => continuation.runId === run.id)
+                .map((continuation) => (
+                  <ContinuedDivider
+                    key={continuation.conversationId}
+                    continuation={continuation}
+                    onOpenChat={onOpenChat}
+                  />
+                ))}
             </section>
           ))}
           {pendingMessage && (

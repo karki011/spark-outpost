@@ -238,6 +238,7 @@ describe('the Spark tools server', () => {
       'spark_audit',
       'spark_brief',
       'spark_chat',
+      'spark_chat_history',
       'spark_chats',
       'spark_comment_ticket',
       'spark_connectors',

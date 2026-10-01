@@ -140,3 +140,5 @@ export const COORD_INTEGRATOR_TRIES = 2;
 export const COORD_OWNERSHIP_STRIKES = 2;
 export const COORD_PROVIDER_HEALTH_MS = 10 * 60_000;
 export const COORD_NOTE_TURNS = 3;
+export const COMPACT_SELF_DROP = 0.4;
+export const COMPACT_AGENT_WORKED = 0.8;

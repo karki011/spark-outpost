@@ -44,8 +44,14 @@ export async function noteProjectMove(db: Db, input: RunInput, append: Append): 
   return { ...input, projectMove: move };
 }
 
-export function withMoveNote(input: Pick<RunInput, 'projectMove' | 'preamble'>): string | null {
-  const parts = [input.projectMove ? projectMoveNote(input.projectMove) : null, input.preamble];
+export function withMoveNote(
+  input: Pick<RunInput, 'projectMove' | 'preamble' | 'seed'>,
+): string | null {
+  const parts = [
+    input.seed?.text ?? null,
+    input.projectMove ? projectMoveNote(input.projectMove) : null,
+    input.preamble,
+  ];
   const joined = parts.filter((part): part is string => Boolean(part)).join('\n\n');
   return joined || null;
 }

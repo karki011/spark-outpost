@@ -19,6 +19,7 @@ Every agent session (Ask, Do, Builders, chats without a project) gets the `spark
 | Home: morning brief (`/home/digest`)                                                       | `spark_brief`                                           | yes     | Reads the latest brief; never writes one                                                               |
 | Chats list, search, state                                                                  | `spark_chats`                                           | yes     |                                                                                                        |
 | One chat: messages, runs, approvals, settings                                              | `spark_chat`                                            | yes     | Also the chat's branch and worktree                                                                    |
+| Chat history: earlier turns, compactions and their summaries                               | `spark_chat_history`                                    | yes     | Turn range or search over the full transcript, including turns compacted out of the agent's context    |
 | Live run: phase, crew, pieces, checkpoints, budget (`/runs/:id/orchestration`)             | `spark_run`                                             | yes     | Crew members with model, status, cost, who picked them and why                                         |
 | Jev decisions: intake, routing, `piece_route`, clarify, verify                             | `spark_run` (`jevDecisions`)                            | yes     | Per-piece pick, decidedBy, reason, Jev's and the rules' picks; clarify rounds                          |
 | Plans: plan versions, agreed plan document, checklist (`/tasks/:id`)                       | `spark_task`                                            | yes     | Current version, approval, files changed since agreed                                                  |
@@ -58,3 +59,7 @@ Terminals live in the API process and Spark tools run in the worker, so the API 
 ## PR follow-up
 
 `spark_pr_follow_up` reads `pr_watches` and `pr_feedback_items` (migration 0087) for the chat's PRs or a PR number: phase, what Spark is doing, checks, rounds used of 3, and each item with author, write access, triage (Jev or rules) and state. Item excerpts come from GitHub reviewers and CI and are marked as data. `spark_pr_follow_up_round` shows a `pr_follow_up_round` card listing the items; on confirm it queues them (including held items from people without write access, or items past the round limit) and asks the worker to start a round. See `PR_FOLLOW_UP.md`.
+
+## Chat history and compaction
+
+`spark_chat_history` reads `messages` for one chat (this chat by default) as numbered turns, by range (`from`, `to`) or by a case-insensitive search, and lists the chat's `compactions` (migration 0088): method (`agent`, `spark`, `agent-auto`), tokens before and after, and the summary. A compacted session's preamble and the note after an agent's `/compact` tell the agent the tool exists. Compaction itself has no action tool: the card or the autonomy level decides. See `COMPACTION.md`.

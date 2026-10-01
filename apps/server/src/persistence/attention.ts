@@ -31,6 +31,7 @@ const ATTENTION_BY_APPROVAL_KIND: Record<ApprovalKind, AttentionKind> = {
   ownership: 'input',
   pieces: 'plan',
   pr_split: 'input',
+  compact: 'input',
 };
 
 function baseName(path: string): string {

@@ -5,6 +5,7 @@ import { approvalSchema } from './approvals.ts';
 import { ATTACHMENTS_PER_MESSAGE, attachmentSchema } from './attachments.ts';
 import { categorySchema, titleSourceSchema } from './categories.ts';
 import { chatSettingsSchema } from './chat-settings.ts';
+import { compactionSchema, continuationSchema } from './compaction.ts';
 import { orchestrationSchema } from './orchestration.ts';
 import { conversationPlansSchema } from './plans.ts';
 import { messageSourceSchema, runSchema, runStatusSchema, startAsSchema } from './runs.ts';
@@ -109,6 +110,8 @@ export const conversationDetailSchema = z.object({
   advice: z.record(z.string(), adviceSummarySchema).optional(),
   orchestrations: z.record(z.string(), orchestrationSchema).optional(),
   plans: conversationPlansSchema.optional(),
+  compactions: z.array(compactionSchema).optional(),
+  continuedIn: z.array(continuationSchema).optional(),
 });
 export type ConversationDetail = z.infer<typeof conversationDetailSchema>;
 

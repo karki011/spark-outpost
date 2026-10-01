@@ -13,8 +13,11 @@ import {
   latestProviderSession,
   startProviderSession,
   sweepProviderSessions,
+  type ContextReading,
   type SweepLimits,
 } from '../persistence/provider-sessions.ts';
+import { insertCompaction, settleTokensAfter } from '../persistence/compactions.ts';
+import { readingOf, selfCompacted } from '../compaction/policy.ts';
 import { recordSessionCommands, sessionCommands } from '../persistence/session-commands.ts';
 import type { ProviderOutput, SessionTarget } from '../providers/provider.ts';
 import type { StopReason } from './agent-turn.ts';
@@ -110,8 +113,30 @@ export async function prepareTurnSession(
   let rowId: string | null = null;
   let costBaseline = 0;
   let reportedCost: number | null = null;
+  let continued = false;
+  let context: ContextReading | null = null;
+  const previous = stored ? readingOf(stored.contextUsed, stored.contextSize) : null;
   const noteSession = (output: SessionOutput) => {
+    continued = output.continued;
     costBaseline = output.continued ? (stored?.reportedCostUsd ?? 0) : 0;
+  };
+  const noteContext = async () => {
+    if (!context) return;
+    const ownerRunId = input.parentRunId ?? input.identity.runId;
+    await settleTokensAfter(db, ownerRunId, context.used);
+    if (!continued || rowId !== stored?.id || !selfCompacted(previous, context)) return;
+    await insertCompaction(db, {
+      conversationId,
+      runId: ownerRunId,
+      sessionRowId: rowId,
+      agentKey: key,
+      method: 'agent-auto',
+      tokensBefore: previous?.used ?? null,
+      tokensAfter: context.used,
+      contextSize: context.size,
+      summary: null,
+      lastMessageId: null,
+    });
   };
   return {
     target: {
@@ -146,6 +171,7 @@ export async function prepareTurnSession(
       if (rowId) await recordSessionCommands(db, rowId, commands);
     },
     usage(output) {
+      context = readingOf(output.contextUsed, output.contextSize) ?? context;
       if (output.costUsd === null) return output;
       reportedCost = output.costUsd;
       return { ...output, costUsd: Math.max(0, output.costUsd - costBaseline) };
@@ -157,6 +183,7 @@ export async function prepareTurnSession(
           lastMessageId: chatTurn ? result.messageId : null,
           replyHash: STOPPED_REPLY,
           reportedCostUsd: reportedCost,
+          context,
         });
         return;
       }
@@ -164,10 +191,12 @@ export async function prepareTurnSession(
         await closeProviderSession(db, rowId, RESUME_REASONS.unfinished);
         return;
       }
+      await noteContext();
       await finishProviderSession(db, rowId, {
         lastMessageId: chatTurn ? result.messageId : null,
         replyHash: replyHash(result.text),
         reportedCostUsd: reportedCost,
+        context,
       });
     },
   };
