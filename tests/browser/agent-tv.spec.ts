@@ -77,7 +77,7 @@ test('clicking a blob bounces it and shows its status, Go to scrolls, Esc steps 
   const bubble = details(page);
   await expect(bubble).toBeVisible();
   await expect(bubble).toContainText('Builder');
-  await expect(bubble).toContainText('Sonnet 5 · high');
+  await expect(bubble).toContainText('Opus 5.5 · high');
   await expect(blob(page, 'builder')).toHaveAttribute('aria-expanded', 'true');
 
   await scrollThread(page, 'top');

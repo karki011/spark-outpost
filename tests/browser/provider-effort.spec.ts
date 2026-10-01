@@ -77,5 +77,5 @@ test('the Claude default effort preselects fresh chats and sets the Builder effo
 
   await send(page, `${CREW_REQUEST} #build #crew`);
   await expect(agentHead(page, 'Bolt')).toContainText('Builder', { timeout: 30_000 });
-  await expect(agentHead(page, 'Bolt')).toContainText('Sonnet 5low effort');
+  await expect(agentHead(page, 'Bolt')).toContainText('Opus 5.5low effort');
 });

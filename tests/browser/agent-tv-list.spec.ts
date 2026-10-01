@@ -61,7 +61,7 @@ test('List view shows running agents with a ticking clock, and the choice is rem
   await expect(builder).toBeVisible();
   await expect(running(page).first()).toContainText('Needs you');
   await expect(builder).toContainText('Agent');
-  await expect(builder).toContainText('Sonnet 5');
+  await expect(builder).toContainText('Opus 5.5');
   await expect(builder.getByRole('button', { name: /^Stop / })).toBeVisible();
 
   const clock = builder.locator('.tvl-clock');
