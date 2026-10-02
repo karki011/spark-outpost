@@ -52,6 +52,23 @@ describe('context assembly', () => {
     expect(prompt).not.toContain('Architect');
   });
 
+  it('tells the Builder what publishing this run allows', () => {
+    const base = { request: 'Add a CSV export', history: [], note: null, findings: [] };
+    const asked = builderPrompt({
+      ...base,
+      publish: { basis: 'requested', branch: 'spark/csv-1a' },
+    });
+    expect(asked).not.toContain(SHIP_RULE);
+    expect(asked).toContain('The user asked for this to be pushed');
+    expect(asked).toContain('`git push origin spark/csv-1a`');
+    expect(asked).toContain('`gh pr create`');
+    expect(asked).toMatch(/Never force-push, push any other branch or the base branch/);
+    const allowed = builderPrompt({ ...base, publish: { basis: 'mode', branch: 'spark/csv-1a' } });
+    expect(allowed).toContain('Leave the change in the working tree unless the user asks');
+    expect(allowed).toContain('`git push origin spark/csv-1a`');
+    expect(builderPrompt({ ...base, publish: null })).toContain(SHIP_RULE);
+  });
+
   it('tells the Builder the user chose to apply the previous answer, and includes it', () => {
     expect(makeChangeFollowUp('Rename sum to add.')).toBe(
       `${MAKE_CHANGE_RULE}\n\n## Answer to apply\nRename sum to add.`,

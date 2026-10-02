@@ -26,6 +26,7 @@ import { ApprovalWaiters } from './approval-waiters.ts';
 import { createAuditRecorder } from './audit-recorder.ts';
 import { prepareAskRun, prepareDoRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
+import { publishGrant, startBasis } from './publish-context.ts';
 import { watchUrgentNotes } from './steer-requests.ts';
 import { createSpendMeter } from './spend-meter.ts';
 import { runEvents } from './run-events.ts';
@@ -289,6 +290,7 @@ export async function runAgentTurn(
             observe: options.observeEdits,
             plans: plans.hooks,
             piece: input.piece ?? undefined,
+            publish: publishGrant(input),
           })
         : asking
           ? prepareAskRun({ ...gateOptions, conversationId: input.identity.threadId })
@@ -329,6 +331,7 @@ export async function runAgentTurn(
       ...(input.mode ? { mode: input.mode } : {}),
       ...(writesCode(input.role) ? { builder: true } : {}),
       ...(input.piece?.coordinated ? { coordinated: true } : {}),
+      ...(writesCode(input.role) && startBasis(input) ? { publishes: true } : {}),
       ...(input.builderEnv ? { env: input.builderEnv } : {}),
       ...(input.copyOf !== null || input.chatWorktree ? { worktree: true } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),

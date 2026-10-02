@@ -142,6 +142,21 @@ describe('Claude session options', () => {
     expect(zai.settings.permissions.deny).toContain('Bash(gh:*)');
   });
 
+  it('lets gh through to the approval gate for a Builder whose run may publish', () => {
+    const publishing = optionsOf(
+      agentDefinitions.claude.doSessionMeta?.([], null, true, false, true),
+    );
+    const deny = publishing.settings.permissions.deny as string[];
+    expect(deny).not.toContain('Bash(gh:*)');
+    for (const rule of ['Bash(hub:*)', 'Bash(glab:*)', 'Bash(git remote set-url:*)']) {
+      expect(deny).toContain(rule);
+    }
+    const coordinated = optionsOf(
+      agentDefinitions.claude.doSessionMeta?.([], null, true, true, true),
+    );
+    expect(coordinated.settings.permissions.deny).toContain('Bash(gh:*)');
+  });
+
   it('also denies git state changes to Builders of a coordinated task', () => {
     const coordinated = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
     const deny = coordinated.settings.permissions.deny as string[];
