@@ -11,6 +11,7 @@ import type { MemberResult, Seat, Session } from '../orchestration/session.ts';
 import type { Assessment } from './assess.ts';
 import { assignPieces } from './assign.ts';
 import { likelyFiles } from './engage.ts';
+import type { BuilderPlan } from './builder-jev.ts';
 import { assignFacts } from './provider-state.ts';
 import { isGlob, normalizeOwned, type OwnedSet } from './owned.ts';
 import { routePieces } from './piece-jev.ts';
@@ -74,7 +75,12 @@ async function replyText(s: Session, result: MemberResult): Promise<string> {
 async function checkBlock(
   s: Session,
   text: string,
-  facts: { files: string[]; budgetTokens: number; planSteps: readonly PlanStep[] },
+  facts: {
+    files: string[];
+    budgetTokens: number;
+    planSteps: readonly PlanStep[];
+    groups: readonly (readonly PlanStep[])[] | null;
+  },
 ) {
   const block = piecesBlockText(text);
   if (block === null) return { ok: false as const, errors: ['the reply has no JSON pieces block'] };
@@ -86,6 +92,7 @@ async function checkBlock(
     budgetTokens: facts.budgetTokens,
     projectChecks: checkCommands(s),
     planSteps: facts.planSteps,
+    groups: facts.groups,
   });
 }
 
@@ -96,6 +103,7 @@ function withRevision(prompt: string, note: string | null): string {
 async function askForPieces(
   s: Session,
   assessment: Assessment,
+  plan: BuilderPlan,
   note: string | null,
 ): Promise<{ ok: true; value: CheckedPieces } | { ok: false; reason: string }> {
   const root = s.input.projectRoots[0]!;
@@ -113,6 +121,7 @@ async function askForPieces(
       ),
       checks: checkCommands(s),
       budgetTokens,
+      groups: plan.steps,
     }),
     note,
   );
@@ -127,6 +136,7 @@ async function askForPieces(
       files,
       budgetTokens,
       planSteps: assessment.planSteps,
+      groups: plan.steps,
     });
     if (checked.ok) return checked;
     errors = checked.errors;
@@ -150,15 +160,16 @@ async function builderNames(s: Session, keys: readonly string[]): Promise<Map<st
 export async function writePieceList(
   s: Session,
   assessment: Assessment,
+  plan: BuilderPlan,
   note: string | null = null,
 ): Promise<PieceListResult> {
-  const asked = await askForPieces(s, assessment, note);
+  const asked = await askForPieces(s, assessment, plan, note);
   if (!asked.ok) return asked;
   const { pieces, integration } = asked.value;
   const place = await chooseListPlace(s, pieces);
   const facts = await assignFacts(s, place.placement !== 'in_order');
   const assigned = new Map(assignPieces(pieces, facts).map((entry) => [entry.key, entry.pick]));
-  const routed = await routePieces(s, pieces, place, assigned, facts);
+  const routed = await routePieces(s, pieces, place, assigned, facts, plan);
   const routes = new Map(routed.pieces.map((route) => [route.key, route]));
   const list = await insertPieceList(s.deps.db, {
     taskId: s.taskId!,

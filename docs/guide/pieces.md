@@ -9,14 +9,25 @@ You'll learn how Spark handles work too big for one Builder, and how to steer it
 
 ## When Spark splits the work
 
-For a big change, a Coordinator splits the work into pieces, each small enough for one Builder. It does this when:
+After you agree a plan, [Jev](jev.md) picks how many Builders it needs: 1, 2, 3 or 4. Spark never uses more than the plan has items, or more than **Builders at once** allows. Spark then groups the plan's items, one group per Builder:
+
+- Items that change the same files stay together.
+- Items in the same part of the project join next, then items next to each other in the plan.
+- Data or migration work, and anything the request deletes or renames, never shares a Builder with other work.
+- Items in different projects never share a Builder.
+
+With one group, one Builder does the whole plan, with no Coordinator. With two or more, a Coordinator writes one piece per group, each small enough for one Builder.
+
+The line above the piece board shows what Jev chose, for example "Jev: 2 Builders (0.84) · P1 Claude Opus 5.5, worktree · P2 Claude Sonnet 5 (clearly simple), shared tree". The number in brackets is how sure Jev was.
+
+Without Jev, or when Jev isn't sure, the rules decide. The Coordinator splits the work when:
 
 - you ask for it, for example "split this up";
 - the agreed plan has 4 or more steps across 2 or more parts of the project;
 - the change likely touches 12 or more files, or 3 or more packages;
 - the change is too big for one Builder session.
 
-Otherwise one Builder does the whole job.
+Otherwise one Builder does the whole job. When you ask for pieces, Spark doesn't drop to one Builder.
 
 ## Pieces and the coordinator
 

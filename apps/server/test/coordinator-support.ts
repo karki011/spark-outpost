@@ -70,6 +70,7 @@ export interface PiecesStart {
   agentEnv?: Record<string, string>;
   jev?: typeof fetch | null;
   codeScan?: OrchestratorDeps['codeScan'];
+  text?: string;
 }
 
 const MODELS: Record<ProviderId, string> = { claude: 'sonnet', codex: 'gpt-6-sol', zai: 'glm' };
@@ -78,7 +79,7 @@ export async function startPieces(
   t: TestDb,
   root: string,
   tags: string,
-  { level = 'hands-off', provider = 'claude', agentEnv, jev, codeScan }: PiecesStart = {},
+  { level = 'hands-off', provider = 'claude', agentEnv, jev, codeScan, text }: PiecesStart = {},
 ): Promise<{ harness: Harness; conversationId: string; runId: string }> {
   const fetcher = jev === undefined ? jevFetch({ calls: [], scenario: NORMAL }) : jev;
   const harness = startOrchestrator(t, fetcher, {
@@ -86,7 +87,7 @@ export async function startPieces(
     ...(agentEnv ? { agentEnv } : {}),
     ...(codeScan ? { codeScan } : {}),
   });
-  const scenario = withTag(NORMAL, `Split this up. ${tags}`);
+  const scenario = withTag(NORMAL, `${text ?? 'Split this up.'} ${tags}`);
   const { conversationId } = await linkedConversation(t, root);
   await t.db.query(`UPDATE conversations SET model_routing = 'auto' WHERE id = $1`, [
     conversationId,

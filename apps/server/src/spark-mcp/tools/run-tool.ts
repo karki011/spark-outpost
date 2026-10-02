@@ -120,6 +120,20 @@ function piecePicks(answer: Record<string, unknown>) {
   }));
 }
 
+function builderFields(answer: Record<string, unknown>) {
+  const builders = answer.builders as Record<string, unknown> | null | undefined;
+  if (!builders) return {};
+  return {
+    builders: {
+      count: builders.builders ?? null,
+      decidedBy: builders.applied,
+      why: builders.reason,
+      ...(builders.asked ? { jevAsked: builders.asked, confidence: builders.confidence } : {}),
+      ...(builders.groups ? { groups: builders.groups } : {}),
+    },
+  };
+}
+
 function clarifyFields(body: Record<string, unknown>) {
   const questions = Array.isArray(body.questions) ? body.questions : [];
   return {
@@ -146,6 +160,7 @@ function decisionLine(row: AdviceRow) {
     ...(decision.gate ? { gate: decision.gate.decision } : {}),
     ...(decision.jevError ? { jevError: decision.jevError } : {}),
     ...(row.purpose === 'piece_route' ? { picks: piecePicks(decision.answer) } : {}),
+    ...(row.purpose === 'parallel' ? builderFields(decision.answer) : {}),
     ...(row.purpose === 'clarify' ? clarifyFields(row.body) : {}),
     costUsd: round(decision.costUsd),
   };
@@ -204,7 +219,7 @@ export const runTool = sparkTool({
   privateData: true,
   title: 'Run status',
   description:
-    "Live status of a chat's latest run (or one run): phase, who is on the crew (Scout, Architect, Builders, Critic) with each agent's model, status, cost and why it was picked, the pieces of a big plan (status, Builder, Jev's per-piece pick and reason, files changed, checks), what it is waiting on, and every Jev decision (intake, routing, piece_route, clarify, verify) with what was applied and why. Defaults to this chat.",
+    "Live status of a chat's latest run (or one run): phase, who is on the crew (Scout, Architect, Builders, Critic) with each agent's model, status, cost and why it was picked, the pieces of a big plan (status, Builder, Jev's per-piece pick and reason, files changed, checks), what it is waiting on, and every Jev decision (intake, routing, parallel with Jev's Builder count and task groups, piece_route, clarify, verify) with what was applied and why. Defaults to this chat.",
   input: runLookupInput,
   run: async (args, context) => runStatus(context, await findTopRun(context, args)),
 });

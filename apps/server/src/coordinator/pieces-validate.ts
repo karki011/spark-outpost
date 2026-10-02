@@ -4,6 +4,7 @@ import { piecesBlockSchema, type PieceDraft } from '@spark-outpost/contracts';
 import { COORD_MAX_PIECES } from '../advisor/policy.ts';
 import { findCycle, reaches, type Graph } from './graph.ts';
 import { isGlob, normalizeOwned, owns, sharedFiles, type OwnedSet } from './owned.ts';
+import { pieceKey } from './builder-count.ts';
 import { uncoveredSteps, type PlanStep } from './plan-coverage.ts';
 import { docsOnly, scopedCheckProblem } from './scoped-checks.ts';
 import { sizeEstimate, type LineCount } from './size.ts';
@@ -15,6 +16,7 @@ export interface ValidationFacts {
   budgetTokens: number;
   projectChecks: readonly string[];
   planSteps: readonly PlanStep[];
+  groups?: readonly (readonly PlanStep[])[] | null;
 }
 
 export interface CheckedPiece extends PieceDraft {
@@ -158,6 +160,27 @@ function pieceErrors(piece: CheckedPiece, facts: ValidationFacts, errors: string
   }
 }
 
+function groupErrors(
+  pieces: readonly CheckedPiece[],
+  groups: readonly (readonly PlanStep[])[],
+  errors: string[],
+): void {
+  const keys = pieces.filter((piece) => !piece.research).map((piece) => piece.key);
+  const wanted = groups.map((_, index) => pieceKey(index));
+  if (keys.length !== wanted.length || wanted.some((key) => !keys.includes(key))) {
+    errors.push(
+      `write exactly ${wanted.length} pieces that build, with the keys ${wanted.join(', ')}, one per Builder group`,
+    );
+    return;
+  }
+  groups.forEach((steps, index) => {
+    const piece = pieces.find((candidate) => candidate.key === wanted[index])!;
+    for (const step of uncoveredSteps(steps, [piece])) {
+      errors.push(`${piece.key} does not cover its group's plan item "${step.text}"`);
+    }
+  });
+}
+
 function docsChecks(draft: PieceDraft, facts: ValidationFacts): string[] {
   if (!docsOnly(draft.owns)) return draft.checks;
   return draft.checks.filter((check) => scopedCheckProblem(check, facts.projectChecks) === null);
@@ -194,6 +217,7 @@ export function validatePieces(block: unknown, facts: ValidationFacts): Validati
   for (const step of uncoveredSteps(facts.planSteps, pieces)) {
     errors.push(`no piece covers the plan item "${step.text}"`);
   }
+  if (facts.groups) groupErrors(pieces, facts.groups, errors);
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, value: { pieces, integration: parsed.data.integration } };
 }

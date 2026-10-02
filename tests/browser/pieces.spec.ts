@@ -37,6 +37,9 @@ test('a story split into pieces is planned first, then shows the coordinator and
   const rows = board.getByRole('listitem');
   await expect(rows).toHaveCount(3);
   await expect(board).toContainText('3 pieces, in order · 3 landed', { timeout: 60_000 });
+  await expect(board.locator('.piece-board-why')).toContainText(
+    /^Jev: 3 Builders \(0\.90\) · P1 [^·]+ · P2 [^·]+ · P3 [^·;]+; /,
+  );
   const pieces: [string, string][] = [
     ['P1', 'Store'],
     ['P2', 'API'],

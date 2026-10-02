@@ -7,6 +7,7 @@ import { mergeCopy, placeFor } from '../orchestration/solo-copy.ts';
 import { publish, type MemberResult, type Session } from '../orchestration/session.ts';
 import type { Spawn } from '../orchestration/transitions.ts';
 import { assess, recordAssessment, type Assessment } from './assess.ts';
+import { askBuilders, type BuilderPlan } from './builder-jev.ts';
 import { integratorRoute, integratorSeat } from './integrator.ts';
 import { landedPieces, type PieceSite } from './piece-run.ts';
 import { askPieceList } from './place-list.ts';
@@ -43,6 +44,7 @@ function pieceSite(s: Session): PieceSite {
 async function settleList(
   s: Session,
   assessment: Assessment,
+  plan: BuilderPlan,
   first: PieceListResult,
 ): Promise<PieceListResult | 'stopped'> {
   let written = first;
@@ -51,7 +53,7 @@ async function settleList(
     await publish(s);
     const answer = await askPieceList(s, list, await pieceSlots(s));
     if (answer.kind === 'revise') {
-      written = await writePieceList(s, assessment, answer.note);
+      written = await writePieceList(s, assessment, plan, answer.note);
       continue;
     }
     if (answer.kind === 'stop') {
@@ -73,10 +75,12 @@ async function settleList(
 
 async function engage(s: Session): Promise<'stopped' | null> {
   const assessment = await assess(s);
-  await recordAssessment(s, assessment, false);
-  if (!assessment.engagement.engage) return null;
+  const plan = await askBuilders(s, assessment);
+  await recordAssessment(s, assessment, false, plan);
+  const engaged = plan.builders === null ? assessment.engagement.engage : plan.builders > 1;
+  if (!engaged) return null;
   const root = s.input.projectRoots[0]!;
-  const written = await settleList(s, assessment, await writePieceList(s, assessment));
+  const written = await settleList(s, assessment, plan, await writePieceList(s, assessment, plan));
   if (written === 'stopped') return written;
   s.coordination = {
     list: written.ok ? written.value.list : null,

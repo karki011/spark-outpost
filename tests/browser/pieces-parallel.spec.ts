@@ -125,6 +125,9 @@ test('Automatic builds independent pieces side by side in the shared tree', asyn
     await expect(pieceRow(page, key)).toContainText('shared tree');
     await expect(pieceRow(page, key)).toContainText('scoped check passed');
   }
+  await expect(board(page).locator('.piece-board-why')).toContainText(
+    /^Jev: 3 Builders \(0\.90\) · P1 [^·]+, shared tree · P2 [^·]+, shared tree · P3 [^·]+, shared tree; /,
+  );
 
   const work = page.getByRole('complementary', { name: 'Work panel' });
   const tasksTab = work.getByRole('tab', { name: 'Tasks' });

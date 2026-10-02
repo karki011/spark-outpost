@@ -18,7 +18,7 @@ Spark gives each request the smallest crew that fits. Each agent has a short nam
 | **Critic**      | Reviews the change, on another provider when one is connected. | Hawk, Owl, Lynx              |
 | **Coordinator** | Splits big work into pieces and joins them.                    | Atlas, Juno, Vega            |
 
-Most requests need only a Reader or one Builder. For big work, see [Big work in pieces](pieces.md).
+Most requests need only a Reader or one Builder. After you agree a plan, Jev picks how many Builders it needs, from 1 to 4, and Spark shares the plan's items between them. For big work, see [Big work in pieces](pieces.md).
 
 ## How Spark decides what to do
 

@@ -200,11 +200,14 @@ function preferredOption(key: string, options: readonly string[], script: JevScr
   return options.find((option) => option !== 'uncertain') ?? options[0]!;
 }
 
+const UNSURE_COUNT = 0.4;
+
 function spreadChoice(key: string, question: AskedQuestion, script: JevScript): Answers[string] {
   const options = Object.keys(question.criteria ?? {});
   const top = preferredOption(key, options, script);
   const rest = options.filter((option) => option !== top);
-  const topMass = rest.length > 0 ? (script.topMass ?? 0.8) : 1;
+  const unasked = key === 'builders' && !script.choices?.builders;
+  const topMass = rest.length > 0 ? (unasked ? UNSURE_COUNT : (script.topMass ?? 0.8)) : 1;
   const probabilities: Record<string, number> = { [top]: topMass };
   for (const option of rest) probabilities[option] = (1 - topMass) / rest.length;
   const n = options.length;

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import { createCodeScanner } from '../src/codescan/scanner.ts';
-import { JEV_NOT_CONNECTED } from '../src/coordinator/piece-jev.ts';
+import { JEV_NOT_CONNECTED } from '../src/coordinator/builder-jev.ts';
 import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
 import { children, pieceList, startPieces } from './coordinator-support.ts';
 import {
@@ -127,23 +127,23 @@ async function runInOrder(jev: typeof fetch | null) {
 }
 
 describe('Jev routes each piece', { timeout: 150_000 }, () => {
-  it('asks once about every piece and composes a different pick per piece', async () => {
+  it('asks once about every plan item and composes a different pick per piece', async () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      scores: { P1_reasoning: 3.5, P1_coding: 2.5, P2_reasoning: 4.5 },
+      choices: { builders: '3' },
+      scores: { T1_reasoning: 3.5, T1_coding: 2.5, T2_reasoning: 4.5 },
     };
     const { runId, orchestration } = await runInOrder(jevFetch(script));
     expect(orchestration.status).toBe('succeeded');
-    const batches = script.calls.filter((call) => call.questions.includes('P1_reasoning'));
+    const batches = script.calls.filter((call) => call.questions.includes('T1_reasoning'));
     expect(batches).toHaveLength(1);
+    expect(script.calls.some((call) => call.questions.includes('P1_reasoning'))).toBe(false);
     expect(batches[0]!.questions).toEqual(
-      expect.arrayContaining(['P1_kind', 'P1_coding', 'P2_context', 'P3_reliability']),
+      expect.arrayContaining(['builders', 'T1_kind', 'T1_coding', 'T2_context', 'T3_reliability']),
     );
     expect(batches[0]!.questions.some((key) => key.endsWith('_wide'))).toBe(false);
-    expect(batches[0]!.questions.some((key) => key.endsWith('_builder'))).toBe(false);
-    expect(String(batches[0]!.state.pieces)).toContain('Piece P2: API');
-    expect(String(batches[0]!.state.pieces)).toContain('  Waits for: P1');
+    expect(String(batches[0]!.state.pieces)).toContain('Piece T2: API: build it in `api.ts`');
     expect(String(batches[0]!.state.pieces)).toContain('  - store.ts');
 
     const list = await pieceList(t, runId);
@@ -152,6 +152,9 @@ describe('Jev routes each piece', { timeout: 150_000 }, () => {
       ['P2', 'claude', 'opus[1m]'],
       ['P3', 'claude', 'sonnet'],
     ]);
+    expect(list.placementReason).toContain(
+      'Jev: 3 Builders (0.73) · P1 Codex 6 Sol · P2 Claude Opus 5.5 · P3 Claude Sonnet 5; pieces run in order',
+    );
     expect(list.pieces.map((piece) => piece.pickNote)).toEqual([
       'Jev: reasoning 3.5, coding 2.5, context 2 → mid tier → Codex 6 Sol (strong at reasoning)',
       'Jev: reasoning 4.5, coding 2, context 2 → top tier (deep reasoning) → Claude Opus 5.5 (only top-tier route)',
@@ -253,7 +256,8 @@ describe('Jev routes parallel pieces', { timeout: 150_000 }, () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      scores: { P3_reasoning: 3.5, P3_coding: 2.5 },
+      choices: { builders: '3' },
+      scores: { T3_reasoning: 3.5, T3_coding: 2.5 },
     };
     const { runId, orchestration } = await runParallel('#migrations', script);
     expect(orchestration.status).toBe('succeeded');
@@ -275,13 +279,16 @@ describe('Jev routes parallel pieces', { timeout: 150_000 }, () => {
     const script: JevScript = {
       calls: [],
       scenario: NORMAL,
-      policy: { P1_wide: 0.05, P2_wide: 0.9, P3_wide: 0.05 },
+      choices: { builders: '3' },
+      policy: { T1_wide: 0.05, T2_wide: 0.9, T3_wide: 0.05 },
     };
     const { runId, orchestration } = await runParallel('', script);
     expect(orchestration.status).toBe('succeeded');
     const list = await pieceListOf(t, runId);
     expect(list.placement).toBe('shared');
-    expect(list.placementReason).toContain('Jev moved P2');
+    expect(list.placementReason).toMatch(
+      /^Jev: 3 Builders \(0\.73\) · P1 [^·]+, shared tree · P2 [^·]+, worktree · P3 [^·]+, shared tree; /,
+    );
     expect(list.pieces.map((piece) => [piece.key, piece.placement, piece.status])).toEqual([
       ['P1', 'shared', 'landed'],
       ['P2', 'worktree', 'landed'],

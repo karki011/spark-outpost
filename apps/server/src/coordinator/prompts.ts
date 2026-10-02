@@ -1,5 +1,7 @@
 import type { TaskPiece } from '@spark-outpost/contracts';
 import { COORD_MAX_PIECES } from '../advisor/policy.ts';
+import { pieceKey } from './builder-count.ts';
+import type { PlanStep } from './plan-coverage.ts';
 import { noCheckLabel } from './scoped-checks.ts';
 
 export const PIECES_FENCE = 'pieces';
@@ -18,6 +20,7 @@ export interface CoordinatorContext {
   planFiles: readonly string[];
   checks: readonly string[];
   budgetTokens: number;
+  groups?: readonly (readonly PlanStep[])[] | null;
 }
 
 function clip(text: string, limit: number): string {
@@ -51,6 +54,14 @@ const EXAMPLE = `\`\`\`${PIECES_FENCE}
 }
 \`\`\``;
 
+function groupsSection(groups: readonly (readonly PlanStep[])[]): string {
+  const keys = groups.map((_, index) => pieceKey(index));
+  const lines = groups.map(
+    (steps, index) => `${keys[index]}: ${steps.map((step) => step.text).join('; ')}`,
+  );
+  return `## Builders\nSpark chose ${groups.length} Builders for the agreed plan. Write exactly ${groups.length} pieces that build, with the keys ${keys.join(', ')}, one per group below, and cover every plan item of its group in that piece. Research pieces may use other keys.\n${bullets(lines)}`;
+}
+
 export function coordinatorPrompt(context: CoordinatorContext): string {
   const files = context.likelyFiles.map((file) =>
     file.lines === null ? file.path : `${file.path} (${file.lines} lines)`,
@@ -65,6 +76,7 @@ export function coordinatorPrompt(context: CoordinatorContext): string {
         ]
       : []),
     ...(files.length > 0 ? [`## Files the code scan ranked likely\n${bullets(files)}`] : []),
+    ...(context.groups ? [groupsSection(context.groups)] : []),
     ...(context.checks.length > 0 ? [`## Project checks\n${bullets(context.checks)}`] : []),
     `## Reply\nReply with one fenced \`${PIECES_FENCE}\` block and nothing else, in this message. Don't write a plan file or ask to leave plan mode: this reply is the plan.\n\n${EXAMPLE}`,
     `## Rules\n${bullets([

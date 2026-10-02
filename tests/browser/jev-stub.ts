@@ -94,6 +94,14 @@ function noulValue(key: string): number {
   return 0.05;
 }
 
+export const BUILDERS_STUB_CONFIDENCE = 0.9;
+
+function buildersAnswer(request: StubRequest): Answer {
+  const tasks = Object.keys(request.questions).filter((key) => /^T\d+_kind$/.test(key)).length;
+  const offered = options(request.questions.builders!);
+  return spread(offered, String(Math.min(Math.max(tasks, 1), 4)), BUILDERS_STUB_CONFIDENCE);
+}
+
 export function jevAnswers(request: StubRequest): Record<string, Answer> {
   const task = String(request.state.task ?? '');
   if (request.questions.intent) return intakeAnswers(request, task);
@@ -104,5 +112,6 @@ export function jevAnswers(request: StubRequest): Record<string, Answer> {
     ]),
   );
   if (request.questions.verdict) answers.verdict = choice(verdictFor(task), 0.95);
+  if (request.questions.builders) answers.builders = buildersAnswer(request);
   return answers;
 }

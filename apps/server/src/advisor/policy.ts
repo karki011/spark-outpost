@@ -102,7 +102,7 @@ export const ROUTER_TIER_OF_CARD: Readonly<Record<ModelTier, RouterTier | null>>
   frontier: null,
 };
 
-export const COORD_POLICY_VERSION = 'coord-4';
+export const COORD_POLICY_VERSION = 'coord-5';
 export const COORD_MAX_PIECES = 8;
 export const COORD_ENGAGE_PLAN_ITEMS = 4;
 export const COORD_ENGAGE_PLAN_AREAS = 2;
@@ -117,6 +117,9 @@ export const COORD_LONG_PIECE_TOKENS = 90_000;
 export const COORD_CRITICAL_PATH_SAVING = 0.35;
 export const COORD_SPLIT_UNSURE_AT = 0.2;
 export const COORD_JEV_ACT_AT = 0.8;
+export const BUILDER_COUNT_AT = 0.7;
+export const BUILDERS_MAX = 4;
+export const BUILDER_TASKS_MAX = 12;
 export const PIECE_SIGNAL_MIN_CONFIDENCE = 0.5;
 export const PIECE_DEMAND_WEIGHTS = { reasoning: 0.45, coding: 0.35, context: 0.2 } as const;
 export const PIECE_MID_AT = 2.5;

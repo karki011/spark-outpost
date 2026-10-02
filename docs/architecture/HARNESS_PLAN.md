@@ -27,8 +27,9 @@ What runs today. Round 10 (September 27, 2026) cut the harness down to one task-
                   top tier for complex work (migration, security, multi-package, broad scan,
                   Jev top ≥ 0.8, or the user asks for it)
                ▼
-   too big for one Builder (asked, big plan, broad scan, size) ► coordinator: pieces, placement,
-   integrator, full checks once (see "Coordinator" below); otherwise:
+   approved plan ► one Jev call: how many Builders (1–4) + per-item ratings; 2+ confident
+   (else the rules: asked, big plan, broad scan, size) ► coordinator: one piece per group,
+   placement, integrator, full checks once (see "Coordinator" below); otherwise:
                ▼
    ONE Builder = a task-scoped child session (resumeKey `${taskId}:builder`), Lean on,
    plans for itself only when the change needs it, works in small increments
@@ -98,7 +99,7 @@ What runs today. Round 10 (September 27, 2026) cut the harness down to one task-
 
 Built September 28–30, 2026 (phases C0–C7); design, status and open items in [COORDINATOR_PLAN.md](COORDINATOR_PLAN.md).
 
-- **When it engages.** After intake, clarify and plan first: the user asks for pieces, the agreed plan has 4+ open items across 2+ areas, the code scan's likely files number 12+ or span 3+ packages, or the size estimate is over one Builder's budget. Otherwise the one-Builder path above runs unchanged, with no extra model call.
+- **When it engages.** After intake, clarify and the approved plan, one batched Jev call (policy `coord-5`, `coordinator/builder-jev.ts`) asks how many Builders the plan needs (a 1–4 choice) and, per plan item, the piece property questions (kind, reasoning, coding, context, reliability and, when pieces can run side by side, wide or risky). With confidence ≥ `BUILDER_COUNT_AT` 0.7 the count is used, clamped to 4, the number of plan items and Builders at once; code groups the items (same files together, then shared Map areas, folders and plan neighbours; never destructive with non-destructive work or across repos). One group runs the one-Builder path above with the whole plan, no coordinator and no integrator; two or more groups run the coordinator with one piece per group, each routed from its items' combined answers (highest demand, worktree if any item is wide or risky). Without Jev, below the threshold, for plans with fewer than 2 or more than 12 items, or when the request asks for pieces and Jev says 1, the rules decide: the user asks for pieces, the agreed plan has 4+ open items across 2+ areas, the code scan's likely files number 12+ or span 3+ packages, or the size estimate is over one Builder's budget; otherwise the one-Builder path runs, and coordinator pieces route by rules. The `parallel` decision records the call and the groups; the list's why-line reads "Jev: 2 Builders (0.84) · P1 Claude Opus 5.5, worktree · P2 Claude Sonnet 5 (clearly simple), shared tree".
 - **What it does.** A read-only coordinator turn (`${taskId}:coordinator`) writes a `pieces` block (owned files, dependencies, contract, acceptance, scoped checks), validated in code. The placement ladder picks pieces in order, shared-tree Builders or worktree Builders; each piece's Builder may only edit its own files and can't run git state changes; pieces run scoped checks only; one integrator (`${taskId}:integrator`) merges, resolves conflicts and fixes what the full checks find; then the full checks, the verified cascade and the Critic run once on the integrated result. A report built by code lists the pieces.
 - **Mode.** `COORDINATOR_MODE` defaults to `parallel` (`apps/server/src/config.ts`); `in_order`, `shadow` and `off` override it. Settings → Projects → "Builders at once" (`projects.piece_slots`, 1–3) caps parallel pieces per task. Spark off never engages it.
 - **Not evaluated.** The story benchmark (phase C8) that should decide whether parallel placement stays on has not run.
