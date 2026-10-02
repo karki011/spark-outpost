@@ -100,7 +100,7 @@ test('stays at rest while work runs and finishes, nudges for approvals, and list
     step: 'Editing upload.ts',
     costUsd: 0.18,
   });
-  const scout = island(page).locator('svg.scout');
+  const scout = island(page).locator('.isl-scout-wrap svg.scout');
   await expect(scout).toHaveClass(/\bworking\b/);
   await page.waitForTimeout(1500);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
@@ -225,7 +225,9 @@ test('quick chat starts a real chat with the project and autonomy chips', async 
     )
     .toContain('Where do we resize uploaded images?');
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await expect(island(page).locator('svg.scout')).toHaveClass(/\bhappy\b/, { timeout: 20_000 });
+  await expect(island(page).locator('.isl-scout-wrap svg.scout')).toHaveClass(/\bhappy\b/, {
+    timeout: 20_000,
+  });
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await hoverIsland(page);
   await expect(island(page).getByRole('region', { name: 'Recent' })).toContainText(

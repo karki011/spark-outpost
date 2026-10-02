@@ -54,3 +54,4 @@ export * from './text-match.ts';
 export * from './guide.ts';
 export * from './guide-search.ts';
 export * from './secrets.ts';
+export * from './secret-files.ts';

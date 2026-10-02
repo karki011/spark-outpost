@@ -252,7 +252,7 @@ test('running and finished work never expand the island', async ({ page }) => {
   await page.goto('/island');
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   const [running] = await seedChats([{ title: 'Fix image uploads', run: { status: 'running' } }]);
-  const scout = island(page).locator('svg.scout');
+  const scout = island(page).locator('.isl-scout-wrap svg.scout');
   await expect(scout).toHaveClass(/\bworking\b/);
   await page.waitForTimeout(1200);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');

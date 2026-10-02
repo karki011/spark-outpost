@@ -5,10 +5,11 @@ import './island-work.css';
 import './island-peek.css';
 import './island-ask.css';
 import './island-menu.css';
+import './island-drop.css';
 import '../chat/project/project.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { ConversationSummary } from '@spark-outpost/contracts';
+import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import { newDraftId } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { useAppEvents } from '../app/live/use-app-events.ts';
@@ -36,7 +37,10 @@ import { isSleepyTime, scoutMoodFor } from './island-mood.ts';
 import { hasHoverItems, type HoverGroups } from './HoverList.tsx';
 import { IslandShell } from './IslandShell.tsx';
 import type { QuickDraft } from './QuickChat.tsx';
+import { useAttachments } from '../chat/attachments/use-attachments.ts';
+import { useAddProject } from './use-add-project.ts';
 import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
+import { useIslandDrop } from './use-island-drop.ts';
 import { chatAgent, useIslandData } from './use-island-data.ts';
 import { noteSeen, useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
@@ -116,6 +120,15 @@ export function IslandApp() {
   const [hover, onHover, setHover] = useHoverIntent(0);
   const islandRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const attachments = useAttachments();
+  const [added, setAdded] = useState<{ project: Project; signal: number } | null>(null);
+  const [dropNote, setDropNote] = useState<string | null>(null);
+  const beforeDrop = useRef<Panel | null>(null);
+  const adder = useAddProject((project) => {
+    setAdded((last) => ({ project, signal: (last?.signal ?? 0) + 1 }));
+    setDraft((current) => ({ ...current, projectId: project.id }));
+  });
 
   const cards = pendingCards(data.chats, data.approvalsByChat, snoozed);
   const allCards = pendingCards(data.chats, data.approvalsByChat, NO_SNOOZE);
@@ -306,69 +319,93 @@ export function IslandApp() {
   });
   fast.spendToday = spend.data?.costUsd ?? null;
 
+  const grab = useIslandDrop({
+    islandRef,
+    sceneRef,
+    reduced,
+    onStart: () => {
+      beforeDrop.current = panel;
+      setDropNote(null);
+      setFollowUp(null);
+      openPanel('quick');
+    },
+    onAbort: () => {
+      if (beforeDrop.current) openPanel(beforeDrop.current);
+      else closePanel();
+    },
+    onFiles: attachments.add,
+    onFolder: adder.linkFolder,
+    onNote: setDropNote,
+  });
+
   return (
-    <IslandShell
-      islandRef={islandRef}
-      rowRef={rowRef}
-      view={view}
-      geometry={geometry}
-      mood={
-        wave
-          ? 'happy'
-          : scoutMoodFor(view, {
-              waiting,
-              hour: new Date(now).getHours(),
-              idleMinutes: 0,
-              running: running.length,
-              moment,
-              failed: groups.recent.some((chat) => sessionState(chat) === 'failed'),
-            })
-      }
-      reduced={reduced}
-      wave={wave}
-      hover={hover}
-      greeting={greeting}
-      waiting={waiting}
-      voice={voice}
-      now={now}
-      note={note}
-      groups={groups}
-      listing={hasHoverItems(groups)}
-      detailFor={(chatId) => data.detailById.get(chatId)}
-      focusSignal={focusSignal}
-      sessions={sessions}
-      peek={row}
-      sleepy={sleepy}
-      projectNames={data.projectNames}
-      projects={data.projects}
-      selected={selected}
-      draftId={draftId}
-      draft={draft}
-      followUp={followUp}
-      fast={fast}
-      announcement={viewAnnouncement || announcement || spoken}
-      onDraft={setDraft}
-      onTab={openPanel}
-      onSelect={setSelected}
-      onOpenChat={openChat}
-      onReply={reply}
-      onDecided={setNote}
-      onLater={snooze}
-      onReview={openCard}
-      onScout={() => {
-        if (panel) closePanel();
-        else if (view.kind === 'nudge') openCard(view.card);
-        else openPanel(row.sessions.length > 0 || allCards.length > 0 ? 'sessions' : 'ask');
-      }}
-      onPeekOpen={(id) => {
-        setSelected(id);
-        openPanel('sessions');
-      }}
-      onSent={(_id, title) => {
-        setAnnouncement(`Started ${followUp ? 'a follow-up' : 'a new chat'}: ${title}.`);
-        setDraftId(newDraftId());
-        closePanel();
-      }}
-    />
+    <div className="isl-drop-root" {...grab.handlers}>
+      <IslandShell
+        islandRef={islandRef}
+        rowRef={rowRef}
+        compose={{ attachments, adder, added, note: dropNote }}
+        drop={{ phase: grab.phase, item: grab.item, note: dropNote, sceneRef }}
+        view={view}
+        geometry={geometry}
+        mood={
+          wave
+            ? 'happy'
+            : scoutMoodFor(view, {
+                waiting,
+                hour: new Date(now).getHours(),
+                idleMinutes: 0,
+                running: running.length,
+                moment,
+                failed: groups.recent.some((chat) => sessionState(chat) === 'failed'),
+              })
+        }
+        reduced={reduced}
+        wave={wave}
+        hover={hover}
+        greeting={greeting}
+        waiting={waiting}
+        voice={voice}
+        now={now}
+        note={note}
+        groups={groups}
+        listing={hasHoverItems(groups)}
+        detailFor={(chatId) => data.detailById.get(chatId)}
+        focusSignal={focusSignal}
+        sessions={sessions}
+        peek={row}
+        sleepy={sleepy}
+        projectNames={data.projectNames}
+        projects={data.projects}
+        selected={selected}
+        draftId={draftId}
+        draft={draft}
+        followUp={followUp}
+        fast={fast}
+        announcement={viewAnnouncement || announcement || spoken}
+        onDraft={setDraft}
+        onTab={openPanel}
+        onSelect={setSelected}
+        onOpenChat={openChat}
+        onReply={reply}
+        onDecided={setNote}
+        onLater={snooze}
+        onReview={openCard}
+        onScout={() => {
+          if (panel) closePanel();
+          else if (view.kind === 'nudge') openCard(view.card);
+          else openPanel(row.sessions.length > 0 || allCards.length > 0 ? 'sessions' : 'ask');
+        }}
+        onPeekOpen={(id) => {
+          setSelected(id);
+          openPanel('sessions');
+        }}
+        onSent={(_id, title) => {
+          setAnnouncement(`Started ${followUp ? 'a follow-up' : 'a new chat'}: ${title}.`);
+          setDraftId(newDraftId());
+          setDropNote(null);
+          closePanel();
+        }}
+      />
+    </div>
   );
 }

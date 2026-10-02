@@ -15,7 +15,9 @@ import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { FolderDialog } from '../chat/project/FolderDialog.tsx';
 import { PanelTabs } from './PanelTabs.tsx';
 import { ProjectMenu } from './ProjectMenu.tsx';
-import { useAddProject } from './use-add-project.ts';
+import { AttachmentChips } from '../chat/attachments/AttachmentChips.tsx';
+import type { AttachmentsState } from '../chat/attachments/use-attachments.ts';
+import type { useAddProject } from './use-add-project.ts';
 import type { Panel } from './island-model.ts';
 
 export interface QuickDraft {
@@ -24,7 +26,15 @@ export interface QuickDraft {
   level: InvolvementLevel | null;
 }
 
+export interface Compose {
+  attachments: AttachmentsState;
+  adder: ReturnType<typeof useAddProject>;
+  added: { project: Project; signal: number } | null;
+  note: string | null;
+}
+
 interface QuickChatProps {
+  compose: Compose;
   draftId: string;
   draft: QuickDraft;
   followUp: ConversationSummary | null;
@@ -56,15 +66,17 @@ export function QuickChat(props: QuickChatProps) {
   const { draftId, draft, followUp, projects, onDraft, onSent } = props;
   const textRef = useRef<HTMLTextAreaElement>(null);
   const chipRef = useRef<HTMLButtonElement>(null);
-  const [menu, setMenu] = useState(false);
+  const { attachments, adder, added } = props.compose;
+  const [menuAt, setMenuAt] = useState<number | null>(null);
+  const menu = menuAt !== null && menuAt === (added?.signal ?? 0);
+  const setMenu = (open: boolean) => setMenuAt(open ? (added?.signal ?? 0) : null);
   const secrets = useSecretGuard(draft.text);
   const defaults = useDefaults();
   const level = draft.level ?? defaults.level ?? 'hands-off';
   const levelInfo = AUTONOMY_LEVELS.find((info) => info.id === level) ?? AUTONOMY_LEVELS[1]!;
-  const [added, setAdded] = useState<Project | null>(null);
   const project =
     projects.find((candidate) => candidate.id === draft.projectId) ??
-    (added?.id === draft.projectId ? added : null);
+    (added && added.project.id === draft.projectId ? added.project : null);
 
   useEffect(() => {
     const timer = setTimeout(
@@ -74,28 +86,32 @@ export function QuickChat(props: QuickChatProps) {
     return () => clearTimeout(timer);
   }, [props.focusDelay, followUp]);
 
+  const attachmentIds = attachments.uploaded.map((attachment) => attachment.id);
+  const ready = !attachments.uploading && !attachments.failed;
+
   const send = useMutation({
     mutationFn: async (content: string) => {
       if (followUp) {
-        await api.sendMessage(followUp.id, crypto.randomUUID(), content);
+        await api.sendMessage(followUp.id, crypto.randomUUID(), content, attachmentIds);
         return { id: followUp.id, title: followUp.title };
       }
       await api.updateChatSettings(draftId, {
         projectIds: draft.projectId ? [draft.projectId] : [],
         level,
       });
-      await api.sendMessage(draftId, crypto.randomUUID(), content);
+      await api.sendMessage(draftId, crypto.randomUUID(), content, attachmentIds);
       return { id: draftId, title: titleFromMessage(content) };
     },
     onSuccess: ({ id, title }) => {
       onDraft({ ...draft, text: '' });
+      attachments.clear();
       onSent(id, title, project?.name ?? null);
     },
   });
 
   const submit = () => {
     const content = draft.text.trim();
-    if (!content || send.isPending || secrets.blocks(draft.text)) return;
+    if (!content || !ready || send.isPending || secrets.blocks(draft.text)) return;
     send.mutate(content);
   };
 
@@ -111,11 +127,6 @@ export function QuickChat(props: QuickChatProps) {
     textRef.current?.focus({ preventScroll: true });
   };
 
-  const adder = useAddProject((linked) => {
-    setAdded(linked);
-    pick(linked.id);
-  });
-
   const cycleLevel = () => {
     const index = AUTONOMY_LEVELS.findIndex((info) => info.id === level);
     onDraft({ ...draft, level: AUTONOMY_LEVELS[(index + 1) % AUTONOMY_LEVELS.length]!.id });
@@ -129,6 +140,13 @@ export function QuickChat(props: QuickChatProps) {
           <div className="isl-qctx">
             Following up in <b>{followUp.title}</b>
           </div>
+        )}
+        {attachments.items.length > 0 && (
+          <AttachmentChips
+            items={attachments.items}
+            onRemove={attachments.remove}
+            onRetry={attachments.retry}
+          />
         )}
         <SecretWarning
           guard={secrets}
@@ -186,12 +204,14 @@ export function QuickChat(props: QuickChatProps) {
             </button>
           )}
           <span className="isl-sp" />
-          <span className="isl-qc-hint">{send.isPending ? 'Sending…' : ''}</span>
+          <span className="isl-qc-hint">
+            {send.isPending ? 'Sending…' : attachments.uploading ? 'Uploading…' : ''}
+          </span>
           <button
             type="button"
             className="isl-send"
             aria-label="Send"
-            disabled={!draft.text.trim() || send.isPending}
+            disabled={!draft.text.trim() || !ready || send.isPending}
             onClick={submit}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
@@ -205,6 +225,11 @@ export function QuickChat(props: QuickChatProps) {
           </button>
         </div>
       </div>
+      {(props.compose.note ?? attachments.notice) && (
+        <p className="isl-qnote" role="status">
+          {props.compose.note ?? attachments.notice}
+        </p>
+      )}
       {menu && (
         <ProjectMenu
           projects={projects}

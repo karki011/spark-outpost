@@ -56,6 +56,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const window = new BrowserWindow(islandWindowOptions(options.preload, start));
   let dragging: { origin: Point; pointer: Point } | null = null;
   let rest: Size | null = null;
+  let interactive = false;
 
   window.setAlwaysOnTop(true, ISLAND_LEVEL);
   window.setVisibleOnAllWorkspaces(true, {
@@ -76,6 +77,11 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
 
   const resting = (): Size | null =>
     placed?.docked && !geometry().notch && !dragging ? rest : null;
+
+  const applyMouse = () => {
+    if (window.isDestroyed()) return;
+    window.setIgnoreMouseEvents(!(interactive || resting() !== null), { forward: true });
+  };
 
   const report = (reason: string) => {
     if (app.isPackaged || window.isDestroyed()) return;
@@ -141,7 +147,8 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       send(IPC.islandCommand, action);
     },
     setInteractive: (on) => {
-      if (!window.isDestroyed()) window.setIgnoreMouseEvents(!on, { forward: true });
+      interactive = on;
+      applyMouse();
     },
     setFocusable: (on) => {
       setIslandFocus(window, on);
@@ -153,6 +160,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       rest = size;
       if (!changed || window.isDestroyed() || dragging || !placed) return;
       moveTo(placed.position);
+      applyMouse();
       report(size ? 'resting' : 'expanded');
     },
     drag: (phase, pointer) => {

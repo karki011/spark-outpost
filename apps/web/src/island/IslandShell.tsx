@@ -18,7 +18,9 @@ import { useViewportWidth } from './island-parts.tsx';
 import { wingsFor } from './island-wings.tsx';
 import { keyHint } from './key-hints.tsx';
 import { PeekRow } from './PeekRow.tsx';
-import { QuickChat, type QuickDraft } from './QuickChat.tsx';
+import { DropScene } from './DropScene.tsx';
+import { QuickChat, type Compose, type QuickDraft } from './QuickChat.tsx';
+import type { GrabItem, GrabPhase } from './use-island-drop.ts';
 import { Sessions } from './Sessions.tsx';
 import { useIslandShape, type ScoutSpot } from './use-island-shape.ts';
 import { chatAgent } from './use-island-data.ts';
@@ -29,6 +31,8 @@ interface ShellRefs {
 }
 
 interface IslandShellProps {
+  compose: Compose;
+  drop: DropProps;
   view: IslandView;
   geometry: IslandGeometry;
   mood: ScoutMood;
@@ -66,6 +70,13 @@ interface IslandShellProps {
   onScout: () => void;
   onPeekOpen: (id: string) => void;
   onSent: (id: string, title: string, project: string | null) => void;
+}
+
+interface DropProps {
+  phase: GrabPhase;
+  item: GrabItem | null;
+  note: string | null;
+  sceneRef: RefObject<HTMLDivElement | null>;
 }
 
 const KHINT_HEIGHT = 18;
@@ -122,6 +133,7 @@ function ViewBody({ props }: { props: IslandShellProps }) {
             draft={props.draft}
             followUp={props.followUp}
             projects={props.projects}
+            compose={props.compose}
             waiting={props.waiting}
             focusDelay={focusDelay}
             onDraft={props.onDraft}
@@ -298,6 +310,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
             </div>
           )}
         </div>
+        <DropScene {...props.drop} />
         <div ref={scoutRef} className="isl-scout-wrap" data-wave={props.wave || undefined}>
           {props.waiting > 0 && view.kind === 'peek' && (
             <span className="isl-pbadge" aria-hidden="true">

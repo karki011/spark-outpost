@@ -166,12 +166,22 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       dragging = null;
     };
     const onBlur = () => latest.current.onBlur();
+    const onDragIn = () => setInteractive(true);
+    const onDragOut = (event: DragEvent) => {
+      if (event.type === 'drop' || !event.relatedTarget) setInteractive(false);
+    };
     document.addEventListener('mousemove', onMove);
     document.documentElement.addEventListener('mouseleave', onLeave);
     window.addEventListener('pointerdown', onDown);
     window.addEventListener('pointerup', onUp);
     window.addEventListener('blur', onBlur);
+    window.addEventListener('dragenter', onDragIn);
+    window.addEventListener('drop', onDragOut);
+    document.documentElement.addEventListener('dragleave', onDragOut);
     return () => {
+      window.removeEventListener('dragenter', onDragIn);
+      window.removeEventListener('drop', onDragOut);
+      document.documentElement.removeEventListener('dragleave', onDragOut);
       document.removeEventListener('mousemove', onMove);
       document.documentElement.removeEventListener('mouseleave', onLeave);
       window.removeEventListener('pointerdown', onDown);
