@@ -2,15 +2,15 @@ import { z } from 'zod';
 
 export const categorySchema = z.enum([
   'question',
-  'debugging',
+  'research',
+  'plan',
   'bug_fix',
   'feature',
   'refactor',
-  'review',
-  'research',
   'docs',
-  'setup',
-  'chat',
+  'tests',
+  'config',
+  'review',
 ]);
 export type Category = z.infer<typeof categorySchema>;
 
@@ -18,15 +18,15 @@ export const CATEGORY_CONFIDENCE_FLOOR = 0.5;
 
 const CATEGORY_LABELS: Record<Category, string> = {
   question: 'Question',
-  debugging: 'Debugging',
+  research: 'Research',
+  plan: 'Plan',
   bug_fix: 'Bug fix',
   feature: 'Feature',
   refactor: 'Refactor',
-  review: 'Review',
-  research: 'Research',
   docs: 'Docs',
-  setup: 'Setup',
-  chat: 'Chat',
+  tests: 'Tests',
+  config: 'Config',
+  review: 'Review',
 };
 
 export function categoryLabel(category: Category): string {
@@ -36,6 +36,9 @@ export function categoryLabel(category: Category): string {
 const LEGACY_INTENTS: Record<string, Category> = {
   explain: 'question',
   fix: 'bug_fix',
+  debugging: 'bug_fix',
+  setup: 'config',
+  chat: 'question',
 };
 
 export function upgradeLegacyCategory(value: unknown): unknown {

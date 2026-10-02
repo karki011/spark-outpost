@@ -3,7 +3,7 @@ import { COORD_CARD_PIECES } from '../advisor/policy.ts';
 import { askCard, CheckpointTimeout, piecesCard } from '../orchestration/checkpoint.ts';
 import type { ForcedPlacement, Session } from '../orchestration/session.ts';
 import { placementFacts } from './assess.ts';
-import { projectSettings } from './builder-env.ts';
+import { projectSettings, type ProjectSettings } from './builder-env.ts';
 import type { CheckedPiece } from './pieces-validate.ts';
 import { placePieces } from './placement.ts';
 import { coordinatorMode } from './shadow.ts';
@@ -27,19 +27,21 @@ export function forcedPlace(placement: ForcedPlacement): ListPlace {
   };
 }
 
+export function inOrderReason(s: Session, settings: ProjectSettings): string | null {
+  if (coordinatorMode(s) !== 'parallel') return IN_ORDER_REASON;
+  if (!settings.parallel) return 'parallel pieces are off for this project';
+  if (settings.slots < 2) return 'this project runs one Builder at a time';
+  if (s.needsCopy) return 'every piece runs in the task copy';
+  return null;
+}
+
 export async function chooseListPlace(
   s: Session,
   pieces: readonly CheckedPiece[],
 ): Promise<ListPlace> {
-  if (coordinatorMode(s) !== 'parallel') return { placement: 'in_order', reason: IN_ORDER_REASON };
   const settings = await projectSettings(s.deps.db, s.lease.runId);
-  if (!settings.parallel) {
-    return { placement: 'in_order', reason: 'parallel pieces are off for this project' };
-  }
-  if (settings.slots < 2) {
-    return { placement: 'in_order', reason: 'this project runs one Builder at a time' };
-  }
-  if (s.needsCopy) return { placement: 'in_order', reason: 'every piece runs in the task copy' };
+  const inOrder = inOrderReason(s, settings);
+  if (inOrder) return { placement: 'in_order', reason: inOrder };
   if (s.deps.forcedPlacement) return forcedPlace(s.deps.forcedPlacement);
   const placed = placePieces(
     pieces.map((piece) => ({

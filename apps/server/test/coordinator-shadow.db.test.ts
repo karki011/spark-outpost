@@ -89,7 +89,7 @@ describe('coordinator shadow', () => {
         detail: 'the agreed plan has 4 open items in 2 areas',
         placement: 'in_order',
         planItems: 4,
-        policy: 'coord-4',
+        policy: 'coord-5',
       }),
     ]);
   }, 60_000);

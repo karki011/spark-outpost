@@ -265,12 +265,13 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     await writeFile(join(root, 'check.mjs'), FAILS_UNTIL_FIXED);
     await setCheckCommands(t, root, ['node check.mjs']);
     const easy = Object.fromEntries(
-      ['P1', 'P2', 'P3'].flatMap((key) => [
+      ['T1', 'T2', 'T3'].flatMap((key) => [
         [`${key}_reasoning`, 1],
         [`${key}_coding`, 1],
       ]),
     );
-    harness = startOrchestrator(t, jevFetch({ calls: [], scenario: NORMAL, scores: easy }), {
+    const script = { calls: [], scenario: NORMAL, scores: easy, choices: { builders: '3' } };
+    harness = startOrchestrator(t, jevFetch(script), {
       coordinator: 'in_order',
     });
     const scenario = withTag(NORMAL, 'Split this up. #pieces #glue');

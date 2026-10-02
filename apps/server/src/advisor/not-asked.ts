@@ -2,7 +2,7 @@ import { SPEED_KEY } from '../orchestration/clarify.ts';
 import type { IntakeRequest } from './advice.ts';
 import type { IntakeQuestions } from './intake-questions.ts';
 
-const DO_QUESTIONS = ['question', 'plan_only', 'review', 'destructive', 'vague'] as const;
+const DO_QUESTIONS = ['plan_only', 'review', 'destructive', 'vague'] as const;
 
 function reasonFor(key: string, request: IntakeRequest): string {
   if (request.mode !== 'do' && key !== 'plan_agreed' && key !== 'injection' && key !== 'tier') {

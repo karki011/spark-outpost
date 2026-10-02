@@ -185,6 +185,38 @@ describe('validatePieces', () => {
     expect(errorsOf({ pieces: [piece('P1')] }, { planSteps: [step] })).toEqual([]);
   });
 
+  it('holds the list to one piece per Builder group, each covering its own plan items', () => {
+    const p1 = { text: 'Write p1', files: ['apps/server/src/p1.ts'] };
+    const p2 = { text: 'Write p2', files: ['apps/server/src/p2.ts'] };
+    const groups = { planSteps: [p1, p2], groups: [[p1], [p2]] };
+    expect(
+      errorsOf(
+        { pieces: [piece('P1'), piece('P2'), piece('R1', { owns: [], research: true })] },
+        groups,
+      ),
+    ).toEqual([]);
+    expect(
+      errorsOf(
+        { pieces: [piece('P1', { owns: ['apps/server/src/p1.ts', 'apps/server/src/p2.ts'] })] },
+        groups,
+      ),
+    ).toEqual(['write exactly 2 pieces that build, with the keys P1, P2, one per Builder group']);
+    expect(
+      errorsOf(
+        {
+          pieces: [
+            piece('P1', { owns: ['apps/server/src/p2.ts'] }),
+            piece('P2', { owns: ['apps/server/src/p1.ts'] }),
+          ],
+        },
+        groups,
+      ),
+    ).toEqual([
+      'P1 does not cover its group\'s plan item "Write p1"',
+      'P2 does not cover its group\'s plan item "Write p2"',
+    ]);
+  });
+
   it('only lets research pieces own nothing', () => {
     expect(errorsOf({ pieces: [piece('P1', { owns: [] })] })).toEqual([
       'P1 owns no files; only research pieces may own none',

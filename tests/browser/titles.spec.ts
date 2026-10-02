@@ -90,7 +90,7 @@ test('filters the sidebar by category with is:', async ({ page }) => {
   await expect(rowTitles(page)).toHaveCount(2);
 
   const search = page.getByRole('searchbox', { name: 'Search chats' });
-  await search.fill('is:debugging');
+  await search.fill('is:research');
   await expect(rowTitles(page)).toHaveText([FAKE_TITLE]);
   await search.fill('is:bug-fix');
   await expect(rowTitles(page)).toHaveText(['Bug fix · header typo']);

@@ -8,7 +8,6 @@ import {
   MAX_PREVIOUS_REPLY_CHARACTERS,
   PLAN_AGREED_QUESTION,
   PLAN_ONLY_QUESTION,
-  QUESTION_QUESTION,
   REVIEW_QUESTION,
   VAGUE_QUESTION,
   buildIntakeQuestions,
@@ -68,7 +67,6 @@ function answered(overrides: Partial<SystemOneResponse['answers']> = {}): System
     model: 'jev-1.13.0',
     answers: {
       intent: choice('refactor'),
-      question: noul(0.04),
       plan_only: noul(0.03),
       review: noul(0.02),
       destructive: noul(0.1),
@@ -94,7 +92,6 @@ describe('intake questions', () => {
     const asked = buildIntakeQuestions(request);
     expect(Object.keys(asked.questions)).toEqual([
       'intent',
-      'question',
       'plan_only',
       'review',
       'destructive',
@@ -105,12 +102,7 @@ describe('intake questions', () => {
       'context_dependence',
       'tier',
     ]);
-    expect(asked.questions.question).toMatchObject({
-      type: 'noul',
-      instructions: QUESTION_QUESTION,
-    });
-    expect(QUESTION_QUESTION).toContain('a plan or feedback');
-    expect(JSON.stringify(asked.questions.question)).toContain('any feedback on the parser?');
+    expect(asked.questions.question).toBeUndefined();
     expect(asked.questions.plan_only).toMatchObject({
       type: 'noul',
       instructions: PLAN_ONLY_QUESTION,
@@ -199,8 +191,31 @@ describe('intake questions', () => {
       string,
       { what: string; not_for: string }
     >;
-    expect(intent.debugging!.not_for).toContain('bug fix');
-    expect(intent.bug_fix!.not_for).toContain('debugging');
+    expect(Object.keys(intent)).toEqual([
+      'question',
+      'research',
+      'plan',
+      'bug_fix',
+      'feature',
+      'refactor',
+      'docs',
+      'tests',
+      'config',
+      'review',
+    ]);
+    expect(intent.research!.not_for).toContain('bug fix');
+    expect(intent.question!.not_for).toContain('research');
+  });
+
+  it('keeps every question short enough for a small model to read the same way', () => {
+    const asked = buildIntakeQuestions({ ...request, firstMessage: true });
+    for (const [key, question] of Object.entries(asked.questions)) {
+      if (key === 'tier') continue;
+      const text = question.instructions;
+      const head =
+        typeof text === 'string' ? text : String((text as { question: string }).question);
+      expect(head.length, key).toBeLessThanOrEqual(160);
+    }
   });
 });
 
@@ -210,7 +225,8 @@ describe('intake answers', () => {
     const intake = parseIntakeAnswers(request, asked, answered());
     expect(intake).toMatchObject({
       intent: 'refactor',
-      question: 0.04,
+      question: 0,
+      plan: 0,
       planOnly: 0.03,
       review: 0.02,
       destructive: 0.1,
@@ -234,19 +250,36 @@ describe('intake answers', () => {
     const intake = parseIntakeAnswers(
       request,
       asked,
-      answered({ question: noul(1.4), tier: choice('frontier'), destructive: undefined }),
+      answered({ review: noul(1.4), tier: choice('frontier'), destructive: undefined }),
     );
-    expect(intake.question).toBeUndefined();
+    expect(intake.review).toBeUndefined();
     expect(intake.tier).toBeNull();
-    expect(intake.invalid).toEqual(['tier', 'question', 'destructive']);
-    expect(intake.review).toBe(0.02);
+    expect(intake.invalid).toEqual(['tier', 'destructive', 'review']);
+    expect(intake.planOnly).toBe(0.03);
+  });
+
+  it('reads the answer-first and plan-first signals from the intent probabilities', () => {
+    const asked = buildIntakeQuestions(request);
+    const intent = {
+      type: 'choice' as const,
+      choice: 'research',
+      confidence: 0.8,
+      probabilities: { research: 0.6, question: 0.3, plan: 0.1 },
+    };
+    const intake = parseIntakeAnswers(request, asked, answered({ intent }));
+    expect(intake).toMatchObject({ intent: 'research', plan: 0.1 });
+    expect(intake.question).toBeCloseTo(0.9);
+    const ask = { ...request, mode: 'ask' as const };
+    const read = parseIntakeAnswers(ask, buildIntakeQuestions(ask), answered({ intent }));
+    expect(read.question).toBeUndefined();
+    expect(read.depth).toBe('direct');
   });
 
   it('validates types, ranges and offered options before anything branches', () => {
     const response = answered({ weird: choice('x') });
-    expect(validNoul(response, 'question')).toBe(0.04);
+    expect(validNoul(response, 'plan_only')).toBe(0.03);
     expect(validNoul(response, 'intent')).toBeNull();
-    expect(validNoul(answered({ question: noul(Number.NaN) }), 'question')).toBeNull();
+    expect(validNoul(answered({ review: noul(Number.NaN) }), 'review')).toBeNull();
     expect(validChoice(response, 'tier', ['small', 'mid'])).toMatchObject({ value: 'mid' });
     expect(validChoice(response, 'tier', ['small'])).toBeNull();
     expect(validChoice(null, 'tier', ['small'])).toBeNull();
@@ -310,7 +343,7 @@ describe('advice record', () => {
     });
     const ask = { ...request, mode: 'ask' as const };
     expect(notAskedReasons(ask, buildIntakeQuestions(ask))).toMatchObject({
-      question: 'not a Do turn',
+      plan_only: 'not a Do turn',
       vague: 'not a Do turn',
     });
     const asked = buildIntakeQuestions(request);

@@ -200,11 +200,14 @@ function preferredOption(key: string, options: readonly string[], script: JevScr
   return options.find((option) => option !== 'uncertain') ?? options[0]!;
 }
 
+const UNSURE_COUNT = 0.4;
+
 function spreadChoice(key: string, question: AskedQuestion, script: JevScript): Answers[string] {
   const options = Object.keys(question.criteria ?? {});
   const top = preferredOption(key, options, script);
   const rest = options.filter((option) => option !== top);
-  const topMass = rest.length > 0 ? (script.topMass ?? 0.8) : 1;
+  const unasked = key === 'builders' && !script.choices?.builders;
+  const topMass = rest.length > 0 ? (unasked ? UNSURE_COUNT : (script.topMass ?? 0.8)) : 1;
   const probabilities: Record<string, number> = { [top]: topMass };
   for (const option of rest) probabilities[option] = (1 - topMass) / rest.length;
   const n = options.length;
@@ -212,7 +215,19 @@ function spreadChoice(key: string, question: AskedQuestion, script: JevScript): 
   return { type: 'choice', choice: top, probabilities, confidence };
 }
 
+function questionIntent(question: number): Answers[string] {
+  const asks = question >= 0.5;
+  return choice(
+    asks ? 'question' : 'bug_fix',
+    asks ? question : 1 - question,
+    asks ? 'bug_fix' : 'question',
+  );
+}
+
 function intentAnswer(scenario: Scenario): Answers[string] {
+  if (!scenario.intent && scenario.mode === 'do' && scenario.question !== undefined) {
+    return questionIntent(scenario.question);
+  }
   const intent = scenario.intent ?? (scenario.mode === 'ask' ? 'question' : 'bug_fix');
   const confidence = scenario.intentConfidence ?? 0.9;
   if (!scenario.intentProbabilities) return choice(intent, confidence);
@@ -225,7 +240,6 @@ function intentAnswer(scenario: Scenario): Answers[string] {
 }
 
 const NOUL_FIELDS = [
-  ['question', 'question'],
   ['plan_only', 'planOnly'],
   ['destructive', 'destructive'],
   ['review', 'review'],
@@ -295,8 +309,9 @@ export function jevFetch(script: JevScript): typeof fetch {
     };
     script.calls.push({ questions: Object.keys(body.questions), state: body.state });
     const task = String(body.state.task ?? '');
+    const fallback = body.state.mode === 'do' ? { ...QUESTION, mode: 'do' as const } : QUESTION;
     const scenario =
-      script.scenario ?? SCENARIOS.find((candidate) => task.startsWith(candidate.text)) ?? QUESTION;
+      script.scenario ?? SCENARIOS.find((candidate) => task.startsWith(candidate.text)) ?? fallback;
     const answers = body.questions.intent
       ? intakeAnswers(scenario, body.questions)
       : observedAnswers(script, body.questions);

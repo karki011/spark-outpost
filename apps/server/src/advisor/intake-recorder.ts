@@ -130,10 +130,11 @@ export function intakeRequest(
   };
 }
 
-export function turnCategory(outcome: JevOutcome): Category | null {
-  if (outcome.status !== 'answered') return null;
+export function turnCategory(outcome: JevOutcome, rules: Category | null = null): Category | null {
+  if (outcome.status !== 'answered') return rules;
   const confidence = outcome.intake.confidences.intent ?? outcome.intake.confidence;
-  return confidence >= CATEGORY_CONFIDENCE_FLOOR ? outcome.intake.intent : null;
+  if (confidence < CATEGORY_CONFIDENCE_FLOOR) return rules;
+  return outcome.intake.intent ?? rules;
 }
 
 export interface IntakeResult {
@@ -172,7 +173,11 @@ export async function saveIntake(
 ): Promise<IntakeResult> {
   const body = adviceBody(asked.request, asked.outcome, decided);
   await insertAdvice(db, input.identity.runId, body);
-  await recordRunCategory(db, input.identity.runId, turnCategory(asked.outcome));
+  await recordRunCategory(
+    db,
+    input.identity.runId,
+    turnCategory(asked.outcome, decided.rules.intent),
+  );
   if (asked.outcome.status !== 'not_connected') await announce(append, body);
   return { body, context: asked.context, outcome: asked.outcome };
 }

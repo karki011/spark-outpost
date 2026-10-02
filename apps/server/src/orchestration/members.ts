@@ -22,7 +22,7 @@ import {
   seatRoute,
   type ResolvedRoute,
 } from './member-routes.ts';
-import { agreedPlanText, promptFor } from './member-prompts.ts';
+import { promptFor, readerPreamble } from './member-prompts.ts';
 import { editObserver } from './observe.ts';
 import { countOutput, counted } from './reads.ts';
 import { reviewFindings, reviewVerdict } from './review.ts';
@@ -154,7 +154,7 @@ async function runInPlace(
     route: storedRoute(route, name),
   });
   if (mode !== s.input.mode) await setRunMode(s, mode);
-  const preamble = await agreedPlanText(s);
+  const preamble = await readerPreamble(s);
   const { planning: drafting, ...facts } = s.input;
   const planning = drafting === true || plansThisTurn(facts);
   const input = {

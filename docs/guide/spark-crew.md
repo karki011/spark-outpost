@@ -18,15 +18,15 @@ Spark gives each request the smallest crew that fits. Each agent has a short nam
 | **Critic**      | Reviews the change, on another provider when one is connected. | Hawk, Owl, Lynx              |
 | **Coordinator** | Splits big work into pieces and joins them.                    | Atlas, Juno, Vega            |
 
-Most requests need only a Reader or one Builder. For big work, see [Big work in pieces](pieces.md).
+Most requests need only a Reader or one Builder. After you agree a plan, Jev picks how many Builders it needs, from 1 to 4, and Spark shares the plan's items between them. For big work, see [Big work in pieces](pieces.md).
 
 ## How Spark decides what to do
 
 When you send a message, Spark reads it first. A line above the crew says what it chose:
 
-- **Answer directly**: a question. A Reader answers and nothing changes.
+- **Answer directly**: a question or research. A Reader answers and nothing changes. For research, it reads the code and the project map, then lists what it found and suggested next steps.
 - **Build it**: a clear change. A Builder makes it.
-- **Plan, then build**: a big or destructive change. You get a plan first.
+- **Plan, then build**: a plan or design request, or a big or destructive change. You get a plan first.
 - **Plan, build, then review**: the same, with a Critic at the end.
 
 If the request is too vague, the agent first asks 1 to 3 questions with its best guesses. With [Jev](jev.md) connected, Jev helps make these calls; otherwise the rules do.

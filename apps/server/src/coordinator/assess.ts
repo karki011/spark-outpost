@@ -8,6 +8,7 @@ import { builderFacts } from '../orchestration/member-routes.ts';
 import { routeBuilder } from '../orchestration/routing.ts';
 import { repoBusy } from '../orchestration/solo-copy.ts';
 import type { Session } from '../orchestration/session.ts';
+import type { BuilderPlan } from './builder-jev.ts';
 import { engagement, likelyFiles, type Engagement } from './engage.ts';
 import { planSteps, type PlanStep } from './plan-coverage.ts';
 import {
@@ -106,40 +107,61 @@ export async function assess(s: Session): Promise<Assessment> {
   };
 }
 
-function summaryOf(assessment: Assessment, shadow: boolean): string {
+function summaryOf(assessment: Assessment, shadow: boolean, plan: BuilderPlan | null): string {
   const { engagement: engaged, placement } = assessment;
   const prefix = shadow ? 'Coordinator (shadow)' : 'Coordinator';
-  if (!engaged.engage) return `${prefix}: one Builder; ${engaged.detail}`;
+  if (plan?.builders) {
+    const built = plan.builders === 1 ? 'one Builder' : `engages with ${plan.builders} pieces`;
+    return `${prefix}: ${plan.reason}; ${built}`;
+  }
+  const jev = plan ? `; ${plan.reason}` : '';
+  if (!engaged.engage) return `${prefix}: one Builder; ${engaged.detail}${jev}`;
   const placed = placement ? `; would place ${placement.placement}: ${placement.reason}` : '';
-  return `${prefix}: engages (${engaged.reason}); ${engaged.detail}${placed}`;
+  return `${prefix}: engages (${engaged.reason}); ${engaged.detail}${placed}${jev}`;
+}
+
+function buildersAnswer(plan: BuilderPlan) {
+  const verdict = plan.verdict?.confident ? plan.verdict : null;
+  return {
+    applied: plan.builders === null ? 'rules' : 'jev',
+    reason: plan.reason,
+    asked: verdict?.asked ?? null,
+    confidence: verdict?.confidence ?? null,
+    builders: plan.builders,
+    tasks: plan.tasks.map((task) => ({ key: task.key, text: task.title, files: task.owns })),
+    groups: plan.groups,
+    placementAsked: plan.placementAsked,
+  };
 }
 
 export async function recordAssessment(
   s: Session,
   assessment: Assessment,
   shadow: boolean,
+  plan: BuilderPlan | null = null,
 ): Promise<void> {
   const { engagement: engaged, placement } = assessment;
+  const call = plan?.call ?? null;
   await insertDecision(s.deps.db, {
     runId: s.lease.runId,
     purpose: 'parallel',
     childRunId: null,
     role: null,
     stepIndex: null,
-    jevStatus: 'not_asked',
-    inputTokens: null,
-    costUsd: null,
+    jevStatus: plan?.status ?? 'not_asked',
+    inputTokens: call?.usage?.inputTokens ?? null,
+    costUsd: call?.usage?.costUsd ?? null,
     policyVersion: COORD_POLICY_VERSION,
     body: {
-      summary: summaryOf(assessment, shadow),
-      applied: 'rules',
+      summary: summaryOf(assessment, shadow, plan),
+      applied: plan?.builders ? 'jev' : 'rules',
       gate: null,
-      jevError: null,
-      jevModel: null,
-      latencyMs: null,
+      jevError: call?.error ?? null,
+      jevModel: call?.model ?? null,
+      latencyMs: call?.latencyMs ?? null,
       answer: {
         shadow,
-        engage: engaged.engage,
+        engage: plan?.builders ? plan.builders > 1 : engaged.engage,
         reason: engaged.reason,
         detail: engaged.detail,
         tooBigUnsure: engaged.tooBigUnsure,
@@ -152,7 +174,11 @@ export async function recordAssessment(
         likelyFiles: assessment.likelyFiles,
         sizeEstimate: assessment.sizeEstimate,
         budgetTokens: assessment.budgetTokens,
+        builders: plan ? buildersAnswer(plan) : null,
       },
+      state: call?.asked?.state ?? null,
+      questions: call?.asked ? Object.keys(call.asked.questions) : null,
+      answers: call?.response?.answers ?? null,
     },
   });
 }

@@ -6,6 +6,7 @@ import type {
   ProviderId,
   RunMode,
 } from '@spark-outpost/contracts';
+import { intentByRule } from '../orchestration/intent-rules.ts';
 
 export interface AdvisorOption {
   id: string;
@@ -50,7 +51,7 @@ export class AdvisorTimeoutError extends AdvisorError {}
 export function ruleAdvisor(request: IntakeRequest): IntakeAnswer {
   const doing = request.mode === 'do';
   return {
-    intent: null,
+    intent: doing ? intentByRule(request.task, request.mode) : null,
     complexity: null,
     risk: doing ? 'edits' : 'read-only',
     injection: null,

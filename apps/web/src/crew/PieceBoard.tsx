@@ -73,6 +73,7 @@ export function PieceBoard({ list, crew = [] }: PieceBoardProps) {
         {rows.length} {rows.length === 1 ? 'piece' : 'pieces'}, {PLACEMENTS[list.placement]} ·{' '}
         {list.status === 'proposed' ? 'waiting for your go-ahead' : `${landed} landed`}
       </p>
+      {list.placementReason && <p className="piece-board-why">{list.placementReason}</p>}
       <ol className="piece-rows">
         {rows.map((row) => (
           <PieceRow key={row.key} row={row} crew={crew} />

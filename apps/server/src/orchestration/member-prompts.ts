@@ -1,3 +1,4 @@
+import { turnCategory } from '../advisor/intake-recorder.ts';
 import { agreedPlanFor } from '../plans/plan-staleness.ts';
 import { gitDiffBetween, gitDiffSince, headCommit } from '../projects/snapshot.ts';
 import { getSnapshot } from '../persistence/run-snapshots.ts';
@@ -77,6 +78,19 @@ export function agreedPlanText(s: Session): Promise<string | null> {
       return null;
     },
   );
+}
+
+export const RESEARCH_BRIEF = [
+  '## Research',
+  'This is a research request. Use read-only tools and the project Map (`spark_map`) to find the answer. Never edit files or run commands that change anything.',
+  'Answer with your findings, each tied to the files and lines you read, then a short list of suggested next steps.',
+].join('\n');
+
+export async function readerPreamble(s: Session): Promise<string | null> {
+  const plan = await agreedPlanText(s);
+  const research = turnCategory(s.intake.outcome, s.intake.body.rules.intent) === 'research';
+  const parts = [plan, research ? RESEARCH_BRIEF : null].filter(Boolean);
+  return parts.length > 0 ? parts.join('\n\n') : null;
 }
 
 export async function promptFor(s: Session, spawn: Spawn): Promise<string> {

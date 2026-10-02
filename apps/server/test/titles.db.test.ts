@@ -180,26 +180,26 @@ describe('auto titles', () => {
 
 describe('turn categories', () => {
   it('stores the category per turn and breaks usage down by category', async () => {
-    await connectJev('debugging');
+    await connectJev('research');
     const id = await newChat();
     const first = await turn(id, 'why does the divider jump');
-    jev = { category: 'chat', confidence: 0.9 };
+    jev = { category: 'question', confidence: 0.9 };
     await turn(id, 'thanks!');
-    expect((await getRun(t.db, first))?.category).toBe('debugging');
-    expect((await getSummary(t.db, id))?.category).toBe('debugging');
+    expect((await getRun(t.db, first))?.category).toBe('research');
+    expect((await getSummary(t.db, id))?.category).toBe('research');
 
     const runs = await conversationAuditRuns(t.db, id);
-    expect(runs?.map((run) => run.category)).toEqual(['debugging', 'chat']);
+    expect(runs?.map((run) => run.category)).toEqual(['research', 'question']);
 
     const usage = await categoryUsage(t.db, t.workspaceId);
     expect(usage.allTime).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ category: 'debugging', turns: 1, costSource: 'reported' }),
-        expect.objectContaining({ category: 'chat', turns: 1 }),
+        expect.objectContaining({ category: 'research', turns: 1, costSource: 'reported' }),
+        expect.objectContaining({ category: 'question', turns: 1 }),
       ]),
     );
-    const debugging = usage.allTime.find((row) => row.category === 'debugging')!;
-    expect(debugging.costUsd).toBeCloseTo(0.0042);
+    const research = usage.allTime.find((row) => row.category === 'research')!;
+    expect(research.costUsd).toBeCloseTo(0.0042);
     expect(usage.last30Days).toHaveLength(2);
   });
 });

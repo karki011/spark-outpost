@@ -86,6 +86,7 @@ export const jevIntakeSchema = intakeAnswerSchema.extend({
   vague: noul.optional(),
   mechanical: noul.optional(),
   question: noul.optional(),
+  plan: noul.optional(),
   planOnly: noul.optional(),
   review: noul.optional(),
   destructive: noul.optional(),
