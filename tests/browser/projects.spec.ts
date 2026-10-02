@@ -93,7 +93,9 @@ test('picks a folder from the context bar and shows it in the bar and header', a
 
   const bar = page.getByRole('button', { name: 'Project folders: app' });
   await expect(bar).toBeVisible();
-  await expect(bar).toHaveAttribute('title', appRoot);
+  await bar.hover();
+  await expect(page.getByRole('tooltip')).toHaveText(appRoot);
+  await page.mouse.move(0, 0);
   await expect(page.locator('.head .crumb')).toHaveText('app /');
   await expect(page.getByText("can read this folder's files but won't change them")).toBeVisible();
   await expect(page.locator('.ctx-branch')).toHaveCount(0);
