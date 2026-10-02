@@ -14,7 +14,6 @@ const NO_REPO = {
   appendPrompt: null,
   plugins: [],
   hooks: null,
-  mcpNames: [],
   skillTool: false,
   agentTool: false,
 };
@@ -82,7 +81,6 @@ describe('withClaudeSpark', () => {
       appendPrompt: '# Repository instructions',
       plugins: [],
       hooks: null,
-      mcpNames: [],
       skillTool: false,
       agentTool: false,
     };

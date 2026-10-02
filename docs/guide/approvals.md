@@ -5,15 +5,17 @@ order: 310
 summary: What Spark asks before an agent acts, how to answer an approval card, and which files always ask.
 ---
 
-Before an agent runs a command or changes a file, Spark checks the request. Depending on the agent's mode, your Spark autonomy level and the file involved, Spark lets it through, refuses it, or shows you an **approval card** and waits.
+Before an agent runs a command or changes a file, Spark checks the request. Spark follows the agent's own mode: when the mode lets the agent act, Spark lets it through without a card. You see an **approval card** only when the agent's mode asks you, or when one of a few hard rails applies.
 
 The approval checks run in Spark Outpost itself, not in the model. Nothing an agent says can approve its own request.
 
 ## What asks first
 
 - **The agent's mode** sets the baseline. For example, Claude's **Manual** asks before edits and commands, while **Accept edits** lets edits through and asks before commands. See [Pick the agent's mode](chats-and-modes.md#pick-the-agents-mode).
-- **Spark autonomy** sets what happens to the results. With **Review each step**, you also get a card before risky work starts. See [Spark autonomy](chats-and-modes.md#spark-autonomy).
-- **Protected paths** and a few risky actions always ask, in every mode and at every level. See [Protected paths](#protected-paths).
+- **Spark autonomy** sets what happens to the results: keep them, or keep them and open a pull request. See [Spark autonomy](chats-and-modes.md#spark-autonomy).
+- **Hard rails** always ask or refuse, in every mode and at every level: secret files, changes outside the project, git hooks and config, agent instruction files and force pushes. See [Protected paths](#protected-paths).
+
+Spark doesn't add ask rules of its own to the agent. Claude and Codex ask when their mode says so, and Spark checks each request against the hard rails. Claude's session also carries Spark's deny rules, so it can't read or edit secret files or force push even in a mode that never asks. A Builder that shares a worktree with other Builders is the exception: its edits and commands go through Spark so each one stays in its own files.
 
 For a side-by-side view of both settings, see [Permissions and autonomy](permissions-and-autonomy.md).
 
@@ -27,16 +29,16 @@ A card shows:
 
 - **The question**, such as **Run a command?**, **Change a file?** or **Change these files?**
 - **Who asks and what for**, for example "Claude wants to run a command."
-- **The details**: the command, or a diff of each file. Select **Wrap** to wrap long lines.
-- **Where it runs**: the folder and branch, and whether the command runs in a sandbox.
-- **Why it asks**, when a safety rule applies, for example "Secret files always ask, whatever your permissions."
+- **The details**: the command, or a diff of each file. A long command shows its first six lines; select **Show all** for the rest. Select **Wrap** to wrap long diff lines.
+- **Where it runs**: the folder and branch.
+- **Why it asks**: the agent's own reason when the agent asked, for example "Codex couldn't run this inside its sandbox, so it asks before running it without one.", or the safety rule, for example "Secret files always ask, whatever your permissions."
 
 ![An approval card showing a file diff](images/approvals-edit-light.png)
 
 To answer:
 
 1. Read the command or the diff.
-2. Select one of the buttons. The labels come from the agent, so they vary a little between Claude and Codex. Typical choices:
+2. Select one of the buttons, right under the question. The labels come from the agent, so they vary a little between Claude and Codex. Typical choices:
    - **Allow**: run it this once.
    - **Always allow**: allow this kind of request for the rest of this run.
    - **Deny**: don't run it. The agent is told and tries another way.
@@ -98,14 +100,15 @@ These always ask or are refused, whatever the agent's mode and your autonomy lev
 | **Files in `.sparkignore`**  | Anything you list in the repo's `.sparkignore`                                                                                                                                                 | Treated exactly like secret files.                                                                     |
 | **Agent instruction files**  | `AGENTS.md` and `CLAUDE.md` at any depth, `.github/copilot-instructions.md`, anything under `.claude/`, `.cursor/rules/` or `.spark/`                                                          | Always ask, with **Allow once** or **Allow for this chat**.                                            |
 | **Git hooks and config**     | `.git/hooks/*`, `.git/config`, `git config` commands                                                                                                                                           | Ask with hold to confirm. Other files inside `.git` can't be changed.                                  |
-| **Outside the linked repos** | Changing or deleting files outside the project                                                                                                                                                 | Always asks. Reading files outside the project is refused.                                             |
-| **Installing packages**      | `npm install`, `pnpm add` and similar                                                                                                                                                          | Always asks.                                                                                           |
+| **Outside the linked repos** | Changing or deleting files outside the project, including `cp` or `>` into another folder                                                                                                      | Always asks. Writing to temporary folders such as `/tmp` is fine. Reading outside files is refused.    |
 | **Pushing**                  | `git push`                                                                                                                                                                                     | Asks, unless the command is on the project's allowlist. A force push always asks with hold to confirm. |
+
+Everything else follows the agent's mode, including package installs and commands Spark can't fully take apart. Spark reads shell commands with a real parser, so loops, `$(…)` and pipes of read-only commands such as `git log`, `git grep`, `rg`, `sed -n` and `ls` count as reads. In a run that only reads (an Ask chat or Plan), a command Spark can't take apart asks, since it might change files.
 
 A few more rules hold everywhere:
 
 - **Builders never publish.** Builders in a Spark crew don't push, open pull requests or change remotes. Spark commits, pushes and opens the PR itself when the task is done.
-- **Modes Spark can't check run in a copy.** Codex's **Approve for me** and **Full access** act without Spark's approval checks, so those chats run only in a worktree copy, never on your checkout.
+- **Modes Spark can't check run in a copy.** Claude's **Bypass permissions** and Codex's **Approve for me** and **Full access** act without Spark's approval checks, so those chats run only in a worktree copy, never on your checkout.
 
 ### Keep files away from agents with .sparkignore
 

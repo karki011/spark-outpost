@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   ASK_AUTO_WHY,
   ASK_TURN_ASKS,
-  INSTALL_REASON,
   NO_RUN_RULES,
   PUSH_REASON,
   SAFE_READ_WHY,
@@ -157,8 +156,12 @@ describe("decide() with Automatic in the chat's worktree", () => {
     expect(auto(run('pnpm build'))).toEqual(allowed);
   });
 
-  it('still asks for the safety floor and before pushing', () => {
-    expect(auto(run('pnpm add left-pad'))).toEqual({ verdict: 'ask', reason: INSTALL_REASON });
+  it('lets installs follow the mode but still asks before pushing', () => {
+    expect(auto(run('pnpm add left-pad'))).toEqual({
+      verdict: 'allow',
+      by: 'level',
+      why: WORKTREE_AUTO_WHY,
+    });
     expect(auto(run('git push origin feature'))).toEqual({ verdict: 'ask', reason: PUSH_REASON });
   });
 

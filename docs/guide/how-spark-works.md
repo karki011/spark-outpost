@@ -35,7 +35,7 @@ The agent's **mode** decides what the agent may do without asking. **Spark auton
 
 ## Approvals and protected paths
 
-Approval checks run in Spark, not in the model. Secret files, agent instruction files, git hooks, force pushes and sending data out always ask, in every mode. See [Approvals and protected paths](approvals.md).
+Approval checks run in Spark, not in the model. Spark follows the agent's own mode and adds only a few hard rails: secret files, changes outside the project, agent instruction files, git hooks, force pushes and sending data out after reading a secret always ask, in every mode. See [Approvals and protected paths](approvals.md).
 
 ## Guardrails on every Builder
 

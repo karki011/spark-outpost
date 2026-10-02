@@ -1,13 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ModePosture } from '@spark-outpost/contracts';
-import {
-  NO_RUN_RULES,
-  SECRET_REASON,
-  UNKNOWN_READ_REASON,
-  decide,
-  type ApprovalRequest,
-} from './decide.ts';
+import { NO_RUN_RULES, SECRET_REASON, decide, type ApprovalRequest } from './decide.ts';
 import type { FileLister } from './file-lister.ts';
 
 const ROOT = '/work/app';
@@ -93,8 +87,8 @@ describe('decide() asks when a command reads files it computes', () => {
     'ls -A | grep "^\\.e" | for f in x; do read f; cat "$f"; done',
     'IFS=x; for f in x.env; do cat $f; done',
     'for f in $(ls -A | grep "^\\.e"); do while read l; do echo "$l"; done < "$f"; done',
-  ])('at Full access: %s', (command) => {
-    expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: UNKNOWN_READ_REASON });
+  ])('lets Full access run a read it cannot resolve: %s', (command) => {
+    expect(fullAccess(command)).toEqual({ verdict: 'allow', by: 'level' });
   });
 
   it.each([
@@ -130,22 +124,22 @@ describe('decide() asks when a command reads files it computes', () => {
     expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: SECRET_REASON });
   });
 
-  it.each(['asks', 'edits', 'auto', 'full_access', 'unknown'] as const)(
-    'asks with the same reason in %s',
-    (posture) => {
-      expect(decideAt(posture, 'for f in $(ls -A); do cat "$f"; done')).toEqual({
-        verdict: 'ask',
-        reason: UNKNOWN_READ_REASON,
-      });
-    },
-  );
+  it.each([
+    ['asks', 'ask'],
+    ['edits', 'ask'],
+    ['unknown', 'ask'],
+    ['auto', 'allow'],
+    ['full_access', 'allow'],
+  ] as const)('leaves a read it cannot resolve to the mode in %s', (posture, verdict) => {
+    expect(decideAt(posture, 'for f in $(ls -A); do cat "$f"; done').verdict).toBe(verdict);
+  });
 
-  it('asks before a run rule or the allowlist can allow it', () => {
+  it('lets a run rule allow a read it cannot resolve', () => {
     const command = 'cat $(ls -A)';
     const rules = { allow: [{ kind: 'execute' as const, command }], reject: [] };
     expect(decide('asks', run(command), rules, ['cat'], { files: lister })).toEqual({
-      verdict: 'ask',
-      reason: UNKNOWN_READ_REASON,
+      verdict: 'allow',
+      by: 'run_rule',
     });
   });
 });

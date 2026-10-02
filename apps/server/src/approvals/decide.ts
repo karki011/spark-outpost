@@ -1,13 +1,8 @@
 import path from 'node:path';
 import type { ApprovalKind, ApprovalOption, FileDiff, ModePosture } from '@spark-outpost/contracts';
-import {
-  isSecretPath,
-  protectedPath,
-  refusalFor,
-  relativeInside,
-} from '../projects/path-policy.ts';
-import { commandTree, deleteTargets, SHELLS, treeWords, type CommandTree } from './command-tree.ts';
-import { allowlistCovers, normalizeCommand, programName, resolveCommandPath } from './commands.ts';
+import { isSecretPath, protectedPath, refusalFor } from '../projects/path-policy.ts';
+import { commandTree, deleteTargets, treeWords, type CommandTree } from './command-tree.ts';
+import { allowlistCovers, normalizeCommand, resolveCommandPath } from './commands.ts';
 import {
   forcePush,
   isGitPush,
@@ -17,16 +12,17 @@ import {
   type ForcePush,
 } from './git-commands.ts';
 import { ENTER_PLAN_MODE_TITLE, ENTER_PLAN_MODE_WHY } from '../plans/plan-mode.ts';
-import { isPackageInstall, isSafeRead } from './command-kinds.ts';
+import { isSafeRead } from './command-kinds.ts';
 import { pieceRefusal, type PieceGuard, type RelativeOf } from './piece-guard.ts';
 import { diskLister, type FileLister } from './file-lister.ts';
 import { readConcern } from './file-reads.ts';
-import { askRunRefusal } from './ask-run.ts';
+import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import { egressOf } from './egress.ts';
-import { withoutHereText } from './inline-code.ts';
-import { readArgs } from './read-args.ts';
 import { taintReason } from './taint.ts';
-import { redirectTargets, writeTargets } from './write-targets.ts';
+import { writeTargets } from './write-targets.ts';
+import { commandCwd, inTempDir, isSecretTarget, outsideRoots, place } from './request-place.ts';
+import type { ShellScript } from './shell-parse.ts';
+import { partRequests, provenRead, shellView, type ShellView } from './shell-view.ts';
 
 export interface RequestRoot {
   path: string;
@@ -49,6 +45,7 @@ export interface ApprovalRequest {
   plan?: string | null;
   mode?: string | null;
   mcpServer?: string | null;
+  agentReason?: string | null;
 }
 
 export type RunRule =
@@ -75,15 +72,11 @@ export const BUILDER_PUBLISH_REASON =
 export const OUTSIDE_DELETE_REASON = 'Deleting outside the repo always asks';
 export const OUTSIDE_WRITE_REASON = 'Changing files outside the repo always asks';
 export const SECRET_REASON = 'Secret files always ask';
-export const INSTALL_REASON = 'Installing packages always asks';
-export const NESTED_COMMAND_REASON = "Commands Spark can't see inside always ask";
-export const UNKNOWN_READ_REASON = "Spark can't tell which files this reads";
-export const HIDDEN_CODE_REASON = "Runs code Spark can't see";
 export const SAFE_READ_WHY = 'a read-only command inside the project';
 export const WORKTREE_AUTO_WHY = "Automatic in this chat's worktree";
 export const ASK_AUTO_WHY = 'Automatic in an Ask turn';
 export const ASK_TURN_ASKS =
-  'Spark asks before commands in a question turn at Review each step, unless they only read files';
+  'Spark asks before commands in a question turn, unless they only read files';
 
 export const INSTRUCTION_REASON =
   'Agent instruction files (AGENTS.md, CLAUDE.md, .claude, .cursor/rules, .spark) always ask';
@@ -96,31 +89,6 @@ export function forcePushReason(branches: readonly string[]): string {
   return `This rewrites history on ${branches.join(', ')} on the remote`;
 }
 
-interface Placement {
-  relative: string | null;
-  root: RequestRoot | null;
-}
-
-function place(roots: readonly RequestRoot[], target: string): Placement {
-  let best: Placement = { relative: null, root: null };
-  for (const root of roots) {
-    const relative = relativeInside(root.path, target);
-    if (relative === null) continue;
-    if (!best.root || root.path.length > best.root.path.length) best = { relative, root };
-  }
-  return best;
-}
-
-function isSecretTarget(roots: readonly RequestRoot[], target: string): boolean {
-  const { relative, root } = place(roots, target);
-  if (relative !== null && root) return isSecretPath(relative, root.ignore);
-  return isSecretPath(path.basename(target));
-}
-
-function commandCwd(request: ApprovalRequest): string {
-  return request.cwd ?? request.roots[0]?.path ?? request.home;
-}
-
 function touchesSecret(request: ApprovalRequest, tree: CommandTree | null): boolean {
   if (request.paths.some((target) => isSecretTarget(request.roots, target))) return true;
   if (!tree) return false;
@@ -131,10 +99,6 @@ function touchesSecret(request: ApprovalRequest, tree: CommandTree | null): bool
       if (isSecretPath(path.basename(word))) return true;
       return isSecretTarget(request.roots, resolveCommandPath(word, cwd, request.home));
     });
-}
-
-function outsideRoots(request: ApprovalRequest, target: string): boolean {
-  return place(request.roots, target).relative === null;
 }
 
 function deletesOutside(request: ApprovalRequest, tree: CommandTree | null): boolean {
@@ -180,42 +144,38 @@ function commandReads(request: ApprovalRequest, tree: CommandTree | null, files:
   });
 }
 
-function runsHereText(program: readonly string[]): boolean {
-  return SHELLS.has(programName(program)) || readArgs(program)?.stdinCode === true;
+function writesOutside(request: ApprovalRequest): boolean {
+  if (!request.command) return false;
+  const targets = writeTargets(request.command, commandCwd(request), request.home) ?? [];
+  return targets.some((target) => outsideRoots(request, target) && !inTempDir(target));
 }
 
-function hereTextWritesInside(request: ApprovalRequest, command: string): boolean {
-  const clean = withoutHereText(command);
-  if (clean === command) return false;
-  const tree = commandTree(clean);
-  if (tree.opaque || tree.commands.some(runsHereText)) return false;
-  const redirects = [...redirectTargets(clean)].filter((word) => !word.startsWith('/dev/'));
-  if (redirects.some((word) => /\$|`/.test(word))) return false;
-  const cwd = commandCwd(request);
-  const written = writeTargets(command, cwd, request.home);
-  if (written === null) return false;
-  const targets = [
-    ...written,
-    ...redirects.map((word) => resolveCommandPath(word, cwd, request.home)),
-  ];
-  return targets.every((target) => !outsideRoots(request, target));
-}
-
-function hidesCommands(request: ApprovalRequest, tree: CommandTree | null): boolean {
-  if (!tree?.opaque || !request.command) return false;
-  return !hereTextWritesInside(request, request.command);
-}
-
-function alwaysAskReason(request: ApprovalRequest, files: FileLister): string | null {
+function railReason(request: ApprovalRequest, files: FileLister): string | null {
   const tree = request.command ? commandTree(request.command) : null;
   if (deletesOutside(request, tree)) return OUTSIDE_DELETE_REASON;
   if (touchesSecret(request, tree)) return SECRET_REASON;
-  const reads = commandReads(request, tree, files);
-  if (reads === 'secret') return SECRET_REASON;
-  if (hidesCommands(request, tree)) return NESTED_COMMAND_REASON;
-  if (reads === 'hidden') return HIDDEN_CODE_REASON;
-  if (reads === 'unknown') return UNKNOWN_READ_REASON;
-  if (request.command && isPackageInstall(request.command)) return INSTALL_REASON;
+  if (commandReads(request, tree, files) === 'secret') return SECRET_REASON;
+  return writesOutside(request) ? OUTSIDE_WRITE_REASON : null;
+}
+
+function redirectRail(view: ShellView | null): string | null {
+  const kinds = view?.redirects ?? [];
+  if (kinds.includes('secret')) return SECRET_REASON;
+  return kinds.includes('writes_outside') ? OUTSIDE_WRITE_REASON : null;
+}
+
+function alwaysAskReason(
+  request: ApprovalRequest,
+  files: FileLister,
+  view: ShellView | null,
+): string | null {
+  const parts = view ? [request, ...partRequests(request, view)] : [request];
+  for (const part of parts) {
+    const reason = railReason(part, files);
+    if (reason) return reason;
+  }
+  const redirected = redirectRail(view);
+  if (redirected) return redirected;
   const writes = request.kind === 'edit' || request.toolKind === 'move';
   if (writes && request.paths.some((target) => outsideRoots(request, target))) {
     return OUTSIDE_WRITE_REASON;
@@ -233,6 +193,8 @@ export interface DecideOptions {
   defaultBranch?: string | null;
   observed?: readonly string[];
   instructionGrants?: ReadonlySet<string>;
+  shell?: ShellScript | null;
+  agentAsks?: boolean;
 }
 
 function secretLabel(roots: readonly RequestRoot[], target: string): string {
@@ -282,16 +244,28 @@ function pieceProtected(guarded: Guarded, options: DecideOptions): boolean {
   );
 }
 
+function askRunChange(request: ApprovalRequest, view: ShellView | null): string | null {
+  const cwd = commandCwd(request);
+  const parts = view ? [request, ...partRequests(request, view)] : [request];
+  for (const part of parts) {
+    const reason = askRunRefusal(part, cwd, request.home);
+    if (reason) return reason;
+  }
+  const writes = (view?.redirects ?? []).some((kind) => kind.startsWith('writes_'));
+  return writes ? ASK_RUN_REASON : null;
+}
+
 function refusal(
   request: ApprovalRequest,
   options: DecideOptions,
   forced: ForcePush | null,
   guarded: Guarded,
+  view: ShellView | null,
 ): string | null {
   if (options.builder && request.command && publishesCode(request.command)) {
     if (!soloLeasePush(request.command, options, forced)) return BUILDER_PUBLISH_REASON;
   }
-  const asking = options.askRun ? askRunRefusal(request, commandCwd(request), request.home) : null;
+  const asking = options.askRun ? askRunChange(request, view) : null;
   if (asking) return asking;
   if (forced?.kind === 'refuse') return forced.reason;
   if (pieceProtected(guarded, options)) return PIECE_PROTECTED_REASON;
@@ -331,6 +305,14 @@ function matchesRule(request: ApprovalRequest, rule: RunRule): boolean {
 
 const ASK: Decision = { verdict: 'ask', reason: null };
 
+export const UNREADABLE_REASON =
+  "Spark couldn't check that this command only reads, and this run only reads";
+
+function unreadable(request: ApprovalRequest, view: ShellView | null): boolean {
+  if (view) return view.unparsed;
+  return request.command !== null && commandTree(request.command).opaque;
+}
+
 function isSafeReadRequest(request: ApprovalRequest): boolean {
   if (!request.command) return false;
   return isSafeRead(request.command, {
@@ -365,7 +347,8 @@ export function decide(
 ): Decision {
   const forced = request.command ? forcePush(request.command, options.defaultBranch ?? null) : null;
   const guarded = guardedTargets(request);
-  const refused = refusal(request, options, forced, guarded);
+  const view = shellView(request, options.shell ?? null);
+  const refused = refusal(request, options, forced, guarded, view);
   if (refused) return { verdict: 'reject', reason: refused };
   if (runRules.reject.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'reject', reason: RUN_REJECTED_REASON };
@@ -384,13 +367,16 @@ export function decide(
   const files = options.files ?? diskLister;
   const tainted = taintedEgress(request, options, files);
   if (tainted) return tainted;
-  const always = alwaysAskReason(request, files);
+  const always = alwaysAskReason(request, files, view);
   if (always) return { verdict: 'ask', reason: always };
   if (runRules.allow.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
   }
   if (request.kind === 'other' && request.title === ENTER_PLAN_MODE_TITLE) {
     return { verdict: 'allow', by: 'level', why: ENTER_PLAN_MODE_WHY };
+  }
+  if (options.agentAsks && posture !== 'full_access' && request.kind !== 'other') {
+    return agentAsked(request, view, allowlist, options);
   }
   const pushes = request.command !== null && isGitPush(request.command);
   if (options.worktreeAuto && !pushes) {
@@ -405,8 +391,11 @@ export function decide(
         ? { verdict: 'allow', by: 'allowlist' }
         : { verdict: 'ask', reason: PUSH_REASON };
     }
-    if (isSafeReadRequest(request)) {
+    if (isSafeReadRequest(request) || provenRead(view)) {
       return { verdict: 'allow', by: 'level', why: SAFE_READ_WHY };
+    }
+    if (options.askRun && unreadable(request, view)) {
+      return { verdict: 'ask', reason: UNREADABLE_REASON };
     }
     const listed = request.command !== null && allowlistCovers(allowlist, request.command);
     if (listed) return { verdict: 'allow', by: 'allowlist' };
@@ -417,6 +406,22 @@ export function decide(
     return unapproved(posture);
   }
   return unapproved(posture);
+}
+
+function agentAsked(
+  request: ApprovalRequest,
+  view: ShellView | null,
+  allowlist: readonly string[],
+  options: DecideOptions,
+): Decision {
+  if (request.kind !== 'execute' || !request.command) return ASK;
+  if (isSafeReadRequest(request) || provenRead(view)) {
+    return { verdict: 'allow', by: 'level', why: SAFE_READ_WHY };
+  }
+  if (options.askRun && options.askAutoWhy && !unreadable(request, view)) {
+    return { verdict: 'allow', by: 'level', why: options.askAutoWhy };
+  }
+  return allowlistCovers(allowlist, request.command) ? { verdict: 'allow', by: 'allowlist' } : ASK;
 }
 
 function unapproved(posture: ModePosture): Decision {

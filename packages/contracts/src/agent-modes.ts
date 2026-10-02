@@ -65,7 +65,6 @@ export interface ProviderModeTable {
   readOnlyMode: string;
   askingMode: string;
   postures: Readonly<Record<string, ModePosture>>;
-  gatesEveryMode: boolean;
   worktreeOnly: readonly string[];
 }
 
@@ -81,8 +80,7 @@ const CLAUDE_MODES: ProviderModeTable = {
     dontAsk: 'denies',
     bypassPermissions: 'full_access',
   },
-  gatesEveryMode: true,
-  worktreeOnly: [],
+  worktreeOnly: ['bypassPermissions'],
 };
 
 const ZAI_MODES: ProviderModeTable = { ...CLAUDE_MODES, defaultMode: 'default' };
@@ -97,7 +95,6 @@ const CODEX_MODES: ProviderModeTable = {
     agent: 'auto',
     'agent-full-access': 'full_access',
   },
-  gatesEveryMode: false,
   worktreeOnly: ['agent', 'agent-full-access'],
 };
 
@@ -170,7 +167,6 @@ export function modeNeedsWorktree(
 ): boolean {
   if (!mode) return false;
   const table = providerModes(provider);
-  if (table?.gatesEveryMode) return false;
   if (table?.worktreeOnly.includes(mode)) return true;
   if (table?.postures[mode]) return false;
   const posture = modePosture(provider, mode, kind);
@@ -207,10 +203,11 @@ export function translateMode(
 }
 
 const LEGACY_POSTURES: Readonly<Record<InvolvementLevel, readonly ModePosture[]>> = {
-  balanced: ['asks'],
   'hands-off': ['edits', 'auto', 'asks'],
   'full-auto': ['full_access', 'edits', 'auto', 'asks'],
 };
+
+const LEGACY_ASKING: readonly ModePosture[] = ['asks'];
 
 export function modeForLegacy(
   provider: string,
@@ -220,8 +217,8 @@ export function modeForLegacy(
   const table = providerModes(provider);
   if (!table) return null;
   if (permission !== PERMISSION_DO) return table.readOnlyMode;
-  const wanted = LEGACY_POSTURES[level ?? 'balanced'].filter(
-    (posture) => table.gatesEveryMode || posture !== 'full_access',
+  const wanted = (level ? LEGACY_POSTURES[level] : LEGACY_ASKING).filter(
+    (posture) => posture !== 'full_access',
   );
   return firstModeWith(table, wanted) ?? table.askingMode;
 }
@@ -237,7 +234,6 @@ const POSTURE_LINES: Readonly<Record<ModePosture, string>> = {
 };
 
 const AUTONOMY_LINES: Readonly<Record<InvolvementLevel, string>> = {
-  balanced: 'you review each step',
   'hands-off': 'kept automatically',
   'full-auto': 'kept and opened as a PR',
 };
@@ -268,6 +264,5 @@ export function combinationWarning(facts: CombinationFacts): string | null {
   if (modeNeedsWorktree(facts.provider, facts.mode, facts.kind)) {
     return "In this mode the agent acts without Spark Outpost's approval gate, so it runs only in a worktree copy, never on your checkout.";
   }
-  if (posture !== 'full_access' || facts.level === 'full-auto') return null;
-  return 'Nothing asks first on your real checkout. Spark Outpost still refuses pushes and secret files and asks before changes outside the repo.';
+  return null;
 }

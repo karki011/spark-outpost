@@ -2,7 +2,6 @@ import './approval-card.css';
 import { Fragment, useId, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  commandSandboxNote,
   isCheckApproval,
   sparkActionLabels,
   type Approval,
@@ -21,6 +20,7 @@ import { providerName } from '../provider-name.ts';
 import { useProjectBranch } from '../project/use-chat-repos.ts';
 import { mergeDecision } from './approval-events.ts';
 import { isAllow, outcome, projectAllowOption, shownOptions } from './approval-outcome.ts';
+import { CommandPreview } from './CommandPreview.tsx';
 import { DiffView } from './DiffView.tsx';
 import { ObservedNote } from './ObservedNote.tsx';
 import { SparkActionCard } from './SparkActionCard.tsx';
@@ -87,10 +87,19 @@ function listed(files: readonly string[]): string {
   return files.join(', ');
 }
 
-function commandNoteEnding(approval: Approval): string {
-  if (approval.reason !== null) return '.';
-  if (approval.payload.asksBecause) return `. ${approval.payload.asksBecause}.`;
-  return ", and this one isn't on the project's allowlist yet.";
+function commandNote(approval: Approval): string | null {
+  if (approval.reason !== null || approval.payload.agentReason) return null;
+  if (approval.payload.asksBecause) return `${approval.payload.asksBecause}.`;
+  return "It isn't on the project's allowlist yet.";
+}
+
+const SANDBOX = /sandbox/i;
+
+function agentReasonLine(agent: string, reason: string): string {
+  if (SANDBOX.test(reason)) {
+    return `${agent} couldn't run this inside its sandbox, so it asks before running it without one.`;
+  }
+  return `${agent} asks because: ${reason}`;
 }
 
 function optionClass(allow: boolean, primary: boolean): string {
@@ -185,6 +194,8 @@ function PendingApproval({
   const firstAllow = options.findIndex(isAllow);
   const lastAllow = options.findLastIndex(isAllow);
   const alwaysAsks = approval.reason !== null;
+  const agentReason = approval.payload.agentReason ?? null;
+  const agentName = agent ?? providerName(provider);
   const command = approval.payload.command;
   const plan = approval.payload.plan ?? null;
   const cwd = displayCwd(approval.payload.cwd, repo);
@@ -195,15 +206,73 @@ function PendingApproval({
 
   return (
     <div className="appr" role="group" aria-labelledby={headingId} id={approvalAnchor(approval.id)}>
-      <div className="appr-h">
-        <span className="ic" aria-hidden="true">
-          <i className="appr-dia" />
-        </span>
-        <span id={headingId}>
-          <b>{heading(approval)}</b> {request(approval, agent ?? providerName(provider))}
-        </span>
+      <div className="appr-top">
+        <div className="appr-h">
+          <span className="ic" aria-hidden="true">
+            <i className="appr-dia" />
+          </span>
+          <span id={headingId}>
+            <b>{heading(approval)}</b> {request(approval, agentName)}
+          </span>
+        </div>
+        {holdOption && (
+          <HoldToConfirm
+            label={gitControl ? 'Hold to allow once' : 'Hold to force push'}
+            hint="Press and hold for 1.5 seconds, with the mouse or Space."
+            holdingHint="Keep holding. Let go now to cancel."
+            releasedHint={
+              gitControl
+                ? 'Released early. Nothing was changed.'
+                : 'Released early. Nothing was pushed.'
+            }
+            disabled={decide.isPending}
+            onConfirm={() => decide.mutate({ optionId: holdOption.optionId, scope: 'once' })}
+          />
+        )}
+        <div className="appr-acts">
+          {options.map((option, index) => (
+            <Fragment key={option.optionId}>
+              <button
+                type="button"
+                className={optionClass(isAllow(option), index === firstAllow)}
+                disabled={decide.isPending || Boolean(option.unavailableReason)}
+                title={option.unavailableReason}
+                onClick={() => decide.mutate({ optionId: option.optionId, scope: 'once' })}
+              >
+                {instructions && isAllow(option) ? 'Allow once' : option.name}
+              </button>
+              {index === lastAllow && chatAllow && (
+                <button
+                  type="button"
+                  className="btn line sm"
+                  disabled={decide.isPending}
+                  onClick={() => decide.mutate({ optionId: chatAllow.optionId, scope: 'chat' })}
+                >
+                  Allow for this chat
+                </button>
+              )}
+              {index === lastAllow && projectAllow && (
+                <button
+                  type="button"
+                  className="btn line sm"
+                  disabled={decide.isPending}
+                  onClick={() =>
+                    decide.mutate({ optionId: projectAllow.optionId, scope: 'project' })
+                  }
+                >
+                  Always allow in this project
+                </button>
+              )}
+            </Fragment>
+          ))}
+        </div>
+        {decide.isError && (
+          <p className="appr-err" role="alert">
+            {decide.error.message}
+          </p>
+        )}
       </div>
-      {command && <pre className="appr-cmd">$ {command}</pre>}
+      {command && <CommandPreview command={command} />}
       {plan && (
         <div className="appr-plan" role="region" tabIndex={0} aria-label="Proposed plan">
           <Markdown text={plan} />
@@ -223,7 +292,7 @@ function PendingApproval({
             </ul>
           )}
       {approval.payload.truncated && <p>The diff was cut to 64 KB.</p>}
-      {approval.kind === 'execute' && (
+      {approval.kind === 'execute' && (cwd || commandNote(approval)) && (
         <p>
           {cwd && (
             <>
@@ -237,8 +306,13 @@ function PendingApproval({
               .{' '}
             </>
           )}
-          {commandSandboxNote(provider)}
-          {commandNoteEnding(approval)}
+          {commandNote(approval)}
+        </p>
+      )}
+      {agentReason && (
+        <p className="appr-reason">
+          {agentReasonLine(agentName, agentReason)}
+          {SANDBOX.test(agentReason) && <span className="appr-agent-says"> {agentReason}</span>}
         </p>
       )}
       {approval.kind === 'edit' && (
@@ -250,60 +324,6 @@ function PendingApproval({
         <p className="appr-reason">
           Git runs hooks and settings from .git on every commit, outside Spark&apos;s control and
           approvals. Allow this once only if you have read the change.
-        </p>
-      )}
-      {holdOption && (
-        <HoldToConfirm
-          label={gitControl ? 'Hold to allow once' : 'Hold to force push'}
-          hint="Press and hold for 1.5 seconds, with the mouse or Space."
-          holdingHint="Keep holding. Let go now to cancel."
-          releasedHint={
-            gitControl
-              ? 'Released early. Nothing was changed.'
-              : 'Released early. Nothing was pushed.'
-          }
-          disabled={decide.isPending}
-          onConfirm={() => decide.mutate({ optionId: holdOption.optionId, scope: 'once' })}
-        />
-      )}
-      <div className="appr-acts">
-        {options.map((option, index) => (
-          <Fragment key={option.optionId}>
-            <button
-              type="button"
-              className={optionClass(isAllow(option), index === firstAllow)}
-              disabled={decide.isPending || Boolean(option.unavailableReason)}
-              title={option.unavailableReason}
-              onClick={() => decide.mutate({ optionId: option.optionId, scope: 'once' })}
-            >
-              {instructions && isAllow(option) ? 'Allow once' : option.name}
-            </button>
-            {index === lastAllow && chatAllow && (
-              <button
-                type="button"
-                className="btn line sm"
-                disabled={decide.isPending}
-                onClick={() => decide.mutate({ optionId: chatAllow.optionId, scope: 'chat' })}
-              >
-                Allow for this chat
-              </button>
-            )}
-            {index === lastAllow && projectAllow && (
-              <button
-                type="button"
-                className="btn line sm"
-                disabled={decide.isPending}
-                onClick={() => decide.mutate({ optionId: projectAllow.optionId, scope: 'project' })}
-              >
-                Always allow in this project
-              </button>
-            )}
-          </Fragment>
-        ))}
-      </div>
-      {decide.isError && (
-        <p className="appr-err" role="alert">
-          {decide.error.message}
         </p>
       )}
     </div>

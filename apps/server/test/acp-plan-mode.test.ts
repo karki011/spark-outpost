@@ -37,6 +37,7 @@ async function planTurn(pick: (request: ApprovalRequest) => GateAnswer) {
       projectRoots: [root],
       signal: new AbortController().signal,
       mode: 'do',
+      worktree: true,
       approvals: {
         review: async (request) => {
           requests.push(request);

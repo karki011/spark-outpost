@@ -8,7 +8,9 @@ import {
   HIDE_CLAUDE_AUTH,
   agentDefinitions,
   claudeSessionMeta,
-  secretReadRules,
+  FORCE_PUSH_DENY_RULES,
+  PIECE_ASK_RULES,
+  secretRules,
 } from './agents.ts';
 import { CODEX_DO_MODE, codexPermissionProfiles } from './codex-permissions.ts';
 import { zaiEnvironment, zaiModelId } from './zai.ts';
@@ -56,8 +58,9 @@ describe('Claude session options', () => {
     expect(project.settings.permissions.deny).toEqual(project.disallowedTools);
   });
 
-  it('denies the same secret names as the path policy', () => {
-    const rules = secretReadRules([]);
+  it('denies reading and editing the same secret names as the path policy', () => {
+    const rules = secretRules([]);
+    expect(rules).toContain('Edit(**/.env)');
     for (const rule of [
       'Read(**/.env)',
       'Read(**/.env.*)',
@@ -83,13 +86,13 @@ describe('Claude session options', () => {
     );
   });
 
-  it('gives Ask turns with an approval gate a shell whose every command asks the gate', () => {
+  it('gives Ask turns a shell and leaves asking to the agent', () => {
     const asking = optionsOf(agentDefinitions.claude.projectSessionMeta?.([], null, true, true));
     expect(asking.tools).toEqual(['Read', 'Glob', 'Grep', 'Bash', 'Write', 'ExitPlanMode']);
-    expect(asking.settings.permissions.ask).toEqual(['Bash']);
+    expect(asking.settings.permissions).not.toHaveProperty('ask');
   });
 
-  it('gives Do runs the edit, shell and todo tools and forces every change to ask, in every mode', () => {
+  it('gives Do runs the edit, shell and todo tools and leaves asking to the agent mode', () => {
     const options = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
     expect(options.tools).toEqual([
       'Read',
@@ -102,9 +105,10 @@ describe('Claude session options', () => {
       'EnterPlanMode',
       'ExitPlanMode',
     ]);
+    expect(options.settings.permissions).not.toHaveProperty('ask');
     expect(options.settings.permissions).toMatchObject({
-      ask: ['Bash', 'Edit', 'Write'],
       blockReadsOutsideWorkingDirectories: true,
+      deny: expect.arrayContaining([...FORCE_PUSH_DENY_RULES, 'Edit(**/.env)']),
     });
     expect(options.settings.permissions).not.toHaveProperty('disableBypassPermissionsMode');
     expect(options.allowDangerouslySkipPermissions).toBe(true);
@@ -135,11 +139,16 @@ describe('Claude session options', () => {
       expect(deny).toContain(rule);
       expect(builder.disallowedTools).toContain(rule);
     }
-    expect(deny).toEqual(expect.arrayContaining(secretReadRules([])));
+    expect(deny).toEqual(expect.arrayContaining(secretRules([])));
     const plain = optionsOf(agentDefinitions.claude.doSessionMeta?.([]));
     expect(plain.settings.permissions.deny).not.toContain('Bash(git push:*)');
     const zai = optionsOf(agentDefinitions.zai.doSessionMeta?.([], null, true));
     expect(zai.settings.permissions.deny).toContain('Bash(gh:*)');
+  });
+
+  it('routes a coordinated Builder through the gate, which guards its files', () => {
+    const piece = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
+    expect(piece.settings.permissions.ask).toEqual([...PIECE_ASK_RULES]);
   });
 
   it('also denies git state changes to Builders of a coordinated task', () => {

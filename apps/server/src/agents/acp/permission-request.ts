@@ -77,6 +77,16 @@ function mcpServerOf(params: acp.RequestPermissionRequest, title: string): strin
   return typeof serverName === 'string' && serverName.trim() ? serverName.trim() : 'unknown';
 }
 
+const REASON_PREFIX = /^Reason:\s*/i;
+const AGENT_REASON_MAX = 500;
+
+function agentReasonOf(params: acp.RequestPermissionRequest): string | null {
+  const description = objectFields(objectFields(params._meta).permission).description;
+  if (typeof description !== 'string') return null;
+  const reason = description.replace(REASON_PREFIX, '').trim();
+  return reason ? reason.slice(0, AGENT_REASON_MAX) : null;
+}
+
 function approvalOptions(options: readonly acp.PermissionOption[]): ApprovalOption[] {
   return options.flatMap((option) => {
     const kind = approvalOptionKindSchema.safeParse(option.kind);
@@ -99,6 +109,7 @@ export function approvalRequestFrom(
   const plan = exitPlanText(toolKind, toolCall.rawInput, toolCall.content);
   const options = approvalOptions(params.options);
   const mcpServer = mcpServerOf(params, title);
+  const agentReason = agentReasonOf(params);
   return {
     toolCallId: toolCall.toolCallId,
     rpcId: context.rpcId,
@@ -114,6 +125,7 @@ export function approvalRequestFrom(
     home: context.home,
     ...(plan ? { plan } : {}),
     ...(mcpServer ? { mcpServer } : {}),
+    ...(agentReason ? { agentReason } : {}),
     ...(context.mode !== undefined ? { mode: context.mode } : {}),
   };
 }

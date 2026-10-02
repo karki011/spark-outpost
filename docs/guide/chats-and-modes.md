@@ -86,20 +86,19 @@ To change the mode:
 A few rules hold in every mode:
 
 - Read-only modes (**Plan**, **Read-only**) never change files. If you ask for a change, the agent answers instead. Select **Make the change** under its answer to run the same request with changes allowed.
-- Codex's **Approve for me** and **Full access** act without Spark's approval checks, so they run only in a worktree copy, never on your checkout.
+- Claude's **Bypass permissions** and Codex's **Approve for me** and **Full access** act without Spark's approval checks, so they run only in a worktree copy, never on your checkout.
 - Whatever the mode, secret files and agent instruction files still ask first, and Builders never publish. See [Approvals and protected paths](approvals.md).
 
 For how the mode and Spark autonomy work together, see [Permissions and autonomy](permissions-and-autonomy.md).
 
 ## Spark autonomy
 
-Spark autonomy decides what Spark does with the agent's work: whether you review each step, whether passing changes are kept, and whether Spark opens a pull request.
+Spark autonomy decides what Spark does with the result of the agent's work: keep it, or keep it and open a pull request. To review each step, pick an agent mode that asks, such as **Manual** or **Plan**.
 
-| Level                | What happens                                                                                                                |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| **Review each step** | You decide what to keep, and you get a card before risky work starts.                                                       |
-| **Automatic**        | Spark runs commands and keeps passing changes. Risky work uses a worktree copy. You can always revert. This is the default. |
-| **Full auto → PR**   | Like Automatic, in a worktree copy, and then Spark opens a pull request. Nothing ever merges.                               |
+| Level              | What happens                                                                                               |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **Automatic**      | Spark keeps changes without stopping. Risky work uses a worktree copy. You can always revert. The default. |
+| **Full auto → PR** | The same, in a worktree copy, and then Spark opens a pull request. Nothing ever merges.                    |
 
 To change it for one chat:
 

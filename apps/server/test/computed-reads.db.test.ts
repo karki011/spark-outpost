@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createAcpProvider } from '../src/agents/acp/acp-provider.ts';
 import { agentDefinitions } from '../src/agents/acp/agents.ts';
-import { SECRET_REASON, UNKNOWN_READ_REASON } from '../src/approvals/decide.ts';
+import { SECRET_REASON } from '../src/approvals/decide.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
 import type { ProviderOutput } from '../src/providers/provider.ts';
 import { createApprovalGate } from '../src/workflow/approval-gate.ts';
@@ -52,7 +52,7 @@ async function pendingReasons(runId: string, count: number) {
 }
 
 describe('Claude at Bypass permissions reading files it computes', { timeout: 30_000 }, () => {
-  it('asks before a disguised or globbed secret read and allows ordinary reads', async () => {
+  it('asks before a globbed secret read and leaves computed reads to the mode', async () => {
     const run = await doRun(t, root, 'go', 'full-auto');
     const waiters = new ApprovalWaiters();
     const gate = createApprovalGate({
@@ -82,26 +82,22 @@ describe('Claude at Bypass permissions reading files it computes', { timeout: 30
         projectRoots: [root],
         signal: new AbortController().signal,
         mode: 'do',
+        worktree: true,
         approvals: gate,
       })) {
         outputs.push(output);
       }
     })();
 
-    for (const reason of [UNKNOWN_READ_REASON, SECRET_REASON]) {
-      const [pending] = await pendingReasons(run.runId, 1);
-      expect(pending!.reason).toBe(reason);
-      await decideApproval(t.db, t.workspaceId, pending!.id, {
-        optionId: 'decline',
-        scope: 'once',
-      });
-      waiters.notify(pending!.id);
-    }
+    const [pending] = await pendingReasons(run.runId, 1);
+    expect(pending!.reason).toBe(SECRET_REASON);
+    await decideApproval(t.db, t.workspaceId, pending!.id, { optionId: 'decline', scope: 'once' });
+    waiters.notify(pending!.id);
     await turn;
 
     const text = replyText(outputs);
     expect(text).toContain('[cat package.json=allow_once]');
-    expect(text).toContain(`[${DISGUISED}=decline]`);
+    expect(text).toContain(`[${DISGUISED}=allow_once]`);
     expect(text).toContain('[for f in src/*.ts; do cat "$f"; done=allow_once]');
     expect(text).toContain(`[${GLOBBED}=decline]`);
     const { rows } = await t.db.query<{ title: string; status: string; decided_by: string }>(
@@ -110,7 +106,7 @@ describe('Claude at Bypass permissions reading files it computes', { timeout: 30
     );
     expect(rows.map((row) => [row.status, row.decided_by])).toEqual([
       ['allowed', 'level'],
-      ['denied', 'user'],
+      ['allowed', 'level'],
       ['allowed', 'level'],
       ['denied', 'user'],
     ]);

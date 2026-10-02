@@ -2,7 +2,7 @@
   margin: 14px 0 6px;
   border-radius: var(--r);
   background: color-mix(in srgb, var(--warn) 9%, var(--raise));
-  overflow: hidden;
+  overflow: clip;
   animation: rise 0.25s var(--out) both;
 }
 .appr.decided {
@@ -130,6 +130,10 @@
   color: var(--warn);
   font-weight: 500;
 }
+.appr .appr-agent-says {
+  color: var(--muted);
+  font-weight: 400;
+}
 .appr .appr-observed {
   color: var(--muted);
 }
@@ -175,11 +179,38 @@
 .appr-count .minus {
   color: var(--danger);
 }
+.appr-top {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: inherit;
+}
 .appr-acts {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 12px 14px 14px;
+  padding: 10px 14px 2px;
+}
+.appr-cmd-wrap {
+  position: relative;
+}
+.appr-cmd-wrap.clipped pre {
+  max-height: calc(6 * 1.5em + 18px);
+  overflow-y: hidden;
+}
+.appr-cmd-wrap.clipped::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 30px;
+  height: 2.5em;
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  background: linear-gradient(transparent, var(--code));
+  pointer-events: none;
+}
+.appr-cmd-more {
+  margin: 4px 14px 0;
 }
 .btn.deny {
   color: var(--danger);

@@ -49,26 +49,22 @@ Spark uses Jev for a handful of concrete judgments per Do turn: whether a messag
     ],
     text: `A chat without a linked project answers from the conversation; it can't touch files or run commands, but agents can still use Spark's own spark_* tools. Link one or more project folders and a chat becomes Ask or Do, depending on the agent mode you pick.
 
-Ask: the agent reads the folders and runs read-only commands directly. Other commands run without asking at Automatic or in an Auto or Bypass mode, and show a "Run a command?" card otherwise. Changing files, installing or pushing is refused — press Make the change for Do work. Do: the agent may also edit files and run commands.
+Ask: the agent reads the folders and runs read-only commands directly, loops and $(…) included. Other commands run without asking at Automatic or in an Auto or Bypass mode, and show a "Run a command?" card otherwise. Changing files, installing or pushing is refused — press Make the change for Do work. Do: the agent may also edit files and run commands.
 
 Agent modes come from the provider, with its own names: Claude offers Manual, Accept edits, Plan, Auto (default) and Bypass permissions; Codex offers Read-only, Ask every time, Approve for me and Full access. Read-only modes are Ask; the rest are Do. The harness autonomy level is a separate choice.`,
   },
   {
     id: 'autonomy-levels',
-    title: 'Autonomy levels: Review each step, Automatic, Full auto → PR',
+    title: 'Autonomy levels: Automatic, Full auto → PR',
     keywords: [
       'autonomy',
       'level',
-      'review each step',
       'automatic',
       'full auto',
-      'balanced',
       'hands-off',
       'how much spark does alone',
     ],
-    text: `Alongside the agent's own mode, Spark has a harness autonomy with three levels. Set the default for new chats in Settings → Spark → How much Spark does alone; each chat can pick its own in its permissions.
-
-Review each step: you decide whether to keep the changes, see the Critic's findings before any fix, and get a card before risky work starts.
+    text: `Alongside the agent's own mode, Spark has two autonomy levels. Set the default for new chats in Settings → Spark → How much Spark does alone; each chat can pick its own in its permissions. To review each step, pick an agent mode that asks (for example Manual, Ask every time or Plan).
 
 Automatic (default): runs commands without asking in this chat's worktree and in Ask turns (which never change files); still asks for risky ones and for pushes. Changes are kept when the checks pass, the Critic's findings are fixed in a loop, and risky work runs in a worktree copy. Revert is always there.
 
@@ -98,7 +94,7 @@ The safety floor holds at every level.`,
       'gate',
       'spend cap',
     ],
-    text: `Every agent action that isn't pre-approved goes through the backend's approval gate, which enforces a floor no mode or level loosens: secret files (.env, keys, credentials) always ask or are refused; Builders never publish (git push, remote changes and gh/hub/glab are refused — only Ship pushes); no writes outside the linked folders; every command and decision goes to a hash-chained audit log.
+    text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: secret files (.env, keys) ask or are refused; Builders never publish (only Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log. Installs and unparsable commands follow the mode.
 
 Force pushes: git push --force-with-lease to a named, non-default branch always asks with a "Force push?" card you press and hold to confirm, with no Always allow. Plain --force, +refspec, mirror, unnamed and default-branch force pushes are refused.
 
@@ -130,7 +126,7 @@ In my files, new chats edit the folder directly. Spark still uses a private work
     keywords: ['coordinator', 'pieces', 'integrator', 'shared tree', 'piece list', 'split'],
     text: `Small and medium work takes the lean path: one Builder, checks with fix turns, and a Critic by rule. For a story too big for one Builder, or one you ask to split, the coordinator plans it into Builder-sized pieces with declared file ownership. Independent pieces run at the same time (up to the project's Builders at once), dependents wait. Pieces run in a shared tree (the chat's worktree, each Builder limited to its own files by the approval gate) or in their own worktree copies for long, destructive or isolated work; each copy lands once its scoped checks pass.
 
-At Review each step, a parallel list or one with 5+ pieces shows a card: Build it, Build in order instead, Revise, or Stop. Builders never stash, checkout, reset, commit, merge or rebase; the integrator resolves conflicts, renumbers colliding migrations and runs the full checks once before the Critic.`,
+Builders never stash, checkout, reset, commit, merge or rebase; the integrator resolves conflicts, renumbers colliding migrations and runs the full checks once before the Critic.`,
   },
   {
     id: 'builders-at-once',
@@ -149,7 +145,7 @@ At Review each step, a parallel list or one with 5+ pieces shows a card: Build i
     ],
     text: `Settings → Projects → Builders at once sets, per project, how many Builders a big plan's pieces may use at the same time: 1 at a time, in order; Up to 2 at once; or Up to 3 at once (the default, so pieces run in parallel by default). More at once finishes sooner and spends faster.
 
-To make Builders run one at a time, open Settings → Projects and pick "1 at a time, in order" for that project. At Review each step you can also choose Build in order instead on the piece-list card for one plan.
+To make Builders run one at a time, open Settings → Projects and pick "1 at a time, in order" for that project.
 
 Spark drops to one at a time on its own while the provider is rate limited. If the server runs with COORDINATOR_MODE set to anything but parallel (the default), every project builds in order and the setting is unavailable. spark_projects shows each project's current value as buildersAtOnce.`,
   },
@@ -173,7 +169,7 @@ In a chat worktree, the keep card offers "Bring changes into <your branch>", "Op
     id: 'pr-follow-up',
     title: 'PR follow-up: Spark handles checks and review feedback',
     keywords: ['follow up', 'review comments', 'failing checks', 'reply', 'copilot', 'coderabbit'],
-    text: `After Spark opens a PR from a chat it watches it until merged or closed: failing checks, review comments, reviews and PR comments, bots included. Jev triages each item (rules without Jev): fix, question, needs you, nit, already addressed, information. Spark acts only on failing checks and comments from people with write access; others are shown, never acted on, and disagreements go to you. A Builder fixes everything in one round in the chat's worktree; the push and replies ("Fixed in <sha>: …") need one confirm card in Review each step and Automatic, none in Full auto. Never force-pushes, merges, approves, resolves threads or dismisses reviews; 3 rounds per PR. Tools: spark_pr_follow_up, spark_pr_follow_up_round.`,
+    text: `After Spark opens a PR from a chat it watches it until merged or closed: failing checks, review comments, reviews and PR comments, bots included. Jev triages each item (rules without Jev): fix, question, needs you, nit, already addressed, information. Spark acts only on failing checks and comments from people with write access; others are shown, never acted on, and disagreements go to you. A Builder fixes everything in one round in the chat's worktree; the push and replies ("Fixed in <sha>: …") need one confirm card in Automatic, none in Full auto. Never force-pushes, merges, approves, resolves threads or dismisses reviews; 3 rounds per PR. Tools: spark_pr_follow_up, spark_pr_follow_up_round.`,
   },
   {
     id: 'tickets',
@@ -239,7 +235,7 @@ Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: 
     id: 'compaction',
     title: 'When a chat gets full: compaction',
     keywords: ['compact', 'compaction', 'context', 'full', 'ring', 'summary', 'tokens'],
-    text: `The ring warns at 60%; Spark compacts at 80% between turns (both in Settings → Spark, spark_settings). Review each step asks: Compact now, a fresh chat with a summary, or Keep going; Automatic uses the agent's /compact or a Spark summary; with automatic compaction off it always asks. A divider shows it. spark_chat_history reads earlier turns.`,
+    text: `The ring warns at 60%; Spark compacts at 80% between turns (both in Settings → Spark, spark_settings). Spark uses the agent's /compact or a Spark summary; with automatic compaction off it asks: Compact now, a fresh chat with a summary, or Keep going. A divider shows it. spark_chat_history reads earlier turns.`,
   },
   {
     id: 'settings-spark',

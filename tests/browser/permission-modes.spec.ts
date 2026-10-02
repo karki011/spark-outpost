@@ -71,11 +71,10 @@ test("the picker lists the agent's own modes and says what each combination does
   await expect(panel.getByRole('note')).toHaveCount(0);
 
   await pickMode(page, 'Bypass permissions');
-  await expect(panel.getByRole('note')).toContainText('Nothing asks first on your real checkout');
+  await expect(panel.getByRole('note')).toContainText('runs only in a worktree copy');
   await pickAutonomy(page, 'Full auto → PR');
   await openPermissions(page);
   await expect(panel).toContainText('in a worktree copy');
-  await expect(panel.getByRole('note')).toHaveCount(0);
 
   await pickMode(page, 'Plan');
   await expect(panel.getByRole('tab', { name: /Permissions/ })).toHaveText(/Plan$/);
@@ -161,8 +160,7 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
   await expect(panel).toBeVisible();
   const levels = panel.getByRole('radiogroup', { name: 'Spark autonomy' });
   await expect(levels.getByRole('radio')).toHaveText([
-    /^Review each step.*You decide what to keep/,
-    /^Automatic.*Runs commands and keeps passing changes/,
+    /^Automatic.*Keeps changes without stopping/,
     /^Full auto → PR.*opens a PR/,
   ]);
   const automatic = levels.getByRole('radio', { name: 'Automatic', exact: true });
@@ -172,13 +170,13 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
   const saved = page.waitForResponse(
     (response) => response.url().endsWith('/settings') && response.request().method() === 'PATCH',
   );
-  await levels.getByRole('radio', { name: 'Review each step', exact: true }).click();
-  expect((await saved).request().postDataJSON()).toEqual({ level: 'balanced' });
-  await expect(chip).toHaveAccessibleName('Spark autonomy: Review each step');
+  await levels.getByRole('radio', { name: 'Full auto → PR', exact: true }).click();
+  expect((await saved).request().postDataJSON()).toEqual({ level: 'full-auto' });
+  await expect(chip).toHaveAccessibleName('Spark autonomy: Full auto → PR');
   await expect(panel.getByRole('button', { name: /^Spark autonomy/ })).toContainText(
-    'Review each step',
+    'Full auto → PR',
   );
-  await expect(pickerButton(page)).not.toContainText('Review each step');
+  await expect(pickerButton(page)).not.toContainText('Full auto → PR');
 
   await panel.getByRole('button', { name: 'Hide work panel' }).click();
   await expect(panel).toBeHidden();
@@ -187,11 +185,11 @@ test('Spark autonomy lives in the Work panel and the context bar chip opens it',
   await autonomyChip(page).click();
   const sheet = page.getByRole('complementary', { name: 'Work panel' });
   await expect(sheet).toBeInViewport();
-  const fullAuto = sheet
+  const back = sheet
     .getByRole('radiogroup', { name: 'Spark autonomy' })
-    .getByRole('radio', { name: 'Full auto → PR', exact: true });
-  await fullAuto.click();
-  await expect(fullAuto).toHaveAttribute('aria-checked', 'true');
+    .getByRole('radio', { name: 'Automatic', exact: true });
+  await back.click();
+  await expect(back).toHaveAttribute('aria-checked', 'true');
   await page.keyboard.press('Escape');
   await expect(sheet).toBeHidden();
   await expect(autonomyChip(page)).toHaveAccessibleName('Spark autonomy: Full auto → PR');
@@ -230,7 +228,7 @@ test("the approval card offers every option the agent sent, with the agent's wor
   await crewChat(page, repo, 'Ask before edits');
   const choices: [string, string, RegExp][] = [
     ['Yes', 'yes', /^Chose: Yes\./],
-    ["Yes, and don't ask again for npm test commands", 'yes-always', /Allowed for this run\./],
+    ["Yes, and don't ask again for npm run lint commands", 'yes-always', /Allowed for this run\./],
     ['No', 'no', /^Chose: No\./],
     ["No, and don't ask again", 'no-always', /Rejected for the rest of this run\./],
   ];
@@ -240,7 +238,7 @@ test("the approval card offers every option the agent sent, with the agent's wor
     await expect(approval.getByRole('button')).toHaveText(
       [
         'Yes',
-        "Yes, and don't ask again for npm test commands",
+        "Yes, and don't ask again for npm run lint commands",
         'Always allow in this project',
         'No',
         "No, and don't ask again",
@@ -309,17 +307,17 @@ test('Settings sets the default mode and autonomy that new chats start with', as
   const saved = page.waitForResponse(
     (response) => response.url().endsWith('/api/profile') && response.ok(),
   );
-  await autonomy.getByRole('radio', { name: 'Review each step' }).click();
+  await autonomy.getByRole('radio', { name: 'Full auto → PR' }).click();
   await saved;
   await page.keyboard.press('Escape');
 
   await linkedChat(page, repo);
   await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Accept edits');
-  await expect(autonomyChip(page)).toHaveAccessibleName('Spark autonomy: Review each step');
+  await expect(autonomyChip(page)).toHaveAccessibleName('Spark autonomy: Full auto → PR');
   await autonomyChip(page).click();
   await expect(
     workPanel(page)
       .getByRole('radiogroup', { name: 'Spark autonomy' })
-      .getByRole('radio', { name: 'Review each step', exact: true }),
+      .getByRole('radio', { name: 'Full auto → PR', exact: true }),
   ).toHaveAttribute('aria-checked', 'true');
 });

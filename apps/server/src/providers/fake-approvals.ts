@@ -10,11 +10,20 @@ export const FAKE_EDIT_TRIGGER = '#edit';
 export const FAKE_PUSH_TRIGGER = '#push';
 export const FAKE_FORCE_PUSH_TRIGGER = '#leasepush';
 export const FAKE_CURL_TRIGGER = '#curl';
+const FAKE_SANDBOX_TRIGGER = '#sandbox';
+const FAKE_LONG_TRIGGER = '#longcommand';
+const FAKE_LONG_COMMAND = [
+  "python3 - <<'EOF'",
+  ...Array.from({ length: 40 }, (_, line) => `print('line ${line + 1}')`),
+  'EOF',
+].join('\n');
+const FAKE_SANDBOX_REASON =
+  'The sandbox blocked network access for this command. Run it outside the sandbox?';
 export const FAKE_READ_ENV_TRIGGER = '#readenv';
 export const FAKE_INSTRUCTIONS_TRIGGER = '#instructions';
 export const FAKE_INSTRUCTIONS_SHELL_TRIGGER = '#shellinstructions';
 export const FAKE_HOOK_TRIGGER = '#githook';
-export const FAKE_COMMAND = 'pnpm test -- groupMessages';
+export const FAKE_COMMAND = 'pnpm lint -- groupMessages';
 export const FAKE_EDIT_FILE = 'notes.txt';
 
 const SHELL_OPTIONS: ApprovalOption[] = [
@@ -37,6 +46,8 @@ export function wantsApproval(prompt: string): boolean {
     FAKE_PUSH_TRIGGER,
     FAKE_FORCE_PUSH_TRIGGER,
     FAKE_CURL_TRIGGER,
+    FAKE_SANDBOX_TRIGGER,
+    FAKE_LONG_TRIGGER,
     FAKE_READ_ENV_TRIGGER,
     FAKE_INSTRUCTIONS_TRIGGER,
     FAKE_INSTRUCTIONS_SHELL_TRIGGER,
@@ -109,6 +120,11 @@ async function fakeRequests(
   if (prompt.includes(FAKE_READ_ENV_TRIGGER)) requests.push(command('fake-read-env', 'cat .env'));
   if (prompt.includes(FAKE_CURL_TRIGGER)) {
     requests.push(command('fake-curl', 'curl -sI https://example.com'));
+  }
+  if (prompt.includes(FAKE_LONG_TRIGGER)) requests.push(command('fake-long', FAKE_LONG_COMMAND));
+  if (prompt.includes(FAKE_SANDBOX_TRIGGER)) {
+    const asked = command('fake-sandbox', 'npm view left-pad version');
+    requests.push({ ...asked, agentReason: FAKE_SANDBOX_REASON });
   }
   if (prompt.includes(FAKE_FORCE_PUSH_TRIGGER)) {
     requests.push(command('fake-force-push', 'git push --force-with-lease origin feature'));

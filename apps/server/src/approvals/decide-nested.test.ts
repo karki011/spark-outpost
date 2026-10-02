@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   BUILDER_PUBLISH_REASON,
-  NESTED_COMMAND_REASON,
   NO_RUN_RULES,
   OUTSIDE_DELETE_REASON,
+  OUTSIDE_WRITE_REASON,
   SECRET_REASON,
   WORKTREE_AUTO_WHY,
   decide,
   type ApprovalRequest,
 } from './decide.ts';
 import { PLAIN_FORCE_REASON } from './git-commands.ts';
+import { parseShell } from './shell-parse.ts';
 
 const ROOT = '/work/app';
 
@@ -31,6 +32,9 @@ function run(command: string): ApprovalRequest {
 }
 
 const fullAccess = (command: string) => decide('full_access', run(command), NO_RUN_RULES, []);
+
+const parsedFullAccess = async (command: string) =>
+  decide('full_access', run(command), NO_RUN_RULES, [], { shell: await parseShell(command) });
 
 describe('decide() looks inside nested and wrapped commands', () => {
   it.each([
@@ -67,19 +71,30 @@ describe('decide() looks inside nested and wrapped commands', () => {
     expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: SECRET_REASON });
   });
 
+  it.each(['find . -name "*.log" | xargs rm', 'ls | xargs -n 1 rm -f'])(
+    'asks before deleting files it gets from a pipe: %s',
+    (command) => {
+      expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: OUTSIDE_DELETE_REASON });
+    },
+  );
+
+  it('finds a delete inside a command substitution in quotes', async () => {
+    expect(await parsedFullAccess('echo "$(rm -rf /tmp/x)"')).toEqual({
+      verdict: 'ask',
+      reason: OUTSIDE_DELETE_REASON,
+    });
+  });
+
   it.each([
-    'find . -name "*.log" | xargs rm',
-    'ls | xargs -n 1 rm -f',
     'sh -c',
     'sh -c "rm -rf \'/tmp/x"',
     'echo rm -rf /tmp | sh',
-    'echo "$(rm -rf /tmp/x)"',
     'sh -c "sh -c \\"sh -c \'sh -c ls\'\\""',
     '$CMD /tmp/x',
     'env -S "rm -rf /tmp/x"',
     '$(echo rm) -rf /tmp/x',
-  ])('asks when a nested command cannot be read: %s', (command) => {
-    expect(fullAccess(command)).toEqual({ verdict: 'ask', reason: NESTED_COMMAND_REASON });
+  ])('leaves a command it cannot read to the mode: %s', async (command) => {
+    expect(await parsedFullAccess(command)).toEqual({ verdict: 'allow', by: 'level' });
   });
 
   it.each(['sh -c "git push -f origin main"', 'if true; then git push -f origin main; fi'])(
@@ -152,11 +167,24 @@ describe('decide() treats a heredoc written to a file as a normal write', () => 
     heredoc('python3 -'),
     heredoc('node'),
     heredoc('cat > run.sh', '\nbash'),
+  ])('lets the text run as code at Automatic in the worktree: %s', (command) => {
+    expect(inWorktree(command)).toEqual({ verdict: 'allow', by: 'level', why: WORKTREE_AUTO_WHY });
+  });
+
+  it.each([
     heredoc('cat > /etc/hosts'),
     heredoc('cat > ~/.zshrc'),
-    heredoc('cat > "$OUT"'),
     heredoc('cat > ../other/file.ts'),
-  ])('still asks when the text runs as code or lands outside the project: %s', (command) => {
-    expect(inWorktree(command)).toEqual({ verdict: 'ask', reason: NESTED_COMMAND_REASON });
+  ])('asks when the text lands outside the project: %s', (command) => {
+    expect(inWorktree(command)).toEqual({ verdict: 'ask', reason: OUTSIDE_WRITE_REASON });
+  });
+
+  it('asks when the text lands somewhere Spark cannot resolve', async () => {
+    const command = heredoc('cat > "$OUT"');
+    const shell = await parseShell(command);
+    expect(decide('asks', run(command), NO_RUN_RULES, [], { worktreeAuto: true, shell })).toEqual({
+      verdict: 'ask',
+      reason: OUTSIDE_WRITE_REASON,
+    });
   });
 });

@@ -13,7 +13,6 @@ export interface ClaudeRepoOptions {
   appendPrompt: string | null;
   plugins: string[];
   hooks: HooksConfig | null;
-  mcpNames: string[];
   skillTool: boolean;
   agentTool: boolean;
   allowRules?: readonly string[];
@@ -99,15 +98,11 @@ async function claudePlugins(launch: RepoLaunch): Promise<string[]> {
   return dirs;
 }
 
-async function claudeOptions(
-  launch: RepoLaunch,
-  mcp: NamedMcpServer[],
-): Promise<ClaudeRepoOptions> {
+async function claudeOptions(launch: RepoLaunch): Promise<ClaudeRepoOptions> {
   return {
     appendPrompt: instructionsPrompt(launch),
     plugins: await claudePlugins(launch),
     hooks: mergedHooks(launch),
-    mcpNames: mcp.map((server) => server.name),
     skillTool: launch.some((root) => (root.skills?.length ?? 0) > 0),
     agentTool: launch.some((root) => root.subagents.length > 0),
     allowRules: mergedAllowRules(launch),
@@ -137,7 +132,7 @@ export async function prepareRepoSession(
   return {
     following: followedFiles(launch),
     mcpServers,
-    claude: style === 'claude' ? await claudeOptions(launch, mcpServers) : null,
+    claude: style === 'claude' ? await claudeOptions(launch) : null,
     codex: style === 'codex' ? codexOptions(launch) : null,
   };
 }
