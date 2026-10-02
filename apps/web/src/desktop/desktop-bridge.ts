@@ -5,7 +5,6 @@ export type IslandAction = 'quick' | 'sessions';
 export interface CompanionStatus {
   supported: boolean;
   enabled: boolean;
-  calm: boolean;
   shortcuts: Record<IslandAction, string>;
   failed: IslandAction[];
 }
@@ -27,7 +26,6 @@ export interface SparkDesktop {
   companion: {
     get(): Promise<CompanionStatus | null>;
     setEnabled(on: boolean): Promise<CompanionStatus>;
-    setCalm(on: boolean): Promise<CompanionStatus>;
     setShortcut(action: IslandAction, accelerator: string | null): Promise<ShortcutResult>;
     onChange(callback: (status: CompanionStatus) => void): Unsubscribe;
   };
@@ -36,6 +34,8 @@ export interface SparkDesktop {
     onGeometry(callback: (geometry: IslandGeometry) => void): Unsubscribe;
     onCommand(callback: (action: IslandAction) => void): Unsubscribe;
     onEscape(callback: () => void): Unsubscribe;
+    sparkFocused(): Promise<boolean>;
+    onSparkFocus(callback: (focused: boolean) => void): Unsubscribe;
     setInteractive(on: boolean): void;
     setFocusable(on: boolean): void;
     drag(phase: 'start' | 'move' | 'end', x: number, y: number): void;

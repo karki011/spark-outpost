@@ -312,21 +312,6 @@
   background: var(--danger);
 }
 
-.isl-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  font-size: 12px;
-  color: var(--muted);
-  margin: -2px 0 10px;
-}
-
-.isl-streak {
-  color: var(--warn);
-  font-weight: 600;
-  animation: isl-pop 0.5s var(--spring);
-}
-
 .isl-reply {
   font-size: 12.5px;
   line-height: 1.5;

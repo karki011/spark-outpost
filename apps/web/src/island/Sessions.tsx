@@ -9,13 +9,19 @@ import { CrewBlob } from '../crew/CrewBlob.tsx';
 import { rowState } from '../conversations/row-state.ts';
 import { relativeTime } from '../ui/relative-time.ts';
 import { islandApi } from './island-api.ts';
-import { matchesQuery, sessionState, type Panel, type SessionState } from './island-model.ts';
+import {
+  ACTIVE_MS,
+  matchesQuery,
+  sessionState,
+  type Panel,
+  type SessionState,
+} from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
 import { RunDots, useArmed } from './island-parts.tsx';
 import { PanelTabs } from './PanelTabs.tsx';
 import { SessionBlob } from './SessionBlob.tsx';
 import { chatAgent } from './use-island-data.ts';
-import { roleLabel } from './WorkViews.tsx';
+import { roleLabel } from './work-items.ts';
 
 const SHOWN = 5;
 
@@ -24,6 +30,7 @@ interface SessionsProps {
   projectNames: ReadonlyMap<string, string>;
   selected: string | null;
   waiting: number;
+  now: number;
   focusDelay: number;
   onSelect: (id: string | null) => void;
   onTab: (panel: Panel) => void;
@@ -54,6 +61,37 @@ function StateChip({ chat, state }: { chat: ConversationSummary; state: SessionS
     case 'idle':
       return <span className="isl-schip">{relativeTime(chat.updatedAt)}</span>;
   }
+}
+
+const GROUPS = [
+  { id: 'needs', label: 'Needs you' },
+  { id: 'running', label: 'Running' },
+  { id: 'recent', label: 'Recent' },
+  { id: 'earlier', label: 'Earlier' },
+] as const;
+
+function groupOf(chat: ConversationSummary, now: number): (typeof GROUPS)[number]['id'] {
+  const state = sessionState(chat);
+  if (state === 'waiting') return 'needs';
+  if (state === 'working') return 'running';
+  if (now - Date.parse(chat.updatedAt) <= ACTIVE_MS) return 'recent';
+  return 'earlier';
+}
+
+const GROUP_RANK = new Map(GROUPS.map((group, index) => [group.id, index]));
+
+function byGroup(chats: readonly ConversationSummary[], now: number): ConversationSummary[] {
+  return chats.toSorted(
+    (a, b) => GROUP_RANK.get(groupOf(a, now))! - GROUP_RANK.get(groupOf(b, now))!,
+  );
+}
+
+function sessionGroups(chats: readonly ConversationSummary[], now: number) {
+  const indexed = chats.map((chat, index) => ({ chat, index, group: groupOf(chat, now) }));
+  return GROUPS.map((group) => ({
+    ...group,
+    chats: indexed.filter((item) => item.group === group.id),
+  })).filter((group) => group.chats.length > 0);
 }
 
 function projectLine(chat: ConversationSummary, names: ReadonlyMap<string, string>): string {
@@ -266,7 +304,10 @@ export function Sessions(props: SessionsProps) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const matches = chats.filter((chat) => matchesQuery(chat, projectNames, query));
+  const matches = byGroup(
+    chats.filter((chat) => matchesQuery(chat, projectNames, query)),
+    props.now,
+  );
   const shown = matches.slice(0, SHOWN);
   const current = Math.min(active, Math.max(0, shown.length - 1));
   const picked = selected ? chats.find((chat) => chat.id === selected) : undefined;
@@ -335,31 +376,43 @@ export function Sessions(props: SessionsProps) {
           </div>
           {shown.length > 0 ? (
             <div className="isl-slist" id="isl-slist" role="listbox" aria-label="Recent sessions">
-              {shown.map((chat, index) => {
-                const state = sessionState(chat);
-                return (
-                  <div
-                    key={chat.id}
-                    id={`isl-sopt-${chat.id}`}
-                    role="option"
-                    aria-selected={index === current}
-                    className={index === current ? 'isl-srow act' : 'isl-srow'}
-                    onClick={() => onSelect(chat.id)}
-                  >
-                    <SessionBlob
-                      chat={chat}
-                      state={state}
-                      size={22}
-                      expression={sessionExpression(state, false)}
-                    />
-                    <div className="isl-smain">
-                      <div className="isl-st">{chat.title}</div>
-                      <div className="isl-sp2">{projectLine(chat, projectNames)}</div>
-                    </div>
-                    <StateChip chat={chat} state={state} />
+              {sessionGroups(shown, props.now).map((group) => (
+                <div
+                  key={group.label}
+                  role="group"
+                  aria-labelledby={`isl-sg-${group.id}`}
+                  className="isl-sgroup"
+                >
+                  <div id={`isl-sg-${group.id}`} className="isl-hhead" role="presentation">
+                    {group.label}
                   </div>
-                );
-              })}
+                  {group.chats.map(({ chat, index }) => {
+                    const state = sessionState(chat);
+                    return (
+                      <div
+                        key={chat.id}
+                        id={`isl-sopt-${chat.id}`}
+                        role="option"
+                        aria-selected={index === current}
+                        className={index === current ? 'isl-srow act' : 'isl-srow'}
+                        onClick={() => onSelect(chat.id)}
+                      >
+                        <SessionBlob
+                          chat={chat}
+                          state={state}
+                          size={22}
+                          expression={sessionExpression(state, false)}
+                        />
+                        <div className="isl-smain">
+                          <div className="isl-st">{chat.title}</div>
+                          <div className="isl-sp2">{projectLine(chat, projectNames)}</div>
+                        </div>
+                        <StateChip chat={chat} state={state} />
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           ) : (
             <div className="isl-sempty">

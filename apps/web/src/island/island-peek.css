@@ -92,10 +92,6 @@
   bottom: 0;
 }
 
-.isl.hang {
-  top: var(--bar);
-}
-
 .isl.bare svg.scout {
   transition: translate 0.25s var(--out);
 }
@@ -114,7 +110,19 @@
 }
 
 .isl-hover {
-  padding: 4px 8px 8px;
+  padding: 2px 8px 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.isl-hhead {
+  margin: 0 0 2px;
+  padding: 0 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .isl-hlist {
@@ -128,8 +136,8 @@
 .isl-hrow {
   width: 100%;
   min-width: 0;
-  height: 34px;
-  padding: 0 8px;
+  min-height: 44px;
+  padding: 5px 8px;
   border: 0;
   border-radius: 9px;
   background: none;
@@ -137,19 +145,22 @@
   font: inherit;
   font-size: 12.5px;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto auto;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   text-align: left;
+}
+
+button.isl-hrow {
   cursor: pointer;
 }
 
-.isl-hrow:hover,
-.isl-hrow:focus-visible {
+button.isl-hrow:hover,
+button.isl-hrow:focus-visible {
   background: color-mix(in srgb, var(--text) 7%, transparent);
 }
 
-.isl-hrow:focus-visible {
+button.isl-hrow:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
 }
@@ -158,50 +169,72 @@
   background: color-mix(in srgb, var(--warn) 14%, transparent);
 }
 
-.isl-htitle {
+.isl-hmain {
+  display: grid;
+  min-width: 0;
+}
+
+.isl-htitle,
+.isl-hsub {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.isl-htitle {
   font-weight: 500;
 }
 
-.isl-hstate,
+.isl-hsub {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
 .isl-htime {
+  display: grid;
+  justify-items: end;
   font-size: 11.5px;
   color: var(--muted);
   white-space: nowrap;
 }
 
-.isl-hrow[data-state='waiting'] .isl-hstate {
-  color: var(--text);
-  font-weight: 600;
+.isl-hstate {
+  color: var(--muted);
 }
 
 .isl-hrow[data-state='failed'] .isl-hstate {
   color: var(--danger);
 }
 
-.isl-hall {
-  display: block;
-  margin: 4px 0 0 auto;
-  padding: 4px 8px;
-  border: 0;
-  border-radius: 7px;
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 11.5px;
-  cursor: pointer;
+.isl-hacts {
+  display: flex;
+  gap: 6px;
 }
 
-.isl-hall:hover,
-.isl-hall:focus-visible {
-  color: var(--text);
-  background: color-mix(in srgb, var(--text) 7%, transparent);
+.isl-hacts .isl-btn {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 12px;
 }
 
-.isl-hall:focus-visible {
-  outline: 2px solid var(--accent);
+.isl-nudge {
+  max-width: 300px;
+}
+
+.isl-nudge-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.isl-nudge b {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.isl-wr .isl-pill-btn + .isl-pill-btn {
+  margin-left: -4px;
 }
 
 .isl-peekblob:focus-visible,
@@ -313,19 +346,9 @@
   fill: var(--scout-eye);
 }
 
-.isl-root[data-rest] .scout *,
-.isl-root[data-rest] .isl-peekblob .isl-sblob {
+.isl-root[data-rest] .scout:not(.working) *,
+.isl-root[data-rest] .isl-peekblob:not([data-state='working']) .isl-sblob {
   animation-play-state: paused;
-}
-
-.isl-root[data-calm] .isl.bare .sc-hop,
-.isl-root[data-calm] .isl-cb,
-.isl-root[data-calm] .isl-peekblob .isl-sblob,
-.isl-root[data-calm] .isl-scout-wrap[data-wave] svg.scout,
-.isl-root[data-calm] .scout.poke .sc-body,
-.isl-root[data-calm] .isl-row-blob,
-.isl-root[data-calm] .isl-crew-mini {
-  animation: none;
 }
 
 .isl-root[data-rm] *,

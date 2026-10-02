@@ -94,12 +94,12 @@ What Spark adds around the agent, in four short pages. Orders 191–194 place th
 
 ### Desktop app
 
-| Page                                                   | Status  | Summary                                                                                                                                         | Screenshots                                          |
-| ------------------------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| `desktop-companion` The desktop companion              | Written | Scout at the top of your screen in the Mac app, session blobs, notch and no-notch displays, Calm mode, and the status companion inside the app. | `companion-settings`                                 |
-| `companion-quick-chat` Quick chat and Sessions         | Written | Start a chat with ⌥Space, find a chat and ask for an update with ⌥⇧Space, ask Spark about your chats, and change the shortcuts.                 | `companion-island-chat`, `companion-island-sessions` |
-| `companion-approvals` Answer approvals from the island | Written | Allow or deny with Y and N, answer questions, and hold to confirm a force push.                                                                 | `companion-island-card`                              |
-| `updates` Updates                                      | Written | How the desktop app updates itself, Stable or Beta, the update blob above Settings, and what happens to your data and running work.             | `updates-rail-blob`, `updates-section`               |
+| Page                                                   | Status  | Summary                                                                                                                                                                  | Screenshots                                          |
+| ------------------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| `desktop-companion` The desktop companion              | Written | Scout at the top of your screen in the Mac app, what it shows at rest and on hover, session blobs, notch and no-notch displays, and the status companion inside the app. | `companion-settings`                                 |
+| `companion-quick-chat` Quick chat and Sessions         | Written | Start a chat with ⌥Space, find a chat and ask for an update with ⌥⇧Space, ask Spark about your chats, and change the shortcuts.                                          | `companion-island-chat`, `companion-island-sessions` |
+| `companion-approvals` Answer approvals from the island | Written | Allow or deny with Y and N, answer questions, and hold to confirm a force push.                                                                                          | `companion-island-card`                              |
+| `updates` Updates                                      | Written | How the desktop app updates itself, Stable or Beta, the update blob above Settings, and what happens to your data and running work.                                      | `updates-rail-blob`, `updates-section`               |
 
 ### Reference
 
@@ -129,7 +129,6 @@ Settings rows and info tips link here with a book icon (`apps/web/src/ui/DocLink
 | Map → what Jev reads info tip                                     | `privacy-and-secrets#sparkignore`                            |
 | Settings → Spark → Show companion on desktop                      | `desktop-companion`                                          |
 | Settings → Spark → Quick chat and Sessions shortcuts              | `companion-quick-chat#change-a-shortcut`                     |
-| Settings → Spark → Calm mode                                      | `desktop-companion#calm-mode`                                |
 | Settings → Updates → Download updates automatically               | `updates#download-updates-automatically`                     |
 
 Getting started links to `troubleshooting#run-setup-again` for when setup comes back.

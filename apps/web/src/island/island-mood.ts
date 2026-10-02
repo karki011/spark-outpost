@@ -1,11 +1,14 @@
 import type { ScoutMood } from '../brand/BlobScout.tsx';
 import type { BlobExpression } from '../brand/blob-expression.ts';
-import type { IslandView, SessionState } from './island-model.ts';
+import type { IslandView, Moment, SessionState } from './island-model.ts';
 
 export interface MoodContext {
   waiting: number;
   hour: number;
   idleMinutes: number;
+  running: number;
+  moment: Moment | null;
+  failed: boolean;
 }
 
 export const SLEEPY_IDLE_MINUTES = 45;
@@ -17,18 +20,17 @@ export function isSleepyTime(hour: number, idleMinutes: number): boolean {
 export function scoutMoodFor(view: IslandView, context: MoodContext): ScoutMood {
   switch (view.kind) {
     case 'card':
+    case 'nudge':
       return 'alert';
-    case 'moment':
-      return view.moment.kind === 'done' ? 'happy' : 'sad';
-    case 'live':
-    case 'overview':
-      return 'working';
     case 'note':
     case 'panel':
       return null;
     case 'pill':
     case 'peek':
       if (context.waiting > 0) return 'alert';
+      if (context.moment) return context.moment.kind === 'done' ? 'happy' : 'sad';
+      if (context.running > 0) return 'working';
+      if (context.failed) return 'sad';
       return isSleepyTime(context.hour, context.idleMinutes) ? 'sleep' : null;
   }
 }

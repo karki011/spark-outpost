@@ -14,7 +14,6 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
   companion: {
     get: () => ipcRenderer.invoke(IPC.companionGet),
     setEnabled: (on: boolean) => ipcRenderer.invoke(IPC.companionSetEnabled, on),
-    setCalm: (on: boolean) => ipcRenderer.invoke(IPC.companionSetCalm, on),
     setShortcut: (action: string, accelerator: string | null) =>
       ipcRenderer.invoke(IPC.companionSetShortcut, action, accelerator),
     onChange: (callback: (status: unknown) => void) => listen(IPC.companionChanged, callback),
@@ -25,6 +24,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
       listen(IPC.islandGeometryChanged, callback),
     onCommand: (callback: (action: unknown) => void) => listen(IPC.islandCommand, callback),
     onEscape: (callback: () => void) => listen(IPC.islandEscape, callback),
+    sparkFocused: () => ipcRenderer.invoke(IPC.islandSparkFocused),
+    onSparkFocus: (callback: (focused: unknown) => void) => listen(IPC.islandSparkFocus, callback),
     setInteractive: (on: boolean) => ipcRenderer.send(IPC.islandInteractive, on),
     setFocusable: (on: boolean) => ipcRenderer.send(IPC.islandFocusable, on),
     drag: (phase: DragPhase, x: number, y: number) => ipcRenderer.send(IPC.islandDrag, phase, x, y),

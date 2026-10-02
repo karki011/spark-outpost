@@ -21,8 +21,8 @@ export interface IslandInputs {
   note: boolean;
   panel: Panel | null;
   cards: readonly Card[];
-  moment: Moment | null;
-  running: number;
+  review: string | null;
+  nudge: boolean;
   hover: boolean;
 }
 
@@ -30,19 +30,24 @@ export type IslandView =
   | { kind: 'note' }
   | { kind: 'panel'; panel: Panel }
   | { kind: 'card'; card: Card; index: number; total: number }
-  | { kind: 'moment'; moment: Moment }
-  | { kind: 'overview' }
-  | { kind: 'live' }
+  | { kind: 'nudge'; card: Card; total: number }
   | { kind: 'pill' }
   | { kind: 'peek' };
 
 export function islandView(inputs: IslandInputs): IslandView {
   if (inputs.note) return { kind: 'note' };
   if (inputs.panel) return { kind: 'panel', panel: inputs.panel };
-  const card = inputs.cards[0];
-  if (card) return { kind: 'card', card, index: 1, total: inputs.cards.length };
-  if (inputs.moment) return { kind: 'moment', moment: inputs.moment };
-  if (inputs.running > 0) return inputs.hover ? { kind: 'overview' } : { kind: 'live' };
+  const total = inputs.cards.length;
+  const reviewed = inputs.cards.findIndex((card) => cardKey(card) === inputs.review);
+  if (reviewed >= 0) {
+    return { kind: 'card', card: inputs.cards[reviewed]!, index: reviewed + 1, total };
+  }
+  const first = inputs.cards[0];
+  if (first && inputs.nudge) {
+    return inputs.hover
+      ? { kind: 'card', card: first, index: 1, total }
+      : { kind: 'nudge', card: first, total };
+  }
   return inputs.hover ? { kind: 'pill' } : { kind: 'peek' };
 }
 
@@ -55,10 +60,8 @@ const WIDTHS = {
   force: 556,
   question: 556,
   open: 520,
-  moment: 520,
-  overview: 540,
-  live: 470,
-  pill: 364,
+  nudge: 364,
+  pill: 420,
 } as const;
 
 export function viewWidth(view: IslandView, notchWidth: number): number {
@@ -75,7 +78,7 @@ export function viewWidth(view: IslandView, notchWidth: number): number {
 }
 
 export function isQuiet(view: IslandView): boolean {
-  return view.kind === 'peek' || view.kind === 'pill';
+  return view.kind === 'peek' || view.kind === 'pill' || view.kind === 'nudge';
 }
 
 export type RunStatuses = ReadonlyMap<string, { status: string; chatId: string }>;
@@ -107,8 +110,6 @@ export function newMoments(previous: RunStatuses, chats: readonly ConversationSu
 export function nextStreak(streak: number, moment: Moment): number {
   return moment.kind === 'done' ? streak + 1 : 0;
 }
-
-export const STREAK_SPARKLE = 3;
 
 function cardKind(chat: ConversationSummary, approval: Approval | null): CardKind {
   if (!approval) return 'open';

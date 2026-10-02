@@ -40,7 +40,7 @@ describe('desktop companion lifecycle', () => {
   it('is on by default and waits for the host before opening the island', () => {
     const { effects, registered, islands } = effectsFor();
     const companion = createCompanion(parseSettings(null), effects);
-    expect(companion.status()).toMatchObject({ enabled: true, calm: true });
+    expect(companion.status()).toMatchObject({ enabled: true });
     expect(effects.openIsland).not.toHaveBeenCalled();
     expect(registered.size).toBe(0);
 

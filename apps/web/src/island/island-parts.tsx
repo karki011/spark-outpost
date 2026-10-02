@@ -60,7 +60,7 @@ export function Who({ name, role, provider, title, expression = 'idle', crewStat
       </span>
       <b>{name}</b>
       {role && <span> · {role}</span>}
-      <ProviderTag provider={provider} />
+      {provider && providerName(provider) !== name && <ProviderTag provider={provider} />}
       {title && <span className="isl-who-title"> · {title}</span>}
     </div>
   );

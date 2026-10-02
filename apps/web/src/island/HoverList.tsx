@@ -1,8 +1,13 @@
+import type { ReactNode } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
+import type { Voice } from '../spark/voice.ts';
 import { relativeTime } from '../ui/relative-time.ts';
-import { sessionState, type SessionState } from './island-model.ts';
+import { doneLine } from './crew-voice.ts';
+import { sessionState, type Card, type CardKind, type SessionState } from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
+import { elapsedText } from './island-parts.tsx';
 import { SessionBlob } from './SessionBlob.tsx';
+import { runStart, workLine, type WorkItem } from './work-items.ts';
 
 export const STATUS_WORDS: Record<SessionState, string> = {
   working: 'running',
@@ -12,62 +17,139 @@ export const STATUS_WORDS: Record<SessionState, string> = {
   idle: 'quiet',
 };
 
-const ATTENTION_FIRST: Record<SessionState, number> = {
-  waiting: 0,
-  failed: 1,
-  working: 2,
-  done: 3,
-  idle: 4,
+const ASKS: Record<CardKind, string> = {
+  approval: 'wants your go-ahead',
+  force: 'wants to do something risky',
+  question: 'asked you a question',
+  open: 'is waiting for you',
 };
 
-export function hoverOrder(sessions: readonly ConversationSummary[]): ConversationSummary[] {
-  return sessions.toSorted(
-    (a, b) =>
-      ATTENTION_FIRST[sessionState(a)] - ATTENTION_FIRST[sessionState(b)] ||
-      b.updatedAt.localeCompare(a.updatedAt),
-  );
+export interface HoverGroups {
+  needs: readonly Card[];
+  running: readonly WorkItem[];
+  recent: readonly ConversationSummary[];
+}
+
+export function hasHoverItems(groups: HoverGroups): boolean {
+  return groups.needs.length + groups.running.length + groups.recent.length > 0;
+}
+
+export function recentLine(voice: Voice, chat: ConversationSummary): string {
+  if (sessionState(chat) === 'failed') {
+    return chat.latestRun?.error ?? 'It stopped before the work was done.';
+  }
+  return doneLine(voice, 'all finished', chat.latestRun?.id ?? chat.id);
 }
 
 interface HoverListProps {
-  sessions: readonly ConversationSummary[];
-  more: number;
+  groups: HoverGroups;
+  voice: Voice;
   now: number;
   sleepy: boolean;
+  onReview: (card: Card) => void;
   onOpen: (id: string) => void;
-  onAll: () => void;
 }
 
-export function HoverList({ sessions, more, now, sleepy, onOpen, onAll }: HoverListProps) {
+function Section({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <section className="isl-hsec" aria-label={label}>
+      <h3 className="isl-hhead">{label}</h3>
+      <ul className="isl-hlist">{children}</ul>
+    </section>
+  );
+}
+
+function Face({
+  chat,
+  state,
+  sleepy,
+}: {
+  chat: ConversationSummary;
+  state: SessionState;
+  sleepy: boolean;
+}) {
+  return (
+    <SessionBlob
+      chat={chat}
+      state={state}
+      size={22}
+      expression={sessionExpression(state, sleepy)}
+    />
+  );
+}
+
+export function HoverList({ groups, voice, now, sleepy, onReview, onOpen }: HoverListProps) {
   return (
     <div className="isl-body isl-hover">
-      <ul className="isl-hlist" aria-label="Active chats">
-        {hoverOrder(sessions).map((chat) => {
-          const state = sessionState(chat);
-          return (
-            <li key={chat.id}>
+      {groups.needs.length > 0 && (
+        <Section label="Needs you">
+          {groups.needs.map((card) => (
+            <li key={card.approval?.id ?? card.chat.id} className="isl-hrow" data-state="waiting">
+              <Face chat={card.chat} state="waiting" sleepy={false} />
+              <span className="isl-hmain">
+                <span className="isl-htitle">{card.chat.title}</span>
+                <span className="isl-hsub">{ASKS[card.kind]}</span>
+              </span>
+              <span className="isl-hacts">
+                <button type="button" className="isl-btn primary" onClick={() => onReview(card)}>
+                  Review
+                </button>
+                <button type="button" className="isl-btn" onClick={() => onOpen(card.chat.id)}>
+                  Open chat
+                </button>
+              </span>
+            </li>
+          ))}
+        </Section>
+      )}
+      {groups.running.length > 0 && (
+        <Section label="Running">
+          {groups.running.map((item) => (
+            <li key={item.chat.id}>
               <button
                 type="button"
                 className="isl-hrow"
-                data-state={state}
-                onClick={() => onOpen(chat.id)}
+                data-state="working"
+                onClick={() => onOpen(item.chat.id)}
               >
-                <SessionBlob
-                  chat={chat}
-                  state={state}
-                  size={22}
-                  expression={sessionExpression(state, sleepy)}
-                />
-                <span className="isl-htitle">{chat.title}</span>
-                <span className="isl-hstate">{STATUS_WORDS[state]}</span>
-                <span className="isl-htime">{relativeTime(chat.updatedAt, now)}</span>
+                <Face chat={item.chat} state="working" sleepy={false} />
+                <span className="isl-hmain">
+                  <span className="isl-htitle">{item.chat.title}</span>
+                  <span className="isl-hsub">{workLine(voice, item)}</span>
+                </span>
+                <span className="isl-htime mono">{elapsedText(runStart(item), now)}</span>
               </button>
             </li>
-          );
-        })}
-      </ul>
-      <button type="button" className="isl-hall" onClick={onAll}>
-        {more > 0 ? `See all · ${more} more` : 'See all'}
-      </button>
+          ))}
+        </Section>
+      )}
+      {groups.recent.length > 0 && (
+        <Section label="Recent">
+          {groups.recent.map((chat) => {
+            const state = sessionState(chat);
+            return (
+              <li key={chat.id}>
+                <button
+                  type="button"
+                  className="isl-hrow"
+                  data-state={state}
+                  onClick={() => onOpen(chat.id)}
+                >
+                  <Face chat={chat} state={state} sleepy={sleepy} />
+                  <span className="isl-hmain">
+                    <span className="isl-htitle">{chat.title}</span>
+                    <span className="isl-hsub">{recentLine(voice, chat)}</span>
+                  </span>
+                  <span className="isl-htime">
+                    <span className="isl-hstate">{STATUS_WORDS[state]}</span>
+                    {relativeTime(chat.updatedAt, now)}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </Section>
+      )}
     </div>
   );
 }

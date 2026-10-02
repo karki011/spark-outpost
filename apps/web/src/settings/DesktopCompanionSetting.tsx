@@ -148,13 +148,6 @@ export function DesktopCompanionSetting() {
           {SHORTCUTS.map((shortcut) => (
             <ShortcutSetting key={shortcut.action} {...shortcut} status={status} />
           ))}
-          <SwitchRow
-            label="Calm mode"
-            doc={{ page: 'desktop-companion', heading: 'calm-mode' }}
-            hint="Keeps the blobs still apart from what matters: no hops, waves or sparkles."
-            checked={status.calm}
-            onChange={(on) => void desktop.companion.setCalm(on)}
-          />
         </>
       )}
     </>

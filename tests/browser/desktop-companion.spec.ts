@@ -8,7 +8,6 @@ async function fakeDesktop(page: Page) {
     const status = {
       supported: true,
       enabled: false,
-      calm: false,
       shortcuts: { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' },
       failed: [] as string[],
     };
@@ -27,10 +26,6 @@ async function fakeDesktop(page: Page) {
           setEnabled: async (on: boolean) => {
             calls.push(['enabled', on]);
             status.enabled = on;
-            return publish();
-          },
-          setCalm: async (on: boolean) => {
-            status.calm = on;
             return publish();
           },
           setShortcut: async (action: 'quick' | 'sessions', accelerator: string | null) => {
@@ -69,7 +64,6 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
 
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
-  await expect(spark.getByRole('switch', { name: 'Calm mode' })).toBeVisible();
   const change = spark.getByRole('button', { name: 'Change Quick chat shortcut' });
   await change.click();
   await page.keyboard.press('Control+Alt+J');
@@ -80,7 +74,7 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
 
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
-  await expect(spark.getByRole('switch', { name: 'Calm mode' })).toHaveCount(0);
+  await expect(spark.getByRole('button', { name: 'Change Quick chat shortcut' })).toHaveCount(0);
   expect(
     await page.evaluate(() => (window as unknown as { desktopCalls: unknown[] }).desktopCalls),
   ).toEqual([

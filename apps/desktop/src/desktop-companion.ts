@@ -1,4 +1,5 @@
 import {
+  app,
   BrowserWindow,
   globalShortcut,
   ipcMain,
@@ -121,14 +122,28 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     },
   });
   refreshTray(companion.status());
+
+  const sparkFocused = () =>
+    BrowserWindow.getAllWindows().some(
+      (window) =>
+        !window.isDestroyed() && window.isFocused() && !island?.owns(window.webContents.id),
+    );
+  let focused = sparkFocused();
+  const reportFocus = () =>
+    setImmediate(() => {
+      const next = sparkFocused();
+      if (next === focused) return;
+      focused = next;
+      island?.sparkFocus(next);
+    });
+  app.on('browser-window-focus', reportFocus);
+  app.on('browser-window-blur', reportFocus);
+  ipcMain.handle(IPC.islandSparkFocused, (event) => fromIsland(event) && sparkFocused());
   companion.resume();
 
   ipcMain.handle(IPC.companionGet, (event) => (fromSpark(event) ? companion.status() : null));
   ipcMain.handle(IPC.companionSetEnabled, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setEnabled(on) : companion.status(),
-  );
-  ipcMain.handle(IPC.companionSetCalm, (event, on: unknown) =>
-    fromSpark(event) && typeof on === 'boolean' ? companion.setCalm(on) : companion.status(),
   );
   ipcMain.handle(IPC.companionSetShortcut, (event, action: unknown, accelerator: unknown) => {
     if (!fromSpark(event) || !isShortcutAction(action)) return { ok: false, error: 'Not allowed.' };
@@ -183,9 +198,9 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       for (const channel of [
         IPC.companionGet,
         IPC.companionSetEnabled,
-        IPC.companionSetCalm,
         IPC.companionSetShortcut,
         IPC.islandGeometry,
+        IPC.islandSparkFocused,
         IPC.pendingChat,
       ]) {
         ipcMain.removeHandler(channel);
@@ -199,6 +214,8 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       ]) {
         ipcMain.removeAllListeners(channel);
       }
+      app.off('browser-window-focus', reportFocus);
+      app.off('browser-window-blur', reportFocus);
       tray.destroy();
     },
   };

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, type CSSProperties, type RefObject } from 'react';
-import type { ConversationSummary, Project } from '@spark-outpost/contracts';
+import type { ConversationDetail, ConversationSummary, Project } from '@spark-outpost/contracts';
 import { BlobScout, type ScoutMood } from '../brand/BlobScout.tsx';
 import type { IslandGeometry } from '../desktop/desktop-bridge.ts';
 import type { Voice } from '../spark/voice.ts';
@@ -8,11 +8,12 @@ import { AskSpark } from './AskSpark.tsx';
 import { CardView, type Decided } from './CardView.tsx';
 import {
   viewWidth,
+  type Card,
   type IslandView,
   type Panel,
   type PeekRow as PeekRowData,
 } from './island-model.ts';
-import { HoverList } from './HoverList.tsx';
+import { HoverList, type HoverGroups } from './HoverList.tsx';
 import { useViewportWidth } from './island-parts.tsx';
 import { wingsFor } from './island-wings.tsx';
 import { keyHint } from './key-hints.tsx';
@@ -21,7 +22,6 @@ import { QuickChat, type QuickDraft } from './QuickChat.tsx';
 import { Sessions } from './Sessions.tsx';
 import { useIslandShape, type ScoutSpot } from './use-island-shape.ts';
 import { chatAgent } from './use-island-data.ts';
-import { LiveView, MomentView, OverviewView, type WorkItem } from './WorkViews.tsx';
 
 interface ShellRefs {
   islandRef: RefObject<HTMLDivElement | null>;
@@ -33,19 +33,16 @@ interface IslandShellProps {
   geometry: IslandGeometry;
   mood: ScoutMood;
   reduced: boolean;
-  calm: boolean;
   wave: boolean;
   hover: boolean;
   greeting: string | null;
   waiting: number;
-  snoozedWaiting: number;
   voice: Voice;
   now: number;
   note: Decided | null;
-  workItems: WorkItem[];
-  itemFor: (chatId: string) => WorkItem | null;
-  watch: { id: string; tag: string } | null;
-  streak: number;
+  groups: HoverGroups;
+  listing: boolean;
+  detailFor: (chatId: string) => ConversationDetail | undefined;
   focusSignal: number;
   sessions: ConversationSummary[];
   peek: PeekRowData;
@@ -65,6 +62,7 @@ interface IslandShellProps {
   onReply: (chat: ConversationSummary) => void;
   onDecided: (decided: Decided) => void;
   onLater: () => void;
+  onReview: (card: Card) => void;
   onScout: () => void;
   onPeekOpen: (id: string) => void;
   onSent: (id: string, title: string, project: string | null) => void;
@@ -82,7 +80,7 @@ const ROW_BLOB = 22;
 const FLAT_ROW_BLOB = 28;
 
 function hasCard(view: IslandView): boolean {
-  return view.kind === 'card' || view.kind === 'moment' || view.kind === 'note';
+  return view.kind === 'card' || view.kind === 'note';
 }
 
 function scoutSpot(view: IslandView, width: number, top: number, hang: number | null): ScoutSpot {
@@ -99,12 +97,12 @@ function ViewBody({ props }: { props: IslandShellProps }) {
     case 'pill':
       return (
         <HoverList
-          sessions={props.peek.sessions}
-          more={props.peek.more}
+          groups={props.groups}
+          voice={props.voice}
           now={props.now}
           sleepy={props.sleepy}
+          onReview={props.onReview}
           onOpen={props.onOpenChat}
-          onAll={() => props.onTab('sessions')}
         />
       );
     case 'note':
@@ -139,6 +137,7 @@ function ViewBody({ props }: { props: IslandShellProps }) {
             projectNames={props.projectNames}
             selected={props.selected}
             waiting={props.waiting}
+            now={props.now}
             focusDelay={focusDelay}
             onSelect={props.onSelect}
             onTab={props.onTab}
@@ -157,60 +156,19 @@ function ViewBody({ props }: { props: IslandShellProps }) {
         />
       );
     case 'card': {
-      const item = props.itemFor(view.card.chat.id);
       return (
         <div className="isl-body">
           <CardView
             card={view.card}
             index={view.index}
             total={view.total}
-            agent={chatAgent(view.card.chat, item?.detail)}
+            agent={chatAgent(view.card.chat, props.detailFor(view.card.chat.id))}
             focusSignal={props.focusSignal}
             onDecided={props.onDecided}
             onOpenChat={props.onOpenChat}
             onLater={props.onLater}
           />
         </div>
-      );
-    }
-    case 'moment':
-      return (
-        <div className="isl-body">
-          <MomentView
-            moment={view.moment}
-            item={props.itemFor(view.moment.chatId)}
-            voice={props.voice}
-            reply={props.watch?.id === view.moment.chatId}
-            streak={props.streak}
-            onOpenChat={props.onOpenChat}
-            onReply={props.onReply}
-          />
-        </div>
-      );
-    case 'overview':
-      return (
-        <div className="isl-body">
-          <OverviewView
-            items={props.workItems}
-            voice={props.voice}
-            now={props.now}
-            onOpenChat={props.onOpenChat}
-          />
-        </div>
-      );
-    case 'live': {
-      const tag =
-        props.watch && props.workItems.some((item) => item.chat.id === props.watch?.id)
-          ? props.watch.tag
-          : null;
-      return (
-        <LiveView
-          items={props.workItems}
-          voice={props.voice}
-          now={props.now}
-          tag={tag}
-          still={props.reduced}
-        />
       );
     }
     default:
@@ -224,8 +182,6 @@ function viewKey(view: IslandView): string {
       return `panel-${view.panel}`;
     case 'card':
       return `card-${view.card.approval?.id ?? view.card.chat.id}`;
-    case 'moment':
-      return `moment-${view.moment.runId}`;
     default:
       return view.kind;
   }
@@ -239,14 +195,15 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const hugsNotch = geometry.notch && geometry.docked;
   const flat = geometry.docked && !geometry.notch;
   const bare = flat && view.kind === 'peek';
-  const hang = bare ? geometry.menuBar + BARE_TUCK : null;
-  const top = view.kind === 'pill' ? Math.max(geometry.top, PILL_HEIGHT) : bare ? 0 : geometry.top;
-  const list = view.kind === 'pill' && props.peek.sessions.length > 0;
-  const quiet = view.kind === 'peek' || (view.kind === 'pill' && !list);
+  const hang = bare ? BARE_TUCK : null;
+  const pillish = view.kind === 'pill' || view.kind === 'nudge';
+  const top = pillish ? Math.max(geometry.top, PILL_HEIGHT) : bare ? 0 : geometry.top;
+  const list = view.kind === 'pill' && props.listing;
+  const quiet = view.kind === 'peek' || (pillish && !list);
   const viewport = useViewportWidth();
   const room = Math.max(PANEL_MIN_WIDTH, viewport - PANEL_SIDE_GAP);
   const width = bare ? BARE_SCOUT : Math.min(viewWidth(view, geometry.notchWidth), room);
-  const compactPill = view.kind === 'pill' && !hugsNotch && !list;
+  const compactPill = pillish && !hugsNotch && !list;
   const hint = keyHint(view);
   const setTarget = useIslandShape(
     islandRef,
@@ -267,7 +224,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
         {
           width: fitted,
           height,
-          radius: view.kind === 'pill' ? 16 : quiet ? 14 : 22,
+          radius: pillish && !list ? 16 : quiet ? 14 : 22,
           scout: scoutSpot(view, fitted, top, hang),
         },
         view.kind === 'peek' ? 0.62 : 0.5,
@@ -281,7 +238,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     const observer = new ResizeObserver(measure);
     watched.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [view, width, top, quiet, hint, compactPill, hang, setTarget]);
+  }, [view, width, top, quiet, hint, compactPill, hang, pillish, list, setTarget]);
 
   const classes = [
     'isl',
@@ -295,7 +252,6 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   return (
     <div
       className="isl-root"
-      data-calm={props.calm || undefined}
       data-rm={props.reduced || undefined}
       data-rest={(quiet && !props.hover) || undefined}
     >
@@ -311,7 +267,6 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
         style={
           {
             '--top': `${top}px`,
-            '--bar': `${geometry.menuBar}px`,
             '--gap': `${hugsNotch ? geometry.notchWidth : 0}px`,
             '--wl': hasCard(view) ? '14px' : '40px',
           } as CSSProperties
@@ -341,24 +296,21 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
               {hint}
             </div>
           )}
-          {view.kind === 'moment' && !props.hover && (
-            <span key={`bar-${viewKey(view)}`} className="isl-closebar" aria-hidden="true" />
-          )}
         </div>
         <div ref={scoutRef} className="isl-scout-wrap" data-wave={props.wave || undefined}>
-          {props.snoozedWaiting > 0 && quiet && (
+          {props.waiting > 0 && view.kind === 'peek' && (
             <span className="isl-pbadge" aria-hidden="true">
-              {props.snoozedWaiting}
+              {props.waiting}
             </span>
           )}
           <span className="isl-glow" data-mood={props.mood ?? 'idle'} aria-hidden="true" />
-          <BlobScout mood={props.mood} size={30} lookAtPointer={quiet && !props.calm} />
+          <BlobScout mood={props.mood} size={30} lookAtPointer={quiet} />
           <button
             type="button"
             className="isl-scout-btn"
             aria-label={
-              props.snoozedWaiting > 0
-                ? `Spark: ${props.snoozedWaiting} need you. Open sessions`
+              props.waiting > 0
+                ? `Spark: ${props.waiting} need you. Open sessions`
                 : 'Open Spark companion'
             }
             onClick={props.onScout}

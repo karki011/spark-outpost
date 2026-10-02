@@ -9,7 +9,6 @@ export type IslandPosition = { docked: true } | { docked: false; x: number; y: n
 
 export interface CompanionSettings {
   enabled: boolean;
-  calm: boolean;
   shortcuts: Record<ShortcutAction, string>;
   position: IslandPosition;
 }
@@ -21,7 +20,6 @@ export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, string>> = {
 
 export const DEFAULT_SETTINGS: CompanionSettings = {
   enabled: true,
-  calm: true,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   position: { docked: true },
 };
@@ -115,7 +113,6 @@ export function parseSettings(raw: string | null): CompanionSettings {
   const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   return {
     enabled: savedFlag(record.enabled, DEFAULT_SETTINGS.enabled),
-    calm: savedFlag(record.calm, DEFAULT_SETTINGS.calm),
     shortcuts: parseShortcuts(record.shortcuts),
     position: parsePosition(record.position),
   };

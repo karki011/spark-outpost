@@ -25,6 +25,7 @@ export interface IslandWindow extends IslandHandle {
   setFocusable(on: boolean): void;
   drag(phase: DragPhase, pointer: Point): void;
   setRestSize(size: Size | null): void;
+  sparkFocus(focused: boolean): void;
   geometry(): IslandGeometry;
 }
 
@@ -146,6 +147,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       setIslandFocus(window, on);
       escape.arm(on && !window.isDestroyed());
     },
+    sparkFocus: (focused) => send(IPC.islandSparkFocus, focused),
     setRestSize: (size) => {
       const changed = JSON.stringify(size) !== JSON.stringify(rest);
       rest = size;

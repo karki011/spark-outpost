@@ -4,7 +4,6 @@ import { BlobScout } from '../brand/BlobScout.tsx';
 import { ToastHost } from '../conversations/Toast.tsx';
 import { useToast } from '../conversations/use-toast.ts';
 import { installMessage, useInstallUpdate } from '../desktop/use-install-update.ts';
-import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 import { useUpdateStatus } from '../desktop/use-update-status.ts';
 import { useReducedMotion } from '../ui/motion.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
@@ -51,12 +50,11 @@ function useOccasionalHop(enabled: boolean): boolean {
 
 export function UpdateBlob() {
   const status = useUpdateStatus();
-  const calm = useCompanionStatus()?.calm ?? false;
   const reduced = useReducedMotion();
   const toaster = useToast();
   const install = useInstallUpdate();
   const view = updateBlobView(status);
-  const hopping = useOccasionalHop(view?.step === 'ready' && !calm && !reduced);
+  const hopping = useOccasionalHop(view?.step === 'ready' && !reduced);
   const { triggerProps, tooltip } = useTooltip(view?.description ?? '', { side: 'top' });
   const readyVersion = status?.phase === 'ready' ? status.availableVersion : null;
   const { show } = toaster;

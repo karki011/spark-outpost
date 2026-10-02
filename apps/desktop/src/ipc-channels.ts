@@ -1,7 +1,6 @@
 export const IPC = {
   companionGet: 'companion:get',
   companionSetEnabled: 'companion:set-enabled',
-  companionSetCalm: 'companion:set-calm',
   companionSetShortcut: 'companion:set-shortcut',
   companionChanged: 'companion:changed',
   islandInteractive: 'island:interactive',
@@ -13,6 +12,8 @@ export const IPC = {
   islandGeometryChanged: 'island:geometry-changed',
   islandCommand: 'island:command',
   islandEscape: 'island:escape',
+  islandSparkFocused: 'island:spark-focused',
+  islandSparkFocus: 'island:spark-focus',
   openChat: 'spark:open-chat',
   pendingChat: 'spark:pending-chat',
   updatesGet: 'updates:get',

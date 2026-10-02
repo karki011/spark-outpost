@@ -12,7 +12,6 @@ import { useAppEvents } from '../app/live/use-app-events.ts';
 import { companionFeed, statusText } from '../companion/companion-model.ts';
 import { useThrottledAnnouncement } from '../companion/use-companion-signals.ts';
 import { sparkDesktop, type IslandAction } from '../desktop/desktop-bridge.ts';
-import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 import { homeApi, homeKeys } from '../home/home-api.ts';
 import { useVoice } from '../spark/use-voice.ts';
 import { useReducedMotion } from '../ui/motion.ts';
@@ -22,32 +21,31 @@ import {
   cardKey,
   isQuiet,
   islandView,
+  sessionState,
   pendingCards,
   peekRow,
   rankedSessions,
   waitingCount,
+  type Card,
   type Panel,
 } from './island-model.ts';
 import { isSleepyTime, scoutMoodFor } from './island-mood.ts';
+import { hasHoverItems, type HoverGroups } from './HoverList.tsx';
 import { IslandShell } from './IslandShell.tsx';
 import type { QuickDraft } from './QuickChat.tsx';
-import { useIslandBridge } from './use-island-bridge.ts';
+import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
 import { chatAgent, useIslandData } from './use-island-data.ts';
 import { noteSeen, useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
-import type { WorkItem } from './WorkViews.tsx';
+import type { WorkItem } from './work-items.ts';
 
 const NOTE_MS = 1_500;
-const HOVER_IN_MS = 220;
 const HOVER_OUT_MS = 450;
-const MOMENT_MS = 8_000;
+const MOMENT_MS = 6_000;
 const WAVE_MS = 1_400;
+const LIST_LIMIT = 5;
 const NO_IDS: string[] = [];
-
-interface Watch {
-  id: string;
-  tag: string;
-}
+const NO_SNOOZE: ReadonlySet<string> = new Set();
 
 function useHoverIntent(delayIn: number) {
   const [hover, setHover] = useState(false);
@@ -81,8 +79,6 @@ export function IslandApp() {
   useThemeSync();
   useAppEvents();
   const reduced = useReducedMotion();
-  const status = useCompanionStatus();
-  const calm = status?.calm ?? false;
   const voice = useVoice();
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
   const assistant = useQuery({
@@ -92,12 +88,12 @@ export function IslandApp() {
     staleTime: Infinity,
   });
   const hidden = useMemo(() => new Set(assistant.data ? [assistant.data] : []), [assistant.data]);
-  const [watch, setWatch] = useState<Watch | null>(null);
-  const data = useIslandData(hidden, watch ? [watch.id] : NO_IDS);
+  const data = useIslandData(hidden, NO_IDS);
+  const sparkFocused = useSparkFocus();
   const [panel, setPanel] = useState<Panel | null>(null);
-  const [lastPanel, setLastPanel] = useState<Panel>('quick');
   const [selected, setSelected] = useState<string | null>(null);
   const [note, setNote] = useState<Decided | null>(null);
+  const [review, setReview] = useState<string | null>(null);
   const [snoozed, setSnoozed] = useState<ReadonlySet<string>>(new Set());
   const [wave, setWave] = useState(false);
   const [focusSignal, setFocusSignal] = useState(0);
@@ -106,7 +102,7 @@ export function IslandApp() {
   const [followUp, setFollowUp] = useState<ConversationSummary | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [now, setNow] = useState(() => Date.now());
-  const { moment, streak, dismiss } = useMoments(data.chats, data.loaded);
+  const { moment, dismiss } = useMoments(data.chats, data.loaded);
   const greeting = useGreeting(voice, setup.data !== undefined);
   const running = data.chats.filter(
     (chat) =>
@@ -114,19 +110,34 @@ export function IslandApp() {
       !chat.needsInput &&
       (chat.latestRun?.status === 'running' || chat.latestRun?.status === 'queued'),
   );
-  const [hover, onHover, setHover] = useHoverIntent(running.length > 0 ? HOVER_IN_MS : 0);
+  const [hover, onHover, setHover] = useHoverIntent(0);
   const islandRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
 
   const cards = pendingCards(data.chats, data.approvalsByChat, snoozed);
+  const allCards = pendingCards(data.chats, data.approvalsByChat, NO_SNOOZE);
+  const row = peekRow(data.chats, new Set(), now);
   const view = islandView({
     note: note !== null,
     panel,
-    cards,
-    moment,
-    running: running.length,
-    hover: hover || greeting !== null,
+    cards: allCards,
+    review,
+    nudge: !sparkFocused && cards.length > 0,
+    hover,
   });
+  const workItems: WorkItem[] = running.slice(0, LIST_LIMIT).map((chat) => ({
+    chat,
+    detail: data.detailById.get(chat.id),
+    agent: chatAgent(chat, data.detailById.get(chat.id)),
+  }));
+  const groups: HoverGroups = {
+    needs: allCards.slice(0, LIST_LIMIT),
+    running: workItems,
+    recent: row.sessions.filter((chat) => {
+      const state = sessionState(chat);
+      return state === 'done' || state === 'failed';
+    }),
+  };
   const quiet = isQuiet(view);
   const waiting = waitingCount(data.chats, new Set());
   const feed = companionFeed(data.chats);
@@ -144,27 +155,24 @@ export function IslandApp() {
     return () => clearTimeout(timer);
   }, [note]);
 
-  const momentChat = view.kind === 'moment' ? view.moment.chatId : null;
-  const momentKind = view.kind === 'moment' ? view.moment.kind : null;
-  const cardChat = view.kind === 'card' ? view.card.chat : null;
-  const watchedId = watch?.id ?? null;
-  const momentTitle = data.chats.find((candidate) => candidate.id === momentChat)?.title ?? null;
+  const momentRun = moment?.runId ?? null;
+  const cardChat = view.kind === 'card' || view.kind === 'nudge' ? view.card.chat : null;
+  const momentTitle = data.chats.find((candidate) => candidate.id === moment?.chatId)?.title;
 
   useEffect(() => {
-    if (!momentChat || hover) return;
-    const timer = setTimeout(dismiss, watchedId === momentChat ? MOMENT_MS * 2 : MOMENT_MS);
+    if (!momentRun) return;
+    const timer = setTimeout(dismiss, MOMENT_MS);
     return () => clearTimeout(timer);
-  }, [momentChat, hover, dismiss, watchedId]);
+  }, [momentRun, dismiss]);
 
   const viewAnnouncement = cardChat
     ? `Spark needs you: ${cardChat.title}.`
-    : momentTitle && momentKind
-      ? `${momentTitle} ${momentKind === 'done' ? 'is done' : 'couldn’t finish'}.`
+    : moment && momentTitle
+      ? `${momentTitle} ${moment.kind === 'done' ? 'is done' : 'couldn’t finish'}.`
       : '';
 
   const openPanel = (next: Panel) => {
     setPanel(next);
-    setLastPanel(next);
     setAnnouncement(
       next === 'quick'
         ? 'New chat composer open. Enter to send, Escape to close; your draft is kept.'
@@ -176,6 +184,7 @@ export function IslandApp() {
 
   const closePanel = () => {
     setPanel(null);
+    setReview(null);
     setSelected(null);
     setFollowUp(null);
     setHover(false);
@@ -183,15 +192,19 @@ export function IslandApp() {
 
   const openChat = (id: string) => {
     closePanel();
-    if (momentChat === id) dismiss();
+    if (moment?.chatId === id) dismiss();
     setNote({ title: 'Opening Spark…', sub: 'The chat opens in the main window.' });
     const desktop = sparkDesktop();
     if (desktop) desktop.island.openChat(id);
     else window.open('/', '_blank', 'noopener');
   };
 
+  const openCard = (card: Card) => {
+    setPanel(null);
+    setReview(cardKey(card));
+  };
+
   const reply = (chat: ConversationSummary) => {
-    dismiss();
     setFollowUp(chat);
     openPanel('quick');
   };
@@ -207,17 +220,16 @@ export function IslandApp() {
     }
     if (
       !panel &&
-      view.kind === 'card' &&
+      (view.kind === 'card' || view.kind === 'nudge') &&
       (view.card.kind === 'approval' || view.card.kind === 'force')
     ) {
+      setReview(cardKey(view.card));
       setFocusSignal((value) => value + 1);
       return;
     }
     if (panel) closePanel();
-    else openPanel(lastPanel);
+    else openPanel('quick');
   };
-
-  const row = peekRow(data.chats, new Set(), now);
 
   const geometry = useIslandBridge({
     islandRef,
@@ -247,7 +259,7 @@ export function IslandApp() {
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       if (panel === 'sessions' && selected) setSelected(null);
       else if (panel) closePanel();
-      else if (view.kind === 'moment') dismiss();
+      else if (review) setReview(null);
       else if (view.kind === 'note') setNote(null);
       else if (hover) setHover(false);
       else return;
@@ -263,27 +275,13 @@ export function IslandApp() {
   const snooze = () => {
     if (view.kind !== 'card') return;
     setSnoozed((set) => new Set([...set, cardKey(view.card)]));
-    if (!calm && !reduced) {
+    setReview(null);
+    if (!reduced) {
       setWave(true);
       setTimeout(() => setWave(false), WAVE_MS);
     }
   };
 
-  const workItems: WorkItem[] = running.slice(0, 4).map((chat) => ({
-    chat,
-    detail: data.detailById.get(chat.id),
-    agent: chatAgent(chat, data.detailById.get(chat.id)),
-  }));
-  const itemFor = (chatId: string): WorkItem | null => {
-    const chat = data.chats.find((candidate) => candidate.id === chatId);
-    return chat
-      ? {
-          chat,
-          detail: data.detailById.get(chatId),
-          agent: chatAgent(chat, data.detailById.get(chatId)),
-        }
-      : null;
-  };
   const sessions = rankedSessions(data.chats, new Set());
   const fast = {
     waiting: feed.needs.map((item) => ({
@@ -315,25 +313,25 @@ export function IslandApp() {
         wave
           ? 'happy'
           : scoutMoodFor(view, {
-              waiting: snoozed.size > 0 ? waiting : 0,
+              waiting,
               hour: new Date(now).getHours(),
               idleMinutes: 0,
+              running: running.length,
+              moment,
+              failed: groups.recent.some((chat) => sessionState(chat) === 'failed'),
             })
       }
       reduced={reduced}
-      calm={calm}
       wave={wave}
       hover={hover}
       greeting={greeting}
       waiting={waiting}
-      snoozedWaiting={snoozed.size > 0 ? waiting : 0}
       voice={voice}
       now={now}
       note={note}
-      workItems={workItems}
-      itemFor={itemFor}
-      watch={watch}
-      streak={streak}
+      groups={groups}
+      listing={hasHoverItems(groups)}
+      detailFor={(chatId) => data.detailById.get(chatId)}
       focusSignal={focusSignal}
       sessions={sessions}
       peek={row}
@@ -353,19 +351,17 @@ export function IslandApp() {
       onReply={reply}
       onDecided={setNote}
       onLater={snooze}
+      onReview={openCard}
       onScout={() => {
         if (panel) closePanel();
-        else openPanel(waiting > 0 && snoozed.size > 0 ? 'sessions' : lastPanel);
+        else if (view.kind === 'nudge') openCard(view.card);
+        else openPanel(row.sessions.length > 0 || allCards.length > 0 ? 'sessions' : 'ask');
       }}
       onPeekOpen={(id) => {
         setSelected(id);
         openPanel('sessions');
       }}
-      onSent={(id, title, project) => {
-        setWatch({
-          id,
-          tag: `${followUp ? 'Follow-up' : 'New chat'} · ${project ?? 'No project'}`,
-        });
+      onSent={(_id, title) => {
         setAnnouncement(`Started ${followUp ? 'a follow-up' : 'a new chat'}: ${title}.`);
         setDraftId(newDraftId());
         closePanel();

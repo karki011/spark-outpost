@@ -51,6 +51,17 @@ interface BridgeOptions {
   onBlur: () => void;
 }
 
+export function useSparkFocus(): boolean {
+  const desktop = sparkDesktop();
+  const [focused, setFocused] = useState(false);
+  useEffect(() => {
+    if (!desktop) return;
+    void desktop.island.sparkFocused().then(setFocused);
+    return desktop.island.onSparkFocus(setFocused);
+  }, [desktop]);
+  return focused;
+}
+
 export function useIslandBridge(options: BridgeOptions): IslandGeometry {
   const desktop = sparkDesktop();
   const [geometry, setGeometry] = useState<IslandGeometry>(BROWSER_GEOMETRY);
