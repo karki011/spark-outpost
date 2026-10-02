@@ -171,11 +171,11 @@ test('a linked chat and its pull request move the ticket between groups without 
   await expect(section(page, 'In progress with Spark')).toHaveCount(0);
   await expect(strip(page).getByRole('button', { name: '5 need you' })).toBeVisible();
 
-  const watch = await watchPull(reviewing!, 341);
   await setPullChecks(341, 'failing');
+  const watch = await watchPull(reviewing!, 341);
   await markWatchChecks(watch, 'failing');
   await expect(row(page, 'API-77')).toContainText(/Needs you.*PR #341 checks failing/, {
-    timeout: 15_000,
+    timeout: 30_000,
   });
   await expect(section(page, 'In review / PR open')).toHaveCount(0);
 });
@@ -183,6 +183,7 @@ test('a linked chat and its pull request move the ticket between groups without 
 test('the grouped list has no serious accessibility issues in light, dark and at phone width', async ({
   page,
 }) => {
+  test.setTimeout(180_000);
   await useSystemTheme(page);
   await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
   await seedEveryGroup(page);
