@@ -5,6 +5,7 @@ import type { ScoutMood } from '../brand/BlobScout.tsx';
 import type { BlobExpression } from '../brand/blob-expression.ts';
 import { UserBlob } from '../brand/UserBlob.tsx';
 import { SIDEBAR_HINT, useSidebarLayout } from '../conversations/sidebar-layout.tsx';
+import { RailVersion } from './RailVersion.tsx';
 import { UpdateBlob } from './UpdateBlob.tsx';
 import './rail.css';
 
@@ -195,6 +196,7 @@ export function Rail({
         </svg>
         Settings
       </button>
+      <RailVersion />
     </nav>
   );
 }

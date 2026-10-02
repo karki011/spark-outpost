@@ -29,20 +29,42 @@
   box-shadow: 0 0 0 2px var(--rail);
 }
 
-.upd-blob-bar {
-  width: 30px;
-  height: 3px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: var(--raise);
+@keyframes upd-excited {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  25% {
+    transform: translateY(-1.5px) rotate(-4deg);
+  }
+  75% {
+    transform: translateY(-1.5px) rotate(4deg);
+  }
 }
 
-.upd-blob-bar i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-  transition: width 0.25s var(--out);
+@keyframes upd-squash {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  40% {
+    transform: scale(1.16, 0.8);
+  }
+  70% {
+    transform: scale(0.92, 1.1);
+  }
+}
+
+.upd-blob.downloading .scout .sc-hop {
+  animation: upd-excited 0.5s ease-in-out infinite;
+}
+
+.upd-blob.installing .scout .sc-body {
+  animation: upd-squash 0.8s var(--spring) infinite;
+}
+
+.upd-blob.updated .scout .sc-hop {
+  animation: sc-hop 0.55s var(--spring) 4;
 }
 
 .upd-blob.downloading,
@@ -53,6 +75,18 @@
 
 .upd-blob:disabled {
   cursor: progress;
+}
+
+.upd-blob.ready,
+.upd-blob.updated {
+  color: var(--accent-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-btn.upd-blob .scout .sc-hop,
+  .rail-btn.upd-blob .scout .sc-body {
+    animation: none;
+  }
 }
 
 .upd-toasts {

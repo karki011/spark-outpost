@@ -88,6 +88,34 @@ function GetUpdateRow({ status }: { status: UpdateStatus }) {
   );
 }
 
+function PreviewFlowRow() {
+  const hintId = useId();
+  const [starting, setStarting] = useState(false);
+  const start = async () => {
+    setStarting(true);
+    await sparkDesktop()?.updates.preview();
+    setStarting(false);
+  };
+  return (
+    <SettingRow
+      label="Update preview"
+      doc={{ page: 'updates', heading: 'preview-the-update-flow' }}
+      hint="Dev app only. Fakes the next version, downloads it, restarts and says hello. Your version and data stay the same."
+      hintId={hintId}
+    >
+      <button
+        type="button"
+        className="btn line sm"
+        aria-describedby={hintId}
+        disabled={starting}
+        onClick={() => void start()}
+      >
+        Preview the update flow
+      </button>
+    </SettingRow>
+  );
+}
+
 function UpdateRows({ status }: { status: UpdateStatus }) {
   const versionHint = useId();
   const channelHint = useId();
@@ -118,6 +146,7 @@ function UpdateRows({ status }: { status: UpdateStatus }) {
           <BetaBadge version={status.currentVersion} />
         </span>
       </SettingRow>
+      {status.devBuild && !status.preview && <PreviewFlowRow />}
       {!off && (
         <>
           {offering && <GetUpdateRow status={status} />}

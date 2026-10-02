@@ -158,3 +158,26 @@
     transform: scale(0.94, 1.07);
   }
 }
+.scout.filling .sc-base {
+  --sc-a: var(--line-strong);
+  --sc-b: var(--line-strong);
+}
+.scout .sc-fill-level {
+  transition: transform 0.45s var(--out);
+}
+.scout .sc-wave {
+  animation: sc-wave 1.1s linear infinite;
+}
+@keyframes sc-wave {
+  to {
+    transform: translateX(16px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scout .sc-fill-level {
+    transition: none;
+  }
+  .scout .sc-wave {
+    animation: none;
+  }
+}

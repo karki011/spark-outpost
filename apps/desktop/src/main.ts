@@ -263,6 +263,10 @@ async function launch(): Promise<void> {
       }
     },
     quit: () => shutdown.quit(),
+    relaunch: () => {
+      app.relaunch();
+      shutdown.quit();
+    },
     log: log('updates'),
   });
   companionHost = await startCompanionHost({

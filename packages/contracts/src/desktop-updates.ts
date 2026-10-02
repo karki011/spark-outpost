@@ -19,6 +19,9 @@ export interface UpdateStatus {
   error: string | null;
   skippedVersion: string | null;
   releaseNotesUrl: string | null;
+  devBuild: boolean;
+  preview: boolean;
+  previewUpdatedTo: string | null;
 }
 
 export type InstallResult =

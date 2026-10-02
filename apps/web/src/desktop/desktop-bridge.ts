@@ -51,6 +51,7 @@ export interface SparkDesktop {
     setChannel(channel: UpdateChannel): Promise<UpdateStatus | null>;
     setAutoDownload(on: boolean): Promise<UpdateStatus | null>;
     install(): Promise<InstallResult>;
+    preview(): Promise<UpdateStatus | null>;
     onChange(callback: (status: UpdateStatus) => void): Unsubscribe;
   };
   help?: {

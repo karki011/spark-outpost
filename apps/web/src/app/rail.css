@@ -115,6 +115,37 @@
   flex: 1;
 }
 
+.rail-ver {
+  width: 62px;
+  margin-top: -2px;
+  padding: 2px 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 3px;
+  border-radius: 6px;
+  color: var(--faint);
+  font-size: 10px;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition: color 0.2s;
+}
+
+.rail-ver span {
+  white-space: nowrap;
+}
+
+.rail-ver:hover {
+  color: var(--text);
+}
+
+@media (max-height: 640px) {
+  .rail-ver {
+    display: none;
+  }
+}
+
 .page {
   flex: 1;
   min-width: 0;
@@ -155,7 +186,8 @@
 
   .rail-logo,
   .rail-sp,
-  .rail-ind {
+  .rail-ind,
+  .rail-ver {
     display: none;
   }
 

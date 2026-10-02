@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     setChannel: (channel: string) => ipcRenderer.invoke(IPC.updatesSetChannel, channel),
     setAutoDownload: (on: boolean) => ipcRenderer.invoke(IPC.updatesSetAutoDownload, on),
     install: () => ipcRenderer.invoke(IPC.updatesInstall),
+    preview: () => ipcRenderer.invoke(IPC.updatesPreview),
     onChange: (callback: (status: unknown) => void) => listen(IPC.updatesChanged, callback),
   },
   help: {
