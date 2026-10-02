@@ -41,6 +41,7 @@ export const IPC = {
   helpShowLogs: 'help:show-logs',
   helpOpen: 'help:open',
   helpPending: 'help:pending',
+  privacyOpenFullDiskAccess: 'privacy:open-full-disk-access',
 } as const;
 
 export type DragPhase = 'start' | 'move' | 'end';

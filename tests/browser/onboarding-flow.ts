@@ -41,6 +41,30 @@ export async function holdToConfirm(page: Page, name: string) {
   await page.keyboard.up(' ');
 }
 
+const macAccessHeading = (page: Page) => dialog(page).getByRole('heading', { name: 'Mac access' });
+
+export async function continueFromTools(page: Page, nextHeadingName: string | RegExp) {
+  await continueButton(page).click();
+  const nextHeading = dialog(page).getByRole('heading', { name: nextHeadingName });
+  const next = macAccessHeading(page).or(nextHeading);
+  await expect(next).toBeVisible();
+  if (await macAccessHeading(page).isVisible()) {
+    await expect(dialog(page).getByRole('region', { name: 'Full Disk Access' })).toBeVisible();
+    await continueButton(page).click();
+  }
+}
+
+export async function backPastMacAccess(page: Page) {
+  await dialog(page).getByRole('button', { name: 'Back' }).click();
+  if (
+    await macAccessHeading(page)
+      .isVisible()
+      .catch(() => false)
+  ) {
+    await dialog(page).getByRole('button', { name: 'Back' }).click();
+  }
+}
+
 export async function openApiKeyTab(page: Page) {
   await openTile(page, 'claude');
   await claudeCard(page).getByRole('tab', { name: 'API key' }).click();

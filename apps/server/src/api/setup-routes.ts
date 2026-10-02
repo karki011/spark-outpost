@@ -26,6 +26,7 @@ import {
 import { updateProviderDefaults } from '../persistence/provider-defaults.ts';
 import { advisorEntry, catalogEntry } from '../providers/catalog.ts';
 import type { RunCommand } from '../setup/command.ts';
+import { fullDiskAccessStatus } from '../setup/full-disk-access.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import { sendTestMessage } from '../setup/test-message.ts';
 import { GitInstallerError, gitStatus, openGitInstaller } from '../ship/git.ts';
@@ -80,6 +81,10 @@ export function setupRoutes(deps: SetupDeps): Router {
 
   router.get('/setup/git', async (_req, res) => {
     res.json(await gitStatus(deps.runCommand));
+  });
+
+  router.get('/setup/full-disk-access', async (_req, res) => {
+    res.json(await fullDiskAccessStatus());
   });
 
   router.post('/setup/git/install', async (_req, res) => {

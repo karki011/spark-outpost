@@ -1,8 +1,10 @@
+import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 
 const SAVED = '/Users/tester/Downloads/spark-outpost-diagnostics-2026-10-01-120000.zip';
 const LOGS = '/Users/tester/Library/Application Support/Spark Outpost/logs';
+const SHOTS = path.resolve('test-results/auto-mode-prompts');
 
 async function fakeDesktop(page: Page, save: 'saved' | 'cancelled' = 'saved') {
   await page.addInitScript(
@@ -39,6 +41,11 @@ async function fakeDesktop(page: Page, save: 'saved' | 'cancelled' = 'saved') {
             onOpenFeedback: (listener: () => void) => {
               feedbackListeners.add(listener);
               return () => feedbackListeners.delete(listener);
+            },
+          },
+          privacy: {
+            openFullDiskAccess: async () => {
+              calls.push('openFullDiskAccess');
             },
           },
           onOpenChat: noop,
@@ -170,3 +177,61 @@ test('in the browser, Export diagnostics downloads the zip from the server', asy
     `Downloaded ${file.suggestedFilename()} to your downloads folder.`,
   );
 });
+
+async function routeFullDiskAccess(page: Page, statuses: string[]) {
+  const queue = [...statuses];
+  const last = statuses[statuses.length - 1];
+  await page.route('**/api/setup/full-disk-access', (route) =>
+    route.fulfill({ json: { status: queue.shift() ?? last } }),
+  );
+}
+
+test('Settings → Help opens System Settings to grant Full Disk Access and re-checks', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeDesktop(page);
+  await routeFullDiskAccess(page, ['not_granted', 'granted']);
+  const help = await openHelp(page);
+
+  const card = help.getByRole('region', { name: 'Full Disk Access' });
+  await expect(card).toContainText('Not yet');
+  await expect(card).toContainText('Let Spark read everywhere on your Mac (Full Disk Access)');
+  await expect(card).toContainText("Spark's own approvals");
+  await shot(page, 'settings-help-full-disk-access', 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await shot(page, 'settings-help-full-disk-access', 'dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+
+  await card.getByRole('button', { name: 'Open System Settings' }).click();
+  await expect(card).toContainText('Granted');
+  expect(await read<string[]>(page, 'helpCalls')).toContain('openFullDiskAccess');
+});
+
+test('in the browser, Full Disk Access shows the System Settings steps as text', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await routeFullDiskAccess(page, ['unknown']);
+  const help = await openHelp(page);
+
+  const card = help.getByRole('region', { name: 'Full Disk Access' });
+  await expect(card).toContainText("Can't tell");
+  await expect(card.getByRole('button', { name: 'Open System Settings' })).toHaveCount(0);
+  await expect(card.getByRole('link', { name: /Privacy & Security/ })).toHaveAttribute(
+    'href',
+    'x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles',
+  );
+});
+
+test('Full Disk Access is hidden outside macOS', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await routeFullDiskAccess(page, ['unsupported']);
+  const help = await openHelp(page);
+  await expect(help.getByRole('region', { name: 'Full Disk Access' })).toHaveCount(0);
+});
+
+async function shot(page: Page, name: string, colorScheme: 'light' | 'dark') {
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(SHOTS, `${name}-${colorScheme}.png`) });
+}

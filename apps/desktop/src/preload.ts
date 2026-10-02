@@ -66,6 +66,9 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     preview: () => ipcRenderer.invoke(IPC.updatesPreview),
     onChange: (callback: (status: unknown) => void) => listen(IPC.updatesChanged, callback),
   },
+  privacy: {
+    openFullDiskAccess: () => ipcRenderer.invoke(IPC.privacyOpenFullDiskAccess),
+  },
   help: {
     info: () => ipcRenderer.invoke(IPC.helpInfo),
     exportDiagnostics: () => ipcRenderer.invoke(IPC.helpExportDiagnostics),

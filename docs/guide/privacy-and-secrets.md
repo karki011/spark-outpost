@@ -2,7 +2,7 @@
 title: Privacy and secrets
 section: Stay in control
 order: 320
-summary: Where keys are stored, why to paste keys only in the app's key field, the warning when a message has a key in it, how Spark redacts secrets, .sparkignore, what leaves your computer, and the anonymous heartbeat.
+summary: Where keys are stored, why to paste keys only in the app's key field, the warning when a message has a key in it, how Spark redacts secrets, .sparkignore, what leaves your computer, the anonymous heartbeat, and Full Disk Access.
 ---
 
 You'll see where Spark Outpost keeps your keys, which files agents never read, and how to keep more files private. About 3 minutes.
@@ -93,6 +93,14 @@ The Mac app tells the Spark Outpost team how many people use it and in which cou
 Cloudflare, which receives it, adds the country. Spark never sends chats, code, file or project names, your name, keys or your IP address, and the IP address isn't stored. Spark in a browser sends nothing.
 
 To turn it off, open **Settings → Help** and turn off **Send anonymous heartbeat**. While it's off, nothing is sent.
+
+## Full Disk Access on Mac
+
+On the Mac app, **Settings → Help → Full Disk Access** is an optional switch that stops macOS from asking every time an agent reads a protected folder, such as `~/Library`, Desktop, Documents or Downloads. It's also offered as a skippable step in setup.
+
+macOS doesn't let apps turn this on themselves. The card's **Open System Settings** button opens **Privacy & Security → Full Disk Access**, where you switch on **Spark Outpost** yourself. Without it, macOS may still ask once per folder the first time an agent reads there, and you can allow those individually instead of granting Full Disk Access.
+
+Full Disk Access only stops macOS's own file-access prompts. It doesn't replace Spark's own approvals before a command or edit runs; see [Approvals and protected paths](approvals.md).
 
 ## What Spark tools never return
 
