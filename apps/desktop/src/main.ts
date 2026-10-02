@@ -13,6 +13,7 @@ import {
 } from './api-port.ts';
 import { waitForApi } from './api-ready.ts';
 import { appearanceFile, readSavedTheme, saveTheme } from './appearance.ts';
+import { startBootTeasers } from './boot-teaser-host.ts';
 import { reportingSteps } from './boot-steps.ts';
 import { channelConfig, channelIcons, channelPaths, resolveChannel } from './channel.ts';
 import { settingsFile } from './companion-settings.ts';
@@ -102,6 +103,11 @@ function log(source: string) {
 }
 
 const mainLog = log('main');
+const bootTeasers = startBootTeasers({
+  userData: paths.userData,
+  version: app.getVersion(),
+  log: log('teasers'),
+});
 
 function supervise(name: string, entry: string, env: NodeJS.ProcessEnv, ready: () => boolean) {
   const tail = new OutputTail();
@@ -121,6 +127,7 @@ function supervise(name: string, entry: string, env: NodeJS.ProcessEnv, ready: (
 }
 
 async function stopEverything(): Promise<void> {
+  await bootTeasers.saveNow();
   await Promise.all(supervisors.map((supervisor) => supervisor.stop()));
   mainLog('API and worker stopped; stopping Postgres.');
   await database?.stop();
@@ -347,6 +354,7 @@ async function launch(): Promise<void> {
     log: log('updates'),
   });
   heartbeat = await scheduleHeartbeat(apiUrl, token);
+  bootTeasers.watch(apiUrl, token);
   companionHost = await startCompanionHost({
     appName: config.appName,
     origin: apiUrl,

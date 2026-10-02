@@ -24,6 +24,7 @@ export const IPC = {
   bootStatus: 'boot:status',
   bootLeave: 'boot:leave',
   bootPainted: 'boot:painted',
+  bootTeasers: 'boot:teasers',
   updatesGet: 'updates:get',
   updatesCheck: 'updates:check',
   updatesSetChannel: 'updates:set-channel',
