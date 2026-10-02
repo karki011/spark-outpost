@@ -2,8 +2,6 @@ import './composer-status.css';
 import { useEffect, useId, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import type { Run } from '@spark-outpost/contracts';
-import { AgentBlob } from '../../brand/AgentBlob.tsx';
-import type { BlobExpression } from '../../brand/blob-expression.ts';
 import { ArrowUpIcon, ChevronIcon } from '../../ui/icons.tsx';
 import { WAITING_KEYS } from '../../ui/Keys.tsx';
 import { hasModifier } from '../../ui/shortcuts.ts';
@@ -11,17 +9,12 @@ import { useTooltip } from '../../ui/Tooltip.tsx';
 import { useExpandReveal } from '../../ui/transitions.tsx';
 import { focusPending, useFocusHandoff } from './focus-pending.ts';
 import { summaryText } from './pending-summary.ts';
-import type { StepActivity } from './step-activity.ts';
+import { Dot, Indicator } from './line-parts.tsx';
+import { RunningLine, runningText } from './RunningLine.tsx';
 import { SummaryText } from './SummaryText.tsx';
 import { clockText } from './status-text.ts';
 import type { PendingEntry, StatusStore } from './status-store.ts';
-import {
-  SLOW_STEP_MS,
-  useNow,
-  useStatusLine,
-  useThrottled,
-  type StatusLine,
-} from './use-status-line.ts';
+import { useStatusLine, useThrottled, type StatusLine } from './use-status-line.ts';
 
 const ANNOUNCE_GAP_MS = 4_000;
 const NO_ENTRIES: readonly PendingEntry[] = [];
@@ -33,11 +26,7 @@ function announcement(line: StatusLine | null): string {
     if (line.entries.length === 1) return `Waiting for you: ${first}`;
     return `${line.entries.length} things are waiting for you. First: ${first}`;
   }
-  if (line.kind === 'running') {
-    const activity = line.activity;
-    if (!activity) return 'Thinking';
-    return activity.target ? `${activity.verb} ${activity.target}` : activity.verb;
-  }
+  if (line.kind === 'running') return runningText(line.worker, line.activity);
   return line.elapsed === null ? line.word : `${line.word} after ${clockText(line.elapsed)}`;
 }
 
@@ -54,38 +43,6 @@ function useWaitingShortcut(entries: readonly PendingEntry[]) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [entries]);
-}
-
-function Dot() {
-  return (
-    <>
-      {' '}
-      <span className="cs-dot" aria-hidden="true">
-        ·
-      </span>{' '}
-    </>
-  );
-}
-
-function Indicator({
-  provider,
-  expression,
-  still = false,
-}: {
-  provider: string;
-  expression: BlobExpression;
-  still?: boolean;
-}) {
-  return (
-    <span className="cs-blob" aria-hidden="true">
-      <AgentBlob
-        provider={provider}
-        size={18}
-        expression={expression}
-        animate={still ? 'hover' : 'always'}
-      />
-    </span>
-  );
 }
 
 function WaitingLine({
@@ -163,41 +120,6 @@ function WaitingLine({
   );
 }
 
-function RunningLine({
-  provider,
-  activity,
-  since,
-}: {
-  provider: string;
-  activity: StepActivity | null;
-  since: number | null;
-}) {
-  const now = useNow(since !== null);
-  const elapsed = since === null ? 0 : now - since;
-  const tip = useTooltip(activity?.full ?? 'Thinking', { side: 'top' });
-  return (
-    <p className="cs-line run">
-      <Indicator provider={provider} expression="thinking" />
-      <span className="cs-word">{activity?.verb ?? 'Thinking…'}</span>
-      {activity?.target && (
-        <>
-          <Dot />
-          <span className="cs-what" {...tip.triggerProps}>
-            {activity.code ? <code>{activity.target}</code> : activity.target}
-          </span>
-        </>
-      )}
-      {elapsed >= SLOW_STEP_MS && (
-        <>
-          <Dot />
-          <span className="cs-time">{clockText(elapsed)}</span>
-        </>
-      )}
-      {tip.tooltip}
-    </p>
-  );
-}
-
 function EndedLine({
   provider,
   word,
@@ -224,7 +146,7 @@ function EndedLine({
 function LineBody({ line, provider }: { line: StatusLine; provider: string }) {
   if (line.kind === 'waiting') return <WaitingLine entries={line.entries} provider={provider} />;
   if (line.kind === 'running') {
-    return <RunningLine provider={line.provider} activity={line.activity} since={line.since} />;
+    return <RunningLine worker={line.worker} activity={line.activity} since={line.since} />;
   }
   return <EndedLine provider={provider} word={line.word} elapsed={line.elapsed} />;
 }

@@ -2,14 +2,15 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { isTerminalRunStatus, type Run, type TerminalRunStatus } from '@spark-outpost/contracts';
 import { runSeconds } from '../turns.ts';
 import { stepActivity, type StepActivity } from './step-activity.ts';
-import { latestWork, type PendingEntry, type StatusStore } from './status-store.ts';
+import { providerName } from '../provider-name.ts';
+import { latestWork, type PendingEntry, type StatusStore, type Worker } from './status-store.ts';
 
 export const DONE_SHOWN_MS = 8_000;
 export const SLOW_STEP_MS = 10_000;
 
 export type StatusLine =
   | { kind: 'waiting'; entries: readonly PendingEntry[] }
-  | { kind: 'running'; provider: string; activity: StepActivity | null; since: number | null }
+  | { kind: 'running'; worker: Worker; activity: StepActivity | null; since: number | null }
   | { kind: 'ended'; word: string; elapsed: number | null };
 
 const ENDED_WORDS: Record<TerminalRunStatus, string> = {
@@ -56,7 +57,12 @@ export function useStatusLine({
     const step = work?.step ?? null;
     return {
       kind: 'running',
-      provider: work?.provider ?? provider,
+      worker: work ?? {
+        id: activeRunId ?? '',
+        name: providerName(provider) || 'The agent',
+        provider,
+        kind: 'agent',
+      },
       activity: step ? stepActivity(step) : null,
       since: step ? work!.since : null,
     };

@@ -124,7 +124,8 @@ function StreamedBody({
   const leads = streamLeads(stream, !live);
   const steps = leads || stored.steps.length === 0 ? stream.steps : stored.steps;
   const streaming = stream.status === 'connecting' || stream.status === 'running';
-  useLiveReport(stored.agent.id, stored.agent.provider, live && streaming, steps);
+  const { id, name, provider } = stored.agent;
+  useLiveReport({ id, name, provider, kind: 'crew' }, live && streaming, steps);
   return (
     <AgentBody
       {...stored}

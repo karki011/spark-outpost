@@ -1,6 +1,13 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { autoContinueAfter, crewChat, crewRepo, resetCrew, send } from './crew-engine.ts';
+import {
+  autoContinueAfter,
+  CREW_REQUEST,
+  crewChat,
+  crewRepo,
+  resetCrew,
+  send,
+} from './crew-engine.ts';
 import { openTestDb, resetTestDatabase } from './database.ts';
 import { shoot } from './docs-seed.ts';
 import { openChats } from './navigation.ts';
@@ -157,10 +164,12 @@ test('while the agent works the line says what it is doing, then Done', async ({
   const runId = run!.id;
   await emit(runId, { type: 'RUN_STARTED', runId, threadId: chatId });
   await openChats(page);
-  await expect(shown(page)).toHaveText('Thinking…');
+  await expect(shown(page)).toHaveText('Fake provider is thinking…');
 
   await emit(runId, stepStarted(`\`${GREP}\``));
-  await expect(shown(page)).toHaveText("Running · git grep -l -i 'AI_USER' -- apps/web/src …");
+  await expect(shown(page)).toHaveText(
+    "Fake provider is working · Running git grep -l -i 'AI_USER' -- apps/web/src …",
+  );
   await expect(line(page).locator('code')).toHaveText("git grep -l -i 'AI_USER' -- apps/web/src …");
   const axe = await new AxeBuilder({ page }).include('.cstatus').analyze();
   expect(axe.violations).toEqual([]);
@@ -168,12 +177,12 @@ test('while the agent works the line says what it is doing, then Done', async ({
 
   await emit(runId, stepFinished(`\`${GREP}\``));
   await emit(runId, stepStarted('Edit `monitors-table.tsx`'));
-  await expect(shown(page)).toHaveText('Editing · monitors-table.tsx');
+  await expect(shown(page)).toHaveText('Fake provider is working · Editing monitors-table.tsx');
   await expect(line(page).locator('.cs-line')).toHaveCount(1);
 
   await emit(runId, stepFinished('Edit `monitors-table.tsx`'));
   await emit(runId, stepStarted('`GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123 gh pr list`'));
-  await expect(shown(page)).toHaveText('Running · gh pr list');
+  await expect(shown(page)).toHaveText('Fake provider is working · Running gh pr list');
   await expect(shown(page)).not.toContainText('ghp_');
   await expect(line(page).locator('.cs-time')).toHaveText(/^1\ds$/, { timeout: 15_000 });
   await expect(line(page).getByRole('status')).not.toHaveText('');
@@ -206,6 +215,35 @@ test('a question from Spark is one line that names the question', async ({ page 
     const questions = card(page, /Spark has a few questions/);
     await expect(questions).toBeInViewport();
     await expect(questions.locator(':focus')).toHaveCount(1);
+  } finally {
+    repo.remove();
+  }
+});
+
+test('during a crew run the line names the crew member at work', async ({ page }) => {
+  test.setTimeout(90_000);
+  await resetCrew();
+  const repo = crewRepo();
+  try {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await crewChat(page, repo, 'Full auto');
+    await page.evaluate(() => {
+      const seen: string[] = [];
+      Object.assign(window, { statusLines: seen });
+      new MutationObserver(() => {
+        const text = document.querySelector('.cstatus .cs-wrap')?.textContent;
+        if (text && seen.at(-1) !== text) seen.push(text);
+      }).observe(document.body, { subtree: true, childList: true, characterData: true });
+    });
+    await send(page, `${CREW_REQUEST} #build #crew`);
+    await expect(page.locator('.crew-turn .crew-foot')).toContainText(/Done 2 agents/, {
+      timeout: 45_000,
+    });
+    await expect(shown(page)).toHaveText(/^Done · \d/);
+    const seen = await page.evaluate(
+      () => (window as unknown as { statusLines: string[] }).statusLines,
+    );
+    expect(seen.some((text) => /^(Bolt|Jev) is (working|thinking|planning)/.test(text))).toBe(true);
   } finally {
     repo.remove();
   }

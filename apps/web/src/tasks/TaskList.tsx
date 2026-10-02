@@ -108,6 +108,11 @@ function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[]
           {label}
         </span>
         {tag && <span className={`ti-tag ${tag.tone}`}>{tag.text}</span>}
+        {item.role && item.agent && (
+          <span className="ti-tag crew" title="A crew member Spark started for this task">
+            Crew
+          </span>
+        )}
         <span className="ti-av" title={agentLine(item)}>
           {item.role && item.agent ? (
             <span className="mb" aria-hidden="true">

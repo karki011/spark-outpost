@@ -1,7 +1,7 @@
 import { createContext, use, useEffect } from 'react';
 import type { RunStep } from '../run-projection.ts';
 import type { PendingSummary } from './pending-summary.ts';
-import type { StatusStore } from './status-store.ts';
+import type { StatusStore, Worker } from './status-store.ts';
 
 export const StatusContext = createContext<StatusStore | null>(null);
 
@@ -25,15 +25,14 @@ function openStep(steps: readonly RunStep[]): string | null {
 }
 
 export function useLiveReport(
-  id: string,
-  provider: string,
+  { id, name, provider, kind }: Worker,
   working: boolean,
   steps: readonly RunStep[],
 ): void {
   const store = use(StatusContext);
   const step = working ? openStep(steps) : null;
   useEffect(() => {
-    store?.report({ id, provider, working, step });
-  }, [store, id, provider, working, step]);
+    store?.report({ id, name, provider, kind, working, step });
+  }, [store, id, name, provider, kind, working, step]);
   useEffect(() => () => store?.forget(id), [store, id]);
 }

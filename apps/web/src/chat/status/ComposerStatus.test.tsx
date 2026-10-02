@@ -213,29 +213,40 @@ describe('waiting for you', () => {
   });
 });
 
+const CLAUDE = { id: 'r', name: 'Claude', provider: 'claude', kind: 'agent' } as const;
+const BOLT = { id: 'b', name: 'Bolt', provider: 'claude', kind: 'crew' } as const;
+const JEV = { id: 'lead', name: 'Jev', provider: 'jev', kind: 'lead' } as const;
+const shown = () => status().querySelector('.cs-wrap')?.textContent;
+
 describe('while the agent works', () => {
-  it('updates one line in place with what the agent is doing', () => {
+  it('updates one line in place with who works and on what', () => {
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
-    expect(status().textContent).toBe('Thinking…');
-    act(() => view.store.report({ id: 'r', provider: 'claude', working: true, step: 'Thinking' }));
-    expect(status().textContent).toBe('Thinking…');
-    act(() =>
-      view.store.report({ id: 'r', provider: 'claude', working: true, step: `\`${GREP}\`` }),
-    );
-    expect(status().textContent).toBe("Running · git grep -l -i 'AI_USER' -- apps/web/src …");
-    act(() =>
-      view.store.report({ id: 'r', provider: 'claude', working: true, step: 'Edit `table.tsx`' }),
-    );
-    expect(status().textContent).toBe('Editing · table.tsx');
+    expect(shown()).toBe('Claude is thinking…');
+    act(() => view.store.report({ ...CLAUDE, working: true, step: 'Thinking' }));
+    expect(shown()).toBe('Claude is thinking…');
+    act(() => view.store.report({ ...CLAUDE, working: true, step: `\`${GREP}\`` }));
+    expect(shown()).toBe("Claude is working · Running git grep -l -i 'AI_USER' -- apps/web/src …");
+    act(() => view.store.report({ ...CLAUDE, working: true, step: 'Edit `table.tsx`' }));
+    expect(shown()).toBe('Claude is working · Editing table.tsx');
     expect(status().querySelectorAll('.cs-line')).toHaveLength(1);
+  });
+
+  it('names the crew member at work, and the lead only while nobody else works', () => {
+    const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
+    act(() => view.store.report({ ...JEV, working: true, step: null }));
+    expect(shown()).toBe('Jev is planning…');
+    act(() => view.store.report({ ...BOLT, working: true, step: null }));
+    expect(shown()).toBe('Bolt is thinking…');
+    act(() => view.store.report({ ...BOLT, working: true, step: 'Read `CLAUDE.md`' }));
+    expect(shown()).toBe('Bolt is working · Reading CLAUDE.md');
+    act(() => view.store.report({ ...BOLT, working: false, step: null }));
+    expect(shown()).toBe('Jev is planning…');
   });
 
   it('adds the elapsed time once a step runs long', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] });
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
-    act(() =>
-      view.store.report({ id: 'r', provider: 'claude', working: true, step: '`pnpm test`' }),
-    );
+    act(() => view.store.report({ ...CLAUDE, working: true, step: '`pnpm test`' }));
     expect(status().querySelector('.cs-time')).toBeNull();
     await act(() => vi.advanceTimersByTimeAsync(12_000));
     expect(status().querySelector('.cs-time')?.textContent).toBe('12s');
@@ -245,7 +256,7 @@ describe('while the agent works', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'Date'] });
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
     view.rerender({ approvals: [], runs: [run('succeeded')], active: null });
-    expect(status().textContent).toBe('Done · 2m 14s');
+    expect(shown()).toBe('Done · 2m 14s');
     await act(() => vi.advanceTimersByTimeAsync(9_000));
     expect(status().dataset.state).toBe('idle');
   });
@@ -255,17 +266,15 @@ describe('while the agent works', () => {
     const view = show({ approvals: [], runs: [run('running')], active: RUN_ID });
     const said = () => within(status()).getByRole('status').textContent;
     await act(() => vi.advanceTimersByTimeAsync(0));
-    expect(said()).toBe('Thinking');
+    expect(said()).toBe('Claude is thinking…');
     for (const file of ['a.ts', 'b.ts', 'c.ts']) {
-      act(() =>
-        view.store.report({ id: 'r', provider: 'claude', working: true, step: `Read \`${file}\`` }),
-      );
+      act(() => view.store.report({ ...CLAUDE, working: true, step: `Read \`${file}\`` }));
       await act(() => vi.advanceTimersByTimeAsync(500));
     }
-    expect(said()).toBe('Thinking');
-    expect(status().textContent).toContain('Reading · c.ts');
+    expect(said()).toBe('Claude is thinking…');
+    expect(shown()).toContain('Reading c.ts');
     await act(() => vi.advanceTimersByTimeAsync(3_000));
-    expect(said()).toBe('Reading c.ts');
+    expect(said()).toBe('Claude is working: Reading c.ts');
   });
 });
 

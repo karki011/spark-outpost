@@ -6,9 +6,16 @@ export interface PendingEntry {
   summary: PendingSummary;
 }
 
-export interface LiveInput {
+export type WorkerKind = 'agent' | 'crew' | 'lead';
+
+export interface Worker {
   id: string;
+  name: string;
   provider: string;
+  kind: WorkerKind;
+}
+
+export interface LiveInput extends Worker {
   working: boolean;
   step: string | null;
 }
@@ -44,8 +51,13 @@ function sameEntry(a: PendingEntry | undefined, b: PendingEntry): boolean {
 }
 
 function sameReport(a: LiveReport | undefined, b: LiveInput): boolean {
+  if (!a) return false;
   return (
-    a !== undefined && a.provider === b.provider && a.working === b.working && a.step === b.step
+    a.name === b.name &&
+    a.kind === b.kind &&
+    a.provider === b.provider &&
+    a.working === b.working &&
+    a.step === b.step
   );
 }
 
@@ -86,10 +98,18 @@ export function createStatusStore(now: () => number = Date.now): StatusStore {
   };
 }
 
+function rank(report: LiveReport): number {
+  return (report.step ? 2 : 0) + (report.kind === 'lead' ? 0 : 1);
+}
+
+function shownFirst(a: LiveReport, b: LiveReport): boolean {
+  return rank(a) > rank(b) || (rank(a) === rank(b) && a.since >= b.since);
+}
+
 export function latestWork(live: readonly LiveReport[]): LiveReport | null {
   const working = live.filter((report) => report.working);
   return working.reduce<LiveReport | null>(
-    (latest, report) => (latest && latest.since >= report.since ? latest : report),
+    (latest, report) => (latest && shownFirst(latest, report) ? latest : report),
     null,
   );
 }

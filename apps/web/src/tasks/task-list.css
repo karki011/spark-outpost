@@ -217,7 +217,8 @@
   white-space: nowrap;
 }
 
-.ti-tag.ok {
+.ti-tag.ok,
+.ti-tag.crew {
   color: var(--muted);
   background: var(--raise);
 }

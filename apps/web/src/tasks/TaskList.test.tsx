@@ -44,4 +44,22 @@ describe('commands in the Work panel', () => {
     expect(full).toContain(GREP);
     expect(full).not.toContain('ghp_');
   });
+
+  it('marks rows that a crew member owns', () => {
+    localStorage.clear();
+    const builder: TaskListItem = {
+      id: 'run:1',
+      label: 'Bolt · Builder',
+      state: 'active',
+      role: 'builder',
+      name: 'Bolt',
+      agent: { provider: 'claude', model: null, effort: null },
+    };
+    const step: TaskListItem = { id: 'plan:1', label: 'Write the export', state: 'pending' };
+    render(<TaskList items={[builder, step]} roots={[]} />);
+    expect(screen.getByRole('button', { name: /Bolt · Builder/ }).textContent).toContain('Crew');
+    expect(screen.getByRole('button', { name: /Write the export/ }).textContent).not.toContain(
+      'Crew',
+    );
+  });
 });
