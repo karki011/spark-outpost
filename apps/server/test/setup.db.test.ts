@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { VerifyEvent } from '@spark-outpost/contracts';
 import type { RunCommand } from '../src/setup/command.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
-import { createTestApp, jsonResponse, localClient } from './app-support.ts';
+import { createTestApp, installedClis, jsonResponse, localClient, noClis } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 const VALID_CLAUDE_KEY = `sk-ant-api03-${'x'.repeat(24)}4f2a`;
@@ -29,7 +29,9 @@ const anthropicModels = {
 };
 
 function appWith(options: { fetch?: typeof fetch; runCommand?: RunCommand } = {}) {
-  const { get, send } = localClient(createTestApp(t, { ...options, secrets }));
+  const { get, send } = localClient(
+    createTestApp(t, { runCommand: installedClis, ...options, secrets }),
+  );
   return {
     get,
     send,
@@ -101,13 +103,14 @@ describe('API key verification', () => {
 
     const events = await app.verify('claude', { method: 'api_key', apiKey: VALID_CLAUDE_KEY });
 
-    expect(
-      events.filter((event) => event.type !== 'step_started').map((event) => event.type),
-    ).toEqual(['step_succeeded', 'step_succeeded', 'step_succeeded', 'connected']);
-    expect(events).toContainEqual({
-      type: 'step_succeeded',
-      label: 'Opus, Sonnet, and Haiku are available',
-    });
+    const passed = events.filter((event) => event.type === 'step_succeeded');
+    expect(passed.map((event) => event.label)).toEqual([
+      'Found `claude 1.0.0` at `/usr/local/bin/claude`',
+      'Format looks right',
+      'Key accepted',
+      'Opus, Sonnet, and Haiku are available',
+    ]);
+    expect(events.at(-1)?.type).toBe('connected');
     expect(requests[0]?.headers.get('x-api-key')).toBe(VALID_CLAUDE_KEY);
     expect(await secrets.get('claude')).toBe(VALID_CLAUDE_KEY);
 
@@ -166,7 +169,7 @@ describe('API key verification', () => {
 
 describe('local CLI verification', () => {
   it('explains how to install a missing CLI', async () => {
-    const events = await appWith().verify('codex', { method: 'cli' });
+    const events = await appWith({ runCommand: noClis }).verify('codex', { method: 'cli' });
     expect(events.at(-1)).toMatchObject({
       type: 'step_failed',
       label: expect.stringContaining('npm i -g @openai/codex'),

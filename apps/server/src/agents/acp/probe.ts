@@ -8,6 +8,7 @@ import type { SecretStore } from '../../setup/secrets.ts';
 import type { AgentDefinition, AgentLaunch } from './agents.ts';
 import { startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
+import { cliEnvironment, type CliLocator } from './agent-cli.ts';
 import { capabilitiesFrom, offeredCapabilities, sessionCapabilities } from './capabilities.ts';
 import { findOption } from './session-config.ts';
 import { CLIENT_CAPABILITIES, CLIENT_INFO } from './client-info.ts';
@@ -15,6 +16,7 @@ import { assertProtocolVersion, toProviderError } from './errors.ts';
 
 export interface ProbeOptions {
   launch?: AgentLaunch;
+  locateCli?: CliLocator;
   env?: Record<string, string>;
   secrets?: Pick<SecretStore, 'get'>;
   timeoutMs?: number;
@@ -30,7 +32,8 @@ export async function probeCapabilities(
   let agent: AgentProcess | null = null;
   const timer = new AbortController();
   try {
-    const env = await agentEnvironment({ ...options, definition }, workdir);
+    const cli = options.launch ? {} : await cliEnvironment(definition, options.locateCli);
+    const env = { ...(await agentEnvironment({ ...options, definition }, workdir)), ...cli };
     agent = startAgentProcess(options.launch ?? definition.launch(), workdir, env);
     const running = agent;
     const read = acp.client(CLIENT_INFO).connectWith(running.stream, async (ctx) => {

@@ -6,6 +6,7 @@ import type { Provider } from '../providers/provider.ts';
 import { childEnvironment } from '../setup/environment.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import type { SparkToolsAccess } from '../agents/acp/spark-tools.ts';
+import type { CliLocator } from '../agents/acp/agent-cli.ts';
 
 export type AgentRuntime = 'acp' | 'fake';
 
@@ -62,6 +63,7 @@ export function createProviders(
   fakeAcpAgent?: string,
   secrets?: Secrets,
   sparkTools?: SparkToolsAccess,
+  locateCli?: CliLocator,
 ): Map<string, Provider> {
   const fake = createFakeProvider();
   const providers = new Map<string, Provider>([[FAKE_PROVIDER_NAME, fake]]);
@@ -71,6 +73,7 @@ export function createProviders(
         definition.id,
         createAcpProvider({
           definition,
+          ...(locateCli ? { locateCli } : {}),
           ...(secrets ? { secrets } : {}),
           ...(sparkTools ? { sparkTools } : {}),
         }),

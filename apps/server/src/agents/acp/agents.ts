@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import type { ProviderId } from '@spark-outpost/contracts';
 import { BUILDER_GIT_OPS, PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
+import type { AgentCli } from './agent-cli.ts';
 import {
   CODEX_DO_MODE,
   CODEX_READ_ONLY_MODE,
@@ -36,6 +37,7 @@ export interface AgentOffers {
 export interface AgentDefinition {
   id: ProviderId;
   name: string;
+  cli: AgentCli;
   launch: () => AgentLaunch;
   keyEnvironment?: (apiKey: string) => Promise<Record<string, string>>;
   offers?: AgentOffers;
@@ -260,12 +262,14 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
   claude: {
     id: 'claude',
     name: 'Claude',
+    cli: 'claude',
     launch: () => packageBin(CLAUDE_ACP),
     ...claudeSessions,
   },
   codex: {
     id: 'codex',
     name: 'Codex',
+    cli: 'codex',
     launch: () => packageBin('@agentclientprotocol/codex-acp'),
     repoStyle: 'codex',
     conversationMode: CODEX_READ_ONLY_MODE,
@@ -279,6 +283,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
   zai: {
     id: 'zai',
     name: 'Z.ai (GLM)',
+    cli: 'claude',
     launch: zaiLaunch,
     ...claudeSessions,
     keyEnvironment: (apiKey) => zaiLaunchEnvironment(apiKey),

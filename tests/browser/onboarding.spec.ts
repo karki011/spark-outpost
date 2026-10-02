@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { resetTestDatabase } from './database.ts';
+import { resetTestDatabase, uninstallFakeClaude } from './database.ts';
 import { REJECTED_KEY_MARKER } from './stub-config.ts';
 
 const CLAUDE_KEY = `sk-ant-api03-${'a'.repeat(24)}4f2a`;
@@ -156,6 +156,7 @@ const terminalText = (scope: ReturnType<typeof card>) =>
 test('a missing CLI opens a terminal with the install command and checks again after install', async ({
   page,
 }) => {
+  uninstallFakeClaude();
   await enterName(page, 'Hazel');
   const claude = card(page, 'Claude');
   await openTile(page, 'Claude');
@@ -184,6 +185,23 @@ test('a missing CLI opens a terminal with the install command and checks again a
   await terminalIn(claude).getByRole('button', { name: 'Dismiss' }).click();
   await expect(terminalIn(claude)).toHaveCount(0);
   await expect(claude.getByRole('button', { name: 'Open terminal' })).toBeVisible();
+});
+
+test('API key mode needs the claude CLI and offers the same install step', async ({ page }) => {
+  uninstallFakeClaude();
+  await enterName(page, 'Hazel');
+  const claude = card(page, 'Claude');
+  const key = await openApiKeyTab(page);
+  await expect(claude).toContainText('API key mode also needs the claude CLI installed.');
+  await key.fill(CLAUDE_KEY);
+  await key.press('Enter');
+
+  await expect(terminalIn(claude)).toContainText('Install Claude');
+  await expect(terminalIn(claude)).toContainText(
+    'API key mode also needs the claude CLI installed.',
+  );
+  await expect(terminalText(claude)).toContainText('npm i -g @anthropic-ai/claude-code');
+  await expect(continueButton(page)).toBeDisabled();
 });
 
 test('an installed but logged-out CLI goes straight to login and connects by itself', async ({

@@ -5,7 +5,8 @@ import { REJECTED_KEY_MARKER } from './stub-config.ts';
 import { openChats } from './navigation.ts';
 
 const ZAI_KEY = 'b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6.GlmTestTail';
-const NOTE = 'Uses your Z.ai API key and Z.ai billing; never your Claude account.';
+const NOTE =
+  'Runs through the claude CLI with your Z.ai API key and Z.ai billing; never your Claude account.';
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: true });

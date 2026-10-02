@@ -34,6 +34,10 @@ const effort = (id: string, label: string, description: string): Choice => ({
   unavailableReason: null,
 });
 
+const CLAUDE_PACKAGE = '@anthropic-ai/claude-code';
+const CLAUDE_INSTALL_COMMAND = `npm i -g ${CLAUDE_PACKAGE}`;
+const CLAUDE_INSTALL_HINT = `Install it with \`${CLAUDE_INSTALL_COMMAND}\` (or Anthropic's native installer), then try again.`;
+
 export const catalog: readonly CatalogEntry[] = [
   {
     id: 'claude',
@@ -41,14 +45,14 @@ export const catalog: readonly CatalogEntry[] = [
     maker: 'Anthropic',
     cli: 'claude',
     keyPrefix: 'sk-ant-',
-    keyHint: "Find it in the Claude Console under API keys. It's stored in your system keychain.",
+    keyHint:
+      "Find it in the Claude Console under API keys. It's stored in your system keychain. API key mode also needs the claude CLI installed.",
     keyLink: { text: 'Claude Console', url: 'https://platform.claude.com/settings/keys' },
     note: null,
-    installHint:
-      'Install it with `npm i -g @anthropic-ai/claude-code`, run `claude` once to log in, then try again.',
+    installHint: CLAUDE_INSTALL_HINT,
     loginHint: 'Run `claude auth login` in a terminal, then try again.',
-    packageName: '@anthropic-ai/claude-code',
-    installCommand: 'npm i -g @anthropic-ai/claude-code',
+    packageName: CLAUDE_PACKAGE,
+    installCommand: CLAUDE_INSTALL_COMMAND,
     loginCommand: 'claude auth login',
     methods: ['cli', 'api_key'],
     doAvailable: true,
@@ -66,10 +70,12 @@ export const catalog: readonly CatalogEntry[] = [
     maker: 'OpenAI',
     cli: 'codex',
     keyPrefix: 'sk-',
-    keyHint: "Find it in the OpenAI dashboard under API keys. It's stored in your system keychain.",
+    keyHint:
+      "Find it in the OpenAI dashboard under API keys. It's stored in your system keychain. API key mode also needs the codex CLI installed.",
     keyLink: { text: 'OpenAI dashboard', url: 'https://platform.openai.com/api-keys' },
     note: null,
-    installHint: 'Install it with `npm i -g @openai/codex`, run `codex login`, then try again.',
+    installHint:
+      'Install it with `npm i -g @openai/codex` (or `brew install --cask codex`), then try again.',
     loginHint: 'Run `codex login` in a terminal, then try again.',
     packageName: '@openai/codex',
     installCommand: 'npm i -g @openai/codex',
@@ -87,15 +93,15 @@ export const catalog: readonly CatalogEntry[] = [
     id: 'zai',
     name: 'Z.ai (GLM)',
     maker: 'Z.ai',
-    cli: '',
+    cli: 'claude',
     keyPrefix: '',
     keyHint: "Create one in the Z.ai console under API keys. It's stored in your system keychain.",
     keyLink: { text: 'Z.ai console', url: 'https://z.ai/manage-apikey/apikey-list' },
-    note: 'Uses your Z.ai API key and Z.ai billing; never your Claude account.',
-    installHint: '',
+    note: 'Runs through the claude CLI with your Z.ai API key and Z.ai billing; never your Claude account.',
+    installHint: CLAUDE_INSTALL_HINT,
     loginHint: '',
-    packageName: '',
-    installCommand: '',
+    packageName: CLAUDE_PACKAGE,
+    installCommand: CLAUDE_INSTALL_COMMAND,
     loginCommand: '',
     methods: ['api_key'],
     doAvailable: true,
