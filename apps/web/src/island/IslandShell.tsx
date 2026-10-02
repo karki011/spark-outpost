@@ -275,7 +275,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
         ref={islandRef}
         className={classes.join(' ')}
         role="region"
-        aria-label="Spark companion"
+        aria-label="Spark Island"
         data-view={view.kind}
         style={
           {
@@ -325,7 +325,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
             aria-label={
               props.waiting > 0
                 ? `Spark: ${props.waiting} need you. Open sessions`
-                : 'Open Spark companion'
+                : 'Open Spark Island'
             }
             onClick={props.onScout}
           />

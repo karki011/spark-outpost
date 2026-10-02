@@ -102,7 +102,7 @@ test('the island Quick chat and Ask warn before sending a key', async ({ page })
   await resetTestDatabase({ onboarded: true });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/island');
-  const island = page.getByRole('region', { name: 'Spark companion' });
+  const island = page.getByRole('region', { name: 'Spark Island' });
   await expect(island).toBeVisible();
 
   await page.keyboard.press('Alt+Space');

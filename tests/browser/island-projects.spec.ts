@@ -13,7 +13,7 @@ test.beforeAll(() => {
 
 test.afterAll(() => rmSync(base, { recursive: true, force: true }));
 
-const island = (page: Page) => page.getByRole('region', { name: 'Spark companion' });
+const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 
 async function link(page: Page, name: string) {
   const response = await page.request.post('/api/projects', {

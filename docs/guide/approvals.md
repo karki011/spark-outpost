@@ -142,7 +142,7 @@ The **If you don't answer a question** setting in **Settings → Spark** doesn't
 - On **Home**, under **What needs you today**. Select **Answer** to jump to the card.
 - In the chat list (**Asking permission**) and as a count on **Chats** in the rail.
 - In the chat's **Work** panel, under **Waiting for you**, with a **Review** button.
-- In the desktop app's companion under the notch, where you can press **Y** to allow or **N** to deny. See [The desktop companion](desktop-companion.md).
+- In the desktop app's Spark Island at the top of the screen, where you can press **Y** to allow or **N** to deny. See [Spark Island](desktop-companion.md).
 
 ## See what was allowed
 

@@ -17,7 +17,7 @@ test.beforeAll(() => {
 
 test.afterAll(() => rmSync(base, { recursive: true, force: true }));
 
-const island = (page: Page) => page.getByRole('region', { name: 'Spark companion' });
+const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 const scene = (page: Page) => page.locator('.isl-drop');
 
 interface FakeFile {

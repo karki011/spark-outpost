@@ -19,7 +19,7 @@ Every agent in every chat gets Spark's own tools, named `spark_*`. With them, an
    - "How do I allow a command in the whole project?"
 3. The agent looks it up with its Spark tools and answers. How-to answers come from this guide, with a link to the right page.
 
-In the desktop app, you can also ask from anywhere with **Ask** in the companion. See [Ask Spark](companion-quick-chat.md#ask-spark).
+In the desktop app, you can also ask from anywhere with **Ask** in Spark Island. See [Ask Spark](companion-quick-chat.md#ask-spark).
 
 ## Which tool answers what
 
@@ -63,4 +63,4 @@ If a tool reads private data, such as your chats or spend, Spark asks before any
 
 > **Tip:** If an agent can't answer a Spark question, ask it to "check the Spark guide". It then searches these pages with `spark_docs`.
 
-**Next:** [The desktop companion](desktop-companion.md)
+**Next:** [Spark Island](desktop-companion.md)

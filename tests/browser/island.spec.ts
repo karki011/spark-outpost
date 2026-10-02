@@ -7,7 +7,7 @@ import { seedChats } from './sidebar-seed.ts';
 
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
 
-const island = (page: Page) => page.getByRole('region', { name: 'Spark companion' });
+const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 
 async function sql(text: string, values: unknown[] = []) {
   const db = openTestDb();

@@ -57,7 +57,7 @@ A chat says "… is rate limited. Try again in a minute." Wait a minute and send
 ## A run seems stuck
 
 1. Check whether it's waiting for you. Look for a card under **Waiting for you** above the message box, or on **Home** under **What needs you today**.
-2. To ask what it's doing without interrupting it, open the chat's **Work** panel, or use **Ask for update** in the desktop companion.
+2. To ask what it's doing without interrupting it, open the chat's **Work** panel, or use **Ask for update** in Spark Island.
 3. To stop it, select **Stop** in the message box. The turn says "Stopped before finishing." Then send a new message to try again.
 
 If Spark Outpost stopped while a run was working, the run says its outcome is unknown. Nothing is retried on its own, so send the request again.

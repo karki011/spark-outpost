@@ -28,7 +28,7 @@ export function islandWindowOptions(preload: string, at: Point): BrowserWindowCo
     hiddenInMissionControl: true,
     roundedCorners: false,
     type: 'panel',
-    title: 'Spark companion',
+    title: 'Spark Island',
     webPreferences: {
       preload,
       contextIsolation: true,
@@ -57,7 +57,7 @@ export function trayTemplate(state: TrayState, actions: TrayActions): MenuItemCo
     ...(state.supported
       ? [
           {
-            label: 'Show companion',
+            label: 'Show Spark Island',
             type: 'checkbox' as const,
             checked: state.companionOn,
             click: () => actions.toggleCompanion(!state.companionOn),

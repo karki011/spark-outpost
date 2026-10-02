@@ -24,7 +24,7 @@ const TEXT = [
   '.isl-who',
 ];
 
-const island = (page: Page) => page.getByRole('region', { name: 'Spark companion' });
+const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 
 async function sql(text: string, values: unknown[] = []) {
   const db = openTestDb();
@@ -316,7 +316,7 @@ test('clicking the blob opens Sessions, or Ask when there is nothing recent', as
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/island');
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  const scoutButton = island(page).getByRole('button', { name: 'Open Spark companion' });
+  const scoutButton = island(page).getByRole('button', { name: 'Open Spark Island' });
   await scoutButton.focus();
   await page.keyboard.press('Enter');
   await expect(island(page).getByRole('tab', { name: 'Ask' })).toHaveAttribute(

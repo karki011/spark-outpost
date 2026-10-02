@@ -112,7 +112,7 @@ async function runsByClaude() {
   }
 }
 
-const island = (page: Page) => page.getByRole('region', { name: 'Spark companion' });
+const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 
 async function openIsland(page: Page) {
   await page.goto('/island');

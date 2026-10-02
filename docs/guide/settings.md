@@ -17,7 +17,7 @@ How Spark talks to you and how it works. Rows are grouped:
 | **How Spark works**    | **Spark** (on), **How much Spark does alone** (**Automatic**), **Spend cap per task**, **If you don't answer a question** (**10s**)                  | [Spark autonomy](chats-and-modes.md#spark-autonomy), [If you don't answer](approvals.md#if-you-dont-answer) |
 | **Context compaction** | **Warn when context is** (60%), **Compact automatically at** (80%)                                                                                   | [Long chats and compaction](compaction.md)                                                                  |
 | **Pull requests**      | **Open pull requests as** (**Ready for review**), **When checks still fail in Full auto** (**Open a draft PR**), **Follow up on pull requests** (on) | [Ship and pull requests](ship-and-pull-requests.md)                                                         |
-| **Around the app**     | **Morning brief** (7:00), **Status companion** (**Show**), and in the Mac app **Show companion on desktop** (on), and the two shortcuts              | [The desktop companion](desktop-companion.md)                                                               |
+| **Around the app**     | **Morning brief** (7:00), **Status companion** (**Show**), and in the Mac app **Show Spark Island** (on), and the two shortcuts                      | [Spark Island](desktop-companion.md)                                                                        |
 
 ## AI providers
 

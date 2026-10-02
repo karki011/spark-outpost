@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 
 const SHOTS = process.env.ISLAND_SHOTS ?? '';
-const island = (page: Page) => page.getByRole('region', { name: 'Spark companion' });
+const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 
 const FILLER = Array.from({ length: 60 }, (_, index) => `word${index}`).join(' ');
 const QUESTION = [

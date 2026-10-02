@@ -58,7 +58,7 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   const spark = page.getByRole('dialog', { name: 'Spark' });
-  const toggle = spark.getByRole('switch', { name: 'Show companion on desktop' });
+  const toggle = spark.getByRole('switch', { name: 'Show Spark Island' });
   await expect(toggle).toHaveAttribute('aria-checked', 'false');
   await expect(spark.getByRole('button', { name: 'Change Quick chat shortcut' })).toHaveCount(0);
 
@@ -91,5 +91,5 @@ test('the browser build hides the desktop companion settings', async ({ page }) 
   await page.getByRole('button', { name: 'Settings' }).click();
   const spark = page.getByRole('dialog', { name: 'Spark' });
   await expect(spark.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
-  await expect(spark.getByRole('switch', { name: 'Show companion on desktop' })).toHaveCount(0);
+  await expect(spark.getByRole('switch', { name: 'Show Spark Island' })).toHaveCount(0);
 });
