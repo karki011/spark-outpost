@@ -236,6 +236,8 @@ Architecture notes are in [`docs/architecture`](docs/architecture). The full doc
 
 Found something? Open **Settings → Help → Send feedback** (or **Help → Send Feedback…**), turn on **Include diagnostics** for bugs, and send the draft. Diagnostics hold versions, settings and recent logs, never chats, prompts, file contents, keys or tokens. Nothing is sent without you.
 
+The Mac app sends one anonymous heartbeat a day (a random install ID, the app version and OS; Cloudflare adds the country) so we know how many people use it. Turn it off in **Settings → Help → Send anonymous heartbeat**. See [Privacy and secrets](docs/guide/privacy-and-secrets.md#anonymous-heartbeat).
+
 ## Built with
 
 Electron · React and Vite · Express · PostgreSQL 17 (embedded in the desktop app) · TypeScript and Zod contracts · Agent Client Protocol · MCP · Vitest and Playwright

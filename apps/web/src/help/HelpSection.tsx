@@ -5,6 +5,7 @@ import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import { exportDiagnostics, outcomeText } from './export-diagnostics.ts';
 import { FeedbackForm } from './FeedbackForm.tsx';
+import { HeartbeatSetting } from './HeartbeatSetting.tsx';
 import '../desktop/updates.css';
 import './help.css';
 
@@ -102,8 +103,8 @@ export function HelpSection() {
   return (
     <>
       <p className="lede">
-        Tell the Spark Outpost team what went wrong or what you'd like. Nothing leaves your Mac
-        unless you send it yourself.
+        Tell the Spark Outpost team what went wrong or what you'd like. Diagnostics and feedback
+        leave your Mac only when you send them.
       </p>
       {desktop &&
         (info ? (
@@ -116,6 +117,7 @@ export function HelpSection() {
             <i />
           </div>
         ))}
+      {desktop && <HeartbeatSetting />}
       <DiagnosticsRow />
       <FeedbackForm version={info?.version ?? null} beta={info?.beta ?? false} />
     </>

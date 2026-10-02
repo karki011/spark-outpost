@@ -53,7 +53,7 @@ In the Mac app only: version, **Channel** (**Stable**, or **Beta** in beta build
 
 ## Help
 
-In the Mac app: the version (with a **Beta** label in beta builds) and the **Logs folder** with **Show in Finder**. Everywhere: **Export diagnostics** and **Send feedback**. See [Send diagnostics with a bug report](troubleshooting.md#send-diagnostics-with-a-bug-report).
+In the Mac app: the version (with a **Beta** label in beta builds), the **Logs folder** with **Show in Finder**, and **Send anonymous heartbeat** (on; see [Anonymous heartbeat](privacy-and-secrets.md#anonymous-heartbeat)). Everywhere: **Export diagnostics** and **Send feedback**. See [Send diagnostics with a bug report](troubleshooting.md#send-diagnostics-with-a-bug-report).
 
 ## Reset
 

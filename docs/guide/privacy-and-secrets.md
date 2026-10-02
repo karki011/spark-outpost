@@ -2,7 +2,7 @@
 title: Privacy and secrets
 section: Stay in control
 order: 320
-summary: Where keys are stored, why to paste keys only in the app's key field, the warning when a message has a key in it, how Spark redacts secrets, .sparkignore, and what leaves your computer.
+summary: Where keys are stored, why to paste keys only in the app's key field, the warning when a message has a key in it, how Spark redacts secrets, .sparkignore, what leaves your computer, and the anonymous heartbeat.
 ---
 
 You'll see where Spark Outpost keeps your keys, which files agents never read, and how to keep more files private. About 3 minutes.
@@ -76,10 +76,23 @@ Files that match are treated exactly like secret files:
 | **Your AI provider**                  | Your messages, and the files and command output the agent reads while it works.                              |
 | **Jev**, if connected                 | Short, redacted facts to make a decision, such as your request. Diffs for checks. File contents for the Map. |
 | **GitHub, Jira, Linear, MCP servers** | Only what you or an agent sends them, when they're connected.                                                |
+| **Spark Outpost team**, Mac app only  | The anonymous heartbeat, unless you turn it off. See below.                                                  |
 
 Jev never gets image attachments or your credentials, and the Map never sends it secret files or `.sparkignore` files. With Spark off, Jev isn't called. See [Jev, Spark's advisor](jev.md) and [What Jev reads](map-areas.md#what-jev-reads).
 
-Spark Outpost sends no analytics or telemetry. Your chats and settings stay in a database on your computer.
+Your chats and settings stay in a database on your computer.
+
+## Anonymous heartbeat
+
+The Mac app tells the Spark Outpost team how many people use it and in which country. About 30 seconds after it starts, and then once a day while it runs, it sends:
+
+- a random install ID, made once on your Mac and stored as a hash on our side;
+- the app version, macOS or another OS, and Intel or Apple silicon;
+- whether it's a Stable, Beta or Dev build.
+
+Cloudflare, which receives it, adds the country. Spark never sends chats, code, file or project names, your name, keys or your IP address, and the IP address isn't stored. Spark in a browser sends nothing.
+
+To turn it off, open **Settings → Help** and turn off **Send anonymous heartbeat**. While it's off, nothing is sent.
 
 ## What Spark tools never return
 

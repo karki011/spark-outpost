@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { builderConfig, releaseProblems, signingPlan, updateFeedUrl } from './builder-config.ts';
+import {
+  builderConfig,
+  packagedHeartbeatUrl,
+  releaseProblems,
+  signingPlan,
+  updateFeedUrl,
+} from './builder-config.ts';
 
 const NOTARY = {
   APPLE_ID: 'me@example.com',
@@ -41,6 +47,25 @@ describe('updateFeedUrl', () => {
   });
 });
 
+describe('packagedHeartbeatUrl', () => {
+  const endpoint = 'https://spark-outpost-heartbeat.example.workers.dev/v1/heartbeat';
+
+  it('bakes in the heartbeat address from the environment', () => {
+    expect(packagedHeartbeatUrl({ SPARK_HEARTBEAT_URL: ` ${endpoint} ` })).toBe(endpoint);
+  });
+
+  it('builds without a heartbeat when none is set', () => {
+    expect(packagedHeartbeatUrl({})).toBeNull();
+    expect(packagedHeartbeatUrl({ SPARK_HEARTBEAT_URL: '' })).toBeNull();
+  });
+
+  it('refuses an address that is not https', () => {
+    expect(() => packagedHeartbeatUrl({ SPARK_HEARTBEAT_URL: 'http://example.com/hb' })).toThrow(
+      /must be an https address/,
+    );
+  });
+});
+
 describe('builderConfig', () => {
   const base = {
     stageDir: '/stage',
@@ -79,6 +104,19 @@ describe('builderConfig', () => {
     });
     expect(config.publish).toEqual([{ provider: 'generic', url: 'http://127.0.0.1:8080/feed' }]);
     expect(config.generateUpdatesFilesForAllChannels).toBe(true);
+  });
+
+  it('writes the heartbeat address into the packaged manifest only when set', () => {
+    const endpoint = 'https://spark-outpost-heartbeat.example.workers.dev/v1/heartbeat';
+    const withBeat = builderConfig({
+      ...base,
+      archs: ['x64'],
+      env: { SPARK_HEARTBEAT_URL: endpoint },
+    });
+    const without = builderConfig({ ...base, archs: ['x64'], env: {} });
+
+    expect(withBeat.extraMetadata).toMatchObject({ heartbeatUrl: endpoint });
+    expect(without.extraMetadata).not.toHaveProperty('heartbeatUrl');
   });
 });
 

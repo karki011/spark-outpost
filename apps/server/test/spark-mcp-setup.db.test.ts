@@ -167,6 +167,15 @@ describe('spark_settings', () => {
       askAgainAfterKeepGoingAtPercent: 95,
     });
   });
+
+  it('reports whether the anonymous heartbeat is on', async () => {
+    const read = async () =>
+      (await (tools ?? (await open())).call('spark_settings')).json<Record<string, unknown>>()
+        .anonymousHeartbeat;
+    expect(await read()).toBe(true);
+    await updateProfile(t.db, t.workspaceId, { heartbeat: false });
+    expect(await read()).toBe(false);
+  });
 });
 
 describe('spark_projects and spark_map', () => {

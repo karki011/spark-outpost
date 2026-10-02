@@ -2,9 +2,11 @@ import { cp } from 'node:fs/promises';
 import path from 'node:path';
 import { Arch, type AfterPackContext, type Configuration } from 'electron-builder';
 import { channelConfig } from '../src/channel.ts';
+import { HEARTBEAT_URL_ENV, heartbeatUrl } from '../src/heartbeat.ts';
 
 export const UPDATE_FEED_ENV = 'SPARK_UPDATE_FEED_URL';
 const UPDATE_FEED_URL = '';
+const HEARTBEAT_URL = '';
 
 export type MacArch = 'x64' | 'arm64';
 
@@ -65,6 +67,18 @@ export function updateFeedUrl(env: Env): string | null {
   return url === '' ? null : url;
 }
 
+export function packagedHeartbeatUrl(env: Env): string | null {
+  const value = (env[HEARTBEAT_URL_ENV] ?? HEARTBEAT_URL).trim();
+  if (value === '') return null;
+  const url = heartbeatUrl(value);
+  if (!url) {
+    throw new Error(
+      `${HEARTBEAT_URL_ENV} must be an https address such as https://spark-outpost-heartbeat.<subdomain>.workers.dev/v1/heartbeat.`,
+    );
+  }
+  return url;
+}
+
 function resourcesDir(context: AfterPackContext): string {
   const app = `${context.packager.appInfo.productFilename}.app`;
   return path.join(context.appOutDir, app, 'Contents/Resources');
@@ -96,11 +110,16 @@ export function builderConfig(options: BuilderOptions): Configuration {
   const prod = channelConfig('prod');
   const signing = signingPlan(options.env);
   const feed = updateFeedUrl(options.env);
+  const heartbeat = packagedHeartbeatUrl(options.env);
   return {
     appId: options.appId ?? prod.appId,
     productName: prod.appName,
     electronVersion: options.electronVersion,
-    extraMetadata: { version: options.version, name: options.packageName ?? 'spark-outpost' },
+    extraMetadata: {
+      version: options.version,
+      name: options.packageName ?? 'spark-outpost',
+      ...(heartbeat ? { heartbeatUrl: heartbeat } : {}),
+    },
     directories: { output: options.outputDir },
     npmRebuild: false,
     asar: false,

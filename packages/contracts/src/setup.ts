@@ -130,6 +130,7 @@ export const profileSchema = z.object({
   compactWarnPercent: compactWarnPercentSchema.default(COMPACT_WARN_DEFAULT),
   compactAtPercent: compactAtPercentSchema.default(COMPACT_AT_DEFAULT),
   autoCompact: z.boolean().default(true),
+  heartbeat: z.boolean().default(true),
 });
 export type Profile = z.infer<typeof profileSchema>;
 export type SparkSessionPrefs = Pick<Profile, 'displayName' | 'personality'>;
@@ -164,6 +165,7 @@ export const updateProfileRequestSchema = z
     compactWarnPercent: compactWarnPercentSchema,
     compactAtPercent: compactAtPercentSchema,
     autoCompact: z.boolean(),
+    heartbeat: z.boolean(),
   })
   .partial();
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
