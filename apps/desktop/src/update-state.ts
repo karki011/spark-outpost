@@ -145,9 +145,33 @@ export function installDecision(status: UpdateStatus, activeRuns: number | null)
 
 const MISSING_CHANNEL = /Cannot find channel "(latest|beta)-mac\.yml"/;
 
+const HTTP_STATUS = /\b(?:HttpError: |^)?(\d{3}) [A-Z][A-Za-z ]+/;
+const OFFLINE =
+  /net::ERR_(INTERNET_DISCONNECTED|NAME_NOT_RESOLVED|CONNECTION_\w+|NETWORK_CHANGED|TIMED_OUT|ADDRESS_UNREACHABLE)/;
+const MAX_DETAIL = 160;
+
+function httpMessage(code: number): string | null {
+  if (code === 401 || code === 403)
+    return "The update server isn't accepting requests right now. Try again later.";
+  if (code === 404) return "There's no release on the update feed yet. Check again later.";
+  if (code >= 500) return 'The update server had a problem. Try again later.';
+  return null;
+}
+
 export function updateErrorMessage(message: string): string {
   const missing = MISSING_CHANNEL.exec(message);
-  if (!missing) return message;
-  const name = missing[1] === 'beta' ? 'Beta' : 'Stable';
-  return `There's no ${name} release on the update feed yet. Check again later.`;
+  if (missing) {
+    const name = missing[1] === 'beta' ? 'Beta' : 'Stable';
+    return `There's no ${name} release on the update feed yet. Check again later.`;
+  }
+  if (OFFLINE.test(message)) return "Couldn't reach the update server. Check your connection.";
+  const status = HTTP_STATUS.exec(message);
+  const friendly = status ? httpMessage(Number(status[1])) : null;
+  if (friendly) return friendly;
+  const firstLine =
+    message
+      .split('\n')[0]
+      ?.replace(/<[^>]*>/g, '')
+      .trim() ?? '';
+  return firstLine.length > MAX_DETAIL ? `${firstLine.slice(0, MAX_DETAIL - 1)}…` : firstLine;
 }

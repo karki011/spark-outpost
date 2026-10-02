@@ -158,7 +158,7 @@ function ChatShell({ entering }: { entering: boolean }) {
         revealIslandSettings();
         setSettings('spark');
       }),
-    [],
+    [setSettings],
   );
 
   const openAtCard = (chat: ConversationSummary) => {
