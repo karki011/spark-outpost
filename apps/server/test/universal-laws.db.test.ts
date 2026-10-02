@@ -113,7 +113,7 @@ describe("Chesterton's fence", { timeout: 120_000 }, () => {
     expect(await findingTexts(runId)).toEqual([flagged]);
     expect(await keepCardLaws(runId)).toEqual([flagged]);
     const replies = await assistantReplies(t, runId);
-    expect(replies.at(-1)).toContain(`Worth a look before you keep this:\n- ${flagged}`);
+    expect(replies.at(-1)).toContain(`Worth a look:\n- ${flagged}`);
   });
 
   it('stays quiet when the Builder explains the removal', async () => {

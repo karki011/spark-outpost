@@ -76,7 +76,7 @@ export function keepsByItself(
 
 export function keepReason(level: InvolvementLevel, facts: KeepFacts): string | null {
   if (level !== 'hands-off' || !facts.riskyMigration) return null;
-  return `Automatic asks because ${riskyMigrationReason(facts.riskyMigration)}, outside a worktree.`;
+  return `Automatic asks because ${riskyMigrationReason(facts.riskyMigration)} and the change is in your checkout, not a worktree.`;
 }
 
 export const KEPT_BY_AUTO_EDIT =

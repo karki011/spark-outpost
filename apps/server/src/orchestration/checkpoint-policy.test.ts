@@ -125,7 +125,7 @@ describe('risky migrations found after the Builder', () => {
     const outside = { ...facts, outsideWorktree: true };
     expect(asksToKeep('hands-off', 2, outside)).toBe(true);
     expect(keepReason('hands-off', outside)).toBe(
-      'Automatic asks because the migration it added can lose or rewrite existing data (`ALTER TABLE expenses DROP COLUMN note`), outside a worktree.',
+      'Automatic asks because the migration it added can lose or rewrite existing data (`ALTER TABLE expenses DROP COLUMN note`) and the change is in your checkout, not a worktree.',
     );
     expect(asksToKeep('full-auto', 2, outside)).toBe(false);
   });
