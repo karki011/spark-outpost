@@ -192,7 +192,7 @@
 }
 
 .ti-t.cmd,
-.wp-wait b.cmd {
+.wp-wait b code {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -200,6 +200,12 @@
     12px/1.5 'Geist Mono',
     ui-monospace,
     monospace;
+}
+
+.wp-wait b.cmd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ti-tag {

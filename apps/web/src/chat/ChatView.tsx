@@ -4,6 +4,7 @@ import {
   type AgentCommand,
   type AnnotationInput,
   type Attachment,
+  type Run,
   type TaskOverview,
 } from '@spark-outpost/contracts';
 import { useState } from 'react';
@@ -35,9 +36,9 @@ import { DropOverlay } from './attachments/DropOverlay.tsx';
 import { useAttachments } from './attachments/use-attachments.ts';
 import { useFileDrop } from './attachments/use-file-drop.ts';
 import { Composer } from './Composer.tsx';
-import { DockContext } from './dock/dock-context.ts';
-import { PendingDock } from './dock/PendingDock.tsx';
-import { usePendingDock } from './dock/use-pending-dock.ts';
+import { ComposerStatus } from './status/ComposerStatus.tsx';
+import { StatusContext } from './status/status-context.ts';
+import { createStatusStore } from './status/status-store.ts';
 import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
@@ -57,6 +58,7 @@ import { TalkToChip } from '../teammates/TalkToChip.tsx';
 const NO_REPOS: string[] = [];
 const NO_TASKS: TaskOverview[] = [];
 const NO_COMMANDS: AgentCommand[] = [];
+const NO_RUNS: Run[] = [];
 
 export interface OutgoingMessage {
   content: string;
@@ -145,12 +147,12 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const canAudit = (detail.data?.runs.length ?? 0) > 0;
   const openAudit = canAudit ? () => setAuditOpen(true) : undefined;
   const tickets = useChatTickets(conversationId, (detail.data?.messages.length ?? 0) > 0);
-  const dock = usePendingDock();
+  const [status] = useState(createStatusStore);
   const teammate = detail.data?.conversation.teammate ?? null;
 
   return (
     <ViewChangesContext value={viewChanges}>
-      <DockContext value={dock.api}>
+      <StatusContext value={status}>
         <FileSheetProvider>
           <main className="main" {...drop.handlers}>
             <header className="head">
@@ -207,10 +209,15 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 )}
               </div>
             )}
-            <PendingDock dock={dock} />
             {detail.data?.messages.length === 0 && (
               <TalkToChip conversationId={conversationId} teammate={teammate} />
             )}
+            <ComposerStatus
+              store={status}
+              runs={detail.data?.runs ?? NO_RUNS}
+              activeRunId={running?.id ?? null}
+              provider={detail.data?.settings.provider ?? ''}
+            />
             <Composer
               conversationId={conversationId}
               repos={repos}
@@ -276,7 +283,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             )}
           </AnimatePresence>
         </FileSheetProvider>
-      </DockContext>
+      </StatusContext>
     </ViewChangesContext>
   );
 }

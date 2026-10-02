@@ -15,6 +15,7 @@ import { EffortMeter } from '../composer/EffortMeter.tsx';
 import { isCheckpoint } from '../checkpoints/checkpoint-model.ts';
 import { Markdown } from '../markdown/Markdown.tsx';
 import { shownText, streamLeads, type RunStep } from '../run-projection.ts';
+import { useLiveReport } from '../status/status-context.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { WorkLog } from '../WorkLog.tsx';
 import { shownApprovals } from './crew-items.ts';
@@ -122,6 +123,8 @@ function StreamedBody({
   const stream = useRunStream(stored.agent.id, conversationId, live || !stored.text);
   const leads = streamLeads(stream, !live);
   const steps = leads || stored.steps.length === 0 ? stream.steps : stored.steps;
+  const streaming = stream.status === 'connecting' || stream.status === 'running';
+  useLiveReport(stored.agent.id, stored.agent.provider, live && streaming, steps);
   return (
     <AgentBody
       {...stored}

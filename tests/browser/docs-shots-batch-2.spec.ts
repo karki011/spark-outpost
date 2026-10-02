@@ -126,12 +126,6 @@ test('Spark tools screenshots', async ({ page }) => {
   const card = page.getByRole('group', { name: /Create this ticket\?/ });
   await expect(card).toBeVisible({ timeout: 45_000 });
   await expect(card).toContainText('Nothing happens until you confirm');
-  await page.addStyleTag({ content: '.dock-inner { max-height: none; }' });
-  await shoot(
-    page,
-    IMAGES,
-    'spark-tools-action-card',
-    page.getByRole('region', { name: 'Waiting for you' }),
-  );
+  await shoot(page, IMAGES, 'spark-tools-action-card', card);
   await card.getByRole('button', { name: 'Don’t' }).click();
 });

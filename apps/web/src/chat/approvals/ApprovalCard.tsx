@@ -15,9 +15,10 @@ import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { projectKeys } from '../../api/projects.ts';
 import { HoldToConfirm } from '../../ui/HoldToConfirm.tsx';
 import { CheckIcon, XIcon } from '../../ui/icons.tsx';
-import { Docked } from '../dock/Docked.tsx';
 import { Markdown } from '../markdown/Markdown.tsx';
 import { providerName } from '../provider-name.ts';
+import { approvalSummary } from '../status/pending-summary.ts';
+import { Pending } from '../status/Pending.tsx';
 import { useProjectBranch } from '../project/use-chat-repos.ts';
 import { mergeDecision } from './approval-events.ts';
 import { isAllow, outcome, projectAllowOption, shownOptions } from './approval-outcome.ts';
@@ -138,7 +139,12 @@ export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps)
   const approval = local ? mergeDecision([incoming], local)[0]! : incoming;
   if (approval.status !== 'pending') return <ResolvedApproval approval={approval} />;
   return (
-    <Docked id={approval.id} order={approval.createdAt} label={heading(approval)} pending>
+    <Pending
+      id={approval.id}
+      order={approval.createdAt}
+      summary={approvalSummary(approval, heading(approval))}
+      pending
+    >
       {approval.payload.sparkAction ? (
         <SparkActionCard
           approval={approval}
@@ -148,7 +154,7 @@ export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps)
       ) : (
         <PendingApproval approval={approval} onDecided={setLocal} {...rest} />
       )}
-    </Docked>
+    </Pending>
   );
 }
 

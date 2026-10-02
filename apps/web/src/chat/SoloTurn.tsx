@@ -29,6 +29,7 @@ import {
   type LiveRunStatus,
   type RunProjection,
 } from './run-projection.ts';
+import { useLiveReport } from './status/status-context.ts';
 import { runSeconds } from './turns.ts';
 import { useRunStream } from './use-run-stream.ts';
 import { WorkLog } from './WorkLog.tsx';
@@ -117,6 +118,7 @@ export function SoloTurn({ run, detail, assistantMessage, repo }: SoloTurnProps)
     ? detail.activity[run.id]!
     : (detail.activity[member?.runId ?? ''] ?? []);
   const steps = leads || persistedSteps.length === 0 ? stream.steps : persistedSteps;
+  useLiveReport(run.id, provider, working, steps);
   const persistedText =
     assistantMessage?.content ??
     detail.messages.find((message) => message.role === 'assistant' && message.runId === child?.id)
