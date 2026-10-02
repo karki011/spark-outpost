@@ -7,7 +7,14 @@ import { describe, expect, it } from 'vitest';
 import { crewAgents } from './crew-projection.ts';
 import { checkpoint, member, orchestration } from './test-orchestration.ts';
 import { doingLine, nextChatter, sceneChanges, trimChatter, type TvScene } from './tv-chatter.ts';
-import { askText, decisionLine, pendingAsks, roleSubtitle } from './tv-scene.ts';
+import {
+  askText,
+  decisionLine,
+  lastDecisionLine,
+  pendingAsks,
+  roleSubtitle,
+  spokenDecisionLine,
+} from './tv-scene.ts';
 
 const BUILDER = '00000000-0000-4000-8000-0000000000a1';
 const CRITIC = '00000000-0000-4000-8000-0000000000a3';
@@ -151,6 +158,22 @@ describe('Agent TV scene', () => {
       'Sent Builder: plan → execute · edits',
     );
     expect(decisionLine(undefined)).toBeNull();
+  });
+
+  it('leaves route decisions out of chatter, since the handoff already says who it went to', () => {
+    const route: OrchestrationDecision = {
+      ...decision,
+      kind: 'route',
+      role: 'critic',
+      gate: null,
+      summary: 'Hawk',
+    };
+    const decisions = [decision, route];
+    expect(lastDecisionLine(orchestration({ decisions }))).toBe('Sent Critic: Hawk');
+    expect(spokenDecisionLine(orchestration({ decisions }))).toBe(
+      'Picked plan → execute · edits · 0.86',
+    );
+    expect(spokenDecisionLine(orchestration({ decisions: [route] }))).toBeNull();
   });
 
   it('asks in plain words what an agent needs from you', () => {

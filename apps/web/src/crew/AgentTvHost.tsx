@@ -14,7 +14,7 @@ import { scrollToAnchor } from './scroll-to-anchor.ts';
 import { JEV_ID } from './crew-projection.ts';
 import { coordinatorScene } from './tv-coordinator.ts';
 import { tvListRows } from './tv-list.ts';
-import { lastDecisionLine, pendingAsks } from './tv-scene.ts';
+import { lastDecisionLine, pendingAsks, spokenDecisionLine } from './tv-scene.ts';
 
 interface AgentTvHostProps {
   activeId: string | null;
@@ -71,6 +71,7 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
       stopping={stop.isPending ? (stop.variables ?? null) : null}
       onStop={(runId) => stop.mutate(runId)}
       decision={lastDecisionLine(orchestration)}
+      remark={spokenDecisionLine(orchestration)}
       branch={source?.conversation.branch ?? null}
       onPick={(agentId) => jump(agentAnchor(orchestration.runId, anchored(agentId)))}
       onAsk={(approvalId) => jump(approvalAnchor(approvalId))}

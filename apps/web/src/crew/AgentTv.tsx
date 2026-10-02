@@ -79,6 +79,7 @@ interface AgentTvProps {
   members: readonly CrewAgent[];
   asks: Record<string, TvAsk>;
   decision: string | null;
+  remark: string | null;
   rows: TvRows;
   tags?: Record<string, PieceTag> | null;
   stopping: string | null;
@@ -92,6 +93,7 @@ export function AgentTv({
   members,
   asks,
   decision,
+  remark,
   rows,
   tags = null,
   stopping,
@@ -108,7 +110,7 @@ export function AgentTv({
   const viewport = useViewport();
   const gaze = useMemo(() => (reduced ? null : new StageGaze()), [reduced]);
   const events = useTvEvents(
-    { agents: members, decision },
+    { agents: members, decision: remark },
     { muted, reduced, paused: hidden, asking: Object.keys(asks) },
   );
   const caption = tvCaption(members);

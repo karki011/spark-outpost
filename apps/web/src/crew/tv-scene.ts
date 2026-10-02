@@ -94,8 +94,17 @@ export function decisionLine(decision: OrchestrationDecision | undefined): strin
 }
 
 const OBSERVED: ReadonlySet<string> = new Set(['policy']);
+const UNSPOKEN: ReadonlySet<string> = new Set([...OBSERVED, 'route']);
+
+function lastLine(orchestration: Orchestration, hidden: ReadonlySet<string>): string | null {
+  const shown = orchestration.decisions.filter((decision) => !hidden.has(decision.kind));
+  return decisionLine(shown.at(-1));
+}
 
 export function lastDecisionLine(orchestration: Orchestration): string | null {
-  const shown = orchestration.decisions.filter((decision) => !OBSERVED.has(decision.kind));
-  return decisionLine(shown.at(-1));
+  return lastLine(orchestration, OBSERVED);
+}
+
+export function spokenDecisionLine(orchestration: Orchestration): string | null {
+  return lastLine(orchestration, UNSPOKEN);
 }
