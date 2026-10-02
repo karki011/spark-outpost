@@ -57,16 +57,31 @@ test('arrows walk the areas, Enter opens one as a network and Escape goes back',
   await page.setViewportSize({ width: 1440, height: 900 });
   const projectId = await addProject(page, REPO_ROOT);
   await openMap(page, monoFixture(projectId));
+  const loadedAreaSizes = new Set<number>();
+  page.on('response', (response) => {
+    if (!/\/map\/areas\//.test(response.url())) return;
+    void response
+      .json()
+      .then((body: { nextOffset: number | null; files?: unknown[] }) => {
+        if (body.nextOffset === null && Array.isArray(body.files)) {
+          loadedAreaSizes.add(body.files.length);
+        }
+      })
+      .catch(() => undefined);
+  });
   await expect(sky(page)).toHaveAccessibleName(/21 areas/);
   await sky(page).focus();
   await page.keyboard.press('ArrowRight');
   await expect(live(page)).toContainText(/area, \d+ files\. Press Enter to open\./);
   const announced = (await live(page).textContent()) ?? '';
   const name = announced.split('.')[0]!;
+  const areaFileCount = Number(/(\d+) files/.exec(announced)?.[1]);
   await page.keyboard.press('Enter');
   const crumb = page.locator('.map-crumb');
   await expect(crumb.getByRole('heading', { name })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Area' })).toBeVisible();
+  await expect.poll(() => loadedAreaSizes.has(areaFileCount), { timeout: 10_000 }).toBe(true);
+  await page.waitForTimeout(400);
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('tooltip')).toContainText('on this');
   await expect(live(page)).toContainText('files depend on this');
