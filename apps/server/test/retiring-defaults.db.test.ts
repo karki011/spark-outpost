@@ -11,6 +11,7 @@ import { createDb, POOL_MAX, type Db } from '../src/persistence/db.ts';
 import { migrationsDir, runMigrations } from '../src/persistence/migrate.ts';
 import { getSetupState, saveConnection } from '../src/persistence/setup.ts';
 import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
+import { oldConversation } from './migration-support.ts';
 import { createTestDb, testDatabaseUrl, type TestDb } from './support.ts';
 
 const RETIRING_MIGRATION = '0051_retiring_defaults.sql';
@@ -72,12 +73,12 @@ describe('migrating stored defaults off retiring models', () => {
        WHERE workspace_id = $1`,
       [workspaceId],
     );
-    const pinned = await createConversation(db, workspaceId, randomUUID());
+    const pinned = await oldConversation(db, workspaceId);
     await db.query(`UPDATE conversations SET provider = 'claude', overrides = $2 WHERE id = $1`, [
       pinned.id,
       JSON.stringify({ claude: { model: 'haiku' } }),
     ]);
-    const plain = await createConversation(db, workspaceId, randomUUID());
+    const plain = await oldConversation(db, workspaceId);
     await db.query(`UPDATE conversations SET provider = 'claude' WHERE id = $1`, [plain.id]);
 
     await runMigrations(db);

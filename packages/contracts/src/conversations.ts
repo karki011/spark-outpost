@@ -8,6 +8,7 @@ import { chatSettingsSchema } from './chat-settings.ts';
 import { compactionSchema, continuationSchema } from './compaction.ts';
 import { orchestrationSchema } from './orchestration.ts';
 import { conversationPlansSchema } from './plans.ts';
+import { teammateTagSchema } from './teammates.ts';
 import { messageSourceSchema, runSchema, runStatusSchema, startAsSchema } from './runs.ts';
 import { taskOverviewSchema } from './tasks.ts';
 import { conversationUsageSchema } from './usage.ts';
@@ -72,6 +73,7 @@ export const conversationSummarySchema = z.object({
   titleSource: titleSourceSchema.default('message'),
   category: categorySchema.nullable().default(null),
   branch: z.string().nullable().optional(),
+  teammate: teammateTagSchema.nullable().optional(),
 });
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
 

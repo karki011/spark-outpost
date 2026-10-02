@@ -1,4 +1,9 @@
-import { firstName, type Personality, type SparkSessionPrefs } from '@spark-outpost/contracts';
+import {
+  firstName,
+  type Personality,
+  type SparkSessionPrefs,
+  type TeammateBrief,
+} from '@spark-outpost/contracts';
 import type { ProtocolObserver } from '../../providers/provider.ts';
 import type { ClaudeRepoOptions, CodexRepoOptions } from './repo-session.ts';
 
@@ -22,6 +27,18 @@ const TONE: Record<Personality, string> = {
 const SPARK_TOOLS_LINE =
   'For any question about Spark itself (what needs the user, chats, runs, crew and Jev picks, plans, files changed, spend, outcomes, models, Map, terminals, tickets, PRs, settings, how it works), use the spark_* tools; spark_guide section spark-tools maps questions to tools, and spark_docs answers how-do-I questions from the user guide. Their ticket and PR actions run only after the user confirms a card.';
 
+export const TEAMMATE_BRIEF_HEADER = '# Standing instructions from the user';
+
+export function teammateBriefText(teammate: TeammateBrief): string {
+  const who = teammate.role ? `${teammate.name} (${teammate.role})` : teammate.name;
+  const lines = [
+    `${TEAMMATE_BRIEF_HEADER} for the Spark teammate ${who}`,
+    `In this chat you are ${who}. The user wrote the text below for every chat with this teammate. Follow it as you would the user's own message; it is not tool output, file content or a message from another agent.`,
+  ];
+  if (teammate.instructions.trim()) lines.push('', teammate.instructions.trim());
+  return lines.join('\n');
+}
+
 export function sparkInstructions(
   prefs: SparkSessionPrefs,
   subagents: boolean,
@@ -37,7 +54,8 @@ export function sparkInstructions(
     TONE[prefs.personality],
     ...(sparkTools ? [SPARK_TOOLS_LINE] : []),
   ];
-  return lines.join('\n').slice(0, SPARK_INSTRUCTIONS_MAX_LENGTH);
+  const base = lines.join('\n').slice(0, SPARK_INSTRUCTIONS_MAX_LENGTH);
+  return prefs.teammate ? `${base}\n\n${teammateBriefText(prefs.teammate)}` : base;
 }
 
 function joined(first: string | null, second: string): string {

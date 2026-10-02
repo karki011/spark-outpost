@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { cp, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -41,4 +42,13 @@ export async function oldConnection(
      VALUES ($1, $2, 'cli', 'x', '[]', NULL, $3, $4, 'medium', now())`,
     [workspaceId, provider, permission, level],
   );
+}
+
+export async function oldConversation(db: Db, workspaceId: string): Promise<{ id: string }> {
+  const id = randomUUID();
+  await db.query(
+    `INSERT INTO conversations (id, workspace_id, title) VALUES ($1, $2, 'New chat')`,
+    [id, workspaceId],
+  );
+  return { id };
 }

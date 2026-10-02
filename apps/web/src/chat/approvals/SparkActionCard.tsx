@@ -19,6 +19,7 @@ import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { isAllow } from './approval-outcome.ts';
 import { ObservedNote } from './ObservedNote.tsx';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
+import { TeammateFacts } from '../../teammates/TeammateFacts.tsx';
 
 interface Draft {
   title: string;
@@ -175,6 +176,9 @@ function Facts({ action }: { action: SparkAction }) {
       );
     case 'pr_follow_up_round':
       return <PrRoundFacts action={action} />;
+    case 'create_teammate':
+    case 'update_teammate':
+      return <TeammateFacts action={action} />;
     case 'pr_follow_up':
       return null;
   }

@@ -7,7 +7,7 @@ import { runMigrations } from '../src/persistence/migrate.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { getSetupState } from '../src/persistence/setup.ts';
 import { createTestApp, LOCAL_HEADERS, ORIGIN } from './app-support.ts';
-import { migratedUpTo, oldConnection } from './migration-support.ts';
+import { migratedUpTo, oldConnection, oldConversation } from './migration-support.ts';
 import { connectCliProvider, createTestDb, type TestDb } from './support.ts';
 
 const LEVELS_MIGRATION = '0049_levels_full_auto_ship.sql';
@@ -20,7 +20,7 @@ describe('removing Hands-on', () => {
     const { db } = state;
     const workspaceId = await ensureLocalWorkspace(db);
     await oldConnection(db, workspaceId, 'claude', 'do', 'hands-on');
-    const conversation = await createConversation(db, workspaceId, randomUUID());
+    const conversation = await oldConversation(db, workspaceId);
     await db.query('UPDATE conversations SET overrides = $2 WHERE id = $1', [
       conversation.id,
       JSON.stringify({
@@ -83,7 +83,7 @@ describe('provider modes from the old permission levels (migration 0050)', () =>
     await oldConnection(db, workspaceId, 'claude', 'do', 'full-auto');
     await oldConnection(db, workspaceId, 'codex', 'ask', 'balanced');
     await oldConnection(db, workspaceId, 'zai', 'do', 'hands-off');
-    const conversation = await createConversation(db, workspaceId, randomUUID());
+    const conversation = await oldConversation(db, workspaceId);
     await db.query('UPDATE conversations SET overrides = $2 WHERE id = $1', [
       conversation.id,
       JSON.stringify({

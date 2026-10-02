@@ -47,6 +47,9 @@ function cardTitle(action: SparkAction): string {
   const question = sparkActionLabels[action.action].question;
   if (action.action === 'create_ticket') return `${question} ${action.title}`;
   if (action.action === 'open_pr') return `${question} ${action.title}`;
+  if (action.action === 'create_teammate' || action.action === 'update_teammate') {
+    return `${question} ${action.name}`;
+  }
   if (action.action === 'pr_follow_up' || action.action === 'pr_follow_up_round') {
     return `${question} ${action.repo}#${action.number}`;
   }

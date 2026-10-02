@@ -19,6 +19,10 @@ How Spark talks to you and how it works. Rows are grouped:
 | **Pull requests**      | **Open pull requests as** (**Ready for review**), **When checks still fail in Full auto** (**Open a draft PR**), **Follow up on pull requests** (on) | [Ship and pull requests](ship-and-pull-requests.md)                                                         |
 | **Around the app**     | **Morning brief** (7:00), **Status companion** (**Show**), and in the Mac app **Show Spark Island** (on), and the two shortcuts                      | [Spark Island](desktop-companion.md)                                                                        |
 
+## Sparks
+
+Your named teammates: each one's face, role and state, with **Edit** and **New Spark**. Editing opens the same sheet as on Home. See [Sparks, your named teammates](sparks.md).
+
 ## AI providers
 
 Connect, test and disconnect Claude, Codex and Z.ai, pick the default provider and each one's **Defaults for new chats**. Jev is under **Advisor**, with **Check changes with Jev**. See [Connect an AI provider](connect-a-provider.md) and [Jev, Spark's advisor](jev.md).

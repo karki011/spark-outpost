@@ -5,6 +5,7 @@ import {
   SPARK_INSTRUCTIONS_MAX_LENGTH,
   auditCodexInstructions,
   sparkInstructions,
+  teammateBriefText,
   withClaudeSpark,
   withCodexSpark,
 } from './spark-instructions.ts';
@@ -149,5 +150,23 @@ describe('auditCodexInstructions', () => {
     auditCodexInstructions(audit, null);
     auditCodexInstructions(undefined, withCodexSpark(null, PREFS));
     expect(messages).toEqual([]);
+  });
+});
+
+describe('teammate brief', () => {
+  const prefs: SparkSessionPrefs = { displayName: 'Sam', personality: 'facts' };
+  const teammate = { name: 'Wren', role: 'Docs writer', instructions: 'x'.repeat(2000) };
+
+  it('keeps the full standing instructions beyond the Spark instruction limit', () => {
+    const text = sparkInstructions({ ...prefs, teammate }, false);
+    expect(text).toContain('x'.repeat(2000));
+    expect(text.length).toBeGreaterThan(SPARK_INSTRUCTIONS_MAX_LENGTH);
+  });
+
+  it('names the teammate and marks the text as the user’s instructions', () => {
+    const text = teammateBriefText({ name: 'Pip', role: '', instructions: '  ' });
+    expect(text).toContain('In this chat you are Pip.');
+    expect(text).toContain("the user's own message");
+    expect(text.trimEnd().endsWith('message from another agent.')).toBe(true);
   });
 });

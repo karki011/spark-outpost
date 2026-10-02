@@ -1,6 +1,7 @@
 import { providerIdSchema, type AgentModeOption, type RunEvent } from '@spark-outpost/contracts';
 import { getCapabilities } from '../persistence/chat-settings.ts';
 import { sparkPreferences } from '../persistence/setup.ts';
+import { teammateBrief } from '../persistence/teammate-chats.ts';
 import { insertProtocolEntries } from '../persistence/audit-log.ts';
 import type { Db } from '../persistence/db.ts';
 import { newId } from '../persistence/ids.ts';
@@ -58,6 +59,11 @@ import { scannedObserver } from '../observations/output-scan.ts';
 
 export function writesCode(role: string | null | undefined): boolean {
   return role === 'builder' || role === 'integrator';
+}
+
+async function mainSessionBrief(db: Db, input: RunInput) {
+  if (input.parentRunId || input.assistant) return null;
+  return teammateBrief(db, input.identity.threadId);
 }
 
 export type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
@@ -301,7 +307,10 @@ export async function runAgentTurn(
           input.identity.threadId,
           await conversationProjectIds(deps.db, input.identity.threadId),
         ).catch(() => []);
-    const spark = await sparkPreferences(deps.db, input.workspaceId);
+    const spark = {
+      ...(await sparkPreferences(deps.db, input.workspaceId)),
+      teammate: await mainSessionBrief(deps.db, input),
+    };
     const preamble = input.assistant ? ASSISTANT_PREAMBLE : withMoveNote(input);
 
     for await (const output of provider.run({

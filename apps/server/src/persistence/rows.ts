@@ -1,6 +1,8 @@
 import {
   agentRoleSchema,
   categorySchema,
+  faceFromName,
+  teammateFaceSchema,
   titleSourceSchema,
   type AgentRole,
   type Attachment,
@@ -13,6 +15,7 @@ import {
   type RunStatus,
   type RunUsage,
   type StartAs,
+  type TeammateTag,
   type TokenUsage,
 } from '@spark-outpost/contracts';
 import { toAttention, type PendingApprovalRow } from './attention.ts';
@@ -82,6 +85,11 @@ export interface ConversationSummaryRow extends PendingApprovalRow {
   needs_input: boolean;
   title_source: string;
   category: string | null;
+  teammate_id: string | null;
+  teammate_name: string | null;
+  teammate_role: string | null;
+  teammate_shape: string | null;
+  teammate_color: string | null;
 }
 
 function iso(value: Date | null): string | null {
@@ -184,5 +192,20 @@ export function toConversationSummary(row: ConversationSummaryRow): Conversation
     attention: row.needs_input ? toAttention(row) : null,
     titleSource: titleSourceSchema.safeParse(row.title_source).data ?? 'message',
     category: categorySchema.safeParse(row.category).data ?? null,
+    teammate: toTeammateTag(row),
+  };
+}
+
+function toTeammateTag(row: ConversationSummaryRow): TeammateTag | null {
+  if (!row.teammate_id || row.teammate_name === null) return null;
+  const face = teammateFaceSchema.safeParse({
+    shape: row.teammate_shape,
+    color: row.teammate_color,
+  });
+  return {
+    id: row.teammate_id,
+    name: row.teammate_name,
+    role: row.teammate_role ?? '',
+    face: face.data ?? faceFromName(row.teammate_name),
   };
 }

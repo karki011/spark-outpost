@@ -42,6 +42,7 @@ import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
+import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { useAttentionTitle } from './use-attention-title.ts';
 import '../ui/controls.css';
 
@@ -238,6 +239,7 @@ function ChatShell({ entering }: { entering: boolean }) {
           onHome={() => setView('home')}
         />
         {live.paused && !connection.lost && <LivePausedHint />}
+        <TeammateHost />
         <AnimatePresence>
           {settings && (
             <SettingsDialog

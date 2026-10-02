@@ -79,6 +79,10 @@ export function newDraftId(): string {
   return id;
 }
 
+export function forgetDraft(conversationId: string): void {
+  drafts.delete(conversationId);
+}
+
 function saved<T>(conversationId: string): (result: T) => T {
   return (result) => {
     drafts.delete(conversationId);

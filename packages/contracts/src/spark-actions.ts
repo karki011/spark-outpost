@@ -1,4 +1,12 @@
 import { z } from 'zod';
+import { providerIdSchema } from './provider-ids.ts';
+import {
+  teammateFaceSchema,
+  teammateLevelSchema,
+  teammateInstructionsSchema,
+  teammateNameSchema,
+  teammateRoleSchema,
+} from './teammates.ts';
 import { ticketSourceIdSchema, ticketStatusSchema } from './tickets.ts';
 
 export const SPARK_ACTION_KIND = 'spark_action' as const;
@@ -107,6 +115,30 @@ export const prFollowUpRoundActionSchema = z.object({
     .max(100),
 });
 
+const teammateFieldsShape = {
+  name: teammateNameSchema,
+  role: teammateRoleSchema,
+  face: teammateFaceSchema,
+  provider: providerIdSchema.nullable(),
+  model: z.string().nullable(),
+  agentMode: z.string().nullable(),
+  level: teammateLevelSchema.nullable(),
+  instructions: teammateInstructionsSchema,
+  projects: z.array(z.object({ id: z.uuid(), name: z.string() })).max(8),
+};
+
+export const createTeammateActionSchema = z.object({
+  action: z.literal('create_teammate'),
+  ...teammateFieldsShape,
+});
+
+export const updateTeammateActionSchema = z.object({
+  action: z.literal('update_teammate'),
+  teammateId: z.uuid(),
+  ...teammateFieldsShape,
+  changed: z.array(z.string()).max(20),
+});
+
 export const sparkActionSchema = z.discriminatedUnion('action', [
   createTicketActionSchema,
   commentTicketActionSchema,
@@ -115,6 +147,8 @@ export const sparkActionSchema = z.discriminatedUnion('action', [
   openPullRequestActionSchema,
   prFollowUpActionSchema,
   prFollowUpRoundActionSchema,
+  createTeammateActionSchema,
+  updateTeammateActionSchema,
 ]);
 export type SparkAction = z.infer<typeof sparkActionSchema>;
 export type SparkActionName = SparkAction['action'];
@@ -142,6 +176,8 @@ const EDITABLE: Record<SparkActionName, readonly (keyof SparkActionEdits)[]> = {
   open_pr: ['title', 'body'],
   pr_follow_up: ['skip'],
   pr_follow_up_round: [],
+  create_teammate: [],
+  update_teammate: [],
 };
 
 export function editableFields(action: SparkActionName): readonly (keyof SparkActionEdits)[] {
@@ -165,4 +201,6 @@ export const sparkActionLabels: Record<SparkActionName, { question: string; conf
   open_pr: { question: 'Open a pull request?', confirm: 'Open PR' },
   pr_follow_up: { question: 'Address PR feedback?', confirm: 'Push and reply' },
   pr_follow_up_round: { question: 'Start a PR follow-up round?', confirm: 'Start round' },
+  create_teammate: { question: 'Add this Spark?', confirm: 'Add Spark' },
+  update_teammate: { question: 'Change this Spark?', confirm: 'Save changes' },
 };

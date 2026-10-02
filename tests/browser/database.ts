@@ -42,6 +42,7 @@ const RESET_TABLES = [
   'attention_snapshots',
   'map_repos',
   'map_overrides',
+  'teammates',
 ];
 const LEFTOVER_RUN_WAIT_MS = 5000;
 

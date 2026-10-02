@@ -64,7 +64,10 @@ test('Spark toggles and personality save, and the moved settings live in Spark o
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   const spark = page.getByRole('dialog', { name: 'Spark' });
-  await expect(spark.getByRole('tab', { name: 'Spark' })).toHaveAttribute('aria-selected', 'true');
+  await expect(spark.getByRole('tab', { name: 'Spark', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await expect(spark.getByRole('tab', { name: 'Profile' })).toHaveCount(0);
 
   const sparkSwitch = spark.getByRole('switch', { name: 'Spark', exact: true });

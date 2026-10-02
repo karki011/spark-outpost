@@ -36,12 +36,13 @@ Tools that read change nothing.
 | The Map, and what breaks if a file changes            | `spark_map`                                                                               |
 | Open terminals                                        | `spark_terminals`                                                                         |
 | Tickets                                               | `spark_tickets`                                                                           |
+| Your Sparks, their state and standing instructions    | `spark_sparks`                                                                            |
 | The audit log                                         | `spark_audit`                                                                             |
 | How Spark works, and this guide                       | `spark_guide`, `spark_docs`                                                               |
 
 ## Actions ask first
 
-A few tools act for you: create, comment on, move or assign a ticket, open a pull request, and start a PR follow-up round. These never act on their own. The agent proposes, and Spark shows you a confirm card.
+A few tools act for you: create, comment on, move or assign a ticket, open a pull request, start a PR follow-up round, and add or change a [Spark](sparks.md). These never act on their own. The agent proposes, and Spark shows you a confirm card.
 
 ![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
 
