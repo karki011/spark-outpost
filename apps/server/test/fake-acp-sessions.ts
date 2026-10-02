@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk';
 
@@ -45,6 +45,11 @@ export function recordPrompt(sessionId: string, text: string): void {
   if (!store) return;
   const session = readFakeSession(sessionId);
   write(sessionId, { ...session, prompts: [...session.prompts, text] });
+}
+
+export function recordCancel(sessionId: string): void {
+  const log = process.env.FAKE_ACP_CANCEL_LOG;
+  if (log) appendFileSync(log, `${sessionId}\n`);
 }
 
 export function recordClose(sessionId: string): void {
