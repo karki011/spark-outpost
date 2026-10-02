@@ -11,12 +11,17 @@ const FILTER_TOKEN = /^is:(.*)$/i;
 const ALIASES: Record<string, Category> = {
   bug: 'bug_fix',
   fix: 'bug_fix',
-  debug: 'debugging',
+  debug: 'bug_fix',
+  debugging: 'bug_fix',
   reading: 'research',
+  investigate: 'research',
+  design: 'plan',
   doc: 'docs',
   documentation: 'docs',
-  config: 'setup',
-  configuration: 'setup',
+  test: 'tests',
+  setup: 'config',
+  configuration: 'config',
+  chore: 'config',
   questions: 'question',
 };
 

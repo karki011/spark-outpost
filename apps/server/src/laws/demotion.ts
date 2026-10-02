@@ -83,11 +83,11 @@ export function demotions(records: readonly ModelRecord[]): Demotion[] {
 
 const KIND_WORDS: Record<string, string> = {
   bug_fix: 'bug fixes',
-  debugging: 'debugging tasks',
   feature: 'features',
   refactor: 'refactors',
   docs: 'docs changes',
-  setup: 'setup tasks',
+  tests: 'test changes',
+  config: 'config changes',
   review: 'reviews',
   other: 'tasks',
 };

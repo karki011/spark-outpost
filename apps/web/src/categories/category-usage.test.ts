@@ -39,15 +39,15 @@ function run(overrides: Partial<AuditRunSummary>): AuditRunSummary {
 
 describe('category breakdown', () => {
   it('counts turns once, adds child cost to the turn category, and sorts by cost', () => {
-    const parent = run({ category: 'debugging', costUsd: 0.1, totalTokens: 100 });
+    const parent = run({ category: 'research', costUsd: 0.1, totalTokens: 100 });
     const rows = categoryBreakdown([
       parent,
-      run({ parentRunId: parent.runId, category: 'debugging', costUsd: 0.4, totalTokens: 900 }),
+      run({ parentRunId: parent.runId, category: 'research', costUsd: 0.4, totalTokens: 900 }),
       run({ category: 'docs', costUsd: 0.05, costSource: 'estimated', totalTokens: 50 }),
       run({ category: null, totalTokens: 10 }),
     ]);
     expect(rows).toEqual([
-      { category: 'debugging', turns: 1, costUsd: 0.5, costSource: 'reported', totalTokens: 1000 },
+      { category: 'research', turns: 1, costUsd: 0.5, costSource: 'reported', totalTokens: 1000 },
       { category: 'docs', turns: 1, costUsd: 0.05, costSource: 'estimated', totalTokens: 50 },
       { category: null, turns: 1, costUsd: null, costSource: null, totalTokens: 10 },
     ]);

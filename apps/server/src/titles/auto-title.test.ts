@@ -11,11 +11,10 @@ describe('fallback title', () => {
   });
 
   it('uses a short topic when no file is named, and nothing without a category', () => {
-    expect(fallbackTitle('debugging', 'Why does the date divider show twice?')).toBe(
-      'Debugging · date divider show',
+    expect(fallbackTitle('research', 'Why does the date divider show twice?')).toBe(
+      'Research · date divider show',
     );
     expect(fallbackTitle(null, 'Fix format.ts')).toBeNull();
-    expect(fallbackTitle('chat', 'hello there')).toBeNull();
     expect(fallbackTitle('question', '??')).toBeNull();
   });
 });
@@ -41,16 +40,16 @@ describe('auto title decision', () => {
     expect(decideAutoTitle({ ...fresh, source: 'user' }, turn)).toBeNull();
   });
 
-  it('retitles a chat title once the chat turns into project work', () => {
+  it('retitles a question title once the chat turns into project work', () => {
     const refused = {
       title: 'Cannot run shell commands here',
       source: 'auto' as const,
-      category: 'chat' as const,
+      category: 'question' as const,
     };
     expect(
-      decideAutoTitle(refused, { ...turn, suggested: 'Run ls and curl', category: 'setup' }),
-    ).toEqual({ title: 'Run ls and curl', origin: 'agent', category: 'setup' });
-    expect(decideAutoTitle(refused, { ...turn, category: 'chat' })).toBeNull();
+      decideAutoTitle(refused, { ...turn, suggested: 'Run ls and curl', category: 'config' }),
+    ).toEqual({ title: 'Run ls and curl', origin: 'agent', category: 'config' });
+    expect(decideAutoTitle(refused, { ...turn, category: 'question' })).toBeNull();
   });
 
   it('retitles an auto title only when the task clearly changed', () => {
@@ -60,7 +59,6 @@ describe('auto title decision', () => {
       category: 'refactor' as const,
     };
     expect(decideAutoTitle(titled, { ...turn, suggested: 'Tidy helpers' })).toBeNull();
-    expect(decideAutoTitle(titled, { ...turn, category: 'chat' })).toBeNull();
     expect(
       decideAutoTitle({ ...titled, category: null }, { ...turn, category: 'docs' }),
     ).toBeNull();

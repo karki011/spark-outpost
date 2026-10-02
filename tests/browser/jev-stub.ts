@@ -33,7 +33,6 @@ function options(question: StubQuestion): string[] {
 
 function nouls(task: string): Record<string, number> {
   return {
-    question: task.includes(UNSURE_MARKER) ? 0.6 : 0.03,
     review: task.includes(CREW_MARKER) ? 0.95 : 0.02,
     destructive: 0.03,
     vague: task.includes(VAGUE_MARKER) ? 0.96 : 0.04,
@@ -52,7 +51,15 @@ function intakeAnswers(request: StubRequest, task: string): Record<string, Answe
       answers[key] = choice(options(question).includes('mid') ? 'mid' : options(question)[0]!, 0.9);
     else answers[key] = choice('bug_fix', JEV_STUB_CONFIDENCE);
   }
-  if (task.includes(DEBUG_MARKER)) answers.intent = choice('debugging', JEV_STUB_CONFIDENCE);
+  if (task.includes(UNSURE_MARKER)) {
+    answers.intent = {
+      type: 'choice',
+      choice: 'question',
+      probabilities: { question: 0.6, bug_fix: 0.4 },
+      confidence: 0.6,
+    };
+  }
+  if (task.includes(DEBUG_MARKER)) answers.intent = choice('research', JEV_STUB_CONFIDENCE);
   if (task.includes(VAGUE_MARKER)) {
     answers.intent = {
       type: 'choice',

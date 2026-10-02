@@ -26,7 +26,7 @@ function topicOf(request: string): string | null {
 }
 
 export function fallbackTitle(category: Category | null, request: string): string | null {
-  if (!category || category === 'chat') return null;
+  if (!category) return null;
   const topic = topicOf(request);
   return topic ? `${categoryLabel(category)} · ${topic}` : null;
 }
@@ -50,7 +50,7 @@ export interface AutoTitle {
 }
 
 function taskChanged(before: Category | null, now: Category | null): boolean {
-  if (!before || !now || now === 'chat') return false;
+  if (!before || !now) return false;
   return before !== now;
 }
 

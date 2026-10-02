@@ -1,9 +1,10 @@
 import type { ModelTier } from '@spark-outpost/contracts';
 
-export const POLICY_VERSION = 'laws-3-pinned-orchestrator';
+export const POLICY_VERSION = 'intake-2-intent-start';
 
 export type ActingQuestion =
   | 'question'
+  | 'plan_first'
   | 'plan_only'
   | 'vague'
   | 'review'
@@ -16,6 +17,7 @@ export type ObservedQuestion = 'tier' | 'policy';
 
 export const ACT_AT: Record<ActingQuestion | ObservedQuestion, number> = {
   question: 0.8,
+  plan_first: 0.8,
   plan_only: 0.8,
   vague: 0.8,
   review: 0.8,

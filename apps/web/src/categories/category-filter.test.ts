@@ -3,9 +3,9 @@ import { categoryFromKeyword, matchesFilter, parseChatFilter } from './category-
 
 describe('chat filter', () => {
   it('reads an is: category and keeps the rest as search text', () => {
-    expect(parseChatFilter('  is:debugging date divider ')).toEqual({
+    expect(parseChatFilter('  is:research date divider ')).toEqual({
       text: 'date divider',
-      category: 'debugging',
+      category: 'research',
       unknownCategory: null,
     });
     expect(parseChatFilter('release notes')).toEqual({
@@ -19,8 +19,10 @@ describe('chat filter', () => {
     expect(categoryFromKeyword('bug_fix')).toBe('bug_fix');
     expect(categoryFromKeyword('Bug-fix')).toBe('bug_fix');
     expect(categoryFromKeyword('bugfix')).toBe('bug_fix');
-    expect(categoryFromKeyword('DEBUG')).toBe('debugging');
-    expect(categoryFromKeyword('config')).toBe('setup');
+    expect(categoryFromKeyword('DEBUG')).toBe('bug_fix');
+    expect(categoryFromKeyword('setup')).toBe('config');
+    expect(categoryFromKeyword('chore')).toBe('config');
+    expect(categoryFromKeyword('Tests')).toBe('tests');
     expect(categoryFromKeyword('reading')).toBe('research');
   });
 

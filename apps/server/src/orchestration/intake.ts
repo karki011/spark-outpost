@@ -1,13 +1,15 @@
-import type {
-  InvolvementLevel,
-  IntakeAnswer,
-  IntakeCall,
-  JevIntake,
-  Risk,
-  RunMode,
+import {
+  CATEGORY_CONFIDENCE_FLOOR,
+  type Category,
+  type InvolvementLevel,
+  type IntakeAnswer,
+  type IntakeCall,
+  type JevIntake,
+  type Risk,
+  type RunMode,
 } from '@spark-outpost/contracts';
 import { noulGate } from '../advisor/gate.ts';
-import { FOLLOW_UP_MINUTES, type ActingQuestion } from '../advisor/policy.ts';
+import { FOLLOW_UP_MINUTES, RATING_ACT_AT, type ActingQuestion } from '../advisor/policy.ts';
 import { vagueByRule } from './clarify.ts';
 import { vagueFollowUpByRule } from './follow-up.ts';
 import {
@@ -23,6 +25,7 @@ import {
   trivialByRule,
 } from './risk-rules.ts';
 import { bigByRule } from './builder-complexity.ts';
+import { intentByRule, planByRule, researchByRule } from './intent-rules.ts';
 import type { ClarifiedStart, StartMode } from './transitions.ts';
 
 export interface CurrentTask {
@@ -46,6 +49,7 @@ export interface IntakeFacts {
 }
 
 export interface IntakeDecisions {
+  intent: Category;
   start: StartMode;
   then: ClarifiedStart;
   review: boolean;
@@ -56,7 +60,7 @@ export interface IntakeDecisions {
   calls: Record<string, IntakeCall>;
 }
 
-type Noul = 'question' | 'planOnly' | 'vague' | 'review' | 'destructive' | 'continuesTask';
+type Noul = 'question' | 'plan' | 'planOnly' | 'vague' | 'review' | 'destructive' | 'continuesTask';
 
 function call(
   jev: JevIntake | null,
@@ -93,20 +97,33 @@ interface StartSignals {
   reviewOnly: boolean;
   vague: boolean;
   answers: boolean;
-  big: boolean;
+  planFirst: boolean;
 }
 
-function startMode(signals: StartSignals): StartMode {
+export function startMode(signals: StartSignals): StartMode {
   if (signals.planOnly) return 'plan';
   if (signals.reviewOnly) return 'review';
   if (signals.vague) return 'ask_agent';
   if (signals.answers) return 'answer';
-  if (signals.big) return 'plan_first';
+  if (signals.planFirst) return 'plan_first';
   return 'build';
 }
 
-function afterClarifying(facts: IntakeFacts, answers: boolean, big: boolean): ClarifiedStart {
-  if (facts.level === 'full-auto' || big) return 'plan_first';
+function complexByJev(jev: JevIntake | null): boolean {
+  const complexity = jev?.ratings?.complexity;
+  return (
+    complexity !== undefined && complexity.confidence >= RATING_ACT_AT && complexity.value >= 4
+  );
+}
+
+export function turnIntent(jev: JevIntake | null, facts: Pick<IntakeFacts, 'request' | 'mode'>) {
+  const confidence = jev ? (jev.confidences.intent ?? jev.confidence) : 0;
+  if (jev?.intent && confidence >= CATEGORY_CONFIDENCE_FLOOR) return jev.intent;
+  return intentByRule(facts.request, facts.mode);
+}
+
+function afterClarifying(facts: IntakeFacts, answers: boolean, planFirst: boolean): ClarifiedStart {
+  if (facts.level === 'full-auto' || planFirst) return 'plan_first';
   return answers ? 'answer' : 'build';
 }
 
@@ -121,6 +138,10 @@ function answersFirst(question: IntakeCall, request: string): boolean {
   if (question.source === 'jev') return question.value;
   if (question.jev !== null) return !buildsByRule(request);
   return question.rule === true;
+}
+
+function answersByRule(request: string): boolean {
+  return questionByRule(request) || (researchByRule(request) && !buildsByRule(request));
 }
 
 function recentTask(facts: IntakeFacts): boolean {
@@ -144,8 +165,10 @@ const USER_CHANGE: IntakeCall = { jev: null, rule: null, value: true, source: 'u
 export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeDecisions {
   const doing = facts.mode === 'do';
   const ruleRisk: Risk = doing ? 'edits' : 'read-only';
+  const intent = turnIntent(jev, facts);
   if (!doing) {
     return {
+      intent,
       start: 'answer',
       then: 'answer',
       review: false,
@@ -167,14 +190,23 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   const destructive =
     flaggedDestructive(destructiveCall, facts.request) && !additiveMigrationWording(facts.request);
   const risk: Risk = destructive ? 'destructive' : 'edits';
-  const question = call(jev, 'question', 'question', questionByRule(facts.request), facts, risk);
+  const question = call(jev, 'question', 'question', answersByRule(facts.request), facts, risk);
+  const planCall = call(jev, 'plan', 'plan_first', planByRule(facts.request), facts, risk);
   const review = call(jev, 'review', 'review', asksForReview(facts.request), facts, risk);
-  const planCall = call(jev, 'planOnly', 'plan_only', planOnlyByRule(facts.request), facts, risk);
-  const planOnly = flaggedByRuleOrJev(planCall);
+  const planOnlyCall = call(
+    jev,
+    'planOnly',
+    'plan_only',
+    planOnlyByRule(facts.request),
+    facts,
+    risk,
+  );
+  const planOnly = flaggedByRuleOrJev(planOnlyCall);
   const answers = answersFirst(question, facts.request);
   const calls: Record<string, IntakeCall> = {
     question: { ...question, value: answers },
-    ...(planOnly ? { plan_only: { ...planCall, value: planOnly } } : {}),
+    ...(planOnly ? { plan_only: { ...planOnlyCall, value: planOnly } } : {}),
+    plan: planCall,
     review: review,
     destructive: { ...destructiveCall, value: destructive },
   };
@@ -192,6 +224,7 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   if (facts.change) {
     calls.change = USER_CHANGE;
     return {
+      intent,
       start: planFirstIfDestructive('build', destructive),
       then: planFirstIfDestructive('build', destructive),
       review: review.value,
@@ -204,14 +237,16 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   }
   const existing = reviewsExistingByRule(facts.request);
   const reviewOnly = existing || (review.value && answers);
-  const big = !facts.hasAgreedPlan && bigByRule(facts.request) !== null;
+  const complex = bigByRule(facts.request) !== null || (continues !== true && complexByJev(jev));
+  const planFirst = !facts.hasAgreedPlan && (planCall.value || complex);
   const start = planFirstIfDestructive(
-    startMode({ planOnly, reviewOnly, vague, answers, big }),
+    startMode({ planOnly, reviewOnly, vague, answers, planFirst }),
     destructive,
   );
   return {
+    intent,
     start,
-    then: planFirstIfDestructive(afterClarifying(facts, answers, big), destructive),
+    then: planFirstIfDestructive(afterClarifying(facts, answers, planFirst), destructive),
     review: review.value || start === 'review',
     destructive,
     trivial,

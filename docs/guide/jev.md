@@ -11,13 +11,13 @@ Jev is an optional advisor from TypeSafe. It answers a few short questions about
 
 ## What Jev decides
 
-| Job         | What Jev answers                                                                                                                      | Without Jev                                                                    |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| **Intake**  | Is the request a question, too vague, a review, destructive, or part of the same task? It also picks a category, such as **Bug fix**. | The rules decide. Vague requests aren't caught and no category shows.          |
-| **Routing** | Rates the request 1–5 for complexity, ambiguity, stakes and context. On **Auto**, these ratings feed Spark's model choice.            | The rules estimate the ratings. See [How Auto picks a model](auto-routing.md). |
-| **Triage**  | Sorts new pull request comments into fix, question, disagreement, nit and so on.                                                      | Keyword rules sort them.                                                       |
-| **Checks**  | Verifies the finished change and says which review findings need a fix. See [Check changes with Jev](#check-changes-with-jev).        | Your project's checks and the Critic decide.                                   |
-| **The Map** | Labels each area of a project, such as auth or payments.                                                                              | Rules label the areas.                                                         |
+| Job         | What Jev answers                                                                                                                   | Without Jev                                                                    |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Intake**  | What kind of request is it, such as **Bug fix** or **Research**? Is it too vague, a review, destructive, or part of the same task? | The rules decide from the wording, and the chip shows their guess.             |
+| **Routing** | Rates the request 1–5 for complexity, ambiguity, stakes and context. On **Auto**, these ratings feed Spark's model choice.         | The rules estimate the ratings. See [How Auto picks a model](auto-routing.md). |
+| **Triage**  | Sorts new pull request comments into fix, question, disagreement, nit and so on.                                                   | Keyword rules sort them.                                                       |
+| **Checks**  | Verifies the finished change and says which review findings need a fix. See [Check changes with Jev](#check-changes-with-jev).     | Your project's checks and the Critic decide.                                   |
+| **The Map** | Labels each area of a project, such as auth or payments.                                                                           | Rules label the areas.                                                         |
 
 Jev only counts when it's sure enough. Below its confidence line, the rules decide that question.
 

@@ -215,7 +215,19 @@ function spreadChoice(key: string, question: AskedQuestion, script: JevScript): 
   return { type: 'choice', choice: top, probabilities, confidence };
 }
 
+function questionIntent(question: number): Answers[string] {
+  const asks = question >= 0.5;
+  return choice(
+    asks ? 'question' : 'bug_fix',
+    asks ? question : 1 - question,
+    asks ? 'bug_fix' : 'question',
+  );
+}
+
 function intentAnswer(scenario: Scenario): Answers[string] {
+  if (!scenario.intent && scenario.mode === 'do' && scenario.question !== undefined) {
+    return questionIntent(scenario.question);
+  }
   const intent = scenario.intent ?? (scenario.mode === 'ask' ? 'question' : 'bug_fix');
   const confidence = scenario.intentConfidence ?? 0.9;
   if (!scenario.intentProbabilities) return choice(intent, confidence);
@@ -228,7 +240,6 @@ function intentAnswer(scenario: Scenario): Answers[string] {
 }
 
 const NOUL_FIELDS = [
-  ['question', 'question'],
   ['plan_only', 'planOnly'],
   ['destructive', 'destructive'],
   ['review', 'review'],
@@ -298,8 +309,9 @@ export function jevFetch(script: JevScript): typeof fetch {
     };
     script.calls.push({ questions: Object.keys(body.questions), state: body.state });
     const task = String(body.state.task ?? '');
+    const fallback = body.state.mode === 'do' ? { ...QUESTION, mode: 'do' as const } : QUESTION;
     const scenario =
-      script.scenario ?? SCENARIOS.find((candidate) => task.startsWith(candidate.text)) ?? QUESTION;
+      script.scenario ?? SCENARIOS.find((candidate) => task.startsWith(candidate.text)) ?? fallback;
     const answers = body.questions.intent
       ? intakeAnswers(scenario, body.questions)
       : observedAnswers(script, body.questions);

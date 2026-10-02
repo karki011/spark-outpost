@@ -43,10 +43,10 @@ const summaryQuery = `
     COALESCE(
       (SELECT cr.category FROM runs cr
        WHERE cr.conversation_id = c.id AND cr.parent_run_id IS NULL
-         AND cr.category IS NOT NULL AND cr.category <> 'chat'
+         AND cr.category IS NOT NULL AND cr.category <> 'question'
        ORDER BY cr.created_at DESC LIMIT 1),
       (SELECT cr.category FROM runs cr
-       WHERE cr.conversation_id = c.id AND cr.parent_run_id IS NULL AND cr.category = 'chat'
+       WHERE cr.conversation_id = c.id AND cr.parent_run_id IS NULL AND cr.category = 'question'
        LIMIT 1)
     ) AS category,
     r.id AS latest_run_id, r.status AS latest_run_status, r.error AS latest_run_error,

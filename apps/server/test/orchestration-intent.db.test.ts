@@ -106,9 +106,10 @@ const PLAN_TALK: Scenario = {
   id: 'plan-talk',
   text: 'give me plan we can integrate',
   mode: 'do',
-  question: 0.38,
   destructive: 0.05,
   intent: 'feature',
+  intentConfidence: 0.62,
+  intentProbabilities: { feature: 0.62, question: 0.38 },
 };
 
 describe('answer first, with "Make the change" one click away', () => {

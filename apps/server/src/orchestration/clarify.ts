@@ -19,13 +19,14 @@ export const SPEED_KEY = 'speed';
 
 const INTERPRETATIONS: Partial<Record<Category, string>> = {
   bug_fix: 'Fix what is broken in it',
-  debugging: 'Find the cause of a problem in it',
+  research: 'Find the cause of a problem in it, without changing it',
   feature: 'Add new behaviour or features',
   refactor: 'Restructure the code without changing what it does',
   docs: 'Improve its documentation',
+  tests: 'Add or fix its tests',
   review: 'Review it and suggest improvements, without changing it',
-  setup: 'Change its build, tooling or settings',
-  research: 'Explain how it works, without changing it',
+  config: 'Change its build, tooling or settings',
+  plan: 'Plan the change before building it',
   question: 'Explain how it works, without changing it',
 };
 

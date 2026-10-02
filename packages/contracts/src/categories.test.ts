@@ -6,15 +6,15 @@ describe('categories', () => {
   it('offers the user-facing categories with plain labels', () => {
     expect(categorySchema.options.map(categoryLabel)).toEqual([
       'Question',
-      'Debugging',
+      'Research',
+      'Plan',
       'Bug fix',
       'Feature',
       'Refactor',
-      'Review',
-      'Research',
       'Docs',
-      'Setup',
-      'Chat',
+      'Tests',
+      'Config',
+      'Review',
     ]);
   });
 
@@ -22,6 +22,9 @@ describe('categories', () => {
     expect(upgradeLegacyCategory('explain')).toBe('question');
     expect(upgradeLegacyCategory('fix')).toBe('bug_fix');
     expect(upgradeLegacyCategory('refactor')).toBe('refactor');
+    expect(upgradeLegacyCategory('debugging')).toBe('bug_fix');
+    expect(upgradeLegacyCategory('setup')).toBe('config');
+    expect(upgradeLegacyCategory('chat')).toBe('question');
     const rules = {
       intent: null,
       complexity: null,

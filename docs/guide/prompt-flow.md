@@ -11,7 +11,7 @@ Not every request takes every step. A question stops after step 1; a small fix s
 
 ## The steps
 
-1. **Spark reads the request.** It decides: answer, ask a few questions first, plan first, or build. A line above the crew says what it chose, for example "Build it · 87% sure". See [How Spark decides what to do](spark-crew.md#how-spark-decides-what-to-do).
+1. **Spark reads the request.** It sorts it into one of ten kinds, shown as a chip such as **Bug fix**: Question, Research, Plan, Bug fix, Feature, Refactor, Docs, Tests, Config or Review. A question or research gets an answer from the Reader, which reads the code and the project map but changes nothing, and research ends with suggested next steps. A plan or design request gets a plan first. Everything else is built, with a plan first when the work is big or destructive, and a few questions first when it's vague. A line above the crew says what it chose, for example "Build it · 87% sure". See [How Spark decides what to do](spark-crew.md#how-spark-decides-what-to-do).
 2. **A plan, if needed.** Big or destructive work, or a request for a plan, gets the **Build this plan?** card with a time and cost estimate. Nothing changes until it's agreed.
 3. **Spark picks the model.** A pinned model stays for the chat itself, and the Builder starts from it, moving down only for clearly simple work or up for hard work. On **Auto**, the chat itself stays on the provider's default model and Spark picks a model for each helper, such as the Builder, for this request. The why-line says why. See [Pick a model for a chat](auto-routing.md).
 4. **A Builder makes the change** in the chat's worktree, within a budget of tool calls and time. For an agreed plan, Jev picks how many Builders it needs, from 1 to 4, and the model and place for each; Spark groups the plan's items to match. One Builder does the whole plan; two or more build it in pieces. See [Big work in pieces](pieces.md).
@@ -44,7 +44,7 @@ Not every request takes every step. A question stops after step 1; a small fix s
 
 Everything above still runs. The differences:
 
-- **Step 1**: rules decide. Vague requests aren't caught, and no category shows.
+- **Step 1**: rules read the wording instead, and the chip shows their guess.
 - **Step 3**: on **Auto**, rules estimate the ratings Jev would give.
 - **Step 4**: rules decide whether to split the plan into pieces, and pick each piece's model.
 - **Step 6** is skipped. Your checks and the Critic decide.

@@ -157,7 +157,7 @@ export function requestSimilarity(a: string, b: string): number {
   return shared / (left.size + right.size - shared);
 }
 
-const FIX_CATEGORIES: ReadonlySet<Category> = new Set(['bug_fix', 'debugging']);
+const FIX_CATEGORIES: ReadonlySet<Category> = new Set(['bug_fix']);
 
 export interface FollowUp {
   text: string;
