@@ -12,7 +12,10 @@ import { shortLabel } from '../chat/composer/model-options.ts';
 import { providerName } from '../chat/provider-name.ts';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
+import { FolderDialog } from '../chat/project/FolderDialog.tsx';
 import { PanelTabs } from './PanelTabs.tsx';
+import { ProjectMenu } from './ProjectMenu.tsx';
+import { useAddProject } from './use-add-project.ts';
 import type { Panel } from './island-model.ts';
 
 export interface QuickDraft {
@@ -58,7 +61,10 @@ export function QuickChat(props: QuickChatProps) {
   const defaults = useDefaults();
   const level = draft.level ?? defaults.level ?? 'hands-off';
   const levelInfo = AUTONOMY_LEVELS.find((info) => info.id === level) ?? AUTONOMY_LEVELS[1]!;
-  const project = projects.find((candidate) => candidate.id === draft.projectId) ?? null;
+  const [added, setAdded] = useState<Project | null>(null);
+  const project =
+    projects.find((candidate) => candidate.id === draft.projectId) ??
+    (added?.id === draft.projectId ? added : null);
 
   useEffect(() => {
     const timer = setTimeout(
@@ -105,15 +111,15 @@ export function QuickChat(props: QuickChatProps) {
     textRef.current?.focus({ preventScroll: true });
   };
 
+  const adder = useAddProject((linked) => {
+    setAdded(linked);
+    pick(linked.id);
+  });
+
   const cycleLevel = () => {
     const index = AUTONOMY_LEVELS.findIndex((info) => info.id === level);
     onDraft({ ...draft, level: AUTONOMY_LEVELS[(index + 1) % AUTONOMY_LEVELS.length]!.id });
   };
-
-  const options = [
-    ...projects.map((item) => ({ id: item.id, name: item.name, path: item.displayPath })),
-    { id: null, name: 'No project', path: 'Chat only, no files' },
-  ];
 
   return (
     <div className="isl-body">
@@ -200,42 +206,24 @@ export function QuickChat(props: QuickChatProps) {
         </div>
       </div>
       {menu && (
-        <div
-          className="isl-menu"
-          id="isl-qmenu"
-          role="menu"
-          aria-label="Choose project"
-          onKeyDown={(event) => {
-            const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button')];
-            const at = items.indexOf(document.activeElement as HTMLButtonElement);
-            if (event.key === 'ArrowDown') items[(at + 1) % items.length]?.focus();
-            else if (event.key === 'ArrowUp')
-              items[(at - 1 + items.length) % items.length]?.focus();
-            else if (event.key === 'Escape') {
-              setMenu(false);
-              chipRef.current?.focus();
-            } else return;
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-        >
-          {options.map((option, index) => (
-            <button
-              key={option.id ?? 'none'}
-              type="button"
-              role="menuitemradio"
-              aria-checked={option.id === (draft.projectId ?? undefined)}
-              autoFocus={index === 0}
-              onClick={() => pick(option.id)}
-            >
-              <span className="check" aria-hidden="true">
-                ✓
-              </span>
-              <span>{option.name}</span>
-              <small>{option.path}</small>
-            </button>
-          ))}
-        </div>
+        <ProjectMenu
+          projects={projects}
+          selected={draft.projectId}
+          adding={adder.adding}
+          error={adder.error}
+          chipRef={chipRef}
+          onPick={pick}
+          onAdd={() => void adder.start()}
+          onClose={() => setMenu(false)}
+        />
+      )}
+      {adder.browsing && (
+        <FolderDialog
+          linking={adder.adding}
+          error={adder.error}
+          onUse={adder.linkFolder}
+          onClose={adder.close}
+        />
       )}
       {send.isError && (
         <p className="isl-err" role="alert">

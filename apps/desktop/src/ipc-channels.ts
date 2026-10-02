@@ -14,6 +14,7 @@ export const IPC = {
   islandEscape: 'island:escape',
   islandSparkFocused: 'island:spark-focused',
   islandSparkFocus: 'island:spark-focus',
+  islandPickFolder: 'island:pick-folder',
   openChat: 'spark:open-chat',
   pendingChat: 'spark:pending-chat',
   updatesGet: 'updates:get',

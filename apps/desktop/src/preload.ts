@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC, type DragPhase } from './ipc-channels.ts';
 
 function listen<T>(channel: string, callback: (payload: T) => void): () => void {
@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     onCommand: (callback: (action: unknown) => void) => listen(IPC.islandCommand, callback),
     onEscape: (callback: () => void) => listen(IPC.islandEscape, callback),
     sparkFocused: () => ipcRenderer.invoke(IPC.islandSparkFocused),
+    pickFolder: () => ipcRenderer.invoke(IPC.islandPickFolder),
+    pathForFile: (file: File) => webUtils.getPathForFile(file) || null,
     onSparkFocus: (callback: (focused: unknown) => void) => listen(IPC.islandSparkFocus, callback),
     setInteractive: (on: boolean) => ipcRenderer.send(IPC.islandInteractive, on),
     setFocusable: (on: boolean) => ipcRenderer.send(IPC.islandFocusable, on),

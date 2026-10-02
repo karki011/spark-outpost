@@ -1,6 +1,7 @@
 import {
   app,
   BrowserWindow,
+  dialog,
   globalShortcut,
   ipcMain,
   Menu,
@@ -139,6 +140,16 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   app.on('browser-window-focus', reportFocus);
   app.on('browser-window-blur', reportFocus);
   ipcMain.handle(IPC.islandSparkFocused, (event) => fromIsland(event) && sparkFocused());
+  ipcMain.handle(IPC.islandPickFolder, async (event) => {
+    if (!fromIsland(event)) return null;
+    app.focus({ steal: true });
+    const picked = await dialog.showOpenDialog({
+      title: 'Choose a project folder',
+      buttonLabel: 'Use this folder',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    return picked.canceled ? null : (picked.filePaths[0] ?? null);
+  });
   companion.resume();
 
   ipcMain.handle(IPC.companionGet, (event) => (fromSpark(event) ? companion.status() : null));
@@ -201,6 +212,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionSetShortcut,
         IPC.islandGeometry,
         IPC.islandSparkFocused,
+        IPC.islandPickFolder,
         IPC.pendingChat,
       ]) {
         ipcMain.removeHandler(channel);
