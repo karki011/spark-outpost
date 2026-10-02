@@ -82,7 +82,10 @@ describe('composer model options', () => {
   it('formats token counts', () => {
     expect(formatTokens(950)).toBe('950');
     expect(formatTokens(18_783)).toBe('18.8K');
-    expect(formatTokens(1_000_000)).toBe('1000K');
+    expect(formatTokens(650_000)).toBe('650K');
+    expect(formatTokens(999_800)).toBe('1M');
+    expect(formatTokens(1_000_000)).toBe('1M');
+    expect(formatTokens(2_500_000)).toBe('2.5M');
   });
 });
 

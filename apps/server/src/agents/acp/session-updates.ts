@@ -12,6 +12,7 @@ import { findPullRequests } from '../../tasks/pr-links.ts';
 import { agentCommands } from './slash-commands.ts';
 import { objectFields } from './object-fields.ts';
 import { exitPlanText, planFileText } from '../../plans/plan-mode.ts';
+import { shortWindowNote } from './long-context.ts';
 
 export const THINKING_STEP = 'Thinking';
 export const FAILED_PREFIX = 'Failed: ';
@@ -195,7 +196,7 @@ function toolTexts(
   return texts;
 }
 
-export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
+export function createUpdateMapper(agentName = 'The agent', checksWindow = false): UpdateMapper {
   const openTools = new Map<string, OpenTool>();
   const seenLinks = new Set<string>();
   let thinking = false;
@@ -208,6 +209,7 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
   let policy: ModePolicy | null = null;
   let unsafeMode: string | null = null;
   let plan: string | null = null;
+  let windowNoted = false;
 
   const rememberPlan = (kind: string | null | undefined, rawInput: unknown, content: unknown) => {
     const items = Array.isArray(content) ? (content as ToolCallContent[]) : null;
@@ -374,15 +376,21 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
           return note(`${noticeLabel(update.severity)}: ${update.title}`);
         case 'available_commands_update':
           return [{ kind: 'commands', commands: agentCommands(update.availableCommands) }];
-        case 'usage_update':
-          return [
-            {
-              kind: 'usage',
-              contextUsed: update.used,
-              contextSize: update.size,
-              costUsd: update.cost?.currency === 'USD' ? update.cost.amount : null,
-            },
-          ];
+        case 'usage_update': {
+          const usage: ProviderOutput = {
+            kind: 'usage',
+            contextUsed: update.used,
+            contextSize: update.size,
+            costUsd: update.cost?.currency === 'USD' ? update.cost.amount : null,
+          };
+          const short =
+            checksWindow && !windowNoted && update.cost
+              ? shortWindowNote(update._meta, update.size)
+              : null;
+          if (!short) return [usage];
+          windowNoted = true;
+          return [usage, ...note(short)];
+        }
         default:
           return [];
       }
