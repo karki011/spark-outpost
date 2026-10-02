@@ -26,6 +26,7 @@ import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { TerminalButton } from '../terminal/dock/TerminalButton.tsx';
 import { TerminalDock } from '../terminal/dock/TerminalDock.tsx';
 import { ThemePicker } from '../theme/ThemePicker.tsx';
+import { PanelOpenContext } from '../tasks/panel-open.ts';
 import { useTaskPanel } from '../tasks/work-panel-state.ts';
 import { ViewChangesContext } from '../tasks/view-changes.ts';
 import type { WorkTab } from '../tasks/TaskDetails.tsx';
@@ -51,6 +52,7 @@ import { useQuotes } from './quotes/use-quotes.ts';
 import { activeRun } from './turns.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
 import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
+import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { ChatTeammate } from '../teammates/ChatTeammate.tsx';
 import { TalkToChip } from '../teammates/TalkToChip.tsx';
 
@@ -123,6 +125,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const crew = conversationCrew(detail.data);
   const orchestration = latestOrchestration(detail.data);
   const steer = useSteer(conversationId, running ? orchestration : null);
+  const openTask = useStableCallback(panel.openTask);
+  const openChat = useStableCallback(onOpenChat);
   const task = panel.task;
   const crewRun = crewOrchestration(detail.data);
   const taskCrew = task && crewRun && belongsTo(task, crewRun) ? crewRun : null;
@@ -188,15 +192,16 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               </p>
             )}
             {detail.data ? (
-              <Thread
-                detail={detail.data}
-                repos={repos}
-                pendingMessage={send.isPending ? send.variables : null}
-                panelOpen={panel.open}
-                onOpenTask={panel.openTask}
-                onOpenChat={onOpenChat}
-                quotes={quotes}
-              />
+              <PanelOpenContext value={panel.open}>
+                <Thread
+                  detail={detail.data}
+                  repos={repos}
+                  pendingMessage={send.isPending ? send.variables : null}
+                  onOpenTask={openTask}
+                  onOpenChat={openChat}
+                  quotes={quotes}
+                />
+              </PanelOpenContext>
             ) : (
               <div className="thread-wrap" aria-busy={detail.isPending}>
                 {detail.isPending && (

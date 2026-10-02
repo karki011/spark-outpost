@@ -1,9 +1,11 @@
 import './task-card.css';
+import { use } from 'react';
 import type { TaskOverview } from '@spark-outpost/contracts';
 import { AgentBlob } from '../brand/AgentBlob.tsx';
 import { CrewBlob } from '../crew/CrewBlob.tsx';
 import type { CrewAgent } from '../crew/crew-model.ts';
 import { ChevronIcon } from '../ui/icons.tsx';
+import { PanelOpenContext } from './panel-open.ts';
 
 export function taskProviders(task: TaskOverview): string[] {
   return [...new Set(task.items.flatMap((item) => (item.agent ? [item.agent.provider] : [])))];
@@ -22,12 +24,12 @@ function currentLine(task: TaskOverview): string {
 
 interface TaskCardProps {
   task: TaskOverview;
-  panelOpen: boolean;
   onOpen(): void;
   agents?: readonly CrewAgent[];
 }
 
-export function TaskCard({ task, panelOpen, onOpen, agents = [] }: TaskCardProps) {
+export function TaskCard({ task, onOpen, agents = [] }: TaskCardProps) {
+  const panelOpen = use(PanelOpenContext);
   const waiting = task.summary.waiting > 0;
   return (
     <button

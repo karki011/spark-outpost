@@ -1,5 +1,5 @@
 import './thread.css';
-import { useEffect } from 'react';
+import { memo, useEffect } from 'react';
 import { PERMISSION_DO, type ConversationDetail, type Project } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { useVoice } from '../spark/use-voice.ts';
@@ -30,17 +30,15 @@ interface ThreadProps {
   detail: ConversationDetail;
   repos: Project[];
   pendingMessage: OutgoingMessage | null;
-  panelOpen?: boolean;
   onOpenTask?: (taskId: string) => void;
   onOpenChat: (conversationId: string) => void;
   quotes: QuotesState;
 }
 
-export function Thread({
+export const Thread = memo(function Thread({
   detail,
   repos,
   pendingMessage,
-  panelOpen = false,
   onOpenTask,
   onOpenChat,
   quotes,
@@ -65,14 +63,7 @@ export function Thread({
     if (!onOpenTask || !task) return null;
     const orchestration = crewRun(runId);
     const crew = orchestration ? crewAgents(orchestration, detail.activity) : [];
-    return (
-      <TaskCard
-        task={task}
-        panelOpen={panelOpen}
-        onOpen={() => onOpenTask(task.id)}
-        agents={crew}
-      />
-    );
+    return <TaskCard task={task} onOpen={() => onOpenTask(task.id)} agents={crew} />;
   };
 
   useEffect(() => {
@@ -205,4 +196,4 @@ export function Thread({
       </button>
     </div>
   );
-}
+});

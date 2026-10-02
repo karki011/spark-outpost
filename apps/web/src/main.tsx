@@ -7,6 +7,7 @@ import { configureLiveQueries } from './app/live/use-app-events.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
 import { AppMotion } from './ui/transitions.tsx';
 import 'blobatar/motion.css';
+import './brand/blob-idle.css';
 import './app/base.css';
 import './app/reduced-motion.css';
 
