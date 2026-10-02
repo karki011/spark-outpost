@@ -26,4 +26,5 @@ contextBridge.exposeInMainWorld('sparkBoot', {
     if (leaving) callback();
   },
   painted: () => ipcRenderer.send(IPC.bootPainted),
+  teasers: () => ipcRenderer.invoke(IPC.bootTeasers),
 });

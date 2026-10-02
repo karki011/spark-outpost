@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 
@@ -5,8 +6,13 @@ const SHOTS = 'test-results/boot-screen';
 const GRAPHITE_BG = 'rgb(12, 15, 18)';
 const FJORD_BG = 'rgb(237, 241, 245)';
 
-async function fakeBootBridge(page: Page) {
-  await page.addInitScript(() => {
+interface Teaser {
+  label: string;
+  text: string;
+}
+
+async function fakeBootBridge(page: Page, teasers?: Teaser[]) {
+  await page.addInitScript((teasers) => {
     const bridge = {
       painted: 0,
       status: null as ((text: string) => void) | null,
@@ -24,9 +30,10 @@ async function fakeBootBridge(page: Page) {
         painted: () => {
           bridge.painted += 1;
         },
+        ...(teasers ? { teasers: async () => teasers } : {}),
       },
     });
-  });
+  }, teasers);
 }
 
 function sendStatus(page: Page, text: string) {
@@ -105,6 +112,228 @@ test.describe('boot screen', () => {
     ).toBe('0');
     await sendStatus(page, 'Updating your data…');
     await expect(page.getByRole('status')).toHaveText('Updating your data…');
+  });
+});
+
+const PARTY_SHOTS = 'test-results/boot-party';
+const SKINS = [
+  'light',
+  'graphite',
+  'apricot',
+  'void',
+  'fjord',
+  'moss',
+  'lagoon',
+  'plum',
+  'sage',
+  'aurora',
+  'iris',
+  'contrast',
+] as const;
+const TEASERS: Teaser[] = [
+  { label: 'While you were away', text: 'Wren is waiting on you 👀' },
+  { label: 'While you were away', text: '2 chats were still running when you left…' },
+  { label: 'New in 0.1.0-beta.1', text: 'Updates in the background on Stable or Beta' },
+  { label: 'Tip', text: '⌥Space starts a chat from anywhere' },
+];
+
+const classesOf = (page: Page, selector: string) =>
+  page.locator(selector).evaluateAll((elements) => elements.map((element) => element.className));
+
+const runningAnimations = (page: Page) =>
+  page.evaluate(
+    () => document.getAnimations().filter((animation) => animation.playState === 'running').length,
+  );
+
+function reactionTo(page: Page, text: string) {
+  return page.evaluate((line) => {
+    const { bootBridge } = window as unknown as { bootBridge: { status: (t: string) => void } };
+    bootBridge.status(line);
+    return {
+      fiveRight: document.querySelectorAll('.pb.five-right').length,
+      fiveLeft: document.querySelectorAll('.pb.five-left').length,
+      cheering: document.querySelectorAll('.pb-hop.cheer').length,
+      sleeperAwake: !document.querySelector('.pb-sleeper')?.classList.contains('sleeping'),
+    };
+  }, text);
+}
+
+async function recordFrames(page: Page, name: string, frames: number) {
+  for (let frame = 0; frame < frames; frame += 1) {
+    await page.screenshot({ path: `${PARTY_SHOTS}/${name}-${String(frame).padStart(2, '0')}.png` });
+    await page.waitForTimeout(220);
+  }
+}
+
+test.describe('boot party', () => {
+  test('a decorative blob party cheers each startup step and jumps into Spark at the end', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await fakeBootBridge(page);
+    await page.goto('/boot.html');
+    const party = page.locator('.party');
+    await expect(party).toHaveAttribute('aria-hidden', 'true');
+    await expect(party.locator('.pb')).toHaveCount(6);
+    await expect(party.locator('.pb-sleeper.sleeping')).toHaveCount(1);
+    await expect(party.locator('.pb-juggler .pb-balls i')).toHaveCount(3);
+    await expect(page.locator('.pb-peeker')).toHaveCount(1);
+    await sendStatus(page, 'Waking up…');
+    await page.waitForTimeout(1_600);
+    await page.screenshot({ path: `${PARTY_SHOTS}/party-dark.png` });
+
+    expect(await reactionTo(page, 'Starting the database…')).toEqual({
+      fiveRight: 1,
+      fiveLeft: 1,
+      cheering: 5,
+      sleeperAwake: true,
+    });
+    await expect(page.getByRole('status')).toHaveText('Starting the database…');
+    await recordFrames(page, 'frames-dark', 8);
+    await expect(party.locator('.pb-sleeper')).toHaveClass(/sleeping/, { timeout: 5_000 });
+
+    await sendStatus(page, 'Starting Spark…');
+    await expect(party).toHaveClass(/huddle/);
+    await expect(party.locator('.pb.happy')).toHaveCount(6);
+    await expect(party.locator('.pb-sleeper')).not.toHaveClass(/sleeping/);
+    await page.waitForTimeout(700);
+    await page.screenshot({ path: `${PARTY_SHOTS}/huddle-dark.png` });
+
+    await page.evaluate(() => {
+      (window as unknown as { bootBridge: { leave: () => void } }).bootBridge.leave();
+    });
+    await expect(party).toHaveClass(/joining/);
+    await expect
+      .poll(() => page.locator('.boot').evaluate((element) => getComputedStyle(element).opacity))
+      .toBe('0');
+  });
+
+  test('teases what happened while you were away, one card at a time', async ({ page }) => {
+    test.setTimeout(60_000);
+    await fakeBootBridge(page, TEASERS);
+    await page.goto('/boot.html?theme=fjord');
+    await sendStatus(page, 'Starting the database…');
+    const teaser = page.locator('.teaser');
+    await page.waitForFunction(
+      () => document.querySelector<HTMLElement>('.teaser')?.dataset.phase === 'arrive',
+      undefined,
+      { polling: 'raf' },
+    );
+    await expect(teaser).toHaveAttribute('aria-hidden', 'true');
+    await page.waitForTimeout(250);
+    await page.screenshot({ path: `${PARTY_SHOTS}/teaser-peek-light.png` });
+    await expect(teaser).toHaveAttribute('data-phase', 'reveal');
+    await expect(teaser.locator('.teaser-front')).toHaveText(
+      'While you were awayWren is waiting on you 👀',
+    );
+    await expect(page.locator('.teaser-text')).toHaveCount(1);
+    await expect(page.locator('.boot-sr')).toHaveText(
+      'While you were away: Wren is waiting on you. While you were away: 2 chats were still running when you left. New in 0.1.0-beta.1: Updates in the background on Stable or Beta. Tip: ⌥Space starts a chat from anywhere.',
+    );
+    await expect(page.locator('.boot-sr')).toHaveAttribute('aria-live', 'polite');
+    await page.waitForTimeout(700);
+    await page.screenshot({ path: `${PARTY_SHOTS}/teaser-light.png` });
+    await recordFrames(page, 'frames-light', 6);
+
+    await expect(teaser.locator('.teaser-text')).toHaveText(
+      '2 chats were still running when you left…',
+      { timeout: 8_000 },
+    );
+    await expect(page.getByRole('status')).toHaveText('Starting the database…');
+
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('/boot.html?theme=graphite');
+    await sendStatus(page, 'Updating your data…');
+    await expect(page.locator('.teaser')).toHaveAttribute('data-phase', 'reveal');
+    await page.waitForTimeout(700);
+    await page.screenshot({ path: `${PARTY_SHOTS}/teaser-dark.png` });
+  });
+
+  test('stands still for a group portrait when motion is reduced', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await fakeBootBridge(page, TEASERS);
+    await page.goto('/boot.html?theme=fjord');
+    await sendStatus(page, 'Waking up…');
+    await expect(page.locator('.party .pb')).toHaveCount(6);
+    await expect(page.locator('.pb-peeker')).toBeHidden();
+    await expect(page.locator('.teaser')).toHaveAttribute('data-phase', 'reveal');
+    await expect(page.locator('.teaser-front')).toBeVisible();
+    await sendStatus(page, 'Starting the database…');
+    await sendStatus(page, 'Starting Spark…');
+    await expect(page.getByRole('status')).toHaveText('Starting Spark…');
+    expect(await runningAnimations(page)).toBe(0);
+    expect(await classesOf(page, '.pb-hop.cheer, .pb.five-left, .party.huddle')).toEqual([]);
+    await page.screenshot({ path: `${PARTY_SHOTS}/portrait-light.png` });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await page.goto('/boot.html?theme=graphite');
+    await expect(page.locator('.teaser')).toHaveAttribute('data-phase', 'reveal');
+    expect(await runningAnimations(page)).toBe(0);
+    await page.screenshot({ path: `${PARTY_SHOTS}/portrait-dark.png` });
+  });
+
+  for (const size of [
+    { width: 360, height: 420 },
+    { width: 480, height: 360 },
+    { width: 800, height: 500 },
+  ]) {
+    test(`fits a ${size.width}×${size.height} window without overflowing`, async ({ page }) => {
+      await page.setViewportSize(size);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await fakeBootBridge(page, TEASERS);
+      await page.goto('/boot.html');
+      await sendStatus(page, 'Updating your data…');
+      await expect(page.locator('.teaser')).toHaveAttribute('data-phase', 'reveal');
+      const overflow = await page.evaluate(() => {
+        const inside = (element: Element) => {
+          const box = element.getBoundingClientRect();
+          return (
+            box.left >= 0 &&
+            box.top >= 0 &&
+            box.right <= window.innerWidth &&
+            box.bottom <= window.innerHeight
+          );
+        };
+        const scroller = document.scrollingElement ?? document.documentElement;
+        return {
+          scrolls:
+            scroller.scrollWidth > window.innerWidth || scroller.scrollHeight > window.innerHeight,
+          outside: [
+            ...document.querySelectorAll('.pb-face, .teaser-card, .boot-blob, .boot-status span'),
+          ]
+            .filter((element) => !inside(element))
+            .map((element) => element.className),
+        };
+      });
+      expect(overflow).toEqual({ scrolls: false, outside: [] });
+      await page.screenshot({ path: `${PARTY_SHOTS}/fit-${size.width}x${size.height}.png` });
+    });
+  }
+
+  test('teaser cards and the status line keep readable contrast in every theme', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await fakeBootBridge(page, TEASERS);
+    const failures: string[] = [];
+    const looks = [
+      ...SKINS.map((skin) => ({ skin, scheme: 'dark' as const })),
+      { skin: 'system', scheme: 'light' as const },
+      { skin: 'system', scheme: 'dark' as const },
+    ];
+    for (const { skin, scheme } of looks) {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto(`/boot.html?theme=${skin}`);
+      await sendStatus(page, 'Starting the database…');
+      await expect(page.locator('.teaser')).toHaveAttribute('data-phase', 'reveal');
+      const results = await new AxeBuilder({ page }).withRules(['color-contrast']).analyze();
+      for (const violation of results.violations) {
+        failures.push(
+          `${skin} ${scheme}: ${violation.nodes.map((node) => node.target.join(' ')).join(', ')}`,
+        );
+      }
+    }
+    expect(failures).toEqual([]);
   });
 });
 
