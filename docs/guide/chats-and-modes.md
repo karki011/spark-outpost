@@ -56,7 +56,7 @@ To change the default for a project, open **Settings → Projects** and change *
 
 ## Pick the model and effort
 
-The model button in the message box shows the provider, model, mode and effort. Select it to open **Model, effort, and permissions**.
+The model button in the message box shows the provider, model and effort. Select it to open **Model, effort, and permissions**.
 
 ![The model picker open on the Model tab](images/chats-and-modes-picker-light.png)
 
@@ -68,11 +68,12 @@ These choices apply to this chat only. New chats start with your defaults from *
 
 ## Pick the agent's mode
 
-The mode is the agent's own permission setting. Spark shows each provider's modes with the provider's names. To change it:
+The mode is the agent's own permission setting. Spark shows each provider's modes with the provider's names. The permissions chip next to the model button shows the current mode with an icon for how much it allows, for example **Auto**. **Bypass permissions** (shown as **Bypass**) and **Full access** are tinted as a warning. On a narrow window the chip shows only its icon.
 
-1. Open the model picker.
-2. Select the **Permissions** tab.
-3. Pick a mode under **Agent mode**. The provider's default has a **Default** tag, and a line under the list sums up the result, for example "Agent only reads · nothing changes".
+To change the mode:
+
+1. Select the permissions chip. The model picker opens on the **Permissions** tab.
+2. Pick a mode under **Agent mode**. The provider's default has a **Default** tag, and a line under the list sums up the result, for example "Agent only reads · nothing changes".
 
 ![The Permissions tab listing Claude's modes](images/chats-and-modes-permissions-light.png)
 

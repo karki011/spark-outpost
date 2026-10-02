@@ -4,6 +4,7 @@ export function usePopover<Anchor extends HTMLElement, Panel extends HTMLElement
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<Anchor>(null);
   const panelRef = useRef<Panel>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -16,7 +17,7 @@ export function usePopover<Anchor extends HTMLElement, Panel extends HTMLElement
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       event.preventDefault();
       setOpen(false);
-      anchorRef.current?.focus();
+      (returnFocusRef.current ?? anchorRef.current)?.focus();
     };
     window.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('keydown', onKeyDown, true);
@@ -32,5 +33,6 @@ export function usePopover<Anchor extends HTMLElement, Panel extends HTMLElement
     toggle: () => setOpen((value) => !value),
     anchorRef,
     panelRef,
+    returnFocusRef,
   };
 }

@@ -161,6 +161,16 @@ export function DotsIcon() {
   );
 }
 
+export function EyeIcon() {
+  return (
+    <StrokeIcon path="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12ZM12 14.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+  );
+}
+
+export function UnlockIcon() {
+  return <StrokeIcon path="M6 11h12v9H6zM8.5 11V7.5a3.5 3.5 0 0 1 6.8-1.2" />;
+}
+
 export function PenIcon() {
   return <StrokeIcon path="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z" />;
 }

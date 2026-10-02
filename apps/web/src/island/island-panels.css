@@ -139,6 +139,11 @@
   cursor: default;
 }
 
+.isl-perm.risk-full {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 40%, var(--line));
+}
+
 .isl-chip:focus-visible,
 .isl-send:focus-visible {
   outline: 2px solid var(--accent);

@@ -1,8 +1,10 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react';
 import { useQueries } from '@tanstack/react-query';
 import {
   DEFAULT_INVOLVEMENT_LEVEL,
+  combinationLine,
+  modeKind,
   type ChatSettings,
   type Orchestration,
   type ProviderId,
@@ -25,10 +27,20 @@ import { ExitingInert } from './ExitingInert.tsx';
 import { autoThisTurn, autoWouldHaveUsed, builderRouteNote } from '../../crew/auto-route.ts';
 import { buttonLabel, currentModel, selectableEfforts } from './model-options.ts';
 import { useChatSettingsUpdate, type PickerRequest } from './use-picker-command.ts';
-import { permissionSummary } from './mode-summary.ts';
+import { permissionState } from './mode-summary.ts';
+import { PermissionChip } from './PermissionChip.tsx';
 import './model-picker.css';
 
 const SECTIONS: PickerSection[] = ['model', 'effort', 'permission', 'options'];
+
+interface FocusRequest {
+  count: number;
+  from: 'model' | 'chip';
+}
+
+function nextFocus(previous: FocusRequest | null, from: FocusRequest['from']): FocusRequest {
+  return { count: (previous?.count ?? 0) + 1, from };
+}
 
 interface ModelPickerProps {
   openRequest: PickerRequest | null;
@@ -47,23 +59,29 @@ export function ModelPicker({
   hasRepos,
   orchestration,
 }: ModelPickerProps) {
-  const { open, setOpen, toggle, anchorRef, panelRef } = usePopover<
-    HTMLButtonElement,
+  const { open, setOpen, toggle, anchorRef, panelRef, returnFocusRef } = usePopover<
+    HTMLDivElement,
     HTMLDivElement
   >();
+  const modelButtonRef = useRef<HTMLButtonElement>(null);
+  const chipRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
   const listId = useId();
   const [section, setSection] = useState<PickerSection>('model');
   const [handledRequest, setHandledRequest] = useState(openRequest?.id ?? null);
-  const [focusRequest, setFocusRequest] = useState<number | null>(null);
+  const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
 
   useEffect(() => {
     if (focusRequest === null) return;
+    const trigger = focusRequest.from === 'chip' ? chipRef : modelButtonRef;
+    returnFocusRef.current = trigger.current;
     const frame = requestAnimationFrame(() =>
-      panelRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus(),
+      panelRef.current
+        ?.querySelector<HTMLElement>('[role="tab"][data-section][aria-selected="true"]')
+        ?.focus(),
     );
     return () => cancelAnimationFrame(frame);
-  }, [focusRequest, panelRef]);
+  }, [focusRequest, panelRef, returnFocusRef]);
   const [direction, setDirection] = useState(1);
   const provider = settings.provider;
 
@@ -86,13 +104,21 @@ export function ModelPicker({
   const model = currentModel(settings, capabilities);
   const efforts = selectableEfforts(capabilities);
   const level = settings.level ?? DEFAULT_INVOLVEMENT_LEVEL;
-  const access = hasRepos ? permissionSummary(settings, capabilities) : null;
+  const permission = permissionState(settings, capabilities);
+  const permissionHint = hasRepos
+    ? combinationLine({
+        provider,
+        mode: permission.mode,
+        kind: modeKind(capabilities?.modes ?? [], permission.mode),
+        level,
+        hasRepos,
+      })
+    : (permission.description ?? permission.label);
   const configOptions = capabilities?.options ?? [];
   const pinnedName = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
   const auto = settings.routing === 'auto';
   const thisTurn = autoThisTurn(orchestration);
   const modelName = auto ? (thisTurn ? `Auto · ${thisTurn} this turn` : 'Auto') : pinnedName;
-  const buttonName = access ? `${modelName} · ${access}` : modelName;
   const would = autoWouldHaveUsed(orchestration);
   const hint = builderRouteNote(orchestration) ?? (would ? `Jev would have used ${would}` : null);
 
@@ -102,8 +128,20 @@ export function ModelPicker({
     setHandledRequest(openRequest.id);
     setSection(openRequest.section);
     setOpen(true);
-    setFocusRequest(openRequest.id);
+    setFocusRequest(nextFocus(focusRequest, 'model'));
   }
+
+  const openPermissions = () => {
+    returnFocusRef.current = chipRef.current;
+    if (open && section === 'permission') {
+      setOpen(false);
+      return;
+    }
+    setDirection(1);
+    setSection('permission');
+    setOpen(true);
+    setFocusRequest(nextFocus(focusRequest, 'chip'));
+  };
   const rows: PickerRow[] = [
     {
       id: 'model',
@@ -125,7 +163,7 @@ export function ModelPicker({
     {
       id: 'permission',
       label: 'Permissions',
-      value: access ?? 'Chat',
+      value: permission.label,
       disabled: !setup,
     },
     ...(configOptions.length > 0
@@ -148,25 +186,37 @@ export function ModelPicker({
 
   return (
     <div className="mpicker">
-      <button
-        ref={anchorRef}
-        type="button"
-        className="mbtn"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={panelId}
-        aria-label={`Model and effort: ${buttonName}`}
-        onClick={() => {
-          setSection('model');
-          toggle();
-        }}
-      >
-        <ProviderBlob providerId={provider} size={18} animate="hover" />
-        <span className="mname">{modelName}</span>
-        {access && <span className="maccess">· {access}</span>}
-        <EffortMeter efforts={efforts} effort={settings.effort} />
-        <ChevronIcon />
-      </button>
+      <div ref={anchorRef} className="mtriggers">
+        <button
+          ref={modelButtonRef}
+          type="button"
+          className="mbtn"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-controls={panelId}
+          aria-label={`Model and effort: ${modelName}`}
+          onClick={() => {
+            returnFocusRef.current = modelButtonRef.current;
+            setSection('model');
+            toggle();
+          }}
+        >
+          <ProviderBlob providerId={provider} size={18} animate="hover" />
+          <span className="mname">{modelName}</span>
+          <EffortMeter efforts={efforts} effort={settings.effort} />
+          <ChevronIcon />
+        </button>
+        {setup && (
+          <PermissionChip
+            ref={chipRef}
+            state={permission}
+            hint={permissionHint}
+            expanded={open}
+            panelId={panelId}
+            onClick={openPermissions}
+          />
+        )}
+      </div>
       <div
         ref={panelRef}
         id={panelId}

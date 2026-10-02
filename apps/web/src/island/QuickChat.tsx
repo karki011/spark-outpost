@@ -9,6 +9,9 @@ import {
 } from '@spark-outpost/contracts';
 import { api, capabilitiesQuery } from '../api/client.ts';
 import { shortLabel } from '../chat/composer/model-options.ts';
+import { permissionState } from '../chat/composer/mode-summary.ts';
+import { PermissionIcon } from '../chat/composer/PermissionChip.tsx';
+import { PICK_PROJECT_HINT } from '../chat/project/repo-list.ts';
 import { providerName } from '../chat/provider-name.ts';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
@@ -44,6 +47,8 @@ function useDefaults() {
   const model = capabilities.data?.models.find((option) => option.id === modelId);
   return {
     provider,
+    settings: defaults.data ?? null,
+    capabilities: capabilities.data,
     level: defaults.data?.level ?? null,
     modelLabel: model ? shortLabel(model.label) : modelId,
   };
@@ -59,6 +64,9 @@ export function QuickChat(props: QuickChatProps) {
   const level = draft.level ?? defaults.level ?? 'hands-off';
   const levelInfo = AUTONOMY_LEVELS.find((info) => info.id === level) ?? AUTONOMY_LEVELS[1]!;
   const project = projects.find((candidate) => candidate.id === draft.projectId) ?? null;
+  const permission = defaults.settings
+    ? permissionState(defaults.settings, defaults.capabilities)
+    : null;
 
   useEffect(() => {
     const timer = setTimeout(
@@ -153,6 +161,7 @@ export function QuickChat(props: QuickChatProps) {
               aria-haspopup="menu"
               aria-expanded={menu}
               aria-controls="isl-qmenu"
+              title={project ? undefined : PICK_PROJECT_HINT}
               onClick={() => setMenu(!menu)}
             >
               {draft.projectId === undefined ? 'Choose project' : (project?.name ?? 'No project')}
@@ -168,6 +177,15 @@ export function QuickChat(props: QuickChatProps) {
                 style={{ ['--pc' as string]: `var(--c-${defaults.provider}, var(--faint))` }}
               />
               {defaults.modelLabel ?? providerName(defaults.provider)}
+            </span>
+          )}
+          {!followUp && permission && (
+            <span
+              className={`isl-chip static isl-perm risk-${permission.risk}`}
+              title="Agent mode, change the default in Spark settings"
+            >
+              <PermissionIcon risk={permission.risk} />
+              {permission.short}
             </span>
           )}
           {!followUp && (
