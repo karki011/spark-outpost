@@ -10,7 +10,7 @@ import {
 import { LINEAR_KEY } from '../../apps/server/test/fake-linear.ts';
 
 const main = (page: Page) => page.getByRole('main', { name: 'Tickets' });
-const section = (page: Page, name: string) => main(page).getByRole('region', { name });
+const section = (page: Page, name: string) => main(page).getByRole('region', { name, exact: true });
 const row = (page: Page, key: string) => main(page).locator(`li[data-ticket$=":${key}"]`);
 
 test.beforeEach(async () => {
@@ -53,7 +53,7 @@ test('the empty state connects Jira first, then checks a Linear key', async ({ p
   await form.getByLabel('API key').fill(LINEAR_KEY);
   await form.getByRole('button', { name: 'Save and check' }).click();
   await expect(form.getByRole('status')).toHaveText('Connected!', { timeout: 10_000 });
-  await expect(section(page, 'Needs attention')).toBeVisible({ timeout: 15_000 });
+  await expect(section(page, 'Needs you')).toBeVisible({ timeout: 15_000 });
   await expect(row(page, 'ENG-1215')).toContainText('Due today');
 });
 
@@ -62,12 +62,13 @@ test('the inbox sorts tickets into sections and opens a ticket', async ({ page }
   await seedAssignedSince([['WEB-433', 3]]);
   await openTickets(page);
 
-  const attention = section(page, 'Needs attention');
+  const attention = section(page, 'Needs you');
   await expect(attention.locator('li')).toHaveCount(3, { timeout: 15_000 });
   await expect(row(page, 'WEB-433')).toContainText('Urgent · not started');
   await expect(row(page, 'API-81')).toContainText('Blocked');
-  await expect(section(page, 'Working on')).toContainText('WEB-421');
-  await expect(section(page, 'In review').locator('li')).toHaveCount(2);
+  await expect(section(page, 'Started')).toContainText('WEB-421');
+  await expect(row(page, 'WEB-421')).toContainText(/Started.*In progress · no chat/);
+  await expect(section(page, 'In review / PR open').locator('li')).toHaveCount(2);
   await expect(section(page, 'Up next')).toContainText('ENG-1210');
   const done = section(page, 'Done recently');
   await expect(done.getByRole('button', { name: /^Done recently/ })).toHaveAttribute(
@@ -78,10 +79,10 @@ test('the inbox sorts tickets into sections and opens a ticket', async ({ page }
     page.getByRole('navigation', { name: 'Main' }).getByLabel('3 tickets need attention'),
   ).toBeVisible();
 
-  const views = page.getByRole('navigation', { name: 'Ticket views' });
-  await views.getByRole('button', { name: /^Up next/ }).click();
+  const views = main(page).getByRole('group', { name: 'Show tickets by where they are' });
+  await views.getByRole('button', { name: '2 up next' }).click();
   await expect(main(page).locator('li.irow')).toHaveCount(2);
-  await views.getByRole('button', { name: /^Inbox/ }).click();
+  await views.getByRole('button', { name: /^All/ }).click();
 
   await row(page, 'WEB-433')
     .getByRole('button', { name: /WEB-433/ })
@@ -98,7 +99,7 @@ test('the inbox sorts tickets into sections and opens a ticket', async ({ page }
 test('search covers every ticket and Assign to me confirms before taking one', async ({ page }) => {
   await connectTickets(page);
   await openTickets(page);
-  await expect(section(page, 'Needs attention')).toBeVisible({ timeout: 15_000 });
+  await expect(section(page, 'Needs you')).toBeVisible({ timeout: 15_000 });
 
   await page.keyboard.press('/');
   await page.keyboard.type('upload');
@@ -137,7 +138,7 @@ test('search covers every ticket and Assign to me confirms before taking one', a
 
   await page.keyboard.press('Escape');
   await page.getByRole('searchbox').press('Escape');
-  await expect(section(page, 'Needs attention')).toBeVisible();
+  await expect(section(page, 'Needs you')).toBeVisible();
 });
 
 test('Start from a ticket creates a linked chat', async ({ page }) => {
@@ -158,7 +159,7 @@ test('the Tickets strip shows the Home brief, and each side links to the other',
   await connectTickets(page);
   await seedAssignedSince([['WEB-433', 3]]);
   await openTickets(page);
-  await expect(section(page, 'Needs attention').locator('li')).toHaveCount(3, { timeout: 15_000 });
+  await expect(section(page, 'Needs you').locator('li')).toHaveCount(3, { timeout: 15_000 });
   await expect(main(page).locator('.brief')).toHaveCount(0);
 
   const rail = page.getByRole('navigation', { name: 'Main' });
@@ -193,7 +194,7 @@ test('the Tickets strip says when the brief is off and turns it on', async ({ pa
   await page.request.patch('/api/tickets/attention-settings', { data: { briefEnabled: false } });
   await openTickets(page);
   const off = main(page).getByRole('region', { name: 'Brief is off' });
-  await expect(off).toContainText('The rules still flag tickets under Needs attention.', {
+  await expect(off).toContainText('The rules still flag tickets under Needs you.', {
     timeout: 15_000,
   });
   await off.getByRole('button', { name: 'Turn on' }).click();

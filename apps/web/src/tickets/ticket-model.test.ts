@@ -90,8 +90,8 @@ describe('ticket rows', () => {
     expect(rowAction(inbox({ section: 'attention', flags: [flag('due-soon')] }))?.kind).toBe(
       'start',
     );
-    expect(rowAction(inbox({ section: 'working', chat }))?.kind).toBe('open-chat');
-    expect(rowAction(inbox({ section: 'in_review' }))).toBeNull();
+    expect(rowAction(inbox({ section: 'started', chat }))?.kind).toBe('open-chat');
+    expect(rowAction(inbox({ section: 'review' }))).toBeNull();
     expect(rowAction(inbox({ section: 'done' }))).toBeNull();
     expect(rowAction(inbox())?.kind).toBe('start');
   });

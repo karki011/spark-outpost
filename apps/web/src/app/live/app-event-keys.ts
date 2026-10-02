@@ -9,6 +9,7 @@ import { prWatchesKey } from '../../chat/pull-request/pr-follow-up-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 import { teammateKeys } from '../../teammates/teammates-api.ts';
+import { ticketKeys } from '../../tickets/tickets-api.ts';
 
 interface Invalidation {
   queryKey: QueryKey;
@@ -88,7 +89,11 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return [teammates, list];
     case 'pull_request':
       return event.conversationId
-        ? [list, { queryKey: prWatchesKey(event.conversationId), exact: true }]
+        ? [
+            list,
+            { queryKey: prWatchesKey(event.conversationId), exact: true },
+            { queryKey: ticketKeys.inbox, exact: true },
+          ]
         : [];
   }
 }

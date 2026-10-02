@@ -45,6 +45,15 @@ function ticketLine(ticket: InboxTicket) {
 
 const TOP_PRIORITY_COUNT = 5;
 
+function sectionCounts(tickets: readonly InboxTicket[]) {
+  return Object.fromEntries(
+    ticketSectionSchema.options.map((section) => [
+      section,
+      tickets.filter((ticket) => ticket.section === section).length,
+    ]),
+  );
+}
+
 function priorityLine(ticket: InboxTicket) {
   const { key, title, priority, section, url } = ticketLine(ticket);
   return { key, title, priority, section, url };
@@ -82,6 +91,7 @@ async function tickets(
       : {}),
     problems: inbox.errors,
     syncedAt: inbox.syncedAt,
+    summary: sectionCounts(inbox.tickets),
     ...shown,
     items: shown.items.map(ticketLine),
     ...(args.sort === 'inbox' && topPriority.length > 0 ? { highestPriority: topPriority } : {}),
@@ -156,7 +166,7 @@ export const workTools = [
     privateData: true,
     title: 'Tickets',
     description:
-      "The user's Jira and Linear tickets as Spark's Tickets inbox sorts them: needs attention first, then working, PR ready, in review, up next. A ticket needs attention when a linked chat is asking or stopped with an error, a sync to the tracker failed, it is blocked, it is due soon or overdue, its PR has changes requested or is approved, it has sat in review too long, or it is Urgent or High and still not started some days after it was assigned (the idle-days setting). An urgent ticket assigned today is not flagged yet. For the highest-priority or most urgent ticket, pass sort=priority (Urgent, High, Medium, Low, then none); with the default inbox order the answer also lists highestPriority, the top open tickets by priority. Each ticket has its status, priority, why it is flagged, due date, linked chat and PR. Fetches fresh data from the connected sources.",
+      "The user's Jira and Linear tickets grouped as Spark's Tickets inbox shows them (section): attention (needs you), spark (a linked chat is running), started (in progress, no active chat), up_next, review (in review or PR open), done (done or PR merged in the last 7 days). A ticket needs attention when a linked chat is asking or stopped with an error, its PR's checks fail with no chat fixing them, a sync to the tracker failed, it is blocked, it is due soon or overdue, its PR has changes requested or is approved, it has sat in review too long, or it is Urgent or High and still not started some days after it was assigned (the idle-days setting). An urgent ticket assigned today is not flagged yet. For the highest-priority or most urgent ticket, pass sort=priority (Urgent, High, Medium, Low, then none); with the default inbox order the answer also lists highestPriority, the top open tickets by priority. summary counts every section. Each ticket has its status, priority, why it is flagged or its Spark progress, due date, linked chat and PR. Fetches fresh data from the connected sources.",
     input: {
       section: ticketSectionSchema.optional().describe('Only one inbox section.'),
       source: ticketSourceIdSchema.optional(),

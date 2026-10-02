@@ -50,11 +50,33 @@ async function updatePull(req: IncomingMessage, res: ServerResponse, number: num
   Object.assign(pull, JSON.parse(text || '{}') as Partial<FakePull>);
   send(res, 200, pull);
 }
+async function addPull(req: IncomingMessage, res: ServerResponse) {
+  let text = '';
+  for await (const chunk of req) text += String(chunk);
+  const fields = JSON.parse(text || '{}') as Partial<FakePull> & { number: number };
+  const pull: FakePull = {
+    owner: 'acme',
+    repo: 'widgets',
+    title: `PR ${fields.number}`,
+    body: '',
+    head: `spark/pr-${fields.number}`,
+    base: 'main',
+    draft: false,
+    state: 'open',
+    html_url: `https://github.com/acme/widgets/pull/${fields.number}`,
+    openedBy: 'octo-cli',
+    via: 'gh_cli',
+    ...fields,
+  };
+  github.pulls.push(pull);
+  send(res, 201, pull);
+}
 const tickets = ticketFakes();
 
 const server = createServer((req, res) => {
   const path = (req.url ?? '').split('?')[0];
   if (path === '/health') return send(res, 200, { ok: true });
+  if (path === '/github-test/pulls' && req.method === 'POST') return void addPull(req, res);
   if (path === '/github-test/pulls') return send(res, 200, github.pulls);
   const pullNumber = /^\/github-test\/pulls\/(\d+)$/.exec(path ?? '')?.[1];
   if (pullNumber && req.method === 'POST') return void updatePull(req, res, Number(pullNumber));
