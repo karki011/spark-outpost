@@ -1,5 +1,6 @@
 import { turnCategory } from '../advisor/intake-recorder.ts';
 import { agreedPlanFor } from '../plans/plan-staleness.ts';
+import { liveRunBase } from '../projects/run-base.ts';
 import { gitDiffBetween, gitDiffSince, headCommit } from '../projects/snapshot.ts';
 import { getSnapshot } from '../persistence/run-snapshots.ts';
 import { projectMoveNote } from '../workflow/project-move.ts';
@@ -26,7 +27,7 @@ async function gitSnapshot(s: Session): Promise<GitSnapshot | null> {
   const state = await getSnapshot(s.deps.db, s.input.workspaceId, s.lease.runId);
   const snapshot = state?.snapshot;
   if (!snapshot || snapshot.kind !== 'git' || !snapshot.ref) return null;
-  return { root: snapshot.root, ref: snapshot.ref };
+  return { root: snapshot.root, ref: await liveRunBase(snapshot.root, snapshot.ref) };
 }
 
 function originOf(
