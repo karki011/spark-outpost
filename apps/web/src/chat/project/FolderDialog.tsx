@@ -6,6 +6,7 @@ import { projectKeys, projectsApi } from '../../api/projects.ts';
 import { breadcrumbs } from './folder-path.ts';
 import { ChevronIcon, FolderIcon, ParentFolderIcon } from '../../ui/icons.tsx';
 import { reveal } from '../../ui/transitions.tsx';
+import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 
 interface FolderDialogProps {
   linking: boolean;
@@ -109,7 +110,7 @@ export function FolderDialog({ linking, error, onUse, onClose }: FolderDialogPro
               {listing.error.message}
             </p>
           )}
-          {listing.isPending && <p className="fdlg-note">Loading folders…</p>}
+          {listing.isPending && <Skeleton label="Opening the folder" shape="list" rows={6} />}
           {current?.folders.length === 0 && <p className="fdlg-note">No folders inside.</p>}
           <ul aria-label="Folders">
             {current?.folders.map((folder) => (

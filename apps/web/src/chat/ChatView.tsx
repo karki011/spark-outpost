@@ -50,7 +50,7 @@ import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
 import { activeRun } from './turns.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
-import { BlobScout } from '../brand/BlobScout.tsx';
+import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
 import { ChatTeammate } from '../teammates/ChatTeammate.tsx';
 import { TalkToChip } from '../teammates/TalkToChip.tsx';
 
@@ -200,10 +200,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             ) : (
               <div className="thread-wrap" aria-busy={detail.isPending}>
                 {detail.isPending && (
-                  <div className="thread-loading" role="status">
-                    <BlobScout size={48} mood="working" />
-                    <span>Opening this chat…</span>
-                  </div>
+                  <LoadingBlob size="lg" className="thread-loading" line="Opening this chat…" />
                 )}
               </div>
             )}

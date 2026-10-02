@@ -7,6 +7,8 @@ import { chatMcpKey, mcpApi, userMcpKey } from '../../api/mcp.ts';
 import { requestSettings } from '../../settings/settings-request.ts';
 import { checkLine, sourceLabel } from '../../settings/mcp/mcp-labels.ts';
 import { SetupSwitch } from '../project/SetupCard.tsx';
+import { QueryWait } from '../../ui/loading/QueryWait.tsx';
+import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 
 interface ChatMcpPanelProps {
   conversationId: string;
@@ -97,12 +99,9 @@ export function ChatMcpPanel({ conversationId, onClose }: ChatMcpPanelProps) {
     >
       <h2 id={titleId}>MCP servers in this chat</h2>
       <p>Changes apply to the next message. Every tool call asks first, except at Full auto.</p>
-      {servers.isPending && <p className="as-empty">Loading…</p>}
-      {servers.isError && (
-        <p className="mcp-error" role="alert">
-          {servers.error.message}
-        </p>
-      )}
+      <QueryWait query={servers} what="MCP servers">
+        <Skeleton label="Finding MCP servers" shape="list" rows={3} />
+      </QueryWait>
       {servers.data && list.length === 0 && (
         <p className="as-empty">No MCP servers yet. Add or import them in Settings.</p>
       )}

@@ -9,6 +9,7 @@ import { needsAttention, trustPrompt } from './agent-setup.ts';
 import { AllowRulesCard, RedirectsCard, TrustCard } from './TrustCards.tsx';
 import { useAgentConfig, useAgentConfigChange } from './use-agent-config.ts';
 import { useOpenFile } from './file-sheet/FileSheet.tsx';
+import { LoadingBlob } from '../../ui/loading/LoadingBlob.tsx';
 
 const FOCUSABLE =
   'button:not([disabled]), input:not([disabled]), summary, [href], [tabindex]:not([tabindex="-1"])';
@@ -28,7 +29,7 @@ function useFocusTrap(panelRef: RefObject<HTMLElement | null>, open: boolean) {
 function RepoSetup({ project, onOpen }: { project: Project; onOpen: (path: string) => void }) {
   const config = useAgentConfig(project.id);
   const change = useAgentConfigChange(project.id);
-  if (config.isPending) return <p className="as-empty">Looking at {project.name}…</p>;
+  if (config.isPending) return <LoadingBlob size="sm" line={`Looking at ${project.name}…`} />;
   if (config.isError) {
     return (
       <p className="mpop-error" role="alert">
