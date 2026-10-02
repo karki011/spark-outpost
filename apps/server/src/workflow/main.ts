@@ -11,6 +11,7 @@ import { locateCli } from '../setup/verify.ts';
 import { startMapScheduler } from '../map/scheduler.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createProviders } from './providers.ts';
+import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import { startWorker } from './worker.ts';
 import { Slots } from '../orchestration/slots.ts';
 import { startSparkMcpHost } from '../spark-mcp/host.ts';
@@ -49,7 +50,13 @@ const worker = startWorker({
   db,
   approvalWaiters,
   intake,
-  providers: createProviders(config.AGENT_RUNTIME, config.FAKE_ACP_AGENT, secrets, sparkTools),
+  providers: createProviders(
+    config.AGENT_RUNTIME,
+    config.FAKE_ACP_AGENT,
+    secrets,
+    sparkTools,
+    loginShellLocator(loginShell),
+  ),
   leaseSeconds: config.LEASE_SECONDS,
   sessionLimits: {
     idleMs: config.SESSION_IDLE_MINUTES * 60_000,

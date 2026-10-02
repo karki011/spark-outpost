@@ -31,6 +31,12 @@ describe('detectHint', () => {
     });
   });
 
+  it('checks again without a login step when Z.ai installs the claude CLI', () => {
+    expect(detectHint(catalogEntry('zai'), 'added 3 packages in 4s')?.hint.message).toBe(
+      'Installed `claude`. Checking again.',
+    );
+  });
+
   it('does not call an install finished when npm skipped its setup script', () => {
     const detected = detectHint(claude, blockedOutput);
     expect(detected?.hint.id).toBe('install_scripts_blocked');

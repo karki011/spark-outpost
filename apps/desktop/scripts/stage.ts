@@ -1,10 +1,13 @@
 import { execFile } from 'node:child_process';
 import { cp, glob, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { build, Platform } from 'electron-builder';
 import { builderConfig, signingPlan, type MacArch } from './builder-config.ts';
 import { notarizeDmgs } from './notarize-dmg.ts';
+import { collect, pruneRuntime, pruneServer } from './prune.ts';
+import { checkPostgresStarts, postgresNativeDir, prunePostgres } from './prune-postgres.ts';
 
 const run = promisify(execFile);
 
@@ -46,18 +49,22 @@ async function deploy(
   }
 }
 
+async function stageRuntime(runtimeDir: string, arch: MacArch): Promise<void> {
+  await deploy('@spark-outpost/desktop', arch, runtimeDir, ['src', 'scripts', 'build']);
+  await pruneRuntime(runtimeDir);
+  const postgres = postgresNativeDir(runtimeDir, arch);
+  await prunePostgres(postgres);
+  if (arch === os.arch()) await checkPostgresStarts(postgres);
+}
+
 async function stageArch(stageDir: string, arch: MacArch): Promise<void> {
   const archDir = path.join(stageDir, arch);
-  await deploy('@spark-outpost/desktop', arch, path.join(archDir, 'runtime'), [
-    'src',
-    'scripts',
-    'build',
-  ]);
+  await stageRuntime(path.join(archDir, 'runtime'), arch);
   const serverDir = path.join(archDir, 'server');
   await deploy('@spark-outpost/server', arch, serverDir, ['test']);
-  for await (const test of glob('src/**/*.test.ts', { cwd: serverDir })) {
-    await rm(path.join(serverDir, test));
-  }
+  const tests = await collect(glob('src/**/*.test.ts', { cwd: serverDir }));
+  for (const test of tests) await rm(path.join(serverDir, test));
+  await pruneServer(serverDir, arch);
   await cp(path.join(repoRoot, 'docs/guide'), path.join(serverDir, 'guide'), {
     recursive: true,
     filter: (source) => !source.includes(`${path.sep}images`),

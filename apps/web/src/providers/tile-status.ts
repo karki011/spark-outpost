@@ -42,7 +42,11 @@ function connectedHint(setup: TileSetup, when: (iso: string) => string): string 
 
 function failureStatus(setup: TileSetup, failure: VerifyFailure): TileStatus {
   if (failure.code === 'cli_missing') {
-    return { tone: 'warn', label: 'CLI not installed', hint: `Install the ${setup.cli} CLI` };
+    const hint =
+      'installCommand' in setup
+        ? `Install it with ${setup.installCommand}`
+        : `Install the ${setup.cli} CLI`;
+    return { tone: 'warn', label: 'CLI not installed', hint };
   }
   if (failure.code === 'not_logged_in') {
     return { tone: 'warn', label: 'Needs sign-in', hint: `Sign in to ${setup.name}` };

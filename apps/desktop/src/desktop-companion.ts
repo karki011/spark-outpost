@@ -150,7 +150,6 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     });
     return picked.canceled ? null : (picked.filePaths[0] ?? null);
   });
-  companion.resume();
 
   ipcMain.handle(IPC.companionGet, (event) => (fromSpark(event) ? companion.status() : null));
   ipcMain.handle(IPC.companionSetEnabled, (event, on: unknown) =>
@@ -181,6 +180,10 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     if (typeof x !== 'number' || typeof y !== 'number') return;
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     island!.drag(phase as DragPhase, { x, y });
+  });
+
+  ipcMain.on(IPC.islandReady, (event) => {
+    if (fromIsland(event)) island!.ready();
   });
 
   ipcMain.on(IPC.islandRestSize, (event, size: unknown) => {
@@ -222,6 +225,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.islandFocusable,
         IPC.islandDrag,
         IPC.islandRestSize,
+        IPC.islandReady,
         IPC.islandOpenChat,
       ]) {
         ipcMain.removeAllListeners(channel);

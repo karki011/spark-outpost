@@ -116,7 +116,7 @@ export function useProviderConnect(
       setVerifying(false);
       setMood('sad');
       startShake();
-      if (body.method === 'cli') openTerminal();
+      if (body.method === 'cli' || code === 'cli_missing') openTerminal();
       latest.current.onFailure?.({ code: code ?? null, label });
       latest.current.onVerifyOutcome?.('failure');
     };

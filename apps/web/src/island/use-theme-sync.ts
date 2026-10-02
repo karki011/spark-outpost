@@ -11,15 +11,11 @@ function applySkin(): void {
 
 export function useThemeSync(): void {
   useEffect(() => {
-    document.documentElement.dataset.island = '';
     applySkin();
     const onStorage = (event: StorageEvent) => {
       if (event.key === null || event.key === THEME_KEY) applySkin();
     };
     window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener('storage', onStorage);
-      delete document.documentElement.dataset.island;
-    };
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 }

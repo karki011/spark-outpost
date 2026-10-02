@@ -37,6 +37,15 @@ const unavailableProbe: AppOptions['probeCapabilities'] = () =>
 
 const notFound: CommandResult = { code: 1, stdout: '', stderr: '' };
 
+export const noClis: RunCommand = async () => notFound;
+
+export const installedClis: RunCommand = async (file, args) => {
+  if (file === '/usr/bin/which')
+    return { code: 0, stdout: `/usr/local/bin/${args[0]}\n`, stderr: '' };
+  if (args[0] === '--version') return { code: 0, stdout: '1.0.0\n', stderr: '' };
+  return notFound;
+};
+
 export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
   return createApp({
     db: t.db,
@@ -56,7 +65,7 @@ export function createTestApp(t: TestDb, options: TestAppOptions = {}) {
       zaiBaseUrl: 'https://zai.test',
       fetch: options.fetch ?? (() => Promise.reject(new Error('Network disabled in tests'))),
     },
-    runCommand: options.runCommand ?? (async () => notFound),
+    runCommand: options.runCommand ?? noClis,
     terminals: options.terminals ?? new TerminalSessions(loginShellSpawner('/bin/sh')),
     appEvents: options.appEvents ?? new AppEventFeed(),
     loginShell: '/bin/zsh',

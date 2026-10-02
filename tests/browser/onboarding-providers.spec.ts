@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { resetTestDatabase } from './database.ts';
+import { resetTestDatabase, uninstallFakeClaude } from './database.ts';
 import { REJECTED_KEY_MARKER } from './stub-config.ts';
 import {
   CLAUDE_KEY,
@@ -49,6 +49,7 @@ const terminalText = (scope: ReturnType<typeof screen>) =>
 test('a missing CLI opens a terminal with the install command and checks again after install', async ({
   page,
 }) => {
+  uninstallFakeClaude();
   await enterName(page, 'Hazel');
   const claude = screen(page, 'claude');
   await openTile(page, 'claude');
@@ -80,7 +81,29 @@ test('a missing CLI opens a terminal with the install command and checks again a
 
   await claude.getByRole('button', { name: 'Back to AI providers' }).click();
   await expect(tile(page, 'claude')).toContainText('CLI not installed');
-  await expect(tile(page, 'claude')).toContainText('Install the claude CLI');
+  await expect(tile(page, 'claude')).toContainText(
+    'Install it with npm i -g @anthropic-ai/claude-code',
+  );
+});
+
+test('API key mode needs the claude CLI and offers the same install step', async ({ page }) => {
+  uninstallFakeClaude();
+  await enterName(page, 'Hazel');
+  const claude = claudeCard(page);
+  const key = await openApiKeyTab(page);
+  await expect(claude).toContainText('API key mode also needs the claude CLI installed.');
+  await key.fill(CLAUDE_KEY);
+  await key.press('Enter');
+
+  await expect(terminalIn(claude)).toContainText('Install Claude');
+  await expect(terminalIn(claude)).toContainText(
+    'API key mode also needs the claude CLI installed.',
+  );
+  await expect(terminalText(claude)).toContainText('npm i -g @anthropic-ai/claude-code');
+  await expect(continueButton(page)).toBeDisabled();
+  await claude.getByRole('button', { name: 'Back to AI providers' }).click();
+  await expect(tile(page, 'claude')).toContainText('CLI not installed');
+  await expect(tile(page, 'claude')).toContainText('npm i -g @anthropic-ai/claude-code');
 });
 
 test('an installed but logged-out CLI goes straight to login and connects by itself', async ({

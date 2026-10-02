@@ -137,25 +137,28 @@ export function ConnectSection({
         <ConnectedDetails setup={setup} connect={connect} />
       )}
       <AnimatePresence mode="wait">
-        {editing && connect.terminalOpen && connect.method === 'cli' && !isAdvisor(setup) && (
-          <motion.div key={connect.terminalRun} className="pc-collapse" {...fadeReveal}>
-            <TerminalPanel
-              provider={setup.id}
-              providerName={setup.name}
-              reason={
-                connect.reauth
-                  ? null
-                  : (connect.log.findLast((line) => line.status === 'bad')?.label ?? null)
-              }
-              step={connect.failureCode === 'not_logged_in' ? 'login' : 'install'}
-              onCheckAgain={() => {
-                connect.closeTerminal();
-                void connect.verify();
-              }}
-              onDismiss={connect.closeTerminal}
-            />
-          </motion.div>
-        )}
+        {editing &&
+          connect.terminalOpen &&
+          (connect.method === 'cli' || connect.failureCode === 'cli_missing') &&
+          !isAdvisor(setup) && (
+            <motion.div key={connect.terminalRun} className="pc-collapse" {...fadeReveal}>
+              <TerminalPanel
+                provider={setup.id}
+                providerName={setup.name}
+                reason={
+                  connect.reauth
+                    ? null
+                    : (connect.log.findLast((line) => line.status === 'bad')?.label ?? null)
+                }
+                step={connect.failureCode === 'not_logged_in' ? 'login' : 'install'}
+                onCheckAgain={() => {
+                  connect.closeTerminal();
+                  void connect.verify();
+                }}
+                onDismiss={connect.closeTerminal}
+              />
+            </motion.div>
+          )}
       </AnimatePresence>
     </>
   );

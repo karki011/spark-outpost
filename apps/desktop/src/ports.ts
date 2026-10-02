@@ -16,3 +16,12 @@ export function freePort(host = LOOPBACK): Promise<number> {
     });
   });
 }
+
+export function portIsFree(port: number, host = LOOPBACK): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = createServer();
+    server.unref();
+    server.once('error', () => resolve(false));
+    server.listen(port, host, () => server.close(() => resolve(true)));
+  });
+}

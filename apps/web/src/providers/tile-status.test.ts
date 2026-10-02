@@ -15,6 +15,7 @@ const codex: ProviderSetup = {
   methods: ['cli', 'api_key'],
   connection: null,
   note: null,
+  installCommand: 'npm i -g @openai/codex',
   efforts: [],
   defaultEffort: 'medium',
 };
@@ -49,9 +50,11 @@ describe('tileStatus', () => {
   });
 
   it('names the step a failed verify stopped at', () => {
-    expect(tileStatus(codex, null, { code: 'cli_missing', label: 'x' }, when).label).toBe(
-      'CLI not installed',
-    );
+    expect(tileStatus(codex, null, { code: 'cli_missing', label: 'x' }, when)).toEqual({
+      tone: 'warn',
+      label: 'CLI not installed',
+      hint: 'Install it with npm i -g @openai/codex',
+    });
     expect(tileStatus(codex, null, { code: 'not_logged_in', label: 'x' }, when).label).toBe(
       'Needs sign-in',
     );

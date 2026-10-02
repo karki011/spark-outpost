@@ -1,3 +1,5 @@
+import { sparkDesktop } from '../desktop/desktop-bridge.ts';
+
 export const themes = [
   {
     id: 'system',
@@ -94,6 +96,7 @@ export function readTheme(): ThemeId {
 export function applyTheme(id: ThemeId): void {
   if (id === 'system') delete document.documentElement.dataset.skin;
   else document.documentElement.dataset.skin = id;
+  sparkDesktop()?.theme?.save(id);
   try {
     localStorage.setItem(STORAGE_KEY, id);
   } catch {

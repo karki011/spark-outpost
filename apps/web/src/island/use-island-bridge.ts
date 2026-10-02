@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { sparkDesktop, type IslandAction, type IslandGeometry } from '../desktop/desktop-bridge.ts';
+import {
+  afterPaint,
+  sparkDesktop,
+  type IslandAction,
+  type IslandGeometry,
+} from '../desktop/desktop-bridge.ts';
 import { matchesShortcut } from '../desktop/shortcut-keys.ts';
 
 export const HIT_MARGIN = 14;
@@ -75,7 +80,10 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
 
   useEffect(() => {
     if (!desktop) return;
-    void desktop.island.geometry().then((next) => next && setGeometry(next));
+    void desktop.island.geometry().then((next) => {
+      if (next) setGeometry(next);
+      afterPaint(() => desktop.island.ready?.());
+    });
     const offGeometry = desktop.island.onGeometry(setGeometry);
     const offCommand = desktop.island.onCommand((action) => latest.current.onCommand(action));
     const offEscape = desktop.island.onEscape(() => {

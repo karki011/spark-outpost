@@ -37,7 +37,8 @@ const rules: HintRule[] = [
   {
     id: 'installed',
     pattern: /(added|changed) \d+ packages?/g,
-    message: (entry) => `Installed \`${entry.cli}\`. Checking whether you're logged in.`,
+    message: (entry) =>
+      `Installed \`${entry.cli}\`. ${entry.loginCommand ? "Checking whether you're logged in." : 'Checking again.'}`,
     checkAgain: true,
   },
   {

@@ -19,7 +19,8 @@ You see **Taking a quick nap** ("The Spark Outpost server isn't answering"), or 
 
 Open **Settings → AI providers**. The provider's tile shows **CLI not installed**, **Needs sign-in** or **Error**. Select it; the message under **Test** says what's wrong:
 
-- **"The `claude` CLI isn't installed or isn't on your PATH"**: install it with `npm i -g @anthropic-ai/claude-code` (for Codex, `npm i -g @openai/codex`), then select **Try again** on the **Local CLI** tab.
+- **"The `claude` CLI isn't installed or isn't on your PATH"** or **"API key mode also needs the `claude` CLI installed"**: install it with `npm i -g @anthropic-ai/claude-code` (for Codex, `npm i -g @openai/codex`), then select **Try again**. Spark doesn't include the CLIs; Z.ai needs `claude` too.
+- **"Claude runs through the `claude` CLI, which isn't installed"** in a chat: the CLI was removed or moved. Install it again, then resend.
 - **"You're not logged in to the `claude` CLI"**: run `claude auth login` (for Codex, `codex login`) in a terminal, then select **Try again**.
 - **"Couldn't reach …"**: check your internet connection and try again.
 

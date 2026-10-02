@@ -1,5 +1,12 @@
-import { rmSync } from 'node:fs';
-import { CREW_CATALOG, FAKE_CODEX_STATE, FAKE_GH_STATE, TEST_DATABASE_URL } from './stub-config.ts';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import {
+  CREW_CATALOG,
+  FAKE_CLAUDE_BIN,
+  FAKE_CODEX_STATE,
+  FAKE_GH_STATE,
+  TEST_DATABASE_URL,
+} from './stub-config.ts';
 import { createDb, type Db } from '../../apps/server/src/persistence/db.ts';
 import { ensureLocalWorkspace } from '../../apps/server/src/persistence/conversations.ts';
 import { truncateTables } from '../../apps/server/src/persistence/truncate.ts';
@@ -10,6 +17,18 @@ export function testDatabaseUrl(): string {
   if (!url)
     throw new Error('Browser tests need TEST_DATABASE_URL. Run pnpm db:setup and pnpm db:up.');
   return url;
+}
+
+const FAKE_CLAUDE =
+  '#!/bin/sh\n[ "$1" = "--version" ] && echo "2.1.0 (Claude Code)" && exit 0\nexit 2\n';
+
+export function installFakeClaude(): void {
+  mkdirSync(FAKE_CLAUDE_BIN, { recursive: true });
+  writeFileSync(path.join(FAKE_CLAUDE_BIN, 'claude'), FAKE_CLAUDE, { mode: 0o755 });
+}
+
+export function uninstallFakeClaude(): void {
+  rmSync(path.join(FAKE_CLAUDE_BIN, 'claude'), { force: true });
 }
 
 export function openTestDb(): Db {
@@ -76,6 +95,7 @@ export async function resetTestDatabase({
 }: ResetOptions): Promise<void> {
   rmSync(FAKE_CODEX_STATE, { force: true });
   rmSync(FAKE_GH_STATE, { force: true });
+  installFakeClaude();
   const db = openTestDb();
   try {
     await stopLeftoverRuns(db);

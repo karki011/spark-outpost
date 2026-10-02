@@ -17,10 +17,14 @@ import { escapeGuard } from './island-escape.ts';
 import { setIslandFocus } from './island-focus.ts';
 import { ISLAND_LEVEL, ISLAND_PATH, islandWindowOptions } from './island-options.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
+import { revealGate } from './reveal-gate.ts';
 import { guardNavigation } from './window.ts';
+
+const READY_FALLBACK_MS = 8_000;
 
 export interface IslandWindow extends IslandHandle {
   owns(webContentsId: number): boolean;
+  ready(): void;
   setInteractive(on: boolean): void;
   setFocusable(on: boolean): void;
   drag(phase: DragPhase, pointer: Point): void;
@@ -107,12 +111,14 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   screen.on('display-added', place);
   screen.on('display-removed', place);
   screen.on('display-metrics-changed', place);
-  window.once('ready-to-show', () => {
+  const reveal = revealGate(() => {
+    if (window.isDestroyed()) return;
     if (placed) moveTo(placed.position);
     window.showInactive();
     report('shown');
-  });
+  }, READY_FALLBACK_MS);
   window.on('closed', () => {
+    reveal.cancel();
     escape.arm(false);
     screen.off('display-added', place);
     screen.off('display-removed', place);
@@ -138,11 +144,13 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
 
   return {
     owns: (id) => !window.isDestroyed() && window.webContents.id === id,
+    ready: reveal.ready,
     destroy: () => {
       if (!window.isDestroyed()) window.destroy();
     },
     command: (action: ShortcutAction) => {
       if (window.isDestroyed()) return;
+      reveal.ready();
       if (!window.isVisible()) window.showInactive();
       send(IPC.islandCommand, action);
     },

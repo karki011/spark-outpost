@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC, type DragPhase } from './ipc-channels.ts';
+import { applySeed } from './storage-seed.ts';
+import { themeFromArgs } from './theme-arg.ts';
 
 function listen<T>(channel: string, callback: (payload: T) => void): () => void {
   const handler = (_event: IpcRendererEvent, payload: T) => callback(payload);
@@ -9,8 +11,25 @@ function listen<T>(channel: string, callback: (payload: T) => void): () => void 
   };
 }
 
+function restoreSettings(): void {
+  try {
+    const entries: unknown = ipcRenderer.sendSync(IPC.storageSeed);
+    if (entries && typeof entries === 'object')
+      applySeed(localStorage, entries as Record<string, string>);
+  } catch {
+    return;
+  }
+}
+
+restoreSettings();
+
 contextBridge.exposeInMainWorld('sparkDesktop', {
   platform: process.platform,
+  theme: {
+    saved: themeFromArgs(process.argv),
+    save: (theme: string) => ipcRenderer.send(IPC.themeSave, theme),
+  },
+  rendered: () => ipcRenderer.send(IPC.appRendered),
   companion: {
     get: () => ipcRenderer.invoke(IPC.companionGet),
     setEnabled: (on: boolean) => ipcRenderer.invoke(IPC.companionSetEnabled, on),
@@ -34,6 +53,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     openChat: (id: string | null) => ipcRenderer.send(IPC.islandOpenChat, id),
     setRestSize: (size: { width: number; height: number } | null) =>
       ipcRenderer.send(IPC.islandRestSize, size),
+    ready: () => ipcRenderer.send(IPC.islandReady),
   },
   updates: {
     get: () => ipcRenderer.invoke(IPC.updatesGet),

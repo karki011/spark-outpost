@@ -1,11 +1,12 @@
 import { BrowserWindow, session, shell } from 'electron';
 import { targetsApi, withApiToken } from './api-token.ts';
 import type { ChannelConfig } from './channel.ts';
+import { themeArgs } from './theme-arg.ts';
 
 export interface WindowOptions {
   config: ChannelConfig;
-  origin: string;
   preload: string;
+  theme: string | null;
 }
 
 function openOutside(url: string): void {
@@ -30,7 +31,7 @@ export function guardNavigation(window: BrowserWindow, origin: string): void {
   });
 }
 
-export function openWindow({ config, origin, preload }: WindowOptions): BrowserWindow {
+export function openWindow({ config, preload, theme }: WindowOptions): BrowserWindow {
   const title = config.badge ? `${config.appName} — ${config.badge}` : config.appName;
   const window = new BrowserWindow({
     title,
@@ -44,14 +45,12 @@ export function openWindow({ config, origin, preload }: WindowOptions): BrowserW
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      additionalArguments: themeArgs(theme),
     },
   });
   window.on('page-title-updated', (event) => {
     event.preventDefault();
     window.setTitle(title);
   });
-  window.once('ready-to-show', () => window.show());
-  guardNavigation(window, origin);
-  void window.loadURL(`${origin}/`);
   return window;
 }

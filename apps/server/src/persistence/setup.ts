@@ -164,6 +164,7 @@ export async function getSetupState(
     keyHint: entry.keyHint,
     keyLink: entry.keyLink,
     note: entry.note,
+    installCommand: entry.installCommand,
     methods: entry.methods,
     efforts: entry.efforts,
     defaultEffort: entry.defaultEffort,
