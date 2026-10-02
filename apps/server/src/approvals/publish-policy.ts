@@ -68,6 +68,11 @@ export function publishRequested(text: string): boolean {
   return PR_ASK.test(text) || PUSH_ASK.test(text);
 }
 
+export function withoutPublishAsks(text: string): string {
+  const every = (pattern: RegExp) => new RegExp(pattern.source, 'gi');
+  return text.replace(every(PR_ASK), ' ').replace(every(PUSH_ASK), ' ');
+}
+
 const GH_PR_VERBS = new Set(['create', 'view', 'edit']);
 const PR_SELECTOR = /^(#?\d+|https?:\/\/.*)$/i;
 
