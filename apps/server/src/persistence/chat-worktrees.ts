@@ -14,7 +14,9 @@ export interface ChatWorktree {
   path: string;
   branch: string;
   baseBranch: string | null;
+  baseRef?: string | null;
   baseCommit: string;
+  createdAt?: string | null;
   landedCommit: string | null;
   inPlace: boolean;
   ownsBranch: boolean;
@@ -28,7 +30,9 @@ interface Row {
   path: string;
   branch: string;
   base_branch: string | null;
+  base_ref: string | null;
   base_commit: string;
+  created_at: Date | null;
   landed_commit: string | null;
   in_place: boolean;
   owns_branch: boolean;
@@ -43,7 +47,9 @@ function toRecord(row: Row): ChatWorktree {
     path: row.path,
     branch: row.branch,
     baseBranch: row.base_branch,
+    baseRef: row.base_ref,
     baseCommit: row.base_commit,
+    createdAt: row.created_at?.toISOString() ?? null,
     landedCommit: row.landed_commit,
     inPlace: row.in_place,
     ownsBranch: row.owns_branch,
@@ -53,8 +59,8 @@ function toRecord(row: Row): ChatWorktree {
 export async function insertChatWorktree(db: Queryable, record: ChatWorktree): Promise<void> {
   await db.query(
     `INSERT INTO chat_worktrees (id, conversation_id, project_id, repo_root, path, branch,
-       base_branch, base_commit, in_place, owns_branch)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+       base_branch, base_commit, in_place, owns_branch, base_ref)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       record.id,
       record.conversationId,
@@ -66,6 +72,7 @@ export async function insertChatWorktree(db: Queryable, record: ChatWorktree): P
       record.baseCommit,
       record.inPlace,
       record.ownsBranch,
+      record.baseRef ?? null,
     ],
   );
 }

@@ -73,6 +73,8 @@ function branchView(record: ChatWorktree | null): ChatWorkspace['current'] {
     worktree: !record.inPlace,
     owned: record.ownsBranch,
     baseBranch: record.baseBranch,
+    baseRef: record.baseRef ?? null,
+    createdAt: record.createdAt ?? null,
   };
 }
 
