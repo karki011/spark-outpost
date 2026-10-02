@@ -149,6 +149,7 @@ function ViewBody({ props }: { props: IslandShellProps }) {
       return (
         <AskSpark
           fast={props.fast}
+          voice={props.voice}
           waiting={props.waiting}
           focusDelay={focusDelay}
           onTab={props.onTab}

@@ -6,6 +6,7 @@ import { doneLine } from './crew-voice.ts';
 import { sessionState, type Card, type CardKind, type SessionState } from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
 import { elapsedText } from './island-parts.tsx';
+import { plainLine } from './plain-line.ts';
 import { SessionBlob } from './SessionBlob.tsx';
 import { runStart, workLine, type WorkItem } from './work-items.ts';
 
@@ -36,7 +37,9 @@ export function hasHoverItems(groups: HoverGroups): boolean {
 
 export function recentLine(voice: Voice, chat: ConversationSummary): string {
   if (sessionState(chat) === 'failed') {
-    return chat.latestRun?.error ?? 'It stopped before the work was done.';
+    return chat.latestRun?.error
+      ? plainLine(chat.latestRun.error)
+      : 'It stopped before the work was done.';
   }
   return doneLine(voice, 'all finished', chat.latestRun?.id ?? chat.id);
 }
@@ -115,7 +118,7 @@ export function HoverList({ groups, voice, now, sleepy, onReview, onOpen }: Hove
                 <Face chat={item.chat} state="working" sleepy={false} />
                 <span className="isl-hmain">
                   <span className="isl-htitle">{item.chat.title}</span>
-                  <span className="isl-hsub">{workLine(voice, item)}</span>
+                  <span className="isl-hsub">{plainLine(workLine(voice, item))}</span>
                 </span>
                 <span className="isl-htime mono">{elapsedText(runStart(item), now)}</span>
               </button>
