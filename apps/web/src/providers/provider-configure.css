@@ -129,3 +129,6 @@
     margin-top: 8px;
   }
 }
+.pconf-sec .conn-details + .pconf-muted {
+  margin-top: 12px;
+}

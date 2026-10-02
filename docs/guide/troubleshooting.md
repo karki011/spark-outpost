@@ -17,32 +17,32 @@ You see **Taking a quick nap** ("The Spark Outpost server isn't answering"), or 
 
 ## A provider won't connect
 
-Open **Settings → AI providers** and open the provider's card. The message under it says what's wrong:
+Open **Settings → AI providers**. The provider's tile shows **CLI not installed**, **Needs sign-in** or **Error**. Select it; the message under **Test** says what's wrong:
 
 - **"The `claude` CLI isn't installed or isn't on your PATH"**: install it with `npm i -g @anthropic-ai/claude-code` (for Codex, `npm i -g @openai/codex`), then select **Try again** on the **Local CLI** tab.
 - **"You're not logged in to the `claude` CLI"**: run `claude auth login` (for Codex, `codex login`) in a terminal, then select **Try again**.
 - **"Couldn't reach …"**: check your internet connection and try again.
 
-In a chat, the same problem shows as "… isn't signed in. Open Settings, reconnect …, and try again." Reconnect the provider on its card, then send your message again.
+In a chat, the same problem shows as "… isn't signed in. Open Settings, reconnect …, and try again." Reconnect the provider on its screen, then send your message again.
 
 ## A key was rejected
 
 - **"rejected this key (401 Unauthorized)"**: the key is wrong or revoked. Copy it again from the provider, paste it into the key field and select **Verify key**.
 - **"denied access (403 Forbidden)"**: the key works but lacks permission. Check its permissions with the provider.
 - **"can't use any models"**: check which project the key belongs to.
-- **"This looks like an OpenAI key. Paste it under Codex instead."**: you pasted it on the wrong card.
+- **"This looks like an OpenAI key. Paste it under Codex instead."**: you pasted it on the wrong provider's screen.
 
 ## No models in the model picker
 
 The picker asks the agent for its models when you open it. If it says **No models reported yet**:
 
-1. Check that the provider's card says **Connected**. If it isn't, connect it first.
+1. Check that the provider's tile says **Connected**. If it isn't, connect it first.
 2. Close the picker and open it again. The first answer can take a few seconds.
-3. If it says the agent "took too long to report its models", select **Send test message** on the card to check the provider answers.
+3. If it says the agent "took too long to report its models", select **Send test message** on the provider's screen to check the provider answers.
 
 ## The test message fails
 
-The card says **The test message failed:** and why:
+The provider's screen says **The test message failed:** under **Test**, and why:
 
 - **"rejected the stored key (401)"** or **"the stored key is missing from the keychain"**: paste the key again and select **Verify key**.
 - **"is rate limiting this key (429)"**: wait a minute, then try again.

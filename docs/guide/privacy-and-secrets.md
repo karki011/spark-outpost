@@ -17,7 +17,7 @@ When you connect a provider with **Local CLI**, the sign-in stays in that CLI. S
 
 ## Paste keys only in the key field
 
-1. Open **Settings → AI providers** and open the provider's card.
+1. Open **Settings → AI providers** and select the provider's tile.
 2. Paste the key into the key field on the **API key** tab.
 3. Select **Verify key**.
 

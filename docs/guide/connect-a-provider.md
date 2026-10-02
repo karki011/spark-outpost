@@ -24,21 +24,29 @@ Pick the way that fits how you already work:
 | **Local CLI** | You already use Claude Code or Codex in a terminal. | In the CLI. Spark never reads or stores it.      |
 | **API key**   | You have a key from the provider, or you use Z.ai.  | In your system keychain, never in Spark's files. |
 
-![The Connect your AI providers step with the Claude card open](images/getting-started-provider-light.png)
+## Open a provider
+
+Each provider has a tile. The tile shows its status, such as **Not set up**, **CLI not installed**, **Needs sign-in**, **Connected · Local CLI** or **Error**, its default model once connected, and what to do next.
+
+![The AI providers tiles with Claude and Jev connected](images/providers-tiles-light.png)
+
+Select a tile to open that provider's screen. It has four parts: **How to connect**, **Test**, **Defaults for new chats** and, once connected, **Danger zone**. Select **Back** (the arrow next to the name), **Done** or press **Esc** to return to the tiles.
+
+![The Claude screen on the Connect your AI providers step, with the API key tab open](images/getting-started-provider-light.png)
 
 ## Connect with the local CLI
 
-1. Select the provider's card to open it.
-2. Select the **Local CLI** tab.
-3. Select **Detect and verify**. Spark looks for the CLI on your computer and checks that you are signed in.
+1. Select the provider's tile to open it.
+2. Under **How to connect**, select the **Local CLI** tab.
+3. Select **Detect and verify**. Spark looks for the CLI on your computer and checks that you are signed in. Each check appears under **Test**.
 4. If the CLI isn't installed or isn't signed in, Spark opens a terminal with the command to fix it. Run the command, and Spark checks again on its own.
 
 Spark Outpost runs the CLI but never reads or stores your credentials.
 
 ## Connect with an API key
 
-1. Select the provider's card to open it.
-2. Select the **API key** tab. Z.ai shows the key field straight away.
+1. Select the provider's tile to open it.
+2. Under **How to connect**, select the **API key** tab. Z.ai shows the key field straight away.
 3. Paste the key into the key field. The hint under the field tells you if the key looks wrong, for example "Claude keys start with sk-ant-".
 4. Select **Verify key**, or press **Enter**.
 
@@ -48,8 +56,8 @@ Spark checks the key with the provider and stores it in your system keychain. It
 
 ## Send a test message
 
-1. Wait until the card says **Connected**.
-2. Select **Send test message**.
+1. Wait until the screen says **Connected**.
+2. Under **Test**, select **Send test message**.
 
 Spark asks the provider to reply with one word. It shows how long the answer took and which model sent it.
 

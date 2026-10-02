@@ -28,7 +28,7 @@ Connect Claude and Codex with your existing CLI login (\`claude\` / \`codex\`), 
     keywords: ['jev', 'advisor', 'typesafe', 'system one', 'judgment', 'check changes'],
     text: `Jev (TypeSafe's "System One") is an optional decision service, not a chat or coding model — it doesn't generate text, stream, call tools or edit files. It answers typed questions (Choice, Score, Noul) with calibrated probabilities over a short state you send it.
 
-Spark uses Jev for a handful of concrete judgments per Do turn: whether a message is a question or a change, whether it's vague enough to need clarifying, whether it looks destructive, whether a Critic review is warranted, and a verifier check on the finished diff. Code always owns the policy and the act line for each question; Jev's answer only decides at high confidence, and low-confidence answers fall back to plain rules. With Spark off, Jev is never called. Answers below the confidence band never grant anything by themselves. Settings → AI providers → Check changes with Jev lets Jev verify finished diffs (never used for training).`,
+Spark uses Jev for a handful of concrete judgments per Do turn: whether a message is a question or a change, whether it's vague enough to need clarifying, whether it looks destructive, whether a Critic review is warranted, and a verifier check on the finished diff. Code always owns the policy and the act line for each question; Jev's answer only decides at high confidence, and low-confidence answers fall back to plain rules. With Spark off, Jev is never called. Answers below the confidence band never grant anything by themselves. Settings → AI providers → Jev → Check changes with Jev lets Jev verify finished diffs (never used for training).`,
   },
   {
     id: 'ask-vs-do',
@@ -273,7 +273,7 @@ The Spark switch on: Jev reads each request, routing picks models, a Critic revi
       'projects',
       'connectors',
     ],
-    text: `Settings has these sections: Spark (see settings-spark); AI providers (connect Claude, Codex, Z.ai and Jev, and Check changes with Jev); Models (cost, benchmark and when Spark uses each model); Usage (tokens and cost per provider and category, last 30 days or all time); Projects (linked folders, trust, Builders at once and Where Spark works); Connectors (GitHub, Jira, Linear); MCP servers; Appearance (themes); Reset (hold to reset, then 10 seconds to Undo; optionally Keep my API keys).
+    text: `Settings has these sections: Spark (see settings-spark); AI providers (a tile per provider: Claude, Codex, Z.ai and Jev, each opening its own screen to connect, test, pick defaults and disconnect; Check changes with Jev is on Jev's screen); Models (cost, benchmark and when Spark uses each model); Usage (tokens and cost per provider and category, last 30 days or all time); Projects (linked folders, trust, Builders at once and Where Spark works); Connectors (GitHub, Jira, Linear); MCP servers; Appearance (themes); Reset (hold to reset, then 10 seconds to Undo; optionally Keep my API keys).
 
 spark_settings returns the non-secret settings; spark_projects returns each project's Builders at once and Where Spark works.`,
   },
