@@ -11,6 +11,7 @@ import { loadOrchestration } from '../../persistence/orchestrations.ts';
 import { round } from '../format.ts';
 import { sparkTool, type SparkToolContext } from '../tool.ts';
 import { findTopRun, runLookupInput, type TopRun } from './run-lookup.ts';
+import { reportedModel } from '../../providers/reported-model.ts';
 
 const FILES_SHOWN = 10;
 
@@ -202,7 +203,7 @@ async function runStatus(context: SparkToolContext, top: TopRun) {
     run: {
       id: top.id,
       status: top.status,
-      agent: pickLabel({ provider: top.provider, model: top.model }),
+      agent: pickLabel({ provider: top.provider, ...reportedModel(top.provider, top.model) }),
       mode: top.mode,
       autonomy: top.level ? autonomyLabel(top.level) : null,
       startedAt: top.created_at.toISOString(),

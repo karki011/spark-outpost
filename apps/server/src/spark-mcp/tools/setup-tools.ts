@@ -17,6 +17,7 @@ import { gitHubStatus } from '../../ship/github/access.ts';
 import { ticketConnections } from '../../tickets/connections.ts';
 import { gitHubDepsFor, ticketDepsFor } from '../deps.ts';
 import { sparkTool, type SparkToolContext } from '../tool.ts';
+import { reportedModel } from '../../providers/reported-model.ts';
 
 function providerLine(provider: ProviderSetup, defaultProvider: string | null) {
   const connection = provider.connection;
@@ -29,7 +30,7 @@ function providerLine(provider: ProviderSetup, defaultProvider: string | null) {
       ? {
           method: connection.method === 'cli' ? 'local CLI login' : 'API key (stored in keychain)',
           account: connection.summary || connection.detail,
-          model: connection.model,
+          ...reportedModel(provider.id, connection.model),
           effort: connection.effort,
           agentMode: connection.agentMode,
           lastTest: connection.lastTest,
@@ -162,7 +163,7 @@ async function settings({ deps, scope }: SparkToolContext) {
     },
     newChatDefaults: {
       provider: chatDefaults.provider,
-      model: chatDefaults.model,
+      ...reportedModel(chatDefaults.provider, chatDefaults.model),
       effort: chatDefaults.effort,
       agentMode: chatDefaults.agentMode,
       autonomy: chatDefaults.level ? autonomyLabel(chatDefaults.level) : null,

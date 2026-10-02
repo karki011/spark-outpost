@@ -48,6 +48,11 @@ export function zaiModelId(slot: string | null): string | null {
   return SLOT_MODELS[slot]?.id ?? slot.replace(/\[[^\]]*\]$/, '');
 }
 
+export function zaiModelFor(model: string | null): ZaiModel | null {
+  const id = zaiModelId(model);
+  return ZAI_MODELS.find((entry) => entry.id === id) ?? null;
+}
+
 const INHERITED = new Set([
   'PATH',
   'HOME',
