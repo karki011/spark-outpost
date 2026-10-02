@@ -233,7 +233,7 @@ test('Settings sets the default mode and autonomy that new chats start with', as
   await page.getByRole('menuitemradio', { name: /^Accept edits/ }).click();
   await expect(mode).toHaveText('Accept edits');
   await expect(claude.getByRole('button', { name: 'Claude harness autonomy' })).toHaveCount(0);
-  await providers.getByRole('tab', { name: 'Spark' }).click();
+  await providers.getByRole('tab', { name: 'Spark', exact: true }).click();
   const autonomy = page
     .getByRole('dialog', { name: 'Spark' })
     .getByRole('radiogroup', { name: 'How much Spark does alone' });
