@@ -55,6 +55,8 @@ async function connectClaude() {
 }
 
 async function chat(title: string, status = 'succeeded', error: string | null = null) {
+  const pausedWorker = worker !== null;
+  await stopWorker();
   const id = randomUUID();
   const sent = await sendUserMessage(
     t.db,
@@ -70,6 +72,7 @@ async function chat(title: string, status = 'succeeded', error: string | null = 
     [sent.run.id, status, error],
   );
   await t.db.query(`UPDATE jobs SET status = 'done' WHERE run_id = $1`, [sent.run.id]);
+  if (pausedWorker) startFakeWorker();
   return { id, runId: sent.run.id };
 }
 

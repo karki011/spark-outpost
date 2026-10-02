@@ -305,6 +305,20 @@ export async function morningBriefSetting(
   return { enabled: profile.morning_brief, time: profile.morning_brief_time };
 }
 
+export async function claimMorningBrief(
+  db: Queryable,
+  workspaceId: string,
+  day: string,
+): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `UPDATE profiles SET morning_brief_tried_on = $2::date
+     WHERE workspace_id = $1
+       AND (morning_brief_tried_on IS NULL OR morning_brief_tried_on < $2::date)`,
+    [workspaceId, day],
+  );
+  return rowCount === 1;
+}
+
 export async function autoContinueSeconds(
   db: Queryable,
   workspaceId: string,
