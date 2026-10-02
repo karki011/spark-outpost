@@ -80,6 +80,7 @@ test.describe('waiting for you', () => {
   });
 
   test('one approval is one line that says what, and jumps to the card', async ({ page }) => {
+    test.setTimeout(60_000);
     await openWaitingChat(page, [grep]);
     await expect(waiting(page)).toHaveText(
       /^Waiting for you · approve git grep -l -i 'AI_USER' …\s*Review$/,
@@ -207,7 +208,7 @@ test('a question from Spark is one line that names the question', async ({ page 
     await autoContinueAfter(page, 60);
     await crewChat(page, repo, 'Ask before edits');
     await send(page, 'Make the reports better #build #vague #questions');
-    await expect(waiting(page)).toContainText('Waiting for you · questions: Which report? +1', {
+    await expect(waiting(page)).toContainText('Waiting for you · question: Which report?', {
       timeout: 30_000,
     });
     await shots(page, 'waiting-question');

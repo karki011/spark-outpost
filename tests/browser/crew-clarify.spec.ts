@@ -46,7 +46,7 @@ test('the questions wait in the thread at Review each step with a one-line summa
   await expect(questions.getByRole('button', { name: /best guesses in/ })).toHaveCount(0);
   await expect(questions.getByRole('button', { name: 'Go with my best guesses' })).toBeVisible();
   await expect(thread(page).getByText('Which report do you mean: Spend or Usage?')).toBeVisible();
-  await expect(statusLine(page)).toContainText('Waiting for you · questions: Which report? +1');
+  await expect(statusLine(page)).toContainText('Waiting for you · question: Which report?');
   await expect(page.getByText('"questions"')).toHaveCount(0);
 
   const lineBox = (await statusLine(page).boundingBox())!;

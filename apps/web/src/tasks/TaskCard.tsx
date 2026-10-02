@@ -3,6 +3,7 @@ import type { TaskOverview } from '@spark-outpost/contracts';
 import { AgentBlob } from '../brand/AgentBlob.tsx';
 import { CrewBlob } from '../crew/CrewBlob.tsx';
 import type { CrewAgent } from '../crew/crew-model.ts';
+import { Dot } from '../chat/status/line-parts.tsx';
 import { ChevronIcon } from '../ui/icons.tsx';
 
 export function taskProviders(task: TaskOverview): string[] {
@@ -66,13 +67,13 @@ export function TaskCard({ task, panelOpen, onOpen, agents = [] }: TaskCardProps
       </b>
       {status && (
         <>
-          <span className="tc-dot">·</span>
+          <Dot />
           <span className="tc-status">{status}</span>
         </>
       )}
       {detail && (
         <>
-          <span className="tc-dot">·</span>
+          <Dot />
           <span className="tc-what">{detail}</span>
         </>
       )}

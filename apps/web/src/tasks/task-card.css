@@ -109,7 +109,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.taskc .tc-dot,
+.taskc .cs-dot,
 .taskc .tc-status {
   flex-shrink: 0;
 }
