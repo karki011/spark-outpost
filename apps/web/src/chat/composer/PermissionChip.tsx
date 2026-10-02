@@ -35,25 +35,21 @@ export function PermissionChip({
   onClick,
 }: PermissionChipProps) {
   const { triggerProps, tooltip } = useTooltip(hint, { side: 'top' });
-  const classes = ['pchip', `risk-${state.risk}`, state.noFolder ? 'no-folder' : '']
-    .filter(Boolean)
-    .join(' ');
   return (
     <>
       <button
         ref={ref}
         type="button"
-        className={classes}
+        className={`pchip risk-${state.risk}`}
         aria-haspopup="dialog"
         aria-expanded={expanded}
         aria-controls={panelId}
-        aria-label={`Permissions: ${state.label}${state.noFolder ? ' · no folder' : ''}`}
+        aria-label={`Permissions: ${state.label}`}
         {...triggerProps}
         onClick={onClick}
       >
         <PermissionIcon risk={state.risk} />
         <span className="pchip-name">{state.short}</span>
-        {state.noFolder && <span className="pchip-note">· no folder</span>}
       </button>
       {tooltip}
     </>

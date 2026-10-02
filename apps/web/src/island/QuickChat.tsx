@@ -9,8 +9,9 @@ import {
 } from '@spark-outpost/contracts';
 import { api, capabilitiesQuery } from '../api/client.ts';
 import { shortLabel } from '../chat/composer/model-options.ts';
-import { NO_FOLDER_NOTE, permissionState } from '../chat/composer/mode-summary.ts';
+import { permissionState } from '../chat/composer/mode-summary.ts';
 import { PermissionIcon } from '../chat/composer/PermissionChip.tsx';
+import { PICK_PROJECT_HINT } from '../chat/project/repo-list.ts';
 import { providerName } from '../chat/provider-name.ts';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
@@ -64,7 +65,7 @@ export function QuickChat(props: QuickChatProps) {
   const levelInfo = AUTONOMY_LEVELS.find((info) => info.id === level) ?? AUTONOMY_LEVELS[1]!;
   const project = projects.find((candidate) => candidate.id === draft.projectId) ?? null;
   const permission = defaults.settings
-    ? permissionState(defaults.settings, defaults.capabilities, project !== null)
+    ? permissionState(defaults.settings, defaults.capabilities)
     : null;
 
   useEffect(() => {
@@ -160,6 +161,7 @@ export function QuickChat(props: QuickChatProps) {
               aria-haspopup="menu"
               aria-expanded={menu}
               aria-controls="isl-qmenu"
+              title={project ? undefined : PICK_PROJECT_HINT}
               onClick={() => setMenu(!menu)}
             >
               {draft.projectId === undefined ? 'Choose project' : (project?.name ?? 'No project')}
@@ -180,11 +182,7 @@ export function QuickChat(props: QuickChatProps) {
           {!followUp && permission && (
             <span
               className={`isl-chip static isl-perm risk-${permission.risk}`}
-              title={
-                permission.noFolder
-                  ? NO_FOLDER_NOTE
-                  : 'Agent permissions, change the default in Spark settings'
-              }
+              title="Agent mode, change the default in Spark settings"
             >
               <PermissionIcon risk={permission.risk} />
               {permission.short}

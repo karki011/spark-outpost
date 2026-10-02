@@ -49,3 +49,5 @@ export function recentProjects<T extends Pick<Project, 'id' | 'createdAt' | 'las
     .sort((a, b) => usedAt(b).localeCompare(usedAt(a)))
     .slice(0, limit);
 }
+
+export const PICK_PROJECT_HINT = 'Pick a project so the agent can read and change files.';

@@ -59,46 +59,46 @@ describe('mode summary', () => {
     const claude = capabilities('claude', claudeModes, 'auto');
     const codex = capabilities('codex', codexModes, 'agent');
 
-    it('names the chosen mode in a plain chat and flags that there is no folder', () => {
-      expect(permissionState(settings('claude', 'auto'), claude, false)).toEqual({
+    it('names only the chosen mode, with or without a project folder', () => {
+      expect(permissionState(settings('claude', 'auto'), claude)).toEqual({
         mode: 'auto',
         label: 'Auto',
         short: 'Auto',
         risk: 'auto',
-        noFolder: true,
+        description: null,
       });
     });
 
-    it('names the mode for a linked project, never the Spark autonomy', () => {
-      const state = permissionState(settings('claude', 'acceptEdits'), claude, true);
-      expect(state).toMatchObject({ label: 'Accept edits', risk: 'edit', noFolder: false });
+    it('names the mode, never the Spark autonomy', () => {
+      const state = permissionState(settings('claude', 'acceptEdits'), claude);
+      expect(state).toMatchObject({ label: 'Accept edits', risk: 'edit' });
       expect(state.label).not.toContain('Full auto');
     });
 
     it('falls back to the default mode before a mode is saved', () => {
-      expect(permissionState(settings('claude', null), claude, true).label).toBe('Auto');
-      expect(permissionState(settings('claude', null), undefined, true).mode).toBe('auto');
-      expect(permissionState(settings('codex', null), codex, true).label).toBe('Approve for me');
+      expect(permissionState(settings('claude', null), claude).label).toBe('Auto');
+      expect(permissionState(settings('claude', null), undefined).mode).toBe('auto');
+      expect(permissionState(settings('codex', null), codex).label).toBe('Approve for me');
     });
 
     it('marks Ask (read-only) modes as reading only', () => {
-      expect(permissionState(settings('claude', 'plan'), claude, true)).toMatchObject({
+      expect(permissionState(settings('claude', 'plan'), claude)).toMatchObject({
         label: 'Plan',
         risk: 'read',
       });
-      expect(permissionState(settings('codex', 'read-only'), codex, true)).toMatchObject({
+      expect(permissionState(settings('codex', 'read-only'), codex)).toMatchObject({
         label: 'Read-only',
         risk: 'read',
       });
     });
 
     it('shortens Bypass permissions and flags full-access modes', () => {
-      expect(permissionState(settings('claude', 'bypassPermissions'), claude, true)).toMatchObject({
+      expect(permissionState(settings('claude', 'bypassPermissions'), claude)).toMatchObject({
         label: 'Bypass permissions',
         short: 'Bypass',
         risk: 'full',
       });
-      expect(permissionState(settings('codex', 'agent-full-access'), codex, true)).toMatchObject({
+      expect(permissionState(settings('codex', 'agent-full-access'), codex)).toMatchObject({
         label: 'Full access',
         short: 'Full access',
         risk: 'full',
@@ -106,9 +106,9 @@ describe('mode summary', () => {
     });
 
     it('gives each Codex mode its risk', () => {
-      expect(permissionState(settings('codex', 'ask-every-action'), codex, true).risk).toBe('ask');
-      expect(permissionState(settings('codex', 'agent'), codex, true).risk).toBe('auto');
-      expect(permissionState(settings('claude', 'default'), claude, true).risk).toBe('ask');
+      expect(permissionState(settings('codex', 'ask-every-action'), codex).risk).toBe('ask');
+      expect(permissionState(settings('codex', 'agent'), codex).risk).toBe('auto');
+      expect(permissionState(settings('claude', 'default'), claude).risk).toBe('ask');
     });
   });
 

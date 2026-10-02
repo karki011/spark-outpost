@@ -114,10 +114,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.pnav-note {
-  font-weight: 400;
-  color: var(--faint);
-}
 .picker-pane {
   position: relative;
   padding: 6px;

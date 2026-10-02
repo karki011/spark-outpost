@@ -19,7 +19,7 @@ export interface PermissionState {
   label: string;
   short: string;
   risk: PermissionRisk;
-  noFolder: boolean;
+  description: string | null;
 }
 
 const RISKS: Readonly<Record<ModePosture, PermissionRisk>> = {
@@ -35,8 +35,6 @@ const RISKS: Readonly<Record<ModePosture, PermissionRisk>> = {
 const SHORT_LABELS: Readonly<Record<string, string>> = {
   'Bypass permissions': 'Bypass',
 };
-
-export const NO_FOLDER_NOTE = 'No project folder, so nothing can change';
 
 export function modeLabel(modes: readonly AgentModeOption[], mode: string | null): string {
   if (!mode) return 'Default mode';
@@ -58,7 +56,6 @@ export function modeSummary(
 export function permissionState(
   settings: ChatSettings,
   capabilities: ProviderCapabilities | undefined,
-  hasRepos: boolean,
 ): PermissionState {
   const modes = capabilities?.modes ?? [];
   const mode = settings.agentMode ?? capabilities?.defaultMode ?? defaultModeFor(settings.provider);
@@ -69,7 +66,7 @@ export function permissionState(
     label,
     short: SHORT_LABELS[label] ?? label,
     risk: RISKS[posture],
-    noFolder: !hasRepos,
+    description: modes.find((option) => option.id === mode)?.description ?? null,
   };
 }
 

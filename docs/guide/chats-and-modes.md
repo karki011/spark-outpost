@@ -68,7 +68,7 @@ These choices apply to this chat only. New chats start with your defaults from *
 
 ## Pick the agent's mode
 
-The mode is the agent's own permission setting. Spark shows each provider's modes with the provider's names. The permissions chip next to the model button shows the current mode with an icon for how much it allows, for example **Auto**. **Bypass permissions** (shown as **Bypass**) and **Full access** are tinted as a warning. In a chat with no project folder the chip adds **no folder**: the mode is saved, but nothing can change until you link a project. On a narrow window the chip shows only its icon.
+The mode is the agent's own permission setting. Spark shows each provider's modes with the provider's names. The permissions chip next to the model button shows the current mode with an icon for how much it allows, for example **Auto**. **Bypass permissions** (shown as **Bypass**) and **Full access** are tinted as a warning. On a narrow window the chip shows only its icon.
 
 To change the mode:
 

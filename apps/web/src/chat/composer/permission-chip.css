@@ -24,14 +24,6 @@
 .pchip[aria-expanded='true'] {
   background: var(--raise);
 }
-.pchip-note {
-  margin-left: -2px;
-  color: var(--faint);
-}
-.pchip.no-folder .pchip-name,
-.pchip.no-folder svg {
-  color: var(--muted);
-}
 .pchip.risk-full {
   color: var(--warn);
   background: color-mix(in srgb, var(--warn) 9%, transparent);
@@ -47,10 +39,6 @@
 @container composer (max-width: 520px) {
   .pchip {
     padding-inline: 7px;
-  }
-
-  .pchip-note {
-    display: none;
   }
 }
 

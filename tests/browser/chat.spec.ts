@@ -157,19 +157,23 @@ test('the composer picks a model and effort per chat and shows context use', asy
   await expect(panel.getByRole('radiogroup', { name: 'Agent mode', exact: true })).toBeVisible();
   await expect(panel.getByRole('radiogroup', { name: /autonomy/i })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Spark autonomy/ })).toHaveCount(0);
-  await expect(panel).toContainText('Plain chat: no project folder, so nothing can change');
+  await expect(panel).not.toContainText('Plain chat');
+  await expect(panel).not.toContainText('no folder');
   const tab = panel.getByRole('tab', { name: /Permissions/ });
-  await expect(tab).toHaveText(/Plan· no folder$/);
+  await expect(tab).toHaveText(/Plan$/);
   const modes = panel.getByRole('radiogroup', { name: 'Agent mode', exact: true });
   await modes.getByRole('radio', { name: 'Auto', exact: true }).click();
-  await expect(tab).toHaveText(/Auto· no folder$/);
+  await expect(tab).toHaveText(/Auto$/);
   await page.keyboard.press('Escape');
   const chip = page.getByRole('button', { name: /^Permissions: / });
-  await expect(chip).toHaveAccessibleName('Permissions: Auto · no folder');
-  await expect(chip).toHaveText('Auto· no folder');
-  await expect(chip).toHaveClass(/no-folder/);
+  await expect(chip).toHaveAccessibleName('Permissions: Auto');
+  await expect(chip).toHaveText('Auto');
   await chip.hover();
-  await expect(page.getByRole('tooltip')).toHaveText('No project folder, so nothing can change');
+  await expect(page.getByRole('tooltip')).toHaveText('Claude handles permission decisions');
+  await page.getByRole('button', { name: 'Choose project' }).hover();
+  await expect(page.getByRole('tooltip')).toHaveText(
+    'Pick a project so the agent can read and change files.',
+  );
   await page.mouse.move(0, 0);
 
   await input.fill('Hello');

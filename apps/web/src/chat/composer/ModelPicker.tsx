@@ -27,7 +27,7 @@ import { ExitingInert } from './ExitingInert.tsx';
 import { autoThisTurn, autoWouldHaveUsed, builderRouteNote } from '../../crew/auto-route.ts';
 import { buttonLabel, currentModel, selectableEfforts } from './model-options.ts';
 import { useChatSettingsUpdate, type PickerRequest } from './use-picker-command.ts';
-import { NO_FOLDER_NOTE, permissionState } from './mode-summary.ts';
+import { permissionState } from './mode-summary.ts';
 import { PermissionChip } from './PermissionChip.tsx';
 import './model-picker.css';
 
@@ -104,16 +104,16 @@ export function ModelPicker({
   const model = currentModel(settings, capabilities);
   const efforts = selectableEfforts(capabilities);
   const level = settings.level ?? DEFAULT_INVOLVEMENT_LEVEL;
-  const permission = permissionState(settings, capabilities, hasRepos);
-  const permissionHint = permission.noFolder
-    ? NO_FOLDER_NOTE
-    : combinationLine({
+  const permission = permissionState(settings, capabilities);
+  const permissionHint = hasRepos
+    ? combinationLine({
         provider,
         mode: permission.mode,
         kind: modeKind(capabilities?.modes ?? [], permission.mode),
         level,
         hasRepos,
-      });
+      })
+    : (permission.description ?? permission.label);
   const configOptions = capabilities?.options ?? [];
   const pinnedName = model ? buttonLabel(model) : `${setup?.name ?? provider} default`;
   const auto = settings.routing === 'auto';
@@ -163,14 +163,7 @@ export function ModelPicker({
     {
       id: 'permission',
       label: 'Permissions',
-      value: permission.noFolder ? (
-        <>
-          {permission.label}
-          <span className="pnav-note">· no folder</span>
-        </>
-      ) : (
-        permission.label
-      ),
+      value: permission.label,
       disabled: !setup,
     },
     ...(configOptions.length > 0
