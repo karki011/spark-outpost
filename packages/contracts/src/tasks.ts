@@ -149,7 +149,7 @@ export interface TaskListEvent {
 
 export interface TaskListTask {
   status: TaskStatus;
-  links: readonly Pick<TaskLink, 'kind' | 'url' | 'title'>[];
+  links: readonly Pick<TaskLink, 'kind' | 'url' | 'title' | 'source'>[];
 }
 
 export interface TaskListPlan {
@@ -282,14 +282,18 @@ function runItem(run: TaskListRun, index: number, asking: ReadonlySet<string>): 
   };
 }
 
+const OWN_PR_SOURCES: ReadonlySet<TaskLinkSource> = new Set(['ship', 'tool_output', 'user']);
+
+function ownPullRequest(link: Pick<TaskLink, 'kind' | 'source'>): boolean {
+  return link.kind === 'pr' && OWN_PR_SOURCES.has(link.source);
+}
+
 function prItems(task: TaskListTask): TaskListItem[] {
-  return task.links
-    .filter((link) => link.kind === 'pr')
-    .map((link) => ({
-      id: `pr:${link.url}`,
-      label: `Opened ${link.title ?? 'a pull request'}`,
-      state: 'done',
-    }));
+  return task.links.filter(ownPullRequest).map((link) => ({
+    id: `pr:${link.url}`,
+    label: `Opened ${link.title ?? 'a pull request'}`,
+    state: 'done',
+  }));
 }
 
 export function taskList(

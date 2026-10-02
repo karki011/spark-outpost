@@ -199,6 +199,7 @@ export async function ticketWork(
      FROM task_tickets tt
      JOIN tasks t ON t.id = tt.task_id
      LEFT JOIN task_links l ON l.task_id = tt.task_id AND l.kind = 'pr'
+       AND l.source IN ('ship', 'tool_output', 'user')
      WHERE tt.workspace_id = $1
        AND (tt.source || ':' || tt.ticket_key) = ANY($2::text[])
      GROUP BY tt.source, tt.ticket_key, tt.task_id, t.conversation_id, tt.created_at
