@@ -44,7 +44,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
   const [contextOpen, setContextOpen] = useState(false);
   const [browsing, setBrowsing] = useState(false);
   const context = useStartContext();
-  const addFolderRef = useRef<HTMLElement | null>(null);
+  const folderOpener = useRef<HTMLElement | null>(null);
   const projects = useQuery({ queryKey: projectKeys.all, queryFn: projectsApi.list });
   const source = ticketSourceNames[ticket.source];
   const owner = ticket.assignedTo && !ticket.mine ? ticket.assignedTo.name : null;
@@ -108,11 +108,11 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
 
   const closeFolders = () => {
     setBrowsing(false);
-    addFolderRef.current?.focus();
+    folderOpener.current?.focus();
   };
 
   const browseFolders = () => {
-    addFolderRef.current =
+    folderOpener.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setBrowsing(true);
   };

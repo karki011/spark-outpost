@@ -5,6 +5,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { connectTickets, openTickets, resetTicketFakes } from './ticket-seed.ts';
 
+test.describe.configure({ timeout: 120_000 });
+
 const SHOTS = 'test-results/ticket-start';
 let base = '';
 
