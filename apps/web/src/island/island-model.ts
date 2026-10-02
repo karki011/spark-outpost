@@ -48,9 +48,9 @@ export function islandView(inputs: IslandInputs): IslandView {
 
 const WIDTHS = {
   note: 420,
-  quick: 560,
-  sessions: 560,
-  ask: 560,
+  quick: 640,
+  sessions: 640,
+  ask: 640,
   approval: 556,
   force: 556,
   question: 556,

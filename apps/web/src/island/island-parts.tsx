@@ -7,6 +7,16 @@ import type { CrewState } from '../crew/crew-model.ts';
 
 export const ARMING_MS = 600;
 
+export function useViewportWidth(): number {
+  const [width, setWidth] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return width;
+}
+
 export function useArmed(key: string): boolean {
   const [armedKey, setArmedKey] = useState<string | null>(null);
   useEffect(() => {

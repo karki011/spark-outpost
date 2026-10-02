@@ -1,17 +1,11 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import { peekOffset, sessionState, type SessionState } from './island-model.ts';
+import { STATUS_WORDS } from './HoverList.tsx';
+import { peekOffset, sessionState } from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
 import { SessionBlob } from './SessionBlob.tsx';
 
 const LEAVE_MS = 420;
-const STATE_WORDS: Record<SessionState, string> = {
-  working: 'working',
-  waiting: 'waiting for you',
-  done: 'done',
-  failed: 'failed',
-  idle: 'quiet',
-};
 
 interface PeekRowProps {
   sessions: readonly ConversationSummary[];
@@ -78,7 +72,7 @@ export function PeekRow({ sessions, more, shown, size, sleepy, onOpen, onMore }:
       {slots.map(({ chat, leaving }, index) => {
         const state = sessionState(chat);
         const slot = leaving ? index : sessions.indexOf(chat);
-        const label = `Chat: ${chat.title}, ${STATE_WORDS[state]}`;
+        const label = `Chat: ${chat.title}, ${STATUS_WORDS[state]}`;
         return (
           <button
             key={chat.id}
@@ -108,7 +102,8 @@ export function PeekRow({ sessions, more, shown, size, sleepy, onOpen, onMore }:
               </span>
             )}
             <span className="isl-tip" aria-hidden="true">
-              {chat.title} · {STATE_WORDS[state]}
+              <b>{chat.title}</b>
+              <span>{STATUS_WORDS[state]} · Click to open</span>
             </span>
           </button>
         );

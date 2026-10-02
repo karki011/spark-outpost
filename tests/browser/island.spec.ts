@@ -374,8 +374,10 @@ test('without a notch the blob peeks on its own and the pill opens a focused cha
   expect((await island(page).boundingBox())!.y).toBe(24);
   const pill = island(page).getByRole('button', { name: 'New chat' });
   await expect(pill).toHaveCSS('cursor', 'pointer');
-  await expect.poll(async () => (await island(page).boundingBox())!.height).toBe(34);
-  await expect.poll(async () => (await island(page).boundingBox())!.width).toBeLessThan(200);
+  const active = island(page).getByRole('list', { name: 'Active chats' });
+  await expect(active.getByRole('button')).toHaveCount(1);
+  await expect(active).toContainText('Fix image uploads');
+  await expect(active).toContainText('done');
   await pill.hover();
   await expect(pill).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await pill.click();

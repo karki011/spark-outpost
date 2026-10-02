@@ -1,7 +1,11 @@
 .isl-tabs {
   display: flex;
+  width: fit-content;
   gap: 2px;
-  margin: 0 0 8px;
+  padding: 2px;
+  margin: 0 0 12px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
 }
 
 .isl-tabs button {
@@ -96,15 +100,22 @@
 .isl-qc-bar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 6px 6px;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 8px 8px 10px;
+}
+
+.isl-qc-bar > .isl-chip {
+  min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .isl-qc-hint {
   font-size: 11.5px;
   color: var(--faint);
   white-space: nowrap;
-  margin-left: 6px;
 }
 
 .isl-sp {

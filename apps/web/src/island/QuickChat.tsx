@@ -143,8 +143,6 @@ export function QuickChat(props: QuickChatProps) {
           onKeyDown={onKeyDown}
         />
         <div className="isl-qc-bar">
-          <span className="isl-qc-hint">{send.isPending ? 'Sending…' : ''}</span>
-          <span className="isl-sp" />
           {!followUp && (
             <button
               ref={chipRef}
@@ -181,6 +179,8 @@ export function QuickChat(props: QuickChatProps) {
               {levelInfo.label}
             </button>
           )}
+          <span className="isl-sp" />
+          <span className="isl-qc-hint">{send.isPending ? 'Sending…' : ''}</span>
           <button
             type="button"
             className="isl-send"

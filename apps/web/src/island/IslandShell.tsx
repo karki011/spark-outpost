@@ -1,7 +1,6 @@
-import { useLayoutEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { useLayoutEffect, useRef, type CSSProperties, type RefObject } from 'react';
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import { BlobScout, type ScoutMood } from '../brand/BlobScout.tsx';
-import { CrewBlob } from '../crew/CrewBlob.tsx';
 import type { IslandGeometry } from '../desktop/desktop-bridge.ts';
 import type { Voice } from '../spark/voice.ts';
 import type { FastState } from './ask-fast-path.ts';
@@ -13,7 +12,9 @@ import {
   type Panel,
   type PeekRow as PeekRowData,
 } from './island-model.ts';
-import { Kbd, RunDots } from './island-parts.tsx';
+import { HoverList } from './HoverList.tsx';
+import { useViewportWidth } from './island-parts.tsx';
+import { wingsFor } from './island-wings.tsx';
 import { keyHint } from './key-hints.tsx';
 import { PeekRow } from './PeekRow.tsx';
 import { QuickChat, type QuickDraft } from './QuickChat.tsx';
@@ -73,6 +74,8 @@ const KHINT_HEIGHT = 18;
 const PILL_HEIGHT = 34;
 const PILL_INSET = 48;
 const PILL_MIN_WIDTH = 112;
+const PANEL_MIN_WIDTH = 320;
+const PANEL_SIDE_GAP = 16;
 const BARE_SCOUT = 38;
 const BARE_TUCK = 20;
 const ROW_BLOB = 22;
@@ -89,131 +92,21 @@ function scoutSpot(view: IslandView, width: number, top: number, hang: number | 
   return { x: view.kind === 'pill' ? 14 : 10, y: Math.max(2, (top - 22) / 2), size: 22 };
 }
 
-function wingsFor(props: IslandShellProps): { left: ReactNode; right: ReactNode } {
-  const { view, waiting, greeting, workItems } = props;
-  switch (view.kind) {
-    case 'pill':
-      return {
-        left: null,
-        right: (
-          <button
-            type="button"
-            className="isl-pill-btn"
-            onClick={() => props.onTab(waiting > 0 ? 'sessions' : 'quick')}
-          >
-            {greeting ? (
-              <span>{greeting}</span>
-            ) : waiting > 0 ? (
-              <>
-                <span className="isl-badge">{waiting}</span>
-                <span>need you</span>
-              </>
-            ) : (
-              <span>New chat</span>
-            )}
-          </button>
-        ),
-      };
-    case 'live': {
-      const crew = workItems.flatMap((item) =>
-        item.agent.crew.filter((agent) => agent.state === 'working' || agent.state === 'thinking'),
-      );
-      return {
-        left: null,
-        right:
-          crew.length > 1 ? (
-            <>
-              <span className="isl-crew" aria-hidden="true">
-                {crew.slice(0, 4).map((agent) => (
-                  <span key={agent.id} className="isl-cb" title={agent.name}>
-                    <CrewBlob
-                      name={agent.name}
-                      provider={agent.provider}
-                      state={agent.state}
-                      size={18}
-                    />
-                  </span>
-                ))}
-              </span>
-              <span>{crew.length}</span>
-            </>
-          ) : (
-            <>
-              <RunDots />
-              <span>{workItems.length}</span>
-            </>
-          ),
-      };
-    }
-    case 'overview':
-      return {
-        left: 'Spark',
-        right: (
-          <>
-            <RunDots />
-            <span>{workItems.length} running</span>
-          </>
-        ),
-      };
-    case 'card':
-      return {
-        left: view.card.kind === 'question' ? 'Question' : 'Needs you',
-        right:
-          view.card.kind === 'force' ? (
-            <>
-              <span className="isl-badge bad">!</span>
-              <span>Risky</span>
-            </>
-          ) : (
-            <>
-              <span className="isl-badge">{view.index}</span>
-              <span>of {view.total}</span>
-            </>
-          ),
-      };
-    case 'moment':
-      return {
-        left:
-          props.watch?.id === view.moment.chatId
-            ? 'Reply'
-            : view.moment.kind === 'done'
-              ? 'Finished'
-              : 'Couldn’t finish',
-        right: (
-          <span className={view.moment.kind === 'done' ? 'isl-badge ok' : 'isl-badge bad'}>
-            {view.moment.kind === 'done' ? '✓' : '!'}
-          </span>
-        ),
-      };
-    case 'panel':
-      return {
-        left:
-          view.panel === 'quick'
-            ? props.followUp
-              ? 'Reply'
-              : 'New chat'
-            : view.panel === 'sessions'
-              ? 'Sessions'
-              : 'Ask Spark',
-        right:
-          view.panel === 'sessions' && waiting > 0 ? (
-            <>
-              <span className="isl-badge">{waiting}</span>
-              <span>need you</span>
-            </>
-          ) : (
-            <Kbd>⌥ Space</Kbd>
-          ),
-      };
-    default:
-      return { left: null, right: null };
-  }
-}
-
 function ViewBody({ props }: { props: IslandShellProps }) {
   const { view } = props;
   const focusDelay = props.reduced ? 0 : 240;
   switch (view.kind) {
+    case 'pill':
+      return (
+        <HoverList
+          sessions={props.peek.sessions}
+          more={props.peek.more}
+          now={props.now}
+          sleepy={props.sleepy}
+          onOpen={props.onOpenChat}
+          onAll={() => props.onTab('sessions')}
+        />
+      );
     case 'note':
       return (
         <div className="isl-body">
@@ -348,9 +241,12 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const bare = flat && view.kind === 'peek';
   const hang = bare ? geometry.menuBar + BARE_TUCK : null;
   const top = view.kind === 'pill' ? Math.max(geometry.top, PILL_HEIGHT) : bare ? 0 : geometry.top;
-  const quiet = view.kind === 'peek' || view.kind === 'pill';
-  const width = bare ? BARE_SCOUT : viewWidth(view, geometry.notchWidth);
-  const compactPill = view.kind === 'pill' && !hugsNotch;
+  const list = view.kind === 'pill' && props.peek.sessions.length > 0;
+  const quiet = view.kind === 'peek' || (view.kind === 'pill' && !list);
+  const viewport = useViewportWidth();
+  const room = Math.max(PANEL_MIN_WIDTH, viewport - PANEL_SIDE_GAP);
+  const width = bare ? BARE_SCOUT : Math.min(viewWidth(view, geometry.notchWidth), room);
+  const compactPill = view.kind === 'pill' && !hugsNotch && !list;
   const hint = keyHint(view);
   const setTarget = useIslandShape(
     islandRef,

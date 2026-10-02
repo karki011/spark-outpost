@@ -42,6 +42,7 @@ interface BridgeOptions {
   coreRects: () => DOMRect[];
   blobRects: () => DOMRect[];
   peek: boolean;
+  hovered: boolean;
   restKey: string;
   islandRef: RefObject<HTMLElement | null>;
   focusable: boolean;
@@ -54,6 +55,7 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
   const desktop = sparkDesktop();
   const [geometry, setGeometry] = useState<IslandGeometry>(BROWSER_GEOMETRY);
   const [pointerIn, setPointerIn] = useState(false);
+  const hovering = useRef(false);
   const resting = options.peek && geometry.docked && !geometry.notch;
   const latest = useRef(options);
   useEffect(() => {
@@ -99,7 +101,6 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
 
   useEffect(() => {
     let interactive = false;
-    let hovering = false;
     let dragging: { x: number; y: number; started: boolean } | null = null;
     const setInteractive = (on: boolean) => {
       if (on === interactive) return;
@@ -108,8 +109,8 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       setPointerIn(on);
     };
     const setHover = (on: boolean) => {
-      if (on === hovering) return;
-      hovering = on;
+      if (on === hovering.current) return;
+      hovering.current = on;
       latest.current.onHover(on);
     };
     const onMove = (event: MouseEvent) => {
@@ -167,6 +168,10 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       window.removeEventListener('blur', onBlur);
     };
   }, [desktop]);
+
+  useEffect(() => {
+    if (!options.hovered) hovering.current = false;
+  }, [options.hovered]);
 
   useEffect(() => {
     if (!desktop) return;

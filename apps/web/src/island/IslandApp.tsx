@@ -225,6 +225,7 @@ export function IslandApp() {
     coreRects: () => coreRects(islandRef.current),
     blobRects: () => flatRowRects(rowRef.current),
     peek: view.kind === 'peek',
+    hovered: hover,
     restKey: `${row.sessions.length}:${row.more}`,
     onHover,
     onCommand: command,

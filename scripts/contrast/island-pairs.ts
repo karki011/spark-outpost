@@ -38,6 +38,17 @@ export const ISLAND_PAIRS: Pair[] = [
     ...ISLAND,
     'var(--accent-soft)',
   ]),
+  pair('hover-row-meta', 'status and time in the hover list', 'var(--muted)', [
+    ...ISLAND,
+    'color-mix(in srgb, var(--text) 7%, transparent)',
+    'color-mix(in srgb, var(--warn) 14%, transparent)',
+  ]),
+  pair('hover-row-waiting', 'needs-you row in the hover list', 'var(--text)', [
+    ...ISLAND,
+    'color-mix(in srgb, var(--warn) 14%, transparent)',
+  ]),
+  pair('hover-row-failed', 'failed status in the hover list', 'var(--danger)', ISLAND),
+  pair('tip', 'session blob tooltip status', 'var(--muted)', ['var(--panel)']),
   pair('ask-question', 'your question in Ask', 'var(--user-text)', ['var(--user)']),
   pair('peek-badge-ring', 'waiting badge on the peeking blob', 'var(--warn)', ISLAND, 'ui'),
   pair('scout', 'Scout on the island', 'var(--accent)', ISLAND, 'ui'),
