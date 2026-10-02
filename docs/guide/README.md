@@ -40,7 +40,7 @@ Get started is a sequence: an overview page that lists the steps, then one short
 | --------------------------------------------- | ------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | `getting-started` Getting started             | Written | Set up Spark Outpost in about five minutes. Each step has its own short page.             | none                                                  |
 | `meet-spark` Meet Spark and pick a theme      | Written | Tell Spark your name, choose how it talks to you, and pick a theme.                       | `getting-started-meet-spark`, `getting-started-theme` |
-| `connect-a-provider` Connect an AI provider   | Written | Connect Claude, Codex or Z.ai with the local CLI or an API key, then send a test message. | `getting-started-provider`                            |
+| `connect-a-provider` Connect an AI provider   | Written | Connect Claude, Codex or Z.ai with the local CLI or an API key, then send a test message. | `providers-tiles`, `getting-started-provider`         |
 | `chat-defaults` Choose defaults for new chats | Written | Pick the model, mode and effort new chats start with, and see where to change them later. | `getting-started-defaults`                            |
 | `meet-jev` Jev, the advisor                   | Written | What Jev is, why it's optional, and how to connect it during setup.                       | none                                                  |
 | `bring-in-your-tools` Bring in your tools     | Written | Check that Git is found, and optionally connect GitHub, Jira and Linear.                  | `getting-started-tools`                               |
@@ -118,7 +118,7 @@ Settings rows and info tips link here with a book icon (`apps/web/src/ui/DocLink
 | Settings → Spark → How much Spark does alone                      | `chats-and-modes#spark-autonomy`                             |
 | Settings → Spark → If you don't answer a question                 | `approvals#if-you-dont-answer`                               |
 | Settings → AI providers → Advisor info tip                        | `jev`                                                        |
-| Settings → AI providers → Check changes with Jev                  | `jev#check-changes-with-jev`                                 |
+| Settings → AI providers → Jev → Check changes with Jev            | `jev#check-changes-with-jev`                                 |
 | Settings → Projects → Where Spark works                           | `spark-crew#where-spark-works`                               |
 | Settings → Projects → Builders at once                            | `pieces#choose-how-many-builders-run-at-once`                |
 | Settings → Spark → Warn when context is, Compact automatically at | `compaction#change-when-spark-compacts`                      |

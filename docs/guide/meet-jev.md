@@ -14,10 +14,10 @@ Jev helps Spark decide how to handle each request and checks finished changes. I
 ## Connect Jev
 
 1. On the **AI provider** step, find **Advisor**.
-2. Connect **Jev** with a TypeSafe API key.
+2. Select the **Jev** tile and connect it with a TypeSafe API key.
 3. When at least one provider is connected, select **Continue**.
 
-To connect it later, open **Settings → AI providers** and look under **Advisor**.
+To connect it later, open **Settings → AI providers** and select the **Jev** tile under **Advisor**.
 
 To learn what Jev decides, what it reads and what it costs, see [Jev, Spark's advisor](jev.md).
 

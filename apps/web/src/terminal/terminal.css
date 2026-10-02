@@ -215,3 +215,39 @@
     animation: none;
   }
 }
+
+.term-size {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.term-size:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
+.term-panel.compact .term-guide {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.term-panel.compact .tg-step {
+  min-height: 26px;
+}
+
+.term-panel.compact .term-screen {
+  height: 112px;
+  transition: height 0.2s var(--out);
+}
+
+.term-panel.compact.tall .term-screen {
+  height: 260px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-panel.compact .term-screen {
+    transition: none;
+  }
+}

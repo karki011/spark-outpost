@@ -25,7 +25,7 @@ Your named teammates: each one's face, role and state, with **Edit** and **New S
 
 ## AI providers
 
-Connect, test and disconnect Claude, Codex and Z.ai, pick the default provider and each one's **Defaults for new chats**. Jev is under **Advisor**, with **Check changes with Jev**. See [Connect an AI provider](connect-a-provider.md) and [Jev, Spark's advisor](jev.md).
+A tile for Claude, Codex and Z.ai, and Jev under **Advisor**. Select a tile to open that provider's screen: connect it, test it, pick the default provider and its **Defaults for new chats**, or disconnect it. **Check changes with Jev** is on Jev's screen. See [Connect an AI provider](connect-a-provider.md) and [Jev, Spark's advisor](jev.md).
 
 ## Models
 

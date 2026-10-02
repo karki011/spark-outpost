@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expandSection } from './provider-screen.ts';
 import {
   autonomyChip,
   card,
@@ -292,8 +293,9 @@ test('Settings sets the default mode and autonomy that new chats start with', as
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
-  const claude = providers.locator('.pcard').filter({ hasText: 'Claude' });
-  await claude.locator('.pc-head').click();
+  const claude = providers.locator('.pconf[data-prov="claude"]');
+  await providers.locator('.ptile[data-prov="claude"]').click();
+  await expandSection(claude, 'Defaults for new chats');
   const mode = claude.getByRole('button', { name: 'Claude default mode' });
   await expect(mode).toHaveText('Plan');
   await mode.click();

@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { expandSection } from './provider-screen.ts';
 import { expect, test, type Page } from '@playwright/test';
 import { PIECE_CHECK_SCRIPT } from '../../apps/server/test/fake-acp-coordinator.ts';
 import { repoWithRemote } from '../../apps/server/test/ship-support.ts';
@@ -89,16 +90,23 @@ test('Providers, models and Jev screenshots', async ({ page }) => {
   await seedDemo(page, repo);
   await openSettings(page, /AI providers/);
   const providers = page.getByRole('dialog', { name: 'AI providers' });
-  const claude = providers.locator('.pcard').filter({ hasText: 'Claude' }).first();
-  await claude.locator('.pc-head').click();
-  await expect(claude.getByRole('region', { name: 'Defaults for new chats' })).toBeVisible();
-  await shoot(page, IMAGES, 'providers-defaults', claude);
-  await claude.locator('.pc-head').click();
+  const tiles = providers.locator('.ptiles-view');
+  await expect(tiles.locator('.ptile[data-prov="claude"]')).toContainText('Connected');
+  await shoot(page, IMAGES, 'providers-tiles', tiles);
 
-  const advisor = providers.locator('section.advisors');
-  await advisor.locator('.pcard .pc-head').first().click();
+  await providers.locator('.ptile[data-prov="claude"]').click();
+  const claude = providers.locator('.pconf[data-prov="claude"]');
+  await expandSection(claude, 'Defaults for new chats');
+  const defaults = claude.getByRole('region', { name: 'Defaults for new chats' });
+  await expect(defaults).toBeVisible();
+  await shoot(page, IMAGES, 'providers-defaults', defaults);
+  await claude.getByRole('button', { name: 'Back to AI providers' }).click();
+
+  await providers.locator('.ptile[data-prov="jev"]').click();
+  const jev = providers.locator('.pconf[data-prov="jev"]');
+  await expandSection(jev, 'Settings');
+  const advisor = jev.getByRole('region', { name: 'Settings' });
   await expect(advisor).toContainText('Sends');
-  await advisor.scrollIntoViewIfNeeded();
   await shoot(page, IMAGES, 'jev-advisor', advisor);
 
   await page.getByRole('tab', { name: /^Models/ }).click();

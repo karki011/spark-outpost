@@ -31,25 +31,25 @@ Jev only counts when it's sure enough. Below its confidence line, the rules deci
 
 1. Get an API key in the **TypeSafe console** under API keys.
 2. Open **Settings → AI providers** and find **Advisor**.
-3. Open the **Jev** card, paste the key and verify it.
+3. Select the **Jev** tile, paste the key and verify it.
 
-The key is stored in your system keychain. To replace it or remove Jev, open the card's **…** menu and select **Change key** or **Disconnect**.
-
-![The Advisor section with Jev connected](images/jev-advisor-light.png)
+The key is stored in your system keychain. To replace it, select **Use a new key** on Jev's screen. To remove Jev, hold **Hold to remove the Jev key** under **Danger zone**; you get 10 seconds to undo.
 
 ## Check changes with Jev
 
-**Check changes with Jev** sits under **Advisor** in **Settings → AI providers**. It's on by default and needs Jev connected. With it on, Jev also gets code diffs:
+**Check changes with Jev** sits on Jev's screen, under **Settings**: open **Settings → AI providers** and select the **Jev** tile. It's on by default and needs Jev connected. With it on, Jev also gets code diffs:
 
 - **Proposed edits**: watched only, never blocked or allowed.
 - **Final diff**: verified. If Jev finds the change incomplete, a stronger model redoes it once. If Jev can't say what's missing, your project's checks pass and the Critic has no concerns, you get the **Jev could not verify the change** card instead of a second Builder.
 - **Review findings**: Jev uses the diff to tell which ones need a fix.
 
+![Settings on Jev's screen, with Check changes with Jev](images/jev-advisor-light.png)
+
 Turn it off to keep diffs on your computer. Jev then sees only your requests.
 
 ## What Jev reads
 
-The **Sends** line on the connected card lists it. In short: your request, the previous request and a short task summary, and the text of files you attach. With **Check changes with Jev** on, also the diffs.
+The **Sends** line on Jev's screen lists it. In short: your request, the previous request and a short task summary, and the text of files you attach. With **Check changes with Jev** on, also the diffs.
 
 Jev never gets keys, tool output or your full chat history. TypeSafe doesn't train on it. The Map sends some file contents to label areas, but never secret files or anything in `.sparkignore`. See [Privacy and secrets](privacy-and-secrets.md).
 

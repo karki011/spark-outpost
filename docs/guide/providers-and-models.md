@@ -21,10 +21,12 @@ New chats start with your default provider's model, mode and effort. For the mod
 
 ## Change the defaults for new chats
 
-1. Open **Settings → AI providers** and select a connected provider's card.
-2. Under **Defaults for new chats**, change **Model**, **Mode** or **Effort**.
+1. Open **Settings → AI providers** and select a connected provider's tile.
+2. Select **Defaults for new chats** to open it, then change **Model**, **Mode** or **Effort**.
 
-![A connected Claude card with Defaults for new chats](images/providers-defaults-light.png)
+In Settings, each part of a provider's screen is a row with a one-line summary, such as the model, mode and effort, or when the last test passed. Select a row to open or close it. Spark opens the part that needs you: **How to connect** until the provider is connected, or the part with a problem. It remembers which rows you open.
+
+![Defaults for new chats on the Claude screen](images/providers-defaults-light.png)
 
 **Effort** has an extra choice, **Per chat**: each chat keeps its own effort. Pick a fixed level instead and every chat, and every Builder, uses it.
 
@@ -34,18 +36,21 @@ Changes apply to new chats. To change one chat, use the model picker. See [Pick 
 
 With more than one provider connected:
 
-1. Open the **…** menu on the provider's card.
-2. Select **Make default**. The card gets a **Default** tag, and new chats start with that provider.
+1. Open the provider's screen.
+2. Under **Defaults for new chats**, select **Make default**. Its tile gets a **Default** tag, and new chats start with that provider.
 
 ## Sign in again or disconnect
 
-Open the **…** menu on a connected card:
+Open a connected provider's screen. Under **How to connect**:
 
 - **Sign in again** (local CLI only) opens a terminal to sign in. Your settings stay as they are.
-- **Change how it connects** switches between **Local CLI** and **API key**, or replaces the key.
-- **Disconnect** removes the connection.
+- **Use an API key instead**, **Use the local CLI or a new key** or **Use a new key** switches between **Local CLI** and **API key**, or replaces the key.
 
-To check a connection, select **Send test message**. The card's **Last test** row shows how long the answer took and which model sent it.
+Under **Danger zone**, hold **Hold to disconnect** (or **Hold to remove the key** for an API key) until the ring fills. You get 10 seconds to select **Undo** or press **Esc** before Spark disconnects it.
+
+To check a connection, select **Send test message** under **Test**. The **Last test** row shows how long the answer took and which model sent it.
+
+> **Tip:** Each provider's screen has its own link, for example `#/settings/providers/codex`. Selecting a provider on Home opens its screen.
 
 ## Read the model cards
 

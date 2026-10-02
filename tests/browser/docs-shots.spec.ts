@@ -32,8 +32,7 @@ test.afterEach(() => repo.remove());
 
 const onboarding = (page: Page) => page.locator('.onb');
 const continueButton = (page: Page) => onboarding(page).getByRole('button', { name: 'Continue' });
-const claudeCard = (page: Page) =>
-  onboarding(page).locator('.pcard').filter({ hasText: 'Claude' }).first();
+const claudeCard = (page: Page) => onboarding(page).locator('.pconf[data-prov="claude"]');
 
 test('Getting started screenshots', async ({ page }) => {
   test.setTimeout(120_000);
@@ -51,7 +50,7 @@ test('Getting started screenshots', async ({ page }) => {
   await shoot(page, IMAGES, 'getting-started-theme');
 
   await continueButton(page).click();
-  await claudeCard(page).locator('.pc-head').click();
+  await onboarding(page).locator('.ptile[data-prov="claude"]').click();
   await claudeCard(page).getByRole('tab', { name: 'API key' }).click();
   await claudeCard(page).getByLabel('Claude API key').fill(CLAUDE_KEY);
   await expect(claudeCard(page)).toContainText('Looks right. Verify to finish connecting.');
@@ -65,7 +64,7 @@ test('Getting started screenshots', async ({ page }) => {
   await expect(defaults.getByRole('button', { name: 'Claude model' })).toHaveText(
     'Claude Opus 5.5',
   );
-  await shoot(page, IMAGES, 'getting-started-defaults', claudeCard(page));
+  await shoot(page, IMAGES, 'getting-started-defaults', defaults);
 
   await continueButton(page).click();
   await expect(

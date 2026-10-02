@@ -64,6 +64,33 @@ interface ProviderDefaultsProps {
   connection: ProviderConnection;
 }
 
+function useDefaultChoices(provider: ProviderSetup, connection: ProviderConnection) {
+  const capabilities = useQuery({
+    ...capabilitiesQuery(provider.id),
+    staleTime: CAPABILITIES_STALE_MS,
+  });
+  const models = modelChoices(connection, capabilities.data);
+  const efforts = effortOptions(provider, capabilities.data);
+  const effort = efforts.find((choice) => choice.id === connection.effort) ?? null;
+  const offered = models.some((model) => model.id === connection.model);
+  const selectedModel = offered ? connection.model : (capabilities.data?.defaultModel ?? null);
+  const agentMode = connection.agentMode ?? capabilities.data?.defaultMode ?? null;
+  const modes = modeChoices(capabilities.data, agentMode);
+  return { capabilities, models, efforts, effort, selectedModel, agentMode, modes };
+}
+
+export function useDefaultsSummary(provider: ProviderSetup, connection: ProviderConnection) {
+  const { models, effort, selectedModel, agentMode, modes } = useDefaultChoices(
+    provider,
+    connection,
+  );
+  const model = models.find((choice) => choice.id === selectedModel)?.label ?? 'CLI model';
+  const mode = modes.find((choice) => choice.id === agentMode)?.label ?? 'CLI mode';
+  return [model, mode, effort ? effort.label : 'effort per chat']
+    .map((part) => part.replace(' (default)', ''))
+    .join(' · ');
+}
+
 export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -76,24 +103,12 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
       }
     },
   });
-  const capabilities = useQuery({
-    ...capabilitiesQuery(provider.id),
-    staleTime: CAPABILITIES_STALE_MS,
-  });
-  const models = modelChoices(connection, capabilities.data);
-  const efforts = effortOptions(provider, capabilities.data);
-  const effort = efforts.find((choice) => choice.id === connection.effort) ?? null;
-  const offered = models.some((model) => model.id === connection.model);
-  const selectedModel = offered ? connection.model : (capabilities.data?.defaultModel ?? null);
-  const agentMode = connection.agentMode ?? capabilities.data?.defaultMode ?? null;
-  const modes = modeChoices(capabilities.data, agentMode);
+  const { capabilities, models, efforts, effort, selectedModel, agentMode, modes } =
+    useDefaultChoices(provider, connection);
 
   return (
-    <section className="conn-section" aria-labelledby={`${provider.id}-defaults-title`}>
-      <h4 className="conn-section-title" id={`${provider.id}-defaults-title`}>
-        Defaults for new chats
-      </h4>
-      <dl className="conn-details">
+    <dl className="conn-details pdefaults">
+      <div className="pdef">
         <dt>Model</dt>
         <dd>
           {models.length === 0 ? (
@@ -111,6 +126,8 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
             />
           )}
         </dd>
+      </div>
+      <div className="pdef">
         <dt>Mode</dt>
         <dd>
           {modes.length === 0 ? (
@@ -128,6 +145,8 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
             />
           )}
         </dd>
+      </div>
+      <div className="pdef">
         <dt>Effort</dt>
         <dd>
           <ChoicePicker
@@ -143,7 +162,7 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
           />
           {effort && <small className="note">Do-task Builders always use this effort.</small>}
         </dd>
-      </dl>
-    </section>
+      </div>
+    </dl>
   );
 }

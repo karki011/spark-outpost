@@ -29,6 +29,11 @@ import { Onboarding } from '../onboarding/Onboarding.tsx';
 import { ResetHost } from '../reset/ResetHost.tsx';
 import { SettingsDialog, type SettingsSection } from '../settings/SettingsDialog.tsx';
 import { useSettingsRequests } from '../settings/settings-request.ts';
+import {
+  currentProviderRoute,
+  leaveProviderRoute,
+  onProviderRoute,
+} from '../providers/provider-route.ts';
 import { requestFeedback } from '../help/feedback-request.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { Tickets } from '../tickets/Tickets.tsx';
@@ -61,8 +66,15 @@ function ChatShell({ entering }: { entering: boolean }) {
   const connection = useConnection();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draftId, setDraftId] = useState(newDraftId);
-  const [settings, setSettings] = useState<SettingsSection | null>(null);
+  const [settings, setSettingsState] = useState<SettingsSection | null>(() =>
+    currentProviderRoute() ? 'ai' : null,
+  );
+  const setSettings = useCallback((next: SettingsSection | null) => {
+    if (next !== 'ai') leaveProviderRoute();
+    setSettingsState(next);
+  }, []);
   useSettingsRequests(setSettings);
+  useEffect(() => onProviderRoute(() => setSettingsState('ai')), []);
   const [view, setViewState] = useState<AppView>(() =>
     isDocLinkOpen() ? 'docs' : readSavedView(),
   );
