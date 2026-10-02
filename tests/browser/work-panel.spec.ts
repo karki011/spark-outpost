@@ -125,8 +125,11 @@ test.describe('a finished crew', () => {
 
     const files = page.locator('.crew-turn > .fchg');
     await expect(files).toContainText('1 file changed+1 −0');
-    await files.getByRole('button', { name: 'Open notes.txt' }).click();
-    await expect(files.locator('.dv-row.add').first()).toContainText('step 1');
+    await files.getByRole('button', { name: 'Open the diff of notes.txt' }).click();
+    const drawer = page.getByRole('dialog', { name: 'Changes · 1 file' });
+    await expect(drawer.locator('.cm-content')).toContainText('step 1', { timeout: 30_000 });
+    await page.keyboard.press('Escape');
+    await expect(drawer).toHaveCount(0);
     await expect(agentBlock(page, 'Bolt').locator('.fchg')).toHaveCount(0);
 
     const work = panel(page);

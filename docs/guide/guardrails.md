@@ -28,7 +28,7 @@ When a Builder finishes, the **Keep these changes?** card can show a list under 
 ![A keep card with Worth a look before you keep this](images/guardrails-keep-card-light.png)
 
 1. Read each line. Names in code style are files, functions or commands.
-2. Select **View changes** to check the diff, or ask the agent in the chat.
+2. Select **View changes** to read the diff in the **Changes** drawer, or ask the agent in the chat.
 3. Select **Keep**, **Fix** or **Revert** as usual. The list never blocks you.
 
 ## "Removed X — why?"

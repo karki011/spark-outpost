@@ -4,6 +4,7 @@ import {
   type AgentCommand,
   type AnnotationInput,
   type Attachment,
+  type ChangeEntry,
   type TaskOverview,
 } from '@spark-outpost/contracts';
 import { useState } from 'react';
@@ -12,6 +13,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import { isConnectionLoss } from '../app/connection/connection-failure.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
+import { DiffChip } from '../diff/DiffChip.tsx';
+import { DiffDrawerHost, useDiffDrawer } from '../diff/DiffDrawerHost.tsx';
 import { AuditDialog } from '../audit/AuditDialog.tsx';
 import { ChatHeaderMenu } from '../audit/ChatHeaderMenu.tsx';
 import { AgentTvButton } from '../crew/AgentTvButton.tsx';
@@ -133,13 +136,14 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
     panel.setOpen(true);
     setAutonomyRequest((request) => request + 1);
   };
+  const diff = useDiffDrawer();
   const viewChanges = task
-    ? (taskId?: string) => {
-        setPanelTab('changes');
-        if (taskId) panel.openTask(taskId);
-        else panel.setOpen(true);
-      }
+    ? (taskId?: string, file?: ChangeEntry) => diff.open(taskId ?? task.id, file)
     : null;
+  const toggleDiff = () => {
+    if (diff.request) diff.close();
+    else if (task) diff.open(task.id);
+  };
   const workspace = useChatWorkspace(conversationId, Boolean(detail.data?.conversation.branch));
   const chatBranch = workspace.data?.current ?? null;
   const canAudit = (detail.data?.runs.length ?? 0) > 0;
@@ -171,6 +175,11 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               </h1>
               <ChatTicketChips chat={tickets} />
               <div className="head-r">
+                <DiffChip
+                  taskId={task?.id ?? null}
+                  open={diff.request !== null}
+                  onToggle={toggleDiff}
+                />
                 <WorkPanelToggle panel={panel} waiting={(task?.summary.waiting ?? 0) > 0} />
                 {openAudit && (
                   <ChatHeaderMenu onAudit={openAudit} onStartFresh={() => startFresh.mutate()} />
@@ -266,6 +275,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               {...(openAudit ? { onAudit: openAudit } : {})}
             />
           )}
+          <DiffDrawerHost state={diff} />
           <AnimatePresence>
             {auditOpen && (
               <AuditDialog

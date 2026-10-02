@@ -1,0 +1,391 @@
+.dd.resizing {
+  animation: none;
+  user-select: none;
+}
+
+.dd-resize {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.dd-resize:hover,
+.dd-resize:focus-visible,
+.dd.resizing .dd-resize {
+  outline: none;
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.dd-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dd-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dd-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.dd-close {
+  margin-left: auto;
+}
+
+.dd-body {
+  display: grid;
+  grid-template-columns: minmax(240px, 30%) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+
+.dd-files {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+}
+
+.dd-files-tools {
+  display: flex;
+  gap: 6px;
+  padding: 10px 10px 4px;
+}
+
+.dd-filter {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 10px;
+  font-size: 12.5px;
+}
+
+.dd-tool {
+  flex-shrink: 0;
+  min-height: 26px;
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--muted);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.dd-tool:hover,
+.dd-tool[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--raise);
+}
+
+.dd-files-count {
+  min-height: 18px;
+  margin: 0;
+  padding: 2px 14px 4px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.dd-tree {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  outline: none;
+}
+
+.dd-tree-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dd-tree-space {
+  position: relative;
+}
+
+.dd-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+  contain: layout paint;
+}
+
+.dd-row.nested {
+  padding-left: 30px;
+}
+
+.dd-row:hover,
+.dd-row.active {
+  background: var(--raise);
+}
+
+.dd-tree:focus-visible .dd-row.active {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.dd-row[aria-selected='true'] {
+  background: var(--accent-soft);
+}
+
+.dd-row[aria-busy='true'] {
+  cursor: default;
+}
+
+.dd-chev {
+  display: inline-flex;
+  width: 12px;
+  color: var(--faint);
+}
+
+.dd-chev.open svg {
+  transform: rotate(90deg);
+}
+
+.dd-folder-name,
+.dd-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.dd-folder-name {
+  color: var(--muted);
+}
+
+.dd-folder-count,
+.dd-run {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  color: var(--faint);
+}
+
+.dd-dir {
+  color: var(--faint);
+}
+
+.dd-status {
+  flex-shrink: 0;
+  width: 14px;
+  font:
+    600 11px/1 'Geist Mono',
+    ui-monospace,
+    monospace;
+  text-align: center;
+}
+
+.dd-status.new {
+  color: var(--success);
+}
+
+.dd-status.deleted {
+  color: var(--danger);
+}
+
+.dd-status.modified {
+  color: var(--warn);
+}
+
+.dd-status.renamed {
+  color: var(--accent-text);
+}
+
+.dd-n {
+  display: inline-flex;
+  gap: 6px;
+  flex-shrink: 0;
+  font:
+    11.5px/1 'Geist Mono',
+    ui-monospace,
+    monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+}
+
+.dd-n .plus {
+  color: var(--success);
+}
+
+.dd-n .minus {
+  color: var(--danger);
+}
+
+.dd-skel-dot {
+  flex-shrink: 0;
+  width: 12px;
+}
+
+.dd-files-empty {
+  position: absolute;
+  inset: 24px 0 auto;
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.dd-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.dd-pane-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding: 8px 12px 8px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dd-pane-path {
+  flex: 1 1 220px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 12.5px;
+}
+
+.dd-pane-path b {
+  font-weight: 600;
+}
+
+.dd-pane-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.dd-pane-tools .seg {
+  width: 160px;
+}
+
+.dd-limit {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--warn) 9%, var(--panel));
+  font-size: 12.5px;
+}
+
+.dd-code-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: var(--code);
+}
+
+.dd-code {
+  height: 100%;
+}
+
+.dd-code .cm-mergeView {
+  height: 100%;
+}
+
+.dd-code .dd-new .cm-line {
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+}
+
+.dd-code .dd-gone .cm-line {
+  background: color-mix(in srgb, var(--danger) 9%, transparent);
+}
+
+.dd-code-skel {
+  display: grid;
+  gap: 9px;
+  padding: 14px 16px;
+}
+
+.dd-skel-line {
+  display: flex;
+  gap: 14px;
+}
+
+.dd-skel-num {
+  flex-shrink: 0;
+  width: 24px;
+}
+
+.dd-hidden {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 18px 16px;
+  padding: 14px 16px;
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.dd-state {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 10px;
+  flex: 1;
+  padding: 48px 16px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.dd-state p {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .dd-body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(160px, 34%) minmax(0, 1fr);
+  }
+
+  .dd-files {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .dd-resize {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dd-chev svg {
+    transition: none;
+  }
+}
