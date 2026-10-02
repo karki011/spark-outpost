@@ -10,6 +10,7 @@ async function fakeDesktop(page: Page) {
       enabled: false,
       shortcuts: { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' },
       failed: [] as string[],
+      sound: false,
     };
     const publish = () => {
       const copy = structuredClone(status);
@@ -40,6 +41,11 @@ async function fakeDesktop(page: Page) {
             publish();
             return { ok: true };
           },
+          setSound: async (on: boolean) => {
+            calls.push(['sound', on]);
+            status.sound = on;
+            return publish();
+          },
           onChange: (listener: (status: unknown) => void) => {
             listeners.add(listener);
             return () => listeners.delete(listener);
@@ -47,6 +53,10 @@ async function fakeDesktop(page: Page) {
         },
         island: { geometry: async () => null, onGeometry: noop, onCommand: noop },
         onOpenChat: noop,
+        onOpenSettings: (callback: (target: string) => void) => {
+          Object.assign(window, { openFromIsland: callback });
+          return () => undefined;
+        },
       },
     });
   });
@@ -92,4 +102,39 @@ test('the browser build hides the desktop companion settings', async ({ page }) 
   const spark = page.getByRole('dialog', { name: 'Spark' });
   await expect(spark.getByRole('radiogroup', { name: 'Status companion' })).toBeVisible();
   await expect(spark.getByRole('switch', { name: 'Show Spark Island' })).toHaveCount(0);
+});
+
+test('the island opens these settings, and its chimes stay off until switched on', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeDesktop(page);
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
+  const fromIsland = (target: string) =>
+    page.evaluate(
+      (target) =>
+        (window as unknown as { openFromIsland: (target: string) => void }).openFromIsland(target),
+      target,
+    );
+  await fromIsland('island');
+  const spark = page.getByRole('dialog', { name: 'Spark' });
+  const show = spark.getByRole('switch', { name: 'Show Spark Island' });
+  await expect(show).toBeFocused();
+  await expect(spark.getByRole('switch', { name: 'Island chimes' })).toHaveCount(0);
+  await show.click();
+  const chimes = spark.getByRole('switch', { name: 'Island chimes' });
+  await expect(chimes).toHaveAttribute('aria-checked', 'false');
+  await chimes.click();
+  await expect(chimes).toHaveAttribute('aria-checked', 'true');
+  await expect(spark).toContainText('plays a soft chime');
+  expect(
+    await page.evaluate(() => (window as unknown as { desktopCalls: unknown[] }).desktopCalls),
+  ).toEqual([
+    ['enabled', true],
+    ['sound', true],
+  ]);
+
+  await fromIsland('sparks');
+  await expect(page.getByRole('dialog', { name: 'Sparks' })).toBeVisible();
 });

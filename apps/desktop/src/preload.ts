@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     setEnabled: (on: boolean) => ipcRenderer.invoke(IPC.companionSetEnabled, on),
     setShortcut: (action: string, accelerator: string | null) =>
       ipcRenderer.invoke(IPC.companionSetShortcut, action, accelerator),
+    setSound: (on: boolean) => ipcRenderer.invoke(IPC.companionSetSound, on),
     onChange: (callback: (status: unknown) => void) => listen(IPC.companionChanged, callback),
   },
   island: {
@@ -51,6 +52,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     setFocusable: (on: boolean) => ipcRenderer.send(IPC.islandFocusable, on),
     drag: (phase: DragPhase, x: number, y: number) => ipcRenderer.send(IPC.islandDrag, phase, x, y),
     openChat: (id: string | null) => ipcRenderer.send(IPC.islandOpenChat, id),
+    openSettings: (target: string) => ipcRenderer.send(IPC.islandOpenSettings, target),
     setRestSize: (size: { width: number; height: number } | null) =>
       ipcRenderer.send(IPC.islandRestSize, size),
     ready: () => ipcRenderer.send(IPC.islandReady),
@@ -76,6 +78,14 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
       take();
       return listen(IPC.helpOpen, take);
     },
+  },
+  onOpenSettings: (callback: (target: string) => void) => {
+    const take = () =>
+      void ipcRenderer.invoke(IPC.pendingSettings).then((target: unknown) => {
+        if (typeof target === 'string') callback(target);
+      });
+    take();
+    return listen(IPC.openSettings, take);
   },
   onOpenChat: (callback: (id: string) => void) => {
     const take = () =>

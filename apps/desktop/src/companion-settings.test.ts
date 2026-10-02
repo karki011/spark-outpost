@@ -34,7 +34,7 @@ describe('companion settings file', () => {
   it('is on by default with the default shortcuts and a docked island', () => {
     expect(parseSettings(null)).toEqual(DEFAULT_SETTINGS);
     expect(parseSettings('not json')).toEqual(DEFAULT_SETTINGS);
-    expect(DEFAULT_SETTINGS).toMatchObject({ enabled: true });
+    expect(DEFAULT_SETTINGS).toMatchObject({ enabled: true, sound: false });
   });
 
   it('keeps a choice the user already saved, ignores the old Calm mode flag', () => {
@@ -59,6 +59,7 @@ describe('companion settings file', () => {
       enabled: false,
       shortcuts: { quick: 'Alt+J', sessions: 'Alt+Shift+Space' },
       position: { docked: true },
+      sound: false,
     });
   });
 
@@ -77,6 +78,7 @@ describe('companion settings file', () => {
       ...DEFAULT_SETTINGS,
       enabled: false,
       position: { docked: false as const, x: 40, y: 200 },
+      sound: true,
     };
     await saveSettings(file, settings);
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(settings);

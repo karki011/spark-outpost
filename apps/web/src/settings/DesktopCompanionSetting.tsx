@@ -1,4 +1,4 @@
-import { useId, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useState, type KeyboardEvent } from 'react';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
 import {
   companionAvailable,
@@ -13,6 +13,15 @@ import { Keys } from '../ui/Keys.tsx';
 import { SettingRow } from './SettingRow.tsx';
 
 const LABEL = 'Show Spark Island';
+const CHIMES = 'Island chimes';
+
+let revealPending = false;
+const revealers = new Set<() => void>();
+
+export function revealIslandSettings(): void {
+  revealPending = true;
+  revealers.forEach((reveal) => reveal());
+}
 
 const SHORTCUTS: { action: IslandAction; label: string; hint: string }[] = [
   { action: 'quick', label: 'Quick chat shortcut', hint: 'Opens a new chat from anywhere.' },
@@ -98,19 +107,20 @@ function ShortcutSetting({
 }
 
 function SwitchRow({
+  id,
   label,
   doc,
   hint,
   checked,
   onChange,
 }: {
+  id: string;
   label: string;
   doc: DocTarget;
   hint: string;
   checked: boolean;
   onChange: (on: boolean) => void;
 }) {
-  const id = useId();
   const hintId = useId();
   return (
     <SettingRow label={label} controlId={id} doc={doc} hint={hint} hintId={hintId}>
@@ -128,11 +138,30 @@ function SwitchRow({
 
 export function DesktopCompanionSetting() {
   const status = useCompanionStatus();
+  const showId = useId();
+  const chimesId = useId();
+  const loaded = status !== null;
+  useEffect(() => {
+    if (!loaded) return;
+    const reveal = () => {
+      const toggle = document.getElementById(showId);
+      if (!revealPending || !toggle) return;
+      revealPending = false;
+      toggle.scrollIntoView({ block: 'center' });
+      toggle.focus({ preventScroll: true });
+    };
+    revealers.add(reveal);
+    reveal();
+    return () => {
+      revealers.delete(reveal);
+    };
+  }, [loaded, showId]);
   if (!companionAvailable() || !status?.supported) return null;
   const desktop = sparkDesktop()!;
   return (
     <>
       <SwitchRow
+        id={showId}
         label={LABEL}
         doc={{ page: 'desktop-companion' }}
         hint={
@@ -148,6 +177,20 @@ export function DesktopCompanionSetting() {
           {SHORTCUTS.map((shortcut) => (
             <ShortcutSetting key={shortcut.action} {...shortcut} status={status} />
           ))}
+          {desktop.companion.setSound && (
+            <SwitchRow
+              id={chimesId}
+              label={CHIMES}
+              doc={{ page: 'desktop-companion' }}
+              hint={
+                status.sound
+                  ? 'Spark Island plays a soft chime when a chat needs you or finishes.'
+                  : 'Off. Spark Island stays silent.'
+              }
+              checked={status.sound === true}
+              onChange={(on) => void desktop.companion.setSound?.(on)}
+            />
+          )}
         </>
       )}
     </>

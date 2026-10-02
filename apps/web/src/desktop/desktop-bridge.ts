@@ -8,11 +8,14 @@ import type {
 
 export type IslandAction = 'quick' | 'sessions';
 
+export type IslandSettingsTarget = 'island' | 'sparks';
+
 export interface CompanionStatus {
   supported: boolean;
   enabled: boolean;
   shortcuts: Record<IslandAction, string>;
   failed: IslandAction[];
+  sound?: boolean;
 }
 
 export type ShortcutResult = { ok: true } | { ok: false; error: string };
@@ -38,6 +41,7 @@ export interface SparkDesktop {
     get(): Promise<CompanionStatus | null>;
     setEnabled(on: boolean): Promise<CompanionStatus>;
     setShortcut(action: IslandAction, accelerator: string | null): Promise<ShortcutResult>;
+    setSound?(on: boolean): Promise<CompanionStatus>;
     onChange(callback: (status: CompanionStatus) => void): Unsubscribe;
   };
   island: {
@@ -53,6 +57,7 @@ export interface SparkDesktop {
     setFocusable(on: boolean): void;
     drag(phase: 'start' | 'move' | 'end', x: number, y: number): void;
     openChat(id: string | null): void;
+    openSettings?(target: IslandSettingsTarget): void;
     setRestSize(size: { width: number; height: number } | null): void;
     ready?(): void;
   };
@@ -72,6 +77,7 @@ export interface SparkDesktop {
     onOpenFeedback(callback: () => void): Unsubscribe;
   };
   onOpenChat(callback: (id: string) => void): Unsubscribe;
+  onOpenSettings?(callback: (target: IslandSettingsTarget) => void): Unsubscribe;
 }
 
 export function sparkDesktop(): SparkDesktop | null {
