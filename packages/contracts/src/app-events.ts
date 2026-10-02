@@ -11,6 +11,7 @@ export const appEventKindSchema = z.enum([
   'outcome',
   'map',
   'pull_request',
+  'teammate',
 ]);
 export type AppEventKind = z.infer<typeof appEventKindSchema>;
 

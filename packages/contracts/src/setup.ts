@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { providerIdSchema, type ProviderId } from './provider-ids.ts';
+import type { TeammateBrief } from './teammates.ts';
 import { DEFAULT_INVOLVEMENT_LEVEL, involvementLevelSchema } from './approvals.ts';
 import {
   COMPACT_AT_DEFAULT,
@@ -14,8 +16,7 @@ import {
   spendCapUsdSchema,
 } from './spark.ts';
 
-export const providerIdSchema = z.enum(['claude', 'codex', 'zai']);
-export type ProviderId = z.infer<typeof providerIdSchema>;
+export { providerIdSchema, type ProviderId };
 
 export const advisorIdSchema = z.enum(['jev']);
 export type AdvisorId = z.infer<typeof advisorIdSchema>;
@@ -132,7 +133,9 @@ export const profileSchema = z.object({
   autoCompact: z.boolean().default(true),
 });
 export type Profile = z.infer<typeof profileSchema>;
-export type SparkSessionPrefs = Pick<Profile, 'displayName' | 'personality'>;
+export type SparkSessionPrefs = Pick<Profile, 'displayName' | 'personality'> & {
+  teammate?: TeammateBrief | null;
+};
 
 export const setupStateSchema = z.object({
   profile: profileSchema,

@@ -25,6 +25,7 @@ import { prFollowUpRoutes } from './pr-follow-up-routes.ts';
 import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
 import { planRoutes } from './plan-routes.ts';
 import { taskRoutes } from './task-routes.ts';
+import { teammateRoutes } from './teammate-routes.ts';
 import { ticketRoutes, type TicketRouteDeps } from './ticket-routes.ts';
 import { webApp } from './web-app.ts';
 import { terminalRoutes } from '../terminal/routes.ts';
@@ -76,6 +77,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', approvalRoutes(options));
   app.use('/api', modelCardRoutes(options));
   app.use('/api', homeRoutes(options));
+  app.use('/api', teammateRoutes(options));
   app.use('/api', companionRoutes(options));
   app.use('/api', outcomeRoutes(options));
   app.use('/api', analyticsRoutes(options));

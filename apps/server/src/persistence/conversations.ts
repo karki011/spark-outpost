@@ -40,6 +40,8 @@ const LOCAL_WORKSPACE_SLUG = 'local';
 
 const summaryQuery = `
   SELECT c.id, c.title, c.updated_at, c.archived_at, c.pinned_at, c.pinned_order, c.title_source,
+    tm.id AS teammate_id, tm.name AS teammate_name, tm.role AS teammate_role,
+    tm.face_shape AS teammate_shape, tm.face_color AS teammate_color,
     COALESCE(
       (SELECT cr.category FROM runs cr
        WHERE cr.conversation_id = c.id AND cr.parent_run_id IS NULL
@@ -81,6 +83,7 @@ const summaryQuery = `
     (SELECT cp.sort_order FROM conversation_projects cp
      WHERE cp.conversation_id = c.id ORDER BY cp.position, cp.created_at LIMIT 1) AS project_order
   FROM conversations c
+  LEFT JOIN teammates tm ON tm.id = c.teammate_id
   LEFT JOIN LATERAL (
     SELECT id, status, error, finished_at, provider, task_id FROM runs
     WHERE conversation_id = c.id AND parent_run_id IS NULL ORDER BY created_at DESC LIMIT 1

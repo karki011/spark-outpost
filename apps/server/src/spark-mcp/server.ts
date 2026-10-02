@@ -8,6 +8,7 @@ import { SparkToolError, type SparkTool, type SparkToolContext } from './tool.ts
 import { pullRequestActionTool } from './actions/pr-action.ts';
 import { prFollowUpRoundTool } from './actions/pr-follow-up-action.ts';
 import { ticketActionTools } from './actions/ticket-actions.ts';
+import { createTeammateTool, updateTeammateTool } from './actions/teammate-actions.ts';
 import { attentionTool } from './tools/attention-tool.ts';
 import { auditTool } from './tools/audit-tool.ts';
 import { docsTool } from './tools/docs-tool.ts';
@@ -21,6 +22,7 @@ import { runTool } from './tools/run-tool.ts';
 import { lawsTool } from './tools/laws-tool.ts';
 import { setupTools } from './tools/setup-tools.ts';
 import { taskTool } from './tools/task-tool.ts';
+import { teammatesTool } from './tools/teammates-tool.ts';
 import { terminalTool } from './tools/terminal-tool.ts';
 import { usageTools } from './tools/usage-tools.ts';
 import { workTools } from './tools/work-tools.ts';
@@ -40,6 +42,7 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   ...workTools,
   ...usageTools,
   terminalTool,
+  teammatesTool,
   guideTool,
   docsTool,
   ...githubTools,
@@ -47,10 +50,12 @@ export const SPARK_TOOLS: readonly SparkTool[] = [
   ...ticketActionTools,
   pullRequestActionTool,
   prFollowUpRoundTool,
+  createTeammateTool,
+  updateTeammateTool,
 ];
 
 const INSTRUCTIONS =
-  'Tools about Spark Outpost itself, the app running this session: what needs the user, chats and their full history (including turns compacted out of context), live runs (crew, pieces, Jev decisions), plans and files changed, audit, spend, analytics and outcomes, model cards, providers, connectors, projects and the Map, terminals, tickets, pull requests and the follow-up on them, estimates, budgets and guardrail findings, activity, the brief, settings, a guide to how Spark works (spark_guide section spark-tools says which tool answers what) and the user guide with step-by-step how-tos (spark_docs). The read tools never change anything. The action tools (create, comment on, move or assign a ticket; open a PR; request a PR follow-up round) only propose: the user confirms each one on a card before Spark does it. Results are JSON, paged and redacted.';
+  'Tools about Spark Outpost itself, the app running this session: what needs the user, chats and their full history (including turns compacted out of context), live runs (crew, pieces, Jev decisions), plans and files changed, audit, spend, analytics and outcomes, model cards, providers, connectors, projects and the Map, terminals, tickets, pull requests and the follow-up on them, estimates, budgets and guardrail findings, activity, the brief, settings, Sparks (named teammates with their state and standing instructions), a guide to how Spark works (spark_guide section spark-tools says which tool answers what) and the user guide with step-by-step how-tos (spark_docs). The read tools never change anything. The action tools (create, comment on, move or assign a ticket; open a PR; request a PR follow-up round; add or change a Spark) only propose: the user confirms each one on a card before Spark does it. Results are JSON, paged and redacted.';
 
 const READ_ONLY = {
   readOnlyHint: true,
