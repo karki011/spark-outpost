@@ -1,6 +1,7 @@
 import { createIntakeRecorder } from '../advisor/intake-recorder.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
 import { loadConfig } from '../config.ts';
+import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { configuredBackup } from '../persistence/startup-backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
@@ -15,6 +16,8 @@ import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import { startWorker } from './worker.ts';
 import { Slots } from '../orchestration/slots.ts';
 import { startSparkMcpHost } from '../spark-mcp/host.ts';
+import type { SparkToolDeps } from '../spark-mcp/deps.ts';
+import { startSparkActionFollowThrough } from '../spark-mcp/actions/follow-through.ts';
 import { startPrFollowUp } from '../pr-follow-up/poller.ts';
 import { pollNowForApproval } from '../persistence/pr-watches.ts';
 
@@ -22,6 +25,8 @@ const config = loadConfig();
 const db = createDb(config.DATABASE_URL, { max: POOL_MAX.worker });
 await migrateOrExit(db, { backup: configuredBackup(config) });
 
+const activeWork = new ActiveWork();
+const stopLagMonitor = startLagMonitor({ processName: 'worker', work: activeWork });
 const approvalWaiters = new ApprovalWaiters();
 const secrets = configuredSecretStore(config);
 const intake = createIntakeRecorder({
@@ -32,7 +37,7 @@ const intake = createIntakeRecorder({
 });
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
 const codeScan = createCodeScanner(db);
-const sparkTools = await startSparkMcpHost({
+const sparkDeps: SparkToolDeps = {
   db,
   secrets,
   fetch,
@@ -45,9 +50,12 @@ const sparkTools = await startSparkMcpHost({
   serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD ?? null,
   parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   branchPrefix: config.BRANCH_PREFIX,
-});
+};
+const sparkTools = await startSparkMcpHost(sparkDeps);
+const sparkActions = await startSparkActionFollowThrough(sparkDeps);
 const worker = startWorker({
   db,
+  activeWork,
   approvalWaiters,
   intake,
   providers: createProviders(
@@ -100,6 +108,7 @@ const prFollowUp = startPrFollowUp({
 const listener = await listen(config.DATABASE_URL, 'jobs', () => worker.wake());
 const approvalListener = await listen(config.DATABASE_URL, 'approvals', (id) => {
   approvalWaiters.notify(id);
+  sparkActions.wake();
   void pollNowForApproval(db, id)
     .then((found) => {
       if (found) prFollowUp.wake();
@@ -111,11 +120,13 @@ console.log(
 );
 
 const shutdown = async () => {
+  stopLagMonitor();
   await listener.close();
   await approvalListener.close();
   await projectMap.stop();
   await prFollowUp.stop();
   await worker.stop();
+  await sparkActions.stop();
   await sparkTools.close();
   await db.end();
   process.exit(0);

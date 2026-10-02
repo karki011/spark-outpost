@@ -21,6 +21,7 @@ import {
 } from './pr-follow-up-support.ts';
 import {
   answerCard,
+  confirmCard,
   recordedHooks,
   startSparkTools,
   type RecordedHooks,
@@ -114,14 +115,14 @@ describe('Spark tools for PR follow-up', { timeout: 60_000 }, () => {
   });
 
   it('starts a round on a held item only after the user confirms the card', async () => {
-    const call = tools.call('spark_pr_follow_up_round', { items: ['F1'] });
-    const card = await answerCard(t, SPARK_ACTION_OPTION.confirm);
+    await tools.call('spark_pr_follow_up_round', { items: ['F1'] });
+    const card = await confirmCard(t);
     expect(card.payload.sparkAction).toMatchObject({
       action: 'pr_follow_up_round',
       number: 7,
       items: [{ label: 'F1', author: 'mallory' }],
     });
-    expect((await call).json()).toMatchObject({ outcome: 'done', queued: ['F1'] });
+    expect(card.payload.sparkResult).toMatchObject({ state: 'done', output: { queued: ['F1'] } });
     expect((await current(t, pull.watch)).requested).toBe(true);
     const states = (await feedbackFor(t.db, pull.watch.id)).map((item) => item.state);
     expect(states).toEqual(['queued', 'needs_user']);
@@ -134,9 +135,9 @@ describe('Spark tools for PR follow-up', { timeout: 60_000 }, () => {
   });
 
   it('changes nothing when the user declines the round', async () => {
-    const call = tools.call('spark_pr_follow_up_round', { items: ['F2'] });
+    await tools.call('spark_pr_follow_up_round', { items: ['F2'] });
     await answerCard(t, SPARK_ACTION_OPTION.decline);
-    expect((await call).json()).toMatchObject({ outcome: 'declined' });
+    await new Promise((resolve) => setTimeout(resolve, 200));
     expect((await current(t, pull.watch)).requested).toBe(false);
   });
 });

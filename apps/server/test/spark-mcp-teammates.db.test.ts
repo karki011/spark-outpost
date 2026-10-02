@@ -1,8 +1,10 @@
+import { getApproval } from '../src/persistence/approvals.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { SPARK_ACTION_OPTION } from '@spark-outpost/contracts';
 import { createTeammate, listTeammates } from '../src/persistence/teammates.ts';
 import {
   answerCard,
+  confirmCard,
   recordedHooks,
   startSparkTools,
   type RecordedHooks,
@@ -75,14 +77,13 @@ describe('spark_sparks', () => {
 
 describe('spark_create_spark', () => {
   it('creates nothing until the user confirms the card', async () => {
-    const call = tools.call('spark_create_spark', {
+    await tools.call('spark_create_spark', {
       name: 'Wren',
       role: 'Docs writer',
       instructions: 'Short sentences.',
       autonomy: 'hands-off',
     });
-    const card = await answerCard(t, SPARK_ACTION_OPTION.confirm);
-    const result = (await call).json<{ outcome: string; name: string }>();
+    const card = await confirmCard(t);
 
     expect(card).toMatchObject({ kind: 'spark_action', title: 'Add this Spark? Wren' });
     expect(card.payload.sparkAction).toMatchObject({
@@ -91,7 +92,10 @@ describe('spark_create_spark', () => {
       instructions: 'Short sentences.',
       level: 'hands-off',
     });
-    expect(result).toMatchObject({ outcome: 'done', name: 'Wren' });
+    expect(card.payload.sparkResult).toMatchObject({
+      state: 'done',
+      message: 'Added Wren to Sparks.',
+    });
     expect((await listTeammates(t.db, t.workspaceId)).map((teammate) => teammate.name)).toEqual([
       'Wren',
     ]);
@@ -99,9 +103,10 @@ describe('spark_create_spark', () => {
   });
 
   it('leaves the roster alone when the user declines', async () => {
-    const call = tools.call('spark_create_spark', { name: 'Bolt' });
-    await answerCard(t, SPARK_ACTION_OPTION.decline);
-    expect((await call).json()).toMatchObject({ outcome: 'declined' });
+    await tools.call('spark_create_spark', { name: 'Bolt' });
+    const card = await answerCard(t, SPARK_ACTION_OPTION.decline);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect((await getApproval(t.db, card.id))?.status).toBe('denied');
     expect(await listTeammates(t.db, t.workspaceId)).toEqual([]);
   });
 
@@ -116,13 +121,12 @@ describe('spark_create_spark', () => {
 describe('spark_update_spark', () => {
   it('shows only real changes on the card and saves them once confirmed', async () => {
     await createTeammate(t.db, t.workspaceId, pip);
-    const call = tools.call('spark_update_spark', {
+    await tools.call('spark_update_spark', {
       spark: 'Pip',
       role: 'Code reviewer',
       instructions: 'Also check tests.',
     });
-    const card = await answerCard(t, SPARK_ACTION_OPTION.confirm);
-    const result = (await call).json<{ outcome: string; changed: string[] }>();
+    const card = await confirmCard(t);
 
     expect(card.title).toBe('Change this Spark? Pip');
     expect(card.payload.sparkAction).toMatchObject({
@@ -130,7 +134,10 @@ describe('spark_update_spark', () => {
       changed: ['instructions'],
       instructions: 'Also check tests.',
     });
-    expect(result).toMatchObject({ outcome: 'done', changed: ['instructions'] });
+    expect(card.payload.sparkResult).toMatchObject({
+      state: 'done',
+      output: { changed: ['instructions'] },
+    });
     const [saved] = await listTeammates(t.db, t.workspaceId);
     expect(saved?.instructions).toBe('Also check tests.');
   });

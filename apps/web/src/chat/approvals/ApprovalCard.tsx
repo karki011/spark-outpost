@@ -128,6 +128,19 @@ function ResolvedApproval({ approval }: { approval: Approval }) {
       <span className="appr-res" role="status">
         <b>{result.label}</b>
         {result.detail}
+        {approval.payload.sparkResult?.url && (
+          <>
+            {' '}
+            <a
+              href={approval.payload.sparkResult.url}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Open: ${result.label}`}
+            >
+              Open
+            </a>
+          </>
+        )}
       </span>
     </div>
   );
