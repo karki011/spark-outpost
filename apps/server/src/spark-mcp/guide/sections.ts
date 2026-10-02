@@ -273,7 +273,7 @@ The Spark switch on: Jev reads each request, routing picks models, a Critic revi
       'projects',
       'connectors',
     ],
-    text: `Settings has these sections: Spark (see settings-spark); AI providers (a tile per provider: Claude, Codex, Z.ai and Jev, each opening its own screen to connect, test, pick defaults and disconnect; Check changes with Jev is on Jev's screen); Models (cost, benchmark and when Spark uses each model); Usage (tokens and cost per provider and category, last 30 days or all time); Projects (linked folders, trust, Builders at once and Where Spark works); Connectors (GitHub, Jira, Linear); MCP servers; Appearance (themes); Reset (hold to reset, then 10 seconds to Undo; optionally Keep my API keys).
+    text: `Settings has these sections: Spark (see settings-spark); AI providers (a tile and screen each for Claude, Codex, Z.ai and Jev); Models (cost, benchmark and when Spark uses each model); Usage (tokens and cost per provider and category, last 30 days or all time); Projects (linked folders, trust, Builders at once and Where Spark works); Connectors (GitHub, Jira, Linear); MCP servers; Appearance (themes); Reset (hold to reset, then 10 seconds to Undo; optionally Keep my API keys).
 
 spark_settings returns the non-secret settings; spark_projects returns each project's Builders at once and Where Spark works.`,
   },
