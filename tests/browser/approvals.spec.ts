@@ -10,7 +10,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { pickAutonomy, pickMode } from './crew-engine.ts';
+import { permissionChip, pickAutonomy, pickMode } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -77,9 +77,7 @@ async function doChat(page: Page) {
   await pickMode(page, 'Manual');
   await expect(panel.getByRole('tab', { name: /Permissions/ })).toHaveText(/Manual$/);
   await pickAutonomy(page, 'Review each step');
-  await expect(page.getByRole('button', { name: /^Model and effort/ })).toHaveAccessibleName(
-    /· Manual$/,
-  );
+  await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Manual');
   await page.getByRole('button', { name: /^Model and effort/ }).click();
   await panel.getByRole('tab', { name: /Permissions/ }).click();
   await shot(page, 'level-picker');
@@ -279,7 +277,10 @@ test('Codex offers Do with its own copy and sandbox note', async ({ page }) => {
     'aria-checked',
     'true',
   );
+  await pickMode(page, 'Full access');
+  await expect(permissionChip(page)).toHaveClass(/risk-full/);
   await pickMode(page, 'Approve for me');
+  await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Approve for me');
   await expect(panel.getByRole('note')).toContainText('runs only in a worktree copy');
   await pickMode(page, 'Ask every time');
   await expect(modes.getByRole('radio', { name: 'Ask every time', exact: true })).toContainText(
@@ -450,7 +451,7 @@ async function askChat(page: Page, autonomy: string) {
   const menu = page.getByRole('dialog', { name: 'Project folders' });
   await menu.getByRole('button', { name: /^app/ }).click();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: /^Model and effort/ })).toContainText('Plan');
+  await expect(permissionChip(page)).toHaveText('Plan');
   await pickAutonomy(page, autonomy);
 }
 

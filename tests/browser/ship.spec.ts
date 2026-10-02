@@ -156,7 +156,9 @@ test('Full auto runs to a PR: the reply and the auto-kept card show the PR link'
   await button.click();
   await pickPermission(page, 'Full auto');
   await page.keyboard.press('Escape');
-  await expect(button).toHaveAccessibleName(/· Bypass permissions$/);
+  await expect(page.getByRole('button', { name: /^Permissions: / })).toHaveAccessibleName(
+    'Permissions: Bypass permissions',
+  );
   await expect(page.getByRole('button', { name: /^Spark autonomy/ })).toHaveText('Full auto → PR');
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Add a line to the notes #edit #plan');

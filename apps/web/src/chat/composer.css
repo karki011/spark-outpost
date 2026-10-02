@@ -156,10 +156,6 @@
   .mbtn .mname {
     max-width: 96px;
   }
-
-  .mbtn .maccess {
-    display: none;
-  }
 }
 
 .composer-wrap > .secret-warn {

@@ -135,6 +135,8 @@ export async function pickMode(page: Page, mode: string): Promise<void> {
   );
 }
 
+export const permissionChip = (page: Page) => page.getByRole('button', { name: /^Permissions: / });
+
 export const autonomyChip = (page: Page) => page.getByRole('button', { name: /^Spark autonomy: / });
 
 export const workPanel = (page: Page) => page.locator('#work-panel');

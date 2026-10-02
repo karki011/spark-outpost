@@ -6,6 +6,7 @@ import {
   crewRepo,
   linkedChat,
   pickAutonomy,
+  permissionChip,
   pickerPanel,
   pickMode,
   resetCrew,
@@ -37,7 +38,7 @@ test("the picker lists the agent's own modes and says what each combination does
   page,
 }) => {
   await linkedChat(page, repo);
-  await expect(pickerButton(page)).toHaveAccessibleName(/· Plan$/);
+  await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Plan');
   const panel = await openPermissions(page);
   const modes = panel.getByRole('radiogroup', { name: 'Agent mode' });
   await expect(modes.getByRole('radio')).toHaveText([
@@ -58,8 +59,9 @@ test("the picker lists the agent's own modes and says what each combination does
   await expect(panel).toContainText('Agent only reads · nothing changes');
 
   await pickMode(page, 'Accept edits');
-  await expect(pickerButton(page)).toHaveAccessibleName(/· Accept edits$/);
-  await expect(pickerButton(page)).not.toContainText('Automatic');
+  await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Accept edits');
+  await expect(pickerButton(page)).toHaveAccessibleName(/^Model and effort: [^·]+$/);
+  await expect(permissionChip(page)).not.toContainText('Automatic');
   await expect(panel.getByRole('radiogroup', { name: /autonomy/i })).toHaveCount(0);
   await expect(panel.getByRole('tab', { name: /Permissions/ })).toHaveText(/Accept edits$/);
   await expect(panel).toContainText(
@@ -76,7 +78,72 @@ test("the picker lists the agent's own modes and says what each combination does
 
   await pickMode(page, 'Plan');
   await expect(panel.getByRole('tab', { name: /Permissions/ })).toHaveText(/Plan$/);
-  await expect(pickerButton(page)).toHaveAccessibleName(/· Plan$/);
+  await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Plan');
+});
+
+test('the permission chip names the mode and opens the picker on Permissions', async ({ page }) => {
+  await linkedChat(page, repo);
+  const chip = permissionChip(page);
+  await expect(chip).toHaveAccessibleName('Permissions: Plan');
+  await expect(chip).toHaveText('Plan');
+  await expect(chip).toHaveAttribute('aria-haspopup', 'dialog');
+
+  await chip.click();
+  const panel = pickerPanel(page);
+  await expect(panel).toBeVisible();
+  const tab = panel.getByRole('tab', { name: /Permissions/ });
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+  await expect(tab).toBeFocused();
+  await expect(panel.getByRole('radiogroup', { name: 'Agent mode' })).toBeVisible();
+
+  await pickMode(page, 'Auto');
+  await expect(chip).toHaveAccessibleName('Permissions: Auto');
+  await expect(chip).toHaveText('Auto');
+  await expect(tab).toHaveText(/Auto$/);
+  await expect(chip).not.toHaveClass(/risk-full/);
+
+  await pickMode(page, 'Bypass permissions');
+  await expect(chip).toHaveAccessibleName('Permissions: Bypass permissions');
+  await expect(chip).toHaveText('Bypass');
+  await expect(chip).toHaveClass(/risk-full/);
+
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+  await expect(chip).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(tab).toBeFocused();
+  await chip.click();
+  await expect(panel).toBeHidden();
+
+  await pickerButton(page).click();
+  await expect(panel.getByRole('tab', { name: /^Model/ })).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Escape');
+  await expect(pickerButton(page)).toBeFocused();
+});
+
+test('the permission chip keeps the composer bar on one line at phone width', async ({ page }) => {
+  await linkedChat(page, repo);
+  await page.setViewportSize({ width: 360, height: 780 });
+  const chip = permissionChip(page);
+  await expect(chip).toHaveAccessibleName('Permissions: Plan');
+  await expect(chip.locator('.pchip-name')).toBeHidden();
+  await expect(chip.locator('svg')).toBeVisible();
+  const bar = page.locator('.comp-bar');
+  const send = bar.locator('.send');
+  const [chipBox, sendBox] = [await chip.boundingBox(), await send.boundingBox()];
+  expect(
+    Math.abs(
+      (chipBox?.y ?? 0) +
+        (chipBox?.height ?? 0) / 2 -
+        ((sendBox?.y ?? 0) + (sendBox?.height ?? 0) / 2),
+    ),
+  ).toBeLessThan(6);
+  expect(await bar.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await chip.click();
+  await expect(pickerPanel(page).getByRole('tab', { name: /Permissions/ })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
 });
 
 test('Spark autonomy lives in the Work panel and the context bar chip opens it', async ({
@@ -245,7 +312,7 @@ test('Settings sets the default mode and autonomy that new chats start with', as
   await page.keyboard.press('Escape');
 
   await linkedChat(page, repo);
-  await expect(pickerButton(page)).toHaveAccessibleName(/· Accept edits$/);
+  await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Accept edits');
   await expect(autonomyChip(page)).toHaveAccessibleName('Spark autonomy: Review each step');
   await autonomyChip(page).click();
   await expect(

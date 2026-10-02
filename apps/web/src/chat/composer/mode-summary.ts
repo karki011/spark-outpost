@@ -1,13 +1,42 @@
 import {
   DEFAULT_INVOLVEMENT_LEVEL,
   autonomyLabel,
+  defaultModeFor,
   isReadOnlyPosture,
+  modeKind,
   modePosture,
   type AgentModeOption,
   type ChatSettings,
   type InvolvementLevel,
+  type ModePosture,
   type ProviderCapabilities,
 } from '@spark-outpost/contracts';
+
+export type PermissionRisk = 'read' | 'ask' | 'edit' | 'auto' | 'full';
+
+export interface PermissionState {
+  mode: string | null;
+  label: string;
+  short: string;
+  risk: PermissionRisk;
+  noFolder: boolean;
+}
+
+const RISKS: Readonly<Record<ModePosture, PermissionRisk>> = {
+  read_only: 'read',
+  asks: 'ask',
+  denies: 'ask',
+  edits: 'edit',
+  auto: 'auto',
+  full_access: 'full',
+  unknown: 'auto',
+};
+
+const SHORT_LABELS: Readonly<Record<string, string>> = {
+  'Bypass permissions': 'Bypass',
+};
+
+export const NO_FOLDER_NOTE = 'No project folder, so nothing can change';
 
 export function modeLabel(modes: readonly AgentModeOption[], mode: string | null): string {
   if (!mode) return 'Default mode';
@@ -26,11 +55,22 @@ export function modeSummary(
   return `${label} · ${autonomyLabel(level ?? DEFAULT_INVOLVEMENT_LEVEL)}`;
 }
 
-export function permissionSummary(
+export function permissionState(
   settings: ChatSettings,
   capabilities: ProviderCapabilities | undefined,
-): string {
-  return modeLabel(capabilities?.modes ?? [], settings.agentMode);
+  hasRepos: boolean,
+): PermissionState {
+  const modes = capabilities?.modes ?? [];
+  const mode = settings.agentMode ?? capabilities?.defaultMode ?? defaultModeFor(settings.provider);
+  const label = modeLabel(modes, mode);
+  const posture = modePosture(settings.provider, mode, modeKind(modes, mode));
+  return {
+    mode,
+    label,
+    short: SHORT_LABELS[label] ?? label,
+    risk: RISKS[posture],
+    noFolder: !hasRepos,
+  };
 }
 
 export function withCurrentMode(

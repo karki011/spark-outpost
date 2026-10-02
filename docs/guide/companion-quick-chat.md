@@ -16,9 +16,9 @@ The companion panel has three tabs: **New chat**, **Sessions** and **Ask**. Insi
 3. Optionally, select **Choose project** to pick a project, or **No project** for a chat without files. Select the autonomy chip, such as **Automatic**, to change it.
 4. Press **Enter** to send.
 
-![The New chat tab of the companion with a message typed and the project, model and autonomy chips](images/companion-island-chat-light.png)
+![The New chat tab of the companion with a message typed and the project, model, permissions and autonomy chips](images/companion-island-chat-light.png)
 
-The chat starts with your default model. Scout keeps an eye on it and tells you when it's done, with a **Reply** button to follow up.
+The chat starts with your default model and agent mode, shown on the model and permissions chips; change those defaults in **Settings → AI providers**. Scout keeps an eye on it and tells you when it's done, with a **Reply** button to follow up.
 
 To close the panel, press **Esc** or **⌥Space**, or click elsewhere. Your draft is kept.
 

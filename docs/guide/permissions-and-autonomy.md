@@ -16,7 +16,7 @@ Each chat has both. New chats start with your defaults.
 
 ## Dial 1: the agent's mode
 
-Open the model button in the message box and select the **Permissions** tab. See [Pick the agent's mode](chats-and-modes.md#pick-the-agents-mode).
+Select the permissions chip next to the model button in the message box. It shows the current mode and opens the **Permissions** tab. See [Pick the agent's mode](chats-and-modes.md#pick-the-agents-mode).
 
 | What it allows                  | Claude and Z.ai           | Codex                        | Approval cards you see                                         |
 | ------------------------------- | ------------------------- | ---------------------------- | -------------------------------------------------------------- |

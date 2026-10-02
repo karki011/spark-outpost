@@ -1,0 +1,61 @@
+.mtriggers {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.pchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  color: inherit;
+  transition: background 0.15s;
+}
+.pchip svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.pchip:hover,
+.pchip[aria-expanded='true'] {
+  background: var(--raise);
+}
+.pchip-note {
+  margin-left: -2px;
+  color: var(--faint);
+}
+.pchip.no-folder .pchip-name,
+.pchip.no-folder svg {
+  color: var(--muted);
+}
+.pchip.risk-full {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 9%, transparent);
+}
+.pchip.risk-full svg {
+  color: var(--warn);
+}
+.pchip.risk-full:hover,
+.pchip.risk-full[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--warn) 16%, transparent);
+}
+
+@container composer (max-width: 520px) {
+  .pchip {
+    padding-inline: 7px;
+  }
+
+  .pchip-note {
+    display: none;
+  }
+}
+
+@container composer (max-width: 400px) {
+  .pchip-name {
+    display: none;
+  }
+}

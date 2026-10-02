@@ -159,8 +159,8 @@ test('Approvals screenshots', async ({ page }) => {
     await newProjectChat(page);
     await linkProject(page);
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('button', { name: /^Model and effort/ })).toHaveAccessibleName(
-      /· Manual$/,
+    await expect(page.getByRole('button', { name: /^Permissions: / })).toHaveAccessibleName(
+      'Permissions: Manual',
     );
     await ask(page, message, card);
     await shoot(page, IMAGES, shot, waiting(page));
