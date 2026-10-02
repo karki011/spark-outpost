@@ -1,3 +1,4 @@
+import type { ActiveWork } from '../diagnostics/event-loop-lag.ts';
 import { executeDigest } from '../digest/execute.ts';
 import type { Db } from '../persistence/db.ts';
 import { isDigestRun } from '../persistence/digests.ts';
@@ -13,6 +14,7 @@ export interface WorkerOptions extends OrchestratorDeps {
   concurrency: number;
   pollMs?: number;
   recoveryEveryMs?: number;
+  activeWork?: ActiveWork;
 }
 
 export interface Worker {
@@ -49,9 +51,11 @@ export function startWorker(options: WorkerOptions): Worker {
     while (!stopped && active.size < options.concurrency) {
       const lease = await claimNextJob(db, options.leaseSeconds);
       if (!lease) return;
+      const done = options.activeWork?.begin(`run ${lease.runId}`);
       const task = runLease(options, lease)
         .catch((error) => console.error(`Run ${lease.runId} crashed`, error))
         .finally(() => {
+          done?.();
           active.delete(task);
           wake();
         });
@@ -64,10 +68,15 @@ export function startWorker(options: WorkerOptions): Worker {
       try {
         if (Date.now() - lastRecovery >= (options.recoveryEveryMs ?? 5000)) {
           lastRecovery = Date.now();
-          await recoverExpiredLeases(options.db);
-          await cleanOrphanedCopies(options.db);
-          await sweepChatWorktrees(options.db);
-          await sweepSessions(options.db, options.sessionLimits);
+          const done = options.activeWork?.begin('recovery sweep');
+          try {
+            await recoverExpiredLeases(options.db);
+            await cleanOrphanedCopies(options.db);
+            await sweepChatWorktrees(options.db);
+            await sweepSessions(options.db, options.sessionLimits);
+          } finally {
+            done?.();
+          }
         }
         await fillSlots(options.db);
       } catch (error) {

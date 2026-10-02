@@ -190,10 +190,10 @@ export class TerminalSessions {
     return true;
   }
 
-  runningCommand(id: string): string | null {
+  async runningCommand(id: string): Promise<string | null> {
     const session = this.sessions.get(id);
     if (session?.kind.type !== 'shell' || !session.pty) return null;
-    return runningCommand(session.pty.pid, processTable());
+    return runningCommand(session.pty.pid, await processTable());
   }
 
   endChat(conversationId: string): number {

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 import { defaultUpdateChannel, isBetaVersion } from '@spark-outpost/contracts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import {
@@ -22,6 +22,7 @@ import { detectGit, GIT_MISSING } from './git.ts';
 import { appLayout } from './layout.ts';
 import { freePort, LOOPBACK, portIsFree } from './ports.ts';
 import { DUMP_TOOL_DIRS } from './data-backup.ts';
+import { guardDownloads } from './downloads.ts';
 import { FileLog } from './file-log.ts';
 import {
   HEARTBEAT_URL_ENV,
@@ -314,6 +315,10 @@ async function launch(): Promise<void> {
   );
 
   attachApiToken(apiUrl, token);
+  guardDownloads(session.defaultSession, {
+    focus: () => spark?.focus(),
+    log: log('downloads'),
+  });
   storage = await startStorageSync({
     file: webStorageFile(paths.userData),
     origin: apiUrl,

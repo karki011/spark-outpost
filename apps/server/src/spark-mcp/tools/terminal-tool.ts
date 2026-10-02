@@ -21,7 +21,7 @@ async function terminals({ deps, scope }: SparkToolContext) {
   const shells = (await listShells(deps.db, scope.workspaceId)).filter((shell) =>
     isAlive(shell.pid),
   );
-  const table = shells.length > 0 ? processTable() : [];
+  const table = shells.length > 0 ? await processTable() : [];
   const home = os.homedir();
   const items = shells.map((shell) => {
     const program = programOf(shell.pid, table);

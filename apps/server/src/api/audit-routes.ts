@@ -1,3 +1,4 @@
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import { Router, type Response } from 'express';
 import { auditLogQuerySchema, type AuditExportLine } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
@@ -5,6 +6,8 @@ import { listProtocolLog, protocolLogBatches, verifyRunLog } from '../persistenc
 import { conversationAuditRuns, summarizeAudit } from '../persistence/audit-summary.ts';
 import { costCsv } from '../audit/cost-csv.ts';
 import { BadRequestError, paramId } from './validation.ts';
+
+const EXPORT_BATCH_ROWS = 100;
 
 export interface AuditDeps {
   db: Db;
@@ -83,7 +86,8 @@ export function auditRoutes({ db }: AuditDeps): Router {
     for (const run of runs) {
       if (res.destroyed) return;
       await writeLine(res, { type: 'run', ...run });
-      for await (const batch of protocolLogBatches(db, run.runId)) {
+      for await (const batch of protocolLogBatches(db, run.runId, EXPORT_BATCH_ROWS)) {
+        await nextTurn();
         for (const entry of batch) {
           if (res.destroyed) return;
           await writeLine(res, { type: 'log', ...entry });

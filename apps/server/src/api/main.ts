@@ -7,6 +7,7 @@ import { pruneUnlinkedAttachments } from '../persistence/attachments.ts';
 import { pruneProtocolLog } from '../persistence/audit-log.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
+import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
 import { startOutcomeSweep } from '../outcomes/sweep.ts';
 import { configuredBackup } from '../persistence/startup-backup.ts';
 import { migrateOrExit } from '../persistence/migrate-startup.ts';
@@ -44,6 +45,8 @@ await pruneUnlinkedAttachments(db, workspaceId);
 await pruneProtocolLog(db, config.AUDIT_RETENTION_DAYS);
 await seedModelStats(db);
 const hub = new RunEventHub();
+const activeWork = new ActiveWork();
+const stopLagMonitor = startLagMonitor({ processName: 'API', work: activeWork });
 ensureSpawnHelperExecutable();
 await forgetAllShells(db, workspaceId);
 const terminals = new TerminalSessions(
@@ -83,6 +86,7 @@ const app = createApp({
   loginShell,
   terminals,
   appEvents,
+  activeWork,
   port: config.API_PORT,
   allowedOrigins: config.ALLOWED_ORIGINS,
   apiToken,
@@ -127,6 +131,7 @@ attachTerminalSockets(server, terminals, {
 
 const shutdown = async () => {
   terminals.killAll();
+  stopLagMonitor();
   outcomeSweep.stop();
   morningBrief?.stop();
   server.close();

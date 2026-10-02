@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { AuditSummary } from '@spark-outpost/contracts';
-import { DownloadIcon } from '../ui/icons.tsx';
 import { auditApi } from './audit-api.ts';
+import { ExportButton } from './ExportButton.tsx';
 
 const PREVIEW_LINES = 6;
 
@@ -40,18 +40,21 @@ export function AuditExport({
             {summary.runs.length} {summary.runs.length === 1 ? 'run' : 'runs'} and {messages}{' '}
             protocol {messages === 1 ? 'message' : 'messages'}, one per line.
           </p>
-          <a className="btn primary sm" href={jsonlUrl} download>
-            <DownloadIcon />
-            Download .jsonl
-          </a>
+          <ExportButton
+            url={jsonlUrl}
+            fileName={`conversation-${conversationId}-audit.jsonl`}
+            label="Download .jsonl"
+            primary
+          />
         </div>
         <div className="xcard">
           <b>Cost as CSV</b>
           <p>Tokens, cost, and cost source per run, for spreadsheets.</p>
-          <a className="btn line sm" href={csvUrl} download>
-            <DownloadIcon />
-            Download .csv
-          </a>
+          <ExportButton
+            url={csvUrl}
+            fileName={`conversation-${conversationId}-cost.csv`}
+            label="Download .csv"
+          />
         </div>
       </div>
       <h4 className="ah">Preview · cost.csv</h4>
