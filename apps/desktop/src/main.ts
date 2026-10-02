@@ -28,6 +28,7 @@ import { startDatabase, type Database, type DatabaseOptions } from './postgres.t
 import { apiEnv, POSTGRES_LOCALE, workerEnv, type ServerLaunch } from './server-env.ts';
 import { forkService, OutputTail } from './service.ts';
 import { createShutdown } from './shutdown.ts';
+import { adoptLoginShellPath } from './shell-path.ts';
 import { startupMigrationEffects } from './startup-migration.ts';
 import { Supervisor } from './supervisor.ts';
 import {
@@ -205,6 +206,7 @@ async function migrateBeforeStart(launchInfo: ServerLaunch, options: DatabaseOpt
 }
 
 async function launch(): Promise<void> {
+  if (app.isPackaged) await adoptLoginShellPath(process.env);
   if (!app.isPackaged) app.dock?.setIcon(icons.app);
   if (config.badge) app.dock?.setBadge(config.badge);
   if (!(await detectGit())) await dialog.showMessageBox({ type: 'warning', ...GIT_MISSING });
