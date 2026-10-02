@@ -1,9 +1,10 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ticketSourceNames, type TicketStartMode } from '@spark-outpost/contracts';
 import { queryKeys } from '../api/client.ts';
 import { projectKeys, projectsApi } from '../api/projects.ts';
+import { FolderDialog } from '../chat/project/FolderDialog.tsx';
 import { CloseIcon } from '../tasks/TaskIcons.tsx';
 import { ChoicePicker } from '../ui/ChoicePicker.tsx';
 import { wrapTabFocus } from '../ui/focus-trap.ts';
@@ -12,6 +13,8 @@ import { reveal } from '../ui/transitions.tsx';
 import type { DetailTicket } from './TicketDetail.tsx';
 import { ticketKeys, ticketsApi } from './tickets-api.ts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { StartContext } from './StartContext.tsx';
+import { useStartContext } from './use-start-context.ts';
 
 interface StartTicketDialogProps {
   ticket: DetailTicket;
@@ -20,7 +23,7 @@ interface StartTicketDialogProps {
 }
 
 const FOCUSABLE =
-  'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  'button:not([disabled]), a[href], input:not([disabled]):not([hidden]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const NO_PROJECT = '';
 
 const MODES = [
@@ -38,6 +41,10 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
   const [assign, setAssign] = useState(!ticket.mine);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [contextOpen, setContextOpen] = useState(false);
+  const [browsing, setBrowsing] = useState(false);
+  const context = useStartContext();
+  const addFolderRef = useRef<HTMLElement | null>(null);
   const projects = useQuery({ queryKey: projectKeys.all, queryFn: projectsApi.list });
   const source = ticketSourceNames[ticket.source];
   const owner = ticket.assignedTo && !ticket.mine ? ticket.assignedTo.name : null;
@@ -58,7 +65,12 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
     wrapTabFocus(event, () => [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)]);
   };
 
-  const start = async () => {
+  const start = async (allowSecrets = false) => {
+    if (context.hold) return;
+    if (!allowSecrets && context.secrets.blocks(context.note.trim())) {
+      setContextOpen(true);
+      return;
+    }
     setBusy(true);
     setProblem(null);
     try {
@@ -75,6 +87,7 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
         messageId: crypto.randomUUID(),
         mode,
         moveToInProgress: move,
+        ...context.request(),
         ...(projectId ? { projectId } : {}),
       });
       await Promise.all([
@@ -93,99 +106,138 @@ export function StartTicketDialog({ ticket, onClose, onStarted }: StartTicketDia
     ...(projects.data ?? []).map((project) => ({ id: project.id, label: project.name })),
   ];
 
+  const closeFolders = () => {
+    setBrowsing(false);
+    addFolderRef.current?.focus();
+  };
+
+  const browseFolders = () => {
+    addFolderRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setBrowsing(true);
+  };
+
+  const projectRoot = projects.data?.find((project) => project.id === projectId)?.rootPath ?? null;
+
   return (
-    <div
-      className="dlg"
-      onMouseDown={(event) => event.target === event.currentTarget && !busy && onClose()}
-    >
-      <motion.div
-        ref={panelRef}
-        className="dlg-panel tk-start"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        initial={{ opacity: 0, y: 12, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={reveal}
-        onKeyDown={onKeyDown}
+    <>
+      <div
+        className="dlg"
+        onMouseDown={(event) => event.target === event.currentTarget && !busy && onClose()}
       >
-        <div className="dlg-head">
-          <div>
-            <h3 id={titleId}>Start work on {ticket.key}</h3>
-            <small>{ticket.title}</small>
+        <motion.div
+          ref={panelRef}
+          className="dlg-panel tk-start"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          initial={{ opacity: 0, y: 12, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={reveal}
+          onKeyDown={onKeyDown}
+        >
+          <div className="dlg-head">
+            <div>
+              <h3 id={titleId}>Start work on {ticket.key}</h3>
+              <small>{ticket.title}</small>
+            </div>
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label="Close"
+              onClick={onClose}
+              disabled={busy}
+            >
+              <CloseIcon />
+            </button>
           </div>
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label="Close"
-            onClick={onClose}
-            disabled={busy}
-          >
-            <CloseIcon />
-          </button>
-        </div>
-        <div className="dlg-body">
-          <p className="dlabel">How to start</p>
-          <Segmented
-            ariaLabel="How to start"
-            options={MODES}
-            value={mode}
-            onChange={(id) => setMode(id as TicketStartMode)}
-          />
-          <p className="dlabel">Project folder</p>
-          <ChoicePicker
-            label="Project folder"
-            choices={projectChoices}
-            value={projectId}
-            onChange={setProjectId}
-          />
-          <label className="check-row">
-            <BlobToggle
-              size="sm"
-              label={`Move ${ticket.key} to In progress in ${source}`}
-              checked={move}
-              onChange={setMove}
+          <div className="dlg-body">
+            <p className="dlabel">How to start</p>
+            <Segmented
+              ariaLabel="How to start"
+              options={MODES}
+              value={mode}
+              onChange={(id) => setMode(id as TicketStartMode)}
             />
-            Move {ticket.key} to In progress in {source}
-          </label>
-          {!ticket.mine && (
+            <p className="dlabel">Project folder</p>
+            <ChoicePicker
+              label="Project folder"
+              choices={projectChoices}
+              value={projectId}
+              onChange={setProjectId}
+            />
             <label className="check-row">
               <BlobToggle
                 size="sm"
-                label={
-                  owner
-                    ? `Take ${ticket.key} from ${owner} and assign it to me in ${source}`
-                    : `Assign ${ticket.key} to me in ${source}`
-                }
-                checked={assign}
-                onChange={setAssign}
+                label={`Move ${ticket.key} to In progress in ${source}`}
+                checked={move}
+                onChange={setMove}
               />
-              {owner
-                ? `Take ${ticket.key} from ${owner} and assign it to me in ${source}`
-                : `Assign ${ticket.key} to me in ${source}`}
+              Move {ticket.key} to In progress in {source}
             </label>
-          )}
-          {problem && (
-            <p className="tk-cform-err" role="alert">
-              {problem}
-            </p>
-          )}
-        </div>
-        <div className="dlg-foot">
-          <span className="why">Creates a chat and links {ticket.key} to it.</span>
-          <button type="button" className="btn ghost sm" onClick={onClose} disabled={busy}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="btn primary sm"
-            onClick={() => void start()}
-            disabled={busy}
-          >
-            {busy ? 'Starting…' : mode === 'plan' ? 'Start with a plan' : 'Start building'}
-          </button>
-        </div>
-      </motion.div>
-    </div>
+            {!ticket.mine && (
+              <label className="check-row">
+                <BlobToggle
+                  size="sm"
+                  label={
+                    owner
+                      ? `Take ${ticket.key} from ${owner} and assign it to me in ${source}`
+                      : `Assign ${ticket.key} to me in ${source}`
+                  }
+                  checked={assign}
+                  onChange={setAssign}
+                />
+                {owner
+                  ? `Take ${ticket.key} from ${owner} and assign it to me in ${source}`
+                  : `Assign ${ticket.key} to me in ${source}`}
+              </label>
+            )}
+            <StartContext
+              context={context}
+              open={contextOpen}
+              onToggle={() => setContextOpen(!contextOpen)}
+              onBrowseFolder={browseFolders}
+              onSendAnyway={() => void start(true)}
+            />
+            {problem && (
+              <p className="tk-cform-err" role="alert">
+                {problem}
+              </p>
+            )}
+          </div>
+          <div className="dlg-foot">
+            <span className="why">
+              {context.hold ?? `Creates a chat and links ${ticket.key} to it.`}
+            </span>
+            <button type="button" className="btn ghost sm" onClick={onClose} disabled={busy}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn primary sm"
+              onClick={() => void start()}
+              disabled={busy || context.hold !== null}
+            >
+              {busy ? 'Starting…' : mode === 'plan' ? 'Start with a plan' : 'Start building'}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+      <AnimatePresence>
+        {browsing && (
+          <FolderDialog
+            purpose="reference"
+            startPath={projectRoot}
+            linking={false}
+            error={null}
+            onUse={(path) => {
+              context.addFolder(path);
+              closeFolders();
+            }}
+            onClose={closeFolders}
+          />
+        )}
+      </AnimatePresence>
+    </>
   );
 }
