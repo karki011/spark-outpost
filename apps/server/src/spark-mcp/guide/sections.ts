@@ -98,7 +98,7 @@ The safety floor holds at every level.`,
       'gate',
       'spend cap',
     ],
-    text: `Every agent action that isn't pre-approved goes through the backend's approval gate, which enforces a floor no mode or level loosens: secret files (.env, keys, credentials) always ask or are refused; Builders never publish (git push, remote changes and gh/hub/glab are refused — only Ship pushes); no writes outside the linked folders; every command and decision goes to a hash-chained audit log.
+    text: `Every agent action that isn't pre-approved goes through the backend's approval gate, which enforces a floor no mode or level loosens: secret files (.env, keys, credentials) always ask or are refused; agents, Builders included, publish only the chat's own spark/ branch (git push <remote> <that branch>, gh pr create/view/edit for its PR) and only when the user's message asks for it, the chat is at Full auto → PR, or the mode is Auto or Bypass permissions — otherwise Builders don't push and Ship does; force pushes, other or base branches, remote changes and hub/glab stay refused in every mode; a short "open pr" or "push it" after the work is done runs as the chat's main agent, not a Builder; no writes outside the linked folders; every command and decision goes to a hash-chained audit log.
 
 Force pushes: git push --force-with-lease to a named, non-default branch always asks with a "Force push?" card you press and hold to confirm, with no Always allow. Plain --force, +refspec, mirror, unnamed and default-branch force pushes are refused.
 

@@ -87,7 +87,7 @@ A few rules hold in every mode:
 
 - Read-only modes (**Plan**, **Read-only**) never change files. If you ask for a change, the agent answers instead. Select **Make the change** under its answer to run the same request with changes allowed.
 - Codex's **Approve for me** and **Full access** act without Spark's approval checks, so they run only in a worktree copy, never on your checkout.
-- Whatever the mode, secret files and agent instruction files still ask first, and Builders never publish. See [Approvals and protected paths](approvals.md).
+- Whatever the mode, secret files and agent instruction files still ask first, and agents publish only the chat's own branch. See [Approvals and protected paths](approvals.md).
 
 For how the mode and Spark autonomy work together, see [Permissions and autonomy](permissions-and-autonomy.md).
 
