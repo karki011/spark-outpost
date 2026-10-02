@@ -1,7 +1,7 @@
 import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
 import { isRunning, rowState } from '../conversations/row-state.ts';
 
-export type Panel = 'quick' | 'sessions' | 'ask';
+export type Panel = 'home' | 'quick' | 'sessions' | 'ask';
 
 export type CardKind = 'approval' | 'force' | 'question' | 'open';
 
@@ -53,6 +53,7 @@ export function islandView(inputs: IslandInputs): IslandView {
 
 const WIDTHS = {
   note: 420,
+  home: 680,
   quick: 640,
   sessions: 640,
   ask: 640,

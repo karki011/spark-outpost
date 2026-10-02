@@ -81,6 +81,7 @@ export function PeekRow({ sessions, more, shown, size, sleepy, onOpen, onMore }:
             }}
             type="button"
             className="isl-peekblob"
+            data-chat={chat.id}
             data-state={state}
             data-leaving={leaving || undefined}
             tabIndex={!leaving && shown && slot === current ? 0 : -1}

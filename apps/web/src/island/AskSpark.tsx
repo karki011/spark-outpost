@@ -9,8 +9,6 @@ import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { fastAnswer, type FastChat, type FastState } from './ask-fast-path.ts';
 import { AskThinking } from './AskThinking.tsx';
 import { islandApi, islandKeys } from './island-api.ts';
-import type { Panel } from './island-model.ts';
-import { PanelTabs } from './PanelTabs.tsx';
 import { plainLine } from './plain-line.ts';
 
 interface Exchange {
@@ -24,9 +22,7 @@ interface Exchange {
 interface AskSparkProps {
   fast: FastState;
   voice: Voice;
-  waiting: number;
   focusDelay: number;
-  onTab: (panel: Panel) => void;
   onOpenChat: (id: string) => void;
 }
 
@@ -83,7 +79,7 @@ function useCheer(thinking: boolean, latest: string | null): string | null {
   return cheer;
 }
 
-export function AskSpark({ fast, voice, waiting, focusDelay, onTab, onOpenChat }: AskSparkProps) {
+export function AskSpark({ fast, voice, focusDelay, onOpenChat }: AskSparkProps) {
   const queryClient = useQueryClient();
   const assistant = useAssistant();
   const [text, setText] = useState('');
@@ -146,8 +142,7 @@ export function AskSpark({ fast, voice, waiting, focusDelay, onTab, onOpenChat }
   const cheer = useCheer(thinking, shown.at(-1)?.answer ? shown.at(-1)!.id : null);
   const step = run?.step ? plainLine(run.step) : null;
   return (
-    <div className="isl-body">
-      <PanelTabs panel="ask" waiting={waiting} onTab={onTab} />
+    <div className="isl-panel">
       <div className="isl-ask-log" aria-live="polite">
         {shown.length === 0 && !thinking && (
           <p className="isl-hint">

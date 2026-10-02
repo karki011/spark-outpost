@@ -159,10 +159,18 @@ test('Desktop companion screenshots', async ({ page }) => {
     },
   ]);
   await runsByClaude();
+  await page.mouse.move(640, 300);
+  await page.mouse.move(640, 8, { steps: 4 });
   await expect(island(page)).toHaveAttribute('data-view', 'card');
   const card = island(page).getByRole('group', { name: /wants to run a command/ });
   await expect(card.getByRole('button', { name: /Allow once/ })).toBeEnabled();
   await shootClip(page, 'companion-island-card', { ...ISLAND_CLIP, height: 260 });
+
+  await page.mouse.move(640, 600);
+  await page.keyboard.press('Alt+Shift+Space');
+  await page.keyboard.press('Meta+1');
+  await expect(island(page).getByRole('region', { name: /^Now/ })).toBeVisible();
+  await shootClip(page, 'companion-island-home', { x: 290, y: 0, width: 700, height: 240 });
 });
 
 test('Companion settings and updates screenshots', async ({ page }) => {

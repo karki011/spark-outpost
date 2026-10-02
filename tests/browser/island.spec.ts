@@ -260,10 +260,10 @@ test('sessions search, open one and ask for an update without touching the agent
   await expect(update).toContainText('Editing upload.ts'.toLowerCase());
   await shot(page, 'update');
   expect((await sql(`SELECT count(*)::int AS n FROM run_events`)).rows[0]!.n).toBe(before);
-  await island(page).getByRole('button', { name: 'Back to sessions' }).click();
+  await island(page).getByRole('button', { name: 'Back to chats' }).click();
   await expect(search).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(island(page).getByRole('button', { name: 'Back to sessions' })).toBeVisible();
+  await expect(island(page).getByRole('button', { name: 'Back to chats' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
 });
@@ -279,7 +279,7 @@ test('Ask answers instantly from Spark’s own state', async ({ page }) => {
   ]);
   await openIsland(page);
   await page.keyboard.press('Alt+Shift+Space');
-  await page.keyboard.press('Meta+3');
+  await page.keyboard.press('Meta+4');
   const ask = island(page).getByRole('textbox', { name: 'Ask Spark' });
   await expect(ask).toBeFocused();
   await ask.fill('Does anyone need anything?');
@@ -360,10 +360,12 @@ test('the island has no serious accessibility problems in its main views', async
   await check('hover list');
   await page.keyboard.press('Alt+Shift+Space');
   await check('sessions');
-  await page.keyboard.press('Meta+1');
-  await check('quick chat');
   await page.keyboard.press('Meta+3');
+  await check('quick chat');
+  await page.keyboard.press('Meta+4');
   await check('ask');
+  await page.keyboard.press('Meta+1');
+  await check('home');
   expect(views).toEqual([]);
 });
 

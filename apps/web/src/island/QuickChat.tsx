@@ -16,12 +16,10 @@ import { providerName } from '../chat/provider-name.ts';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { FolderDialog } from '../chat/project/FolderDialog.tsx';
-import { PanelTabs } from './PanelTabs.tsx';
 import { ProjectMenu } from './ProjectMenu.tsx';
 import { AttachmentChips } from '../chat/attachments/AttachmentChips.tsx';
 import type { AttachmentsState } from '../chat/attachments/use-attachments.ts';
 import type { useAddProject } from './use-add-project.ts';
-import type { Panel } from './island-model.ts';
 
 export interface QuickDraft {
   text: string;
@@ -42,10 +40,8 @@ interface QuickChatProps {
   draft: QuickDraft;
   followUp: ConversationSummary | null;
   projects: readonly Project[];
-  waiting: number;
   focusDelay: number;
   onDraft: (draft: QuickDraft) => void;
-  onTab: (panel: Panel) => void;
   onSent: (chatId: string, title: string, project: string | null) => void;
 }
 
@@ -141,8 +137,7 @@ export function QuickChat(props: QuickChatProps) {
   };
 
   return (
-    <div className="isl-body">
-      <PanelTabs panel="quick" waiting={props.waiting} onTab={props.onTab} />
+    <div className="isl-panel">
       <div className="isl-qc">
         {followUp && (
           <div className="isl-qctx">

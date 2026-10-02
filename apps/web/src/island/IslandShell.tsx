@@ -1,81 +1,25 @@
-import { useLayoutEffect, useRef, type CSSProperties, type RefObject } from 'react';
-import type { ConversationDetail, ConversationSummary, Project } from '@spark-outpost/contracts';
-import { BlobScout, type ScoutMood } from '../brand/BlobScout.tsx';
-import type { IslandGeometry } from '../desktop/desktop-bridge.ts';
-import type { Voice } from '../spark/voice.ts';
-import type { FastState } from './ask-fast-path.ts';
-import { AskSpark } from './AskSpark.tsx';
-import { CardView, type Decided } from './CardView.tsx';
 import {
-  viewWidth,
-  type Card,
-  type IslandView,
-  type Panel,
-  type PeekRow as PeekRowData,
-} from './island-model.ts';
-import { HoverList, type HoverGroups } from './HoverList.tsx';
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type CSSProperties,
+  type RefObject,
+} from 'react';
+import { BlobScout } from '../brand/BlobScout.tsx';
+import { leaveAsGhost } from './home-motion.ts';
+import { viewWidth, type IslandView } from './island-model.ts';
 import { useViewportWidth } from './island-parts.tsx';
 import { wingsFor } from './island-wings.tsx';
 import { keyHint } from './key-hints.tsx';
 import { PeekRow } from './PeekRow.tsx';
 import { DropScene } from './DropScene.tsx';
-import { QuickChat, type Compose, type QuickDraft } from './QuickChat.tsx';
-import type { GrabItem, GrabPhase } from './use-island-drop.ts';
-import { Sessions } from './Sessions.tsx';
+import { ViewBody, type IslandShellProps } from './ShellBody.tsx';
 import { useIslandShape, type ScoutSpot } from './use-island-shape.ts';
-import { chatAgent } from './use-island-data.ts';
 
 interface ShellRefs {
   islandRef: RefObject<HTMLDivElement | null>;
   rowRef: RefObject<HTMLDivElement | null>;
-}
-
-interface IslandShellProps {
-  compose: Compose;
-  drop: DropProps;
-  view: IslandView;
-  geometry: IslandGeometry;
-  mood: ScoutMood;
-  reduced: boolean;
-  wave: boolean;
-  hover: boolean;
-  greeting: string | null;
-  waiting: number;
-  voice: Voice;
-  now: number;
-  note: Decided | null;
-  groups: HoverGroups;
-  listing: boolean;
-  detailFor: (chatId: string) => ConversationDetail | undefined;
-  focusSignal: number;
-  sessions: ConversationSummary[];
-  peek: PeekRowData;
-  sleepy: boolean;
-  projectNames: ReadonlyMap<string, string>;
-  projects: readonly Project[];
-  selected: string | null;
-  draftId: string;
-  draft: QuickDraft;
-  followUp: ConversationSummary | null;
-  fast: FastState;
-  announcement: string;
-  onDraft: (draft: QuickDraft) => void;
-  onTab: (panel: Panel) => void;
-  onSelect: (id: string | null) => void;
-  onOpenChat: (id: string) => void;
-  onDecided: (decided: Decided) => void;
-  onLater: () => void;
-  onReview: (card: Card) => void;
-  onScout: () => void;
-  onPeekOpen: (id: string) => void;
-  onSent: (id: string, title: string, project: string | null) => void;
-}
-
-interface DropProps {
-  phase: GrabPhase;
-  item: GrabItem | null;
-  note: string | null;
-  sceneRef: RefObject<HTMLDivElement | null>;
 }
 
 const KHINT_HEIGHT = 18;
@@ -101,97 +45,10 @@ function scoutSpot(view: IslandView, width: number, top: number, hang: number | 
   return { x: view.kind === 'pill' ? 14 : 10, y: Math.max(2, (top - 22) / 2), size: 22 };
 }
 
-function ViewBody({ props }: { props: IslandShellProps }) {
-  const { view } = props;
-  const focusDelay = props.reduced ? 0 : 240;
-  switch (view.kind) {
-    case 'pill':
-      return (
-        <HoverList
-          groups={props.groups}
-          voice={props.voice}
-          now={props.now}
-          sleepy={props.sleepy}
-          onReview={props.onReview}
-          onOpen={props.onOpenChat}
-        />
-      );
-    case 'note':
-      return (
-        <div className="isl-body">
-          <div className="isl-card isl-note" data-wash="accent" role="status">
-            <div className="isl-ttl">{props.note?.title}</div>
-            <div className="isl-hint">{props.note?.sub}</div>
-          </div>
-        </div>
-      );
-    case 'panel':
-      if (view.panel === 'quick') {
-        return (
-          <QuickChat
-            draftId={props.draftId}
-            draft={props.draft}
-            followUp={props.followUp}
-            projects={props.projects}
-            compose={props.compose}
-            waiting={props.waiting}
-            focusDelay={focusDelay}
-            onDraft={props.onDraft}
-            onTab={props.onTab}
-            onSent={props.onSent}
-          />
-        );
-      }
-      if (view.panel === 'sessions') {
-        return (
-          <Sessions
-            chats={props.sessions}
-            projectNames={props.projectNames}
-            selected={props.selected}
-            waiting={props.waiting}
-            now={props.now}
-            focusDelay={focusDelay}
-            onSelect={props.onSelect}
-            onTab={props.onTab}
-            onOpenChat={props.onOpenChat}
-          />
-        );
-      }
-      return (
-        <AskSpark
-          fast={props.fast}
-          voice={props.voice}
-          waiting={props.waiting}
-          focusDelay={focusDelay}
-          onTab={props.onTab}
-          onOpenChat={props.onOpenChat}
-        />
-      );
-    case 'card': {
-      return (
-        <div className="isl-body">
-          <CardView
-            card={view.card}
-            index={view.index}
-            total={view.total}
-            agent={chatAgent(view.card.chat, props.detailFor(view.card.chat.id))}
-            focusSignal={props.focusSignal}
-            onDecided={props.onDecided}
-            onOpenChat={props.onOpenChat}
-            onLater={props.onLater}
-          />
-        </div>
-      );
-    }
-    default:
-      return null;
-  }
-}
-
 function viewKey(view: IslandView): string {
   switch (view.kind) {
     case 'panel':
-      return `panel-${view.panel}`;
+      return 'panel';
     case 'card':
       return `card-${view.card.approval?.id ?? view.card.chat.id}`;
     default:
@@ -227,6 +84,18 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     props.reduced,
   );
   const wings = wingsFor(props);
+  const reducedRef = useRef(props.reduced);
+  useEffect(() => {
+    reducedRef.current = props.reduced;
+  }, [props.reduced]);
+  const attachView = useCallback((node: HTMLDivElement | null) => {
+    viewRef.current = node;
+    if (!node) return;
+    return () => {
+      if (viewRef.current === node) viewRef.current = null;
+      if (!reducedRef.current && node.dataset.panel) leaveAsGhost(node);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const measure = () => {
@@ -302,7 +171,13 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
             </div>
           </div>
           {!quiet && (
-            <div ref={viewRef} key={viewKey(view)} className="isl-view" style={{ width }}>
+            <div
+              ref={attachView}
+              key={viewKey(view)}
+              className="isl-view"
+              data-panel={view.kind === 'panel' ? view.panel : undefined}
+              style={{ width, marginLeft: -width / 2 }}
+            >
               <ViewBody props={props} />
             </div>
           )}
@@ -326,7 +201,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
             className="isl-scout-btn"
             aria-label={
               props.waiting > 0
-                ? `Spark: ${props.waiting} need you. Open sessions`
+                ? `Spark: ${props.waiting} need you. Open Spark Island`
                 : 'Open Spark Island'
             }
             onClick={props.onScout}

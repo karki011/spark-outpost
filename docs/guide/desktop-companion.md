@@ -2,7 +2,7 @@
 title: Spark Island
 section: Desktop app
 order: 510
-summary: Spark Island, Scout at the top of your screen in the Mac app: what it shows at rest and on hover, the session blobs beside it, notch and no-notch displays, and the status companion inside the app.
+summary: Spark Island, Scout at the top of your screen in the Mac app: what it shows at rest and on hover, the Home view with what's happening now and your Sparks, chimes, the session blobs beside it, notch and no-notch displays, and the status companion inside the app.
 ---
 
 You'll get to know Spark Island at the top of your Mac's screen and set it up the way you like. About 2 minutes.
@@ -35,9 +35,25 @@ Point at Scout to see everything at once, grouped:
 - **Running**: each chat with who's working, what it's doing and how long it's been going.
 - **Recent**: chats that finished or failed in the last 20 minutes, with a short line about how it went.
 
-Groups with nothing in them don't show. **See all** opens **Sessions**, and **New chat** starts a chat. Select a row to open that chat in Spark Outpost.
+Groups with nothing in them don't show. **See all** opens **Chats**, and **New chat** starts a chat. Select a row to open that chat in Spark Outpost.
 
-Select Scout to open the panel: **Sessions** when you have active or recent chats, otherwise **Ask**.
+## Home
+
+Select Scout to open Spark Island on **Home**. The panel is always a dark glass panel, whichever theme you use in the app, so it sits well with the notch and the menu bar.
+
+![Spark Island Home with the Now card showing a chat's latest steps and the Sparks tiles](images/companion-island-home-light.png)
+
+- **Now** shows the chat that matters most: one that needs you first, then one that's running, otherwise your latest chat. You see its blob with a small badge for its state, its title and agent, the step it's on (such as **2/4**) when it follows a plan, and its last few steps, such as **Read · billing.ts** or **Editing · billing.ts**. Steps show only verbs and file names; full paths and anything that looks like a secret are left out.
+- When several chats are live, select a dot under the blob, or swipe sideways, to flip between them.
+- Select the open button next to the title to open that chat right in Spark Island. **⌘-click** it, or hold it, to open the chat in Spark Outpost instead.
+- With nothing going on, **Now** offers **Ask Spark…** and a new chat in your latest project.
+- The tiles beside it are your [Sparks](sparks.md). Select one to chat with that Spark right in Spark Island. Without any Sparks, the tiles start a new chat, open **Ask Spark**, show what needs you, or help you make a Spark.
+
+The top of the panel has the **Home**, **Chats** and **New chat** tabs, then **Spark Island settings** and **Island chimes**. See [Quick chat and Sessions](companion-quick-chat.md) for the other tabs.
+
+### Chimes
+
+Spark Island can play a soft chime when a chat needs you or finishes. Chimes are off until you turn them on: select **Island chimes** at the top of the panel, or switch on **Island chimes** under **Settings → Spark → Around the app**.
 
 ### When a chat needs you
 
@@ -49,7 +65,7 @@ Next to Scout, a small blob stands for each active chat: running, waiting for yo
 
 - A wobbling blob is working. A **!** means it's waiting for you.
 - A small sparkle means it's done. A grey blob means it failed.
-- Point at a blob to see the chat's title and state. Select it to open that chat in **Sessions**.
+- Point at a blob to see the chat's title and state. Select it to open that chat in **Chats**.
 
 ## Notch or no notch
 
@@ -58,7 +74,7 @@ Next to Scout, a small blob stands for each active chat: running, waiting for yo
 
 To move Spark Island, drag it by any part that isn't a button, to any display. Drop it near the top centre to dock it again. Spark remembers where you put it.
 
-Scout and the session blobs move only when there's something to show. If **Reduce motion** is on in your Mac's Accessibility settings, they stay still and only their faces change.
+Scout and the session blobs move only when there's something to show. Opening Home, the panel grows out of Scout and the chat's blob hops into the **Now** card; closing it folds everything back. If **Reduce motion** is on in your Mac's Accessibility settings, they stay still, panels open and close in place, and only faces change.
 
 ## The status companion in the app
 

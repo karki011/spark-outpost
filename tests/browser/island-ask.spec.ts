@@ -26,7 +26,7 @@ async function askLongQuestion(page: Page) {
   await page.goto('/island');
   await expect(island(page)).toBeVisible();
   await page.keyboard.press('Alt+Space');
-  await page.keyboard.press('Meta+3');
+  await page.keyboard.press('Meta+4');
   const ask = island(page).getByRole('textbox', { name: 'Ask Spark' });
   await expect(ask).toBeFocused();
   await ask.fill(QUESTION);

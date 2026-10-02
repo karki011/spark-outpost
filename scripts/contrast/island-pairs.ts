@@ -3,6 +3,10 @@ import type { Pair } from './pair-types.ts';
 const ISLAND = ['var(--panel)'];
 const CARD = ['color-mix(in srgb, var(--raise) 70%, var(--panel))'];
 const BUTTON = [...CARD, 'color-mix(in srgb, var(--text) 7%, transparent)'];
+const TILE = [
+  'color-mix(in srgb, var(--text) 4%, color-mix(in srgb, var(--raise) 70%, var(--panel)))',
+  'color-mix(in srgb, var(--text) 9%, color-mix(in srgb, var(--raise) 70%, var(--panel)))',
+];
 
 const pair = (
   id: string,
@@ -53,4 +57,11 @@ export const ISLAND_PAIRS: Pair[] = [
   pair('peek-badge-ring', 'waiting badge on the peeking blob', 'var(--warn)', ISLAND, 'ui'),
   pair('scout', 'Scout on the island', 'var(--accent)', ISLAND, 'ui'),
   pair('focus', 'focus ring around a card or blob', 'var(--accent)', CARD, 'focus'),
+  pair('tab-icon', 'Home, Chats and New tab icons', 'var(--muted)', ISLAND, 'ui'),
+  pair('chimes-on', 'chimes button while on', 'var(--accent-text)', ISLAND, 'ui'),
+  pair('now-title', 'session title on the Now card', 'var(--text)', CARD),
+  pair('now-meta', 'agent, step count and older steps on the Now card', 'var(--muted)', CARD),
+  pair('now-active', 'marker of the step in progress', 'var(--accent-text)', CARD, 'ui'),
+  pair('now-failed', 'marker of a failed step', 'var(--danger)', CARD, 'ui'),
+  pair('tile-label', 'Spark name on a Home tile', 'var(--text)', TILE),
 ];
