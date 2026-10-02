@@ -11,19 +11,20 @@ const BROWSER_SHORTCUTS: Record<IslandAction, string> = {
   sessions: 'Alt+Shift+Space',
 };
 
-function inside(rects: readonly DOMRect[], x: number, y: number): boolean {
+function inside(rects: readonly DOMRect[], x: number, y: number, margin = HIT_MARGIN): boolean {
   return rects.some(
     (rect) =>
       rect.width > 0 &&
-      x >= rect.left - HIT_MARGIN &&
-      x <= rect.right + HIT_MARGIN &&
-      y >= rect.top - HIT_MARGIN &&
-      y <= rect.bottom + HIT_MARGIN,
+      x >= rect.left - margin &&
+      x <= rect.right + margin &&
+      y >= rect.top - margin &&
+      y <= rect.bottom + margin,
   );
 }
 
 interface BridgeOptions {
   hitRects: () => DOMRect[];
+  blobRects: () => DOMRect[];
   islandRef: RefObject<HTMLElement | null>;
   focusable: boolean;
   onHover: (inside: boolean) => void;
@@ -92,7 +93,10 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       }
       const hit = inside(latest.current.hitRects(), event.clientX, event.clientY);
       setInteractive(hit);
-      setHover(hit);
+      const island = latest.current.islandRef.current?.getBoundingClientRect();
+      const onIsland = island ? inside([island], event.clientX, event.clientY, 0) : false;
+      const onBlob = inside(latest.current.blobRects(), event.clientX, event.clientY, 0);
+      setHover(hit && (onIsland || !onBlob));
     };
     const onLeave = () => {
       if (dragging) return;

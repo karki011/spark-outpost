@@ -64,6 +64,13 @@ function useHoverIntent(delayIn: number) {
   return [hover, onHover, setHover] as const;
 }
 
+function flatRowRects(row: HTMLElement | null): DOMRect[] {
+  if (!row?.matches('[data-flat]')) return [];
+  return Array.from(row.querySelectorAll('[data-shown] button'), (element) =>
+    element.getBoundingClientRect(),
+  );
+}
+
 export function IslandApp() {
   useThemeSync();
   useAppEvents();
@@ -206,10 +213,11 @@ export function IslandApp() {
   const geometry = useIslandBridge({
     islandRef,
     focusable: panel !== null || (focusSignal > 0 && view.kind === 'card'),
-    hitRects: () =>
-      [islandRef.current, rowRef.current].flatMap((element) =>
-        element ? [element.getBoundingClientRect()] : [],
-      ),
+    hitRects: () => [
+      ...(islandRef.current ? [islandRef.current.getBoundingClientRect()] : []),
+      ...flatRowRects(rowRef.current),
+    ],
+    blobRects: () => flatRowRects(rowRef.current),
     onHover,
     onCommand: command,
     onBlur: () => {

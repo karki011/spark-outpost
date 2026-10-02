@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  dockedPosition,
   draggedPosition,
   islandDisplay,
   islandGeometry,
@@ -68,6 +69,31 @@ describe('island placement', () => {
       position: { x: (1512 - ISLAND_WIDTH) / 2, y: 0 },
       docked: true,
     });
+  });
+
+  it('hangs flush under a standard menu bar with no margin', () => {
+    for (const menuBar of [22, 24, 25]) {
+      const intel: DisplayInfo = {
+        ...builtIn,
+        bounds: { x: 0, y: 0, width: 1440, height: 900 },
+        workArea: { x: 0, y: menuBar, width: 1440, height: 900 - menuBar },
+      };
+      expect(placement({ docked: true }, [intel], 1)).toEqual({
+        display: intel,
+        position: { x: (1440 - ISLAND_WIDTH) / 2, y: menuBar },
+        docked: true,
+      });
+      const monitor: DisplayInfo = {
+        ...external,
+        workArea: { ...external.workArea, y: external.bounds.y + menuBar },
+      };
+      expect(dockedPosition(monitor)).toEqual({
+        x: 1512 + (2560 - ISLAND_WIDTH) / 2,
+        y: -200 + menuBar,
+      });
+    }
+    const hidden = { ...builtIn, internal: false, workArea: builtIn.bounds };
+    expect(dockedPosition(hidden).y).toBe(0);
   });
 
   it('restores a floating position on a display that still exists', () => {

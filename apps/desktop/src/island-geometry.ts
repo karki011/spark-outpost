@@ -49,16 +49,27 @@ export function islandDisplay(
   );
 }
 
+function menuBarHeight(display: DisplayInfo): number {
+  return display.workArea.y - display.bounds.y;
+}
+
+function hasNotch(display: DisplayInfo): boolean {
+  return display.internal && menuBarHeight(display) > NOTCH_MENU_BAR_MIN;
+}
+
 export function islandGeometry(display: DisplayInfo, docked: boolean): IslandGeometry {
-  const menuBar = display.workArea.y - display.bounds.y;
-  const notch = display.internal && menuBar > NOTCH_MENU_BAR_MIN;
+  const menuBar = menuBarHeight(display);
+  const notch = hasNotch(display);
   const top = menuBar > 0 ? Math.min(MAX_TOP, Math.max(MIN_TOP, menuBar)) : DEFAULT_TOP;
   return { notch, top, notchWidth: notch ? NOTCH_WIDTH : 0, docked };
 }
 
 export function dockedPosition(display: DisplayInfo): Point {
-  const { bounds } = display;
-  return { x: bounds.x + Math.round((bounds.width - ISLAND_WIDTH) / 2), y: bounds.y };
+  const { bounds, workArea } = display;
+  return {
+    x: bounds.x + Math.round((bounds.width - ISLAND_WIDTH) / 2),
+    y: hasNotch(display) ? bounds.y : workArea.y,
+  };
 }
 
 function clamp(value: number, min: number, max: number): number {

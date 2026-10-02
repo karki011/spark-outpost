@@ -299,6 +299,7 @@ test('without a notch the blob peeks on its own and the pill opens a focused cha
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
+  await seedChats([{ title: 'Fix image uploads', run: { status: 'succeeded' } }]);
   await fakeNonNotchDesktop(page);
   await openIsland(page);
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
@@ -306,6 +307,25 @@ test('without a notch the blob peeks on its own and the pill opens a focused cha
   await expect
     .poll(() => island(page).evaluate((element) => getComputedStyle(element).backgroundColor))
     .toBe('rgba(0, 0, 0, 0)');
+
+  const scout = island(page).locator('.isl-scout-wrap');
+  await expect.poll(async () => (await scout.boundingBox())!.y).toBe(-22);
+  expect((await scout.boundingBox())!.height).toBe(38);
+  const eyes = await island(page)
+    .locator('.sc-eye')
+    .evaluateAll((all) => all.map((eye) => eye.getBoundingClientRect().top));
+  expect(Math.min(...eyes)).toBeGreaterThanOrEqual(0);
+  const blob = page.getByRole('button', { name: /^Chat: Fix image uploads/ });
+  await expect.poll(async () => (await blob.boundingBox())?.y).toBe(-12);
+  expect((await blob.boundingBox())!.height).toBe(28);
+  const blobEyes = await blob
+    .locator('.mo-eyes')
+    .evaluate((element) => element.getBoundingClientRect().top);
+  expect(blobEyes).toBeGreaterThanOrEqual(0);
+  const spot = (await blob.boundingBox())!;
+  await page.mouse.move(spot.x + spot.width / 2, 8);
+  await page.waitForTimeout(400);
+  await expect(island(page)).toHaveAttribute('data-view', 'peek');
 
   const box = (await island(page).boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, 10);

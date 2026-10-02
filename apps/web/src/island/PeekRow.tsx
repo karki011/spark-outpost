@@ -17,6 +17,7 @@ interface PeekRowProps {
   sessions: readonly ConversationSummary[];
   more: number;
   shown: boolean;
+  size: number;
   sleepy: boolean;
   onOpen: (id: string) => void;
   onMore: () => void;
@@ -50,7 +51,7 @@ function useSlots(sessions: readonly ConversationSummary[]): Slot[] {
   ];
 }
 
-export function PeekRow({ sessions, more, shown, sleepy, onOpen, onMore }: PeekRowProps) {
+export function PeekRow({ sessions, more, shown, size, sleepy, onOpen, onMore }: PeekRowProps) {
   const slots = useSlots(sessions);
   const [focus, setFocus] = useState(0);
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
@@ -98,7 +99,7 @@ export function PeekRow({ sessions, more, shown, sleepy, onOpen, onMore }: PeekR
             <SessionBlob
               chat={chat}
               state={state}
-              size={22}
+              size={size}
               expression={sessionExpression(state, sleepy)}
             />
             {state === 'waiting' && (
