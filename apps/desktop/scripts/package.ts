@@ -2,7 +2,12 @@ import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { releaseProblems, RELEASE_ARCHS, type MacArch } from './builder-config.ts';
+import {
+  packagedHeartbeatUrl,
+  releaseProblems,
+  RELEASE_ARCHS,
+  type MacArch,
+} from './builder-config.ts';
 import { desktopDir, packageDesktop, releaseDir } from './stage.ts';
 
 const { values } = parseArgs({
@@ -34,6 +39,10 @@ if (values.release) {
     process.exit(1);
   }
 }
+const heartbeat = packagedHeartbeatUrl(process.env);
+console.log(
+  heartbeat ? `Heartbeat: ${heartbeat}` : 'Heartbeat: off (set SPARK_HEARTBEAT_URL to turn it on).',
+);
 const outputDir = path.join(releaseDir, version);
 const artifacts = await packageDesktop({
   version,

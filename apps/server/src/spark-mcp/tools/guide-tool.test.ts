@@ -26,6 +26,7 @@ const SETTING_LABELS = [
   'Builders at once',
   'Where Spark works',
   'Keep my API keys',
+  'Send anonymous heartbeat',
 ];
 
 const context: SparkToolContext = {

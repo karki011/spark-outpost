@@ -67,6 +67,7 @@ describe('setup state', () => {
       compactWarnPercent: 60,
       compactAtPercent: 80,
       autoCompact: true,
+      heartbeat: true,
     });
     expect(body.providers.map((provider: { id: string }) => provider.id)).toEqual([
       'claude',

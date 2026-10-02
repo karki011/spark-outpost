@@ -306,4 +306,10 @@ The chain lets Spark detect tampering: verifying it walks every row and reports 
 
 Local API calls require a per-launch token so nothing else on your machine can reach them. A separate "Dev" channel (its own app ID, data folder, database, and branch prefix) keeps development builds from ever touching your everyday installed app's data. Packaging (code signing, notarization, auto-update) is the step still ahead of general release.`,
   },
+  {
+    id: 'heartbeat',
+    title: 'Anonymous heartbeat',
+    keywords: ['heartbeat', 'telemetry', 'privacy', 'analytics', 'install', 'country', 'tracking'],
+    text: `The Mac app sends a daily anonymous heartbeat: random install ID, version, OS. Cloudflare adds the country. Turn off: Settings → Help → Send anonymous heartbeat.`,
+  },
 ];

@@ -12,9 +12,10 @@
         "tests/browser/*.spec.ts",
         "tests/browser/provider-stub.ts",
         "tests/browser/ensure-database.ts",
-        "tests/browser/bin/gh-fake.ts"
+        "tests/browser/bin/gh-fake.ts",
+        "infra/heartbeat-worker/src/worker.ts"
       ],
-      "project": ["scripts/**/*.ts", "tests/**/*.ts"],
+      "project": ["scripts/**/*.ts", "tests/**/*.ts", "infra/**/*.ts"],
       "ignore": [
         "scripts/bench/fixture/**",
         "scripts/e2e-live/dev-day/fixtures/**",

@@ -78,6 +78,28 @@ test('the desktop Help section shows the beta version and logs, and exports diag
   expect(await read<string[]>(page, 'helpCalls')).toEqual(['showLogs', 'export']);
 });
 
+test('the desktop Help section sends the anonymous heartbeat by default and turns it off', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeDesktop(page);
+  const help = await openHelp(page);
+
+  const heartbeat = help.getByRole('switch', { name: 'Send anonymous heartbeat' });
+  await expect(heartbeat).toBeChecked();
+  await expect(heartbeat).toHaveAccessibleDescription(
+    'Once a day Spark sends a random install ID, app version and OS. Cloudflare adds the country. No chats, code, names or IP addresses.',
+  );
+  const saved = page.waitForResponse(
+    (response) => response.url().endsWith('/api/profile') && response.ok(),
+  );
+  await heartbeat.click();
+  await saved;
+  await expect(heartbeat).not.toBeChecked();
+  const profile = await page.request.get('/api/setup');
+  expect((await profile.json()).profile.heartbeat).toBe(false);
+});
+
 test('feedback opens an email draft and says which diagnostics zip to attach', async ({ page }) => {
   await resetTestDatabase({ onboarded: true });
   await fakeDesktop(page);
@@ -137,6 +159,7 @@ test('in the browser, Export diagnostics downloads the zip from the server', asy
   await resetTestDatabase({ onboarded: true });
   const help = await openHelp(page);
   await expect(help.getByRole('button', { name: 'Show in Finder' })).toHaveCount(0);
+  await expect(help.getByRole('switch', { name: 'Send anonymous heartbeat' })).toHaveCount(0);
   const download = page.waitForEvent('download');
   await help.getByRole('button', { name: 'Export diagnostics' }).click();
   const file = await download;

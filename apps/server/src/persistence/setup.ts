@@ -45,6 +45,7 @@ interface ProfileRow {
   compact_warn_percent: number;
   compact_at_percent: number;
   auto_compact: boolean;
+  heartbeat: boolean;
 }
 
 export interface ConnectionRow {
@@ -88,7 +89,7 @@ async function ensureProfile(db: Queryable, workspaceId: string): Promise<Profil
        jev_diffs, ship_failing_checks, pr_ready_for_review, pr_follow_up, pr_follow_up_checks,
        pr_follow_up_reviews, pr_follow_up_replies, personality, spark_enabled, default_level,
        spend_cap_usd, morning_brief, compact_warn_percent, compact_at_percent, auto_compact,
-       to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
+       heartbeat, to_char(morning_brief_time, 'HH24:MI') AS morning_brief_time
      FROM profiles WHERE workspace_id = $1`,
     [workspaceId],
   );
@@ -189,6 +190,7 @@ export async function getSetupState(
     compactWarnPercent: profile.compact_warn_percent,
     compactAtPercent: profile.compact_at_percent,
     autoCompact: profile.auto_compact,
+    heartbeat: profile.heartbeat,
   };
   return { profile: result, providers, advisors };
 }
@@ -240,6 +242,7 @@ export async function updateProfile(
        compact_warn_percent = COALESCE($21, compact_warn_percent),
        compact_at_percent = COALESCE($22, compact_at_percent),
        auto_compact = COALESCE($23, auto_compact),
+       heartbeat = COALESCE($24, heartbeat),
        updated_at = now()
      WHERE workspace_id = $1`,
     [
@@ -266,6 +269,7 @@ export async function updateProfile(
       update.compactWarnPercent ?? null,
       update.compactAtPercent ?? null,
       update.autoCompact ?? null,
+      update.heartbeat ?? null,
     ],
   );
 }

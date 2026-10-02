@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import { app, BrowserWindow, dialog, shell } from 'electron';
-import { isBetaVersion } from '@spark-outpost/contracts';
+import { defaultUpdateChannel, isBetaVersion } from '@spark-outpost/contracts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import { waitForApi } from './api-ready.ts';
 import { channelConfig, channelIcons, channelPaths, resolveChannel } from './channel.ts';
@@ -12,6 +12,16 @@ import { appLayout } from './layout.ts';
 import { freePort, LOOPBACK } from './ports.ts';
 import { DUMP_TOOL_DIRS } from './data-backup.ts';
 import { FileLog } from './file-log.ts';
+import {
+  HEARTBEAT_URL_ENV,
+  heartbeatEnabled,
+  heartbeatUrl,
+  installIdFile,
+  loadInstallId,
+  readBakedHeartbeatUrl,
+  startHeartbeat,
+  type HeartbeatTimer,
+} from './heartbeat.ts';
 import { startHelp, type Help } from './help.ts';
 import { aboutVersion } from './help-menu.ts';
 import { startDatabase, type Database, type DatabaseOptions } from './postgres.ts';
@@ -63,6 +73,7 @@ let companionHost: CompanionHost | null = null;
 let failureHelp: string | null = null;
 let updater: Updater | null = null;
 let help: Help | null = null;
+let heartbeat: HeartbeatTimer | null = null;
 const fileLog = new FileLog({ dir: paths.logs });
 
 function log(source: string) {
@@ -100,6 +111,8 @@ async function stopEverything(): Promise<void> {
 }
 
 function closeWindows(): void {
+  heartbeat?.dispose();
+  heartbeat = null;
   updater?.dispose();
   updater = null;
   help?.dispose();
@@ -269,6 +282,7 @@ async function launch(): Promise<void> {
     },
     log: log('updates'),
   });
+  heartbeat = await scheduleHeartbeat(apiUrl, token);
   companionHost = await startCompanionHost({
     appName: config.appName,
     origin: apiUrl,
@@ -279,6 +293,23 @@ async function launch(): Promise<void> {
     quit: () => app.quit(),
   });
   mainLog(`${config.appName} ${app.getVersion()} ready on ${apiUrl}; data in ${paths.userData}.`);
+}
+
+async function scheduleHeartbeat(apiUrl: string, token: string): Promise<HeartbeatTimer> {
+  const version = app.getVersion();
+  return startHeartbeat({
+    url:
+      heartbeatUrl(process.env[HEARTBEAT_URL_ENV]) ??
+      (await readBakedHeartbeatUrl(app.getAppPath())),
+    enabled: () => heartbeatEnabled(apiUrl, token),
+    heartbeat: async () => ({
+      installId: await loadInstallId(installIdFile(paths.userData)),
+      version,
+      os: process.platform,
+      arch: process.arch,
+      channel: config.channel === 'dev' ? 'dev' : defaultUpdateChannel(version),
+    }),
+  });
 }
 
 function showSpark(): void {
