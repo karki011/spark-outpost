@@ -10,6 +10,7 @@ import { spendSummary } from '../../persistence/spend.ts';
 import { localTimeZone, nowOf } from '../deps.ts';
 import { round } from '../format.ts';
 import { limitInput, sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
+import { reportedModel } from '../../providers/reported-model.ts';
 
 interface SpendRow {
   provider: string;
@@ -55,6 +56,11 @@ function totalBy<K extends string>(rows: readonly SpendRow[], key: (row: SpendRo
     .sort((a, b) => (b.costUsd ?? 0) - (a.costUsd ?? 0));
 }
 
+function spentOn(row: SpendRow): string {
+  const { model, modelLabel } = reportedModel(row.provider, row.model);
+  return modelLabel ?? model ?? 'default';
+}
+
 async function spend(
   { deps, scope }: SparkToolContext,
   range: z.infer<typeof spendRangeSchema>,
@@ -77,7 +83,7 @@ async function spend(
       costSource: row.costSource,
       tokens: row.totalTokens,
     })),
-    byModel: totalBy(rows, (row) => `${row.provider} · ${row.model ?? 'default'}`).slice(0, limit),
+    byModel: totalBy(rows, (row) => `${row.provider} · ${spentOn(row)}`).slice(0, limit),
     byChat: totalBy(rows, (row) => row.chat_id)
       .slice(0, limit)
       .map(({ name, ...bucket }) => ({ id: name, title: titles.get(name) ?? '', ...bucket })),

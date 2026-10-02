@@ -7,6 +7,7 @@ import { saveManualServer } from '../src/mcp/save.ts';
 import { saveConnection, updateProfile } from '../src/persistence/setup.ts';
 import { createProject } from '../src/projects/projects.ts';
 import { memorySecretStore, type SecretStore } from '../src/setup/secrets.ts';
+import { zaiModels } from '../src/setup/zai-key.ts';
 import { saveConnection as saveTicketConnection } from '../src/tickets/connections.ts';
 import { LINEAR_KEY } from './fake-linear.ts';
 import { connectClient, startSparkTools, type SparkToolsHarness } from './spark-mcp-support.ts';
@@ -85,6 +86,27 @@ describe('spark_providers', () => {
     expect(body.problemsLast24h).toEqual([
       expect.objectContaining({ provider: 'codex', message: expect.stringContaining('signed in') }),
     ]);
+  });
+  it('reports the GLM model behind the Claude alias Z.ai is stored with', async () => {
+    await secrets.set('zai', ZAI_KEY);
+    const connection = await saveConnection(t.db, t.workspaceId, 'zai', {
+      method: 'api_key',
+      detail: 'Key ending CDEF',
+      summary: '',
+      models: zaiModels(),
+    });
+    expect(connection.model).toBe('opus');
+
+    const result = await (await open()).call('spark_providers');
+
+    const body = result.json<{
+      providers: { id: string; model?: string; modelLabel?: string }[];
+    }>();
+    expect(body.providers.find((provider) => provider.id === 'zai')).toMatchObject({
+      model: 'glm-5.3',
+      modelLabel: 'GLM-5.3',
+    });
+    expect(result.text).not.toContain('"opus"');
   });
 });
 

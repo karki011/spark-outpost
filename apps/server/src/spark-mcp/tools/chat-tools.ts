@@ -19,6 +19,7 @@ import {
   type SparkToolContext,
 } from '../tool.ts';
 import { findProject } from './project-tools.ts';
+import { reportedModel } from '../../providers/reported-model.ts';
 
 const CHAT_STATES = ['working', 'needs_you', 'failed', 'done', 'idle'] as const;
 type ChatState = (typeof CHAT_STATES)[number];
@@ -77,7 +78,7 @@ async function chats(
         ...(chat.attention ? { waitingOn: `${chat.attention.kind}: ${chat.attention.title}` } : {}),
         ...(chat.latestRun?.error ? { error: chat.latestRun.error } : {}),
         provider: settings?.provider ?? chat.latestRun?.provider ?? null,
-        model: settings?.model ?? null,
+        ...reportedModel(settings?.provider ?? null, settings?.model ?? null),
         agentMode: settings?.agentMode ?? null,
         autonomy: settings?.level ? autonomyLabel(settings.level) : null,
         category: chat.category,
@@ -96,7 +97,7 @@ function runLine(run: Run) {
     id: run.id,
     status: run.status,
     provider: run.provider,
-    model: run.model,
+    ...reportedModel(run.provider, run.model),
     mode: run.mode,
     ...(run.role ? { role: run.role } : {}),
     ...(run.agentLabel ? { agent: run.agentLabel } : {}),
@@ -130,7 +131,7 @@ async function chat(
     state: chatState(conversation),
     settings: {
       provider: settings.provider,
-      model: settings.model,
+      ...reportedModel(settings.provider, settings.model),
       effort: settings.effort,
       agentMode: settings.agentMode,
       autonomy: settings.level ? autonomyLabel(settings.level) : null,

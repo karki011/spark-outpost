@@ -9,6 +9,7 @@ import { round } from '../format.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 import { chatIdFor, chatIdInput, inWorkspace } from './chat-tools.ts';
 import { lastDays } from './window.ts';
+import { reportedModel } from '../../providers/reported-model.ts';
 
 const STEPS_PER_RUN = 25;
 const DECLINED = /^(Declined|Blocked|Refused|Stopped)\b/i;
@@ -86,7 +87,7 @@ async function chatAudit(
     totals: { ...summary.totals, costUsd: round(summary.totals.costUsd) },
     byModel: summary.byModel.map((row) => ({
       provider: row.provider,
-      model: row.model,
+      ...reportedModel(row.provider, row.model),
       runs: row.runs,
       costUsd: round(row.costUsd),
       totalTokens: row.totalTokens,
@@ -103,7 +104,7 @@ async function chatAudit(
         id: run.runId,
         role: run.role,
         provider: run.provider,
-        model: run.model,
+        ...reportedModel(run.provider, run.model),
         mode: run.mode,
         runMode: run.runMode,
         status: run.status,
