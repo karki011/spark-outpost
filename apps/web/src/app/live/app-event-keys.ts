@@ -8,6 +8,7 @@ import { mapKeys } from '../../map/map-api.ts';
 import { prWatchesKey } from '../../chat/pull-request/pr-follow-up-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
+import { teammateKeys } from '../../teammates/teammates-api.ts';
 
 interface Invalidation {
   queryKey: QueryKey;
@@ -23,6 +24,7 @@ export const LIVE_ROOTS: readonly string[] = [
   outcomeKeys.all[0],
   analyticsKeys.all[0],
   queryKeys.usageSummary[0],
+  teammateKeys.all[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -38,6 +40,7 @@ const digest: Invalidation = { queryKey: homeKeys.digest, exact: true };
 const today: Invalidation = { queryKey: homeKeys.today, exact: true };
 const usage: Invalidation = { queryKey: queryKeys.usageSummary, exact: true };
 const analytics: Invalidation = { queryKey: analyticsKeys.all };
+const teammates: Invalidation = { queryKey: teammateKeys.all };
 
 function conversationScoped(event: AppEvent, withAudit: boolean): Invalidation[] {
   const id = event.conversationId;
@@ -53,10 +56,11 @@ function outcome(event: AppEvent): Invalidation[] {
 function invalidationsFor(event: AppEvent): Invalidation[] {
   switch (event.kind) {
     case 'conversation':
-      return [list, search, ...conversationScoped(event, false)];
+      return [list, search, teammates, ...conversationScoped(event, false)];
     case 'run':
       return [
         list,
+        teammates,
         ...conversationScoped(event, true),
         tasks,
         spend,
@@ -69,7 +73,7 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
     case 'step':
       return [list, ...conversationScoped(event, true)];
     case 'approval':
-      return [list, ...conversationScoped(event, true), tasks, today];
+      return [list, teammates, ...conversationScoped(event, true), tasks, today];
     case 'orchestration':
       return conversationScoped(event, false);
     case 'task':
@@ -80,6 +84,8 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return [...outcome(event), analytics];
     case 'map':
       return [{ queryKey: mapKeys.all }];
+    case 'teammate':
+      return [teammates, list];
     case 'pull_request':
       return event.conversationId
         ? [list, { queryKey: prWatchesKey(event.conversationId), exact: true }]

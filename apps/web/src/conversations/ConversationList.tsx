@@ -15,7 +15,12 @@ import { isConnectionLoss } from '../app/connection/connection-failure.ts';
 import { FolderDialog } from '../chat/project/FolderDialog.tsx';
 import { useProjects } from '../chat/project/use-chat-repos.ts';
 import { PlusIcon } from '../ui/icons.tsx';
-import { isFiltering, matchesFilter, parseChatFilter } from '../categories/category-filter.ts';
+import {
+  isFiltering,
+  matchesFilter,
+  matchesTeammate,
+  parseChatFilter,
+} from '../categories/category-filter.ts';
 import { useDebouncedValue } from '../ui/use-debounced-value.ts';
 import { scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
 import { AttentionCard } from './AttentionCard.tsx';
@@ -41,6 +46,7 @@ import {
 } from './SidebarHeader.tsx';
 import { SidebarCollapseButton, useSidebarLayout } from './sidebar-layout.tsx';
 import { SidebarResizer } from './SidebarResizer.tsx';
+import { TeammateFilter } from './TeammateFilter.tsx';
 import { ToastHost } from './Toast.tsx';
 import { useChatActions } from './use-chat-actions.ts';
 import { useProjectActions } from './use-project-actions.ts';
@@ -138,7 +144,9 @@ export function ConversationList({
   const chats = all.filter(present);
   const searching = query !== '' || isFiltering(filter);
   const found = query !== '' ? (results.data ?? []).filter(present) : chats;
-  const visible = found.filter((chat) => matchesFilter(filter, chat.category));
+  const visible = found.filter(
+    (chat) => matchesFilter(filter, chat.category) && matchesTeammate(filter, chat.teammate),
+  );
   const byId = new Map([...chats, ...visible].map((chat) => [chat.id, chat]));
   const activeCount = chats.filter((chat) => !chat.archivedAt).length;
   const waiting = attention(chats, selectedId);
@@ -405,6 +413,7 @@ export function ConversationList({
         </div>
         <NewChatButton onNew={startNew} />
         <SearchBox value={search} inputRef={searchRef} onChange={setSearch} />
+        <TeammateFilter search={search} onSearch={setSearch} />
         <SidebarTabs
           tab={tab}
           activeCount={activeCount}

@@ -9,6 +9,7 @@ import { ThemeCards } from '../theme/ThemeCards.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
 import { SparkSection } from '../spark/SparkSection.tsx';
+import { SparksSection } from '../teammates/SparksSection.tsx';
 import { JevSettings } from './JevSettings.tsx';
 import { ProjectsSection } from './ProjectsSection.tsx';
 import { ResetSection } from '../reset/ResetSection.tsx';
@@ -19,6 +20,7 @@ import './settings.css';
 
 export type SettingsSection =
   | 'spark'
+  | 'sparks'
   | 'ai'
   | 'models'
   | 'usage'
@@ -38,6 +40,17 @@ const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
       <>
         <path d="M4 15.5C4 11 7.4 8.5 12 8.5s8 2.5 8 7-3.4 5.5-8 5.5-8-1-8-5.5Z" />
         <path d="M13.5 8.5c.4-2 1.6-3.3 3.5-3.7" />
+      </>
+    ),
+  },
+  {
+    id: 'sparks',
+    label: 'Sparks',
+    icon: (
+      <>
+        <circle cx="9" cy="10" r="3.2" />
+        <path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6s4.9 1.6 5.5 4.6" />
+        <path d="M16 6.5c.3 1.6 1 2.3 2.6 2.6-1.6.3-2.3 1-2.6 2.6-.3-1.6-1-2.3-2.6-2.6 1.6-.3 2.3-1 2.6-2.6Z" />
       </>
     ),
   },
@@ -236,6 +249,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                 transition={{ ...reveal, duration: 0.15 }}
               >
                 {setup.data && section === 'spark' && <SparkSection setup={setup.data} />}
+                {section === 'sparks' && <SparksSection />}
                 {setup.data && section === 'ai' && (
                   <>
                     <p className="lede">

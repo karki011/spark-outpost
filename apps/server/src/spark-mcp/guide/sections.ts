@@ -233,13 +233,7 @@ Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
     text: `Needs me? spark_attention. A chat's live run, crew, pieces and Jev decisions: spark_run. Plan and files changed: spark_task. Chats and messages: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent work: spark_activity, spark_brief.
 Spend: spark_spend. Trends and outcomes: spark_analytics. Model price, strengths and pass rates: spark_models.
-Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what a file change breaks: spark_map. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. Spark's follow-up on its PRs: spark_pr_follow_up. Estimates, budgets, removal findings, demotions: spark_laws. Sparks (named teammates), their state, home chat and standing instructions: spark_sparks. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
-  },
-  {
-    id: 'sparks',
-    title: 'Sparks: named teammates',
-    keywords: ['sparks', 'teammate', 'teammates', 'contact', 'roster', 'talk to', 'home thread'],
-    text: `A Spark is a named teammate the user sets up: a name, a role, a blob face, default provider, model, mode, Spark autonomy and projects, and standing instructions. Home shows them under Your Sparks with a state across their chats (idle, working, needs you, done, failed); clicking one opens its home chat. "Talk to…" on a new chat starts the chat with that Spark's defaults. The standing instructions are added to the main session of every chat with that Spark as the user's own instructions; Builders and Jev routing are unchanged. spark_sparks lists them; spark_create_spark and spark_update_spark propose changes on a confirm card.`,
+Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what a file change breaks: spark_map. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. Spark's follow-up on its PRs: spark_pr_follow_up. Estimates, budgets, removal findings, demotions: spark_laws. Sparks (named teammates): spark_sparks. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
   },
   {
     id: 'compaction',

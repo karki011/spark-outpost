@@ -51,6 +51,8 @@ import { useQuotes } from './quotes/use-quotes.ts';
 import { activeRun } from './turns.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
 import { BlobScout } from '../brand/BlobScout.tsx';
+import { ChatTeammate } from '../teammates/ChatTeammate.tsx';
+import { TalkToChip } from '../teammates/TalkToChip.tsx';
 
 const NO_REPOS: string[] = [];
 const NO_TASKS: TaskOverview[] = [];
@@ -144,6 +146,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const openAudit = canAudit ? () => setAuditOpen(true) : undefined;
   const tickets = useChatTickets(conversationId, (detail.data?.messages.length ?? 0) > 0);
   const dock = usePendingDock();
+  const teammate = detail.data?.conversation.teammate ?? null;
 
   return (
     <ViewChangesContext value={viewChanges}>
@@ -157,6 +160,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                   {repoSummary(repos.map((repo) => repo.name))} /
                 </span>
               )}
+              {detail.data && <ChatTeammate chat={detail.data.conversation} />}
               <h1
                 className="chat-title"
                 title={
@@ -204,6 +208,9 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               </div>
             )}
             <PendingDock dock={dock} />
+            {detail.data?.messages.length === 0 && (
+              <TalkToChip conversationId={conversationId} teammate={teammate} />
+            )}
             <Composer
               conversationId={conversationId}
               repos={repos}

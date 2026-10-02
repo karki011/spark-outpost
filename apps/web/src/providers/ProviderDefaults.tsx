@@ -22,7 +22,10 @@ function toChoice(id: string, label: string, description: string): Choice {
   return { id, label, description, risky: false, unavailableReason: null };
 }
 
-function modeChoices(capabilities: ProviderCapabilities | undefined, current: string | null) {
+export function modeChoices(
+  capabilities: ProviderCapabilities | undefined,
+  current: string | null,
+) {
   const modes = withCurrentMode(capabilities?.modes ?? [], current);
   return modes.map((mode) =>
     toChoice(
@@ -31,6 +34,17 @@ function modeChoices(capabilities: ProviderCapabilities | undefined, current: st
       mode.description ?? '',
     ),
   );
+}
+
+export function modelChoices(
+  connection: ProviderConnection,
+  capabilities: ProviderCapabilities | undefined,
+): Choice[] {
+  return connection.method === 'cli' && capabilities
+    ? capabilities.models.map((model) =>
+        toChoice(model.id, optionLabel(model, capabilities), cleanDescription(model) ?? ''),
+      )
+    : connection.models.map((model) => toChoice(model.id, model.label, ''));
 }
 
 const PER_CHAT = 'per-chat';
@@ -66,13 +80,7 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
     ...capabilitiesQuery(provider.id),
     staleTime: CAPABILITIES_STALE_MS,
   });
-  const cli = connection.method === 'cli';
-  const models =
-    cli && capabilities.data
-      ? capabilities.data.models.map((model) =>
-          toChoice(model.id, optionLabel(model, capabilities.data), cleanDescription(model) ?? ''),
-        )
-      : connection.models.map((model) => toChoice(model.id, model.label, ''));
+  const models = modelChoices(connection, capabilities.data);
   const efforts = effortOptions(provider, capabilities.data);
   const effort = efforts.find((choice) => choice.id === connection.effort) ?? null;
   const offered = models.some((model) => model.id === connection.model);

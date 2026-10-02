@@ -1,12 +1,20 @@
-import { categoryLabel, categorySchema, type Category } from '@spark-outpost/contracts';
+import {
+  categoryLabel,
+  categorySchema,
+  teammateFilterKey,
+  type Category,
+  type TeammateTag,
+} from '@spark-outpost/contracts';
 
 export interface ChatFilter {
   text: string;
   category: Category | null;
   unknownCategory: string | null;
+  teammate: string | null;
 }
 
 const FILTER_TOKEN = /^is:(.*)$/i;
+const TEAMMATE_TOKEN = /^with:(.*)$/i;
 
 const ALIASES: Record<string, Category> = {
   bug: 'bug_fix',
@@ -43,7 +51,13 @@ export function parseChatFilter(input: string): ChatFilter {
   const words: string[] = [];
   let category: Category | null = null;
   let unknownCategory: string | null = null;
+  let teammate: string | null = null;
   for (const word of input.trim().split(/\s+/).filter(Boolean)) {
+    const withName = TEAMMATE_TOKEN.exec(word)?.[1];
+    if (withName !== undefined) {
+      teammate = teammateFilterKey(withName) || null;
+      continue;
+    }
     const keyword = FILTER_TOKEN.exec(word)?.[1];
     if (keyword === undefined) {
       words.push(word);
@@ -53,11 +67,29 @@ export function parseChatFilter(input: string): ChatFilter {
     category = categoryFromKeyword(keyword);
     unknownCategory = category ? null : keyword;
   }
-  return { text: words.join(' '), category, unknownCategory };
+  return { text: words.join(' '), category, unknownCategory, teammate };
 }
 
 export function isFiltering(filter: ChatFilter): boolean {
-  return filter.category !== null || filter.unknownCategory !== null;
+  return filter.category !== null || filter.unknownCategory !== null || filter.teammate !== null;
+}
+
+export function matchesTeammate(
+  filter: ChatFilter,
+  teammate: TeammateTag | null | undefined,
+): boolean {
+  return (
+    filter.teammate === null ||
+    (teammate ? teammateFilterKey(teammate.name) : null) === filter.teammate
+  );
+}
+
+export function withTeammateToken(input: string, name: string | null): string {
+  const rest = input
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word && !TEAMMATE_TOKEN.test(word));
+  return [...rest, ...(name ? [`with:${teammateFilterKey(name)}`] : [])].join(' ');
 }
 
 export function matchesFilter(filter: ChatFilter, category: Category | null): boolean {

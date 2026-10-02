@@ -19,6 +19,7 @@ import { briefEntries, feedRows, needsMode, type BriefEntry } from './needs-mode
 import { NeedsToday } from './NeedsToday.tsx';
 import { ProviderStrip } from './ProviderStrip.tsx';
 import { SpendCard } from './SpendCard.tsx';
+import { TeammateRoster } from '../teammates/TeammateRoster.tsx';
 import { useAttentionSettings, useBrief } from './use-brief.ts';
 
 const ENTER_MS = 700;
@@ -184,6 +185,7 @@ export function Home(props: HomeProps) {
               projectName={projectName}
               onOpen={onOpenChat}
             />
+            <TeammateRoster now={now} onOpenId={props.onOpenId} />
             {props.loading ? (
               <RecentSkeleton />
             ) : (

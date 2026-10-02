@@ -9,6 +9,7 @@ import { recencyLabel } from './recency.ts';
 import { rowState, type RowTone } from './row-state.ts';
 import { RowTitle, useMarquee } from './RowTitle.tsx';
 import { useSortableMotion } from './use-sortable-motion.ts';
+import { TeammateFace } from '../teammates/TeammateFace.tsx';
 import { pointerStart } from './sidebar-dnd-geometry.ts';
 
 interface ChatRowProps {
@@ -168,6 +169,7 @@ export function ChatRow(props: ChatRowProps) {
   };
   const tooltip = [
     chat.title,
+    chat.teammate ? `with ${chat.teammate.name}` : null,
     chat.titleSource === 'auto' ? 'Renamed by Spark' : null,
     chat.category ? categoryLabel(chat.category) : null,
     state.label,
@@ -203,6 +205,11 @@ export function ChatRow(props: ChatRowProps) {
           >
             <StatusMark tone={state.tone} />
           </span>
+          {chat.teammate && (
+            <span className="rface" aria-hidden="true">
+              <TeammateFace face={chat.teammate.face} size={16} />
+            </span>
+          )}
           <span className="rt">
             <RowTitle
               text={chat.title}
@@ -211,6 +218,7 @@ export function ChatRow(props: ChatRowProps) {
               titleRef={marquee.ref}
             />
             {state.sub && <small className="sub">{state.sub}</small>}
+            {chat.teammate && <span className="sr-only">with {chat.teammate.name}</span>}
           </span>
         </button>
       )}
