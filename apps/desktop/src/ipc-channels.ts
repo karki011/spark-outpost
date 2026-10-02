@@ -20,6 +20,7 @@ export const IPC = {
   pendingChat: 'spark:pending-chat',
   appRendered: 'spark:rendered',
   themeSave: 'spark:theme',
+  storageSeed: 'spark:storage-seed',
   bootStatus: 'boot:status',
   bootLeave: 'boot:leave',
   bootPainted: 'boot:painted',

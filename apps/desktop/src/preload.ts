@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC, type DragPhase } from './ipc-channels.ts';
+import { applySeed } from './storage-seed.ts';
 import { themeFromArgs } from './theme-arg.ts';
 
 function listen<T>(channel: string, callback: (payload: T) => void): () => void {
@@ -9,6 +10,18 @@ function listen<T>(channel: string, callback: (payload: T) => void): () => void 
     ipcRenderer.removeListener(channel, handler);
   };
 }
+
+function restoreSettings(): void {
+  try {
+    const entries: unknown = ipcRenderer.sendSync(IPC.storageSeed);
+    if (entries && typeof entries === 'object')
+      applySeed(localStorage, entries as Record<string, string>);
+  } catch {
+    return;
+  }
+}
+
+restoreSettings();
 
 contextBridge.exposeInMainWorld('sparkDesktop', {
   platform: process.platform,

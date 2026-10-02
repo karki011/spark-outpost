@@ -3,6 +3,14 @@ import { writeFile } from 'node:fs/promises';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { defaultUpdateChannel, isBetaVersion } from '@spark-outpost/contracts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
+import {
+  apiPortFile,
+  chooseApiPort,
+  isStablePort,
+  randomStablePort,
+  readApiPort,
+  saveApiPort,
+} from './api-port.ts';
 import { waitForApi } from './api-ready.ts';
 import { appearanceFile, readSavedTheme, saveTheme } from './appearance.ts';
 import { reportingSteps } from './boot-steps.ts';
@@ -11,7 +19,7 @@ import { settingsFile } from './companion-settings.ts';
 import { startCompanionHost, type CompanionHost } from './desktop-companion.ts';
 import { detectGit, GIT_MISSING } from './git.ts';
 import { appLayout } from './layout.ts';
-import { freePort, LOOPBACK } from './ports.ts';
+import { freePort, LOOPBACK, portIsFree } from './ports.ts';
 import { DUMP_TOOL_DIRS } from './data-backup.ts';
 import { FileLog } from './file-log.ts';
 import {
@@ -45,7 +53,9 @@ import { fetchActiveRuns } from './active-runs.ts';
 import { apiOrigin, targetsApi } from './api-token.ts';
 import { IPC } from './ipc-channels.ts';
 import { openSparkWindow, type SparkWindow } from './spark-window.ts';
+import { startStorageSync, type StorageSync } from './storage-sync.ts';
 import { isThemeName } from './theme-arg.ts';
+import { webStorageFile } from './web-storage.ts';
 import { attachApiToken } from './window.ts';
 
 const config = channelConfig(resolveChannel(app.isPackaged));
@@ -81,6 +91,7 @@ let failureHelp: string | null = null;
 let updater: Updater | null = null;
 let help: Help | null = null;
 let heartbeat: HeartbeatTimer | null = null;
+let storage: StorageSync | null = null;
 const fileLog = new FileLog({ dir: paths.logs });
 
 function log(source: string) {
@@ -118,6 +129,8 @@ async function stopEverything(): Promise<void> {
 }
 
 function closeWindows(): void {
+  storage?.dispose();
+  storage = null;
   heartbeat?.dispose();
   heartbeat = null;
   updater?.dispose();
@@ -225,6 +238,24 @@ function listenForTheme(): void {
   });
 }
 
+function quitAfterSaving(): void {
+  void (storage?.capture() ?? Promise.resolve()).finally(() => shutdown.quit());
+}
+
+async function stableApiPort(): Promise<number> {
+  const file = apiPortFile(paths.userData);
+  const saved = await readApiPort(file);
+  const port = await chooseApiPort({
+    saved,
+    isFree: (candidate) => portIsFree(candidate),
+    random: randomStablePort,
+    fallback: () => freePort(),
+  });
+  if (port !== saved && isStablePort(port)) await saveApiPort(file, port);
+  if (saved !== null && port !== saved) mainLog(`API port ${saved} is taken; moved to ${port}.`);
+  return port;
+}
+
 async function launch(): Promise<void> {
   savedTheme = await readSavedTheme(appearanceFile(paths.userData));
   listenForTheme();
@@ -242,7 +273,7 @@ async function launch(): Promise<void> {
   };
   spark?.status('database');
   database = await startDatabase(databaseOptions);
-  const apiPort = await freePort();
+  const apiPort = await stableApiPort();
   const apiUrl = apiOrigin(LOOPBACK, apiPort);
   const token = createLaunchToken();
   const launchInfo: ServerLaunch = {
@@ -276,6 +307,11 @@ async function launch(): Promise<void> {
   );
 
   attachApiToken(apiUrl, token);
+  storage = await startStorageSync({
+    file: webStorageFile(paths.userData),
+    origin: apiUrl,
+    log: log('settings'),
+  });
   origin = apiUrl;
   if (spark) spark.loadApp(apiUrl);
   else showSpark();
@@ -303,10 +339,10 @@ async function launch(): Promise<void> {
         if (!open.isDestroyed()) open.webContents.send(IPC.updatesChanged, status);
       }
     },
-    quit: () => shutdown.quit(),
+    quit: quitAfterSaving,
     relaunch: () => {
       app.relaunch();
-      shutdown.quit();
+      quitAfterSaving();
     },
     log: log('updates'),
   });
@@ -379,7 +415,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', (event) => {
     event.preventDefault();
     if (updater?.takeOverQuit()) return;
-    shutdown.quit();
+    quitAfterSaving();
   });
   app
     .whenReady()
