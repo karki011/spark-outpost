@@ -134,6 +134,7 @@ test('the rules pick models, so there is no frontier switch, and Jev can stop ch
 
   await dialog.getByRole('tab', { name: /AI providers/ }).click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
+  await providers.locator('.ptile[data-prov="jev"]').click();
   const diffs = providers.getByRole('switch', { name: 'Check changes with Jev' });
   await expect(diffs).toBeChecked();
   await expect(diffs).toHaveAccessibleDescription(
@@ -147,8 +148,6 @@ test('the rules pick models, so there is no frontier switch, and Jev can stop ch
   await page.keyboard.press('Space');
   await expect(diffs).not.toBeChecked();
   await page.reload();
-  const again = await openModels(page);
-  await again.getByRole('tab', { name: /AI providers/ }).click();
   await expect(
     page
       .getByRole('dialog', { name: 'AI providers' })

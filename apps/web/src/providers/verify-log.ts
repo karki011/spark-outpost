@@ -43,3 +43,7 @@ export function resolveLastLine(
 export function methodLabel(method: 'cli' | 'api_key'): string {
   return method === 'cli' ? 'local CLI' : 'API key';
 }
+
+export function methodTitle(method: 'cli' | 'api_key'): string {
+  return method === 'cli' ? 'Local CLI' : 'API key';
+}

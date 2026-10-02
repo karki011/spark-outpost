@@ -4,7 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { ModelsSection } from '../models/ModelsSection.tsx';
 import { ConnectorGrid } from '../onboarding/ToolsStep.tsx';
-import { ProviderList } from '../providers/ProviderList.tsx';
+import { ProviderSetupView } from '../providers/ProviderSetupView.tsx';
+import { routeToProvider, useRoutedProvider } from '../providers/provider-route.ts';
 import { ThemeCards } from '../theme/ThemeCards.tsx';
 import { reveal } from '../ui/transitions.tsx';
 import { UsageSection } from '../usage/UsageSection.tsx';
@@ -146,13 +147,15 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
   const title = sections.find((entry) => entry.id === section)?.label ?? '';
 
   const onCloseRef = useRef(onClose);
+  const routedProvider = useRoutedProvider();
 
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
 
   useEffect(() => {
-    closeRef.current?.focus();
+    const panel = closeRef.current?.closest('.set-panel');
+    if (!panel?.contains(document.activeElement)) closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !event.defaultPrevented) onCloseRef.current();
     };
@@ -253,12 +256,15 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                 {setup.data && section === 'ai' && (
                   <>
                     <p className="lede">
-                      Connect Claude, Codex or both. Open one to test it or change its defaults.
+                      Connect Claude, Codex or both. Open one to set it up, test it or change its
+                      defaults.
                     </p>
-                    <ProviderList
+                    <ProviderSetupView
                       providers={setup.data.providers}
                       advisors={setup.data.advisors}
                       defaultProvider={setup.data.profile.defaultProvider}
+                      openId={routedProvider}
+                      onOpenChange={routeToProvider}
                       advisorSettings={
                         <JevSettings
                           profile={setup.data.profile}

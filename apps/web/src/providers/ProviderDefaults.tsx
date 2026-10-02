@@ -89,61 +89,54 @@ export function ProviderDefaults({ provider, connection }: ProviderDefaultsProps
   const modes = modeChoices(capabilities.data, agentMode);
 
   return (
-    <section className="conn-section" aria-labelledby={`${provider.id}-defaults-title`}>
-      <h4 className="conn-section-title" id={`${provider.id}-defaults-title`}>
-        Defaults for new chats
-      </h4>
-      <dl className="conn-details">
-        <dt>Model</dt>
-        <dd>
-          {models.length === 0 ? (
-            <span className="muted">
-              {capabilities.isFetching
-                ? `Asking ${provider.name} for its models…`
-                : `Whatever your ${provider.cli} CLI is set to`}
-            </span>
-          ) : (
-            <ChoicePicker
-              label={`${provider.name} model`}
-              choices={models}
-              value={selectedModel ?? ''}
-              onChange={(id) => mutation.mutate({ model: id })}
-            />
-          )}
-        </dd>
-        <dt>Mode</dt>
-        <dd>
-          {modes.length === 0 ? (
-            <span className="muted">
-              {capabilities.isFetching
-                ? `Asking ${provider.name} for its modes…`
-                : `Whatever your ${provider.cli} CLI is set to`}
-            </span>
-          ) : (
-            <ChoicePicker
-              label={`${provider.name} default mode`}
-              choices={modes}
-              value={agentMode ?? ''}
-              onChange={(id) => mutation.mutate({ agentMode: id })}
-            />
-          )}
-        </dd>
-        <dt>Effort</dt>
-        <dd>
+    <dl className="conn-details">
+      <dt>Model</dt>
+      <dd>
+        {models.length === 0 ? (
+          <span className="muted">
+            {capabilities.isFetching
+              ? `Asking ${provider.name} for its models…`
+              : `Whatever your ${provider.cli} CLI is set to`}
+          </span>
+        ) : (
           <ChoicePicker
-            label={`${provider.name} effort`}
-            choices={[
-              toChoice(PER_CHAT, 'Per chat', PER_CHAT_NOTE),
-              ...efforts.map((choice) =>
-                toChoice(choice.id, choice.label, effortNote(choice) ?? ''),
-              ),
-            ]}
-            value={effort?.id ?? PER_CHAT}
-            onChange={(id) => mutation.mutate({ effort: id === PER_CHAT ? null : id })}
+            label={`${provider.name} model`}
+            choices={models}
+            value={selectedModel ?? ''}
+            onChange={(id) => mutation.mutate({ model: id })}
           />
-          {effort && <small className="note">Do-task Builders always use this effort.</small>}
-        </dd>
-      </dl>
-    </section>
+        )}
+      </dd>
+      <dt>Mode</dt>
+      <dd>
+        {modes.length === 0 ? (
+          <span className="muted">
+            {capabilities.isFetching
+              ? `Asking ${provider.name} for its modes…`
+              : `Whatever your ${provider.cli} CLI is set to`}
+          </span>
+        ) : (
+          <ChoicePicker
+            label={`${provider.name} default mode`}
+            choices={modes}
+            value={agentMode ?? ''}
+            onChange={(id) => mutation.mutate({ agentMode: id })}
+          />
+        )}
+      </dd>
+      <dt>Effort</dt>
+      <dd>
+        <ChoicePicker
+          label={`${provider.name} effort`}
+          choices={[
+            toChoice(PER_CHAT, 'Per chat', PER_CHAT_NOTE),
+            ...efforts.map((choice) => toChoice(choice.id, choice.label, effortNote(choice) ?? '')),
+          ]}
+          value={effort?.id ?? PER_CHAT}
+          onChange={(id) => mutation.mutate({ effort: id === PER_CHAT ? null : id })}
+        />
+        {effort && <small className="note">Do-task Builders always use this effort.</small>}
+      </dd>
+    </dl>
   );
 }

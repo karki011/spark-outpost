@@ -2,6 +2,7 @@ import { useQueries, useQuery } from '@tanstack/react-query';
 import { capabilitiesQuery } from '../api/client.ts';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { ProviderBlob } from '../brand/ProviderBlob.tsx';
+import { routeToProvider } from '../providers/provider-route.ts';
 import { relativeTime } from '../ui/relative-time.ts';
 import { useTooltip } from '../ui/Tooltip.tsx';
 import { homeApi, homeKeys } from './home-api.ts';
@@ -99,7 +100,14 @@ export function ProviderStrip({ onSettings }: { onSettings: () => void }) {
     <div className="pstrip">
       <ul className="ps-list" aria-label="AI providers">
         {items.map((item) => (
-          <StripButton key={item.id} item={item} onOpen={onSettings} />
+          <StripButton
+            key={item.id}
+            item={item}
+            onOpen={() => {
+              routeToProvider(item.id);
+              onSettings();
+            }}
+          />
         ))}
       </ul>
       {first && (
@@ -116,7 +124,14 @@ export function ProviderStrip({ onSettings }: { onSettings: () => void }) {
             {first.name}: {first.problem}
             {troubled.length > 1 ? ` (+${troubled.length - 1} more)` : ''}
           </span>
-          <button type="button" className="hlink" onClick={onSettings}>
+          <button
+            type="button"
+            className="hlink"
+            onClick={() => {
+              routeToProvider(first.id);
+              onSettings();
+            }}
+          >
             Fix
           </button>
         </p>

@@ -27,8 +27,8 @@ async function chooseClaudeDefault(page: Page): Promise<void> {
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
-  const claude = providers.locator('.pcard').filter({ hasText: 'Claude' });
-  await claude.locator('.pc-head').click();
+  const claude = providers.locator('.pconf[data-prov="claude"]');
+  await providers.locator('.ptile[data-prov="claude"]').click();
   const effort = claude.getByRole('button', { name: 'Claude effort' });
   await expect(effort).toHaveText('high');
 
@@ -52,6 +52,8 @@ async function chooseClaudeDefault(page: Page): Promise<void> {
   await menu.getByRole('menuitemradio', { name: /^low/ }).click();
   await expect(effort).toHaveText('low');
   await expect(claude).toContainText('Do-task Builders always use this effort.');
+  await page.keyboard.press('Escape');
+  await expect(providers.locator('.ptile[data-prov="claude"]')).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(providers).toHaveCount(0);
 }

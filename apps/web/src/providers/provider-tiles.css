@@ -1,0 +1,160 @@
+.psetup {
+  position: relative;
+}
+.psetup-view {
+  width: 100%;
+}
+.ptiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ptiles > li {
+  display: flex;
+  min-width: 0;
+}
+.ptile {
+  --card-shadow:
+    0 1px 2px color-mix(in srgb, var(--text) 5%, transparent),
+    0 3px 12px color-mix(in srgb, var(--text) 4%, transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 14px 13px;
+  border: 1px solid transparent;
+  border-radius: var(--r);
+  background: var(--panel);
+  box-shadow: var(--card-shadow);
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s var(--out),
+    transform 0.2s var(--out);
+}
+.ptile.ok {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+.ptile:hover {
+  --card-shadow:
+    0 1px 2px color-mix(in srgb, var(--text) 6%, transparent),
+    0 8px 22px color-mix(in srgb, var(--text) 8%, transparent);
+  transform: translateY(-1px);
+}
+.ptile:active {
+  transform: scale(0.98);
+}
+.ptile:focus-visible {
+  outline: none;
+  box-shadow: var(--card-shadow), var(--focus-ring);
+}
+.ptile-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.ptile .plogo {
+  background: transparent;
+}
+.ptile-name {
+  flex: 1;
+  min-width: 0;
+}
+.ptile-name b {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ptile-name small {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.ptile-top > svg {
+  flex-shrink: 0;
+  color: var(--faint);
+  transition: transform 0.2s var(--out);
+}
+.ptile:hover .ptile-top > svg {
+  transform: translateX(2px);
+  color: var(--muted);
+}
+.ptile-detail {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.ptile-model b {
+  font-weight: 500;
+  color: var(--text);
+}
+.ptile-hint {
+  overflow-wrap: anywhere;
+}
+.pchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 9px 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+.pchip i {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+}
+.pchip.off {
+  background: var(--raise);
+  color: var(--muted);
+}
+.pchip.off i {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+.pchip.ok {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+.pchip.warn {
+  background: color-mix(in srgb, var(--warn) 13%, transparent);
+  color: var(--warn);
+}
+.pchip.bad {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.ptiles-view .advisors {
+  margin-top: 24px;
+}
+
+@media (max-width: 640px) {
+  .ptiles {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ptile,
+  .ptile-top > svg {
+    transition: none;
+  }
+  .ptile:hover,
+  .ptile:active,
+  .ptile:hover .ptile-top > svg {
+    transform: none;
+  }
+}

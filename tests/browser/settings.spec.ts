@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
@@ -17,10 +18,10 @@ test('settings opens from the sidebar and lets a CLI provider sign in again', as
 
   await dialog.getByRole('tab', { name: /AI providers/ }).click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
-  const claude = providers.locator('.pcard').filter({ hasText: 'Claude' });
-  await claude.locator('.pc-head').click();
-  await claude.getByRole('button', { name: 'More Claude actions' }).click();
-  await claude.getByRole('menuitem', { name: /Sign in again/ }).click();
+  const claude = providers.locator('.pconf[data-prov="claude"]');
+  await providers.locator('.ptile[data-prov="claude"]').click();
+  await expect(page).toHaveURL(/#\/settings\/providers\/claude$/);
+  await claude.getByRole('button', { name: 'Sign in again' }).click();
   const terminal = claude.getByRole('region', { name: 'Terminal' });
   await expect(terminal).toContainText('Sign in to Claude');
   await expect(terminal.locator('.xterm-accessibility')).toContainText('claude auth login', {
@@ -32,6 +33,7 @@ test('settings opens from the sidebar and lets a CLI provider sign in again', as
   await expect(claude.locator('.xterm')).toHaveCount(0);
 
   await providers.getByRole('tab', { name: 'Appearance' }).click();
+  await expect(page).not.toHaveURL(/#\/settings/);
   const cards = page.getByRole('dialog', { name: 'Appearance' }).locator('.tcard');
   await expect(cards).toHaveCount(12);
   const lefts = await cards.evaluateAll((all) =>
@@ -160,8 +162,8 @@ test('provider setting dropdowns return focus to their trigger after a keyboard 
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
-  const claude = providers.locator('.pcard').filter({ hasText: 'Claude' });
-  await claude.locator('.pc-head').click();
+  const claude = providers.locator('.pconf[data-prov="claude"]');
+  await providers.locator('.ptile[data-prov="claude"]').click();
   const rows = ['Claude default mode', 'Claude effort'];
   if ((await claude.getByRole('button', { name: 'Claude model' }).count()) > 0) {
     rows.unshift('Claude model');
@@ -187,7 +189,7 @@ test('provider setting dropdowns return focus to their trigger after a keyboard 
     await page.keyboard.press('Escape');
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
     await expect(trigger).toBeFocused();
-    await expect(providers).toBeVisible();
+    await expect(claude).toBeVisible();
   }
 });
 
@@ -213,7 +215,9 @@ test('Spark sets what Full auto does when checks still fail, opening the draft P
   expect((await profile.json()).profile.shipFailingChecks).toBe(false);
 });
 
-test('the Jev card keeps only its own switch and explains it in an info tip', async ({ page }) => {
+test('the Jev screen keeps only its own switch and explains it in an info tip', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings' }).click();
   await page
@@ -221,7 +225,11 @@ test('the Jev card keeps only its own switch and explains it in an info tip', as
     .getByRole('tab', { name: /AI providers/ })
     .click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
-  const advisor = providers.getByRole('region', { name: 'Advisor' });
+  await expect(providers.getByRole('region', { name: 'Advisor' })).toContainText('Not set up');
+  await providers.locator('.ptile[data-prov="jev"]').click();
+  const advisor = providers.locator('.pconf[data-prov="jev"]').getByRole('region', {
+    name: 'Settings',
+  });
   await expect(providers).not.toContainText('Full auto');
   await expect(advisor.getByRole('switch', { name: 'Check changes with Jev' })).toBeDisabled();
   await expect(advisor).toContainText('Connect Jev to use this.');
@@ -235,7 +243,7 @@ test('the Jev card keeps only its own switch and explains it in an info tip', as
   await expect(page.getByRole('tooltip')).toContainText('never blocked or allowed');
   await page.keyboard.press('Escape');
   await expect(page.getByRole('tooltip')).toHaveCount(0);
-  await expect(providers).toBeVisible();
+  await expect(advisor).toBeVisible();
 });
 
 test('a failed test message makes the provider blob wobble and shows the error', async ({
@@ -247,11 +255,9 @@ test('a failed test message makes the provider blob wobble and shows the error',
     .getByRole('dialog', { name: 'Spark' })
     .getByRole('tab', { name: /AI providers/ })
     .click();
-  const claude = page
-    .getByRole('dialog', { name: 'AI providers' })
-    .locator('.pcard')
-    .filter({ hasText: 'Claude' });
-  await claude.locator('.pc-head').click();
+  const providers = page.getByRole('dialog', { name: 'AI providers' });
+  const claude = providers.locator('.pconf[data-prov="claude"]');
+  await providers.locator('.ptile[data-prov="claude"]').click();
   let answer = () => {};
   const held = new Promise<void>((resolve) => (answer = resolve));
   await page.route('**/api/providers/claude/test', async (route) => {
@@ -262,7 +268,7 @@ test('a failed test message makes the provider blob wobble and shows the error',
   await expect(claude.getByRole('button', { name: /^Asking Claude…/ })).toBeVisible();
   await expect(claude.locator('.test-bubble')).toBeVisible();
   answer();
-  await expect(claude.getByRole('region', { name: 'Connection' })).toContainText(
+  await expect(claude.getByRole('region', { name: 'Test' })).toContainText(
     'The test message failed',
   );
   await expect(claude.locator('.plogo')).toHaveClass(/test-failed/);
@@ -324,4 +330,80 @@ test('context compaction thresholds validate inline and save from Spark settings
     compactAtPercent: 90,
     autoCompact: false,
   });
+});
+
+test('a provider link opens its screen, Escape steps back to the tiles, then closes', async ({
+  page,
+}) => {
+  await resetTestDatabase({ onboarded: true, connected: ['claude'], jev: true });
+  await page.goto('/#/settings/providers/codex');
+  const providers = page.getByRole('dialog', { name: 'AI providers' });
+  const codex = providers.getByRole('region', { name: 'Codex' });
+  await expect(codex.getByRole('tab', { name: 'Local CLI' })).toBeVisible();
+  await expect(codex.getByRole('button', { name: 'Back to AI providers' })).toBeFocused();
+  const screen = await new AxeBuilder({ page })
+    .include('.pconf')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(screen.violations).toEqual([]);
+
+  await page.keyboard.press('Escape');
+  await expect(codex).toHaveCount(0);
+  await expect(providers.locator('.ptile[data-prov="codex"]')).toBeFocused();
+  await expect(page).toHaveURL(/#\/settings\/providers$/);
+  await expect(
+    providers.getByRole('button', { name: 'Claude Connected · Local CLI', exact: true }),
+  ).toBeVisible();
+  const tiles = await new AxeBuilder({ page })
+    .include('.ptiles-view')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(tiles.violations).toEqual([]);
+
+  await providers.locator('.ptile[data-prov="claude"]').click();
+  const claude = providers.getByRole('region', { name: 'Claude' });
+  await expect(claude.getByRole('region', { name: 'Danger zone' })).toBeVisible();
+  const connected = await new AxeBuilder({ page })
+    .include('.pconf')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
+    .analyze();
+  expect(connected.violations).toEqual([]);
+  await claude.getByRole('button', { name: 'Done' }).click();
+  await expect(providers.locator('.ptile[data-prov="claude"]')).toBeFocused();
+
+  await page.keyboard.press('Escape');
+  await expect(providers).toHaveCount(0);
+  await expect(page).not.toHaveURL(/#\/settings/);
+});
+
+test('disconnecting a CLI provider waits 10 seconds for Undo', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
+  await page.goto('/#/settings/providers/codex');
+  const codex = page.getByRole('dialog', { name: 'AI providers' }).getByRole('region', {
+    name: 'Codex',
+  });
+  const hold = codex.getByRole('button', { name: 'Hold to disconnect Codex' });
+  await expect(hold).toHaveAccessibleDescription(
+    'Spark stops using Codex. Your CLI login stays. You get 10 seconds to undo.',
+  );
+  await hold.focus();
+  await page.keyboard.down(' ');
+  await page.waitForTimeout(300);
+  await page.keyboard.up(' ');
+  await expect(codex).toContainText('Released early. Nothing happened.');
+
+  await page.keyboard.down(' ');
+  const grace = page.locator('.toast.grace');
+  await expect(grace).toContainText('Disconnecting Codex…', { timeout: 5_000 });
+  await page.keyboard.up(' ');
+  await page.keyboard.press('Escape');
+  await expect(grace).toHaveCount(0);
+  await expect(codex).toContainText('Connected · Local CLI');
+
+  await hold.focus();
+  await page.keyboard.down(' ');
+  await expect(grace).toBeVisible({ timeout: 5_000 });
+  await page.keyboard.up(' ');
+  await expect(codex.getByRole('tab', { name: 'API key' })).toBeVisible({ timeout: 15_000 });
+  await expect(codex).toContainText('Not set up');
 });

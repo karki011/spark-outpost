@@ -405,7 +405,19 @@ test('the provider strip shows status, model labels, problems and a fix link', a
   const warning = home(page).locator('.ps-warn');
   await expect(warning).toContainText('Claude: Verify failed (+1 more)');
   await warning.getByRole('button', { name: 'Fix' }).click();
-  await expect(page.getByRole('dialog', { name: 'AI providers' })).toBeVisible();
+  const providers = page.getByRole('dialog', { name: 'AI providers' });
+  await expect(providers.getByRole('region', { name: 'Claude' })).toContainText('Error');
+  await expect(page).toHaveURL(/#\/settings\/providers\/claude$/);
+  await page.keyboard.press('Escape');
+  await expect(providers.locator('.ptile[data-prov="codex"]')).toContainText(
+    'Rate limited · just now',
+  );
+  await page.keyboard.press('Escape');
+  await expect(providers).toHaveCount(0);
+  await expect(page).not.toHaveURL(/#\/settings/);
+
+  await strip.getByRole('button', { name: 'Z.ai (GLM) · Not connected' }).click();
+  await expect(providers.getByRole('region', { name: 'Z.ai (GLM)' })).toBeVisible();
 });
 
 test('a tooltip near the right edge stays inside the viewport', async ({ page }) => {
