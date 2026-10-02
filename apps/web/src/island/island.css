@@ -175,7 +175,7 @@
 
 .isl-view {
   position: absolute;
-  left: 0;
+  left: 50%;
   top: var(--top);
   animation: isl-view-in 0.3s var(--out) 0.16s both;
   transform-origin: 50% 0;

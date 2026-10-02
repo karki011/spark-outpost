@@ -11,6 +11,7 @@ export interface CompanionSettings {
   enabled: boolean;
   shortcuts: Record<ShortcutAction, string>;
   position: IslandPosition;
+  sound: boolean;
 }
 
 export const DEFAULT_SHORTCUTS: Readonly<Record<ShortcutAction, string>> = {
@@ -22,6 +23,7 @@ export const DEFAULT_SETTINGS: CompanionSettings = {
   enabled: true,
   shortcuts: { ...DEFAULT_SHORTCUTS },
   position: { docked: true },
+  sound: false,
 };
 
 const MODIFIERS = new Set([
@@ -115,6 +117,7 @@ export function parseSettings(raw: string | null): CompanionSettings {
     enabled: savedFlag(record.enabled, DEFAULT_SETTINGS.enabled),
     shortcuts: parseShortcuts(record.shortcuts),
     position: parsePosition(record.position),
+    sound: savedFlag(record.sound, DEFAULT_SETTINGS.sound),
   };
 }
 

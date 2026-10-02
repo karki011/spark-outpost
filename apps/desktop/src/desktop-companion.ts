@@ -41,6 +41,12 @@ export interface CompanionHost {
 
 const CHAT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DRAG_PHASES: readonly DragPhase[] = ['start', 'move', 'end'];
+const SETTINGS_TARGETS = ['island', 'sparks'] as const;
+type SettingsTarget = (typeof SETTINGS_TARGETS)[number];
+
+function isSettingsTarget(value: unknown): value is SettingsTarget {
+  return SETTINGS_TARGETS.some((target) => target === value);
+}
 
 function isShortcutAction(value: unknown): value is ShortcutAction {
   return SHORTCUT_ACTIONS.some((action) => action === value);
@@ -62,6 +68,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   const initial = await loadSettings(options.settingsPath);
   let island: IslandWindow | null = null;
   let pendingChat: string | null = null;
+  let pendingSettings: SettingsTarget | null = null;
   let saving = Promise.resolve();
   const tray = new Tray(trayIcon(options.trayIcon));
   tray.setToolTip(options.appName);
@@ -162,12 +169,21 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     }
     return companion.setShortcut(action, accelerator);
   });
+  ipcMain.handle(IPC.companionSetSound, (event, on: unknown) =>
+    fromSpark(event) && typeof on === 'boolean' ? companion.setSound(on) : companion.status(),
+  );
   ipcMain.handle(IPC.islandGeometry, (event) => (fromIsland(event) ? island!.geometry() : null));
   ipcMain.handle(IPC.pendingChat, (event) => {
     if (!fromSpark(event) || fromIsland(event)) return null;
     const id = pendingChat;
     pendingChat = null;
     return id;
+  });
+  ipcMain.handle(IPC.pendingSettings, (event) => {
+    if (!fromSpark(event) || fromIsland(event)) return null;
+    const pending = pendingSettings;
+    pendingSettings = null;
+    return pending;
   });
   ipcMain.on(IPC.islandInteractive, (event, on: unknown) => {
     if (fromIsland(event) && typeof on === 'boolean') island!.setInteractive(on);
@@ -204,6 +220,13 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     else options.showSpark();
   });
 
+  ipcMain.on(IPC.islandOpenSettings, (event, target: unknown) => {
+    if (!fromIsland(event) || !isSettingsTarget(target)) return;
+    pendingSettings = target;
+    options.showSpark();
+    broadcast(IPC.openSettings, null);
+  });
+
   return {
     companion,
     dispose: () => {
@@ -213,10 +236,12 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionGet,
         IPC.companionSetEnabled,
         IPC.companionSetShortcut,
+        IPC.companionSetSound,
         IPC.islandGeometry,
         IPC.islandSparkFocused,
         IPC.islandPickFolder,
         IPC.pendingChat,
+        IPC.pendingSettings,
       ]) {
         ipcMain.removeHandler(channel);
       }
@@ -227,6 +252,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.islandRestSize,
         IPC.islandReady,
         IPC.islandOpenChat,
+        IPC.islandOpenSettings,
       ]) {
         ipcMain.removeAllListeners(channel);
       }

@@ -13,6 +13,8 @@ const PARTS = [
   '.isl-sempty',
   '.isl-card',
   '.isl-khint',
+  '.isl-hcard',
+  '.isl-dots',
 ];
 const TEXT = [
   '.isl-wlabel',
@@ -22,6 +24,8 @@ const TEXT = [
   '.isl-htitle',
   '.isl-hhead',
   '.isl-who',
+  '.isl-now-title',
+  '.isl-tile-name',
 ];
 
 const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
@@ -143,7 +147,7 @@ async function expectClean(page: Page, label: string) {
         if (rect.width > 0 && overlaps(scout, rect)) found.push(`the blob covers ${selector}`);
       }
       for (const { selector, element } of visible(
-        '.isl-htitle, .isl-hsub, .isl-st, .isl-wlabel, .isl-nudge-title',
+        '.isl-htitle, .isl-hsub, .isl-st, .isl-wlabel, .isl-nudge-title, .isl-now-title, .isl-tile-name',
       )) {
         if (
           getComputedStyle(element).textOverflow !== 'ellipsis' &&
@@ -184,8 +188,10 @@ for (const width of [420, 1280]) {
     expect(radii).toEqual(['0px', '0px']);
     await page.keyboard.press('Meta+2');
     await expectClean(page, 'sessions, none');
-    await page.keyboard.press('Meta+3');
+    await page.keyboard.press('Meta+4');
     await expectClean(page, 'ask');
+    await page.keyboard.press('Meta+1');
+    await expectClean(page, 'home, quiet');
     await page.keyboard.press('Escape');
 
     await seedChats([
@@ -204,6 +210,8 @@ for (const width of [420, 1280]) {
 
     await command(page, 'sessions');
     await expectClean(page, 'sessions, many');
+    await page.keyboard.press('Meta+1');
+    await expectClean(page, 'home, many');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
 
@@ -312,7 +320,9 @@ for (const { name, sparkFocused, expected } of [
   });
 }
 
-test('clicking the blob opens Sessions, or Ask when there is nothing recent', async ({ page }) => {
+test('clicking the blob opens Home, quiet or busy, and the shortcuts still open their panels', async ({
+  page,
+}) => {
   await resetTestDatabase({ onboarded: true });
   await fakeFlatDesktop(page);
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -321,10 +331,11 @@ test('clicking the blob opens Sessions, or Ask when there is nothing recent', as
   const scoutButton = island(page).getByRole('button', { name: 'Open Spark Island' });
   await scoutButton.focus();
   await page.keyboard.press('Enter');
-  await expect(island(page).getByRole('tab', { name: 'Ask' })).toHaveAttribute(
+  await expect(island(page).getByRole('tab', { name: 'Home' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
+  await expect(island(page).getByRole('region', { name: 'Now' })).toContainText('All quiet');
   await page.keyboard.press('Escape');
   await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
   await seedChats([
@@ -336,15 +347,13 @@ test('clicking the blob opens Sessions, or Ask when there is nothing recent', as
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
   await scoutButton.focus();
   await page.keyboard.press('Enter');
-  await expect(island(page).getByRole('tab', { name: 'Sessions' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await expect(island(page).getByRole('region', { name: 'Now: Fix image uploads' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await command(page, 'sessions');
   const list = island(page).getByRole('listbox', { name: 'Recent sessions' });
   await expect(list.getByRole('group', { name: 'Running' })).toContainText('Fix image uploads');
   await expect(list.getByRole('group', { name: 'Recent' })).toContainText('Speed up cold start');
   await expect(list.getByRole('group', { name: 'Needs you' })).toHaveCount(0);
-  await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
   await command(page, 'quick');
   await expect(island(page).getByRole('tab', { name: 'New chat' })).toHaveAttribute(
@@ -402,7 +411,7 @@ test('hovering groups what needs you, what runs and what finished, and keeps the
   await expect(island(page).getByRole('button', { name: 'New chat' })).toBeVisible();
   await island(page).getByRole('button', { name: 'See all' }).click();
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
-  await expect(island(page).getByRole('tab', { name: 'Sessions' })).toHaveAttribute(
+  await expect(island(page).getByRole('tab', { name: 'Chats' })).toHaveAttribute(
     'aria-selected',
     'true',
   );

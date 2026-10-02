@@ -7,7 +7,7 @@ summary: Start a chat from anywhere with ⌥Space, find a chat and ask for an up
 
 You'll start a chat, check on another one and ask Spark a question, all without leaving the app you're in. About 2 minutes.
 
-The Spark Island panel has three tabs: **New chat**, **Sessions** and **Ask**. Inside the panel, press **⌘1**, **⌘2** or **⌘3** to switch between them.
+The Spark Island panel has three tabs: **Home**, **Chats** and **New chat**. **New chat** also holds **Ask Spark**. Inside the panel, press **⌘1** for Home, **⌘2** for Chats, **⌘3** for a new chat and **⌘4** for Ask Spark. See [Spark Island](desktop-companion.md) for Home.
 
 ## Quick chat with ⌥Space
 
@@ -22,22 +22,22 @@ The chat starts with your default model and agent mode, shown on the model and p
 
 To close the panel, press **Esc** or **⌥Space**, or click elsewhere. Your draft is kept.
 
-## Sessions with ⌥⇧Space
+## Chats with ⌥⇧Space
 
-1. Press **⌥⇧Space** (Option-Shift-Space), or select Scout. The panel opens on **Sessions**. If you have no active or recent chats, selecting Scout opens **Ask** instead.
+1. Press **⌥⇧Space** (Option-Shift-Space), or select **Chats** at the top of the panel.
 2. The list is grouped into **Needs you**, **Running**, **Recent** and **Earlier**. Type part of a chat's title or project to narrow it down.
 3. Use **↑** and **↓** to pick one and press **Enter**.
 4. Select **Ask for update**. Spark writes a short update: what happened and what's next.
 
-![A chat's details in Sessions with a written update and the Ask for update, Reply and Open in Spark buttons](images/companion-island-sessions-light.png)
+![A chat's details in Chats with a written update and the Ask for update, Reply and Open in Spark buttons](images/companion-island-sessions-light.png)
 
 Asking for an update doesn't interrupt the agent. It's written from what Spark already tracks.
 
-From the same view, select **Reply** to send the chat a message, or **Open in Spark** to open it in the app. Select **‹ Sessions** to go back.
+From the same view, select **Reply** to send the chat a message, or **Open in Spark** to open it in the app. Select **‹ Chats** to go back.
 
 ## Ask Spark
 
-1. Open the panel and select **Ask**, or press **⌘3**.
+1. Open the panel, select **New chat** and then **Ask Spark**, or press **⌘4**.
 2. Type a question in **Ask Spark about your chats…**, such as "Who needs me?" or "What did I spend today?", and press **Enter**.
 
 Questions about who needs you, what's running and today's spend are answered right away from what Spark has open. Other questions go to a chat called **Ask Spark**, which uses your default model. To read it in full, select **Open the Ask Spark chat**.

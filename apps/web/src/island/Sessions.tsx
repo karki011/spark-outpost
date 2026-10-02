@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import { ACTIVE_MS, matchesQuery, sessionState, type Panel } from './island-model.ts';
+import { api, queryKeys } from '../api/client.ts';
+import { ACTIVE_MS, matchesQuery, sessionState } from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
-import { PanelTabs } from './PanelTabs.tsx';
 import { StateChip, projectLine } from './session-bits.tsx';
 import { SessionBlob } from './SessionBlob.tsx';
 import { SessionChat } from './SessionChat.tsx';
@@ -11,11 +12,9 @@ interface SessionsProps {
   chats: readonly ConversationSummary[];
   projectNames: ReadonlyMap<string, string>;
   selected: string | null;
-  waiting: number;
   now: number;
   focusDelay: number;
   onSelect: (id: string | null) => void;
-  onTab: (panel: Panel) => void;
   onOpenChat: (id: string) => void;
 }
 
@@ -61,7 +60,14 @@ export function Sessions(props: SessionsProps) {
   );
   const shown = matches;
   const current = Math.min(active, Math.max(0, shown.length - 1));
-  const picked = selected ? chats.find((chat) => chat.id === selected) : undefined;
+  const listed = selected ? chats.find((chat) => chat.id === selected) : undefined;
+  const unlisted = useQuery({
+    queryKey: queryKeys.conversation(selected ?? 'none'),
+    queryFn: () => api.getConversation(selected!),
+    enabled: selected !== null && listed === undefined,
+  });
+  const picked = listed ?? (selected ? unlisted.data?.conversation : undefined);
+  const loading = selected !== null && picked === undefined && !unlisted.isError;
 
   useEffect(() => {
     if (picked) return;
@@ -88,8 +94,7 @@ export function Sessions(props: SessionsProps) {
   };
 
   return (
-    <div className="isl-body">
-      <PanelTabs panel="sessions" waiting={props.waiting} onTab={props.onTab} />
+    <div className="isl-panel">
       {picked ? (
         <SessionChat
           chat={picked}
@@ -97,6 +102,20 @@ export function Sessions(props: SessionsProps) {
           onBack={() => onSelect(null)}
           onOpenChat={props.onOpenChat}
         />
+      ) : loading ? (
+        <div className="isl-detail" aria-busy="true">
+          <button type="button" className="isl-back" onClick={() => onSelect(null)}>
+            ‹ Chats
+          </button>
+          <p className="sr-only" role="status">
+            Opening the chat…
+          </p>
+          <div className="isl-skl" aria-hidden="true">
+            <i />
+            <i />
+            <i style={{ width: '58%' }} />
+          </div>
+        </div>
       ) : (
         <>
           <div className="isl-search">

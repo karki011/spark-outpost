@@ -34,6 +34,7 @@ import {
   leaveProviderRoute,
   onProviderRoute,
 } from '../providers/provider-route.ts';
+import { revealIslandSettings } from '../settings/DesktopCompanionSetting.tsx';
 import { requestFeedback } from '../help/feedback-request.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { Tickets } from '../tickets/Tickets.tsx';
@@ -147,6 +148,18 @@ function ChatShell({ entering }: { entering: boolean }) {
   });
   useEffect(() => sparkDesktop()?.onOpenChat((id) => openFromDesktop.current(id)), []);
   useEffect(() => sparkDesktop()?.help?.onOpenFeedback(requestFeedback), []);
+  useEffect(
+    () =>
+      sparkDesktop()?.onOpenSettings?.((target) => {
+        if (target === 'sparks') {
+          setSettings('sparks');
+          return;
+        }
+        revealIslandSettings();
+        setSettings('spark');
+      }),
+    [],
+  );
 
   const openAtCard = (chat: ConversationSummary) => {
     openChat(chat.id);

@@ -121,6 +121,14 @@ describe('desktop companion lifecycle', () => {
     expect(registered.has('Alt+S')).toBe(true);
   });
 
+  it('keeps island chimes off until turned on, then saves and announces the choice', () => {
+    const { companion, effects } = setup();
+    expect(companion.status().sound).toBe(false);
+    expect(companion.setSound(true)).toMatchObject({ sound: true, enabled: true });
+    expect(effects.save).toHaveBeenLastCalledWith(expect.objectContaining({ sound: true }));
+    expect(effects.changed).toHaveBeenLastCalledWith(expect.objectContaining({ sound: true }));
+  });
+
   it('shuts down cleanly and notices a window that went away on its own', () => {
     const { companion, registered, islands, gone } = setup({ enabled: true });
     gone[0]!();

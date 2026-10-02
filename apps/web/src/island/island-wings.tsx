@@ -35,6 +35,17 @@ export function nudgeTitle(card: Card): string {
   return `${card.chat.title} needs you`;
 }
 
+const PANEL_LABELS: Record<Panel, string> = {
+  home: 'Spark',
+  quick: 'New chat',
+  sessions: 'Chats',
+  ask: 'Ask Spark',
+};
+
+function panelLabel(panel: Panel, followUp: boolean): string {
+  return panel === 'quick' && followUp ? 'Reply' : PANEL_LABELS[panel];
+}
+
 export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode } {
   const { view, waiting, greeting } = props;
   switch (view.kind) {
@@ -98,14 +109,7 @@ export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode 
       };
     case 'panel':
       return {
-        left:
-          view.panel === 'quick'
-            ? props.followUp
-              ? 'Reply'
-              : 'New chat'
-            : view.panel === 'sessions'
-              ? 'Sessions'
-              : 'Ask Spark',
+        left: panelLabel(view.panel, props.followUp !== null),
         right:
           view.panel === 'sessions' && waiting > 0 ? (
             <>

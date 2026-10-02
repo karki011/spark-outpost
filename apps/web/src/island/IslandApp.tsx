@@ -6,6 +6,9 @@ import './island-peek.css';
 import './island-ask.css';
 import './island-menu.css';
 import './island-drop.css';
+import './island-motion.css';
+import './island-bar.css';
+import './island-home.css';
 import '../chat/project/project.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -15,7 +18,11 @@ import { setupApi, setupKey } from '../api/setup.ts';
 import { useAppEvents } from '../app/live/use-app-events.ts';
 import { companionFeed, statusText } from '../companion/companion-model.ts';
 import { useThrottledAnnouncement } from '../companion/use-companion-signals.ts';
-import { sparkDesktop, type IslandAction } from '../desktop/desktop-bridge.ts';
+import {
+  sparkDesktop,
+  type IslandAction,
+  type IslandSettingsTarget,
+} from '../desktop/desktop-bridge.ts';
 import { homeApi, homeKeys } from '../home/home-api.ts';
 import { useVoice } from '../spark/use-voice.ts';
 import { useReducedMotion } from '../ui/motion.ts';
@@ -34,7 +41,9 @@ import {
   type Panel,
 } from './island-model.ts';
 import { isSleepyTime, scoutMoodFor } from './island-mood.ts';
+import { homeSessions, quickStartProject } from './home-model.ts';
 import { hasHoverItems, type HoverGroups } from './HoverList.tsx';
+import { useChimes, useIslandSound } from './island-sound.ts';
 import { IslandShell } from './IslandShell.tsx';
 import type { QuickDraft } from './QuickChat.tsx';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
@@ -53,6 +62,13 @@ const WAVE_MS = 1_400;
 const LIST_LIMIT = 5;
 const NO_IDS: string[] = [];
 const NO_SNOOZE: ReadonlySet<string> = new Set();
+const PANEL_KEYS = ['home', 'sessions', 'quick', 'ask'] as const;
+const PANEL_ANNOUNCEMENTS: Record<Panel, string> = {
+  home: 'Spark Island open. Home shows what is happening now.',
+  quick: 'New chat composer open. Enter to send, Escape to close; your draft is kept.',
+  sessions: 'Chats open. Type to search, arrows to move, Enter to open.',
+  ask: 'Ask Spark open.',
+};
 
 function useHoverIntent(delayIn: number) {
   const [hover, setHover] = useState(false);
@@ -189,13 +205,7 @@ export function IslandApp() {
 
   const openPanel = (next: Panel) => {
     setPanel(next);
-    setAnnouncement(
-      next === 'quick'
-        ? 'New chat composer open. Enter to send, Escape to close; your draft is kept.'
-        : next === 'sessions'
-          ? 'Sessions open. Type to search, arrows to move, Enter to open.'
-          : 'Ask Spark open.',
-    );
+    setAnnouncement(PANEL_ANNOUNCEMENTS[next]);
   };
 
   const closePanel = () => {
@@ -263,9 +273,10 @@ export function IslandApp() {
   const keys = useRef<(event: KeyboardEvent) => void>(() => undefined);
   useEffect(() => {
     keys.current = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && panel && ['1', '2', '3'].includes(event.key)) {
+      const slot = PANEL_KEYS[Number(event.key) - 1];
+      if ((event.metaKey || event.ctrlKey) && panel && slot) {
         event.preventDefault();
-        openPanel((['quick', 'sessions', 'ask'] as const)[Number(event.key) - 1]!);
+        openPanel(slot);
         return;
       }
       if (event.key !== 'Escape' || event.defaultPrevented) return;
@@ -294,6 +305,33 @@ export function IslandApp() {
   };
 
   const sessions = rankedSessions(data.chats, new Set());
+  const sound = useIslandSound();
+  useChimes(
+    sound?.on ?? false,
+    data.loaded ? waiting : null,
+    moment?.kind === 'done' ? moment.runId : null,
+  );
+  const desktop = sparkDesktop();
+  const openSettings = (target: IslandSettingsTarget) => {
+    closePanel();
+    desktop?.island.openSettings?.(target);
+  };
+  const settingsReady = typeof desktop?.island.openSettings === 'function';
+  const quickStart = quickStartProject(data.chats, data.projects);
+  const home = {
+    sessions: homeSessions(data.chats),
+    quickStart: quickStart ? { id: quickStart.id, name: quickStart.name } : null,
+    onOpenHere: (id: string) => {
+      setSelected(id);
+      openPanel('sessions');
+    },
+    onNewIn: (projectId: string | null) => {
+      setFollowUp(null);
+      setDraft((current) => ({ ...current, projectId }));
+      openPanel('quick');
+    },
+    onMakeSpark: settingsReady ? () => openSettings('sparks') : null,
+  };
   const fast = {
     waiting: feed.needs.map((item) => ({
       id: item.chat.id,
@@ -367,6 +405,8 @@ export function IslandApp() {
         detailFor={(chatId) => data.detailById.get(chatId)}
         focusSignal={focusSignal}
         sessions={sessions}
+        home={home}
+        bar={{ sound, onSettings: settingsReady ? () => openSettings('island') : null }}
         peek={row}
         sleepy={sleepy}
         projectNames={data.projectNames}
@@ -387,7 +427,7 @@ export function IslandApp() {
         onScout={() => {
           if (panel) closePanel();
           else if (view.kind === 'nudge') openCard(view.card);
-          else openPanel(row.sessions.length > 0 || allCards.length > 0 ? 'sessions' : 'ask');
+          else openPanel('home');
         }}
         onPeekOpen={(id) => {
           setSelected(id);

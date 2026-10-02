@@ -189,8 +189,8 @@ export function SessionChat({ chat, projectNames, onBack, onOpenChat }: SessionC
   const status = rowState(chat, false).sub || (state === 'done' ? 'Finished' : 'Quiet');
   return (
     <div ref={rootRef} className="isl-detail isl-chat">
-      <button type="button" className="isl-back" onClick={onBack} aria-label="Back to sessions">
-        ‹ Sessions
+      <button type="button" className="isl-back" onClick={onBack} aria-label="Back to chats">
+        ‹ Chats
       </button>
       <div className="isl-shead">
         <SessionBlob chat={chat} state={state} size={30} />
