@@ -40,6 +40,7 @@ import { OfflineScreen } from './connection/OfflineScreen.tsx';
 import { ReconnectBanner } from './connection/ReconnectBanner.tsx';
 import { LivePausedHint } from './live/LivePausedHint.tsx';
 import { useAppEvents } from './live/use-app-events.ts';
+import { useFirstContent } from './first-content.ts';
 import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
@@ -260,6 +261,7 @@ export function App() {
   const queryClient = useQueryClient();
   const connection = useConnection();
   const [entering, setEntering] = useState(false);
+  useFirstContent(setup.data !== undefined || setup.isError);
 
   function handleOnboardingFinished() {
     saveView('home');

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spark Outpost</title>
+    <link rel="stylesheet" href="theme.css" />
+    <link rel="stylesheet" href="boot.css" />
+    <script src="boot.js"></script>
+  </head>
+  <body>
+    <main class="boot" aria-label="Spark Outpost is starting" aria-busy="true">
+      <div class="boot-spark">
+        <span class="boot-glow" aria-hidden="true"></span>
+        <svg class="boot-blob" viewBox="0 0 64 64" width="96" height="96" aria-hidden="true">
+          <g class="bb-stretch">
+            <g class="bb-breathe">
+              <path
+                class="bb-ant"
+                d="M38 18C39 13 42 10 46 9"
+                fill="none"
+                stroke-width="3"
+                stroke-linecap="round"
+              />
+              <path
+                class="bb-spark"
+                d="M48 2C48.6 6.4 50.1 7.9 54.5 8.5C50.1 9.1 48.6 10.6 48 15C47.4 10.6 45.9 9.1 41.5 8.5C45.9 7.9 47.4 6.4 48 2Z"
+              />
+              <path
+                class="bb-body"
+                d="M10 39C10 25 19 17 32 17C45 17 54 25 54 39C54 51.5 45.5 58 32 58C18.5 58 10 51.5 10 39Z"
+              />
+              <g class="bb-eyes">
+                <rect class="bb-eye" x="22.5" y="32" width="5.6" height="11" rx="2.8" />
+                <rect class="bb-eye" x="35.9" y="32" width="5.6" height="11" rx="2.8" />
+              </g>
+              <path class="bb-closed" d="M22.8 39.5H27.8M36.2 39.5H41.2" />
+            </g>
+          </g>
+        </svg>
+      </div>
+      <p class="boot-status" role="status" aria-live="polite"></p>
+    </main>
+  </body>
+</html>

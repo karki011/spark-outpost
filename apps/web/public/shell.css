@@ -1,0 +1,130 @@
+html[data-island],
+html[data-island] body {
+  background: transparent;
+  overflow: hidden;
+}
+
+html[data-island] #root {
+  min-height: 100vh;
+}
+
+html[data-island] .shell-sk {
+  display: none;
+}
+
+.shell-sk {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  pointer-events: none;
+}
+
+.shell-sk span {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--raise) 25%, var(--line) 50%, var(--raise) 75%);
+  background-size: 200% 100%;
+  animation: shell-sk-shimmer 1.3s linear infinite;
+}
+
+.shell-sk-rail {
+  width: 70px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 27px;
+  padding: 22px 0 18px;
+  background: var(--rail);
+}
+
+.shell-sk-rail span {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.shell-sk-rail .shell-sk-logo {
+  width: 28px;
+  height: 32px;
+  border-radius: 50%;
+  margin-bottom: 4px;
+}
+
+.shell-sk-rail .shell-sk-end {
+  margin-top: auto;
+}
+
+.shell-sk-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  margin: 8px 8px 8px 0;
+  padding: 48px 24px;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--r) + 4px);
+}
+
+.shell-sk-col {
+  width: min(804px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.shell-sk-hello {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.shell-sk-col .shell-sk-blob {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+}
+
+.shell-sk-col .shell-sk-title {
+  width: 300px;
+  max-width: 60%;
+  height: 26px;
+}
+
+.shell-sk-col .shell-sk-line {
+  width: 240px;
+  height: 12px;
+}
+
+.shell-sk-col .shell-sk-composer {
+  height: 88px;
+  margin: 26px 0 40px;
+  border-radius: var(--r);
+}
+
+.shell-sk-col .shell-sk-head {
+  width: 120px;
+  height: 14px;
+}
+
+.shell-sk-col .shell-sk-card {
+  height: 62px;
+  border-radius: var(--r);
+}
+
+@keyframes shell-sk-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-sk span {
+    animation: none;
+  }
+}

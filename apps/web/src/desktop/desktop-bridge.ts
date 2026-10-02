@@ -29,6 +29,11 @@ type Unsubscribe = () => void;
 
 export interface SparkDesktop {
   platform: string;
+  theme?: {
+    saved: string | null;
+    save(theme: string): void;
+  };
+  rendered?(): void;
   companion: {
     get(): Promise<CompanionStatus | null>;
     setEnabled(on: boolean): Promise<CompanionStatus>;
@@ -49,6 +54,7 @@ export interface SparkDesktop {
     drag(phase: 'start' | 'move' | 'end', x: number, y: number): void;
     openChat(id: string | null): void;
     setRestSize(size: { width: number; height: number } | null): void;
+    ready?(): void;
   };
   updates: {
     get(): Promise<UpdateStatus | null>;
@@ -71,6 +77,10 @@ export interface SparkDesktop {
 export function sparkDesktop(): SparkDesktop | null {
   if (typeof window === 'undefined') return null;
   return (window as { sparkDesktop?: SparkDesktop }).sparkDesktop ?? null;
+}
+
+export function afterPaint(run: () => void): void {
+  requestAnimationFrame(() => requestAnimationFrame(run));
 }
 
 export function companionAvailable(): boolean {

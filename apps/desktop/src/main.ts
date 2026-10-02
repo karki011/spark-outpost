@@ -1,9 +1,11 @@
 import path from 'node:path';
 import { writeFile } from 'node:fs/promises';
-import { app, BrowserWindow, dialog, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { defaultUpdateChannel, isBetaVersion } from '@spark-outpost/contracts';
 import { createLaunchToken } from '../../server/src/api/launch-token.ts';
 import { waitForApi } from './api-ready.ts';
+import { appearanceFile, readSavedTheme, saveTheme } from './appearance.ts';
+import { reportingSteps } from './boot-steps.ts';
 import { channelConfig, channelIcons, channelPaths, resolveChannel } from './channel.ts';
 import { settingsFile } from './companion-settings.ts';
 import { startCompanionHost, type CompanionHost } from './desktop-companion.ts';
@@ -42,7 +44,9 @@ import { startUpdater, type Updater } from './updater.ts';
 import { fetchActiveRuns } from './active-runs.ts';
 import { apiOrigin, targetsApi } from './api-token.ts';
 import { IPC } from './ipc-channels.ts';
-import { attachApiToken, openWindow } from './window.ts';
+import { openSparkWindow, type SparkWindow } from './spark-window.ts';
+import { isThemeName } from './theme-arg.ts';
+import { attachApiToken } from './window.ts';
 
 const config = channelConfig(resolveChannel(app.isPackaged));
 const paths = channelPaths(process.env.SPARK_APP_DATA ?? app.getPath('appData'), config);
@@ -54,6 +58,7 @@ const layout = appLayout({
 const serverDir = layout.serverDir;
 const bootstrap = path.join(import.meta.dirname, 'server-entry.js');
 const preload = path.join(import.meta.dirname, 'preload.cjs');
+const bootPreload = path.join(import.meta.dirname, 'boot-preload.cjs');
 const icons = channelIcons(path.join(app.getAppPath(), 'assets'), config);
 
 app.setName(config.appName);
@@ -68,8 +73,9 @@ process.env.LC_ALL = POSTGRES_LOCALE;
 
 let database: Database | null = null;
 const supervisors: Supervisor[] = [];
-let window: BrowserWindow | null = null;
+let spark: SparkWindow | null = null;
 let origin: string | null = null;
+let savedTheme: string | null = null;
 let companionHost: CompanionHost | null = null;
 let failureHelp: string | null = null;
 let updater: Updater | null = null;
@@ -166,28 +172,29 @@ async function runOnce(name: string, entry: string, env: NodeJS.ProcessEnv) {
 }
 
 async function migrateBeforeStart(launchInfo: ServerLaunch, options: DatabaseOptions) {
+  const effects = startupMigrationEffects({
+    paths,
+    migrationsDir: path.join(serverDir, 'migrations'),
+    toolDirs: [path.join(process.resourcesPath, 'postgres-tools/bin'), ...DUMP_TOOL_DIRS],
+    databaseUrl: () => launchInfo.databaseUrl,
+    stopDatabase: async () => {
+      await database?.stop();
+      database = null;
+    },
+    startDatabase: async () => {
+      database = await startDatabase(options);
+    },
+    runMigrate: () =>
+      runOnce(
+        'Spark Outpost Migrate',
+        path.join(serverDir, 'src/persistence/migrate-cli.ts'),
+        workerEnv(launchInfo),
+      ),
+    log: log('migrate'),
+  });
   const result = await guardMigrations(
     app.getVersion(),
-    startupMigrationEffects({
-      paths,
-      migrationsDir: path.join(serverDir, 'migrations'),
-      toolDirs: [path.join(process.resourcesPath, 'postgres-tools/bin'), ...DUMP_TOOL_DIRS],
-      databaseUrl: () => launchInfo.databaseUrl,
-      stopDatabase: async () => {
-        await database?.stop();
-        database = null;
-      },
-      startDatabase: async () => {
-        database = await startDatabase(options);
-      },
-      runMigrate: () =>
-        runOnce(
-          'Spark Outpost Migrate',
-          path.join(serverDir, 'src/persistence/migrate-cli.ts'),
-          workerEnv(launchInfo),
-        ),
-      log: log('migrate'),
-    }),
+    reportingSteps(effects, (step) => spark?.status(step)),
   );
   if (!isMigrationFailure(result)) return true;
   const context = {
@@ -205,7 +212,23 @@ async function migrateBeforeStart(launchInfo: ServerLaunch, options: DatabaseOpt
   return false;
 }
 
+function listenForTheme(): void {
+  const file = appearanceFile(paths.userData);
+  let saving = Promise.resolve();
+  ipcMain.on(IPC.themeSave, (event, theme: unknown) => {
+    if (!origin || !targetsApi(event.senderFrame?.url ?? '', origin) || !isThemeName(theme)) return;
+    if (theme === savedTheme) return;
+    savedTheme = theme;
+    saving = saving
+      .then(() => saveTheme(file, theme))
+      .catch((error: Error) => mainLog(`Could not save the theme: ${error.message}`));
+  });
+}
+
 async function launch(): Promise<void> {
+  savedTheme = await readSavedTheme(appearanceFile(paths.userData));
+  listenForTheme();
+  showSpark();
   if (app.isPackaged) await adoptLoginShellPath(process.env);
   if (!app.isPackaged) app.dock?.setIcon(icons.app);
   if (config.badge) app.dock?.setBadge(config.badge);
@@ -217,6 +240,7 @@ async function launch(): Promise<void> {
     port: await freePort(),
     log: log('postgres'),
   };
+  spark?.status('database');
   database = await startDatabase(databaseOptions);
   const apiPort = await freePort();
   const apiUrl = apiOrigin(LOOPBACK, apiPort);
@@ -234,6 +258,7 @@ async function launch(): Promise<void> {
   };
   if (!(await migrateBeforeStart(launchInfo, databaseOptions))) return;
 
+  spark?.status('spark');
   let apiReady = false;
   supervise(
     'Spark Outpost API',
@@ -252,7 +277,8 @@ async function launch(): Promise<void> {
 
   attachApiToken(apiUrl, token);
   origin = apiUrl;
-  showSpark();
+  if (spark) spark.loadApp(apiUrl);
+  else showSpark();
   help = startHelp({
     version: app.getVersion(),
     logsFolder: paths.logs,
@@ -260,7 +286,7 @@ async function launch(): Promise<void> {
     token,
     trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
     showSpark,
-    mainWindow: () => window,
+    mainWindow: () => spark?.window ?? null,
     log: log('help'),
   });
   updater = await startUpdater({
@@ -294,6 +320,7 @@ async function launch(): Promise<void> {
     showSpark,
     quit: () => app.quit(),
   });
+  void spark?.finished.then(() => companionHost?.companion.resume());
   mainLog(`${config.appName} ${app.getVersion()} ready on ${apiUrl}; data in ${paths.userData}.`);
 }
 
@@ -314,18 +341,29 @@ async function scheduleHeartbeat(apiUrl: string, token: string): Promise<Heartbe
   });
 }
 
+function openSpark(): SparkWindow {
+  const opened = openSparkWindow({
+    config,
+    preload,
+    bootPreload,
+    bootPage: path.join(layout.webRoot, 'boot.html'),
+    theme: savedTheme,
+    log: mainLog,
+  });
+  opened.window.on('closed', () => {
+    if (spark === opened) spark = null;
+  });
+  if (origin) opened.loadApp(origin);
+  return opened;
+}
+
 function showSpark(): void {
-  if (!origin || shutdown.failed.aborted) return;
-  if (!window) {
-    window = openWindow({ config, origin, preload });
-    window.on('closed', () => {
-      window = null;
-    });
+  if (shutdown.failed.aborted) return;
+  if (!spark) {
+    spark = openSpark();
     return;
   }
-  if (window.isMinimized()) window.restore();
-  window.show();
-  window.focus();
+  spark.focus();
   app.focus({ steal: true });
 }
 
