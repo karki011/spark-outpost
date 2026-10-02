@@ -122,10 +122,6 @@
   transition: width 0.35s var(--out);
 }
 
-.isl[data-view='pill'] .isl-wing.r {
-  padding-right: 6px;
-}
-
 .isl-pill-btn {
   height: 26px;
   padding: 0 10px;
@@ -316,7 +312,7 @@
   outline-offset: 0;
 }
 
-.isl:not(.peek):not([data-view='pill']) .isl-scout-btn {
+.isl:not(.peek) .isl-scout-btn {
   pointer-events: none;
 }
 

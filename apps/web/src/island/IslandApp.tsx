@@ -10,7 +10,15 @@ import './island-motion.css';
 import './island-bar.css';
 import './island-home.css';
 import '../chat/project/project.css';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+  type SyntheticEvent,
+} from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ConversationSummary, Project } from '@spark-outpost/contracts';
 import { newDraftId } from '../api/client.ts';
@@ -30,6 +38,7 @@ import type { Decided } from './CardView.tsx';
 import { islandKeys, islandApi } from './island-api.ts';
 import {
   cardKey,
+  hoverOpens,
   isQuiet,
   islandView,
   sessionState,
@@ -42,7 +51,6 @@ import {
 } from './island-model.ts';
 import { isSleepyTime, scoutMoodFor } from './island-mood.ts';
 import { homeSessions, quickStartProject } from './home-model.ts';
-import { hasHoverItems, type HoverGroups } from './HoverList.tsx';
 import { useChimes, useIslandSound } from './island-sound.ts';
 import { IslandShell } from './IslandShell.tsx';
 import type { QuickDraft } from './QuickChat.tsx';
@@ -50,16 +58,15 @@ import { useAttachments } from '../chat/attachments/use-attachments.ts';
 import { useAddProject } from './use-add-project.ts';
 import { useIslandBridge, useSparkFocus } from './use-island-bridge.ts';
 import { useIslandDrop } from './use-island-drop.ts';
-import { chatAgent, useIslandData } from './use-island-data.ts';
+import { useIslandData } from './use-island-data.ts';
 import { noteSeen, useGreeting, useMoments } from './use-island-moments.ts';
 import { useThemeSync } from './use-theme-sync.ts';
-import type { WorkItem } from './work-items.ts';
 
 const NOTE_MS = 1_500;
-const HOVER_OUT_MS = 450;
+const HOVER_IN_MS = 140;
+const HOVER_OUT_MS = 400;
 const MOMENT_MS = 6_000;
 const WAVE_MS = 1_400;
-const LIST_LIMIT = 5;
 const NO_IDS: string[] = [];
 const NO_SNOOZE: ReadonlySet<string> = new Set();
 const PANEL_KEYS = ['home', 'sessions', 'quick', 'ask'] as const;
@@ -70,19 +77,27 @@ const PANEL_ANNOUNCEMENTS: Record<Panel, string> = {
   ask: 'Ask Spark open.',
 };
 
-function useHoverIntent(delayIn: number) {
+type Opener = 'hover' | 'user';
+
+function useHoverIntent(settleRef: RefObject<(inside: boolean) => void>) {
   const [hover, setHover] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const onHover = useCallback(
     (inside: boolean) => {
       clearTimeout(timer.current);
-      timer.current = setTimeout(() => setHover(inside), inside ? delayIn : HOVER_OUT_MS);
+      timer.current = setTimeout(
+        () => {
+          setHover(inside);
+          settleRef.current(inside);
+        },
+        inside ? HOVER_IN_MS : HOVER_OUT_MS,
+      );
       if (inside) noteSeen();
     },
-    [delayIn],
+    [settleRef],
   );
   useEffect(() => () => clearTimeout(timer.current), []);
-  return [hover, onHover, setHover] as const;
+  return [hover, onHover] as const;
 }
 
 function coreRects(island: HTMLElement | null): DOMRect[] {
@@ -114,6 +129,7 @@ export function IslandApp() {
   const data = useIslandData(hidden, NO_IDS);
   const sparkFocused = useSparkFocus();
   const [panel, setPanel] = useState<Panel | null>(null);
+  const [opener, setOpener] = useState<Opener>('user');
   const [selected, setSelected] = useState<string | null>(null);
   const [note, setNote] = useState<Decided | null>(null);
   const [review, setReview] = useState<string | null>(null);
@@ -133,7 +149,8 @@ export function IslandApp() {
       !chat.needsInput &&
       (chat.latestRun?.status === 'running' || chat.latestRun?.status === 'queued'),
   );
-  const [hover, onHover, setHover] = useHoverIntent(0);
+  const settleHover = useRef<(inside: boolean) => void>(() => undefined);
+  const [hover, onHover] = useHoverIntent(settleHover);
   const islandRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
@@ -155,21 +172,7 @@ export function IslandApp() {
     cards: allCards,
     review,
     nudge: !sparkFocused && cards.length > 0,
-    hover,
   });
-  const workItems: WorkItem[] = running.slice(0, LIST_LIMIT).map((chat) => ({
-    chat,
-    detail: data.detailById.get(chat.id),
-    agent: chatAgent(chat, data.detailById.get(chat.id)),
-  }));
-  const groups: HoverGroups = {
-    needs: allCards.slice(0, LIST_LIMIT),
-    running: workItems,
-    recent: row.sessions.filter((chat) => {
-      const state = sessionState(chat);
-      return state === 'done' || state === 'failed';
-    }),
-  };
   const quiet = isQuiet(view);
   const waiting = waitingCount(data.chats, new Set());
   const feed = companionFeed(data.chats);
@@ -203,8 +206,9 @@ export function IslandApp() {
       ? `${momentTitle} ${moment.kind === 'done' ? 'is done' : 'couldn’t finish'}.`
       : '';
 
-  const openPanel = (next: Panel) => {
+  const openPanel = (next: Panel, by: Opener = 'user') => {
     setPanel(next);
+    setOpener(by);
     setAnnouncement(PANEL_ANNOUNCEMENTS[next]);
   };
 
@@ -213,7 +217,6 @@ export function IslandApp() {
     setReview(null);
     setSelected(null);
     setFollowUp(null);
-    setHover(false);
   };
 
   const openChat = (id: string) => {
@@ -225,10 +228,10 @@ export function IslandApp() {
     else window.open('/', '_blank', 'noopener');
   };
 
-  const openCard = (card: Card) => {
+  const openCard = (card: Card, by: Opener = 'user') => {
     setReview(null);
     setSelected(card.chat.id);
-    openPanel('sessions');
+    openPanel('sessions', by);
   };
 
   const command = (action: IslandAction) => {
@@ -255,7 +258,7 @@ export function IslandApp() {
 
   const geometry = useIslandBridge({
     islandRef,
-    focusable: panel !== null || (focusSignal > 0 && view.kind === 'card'),
+    focusable: (panel !== null && opener === 'user') || (focusSignal > 0 && view.kind === 'card'),
     coreRects: () => coreRects(islandRef.current),
     blobRects: () => flatRowRects(rowRef.current),
     peek: view.kind === 'peek',
@@ -283,7 +286,6 @@ export function IslandApp() {
       if (panel) closePanel();
       else if (review) setReview(null);
       else if (view.kind === 'note') setNote(null);
-      else if (hover) setHover(false);
       else return;
       event.preventDefault();
     };
@@ -293,6 +295,10 @@ export function IslandApp() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
+
+  const pin = (event: SyntheticEvent) => {
+    if (panel && opener === 'hover' && event.target !== event.currentTarget) setOpener('user');
+  };
 
   const snooze = () => {
     if (view.kind !== 'card') return;
@@ -371,8 +377,26 @@ export function IslandApp() {
     onNote: setDropNote,
   });
 
+  useEffect(() => {
+    settleHover.current = (inside: boolean) => {
+      if (inside) {
+        if (grab.phase !== 'idle') return;
+        const target = hoverOpens(view);
+        if (target?.kind === 'home') openPanel('home', 'hover');
+        else if (target?.kind === 'card') openCard(target.card, 'hover');
+        return;
+      }
+      if (panel && opener === 'hover') closePanel();
+    };
+  });
+
   return (
-    <div className="isl-drop-root" {...grab.handlers}>
+    <div
+      className="isl-drop-root"
+      {...grab.handlers}
+      onPointerDownCapture={pin}
+      onKeyDownCapture={pin}
+    >
       <IslandShell
         islandRef={islandRef}
         rowRef={rowRef}
@@ -389,7 +413,7 @@ export function IslandApp() {
                 idleMinutes: 0,
                 running: running.length,
                 moment,
-                failed: groups.recent.some((chat) => sessionState(chat) === 'failed'),
+                failed: row.sessions.some((chat) => sessionState(chat) === 'failed'),
               })
         }
         reduced={reduced}
@@ -400,8 +424,6 @@ export function IslandApp() {
         voice={voice}
         now={now}
         note={note}
-        groups={groups}
-        listing={hasHoverItems(groups)}
         detailFor={(chatId) => data.detailById.get(chatId)}
         focusSignal={focusSignal}
         sessions={sessions}
