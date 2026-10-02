@@ -181,7 +181,7 @@ Scout, Spark's blob, lives under your Mac's notch and peeks out when your chats 
 | **⌥⇧Space**         | **Sessions**: find a chat, ask for an update, reply, without interrupting it    |
 | **⌘3** in the panel | **Ask**: "Who needs me?" or "What did I spend today?", answered on the spot     |
 
-Answer approvals right from the island with **Y** and **N**. The blobs react to your work: happy when it lands, worried when it fails, waving when something needs you.
+Answer approvals right from the island with **Y** and **N**. The blobs react to your work: happy when it lands, worried when it fails, and a badge appears when something needs you.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/guide/images/companion-island-sessions-dark.png">
