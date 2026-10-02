@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     setFocusable: (on: boolean) => ipcRenderer.send(IPC.islandFocusable, on),
     drag: (phase: DragPhase, x: number, y: number) => ipcRenderer.send(IPC.islandDrag, phase, x, y),
     openChat: (id: string | null) => ipcRenderer.send(IPC.islandOpenChat, id),
+    setRestSize: (size: { width: number; height: number } | null) =>
+      ipcRenderer.send(IPC.islandRestSize, size),
   },
   updates: {
     get: () => ipcRenderer.invoke(IPC.updatesGet),

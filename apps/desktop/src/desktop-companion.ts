@@ -18,6 +18,7 @@ import {
 } from './companion-settings.ts';
 import { targetsApi } from './api-token.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
+import { isSize } from './island-geometry.ts';
 import { trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 
@@ -156,6 +157,12 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     island!.drag(phase as DragPhase, { x, y });
   });
 
+  ipcMain.on(IPC.islandRestSize, (event, size: unknown) => {
+    if (!fromIsland(event)) return;
+    if (size === null) island!.setRestSize(null);
+    else if (isSize(size)) island!.setRestSize({ width: size.width, height: size.height });
+  });
+
   const openChat = (id: string) => {
     pendingChat = id;
     options.showSpark();
@@ -187,6 +194,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.islandInteractive,
         IPC.islandFocusable,
         IPC.islandDrag,
+        IPC.islandRestSize,
         IPC.islandOpenChat,
       ]) {
         ipcMain.removeAllListeners(channel);

@@ -73,9 +73,8 @@ const KHINT_HEIGHT = 18;
 const PILL_HEIGHT = 34;
 const PILL_INSET = 48;
 const PILL_MIN_WIDTH = 112;
-const BARE_HEIGHT = 14;
 const BARE_SCOUT = 38;
-const BARE_TUCK = 22;
+const BARE_TUCK = 20;
 const ROW_BLOB = 22;
 const FLAT_ROW_BLOB = 28;
 
@@ -83,8 +82,8 @@ function hasCard(view: IslandView): boolean {
   return view.kind === 'card' || view.kind === 'moment' || view.kind === 'note';
 }
 
-function scoutSpot(view: IslandView, width: number, top: number, bare: boolean): ScoutSpot {
-  if (bare) return { x: width / 2 - BARE_SCOUT / 2, y: -BARE_TUCK, size: BARE_SCOUT };
+function scoutSpot(view: IslandView, width: number, top: number, hang: number | null): ScoutSpot {
+  if (hang !== null) return { x: width / 2 - BARE_SCOUT / 2, y: -hang, size: BARE_SCOUT };
   if (view.kind === 'peek') return { x: width / 2 - 9, y: top - 13, size: 30 };
   if (hasCard(view)) return { x: 22, y: top + 8 + 14, size: 46 };
   return { x: view.kind === 'pill' ? 14 : 10, y: Math.max(2, (top - 22) / 2), size: 22 };
@@ -347,8 +346,8 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const hugsNotch = geometry.notch && geometry.docked;
   const flat = geometry.docked && !geometry.notch;
   const bare = flat && view.kind === 'peek';
-  const top =
-    view.kind === 'pill' ? Math.max(geometry.top, PILL_HEIGHT) : bare ? BARE_HEIGHT : geometry.top;
+  const hang = bare ? geometry.menuBar + BARE_TUCK : null;
+  const top = view.kind === 'pill' ? Math.max(geometry.top, PILL_HEIGHT) : bare ? 0 : geometry.top;
   const quiet = view.kind === 'peek' || view.kind === 'pill';
   const width = bare ? BARE_SCOUT : viewWidth(view, geometry.notchWidth);
   const compactPill = view.kind === 'pill' && !hugsNotch;
@@ -356,7 +355,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const setTarget = useIslandShape(
     islandRef,
     scoutRef,
-    { width, height: top, radius: 14, scout: scoutSpot(view, width, top, bare) },
+    { width, height: top, radius: 14, scout: scoutSpot(view, width, top, hang) },
     props.reduced,
   );
   const wings = wingsFor(props);
@@ -373,7 +372,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
           width: fitted,
           height,
           radius: view.kind === 'pill' ? 16 : quiet ? 14 : 22,
-          scout: scoutSpot(view, fitted, top, bare),
+          scout: scoutSpot(view, fitted, top, hang),
         },
         view.kind === 'peek' ? 0.62 : 0.5,
       );
@@ -386,12 +385,13 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     const observer = new ResizeObserver(measure);
     watched.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [view, width, top, quiet, hint, compactPill, bare, setTarget]);
+  }, [view, width, top, quiet, hint, compactPill, hang, setTarget]);
 
   const classes = [
     'isl',
     view.kind === 'peek' ? 'peek' : '',
     bare ? 'bare' : '',
+    flat ? 'hang' : '',
     !quiet ? 'lifted' : '',
     geometry.docked ? '' : 'floating',
   ].filter(Boolean);
@@ -415,6 +415,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
         style={
           {
             '--top': `${top}px`,
+            '--bar': `${geometry.menuBar}px`,
             '--gap': `${hugsNotch ? geometry.notchWidth : 0}px`,
             '--wl': hasCard(view) ? '14px' : '40px',
           } as CSSProperties

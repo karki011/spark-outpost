@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   dockedPosition,
   draggedPosition,
+  islandBounds,
   islandDisplay,
   islandGeometry,
+  isSize,
   nearDock,
   placement,
+  ISLAND_HEIGHT,
   ISLAND_WIDTH,
   type DisplayInfo,
 } from './island-geometry.ts';
@@ -37,12 +40,14 @@ describe('island placement', () => {
       top: 38,
       notchWidth: 190,
       docked: true,
+      menuBar: 38,
     });
     expect(islandGeometry(external, false)).toEqual({
       notch: false,
       top: 25,
       notchWidth: 0,
       docked: false,
+      menuBar: 25,
     });
     expect(islandGeometry({ ...builtIn, workArea: builtIn.bounds }, true).top).toBe(32);
   });
@@ -59,6 +64,7 @@ describe('island placement', () => {
         top: Math.max(24, menuBar),
         notchWidth: 0,
         docked: true,
+        menuBar,
       });
     }
   });
@@ -71,7 +77,7 @@ describe('island placement', () => {
     });
   });
 
-  it('hangs flush under a standard menu bar with no margin', () => {
+  it('hangs from the very top of the screen over a standard menu bar', () => {
     for (const menuBar of [22, 24, 25]) {
       const intel: DisplayInfo = {
         ...builtIn,
@@ -80,20 +86,37 @@ describe('island placement', () => {
       };
       expect(placement({ docked: true }, [intel], 1)).toEqual({
         display: intel,
-        position: { x: (1440 - ISLAND_WIDTH) / 2, y: menuBar },
+        position: { x: (1440 - ISLAND_WIDTH) / 2, y: 0 },
         docked: true,
       });
       const monitor: DisplayInfo = {
         ...external,
         workArea: { ...external.workArea, y: external.bounds.y + menuBar },
       };
-      expect(dockedPosition(monitor)).toEqual({
-        x: 1512 + (2560 - ISLAND_WIDTH) / 2,
-        y: -200 + menuBar,
-      });
+      expect(dockedPosition(monitor)).toEqual({ x: 1512 + (2560 - ISLAND_WIDTH) / 2, y: -200 });
     }
-    const hidden = { ...builtIn, internal: false, workArea: builtIn.bounds };
-    expect(dockedPosition(hidden).y).toBe(0);
+  });
+
+  it('rests in a narrow strip centred where the full window would be', () => {
+    const at = { x: 360, y: 0 };
+    expect(islandBounds(at, null)).toEqual({ x: 360, y: 0, width: 720, height: 480 });
+    expect(islandBounds(at, { width: 147, height: 37.2 })).toEqual({
+      x: 360 + (720 - 148) / 2,
+      y: 0,
+      width: 148,
+      height: 38,
+    });
+    expect(islandBounds(at, { width: 1, height: 1 })).toMatchObject({ width: 40, height: 20 });
+    expect(islandBounds(at, { width: 5000, height: 5000 })).toEqual({
+      x: 360,
+      y: 0,
+      width: ISLAND_WIDTH,
+      height: ISLAND_HEIGHT,
+    });
+    expect(isSize({ width: 100, height: 40 })).toBe(true);
+    expect(isSize({ width: '100', height: 40 })).toBe(false);
+    expect(isSize({ width: Number.NaN, height: 40 })).toBe(false);
+    expect(isSize(null)).toBe(false);
   });
 
   it('restores a floating position on a display that still exists', () => {

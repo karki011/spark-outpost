@@ -17,6 +17,7 @@ export interface IslandGeometry {
   top: number;
   notchWidth: number;
   docked: boolean;
+  menuBar: number;
 }
 
 type Unsubscribe = () => void;
@@ -38,6 +39,7 @@ export interface SparkDesktop {
     setFocusable(on: boolean): void;
     drag(phase: 'start' | 'move' | 'end', x: number, y: number): void;
     openChat(id: string | null): void;
+    setRestSize(size: { width: number; height: number } | null): void;
   };
   updates: {
     get(): Promise<UpdateStatus | null>;

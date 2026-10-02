@@ -38,20 +38,29 @@ async function fakeNonNotchDesktop(page: Page) {
       }),
     );
     const focus: boolean[] = [];
+    const rest: unknown[] = [];
     const none = () => () => undefined;
     Object.assign(window, {
       islandFocus: focus,
+      islandRest: rest,
       sparkDesktop: {
         platform: 'darwin',
         companion: { get: async () => null, onChange: none },
         island: {
-          geometry: async () => ({ notch: false, top: 24, notchWidth: 0, docked: true }),
+          geometry: async () => ({
+            notch: false,
+            top: 24,
+            notchWidth: 0,
+            docked: true,
+            menuBar: 24,
+          }),
           onGeometry: none,
           onCommand: none,
           setInteractive: () => undefined,
           setFocusable: (on: boolean) => focus.push(on),
           drag: () => undefined,
           openChat: () => undefined,
+          setRestSize: (size: unknown) => rest.push(size),
         },
         onOpenChat: none,
       },
@@ -309,19 +318,27 @@ test('without a notch the blob peeks on its own and the pill opens a focused cha
     .toBe('rgba(0, 0, 0, 0)');
 
   const scout = island(page).locator('.isl-scout-wrap');
-  await expect.poll(async () => (await scout.boundingBox())!.y).toBe(-22);
+  await expect.poll(async () => (await scout.boundingBox())!.y).toBe(-20);
   expect((await scout.boundingBox())!.height).toBe(38);
   const eyes = await island(page)
     .locator('.sc-eye')
-    .evaluateAll((all) => all.map((eye) => eye.getBoundingClientRect().top));
-  expect(Math.min(...eyes)).toBeGreaterThanOrEqual(0);
+    .evaluateAll((all) => all.map((eye) => eye.getBoundingClientRect()));
+  expect(Math.min(...eyes.map((eye) => eye.top))).toBeGreaterThanOrEqual(0);
+  expect(Math.max(...eyes.map((eye) => eye.bottom))).toBeLessThanOrEqual(24);
+  const lastRest = () =>
+    page.evaluate(() => (window as unknown as { islandRest: unknown[] }).islandRest.at(-1));
+  await expect.poll(lastRest).not.toBeNull();
+  const rest = (await lastRest()) as { width: number; height: number };
+  expect(rest.width).toBeLessThan(200);
+  expect(rest.height).toBeLessThan(50);
   const blob = page.getByRole('button', { name: /^Chat: Fix image uploads/ });
-  await expect.poll(async () => (await blob.boundingBox())?.y).toBe(-12);
+  await expect.poll(async () => (await blob.boundingBox())?.y).toBe(-10);
   expect((await blob.boundingBox())!.height).toBe(28);
   const blobEyes = await blob
     .locator('.mo-eyes')
     .evaluate((element) => element.getBoundingClientRect().top);
   expect(blobEyes).toBeGreaterThanOrEqual(0);
+  expect(blobEyes).toBeLessThan(24);
   const spot = (await blob.boundingBox())!;
   await page.mouse.move(spot.x + spot.width / 2, 8);
   await page.waitForTimeout(400);
@@ -331,6 +348,8 @@ test('without a notch the blob peeks on its own and the pill opens a focused cha
   await page.mouse.move(box.x + box.width / 2, 10);
   await expect(island(page)).toHaveAttribute('data-view', 'pill');
   await expect(island(page)).not.toHaveClass(/\bbare\b/);
+  await expect.poll(lastRest).toBeNull();
+  expect((await island(page).boundingBox())!.y).toBe(24);
   const pill = island(page).getByRole('button', { name: 'New chat' });
   await expect(pill).toHaveCSS('cursor', 'pointer');
   await expect.poll(async () => (await island(page).boundingBox())!.height).toBe(34);

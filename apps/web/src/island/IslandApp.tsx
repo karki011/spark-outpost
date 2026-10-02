@@ -64,6 +64,12 @@ function useHoverIntent(delayIn: number) {
   return [hover, onHover, setHover] as const;
 }
 
+function coreRects(island: HTMLElement | null): DOMRect[] {
+  if (!island) return [];
+  const scout = island.classList.contains('hang') ? island.querySelector('.isl-scout-wrap') : null;
+  return [island, scout].flatMap((element) => (element ? [element.getBoundingClientRect()] : []));
+}
+
 function flatRowRects(row: HTMLElement | null): DOMRect[] {
   if (!row?.matches('[data-flat]')) return [];
   return Array.from(row.querySelectorAll('[data-shown] button'), (element) =>
@@ -210,14 +216,15 @@ export function IslandApp() {
     else openPanel(lastPanel);
   };
 
+  const row = peekRow(data.chats, new Set(), now);
+
   const geometry = useIslandBridge({
     islandRef,
     focusable: panel !== null || (focusSignal > 0 && view.kind === 'card'),
-    hitRects: () => [
-      ...(islandRef.current ? [islandRef.current.getBoundingClientRect()] : []),
-      ...flatRowRects(rowRef.current),
-    ],
+    coreRects: () => coreRects(islandRef.current),
     blobRects: () => flatRowRects(rowRef.current),
+    peek: view.kind === 'peek',
+    restKey: `${row.sessions.length}:${row.more}`,
     onHover,
     onCommand: command,
     onBlur: () => {
@@ -274,7 +281,6 @@ export function IslandApp() {
       : null;
   };
   const sessions = rankedSessions(data.chats, new Set());
-  const row = peekRow(data.chats, new Set(), now);
   const fast = {
     waiting: feed.needs.map((item) => ({
       id: item.chat.id,

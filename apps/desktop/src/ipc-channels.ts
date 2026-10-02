@@ -8,6 +8,7 @@ export const IPC = {
   islandFocusable: 'island:focusable',
   islandOpenChat: 'island:open-chat',
   islandDrag: 'island:drag',
+  islandRestSize: 'island:rest-size',
   islandGeometry: 'island:geometry',
   islandGeometryChanged: 'island:geometry-changed',
   islandCommand: 'island:command',

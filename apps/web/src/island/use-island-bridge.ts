@@ -4,8 +4,15 @@ import { matchesShortcut } from '../desktop/shortcut-keys.ts';
 
 export const HIT_MARGIN = 14;
 const DRAG_START = 6;
+const REST_DELAY_MS = 700;
 
-const BROWSER_GEOMETRY: IslandGeometry = { notch: true, top: 32, notchWidth: 190, docked: true };
+const BROWSER_GEOMETRY: IslandGeometry = {
+  notch: true,
+  top: 32,
+  notchWidth: 190,
+  docked: true,
+  menuBar: 32,
+};
 const BROWSER_SHORTCUTS: Record<IslandAction, string> = {
   quick: 'Alt+Space',
   sessions: 'Alt+Shift+Space',
@@ -22,9 +29,20 @@ function inside(rects: readonly DOMRect[], x: number, y: number, margin = HIT_MA
   );
 }
 
+function restSize(rects: readonly DOMRect[]): { width: number; height: number } | null {
+  const shown = rects.filter((rect) => rect.width > 0);
+  if (shown.length === 0) return null;
+  const middle = window.innerWidth / 2;
+  const reach = Math.max(...shown.map((rect) => Math.max(middle - rect.left, rect.right - middle)));
+  const bottom = Math.max(...shown.map((rect) => rect.bottom));
+  return { width: 2 * (reach + HIT_MARGIN), height: bottom + HIT_MARGIN };
+}
+
 interface BridgeOptions {
-  hitRects: () => DOMRect[];
+  coreRects: () => DOMRect[];
   blobRects: () => DOMRect[];
+  peek: boolean;
+  restKey: string;
   islandRef: RefObject<HTMLElement | null>;
   focusable: boolean;
   onHover: (inside: boolean) => void;
@@ -35,6 +53,8 @@ interface BridgeOptions {
 export function useIslandBridge(options: BridgeOptions): IslandGeometry {
   const desktop = sparkDesktop();
   const [geometry, setGeometry] = useState<IslandGeometry>(BROWSER_GEOMETRY);
+  const [pointerIn, setPointerIn] = useState(false);
+  const resting = options.peek && geometry.docked && !geometry.notch;
   const latest = useRef(options);
   useEffect(() => {
     latest.current = options;
@@ -73,6 +93,7 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       if (on === interactive) return;
       interactive = on;
       desktop?.island.setInteractive(on);
+      setPointerIn(on);
     };
     const setHover = (on: boolean) => {
       if (on === hovering) return;
@@ -91,12 +112,13 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
         if (dragging.started) desktop?.island.drag('move', event.screenX, event.screenY);
         return;
       }
-      const hit = inside(latest.current.hitRects(), event.clientX, event.clientY);
+      const core = latest.current.coreRects();
+      const blobs = latest.current.blobRects();
+      const hit = inside([...core, ...blobs], event.clientX, event.clientY);
       setInteractive(hit);
-      const island = latest.current.islandRef.current?.getBoundingClientRect();
-      const onIsland = island ? inside([island], event.clientX, event.clientY, 0) : false;
-      const onBlob = inside(latest.current.blobRects(), event.clientX, event.clientY, 0);
-      setHover(hit && (onIsland || !onBlob));
+      const onCore = inside(core, event.clientX, event.clientY, 0);
+      const onBlob = inside(blobs, event.clientX, event.clientY, 0);
+      setHover(hit && (onCore || !onBlob));
     };
     const onLeave = () => {
       if (dragging) return;
@@ -133,6 +155,19 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
       window.removeEventListener('blur', onBlur);
     };
   }, [desktop]);
+
+  useEffect(() => {
+    if (!desktop) return;
+    if (!resting || pointerIn) {
+      desktop.island.setRestSize(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const { coreRects, blobRects } = latest.current;
+      desktop.island.setRestSize(restSize([...coreRects(), ...blobRects()]));
+    }, REST_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [desktop, resting, pointerIn, options.restKey]);
 
   useEffect(() => {
     desktop?.island.setFocusable(options.focusable);
