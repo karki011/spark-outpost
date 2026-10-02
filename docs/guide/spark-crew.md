@@ -54,7 +54,7 @@ After a fix, the Critic only rechecks: it confirms the earlier problems are fixe
 
 ## Where Spark works
 
-By default, each chat that changes code gets its own git worktree on a new branch, so your own checkout stays as it is. To change this for a project:
+By default, each chat that changes code gets its own git worktree on a new branch, so your own checkout stays as it is. Spark fetches first and starts the branch from the latest `origin` default branch, unless your checkout has commits of its own or you picked a branch. Hover the branch chip to see where it started, for example "from origin/main · 2 min ago". To change this for a project:
 
 1. Open **Settings → Projects** and find the project.
 2. Under **Where Spark works**, pick **Each chat in its own worktree (recommended)** or **In my files**.

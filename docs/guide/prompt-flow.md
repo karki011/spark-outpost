@@ -26,17 +26,17 @@ Not every request takes every step. A question stops after step 1; a small fix s
 
 ## Where cards can appear
 
-| Step          | Card                             | Review each step               | Automatic                                      | Full auto → PR                      |
-| ------------- | -------------------------------- | ------------------------------ | ---------------------------------------------- | ----------------------------------- |
-| 1. Read       | **A few questions first**        | Waits for you                  | Waits, then uses best guesses                  | Uses best guesses after a countdown |
-| 2. Plan       | **Build this plan?**             | Waits for you                  | Waits, then builds                             | Builds after a countdown            |
-| 2. Plan       | Destructive work                 | Waits for you                  | Waits for you                                  | Waits for you                       |
-| 4. Build      | Approval cards (commands, files) | Per the agent's mode           | Per the agent's mode                           | Per the agent's mode                |
-| 4. Build      | Pieces card                      | When building side by side     | Never                                          | Never                               |
-| 4. Build      | **Continue past the budget?**    | Waits for you                  | Waits for you                                  | Waits for you                       |
-| 7. Review     | Critic findings                  | You choose to fix              | Fixed by itself                                | Fixed by itself                     |
-| 8. Keep       | **Keep these changes?**          | Unless you approved every edit | Never: kept, with a note                       | Never: it ships                     |
-| 10. Follow-up | **Address PR feedback?**         | Waits for you                  | Waits for you                                  | Never: it pushes and replies        |
+| Step          | Card                             | Review each step               | Automatic                     | Full auto → PR                      |
+| ------------- | -------------------------------- | ------------------------------ | ----------------------------- | ----------------------------------- |
+| 1. Read       | **A few questions first**        | Waits for you                  | Waits, then uses best guesses | Uses best guesses after a countdown |
+| 2. Plan       | **Build this plan?**             | Waits for you                  | Waits, then builds            | Builds after a countdown            |
+| 2. Plan       | Destructive work                 | Waits for you                  | Waits for you                 | Waits for you                       |
+| 4. Build      | Approval cards (commands, files) | Per the agent's mode           | Per the agent's mode          | Per the agent's mode                |
+| 4. Build      | Pieces card                      | When building side by side     | Never                         | Never                               |
+| 4. Build      | **Continue past the budget?**    | Waits for you                  | Waits for you                 | Waits for you                       |
+| 7. Review     | Critic findings                  | You choose to fix              | Fixed by itself               | Fixed by itself                     |
+| 8. Keep       | **Keep these changes?**          | Unless you approved every edit | Never: kept, with a note      | Never: it ships                     |
+| 10. Follow-up | **Address PR feedback?**         | Waits for you                  | Waits for you                 | Never: it pushes and replies        |
 
 "Waits, then" means Spark goes on after the time in **If you don't answer a question**, or waits for you when that's **Off**. Full auto's countdown is 30 seconds when that setting is **Off**. See [If you don't answer](permissions-and-autonomy.md#if-you-dont-answer).
 
