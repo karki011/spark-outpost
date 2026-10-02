@@ -132,6 +132,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
     mac: {
       category: 'public.app-category.developer-tools',
       icon: options.icon,
+      electronLanguages: ['en'],
       target: (options.formats ?? ['zip', 'dmg']).map((target) => ({
         target,
         arch: options.archs,
