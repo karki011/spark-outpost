@@ -19,6 +19,7 @@ export const IPC = {
   updatesSetAutoDownload: 'updates:set-auto-download',
   updatesInstall: 'updates:install',
   updatesChanged: 'updates:changed',
+  updatesPreview: 'updates:preview',
   helpInfo: 'help:info',
   helpExportDiagnostics: 'help:export-diagnostics',
   helpShowLogs: 'help:show-logs',

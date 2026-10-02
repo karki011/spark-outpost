@@ -186,7 +186,7 @@ test('Companion settings and updates screenshots', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(updates).toBeHidden();
 
-  const blob = page.getByRole('button', { name: /^New update ready/ });
+  const blob = page.getByRole('button', { name: /^Restart to update/ });
   await expect(blob).toBeVisible();
   const box = (await blob.boundingBox())!;
   await shootClip(page, 'updates-rail-blob', {

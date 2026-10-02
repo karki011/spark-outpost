@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import './scout.css';
 import { prefersReducedMotion } from '../ui/motion.ts';
 import { SCOUT_ANTENNA, SCOUT_BODY, SCOUT_SPARK } from './scout-shape.ts';
@@ -10,7 +10,49 @@ interface BlobScoutProps {
   mood?: ScoutMood;
   lookAtPointer?: boolean;
   className?: string;
+  fill?: number | null;
   onClick?: () => void;
+}
+
+const FILL_BOTTOM = 59;
+const WAVE = `M-64 0${' q4 -2.4 8 0 t8 0'.repeat(12)} V80 H-64 Z`;
+
+function fillOffset(fill: number): number {
+  const clamped = Math.max(0, Math.min(100, fill));
+  return FILL_BOTTOM - (FILL_BOTTOM * clamped) / 100;
+}
+
+function ScoutShape() {
+  return (
+    <>
+      <path
+        className="sc-ant"
+        d={SCOUT_ANTENNA}
+        fill="none"
+        stroke="var(--sc-a)"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path className="sc-spark" d={SCOUT_SPARK} fill="var(--sc-b)" />
+      <path d={SCOUT_BODY} fill="var(--sc-a)" />
+    </>
+  );
+}
+
+function ScoutFill({ fill }: { fill: number }) {
+  const maskId = `sc-fill-${useId().replace(/[^\w-]/g, '')}`;
+  return (
+    <>
+      <mask id={maskId} maskUnits="userSpaceOnUse" x="-8" y="-8" width="80" height="80">
+        <g className="sc-fill-level" style={{ transform: `translateY(${fillOffset(fill)}px)` }}>
+          <path className="sc-wave" d={WAVE} fill="#fff" />
+        </g>
+      </mask>
+      <g className="sc-filled" mask={`url(#${maskId})`}>
+        <ScoutShape />
+      </g>
+    </>
+  );
 }
 
 function lookAt(look: SVGGElement, root: SVGSVGElement, x: number, y: number): void {
@@ -32,6 +74,7 @@ export function BlobScout({
   mood = null,
   lookAtPointer = false,
   className = '',
+  fill = null,
   onClick,
 }: BlobScoutProps) {
   const rootRef = useRef<SVGSVGElement>(null);
@@ -71,7 +114,15 @@ export function BlobScout({
     onClick?.();
   };
 
-  const classes = ['scout', mood ?? '', poking ? 'poke' : '', className].filter(Boolean).join(' ');
+  const classes = [
+    'scout',
+    mood ?? '',
+    poking ? 'poke' : '',
+    fill === null ? '' : 'filling',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <svg
@@ -85,16 +136,10 @@ export function BlobScout({
     >
       <g className="sc-hop">
         <g className="sc-body">
-          <path
-            className="sc-ant"
-            d={SCOUT_ANTENNA}
-            fill="none"
-            stroke="var(--sc-a)"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-          <path className="sc-spark" d={SCOUT_SPARK} fill="var(--sc-b)" />
-          <path d={SCOUT_BODY} fill="var(--sc-a)" />
+          <g className="sc-base">
+            <ScoutShape />
+          </g>
+          {fill !== null && <ScoutFill fill={fill} />}
           <g className="sc-cheeks">
             <circle cx="18.5" cy="46.5" r="2.7" />
             <circle cx="45.5" cy="46.5" r="2.7" />

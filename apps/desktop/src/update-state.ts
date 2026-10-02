@@ -31,6 +31,9 @@ export interface InitialStatus {
   autoDownload: boolean;
   offReason: UpdatesOffReason | null;
   feedUrl: string | null;
+  devBuild?: boolean;
+  preview?: boolean;
+  previewUpdatedTo?: string | null;
 }
 
 export function initialStatus(initial: InitialStatus): UpdateStatus {
@@ -48,6 +51,9 @@ export function initialStatus(initial: InitialStatus): UpdateStatus {
     error: null,
     skippedVersion: null,
     releaseNotesUrl: initial.feedUrl ? `${initial.feedUrl}/release-notes.html` : null,
+    devBuild: initial.devBuild ?? false,
+    preview: initial.preview ?? false,
+    previewUpdatedTo: initial.previewUpdatedTo ?? null,
   };
 }
 

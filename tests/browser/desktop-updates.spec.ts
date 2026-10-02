@@ -1,123 +1,14 @@
-import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
-
-const SHOTS = process.env.SPARK_SHOTS_DIR;
-
-async function shot(page: Page, name: string): Promise<void> {
-  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `update-${name}.png`) });
-}
-
-async function fakeUpdater(page: Page, start: Record<string, unknown> = {}) {
-  await page.addInitScript((patch) => {
-    const listeners = new Set<(status: unknown) => void>();
-    const calls: unknown[][] = [];
-    const state = {
-      runs: 1,
-      status: {
-        currentVersion: '0.2.0',
-        channel: 'stable',
-        autoDownload: true,
-        phase: 'idle',
-        offReason: null as string | null,
-        availableVersion: null as string | null,
-        progress: null as number | null,
-        installRequested: false,
-        waitingForRuns: false,
-        lastCheckedAt: null as string | null,
-        error: null,
-        skippedVersion: null,
-        releaseNotesUrl: 'https://updates.example.com/spark/release-notes.html' as string | null,
-        ...patch,
-      },
-    };
-    const publish = () => {
-      const copy = structuredClone(state.status);
-      listeners.forEach((listener) => listener(copy));
-      return copy;
-    };
-    const noop = () => () => undefined;
-    const waiting = 'Spark will update when your work finishes.';
-    Object.assign(window, {
-      desktopCalls: calls,
-      fakeUpdates: {
-        push: (next: Partial<typeof state.status>) => {
-          Object.assign(state.status, next);
-          publish();
-        },
-        setRuns: (runs: number) => {
-          state.runs = runs;
-        },
-      },
-      sparkDesktop: {
-        platform: 'darwin',
-        companion: { get: async () => null, onChange: noop },
-        island: { geometry: async () => null, onGeometry: noop, onCommand: noop },
-        updates: {
-          get: async () => structuredClone(state.status),
-          check: async () => {
-            calls.push(['check']);
-            state.status.lastCheckedAt = new Date().toISOString();
-            return publish();
-          },
-          setChannel: async (channel: string) => {
-            calls.push(['channel', channel]);
-            state.status.channel = channel;
-            return publish();
-          },
-          setAutoDownload: async (on: boolean) => {
-            calls.push(['autoDownload', on]);
-            state.status.autoDownload = on;
-            return publish();
-          },
-          install: async () => {
-            calls.push(['install']);
-            if (state.status.phase === 'available') {
-              Object.assign(state.status, {
-                phase: 'downloading',
-                installRequested: true,
-                progress: 0,
-              });
-              publish();
-              return { status: 'downloading' };
-            }
-            if (state.runs > 0) {
-              Object.assign(state.status, { installRequested: true, waitingForRuns: true });
-              publish();
-              return { status: 'waiting', reason: waiting };
-            }
-            Object.assign(state.status, { phase: 'installing', waitingForRuns: false });
-            publish();
-            return { status: 'installing' };
-          },
-          onChange: (listener: (status: unknown) => void) => {
-            listeners.add(listener);
-            return () => listeners.delete(listener);
-          },
-        },
-        onOpenChat: noop,
-      },
-    });
-  }, start);
-}
-
-async function desktopCalls(page: Page) {
-  return page.evaluate(() => (window as unknown as { desktopCalls: unknown[] }).desktopCalls);
-}
-
-async function pushUpdate(page: Page, patch: Record<string, unknown>) {
-  await page.evaluate((next) => {
-    (window as unknown as { fakeUpdates: { push: (p: unknown) => void } }).fakeUpdates.push(next);
-  }, patch);
-}
-
-async function setRuns(page: Page, runs: number) {
-  await page.evaluate((count) => {
-    (window as unknown as { fakeUpdates: { setRuns: (n: number) => void } }).fakeUpdates.setRuns(
-      count,
-    );
-  }, runs);
-}
+import {
+  desktopCalls,
+  fakeUpdater,
+  pushUpdate,
+  railShot,
+  relaunchWith,
+  setRuns,
+  shot,
+} from './fake-updater.ts';
 
 const rail = (page: Page) => page.getByRole('navigation', { name: 'Main' });
 
@@ -178,43 +69,49 @@ test('beta builds show a Beta label next to the version', async ({ page }) => {
   );
 });
 
-test('the update blob goes from available through downloading to ready and restarting', async ({
+test('the update blob goes from available through downloading to ready and installing', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
   await fakeUpdater(page, { autoDownload: false });
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
-  await expect(rail(page).getByRole('button', { name: /New update ready/ })).toHaveCount(0);
+  await expect(rail(page).locator('.upd-blob')).toHaveCount(0);
 
   await pushUpdate(page, { phase: 'available', availableVersion: '0.3.0' });
-  const blob = rail(page).getByRole('button', {
-    name: 'New update ready — click to get the latest (Spark Outpost 0.3.0)',
+  const available = rail(page).getByRole('button', {
+    name: 'Update ready to download · click to get it (Spark Outpost 0.3.0)',
   });
-  await expect(blob).toBeVisible();
-  await expect(blob.locator('.upd-blob-dot')).toBeVisible();
-  await blob.hover();
+  await expect(available).toBeVisible();
+  await expect(available).toHaveAttribute('data-fill', '0');
+  await available.hover();
   await expect(page.getByRole('tooltip')).toContainText(
-    'New update ready — click to get the latest',
+    'Update ready to download · click to get it',
   );
   await shot(page, 'available');
 
-  await blob.click();
+  await available.click();
   const downloading = rail(page).getByRole('button', { name: /Getting Spark Outpost 0\.3\.0/ });
   await expect(downloading).toHaveText('0%');
   await pushUpdate(page, { progress: 64 });
   await expect(downloading).toHaveText('64%');
   await expect(downloading).toHaveAttribute('aria-busy', 'true');
+  await expect(downloading).toHaveAttribute('data-fill', '64');
   await shot(page, 'downloading');
 
   await pushUpdate(page, { phase: 'ready', progress: 100, installRequested: false });
-  await expect(blob).toBeVisible();
+  const ready = rail(page).getByRole('button', {
+    name: 'Restart to update (Spark Outpost 0.3.0)',
+  });
+  await expect(ready).toHaveText('Restart');
+  await expect(ready).not.toHaveAttribute('data-fill');
+  await expect(ready.locator('.upd-blob-dot')).toBeVisible();
   await expect(page.locator('.upd-toasts').getByRole('status')).toContainText(
     'Spark Outpost 0.3.0 is ready.',
   );
   await shot(page, 'ready');
 
-  await blob.click();
+  await ready.click();
   const waiting = rail(page).getByRole('button', {
     name: 'Spark will update when your work finishes. (Spark Outpost 0.3.0)',
   });
@@ -226,11 +123,11 @@ test('the update blob goes from available through downloading to ready and resta
 
   await setRuns(page, 0);
   await waiting.click();
-  const restarting = rail(page).getByRole('button', {
+  const installing = rail(page).getByRole('button', {
     name: 'Installing Spark Outpost 0.3.0 and restarting',
   });
-  await expect(restarting).toHaveText('Restarting');
-  await expect(restarting).toBeDisabled();
+  await expect(installing).toHaveText('Installing…');
+  await expect(installing).toBeDisabled();
   await shot(page, 'restarting');
 
   expect(await desktopCalls(page)).toEqual([['install'], ['install'], ['install']]);
@@ -243,7 +140,7 @@ test('the ready toast appears once per version', async ({ page }) => {
   const toast = page.locator('.upd-toasts').getByRole('status');
   await expect(toast).toContainText('Spark Outpost 0.3.0 is ready.');
   await page.reload();
-  await expect(rail(page).getByRole('button', { name: /New update ready/ })).toBeVisible();
+  await expect(rail(page).getByRole('button', { name: /Restart to update/ })).toBeVisible();
   await expect(page.getByText('Spark Outpost 0.3.0 is ready.')).toHaveCount(0);
 });
 
@@ -263,7 +160,29 @@ test('the dev copy shows its version, says it never updates and has no blob', as
   await expect(updates).toContainText('This dev copy never updates.');
   await expect(updates.getByRole('button', { name: 'Check now' })).toHaveCount(0);
   await expect(updates.getByRole('radiogroup', { name: 'Update channel' })).toHaveCount(0);
-  await expect(rail(page).getByRole('button', { name: /New update ready/ })).toHaveCount(0);
+  await expect(rail(page).locator('.upd-blob')).toHaveCount(0);
+  await expect(updates.getByRole('button', { name: 'Preview the update flow' })).toHaveCount(0);
+});
+
+test('the dev app starts the update preview from Settings', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeUpdater(page, {
+    currentVersion: '0.1.0-beta.1',
+    phase: 'off',
+    offReason: 'dev',
+    devBuild: true,
+    releaseNotesUrl: null,
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Updates' }).click();
+  const updates = page.getByRole('dialog', { name: 'Updates' });
+  const start = updates.getByRole('button', { name: 'Preview the update flow' });
+  await expect(start).toBeVisible();
+  await start.click();
+  await expect(start).toHaveCount(0);
+  await expect(updates.getByRole('radiogroup', { name: 'Update channel' })).toBeVisible();
+  expect(await desktopCalls(page)).toEqual([['preview']]);
 });
 
 test('the browser build has no Updates section and no update blob', async ({ page }) => {
@@ -272,5 +191,206 @@ test('the browser build has no Updates section and no update blob', async ({ pag
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.getByRole('tab', { name: 'Reset' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Updates' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /New update ready/ })).toHaveCount(0);
+  await expect(page.locator('.upd-blob')).toHaveCount(0);
+  await expect(page.locator('.rail-ver')).toHaveCount(0);
+});
+
+const PREVIEW = {
+  currentVersion: '0.1.0-beta.1',
+  channel: 'beta',
+  autoDownload: false,
+  devBuild: true,
+  preview: true,
+  releaseNotesUrl: null,
+};
+
+const blob = (page: Page) => rail(page).locator('.upd-blob');
+const version = (page: Page) => rail(page).locator('.rail-ver');
+const toasts = (page: Page) => page.locator('.upd-toasts').getByRole('status');
+
+async function hoverTip(page: Page, text: string) {
+  await page.mouse.move(640, 300);
+  await blob(page).hover();
+  await expect(page.getByRole('tooltip')).toContainText(text);
+}
+
+async function startPreview(page: Page, runs = 0) {
+  await resetTestDatabase({ onboarded: true });
+  await fakeUpdater(page, PREVIEW);
+  await page.goto('/');
+  await setRuns(page, runs);
+  await expect(version(page)).toHaveAccessibleName('App version v0.1.0-beta.1 · dev');
+  await pushUpdate(page, { phase: 'available', availableVersion: '0.1.0-beta.2' });
+  await expect(blob(page)).toHaveAttribute('data-fill', '0');
+}
+
+async function downloadToReady(page: Page) {
+  await blob(page).click();
+  for (const percent of [9, 22, 47, 51, 79, 97]) {
+    await pushUpdate(page, { progress: percent });
+    await expect(blob(page)).toHaveText(`${percent}%`);
+    await expect(blob(page)).toHaveAttribute('data-fill', String(percent));
+    await expect(version(page)).toHaveText(`v0.1.0-beta.1· dev· ${percent}%`);
+  }
+  await pushUpdate(page, { phase: 'ready', progress: 100, installRequested: false });
+  await expect(blob(page)).toHaveAccessibleName('Restart to update (Spark Outpost 0.1.0-beta.2)');
+}
+
+test.describe('update preview flow', () => {
+  test.use({ deviceScaleFactor: 2 });
+
+  test('the preview goes gray, fills, turns coloured, installs and celebrates after relaunch', async ({
+    page,
+  }) => {
+    await startPreview(page);
+    await expect(blob(page)).toHaveText('Update');
+    await expect(blob(page).locator('.scout')).toHaveClass(/filling/);
+    await hoverTip(page, 'Update ready to download · click to get it');
+    await railShot(page, 'preview-gray');
+
+    await blob(page).click();
+    await pushUpdate(page, { progress: 51 });
+    await expect(blob(page)).toHaveAttribute('data-fill', '51');
+    await expect(blob(page)).toHaveClass(/downloading/);
+    await expect(version(page)).toContainText('51%');
+    await hoverTip(page, 'Getting Spark Outpost 0.1.0-beta.2: 51%');
+    await railShot(page, 'preview-half');
+
+    await pushUpdate(page, { progress: 97 });
+    await pushUpdate(page, { phase: 'ready', progress: 100, installRequested: false });
+    await expect(blob(page)).toHaveText('Restart');
+    await expect(blob(page).locator('.scout')).not.toHaveClass(/filling/);
+    await expect(blob(page).locator('.scout')).toHaveClass(/happy/);
+    await expect(version(page)).toHaveText('v0.1.0-beta.1· dev');
+    await hoverTip(page, 'Restart to update');
+    await railShot(page, 'preview-full');
+
+    await blob(page).click();
+    await expect(blob(page)).toHaveText('Installing…');
+    await expect(blob(page)).toBeDisabled();
+    await expect(blob(page)).toHaveClass(/installing/);
+
+    await relaunchWith(page, {
+      phase: 'off',
+      offReason: 'dev',
+      preview: false,
+      availableVersion: null,
+      progress: null,
+      installRequested: false,
+      previewUpdatedTo: '0.1.0-beta.2',
+    });
+    await expect(toasts(page)).toContainText('Updated to 0.1.0-beta.2 (preview)');
+    await expect(blob(page)).toHaveAccessibleName('Updated to 0.1.0-beta.2 (preview)');
+    await expect(blob(page)).toHaveClass(/updated/);
+    await expect(version(page)).toHaveText('v0.1.0-beta.1· dev');
+    await railShot(page, 'preview-toast');
+
+    await blob(page).click();
+    await expect(page.getByRole('dialog', { name: 'Updates' })).toBeVisible();
+    await expect(blob(page)).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    await page.reload();
+    await expect(version(page)).toBeVisible();
+    await expect(toasts(page)).toHaveCount(0);
+    await expect(blob(page)).toHaveCount(0);
+    expect(await desktopCalls(page)).toEqual([]);
+  });
+
+  test('the busy preview waits for running work before it installs', async ({ page }) => {
+    await startPreview(page, 1);
+    await downloadToReady(page);
+    await blob(page).click();
+    await expect(blob(page)).toHaveText('Waiting');
+    await expect(toasts(page).filter({ hasText: 'when your work finishes' })).toBeVisible();
+    await hoverTip(page, 'Spark will update when your work finishes.');
+
+    await setRuns(page, 0);
+    await blob(page).click();
+    await expect(blob(page)).toHaveText('Installing…');
+    expect(await desktopCalls(page)).toEqual([['install'], ['install'], ['install']]);
+  });
+
+  test('with reduced motion the fill steps in quarters and nothing hops', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await startPreview(page);
+    const animation = (selector: string) =>
+      blob(page)
+        .locator(selector)
+        .first()
+        .evaluate((node) => getComputedStyle(node).animationName);
+
+    await blob(page).click();
+    const steps: [number, string][] = [
+      [9, '0'],
+      [31, '25'],
+      [64, '50'],
+      [79, '75'],
+      [97, '75'],
+    ];
+    for (const [percent, fill] of steps) {
+      await pushUpdate(page, { progress: percent });
+      await expect(blob(page)).toHaveText(`${percent}%`);
+      await expect(blob(page)).toHaveAttribute('data-fill', fill);
+    }
+    expect(await animation('.sc-wave')).toBe('none');
+    expect(await animation('.sc-hop')).toBe('none');
+    const transition = await blob(page)
+      .locator('.sc-fill-level')
+      .evaluate((node) => getComputedStyle(node).transitionDuration);
+    expect(transition).toBe('0s');
+
+    await pushUpdate(page, { phase: 'ready', progress: 100, installRequested: false });
+    await expect(blob(page)).toHaveText('Restart');
+    expect(await animation('.sc-hop')).toBe('none');
+    expect(await animation('.sc-body')).toBe('none');
+  });
+
+  test('the rail shows the version under Settings and hides it when short', async ({ page }) => {
+    await resetTestDatabase({ onboarded: true });
+    await fakeUpdater(page, {
+      currentVersion: '0.1.0-beta.1',
+      phase: 'off',
+      offReason: 'dev',
+      devBuild: true,
+    });
+    await page.goto('/');
+    const settings = rail(page).getByRole('button', { name: 'Settings' });
+    const label = page.getByRole('button', {
+      name: 'App version v0.1.0-beta.1 · dev',
+    });
+    await expect(label).toBeVisible();
+
+    const below = async () => {
+      const gear = (await settings.boundingBox())!;
+      const text = (await label.boundingBox())!;
+      const viewport = page.viewportSize()!;
+      expect(text.y).toBeGreaterThanOrEqual(gear.y + gear.height - 1);
+      expect(Math.abs(text.x + text.width / 2 - (gear.x + gear.width / 2))).toBeLessThan(2);
+      expect(text.y + text.height).toBeLessThanOrEqual(viewport.height);
+    };
+    await below();
+    await railShot(page, 'rail-version');
+
+    await page.setViewportSize({ width: 1280, height: 660 });
+    await expect(label).toBeVisible();
+    await below();
+
+    await page.setViewportSize({ width: 1280, height: 600 });
+    await expect(label).toBeHidden();
+    const gear = (await settings.boundingBox())!;
+    expect(gear.y + gear.height).toBeLessThanOrEqual(600);
+
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await label.click();
+    await expect(page.getByRole('dialog', { name: 'Updates' })).toBeVisible();
+  });
+
+  test('a prod build shows the version without the dev tag', async ({ page }) => {
+    await resetTestDatabase({ onboarded: true });
+    await fakeUpdater(page, { currentVersion: '0.1.0-beta.1' });
+    await page.goto('/');
+    await expect(version(page)).toHaveText('v0.1.0-beta.1');
+    await expect(version(page)).toHaveAccessibleName('App version v0.1.0-beta.1');
+  });
 });
