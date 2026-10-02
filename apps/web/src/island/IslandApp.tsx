@@ -216,13 +216,9 @@ export function IslandApp() {
   };
 
   const openCard = (card: Card) => {
-    setPanel(null);
-    setReview(cardKey(card));
-  };
-
-  const reply = (chat: ConversationSummary) => {
-    setFollowUp(chat);
-    openPanel('quick');
+    setReview(null);
+    setSelected(card.chat.id);
+    openPanel('sessions');
   };
 
   const command = (action: IslandAction) => {
@@ -273,8 +269,7 @@ export function IslandApp() {
         return;
       }
       if (event.key !== 'Escape' || event.defaultPrevented) return;
-      if (panel === 'sessions' && selected) setSelected(null);
-      else if (panel) closePanel();
+      if (panel) closePanel();
       else if (review) setReview(null);
       else if (view.kind === 'note') setNote(null);
       else if (hover) setHover(false);
@@ -386,7 +381,6 @@ export function IslandApp() {
         onTab={openPanel}
         onSelect={setSelected}
         onOpenChat={openChat}
-        onReply={reply}
         onDecided={setNote}
         onLater={snooze}
         onReview={openCard}

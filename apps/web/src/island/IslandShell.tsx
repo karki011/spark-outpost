@@ -63,7 +63,6 @@ interface IslandShellProps {
   onTab: (panel: Panel) => void;
   onSelect: (id: string | null) => void;
   onOpenChat: (id: string) => void;
-  onReply: (chat: ConversationSummary) => void;
   onDecided: (decided: Decided) => void;
   onLater: () => void;
   onReview: (card: Card) => void;
@@ -84,6 +83,7 @@ const PILL_HEIGHT = 34;
 const PILL_INSET = 48;
 const PILL_MIN_WIDTH = 112;
 const PANEL_MIN_WIDTH = 320;
+const CHAT_WIDTH = 690;
 const PANEL_SIDE_GAP = 16;
 const BARE_SCOUT = 38;
 const BARE_TUCK = 20;
@@ -154,7 +154,6 @@ function ViewBody({ props }: { props: IslandShellProps }) {
             onSelect={props.onSelect}
             onTab={props.onTab}
             onOpenChat={props.onOpenChat}
-            onReply={props.onReply}
           />
         );
       }
@@ -215,7 +214,10 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const quiet = view.kind === 'peek' || (pillish && !list);
   const viewport = useViewportWidth();
   const room = Math.max(PANEL_MIN_WIDTH, viewport - PANEL_SIDE_GAP);
-  const width = bare ? BARE_SCOUT : Math.min(viewWidth(view, geometry.notchWidth), room);
+  const chatting = view.kind === 'panel' && view.panel === 'sessions' && props.selected !== null;
+  const width = bare
+    ? BARE_SCOUT
+    : Math.min(chatting ? CHAT_WIDTH : viewWidth(view, geometry.notchWidth), room);
   const compactPill = pillish && !hugsNotch && !list;
   const hint = keyHint(view);
   const setTarget = useIslandShape(

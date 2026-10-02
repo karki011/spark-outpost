@@ -121,11 +121,9 @@ test('stays at rest while work runs and finishes, nudges for approvals, and list
     },
   ]);
   await expect(island(page)).toHaveAttribute('data-view', 'nudge');
-  await expect(island(page)).toContainText('Add the image library');
+  await expect(island(page)).toContainText('Approve: run npm install sharp');
   await shot(page, 'nudge');
-  await island(page)
-    .getByRole('button', { name: /needs you · Review/ })
-    .click();
+  await hoverIsland(page);
   await expect(island(page)).toHaveAttribute('data-view', 'card');
   const card = island(page).getByRole('group', {
     name: /wants to run a command: npm install sharp/,
@@ -262,8 +260,12 @@ test('sessions search, open one and ask for an update without touching the agent
   await expect(update).toContainText('Editing upload.ts'.toLowerCase());
   await shot(page, 'update');
   expect((await sql(`SELECT count(*)::int AS n FROM run_events`)).rows[0]!.n).toBe(before);
+  await island(page).getByRole('button', { name: 'Back to sessions' }).click();
+  await expect(search).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(island(page).getByRole('button', { name: 'Back to sessions' })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(search).toBeVisible();
+  await expect(island(page)).not.toHaveAttribute('data-view', 'panel');
 });
 
 test('Ask answers instantly from Spark’s own state', async ({ page }) => {
@@ -350,9 +352,7 @@ test('the island has no serious accessibility problems in its main views', async
     }
   };
   await check('nudge');
-  await island(page)
-    .getByRole('button', { name: /needs you · Review/ })
-    .click();
+  await hoverIsland(page);
   await expect(island(page)).toHaveAttribute('data-view', 'card');
   await check('card');
   await page.keyboard.press('Escape');

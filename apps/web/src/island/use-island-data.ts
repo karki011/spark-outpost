@@ -50,7 +50,7 @@ export function chatAgent(
   };
 }
 
-function pendingOf(detail: ConversationDetail): Approval[] {
+export function pendingOf(detail: ConversationDetail): Approval[] {
   const checkpoints = Object.values(detail.orchestrations ?? {}).flatMap((orchestration) =>
     orchestration.pendingCheckpoint ? [orchestration.pendingCheckpoint] : [],
   );

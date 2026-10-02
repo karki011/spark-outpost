@@ -1,9 +1,4 @@
-import {
-  agentRoleLabel,
-  agentRoleSchema,
-  type ConversationDetail,
-  type ConversationSummary,
-} from '@spark-outpost/contracts';
+import type { ConversationDetail, ConversationSummary } from '@spark-outpost/contracts';
 import type { Voice } from '../spark/voice.ts';
 import { crewLine, type VoiceRole } from './crew-voice.ts';
 import { isCheckStep } from './island-mood.ts';
@@ -13,12 +8,6 @@ export interface WorkItem {
   chat: ConversationSummary;
   agent: ChatAgent;
   detail: ConversationDetail | undefined;
-}
-
-export function roleLabel(role: string | null): string | null {
-  const parsed = agentRoleSchema.safeParse(role);
-  if (parsed.success) return agentRoleLabel(parsed.data);
-  return role === 'jev' ? 'Planner' : null;
 }
 
 export function runStart(item: WorkItem): string | null {

@@ -33,7 +33,7 @@ export interface IslandGeometry {
 }
 
 export const ISLAND_WIDTH = 720;
-export const ISLAND_HEIGHT = 480;
+export const ISLAND_HEIGHT = 600;
 
 const NOTCH_MENU_BAR_MIN = 30;
 const NOTCH_WIDTH = 190;

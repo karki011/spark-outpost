@@ -9,7 +9,7 @@ export function keyHint(view: IslandView): ReactNode {
         <>
           <Kbd>↑</Kbd>
           <Kbd>↓</Kbd> move · <Kbd>Enter</Kbd> open · <Kbd>⌘ 1</Kbd> chat · <Kbd>⌘ 3</Kbd> ask ·{' '}
-          <Kbd>Esc</Kbd> back / close
+          <Kbd>Esc</Kbd> close
         </>
       ) : view.panel === 'quick' ? (
         <>

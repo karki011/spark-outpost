@@ -99,7 +99,7 @@ describe('island placement', () => {
 
   it('rests in a narrow strip centred where the full window would be', () => {
     const at = { x: 360, y: 0 };
-    expect(islandBounds(at, null)).toEqual({ x: 360, y: 0, width: 720, height: 480 });
+    expect(islandBounds(at, null)).toEqual({ x: 360, y: 0, width: 720, height: ISLAND_HEIGHT });
     expect(islandBounds(at, { width: 147, height: 37.2 })).toEqual({
       x: 360 + (720 - 148) / 2,
       y: 0,
@@ -136,7 +136,7 @@ describe('island placement', () => {
     expect(nearDock(moved, builtIn)).toBe(false);
     expect(draggedPosition(origin, { x: 0, y: 0 }, { x: -5000, y: 5000 }, builtIn)).toEqual({
       x: 0,
-      y: 982 - 480,
+      y: 982 - ISLAND_HEIGHT,
     });
     expect(nearDock({ x: 420, y: 40 }, builtIn)).toBe(true);
   });

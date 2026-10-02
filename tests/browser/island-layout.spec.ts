@@ -216,9 +216,8 @@ for (const width of [420, 1280]) {
     ]);
     await expect(island(page)).toHaveAttribute('data-view', 'nudge');
     await expectClean(page, 'nudge');
-    await island(page)
-      .getByRole('button', { name: /needs you · Review/ })
-      .click();
+    await page.mouse.move(width / 2, 300);
+    await page.mouse.move(width / 2, 6, { steps: 4 });
     await expect(island(page)).toHaveAttribute('data-view', 'card');
     await expectClean(page, 'approval');
     const allow = island(page).getByRole('button', { name: /Allow once/ });
@@ -305,8 +304,11 @@ for (const { name, sparkFocused, expected } of [
     const needs = island(page).getByRole('region', { name: 'Needs you' });
     await expect(needs).toContainText('Deploy the site');
     await needs.getByRole('button', { name: 'Review' }).click();
-    await expect(island(page)).toHaveAttribute('data-view', 'card');
-    await expect(island(page).getByRole('button', { name: /Allow once/ })).toBeVisible();
+    await expect(island(page)).toHaveAttribute('data-view', 'panel');
+    const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
+    await expect(waiting).toBeFocused();
+    await expect(waiting.getByRole('button', { name: 'Allow', exact: true })).toBeVisible();
+    await expectClean(page, 'inline chat with an approval');
   });
 }
 
