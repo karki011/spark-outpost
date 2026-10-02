@@ -7,7 +7,9 @@ import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
-  changedFileSchema,
+  changeDiffSchema,
+  changePageSchema,
+  changeSummarySchema,
   runChangesSchema,
   taskChangesSchema,
   taskOverviewSchema,
@@ -96,6 +98,13 @@ async function changes(taskId: string): Promise<TaskChanges> {
   return taskChangesSchema.parse((await get(`/api/tasks/${taskId}/changes`).expect(200)).body);
 }
 
+async function diff(taskId: string, runId: string, path: string, lines?: number) {
+  const query = lines ? { runId, path, lines } : { runId, path };
+  return changeDiffSchema.parse(
+    (await get(`/api/tasks/${taskId}/changes/diff`).query(query).expect(200)).body,
+  );
+}
+
 describe('task changes', { timeout: 60_000 }, () => {
   it('splits git changes by run and counts lines', async () => {
     const root = join(base, 'repo');
@@ -130,18 +139,26 @@ describe('task changes', { timeout: 60_000 }, () => {
         change: 'modified',
         added: 2,
         removed: 1,
-        oldText: 'one\ntwo\n',
-        newText: 'one\n2\nthree\n',
+        oldText: null,
+        newText: null,
         shown: 'text',
+        bytes: 12,
       },
     ]);
+    expect(await diff(taskId, runs[0], 'a.ts')).toMatchObject({
+      oldText: 'one\ntwo\n',
+      newText: 'one\n2\nthree\n',
+      oldLines: 2,
+      newLines: 3,
+      limited: false,
+    });
     expect(result.runs[1]!.files).toEqual([
       expect.objectContaining({ path: 'b.bin', change: 'added', shown: 'binary', oldText: null }),
       expect.objectContaining({ path: 'c.md', change: 'added', added: 1, removed: 0 }),
     ]);
   });
 
-  it('keeps true counts for truncated files, pairs renames, and serves one full file', async () => {
+  it('keeps true counts for huge files, pairs renames, and serves one file by lines', async () => {
     const root = join(base, 'large');
     await mkdir(root);
     execFileSync('git', ['init', '-q', root]);
@@ -163,7 +180,7 @@ describe('task changes', { timeout: 60_000 }, () => {
     const { taskId, runs } = await twoRunTask();
 
     await snapshotRun(t.db, runs[0], root);
-    const big = Array.from({ length: 30_000 }, (_, index) => `row ${index} of the big file`);
+    const big = Array.from({ length: 50_000 }, (_, index) => `row ${index} of the big file`);
     await writeFile(join(root, 'big.txt'), `seed\n${big.join('\n')}\n`);
     await rm(join(root, 'old-name.ts'));
     moved[4] = 'export const four = 4;';
@@ -174,7 +191,7 @@ describe('task changes', { timeout: 60_000 }, () => {
     expect(files.find((file) => file.path === 'big.txt')).toMatchObject({
       shown: 'too-large',
       truncated: true,
-      added: 30_000,
+      added: 50_000,
       removed: 0,
       newText: null,
     });
@@ -185,19 +202,42 @@ describe('task changes', { timeout: 60_000 }, () => {
       removed: 1,
     });
 
-    const full = changedFileSchema.parse(
+    const first = await diff(taskId, runs[0], 'big.txt', 2000);
+    expect(first).toMatchObject({ shown: 'too-large', added: 50_000, limited: true });
+    expect(first.newText?.split('\n')).toHaveLength(2001);
+    expect(first.newLines).toBe(50_001);
+    const full = await diff(taskId, runs[0], 'big.txt');
+    expect(full.limited).toBe(false);
+    expect(full.newText?.endsWith('row 49999 of the big file\n')).toBe(true);
+    expect(await diff(taskId, runs[0], 'new-name.ts')).toMatchObject({
+      oldPath: 'old-name.ts',
+      oldText: expect.stringContaining('export const v4 = 4;'),
+      newText: expect.stringContaining('export const four = 4;'),
+    });
+
+    const summary = changeSummarySchema.parse(
+      (await get(`/api/tasks/${taskId}/changes/summary`).expect(200)).body,
+    );
+    expect(summary).toMatchObject({ files: 2, added: 50_001, removed: 1 });
+    expect(summary.top[0]).toMatchObject({ path: 'big.txt', runId: runs[0] });
+    const page = changePageSchema.parse(
       (
-        await get(`/api/tasks/${taskId}/changes/file`)
-          .query({ runId: runs[0], path: 'big.txt' })
+        await get(`/api/tasks/${taskId}/changes/files`)
+          .query({ version: summary.version, offset: 1, limit: 1 })
           .expect(200)
       ).body,
     );
-    expect(full).toMatchObject({ shown: 'text', added: 30_000, removed: 0 });
-    expect(full.newText?.endsWith('row 29999 of the big file\n')).toBe(true);
-    await get(`/api/tasks/${taskId}/changes/file`)
+    expect(page).toMatchObject({ version: summary.version, total: 2, offset: 1 });
+    expect(page.files.map((file) => file.path)).toEqual(['new-name.ts']);
+    const filtered = changePageSchema.parse(
+      (await get(`/api/tasks/${taskId}/changes/files`).query({ q: 'BIG' }).expect(200)).body,
+    );
+    expect(filtered.files.map((file) => file.path)).toEqual(['big.txt']);
+
+    await get(`/api/tasks/${taskId}/changes/diff`)
       .query({ runId: runs[0], path: 'missing.txt' })
       .expect(404);
-    await get(`/api/tasks/${taskId}/changes/file`).query({ path: 'big.txt' }).expect(400);
+    await get(`/api/tasks/${taskId}/changes/diff`).query({ path: 'big.txt' }).expect(400);
   });
 
   it('uses the next run backup as the end of a file-copy run', async () => {
@@ -215,9 +255,20 @@ describe('task changes', { timeout: 60_000 }, () => {
     await writeFile(target, 'third\n');
 
     const result = await changes(taskId);
-    expect(result.runs.map((run) => run.files.map((file) => [file.oldText, file.newText]))).toEqual(
-      [[['first\n', 'second\n']], [['second\n', 'third\n']]],
+    expect(result.runs.map((run) => run.files.map((file) => file.path))).toEqual([
+      ['notes.txt'],
+      ['notes.txt'],
+    ]);
+    const texts = await Promise.all(
+      runs.map(async (runId) => {
+        const file = await diff(taskId, runId, 'notes.txt');
+        return [file.oldText, file.newText];
+      }),
     );
+    expect(texts).toEqual([
+      ['first\n', 'second\n'],
+      ['second\n', 'third\n'],
+    ]);
   });
 
   it("serves a lane's changes from its refs after the worktree is removed", async () => {
@@ -270,7 +321,8 @@ describe('task changes', { timeout: 60_000 }, () => {
     });
     const result = await changes(taskId);
     const fixFiles = result.runs.find((run) => run.runId === fix)?.files;
-    expect(fixFiles?.map((file) => [file.path, file.newText])).toEqual([['fixed.txt', 'fixed\n']]);
+    expect(fixFiles?.map((file) => file.path)).toEqual(['fixed.txt']);
+    expect((await diff(taskId, fix, 'fixed.txt')).newText).toBe('fixed\n');
     const laneFiles = result.runs.find((run) => run.runId === lane)?.files;
     expect(laneFiles?.map((file) => file.path).sort()).toEqual(['a.ts', 'fixed.txt']);
   });

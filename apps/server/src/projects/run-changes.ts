@@ -46,10 +46,10 @@ function exists(target: string): Promise<boolean> {
   );
 }
 
-export async function changesWhilePresent(
+export async function changesWhilePresent<T>(
   root: string,
-  read: () => Promise<RunChange[]>,
-): Promise<RunChange[] | null> {
+  read: () => Promise<T>,
+): Promise<T | null> {
   try {
     return await read();
   } catch (error) {

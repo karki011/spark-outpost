@@ -3,7 +3,6 @@ import {
   addTaskLinkRequestSchema,
   artifactKindSchema,
   artifactMarkdown,
-  changedFileQuerySchema,
   PIECE_KEY_PATTERN,
   pieceNoteRequestSchema,
   providerIdSchema,
@@ -17,20 +16,17 @@ import { applySteer, SteerError } from '../coordinator/steer.ts';
 import { classifySteer } from '../coordinator/steer-rules.ts';
 import { addTaskLink, TaskNotFoundError } from '../persistence/tasks.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
-import { taskCoreImpact } from '../map/impact.ts';
-import { taskChangedFile, taskChanges } from '../projects/task-changes.ts';
 import { agreedPlans } from '../plans/agreed-plans.ts';
 import { findPullRequests } from '../tasks/pr-links.ts';
 import { BadRequestError, paramId, parseBody } from './validation.ts';
 
 export interface TaskRouteDeps {
   db: Db;
-  workspaceId: string;
 }
 
 const MARKDOWN_FILE = /^([a-z]+)\.md$/;
 
-export function taskRoutes({ db, workspaceId }: TaskRouteDeps): Router {
+export function taskRoutes({ db }: TaskRouteDeps): Router {
   const router = Router();
 
   router.get('/tasks/:id', async (req, res) => {
@@ -77,23 +73,6 @@ export function taskRoutes({ db, workspaceId }: TaskRouteDeps): Router {
       provider: provider?.data ?? null,
     };
     res.status(202).json(await applySteer(db, taskId, plan, note.urgent));
-  });
-
-  router.get('/tasks/:id/changes', async (req, res) => {
-    const taskId = paramId(req);
-    const changes = await taskChanges(db, workspaceId, taskId);
-    res.json({ ...changes, core: await taskCoreImpact(db, taskId, changes) });
-  });
-
-  router.get('/tasks/:id/changes/file', async (req, res) => {
-    const query = changedFileQuerySchema.safeParse(req.query);
-    if (!query.success) throw new BadRequestError('Pass a runId and a path.');
-    const file = await taskChangedFile(db, workspaceId, paramId(req), query.data);
-    if (!file) {
-      res.status(404).json({ error: 'That file has no changes in this task.' });
-      return;
-    }
-    res.json(file);
   });
 
   router.post('/tasks/:id/links', async (req, res) => {
