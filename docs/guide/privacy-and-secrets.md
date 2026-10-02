@@ -37,7 +37,7 @@ Choose what to do:
 - **Send anyway**: sends the message as you wrote it.
 - Press Escape to go back and edit the message yourself.
 
-The note shows in a chat, on Home, and in the island's **Quick chat** and **Ask**. If you send anyway, the audit log still stores the message with the secret redacted, but the provider and the saved chat get it as written.
+The note shows in a chat, on Home, and in Spark Island's **Quick chat** and **Ask**. If you send anyway, the audit log still stores the message with the secret redacted, but the provider and the saved chat get it as written.
 
 ## How Spark redacts secrets
 

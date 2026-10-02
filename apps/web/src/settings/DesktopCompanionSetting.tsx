@@ -12,7 +12,7 @@ import type { DocTarget } from '../ui/DocLink.tsx';
 import { Keys } from '../ui/Keys.tsx';
 import { SettingRow } from './SettingRow.tsx';
 
-const LABEL = 'Show companion on desktop';
+const LABEL = 'Show Spark Island';
 
 const SHORTCUTS: { action: IslandAction; label: string; hint: string }[] = [
   { action: 'quick', label: 'Quick chat shortcut', hint: 'Opens a new chat from anywhere.' },
@@ -137,8 +137,8 @@ export function DesktopCompanionSetting() {
         doc={{ page: 'desktop-companion' }}
         hint={
           status.enabled
-            ? 'Scout sits at the top of your screen, under the notch, and shows what needs you.'
-            : 'Off. Turn it on to see Spark at the top of your screen.'
+            ? 'Spark Island sits at the top of your screen and shows what needs you.'
+            : 'Off. Turn it on to see Spark Island at the top of your screen.'
         }
         checked={status.enabled}
         onChange={(on) => void desktop.companion.setEnabled(on)}
@@ -148,13 +148,6 @@ export function DesktopCompanionSetting() {
           {SHORTCUTS.map((shortcut) => (
             <ShortcutSetting key={shortcut.action} {...shortcut} status={status} />
           ))}
-          <SwitchRow
-            label="Calm mode"
-            doc={{ page: 'desktop-companion', heading: 'calm-mode' }}
-            hint="Keeps the blobs still apart from what matters: no hops, waves or sparkles."
-            checked={status.calm}
-            onChange={(on) => void desktop.companion.setCalm(on)}
-          />
         </>
       )}
     </>

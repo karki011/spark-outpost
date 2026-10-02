@@ -7,6 +7,16 @@ import type { CrewState } from '../crew/crew-model.ts';
 
 export const ARMING_MS = 600;
 
+export function useViewportWidth(): number {
+  const [width, setWidth] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return width;
+}
+
 export function useArmed(key: string): boolean {
   const [armedKey, setArmedKey] = useState<string | null>(null);
   useEffect(() => {
@@ -50,7 +60,7 @@ export function Who({ name, role, provider, title, expression = 'idle', crewStat
       </span>
       <b>{name}</b>
       {role && <span> · {role}</span>}
-      <ProviderTag provider={provider} />
+      {provider && providerName(provider) !== name && <ProviderTag provider={provider} />}
       {title && <span className="isl-who-title"> · {title}</span>}
     </div>
   );

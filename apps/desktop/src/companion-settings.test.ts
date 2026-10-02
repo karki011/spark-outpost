@@ -31,24 +31,19 @@ describe('companion shortcut config', () => {
 });
 
 describe('companion settings file', () => {
-  it('is on and calm by default with the default shortcuts and a docked island', () => {
+  it('is on by default with the default shortcuts and a docked island', () => {
     expect(parseSettings(null)).toEqual(DEFAULT_SETTINGS);
     expect(parseSettings('not json')).toEqual(DEFAULT_SETTINGS);
-    expect(DEFAULT_SETTINGS).toMatchObject({ enabled: true, calm: true });
+    expect(DEFAULT_SETTINGS).toMatchObject({ enabled: true });
   });
 
-  it('keeps a choice the user already saved and defaults only the missing ones', () => {
-    expect(parseSettings(JSON.stringify({ enabled: false, calm: false }))).toMatchObject({
+  it('keeps a choice the user already saved, ignores the old Calm mode flag', () => {
+    expect(parseSettings(JSON.stringify({ enabled: false, calm: false }))).toEqual({
+      ...DEFAULT_SETTINGS,
       enabled: false,
-      calm: false,
-    });
-    expect(parseSettings(JSON.stringify({ enabled: false }))).toMatchObject({
-      enabled: false,
-      calm: true,
     });
     expect(parseSettings(JSON.stringify({ position: { docked: true } }))).toMatchObject({
       enabled: true,
-      calm: true,
     });
   });
 
@@ -56,14 +51,12 @@ describe('companion settings file', () => {
     const parsed = parseSettings(
       JSON.stringify({
         enabled: false,
-        calm: 'yes',
         shortcuts: { quick: 'Alt+J', sessions: 'Space' },
         position: { docked: false, x: 120.4, y: 'top' },
       }),
     );
     expect(parsed).toEqual({
       enabled: false,
-      calm: true,
       shortcuts: { quick: 'Alt+J', sessions: 'Alt+Shift+Space' },
       position: { docked: true },
     });

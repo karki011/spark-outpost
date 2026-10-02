@@ -1,5 +1,7 @@
 import {
+  app,
   BrowserWindow,
+  dialog,
   globalShortcut,
   ipcMain,
   Menu,
@@ -18,6 +20,7 @@ import {
 } from './companion-settings.ts';
 import { targetsApi } from './api-token.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
+import { isSize } from './island-geometry.ts';
 import { trayTemplate } from './island-options.ts';
 import { openIslandWindow, type IslandWindow } from './island-window.ts';
 
@@ -120,14 +123,38 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     },
   });
   refreshTray(companion.status());
+
+  const sparkFocused = () =>
+    BrowserWindow.getAllWindows().some(
+      (window) =>
+        !window.isDestroyed() && window.isFocused() && !island?.owns(window.webContents.id),
+    );
+  let focused = sparkFocused();
+  const reportFocus = () =>
+    setImmediate(() => {
+      const next = sparkFocused();
+      if (next === focused) return;
+      focused = next;
+      island?.sparkFocus(next);
+    });
+  app.on('browser-window-focus', reportFocus);
+  app.on('browser-window-blur', reportFocus);
+  ipcMain.handle(IPC.islandSparkFocused, (event) => fromIsland(event) && sparkFocused());
+  ipcMain.handle(IPC.islandPickFolder, async (event) => {
+    if (!fromIsland(event)) return null;
+    app.focus({ steal: true });
+    const picked = await dialog.showOpenDialog({
+      title: 'Choose a project folder',
+      buttonLabel: 'Use this folder',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    return picked.canceled ? null : (picked.filePaths[0] ?? null);
+  });
   companion.resume();
 
   ipcMain.handle(IPC.companionGet, (event) => (fromSpark(event) ? companion.status() : null));
   ipcMain.handle(IPC.companionSetEnabled, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setEnabled(on) : companion.status(),
-  );
-  ipcMain.handle(IPC.companionSetCalm, (event, on: unknown) =>
-    fromSpark(event) && typeof on === 'boolean' ? companion.setCalm(on) : companion.status(),
   );
   ipcMain.handle(IPC.companionSetShortcut, (event, action: unknown, accelerator: unknown) => {
     if (!fromSpark(event) || !isShortcutAction(action)) return { ok: false, error: 'Not allowed.' };
@@ -156,6 +183,12 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
     island!.drag(phase as DragPhase, { x, y });
   });
 
+  ipcMain.on(IPC.islandRestSize, (event, size: unknown) => {
+    if (!fromIsland(event)) return;
+    if (size === null) island!.setRestSize(null);
+    else if (isSize(size)) island!.setRestSize({ width: size.width, height: size.height });
+  });
+
   const openChat = (id: string) => {
     pendingChat = id;
     options.showSpark();
@@ -176,9 +209,10 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
       for (const channel of [
         IPC.companionGet,
         IPC.companionSetEnabled,
-        IPC.companionSetCalm,
         IPC.companionSetShortcut,
         IPC.islandGeometry,
+        IPC.islandSparkFocused,
+        IPC.islandPickFolder,
         IPC.pendingChat,
       ]) {
         ipcMain.removeHandler(channel);
@@ -187,10 +221,13 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.islandInteractive,
         IPC.islandFocusable,
         IPC.islandDrag,
+        IPC.islandRestSize,
         IPC.islandOpenChat,
       ]) {
         ipcMain.removeAllListeners(channel);
       }
+      app.off('browser-window-focus', reportFocus);
+      app.off('browser-window-blur', reportFocus);
       tray.destroy();
     },
   };

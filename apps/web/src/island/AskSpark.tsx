@@ -2,12 +2,16 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import { BlobScout } from '../brand/BlobScout.tsx';
+import { Markdown } from '../chat/markdown/Markdown.tsx';
+import type { Voice } from '../spark/voice.ts';
 import { SecretWarning } from '../ui/SecretWarning.tsx';
 import { useSecretGuard } from '../ui/use-secret-guard.ts';
 import { fastAnswer, type FastChat, type FastState } from './ask-fast-path.ts';
+import { AskThinking } from './AskThinking.tsx';
 import { islandApi, islandKeys } from './island-api.ts';
 import type { Panel } from './island-model.ts';
 import { PanelTabs } from './PanelTabs.tsx';
+import { plainLine } from './plain-line.ts';
 
 interface Exchange {
   id: string;
@@ -19,6 +23,7 @@ interface Exchange {
 
 interface AskSparkProps {
   fast: FastState;
+  voice: Voice;
   waiting: number;
   focusDelay: number;
   onTab: (panel: Panel) => void;
@@ -26,6 +31,7 @@ interface AskSparkProps {
 }
 
 const HISTORY = 3;
+const CHEER_MS = 1_400;
 
 function useAssistant() {
   const id = useQuery({
@@ -60,7 +66,24 @@ function modelExchanges(detail: ReturnType<typeof useAssistant>['detail']): Exch
   return exchanges;
 }
 
-export function AskSpark({ fast, waiting, focusDelay, onTab, onOpenChat }: AskSparkProps) {
+function useCheer(thinking: boolean, latest: string | null): string | null {
+  const [cheer, setCheer] = useState<string | null>(null);
+  const was = useRef(thinking);
+  useEffect(() => {
+    const finished = was.current && !thinking;
+    was.current = thinking;
+    if (!finished || !latest) return;
+    const start = setTimeout(() => setCheer(latest), 0);
+    const stop = setTimeout(() => setCheer(null), CHEER_MS);
+    return () => {
+      clearTimeout(start);
+      clearTimeout(stop);
+    };
+  }, [thinking, latest]);
+  return cheer;
+}
+
+export function AskSpark({ fast, voice, waiting, focusDelay, onTab, onOpenChat }: AskSparkProps) {
   const queryClient = useQueryClient();
   const assistant = useAssistant();
   const [text, setText] = useState('');
@@ -120,6 +143,8 @@ export function AskSpark({ fast, waiting, focusDelay, onTab, onOpenChat }: AskSp
   };
 
   const shown = [...modelExchanges(assistant.detail), ...instant].slice(-HISTORY);
+  const cheer = useCheer(thinking, shown.at(-1)?.answer ? shown.at(-1)!.id : null);
+  const step = run?.step ? plainLine(run.step) : null;
   return (
     <div className="isl-body">
       <PanelTabs panel="ask" waiting={waiting} onTab={onTab} />
@@ -135,10 +160,14 @@ export function AskSpark({ fast, waiting, focusDelay, onTab, onOpenChat }: AskSp
             {exchange.answer ? (
               <div className="isl-ask-a">
                 <span className="isl-ask-scout" aria-hidden="true">
-                  <BlobScout size={16} />
+                  <BlobScout size={16} mood={cheer === exchange.id ? 'happy' : null} />
                 </span>
-                <div>
-                  <p>{exchange.answer}</p>
+                <div className="isl-ask-md">
+                  {exchange.instant ? (
+                    <p>{exchange.answer}</p>
+                  ) : (
+                    <Markdown text={exchange.answer} />
+                  )}
                   {exchange.chats.length > 0 && (
                     <div className="isl-acts">
                       {exchange.chats.slice(0, 3).map((chat) => (
@@ -159,10 +188,7 @@ export function AskSpark({ fast, waiting, focusDelay, onTab, onOpenChat }: AskSp
                 </div>
               </div>
             ) : (
-              <div className="isl-skl" aria-hidden="true">
-                <i />
-                <i style={{ width: '62%' }} />
-              </div>
+              <AskThinking voice={voice} step={step} />
             )}
           </div>
         ))}
@@ -182,9 +208,7 @@ export function AskSpark({ fast, waiting, focusDelay, onTab, onOpenChat }: AskSp
           onKeyDown={onKeyDown}
         />
         <div className="isl-qc-bar">
-          <span className="isl-qc-hint">
-            {thinking ? 'Spark is looking…' : 'Answers use your default model'}
-          </span>
+          <span className="isl-qc-hint">Answers use your default model</span>
           <span className="isl-sp" />
           <button
             type="button"

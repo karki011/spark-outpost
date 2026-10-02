@@ -1,22 +1,17 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import type { ConversationSummary } from '@spark-outpost/contracts';
-import { peekOffset, sessionState, type SessionState } from './island-model.ts';
+import { STATUS_WORDS } from './HoverList.tsx';
+import { peekOffset, sessionState } from './island-model.ts';
 import { sessionExpression } from './island-mood.ts';
 import { SessionBlob } from './SessionBlob.tsx';
 
 const LEAVE_MS = 420;
-const STATE_WORDS: Record<SessionState, string> = {
-  working: 'working',
-  waiting: 'waiting for you',
-  done: 'done',
-  failed: 'failed',
-  idle: 'quiet',
-};
 
 interface PeekRowProps {
   sessions: readonly ConversationSummary[];
   more: number;
   shown: boolean;
+  size: number;
   sleepy: boolean;
   onOpen: (id: string) => void;
   onMore: () => void;
@@ -50,7 +45,7 @@ function useSlots(sessions: readonly ConversationSummary[]): Slot[] {
   ];
 }
 
-export function PeekRow({ sessions, more, shown, sleepy, onOpen, onMore }: PeekRowProps) {
+export function PeekRow({ sessions, more, shown, size, sleepy, onOpen, onMore }: PeekRowProps) {
   const slots = useSlots(sessions);
   const [focus, setFocus] = useState(0);
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
@@ -77,7 +72,7 @@ export function PeekRow({ sessions, more, shown, sleepy, onOpen, onMore }: PeekR
       {slots.map(({ chat, leaving }, index) => {
         const state = sessionState(chat);
         const slot = leaving ? index : sessions.indexOf(chat);
-        const label = `Chat: ${chat.title}, ${STATE_WORDS[state]}`;
+        const label = `Chat: ${chat.title}, ${STATUS_WORDS[state]}`;
         return (
           <button
             key={chat.id}
@@ -98,7 +93,7 @@ export function PeekRow({ sessions, more, shown, sleepy, onOpen, onMore }: PeekR
             <SessionBlob
               chat={chat}
               state={state}
-              size={22}
+              size={size}
               expression={sessionExpression(state, sleepy)}
             />
             {state === 'waiting' && (
@@ -107,7 +102,8 @@ export function PeekRow({ sessions, more, shown, sleepy, onOpen, onMore }: PeekR
               </span>
             )}
             <span className="isl-tip" aria-hidden="true">
-              {chat.title} · {STATE_WORDS[state]}
+              <b>{chat.title}</b>
+              <span>{STATUS_WORDS[state]} · Click to open</span>
             </span>
           </button>
         );

@@ -19,15 +19,21 @@ export interface DisplayInfo {
   internal: boolean;
 }
 
+export interface Size {
+  width: number;
+  height: number;
+}
+
 export interface IslandGeometry {
   notch: boolean;
   top: number;
   notchWidth: number;
   docked: boolean;
+  menuBar: number;
 }
 
 export const ISLAND_WIDTH = 720;
-export const ISLAND_HEIGHT = 480;
+export const ISLAND_HEIGHT = 600;
 
 const NOTCH_MENU_BAR_MIN = 30;
 const NOTCH_WIDTH = 190;
@@ -36,6 +42,8 @@ const MIN_TOP = 24;
 const MAX_TOP = 44;
 const DOCK_REACH_X = 120;
 const DOCK_REACH_Y = 90;
+const REST_MIN_WIDTH = 40;
+const REST_MIN_HEIGHT = 20;
 
 export function islandDisplay(
   displays: readonly DisplayInfo[],
@@ -53,7 +61,7 @@ export function islandGeometry(display: DisplayInfo, docked: boolean): IslandGeo
   const menuBar = display.workArea.y - display.bounds.y;
   const notch = display.internal && menuBar > NOTCH_MENU_BAR_MIN;
   const top = menuBar > 0 ? Math.min(MAX_TOP, Math.max(MIN_TOP, menuBar)) : DEFAULT_TOP;
-  return { notch, top, notchWidth: notch ? NOTCH_WIDTH : 0, docked };
+  return { notch, top, notchWidth: notch ? NOTCH_WIDTH : 0, docked, menuBar: Math.max(0, menuBar) };
 }
 
 export function dockedPosition(display: DisplayInfo): Point {
@@ -63,6 +71,24 @@ export function dockedPosition(display: DisplayInfo): Point {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), Math.max(min, max));
+}
+
+export function isSize(value: unknown): value is Size {
+  if (!value || typeof value !== 'object') return false;
+  const { width, height } = value as Record<string, unknown>;
+  return (
+    typeof width === 'number' &&
+    typeof height === 'number' &&
+    Number.isFinite(width) &&
+    Number.isFinite(height)
+  );
+}
+
+export function islandBounds(position: Point, rest: Size | null): Rect {
+  if (!rest) return { ...position, width: ISLAND_WIDTH, height: ISLAND_HEIGHT };
+  const width = 2 * Math.ceil(clamp(rest.width, REST_MIN_WIDTH, ISLAND_WIDTH) / 2);
+  const height = Math.ceil(clamp(rest.height, REST_MIN_HEIGHT, ISLAND_HEIGHT));
+  return { x: position.x + (ISLAND_WIDTH - width) / 2, y: position.y, width, height };
 }
 
 export function clampToDisplay(position: Point, display: DisplayInfo): Point {

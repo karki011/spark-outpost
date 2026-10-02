@@ -1,18 +1,19 @@
-import { BrowserWindow, screen, type Display } from 'electron';
+import { app, BrowserWindow, globalShortcut, screen, type Display } from 'electron';
 import type { IslandPosition, ShortcutAction } from './companion-settings.ts';
 import type { IslandHandle } from './companion.ts';
 import {
   dockedPosition,
   draggedPosition,
+  islandBounds,
   islandGeometry,
   nearDock,
   placement,
-  ISLAND_HEIGHT,
-  ISLAND_WIDTH,
   type DisplayInfo,
   type IslandGeometry,
   type Point,
+  type Size,
 } from './island-geometry.ts';
+import { escapeGuard } from './island-escape.ts';
 import { setIslandFocus } from './island-focus.ts';
 import { ISLAND_LEVEL, ISLAND_PATH, islandWindowOptions } from './island-options.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
@@ -23,6 +24,8 @@ export interface IslandWindow extends IslandHandle {
   setInteractive(on: boolean): void;
   setFocusable(on: boolean): void;
   drag(phase: DragPhase, pointer: Point): void;
+  setRestSize(size: Size | null): void;
+  sparkFocus(focused: boolean): void;
   geometry(): IslandGeometry;
 }
 
@@ -52,6 +55,8 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const start = placed?.position ?? { x: 0, y: 0 };
   const window = new BrowserWindow(islandWindowOptions(options.preload, start));
   let dragging: { origin: Point; pointer: Point } | null = null;
+  let rest: Size | null = null;
+  let interactive = false;
 
   window.setAlwaysOnTop(true, ISLAND_LEVEL);
   window.setVisibleOnAllWorkspaces(true, {
@@ -64,14 +69,29 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   const geometry = (): IslandGeometry =>
     placed
       ? islandGeometry(placed.display, placed.docked)
-      : { notch: false, top: 32, notchWidth: 0, docked: true };
+      : { notch: false, top: 32, notchWidth: 0, docked: true, menuBar: 0 };
 
   const send = (channel: string, payload: unknown) => {
     if (!window.isDestroyed()) window.webContents.send(channel, payload);
   };
 
+  const resting = (): Size | null =>
+    placed?.docked && !geometry().notch && !dragging ? rest : null;
+
+  const applyMouse = () => {
+    if (window.isDestroyed()) return;
+    window.setIgnoreMouseEvents(!(interactive || resting() !== null), { forward: true });
+  };
+
+  const report = (reason: string) => {
+    if (app.isPackaged || window.isDestroyed()) return;
+    console.log(`[island] ${reason}: ${JSON.stringify(window.getBounds())}`);
+  };
+
+  const escape = escapeGuard(globalShortcut, () => send(IPC.islandEscape, null));
+
   const moveTo = (position: Point, animate = false) => {
-    window.setBounds({ ...position, width: ISLAND_WIDTH, height: ISLAND_HEIGHT }, animate);
+    window.setBounds(islandBounds(position, resting()), animate);
   };
 
   const place = () => {
@@ -80,6 +100,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     if (!placed) return;
     if (placed.docked) options.savePosition({ docked: true });
     moveTo(placed.position);
+    report('placed');
     send(IPC.islandGeometryChanged, geometry());
   };
 
@@ -89,8 +110,10 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
   window.once('ready-to-show', () => {
     if (placed) moveTo(placed.position);
     window.showInactive();
+    report('shown');
   });
   window.on('closed', () => {
+    escape.arm(false);
     screen.off('display-added', place);
     screen.off('display-removed', place);
     screen.off('display-metrics-changed', place);
@@ -105,6 +128,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       options.savePosition({ docked: true });
       placed = { display, position: dockedPosition(display), docked: true };
       moveTo(placed.position, true);
+      report('docked');
     } else {
       options.savePosition({ docked: false, x, y });
       placed = { display, position: { x, y }, docked: false };
@@ -123,9 +147,22 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
       send(IPC.islandCommand, action);
     },
     setInteractive: (on) => {
-      if (!window.isDestroyed()) window.setIgnoreMouseEvents(!on, { forward: true });
+      interactive = on;
+      applyMouse();
     },
-    setFocusable: (on) => setIslandFocus(window, on),
+    setFocusable: (on) => {
+      setIslandFocus(window, on);
+      escape.arm(on && !window.isDestroyed());
+    },
+    sparkFocus: (focused) => send(IPC.islandSparkFocus, focused),
+    setRestSize: (size) => {
+      const changed = JSON.stringify(size) !== JSON.stringify(rest);
+      rest = size;
+      if (!changed || window.isDestroyed() || dragging || !placed) return;
+      moveTo(placed.position);
+      applyMouse();
+      report(size ? 'resting' : 'expanded');
+    },
     drag: (phase, pointer) => {
       if (window.isDestroyed()) return;
       if (phase === 'start') {

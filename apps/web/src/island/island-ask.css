@@ -1,0 +1,135 @@
+.isl-ask-a {
+  animation: isl-answer-in 0.32s var(--out) both;
+}
+
+@keyframes isl-answer-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+.isl-thinking {
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  min-height: 34px;
+  color: var(--muted);
+}
+
+.isl-think-scene {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
+
+.isl-think-scene svg.scout {
+  display: block;
+}
+
+.isl-glass {
+  position: absolute;
+  right: -6px;
+  bottom: 0;
+  fill: color-mix(in srgb, var(--panel) 40%, transparent);
+  stroke: var(--warn);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  transform-origin: 30% 30%;
+  animation: isl-peer 2.2s ease-in-out infinite;
+}
+
+@keyframes isl-peer {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  35% {
+    transform: translate(-9px, -3px) rotate(-12deg);
+  }
+  70% {
+    transform: translate(1px, -5px) rotate(8deg);
+  }
+}
+
+.isl-think-line {
+  font-size: 12.5px;
+  animation: isl-answer-in 0.3s var(--out) both;
+}
+
+.isl-ask-md {
+  min-width: 0;
+}
+
+.isl-ask-md .md {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.isl-ask-md .md p,
+.isl-ask-md .md ul,
+.isl-ask-md .md ol {
+  margin: 0 0 6px;
+  white-space: normal;
+}
+
+.isl-ask-md .md ul,
+.isl-ask-md .md ol {
+  padding-left: 18px;
+}
+
+.isl-ask-md .md li {
+  margin: 1px 0;
+}
+
+.isl-ask-md .md code {
+  font:
+    11.5px 'Geist Mono',
+    monospace;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--code);
+}
+
+.isl-ask-md .md a {
+  color: var(--accent-text);
+}
+
+.isl-chat-scroll {
+  display: grid;
+  gap: 8px;
+  max-height: 250px;
+  margin: 0 0 8px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.isl-chatlog {
+  display: grid;
+  gap: 6px;
+}
+
+.isl-chat-a {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.isl-chat-cards {
+  display: grid;
+  gap: 8px;
+  scroll-margin: 8px;
+}
+
+.isl-chat-cards .appr {
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.isl-chat .isl-qc textarea {
+  min-height: 34px;
+}
+
+.isl-chat-cards:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 12px;
+}

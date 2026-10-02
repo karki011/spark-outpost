@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
 import { fastAnswer } from './ask-fast-path.ts';
 import {
+  cardKey,
   islandView,
   newMoments,
   nextStreak,
@@ -47,30 +48,43 @@ const quiet: IslandInputs = {
   note: false,
   panel: null,
   cards: [],
-  moment: null,
-  running: 0,
+  review: null,
+  nudge: false,
   hover: false,
 };
 
 describe('island state machine', () => {
-  it('peeks when quiet, pops into a pill on hover, and shows the live row while work runs', () => {
+  it('rests until hovered, whatever is running or waiting', () => {
+    const card = { kind: 'approval' as const, chat: chat('a'), approval: null };
     expect(islandView(quiet).kind).toBe('peek');
+    expect(islandView({ ...quiet, cards: [card] }).kind).toBe('peek');
     expect(islandView({ ...quiet, hover: true }).kind).toBe('pill');
-    expect(islandView({ ...quiet, running: 2 }).kind).toBe('live');
-    expect(islandView({ ...quiet, running: 2, hover: true }).kind).toBe('overview');
+    expect(islandView({ ...quiet, cards: [card], hover: true }).kind).toBe('pill');
   });
 
-  it('puts cards above moments and work, and the user’s own panel above cards', () => {
-    const card = { kind: 'approval' as const, chat: chat('a'), approval: null };
-    const moment = { kind: 'done' as const, chatId: 'b', runId: 'r' };
-    expect(islandView({ ...quiet, running: 1, moment, cards: [card, card] })).toEqual({
+  it('nudges for a waiting card only when allowed, and opens it on hover or review', () => {
+    const first = { kind: 'approval' as const, chat: chat('a'), approval: null };
+    const second = { kind: 'question' as const, chat: chat('b'), approval: null };
+    const cards = [first, second];
+    expect(islandView({ ...quiet, cards, nudge: true })).toEqual({
+      kind: 'nudge',
+      card: first,
+      total: 2,
+    });
+    expect(islandView({ ...quiet, cards, nudge: true, hover: true })).toEqual({
       kind: 'card',
-      card,
+      card: first,
       index: 1,
       total: 2,
     });
-    expect(islandView({ ...quiet, running: 1, moment }).kind).toBe('moment');
-    expect(islandView({ ...quiet, cards: [card], panel: 'sessions' }).kind).toBe('panel');
+    expect(islandView({ ...quiet, cards, review: cardKey(second) })).toEqual({
+      kind: 'card',
+      card: second,
+      index: 2,
+      total: 2,
+    });
+    expect(islandView({ ...quiet, cards, review: 'gone' }).kind).toBe('peek');
+    expect(islandView({ ...quiet, cards, nudge: true, panel: 'sessions' }).kind).toBe('panel');
     expect(islandView({ ...quiet, panel: 'quick', note: true }).kind).toBe('note');
   });
 
@@ -144,18 +158,26 @@ describe('island state machine', () => {
 });
 
 describe('moods and quirks', () => {
-  const context = { waiting: 0, hour: 14, idleMinutes: 0 };
+  const context = {
+    waiting: 0,
+    hour: 14,
+    idleMinutes: 0,
+    running: 0,
+    moment: null,
+    failed: false,
+  };
 
-  it('maps what is happening to Scout’s mood, sleepy late at night', () => {
-    expect(scoutMoodFor({ kind: 'live' }, context)).toBe('working');
-    expect(scoutMoodFor({ kind: 'peek' }, { ...context, waiting: 1 })).toBe('alert');
-    expect(scoutMoodFor({ kind: 'peek' }, { ...context, hour: 1 })).toBe('sleep');
-    expect(
-      scoutMoodFor(
-        { kind: 'moment', moment: { kind: 'failed', chatId: 'a', runId: 'r' } },
-        context,
-      ),
-    ).toBe('sad');
+  it('shows what is happening on the resting blob, sleepy late at night', () => {
+    const peek = { kind: 'peek' } as const;
+    const moment = { kind: 'done' as const, chatId: 'a', runId: 'r' };
+    expect(scoutMoodFor(peek, context)).toBeNull();
+    expect(scoutMoodFor(peek, { ...context, running: 2 })).toBe('working');
+    expect(scoutMoodFor(peek, { ...context, waiting: 1, running: 2 })).toBe('alert');
+    expect(scoutMoodFor(peek, { ...context, moment, running: 1 })).toBe('happy');
+    expect(scoutMoodFor(peek, { ...context, moment: { ...moment, kind: 'failed' } })).toBe('sad');
+    expect(scoutMoodFor(peek, { ...context, failed: true })).toBe('sad');
+    expect(scoutMoodFor(peek, { ...context, hour: 1 })).toBe('sleep');
+    expect(scoutMoodFor({ kind: 'panel', panel: 'quick' }, { ...context, running: 1 })).toBeNull();
   });
 
   it('gives each role a quirk and reacts to checks and questions', () => {

@@ -15,7 +15,6 @@ export interface IslandHandle {
 export interface CompanionStatus {
   supported: boolean;
   enabled: boolean;
-  calm: boolean;
   shortcuts: Record<ShortcutAction, string>;
   failed: ShortcutAction[];
 }
@@ -37,7 +36,6 @@ export interface Companion {
   running(): boolean;
   position(): IslandPosition;
   setEnabled(on: boolean): CompanionStatus;
-  setCalm(on: boolean): CompanionStatus;
   setShortcut(action: ShortcutAction, accelerator: string | null): ShortcutResult;
   setPosition(position: IslandPosition): void;
   shutdown(): void;
@@ -60,7 +58,6 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
   const status = (): CompanionStatus => ({
     supported: effects.supported,
     enabled: effects.supported && settings.enabled,
-    calm: settings.calm,
     shortcuts: { ...settings.shortcuts },
     failed: SHORTCUT_ACTIONS.filter((action) => failed.has(action)),
   });
@@ -118,11 +115,6 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
       commit({ ...settings, enabled: on });
       if (on) start();
       else stop();
-      publish();
-      return status();
-    },
-    setCalm(on) {
-      commit({ ...settings, calm: on });
       publish();
       return status();
     },

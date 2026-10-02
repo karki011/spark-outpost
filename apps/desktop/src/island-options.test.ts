@@ -36,7 +36,7 @@ describe('tray menu', () => {
     );
     expect(items.map((item) => item.label ?? item.type)).toEqual([
       'Open Spark Outpost',
-      'Show companion',
+      'Show Spark Island',
       'separator',
       'Quit Spark Outpost',
     ]);
@@ -47,6 +47,6 @@ describe('tray menu', () => {
 
   it('hides the companion toggle where the island is not available', () => {
     const items = trayTemplate({ appName: 'Spark', companionOn: false, supported: false }, actions);
-    expect(items.some((item) => item.label === 'Show companion')).toBe(false);
+    expect(items.some((item) => item.label === 'Show Spark Island')).toBe(false);
   });
 });

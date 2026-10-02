@@ -61,7 +61,6 @@ async function fakeDesktop(page: Page) {
     const companion = {
       supported: true,
       enabled: true,
-      calm: true,
       shortcuts: { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' },
       failed: [] as string[],
     };
@@ -86,7 +85,6 @@ async function fakeDesktop(page: Page) {
         companion: {
           get: async () => structuredClone(companion),
           setEnabled: async () => structuredClone(companion),
-          setCalm: async () => structuredClone(companion),
           setShortcut: async () => ({ ok: true }),
           onChange: noop,
         },
@@ -114,7 +112,7 @@ async function runsByClaude() {
   }
 }
 
-const island = (page: Page) => page.getByRole('region', { name: 'Spark companion' });
+const island = (page: Page) => page.getByRole('region', { name: 'Spark Island' });
 
 async function openIsland(page: Page) {
   await page.goto('/island');
@@ -175,7 +173,7 @@ test('Companion settings and updates screenshots', async ({ page }) => {
   await page.getByRole('button', { name: 'Settings' }).click();
   const spark = page.getByRole('dialog', { name: 'Spark' });
   const around = spark.getByRole('region', { name: 'Around the app' });
-  await expect(around.getByRole('switch', { name: 'Calm mode' })).toBeVisible();
+  await expect(around.getByRole('button', { name: 'Change Quick chat shortcut' })).toBeVisible();
   await around.scrollIntoViewIfNeeded();
   await shoot(page, IMAGES, 'companion-settings', around);
 
