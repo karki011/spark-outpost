@@ -82,9 +82,11 @@ type Opener = 'hover' | 'user';
 function useHoverIntent(settleRef: RefObject<(inside: boolean) => void>) {
   const [hover, setHover] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const entering = useRef(false);
   const onHover = useCallback(
     (inside: boolean) => {
       clearTimeout(timer.current);
+      entering.current = inside;
       timer.current = setTimeout(
         () => {
           setHover(inside);
@@ -96,8 +98,11 @@ function useHoverIntent(settleRef: RefObject<(inside: boolean) => void>) {
     },
     [settleRef],
   );
+  const cancelEnter = useCallback(() => {
+    if (entering.current) clearTimeout(timer.current);
+  }, []);
   useEffect(() => () => clearTimeout(timer.current), []);
-  return [hover, onHover] as const;
+  return [hover, onHover, cancelEnter] as const;
 }
 
 function coreRects(island: HTMLElement | null): DOMRect[] {
@@ -150,7 +155,7 @@ export function IslandApp() {
       (chat.latestRun?.status === 'running' || chat.latestRun?.status === 'queued'),
   );
   const settleHover = useRef<(inside: boolean) => void>(() => undefined);
-  const [hover, onHover] = useHoverIntent(settleHover);
+  const [hover, onHover, cancelHoverOpen] = useHoverIntent(settleHover);
   const islandRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<HTMLDivElement>(null);
@@ -213,6 +218,7 @@ export function IslandApp() {
   };
 
   const closePanel = () => {
+    cancelHoverOpen();
     setPanel(null);
     setReview(null);
     setSelected(null);

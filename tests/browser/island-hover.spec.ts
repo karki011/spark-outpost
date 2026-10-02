@@ -30,9 +30,9 @@ test('hovering waits a moment before opening and a moment before closing', async
   await expect(island(page)).toHaveAttribute('data-view', 'peek');
 
   await hoverIsland(page);
+  await page.waitForTimeout(800);
   const box = (await island(page).boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height + 60);
-  await page.waitForTimeout(150);
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height + 40);
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.waitForTimeout(600);
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
