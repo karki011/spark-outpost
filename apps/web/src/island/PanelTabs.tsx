@@ -16,7 +16,7 @@ export function PanelTabs({
   onTab: (panel: Panel) => void;
 }) {
   return (
-    <div className="isl-tabs" role="tablist" aria-label="Companion">
+    <div className="isl-tabs" role="tablist" aria-label="Spark Island">
       {TABS.map((tab) => (
         <button
           key={tab.id}
