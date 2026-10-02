@@ -2,6 +2,10 @@
 
 What each document is for. Each one describes what runs today plus its open items; older plans, round-by-round logs and review screenshots were removed and live in git history. Start with [AGENTS.md](../AGENTS.md).
 
+## Development
+
+- [DEVELOPMENT.md](DEVELOPMENT.md): requirements, first run, every `pnpm` command and the repo layout.
+
 ## Product
 
 - [product/PLAN.md](product/PLAN.md): product direction, scope and phases.
