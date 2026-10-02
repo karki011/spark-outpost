@@ -132,11 +132,14 @@ export function verifyCard(
   };
 }
 
+export type ChangedLines = CheckpointPayload['lines'];
+
 export function acceptCard(
   files: readonly RunChange[],
   reason: string,
   fixLabel: string | null = null,
   laws: readonly string[] = [],
+  lines: ChangedLines = null,
 ): CheckpointCard {
   return {
     kind: 'accept',
@@ -147,6 +150,7 @@ export function acceptCard(
       reason,
       files: [...files],
       laws: [...laws],
+      lines,
     }),
     options: [
       allow(CHECKPOINT_OPTION.keep, 'Keep'),

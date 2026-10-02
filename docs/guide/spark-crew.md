@@ -48,6 +48,8 @@ A Critic reviews bigger or riskier changes: large diffs, 3 or more source files,
 
 If the Critic finds problems, a Builder fixes them, up to 3 rounds. At **Review each step** you see the findings first and choose **Fix these findings**.
 
+If the Critic itself fails, for example with "Codex encountered an internal error", Spark retries it once, on your chat's provider when the Critic ran on another one. If the retry fails too, the review is skipped with a quiet note, "Review skipped (Critic unavailable: …)", and the change is kept as usual.
+
 After a fix, the Critic only rechecks: it confirms the earlier problems are fixed and looks for anything the fix itself broke. It doesn't start a new review of code the fix didn't touch. Hardening ideas the request didn't ask for, such as rejecting a zero or negative setting, are listed under **Not fixed automatically** instead of starting another round.
 
 ## Where Spark works
@@ -66,7 +68,9 @@ When the Builder finishes, the **Keep these changes?** card lists the changed fi
 1. Select **Keep** or **Revert**. To ask for changes, select **Fix**, type what should be fixed and select **Ask for a fix**.
 2. In a worktree, kept changes stay on the chat's branch. Select **Bring changes into** _branch_ to copy them into your checkout, or ship them. See [Ship and pull requests](ship-and-pull-requests.md).
 
-At **Automatic**, passing changes are kept by themselves. To undo a run later, select **Revert to before this run**.
+At **Automatic**, changes are kept by themselves, without a card. When the checks still fail, the Critic still has concerns or something is worth a look, the final reply says so in a note. To undo a run later, select **Revert to before this run**.
+
+Files changed counts only what the agent changed. If it updates the branch from main during the run, for example with a fetch and fast-forward or a rebase, the changes it brought in from main aren't counted, reviewed or reverted.
 
 > **Tip:** How much of this Spark does alone depends on the chat's [Spark autonomy](chats-and-modes.md#spark-autonomy): **Review each step**, **Automatic** or **Full auto → PR**.
 

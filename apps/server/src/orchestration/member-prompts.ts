@@ -10,6 +10,7 @@ import { pieceReviews } from '../coordinator/critic-pieces.ts';
 import { lawFacts } from '../laws/review.ts';
 import { removalFindings } from '../laws/removals.ts';
 import { fixDiff } from './fix-rounds.ts';
+import type { ChangedLines } from './checkpoint.ts';
 import type { Session } from './session.ts';
 import type { Spawn } from './transitions.ts';
 
@@ -44,6 +45,15 @@ export async function changesSoFar(s: Session): Promise<ChangeSummary> {
   if (!snapshot) return { files: [], patch: '' };
   const diff = await gitDiffSince(snapshot.root, snapshot.ref).catch(() => null);
   return diff ? { files: diff.stats, patch: diff.patch } : { files: [], patch: '' };
+}
+
+export async function changedLines(s: Session): Promise<ChangedLines> {
+  const { files } = await changesSoFar(s).catch(() => ({ files: [] as ChangedFile[] }));
+  if (files.length === 0) return null;
+  return {
+    added: files.reduce((sum, file) => sum + file.additions, 0),
+    removed: files.reduce((sum, file) => sum + file.deletions, 0),
+  };
 }
 
 export async function changesForReview(s: Session): Promise<ChangeSummary> {

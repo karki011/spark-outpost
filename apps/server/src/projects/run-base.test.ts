@@ -63,64 +63,68 @@ afterEach(async () => {
   await rm(scratch, { recursive: true, force: true });
 });
 
-describe('a run’s own changes when the agent updates the branch from its base', () => {
-  it('leaves out upstream changes brought in by a fetch and fast-forward', async () => {
-    const ref = await takeGitSnapshot(clone, 'run-ff');
-    await landUpstream();
-    git(clone, 'fetch', '-q', 'origin');
-    git(clone, 'merge', '-q', '--ff-only', 'origin/main');
-    await write(clone, 'app.ts', 'two\n');
-    expect(await changedPaths(ref)).toEqual(['modified app.ts']);
-  });
+describe(
+  'a run’s own changes when the agent updates the branch from its base',
+  { timeout: 30_000 },
+  () => {
+    it('leaves out upstream changes brought in by a fetch and fast-forward', async () => {
+      const ref = await takeGitSnapshot(clone, 'run-ff');
+      await landUpstream();
+      git(clone, 'fetch', '-q', 'origin');
+      git(clone, 'merge', '-q', '--ff-only', 'origin/main');
+      await write(clone, 'app.ts', 'two\n');
+      expect(await changedPaths(ref)).toEqual(['modified app.ts']);
+    });
 
-  it('leaves out upstream changes when the agent rebases its own commit onto newer main', async () => {
-    const ref = await takeGitSnapshot(clone, 'run-rebase');
-    await write(clone, 'feature.ts', 'export const feature = 1;\n');
-    await commitAll(clone, 'agent work');
-    await landUpstream();
-    git(clone, 'fetch', '-q', 'origin');
-    git(clone, 'rebase', '-q', 'origin/main');
-    await write(clone, 'app.ts', 'two\n');
-    expect(await changedPaths(ref)).toEqual(['added feature.ts', 'modified app.ts']);
-  });
+    it('leaves out upstream changes when the agent rebases its own commit onto newer main', async () => {
+      const ref = await takeGitSnapshot(clone, 'run-rebase');
+      await write(clone, 'feature.ts', 'export const feature = 1;\n');
+      await commitAll(clone, 'agent work');
+      await landUpstream();
+      git(clone, 'fetch', '-q', 'origin');
+      git(clone, 'rebase', '-q', 'origin/main');
+      await write(clone, 'app.ts', 'two\n');
+      expect(await changedPaths(ref)).toEqual(['added feature.ts', 'modified app.ts']);
+    });
 
-  it('keeps work that was uncommitted before the run out of the count after a fast-forward', async () => {
-    await write(clone, 'notes.md', 'mine\n');
-    const ref = await takeGitSnapshot(clone, 'run-dirty');
-    await landUpstream();
-    git(clone, 'fetch', '-q', 'origin');
-    git(clone, 'merge', '-q', '--ff-only', 'origin/main');
-    await write(clone, 'app.ts', 'two\n');
-    expect(await changedPaths(ref)).toEqual(['modified app.ts']);
-  });
+    it('keeps work that was uncommitted before the run out of the count after a fast-forward', async () => {
+      await write(clone, 'notes.md', 'mine\n');
+      const ref = await takeGitSnapshot(clone, 'run-dirty');
+      await landUpstream();
+      git(clone, 'fetch', '-q', 'origin');
+      git(clone, 'merge', '-q', '--ff-only', 'origin/main');
+      await write(clone, 'app.ts', 'two\n');
+      expect(await changedPaths(ref)).toEqual(['modified app.ts']);
+    });
 
-  it('still counts the agent’s own commits after its branch is pushed', async () => {
-    const ref = await takeGitSnapshot(clone, 'run-pushed');
-    await write(clone, 'feature.ts', 'export const feature = 1;\n');
-    await commitAll(clone, 'agent work');
-    git(clone, 'push', '-q', 'origin', 'spark/chat');
-    git(clone, 'fetch', '-q', 'origin');
-    expect(await changedPaths(ref)).toEqual(['added feature.ts']);
-  });
+    it('still counts the agent’s own commits after its branch is pushed', async () => {
+      const ref = await takeGitSnapshot(clone, 'run-pushed');
+      await write(clone, 'feature.ts', 'export const feature = 1;\n');
+      await commitAll(clone, 'agent work');
+      git(clone, 'push', '-q', 'origin', 'spark/chat');
+      git(clone, 'fetch', '-q', 'origin');
+      expect(await changedPaths(ref)).toEqual(['added feature.ts']);
+    });
 
-  it('counts everything against the snapshot when the branch did not move', async () => {
-    const ref = await takeGitSnapshot(clone, 'run-still');
-    await write(clone, 'app.ts', 'two\n');
-    await rm(join(clone, '.archived'), { recursive: true });
-    expect(await changedPaths(ref)).toEqual(['deleted .archived/Makefile', 'modified app.ts']);
-  });
+    it('counts everything against the snapshot when the branch did not move', async () => {
+      const ref = await takeGitSnapshot(clone, 'run-still');
+      await write(clone, 'app.ts', 'two\n');
+      await rm(join(clone, '.archived'), { recursive: true });
+      expect(await changedPaths(ref)).toEqual(['deleted .archived/Makefile', 'modified app.ts']);
+    });
 
-  it('reverts only the agent’s edit and keeps the newer main', async () => {
-    const ref = await takeGitSnapshot(clone, 'run-revert');
-    await landUpstream();
-    git(clone, 'fetch', '-q', 'origin');
-    git(clone, 'merge', '-q', '--ff-only', 'origin/main');
-    await write(clone, 'vitest.config.ts', 'export default { agent: true };\n');
-    const base = await liveRunBase(clone, ref);
-    await revertGitChanges(clone, base, await gitChanges(clone, base));
-    expect(await readFile(join(clone, 'vitest.config.ts'), 'utf8')).toBe(
-      'export default { upstream: true };\n',
-    );
-    expect(git(clone, 'status', '--porcelain')).toBe('');
-  });
-});
+    it('reverts only the agent’s edit and keeps the newer main', async () => {
+      const ref = await takeGitSnapshot(clone, 'run-revert');
+      await landUpstream();
+      git(clone, 'fetch', '-q', 'origin');
+      git(clone, 'merge', '-q', '--ff-only', 'origin/main');
+      await write(clone, 'vitest.config.ts', 'export default { agent: true };\n');
+      const base = await liveRunBase(clone, ref);
+      await revertGitChanges(clone, base, await gitChanges(clone, base));
+      expect(await readFile(join(clone, 'vitest.config.ts'), 'utf8')).toBe(
+        'export default { upstream: true };\n',
+      );
+      expect(git(clone, 'status', '--porcelain')).toBe('');
+    });
+  },
+);

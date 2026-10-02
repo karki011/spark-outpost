@@ -149,6 +149,7 @@ function blindFindings(text: string, rechecking: boolean) {
 }
 
 export async function critic(turn: RoleTurn): Promise<acp.StopReason> {
+  if (turn.text.includes('#criticdown')) throw new Error('Codex encountered an internal error.');
   const rechecking = turn.text.includes(RECHECK);
   const text = rechecking ? [...sessionPrompts(turn), turn.text].join('\n') : turn.text;
   if (rechecking) {
