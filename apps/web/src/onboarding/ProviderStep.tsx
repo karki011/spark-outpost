@@ -53,6 +53,7 @@ export function ProviderStep({
         key. Spark checks for Git on the next step.
       </p>
       <ProviderSetupView
+        density="roomy"
         providers={providers}
         openId={openId}
         onOpenChange={setOpenId}

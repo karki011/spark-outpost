@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expandSection } from './provider-screen.ts';
 import {
   CREW_REQUEST,
   agentHead,
@@ -29,6 +30,7 @@ async function chooseClaudeDefault(page: Page): Promise<void> {
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   const claude = providers.locator('.pconf[data-prov="claude"]');
   await providers.locator('.ptile[data-prov="claude"]').click();
+  await expandSection(claude, 'Defaults for new chats');
   const effort = claude.getByRole('button', { name: 'Claude effort' });
   await expect(effort).toHaveText('high');
 

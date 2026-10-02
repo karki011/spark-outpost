@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { expandSection } from './provider-screen.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -21,6 +22,7 @@ test('settings opens from the sidebar and lets a CLI provider sign in again', as
   const claude = providers.locator('.pconf[data-prov="claude"]');
   await providers.locator('.ptile[data-prov="claude"]').click();
   await expect(page).toHaveURL(/#\/settings\/providers\/claude$/);
+  await expandSection(claude, 'How to connect');
   await claude.getByRole('button', { name: 'Sign in again' }).click();
   const terminal = claude.getByRole('region', { name: 'Terminal' });
   await expect(terminal).toContainText('Sign in to Claude');
@@ -164,6 +166,7 @@ test('provider setting dropdowns return focus to their trigger after a keyboard 
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   const claude = providers.locator('.pconf[data-prov="claude"]');
   await providers.locator('.ptile[data-prov="claude"]').click();
+  await expandSection(claude, 'Defaults for new chats');
   const rows = ['Claude default mode', 'Claude effort'];
   if ((await claude.getByRole('button', { name: 'Claude model' }).count()) > 0) {
     rows.unshift('Claude model');
@@ -227,9 +230,9 @@ test('the Jev screen keeps only its own switch and explains it in an info tip', 
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   await expect(providers.getByRole('region', { name: 'Advisor' })).toContainText('Not set up');
   await providers.locator('.ptile[data-prov="jev"]').click();
-  const advisor = providers.locator('.pconf[data-prov="jev"]').getByRole('region', {
-    name: 'Settings',
-  });
+  const jev = providers.locator('.pconf[data-prov="jev"]');
+  await expandSection(jev, 'Settings');
+  const advisor = jev.getByRole('region', { name: 'Settings' });
   await expect(providers).not.toContainText('Full auto');
   await expect(advisor.getByRole('switch', { name: 'Check changes with Jev' })).toBeDisabled();
   await expect(advisor).toContainText('Connect Jev to use this.');
@@ -258,6 +261,7 @@ test('a failed test message makes the provider blob wobble and shows the error',
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   const claude = providers.locator('.pconf[data-prov="claude"]');
   await providers.locator('.ptile[data-prov="claude"]').click();
+  await expandSection(claude, 'Test');
   let answer = () => {};
   const held = new Promise<void>((resolve) => (answer = resolve));
   await page.route('**/api/providers/claude/test', async (route) => {
@@ -362,7 +366,13 @@ test('a provider link opens its screen, Escape steps back to the tiles, then clo
 
   await providers.locator('.ptile[data-prov="claude"]').click();
   const claude = providers.getByRole('region', { name: 'Claude' });
-  await expect(claude.getByRole('region', { name: 'Danger zone' })).toBeVisible();
+  for (const name of ['How to connect', 'Test', 'Defaults for new chats', 'Danger zone']) {
+    const toggle = claude.getByRole('button', { name: new RegExp(`^${name}`) });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  }
+  await expect(claude.getByRole('button', { name: /^Test/ })).toContainText('Not sent yet');
+  await expandSection(claude, 'Danger zone');
+  await expandSection(claude, 'Defaults for new chats');
   const connected = await new AxeBuilder({ page })
     .include('.pconf')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
@@ -382,6 +392,7 @@ test('disconnecting a CLI provider waits 10 seconds for Undo', async ({ page }) 
   const codex = page.getByRole('dialog', { name: 'AI providers' }).getByRole('region', {
     name: 'Codex',
   });
+  await expandSection(codex, 'Danger zone');
   const hold = codex.getByRole('button', { name: 'Hold to disconnect Codex' });
   await expect(hold).toHaveAccessibleDescription(
     'Spark stops using Codex. Your CLI login stays. You get 10 seconds to undo.',

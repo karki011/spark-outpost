@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expandSection } from './provider-screen.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -135,6 +136,7 @@ test('the rules pick models, so there is no frontier switch, and Jev can stop ch
   await dialog.getByRole('tab', { name: /AI providers/ }).click();
   const providers = page.getByRole('dialog', { name: 'AI providers' });
   await providers.locator('.ptile[data-prov="jev"]').click();
+  await expandSection(providers.locator('.pconf[data-prov="jev"]'), 'Settings');
   const diffs = providers.getByRole('switch', { name: 'Check changes with Jev' });
   await expect(diffs).toBeChecked();
   await expect(diffs).toHaveAccessibleDescription(

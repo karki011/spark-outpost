@@ -37,6 +37,7 @@ interface ProviderSetupViewProps {
   onVerifyStart?: () => void;
   onVerifyOutcome?: (outcome: 'success' | 'failure') => void;
   advisorSettings?: ReactNode;
+  density: 'compact' | 'roomy';
 }
 
 function useModelLabels(providers: ProviderSetup[]) {
@@ -62,6 +63,7 @@ export function ProviderSetupView({
   onVerifyStart,
   onVerifyOutcome,
   advisorSettings,
+  density,
 }: ProviderSetupViewProps) {
   const [failures, setFailures] = useState<Partial<Record<ConnectableId, VerifyFailure>>>({});
   const [lastOpened, setLastOpened] = useState<ConnectableId | null>(null);
@@ -118,6 +120,7 @@ export function ProviderSetupView({
         >
           {open ? (
             <ProviderConfigure
+              density={density}
               setup={open.setup}
               status={open.status}
               isDefault={open.isDefault}

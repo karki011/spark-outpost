@@ -260,6 +260,7 @@ export function SettingsDialog({ section, onSection, onClose }: SettingsDialogPr
                       defaults.
                     </p>
                     <ProviderSetupView
+                      density="compact"
                       providers={setup.data.providers}
                       advisors={setup.data.advisors}
                       defaultProvider={setup.data.profile.defaultProvider}

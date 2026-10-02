@@ -22,7 +22,9 @@ New chats start with your default provider's model, mode and effort. For the mod
 ## Change the defaults for new chats
 
 1. Open **Settings → AI providers** and select a connected provider's tile.
-2. Under **Defaults for new chats**, change **Model**, **Mode** or **Effort**.
+2. Select **Defaults for new chats** to open it, then change **Model**, **Mode** or **Effort**.
+
+In Settings, each part of a provider's screen is a row with a one-line summary, such as the model, mode and effort, or when the last test passed. Select a row to open or close it. Spark opens the part that needs you: **How to connect** until the provider is connected, or the part with a problem. It remembers which rows you open.
 
 ![Defaults for new chats on the Claude screen](images/providers-defaults-light.png)
 

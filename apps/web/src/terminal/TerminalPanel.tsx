@@ -19,6 +19,7 @@ interface TerminalPanelProps {
   step: TerminalStep;
   onCheckAgain: () => void;
   onDismiss: () => void;
+  compact?: boolean;
 }
 
 type GuideState = 'todo' | 'active' | 'done';
@@ -41,6 +42,7 @@ export function TerminalPanel({
   step,
   onCheckAgain,
   onDismiss,
+  compact = false,
 }: TerminalPanelProps) {
   const screen = useRef<HTMLDivElement>(null);
   const connection = useRef<TerminalConnection | null>(null);
@@ -49,6 +51,7 @@ export function TerminalPanel({
   const [ran, setRan] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [hint, setHint] = useState<TerminalHint | null>(null);
+  const [tall, setTall] = useState(false);
   const checkAgainRef = useRef(onCheckAgain);
 
   useEffect(() => {
@@ -101,7 +104,10 @@ export function TerminalPanel({
         : notice;
 
   return (
-    <section className="term-panel" aria-label="Terminal">
+    <section
+      className={compact ? `term-panel compact${tall ? ' tall' : ''}` : 'term-panel'}
+      aria-label="Terminal"
+    >
       <div className="term-guide">
         <b>{title}</b>
         {reason && (
@@ -140,6 +146,16 @@ export function TerminalPanel({
         <span className="term-status" aria-live="polite">
           {statusText}
         </span>
+        {compact && (
+          <button
+            type="button"
+            className="term-size"
+            aria-pressed={tall}
+            onClick={() => setTall((value) => !value)}
+          >
+            Taller
+          </button>
+        )}
         <button
           type="button"
           className="term-close"

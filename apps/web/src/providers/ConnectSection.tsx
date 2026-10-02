@@ -123,9 +123,11 @@ function ConnectForm({ setup, connect }: { setup: ConnectSetup; connect: Provide
 export function ConnectSection({
   setup,
   connect,
+  compact,
 }: {
   setup: ConnectSetup;
   connect: ProviderConnect;
+  compact: boolean;
 }) {
   const editing = !setup.connection || connect.changing;
   return (
@@ -156,6 +158,7 @@ export function ConnectSection({
                   void connect.verify();
                 }}
                 onDismiss={connect.closeTerminal}
+                compact={compact}
               />
             </motion.div>
           )}

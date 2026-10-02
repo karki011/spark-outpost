@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { expandSection } from './provider-screen.ts';
 import { resetTestDatabase } from './database.ts';
 import { REJECTED_KEY_MARKER } from './stub-config.ts';
 import { openChats } from './navigation.ts';
@@ -60,6 +61,7 @@ test('Z.ai connects with an API key, says who bills it, and runs a chat', async 
   await expect(zai.locator('.pchip.ok')).toHaveText('Connected · API key');
   await expect(page.locator('body')).not.toContainText(ZAI_KEY);
 
+  for (const name of ['How to connect', 'Test', 'Danger zone']) await expandSection(zai, name);
   const results = await new AxeBuilder({ page })
     .include('.pconf[data-prov="zai"]')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
