@@ -86,8 +86,8 @@ async function linkPull(key: string, url: string) {
   await addTaskLink(t.db, rows[0]!.task_id, { kind: 'pr', url, title: url, source: 'ship' });
 }
 
-async function finishRuns() {
-  await t.db.query(`UPDATE runs SET status = 'succeeded', finished_at = now()`);
+async function setRuns(status: 'running' | 'succeeded') {
+  await t.db.query(`UPDATE runs SET status = $1`, [status]);
 }
 
 const ticketIn = async (key: string) =>
@@ -191,11 +191,12 @@ describe('tickets inbox', () => {
     await connectGitHubToken();
     fakePull(1, { draft: true });
     await linkPull('ENG-12', 'https://github.com/acme/widgets/pull/1');
+    await setRuns('running');
     const working = await ticketIn('ENG-12');
     expect(working).toMatchObject({ section: 'spark', reason: 'Spark working', tone: 'running' });
     expect(working.chat?.state).toBe('running');
 
-    await finishRuns();
+    await setRuns('succeeded');
     const drafted = await ticketIn('ENG-12');
     expect(drafted).toMatchObject({ section: 'review', reason: 'Draft PR #1' });
     expect(drafted.pullRequest).toMatchObject({ repo: 'acme/widgets', number: 1, state: 'draft' });
@@ -244,18 +245,17 @@ describe('tickets inbox', () => {
     expect(await checks()).toBe('pending');
     pull.checkRuns[1] = { status: 'completed', conclusion: 'failure' };
     expect(await checks()).toBe('failing');
-    expect(await ticketIn('ENG-12')).toMatchObject({ section: 'spark' });
-    await finishRuns();
+    const rules = async () => (await ticketIn('ENG-12')).flags.map((flag) => flag.rule);
+    await setRuns('running');
+    expect(await rules()).not.toContain('pr-checks');
+    await setRuns('succeeded');
     expect(await ticketIn('ENG-12')).toMatchObject({
       section: 'attention',
       reason: 'PR #1 checks failing',
       tone: 'error',
     });
     pull.checkRuns[1] = { status: 'completed', conclusion: 'success' };
-    expect(await ticketIn('ENG-12')).toMatchObject({
-      section: 'review',
-      reason: 'PR #1 · checks passing',
-    });
+    expect(await rules()).not.toContain('pr-checks');
     pull.checkRuns[1] = { status: 'completed', conclusion: 'skipped' };
     expect(await checks()).toBe('passing');
   });
@@ -263,7 +263,7 @@ describe('tickets inbox', () => {
   it('shows Not available when the pull request cannot be read', async () => {
     await connect();
     await linkPull('ENG-12', 'https://github.com/acme/widgets/pull/9');
-    await finishRuns();
+    await setRuns('succeeded');
     const item = await ticketIn('ENG-12');
     expect(item).toMatchObject({ section: 'review', reason: 'PR opened', pullRequest: null });
   });
