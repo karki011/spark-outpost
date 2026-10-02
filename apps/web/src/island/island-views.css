@@ -47,6 +47,21 @@
   padding-left: 14px;
 }
 
+.isl-note {
+  min-height: 74px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.isl-note .isl-ttl {
+  margin: 0 0 4px;
+}
+
+.isl-note .isl-hint {
+  margin: 0;
+}
+
 .isl-kcard:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;

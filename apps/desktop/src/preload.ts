@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('sparkDesktop', {
     onGeometry: (callback: (geometry: unknown) => void) =>
       listen(IPC.islandGeometryChanged, callback),
     onCommand: (callback: (action: unknown) => void) => listen(IPC.islandCommand, callback),
+    onEscape: (callback: () => void) => listen(IPC.islandEscape, callback),
     setInteractive: (on: boolean) => ipcRenderer.send(IPC.islandInteractive, on),
     setFocusable: (on: boolean) => ipcRenderer.send(IPC.islandFocusable, on),
     drag: (phase: DragPhase, x: number, y: number) => ipcRenderer.send(IPC.islandDrag, phase, x, y),

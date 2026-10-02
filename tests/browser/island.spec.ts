@@ -56,6 +56,10 @@ async function fakeNonNotchDesktop(page: Page) {
           }),
           onGeometry: none,
           onCommand: none,
+          onEscape: (callback: () => void) => {
+            Object.assign(window, { islandEscape: callback });
+            return () => undefined;
+          },
           setInteractive: () => undefined,
           setFocusable: (on: boolean) => focus.push(on),
           drag: () => undefined,
@@ -125,6 +129,24 @@ test('peeks, shows live work, takes an approval and celebrates when work finishe
   await expect(island(page)).toHaveAttribute('data-view', 'moment');
   await expect(island(page)).toContainText('Fix image uploads is done');
   await shot(page, 'done');
+
+  const popup = page.waitForEvent('popup');
+  await island(page).getByRole('button', { name: 'Open chat' }).click();
+  await (await popup).close();
+  await expect(island(page)).toHaveAttribute('data-view', 'note');
+  const note = island(page).getByRole('status').filter({ hasText: 'Opening Spark…' });
+  await expect(note).toBeVisible();
+  await expect(island(page)).not.toContainText('Fix image uploads is done');
+  await page.waitForTimeout(700);
+  const scoutBox = (await island(page).locator('.isl-scout-wrap').boundingBox())!;
+  for (const text of [note.locator('.isl-ttl'), note.locator('.isl-hint')]) {
+    expect((await text.boundingBox())!.x).toBeGreaterThan(scoutBox.x + scoutBox.width);
+  }
+  const noteBox = (await note.boundingBox())!;
+  const islandBox = (await island(page).boundingBox())!;
+  expect(noteBox.y + noteBox.height).toBeLessThan(islandBox.y + islandBox.height);
+  await expect(island(page)).not.toHaveAttribute('data-view', 'note', { timeout: 3000 });
+  await expect(island(page)).not.toContainText('Fix image uploads is done');
 });
 
 test('the approval card takes Y only once focused', async ({ page }) => {
@@ -376,6 +398,16 @@ test('without a notch the blob peeks on its own and the pill opens a focused cha
   expect(lines.height).toBeLessThan(lines.line * 1.5);
   expect(lines.fits).toBe(true);
   await page.keyboard.press('Escape');
+  await expect(message).toHaveCount(0);
+  await expect.poll(lastFocus).toBe(false);
+
+  await page.mouse.move(box.x + box.width / 2, 300);
+  await page.mouse.move(box.x + box.width / 2, 10, { steps: 4 });
+  await island(page).getByRole('button', { name: 'New chat' }).click();
+  await expect(message).toBeFocused();
+  await message.fill('Keep this draft');
+  await message.blur();
+  await page.evaluate(() => (window as unknown as { islandEscape: () => void }).islandEscape());
   await expect(message).toHaveCount(0);
   await expect.poll(lastFocus).toBe(false);
 });

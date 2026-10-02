@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen, type Display } from 'electron';
+import { app, BrowserWindow, globalShortcut, screen, type Display } from 'electron';
 import type { IslandPosition, ShortcutAction } from './companion-settings.ts';
 import type { IslandHandle } from './companion.ts';
 import {
@@ -13,6 +13,7 @@ import {
   type Point,
   type Size,
 } from './island-geometry.ts';
+import { escapeGuard } from './island-escape.ts';
 import { setIslandFocus } from './island-focus.ts';
 import { ISLAND_LEVEL, ISLAND_PATH, islandWindowOptions } from './island-options.ts';
 import { IPC, type DragPhase } from './ipc-channels.ts';
@@ -80,6 +81,8 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     console.log(`[island] ${reason}: ${JSON.stringify(window.getBounds())}`);
   };
 
+  const escape = escapeGuard(globalShortcut, () => send(IPC.islandEscape, null));
+
   const moveTo = (position: Point, animate = false) => {
     window.setBounds(islandBounds(position, resting()), animate);
   };
@@ -103,6 +106,7 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     report('shown');
   });
   window.on('closed', () => {
+    escape.arm(false);
     screen.off('display-added', place);
     screen.off('display-removed', place);
     screen.off('display-metrics-changed', place);
@@ -138,7 +142,10 @@ export function openIslandWindow(options: IslandWindowOptions): IslandWindow {
     setInteractive: (on) => {
       if (!window.isDestroyed()) window.setIgnoreMouseEvents(!on, { forward: true });
     },
-    setFocusable: (on) => setIslandFocus(window, on),
+    setFocusable: (on) => {
+      setIslandFocus(window, on);
+      escape.arm(on && !window.isDestroyed());
+    },
     setRestSize: (size) => {
       const changed = JSON.stringify(size) !== JSON.stringify(rest);
       rest = size;

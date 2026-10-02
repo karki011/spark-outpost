@@ -217,7 +217,7 @@ function ViewBody({ props }: { props: IslandShellProps }) {
     case 'note':
       return (
         <div className="isl-body">
-          <div className="isl-card plain" data-wash="accent" role="status">
+          <div className="isl-card isl-note" data-wash="accent" role="status">
             <div className="isl-ttl">{props.note?.title}</div>
             <div className="isl-hint">{props.note?.sub}</div>
           </div>
@@ -446,7 +446,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
             </div>
           )}
           {view.kind === 'moment' && !props.hover && (
-            <span key={viewKey(view)} className="isl-closebar" aria-hidden="true" />
+            <span key={`bar-${viewKey(view)}`} className="isl-closebar" aria-hidden="true" />
           )}
         </div>
         <div ref={scoutRef} className="isl-scout-wrap" data-wave={props.wave || undefined}>

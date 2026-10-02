@@ -183,6 +183,7 @@ export function IslandApp() {
 
   const openChat = (id: string) => {
     closePanel();
+    if (momentChat === id) dismiss();
     setNote({ title: 'Opening Spark…', sub: 'The chat opens in the main window.' });
     const desktop = sparkDesktop();
     if (desktop) desktop.island.openChat(id);
@@ -228,7 +229,9 @@ export function IslandApp() {
     onHover,
     onCommand: command,
     onBlur: () => {
-      if (panel && sparkDesktop()) closePanel();
+      if (!sparkDesktop()) return;
+      if (panel) closePanel();
+      setFocusSignal(0);
     },
   });
 

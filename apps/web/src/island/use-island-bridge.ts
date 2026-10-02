@@ -65,9 +65,21 @@ export function useIslandBridge(options: BridgeOptions): IslandGeometry {
     void desktop.island.geometry().then((next) => next && setGeometry(next));
     const offGeometry = desktop.island.onGeometry(setGeometry);
     const offCommand = desktop.island.onCommand((action) => latest.current.onCommand(action));
+    const offEscape = desktop.island.onEscape(() => {
+      const target = document.activeElement ?? document.body;
+      target.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Escape',
+          code: 'Escape',
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
     return () => {
       offGeometry();
       offCommand();
+      offEscape();
     };
   }, [desktop]);
 

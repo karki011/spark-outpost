@@ -12,6 +12,7 @@ export const IPC = {
   islandGeometry: 'island:geometry',
   islandGeometryChanged: 'island:geometry-changed',
   islandCommand: 'island:command',
+  islandEscape: 'island:escape',
   openChat: 'spark:open-chat',
   pendingChat: 'spark:pending-chat',
   updatesGet: 'updates:get',

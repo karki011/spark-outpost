@@ -35,6 +35,7 @@ export interface SparkDesktop {
     geometry(): Promise<IslandGeometry | null>;
     onGeometry(callback: (geometry: IslandGeometry) => void): Unsubscribe;
     onCommand(callback: (action: IslandAction) => void): Unsubscribe;
+    onEscape(callback: () => void): Unsubscribe;
     setInteractive(on: boolean): void;
     setFocusable(on: boolean): void;
     drag(phase: 'start' | 'move' | 'end', x: number, y: number): void;
