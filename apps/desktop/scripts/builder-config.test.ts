@@ -96,6 +96,18 @@ describe('builderConfig', () => {
     });
   });
 
+  it('signs the dmg only with a Developer ID certificate', () => {
+    const adHoc = builderConfig({ ...base, archs: ['x64'], env: {} });
+    const signed = builderConfig({
+      ...base,
+      archs: ['x64'],
+      env: { CSC_NAME: 'Developer ID Application: Me (TEAM123)' },
+    });
+
+    expect(adHoc.dmg).toMatchObject({ sign: false, writeUpdateInfo: false });
+    expect(signed.dmg).toMatchObject({ sign: true, writeUpdateInfo: false });
+  });
+
   it('publishes update files for every channel to the generic feed', () => {
     const config = builderConfig({
       ...base,

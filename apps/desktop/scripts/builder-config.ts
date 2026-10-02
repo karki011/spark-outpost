@@ -143,6 +143,6 @@ export function builderConfig(options: BuilderOptions): Configuration {
       entitlementsInherit: options.entitlements,
       minimumSystemVersion: '12.0',
     },
-    dmg: { writeUpdateInfo: false },
+    dmg: { writeUpdateInfo: false, sign: !signing.adHoc },
   };
 }

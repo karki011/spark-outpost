@@ -3,7 +3,8 @@ import { cp, glob, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { build, Platform } from 'electron-builder';
-import { builderConfig, type MacArch } from './builder-config.ts';
+import { builderConfig, signingPlan, type MacArch } from './builder-config.ts';
+import { notarizeDmgs } from './notarize-dmg.ts';
 
 const run = promisify(execFile);
 
@@ -127,6 +128,7 @@ export async function packageDesktop(options: PackageOptions): Promise<string[]>
     config,
     publish: 'never',
   });
+  if (signingPlan(options.env).notarize) await notarizeDmgs(artifacts, options.env);
   await writeReleaseNotes(options.outputDir, options.version);
   return artifacts;
 }
