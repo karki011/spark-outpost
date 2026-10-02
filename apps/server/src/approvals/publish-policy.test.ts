@@ -11,18 +11,19 @@ import {
   publishRequested,
   publishVerdict,
   type PublishContext,
+  type PublishGrant,
 } from './publish-policy.ts';
 
 const BRANCH = 'spark/fix-dates-1a2b';
 const TASK = { branch: BRANCH, protectedBranches: ['main', 'master', 'develop'] };
-const MANUAL = { level: 'balanced' as const, requested: false };
+const MANUAL: PublishGrant = { level: 'balanced', requested: false };
 
 function context(grant = MANUAL, task: PublishContext['task'] = TASK): PublishContext {
   return { grant, task };
 }
 
 describe('publishBasis()', () => {
-  it.each<[ModePosture, typeof MANUAL, string | null]>([
+  it.each<[ModePosture, PublishGrant, string | null]>([
     ['full_access', MANUAL, 'mode'],
     ['auto', MANUAL, 'mode'],
     ['asks', { level: 'full-auto', requested: false }, 'full_auto'],
@@ -104,7 +105,7 @@ describe('publishVerdict() leaves Manual runs without a request to the old rules
 });
 
 describe('publishVerdict() keeps the rails in every permitted mode', () => {
-  const permitted: [ModePosture, typeof MANUAL][] = [
+  const permitted: [ModePosture, PublishGrant][] = [
     ['full_access', MANUAL],
     ['auto', MANUAL],
     ['asks', { level: 'full-auto', requested: false }],
