@@ -89,6 +89,11 @@ const app = createApp({
   serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD,
   parallelBuilders: config.COORDINATOR_MODE === 'parallel',
   ...(config.WEB_ROOT ? { webRoot: config.WEB_ROOT } : {}),
+  diagnostics: {
+    appVersion: config.SPARK_APP_VERSION ?? null,
+    logDir: config.SPARK_LOG_DIR ?? null,
+    dataDir: config.SPARK_DATA_DIR ?? null,
+  },
 });
 const outcomeSweep = startOutcomeSweep(db, workspaceId, {
   sampleRate: config.OUTCOME_SAMPLE_RATE,

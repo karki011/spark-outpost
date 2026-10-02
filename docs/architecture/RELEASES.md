@@ -7,7 +7,11 @@ How the desktop app is packaged, signed, published and updated. The installed ap
 | Piece                            | Where                                                            | State                                                                                                  |
 | -------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | Packaging                        | `pnpm desktop:package` (`apps/desktop/scripts/package.ts`)       | Works locally: zip + dmg for x64 and arm64, ad-hoc signed                                              |
-| Update feed URL                  | `UPDATE_FEED_URL` in `apps/desktop/scripts/builder-config.ts`    | Empty until hosting is chosen; `SPARK_UPDATE_FEED_URL` overrides it per build                          |
+| Update feed URL                  | `UPDATE_FEED_URL` in `apps/desktop/scripts/builder-config.ts`    | Empty until the R2 bucket exists; `SPARK_UPDATE_FEED_URL` overrides it per build                       |
+| Release build check              | `pnpm desktop:package --release`                                 | Fails with a clear message without `CSC_NAME`, notary variables, a feed URL or both archs              |
+| Publish                          | `pnpm desktop:release` (`apps/desktop/scripts/release.ts`)       | Dry run by default; `--yes` uploads to Cloudflare R2 with rclone, artifacts first, channel files last  |
+| Logs                             | `apps/desktop/src/file-log.ts`                                   | Main, API and worker output in `<data>/logs/spark-outpost*.log`, redacted, 2 MB × 4 files              |
+| Diagnostics and feedback         | `GET /api/diagnostics/export`, Settings › Help, Help menu        | Zip of versions, providers, settings, migrations and logs; feedback opens a draft the user sends       |
 | Updater                          | `apps/desktop/src/updater.ts`                                    | electron-updater, generic provider, prod only                                                          |
 | Backup before migrating          | `apps/desktop/src/update-migration.ts`                           | pg_dump 17 when found, else a cold copy of the data folder; last 3 kept; restored if a migration fails |
 | Settings › Updates + update blob | `apps/web/src/settings/UpdatesSection.tsx`, `app/UpdateBlob.tsx` | Desktop prod only; hidden in the browser and the dev app (preview with `SPARK_UPDATE_PREVIEW`)         |
@@ -18,9 +22,43 @@ How the desktop app is packaged, signed, published and updated. The installed ap
 
 1. **Developer ID certificate.** In the Apple Developer account, create a _Developer ID Application_ certificate and install it in the login keychain (`security find-identity -v -p codesigning` must list it). Builds then sign with it when `CSC_NAME="Developer ID Application: <Name> (<TEAMID>)"` is set; in CI use `CSC_LINK` (base64 .p12) and `CSC_KEY_PASSWORD`. Without either, builds are signed ad hoc and never notarized.
 2. **Notarization credentials.** electron-builder reads, by name only: `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` (or `APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, the safer option for CI). `~/.zshrc` already exports the first three; `APPLE_PASSWORD` there is not used. Notarization runs only when a Developer ID is configured and one complete set is present.
-3. **Hosting.** Pick one place that serves static files over HTTPS and set `UPDATE_FEED_URL` once. Every file of a release goes to that one folder (see [Feed layout](#feed-layout)). The likely choice is a public GitHub repo `spark-outpost-releases`; GitHub Pages or a release named `feed` that is replaced each time both work with the generic provider. A plain `releases/latest/download` URL does not serve Beta, because `latest` skips prereleases.
+3. **Hosting: a Cloudflare R2 bucket.** See [Set up the R2 feed](#set-up-the-r2-feed). Every file of a release goes to one folder (see [Feed layout](#feed-layout)).
 4. **App icon.** Already in place: `pnpm --filter @spark-outpost/desktop icons` regenerates `build/icon.icns` (all sizes 16–1024 with @2x), `assets/icon.png`, `assets/icon-dev.png` (DEV corner badge, used for the dev app's Dock icon and About panel) and the menu-bar `assets/trayTemplate.png` / `@2x` from the Scout shape in `apps/web/src/brand/scout-shape.ts`. Rerun it after changing the logo and commit the output.
 5. **First signed install is manual.** Ad-hoc builds cannot update to signed ones (Squirrel.Mac requires the new signature to satisfy the running app's designated requirement), so the first Developer ID build is installed from its dmg. Every later update is automatic.
+
+## Set up the R2 feed
+
+R2 serves the generic electron-updater feed with no egress fees, and its free tier (10 GB-month of storage, 1 million writes and 10 million reads a month) covers a small beta. The user does these steps once, in the Cloudflare dashboard; nothing in the repo creates accounts or buckets.
+
+1. **Create the bucket.** Cloudflare dashboard → **R2 Object Storage** → **Create bucket**. Name it, for example, `spark-outpost-releases`; location Automatic; Standard storage class.
+2. **Make it readable.** Open the bucket → **Settings** → **Public access**:
+   - With a domain on Cloudflare: **Custom Domains** → **Connect Domain** → for example `updates.example.com`. Preferred: it is cached by Cloudflare and has no rate limit.
+   - Without one: **R2.dev subdomain** → **Allow Access**. It gives `https://pub-<id>.r2.dev`. Cloudflare rate-limits r2.dev and describes it as not for production, which is fine for a few testers.
+3. **Create an API token scoped to the bucket.** R2 Object Storage → **Manage API tokens** → **Create API token** (an Account API token): permission **Object Read & Write**, **Apply to specific buckets only** → the bucket, and a TTL if wanted. Copy the **Access Key ID** and **Secret Access Key** (shown once) and note the account ID in the S3 endpoint `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`.
+4. **Set the variables** where the shell loads them (for example the `# App developer` block in `~/.zshrc`, next to the Apple ones). Never commit them; the publish script only names them and passes them to rclone through its environment:
+   ```sh
+   export R2_ACCOUNT_ID=...            # or R2_ENDPOINT=https://... for another S3-compatible store
+   export R2_ACCESS_KEY_ID=...
+   export R2_SECRET_ACCESS_KEY=...
+   export R2_BUCKET=spark-outpost-releases
+   export R2_PREFIX=mac                # optional folder inside the bucket
+   ```
+5. **Install rclone:** `brew install rclone`. No `rclone config` is needed.
+6. **Set the feed URL** to the public URL of that folder, for example `https://updates.example.com/mac` (or `https://pub-<id>.r2.dev/mac`): put it in `UPDATE_FEED_URL` in `apps/desktop/scripts/builder-config.ts` and commit it (it is public), or export `SPARK_UPDATE_FEED_URL` for each build. The URL is baked into each build's `app-update.yml`, so set it before the first build you hand out.
+7. **Set the feedback address**: `FEEDBACK_EMAIL` (or `FEEDBACK_REPO`, `owner/repo`, for prefilled GitHub issues) in `apps/web/src/help/feedback-target.ts`, or `VITE_SPARK_FEEDBACK_EMAIL` / `VITE_SPARK_FEEDBACK_REPO` when building. With neither, **Send feedback** copies the report instead.
+
+### What R2 costs
+
+A release is about 2.1 GB: per arch, a 530 MB zip, a dmg of about the same size and a small blockmap. Storage is the only cost that grows; writes, update checks and downloads stay inside the free tier for a small beta, and egress is free.
+
+| Releases kept on the feed (N) | Storage | Billed beyond 10 GB at $0.015/GB-month |
+| ----------------------------- | ------- | -------------------------------------- |
+| 3                             | 6.4 GB  | $0.00                                  |
+| 5                             | 10.7 GB | about $0.01 a month                    |
+| 10                            | 21 GB   | about $0.17 a month                    |
+| 20                            | 43 GB   | about $0.49 a month                    |
+
+In general: about max(0, 2.14 × N − 10) × $0.015 a month. Deleting the dmgs of old releases halves it; keep old zips' blockmaps for differential downloads. Prices as of 2026; check Cloudflare's R2 pricing page.
 
 ## Feed layout
 
@@ -40,14 +78,14 @@ release-notes.html        rendered from apps/desktop/CHANGELOG.md; linked from S
 
 ## Cutting a release
 
-1. **Version.** Bump `version` in `apps/desktop/package.json` (semver). Beta: `0.3.0-beta.1`, `0.3.0-beta.2`, … Stable: `0.3.0`.
+1. **Version.** Bump `version` in `apps/desktop/package.json` (semver). Beta: `0.1.0-beta.1`, `0.1.0-beta.2`, … Stable: `0.1.0`. A version with a `-beta.n` suffix writes only `beta-mac.yml`, shows **Beta** in About and Settings, and starts new installs on the Beta channel; other prerelease tags are refused by the publish script.
 2. **Changelog.** Add a section to `apps/desktop/CHANGELOG.md`.
 3. **Checks.** `pnpm check`, `pnpm test:db`, `pnpm test:browser`. If the release adds migrations, read them for anything that cannot run inside a transaction and confirm the backup path with `pnpm desktop:e2e-update`.
 4. **Build, sign, notarize.** With the certificate installed and the Apple variables set:
    ```sh
-   CSC_NAME="Developer ID Application: <Name> (<TEAMID>)" pnpm desktop:package
+   CSC_NAME="Developer ID Application: <Name> (<TEAMID>)" pnpm desktop:package --release
    ```
-   `--arch x64|arm64|current` builds one arch; the default builds both. `--version` overrides the package version.
+   `--release` stops before building, with one line per problem, when `CSC_NAME` (or `CSC_LINK`) is missing, the notarization variables are incomplete, no feed URL is set, or `--arch` would build only one architecture. Without `--release`, builds stay unsigned (ad hoc) for local testing. `--arch x64|arm64|current` builds one arch; the default builds both in one run, which matters: electron-builder merges both zips into one `beta-mac.yml` / `latest-mac.yml`, and electron-updater's MacUpdater picks the file whose name contains `arm64` on Apple silicon (including under Rosetta) and the other one on Intel. Two separate runs would overwrite each other's channel file. `--version` overrides the package version.
 5. **Verify the artifacts.**
    ```sh
    codesign --verify --deep --strict --verbose=2 "apps/desktop/release/<v>/mac-arm64/Spark Outpost.app"
@@ -55,11 +93,21 @@ release-notes.html        rendered from apps/desktop/CHANGELOG.md; linked from S
    xcrun stapler validate "apps/desktop/release/<v>/Spark-Outpost-<v>-arm64.dmg"
    ```
    Open the dmg on a machine (or user account) that has the previous version installed and confirm it starts and keeps the data.
-6. **Upload.** Upload zips, blockmaps, dmgs and `release-notes.html` first, then the `*-mac.yml` files last, so no client sees a channel file that points at a missing zip.
+6. **Upload.**
+   ```sh
+   pnpm desktop:release            # dry run: prints every file, its size and the order; uploads nothing
+   pnpm desktop:release --yes      # uploads
+   ```
+   The script reads `apps/desktop/release/<version>/` (`--version` picks another), checks that the channel files are for this version and list both arch zips, and uploads zips, blockmaps, dmgs and `release-notes.html` first and the `*-mac.yml` files last, so no client sees a channel file that points at a missing zip. Artifacts are uploaded with a one-year immutable `Cache-Control`; channel files and the release notes with `no-cache`. If an upload fails, it stops before the channel files.
 
 ### Beta → Stable
 
-A version string is baked into the binary, so promotion is a rebuild: tag the commit the last beta was built from, set the version to `0.3.0`, build and upload. That writes `latest-mac.yml` (Stable users get it) and `beta-mac.yml` (Beta users move from `0.3.0-beta.n` to `0.3.0`).
+A version string is baked into the binary, so a `-beta.n` build is never served to Stable. Two ways to promote:
+
+- **Rebuild.** Tag the commit the last beta was built from, set the version to `0.1.0`, build with `--release` and run `pnpm desktop:release --yes`. A stable version writes `beta-mac.yml` (Beta users move from `0.1.0-beta.n` to `0.1.0`) and then `latest-mac.yml` (Stable users get it).
+- **Soak, then promote the same binary.** Build `0.1.0` and run `pnpm desktop:release --beta-only --yes`: only Beta users get it. When it holds up, `pnpm desktop:release --promote --yes` uploads just `latest-mac.yml`, after checking that both `0.1.0` zips are already on the feed.
+
+`--promote` on a beta version is refused with the rebuild instructions.
 
 ### Rollback
 
@@ -80,7 +128,7 @@ Clients never downgrade (`allowDowngrade` is off, including when someone switche
 
 ## Local testing
 
-- `pnpm desktop:package --arch current` builds an ad-hoc signed app in `apps/desktop/release/<version>/`. Launch it with `SPARK_APP_DATA=/tmp/somewhere` so it does not touch `~/Library/Application Support/Spark Outpost`.
+- `pnpm desktop:package --arch current` builds an ad-hoc signed app in `apps/desktop/release/<version>/`. Set `SPARK_UPDATE_FEED_URL` to any URL to also get the channel files, so `pnpm desktop:release` can show a dry run. Launch it with `SPARK_APP_DATA=/tmp/somewhere` so it does not touch `~/Library/Application Support/Spark Outpost`.
 - `pnpm desktop:e2e-update` builds 0.0.1, 0.0.2 (with an extra migration) and 0.0.3 (with a failing one) for the current arch, serves 0.0.2 from a local feed and prints which checks were verified and which are blocked by signing. It uses its own updater cache name (`spark-outpost-e2e-updater`) and data folder under `apps/desktop/release/e2e/`.
 
 Last run on an Intel Mac without a Developer ID (2026-10-01, x64, ad-hoc signed, zip only):

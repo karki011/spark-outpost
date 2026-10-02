@@ -136,3 +136,12 @@ export function installDecision(status: UpdateStatus, activeRuns: number | null)
   if (activeRuns === null || activeRuns > 0) return { status: 'waiting', reason: WAITING_FOR_RUNS };
   return { status: 'installing' };
 }
+
+const MISSING_CHANNEL = /Cannot find channel "(latest|beta)-mac\.yml"/;
+
+export function updateErrorMessage(message: string): string {
+  const missing = MISSING_CHANNEL.exec(message);
+  if (!missing) return message;
+  const name = missing[1] === 'beta' ? 'Beta' : 'Stable';
+  return `There's no ${name} release on the update feed yet. Check again later.`;
+}

@@ -2,7 +2,7 @@
 title: Troubleshooting
 section: Reference
 order: 620
-summary: What to do when the app doesn't answer, a provider won't connect, no models show, a test message or run fails, or a shortcut is taken.
+summary: What to do when the app doesn't answer, a provider won't connect, no models show, a test message or run fails, or a shortcut is taken, and how to send diagnostics with a bug report.
 ---
 
 Find your problem below and follow the steps. Each fix takes a minute or two.
@@ -90,6 +90,18 @@ Setup has no replay button. It comes back in two cases:
 
 - You disconnect every provider. Spark Outpost needs at least one, so setup reopens at **AI provider**.
 - You reset Spark in **Settings → Reset**. This deletes your chats, projects and settings, so read the lists on that screen first.
+
+## Send diagnostics with a bug report
+
+Diagnostics help the Spark Outpost team see what went wrong. The zip holds the app, Electron and macOS versions, which providers are connected and how (CLI or API key), your settings with your name left out, which database updates have run, and recent app logs. It never holds chats, prompts, file contents, keys or tokens; anything in a log or setting that looks like a key or token is replaced with `[redacted:…]`.
+
+1. Open **Settings → Help**, or choose **Help → Export Diagnostics…** in the menu bar.
+2. Select **Export diagnostics** and pick where to save the zip. In the browser it downloads to your downloads folder instead.
+3. Open the zip and look through it if you like, then attach it to your bug report.
+
+To report the problem in the same step, use **Send feedback** under **Settings → Help** (or **Help → Send Feedback…**): describe what happened and what you expected, turn on **Include diagnostics**, and select **Open email draft** (or **Open GitHub issue draft**). Spark saves the zip, opens a draft and tells you where the zip is, so you can attach it. Nothing is sent until you send it yourself.
+
+The app's own logs are in `~/Library/Application Support/Spark Outpost/logs`. **Logs folder** under **Settings → Help** shows the path, and **Show in Finder** opens it. Spark keeps about 8 MB of logs and replaces the oldest first.
 
 ## Start over
 

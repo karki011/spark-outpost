@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { WAITING_FOR_RUNS, type UpdateChannel, type UpdateStatus } from '@spark-outpost/contracts';
 import { BlobToggle } from '../brand/BlobToggle.tsx';
+import { BetaBadge } from '../desktop/BetaBadge.tsx';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { installMessage, useInstallUpdate } from '../desktop/use-install-update.ts';
 import { useUpdateStatus } from '../desktop/use-update-status.ts';
@@ -112,7 +113,10 @@ function UpdateRows({ status }: { status: UpdateStatus }) {
   return (
     <>
       <SettingRow label="Version" hint={phaseText(status)} hintId={versionHint}>
-        <span className="upd-version">Spark Outpost {status.currentVersion}</span>
+        <span className="upd-version">
+          Spark Outpost {status.currentVersion}
+          <BetaBadge version={status.currentVersion} />
+        </span>
       </SettingRow>
       {!off && (
         <>

@@ -19,6 +19,11 @@ export const IPC = {
   updatesSetAutoDownload: 'updates:set-auto-download',
   updatesInstall: 'updates:install',
   updatesChanged: 'updates:changed',
+  helpInfo: 'help:info',
+  helpExportDiagnostics: 'help:export-diagnostics',
+  helpShowLogs: 'help:show-logs',
+  helpOpen: 'help:open',
+  helpPending: 'help:pending',
 } as const;
 
 export type DragPhase = 'start' | 'move' | 'end';

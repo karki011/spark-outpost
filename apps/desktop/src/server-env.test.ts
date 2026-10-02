@@ -12,6 +12,7 @@ const launch: ServerLaunch = {
   apiPort: 50002,
   apiOrigin: 'http://127.0.0.1:50002',
   token: 'a'.repeat(43),
+  version: '0.1.0-beta.1',
   webRoot: '/repo/apps/web/dist',
   baseEnv: {
     PATH: '/usr/bin',
@@ -19,6 +20,7 @@ const launch: ServerLaunch = {
     DATABASE_URL: 'postgres://spark@127.0.0.1:5432/spark_outpost',
     SPARK_API_TOKEN: 'inherited',
     SECRET_STORE: 'memory',
+    SPARK_LOG_DIR: '/tmp/elsewhere',
   },
 };
 
@@ -44,5 +46,14 @@ describe('server environment', () => {
       WEB_ROOT: '/repo/apps/web/dist',
     });
     expect(workerEnv(launch).SPARK_API_TOKEN).toBeUndefined();
+  });
+
+  it('tells the API where the logs and data folder are, for diagnostics', () => {
+    expect(apiEnv(launch)).toMatchObject({
+      SPARK_APP_VERSION: '0.1.0-beta.1',
+      SPARK_LOG_DIR: '/Users/me/Library/Application Support/Spark Outpost Dev/logs',
+      SPARK_DATA_DIR: '/Users/me/Library/Application Support/Spark Outpost Dev',
+    });
+    expect(workerEnv(launch).SPARK_LOG_DIR).toBeUndefined();
   });
 });

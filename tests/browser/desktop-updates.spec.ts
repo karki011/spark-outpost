@@ -164,6 +164,20 @@ test('Settings shows the version, channel, automatic downloads and Check now', a
   ]);
 });
 
+test('beta builds show a Beta label next to the version', async ({ page }) => {
+  await resetTestDatabase({ onboarded: true });
+  await fakeUpdater(page, { currentVersion: '0.1.0-beta.1', channel: 'beta' });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('tab', { name: 'Updates' }).click();
+  const updates = page.getByRole('dialog', { name: 'Updates' });
+  await expect(updates.locator('.upd-version')).toHaveText('Spark Outpost 0.1.0-beta.1Beta');
+  await expect(updates.getByRole('radio', { name: 'Beta' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+});
+
 test('the update blob goes from available through downloading to ready and restarting', async ({
   page,
 }) => {

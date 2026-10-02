@@ -49,7 +49,11 @@ The theme. **Graphite** is the default. See [Pick a theme](meet-spark.md#pick-a-
 
 ## Updates
 
-In the Mac app only: version, **Channel** (**Stable**), **Download updates automatically** (on) and **Check for updates**. See [Updates](updates.md).
+In the Mac app only: version, **Channel** (**Stable**, or **Beta** in beta builds), **Download updates automatically** (on) and **Check for updates**. See [Updates](updates.md).
+
+## Help
+
+In the Mac app: the version (with a **Beta** label in beta builds) and the **Logs folder** with **Show in Finder**. Everywhere: **Export diagnostics** and **Send feedback**. See [Send diagnostics with a bug report](troubleshooting.md#send-diagnostics-with-a-bug-report).
 
 ## Reset
 
