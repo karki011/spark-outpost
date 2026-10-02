@@ -26,6 +26,7 @@ interface TitleRow {
   title_source: TitleSource;
   title_category: string | null;
   suggested: string | null;
+  has_linked_ticket: boolean;
 }
 
 const asCategory = (value: string | null) => categorySchema.safeParse(value).data ?? null;
@@ -36,7 +37,14 @@ export async function applyAutoTitle(db: Queryable, runId: string): Promise<Auto
        c.title_category,
        (SELECT s.suggested_title FROM runs s
         WHERE (s.id = r.id OR s.parent_run_id = r.id) AND s.suggested_title IS NOT NULL
-        ORDER BY s.id = r.id DESC, s.created_at LIMIT 1) AS suggested
+        ORDER BY s.id = r.id DESC, s.created_at LIMIT 1) AS suggested,
+       EXISTS (
+         SELECT 1 FROM conversation_tickets ct
+         WHERE ct.conversation_id = r.conversation_id AND ct.state = 'linked'
+         UNION ALL
+         SELECT 1 FROM task_tickets tt JOIN tasks t ON t.id = tt.task_id
+         WHERE t.conversation_id = r.conversation_id
+       ) AS has_linked_ticket
      FROM runs r
      JOIN conversations c ON c.id = r.conversation_id
      JOIN messages m ON m.id = r.user_message_id
@@ -45,7 +53,7 @@ export async function applyAutoTitle(db: Queryable, runId: string): Promise<Auto
     [runId],
   );
   const row = rows[0];
-  if (!row) return null;
+  if (!row || row.has_linked_ticket) return null;
   const decided = decideAutoTitle(
     { title: row.title, source: row.title_source, category: asCategory(row.title_category) },
     { suggested: row.suggested, category: asCategory(row.category), request: row.request },
