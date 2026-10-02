@@ -11,11 +11,11 @@ You'll connect at least one provider and check that it answers. About 2 minutes.
 
 Spark Outpost runs coding agents from three providers. Connect at least one; you can add the others later.
 
-| Provider       | Made by   | How it connects                                                              |
-| -------------- | --------- | ---------------------------------------------------------------------------- |
-| **Claude**     | Anthropic | **Local CLI** (your `claude` login) or **API key**                           |
-| **Codex**      | OpenAI    | **Local CLI** (your `codex` login) or **API key**                            |
-| **Z.ai (GLM)** | Z.ai      | **API key** only. Z.ai uses your Z.ai billing and never your Claude account. |
+| Provider       | Made by   | How it connects                                                                           |
+| -------------- | --------- | ----------------------------------------------------------------------------------------- |
+| **Claude**     | Anthropic | **Local CLI** (your `claude` login) or **API key**                                        |
+| **Codex**      | OpenAI    | **Local CLI** (your `codex` login) or **API key**                                         |
+| **Z.ai (GLM)** | Z.ai      | **API key** only, run through the `claude` CLI. Z.ai bills it, never your Claude account. |
 
 Pick the way that fits how you already work:
 
@@ -25,6 +25,17 @@ Pick the way that fits how you already work:
 | **API key**   | You have a key from the provider, or you use Z.ai.  | In your system keychain, never in Spark's files. |
 
 ![The Connect your AI providers step with the Claude card open](images/getting-started-provider-light.png)
+
+## Install the CLI first
+
+Spark doesn't ship the agents. It runs the `claude` and `codex` CLIs installed on your computer, whichever way you connect. Claude and Z.ai need `claude`; Codex needs `codex`.
+
+| CLI      | Install it with                                                                         |
+| -------- | --------------------------------------------------------------------------------------- |
+| `claude` | `npm i -g @anthropic-ai/claude-code`, or Anthropic's native installer                   |
+| `codex`  | `npm i -g @openai/codex`, `brew install --cask codex`, or OpenAI's standalone installer |
+
+If a CLI is missing, the card says so and opens a terminal with the install command. Select **Run it**, and Spark checks again on its own.
 
 ## Connect with the local CLI
 
@@ -42,7 +53,7 @@ Spark Outpost runs the CLI but never reads or stores your credentials.
 3. Paste the key into the key field. The hint under the field tells you if the key looks wrong, for example "Claude keys start with sk-ant-".
 4. Select **Verify key**, or press **Enter**.
 
-Spark checks the key with the provider and stores it in your system keychain. It never saves keys in its database or logs.
+Spark first checks that the provider's CLI is installed (API key mode also needs it), then checks the key with the provider and stores it in your system keychain. It never saves keys in its database or logs.
 
 > **Important:** Paste keys only into this key field. Don't paste them into a chat message; chat text is sent to the agent and saved with the chat.
 

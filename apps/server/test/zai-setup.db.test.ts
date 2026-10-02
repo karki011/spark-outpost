@@ -10,7 +10,7 @@ import {
   recordTokens,
   recordUsage,
 } from '../src/workflow/run-metadata.ts';
-import { createTestApp, jsonResponse, localClient } from './app-support.ts';
+import { createTestApp, installedClis, jsonResponse, localClient } from './app-support.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 const ZAI_KEY = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6.ZaiSecretTail';
@@ -28,7 +28,9 @@ afterEach(async () => {
 });
 
 function appWith(fetch: typeof globalThis.fetch) {
-  const { get, send } = localClient(createTestApp(t, { fetch, secrets }));
+  const { get, send } = localClient(
+    createTestApp(t, { fetch, secrets, runCommand: installedClis }),
+  );
   return {
     get,
     send,
@@ -56,7 +58,7 @@ describe('Z.ai connection', () => {
       name: 'Z.ai (GLM)',
       maker: 'Z.ai',
       methods: ['api_key'],
-      note: 'Uses your Z.ai API key and Z.ai billing; never your Claude account.',
+      note: 'Runs through the claude CLI with your Z.ai API key and Z.ai billing; never your Claude account.',
       efforts: [{ id: 'low' }, { id: 'high' }, { id: 'max' }],
       defaultEffort: 'high',
       connection: null,

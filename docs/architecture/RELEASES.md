@@ -50,14 +50,14 @@ R2 serves the generic electron-updater feed with no egress fees, and its free ti
 
 ### What R2 costs
 
-A release is about 2.1 GB: per arch, a 530 MB zip, a dmg of about the same size and a small blockmap. Storage is the only cost that grows; writes, update checks and downloads stay inside the free tier for a small beta, and egress is free.
+A release is about 800 MB: per arch, a 200 MB zip, a dmg of about the same size and a small blockmap. Storage is the only cost that grows; writes, update checks and downloads stay inside the free tier for a small beta, and egress is free.
 
 | Releases kept on the feed (N) | Storage | Billed beyond 10 GB at $0.015/GB-month |
 | ----------------------------- | ------- | -------------------------------------- |
-| 3                             | 6.4 GB  | $0.00                                  |
-| 5                             | 10.7 GB | about $0.01 a month                    |
-| 10                            | 21 GB   | about $0.17 a month                    |
-| 20                            | 43 GB   | about $0.49 a month                    |
+| 3                             | 2.4 GB  | $0.00                                  |
+| 5                             | 4 GB    | $0.00                                  |
+| 10                            | 8 GB    | $0.00                                  |
+| 20                            | 16 GB   | about $0.09 a month                    |
 
 In general: about max(0, 2.14 × N − 10) × $0.015 a month. Deleting the dmgs of old releases halves it; keep old zips' blockmaps for differential downloads. Prices as of 2026; check Cloudflare's R2 pricing page.
 
@@ -142,7 +142,7 @@ Last run on an Intel Mac without a Developer ID (2026-10-01, x64, ad-hoc signed,
 | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.0.1 launches, starts bundled Postgres, migrates a fresh database, serves the window             | verified                                                                                                                                                                         |
 | Updater finds 0.0.2 on the generic feed and downloads it in the background                        | verified                                                                                                                                                                         |
-| Update zip staged in the updater cache with `update-info.json` (sha512 checked)                   | verified (530 MB zip)                                                                                                                                                            |
+| Update zip staged in the updater cache with `update-info.json` (sha512 checked)                   | verified (530 MB zip, before the bundle was trimmed)                                                                                                                             |
 | Install on quit hands the zip to Squirrel.Mac                                                     | **blocked by signing**: Squirrel reports the code signature "did not pass validation: code failed to satisfy specified code requirement"; the app quits normally and stays 0.0.1 |
 | Differential download                                                                             | **not exercised**: the first update after an install has no cached `update.zip`, so electron-updater downloads in full                                                           |
 | 0.0.2 backs up (pg_dump 17 from Homebrew on this machine) before its new migration, records 0.0.2 | verified                                                                                                                                                                         |
@@ -156,5 +156,6 @@ Also checked by hand: a 0.0.2 install pointed at a feed with 0.0.3 downloads it 
 - **pg_dump is not bundled.** `embedded-postgres` ships only `initdb`, `pg_ctl` and `postgres`, and there is no matching `pg_dump` from the same source. The app uses a pg_dump 17 it can find, else the cold copy (equally safe for update rollback, larger on disk). To bundle one later, place `pg_dump` and `pg_restore` 17 with their libraries in `Contents/Resources/postgres-tools/bin`; the app already looks there first.
 - **The server runs as TypeScript through `tsx`** from `Contents/Resources/server`. Compiling it to JavaScript would speed up start.
 - **asar is off.** Postgres, the agent adapters, ripgrep, node-pty's `spawn-helper` and esbuild are spawned as files, and `embedded-postgres` builds its binary paths from its own location, so the runtime ships as plain files (the server tree and Postgres are outside any archive). The signature still seals the whole bundle.
-- **Agent adapters are bundled** (`claude-agent-acp`, the patched `codex-acp` and their native CLIs) and run on the app's own runtime with `ELECTRON_RUN_AS_NODE=1`, which their child processes inherit. Signing in to Claude or Codex still uses the user's CLI logins; a full agent turn inside the packaged app has not been exercised.
+- **Agent adapters are bundled, the CLIs are not.** `claude-agent-acp` and the patched `codex-acp` run on the app's own runtime with `ELECTRON_RUN_AS_NODE=1`, which their child processes inherit; they run the user's installed `claude` and `codex` (found with the login-shell lookup, passed as `CLAUDE_CODE_EXECUTABLE` and `CODEX_PATH`). The adapters are pinned against a CLI version (Claude Code 2.1.280, Codex 0.156.1); a much older user CLI may lack options they send. A full agent turn inside the packaged app has not been exercised.
+- **Trimmed bundle needs a signed check.** Postgres, node-pty and the adapters were smoke-tested from an ad-hoc signed x64 app (initdb, start, all migrations, PL/pgSQL, conversions and text search; a node-pty spawn; CLI lookup). Still to confirm with a Developer ID build: notarization of the trimmed tree, a first launch from the dmg on another Mac, and the arm64 build (its Postgres is only checked when staged on Apple silicon).
 - **PATH for Finder launches**, the link scheme, menu-bar residency and the dev icon remain as listed in ELECTRON_PLAN.md.

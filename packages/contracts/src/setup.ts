@@ -94,6 +94,7 @@ export type ConnectableSetup = z.infer<typeof connectableSetupSchema>;
 export const providerSetupSchema = connectableSetupSchema.extend({
   id: providerIdSchema,
   note: z.string().nullable(),
+  installCommand: z.string(),
   efforts: z.array(choiceSchema),
   defaultEffort: z.string(),
   connection: providerConnectionSchema.nullable(),

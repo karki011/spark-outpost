@@ -7,6 +7,7 @@ import { API_TOKEN_ENV } from './packages/contracts/src/api-token.ts';
 import {
   API_PORT,
   FAKE_ACP_MODELS,
+  FAKE_CLAUDE_BIN,
   FAKE_ACP_MODES,
   FAKE_CODEX_STATE,
   FAKE_GH_STATE,
@@ -24,7 +25,7 @@ const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
 const apiToken = randomBytes(32).toString('base64url');
 
 const serverEnv = {
-  PATH: `${path.resolve('tests/browser/bin')}:/usr/bin:/bin`,
+  PATH: `${path.resolve('tests/browser/bin')}:${FAKE_CLAUDE_BIN}:/usr/bin:/bin`,
   CLI_LOOKUP_LOGIN_SHELL: 'false',
   FAKE_CODEX_STATE,
   FAKE_GH_STATE,

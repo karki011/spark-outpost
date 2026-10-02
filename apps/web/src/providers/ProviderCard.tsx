@@ -123,7 +123,7 @@ export function ProviderCard({
       setVerifying(false);
       setMood('sad');
       setShake(true);
-      if (body.method === 'cli') openTerminal();
+      if (body.method === 'cli' || code === 'cli_missing') openTerminal();
       onVerifyOutcome?.('failure');
     };
 
@@ -317,25 +317,27 @@ export function ProviderCard({
                   )}
                   {!terminalOpen && <VerifyLog lines={log} />}
                   <AnimatePresence mode="wait">
-                    {terminalOpen && method === 'cli' && !isAdvisor(provider) && (
-                      <motion.div key={terminalRun} className="pc-collapse" {...fadeReveal}>
-                        <TerminalPanel
-                          provider={provider.id}
-                          providerName={provider.name}
-                          reason={
-                            reauth
-                              ? null
-                              : (log.findLast((line) => line.status === 'bad')?.label ?? null)
-                          }
-                          step={failureCode === 'not_logged_in' ? 'login' : 'install'}
-                          onCheckAgain={() => {
-                            setTerminalOpen(false);
-                            void handleVerify();
-                          }}
-                          onDismiss={() => setTerminalOpen(false)}
-                        />
-                      </motion.div>
-                    )}
+                    {terminalOpen &&
+                      (method === 'cli' || failureCode === 'cli_missing') &&
+                      !isAdvisor(provider) && (
+                        <motion.div key={terminalRun} className="pc-collapse" {...fadeReveal}>
+                          <TerminalPanel
+                            provider={provider.id}
+                            providerName={provider.name}
+                            reason={
+                              reauth
+                                ? null
+                                : (log.findLast((line) => line.status === 'bad')?.label ?? null)
+                            }
+                            step={failureCode === 'not_logged_in' ? 'login' : 'install'}
+                            onCheckAgain={() => {
+                              setTerminalOpen(false);
+                              void handleVerify();
+                            }}
+                            onDismiss={() => setTerminalOpen(false)}
+                          />
+                        </motion.div>
+                      )}
                   </AnimatePresence>
                 </>
               )}

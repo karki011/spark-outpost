@@ -265,22 +265,59 @@ export async function locateCli(
   );
 }
 
+interface FoundCli {
+  path: string;
+  version: string;
+}
+
+async function* findCli(
+  entry: CatalogEntry,
+  run: RunCommand,
+  shell: string | null,
+  missing: string,
+): AsyncGenerator<VerifyStep, FoundCli | null> {
+  yield started(`Looking for \`${entry.cli}\` on your PATH`);
+  const path = await locateCli(entry.cli, run, shell);
+  if (!path) {
+    yield failed(`${missing} ${entry.installHint}`, 'cli_missing');
+    return null;
+  }
+  const version = parseVersion((await run(path, ['--version'], VERSION_TIMEOUT_MS)).stdout);
+  yield succeeded(`Found \`${entry.cli} ${version}\` at \`${path}\``);
+  return { path, version };
+}
+
+export async function* verifyApiKeyWithCli(
+  entry: CatalogEntry,
+  rawKey: string,
+  endpoints: ApiEndpoints,
+  run: RunCommand,
+  shell: string | null,
+): Verification {
+  const needs = entry.methods.includes('cli') ? 'API key mode' : entry.name;
+  const found = yield* findCli(
+    entry,
+    run,
+    shell,
+    `${needs} also needs the \`${entry.cli}\` CLI installed.`,
+  );
+  if (!found) return null;
+  return yield* verifyApiKey(entry, rawKey, endpoints);
+}
+
 export async function* verifyCli(
   entry: CatalogEntry,
   run: RunCommand,
   shell: string | null = process.env.SHELL || '/bin/zsh',
 ): Verification {
-  yield started(`Looking for \`${entry.cli}\` on your PATH`);
-  const path = await locateCli(entry.cli, run, shell);
-  if (!path) {
-    yield failed(
-      `The \`${entry.cli}\` CLI isn't installed or isn't on your PATH. ${entry.installHint}`,
-      'cli_missing',
-    );
-    return null;
-  }
-  const version = parseVersion((await run(path, ['--version'], VERSION_TIMEOUT_MS)).stdout);
-  yield succeeded(`Found \`${entry.cli} ${version}\` at \`${path}\``);
+  const found = yield* findCli(
+    entry,
+    run,
+    shell,
+    `The \`${entry.cli}\` CLI isn't installed or isn't on your PATH.`,
+  );
+  if (!found) return null;
+  const { path, version } = found;
 
   const summary =
     entry.id === 'claude'

@@ -21,6 +21,7 @@ import { forgetAllShells } from '../persistence/terminal-shells.ts';
 import { attachTerminalSockets } from '../terminal/websocket.ts';
 import { agentDefinitions } from '../agents/acp/agents.ts';
 import { probeCapabilities } from '../agents/acp/probe.ts';
+import { loginShellLocator } from '../agents/acp/agent-cli.ts';
 import { fakeCapabilities } from '../providers/fake.ts';
 import { AppEventFeed, listenForAppEvents } from './app-events.ts';
 import { createApp } from './app.ts';
@@ -74,7 +75,10 @@ const app = createApp({
     provider,
     ...(config.AGENT_RUNTIME === 'fake'
       ? fakeCapabilities(provider)
-      : await probeCapabilities(agentDefinitions[provider], { secrets })),
+      : await probeCapabilities(agentDefinitions[provider], {
+          secrets,
+          locateCli: loginShellLocator(loginShell),
+        })),
   }),
   loginShell,
   terminals,

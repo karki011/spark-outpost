@@ -86,14 +86,14 @@ The rule for every new feature: anything that stores data, opens a port, names a
 
 ## Decide when we package
 
-| Decision                                                     | Recommendation                                                                                                                                                            |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Agent adapters (`claude-agent-acp`, our patched `codex-acp`) | Bundle pinned versions, so the Codex patch always ships. Users sign in with their own Claude and Codex logins, as today.                                                  |
-| Platforms                                                    | macOS first, Intel and Apple Silicon builds. Windows and Linux later.                                                                                                     |
-| Signing and updates                                          | Apple Developer ID with notarization; `electron-updater`.                                                                                                                 |
-| Postgres major upgrades                                      | A `pg_upgrade` step before the bundled major version ever changes.                                                                                                        |
-| Crash reports and telemetry                                  | No crash reports. One anonymous daily install heartbeat (install ID, version, OS, country), on by default with a switch in Settings → Help; see `infra/heartbeat-worker`. |
-| Shell details                                                | One running copy at a time, stays in the menu bar when the window closes, links that open a chat.                                                                         |
+| Decision                                                     | Recommendation                                                                                                                                                              |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Agent adapters (`claude-agent-acp`, our patched `codex-acp`) | Bundle pinned adapter versions, so the Codex patch always ships, but not the `claude` and `codex` CLIs: users install those, and the adapters run the user's CLI and login. |
+| Platforms                                                    | macOS first, Intel and Apple Silicon builds. Windows and Linux later.                                                                                                       |
+| Signing and updates                                          | Apple Developer ID with notarization; `electron-updater`.                                                                                                                   |
+| Postgres major upgrades                                      | A `pg_upgrade` step before the bundled major version ever changes.                                                                                                          |
+| Crash reports and telemetry                                  | No crash reports. One anonymous daily install heartbeat (install ID, version, OS, country), on by default with a switch in Settings → Help; see `infra/heartbeat-worker`.   |
+| Shell details                                                | One running copy at a time, stays in the menu bar when the window closes, links that open a chat.                                                                           |
 
 ## Order
 
@@ -125,6 +125,8 @@ Verified on 2026-09-28 (Intel Mac, Electron 44.4.5 / Node 24.21): window loads o
 
 - **Layout:** `Contents/Resources/app` holds the bundled main process and its runtime `node_modules` (embedded-postgres, pg, tsx, electron-updater); `Contents/Resources/server` is a `pnpm deploy --prod --cpu=<arch>` of `apps/server` (TypeScript sources, migrations, adapters with the codex patch, node-pty prebuilds, ripgrep); `Contents/Resources/web` is the built web app. `layout.ts` picks these paths when packaged and the checkout paths from source. The packaged app is always the prod channel; `SPARK_APP_DATA` relocates its data folder for local tests.
 - **asar is off** so spawned binaries (Postgres, ripgrep, node-pty `spawn-helper`, adapters, esbuild for tsx) run as plain files without `app.asar.unpacked` path mapping; `embedded-postgres` derives its binary paths from its own location, which asarUnpack alone cannot fix.
+- **Trimmed bundle:** staging (`scripts/prune.ts`, `scripts/prune-postgres.ts`) drops the bundled Claude and Codex CLI packages (`@anthropic-ai/claude-agent-sdk-darwin-*`, `@openai/codex*`), node-pty's other platforms, sources and tests, source maps, type declarations and READMEs in `node_modules`, esbuild's duplicate CLI binary, and Electron locales other than English. Postgres keeps `initdb` and `postgres`, the dylibs they and the kept modules link (walked with `otool -L`), PL/pgSQL, the snowball dictionaries and encoding conversions; staging runs both binaries with `--version` on the host arch. The x64 app went from 1.3 GB (509 MB dmg) to 482 MB (186 MB dmg).
+- **User's agent CLIs:** every Claude, Codex and Z.ai run looks up the CLI (`which`, then the login shell) and passes it as `CLAUDE_CODE_EXECUTABLE` or `CODEX_PATH` (`agents/acp/agent-cli.ts`). No CLI means a "not installed" error, never a fallback; API key verification checks for the CLI first and offers the same install terminal.
 - **Agent adapters** start with `process.execPath`; inside Electron that is the helper binary, so their launch adds `ELECTRON_RUN_AS_NODE=1` (`scriptLaunch` in `agents/acp/agents.ts`). The adapter's own children inherit it, so an agent's shell command that starts an Electron app would run it as Node.
 - **Migrations on update:** before the API starts, the shell compares pending migrations, backs up (pg_dump 17 if found, else a cold copy of the stopped data folder), keeps three `update-*` backups, migrates once in a utility process and records the version in `migrated-version.json`; on failure it restores the backup, skips that version for updates and offers previous-version instructions. The API and worker no longer get `BACKUP_DIR`.
 - **Icons:** `scripts/icons.ts` renders the Scout into `build/icon.icns` (packaged app), `assets/icon.png` / `assets/icon-dev.png` (About panel; the dev app also sets it as its Dock icon) and `assets/trayTemplate*.png` (menu-bar template image). `channelIcons` picks the channel's files.
@@ -135,7 +137,7 @@ Verified on 2026-10-01 (Intel Mac, ad-hoc signed): the packaged x64 app starts i
 ### Left for later
 
 - **Server as JS:** compile `apps/server` instead of registering `tsx` at runtime.
-- **pg_dump:** not bundled; `embedded-postgres` ships only `initdb`, `pg_ctl` and `postgres`. The update backup falls back to a cold copy; `Contents/Resources/postgres-tools/bin` is checked first if a matching pg_dump/pg_restore 17 is added later.
+- **pg_dump:** not bundled; `embedded-postgres` ships only `initdb`, `pg_ctl` and `postgres` (the app keeps the last two). The update backup falls back to a cold copy; `Contents/Resources/postgres-tools/bin` is checked first if a matching pg_dump/pg_restore 17 is added later.
 - **PATH for GUI launches:** an app started from Finder gets a minimal PATH; agents, git and the CLI lookup need the login shell's PATH.
 - **Repo lock file** in `.git/` naming channel and run (isolation section): not built; the server has no hook for it yet (`repoBusy` only checks runs in its own database). TODO.
 - **Worktrees under the channel data folder:** branches are per channel now, but copies still live in `<repo>/.spark/worktrees/<runId>`.

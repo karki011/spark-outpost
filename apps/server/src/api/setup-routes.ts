@@ -31,6 +31,7 @@ import { sendTestMessage } from '../setup/test-message.ts';
 import { GitInstallerError, gitStatus, openGitInstaller } from '../ship/git.ts';
 import {
   verifyApiKey,
+  verifyApiKeyWithCli,
   verifyCli,
   type ApiEndpoints,
   type Verification,
@@ -106,7 +107,7 @@ export function setupRoutes(deps: SetupDeps): Router {
       throw new BadRequestError(`${entry.name} connects with an API key.`);
     }
     return request.method === 'api_key'
-      ? verifyApiKey(entry, request.apiKey, deps.endpoints)
+      ? verifyApiKeyWithCli(entry, request.apiKey, deps.endpoints, deps.runCommand, deps.loginShell)
       : verifyCli(entry, deps.runCommand, deps.loginShell);
   }
 

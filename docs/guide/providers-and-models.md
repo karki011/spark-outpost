@@ -11,11 +11,11 @@ To connect a provider for the first time, see [Connect an AI provider](connect-a
 
 ## The three providers
 
-| Provider       | Connects with                | Models                                                               | Default mode       | Default effort |
-| -------------- | ---------------------------- | -------------------------------------------------------------------- | ------------------ | -------------- |
-| **Claude**     | **Local CLI** or **API key** | What your Claude CLI offers. Claude Opus 5.5 at the time of writing. | **Auto**           | High           |
-| **Codex**      | **Local CLI** or **API key** | What your Codex CLI offers.                                          | **Approve for me** | Medium         |
-| **Z.ai (GLM)** | **API key** only             | GLM-5.3 (default) and GLM-5.3-Flash                                  | **Manual**         | High           |
+| Provider       | Connects with                             | Models                                                               | Default mode       | Default effort |
+| -------------- | ----------------------------------------- | -------------------------------------------------------------------- | ------------------ | -------------- |
+| **Claude**     | **Local CLI** or **API key**              | What your Claude CLI offers. Claude Opus 5.5 at the time of writing. | **Auto**           | High           |
+| **Codex**      | **Local CLI** or **API key**              | What your Codex CLI offers.                                          | **Approve for me** | Medium         |
+| **Z.ai (GLM)** | **API key** only (needs the `claude` CLI) | GLM-5.3 (default) and GLM-5.3-Flash                                  | **Manual**         | High           |
 
 New chats start with your default provider's model, mode and effort. For the modes, see [Pick the agent's mode](chats-and-modes.md#pick-the-agents-mode).
 

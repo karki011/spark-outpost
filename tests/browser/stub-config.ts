@@ -38,6 +38,11 @@ export const FAKE_CODEX_STATE = path.join(
   slot === 0 ? 'spark-outpost-fake-codex-logged-in' : `spark-outpost-fake-codex-logged-in-${slot}`,
 );
 
+export const FAKE_CLAUDE_BIN = path.join(
+  os.tmpdir(),
+  slot === 0 ? 'spark-outpost-fake-claude-bin' : `spark-outpost-fake-claude-bin-${slot}`,
+);
+
 export const FAKE_GH_STATE = path.join(
   os.tmpdir(),
   slot === 0 ? 'spark-outpost-fake-gh-login' : `spark-outpost-fake-gh-login-${slot}`,

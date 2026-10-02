@@ -13,6 +13,7 @@ import {
 import { supportsDo, type AgentDefinition, type AgentLaunch } from './agents.ts';
 import { AgentExitedError, startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
+import { cliEnvironment, type CliLocator } from './agent-cli.ts';
 import { auditCodexInstructions, withClaudeSpark, withCodexSpark } from './spark-instructions.ts';
 import {
   openSparkTools,
@@ -72,6 +73,7 @@ import { TITLE_REQUEST } from '../../titles/title-line.ts';
 export interface AcpProviderOptions {
   definition: AgentDefinition;
   launch?: AgentLaunch;
+  locateCli?: CliLocator;
   env?: Record<string, string>;
   secrets?: Pick<SecretStore, 'get'>;
   cancelGraceMs?: number;
@@ -159,8 +161,9 @@ async function runSession(
     const codex = withCodexSpark(repo?.codex ?? null, turn.spark, spark !== null);
     if (definition.repoStyle === 'codex') auditCodexInstructions(turn.audit, codex);
     const builder = turn.builder === true;
+    const cli = options.launch ? {} : await cliEnvironment(definition, options.locateCli);
     const env = withCodexSparkServer(
-      await agentEnvironment(options, home, browsing, codex, builder, turn.env),
+      { ...(await agentEnvironment(options, home, browsing, codex, builder, turn.env)), ...cli },
       definition.repoStyle === 'codex' ? spark : null,
     );
     agent = startAgentProcess(options.launch ?? definition.launch(), cwd, env, replay.observer);
