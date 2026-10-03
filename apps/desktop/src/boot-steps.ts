@@ -33,3 +33,17 @@ export function leaveDelay(shownAt: number | null, now: number): number {
   if (shownAt === null) return 0;
   return Math.max(0, MIN_BOOT_MS - (now - shownAt));
 }
+
+export interface BootPreparation<Database> {
+  startDatabase: () => Promise<Database>;
+  adoptShellPath: () => Promise<void>;
+  checkTools: () => Promise<void>;
+}
+
+export async function prepareBoot<Database>(steps: BootPreparation<Database>): Promise<Database> {
+  const [database] = await Promise.all([
+    steps.startDatabase(),
+    steps.adoptShellPath().then(steps.checkTools),
+  ]);
+  return database;
+}

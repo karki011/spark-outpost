@@ -2,9 +2,7 @@ import { resolve } from 'node:path';
 import { DEV_API_TOKEN_FILE } from '@spark-outpost/contracts';
 import { loadConfig } from '../config.ts';
 import { startMorningBrief } from '../digest/morning.ts';
-import { ensureLocalWorkspace, pruneEmptyConversations } from '../persistence/conversations.ts';
-import { pruneUnlinkedAttachments } from '../persistence/attachments.ts';
-import { pruneProtocolLog } from '../persistence/audit-log.ts';
+import { ensureLocalWorkspace } from '../persistence/conversations.ts';
 import { seedModelStats } from '../model-cards/ingest.ts';
 import { createDb, POOL_MAX } from '../persistence/db.ts';
 import { ActiveWork, startLagMonitor } from '../diagnostics/event-loop-lag.ts';
@@ -30,6 +28,7 @@ import { takeLaunchToken } from './launch-token.ts';
 import { gitHubDepsOf } from './ship-routes.ts';
 import { loadInbox } from '../tickets/inbox.ts';
 import { RunEventHub } from './run-event-hub.ts';
+import { pruneOldRows } from './startup-prune.ts';
 
 const apiToken = takeLaunchToken(
   process.env,
@@ -40,9 +39,6 @@ const db = createDb(config.DATABASE_URL, { max: POOL_MAX.api });
 await migrateOrExit(db, { backup: configuredBackup(config) });
 
 const workspaceId = await ensureLocalWorkspace(db);
-await pruneEmptyConversations(db, workspaceId);
-await pruneUnlinkedAttachments(db, workspaceId);
-await pruneProtocolLog(db, config.AUDIT_RETENTION_DAYS);
 await seedModelStats(db);
 const hub = new RunEventHub();
 const activeWork = new ActiveWork();
@@ -122,6 +118,7 @@ const morningBrief = config.MORNING_BRIEF
 
 const server = app.listen(config.API_PORT, config.API_HOST, () => {
   console.log(`API listening on http://${config.API_HOST}:${config.API_PORT}`);
+  void pruneOldRows({ db, workspaceId, auditRetentionDays: config.AUDIT_RETENTION_DAYS });
 });
 attachTerminalSockets(server, terminals, {
   port: config.API_PORT,
