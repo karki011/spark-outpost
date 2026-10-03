@@ -13,6 +13,7 @@ import { isBusy, isDispatcher, modelLabel, type CrewAgent, type CrewState } from
 import { JEV_ID, jevAgent, runAgent } from './crew-projection.ts';
 import { pieceTag, waitingAgent, type PieceTag } from './tv-coordinator.ts';
 import { roleSubtitle, type TvAsk } from './tv-scene.ts';
+import { messageable } from './member-model.ts';
 
 type TvOutcome = 'passed' | 'failed' | 'stopped';
 
@@ -35,6 +36,7 @@ export interface TvRow {
   durationMs: number | null;
   ask: TvAsk | null;
   dispatcher: boolean;
+  messageable: boolean;
   piece: TvRowPiece | null;
   order: number;
 }
@@ -91,6 +93,7 @@ function row(
     durationMs: wallMs(extra.startedAt, extra.finishedAt, agent.durationMs),
     ask: extra.ask ?? null,
     dispatcher: agent.role === 'jev',
+    messageable: messageable(agent),
     piece: extra.piece,
     order: extra.order,
   };

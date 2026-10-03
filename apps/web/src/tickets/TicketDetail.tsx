@@ -74,7 +74,9 @@ function LinkedWork({
   const chat = ticket?.chat;
   const pull = ticket?.pullRequest ?? null;
   const url = safeUrl(ticket ? pullUrl(ticket) : null);
-  if (!chat && !url) {
+  const create = url ? null : ticket?.work.flatMap((work) => work.prLinks ?? []).at(-1);
+  const createUrl = safeUrl(create?.url ?? null);
+  if (!chat && !url && !createUrl) {
     return (
       <p className="tk-quiet">
         No chats or pull requests yet. Start work to create a chat linked to this ticket.
@@ -91,6 +93,11 @@ function LinkedWork({
             <small>Chat · {chat.state === 'asking' ? 'Waiting for your answer' : chat.state}</small>
           </span>
         </button>
+      )}
+      {create && createUrl && (
+        <a className="btn line sm" href={createUrl} target="_blank" rel="noreferrer">
+          {create.title}
+        </a>
       )}
       {url && (
         <div className="prbox">

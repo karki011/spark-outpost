@@ -276,7 +276,7 @@ test('Codex offers Do with its own copy', async ({ page }) => {
   await expect(permissionChip(page)).toHaveClass(/risk-full/);
   await pickMode(page, 'Approve for me');
   await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Approve for me');
-  await expect(panel.getByRole('note')).toContainText('runs only in a worktree copy');
+  await expect(panel.getByRole('note')).toContainText('ran without review');
   await pickMode(page, 'Ask every time');
   await expect(modes.getByRole('radio', { name: 'Ask every time', exact: true })).toContainText(
     'Commands run in a workspace-write sandbox without network',
@@ -382,6 +382,9 @@ test('asks before an agent instruction file, with Allow once, for this chat, or 
     timeout: 15_000,
   });
   expect(readFileSync(agents, 'utf8')).toBe('Edited by the fake agent\n');
+  await expect(page.locator('.crew-turn .crew-foot').last()).toContainText('Done', {
+    timeout: 15_000,
+  });
 
   await send(page, 'Once more #instructions');
   const third = card(page, /Change a file\?/);

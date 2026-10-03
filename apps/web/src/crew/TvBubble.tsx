@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { crewStateWord, headerMeta, isDispatcher, type CrewAgent } from './crew-model.ts';
 import type { BubbleBox } from './tv-layout.ts';
 import { roleTitle, type TvAsk } from './tv-scene.ts';
+import { messageable } from './member-model.ts';
 
 function place(box: BubbleBox): CSSProperties {
   const vertical: CSSProperties = box.below ? { top: box.edge } : { bottom: box.edge };
@@ -45,9 +46,19 @@ interface DetailProps {
   ask: TvAsk | undefined;
   onGo(): void;
   onAsk(approvalId: string): void;
+  onMessage?: (() => void) | undefined;
 }
 
-export function DetailBubble({ id, box, agent, decision, ask, onGo, onAsk }: DetailProps) {
+export function DetailBubble({
+  id,
+  box,
+  agent,
+  decision,
+  ask,
+  onGo,
+  onAsk,
+  onMessage,
+}: DetailProps) {
   const jev = isDispatcher(agent);
   const status = `${crewStateWord(agent.state)} · ${agent.line}`;
   return (
@@ -62,6 +73,11 @@ export function DetailBubble({ id, box, agent, decision, ask, onGo, onAsk }: Det
         {ask && (
           <button type="button" className="tv-bub-go warn" onClick={() => onAsk(ask.approvalId)}>
             Answer
+          </button>
+        )}
+        {onMessage && messageable(agent) && (
+          <button type="button" className="tv-bub-go" onClick={onMessage}>
+            Message
           </button>
         )}
         <button type="button" className="tv-bub-go" onClick={onGo}>

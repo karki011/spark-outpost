@@ -1,3 +1,4 @@
+import { queuedCount } from '../queue/queue-model.ts';
 import { AgentBlob } from '../../brand/AgentBlob.tsx';
 import type { BlobExpression } from '../../brand/blob-expression.ts';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
@@ -48,5 +49,15 @@ export function WorkerFace({ worker, idle }: { worker: Worker; idle: boolean }) 
         size={18}
       />
     </span>
+  );
+}
+
+export function QueuedTail({ queued }: { queued: number }) {
+  if (queued === 0) return null;
+  return (
+    <>
+      <Dot />
+      <span className="cs-queued">{queuedCount(queued)}</span>
+    </>
   );
 }

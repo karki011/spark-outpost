@@ -34,6 +34,7 @@ function item(overrides: Partial<TvRow>): TvRow {
     durationMs: null,
     ask: null,
     dispatcher: false,
+    messageable: true,
     piece: null,
     order: 1,
     ...overrides,

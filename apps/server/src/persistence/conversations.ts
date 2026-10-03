@@ -22,9 +22,12 @@ import { resolveChatSettings } from './chat-settings.ts';
 import { withChatBranches } from './chat-worktrees.ts';
 import { withTransaction, type Db, type Queryable } from './db.ts';
 import { listCompactions, listContinuations } from './compactions.ts';
+import { listRailFlags } from './rail-flags.ts';
 import { newId } from './ids.ts';
 import { containsPattern } from './like-pattern.ts';
 import { taskForNewRun } from './tasks.ts';
+import { listQueue } from './chat-queue.ts';
+import { listMemberMessages } from './member-messages.ts';
 import { taskOverviews } from './task-views.ts';
 import { conversationUsage } from './usage.ts';
 import {
@@ -72,7 +75,10 @@ const summaryQuery = `
       r.status = 'succeeded' AND r.finished_at > COALESCE(c.last_read_at, '-infinity'::timestamptz),
       false
     ) AS unread,
-    COALESCE(r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL, false) AS needs_input,
+    COALESCE(
+      r.status = 'awaiting_approval' OR p.pending_id IS NOT NULL OR fl.flag_id IS NOT NULL, false
+    ) AS needs_input,
+    fl.flag_title,
     p.pending_id, p.pending_kind, p.pending_title, p.pending_command, p.pending_paths,
     p.pending_agent, p.pending_member, p.pending_asker, p.pending_provider,
     p.pending_pr_feedback,
@@ -105,7 +111,12 @@ const summaryQuery = `
     ) m ON true
     WHERE a.status = 'pending' AND (ar.id = r.id OR ar.parent_run_id = r.id)
     ORDER BY a.created_at, a.id LIMIT 1
-  ) p ON true`;
+  ) p ON true
+  LEFT JOIN LATERAL (
+    SELECT f.id AS flag_id, f.title AS flag_title FROM rail_flags f
+    WHERE f.conversation_id = c.id AND f.status = 'open'
+    ORDER BY f.created_at DESC LIMIT 1
+  ) fl ON true`;
 
 export class ConversationNotFoundError extends Error {
   constructor(id: string) {
@@ -208,9 +219,11 @@ export async function getConversationDetail(
   const advice = await conversationAdvice(db, id);
   const orchestrations = await conversationOrchestrations(db, id);
   const plans = await conversationPlans(db, id);
-  const [compactions, continuedIn] = await Promise.all([
+  const [compactions, continuedIn, queue, memberMessages] = await Promise.all([
     listCompactions(db, id),
     listContinuations(db, id),
+    listQueue(db, id),
+    listMemberMessages(db, id),
   ]);
   const attachments = await attachmentsForMessages(
     db,
@@ -232,6 +245,9 @@ export async function getConversationDetail(
     plans,
     compactions,
     continuedIn,
+    queue,
+    memberMessages,
+    railFlags: await listRailFlags(db, id),
   };
 }
 
@@ -264,7 +280,7 @@ export type SendMessageInput = Omit<
 > & {
   attachmentIds?: readonly string[];
   annotations?: SendMessageRequest['annotations'];
-  source?: MessageSource | 'ticket' | 'pr_follow_up' | undefined;
+  source?: MessageSource | 'ticket' | 'pr_follow_up' | 'queue' | undefined;
 };
 
 export async function sendUserMessage(
@@ -274,73 +290,83 @@ export async function sendUserMessage(
   target: RunTarget,
   workspaceId?: string,
 ): Promise<SendMessageResponse> {
-  return withTransaction(db, async (client) => {
-    if (workspaceId) await insertConversation(client, workspaceId, conversationId);
-    const conversation = await client.query<{ title: string }>(
-      'SELECT title FROM conversations WHERE id = $1 FOR UPDATE',
-      [conversationId],
-    );
-    const current = conversation.rows[0];
-    if (!current) throw new ConversationNotFoundError(conversationId);
+  return withTransaction(db, (client) =>
+    sendInTransaction(client, conversationId, request, target, workspaceId),
+  );
+}
 
-    const inserted = await client.query<MessageRow>(
-      `INSERT INTO messages (id, conversation_id, role, content) VALUES ($1, $2, 'user', $3)
-       ON CONFLICT (id) DO NOTHING RETURNING *`,
-      [request.id, conversationId, request.content],
-    );
+export async function sendInTransaction(
+  client: Queryable,
+  conversationId: string,
+  request: SendMessageInput,
+  target: RunTarget,
+  workspaceId?: string,
+): Promise<SendMessageResponse> {
+  if (workspaceId) await insertConversation(client, workspaceId, conversationId);
+  const conversation = await client.query<{ title: string }>(
+    'SELECT title FROM conversations WHERE id = $1 FOR UPDATE',
+    [conversationId],
+  );
+  const current = conversation.rows[0];
+  if (!current) throw new ConversationNotFoundError(conversationId);
 
-    if (!inserted.rows[0]) {
-      return existingSend(client, conversationId, request);
-    }
+  const inserted = await client.query<MessageRow>(
+    `INSERT INTO messages (id, conversation_id, role, content) VALUES ($1, $2, 'user', $3)
+     ON CONFLICT (id) DO NOTHING RETURNING *`,
+    [request.id, conversationId, request.content],
+  );
 
-    const attachments = await linkAttachments(
-      client,
+  if (!inserted.rows[0]) {
+    return existingSend(client, conversationId, request);
+  }
+
+  const attachments = await linkAttachments(
+    client,
+    conversationId,
+    request.id,
+    request.attachmentIds ?? [],
+  );
+  await insertAnnotations(client, conversationId, request.id, request.annotations ?? []);
+  const runId = newId();
+  const task = await taskForNewRun(client, conversationId);
+  const mode = await runMode(client, conversationId, target.permission ?? null);
+  const run = await client.query<RunRow>(
+    `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
+       task_id, plan_version, mode, level, agent_mode, config_values,
+       picked_mode, start_as, source)
+     VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10, $11, $12, $9, $13, $14)
+     RETURNING *`,
+    [
+      runId,
       conversationId,
       request.id,
-      request.attachmentIds ?? [],
-    );
-    await insertAnnotations(client, conversationId, request.id, request.annotations ?? []);
-    const runId = newId();
-    const task = await taskForNewRun(client, conversationId);
-    const mode = await runMode(client, conversationId, target.permission ?? null);
-    const run = await client.query<RunRow>(
-      `INSERT INTO runs (id, conversation_id, user_message_id, provider, model, effort, status,
-         task_id, plan_version, mode, level, agent_mode, config_values,
-         picked_mode, start_as, source)
-       VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7, $8, $9, $10, $11, $12, $9, $13, $14)
-       RETURNING *`,
-      [
-        runId,
-        conversationId,
-        request.id,
-        target.provider,
-        target.model ?? null,
-        target.effort ?? null,
-        task?.taskId ?? null,
-        task?.planVersion ?? null,
-        mode,
-        mode === 'do' ? (target.level ?? null) : null,
-        target.agentMode ?? null,
-        JSON.stringify(target.options ?? {}),
-        mode === 'do' ? (request.startAs ?? null) : null,
-        request.source ?? null,
-      ],
-    );
-    await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [
-      newId(),
-      runId,
-    ]);
-    const title =
-      current.title === UNTITLED_CONVERSATION
-        ? titleFromMessage(request.content || attachments.map((file) => file.name).join(', '))
-        : current.title;
-    await client.query(
-      'UPDATE conversations SET title = $2, updated_at = now(), archived_at = NULL WHERE id = $1',
-      [conversationId, title],
-    );
-    await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);
-    return { message: toMessage(inserted.rows[0], attachments), run: toRun(run.rows[0]!) };
-  });
+      target.provider,
+      target.model ?? null,
+      target.effort ?? null,
+      task?.taskId ?? null,
+      task?.planVersion ?? null,
+      mode,
+      mode === 'do' ? (target.level ?? null) : null,
+      target.agentMode ?? null,
+      JSON.stringify(target.options ?? {}),
+      mode === 'do' ? (request.startAs ?? null) : null,
+      request.source ?? null,
+    ],
+  );
+  await client.query(`INSERT INTO jobs (id, run_id, status) VALUES ($1, $2, 'queued')`, [
+    newId(),
+    runId,
+  ]);
+  const title =
+    current.title === UNTITLED_CONVERSATION
+      ? titleFromMessage(request.content || attachments.map((file) => file.name).join(', '))
+      : current.title;
+  await client.query(
+    'UPDATE conversations SET title = $2, updated_at = now(), archived_at = NULL WHERE id = $1',
+    [conversationId, title],
+  );
+  await client.query(`SELECT pg_notify('jobs', $1)`, [runId]);
+  return { message: toMessage(inserted.rows[0], attachments), run: toRun(run.rows[0]!) };
 }
 
 async function existingSend(

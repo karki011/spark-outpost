@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   EventType,
+  MEMBER_MESSAGE_ACTIVITY,
   ORCHESTRATION_ACTIVITY,
   isApprovalEvent,
   isTaskActivity,
@@ -15,7 +16,9 @@ import { applyRunEvent, initialRunProjection, type RunProjection } from './run-p
 
 function isOrchestrationActivity(event: RunEvent): boolean {
   return (
-    event.type === EventType.ACTIVITY_SNAPSHOT && event.activityType === ORCHESTRATION_ACTIVITY
+    event.type === EventType.ACTIVITY_SNAPSHOT &&
+    (event.activityType === ORCHESTRATION_ACTIVITY ||
+      event.activityType === MEMBER_MESSAGE_ACTIVITY)
   );
 }
 

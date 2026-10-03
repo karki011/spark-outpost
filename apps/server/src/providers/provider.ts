@@ -15,6 +15,7 @@ import type { RepoLaunch } from '../agent-config/launch.ts';
 import type { UserMcpLaunch } from '../mcp/launch.ts';
 import type { SparkScope } from '../spark-mcp/deps.ts';
 import type { ApprovalRequest } from '../approvals/decide.ts';
+import type { ObservedRail } from '../agents/acp/rail-watch.ts';
 
 export interface TurnAttachment {
   name: string;
@@ -46,6 +47,10 @@ export interface SteerRequests {
   attach(send: (text: string) => Promise<boolean>): () => void;
 }
 
+export interface TurnInbox {
+  take(): Promise<string | null>;
+}
+
 export interface StoredSession {
   sessionId: string;
   cwd: string;
@@ -74,10 +79,10 @@ export interface ProviderTurn {
   coordinated?: boolean;
   publishes?: boolean;
   env?: Readonly<Record<string, string>>;
-  worktree?: boolean;
   planning?: boolean;
   modeRequests?: ModeRequests;
   steering?: SteerRequests;
+  inbox?: TurnInbox;
   approvals?: PermissionGate;
   askTitle?: boolean;
   session?: SessionTarget;
@@ -168,7 +173,8 @@ export type ProviderOutput =
     }
   | { kind: 'link'; url: string; title: string; source: Exclude<TaskLinkSource, 'user'> }
   | { kind: 'commands'; commands: AgentCommand[] }
-  | { kind: 'instructions'; files: string[] };
+  | { kind: 'instructions'; files: string[] }
+  | { kind: 'rail_flag'; flag: ObservedRail };
 
 export interface Provider {
   readonly name: string;

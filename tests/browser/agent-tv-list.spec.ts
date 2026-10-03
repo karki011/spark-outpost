@@ -5,7 +5,7 @@ import {
   CREW_REQUEST,
   crewChat,
   crewRepo,
-  failingCheck,
+  allowEdit,
   resetCrew,
   send,
   type CrewRepo,
@@ -100,16 +100,16 @@ test('Needs you jumps to the approval, and Finished opens, shows outcomes and cl
   page,
 }) => {
   test.setTimeout(90_000);
-  await crewChat(page, repo, 'Auto-edit');
-  await failingCheck(page, repo.root);
-  await send(page, `${CREW_REQUEST} #build #crew`);
-  const tv = await openList(page);
-
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toBeVisible({ timeout: 30_000 });
-  const jev = row(page, /^Jev$/);
-  await expect(jev.getByRole('button', { name: 'Needs you' })).toBeVisible({ timeout: 10_000 });
-  await expect(running(page).first()).toContainText('Jev');
+  const tv = await listWaiting(page);
+  const edit = card(page, /Change a file\?/);
+  const needs = row(page, BUILDER).getByRole('button', { name: 'Needs you' });
+  await expect(needs).toBeVisible({ timeout: 10_000 });
+  await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
+  await needs.click();
+  await expect(edit).toBeInViewport();
+  await allowEdit(page);
+  await expect(tv.getByRole('button', { name: /^Finished/ })).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.crew-foot').last()).toContainText('Done', { timeout: 30_000 });
 
   const toggle = tv.getByRole('button', { name: /^Finished/ });
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -138,10 +138,6 @@ test('Needs you jumps to the approval, and Finished opens, shows outcomes and cl
     await page.setViewportSize({ width: 1400, height: 900 });
     await page.emulateMedia({ colorScheme: 'light' });
   }
-
-  await page.locator('.thread').evaluate((element) => (element.scrollTop = 0));
-  await jev.getByRole('button', { name: 'Needs you' }).click();
-  await expect(keep).toBeInViewport();
 
   await tv.getByRole('button', { name: 'Clear finished' }).click();
   await expect(toggle).toHaveCount(0);

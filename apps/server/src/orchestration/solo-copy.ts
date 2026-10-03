@@ -4,7 +4,6 @@ import {
   CONFLICT_TEXT_MAX_BYTES,
   type MergeConflict,
 } from '@spark-outpost/contracts';
-import { modeNeedsWorktree } from '@spark-outpost/contracts';
 import type { Db } from '../persistence/db.ts';
 import { saveSnapshot } from '../persistence/run-snapshots.ts';
 import {
@@ -64,8 +63,6 @@ export async function repoBusy(db: Db, runId: string, root: string): Promise<boo
 }
 
 export interface CopyFacts {
-  provider: string;
-  agentMode: string | null;
   level: Session['input']['level'];
   destructive: boolean;
   risky: boolean;
@@ -73,13 +70,7 @@ export interface CopyFacts {
 }
 
 export function needsCopyFor(facts: CopyFacts): boolean {
-  return (
-    facts.level === 'full-auto' ||
-    modeNeedsWorktree(facts.provider, facts.agentMode) ||
-    facts.destructive ||
-    facts.risky ||
-    facts.busy
-  );
+  return facts.level === 'full-auto' || facts.destructive || facts.risky || facts.busy;
 }
 
 export interface CopyBase {

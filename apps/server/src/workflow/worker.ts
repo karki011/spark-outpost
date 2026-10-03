@@ -9,12 +9,14 @@ import { orchestrate } from '../orchestration/orchestrator.ts';
 import type { OrchestratorDeps } from '../orchestration/session.ts';
 import { recoverExpiredLeases } from './recovery.ts';
 import { sweepSessions } from './turn-session.ts';
+import { chatTarget, drainQueue, drainWaiting, type ResolveTarget } from './queue-drain.ts';
 
 export interface WorkerOptions extends OrchestratorDeps {
   concurrency: number;
   pollMs?: number;
   recoveryEveryMs?: number;
   activeWork?: ActiveWork;
+  queueTarget?: ResolveTarget;
 }
 
 export interface Worker {
@@ -25,7 +27,24 @@ export interface Worker {
 
 async function runLease(options: WorkerOptions, lease: Lease): Promise<void> {
   if (await isDigestRun(options.db, lease.runId)) return executeDigest(options, lease);
-  return orchestrate(options, lease);
+  await orchestrate(options, lease);
+  await sendNextQueued(options, lease.runId);
+}
+
+async function sendNextQueued(options: WorkerOptions, runId: string): Promise<void> {
+  const { rows } = await options.db.query<{ conversation_id: string }>(
+    'SELECT conversation_id FROM runs WHERE id = $1 AND parent_run_id IS NULL',
+    [runId],
+  );
+  const conversationId = rows[0]?.conversation_id;
+  if (!conversationId) return;
+  await drainQueue(options.db, conversationId, queueTarget(options)).catch((error: unknown) =>
+    console.error(`Could not send the queued message for chat ${conversationId}`, error),
+  );
+}
+
+function queueTarget(options: WorkerOptions): ResolveTarget {
+  return options.queueTarget ?? chatTarget(options.db);
 }
 
 export function startWorker(options: WorkerOptions): Worker {
@@ -74,6 +93,7 @@ export function startWorker(options: WorkerOptions): Worker {
             await cleanOrphanedCopies(options.db);
             await sweepChatWorktrees(options.db);
             await sweepSessions(options.db, options.sessionLimits);
+            await drainWaiting(options.db, queueTarget(options));
           } finally {
             done?.();
           }

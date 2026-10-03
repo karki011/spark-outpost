@@ -9,7 +9,9 @@ import { ShipGitError } from '../ship/git.ts';
 import { gitHubStatus, removeToken, saveToken, type GitHubDeps } from '../ship/github/access.ts';
 import { GitHubApiError } from '../ship/github/connection.ts';
 import { ShipBlockedError, type ShipDeps } from '../ship/prepare.ts';
+import { conversationPrRoute, forgetPrRoutes, testGitHub } from '../ship/route-check.ts';
 import { shipPreview, shipTask } from '../ship/service.ts';
+import { loginShellPath } from '../setup/login-path.ts';
 import { paramId, parseBody } from './validation.ts';
 
 export interface ShipRouteDeps {
@@ -45,6 +47,7 @@ export function gitHubDepsOf(deps: GitHubRouteDeps): GitHubDeps {
     fetch: deps.endpoints.fetch,
     apiUrl: deps.githubApiUrl,
     locateGh: deps.locateGh ?? (() => locateCli('gh', deps.runCommand, deps.loginShell)),
+    loginPath: loginShellPath(deps.runCommand, deps.loginShell),
   };
 }
 
@@ -70,11 +73,21 @@ export function shipRoutes(routeDeps: ShipRouteDeps): Router {
 
   router.put('/github/token', async (req, res) => {
     const request = parseBody(saveGitHubTokenRequestSchema, req);
+    forgetPrRoutes();
     res.json(await saveToken(deps, request.token, request.host));
   });
 
   router.delete('/github/token', async (_req, res) => {
+    forgetPrRoutes();
     res.json(await removeToken(deps));
+  });
+
+  router.post('/github/test', async (_req, res) => {
+    res.json(await testGitHub(deps));
+  });
+
+  router.get('/conversations/:id/pr-route', async (req, res) => {
+    res.json({ info: await conversationPrRoute(deps, paramId(req)) });
   });
 
   return router;

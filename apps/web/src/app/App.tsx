@@ -19,6 +19,7 @@ import { queueDraft } from '../chat/composer/pending-draft.ts';
 import { StatusCompanion } from '../companion/StatusCompanion.tsx';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
 import { AgentTvHost } from '../crew/AgentTvHost.tsx';
+import { MemberChatHost } from '../crew/MemberChatHost.tsx';
 import { scrollToChatApproval } from '../crew/scroll-to-anchor.ts';
 import { ConversationList } from '../conversations/ConversationList.tsx';
 import { attention, isRunning, rowState } from '../conversations/row-state.ts';
@@ -274,6 +275,7 @@ function ChatShell({ entering }: { entering: boolean }) {
         />
         {live.paused && !connection.lost && <LivePausedHint />}
         <TeammateHost />
+        <MemberChatHost />
         <AnimatePresence>
           {settings && (
             <SettingsDialog

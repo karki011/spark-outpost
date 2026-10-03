@@ -2,13 +2,9 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
 import { closeAgentTv, useAgentTv } from './agent-tv-store.ts';
+import { openMemberChat } from './member-chat-store.ts';
 import { AgentTv } from './AgentTv.tsx';
-import {
-  agentAnchor,
-  approvalAnchor,
-  conversationCrew,
-  crewOrchestration,
-} from './conversation-crew.ts';
+import { agentAnchor, approvalAnchor, lastCrewOrchestration, tvCrew } from './conversation-crew.ts';
 import { busyCount } from './crew-model.ts';
 import { scrollToAnchor } from './scroll-to-anchor.ts';
 import { JEV_ID } from './crew-projection.ts';
@@ -30,8 +26,8 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
     enabled: sourceId !== null,
   });
   const source = sourceId ? detail.data : undefined;
-  const agents = conversationCrew(source);
-  const orchestration = crewOrchestration(source);
+  const agents = tvCrew(source);
+  const orchestration = lastCrewOrchestration(source);
   const waiting = orchestration?.pendingCheckpoint ?? null;
   const elsewhere = sourceId !== null && sourceId !== activeId;
   const asking = agents.some((agent) => agent.state === 'waiting');
@@ -70,6 +66,7 @@ export function AgentTvHost({ activeId, onGoTo }: AgentTvHostProps) {
       rows={tvListRows(source, orchestration, members, asks)}
       stopping={stop.isPending ? (stop.variables ?? null) : null}
       onStop={(runId) => stop.mutate(runId)}
+      onMessage={(runId) => openMemberChat(sourceId, runId)}
       decision={lastDecisionLine(orchestration)}
       remark={spokenDecisionLine(orchestration)}
       branch={source?.conversation.branch ?? null}

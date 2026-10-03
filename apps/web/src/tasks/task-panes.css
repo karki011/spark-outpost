@@ -222,7 +222,7 @@
 
 .crow {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-columns: 30px minmax(0, 1fr) auto auto;
   gap: 0 10px;
   align-items: center;
   padding: 6px 0;
@@ -323,4 +323,9 @@
 
 .wsec.agreed + .wsec {
   margin-top: 14px;
+}
+
+.crow .msg-member {
+  width: 28px;
+  height: 28px;
 }

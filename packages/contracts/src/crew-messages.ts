@@ -1,0 +1,52 @@
+import { z } from 'zod';
+import { STEER_TEXT_LIMIT } from './steer.ts';
+
+export const MEMBER_MESSAGE_ACTIVITY = 'member_message';
+
+export const memberMessageStatusSchema = z.enum([
+  'queued',
+  'delivered',
+  'interrupting',
+  'sent',
+  'missed',
+  'continued',
+]);
+export type MemberMessageStatus = z.infer<typeof memberMessageStatusSchema>;
+
+export const memberMessageUrgencySchema = z.enum(['next', 'now']);
+export type MemberMessageUrgency = z.infer<typeof memberMessageUrgencySchema>;
+
+export const memberMessageSchema = z.object({
+  id: z.uuid(),
+  runId: z.uuid(),
+  body: z.string(),
+  urgency: memberMessageUrgencySchema,
+  status: memberMessageStatusSchema,
+  messageId: z.uuid().nullable(),
+  createdAt: z.string(),
+  deliveredAt: z.string().nullable(),
+});
+export type MemberMessage = z.infer<typeof memberMessageSchema>;
+
+export const memberMessageRequestSchema = z.object({
+  id: z.uuid(),
+  text: z.string().trim().min(1).max(STEER_TEXT_LIMIT),
+  continue: z.boolean().default(false),
+});
+export type MemberMessageRequest = z.infer<typeof memberMessageRequestSchema>;
+
+export const memberMessageResponseSchema = z.object({
+  message: memberMessageSchema.nullable(),
+  queued: z.boolean(),
+  reply: z.string(),
+});
+export type MemberMessageResponse = z.infer<typeof memberMessageResponseSchema>;
+
+export const queuedMessageSchema = z.object({
+  id: z.uuid(),
+  content: z.string(),
+  position: z.number(),
+  continueRunId: z.uuid().nullable(),
+  createdAt: z.string(),
+});
+export type QueuedMessage = z.infer<typeof queuedMessageSchema>;

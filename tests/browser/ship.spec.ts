@@ -48,7 +48,7 @@ async function keptChange(page: Page, root: string) {
     .getByRole('button', { name: 'Allow', exact: true })
     .click();
   await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toContainText(
-    'Kept: you approved every edit.',
+    'Kept automatically.',
     { timeout: 20_000 },
   );
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 15_000 });
@@ -121,20 +121,25 @@ test('Ship from the keep card commits the task file and opens a PR', async ({ pa
   await expect(workPanel.locator('.ship .lchip')).toContainText('acme/widgets#1');
 });
 
-test('Ship offers push only when GitHub is not connected', async ({ page }) => {
+test('Ship pushes and links Create PR when GitHub is not connected', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   const repo = await repoWithRemote(base, 'pushonly');
   await keptChange(page, repo.root);
-  const push = page.locator('.ship-btn');
-  await expect(push).toHaveText('Push branch');
-  await push.click();
+  const open = page.locator('.ship-btn');
+  await expect(open).toHaveText('Open PR');
+  await open.click();
   const panel = page.getByRole('group', { name: 'Ship this task' });
-  await expect(panel).toContainText('Connect GitHub in Settings');
-  await expect(panel.getByRole('radio')).toHaveCount(2);
-  await panel.getByRole('button', { name: 'Push branch' }).click();
+  await expect(panel).toContainText('Create PR link');
+  await expect(panel.getByRole('radio')).toHaveCount(3);
+  await panel.getByRole('button', { name: 'Open PR' }).click();
   await expect(page.getByRole('status').filter({ hasText: /^Pushed spark\// })).toBeVisible({
     timeout: 15_000,
   });
+  const create = page.locator('.ship').getByRole('link', { name: 'Create PR on GitHub' });
+  await expect(create).toHaveAttribute(
+    'href',
+    /^https:\/\/github\.com\/acme\/widgets\/compare\/main\.\.\.spark%2F/,
+  );
   const branch = (await page.locator('.ctxbar .chat-branch .ctx-branch-name').textContent()) ?? '';
   expect(git(repo.root, 'symbolic-ref', '--short', 'HEAD')).toBe('main');
   expect(git(repo.bare, 'rev-parse', branch)).toBe(git(repo.root, 'rev-parse', branch));

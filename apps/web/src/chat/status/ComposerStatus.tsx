@@ -9,7 +9,7 @@ import { useTooltip } from '../../ui/Tooltip.tsx';
 import { useExpandReveal } from '../../ui/transitions.tsx';
 import { focusPending, useFocusHandoff } from './focus-pending.ts';
 import { summaryText } from './pending-summary.ts';
-import { Dot, Indicator } from './line-parts.tsx';
+import { Dot, Indicator, QueuedTail } from './line-parts.tsx';
 import { RunningLine, runningText } from './RunningLine.tsx';
 import { SummaryText } from './SummaryText.tsx';
 import { clockText } from './status-text.ts';
@@ -48,9 +48,11 @@ function useWaitingShortcut(entries: readonly PendingEntry[]) {
 function WaitingLine({
   entries,
   provider,
+  queued,
 }: {
   entries: readonly PendingEntry[];
   provider: string;
+  queued: number;
 }) {
   const [open, setOpen] = useState(false);
   const listId = useId();
@@ -103,6 +105,7 @@ function WaitingLine({
             </span>
           </button>
         )}
+        <QueuedTail queued={queued} />
         {tip.tooltip}
       </div>
       {!single && open && (
@@ -143,10 +146,27 @@ function EndedLine({
   );
 }
 
-function LineBody({ line, provider }: { line: StatusLine; provider: string }) {
-  if (line.kind === 'waiting') return <WaitingLine entries={line.entries} provider={provider} />;
+function LineBody({
+  line,
+  provider,
+  queued,
+}: {
+  line: StatusLine;
+  provider: string;
+  queued: number;
+}) {
+  if (line.kind === 'waiting') {
+    return <WaitingLine entries={line.entries} provider={provider} queued={queued} />;
+  }
   if (line.kind === 'running') {
-    return <RunningLine worker={line.worker} activity={line.activity} since={line.since} />;
+    return (
+      <RunningLine
+        worker={line.worker}
+        activity={line.activity}
+        since={line.since}
+        queued={queued}
+      />
+    );
   }
   return <EndedLine provider={provider} word={line.word} elapsed={line.elapsed} />;
 }
@@ -156,9 +176,16 @@ interface ComposerStatusProps {
   runs: readonly Run[];
   activeRunId: string | null;
   provider: string;
+  queued?: number;
 }
 
-export function ComposerStatus({ store, runs, activeRunId, provider }: ComposerStatusProps) {
+export function ComposerStatus({
+  store,
+  runs,
+  activeRunId,
+  provider,
+  queued = 0,
+}: ComposerStatusProps) {
   const line = useStatusLine({ store, runs, activeRunId, provider });
   const pending = line?.kind === 'waiting' ? line.entries : NO_ENTRIES;
   useFocusHandoff(pending);
@@ -173,7 +200,7 @@ export function ComposerStatus({ store, runs, activeRunId, provider }: ComposerS
       <AnimatePresence initial={false}>
         {line && (
           <motion.div key="line" className="cs-wrap" {...expand}>
-            <LineBody line={line} provider={provider} />
+            <LineBody line={line} provider={provider} queued={queued} />
           </motion.div>
         )}
       </AnimatePresence>

@@ -170,6 +170,7 @@ export function TaskDetails({
           <CrewPane
             runs={[]}
             agents={agents}
+            conversationId={conversationId}
             labels={orchestration ? pieceLabels(orchestration) : undefined}
           />
         )}

@@ -268,8 +268,8 @@ describe('ship', { timeout: 60_000 }, () => {
     const repo = await repoWithRemote(base, 'token');
     await post('/api/projects', { rootPath: repo.root }).expect(201);
     const { taskId } = await editedTask(repo.root);
-    expect((await preview(taskId)).modes).toEqual(['commit', 'push']);
-    expect((await preview(taskId)).notes[0]).toMatch(/Connect GitHub in Settings/);
+    expect((await preview(taskId)).modes).toEqual(['commit', 'push', 'draft_pr']);
+    expect((await preview(taskId)).notes[0]).toMatch(/Create PR link\. Connect GitHub in Settings/);
 
     const rejected = await put('/api/github/token', {
       token: 'github_pat_rejected_0123456789abcdef',
@@ -308,7 +308,7 @@ describe('ship', { timeout: 60_000 }, () => {
     expect(await secrets.get('github')).toBeNull();
   });
 
-  it('prefers the gh login over a saved token and reports it', async () => {
+  it('reports the gh login when no token is saved', async () => {
     await loginGh('octo-cli');
     const status = githubConnectionSchema.parse(
       (await get('/api/github/connection').expect(200)).body,

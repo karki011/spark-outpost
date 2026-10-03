@@ -10,7 +10,7 @@ export const BOOT_STATUS: Record<BootStep, string> = {
   spark: 'Starting Spark…',
 };
 
-export const MIN_BOOT_MS = 300;
+export const MIN_BOOT_MS = 3_000;
 
 export function reportingSteps(
   effects: MigrationGuardEffects,

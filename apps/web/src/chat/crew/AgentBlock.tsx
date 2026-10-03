@@ -1,6 +1,14 @@
 import { useId, useState, type ReactNode } from 'react';
-import { isCheckApproval, type Approval, type Project } from '@spark-outpost/contracts';
+import {
+  isCheckApproval,
+  type Approval,
+  type MemberMessage,
+  type Project,
+} from '@spark-outpost/contracts';
 import { CrewBlob } from '../../crew/CrewBlob.tsx';
+import { MessageMemberButton } from '../../crew/MessageMemberButton.tsx';
+import { MemberMessageList } from '../../crew/MemberMessageList.tsx';
+import '../../crew/member-chat.css';
 import {
   crewStateWord,
   modelLabel,
@@ -20,6 +28,8 @@ import { useRunStream } from '../use-run-stream.ts';
 import { WorkLog } from '../WorkLog.tsx';
 import { shownApprovals } from './crew-items.ts';
 import { CrewName } from './CrewHint.tsx';
+
+const NO_MESSAGES: readonly MemberMessage[] = [];
 
 const EFFORT_SCALE = ['low', 'medium', 'high', 'xhigh', 'max'].map((id) => ({
   id,
@@ -54,7 +64,13 @@ const TURN_STATES: Record<CrewAgent['state'], TurnState> = {
   queued: 'working',
 };
 
-export function AgentHead({ agent, anchor }: { agent: CrewAgent; anchor: string }) {
+interface AgentHeadProps {
+  agent: CrewAgent;
+  anchor: string;
+  conversationId?: string;
+}
+
+export function AgentHead({ agent, anchor, conversationId }: AgentHeadProps) {
   const live = agent.state !== 'done';
   return (
     <div className="agent-head" id={anchor}>
@@ -67,6 +83,13 @@ export function AgentHead({ agent, anchor }: { agent: CrewAgent; anchor: string 
       </span>
       {live && <span className={`agent-state ${agent.state}`}>{crewStateWord(agent.state)}</span>}
       <HeadMeta agent={agent} />
+      {conversationId && (
+        <MessageMemberButton
+          conversationId={conversationId}
+          agent={agent}
+          className="icon-btn agent-msg"
+        />
+      )}
     </div>
   );
 }
@@ -152,6 +175,7 @@ interface AgentBlockProps {
   repo: Project | null;
   after?: ReactNode;
   changes?: ReactNode;
+  messages?: readonly MemberMessage[];
 }
 
 function firstLine(text: string): string {
@@ -171,6 +195,7 @@ export function AgentBlock({
   conversationId,
   after,
   changes,
+  messages = NO_MESSAGES,
   ...body
 }: AgentBlockProps) {
   const [choice, setChoice] = useState<boolean | null>(null);
@@ -203,7 +228,7 @@ export function AgentBlock({
   }
   return (
     <div className="msg ai agent-block" data-agent={agent.id}>
-      <AgentHead agent={agent} anchor={anchor} />
+      <AgentHead agent={agent} anchor={anchor} conversationId={conversationId} />
       <div id={bodyId}>
         {settled ? (
           <AgentBody agent={agent} {...body} />
@@ -211,6 +236,12 @@ export function AgentBlock({
           <StreamedBody agent={agent} live={live} conversationId={conversationId} {...body} />
         )}
       </div>
+      <MemberMessageList
+        name={agent.name}
+        live={live}
+        messages={messages}
+        className="mc-log agent-notes"
+      />
       {choice === true && (
         <button type="button" className="agent-unfold" onClick={() => setChoice(false)}>
           Collapse

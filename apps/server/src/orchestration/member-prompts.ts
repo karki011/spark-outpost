@@ -14,6 +14,7 @@ import type { ChangedLines } from './checkpoint.ts';
 import type { Session } from './session.ts';
 import { publishBrief } from '../workflow/publish-context.ts';
 import type { Spawn } from './transitions.ts';
+import { deliveredToCrew, type CrewNote } from '../persistence/member-messages.ts';
 
 export interface ChangeSummary {
   files: ChangedFile[];
@@ -105,8 +106,17 @@ export async function readerPreamble(s: Session): Promise<string | null> {
   return parts.length > 0 ? parts.join('\n\n') : null;
 }
 
+export function withCrewNotes(request: string, notes: readonly CrewNote[]): string {
+  if (notes.length === 0) return request;
+  const lines = notes.map(
+    (note) => `- You → ${note.name}: ${note.body.replace(/\s+/g, ' ').trim()}`,
+  );
+  return `${request}\n\nWhile the crew worked, the user also said:\n${lines.join('\n')}`;
+}
+
 export async function promptFor(s: Session, spawn: Spawn): Promise<string> {
-  const request = s.input.userRequest;
+  const notes = await deliveredToCrew(s.deps.db, s.lease.runId).catch(() => []);
+  const request = withCrewNotes(s.input.userRequest, notes);
   const agreedPlan = await agreedPlanText(s);
   if (spawn.role === 'critic') {
     const changes = await changesForReview(s);

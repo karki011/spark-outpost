@@ -42,6 +42,7 @@ interface RunAuditRow {
   cost_source: CostSource | null;
   log_pruned: boolean;
   log_entries: number;
+  unreviewed_count: number;
   methods: string[];
   category: string | null;
   file_reads: number | null;
@@ -86,6 +87,7 @@ function toRunSummary(row: RunAuditRow, approvalWaits: ApprovalWait[]): AuditRun
     agentLabel: row.agent_label,
     category: categorySchema.safeParse(row.category).data ?? null,
     ...(row.file_reads === null ? {} : { fileReads: row.file_reads }),
+    ...(row.unreviewed_count > 0 ? { unreviewedCount: row.unreviewed_count } : {}),
   };
 }
 
@@ -140,6 +142,8 @@ export async function conversationAuditRuns(
        (r.route->>'fileReads')::int AS file_reads,
        r.protocol_log_pruned_at IS NOT NULL AS log_pruned,
        (SELECT count(*)::int FROM run_protocol_log l WHERE l.run_id = r.id) AS log_entries,
+       (SELECT count(*)::int FROM run_protocol_log l
+         WHERE l.run_id = r.id AND l.unreviewed) AS unreviewed_count,
        ARRAY(SELECT DISTINCT l.method FROM run_protocol_log l
          WHERE l.run_id = r.id AND l.method IS NOT NULL ORDER BY l.method) AS methods,
        COALESCE(p.category, r.category) AS category

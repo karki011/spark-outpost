@@ -1,3 +1,4 @@
+import { loginShellPath } from '../setup/login-path.ts';
 import { createIntakeRecorder } from '../advisor/intake-recorder.ts';
 import { createCodeScanner } from '../codescan/scanner.ts';
 import { loadConfig } from '../config.ts';
@@ -46,6 +47,7 @@ const sparkDeps: SparkToolDeps = {
     runCommand,
     apiUrl: config.GITHUB_API_URL,
     locateGh: () => locateCli('gh', runCommand, loginShell),
+    loginPath: loginShellPath(runCommand, loginShell),
   },
   serverSpendCapUsd: config.ORCHESTRATION_COST_CAP_USD ?? null,
   parallelBuilders: config.COORDINATOR_MODE === 'parallel',
@@ -82,6 +84,7 @@ const worker = startWorker({
     fetch,
     apiUrl: config.GITHUB_API_URL,
     locateGh: () => locateCli('gh', runCommand, loginShell),
+    loginPath: loginShellPath(runCommand, loginShell),
   },
   ...(config.ORCHESTRATION_COST_CAP_USD
     ? { budget: { costCapUsd: config.ORCHESTRATION_COST_CAP_USD } }
@@ -101,6 +104,7 @@ const prFollowUp = startPrFollowUp({
     fetch,
     apiUrl: config.GITHUB_API_URL,
     locateGh: () => locateCli('gh', runCommand, loginShell),
+    loginPath: loginShellPath(runCommand, loginShell),
   },
   branchPrefix: config.BRANCH_PREFIX,
   jev: intake.deps,

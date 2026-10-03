@@ -61,6 +61,21 @@ By default, each chat that changes code gets its own git worktree on a new branc
 
 One chat can also switch with the branch chip above the message box. See [Where the chat works](chats-and-modes.md#where-the-chat-works).
 
+## Watch the crew in Agent TV
+
+Select **Agent TV** in the chat header to watch the crew work. **Stage** shows the agents as blobs, with Jev in the middle; **List** shows one row per agent with its model, time and cost. Select an agent to see its status, then **Go to** to jump to its work in the chat. Agent TV keeps following its chat while you open another one. Press **Esc** to close it.
+
+## Message a crew member
+
+You can tell one agent something without stopping the others. Nothing waits for an approval: the agent's mode and Spark's safety rules still apply.
+
+1. Open the agent: select **Message** on its row in **Agent TV**, its message button in the **Crew** tab of the work panel, or the button on its row in the chat.
+2. Type your message and select **Send to** _name_, for example **Send to Bolt**.
+
+The agent reads it at its next step, in its own session, and the chat shows it under the agent as **You → Bolt**. The Critic and the Coordinator see what you said when they review.
+
+When a Builder has finished, the button becomes **Continue** _name_. Spark starts a new turn where the same Builder picks its work back up in the same place, resuming its session when the agent supports it. If a turn is still running, your message waits in the [queue](chats-and-modes.md#queue-messages-while-a-turn-runs).
+
 ## Keep or revert the changes
 
 When the Builder finishes, the **Keep these changes?** card lists the changed files and anything [worth a look](guardrails.md#read-the-keep-card).

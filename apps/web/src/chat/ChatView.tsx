@@ -23,6 +23,7 @@ import {
   conversationCrew,
   crewOrchestration,
   latestOrchestration,
+  tvCrew,
 } from '../crew/conversation-crew.ts';
 import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { TerminalButton } from '../terminal/dock/TerminalButton.tsx';
@@ -52,6 +53,9 @@ import { useChatWorkspace } from './project/use-chat-workspace.ts';
 import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
 import { useChatSend } from './send/use-chat-send.ts';
+import { QueueStrip } from './queue/QueueStrip.tsx';
+import { queueMode } from './queue/queue-model.ts';
+import { useChatQueue } from './queue/use-chat-queue.ts';
 import { activeRun } from './turns.ts';
 import { useStop } from './use-stop.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
@@ -109,6 +113,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   });
 
   const running = activeRun(detail.data);
+  const queue = useChatQueue(conversationId, detail.data?.queue);
   const title = detail.data?.conversation.title ?? '';
   const repos = useLinkedProjects(detail.data?.conversation.projectIds ?? NO_REPOS);
   const settings = detail.data?.settings ?? null;
@@ -182,7 +187,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 {openAudit && (
                   <ChatHeaderMenu onAudit={openAudit} onStartFresh={() => startFresh.mutate()} />
                 )}
-                <AgentTvButton conversationId={conversationId} agents={crew} />
+                <AgentTvButton conversationId={conversationId} agents={tvCrew(detail.data)} />
                 <TerminalButton chatId={conversationId} />
                 <ThemePicker />
               </div>
@@ -220,6 +225,11 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               runs={detail.data?.runs ?? NO_RUNS}
               activeRunId={running?.id ?? null}
               provider={detail.data?.settings.provider ?? ''}
+              queued={queue.items.length}
+            />
+            <QueueStrip
+              queue={queue}
+              mode={queueMode(running !== null, detail.data?.runs ?? NO_RUNS)}
             />
             <Composer
               conversationId={conversationId}
@@ -239,6 +249,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
                 sends.send({ content, attachments: files, annotations });
               }}
               onStop={stop.stop}
+              onQueue={queue.add}
               steer={steer}
               {...(openAudit ? { onAudit: openAudit } : {})}
               onStartFresh={() => startFresh.mutate()}

@@ -14,6 +14,7 @@ import { crewTotals, totalsLine } from '../../crew/crew-model.ts';
 import { crewAgents, runAgent } from '../../crew/crew-projection.ts';
 import { PieceBoard } from '../../crew/PieceBoard.tsx';
 import { ApprovalCard } from '../approvals/ApprovalCard.tsx';
+import { RailFlags } from '../approvals/RailFlags.tsx';
 import { RevertRun } from '../approvals/RevertRun.tsx';
 import { FilesChanged, taskForRuns } from '../changes/FilesChanged.tsx';
 import { Markdown } from '../markdown/Markdown.tsx';
@@ -41,6 +42,7 @@ import {
 import { DispatchLine } from './DispatchLine.tsx';
 import { ParallelGroup } from './ParallelGroup.tsx';
 import { pieceLabels } from '../../crew/piece-labels.ts';
+import { messagesFor } from '../../crew/member-model.ts';
 
 interface CrewTurnProps {
   run: Run;
@@ -131,6 +133,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         approvals={detail.approvals.filter((approval) => approval.runId === member.runId)}
         repo={repo}
         changes={changedBy(member.runId)}
+        messages={messagesFor(detail, member.runId)}
         after={item.checkpoints.map(checkpointCard)}
       />
     );
@@ -185,6 +188,7 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
         </div>
       )}
       {orchestration.error && <p className="error-line">{orchestration.error}</p>}
+      <RailFlags detail={detail} runId={run.id} />
       <TurnPlanOffer detail={detail} runId={run.id} />
       <ReplyPlanAction
         detail={detail}

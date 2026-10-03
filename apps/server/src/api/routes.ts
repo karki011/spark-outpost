@@ -16,7 +16,6 @@ import {
   listConversations,
   sendUserMessage,
 } from '../persistence/conversations.ts';
-import { ConversationBusyError } from '../persistence/conversation-actions.ts';
 import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
 import { countActiveRuns, getRun } from '../persistence/runs.ts';
 import { stopRun } from '../workflow/stop-run.ts';
@@ -39,6 +38,7 @@ import { approvalErrorStatus } from './approval-routes.ts';
 import { shipErrorStatus } from './ship-routes.ts';
 import { ticketErrorStatus } from './ticket-routes.ts';
 import { teammateErrorStatus } from './teammate-routes.ts';
+import { queueErrorStatus } from './queue-routes.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { PlanDocumentError } from '../persistence/plan-documents.ts';
 import { AgentConfigConflictError } from './agent-config-routes.ts';
@@ -89,7 +89,7 @@ export function apiRoutes(deps: RouteDeps): Router {
     const request = parseBody(sendMessageRequestSchema, req);
     const conversationId = paramId(req);
     const target = await runTarget(conversationId);
-    if (request.startAs === 'change' && target.permission !== PERMISSION_DO) {
+    if (request.startAs && target.permission !== PERMISSION_DO) {
       throw new BadRequestError('Switch the chat to Do to make the change.');
     }
     await deps.warmTicketMentions?.(request.content);
@@ -157,7 +157,8 @@ export function statusForError(error: unknown): { status: number; message: strin
     outcomeErrorStatus(error) ??
     shipErrorStatus(error) ??
     ticketErrorStatus(error) ??
-    teammateErrorStatus(error);
+    teammateErrorStatus(error) ??
+    queueErrorStatus(error);
   if (known) return known;
   if (
     error instanceof BadRequestError ||
@@ -181,7 +182,7 @@ export function statusForError(error: unknown): { status: number; message: strin
   if (error instanceof PlanDocumentError || error instanceof AgentConfigConflictError) {
     return { status: 409, message: error.message };
   }
-  if (error instanceof MessageConflictError || error instanceof ConversationBusyError) {
+  if (error instanceof MessageConflictError) {
     return { status: 409, message: error.message };
   }
   return { status: 500, message: 'The server hit an unexpected error. Check the server log.' };

@@ -128,3 +128,36 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+.gh-route {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.gh-route p {
+  margin: 0;
+}
+.gh-route b {
+  font-weight: 500;
+}
+.gh-test {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gh-test .gh-state {
+  display: block;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.gh-test .gh-state::before {
+  display: inline-block;
+  margin-right: 7px;
+  vertical-align: middle;
+}

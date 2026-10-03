@@ -44,6 +44,7 @@ export interface IntakeFacts {
   currentTask: CurrentTask | null;
   previousReply?: string | null;
   change?: boolean;
+  continuing?: boolean;
   hasAgreedPlan?: boolean;
   now?: Date;
 }
@@ -160,7 +161,7 @@ function vagueRule(facts: IntakeFacts): boolean {
   });
 }
 
-const USER_CHANGE: IntakeCall = { jev: null, rule: null, value: true, source: 'user', gate: null };
+const USER_SAID: IntakeCall = { jev: null, rule: null, value: true, source: 'user', gate: null };
 
 export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeDecisions {
   const doing = facts.mode === 'do';
@@ -211,7 +212,10 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
     destructive: { ...destructiveCall, value: destructive },
   };
   let continues: boolean | null = null;
-  if (facts.currentTask) {
+  if (facts.currentTask && facts.continuing) {
+    continues = true;
+    calls.continues_task = USER_SAID;
+  } else if (facts.currentTask) {
     const rule = followUpByRule(facts.request, facts.currentTask.lastReplyAt, facts.now);
     const continuesCall = call(jev, 'continuesTask', 'continues_task', rule, facts, risk);
     continues = continuesCall.value;
@@ -221,8 +225,8 @@ export function decideIntake(jev: JevIntake | null, facts: IntakeFacts): IntakeD
   const vague = vagueCall.value && !(continues === true && !facts.firstMessage);
   calls.vague = { ...vagueCall, value: vague };
   const trivial = !destructive && trivialByRule(facts.request);
-  if (facts.change) {
-    calls.change = USER_CHANGE;
+  if (facts.change || facts.continuing) {
+    calls.change = USER_SAID;
     return {
       intent,
       start: planFirstIfDestructive('build', destructive),

@@ -36,6 +36,7 @@ import { assertProtocolVersion, failureError, toProviderError } from './errors.t
 import { declineInConversation, nativePlan } from './permissions.ts';
 import { applySessionSettings, modeName } from './apply-settings.ts';
 import { modeAllowed, modeWish, switchMode } from './session-modes.ts';
+import { createRailWatch } from './rail-watch.ts';
 import { asReported } from './reported-output.ts';
 import { CLIENT_INFO, clientCapabilities } from './client-info.ts';
 import { readTextFile, refuseWrite } from './fs-handlers.ts';
@@ -48,7 +49,7 @@ import {
 import { primaryRoot, type PathPolicy } from '../../projects/path-policy.ts';
 import { newSessionRequest } from './session-request.ts';
 import { extraRoots, openProject, sessionMeta } from './session-start.ts';
-import { attachSteering } from './steering.ts';
+import { attachSteering, nextMessage, untilFailure } from './steering.ts';
 import {
   namedMcpServers,
   prepareRepoSession,
@@ -334,9 +335,11 @@ async function converse(
         }
       : null;
   const doing = workspace.changing ? gated : null;
+  const rails = doing ? createRailWatch({ roots: doing.policy.roots, cwd: doing.cwd }) : null;
   const client = acp
     .client(CLIENT_INFO)
     .onRequest(acp.methods.client.session.requestPermission, (ctx) => {
+      rails?.asked(ctx.params.toolCall.toolCallId);
       if (signal.aborted) return { outcome: { outcome: 'cancelled' } };
       if (doing) return reviewPermission(ctx.params, ctx.requestId, doing);
       const plan = policy ? nativePlan(ctx.params, definition.id, mapper.shownPlan()) : [];
@@ -419,7 +422,7 @@ async function converse(
         if (note) push(mapper.note(note));
       }
       const { live } = applied;
-      const allowed = modeAllowed(definition, turn, policy !== null, doing !== null);
+      const allowed = modeAllowed(definition, policy !== null, doing !== null);
       mapper.trackSettings(
         { ...applied.current, mode: applied.mode, values: applied.values },
         { allowed, name: (mode) => modeName(live.options(), mode) },
@@ -458,16 +461,21 @@ async function converse(
       const blocks = continued
         ? followUpBlocks(text, promptOptions)
         : conversationBlocks(history, text, promptOptions);
+      const textOnly = { ...promptOptions, attachments: [] };
       const detachSteering = attachSteering(ctx, init, session.sessionId, turn.steering);
-      const prompt = session.prompt(blocks);
-      const promptFailure = prompt.then(() => new Promise<never>(() => undefined));
+      let promptFailure = untilFailure(session.prompt(blocks));
       for (;;) {
         const message = await Promise.race([session.nextUpdate(), promptFailure]);
         if (message.kind === 'stop') {
-          stopRequests?.();
-          detachSteering();
           push(promptTokens(message.response.usage));
           mapper.stopped(message.response._meta);
+          const next = await nextMessage(turn, message.stopReason, signal);
+          if (next) {
+            promptFailure = untilFailure(session.prompt(followUpBlocks(next, textOnly)));
+            continue;
+          }
+          stopRequests?.();
+          detachSteering();
           if (turn.session) await closeQuietly(ctx, init, session.sessionId);
           return message.stopReason;
         }
@@ -475,6 +483,9 @@ async function converse(
           live.adopt(message.update.configOptions);
         }
         push(mapper.map(message.update));
+        for (const flag of (await rails?.observe(message.update)) ?? []) {
+          push([{ kind: 'rail_flag', flag }]);
+        }
         const unsafe = mapper.unsafeModeChange();
         if (unsafe) {
           throw new ProviderError(

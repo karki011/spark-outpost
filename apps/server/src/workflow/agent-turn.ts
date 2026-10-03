@@ -28,6 +28,7 @@ import { prepareAskRun, prepareDoRun } from './do-run.ts';
 import { watchModeRequests } from './mode-requests.ts';
 import { publishGrant, startBasis } from './publish-context.ts';
 import { watchUrgentNotes } from './steer-requests.ts';
+import { joinSteering, openMemberInbox } from './member-inbox.ts';
 import { createSpendMeter } from './spend-meter.ts';
 import { runEvents } from './run-events.ts';
 import type { RunInput } from './run-input.ts';
@@ -55,6 +56,7 @@ import { loadUserMcp } from '../mcp/launch.ts';
 import { withMoveNote } from './project-move.ts';
 import { ASSISTANT_PREAMBLE } from '../companion/assistant.ts';
 import { createRunObservations } from '../observations/run-observations.ts';
+import { startRailFlags } from './rail-flags.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
 
 export function writesCode(role: string | null | undefined): boolean {
@@ -65,6 +67,8 @@ async function mainSessionBrief(db: Db, input: RunInput) {
   if (input.parentRunId || input.assistant) return null;
   return teammateBrief(db, input.identity.threadId);
 }
+
+const INBOX_POLL_MS = 1000;
 
 export type Append = (event: RunEvent, options?: AppendOptions) => Promise<number>;
 
@@ -77,6 +81,7 @@ export interface TurnDeps {
   approvalPollMs?: number;
   approvalTimeoutMs?: number;
   sessionLimits?: SweepLimits;
+  inboxPollMs?: number;
 }
 
 export type StopReason = 'cancelled' | 'lease_lost' | 'approval_timeout' | 'budget';
@@ -243,6 +248,15 @@ export async function runAgentTurn(
         control.stop('cancelled'),
       )
     : null;
+  const inbox = input.assistant
+    ? null
+    : openMemberInbox(deps.db, {
+        runId: lease.runId,
+        topRunId: input.parentRunId ?? lease.runId,
+        pollMs: deps.inboxPollMs ?? INBOX_POLL_MS,
+        append,
+      });
+  const steering = joinSteering([steerWatch, inbox]);
   const secretValues = await projectSecretValues(input.projectRoots);
   const redaction = createRedactionFilter(secretValues);
   const observer = scannedObserver(audit, secretValues, observations.record);
@@ -293,6 +307,10 @@ export async function runAgentTurn(
         : asking
           ? prepareAskRun({ ...gateOptions, conversationId: input.identity.threadId })
           : undefined;
+    const rails =
+      input.mode === 'do'
+        ? await startRailFlags({ ...input, db: deps.db, runId: lease.runId, audit })
+        : null;
     turnSession = await prepareTurnSession(deps.db, input, deps.sessionLimits);
     const session = turnSession;
     const recordSpend = async (output: Extract<ProviderOutput, { kind: 'usage' }>) => {
@@ -331,11 +349,11 @@ export async function runAgentTurn(
       ...(input.piece?.coordinated ? { coordinated: true } : {}),
       ...(writesCode(input.role) && startBasis(input) ? { publishes: true } : {}),
       ...(input.builderEnv ? { env: input.builderEnv } : {}),
-      ...(input.copyOf !== null || input.chatWorktree ? { worktree: true } : {}),
       ...(plansThisTurn(input) ? { planning: true } : {}),
       ...(approvals ? { approvals } : {}),
       ...(approvals && modeWatch ? { modeRequests: modeWatch } : {}),
-      ...(steerWatch ? { steering: steerWatch } : {}),
+      ...(steering ? { steering } : {}),
+      ...(inbox ? { inbox } : {}),
       ...(input.askTitle ? { askTitle: true } : {}),
       ...(preamble ? { preamble } : {}),
       ...(session ? { session: session.target } : {}),
@@ -383,8 +401,10 @@ export async function runAgentTurn(
       if (output.kind === 'instructions') {
         await recordFollowedInstructions(deps.db, lease.runId, output.files);
       }
+      if (output.kind === 'rail_flag') await rails?.record(output.flag);
       if (output.kind === 'text_delta') await sayText(redaction.push(output.delta));
     }
+    await rails?.finish();
     await sayText(redaction.finish());
     if (titles) {
       const ending = titles.finish();
@@ -414,6 +434,9 @@ export async function runAgentTurn(
   } finally {
     modeWatch?.dispose();
     steerWatch?.dispose();
+    await inbox
+      ?.dispose()
+      .catch((error: unknown) => console.error('Could not close the message inbox', error));
     audit.discard();
   }
 }

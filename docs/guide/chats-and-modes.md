@@ -86,7 +86,7 @@ To change the mode:
 A few rules hold in every mode:
 
 - Read-only modes (**Plan**, **Read-only**) never change files. If you ask for a change, the agent answers instead. Select **Make the change** under its answer to run the same request with changes allowed.
-- Claude's **Bypass permissions** and Codex's **Approve for me** and **Full access** act without Spark's approval checks, so they run only in a worktree copy, never on your checkout.
+- Claude's **Bypass permissions** and Codex's **Approve for me** and **Full access** act without asking, wherever the chat works (its own worktree by default, or your checkout if you picked it). Spark watches every action, marks it **ran without review** in the audit, and flags anything that crosses a protected path.
 - Whatever the mode, secret files and agent instruction files still ask first, and agents publish only the chat's own branch. See [Approvals and protected paths](approvals.md).
 
 For how the mode and Spark autonomy work together, see [Permissions and autonomy](permissions-and-autonomy.md).
@@ -115,10 +115,22 @@ To change the default for new chats, open **Settings → Spark** and change **Ho
 ## While a turn runs
 
 - To stop the agent, select **Stop**. It replaces the send button while a turn runs.
+- To say more while it works, type and press **Enter**. Your message joins the queue instead of waiting in the box. See [Queue messages while a turn runs](#queue-messages-while-a-turn-runs).
 - When Spark splits the work into pieces, the message box becomes a steering box. Pick who gets your message under **Steer to**: **Auto**, **All pieces**, one piece, or **Coordinator**. See [The Spark crew](spark-crew.md).
+- To tell one agent something, such as Bolt the Builder, message it directly. See [Message a crew member](spark-crew.md#message-a-crew-member).
 - To see the plan, the crew, the files changed and the cost, select **Show work panel** in the chat header.
 - A line above the message box shows what the agent is doing right now, for example **Running · pnpm test**, **Editing · table.tsx** or **Thinking…**. A step that runs longer than ten seconds shows how long it has taken. When the turn ends, the line says **Done** with the time it took, then fades. Secrets in commands show as •••.
 - When the agent needs you, its card waits in the chat and the same line says what for, for example **Waiting for you · approve `pnpm test`**. Select it, or press **⌘ Shift Y** (**Ctrl Shift Y** on Windows and Linux), to jump to the card. See [Approvals and protected paths](approvals.md#answer-an-approval-card).
+
+### Queue messages while a turn runs
+
+The queue sits above the message box and shows how many messages wait, for example **2 queued**. The line above the box shows the count too.
+
+1. Type your message and press **Enter**, or select **Queue message** next to **Stop**.
+2. To change the queue, use the buttons on each message: **Edit**, **Move up**, **Move down** and **Remove**.
+3. To send one before the turn ends, select **Send now**. If the agent can take a message mid-turn, it gets it at its next step. Otherwise Spark stops the turn and sends your message first.
+
+When the turn finishes, Spark sends the queued messages one at a time, in order. If you stop the turn or it fails, the queue pauses until you select **Send now**. The queue is saved with the chat, so it survives a reload or a restart. Files wait until the turn ends; only text can be queued.
 
 ## Review the changes
 

@@ -270,9 +270,16 @@
   background: var(--danger-soft);
   color: var(--danger);
 }
-.ltype.stderr {
+.ltype.stderr,
+.unrev {
   background: color-mix(in srgb, var(--warn) 15%, transparent);
   color: var(--warn);
+}
+.unrev {
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 5px;
+  font-size: 12px;
 }
 .lraw {
   padding: 0 6px 12px 124px;

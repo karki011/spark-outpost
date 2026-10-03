@@ -60,6 +60,9 @@ const TurnWaterfall = memo(function TurnWaterfall({
               <span>
                 {bar.run.role} · {providerLabel(bar.run.provider)}
               </span>
+              {bar.run.unreviewedCount ? (
+                <span className="unrev">{bar.run.unreviewedCount} ran without review</span>
+              ) : null}
             </div>
             <div className="wf-track">
               <div

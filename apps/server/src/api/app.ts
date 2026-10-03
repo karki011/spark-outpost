@@ -9,7 +9,10 @@ import { chatTicketRoutes, ticketMentionWarmer } from './chat-ticket-routes.ts';
 import { chatSettingsRoutes, type ChatSettingsDeps } from './chat-settings-routes.ts';
 import { chatWorkspaceRoutes, type ChatWorkspaceDeps } from './chat-workspace-routes.ts';
 import { companionRoutes } from './companion-routes.ts';
-import { conversationActionRoutes } from './conversation-action-routes.ts';
+import {
+  conversationActionRoutes,
+  type ConversationActionDeps,
+} from './conversation-action-routes.ts';
 import { diagnosticsRoutes, type DiagnosticsPlaces } from './diagnostics-routes.ts';
 import { homeRoutes } from './home-routes.ts';
 import { mapRoutes } from './map-routes.ts';
@@ -26,6 +29,7 @@ import { shipRoutes, type ShipRouteDeps } from './ship-routes.ts';
 import { planRoutes } from './plan-routes.ts';
 import { taskChangeRoutes } from './task-change-routes.ts';
 import { taskRoutes } from './task-routes.ts';
+import { queueRoutes } from './queue-routes.ts';
 import { teammateRoutes } from './teammate-routes.ts';
 import { ticketRoutes, type TicketRouteDeps } from './ticket-routes.ts';
 import { webApp } from './web-app.ts';
@@ -42,7 +46,8 @@ export interface AppOptions
     ChatSettingsDeps,
     Pick<ChatWorkspaceDeps, 'openFolder'>,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
-    Pick<McpRouteDeps, 'probeMcp'> {
+    Pick<McpRouteDeps, 'probeMcp'>,
+    Pick<ConversationActionDeps, 'deleteSettleMs'> {
   terminals: TerminalSessions;
   appEvents: AppEventFeed;
   port: number;
@@ -82,6 +87,7 @@ export function createApp(options: AppOptions) {
   app.use('/api', mcpRoutes(options));
   app.use('/api', auditRoutes(options));
   app.use('/api', taskRoutes(options));
+  app.use('/api', queueRoutes(options));
   app.use('/api', taskChangeRoutes(options));
   app.use('/api', shipRoutes(options));
   app.use('/api', prFollowUpRoutes(options));

@@ -125,17 +125,19 @@ test('Sessions lists every active chat and opens one inline to read, approve and
     .toBe('allowed');
 
   const reply = island(page).getByRole('textbox', { name: 'Reply to Speed up the test suite' });
+  await expect(reply).toHaveAttribute('placeholder', 'Queue a reply for when this turn ends…');
   await reply.fill('Thanks, carry on');
   await page.keyboard.press('Enter');
   await expect
     .poll(async () =>
-      (
-        await sql(`SELECT content FROM messages WHERE role = 'user' AND conversation_id = $1`, [
-          chatId,
-        ])
-      ).rows.map((row) => row.content),
+      (await sql(`SELECT content FROM chat_queue WHERE conversation_id = $1`, [chatId])).rows.map(
+        (row) => row.content,
+      ),
     )
-    .toContain('Thanks, carry on');
+    .toEqual(['Thanks, carry on']);
+  await expect(island(page).locator('.isl-qc-hint')).toHaveText(
+    '1 queued · sends when this turn ends',
+  );
 
   await island(page).getByRole('button', { name: 'Open in Spark' }).click();
   expect(

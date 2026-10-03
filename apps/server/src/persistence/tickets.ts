@@ -183,6 +183,7 @@ interface WorkRow {
   conversation_id: string;
   created_at: Date;
   pull_requests: { title: string | null; url: string }[];
+  pr_links: { title: string | null; url: string }[];
 }
 
 export async function ticketWork(
@@ -195,16 +196,21 @@ export async function ticketWork(
   const { rows } = await db.query<WorkRow>(
     `SELECT tt.source, tt.ticket_key, tt.task_id, t.conversation_id, tt.created_at,
        COALESCE(jsonb_agg(jsonb_build_object('title', l.title, 'url', l.url)
-         ORDER BY l.created_at) FILTER (WHERE l.id IS NOT NULL), '[]') AS pull_requests
+         ORDER BY l.created_at) FILTER (WHERE l.kind = 'pr'), '[]') AS pull_requests,
+       COALESCE(jsonb_agg(jsonb_build_object('title', l.title, 'url', l.url)
+         ORDER BY l.created_at) FILTER (WHERE l.kind = 'link'), '[]') AS pr_links
      FROM task_tickets tt
      JOIN tasks t ON t.id = tt.task_id
-     LEFT JOIN task_links l ON l.task_id = tt.task_id AND l.kind = 'pr'
-       AND l.source IN ('ship', 'tool_output', 'user')
+     LEFT JOIN task_links l ON l.task_id = tt.task_id AND (
+       (l.kind = 'pr' AND l.source IN ('ship', 'tool_output', 'user'))
+       OR (l.kind = 'link' AND l.source = 'ship')
+     )
      WHERE tt.workspace_id = $1
        AND (tt.source || ':' || tt.ticket_key) = ANY($2::text[])
      GROUP BY tt.source, tt.ticket_key, tt.task_id, t.conversation_id, tt.created_at
      UNION ALL
-     SELECT ct.source, ct.ticket_key, NULL, ct.conversation_id, ct.created_at, '[]'::jsonb
+     SELECT ct.source, ct.ticket_key, NULL, ct.conversation_id, ct.created_at, '[]'::jsonb,
+       '[]'::jsonb
      FROM conversation_tickets ct
      WHERE ct.workspace_id = $1 AND ct.state = 'linked'
        AND (ct.source || ':' || ct.ticket_key) = ANY($2::text[])
@@ -225,6 +231,11 @@ export async function ticketWork(
         title: pull.title ?? pull.url,
         url: pull.url,
       })),
+      ...(row.pr_links.length > 0 && row.pull_requests.length === 0
+        ? {
+            prLinks: row.pr_links.map((link) => ({ title: link.title ?? link.url, url: link.url })),
+          }
+        : {}),
     });
     work.set(ref, list);
   }

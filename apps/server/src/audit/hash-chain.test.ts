@@ -54,6 +54,16 @@ describe('hash chain', () => {
     expect(verifyChain([reordered]).intact).toBe(true);
   });
 
+  it('hashes the ran-without-review mark, and leaves unmarked rows as before', () => {
+    const [plain] = chainRows(null, [row(1)]);
+    const [marked] = chainRows(null, [{ ...row(1), unreviewed: true }]);
+    expect(chainRows(null, [{ ...row(1), unreviewed: false }])[0]!.hash).toBe(plain!.hash);
+    expect(marked!.hash).not.toBe(plain!.hash);
+    const { unreviewed, ...unmarked } = marked!;
+    expect(unreviewed).toBe(true);
+    expect(verifyChain([unmarked]).intact).toBe(false);
+  });
+
   it.each([
     ['an edited payload', (rows: HashedRow[]) => (rows[1]!.payload = { a: 'changed' })],
     ['an edited method', (rows: HashedRow[]) => (rows[1]!.method = 'session/cancel')],

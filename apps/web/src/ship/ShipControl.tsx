@@ -229,6 +229,11 @@ export function ShipControl({
           {resultLine(result)}
         </p>
       )}
+      {result?.prLink && !pull && (
+        <a className="btn primary sm" href={result.prLink.url} target="_blank" rel="noreferrer">
+          {result.prLink.label}
+        </a>
+      )}
       {data.blocked && !pull && !QUIET_SHIP_BLOCKS.includes(data.blocked.reason) && (
         <p className="ship-note">{data.blocked.message}</p>
       )}

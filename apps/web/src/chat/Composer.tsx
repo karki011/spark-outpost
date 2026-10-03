@@ -54,6 +54,7 @@ import { useSlash } from './composer/use-slash.ts';
 import { takeDraft, usePendingDraft } from './composer/pending-draft.ts';
 import { PlusMenu } from './composer/PlusMenu.tsx';
 import { SendButton } from './composer/SendButton.tsx';
+import { composerHint } from './composer/composer-hint.ts';
 import type { AutonomyControl } from './project/AutonomyChip.tsx';
 import { ContextBar } from './project/ContextBar.tsx';
 import { MentionPicker } from './project/MentionPicker.tsx';
@@ -85,6 +86,7 @@ interface ComposerProps {
   ) => Promise<void>;
   quotes?: QuotesState;
   onStop: () => void;
+  onQueue?: (content: string) => Promise<void>;
   steer?: SteerControl | null;
   onAudit?: () => void;
   onStartFresh?: () => void;
@@ -123,6 +125,7 @@ export function Composer({
   attachments,
   onSend,
   onStop,
+  onQueue,
   steer = null,
   onAudit,
   onStartFresh,
@@ -252,13 +255,15 @@ export function Composer({
   }, [focusRequest]);
 
   const steering = busy ? steer : null;
+  const queueing = busy && steering === null && onQueue !== undefined;
   const hasText = draft.trim().length > 0;
   const quoteItems = quotes?.items ?? [];
   const sendName = hasText ? 'Send' : sendLabel(quoteItems.map((quote) => quote.kind));
+  const canQueue = queueing && hasText && attachments.items.length === 0;
   const canSend =
     (hasText || attachments.items.length > 0 || quoteItems.length > 0) &&
     !sending &&
-    (!busy || (steering !== null && hasText)) &&
+    (!busy || (steering !== null && hasText) || canQueue) &&
     !attachments.uploading &&
     !attachments.failed;
 
@@ -295,6 +300,13 @@ export function Composer({
       return;
     }
     setDraft('');
+    if (queueing && onQueue) {
+      await onQueue(content).then(
+        () => quotes?.clear(),
+        () => setDraft(draftText),
+      );
+      return;
+    }
     try {
       await onSend(content, attachments.uploaded, annotations);
       attachments.clear();
@@ -417,9 +429,11 @@ export function Composer({
           placeholder={
             steering
               ? 'Steer the pieces while they run'
-              : hasRepos
-                ? 'Ask anything, @ to add a file, / for commands'
-                : 'Ask anything, / for commands'
+              : queueing
+                ? 'Queue a message for when this turn ends'
+                : hasRepos
+                  ? 'Ask anything, @ to add a file, / for commands'
+                  : 'Ask anything, / for commands'
           }
           {...(slash.open ? slash.inputProps : mention.inputProps)}
           onChange={(event) => {
@@ -447,7 +461,7 @@ export function Composer({
             onAddRepo={openRepoMenu}
           />
           <span className={attachments.items.length > 0 ? 'hint shown' : 'hint'}>
-            {composerHint(attachments)}
+            {composerHint(attachments, queueing)}
           </span>
           <SparkOffChip />
           {settings && (
@@ -477,15 +491,10 @@ export function Composer({
             disabled={!canSend}
             onSend={() => void submit()}
             onStop={onStop}
+            {...(queueing ? { onQueue: () => void submit() } : {})}
           />
         </div>
       </div>
     </div>
   );
-}
-
-function composerHint(attachments: AttachmentsState): string {
-  if (attachments.uploading) return 'Uploading your files…';
-  if (attachments.failed) return 'Remove or retry the files that failed';
-  return 'Enter to send, Shift + Enter for a new line';
 }
