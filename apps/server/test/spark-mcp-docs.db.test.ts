@@ -18,47 +18,103 @@ afterEach(async () => {
 interface Listed {
   page: string;
   title: string;
-  section: string;
+  type: string;
   comingSoon?: boolean;
 }
 
+interface ListedSection {
+  section: string;
+  pages: Listed[];
+}
+
 describe('spark_docs', () => {
-  it('lists every guide page in order with its section and whether it is written', async () => {
-    const { pages } = (await tools.call('spark_docs')).json<{ pages: Listed[] }>();
-    expect(pages[0]).toMatchObject({ page: 'getting-started', section: 'Get started' });
-    expect(pages.find((page) => page.page === 'approvals')).not.toHaveProperty('comingSoon');
+  it('lists every guide page by section, in order, with its type', async () => {
+    const { sections } = (await tools.call('spark_docs')).json<{ sections: ListedSection[] }>();
+    expect(sections[0]).toMatchObject({ section: 'Get started' });
+    expect(sections[0]!.pages[0]).toMatchObject({ page: 'welcome', type: 'start' });
+    expect(sections.map((entry) => entry.section)).toEqual(
+      expect.arrayContaining(['Chats', 'Understand Spark', 'Reference', 'Troubleshooting']),
+    );
+    const pages = sections.flatMap((entry) => entry.pages);
+    expect(pages.length).toBeGreaterThan(50);
     expect(pages.filter((page) => page.comingSoon)).toEqual([]);
     expect(pages.map((page) => page.page)).not.toContain('README');
+    expect(JSON.stringify(sections)).not.toMatch(/… \d+ more/);
   });
 
-  it('searches and answers with the matching section, its text and a Docs link', async () => {
+  it('narrows the list and the search to one type of page', async () => {
+    const { sections } = (await tools.call('spark_docs', { type: 'troubleshooting' })).json<{
+      sections: ListedSection[];
+    }>();
+    expect(sections.map((entry) => entry.section)).toEqual(['Troubleshooting']);
+    expect(sections[0]!.pages.map((page) => page.page)).toContain('trouble-providers');
+
+    const { matches } = (
+      await tools.call('spark_docs', { query: 'agent mode', type: 'reference' })
+    ).json<{ matches: { page: string; type: string }[] }>();
+    expect(matches[0]).toMatchObject({ page: 'modes-and-levels', type: 'reference' });
+    expect(matches.every((match) => match.type === 'reference')).toBe(true);
+  });
+
+  it('searches by task and answers with the matching section, its text and a Docs link', async () => {
     const result = await tools.call('spark_docs', { query: 'how do I hold to confirm a git hook' });
     const { matches } = result.json<{
-      matches: { page: string; heading: string; link: string; text: string }[];
+      matches: { page: string; type: string; heading: string; link: string; text: string }[];
     }>();
     expect(matches[0]).toMatchObject({
-      page: 'approvals',
+      page: 'answer-approvals',
+      type: 'how-to',
       heading: 'Hold to confirm',
-      link: '#/docs/approvals#hold-to-confirm',
+      link: '#/docs/answer-approvals#hold-to-confirm',
     });
     expect(matches[0]!.text).toContain('Hold to allow once');
   });
 
+  it.each([
+    ['queue a message while the agent works', 'queue-messages'],
+    ['delete a chat that is running', 'follow-a-turn'],
+    ['provider will not connect', 'trouble-providers'],
+    ['what changed recently', 'whats-new'],
+    ['keep files away from agents', 'sparkignore'],
+    ['open a pull request', 'ship-and-pull-requests'],
+  ])('finds "%s" on %s', async (query, page) => {
+    const { matches } = (await tools.call('spark_docs', { query, limit: 3 })).json<{
+      matches: { page: string }[];
+    }>();
+    expect(matches.map((match) => match.page)).toContain(page);
+  });
+
   it('reads a page split by heading, with screenshots as text', async () => {
-    const page = (await tools.call('spark_docs', { page: 'chats-and-modes' })).json<{
+    const page = (await tools.call('spark_docs', { page: 'spark-autonomy' })).json<{
       title: string;
+      type: string;
       link: string;
       headings: { anchor: string }[];
       sections: { anchor: string | null; link: string; text: string }[];
     }>();
-    expect(page.title).toBe('Chats, modes and autonomy');
-    expect(page.link).toBe('#/docs/chats-and-modes');
-    expect(page.headings.map((heading) => heading.anchor)).toContain('spark-autonomy');
-    const autonomy = page.sections.find((section) => section.anchor === 'spark-autonomy');
-    expect(autonomy?.link).toBe('#/docs/chats-and-modes#spark-autonomy');
-    expect(autonomy?.text).toContain('Full auto → PR');
-    expect(autonomy?.text).toContain('[Screenshot: The Work panel with the Spark autonomy levels]');
-    expect(autonomy?.text).not.toContain('images/');
+    expect(page.title).toBe('Choose how much Spark does alone');
+    expect(page.type).toBe('how-to');
+    expect(page.link).toBe('#/docs/spark-autonomy');
+    expect(page.headings.map((heading) => heading.anchor)).toContain('for-one-chat');
+    const oneChat = page.sections.find((section) => section.anchor === 'for-one-chat');
+    expect(oneChat?.link).toBe('#/docs/spark-autonomy#for-one-chat');
+    expect(oneChat?.text).toContain('Full auto → PR');
+    expect(oneChat?.text).toContain('[Screenshot: The Work panel with the Spark autonomy levels]');
+    expect(oneChat?.text).not.toContain('images/');
+  });
+
+  it('still opens pages and headings by the ids they had before they moved', async () => {
+    const moved = (await tools.call('spark_docs', { page: 'chats-and-modes' })).json<{
+      page: string;
+      movedFrom: string;
+    }>();
+    expect(moved).toMatchObject({ page: 'start-a-chat', movedFrom: 'chats-and-modes' });
+
+    const heading = (
+      await tools.call('spark_docs', { page: 'approvals', heading: 'hold-to-confirm' })
+    ).json<{ page: string; sections: { anchor: string }[] }>();
+    expect(heading.page).toBe('answer-approvals');
+    expect(heading.sections.map((section) => section.anchor)).toEqual(['hold-to-confirm']);
   });
 
   it('reads one heading and explains unknown pages and headings', async () => {
@@ -70,19 +126,19 @@ describe('spark_docs', () => {
 
     const missing = await tools.call('spark_docs', { page: 'nope' });
     expect(missing).toMatchObject({ isError: true });
-    expect(missing.text).toContain('Known pages: getting-started');
+    expect(missing.text).toContain('Known pages: welcome');
     const noHeading = await tools.call('spark_docs', { page: 'jev', heading: 'zzz' });
     expect(noHeading.text).toContain('Headings: what-jev-decides');
   });
 
   it('lists every page when a search finds nothing', async () => {
-    const { matches, pages, note } = (await tools.call('spark_docs', { query: 'zzzqqq' })).json<{
+    const { matches, sections, note } = (await tools.call('spark_docs', { query: 'zzzqqq' })).json<{
       matches: unknown[];
-      pages: unknown[];
+      sections: ListedSection[];
       note: string;
     }>();
     expect(matches).toEqual([]);
-    expect(pages.length).toBeGreaterThan(10);
+    expect(sections.flatMap((entry) => entry.pages).length).toBeGreaterThan(50);
     expect(note).toContain('page');
   });
 });
