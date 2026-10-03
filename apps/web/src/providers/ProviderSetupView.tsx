@@ -21,6 +21,16 @@ import './providers.css';
 import './provider-tiles.css';
 
 const OFFSET = 32;
+const KEYCHAIN_POLL_MS = 3000;
+
+function KeychainNotice() {
+  return (
+    <p className="keychain-notice" role="status">
+      macOS is asking to let Spark use the keychain, where your keys are stored. Find that prompt
+      and click <b>Always Allow</b> so Spark can read them without asking again.
+    </p>
+  );
+}
 
 const views: Variants = {
   enter: (direction: number) => ({ opacity: 0, x: OFFSET * direction, scale: 0.98 }),
@@ -69,7 +79,11 @@ export function ProviderSetupView({
   const [lastOpened, setLastOpened] = useState<ConnectableId | null>(null);
   const [direction, setDirection] = useState<1 | -1>(1);
   const reduced = useReducedMotion();
-  const health = useQuery({ queryKey: homeKeys.health, queryFn: homeApi.health });
+  const health = useQuery({
+    queryKey: homeKeys.health,
+    queryFn: homeApi.health,
+    refetchInterval: (query) => (query.state.data?.keychainWaiting ? KEYCHAIN_POLL_MS : false),
+  });
   const models = useModelLabels(providers);
   const connectedCount = providers.filter((provider) => provider.connection).length;
 
@@ -107,6 +121,7 @@ export function ProviderSetupView({
 
   return (
     <div className="psetup">
+      {health.data?.keychainWaiting && <KeychainNotice />}
       <AnimatePresence mode="popLayout" initial={false} custom={direction}>
         <motion.div
           key={open ? open.setup.id : 'tiles'}

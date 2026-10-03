@@ -27,6 +27,7 @@ import { updateProviderDefaults } from '../persistence/provider-defaults.ts';
 import { advisorEntry, catalogEntry } from '../providers/catalog.ts';
 import type { RunCommand } from '../setup/command.ts';
 import { fullDiskAccessStatus } from '../setup/full-disk-access.ts';
+import { KeychainWaitingError } from '../setup/keychain.ts';
 import type { SecretStore } from '../setup/secrets.ts';
 import { sendTestMessage } from '../setup/test-message.ts';
 import { GitInstallerError, gitStatus, openGitInstaller } from '../ship/git.ts';
@@ -140,10 +141,15 @@ export function setupRoutes(deps: SetupDeps): Router {
     }
     const verified = outcome.value;
     if (verified) {
-      if (verified.secret) await secrets.set(provider, verified.secret);
-      else await secrets.delete(provider);
-      const connection = await saveVerified(provider, verified);
-      writeEvent(res, { type: 'connected', connection });
+      try {
+        if (verified.secret) await secrets.set(provider, verified.secret);
+        else await secrets.delete(provider);
+        const connection = await saveVerified(provider, verified);
+        writeEvent(res, { type: 'connected', connection });
+      } catch (error) {
+        if (!(error instanceof KeychainWaitingError)) throw error;
+        writeEvent(res, { type: 'step_failed', label: error.message });
+      }
     }
     res.end();
   });

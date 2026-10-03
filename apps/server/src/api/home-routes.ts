@@ -5,15 +5,17 @@ import { todaySummary } from '../digest/today.ts';
 import type { Db } from '../persistence/db.ts';
 import { providerIssues } from '../persistence/provider-health.ts';
 import { spendSummary } from '../persistence/spend.ts';
+import type { SecretStore } from '../setup/secrets.ts';
 import { timeZoneParam } from './time-zone-param.ts';
 import { BadRequestError, parseBody } from './validation.ts';
 
 export interface HomeRouteDeps {
   db: Db;
   workspaceId: string;
+  secrets: Pick<SecretStore, 'waiting'>;
 }
 
-export function homeRoutes({ db, workspaceId }: HomeRouteDeps): Router {
+export function homeRoutes({ db, workspaceId, secrets }: HomeRouteDeps): Router {
   const router = Router();
 
   router.get('/usage/spend', async (req, res) => {
@@ -23,7 +25,10 @@ export function homeRoutes({ db, workspaceId }: HomeRouteDeps): Router {
   });
 
   router.get('/providers/health', async (_req, res) => {
-    res.json({ issues: await providerIssues(db, workspaceId) });
+    res.json({
+      issues: await providerIssues(db, workspaceId),
+      keychainWaiting: secrets.waiting(),
+    });
   });
 
   router.get('/home/digest', async (_req, res) => {

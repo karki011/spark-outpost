@@ -68,6 +68,7 @@ export type ProviderIssue = z.infer<typeof providerIssueSchema>;
 
 export const providerHealthSchema = z.object({
   issues: z.array(providerIssueSchema),
+  keychainWaiting: z.boolean().default(false),
 });
 export type ProviderHealth = z.infer<typeof providerHealthSchema>;
 
