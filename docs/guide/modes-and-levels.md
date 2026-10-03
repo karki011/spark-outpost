@@ -2,11 +2,11 @@
 title: Agent modes and autonomy levels
 section: Reference
 type: reference
-order: 912
+order: 612
 summary: Every agent mode for Claude, Codex and Z.ai, what each allows, and the two Spark autonomy levels.
 ---
 
-The agent's mode is the provider's own setting, shown with the provider's names. Spark autonomy is Spark's. To change them, see [Change the agent's mode](agent-mode.md) and [Choose how much Spark does alone](spark-autonomy.md).
+The agent's mode is the provider's own setting, shown with the provider's names. Spark autonomy is Spark's. To change them, see [Pick the mode](agent-mode.md#pick-the-agents-mode) and [Choose how much Spark does alone](spark-autonomy.md).
 
 ## Agent modes
 
@@ -24,17 +24,15 @@ The agent's mode is the provider's own setting, shown with the provider's names.
 | Codex    | **Approve for me** | Medium         |
 | Z.ai     | **Manual**         | High           |
 
-The chip shows **Bypass permissions** as **Bypass**, and tints it and **Full access** as a warning.
-
 ## What Spark does in each mode
 
-| Mode                                                        | Spark                                                                                                                                      |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Read-only modes                                             | Runs read-only commands directly. Refuses file changes.                                                                                    |
-| Modes that ask                                              | Shows the agent's card with the agent's reason. Adds no ask rules of its own.                                                              |
-| **Bypass permissions**, **Approve for me**, **Full access** | Can't see their requests, so it watches: marks each action **ran without review** and flags protected-path crossings. Never stops the run. |
-| A mode Spark doesn't recognise                              | Lets the agent decide when to ask. Never stops a run for it.                                                                               |
-| Every mode                                                  | Enforces the [protected paths](protected-paths.md).                                                                                        |
+| Mode                                                        | Spark                                                                                             |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Read-only modes                                             | Runs read-only commands directly. Refuses file changes.                                           |
+| Modes that ask                                              | Shows the agent's card with the agent's reason. Adds no ask rules of its own.                     |
+| **Bypass permissions**, **Approve for me**, **Full access** | Marks each action **ran without review** and flags protected-path crossings. Never stops the run. |
+| A mode Spark doesn't recognise                              | Lets the agent decide when to ask.                                                                |
+| Every mode                                                  | Enforces the [protected paths](protected-paths.md).                                               |
 
 ## Autonomy levels
 
@@ -44,7 +42,3 @@ The chip shows **Bypass permissions** as **Bypass**, and tints it and **Full acc
 | **Full auto → PR**      | Build after a countdown | Kept by itself  | Spark opens a PR, a draft if checks fail | A worktree copy               |
 
 Both levels keep **Revert to before this run**, and neither ever merges.
-
-## Actions agents propose
-
-Spark's own action tools, such as creating a ticket or opening a PR, follow both settings. See [When actions ask first](spark-tools.md#when-actions-ask-first).

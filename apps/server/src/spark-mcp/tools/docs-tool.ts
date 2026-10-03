@@ -1,14 +1,12 @@
 import { z } from 'zod';
 import {
   GUIDE_PAGE_TYPES,
-  GUIDE_REDIRECTS,
   groupGuideSections,
   guideChunks,
   guideLink,
   HEADING_LINE,
   headingAnchor,
   markdownLines,
-  resolveGuideLink,
   searchGuidePages,
   type GuidePage,
   type GuidePageType,
@@ -34,7 +32,6 @@ export function guideListing(pages: readonly GuidePage[]) {
 interface Target {
   page: GuidePage;
   anchor: string | null;
-  movedFrom: string | null;
 }
 
 function findTarget(
@@ -42,19 +39,17 @@ function findTarget(
   slug: string,
   heading: string | undefined,
 ): Target {
-  const anchor = heading ? headingAnchor(heading) : null;
-  const resolved = resolveGuideLink(pages, GUIDE_REDIRECTS, { slug, anchor });
-  const page = resolved ? pages.find((entry) => entry.slug === resolved.slug) : undefined;
-  if (!resolved || !page) {
+  const page = pages.find((entry) => entry.slug === slug);
+  if (!page) {
     const known = pages.map((entry) => entry.slug).join(', ');
     throw new SparkToolError(`No guide page "${slug}". Known pages: ${known}`);
   }
-  const moved = page.slug !== slug;
-  if (!moved && anchor && resolved.anchor !== anchor) {
+  const anchor = heading ? headingAnchor(heading) : null;
+  if (anchor && !page.headings.some((entry) => entry.anchor === anchor)) {
     const known = page.headings.map((entry) => entry.anchor).join(', ');
     throw new SparkToolError(`No heading "${heading}" on ${page.slug}. Headings: ${known}`);
   }
-  return { page, anchor: resolved.anchor, movedFrom: moved ? slug : null };
+  return { page, anchor };
 }
 
 interface PageSection {
@@ -84,7 +79,7 @@ function pageSections(page: GuidePage): PageSection[] {
     .filter((section) => section.text);
 }
 
-export function readGuidePage({ page, anchor, movedFrom }: Target) {
+export function readGuidePage({ page, anchor }: Target) {
   const sections = pageSections(page);
   return {
     page: page.slug,
@@ -93,7 +88,6 @@ export function readGuidePage({ page, anchor, movedFrom }: Target) {
     type: page.type,
     summary: page.summary,
     link: guideLink(page.slug),
-    ...(movedFrom ? { movedFrom } : {}),
     ...(page.comingSoon ? { comingSoon: true } : {}),
     headings: page.headings.map((entry) => ({ text: entry.text, anchor: entry.anchor })),
     sections: anchor ? sections.filter((section) => section.anchor === anchor) : sections,
@@ -140,7 +134,7 @@ export const docsTool = sparkTool({
   name: 'spark_docs',
   title: 'Spark user guide',
   description:
-    'The Spark Outpost user guide, the same pages the user sees under Docs in the app, one job per page, with the real button and setting names. Each page has a `type`: how-to (steps for one task), start (setup), concept (how it works), reference (tables: settings, modes, cards, protected paths, tools, shortcuts, statuses, glossary), troubleshooting (you see, why, fix) or whats-new. No arguments lists every page by section; `query` searches by task and returns the best section of each page; `type` narrows the list or the search; `page` (a page id from the list; ids of moved pages still work) reads one page, optionally only the section under `heading` (an anchor or heading text). Give the user the `link` (#/docs/…) so they can open the page in Docs.',
+    'The Spark Outpost user guide, the same pages the user sees under Docs in the app, with the real button and setting names. Each page has a `type`: how-to (steps for one task), start (setup), concept (how it works), reference (tables: settings, modes, cards, protected paths, tools, shortcuts, statuses, glossary), troubleshooting (you see, why, fix) or whats-new. No arguments lists every page by section; `query` searches by task and returns the best section of each page; `type` narrows the list or the search; `page` (a page id from the list) reads one page, optionally only the section under `heading` (an anchor or heading text). Give the user the `link` (#/docs/…) so they can open the page in Docs.',
   input: {
     query: z.string().max(300).optional(),
     page: z.string().max(80).optional(),

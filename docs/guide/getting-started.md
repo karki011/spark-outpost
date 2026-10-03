@@ -3,26 +3,41 @@ title: Set up Spark Outpost
 section: Get started
 type: start
 order: 110
-summary: Set up Spark Outpost in about five minutes. Each step has its own short page.
+summary: Go from first launch to your first chat in about five minutes.
 ---
 
 You'll go from first launch to your first chat. About 5 minutes.
 
-Spark Outpost runs AI coding agents on your computer. Only two things are required: your name and one connected provider. You can change everything later in **Settings**.
+Only your name and one provider are required. Change the rest later in **Settings**.
 
-## The steps
+## Meet Spark and pick a theme
 
-Setup shows these screens: **Meet Spark**, **Theme**, **AI provider**, **Tools**, **Mac access** (Mac app only) and **Done**.
+1. Type your name under **What should Spark call you?**.
+2. Pick a **Personality**: **Playful**, **Friendly** (the default) or **Just the facts**.
+3. Leave the **Spark** switch on and select **Continue**.
+4. Select a theme card, then **Continue**. **Graphite** is the default.
 
-1. [Meet Spark and pick a theme](meet-spark.md): your name, how Spark talks, the look.
-2. [Connect an AI provider](connect-a-provider.md): Claude, Codex or Z.ai.
-3. [Choose defaults for new chats](chat-defaults.md): model, mode and effort.
-4. [Connect Jev (optional)](meet-jev.md): an advisor you can add now or later.
-5. [Bring in your tools](bring-in-your-tools.md): Git, and optionally GitHub, Jira and Linear.
-6. [Send your first message](first-chat.md).
+![The Meet Spark step with a name typed in and the Friendly personality selected](images/getting-started-meet-spark-light.png)
 
-> **Tip:** **Back** at the bottom of the window returns to an earlier step. If you close the app after saving your name, setup reopens at **AI provider**.
+## Bring in your tools
 
-Setup has no replay button. See [Run setup again](trouble-setup-and-reset.md#run-setup-again).
+1. [Connect an AI provider](connect-a-provider.md): Claude, Codex or Z.ai.
+2. On **Tools**, check the **Git** card. If Git is missing, select **Install Xcode Command Line Tools**, then **Check again**.
+3. Optionally connect **GitHub**, **Jira** or **Linear**, then select **Continue**.
 
-**Next:** [Meet Spark and pick a theme](meet-spark.md)
+![The Bring in your tools step with Git found](images/getting-started-tools-light.png)
+
+Spark needs Git to change code. The Mac app adds an optional **Mac access** step for [Full Disk Access](mac-privacy.md#full-disk-access).
+
+## Send your first message
+
+1. On **You're all set**, select **Open Spark Outpost**.
+2. Select **Chats** in the rail, then **New chat** (**⌘⇧O**).
+3. Select **Choose project** and pick a folder.
+4. Type a small task, such as `Add a dark mode toggle to the dashboard`, and press **Enter**.
+
+![The final step summarising name, theme, provider and tools](images/getting-started-done-light.png)
+
+The agent works in its own copy of the project, and you can always revert.
+
+**Next:** [Connect an AI provider](connect-a-provider.md)

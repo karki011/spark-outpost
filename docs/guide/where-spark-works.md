@@ -1,6 +1,6 @@
 ---
 title: Choose where a chat works
-section: Projects and the Map
+section: Projects and shipping
 type: how-to
 order: 310
 summary: Let each chat work in its own git worktree, start it from another branch, or have it edit your files directly.
@@ -13,12 +13,9 @@ By default each chat that changes code gets its own git worktree on a new branch
 ## For one chat
 
 1. In the context bar, select the branch chip next to the project.
-2. Pick one:
-   - **New branch from** _branch_: start the worktree from another branch.
-   - A branch under **Or continue a branch**.
-   - **Edit my files directly instead**: skip the worktree.
+2. Pick **New branch from** _branch_, a branch under **Or continue a branch**, or **Edit my files directly instead**.
 
-Hover the chip to see where the branch started, such as "from origin/main · 2 min ago", and how pull requests will open.
+Hover the chip to see where the branch started and how pull requests will open.
 
 ## For every chat in a project
 
@@ -32,8 +29,8 @@ Hover the chip to see where the branch started, such as "from origin/main · 2 m
 | Worktree | On the chat's own `spark/` branch | **Bring changes into** _branch_, or open a pull request |
 | My files | Straight in your checkout         | Nothing to do                                           |
 
-Spark fetches first and starts a new worktree from the latest `origin` default branch, unless your checkout has commits of its own or you picked a branch.
+A new worktree starts from the latest `origin` default branch, unless your checkout has commits of its own or you picked a branch.
 
 > **Tip:** Keep worktrees on if you run agents in modes that never ask. Mistakes then stay out of your checkout.
 
-**Next:** [Let a command run without asking](allow-commands.md)
+**Next:** [Keep files and keys away from agents](sparkignore.md)

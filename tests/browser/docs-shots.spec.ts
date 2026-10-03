@@ -47,7 +47,6 @@ test('Getting started screenshots', async ({ page }) => {
 
   await name.press('Enter');
   await expect(onboarding(page).getByRole('heading', { name: 'Pick a theme' })).toBeVisible();
-  await shoot(page, IMAGES, 'getting-started-theme');
 
   await continueButton(page).click();
   await onboarding(page).locator('.ptile[data-prov="claude"]').click();
@@ -64,7 +63,6 @@ test('Getting started screenshots', async ({ page }) => {
   await expect(defaults.getByRole('button', { name: 'Claude model' })).toHaveText(
     'Claude Opus 5.5',
   );
-  await shoot(page, IMAGES, 'getting-started-defaults', defaults);
 
   await continueButton(page).click();
   await expect(

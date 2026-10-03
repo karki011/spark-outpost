@@ -1,23 +1,36 @@
 ---
-title: Change the agent's mode
+title: Pick the model, effort and mode
 section: Chats
 type: how-to
 order: 212
-summary: Pick what the agent may do without asking you in one chat: only read, ask before each step, or act on its own.
+summary: Pin a model or let Auto pick, set how hard the agent thinks, and choose what it may do without asking in one chat.
 ---
 
-You'll choose how much the agent may do without asking in this chat. About 1 minute.
+You'll choose the model, effort and permissions for one chat. About 1 minute.
 
-1. In the message box, select the permissions chip next to the model button. It shows the current mode, such as **Auto**.
-2. The picker opens on the **Permissions** tab. Pick a mode under **Agent mode**. The provider's default has a **Default** tag.
+## Pick a model
 
-   ![The Permissions tab listing Claude's modes](images/chats-and-modes-permissions-light.png)
+1. Select the model button in the message box. The picker opens on **Model**.
+2. With several providers connected, switch **AI provider** at the top.
+3. Pick a model to pin it, or **Auto** to let Spark choose per request.
 
-3. Read the line under the list. It sums up the result, for example "Agent only reads · nothing changes".
+![The model picker open on the Model tab](images/chats-and-modes-picker-light.png)
 
-The mode applies to this chat. To change it for new chats, see [Choose defaults for new chats](chat-defaults.md).
+A new chat starts pinned to your default model. See [How Spark picks a model](model-routing.md).
 
-## Which mode to pick
+## Set the effort
+
+1. Select the **Effort** tab.
+2. Pick a level, from **Low** (quick) to **Max** (deepest and slowest). The list comes from the model.
+
+Higher effort is slower and costs more.
+
+## Pick the agent's mode
+
+1. Select the **Permissions** tab, or the permissions chip next to the model button.
+2. Pick a mode under **Agent mode**. The provider's default has a **Default** tag.
+
+![The Permissions tab listing Claude's modes](images/chats-and-modes-permissions-light.png)
 
 | You want                             | Claude and Z.ai        | Codex              |
 | ------------------------------------ | ---------------------- | ------------------ |
@@ -27,10 +40,10 @@ The mode applies to this chat. To change it for new chats, see [Choose defaults 
 | The agent to decide what to ask      | **Auto**               | **Approve for me** |
 | No questions from the agent          | **Bypass permissions** | **Full access**    |
 
-In a read-only mode, the agent answers instead of changing files. Select **Make the change** under its answer to run the same request with changes allowed.
+In a read-only mode, select **Make the change** under an answer to run it with changes allowed.
 
-**Bypass permissions**, **Approve for me** and **Full access** act without asking. Spark doesn't block them; it records each action as **ran without review** and flags any that cross a protected path. See [How approvals work](approvals.md#actions-that-ran-without-review).
+> **Important:** No mode switches off the [protected paths](protected-paths.md). Modes that never ask are recorded as [ran without review](approvals.md#actions-that-ran-without-review).
 
-> **Important:** No mode switches off the [protected paths](protected-paths.md). Secret files and agent instruction files always ask.
+These choices apply to this chat. For new chats, see [Change defaults](providers-and-models.md#change-defaults-or-the-default-provider).
 
 **Next:** [Choose how much Spark does alone](spark-autonomy.md)

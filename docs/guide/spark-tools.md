@@ -2,66 +2,35 @@
 title: Spark tools for agents
 section: Reference
 type: reference
-order: 917
+order: 618
 summary: What agents can look up about Spark, the confirm card they show before acting for you, and what they never see.
 ---
 
-You'll learn what an agent can find out about your Spark Outpost, and how to answer when it offers to do something for you. About 2 minutes.
+Every agent in every chat gets Spark's own `spark_*` tools. Ask in plain words, such as "Which chats are waiting for me?" or "What did I spend today?".
 
-Every agent in every chat gets Spark's own tools, named `spark_*`. With them, an agent can answer questions about your chats, spend, projects and this guide, without you copying anything in.
+## Tools that read
 
-## Ask Spark about Spark
+These change nothing.
 
-1. Open any chat, with or without a project.
-2. Ask a question about Spark Outpost in plain words, for example:
-   - "Which chats are waiting for me?"
-   - "What did I spend today, by model?"
-   - "What breaks if I change `src/billing/invoice.ts`?"
-   - "How do I allow a command in the whole project?"
-3. The agent looks it up with its Spark tools and answers. How-to answers come from this guide, with a link to the right page.
+| You ask about                                            | Tool                                                                                      |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| What needs you, failed chats, flagged tickets            | `spark_attention`                                                                         |
+| Chats, one chat's runs and queue, earlier turns          | `spark_chats`, `spark_chat`, `spark_chat_history`                                         |
+| A running task: crew, pieces, estimate, Jev's decisions  | `spark_run`, `spark_task`, `spark_laws`                                                   |
+| Spend, activity, analytics, the morning brief            | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                         |
+| Pull requests, their checks and reviews                  | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                   |
+| Providers, models, connectors, settings, projects        | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects` |
+| The Map, and what breaks if a file changes               | `spark_map`                                                                               |
+| Where something lives in the code                        | `spark_find`                                                                              |
+| Open terminals                                           | `spark_terminals`                                                                         |
+| Tickets                                                  | `spark_tickets`                                                                           |
+| Your Sparks and their standing instructions              | `spark_sparks`                                                                            |
+| The audit log, including actions that ran without review | `spark_audit`                                                                             |
+| How Spark works, and this guide                          | `spark_guide`, `spark_docs`                                                               |
 
-In the desktop app, you can also ask from anywhere with **Ask** in Spark Island. See [Ask Spark](companion-quick-chat.md#ask-spark).
+## Tools that act
 
-## Which tool answers what
-
-Tools that read change nothing.
-
-| You ask about                                                            | Tool                                                                                      |
-| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| What needs you, failed chats, flagged tickets                            | `spark_attention`                                                                         |
-| Chats, one chat's runs, settings, queue and crew messages, earlier turns | `spark_chats`, `spark_chat`, `spark_chat_history`                                         |
-| A running task: crew, pieces, budget, Jev's decisions                    | `spark_run`, `spark_task`, `spark_laws`                                                   |
-| Spend, activity, analytics, the morning brief                            | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                         |
-| Pull requests and their checks and reviews                               | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                   |
-| Providers, models, connectors, settings, projects                        | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects` |
-| The Map, and what breaks if a file changes                               | `spark_map`                                                                               |
-| Where something lives in the code                                        | `spark_find`                                                                              |
-| Open terminals                                                           | `spark_terminals`                                                                         |
-| Tickets, or one ticket in full (`action` read)                           | `spark_tickets`                                                                           |
-| Your Sparks, their state and standing instructions                       | `spark_sparks`                                                                            |
-| The audit log, including actions that ran without review                 | `spark_audit`                                                                             |
-| How Spark works, and this guide                                          | `spark_guide`, `spark_docs`                                                               |
-
-## When actions ask first
-
-A few tools act for you: create, comment on, move or assign a ticket, open a pull request, start a PR follow-up round, and add or change a [Spark](sparks.md). The agent proposes, and Spark does it. Whether you see a confirm card first follows the agent's permission mode and the chat's autonomy:
-
-- **Auto** or **Bypass permissions** (Codex **Approve for me** or **Full access**), or **Full auto → PR**: Spark does it straight away. The chat shows what it did, with a link.
-- **Accept edits**: Spark does it straight away when your message asked for it, such as "open a PR". Otherwise you get a card.
-- **Manual**, **Plan** and read-only modes: you always get a card. When your message asked for it, the confirm button is focused so you can press Enter.
-- After the agent reads secrets or private work data in a turn, every action in that turn asks first.
-
-![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
-
-To answer the card:
-
-1. Read what will happen. The card says where, for example **Linear · ENG**, and who asks: "Claude asks Spark to do this for you."
-2. Change any field you want, such as the title or priority.
-3. Select the confirm button, such as **Create ticket** or **Open PR**. To say no, select **Don't**. Nothing changes and the agent is told.
-
-The agent doesn't wait on the card. Answer it whenever you like, even after the agent has finished: Spark does it when you confirm and shows the result, such as **Opened PR #12** and a link, on the card. Every action and answer goes into the audit log.
-
-### Tools that act
+The agent proposes, and Spark does it.
 
 | Action                                      | Tool                                                                                            |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -70,12 +39,26 @@ The agent doesn't wait on the card. Answer it whenever you like, even after the 
 | Start a PR follow-up round                  | `spark_pr_follow_up_round`                                                                      |
 | Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                      |
 
+## When actions ask first
+
+| Agent mode or autonomy                                                                       | Spark                                                           |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| **Auto**, **Bypass permissions**, **Approve for me**, **Full access**, or **Full auto → PR** | Does it straight away and shows a link.                         |
+| **Accept edits**                                                                             | Does it when your message asked for it. Otherwise shows a card. |
+| **Manual**, **Plan** and read-only modes                                                     | Always shows a card.                                            |
+| Any, after the agent read secrets or private work data in the turn                           | Always shows a card.                                            |
+
+![A Create this ticket card with editable title, description, type, priority and labels](images/spark-tools-action-card-light.png)
+
+On the card, change any field, then select the confirm button, such as **Create ticket**, or **Don't**. The agent doesn't wait: answer whenever you like. Every action goes into the audit log.
+
 ## What the tools never return
 
-- File contents and terminal output. For a terminal, agents see only its name, folder and running program.
-- Secrets, API keys and tokens. Provider keys and connector tokens are never shown, and results are redacted before the agent sees them.
-- Feedback comments. Analytics give counts only.
+| Never returned               | Instead                                               |
+| ---------------------------- | ----------------------------------------------------- |
+| File contents                | `spark_find` gives files, functions and line numbers. |
+| Terminal output              | A terminal's name, folder and running program.        |
+| Secrets, API keys and tokens | Results are redacted before the agent sees them.      |
+| Feedback comments            | Analytics give counts only.                           |
 
-If a tool reads private data, such as your chats or spend, Spark asks before anything in that run sends data off your computer. See [Sending data out after reading secrets](approvals.md#sending-data-out-after-reading-secrets).
-
-> **Tip:** If an agent can't answer a Spark question, ask it to "check the Spark guide". It then searches these pages with `spark_docs`.
+After a tool reads private data, such as your chats or spend, Spark asks before that run [sends data out](approvals.md#sending-data-out-after-reading-secrets).

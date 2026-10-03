@@ -1,25 +1,36 @@
 ---
-title: Setup, diagnostics and reset
-section: Troubleshooting
+title: Fix the app, setup or a reset
+section: Help
 type: troubleshooting
-order: 958
-summary: Why setup comes back, how to send diagnostics with a bug report, and how to start over.
+order: 710
+summary: Fixes for an app that isn't answering or doesn't start, how to send diagnostics with a bug report, and how to start over.
 ---
+
+For provider errors, see [Providers and keys](trouble-providers.md). For stuck runs and failed pushes, see [Runs and pull requests](trouble-runs.md).
+
+## The app
+
+| You see                                     | Why                                                       | Fix                                                                                                                       |
+| ------------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **Taking a quick nap** or **Reconnecting…** | The server stopped answering.                             | Wait for **Back online!**, or select **Try now**.                                                                         |
+| "Spark Outpost could not continue"          | The database or server didn't start, or an update failed. | Quit and reopen. After an update, select [**Open previous version instructions**](updates.md#your-data-during-an-update). |
+| "Git is not installed"                      | The Mac app needs Git.                                    | Run `xcode-select --install` in Terminal.                                                                                 |
+| "Another app is using this shortcut"        | Another app uses the same keys.                           | In **Settings → Spark → Around the app**, select **Change** or **Reset**.                                                 |
+| "You have 12 terminals open"                | 12 is the limit across all chats.                         | Close a terminal tab, or reload the page to end them all.                                                                 |
+
+> **Important:** Don't delete `~/Library/Application Support/Spark Outpost` to fix a start-up problem. It holds your chats and backups.
 
 ## Run setup again
 
-- **You see:** the setup screens again.
-- **Why:** setup has no replay button. It comes back when you disconnect every provider, or when you reset Spark.
-- **Fix:** connect a provider. Setup reopens at **AI provider**.
-- **Still stuck:** see [Providers and keys](trouble-providers.md).
+Setup has no replay button. It comes back when you disconnect every provider or reset Spark, and reopens at **AI provider**.
 
 ## Send diagnostics with a bug report
 
-1. Open **Settings → Help**, or choose **Help → Export Diagnostics…** in the menu bar.
-2. Select **Export diagnostics** and pick where to save the zip.
-3. Open the zip to check it, then attach it to your report.
+1. Open **Settings → Help** and select **Export diagnostics**.
+2. Open the zip to check it, then attach it to your report.
+3. Or select **Send feedback**, turn on **Include diagnostics**, and select **Open email draft** or **Open GitHub issue draft**.
 
-To report in the same step, select **Send feedback**, describe what happened, turn on **Include diagnostics**, and select **Open email draft** or **Open GitHub issue draft**. Nothing is sent until you send it.
+Nothing is sent until you send it.
 
 | The zip holds                                        | It never holds                                            |
 | ---------------------------------------------------- | --------------------------------------------------------- |
@@ -28,16 +39,12 @@ To report in the same step, select **Send feedback**, describe what happened, tu
 | Your settings, with your name left out               | Keys or tokens                                            |
 | Which database updates have run, and recent app logs | Anything that looks like a key: it becomes `[redacted:…]` |
 
-The feedback draft also lists Docs searches that found nothing, so the guide can be fixed. You can delete that line before you send.
-
-Logs are in `~/Library/Application Support/Spark Outpost/logs`. **Logs folder** under **Settings → Help** opens it.
+The draft lists Docs searches that found nothing; you can delete that line.
 
 ## Start over
 
-- **You see:** you want to clear everything.
-- **Why:** a reset deletes your chats, projects and settings. Your repositories and pushed branches stay.
-- **Fix:**
-  1. Open **Settings → Reset** and read **What Spark removes** and **What stays**.
-  2. To keep provider and Jev keys, turn on **Keep my API keys**. GitHub, ticket and MCP tokens are always removed.
-  3. Press and hold **Hold to reset** for 1.5 seconds.
-- **Still stuck:** you have 10 seconds to select **Undo**. After that it can't be undone.
+A reset deletes your chats, projects and settings. Your repositories and pushed branches stay.
+
+1. Open **Settings → Reset** and read **What Spark removes** and **What stays**.
+2. Turn on **Keep my API keys** to keep provider and Jev keys. GitHub, ticket and MCP tokens are always removed.
+3. Press and hold **Hold to reset** for 1.5 seconds. You have 10 seconds to select **Undo**.

@@ -2,27 +2,27 @@
 title: Answer an approval card
 section: Chats
 type: how-to
-order: 222
-summary: Allow or deny a command or file change an agent asks about, hold to confirm the risky ones, and find cards that wait for you.
+order: 218
+summary: Allow or deny a command or file change an agent asks about, hold to confirm the risky ones, and let trusted commands run without asking.
 ---
 
 You'll answer an agent that's waiting for your permission. About 1 minute.
 
-1. Find the card. The line above the message box says **Waiting for you**; select it or press **⌘⇧Y** to jump to the card.
-2. Read the command or the diff, where it runs, and why it asks. Select **Show all** for a long command.
+1. Select **Waiting for you** above the message box, or press **⌘⇧Y**, to jump to the card.
+2. Read the command or the diff, where it runs, and why it asks.
 
    ![An approval card asking to run a command](images/approvals-command-light.png)
 
 3. Select a button. The labels come from the agent, so they vary a little.
 
-| Button                           | Does                                                         |
-| -------------------------------- | ------------------------------------------------------------ |
-| **Allow**                        | Runs it this once.                                           |
-| **Always allow**                 | Allows this kind of request for the rest of this run.        |
-| **Always allow in this project** | Adds the command to the [project's list](allow-commands.md). |
-| **Deny**                         | Doesn't run it. The agent is told and tries another way.     |
+| Button                           | Does                                                     |
+| -------------------------------- | -------------------------------------------------------- |
+| **Allow**                        | Runs it this once.                                       |
+| **Always allow**                 | Allows this kind of request for the rest of this run.    |
+| **Always allow in this project** | Adds the command to the project's list.                  |
+| **Deny**                         | Doesn't run it. The agent is told and tries another way. |
 
-The card then shows your answer, such as "Chose: Allow."
+A card nobody answers within 30 minutes is declined and says **Expired**.
 
 ## Hold to confirm
 
@@ -38,17 +38,20 @@ The card then shows your answer, such as "Chose: Allow."
 
 **Change agent instructions?** appears for files such as `AGENTS.md`. Pick **Allow once**, **Allow for this chat** or **Deny**.
 
+## Let a command run without asking
+
+1. Select the project name above the message box.
+2. Open **Commands that run without asking**.
+3. Type a command and select **Add**. Select **×** to remove one.
+
+![The project menu with Commands that run without asking open](images/approvals-allowlist-light.png)
+
+A listed command covers longer forms too: `pnpm test` allows `pnpm test -- api`. Commands that touch [protected paths](protected-paths.md), push or send data out always ask.
+
 ## Where waiting cards show
 
-- In the chat, and on **Home** under **What needs you today**.
-- In the chat list (**Asking permission**) and as a count on **Chats** in the rail.
-- In the **Work** panel under **Waiting for you**.
-- On [Spark Island](companion-approvals.md) in the Mac app.
+Cards wait in the chat, on **Home** under **What needs you today**, in the chat list as **Asking permission**, and on [Spark Island](desktop-companion.md#answer-a-card).
 
-A card nobody answers within 30 minutes is declined and says **Expired**.
-
-## See what was allowed
-
-Each turn's steps record every request, such as "Allowed pnpm test (you allowed it)". For the full record, open the chat's **…** menu and select **Audit this chat**.
+To see what was allowed, open the chat's **…** menu and select **Audit this chat**.
 
 **Next:** [Answer a plan](plan-card.md)

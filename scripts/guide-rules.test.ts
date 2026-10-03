@@ -4,8 +4,10 @@ import {
   checkCoverage,
   checkImages,
   checkPages,
-  checkRedirects,
+  checkTotalWords,
+  GUIDE_WORDS_MAX,
   longestParagraph,
+  PARAGRAPH_WORDS_MAX,
   proseWords,
   WORD_CAPS,
 } from './guide-rules.ts';
@@ -56,11 +58,21 @@ describe('page rules', () => {
     ]);
   });
 
-  it('holds each type to its word cap and paragraphs to three lines', () => {
+  it('holds each type to its word cap and paragraphs to their limit', () => {
     const long = `${'word '.repeat(WORD_CAPS.concept + 1)}`;
     expect(messages([page('big', 'concept', long)])).toEqual([
       `big: ${WORD_CAPS.concept + 1} words; a concept page may have ${WORD_CAPS.concept}`,
-      `big: a ${WORD_CAPS.concept + 1}-word paragraph; keep paragraphs to 60`,
+      `big: a ${WORD_CAPS.concept + 1}-word paragraph; keep paragraphs to ${PARAGRAPH_WORDS_MAX}`,
+    ]);
+  });
+
+  it('holds the whole guide to a total word cap', () => {
+    const half = `- ${'word '.repeat(GUIDE_WORDS_MAX / 2)}`;
+    const fits = [page('a', 'reference', half, 'A'), page('b', 'reference', half, 'B')];
+    expect(checkTotalWords(fits)).toEqual([]);
+    const over = [...fits, page('c', 'reference', 'One more.', 'C')];
+    expect(checkTotalWords(over).map((violation) => violation.message)).toEqual([
+      `${GUIDE_WORDS_MAX + 2} words in all; the guide may have ${GUIDE_WORDS_MAX}. Cut or merge before adding`,
     ]);
   });
 
@@ -77,7 +89,7 @@ describe('page rules', () => {
   });
 });
 
-describe('images, redirects and reference entries', () => {
+describe('images and reference entries', () => {
   const pages = [page('go', 'how-to', HOW_TO), page('other', 'concept', '## Kept\n\nText.')];
 
   it('wants a light and dark file for each shot and no file left unshown', () => {
@@ -85,19 +97,6 @@ describe('images, redirects and reference entries', () => {
     expect(
       checkImages(pages, ['go-light.png', 'old-light.png']).map((entry) => entry.message),
     ).toEqual(['missing image go-dark.png', 'old-light.png is not shown on any page']);
-  });
-
-  it('wants each redirect to leave a gone link and land on a real one', () => {
-    expect(checkRedirects(pages, { gone: 'other#kept', 'other#moved': 'go' })).toEqual([]);
-    expect(
-      checkRedirects(pages, { gone: 'nowhere', go: 'other', 'other#kept': 'go' }).map(
-        (entry) => entry.message,
-      ),
-    ).toEqual([
-      'gone points at missing nowhere',
-      'go still exists; drop the redirect',
-      'other#kept still exists; drop the redirect',
-    ]);
   });
 
   it('wants an entry for every tool or Settings section', () => {

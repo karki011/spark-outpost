@@ -4,14 +4,13 @@ import { redactValue } from '../apps/server/src/audit/redact.ts';
 import { renderResult } from '../apps/server/src/spark-mcp/format.ts';
 import { SPARK_TOOLS } from '../apps/server/src/spark-mcp/server.ts';
 import { guideListing, readGuidePage } from '../apps/server/src/spark-mcp/tools/docs-tool.ts';
-import { GUIDE_REDIRECTS } from '../packages/contracts/src/guide-redirects.ts';
 import { loadGuidePages, type GuidePage } from '../packages/contracts/src/guide.ts';
 import {
   checkCoverage,
   checkImages,
   checkPages,
-  checkRedirects,
-  proseWords,
+  checkTotalWords,
+  guideWords,
   type GuideViolation,
 } from './guide-rules.ts';
 
@@ -43,9 +42,7 @@ function fitsSparkDocs(page: string, value: unknown): GuideViolation[] {
 function checkSparkDocs(pages: readonly GuidePage[]): GuideViolation[] {
   return [
     ...fitsSparkDocs('page list', { sections: guideListing(pages) }),
-    ...pages.flatMap((page) =>
-      fitsSparkDocs(page.slug, readGuidePage({ page, anchor: null, movedFrom: null })),
-    ),
+    ...pages.flatMap((page) => fitsSparkDocs(page.slug, readGuidePage({ page, anchor: null }))),
   ];
 }
 
@@ -54,8 +51,8 @@ function violationsFor(pages: readonly GuidePage[]): GuideViolation[] {
   const toolNames = SPARK_TOOLS.map((tool) => `\`${tool.name}\``);
   return [
     ...checkPages(pages),
+    ...checkTotalWords(pages),
     ...checkImages(pages, readdirSync(path.join(GUIDE, 'images'))),
-    ...checkRedirects(pages, GUIDE_REDIRECTS),
     ...checkCoverage(bySlug.get('spark-tools'), 'spark-tools', 'Spark tool', toolNames),
     ...checkCoverage(bySlug.get('settings'), 'settings', 'Settings section', settingsSections()),
     ...checkSparkDocs(pages),
@@ -78,8 +75,7 @@ function main(): void {
     console.error(`\n${violations.length} guide rule violation(s). See docs/guide/README.md.`);
     process.exit(1);
   }
-  const words = pages.reduce((sum, page) => sum + proseWords(page.body), 0);
-  console.log(`Guide rules passed for ${pages.length} pages, ${words} words.`);
+  console.log(`Guide rules passed for ${pages.length} pages, ${guideWords(pages)} words.`);
 }
 
 main();

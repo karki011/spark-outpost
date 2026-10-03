@@ -33,10 +33,11 @@ describe('spark_docs', () => {
     expect(sections[0]).toMatchObject({ section: 'Get started' });
     expect(sections[0]!.pages[0]).toMatchObject({ page: 'welcome', type: 'start' });
     expect(sections.map((entry) => entry.section)).toEqual(
-      expect.arrayContaining(['Chats', 'Understand Spark', 'Reference', 'Troubleshooting']),
+      expect.arrayContaining(['Chats', 'Understand Spark', 'Reference', 'Help']),
     );
     const pages = sections.flatMap((entry) => entry.pages);
-    expect(pages.length).toBeGreaterThan(50);
+    expect(pages.length).toBeGreaterThan(40);
+    expect(sections.length).toBeLessThanOrEqual(7);
     expect(pages.filter((page) => page.comingSoon)).toEqual([]);
     expect(pages.map((page) => page.page)).not.toContain('README');
     expect(JSON.stringify(sections)).not.toMatch(/… \d+ more/);
@@ -46,7 +47,7 @@ describe('spark_docs', () => {
     const { sections } = (await tools.call('spark_docs', { type: 'troubleshooting' })).json<{
       sections: ListedSection[];
     }>();
-    expect(sections.map((entry) => entry.section)).toEqual(['Troubleshooting']);
+    expect(sections.map((entry) => entry.section)).toEqual(['Help']);
     expect(sections[0]!.pages.map((page) => page.page)).toContain('trouble-providers');
 
     const { matches } = (
@@ -71,7 +72,7 @@ describe('spark_docs', () => {
   });
 
   it.each([
-    ['queue a message while the agent works', 'queue-messages'],
+    ['queue a message while the agent works', 'follow-a-turn'],
     ['delete a chat that is running', 'follow-a-turn'],
     ['provider will not connect', 'trouble-providers'],
     ['what changed recently', 'whats-new'],
@@ -103,20 +104,6 @@ describe('spark_docs', () => {
     expect(oneChat?.text).not.toContain('images/');
   });
 
-  it('still opens pages and headings by the ids they had before they moved', async () => {
-    const moved = (await tools.call('spark_docs', { page: 'chats-and-modes' })).json<{
-      page: string;
-      movedFrom: string;
-    }>();
-    expect(moved).toMatchObject({ page: 'start-a-chat', movedFrom: 'chats-and-modes' });
-
-    const heading = (
-      await tools.call('spark_docs', { page: 'approvals', heading: 'hold-to-confirm' })
-    ).json<{ page: string; sections: { anchor: string }[] }>();
-    expect(heading.page).toBe('answer-approvals');
-    expect(heading.sections.map((section) => section.anchor)).toEqual(['hold-to-confirm']);
-  });
-
   it('reads one heading and explains unknown pages and headings', async () => {
     const one = (
       await tools.call('spark_docs', { page: 'approvals', heading: 'if-you-dont-answer' })
@@ -124,7 +111,7 @@ describe('spark_docs', () => {
     expect(one.sections.map((section) => section.anchor)).toEqual(['if-you-dont-answer']);
     expect(one.sections[0]!.text).toContain('30 minutes');
 
-    const missing = await tools.call('spark_docs', { page: 'nope' });
+    const missing = await tools.call('spark_docs', { page: 'queue-messages' });
     expect(missing).toMatchObject({ isError: true });
     expect(missing.text).toContain('Known pages: welcome');
     const noHeading = await tools.call('spark_docs', { page: 'jev', heading: 'zzz' });
@@ -138,7 +125,7 @@ describe('spark_docs', () => {
       note: string;
     }>();
     expect(matches).toEqual([]);
-    expect(sections.flatMap((entry) => entry.pages).length).toBeGreaterThan(50);
+    expect(sections.flatMap((entry) => entry.pages).length).toBeGreaterThan(40);
     expect(note).toContain('page');
   });
 });

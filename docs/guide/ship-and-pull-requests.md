@@ -1,22 +1,21 @@
 ---
 title: Ship a change
-section: Ship and pull requests
+section: Projects and shipping
 type: how-to
-order: 510
+order: 320
 summary: Commit, push or open a pull request from a chat, and choose whether pull requests open ready for review or as drafts.
 ---
 
 You'll ship a finished change as a commit, a pushed branch or a pull request. About 2 minutes.
 
-1. When a change is kept, find the ship button on the chat's outcome card or in the **Changes** tab of the **Work** panel. It reads **Open PR**, **Push branch** or **Commit**.
-2. Select it. **Ship this task** opens.
-3. Under **How to ship**, pick **Commit**, **Push** or **PR**, if more than one is possible.
-4. Check the branch, the files and the **Pull request title**.
-5. Select **Open PR** (or **Push branch**, **Commit**).
+1. Select the ship button on the chat's outcome card or in the **Changes** tab of the **Work** panel. It reads **Open PR**, **Push branch** or **Commit**.
+2. In **Ship this task**, pick **Commit**, **Push** or **PR** under **How to ship**.
+3. Check the branch, the files and the **Pull request title**.
+4. Select **Open PR**, **Push branch** or **Commit**.
 
 ![Ship this task with the PR option, branch and files](images/ship-panel-light.png)
 
-The chat says what happened, such as "Opened PR #12.". Ship commits only the task's own files and leaves secret files out. After a PR exists, the button reads **Update PR**.
+Ship commits only the task's own files and leaves secret files out. Once a PR exists, the button reads **Update PR**. Spark never merges a pull request.
 
 ## How Spark pushes and opens the PR
 
@@ -27,7 +26,7 @@ Spark does it itself, so your credentials never reach the agent.
 | Push        | Your own git login, then a saved GitHub token. The token is never written to git config or logs. |
 | Open the PR | The GitHub connection, then your `gh` login, then a **Create PR on GitHub** link.                |
 
-GitLab and Bitbucket remotes get a link to their merge request page. Hover the chat's branch chip to see the route, such as **PRs via GitHub connection** or **Push only · PR link**.
+GitLab and Bitbucket remotes get a link to their merge request page. Hover the chat's branch chip to see the route.
 
 ## Ready for review or draft
 
@@ -36,11 +35,11 @@ GitLab and Bitbucket remotes get a link to their merge request page. Hover the c
 
 ## When checks still fail in Full auto
 
-At **Full auto → PR**, Spark ships by itself. **When checks still fail in Full auto** in **Settings → Spark** decides what happens if checks fail:
+At **Full auto → PR**, Spark ships by itself. **When checks still fail in Full auto** in **Settings → Spark** decides what happens:
 
-- **Open a draft PR** (default): the PR opens as a draft marked "Checks failing".
-- **Stop and ask**: Spark stops before shipping and asks you.
-
-Spark never merges a pull request.
+| Choice                        | Result                                           |
+| ----------------------------- | ------------------------------------------------ |
+| **Open a draft PR** (default) | The PR opens as a draft marked "Checks failing". |
+| **Stop and ask**              | Spark stops before shipping and asks you.        |
 
 **Next:** [Let Spark handle PR feedback](pr-follow-up.md)

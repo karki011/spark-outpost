@@ -1,47 +1,50 @@
 ---
-title: Steer big work in pieces
-section: Crew and pieces
+title: Watch and steer the crew
+section: Chats
 type: how-to
-order: 412
-summary: Choose how many Builders run at once, steer pieces while they run, and pick one pull request or several.
+order: 230
+summary: Watch a chat's agents in Agent TV, message one of them, steer the pieces of big work, and pick one pull request or several.
 ---
 
-You'll control how Spark builds work that's too big for one Builder. About 2 minutes.
+You'll watch the agents on a request, message one, and steer big work. About 2 minutes.
 
-After you agree a plan, Spark may split it into pieces, one Builder each. See [How pieces work](how-pieces-work.md).
+## Watch in Agent TV
+
+1. Select **Agent TV** in the chat header, once the first reply starts.
+2. Pick **Stage** to see the agents as blobs, or **List** for each agent's model, time and cost.
+3. Select an agent, then **Go to** to jump to its work. Press **Esc** to close.
+
+Agent TV keeps following its chat while you open another.
+
+## Message a crew member
+
+1. Select **Message** on the agent's row in **Agent TV**, in the **Crew** tab of the **Work** panel, or in the chat.
+2. Type your message and select **Send to** _name_, such as **Send to Bolt**.
+
+The agent reads it at its next step. A finished Builder shows **Continue** _name_ and resumes in a new turn.
+
+## Steer the pieces
+
+Spark may split a big plan into [pieces](spark-crew.md#pieces), one Builder each.
+
+1. While pieces run, find **Steer to** above the message box.
+2. Pick **Auto**, **All pieces**, one piece such as **P2 · API**, or **Coordinator**.
+3. Send. Write "skip P3" to skip a piece, or "use Codex for P2" to move one.
+
+**Auto** sends to whoever your words name.
 
 ## Choose how many Builders run at once
 
 1. Open **Settings → Projects** and find the project.
 2. Under **Builders at once**, pick **1 at a time, in order**, **Up to 2 at once** or **Up to 3 at once** (the default).
 
-More at once finishes sooner and spends faster.
-
-## Steer the pieces while they run
-
-1. While pieces run, find **Steer to** above the message box.
-2. Pick who gets your message:
-
-   | Pick                          | Goes to                                                 |
-   | ----------------------------- | ------------------------------------------------------- |
-   | **Auto**                      | Whoever your words name, such as a piece key or Builder |
-   | **All pieces**                | Every piece still open                                  |
-   | A piece, such as **P2 · API** | That piece's Builder                                    |
-   | **Coordinator**               | Read when the pieces are joined                         |
-
-3. Send. The line above the box says when it arrives, such as "Queued for Rivet: … (next turn)".
-
-Write "skip P3" to skip a piece, or "use Codex for P2" to move one.
-
 ## One PR or separate PRs
 
-At **Full auto → PR**, when two or more pieces were built in their own copies, Spark asks **One PR or separate PRs?**.
+At **Full auto → PR**, Spark asks **One PR or separate PRs?** when pieces were built in their own copies.
 
 1. Pick **One PR** or **Separate PRs**.
 2. To skip the card next time, pick **Always one PR here** or **Always separate PRs here**.
 
-If you don't answer, Spark picks **One PR** after the time in **If you don't answer a question**. With that setting **Off**, the card waits.
+Unanswered, Spark picks **One PR** after the **If you don't answer a question** time.
 
-> **Tip:** On a busy repo, set **Builders at once** to **1 at a time, in order**. Spark still splits the work but builds one piece at a time.
-
-**Next:** [Ship a change](ship-and-pull-requests.md)
+**Next:** [Choose where a chat works](where-spark-works.md)

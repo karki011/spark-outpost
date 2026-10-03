@@ -196,23 +196,12 @@ export function guideBodyWithoutNext(page: GuidePage): string {
   return page.body.replace(NEXT_LINK, '\n');
 }
 
-export function resolveGuideLink(
-  pages: readonly GuidePage[],
-  redirects: Readonly<Record<string, string>>,
-  link: GuideLink,
-): GuideLink | null {
+export function resolveGuideLink(pages: readonly GuidePage[], link: GuideLink): GuideLink | null {
   const page = pages.find((entry) => entry.slug === link.slug);
+  if (!page) return null;
   const anchorExists =
-    link.anchor === null || page?.headings.some((heading) => heading.anchor === link.anchor);
-  if (page && anchorExists) return link;
-  const moved =
-    (link.anchor ? redirects[`${link.slug}#${link.anchor}`] : undefined) ??
-    (page ? undefined : redirects[link.slug]);
-  if (moved) {
-    const [slug = '', anchor] = moved.split('#', 2);
-    return { slug, anchor: anchor ?? null };
-  }
-  return page ? { slug: link.slug, anchor: null } : null;
+    link.anchor === null || page.headings.some((heading) => heading.anchor === link.anchor);
+  return anchorExists ? link : { slug: link.slug, anchor: null };
 }
 
 export function guideHrefTarget(href: string): GuideLink | null {

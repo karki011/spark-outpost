@@ -3,21 +3,21 @@ import {
   guideNextSlug,
   inlineText,
   markdownLines,
-  resolveGuideLink,
   type GuidePage,
   type GuidePageType,
 } from '../packages/contracts/src/guide.ts';
 
 export const WORD_CAPS: Readonly<Record<GuidePageType, number>> = {
-  start: 300,
-  'how-to': 450,
-  concept: 400,
-  reference: 800,
-  troubleshooting: 450,
-  'whats-new': 600,
+  start: 200,
+  'how-to': 300,
+  concept: 300,
+  reference: 600,
+  troubleshooting: 350,
+  'whats-new': 400,
 };
 
-export const PARAGRAPH_WORDS_MAX = 60;
+export const GUIDE_WORDS_MAX = 13_000;
+export const PARAGRAPH_WORDS_MAX = 40;
 export const SUMMARY_CHARS_MAX = 170;
 const SEQUENCE_TYPES: readonly GuidePageType[] = ['start', 'how-to'];
 
@@ -142,29 +142,6 @@ export function checkImages(
   return violations;
 }
 
-export function checkRedirects(
-  pages: readonly GuidePage[],
-  redirects: Readonly<Record<string, string>>,
-): GuideViolation[] {
-  const violations: GuideViolation[] = [];
-  for (const [from, to] of Object.entries(redirects)) {
-    const [fromSlug = '', fromAnchor] = from.split('#', 2);
-    const [toSlug = '', toAnchor] = to.split('#', 2);
-    if (!targetExists(pages, toSlug, toAnchor ?? null)) {
-      violations.push({ page: 'redirects', message: `${from} points at missing ${to}` });
-    }
-    if (targetExists(pages, fromSlug, fromAnchor ?? null)) {
-      violations.push({ page: 'redirects', message: `${from} still exists; drop the redirect` });
-    }
-    const resolved = resolveGuideLink(pages, redirects, {
-      slug: fromSlug,
-      anchor: fromAnchor ?? null,
-    });
-    if (!resolved) violations.push({ page: 'redirects', message: `${from} does not resolve` });
-  }
-  return violations;
-}
-
 export function checkCoverage(
   page: GuidePage | undefined,
   slug: string,
@@ -175,6 +152,21 @@ export function checkCoverage(
   return names
     .filter((name) => !page.body.includes(name))
     .map((name) => ({ page: slug, message: `no entry for the ${kind} ${name}` }));
+}
+
+export function guideWords(pages: readonly GuidePage[]): number {
+  return pages.reduce((sum, page) => sum + proseWords(page.body), 0);
+}
+
+export function checkTotalWords(pages: readonly GuidePage[]): GuideViolation[] {
+  const words = guideWords(pages);
+  if (words <= GUIDE_WORDS_MAX) return [];
+  return [
+    {
+      page: 'guide',
+      message: `${words} words in all; the guide may have ${GUIDE_WORDS_MAX}. Cut or merge before adding`,
+    },
+  ];
 }
 
 export function checkPages(pages: readonly GuidePage[]): GuideViolation[] {
