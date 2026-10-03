@@ -1,22 +1,13 @@
-import path from 'node:path';
 import { setImmediate as nextTurn } from 'node:timers/promises';
 import { diffLines } from 'diff';
-import {
-  CHANGED_FILE_FULL_MAX_BYTES,
-  CHANGED_FILE_TEXT_MAX_BYTES,
-  type ChangedFile,
-  type ChangedFileQuery,
-  type RunChange,
-  type RunFileChanges,
-  type TaskChanges,
-} from '@spark-outpost/contracts';
-import { mapLimit } from '../codescan/file-stats.ts';
+import type { ChangedFile, RunChange, TaskChanges } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { getSnapshot, listBackups, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
 import { pairRenames } from './change-renames.ts';
-import { copyChanges, type Describe } from './copy-changes.ts';
+import { gitRangeFiles, shownFor, type FileContents, type ListedFile } from './change-list.ts';
+import { copyChanges } from './copy-changes.ts';
 import { countChangedLines, lineCount, type LineCounts } from './line-counts.ts';
 import { relativeInside } from './path-policy.ts';
 import {
@@ -26,40 +17,41 @@ import {
   type SnapshotSource,
 } from './run-changes.ts';
 import { runBaseUntil } from './run-base.ts';
-import { gitChanges, gitFileAt } from './snapshot.ts';
+import { gitFileAt, workingTree } from './snapshot.ts';
 
-const GIT_READ_CONCURRENCY = 8;
-const DIFF_TIMEOUT_MS = 50;
+export interface ListedRun {
+  runId: string;
+  revertedAt: string | null;
+  name?: string;
+  copy?: string;
+  files: ListedFile[];
+}
 
-interface FileVersions {
+interface FileVersions extends FileContents {
   change: RunChange;
-  before: Buffer | null;
-  after: Buffer | null;
 }
 
 function isBinary(content: Buffer | null): boolean {
   return content !== null && content.includes(0);
 }
 
-function isTooLarge(content: Buffer | null, maxBytes: number): boolean {
-  return content !== null && content.length > maxBytes;
+function byteSize(versions: FileContents): number {
+  return Math.max(versions.before?.length ?? 0, versions.after?.length ?? 0);
 }
 
-function describer(fullPath: string | null): Describe {
-  return async ({ change, before, after }: FileVersions): Promise<ChangedFile> => {
-    const maxBytes =
-      change.path === fullPath ? CHANGED_FILE_FULL_MAX_BYTES : CHANGED_FILE_TEXT_MAX_BYTES;
-    const base = { ...change, added: null, removed: null, oldText: null, newText: null };
-    if (isBinary(before) || isBinary(after)) return { ...base, shown: 'binary' };
-    if (isTooLarge(before, maxBytes) || isTooLarge(after, maxBytes)) {
-      const counts = await countChangedLines(before, after);
-      return { ...base, ...counts, shown: 'too-large', truncated: true };
-    }
-    const oldText = before?.toString('utf8') ?? null;
-    const newText = after?.toString('utf8') ?? null;
-    const counts = await textCounts(before, after, oldText, newText);
-    return { ...change, ...counts, oldText, newText, shown: 'text' };
-  };
+async function describeVersions(versions: FileVersions): Promise<ChangedFile> {
+  const { change, before, after } = versions;
+  const bytes = byteSize(versions);
+  const base = { ...change, added: null, removed: null, oldText: null, newText: null, bytes };
+  if (isBinary(before) || isBinary(after)) return { ...base, shown: 'binary' };
+  if (shownFor(false, bytes) === 'too-large') {
+    const counts = await countChangedLines(before, after);
+    return { ...base, ...counts, shown: 'too-large', truncated: true };
+  }
+  const oldText = before?.toString('utf8') ?? null;
+  const newText = after?.toString('utf8') ?? null;
+  const counts = await textCounts(before, after, oldText, newText);
+  return { ...change, ...counts, oldText, newText, shown: 'text', bytes };
 }
 
 async function textCounts(
@@ -83,6 +75,12 @@ async function textCounts(
   return { added, removed };
 }
 
+function withoutText(file: ChangedFile): ChangedFile {
+  return { ...file, oldText: null, newText: null };
+}
+
+const DIFF_TIMEOUT_MS = 50;
+
 interface RunState {
   runId: string;
   snapshot: RunSnapshot;
@@ -95,11 +93,11 @@ function changeKind(before: Buffer | null, after: Buffer | null): RunChange['cha
   return before.equals(after) ? null : 'modified';
 }
 
-async function gitVersions(
+async function gitListed(
   db: Queryable,
   run: RunState,
   next: RunState | undefined,
-): Promise<FileVersions[]> {
+): Promise<ListedFile[]> {
   const { root, ref } = run.snapshot;
   if (!ref) return [];
   const source = await snapshotSource(db, run.runId, root);
@@ -107,18 +105,10 @@ async function gitVersions(
   if (source.gone && !until) return [];
   const gitRoot = source.gitRoot;
   const base = await runBaseUntil(gitRoot, ref, until);
-  const changes = await changesWhilePresent(gitRoot, () => gitChanges(gitRoot, base, until));
-  if (changes === null) return [];
-  const afterContent = (change: RunChange): Promise<Buffer | null> => {
-    if (change.change === 'deleted') return Promise.resolve(null);
-    if (until) return gitFileAt(gitRoot, until, change.path);
-    return readIfPresent(path.join(root, change.path));
-  };
-  return mapLimit(changes, GIT_READ_CONCURRENCY, async (change) => ({
-    change,
-    before: change.change === 'added' ? null : await gitFileAt(gitRoot, base, change.path),
-    after: await afterContent(change),
-  }));
+  const files = await changesWhilePresent(gitRoot, async () =>
+    gitRangeFiles({ root: gitRoot, from: base, to: until ?? (await workingTree(gitRoot)) }),
+  );
+  return files ?? [];
 }
 
 async function laterBackup(
@@ -164,6 +154,24 @@ async function backupVersions(
   return versions;
 }
 
+async function backupListed(
+  db: Queryable,
+  run: RunState,
+  later: readonly RunState[],
+): Promise<ListedFile[]> {
+  const versions = await backupVersions(db, run, later);
+  const byPath = new Map(versions.map((version) => [version.change.path, version]));
+  const files = pairRenames(await Promise.all(versions.map(describeVersions)));
+  return files.map((file) => ({
+    file: withoutText(file),
+    contents: () =>
+      Promise.resolve({
+        before: byPath.get(file.oldPath ?? file.path)?.before ?? null,
+        after: byPath.get(file.path)?.after ?? null,
+      }),
+  }));
+}
+
 async function runStates(
   db: Queryable,
   workspaceId: string,
@@ -181,63 +189,55 @@ async function runFiles(
   db: Queryable,
   run: RunState,
   later: readonly RunState[],
-  describe: Describe,
-): Promise<RunFileChanges | null> {
+): Promise<ListedRun | null> {
   const sameRoot = later.filter((other) => other.snapshot.root === run.snapshot.root);
-  const versions =
+  const files =
     run.snapshot.kind === 'git'
-      ? await gitVersions(
+      ? await gitListed(
           db,
           run,
           sameRoot.find((other) => other.snapshot.kind === 'git'),
         )
-      : await backupVersions(db, run, sameRoot);
-  if (versions.length === 0) return null;
-  return {
-    runId: run.runId,
-    revertedAt: run.revertedAt?.toISOString() ?? null,
-    files: await mapLimit(versions, GIT_READ_CONCURRENCY, describe),
-  };
+      : await backupListed(db, run, sameRoot);
+  if (files.length === 0) return null;
+  return { runId: run.runId, revertedAt: run.revertedAt?.toISOString() ?? null, files };
 }
 
-function withRenames(run: RunFileChanges): RunFileChanges {
-  return { ...run, files: pairRenames(run.files) };
-}
-
-export async function taskChanges(
+export async function taskChangeSet(
   db: Queryable,
   workspaceId: string,
   taskId: string,
-  fullPath: string | null = null,
-): Promise<TaskChanges> {
+): Promise<ListedRun[]> {
   const task = await getTaskDetail(db, taskId);
   if (!task) throw new TaskNotFoundError(taskId);
-  const describe = describer(fullPath);
-  const copies = await copyChanges(db, task.runIds, describe);
+  const copies = await copyChanges(db, task.runIds);
   const states = (await runStates(db, workspaceId, task.runIds)).filter(
     (state) =>
       !copies.has(state.runId) || copies.get(state.runId)?.mergedInto === state.snapshot.root,
   );
   const main = await Promise.all(
     states.map((run, index) =>
-      copies.has(run.runId) ? null : runFiles(db, run, states.slice(index + 1), describe),
+      copies.has(run.runId) ? null : runFiles(db, run, states.slice(index + 1)),
     ),
   );
   const byRun = new Map(
     [...main, ...[...copies.values()].map((copy) => copy.changes)].flatMap((run) =>
-      run ? [[run.runId, withRenames(run)] as const] : [],
+      run ? [[run.runId, run] as const] : [],
     ),
   );
-  return { runs: task.runIds.flatMap((runId) => byRun.get(runId) ?? []) };
+  return task.runIds.flatMap((runId) => byRun.get(runId) ?? []);
 }
 
-export async function taskChangedFile(
+export function leanChanges(runs: readonly ListedRun[]): TaskChanges {
+  return {
+    runs: runs.map(({ files, ...run }) => ({ ...run, files: files.map((entry) => entry.file) })),
+  };
+}
+
+export async function taskChanges(
   db: Queryable,
   workspaceId: string,
   taskId: string,
-  query: ChangedFileQuery,
-): Promise<ChangedFile | null> {
-  const changes = await taskChanges(db, workspaceId, taskId, query.path);
-  const run = changes.runs.find((candidate) => candidate.runId === query.runId);
-  return run?.files.find((file) => file.path === query.path) ?? null;
+): Promise<TaskChanges> {
+  return leanChanges(await taskChangeSet(db, workspaceId, taskId));
 }

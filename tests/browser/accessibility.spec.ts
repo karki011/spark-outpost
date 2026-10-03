@@ -1,9 +1,12 @@
+import { mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { connectorCard, connectorHead } from './connector-cards.ts';
 import { resetTestDatabase } from './database.ts';
+import { editedChat } from './edited-chat.ts';
 import { seedChats } from './sidebar-seed.ts';
 import { combinedFixture, monoFixture, REPO_ROOT, serveMap } from './map-fixture.ts';
 import { nxFixture } from './map-nx-fixture.ts';
@@ -280,6 +283,37 @@ test('the Docs page has no serious colour-contrast or ARIA issues in any theme',
   await docs.getByRole('button', { name: 'Contents' }).click();
   found.push(...(await blockingViolations(page, 'docs phone contents')));
   expect(found).toEqual([]);
+});
+
+test('the changes chip, drawer and Changes tab have no serious issues in any theme', async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
+  const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'spark-a11y-diff-')));
+  try {
+    writeFileSync(path.join(root, 'notes.txt'), 'Remember the milk\n');
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await editedChat(page, root);
+    const panel = page.getByRole('complementary', { name: 'Work panel' });
+    const show = page.getByRole('button', { name: 'Show work panel' });
+    if (await show.isVisible()) await show.click();
+    await panel.getByRole('tab', { name: 'Changes' }).click();
+    await expect(panel.getByRole('region', { name: 'Most changed files' })).toBeVisible();
+    await page.getByRole('button', { name: /added, \d+ removed in 1 file$/ }).click();
+    const drawer = page.getByRole('dialog', { name: 'Changes · 1 file' });
+    await drawer.getByRole('treeitem', { name: /notes\.txt/ }).click();
+    await expect(drawer.locator('.cm-content')).toContainText('Edited by the fake agent');
+    const found = [];
+    for (const theme of THEMES) {
+      await useTheme(page, theme);
+      found.push(...(await blockingViolations(page, `changes drawer ${theme}`)));
+    }
+    expect(found).toEqual([]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('interactive targets on the chat screen are at least 24 by 24 pixels', async ({ page }) => {

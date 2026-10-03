@@ -64,13 +64,7 @@ export function findNativeSelects(file: string, text: string): SourceViolation[]
 
 const PLAIN_LOADING = /(?<![\w-])Loading(?:\s[^'"`<>{}\n]*)?(?:…|\.\.\.)/g;
 
-export const PLAIN_LOADING_PENDING = new Set([
-  'apps/web/src/chat/changes/FileChangeList.tsx',
-  'apps/web/src/tasks/ChangesPane.tsx',
-]);
-
 export function findPlainLoading(file: string, text: string): SourceViolation[] {
-  if (PLAIN_LOADING_PENDING.has(file)) return [];
   return [...text.matchAll(PLAIN_LOADING)].map((match) => ({
     file,
     line: text.slice(0, match.index).split('\n').length,

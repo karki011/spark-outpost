@@ -121,6 +121,19 @@ To change the default for new chats, open **Settings → Spark** and change **Ho
 - A line above the message box shows what the agent is doing right now, for example **Running · pnpm test**, **Editing · table.tsx** or **Thinking…**. A step that runs longer than ten seconds shows how long it has taken. When the turn ends, the line says **Done** with the time it took, then fades. Secrets in commands show as •••.
 - When the agent needs you, its card waits in the chat and the same line says what for, for example **Waiting for you · approve `pnpm test`**. Select it, or press **⌘ Shift Y** (**Ctrl Shift Y** on Windows and Linux), to jump to the card. See [Approvals and protected paths](approvals.md#answer-an-approval-card).
 
+## Review the changes
+
+When the agent has changed files, the chat header shows how many lines it added and removed, for example **+2,550 −21** with a five-block bar.
+
+1. Select it, or press **⌘⇧D**. The **Changes** drawer slides in over the chat.
+2. Pick a file on the left. Type in **Filter files** to find one, or turn off **Folders** for a flat list. Arrow keys move, **Enter** opens.
+3. Read the diff on the right. Switch between **Unified** and **Split**, select **Wrap** for long lines, and press **⌘F** in the diff to search.
+4. Press **Esc** or select **Close changes** to go back to the chat. Drag the drawer's left edge to resize it.
+
+![The Changes drawer with the file list and a diff](images/chats-and-modes-diff-drawer-light.png)
+
+Big files show their first 2,000 lines; select **Load full file** for the rest. Lockfiles, minified and other generated files, files over 1 MB and binary files stay folded until you select **Show diff**. The **Changes** tab of the **Work** panel keeps a summary: totals, the most changed files, each run's share and the ship button.
+
 ## After a turn
 
 - Copy a message or a reply with its copy button.
@@ -136,6 +149,7 @@ To change the default for new chats, open **Settings → Spark** and change **Ho
 | **⌘K**                      | Search chats                      |
 | **⌘B**                      | Show or hide the chat list        |
 | **⌃\`**                     | Terminal                          |
+| **⌘⇧D**                     | Review the changes                |
 | **⌘⇧A**                     | Add the selected text to the chat |
 | **Enter** / **Shift+Enter** | Send / new line                   |
 

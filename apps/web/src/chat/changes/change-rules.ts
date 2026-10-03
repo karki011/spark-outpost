@@ -1,7 +1,6 @@
-import type { ChangedFile } from '@spark-outpost/contracts';
+import { DIFF_HUGE_BYTES, DIFF_MAX_BYTES, type ChangeEntry } from '@spark-outpost/contracts';
 
-export const LARGE_DIFF_LINES = 800;
-export const LARGE_DIFF_BYTES = 200 * 1024;
+type FileFacts = Pick<ChangeEntry, 'path' | 'shown' | 'added' | 'removed' | 'bytes'>;
 
 const LOCKFILES = new Set([
   'pnpm-lock.yaml',
@@ -18,12 +17,7 @@ const LOCKFILES = new Set([
 const GENERATED_DIRS = new Set(['dist', 'build', 'out', 'coverage', 'node_modules', 'vendor']);
 const GENERATED_NAME = /(\.lock|\.min\.(js|css|mjs)|\.bundle\.js|\.map|\.snap)$/i;
 
-export type FileView =
-  | { kind: 'text' }
-  | { kind: 'binary' }
-  | { kind: 'generated' }
-  | { kind: 'large'; lines: number }
-  | { kind: 'truncated'; lines: number | null };
+export type FileView = 'text' | 'binary' | 'generated' | 'huge' | 'oversized';
 
 export interface ChangeTotals {
   files: number;
@@ -61,31 +55,29 @@ export function isGenerated(path: string): boolean {
   return parts.slice(0, -1).some((part) => GENERATED_DIRS.has(part));
 }
 
-function changedLines(file: ChangedFile): number | null {
-  if (file.added === null || file.removed === null) return null;
-  return file.added + file.removed;
+export function fileView(file: FileFacts): FileView {
+  if (file.shown === 'binary') return 'binary';
+  const bytes = file.bytes ?? 0;
+  if (bytes > DIFF_MAX_BYTES) return 'oversized';
+  if (file.shown === 'too-large' || bytes > DIFF_HUGE_BYTES) return 'huge';
+  return isGenerated(file.path) ? 'generated' : 'text';
 }
 
-function textBytes(file: ChangedFile): number {
-  return (file.oldText?.length ?? 0) + (file.newText?.length ?? 0);
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${trimZero((bytes / (1024 * 1024)).toFixed(1))} MB`;
 }
 
-export function fileView(file: ChangedFile): FileView {
-  if (file.shown === 'binary') return { kind: 'binary' };
-  if (isGenerated(file.path)) return { kind: 'generated' };
-  const lines = changedLines(file);
-  if (file.shown === 'too-large') return { kind: 'truncated', lines };
-  if ((lines ?? 0) > LARGE_DIFF_LINES || textBytes(file) > LARGE_DIFF_BYTES) {
-    return { kind: 'large', lines: lines ?? 0 };
-  }
-  return { kind: 'text' };
+export function formatTotal(count: number): string {
+  return count < 100_000 ? count.toLocaleString('en-US') : formatCount(count);
 }
 
-export function changeTotals(files: readonly ChangedFile[]): ChangeTotals {
+export function runTotals(runs: readonly ChangeTotals[]): ChangeTotals {
   return {
-    files: files.length,
-    added: files.reduce((sum, file) => sum + (file.added ?? 0), 0),
-    removed: files.reduce((sum, file) => sum + (file.removed ?? 0), 0),
+    files: runs.reduce((sum, run) => sum + run.files, 0),
+    added: runs.reduce((sum, run) => sum + run.added, 0),
+    removed: runs.reduce((sum, run) => sum + run.removed, 0),
   };
 }
 
@@ -100,5 +92,5 @@ export function diffStatBar(added: number, removed: number, slots = 5): DiffStat
 }
 
 export function filesLabel(count: number): string {
-  return `${count} ${count === 1 ? 'file' : 'files'}`;
+  return `${count.toLocaleString('en-US')} ${count === 1 ? 'file' : 'files'}`;
 }

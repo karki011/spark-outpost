@@ -194,6 +194,21 @@ test('Crew, plan and guardrail screenshots', async ({ page }) => {
   await shoot(page, IMAGES, 'guardrails-keep-card', keep);
 });
 
+test('Changes drawer screenshot', async ({ page }) => {
+  test.setTimeout(300_000);
+  crewFiles('src/totals.ts', TOTALS);
+  await seedDemo(page, repo);
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await projectChat(page, 'Review keep');
+  await send(page, 'Fix the totals divider #build #removehelper');
+  await expect(card(page, /Keep these changes\?/)).toBeVisible({ timeout: 120_000 });
+  await page.getByRole('button', { name: /added, [\d,]+ removed in / }).click();
+  const drawer = page.getByRole('dialog', { name: /^Changes · / });
+  await drawer.getByRole('treeitem', { name: /totals\.ts/ }).click({ timeout: 60_000 });
+  await expect(drawer.locator('.cm-content')).toBeVisible({ timeout: 60_000 });
+  await shoot(page, IMAGES, 'chats-and-modes-diff-drawer');
+});
+
 test('Pieces screenshot', async ({ page }) => {
   test.setTimeout(150_000);
   crewFiles('piece-check.mjs', PIECE_CHECK_SCRIPT);

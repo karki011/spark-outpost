@@ -114,8 +114,10 @@ test('Ship from the keep card commits the task file and opens a PR', async ({ pa
     git(repo.root, 'rev-parse', pulls[0]!.head),
   );
 
-  await page.getByRole('button', { name: 'Review all changes' }).click();
+  const showPanel = page.getByRole('button', { name: 'Show work panel' });
+  if (await showPanel.isVisible()) await showPanel.click();
   const workPanel = page.getByRole('complementary', { name: 'Work panel' });
+  await workPanel.getByRole('tab', { name: 'Changes' }).click();
   await expect(workPanel.locator('.ship .lchip')).toContainText('acme/widgets#1');
 });
 

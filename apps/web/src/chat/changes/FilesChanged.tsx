@@ -1,11 +1,10 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { TaskChanges, TaskOverview } from '@spark-outpost/contracts';
-import { taskApi, taskKeys } from '../../tasks/task-api.ts';
+import type { TaskOverview } from '@spark-outpost/contracts';
 import { CoreImpactNote } from '../../map/CoreImpactNote.tsx';
 import { useViewChanges } from '../../tasks/view-changes.ts';
-import { changeTotals, filesLabel } from './change-rules.ts';
-import { Counts, FileChangeList, type FileEntry } from './FileChangeList.tsx';
+import { diffApi, diffKeys } from '../../diff/diff-api.ts';
+import { filesLabel, runTotals } from './change-rules.ts';
+import { Counts, FileChangeList } from './FileChangeList.tsx';
 
 const FIRST_FILES = 6;
 
@@ -16,15 +15,6 @@ export function taskForRuns(
   return tasks.find((task) => runIds.some((runId) => task.runIds.includes(runId))) ?? null;
 }
 
-export function fileEntries(
-  changes: TaskChanges | undefined,
-  runIds: readonly string[],
-): FileEntry[] {
-  return (changes?.runs ?? [])
-    .filter((run) => runIds.includes(run.runId) && !run.revertedAt)
-    .flatMap((run) => run.files.map((file) => ({ runId: run.runId, file })));
-}
-
 interface FilesChangedProps {
   taskId: string;
   runIds: readonly string[];
@@ -33,34 +23,42 @@ interface FilesChangedProps {
 
 export function FilesChanged({ taskId, runIds, listed = runIds }: FilesChangedProps) {
   const viewChanges = useViewChanges();
-  const [all, setAll] = useState(false);
-  const changes = useQuery({
-    queryKey: taskKeys.changes(taskId),
-    queryFn: () => taskApi.changes(taskId),
+  const summary = useQuery({
+    queryKey: diffKeys.summary(taskId),
+    queryFn: () => diffApi.summary(taskId),
   });
-  const entries = fileEntries(changes.data, runIds);
-  if (entries.length === 0) return null;
-  const totals = changeTotals(entries.map((entry) => entry.file));
-  const listable = entries.filter((entry) => listed.includes(entry.runId));
-  const shown = all ? listable : listable.slice(0, FIRST_FILES);
+  const live = (summary.data?.runs ?? []).filter(
+    (run) => runIds.includes(run.runId) && !run.revertedAt,
+  );
+  const listable = live.filter((run) => listed.includes(run.runId)).map((run) => run.runId);
+  const params = { version: summary.data?.version, q: '', runs: listable, page: 0 };
+  const page = useQuery({
+    queryKey: diffKeys.page(taskId, params),
+    queryFn: () => diffApi.page(taskId, params),
+    enabled: listable.length > 0,
+  });
+  if (live.length === 0) return null;
+  const { files, added, removed } = runTotals(live);
+  const shown = page.data?.files.slice(0, FIRST_FILES) ?? [];
+  const more = (page.data?.total ?? 0) - shown.length;
   const list = listable.length > 0;
-  const label = `${filesLabel(totals.files)} changed`;
+  const label = `${filesLabel(files)} changed`;
   return (
     <section className={list ? 'fchg' : 'fchg bare'} aria-label={`Files changed: ${label}`}>
       <div className="fchg-h">
         <b>{label}</b>
-        <Counts added={totals.added} removed={totals.removed} />
+        <Counts added={added} removed={removed} />
         {viewChanges && (
           <button type="button" className="fchg-review" onClick={() => viewChanges(taskId)}>
             Review all changes
           </button>
         )}
       </div>
-      <CoreImpactNote impact={changes.data?.core} />
+      <CoreImpactNote impact={summary.data?.core} />
       {list && <FileChangeList taskId={taskId} entries={shown} />}
-      {list && listable.length > shown.length && (
-        <button type="button" className="fchg-more" onClick={() => setAll(true)}>
-          Show {filesLabel(listable.length - shown.length)} more
+      {more > 0 && viewChanges && (
+        <button type="button" className="fchg-more" onClick={() => viewChanges(taskId)}>
+          Show {filesLabel(more)} more
         </button>
       )}
     </section>

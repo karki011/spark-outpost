@@ -1,23 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import type { ChangedFile } from '@spark-outpost/contracts';
+import type { ChangeEntry } from '@spark-outpost/contracts';
 import {
-  changeTotals,
   diffStatBar,
   fileView,
+  formatBytes,
   formatCount,
   formatLines,
+  formatTotal,
   isGenerated,
+  runTotals,
 } from './change-rules.ts';
 
-function file(overrides: Partial<ChangedFile>): ChangedFile {
+function file(overrides: Partial<ChangeEntry>): ChangeEntry {
   return {
+    runId: '00000000-0000-4000-8000-00000000000a',
     path: 'src/app.ts',
     change: 'modified',
     added: 3,
     removed: 1,
-    oldText: 'a\n',
-    newText: 'b\n',
     shown: 'text',
+    bytes: 120,
     ...overrides,
   };
 }
@@ -64,45 +66,41 @@ describe('isGenerated', () => {
 });
 
 describe('fileView', () => {
-  it('shows ordinary text diffs inline', () => {
-    expect(fileView(file({}))).toEqual({ kind: 'text' });
+  it('shows ordinary text diffs', () => {
+    expect(fileView(file({ added: 20_000 }))).toBe('text');
   });
 
   it('marks binary files before anything else', () => {
-    expect(fileView(file({ path: 'dist/logo.png', shown: 'binary' }))).toEqual({ kind: 'binary' });
+    expect(fileView(file({ path: 'dist/logo.png', shown: 'binary' }))).toBe('binary');
   });
 
   it('collapses generated files', () => {
-    expect(fileView(file({ path: 'pnpm-lock.yaml' }))).toEqual({ kind: 'generated' });
+    expect(fileView(file({ path: 'pnpm-lock.yaml' }))).toBe('generated');
   });
 
-  it('collapses files over 800 changed lines', () => {
-    expect(fileView(file({ added: 800, removed: 0 }))).toEqual({ kind: 'text' });
-    expect(fileView(file({ added: 900, removed: 340 }))).toEqual({ kind: 'large', lines: 1240 });
-  });
-
-  it('collapses diffs over 200 KB even with few changed lines', () => {
-    const big = 'x'.repeat(210 * 1024);
-    expect(fileView(file({ oldText: big, newText: `${big}y` }))).toEqual({
-      kind: 'large',
-      lines: 4,
-    });
-  });
-
-  it('keeps the true line count when the server left the text out', () => {
-    expect(
-      fileView(file({ shown: 'too-large', oldText: null, newText: null, added: 30_000 })),
-    ).toEqual({ kind: 'truncated', lines: 30_001 });
+  it('collapses files over 1 MB and refuses ones too big to load', () => {
+    expect(fileView(file({ bytes: 1024 * 1024 + 1 }))).toBe('huge');
+    expect(fileView(file({ shown: 'too-large' }))).toBe('huge');
+    expect(fileView(file({ bytes: 17 * 1024 * 1024 }))).toBe('oversized');
   });
 });
 
-describe('changeTotals and diffStatBar', () => {
-  it('sums counts, treating unknown counts as zero', () => {
+describe('formatBytes and formatTotal', () => {
+  it('writes sizes and totals people can read', () => {
+    expect(formatBytes(900)).toBe('900 B');
+    expect(formatBytes(24 * 1024)).toBe('24 KB');
+    expect(formatBytes(3.25 * 1024 * 1024)).toBe('3.3 MB');
+    expect(formatTotal(2550)).toBe('2,550');
+    expect(formatTotal(250_400)).toBe('250k');
+  });
+});
+
+describe('runTotals and diffStatBar', () => {
+  it('sums the counts of several runs', () => {
     expect(
-      changeTotals([
-        file({ added: 40, removed: 7 }),
-        file({ added: null, removed: null }),
-        file({}),
+      runTotals([
+        { files: 2, added: 40, removed: 7 },
+        { files: 1, added: 3, removed: 1 },
       ]),
     ).toEqual({ files: 3, added: 43, removed: 8 });
   });

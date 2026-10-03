@@ -1,44 +1,23 @@
-import type { ChangedFile, RunChange, RunFileChanges } from '@spark-outpost/contracts';
-import { mapLimit } from '../codescan/file-stats.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { worktreesForRuns, type WorktreeRecord } from '../persistence/worktrees.ts';
-import { gitChanges, gitFileAt } from './snapshot.ts';
-
-const GIT_READ_CONCURRENCY = 8;
-
-export type Describe = (versions: {
-  change: RunChange;
-  before: Buffer | null;
-  after: Buffer | null;
-}) => Promise<ChangedFile>;
+import { gitRangeFiles } from './change-list.ts';
+import type { ListedRun } from './task-changes.ts';
 
 export interface CopyChanges {
-  changes: RunFileChanges | null;
+  changes: ListedRun | null;
   mergedInto: string | null;
-}
-
-async function copyFiles(
-  record: WorktreeRecord & { resultCommit: string },
-  describe: Describe,
-): Promise<ChangedFile[]> {
-  const { repoRoot: root, baseCommit: base, resultCommit: result } = record;
-  const changes = await gitChanges(root, base, result);
-  return mapLimit(changes, GIT_READ_CONCURRENCY, async (change) =>
-    describe({
-      change,
-      before: change.change === 'added' ? null : await gitFileAt(root, base, change.path),
-      after: change.change === 'deleted' ? null : await gitFileAt(root, result, change.path),
-    }),
-  );
 }
 
 async function describeCopy(
   record: WorktreeRecord & { name: string | null },
-  describe: Describe,
-): Promise<RunFileChanges | null> {
+): Promise<ListedRun | null> {
   const { resultCommit } = record;
   if (!resultCommit) return null;
-  const files = await copyFiles({ ...record, resultCommit }, describe).catch(() => []);
+  const files = await gitRangeFiles({
+    root: record.repoRoot,
+    from: record.baseCommit,
+    to: resultCommit,
+  }).catch(() => []);
   if (files.length === 0) return null;
   return {
     runId: record.runId,
@@ -52,14 +31,13 @@ async function describeCopy(
 export async function copyChanges(
   db: Queryable,
   runIds: readonly string[],
-  describe: Describe,
 ): Promise<Map<string, CopyChanges>> {
   const records = await worktreesForRuns(db, runIds);
   const entries = await Promise.all(
     [...records.values()].map(async (record): Promise<[string, CopyChanges]> => [
       record.runId,
       {
-        changes: await describeCopy(record, describe),
+        changes: await describeCopy(record),
         mergedInto: record.mergedAt ? record.repoRoot : null,
       },
     ]),

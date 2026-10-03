@@ -50,12 +50,12 @@ Get started is a sequence: an overview page that lists the steps, then one short
 
 What Spark adds around the agent, in four short pages. Orders 191–194 place this section between Get started and Work with Spark.
 
-| Page                                                | Status  | Summary                                                                                                    | Screenshots                                               |
-| --------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `how-spark-works` Spark at a glance                 | Written | What Spark adds on top of Claude, Codex and Z.ai, one paragraph each, with links to the details.           | none                                                      |
-| `prompt-flow` What happens when you send a prompt   | Written | The path from the message box to a pull request, where each card can appear, and what changes without Jev. | `prompt-flow-crew-turn`                                   |
-| `permissions-and-autonomy` Permissions and autonomy | Written | The agent's mode and Spark autonomy, how they combine, and which cards never go on without you.            | `chats-and-modes-permissions`, `chats-and-modes-autonomy` |
-| `use-cases` Use cases                               | Written | Six short walkthroughs from a question to a Full auto pull request.                                        | none                                                      |
+| Page                                                | Status  | Summary                                                                                                    | Screenshots                                                                              |
+| --------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `how-spark-works` Spark at a glance                 | Written | What Spark adds on top of Claude, Codex and Z.ai, one paragraph each, with links to the details.           | none                                                                                     |
+| `prompt-flow` What happens when you send a prompt   | Written | The path from the message box to a pull request, where each card can appear, and what changes without Jev. | `prompt-flow-crew-turn`                                                                  |
+| `permissions-and-autonomy` Permissions and autonomy | Written | The agent's mode and Spark autonomy, how they combine, and which cards never go on without you.            | `chats-and-modes-permissions`, `chats-and-modes-autonomy`, `chats-and-modes-diff-drawer` |
+| `use-cases` Use cases                               | Written | Six short walkthroughs from a question to a Full auto pull request.                                        | none                                                                                     |
 
 ### Work with Spark
 

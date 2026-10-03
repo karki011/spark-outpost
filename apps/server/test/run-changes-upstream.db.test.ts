@@ -6,7 +6,12 @@ import { dirname, join } from 'node:path';
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { runChangesSchema, taskChangesSchema, taskOverviewSchema } from '@spark-outpost/contracts';
+import {
+  changeDiffSchema,
+  runChangesSchema,
+  taskChangesSchema,
+  taskOverviewSchema,
+} from '@spark-outpost/contracts';
 import { getRun } from '../src/persistence/runs.ts';
 import { snapshotRun } from '../src/projects/run-changes.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
@@ -121,8 +126,16 @@ describe(
         (await get(`/api/tasks/${taskId}/changes`).expect(200)).body,
       );
       expect(task.runs[0]!.files).toEqual([
-        expect.objectContaining({ path: 'app.ts', oldText: 'one\n', newText: 'two\n' }),
+        expect.objectContaining({ path: 'app.ts', added: 1, removed: 1 }),
       ]);
+      const diff = changeDiffSchema.parse(
+        (
+          await get(`/api/tasks/${taskId}/changes/diff`)
+            .query({ runId, path: 'app.ts' })
+            .expect(200)
+        ).body,
+      );
+      expect(diff).toMatchObject({ oldText: 'one\n', newText: 'two\n' });
 
       await post(`/api/runs/${runId}/revert`, {}).expect(200);
       expect(await readFile(join(clone, 'app.ts'), 'utf8')).toBe('one\n');

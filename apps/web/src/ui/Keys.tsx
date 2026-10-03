@@ -6,6 +6,7 @@ export type ShortcutKeys = readonly string[];
 export const NEW_CHAT_KEYS: ShortcutKeys = MAC ? ['⌘', '⇧', 'O'] : ['Ctrl', 'Shift', 'O'];
 export const SEARCH_KEYS: ShortcutKeys = MAC ? ['⌘', 'K'] : ['Ctrl', 'K'];
 export const SIDEBAR_KEYS: ShortcutKeys = MAC ? ['⌘', 'B'] : ['Ctrl', 'B'];
+export const DIFF_KEYS: ShortcutKeys = MAC ? ['⌘', '⇧', 'D'] : ['Ctrl', 'Shift', 'D'];
 export const TERMINAL_KEYS: ShortcutKeys = MAC ? ['⌃', '`'] : ['Ctrl', '`'];
 export const WAITING_KEYS: ShortcutKeys = MAC ? ['⌘', '⇧', 'Y'] : ['Ctrl', 'Shift', 'Y'];
 

@@ -241,11 +241,9 @@ test('reverts an allowed edit after one confirmation', async ({ page }) => {
     'aria-selected',
     'true',
   );
-  const changed = panel.getByRole('region', { name: /· 1 file$/ });
+  const changed = panel.getByRole('region', { name: 'Most changed files' });
   await expect(changed).toContainText('notes.txt');
   await expect(changed).toContainText('+1 −0');
-  await changed.getByRole('button', { name: 'Open notes.txt' }).click();
-  await expect(changed.locator('.dv-row.add')).toHaveText('2+AddedEdited by the fake agent');
   await shot(page, 'changes-tab');
 
   await page.getByRole('button', { name: 'Revert to before this run' }).click();
