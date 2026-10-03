@@ -5,6 +5,8 @@ import {
   ATTACHMENT_TEXT_MAX_BYTES,
   attachmentContentPath,
   attachmentSchema,
+  isSecretFileName,
+  SECRET_FILE_REFUSAL,
   type Attachment,
   type AttachmentKind,
 } from '@spark-outpost/contracts';
@@ -96,6 +98,7 @@ export function classifyFile(file: File): Classified {
   if (file.name.length > ATTACHMENT_NAME_MAX_LENGTH) {
     return { error: `File names can be at most ${ATTACHMENT_NAME_MAX_LENGTH} characters.` };
   }
+  if (isSecretFileName(file.name)) return { error: SECRET_FILE_REFUSAL };
   if (isImageType(file.type)) {
     if (file.size > ATTACHMENT_IMAGE_MAX_BYTES) {
       return { error: `Images can be up to ${formatBytes(ATTACHMENT_IMAGE_MAX_BYTES)}.` };
