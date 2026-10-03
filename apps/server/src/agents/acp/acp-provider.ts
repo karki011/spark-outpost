@@ -52,7 +52,6 @@ import { attachSteering } from './steering.ts';
 import {
   namedMcpServers,
   prepareRepoSession,
-  type ClaudeRepoOptions,
   type NamedMcpServer,
   type RepoSession,
 } from './repo-session.ts';
