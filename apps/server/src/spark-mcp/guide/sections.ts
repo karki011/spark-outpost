@@ -201,7 +201,7 @@ The Map builds in the worker at low priority, pauses while an agent runs, and up
     id: 'mcp-servers',
     title: 'MCP servers: user-level and repo .mcp.json',
     keywords: ['mcp', 'mcp server', 'mcp.json', 'trust'],
-    text: `Agent sessions can use MCP servers from two sources: user-level servers you add by hand in Settings → MCP servers (scoped to all chats, a project, or a single chat), and a linked repo's own .mcp.json. Every MCP tool call still asks for approval unless the agent's mode lets everything through.
+    text: `Agent sessions can use MCP servers from two sources: user-level servers you add by hand in Settings → MCP servers (scoped to all chats, a project, or a single chat), and a linked repo's own .mcp.json. Every MCP tool call still asks for approval unless the agent's mode lets everything through. Agents list them with spark_mcp_servers and propose changes with the spark_*_mcp_server tools, naming env vars and headers only; you fill the values in Settings.
 
 A repo's .mcp.json, hooks, and allow rules only load after you trust that folder (a one-time "Trust this folder?" decision); trust is fingerprinted, so a changed hooks/MCP/allow-rules set asks again. Env and header secret values for MCP servers live in the OS keychain, never in the database, and are redacted in the audit log.`,
   },
@@ -221,7 +221,7 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
 
 Read tools need no approval card; section spark-tools says which one answers which question.
 
-Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket, spark_assign_ticket, spark_open_pr, spark_pr_follow_up_round, spark_create_spark and spark_update_spark. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise a card shows the change and Spark does it when you confirm. Audited.`,
+Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket, spark_assign_ticket, spark_open_pr, spark_pr_follow_up_round, spark_create_spark, spark_update_spark and the spark_*_mcp_server tools. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise a card shows the change and Spark does it when you confirm. Audited.`,
   },
   {
     id: 'spark-tools',
@@ -229,7 +229,7 @@ Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket
     keywords: ['which tool', 'spark_', 'tools', 'ask spark', 'question', 'answer', 'index'],
     text: `Needs me? spark_attention. A chat's live run, crew, pieces and Jev decisions: spark_run. Plan and files changed: spark_task. Chats and messages, the queue and messages to crew members: spark_chats, spark_chat. Compacted turns: spark_chat_history. Agent steps: spark_audit. Recent work: spark_activity, spark_brief.
 Spend: spark_spend. Trends and outcomes: spark_analytics. Model price, strengths and pass rates: spark_models.
-Agents: spark_providers. GitHub, Jira, Linear, MCP: spark_connectors. Settings: spark_settings. Projects: spark_projects. Areas, or what a file change breaks: spark_map. Where code lives: spark_find. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. Spark's follow-up on its PRs: spark_pr_follow_up. Estimates, budgets, removal findings, demotions: spark_laws. Sparks (named teammates): spark_sparks. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
+Agents: spark_providers. GitHub, Jira, Linear: spark_connectors. MCP servers: spark_mcp_servers. Settings: spark_settings. Projects: spark_projects. Areas, or what a file change breaks: spark_map. Where code lives: spark_find. Open terminals (never output): spark_terminals. Tickets: spark_tickets. PRs: spark_pull_requests, spark_pr. Spark's follow-up on its PRs: spark_pr_follow_up. Estimates, budgets, removal findings, demotions: spark_laws. Sparks (named teammates): spark_sparks. How Spark works: spark_guide. User guide how-tos: spark_docs.`,
   },
   {
     id: 'compaction',

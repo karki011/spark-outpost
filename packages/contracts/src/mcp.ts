@@ -8,8 +8,10 @@ import {
 } from './agent-config.ts';
 
 export const MCP_NAME_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
-const variableName = z.string().regex(/^[A-Za-z_][A-Za-z0-9_.-]{0,127}$/);
-const headerName = z.string().regex(/^[A-Za-z0-9!#$%&'*+.^_`|~-]{1,128}$/);
+export const MCP_ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_.-]{0,127}$/;
+export const MCP_HEADER_NAME_PATTERN = /^[A-Za-z0-9!#$%&'*+.^_`|~-]{1,128}$/;
+const variableName = z.string().regex(MCP_ENV_NAME_PATTERN);
+const headerName = z.string().regex(MCP_HEADER_NAME_PATTERN);
 
 export const mcpCheckSchema = z.object({
   ok: z.boolean(),

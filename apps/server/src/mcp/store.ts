@@ -181,6 +181,19 @@ export async function updateUserMcp(
   );
 }
 
+export async function keepEnabledAfterChange(
+  db: Queryable,
+  id: string,
+  before: string,
+  after: string,
+): Promise<void> {
+  await db.query(
+    `UPDATE mcp_server_enablements SET fingerprint = $3, updated_at = now()
+      WHERE server_id = $1 AND enabled AND fingerprint = $2`,
+    [id, before, after],
+  );
+}
+
 export async function recordCheck(db: Queryable, id: string, check: McpCheck): Promise<void> {
   await db.query('UPDATE mcp_servers SET last_check = $2 WHERE id = $1', [id, check]);
 }

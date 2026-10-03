@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Approval, SparkAction } from '@spark-outpost/contracts';
 import { approvalsApi } from '../../api/approvals.ts';
 import { ApprovalCard } from './ApprovalCard.tsx';
+import { useSettingsRequests } from '../../settings/settings-request.ts';
 
 afterEach(() => {
   cleanup();
@@ -59,6 +60,11 @@ function show(approval: Approval) {
       <ApprovalCard approval={approval} provider="claude" agent="Bolt" repo={null} />
     </QueryClientProvider>,
   );
+}
+
+function SettingsListener({ onOpen }: { onOpen: (section: string) => void }) {
+  useSettingsRequests(onOpen);
+  return null;
 }
 
 describe('SparkActionCard', () => {
@@ -144,5 +150,75 @@ describe('SparkActionCard', () => {
     expect(group.textContent).toContain('spark/tidy-notes into main');
     expect(group.textContent).toContain('notes.txt modified');
     expect(within(group).getByLabelText('Description')).toHaveProperty('value', 'Why');
+  });
+
+  it('shows the exact MCP command, the names that need values and no editable fields', () => {
+    const opened = vi.fn();
+    render(<SettingsListener onOpen={opened} />);
+    show(
+      card(
+        {
+          action: 'add_mcp_server',
+          name: 'github',
+          transport: 'stdio',
+          command: 'npx',
+          args: ['-y', '@modelcontextprotocol/server-github', 'two words'],
+          url: null,
+          envNames: ['GITHUB_TOKEN'],
+          headerNames: [],
+          needsValues: ['GITHUB_TOKEN'],
+          turnOn: 'off',
+        },
+        'Add this MCP server? github',
+      ),
+    );
+    const group = screen.getByRole('group', { name: /Add this MCP server\?/ });
+    expect(group.textContent).toContain('github · Command on your computer');
+    expect(group.textContent).toContain("npx -y @modelcontextprotocol/server-github 'two words'");
+    expect(group.textContent).toContain('This command runs on your computer');
+    expect(group.textContent).toContain('Needs a value for GITHUB_TOKEN');
+    expect(group.textContent).toContain('Off until you fill its values and turn it on');
+    expect(group.textContent).toContain('new agent sessions');
+    expect(group.textContent).not.toContain('You can edit it first');
+    expect(within(group).queryByRole('textbox')).toBeNull();
+
+    fireEvent.click(within(group).getByRole('button', { name: 'Open MCP servers' }));
+    expect(opened).toHaveBeenCalledWith('mcp');
+  });
+
+  it('says where an MCP server is switched and what a removal takes with it', () => {
+    const server = {
+      serverId: '8f3c1a2e-0c4b-4a61-9a4e-0d1f2c3b4a5d',
+      name: 'docs',
+      transport: 'http' as const,
+      command: null,
+      args: [],
+      url: 'https://mcp.example.com/v1',
+      envNames: [],
+      headerNames: ['Authorization'],
+      needsValues: [],
+    };
+    show(
+      card(
+        {
+          action: 'switch_mcp_server',
+          ...server,
+          fingerprint: 'sha256:abc',
+          place: 'project',
+          project: { id: '9f3c1a2e-0c4b-4a61-9a4e-0d1f2c3b4a5d', name: 'webapp' },
+          state: 'on',
+        },
+        'Switch this MCP server? docs',
+      ),
+    );
+    const switching = screen.getByRole('group', { name: /Switch this MCP server\?/ });
+    expect(switching.textContent).toContain('https://mcp.example.com/v1');
+    expect(switching.textContent).toContain('Project webapp: on');
+    expect(switching.textContent).not.toContain('runs on your computer');
+    cleanup();
+
+    show(card({ action: 'remove_mcp_server', ...server }, 'Remove this MCP server? docs'));
+    const removing = screen.getByRole('group', { name: /Remove this MCP server\?/ });
+    expect(removing.textContent).toContain('Removed with its saved values');
   });
 });

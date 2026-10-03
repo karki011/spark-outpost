@@ -19,6 +19,7 @@ import { approvalAnchor } from '../../crew/conversation-crew.ts';
 import { isAllow } from './approval-outcome.ts';
 import { ObservedNote } from './ObservedNote.tsx';
 import { PrFollowUpFacts, PrRoundFacts } from './PrFollowUpFacts.tsx';
+import { McpActionFacts } from '../../settings/mcp/McpActionFacts.tsx';
 import { TeammateFacts } from '../../teammates/TeammateFacts.tsx';
 
 interface Draft {
@@ -179,6 +180,11 @@ function Facts({ action }: { action: SparkAction }) {
     case 'create_teammate':
     case 'update_teammate':
       return <TeammateFacts action={action} />;
+    case 'add_mcp_server':
+    case 'update_mcp_server':
+    case 'switch_mcp_server':
+    case 'remove_mcp_server':
+      return <McpActionFacts action={action} />;
     case 'pr_follow_up':
       return null;
   }
@@ -194,6 +200,9 @@ function byline(action: SparkAction, agent: string): string {
 function confirmNote(action: SparkAction): string {
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';
+  }
+  if (editableFields(action.action).length === 0) {
+    return 'Nothing happens until you confirm. Spark does it as soon as you confirm, even after the agent has finished.';
   }
   return 'Nothing happens until you confirm. You can edit it first. Spark does it as soon as you confirm, even after the agent has finished.';
 }

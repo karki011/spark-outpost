@@ -34,6 +34,7 @@ Tools that read change nothing.
 | Spend, activity, analytics, the morning brief                            | `spark_spend`, `spark_activity`, `spark_analytics`, `spark_brief`                         |
 | Pull requests and their checks and reviews                               | `spark_pull_requests`, `spark_pr`, `spark_pr_follow_up`                                   |
 | Providers, models, connectors, settings, projects                        | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects` |
+| Your MCP servers, where each is on and what still needs a value          | `spark_mcp_servers`                                                                       |
 | The Map, and what breaks if a file changes                               | `spark_map`                                                                               |
 | Where something lives in the code                                        | `spark_find`                                                                              |
 | Open terminals                                                           | `spark_terminals`                                                                         |
@@ -44,7 +45,7 @@ Tools that read change nothing.
 
 ## When actions ask first
 
-A few tools act for you: create, comment on, move or assign a ticket, open a pull request, start a PR follow-up round, and add or change a [Spark](sparks.md). The agent proposes, and Spark does it. Whether you see a confirm card first follows the agent's permission mode and the chat's autonomy:
+A few tools act for you: create, comment on, move or assign a ticket, open a pull request, start a PR follow-up round, add or change a [Spark](sparks.md), and add, change, switch or remove an MCP server. The agent proposes, and Spark does it. Whether you see a confirm card first follows the agent's permission mode and the chat's autonomy:
 
 - **Auto** or **Bypass permissions** (Codex **Approve for me** or **Full access**), or **Full auto → PR**: Spark does it straight away. The chat shows what it did, with a link.
 - **Accept edits**: Spark does it straight away when your message asked for it, such as "open a PR". Otherwise you get a card.
@@ -63,12 +64,15 @@ The agent doesn't wait on the card. Answer it whenever you like, even after the 
 
 ### Tools that act
 
-| Action                                      | Tool                                                                                            |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Create, comment on, move or assign a ticket | `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket` |
-| Open a pull request                         | `spark_open_pr`                                                                                 |
-| Start a PR follow-up round                  | `spark_pr_follow_up_round`                                                                      |
-| Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                      |
+| Action                                      | Tool                                                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Create, comment on, move or assign a ticket | `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket`         |
+| Open a pull request                         | `spark_open_pr`                                                                                         |
+| Start a PR follow-up round                  | `spark_pr_follow_up_round`                                                                              |
+| Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                              |
+| Add, change, switch or remove an MCP server | `spark_add_mcp_server`, `spark_update_mcp_server`, `spark_switch_mcp_server`, `spark_remove_mcp_server` |
+
+An MCP server card shows the exact command and arguments, because a command server runs on your computer. Agents pass only the names of environment variables and headers. You fill the values in **Settings → MCP servers**, and a server that needs values stays off until you do. Changes apply to new agent sessions.
 
 ## What the tools never return
 

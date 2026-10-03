@@ -77,3 +77,19 @@
   outline: 2px solid var(--accent-text);
   outline-offset: 1px;
 }
+
+.mcp-fact-cmd {
+  white-space: pre-wrap;
+}
+.mcp-fact-name {
+  margin-right: 8px;
+}
+.sac-link {
+  display: inline;
+  padding: 0;
+  color: var(--accent-text);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
