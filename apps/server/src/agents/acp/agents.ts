@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import type { ProviderId } from '@spark-outpost/contracts';
 import { BUILDER_GIT_OPS, PUBLISH_COMMANDS } from '../../approvals/git-commands.ts';
+import { PLANS_DIR } from '../../plans/plan-mode.ts';
 import type { UsageReadings } from '../../providers/provider.ts';
 import type { AgentCli } from './agent-cli.ts';
 import {
@@ -178,6 +179,7 @@ export function claudeSessionMeta(
             : {}),
           ...(repo?.hooks ? { hooks: repo.hooks } : { disableAllHooks: true }),
           disableSkillShellExecution: true,
+          plansDirectory: PLANS_DIR,
           permissions: {
             deny,
             ...(ask.length > 0 ? { ask } : {}),

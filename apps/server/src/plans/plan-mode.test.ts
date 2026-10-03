@@ -68,6 +68,7 @@ describe('planFileText', () => {
   it('reads a plan Claude writes to its plans folder and nothing else', () => {
     const plan = { file_path: '/Users/a/.claude/plans/csv.md', content: ' 1. Add CSV \n' };
     expect(planFileText(plan)).toBe('1. Add CSV');
+    expect(planFileText({ ...plan, file_path: '/repo/.spark/plans/csv.md' })).toBe('1. Add CSV');
     expect(planFileText({ ...plan, file_path: '/repo/src/csv.md' })).toBeNull();
     expect(planFileText({ ...plan, content: '  ' })).toBeNull();
     expect(planFileText(null)).toBeNull();

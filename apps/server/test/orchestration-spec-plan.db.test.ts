@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { InvolvementLevel } from '@spark-outpost/contracts';
+import { CHECKPOINT_OPTION, type InvolvementLevel } from '@spark-outpost/contracts';
 import { SPEC_PLAN_OPTION } from '../src/orchestration/plan-first.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import {
@@ -105,23 +105,32 @@ describe('a request that is already a spec', { timeout: 120_000 }, () => {
 });
 
 describe('the plan-first card at Automatic', { timeout: 120_000 }, () => {
-  it('counts down and builds the plan by itself', async () => {
+  it('waits for Build past the auto-continue time, then builds the plan', async () => {
     await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
     const loose: Scenario = {
       ...NORMAL,
       id: 'loose',
       text: 'Refactor the notes store, update the API, change the view and add tests. #build',
     };
-    const done = await run('hands-off', loose, (approval) =>
-      approval.kind === 'plan' ? null : answerEverything(approval),
-    );
+    let firstSeen: number | null = null;
+    const done = await run('hands-off', loose, (approval) => {
+      if (approval.kind !== 'plan') return answerEverything(approval);
+      firstSeen ??= Date.now();
+      return Date.now() - firstSeen < 2_500 ? null : { optionId: CHECKPOINT_OPTION.makeChange };
+    });
     expect(done.orchestration.status).toBe('succeeded');
-    const { rows } = await t.db.query<{ decided_by: string; auto: boolean }>(
-      `SELECT a.decided_by, a.auto_continue_at IS NOT NULL AS auto FROM approvals a
+    const { rows } = await t.db.query<{ decided_by: string; auto: boolean; reason: string }>(
+      `SELECT a.decided_by, a.auto_continue_at IS NOT NULL AS auto, a.reason FROM approvals a
        JOIN runs r ON r.id = a.run_id WHERE r.conversation_id = $1 AND a.title = 'Build this plan?'`,
       [done.conversationId],
     );
-    expect(rows).toEqual([{ decided_by: 'auto', auto: true }]);
+    expect(rows).toEqual([
+      {
+        decided_by: 'user',
+        auto: false,
+        reason: 'Saved as plan v1; nothing was changed yet. Build it, edit it, or stop.',
+      },
+    ]);
     expect(done.plans.map((plan) => [plan.source, plan.status])).toEqual([['chat', 'approved']]);
   });
 });

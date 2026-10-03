@@ -33,17 +33,10 @@ export function planFirstPrompt(prompt: string, note: string | null): string {
   return `${base}\n\nThe user asked for these changes to your previous plan:\n\n${note}\n\nReply with the whole revised plan.`;
 }
 
-const LEVEL_NAME: Readonly<Record<InvolvementLevel, string>> = {
-  'hands-off': 'Automatic',
-  'full-auto': 'Full auto',
-};
+const PLAN_WAIT = 'Build it, edit it, or stop.';
 
-const HELD_WAIT = 'Build it, edit it, or stop.';
-
-function waitLine(level: InvolvementLevel, seconds: number | null): string {
-  if (seconds !== null)
-    return `${LEVEL_NAME[level]} builds it in ${seconds} s unless you edit or stop it.`;
-  if (level !== 'full-auto') return 'Auto-continue is off: build it, edit it, or stop.';
+function fullAutoWait(seconds: number | null): string {
+  if (seconds !== null) return `Full auto builds it in ${seconds} s unless you edit or stop it.`;
   return `Auto-continue is off, so Full auto waits ${FULL_AUTO_PLAN_SECONDS} s, then builds it unless you edit or stop it.`;
 }
 
@@ -63,8 +56,8 @@ function planCard(version: number, wait: string, autoOption: string | null): Che
       autoOption,
     }),
     options: [
-      { optionId: CHECKPOINT_OPTION.makeChange, name: 'Build this plan', kind: 'allow_once' },
-      { optionId: CHECKPOINT_OPTION.editPlan, name: 'Edit plan', kind: 'allow_once' },
+      { optionId: CHECKPOINT_OPTION.makeChange, name: 'Build', kind: 'allow_once' },
+      { optionId: CHECKPOINT_OPTION.editPlan, name: 'Edit', kind: 'allow_once' },
       { optionId: CHECKPOINT_OPTION.stop, name: 'Stop', kind: 'reject_once' },
     ],
   };
@@ -75,7 +68,8 @@ export function planFirstCard(
   level: InvolvementLevel,
   seconds: number | null,
 ): CheckpointCard {
-  return planCard(version, waitLine(level, seconds), CHECKPOINT_OPTION.makeChange);
+  if (level !== 'full-auto') return planCard(version, PLAN_WAIT, null);
+  return planCard(version, fullAutoWait(seconds), CHECKPOINT_OPTION.makeChange);
 }
 
 export function planPrNote(body: string): string {
@@ -119,7 +113,7 @@ async function adoptRequestAsPlan(s: Session, request: string, reason: string): 
 
 function cardFor(s: Session, version: number, seconds: number | null): CheckpointCard {
   if (!destructiveWork(s)) return planFirstCard(version, s.input.level, seconds);
-  return heldCard(planCard(version, HELD_WAIT, null));
+  return heldCard(planCard(version, PLAN_WAIT, null));
 }
 
 function withEstimate(card: CheckpointCard, estimate: string | null): CheckpointCard {

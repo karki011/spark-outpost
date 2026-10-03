@@ -47,6 +47,7 @@ type Meta = {
       settings: {
         disableAllHooks?: boolean;
         disableSkillShellExecution: boolean;
+        plansDirectory: string;
         hooks?: Record<string, unknown>;
         permissions: { ask?: string[]; deny: string[]; allow?: string[] };
       };
@@ -65,6 +66,7 @@ describe('Claude session meta from repo config', () => {
     expect(claudeCode.options.settingSources).toEqual([]);
     expect(claudeCode.options.strictMcpConfig).toBe(true);
     expect(claudeCode.options.settings.disableSkillShellExecution).toBe(true);
+    expect(claudeCode.options.settings.plansDirectory).toBe('.spark/plans');
     expect(claudeCode.options.settings.permissions).not.toHaveProperty('ask');
     expect(claudeCode.options.settings.permissions.deny).toContain('Read(**/.env)');
     expect(JSON.stringify(claudeCode)).not.toContain('bypassPermissions');

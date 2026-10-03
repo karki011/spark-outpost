@@ -95,10 +95,10 @@ For how the mode and Spark autonomy work together, see [Permissions and autonomy
 
 Spark autonomy decides what Spark does with the result of the agent's work: keep it, or keep it and open a pull request. To review each step, pick an agent mode that asks, such as **Manual** or **Plan**.
 
-| Level              | What happens                                                                                               |
-| ------------------ | ---------------------------------------------------------------------------------------------------------- |
-| **Automatic**      | Spark keeps changes without stopping. Risky work uses a worktree copy. You can always revert. The default. |
-| **Full auto → PR** | The same, in a worktree copy, and then Spark opens a pull request. Nothing ever merges.                    |
+| Level              | What happens                                                                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Automatic**      | Spark keeps changes without stopping, except that a plan waits for **Build**. Risky work uses a worktree copy. You can always revert. The default. |
+| **Full auto → PR** | The same, in a worktree copy, but a plan builds after a countdown, and then Spark opens a pull request. Nothing ever merges.                       |
 
 To change it for one chat:
 

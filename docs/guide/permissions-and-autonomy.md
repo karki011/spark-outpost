@@ -36,7 +36,7 @@ Select the shield chip in the context bar, or set the default in **Settings → 
 
 | Level                   | Plans                   | Risky work              | Keeping changes                             | Shipping                                 |
 | ----------------------- | ----------------------- | ----------------------- | ------------------------------------------- | ---------------------------------------- |
-| **Automatic** (default) | Build after a countdown | Runs in a worktree copy | Kept if checks pass and the Critic is happy | You ship with **Open PR**                |
+| **Automatic** (default) | Wait for you            | Runs in a worktree copy | Kept if checks pass and the Critic is happy | You ship with **Open PR**                |
 | **Full auto → PR**      | Build after a countdown | Runs in a worktree copy | Kept by itself                              | Spark opens a PR, a draft if checks fail |
 
 To review each step, pick a mode that asks, such as **Manual**.
@@ -61,6 +61,7 @@ Whatever the mode and level, these wait for your answer:
 
 - **Approval cards.** They expire after 30 minutes if nobody answers, and the request is declined.
 - **Protected paths**: secret files, agent instruction files, git hooks and config, force pushes, and sending data out after reading secrets. See [Approvals and protected paths](approvals.md).
+- **The plan card at Automatic.** **Build this plan?** waits for **Build**, **Edit** or **Stop**, whatever the agent's mode, even **Auto** or **Bypass permissions**. After you select **Build**, the work runs on its own.
 - **Destructive work.** Its plan card waits at every level. Work counts as destructive when it deletes, drops or truncates data. Creating a table whose foreign key says `ON DELETE CASCADE` doesn't count.
 - **Continue past the budget?** See [Budgets and the budget card](estimates-and-budgets.md#budgets-and-the-budget-card).
 - **Pushing PR fixes** at **Automatic**: the **Address PR feedback?** card.
@@ -76,12 +77,12 @@ The model you pin is the chat's own model, the one that reads, plans and coordin
 | Card                                             | Spark picks                            |
 | ------------------------------------------------ | -------------------------------------- |
 | **A few questions first** (Automatic, Full auto) | The agent's best guesses               |
-| **Build this plan?** (Automatic, Full auto)      | **Build this plan**                    |
+| **Build this plan?** (Full auto only)            | **Build**                              |
 | A stuck or failing step                          | **Stop and report**                    |
 | **Jev could not verify the change**              | **Finish as it is**, marked unverified |
 | **This chat is almost full**                     | **Keep going**                         |
 
-With **Off**, these wait for you, except that **Full auto → PR** still builds a plan after 30 seconds. Approval cards never use this setting.
+With **Off**, these wait for you, except that **Full auto → PR** still builds a plan after 30 seconds. At **Automatic** the plan card always waits for you, whatever this setting says. Approval cards never use this setting.
 
 ## Allow once, for this chat, or always
 

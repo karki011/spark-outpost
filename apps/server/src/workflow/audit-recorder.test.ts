@@ -142,10 +142,17 @@ describe('audit recorder', () => {
     audit.message('from_agent', update('a', { status: 'completed' }));
     audit.message('from_agent', update('r', { kind: 'read', status: 'completed' }));
     audit.message('from_agent', update('w', { status: 'completed' }));
+    audit.message(
+      'from_agent',
+      update('p', { kind: 'edit', rawInput: { file_path: '/repo/.spark/plans/quiet-plan.md' } }),
+    );
+    audit.message('from_agent', update('p', { status: 'completed' }));
     await audit.close();
     expect(batches.flat().map((entry) => entry.unreviewed === true)).toEqual([
       false,
       true,
+      false,
+      false,
       false,
       false,
       false,

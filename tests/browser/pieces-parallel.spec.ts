@@ -23,12 +23,14 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(() => repo.remove());
 
-async function planBuildsByItself(page: Page): Promise<void> {
+async function buildThePlan(page: Page, waitMs = 0): Promise<void> {
   const plan = card(page, /Build this plan\?/);
-  await expect(plan.getByRole('button', { name: /^Building this plan in \d+s$/ })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(plan).toContainText(/Continued automatically after \d+s\./, { timeout: 15_000 });
+  await expect(plan).toContainText('Build it, edit it, or stop.', { timeout: 30_000 });
+  await expect(plan.getByRole('button', { name: /^Building this plan in/ })).toHaveCount(0);
+  await expect(page.locator('.cstatus')).toContainText('Waiting for you · plan to review');
+  await page.waitForTimeout(waitMs);
+  await expect(plan).not.toContainText('Continued automatically');
+  await plan.getByRole('button', { name: 'Build', exact: true }).click();
 }
 
 async function allowChecksWhile(page: Page, settled: () => Promise<void>): Promise<void> {
@@ -75,7 +77,7 @@ test('Automatic builds independent pieces side by side in the shared tree', asyn
   await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Auto-edit');
   await send(page, REQUEST);
-  await planBuildsByItself(page);
+  await buildThePlan(page, 4_000);
 
   await allowChecksUntil(page, board(page), '3 pieces, in the shared tree · 3 landed');
   await expect(board(page).getByRole('button')).toHaveCount(0);
@@ -197,7 +199,7 @@ test('two copies that collide go to the integrator, then to the merge conflict c
   test.setTimeout(180_000);
   await crewChat(page, repo, 'Auto-edit');
   await send(page, `${REQUEST} #manifest #useredit #unresolvable`);
-  await planBuildsByItself(page);
+  await buildThePlan(page);
   await expect(board(page)).toContainText('in worktrees', { timeout: 60_000 });
 
   const conflict = card(page, /copy and your files collided/);

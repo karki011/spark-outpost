@@ -1,5 +1,6 @@
 import type { PathPolicy } from '../../projects/path-policy.ts';
 import { projectPolicy, RootMissingError } from '../../projects/project-fs.ts';
+import { excludeSparkDir } from '../../projects/worktrees.ts';
 import { ProviderError, type ProviderTurn } from '../../providers/provider.ts';
 import type { AgentDefinition } from './agents.ts';
 import type { ClaudeRepoOptions } from './repo-session.ts';
@@ -9,13 +10,20 @@ export async function openProject(
   roots: readonly string[],
 ): Promise<PathPolicy> {
   try {
-    return await projectPolicy(roots);
+    const policy = await projectPolicy(roots);
+    if (definition.repoStyle === 'claude') await keepPlansUntracked(policy);
+    return policy;
   } catch (error) {
     const root = error instanceof RootMissingError ? error.root : roots.join(', ');
     throw new ProviderError(
       `${definition.name} can't open the project folder ${root}. Check that it still exists, or link the project again.`,
     );
   }
+}
+
+async function keepPlansUntracked(policy: PathPolicy): Promise<void> {
+  const root = policy.roots[0]?.path;
+  if (root) await excludeSparkDir(root).catch(() => undefined);
 }
 
 export function extraRoots(policy: PathPolicy | null): string[] {

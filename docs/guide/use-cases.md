@@ -27,7 +27,7 @@ Each one assumes the defaults, Claude on **Auto** mode, unless it says otherwise
 
 - **Prompt:** "Add CSV export: a store for export jobs, an API endpoint and a download button."
 - **What Spark does:** plans first, then a Coordinator splits the plan into pieces. Builders work side by side, the full checks run once and a Critic reviews. See [Big work in pieces](pieces.md).
-- **Cards:** **Build this plan?**, which builds by itself after the answer wait unless you edit or stop it.
+- **Cards:** **Build this plan?**, which waits for **Build** at Automatic, and at Full auto → PR builds by itself after a countdown unless you edit or stop it.
 - **Result at Full auto → PR:** if pieces were built in their own copies, Spark asks **One PR or separate PRs?**, then opens the PR.
 
 ## Make a risky or destructive change

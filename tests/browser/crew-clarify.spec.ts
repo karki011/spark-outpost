@@ -111,7 +111,7 @@ test('Full auto counts down to the best guesses, then to building the plan', asy
   await expect(plan.getByRole('button', { name: /^Building this plan in \ds$/ })).toBeVisible({
     timeout: 30_000,
   });
-  await expect(plan.getByRole('button', { name: 'Edit plan' })).toBeVisible();
+  await expect(plan.getByRole('button', { name: 'Edit', exact: true })).toBeVisible();
   await expect(plan.getByRole('button', { name: 'Stop' })).toBeVisible();
   await expect(plan).toContainText('Continued automatically after 3s.', { timeout: 10_000 });
   await expect.poll(() => repo.notes(), { timeout: 30_000 }).toBe('start\nstep 1\n');
@@ -141,7 +141,7 @@ test('destructive work waits for your answer instead of counting down, then plan
   await expect(plan.getByRole('button', { name: /Building this plan in/ })).toHaveCount(0);
   await page.waitForTimeout(3_000);
   expect(repo.notes()).toBe('start\n');
-  await plan.getByRole('button', { name: 'Build this plan' }).click();
+  await plan.getByRole('button', { name: 'Build', exact: true }).click();
   await expect(plan).not.toContainText(HELD);
   await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
 });

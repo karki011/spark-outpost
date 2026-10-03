@@ -7,7 +7,7 @@ import { costSourceSchema, totalCostSourceSchema, type CostSource } from './audi
 import { agentRoleSchema, type AgentRole } from './roles.ts';
 import { runStatusSchema, type RunStatus } from './runs.ts';
 
-export const TASK_TITLE_MAX_LENGTH = 80;
+export const TASK_TITLE_MAX_LENGTH = 120;
 export const LINK_TITLE_MAX_LENGTH = 200;
 
 export const taskStatusSchema = z.enum(['open', 'closed']);
