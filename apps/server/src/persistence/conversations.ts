@@ -199,7 +199,22 @@ export async function getConversationDetail(
   if (!summary) return null;
   const [conversation] = await withChatBranches(db, [summary]);
   if (!conversation) return null;
-  const [messages, runs, steps, settings] = await Promise.all([
+  const [
+    messages,
+    runs,
+    steps,
+    settings,
+    tasks,
+    approvals,
+    advice,
+    orchestrations,
+    plans,
+    compactions,
+    continuedIn,
+    queue,
+    memberMessages,
+    railFlags,
+  ] = await Promise.all([
     db.query<MessageRow>(
       'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at, id',
       [id],
@@ -213,17 +228,16 @@ export async function getConversationDetail(
       [id],
     ),
     resolveChatSettings(db, id),
-  ]);
-  const tasks = await taskOverviews(db, id);
-  const approvals = await shownApprovalsForConversation(db, id);
-  const advice = await conversationAdvice(db, id);
-  const orchestrations = await conversationOrchestrations(db, id);
-  const plans = await conversationPlans(db, id);
-  const [compactions, continuedIn, queue, memberMessages] = await Promise.all([
+    taskOverviews(db, id),
+    shownApprovalsForConversation(db, id),
+    conversationAdvice(db, id),
+    conversationOrchestrations(db, id),
+    conversationPlans(db, id),
     listCompactions(db, id),
     listContinuations(db, id),
     listQueue(db, id),
     listMemberMessages(db, id),
+    listRailFlags(db, id),
   ]);
   const attachments = await attachmentsForMessages(
     db,
@@ -247,7 +261,7 @@ export async function getConversationDetail(
     continuedIn,
     queue,
     memberMessages,
-    railFlags: await listRailFlags(db, id),
+    railFlags,
   };
 }
 
