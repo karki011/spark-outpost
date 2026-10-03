@@ -3,6 +3,7 @@ import type { ProviderConnection, ProviderId } from '@spark-outpost/contracts';
 import { redactText } from '../audit/redact.ts';
 import { catalogEntry, type CatalogEntry } from '../providers/catalog.ts';
 import type { RunCommand } from './command.ts';
+import { KeychainWaitingError } from './keychain.ts';
 import type { SecretStore } from './secrets.ts';
 import { locateCli, type ApiEndpoints } from './verify.ts';
 import { zaiFailureReason, zaiMessageRequest } from './zai-key.ts';
@@ -43,6 +44,21 @@ function modelArgs(flag: string, model: string | null): string[] {
 
 function failedWith(reason: string): TestOutcome {
   return { ok: false, message: `The test message failed: ${redactText(reason)}` };
+}
+
+const KEYCHAIN_TEST_REASON =
+  'macOS is still asking to let Spark use the keychain. Click Always Allow in that prompt, then test again.';
+
+async function storedKey(
+  entry: CatalogEntry,
+  deps: TestMessageDeps,
+): Promise<string | null | KeychainWaitingError> {
+  try {
+    return await deps.secrets.get(entry.id);
+  } catch (error) {
+    if (error instanceof KeychainWaitingError) return error;
+    throw error;
+  }
 }
 
 function httpReason(entry: CatalogEntry, status: number): string {
@@ -235,7 +251,8 @@ async function testApiKey(
   connection: ProviderConnection,
   deps: TestMessageDeps,
 ): Promise<TestOutcome> {
-  const key = await deps.secrets.get(entry.id);
+  const key = await storedKey(entry, deps);
+  if (key instanceof KeychainWaitingError) return failedWith(KEYCHAIN_TEST_REASON);
   if (!key) return failedWith('the stored key is missing from the keychain. Verify the key again.');
   const model = testModel(entry.id, connection) ?? connection.model;
   if (!model) return failedWith('no default model is selected.');

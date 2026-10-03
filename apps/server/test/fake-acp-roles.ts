@@ -94,6 +94,9 @@ export const SCOPE_RECHECK = [
   '[bug] `src/other.ts:40`: an untouched helper misses the empty-list case.',
 ];
 
+export const FIXED_ECHO = [`[bug] Fixed: ${BUG_FINDINGS[0]}`, `[bug] ${BUG_FINDINGS[1]}`];
+const FIXED_ALL = BUG_FINDINGS.map((finding) => `[bug] Fixed: ${finding}`);
+
 const ASKED_TO_FIX = '## Findings the Builder was asked to fix';
 
 function reviewNumber(text: string): number {
@@ -114,6 +117,12 @@ function roundFindings(text: string): string[] {
 function reviewFindings(text: string): { findings: string[]; concerns: boolean } {
   const rechecking = text.includes(ASKED_TO_FIX);
   if (text.includes('#stuckreview')) return { findings: BUG_FINDINGS, concerns: true };
+  if (text.includes('#fixedecho')) {
+    return { findings: rechecking ? FIXED_ECHO : BUG_FINDINGS, concerns: true };
+  }
+  if (text.includes('#fixedall')) {
+    return { findings: rechecking ? FIXED_ALL : BUG_FINDINGS, concerns: true };
+  }
   if (text.includes('#scopecreep')) {
     return { findings: rechecking ? SCOPE_RECHECK : SCOPE_FIRST, concerns: true };
   }

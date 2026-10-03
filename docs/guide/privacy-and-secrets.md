@@ -15,6 +15,10 @@ Spark's database keeps only a masked hint, such as the first few and last four c
 
 When you connect a provider with **Local CLI**, the sign-in stays in that CLI. Spark runs it but never reads or stores it.
 
+### If macOS asks to let Spark use the keychain
+
+The first time Spark reads a key, macOS may ask whether Spark Outpost may use its item in your keychain. Click **Always Allow** so it doesn't ask again; updates keep that permission. Spark keeps working while the prompt is open: after 10 seconds it stops waiting, Settings › Providers shows a reminder, and a test message says it is waiting for the keychain instead of hanging.
+
 ## Paste keys only in the key field
 
 1. Open **Settings → AI providers** and select the provider's tile.

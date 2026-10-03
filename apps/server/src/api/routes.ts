@@ -42,6 +42,7 @@ import { queueErrorStatus } from './queue-routes.ts';
 import { resolveRunTarget } from './run-target.ts';
 import { PlanDocumentError } from '../persistence/plan-documents.ts';
 import { AgentConfigConflictError } from './agent-config-routes.ts';
+import { KeychainWaitingError } from '../setup/keychain.ts';
 
 export interface RouteDeps {
   db: Db;
@@ -170,6 +171,7 @@ export function statusForError(error: unknown): { status: number; message: strin
     return { status: 400, message: error.message };
   }
   if (error instanceof UploadTooLargeError) return { status: 413, message: error.message };
+  if (error instanceof KeychainWaitingError) return { status: 503, message: error.message };
   if (error instanceof SteerError) return { status: error.status, message: error.message };
   if (error instanceof TerminalLimitError) {
     return { status: 409, message: error.message };

@@ -1,6 +1,6 @@
-import { Entry } from '@napi-rs/keyring';
 import type { ConnectableId, TicketSourceId } from '@spark-outpost/contracts';
 import type { Config } from '../config.ts';
+import { keychainCache, nativeKeyring, type Keyring, type KeychainTiming } from './keychain.ts';
 
 export type TicketSecretId = `ticket:${TicketSourceId}`;
 export type SecretId = ConnectableId | 'github' | TicketSecretId | `mcp:${string}`;
@@ -9,6 +9,7 @@ export interface SecretStore {
   set(provider: SecretId, secret: string): Promise<void>;
   get(provider: SecretId): Promise<string | null>;
   delete(provider: SecretId): Promise<void>;
+  waiting(): boolean;
 }
 
 export const DEFAULT_KEYCHAIN_SERVICE = 'Spark Outpost';
@@ -20,18 +21,16 @@ function account(provider: SecretId): string {
   return `${provider}:api_key`;
 }
 
-export function keychainSecretStore(service = DEFAULT_KEYCHAIN_SERVICE): SecretStore {
-  const entry = (provider: SecretId) => new Entry(service, account(provider));
+export function keychainSecretStore(
+  service = DEFAULT_KEYCHAIN_SERVICE,
+  options: KeychainTiming & { keyring?: Keyring } = {},
+): SecretStore {
+  const keychain = keychainCache(options.keyring ?? nativeKeyring(service), options);
   return {
-    async set(provider, secret) {
-      entry(provider).setPassword(secret);
-    },
-    async get(provider) {
-      return entry(provider).getPassword();
-    },
-    async delete(provider) {
-      entry(provider).deletePassword();
-    },
+    set: (provider, secret) => keychain.set(account(provider), secret),
+    get: (provider) => keychain.get(account(provider)),
+    delete: (provider) => keychain.delete(account(provider)),
+    waiting: () => keychain.waiting(),
   };
 }
 
@@ -47,6 +46,7 @@ export function memorySecretStore(seed: Partial<Record<SecretId, string>> = {}):
     async delete(provider) {
       secrets.delete(provider);
     },
+    waiting: () => false,
   };
 }
 

@@ -111,6 +111,28 @@ describe('Critic → fix rounds', () => {
     expect(fixOptionLabel(review)).toBe('Fix again');
   });
 
+  it('stops after one retry when an earlier finding comes back next to a new one', () => {
+    const results = run('hands-off', [reviewedAs(A), built(), reviewedAs([...C, ...A])]);
+    expect(actions(results).slice(2)).toEqual(['builder:fix', 'critic:recheck', 'wrap_up']);
+    expect(results.at(-1)!.state.review).toMatchObject({
+      stop: 'repeated',
+      fixRounds: 1,
+      fixable: [...C, ...A],
+    });
+  });
+
+  it('stops when a finding from an earlier round returns after a different one', () => {
+    const results = run('hands-off', [
+      reviewedAs(A),
+      built(),
+      reviewedAs(B),
+      built(),
+      reviewedAs(A),
+    ]);
+    expect(actions(results).filter((action) => action === 'builder:fix')).toHaveLength(2);
+    expect(results.at(-1)!.state.review).toMatchObject({ stop: 'repeated', fixRounds: 2 });
+  });
+
   it('stops after three fix rounds and keeps with the concerns as a note at Automatic', () => {
     const results = run('hands-off', [
       reviewedAs(A),
@@ -202,8 +224,10 @@ describe('repeat detection', () => {
     expect(normalizeFinding('`a.ts:12` Returns -500!')).toBe(
       normalizeFinding('a.ts:40: returns -500'),
     );
+    expect(normalizeFinding(`[missing] ${B[0]}`)).toBe(normalizeFinding(`[bug] ${B[0]}`));
     expect(repeatsPrevious([...A, ...B], A)).toBe(true);
-    expect(repeatsPrevious(A, [...A, ...C])).toBe(false);
+    expect(repeatsPrevious(A, [...A, ...C])).toBe(true);
+    expect(repeatsPrevious(A, C)).toBe(false);
     expect(repeatsPrevious([], A)).toBe(false);
   });
 

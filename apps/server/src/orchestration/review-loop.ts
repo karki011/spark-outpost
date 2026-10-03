@@ -37,9 +37,11 @@ export const IDLE_REVIEW: ReviewLoop = {
 };
 
 const LINE_REF = /:\d+(?::\d+)?\b|\bL\d+\b/g;
+const KIND_TAG = /^\W*\[\w+\]/;
 
 export function normalizeFinding(finding: string): string {
   return finding
+    .replace(KIND_TAG, '')
     .replace(LINE_REF, '')
     .toLowerCase()
     .replace(/[^\p{L}\p{N}$+-]+/gu, ' ')
@@ -49,7 +51,7 @@ export function normalizeFinding(finding: string): string {
 export function repeatsPrevious(previous: readonly string[], current: readonly string[]): boolean {
   if (current.length === 0 || previous.length === 0) return false;
   const seen = new Set(previous.map(normalizeFinding));
-  return current.every((finding) => seen.has(normalizeFinding(finding)));
+  return current.some((finding) => seen.has(normalizeFinding(finding)));
 }
 
 export function reviewAction(
@@ -59,7 +61,7 @@ export function reviewAction(
 ): ReviewAction {
   if (verdict === 'unclear') return 'unclear';
   if (fixable.length === 0) return 'clean';
-  const previous = loop.rounds.at(-1)?.findings ?? [];
+  const previous = loop.rounds.flatMap((round) => round.findings);
   if (loop.fixRounds > 0 && repeatsPrevious(previous, fixable)) return 'repeated';
   if (loop.fixRounds >= CRITIC_FIX_ROUNDS) return 'cap';
   return 'fix';

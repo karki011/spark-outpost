@@ -23,3 +23,15 @@ export function reviewFindings(text: string): string[] {
     .filter((finding): finding is string => finding !== undefined)
     .slice(0, MAX_FINDINGS);
 }
+
+const RESOLVED_TAG = /^\W*\[(?:fixed|resolved|addressed)\]/i;
+const RESOLVED_LEAD =
+  /^\W*(?:\[\w+\]\s*)?(?:(?:now|already)\s+)?(?:fixed|resolved|addressed)\s*(?:[:.,;—–]|\s-\s|$)/i;
+
+export function isResolvedFinding(finding: string): boolean {
+  return RESOLVED_TAG.test(finding) || RESOLVED_LEAD.test(finding);
+}
+
+export function openFindings(findings: readonly string[]): string[] {
+  return findings.filter((finding) => !isResolvedFinding(finding));
+}
