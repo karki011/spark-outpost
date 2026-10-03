@@ -18,7 +18,7 @@ async function openDocs(page: Page) {
   await expect(pageTitle(page)).toHaveText('What do you want to do?');
 }
 
-test('Docs opens on tasks by audience, and a task opens its how-to with a deep link', async ({
+test('Docs opens on a short list of tasks, and a task opens its how-to with a deep link', async ({
   page,
 }) => {
   await page.addInitScript(() => localStorage.setItem('spark-outpost.theme', 'system'));
@@ -30,8 +30,10 @@ test('Docs opens on tasks by audience, and a task opens its how-to with a deep l
   );
   await expect(typeBadge(page)).toHaveText('Get started');
   await expect(
-    article(page).getByRole('heading', { name: 'I work in chats every day', level: 2 }),
+    article(page).getByRole('heading', { name: 'Work in a chat', level: 2 }),
   ).toBeVisible();
+  await expect(article(page).getByRole('heading', { level: 2 })).toHaveCount(4);
+  expect(await article(page).locator('.docs-body li a').count()).toBeLessThanOrEqual(12);
 
   await article(page).getByRole('link', { name: 'Answer an approval card' }).click();
   await expect(pageTitle(page)).toHaveText('Answer an approval card');
@@ -63,7 +65,7 @@ test('Docs opens on tasks by audience, and a task opens its how-to with a deep l
 
   const pager = docs(page).getByRole('navigation', { name: 'More pages' });
   await expect(pager.getByRole('link', { name: /^Previous/ })).toContainText(
-    'Queue messages while the agent works',
+    'Follow, stop and queue messages',
   );
   await pager.getByRole('link', { name: /^Next/ }).click();
   await expect(pageTitle(page)).toHaveText('Answer a plan');
@@ -80,22 +82,12 @@ test('Docs opens on tasks by audience, and a task opens its how-to with a deep l
   await expect(typeBadge(page)).toHaveText('Concept');
 });
 
-test('links to pages and headings that moved still open the right place', async ({ page }) => {
-  await page.goto('/#/docs/chats-and-modes#spark-autonomy');
-  await expect(pageTitle(page)).toHaveText('Choose how much Spark does alone');
-  await expect(page).toHaveURL(/#\/docs\/spark-autonomy$/);
-
-  await page.goto('/#/docs/approvals#hold-to-confirm');
+test('a link to a missing heading opens its page, and a missing page opens the landing page', async ({
+  page,
+}) => {
+  await page.goto('/#/docs/answer-approvals#no-such-heading');
   await expect(pageTitle(page)).toHaveText('Answer an approval card');
-  await expect(
-    docs(page).getByRole('heading', { name: 'Hold to confirm', level: 2 }),
-  ).toBeFocused();
-  await expect(page).toHaveURL(/#\/docs\/answer-approvals#hold-to-confirm$/);
-
-  await page.goto('/#/docs/troubleshooting#start-over');
-  await expect(pageTitle(page)).toHaveText('Setup, diagnostics and reset');
-  await expect(docs(page).getByRole('heading', { name: 'Start over', level: 2 })).toBeFocused();
-  await expect(typeBadge(page)).toHaveText('Troubleshooting');
+  await expect(page).toHaveURL(/#\/docs\/answer-approvals$/);
 
   await page.goto('/#/docs/no-such-page');
   await expect(pageTitle(page)).toHaveText('What do you want to do?');
@@ -137,12 +129,12 @@ test('Search finds a task, shows the page type and opens the matching section', 
   await search.fill('keep files away from agents');
   const results = docs(page).getByRole('list', { name: 'Search results' });
   const first = results.getByRole('link').first();
-  await expect(first).toContainText('Keep files away from agents');
+  await expect(first).toContainText('Keep files and keys away from agents');
   await expect(first).toContainText('How-to');
   await expect(guideNav(page)).toHaveCount(0);
 
   await first.click();
-  await expect(pageTitle(page)).toHaveText('Keep files away from agents');
+  await expect(pageTitle(page)).toHaveText('Keep files and keys away from agents');
   await expect(search).toHaveValue('');
 
   await search.fill('hold to confirm');

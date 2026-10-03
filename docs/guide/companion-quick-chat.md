@@ -1,23 +1,21 @@
 ---
 title: Start and check chats from anywhere
-section: Mac app
+section: Mac app and providers
 type: how-to
-order: 711
+order: 412
 summary: Start a chat from any app with ⌥Space, find a chat and ask for an update with ⌥⇧Space, ask Spark a question, and change the shortcuts.
 ---
 
-You'll start a chat, check on another and ask Spark a question without leaving the app you're in. About 2 minutes.
+You'll start a chat, check on another and ask Spark a question from any app. About 2 minutes.
 
 ## Start a chat
 
 1. Press **⌥Space** anywhere on your Mac. The panel opens on **New chat**.
 2. Type your task in **Start a new chat…**.
 3. Optionally select **Choose project**, or the autonomy chip to change it.
-4. Press **Enter**.
+4. Press **Enter**. **Esc** closes the panel and keeps your draft.
 
 ![The New chat tab of Spark Island with a message typed and the project, model, permissions and autonomy chips](images/companion-island-chat-light.png)
-
-The chat uses your default model and agent mode. Press **Esc** to close the panel; your draft is kept.
 
 ## Check on a chat
 
@@ -39,9 +37,7 @@ Who needs you, what's running and today's spend are answered right away. Other q
 ## Change a shortcut
 
 1. Open **Settings → Spark** and scroll to **Around the app**.
-2. Next to **Quick chat shortcut** or **Sessions shortcut**, select **Change**.
-3. Press the new keys: at least one modifier with a letter, number or Space. Select **Reset** to go back.
+2. Select **Change** next to **Quick chat shortcut** or **Sessions shortcut**.
+3. Press the new keys: at least one modifier with a letter, number or Space. **Reset** restores the default.
 
-> **Tip:** Inside the panel, **⌘1** to **⌘4** switch between Home, Chats, New chat and Ask Spark.
-
-**Next:** [Answer from Spark Island](companion-approvals.md)
+**Next:** [Update the app](updates.md)

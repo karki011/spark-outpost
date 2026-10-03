@@ -1,42 +1,49 @@
 ---
-title: The Spark crew
+title: The crew and pieces
 section: Understand Spark
 type: concept
-order: 818
-summary: Who reads, builds and reviews your request, how Spark decides what to do with it, and when a Critic reviews.
+order: 514
+summary: Who reads, builds and reviews your request, when a Critic reviews, and how big work is split into pieces.
 ---
 
-Spark gives each request the smallest crew that fits. Most requests need only a Reader or one Builder; a Critic and a Coordinator join for bigger or riskier work.
+Spark gives each request the smallest crew that fits. A Critic and a Coordinator join for bigger or riskier work.
 
-| Role            | What it does                                                   | Names                        |
-| --------------- | -------------------------------------------------------------- | ---------------------------- |
-| **Reader**      | Reads the project and answers. Changes nothing.                | Pip, Wren, Skye              |
-| **Builder**     | Makes the change.                                              | Bolt, Rivet, Tack, Chip, Nut |
-| **Critic**      | Reviews the change, on another provider when one is connected. | Hawk, Owl, Lynx              |
-| **Coordinator** | Splits big work into pieces and joins them.                    | Atlas, Juno, Vega            |
+| Role            | What it does                                          | Names                        |
+| --------------- | ----------------------------------------------------- | ---------------------------- |
+| **Reader**      | Answers. Changes nothing.                             | Pip, Wren, Skye              |
+| **Builder**     | Makes the change.                                     | Bolt, Rivet, Tack, Chip, Nut |
+| **Critic**      | Reviews the change, on another provider if connected. | Hawk, Owl, Lynx              |
+| **Coordinator** | Splits big work into pieces and joins them.           | Atlas, Juno, Vega            |
 
-To watch them, see [Watch and message the crew](agent-tv.md).
+See [Watch and steer the crew](pieces.md).
 
 ## How Spark decides what to do
 
-A line above the crew says what Spark chose:
+| Line above the crew          | When                                                           |
+| ---------------------------- | -------------------------------------------------------------- |
+| **Answer directly**          | A question or research                                         |
+| **Build it**                 | A clear change                                                 |
+| **Plan, then build**         | A [plan](plan-card.md) request, or a big or destructive change |
+| **Plan, build, then review** | The same, when a review is warranted                           |
 
-| Line                         | When                                           | What happens                          |
-| ---------------------------- | ---------------------------------------------- | ------------------------------------- |
-| **Answer directly**          | A question or research                         | A Reader answers. Nothing changes.    |
-| **Build it**                 | A clear change                                 | A Builder makes it.                   |
-| **Plan, then build**         | A plan request, or a big or destructive change | You get a [plan](plan-card.md) first. |
-| **Plan, build, then review** | The same, when a review is warranted           | A Critic reviews at the end.          |
-
-If the request is too vague, the agent first asks 1 to 3 questions with its best guesses.
-
-With [Jev](jev.md) connected, Jev helps make these calls. Without it, Spark's rules decide from the wording.
+A vague request first gets 1 to 3 questions. [Jev](jev.md) helps make these calls; without it, rules decide from the wording.
 
 ## When the Critic reviews
 
-A Critic reviews large diffs, changes to 3 or more source files, migrations, destructive or high-stakes work, a build from an agreed plan, or when you ask. A one-line fix never gets one.
+A Critic reviews large diffs, changes to 3 or more source files, migrations, destructive or high-stakes work, builds from an agreed plan, or when you ask.
 
-- A Builder fixes the Critic's findings, up to 3 rounds.
-- After a fix, the Critic only rechecks: it confirms the earlier problems are fixed and looks at what the fix changed.
-- Hardening ideas you didn't ask for are listed under **Not fixed automatically** instead of starting another round.
-- If the Critic fails to run, Spark retries once, on your chat's provider. If that fails too, the reply says "Review skipped (Critic unavailable: …)" and the change is kept as usual.
+A Builder fixes its findings, up to 3 rounds.
+
+## Pieces
+
+A Coordinator splits a big plan into pieces such as **P1**, one Builder each, then joins them. Jev picks 1 to 4 Builders. Without Jev, rules split when you ask or the plan is large.
+
+| Where pieces run     | Means                                        | Used for                                            |
+| -------------------- | -------------------------------------------- | --------------------------------------------------- |
+| **in order**         | One Builder at a time                        | Pieces that depend on each other                    |
+| **shared tree**      | Builders side by side, each on its own files | Independent pieces                                  |
+| _Builder_**'s copy** | Each Builder in its own worktree copy        | Data or migration work, lockfiles, package installs |
+
+In a shared tree, Spark checks each Builder's edits and commands so it stays in its own files.
+
+If two copies clash, you get a card. At **Full auto → PR**, Spark stops and reports.

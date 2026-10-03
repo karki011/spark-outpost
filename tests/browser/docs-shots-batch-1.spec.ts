@@ -154,19 +154,6 @@ test('Compaction screenshots', async ({ page }) => {
   const full = card(page, /This chat is almost full/);
   await expect(full).toBeVisible({ timeout: 20_000 });
   await shoot(page, IMAGES, 'compaction-card', full);
-  await full.getByRole('button', { name: 'Compact now' }).click();
-  await expect(page.locator('.mood', { hasText: 'done' })).toHaveCount(3, { timeout: 20_000 });
-  const divider = page.getByRole('group', { name: 'Compacted' });
-  await divider.getByRole('button', { name: 'View summary' }).click();
-  await expect(divider.getByRole('button', { name: 'Hide summary' })).toBeVisible();
-  await shoot(page, IMAGES, 'compaction-divider', divider);
-
-  const compactOn = await page.request.patch('/api/profile', { data: { autoCompact: true } });
-  expect(compactOn.ok()).toBe(true);
-  await openSettings(page);
-  const section = page.getByRole('region', { name: 'Context compaction' });
-  await section.scrollIntoViewIfNeeded();
-  await shoot(page, IMAGES, 'compaction-settings', section);
 });
 
 const TOTALS = `export function sumTotals(rows: number[]): number {

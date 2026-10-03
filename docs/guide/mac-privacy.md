@@ -1,12 +1,12 @@
 ---
 title: Mac privacy settings
-section: Mac app
+section: Mac app and providers
 type: how-to
-order: 716
+order: 416
 summary: Turn the anonymous heartbeat off, decide on Full Disk Access, and answer the macOS keychain prompt.
 ---
 
-You'll set the three privacy switches that exist only in the Mac app. About 2 minutes.
+You'll set the three privacy choices that exist only in the Mac app. About 2 minutes.
 
 ## Anonymous heartbeat
 
@@ -41,4 +41,4 @@ The first time Spark reads a key, macOS may ask whether Spark Outpost may use it
 
 Spark keeps working while the prompt is open. After 10 seconds it stops waiting, and a test message says it's waiting for the keychain.
 
-**Next:** [Manage providers and models](providers-and-models.md)
+**Next:** [Manage providers, models and Jev](providers-and-models.md)

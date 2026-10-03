@@ -2,7 +2,7 @@
 title: Statuses and limits
 section: Reference
 type: reference
-order: 920
+order: 622
 summary: What each status label means across providers, chats, Sparks, tickets, the Map and Spark Island, and the fixed limits.
 ---
 
@@ -26,6 +26,16 @@ summary: What each status label means across providers, chats, Sparks, tickets, 
 | **Working**           | Spark card        | A request in one of its chats is running.                              |
 | **Needs you**         | Spark card        | A card in one of its chats waits.                                      |
 | **Done** / **Failed** | Spark card        | Its latest request finished in the last hour / failed in the last day. |
+
+## Jev on a reply
+
+Hover the chip on a reply, such as **Question**.
+
+| Status                            | Means                                                     |
+| --------------------------------- | --------------------------------------------------------- |
+| **Jev not connected**             | The rules decided.                                        |
+| **Not asked**                     | This step didn't need Jev, such as "pinned, no Jev call". |
+| **Jev timed out**, **Jev failed** | Spark used the rules.                                     |
 
 ## Ticket groups
 

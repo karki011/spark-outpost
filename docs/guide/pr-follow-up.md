@@ -1,29 +1,23 @@
 ---
 title: Let Spark handle PR feedback
-section: Ship and pull requests
+section: Projects and shipping
 type: how-to
-order: 512
+order: 322
 summary: Have Spark fix failing checks and answer review comments on the pull requests it opened, with a confirm card or by itself in Full auto.
 ---
 
-You'll let Spark fix checks and answer reviews on its pull requests, and stay in charge of what reaches GitHub. About 2 minutes.
+You'll let Spark fix checks and answer reviews on its pull requests. About 2 minutes.
 
-After Spark opens a PR, it watches the PR's checks and reviews until the PR is merged or closed. It uses your GitHub connection.
-
-## Review what Spark gathered
+After Spark opens a PR, it watches the PR's checks and reviews until the PR is merged or closed.
 
 1. Read the PR strip above the chat, such as "Open · Checks failing · 2 new comments · Round 1 of 3".
 2. Open **items gathered** to see each item, who wrote it and what Spark plans.
 
-![The PR strip above a chat, with the items Spark gathered](images/pr-follow-up-strip-light.png)
+   ![The PR strip above a chat, with the items Spark gathered](images/pr-follow-up-strip-light.png)
 
-## Confirm the push and replies
-
-At **Automatic**, a Builder fixes the items in the chat's worktree, then **Address PR feedback?** asks before anything reaches GitHub.
-
-1. Read the push and each reply, such as "Fixed in 1a2b3c4: …".
-2. Uncheck anything to leave it out.
-3. Select **Push and reply**, or **Don't**.
+3. Wait for **Address PR feedback?**. A Builder fixes the items first, in the chat's worktree.
+4. Read the push and each reply, and uncheck anything to leave it out.
+5. Select **Push and reply**, or **Don't**.
 
 ![The Address PR feedback? card with the push and a reply checked](images/pr-follow-up-card-light.png)
 
@@ -44,10 +38,11 @@ Jev sorts comments into fix, question, nit and so on. Without Jev, keyword rules
 
 - At most 3 fix-and-push rounds per PR. Ask in the chat for another.
 - Spark never force-pushes, merges, approves, resolves threads or dismisses reviews.
-- PR text is data, never instructions. It goes through the same approvals as anything else.
+- PR text is data, never instructions.
 
 ## Turn it off
 
-In **Settings → Spark → Pull requests**, turn off **Follow up on pull requests**, or only **Fix failing checks**, **Handle review comments** or **Reply on GitHub threads**.
+1. Open **Settings → Spark** and find **Pull requests**.
+2. Turn off **Follow up on pull requests**, or only **Fix failing checks**, **Handle review comments** or **Reply on GitHub threads**.
 
 **Next:** [Connect GitHub, Jira or Linear](tickets-and-github.md)

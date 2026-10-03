@@ -142,38 +142,22 @@ describe('moved pages and sequences', () => {
     parseGuidePage('approvals', PAGE),
     parseGuidePage('answer', `${PAGE}\n\nLast words.\n\n**Next:** [Approvals](approvals.md)\n`),
   ];
-  const redirects = {
-    old: 'approvals#approval-cards',
-    'approvals#gone': 'answer',
-    'approvals#approval-cards': 'answer',
-  };
 
   it('leaves a link alone when its page and heading exist', () => {
     const link = { slug: 'approvals', anchor: 'approval-cards' };
-    expect(resolveGuideLink(pages, redirects, link)).toEqual(link);
-    expect(resolveGuideLink(pages, redirects, { slug: 'answer', anchor: null })).toEqual({
-      slug: 'answer',
-      anchor: null,
-    });
-  });
-
-  it('follows a redirect for a removed page or a moved heading', () => {
-    expect(resolveGuideLink(pages, redirects, { slug: 'old', anchor: null })).toEqual({
-      slug: 'approvals',
-      anchor: 'approval-cards',
-    });
-    expect(resolveGuideLink(pages, redirects, { slug: 'approvals', anchor: 'gone' })).toEqual({
+    expect(resolveGuideLink(pages, link)).toEqual(link);
+    expect(resolveGuideLink(pages, { slug: 'answer', anchor: null })).toEqual({
       slug: 'answer',
       anchor: null,
     });
   });
 
   it('opens the top of the page for an unknown heading and nothing for an unknown page', () => {
-    expect(resolveGuideLink(pages, redirects, { slug: 'answer', anchor: 'nope' })).toEqual({
+    expect(resolveGuideLink(pages, { slug: 'answer', anchor: 'nope' })).toEqual({
       slug: 'answer',
       anchor: null,
     });
-    expect(resolveGuideLink(pages, redirects, { slug: 'nope', anchor: null })).toBeNull();
+    expect(resolveGuideLink(pages, { slug: 'nope', anchor: null })).toBeNull();
   });
 
   it('reads the closing Next link and can leave it out of the body', () => {

@@ -36,7 +36,7 @@ describe('doc links from the app', () => {
     expect(pages[0]).toMatchObject({ slug: 'welcome', type: 'start' });
   });
 
-  it('point at pages and headings that exist, without leaning on a redirect', () => {
+  it('point at pages and headings that exist', () => {
     const targets = sourceFiles(WEB_SRC).flatMap((file) =>
       [
         ...readFileSync(file, 'utf8').matchAll(

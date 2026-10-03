@@ -1,5 +1,4 @@
 import {
-  GUIDE_REDIRECTS,
   guideNextSlug,
   loadGuidePages,
   resolveGuideLink,
@@ -42,7 +41,7 @@ function neighbours(page: GuidePage): Pick<OpenDoc, 'previous' | 'next'> {
 }
 
 export function openDocFor(route: GuideLink | null): OpenDoc | null {
-  const target = route?.slug ? resolveGuideLink(guidePages, GUIDE_REDIRECTS, route) : null;
+  const target = route?.slug ? resolveGuideLink(guidePages, route) : null;
   const page = (target && bySlug.get(target.slug)) ?? guidePages[0];
   if (!page) return null;
   return { page, anchor: target?.slug === page.slug ? target.anchor : null, ...neighbours(page) };

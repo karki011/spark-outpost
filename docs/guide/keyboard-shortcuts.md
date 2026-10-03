@@ -2,7 +2,7 @@
 title: Keyboard shortcuts
 section: Reference
 type: reference
-order: 918
+order: 620
 summary: Shortcuts for chats, the Changes drawer, the Map, Tickets and Spark Island.
 ---
 

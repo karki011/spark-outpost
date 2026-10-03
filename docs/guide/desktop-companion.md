@@ -1,43 +1,53 @@
 ---
-title: Set up Spark Island
-section: Mac app
+title: Use Spark Island
+section: Mac app and providers
 type: how-to
-order: 710
-summary: Turn on Spark Island in the Mac app, size and move it, read Scout's face and the session blobs, and open the Home panel.
+order: 410
+summary: Turn on Spark Island in the Mac app, size and move it, and allow or deny an agent's request from the top of your screen.
 ---
 
-You'll set up Spark Island, the Mac app's home at the top of your screen. About 2 minutes.
-
-Scout, Spark's blob, sits under the notch or hangs over the menu bar and shows what your chats are doing, even when Spark Outpost is in the background.
+You'll set up Spark Island and answer waiting agents from the top of your screen. About 2 minutes.
 
 ## Turn it on and size it
 
 1. Open **Settings → Spark** and scroll to **Around the app**.
 2. Switch **Show Spark Island** on or off. It's on by default.
 3. Pick **Spark Island size**: **Small**, **Medium** (default) or **Large**.
-4. To hear a chime when a chat needs you or finishes, switch on **Island chimes**.
+4. Switch on **Island chimes** to hear when a chat needs you or finishes.
 
 ![The Around the app settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
-To move the island, drag it by any part that isn't a button. Drop it near the top centre to dock it again.
+Drag the island to move it.
 
 ## Open it
 
 1. Point at Scout. The panel opens on **Home** and closes when the pointer leaves.
-2. Click inside it to keep it open. Press **Esc** or click outside to close it.
+2. Click inside it to keep it open. Press **Esc** to close it.
 
 ![Spark Island Home with the Now card showing a chat's latest steps and the Sparks tiles](images/companion-island-home-light.png)
 
-**Now** shows the chat that matters most: one that needs you, then one that's running. The tiles are your [Sparks](sparks.md). Steps show only verbs and file names, never full paths or secrets.
+Steps show only verbs and file names, never full paths or secrets. For the faces of Scout, Spark's blob, see [Spark Island states](statuses-and-limits.md#spark-island-states).
 
-The island never opens by itself. When a chat needs you and you're in another app, it drops a one-line pill, such as **Deploy the site needs you · Review**.
+## Answer a card
 
-For what Scout's face and the session blobs mean, see [Spark Island states](statuses-and-limits.md#spark-island-states).
+The island never opens by itself. When a chat needs you, it drops a pill, such as **Deploy the site needs you · Review**.
+
+1. Select the pill, or press **⌥Space**.
+2. Press **Y** to allow once or **N** to deny, once the card has focus.
+
+![A Spark Island card: Claude wants to run a command, with Deny, Allow once, Always in this project, Open chat and Later](images/companion-island-card-light.png)
+
+| Choice                     | Does                                                                              |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| **Always in this project** | Adds a plain command to the project's list.                                       |
+| **Open chat**              | Opens the chat. Plans and instruction-file changes offer only this and **Later**. |
+| **Later**                  | Puts the card aside under **Needs you**.                                          |
+| **Hold to force-push**     | Hold about a second. The push waits 10 seconds; select **Undo** to stop it.       |
+
+A question card counts down to its default answer. Point at it to pause. Answering here answers the card in the chat too.
 
 ## Inside the app
 
-Scout also floats in a corner of Spark Outpost. Select it to see **Needs you**, **Failed**, **Running** and **Just finished**. Drag it to another corner, or set **Status companion** to **Hide**.
-
-> **Tip:** Opening the island or asking for an update never interrupts an agent.
+Scout also floats in a corner of Spark Outpost. Select it for **Needs you**, **Failed**, **Running** and **Just finished**. Set **Status companion** to **Hide** to remove it.
 
 **Next:** [Start and check chats from anywhere](companion-quick-chat.md)

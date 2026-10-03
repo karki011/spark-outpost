@@ -53,12 +53,6 @@ test('Map screenshots', async ({ page }) => {
   await page.waitForTimeout(1500);
   await shoot(page, IMAGES, 'map-tree');
 
-  await page.getByRole('button', { name: /^Review areas/ }).click();
-  const review = page.getByRole('heading', { name: 'Review areas', level: 2 });
-  await expect(review).toBeVisible();
-  await shoot(page, IMAGES, 'map-review');
-  await page.getByRole('button', { name: 'Close review' }).click();
-
   await page.getByRole('radio', { name: 'Focus' }).click();
   const suggested = page.getByRole('list', { name: 'Suggested files' });
   await suggested.getByRole('button').first().click();
