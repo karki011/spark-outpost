@@ -107,7 +107,9 @@ test('a rejected Jira token shows a sad check and the error next to the token', 
   expect(await connections(page)).toEqual([]);
 });
 
-test('Disconnect waits for Undo, and the ticket update switches save', async ({ page }) => {
+test('Disconnect waits for Undo, and the ticket update switches save @packaged', async ({
+  page,
+}) => {
   await connectTickets(page, ['jira']);
   await openConnectors(page);
   const jira = connectorCard(page, 'jira');

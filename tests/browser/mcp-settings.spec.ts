@@ -77,7 +77,7 @@ test('Settings lists a server switched off, turns it on for all chats and tests 
   expect(results.violations).toEqual([]);
 });
 
-test('Settings adds a server by hand, keeps its secret out of the page and removes it', async ({
+test('Settings adds a server by hand, keeps its secret out of the page and removes it @packaged', async ({
   page,
 }) => {
   const dialog = await openMcpSettings(page);

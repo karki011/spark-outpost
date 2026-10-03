@@ -58,7 +58,9 @@ async function themeShots(page: Page) {
   }
 }
 
-test('the audit view summarises, times, lists, and exports a session', async ({ page }) => {
+test('the audit view summarises, times, lists, and exports a session @packaged', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await sendPlannedTask(page);
   const { runId } = await seedAuditLog();
@@ -151,13 +153,15 @@ test('the audit view opens from the cost ring and fills a phone screen', async (
   await expect(dialog).toBeVisible();
   const size = async () => (await dialog.boundingBox()) ?? { width: 0, height: 0 };
   await expect.poll(async () => (await size()).width).toBeGreaterThanOrEqual(389);
-  expect((await size()).height).toBeGreaterThanOrEqual(843);
+  await expect.poll(async () => (await size()).height).toBeGreaterThanOrEqual(843);
   const scroll = await page.evaluate(() => document.documentElement.scrollWidth);
   expect(scroll).toBeLessThanOrEqual(390);
   await shot(page, 'mobile');
 });
 
-test('downloading the JSONL export shows progress and runs once at a time', async ({ page }) => {
+test('downloading the JSONL export shows progress and runs once at a time @packaged', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await sendPlannedTask(page);
   await seedAuditLog();

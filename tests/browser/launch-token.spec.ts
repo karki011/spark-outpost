@@ -1,22 +1,23 @@
 import { expect, test } from '@playwright/test';
 import { API_TOKEN_HEADER } from '../../packages/contracts/src/api-token.ts';
 import { resetTestDatabase } from './database.ts';
-import { API_PORT } from './stub-config.ts';
+import { API_PORT, PACKAGED } from './stub-config.ts';
 
 const DIRECT_API = `http://127.0.0.1:${API_PORT}/api`;
 
-test('the API refuses callers without the launch token', async ({ request }) => {
-  const health = await request.get(`${DIRECT_API}/health`);
-  expect(health.status()).toBe(401);
-  const events = await request.get(`${DIRECT_API}/events`);
-  expect(events.status()).toBe(401);
-  const forged = await request.get(`${DIRECT_API}/conversations`, {
+test('the API refuses callers without the launch token @packaged', async () => {
+  const health = await fetch(`${DIRECT_API}/health`);
+  expect(health.status).toBe(401);
+  const events = await fetch(`${DIRECT_API}/events`);
+  expect(events.status).toBe(401);
+  const forged = await fetch(`${DIRECT_API}/conversations`, {
     headers: { [API_TOKEN_HEADER]: 'guessed-token' },
   });
-  expect(forged.status()).toBe(401);
+  expect(forged.status).toBe(401);
 });
 
 test('the web app reaches the API without ever holding the token', async ({ page }) => {
+  test.skip(PACKAGED, 'Electron adds the token below the page, as extraHTTPHeaders does here.');
   await resetTestDatabase({ onboarded: true });
   const tokenHeaders: string[] = [];
   page.on('request', (request) => {

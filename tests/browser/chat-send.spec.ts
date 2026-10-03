@@ -112,7 +112,7 @@ test('Edit puts a failed message back in the composer', async ({ page }) => {
   await expect(page.locator('.msg.me', { hasText: marker })).toHaveCount(0);
 });
 
-test('Stop shows Stopping… at once and the chat settles as stopped', async ({ page }) => {
+test('Stop shows Stopping… at once and the chat settles as stopped @packaged', async ({ page }) => {
   let release: () => void = () => undefined;
   const held = new Promise<void>((resolve) => {
     release = resolve;

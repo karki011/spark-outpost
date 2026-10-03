@@ -156,7 +156,7 @@ test('Talk to on Home starts the next chat with a Spark, then goes back to plain
   ]);
 });
 
-test('edit a Spark, then hold to delete with Undo; its chats stay', async ({ page }) => {
+test('edit a Spark, then hold to delete with Undo; its chats stay @packaged', async ({ page }) => {
   test.setTimeout(60_000);
   const id = await addSpark(page, { name: 'Wren', role: 'Docs writer' });
   const home = await page.request.post(`/api/teammates/${id}/home`, { data: {} });

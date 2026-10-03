@@ -37,7 +37,7 @@ async function dispatchFileDrag(page: Page, type: 'dragenter' | 'dragleave' | 'd
   );
 }
 
-test('uploads from the file chooser, sends with the message, and survives a reload', async ({
+test('uploads from the file chooser, sends with the message, and survives a reload @packaged', async ({
   page,
 }) => {
   const input = await newChat(page);

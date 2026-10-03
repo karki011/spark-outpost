@@ -3,15 +3,17 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 import { LINEAR_KEY } from './apps/server/test/fake-linear.ts';
-import { API_TOKEN_ENV } from './packages/contracts/src/api-token.ts';
+import { API_TOKEN_ENV, API_TOKEN_HEADER } from './packages/contracts/src/api-token.ts';
 import {
   API_PORT,
+  APP_ORIGIN,
   FAKE_ACP_MODELS,
   FAKE_CLAUDE_BIN,
   FAKE_ACP_MODES,
   FAKE_CODEX_STATE,
   FAKE_GH_STATE,
   MAP_ROOT_PREFIX,
+  PACKAGED,
   SERVER_LOG_DIR,
   slot,
   STUB_PORT,
@@ -23,7 +25,8 @@ if (existsSync('.local/credentials.env')) process.loadEnvFile('.local/credential
 delete process.env.BACKUP_DIR;
 
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
-const apiToken = randomBytes(32).toString('base64url');
+process.env.SPARK_BROWSER_API_TOKEN ??= randomBytes(32).toString('base64url');
+const apiToken = process.env.SPARK_BROWSER_API_TOKEN;
 
 const serverEnv = {
   PATH: `${path.resolve('tests/browser/bin')}:${FAKE_CLAUDE_BIN}:/usr/bin:/bin`,
@@ -36,7 +39,7 @@ const serverEnv = {
   SHELL: '/bin/sh',
   DATABASE_URL: TEST_DATABASE_URL ?? '',
   API_PORT: String(API_PORT),
-  ALLOWED_ORIGINS: `http://127.0.0.1:${WEB_PORT}`,
+  ALLOWED_ORIGINS: APP_ORIGIN,
   SECRET_STORE: 'memory',
   MEMORY_SECRETS: JSON.stringify({
     jev: 'browser-test-jev-key',
@@ -65,6 +68,27 @@ const serverCommand = (entry: string) => `${node} --import tsx ${entry}`;
 const logged = (command: string, name: string) =>
   `mkdir -p ${JSON.stringify(SERVER_LOG_DIR)} && { ${command}; } 2>&1 | tee -a ${JSON.stringify(path.join(SERVER_LOG_DIR, `${name}.log`))}`;
 const shutdown = { signal: 'SIGTERM', timeout: 5_000 } as const;
+const buildsWeb = PACKAGED || Boolean(process.env.SPARK_WEB_BUILD);
+const buildEnv = { VITE_SPARK_FEEDBACK_EMAIL: 'beta-feedback@example.test' };
+const viteBuild = `${node} node_modules/vite/bin/vite.js build`;
+const packagedBuild = PACKAGED ? `(cd ../web && ${viteBuild}) && ` : '';
+
+const viteServer = {
+  command: process.env.SPARK_WEB_BUILD
+    ? `${viteBuild} && ${node} node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port ${WEB_PORT} --strictPort`
+    : `${node} node_modules/vite/bin/vite.js`,
+  cwd: 'apps/web',
+  env: {
+    ...buildEnv,
+    SPARK_WEB_PORT: String(WEB_PORT),
+    SPARK_API_PORT: String(API_PORT),
+    [API_TOKEN_ENV]: apiToken,
+  },
+  url: `http://127.0.0.1:${WEB_PORT}`,
+  reuseExistingServer: false,
+  timeout: buildsWeb ? 300_000 : 60_000,
+  gracefulShutdown: shutdown,
+};
 
 export default defineConfig({
   testDir: 'tests/browser',
@@ -75,8 +99,9 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   use: {
-    baseURL: `http://127.0.0.1:${WEB_PORT}`,
+    baseURL: APP_ORIGIN,
     trace: 'retain-on-failure',
+    ...(PACKAGED ? { extraHTTPHeaders: { [API_TOKEN_HEADER]: apiToken } } : {}),
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
@@ -87,17 +112,18 @@ export default defineConfig({
       gracefulShutdown: shutdown,
     },
     {
-      command: `${node} --import tsx ../../tests/browser/ensure-database.ts && ${serverCommand('src/persistence/migrate-cli.ts')} && ${logged(serverCommand('src/api/main.ts'), 'api')}`,
+      command: `${packagedBuild}${node} --import tsx ../../tests/browser/ensure-database.ts && ${serverCommand('src/persistence/migrate-cli.ts')} && ${logged(serverCommand('src/api/main.ts'), 'api')}`,
       cwd: 'apps/server',
       env: {
         ...serverEnv,
+        ...(PACKAGED ? { ...buildEnv, WEB_ROOT: path.resolve('apps/web/dist') } : {}),
         [API_TOKEN_ENV]: apiToken,
         SPARK_TEST_PORT_SLOT: String(slot),
         TEST_DATABASE_URL: process.env.TEST_DATABASE_URL ?? '',
       },
       url: `http://127.0.0.1:${API_PORT}/api/health`,
       reuseExistingServer: false,
-      timeout: 60_000,
+      timeout: PACKAGED ? 300_000 : 60_000,
       gracefulShutdown: shutdown,
     },
     {
@@ -109,21 +135,6 @@ export default defineConfig({
       timeout: 60_000,
       gracefulShutdown: shutdown,
     },
-    {
-      command: process.env.SPARK_WEB_BUILD
-        ? `${node} node_modules/vite/bin/vite.js build && ${node} node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port ${WEB_PORT} --strictPort`
-        : `${node} node_modules/vite/bin/vite.js`,
-      cwd: 'apps/web',
-      env: {
-        SPARK_WEB_PORT: String(WEB_PORT),
-        SPARK_API_PORT: String(API_PORT),
-        [API_TOKEN_ENV]: apiToken,
-        VITE_SPARK_FEEDBACK_EMAIL: 'beta-feedback@example.test',
-      },
-      url: `http://127.0.0.1:${WEB_PORT}`,
-      reuseExistingServer: false,
-      timeout: process.env.SPARK_WEB_BUILD ? 300_000 : 60_000,
-      gracefulShutdown: shutdown,
-    },
+    ...(PACKAGED ? [] : [viteServer]),
   ],
 });

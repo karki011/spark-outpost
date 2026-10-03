@@ -86,7 +86,7 @@ async function runPwd(page: Page, marker: string) {
   await page.keyboard.press('Enter');
 }
 
-test('a chat without a project opens a terminal in the home folder', async ({ page }) => {
+test('a chat without a project opens a terminal in the home folder @packaged', async ({ page }) => {
   await page.setViewportSize({ width: 1300, height: 860 });
   await newChat(page);
   const button = terminalButton(page);
@@ -180,7 +180,7 @@ test('a Do chat with a worktree opens its terminal in the worktree', async ({ pa
   await shot(page, 'worktree');
 });
 
-test('closing a tab that is running something asks first', async ({ page }) => {
+test('closing a tab that is running something asks first @packaged', async ({ page }) => {
   await page.setViewportSize({ width: 1300, height: 860 });
   await newChat(page);
   await terminalButton(page).click();

@@ -25,7 +25,7 @@ async function deleteChat(page: Page, title: string) {
   await menu.getByRole('menuitem', { name: 'Confirm delete' }).click();
 }
 
-test('a chat with a stuck run is stopped and deleted, and stays gone after reload', async ({
+test('a chat with a stuck run is stopped and deleted, and stays gone after reload @packaged', async ({
   page,
 }) => {
   await seedChats([

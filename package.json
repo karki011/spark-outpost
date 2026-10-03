@@ -25,6 +25,7 @@
     "test:db": "vitest run --project db",
     "test:live": "vitest run --project live",
     "test:browser": "playwright test",
+    "test:browser:packaged": "SPARK_PACKAGED=1 playwright test --grep @packaged",
     "docs:screenshots": "SPARK_DOCS_SHOTS=1 playwright test tests/browser/docs-shots --workers=1",
     "db:setup": "bash infra/local/setup.sh",
     "db:up": "bash infra/local/up.sh",

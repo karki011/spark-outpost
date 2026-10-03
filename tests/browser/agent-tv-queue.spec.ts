@@ -164,7 +164,7 @@ test('message a crew member from the Work panel, then continue the finished Buil
   await expect(agentBlock(page, name).last()).toBeVisible();
 });
 
-test('the queue strip edits, reorders, removes and keeps messages, then sends them after the turn', async ({
+test('the queue strip edits, reorders, removes and keeps messages, then sends them after the turn @packaged', async ({
   page,
 }) => {
   test.setTimeout(120_000);

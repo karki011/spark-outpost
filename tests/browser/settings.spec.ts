@@ -386,7 +386,7 @@ test('a provider link opens its screen, Escape steps back to the tiles, then clo
   await expect(page).not.toHaveURL(/#\/settings/);
 });
 
-test('disconnecting a CLI provider waits 10 seconds for Undo', async ({ page }) => {
+test('disconnecting a CLI provider waits 10 seconds for Undo @packaged', async ({ page }) => {
   await resetTestDatabase({ onboarded: true, connected: ['claude', 'codex'] });
   await page.goto('/#/settings/providers/codex');
   const codex = page.getByRole('dialog', { name: 'AI providers' }).getByRole('region', {

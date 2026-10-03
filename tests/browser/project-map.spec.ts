@@ -51,7 +51,7 @@ test('the sky shows each area as a constellation, with gold names and a legend',
   await screenshot(page, 'sky-light');
 });
 
-test('arrows walk the areas, Enter opens one as a network and Escape goes back', async ({
+test('arrows walk the areas, Enter opens one as a network and Escape goes back @packaged', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
