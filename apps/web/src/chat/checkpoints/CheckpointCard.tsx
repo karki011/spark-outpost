@@ -18,13 +18,15 @@ import { CheckIcon, XIcon } from '../../ui/icons.tsx';
 import { DiffView } from '../approvals/DiffView.tsx';
 import { mergeDecision } from '../approvals/approval-events.ts';
 import { CrewHint } from '../crew/CrewHint.tsx';
-import { Docked } from '../dock/Docked.tsx';
+import { checkpointSummary } from '../status/pending-summary.ts';
+import { Pending } from '../status/Pending.tsx';
 import { Action, CheckpointNotes, NoteForm, type Decide } from './card-parts.tsx';
 import { ClarifyBody } from './ClarifyBody.tsx';
 import {
   asksQuestions,
   budgetLine,
   checkpointQuestion,
+  changesSummary,
   checkpointResult,
   checkpointTitle,
   offers,
@@ -35,55 +37,71 @@ import {
 } from './checkpoint-model.ts';
 import { useAutoContinue } from './use-auto-continue.ts';
 
-function AcceptBody({ approval, decide }: { approval: CheckpointApproval; decide: Decide }) {
-  const [fixing, setFixing] = useState(false);
-  const viewChanges = useViewChanges();
-  const files = approval.payload.checkpoint.files;
+function FileList({ files }: { files: CheckpointPayload['files'] }) {
   return (
-    <>
-      {files.length > 0 && (
-        <ul className="ck-files" aria-label="Changed files">
-          {files.map((file) => (
-            <li key={file.path}>
-              <code>{file.path}</code>
-              <span className={`ck-change ${file.change}`}>{file.change}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {files.length > 0 && viewChanges && (
-        <button type="button" className="ck-view" onClick={() => viewChanges()}>
-          View changes
+    <ul className="ck-files" aria-label="Changed files">
+      {files.map((file) => (
+        <li key={file.path}>
+          <code>{file.path}</code>
+          <span className={`ck-change ${file.change}`}>{file.change}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ChangesSummary({ payload }: { payload: CheckpointPayload }) {
+  const viewChanges = useViewChanges();
+  if (payload.files.length === 0) return null;
+  return (
+    <div className="ck-changes">
+      <p className="ck-sum">
+        <span>{changesSummary(payload)}</span>
+        {viewChanges && (
+          <button type="button" className="ck-view" onClick={() => viewChanges()}>
+            View changes
+          </button>
+        )}
+      </p>
+      <details className="ck-more">
+        <summary>Show files</summary>
+        <FileList files={payload.files} />
+      </details>
+    </div>
+  );
+}
+
+function AcceptActions({ approval, decide }: { approval: CheckpointApproval; decide: Decide }) {
+  const [fixing, setFixing] = useState(false);
+  if (fixing) {
+    return (
+      <NoteForm
+        label="What should be fixed?"
+        initial=""
+        submit="Ask for a fix"
+        busy={decide.busy}
+        onSubmit={(note) => decide(CHECKPOINT_OPTION.fix, note)}
+        onCancel={() => setFixing(false)}
+      />
+    );
+  }
+  return (
+    <div className="appr-acts">
+      <Action id={CHECKPOINT_OPTION.keep} approval={approval} decide={decide} kind="primary">
+        Keep
+      </Action>
+      <Action id={CHECKPOINT_OPTION.fixFindings} approval={approval} decide={decide}>
+        {optionName(approval, CHECKPOINT_OPTION.fixFindings)}
+      </Action>
+      {offers(approval, CHECKPOINT_OPTION.fix) && (
+        <button type="button" className="btn line sm" onClick={() => setFixing(true)}>
+          Fix
         </button>
       )}
-      {fixing ? (
-        <NoteForm
-          label="What should be fixed?"
-          initial=""
-          submit="Ask for a fix"
-          busy={decide.busy}
-          onSubmit={(note) => decide(CHECKPOINT_OPTION.fix, note)}
-          onCancel={() => setFixing(false)}
-        />
-      ) : (
-        <div className="appr-acts">
-          <Action id={CHECKPOINT_OPTION.keep} approval={approval} decide={decide} kind="primary">
-            Keep
-          </Action>
-          <Action id={CHECKPOINT_OPTION.fixFindings} approval={approval} decide={decide}>
-            {optionName(approval, CHECKPOINT_OPTION.fixFindings)}
-          </Action>
-          {offers(approval, CHECKPOINT_OPTION.fix) && (
-            <button type="button" className="btn line sm" onClick={() => setFixing(true)}>
-              Fix
-            </button>
-          )}
-          <Action id={CHECKPOINT_OPTION.revert} approval={approval} decide={decide} kind="stop">
-            Revert
-          </Action>
-        </div>
-      )}
-    </>
+      <Action id={CHECKPOINT_OPTION.revert} approval={approval} decide={decide} kind="stop">
+        Revert
+      </Action>
+    </div>
   );
 }
 
@@ -202,7 +220,7 @@ function PendingBody({ approval, decide }: { approval: CheckpointApproval; decid
     case 'pieces':
       return <PlanBody approval={approval} decide={decide} />;
     case 'accept':
-      return <AcceptBody approval={approval} decide={decide} />;
+      return <ChangesSummary payload={checkpoint} />;
     case 'retry':
       return (
         <div className="appr-acts">
@@ -371,25 +389,34 @@ export function CheckpointCard({
   const stopped =
     approval.decisionOptionId === CHECKPOINT_OPTION.stop || approval.status !== 'allowed';
 
+  const actionsFirst = pending && checkpoint.kind === 'accept';
   const title = checkpointTitle(checkpoint);
   const questions = asksQuestions(checkpoint);
 
   return (
-    <Docked id={approval.id} order={approval.createdAt} label={title} pending={pending}>
+    <Pending
+      id={approval.id}
+      order={approval.createdAt}
+      summary={checkpointSummary(checkpoint, title)}
+      pending={pending}
+    >
       <div
         className={pending ? `appr ck ${checkpoint.kind}` : `appr ck ${checkpoint.kind} decided`}
         role="group"
         aria-labelledby={headingId}
         id={approvalAnchor(approval.id)}
       >
-        <div className="appr-h">
-          <span className="ic" aria-hidden="true">
-            <i className={pending ? 'appr-dia' : 'appr-dia still'} />
-          </span>
-          <span id={headingId}>
-            <CheckpointHeading payload={checkpoint} title={title} />{' '}
-            {checkpointQuestion(checkpoint)}
-          </span>
+        <div className={actionsFirst ? 'ck-top' : undefined}>
+          <div className="appr-h">
+            <span className="ic" aria-hidden="true">
+              <i className={pending ? 'appr-dia' : 'appr-dia still'} />
+            </span>
+            <span id={headingId}>
+              <CheckpointHeading payload={checkpoint} title={title} />{' '}
+              {checkpointQuestion(checkpoint)}
+            </span>
+          </div>
+          {actionsFirst && <AcceptActions approval={approval} decide={decide} />}
         </div>
         {subtitle && <p className="ck-lead">{subtitle}</p>}
         {pending && checkpoint.waitsFor && (
@@ -416,6 +443,6 @@ export function CheckpointCard({
           </p>
         )}
       </div>
-    </Docked>
+    </Pending>
   );
 }

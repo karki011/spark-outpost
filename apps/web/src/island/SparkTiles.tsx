@@ -41,7 +41,7 @@ function TileSkeleton() {
   return (
     <section className="isl-hcard isl-tiles" aria-busy="true" style={tileStyle(1)}>
       <p className="sr-only" role="status">
-        Loading your Sparks…
+        Finding your Sparks
       </p>
       <div className="isl-tilegrid" aria-hidden="true">
         {[0, 1, 2, 3].map((slot) => (

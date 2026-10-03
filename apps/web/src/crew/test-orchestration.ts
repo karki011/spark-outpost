@@ -71,6 +71,7 @@ export function checkpoint(
         waitsFor: null,
         keptBy: null,
         laws: [],
+        lines: null,
         estimate: null,
         askAgainAt: null,
         ...payload,

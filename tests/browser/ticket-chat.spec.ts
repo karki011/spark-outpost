@@ -144,18 +144,16 @@ test('Start work links the chat, Ship puts the PR on the ticket, and a merge mov
     data: { merged: true, state: 'closed' },
   });
   await refreshTickets(page);
+  const done = main(page).getByRole('region', { name: 'Done recently' });
+  await done.getByRole('button', { name: /^Done recently/ }).click({ timeout: 15_000 });
   await expect(
     ticketRow.getByRole('button', { name: /^Open PR #1 for ENG-1210, merged/ }),
   ).toBeVisible({ timeout: 15_000 });
-  await expect(main(page).getByRole('region', { name: 'Working on' })).toContainText('ENG-1210');
+  await expect(ticketRow).toContainText(/Done.*PR #1 merged/);
 
   await page.request.patch('/api/tickets/connections/linear', { data: { moveOnMerge: true } });
   await refreshTickets(page);
-  const done = main(page).getByRole('region', { name: 'Done recently' });
-  await expect(done.getByRole('button', { name: /^Done recently/ })).toBeVisible({
-    timeout: 15_000,
-  });
-  await done.getByRole('button', { name: /^Done recently/ }).click();
+  await expect(ticketRow).not.toContainText('PR #1 merged', { timeout: 15_000 });
   await expect(done).toContainText('ENG-1210');
 
   await chatLink.click();

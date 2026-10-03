@@ -17,14 +17,16 @@ import { createTicket } from '../../tickets/create.ts';
 import { moveTicket } from '../../tickets/sync.ts';
 import { ticketDepsFor } from '../deps.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
-import { confirmThen } from './confirm.ts';
+import { ACTION_NOTE } from './action-note.ts';
+import { proposeAction } from './confirm.ts';
+import type { Performed } from './performed.ts';
 
 const sourceInput = ticketSourceIdSchema
   .optional()
   .describe('jira or linear. Defaults to the only connected one.');
 const keyInput = ticketKeySchema.describe('Ticket key, such as ENG-12.');
 
-async function pickSource(deps: TicketDeps, requested: TicketSourceId | undefined) {
+export async function pickSource(deps: TicketDeps, requested: TicketSourceId | undefined) {
   if (requested) return requested;
   const connected = await connectedSources(deps);
   if (connected.length === 1) return connected[0]!.connection.source;
@@ -70,15 +72,24 @@ async function create(context: SparkToolContext, args: z.output<z.ZodObject<type
     labels: args.labels,
     assignToMe: args.assignToMe,
   };
-  return confirmThen(context, action, async (confirmed) => {
-    if (confirmed.action !== 'create_ticket') throw new Error('Unexpected action.');
-    const created = await createTicket(deps, confirmed);
-    return {
+  return proposeAction(context, action);
+}
+
+type ActionOf<Name extends SparkAction['action']> = Extract<SparkAction, { action: Name }>;
+
+export async function performCreateTicket(
+  context: SparkToolContext,
+  action: ActionOf<'create_ticket'>,
+): Promise<Performed> {
+  const created = await createTicket(ticketDepsFor(context.deps, context.scope), action);
+  return {
+    message: `Created ${created.key}.`,
+    url: created.url,
+    output: {
       key: created.key,
-      url: created.url,
       ...(created.skippedLabels.length > 0 ? { labelsNotFound: created.skippedLabels } : {}),
-    };
-  });
+    },
+  };
 }
 
 async function comment(
@@ -87,20 +98,27 @@ async function comment(
 ) {
   const deps = ticketDepsFor(context.deps, context.scope);
   const source = await pickSource(deps, args.source);
-  const { open, ref } = await ticketOf(deps, source, args.key);
+  const { ref } = await ticketOf(deps, source, args.key);
   const action: SparkAction = { action: 'comment_ticket', ticket: ref, body: args.body };
-  return confirmThen(context, action, async (confirmed) => {
-    if (confirmed.action !== 'comment_ticket') throw new Error('Unexpected action.');
-    await open.source.comment(ref.key, confirmed.body);
-    await recordTicketEvent(deps.db, deps.workspaceId, {
-      source,
-      action: 'comment',
-      ticketKey: ref.key,
-      outcome: 'succeeded',
-      detail: { length: confirmed.body.length, via: 'spark_tools' },
-    });
-    return { key: ref.key, url: ref.url };
+  return proposeAction(context, action);
+}
+
+export async function performCommentTicket(
+  context: SparkToolContext,
+  action: ActionOf<'comment_ticket'>,
+): Promise<Performed> {
+  const deps = ticketDepsFor(context.deps, context.scope);
+  const { ticket } = action;
+  const open = await requireSource(deps, ticket.source);
+  await open.source.comment(ticket.key, action.body);
+  await recordTicketEvent(deps.db, deps.workspaceId, {
+    source: ticket.source,
+    action: 'comment',
+    ticketKey: ticket.key,
+    outcome: 'succeeded',
+    detail: { length: action.body.length, via: 'spark_tools' },
   });
+  return { message: `Commented on ${ticket.key}.`, url: ticket.url, output: { key: ticket.key } };
 }
 
 async function transition(
@@ -109,7 +127,7 @@ async function transition(
 ) {
   const deps = ticketDepsFor(context.deps, context.scope);
   const source = await pickSource(deps, args.source);
-  const { open, summary, ref } = await ticketOf(deps, source, args.key);
+  const { summary, ref } = await ticketOf(deps, source, args.key);
   if (summary.status === args.status) {
     return { outcome: 'unchanged', message: `${ref.key} is already ${summary.statusName}.` };
   }
@@ -119,14 +137,25 @@ async function transition(
     from: summary.statusName,
     status: args.status,
   };
-  return confirmThen(context, action, async (confirmed) => {
-    if (confirmed.action !== 'transition_ticket') throw new Error('Unexpected action.');
-    const sync = await moveTicket(deps, open, ref.key, confirmed.status, null, {
-      via: 'spark_tools',
-    });
-    if (sync.outcome === 'failed') throw new Error(sync.message ?? 'The move failed.');
-    return { key: ref.key, moved: sync.outcome === 'succeeded', message: sync.message };
+  return proposeAction(context, action);
+}
+
+export async function performTransitionTicket(
+  context: SparkToolContext,
+  action: ActionOf<'transition_ticket'>,
+): Promise<Performed> {
+  const deps = ticketDepsFor(context.deps, context.scope);
+  const { ticket } = action;
+  const open = await requireSource(deps, ticket.source);
+  const sync = await moveTicket(deps, open, ticket.key, action.status, null, {
+    via: 'spark_tools',
   });
+  if (sync.outcome === 'failed') throw new Error(sync.message ?? 'The move failed.');
+  return {
+    message: sync.message ?? `Moved ${ticket.key}.`,
+    url: ticket.url,
+    output: { key: ticket.key, moved: sync.outcome === 'succeeded' },
+  };
 }
 
 type SparkStatus = z.infer<typeof ticketStatusSchema>;
@@ -145,25 +174,34 @@ async function assign(
     currentAssigneeId: summary.assignedTo?.id ?? null,
     to: args.to,
   };
-  return confirmThen(context, action, async (confirmed) => {
-    if (confirmed.action !== 'assign_ticket') throw new Error('Unexpected action.');
-    const result = await assignTicket(deps, source, ref.key, {
-      to: confirmed.to === 'me' ? 'me' : null,
-      expectedAssigneeId: confirmed.currentAssigneeId,
-      confirmTakeover: true,
-    });
-    return { key: ref.key, assignedTo: result.ticket.assignedTo?.name ?? null };
-  });
+  return proposeAction(context, action);
 }
 
-const CONFIRM_NOTE = `Spark shows the user a card with exactly what will change; nothing happens until they confirm, and they may edit the fields first. The call waits for their answer.`;
+export async function performAssignTicket(
+  context: SparkToolContext,
+  action: ActionOf<'assign_ticket'>,
+): Promise<Performed> {
+  const deps = ticketDepsFor(context.deps, context.scope);
+  const { ticket } = action;
+  const result = await assignTicket(deps, ticket.source, ticket.key, {
+    to: action.to === 'me' ? 'me' : null,
+    expectedAssigneeId: action.currentAssigneeId,
+    confirmTakeover: true,
+  });
+  const assignedTo = result.ticket.assignedTo?.name ?? null;
+  return {
+    message: assignedTo ? `Assigned ${ticket.key} to ${assignedTo}.` : `Unassigned ${ticket.key}.`,
+    url: ticket.url,
+    output: { key: ticket.key, assignedTo },
+  };
+}
 
 export const ticketActionTools = [
   sparkTool({
     name: 'spark_create_ticket',
     title: 'Create a ticket',
     acts: true,
-    description: `Create a Jira or Linear ticket through Spark's connector. ${CONFIRM_NOTE} Returns the new key and URL, or that the user declined.`,
+    description: `Create a Jira or Linear ticket through Spark's connector. ${ACTION_NOTE} Returns the new key and URL, or that the user declined.`,
     input: createInput,
     run: (args, context) => create(context, args),
   }),
@@ -171,7 +209,7 @@ export const ticketActionTools = [
     name: 'spark_comment_ticket',
     title: 'Comment on a ticket',
     acts: true,
-    description: `Post a comment on a Jira or Linear ticket. ${CONFIRM_NOTE}`,
+    description: `Post a comment on a Jira or Linear ticket. ${ACTION_NOTE}`,
     input: {
       source: sourceInput,
       key: keyInput,
@@ -183,7 +221,7 @@ export const ticketActionTools = [
     name: 'spark_transition_ticket',
     title: 'Move a ticket',
     acts: true,
-    description: `Move a Jira or Linear ticket to todo, in_progress, in_review or done (mapped to the project's own statuses). ${CONFIRM_NOTE}`,
+    description: `Move a Jira or Linear ticket to todo, in_progress, in_review or done (mapped to the project's own statuses). ${ACTION_NOTE}`,
     input: { source: sourceInput, key: keyInput, status: ticketStatusSchema },
     run: (args, context) => transition(context, args),
   }),
@@ -191,7 +229,7 @@ export const ticketActionTools = [
     name: 'spark_assign_ticket',
     title: 'Assign a ticket',
     acts: true,
-    description: `Assign a Jira or Linear ticket to the user (me) or unassign it (nobody). The card names the current assignee, so taking someone else's ticket is confirmed explicitly. ${CONFIRM_NOTE}`,
+    description: `Assign a Jira or Linear ticket to the user (me) or unassign it (nobody). The card names the current assignee, so taking someone else's ticket is confirmed explicitly. ${ACTION_NOTE}`,
     input: { source: sourceInput, key: keyInput, to: z.enum(['me', 'nobody']) },
     run: (args, context) => assign(context, args),
   }),

@@ -1,12 +1,11 @@
 import './thread.css';
-import { useEffect } from 'react';
+import { memo, useEffect } from 'react';
 import { PERMISSION_DO, type ConversationDetail, type Project } from '@spark-outpost/contracts';
 import { BlobScout } from '../brand/BlobScout.tsx';
 import { useVoice } from '../spark/use-voice.ts';
 import { greeting } from '../spark/voice.ts';
 import { ArrowDownIcon } from '../ui/icons.tsx';
 import { MessageAttachments } from './attachments/MessageAttachments.tsx';
-import type { OutgoingMessage } from './ChatView.tsx';
 import { AdviceLine } from './AdviceLine.tsx';
 import { repoSummary } from './project/repo-list.ts';
 import { RepoKit } from './project/RepoKit.tsx';
@@ -24,23 +23,23 @@ import { MessageActions } from './message-actions/MessageActions.tsx';
 import { QuotedText } from './quotes/QuotedText.tsx';
 import { QuoteMarks } from './quotes/QuoteMarks.tsx';
 import { QuoteToolbar } from './quotes/QuoteToolbar.tsx';
+import { PendingSends } from './send/PendingSends.tsx';
+import type { ChatSends } from './send/use-chat-send.ts';
 import type { QuotesState } from './quotes/use-quotes.ts';
 
 interface ThreadProps {
   detail: ConversationDetail;
   repos: Project[];
-  pendingMessage: OutgoingMessage | null;
-  panelOpen?: boolean;
+  sends: ChatSends;
   onOpenTask?: (taskId: string) => void;
   onOpenChat: (conversationId: string) => void;
   quotes: QuotesState;
 }
 
-export function Thread({
+export const Thread = memo(function Thread({
   detail,
   repos,
-  pendingMessage,
-  panelOpen = false,
+  sends,
   onOpenTask,
   onOpenChat,
   quotes,
@@ -65,21 +64,15 @@ export function Thread({
     if (!onOpenTask || !task) return null;
     const orchestration = crewRun(runId);
     const crew = orchestration ? crewAgents(orchestration, detail.activity) : [];
-    return (
-      <TaskCard
-        task={task}
-        panelOpen={panelOpen}
-        onOpen={() => onOpenTask(task.id)}
-        agents={crew}
-      />
-    );
+    return <TaskCard task={task} onOpen={() => onOpenTask(task.id)} agents={crew} />;
   };
 
+  const pendingCount = sends.pending.length;
   useEffect(() => {
-    if (pendingMessage) follow();
-  }, [pendingMessage, follow]);
+    if (pendingCount > 0) follow();
+  }, [pendingCount, follow]);
 
-  if (turns.length === 0 && !pendingMessage) {
+  if (turns.length === 0 && pendingCount === 0) {
     return (
       <div className="thread-wrap">
         <div className="thread">
@@ -181,16 +174,7 @@ export function Thread({
                 ))}
             </section>
           ))}
-          {pendingMessage && (
-            <div className="msg me">
-              <MessageAttachments attachments={pendingMessage.attachments} />
-              {pendingMessage.content && (
-                <div className="bubble pending">
-                  <QuotedText text={pendingMessage.content} />
-                </div>
-              )}
-            </div>
-          )}
+          <PendingSends sends={sends} />
         </div>
       </div>
       <QuoteToolbar scrollerRef={scroller} quotes={quotes} />
@@ -205,4 +189,4 @@ export function Thread({
       </button>
     </div>
   );
-}
+});

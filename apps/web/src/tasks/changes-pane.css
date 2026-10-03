@@ -59,11 +59,5 @@
 }
 
 .chg-skel {
-  display: grid;
-  gap: 10px;
   margin: 4px 0 14px;
-}
-
-.chg-skel .dd-skel {
-  height: 12px;
 }

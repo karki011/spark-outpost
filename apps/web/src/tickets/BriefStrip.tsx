@@ -87,8 +87,8 @@ export function BriefStrip(props: BriefStripProps) {
           <h3 id="tk-brief-t">Brief is off</h3>
         </div>
         <div className="brief-foot">
-          The rules still flag tickets under Needs attention. Turn the brief on for a short summary,
-          about $0.01 each.
+          The rules still flag tickets under Needs you. Turn the brief on for a short summary, about
+          $0.01 each.
           <button type="button" className="btn sm line" onClick={() => void brief.turnOn()}>
             Turn on
           </button>

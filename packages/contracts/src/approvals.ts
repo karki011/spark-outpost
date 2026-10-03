@@ -4,7 +4,12 @@ import { checkpointKindSchema, checkpointPayloadSchema } from './checkpoints.ts'
 import { INVOLVEMENT_LEVEL_IDS, type InvolvementLevel } from './involvement-levels.ts';
 import { workPlaceSchema } from './chat-workspace.ts';
 import { pieceSlotsSchema, projectNameSchema } from './projects.ts';
-import { SPARK_ACTION_KIND, sparkActionEditsSchema, sparkActionSchema } from './spark-actions.ts';
+import {
+  SPARK_ACTION_KIND,
+  sparkActionEditsSchema,
+  sparkActionSchema,
+  sparkResultSchema,
+} from './spark-actions.ts';
 
 export const runModeSchema = z.enum(['chat', 'ask', 'do']);
 export type RunMode = z.infer<typeof runModeSchema>;
@@ -130,6 +135,8 @@ export const approvalPayloadSchema = z.object({
   asksBecause: z.string().optional(),
   observed: z.array(z.string()).optional(),
   sparkAction: sparkActionSchema.optional(),
+  sparkResult: sparkResultSchema.optional(),
+  sparkRequested: z.boolean().optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
 

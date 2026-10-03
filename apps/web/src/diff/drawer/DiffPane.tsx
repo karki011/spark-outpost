@@ -10,6 +10,7 @@ import {
 } from '../../chat/changes/change-rules.ts';
 import { Counts, changeTag, splitPath } from '../../chat/changes/FileChangeList.tsx';
 import { Segmented } from '../../ui/Segmented.tsx';
+import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 import { diffApi, diffKeys } from '../diff-api.ts';
 import { CodeDiff } from './CodeDiff.tsx';
 import type { DiffMode } from './code-view.ts';
@@ -18,7 +19,6 @@ const MODES = [
   { id: 'unified', label: 'Unified' },
   { id: 'split', label: 'Split' },
 ];
-const SKELETON_WIDTHS = ['64%', '42%', '78%', '35%', '58%', '70%', '48%', '62%', '30%', '54%'];
 
 function hiddenNote(entry: ChangeEntry, view: FileView): string | null {
   const size = formatBytes(entry.bytes ?? 0);
@@ -27,19 +27,6 @@ function hiddenNote(entry: ChangeEntry, view: FileView): string | null {
   if (view === 'huge') return `Large file · ${size} · diff hidden`;
   if (view === 'generated') return 'Generated file · diff hidden';
   return null;
-}
-
-function CodeSkeleton() {
-  return (
-    <div className="dd-code-skel" aria-hidden="true">
-      {SKELETON_WIDTHS.map((width, index) => (
-        <span key={index} className="dd-skel-line">
-          <span className="dd-skel dd-skel-num" />
-          <span className="dd-skel" style={{ width }} />
-        </span>
-      ))}
-    </div>
-  );
 }
 
 interface DiffBodyProps {
@@ -89,7 +76,7 @@ function DiffBody({ taskId, version, entry, mode, wrap }: DiffBodyProps) {
   if (!diff.data) {
     return (
       <div className="dd-code-wrap" aria-busy="true">
-        <CodeSkeleton />
+        <Skeleton label="Loading the diff" shape="diff" rows={10} className="dd-code-skel" />
       </div>
     );
   }

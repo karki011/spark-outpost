@@ -12,6 +12,7 @@ import { findPullRequests } from '../../tasks/pr-links.ts';
 import { agentCommands } from './slash-commands.ts';
 import { objectFields } from './object-fields.ts';
 import { exitPlanText, planFileText } from '../../plans/plan-mode.ts';
+import { shortWindowNote } from './long-context.ts';
 
 export const THINKING_STEP = 'Thinking';
 export const FAILED_PREFIX = 'Failed: ';
@@ -113,6 +114,21 @@ interface OpenTool {
   name: string;
   kind: string | null;
   target: string | null;
+  opensPr: boolean;
+  linked: boolean;
+}
+
+const OPENS_PULL_REQUEST =
+  /\bgh\s+pr\s+create\b|\bhub\s+pull-request\b|\bglab\s+mr\s+create\b|create_pull_request/i;
+
+export function opensPullRequest(title: string | null | undefined, rawInput: unknown): boolean {
+  if (title && OPENS_PULL_REQUEST.test(title)) return true;
+  if (rawInput === undefined || rawInput === null) return false;
+  try {
+    return OPENS_PULL_REQUEST.test(JSON.stringify(rawInput) ?? '');
+  } catch {
+    return false;
+  }
 }
 
 type ToolCallUpdate = Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }>;
@@ -195,7 +211,7 @@ function toolTexts(
   return texts;
 }
 
-export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
+export function createUpdateMapper(agentName = 'The agent', checksWindow = false): UpdateMapper {
   const openTools = new Map<string, OpenTool>();
   const seenLinks = new Set<string>();
   let thinking = false;
@@ -208,6 +224,7 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
   let policy: ModePolicy | null = null;
   let unsafeMode: string | null = null;
   let plan: string | null = null;
+  let windowNoted = false;
 
   const rememberPlan = (kind: string | null | undefined, rawInput: unknown, content: unknown) => {
     const items = Array.isArray(content) ? (content as ToolCallContent[]) : null;
@@ -240,6 +257,7 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
   const retarget = (update: ToolCallUpdate) => {
     const open = openTools.get(update.toolCallId);
     if (!open) return;
+    open.opensPr ||= opensPullRequest(update.title, update.rawInput);
     const title = update.title ? describeTool(update.title) : null;
     open.target =
       toolTarget(update.locations, update.rawInput) ??
@@ -287,6 +305,15 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
       }),
     );
 
+  const openedLink = (id: string, texts: readonly [string, LinkSource][]): ProviderOutput[] => {
+    const open = openTools.get(id);
+    if (!open?.opensPr || open.linked) return [];
+    const first = links(texts)[0];
+    if (!first) return [];
+    open.linked = true;
+    return [first];
+  };
+
   const progressed = (update: SessionUpdate) => {
     if (update.sessionUpdate === 'tool_call') warned = null;
     if (update.sessionUpdate === 'agent_message_chunk' && messageText(update.content) !== '') {
@@ -325,7 +352,13 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
           const name = describeTool(update.title);
           worked = true;
           const target = toolTarget(update.locations, update.rawInput);
-          openTools.set(update.toolCallId, { name, kind: update.kind ?? null, target });
+          openTools.set(update.toolCallId, {
+            name,
+            kind: update.kind ?? null,
+            target,
+            opensPr: opensPullRequest(update.title, update.rawInput),
+            linked: false,
+          });
           outputs.push({
             kind: 'step_started',
             name,
@@ -333,7 +366,9 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
             ...(update.kind ? { toolKind: update.kind } : {}),
             ...(target ? { target } : {}),
           });
-          outputs.push(...links(toolTexts(update.content, update.rawOutput)));
+          outputs.push(
+            ...openedLink(update.toolCallId, toolTexts(update.content, update.rawOutput)),
+          );
           if (update.status === 'completed' || update.status === 'failed') {
             outputs.push(...finishTool(update.toolCallId, update.status === 'failed'));
           }
@@ -346,7 +381,7 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
             update.content,
           );
           retarget(update);
-          const linked = links(toolTexts(update.content, update.rawOutput));
+          const linked = openedLink(update.toolCallId, toolTexts(update.content, update.rawOutput));
           if (update.status === 'completed' || update.status === 'failed') {
             return [...linked, ...finishTool(update.toolCallId, update.status === 'failed')];
           }
@@ -374,15 +409,21 @@ export function createUpdateMapper(agentName = 'The agent'): UpdateMapper {
           return note(`${noticeLabel(update.severity)}: ${update.title}`);
         case 'available_commands_update':
           return [{ kind: 'commands', commands: agentCommands(update.availableCommands) }];
-        case 'usage_update':
-          return [
-            {
-              kind: 'usage',
-              contextUsed: update.used,
-              contextSize: update.size,
-              costUsd: update.cost?.currency === 'USD' ? update.cost.amount : null,
-            },
-          ];
+        case 'usage_update': {
+          const usage: ProviderOutput = {
+            kind: 'usage',
+            contextUsed: update.used,
+            contextSize: update.size,
+            costUsd: update.cost?.currency === 'USD' ? update.cost.amount : null,
+          };
+          const short =
+            checksWindow && !windowNoted && update.cost
+              ? shortWindowNote(update._meta, update.size)
+              : null;
+          if (!short) return [usage];
+          windowNoted = true;
+          return [usage, ...note(short)];
+        }
         default:
           return [];
       }

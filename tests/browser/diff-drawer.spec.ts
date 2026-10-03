@@ -9,7 +9,7 @@ import { editedChat } from './edited-chat.ts';
 test.use({ trace: 'off' });
 
 const PRODUCTION = Boolean(process.env.SPARK_WEB_BUILD);
-const BUSY_MACHINE = os.loadavg()[0] > os.cpus().length * 2;
+const BUSY_MACHINE = (os.loadavg()[0] ?? 0) > os.cpus().length * 2;
 const LONG_TASK_MS = PRODUCTION && !BUSY_MACHINE ? 100 : 250;
 const FILES = 5000;
 const BIG_LINES = 20_000;

@@ -44,7 +44,7 @@ export type FlowAction =
   | { type: 'ask_agent'; then: ClarifiedStart }
   | { type: 'verify' }
   | { type: 'wrap_up' }
-  | { type: 'keep'; approvedEach?: boolean }
+  | { type: 'keep'; approvedEach?: boolean; note?: string }
   | { type: 'ship' }
   | { type: 'revert' }
   | { type: 'restore' }
@@ -95,6 +95,7 @@ export type FlowEvent =
       checksFailing?: boolean;
       riskyMigration?: string;
       approvedEach?: boolean;
+      outsideWorktree?: boolean;
     }
   | { type: 'kept' }
   | { type: 'shipped' }
@@ -138,6 +139,8 @@ export interface FlowState {
   solo?: boolean;
   missingContext?: string | null;
   then?: ClarifiedStart;
+  criticRetried?: boolean;
+  criticSkipped?: string | null;
 }
 
 export interface FlowResult {

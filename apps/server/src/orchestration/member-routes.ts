@@ -165,8 +165,16 @@ export function seatRoute(s: Session, spawn: Spawn): ResolvedRoute {
   return { route: routeBuilder(s.route, builderFacts(s), jevTier(s)) };
 }
 
+function retryCriticRoute(s: Session, previous: MemberRoute): MemberRoute {
+  const own = s.route.chat.provider;
+  return previous.pick.provider === own ? previous : routeCritic(s.route, [], own);
+}
+
 export async function resolveRoute(s: Session, spawn: Spawn): Promise<ResolvedRoute> {
   const previous = s.routes.get(spawn.role);
+  if (previous && spawn.role === 'critic' && spawn.reason === 'retry') {
+    return { route: retryCriticRoute(s, previous) };
+  }
   if (previous && spawn.escalate) {
     const route =
       spawn.role === 'builder' ? escalateBuilder(s.route, previous) : escalate(s.route, previous);

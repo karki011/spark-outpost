@@ -20,7 +20,7 @@ Each one assumes the defaults, Claude on **Auto** mode, unless it says otherwise
 
 - **Prompt:** "The invoice total shows NaN when a line has no quantity. Fix it."
 - **What Spark does:** one Builder fixes it in the chat's worktree. Spark runs your tests itself.
-- **Cards:** none, if the tests pass. If they still fail after 2 fix turns, the **Keep these changes?** card asks.
+- **Cards:** none. If the tests still fail after 2 fix turns, the change is kept and the final reply says so in a note.
 - **Result:** the fix is kept on the chat's branch. Select **Open PR** to ship it, or **Bring changes into** your checkout.
 
 ## Build a bigger feature in pieces

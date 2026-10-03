@@ -99,6 +99,18 @@
   background: color-mix(in srgb, var(--accent) 22%, transparent);
   transform: none;
 }
+.send.busy.stopping {
+  cursor: default;
+  opacity: 0.6;
+}
+.send.busy.stopping:hover {
+  background: var(--accent-soft);
+}
+.stopping-note {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
 .send.busy .stop-ring {
   position: absolute;
   inset: 0;

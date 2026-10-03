@@ -1,4 +1,5 @@
 import { redacted, redactText, sensitiveFieldKind } from '@spark-outpost/contracts';
+import { LAG_WARN_MS } from './event-loop-lag.ts';
 import type { ZipEntry } from './zip.ts';
 
 export interface AboutFacts {
@@ -31,6 +32,7 @@ export interface DiagnosticsFacts {
   desktopSettings: Record<string, unknown>;
   migrations: { applied: number; latest: string[] };
   desktopMarkers: Record<string, unknown>;
+  eventLoop: string[];
   logs: LogFile[];
 }
 
@@ -64,6 +66,7 @@ This zip helps the Spark Outpost team understand a problem. It holds:
 - providers.json: which providers are connected and how (CLI or API key)
 - settings.json: your settings, with your name left out and anything that looks like a key or token redacted
 - migrations.json: which database updates have run, and the desktop update markers
+- event-loop.json: recent moments when the app was too busy to answer, and what it was doing
 - logs/: recent app logs, with keys and tokens redacted
 
 It never holds chats, prompts, plans, file contents, keys or tokens. Open the files to check before you share them.
@@ -90,6 +93,10 @@ export function diagnosticsEntries(facts: DiagnosticsFacts): ZipEntry[] {
     {
       name: 'migrations.json',
       data: json({ database: facts.migrations, desktop: facts.desktopMarkers }),
+    },
+    {
+      name: 'event-loop.json',
+      data: json({ warnAfterMs: LAG_WARN_MS, warnings: facts.eventLoop }),
     },
   ];
   for (const log of facts.logs) {

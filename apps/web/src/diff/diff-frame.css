@@ -32,20 +32,6 @@
   color: var(--danger);
 }
 
-.dd-skel {
-  display: block;
-  height: 10px;
-  border-radius: 4px;
-  background: linear-gradient(
-      90deg,
-      var(--raise) 0%,
-      color-mix(in srgb, var(--raise) 40%, var(--panel)) 50%,
-      var(--raise) 100%
-    )
-    0 0 / 250% 100%;
-  animation: shimmer 1.6s linear infinite;
-}
-
 .dd {
   --dd-w: 1040px;
   position: fixed;
@@ -78,12 +64,6 @@
   padding: 56px 18px 18px;
 }
 
-.dd-shell-col {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-}
-
 @keyframes dd-in {
   from {
     opacity: 0;
@@ -109,10 +89,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .dd {
-    animation: none;
-  }
-
-  .dd-skel {
     animation: none;
   }
 }

@@ -4,6 +4,7 @@ import path from 'node:path';
 import { isBetaVersion, type ConnectableSetup } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
 import { getSetupState } from '../persistence/setup.ts';
+import { recentLagWarnings } from './event-loop-lag.ts';
 import type { ConnectionFact, DiagnosticsFacts, LogFile } from './report.ts';
 
 export interface DiagnosticsSources {
@@ -103,6 +104,7 @@ export async function collectDiagnostics(sources: DiagnosticsSources): Promise<D
     desktopSettings,
     migrations,
     desktopMarkers,
+    eventLoop: recentLagWarnings(logs),
     logs,
   };
 }

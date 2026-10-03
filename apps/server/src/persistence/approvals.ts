@@ -154,7 +154,7 @@ export async function getApproval(db: Queryable, id: string): Promise<Approval |
   return rows[0] ? toApproval(rows[0]) : null;
 }
 
-async function notifyApprovalChanged(db: Queryable, id: string): Promise<void> {
+export async function notifyApprovalChanged(db: Queryable, id: string): Promise<void> {
   await db.query(`SELECT pg_notify('approvals', $1)`, [id]);
 }
 
@@ -429,9 +429,11 @@ export async function shownApprovalsForConversation(
 ): Promise<Approval[]> {
   const { rows } = await db.query<ApprovalRow>(
     `SELECT a.* FROM approvals a JOIN runs r ON r.id = a.run_id
-     WHERE r.conversation_id = $1 AND (a.status = 'pending' OR a.decided_by = 'user')
+     WHERE r.conversation_id = $1
+       AND (a.status = 'pending' OR a.decided_by = 'user'
+         OR (a.kind = $2 AND a.payload ? 'sparkResult'))
      ORDER BY a.created_at`,
-    [conversationId],
+    [conversationId, SPARK_ACTION_KIND],
   );
   return rows.map(toApproval);
 }

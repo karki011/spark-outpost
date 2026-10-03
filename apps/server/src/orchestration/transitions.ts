@@ -18,9 +18,11 @@ import {
   asksToKeep,
   asksForLoop,
   keepReason,
+  filesChangedLine,
+  keepFacts,
   keepsByItself,
+  keptLine,
   shipsByItself,
-  type KeepFacts,
 } from './checkpoint-policy.ts';
 import { cascadeAction, DECLINED_REASON, UNCONFIRMED_REASON } from './cascade.ts';
 import { criticFixFollowUp } from './context.ts';
@@ -276,6 +278,19 @@ function verified(state: FlowState, event: Extract<FlowEvent, { type: 'verified'
   return afterBuilder(next, state.large);
 }
 
+export const CRITIC_UNAVAILABLE = 'critic unavailable';
+
+function criticFailed(state: FlowState, error: string | null | undefined): FlowResult {
+  if (!state.criticRetried) {
+    return spawn(
+      { ...state, criticRetried: true },
+      { role: 'critic', reason: 'retry', escalate: false },
+    );
+  }
+  const review = afterReview(state.review, 'unclear', [], state.level);
+  return wrapUp({ ...state, review, criticSkipped: error?.trim() || CRITIC_UNAVAILABLE });
+}
+
 function agentDone(
   state: FlowState,
   event: Extract<FlowEvent, { type: 'agent_done' }>,
@@ -292,8 +307,10 @@ function agentDone(
     }
     return finish({ ...state, verdict: event.verdict ?? 'unclear' }, 'succeeded');
   }
+  if (event.role === 'critic' && event.outcome === 'failed')
+    return criticFailed(state, event.error);
   if (event.role === 'critic') {
-    const verdict = event.outcome === 'succeeded' ? (event.verdict ?? 'unclear') : 'unclear';
+    const verdict = event.verdict ?? 'unclear';
     const review = afterReview(state.review, verdict, event.fixable ?? [], state.level);
     const next = { ...state, verdict, review };
     return lastAction(review) === 'fix' ? fixFindings(next, true) : wrapUp(next);
@@ -421,6 +438,7 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
       const facts = {
         ...keepFacts(state, event.checksFailing === true, event.riskyMigration ?? null),
         approvedEach: event.approvedEach === true,
+        outsideWorktree: event.outsideWorktree === true,
       };
       if (asksToKeep(state.level, event.filesChanged, facts)) {
         const why = keepReason(state.level, facts);
@@ -429,10 +447,11 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
       }
       if (shipsByItself(state.level, event.filesChanged)) return ship(state);
       if (keepsByItself(state.level, event.filesChanged, facts)) {
+        const note = keptLine(facts);
         const action =
           state.level === 'balanced'
             ? { type: 'keep' as const, approvedEach: true }
-            : { type: 'keep' as const };
+            : { type: 'keep' as const, ...(note ? { note } : {}) };
         return { state: { ...state, waitingFor: null }, action };
       }
       return finish(state, 'succeeded');
@@ -465,21 +484,4 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
     case 'stopped':
       return finish(state, 'cancelled', 'Stopped.');
   }
-}
-
-function keepFacts(
-  state: FlowState,
-  checksFailing: boolean,
-  riskyMigration: string | null = null,
-): KeepFacts {
-  const critic = state.verdict !== null;
-  return {
-    checksFailing,
-    criticUnsatisfied: critic && (state.verdict === 'unclear' || state.review.fixable.length > 0),
-    ...(riskyMigration ? { riskyMigration } : {}),
-  };
-}
-
-function filesChangedLine(count: number): string {
-  return `${count} ${count === 1 ? 'file' : 'files'} changed.`;
 }

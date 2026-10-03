@@ -5,7 +5,6 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION, type Approval } from '@spark-outpost/contracts';
 import {
   NORMAL,
   TRIVIAL,
@@ -113,7 +112,7 @@ describe("Chesterton's fence", { timeout: 120_000 }, () => {
     expect(await findingTexts(runId)).toEqual([flagged]);
     expect(await keepCardLaws(runId)).toEqual([flagged]);
     const replies = await assistantReplies(t, runId);
-    expect(replies.at(-1)).toContain(`Worth a look before you keep this:\n- ${flagged}`);
+    expect(replies.at(-1)).toContain(`Worth a look:\n- ${flagged}`);
   });
 
   it('stays quiet when the Builder explains the removal', async () => {
@@ -185,7 +184,7 @@ describe('Hofstadter estimates', { timeout: 240_000 }, () => {
 });
 
 describe('Parkinson budgets', { timeout: 120_000 }, () => {
-  it('stops a simple Builder that runs past its budget and asks', async () => {
+  it('lets a simple Builder run past the old budget without stopping it', async () => {
     const scenario = tagged(TRIVIAL, '#manyreads 40');
     start(scenario);
     const sent = await startScenario(t, root, scenario, 'hands-off');
@@ -193,20 +192,12 @@ describe('Parkinson budgets', { timeout: 120_000 }, () => {
       t,
       sent.conversationId,
       sent.runId,
-      (approval: Approval) =>
-        approval.kind === 'budget'
-          ? { optionId: CHECKPOINT_OPTION.stop }
-          : answerEverything(approval),
+      answerEverything,
     );
-    const budget = asked.find((approval) => approval.kind === 'budget');
-    expect(budget?.payload.checkpoint?.reason).toMatch(
-      /used its 18 tool calls · 4\.5 min budget for complexity 1 work and was stopped/,
-    );
-    expect(budget?.payload.checkpoint?.budget).toMatchObject({ limit: 'tool_calls', allowed: 18 });
+    expect(asked.filter((approval) => approval.kind === 'budget')).toEqual([]);
     const builder = orchestration.crew.find((member) => member.role === 'builder');
-    expect(builder?.budget).toBe('budget 18 tool calls · 4.5 min');
-    const [row] = await lawRows(sent.runId, 'budget');
-    expect(row?.summary).toBe('budget 18 tool calls · 4.5 min for complexity 1');
+    expect(builder?.budget ?? null).toBeNull();
+    expect(await lawRows(sent.runId, 'budget')).toEqual([]);
   });
 });
 
@@ -255,9 +246,7 @@ describe('Peter principle demotions', { timeout: 120_000 }, () => {
         'Sonnet 5 has passed 42% of recent bug fixes here (5/12; the 60% floor)',
       ]);
       expect(laws.run?.estimate?.source).toBe('rough');
-      expect(laws.run?.budget?.text).toMatch(
-        /^budget \d+ tool calls · [\d.]+ min for complexity \d/,
-      );
+      expect(laws.run?.budget ?? null).toBeNull();
       expect(laws.run?.findings?.items).toEqual([]);
     } finally {
       await tools.close();

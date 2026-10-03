@@ -149,6 +149,7 @@ function blindFindings(text: string, rechecking: boolean) {
 }
 
 export async function critic(turn: RoleTurn): Promise<acp.StopReason> {
+  if (turn.text.includes('#criticdown')) throw new Error('Codex encountered an internal error.');
   const rechecking = turn.text.includes(RECHECK);
   const text = rechecking ? [...sessionPrompts(turn), turn.text].join('\n') : turn.text;
   if (rechecking) {
@@ -357,6 +358,9 @@ export async function builder(turn: RoleTurn): Promise<acp.StopReason> {
   if (turn.text.includes('#spend')) await spend(turn);
   if (turn.text.includes('#slowbuild')) {
     for (;;) await sleep(50, turn.signal);
+  }
+  if (turn.text.includes('#stubbornbuild')) {
+    for (;;) await new Promise((resolve) => setTimeout(resolve, 50));
   }
   if (turn.text.includes('#todos')) await todos(turn, stopAfter);
   if (turn.text.includes('#cost')) {

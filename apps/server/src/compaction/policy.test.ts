@@ -57,6 +57,13 @@ describe('compactStep', () => {
     expect(compactStep({ ...base, cardPending: true, reading: at(99) })).toBe('none');
   });
 
+  it('measures against the reported window, so 1M sessions compact at 800K', () => {
+    const tokens = (used: number) => ({ used, size: 1_000_000 });
+    expect(compactStep({ ...base, reading: tokens(190_000) })).toBe('none');
+    expect(compactStep({ ...base, reading: tokens(790_000) })).toBe('none');
+    expect(compactStep({ ...base, reading: tokens(800_000) })).toBe('compact');
+  });
+
   it('rounds the percentage the way the ring shows it', () => {
     expect(usedPercent({ used: 169_100, size: 200_000 })).toBe(85);
     expect(usedPercent({ used: 10, size: 0 })).toBe(0);

@@ -23,13 +23,13 @@ This page covers the first two. For the rest, see [Estimates, budgets and model 
 
 ## Read the keep card
 
-When a Builder finishes, the **Keep these changes?** card can show a list under **Worth a look before you keep this**. The final reply lists the same points.
+When a Builder finishes, the **Keep these changes?** card can show a list under **Worth a look before you keep this**. The final reply lists the same points under **Worth a look**. At **Automatic** there is no keep card: the changes are kept and the list is a note on the final reply. At **Full auto → PR** it's also in the PR description.
 
 ![A keep card with Worth a look before you keep this](images/guardrails-keep-card-light.png)
 
 1. Read each line. Names in code style are files, functions or commands.
 2. Select **View changes** to read the diff in the **Changes** drawer, or ask the agent in the chat.
-3. Select **Keep**, **Fix** or **Revert** as usual. The list never blocks you.
+3. Select **Keep**, **Fix** or **Revert** as usual. The list never blocks you. At **Automatic**, undo a run you don't want with **Revert to before this run**.
 
 ## "Removed X — why?"
 

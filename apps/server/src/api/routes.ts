@@ -18,7 +18,8 @@ import {
 } from '../persistence/conversations.ts';
 import { ConversationBusyError } from '../persistence/conversation-actions.ts';
 import { AnnotationError, listAnnotations } from '../persistence/annotations.ts';
-import { countActiveRuns, getRun, requestCancel } from '../persistence/runs.ts';
+import { countActiveRuns, getRun } from '../persistence/runs.ts';
+import { stopRun } from '../workflow/stop-run.ts';
 import { loadOrchestration } from '../persistence/orchestrations.ts';
 import { advisorUsageSummary } from '../persistence/advice.ts';
 import { usageSummary } from '../persistence/usage.ts';
@@ -132,12 +133,15 @@ export function apiRoutes(deps: RouteDeps): Router {
   });
 
   router.post('/runs/:id/cancel', async (req, res) => {
-    const run = await requestCancel(db, paramId(req));
-    if (!run) {
+    const stopped = await stopRun(db, paramId(req));
+    if (!stopped) {
       res.status(404).json({ error: 'Run not found.' });
       return;
     }
-    res.status(202).json(run);
+    res
+      .status(stopped.outcome === 'stopping' ? 202 : 200)
+      .set('Spark-Stop', stopped.outcome)
+      .json(stopped.run);
   });
 
   router.get('/runs/:id/events', async (req, res) => {

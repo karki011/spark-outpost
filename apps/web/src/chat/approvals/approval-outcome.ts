@@ -68,7 +68,32 @@ function chosenDetail(approval: Approval): string {
   return `${deniedDetail(approval)}${forRun ? ' Rejected for the rest of this run.' : ''}`;
 }
 
+function sparkOutcome(approval: Approval): Outcome | null {
+  const result = approval.payload.sparkResult;
+  if (!result || approval.status !== 'allowed') return null;
+  const byMode = approval.decidedBy === 'level';
+  if (result.state === 'failed') {
+    return { icon: 'no', label: 'It failed.', detail: result.message ?? '' };
+  }
+  if (result.state === 'done') {
+    return {
+      icon: 'ok',
+      label: result.message ?? 'Done.',
+      detail: byMode
+        ? ' Done without a card: the agent’s mode or the chat’s autonomy allows it.'
+        : '',
+    };
+  }
+  return {
+    icon: 'ok',
+    label: byMode ? 'Spark is doing it…' : 'Confirmed. Spark is doing it…',
+    detail: '',
+  };
+}
+
 export function outcome(approval: Approval): Outcome {
+  const spark = sparkOutcome(approval);
+  if (spark) return spark;
   const chosen = chosenOption(approval);
   if (approval.payload.plan) return planOutcome(approval, chosen ? `Chose: ${chosen.name}. ` : '');
   const stopped = stoppedOutcome(approval);

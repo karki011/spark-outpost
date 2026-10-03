@@ -101,6 +101,11 @@ export function checksPhrase(bodies: readonly CheckBody[]): string {
   return 'checks were skipped';
 }
 
+export function criticSkippedLine(s: Pick<Session, 'flow'>): string | null {
+  const error = s.flow.criticSkipped;
+  return error ? `Review skipped (Critic unavailable: ${error}).` : null;
+}
+
 export function sessionReviewLine(s: Session): string | null {
   return reviewLine(s.flow.review, checksPhrase(s.checkBodies));
 }

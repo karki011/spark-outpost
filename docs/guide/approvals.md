@@ -19,7 +19,7 @@ For a side-by-side view of both settings, see [Permissions and autonomy](permiss
 
 ## Answer an approval card
 
-When an agent needs you, its card appears in the chat and docks above the message box under **Waiting for you**. The chat list shows **Asking permission**, and the **Chats** button in the rail shows a count.
+When an agent needs you, its card appears in the chat, and a one-line summary appears just above the message box, for example **Waiting for you · approve `pnpm test`** or **Waiting for you · question: Which repo?**. Hover or focus it to see the full command. The chat list shows **Asking permission**, and the **Chats** button in the rail shows a count.
 
 ![An approval card asking to run a command](images/approvals-command-light.png)
 
@@ -41,7 +41,7 @@ To answer:
    - **Always allow**: allow this kind of request for the rest of this run.
    - **Deny**: don't run it. The agent is told and tries another way.
 
-With the keyboard: where the card sat in the conversation, a **Waiting for your answer** button stays behind. Focus it and press **Enter** to jump to the docked card; its first button gets focus. Press **Tab** to move between buttons and **Enter** to choose.
+To get back to the card, select the summary line above the message box, or press **⌘ Shift Y** (**Ctrl Shift Y** on Windows and Linux). The chat scrolls to the card and its first button gets focus. Press **Tab** to move between buttons and **Enter** to choose. The line only jumps to the card; you always answer on the card itself, so cards that need a long press keep it.
 
 The card then shows your answer, for example "Chose: Allow." or "Denied. The command didn't run."
 
@@ -100,11 +100,12 @@ These always ask or are refused, whatever the agent's mode and your autonomy lev
 | **Git hooks and config**     | `.git/hooks/*`, `.git/config`, `git config` commands                                                                                                                                           | Ask with hold to confirm. Other files inside `.git` can't be changed.                                  |
 | **Outside the linked repos** | Changing or deleting files outside the project                                                                                                                                                 | Always asks. Reading files outside the project is refused.                                             |
 | **Installing packages**      | `npm install`, `pnpm add` and similar                                                                                                                                                          | Always asks.                                                                                           |
-| **Pushing**                  | `git push`                                                                                                                                                                                     | Asks, unless the command is on the project's allowlist. A force push always asks with hold to confirm. |
+| **Pushing**                  | `git push`                                                                                                                                                                                     | Asks unless allowlisted, or publishing is allowed (see below). A force push asks with hold to confirm. |
 
 A few more rules hold everywhere:
 
-- **Builders never publish.** Builders in a Spark crew don't push, open pull requests or change remotes. Spark commits, pushes and opens the PR itself when the task is done.
+- **Agents publish only the chat's own branch, and only when allowed.** An agent, Builders included, may push the chat's own `spark/` branch and run `gh pr create`, `gh pr view` or `gh pr edit` for its pull request when your message asks for it ("open a PR", "push it"), the chat is at **Full auto → PR**, or the agent's mode is **Auto** or **Bypass permissions**. Otherwise Builders don't push and Spark commits, pushes and opens the PR itself when the task is done. Force pushes, pushes of any other branch or the base branch, changing remotes and other hosting tools stay refused in every mode.
+- **Short instructions after the work is done go to the chat's agent.** When a chat's task has already built, a short message like "open pr" or "push it" runs as one turn of the chat's main agent with the chat's own mode, not as a new Builder.
 - **Modes Spark can't check run in a copy.** Codex's **Approve for me** and **Full access** act without Spark's approval checks, so those chats run only in a worktree copy, never on your checkout.
 
 ### Keep files away from agents with .sparkignore
@@ -138,7 +139,7 @@ The **If you don't answer a question** setting in **Settings → Spark** doesn't
 
 ## Where waiting cards show
 
-- In the chat, docked above the message box under **Waiting for you**. With more than one, use **Previous waiting card** and **Next waiting card**.
+- In the chat, in the conversation, with a one-line summary above the message box. With more than one, the line says how many, for example **Waiting for you · 2 things**; select it to list them and pick one to jump to.
 - On **Home**, under **What needs you today**. Select **Answer** to jump to the card.
 - In the chat list (**Asking permission**) and as a count on **Chats** in the rail.
 - In the chat's **Work** panel, under **Waiting for you**, with a **Review** button.

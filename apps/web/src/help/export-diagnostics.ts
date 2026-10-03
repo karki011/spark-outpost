@@ -1,24 +1,14 @@
 import { DIAGNOSTICS_EXPORT_PATH, diagnosticsFileName } from '@spark-outpost/contracts';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
+import { saveResponse } from '../ui/save-response.ts';
 
 export type DiagnosticsOutcome =
   { kind: 'saved'; path: string } | { kind: 'downloaded'; name: string } | { kind: 'cancelled' };
 
-function attachmentName(header: string | null): string {
-  const match = /filename="([^"]+)"/.exec(header ?? '');
-  return match?.[1] ?? diagnosticsFileName(new Date());
-}
-
 async function download(): Promise<DiagnosticsOutcome> {
   const response = await fetch(DIAGNOSTICS_EXPORT_PATH);
   if (!response.ok) throw new Error(`Spark couldn't collect diagnostics (${response.status}).`);
-  const name = attachmentName(response.headers.get('Content-Disposition'));
-  const url = URL.createObjectURL(await response.blob());
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const name = await saveResponse(response, diagnosticsFileName(new Date()));
   return { kind: 'downloaded', name };
 }
 

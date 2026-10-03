@@ -1,5 +1,5 @@
 import './spark-action-card.css';
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   editableFields,
@@ -195,7 +195,7 @@ function confirmNote(action: SparkAction): string {
   if (action.action === 'pr_follow_up') {
     return 'Nothing is pushed or posted until you confirm. Uncheck anything to leave it out; a fix reply needs the push.';
   }
-  return 'Nothing happens until you confirm. You can edit it first.';
+  return 'Nothing happens until you confirm. You can edit it first. Spark does it as soon as you confirm, even after the agent has finished.';
 }
 
 function takeover(action: SparkAction): string | null {
@@ -324,6 +324,14 @@ export function SparkActionCard({
     },
     onSuccess: onDecided,
   });
+  const confirmRef = useRef<HTMLButtonElement>(null);
+  const requested = approval.payload.sparkRequested === true;
+  useEffect(() => {
+    if (!requested) return;
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    confirmRef.current?.focus();
+  }, [requested]);
   const warning = takeover(action);
   const blankTitle = editableFields(action.action).includes('title') && !draft.title.trim();
   return (
@@ -358,6 +366,7 @@ export function SparkActionCard({
         {approval.options.map((option) => (
           <button
             key={option.optionId}
+            ref={isAllow(option) ? confirmRef : undefined}
             type="button"
             className={isAllow(option) ? 'btn primary sm' : 'btn ghost sm deny'}
             disabled={decide.isPending || (isAllow(option) && blankTitle)}

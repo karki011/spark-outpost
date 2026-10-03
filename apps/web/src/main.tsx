@@ -7,13 +7,17 @@ import { configureLiveQueries } from './app/live/use-app-events.ts';
 import { markScrollbarStyle } from './app/scrollbars.ts';
 import { AppMotion } from './ui/transitions.tsx';
 import 'blobatar/motion.css';
+import './brand/blob-idle.css';
 import './app/base.css';
 import './app/reduced-motion.css';
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: reportRequestError, onSuccess: markConnectionRestored }),
   mutationCache: new MutationCache({ onError: reportRequestError }),
-  defaultOptions: { queries: { staleTime: 5_000, retry: 1 } },
+  defaultOptions: {
+    queries: { staleTime: 5_000, retry: 1, networkMode: 'always' },
+    mutations: { networkMode: 'always' },
+  },
 });
 configureLiveQueries(queryClient);
 

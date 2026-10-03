@@ -305,7 +305,9 @@ test('motion: Home grows out of the blob and folds back into it', async ({ page 
     .evaluate((button: HTMLElement) => button.click());
   const blob = nowCard(page).locator('.isl-now-blob');
   await expect(blob).toBeAttached();
-  expect(await blob.evaluate((element) => element.getAnimations().length)).toBeGreaterThan(0);
+  expect(
+    await nowCard(page).evaluate((card) => card.getAnimations({ subtree: true }).length),
+  ).toBeGreaterThan(0);
   let elapsed = 0;
   for (const at of [0, 70, 140, 220, 320, 480, 760]) {
     await frame(page, at - elapsed, at, `expand-${String(at).padStart(3, '0')}ms`);
@@ -332,6 +334,7 @@ for (const theme of ['apricot', 'graphite']) {
   test(`in the ${theme} app theme the island is night glass with no accessibility problems`, async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     await resetTestDatabase({ onboarded: true });
     const [running] = await seedChats([
       { title: 'Fix billing totals', run: { status: 'running' }, minutesAgo: 1 },

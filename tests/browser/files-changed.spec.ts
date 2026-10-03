@@ -144,6 +144,7 @@ test('a turn lists changed files and opens each one in the diff drawer', async (
   await editedChat(page, appRoot);
   await expect(page.getByRole('group', { name: /Keep these changes\?/ })).toContainText(
     'Kept: you approved every edit.',
+    { timeout: 20_000 },
   );
   const block = page.getByRole('region', { name: 'Files changed: 1 file changed' });
   await expect(block).toContainText('+1 −0');

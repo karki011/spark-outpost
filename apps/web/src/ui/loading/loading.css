@@ -1,0 +1,177 @@
+.skel {
+  --skel-gap: 10px;
+  padding: 4px 0;
+  animation: loading-in 0.2s var(--out) 0.15s both;
+}
+
+.skel-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--skel-gap);
+}
+
+.skel-bar {
+  display: block;
+  height: 10px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--raise) 25%, var(--line) 50%, var(--raise) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+.skel-row,
+.skel-dline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 22px;
+}
+
+.skel-row .skel-bar:nth-child(2) {
+  flex: 0 1 auto;
+}
+
+.skel-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.skel-meta {
+  width: 36px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.skel-diff {
+  --skel-gap: 6px;
+}
+
+.skel-dline {
+  min-height: 12px;
+}
+
+.skel-dline .skel-bar {
+  height: 8px;
+}
+
+.skel-gutter {
+  width: 22px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.skel-cards .skel-rows {
+  gap: 8px;
+}
+
+.skel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+}
+
+.loadblob {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  animation: loading-in 0.3s var(--out) 0.25s both;
+}
+
+.loadblob.md,
+.loadblob.lg {
+  flex-direction: column;
+  justify-content: center;
+  padding: 24px 12px;
+  text-align: center;
+}
+
+.loadblob.sm {
+  font-size: 12.5px;
+}
+
+.loadblob-scene {
+  position: relative;
+  display: block;
+}
+
+.loadblob-glass {
+  position: absolute;
+  right: -7px;
+  bottom: 0;
+  width: 45%;
+  height: 45%;
+  fill: color-mix(in srgb, var(--panel) 40%, transparent);
+  stroke: var(--warn);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  transform-origin: 30% 30%;
+  animation: loadblob-peer 2.2s ease-in-out infinite;
+}
+
+.loadretry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--raise);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.loadretry-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.loadretry-text b {
+  font-weight: 600;
+}
+
+.loadretry-text small {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.loadretry.bad {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+  background: var(--danger-soft);
+}
+
+@keyframes loading-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes loadblob-peer {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(-3px, -2px) rotate(-8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skel,
+  .skel-bar,
+  .loadblob,
+  .loadblob-glass {
+    animation: none;
+  }
+}

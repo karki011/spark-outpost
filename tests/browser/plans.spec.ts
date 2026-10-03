@@ -24,6 +24,7 @@ test("Claude's plan shows on the approval card, and once approved it is the agre
   await expect(approval).toContainText('wrote a plan and wants to start building', {
     timeout: 30_000,
   });
+  await expect(page.locator('.cstatus')).toContainText('Waiting for you · plan to review');
   const plan = approval.getByRole('region', { name: 'Proposed plan' });
   await expect(plan.getByRole('heading', { name: 'Add CSV export' })).toBeVisible();
   await expect(plan.getByRole('listitem').first()).toContainText('src/export.ts');

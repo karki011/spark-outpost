@@ -11,6 +11,7 @@ import { seedChats } from './sidebar-seed.ts';
 import { combinedFixture, monoFixture, REPO_ROOT, serveMap } from './map-fixture.ts';
 import { nxFixture } from './map-nx-fixture.ts';
 import { openChats } from './navigation.ts';
+import { seedFlowChats } from './ticket-flow-seed.ts';
 import { connectTickets, openTickets, resetTicketFakes, STUB_URL } from './ticket-seed.ts';
 import { JIRA_EMAIL } from '../../apps/server/test/fake-jira.ts';
 
@@ -65,7 +66,7 @@ async function openWorkedChat(page: Page) {
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('7 of 7 done', { timeout: 20_000 });
+  await expect(page.locator('.taskc')).toContainText('Task 7/7', { timeout: 20_000 });
 }
 
 async function useTheme(page: Page, theme: string) {
@@ -158,6 +159,12 @@ test('the Tickets screen has no serious colour-contrast or ARIA issues in any th
   const found = await blockingViolations(page, 'tickets connect');
 
   await connectTickets(page);
+  await page.request.get('/api/tickets/inbox');
+  await seedFlowChats([
+    { key: 'WEB-433', source: 'linear', status: 'running', spark: 'Pip' },
+    { key: 'WEB-421', source: 'linear', status: 'failed' },
+    { key: 'API-84', source: 'jira', status: 'succeeded' },
+  ]);
   await openTickets(page);
   const row = page.locator('li[data-ticket$=":WEB-433"]');
   await row.getByRole('button').first().click({ timeout: 15_000 });

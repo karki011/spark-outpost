@@ -7,6 +7,7 @@ import { queryKeys } from '../../api/client.ts';
 import { outcomeKeys } from '../../api/outcomes.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 import { RestoreIcon } from '../../ui/icons.tsx';
+import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 
 const CHANGE_LABELS = { added: 'added', modified: 'changed', deleted: 'deleted' } as const;
 
@@ -66,7 +67,7 @@ export function RevertRun({ run, compact = false }: { run: Run; compact?: boolea
   const data = changes.data;
   return (
     <div className="revert-confirm" role="group" aria-label="Revert to before this run">
-      {changes.isPending && <p>Checking what changed…</p>}
+      {changes.isPending && <Skeleton label="Checking what changed" shape="lines" rows={2} />}
       {changes.isError && <p className="revert-err">{changes.error.message}</p>}
       {data && !data.revertible && <p>{data.reason}</p>}
       {data?.revertible && (

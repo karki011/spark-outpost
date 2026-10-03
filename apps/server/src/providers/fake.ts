@@ -296,7 +296,7 @@ async function* fakeTurn(
   }
   yield* fakeSessionOutputs(turn);
   if (fakeCompactTurn(turn)) {
-    yield* fakeCompactOutputs();
+    yield* fakeCompactOutputs(turn);
     return;
   }
   if (turn.repo) yield { kind: 'instructions', files: followedFiles(turn.repo) };

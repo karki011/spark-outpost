@@ -16,6 +16,8 @@ import {
   branchTipOf,
   changedFiles,
   defaultBranch,
+  freshRemoteDefault,
+  isAncestor,
   listBranches,
   type BranchList,
   type WorktreeSource,
@@ -83,16 +85,37 @@ async function branchTitle(db: Queryable, conversationId: string, request: strin
   return ticketBranchTitle(db, conversationId, title);
 }
 
-async function startPoint(root: string, branches: BranchList, from: string | null) {
-  if (from) return from;
-  if (branches.current) return (await headCommit(root)) ?? branches.current;
-  return (await defaultBranch(root)) ?? (await headCommit(root));
+interface StartPoint {
+  from: string;
+  baseRef: string;
+}
+
+async function upToDateBase(root: string, head: string | null): Promise<StartPoint | null> {
+  const remote = await freshRemoteDefault(root);
+  if (!remote || (head && !(await isAncestor(root, head, remote)))) return null;
+  const commit = (await git(root, ['rev-parse', '--verify', '-q', `${remote}^{commit}`])).trim();
+  return commit ? { from: commit, baseRef: remote } : null;
+}
+
+async function startPoint(
+  root: string,
+  branches: BranchList,
+  from: string | null,
+): Promise<StartPoint | null> {
+  if (from) return { from, baseRef: from };
+  const head = await headCommit(root);
+  const fresh = await upToDateBase(root, head);
+  if (fresh) return fresh;
+  if (branches.current) return { from: head ?? branches.current, baseRef: branches.current };
+  const fallback = (await defaultBranch(root)) ?? head;
+  return fallback ? { from: fallback, baseRef: fallback } : null;
 }
 
 interface Planned {
   source: WorktreeSource;
   owned: boolean;
   baseBranch: string | null;
+  baseRef: string | null;
 }
 
 async function plannedSource(
@@ -103,20 +126,25 @@ async function plannedSource(
   decision: Exclude<PlaceDecision, { kind: 'checkout' } | { kind: 'in_place' }>,
 ): Promise<Planned | null> {
   if (decision.kind === 'existing') {
-    return { source: decision, owned: false, baseBranch: decision.branch };
+    return { source: decision, owned: false, baseBranch: decision.branch, baseRef: null };
   }
   if (decision.kind === 'remote') {
-    return { source: decision, owned: false, baseBranch: decision.branch };
+    return { source: decision, owned: false, baseBranch: decision.branch, baseRef: decision.ref };
   }
   const title = await branchTitle(deps.db, target.conversationId, request);
   const branch = shipBranchName(deps.branchPrefix, title, target.conversationId);
   const baseBranch = decision.from ?? branches.current ?? (await defaultBranch(target.root));
   if (branches.local.includes(branch)) {
-    return { source: { kind: 'existing', branch }, owned: true, baseBranch };
+    return { source: { kind: 'existing', branch }, owned: true, baseBranch, baseRef: null };
   }
-  const from = await startPoint(target.root, branches, decision.from);
-  if (!from) return null;
-  return { source: { kind: 'new', branch, from }, owned: true, baseBranch };
+  const start = await startPoint(target.root, branches, decision.from);
+  if (!start) return null;
+  return {
+    source: { kind: 'new', branch, from: start.from },
+    owned: true,
+    baseBranch,
+    baseRef: start.baseRef,
+  };
 }
 
 async function baseCommitOf(root: string, source: WorktreeSource): Promise<string | null> {
@@ -145,6 +173,7 @@ async function createCopy(
     path: path.join(folder, path.relative(top, root)),
     branch: planned.source.branch,
     baseBranch: planned.baseBranch,
+    baseRef: planned.baseRef,
     baseCommit: (await baseCommitOf(root, planned.source)) ?? '',
     landedCommit: null,
     inPlace: false,

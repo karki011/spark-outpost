@@ -1,13 +1,17 @@
-import type { InboxTicket, TicketSection } from '@spark-outpost/contracts';
+import type { AttentionSettings, InboxTicket, TicketSection } from '@spark-outpost/contracts';
 import { EmptyScene } from '../brand/EmptyScene.tsx';
+import { UserBlob } from '../brand/UserBlob.tsx';
+import { rowPreview } from './row-preview.ts';
 import { SectionHeader } from './SectionHeader.tsx';
+import { StatusChip } from './StatusChip.tsx';
+import type { LiveTicket } from './ticket-flow.ts';
 import {
   ageTitle,
+  attentionRule,
   compactAge,
   rowAction,
   SECTIONS,
   SNOOZED_RULE,
-  snoozedTickets,
   snoozeTime,
   ticketId,
   type RowAction,
@@ -17,8 +21,10 @@ import { RowLinks } from './RowLinks.tsx';
 import { TicketRow } from './TicketRow.tsx';
 
 interface InboxSectionsProps {
-  tickets: readonly InboxTicket[];
+  entries: readonly LiveTicket[];
   view: TicketView;
+  settings: AttentionSettings;
+  now: number;
   collapsed: ReadonlySet<TicketSection>;
   selectedId: string | null;
   onToggle: (section: TicketSection) => void;
@@ -29,9 +35,9 @@ interface InboxSectionsProps {
 const EMPTY_TEXT: Record<TicketView, string> = {
   inbox: 'Nothing assigned to you right now.',
   attention: 'Nothing needs you right now.',
-  working: 'Nothing in progress.',
-  pr_ready: 'No pull requests waiting on you.',
-  in_review: 'Nothing in review.',
+  spark: 'No chat is working on a ticket right now.',
+  started: 'Nothing started without a running chat.',
+  review: 'Nothing in review and no pull request open.',
   up_next: 'Nothing queued up next.',
   done: 'Nothing finished in the last 7 days.',
   snoozed: 'Nothing snoozed.',
@@ -43,18 +49,29 @@ function syncProblem(ticket: InboxTicket): string | null {
   return `${sync.message ?? 'The last change failed.'} Details and Retry are in the ticket.`;
 }
 
+function Assignee({ name }: { name: string }) {
+  return (
+    <span className="ir-who" role="img" aria-label={`Assigned to ${name}`} title={name}>
+      <UserBlob displayName={name} size={18} />
+    </span>
+  );
+}
+
 function InboxRow({
-  ticket,
+  entry,
+  now,
   selected,
   onSelect,
   onAction,
 }: {
-  ticket: InboxTicket;
+  entry: LiveTicket;
+  now: number;
   selected: boolean;
   onSelect: () => void;
   onAction: (action: RowAction) => void;
 }) {
-  const action = rowAction(ticket);
+  const { ticket } = entry;
+  const action = rowAction({ ...ticket, section: entry.section });
   return (
     <TicketRow
       id={ticketId(ticket)}
@@ -62,14 +79,21 @@ function InboxRow({
       ticketKey={ticket.key}
       title={ticket.title}
       priorityRank={ticket.priorityRank}
-      reason={ticket.reason}
-      tone={ticket.tone}
-      more={ticket.flags.slice(1).map((flag) => flag.text)}
-      age={ticket.age ? { text: compactAge(ticket.age.at), title: ageTitle(ticket.age) } : null}
+      reason={entry.line}
+      tone="none"
+      more={entry.section === 'attention' ? ticket.flags.slice(1).map((flag) => flag.text) : []}
+      age={
+        ticket.age
+          ? { text: compactAge(ticket.age.at, now), title: ageTitle(ticket.age, now) }
+          : null
+      }
       syncProblem={syncProblem(ticket)}
-      snoozedUntil={ticket.snooze ? snoozeTime(new Date(ticket.snooze.until), new Date()) : null}
+      snoozedUntil={ticket.snooze ? snoozeTime(new Date(ticket.snooze.until), new Date(now)) : null}
       selected={selected}
       onSelect={onSelect}
+      chip={<StatusChip section={entry.section} tone={entry.tone} chat={entry.chat} />}
+      avatar={ticket.assignedTo ? <Assignee name={ticket.assignedTo.name} /> : null}
+      preview={rowPreview(entry, now)}
       links={
         <RowLinks
           ticket={ticket}
@@ -91,19 +115,26 @@ function InboxRow({
   );
 }
 
+const snoozedEntries = (entries: readonly LiveTicket[]) =>
+  entries
+    .filter((entry) => entry.ticket.snooze)
+    .toSorted((a, b) => (a.ticket.snooze?.until ?? '').localeCompare(b.ticket.snooze?.until ?? ''));
+
 export function InboxSections(props: InboxSectionsProps) {
-  const { tickets, view } = props;
+  const { entries, view } = props;
   const sections =
     view === 'snoozed'
       ? [{ id: 'snoozed' as const, label: 'Snoozed', rule: SNOOZED_RULE }]
       : SECTIONS.filter((section) => view === 'inbox' || section.id === view);
+  const ruleOf = (section: (typeof sections)[number]) =>
+    section.id === 'attention' ? attentionRule(props.settings) : section.rule;
   return (
     <>
       {sections.map((section) => {
         const rows =
           section.id === 'snoozed'
-            ? snoozedTickets(tickets)
-            : tickets.filter((ticket) => ticket.section === section.id);
+            ? snoozedEntries(entries)
+            : entries.filter((entry) => entry.section === section.id);
         if (view === 'inbox' && rows.length === 0) return null;
         const listId = `tk-sec-${section.id}`;
         const open =
@@ -114,7 +145,7 @@ export function InboxSections(props: InboxSectionsProps) {
               id={listId}
               label={section.label}
               count={rows.length}
-              rule={section.rule}
+              rule={ruleOf(section)}
               attention={section.id === 'attention'}
               expanded={open}
               onToggle={
@@ -126,13 +157,14 @@ export function InboxSections(props: InboxSectionsProps) {
             {open && rows.length === 0 && <EmptyScene fill>{EMPTY_TEXT[view]}</EmptyScene>}
             {open && rows.length > 0 && (
               <ul id={listId} className="tk-rows">
-                {rows.map((ticket) => (
+                {rows.map((entry) => (
                   <InboxRow
-                    key={ticketId(ticket)}
-                    ticket={ticket}
-                    selected={props.selectedId === ticketId(ticket)}
-                    onSelect={() => props.onSelect(ticket)}
-                    onAction={(action) => props.onAction(ticket, action)}
+                    key={ticketId(entry.ticket)}
+                    entry={entry}
+                    now={props.now}
+                    selected={props.selectedId === ticketId(entry.ticket)}
+                    onSelect={() => props.onSelect(entry.ticket)}
+                    onAction={(action) => props.onAction(entry.ticket, action)}
                   />
                 ))}
               </ul>

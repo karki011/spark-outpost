@@ -1,5 +1,4 @@
 import './changes-pane.css';
-import '../diff/diff-frame.css';
 import { useQuery } from '@tanstack/react-query';
 import { isTerminalRunStatus, type ChangeRunSummary, type TaskRun } from '@spark-outpost/contracts';
 import { filesLabel } from '../chat/changes/change-rules.ts';
@@ -7,10 +6,9 @@ import { Counts, DiffStat, FileChangeList } from '../chat/changes/FileChangeList
 import { diffApi, diffKeys } from '../diff/diff-api.ts';
 import { CoreImpactNote } from '../map/CoreImpactNote.tsx';
 import { ShipControl } from '../ship/ShipControl.tsx';
+import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { crewNames } from './CrewPane.tsx';
 import { useViewChanges } from './view-changes.ts';
-
-const SKELETON_ROWS = ['64%', '48%', '72%'];
 
 function runName(run: ChangeRunSummary, names: ReadonlyMap<string, string>): string {
   if (run.name) return `${run.name}${run.copy ? '’s copy' : ''}`;
@@ -29,16 +27,6 @@ function RunRow({ run, name }: { run: ChangeRunSummary; name: string }) {
         <Counts added={run.added} removed={run.removed} />
       )}
     </li>
-  );
-}
-
-function SummarySkeleton() {
-  return (
-    <div className="chg-skel" aria-hidden="true">
-      {SKELETON_ROWS.map((width) => (
-        <span key={width} className="dd-skel" style={{ width }} />
-      ))}
-    </div>
   );
 }
 
@@ -69,7 +57,9 @@ export function ChangesPane({ taskId, conversationId, runs }: ChangesPaneProps) 
           </span>
         )}
       </div>
-      {summary.isPending && <SummarySkeleton />}
+      {summary.isPending && (
+        <Skeleton label="Loading what changed" shape="list" rows={3} className="chg-skel" />
+      )}
       {summary.isError && <p className="wnote first bad">{summary.error.message}</p>}
       {data && groups.length === 0 && (
         <p className="wnote first">No file changes in this task yet.</p>

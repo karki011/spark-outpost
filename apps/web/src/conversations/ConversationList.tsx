@@ -136,7 +136,9 @@ export function ConversationList({
     projects: projectList,
     selectedId,
     nextChatId: (excluding) =>
-      all.find((chat) => chat.id !== excluding && !chat.archivedAt)?.id ?? null,
+      all.find(
+        (chat) => chat.id !== excluding && !chat.archivedAt && !actions.deleting.has(chat.id),
+      )?.id ?? null,
     onSelect,
     onNew,
   });

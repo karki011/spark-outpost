@@ -2,6 +2,8 @@ import type { Run, StoredRunEvent } from '@spark-outpost/contracts';
 import type { Queryable } from './db.ts';
 import { toRun, type RunRow } from './rows.ts';
 
+const FINISHED_STATUSES = ['succeeded', 'failed', 'cancelled', 'outcome_unknown'];
+
 export async function getRun(db: Queryable, id: string): Promise<Run | null> {
   const { rows } = await db.query<RunRow>('SELECT * FROM runs WHERE id = $1', [id]);
   return rows[0] ? toRun(rows[0]) : null;
@@ -16,12 +18,17 @@ export async function countActiveRuns(db: Queryable): Promise<number> {
 }
 
 export async function requestCancel(db: Queryable, id: string): Promise<Run | null> {
-  const { rows } = await db.query<RunRow>(
-    `UPDATE runs SET cancel_requested_at = COALESCE(cancel_requested_at, now())
-     WHERE id = $1 RETURNING *`,
-    [id],
+  await db.query(
+    `WITH RECURSIVE tree AS (
+       SELECT id FROM runs WHERE id = $1
+       UNION ALL
+       SELECT child.id FROM runs child JOIN tree ON child.parent_run_id = tree.id
+     )
+     UPDATE runs SET cancel_requested_at = COALESCE(cancel_requested_at, now())
+     WHERE id IN (SELECT id FROM tree) AND status <> ALL($2::text[])`,
+    [id, FINISHED_STATUSES],
   );
-  return rows[0] ? toRun(rows[0]) : null;
+  return getRun(db, id);
 }
 
 export async function listRunEventsAfter(

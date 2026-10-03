@@ -1,4 +1,4 @@
-import { POLICY_VERSION } from '../advisor/policy.ts';
+import { LAW_BUDGET_ENFORCED, POLICY_VERSION } from '../advisor/policy.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { budgetUsage } from '../orchestration/budget-check.ts';
 import type { MemberRoute } from '../orchestration/routing.ts';
@@ -45,6 +45,7 @@ export async function startBuilderLaws(
   if (s.flow.solo || spawn.role !== 'builder' || spawn.reason !== 'first') return;
   if (s.memberBudget) return;
   await ensureEstimate(s);
+  if (!LAW_BUDGET_ENFORCED) return;
   const complexity = route.score?.signals.complexity ?? sessionSignals(s).complexity;
   s.memberBudget = memberBudget(s.baseLimits, complexity, await budgetUsage(s));
   await recordBudget(s, s.memberBudget, childRunId);

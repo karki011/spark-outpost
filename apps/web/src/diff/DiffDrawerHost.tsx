@@ -2,12 +2,11 @@ import './diff-frame.css';
 import { lazy, Suspense, useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ChangeEntry } from '@spark-outpost/contracts';
+import { Skeleton } from '../ui/loading/Skeleton.tsx';
 
 const DiffDrawer = lazy(() =>
   import('./drawer/DiffDrawer.tsx').then((module) => ({ default: module.DiffDrawer })),
 );
-
-const SHELL_ROWS = ['72%', '54%', '80%', '46%', '66%', '58%'];
 
 export interface DiffRequest {
   taskId: string;
@@ -41,16 +40,8 @@ function DrawerShell() {
   return (
     <aside className="dd" aria-label="Changes" aria-busy="true">
       <div className="dd-shell">
-        <div className="dd-shell-col">
-          {SHELL_ROWS.map((width) => (
-            <span key={width} className="dd-skel" style={{ width }} />
-          ))}
-        </div>
-        <div className="dd-shell-col">
-          {SHELL_ROWS.map((width) => (
-            <span key={width} className="dd-skel" style={{ width: `calc(${width} - 10%)` }} />
-          ))}
-        </div>
+        <Skeleton label="Opening the changes" shape="list" rows={8} />
+        <Skeleton label="Opening the diff" shape="diff" rows={12} />
       </div>
     </aside>
   );

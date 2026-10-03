@@ -1,10 +1,13 @@
 import type {
+  AttentionSettings,
   InboxTicket,
   TicketAge,
   TicketSearchResult,
   TicketSection,
   TicketSourceId,
 } from '@spark-outpost/contracts';
+
+type Thresholds = Pick<AttentionSettings, 'idleDays' | 'dueDays' | 'reviewDays'>;
 
 export interface SectionMeta {
   id: TicketSection;
@@ -13,29 +16,39 @@ export interface SectionMeta {
 }
 
 export const SECTIONS: readonly SectionMeta[] = [
-  { id: 'attention', label: 'Needs attention', rule: 'Flagged by rules; each row says why.' },
   {
-    id: 'working',
-    label: 'Working on',
-    rule: 'A linked chat is running or finished, or the ticket is In progress.',
+    id: 'attention',
+    label: 'Needs you',
+    rule: 'A linked chat is waiting on you, checks are failing, or a rule flagged it. Each row says why.',
   },
+  { id: 'spark', label: 'In progress with Spark', rule: 'A linked chat is running now.' },
   {
-    id: 'pr_ready',
-    label: 'PR ready',
-    rule: 'A pull request from Ship is waiting for your next move.',
-  },
-  {
-    id: 'in_review',
-    label: 'In review',
-    rule: 'In review in the tracker, or its pull request is waiting on reviewers. Longest first.',
+    id: 'started',
+    label: 'Started',
+    rule: 'In progress in your tracker, or a chat worked on it, and no chat is running now.',
   },
   {
     id: 'up_next',
     label: 'Up next',
     rule: 'Assigned to you and not started, by priority, then due date.',
   },
-  { id: 'done', label: 'Done recently', rule: 'Done in the last 7 days, most recent first.' },
+  {
+    id: 'review',
+    label: 'In review / PR open',
+    rule: 'In review in your tracker, or its pull request is open. Longest first.',
+  },
+  {
+    id: 'done',
+    label: 'Done recently',
+    rule: 'Done, or its pull request merged, in the last 7 days. Most recent first.',
+  },
 ];
+
+const days = (count: number) => `${count} ${count === 1 ? 'day' : 'days'}`;
+
+export function attentionRule(settings: Thresholds): string {
+  return `Needs you when a linked chat is waiting on you or stopped, checks fail on its PR, a PR has changes requested or is approved, it's blocked, a status move failed, it's due within ${days(settings.dueDays)}, in review ${days(settings.reviewDays)} or more, or High or Urgent and not started after ${days(settings.idleDays)}.`;
+}
 
 export type TicketView = 'inbox' | TicketSection | 'snoozed';
 
@@ -75,7 +88,7 @@ export interface RowAction {
   url?: string;
 }
 
-const PR_RULES = new Set(['pr-changes', 'pr-approved', 'review-slow']);
+const PR_RULES = new Set(['pr-checks', 'pr-changes', 'pr-approved', 'review-slow']);
 
 export function pullUrl(ticket: InboxTicket): string | null {
   return (
@@ -100,10 +113,10 @@ export function rowAction(ticket: InboxTicket): RowAction | null {
       if (ticket.flags.every((flag) => flag.rule === 'sync-failed')) return null;
       return chatOrStart(ticket);
     }
-    case 'working':
+    case 'spark':
+    case 'started':
       return chatOrStart(ticket);
-    case 'pr_ready':
-    case 'in_review':
+    case 'review':
       return pr ? { kind: 'open-pr', label: 'Open PR', url: pr } : null;
     case 'up_next':
       return { kind: 'start', label: 'Start' };
@@ -152,8 +165,10 @@ export function whose(ticket: TicketSearchResult): string {
   return ticket.assignedTo ? `Assigned to ${ticket.assignedTo.name}` : 'Unassigned';
 }
 
-export function countBy(tickets: readonly InboxTicket[]): Record<TicketSection, number> {
-  const counts = { attention: 0, working: 0, pr_ready: 0, in_review: 0, up_next: 0, done: 0 };
+export function countBy(
+  tickets: readonly { section: TicketSection }[],
+): Record<TicketSection, number> {
+  const counts = { attention: 0, spark: 0, started: 0, up_next: 0, review: 0, done: 0 };
   for (const ticket of tickets) counts[ticket.section] += 1;
   return counts;
 }

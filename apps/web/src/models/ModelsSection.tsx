@@ -15,6 +15,8 @@ import {
 import { ProviderChips } from './ProviderChips.tsx';
 import { ProviderSummary } from './ProviderSummary.tsx';
 import './models.css';
+import { QueryWait } from '../ui/loading/QueryWait.tsx';
+import { Skeleton } from '../ui/loading/Skeleton.tsx';
 
 function ProviderModels({ view }: { view: ProviderCardsView }) {
   const headingId = useId();
@@ -48,8 +50,13 @@ function ProviderModels({ view }: { view: ProviderCardsView }) {
 export function ModelsSection() {
   const cards = useQuery({ queryKey: modelCardsKey, queryFn: modelCardsApi.get });
   const [saved, setSaved] = useState(readSavedProvider);
-  if (cards.isError) return <p className="set-hint">{cards.error.message}</p>;
-  if (!cards.data) return <p className="set-hint">Loading model cards…</p>;
+  if (!cards.data) {
+    return (
+      <QueryWait query={cards} what="model cards">
+        <Skeleton label="Reading model cards" shape="cards" rows={3} />
+      </QueryWait>
+    );
+  }
   const providers = cards.data.providers;
   const selected = shownProvider(
     saved,

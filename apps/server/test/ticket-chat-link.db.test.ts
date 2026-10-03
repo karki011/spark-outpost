@@ -196,11 +196,11 @@ describe('linking a chat to the ticket it works on', () => {
       'SELECT content FROM messages WHERE conversation_id = $1',
       [chat],
     );
-    expect(rows[0]!.content).toContain('ENG-13');
+    expect(rows[0]!.content).toContain('ENG-12');
     await linkTicketForBuild(t.db, {
       workspaceId: t.workspaceId,
       conversationId: chat,
-      request: rows[0]!.content,
+      request: `${rows[0]!.content}\n\nSubtasks: ENG-13`,
       builds: true,
     });
     const view = await chatTickets(chat);

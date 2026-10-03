@@ -42,7 +42,7 @@ function scoutSpot(view: IslandView, width: number, top: number, hang: number | 
   if (hang !== null) return { x: width / 2 - BARE_SCOUT / 2, y: -hang, size: BARE_SCOUT };
   if (view.kind === 'peek') return { x: width / 2 - 9, y: top - 13, size: 30 };
   if (hasCard(view)) return { x: 22, y: top + 8 + 14, size: 46 };
-  return { x: view.kind === 'pill' ? 14 : 10, y: Math.max(2, (top - 22) / 2), size: 22 };
+  return { x: 10, y: Math.max(2, (top - 22) / 2), size: 22 };
 }
 
 function viewKey(view: IslandView): string {
@@ -65,17 +65,16 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   const flat = geometry.docked && !geometry.notch;
   const bare = flat && view.kind === 'peek';
   const hang = bare ? BARE_TUCK : null;
-  const pillish = view.kind === 'pill' || view.kind === 'nudge';
+  const pillish = view.kind === 'nudge';
   const top = pillish ? Math.max(geometry.top, PILL_HEIGHT) : bare ? 0 : geometry.top;
-  const list = view.kind === 'pill' && props.listing;
-  const quiet = view.kind === 'peek' || (pillish && !list);
+  const quiet = view.kind === 'peek' || pillish;
   const viewport = useViewportWidth();
   const room = Math.max(PANEL_MIN_WIDTH, viewport - PANEL_SIDE_GAP);
   const chatting = view.kind === 'panel' && view.panel === 'sessions' && props.selected !== null;
   const width = bare
     ? BARE_SCOUT
     : Math.min(chatting ? CHAT_WIDTH : viewWidth(view, geometry.notchWidth), room);
-  const compactPill = pillish && !hugsNotch && !list;
+  const compactPill = pillish && !hugsNotch;
   const hint = keyHint(view);
   const setTarget = useIslandShape(
     islandRef,
@@ -108,7 +107,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
         {
           width: fitted,
           height,
-          radius: pillish && !list ? 16 : quiet ? 14 : 22,
+          radius: pillish ? 16 : quiet ? 14 : 22,
           scout: scoutSpot(view, fitted, top, hang),
         },
         view.kind === 'peek' ? 0.62 : 0.5,
@@ -122,7 +121,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     const observer = new ResizeObserver(measure);
     watched.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [view, width, top, quiet, hint, compactPill, hang, pillish, list, setTarget]);
+  }, [view, width, top, quiet, hint, compactPill, hang, pillish, setTarget]);
 
   const classes = [
     'isl',

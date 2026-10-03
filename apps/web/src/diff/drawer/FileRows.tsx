@@ -1,3 +1,4 @@
+import '../../ui/loading/loading.css';
 import { memo, type CSSProperties } from 'react';
 import type { ChangeEntry } from '@spark-outpost/contracts';
 import { changeTag, splitPath } from '../../chat/changes/FileChangeList.tsx';
@@ -137,8 +138,8 @@ export function SkeletonRow({ id, row, top }: SkeletonRowProps) {
       aria-label="Loading file"
       style={place(top)}
     >
-      <span className="dd-skel dd-skel-dot" />
-      <span className="dd-skel" style={{ width }} />
+      <span className="skel-bar skel-icon" />
+      <span className="skel-bar" style={{ width }} />
     </div>
   );
 }

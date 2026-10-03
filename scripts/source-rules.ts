@@ -62,6 +62,16 @@ export function findNativeSelects(file: string, text: string): SourceViolation[]
   }));
 }
 
+const PLAIN_LOADING = /(?<![\w-])Loading(?:\s[^'"`<>{}\n]*)?(?:…|\.\.\.)/g;
+
+export function findPlainLoading(file: string, text: string): SourceViolation[] {
+  return [...text.matchAll(PLAIN_LOADING)].map((match) => ({
+    file,
+    line: text.slice(0, match.index).split('\n').length,
+    message: 'Plain loading text; use ui/loading Skeleton, LoadingBlob or QueryWait',
+  }));
+}
+
 export function checkSource(file: string, text: string): SourceViolation[] {
   const violations: SourceViolation[] = [];
   const lines = lineCount(text);
@@ -71,6 +81,7 @@ export function checkSource(file: string, text: string): SourceViolation[] {
   if (/\.(ts|tsx|js|mjs)$/.test(file)) violations.push(...findTsComments(file, text));
   if (file.startsWith('apps/web/') && file.endsWith('.tsx')) {
     violations.push(...findNativeSelects(file, text));
+    if (!file.includes('.test.')) violations.push(...findPlainLoading(file, text));
   }
   if (file.endsWith('.css')) violations.push(...findBlockComments(file, text, /\/\*[\s\S]*?\*\//g));
   if (file.endsWith('.sql')) violations.push(...findBlockComments(file, text, /^\s*--.*$/gm));

@@ -43,6 +43,7 @@ export interface AgentDefinition {
   offers?: AgentOffers;
   usedModel?: (model: string | null) => string | null;
   estimatesCost?: boolean;
+  longContext?: boolean;
   inputExcludesCache?: boolean;
   usageReadings?: UsageReadings;
   conversationMode: string;
@@ -65,6 +66,7 @@ export interface AgentDefinition {
     repo?: ClaudeRepoOptions | null,
     builder?: boolean,
     coordinated?: boolean,
+    publishes?: boolean,
   ) => Record<string, unknown>;
   probeSessionMeta?: Record<string, unknown>;
   askMode: string;
@@ -102,11 +104,14 @@ const SOLO_BUILDER_DENY_RULES = BUILDER_PUBLISH_DENY_RULES.filter(
   (rule) => rule !== 'Bash(git push:*)',
 );
 
-function builderDeny(builder: boolean, coordinated: boolean): string[] {
+const PUBLISHING_BUILDER_DENY_RULES = SOLO_BUILDER_DENY_RULES.filter(
+  (rule) => rule !== 'Bash(gh:*)',
+);
+
+function builderDeny(builder: boolean, coordinated: boolean, publishes: boolean): string[] {
   if (!builder) return [];
-  return coordinated
-    ? [...BUILDER_PUBLISH_DENY_RULES, ...BUILDER_GIT_DENY_RULES]
-    : SOLO_BUILDER_DENY_RULES;
+  if (coordinated) return [...BUILDER_PUBLISH_DENY_RULES, ...BUILDER_GIT_DENY_RULES];
+  return publishes ? PUBLISHING_BUILDER_DENY_RULES : SOLO_BUILDER_DENY_RULES;
 }
 
 export function secretReadRules(extraRoots: readonly string[]): string[] {
@@ -130,8 +135,9 @@ export function claudeSessionMeta(
   builder = false,
   allowBypass = false,
   coordinated = false,
+  publishes = false,
 ): Record<string, unknown> {
-  const deny = [...secretReadRules(extraRoots), ...builderDeny(builder, coordinated)];
+  const deny = [...secretReadRules(extraRoots), ...builderDeny(builder, coordinated, publishes)];
   const askRules = [...ask, ...(repo?.mcpNames ?? []).map((name) => `mcp__${name}`)];
   const allowRules = [...(repo?.allowRules ?? [])];
   const plugins = repo?.plugins ?? [];
@@ -234,6 +240,7 @@ const claudeSessions = {
     repo?: ClaudeRepoOptions | null,
     builder = false,
     coordinated = false,
+    publishes = false,
   ) =>
     claudeSessionMeta(
       CLAUDE_DO_TOOLS,
@@ -243,6 +250,7 @@ const claudeSessions = {
       builder,
       true,
       coordinated,
+      publishes,
     ),
 } satisfies Partial<AgentDefinition>;
 
@@ -265,6 +273,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     cli: 'claude',
     launch: () => packageBin(CLAUDE_ACP),
     ...claudeSessions,
+    longContext: true,
   },
   codex: {
     id: 'codex',

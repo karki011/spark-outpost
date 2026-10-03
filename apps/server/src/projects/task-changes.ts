@@ -1,3 +1,4 @@
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import { diffLines } from 'diff';
 import type { ChangedFile, RunChange, TaskChanges } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
@@ -7,7 +8,7 @@ import { TaskNotFoundError } from '../persistence/tasks.ts';
 import { pairRenames } from './change-renames.ts';
 import { gitRangeFiles, shownFor, type FileContents, type ListedFile } from './change-list.ts';
 import { copyChanges } from './copy-changes.ts';
-import { countChangedLines } from './line-counts.ts';
+import { countChangedLines, lineCount, type LineCounts } from './line-counts.ts';
 import { relativeInside } from './path-policy.ts';
 import {
   changesWhilePresent,
@@ -15,6 +16,7 @@ import {
   snapshotSource,
   type SnapshotSource,
 } from './run-changes.ts';
+import { runBaseUntil } from './run-base.ts';
 import { gitFileAt, workingTree } from './snapshot.ts';
 
 export interface ListedRun {
@@ -48,18 +50,36 @@ async function describeVersions(versions: FileVersions): Promise<ChangedFile> {
   }
   const oldText = before?.toString('utf8') ?? null;
   const newText = after?.toString('utf8') ?? null;
+  const counts = await textCounts(before, after, oldText, newText);
+  return { ...change, ...counts, oldText, newText, shown: 'text', bytes };
+}
+
+async function textCounts(
+  before: Buffer | null,
+  after: Buffer | null,
+  oldText: string | null,
+  newText: string | null,
+): Promise<LineCounts> {
+  if (oldText === null || newText === null) {
+    return { added: lineCount(after), removed: lineCount(before) };
+  }
+  await nextTurn();
+  const parts = diffLines(oldText, newText, { timeout: DIFF_TIMEOUT_MS });
+  if (!parts) return countChangedLines(before, after);
   let added = 0;
   let removed = 0;
-  for (const part of diffLines(oldText ?? '', newText ?? '')) {
+  for (const part of parts) {
     if (part.added) added += part.count;
     if (part.removed) removed += part.count;
   }
-  return { ...change, added, removed, oldText, newText, shown: 'text', bytes };
+  return { added, removed };
 }
 
 function withoutText(file: ChangedFile): ChangedFile {
   return { ...file, oldText: null, newText: null };
 }
+
+const DIFF_TIMEOUT_MS = 50;
 
 interface RunState {
   runId: string;
@@ -84,8 +104,9 @@ async function gitListed(
   const until = next?.snapshot.ref ?? source.end;
   if (source.gone && !until) return [];
   const gitRoot = source.gitRoot;
+  const base = await runBaseUntil(gitRoot, ref, until);
   const files = await changesWhilePresent(gitRoot, async () =>
-    gitRangeFiles({ root: gitRoot, from: ref, to: until ?? (await workingTree(gitRoot)) }),
+    gitRangeFiles({ root: gitRoot, from: base, to: until ?? (await workingTree(gitRoot)) }),
   );
   return files ?? [];
 }
