@@ -51,6 +51,7 @@ describe('the modes a running session may switch to', () => {
     const allowed = modeAllowed(codex, true, false);
     expect(allowed('read-only')).toBe(true);
     expect(allowed('agent')).toBe(false);
+    expect(allowed('something-new')).toBe(true);
   });
 
   it('lets Do switch to any mode, Bypass and Full access included', () => {
@@ -59,6 +60,7 @@ describe('the modes a running session may switch to', () => {
       expect(allowed(mode)).toBe(true);
     }
     expect(modeAllowed(codex, true, true)('agent-full-access')).toBe(true);
+    expect(modeAllowed(claude, true, true)('futureMode')).toBe(true);
   });
 });
 

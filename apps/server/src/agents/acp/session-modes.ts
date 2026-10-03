@@ -32,8 +32,10 @@ export function modeAllowed(
 ): (mode: string) => boolean {
   if (!inProject) return (mode) => mode === definition.conversationMode;
   if (!changing) {
-    return (mode) =>
-      mode === definition.askMode || isReadOnlyPosture(modePosture(definition.id, mode));
+    return (mode) => {
+      const posture = modePosture(definition.id, mode);
+      return mode === definition.askMode || isReadOnlyPosture(posture) || posture === 'unknown';
+    };
   }
   return () => true;
 }
