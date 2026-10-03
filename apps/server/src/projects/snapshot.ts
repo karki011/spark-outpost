@@ -4,6 +4,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { RunChange } from '@spark-outpost/contracts';
+import {
+  racySafeSecond,
+  saveSnapshotIndex,
+  seedSnapshotIndex,
+  snapshotIndexPath,
+} from './snapshot-index.ts';
 
 const run = promisify(execFile);
 const GIT_TIMEOUT_MS = 60_000;
@@ -77,12 +83,32 @@ async function addAll(root: string, env: NodeJS.ProcessEnv): Promise<void> {
   }
 }
 
+async function treeFromHead(root: string, head: string, index: string): Promise<string> {
+  const env = { GIT_INDEX_FILE: index };
+  const saved = await snapshotIndexPath(root, git);
+  const startedSecond = racySafeSecond();
+  const seeded = saved !== null && (await seedSnapshotIndex(saved, index));
+  try {
+    await git(root, seeded ? ['read-tree', '--reset', head] : ['read-tree', head], env);
+  } catch (error) {
+    if (!seeded) throw error;
+    await rm(index, { force: true });
+    await git(root, ['read-tree', head], env);
+  }
+  await addAll(root, env);
+  const tree = (await git(root, ['write-tree'], env)).trim();
+  if (saved !== null) await saveSnapshotIndex(index, saved, startedSecond);
+  return tree;
+}
+
 export async function workingTree(root: string): Promise<string> {
   const scratch = await mkdtemp(path.join(tmpdir(), 'spark-outpost-index-'));
-  const env = { GIT_INDEX_FILE: path.join(scratch, 'index') };
+  const index = path.join(scratch, 'index');
   try {
     const head = await headCommit(root);
-    await git(root, head ? ['read-tree', head] : ['read-tree', '--empty'], env);
+    if (head) return await treeFromHead(root, head, index);
+    const env = { GIT_INDEX_FILE: index };
+    await git(root, ['read-tree', '--empty'], env);
     await addAll(root, env);
     return (await git(root, ['write-tree'], env)).trim();
   } finally {

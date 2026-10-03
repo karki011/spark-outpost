@@ -37,16 +37,22 @@ export function pairTests(
 ): Set<string> {
   const byDirectory = new Set<string>();
   const byPackage = new Set<string>();
+  const subjects = new Set<string>();
+  const sources: string[] = [];
   for (const path of paths) {
-    if (!isTestFile(path)) continue;
+    if (!isTestFile(path)) {
+      sources.push(path);
+      continue;
+    }
     const subject = subjectOf(path);
+    subjects.add(subject);
     byDirectory.add(key(directoryOf(path), subject));
     byPackage.add(key(packageOf(path), subject));
   }
   const tested = new Set<string>();
-  for (const path of paths) {
-    if (isTestFile(path)) continue;
+  for (const path of sources) {
     const stem = stemOf(path).toLowerCase();
+    if (!subjects.has(stem)) continue;
     const near = byDirectory.has(key(directoryOf(path), stem));
     const inPackage = !GENERIC_STEMS.has(stem) && byPackage.has(key(packageOf(path), stem));
     if (near || inPackage) tested.add(path);

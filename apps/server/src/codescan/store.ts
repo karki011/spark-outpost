@@ -5,6 +5,7 @@ import type { ProjectLayout } from './layout.ts';
 import type { CachedFile } from './refresh-plan.ts';
 
 export const WRITE_BATCH = 500;
+const READ_PAGE = 10_000;
 
 export interface IndexProject {
   id: string;
@@ -99,40 +100,55 @@ export async function fileParserVersions(db: Queryable, projectId: string): Prom
 export async function cachedFiles(
   db: Queryable,
   projectId: string,
+  pageSize: number = READ_PAGE,
 ): Promise<Map<string, CachedRow>> {
-  const { rows } = await db.query<{
-    path: string;
-    size: number;
-    mtime_ms: string;
-    content_hash: string;
-    package: string;
-    has_test: boolean;
-  }>(
-    `SELECT path, size, mtime_ms, content_hash, package, has_test
-     FROM code_index_files WHERE project_id = $1`,
-    [projectId],
-  );
-  return new Map(
-    rows.map((row) => [
-      row.path,
-      {
+  const cached = new Map<string, CachedRow>();
+  for (let after = ''; ;) {
+    const { rows } = await db.query<{
+      path: string;
+      size: number;
+      mtime_ms: string;
+      content_hash: string;
+      package: string;
+      has_test: boolean;
+    }>(
+      `SELECT path, size, mtime_ms, content_hash, package, has_test
+       FROM code_index_files WHERE project_id = $1 AND path > $2 ORDER BY path LIMIT $3`,
+      [projectId, after, pageSize],
+    );
+    for (const row of rows) {
+      cached.set(row.path, {
         path: row.path,
         size: row.size,
         mtimeMs: Number(row.mtime_ms),
         hash: row.content_hash,
         package: row.package,
         hasTest: row.has_test,
-      },
-    ]),
-  );
+      });
+    }
+    const last = rows.at(-1);
+    if (!last || rows.length < pageSize) return cached;
+    after = last.path;
+  }
 }
 
-export async function projectNames(db: Queryable, projectId: string): Promise<Map<string, number>> {
-  const { rows } = await db.query<{ id: number; name: string }>(
-    'SELECT id, name FROM code_index_names WHERE project_id = $1',
-    [projectId],
-  );
-  return new Map(rows.map((row) => [row.name, row.id]));
+export async function projectNames(
+  db: Queryable,
+  projectId: string,
+  pageSize: number = READ_PAGE,
+): Promise<Map<string, number>> {
+  const names = new Map<string, number>();
+  for (let after = 0; ;) {
+    const { rows } = await db.query<{ id: number; name: string }>(
+      `SELECT id, name FROM code_index_names
+       WHERE project_id = $1 AND id > $2 ORDER BY id LIMIT $3`,
+      [projectId, after, pageSize],
+    );
+    for (const row of rows) names.set(row.name, row.id);
+    const last = rows.at(-1);
+    if (!last || rows.length < pageSize) return names;
+    after = last.id;
+  }
 }
 
 export async function insertNames(

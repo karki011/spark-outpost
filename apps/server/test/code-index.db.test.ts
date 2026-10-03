@@ -10,6 +10,7 @@ import { stopParseWorker } from '../src/codescan/parse-pool.ts';
 import { evictBeyondCap, expireIndexes } from '../src/codescan/retention.ts';
 import { createCodeScanner } from '../src/codescan/scanner.ts';
 import { declarationsIn } from '../src/codescan/scan-store.ts';
+import { cachedFiles, projectNames } from '../src/codescan/store.ts';
 import { createTestDb, type TestDb } from './support.ts';
 
 let t: TestDb;
@@ -72,6 +73,34 @@ afterAll(async () => {
 });
 
 describe('code index cache', () => {
+  it('reads the cached files and names in pages without losing or repeating rows', async () => {
+    const outcome = await indexProject(t.db, root);
+    const whole = await cachedFiles(t.db, outcome.projectId);
+    const paged = await cachedFiles(t.db, outcome.projectId, 3);
+    expect(whole.size).toBe(8);
+    expect([...paged].sort()).toEqual([...whole].sort());
+    expect((await cachedFiles(t.db, outcome.projectId, 8)).size).toBe(8);
+    const names = await projectNames(t.db, outcome.projectId);
+    expect(names.size).toBeGreaterThan(4);
+    expect([...(await projectNames(t.db, outcome.projectId, 2))].sort()).toEqual([...names].sort());
+  });
+
+  it('keeps the ids of known names when a later refresh parses one changed file', async () => {
+    const first = await indexProject(t.db, root);
+    const before = await projectNames(t.db, first.projectId);
+    await put(
+      'src/data/load-series.ts',
+      'export function loadSeries(days: number) { return [days]; }\nexport function loadTotals() { return loadSeries(1); }\n',
+    );
+    const second = await indexProject(t.db, root);
+    expect(second).toMatchObject({ rebuilt: null, parsed: 1 });
+    const after = await projectNames(t.db, first.projectId);
+    expect(after.get('loadSeries')).toBe(before.get('loadSeries'));
+    expect(after.get('useChartData')).toBe(before.get('useChartData'));
+    expect(after.has('loadTotals')).toBe(true);
+    expect(new Set(after.values()).size).toBe(after.size);
+  });
+
   it('indexes tracked files with their symbols and skips ignored, binary and dependency files', async () => {
     const outcome = await indexProject(t.db, root);
     expect(outcome).toMatchObject({ rebuilt: 'first index', parsed: 8, capped: false });

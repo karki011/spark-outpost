@@ -118,11 +118,14 @@ export async function readLayout(paths: readonly string[], read: ReadText): Prom
 
 export function packageMatcher(packages: readonly WorkspacePackage[]): (path: string) => string {
   const byRoot = new Map(packages.map((entry) => [entry.root, entry.name]));
-  return (path) => {
-    for (let directory = directoryOf(path); ; directory = directoryOf(directory)) {
-      const name = byRoot.get(directory);
-      if (name !== undefined) return name;
-      if (directory === '.') return '.';
-    }
+  const byDirectory = new Map<string, string>();
+  const nameFor = (directory: string): string => {
+    const known = byDirectory.get(directory);
+    if (known !== undefined) return known;
+    const name =
+      byRoot.get(directory) ?? (directory === '.' ? '.' : nameFor(directoryOf(directory)));
+    byDirectory.set(directory, name);
+    return name;
   };
+  return (path) => nameFor(directoryOf(path));
 }
