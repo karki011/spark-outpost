@@ -39,7 +39,7 @@ test('the work panel is wider by default, resizes from its edge and remembers th
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task 7/7', { timeout: 20_000 });
+  await expect(page.locator('.taskc')).toContainText('Task 6/6', { timeout: 20_000 });
   await expect.poll(() => panelWidth(page)).toBe(432);
 
   const handle = page.getByRole('separator', { name: 'Resize work panel' });
@@ -79,7 +79,7 @@ test('the work panel slides open and closed without moving the thread', async ({
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task 7/7', { timeout: 20_000 });
+  await expect(page.locator('.taskc')).toContainText('Task 6/6', { timeout: 20_000 });
   await expect.poll(() => panelWidth(page)).toBe(432);
 
   const thread = page.locator('.thread');
