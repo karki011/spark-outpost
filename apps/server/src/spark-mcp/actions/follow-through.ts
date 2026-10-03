@@ -76,6 +76,11 @@ export async function followThroughOnce(deps: SparkToolDeps): Promise<boolean> {
   return true;
 }
 
+function failed(error: unknown): false {
+  console.error('Spark could not follow through on a confirmed action', error);
+  return false;
+}
+
 export async function startSparkActionFollowThrough(
   deps: SparkToolDeps,
   sweepMs = SWEEP_MS,
@@ -86,7 +91,7 @@ export async function startSparkActionFollowThrough(
   let stopped = false;
 
   const drain = async () => {
-    while (!stopped && (await followThroughOnce(deps).catch(() => false)));
+    while (!stopped && (await followThroughOnce(deps).catch(failed)));
   };
 
   const wake = () => {

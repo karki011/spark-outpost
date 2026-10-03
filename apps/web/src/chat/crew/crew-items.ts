@@ -46,7 +46,12 @@ export function mergeApprovals(...lists: readonly (readonly Approval[])[]): Appr
 }
 
 function answeredOrPending(approval: Approval): boolean {
-  return approval.status === 'pending' || approval.decidedBy === 'user' || isCheckpoint(approval);
+  return (
+    approval.status === 'pending' ||
+    approval.decidedBy === 'user' ||
+    approval.payload.sparkResult !== undefined ||
+    isCheckpoint(approval)
+  );
 }
 
 export function shownApprovals(...lists: readonly (readonly Approval[])[]): Approval[] {

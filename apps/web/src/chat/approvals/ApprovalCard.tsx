@@ -148,7 +148,8 @@ function ResolvedApproval({ approval }: { approval: Approval }) {
 
 export function ApprovalCard({ approval: incoming, ...rest }: ApprovalCardProps) {
   const [local, setLocal] = useState<ApprovalDecidedValue | null>(null);
-  const approval = local ? mergeDecision([incoming], local)[0]! : incoming;
+  const approval =
+    local && incoming.status === 'pending' ? mergeDecision([incoming], local)[0]! : incoming;
   if (approval.status !== 'pending') return <ResolvedApproval approval={approval} />;
   return (
     <Docked id={approval.id} order={approval.createdAt} label={heading(approval)} pending>

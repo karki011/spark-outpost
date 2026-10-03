@@ -30,9 +30,8 @@ test('an agent asks to create a ticket and the user edits and confirms it on a c
   await card.getByLabel('Title').fill('Crash when saving drafts');
   await card.getByRole('button', { name: 'Create ticket' }).click();
 
-  await expect(page.getByText(/"outcome":"done","key":"ENG-\d+"/)).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(page.getByText(/"outcome":"waiting_for_user"/)).toBeVisible({ timeout: 30_000 });
   const resolved = page.getByRole('group', { name: /Create this ticket\?/ });
-  await expect(resolved).toContainText('Chose: Create ticket.');
+  await expect(resolved).toContainText(/Created ENG-\d+\./, { timeout: 30_000 });
+  await expect(resolved.getByRole('link', { name: /Open: Created ENG-\d+/ })).toBeVisible();
 });
