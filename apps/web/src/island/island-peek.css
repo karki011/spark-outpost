@@ -1,7 +1,7 @@
 .isl-peekrow-wrap {
   position: absolute;
   top: 0;
-  left: 50%;
+  left: calc(50% + var(--cx, 0px));
   width: 0;
   height: calc(var(--top) + 18px);
   z-index: 1;
@@ -82,16 +82,6 @@
   transform: translateY(16px);
 }
 
-.isl-peekrow-wrap[data-flat] .isl-pb {
-  top: auto;
-  bottom: -2px;
-}
-
-.isl-peekrow-wrap[data-flat] .isl-peekblob[data-state='done'] .isl-sblob::after {
-  top: auto;
-  bottom: 0;
-}
-
 .isl.bare svg.scout {
   transition: translate 0.25s var(--out);
 }
@@ -144,46 +134,6 @@
 
 .isl-peekblob .isl-sblob {
   display: block;
-}
-
-.isl-peekblob[data-state='working'] .isl-sblob {
-  animation: isl-wobble 2.4s ease-in-out infinite;
-}
-
-.isl-peekblob[data-state='failed'] .isl-sblob {
-  filter: saturate(0.6);
-}
-
-.isl-peekblob[data-state='done'] .isl-sblob::after {
-  content: '';
-  position: absolute;
-  right: -3px;
-  top: -3px;
-  width: 7px;
-  height: 7px;
-  background: var(--warn);
-  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
-}
-
-@keyframes isl-wobble {
-  50% {
-    transform: rotate(-6deg) translateY(-1px);
-  }
-}
-
-.isl-pb {
-  position: absolute;
-  right: -5px;
-  top: -4px;
-  min-width: 12px;
-  height: 12px;
-  border-radius: 6px;
-  background: var(--warn);
-  color: var(--warn-ink);
-  font:
-    700 8.5px/12px Geist,
-    sans-serif;
-  box-shadow: 0 0 0 2px var(--island);
 }
 
 .isl-tip {
@@ -244,8 +194,7 @@
   fill: var(--scout-eye);
 }
 
-.isl-root[data-rest] .scout:not(.working) *,
-.isl-root[data-rest] .isl-peekblob:not([data-state='working']) .isl-sblob {
+.isl-root[data-rest] .scout:not(.working) * {
   animation-play-state: paused;
 }
 

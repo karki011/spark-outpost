@@ -18,6 +18,11 @@ export function sessionSeed(chat: ConversationSummary): string {
   return `chat:${chat.title.trim().toLowerCase() || chat.id}`;
 }
 
+export function sessionTint(chat: ConversationSummary): string {
+  const seed = sessionSeed(chat);
+  return sessionColor((count) => seedIndex(seed, count));
+}
+
 export function SessionBlob({ chat, state, size, expression, live = false }: SessionBlobProps) {
   const seed = sessionSeed(chat);
   return (
@@ -25,7 +30,7 @@ export function SessionBlob({ chat, state, size, expression, live = false }: Ses
       className="isl-sblob"
       data-state={state}
       style={{
-        ['--sc' as string]: sessionColor((count) => seedIndex(seed, count)),
+        ['--sc' as string]: sessionTint(chat),
         width: size,
         height: size,
       }}
