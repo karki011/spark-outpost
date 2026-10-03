@@ -10,12 +10,15 @@ export type IslandAction = 'quick' | 'sessions';
 
 export type IslandSettingsTarget = 'island' | 'sparks';
 
+export type IslandSize = 'small' | 'medium' | 'large';
+
 export interface CompanionStatus {
   supported: boolean;
   enabled: boolean;
   shortcuts: Record<IslandAction, string>;
   failed: IslandAction[];
   sound?: boolean;
+  islandSize?: IslandSize;
 }
 
 export type ShortcutResult = { ok: true } | { ok: false; error: string };
@@ -42,6 +45,7 @@ export interface SparkDesktop {
     setEnabled(on: boolean): Promise<CompanionStatus>;
     setShortcut(action: IslandAction, accelerator: string | null): Promise<ShortcutResult>;
     setSound?(on: boolean): Promise<CompanionStatus>;
+    setIslandSize?(size: IslandSize): Promise<CompanionStatus>;
     onChange(callback: (status: CompanionStatus) => void): Unsubscribe;
   };
   island: {

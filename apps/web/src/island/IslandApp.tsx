@@ -52,6 +52,7 @@ import {
 import { isSleepyTime, scoutMoodFor } from './island-mood.ts';
 import { homeSessions, quickStartProject } from './home-model.ts';
 import { useChimes, useIslandSound } from './island-sound.ts';
+import { useIslandSize } from './island-size.ts';
 import { IslandShell } from './IslandShell.tsx';
 import type { QuickDraft } from './QuickChat.tsx';
 import { useAttachments } from '../chat/attachments/use-attachments.ts';
@@ -262,6 +263,7 @@ export function IslandApp() {
     else openPanel('quick');
   };
 
+  const size = useIslandSize();
   const geometry = useIslandBridge({
     islandRef,
     focusable: (panel !== null && opener === 'user') || (focusSignal > 0 && view.kind === 'card'),
@@ -269,7 +271,7 @@ export function IslandApp() {
     blobRects: () => flatRowRects(rowRef.current),
     peek: view.kind === 'peek',
     hovered: hover,
-    restKey: `${row.sessions.length}:${row.more}`,
+    restKey: `${row.sessions.length}:${row.more}:${size}`,
     onHover,
     onCommand: command,
     onBlur: () => {
@@ -410,6 +412,7 @@ export function IslandApp() {
         drop={{ phase: grab.phase, item: grab.item, note: dropNote, sceneRef }}
         view={view}
         geometry={geometry}
+        size={size}
         mood={
           wave
             ? 'happy'

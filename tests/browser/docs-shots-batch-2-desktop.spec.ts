@@ -63,6 +63,7 @@ async function fakeDesktop(page: Page) {
       enabled: true,
       shortcuts: { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' },
       failed: [] as string[],
+      islandSize: 'medium',
     };
     const updates = {
       currentVersion: '0.2.0',
@@ -86,6 +87,7 @@ async function fakeDesktop(page: Page) {
           get: async () => structuredClone(companion),
           setEnabled: async () => structuredClone(companion),
           setShortcut: async () => ({ ok: true }),
+          setIslandSize: async () => structuredClone(companion),
           onChange: noop,
         },
         island: { geometry: async () => null, onGeometry: noop, onCommand: noop },

@@ -10,6 +10,7 @@ import { acceleratorFromKey, shortcutKeys } from '../desktop/shortcut-keys.ts';
 import { useCompanionStatus } from '../desktop/use-companion-status.ts';
 import type { DocTarget } from '../ui/DocLink.tsx';
 import { Keys } from '../ui/Keys.tsx';
+import { IslandSizeSetting } from './IslandSizeSetting.tsx';
 import { SettingRow } from './SettingRow.tsx';
 
 const LABEL = 'Show Spark Island';
@@ -174,6 +175,12 @@ export function DesktopCompanionSetting() {
       />
       {status.enabled && (
         <>
+          {desktop.companion.setIslandSize && (
+            <IslandSizeSetting
+              status={status}
+              onChange={(size) => void desktop.companion.setIslandSize?.(size)}
+            />
+          )}
           {SHORTCUTS.map((shortcut) => (
             <ShortcutSetting key={shortcut.action} {...shortcut} status={status} />
           ))}

@@ -1,7 +1,7 @@
 import { useState, type RefObject } from 'react';
 import type { ConversationDetail, ConversationSummary, Project } from '@spark-outpost/contracts';
 import type { ScoutMood } from '../brand/BlobScout.tsx';
-import type { IslandGeometry } from '../desktop/desktop-bridge.ts';
+import type { IslandGeometry, IslandSize } from '../desktop/desktop-bridge.ts';
 import type { Voice } from '../spark/voice.ts';
 import type { FastState } from './ask-fast-path.ts';
 import { AskSpark } from './AskSpark.tsx';
@@ -26,6 +26,7 @@ export interface IslandShellProps {
   drop: DropProps;
   view: IslandView;
   geometry: IslandGeometry;
+  size: IslandSize;
   mood: ScoutMood;
   reduced: boolean;
   wave: boolean;

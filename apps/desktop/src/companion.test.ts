@@ -129,6 +129,16 @@ describe('desktop companion lifecycle', () => {
     expect(effects.changed).toHaveBeenLastCalledWith(expect.objectContaining({ sound: true }));
   });
 
+  it('starts at the medium island size, then saves and announces a new size', () => {
+    const { companion, effects } = setup();
+    expect(companion.status().islandSize).toBe('medium');
+    expect(companion.setIslandSize('large')).toMatchObject({ islandSize: 'large' });
+    expect(effects.save).toHaveBeenLastCalledWith(expect.objectContaining({ islandSize: 'large' }));
+    expect(effects.changed).toHaveBeenLastCalledWith(
+      expect.objectContaining({ islandSize: 'large' }),
+    );
+  });
+
   it('shuts down cleanly and notices a window that went away on its own', () => {
     const { companion, registered, islands, gone } = setup({ enabled: true });
     gone[0]!();

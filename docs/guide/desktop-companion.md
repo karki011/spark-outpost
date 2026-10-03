@@ -18,6 +18,8 @@ Spark Island is on by default. To change it:
 
 You can also select the Spark Outpost icon in the menu bar and choose **Show Spark Island**.
 
+To make Scout bigger or smaller at rest, pick **Spark Island size** right below: **Small**, **Medium** (the default) or **Large**. The needs-you pill grows with it, and the change shows straight away.
+
 ![The Around the app settings with Show Spark Island and the two shortcuts](images/companion-settings-light.png)
 
 ## What Spark Island shows

@@ -3,6 +3,7 @@ export const IPC = {
   companionSetEnabled: 'companion:set-enabled',
   companionSetShortcut: 'companion:set-shortcut',
   companionSetSound: 'companion:set-sound',
+  companionSetIslandSize: 'companion:set-island-size',
   companionChanged: 'companion:changed',
   islandInteractive: 'island:interactive',
   islandFocusable: 'island:focusable',

@@ -4,6 +4,7 @@ import {
   SHORTCUT_ACTIONS,
   type CompanionSettings,
   type IslandPosition,
+  type IslandSize,
   type ShortcutAction,
 } from './companion-settings.ts';
 
@@ -18,6 +19,7 @@ export interface CompanionStatus {
   shortcuts: Record<ShortcutAction, string>;
   failed: ShortcutAction[];
   sound: boolean;
+  islandSize: IslandSize;
 }
 
 export type ShortcutResult = { ok: true } | { ok: false; error: string };
@@ -39,6 +41,7 @@ export interface Companion {
   setEnabled(on: boolean): CompanionStatus;
   setShortcut(action: ShortcutAction, accelerator: string | null): ShortcutResult;
   setSound(on: boolean): CompanionStatus;
+  setIslandSize(size: IslandSize): CompanionStatus;
   setPosition(position: IslandPosition): void;
   shutdown(): void;
 }
@@ -63,6 +66,7 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     shortcuts: { ...settings.shortcuts },
     failed: SHORTCUT_ACTIONS.filter((action) => failed.has(action)),
     sound: settings.sound,
+    islandSize: settings.islandSize,
   });
 
   const publish = () => effects.changed(status());
@@ -143,6 +147,11 @@ export function createCompanion(initial: CompanionSettings, effects: CompanionEf
     },
     setSound(on) {
       commit({ ...settings, sound: on });
+      publish();
+      return status();
+    },
+    setIslandSize(size) {
+      commit({ ...settings, islandSize: size });
       publish();
       return status();
     },

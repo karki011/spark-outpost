@@ -12,6 +12,7 @@ import {
 } from 'electron';
 import { createCompanion, type Companion, type CompanionStatus } from './companion.ts';
 import {
+  isIslandSize,
   loadSettings,
   saveSettings,
   SHORTCUT_ACTIONS,
@@ -172,6 +173,9 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
   ipcMain.handle(IPC.companionSetSound, (event, on: unknown) =>
     fromSpark(event) && typeof on === 'boolean' ? companion.setSound(on) : companion.status(),
   );
+  ipcMain.handle(IPC.companionSetIslandSize, (event, size: unknown) =>
+    fromSpark(event) && isIslandSize(size) ? companion.setIslandSize(size) : companion.status(),
+  );
   ipcMain.handle(IPC.islandGeometry, (event) => (fromIsland(event) ? island!.geometry() : null));
   ipcMain.handle(IPC.pendingChat, (event) => {
     if (!fromSpark(event) || fromIsland(event)) return null;
@@ -237,6 +241,7 @@ export async function startCompanionHost(options: CompanionHostOptions): Promise
         IPC.companionSetEnabled,
         IPC.companionSetShortcut,
         IPC.companionSetSound,
+        IPC.companionSetIslandSize,
         IPC.islandGeometry,
         IPC.islandSparkFocused,
         IPC.islandPickFolder,

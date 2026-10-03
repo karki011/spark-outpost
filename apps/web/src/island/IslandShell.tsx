@@ -15,6 +15,7 @@ import { keyHint } from './key-hints.tsx';
 import { PeekRow } from './PeekRow.tsx';
 import { DropScene } from './DropScene.tsx';
 import { ViewBody, type IslandShellProps } from './ShellBody.tsx';
+import { restMetrics, type RestMetrics } from './island-size.ts';
 import { useIslandShape, type ScoutSpot } from './use-island-shape.ts';
 
 interface ShellRefs {
@@ -23,14 +24,10 @@ interface ShellRefs {
 }
 
 const KHINT_HEIGHT = 18;
-const PILL_HEIGHT = 34;
-const PILL_INSET = 48;
 const PILL_MIN_WIDTH = 112;
 const PANEL_MIN_WIDTH = 320;
 const CHAT_WIDTH = 690;
 const PANEL_SIDE_GAP = 16;
-const BARE_SCOUT = 38;
-const BARE_TUCK = 20;
 const ROW_BLOB = 22;
 const FLAT_ROW_BLOB = 28;
 
@@ -38,10 +35,19 @@ function hasCard(view: IslandView): boolean {
   return view.kind === 'card' || view.kind === 'note';
 }
 
-function scoutSpot(view: IslandView, width: number, top: number, hang: number | null): ScoutSpot {
-  if (hang !== null) return { x: width / 2 - BARE_SCOUT / 2, y: -hang, size: BARE_SCOUT };
+function scoutSpot(
+  view: IslandView,
+  width: number,
+  top: number,
+  hang: number | null,
+  rest: RestMetrics,
+): ScoutSpot {
+  if (hang !== null) return { x: width / 2 - rest.blob / 2, y: -hang, size: rest.blob };
   if (view.kind === 'peek') return { x: width / 2 - 9, y: top - 13, size: 30 };
   if (hasCard(view)) return { x: 22, y: top + 8 + 14, size: 46 };
+  if (view.kind === 'nudge') {
+    return { x: 10, y: Math.max(2, (top - rest.pillScout) / 2), size: rest.pillScout };
+  }
   return { x: 10, y: Math.max(2, (top - 22) / 2), size: 22 };
 }
 
@@ -57,29 +63,30 @@ function viewKey(view: IslandView): string {
 }
 
 export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & ShellRefs) {
-  const { view, geometry } = props;
+  const { view, geometry, size } = props;
   const scoutRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<HTMLDivElement>(null);
   const wingRef = useRef<HTMLSpanElement>(null);
   const hugsNotch = geometry.notch && geometry.docked;
   const flat = geometry.docked && !geometry.notch;
   const bare = flat && view.kind === 'peek';
-  const hang = bare ? BARE_TUCK : null;
+  const rest = restMetrics(size);
+  const hang = bare ? rest.tuck : null;
   const pillish = view.kind === 'nudge';
-  const top = pillish ? Math.max(geometry.top, PILL_HEIGHT) : bare ? 0 : geometry.top;
+  const top = pillish ? Math.max(geometry.top, rest.pillHeight) : bare ? 0 : geometry.top;
   const quiet = view.kind === 'peek' || pillish;
   const viewport = useViewportWidth();
   const room = Math.max(PANEL_MIN_WIDTH, viewport - PANEL_SIDE_GAP);
   const chatting = view.kind === 'panel' && view.panel === 'sessions' && props.selected !== null;
   const width = bare
-    ? BARE_SCOUT
+    ? rest.blob
     : Math.min(chatting ? CHAT_WIDTH : viewWidth(view, geometry.notchWidth), room);
   const compactPill = pillish && !hugsNotch;
   const hint = keyHint(view);
   const setTarget = useIslandShape(
     islandRef,
     scoutRef,
-    { width, height: top, radius: 14, scout: scoutSpot(view, width, top, hang) },
+    { width, height: top, radius: 14, scout: scoutSpot(view, width, top, hang, rest) },
     props.reduced,
   );
   const wings = wingsFor(props);
@@ -101,14 +108,14 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
       const body = quiet ? 0 : (viewRef.current?.scrollHeight ?? 0);
       const height = top + body + (hint && !quiet ? KHINT_HEIGHT : 0);
       const fitted = compactPill
-        ? Math.max(PILL_MIN_WIDTH, PILL_INSET + (wingRef.current?.scrollWidth ?? 0))
+        ? Math.max(PILL_MIN_WIDTH, rest.pillInset + (wingRef.current?.scrollWidth ?? 0))
         : width;
       setTarget(
         {
           width: fitted,
           height,
           radius: pillish ? 16 : quiet ? 14 : 22,
-          scout: scoutSpot(view, fitted, top, hang),
+          scout: scoutSpot(view, fitted, top, hang, rest),
         },
         view.kind === 'peek' ? 0.62 : 0.5,
       );
@@ -121,7 +128,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     const observer = new ResizeObserver(measure);
     watched.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [view, width, top, quiet, hint, compactPill, hang, pillish, setTarget]);
+  }, [view, width, top, quiet, hint, compactPill, hang, pillish, setTarget, rest]);
 
   const classes = [
     'isl',
@@ -151,7 +158,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
           {
             '--top': `${top}px`,
             '--gap': `${hugsNotch ? geometry.notchWidth : 0}px`,
-            '--wl': hasCard(view) ? '14px' : '40px',
+            '--wl': hasCard(view) ? '14px' : `${pillish ? rest.pillWing : 40}px`,
           } as CSSProperties
         }
       >

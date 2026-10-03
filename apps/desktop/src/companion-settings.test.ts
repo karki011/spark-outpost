@@ -60,7 +60,13 @@ describe('companion settings file', () => {
       shortcuts: { quick: 'Alt+J', sessions: 'Alt+Shift+Space' },
       position: { docked: true },
       sound: false,
+      islandSize: 'medium',
     });
+  });
+
+  it('keeps a saved island size and ignores an unknown one', () => {
+    expect(parseSettings(JSON.stringify({ islandSize: 'large' })).islandSize).toBe('large');
+    expect(parseSettings(JSON.stringify({ islandSize: 'huge' })).islandSize).toBe('medium');
   });
 
   it('falls back to the defaults when both shortcuts collide', () => {
@@ -79,6 +85,7 @@ describe('companion settings file', () => {
       enabled: false,
       position: { docked: false as const, x: 40, y: 200 },
       sound: true,
+      islandSize: 'small' as const,
     };
     await saveSettings(file, settings);
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(settings);

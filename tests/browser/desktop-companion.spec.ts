@@ -11,6 +11,7 @@ async function fakeDesktop(page: Page) {
       shortcuts: { quick: 'Alt+Space', sessions: 'Alt+Shift+Space' },
       failed: [] as string[],
       sound: false,
+      islandSize: 'medium',
     };
     const publish = () => {
       const copy = structuredClone(status);
@@ -46,6 +47,11 @@ async function fakeDesktop(page: Page) {
             status.sound = on;
             return publish();
           },
+          setIslandSize: async (size: string) => {
+            calls.push(['size', size]);
+            status.islandSize = size;
+            return publish();
+          },
           onChange: (listener: (status: unknown) => void) => {
             listeners.add(listener);
             return () => listeners.delete(listener);
@@ -74,6 +80,13 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
 
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  const sizes = spark.getByRole('radiogroup', { name: 'Spark Island size' });
+  await expect(sizes.getByRole('radio', { name: 'Medium' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await sizes.getByRole('radio', { name: 'Large' }).click();
+  await expect(sizes.getByRole('radio', { name: 'Large' })).toHaveAttribute('aria-checked', 'true');
   const change = spark.getByRole('button', { name: 'Change Quick chat shortcut' });
   await change.click();
   await page.keyboard.press('Control+Alt+J');
@@ -89,6 +102,7 @@ test('the desktop companion shows its shortcuts only while it is on', async ({ p
     await page.evaluate(() => (window as unknown as { desktopCalls: unknown[] }).desktopCalls),
   ).toEqual([
     ['enabled', true],
+    ['size', 'large'],
     ['shortcut', 'quick', 'Control+Alt+J'],
     ['shortcut', 'sessions', 'Alt+K'],
     ['enabled', false],
