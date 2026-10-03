@@ -144,7 +144,7 @@
 .titem {
   margin: 0 -8px;
   border-radius: var(--r-sm);
-  animation: rise 0.2s var(--out) both;
+  animation: rise 0.2s var(--out) backwards;
 }
 
 .ti-row {
