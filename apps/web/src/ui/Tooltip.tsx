@@ -98,6 +98,7 @@ export function useTooltip(label: TipContent, { side = 'bottom', keys }: Tooltip
   const id = useId();
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const anchorElement = useRef<HTMLElement | null>(null);
 
   const cancel = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -112,6 +113,7 @@ export function useTooltip(label: TipContent, { side = 'bottom', keys }: Tooltip
   const showSoon = useCallback(
     (element: HTMLElement) => {
       cancel();
+      anchorElement.current = element;
       timer.current = setTimeout(() => setAnchor(element.getBoundingClientRect()), SHOW_DELAY_MS);
     },
     [cancel],
@@ -120,6 +122,7 @@ export function useTooltip(label: TipContent, { side = 'bottom', keys }: Tooltip
   const show = useCallback(
     (element: HTMLElement) => {
       cancel();
+      anchorElement.current = element;
       setAnchor(element.getBoundingClientRect());
     },
     [cancel],
@@ -134,12 +137,17 @@ export function useTooltip(label: TipContent, { side = 'bottom', keys }: Tooltip
       event.preventDefault();
       hide();
     };
+    const onScroll = (event: Event) => {
+      const scrolled = event.target;
+      const moved = !(scrolled instanceof Node) || scrolled.contains(anchorElement.current);
+      if (moved) hide();
+    };
     window.addEventListener('keydown', onKey, true);
-    window.addEventListener('scroll', hide, true);
+    window.addEventListener('scroll', onScroll, true);
     window.addEventListener('resize', hide);
     return () => {
       window.removeEventListener('keydown', onKey, true);
-      window.removeEventListener('scroll', hide, true);
+      window.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', hide);
     };
   }, [anchor, hide]);
