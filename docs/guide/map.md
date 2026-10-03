@@ -1,7 +1,8 @@
 ---
 title: The Map
-section: Your tools
-order: 420
+section: Projects and the Map
+type: how-to
+order: 320
 summary: Open a project's Map, see how it builds, and switch between the Tree, Focus, Outline and Sky views.
 ---
 

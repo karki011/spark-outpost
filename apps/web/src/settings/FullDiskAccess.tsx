@@ -47,7 +47,7 @@ export function FullDiskAccess() {
         </span>
         <DocLink
           topic="Full Disk Access"
-          doc={{ page: 'privacy-and-secrets', heading: 'full-disk-access-on-mac' }}
+          doc={{ page: 'mac-privacy', heading: 'full-disk-access' }}
         />
         {status && <StatusPill status={status} />}
       </div>

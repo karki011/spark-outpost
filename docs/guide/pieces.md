@@ -1,86 +1,47 @@
 ---
-title: Big work in pieces
-section: Work with Spark
-order: 225
-summary: How the coordinator splits big work into pieces, runs Builders side by side in a shared tree or in worktrees, and ships them in one PR or several.
+title: Steer big work in pieces
+section: Crew and pieces
+type: how-to
+order: 412
+summary: Choose how many Builders run at once, steer pieces while they run, and pick one pull request or several.
 ---
 
-You'll learn how Spark handles work too big for one Builder, and how to steer it. About 4 minutes.
+You'll control how Spark builds work that's too big for one Builder. About 2 minutes.
 
-## When Spark splits the work
-
-After you agree a plan, [Jev](jev.md) picks how many Builders it needs: 1, 2, 3 or 4. Spark never uses more than the plan has items, or more than **Builders at once** allows. Spark then groups the plan's items, one group per Builder:
-
-- Items that change the same files stay together.
-- Items in the same part of the project join next, then items next to each other in the plan.
-- Data or migration work, and anything the request deletes or renames, never shares a Builder with other work.
-- Items in different projects never share a Builder.
-
-With one group, one Builder does the whole plan, with no Coordinator. With two or more, a Coordinator writes one piece per group, each small enough for one Builder.
-
-The line above the piece board shows what Jev chose, for example "Jev: 2 Builders (0.84) · P1 Claude Opus 5.5, worktree · P2 Claude Sonnet 5 (clearly simple), shared tree". The number in brackets is how sure Jev was.
-
-Without Jev, or when Jev isn't sure, the rules decide. The Coordinator splits the work when:
-
-- you ask for it, for example "split this up";
-- the agreed plan has 4 or more steps across 2 or more parts of the project;
-- the change likely touches 12 or more files, or 3 or more packages;
-- the change is too big for one Builder session.
-
-Otherwise one Builder does the whole job. When you ask for pieces, Spark doesn't drop to one Builder.
-
-## Pieces and the coordinator
-
-Each piece has a title, a key such as **P1**, a Builder and the files it owns. A Builder may change only its own files, and it can't commit, merge or switch branches. The Coordinator joins the pieces, runs the full checks once, and the Critic reviews the whole change.
-
-The piece board in the chat shows every piece with its Builder, where it runs, its model, its state and its checks.
-
-## Shared tree or worktrees
-
-Spark decides where each piece runs:
-
-| Where                | What it means                                                            | When Spark uses it                                                                                     |
-| -------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| **in order**         | One Builder at a time, one piece after another.                          | The pieces depend on each other, or running them together saves little time.                           |
-| **shared tree**      | Builders work side by side in the chat's folder, each on its own files.  | Independent pieces with no risky files.                                                                |
-| _Builder_**'s copy** | Each Builder works in its own worktree copy, merged back when it's done. | Data or migration work, a piece that touches lockfiles or manifests, or another task in the same repo. |
-
-Pieces in a copy land one by one as their checks pass. If two copies clash, Spark tries to merge them. If it can't, you get a card; at **Full auto → PR**, Spark stops and reports the clash instead of guessing.
+After you agree a plan, Spark may split it into pieces, one Builder each. See [How pieces work](how-pieces-work.md).
 
 ## Choose how many Builders run at once
 
 1. Open **Settings → Projects** and find the project.
-2. Under **Builders at once**, pick **1 at a time, in order**, **Up to 2 at once** or **Up to 3 at once**. The default is 3.
+2. Under **Builders at once**, pick **1 at a time, in order**, **Up to 2 at once** or **Up to 3 at once** (the default).
 
 More at once finishes sooner and spends faster.
 
 ## Steer the pieces while they run
 
-While pieces run, the message box becomes a steering box. Under **Steer to**, pick:
+1. While pieces run, find **Steer to** above the message box.
+2. Pick who gets your message:
 
-- **Auto**: Spark routes your message by its words, for example a piece's key or Builder name.
-- **All pieces**: every piece still open.
-- One piece, such as **P2 · API**.
-- **Coordinator**: read when the pieces are joined.
+   | Pick                          | Goes to                                                 |
+   | ----------------------------- | ------------------------------------------------------- |
+   | **Auto**                      | Whoever your words name, such as a piece key or Builder |
+   | **All pieces**                | Every piece still open                                  |
+   | A piece, such as **P2 · API** | That piece's Builder                                    |
+   | **Coordinator**               | Read when the pieces are joined                         |
 
-Write "skip P3" to skip a piece, or "use Codex for P2" to move one. The reply above the message box says when it arrives, for example "Queued for Rivet: … (next turn)".
+3. Send. The line above the box says when it arrives, such as "Queued for Rivet: … (next turn)".
 
-## Read the reply
-
-When the pieces are joined, the reply has one line per piece: what its Builder built, the files it changed and its scoped check. Later turns, such as a fix after review, follow as "Then …" lines.
-
-## Watch the crew in Agent TV
-
-Select **Agent TV** in the chat header to see the Coordinator in the middle and the Builders around it. It keeps showing the last crew while you ask follow-up questions. **Stage** shows them as a map, **List** as rows. Select a Builder to see its piece, model and state, or **Message** to tell just that Builder something. See [Message a crew member](spark-crew.md#message-a-crew-member).
+Write "skip P3" to skip a piece, or "use Codex for P2" to move one.
 
 ## One PR or separate PRs
 
-At **Full auto → PR**, when 2 or more pieces were built in their own copies, Spark asks **One PR or separate PRs?**:
+At **Full auto → PR**, when two or more pieces were built in their own copies, Spark asks **One PR or separate PRs?**.
 
-- **One PR**: everything in one pull request. If you don't answer, Spark picks this after the time in **If you don't answer a question** (**Settings → Spark**). With that setting **Off**, the card waits for you.
-- **Separate PRs**: one pull request per piece. Pieces built in the shared tree always go in the main PR.
-- **Always one PR here** or **Always separate PRs here**: remember the choice for this project and skip the card next time.
+1. Pick **One PR** or **Separate PRs**.
+2. To skip the card next time, pick **Always one PR here** or **Always separate PRs here**.
 
-> **Tip:** To keep things simple on a busy repo, set **Builders at once** to **1 at a time, in order**. Spark still splits big work, but builds one piece at a time.
+If you don't answer, Spark picks **One PR** after the time in **If you don't answer a question**. With that setting **Off**, the card waits.
 
-**Next:** [Jev, Spark's advisor](jev.md)
+> **Tip:** On a busy repo, set **Builders at once** to **1 at a time, in order**. Spark still splits the work but builds one piece at a time.
+
+**Next:** [Ship a change](ship-and-pull-requests.md)

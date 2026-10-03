@@ -16,7 +16,7 @@ export function HeartbeatSetting() {
       enabled={setup.data.profile.heartbeat}
       label="Send anonymous heartbeat"
       info={HEARTBEAT_INFO}
-      doc={{ page: 'privacy-and-secrets', heading: 'anonymous-heartbeat' }}
+      doc={{ page: 'mac-privacy', heading: 'anonymous-heartbeat' }}
       hint={HEARTBEAT_HINT}
       toUpdate={(value) => ({ heartbeat: value })}
     />

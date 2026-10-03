@@ -6,10 +6,31 @@ export interface GuideHeading {
   anchor: string;
 }
 
+export const GUIDE_PAGE_TYPES = [
+  'start',
+  'how-to',
+  'concept',
+  'reference',
+  'troubleshooting',
+  'whats-new',
+] as const;
+
+export type GuidePageType = (typeof GUIDE_PAGE_TYPES)[number];
+
+export const GUIDE_TYPE_LABELS: Readonly<Record<GuidePageType, string>> = {
+  start: 'Get started',
+  'how-to': 'How-to',
+  concept: 'Concept',
+  reference: 'Reference',
+  troubleshooting: 'Troubleshooting',
+  'whats-new': "What's new",
+};
+
 export interface GuidePage {
   slug: string;
   title: string;
   section: string;
+  type: GuidePageType;
   order: number;
   summary: string;
   body: string;
@@ -30,6 +51,7 @@ export interface GuideLink {
 const frontmatterSchema = z.object({
   title: z.string().min(1),
   section: z.string().min(1),
+  type: z.enum(GUIDE_PAGE_TYPES),
   order: z.coerce.number().int(),
   summary: z.string().min(1),
 });
@@ -161,6 +183,36 @@ export function parseGuideLink(hash: string): GuideLink | null {
   const slug = decodeURIComponent(slugPart).replace(/\/$/, '');
   const anchor = anchorPart ? decodeURIComponent(anchorPart) : null;
   return { slug, anchor };
+}
+
+const NEXT_LINK = /\n*\*\*Next:\*\* \[[^\]]+\]\(([^)\s]+)\)\s*$/;
+
+export function guideNextSlug(page: GuidePage): string | null {
+  const match = NEXT_LINK.exec(page.body);
+  return match ? (guideHrefTarget(match[1]!)?.slug ?? null) : null;
+}
+
+export function guideBodyWithoutNext(page: GuidePage): string {
+  return page.body.replace(NEXT_LINK, '\n');
+}
+
+export function resolveGuideLink(
+  pages: readonly GuidePage[],
+  redirects: Readonly<Record<string, string>>,
+  link: GuideLink,
+): GuideLink | null {
+  const page = pages.find((entry) => entry.slug === link.slug);
+  const anchorExists =
+    link.anchor === null || page?.headings.some((heading) => heading.anchor === link.anchor);
+  if (page && anchorExists) return link;
+  const moved =
+    (link.anchor ? redirects[`${link.slug}#${link.anchor}`] : undefined) ??
+    (page ? undefined : redirects[link.slug]);
+  if (moved) {
+    const [slug = '', anchor] = moved.split('#', 2);
+    return { slug, anchor: anchor ?? null };
+  }
+  return page ? { slug: link.slug, anchor: null } : null;
 }
 
 export function guideHrefTarget(href: string): GuideLink | null {

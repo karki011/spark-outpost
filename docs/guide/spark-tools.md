@@ -1,7 +1,8 @@
 ---
 title: Spark tools for agents
-section: Your tools
-order: 430
+section: Reference
+type: reference
+order: 917
 summary: What agents can look up about Spark, the confirm card they show before acting for you, and what they never see.
 ---
 
@@ -44,7 +45,7 @@ Tools that read change nothing.
 
 A few tools act for you: create, comment on, move or assign a ticket, open a pull request, start a PR follow-up round, and add or change a [Spark](sparks.md). The agent proposes, and Spark does it. Whether you see a confirm card first follows the agent's permission mode and the chat's autonomy:
 
-- **Auto** or **Bypass permissions** (Codex **Agent** or **Full access**), or **Full auto → PR**: Spark does it straight away. The chat shows what it did, with a link.
+- **Auto** or **Bypass permissions** (Codex **Approve for me** or **Full access**), or **Full auto → PR**: Spark does it straight away. The chat shows what it did, with a link.
 - **Accept edits**: Spark does it straight away when your message asked for it, such as "open a PR". Otherwise you get a card.
 - **Manual**, **Plan** and read-only modes: you always get a card. When your message asked for it, the confirm button is focused so you can press Enter.
 - After the agent reads secrets or private work data in a turn, every action in that turn asks first.
@@ -59,6 +60,15 @@ To answer the card:
 
 The agent doesn't wait on the card. Answer it whenever you like, even after the agent has finished: Spark does it when you confirm and shows the result, such as **Opened PR #12** and a link, on the card. Every action and answer goes into the audit log.
 
+### Tools that act
+
+| Action                                      | Tool                                                                                            |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Create, comment on, move or assign a ticket | `spark_create_ticket`, `spark_comment_ticket`, `spark_transition_ticket`, `spark_assign_ticket` |
+| Open a pull request                         | `spark_open_pr`                                                                                 |
+| Start a PR follow-up round                  | `spark_pr_follow_up_round`                                                                      |
+| Add or change a Spark                       | `spark_create_spark`, `spark_update_spark`                                                      |
+
 ## What the tools never return
 
 - File contents and terminal output. For a terminal, agents see only its name, folder and running program.
@@ -68,5 +78,3 @@ The agent doesn't wait on the card. Answer it whenever you like, even after the 
 If a tool reads private data, such as your chats or spend, Spark asks before anything in that run sends data off your computer. See [Sending data out after reading secrets](approvals.md#sending-data-out-after-reading-secrets).
 
 > **Tip:** If an agent can't answer a Spark question, ask it to "check the Spark guide". It then searches these pages with `spark_docs`.
-
-**Next:** [Spark Island](desktop-companion.md)

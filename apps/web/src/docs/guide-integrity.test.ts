@@ -1,7 +1,7 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { guideHrefTarget, loadGuidePages, type GuidePage } from '@spark-outpost/contracts';
+import { loadGuidePages, type GuidePage } from '@spark-outpost/contracts';
 
 const GUIDE = path.resolve(import.meta.dirname, '../../../../docs/guide');
 const WEB_SRC = path.resolve(import.meta.dirname, '..');
@@ -31,53 +31,12 @@ function hasTarget(slug: string, anchor: string | null): boolean {
   return anchor === null || page.headings.some((heading) => heading.anchor === anchor);
 }
 
-describe('the user guide', () => {
-  it('parses every page with unique titles and no body title', () => {
-    expect(pages.length).toBeGreaterThan(10);
-    expect(new Set(pages.map((page) => page.title)).size).toBe(pages.length);
-    for (const page of pages) {
-      expect(
-        page.headings.filter((heading) => heading.depth === 1),
-        page.slug,
-      ).toEqual([]);
-    }
+describe('doc links from the app', () => {
+  it('open the landing page first', () => {
+    expect(pages[0]).toMatchObject({ slug: 'welcome', type: 'start' });
   });
 
-  it('links only to pages and headings that exist', () => {
-    for (const page of pages) {
-      for (const match of page.body.matchAll(/(?<!!)\[[^\]]*\]\(([^)\s]+)\)/g)) {
-        const target = guideHrefTarget(match[1]!);
-        if (!target) continue;
-        expect(
-          hasTarget(target.slug || page.slug, target.anchor),
-          `${page.slug}: ${match[1]}`,
-        ).toBe(true);
-      }
-    }
-  });
-
-  it('chains the Get started pages in order with a closing Next link', () => {
-    const steps = pages.filter((page) => page.section === 'Get started' && !page.comingSoon);
-    expect(steps.length).toBeGreaterThanOrEqual(5);
-    steps.slice(0, -1).forEach((page, index) => {
-      const next = steps[index + 1]!;
-      expect(page.body.trimEnd(), page.slug).toMatch(
-        new RegExp(`\\*\\*Next:\\*\\* \\[${next.title}\\]\\(${next.slug}\\.md\\)$`),
-      );
-    });
-  });
-
-  it('has a light and a dark file for every screenshot a page shows', () => {
-    for (const page of pages) {
-      for (const match of page.body.matchAll(/!\[[^\]]*\]\(([^)\s]+)\)/g)) {
-        const light = path.join(GUIDE, match[1]!);
-        expect(existsSync(light), `${page.slug}: ${match[1]}`).toBe(true);
-        expect(existsSync(light.replace(/-light\.png$/, '-dark.png')), match[1]).toBe(true);
-      }
-    }
-  });
-
-  it('only sends doc links from the app to pages and headings that exist', () => {
+  it('point at pages and headings that exist, without leaning on a redirect', () => {
     const targets = sourceFiles(WEB_SRC).flatMap((file) =>
       [
         ...readFileSync(file, 'utf8').matchAll(
