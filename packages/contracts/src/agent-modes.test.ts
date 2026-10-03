@@ -4,7 +4,7 @@ import {
   combinationWarning,
   defaultModeFor,
   modeForLegacy,
-  modeNeedsWorktree,
+  modeSkipsGate,
   modePosture,
   permissionFor,
   translateMode,
@@ -48,22 +48,22 @@ describe('mode postures', () => {
   });
 });
 
-describe('where a mode may run', () => {
-  it('keeps Claude modes that ask or decide on the checkout, and Bypass in a worktree copy', () => {
+describe('modes that skip the approval gate', () => {
+  it('counts only Bypass and unknown Claude modes', () => {
     for (const mode of ['default', 'acceptEdits', 'auto', 'plan']) {
-      expect(modeNeedsWorktree('claude', mode)).toBe(false);
+      expect(modeSkipsGate('claude', mode)).toBe(false);
     }
-    expect(modeNeedsWorktree('claude', 'bypassPermissions')).toBe(true);
-    expect(modeNeedsWorktree('claude', 'future')).toBe(true);
+    expect(modeSkipsGate('claude', 'bypassPermissions')).toBe(true);
+    expect(modeSkipsGate('claude', 'future')).toBe(true);
   });
 
-  it('puts Codex modes that skip the gate, and unknown modes, in a worktree copy', () => {
-    expect(modeNeedsWorktree('codex', 'ask-every-action')).toBe(false);
-    expect(modeNeedsWorktree('codex', 'agent')).toBe(true);
-    expect(modeNeedsWorktree('codex', 'agent-full-access')).toBe(true);
-    expect(modeNeedsWorktree('codex', 'future')).toBe(true);
-    expect(modeNeedsWorktree('fake', 'custom')).toBe(true);
-    expect(modeNeedsWorktree('fake', 'read-only')).toBe(false);
+  it('counts Codex modes that never ask, and unknown modes', () => {
+    expect(modeSkipsGate('codex', 'ask-every-action')).toBe(false);
+    expect(modeSkipsGate('codex', 'agent')).toBe(true);
+    expect(modeSkipsGate('codex', 'agent-full-access')).toBe(true);
+    expect(modeSkipsGate('codex', 'future')).toBe(true);
+    expect(modeSkipsGate('fake', 'custom')).toBe(true);
+    expect(modeSkipsGate('fake', 'read-only')).toBe(false);
   });
 });
 
@@ -98,7 +98,7 @@ describe('the one-line summary', () => {
 
   it('says what the mode and autonomy do together', () => {
     expect(combinationLine({ ...facts, mode: 'bypassPermissions', level: 'hands-off' })).toBe(
-      "Agent won't ask · kept automatically · in a worktree copy · Revert available",
+      "Agent won't ask · kept automatically · Revert available",
     );
     expect(combinationLine({ ...facts, mode: 'default', level: 'hands-off' })).toBe(
       'Agent asks before edits and commands · kept automatically · Revert available',
@@ -113,9 +113,9 @@ describe('the one-line summary', () => {
     );
   });
 
-  it('warns only for worktree-only modes', () => {
+  it('warns only for modes that skip the gate', () => {
     expect(combinationWarning({ ...facts, mode: 'bypassPermissions', level: 'hands-off' })).toMatch(
-      /runs only in a worktree copy/,
+      /ran without review/,
     );
     expect(combinationWarning({ ...facts, mode: 'acceptEdits', level: 'hands-off' })).toBeNull();
     expect(
@@ -125,7 +125,7 @@ describe('the one-line summary', () => {
         level: 'hands-off',
         hasRepos: true,
       }),
-    ).toMatch(/worktree copy/);
+    ).toMatch(/flags anything that crosses a safety rail/);
     expect(
       combinationWarning({
         ...facts,

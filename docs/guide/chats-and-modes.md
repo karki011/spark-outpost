@@ -86,7 +86,7 @@ To change the mode:
 A few rules hold in every mode:
 
 - Read-only modes (**Plan**, **Read-only**) never change files. If you ask for a change, the agent answers instead. Select **Make the change** under its answer to run the same request with changes allowed.
-- Claude's **Bypass permissions** and Codex's **Approve for me** and **Full access** act without Spark's approval checks, so they run only in a worktree copy, never on your checkout.
+- Claude's **Bypass permissions** and Codex's **Approve for me** and **Full access** act without asking, wherever the chat works (its own worktree by default, or your checkout if you picked it). Spark watches every action, marks it **ran without review** in the audit, and flags anything that crosses a protected path.
 - Whatever the mode, secret files and agent instruction files still ask first, and agents publish only the chat's own branch. See [Approvals and protected paths](approvals.md).
 
 For how the mode and Spark autonomy work together, see [Permissions and autonomy](permissions-and-autonomy.md).

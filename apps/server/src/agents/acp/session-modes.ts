@@ -1,4 +1,4 @@
-import { isReadOnlyPosture, modeNeedsWorktree, modePosture } from '@spark-outpost/contracts';
+import { isReadOnlyPosture, modePosture } from '@spark-outpost/contracts';
 import type { ProviderOutput, ProviderTurn } from '../../providers/provider.ts';
 import type { AgentDefinition } from './agents.ts';
 import { modeName, offersMode, type ModeWish, type SettingsSession } from './apply-settings.ts';
@@ -8,9 +8,6 @@ function doModeWish(definition: AgentDefinition, turn: ProviderTurn): ModeWish {
   const asking = definition.doMode ?? definition.conversationMode;
   const chosen = turn.settings.mode ?? asking;
   if (isReadOnlyPosture(modePosture(definition.id, chosen))) return { wanted: asking };
-  if (turn.worktree !== true && modeNeedsWorktree(definition.id, chosen)) {
-    return { wanted: asking, note: `${chosen} runs only in a worktree copy; asking instead` };
-  }
   return { wanted: chosen, fallback: asking };
 }
 
@@ -30,7 +27,6 @@ export function modeWish(
 
 export function modeAllowed(
   definition: AgentDefinition,
-  turn: ProviderTurn,
   inProject: boolean,
   changing: boolean,
 ): (mode: string) => boolean {
@@ -39,7 +35,7 @@ export function modeAllowed(
     return (mode) =>
       mode === definition.askMode || isReadOnlyPosture(modePosture(definition.id, mode));
   }
-  return (mode) => turn.worktree === true || !modeNeedsWorktree(definition.id, mode);
+  return () => true;
 }
 
 export async function switchMode(
@@ -57,7 +53,7 @@ export async function switchMode(
     return;
   }
   if (!allowed(mode)) {
-    push(mapper.note(`${name} runs only in a worktree copy; the mode stays as it was`));
+    push(mapper.note(`${name} can't be used in this turn; the mode stays as it was`));
     return;
   }
   try {

@@ -65,7 +65,7 @@ export interface ProviderModeTable {
   readOnlyMode: string;
   askingMode: string;
   postures: Readonly<Record<string, ModePosture>>;
-  worktreeOnly: readonly string[];
+  skipsGate: readonly string[];
 }
 
 const CLAUDE_MODES: ProviderModeTable = {
@@ -80,7 +80,7 @@ const CLAUDE_MODES: ProviderModeTable = {
     dontAsk: 'denies',
     bypassPermissions: 'full_access',
   },
-  worktreeOnly: ['bypassPermissions'],
+  skipsGate: ['bypassPermissions'],
 };
 
 const ZAI_MODES: ProviderModeTable = { ...CLAUDE_MODES, defaultMode: 'default' };
@@ -95,7 +95,7 @@ const CODEX_MODES: ProviderModeTable = {
     agent: 'auto',
     'agent-full-access': 'full_access',
   },
-  worktreeOnly: ['agent', 'agent-full-access'],
+  skipsGate: ['agent', 'agent-full-access'],
 };
 
 const PROVIDER_MODES: Readonly<Record<string, ProviderModeTable>> = {
@@ -160,14 +160,14 @@ export function defaultModeFor(provider: string | null): string | null {
   return providerModes(provider)?.defaultMode ?? null;
 }
 
-export function modeNeedsWorktree(
+export function modeSkipsGate(
   provider: string | null,
   mode: string | null,
   kind: string | null = null,
 ): boolean {
   if (!mode) return false;
   const table = providerModes(provider);
-  if (table?.worktreeOnly.includes(mode)) return true;
+  if (table?.skipsGate.includes(mode)) return true;
   if (table?.postures[mode]) return false;
   const posture = modePosture(provider, mode, kind);
   return posture === 'unknown' || posture === 'auto' || posture === 'full_access';
@@ -250,9 +250,8 @@ export function combinationLine(facts: CombinationFacts): string {
   if (!facts.hasRepos) return 'Plain chat: no project folder, so nothing can change';
   const posture = modePosture(facts.provider, facts.mode, facts.kind);
   if (isReadOnlyPosture(posture)) return `${POSTURE_LINES.read_only} · nothing changes`;
-  const worktree = modeNeedsWorktree(facts.provider, facts.mode, facts.kind);
   const parts = [POSTURE_LINES[posture], AUTONOMY_LINES[facts.level]];
-  if (worktree || facts.level === 'full-auto') parts.push('in a worktree copy');
+  if (facts.level === 'full-auto') parts.push('in a worktree copy');
   parts.push('Revert available');
   return parts.join(' · ');
 }
@@ -261,8 +260,8 @@ export function combinationWarning(facts: CombinationFacts): string | null {
   if (!facts.hasRepos) return null;
   const posture = modePosture(facts.provider, facts.mode, facts.kind);
   if (isReadOnlyPosture(posture)) return null;
-  if (modeNeedsWorktree(facts.provider, facts.mode, facts.kind)) {
-    return "In this mode the agent acts without Spark Outpost's approval gate, so it runs only in a worktree copy, never on your checkout.";
+  if (modeSkipsGate(facts.provider, facts.mode, facts.kind)) {
+    return "In this mode the agent acts without asking. Spark watches every action, marks it ran without review, and flags anything that crosses a safety rail.";
   }
   return null;
 }

@@ -26,7 +26,7 @@ Select the permissions chip next to the model button in the message box. It show
 | Decides what to ask             | **Auto** (Claude default) | **Approve for me** (default) | Only what the agent asks about.                                |
 | Never asks                      | **Bypass permissions**    | **Full access**              | None from the agent.                                           |
 
-Z.ai starts on **Manual**. Spark follows the mode: when it lets the agent act, Spark adds no card of its own beyond the protected paths. **Bypass permissions**, Codex's **Approve for me** and **Full access** act outside Spark's approval checks, so those chats run only in a worktree copy.
+Z.ai starts on **Manual**. Spark follows the mode: when it lets the agent act, Spark adds no card of its own beyond the protected paths. **Bypass permissions**, Codex's **Approve for me** and **Full access** act without asking, in the chat's worktree or on your checkout, whichever you chose. Spark records each action as **ran without review** and flags any that cross a protected path; see [Approvals](approvals.md#actions-that-ran-without-review).
 
 ![The Permissions tab listing Claude's modes](images/chats-and-modes-permissions-light.png)
 

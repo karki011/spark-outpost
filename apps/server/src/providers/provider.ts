@@ -74,7 +74,6 @@ export interface ProviderTurn {
   coordinated?: boolean;
   publishes?: boolean;
   env?: Readonly<Record<string, string>>;
-  worktree?: boolean;
   planning?: boolean;
   modeRequests?: ModeRequests;
   steering?: SteerRequests;

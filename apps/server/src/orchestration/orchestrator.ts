@@ -417,8 +417,6 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
         git &&
         !input.chatWorktree &&
         needsCopyFor({
-          provider: input.provider,
-          agentMode: input.agentMode,
           level: input.level,
           destructive: decisions.destructive,
           risky: risky !== null,

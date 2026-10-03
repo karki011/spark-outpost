@@ -109,7 +109,7 @@ A few more rules hold everywhere:
 
 - **Agents publish only the chat's own branch, and only when allowed.** An agent, Builders included, may push the chat's own `spark/` branch and run `gh pr create`, `gh pr view` or `gh pr edit` for its pull request when your message asks for it ("open a PR", "push it"), the chat is at **Full auto → PR**, or the agent's mode is **Auto** or **Bypass permissions**. Otherwise Builders don't push and Spark commits, pushes and opens the PR itself when the task is done. Force pushes, pushes of any other branch or the base branch, changing remotes and other hosting tools stay refused in every mode.
 - **Short instructions after the work is done go to the chat's agent.** When a chat's task has already built, a short message like "open pr" or "push it" runs as one turn of the chat's main agent with the chat's own mode, not as a new Builder.
-- **Modes Spark can't check run in a copy.** Claude's **Bypass permissions** and Codex's **Approve for me** and **Full access** act without Spark's approval checks, so those chats run only in a worktree copy, never on your checkout.
+- **Modes that never ask are watched, not blocked.** Claude's **Bypass permissions** and Codex's **Approve for me** and **Full access** act without asking, wherever the chat works. See [Actions that ran without review](#actions-that-ran-without-review).
 
 ### Keep files away from agents with .sparkignore
 

@@ -1,4 +1,4 @@
-import { modeNeedsWorktree, type PlanDocument } from '@spark-outpost/contracts';
+import { modeSkipsGate, type PlanDocument } from '@spark-outpost/contracts';
 import { COORD_POLICY_VERSION } from '../advisor/policy.ts';
 import { insertDecision } from '../persistence/orchestrations.ts';
 import { latestApprovedPlan } from '../persistence/plan-documents.ts';
@@ -56,7 +56,7 @@ export async function placementFacts(s: Session): Promise<PlacementFacts> {
     git: s.git,
     repoBusy: s.git ? await repoBusy(s.deps.db, s.lease.runId, root) : false,
     destructive: s.facts.destructive,
-    skipsGate: modeNeedsWorktree(s.input.provider, s.input.agentMode),
+    skipsGate: modeSkipsGate(s.input.provider, s.input.agentMode),
     wholeProjectChecks: (s.checks?.commands.length ?? 0) > 0,
     splitWorthIt: null,
     sameFolder: null,

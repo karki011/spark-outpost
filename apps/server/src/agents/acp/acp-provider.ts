@@ -419,7 +419,7 @@ async function converse(
         if (note) push(mapper.note(note));
       }
       const { live } = applied;
-      const allowed = modeAllowed(definition, turn, policy !== null, doing !== null);
+      const allowed = modeAllowed(definition, policy !== null, doing !== null);
       mapper.trackSettings(
         { ...applied.current, mode: applied.mode, values: applied.values },
         { allowed, name: (mode) => modeName(live.options(), mode) },
