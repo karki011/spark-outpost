@@ -59,6 +59,19 @@ describe('engagement', () => {
     expect(engagement({ ...FACTS, planItems: oneArea }).engage).toBe(false);
   });
 
+  it('keeps a trivial housekeeping plan on one Builder when a step names a file outside the project (live M2)', () => {
+    const plan = [
+      'Step 3: create `NOTES.md` in the repo root with the given heredoc.',
+      'Step 4: `pnpm install --offline 2>&1 | tail -3` (can change node_modules/lockfile).',
+      'Step 6: `git add NOTES.md && git commit -qm "Add notes"`.',
+      'Step 7: not doable: `.env` reads are blocked by permission settings.',
+      'Step 8: not doable: writing to `.../scratchpad/live5/outside/m2-bypass.txt` is outside the project folder.',
+    ];
+    expect(engagement({ ...FACTS, planItems: plan })).toMatchObject({ engage: false });
+    const escaping = plan.map((item) => item.replace('.../scratchpad', '../scratchpad'));
+    expect(engagement({ ...FACTS, planItems: escaping }).engage).toBe(false);
+  });
+
   it('engages when the scan spreads over 12 files or 3 packages', () => {
     const many = Array.from({ length: 12 }, (_, index) => file(`src/f${index}.ts`, '.'));
     expect(engagement({ ...FACTS, likely: many }).reason).toBe('scan');

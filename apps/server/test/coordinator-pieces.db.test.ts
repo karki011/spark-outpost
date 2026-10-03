@@ -10,7 +10,11 @@ import {
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
-import { PIECE_OUTCOME_UNKNOWN, recoverExpiredLeases } from '../src/workflow/recovery.ts';
+import {
+  PIECE_NOT_STARTED,
+  PIECE_OUTCOME_UNKNOWN,
+  recoverExpiredLeases,
+} from '../src/workflow/recovery.ts';
 import { PIECE_CHECK_SCRIPT } from './fake-acp-coordinator.ts';
 import { BLIND_FINDING } from './fake-acp-roles.ts';
 import {
@@ -222,7 +226,9 @@ describe('pieces in order', { timeout: 120_000 }, () => {
       note: 'The Builder changed none of its files.',
       filesChanged: [],
     });
-    expect(list.pieces.slice(1).map((piece) => piece.status)).not.toContain('landed');
+    expect(list.pieces.slice(1).map((piece) => [piece.status, piece.note])).toEqual(
+      list.pieces.slice(1).map(() => ['skipped', 'Not started: P1 failed and the run stopped']),
+    );
   });
 
   it('hands a piece to a fresh Builder once its context is 75% full', async () => {
@@ -438,8 +444,9 @@ describe('pieces in order', { timeout: 120_000 }, () => {
     expect(list.pieces.map((piece) => [piece.key, piece.status])).toEqual([
       ['P1', 'landed'],
       ['P2', 'failed'],
-      ['P3', 'pending'],
+      ['P3', 'skipped'],
     ]);
     expect(list.pieces[1]!.note).toBe(PIECE_OUTCOME_UNKNOWN);
+    expect(list.pieces[2]!.note).toBe(PIECE_NOT_STARTED);
   });
 });

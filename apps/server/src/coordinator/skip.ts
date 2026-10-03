@@ -1,7 +1,8 @@
 import type { PieceStatus, TaskPiece } from '@spark-outpost/contracts';
 import type { Queryable } from '../persistence/db.ts';
-import { movePiece } from '../persistence/pieces.ts';
+import { movePiece, pieceListById } from '../persistence/pieces.ts';
 import { reaches } from './graph.ts';
+import type { Coordination } from './state.ts';
 
 export const SKIPPED_BY_USER = 'You skipped it.';
 
@@ -42,4 +43,25 @@ export async function skipWithDependents(
   const moved = await movePiece(db, piece.id, OPEN, 'skipped', { note: SKIPPED_BY_USER });
   const dependents = await skipDependents(db, pieces, piece.key);
   return moved ? [piece.key, ...dependents] : dependents;
+}
+
+function unstartedNote(pieces: readonly TaskPiece[]): string {
+  const failed = pieces.find((piece) => piece.status === 'failed');
+  return failed
+    ? `Not started: ${failed.key} failed and the run stopped`
+    : 'Not started: the run ended before it';
+}
+
+export async function skipUnstarted(
+  db: Queryable,
+  coordination: Coordination | null,
+): Promise<void> {
+  const list = coordination?.list;
+  if (!coordination || !list) return;
+  const note = unstartedNote(list.pieces);
+  let moved = false;
+  for (const piece of list.pieces) {
+    if (await movePiece(db, piece.id, ['pending', 'ready'], 'skipped', { note })) moved = true;
+  }
+  if (moved) coordination.list = await pieceListById(db, list.id);
 }

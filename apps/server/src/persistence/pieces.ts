@@ -315,3 +315,14 @@ export async function failRunningPieces(db: Queryable, note: string): Promise<nu
   );
   return rowCount ?? 0;
 }
+
+export async function skipUnstartedPieces(db: Queryable, note: string): Promise<number> {
+  const { rowCount } = await db.query(
+    `UPDATE task_pieces p SET status = 'skipped', note = $1
+     FROM piece_lists l JOIN runs r ON r.id = l.orchestration_run_id
+     WHERE p.piece_list_id = l.id AND p.status IN ('pending', 'ready')
+       AND r.status NOT IN ('running', 'awaiting_approval', 'queued')`,
+    [note],
+  );
+  return rowCount ?? 0;
+}

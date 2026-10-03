@@ -41,8 +41,14 @@ export function likelyFiles<T extends Pick<RankedFile, 'termsMatched' | 'score'>
   return candidates.filter((file) => file.termsMatched > 0 && file.score >= BROAD_SCAN_SCORE);
 }
 
+const OUTSIDE_SEGMENT = /^\.+$/;
+
+function inProject(file: string): boolean {
+  return !file.split('/').some((segment) => OUTSIDE_SEGMENT.test(segment));
+}
+
 export function planAreas(items: readonly string[]): number {
-  return new Set(namedFiles(items).map(areaOf)).size;
+  return new Set(namedFiles(items).filter(inProject).map(areaOf)).size;
 }
 
 export function engagement(facts: EngageFacts): Engagement {
