@@ -182,20 +182,23 @@ test('Approvals screenshots', async ({ page }) => {
 test('Docs page review screenshots', async ({ page }) => {
   const folder = path.resolve('test-results/docs-review');
   await seedDemo(page, repo);
-  await page.goto('/#/docs/approvals#protected-paths');
-  await expect(page.getByRole('heading', { name: 'Protected paths', level: 2 })).toBeFocused();
-  await shoot(page, folder, 'docs-approvals');
-  await page.goto('/#/docs/getting-started');
-  await expect(page.getByRole('heading', { name: 'Getting started', level: 1 })).toBeVisible();
-  await shoot(page, folder, 'docs-get-started');
-  await page.goto('/#/docs/connect-a-provider');
+  await page.goto('/#/docs/answer-approvals#hold-to-confirm');
+  await expect(page.getByRole('heading', { name: 'Hold to confirm', level: 2 })).toBeFocused();
+  await shoot(page, folder, 'docs-how-to');
+  await page.goto('/#/docs/welcome');
   await expect(
-    page.getByRole('heading', { name: 'Connect an AI provider', level: 1 }),
+    page.getByRole('heading', { name: 'What do you want to do?', level: 1 }),
   ).toBeVisible();
-  await shoot(page, folder, 'docs-connect-a-provider');
+  await shoot(page, folder, 'docs-landing');
+  await page.goto('/#/docs/cards');
+  await expect(page.getByRole('heading', { name: 'Cards', level: 1 })).toBeVisible();
+  await shoot(page, folder, 'docs-reference');
+  await page.goto('/#/docs/trouble-providers');
+  await expect(page.getByRole('heading', { name: 'Providers and keys', level: 1 })).toBeVisible();
+  await shoot(page, folder, 'docs-troubleshooting');
   await page.getByRole('searchbox', { name: 'Search the guide' }).fill('autonomy');
   await shoot(page, folder, 'docs-search');
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/#/docs/chats-and-modes');
+  await page.goto('/#/docs/start-a-chat');
   await shoot(page, folder, 'docs-phone');
 });
