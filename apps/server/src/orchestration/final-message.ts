@@ -5,7 +5,7 @@ import type { MemberResult } from './session.ts';
 
 const BUILDS: ReadonlySet<SpawnReason> = new Set(['first', 'retry']);
 const LATER_TURNS: ReadonlySet<SpawnReason> = new Set(['fix']);
-const CONTINUES: ReadonlySet<SpawnReason> = new Set(['continue', 'resume', 'unstick', 'escalate']);
+const CONTINUES: ReadonlySet<SpawnReason> = new Set(['continue', 'resume', 'escalate']);
 const LINE_CHARACTERS = 200;
 
 const VERDICTS: Record<ReviewVerdict, string> = {

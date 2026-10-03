@@ -40,7 +40,7 @@ The chat list shows **PR feedback** when Spark needs you.
 
 ## Confirm the push and replies
 
-At **Review each step** and **Automatic**, a Builder fixes the items in the chat's worktree. Then the card **Address PR feedback?** asks before anything reaches GitHub.
+At **Automatic**, a Builder fixes the items in the chat's worktree. Then the card **Address PR feedback?** asks before anything reaches GitHub.
 
 ![The Address PR feedback? card with the push and a reply checked](images/pr-follow-up-card-light.png)
 

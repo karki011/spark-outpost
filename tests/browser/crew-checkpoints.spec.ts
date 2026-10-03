@@ -7,6 +7,7 @@ import {
   card,
   crewChat,
   crewRepo,
+  failingCheck,
   resetCrew,
   send,
   type CrewRepo,
@@ -25,7 +26,7 @@ test.afterEach(() => repo.remove());
 
 test('clarify takes an answer in your own words and works from it', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
   await send(page, 'Make the reports better #build #vague');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify).toBeVisible({ timeout: 30_000 });
@@ -39,8 +40,7 @@ test('clarify takes an answer in your own words and works from it', async ({ pag
   await expect(clarify).toContainText('Only the top heading');
 
   const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toBeVisible({ timeout: 30_000 });
-  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  await expect(keep).toContainText('Kept automatically.', { timeout: 30_000 });
   await expect(
     page.locator('.md', { hasText: 'Clarified: Only the top heading' }).first(),
   ).toBeVisible({ timeout: 30_000 });
@@ -49,7 +49,7 @@ test('clarify takes an answer in your own words and works from it', async ({ pag
 
 test('a vague request gets one short question with likely readings', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
   await send(page, 'Make the reports better #build #vague');
   const clarify = card(page, /Jev has a question/);
   await expect(clarify).toContainText('What should change?', { timeout: 30_000 });
@@ -57,8 +57,7 @@ test('a vague request gets one short question with likely readings', async ({ pa
   await clarify.getByRole('button', { name: 'Add new behaviour or features' }).click();
   await expect(clarify).toContainText('You chose: Add new behaviour or features');
   const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toBeVisible({ timeout: 30_000 });
-  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  await expect(keep).toContainText('Kept automatically.', { timeout: 30_000 });
   await expect(
     page.locator('.md', { hasText: 'Clarified: Add new behaviour or features' }).first(),
   ).toBeVisible({ timeout: 30_000 });
@@ -100,27 +99,23 @@ test('a Builder that keeps failing stops on a retry card, which stops and report
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
 });
 
-test('the loop guard stops a Builder that repeats itself, and Continue resumes it', async ({
-  page,
-}) => {
+test('the loop guard stops a Builder that repeats itself and reports', async ({ page }) => {
   test.setTimeout(60_000);
   await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Fix the divider #build #repeat');
-  const stuck = card(page, /Bolt was repeating itself/);
-  await expect(stuck).toBeVisible({ timeout: 30_000 });
-  await stuck.getByRole('button', { name: 'Continue' }).click();
-  await expect(stuck).toContainText('Continued with a note to try another way.');
-  await allowEdit(page);
-  const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toContainText('Kept: you approved every edit.', { timeout: 30_000 });
-  expect(repo.notes()).toBe('start\ntried another way\n');
+  await expect(page.locator('.crew-turn')).toContainText('Stopped: Bolt repeated', {
+    timeout: 30_000,
+  });
+  await expect(card(page, /Bolt was repeating itself/)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
+  expect(repo.notes()).toBe('start\n');
 });
 
 test('risky work shows a plan card that waits before the Builder starts, and Build this plan goes on', async ({
   page,
 }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
   await send(page, 'Rename the runs table column and migrate old rows #build');
   const risky = card(page, /Build this plan\?/);
   await expect(risky).toBeVisible({ timeout: 30_000 });
@@ -128,8 +123,7 @@ test('risky work shows a plan card that waits before the Builder starts, and Bui
   expect(repo.notes()).toBe('start\n');
   await risky.getByRole('button', { name: 'Build this plan' }).click();
   const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toBeVisible({ timeout: 30_000 });
-  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  await expect(keep).toContainText('Kept automatically.', { timeout: 30_000 });
   await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
   expect(repo.notes()).toContain('step 1');
 });
@@ -153,7 +147,8 @@ test('Stop mid-Builder cancels the Builder and the crew', async ({ page }) => {
 
 test('Fix from the keep card runs another Builder with your note', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
+  await failingCheck(page, repo.root);
   await send(page, 'Fix the divider #build');
   const keep = card(page, /Keep these changes\?/).first();
   await expect(keep).toBeVisible({ timeout: 30_000 });
@@ -184,27 +179,6 @@ test('Auto-edit: Critic concerns get a fix round and a second review, then it ke
   await expect(kept).toContainText('Kept automatically.');
   await expect(kept.getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Revert to before this run' })).toBeVisible();
-  expect(repo.notes()).toBe('start\nstep 1\nfixed the review findings\n');
-});
-
-test('Review each step: "Fix these findings" on the keep card sends the review back to the Builder', async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  await crewChat(page, repo, 'Review keep');
-  await send(page, 'Fix the divider #build #crew #bugreview');
-  const keep = card(page, /Keep these changes\?/).first();
-  await expect(keep).toContainText('The AI review found 2 correctness findings.', {
-    timeout: 30_000,
-  });
-  await expect(keep.getByRole('button', { name: 'Keep', exact: true })).toHaveClass(/primary/);
-  await keep.getByRole('button', { name: 'Fix these findings' }).click();
-  await expect(keep).toContainText('Sent the review findings back to the Builder.');
-
-  const again = card(page, /Keep these changes\?/).nth(1);
-  await expect(again).toContainText('Fixed after 1 review round', { timeout: 30_000 });
-  await expect(again.getByRole('button', { name: /Fix these findings|Fix again/ })).toHaveCount(0);
-  await again.getByRole('button', { name: 'Keep', exact: true }).click();
   expect(repo.notes()).toBe('start\nstep 1\nfixed the review findings\n');
 });
 

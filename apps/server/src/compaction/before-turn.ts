@@ -4,7 +4,6 @@ import {
   type CompactionThresholds,
   type RunMode,
 } from '@spark-outpost/contracts';
-import { resolveChatSettings } from '../persistence/chat-settings.ts';
 import { insertCompaction, pendingCardInChat } from '../persistence/compactions.ts';
 import type { Lease } from '../persistence/jobs.ts';
 import {
@@ -251,12 +250,10 @@ export async function compactBeforeTurn(
   if (input.parentRunId !== null || input.assistant) return keep;
   const candidate = await candidateFor(deps, input);
   if (!candidate) return keep;
-  const settings = await resolveChatSettings(deps.db, input.identity.threadId).catch(() => null);
   const thresholds = await compactionThresholds(deps.db, input.workspaceId);
   const step = compactStep({
     thresholds,
     reading: candidate.reading,
-    level: settings?.level ?? input.level,
     snoozed: candidate.session.compactSnoozed,
     cardPending: await pendingCardInChat(deps.db, input.identity.threadId),
   });

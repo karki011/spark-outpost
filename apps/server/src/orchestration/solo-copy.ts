@@ -36,7 +36,6 @@ import {
   type MergeAttempt,
 } from '../projects/worktrees.ts';
 import { askCard, CheckpointTimeout, mergeConflictCard } from './checkpoint.ts';
-import { copiesRiskyWork } from './checkpoint-policy.ts';
 import { checkAndFix } from './land.ts';
 import { ensureParentSnapshot, runMember, type MemberOutcome, type Place } from './members.ts';
 import type { Session } from './session.ts';
@@ -78,7 +77,7 @@ export function needsCopyFor(facts: CopyFacts): boolean {
     facts.level === 'full-auto' ||
     modeNeedsWorktree(facts.provider, facts.agentMode) ||
     facts.destructive ||
-    (facts.risky && copiesRiskyWork(facts.level)) ||
+    facts.risky ||
     facts.busy
   );
 }

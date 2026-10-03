@@ -1,8 +1,8 @@
 import { z } from 'zod';
+import { involvementLevelSchema } from './involvement-levels.ts';
 import { providerIdSchema } from './provider-ids.ts';
 import {
   teammateFaceSchema,
-  teammateLevelSchema,
   teammateInstructionsSchema,
   teammateNameSchema,
   teammateRoleSchema,
@@ -122,7 +122,7 @@ const teammateFieldsShape = {
   provider: providerIdSchema.nullable(),
   model: z.string().nullable(),
   agentMode: z.string().nullable(),
-  level: teammateLevelSchema.nullable(),
+  level: involvementLevelSchema.nullable(),
   instructions: teammateInstructionsSchema,
   projects: z.array(z.object({ id: z.uuid(), name: z.string() })).max(8),
 };

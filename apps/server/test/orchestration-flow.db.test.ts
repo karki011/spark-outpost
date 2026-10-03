@@ -17,6 +17,7 @@ import {
   gitRepo,
   jevFetch,
   removeRepo,
+  setCheckCommands,
   startOrchestrator,
   startScenario,
   withTag,
@@ -100,7 +101,7 @@ describe('repair and escalation', () => {
     await start();
     script.scenario = TRIVIAL;
     const flaky = withTag(TRIVIAL, '#failonce 1');
-    const { conversationId, runId } = await startScenario(t, root, flaky, 'balanced');
+    const { conversationId, runId } = await startScenario(t, root, flaky, null);
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
     expect(asked.map((approval) => approval.kind)).toEqual(['edit']);
     expect(orchestration.crew.map((member) => member.model)).toEqual(['sonnet', 'opus[1m]']);
@@ -109,46 +110,27 @@ describe('repair and escalation', () => {
 });
 
 describe('the loop guard', () => {
-  it('stops a Builder that repeats itself and asks at Balanced; Continue resumes with a note', async () => {
-    await start();
-    script.scenario = TRIVIAL;
-    const looping = withTag(TRIVIAL, '#repeat');
-    const { conversationId, runId } = await startScenario(t, root, looping, 'balanced');
-    const answers: Answerer = (approval) =>
-      approval.kind === 'stuck'
-        ? { optionId: CHECKPOINT_OPTION.continueStuck }
-        : answerEverything(approval);
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);
-    expect(asked.map((approval) => approval.kind)).toEqual(['stuck', 'edit']);
-    expect(asked[0]!.payload.checkpoint?.reason).toContain('repeated `Read `src/dates.ts``');
-    expect(orchestration.crew.map((member) => member.status)).toEqual(['cancelled', 'succeeded']);
-    expect(await readFile(join(root, 'notes.txt'), 'utf8')).toContain('tried another way');
-  }, 60_000);
-
-  it('stops with a report at Full auto', async () => {
-    await start();
-    script.scenario = TRIVIAL;
-    const looping = withTag(TRIVIAL, '#repeat');
-    const { conversationId, runId } = await startScenario(t, root, looping, 'full-auto');
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
-    expect(asked).toEqual([]);
-    expect(orchestration.status).toBe('failed');
-    expect(orchestration.error).toMatch(/^Stopped: Bolt repeated/);
-  }, 60_000);
+  it.each(['hands-off', 'full-auto'] as const)(
+    'stops with a report at %s',
+    async (level) => {
+      await start();
+      script.scenario = TRIVIAL;
+      const looping = withTag(TRIVIAL, '#repeat');
+      const { conversationId, runId } = await startScenario(t, root, looping, level);
+      const { asked, orchestration } = await driveToEnd(t, conversationId, runId);
+      expect(asked).toEqual([]);
+      expect(orchestration.status).toBe('failed');
+      expect(orchestration.error).toMatch(/^Stopped: Bolt repeated/);
+    },
+    60_000,
+  );
 });
 
 describe('checkpoints', () => {
   it('reverts the whole orchestration from the keep, fix or revert card', async () => {
     await start();
-    const { conversationId, runId } = await startScenario(
-      t,
-      root,
-      TRIVIAL,
-      'balanced',
-      'auto',
-      'sonnet',
-      'acceptEdits',
-    );
+    await setCheckCommands(t, root, ['node -e "process.exit(1)"']);
+    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'hands-off');
     const answers: Answerer = (approval) =>
       approval.kind === 'accept'
         ? { optionId: CHECKPOINT_OPTION.revert }
@@ -161,15 +143,8 @@ describe('checkpoints', () => {
 
   it('sends a fix request back to the same Builder from the keep card', async () => {
     await start();
-    const { conversationId, runId } = await startScenario(
-      t,
-      root,
-      TRIVIAL,
-      'balanced',
-      'auto',
-      'sonnet',
-      'acceptEdits',
-    );
+    await setCheckCommands(t, root, ['node -e "process.exit(1)"']);
+    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'hands-off');
     let fixed = false;
     const answers: Answerer = (approval) => {
       if (approval.kind !== 'accept') return answerEverything(approval);
@@ -284,7 +259,7 @@ describe('stop and recovery', () => {
     await start();
     const vague = { ...TRIVIAL, text: 'Make the reports better', vague: 0.95 };
     script.scenario = vague;
-    const { conversationId, runId } = await startScenario(t, root, vague, 'balanced');
+    const { conversationId, runId } = await startScenario(t, root, vague, null);
     const keep = await pending(conversationId, 'clarify');
     await t.db.query(`UPDATE jobs SET lease_expires_at = now() - interval '1 second'`);
     await recoverExpiredLeases(t.db);

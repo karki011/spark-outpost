@@ -18,7 +18,7 @@ const request: IntakeRequest = {
     },
   ],
   current: { provider: 'claude', model: 'sonnet', modelLabel: 'Sonnet 5', effort: null },
-  level: 'balanced',
+  level: 'hands-off',
   routing: 'pinned',
   firstMessage: true,
   currentTask: { previousRequest: 'Add a JSON export', summary: 'Added exportJson.' },

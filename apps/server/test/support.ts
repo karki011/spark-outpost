@@ -156,7 +156,7 @@ export function chatTurnInput(
     settings: { method: 'cli', model: 'sonnet', modelLabel: 'Sonnet', effort: 'medium' },
     projectRoots: [],
     mode: 'chat',
-    level: 'balanced',
+    level: 'hands-off',
     agentMode: null,
     parentRunId: null,
     userRequest: 'next',

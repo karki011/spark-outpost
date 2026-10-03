@@ -12,8 +12,6 @@ import {
   CheckpointTimeout,
   clarifiedRequest,
   retryCard,
-  riskyCard,
-  stuckCard,
   verifyCard,
   type CheckpointCard,
 } from './checkpoint.ts';
@@ -31,8 +29,6 @@ import { escalatedBuilderPick } from './member-routes.ts';
 import { save, type Session } from './session.ts';
 import { lawItems } from '../laws/review.ts';
 import { budgetStopLine, memberUsed } from '../laws/member-budget.ts';
-import { ensureEstimate } from '../laws/estimate-history.ts';
-import { withEstimate } from './plan-first.ts';
 import type { FlowAction, FlowEvent } from './transitions.ts';
 
 type Ask = Extract<FlowAction, { type: 'ask' }>;
@@ -45,14 +41,10 @@ async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
   if (action.kind === 'clarify') {
     return action.context ? contextCard(action.reason) : followUpCard(action.reason);
   }
-  if (action.kind === 'plan') {
-    return withEstimate(riskyCard(action.reason), (await ensureEstimate(s))?.text ?? null);
-  }
   if (action.kind === 'retry' || action.kind === 'verify') {
     const card = action.kind === 'retry' ? retryCard : verifyCard;
     return card(builderPick(s), escalatedBuilderPick(s), action.reason);
   }
-  if (action.kind === 'stuck') return stuckCard(builderName(s), action.reason);
   if (action.kind === 'accept') {
     const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
     const line = sessionReviewLine(s);

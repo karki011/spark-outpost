@@ -317,7 +317,7 @@ test('context compaction thresholds validate inline and save from Spark settings
   await compact.blur();
   await save;
   await expect(compact).toHaveAccessibleDescription(
-    'Spark compacts at 90% (asks first at Review each step) and asks again at 95% after Keep going.',
+    'Spark compacts at 90% and asks again at 95% after Keep going.',
   );
 
   const toggle = spark.getByRole('switch', { name: 'Compact automatically at' });

@@ -62,7 +62,7 @@ afterEach(async () => {
 async function send(
   conversationId: string,
   scenario: Scenario,
-  level: InvolvementLevel = 'balanced',
+  level: InvolvementLevel | null = null,
   extra: { startAs?: 'change' } = {},
 ) {
   script.scenario = scenario;
@@ -76,7 +76,7 @@ async function send(
       effort: 'medium',
       permission: scenario.mode,
       agentMode: modeForLegacy('claude', scenario.mode, level),
-      level,
+      level: level ?? 'hands-off',
     },
   );
   return sent.run.id;
@@ -86,7 +86,7 @@ async function turn(
   conversationId: string,
   scenario: Scenario,
   answer: Answerer = answerEverything,
-  level: InvolvementLevel = 'balanced',
+  level: InvolvementLevel | null = null,
   extra: { startAs?: 'change' } = {},
 ) {
   const runId = await send(conversationId, scenario, level, extra);
@@ -124,15 +124,9 @@ describe('answer first, with "Make the change" one click away', () => {
     expect(advice.calls?.question).toMatchObject({ jev: 0.38, value: true, source: 'rules' });
     expect(advice.notAsked).toMatchObject({ continues_task: 'no current task' });
 
-    const built = await turn(
-      conversationId,
-      withTag(PLAN_TALK, '#build'),
-      answerEverything,
-      'balanced',
-      {
-        startAs: 'change',
-      },
-    );
+    const built = await turn(conversationId, withTag(PLAN_TALK, '#build'), answerEverything, null, {
+      startAs: 'change',
+    });
     expect(built.orchestration.crew.map((member) => member.role)).toContain('builder');
     expect(await getRun(t.db, built.runId)).toMatchObject({ pickedMode: 'do', startAs: 'change' });
     expect((await adviceOf(built.runId)).calls?.change).toMatchObject({ source: 'user' });

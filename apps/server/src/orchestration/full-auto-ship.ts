@@ -1,6 +1,7 @@
 import {
   CHECKPOINT_OPTION,
   preferredShipMode,
+  type InvolvementLevel,
   type ShipResult,
   type TaskPiece,
 } from '@spark-outpost/contracts';
@@ -47,7 +48,7 @@ function shipDeps(s: Session): ShipDeps {
 
 export async function autoKeep(
   s: Session,
-  keptBy: 'balanced' | 'hands-off' | 'full-auto',
+  keptBy: InvolvementLevel,
   lines: readonly (string | null)[],
 ): Promise<void> {
   const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);

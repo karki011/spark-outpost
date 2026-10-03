@@ -22,10 +22,7 @@ Spark checks only between your messages, never in the middle of a reply, and nev
 
 ## What happens at the compaction point
 
-When you send a message and the chat is past the compaction point, what Spark does depends on the chat's [Spark autonomy](chats-and-modes.md#spark-autonomy):
-
-- **Review each step**: a card asks first. See [Answer the card](#answer-the-card).
-- **Automatic** and **Full auto → PR**: Spark compacts before your message and notes it in the work log, for example "Sent /compact to the agent".
+When you send a message and the chat is past the compaction point, Spark compacts before your message and notes it in the work log, for example "Sent /compact to the agent". If you turned automatic compaction off, a card asks first. See [Answer the card](#answer-the-card).
 
 Spark first asks the agent to compact itself with `/compact`. If the agent can't, or its context barely shrinks, Spark writes the summary itself from the transcript.
 
@@ -59,7 +56,7 @@ Claude Code and Codex also compact on their own. When that happens, the divider 
 1. Open **Settings → Spark** and find **Context compaction**.
 2. Change **Warn when context is** (default 60%, from 30% to 90%). This only colours the ring.
 3. Change **Compact automatically at** (default 80%, from 40% to 95%). The warning must be at least 5 points lower.
-4. To stop Spark compacting by itself, turn off the **Compact automatically at** switch. Spark then only warns and shows the card at that point, at every autonomy level.
+4. To stop Spark compacting by itself, turn off the **Compact automatically at** switch. Spark then only warns and shows the card at that point.
 
 ![The Context compaction settings](images/compaction-settings-light.png)
 

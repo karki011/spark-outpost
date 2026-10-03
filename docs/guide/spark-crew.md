@@ -46,7 +46,7 @@ At **Automatic** and **Full auto → PR**, the button counts down, for example "
 
 A Critic reviews bigger or riskier changes: large diffs, 3 or more source files, migrations, destructive or high-stakes work, a build from an agreed plan, or when you ask for a review. A one-line fix never gets one.
 
-If the Critic finds problems, a Builder fixes them, up to 3 rounds. At **Review each step** you see the findings first and choose **Fix these findings**.
+If the Critic finds problems, a Builder fixes them, up to 3 rounds.
 
 After a fix, the Critic only rechecks: it confirms the earlier problems are fixed and looks for anything the fix itself broke. It doesn't start a new review of code the fix didn't touch. Hardening ideas the request didn't ask for, such as rejecting a zero or negative setting, are listed under **Not fixed automatically** instead of starting another round.
 
@@ -68,6 +68,6 @@ When the Builder finishes, the **Keep these changes?** card lists the changed fi
 
 At **Automatic**, passing changes are kept by themselves. To undo a run later, select **Revert to before this run**.
 
-> **Tip:** How much of this Spark does alone depends on the chat's [Spark autonomy](chats-and-modes.md#spark-autonomy): **Review each step**, **Automatic** or **Full auto → PR**.
+> **Tip:** How much of this Spark does alone depends on the chat's [Spark autonomy](chats-and-modes.md#spark-autonomy): **Automatic** or **Full auto → PR**.
 
 **Next:** [Big work in pieces](pieces.md)

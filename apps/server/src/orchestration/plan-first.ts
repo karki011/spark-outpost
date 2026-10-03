@@ -33,15 +33,16 @@ export function planFirstPrompt(prompt: string, note: string | null): string {
   return `${base}\n\nThe user asked for these changes to your previous plan:\n\n${note}\n\nReply with the whole revised plan.`;
 }
 
-const LEVEL_NAME: Partial<Record<InvolvementLevel, string>> = {
+const LEVEL_NAME: Readonly<Record<InvolvementLevel, string>> = {
   'hands-off': 'Automatic',
   'full-auto': 'Full auto',
 };
 
+const HELD_WAIT = 'Build it, edit it, or stop.';
+
 function waitLine(level: InvolvementLevel, seconds: number | null): string {
-  const name = LEVEL_NAME[level];
-  if (!name) return 'Build it, edit it, or stop.';
-  if (seconds !== null) return `${name} builds it in ${seconds} s unless you edit or stop it.`;
+  if (seconds !== null)
+    return `${LEVEL_NAME[level]} builds it in ${seconds} s unless you edit or stop it.`;
   if (level !== 'full-auto') return 'Auto-continue is off: build it, edit it, or stop.';
   return `Auto-continue is off, so Full auto waits ${FULL_AUTO_PLAN_SECONDS} s, then builds it unless you edit or stop it.`;
 }
@@ -50,13 +51,8 @@ function fallbackSeconds(level: InvolvementLevel): number | null {
   return level === 'full-auto' ? FULL_AUTO_PLAN_SECONDS : null;
 }
 
-export function planFirstCard(
-  version: number,
-  level: InvolvementLevel,
-  seconds: number | null,
-): CheckpointCard {
-  const reason = `Saved as plan v${version}; nothing was changed yet. ${waitLine(level, seconds)}`;
-  const autoOption = level === 'balanced' ? null : CHECKPOINT_OPTION.makeChange;
+function planCard(version: number, wait: string, autoOption: string | null): CheckpointCard {
+  const reason = `Saved as plan v${version}; nothing was changed yet. ${wait}`;
   return {
     kind: 'plan',
     title: PLAN_QUESTION,
@@ -74,17 +70,20 @@ export function planFirstCard(
   };
 }
 
+export function planFirstCard(
+  version: number,
+  level: InvolvementLevel,
+  seconds: number | null,
+): CheckpointCard {
+  return planCard(version, waitLine(level, seconds), CHECKPOINT_OPTION.makeChange);
+}
+
 export function planPrNote(body: string): string {
   const capped = body.length > PR_PLAN_LIMIT ? `${body.slice(0, PR_PLAN_LIMIT)}…` : body;
   return `Plan it followed:\n\n${capped}`;
 }
 
 export const SPEC_PLAN_OPTION = 'request_is_plan';
-
-export function requestIsThePlan(level: InvolvementLevel, request: string): string | null {
-  if (level === 'balanced') return null;
-  return specByRule(request);
-}
 
 export function specPlanLine(reason: string, version: number | null): string {
   const saved = version === null ? 'building it as written' : `saved as plan v${version}`;
@@ -120,16 +119,16 @@ async function adoptRequestAsPlan(s: Session, request: string, reason: string): 
 
 function cardFor(s: Session, version: number, seconds: number | null): CheckpointCard {
   if (!destructiveWork(s)) return planFirstCard(version, s.input.level, seconds);
-  return heldCard(planFirstCard(version, 'balanced', null));
+  return heldCard(planCard(version, HELD_WAIT, null));
 }
 
-export function withEstimate(card: CheckpointCard, estimate: string | null): CheckpointCard {
+function withEstimate(card: CheckpointCard, estimate: string | null): CheckpointCard {
   return estimate ? { ...card, payload: { ...card.payload, estimate } } : card;
 }
 
 export async function writePlanFirst(s: Session, note: string | null): Promise<FlowEvent> {
   const held = destructiveWork(s);
-  const spec = note === null && !held ? requestIsThePlan(s.input.level, s.input.userRequest) : null;
+  const spec = note === null && !held ? specByRule(s.input.userRequest) : null;
   if (spec) return adoptRequestAsPlan(s, s.input.userRequest, spec);
   const original = originalPrompt(s);
   const drafted = await draftPlan(s, planFirstPrompt(original, note), note);

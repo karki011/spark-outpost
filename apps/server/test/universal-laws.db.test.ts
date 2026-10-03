@@ -90,9 +90,9 @@ async function keepCardLaws(runId: string): Promise<string[]> {
   return rows[0]?.laws ?? [];
 }
 
-async function run(scenario: Scenario, level: 'hands-off' | 'balanced' = 'hands-off') {
+async function run(scenario: Scenario) {
   start(scenario);
-  const sent = await startScenario(t, root, scenario, level);
+  const sent = await startScenario(t, root, scenario, 'hands-off');
   const done = await driveToEnd(t, sent.conversationId, sent.runId);
   await harness?.stop();
   harness = null;

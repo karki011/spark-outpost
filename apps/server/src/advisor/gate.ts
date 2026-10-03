@@ -1,12 +1,6 @@
 import type { Gate, InvolvementLevel, Risk } from '@spark-outpost/contracts';
 import { ACT_AT, ASK_AT, type ActingQuestion, type ObservedQuestion } from './policy.ts';
 
-const ASKING_LEVELS: ReadonlySet<InvolvementLevel> = new Set(['balanced']);
-
-export function asksWhenUnsure(level: InvolvementLevel): boolean {
-  return ASKING_LEVELS.has(level);
-}
-
 export function optionConfidence(topProbability: number, options: number): number {
   if (options < 2) return 1;
   return Math.min(1, Math.max(0, (options * topProbability - 1) / (options - 1)));
@@ -23,16 +17,14 @@ export function gate(
   risk: Risk,
 ): Gate {
   const actAt = ACT_AT[question];
-  const asks = asksWhenUnsure(level);
-  const decision = confidence >= actAt ? 'act' : asks && confidence >= ASK_AT ? 'ask' : 'fallback';
   return {
-    decision,
+    decision: confidence >= actAt ? 'act' : 'fallback',
     confidence,
     risk,
     level,
     actAt,
     askAt: ASK_AT,
-    clarifyBelow: asks ? actAt : null,
+    clarifyBelow: null,
   };
 }
 
@@ -52,10 +44,9 @@ export function noulGate(
   }
   const actAt = noulConfidence(ACT_AT[question]);
   const confidence = noulConfidence(noul);
-  const asks = asksWhenUnsure(level);
-  const decision = confidence >= actAt ? 'act' : asks ? 'ask' : 'fallback';
+  const decision = confidence >= actAt ? 'act' : 'fallback';
   return {
     value: decision === 'act' ? noul >= 0.5 : null,
-    gate: { decision, confidence, risk, level, actAt, askAt: 0, clarifyBelow: asks ? actAt : null },
+    gate: { decision, confidence, risk, level, actAt, askAt: 0, clarifyBelow: null },
   };
 }

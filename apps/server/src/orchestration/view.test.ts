@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CrewMember, OrchestrationDecision } from '@spark-outpost/contracts';
 import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
-import { clarifiedRequest, mergeConflictCard, retryCard, stuckCard } from './checkpoint.ts';
+import { clarifiedRequest, mergeConflictCard, retryCard } from './checkpoint.ts';
 import { finalText } from './final-message.ts';
 import { orchestrationTotals } from './view.ts';
 
@@ -91,15 +91,6 @@ describe('checkpoint cards', () => {
       CHECKPOINT_OPTION.stopReport,
     ]);
     expect(card.payload.autoOption).toBe(CHECKPOINT_OPTION.stopReport);
-  });
-
-  it('offers Continue or Stop and report after the loop guard stopped a Builder', () => {
-    const card = stuckCard('Bolt', 'Bolt repeated `Read a.ts` 5 times in a row');
-    expect(card.title).toBe('Bolt was repeating itself');
-    expect(card.options.map((option) => option.optionId)).toEqual([
-      CHECKPOINT_OPTION.continueStuck,
-      CHECKPOINT_OPTION.stopReport,
-    ]);
   });
 
   it('offers no reconciling Builder for a copy that collides with your files', () => {

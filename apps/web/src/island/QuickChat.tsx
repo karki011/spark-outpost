@@ -74,7 +74,7 @@ export function QuickChat(props: QuickChatProps) {
   const secrets = useSecretGuard(draft.text);
   const defaults = useDefaults();
   const level = draft.level ?? defaults.level ?? 'hands-off';
-  const levelInfo = AUTONOMY_LEVELS.find((info) => info.id === level) ?? AUTONOMY_LEVELS[1]!;
+  const levelInfo = AUTONOMY_LEVELS.find((info) => info.id === level) ?? AUTONOMY_LEVELS[0]!;
   const project =
     projects.find((candidate) => candidate.id === draft.projectId) ??
     (added && added.project.id === draft.projectId ? added.project : null);

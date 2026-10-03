@@ -1,10 +1,11 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
-  CREW_REQUEST,
   card,
+  CREW_REQUEST,
   crewChat,
   crewRepo,
+  failingCheck,
   resetCrew,
   send,
   type CrewRepo,
@@ -99,7 +100,8 @@ test('Needs you jumps to the approval, and Finished opens, shows outcomes and cl
   page,
 }) => {
   test.setTimeout(90_000);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
+  await failingCheck(page, repo.root);
   await send(page, `${CREW_REQUEST} #build #crew`);
   const tv = await openList(page);
 

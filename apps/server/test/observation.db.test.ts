@@ -94,7 +94,7 @@ describe('observation mode', () => {
   it('links the observation to the approval the user answered', async () => {
     const script: JevScript = { calls: [], scenario: NORMAL };
     harness = startOrchestrator(t, jevFetch(script));
-    const { conversationId, runId } = await startScenario(t, root, NORMAL, 'balanced');
+    const { conversationId, runId } = await startScenario(t, root, NORMAL, null);
     await driveToEnd(t, conversationId, runId);
     const policy = (await observations(runId)).find((row) => row.purpose === 'policy')!;
     expect(policy.body.answer.actual?.verdict).toBe('ask');

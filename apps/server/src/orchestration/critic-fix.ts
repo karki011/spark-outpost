@@ -11,7 +11,6 @@ import type { MemberResult, Session } from './session.ts';
 
 const ACTION_TEXT: Record<ReviewAction, string> = {
   fix: 'fix turn',
-  offer: 'offered on the keep card',
   clean: 'no fix turn',
   unclear: 'no fix turn',
   repeated: 'stop: the same findings came back',
@@ -73,7 +72,7 @@ export async function correctnessFindings(
     .map((reading) => reading.finding);
   s.reviewNotes = [...(s.reviewNotes ?? []), ...s.suggestions];
   const review = s.flow.review.rounds.length + 1;
-  const action = reviewAction(s.flow.review, 'concerns', fixable, s.input.level);
+  const action = reviewAction(s.flow.review, 'concerns', fixable);
   await recordAdvice(
     s,
     'finding',

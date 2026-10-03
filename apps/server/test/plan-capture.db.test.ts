@@ -57,7 +57,7 @@ async function say(
   conversationId: string,
   content: string,
   permission: RunMode = 'do',
-  level: InvolvementLevel = 'balanced',
+  level: InvolvementLevel = 'hands-off',
 ) {
   const sent = await sendUserMessage(
     t.db,

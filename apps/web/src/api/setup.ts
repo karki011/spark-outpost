@@ -1,8 +1,10 @@
 import {
+  fullDiskAccessSchema,
   gitStatusSchema,
   setupStateSchema,
   verifyEventSchema,
   type ConnectableId,
+  type FullDiskAccessStatus,
   type GitStatus,
   type ProviderId,
   type SetupState,
@@ -18,6 +20,8 @@ export const setupKey = ['setup'] as const;
 export const setupApi = {
   get: (): Promise<SetupState> => request(setupStateSchema, '/setup'),
   git: (): Promise<GitStatus> => request(gitStatusSchema, '/setup/git'),
+  fullDiskAccess: (): Promise<FullDiskAccessStatus> =>
+    request(fullDiskAccessSchema, '/setup/full-disk-access'),
   installGit: (): Promise<GitStatus> =>
     request(gitStatusSchema, '/setup/git/install', { method: 'POST', body: '{}' }),
   updateProfile: (update: UpdateProfileRequest): Promise<SetupState> =>

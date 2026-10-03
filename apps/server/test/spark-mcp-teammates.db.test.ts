@@ -20,7 +20,7 @@ const pip = {
   provider: null,
   model: null,
   agentMode: null,
-  level: 'balanced' as const,
+  level: 'full-auto' as const,
   instructions: 'Point to the file and line.',
   projectIds: [],
 };
@@ -57,7 +57,7 @@ describe('spark_sparks', () => {
         homeChatId: null,
         chats: 0,
         standingInstructions: 'Point to the file and line.',
-        defaults: expect.objectContaining({ autonomy: 'Review each step' }),
+        defaults: expect.objectContaining({ autonomy: 'Full auto → PR' }),
       }),
     ]);
     expect(result.startersOffered).toEqual(['Wren · Docs writer', 'Bolt · Bug fixer']);

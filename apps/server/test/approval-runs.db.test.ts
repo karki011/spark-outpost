@@ -8,7 +8,6 @@ import type { Approval, ConversationSummary } from '@spark-outpost/contracts';
 import { randomUUID } from 'node:crypto';
 import { modeForLegacy, type InvolvementLevel } from '@spark-outpost/contracts';
 import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
-import { ASK_TURN_ASKS } from '../src/approvals/decide.ts';
 import { updateChatSettings } from '../src/persistence/chat-settings.ts';
 import { claimNextJob } from '../src/persistence/jobs.ts';
 import { getRun, requestCancel } from '../src/persistence/runs.ts';
@@ -117,7 +116,7 @@ describe('Do runs with approvals', () => {
     expect(detail?.activity[builder]?.map((step) => step.name)).toContain(
       `Allowed \`${FAKE_COMMAND}\` (you allowed it)`,
     );
-    expect(detail?.runs[0]).toMatchObject({ mode: 'do', level: 'balanced', snapshot: 'files' });
+    expect(detail?.runs[0]).toMatchObject({ mode: 'do', level: 'hands-off', snapshot: 'files' });
   });
 
   it('answers 409 when the approval was already decided', async () => {
@@ -200,19 +199,6 @@ describe('Ask runs with commands', () => {
     );
     expect(await readFile(join(root, FAKE_EDIT_FILE), 'utf8')).toBe('original\n');
   });
-
-  it('asks before the same command at Review each step', async () => {
-    start();
-    const { conversationId, runId } = await askRun('balanced');
-    const approval = await waitingApproval(conversationId);
-    expect(approval).toMatchObject({
-      kind: 'execute',
-      reason: null,
-      payload: { command: 'curl -sI https://example.com', asksBecause: ASK_TURN_ASKS },
-    });
-    await post(`/api/approvals/${approval.id}/decision`, { optionId: 'reject' }).expect(200);
-    expect((await settled(runId)).status).toBe('succeeded');
-  });
 });
 
 describe('revert to before the run', () => {
@@ -229,7 +215,7 @@ describe('revert to before the run', () => {
     }>(`SELECT status, decided_by, payload FROM approvals WHERE kind = 'accept'`);
     expect(rows).toMatchObject([{ status: 'allowed', decided_by: 'level' }]);
     expect(rows[0]!.payload.checkpoint).toMatchObject({
-      keptBy: 'balanced',
+      keptBy: 'hands-off',
       files: [{ path: FAKE_EDIT_FILE, change: 'modified' }],
     });
     return run;

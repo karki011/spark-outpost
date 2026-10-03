@@ -28,7 +28,7 @@ const verdict = (
   reasons: string[] = [],
 ): FlowEvent => ({ type: 'verified', accepted, reasons });
 
-const withJev = (level: 'balanced' | 'full-auto' = 'balanced') =>
+const withJev = (level: 'hands-off' | 'full-auto' = 'hands-off') =>
   initialFlow('edits', level, false, true);
 
 describe('verified cascade', () => {
@@ -102,7 +102,7 @@ describe('verified cascade', () => {
   });
 
   it('keeps the flow unchanged without Jev: checks only, no verdict', () => {
-    const [, built] = run(initialFlow('edits', 'balanced'), [start, green]);
+    const [, built] = run(initialFlow('edits', 'hands-off'), [start, green]);
     expect(built!.action).toEqual({ type: 'wrap_up' });
   });
 

@@ -153,7 +153,7 @@ describe('chat settings', () => {
       model: 'sonnet',
       effort: 'max',
       agentMode: 'acceptEdits',
-      level: 'balanced',
+      level: 'full-auto',
     }).expect(200);
     await send('patch', path, { provider: 'codex' }).expect(200);
     const codex = await send('patch', path, { model: 'gpt-6-sol', effort: 'high' }).expect(200);
@@ -180,7 +180,7 @@ describe('chat settings', () => {
       effort: 'max',
       permission: 'do',
       agentMode: 'acceptEdits',
-      level: 'balanced',
+      level: 'full-auto',
       options: {},
       routing: 'pinned',
     });

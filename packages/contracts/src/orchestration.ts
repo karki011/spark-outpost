@@ -6,7 +6,8 @@ import {
   modelRoutingSchema,
   riskSchema,
 } from './advice.ts';
-import { approvalSchema, involvementLevelSchema, runModeSchema } from './approvals.ts';
+import { approvalSchema, runModeSchema } from './approvals.ts';
+import { involvementLevelSchema } from './involvement-levels.ts';
 import { costSourceSchema, totalCostSourceSchema } from './audit.ts';
 import { runStatusSchema } from './runs.ts';
 import { agentPickSchema, budgetLimitSchema, routeSourceSchema } from './checkpoints.ts';

@@ -381,23 +381,6 @@ export async function chatInstructionGrants(db: Queryable, runId: string): Promi
 }
 export const rejectedForRun = memberApprovals('denied');
 
-export async function approvedEveryEdit(
-  db: Queryable,
-  runId: string,
-  changed: readonly string[],
-): Promise<boolean> {
-  if (changed.length === 0) return false;
-  const { rows } = await db.query<{ path: string }>(
-    `SELECT DISTINCT jsonb_array_elements_text(a.payload->'paths') AS path
-     FROM approvals a JOIN runs r ON r.id = a.run_id
-     WHERE (r.id = $1 OR r.parent_run_id = $1)
-       AND a.kind = 'edit' AND a.status = 'allowed' AND a.decided_by = 'user'`,
-    [runId],
-  );
-  const approved = new Set(rows.map((row) => row.path));
-  return changed.every((path) => approved.has(path));
-}
-
 export async function projectAllowlistForRun(db: Queryable, runId: string): Promise<string[]> {
   const { rows } = await db.query<{ command_allowlist: string[] }>(
     `SELECT p.command_allowlist FROM runs r

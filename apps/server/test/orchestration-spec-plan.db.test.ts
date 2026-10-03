@@ -91,12 +91,6 @@ describe('a request that is already a spec', { timeout: 120_000 }, () => {
     expect(builder.prompt).toContain('`src/notes.ts` with `addNote(text)`');
   });
 
-  it('still plans first at Review each step', async () => {
-    const done = await run('balanced');
-    expect(done.titles).toContain('Build this plan?');
-    expect(done.plans.map((plan) => [plan.source, plan.status])).toEqual([['chat', 'approved']]);
-  });
-
   it('still asks Build this plan? for a destructive spec at Automatic (live runs D and E)', async () => {
     const text = [
       'Split this up into pieces, they are independent:',

@@ -1,13 +1,14 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
-  CREW_REQUEST,
   agentBlock,
   agentHead,
   allowEdit,
   card,
+  CREW_REQUEST,
   crewChat,
   crewRepo,
+  failingCheck,
   resetCrew,
   send,
   type CrewRepo,
@@ -129,7 +130,8 @@ test('Manual, review each step: one task Builder with an edit approval, the Crit
 
 test("Review jumps to a second turn's keep card, which renders once", async ({ page }) => {
   test.setTimeout(120_000);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
+  await failingCheck(page, repo.root);
   await send(page, `${CREW_REQUEST} #build #crew`);
   const first = card(page, /Keep these changes\?/);
   await expect(first).toBeVisible({ timeout: 30_000 });

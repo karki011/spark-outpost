@@ -1,11 +1,12 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
-  CREW_REQUEST,
   allowEdit,
   card,
+  CREW_REQUEST,
   crewChat,
   crewRepo,
+  failingCheck,
   resetCrew,
   send,
   type CrewRepo,
@@ -125,7 +126,8 @@ test('a dispatch sends a packet and a line of chatter, and a waiting agent asks 
   page,
 }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
+  await failingCheck(page, repo.root);
   await send(page, `${CREW_REQUEST} #build #crew`);
   await page.getByRole('button', { name: 'Agent TV' }).click();
   const tv = tvOf(page);

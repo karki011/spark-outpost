@@ -54,17 +54,6 @@ Pieces in a copy land one by one as their checks pass. If two copies clash, Spar
 
 More at once finishes sooner and spends faster.
 
-## Answer the pieces card
-
-At **Review each step**, Spark asks before it builds side by side, or before 5 or more pieces. The card asks, for example, "Build in 3 pieces, 2 at once in the shared tree?".
-
-![The pieces card with Build it, Build in order instead and Revise](images/pieces-card-light.png)
-
-1. Read the board under the card: each piece, its Builder and the model Spark picked for it.
-2. Select **Build it**, **Build in order instead**, **Revise** (type what should change) or **Stop**.
-
-At **Automatic** and **Full auto → PR**, Spark builds without this card.
-
 ## Steer the pieces while they run
 
 While pieces run, the message box becomes a steering box. Under **Steer to**, pick:

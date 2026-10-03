@@ -38,7 +38,7 @@ import {
   recordTokens,
   recordUsage,
 } from './run-metadata.ts';
-import { testRunnerAllowlist } from '../approvals/command-kinds.ts';
+import { TEST_RUNNER_ALLOWLIST } from '../approvals/command-kinds.ts';
 import { proposedPlan } from '../plans/codex-plan.ts';
 import { plansThisTurn } from '../plans/plan-mode.ts';
 import { createPlanRecorder } from './plan-recorder.ts';
@@ -53,7 +53,6 @@ import { conversationProjectIds } from '../agent-config/store.ts';
 import { loadUserMcp } from '../mcp/launch.ts';
 import { withMoveNote } from './project-move.ts';
 import { ASSISTANT_PREAMBLE } from '../companion/assistant.ts';
-import { autoInWorktree } from '../orchestration/checkpoint-policy.ts';
 import { createRunObservations } from '../observations/run-observations.ts';
 import { scannedObserver } from '../observations/output-scan.ts';
 
@@ -268,7 +267,7 @@ export async function runAgentTurn(
       provider: input.provider,
       mode: input.agentMode,
       modes: await knownModes(deps.db, input),
-      extraAllowlist: () => [...trustedCommands, ...testRunnerAllowlist(input.level)],
+      extraAllowlist: () => [...trustedCommands, ...TEST_RUNNER_ALLOWLIST],
       append,
       waiters: deps.approvalWaiters,
       pollMs: deps.approvalPollMs,
@@ -282,7 +281,7 @@ export async function runAgentTurn(
         ? await prepareDoRun({
             ...gateOptions,
             builder: writesCode(input.role),
-            worktreeAuto: autoInWorktree(input.level, input.chatWorktree === true),
+            worktreeAuto: input.chatWorktree === true,
             projectRoots: input.projectRoots,
             backupAlsoFor: options.backupAlsoFor,
             copyOf: input.copyOf,

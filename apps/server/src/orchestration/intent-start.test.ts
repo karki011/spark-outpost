@@ -24,7 +24,7 @@ const jev = (extra: Partial<JevIntake> = {}): JevIntake => ({
 const facts = (extra: Partial<IntakeFacts> = {}): IntakeFacts => ({
   request: 'Add a CSV export to the reports page',
   mode: 'do',
-  level: 'balanced',
+  level: 'hands-off',
   firstMessage: true,
   namedFiles: 1,
   currentTask: null,

@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { providerIdSchema, type ProviderId } from './provider-ids.ts';
 import type { TeammateBrief } from './teammates.ts';
-import { DEFAULT_INVOLVEMENT_LEVEL, involvementLevelSchema } from './approvals.ts';
+import { DEFAULT_INVOLVEMENT_LEVEL } from './approvals.ts';
+import { involvementLevelSchema } from './involvement-levels.ts';
 import {
   COMPACT_AT_DEFAULT,
   COMPACT_WARN_DEFAULT,

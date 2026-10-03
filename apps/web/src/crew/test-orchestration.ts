@@ -99,7 +99,7 @@ export function orchestration(overrides: Partial<Orchestration> = {}): Orchestra
     depth: 'plan_execute',
     depthSource: 'jev',
     risk: 'edits',
-    level: 'balanced',
+    level: 'hands-off',
     routing: 'auto',
     provider: 'claude',
     planVersion: 2,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
 import { gate, noulGate, optionConfidence } from './gate.ts';
 
-const LEVELS: InvolvementLevel[] = ['balanced', 'hands-off', 'full-auto'];
+const LEVELS: InvolvementLevel[] = ['hands-off', 'full-auto'];
 
 describe('choice gate', () => {
   it('acts at the question’s own line at every level, never lower', () => {
@@ -12,27 +12,21 @@ describe('choice gate', () => {
     }
   });
 
-  it('never acts at 0.6 on destructive work: Ask before edits asks, Auto-edit falls back', () => {
-    expect(gate(0.6, 'tier', 'balanced', 'destructive').decision).toBe('ask');
+  it('never acts at 0.6 on destructive work: it falls back to the rules', () => {
     expect(gate(0.6, 'tier', 'hands-off', 'destructive').decision).toBe('fallback');
     expect(gate(0.6, 'tier', 'full-auto', 'destructive').decision).toBe('fallback');
   });
 
-  it('falls back below the ask line even where the level would ask', () => {
-    expect(gate(0.49, 'tier', 'balanced', 'edits').decision).toBe('fallback');
-  });
-
   it('records the line it used', () => {
-    expect(gate(0.95, 'tier', 'balanced', 'edits')).toEqual({
+    expect(gate(0.95, 'tier', 'hands-off', 'edits')).toEqual({
       decision: 'act',
       confidence: 0.95,
       risk: 'edits',
-      level: 'balanced',
+      level: 'hands-off',
       actAt: 0.9,
       askAt: 0.5,
-      clarifyBelow: 0.9,
+      clarifyBelow: null,
     });
-    expect(gate(0.95, 'tier', 'full-auto', 'edits').clarifyBelow).toBeNull();
   });
 });
 
@@ -44,11 +38,7 @@ describe('noul gate', () => {
     }
   });
 
-  it('lets the level choose only between asking and the rules when unsure', () => {
-    expect(noulGate(0.6, 'question', 'balanced', 'edits')).toMatchObject({
-      value: null,
-      gate: { decision: 'ask' },
-    });
+  it('falls back to the rules when unsure', () => {
     expect(noulGate(0.6, 'question', 'hands-off', 'edits')).toMatchObject({
       value: null,
       gate: { decision: 'fallback' },
@@ -56,8 +46,11 @@ describe('noul gate', () => {
   });
 
   it('treats a missing or broken answer as no answer', () => {
-    expect(noulGate(null, 'vague', 'balanced', 'edits')).toEqual({ value: null, gate: null });
-    expect(noulGate(Number.NaN, 'vague', 'balanced', 'edits')).toEqual({ value: null, gate: null });
+    expect(noulGate(null, 'vague', 'hands-off', 'edits')).toEqual({ value: null, gate: null });
+    expect(noulGate(Number.NaN, 'vague', 'hands-off', 'edits')).toEqual({
+      value: null,
+      gate: null,
+    });
   });
 });
 

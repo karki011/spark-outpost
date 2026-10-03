@@ -5,7 +5,7 @@ import {
   configOptionInfoSchema,
   configValuesSchema,
 } from './agent-modes.ts';
-import { involvementLevelSchema } from './approvals.ts';
+import { involvementLevelSchema } from './involvement-levels.ts';
 import { CONVERSATION_PROJECTS_MAX } from './projects.ts';
 import { providerIdSchema } from './setup.ts';
 

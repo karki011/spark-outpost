@@ -1,8 +1,7 @@
-import type { BudgetLimit, InvolvementLevel, ReviewVerdict } from '@spark-outpost/contracts';
+import type { BudgetLimit, ReviewVerdict } from '@spark-outpost/contracts';
 import { CRITIC_FIX_ROUNDS } from '../advisor/policy.ts';
-import { fixesFindingsItself } from './checkpoint-policy.ts';
 
-export type ReviewAction = 'fix' | 'offer' | 'clean' | 'unclear' | 'repeated' | 'cap';
+export type ReviewAction = 'fix' | 'clean' | 'unclear' | 'repeated' | 'cap';
 export type ReviewStop =
   'clean' | 'unclear' | 'repeated' | 'cap' | 'checks_failing' | 'budget' | 'limit';
 
@@ -57,19 +56,17 @@ export function reviewAction(
   loop: ReviewLoop,
   verdict: ReviewVerdict,
   fixable: readonly string[],
-  level: InvolvementLevel,
 ): ReviewAction {
   if (verdict === 'unclear') return 'unclear';
   if (fixable.length === 0) return 'clean';
   const previous = loop.rounds.at(-1)?.findings ?? [];
   if (loop.fixRounds > 0 && repeatsPrevious(previous, fixable)) return 'repeated';
-  if (!fixesFindingsItself(level)) return 'offer';
   if (loop.fixRounds >= CRITIC_FIX_ROUNDS) return 'cap';
   return 'fix';
 }
 
 function stopFor(action: ReviewAction, fixRounds: number): ReviewStop | null {
-  if (action === 'fix' || action === 'offer') return null;
+  if (action === 'fix') return null;
   if (action === 'clean' || action === 'unclear') return fixRounds > 0 ? action : null;
   return action;
 }
@@ -78,9 +75,8 @@ export function afterReview(
   loop: ReviewLoop,
   verdict: ReviewVerdict,
   fixable: readonly string[],
-  level: InvolvementLevel,
 ): ReviewLoop {
-  const action = reviewAction(loop, verdict, fixable, level);
+  const action = reviewAction(loop, verdict, fixable);
   const kept = action === 'unclear' ? [] : [...fixable];
   return {
     ...loop,

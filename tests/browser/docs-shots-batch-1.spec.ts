@@ -4,10 +4,16 @@ import os from 'node:os';
 import path from 'node:path';
 import { expandSection } from './provider-screen.ts';
 import { expect, test, type Page } from '@playwright/test';
-import { PIECE_CHECK_SCRIPT } from '../../apps/server/test/fake-acp-coordinator.ts';
 import { repoWithRemote } from '../../apps/server/test/ship-support.ts';
 import { connectorCard, connectorHead } from './connector-cards.ts';
-import { card, pickerPanel, pickPermission, send, type Level } from './crew-engine.ts';
+import {
+  card,
+  failingCheck,
+  pickerPanel,
+  pickPermission,
+  send,
+  type Level,
+} from './crew-engine.ts';
 import {
   DEMO_PROJECT,
   demoRepo,
@@ -130,7 +136,9 @@ async function sendAndWait(page: Page, text: string, turns: number) {
 
 test('Compaction screenshots', async ({ page }) => {
   test.setTimeout(120_000);
-  await seedDemo(page, repo, { autonomy: 'balanced' });
+  await seedDemo(page, repo);
+  const askFirst = await page.request.patch('/api/profile', { data: { autoCompact: false } });
+  expect(askFirst.ok()).toBe(true);
   await newChat(page);
   await sendAndWait(page, 'Plan the invoice export rollout #ctx75', 1);
   await page.getByRole('button', { name: /Context window: 75% used/ }).click();
@@ -150,6 +158,8 @@ test('Compaction screenshots', async ({ page }) => {
   await expect(divider.getByRole('button', { name: 'Hide summary' })).toBeVisible();
   await shoot(page, IMAGES, 'compaction-divider', divider);
 
+  const compactOn = await page.request.patch('/api/profile', { data: { autoCompact: true } });
+  expect(compactOn.ok()).toBe(true);
   await openSettings(page);
   const section = page.getByRole('region', { name: 'Context compaction' });
   await section.scrollIntoViewIfNeeded();
@@ -171,7 +181,7 @@ test('Crew, plan and guardrail screenshots', async ({ page }) => {
   await seedDemo(page, repo);
   await page.setViewportSize({ width: 1400, height: 900 });
 
-  await projectChat(page, 'Review keep');
+  await projectChat(page, 'Auto-edit');
   await send(page, 'Rename the invoices table column and migrate old rows #build');
   const plan = card(page, /Build this plan\?/);
   await expect(plan.locator('.ck-estimate')).toBeVisible({ timeout: 30_000 });
@@ -180,7 +190,8 @@ test('Crew, plan and guardrail screenshots', async ({ page }) => {
   await plan.getByRole('button', { name: 'Stop' }).click();
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
 
-  await projectChat(page, 'Review keep');
+  await projectChat(page, 'Auto-edit');
+  await failingCheck(page, repo.root);
   await send(page, 'Fix the totals divider #build #removehelper #criticremoval');
   const keep = card(page, /Keep these changes\?/);
   await expect(keep.getByRole('list', { name: 'Worth a look before you keep this' })).toBeVisible({
@@ -189,24 +200,6 @@ test('Crew, plan and guardrail screenshots', async ({ page }) => {
   await keep.scrollIntoViewIfNeeded();
   await shoot(page, IMAGES, 'prompt-flow-crew-turn');
   await shoot(page, IMAGES, 'guardrails-keep-card', keep);
-});
-
-test('Pieces screenshot', async ({ page }) => {
-  test.setTimeout(150_000);
-  crewFiles('piece-check.mjs', PIECE_CHECK_SCRIPT);
-  await seedDemo(page, repo);
-  await page.setViewportSize({ width: 1400, height: 900 });
-  await projectChat(page, 'Review keep');
-  await send(
-    page,
-    'Split this up: build a store, add an API and add a view. #build #pieces #parallel',
-  );
-  const plan = card(page, /Build this plan\?/);
-  await plan.getByRole('button', { name: 'Build this plan' }).click({ timeout: 30_000 });
-  const split = card(page, /Build in 3 pieces, 2 at once in the shared tree\?/);
-  await expect(split).toBeVisible({ timeout: 60_000 });
-  await shoot(page, IMAGES, 'pieces-card', split);
-  await split.getByRole('button', { name: 'Stop' }).click();
 });
 
 test('Ship screenshot', async ({ page }) => {

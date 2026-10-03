@@ -45,7 +45,7 @@ async function askWith(teammateId: string | null) {
     t,
     root,
     withTag(QUESTION, '#session'),
-    'balanced',
+    null,
     'auto',
     'sonnet',
     undefined,

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { clarifyOptionId } from '@spark-outpost/contracts';
+import { clarifyOptionId, type InvolvementLevel } from '@spark-outpost/contracts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import {
   answerEverything,
@@ -56,7 +56,7 @@ const FASTER: Scenario = {
 };
 
 async function run(
-  level: 'balanced' | 'hands-off' | 'full-auto',
+  level: InvolvementLevel | null,
   answer: Answerer = answerEverything,
   scenario: Scenario = VAGUE,
 ) {
@@ -68,10 +68,10 @@ async function run(
 }
 
 describe('a vague request', () => {
-  it('asks one short question at Balanced and builds what the user picked', async () => {
+  it('asks one short question and builds what the user picked', async () => {
     const pick: Answerer = (approval) =>
       approval.kind === 'clarify' ? { optionId: clarifyOptionId(1) } : answerEverything(approval);
-    const { asked, orchestration, reply } = await run('balanced', pick);
+    const { asked, orchestration, reply } = await run(null, pick);
     expect(orchestration.status).toBe('succeeded');
     const clarify = asked.find((approval) => approval.kind === 'clarify')!;
     expect(clarify.title).toBe('What should change?');
@@ -91,7 +91,7 @@ describe('a vague request', () => {
     await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
     const skip: Answerer = (approval) =>
       approval.kind === 'clarify' ? null : answerEverything(approval);
-    const { orchestration, reply } = await run('balanced', skip);
+    const { orchestration, reply } = await run(null, skip);
     expect(orchestration.checkpoints[0]).toMatchObject({ kind: 'clarify', decidedBy: 'auto' });
     expect(reply).toContain('Took it as: Improve its documentation');
     expect(reply).toContain('Assumed you meant: Improve its documentation.');

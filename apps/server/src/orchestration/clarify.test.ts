@@ -29,8 +29,7 @@ describe('vague requests', () => {
     ).toBe(false);
   });
 
-  it('asks at Ask before edits and Auto-edit, and assumes only at Full auto', () => {
-    expect(vagueHandling('balanced')).toBe('ask');
+  it('asks at Automatic and assumes only at Full auto', () => {
     expect(vagueHandling('hands-off')).toBe('ask');
     expect(vagueHandling('full-auto')).toBe('assume');
   });

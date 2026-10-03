@@ -2,12 +2,7 @@ import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import {
-  APPROVAL_DECIDED,
-  APPROVAL_REQUESTED,
-  type ApprovalScope,
-  type InvolvementLevel,
-} from '@spark-outpost/contracts';
+import { APPROVAL_DECIDED, APPROVAL_REQUESTED, type ApprovalScope } from '@spark-outpost/contracts';
 import {
   ApprovalConflictError,
   ApprovalInputError,
@@ -47,15 +42,9 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-const MODE_FOR: Record<InvolvementLevel, string> = {
-  balanced: 'default',
-  'hands-off': 'acceptEdits',
-  'full-auto': 'bypassPermissions',
-};
-
 function gateFor(
   runId: string,
-  level: InvolvementLevel = 'balanced',
+  mode = 'default',
   options: { timeoutMs?: number; onTimeout?: () => void } = {},
 ) {
   const recorded = recordingAppend();
@@ -64,7 +53,7 @@ function gateFor(
     db: t.db,
     runId,
     provider: 'claude',
-    mode: MODE_FOR[level],
+    mode,
     append: recorded.append,
     waiters,
     pollMs: 20,
@@ -225,12 +214,9 @@ describe('approval gate', () => {
       'pnpm test',
     ]);
     const next = await sendDo(t, run.conversationId, 'again');
-    const balanced = gateFor(next).gate;
+    const manual = gateFor(next).gate;
     expect(
-      await balanced.review(
-        commandRequest(root, 'pnpm test -- unit'),
-        new AbortController().signal,
-      ),
+      await manual.review(commandRequest(root, 'pnpm test -- unit'), new AbortController().signal),
     ).toMatchObject({
       allowed: true,
       note: 'Allowed `pnpm test -- unit` (on the project allowlist)',
@@ -248,7 +234,7 @@ describe('approval gate', () => {
 
   it('records a receipt without asking when the mode allows it', async () => {
     const run = await doRun(t, root, 'go', 'full-auto');
-    const { gate, events } = gateFor(run.runId, 'full-auto');
+    const { gate, events } = gateFor(run.runId, 'bypassPermissions');
     const answer = await gate.review(
       commandRequest(root, 'rm -rf build'),
       new AbortController().signal,
@@ -263,8 +249,8 @@ describe('approval gate', () => {
   });
 
   it('asks before a push below Full auto', async () => {
-    const run = await doRun(t, root, 'go', 'balanced');
-    const { gate, waiters } = gateFor(run.runId, 'balanced');
+    const run = await doRun(t, root, 'go');
+    const { gate, waiters } = gateFor(run.runId);
     const answer = gate.review(
       commandRequest(root, 'git push origin main'),
       new AbortController().signal,
@@ -278,7 +264,7 @@ describe('approval gate', () => {
 
   it('refuses a plain force push even in Full auto', async () => {
     const run = await doRun(t, root, 'go', 'full-auto');
-    const { gate } = gateFor(run.runId, 'full-auto');
+    const { gate } = gateFor(run.runId, 'bypassPermissions');
     const answer = await gate.review(
       commandRequest(root, 'git push --force origin feature'),
       new AbortController().signal,
@@ -288,7 +274,7 @@ describe('approval gate', () => {
 
   it('asks once, never for the run, before a lease force push even in Full auto', async () => {
     const run = await doRun(t, root, 'go', 'full-auto');
-    const { gate, waiters } = gateFor(run.runId, 'full-auto');
+    const { gate, waiters } = gateFor(run.runId, 'bypassPermissions');
     const request = commandRequest(root, 'git push --force-with-lease origin feature');
     const answer = gate.review(
       {
@@ -329,7 +315,7 @@ describe('approval gate', () => {
   it('expires after the timeout, rejects once, and reports the timeout', async () => {
     const run = await doRun(t, root);
     let timedOut = false;
-    const { gate } = gateFor(run.runId, 'balanced', {
+    const { gate } = gateFor(run.runId, 'default', {
       timeoutMs: 80,
       onTimeout: () => {
         timedOut = true;

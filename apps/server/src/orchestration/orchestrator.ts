@@ -23,12 +23,7 @@ import { checkBudget, checkBudgetBeforeCall, fixRoundShort } from './budget-chec
 import { checksFailing } from './check-results.ts';
 import { correctnessFindings, sessionReviewLine, suggestionsLine } from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
-import {
-  confirmsRiskyFirst,
-  KEPT_AFTER_EACH_EDIT,
-  KEPT_BY_AUTO_EDIT,
-  riskyChange,
-} from './checkpoint-policy.ts';
+import { KEPT_BY_AUTO_EDIT, riskyChange } from './checkpoint-policy.ts';
 import { missingContext } from './missing-context.ts';
 import { migrationByRule } from './risk-rules.ts';
 import { wrappedUp } from './wrap-up.ts';
@@ -216,11 +211,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       await recordShortcuts(s).catch(() => null);
       return wrappedUp(s);
     case 'keep':
-      if (action.approvedEach) {
-        await autoKeep(s, 'balanced', [KEPT_AFTER_EACH_EDIT]);
-      } else {
-        await autoKeep(s, 'hands-off', [KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
-      }
+      await autoKeep(s, 'hands-off', [KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
       return { type: 'kept' };
     case 'ship':
       return shipFullAuto(s);
@@ -367,7 +358,6 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     });
     const busy = git && !answers ? await repoBusy(deps.db, lease.runId, root) : false;
     const risky = doing ? riskyChange(decisions.destructive, input.userRequest) : null;
-    const confirmFirst = risky && confirmsRiskyFirst(input.level) ? risky : null;
     const jevDeps = solo ? null : orchestrationJevDeps(deps);
     const jev =
       jevDeps && intake.context.jevModel ? { deps: jevDeps, model: intake.context.jevModel } : null;
@@ -389,7 +379,7 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
       },
       intake,
       flow: {
-        ...initialFlow(decisions.risk, input.level, reviewWanted, jev !== null, confirmFirst),
+        ...initialFlow(decisions.risk, input.level, reviewWanted, jev !== null),
         ...(solo ? { solo } : {}),
       },
       risky,

@@ -66,7 +66,7 @@ describe('clarify in your own words', () => {
   it('needs a note, then works on the request with the answer added', async () => {
     const unsure = { ...TRIVIAL, text: 'Make the reports better', vague: 0.95 };
     script.scenario = unsure;
-    const { conversationId, runId } = await startScenario(t, root, unsure, 'balanced');
+    const { conversationId, runId } = await startScenario(t, root, unsure, null);
     const clarify = await pendingApproval(conversationId, 'clarify');
     expect(clarify.options.map((option) => option.optionId)).toContain(CHECKPOINT_OPTION.answer);
     await expect(
@@ -95,7 +95,7 @@ describe('a Builder waiting on an edit', () => {
   it('marks the chat as needing input and mirrors the approval on the orchestration stream', async () => {
     const reviewed = { ...COMPLEX, review: 0.95 };
     script.scenario = reviewed;
-    const { conversationId, runId } = await startScenario(t, root, reviewed, 'balanced');
+    const { conversationId, runId } = await startScenario(t, root, reviewed, null);
     const edit = await pendingApproval(conversationId, 'edit');
     expect(edit.runId).not.toBe(runId);
     expect((await getRun(t.db, runId))?.status).toBe('running');

@@ -12,7 +12,7 @@ import type { Verdict } from '../advisor/verify-questions.ts';
 import { IDLE_REVIEW, type ReviewLoop } from './review-loop.ts';
 
 export type SpawnReason =
-  'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'unstick' | 'escalate' | 'recheck';
+  'first' | 'retry' | 'fix' | 'continue' | 'resume' | 'escalate' | 'recheck';
 
 export interface CascadeEvidence {
   checksPass: boolean;
@@ -44,7 +44,7 @@ export type FlowAction =
   | { type: 'ask_agent'; then: ClarifiedStart }
   | { type: 'verify' }
   | { type: 'wrap_up' }
-  | { type: 'keep'; approvedEach?: boolean }
+  | { type: 'keep' }
   | { type: 'ship' }
   | { type: 'revert' }
   | { type: 'restore' }
@@ -94,7 +94,6 @@ export type FlowEvent =
       filesChanged: number;
       checksFailing?: boolean;
       riskyMigration?: string;
-      approvedEach?: boolean;
     }
   | { type: 'kept' }
   | { type: 'shipped' }
@@ -134,7 +133,6 @@ export interface FlowState {
   review: ReviewLoop;
   shipping?: boolean;
   readOnly?: ReadOnlyWork;
-  confirmFirst: string | null;
   solo?: boolean;
   missingContext?: string | null;
   then?: ClarifiedStart;
@@ -150,7 +148,6 @@ export function initialFlow(
   level: InvolvementLevel,
   reviewWanted = false,
   verifier = false,
-  confirmFirst: string | null = null,
 ): FlowState {
   return {
     depth: 'execute',
@@ -173,6 +170,5 @@ export function initialFlow(
     escalated: false,
     large: false,
     review: IDLE_REVIEW,
-    confirmFirst,
   };
 }

@@ -308,7 +308,7 @@ describe('Critic → fix rounds', () => {
 
   it('runs no fix turn for style-only concerns or a looks-good review', async () => {
     await start();
-    const style = await begin('#stylereview', 'balanced');
+    const style = await begin('#stylereview', 'hands-off');
     await drive(style.conversationId, style.runId);
     expect(await roles(style.runId)).toEqual(['builder', 'critic']);
     expect((await findingAdvice(style.runId))[0]?.body.answer).toMatchObject({
@@ -316,7 +316,7 @@ describe('Critic → fix rounds', () => {
       action: 'clean',
     });
 
-    const good = await begin('', 'balanced');
+    const good = await begin('', 'hands-off');
     await drive(good.conversationId, good.runId);
     expect(await roles(good.runId)).toEqual(['builder', 'critic']);
     expect(await findingAdvice(good.runId)).toEqual([]);
@@ -369,34 +369,6 @@ describe('Critic → fix rounds', () => {
     const { conversationId, runId } = await begin('#bugreview', 'hands-off');
     await drive(conversationId, runId);
     expect(await roles(runId)).toEqual(['builder', 'critic']);
-  }, 120_000);
-
-  it('offers "Fix these findings" on the keep card at Review each step instead of fixing by itself', async () => {
-    await start({ policy: JEV_SAYS_BUGS });
-    const { conversationId, runId } = await begin('#bugreview', 'balanced');
-    let fixed = false;
-    const answers: Answerer = (approval) => {
-      if (approval.kind !== 'accept') return answerEverything(approval);
-      if (fixed) return { optionId: CHECKPOINT_OPTION.keep };
-      fixed = true;
-      return { optionId: CHECKPOINT_OPTION.fixFindings };
-    };
-    const { asked, orchestration } = await drive(conversationId, runId, answers);
-    const [offer, after] = asked.filter((approval) => approval.kind === 'accept');
-    expect(offer!.options.map((option) => [option.optionId, option.name])).toEqual([
-      [CHECKPOINT_OPTION.keep, 'Keep'],
-      [CHECKPOINT_OPTION.fixFindings, 'Fix these findings'],
-      [CHECKPOINT_OPTION.fix, 'Ask for a fix'],
-      [CHECKPOINT_OPTION.revert, 'Revert'],
-    ]);
-    expect(offer!.reason).toContain('The AI review found 2 correctness findings.');
-    expect(after).toBeUndefined();
-    const kept = orchestration.checkpoints.find(
-      (approval) => approval.kind === 'accept' && approval.decidedBy === 'level',
-    );
-    expect(kept?.payload.checkpoint?.keptBy).toBe('balanced');
-    expect(await roles(runId)).toEqual(['builder', 'critic', 'builder', 'critic']);
-    expect(await notes()).toContain('fixed the review findings');
   }, 120_000);
 });
 

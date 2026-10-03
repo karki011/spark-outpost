@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   CHECKPOINT_OPTION,
+  DEFAULT_INVOLVEMENT_LEVEL,
   clarifyOptionId,
   modeForLegacy,
   type Approval,
@@ -166,7 +167,7 @@ export function withTag(scenario: Scenario, tag: string): Scenario {
   return { ...scenario, text: `${scenario.text} ${tag}` };
 }
 
-export const LEVELS: readonly InvolvementLevel[] = ['balanced', 'hands-off', 'full-auto'];
+export const LEVELS: readonly InvolvementLevel[] = ['hands-off', 'full-auto'];
 
 type Answers = Record<string, unknown>;
 
@@ -401,7 +402,7 @@ export async function startScenario(
   t: TestDb,
   root: string,
   scenario: Scenario,
-  level: InvolvementLevel,
+  level: InvolvementLevel | null,
   routing: 'auto' | 'pinned' = 'auto',
   model = 'sonnet',
   agentMode: string | null = modeForLegacy('claude', scenario.mode, level),
@@ -417,7 +418,14 @@ export async function startScenario(
     t.db,
     conversationId,
     { id: randomUUID(), content: scenario.text },
-    { provider: 'claude', model, effort: 'medium', permission: scenario.mode, agentMode, level },
+    {
+      provider: 'claude',
+      model,
+      effort: 'medium',
+      permission: scenario.mode,
+      agentMode,
+      level: level ?? DEFAULT_INVOLVEMENT_LEVEL,
+    },
   );
   return { conversationId, runId: sent.run.id };
 }

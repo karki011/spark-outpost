@@ -29,10 +29,10 @@ test('the default autonomy is one setting that new chats start with', async ({ p
     'The default for new chats, whichever agent they use.',
   );
   const saved = profileSaved(page);
-  await level.getByRole('radio', { name: 'Review each step' }).click();
+  await level.getByRole('radio', { name: 'Full auto → PR' }).click();
   await saved;
   const defaults = await (await page.request.get('/api/chat-settings/defaults')).json();
-  expect(defaults.level).toBe('balanced');
+  expect(defaults.level).toBe('full-auto');
 });
 
 test('the spend cap turns on with an amount you can change', async ({ page }) => {

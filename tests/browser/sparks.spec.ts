@@ -88,7 +88,7 @@ test('create a Spark, open its home thread and see its face in the chat', async 
   await form.getByRole('button', { name: 'Provider' }).click();
   await page.getByRole('menuitemradio', { name: 'Claude' }).click();
   await form.getByRole('button', { name: 'Spark autonomy' }).click();
-  await page.getByRole('menuitemradio', { name: /Review each step/ }).click();
+  await page.getByRole('menuitemradio', { name: /Full auto → PR/ }).click();
   await form
     .getByRole('textbox', { name: 'Standing instructions' })
     .fill('Check the changelog and version before every release.');
@@ -135,7 +135,7 @@ test('create a Spark, open its home thread and see its face in the chat', async 
 test('Talk to on Home starts the next chat with a Spark, then goes back to plain', async ({
   page,
 }) => {
-  await addSpark(page, { name: 'Bolt', role: 'Bug fixer', level: 'balanced' });
+  await addSpark(page, { name: 'Bolt', role: 'Bug fixer', level: 'full-auto' });
   await openHome(page);
   const compose = home(page).getByRole('region', { name: 'Start a new chat' });
   await compose.getByRole('button', { name: 'Talk to…' }).click();

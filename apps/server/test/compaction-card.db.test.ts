@@ -3,6 +3,7 @@ import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { movedReply } from '../src/compaction/prepare-turn.ts';
 import { decideApproval } from '../src/persistence/approvals.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
+import { updateProfile } from '../src/persistence/setup.ts';
 import { HANDOFF_HEADINGS } from '../src/orchestration/handoff.ts';
 import {
   compactionsOf,
@@ -33,13 +34,14 @@ async function answer(runId: string, optionId: string) {
 }
 
 async function fullChat(): Promise<string> {
-  const id = await newChat(h, 'balanced');
+  await updateProfile(h.t.db, h.t.workspaceId, { autoCompact: false });
+  const id = await newChat(h, 'hands-off');
   await say(h, id, 'Remember PELICAN');
   await say(h, id, 'Draft the plan #ctx88');
   return id;
 }
 
-describe('the compaction card at Review each step', { timeout: 60_000 }, () => {
+describe('the compaction card with automatic compaction off', { timeout: 60_000 }, () => {
   it('offers three choices and compacts with the agent on Compact now', async () => {
     h = await startCompactionHarness(['compact']);
     const id = await fullChat();

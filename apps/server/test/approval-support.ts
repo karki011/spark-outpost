@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
-import { modeForLegacy, type InvolvementLevel, type RunEvent } from '@spark-outpost/contracts';
+import {
+  DEFAULT_INVOLVEMENT_LEVEL,
+  modeForLegacy,
+  type InvolvementLevel,
+  type RunEvent,
+} from '@spark-outpost/contracts';
 import type { ApprovalRequest } from '../src/approvals/decide.ts';
 import { insertApproval } from '../src/persistence/approvals.ts';
 import { setConversationProjects } from '../src/persistence/conversation-projects.ts';
@@ -26,13 +31,18 @@ export async function sendDo(
   t: TestDb,
   conversationId: string,
   content: string,
-  level: InvolvementLevel = 'balanced',
+  level: InvolvementLevel | null = null,
 ): Promise<string> {
   const sent = await sendUserMessage(
     t.db,
     conversationId,
     { id: randomUUID(), content },
-    { provider: 'fake', permission: 'do', agentMode: modeForLegacy('claude', 'do', level), level },
+    {
+      provider: 'fake',
+      permission: 'do',
+      agentMode: modeForLegacy('claude', 'do', level),
+      level: level ?? DEFAULT_INVOLVEMENT_LEVEL,
+    },
   );
   return sent.run.id;
 }
@@ -41,7 +51,7 @@ export async function doRun(
   t: TestDb,
   root: string,
   content = 'work',
-  level: InvolvementLevel = 'balanced',
+  level: InvolvementLevel | null = null,
 ): Promise<LinkedRun> {
   const linked = await linkedConversation(t, root);
   return { ...linked, runId: await sendDo(t, linked.conversationId, content, level) };

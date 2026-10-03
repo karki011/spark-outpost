@@ -137,7 +137,7 @@ const decision: OrchestrationDecision = {
     decision: 'act',
     confidence: 0.862,
     risk: 'edits',
-    level: 'balanced',
+    level: 'hands-off',
     actAt: 0.7,
     askAt: 0.5,
     clarifyBelow: null,

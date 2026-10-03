@@ -35,22 +35,19 @@ const greenMissing: FlowEvent = {
   green: true,
   missingContext: MISSING,
 };
-const flow = (level: InvolvementLevel = 'balanced', verifier = false) =>
+const flow = (level: InvolvementLevel = 'hands-off', verifier = false) =>
   initialFlow('edits', level, false, verifier);
 
 describe('no tier-up when the Builder is missing context', () => {
-  it.each(['balanced', 'hands-off'] as const)(
-    'asks where to look instead of retrying one tier up at %s',
-    (level) => {
-      const [, failed] = run(flow(level), [start, failedMissing]);
-      expect(failed!.action).toEqual({
-        type: 'ask',
-        kind: 'clarify',
-        reason: MISSING,
-        context: true,
-      });
-    },
-  );
+  it('asks where to look instead of retrying one tier up at Automatic', () => {
+    const [, failed] = run(flow(), [start, failedMissing]);
+    expect(failed!.action).toEqual({
+      type: 'ask',
+      kind: 'clarify',
+      reason: MISSING,
+      context: true,
+    });
+  });
 
   it('stops and reports at Full auto instead of escalating', () => {
     const [, failed] = run(flow('full-auto'), [start, failedMissing]);
@@ -67,7 +64,7 @@ describe('no tier-up when the Builder is missing context', () => {
   });
 
   it('asks instead of escalating when Jev cannot confirm a change made without context', () => {
-    const [, built, verified] = run(flow('balanced', true), [
+    const [, built, verified] = run(flow('hands-off', true), [
       start,
       greenMissing,
       { type: 'verified', accepted: 'unsupported', reasons: [] },

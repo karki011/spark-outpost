@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   asksToKeep,
-  confirmsRiskyFirst,
-  copiesRiskyWork,
   DESTRUCTIVE_CARD_REASON,
   keepReason,
   keepsByItself,
@@ -10,7 +8,6 @@ import {
   riskyChange,
 } from './checkpoint-policy.ts';
 import { destructiveByRule, destructiveMigrationInPatch } from './risk-rules.ts';
-import { riskyCard, RISKY_CARD_TITLE } from './checkpoint.ts';
 
 const S11 = [
   'Add tags to projects, end to end:',
@@ -125,30 +122,8 @@ describe('risky migrations found after the Builder', () => {
   });
 });
 
-describe('the risky card', () => {
-  it('asks first only at Review each step; Automatic and Full auto → PR copy risky work instead', () => {
-    expect(confirmsRiskyFirst('balanced')).toBe(true);
-    expect(confirmsRiskyFirst('hands-off')).toBe(false);
-    expect(confirmsRiskyFirst('full-auto')).toBe(false);
-    expect(copiesRiskyWork('balanced')).toBe(false);
-    expect(copiesRiskyWork('hands-off')).toBe(true);
-    expect(copiesRiskyWork('full-auto')).toBe(true);
-  });
-
-  it('offers Build it or Stop on the card', () => {
-    const card = riskyCard(DESTRUCTIVE_CARD_REASON);
-    expect(card).toMatchObject({ kind: 'plan', title: RISKY_CARD_TITLE });
-    expect(card.options.map((option) => option.name)).toEqual(['Build it', 'Stop']);
-  });
-});
-
 describe('keep card', () => {
   const settled = { checksFailing: false, criticUnsatisfied: false };
-
-  it('always asks at Ask before edits when files changed', () => {
-    expect(asksToKeep('balanced', 2, settled)).toBe(true);
-    expect(asksToKeep('balanced', 0, settled)).toBe(false);
-  });
 
   it('asks at Auto-edit only when checks fail or the Critic is not satisfied', () => {
     expect(asksToKeep('hands-off', 2, settled)).toBe(false);
@@ -163,20 +138,5 @@ describe('keep card', () => {
       false,
     );
     expect(keepsByItself('full-auto', 2)).toBe(false);
-  });
-});
-
-describe('never ask twice', () => {
-  it('skips the keep card at Review each step when you approved every edit', () => {
-    const settled = { checksFailing: false, criticUnsatisfied: false };
-    expect(asksToKeep('balanced', 2, settled)).toBe(true);
-    expect(asksToKeep('balanced', 2, { ...settled, approvedEach: true })).toBe(false);
-    expect(keepsByItself('balanced', 2, { ...settled, approvedEach: true })).toBe(true);
-    expect(keepsByItself('balanced', 2, settled)).toBe(false);
-  });
-
-  it('still asks when something new went wrong after the edits you approved', () => {
-    const approved = { checksFailing: true, criticUnsatisfied: false, approvedEach: true };
-    expect(asksToKeep('balanced', 2, approved)).toBe(true);
   });
 });
