@@ -14,6 +14,7 @@ import { startMapScheduler } from '../map/scheduler.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createProviders } from './providers.ts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
+import { flushBufferedText } from './run-appender.ts';
 import { startWorker } from './worker.ts';
 import { Slots } from '../orchestration/slots.ts';
 import { startSparkMcpHost } from '../spark-mcp/host.ts';
@@ -131,6 +132,7 @@ const shutdown = async () => {
   await projectMap.stop();
   await prFollowUp.stop();
   await worker.stop();
+  await flushBufferedText();
   await sparkActions.stop();
   await sparkTools.close();
   await db.end();

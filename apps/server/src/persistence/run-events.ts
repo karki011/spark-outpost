@@ -39,9 +39,18 @@ export async function appendRunEvent(
   event: RunEvent,
   options: AppendOptions = {},
 ): Promise<number> {
+  return appendRunEvents(db, lease, [event], options);
+}
+
+export async function appendRunEvents(
+  db: Db,
+  lease: Lease,
+  events: readonly RunEvent[],
+  options: AppendOptions = {},
+): Promise<number> {
   return withTransaction(db, async (client) => {
     await assertLeaseHeld(client, lease, options.expectExpired ?? false);
-    const seq = await insertRunEvent(client, lease.runId, event);
+    const seq = await insertRunEvents(client, lease.runId, events);
     if (options.assistantMessage) {
       await insertAssistantMessage(client, lease.runId, options.assistantMessage);
     }
@@ -61,16 +70,27 @@ export async function insertRunEvent(
   runId: string,
   event: RunEvent,
 ): Promise<number> {
+  return insertRunEvents(client, runId, [event]);
+}
+
+async function insertRunEvents(
+  client: DbClient,
+  runId: string,
+  events: readonly RunEvent[],
+): Promise<number> {
   const next = await client.query<{ seq: number }>(
     'SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM run_events WHERE run_id = $1',
     [runId],
   );
-  const seq = next.rows[0]!.seq;
+  const first = next.rows[0]!.seq;
   await client.query(
-    'INSERT INTO run_events (run_id, seq, type, payload) VALUES ($1, $2, $3, $4)',
-    [runId, seq, event.type, JSON.stringify(event)],
+    `INSERT INTO run_events (run_id, seq, type, payload)
+     SELECT $1, $2::integer + listed.position::integer - 1, listed.type, listed.payload::jsonb
+     FROM unnest($3::text[], $4::text[]) WITH ORDINALITY AS listed(type, payload, position)
+     ORDER BY listed.position`,
+    [runId, first, events.map((event) => event.type), events.map((event) => JSON.stringify(event))],
   );
-  return seq;
+  return first + events.length - 1;
 }
 
 export async function assertLeaseHeld(client: DbClient, lease: Lease, expectExpired: boolean) {
