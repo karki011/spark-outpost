@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import './scout.css';
 import { prefersReducedMotion } from '../ui/motion.ts';
+import { scoutFaceCenter, scoutLookTransform, type LookTarget } from './scout-look.ts';
 import { SCOUT_ANTENNA, SCOUT_BODY, SCOUT_SPARK } from './scout-shape.ts';
 
 export type ScoutMood = 'working' | 'alert' | 'happy' | 'sad' | 'sleep' | null;
@@ -55,18 +56,36 @@ function ScoutFill({ fill }: { fill: number }) {
   );
 }
 
-function lookAt(look: SVGGElement, root: SVGSVGElement, x: number, y: number): void {
-  const rect = root.getBoundingClientRect();
-  if (!rect.width) return;
-  const centerX = rect.left + rect.width / 2;
-  const centerY = rect.top + rect.height * 0.6;
-  const dx = x - centerX;
-  const dy = y - centerY;
-  const distance = Math.hypot(dx, dy) || 1;
-  const magnitude = 2.8 * Math.min(1, distance / 220);
-  const x2 = ((dx / distance) * magnitude).toFixed(2);
-  const y2 = ((dy / distance) * magnitude * 0.8).toFixed(2);
-  look.style.transform = `translate(${x2}px,${y2}px)`;
+const FACE_STALE_MS = 200;
+
+function followPointer(root: SVGSVGElement, look: SVGGElement): () => void {
+  let raf = 0;
+  let pointer: LookTarget | null = null;
+  let face: LookTarget | null = null;
+  let measuredAt = -Infinity;
+  let written = '';
+  const turn = (time: number) => {
+    raf = 0;
+    if (!pointer) return;
+    if (time - measuredAt > FACE_STALE_MS) {
+      face = scoutFaceCenter(root.getBoundingClientRect());
+      measuredAt = time;
+    }
+    if (!face) return;
+    const next = scoutLookTransform(face, pointer);
+    if (next === written) return;
+    written = next;
+    look.style.transform = next;
+  };
+  const onMove = (event: PointerEvent) => {
+    pointer = { x: event.clientX, y: event.clientY };
+    raf ||= requestAnimationFrame(turn);
+  };
+  addEventListener('pointermove', onMove, { passive: true });
+  return () => {
+    removeEventListener('pointermove', onMove);
+    if (raf) cancelAnimationFrame(raf);
+  };
 }
 
 export function BlobScout({
@@ -86,21 +105,7 @@ export function BlobScout({
     const root = rootRef.current;
     const look = lookRef.current;
     if (!root || !look) return;
-    let raf = 0;
-    let last: [number, number] | null = null;
-    const onMove = (event: PointerEvent) => {
-      last = [event.clientX, event.clientY];
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        if (last) lookAt(look, root, last[0], last[1]);
-      });
-    };
-    addEventListener('pointermove', onMove, { passive: true });
-    return () => {
-      removeEventListener('pointermove', onMove);
-      if (raf) cancelAnimationFrame(raf);
-    };
+    return followPointer(root, look);
   }, [lookAtPointer]);
 
   useEffect(() => {
