@@ -31,6 +31,7 @@ export interface ScannerOptions {
   deadlineMs?: number;
   maxConcurrent?: number;
   refreshEveryMs?: number;
+  scanIndexPace?: (() => NonNullable<IndexOptions['pace']>) | undefined;
 }
 
 export interface Limiter {
@@ -107,7 +108,7 @@ export function createCodeScanner(db: Queryable, options: ScannerOptions = {}): 
   ): Promise<ScanOutcome> {
     const started = performance.now();
     const elapsed = () => Math.round(performance.now() - started);
-    void ensureIndexed(root);
+    void ensureIndexed(root, { pace: options.scanIndexPace?.() });
     const deadline = AbortSignal.timeout(Math.max(0, startedAt + deadlineMs - Date.now()));
     if (!(await limiter.acquire(deadline))) {
       return {

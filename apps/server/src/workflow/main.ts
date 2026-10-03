@@ -14,6 +14,7 @@ import { startMapScheduler } from '../map/scheduler.ts';
 import { ApprovalWaiters } from './approval-waiters.ts';
 import { createProviders } from './providers.ts';
 import { loginShellLocator } from '../agents/acp/agent-cli.ts';
+import { scanIndexPace } from '../map/scan-index-pace.ts';
 import { flushBufferedText } from './run-appender.ts';
 import { startWorker } from './worker.ts';
 import { Slots } from '../orchestration/slots.ts';
@@ -38,7 +39,7 @@ const intake = createIntakeRecorder({
   baseUrl: config.TYPESAFE_BASE_URL,
 });
 const loginShell = config.CLI_LOOKUP_LOGIN_SHELL ? process.env.SHELL || '/bin/zsh' : null;
-const codeScan = createCodeScanner(db);
+const codeScan = createCodeScanner(db, { scanIndexPace: scanIndexPace({ db }) });
 const sparkDeps: SparkToolDeps = {
   db,
   secrets,
