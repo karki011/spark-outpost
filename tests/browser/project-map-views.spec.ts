@@ -50,6 +50,15 @@ test('the tree is the default view: top-level groups that open into areas and fi
   await expect(ui).toBeVisible();
   await expect(ui).toContainText('Shared');
   await expect(node(page, /^core, group of 5 areas/)).toContainText('Core');
+  const frames = await tree(page)
+    .locator('.react-flow__node')
+    .evaluateAll((wrappers) =>
+      wrappers.map((wrapper) => {
+        const style = getComputedStyle(wrapper);
+        return `${style.borderTopWidth} ${style.paddingTop} ${style.backgroundColor}`;
+      }),
+    );
+  expect(new Set(frames)).toEqual(new Set(['0px 0px rgba(0, 0, 0, 0)']));
   expect(await page.locator('.react-flow__edge').count()).toBeGreaterThan(10);
   await page.getByRole('switch', { name: /This chat’s changes/ }).click();
   await expect(page.locator('.map-tn-changed').first()).toBeVisible();

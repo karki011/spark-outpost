@@ -17,6 +17,22 @@
   background: var(--bg);
 }
 
+.map-tree .react-flow__node {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.map-tree .react-flow__node.selected,
+.map-tree .react-flow__node:focus,
+.map-tree .react-flow__node:focus-visible {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+
 .map-te path {
   fill: none;
 }
