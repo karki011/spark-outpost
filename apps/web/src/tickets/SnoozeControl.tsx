@@ -19,11 +19,13 @@ function snoozedLocally(ticket: InboxTicket, until: Date): InboxTicket {
   const section =
     ticket.status === 'done'
       ? 'done'
-      : ticket.status === 'in_review'
-        ? 'in_review'
-        : ticket.status === 'in_progress' || ticket.chat
-          ? 'working'
-          : 'up_next';
+      : ticket.chat?.state === 'running'
+        ? 'spark'
+        : ticket.status === 'in_review' || ticket.pullRequest
+          ? 'review'
+          : ticket.status === 'in_progress' || ticket.chat
+            ? 'started'
+            : 'up_next';
   return {
     ...ticket,
     section,

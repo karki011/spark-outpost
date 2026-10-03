@@ -7,7 +7,6 @@ import type { FastState } from './ask-fast-path.ts';
 import { AskSpark } from './AskSpark.tsx';
 import { CardView, type Decided } from './CardView.tsx';
 import type { Card, IslandView, Panel, PeekRow as PeekRowData } from './island-model.ts';
-import { HoverList, type HoverGroups } from './HoverList.tsx';
 import { IslandHome, type HomeBundle } from './IslandHome.tsx';
 import { IslandBar, PANEL_ORDER, type BarActions } from './PanelTabs.tsx';
 import { QuickChat, type Compose, type QuickDraft } from './QuickChat.tsx';
@@ -36,8 +35,6 @@ export interface IslandShellProps {
   voice: Voice;
   now: number;
   note: Decided | null;
-  groups: HoverGroups;
-  listing: boolean;
   detailFor: (chatId: string) => ConversationDetail | undefined;
   focusSignal: number;
   sessions: ConversationSummary[];
@@ -140,17 +137,6 @@ function PanelBody({ panel, props }: { panel: Panel; props: IslandShellProps }) 
 export function ViewBody({ props }: { props: IslandShellProps }) {
   const { view } = props;
   switch (view.kind) {
-    case 'pill':
-      return (
-        <HoverList
-          groups={props.groups}
-          voice={props.voice}
-          now={props.now}
-          sleepy={props.sleepy}
-          onReview={props.onReview}
-          onOpen={props.onOpenChat}
-        />
-      );
     case 'note':
       return (
         <div className="isl-body">

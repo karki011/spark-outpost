@@ -91,6 +91,29 @@ export async function defaultBranch(root: string): Promise<string | null> {
   return null;
 }
 
+async function remoteRef(root: string, ref: string): Promise<boolean> {
+  return succeeds(root, ['rev-parse', '--verify', '-q', `refs/remotes/${ref}^{commit}`]);
+}
+
+export async function freshRemoteDefault(root: string): Promise<string | null> {
+  if (!(await succeeds(root, ['remote', 'get-url', 'origin']))) return null;
+  await run('git', ['-C', root, 'fetch', '--quiet', 'origin'], {
+    timeout: FETCH_TIMEOUT_MS,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+  }).catch(() => undefined);
+  const head = await git(root, ['symbolic-ref', '--quiet', '--short', 'refs/remotes/origin/HEAD'])
+    .then((ref) => ref.trim())
+    .catch(() => '');
+  for (const ref of [head, 'origin/main', 'origin/master'].filter(Boolean)) {
+    if (await remoteRef(root, ref)) return ref;
+  }
+  return null;
+}
+
+export async function isAncestor(root: string, older: string, newer: string): Promise<boolean> {
+  return succeeds(root, ['merge-base', '--is-ancestor', older, newer]);
+}
+
 export async function branchCheckedOut(root: string, branch: string): Promise<boolean> {
   const listed = await git(root, ['worktree', 'list', '--porcelain']).catch(() => '');
   return lines(listed).includes(`branch refs/heads/${branch}`);

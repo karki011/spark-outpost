@@ -7,7 +7,8 @@
 
 .side {
   position: relative;
-  width: min(var(--side-w, 300px), 36vw);
+  --side-cap: 36vw;
+  width: min(var(--side-w, 300px), var(--side-cap));
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -23,7 +24,8 @@
 }
 
 .side-in {
-  width: min(var(--side-w, 300px), 36vw);
+  --side-cap: 36vw;
+  width: min(var(--side-w, 300px), var(--side-cap));
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -432,14 +434,15 @@
 @media (max-width: 1240px) {
   .side,
   .side-in {
-    width: min(var(--side-w, 280px), 36vw);
+    width: min(var(--side-w, 280px), var(--side-cap));
   }
 }
 
 @media (max-width: 1000px) {
   .side,
   .side-in {
-    width: min(var(--side-w, 248px), 32vw);
+    --side-cap: 32vw;
+    width: min(var(--side-w, 248px), var(--side-cap));
   }
 }
 

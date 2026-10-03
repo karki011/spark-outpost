@@ -6,12 +6,12 @@ Reference for the Tickets screen and the Home brief. Both are built: the backend
 
 1. **The inbox is the only layout.** The list and board mockups are removed (they are in git history at `0a3b94b`). The inbox has a Comfortable / Compact row density switch. Both densities use the same one-line row; Compact only makes it shorter (32 px instead of 40 px) and hides the brief strip.
 2. **Search covers every ticket in the connected sources**, not just yours. Results are grouped as Assigned to you, Unassigned and Assigned to others. Any result can be assigned to you in one click (Linear `issueUpdate` with `assigneeId`; Jira `PUT /issue/{key}/assignee`). Built: `GET /tickets/search`.
-3. **Smart views.** Every ticket assigned to you lands in exactly one: Needs attention, Working on, PR ready, In review (with its age, such as "in review 3 days"), Up next and Done recently.
+3. **Flow groups.** Every ticket assigned to you lands in exactly one group, from the tracker status and Spark's activity together: Needs you, In progress with Spark, Started, Up next, In review / PR open and Done recently. A summary strip above the list counts each group ("3 need you · 2 with Spark · 4 done this week") and its chips filter the list; it replaced the side column of views.
 4. **Filters:** source, team or project, sprint or cycle, priority, label, plus assignee while searching.
 5. **Skeleton loading everywhere and no spinners.** Skeletons are shaped like the rows, sections, brief and detail they stand in for. Pending moves and "Assigning…" use a pulsing dot with text.
 6. **Attention comes from rules first.** Deterministic rules flag the work and each flag says why. An optional AI brief then summarises only the flagged items.
 7. **The brief lives on Home.** Home shows one attention feed for chats, tickets and PRs, and the Tickets inbox shows the ticket slice of that same feed. See "Where the brief lives".
-8. **Lean rows.** A row is one line: priority, key, title, then the single most important reason as plain muted text and a compact age. No pills, no source badge, no project or sprint, no tracker status text, no chat or PR icons in the row. Everything else is in the detail pane. See "Rows".
+8. **Scannable rows.** A row is one line: priority, key, a status chip for its group (its own colour and icon, never colour alone), title, then the Spark progress or the single most important reason, a compact age and the assignee's avatar. No source badge, no project or sprint, no tracker status text. Hover or focus shows a short preview; everything else is in the detail pane. See "Rows".
 9. **Linked work in the row and chat linking.** Rows end with a fixed-width links column: a chat button (state dot for asking, running, error) and a compact PR badge with its number whose glyph names the state (draft, open, checks failing, changes requested, approved, merged, closed). Both open their target directly (the PR in the default browser); the column is always reserved, so nothing jumps. A chat links itself to a ticket only when it is working on it: Start work, or a build turn (intake start build or plan first) that names exactly one ticket as its target ("fix ABC-123", "ABC-123: …", a pasted ticket link). A ticket cited as a reference ("see", "similar to", "analyse", Ask turns) is only shown as a "Mentions ABC-123" line with "Link this chat"; several tickets, or a reference in a build turn, give a "Link this chat to ABC-123 / ABC-124?" suggestion. Linked tickets show as a chip in the chat header with Unlink; an unlinked ticket is never re-linked automatically in that chat. Once linked, the chat branch starts with the key and the Ship title and body name it; mentions never move ticket status.
 10. **Snooze ("Remind me later").** A ticket can be snoozed until a chosen time (`PUT`/`DELETE /tickets/:source/:key/snooze`); snoozed tickets move to their own "Snoozed" view and drop out of the other sections until they wake.
 
@@ -32,40 +32,43 @@ CSS tokens, fonts, rail, buttons, pills, provider cards, the Home layout (`home-
 
 **Filter bar.** Selects for source, team or project, sprint or cycle, priority (Urgent, High and above, Medium and above) and label, plus assignee (Anyone, Me, Unassigned, or a person) while searching. An active filter is tinted and "Clear filters" appears. The density switch sits at the right end of the bar.
 
-**Side column: views.** Inbox (all sections) and one entry per smart view with its count. Needs attention's count is amber when it's above zero. Under the list, the attention rules are written out in plain words. The rail's Tickets item shows the same Needs attention count as a badge.
+**Summary strip.** One chip per non-empty group with its count ("3 need you", "2 with Spark", "1 started", "5 up next", "2 in review", "4 done this week"), plus All and Snoozed. Each chip is a toggle button (`aria-pressed`) that shows only its group; selecting it again shows all. Chips use the same colour and icon as the row chips. The rail's Tickets item shows the Needs you count as a badge.
 
 **Brief strip.** At the top of the Inbox view in Comfortable density: "What needs you today", with up to 3 ticket items from the Home brief. Each item shows its lead reason as plain text (the same words as its row) and one quick action. A footer links to "Full brief on Home". It is a view of the Home brief and never calls a model itself. It shows as a skeleton while the brief is being written. When the brief is off, it says so and offers "Turn on (about $0.01 each)".
 
-**Sections**, in this order. A ticket is placed in the first one that matches:
+**Groups**, in this order. A ticket is placed in the first one that matches:
 
-| View | Rule | Sorted by | Row shows | Quick actions |
+| Group | Rule | Sorted by | Row shows | Quick actions |
 | --- | --- | --- | --- | --- |
-| Needs attention | Any attention rule matches (below) | Rule order, then priority | The first flag's reason ("Waiting for your answer", "Urgent · not started", "Due tomorrow", "PR #88 in review"), +N for more | Answer (chat asking), Open PR (slow review), none when the only flag is a failed move (Retry is in the detail), otherwise Start |
-| Done recently | Done in the last 7 days | Most recent first; collapsed by default | "Done", age 3d | none (open in the tracker from the detail) |
-| PR ready | Has a draft PR from Ship | Newest PR first | "Draft PR #231", age of the PR | Open PR |
-| Working on | Linked chat running or open, or the ticket is In progress | Latest activity | "Running · step 3 of 5" (pulsing dot), "Finished, not shipped" or "In progress · no chat" | Open chat, or Start when there's no chat |
-| In review | In review, no Spark PR | Longest in review first | "PR #91 in review" or "In review", age in review | Open PR, or open in the tracker |
-| Up next | Everything else assigned to you that isn't started | Priority, then due date | "Due Oct 6" or "Not started", age since assigned | Start |
+| Needs you | Any attention rule matches (below), including a linked chat asking or stopped and failing checks on its PR | Rule order, then priority | What the chat asks for ("Approve plan", "Answer a question") or the first flag's reason ("PR #342 checks failing", "Due tomorrow"), +N for more | Answer, Open PR, Start, or none when the only flag is a failed move |
+| In progress with Spark | A linked chat is running | Latest start first | The Spark and plan progress, "8/10 · Pip working", with the Spark's blob face in the chip | Open chat |
+| Started | In progress in the tracker, or a linked chat finished or idle, and no chat running | Priority, then latest update | "In progress · no chat", "Chat finished · not shipped" | Open chat, or Start |
+| Up next | Everything else assigned to you that isn't started | Priority, then due date | "Due Oct 6" or "Not started" | Start |
+| In review / PR open | In review in the tracker, or its PR is open (draft included) | Longest in review first | "PR #341 · checks passing", "Draft PR #231", "In review" | Open PR |
+| Done recently | Done, or its PR merged, in the last 7 days | Most recent first; collapsed by default | "Done", "PR #88 merged" | none |
 
-Spark reads PR status (`apps/server/src/tickets/pull-status.ts`, `getPullRequest`): PR ready means the PR is still a draft (your move), and In review means it's open and waiting on reviewers.
+The screen joins each linked chat's live state (from the chat list that live events keep fresh) onto its ticket, so a chat that starts asking moves its ticket to Needs you, and plan progress ticks, without a reload; the inbox is then refetched so the server's grouping catches up. A pull request watch changing (checks, draft, merged) also refetches the inbox.
+
+Spark reads PR status (`apps/server/src/tickets/pull-status.ts`, `getPullRequest`): a draft or open PR places the ticket in In review / PR open, failing checks move it to Needs you, and a merged PR moves it to Done recently.
 
 **Rows.** One line, the same height in every section (40 px Comfortable, 32 px Compact); two lines only below 900 px, where the reason moves under the title.
 
-`[source letter] [priority] [KEY] [Title] ... [• reason] [+N] [sync glyph] [age]`
+`[source letter] [priority] [KEY] [status chip] [Title] ... [Spark progress or reason] [+N] [sync glyph] [age] [assignee] [links]`
+
+- **Status chip**: the group as a short label with its own icon and colour: Needs you (warn, a red variant for errors), With Spark (accent, with the chat's Spark or agent blob face, animated while it works), Started, Up next, In review, Done. Search rows keep the status circle instead.
 
 - **Priority** glyph (bars, or the amber `!` for Urgent). **Key** in muted mono. **Title** takes the rest and truncates.
-- **Reason**: the single most important reason for this row, as plain muted text. In Needs attention it's the first matching rule's words: "Waiting for your answer", "Move failed in Jira", "Urgent · not started", "Due tomorrow", "PR #88 in review". Other sections say what the section is about: "Running · step 3 of 5", "Draft PR #231", "In review", "Due Oct 6", "Done". In search it says whose it is: "Assigned to you", "Unassigned", "Assigned to Jordan Lee".
+- **Reason**: the single most important reason for this row, as plain muted text. In Needs you it's what the chat asks for or the first matching rule's words: "Approve plan", "Move failed in Jira", "Urgent · not started", "Due tomorrow", "PR #88 in review". Other groups say what is happening: "8/10 · Pip working", "Draft PR #231", "PR #341 · checks passing", "Due Oct 6", "Done". In search it says whose it is: "Assigned to you", "Unassigned", "Assigned to Jordan Lee".
 - **Age**: compact (`20m`, `3d`, `today`), right-aligned in a fixed column, with a `title` that says what it measures ("Asked 20 min ago", "Assigned 3 days ago", "In review for 4 days"). Together with the reason it reads "Waiting for your answer 20m", "Urgent · not started 3d", "PR #88 in review 4d".
-- **Color** only on a 6 px dot before the reason: amber for a warning flag, red for an error, pulsing green for a running chat, none otherwise. No pill backgrounds anywhere in the list.
 - **More flags**: a muted `+1` after the reason, with the other reasons as its `title` and hidden text. The detail pane lists every reason with its rule.
 - **Sync problems**: a small red warning glyph with a tooltip ("Could not move API-81 to In Progress in Jira. Details and Retry in the ticket."), amber "Out of date" when the source's token is rejected, a pulsing dot while a move is pending. The error text and Retry live in the detail pane only.
 - **Source**: not shown by default. With All sources selected, a tiny source letter (L or J) appears at the left edge on hover, focus or selection. The key prefix and the detail pane name the source.
-- **Dropped from the row**: source badge, project and sprint (group headers and filters cover them), the tracker's own status name ("Jira: Code Review", now only in the detail), the status circle (the section implies it; search rows keep it because results are mixed), and the chat and PR icons (folded into the reason, "PR #88 in review 4d").
+- **Dropped from the row**: source badge, project and sprint (group headers and filters cover them), the tracker's own status name ("Jira: Code Review", now only in the detail), and the status circle (the chip replaces it; search rows keep it because results are mixed).
 - **Actions**: at most one per row, a ghost button (the primary verb is outlined in the accent color), shown only on hover, on focus within the row and on the selected row. It takes the place of the reason and age, so the row never changes height or shifts. Answer, Start, Open PR, Open chat, Assign to me. "Assigning in Linear" and "Assigned to you · Undo" stay visible while they apply.
-- **Selection**: the selected row has a tinted background and a 3 px accent bar on the left. Up and Down (or J and K) move the selection and keep focus on the row; the focus ring is drawn inside the row.
+- **Selection**: the selected row has a tinted background and a 3 px accent bar on the left. Up and Down (or J and K), Home and End move focus between rows, and Enter opens one; while the detail pane is open, moving also selects, so the detail follows. Focusing a row shows its preview (title, status, chat, PR, other flags, priority, age); the focus ring is drawn inside the row.
 - Each row is a list item with a main button (selects the ticket) and a separate action button, so buttons are never nested.
 
-**Section headers.** Chevron, name and count only ("Needs attention 4"), with an info button whose tooltip gives the rule ("Flagged by rules; each row says why."). The tooltip shows on hover and keyboard focus, stays while hovered and closes with Escape. Search group headers work the same way.
+**Section headers.** Chevron, name and count only ("Needs you 4"), with an info button whose tooltip gives the rule ("Flagged by rules; each row says why."). The tooltip shows on hover and keyboard focus, stays while hovered and closes with Escape. Search group headers work the same way.
 
 **Detail pane** (420 px; below 1180 px it overlays the list). The actions come first: Assign to me (when it isn't yours), then Answer in chat or Open chat, Open PR, and Start work or Start again. Next come "Why it needs attention" (each flag with the rule's wording), the sync line, and the properties: status and time in it, priority, due, team or project, sprint or cycle, assignee, labels, updated. Then Linked work: the chat, the question the chat is asking, and a PR box whose Review, CI checks and Merged lines read "Not available yet". Then the description (loaded live), acceptance criteria, subtasks, links and comments.
 
@@ -98,7 +101,7 @@ The rules are deterministic, free and instant. Each flag carries its rule's word
 | `review-slow` | In review `reviewDays` or more | PR #88 in review · 4d |
 | `pr-changes` | PR has changes requested | Changes requested |
 | `pr-approved` | PR is approved | Approved |
-| `pr-ci` | Not built (would flag failing checks) | — |
+| `pr-checks` | Checks fail on the linked open PR and no chat is running | PR #342 checks failing |
 
 The thresholds (`idleDays`, `dueDays`, `reviewDays`) are per-workspace settings (`apps/server/src/persistence/attention-settings.ts`, defaults in `@spark-outpost/contracts`), not constants. Items are ordered by rule (waiting on you, then errors and failed moves, then priority and dates), then by priority.
 
@@ -114,7 +117,7 @@ The thresholds (`idleDays`, `dueDays`, `reviewDays`) are per-workspace settings 
 
 ## Where the brief lives
 
-Home shows one "What needs you today" section: a brief panel (`apps/web/src/home/BriefPanel.tsx`, the old Digest card grown to cover tickets and PRs) plus a lean attention feed (`apps/web/src/home/NeedsFeed.tsx`) for chats, tickets and PRs. The Tickets inbox shows the ticket items of that same brief as a strip (`BriefStrip.tsx`) above its sections, and Needs attention as its first section; the inbox never starts its own brief. Home keeps Running now (full width, hidden when empty, shows the ticket key when a running chat is linked), then "Up next" (top 4 tickets) next to Recent chats. See "Open items" below for what's still incomplete.
+Home shows one "What needs you today" section: a brief panel (`apps/web/src/home/BriefPanel.tsx`, the old Digest card grown to cover tickets and PRs) plus a lean attention feed (`apps/web/src/home/NeedsFeed.tsx`) for chats, tickets and PRs. The Tickets inbox shows the ticket items of that same brief as a strip (`BriefStrip.tsx`) above its sections, and Needs you as its first group; the inbox never starts its own brief. Home keeps Running now (full width, hidden when empty, shows the ticket key when a running chat is linked), then "Up next" (top 4 tickets) next to Recent chats. See "Open items" below for what's still incomplete.
 
 ## Start work dialog
 

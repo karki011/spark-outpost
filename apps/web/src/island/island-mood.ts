@@ -25,7 +25,6 @@ export function scoutMoodFor(view: IslandView, context: MoodContext): ScoutMood 
     case 'note':
     case 'panel':
       return null;
-    case 'pill':
     case 'peek':
       if (context.waiting > 0) return 'alert';
       if (context.moment) return context.moment.kind === 'done' ? 'happy' : 'sad';

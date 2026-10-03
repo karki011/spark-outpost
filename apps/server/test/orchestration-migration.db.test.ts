@@ -101,7 +101,7 @@ describe('the risky card and migrations (N3)', () => {
     expect(orchestration.status).toBe('succeeded');
     expect(cards.map((approval) => approval.kind)).toEqual(['accept']);
     expect(cards[0]!.reason).toContain(
-      'Automatic asks because the migration it added can lose or rewrite existing data (`ALTER TABLE projects DROP COLUMN note`).',
+      'Automatic asks because the migration it added can lose or rewrite existing data (`ALTER TABLE projects DROP COLUMN note`) and the change is in your checkout, not a worktree.',
     );
   }, 60_000);
 });

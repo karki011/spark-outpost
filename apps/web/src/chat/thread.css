@@ -16,6 +16,15 @@
   margin: 0 auto;
 }
 
+.col > section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 360px;
+}
+
+.col > section:not(:nth-last-child(-n + 2)) .msg {
+  animation: none;
+}
+
 .empty {
   display: flex;
   flex-direction: column;

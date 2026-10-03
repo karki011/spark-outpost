@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { AuditSummary } from '@spark-outpost/contracts';
+import { QueryWait } from '../ui/loading/QueryWait.tsx';
+import { Skeleton } from '../ui/loading/Skeleton.tsx';
 import { auditApi } from './audit-api.ts';
 import { ExportButton } from './ExportButton.tsx';
 
@@ -58,9 +60,15 @@ export function AuditExport({
         </div>
       </div>
       <h4 className="ah">Preview · cost.csv</h4>
-      <pre className="xprev" tabIndex={0} aria-label="CSV preview">
-        {preview.data ?? (preview.isError ? preview.error.message : 'Loading…')}
-      </pre>
+      {preview.data === undefined ? (
+        <QueryWait query={preview} what="the preview">
+          <Skeleton label="Preparing the preview" shape="diff" rows={PREVIEW_LINES} />
+        </QueryWait>
+      ) : (
+        <pre className="xprev" tabIndex={0} aria-label="CSV preview">
+          {preview.data}
+        </pre>
+      )}
     </>
   );
 }

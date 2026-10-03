@@ -3,6 +3,8 @@ import {
   ATTACHMENT_IMAGE_TYPES,
   ATTACHMENT_NAME_MAX_LENGTH,
   ATTACHMENT_TEXT_MAX_BYTES,
+  isSecretFileName,
+  SECRET_FILE_REFUSAL,
   type AttachmentKind,
 } from '@spark-outpost/contracts';
 
@@ -92,6 +94,7 @@ export function classifyAttachment(
   data: Uint8Array,
 ): ClassifiedAttachment {
   const name = sanitizeAttachmentName(rawName);
+  if (isSecretFileName(name)) throw new AttachmentError(SECRET_FILE_REFUSAL);
   if (data.length === 0) throw new AttachmentError('The file is empty.');
   const declared = baseMediaType(rawMediaType);
   if (isImageType(declared) && imageSignatures[declared](data)) {

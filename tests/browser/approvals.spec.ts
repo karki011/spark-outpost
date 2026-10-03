@@ -107,10 +107,10 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
   await shot(page, 'approval-command');
 
   await page.reload();
-  const docked = page.getByRole('region', { name: 'Waiting for you' });
-  await expect(docked.getByRole('group', { name: /Run a command\?/ })).toBeVisible();
+  const status = page.locator('.cstatus').getByRole('button', { name: /^Waiting for you/ });
+  await expect(status).toContainText('approve pnpm test -- groupMessages');
   const allow = card(page, /Run a command\?/).getByRole('button', { name: 'Allow', exact: true });
-  await page.getByRole('button', { name: 'Waiting for your answer' }).focus();
+  await status.focus();
   await page.keyboard.press('Enter');
   await expect(allow).toBeFocused();
   await page.keyboard.press('Enter');

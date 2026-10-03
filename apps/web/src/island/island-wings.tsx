@@ -7,7 +7,6 @@ export interface WingProps {
   view: IslandView;
   waiting: number;
   greeting: string | null;
-  listing: boolean;
   followUp: ConversationSummary | null;
   onTab: (panel: Panel) => void;
   onReview: (card: Card) => void;
@@ -49,33 +48,6 @@ function panelLabel(panel: Panel, followUp: boolean): string {
 export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode } {
   const { view, waiting, greeting } = props;
   switch (view.kind) {
-    case 'pill':
-      return props.listing
-        ? {
-            left: null,
-            right: (
-              <>
-                <button
-                  type="button"
-                  className="isl-pill-btn"
-                  onClick={() => props.onTab('sessions')}
-                >
-                  See all
-                </button>
-                <button type="button" className="isl-pill-btn" onClick={() => props.onTab('quick')}>
-                  New chat
-                </button>
-              </>
-            ),
-          }
-        : {
-            left: null,
-            right: (
-              <button type="button" className="isl-pill-btn" onClick={() => props.onTab('quick')}>
-                <span>{greeting ?? 'New chat'}</span>
-              </button>
-            ),
-          };
     case 'nudge':
       return {
         left: null,
@@ -109,7 +81,10 @@ export function wingsFor(props: WingProps): { left: ReactNode; right: ReactNode 
       };
     case 'panel':
       return {
-        left: panelLabel(view.panel, props.followUp !== null),
+        left:
+          view.panel === 'home' && greeting
+            ? greeting
+            : panelLabel(view.panel, props.followUp !== null),
         right:
           view.panel === 'sessions' && waiting > 0 ? (
             <>

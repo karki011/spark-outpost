@@ -35,7 +35,7 @@ Tools that read change nothing.
 | Providers, models, connectors, settings, projects     | `spark_providers`, `spark_models`, `spark_connectors`, `spark_settings`, `spark_projects` |
 | The Map, and what breaks if a file changes            | `spark_map`                                                                               |
 | Open terminals                                        | `spark_terminals`                                                                         |
-| Tickets                                               | `spark_tickets`                                                                           |
+| Tickets, or one ticket in full (`action` read)        | `spark_tickets`                                                                           |
 | Your Sparks, their state and standing instructions    | `spark_sparks`                                                                            |
 | The audit log                                         | `spark_audit`                                                                             |
 | How Spark works, and this guide                       | `spark_guide`, `spark_docs`                                                               |

@@ -1,5 +1,7 @@
 import type { KeyboardEvent, PointerEvent } from 'react';
+import { holdTransitions, releaseAfterPaint, startWidthDrag, widthText } from '../ui/width-drag.ts';
 import {
+  clampPanelWidth,
   WORK_PANEL_DEFAULT_WIDTH,
   WORK_PANEL_MAX_WIDTH,
   WORK_PANEL_MIN_WIDTH,
@@ -7,21 +9,6 @@ import {
 
 const STEP = 16;
 const BIG_STEP = 48;
-
-function holdTransitions(): () => void {
-  const app = document.querySelector('.app');
-  const panel = document.getElementById('work-panel');
-  app?.classList.add('resizing');
-  panel?.classList.add('dragging');
-  return () => {
-    app?.classList.remove('resizing');
-    panel?.classList.remove('dragging');
-  };
-}
-
-function releaseAfterPaint(release: () => void): void {
-  requestAnimationFrame(() => requestAnimationFrame(release));
-}
 
 interface WorkPanelResizerProps {
   width: number | null;
@@ -32,7 +19,7 @@ export function WorkPanelResizer({ width: saved, onWidth }: WorkPanelResizerProp
   const width = saved ?? WORK_PANEL_DEFAULT_WIDTH;
 
   const resize = (next: number | null) => {
-    const release = holdTransitions();
+    const release = holdTransitions(document.getElementById('work-panel'));
     onWidth(next);
     releaseAfterPaint(release);
   };
@@ -40,24 +27,18 @@ export function WorkPanelResizer({ width: saved, onWidth }: WorkPanelResizerProp
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     event.preventDefault();
-    const handle = event.currentTarget;
-    const panel = handle.closest('.wp');
-    const startWidth = panel?.getBoundingClientRect().width ?? width;
-    const startX = event.clientX;
-    const release = holdTransitions();
-    handle.setPointerCapture(event.pointerId);
-    const onMove = (move: globalThis.PointerEvent) => {
-      onWidth(startWidth - (move.clientX - startX));
-    };
-    const onUp = () => {
-      handle.removeEventListener('pointermove', onMove);
-      handle.removeEventListener('pointerup', onUp);
-      handle.removeEventListener('pointercancel', onUp);
-      release();
-    };
-    handle.addEventListener('pointermove', onMove);
-    handle.addEventListener('pointerup', onUp);
-    handle.addEventListener('pointercancel', onUp);
+    const panel = event.currentTarget.closest<HTMLElement>('.wp');
+    startWidthDrag(event, {
+      panel,
+      host: panel,
+      variable: '--wp-w',
+      targets: panel ? [panel, ...panel.querySelectorAll<HTMLElement>(':scope > .wp-in')] : [],
+      cap: '--wp-cap',
+      startWidth: panel?.getBoundingClientRect().width ?? width,
+      direction: -1,
+      clamp: clampPanelWidth,
+      commit: onWidth,
+    });
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -84,7 +65,7 @@ export function WorkPanelResizer({ width: saved, onWidth }: WorkPanelResizerProp
       aria-valuemin={WORK_PANEL_MIN_WIDTH}
       aria-valuemax={WORK_PANEL_MAX_WIDTH}
       aria-valuenow={width}
-      aria-valuetext={`${width} pixels wide. Arrow keys resize, Enter resets.`}
+      aria-valuetext={widthText(width)}
       tabIndex={0}
       onPointerDown={onPointerDown}
       onDoubleClick={() => resize(null)}

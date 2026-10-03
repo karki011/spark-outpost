@@ -13,6 +13,8 @@ import { AuditLogs } from './AuditLogs.tsx';
 import { AuditSummaryPane } from './AuditSummaryPane.tsx';
 import { AuditTimeline } from './AuditTimeline.tsx';
 import { ChainBadge, useChainChecks } from './ChainBadge.tsx';
+import { QueryWait } from '../ui/loading/QueryWait.tsx';
+import { Skeleton } from '../ui/loading/Skeleton.tsx';
 
 export type AuditTab = 'summary' | 'timeline' | 'logs' | 'export';
 
@@ -161,8 +163,9 @@ export function AuditDialog({ conversationId, title, onClose }: AuditDialogProps
             role="tabpanel"
             aria-labelledby={`aud-tab-${tab}`}
           >
-            {summary.isError && <p className="aud-empty">{summary.error.message}</p>}
-            {!summary.data && !summary.isError && <p className="aud-empty">Loading…</p>}
+            <QueryWait query={summary} what="the audit">
+              <Skeleton label="Gathering the audit" shape="cards" rows={3} />
+            </QueryWait>
             {summary.data && (
               <div key={tab} className="aud-pane">
                 {tab === 'summary' && <AuditSummaryPane summary={summary.data} />}

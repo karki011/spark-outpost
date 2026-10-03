@@ -39,5 +39,6 @@ export async function wrappedUp(s: Session): Promise<FlowEvent> {
     ...(checksFailing(s) ? { checksFailing: true } : {}),
     ...(riskyMigration ? { riskyMigration } : {}),
     ...(approvedEach ? { approvedEach: true } : {}),
+    ...(s.input.chatWorktree ? {} : { outsideWorktree: true }),
   };
 }

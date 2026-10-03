@@ -3,6 +3,7 @@ import {
   type AttentionFlag,
   type AttentionRule,
   type AttentionSettings,
+  type PlanProgress,
   type PullRequestStatus,
   type TicketChatState,
   type TicketLastSync,
@@ -14,7 +15,14 @@ export type Thresholds = Pick<AttentionSettings, 'idleDays' | 'dueDays' | 'revie
 
 export interface TicketFacts {
   ticket: TicketListItem;
-  chat: { conversationId: string; title: string; state: TicketChatState; at: string } | null;
+  chat: {
+    conversationId: string;
+    title: string;
+    state: TicketChatState;
+    at: string;
+    progress?: PlanProgress | null;
+    agent?: string | null;
+  } | null;
   pullRequest: PullRequestStatus | null;
   lastSync: TicketLastSync | null;
   statusSince: string | null;
@@ -38,6 +46,7 @@ export const RULE_ORDER: readonly AttentionRule[] = [
   'chat-asking',
   'chat-error',
   'pr-feedback',
+  'pr-checks',
   'sync-failed',
   'blocked',
   'high-idle',
@@ -127,6 +136,20 @@ function feedbackFlags({ prFeedback }: TicketFacts): AttentionFlag[] {
       `PR #${prFeedback.number} feedback needs you`,
       `Rule: Spark is following up on the linked pull request and ${plural(prFeedback.waiting, 'item')} need${prFeedback.waiting === 1 ? 's' : ''} your call.`,
       prFeedback.since,
+    ),
+  ];
+}
+
+function checksFlags({ pullRequest: pull, chat }: TicketFacts): AttentionFlag[] {
+  const open = pull && pull.state !== 'merged' && pull.state !== 'closed';
+  if (!open || pull.checks !== 'failing' || chat?.state === 'running') return [];
+  return [
+    flag(
+      'pr-checks',
+      `PR #${pull.number} checks failing`,
+      'Rule: Checks are failing on the linked pull request and no chat is fixing them.',
+      null,
+      'error',
     ),
   ];
 }
@@ -222,6 +245,7 @@ export function attentionFlags(facts: TicketFacts, limits: Thresholds, now: Date
   const flags = [
     ...chatFlags(facts),
     ...feedbackFlags(facts),
+    ...checksFlags(facts),
     ...syncFlags(facts),
     ...workFlags(facts, limits, now),
     ...pullFlags(facts, limits, now),

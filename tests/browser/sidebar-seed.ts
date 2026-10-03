@@ -8,6 +8,7 @@ export interface SeedApproval {
   title: string;
   command?: string;
   paths?: string[];
+  plan?: string;
   checkpoint?: Record<string, unknown>;
 }
 
@@ -19,6 +20,7 @@ export interface SeedChat {
   unread?: boolean;
   run?: { status: string; error?: string };
   approval?: SeedApproval;
+  approvals?: SeedApproval[];
   minutesAgo?: number;
 }
 
@@ -29,8 +31,9 @@ const APPROVAL_OPTIONS = [
 
 async function insertApproval(
   db: Db,
-  run: { id: string; conversationId: string },
+  run: { id: string },
   approval: SeedApproval,
+  seq: number,
 ): Promise<void> {
   const id = randomUUID();
   const payload = {
@@ -39,6 +42,7 @@ async function insertApproval(
     paths: approval.paths ?? [],
     diffs: [],
     truncated: false,
+    ...(approval.plan ? { plan: approval.plan } : {}),
     ...(approval.checkpoint ? { checkpoint: approval.checkpoint } : {}),
   };
   const toolCallId = `seed:${id}`;
@@ -79,11 +83,28 @@ async function insertApproval(
       note: null,
     },
   };
+  await db.query(`INSERT INTO run_events (run_id, seq, type, payload) VALUES ($1, $2, $3, $4)`, [
+    run.id,
+    seq,
+    requested.type,
+    JSON.stringify(requested),
+  ]);
+}
+
+async function insertApprovals(
+  db: Db,
+  run: { id: string; conversationId: string },
+  approvals: readonly SeedApproval[],
+): Promise<void> {
   const started = { type: 'RUN_STARTED', runId: run.id, threadId: run.conversationId };
-  await db.query(
-    `INSERT INTO run_events (run_id, seq, type, payload) VALUES ($1, 1, $2, $3), ($1, 2, $4, $5)`,
-    [run.id, started.type, JSON.stringify(started), requested.type, JSON.stringify(requested)],
-  );
+  await db.query(`INSERT INTO run_events (run_id, seq, type, payload) VALUES ($1, 1, $2, $3)`, [
+    run.id,
+    started.type,
+    JSON.stringify(started),
+  ]);
+  for (const [index, approval] of approvals.entries()) {
+    await insertApproval(db, run, approval, index + 2);
+  }
 }
 
 export async function seedChats(chats: readonly SeedChat[]): Promise<string[]> {
@@ -126,8 +147,9 @@ export async function seedChats(chats: readonly SeedChat[]): Promise<string[]> {
            VALUES ($1, $2, $3, 'fake', $4, $5, now(), CASE WHEN $6 THEN now() END)`,
           [runId, id, messageId, chat.run.status, chat.run.error ?? null, chat.unread ?? false],
         );
-        if (chat.approval) {
-          await insertApproval(db, { id: runId, conversationId: id }, chat.approval);
+        const approvals = [...(chat.approval ? [chat.approval] : []), ...(chat.approvals ?? [])];
+        if (approvals.length > 0) {
+          await insertApprovals(db, { id: runId, conversationId: id }, approvals);
         }
       }
       ids.push(id);

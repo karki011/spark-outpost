@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { TicketSourceId, TicketStatus } from '@spark-outpost/contracts';
+import { useTooltip, type TipContent } from '../ui/Tooltip.tsx';
 import { Glyph, PriorityGlyph, StatusCircle } from './ticket-icons.tsx';
 
 export type RowTone = 'none' | 'warn' | 'error' | 'running';
@@ -31,6 +32,9 @@ export interface TicketRowProps {
   pinned?: ReactNode;
   below?: ReactNode;
   links?: ReactNode;
+  chip?: ReactNode;
+  avatar?: ReactNode;
+  preview?: TipContent;
 }
 
 const TONE_CLASS: Record<RowTone, string> = {
@@ -41,7 +45,8 @@ const TONE_CLASS: Record<RowTone, string> = {
 };
 
 export function TicketRow(props: TicketRowProps) {
-  const { action, pinned, below, links } = props;
+  const { action, pinned, below, links, chip } = props;
+  const preview = useTooltip(props.preview ?? '');
   const classes = [
     'irow',
     action ? 'acts' : '',
@@ -55,9 +60,10 @@ export function TicketRow(props: TicketRowProps) {
     <li className={classes} data-ticket={props.id}>
       <button
         type="button"
-        className={props.status ? 'ir-main with-status' : 'ir-main'}
+        className={props.status ? 'ir-main with-status' : chip ? 'ir-main flow' : 'ir-main'}
         aria-current={props.selected ? 'true' : undefined}
         onClick={props.onSelect}
+        {...(props.preview ? preview.triggerProps : {})}
       >
         <span className="srcl" aria-hidden="true">
           {props.source === 'linear' ? 'L' : 'J'}
@@ -65,6 +71,7 @@ export function TicketRow(props: TicketRowProps) {
         {props.status && <StatusCircle status={props.status.status} label={props.status.label} />}
         <PriorityGlyph rank={props.priorityRank} />
         <span className="tk-key">{props.ticketKey}</span>
+        {chip}
         <span className="tk-title">{props.title}</span>
         <span className="why-r">
           <i className={TONE_CLASS[props.tone]} aria-hidden="true" />
@@ -91,7 +98,9 @@ export function TicketRow(props: TicketRowProps) {
         <span className="age" title={props.age?.title}>
           {props.age?.text}
         </span>
+        {props.avatar}
       </button>
+      {props.preview && preview.tooltip}
       {links}
       {(action || pinned) && (
         <div className={pinned ? 'ir-acts pin' : 'ir-acts'}>

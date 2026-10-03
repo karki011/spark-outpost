@@ -12,6 +12,7 @@ import {
 } from './interface-pairs.ts';
 import { ISLAND_PAIRS } from './island-pairs.ts';
 import { MAP } from './map-pairs.ts';
+import { TICKETS } from './ticket-pairs.ts';
 import { surfaceText, type HuePair, type Pair, type PairKind } from './pair-types.ts';
 
 export type { HuePair, Pair, PairKind };
@@ -52,6 +53,7 @@ export const PAIRS: Pair[] = [
   ...AGENT_TV,
   ...MAP,
   ...ISLAND_PAIRS,
+  ...TICKETS,
 ];
 
 export const HUE_PAIRS: HuePair[] = [

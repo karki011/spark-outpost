@@ -19,7 +19,7 @@ For a side-by-side view of both settings, see [Permissions and autonomy](permiss
 
 ## Answer an approval card
 
-When an agent needs you, its card appears in the chat and docks above the message box under **Waiting for you**. The chat list shows **Asking permission**, and the **Chats** button in the rail shows a count.
+When an agent needs you, its card appears in the chat, and a one-line summary appears just above the message box, for example **Waiting for you · approve `pnpm test`** or **Waiting for you · question: Which repo?**. Hover or focus it to see the full command. The chat list shows **Asking permission**, and the **Chats** button in the rail shows a count.
 
 ![An approval card asking to run a command](images/approvals-command-light.png)
 
@@ -41,7 +41,7 @@ To answer:
    - **Always allow**: allow this kind of request for the rest of this run.
    - **Deny**: don't run it. The agent is told and tries another way.
 
-With the keyboard: where the card sat in the conversation, a **Waiting for your answer** button stays behind. Focus it and press **Enter** to jump to the docked card; its first button gets focus. Press **Tab** to move between buttons and **Enter** to choose.
+To get back to the card, select the summary line above the message box, or press **⌘ Shift Y** (**Ctrl Shift Y** on Windows and Linux). The chat scrolls to the card and its first button gets focus. Press **Tab** to move between buttons and **Enter** to choose. The line only jumps to the card; you always answer on the card itself, so cards that need a long press keep it.
 
 The card then shows your answer, for example "Chose: Allow." or "Denied. The command didn't run."
 
@@ -139,7 +139,7 @@ The **If you don't answer a question** setting in **Settings → Spark** doesn't
 
 ## Where waiting cards show
 
-- In the chat, docked above the message box under **Waiting for you**. With more than one, use **Previous waiting card** and **Next waiting card**.
+- In the chat, in the conversation, with a one-line summary above the message box. With more than one, the line says how many, for example **Waiting for you · 2 things**; select it to list them and pick one to jump to.
 - On **Home**, under **What needs you today**. Select **Answer** to jump to the card.
 - In the chat list (**Asking permission**) and as a count on **Chats** in the rail.
 - In the chat's **Work** panel, under **Waiting for you**, with a **Review** button.

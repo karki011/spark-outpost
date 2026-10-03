@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   useMutation,
   useMutationState,
@@ -6,6 +6,7 @@ import {
   type Mutation,
 } from '@tanstack/react-query';
 import { api } from '../../api/client.ts';
+import { useStableCallback } from '../../ui/use-stable-callback.ts';
 import { queueDraft } from '../composer/pending-draft.ts';
 import {
   nextSlowAt,
@@ -61,7 +62,7 @@ export function useChatSend(
   });
   const attempts = useMutationState({ filters: { mutationKey }, select: toAttempt });
   const [now, setNow] = useState(() => Date.now());
-  const pending = pendingSends(attempts, savedIds, now);
+  const pending = useMemo(() => pendingSends(attempts, savedIds, now), [attempts, savedIds, now]);
   const slowAt = nextSlowAt(pending);
 
   useEffect(() => {
@@ -76,20 +77,27 @@ export function useChatSend(
       .findAll({ mutationKey, status: 'pending' })
       .some((entry) => !savedIds.has(outgoing(entry).id));
 
-  return {
-    pending,
-    sending: pending.some((send) => send.phase !== 'failed'),
-    send: (message) => {
-      if (inFlight()) return;
-      mutation.mutate({ ...message, id: crypto.randomUUID() });
-    },
-    retry: (message) => mutation.mutate(message),
-    edit: (message) => {
-      const cache = queryClient.getMutationCache();
-      cache
-        .findAll({ mutationKey, predicate: (entry) => outgoing(entry).id === message.id })
-        .forEach((entry) => cache.remove(entry));
-      queueDraft(conversationId, message.content);
-    },
-  };
+  const send = useStableCallback((message: Omit<OutgoingMessage, 'id'>) => {
+    if (inFlight()) return;
+    mutation.mutate({ ...message, id: crypto.randomUUID() });
+  });
+  const retry = useStableCallback((message: OutgoingMessage) => mutation.mutate(message));
+  const edit = useStableCallback((message: OutgoingMessage) => {
+    const cache = queryClient.getMutationCache();
+    cache
+      .findAll({ mutationKey, predicate: (entry) => outgoing(entry).id === message.id })
+      .forEach((entry) => cache.remove(entry));
+    queueDraft(conversationId, message.content);
+  });
+
+  return useMemo(
+    () => ({
+      pending,
+      sending: pending.some((entry) => entry.phase !== 'failed'),
+      send,
+      retry,
+      edit,
+    }),
+    [pending, send, retry, edit],
+  );
 }

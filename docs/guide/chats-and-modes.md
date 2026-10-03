@@ -118,7 +118,8 @@ To change the default for new chats, open **Settings → Spark** and change **Ho
 - To stop the agent, select **Stop**. It replaces the send button while a turn runs.
 - When Spark splits the work into pieces, the message box becomes a steering box. Pick who gets your message under **Steer to**: **Auto**, **All pieces**, one piece, or **Coordinator**. See [The Spark crew](spark-crew.md).
 - To see the plan, the crew, the files changed and the cost, select **Show work panel** in the chat header.
-- When the agent needs you, a card waits above the message box under **Waiting for you**. See [Approvals and protected paths](approvals.md#answer-an-approval-card).
+- A line above the message box shows what the agent is doing right now, for example **Running · pnpm test**, **Editing · table.tsx** or **Thinking…**. A step that runs longer than ten seconds shows how long it has taken. When the turn ends, the line says **Done** with the time it took, then fades. Secrets in commands show as •••.
+- When the agent needs you, its card waits in the chat and the same line says what for, for example **Waiting for you · approve `pnpm test`**. Select it, or press **⌘ Shift Y** (**Ctrl Shift Y** on Windows and Linux), to jump to the card. See [Approvals and protected paths](approvals.md#answer-an-approval-card).
 
 ## After a turn
 

@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   DEFAULT_ATTENTION_SETTINGS,
   ticketSourceNames,
@@ -32,13 +31,15 @@ import {
   type TicketView,
 } from './ticket-model.ts';
 import { TicketsHeader } from './TicketsHeader.tsx';
+import { SummaryStrip } from './SummaryStrip.tsx';
 import { TicketsSkeleton } from './TicketsSkeleton.tsx';
-import { TicketViews } from './TicketViews.tsx';
-import { ticketKeys, ticketsApi } from './tickets-api.ts';
 import { useAssign } from './use-assign.ts';
 import { useDensity } from './use-density.ts';
+import { useLiveTickets } from './use-live-tickets.ts';
+import { useTicketInbox } from './use-ticket-inbox.ts';
 import { useTicketSearch } from './use-ticket-search.ts';
 import './tickets.css';
+import './ticket-flow.css';
 import './ticket-rows.css';
 import './ticket-search.css';
 import './ticket-detail.css';
@@ -49,8 +50,6 @@ interface TicketsProps {
   onHome: () => void;
 }
 
-const INBOX_STALE_MS = 60_000;
-
 const SOURCE_ORDER: readonly TicketSourceId[] = ['linear', 'jira'];
 
 function sourcesLabel(sources: readonly TicketSourceId[]): string {
@@ -58,29 +57,29 @@ function sourcesLabel(sources: readonly TicketSourceId[]): string {
   return shown.map((source) => ticketSourceNames[source]).join(' and ');
 }
 
-function moveSelection(event: KeyboardEvent<HTMLElement>) {
-  const step = { ArrowDown: 1, j: 1, ArrowUp: -1, k: -1 }[event.key];
-  if (!step || !(event.target instanceof HTMLElement) || !event.target.matches('.ir-main')) return;
+const ROW_STEPS: Record<string, number> = { ArrowDown: 1, j: 1, ArrowUp: -1, k: -1 };
+
+function moveSelection(event: KeyboardEvent<HTMLElement>, follow: boolean) {
+  const target = event.target;
+  if (!(target instanceof HTMLButtonElement) || !target.matches('.ir-main')) return;
   const rows = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('.ir-main')];
-  const next = rows[rows.indexOf(event.target as HTMLButtonElement) + step];
+  const at = rows.indexOf(target);
+  const next =
+    event.key === 'Home'
+      ? rows[0]
+      : event.key === 'End'
+        ? rows.at(-1)
+        : ROW_STEPS[event.key]
+          ? rows[at + ROW_STEPS[event.key]!]
+          : undefined;
   if (!next) return;
   event.preventDefault();
   next.focus();
-  next.click();
+  if (follow) next.click();
 }
 
 export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
-  const connections = useQuery({
-    queryKey: ticketKeys.connections,
-    queryFn: ticketsApi.connections,
-  });
-  const connected = (connections.data?.connections ?? []).some((entry) => entry.keySaved);
-  const inbox = useQuery({
-    queryKey: ticketKeys.inbox,
-    queryFn: ticketsApi.inbox,
-    enabled: connected,
-    staleTime: INBOX_STALE_MS,
-  });
+  const { connections, connected, inbox } = useTicketInbox();
   const [view, setView] = useState<TicketView>('inbox');
   const [filters, setFilters] = useState<TicketFilters>(ALL_FILTERS);
   const [collapsed, setCollapsed] = useState<ReadonlySet<TicketSection>>(new Set(['done']));
@@ -117,8 +116,9 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
   const settings = data?.settings ?? DEFAULT_ATTENTION_SETTINGS;
   const sources = data?.sources ?? [];
   const label = sourcesLabel(sources);
-  const tickets = filterTickets(data?.tickets ?? [], filters);
-  const counts = countBy(tickets);
+  const tickets = useMemo(() => filterTickets(data?.tickets ?? [], filters), [data, filters]);
+  const entries = useLiveTickets(tickets);
+  const counts = countBy(entries);
 
   const findInbox = (id: string) => data?.tickets.find((ticket) => ticketId(ticket) === id) ?? null;
   const findResult = (id: string) =>
@@ -198,18 +198,7 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
             <TicketsSkeleton sourcesLabel={label} />
           ) : (
             <div className="ib">
-              <TicketViews
-                view={view}
-                total={tickets.length}
-                counts={counts}
-                snoozed={snoozedTickets(tickets).length}
-                settings={settings}
-                onView={(next) => {
-                  setView(next);
-                  search.clear();
-                }}
-              />
-              <div className="ib-main" onKeyDown={moveSelection}>
+              <div className="ib-main" onKeyDown={(event) => moveSelection(event, detail !== null)}>
                 {search.active ? (
                   <SearchResults
                     query={search.text.trim()}
@@ -228,6 +217,13 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                   </EmptyScene>
                 ) : (
                   <>
+                    <SummaryStrip
+                      view={view}
+                      total={tickets.length}
+                      counts={counts}
+                      snoozed={snoozedTickets(tickets).length}
+                      onView={setView}
+                    />
                     {view === 'inbox' && density === 'comfortable' && (
                       <BriefStrip
                         tickets={tickets}
@@ -238,8 +234,10 @@ export function Tickets({ focusId, onOpenChat, onHome }: TicketsProps) {
                       />
                     )}
                     <InboxSections
-                      tickets={tickets}
+                      entries={entries}
                       view={view}
+                      settings={settings}
+                      now={now}
                       collapsed={collapsed}
                       selectedId={selectedId}
                       onToggle={toggleSection}

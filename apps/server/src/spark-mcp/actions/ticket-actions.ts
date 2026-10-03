@@ -26,7 +26,7 @@ const sourceInput = ticketSourceIdSchema
   .describe('jira or linear. Defaults to the only connected one.');
 const keyInput = ticketKeySchema.describe('Ticket key, such as ENG-12.');
 
-async function pickSource(deps: TicketDeps, requested: TicketSourceId | undefined) {
+export async function pickSource(deps: TicketDeps, requested: TicketSourceId | undefined) {
   if (requested) return requested;
   const connected = await connectedSources(deps);
   if (connected.length === 1) return connected[0]!.connection.source;

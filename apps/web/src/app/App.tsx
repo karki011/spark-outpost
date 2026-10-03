@@ -38,7 +38,8 @@ import { revealIslandSettings } from '../settings/DesktopCompanionSetting.tsx';
 import { requestFeedback } from '../help/feedback-request.ts';
 import { DocsReachable } from '../ui/DocLink.tsx';
 import { Tickets } from '../tickets/Tickets.tsx';
-import { ticketKeys, ticketsApi } from '../tickets/tickets-api.ts';
+import { ticketKeys } from '../tickets/tickets-api.ts';
+import { useTicketInbox } from '../tickets/use-ticket-inbox.ts';
 import { useTicketRequests } from '../tickets/ticket-request.ts';
 import { BackOnlineToast } from './connection/BackOnlineToast.tsx';
 import { markConnectionRestored, useConnection } from './connection/connection-store.ts';
@@ -105,7 +106,7 @@ function ChatShell({ entering }: { entering: boolean }) {
   });
   const chats = conversations.data ?? [];
   const waiting = attention(chats, null).count;
-  const inbox = useQuery({ queryKey: ticketKeys.inbox, queryFn: ticketsApi.inbox, enabled: false });
+  const { inbox } = useTicketInbox();
   const ticketsWaiting = (inbox.data?.tickets ?? []).filter(
     (ticket) => ticket.section === 'attention',
   ).length;

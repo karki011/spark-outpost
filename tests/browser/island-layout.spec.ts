@@ -4,7 +4,6 @@ import { seedChats } from './sidebar-seed.ts';
 
 const PARTS = [
   '.isl-wlabel',
-  '.isl-hsec',
   '.isl-wr',
   '.isl-tabs',
   '.isl-qc',
@@ -21,7 +20,6 @@ const TEXT = [
   '.isl-tabs',
   '.isl-ttl',
   '.isl-hint',
-  '.isl-htitle',
   '.isl-hhead',
   '.isl-who',
   '.isl-now-title',
@@ -147,7 +145,7 @@ async function expectClean(page: Page, label: string) {
         if (rect.width > 0 && overlaps(scout, rect)) found.push(`the blob covers ${selector}`);
       }
       for (const { selector, element } of visible(
-        '.isl-htitle, .isl-hsub, .isl-st, .isl-wlabel, .isl-nudge-title, .isl-now-title, .isl-tile-name',
+        '.isl-st, .isl-wlabel, .isl-nudge-title, .isl-now-title, .isl-tile-name',
       )) {
         if (
           getComputedStyle(element).textOverflow !== 'ellipsis' &&
@@ -203,10 +201,11 @@ for (const width of [420, 1280]) {
     await expect(page.getByRole('button', { name: /^Chat: / })).toHaveCount(4);
     await page.mouse.move(width / 2, 300);
     await page.mouse.move(width / 2, 6, { steps: 4 });
-    await expect(island(page)).toHaveAttribute('data-view', 'pill');
-    await expect(island(page).getByRole('region', { name: 'Recent' })).toBeVisible();
-    await expectClean(page, 'hover list');
+    await expect(island(page)).toHaveAttribute('data-view', 'panel');
+    await expect(island(page).getByRole('region', { name: /^Now/ })).toBeVisible();
+    await expectClean(page, 'home on hover');
     await page.mouse.move(width / 2, 600);
+    await expect(island(page)).toHaveAttribute('data-view', 'peek');
 
     await command(page, 'sessions');
     await expectClean(page, 'sessions, many');
@@ -224,8 +223,7 @@ for (const width of [420, 1280]) {
     ]);
     await expect(island(page)).toHaveAttribute('data-view', 'nudge');
     await expectClean(page, 'nudge');
-    await page.mouse.move(width / 2, 300);
-    await page.mouse.move(width / 2, 6, { steps: 4 });
+    await command(page, 'quick');
     await expect(island(page)).toHaveAttribute('data-view', 'card');
     await expectClean(page, 'approval');
     const allow = island(page).getByRole('button', { name: /Allow once/ });
@@ -241,12 +239,10 @@ for (const width of [420, 1280]) {
     await expect(island(page)).toHaveAttribute('data-view', 'peek');
     await page.mouse.move(width / 2, 300);
     await page.mouse.move(width / 2, 6, { steps: 4 });
-    await expect(island(page).getByRole('region', { name: 'Recent' })).toContainText(LONG);
-    await expectClean(page, 'hover list after a run');
-    await island(page)
-      .getByRole('region', { name: 'Recent' })
-      .getByRole('button', { name: /Fix image uploads/ })
-      .click();
+    const now = island(page).getByRole('region', { name: /^Now/ });
+    await expect(now).toContainText(LONG);
+    await expectClean(page, 'home after a run');
+    await now.getByRole('button', { name: /^Open / }).click({ modifiers: ['Meta'] });
     await expect(island(page)).toHaveAttribute('data-view', 'note');
     await expectClean(page, 'opening note');
   });
@@ -309,9 +305,8 @@ for (const { name, sparkFocused, expected } of [
     }
     await page.mouse.move(640, 300);
     await page.mouse.move(640, 6, { steps: 4 });
-    const needs = island(page).getByRole('region', { name: 'Needs you' });
-    await expect(needs).toContainText('Deploy the site');
-    await needs.getByRole('button', { name: 'Review' }).click();
+    const now = island(page).getByRole('region', { name: 'Now: Deploy the site' });
+    await now.getByRole('button', { name: 'Open Deploy the site' }).click();
     await expect(island(page)).toHaveAttribute('data-view', 'panel');
     const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
     await expect(waiting).toBeFocused();
@@ -362,30 +357,15 @@ test('clicking the blob opens Home, quiet or busy, and the shortcuts still open 
   );
 });
 
-test('hovering groups what needs you, what runs and what finished, and keeps the plain pill when there is nothing', async ({
+test('hovering the needs-you pill opens the full panel on that chat, and leaving closes it', async ({
   page,
 }) => {
   await resetTestDatabase({ onboarded: true });
-  await fakeFlatDesktop(page, { sparkFocused: true });
+  await fakeFlatDesktop(page);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/island');
-  await expect(island(page)).toHaveAttribute('data-view', 'peek');
-  await page.waitForTimeout(800);
-  const hover = async () => {
-    await page.mouse.move(640, 300);
-    await page.mouse.move(640, 6, { steps: 4 });
-    await expect(island(page)).toHaveAttribute('data-view', 'pill');
-  };
-  await hover();
-  await expect(island(page).locator('.isl-hsec')).toHaveCount(0);
-  await expect(island(page).getByRole('button', { name: 'New chat' })).toBeVisible();
-  await page.mouse.move(640, 600);
-  await expect(island(page)).toHaveAttribute('data-view', 'peek');
-
   await seedChats([
-    { title: 'Fix image uploads', run: { status: 'succeeded' }, minutesAgo: 3 },
-    { title: 'Add dark mode toggle', run: { status: 'failed' }, minutesAgo: 5 },
-    { title: 'Speed up cold start', run: { status: 'running' }, minutesAgo: 1 },
+    { title: 'Fix image uploads', run: { status: 'running' }, minutesAgo: 1 },
     {
       title: 'Deploy the site',
       run: { status: 'awaiting_approval' },
@@ -393,26 +373,17 @@ test('hovering groups what needs you, what runs and what finished, and keeps the
       minutesAgo: 8,
     },
   ]);
-  await expect(page.getByRole('button', { name: /^Chat: / })).toHaveCount(4);
-  await hover();
-  const sections = island(page).locator('.isl-hsec');
-  await expect(sections).toHaveCount(3);
-  await expect(sections.nth(0)).toHaveAccessibleName('Needs you');
-  await expect(sections.nth(1)).toHaveAccessibleName('Running');
-  await expect(sections.nth(2)).toHaveAccessibleName('Recent');
-  await expect(sections.nth(0)).toContainText('Deploy the site');
-  await expect(sections.nth(1)).toContainText('Speed up cold start');
-  const recent = sections.nth(2).getByRole('button');
-  await expect(recent).toHaveCount(2);
-  await expect(recent.nth(0)).toContainText('Fix image uploads');
-  await expect(recent.nth(1)).toContainText('Add dark mode toggle');
-  await expect(recent.nth(1)).toContainText('failed');
-  await expectClean(page, 'grouped hover list');
-  await expect(island(page).getByRole('button', { name: 'New chat' })).toBeVisible();
-  await island(page).getByRole('button', { name: 'See all' }).click();
+  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
+  await page.mouse.move(640, 300);
+  await page.mouse.move(640, 6, { steps: 4 });
   await expect(island(page)).toHaveAttribute('data-view', 'panel');
-  await expect(island(page).getByRole('tab', { name: 'Chats' })).toHaveAttribute(
+  await expect(island(page).getByRole('tab', { name: /^Chats/ })).toHaveAttribute(
     'aria-selected',
     'true',
   );
+  const waiting = island(page).getByRole('group', { name: 'Waiting for you' });
+  await expect(waiting.getByRole('button', { name: 'Allow', exact: true })).toBeVisible();
+  await expectClean(page, 'pending chat on hover');
+  await page.mouse.move(640, 600);
+  await expect(island(page)).toHaveAttribute('data-view', 'nudge');
 });

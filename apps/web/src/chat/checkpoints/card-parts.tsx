@@ -117,7 +117,9 @@ export function CheckpointNotes({ payload }: { payload: CheckpointPayload }) {
       {payload.estimate && <p className="ck-estimate">{payload.estimate}</p>}
       {payload.laws.length > 0 && (
         <div className="ck-laws">
-          <p id={headingId}>Worth a look before you keep this</p>
+          <p id={headingId}>
+            {payload.keptBy ? 'Worth a look' : 'Worth a look before you keep this'}
+          </p>
           <ul aria-labelledby={headingId}>
             {payload.laws.map((law) => (
               <li key={law}>

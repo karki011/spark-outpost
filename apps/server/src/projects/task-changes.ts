@@ -25,6 +25,7 @@ import {
   snapshotSource,
   type SnapshotSource,
 } from './run-changes.ts';
+import { runBaseUntil } from './run-base.ts';
 import { gitChanges, gitFileAt } from './snapshot.ts';
 
 const GIT_READ_CONCURRENCY = 8;
@@ -105,7 +106,8 @@ async function gitVersions(
   const until = next?.snapshot.ref ?? source.end;
   if (source.gone && !until) return [];
   const gitRoot = source.gitRoot;
-  const changes = await changesWhilePresent(gitRoot, () => gitChanges(gitRoot, ref, until));
+  const base = await runBaseUntil(gitRoot, ref, until);
+  const changes = await changesWhilePresent(gitRoot, () => gitChanges(gitRoot, base, until));
   if (changes === null) return [];
   const afterContent = (change: RunChange): Promise<Buffer | null> => {
     if (change.change === 'deleted') return Promise.resolve(null);
@@ -114,7 +116,7 @@ async function gitVersions(
   };
   return mapLimit(changes, GIT_READ_CONCURRENCY, async (change) => ({
     change,
-    before: change.change === 'added' ? null : await gitFileAt(gitRoot, ref, change.path),
+    before: change.change === 'added' ? null : await gitFileAt(gitRoot, base, change.path),
     after: await afterContent(change),
   }));
 }

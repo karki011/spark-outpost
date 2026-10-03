@@ -23,6 +23,8 @@ import { keepCardHost } from '../outcomes/feedback-host.ts';
 import { TurnFeedback } from '../outcomes/TurnFeedback.tsx';
 import { KeepCardFooter } from '../outcomes/KeepCardFooter.tsx';
 import { ReplyPlanAction, TurnPlanOffer } from '../plans/TurnPlans.tsx';
+import type { RunStep } from '../run-projection.ts';
+import { useLiveReport } from '../status/status-context.ts';
 import { runSeconds } from '../turns.ts';
 import { useRunStream } from '../use-run-stream.ts';
 import { AgentBlock, AgentHead } from './AgentBlock.tsx';
@@ -56,6 +58,8 @@ function newer(live: Orchestration | null, stored: Orchestration): Orchestration
   return live && live.updatedAt > stored.updatedAt ? live : stored;
 }
 
+const NO_STEPS: RunStep[] = [];
+
 function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApprovals }: BodyProps) {
   const runsById = new Map(detail.runs.map((candidate) => [candidate.id, candidate]));
   const handedOffAt = handOffAt(orchestration.crew, run.id);
@@ -73,6 +77,12 @@ function CrewTurnBody({ run, detail, orchestration, repo, taskCard, liveApproval
   const items = groupParallel(crewItems(orchestration.crew, checkpoints, checkApprovals));
   const last = lastAgentIndex(items);
   const finished = isTerminalRunStatus(orchestration.status);
+  const planning = !finished && (jev.state === 'thinking' || jev.state === 'working');
+  useLiveReport(
+    { id: `lead:${run.id}`, name: jev.name, provider: jev.provider, kind: 'lead' },
+    planning,
+    NO_STEPS,
+  );
   const changeTask = taskForRuns(detail.tasks, crewRunIds);
   const showsOwnChanges = (runId: string) => {
     const child = runsById.get(runId);

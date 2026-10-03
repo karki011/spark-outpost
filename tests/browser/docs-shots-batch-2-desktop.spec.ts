@@ -159,8 +159,7 @@ test('Desktop companion screenshots', async ({ page }) => {
     },
   ]);
   await runsByClaude();
-  await page.mouse.move(640, 300);
-  await page.mouse.move(640, 8, { steps: 4 });
+  await page.keyboard.press('Alt+Space');
   await expect(island(page)).toHaveAttribute('data-view', 'card');
   const card = island(page).getByRole('group', { name: /wants to run a command/ });
   await expect(card.getByRole('button', { name: /Allow once/ })).toBeEnabled();

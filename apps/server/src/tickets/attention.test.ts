@@ -119,6 +119,24 @@ describe('attention rules', () => {
     expect(rules(quick)).toEqual([]);
   });
 
+  it('flags failing checks on an open pull request unless a chat is fixing them', () => {
+    const failing = { ...pull('review'), checks: 'failing' as const };
+    const input = facts({ pullRequest: failing });
+    expect(attentionFlags(input, DEFAULT_ATTENTION_SETTINGS, now)[0]).toMatchObject({
+      rule: 'pr-checks',
+      text: 'PR #88 checks failing',
+      severity: 'error',
+    });
+    const running = {
+      conversationId: CHAT,
+      title: 'Chat',
+      state: 'running' as const,
+      at: now.toISOString(),
+    };
+    expect(rules(facts({ pullRequest: failing, chat: running }))).toEqual([]);
+    expect(rules(facts({ pullRequest: { ...pull('merged'), checks: 'failing' } }))).toEqual([]);
+  });
+
   it('never flags done tickets', () => {
     const done = facts({ assignedSince: daysAgo(9) }, { status: 'done', priorityRank: 1 });
     expect(rules(done)).toEqual([]);
@@ -135,7 +153,7 @@ describe('snoozed tickets', () => {
     const input = facts({ ...slowReview, snooze }, review);
     expect(rules(input)).toEqual([]);
     const placed = placeTicket(input, DEFAULT_ATTENTION_SETTINGS, now);
-    expect(placed.section).toBe('in_review');
+    expect(placed.section).toBe('review');
     expect(placed.snooze).toEqual(snooze);
   });
 
@@ -166,36 +184,66 @@ describe('snoozed tickets', () => {
 
 describe('inbox sections', () => {
   const place = (input: TicketFacts) => placeTicket(input, DEFAULT_ATTENTION_SETTINGS, now);
+  const chat = (state: 'running' | 'finished' | 'idle' | 'asking', more = {}) => ({
+    conversationId: CHAT,
+    title: 'Chat',
+    state,
+    at: daysAgo(0),
+    ...more,
+  });
 
-  it('puts each ticket in the first section that matches', () => {
+  it('puts each ticket in the first group of the flow that matches', () => {
     expect(place(facts({}, { dueDate: '2026-09-29' }))).toMatchObject({
       section: 'attention',
       reason: 'Due tomorrow',
       tone: 'warn',
     });
+    expect(place(facts({ chat: chat('asking') }))).toMatchObject({
+      section: 'attention',
+      reason: 'Waiting for your answer',
+    });
     expect(place(facts({}, { status: 'done', doneAt: daysAgo(2) }))).toMatchObject({
       section: 'done',
       reason: 'Done',
     });
-    expect(place(facts({ pullRequest: pull('draft') }))).toMatchObject({
-      section: 'pr_ready',
-      reason: 'Draft PR #88',
+    expect(place(facts({ pullRequest: pull('merged') }))).toMatchObject({
+      section: 'done',
+      reason: 'PR #88 merged',
+      age: { label: 'Merged' },
     });
-    const running = facts({
-      chat: { conversationId: CHAT, title: 'Chat', state: 'running', at: daysAgo(0) },
-    });
-    expect(place(running)).toMatchObject({
-      section: 'working',
-      reason: 'Running',
+    expect(place(facts({ chat: chat('running'), pullRequest: pull('draft') }))).toMatchObject({
+      section: 'spark',
+      reason: 'Spark working',
       tone: 'running',
     });
+    const progress = { done: 8, active: 1, total: 10 };
+    expect(place(facts({ chat: chat('running', { progress, agent: 'Pip' }) }))).toMatchObject({
+      section: 'spark',
+      reason: '8/10 · Pip working',
+    });
+    expect(place(facts({ pullRequest: pull('draft') }))).toMatchObject({
+      section: 'review',
+      reason: 'Draft PR #88',
+    });
+    expect(place(facts({ pullRequest: { ...pull('review'), checks: 'passing' } }))).toMatchObject({
+      section: 'review',
+      reason: 'PR #88 · checks passing',
+    });
+    expect(place(facts({}, { status: 'in_review' }))).toMatchObject({
+      section: 'review',
+      reason: 'In review',
+    });
     expect(place(facts({}, { status: 'in_progress' }))).toMatchObject({
-      section: 'working',
+      section: 'started',
       reason: 'In progress · no chat',
     });
-    expect(place(facts({ pullRequest: pull('review') }))).toMatchObject({
-      section: 'in_review',
-      reason: 'PR #88 in review',
+    expect(place(facts({ chat: chat('finished') }))).toMatchObject({
+      section: 'started',
+      reason: 'Chat finished · not shipped',
+    });
+    expect(place(facts({ chat: chat('idle') }))).toMatchObject({
+      section: 'started',
+      reason: 'Started · chat idle',
     });
     expect(place(facts({}, { dueDate: '2026-10-06' }))).toMatchObject({
       section: 'up_next',
@@ -204,32 +252,33 @@ describe('inbox sections', () => {
     });
   });
 
-  it('keeps a Spark PR in PR ready until its status is known', () => {
+  it('keeps a Spark PR in review until its status is known', () => {
     const linked = [{ ...work[0]!, pullRequests: [{ title: 'PR', url: pull('draft').url }] }];
     expect(place(facts({}, { work: linked }))).toMatchObject({
-      section: 'pr_ready',
+      section: 'review',
       reason: 'PR opened',
     });
   });
 
-  it('orders sections and sorts attention by rule, then priority', () => {
+  it('orders groups by urgency and sorts attention by rule, then priority', () => {
     const tickets = [
       place(facts({}, { key: 'UP-1', priorityRank: 4 })),
+      place(facts({ pullRequest: pull('review') }, { key: 'PR-1' })),
       place(facts({}, { key: 'UP-2', priorityRank: 1, assignedTo: null })),
       place(facts({}, { key: 'DUE-1', dueDate: '2026-09-28', priorityRank: 3 })),
-      place(
-        facts(
-          { chat: { conversationId: CHAT, title: 'Chat', state: 'asking', at: daysAgo(0) } },
-          { key: 'ASK-1' },
-        ),
-      ),
+      place(facts({ chat: chat('running') }, { key: 'RUN-1' })),
+      place(facts({}, { key: 'GO-1', status: 'in_progress' })),
+      place(facts({ chat: chat('asking') }, { key: 'ASK-1' })),
       place(facts({}, { key: 'DONE-1', status: 'done', doneAt: daysAgo(1) })),
     ];
     expect(sortInbox(tickets).map((entry) => entry.key)).toEqual([
       'ASK-1',
       'DUE-1',
+      'RUN-1',
+      'GO-1',
       'UP-2',
       'UP-1',
+      'PR-1',
       'DONE-1',
     ]);
   });
