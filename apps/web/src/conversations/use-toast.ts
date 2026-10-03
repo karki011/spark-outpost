@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 export interface ToastSpec {
   text: string;
   undo?: () => void;
+  retry?: () => void;
   onSettle?: () => void;
 }
 
@@ -38,6 +39,12 @@ export function useToast() {
     shown?.undo?.();
   }, [replace]);
 
+  const retry = useCallback(() => {
+    const shown = current.current;
+    replace(null, false);
+    shown?.retry?.();
+  }, [replace]);
+
   useEffect(() => {
     const flush = () => {
       current.current?.onSettle?.();
@@ -50,7 +57,7 @@ export function useToast() {
     };
   }, []);
 
-  return { toast, show, dismiss, undo };
+  return { toast, show, dismiss, undo, retry };
 }
 
 export type Toaster = ReturnType<typeof useToast>;

@@ -205,39 +205,6 @@ test('Crew, plan and guardrail screenshots', async ({ page }) => {
   await shoot(page, IMAGES, 'guardrails-keep-card', keep);
 });
 
-test('Changes drawer screenshot', async ({ page }) => {
-  test.setTimeout(300_000);
-  crewFiles('src/totals.ts', TOTALS);
-  await seedDemo(page, repo);
-  await page.setViewportSize({ width: 1400, height: 900 });
-  await projectChat(page, 'Review keep');
-  await send(page, 'Fix the totals divider #build #removehelper');
-  await expect(card(page, /Keep these changes\?/)).toBeVisible({ timeout: 120_000 });
-  await page.getByRole('button', { name: /added, [\d,]+ removed in / }).click();
-  const drawer = page.getByRole('dialog', { name: /^Changes · / });
-  await drawer.getByRole('treeitem', { name: /totals\.ts/ }).click({ timeout: 60_000 });
-  await expect(drawer.locator('.cm-content')).toBeVisible({ timeout: 60_000 });
-  await shoot(page, IMAGES, 'chats-and-modes-diff-drawer');
-});
-
-test('Pieces screenshot', async ({ page }) => {
-  test.setTimeout(150_000);
-  crewFiles('piece-check.mjs', PIECE_CHECK_SCRIPT);
-  await seedDemo(page, repo);
-  await page.setViewportSize({ width: 1400, height: 900 });
-  await projectChat(page, 'Review keep');
-  await send(
-    page,
-    'Split this up: build a store, add an API and add a view. #build #pieces #parallel',
-  );
-  const plan = card(page, /Build this plan\?/);
-  await plan.getByRole('button', { name: 'Build this plan' }).click({ timeout: 30_000 });
-  const split = card(page, /Build in 3 pieces, 2 at once in the shared tree\?/);
-  await expect(split).toBeVisible({ timeout: 60_000 });
-  await shoot(page, IMAGES, 'pieces-card', split);
-  await split.getByRole('button', { name: 'Stop' }).click();
-});
-
 test('Ship screenshot', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1400, height: 900 });

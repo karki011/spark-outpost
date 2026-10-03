@@ -9,7 +9,10 @@ import { chatTicketRoutes, ticketMentionWarmer } from './chat-ticket-routes.ts';
 import { chatSettingsRoutes, type ChatSettingsDeps } from './chat-settings-routes.ts';
 import { chatWorkspaceRoutes, type ChatWorkspaceDeps } from './chat-workspace-routes.ts';
 import { companionRoutes } from './companion-routes.ts';
-import { conversationActionRoutes } from './conversation-action-routes.ts';
+import {
+  conversationActionRoutes,
+  type ConversationActionDeps,
+} from './conversation-action-routes.ts';
 import { diagnosticsRoutes, type DiagnosticsPlaces } from './diagnostics-routes.ts';
 import { homeRoutes } from './home-routes.ts';
 import { mapRoutes } from './map-routes.ts';
@@ -42,7 +45,8 @@ export interface AppOptions
     ChatSettingsDeps,
     Pick<ChatWorkspaceDeps, 'openFolder'>,
     Pick<OutcomeRouteDeps, 'outcomeSampleRate'>,
-    Pick<McpRouteDeps, 'probeMcp'> {
+    Pick<McpRouteDeps, 'probeMcp'>,
+    Pick<ConversationActionDeps, 'deleteSettleMs'> {
   terminals: TerminalSessions;
   appEvents: AppEventFeed;
   port: number;

@@ -16,7 +16,6 @@ import {
   UnpinIcon,
 } from '../ui/icons.tsx';
 import { MenuItem as Item, MenuShell, type MenuAnchor } from './MenuShell.tsx';
-import { isRunning } from './row-state.ts';
 
 export interface ChatMenuActions {
   onRename: () => void;
@@ -49,7 +48,6 @@ export function ChatMenu({
   const [confirming, setConfirming] = useState(false);
   const archived = chat.archivedAt !== null;
   const primary = chat.projectIds[0] ?? null;
-  const running = isRunning(chat);
   const autoTitles = chat.titleSource !== 'user';
 
   const run = (action: () => void) => () => {
@@ -135,8 +133,6 @@ export function ChatMenu({
         icon={<TrashIcon />}
         label={confirming ? 'Confirm delete' : 'Delete'}
         danger
-        disabled={running}
-        title={running ? 'Stop the reply first' : undefined}
         onSelect={confirming ? run(actions.onDelete) : () => setConfirming(true)}
       />
     </>

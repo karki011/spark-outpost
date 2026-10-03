@@ -68,6 +68,7 @@ describe('GET /api/diagnostics/export', () => {
       'providers.json',
       'settings.json',
       'migrations.json',
+      'event-loop.json',
       'logs/spark-outpost.1.log',
       'logs/spark-outpost.log',
     ]);
