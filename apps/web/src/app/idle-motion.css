@@ -4,6 +4,7 @@
     .scout .sc-body,
     .scout:not(.alert, .sad, .happy, .sleep) .sc-eye,
     .scout:not(.working, .alert, .sad, .sleep) .sc-spark,
+    .scout.alert :is(.sc-ant, .sc-spark),
     .cmp-float,
     .btog-z,
     .mh-dust,
