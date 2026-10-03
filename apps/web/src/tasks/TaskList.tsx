@@ -6,6 +6,9 @@ import {
   type TaskItemState,
   type TaskListItem,
 } from '@spark-outpost/contracts';
+import { commandApproval } from '../chat/status/pending-summary.ts';
+import { commandFull, commandSummary } from '../chat/status/status-text.ts';
+import { SummaryText } from '../chat/status/SummaryText.tsx';
 import { approvalAnchor } from '../crew/conversation-crew.ts';
 import { CrewBlob } from '../crew/CrewBlob.tsx';
 import type { CrewState } from '../crew/crew-model.ts';
@@ -64,15 +67,32 @@ function outputLabel(item: TaskListItem): string {
   return item.id.startsWith('shortcut:') ? 'Deferred shortcuts' : 'Check output';
 }
 
+function fullLabel(item: TaskListItem): string {
+  return item.command ? commandFull(item.label) : item.label;
+}
+
 function fullText(item: TaskListItem): string {
-  return item.hint ? `${item.label}\n${item.hint}` : item.label;
+  return item.hint ? `${fullLabel(item)}\n${item.hint}` : fullLabel(item);
+}
+
+function rowLabel(item: TaskListItem, roots: readonly string[]): string {
+  const short = shortenPaths(item.label, roots);
+  return item.command ? commandSummary(short) : short;
+}
+
+const WAITING_PREFIX = 'Waiting for you: ';
+
+function waitingSubject(item: TaskListItem): string {
+  return item.label.startsWith(WAITING_PREFIX)
+    ? item.label.slice(WAITING_PREFIX.length)
+    : item.label;
 }
 
 function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[] }) {
   const [open, setOpen] = useState(false);
   const moreId = useId();
   const numbers = usageLine(item.tokens ?? null, item.costUsd ?? null, item.costSource);
-  const label = shortenPaths(item.label, roots);
+  const label = rowLabel(item, roots);
   const tag = decisionTag(item);
   const showFull = item.command || label !== item.label;
   return (
@@ -89,6 +109,11 @@ function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[]
           {label}
         </span>
         {tag && <span className={`ti-tag ${tag.tone}`}>{tag.text}</span>}
+        {item.role && item.agent && (
+          <span className="ti-tag crew" title="A crew member Spark started for this task">
+            Crew
+          </span>
+        )}
         <span className="ti-av" title={agentLine(item)}>
           {item.role && item.agent ? (
             <span className="mb" aria-hidden="true">
@@ -106,7 +131,7 @@ function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[]
       </button>
       {open && (
         <div className="ti-more" id={moreId}>
-          {showFull && <code className="ti-full">{item.label}</code>}
+          {showFull && <code className="ti-full">{fullLabel(item)}</code>}
           {agentLine(item)}
           {item.detail ? ` · ${item.detail}` : ''}
           {numbers ? ` · ${numbers}` : ''}
@@ -197,13 +222,20 @@ export function WaitingItems({ items, roots, onReview }: WaitingItemsProps) {
     <ul className="wp-waits" aria-label="Waiting for you">
       {waiting.map((item) => {
         const approvalId = waitingApprovalId(item);
+        const command = item.command
+          ? commandApproval(shortenPaths(waitingSubject(item), roots))
+          : null;
         return (
           <li key={item.id} className="wp-wait">
             <TaskStateIcon state="waiting" />
             <span>
-              <b className={item.command ? 'cmd' : undefined} title={item.hint ?? item.label}>
-                {shortenPaths(item.label, roots)}
-              </b>
+              {command ? (
+                <b className="cmd" title={commandFull(waitingSubject(item))}>
+                  <SummaryText summary={command} lead />
+                </b>
+              ) : (
+                <b title={item.hint ?? item.label}>{shortenPaths(item.label, roots)}</b>
+              )}
               {item.detail && <small>{item.detail}</small>}
             </span>
             {approvalId && (

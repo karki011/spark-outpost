@@ -18,7 +18,8 @@ import { CheckIcon, XIcon } from '../../ui/icons.tsx';
 import { DiffView } from '../approvals/DiffView.tsx';
 import { mergeDecision } from '../approvals/approval-events.ts';
 import { CrewHint } from '../crew/CrewHint.tsx';
-import { Docked } from '../dock/Docked.tsx';
+import { checkpointSummary } from '../status/pending-summary.ts';
+import { Pending } from '../status/Pending.tsx';
 import { Action, CheckpointNotes, NoteForm, type Decide } from './card-parts.tsx';
 import { ClarifyBody } from './ClarifyBody.tsx';
 import {
@@ -393,7 +394,12 @@ export function CheckpointCard({
   const questions = asksQuestions(checkpoint);
 
   return (
-    <Docked id={approval.id} order={approval.createdAt} label={title} pending={pending}>
+    <Pending
+      id={approval.id}
+      order={approval.createdAt}
+      summary={checkpointSummary(checkpoint, title)}
+      pending={pending}
+    >
       <div
         className={pending ? `appr ck ${checkpoint.kind}` : `appr ck ${checkpoint.kind} decided`}
         role="group"
@@ -437,6 +443,6 @@ export function CheckpointCard({
           </p>
         )}
       </div>
-    </Docked>
+    </Pending>
   );
 }

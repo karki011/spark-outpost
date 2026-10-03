@@ -62,7 +62,7 @@ async function openWorkedChat(page: Page) {
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('7 of 7 done', { timeout: 20_000 });
+  await expect(page.locator('.taskc')).toContainText('Task 7/7', { timeout: 20_000 });
 }
 
 async function useTheme(page: Page, theme: string) {
