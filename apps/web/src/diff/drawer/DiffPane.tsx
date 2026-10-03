@@ -38,7 +38,7 @@ interface DiffBodyProps {
 }
 
 function DiffBody({ taskId, version, entry, mode, wrap }: DiffBodyProps) {
-  const view = fileView(entry);
+  const [view] = useState(() => fileView(entry));
   const [revealed, setRevealed] = useState(false);
   const [full, setFull] = useState(false);
   const note = hiddenNote(entry, view);
@@ -47,7 +47,7 @@ function DiffBody({ taskId, version, entry, mode, wrap }: DiffBodyProps) {
   const lines = full ? null : DIFF_FIRST_LINES;
   const params = { version, runId: entry.runId, path: entry.path, lines };
   const diff = useQuery({
-    queryKey: diffKeys.file(taskId, entry.runId, entry.path, lines),
+    queryKey: diffKeys.file(taskId, params),
     queryFn: () => diffApi.file(taskId, params),
     enabled: showing,
     staleTime: 30_000,

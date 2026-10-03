@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { TaskOverview } from '@spark-outpost/contracts';
 import { CoreImpactNote } from '../../map/CoreImpactNote.tsx';
 import { useViewChanges } from '../../tasks/view-changes.ts';
@@ -36,6 +36,7 @@ export function FilesChanged({ taskId, runIds, listed = runIds }: FilesChangedPr
     queryKey: diffKeys.page(taskId, params),
     queryFn: () => diffApi.page(taskId, params),
     enabled: listable.length > 0,
+    placeholderData: keepPreviousData,
   });
   if (live.length === 0) return null;
   const { files, added, removed } = runTotals(live);

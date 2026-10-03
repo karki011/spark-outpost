@@ -31,6 +31,7 @@ interface FileListProps {
   runs: readonly ChangeRunSummary[];
   selected: string | null;
   onSelect(entry: ChangeEntry): void;
+  onFresh(entry: ChangeEntry): void;
   treeRef: Ref<HTMLDivElement>;
 }
 
@@ -66,7 +67,15 @@ function runLabels(runs: readonly ChangeRunSummary[]): Map<string, string> {
   return new Map(live.map((run, index) => [run.runId, run.name ?? `Run ${index + 1}`]));
 }
 
-export function FileList({ taskId, version, runs, selected, onSelect, treeRef }: FileListProps) {
+export function FileList({
+  taskId,
+  version,
+  runs,
+  selected,
+  onSelect,
+  onFresh,
+  treeRef,
+}: FileListProps) {
   const [filter, setFilter] = useState('');
   const q = useDebouncedValue(filter.trim(), 150);
   const [grouped, setGrouped] = useState(true);
@@ -169,6 +178,7 @@ export function FileList({ taskId, version, runs, selected, onSelect, treeRef }:
   };
 
   const rows = [];
+  let shownSelected: ChangeEntry | null = null;
   for (let index = range.start; index < range.end; index++) {
     const row = model.at(index);
     const id = `dd-row-${index}`;
@@ -195,6 +205,7 @@ export function FileList({ taskId, version, runs, selected, onSelect, treeRef }:
       continue;
     }
     const entry = fileAt(row.index);
+    if (entry && selected === entryKey(entry)) shownSelected = entry;
     rows.push(
       entry ? (
         <FileRowView
@@ -210,6 +221,10 @@ export function FileList({ taskId, version, runs, selected, onSelect, treeRef }:
       ),
     );
   }
+
+  useEffect(() => {
+    if (shownSelected) onFresh(shownSelected);
+  }, [shownSelected, onFresh]);
 
   const loading = first.isPending;
   const shownRow = !loading && current >= range.start && current < range.end;

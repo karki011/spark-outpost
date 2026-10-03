@@ -1,7 +1,8 @@
-import { MergeView, unifiedMergeView } from '@codemirror/merge';
-import { Compartment, EditorState, type Extension } from '@codemirror/state';
+import { MergeView, originalDocChangeEffect, unifiedMergeView } from '@codemirror/merge';
+import { ChangeSet, Compartment, EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { baseExtensions, languageLoader } from './code-setup.ts';
+import { changedRange } from './text-change.ts';
 
 export type DiffMode = 'unified' | 'split';
 
@@ -16,7 +17,20 @@ export interface CodeDiffInput {
 
 export interface CodeDiffView {
   setWrap(wrap: boolean): void;
+  update(input: CodeDiffInput): boolean;
   destroy(): void;
+}
+
+function replaceDoc(view: EditorView, next: string): void {
+  const change = changedRange(view.state.doc.toString(), next);
+  if (change) view.dispatch({ changes: change });
+}
+
+function replaceOriginal(view: EditorView, current: string, next: string): void {
+  const change = changedRange(current, next);
+  if (!change) return;
+  const changes = ChangeSet.of(change, current.length);
+  view.dispatch({ effects: originalDocChangeEffect(view.state, changes) });
 }
 
 const COLLAPSE = { margin: 3, minSize: 4 };
@@ -50,6 +64,14 @@ interface Editor {
 interface Mounted {
   editors: Editor[];
   root: { destroy(): void };
+  layout: Layout;
+}
+
+type Layout = 'single' | 'split' | 'unified';
+
+function layoutOf(input: CodeDiffInput): Layout {
+  if (singleDoc(input) !== null) return 'single';
+  return input.mode;
 }
 
 function newSlots(): Slots {
@@ -76,7 +98,7 @@ function mount(parent: HTMLElement, input: CodeDiffInput): Mounted {
         ],
       }),
     });
-    return { editors: [{ view, slots: first }], root: view };
+    return { editors: [{ view, slots: first }], root: view, layout: 'single' };
   }
   if (input.mode === 'split') {
     const second = newSlots();
@@ -98,6 +120,7 @@ function mount(parent: HTMLElement, input: CodeDiffInput): Mounted {
         { view: merge.b, slots: second },
       ],
       root: merge,
+      layout: 'split',
     };
   }
   const view = new EditorView({
@@ -118,11 +141,27 @@ function mount(parent: HTMLElement, input: CodeDiffInput): Mounted {
       ],
     }),
   });
-  return { editors: [{ view, slots: first }], root: view };
+  return { editors: [{ view, slots: first }], root: view, layout: 'unified' };
+}
+
+function applyTexts(mounted: Mounted, shown: CodeDiffInput, next: CodeDiffInput): void {
+  const [first, second] = mounted.editors;
+  if (!first) return;
+  if (mounted.layout === 'single') {
+    replaceDoc(first.view, singleDoc(next) ?? '');
+  } else if (mounted.layout === 'split' && second) {
+    replaceDoc(first.view, next.oldText ?? '');
+    replaceDoc(second.view, next.newText);
+  } else {
+    replaceOriginal(first.view, shown.oldText ?? '', next.oldText ?? '');
+    replaceDoc(first.view, next.newText);
+  }
 }
 
 export function createCodeDiff(parent: HTMLElement, input: CodeDiffInput): CodeDiffView {
-  const { editors, root } = mount(parent, input);
+  const mounted = mount(parent, input);
+  const { editors, root } = mounted;
+  let shown = input;
   let alive = true;
   const reconfigure = (pick: (slots: Slots) => Compartment, extension: Extension) => {
     for (const { view, slots } of editors) {
@@ -138,6 +177,12 @@ export function createCodeDiff(parent: HTMLElement, input: CodeDiffInput): CodeD
   }
   return {
     setWrap: (wrap) => reconfigure((slots) => slots.wrap, wrapping(wrap)),
+    update: (next) => {
+      if (next.path !== shown.path || layoutOf(next) !== mounted.layout) return false;
+      applyTexts(mounted, shown, next);
+      shown = next;
+      return true;
+    },
     destroy: () => {
       alive = false;
       root.destroy();

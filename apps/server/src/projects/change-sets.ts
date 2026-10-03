@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type {
   ChangeEntry,
   ChangeFolder,
@@ -33,11 +33,26 @@ function byPath(a: SetEntry, b: SetEntry): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
+function contentVersion(taskId: string, runs: readonly ListedRun[]): string {
+  const files = runs.flatMap((run) => run.files);
+  if (files.some((listed) => listed.revision === undefined)) return randomUUID();
+  const hash = createHash('sha1').update(taskId);
+  for (const run of runs) {
+    hash.update(
+      `\0run\0${run.runId}\0${run.revertedAt ?? ''}\0${run.name ?? ''}\0${run.copy ?? ''}`,
+    );
+    for (const { file, revision } of run.files) {
+      hash.update(`\0${file.path}\0${file.oldPath ?? ''}\0${file.change}\0${revision}`);
+    }
+  }
+  return hash.digest('hex');
+}
+
 export function buildChangeSet(
   taskId: string,
   runs: readonly ListedRun[],
   now: number,
-  version: string = randomUUID(),
+  version: string = contentVersion(taskId, runs),
 ): ChangeSet {
   const entries = runs
     .filter((run) => !run.revertedAt)
@@ -144,8 +159,16 @@ export function findEntry(set: ChangeSet, runId: string, path: string): SetEntry
   );
 }
 
+interface Loading {
+  running: Promise<ChangeSet>;
+  queued: Promise<ChangeSet> | null;
+}
+
+const settled = () => undefined;
+
 export class ChangeSetCache {
   private readonly sets = new Map<string, ChangeSet>();
+  private readonly loads = new Map<string, Loading>();
   private readonly contents = new Map<string, Promise<FileContents>>();
   private readonly sizes = new Map<string, number>();
   private contentBytes = 0;
@@ -155,7 +178,23 @@ export class ChangeSetCache {
     private readonly now: () => number = Date.now,
   ) {}
 
-  async fresh(taskId: string): Promise<ChangeSet> {
+  fresh(taskId: string): Promise<ChangeSet> {
+    const loading = this.loads.get(taskId);
+    if (!loading) return this.start(taskId);
+    loading.queued ??= loading.running.then(settled, settled).then(() => this.start(taskId));
+    return loading.queued;
+  }
+
+  private start(taskId: string): Promise<ChangeSet> {
+    const running = this.build(taskId);
+    this.loads.set(taskId, { running, queued: null });
+    void running.then(settled, settled).then(() => {
+      if (this.loads.get(taskId)?.running === running) this.loads.delete(taskId);
+    });
+    return running;
+  }
+
+  private async build(taskId: string): Promise<ChangeSet> {
     const set = buildChangeSet(taskId, await this.load(taskId), this.now());
     this.sets.set(set.version, set);
     this.prune();

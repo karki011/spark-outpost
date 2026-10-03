@@ -1,5 +1,5 @@
 import './diff-drawer.css';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ChangeEntry } from '@spark-outpost/contracts';
 import { Counts, DiffStat } from '../../chat/changes/FileChangeList.tsx';
@@ -32,6 +32,11 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
     setSeenTarget(target);
     if (target) setSelected(target);
   }
+  const refresh = useCallback((fresh: ChangeEntry) => {
+    setSelected((current) =>
+      current && current !== fresh && entryKey(current) === entryKey(fresh) ? fresh : current,
+    );
+  }, []);
   const [mode, setMode] = usePref<DiffMode>('spark-outpost.diff-drawer.mode', MODES, 'unified');
   const [wrap, setWrap] = usePref('spark-outpost.diff-drawer.wrap', WRAPS, 'off');
   const [width, setWidth] = useDrawerWidth();
@@ -90,6 +95,7 @@ export function DiffDrawer({ taskId, target, onClose }: DiffDrawerProps) {
           runs={data?.runs ?? []}
           selected={selected ? entryKey(selected) : null}
           onSelect={setSelected}
+          onFresh={refresh}
           treeRef={tree}
         />
         <DiffPane

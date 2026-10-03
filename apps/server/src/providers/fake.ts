@@ -11,6 +11,7 @@ import type {
 import { ProviderError } from './provider.ts';
 import { followedFiles } from '../agent-config/instructions.ts';
 import { fakeApprovalTurn, wantsApproval } from './fake-approvals.ts';
+import { editStreamPlan, fakeEditStream } from './fake-edit-stream.ts';
 import { ZAI_EFFORTS, ZAI_MODELS } from '../agents/acp/zai.ts';
 import {
   fakeCompactOutputs,
@@ -292,6 +293,11 @@ async function* fakeTurn(
   if (wantsApproval(turn.prompt)) {
     await delay(timing.stepMs, undefined, { signal: turn.signal });
     yield* fakeApprovalTurn(turn);
+    return;
+  }
+  const editStream = editStreamPlan(turn.prompt);
+  if (editStream) {
+    yield* fakeEditStream(turn, editStream);
     return;
   }
   yield* fakeSessionOutputs(turn);

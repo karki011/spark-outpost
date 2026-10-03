@@ -25,18 +25,29 @@ export interface DiffParams {
   lines: number | null;
 }
 
+const SUMMARIES = [...taskKeys.all, 'change-summaries'] as const;
+
 export const diffKeys = {
-  summary: (taskId: string) => [...taskKeys.changes(taskId), 'summary'] as const,
+  summaries: SUMMARIES,
+  summary: (taskId: string) => [...SUMMARIES, taskId] as const,
   page: (taskId: string, params: PageParams) =>
     [
       ...taskKeys.changes(taskId),
       'files',
+      params.version ?? '',
       params.q,
       params.runs?.join(',') ?? '',
       params.page,
     ] as const,
-  file: (taskId: string, runId: string, path: string, lines: number | null) =>
-    [...taskKeys.changes(taskId), 'diff', runId, path, lines] as const,
+  file: (taskId: string, params: DiffParams) =>
+    [
+      ...taskKeys.changes(taskId),
+      'diff',
+      params.version ?? '',
+      params.runId,
+      params.path,
+      params.lines,
+    ] as const,
 };
 
 function query(values: Record<string, string | number | undefined>): string {

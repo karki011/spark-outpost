@@ -12,6 +12,7 @@ import {
   FAKE_CODEX_STATE,
   FAKE_GH_STATE,
   MAP_ROOT_PREFIX,
+  SERVER_LOG_DIR,
   slot,
   STUB_PORT,
   TEST_DATABASE_URL,
@@ -61,6 +62,8 @@ const serverEnv = {
 
 const node = JSON.stringify(process.execPath);
 const serverCommand = (entry: string) => `${node} --import tsx ${entry}`;
+const logged = (command: string, name: string) =>
+  `mkdir -p ${JSON.stringify(SERVER_LOG_DIR)} && { ${command}; } 2>&1 | tee -a ${JSON.stringify(path.join(SERVER_LOG_DIR, `${name}.log`))}`;
 const shutdown = { signal: 'SIGTERM', timeout: 5_000 } as const;
 
 export default defineConfig({
@@ -84,7 +87,7 @@ export default defineConfig({
       gracefulShutdown: shutdown,
     },
     {
-      command: `${node} --import tsx ../../tests/browser/ensure-database.ts && ${serverCommand('src/persistence/migrate-cli.ts')} && ${serverCommand('src/api/main.ts')}`,
+      command: `${node} --import tsx ../../tests/browser/ensure-database.ts && ${serverCommand('src/persistence/migrate-cli.ts')} && ${logged(serverCommand('src/api/main.ts'), 'api')}`,
       cwd: 'apps/server',
       env: {
         ...serverEnv,
@@ -98,7 +101,7 @@ export default defineConfig({
       gracefulShutdown: shutdown,
     },
     {
-      command: serverCommand('src/workflow/main.ts'),
+      command: logged(serverCommand('src/workflow/main.ts'), 'worker'),
       cwd: 'apps/server',
       env: serverEnv,
       wait: { stdout: /Worker running/ },

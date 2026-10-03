@@ -19,6 +19,8 @@ const cached: Record<string, QueryKey> = {
   health: ['home', 'provider-health'],
   today: ['home', 'today'],
   task: ['tasks', 'task-1'],
+  changesA: ['tasks', 'change-summaries', 'task-1'],
+  changeFiles: ['tasks', 'task-1', 'changes', 'files', 'v1', '', '', 0],
   auditA: ['audit', A, 'summary'],
   auditB: ['audit', B, 'summary'],
   outcome: ['outcome', RUN],
@@ -56,6 +58,8 @@ describe('app event invalidation', () => {
       [
         'analytics',
         'auditA',
+        'changeFiles',
+        'changesA',
         'detailA',
         'health',
         'list',
@@ -81,13 +85,15 @@ describe('app event invalidation', () => {
     ]);
   });
 
-  it('a step refreshes the sidebar row, the open chat and its audit summary', async () => {
-    expect(await invalidatedBy(event('step'))).toEqual(['auditA', 'detailA', 'list']);
+  it('a step refreshes the sidebar row, the open chat, its audit summary and live change counts', async () => {
+    expect(await invalidatedBy(event('step'))).toEqual(['auditA', 'changesA', 'detailA', 'list']);
   });
 
   it('an approval also refreshes tasks and the day so far', async () => {
     expect(await invalidatedBy(event('approval'))).toEqual([
       'auditA',
+      'changeFiles',
+      'changesA',
       'detailA',
       'list',
       'task',
@@ -104,7 +110,13 @@ describe('app event invalidation', () => {
   });
 
   it('task changes without a chat leave every chat detail alone', async () => {
-    expect(await invalidatedBy(event('task', null))).toEqual(['list', 'task', 'today']);
+    expect(await invalidatedBy(event('task', null))).toEqual([
+      'changeFiles',
+      'changesA',
+      'list',
+      'task',
+      'today',
+    ]);
   });
 
   it('a recorded outcome refreshes that run outcome and analytics', async () => {

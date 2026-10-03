@@ -80,4 +80,35 @@ describe('change sets', () => {
     await cache.fileContents(set, entry);
     expect(contents).toHaveBeenCalledTimes(1);
   });
+
+  it('keeps the version while the content stays the same', () => {
+    const revised = (revision: string): ListedRun[] => [
+      { runId: RUN_A, revertedAt: null, files: [{ ...listed('a.ts'), revision }] },
+    ];
+    const first = buildChangeSet('task', revised('1..2'), 0);
+    expect(buildChangeSet('task', revised('1..2'), 5).version).toBe(first.version);
+    expect(buildChangeSet('task', revised('1..3'), 5).version).not.toBe(first.version);
+    expect(buildChangeSet('other', revised('1..2'), 5).version).not.toBe(first.version);
+  });
+
+  it('joins overlapping refreshes and still loads once after the last request', async () => {
+    const releases: (() => void)[] = [];
+    const load = vi.fn(
+      () =>
+        new Promise<ListedRun[]>((resolve) => {
+          releases.push(() => resolve(bigRuns(1)));
+        }),
+    );
+    const cache = new ChangeSetCache(load);
+    const running = cache.fresh('task');
+    const second = cache.fresh('task');
+    const third = cache.fresh('task');
+    expect(load).toHaveBeenCalledTimes(1);
+    releases.shift()!();
+    await running;
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+    releases.shift()!();
+    expect(await second).toBe(await third);
+    expect(load).toHaveBeenCalledTimes(2);
+  });
 });

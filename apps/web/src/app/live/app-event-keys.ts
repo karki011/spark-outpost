@@ -6,6 +6,7 @@ import { outcomeKeys } from '../../api/outcomes.ts';
 import { auditKeys } from '../../audit/audit-api.ts';
 import { mapKeys } from '../../map/map-api.ts';
 import { prWatchesKey } from '../../chat/pull-request/pr-follow-up-api.ts';
+import { diffKeys } from '../../diff/diff-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 import { teammateKeys } from '../../teammates/teammates-api.ts';
@@ -36,6 +37,7 @@ export function isLiveQueryKey(key: QueryKey): boolean {
 const list: Invalidation = { queryKey: queryKeys.conversations, exact: true };
 const search: Invalidation = { queryKey: queryKeys.conversationSearches };
 const tasks: Invalidation = { queryKey: taskKeys.all };
+const changeSummaries: Invalidation = { queryKey: diffKeys.summaries };
 const spend: Invalidation = { queryKey: homeKeys.spendAll };
 const health: Invalidation = { queryKey: homeKeys.health, exact: true };
 const digest: Invalidation = { queryKey: homeKeys.digest, exact: true };
@@ -75,7 +77,7 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
         ...outcome(event),
       ];
     case 'step':
-      return [list, ...conversationScoped(event, true)];
+      return [list, ...conversationScoped(event, true), changeSummaries];
     case 'approval':
       return [list, teammates, ...conversationScoped(event, true), tasks, today];
     case 'orchestration':
@@ -99,10 +101,22 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
   }
 }
 
+export function isStepEvent(event: AppEvent): boolean {
+  return event.kind === 'step';
+}
+
+function covers(broad: Invalidation, narrow: Invalidation): boolean {
+  if (broad === narrow || broad.exact || broad.queryKey.length >= narrow.queryKey.length) {
+    return false;
+  }
+  return broad.queryKey.every((part, index) => part === narrow.queryKey[index]);
+}
+
 export function mergeInvalidations(events: readonly AppEvent[]): Invalidation[] {
   const unique = new Map<string, Invalidation>();
   for (const invalidation of events.flatMap(invalidationsFor)) {
     unique.set(JSON.stringify([invalidation.queryKey, invalidation.exact ?? false]), invalidation);
   }
-  return [...unique.values()];
+  const all = [...unique.values()];
+  return all.filter((narrow) => !all.some((broad) => covers(broad, narrow)));
 }

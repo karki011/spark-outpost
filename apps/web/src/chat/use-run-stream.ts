@@ -33,14 +33,24 @@ export function useRunStream(runId: string, conversationId: string, live = true)
   useEffect(() => {
     if (!opened) return;
     const source = new EventSource(`/api/runs/${runId}/events`);
+    let queued: [number, RunEvent][] = [];
+    let frame = 0;
+    const apply = () => {
+      frame = 0;
+      const events = queued;
+      queued = [];
+      setState((current) => {
+        let projection = current.runId === runId ? current.projection : initialRunProjection;
+        for (const [seq, event] of events) projection = applyRunEvent(projection, seq, event);
+        return { runId, projection };
+      });
+    };
     source.onmessage = (message: MessageEvent<string>) => {
       const event = parseRunEvent(JSON.parse(message.data));
       const seq = Number.parseInt(message.lastEventId, 10);
       if (!event || !Number.isInteger(seq)) return;
-      setState((current) => {
-        const base = current.runId === runId ? current.projection : initialRunProjection;
-        return { runId, projection: applyRunEvent(base, seq, event) };
-      });
+      queued.push([seq, event]);
+      frame ||= requestAnimationFrame(apply);
       if (isTaskActivity(event) || isOrchestrationActivity(event) || isApprovalEvent(event)) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) });
       }
@@ -52,12 +62,17 @@ export function useRunStream(runId: string, conversationId: string, live = true)
       }
       if (isTerminalRunEvent(event)) {
         source.close();
+        cancelAnimationFrame(frame);
+        apply();
         void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(conversationId) });
         void queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true });
         void queryClient.invalidateQueries({ queryKey: queryKeys.allCapabilities });
       }
     };
-    return () => source.close();
+    return () => {
+      source.close();
+      cancelAnimationFrame(frame);
+    };
   }, [runId, conversationId, queryClient, opened]);
 
   return state.runId === runId ? state.projection : initialRunProjection;

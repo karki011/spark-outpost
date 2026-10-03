@@ -1,4 +1,10 @@
-import { keepPreviousData, useQueries, useQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useQueries,
+  useQuery,
+  type Query,
+  type QueryKey,
+} from '@tanstack/react-query';
 import type { ChangeEntry, ChangePage } from '@spark-outpost/contracts';
 import { diffApi, diffKeys, FILE_PAGE_SIZE, type PageParams } from '../diff-api.ts';
 
@@ -6,6 +12,10 @@ const PAGE_STALE_MS = 30_000;
 
 function params(version: string | undefined, q: string, page: number): PageParams {
   return { version, q, runs: null, page };
+}
+
+function samePage(key: QueryKey, request: PageParams): boolean {
+  return key.at(-3) === request.q && key.at(-1) === request.page;
 }
 
 export function useFirstPage(taskId: string, version: string | undefined, q: string) {
@@ -33,6 +43,8 @@ export function useFilePages(
         queryKey: diffKeys.page(taskId, request),
         queryFn: () => diffApi.page(taskId, request),
         staleTime: PAGE_STALE_MS,
+        placeholderData: (previous: ChangePage | undefined, previousQuery?: Query<ChangePage>) =>
+          previousQuery && samePage(previousQuery.queryKey, request) ? previous : undefined,
         enabled: first !== undefined,
       };
     }),

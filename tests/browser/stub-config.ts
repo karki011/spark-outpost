@@ -29,6 +29,8 @@ function slotDatabaseUrl(): string | null {
 
 export const TEST_DATABASE_URL = slotDatabaseUrl();
 
+export const SERVER_LOG_DIR = path.join(os.tmpdir(), `spark-outpost-server-logs-${slot}`);
+
 export const STUB_PORT = base ?? 4399;
 export const API_PORT = base === null ? 4319 : base + 1;
 export const WEB_PORT = base === null ? 5174 : base + 2;

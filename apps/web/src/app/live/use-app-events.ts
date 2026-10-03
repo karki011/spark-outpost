@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { parseAppEvent, type AppEvent } from '@spark-outpost/contracts';
-import { LIVE_ROOTS, isLiveQueryKey, mergeInvalidations } from './app-event-keys.ts';
+import { LIVE_ROOTS, isLiveQueryKey, isStepEvent, mergeInvalidations } from './app-event-keys.ts';
 
 const LIVE_STALE_MS = 5 * 60_000;
 const FALLBACK_POLL_MS = 60_000;
 const PAUSED_HINT_MS = 20_000;
 const COALESCE_MS = 100;
+const STEP_COALESCE_MS = 1_000;
 const RETRY_BASE_MS = 1_000;
 const RETRY_MAX_MS = 15_000;
 
@@ -32,15 +33,21 @@ export function useAppEvents(): { paused: boolean } {
     let stopped = false;
     let attempts = 0;
     let pending: AppEvent[] = [];
+    let steps: AppEvent[] = [];
     let flushTimer: Timer | undefined;
+    let stepTimer: Timer | undefined;
     let retryTimer: Timer | undefined;
     let hintTimer: Timer | undefined;
     let fallbackTimer: ReturnType<typeof setInterval> | undefined;
 
     const flush = () => {
+      clearTimeout(flushTimer);
+      clearTimeout(stepTimer);
       flushTimer = undefined;
-      const events = pending;
+      stepTimer = undefined;
+      const events = [...pending, ...steps];
       pending = [];
+      steps = [];
       for (const invalidation of mergeInvalidations(events)) {
         void queryClient.invalidateQueries(invalidation);
       }
@@ -71,6 +78,11 @@ export function useAppEvents(): { paused: boolean } {
       next.onmessage = (message: MessageEvent<string>) => {
         const event = parseAppEvent(message.data);
         if (!event) return;
+        if (isStepEvent(event)) {
+          steps.push(event);
+          stepTimer ??= setTimeout(flush, STEP_COALESCE_MS);
+          return;
+        }
         pending.push(event);
         flushTimer ??= setTimeout(flush, COALESCE_MS);
       };
@@ -88,6 +100,7 @@ export function useAppEvents(): { paused: boolean } {
       stopped = true;
       source?.close();
       clearTimeout(flushTimer);
+      clearTimeout(stepTimer);
       clearTimeout(retryTimer);
       clearTimeout(hintTimer);
       clearInterval(fallbackTimer);
