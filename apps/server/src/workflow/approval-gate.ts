@@ -11,6 +11,8 @@ import { normalizeCommand } from '../approvals/commands.ts';
 import { forcePush } from '../approvals/git-commands.ts';
 import { defaultBranch } from '../projects/chat-worktrees.ts';
 import { pieceRefusal, type PieceGuard } from '../approvals/piece-guard.ts';
+import type { PublishGrant } from '../approvals/publish-policy.ts';
+import { publishContext } from './publish-context.ts';
 import {
   FS_WRITE_TOOL_KIND,
   SECRET_REASON,
@@ -84,6 +86,7 @@ export interface GateDeps {
   plans?: PlanModeHooks;
   piece?: PieceGuard;
   observations?: RunObservations | undefined;
+  publish?: PublishGrant | undefined;
 }
 
 export type Asking = Pick<
@@ -382,6 +385,7 @@ export function createApprovalGate(deps: GateDeps): PermissionGate {
       shell: request.kind === 'execute' ? await parseShell(request.command) : null,
       agentAsks: Boolean(request.agentReason),
       ...(deps.piece ? { piece: deps.piece } : {}),
+      ...(await publishContext(deps.db, deps.publish, request)),
     });
     if (decision.verdict === 'ask') {
       return ask(request, decision.reason, signal, decision);

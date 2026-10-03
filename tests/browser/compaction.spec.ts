@@ -148,3 +148,22 @@ test('saved thresholds drive the ring, and with automatic compaction off Spark o
   await expect(page.locator('.mood', { hasText: 'done' })).toHaveCount(3, { timeout: 20_000 });
   await expect(page.getByRole('group', { name: /^Compacted/ })).toHaveCount(0);
 });
+
+test('a 1M window drives the ring and the compaction card', async ({ page }) => {
+  await startAt(ASKS_FIRST);
+  await newChat(page);
+  await sendAndWait(page, 'Read the whole repo #window1m #ctx65', 1);
+  const ring = page.getByRole('button', {
+    name: 'Context window: 65% used, 650K of 1M tokens',
+  });
+  await expect(ring).toHaveAttribute('data-level', 'warm');
+
+  await sendAndWait(page, 'Keep reading #ctx85', 2);
+  const input = page.getByRole('textbox', { name: 'Message' });
+  await input.fill('What is next?');
+  await input.press('Enter');
+  const card = page.getByRole('group', { name: /This chat is almost full/ });
+  await expect(card).toContainText("The agent's context is 85% full (850K of 1M tokens).", {
+    timeout: 20_000,
+  });
+});

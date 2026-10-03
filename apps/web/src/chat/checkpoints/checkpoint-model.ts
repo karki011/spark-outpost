@@ -8,6 +8,7 @@ import {
   type CheckpointQuestion,
 } from '@spark-outpost/contracts';
 import { formatDuration } from '../../audit/audit-model.ts';
+import { filesLabel } from '../changes/change-rules.ts';
 import { formatCost } from '../../usage/format.ts';
 import { shortLabel } from '../composer/model-options.ts';
 
@@ -207,6 +208,11 @@ export function secondsLeft(autoContinueAt: string, now: number): number {
 export function autoDelaySeconds(approval: Approval): number | null {
   if (!approval.autoContinueAt) return null;
   return Math.round((Date.parse(approval.autoContinueAt) - Date.parse(approval.createdAt)) / 1000);
+}
+
+export function changesSummary(payload: Pick<CheckpointPayload, 'files' | 'lines'>): string {
+  const files = filesLabel(payload.files.length);
+  return payload.lines ? `${files} · +${payload.lines.added} −${payload.lines.removed}` : files;
 }
 
 export function checkpointResult(approval: Approval): string {

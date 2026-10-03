@@ -23,7 +23,6 @@ export interface IslandInputs {
   cards: readonly Card[];
   review: string | null;
   nudge: boolean;
-  hover: boolean;
 }
 
 export type IslandView =
@@ -31,7 +30,6 @@ export type IslandView =
   | { kind: 'panel'; panel: Panel }
   | { kind: 'card'; card: Card; index: number; total: number }
   | { kind: 'nudge'; card: Card; total: number }
-  | { kind: 'pill' }
   | { kind: 'peek' };
 
 export function islandView(inputs: IslandInputs): IslandView {
@@ -43,12 +41,16 @@ export function islandView(inputs: IslandInputs): IslandView {
     return { kind: 'card', card: inputs.cards[reviewed]!, index: reviewed + 1, total };
   }
   const first = inputs.cards[0];
-  if (first && inputs.nudge) {
-    return inputs.hover
-      ? { kind: 'card', card: first, index: 1, total }
-      : { kind: 'nudge', card: first, total };
-  }
-  return inputs.hover ? { kind: 'pill' } : { kind: 'peek' };
+  if (first && inputs.nudge) return { kind: 'nudge', card: first, total };
+  return { kind: 'peek' };
+}
+
+export type HoverOpen = { kind: 'home' } | { kind: 'card'; card: Card } | null;
+
+export function hoverOpens(view: IslandView): HoverOpen {
+  if (view.kind === 'peek') return { kind: 'home' };
+  if (view.kind === 'nudge') return { kind: 'card', card: view.card };
+  return null;
 }
 
 const WIDTHS = {
@@ -62,7 +64,6 @@ const WIDTHS = {
   question: 556,
   open: 520,
   nudge: 364,
-  pill: 420,
 } as const;
 
 export function viewWidth(view: IslandView, notchWidth: number): number {
@@ -79,7 +80,7 @@ export function viewWidth(view: IslandView, notchWidth: number): number {
 }
 
 export function isQuiet(view: IslandView): boolean {
-  return view.kind === 'peek' || view.kind === 'pill' || view.kind === 'nudge';
+  return view.kind === 'peek' || view.kind === 'nudge';
 }
 
 export type RunStatuses = ReadonlyMap<string, { status: string; chatId: string }>;

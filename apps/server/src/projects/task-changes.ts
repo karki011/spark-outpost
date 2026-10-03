@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import { diffLines } from 'diff';
 import {
   CHANGED_FILE_FULL_MAX_BYTES,
@@ -9,13 +10,14 @@ import {
   type RunFileChanges,
   type TaskChanges,
 } from '@spark-outpost/contracts';
+import { mapLimit } from '../codescan/file-stats.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { getSnapshot, listBackups, type RunSnapshot } from '../persistence/run-snapshots.ts';
 import { getTaskDetail } from '../persistence/task-views.ts';
 import { TaskNotFoundError } from '../persistence/tasks.ts';
 import { pairRenames } from './change-renames.ts';
 import { copyChanges, type Describe } from './copy-changes.ts';
-import { countChangedLines } from './line-counts.ts';
+import { countChangedLines, lineCount, type LineCounts } from './line-counts.ts';
 import { relativeInside } from './path-policy.ts';
 import {
   changesWhilePresent,
@@ -23,7 +25,11 @@ import {
   snapshotSource,
   type SnapshotSource,
 } from './run-changes.ts';
+import { runBaseUntil } from './run-base.ts';
 import { gitChanges, gitFileAt } from './snapshot.ts';
+
+const GIT_READ_CONCURRENCY = 8;
+const DIFF_TIMEOUT_MS = 50;
 
 interface FileVersions {
   change: RunChange;
@@ -51,14 +57,30 @@ function describer(fullPath: string | null): Describe {
     }
     const oldText = before?.toString('utf8') ?? null;
     const newText = after?.toString('utf8') ?? null;
-    let added = 0;
-    let removed = 0;
-    for (const part of diffLines(oldText ?? '', newText ?? '')) {
-      if (part.added) added += part.count;
-      if (part.removed) removed += part.count;
-    }
-    return { ...change, added, removed, oldText, newText, shown: 'text' };
+    const counts = await textCounts(before, after, oldText, newText);
+    return { ...change, ...counts, oldText, newText, shown: 'text' };
   };
+}
+
+async function textCounts(
+  before: Buffer | null,
+  after: Buffer | null,
+  oldText: string | null,
+  newText: string | null,
+): Promise<LineCounts> {
+  if (oldText === null || newText === null) {
+    return { added: lineCount(after), removed: lineCount(before) };
+  }
+  await nextTurn();
+  const parts = diffLines(oldText, newText, { timeout: DIFF_TIMEOUT_MS });
+  if (!parts) return countChangedLines(before, after);
+  let added = 0;
+  let removed = 0;
+  for (const part of parts) {
+    if (part.added) added += part.count;
+    if (part.removed) removed += part.count;
+  }
+  return { added, removed };
 }
 
 interface RunState {
@@ -84,20 +106,19 @@ async function gitVersions(
   const until = next?.snapshot.ref ?? source.end;
   if (source.gone && !until) return [];
   const gitRoot = source.gitRoot;
-  const changes = await changesWhilePresent(gitRoot, () => gitChanges(gitRoot, ref, until));
+  const base = await runBaseUntil(gitRoot, ref, until);
+  const changes = await changesWhilePresent(gitRoot, () => gitChanges(gitRoot, base, until));
   if (changes === null) return [];
   const afterContent = (change: RunChange): Promise<Buffer | null> => {
     if (change.change === 'deleted') return Promise.resolve(null);
     if (until) return gitFileAt(gitRoot, until, change.path);
     return readIfPresent(path.join(root, change.path));
   };
-  return Promise.all(
-    changes.map(async (change) => ({
-      change,
-      before: change.change === 'added' ? null : await gitFileAt(gitRoot, ref, change.path),
-      after: await afterContent(change),
-    })),
-  );
+  return mapLimit(changes, GIT_READ_CONCURRENCY, async (change) => ({
+    change,
+    before: change.change === 'added' ? null : await gitFileAt(gitRoot, base, change.path),
+    after: await afterContent(change),
+  }));
 }
 
 async function laterBackup(
@@ -175,7 +196,7 @@ async function runFiles(
   return {
     runId: run.runId,
     revertedAt: run.revertedAt?.toISOString() ?? null,
-    files: await Promise.all(versions.map(describe)),
+    files: await mapLimit(versions, GIT_READ_CONCURRENCY, describe),
   };
 }
 

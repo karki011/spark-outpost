@@ -21,7 +21,12 @@ import { closeKeyedSessions } from '../persistence/provider-sessions.ts';
 import { projectChecks } from '../checks/project-checks.ts';
 import { checkBudget, checkBudgetBeforeCall, fixRoundShort } from './budget-check.ts';
 import { checksFailing } from './check-results.ts';
-import { correctnessFindings, sessionReviewLine, suggestionsLine } from './critic-fix.ts';
+import {
+  correctnessFindings,
+  criticSkippedLine,
+  sessionReviewLine,
+  suggestionsLine,
+} from './critic-fix.ts';
 import { CheckpointTimeout } from './checkpoint.ts';
 import { KEPT_BY_AUTO_EDIT, riskyChange } from './checkpoint-policy.ts';
 import { missingContext } from './missing-context.ts';
@@ -30,6 +35,7 @@ import { wrappedUp } from './wrap-up.ts';
 import { ask } from './checkpoint-asks.ts';
 import { assumptionLine } from './clarify.ts';
 import { readOnlyStart, type CurrentTask, type IntakeDecisions } from './intake.ts';
+import { mainAgentInstruction } from './instruction-turn.ts';
 import { orchestrationJevDeps, routeContext, runIntake } from './intake-run.ts';
 import { buildAndLand } from './land.ts';
 import {
@@ -211,7 +217,7 @@ async function perform(s: Session, action: FlowAction): Promise<FlowEvent | null
       await recordShortcuts(s).catch(() => null);
       return wrappedUp(s);
     case 'keep':
-      await autoKeep(s, 'hands-off', [KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
+      await autoKeep(s, 'hands-off', [action.note ?? KEPT_BY_AUTO_EDIT, sessionReviewLine(s)]);
       return { type: 'kept' };
     case 'ship':
       return shipFullAuto(s);
@@ -255,11 +261,12 @@ async function finish(
   const shipped = s.shipLine ?? null;
   const pieces = coordinationReport(s.coordination);
   const laws = lawsNote(s);
-  const notes = [pieces, assumed, escalated, fixed, suggested, laws, stopped, incomplete, shipped];
+  const skipped = criticSkippedLine(s);
+  const notes = [pieces, assumed, escalated, fixed, suggested, skipped, laws, stopped, incomplete];
   const prefs = await sparkPreferences(s.deps.db, s.input.workspaceId).catch(() => null);
   const summary = piecesSummary(s.coordination, s.results, prefs && firstName(prefs.displayName));
   const reply = finalText(s.results, verdict, s.findings, !!s.message, s.checkBodies, summary);
-  const text = withNotes(reply, notes, s.message !== null);
+  const text = withNotes(reply, [...notes, shipped], s.message !== null);
   await publish(s, { phase: 'finished', error: status === 'failed' ? reason : null });
   if (text) {
     if (!s.message) {
@@ -305,14 +312,14 @@ export async function orchestrate(deps: OrchestratorDeps, lease: Lease): Promise
     const doing = mode === 'do' && input.projectRoots[0] !== undefined;
     const prefs = await sparkPreferences(deps.db, input.workspaceId);
     const solo = !prefs.sparkEnabled;
-    if (solo && !doing) {
+    const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
+    if ((solo && !doing) || mainAgentInstruction(input.userRequest, current)) {
       const result = await runAgentTurn(deps, lease, input, append, control);
       await finishRun(append, input.identity, result, true);
       return;
     }
     const scanning =
       doing && !solo && repoRoot ? startScan({ deps, input }, repoRoot, taskStartedAt) : null;
-    const current = doing ? await currentTaskContext(deps.db, lease.runId) : null;
     const { intake, decisions } = await runIntake(
       deps,
       input,

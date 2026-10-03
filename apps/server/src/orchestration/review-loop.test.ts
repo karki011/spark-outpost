@@ -111,7 +111,7 @@ describe('Critic → fix rounds', () => {
     expect(fixOptionLabel(review)).toBe('Fix again');
   });
 
-  it('stops after three fix rounds and asks to keep with the concerns at Auto-edit', () => {
+  it('stops after three fix rounds and keeps with the concerns as a note at Automatic', () => {
     const results = run('hands-off', [
       reviewedAs(A),
       built(),
@@ -127,9 +127,8 @@ describe('Critic → fix rounds', () => {
     const state = results.at(-1)!.state;
     expect(state.review).toMatchObject({ stop: 'cap', fixRounds: 3, fixable: D });
     expect(results.at(-1)!.action).toEqual({
-      type: 'ask',
-      kind: 'accept',
-      reason: '1 file changed. Automatic asks because the Critic still has concerns.',
+      type: 'keep',
+      note: 'Kept automatically; worth a look: the Critic still has concerns. Revert undoes them.',
     });
     expect(fixOptionLabel(state.review)).toBe('Fix again');
     expect(reviewLine(state.review, 'checks pass')).toBe(
@@ -177,8 +176,11 @@ describe('Critic → fix rounds', () => {
       reviewedAs(A),
       built(),
       { type: 'agent_done', role: 'critic', outcome: 'failed', error: 'boom' },
+      { type: 'agent_done', role: 'critic', outcome: 'failed', error: 'boom' },
     ]);
+    expect(actions(results).at(-2)).toBe('critic:retry');
     expect(results.at(-1)!.state.review.stop).toBe('unclear');
+    expect(results.at(-1)!.state.criticSkipped).toBe('boom');
   });
 
   it('puts the fix option after Keep so Keep stays the default', () => {
@@ -251,7 +253,12 @@ describe('a limit that cuts a fix round short (N2)', () => {
       reviewedAs(A),
       { type: 'budget_exceeded', limit: 'tool_calls', round: true, passing: true },
       { type: 'restored', restored: true },
-      { type: 'wrapped', filesChanged: 1 },
+      {
+        type: 'wrapped',
+        filesChanged: 1,
+        riskyMigration: 'ALTER TABLE notes DROP COLUMN body',
+        outsideWorktree: true,
+      },
     ]).at(-1)!;
     expect(offered.action).toMatchObject({ type: 'ask', kind: 'accept' });
     const byUser = nextStep(offered.state, {
@@ -264,7 +271,7 @@ describe('a limit that cuts a fix round short (N2)', () => {
     expect(byUser.action).not.toHaveProperty('auto');
   });
 
-  it('restores the last passing state and ends on the keep card instead of the budget card', () => {
+  it('restores the last passing state and keeps with a note instead of the budget card', () => {
     const cut = run('hands-off', [
       reviewedAs(A),
       { type: 'budget_exceeded', limit: 'tool_calls', round: true, passing: true },
@@ -277,9 +284,9 @@ describe('a limit that cuts a fix round short (N2)', () => {
       `Stopped fix round 1: fix round 1's own tool-call budget ran out, so Spark Outpost rolled its edits back to the last state that passed the checks. Still open: ${A[0]}.`,
     );
     const keep = nextStep(restored.state, { type: 'wrapped', filesChanged: 2 });
-    expect(keep.action).toMatchObject({ type: 'ask', kind: 'accept' });
-    expect(keep.action).toMatchObject({
-      reason: expect.stringContaining('Automatic asks because the Critic still has concerns.'),
+    expect(keep.action).toEqual({
+      type: 'keep',
+      note: 'Kept automatically; worth a look: the Critic still has concerns. Revert undoes them.',
     });
   });
 

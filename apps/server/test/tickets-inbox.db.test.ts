@@ -86,6 +86,13 @@ async function linkPull(key: string, url: string) {
   await addTaskLink(t.db, rows[0]!.task_id, { kind: 'pr', url, title: url, source: 'ship' });
 }
 
+async function setRuns(status: 'running' | 'succeeded') {
+  await t.db.query(`UPDATE runs SET status = $1`, [status]);
+}
+
+const ticketIn = async (key: string) =>
+  (await inbox()).tickets.find((ticket) => ticket.key === key)!;
+
 async function connectGitHubToken() {
   await secrets.set('github', 'ghp_test_token');
   await saveGitHubToken(t.db, t.workspaceId, {
@@ -141,8 +148,8 @@ describe('tickets inbox', () => {
       ['OPS-4', 'Due tomorrow'],
     ]);
     expect(attention[0]!.flags[0]!.rationale).toContain('2 days ago or more');
-    expect(sectionOf(list, 'ENG-13')).toBe('working');
-    expect(sectionOf(list, 'WEB-419')).toBe('working');
+    expect(sectionOf(list, 'ENG-13')).toBe('started');
+    expect(sectionOf(list, 'WEB-419')).toBe('started');
     expect(sectionOf(list, 'ENG-12')).toBe('up_next');
     expect(sectionOf(list, 'ENG-14')).toBe('done');
     expect(sectionOf(list, 'WEB-420')).toBe('done');
@@ -184,10 +191,15 @@ describe('tickets inbox', () => {
     await connectGitHubToken();
     fakePull(1, { draft: true });
     await linkPull('ENG-12', 'https://github.com/acme/widgets/pull/1');
-    const drafted = (await inbox()).tickets.find((ticket) => ticket.key === 'ENG-12')!;
-    expect(drafted).toMatchObject({ section: 'pr_ready', reason: 'Draft PR #1' });
+    await setRuns('running');
+    const working = await ticketIn('ENG-12');
+    expect(working).toMatchObject({ section: 'spark', reason: 'Spark working', tone: 'running' });
+    expect(working.chat?.state).toBe('running');
+
+    await setRuns('succeeded');
+    const drafted = await ticketIn('ENG-12');
+    expect(drafted).toMatchObject({ section: 'review', reason: 'Draft PR #1' });
     expect(drafted.pullRequest).toMatchObject({ repo: 'acme/widgets', number: 1, state: 'draft' });
-    expect(drafted.chat?.state).toBe('running');
 
     const pull = github.github.pulls[0]!;
     pull.draft = false;
@@ -201,7 +213,7 @@ describe('tickets inbox', () => {
     pull.merged = true;
     pull.state = 'closed';
     const kept = (await inbox()).tickets.find((ticket) => ticket.key === 'ENG-12')!;
-    expect(kept).toMatchObject({ section: 'working', reason: 'PR #1 merged' });
+    expect(kept).toMatchObject({ section: 'done', reason: 'PR #1 merged' });
     expect(stubs.linear.issues.find((i) => i.identifier === 'ENG-12')!.stateId).toBe('eng-todo');
 
     await send('patch', '/api/tickets/connections/linear', { moveOnMerge: true }).expect(200);
@@ -233,6 +245,17 @@ describe('tickets inbox', () => {
     expect(await checks()).toBe('pending');
     pull.checkRuns[1] = { status: 'completed', conclusion: 'failure' };
     expect(await checks()).toBe('failing');
+    const rules = async () => (await ticketIn('ENG-12')).flags.map((flag) => flag.rule);
+    await setRuns('running');
+    expect(await rules()).not.toContain('pr-checks');
+    await setRuns('succeeded');
+    expect(await ticketIn('ENG-12')).toMatchObject({
+      section: 'attention',
+      reason: 'PR #1 checks failing',
+      tone: 'error',
+    });
+    pull.checkRuns[1] = { status: 'completed', conclusion: 'success' };
+    expect(await rules()).not.toContain('pr-checks');
     pull.checkRuns[1] = { status: 'completed', conclusion: 'skipped' };
     expect(await checks()).toBe('passing');
   });
@@ -240,7 +263,8 @@ describe('tickets inbox', () => {
   it('shows Not available when the pull request cannot be read', async () => {
     await connect();
     await linkPull('ENG-12', 'https://github.com/acme/widgets/pull/9');
-    const item = (await inbox()).tickets.find((ticket) => ticket.key === 'ENG-12')!;
-    expect(item).toMatchObject({ section: 'pr_ready', reason: 'PR opened', pullRequest: null });
+    await setRuns('succeeded');
+    const item = await ticketIn('ENG-12');
+    expect(item).toMatchObject({ section: 'review', reason: 'PR opened', pullRequest: null });
   });
 });

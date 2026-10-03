@@ -29,7 +29,7 @@ async function shot(page: Page, name: string) {
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/docked-${name}.png` });
 }
 
-const dock = (page: Page) => page.getByRole('region', { name: 'Waiting for you' });
+const statusLine = (page: Page) => page.locator('.cstatus');
 const thread = (page: Page) => page.locator('.thread');
 
 test('the questions dock above the composer, wait without a countdown when auto-continue is off, and a quick answer goes back in the thread', async ({
@@ -39,22 +39,22 @@ test('the questions dock above the composer, wait without a countdown when auto-
   await autoContinueAfter(page, null);
   await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Make the reports better #build #vague #questions');
-  const questions = dock(page).getByRole('group', { name: QUESTIONS });
+  const questions = thread(page).getByRole('group', { name: QUESTIONS });
   await expect(questions).toBeVisible({ timeout: 30_000 });
   await expect(questions).toContainText('Which report?');
   await expect(questions).toContainText('Best guess: Spend');
   await expect(questions.getByRole('button', { name: /best guesses in/ })).toHaveCount(0);
   await expect(questions.getByRole('button', { name: 'Go with my best guesses' })).toBeVisible();
   await expect(thread(page).getByText('Which report do you mean: Spend or Usage?')).toBeVisible();
-  await expect(thread(page).getByRole('button', { name: 'Waiting for your answer' })).toBeVisible();
+  await expect(statusLine(page)).toContainText('Waiting for you · question: Which report?');
   await expect(page.getByText('"questions"')).toHaveCount(0);
 
-  const dockBox = (await dock(page).boundingBox())!;
+  const lineBox = (await statusLine(page).boundingBox())!;
   const composerBox = (await page.locator('.composer').boundingBox())!;
-  expect(dockBox.y + dockBox.height).toBeLessThanOrEqual(composerBox.y + 1);
+  expect(lineBox.y + lineBox.height).toBeLessThanOrEqual(composerBox.y + 1);
   await expect(page.getByRole('textbox', { name: 'Message' })).toBeVisible();
 
-  const axe = await new AxeBuilder({ page }).include('.pending-dock').analyze();
+  const axe = await new AxeBuilder({ page }).include('.cstatus').analyze();
   expect(axe.violations).toEqual([]);
   await shot(page, 'questions');
 
@@ -68,9 +68,7 @@ test('the questions dock above the composer, wait without a countdown when auto-
   const answered = thread(page).getByRole('group', { name: QUESTIONS });
   await expect(answered).toContainText('Answered.');
   await expect(answered).toContainText('Which report? → Usage');
-  await expect(thread(page).getByRole('button', { name: 'Waiting for your answer' })).toHaveCount(
-    0,
-  );
+  await expect(statusLine(page)).not.toContainText('Waiting for you');
   await allowEdit(page);
   await expect(card(page, /Keep these changes\?/)).toBeVisible({ timeout: 30_000 });
   expect(repo.notes()).toBe('start\nstep 1\n');
@@ -84,7 +82,7 @@ test('Automatic goes with the best guesses when the wait runs out, and says so',
   await autoContinueAfter(page, 3);
   await crewChat(page, repo, 'Auto-edit');
   await send(page, 'Make the reports better #build #vague #questions');
-  const questions = dock(page).getByRole('group', { name: QUESTIONS });
+  const questions = thread(page).getByRole('group', { name: QUESTIONS });
   await expect(
     questions.getByRole('button', { name: /^Going with my best guesses in \ds$/ }),
   ).toBeVisible({ timeout: 30_000 });
@@ -126,7 +124,7 @@ test('destructive work waits for your answer instead of counting down, then plan
   await autoContinueAfter(page, 2);
   await crewChat(page, repo, 'Auto-edit');
   await send(page, 'Clean up the reports table — drop the old rows #build #vague #questions');
-  const questions = dock(page).getByRole('group', { name: QUESTIONS });
+  const questions = thread(page).getByRole('group', { name: QUESTIONS });
   await expect(questions).toBeVisible({ timeout: 30_000 });
   await expect(questions.getByRole('status')).toHaveText(HELD);
   await expect(questions.getByRole('button', { name: /best guesses in/ })).toHaveCount(0);

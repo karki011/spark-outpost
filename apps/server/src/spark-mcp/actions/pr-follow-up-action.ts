@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { FeedbackState, SparkAction } from '@spark-outpost/contracts';
 import {
   feedbackFor,
+  getWatch,
   pollNow,
   updateFeedback,
   type StoredFeedback,
@@ -10,7 +11,9 @@ import {
 import type { Queryable } from '../../persistence/db.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 import { pullNumberInput, watchesFor } from '../tools/pr-follow-up-tool.ts';
-import { confirmThen } from './confirm.ts';
+import { proposeAction } from './confirm.ts';
+import type { Performed } from './performed.ts';
+import { ACTION_NOTE } from './action-note.ts';
 
 const REOPENABLE: readonly FeedbackState[] = ['queued', 'held', 'needs_user', 'skipped'];
 
@@ -62,14 +65,32 @@ async function askForRound(
       what: item.body.split('\n')[0]!.slice(0, 200),
     })),
   };
-  return confirmThen(context, action, async () => {
-    await requestRound(context.deps.db, watch, items);
-    return {
-      queued: items.map((item) => item.label),
-      message:
-        'Spark starts the round on its next check. The push and replies still follow the chat’s autonomy level.',
-    };
-  });
+  return proposeAction(context, action);
+}
+
+export async function performFollowUpRound(
+  context: SparkToolContext,
+  action: Extract<SparkAction, { action: 'pr_follow_up_round' }>,
+): Promise<Performed> {
+  const { db } = context.deps;
+  const watch = await getWatch(db, action.watchId);
+  if (!watch || watch.phase === 'done') throw new Error('That pull request is merged or closed.');
+  if (watch.phase === 'fixing' || watch.phase === 'confirming') {
+    throw new Error('A follow-up round is already running or waiting for the user.');
+  }
+  const open = await feedbackFor(db, watch.id, REOPENABLE);
+  const items = pickItems(
+    open,
+    action.items.map((item) => item.label),
+  );
+  if (items.length === 0) throw new Error('Nothing on this PR is waiting for a round.');
+  await requestRound(db, watch, items);
+  return {
+    message:
+      'Spark starts the round on its next check. The push and replies still follow the chat’s autonomy level.',
+    url: watch.url,
+    output: { queued: items.map((item) => item.label) },
+  };
 }
 
 export const prFollowUpRoundTool = sparkTool({
@@ -77,7 +98,8 @@ export const prFollowUpRoundTool = sparkTool({
   title: 'Request a PR follow-up round',
   acts: true,
   description:
-    "Ask Spark to run one more follow-up round on a pull request it opened (default: this chat's): a Builder fixes the chosen items in the chat's worktree, then the push and GitHub replies follow the chat's autonomy level. Pass item labels (F1, F2, …) from spark_pr_follow_up to include items Spark held back, such as comments from people without write access, or items past the round limit; with no labels it takes every open item except held ones. Shows the user a confirm card; nothing happens until they confirm.",
+    "Ask Spark to run one more follow-up round on a pull request it opened (default: this chat's): a Builder fixes the chosen items in the chat's worktree, then the push and GitHub replies follow the chat's autonomy level. Pass item labels (F1, F2, …) from spark_pr_follow_up to include items Spark held back, such as comments from people without write access, or items past the round limit; with no labels it takes every open item except held ones. " +
+    ACTION_NOTE,
   input: {
     number: pullNumberInput,
     items: z

@@ -130,7 +130,7 @@ describe('decide() in an Ask run at Automatic and Full auto', () => {
   });
 });
 
-describe('decide() in an Ask run at Review each step', () => {
+describe('decide() in an Ask run without auto-allow', () => {
   it('asks before a command that is not a safe read', () => {
     expect(asking('curl -sI https://example.com')).toEqual({
       verdict: 'ask',

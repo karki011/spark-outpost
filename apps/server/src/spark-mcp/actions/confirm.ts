@@ -2,23 +2,28 @@ import { randomUUID } from 'node:crypto';
 import {
   SPARK_ACTION_KIND,
   SPARK_ACTION_OPTION,
-  applySparkEdits,
   sparkActionLabels,
+  sparkResultFinished,
   type Approval,
   type SparkAction,
 } from '@spark-outpost/contracts';
 import { redactValue } from '../../audit/redact.ts';
-import { insertApproval, settlePending } from '../../persistence/approvals.ts';
+import { getApproval, insertApproval, notifyApprovalChanged } from '../../persistence/approvals.ts';
+import type { Queryable } from '../../persistence/db.ts';
 import { LeaseLostError } from '../../persistence/run-events.ts';
-import { waitForApproval } from '../../workflow/approval-waiters.ts';
+import { WAITING_RESULT } from '../../persistence/spark-results.ts';
 import { runEvents } from '../../workflow/run-events.ts';
-import type { SparkActionHooks, SparkScope, SparkToolDeps } from '../deps.ts';
+import type { SparkActionHooks, SparkScope } from '../deps.ts';
 import { SparkToolError, type SparkToolContext } from '../tool.ts';
+import { actionFacts, actionPath, type ActionPath } from './action-policy.ts';
 
-type Confirmation =
-  | { outcome: 'confirmed'; action: SparkAction }
-  | { outcome: 'declined'; note: string | null }
-  | { outcome: 'stopped' | 'timeout' };
+export const RESULT_WAIT_MS = 40_000;
+
+export const WAITING_MESSAGE =
+  'Spark showed the user a confirm card in the chat and will do it as soon as they confirm; the result appears on that card. Do not call this again and do not ask the user to do it by hand. Tell them it is waiting for their confirmation.';
+
+export const IN_PROGRESS_MESSAGE =
+  'Spark is still doing it; the result appears on the card in the chat. Do not call this again.';
 
 interface ActionRun {
   runId: string;
@@ -56,71 +61,55 @@ function cardTitle(action: SparkAction): string {
   return `${question} ${action.ticket.key}`;
 }
 
-async function askToConfirm(
-  deps: SparkToolDeps,
-  run: ActionRun,
-  action: SparkAction,
-  caller: AbortSignal | undefined,
-): Promise<Confirmation> {
-  const { hooks } = run;
-  const signal = caller ? AbortSignal.any([hooks.signal, caller]) : hooks.signal;
-  const observed = (await run.scope.observations?.labels()) ?? [];
-  const pending = await insertApproval(deps.db, {
-    runId: run.runId,
-    toolCallId: `spark:${action.action}:${randomUUID()}`,
-    rpcId: null,
-    kind: SPARK_ACTION_KIND,
-    title: cardTitle(action),
-    payload: {
-      command: null,
-      cwd: null,
-      paths: [],
-      diffs: [],
-      truncated: false,
-      sparkAction: action,
-      ...(observed.length > 0 ? { observed } : {}),
-    },
-    options: [
-      {
-        optionId: SPARK_ACTION_OPTION.confirm,
-        name: sparkActionLabels[action.action].confirm,
-        kind: 'allow_once',
-      },
-      { optionId: SPARK_ACTION_OPTION.decline, name: 'Don’t', kind: 'reject_once' },
-    ],
-    reason: null,
-  });
-  await hooks.append(runEvents.approvalRequested(pending), {
-    transition: { status: 'awaiting_approval' },
-  });
-  const result = await waitForApproval(pending.id, {
-    db: deps.db,
-    waiters: hooks.waiters,
-    signal,
-    timeoutMs: hooks.timeoutMs,
-    pollMs: hooks.pollMs,
-  });
-  if (result === 'aborted' || result === 'timeout') {
-    const settled = await settlePending(deps.db, pending.id, {
-      status: result === 'aborted' ? 'cancelled' : 'expired',
-      decidedBy: result === 'aborted' ? 'stop' : 'timeout',
-      optionId: null,
-    });
-    if (settled) await quietly(hooks.append(runEvents.approvalDecided(settled)));
-    return { outcome: result === 'aborted' ? 'stopped' : 'timeout' };
-  }
-  await quietly(
-    hooks.append(runEvents.approvalDecided(result), { transition: { status: 'running' } }),
-  );
-  return decisionOf(result, action);
+interface CardPlan {
+  path: ActionPath;
+  requested: boolean;
+  observed: readonly string[];
 }
 
-function decisionOf(approval: Approval, action: SparkAction): Confirmation {
-  if (approval.status === 'allowed') {
-    return { outcome: 'confirmed', action: applySparkEdits(action, approval.edits ?? null) };
-  }
-  if (approval.status === 'denied') return { outcome: 'declined', note: approval.note ?? null };
-  return { outcome: 'stopped' };
+async function postCard(
+  db: Queryable,
+  run: ActionRun,
+  action: SparkAction,
+  { path, requested, observed }: CardPlan,
+): Promise<Approval> {
+  const card = await insertApproval(
+    db,
+    {
+      runId: run.runId,
+      toolCallId: `spark:${action.action}:${randomUUID()}`,
+      rpcId: null,
+      kind: SPARK_ACTION_KIND,
+      title: cardTitle(action),
+      payload: {
+        command: null,
+        cwd: null,
+        paths: [],
+        diffs: [],
+        truncated: false,
+        sparkAction: action,
+        sparkResult: WAITING_RESULT,
+        ...(requested ? { sparkRequested: true } : {}),
+        ...(observed.length > 0 ? { observed: [...observed] } : {}),
+      },
+      options: [
+        {
+          optionId: SPARK_ACTION_OPTION.confirm,
+          name: sparkActionLabels[action.action].confirm,
+          kind: 'allow_once',
+        },
+        { optionId: SPARK_ACTION_OPTION.decline, name: 'Don’t', kind: 'reject_once' },
+      ],
+      reason: null,
+    },
+    path === 'perform'
+      ? { status: 'allowed', decidedBy: 'level', optionId: SPARK_ACTION_OPTION.confirm }
+      : null,
+  );
+  await quietly(run.hooks.append(runEvents.approvalRequested(card)));
+  if (path === 'perform') await quietly(run.hooks.append(runEvents.approvalDecided(card)));
+  await notifyApprovalChanged(db, card.id);
+  return card;
 }
 
 function auditAction(run: ActionRun, action: SparkAction, outcome: Record<string, unknown>): void {
@@ -130,40 +119,53 @@ function auditAction(run: ActionRun, action: SparkAction, outcome: Record<string
   });
 }
 
-function unconfirmed(confirmation: Exclude<Confirmation, { outcome: 'confirmed' }>) {
-  if (confirmation.outcome === 'declined') {
-    return {
-      outcome: 'declined',
-      message: 'The user declined. Nothing was changed.',
-      ...(confirmation.note ? { userNote: confirmation.note } : {}),
-    };
+async function awaitResult(
+  context: SparkToolContext,
+  run: ActionRun,
+  id: string,
+): Promise<Approval | null> {
+  const signal = context.signal
+    ? AbortSignal.any([run.hooks.signal, context.signal])
+    : run.hooks.signal;
+  const deadline = Date.now() + RESULT_WAIT_MS;
+  for (;;) {
+    const current = await getApproval(context.deps.db, id);
+    if (!current || sparkResultFinished(current.payload.sparkResult)) return current;
+    const remaining = deadline - Date.now();
+    if (signal.aborted || remaining <= 0) return null;
+    await run.hooks.waiters.wait(id, Math.min(run.hooks.pollMs, remaining), signal);
   }
-  return {
-    outcome: confirmation.outcome,
-    message:
-      confirmation.outcome === 'timeout'
-        ? 'Nobody answered the confirmation card in time. Nothing was changed.'
-        : 'The request was stopped before the user answered. Nothing was changed.',
-  };
 }
 
-export async function confirmThen<T extends object>(
-  context: SparkToolContext,
-  action: SparkAction,
-  perform: (confirmed: SparkAction) => Promise<T>,
-) {
+function finished(approval: Approval) {
+  const result = approval.payload.sparkResult!;
+  if (result.state === 'failed') {
+    throw new SparkToolError(`Spark could not do it: ${result.message ?? 'it failed.'}`);
+  }
+  return { outcome: 'done', message: result.message, url: result.url, ...result.output };
+}
+
+export async function proposeAction(context: SparkToolContext, action: SparkAction) {
   const run = actionRun(context.scope);
-  const answer = await askToConfirm(context.deps, run, action, context.signal);
-  if (answer.outcome !== 'confirmed') {
-    auditAction(run, action, { outcome: answer.outcome });
-    return unconfirmed(answer);
+  const observed = (await run.scope.observations?.labels()) ?? [];
+  const facts = await actionFacts(
+    context.deps.db,
+    { runId: run.runId, conversationId: run.scope.conversationId, observed: observed.length > 0 },
+    action.action,
+  );
+  const path = actionPath(facts);
+  const card = await postCard(context.deps.db, run, action, {
+    path,
+    requested: facts.requested,
+    observed,
+  });
+  if (path === 'confirm') {
+    auditAction(run, action, { outcome: 'waiting_for_user', approvalId: card.id });
+    return { outcome: 'waiting_for_user', approvalId: card.id, message: WAITING_MESSAGE };
   }
-  try {
-    const result = await perform(answer.action);
-    auditAction(run, answer.action, { outcome: 'done', result });
-    return { outcome: 'done', ...result };
-  } catch (error) {
-    auditAction(run, answer.action, { outcome: 'failed', error: (error as Error).message });
-    throw new SparkToolError(`The user confirmed, but it failed: ${(error as Error).message}`);
-  }
+  auditAction(run, action, { outcome: 'performing', approvalId: card.id });
+  const settled = await awaitResult(context, run, card.id);
+  if (!settled)
+    return { outcome: 'in_progress', approvalId: card.id, message: IN_PROGRESS_MESSAGE };
+  return finished(settled);
 }

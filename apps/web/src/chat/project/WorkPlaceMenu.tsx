@@ -13,6 +13,7 @@ import {
   useProjectBranches,
   useUpdateWorkspace,
 } from './use-chat-workspace.ts';
+import { Skeleton } from '../../ui/loading/Skeleton.tsx';
 
 interface WorkPlaceMenuProps {
   conversationId: string;
@@ -176,7 +177,7 @@ export function WorkPlaceMenu({ conversationId, projectId, checkoutBranch }: Wor
                 Pulling branches from the remote…
               </p>
             )}
-            {branches.isPending && <p className="mempty">Reading branches…</p>}
+            {branches.isPending && <Skeleton label="Reading branches" shape="list" rows={4} />}
             {list && total > 0 && rows.length === 0 && (
               <p className="mempty">No branch matches “{query.trim()}”.</p>
             )}

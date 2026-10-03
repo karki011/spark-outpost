@@ -64,7 +64,7 @@ export function lawsNote(s: Pick<Session, 'laws'>): string | null {
   const more =
     findings.length > LAW_ITEMS_SHOWN ? `\n- and ${findings.length - LAW_ITEMS_SHOWN} more` : '';
   const items = lawItems(s).map((text) => `- ${text}`);
-  return `Worth a look before you keep this:\n${items.join('\n')}${more}`;
+  return `Worth a look:\n${items.join('\n')}${more}`;
 }
 
 function lawSummary(review: LawReview): string {

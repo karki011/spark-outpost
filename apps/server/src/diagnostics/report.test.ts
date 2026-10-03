@@ -21,6 +21,9 @@ function facts(patch: Partial<DiagnosticsFacts> = {}): DiagnosticsFacts {
     desktopSettings: { 'updates.json': { channel: 'beta', autoDownload: true } },
     migrations: { applied: 92, latest: ['0092_last.sql'] },
     desktopMarkers: { 'migrated-version.json': { version: '0.1.0-beta.1' } },
+    eventLoop: [
+      '2026-10-01T11:59:00.000Z [api] Event loop blocked for 850 ms in the API during GET /api/x',
+    ],
     logs: [
       {
         name: 'spark-outpost.log',
@@ -45,6 +48,7 @@ describe('diagnosticsEntries', () => {
       'providers.json',
       'settings.json',
       'migrations.json',
+      'event-loop.json',
       'logs/spark-outpost.log',
     ]);
     expect(JSON.parse(zip.get('about.json')!)).toMatchObject({
@@ -60,6 +64,10 @@ describe('diagnosticsEntries', () => {
     expect(JSON.parse(zip.get('migrations.json')!)).toMatchObject({
       database: { applied: 92 },
       desktop: { 'migrated-version.json': { version: '0.1.0-beta.1' } },
+    });
+    expect(JSON.parse(zip.get('event-loop.json')!)).toEqual({
+      warnAfterMs: 200,
+      warnings: [expect.stringContaining('blocked for 850 ms in the API during GET /api/x')],
     });
     expect(zip.get('logs/spark-outpost.log')).toMatch(/^\[older lines left out\]\n\[api\] started/);
   });

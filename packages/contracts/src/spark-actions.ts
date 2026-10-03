@@ -204,3 +204,18 @@ export const sparkActionLabels: Record<SparkActionName, { question: string; conf
   create_teammate: { question: 'Add this Spark?', confirm: 'Add Spark' },
   update_teammate: { question: 'Change this Spark?', confirm: 'Save changes' },
 };
+
+export const sparkResultStateSchema = z.enum(['waiting', 'running', 'done', 'failed']);
+export type SparkResultState = z.infer<typeof sparkResultStateSchema>;
+
+export const sparkResultSchema = z.object({
+  state: sparkResultStateSchema,
+  message: z.string().max(2000).nullable(),
+  url: z.string().max(2000).nullable(),
+  output: z.record(z.string(), z.unknown()).optional(),
+});
+export type SparkResult = z.infer<typeof sparkResultSchema>;
+
+export function sparkResultFinished(result: SparkResult | undefined): boolean {
+  return result?.state === 'done' || result?.state === 'failed';
+}

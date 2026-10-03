@@ -71,7 +71,6 @@ describe('task API', () => {
       'Look through the code',
       'Write the answer',
       'Worked on the request',
-      'Opened spark-outpost/demo#42',
     ]);
   });
 

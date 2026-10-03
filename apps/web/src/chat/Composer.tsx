@@ -74,6 +74,7 @@ interface ComposerProps {
   orchestration?: Orchestration | null;
   usageTotals: ConversationUsage;
   busy: boolean;
+  stopping?: boolean;
   sending: boolean;
   error: string | null;
   attachments: AttachmentsState;
@@ -116,6 +117,7 @@ export function Composer({
   orchestration = null,
   usageTotals,
   busy,
+  stopping = false,
   sending,
   error,
   attachments,
@@ -470,6 +472,7 @@ export function Composer({
           )}
           <SendButton
             busy={busy}
+            stopping={stopping}
             label={sendName}
             disabled={!canSend}
             onSend={() => void submit()}

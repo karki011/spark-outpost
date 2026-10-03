@@ -168,6 +168,7 @@ export const LAW_ROUGH_RANGE = [0.5, 2] as const;
 export const LAW_PAD_MIN_RUNS = 5;
 export const LAW_PAD_MAX = 3;
 
+export const LAW_BUDGET_ENFORCED = false;
 export const LAW_BUDGET_SHARE = [0.3, 0.5, 0.75, 1, 1] as const;
 export const LAW_BUDGET_MIN_TOOL_CALLS = 10;
 export const LAW_BUDGET_MIN_MS = 3 * 60_000;

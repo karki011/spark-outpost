@@ -39,7 +39,7 @@ test('the work panel is wider by default, resizes from its edge and remembers th
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task · 7 of 7 done', { timeout: 20_000 });
+  await expect(page.locator('.taskc')).toContainText('Task 7/7', { timeout: 20_000 });
   await expect.poll(() => panelWidth(page)).toBe(432);
 
   const handle = page.getByRole('separator', { name: 'Resize work panel' });
@@ -79,7 +79,7 @@ test('the work panel slides open and closed without moving the thread', async ({
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill('Fix the date divider #plan');
   await input.press('Enter');
-  await expect(page.locator('.taskc')).toContainText('Task · 7 of 7 done', { timeout: 20_000 });
+  await expect(page.locator('.taskc')).toContainText('Task 7/7', { timeout: 20_000 });
   await expect.poll(() => panelWidth(page)).toBe(432);
 
   const thread = page.locator('.thread');
@@ -130,6 +130,9 @@ test.describe('a finished crew', () => {
     await expect(agentBlock(page, 'Bolt').locator('.fchg')).toHaveCount(0);
 
     const work = panel(page);
+    const crewRow = work.locator('.titem').filter({ has: page.locator('.ti-tag.crew') });
+    await expect(crewRow.first()).toBeVisible();
+    await expect(crewRow.first().getByRole('button')).toContainText('Crew');
     await work.getByRole('tab', { name: 'Cost' }).click();
     const rows = work.getByRole('list', { name: 'Cost by agent' }).getByRole('listitem');
     await expect(rows).toHaveCount(3);

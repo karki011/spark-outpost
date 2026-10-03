@@ -13,6 +13,7 @@ import {
 import { supportsDo, type AgentDefinition, type AgentLaunch } from './agents.ts';
 import { AgentExitedError, startAgentProcess, type AgentProcess } from './agent-process.ts';
 import { agentEnvironment } from './agent-env.ts';
+import { longContextEnv } from './long-context.ts';
 import { cliEnvironment, type CliLocator } from './agent-cli.ts';
 import { auditCodexInstructions, withClaudeSpark, withCodexSpark } from './spark-instructions.ts';
 import {
@@ -118,7 +119,7 @@ async function runSession(
   channel: Channel<ProviderOutput>,
 ): Promise<void> {
   const { definition } = options;
-  const mapper = createUpdateMapper(definition.name);
+  const mapper = createUpdateMapper(definition.name, definition.longContext === true);
   const push = (outputs: ProviderOutput[]) =>
     outputs.forEach((output) => channel.push(asReported(definition, output)));
   let agent: AgentProcess | null = null;
@@ -162,8 +163,9 @@ async function runSession(
     if (definition.repoStyle === 'codex') auditCodexInstructions(turn.audit, codex);
     const builder = turn.builder === true;
     const cli = options.launch ? {} : await cliEnvironment(definition, options.locateCli);
+    const launchEnv = await agentEnvironment(options, home, browsing, codex, builder, turn.env);
     const env = withCodexSparkServer(
-      { ...(await agentEnvironment(options, home, browsing, codex, builder, turn.env)), ...cli },
+      { ...launchEnv, ...longContextEnv(definition, launchEnv, repo?.claude?.redirects), ...cli },
       definition.repoStyle === 'codex' ? spark : null,
     );
     agent = startAgentProcess(options.launch ?? definition.launch(), cwd, env, replay.observer);
@@ -246,13 +248,16 @@ function sessionMeta(
   {
     builder,
     coordinated,
+    publishes,
     planning,
     approvals,
-  }: Pick<ProviderTurn, 'builder' | 'coordinated' | 'planning' | 'approvals'>,
+  }: Pick<ProviderTurn, 'builder' | 'coordinated' | 'publishes' | 'planning' | 'approvals'>,
 ) {
   if (!policy) return definition.conversationSessionMeta?.(repo) ?? null;
   const roots = extraRoots(policy);
-  if (changing) return definition.doSessionMeta?.(roots, repo, builder, coordinated) ?? null;
+  if (changing) {
+    return definition.doSessionMeta?.(roots, repo, builder, coordinated, publishes) ?? null;
+  }
   const commands = approvals !== undefined;
   return definition.projectSessionMeta?.(roots, repo, planning === true, commands) ?? null;
 }

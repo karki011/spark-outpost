@@ -17,7 +17,9 @@ import { createTeammate, listTeammates, updateTeammate } from '../../persistence
 import { listProjects } from '../../projects/projects.ts';
 import { sparkTool, SparkToolError, type SparkToolContext } from '../tool.ts';
 import { matchTeammate } from '../tools/teammates-tool.ts';
-import { confirmThen } from './confirm.ts';
+import { proposeAction } from './confirm.ts';
+import type { Performed } from './performed.ts';
+import { ACTION_NOTE } from './action-note.ts';
 
 const fieldsInput = {
   role: teammateRoleSchema.optional().describe('Role or title, such as "Release manager".'),
@@ -84,21 +86,27 @@ async function create(context: SparkToolContext, args: Fields & { name: string }
     instructions: args.instructions ?? '',
     projects: await resolveProjects(context, args.projects ?? []),
   };
-  return confirmThen(context, action, async (confirmed) => {
-    if (confirmed.action !== 'create_teammate') throw new Error('Unexpected action.');
-    const created = await createTeammate(context.deps.db, context.scope.workspaceId, {
-      name: confirmed.name,
-      role: confirmed.role,
-      face: confirmed.face,
-      provider: confirmed.provider,
-      model: confirmed.model,
-      agentMode: confirmed.agentMode,
-      level: confirmed.level,
-      instructions: confirmed.instructions,
-      projectIds: confirmed.projects.map((project) => project.id),
-    });
-    return { id: created.id, name: created.name, message: `Added ${created.name} to Sparks.` };
+  return proposeAction(context, action);
+}
+
+type ActionOf<Name extends SparkAction['action']> = Extract<SparkAction, { action: Name }>;
+
+export async function performCreateTeammate(
+  context: SparkToolContext,
+  action: ActionOf<'create_teammate'>,
+): Promise<Performed> {
+  const created = await createTeammate(context.deps.db, context.scope.workspaceId, {
+    name: action.name,
+    role: action.role,
+    face: action.face,
+    provider: action.provider,
+    model: action.model,
+    agentMode: action.agentMode,
+    level: action.level,
+    instructions: action.instructions,
+    projectIds: action.projects.map((project) => project.id),
   });
+  return { message: `Added ${created.name} to Sparks.`, url: null, output: { id: created.id } };
 }
 
 function changesOf(current: Teammate, args: Fields & { name?: string | undefined }) {
@@ -153,13 +161,44 @@ async function update(
       projects ?? current.projectIds.map((id) => ({ id, name: names.get(id) ?? 'Project' })),
     changed: Object.keys(changes),
   };
-  return confirmThen(context, action, async () => {
-    const saved = await updateTeammate(db, workspaceId, current.id, changes);
-    if (changes.name !== undefined || changes.role !== undefined || changes.instructions) {
-      await closeTeammateSessions(db, workspaceId, current.id);
-    }
-    return { id: saved.id, changed: Object.keys(changes), message: `Saved ${saved.name}.` };
-  });
+  return proposeAction(context, action);
+}
+
+const CHANGEABLE = [
+  'name',
+  'role',
+  'face',
+  'provider',
+  'model',
+  'agentMode',
+  'level',
+  'instructions',
+] as const;
+
+function changesFrom(action: ActionOf<'update_teammate'>): UpdateTeammateRequest {
+  const changed = new Set(action.changed);
+  const update: Record<string, unknown> = {};
+  for (const field of CHANGEABLE) if (changed.has(field)) update[field] = action[field];
+  if (changed.has('projectIds')) update.projectIds = action.projects.map((project) => project.id);
+  return update as UpdateTeammateRequest;
+}
+
+export async function performUpdateTeammate(
+  context: SparkToolContext,
+  action: ActionOf<'update_teammate'>,
+): Promise<Performed> {
+  const { db } = context.deps;
+  const { workspaceId } = context.scope;
+  const changes = changesFrom(action);
+  const saved = await updateTeammate(db, workspaceId, action.teammateId, changes);
+  if (changes.name !== undefined || changes.role !== undefined || changes.instructions) {
+    await closeTeammateSessions(db, workspaceId, action.teammateId);
+  }
+  return {
+    message: `Saved ${saved.name}.`,
+    url: null,
+    output: { id: saved.id, changed: Object.keys(changes) },
+  };
 }
 
 export const createTeammateTool = sparkTool({
@@ -167,7 +206,8 @@ export const createTeammateTool = sparkTool({
   title: 'Add a Spark (named teammate)',
   acts: true,
   description:
-    'Propose a new Spark: a named teammate with a role, blob face, default provider, model, mode, autonomy and projects, and standing instructions added to every chat with it. Shows the user a confirm card; nothing is created until they confirm.',
+    'Propose a new Spark: a named teammate with a role, blob face, default provider, model, mode, autonomy and projects, and standing instructions added to every chat with it. ' +
+    ACTION_NOTE,
   input: { name: teammateNameSchema, ...fieldsInput },
   run: (args, context) => create(context, args),
 });
@@ -177,7 +217,8 @@ export const updateTeammateTool = sparkTool({
   title: 'Change a Spark',
   acts: true,
   description:
-    'Propose changes to an existing Spark (pass spark: its name or id): rename it, change its role, face, defaults, projects or standing instructions. Only the fields you pass change. Shows a confirm card with the changes; nothing is saved until the user confirms. Chats already started keep their own settings.',
+    'Propose changes to an existing Spark (pass spark: its name or id): rename it, change its role, face, defaults, projects or standing instructions. Only the fields you pass change. Chats already started keep their own settings. ' +
+    ACTION_NOTE,
   input: {
     spark: z.string().trim().min(1).max(100).describe('The Spark to change: name or id.'),
     name: teammateNameSchema.optional().describe('A new name.'),

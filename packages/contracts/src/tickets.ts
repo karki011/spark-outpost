@@ -1,8 +1,12 @@
 import { z } from 'zod';
+import { ATTACHMENTS_PER_MESSAGE } from './attachments.ts';
 
 export const TICKET_KEY_MAX_LENGTH = 64;
 export const TICKET_SEARCH_MAX_LENGTH = 200;
 export const TICKET_COMMENT_MAX_LENGTH = 10_000;
+export const TICKET_START_NOTE_MAX_LENGTH = 4_000;
+export const TICKET_START_LINKS_MAX = 10;
+export const TICKET_START_FOLDERS_MAX = 5;
 
 export const ticketSourceIdSchema = z.enum(['linear', 'jira']);
 export type TicketSourceId = z.infer<typeof ticketSourceIdSchema>;
@@ -185,6 +189,13 @@ export const startTicketRequestSchema = z.object({
   projectId: z.uuid().optional(),
   mode: ticketStartModeSchema.default('build'),
   moveToInProgress: z.boolean().default(true),
+  note: z.string().trim().max(TICKET_START_NOTE_MAX_LENGTH).default(''),
+  links: z
+    .array(z.url({ protocol: /^https?$/ }).max(2000))
+    .max(TICKET_START_LINKS_MAX)
+    .default([]),
+  attachmentIds: z.array(z.uuid()).max(ATTACHMENTS_PER_MESSAGE).default([]),
+  folders: z.array(z.string().trim().min(1).max(4096)).max(TICKET_START_FOLDERS_MAX).default([]),
 });
 export type StartTicketRequest = z.infer<typeof startTicketRequestSchema>;
 

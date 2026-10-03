@@ -27,6 +27,9 @@ const cached: Record<string, QueryKey> = {
   setup: ['setup'],
   mapProject: ['map', 'project', A],
   mapArea: ['map', 'area', A, 'aaaaaaaaaaaa', 120],
+  ticketInbox: ['tickets', 'inbox'],
+  ticketView: ['tickets', 'view', 'linear', 'ENG-1'],
+  ticketConnections: ['tickets', 'connections'],
 };
 
 async function invalidatedBy(...events: AppEvent[]): Promise<string[]> {
@@ -108,6 +111,13 @@ describe('app event invalidation', () => {
     expect(await invalidatedBy(event('outcome'))).toEqual(['analytics', 'outcome']);
   });
 
+  it('a ticket attention change refreshes the inbox and connections but not a single ticket view', async () => {
+    expect(await invalidatedBy(event('ticket', null))).toEqual([
+      'ticketConnections',
+      'ticketInbox',
+    ]);
+  });
+
   it('merges a burst of events into one invalidation per key', () => {
     const once = mergeInvalidations([event('run')]);
     expect(mergeInvalidations([event('run'), event('run'), event('step')])).toHaveLength(
@@ -118,6 +128,7 @@ describe('app event invalidation', () => {
   it('marks only pushed query roots as live', () => {
     expect(isLiveQueryKey(['conversations', A])).toBe(true);
     expect(isLiveQueryKey(['home', 'digest'])).toBe(true);
+    expect(isLiveQueryKey(['tickets', 'inbox'])).toBe(true);
     expect(isLiveQueryKey(['setup'])).toBe(false);
     expect(isLiveQueryKey(['projects'])).toBe(false);
   });

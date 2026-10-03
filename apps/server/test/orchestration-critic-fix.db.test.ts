@@ -3,7 +3,12 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION, type CheckBody, type InvolvementLevel } from '@spark-outpost/contracts';
+import {
+  CHECKPOINT_OPTION,
+  type Approval,
+  type CheckBody,
+  type InvolvementLevel,
+} from '@spark-outpost/contracts';
 import { POLICY_VERSION } from '../src/advisor/policy.ts';
 import { nextCallUsd } from '../src/orchestration/budget-check.ts';
 import { CRITIC_FIX_LEAD, RECHECK_RULE } from '../src/orchestration/context.ts';
@@ -162,6 +167,16 @@ async function reply(runId: string): Promise<string> {
 
 const notes = () => readFile(join(root, 'notes.txt'), 'utf8');
 
+const CONCERNS_NOTE = 'Kept automatically; worth a look: the Critic still has concerns.';
+
+function keptCard(orchestration: { checkpoints: readonly Approval[] }): Approval {
+  const kept = orchestration.checkpoints.find(
+    (approval) => approval.kind === 'accept' && approval.decidedBy === 'level',
+  );
+  expect(kept?.payload.checkpoint?.keptBy).toBe('hands-off');
+  return kept!;
+}
+
 describe('Critic → fix rounds', () => {
   it('sends correctness findings back to the same Builder at Auto-edit, reruns the checks and the Critic', async () => {
     await configureCheck(PASSING_CHECK);
@@ -273,15 +288,12 @@ describe('Critic → fix rounds', () => {
     );
   }, 120_000);
 
-  it('stops after three fix rounds, shows the remaining concerns and asks to keep at Auto-edit', async () => {
+  it('stops after three fix rounds, shows the remaining concerns and keeps with a note at Automatic', async () => {
     await start({ policy: JEV_SAYS_BUGS });
     const { conversationId, runId } = await begin('#bugrounds 9', 'hands-off');
-    const { asked } = await drive(conversationId, runId, answerEverything, 170_000);
-    expect(asked.map((approval) => approval.kind)).toEqual(['accept']);
-    expect(asked[0]!.reason).toContain('Automatic asks because the Critic still has concerns.');
-    expect(asked[0]!.options.map((option) => option.optionId)).toContain(
-      CHECKPOINT_OPTION.fixFindings,
-    );
+    const { asked, orchestration } = await drive(conversationId, runId, answerEverything, 170_000);
+    expect(asked).toEqual([]);
+    expect(keptCard(orchestration).reason).toContain(CONCERNS_NOTE);
     const spawned = await roles(runId);
     expect(spawned.filter((role) => role === 'builder')).toHaveLength(4);
     expect(spawned.filter((role) => role === 'critic')).toHaveLength(4);
@@ -376,12 +388,13 @@ describe('the task budget', () => {
   const stopAtBudget: Answerer = (approval) =>
     approval.kind === 'budget' ? { optionId: CHECKPOINT_OPTION.stop } : answerEverything(approval);
 
-  it('refuses the first fix turn once the Builder and Critic spent the cap, and Stop ends on the keep card', async () => {
+  it('refuses the first fix turn once the Builder and Critic spent the cap, and Stop keeps with a note', async () => {
     const builderAndCriticFloor = 0.2 + nextCallUsd('claude', 'sonnet');
     await start({ policy: JEV_SAYS_BUGS, costCapUsd: builderAndCriticFloor + 0.0002 });
     const { conversationId, runId } = await begin('#bugreview #cost', 'hands-off');
     const { asked, orchestration } = await drive(conversationId, runId, stopAtBudget);
-    expect(asked.map((approval) => approval.kind)).toEqual(['budget', 'accept']);
+    expect(asked.map((approval) => approval.kind)).toEqual(['budget']);
+    expect(keptCard(orchestration).reason).toContain(CONCERNS_NOTE);
     expect(orchestration).toMatchObject({ status: 'succeeded', budget: { exceeded: 'cost' } });
     expect(await roles(runId)).toEqual(['builder', 'critic']);
     expect((await findingAdvice(runId))[0]?.body.answer.fixable).toBe(2);
@@ -390,15 +403,15 @@ describe('the task budget', () => {
     );
   }, 120_000);
 
-  it('rolls a fix round cut by the run cost cap back to the state that passed the checks and asks to keep (N2)', async () => {
+  it('rolls a fix round cut by the run cost cap back to the state that passed the checks and keeps with a note (N2)', async () => {
     await configureCheck(PASSING_CHECK);
     await start({ policy: JEV_SAYS_BUGS, costCapUsd: 0.1 });
     const { conversationId, runId } = await begin('#bugrounds 2 #fixcost', 'hands-off');
     const { asked, orchestration } = await drive(conversationId, runId, stopAtBudget);
-    const cards = asked.filter((approval) => approval.kind !== 'execute');
-    expect(cards.map((approval) => approval.kind)).toEqual(['accept']);
-    expect(cards[0]!.reason).toContain('Automatic asks because the Critic still has concerns.');
-    expect(cards[0]!.reason).toContain(
+    expect(asked.filter((approval) => approval.kind !== 'execute')).toEqual([]);
+    const kept = keptCard(orchestration);
+    expect(kept.reason).toContain(CONCERNS_NOTE);
+    expect(kept.reason).toContain(
       "Stopped fix round 1: the run's cost budget ran out, so Spark Outpost rolled its edits back to the last state that passed the checks.",
     );
     expect(orchestration).toMatchObject({ status: 'succeeded', budget: { exceeded: 'cost' } });
@@ -408,7 +421,7 @@ describe('the task budget', () => {
     expect(await reply(runId)).toContain('Stopped fix round 1');
   }, 120_000);
 
-  it('rolls a fix round cut by its own budget back to the last passing state and ends on the keep card (N2)', async () => {
+  it('rolls a fix round cut by its own budget back to the last passing state and keeps with a note (N2)', async () => {
     await configureCheck(PASSING_CHECK);
     await start({ policy: JEV_SAYS_BUGS, fixRound: { toolCalls: 1 } });
     const { conversationId, runId } = await begin('#bugrounds 9 #slowfix', 'hands-off');
@@ -416,14 +429,13 @@ describe('the task budget', () => {
     expect(orchestration.status).toBe('succeeded');
     expect(orchestration.budget.exceeded).toBeNull();
     expect(await roles(runId)).toEqual(['builder', 'critic', 'builder']);
-    const cards = asked.filter((approval) => approval.kind !== 'execute');
-    expect(cards.map((approval) => approval.kind)).toEqual(['accept']);
-    const keep = cards[0]!;
+    expect(asked.filter((approval) => approval.kind !== 'execute')).toEqual([]);
+    const keep = keptCard(orchestration);
+    expect(keep.reason).toContain(CONCERNS_NOTE);
     expect(keep.reason).toContain(
       "Stopped fix round 1: fix round 1's own tool-call budget ran out, so Spark Outpost rolled its edits back to the last state that passed the checks.",
     );
     expect(keep.reason).toContain(`Still open: ${ROUND_FINDINGS[0]}`);
-    expect(keep.options.map((option) => option.optionId)).toContain(CHECKPOINT_OPTION.fixFindings);
     expect(await notes()).not.toContain('fixed the review findings');
     expect(await notes()).toContain('step 1');
   }, 120_000);
@@ -434,10 +446,12 @@ describe('the task budget', () => {
     const { asked, orchestration } = await drive(conversationId, runId);
     expect(orchestration.status).toBe('succeeded');
     expect(await roles(runId)).toEqual(['builder', 'critic']);
-    expect(asked.map((approval) => approval.kind)).toEqual(['accept']);
-    expect(asked[0]!.reason).toContain(
+    expect(asked).toEqual([]);
+    const kept = keptCard(orchestration);
+    expect(kept.reason).toContain(CONCERNS_NOTE);
+    expect(kept.reason).toContain(
       "Did not start fix round 1: too little of the run's tool-call budget was left for one",
     );
-    expect(asked[0]!.reason).toContain(`Still open: ${BUG_FINDINGS[0]}`);
+    expect(kept.reason).toContain(`Still open: ${BUG_FINDINGS[0]}`);
   }, 120_000);
 });

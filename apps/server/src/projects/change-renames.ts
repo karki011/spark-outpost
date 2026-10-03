@@ -3,6 +3,7 @@ import type { ChangedFile } from '@spark-outpost/contracts';
 
 const MIN_SIMILARITY = 0.5;
 const MAX_PAIRS = 400;
+const COMPARE_TIMEOUT_MS = 20;
 
 interface Comparison {
   similarity: number;
@@ -16,11 +17,13 @@ function lines(text: string): number {
   return text.endsWith('\n') ? count - 1 : count;
 }
 
-function compare(oldText: string, newText: string): Comparison {
+function compare(oldText: string, newText: string): Comparison | null {
+  const parts = diffLines(oldText, newText, { timeout: COMPARE_TIMEOUT_MS });
+  if (!parts) return null;
   let same = 0;
   let added = 0;
   let removed = 0;
-  for (const part of diffLines(oldText, newText)) {
+  for (const part of parts) {
     if (part.added) added += part.count;
     else if (part.removed) removed += part.count;
     else same += part.count;
@@ -50,7 +53,7 @@ function bestMatch(
     const newText = fresh.newText ?? '';
     if (taken.has(fresh) || !sizesClose(oldText, newText)) continue;
     const comparison = compare(oldText, newText);
-    if (comparison.similarity < MIN_SIMILARITY) continue;
+    if (!comparison || comparison.similarity < MIN_SIMILARITY) continue;
     if (!best || comparison.similarity > best.comparison.similarity) {
       best = { file: fresh, comparison };
     }

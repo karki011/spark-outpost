@@ -10,6 +10,7 @@ import {
   claudeSessionMeta,
   FORCE_PUSH_DENY_RULES,
   PIECE_ASK_RULES,
+  PUBLISH_ASK_RULES,
   secretRules,
 } from './agents.ts';
 import { CODEX_DO_MODE, codexPermissionProfiles } from './codex-permissions.ts';
@@ -149,6 +150,26 @@ describe('Claude session options', () => {
   it('routes a coordinated Builder through the gate, which guards its files', () => {
     const piece = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true, true));
     expect(piece.settings.permissions.ask).toEqual([...PIECE_ASK_RULES]);
+  });
+
+  it('sends a solo Builder’s pushes and gh calls to the gate, which applies the publish rules', () => {
+    const solo = optionsOf(agentDefinitions.claude.doSessionMeta?.([], null, true));
+    expect(solo.settings.permissions.ask).toEqual([...PUBLISH_ASK_RULES]);
+  });
+
+  it('lets gh through to the approval gate for a Builder whose run may publish', () => {
+    const publishing = optionsOf(
+      agentDefinitions.claude.doSessionMeta?.([], null, true, false, true),
+    );
+    const deny = publishing.settings.permissions.deny as string[];
+    expect(deny).not.toContain('Bash(gh:*)');
+    for (const rule of ['Bash(hub:*)', 'Bash(glab:*)', 'Bash(git remote set-url:*)']) {
+      expect(deny).toContain(rule);
+    }
+    const coordinated = optionsOf(
+      agentDefinitions.claude.doSessionMeta?.([], null, true, true, true),
+    );
+    expect(coordinated.settings.permissions.deny).toContain('Bash(gh:*)');
   });
 
   it('also denies git state changes to Builders of a coordinated task', () => {

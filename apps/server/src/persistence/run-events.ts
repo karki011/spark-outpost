@@ -41,15 +41,7 @@ export async function appendRunEvent(
 ): Promise<number> {
   return withTransaction(db, async (client) => {
     await assertLeaseHeld(client, lease, options.expectExpired ?? false);
-    const next = await client.query<{ seq: number }>(
-      'SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM run_events WHERE run_id = $1',
-      [lease.runId],
-    );
-    const seq = next.rows[0]!.seq;
-    await client.query(
-      'INSERT INTO run_events (run_id, seq, type, payload) VALUES ($1, $2, $3, $4)',
-      [lease.runId, seq, event.type, JSON.stringify(event)],
-    );
+    const seq = await insertRunEvent(client, lease.runId, event);
     if (options.assistantMessage) {
       await insertAssistantMessage(client, lease.runId, options.assistantMessage);
     }
@@ -62,6 +54,23 @@ export async function appendRunEvent(
     await client.query(`SELECT pg_notify('run_events', $1)`, [lease.runId]);
     return seq;
   });
+}
+
+export async function insertRunEvent(
+  client: DbClient,
+  runId: string,
+  event: RunEvent,
+): Promise<number> {
+  const next = await client.query<{ seq: number }>(
+    'SELECT COALESCE(MAX(seq), 0) + 1 AS seq FROM run_events WHERE run_id = $1',
+    [runId],
+  );
+  const seq = next.rows[0]!.seq;
+  await client.query(
+    'INSERT INTO run_events (run_id, seq, type, payload) VALUES ($1, $2, $3, $4)',
+    [runId, seq, event.type, JSON.stringify(event)],
+  );
+  return seq;
 }
 
 export async function assertLeaseHeld(client: DbClient, lease: Lease, expectExpired: boolean) {

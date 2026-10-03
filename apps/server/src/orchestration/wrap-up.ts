@@ -34,5 +34,6 @@ export async function wrappedUp(s: Session): Promise<FlowEvent> {
     filesChanged: files.length,
     ...(checksFailing(s) ? { checksFailing: true } : {}),
     ...(riskyMigration ? { riskyMigration } : {}),
+    ...(s.input.chatWorktree ? {} : { outsideWorktree: true }),
   };
 }

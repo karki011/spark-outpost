@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { ConversationSummary, PlanProgress } from './conversations.ts';
 import {
   TICKET_KEY_MAX_LENGTH,
   TICKET_SEARCH_MAX_LENGTH,
@@ -81,6 +82,7 @@ export const attentionRuleSchema = z.enum([
   'chat-asking',
   'chat-error',
   'pr-feedback',
+  'pr-checks',
   'sync-failed',
   'blocked',
   'high-idle',
@@ -102,16 +104,31 @@ export type AttentionFlag = z.infer<typeof attentionFlagSchema>;
 
 export const ticketSectionSchema = z.enum([
   'attention',
-  'working',
-  'pr_ready',
-  'in_review',
+  'spark',
+  'started',
   'up_next',
+  'review',
   'done',
 ]);
 export type TicketSection = z.infer<typeof ticketSectionSchema>;
 
 export const ticketChatStateSchema = z.enum(['asking', 'running', 'error', 'finished', 'idle']);
 export type TicketChatState = z.infer<typeof ticketChatStateSchema>;
+
+export function ticketChatState(chat: ConversationSummary): TicketChatState {
+  if (chat.needsInput) return 'asking';
+  switch (chat.latestRun?.status) {
+    case 'queued':
+    case 'running':
+      return 'running';
+    case 'failed':
+      return 'error';
+    case 'succeeded':
+      return 'finished';
+    default:
+      return 'idle';
+  }
+}
 
 export const ticketLastSyncSchema = z.object({
   action: z.enum(['transition', 'link_pr', 'assign']),
@@ -152,6 +169,11 @@ export const inboxTicketSchema = ticketListItemSchema.extend({
   snooze: ticketSnoozeSchema.optional(),
 });
 export type InboxTicket = z.infer<typeof inboxTicketSchema>;
+
+export function sparkWorkingText(progress: PlanProgress | null, agent: string | null): string {
+  const who = `${agent ?? 'Spark'} working`;
+  return progress ? `${progress.done}/${progress.total} · ${who}` : who;
+}
 
 export const BRIEF_INTERVALS = [0, 15, 30, 60] as const;
 const dayCount = z.number().int().min(1).max(30);

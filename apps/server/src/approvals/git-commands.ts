@@ -3,7 +3,7 @@ import { programName } from './commands.ts';
 
 const GIT_PUBLISHES = ['push', 'send-email', 'request-pull'];
 const REMOTE_CHANGES = ['add', 'set-url', 'remove', 'rm', 'rename', 'set-head', 'set-branches'];
-const HOSTING_CLIS = ['gh', 'hub', 'glab', 'tea'];
+export const HOSTING_CLIS = ['gh', 'hub', 'glab', 'tea'];
 
 export const PUBLISH_COMMANDS: readonly string[] = [
   ...GIT_PUBLISHES.map((sub) => `git ${sub}`),
@@ -58,6 +58,7 @@ const PUSH_VALUE_FLAGS = new Set(['-o', '--push-option', '--repo', '--receive-pa
 const EVERY_REF_FLAGS = new Set(['--all', '--branches', '--tags']);
 
 interface PushShape {
+  remote: string | null;
   plain: boolean;
   lease: boolean;
   mirror: boolean;
@@ -67,6 +68,7 @@ interface PushShape {
 
 function pushShape(args: readonly string[]): PushShape {
   const shape: PushShape = {
+    remote: null,
     plain: false,
     lease: false,
     mirror: false,
@@ -83,6 +85,7 @@ function pushShape(args: readonly string[]): PushShape {
     else if (token === '--force' || /^-[a-zA-Z]*f[a-zA-Z]*$/.test(token)) shape.plain = true;
     else if (!token.startsWith('-')) positional.push(token);
   }
+  shape.remote = positional[0] ?? null;
   shape.refspecs = positional.slice(1);
   if (shape.refspecs.some((refspec) => refspec.startsWith('+'))) shape.plain = true;
   return shape;
@@ -94,6 +97,32 @@ function destination(refspec: string): string | null {
   const target = (colon === -1 ? bare : bare.slice(colon + 1)).replace(/^refs\/heads\//, '');
   if (!target || target === 'HEAD' || target === '@' || target.startsWith('refs/')) return null;
   return target;
+}
+
+export interface PushTarget {
+  remote: string | null;
+  branches: (string | null)[];
+  widens: boolean;
+}
+
+const WIDENING_PUSH_FLAGS = new Set(['--delete', '--prune', '--repo']);
+
+function widensPush(token: string): boolean {
+  if (WIDENING_PUSH_FLAGS.has(token.split('=')[0]!)) return true;
+  return /^-[a-zA-Z]+$/.test(token) && token.includes('d');
+}
+
+export function pushTargets(command: string): PushTarget[] {
+  return pushArgs(command).map((args) => {
+    const shape = pushShape(args);
+    return {
+      remote: shape.remote,
+      branches: shape.refspecs.map((refspec) =>
+        refspec.replace(/^\+/, '').startsWith(':') ? null : destination(refspec),
+      ),
+      widens: shape.mirror || shape.everyRef || args.some(widensPush),
+    };
+  });
 }
 
 function forcePushOf(shape: PushShape, protectedBranches: readonly string[]): ForcePush | null {
@@ -127,15 +156,25 @@ export function forcePush(command: string, defaultBranch: string | null = null):
   };
 }
 
-function publishes(command: string, publishing: readonly string[]): boolean {
-  const hosting = commandTree(command).commands.some((program) =>
-    HOSTING_CLIS.includes(programName(program)),
-  );
-  if (hosting) return true;
+function gitPublishes(command: string, publishing: readonly string[]): boolean {
   return gitSubcommands(command).some((sub) => {
     if (publishing.includes(sub.name)) return true;
     return sub.name === 'remote' && sub.rest.some((token) => REMOTE_CHANGES.includes(token));
   });
+}
+
+function publishes(command: string, publishing: readonly string[]): boolean {
+  const hosting = commandTree(command).commands.some((program) =>
+    HOSTING_CLIS.includes(programName(program)),
+  );
+  return hosting || gitPublishes(command, publishing);
+}
+
+export function gitPublishesBesidesPush(command: string): boolean {
+  return gitPublishes(
+    command,
+    GIT_PUBLISHES.filter((name) => name !== 'push'),
+  );
 }
 
 export function publishesCode(command: string): boolean {

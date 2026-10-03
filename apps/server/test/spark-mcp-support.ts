@@ -2,11 +2,18 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { Approval, RunEvent } from '@spark-outpost/contracts';
+import {
+  SPARK_ACTION_OPTION,
+  sparkResultFinished,
+  type Approval,
+  type RunEvent,
+} from '@spark-outpost/contracts';
 import { decideApproval, getApproval, type UserDecision } from '../src/persistence/approvals.ts';
+import { updateChatSettings } from '../src/persistence/chat-settings.ts';
 import type { SparkActionHooks, SparkScope, SparkToolDeps } from '../src/spark-mcp/deps.ts';
 import { ApprovalWaiters } from '../src/workflow/approval-waiters.ts';
 import { startSparkMcpHost, type SparkGrant, type SparkMcpHost } from '../src/spark-mcp/host.ts';
+import { startSparkActionFollowThrough } from '../src/spark-mcp/actions/follow-through.ts';
 import { memorySecretStore } from '../src/setup/secrets.ts';
 import { eventually, type TestDb } from './support.ts';
 
@@ -52,7 +59,9 @@ export async function startSparkTools(
   scope: Partial<SparkScope> = {},
   overrides: Partial<SparkToolDeps> = {},
 ): Promise<SparkToolsHarness> {
-  const host = await startSparkMcpHost(toolDeps(t, overrides));
+  const deps = toolDeps(t, overrides);
+  const host = await startSparkMcpHost(deps);
+  const followThrough = await startSparkActionFollowThrough(deps, 25);
   const grant = host.grant({
     workspaceId: t.workspaceId,
     conversationId: null,
@@ -78,6 +87,7 @@ export async function startSparkTools(
     },
     async close() {
       await client.close();
+      await followThrough.stop();
       await host.close();
     },
   };
@@ -127,4 +137,34 @@ export async function answerCard(
   const card = await pendingCard(t);
   await decideApproval(t.db, t.workspaceId, card.id, { optionId, scope: 'once', ...extra });
   return card;
+}
+
+export async function cardResult(t: TestDb, id: string): Promise<Approval> {
+  const settled = await eventually(async () => {
+    const approval = await getApproval(t.db, id);
+    if (!approval) return null;
+    if (approval.status === 'pending') return null;
+    if (approval.status !== 'allowed') return approval;
+    return sparkResultFinished(approval.payload.sparkResult) ? approval : null;
+  }, 15_000);
+  return settled!;
+}
+
+export async function confirmCard(
+  t: TestDb,
+  extra: Omit<UserDecision, 'optionId' | 'scope'> = {},
+): Promise<Approval> {
+  const card = await answerCard(t, SPARK_ACTION_OPTION.confirm, extra);
+  return cardResult(t, card.id);
+}
+
+export async function fullAutoChat(t: TestDb, conversationId: string): Promise<void> {
+  await t.db.query(
+    `INSERT INTO provider_connections
+       (workspace_id, provider, method, detail, models, model, permission, effort, verified_at)
+     VALUES ($1, 'claude', 'cli', 'test', '[]', 'opus', 'do', 'medium', now())
+     ON CONFLICT DO NOTHING`,
+    [t.workspaceId],
+  );
+  await updateChatSettings(t.db, conversationId, { provider: 'claude', level: 'full-auto' });
 }

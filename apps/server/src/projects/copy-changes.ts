@@ -1,7 +1,10 @@
 import type { ChangedFile, RunChange, RunFileChanges } from '@spark-outpost/contracts';
+import { mapLimit } from '../codescan/file-stats.ts';
 import type { Queryable } from '../persistence/db.ts';
 import { worktreesForRuns, type WorktreeRecord } from '../persistence/worktrees.ts';
 import { gitChanges, gitFileAt } from './snapshot.ts';
+
+const GIT_READ_CONCURRENCY = 8;
 
 export type Describe = (versions: {
   change: RunChange;
@@ -20,14 +23,12 @@ async function copyFiles(
 ): Promise<ChangedFile[]> {
   const { repoRoot: root, baseCommit: base, resultCommit: result } = record;
   const changes = await gitChanges(root, base, result);
-  return Promise.all(
-    changes.map(async (change) =>
-      describe({
-        change,
-        before: change.change === 'added' ? null : await gitFileAt(root, base, change.path),
-        after: change.change === 'deleted' ? null : await gitFileAt(root, result, change.path),
-      }),
-    ),
+  return mapLimit(changes, GIT_READ_CONCURRENCY, async (change) =>
+    describe({
+      change,
+      before: change.change === 'added' ? null : await gitFileAt(root, base, change.path),
+      after: change.change === 'deleted' ? null : await gitFileAt(root, result, change.path),
+    }),
   );
 }
 

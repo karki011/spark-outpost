@@ -43,6 +43,7 @@ export interface AgentDefinition {
   offers?: AgentOffers;
   usedModel?: (model: string | null) => string | null;
   estimatesCost?: boolean;
+  longContext?: boolean;
   inputExcludesCache?: boolean;
   usageReadings?: UsageReadings;
   conversationMode: string;
@@ -65,6 +66,7 @@ export interface AgentDefinition {
     repo?: ClaudeRepoOptions | null,
     builder?: boolean,
     coordinated?: boolean,
+    publishes?: boolean,
   ) => Record<string, unknown>;
   probeSessionMeta?: Record<string, unknown>;
   askMode: string;
@@ -88,6 +90,12 @@ const CLAUDE_COMMAND_TOOLS = ['Bash'];
 const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'];
 const CLAUDE_DO_MODE = 'default';
 export const PIECE_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
+export const PUBLISH_ASK_RULES = ['Bash(git push:*)', 'Bash(gh:*)'] as const;
+
+function askRules(builder: boolean, coordinated: boolean): string[] {
+  if (coordinated) return [...PIECE_ASK_RULES];
+  return builder ? [...PUBLISH_ASK_RULES] : [];
+}
 
 export const FORCE_PUSH_DENY_RULES = [
   'Bash(git push --force:*)',
@@ -108,11 +116,14 @@ const SOLO_BUILDER_DENY_RULES = BUILDER_PUBLISH_DENY_RULES.filter(
   (rule) => rule !== 'Bash(git push:*)',
 );
 
-function builderDeny(builder: boolean, coordinated: boolean): string[] {
+const PUBLISHING_BUILDER_DENY_RULES = SOLO_BUILDER_DENY_RULES.filter(
+  (rule) => rule !== 'Bash(gh:*)',
+);
+
+function builderDeny(builder: boolean, coordinated: boolean, publishes: boolean): string[] {
   if (!builder) return [];
-  return coordinated
-    ? [...BUILDER_PUBLISH_DENY_RULES, ...BUILDER_GIT_DENY_RULES]
-    : SOLO_BUILDER_DENY_RULES;
+  if (coordinated) return [...BUILDER_PUBLISH_DENY_RULES, ...BUILDER_GIT_DENY_RULES];
+  return publishes ? PUBLISHING_BUILDER_DENY_RULES : SOLO_BUILDER_DENY_RULES;
 }
 
 export function secretRules(extraRoots: readonly string[]): string[] {
@@ -136,11 +147,12 @@ export function claudeSessionMeta(
   builder = false,
   allowBypass = false,
   coordinated = false,
+  publishes = false,
 ): Record<string, unknown> {
   const deny = [
     ...secretRules(extraRoots),
     ...FORCE_PUSH_DENY_RULES,
-    ...builderDeny(builder, coordinated),
+    ...builderDeny(builder, coordinated, publishes),
   ];
   const allowRules = [...(repo?.allowRules ?? [])];
   const plugins = repo?.plugins ?? [];
@@ -164,7 +176,7 @@ export function claudeSessionMeta(
           disableSkillShellExecution: true,
           permissions: {
             deny,
-            ...(coordinated ? { ask: [...PIECE_ASK_RULES] } : {}),
+            ...(builder || coordinated ? { ask: askRules(builder, coordinated) } : {}),
             ...(allowRules.length > 0 ? { allow: allowRules } : {}),
             blockReadsOutsideWorkingDirectories: true,
             ...(allowBypass ? {} : { disableBypassPermissionsMode: 'disable' }),
@@ -242,7 +254,17 @@ const claudeSessions = {
     repo?: ClaudeRepoOptions | null,
     builder = false,
     coordinated = false,
-  ) => claudeSessionMeta(CLAUDE_DO_TOOLS, extraRoots, repo ?? null, builder, true, coordinated),
+    publishes = false,
+  ) =>
+    claudeSessionMeta(
+      CLAUDE_DO_TOOLS,
+      extraRoots,
+      repo ?? null,
+      builder,
+      true,
+      coordinated,
+      publishes,
+    ),
 } satisfies Partial<AgentDefinition>;
 
 const CLAUDE_ACP = '@agentclientprotocol/claude-agent-acp';
@@ -264,6 +286,7 @@ export const agentDefinitions: Record<ProviderId, AgentDefinition> = {
     cli: 'claude',
     launch: () => packageBin(CLAUDE_ACP),
     ...claudeSessions,
+    longContext: true,
   },
   codex: {
     id: 'codex',

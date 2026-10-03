@@ -84,13 +84,19 @@ describe('taskList', () => {
     expect(items[1]).toMatchObject({ tokens: 1200, costUsd: 0.004, detail: 'Replied' });
   });
 
-  it('adds waiting items from harness events and a done item per pull request', () => {
+  it('adds waiting items from harness events and a done item per pull request it opened', () => {
     const items = taskList(
       {
         status: 'open',
         links: [
-          { kind: 'pr', url: 'https://github.com/a/b/pull/7', title: 'a/b#7' },
-          { kind: 'link', url: 'https://example.com', title: null },
+          { kind: 'pr', url: 'https://github.com/a/b/pull/7', title: 'a/b#7', source: 'ship' },
+          {
+            kind: 'pr',
+            url: 'https://github.com/a/b/pull/2',
+            title: 'a/b#2',
+            source: 'agent_text',
+          },
+          { kind: 'link', url: 'https://example.com', title: null, source: 'user' },
         ],
       },
       [run()],

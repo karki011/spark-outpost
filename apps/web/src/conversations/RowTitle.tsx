@@ -8,22 +8,28 @@ const MIN_SCROLL_S = 1.2;
 
 function useOverflow(text: string) {
   const [element, ref] = useState<HTMLSpanElement | null>(null);
-  const [overflow, setOverflow] = useState(0);
+  const [truncated, setTruncated] = useState(false);
   useEffect(() => {
     if (!element) return;
-    const measure = () => setOverflow(Math.max(0, element.scrollWidth - element.clientWidth));
-    measure();
-    const observer = new ResizeObserver(measure);
+    const check = () => setTruncated(element.scrollWidth > element.clientWidth);
+    check();
+    const observer = new ResizeObserver(check);
     observer.observe(element);
     return () => observer.disconnect();
   }, [element, text]);
-  return { ref, overflow };
+  const measure = useCallback(
+    () => (element ? Math.max(0, element.scrollWidth - element.clientWidth) : 0),
+    [element],
+  );
+  return { ref, truncated, measure };
 }
 
 export function useMarquee(text: string) {
-  const { ref, overflow } = useOverflow(text);
+  const { ref, truncated, measure } = useOverflow(text);
+  const [shift, setShift] = useState(0);
   const [running, setRunning] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const overflow = truncated ? Math.max(shift, 1) : 0;
 
   const stop = useCallback(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -32,9 +38,10 @@ export function useMarquee(text: string) {
   }, []);
 
   const start = useCallback(() => {
-    if (overflow === 0 || prefersReducedMotion() || timer.current) return;
+    if (!truncated || prefersReducedMotion() || timer.current) return;
+    setShift(measure());
     timer.current = setTimeout(() => setRunning(true), START_DELAY_MS);
-  }, [overflow]);
+  }, [truncated, measure]);
 
   useEffect(() => stop, [stop]);
 

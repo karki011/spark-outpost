@@ -94,7 +94,7 @@ The safety floor holds at every level.`,
       'gate',
       'spend cap',
     ],
-    text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: secret files (.env, keys) ask or are refused; Builders never publish (only Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log. Installs and unparsable commands follow the mode.
+    text: `The backend's approval gate follows the agent's own mode: a card only when the mode asks or the agent asks itself (shown with its reason, e.g. a sandbox block). A floor no mode loosens: secret files (.env, keys) ask or are refused; agents push only the chat's own spark/ branch and its gh PR, and only when asked, at Full auto → PR or in Auto/Bypass (else Ship pushes); no writes or deletes outside the linked folders (temp folders fine); everything goes to a hash-chained audit log.
 
 Force pushes: git push --force-with-lease to a named, non-default branch always asks with a "Force push?" card you press and hold to confirm, with no Always allow. Plain --force, +refspec, mirror, unnamed and default-branch force pushes are refused.
 
@@ -175,11 +175,11 @@ In a chat worktree, the keep card offers "Bring changes into <your branch>", "Op
     id: 'tickets',
     title: 'Tickets inbox, links to chats and PRs',
     keywords: ['ticket', 'jira', 'linear', 'inbox', 'attention', 'link', 'unlink', 'priority'],
-    text: `Tickets pulls your Jira and Linear tickets (connect them in Settings → Connectors) into one inbox: Needs attention first, then Working, PR ready, In review and Up next. Each row shows status, priority, why it is flagged, due date, and a links column with the chat (with its state) and the PR (draft, open, checks failing, changes requested, approved, merged, closed).
+    text: `Tickets pulls your Jira and Linear tickets (connect them in Settings → Connectors) into one inbox grouped by flow: Needs you, In progress with Spark, Started, Up next, In review / PR open, Done recently; a strip of counts filters. Rows show a status chip, Spark progress, priority, age, and links to the chat and PR.
 
-A build turn that names exactly one ticket links the chat to it; references like "see" or "similar to", or several keys, only suggest. Linked chats show a "KEY · title" chip with Unlink and Undo, their branch starts with the key, and Ship puts the key in the PR title. Mentions never move a ticket's status.
+A build turn that names exactly one ticket links the chat to it; references like "see" or "similar to", or several keys, only suggest. Linked chats show a "KEY · title" chip (Unlink, Undo), their branch starts with the key, and Ship puts the key in the PR title. Mentions never move a ticket's status.
 
-spark_tickets returns the same live data; use sort=priority for the most urgent ticket.`,
+spark_tickets: live data; sort=priority for most urgent, action=read for one ticket in full.`,
   },
   {
     id: 'attention-brief',
@@ -221,7 +221,7 @@ Hooks and a repo's permissions.allow rules are off until you trust the folder (o
 
 Read tools need no approval card; section spark-tools says which one answers which question.
 
-Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket, spark_assign_ticket, spark_open_pr, spark_pr_follow_up_round, spark_create_spark and spark_update_spark. Each shows a card previewing exactly what will change; you may edit the text, and nothing happens until you confirm. There is no Always allow and autonomy levels never decide these cards. Every action is audited.`,
+Action tools: spark_create_ticket, spark_comment_ticket, spark_transition_ticket, spark_assign_ticket, spark_open_pr, spark_pr_follow_up_round, spark_create_spark and spark_update_spark. In Auto, Bypass or Full auto → PR Spark does them at once; otherwise a card shows the change and Spark does it when you confirm. Audited.`,
   },
   {
     id: 'spark-tools',

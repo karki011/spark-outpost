@@ -6,6 +6,7 @@ import request from 'supertest';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { SPARK_ACTION_OPTION, taskOverviewSchema } from '@spark-outpost/contracts';
+import { getApproval } from '../src/persistence/approvals.ts';
 import { getRun } from '../src/persistence/runs.ts';
 import { snapshotRun } from '../src/projects/run-changes.ts';
 import { createFakeProvider } from '../src/providers/fake.ts';
@@ -21,6 +22,8 @@ import {
 } from './ship-support.ts';
 import {
   answerCard,
+  confirmCard,
+  fullAutoChat,
   recordedHooks,
   startSparkTools,
   type RecordedHooks,
@@ -111,19 +114,16 @@ async function open(conversationId: string, runId: string) {
 }
 
 describe('spark_open_pr', { timeout: 60_000 }, () => {
-  it('opens a draft PR through Ship with the confirmed title and description', async () => {
+  it('opens a PR through Ship with the confirmed title and description', async () => {
     const repo = await repoWithRemote(base, 'pr');
     const { conversationId, runId, taskId } = await editedChat(repo.root);
     const harness = await open(conversationId, runId);
 
-    const call = harness.call('spark_open_pr', {
+    const waiting = await harness.call('spark_open_pr', {
       title: 'Tidy notes',
       body: 'Adds a second line to the notes.',
     });
-    const card = await answerCard(t, SPARK_ACTION_OPTION.confirm, {
-      edits: { title: 'Tidy the notes file' },
-    });
-    const result = (await call).json<{ outcome: string; url: string; number: number }>();
+    const card = await confirmCard(t, { edits: { title: 'Tidy the notes file' } });
 
     expect(card.payload.sparkAction).toMatchObject({
       action: 'open_pr',
@@ -132,10 +132,12 @@ describe('spark_open_pr', { timeout: 60_000 }, () => {
       repo: 'acme/widgets',
       files: [{ path: 'notes.txt', change: 'modified' }],
     });
-    expect(result).toMatchObject({
-      outcome: 'done',
-      number: 1,
+    expect(waiting.json()).toMatchObject({ outcome: 'waiting_for_user', approvalId: card.id });
+    expect(card.payload.sparkResult).toMatchObject({
+      state: 'done',
+      message: 'Opened PR #1.',
       url: 'https://github.com/acme/widgets/pull/1',
+      output: { number: 1 },
     });
     expect(stub.github.pulls[0]).toMatchObject({ title: 'Tidy the notes file', draft: false });
     expect(stub.github.pulls[0]!.body).toContain('Adds a second line to the notes.');
@@ -147,11 +149,47 @@ describe('spark_open_pr', { timeout: 60_000 }, () => {
     const { conversationId, runId } = await editedChat(repo.root);
     const harness = await open(conversationId, runId);
 
-    const call = harness.call('spark_open_pr', { title: 'Nope' });
-    await answerCard(t, SPARK_ACTION_OPTION.decline);
+    await harness.call('spark_open_pr', { title: 'Nope' });
+    const card = await answerCard(t, SPARK_ACTION_OPTION.decline);
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
-    expect((await call).json()).toMatchObject({ outcome: 'declined' });
+    expect((await getApproval(t.db, card.id))?.status).toBe('denied');
     expect(stub.github.pulls).toEqual([]);
+  });
+
+  it('opens the PR without a card at Full auto → PR', async () => {
+    const repo = await repoWithRemote(base, 'full-auto');
+    const { conversationId, runId } = await editedChat(repo.root);
+    await fullAutoChat(t, conversationId);
+    const harness = await open(conversationId, runId);
+
+    const result = await harness.call('spark_open_pr', { title: 'Tidy notes' });
+
+    expect(result.json()).toMatchObject({
+      outcome: 'done',
+      url: 'https://github.com/acme/widgets/pull/1',
+      number: 1,
+    });
+    expect(stub.github.pulls).toHaveLength(1);
+    const { rows } = await t.db.query<{ status: string; decided_by: string }>(
+      `SELECT status, decided_by FROM approvals WHERE kind = 'spark_action'`,
+    );
+    expect(rows).toEqual([{ status: 'allowed', decided_by: 'level' }]);
+  });
+
+  it('opens the PR without a card when the agent runs in Bypass permissions', async () => {
+    const repo = await repoWithRemote(base, 'bypass');
+    const { conversationId, runId } = await editedChat(repo.root);
+    await t.db.query(
+      `UPDATE runs SET provider = 'claude', used_mode = 'bypassPermissions' WHERE id = $1`,
+      [runId],
+    );
+    const harness = await open(conversationId, runId);
+
+    const result = await harness.call('spark_open_pr', { title: 'Tidy notes' });
+
+    expect(result.json()).toMatchObject({ outcome: 'done', number: 1 });
+    expect(stub.github.pulls[0]).toMatchObject({ title: 'Tidy notes' });
   });
 
   it('explains when the chat has nothing to ship', async () => {

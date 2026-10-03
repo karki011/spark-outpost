@@ -25,7 +25,10 @@ import {
 import { openChats } from './navigation.ts';
 import { seedPrFollowUp } from './pr-follow-up-seed.ts';
 import { FAKE_GH_STATE, STUB_PORT } from './stub-config.ts';
-import { connectTickets, openTickets, resetTicketFakes, seedAssignedSince } from './ticket-seed.ts';
+import { seedFlowChats } from './ticket-flow-seed.ts';
+import { connectTickets, openTickets, resetTicketFakes } from './ticket-seed.ts';
+
+const PLAN_APPROVAL = { kind: 'plan', title: 'Approve the plan' };
 
 const IMAGES = path.resolve('docs/guide/images');
 const STUB_URL = `http://127.0.0.1:${STUB_PORT}`;
@@ -257,6 +260,7 @@ test('PR follow-up screenshots', async ({ page }) => {
 test('Tickets and GitHub screenshots', async ({ page }) => {
   test.setTimeout(120_000);
   await resetTicketFakes();
+  await page.request.post(`${STUB_URL}/github-test/reset`);
   await seedDemo(page, repo);
   writeFileSync(FAKE_GH_STATE, 'maya');
   await openSettings(page, /Connectors/);
@@ -266,10 +270,27 @@ test('Tickets and GitHub screenshots', async ({ page }) => {
   await shoot(page, IMAGES, 'tickets-github', github);
 
   await connectTickets(page);
-  await seedAssignedSince([['WEB-433', 3]]);
+  await page.request.get('/api/tickets/inbox');
+  await seedFlowChats([
+    { key: 'WEB-421', source: 'linear', status: 'awaiting_approval', approval: PLAN_APPROVAL },
+    {
+      key: 'WEB-433',
+      source: 'linear',
+      status: 'running',
+      spark: 'Pip',
+      plan: ['completed', 'completed', 'in_progress'],
+    },
+    { key: 'API-84', source: 'jira', status: 'succeeded' },
+    {
+      key: 'API-77',
+      source: 'jira',
+      status: 'succeeded',
+      pull: { number: 341, checks: 'passing' },
+    },
+  ]);
   await openTickets(page);
   const main = page.getByRole('main', { name: 'Tickets' });
-  await expect(main.getByRole('region', { name: 'Needs attention' })).toBeVisible({
+  await expect(main.getByRole('region', { name: 'Needs you', exact: true })).toBeVisible({
     timeout: 15_000,
   });
   await shoot(page, IMAGES, 'tickets-inbox');

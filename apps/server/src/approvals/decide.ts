@@ -18,6 +18,12 @@ import { diskLister, type FileLister } from './file-lister.ts';
 import { readConcern } from './file-reads.ts';
 import { ASK_RUN_REASON, askRunRefusal } from './ask-run.ts';
 import { egressOf } from './egress.ts';
+import {
+  publishVerdict,
+  type PublishBasis,
+  type PublishContext,
+  type PublishVerdict,
+} from './publish-policy.ts';
 import { taintReason } from './taint.ts';
 import { writeTargets } from './write-targets.ts';
 import { commandCwd, inTempDir, isSecretTarget, outsideRoots, place } from './request-place.ts';
@@ -193,6 +199,7 @@ export interface DecideOptions {
   instructionGrants?: ReadonlySet<string>;
   shell?: ShellScript | null;
   agentAsks?: boolean;
+  publish?: PublishContext;
 }
 
 function secretLabel(roots: readonly RequestRoot[], target: string): string {
@@ -259,9 +266,13 @@ function refusal(
   forced: ForcePush | null,
   guarded: Guarded,
   view: ShellView | null,
+  published: PublishVerdict | null,
 ): string | null {
   if (options.builder && request.command && publishesCode(request.command)) {
-    if (!soloLeasePush(request.command, options, forced)) return BUILDER_PUBLISH_REASON;
+    if (published?.kind === 'refuse') return published.reason;
+    if (!published && !soloLeasePush(request.command, options, forced)) {
+      return BUILDER_PUBLISH_REASON;
+    }
   }
   const asking = options.askRun ? askRunChange(request, view) : null;
   if (asking) return asking;
@@ -346,7 +357,8 @@ export function decide(
   const forced = request.command ? forcePush(request.command, options.defaultBranch ?? null) : null;
   const guarded = guardedTargets(request);
   const view = shellView(request, options.shell ?? null);
-  const refused = refusal(request, options, forced, guarded, view);
+  const published = publishing(posture, request, options);
+  const refused = refusal(request, options, forced, guarded, view, published);
   if (refused) return { verdict: 'reject', reason: refused };
   if (runRules.reject.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'reject', reason: RUN_REJECTED_REASON };
@@ -370,6 +382,7 @@ export function decide(
   if (runRules.allow.some((rule) => matchesRule(request, rule))) {
     return { verdict: 'allow', by: 'run_rule' };
   }
+  if (published?.kind === 'allow') return publishAllowed(published.basis);
   if (request.kind === 'other' && request.title === ENTER_PLAN_MODE_TITLE) {
     return { verdict: 'allow', by: 'level', why: ENTER_PLAN_MODE_WHY };
   }
@@ -417,6 +430,24 @@ function agentAsked(
     return { verdict: 'allow', by: 'level', why: options.askAutoWhy };
   }
   return allowlistCovers(allowlist, request.command) ? { verdict: 'allow', by: 'allowlist' } : ASK;
+}
+
+function publishing(
+  posture: ModePosture,
+  request: ApprovalRequest,
+  options: DecideOptions,
+): PublishVerdict | null {
+  if (!request.command || !options.publish || options.piece?.coordinated) return null;
+  return publishVerdict(request.command, posture, options.publish);
+}
+
+export const PUBLISH_ASKED_WHY = 'you asked to push or open a PR';
+export const PUBLISH_FULL_AUTO_WHY = 'Full auto → PR';
+
+function publishAllowed(basis: PublishBasis): Decision {
+  if (basis === 'requested') return { verdict: 'allow', by: 'level', why: PUBLISH_ASKED_WHY };
+  if (basis === 'full_auto') return { verdict: 'allow', by: 'level', why: PUBLISH_FULL_AUTO_WHY };
+  return { verdict: 'allow', by: 'level' };
 }
 
 function unapproved(posture: ModePosture): Decision {

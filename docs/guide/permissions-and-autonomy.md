@@ -67,7 +67,7 @@ Whatever the mode and level, these wait for your answer:
 
 The model you pin is the chat's own model, the one that reads, plans and coordinates; Builders start from it. See [Builders in a pinned chat](auto-routing.md#builders-in-a-pinned-chat).
 
-**Full auto → PR** has firm limits too. It pushes only the chat's own branch and opens or updates its PR. It never merges, never force-pushes, and Builders never push or open PRs themselves.
+**Full auto → PR** has firm limits too. It pushes only the chat's own branch and opens or updates its PR. It never merges and never force-pushes. At this level the agent, Builders included, may also push the chat's own branch and open its PR itself; no other branch is ever pushed.
 
 ## If you don't answer
 

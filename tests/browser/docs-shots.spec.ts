@@ -128,17 +128,17 @@ test('Chats and modes screenshots', async ({ page }) => {
   await shoot(page, IMAGES, 'chats-and-modes-autonomy');
 });
 
-const waiting = (page: Page) => page.getByRole('region', { name: 'Waiting for you' });
+const waitingCard = (page: Page, card: RegExp) => page.getByRole('group', { name: card });
 
 async function ask(page: Page, text: string, card: RegExp) {
   const input = page.getByRole('textbox', { name: 'Message' });
   await input.fill(text);
   await input.press('Enter');
-  await expect(waiting(page).getByRole('group', { name: card })).toBeVisible({ timeout: 20_000 });
+  await expect(waitingCard(page, card)).toBeVisible({ timeout: 20_000 });
 }
 
-async function answer(page: Page, button: string) {
-  await waiting(page).getByRole('button', { name: button, exact: true }).click();
+async function answer(page: Page, card: RegExp, button: string) {
+  await waitingCard(page, card).getByRole('button', { name: button, exact: true }).click();
   const stop = page.getByRole('button', { name: 'Stop', exact: true });
   if (await stop.isVisible()) await stop.click();
   await expect(stop).toBeHidden({ timeout: 20_000 });
@@ -166,8 +166,8 @@ test('Approvals screenshots', async ({ page }) => {
       'Permissions: Manual',
     );
     await ask(page, message, card);
-    await shoot(page, IMAGES, shot, waiting(page));
-    await answer(page, button);
+    await shoot(page, IMAGES, shot, waitingCard(page, card));
+    await answer(page, card, button);
   }
 
   await page.locator('.ctx-repo').click();

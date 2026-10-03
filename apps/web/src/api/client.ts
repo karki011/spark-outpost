@@ -164,8 +164,12 @@ export const api = {
     );
     return list.annotations;
   },
-  cancelRun: (runId: string): Promise<Run> =>
-    request(runSchema, `/runs/${runId}/cancel`, { method: 'POST', body: '{}' }),
+  cancelRun: (runId: string, signal?: AbortSignal): Promise<Run> =>
+    request(runSchema, `/runs/${runId}/cancel`, {
+      method: 'POST',
+      body: '{}',
+      ...(signal ? { signal } : {}),
+    }),
   updateChatSettings: (
     conversationId: string,
     update: UpdateChatSettingsRequest,

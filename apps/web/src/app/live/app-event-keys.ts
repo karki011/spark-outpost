@@ -9,6 +9,7 @@ import { prWatchesKey } from '../../chat/pull-request/pr-follow-up-api.ts';
 import { homeKeys } from '../../home/home-api.ts';
 import { taskKeys } from '../../tasks/task-api.ts';
 import { teammateKeys } from '../../teammates/teammates-api.ts';
+import { ticketKeys } from '../../tickets/tickets-api.ts';
 
 interface Invalidation {
   queryKey: QueryKey;
@@ -25,6 +26,7 @@ export const LIVE_ROOTS: readonly string[] = [
   analyticsKeys.all[0],
   queryKeys.usageSummary[0],
   teammateKeys.all[0],
+  ticketKeys.all[0],
 ];
 
 export function isLiveQueryKey(key: QueryKey): boolean {
@@ -41,6 +43,8 @@ const today: Invalidation = { queryKey: homeKeys.today, exact: true };
 const usage: Invalidation = { queryKey: queryKeys.usageSummary, exact: true };
 const analytics: Invalidation = { queryKey: analyticsKeys.all };
 const teammates: Invalidation = { queryKey: teammateKeys.all };
+const ticketInbox: Invalidation = { queryKey: ticketKeys.inbox, exact: true };
+const ticketConnections: Invalidation = { queryKey: ticketKeys.connections, exact: true };
 
 function conversationScoped(event: AppEvent, withAudit: boolean): Invalidation[] {
   const id = event.conversationId;
@@ -88,8 +92,10 @@ function invalidationsFor(event: AppEvent): Invalidation[] {
       return [teammates, list];
     case 'pull_request':
       return event.conversationId
-        ? [list, { queryKey: prWatchesKey(event.conversationId), exact: true }]
+        ? [list, { queryKey: prWatchesKey(event.conversationId), exact: true }, ticketInbox]
         : [];
+    case 'ticket':
+      return [ticketInbox, ticketConnections];
   }
 }
 

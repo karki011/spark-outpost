@@ -4,7 +4,12 @@ import { checkpointKindSchema, checkpointPayloadSchema } from './checkpoints.ts'
 import type { InvolvementLevel } from './involvement-levels.ts';
 import { workPlaceSchema } from './chat-workspace.ts';
 import { pieceSlotsSchema, projectNameSchema } from './projects.ts';
-import { SPARK_ACTION_KIND, sparkActionEditsSchema, sparkActionSchema } from './spark-actions.ts';
+import {
+  SPARK_ACTION_KIND,
+  sparkActionEditsSchema,
+  sparkActionSchema,
+  sparkResultSchema,
+} from './spark-actions.ts';
 
 export const runModeSchema = z.enum(['chat', 'ask', 'do']);
 export type RunMode = z.infer<typeof runModeSchema>;
@@ -68,7 +73,6 @@ export const approvalDeciderSchema = z.enum([
   'timeout',
   'recovery',
   'auto',
-  'jev',
 ]);
 export type ApprovalDecider = z.infer<typeof approvalDeciderSchema>;
 
@@ -94,21 +98,6 @@ export const fileDiffSchema = z.object({
 });
 export type FileDiff = z.infer<typeof fileDiffSchema>;
 
-export const autoDecisionSchema = z.object({
-  by: z.enum(['rules', 'jev']),
-  pick: z.enum(['allow', 'ask']).nullable(),
-  why: z.string(),
-  jev: z
-    .object({
-      status: z.string(),
-      risk: z.number().nullable(),
-      model: z.string().nullable(),
-      costUsd: z.number().nullable(),
-    })
-    .optional(),
-});
-export type AutoDecision = z.infer<typeof autoDecisionSchema>;
-
 export const approvalPayloadSchema = z.object({
   command: z.string().nullable(),
   cwd: z.string().nullable(),
@@ -124,8 +113,9 @@ export const approvalPayloadSchema = z.object({
   asksBecause: z.string().optional(),
   observed: z.array(z.string()).optional(),
   sparkAction: sparkActionSchema.optional(),
+  sparkResult: sparkResultSchema.optional(),
+  sparkRequested: z.boolean().optional(),
   agentReason: z.string().optional(),
-  autoDecision: autoDecisionSchema.optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
 

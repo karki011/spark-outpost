@@ -24,7 +24,7 @@ import {
   interpretationCard,
   interpretations,
 } from './clarify.ts';
-import { checkCommands } from './member-prompts.ts';
+import { changedLines, checkCommands } from './member-prompts.ts';
 import { escalatedBuilderPick } from './member-routes.ts';
 import { save, type Session } from './session.ts';
 import { lawItems } from '../laws/review.ts';
@@ -49,7 +49,8 @@ async function cardFor(s: Session, action: Ask): Promise<CheckpointCard> {
     const changes = await runChanges(s.deps.db, s.input.workspaceId, s.lease.runId, true);
     const line = sessionReviewLine(s);
     const reason = line ? `${action.reason} ${line}` : action.reason;
-    return acceptCard(changes.files, reason, fixOptionLabel(s.flow.review), lawItems(s));
+    const lines = await changedLines(s);
+    return acceptCard(changes.files, reason, fixOptionLabel(s.flow.review), lawItems(s), lines);
   }
   const usage = await budgetUsage(s);
   const limit = s.budgetHit ?? 'time';

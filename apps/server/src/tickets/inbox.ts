@@ -1,9 +1,8 @@
 import {
+  ticketChatState,
   ticketItemId,
-  type ConversationSummary,
   type InboxTicket,
   type PullRequestStatus,
-  type TicketChatState,
   type TicketInbox,
   type TicketListItem,
   type TicketSourceProblem,
@@ -48,21 +47,6 @@ async function fetchMine(open: OpenSource) {
     return { tickets: [...active, ...done], problem: null };
   } catch (error) {
     return { tickets: [], problem: problemOf(open, error) };
-  }
-}
-
-function chatStateOf(chat: ConversationSummary): TicketChatState {
-  if (chat.needsInput) return 'asking';
-  switch (chat.latestRun?.status) {
-    case 'queued':
-    case 'running':
-      return 'running';
-    case 'failed':
-      return 'error';
-    case 'succeeded':
-      return 'finished';
-    default:
-      return 'idle';
   }
 }
 
@@ -148,8 +132,10 @@ async function factsFor(
           ? {
               conversationId: chat.id,
               title: chat.title,
-              state: chatStateOf(chat),
+              state: ticketChatState(chat),
               at: chat.updatedAt,
+              progress: chat.latestRun?.progress ?? null,
+              agent: chat.teammate?.name ?? null,
             }
           : null,
         pullRequest: pull,

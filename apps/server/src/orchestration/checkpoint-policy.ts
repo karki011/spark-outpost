@@ -3,6 +3,7 @@ import {
   type CheckpointKind,
   type InvolvementLevel,
 } from '@spark-outpost/contracts';
+import type { FlowState } from './flow-types.ts';
 import { destructiveMigrationWording } from './risk-rules.ts';
 
 export const DESTRUCTIVE_CARD_REASON =
@@ -28,6 +29,8 @@ export interface KeepFacts {
   checksFailing: boolean;
   criticUnsatisfied: boolean;
   riskyMigration?: string | null;
+  outsideWorktree?: boolean;
+  criticSkipped?: boolean;
 }
 
 const SETTLED: KeepFacts = { checksFailing: false, criticUnsatisfied: false };
@@ -39,7 +42,7 @@ export function asksToKeep(
 ): boolean {
   if (filesChanged === 0) return false;
   if (level !== 'hands-off') return false;
-  return facts.checksFailing || facts.criticUnsatisfied || Boolean(facts.riskyMigration);
+  return Boolean(facts.riskyMigration) && facts.outsideWorktree === true;
 }
 
 export function keepsByItself(level: InvolvementLevel, filesChanged: number): boolean {
@@ -47,16 +50,27 @@ export function keepsByItself(level: InvolvementLevel, filesChanged: number): bo
 }
 
 export function keepReason(level: InvolvementLevel, facts: KeepFacts): string | null {
-  if (level !== 'hands-off') return null;
-  if (facts.checksFailing) return 'Automatic asks because the checks still fail.';
-  if (facts.criticUnsatisfied) return 'Automatic asks because the Critic still has concerns.';
-  if (facts.riskyMigration)
-    return `Automatic asks because ${riskyMigrationReason(facts.riskyMigration)}.`;
-  return null;
+  if (level !== 'hands-off' || !facts.riskyMigration) return null;
+  return `Automatic asks because ${riskyMigrationReason(facts.riskyMigration)} and the change is in your checkout, not a worktree.`;
 }
 
 export const KEPT_BY_AUTO_EDIT =
   'Kept automatically: the checks pass and the Critic, if it ran, found no correctness problems. Revert undoes them.';
+
+function keptConcerns(facts: KeepFacts): string[] {
+  return [
+    facts.checksFailing ? 'the checks still fail' : null,
+    facts.criticUnsatisfied ? 'the Critic still has concerns' : null,
+    facts.criticSkipped ? 'the Critic was unavailable, so no AI review ran' : null,
+    facts.riskyMigration ? riskyMigrationReason(facts.riskyMigration) : null,
+  ].filter((part): part is string => part !== null);
+}
+
+export function keptLine(facts: KeepFacts): string | null {
+  const concerns = keptConcerns(facts);
+  if (concerns.length === 0) return null;
+  return `Kept automatically; worth a look: ${concerns.join('; ')}. Revert undoes them.`;
+}
 
 export function shipsByItself(level: InvolvementLevel, filesChanged: number): boolean {
   return level === 'full-auto' && filesChanged > 0;
@@ -67,4 +81,22 @@ export function autoContinueOption(kind: CheckpointKind, interpret: boolean): st
   if (kind === 'retry') return CHECKPOINT_OPTION.stopReport;
   if (kind === 'verify') return CHECKPOINT_OPTION.finishUnverified;
   return null;
+}
+
+export function keepFacts(
+  state: FlowState,
+  checksFailing: boolean,
+  riskyMigration: string | null = null,
+): KeepFacts {
+  const critic = state.verdict !== null;
+  return {
+    checksFailing,
+    criticUnsatisfied: critic && (state.verdict === 'unclear' || state.review.fixable.length > 0),
+    ...(riskyMigration ? { riskyMigration } : {}),
+    ...(state.criticSkipped ? { criticSkipped: true } : {}),
+  };
+}
+
+export function filesChangedLine(count: number): string {
+  return `${count} ${count === 1 ? 'file' : 'files'} changed.`;
 }

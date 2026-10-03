@@ -2,11 +2,10 @@ import {
   DEFAULT_INVOLVEMENT_LEVEL,
   EMPTY_CONVERSATION_USAGE,
   type AgentCommand,
-  type AnnotationInput,
-  type Attachment,
+  type Run,
   type TaskOverview,
 } from '@spark-outpost/contracts';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, queryKeys } from '../api/client.ts';
@@ -26,6 +25,7 @@ import { SidebarToggle } from '../conversations/sidebar-layout.tsx';
 import { TerminalButton } from '../terminal/dock/TerminalButton.tsx';
 import { TerminalDock } from '../terminal/dock/TerminalDock.tsx';
 import { ThemePicker } from '../theme/ThemePicker.tsx';
+import { PanelOpenContext } from '../tasks/panel-open.ts';
 import { useTaskPanel } from '../tasks/work-panel-state.ts';
 import { ViewChangesContext } from '../tasks/view-changes.ts';
 import type { WorkTab } from '../tasks/TaskDetails.tsx';
@@ -35,9 +35,9 @@ import { DropOverlay } from './attachments/DropOverlay.tsx';
 import { useAttachments } from './attachments/use-attachments.ts';
 import { useFileDrop } from './attachments/use-file-drop.ts';
 import { Composer } from './Composer.tsx';
-import { DockContext } from './dock/dock-context.ts';
-import { PendingDock } from './dock/PendingDock.tsx';
-import { usePendingDock } from './dock/use-pending-dock.ts';
+import { ComposerStatus } from './status/ComposerStatus.tsx';
+import { StatusContext } from './status/status-context.ts';
+import { createStatusStore } from './status/status-store.ts';
 import { providerName } from './provider-name.ts';
 import { repoSummary } from './project/repo-list.ts';
 import { useLinkedProjects } from './project/use-chat-repos.ts';
@@ -48,21 +48,19 @@ import { useChatTickets } from './tickets/use-chat-tickets.ts';
 import { useChatWorkspace } from './project/use-chat-workspace.ts';
 import { Thread } from './Thread.tsx';
 import { useQuotes } from './quotes/use-quotes.ts';
+import { useChatSend } from './send/use-chat-send.ts';
 import { activeRun } from './turns.ts';
+import { useStop } from './use-stop.ts';
 import { FileSheetProvider } from './project/file-sheet/FileSheet.tsx';
-import { BlobScout } from '../brand/BlobScout.tsx';
+import { LoadingBlob } from '../ui/loading/LoadingBlob.tsx';
+import { useStableCallback } from '../ui/use-stable-callback.ts';
 import { ChatTeammate } from '../teammates/ChatTeammate.tsx';
 import { TalkToChip } from '../teammates/TalkToChip.tsx';
 
 const NO_REPOS: string[] = [];
 const NO_TASKS: TaskOverview[] = [];
 const NO_COMMANDS: AgentCommand[] = [];
-
-export interface OutgoingMessage {
-  content: string;
-  attachments: Attachment[];
-  annotations?: AnnotationInput[];
-}
+const NO_RUNS: Run[] = [];
 
 interface ChatViewProps {
   conversationId: string;
@@ -85,23 +83,17 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
       queryClient.invalidateQueries({ queryKey: queryKeys.conversations, exact: true }),
     ]);
 
-  const send = useMutation({
-    mutationFn: (message: OutgoingMessage) =>
-      api.sendMessage(
-        conversationId,
-        crypto.randomUUID(),
-        message.content,
-        message.attachments.map((attachment) => attachment.id),
-        message.annotations,
-      ),
-    onSuccess: refresh,
-  });
+  const savedIds = useMemo(
+    () => new Set(detail.data?.messages.map((message) => message.id)),
+    [detail.data?.messages],
+  );
+  const sends = useChatSend(conversationId, savedIds, refresh);
   const attachments = useAttachments();
   const latestReplyId =
     detail.data?.messages.findLast((message) => message.role === 'assistant')?.id ?? null;
   const quotes = useQuotes(conversationId, latestReplyId);
   const drop = useFileDrop(attachments.add);
-  const stop = useMutation({ mutationFn: api.cancelRun, onSuccess: refresh });
+  const stop = useStop(conversationId, detail.data, refresh);
   const startFresh = useMutation({
     mutationFn: () => api.startFreshSession(conversationId),
     onSuccess: () =>
@@ -123,6 +115,8 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const crew = conversationCrew(detail.data);
   const orchestration = latestOrchestration(detail.data);
   const steer = useSteer(conversationId, running ? orchestration : null);
+  const openTask = useStableCallback(panel.openTask);
+  const openChat = useStableCallback(onOpenChat);
   const task = panel.task;
   const crewRun = crewOrchestration(detail.data);
   const taskCrew = task && crewRun && belongsTo(task, crewRun) ? crewRun : null;
@@ -145,12 +139,12 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
   const canAudit = (detail.data?.runs.length ?? 0) > 0;
   const openAudit = canAudit ? () => setAuditOpen(true) : undefined;
   const tickets = useChatTickets(conversationId, (detail.data?.messages.length ?? 0) > 0);
-  const dock = usePendingDock();
+  const [status] = useState(createStatusStore);
   const teammate = detail.data?.conversation.teammate ?? null;
 
   return (
     <ViewChangesContext value={viewChanges}>
-      <DockContext value={dock.api}>
+      <StatusContext value={status}>
         <FileSheetProvider>
           <main className="main" {...drop.handlers}>
             <header className="head">
@@ -188,29 +182,32 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               </p>
             )}
             {detail.data ? (
-              <Thread
-                detail={detail.data}
-                repos={repos}
-                pendingMessage={send.isPending ? send.variables : null}
-                panelOpen={panel.open}
-                onOpenTask={panel.openTask}
-                onOpenChat={onOpenChat}
-                quotes={quotes}
-              />
+              <PanelOpenContext value={panel.open}>
+                <Thread
+                  detail={detail.data}
+                  repos={repos}
+                  sends={sends}
+                  onOpenTask={openTask}
+                  onOpenChat={openChat}
+                  quotes={quotes}
+                />
+              </PanelOpenContext>
             ) : (
               <div className="thread-wrap" aria-busy={detail.isPending}>
                 {detail.isPending && (
-                  <div className="thread-loading" role="status">
-                    <BlobScout size={48} mood="working" />
-                    <span>Opening this chat…</span>
-                  </div>
+                  <LoadingBlob size="lg" className="thread-loading" line="Opening this chat…" />
                 )}
               </div>
             )}
-            <PendingDock dock={dock} />
             {detail.data?.messages.length === 0 && (
               <TalkToChip conversationId={conversationId} teammate={teammate} />
             )}
+            <ComposerStatus
+              store={status}
+              runs={detail.data?.runs ?? NO_RUNS}
+              activeRunId={running?.id ?? null}
+              provider={detail.data?.settings.provider ?? ''}
+            />
             <Composer
               conversationId={conversationId}
               repos={repos}
@@ -220,16 +217,15 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
               orchestration={orchestration}
               usageTotals={detail.data?.usageTotals ?? EMPTY_CONVERSATION_USAGE}
               busy={running !== null}
-              sending={send.isPending}
-              error={send.error?.message ?? stop.error?.message ?? null}
+              sending={sends.sending}
+              error={stop.error}
+              stopping={stop.stopping}
               attachments={attachments}
               quotes={quotes}
               onSend={async (content, files, annotations) => {
-                await send.mutateAsync({ content, attachments: files, annotations });
+                sends.send({ content, attachments: files, annotations });
               }}
-              onStop={() => {
-                if (running) stop.mutate(running.id);
-              }}
+              onStop={stop.stop}
               steer={steer}
               {...(openAudit ? { onAudit: openAudit } : {})}
               onStartFresh={() => startFresh.mutate()}
@@ -276,7 +272,7 @@ export function ChatView({ conversationId, onOpenChat }: ChatViewProps) {
             )}
           </AnimatePresence>
         </FileSheetProvider>
-      </DockContext>
+      </StatusContext>
     </ViewChangesContext>
   );
 }
