@@ -29,7 +29,7 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(() => repo.remove());
 
-test('the keep card asks why code was removed, and the Builder head shows its budget', async ({
+test('the kept card asks why code was removed, and Builders run without a budget', async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -39,11 +39,12 @@ test('the keep card asks why code was removed, and the Builder head shows its bu
   await send(page, 'Fix the divider #build #removehelper #criticremoval');
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });
-  const laws = keep.getByRole('list', { name: 'Worth a look before you keep this' });
+  const laws = keep.getByRole('list', { name: 'Worth a look' });
   await expect(laws).toContainText('Removed helperTotals from totals.ts — why?');
   await expect(laws.locator('code').first()).toHaveText('helperTotals');
-  await expect(agentHead(page, 'Bolt')).toContainText(/budget \d+ tool calls · [\d.]+ min/);
-  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
+  await expect(agentHead(page, 'Bolt').first()).toBeVisible();
+  await expect(page.locator('.crew-turn')).not.toContainText(/budget \d+ tool calls/);
+  await expect(keep.getByRole('status').first()).toHaveText('Kept automatically.');
   await expect(page.locator('.crew-foot')).toContainText('Done', { timeout: 30_000 });
 });
 

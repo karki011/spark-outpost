@@ -150,7 +150,7 @@ test('rows move with the keyboard, Enter opens one, and focus shows a preview', 
   await expect(page.getByRole('complementary', { name: 'WEB-418 details' })).toBeVisible();
 
   await row(page, 'API-77').hover();
-  const preview = page.getByRole('tooltip');
+  const preview = page.getByRole('tooltip', { name: /^API-77/ });
   await expect(preview).toContainText('API-77 · Rate limit headers missing on 429 responses');
   await expect(preview).toContainText('#341 in acme/widgets');
 });

@@ -4,7 +4,7 @@ import { fakeHomeDesktop, island, openIsland } from './island-home-desktop.ts';
 import {
   CLICK_LIMIT_MS,
   clickFeedbackMs,
-  idleBusyPercent,
+  restingBusyPercent,
   PRODUCTION,
   settledMetrics,
   startProbe,
@@ -18,7 +18,7 @@ import { seedTourChats } from './tour-seed.ts';
 test.use({ trace: 'off' });
 
 const LIVE_STEPS = 40;
-const IDLE_BUSY_LIMIT = 45;
+const IDLE_BUSY_LIMIT = 5;
 
 async function addSteps(conversationId: string, count: number) {
   const db = openTestDb();
@@ -62,7 +62,7 @@ test('Spark Island stays smooth with many chats and live activity', async ({ pag
   await openIsland(page);
   await page.waitForTimeout(1_500);
   const before = await settledMetrics(page);
-  const restingBusy = await idleBusyPercent(page);
+  const restingBusy = await restingBusyPercent(page);
   await startProbe(page);
   const phases: Record<string, ProbeResult> = {};
 

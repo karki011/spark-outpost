@@ -152,6 +152,8 @@ test('Desktop companion screenshots', async ({ page }) => {
   await shootClip(page, 'companion-island-sessions', ISLAND_CLIP);
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
+  await page.mouse.move(640, 600);
+  await expect(island(page)).not.toHaveAttribute('data-view', 'panel', { timeout: 10_000 });
 
   await seedChats([
     {
@@ -161,6 +163,7 @@ test('Desktop companion screenshots', async ({ page }) => {
     },
   ]);
   await runsByClaude();
+  await expect(island(page)).toHaveAttribute('data-view', 'nudge', { timeout: 15_000 });
   await page.keyboard.press('Alt+Space');
   await expect(island(page)).toHaveAttribute('data-view', 'card');
   const card = island(page).getByRole('group', { name: /wants to run a command/ });

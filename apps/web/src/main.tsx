@@ -10,6 +10,7 @@ import 'blobatar/motion.css';
 import './brand/blob-idle.css';
 import './app/base.css';
 import './app/reduced-motion.css';
+import './app/idle-motion.css';
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({ onError: reportRequestError, onSuccess: markConnectionRestored }),

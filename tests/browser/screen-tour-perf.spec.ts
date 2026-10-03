@@ -5,7 +5,7 @@ import { REPO_ROOT, serveMap, syntheticFixture } from './map-fixture.ts';
 import {
   CLICK_LIMIT_MS,
   clickFeedbackMs,
-  idleBusyPercent,
+  restingBusyPercent,
   PRODUCTION,
   startProbe,
   takeProbe,
@@ -16,7 +16,7 @@ import { seedLongAudit, seedSparks, seedTourChats, serveBigInbox } from './tour-
 
 test.use({ trace: 'off' });
 
-const IDLE_BUSY_LIMIT = 45;
+const IDLE_BUSY_LIMIT = 5;
 
 interface Step {
   clickMs: number;
@@ -72,7 +72,7 @@ async function measure(
     openMaxTaskMs: opened.maxTaskMs,
     steadyMaxTaskMs: steadyProbe.maxTaskMs,
     slowFrames: steadyProbe.slowFrames,
-    idleBusyPercent: await idleBusyPercent(page),
+    idleBusyPercent: await restingBusyPercent(page),
   };
 }
 

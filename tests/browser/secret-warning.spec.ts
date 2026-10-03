@@ -115,7 +115,7 @@ test('the island Quick chat and Ask warn before sending a key', async ({ page })
   await expect(message).toHaveValue(CLEANED);
   await expect(message).toBeFocused();
 
-  await page.keyboard.press('Meta+3');
+  await page.keyboard.press('Meta+4');
   const ask = island.getByRole('textbox', { name: 'Ask Spark' });
   await expect(ask).toBeFocused();
   await ask.fill(`Is ${KEY} still valid?`);

@@ -31,8 +31,31 @@ export async function startProbe(page: Page): Promise<void> {
       last = now;
       requestAnimationFrame(tick);
     };
+    Object.assign(window, {
+      perfProbeResume: () => {
+        if (probe.running) return;
+        probe.running = true;
+        last = performance.now();
+        requestAnimationFrame(tick);
+      },
+    });
     requestAnimationFrame(tick);
   });
+}
+
+async function pauseProbe(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const probe = (window as unknown as Partial<ProbeWindow>).perfProbe;
+    if (!probe?.running) return false;
+    probe.running = false;
+    return true;
+  });
+}
+
+async function resumeProbe(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    (window as unknown as { perfProbeResume: () => void }).perfProbeResume(),
+  );
 }
 
 export interface ProbeResult {
@@ -158,6 +181,18 @@ export async function idleBusyPercent(page: Page, ms = 2_000): Promise<number> {
   await page.waitForTimeout(ms);
   const after = await pageMetrics(page);
   return Math.round(((after.taskMs - before.taskMs) / (Date.now() - started)) * 100);
+}
+
+export async function restingBusyPercent(page: Page, ms = 2_000): Promise<number> {
+  const paused = await pauseProbe(page);
+  await page.waitForFunction(() => document.documentElement.dataset.motion !== 'live', null, {
+    polling: 250,
+    timeout: 15_000,
+  });
+  const first = await idleBusyPercent(page, ms);
+  const busy = Math.min(first, await idleBusyPercent(page, ms));
+  if (paused) await resumeProbe(page);
+  return busy;
 }
 
 export async function settledMetrics(page: Page): Promise<PageMetrics> {

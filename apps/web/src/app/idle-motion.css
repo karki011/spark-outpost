@@ -1,0 +1,16 @@
+:root:is([data-motion='rest'], [data-motion='paused'])
+  :is(
+    .mo-root *,
+    .scout .sc-body,
+    .scout:not(.alert, .sad, .happy, .sleep) .sc-eye,
+    .scout:not(.working, .alert, .sad, .sleep) .sc-spark,
+    .cmp-float,
+    .btog-z,
+    .mh-dust,
+    .mh-star,
+    .row.st-running .tt > span,
+    .isl-sstatus .shim
+  ),
+:root:is([data-motion='rest'], [data-motion='paused']) .bst.asleep .bst-blob::after {
+  animation-play-state: paused !important;
+}

@@ -56,6 +56,7 @@ import { Rail, type AppView } from './Rail.tsx';
 import { readSavedView, saveView } from './saved-view.ts';
 import { TeammateHost } from '../teammates/TeammateHost.tsx';
 import { useAttentionTitle } from './use-attention-title.ts';
+import { startIdleMotion } from './idle-motion.ts';
 import '../ui/controls.css';
 
 const StableChatView = memo(ChatView);
@@ -296,6 +297,7 @@ export function App() {
   const queryClient = useQueryClient();
   const connection = useConnection();
   const [entering, setEntering] = useState(false);
+  useEffect(() => startIdleMotion(), []);
   useFirstContent(setup.data !== undefined || setup.isError);
 
   function handleOnboardingFinished() {

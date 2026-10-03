@@ -7,6 +7,7 @@ import {
   type RefObject,
 } from 'react';
 import { BlobScout } from '../brand/BlobScout.tsx';
+import { setMotionMode } from '../app/idle-motion.ts';
 import { leaveAsGhost } from './home-motion.ts';
 import { viewWidth, type IslandView } from './island-model.ts';
 import { useViewportWidth } from './island-parts.tsx';
@@ -90,6 +91,8 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
     props.reduced,
   );
   const wings = wingsFor(props);
+  const resting = quiet && !props.hover;
+  useEffect(() => setMotionMode(resting ? 'paused' : 'live'), [resting]);
   const reducedRef = useRef(props.reduced);
   useEffect(() => {
     reducedRef.current = props.reduced;
@@ -140,11 +143,7 @@ export function IslandShell({ islandRef, rowRef, ...props }: IslandShellProps & 
   ].filter(Boolean);
 
   return (
-    <div
-      className="isl-root"
-      data-rm={props.reduced || undefined}
-      data-rest={(quiet && !props.hover) || undefined}
-    >
+    <div className="isl-root" data-rm={props.reduced || undefined} data-rest={resting || undefined}>
       <div className="sr-only" aria-live="polite">
         {props.announcement}
       </div>
