@@ -76,6 +76,9 @@ export interface SparkDesktop {
     showLogs(): Promise<void>;
     onOpenFeedback(callback: () => void): Unsubscribe;
   };
+  privacy?: {
+    openFullDiskAccess(): Promise<void>;
+  };
   onOpenChat(callback: (id: string) => void): Unsubscribe;
   onOpenSettings?(callback: (target: IslandSettingsTarget) => void): Unsubscribe;
 }

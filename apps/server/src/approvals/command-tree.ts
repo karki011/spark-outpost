@@ -169,6 +169,7 @@ export function deleteTargets(tree: CommandTree, cwd: string, home: string): str
       dirs = next;
       continue;
     }
+    if (DELETERS.has(name) && tree.fedByXargs.includes(program)) return null;
     const words = deletedWords(program);
     if (words.some((word) => UNKNOWN_WORD.test(word))) return null;
     for (const word of words) {

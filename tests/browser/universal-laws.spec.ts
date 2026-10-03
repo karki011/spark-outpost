@@ -4,6 +4,7 @@ import {
   card,
   crewChat,
   crewRepo,
+  failingCheck,
   resetCrew,
   send,
   type CrewRepo,
@@ -33,7 +34,8 @@ test('the keep card asks why code was removed, and the Builder head shows its bu
 }) => {
   test.setTimeout(90_000);
   repo.commit('totals.ts', TOTALS);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
+  await failingCheck(page, repo.root);
   await send(page, 'Fix the divider #build #removehelper #criticremoval');
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });
@@ -47,7 +49,7 @@ test('the keep card asks why code was removed, and the Builder head shows its bu
 
 test('a plan card shows a rough estimate before Spark has history', async ({ page }) => {
   test.setTimeout(60_000);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
   await send(page, 'Rename the runs table column and migrate old rows #build');
   const plan = card(page, /Build this plan\?/);
   await expect(plan).toBeVisible({ timeout: 30_000 });

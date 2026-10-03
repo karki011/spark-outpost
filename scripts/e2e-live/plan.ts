@@ -60,7 +60,7 @@ export interface Cell {
 export const BASELINE: HarnessSetup = {
   driver: 'ui',
   provider: 'claude',
-  level: 'balanced',
+  level: 'hands-off',
   model: 'auto',
   buildStyle: 'off',
   jev: true,
@@ -159,7 +159,7 @@ function versionCells(): Cell[] {
 }
 
 function configCells(): Cell[] {
-  const levels = (['balanced', 'full-auto'] as const).flatMap((level) =>
+  const levels = (['full-auto'] as const).flatMap((level) =>
     ['b', 'c', 'f'].map((id) => cell('configs', id, 'harness', `level-${level}`, { level })),
   );
   const lean = ['c', 'd'].map((id) =>

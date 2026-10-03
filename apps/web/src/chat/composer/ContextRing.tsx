@@ -38,7 +38,7 @@ function ringNote(level: ContextLevel, thresholds: CompactionThresholds): string
       : `Getting full. Spark asks about compacting at ${at}%; the full transcript stays here.`;
   }
   return thresholds.autoCompact
-    ? 'Almost full. Spark compacts the chat before your next message (at Review each step, it asks first).'
+    ? 'Almost full. Spark compacts the chat before your next message.'
     : 'Almost full. Spark asks before your next message whether to compact the chat.';
 }
 

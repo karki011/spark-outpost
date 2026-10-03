@@ -49,10 +49,12 @@ describe('mode postures', () => {
 });
 
 describe('where a mode may run', () => {
-  it('keeps every Claude mode on the checkout, since the gate sees every action', () => {
-    for (const mode of ['default', 'acceptEdits', 'auto', 'bypassPermissions', 'future']) {
+  it('keeps Claude modes that ask or decide on the checkout, and Bypass in a worktree copy', () => {
+    for (const mode of ['default', 'acceptEdits', 'auto', 'plan']) {
       expect(modeNeedsWorktree('claude', mode)).toBe(false);
     }
+    expect(modeNeedsWorktree('claude', 'bypassPermissions')).toBe(true);
+    expect(modeNeedsWorktree('claude', 'future')).toBe(true);
   });
 
   it('puts Codex modes that skip the gate, and unknown modes, in a worktree copy', () => {
@@ -68,11 +70,11 @@ describe('where a mode may run', () => {
 describe('migrating the old levels', () => {
   it.each([
     ['claude', 'ask', null, 'plan'],
-    ['claude', 'do', 'balanced', 'default'],
+    ['claude', 'do', null, 'default'],
     ['claude', 'do', 'hands-off', 'acceptEdits'],
-    ['claude', 'do', 'full-auto', 'bypassPermissions'],
+    ['claude', 'do', 'full-auto', 'acceptEdits'],
     ['codex', 'ask', 'full-auto', 'read-only'],
-    ['codex', 'do', 'balanced', 'ask-every-action'],
+    ['codex', 'do', null, 'ask-every-action'],
     ['codex', 'do', 'hands-off', 'agent'],
     ['codex', 'do', 'full-auto', 'agent'],
     ['zai', 'do', 'hands-off', 'acceptEdits'],
@@ -96,12 +98,12 @@ describe('the one-line summary', () => {
 
   it('says what the mode and autonomy do together', () => {
     expect(combinationLine({ ...facts, mode: 'bypassPermissions', level: 'hands-off' })).toBe(
-      "Agent won't ask · kept automatically · Revert available",
+      "Agent won't ask · kept automatically · in a worktree copy · Revert available",
     );
-    expect(combinationLine({ ...facts, mode: 'default', level: 'balanced' })).toBe(
-      'Agent asks before edits and commands · you review each step · Revert available',
+    expect(combinationLine({ ...facts, mode: 'default', level: 'hands-off' })).toBe(
+      'Agent asks before edits and commands · kept automatically · Revert available',
     );
-    expect(combinationLine({ ...facts, mode: 'plan', level: 'balanced' })).toBe(
+    expect(combinationLine({ ...facts, mode: 'plan', level: 'hands-off' })).toBe(
       'Agent only reads · nothing changes',
     );
     expect(
@@ -111,19 +113,16 @@ describe('the one-line summary', () => {
     );
   });
 
-  it('warns only for bypass-type modes on the real checkout and for worktree-only modes', () => {
+  it('warns only for worktree-only modes', () => {
     expect(combinationWarning({ ...facts, mode: 'bypassPermissions', level: 'hands-off' })).toMatch(
-      /real checkout/,
+      /runs only in a worktree copy/,
     );
-    expect(
-      combinationWarning({ ...facts, mode: 'bypassPermissions', level: 'full-auto' }),
-    ).toBeNull();
     expect(combinationWarning({ ...facts, mode: 'acceptEdits', level: 'hands-off' })).toBeNull();
     expect(
       combinationWarning({
         provider: 'codex',
         mode: 'agent-full-access',
-        level: 'balanced',
+        level: 'hands-off',
         hasRepos: true,
       }),
     ).toMatch(/worktree copy/);

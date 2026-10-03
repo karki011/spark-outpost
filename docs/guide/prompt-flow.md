@@ -18,7 +18,7 @@ Not every request takes every step. A question stops after step 1; a small fix s
 5. **Spark runs the checks itself**, such as your tests and lint. If they fail, the Builder gets up to 2 turns to fix them. Spark reports its own run, never the Builder's claim.
 6. **Jev checks the result**, if **Check changes with Jev** is on. A change Jev finds incomplete is redone once on a stronger model.
 7. **The Critic reviews** bigger or riskier changes. A Builder fixes its findings, up to 3 rounds. If the Critic fails to run, Spark tries once more, on your chat's provider when the Critic used another one. If that fails too, the reply says "Review skipped (Critic unavailable: …)" and the flow goes on.
-8. **You keep or revert.** At **Review each step**, the **Keep these changes?** card has **Keep**, **Fix** and **Revert** at the top, then a summary such as "12 files · +340 −21" with **View changes**; **Show files** lists them. At **Automatic** the changes are kept by themselves, and failing checks, Critic concerns and anything [worth a look](guardrails.md#read-the-keep-card) become a note on the final reply. **Revert to before this run** undoes it.
+8. **You keep or revert.** At **Automatic** the changes are kept by themselves, and failing checks, Critic concerns and anything [worth a look](guardrails.md#read-the-keep-card) become a note on the final reply. **Revert to before this run** undoes it.
 9. **Ship.** You commit, push or open a PR, or **Full auto → PR** opens one by itself. See [Ship and pull requests](ship-and-pull-requests.md).
 10. **PR follow-up.** Spark fixes failing checks and answers review comments on its PR. See [Follow up on pull requests](pr-follow-up.md).
 
@@ -26,17 +26,16 @@ Not every request takes every step. A question stops after step 1; a small fix s
 
 ## Where cards can appear
 
-| Step          | Card                             | Review each step               | Automatic                     | Full auto → PR                      |
-| ------------- | -------------------------------- | ------------------------------ | ----------------------------- | ----------------------------------- |
-| 1. Read       | **A few questions first**        | Waits for you                  | Waits, then uses best guesses | Uses best guesses after a countdown |
-| 2. Plan       | **Build this plan?**             | Waits for you                  | Waits, then builds            | Builds after a countdown            |
-| 2. Plan       | Destructive work                 | Waits for you                  | Waits for you                 | Waits for you                       |
-| 4. Build      | Approval cards (commands, files) | Per the agent's mode           | Per the agent's mode          | Per the agent's mode                |
-| 4. Build      | Pieces card                      | When building side by side     | Never                         | Never                               |
-| 4. Build      | **Continue past the budget?**    | Waits for you                  | Waits for you                 | Waits for you                       |
-| 7. Review     | Critic findings                  | You choose to fix              | Fixed by itself               | Fixed by itself                     |
-| 8. Keep       | **Keep these changes?**          | Unless you approved every edit | Never: kept, with a note      | Never: it ships                     |
-| 10. Follow-up | **Address PR feedback?**         | Waits for you                  | Waits for you                 | Never: it pushes and replies        |
+| Step          | Card                             | Automatic                     | Full auto → PR                      |
+| ------------- | -------------------------------- | ----------------------------- | ----------------------------------- |
+| 1. Read       | **A few questions first**        | Waits, then uses best guesses | Uses best guesses after a countdown |
+| 2. Plan       | **Build this plan?**             | Waits, then builds            | Builds after a countdown            |
+| 2. Plan       | Destructive work                 | Waits for you                 | Waits for you                       |
+| 4. Build      | Approval cards (commands, files) | Per the agent's mode          | Per the agent's mode                |
+| 4. Build      | **Continue past the budget?**    | Waits for you                 | Waits for you                       |
+| 7. Review     | Critic findings                  | Fixed by itself               | Fixed by itself                     |
+| 8. Keep       | **Keep these changes?**          | Never: kept, with a note      | Never: it ships                     |
+| 10. Follow-up | **Address PR feedback?**         | Waits for you                 | Never: it pushes and replies        |
 
 "Waits, then" means Spark goes on after the time in **If you don't answer a question**, or waits for you when that's **Off**. Full auto's countdown is 30 seconds when that setting is **Off**. See [If you don't answer](permissions-and-autonomy.md#if-you-dont-answer).
 

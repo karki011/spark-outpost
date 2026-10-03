@@ -27,7 +27,7 @@
     "apps/server": {
       "entry": ["test/fake-*.ts", "test/echo-mcp-server.mjs"],
       "project": ["src/**/*.ts", "test/**/*.{ts,mjs}"],
-      "ignoreDependencies": ["@agentclientprotocol/claude-agent-acp", "@vscode/tree-sitter-wasm"]
+      "ignoreDependencies": ["@agentclientprotocol/claude-agent-acp"]
     },
     "apps/web": {
       "entry": ["src/chat/approvals/diff-worker.ts"],

@@ -16,7 +16,7 @@ import {
 
 const BRANCH = 'spark/fix-dates-1a2b';
 const TASK = { branch: BRANCH, protectedBranches: ['main', 'master', 'develop'] };
-const MANUAL: PublishGrant = { level: 'balanced', requested: false };
+const MANUAL: PublishGrant = { level: 'hands-off', requested: false };
 
 function context(grant = MANUAL, task: PublishContext['task'] = TASK): PublishContext {
   return { grant, task };
@@ -27,7 +27,7 @@ describe('publishBasis()', () => {
     ['full_access', MANUAL, 'mode'],
     ['auto', MANUAL, 'mode'],
     ['asks', { level: 'full-auto', requested: false }, 'full_auto'],
-    ['asks', { level: 'balanced', requested: true }, 'requested'],
+    ['asks', { level: 'hands-off', requested: true }, 'requested'],
     ['edits', { level: 'hands-off', requested: true }, 'requested'],
     ['asks', MANUAL, null],
     ['edits', { level: 'hands-off', requested: false }, null],
@@ -85,7 +85,7 @@ describe('publishVerdict() allows the own branch when publishing is permitted', 
       publishVerdict(command, 'asks', context({ level: 'full-auto', requested: false })),
     ).toEqual({ kind: 'allow', basis: 'full_auto' });
     expect(
-      publishVerdict(command, 'asks', context({ level: 'balanced', requested: true })),
+      publishVerdict(command, 'asks', context({ level: 'hands-off', requested: true })),
     ).toEqual({ kind: 'allow', basis: 'requested' });
   });
 });
@@ -109,7 +109,7 @@ describe('publishVerdict() keeps the rails in every permitted mode', () => {
     ['full_access', MANUAL],
     ['auto', MANUAL],
     ['asks', { level: 'full-auto', requested: false }],
-    ['asks', { level: 'balanced', requested: true }],
+    ['asks', { level: 'hands-off', requested: true }],
   ];
 
   it.each([

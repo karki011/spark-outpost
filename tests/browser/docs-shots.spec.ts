@@ -76,7 +76,11 @@ test('Getting started screenshots', async ({ page }) => {
   await shoot(page, IMAGES, 'getting-started-tools');
 
   await continueButton(page).click();
-  await expect(onboarding(page).getByRole('heading', { name: /all set, Maya/ })).toBeVisible();
+  const macAccess = onboarding(page).getByRole('heading', { name: 'Mac access' });
+  const allSet = onboarding(page).getByRole('heading', { name: /all set, Maya/ });
+  await expect(macAccess.or(allSet)).toBeVisible();
+  if (await macAccess.isVisible()) await continueButton(page).click();
+  await expect(allSet).toBeVisible();
   await shoot(page, IMAGES, 'getting-started-done');
 });
 
@@ -142,7 +146,7 @@ async function answer(page: Page, card: RegExp, button: string) {
 
 test('Approvals screenshots', async ({ page }) => {
   test.setTimeout(180_000);
-  await seedDemo(page, repo, { claudeMode: 'default', autonomy: 'balanced' });
+  await seedDemo(page, repo, { claudeMode: 'default' });
   const cards: [string, string, RegExp, string][] = [
     ['approvals-command', 'Run the tests #approve', /Run a command\?/, 'Allow'],
     ['approvals-edit', 'Add today to the checklist #edit', /Change a file\?/, 'Deny'],

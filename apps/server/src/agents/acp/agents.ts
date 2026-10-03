@@ -89,8 +89,20 @@ const CLAUDE_DO_TOOLS = [
 const CLAUDE_READ_TOOLS = ['Read', 'Glob', 'Grep'];
 const CLAUDE_COMMAND_TOOLS = ['Bash'];
 const CLAUDE_PLAN_TOOLS = ['Write', 'ExitPlanMode'];
-export const CLAUDE_DO_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
 const CLAUDE_DO_MODE = 'default';
+export const PIECE_ASK_RULES = ['Bash', 'Edit', 'Write'] as const;
+export const PUBLISH_ASK_RULES = ['Bash(git push:*)', 'Bash(gh:*)'] as const;
+
+function askRules(builder: boolean, coordinated: boolean): string[] {
+  if (coordinated) return [...PIECE_ASK_RULES];
+  return builder ? [...PUBLISH_ASK_RULES] : [];
+}
+
+export const FORCE_PUSH_DENY_RULES = [
+  'Bash(git push --force:*)',
+  'Bash(git push -f:*)',
+  'Bash(git push --mirror:*)',
+];
 
 export const BUILDER_PUBLISH_DENY_RULES = PUBLISH_COMMANDS.map((command) => `Bash(${command}:*)`);
 
@@ -115,11 +127,12 @@ function builderDeny(builder: boolean, coordinated: boolean, publishes: boolean)
   return publishes ? PUBLISHING_BUILDER_DENY_RULES : SOLO_BUILDER_DENY_RULES;
 }
 
-export function secretReadRules(extraRoots: readonly string[]): string[] {
+export function secretRules(extraRoots: readonly string[]): string[] {
   const underExtraRoots = extraRoots.flatMap((root) =>
     SECRET_GLOBS.map((glob) => `/${root}/${glob}`),
   );
-  return [...SECRET_GLOBS, ...underExtraRoots].map((pattern) => `Read(${pattern})`);
+  const patterns = [...SECRET_GLOBS, ...underExtraRoots];
+  return ['Read', 'Edit'].flatMap((tool) => patterns.map((pattern) => `${tool}(${pattern})`));
 }
 
 function repoTools(repo: ClaudeRepoOptions | null, coordinated: boolean): string[] {
@@ -131,15 +144,17 @@ function repoTools(repo: ClaudeRepoOptions | null, coordinated: boolean): string
 export function claudeSessionMeta(
   tools: readonly string[],
   extraRoots: readonly string[],
-  ask: readonly string[] = [],
   repo: ClaudeRepoOptions | null = null,
   builder = false,
   allowBypass = false,
   coordinated = false,
   publishes = false,
 ): Record<string, unknown> {
-  const deny = [...secretReadRules(extraRoots), ...builderDeny(builder, coordinated, publishes)];
-  const askRules = [...ask, ...(repo?.mcpNames ?? []).map((name) => `mcp__${name}`)];
+  const deny = [
+    ...secretRules(extraRoots),
+    ...FORCE_PUSH_DENY_RULES,
+    ...builderDeny(builder, coordinated, publishes),
+  ];
   const allowRules = [...(repo?.allowRules ?? [])];
   const plugins = repo?.plugins ?? [];
   return {
@@ -162,7 +177,7 @@ export function claudeSessionMeta(
           disableSkillShellExecution: true,
           permissions: {
             deny,
-            ...(askRules.length > 0 ? { ask: askRules } : {}),
+            ...(builder || coordinated ? { ask: askRules(builder, coordinated) } : {}),
             ...(allowRules.length > 0 ? { allow: allowRules } : {}),
             blockReadsOutsideWorkingDirectories: true,
             ...(allowBypass ? {} : { disableBypassPermissionsMode: 'disable' }),
@@ -224,8 +239,8 @@ const claudeSessions = {
   usageReadings: 'start_and_end',
   readsProjectFolders: true,
   conversationSessionMeta: (repo?: ClaudeRepoOptions | null) =>
-    claudeSessionMeta([], [], [], repo ?? null),
-  probeSessionMeta: claudeSessionMeta([], [], [], null, false, true),
+    claudeSessionMeta([], [], repo ?? null),
+  probeSessionMeta: claudeSessionMeta([], [], null, false, true),
   projectSessionMeta: (
     extraRoots: readonly string[],
     repo?: ClaudeRepoOptions | null,
@@ -239,7 +254,6 @@ const claudeSessions = {
         ...(planning ? CLAUDE_PLAN_TOOLS : []),
       ],
       extraRoots,
-      commands ? CLAUDE_COMMAND_TOOLS : [],
       repo ?? null,
     ),
   doSessionMeta: (
@@ -252,7 +266,6 @@ const claudeSessions = {
     claudeSessionMeta(
       CLAUDE_DO_TOOLS,
       extraRoots,
-      CLAUDE_DO_ASK_RULES,
       repo ?? null,
       builder,
       true,

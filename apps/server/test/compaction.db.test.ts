@@ -3,16 +3,12 @@ import { HANDOFF_HEADINGS, HISTORY_TOOL_NOTE } from '../src/orchestration/handof
 import { AGENT_COMPACTED_NOTE } from '../src/compaction/before-turn.ts';
 import { insertApproval } from '../src/persistence/approvals.ts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
-import { requestCancel } from '../src/persistence/runs.ts';
 import {
   compactionsOf,
   newChat,
-  pendingCard,
   percentOf,
   promptsOf,
   say,
-  send,
-  finished,
   sessionsOf,
   startCompactionHarness,
   type CompactionHarness,
@@ -127,20 +123,6 @@ describe('compaction safety', { timeout: 60_000 }, () => {
     });
     const next = await say(h, id, 'Next');
     expect(next.steps.some((step) => step.includes('ompact'))).toBe(false);
-    expect(await compactionsOf(h, id)).toEqual([]);
-  });
-
-  it('asks at Review each step and runs nothing until the card is answered', async () => {
-    h = await startCompactionHarness(['compact']);
-    const id = await newChat(h, 'balanced');
-    await say(h, id, 'Start #ctx88');
-    const runId = await send(h, id, 'Next');
-    const card = await pendingCard(h, runId);
-    expect(card.kind).toBe('compact');
-    const sessions = await sessionsOf(h, id);
-    expect(promptsOf(h, sessions[0]!.session_id)).toHaveLength(1);
-    await requestCancel(h.t.db, runId);
-    expect((await finished(h, runId)).status).toBe('cancelled');
     expect(await compactionsOf(h, id)).toEqual([]);
   });
 });

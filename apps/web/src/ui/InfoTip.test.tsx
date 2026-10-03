@@ -30,8 +30,8 @@ describe('InfoTip', () => {
     const levels = {
       lead: 'How much Spark does alone.',
       items: [
-        { label: 'Review each step', text: 'You decide what to keep.' },
-        { label: 'Automatic', text: 'Runs commands without asking.' },
+        { label: 'Automatic', text: 'Keeps changes without stopping.' },
+        { label: 'Full auto', text: 'Then opens a PR.' },
       ],
       footer: 'Revert is always there.',
     };
@@ -39,16 +39,16 @@ describe('InfoTip', () => {
     const button = screen.getByRole('button', { name: 'More about Spark autonomy' });
     expect(button.getAttribute('aria-describedby')).not.toBeNull();
     expect(document.getElementById(button.getAttribute('aria-describedby')!)?.textContent).toBe(
-      'How much Spark does alone. Review each step: You decide what to keep. Automatic: Runs commands without asking. Revert is always there.',
+      'How much Spark does alone. Automatic: Keeps changes without stopping. Full auto: Then opens a PR. Revert is always there.',
     );
     fireEvent.click(button);
     const tooltip = screen.getByRole('tooltip');
     const items = within(tooltip).getAllByRole('listitem');
     expect(items.map((item) => item.querySelector('b')?.textContent)).toEqual([
-      'Review each step',
       'Automatic',
+      'Full auto',
     ]);
-    expect(items[1]!.textContent).toBe('Automatic Runs commands without asking.');
+    expect(items[1]!.textContent).toBe('Full auto Then opens a PR.');
     expect(tooltip.firstElementChild?.textContent).toBe('How much Spark does alone.');
     expect(tooltip.lastElementChild?.textContent).toBe('Revert is always there.');
   });

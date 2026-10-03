@@ -72,7 +72,7 @@ afterEach(async () => {
 
 async function run(scenario: Scenario, answer: Answerer = answerEverything) {
   harness = startOrchestrator(t, jevFetch({ calls: [], scenario }));
-  const { conversationId, runId } = await startScenario(t, root, scenario, 'balanced');
+  const { conversationId, runId } = await startScenario(t, root, scenario, null);
   const done = await driveToEnd(t, conversationId, runId, answer);
   const replies = await t.db.query<{ id: string; content: string }>(
     `SELECT id, content FROM messages WHERE run_id = $1 AND role = 'assistant' ORDER BY created_at`,

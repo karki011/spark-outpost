@@ -48,7 +48,7 @@ afterEach(async () => {
   await removeRepo(root);
 });
 
-async function build(level: InvolvementLevel) {
+async function build(level: InvolvementLevel | null) {
   const { conversationId } = await linkedConversation(t, root);
   const sent = await sendUserMessage(
     t.db,
@@ -60,7 +60,7 @@ async function build(level: InvolvementLevel) {
       effort: 'medium',
       permission: 'do',
       agentMode: modeForLegacy('codex', 'do', level),
-      level,
+      level: level ?? 'hands-off',
     },
   );
   const result = await driveToEnd(t, conversationId, sent.run.id);
@@ -82,18 +82,14 @@ async function build(level: InvolvementLevel) {
 }
 
 describe('a Codex-only crew in Do', { timeout: 60_000 }, () => {
-  it.each(['balanced'] as const)(
-    'builds in place at %s and asks for the edit',
-    async (level) => {
-      const { orchestration, asked, builders, copies, status } = await build(level);
-      expect(orchestration.status).toBe('succeeded');
-      expect(builders.map((row) => [row.provider, row.in_copy])).toEqual([['codex', false]]);
-      expect(copies).toEqual([]);
-      expect(asked.some((approval) => approval.kind === 'edit')).toBe(true);
-      expect(status).not.toBe('');
-    },
-    60_000,
-  );
+  it('builds in place in Ask every time mode and asks for the edit', async () => {
+    const { orchestration, asked, builders, copies, status } = await build(null);
+    expect(orchestration.status).toBe('succeeded');
+    expect(builders.map((row) => [row.provider, row.in_copy])).toEqual([['codex', false]]);
+    expect(copies).toEqual([]);
+    expect(asked.some((approval) => approval.kind === 'edit')).toBe(true);
+    expect(status).not.toBe('');
+  }, 60_000);
 
   it.each(['hands-off', 'full-auto'] as const)(
     'builds in a worktree at %s and merges it into the working tree',

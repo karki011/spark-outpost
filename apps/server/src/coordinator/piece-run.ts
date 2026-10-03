@@ -214,23 +214,21 @@ function pieceChanges(work: PieceWork): Promise<string[]> {
   return work.site.cwd().then((cwd) => changedFiles(cwd, work.before));
 }
 
-async function guardTurn(s: Session, work: PieceWork): Promise<boolean> {
-  if (work.piece.research || !work.before) return true;
+async function guardTurn(s: Session, work: PieceWork): Promise<void> {
+  if (work.piece.research || !work.before) return;
   const cwd = await work.site.cwd();
   const changed = await pieceChanges(work);
-  const checked = await checkOwnership(s, work.coordination, work.piece, changed, cwd, work.before);
-  work.note = violationNote(checked.violations);
-  if (checked.violations.length > 0) {
-    work.violations.push(...checked.violations);
+  const violations = await checkOwnership(work.coordination, work.piece, changed, cwd, work.before);
+  work.note = violationNote(violations);
+  if (violations.length > 0) {
+    work.violations.push(...violations);
     const owned = work.coordination.owned.get(work.piece.key);
     await movePiece(s.deps.db, work.piece.id, ['running'], 'running', {
       violations: work.violations,
       ...(owned ? { owns: [...owned.paths, ...owned.globs] } : {}),
     });
   }
-  if (checked.outcome === 'stopped') return false;
   work.before = (await work.site.boundary?.()) ?? work.before;
-  return true;
 }
 
 function stopped(s: Session): boolean {
@@ -251,7 +249,6 @@ async function failPiece(
   return { result, landed: false };
 }
 
-export const OWNERSHIP_STOP_NOTE = 'You stopped it at the ownership card.';
 export const NO_CHANGES_NOTE = 'The Builder changed none of its files.';
 
 export const NOTHING_CHANGED_SECTION = [
@@ -308,14 +305,7 @@ export async function runPiece(
   let turn: PieceTurn = { generation: first.generation, result: first.result };
   await movePiece(db, piece.id, ['running'], 'running', { builderRunId: turn.result.runId });
   if (turn.result.outcome !== 'succeeded') return failPiece(s, work, turn.result);
-  if (!(await guardTurn(s, work))) {
-    return failPiece(
-      s,
-      work,
-      { ...turn.result, outcome: 'cancelled' },
-      { note: OWNERSHIP_STOP_NOTE },
-    );
-  }
+  await guardTurn(s, work);
   if (piece.research) coordination.scoutNotes.push(`${piece.key}: ${turn.result.text.trim()}`);
   let fixes = 0;
   if (expectsChanges(piece, action) && (await changedNothing(work)) && !stopped(s)) {
@@ -326,14 +316,7 @@ export async function runPiece(
     if (turn.result.outcome !== 'succeeded') {
       return failPiece(s, work, turn.result, { fixTurns: fixes });
     }
-    if (!(await guardTurn(s, work))) {
-      return failPiece(
-        s,
-        work,
-        { ...turn.result, outcome: 'cancelled' },
-        { fixTurns: fixes, note: OWNERSHIP_STOP_NOTE },
-      );
-    }
+    await guardTurn(s, work);
     if (await changedNothing(work)) {
       return failPiece(
         s,
@@ -351,14 +334,7 @@ export async function runPiece(
     turn = fixed;
     fixes += 1;
     if (turn.result.outcome !== 'succeeded') break;
-    if (!(await guardTurn(s, work))) {
-      return failPiece(
-        s,
-        work,
-        { ...turn.result, outcome: 'cancelled' },
-        { fixTurns: fixes, note: OWNERSHIP_STOP_NOTE },
-      );
-    }
+    await guardTurn(s, work);
     checks = await scopedChecks(s, work, turn.result);
   }
   if (turn.result.outcome !== 'succeeded')

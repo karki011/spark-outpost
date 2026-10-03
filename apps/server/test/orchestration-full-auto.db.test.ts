@@ -6,7 +6,7 @@ import { CHECKPOINT_OPTION, type Approval } from '@spark-outpost/contracts';
 import { getConversationDetail } from '../src/persistence/conversations.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import { getTaskShip } from '../src/persistence/task-ships.ts';
-import { BUILDER_PUBLISH_REASON } from '../src/approvals/decide.ts';
+import { NO_TASK_BRANCH_REASON } from '../src/approvals/publish-policy.ts';
 import { DESTRUCTIVE_WAIT, RISKY_PR_NOTE } from '../src/orchestration/checkpoint-policy.ts';
 import { assumptionPrNote } from '../src/orchestration/clarify.ts';
 import { HARNESS_COMMIT_EMAIL } from '../src/projects/snapshot.ts';
@@ -199,7 +199,7 @@ describe('Full auto runs to a draft PR', () => {
       [runId],
     );
     expect(pushes.rows).toEqual([
-      { status: 'denied', decided_by: 'policy', reason: BUILDER_PUBLISH_REASON },
+      { status: 'denied', decided_by: 'policy', reason: NO_TASK_BRANCH_REASON },
     ]);
     expect(stub.github.pulls).toHaveLength(1);
     const head = stub.github.pulls[0]!.head;

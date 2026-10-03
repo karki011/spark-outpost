@@ -9,15 +9,15 @@ interface Thresholds {
 }
 
 const DEFAULTS: Thresholds = { warn: 60, compact: 80, auto: true };
+const ASKS_FIRST: Thresholds = { ...DEFAULTS, auto: false };
 
-async function startAt(level: 'balanced' | 'hands-off', thresholds = DEFAULTS) {
+async function startAt(thresholds = DEFAULTS) {
   await resetTestDatabase({ onboarded: true });
   const db = openTestDb();
   try {
     await db.query(
-      `UPDATE profiles SET default_level = $1, compact_warn_percent = $2,
-         compact_at_percent = $3, auto_compact = $4`,
-      [level, thresholds.warn, thresholds.compact, thresholds.auto],
+      `UPDATE profiles SET compact_warn_percent = $1, compact_at_percent = $2, auto_compact = $3`,
+      [thresholds.warn, thresholds.compact, thresholds.auto],
     );
   } finally {
     await db.end();
@@ -40,14 +40,14 @@ async function sendAndWait(page: Page, text: string, turns: number) {
 test('the ring warns at 60%, the card compacts at 80%, and the divider shows the summary', async ({
   page,
 }) => {
-  await startAt('balanced');
+  await startAt(ASKS_FIRST);
   await newChat(page);
   await sendAndWait(page, 'Plan the rollout #ctx75', 1);
   const ring = page.getByRole('button', { name: /Context window: 75% used/ });
   await expect(ring).toHaveAttribute('data-level', 'warm');
   await ring.click();
   await expect(page.getByRole('dialog', { name: 'Context window' })).toContainText(
-    'Getting full. Spark compacts the chat at 80%',
+    'Getting full. Spark asks about compacting at 80%',
   );
   await page.keyboard.press('Escape');
 
@@ -84,7 +84,7 @@ test('the ring warns at 60%, the card compacts at 80%, and the divider shows the
 });
 
 test('without /compact Spark writes the summary itself', async ({ page }) => {
-  await startAt('hands-off');
+  await startAt();
   await newChat(page);
   await sendAndWait(page, 'Plan the rollout #ctx92 #nocompact', 1);
   await sendAndWait(page, 'What is next?', 2);
@@ -97,7 +97,7 @@ test('without /compact Spark writes the summary itself', async ({ page }) => {
 });
 
 test('a fresh chat with a summary links both ways', async ({ page }) => {
-  await startAt('balanced');
+  await startAt(ASKS_FIRST);
   await newChat(page);
   await sendAndWait(page, 'Ledger fixes #ctx88', 1);
   const input = page.getByRole('textbox', { name: 'Message' });
@@ -120,7 +120,7 @@ test('a fresh chat with a summary links both ways', async ({ page }) => {
 test('saved thresholds drive the ring, and with automatic compaction off Spark only asks', async ({
   page,
 }) => {
-  await startAt('hands-off', { warn: 30, compact: 50, auto: false });
+  await startAt({ warn: 30, compact: 50, auto: false });
   await newChat(page);
   await sendAndWait(page, 'Sketch it #ctx40', 1);
   const ring = page.getByRole('button', { name: /Context window: 40% used/ });
@@ -150,7 +150,7 @@ test('saved thresholds drive the ring, and with automatic compaction off Spark o
 });
 
 test('a 1M window drives the ring and the compaction card', async ({ page }) => {
-  await startAt('balanced');
+  await startAt(ASKS_FIRST);
   await newChat(page);
   await sendAndWait(page, 'Read the whole repo #window1m #ctx65', 1);
   const ring = page.getByRole('button', {

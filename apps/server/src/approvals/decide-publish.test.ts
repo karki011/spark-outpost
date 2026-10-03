@@ -18,8 +18,8 @@ import { REMOTE_RAIL_REASON, otherBranchReason, type PublishGrant } from './publ
 const ROOT = '/work/app/.spark/worktrees/chat-1';
 const BRANCH = 'spark/fix-dates-1a2b';
 const files: FileLister = { glob: () => [], walk: () => [], script: () => null };
-const MANUAL: PublishGrant = { level: 'balanced', requested: false };
-const ASKED: PublishGrant = { level: 'balanced', requested: true };
+const MANUAL: PublishGrant = { level: 'hands-off', requested: false };
+const ASKED: PublishGrant = { level: 'hands-off', requested: true };
 const FULL_AUTO: PublishGrant = { level: 'full-auto', requested: false };
 
 function run(command: string): ApprovalRequest {

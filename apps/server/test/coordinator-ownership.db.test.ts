@@ -1,8 +1,7 @@
-import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION, type InvolvementLevel, type PieceList } from '@spark-outpost/contracts';
+import type { InvolvementLevel, PieceList } from '@spark-outpost/contracts';
 import { BUILDER_GIT_REASON } from '../src/approvals/piece-guard.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
@@ -113,21 +112,6 @@ describe('ownership and git guards', { timeout: 120_000 }, () => {
       owns: ['api.ts', 'stray.ts'],
     });
     expect(await readFile(join(root, 'stray.ts'), 'utf8')).toBe('shell stray\n');
-  });
-
-  it('asks at Review each step and reverts the file when you choose to', async () => {
-    const answer: Answerer = (approval) =>
-      approval.kind === 'ownership'
-        ? { optionId: CHECKPOINT_OPTION.revertFile }
-        : answerEverything(approval);
-    const { asked, list } = await build('#shellstray', 'balanced', answer);
-    const card = asked.find((approval) => approval.kind === 'ownership');
-    expect(card?.title).toBe('Rivet changed a file outside its piece');
-    expect(card?.reason).toBe('Rivet changed `stray.ts`, which no piece owns.');
-    expect(list.pieces[1]!.violations).toEqual([
-      { path: 'stray.ts', action: 'reverted', owner: null },
-    ]);
-    expect(existsSync(join(root, 'stray.ts'))).toBe(false);
   });
 
   it('gives each Builder its slot and name in its environment and its checks', async () => {

@@ -26,7 +26,7 @@ interface PieceGroup {
 
 const LIMITED = new Set(['rate_limit', 'usage_limit']);
 
-export async function pieceSlots(s: Session): Promise<number> {
+async function pieceSlots(s: Session): Promise<number> {
   const { slots } = await projectSettings(s.deps.db, s.lease.runId);
   const issues = await providerIssues(s.deps.db, s.input.workspaceId);
   const limited = issues.some(

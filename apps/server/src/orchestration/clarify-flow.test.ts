@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CHECKPOINT_OPTION, type InvolvementLevel } from '@spark-outpost/contracts';
 import { initialFlow, nextStep, type FlowEvent, type FlowState } from './transitions.ts';
 
-const flow = (level: InvolvementLevel = 'balanced') => initialFlow('edits', level);
+const flow = (level: InvolvementLevel = 'hands-off') => initialFlow('edits', level);
 
 function after(state: FlowState, events: readonly FlowEvent[]) {
   let result = nextStep(state, events[0]!);
@@ -64,7 +64,7 @@ describe('plan first, then build', () => {
     ]);
     expect(built.action).toMatchObject({ type: 'spawn', role: 'builder', reason: 'first' });
     expect(built.state.depth).toBe('execute');
-    const edited = after(planned('balanced').state, [
+    const edited = after(planned('hands-off').state, [
       { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.editPlan, note: 'skip docs' },
     ]);
     expect(edited.action).toEqual({ type: 'plan_first', note: 'skip docs' });

@@ -27,7 +27,7 @@ const advice: AdviceSummary = {
     decision: 'act',
     confidence: 0.7,
     risk: 'read-only',
-    level: 'balanced',
+    level: 'hands-off',
     actAt: 0.6,
     askAt: 0.4,
     clarifyBelow: null,

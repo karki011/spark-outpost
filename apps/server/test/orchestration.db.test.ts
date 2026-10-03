@@ -32,14 +32,12 @@ interface Expectation {
 }
 
 const asksEdits = (crew: AgentRole[]): Record<InvolvementLevel, Expectation> => ({
-  balanced: { crew, asked: ['edit'] },
   'hands-off': { crew, asked: [] },
   'full-auto': { crew, asked: [] },
 });
 
 const EXPECTED: Record<string, Record<InvolvementLevel, Expectation>> = {
   question: {
-    balanced: { crew: ['scout'], asked: [] },
     'hands-off': { crew: ['scout'], asked: [] },
     'full-auto': { crew: ['scout'], asked: [] },
   },
@@ -47,7 +45,6 @@ const EXPECTED: Record<string, Record<InvolvementLevel, Expectation>> = {
   normal: asksEdits([BUILDER]),
   complex: asksEdits([BUILDER]),
   risky: {
-    balanced: { crew: [SCOUT, BUILDER, CRITIC], asked: ['plan', 'edit'] },
     'hands-off': { crew: [SCOUT, BUILDER, CRITIC], asked: ['plan'] },
     'full-auto': { crew: [SCOUT, BUILDER, CRITIC], asked: ['plan'] },
   },
@@ -120,9 +117,6 @@ describe.each(SCENARIOS)('$id', (scenario) => {
       ).toEqual(keptBy);
       if (level === 'hands-off' && keptBy.length > 0) {
         expect(kept[0]!.reason, context).toContain('Kept automatically');
-      }
-      if (level === 'balanced' && keptBy.length > 0) {
-        expect(kept[0]!.reason, context).toContain('you approved every edit');
       }
 
       const builders = expected.crew.filter((role) => role === BUILDER).length;
@@ -205,7 +199,7 @@ describe('rule routing on Auto', () => {
   }, 60_000);
 
   it("answers on the provider's default model in an Auto chat, whatever model the chat had", async () => {
-    const { orchestration } = await runLevel(QUESTION, 'balanced', 'auto', 'haiku');
+    const { orchestration } = await runLevel(QUESTION, 'hands-off', 'auto', 'haiku');
     expect(orchestration.crew).toEqual([
       expect.objectContaining({ role: 'scout', model: 'opus[1m]' }),
     ]);
@@ -214,7 +208,7 @@ describe('rule routing on Auto', () => {
   }, 60_000);
 
   it('answers on Haiku when the user picked it, with a retiring note', async () => {
-    const { orchestration } = await runLevel(QUESTION, 'balanced', 'pinned', 'haiku');
+    const { orchestration } = await runLevel(QUESTION, 'hands-off', 'pinned', 'haiku');
     const note = 'Haiku 4.5 retiring on 2026-10-15';
     expect(orchestration.crew).toEqual([
       expect.objectContaining({ role: 'scout', model: 'haiku', routeNote: note }),

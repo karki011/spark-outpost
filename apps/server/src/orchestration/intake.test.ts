@@ -21,7 +21,7 @@ const jev = (extra: Partial<JevIntake> = {}): JevIntake => ({
 const facts = (extra: Partial<IntakeFacts> = {}): IntakeFacts => ({
   request: 'Add a CSV export to the reports page',
   mode: 'do',
-  level: 'balanced',
+  level: 'hands-off',
   firstMessage: false,
   namedFiles: 0,
   currentTask: null,
@@ -51,7 +51,7 @@ describe('intake decisions', () => {
   });
 
   it('answers when Jev is unsure, unless the request leads with a change verb', () => {
-    for (const level of ['balanced', 'hands-off', 'full-auto'] as const) {
+    for (const level of ['hands-off', 'full-auto'] as const) {
       const unsure = facts({ request: 'lets plan the agent md update', level });
       expect(decideIntake(jev({ question: 0.52 }), unsure).start, level).toBe('answer');
       expect(
@@ -85,7 +85,7 @@ describe('intake decisions', () => {
 
   it('plans first before any destructive build, at every level, also after clarifying (E)', () => {
     const cleanup = 'Clean up the uploads table — drop the unused columns and old rows.';
-    for (const level of ['balanced', 'hands-off', 'full-auto'] as const) {
+    for (const level of ['hands-off', 'full-auto'] as const) {
       expect(decideIntake(null, facts({ request: 'Drop the users table', level }))).toMatchObject({
         start: 'plan_first',
         then: 'plan_first',
@@ -127,7 +127,7 @@ describe('intake decisions', () => {
       request:
         'Add CSV export to the reports page, add a download button, update the docs and write a test',
     });
-    for (const level of ['balanced', 'hands-off', 'full-auto'] as const) {
+    for (const level of ['hands-off', 'full-auto'] as const) {
       expect(decideIntake(null, { ...big, level }).start, level).toBe('plan_first');
     }
     expect(decideIntake(null, { ...big, hasAgreedPlan: true }).start).toBe('build');

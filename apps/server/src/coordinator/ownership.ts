@@ -1,19 +1,10 @@
 import { rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { CHECKPOINT_OPTION, type PieceViolation, type TaskPiece } from '@spark-outpost/contracts';
+import type { PieceViolation, TaskPiece } from '@spark-outpost/contracts';
 import { gitFileAt } from '../projects/snapshot.ts';
-import { askCard, CheckpointTimeout, ownershipCard } from '../orchestration/checkpoint.ts';
-import type { Session } from '../orchestration/session.ts';
 import { ownerLabel, owns, type OwnedFiles, type OwnedSet } from './owned.ts';
 import { sharedTreeBlocker } from './placement.ts';
 import type { Coordination } from './state.ts';
-
-export type OwnershipOutcome = 'kept' | 'stopped';
-
-export interface OwnershipResult {
-  outcome: OwnershipOutcome;
-  violations: PieceViolation[];
-}
 
 export function ownedFilesFor(coordination: Coordination, piece: TaskPiece): OwnedFiles {
   const setOf = (key: string): OwnedSet => coordination.owned.get(key) ?? { paths: [], globs: [] };
@@ -45,38 +36,13 @@ function adopt(coordination: Coordination, key: string, files: readonly string[]
   coordination.owned = owned;
 }
 
-async function askAboutUnowned(
-  s: Session,
-  name: string,
-  files: readonly string[],
-): Promise<'keep' | 'revert' | 'stop'> {
-  const answer = await askCard(s, ownershipCard(name, files));
-  if (answer.type === 'timeout') throw new CheckpointTimeout();
-  if (answer.type === 'stopped' || answer.optionId === CHECKPOINT_OPTION.stop) return 'stop';
-  return answer.optionId === CHECKPOINT_OPTION.keepInPiece ? 'keep' : 'revert';
-}
-
-async function settleUnowned(
-  s: Session,
-  owned: OwnedFiles,
-  files: readonly string[],
-): Promise<{ kept: string[]; stop: boolean }> {
-  if (files.length === 0) return { kept: [], stop: false };
-  if (s.input.level === 'balanced') {
-    const choice = await askAboutUnowned(s, owned.name ?? owned.key, files);
-    return { kept: choice === 'keep' ? [...files] : [], stop: choice === 'stop' };
-  }
-  return { kept: files.filter((file) => sharedTreeBlocker(file) === null), stop: false };
-}
-
 export async function checkOwnership(
-  s: Session,
   coordination: Coordination,
   piece: TaskPiece,
   changed: readonly string[],
   cwd: string,
   before: string,
-): Promise<OwnershipResult> {
+): Promise<PieceViolation[]> {
   const owned = ownedFilesFor(coordination, piece);
   const outside = changed.filter((file) => !owns(owned, file));
   const violations: PieceViolation[] = [];
@@ -90,15 +56,15 @@ export async function checkOwnership(
     await revertFile(cwd, before, file);
     violations.push({ path: file, action: 'reverted', owner: ownerLabel(owner) });
   }
-  const settled = await settleUnowned(s, owned, unowned);
+  const kept = unowned.filter((file) => sharedTreeBlocker(file) === null);
   for (const file of unowned) {
-    const kept = settled.kept.includes(file);
-    if (!kept && !settled.stop) await revertFile(cwd, before, file);
-    violations.push({ path: file, action: kept ? 'moved' : 'reverted', owner: null });
+    const moved = kept.includes(file);
+    if (!moved) await revertFile(cwd, before, file);
+    violations.push({ path: file, action: moved ? 'moved' : 'reverted', owner: null });
   }
-  if (settled.kept.length > 0) adopt(coordination, piece.key, settled.kept);
+  if (kept.length > 0) adopt(coordination, piece.key, kept);
   if (violations.length > 0) coordination.violations += 1;
-  return { outcome: settled.stop ? 'stopped' : 'kept', violations };
+  return violations;
 }
 
 export function violationNote(violations: readonly PieceViolation[]): string | null {

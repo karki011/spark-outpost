@@ -37,6 +37,7 @@ import {
 import { startHelp, type Help } from './help.ts';
 import { aboutVersion } from './help-menu.ts';
 import { startDatabase, type Database, type DatabaseOptions } from './postgres.ts';
+import { startPrivacy, type Privacy } from './privacy.ts';
 import { apiEnv, POSTGRES_LOCALE, workerEnv, type ServerLaunch } from './server-env.ts';
 import { forkService, OutputTail } from './service.ts';
 import { createShutdown } from './shutdown.ts';
@@ -92,6 +93,7 @@ let companionHost: CompanionHost | null = null;
 let failureHelp: string | null = null;
 let updater: Updater | null = null;
 let help: Help | null = null;
+let privacy: Privacy | null = null;
 let heartbeat: HeartbeatTimer | null = null;
 let storage: StorageSync | null = null;
 const fileLog = new FileLog({ dir: paths.logs });
@@ -145,6 +147,8 @@ function closeWindows(): void {
   updater = null;
   help?.dispose();
   help = null;
+  privacy?.dispose();
+  privacy = null;
   companionHost?.dispose();
   companionHost = null;
   for (const open of BrowserWindow.getAllWindows()) open.destroy();
@@ -336,6 +340,9 @@ async function launch(): Promise<void> {
     showSpark,
     mainWindow: () => spark?.window ?? null,
     log: log('help'),
+  });
+  privacy = startPrivacy({
+    trusted: (event) => targetsApi(event.senderFrame?.url ?? '', apiUrl),
   });
   updater = await startUpdater({
     enabled: config.autoUpdate,

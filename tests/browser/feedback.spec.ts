@@ -1,5 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
-import { card, crewChat, crewRepo, resetCrew, send, type CrewRepo } from './crew-engine.ts';
+import {
+  card,
+  crewChat,
+  crewRepo,
+  failingCheck,
+  resetCrew,
+  send,
+  type CrewRepo,
+} from './crew-engine.ts';
 import { openChats } from './navigation.ts';
 
 let repo: CrewRepo;
@@ -27,7 +35,8 @@ async function twoEarlierTurns(page: Page): Promise<void> {
 }
 
 async function keptChange(page: Page, choice: 'Keep' | 'Revert'): Promise<void> {
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
+  await failingCheck(page, repo.root);
   if (choice === 'Keep') await twoEarlierTurns(page);
   await send(page, 'Fix the divider #build');
   await expect(keepCard(page)).toBeVisible({ timeout: 30_000 });
@@ -123,7 +132,7 @@ test('keeps the thumbs in the token row, nudging only from the third turn', asyn
 test('stays quiet when the signals agree: just the thumbs', async ({ page }) => {
   test.setTimeout(240_000);
   repo.commit('check.mjs', "console.log('ok');\n");
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
   await twoEarlierTurns(page);
   const listed = await page.request.get('/api/projects');
   const project = ((await listed.json()) as { id: string; rootPath: string }[]).find(
@@ -139,7 +148,6 @@ test('stays quiet when the signals agree: just the thumbs', async ({ page }) => 
   });
   await check.getByRole('button', { name: 'Allow', exact: true }).click({ timeout: 30_000 });
   await expect(keepCard(page)).toBeVisible({ timeout: 30_000 });
-  await keepCard(page).getByRole('button', { name: 'Keep', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Send' })).toBeVisible({ timeout: 30_000 });
 
   const good = keepCard(page).getByRole('button', { name: 'Good result' });

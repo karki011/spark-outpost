@@ -150,9 +150,6 @@ describe('checkpoint wording', () => {
     expect(checkpointResult(checkpoint({ kind: 'accept', keptBy: 'hands-off' }, kept))).toBe(
       'Kept automatically.',
     );
-    expect(checkpointResult(checkpoint({ kind: 'accept', keptBy: 'balanced' }, kept))).toBe(
-      'Kept: you approved every edit.',
-    );
   });
 
   it('titles the risky-change card and reports its approval', () => {

@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   asksToKeep,
-  confirmsRiskyFirst,
-  copiesRiskyWork,
   DESTRUCTIVE_CARD_REASON,
   keepReason,
   keptLine,
@@ -11,7 +9,6 @@ import {
   riskyChange,
 } from './checkpoint-policy.ts';
 import { destructiveByRule, destructiveMigrationInPatch } from './risk-rules.ts';
-import { riskyCard, RISKY_CARD_TITLE } from './checkpoint.ts';
 
 const S11 = [
   'Add tags to projects, end to end:',
@@ -131,37 +128,15 @@ describe('risky migrations found after the Builder', () => {
   });
 });
 
-describe('the risky card', () => {
-  it('asks first only at Review each step; Automatic and Full auto → PR copy risky work instead', () => {
-    expect(confirmsRiskyFirst('balanced')).toBe(true);
-    expect(confirmsRiskyFirst('hands-off')).toBe(false);
-    expect(confirmsRiskyFirst('full-auto')).toBe(false);
-    expect(copiesRiskyWork('balanced')).toBe(false);
-    expect(copiesRiskyWork('hands-off')).toBe(true);
-    expect(copiesRiskyWork('full-auto')).toBe(true);
-  });
-
-  it('offers Build it or Stop on the card', () => {
-    const card = riskyCard(DESTRUCTIVE_CARD_REASON);
-    expect(card).toMatchObject({ kind: 'plan', title: RISKY_CARD_TITLE });
-    expect(card.options.map((option) => option.name)).toEqual(['Build it', 'Stop']);
-  });
-});
-
 describe('keep card', () => {
   const settled = { checksFailing: false, criticUnsatisfied: false };
-
-  it('always asks at Ask before edits when files changed', () => {
-    expect(asksToKeep('balanced', 2, settled)).toBe(true);
-    expect(asksToKeep('balanced', 0, settled)).toBe(false);
-  });
 
   it('keeps at Automatic and turns failing checks and Critic concerns into a note', () => {
     expect(asksToKeep('hands-off', 2, settled)).toBe(false);
     expect(keepsByItself('hands-off', 2)).toBe(true);
     const troubled = { ...settled, checksFailing: true, criticUnsatisfied: true };
     expect(asksToKeep('hands-off', 2, { ...troubled, outsideWorktree: true })).toBe(false);
-    expect(keepsByItself('hands-off', 2, troubled)).toBe(true);
+    expect(keepsByItself('hands-off', 2)).toBe(true);
     expect(keptLine(settled)).toBeNull();
     expect(keptLine(troubled)).toBe(
       'Kept automatically; worth a look: the checks still fail; the Critic still has concerns. Revert undoes them.',
@@ -177,20 +152,5 @@ describe('keep card', () => {
       false,
     );
     expect(keepsByItself('full-auto', 2)).toBe(false);
-  });
-});
-
-describe('never ask twice', () => {
-  it('skips the keep card at Review each step when you approved every edit', () => {
-    const settled = { checksFailing: false, criticUnsatisfied: false };
-    expect(asksToKeep('balanced', 2, settled)).toBe(true);
-    expect(asksToKeep('balanced', 2, { ...settled, approvedEach: true })).toBe(false);
-    expect(keepsByItself('balanced', 2, { ...settled, approvedEach: true })).toBe(true);
-    expect(keepsByItself('balanced', 2, settled)).toBe(false);
-  });
-
-  it('still asks when something new went wrong after the edits you approved', () => {
-    const approved = { checksFailing: true, criticUnsatisfied: false, approvedEach: true };
-    expect(asksToKeep('balanced', 2, approved)).toBe(true);
   });
 });

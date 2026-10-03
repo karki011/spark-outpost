@@ -67,22 +67,6 @@ const pieceRow = (page: Page, key: string) =>
 const tvOf = (page: Page) => page.getByRole('dialog', { name: 'Agent TV' });
 const spoke = (page: Page, key: string) => tvOf(page).locator(`.tv-n[data-piece="${key}"]`);
 
-async function focusByShiftTab(page: Page, target: Locator): Promise<void> {
-  await page.getByRole('textbox', { name: 'Message' }).focus();
-  await expect(async () => {
-    await page.keyboard.press('Shift+Tab');
-    await expect(target).toBeFocused({ timeout: 100 });
-  }).toPass({ timeout: 20_000 });
-}
-
-async function showsFocusRing(target: Locator): Promise<boolean> {
-  return target.evaluate((element) => {
-    const style = getComputedStyle(element);
-    const ring = style.outlineStyle !== 'none' || style.boxShadow !== 'none';
-    return element.matches(':focus-visible') && ring;
-  });
-}
-
 async function openTv(page: Page, view: 'Stage' | 'List'): Promise<Locator> {
   await page.getByRole('button', { name: 'Agent TV' }).click();
   const tv = tvOf(page);
@@ -169,53 +153,6 @@ test('Automatic builds independent pieces side by side in the shared tree', asyn
   expect(repo.file('api.ts')).toContain('built by P2');
 });
 
-test('Review each step asks for the split before building it, answered by keyboard', async ({
-  page,
-}) => {
-  test.setTimeout(150_000);
-  await crewChat(page, repo, 'Review keep');
-  await send(page, REQUEST);
-
-  await buildThePlan(page);
-
-  const split = card(page, /Build in 3 pieces, 2 at once in the shared tree\?/);
-  await expect(split).toBeVisible({ timeout: 60_000 });
-  await expect(board(page)).toContainText('waiting for your go-ahead');
-  await expect(pieceRow(page, 'P3')).toContainText('waiting on P1');
-  await expect(pieceRow(page, 'P1').locator('.piece-pick')).toHaveText(
-    "Jev: reasoning 2, coding 2, context 2 → demand low → mid route → Claude Sonnet 5 (the chat's provider)",
-  );
-  const build = split.getByRole('button', { name: 'Build it' });
-  const inOrder = split.getByRole('button', { name: 'Build in order instead' });
-  const revise = split.getByRole('button', { name: 'Revise' });
-  await focusByShiftTab(page, build);
-  expect(await showsFocusRing(build)).toBe(true);
-  await page.keyboard.press('Tab');
-  await expect(inOrder).toBeFocused();
-  expect(await showsFocusRing(inOrder)).toBe(true);
-  await page.keyboard.press('Tab');
-  await expect(revise).toBeFocused();
-  expect(await showsFocusRing(revise)).toBe(true);
-  await page.keyboard.press('Space');
-  const note = split.getByRole('textbox', { name: 'What should change in the split?' });
-  await expect(note).toBeFocused();
-  await page.keyboard.type('Keep the view last');
-  await page.keyboard.press('Tab');
-  await expect(split.getByRole('button', { name: 'Revise the plan' })).toBeFocused();
-  await page.keyboard.press('Enter');
-
-  const splits = card(page, /Build in 3 pieces, 2 at once in the shared tree\?/);
-  await expect(splits).toHaveCount(2, { timeout: 60_000 });
-  const again = splits.last();
-  const buildAgain = again.getByRole('button', { name: 'Build it' });
-  await focusByShiftTab(page, buildAgain);
-  await page.keyboard.press('Enter');
-  await expect(again.getByRole('status')).toBeVisible();
-
-  await allowChecksUntil(page, board(page), '3 pieces, in the shared tree · 3 landed');
-  await expect(parallelGroup(page)).toBeVisible();
-});
-
 test('Full auto builds each piece in its own copy of the chat worktree', async ({ page }) => {
   test.setTimeout(150_000);
   await autoContinueAfter(page, 3);
@@ -264,16 +201,10 @@ test('two copies that collide go to the integrator, then to the merge conflict c
   page,
 }) => {
   test.setTimeout(180_000);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
   await send(page, `${REQUEST} #manifest #useredit #unresolvable`);
   await buildThePlan(page);
-
-  const split = card(page, /^Build in 3 pieces/).filter({
-    has: page.getByRole('button', { name: 'Build it' }),
-  });
-  await expect(split).toBeVisible({ timeout: 60_000 });
-  await expect(board(page)).toContainText('in worktrees');
-  await split.getByRole('button', { name: 'Build it' }).click();
+  await expect(board(page)).toContainText('in worktrees', { timeout: 60_000 });
 
   const conflict = card(page, /copy and your files collided/);
   await allowChecksWhile(page, () => expect(conflict).toBeVisible({ timeout: 1_000 }));

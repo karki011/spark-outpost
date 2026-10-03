@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { InvolvementLevel } from '@spark-outpost/contracts';
-import { MIGRATION_CARD_REASON } from '../src/orchestration/checkpoint-policy.ts';
 import {
   connectProviders,
   driveToEnd,
@@ -60,27 +59,6 @@ describe('the risky card and migrations (N3)', () => {
     expect(orchestration.crew.map((member) => member.role)).toEqual(['builder', 'critic']);
     const kept = orchestration.checkpoints.find((approval) => approval.kind === 'accept');
     expect(kept?.decidedBy).toBe('level');
-  }, 60_000);
-
-  it('asks no risky card for it at Review each step either, and no keep card after you approved each edit', async () => {
-    const { orchestration, cards } = await run(`${TAGS_STORY} #build #addmigration`, 'balanced');
-    expect(orchestration.status).toBe('succeeded');
-    expect(cards.map((approval) => approval.kind)).toEqual([]);
-    expect(
-      orchestration.checkpoints.find((approval) => approval.kind === 'accept')?.payload.checkpoint
-        ?.keptBy,
-    ).toBe('balanced');
-    expect(orchestration.crew.map((member) => member.role)).toEqual(['builder', 'critic']);
-  }, 60_000);
-
-  it('still shows the card first for a migration that drops a column at Review each step', async () => {
-    const { orchestration, cards } = await run(
-      'Write a migration that drops the note column from projects. #build #dropmigration',
-      'balanced',
-    );
-    expect(orchestration.status).toBe('succeeded');
-    expect(cards[0]).toMatchObject({ kind: 'plan' });
-    expect(cards[0]!.reason).toBe(MIGRATION_CARD_REASON);
   }, 60_000);
 
   it('builds a column drop in a worktree copy at Automatic and asks to keep it instead', async () => {

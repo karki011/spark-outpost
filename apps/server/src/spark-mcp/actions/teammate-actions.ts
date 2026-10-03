@@ -35,7 +35,7 @@ const fieldsInput = {
   autonomy: teammateLevelSchema
     .nullable()
     .optional()
-    .describe('balanced (Review each step), hands-off (Automatic) or full-auto (Full auto → PR).'),
+    .describe('hands-off (Automatic) or full-auto (Full auto → PR).'),
   instructions: teammateInstructionsSchema
     .optional()
     .describe('Standing instructions added to every chat with this Spark.'),

@@ -12,7 +12,7 @@ describe('mode summary', () => {
     expect(modeSummary('claude', 'acceptEdits', 'hands-off', modes)).toBe(
       'Accept edits · Automatic',
     );
-    expect(modeSummary('claude', 'default', 'balanced', modes)).toBe('Manual · Review each step');
+    expect(modeSummary('claude', 'default', 'full-auto', modes)).toBe('Manual · Full auto → PR');
     expect(modeSummary('claude', 'default', null, modes)).toBe('Manual · Automatic');
   });
 

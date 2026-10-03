@@ -49,17 +49,6 @@ function payload(
   return checkpointPayloadSchema.parse(partial);
 }
 
-export const RISKY_CARD_TITLE = 'Start this risky change?';
-
-export function riskyCard(reason: string): CheckpointCard {
-  return {
-    kind: 'plan',
-    title: RISKY_CARD_TITLE,
-    payload: payload({ kind: 'plan', question: RISKY_CARD_TITLE, reason }),
-    options: [allow(CHECKPOINT_OPTION.makeChange, 'Build it'), stopOption],
-  };
-}
-
 function retryTarget(to: AgentPick | null): string {
   return to?.modelLabel ? ` with ${to.modelLabel}` : ' one tier up';
 }
@@ -83,25 +72,6 @@ export function retryCard(
     }),
     options: [
       allow(CHECKPOINT_OPTION.retry, 'Retry'),
-      reject(CHECKPOINT_OPTION.stopReport, 'Stop and report'),
-    ],
-  };
-}
-
-export function stuckCard(agent: string, reason: string): CheckpointCard {
-  const title = `${agent} was repeating itself`;
-  return {
-    kind: 'stuck',
-    title,
-    payload: payload({
-      kind: 'stuck',
-      question: 'Continue, or stop and report?',
-      reason: `${reason}.`,
-      agent,
-      autoOption: CHECKPOINT_OPTION.stopReport,
-    }),
-    options: [
-      allow(CHECKPOINT_OPTION.continueStuck, `Continue ${agent}`),
       reject(CHECKPOINT_OPTION.stopReport, 'Stop and report'),
     ],
   };
@@ -177,41 +147,6 @@ export function budgetCard(
       budget: { limit, used, allowed },
     }),
     options: [allow(CHECKPOINT_OPTION.continueBudget, 'Continue'), stopOption],
-  };
-}
-
-export function ownershipCard(agent: string, files: readonly string[]): CheckpointCard {
-  const named = files.map((file) => `\`${file}\``).join(', ');
-  const reason = `${agent} changed ${named}, which no piece owns.`;
-  return {
-    kind: 'ownership',
-    title: `${agent} changed a file outside its piece`,
-    payload: payload({
-      kind: 'ownership',
-      question: 'Keep it in the piece, revert it, or stop?',
-      reason,
-      agent,
-      files: files.map((path) => ({ path, change: 'modified' as const })),
-    }),
-    options: [
-      allow(CHECKPOINT_OPTION.keepInPiece, `Keep it in ${agent}'s piece`),
-      reject(CHECKPOINT_OPTION.revertFile, 'Revert that file'),
-      stopOption,
-    ],
-  };
-}
-
-export function piecesCard(question: string, reason: string, parallel: boolean): CheckpointCard {
-  return {
-    kind: 'pieces',
-    title: question,
-    payload: payload({ kind: 'pieces', question, reason }),
-    options: [
-      allow(CHECKPOINT_OPTION.makeChange, 'Build it'),
-      ...(parallel ? [allow(CHECKPOINT_OPTION.buildInOrder, 'Build in order instead')] : []),
-      allow(CHECKPOINT_OPTION.editPlan, 'Revise'),
-      stopOption,
-    ],
   };
 }
 

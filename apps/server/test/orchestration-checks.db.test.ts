@@ -150,7 +150,7 @@ describe('checks after a Builder lands', { timeout: 60_000 }, () => {
     await writeFile(join(root, 'check.mjs'), "console.log('ok');\n");
     await setCheckCommands(t, root, ['node check.mjs']);
     start(TRIVIAL);
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'balanced');
+    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, null);
     const { asked } = await driveToEnd(t, conversationId, runId);
     expect(asked.map((approval) => approval.title)).toContain('Run check: node check.mjs');
     const bodies = await checkBodies();
@@ -162,7 +162,7 @@ describe('checks after a Builder lands', { timeout: 60_000 }, () => {
     await writeFile(join(root, 'check.mjs'), FAILS_UNTIL_FIXED);
     await setCheckCommands(t, root, ['node check.mjs']);
     start(TRIVIAL);
-    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, 'balanced');
+    const { conversationId, runId } = await startScenario(t, root, TRIVIAL, null);
     const { asked } = await driveToEnd(t, conversationId, runId, (approval) => {
       const decision = answerEverything(approval);
       return decision && approval.kind === 'edit' ? { ...decision, scope: 'run' } : decision;

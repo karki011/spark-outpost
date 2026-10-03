@@ -15,7 +15,7 @@ const connection = {
   model: null,
   permission: 'ask',
   agentMode: null,
-  level: 'balanced',
+  level: 'hands-off',
   effort: null,
   verifiedAt: '2026-09-28T00:00:00.000Z',
 } as ProviderConnection;

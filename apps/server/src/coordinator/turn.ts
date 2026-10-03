@@ -18,7 +18,7 @@ import { routePieces } from './piece-jev.ts';
 import { piecesHash, validatePieces, type CheckedPieces } from './pieces-validate.ts';
 import type { PlanStep } from './plan-coverage.ts';
 import { budgetFor, lineCounter, projectFiles } from './project-facts.ts';
-import { chooseListPlace, wantsListCard } from './place-list.ts';
+import { chooseListPlace } from './place-list.ts';
 import { coordinatorPrompt, piecesBlockText, repairPrompt } from './prompts.ts';
 
 const LIKELY_SHOWN = 15;
@@ -37,7 +37,7 @@ export interface WrittenList {
   topTier: Set<string>;
 }
 
-export type PieceListResult = { ok: true; value: WrittenList } | { ok: false; reason: string };
+type PieceListResult = { ok: true; value: WrittenList } | { ok: false; reason: string };
 
 function coordinatorKey(taskId: string): string {
   return `${taskId}:coordinator`;
@@ -96,35 +96,27 @@ async function checkBlock(
   });
 }
 
-function withRevision(prompt: string, note: string | null): string {
-  return note ? `${prompt}\n\n## The user asked for changes to the split\n${note}` : prompt;
-}
-
 async function askForPieces(
   s: Session,
   assessment: Assessment,
   plan: BuilderPlan,
-  note: string | null,
 ): Promise<{ ok: true; value: CheckedPieces } | { ok: false; reason: string }> {
   const root = s.input.projectRoots[0]!;
   const files = await projectFiles(root);
   const budgetTokens = budgetFor(seatRoute(s, spawn).route.pick);
   const likely = likelyFiles(s.scanReport?.candidates ?? []).slice(0, LIKELY_SHOWN);
-  let prompt = withRevision(
-    coordinatorPrompt({
-      request: s.input.userRequest,
-      agreedPlan: await agreedPlanText(s),
-      likelyFiles: likely.map((file) => ({ path: file.path, lines: file.lines })),
-      planFiles: [...new Set(assessment.planSteps.flatMap((step) => step.files))].slice(
-        0,
-        PLAN_FILES_SHOWN,
-      ),
-      checks: checkCommands(s),
-      budgetTokens,
-      groups: plan.steps,
-    }),
-    note,
-  );
+  let prompt = coordinatorPrompt({
+    request: s.input.userRequest,
+    agreedPlan: await agreedPlanText(s),
+    likelyFiles: likely.map((file) => ({ path: file.path, lines: file.lines })),
+    planFiles: [...new Set(assessment.planSteps.flatMap((step) => step.files))].slice(
+      0,
+      PLAN_FILES_SHOWN,
+    ),
+    checks: checkCommands(s),
+    budgetTokens,
+    groups: plan.steps,
+  });
   let errors: string[] = [];
   for (let attempt = 0; attempt < 2; attempt += 1) {
     if (attempt > 0) prompt = repairPrompt(prompt, errors);
@@ -161,9 +153,8 @@ export async function writePieceList(
   s: Session,
   assessment: Assessment,
   plan: BuilderPlan,
-  note: string | null = null,
 ): Promise<PieceListResult> {
-  const asked = await askForPieces(s, assessment, plan, note);
+  const asked = await askForPieces(s, assessment, plan);
   if (!asked.ok) return asked;
   const { pieces, integration } = asked.value;
   const place = await chooseListPlace(s, pieces);
@@ -180,7 +171,7 @@ export async function writePieceList(
     placement: routed.placement,
     placementReason: routed.reason,
     integration,
-    approvedBy: wantsListCard(s, routed.placement, pieces.length) ? null : 'level',
+    approvedBy: 'level',
     pieces: pieces.map((piece) => ({
       ...piece,
       owns: [...piece.owned.paths, ...piece.owned.globs],

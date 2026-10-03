@@ -59,7 +59,7 @@ describe('the Spark decisions migration', () => {
 
     expect(await defaultLevel(db, local)).toBe('full-auto');
     expect(await defaultLevel(db, tied)).toBe('hands-off');
-    expect(await defaultLevel(db, unprofiled)).toBe('balanced');
+    expect(await defaultLevel(db, unprofiled)).toBe('hands-off');
     const { rows } = await db.query(
       `SELECT 1 FROM information_schema.columns
        WHERE table_schema = $1 AND table_name = 'provider_connections' AND column_name = 'level'`,
@@ -130,17 +130,17 @@ describe('Spark decision settings', () => {
 
   it('gives new chats the one default autonomy and keeps a chat’s own pick', async () => {
     expect((await draftChatSettings(t.db, t.workspaceId)).level).toBe('hands-off');
-    await updateProfile(t.db, t.workspaceId, { defaultLevel: 'balanced' });
-    expect((await draftChatSettings(t.db, t.workspaceId)).level).toBe('balanced');
+    await updateProfile(t.db, t.workspaceId, { defaultLevel: 'full-auto' });
+    expect((await draftChatSettings(t.db, t.workspaceId)).level).toBe('full-auto');
     const picked = await createConversation(t.db, t.workspaceId, randomUUID());
     await t.db.query('UPDATE conversations SET overrides = $2 WHERE id = $1', [
       picked.id,
-      JSON.stringify({ claude: { level: 'full-auto' } }),
+      JSON.stringify({ claude: { level: 'hands-off' } }),
     ]);
     const fresh = await createConversation(t.db, t.workspaceId, randomUUID());
     await t.db.query(`UPDATE conversations SET provider = 'codex' WHERE id = $1`, [fresh.id]);
-    expect((await resolveChatSettings(t.db, picked.id)).level).toBe('full-auto');
-    expect((await resolveChatSettings(t.db, fresh.id)).level).toBe('balanced');
+    expect((await resolveChatSettings(t.db, picked.id)).level).toBe('hands-off');
+    expect((await resolveChatSettings(t.db, fresh.id)).level).toBe('full-auto');
   });
 
   it('no longer takes an autonomy level per agent', async () => {

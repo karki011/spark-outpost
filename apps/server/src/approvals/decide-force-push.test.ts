@@ -50,7 +50,7 @@ describe('decide() asks before a lease force push to a working branch', () => {
     ['git add . && git -C sub push --force-with-lease origin feature', ['feature']],
   ])('%s', (command, branches) => {
     for (const mode of EVERY_MODE) {
-      const options = { worktreeAuto: true, defaultBranch: 'trunk' };
+      const options = { defaultBranch: 'trunk' };
       expect(decide(mode, run(command), everything(command), ['git'], options)).toEqual({
         verdict: 'ask',
         reason: forcePushReason(branches),

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { planEntrySchema } from './artifacts.ts';
-import { INVOLVEMENT_LEVEL_IDS } from './involvement-levels.ts';
+import { involvementLevelSchema } from './involvement-levels.ts';
 
 export const checkpointKindSchema = z.enum([
   'clarify',
@@ -128,7 +128,7 @@ export const checkpointPayloadSchema = z.object({
   agent: z.string().nullable().default(null),
   autoOption: z.string().nullable().default(null),
   waitsFor: z.string().nullable().default(null),
-  keptBy: z.enum(INVOLVEMENT_LEVEL_IDS).nullable().default(null),
+  keptBy: involvementLevelSchema.nullable().default(null),
   laws: z.array(z.string()).default([]),
   lines: z
     .object({ added: z.number().int().nonnegative(), removed: z.number().int().nonnegative() })

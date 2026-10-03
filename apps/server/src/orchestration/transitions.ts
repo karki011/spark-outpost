@@ -16,7 +16,6 @@ import {
 import { MAX_VERDICTS, PLAN_CONTINUES } from '../advisor/policy.ts';
 import {
   asksToKeep,
-  asksForLoop,
   keepReason,
   filesChangedLine,
   keepFacts,
@@ -119,11 +118,7 @@ export function continueFollowUp(open: readonly string[]): string {
   return `You stopped before finishing: ${listText(open)} ${open.length === 1 ? 'is' : 'are'} still open in your plan. Continue with ${open.length === 1 ? 'it' : 'them'} now, then reply with what you changed.`;
 }
 
-export const UNSTICK_NOTE =
-  'The harness stopped your last turn because you repeated the same action several times without progress. Take a different approach, or say what is blocking you.';
-
 function build(state: FlowState): FlowResult {
-  if (state.confirmFirst) return ask(state, 'plan', state.confirmFirst);
   return spawn(
     { ...state, depth: 'execute' },
     { role: 'builder', reason: 'first', escalate: false },
@@ -287,7 +282,7 @@ function criticFailed(state: FlowState, error: string | null | undefined): FlowR
       { role: 'critic', reason: 'retry', escalate: false },
     );
   }
-  const review = afterReview(state.review, 'unclear', [], state.level);
+  const review = afterReview(state.review, 'unclear', []);
   return wrapUp({ ...state, review, criticSkipped: error?.trim() || CRITIC_UNAVAILABLE });
 }
 
@@ -311,7 +306,7 @@ function agentDone(
     return criticFailed(state, event.error);
   if (event.role === 'critic') {
     const verdict = event.verdict ?? 'unclear';
-    const review = afterReview(state.review, verdict, event.fixable ?? [], state.level);
+    const review = afterReview(state.review, verdict, event.fixable ?? []);
     const next = { ...state, verdict, review };
     return lastAction(review) === 'fix' ? fixFindings(next, true) : wrapUp(next);
   }
@@ -320,9 +315,6 @@ function agentDone(
 
 function looped(state: FlowState, event: Extract<FlowEvent, { type: 'looped' }>): FlowResult {
   const next = { ...state, loop: event.summary, open: [...(event.open ?? state.open)] };
-  if (asksForLoop(state.level) && state.retries < MAX_REPAIR_RETRIES) {
-    return ask(next, 'stuck', event.summary);
-  }
   return stopReport(next, `Stopped: ${event.summary}.`);
 }
 
@@ -355,15 +347,6 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
       `Stopped after ${MAX_REPAIR_RETRIES} retries; the step did not succeed.`,
     );
   }
-  if (event.kind === 'stuck') {
-    if (option === CHECKPOINT_OPTION.continueStuck) {
-      return spawn(
-        { ...state, retries: state.retries + 1, loop: null },
-        { role: 'builder', reason: 'unstick', escalate: false, followUp: UNSTICK_NOTE },
-      );
-    }
-    return stopReport(state, `Stopped: ${state.loop ?? 'the Builder was repeating itself'}.`);
-  }
   if (event.kind === 'clarify') {
     return spawn(
       { ...state, retries: state.retries + 1, missingContext: null },
@@ -375,7 +358,7 @@ function answered(state: FlowState, event: Extract<FlowEvent, { type: 'answered'
     if (note) return planFirst(state, note);
     if (option !== CHECKPOINT_OPTION.makeChange)
       return finish(state, 'cancelled', 'You stopped it.');
-    return build({ ...state, confirmFirst: null });
+    return build(state);
   }
   if (event.kind === 'plan') {
     const note = option === CHECKPOINT_OPTION.editPlan ? event.note?.trim() : null;
@@ -437,7 +420,6 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
     case 'wrapped': {
       const facts = {
         ...keepFacts(state, event.checksFailing === true, event.riskyMigration ?? null),
-        approvedEach: event.approvedEach === true,
         outsideWorktree: event.outsideWorktree === true,
       };
       if (asksToKeep(state.level, event.filesChanged, facts)) {
@@ -446,12 +428,9 @@ export function nextStep(state: FlowState, event: FlowEvent): FlowResult {
         return ask(state, 'accept', why ? `${line} ${why}` : line);
       }
       if (shipsByItself(state.level, event.filesChanged)) return ship(state);
-      if (keepsByItself(state.level, event.filesChanged, facts)) {
+      if (keepsByItself(state.level, event.filesChanged)) {
         const note = keptLine(facts);
-        const action =
-          state.level === 'balanced'
-            ? { type: 'keep' as const, approvedEach: true }
-            : { type: 'keep' as const, ...(note ? { note } : {}) };
+        const action = { type: 'keep' as const, ...(note ? { note } : {}) };
         return { state: { ...state, waitingFor: null }, action };
       }
       return finish(state, 'succeeded');

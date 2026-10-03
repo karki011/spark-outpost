@@ -139,14 +139,14 @@ describe('chats with a teammate', () => {
   });
 
   it('opens one home thread per teammate, named after it', async () => {
-    const teammate = await create({ name: 'Wren', level: 'balanced' });
+    const teammate = await create({ name: 'Wren', level: 'full-auto' });
     const first = await client.send('post', `/api/teammates/${teammate.id}/home`);
     const again = await client.send('post', `/api/teammates/${teammate.id}/home`);
 
     expect(first.body.conversationId).toBe(again.body.conversationId);
     const detail = await getConversationDetail(t.db, first.body.conversationId as string);
     expect(detail?.conversation).toMatchObject({ title: 'Wren', titleSource: 'user' });
-    expect(detail?.settings.level).toBe('balanced');
+    expect(detail?.settings.level).toBe('full-auto');
     expect((await list()).teammates[0]?.homeConversationId).toBe(first.body.conversationId);
   });
 

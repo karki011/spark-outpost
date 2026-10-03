@@ -9,7 +9,7 @@ import { rootLaunch, type RepoLaunch } from '../../agent-config/launch.ts';
 import { DEFAULT_AGENT_SETTINGS, type AgentSettingsRow } from '../../agent-config/store.ts';
 import { executableItems, trustFingerprint, type TrustRow } from '../../agent-config/trust.ts';
 import { redirectsFingerprint } from '../../agent-config/redirects.ts';
-import { agentDefinitions, claudeSessionMeta, CLAUDE_DO_ASK_RULES, codexConfig } from './agents.ts';
+import { agentDefinitions, codexConfig } from './agents.ts';
 import { acpMcpServer, namedMcpServers, prepareRepoSession } from './repo-session.ts';
 import { newSessionRequest } from './session-request.ts';
 
@@ -65,7 +65,7 @@ describe('Claude session meta from repo config', () => {
     expect(claudeCode.options.settingSources).toEqual([]);
     expect(claudeCode.options.strictMcpConfig).toBe(true);
     expect(claudeCode.options.settings.disableSkillShellExecution).toBe(true);
-    expect(claudeCode.options.settings.permissions.ask).toEqual([...CLAUDE_DO_ASK_RULES]);
+    expect(claudeCode.options.settings.permissions).not.toHaveProperty('ask');
     expect(claudeCode.options.settings.permissions.deny).toContain('Read(**/.env)');
     expect(JSON.stringify(claudeCode)).not.toContain('bypassPermissions');
     expect(JSON.stringify(claudeCode)).not.toContain('evil.example');
@@ -134,17 +134,10 @@ describe('Claude session meta from repo config', () => {
     expect(meta.claudeCode.options.tools).not.toContain('Agent');
   });
 
-  it('asks before every tool of an enabled MCP server', async () => {
+  it("leaves an enabled MCP server's tools to the agent's mode", async () => {
     const echo = scan.mcpServers.find((server) => server.name === 'echo')!;
     const meta = await claudeMeta(await launchWith({}, { echo: echo.fingerprint }));
-    expect(meta.claudeCode.options.settings.permissions.ask).toContain('mcp__echo');
-    const ask = claudeSessionMeta(
-      ['Read'],
-      [],
-      [],
-      (await prepareRepoSession(await launchWith({}, { echo: echo.fingerprint }), 'claude')).claude,
-    ) as Meta;
-    expect(ask.claudeCode.options.settings.permissions.ask).toEqual(['mcp__echo']);
+    expect(meta.claudeCode.options.settings.permissions).not.toHaveProperty('ask');
   });
 });
 
@@ -170,9 +163,7 @@ describe('trusted folder in the Claude session', () => {
     const { settings } = meta.claudeCode.options;
     expect(settings.hooks).toHaveProperty('Stop');
     expect(settings.permissions.allow).toEqual(launch.allowRules);
-    expect(settings.permissions.ask).toEqual(
-      expect.arrayContaining([...CLAUDE_DO_ASK_RULES, 'mcp__echo', 'mcp__remote']),
-    );
+    expect(settings.permissions).not.toHaveProperty('ask');
     expect(meta.claudeCode.options.settingSources).toEqual([]);
     expect(JSON.stringify(meta)).not.toContain('evil.example');
   });

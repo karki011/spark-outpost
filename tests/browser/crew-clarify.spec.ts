@@ -32,11 +32,11 @@ async function shot(page: Page, name: string) {
 const statusLine = (page: Page) => page.locator('.cstatus');
 const thread = (page: Page) => page.locator('.thread');
 
-test('the questions wait in the thread at Review each step with a one-line summary above the composer, wait without a countdown, and a quick answer goes back in the thread', async ({
+test('the questions dock above the composer, wait without a countdown when auto-continue is off, and a quick answer goes back in the thread', async ({
   page,
 }) => {
   test.setTimeout(90_000);
-  await autoContinueAfter(page, 60);
+  await autoContinueAfter(page, null);
   await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Make the reports better #build #vague #questions');
   const questions = thread(page).getByRole('group', { name: QUESTIONS });

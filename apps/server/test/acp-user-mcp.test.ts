@@ -107,7 +107,7 @@ const echoEnabled = () => {
 };
 
 describe('user-level MCP servers reach the agent', { timeout: 20_000 }, () => {
-  it('sends enabled user servers with keychain values next to the repo’s, and asks before their tools', async () => {
+  it('sends enabled user servers with keychain values next to the repo’s, and leaves their tools to the agent’s mode', async () => {
     const repo = [await rootLaunch(scan, DEFAULT_AGENT_SETTINGS, echoEnabled())];
     const received = await session(claude, {
       projectRoots: [root],
@@ -121,9 +121,7 @@ describe('user-level MCP servers reach the agent', { timeout: 20_000 }, () => {
     expect(received.mcpServers[1]!.headers).toEqual([
       { name: 'Authorization', value: 'Bearer docs-token' },
     ]);
-    expect(received.meta!.claudeCode.options.settings.permissions.ask).toEqual(
-      expect.arrayContaining(['mcp__github', 'mcp__docs', 'mcp__echo']),
-    );
+    expect(received.meta!.claudeCode.options.settings.permissions).not.toHaveProperty('ask');
   });
 
   it('sends user servers in a chat without a project', async () => {

@@ -1,8 +1,4 @@
-import {
-  reaskPercent,
-  type CompactionThresholds,
-  type InvolvementLevel,
-} from '@spark-outpost/contracts';
+import { reaskPercent, type CompactionThresholds } from '@spark-outpost/contracts';
 import { COMPACT_AGENT_WORKED, COMPACT_SELF_DROP } from '../advisor/policy.ts';
 import type { ContextReading } from '../persistence/provider-sessions.ts';
 
@@ -10,7 +6,6 @@ export type CompactStep = 'none' | 'ask' | 'compact';
 
 export interface CompactFacts {
   reading: ContextReading | null;
-  level: InvolvementLevel;
   snoozed: boolean;
   cardPending: boolean;
   thresholds: CompactionThresholds;
@@ -26,7 +21,7 @@ export function compactStep(facts: CompactFacts): CompactStep {
   const { compactPercent, autoCompact } = facts.thresholds;
   const threshold = facts.snoozed ? reaskPercent(compactPercent) : compactPercent;
   if (usedPercent(facts.reading) < threshold) return 'none';
-  return facts.level === 'balanced' || !autoCompact ? 'ask' : 'compact';
+  return autoCompact ? 'compact' : 'ask';
 }
 
 export function selfCompacted(

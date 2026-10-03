@@ -71,12 +71,12 @@ test('a failing check goes back to the Builder, and the work panel shows both ro
   );
 });
 
-test('Accept edits, review each step: the check approval shows in the thread, Review jumps to it, and the fix turn runs the check again', async ({
+test('Accept edits: the check approval shows in the thread, Review jumps to it, and the fix turn runs the check again', async ({
   page,
 }) => {
   test.setTimeout(120_000);
   repo.commit('check.mjs', FAILS_UNTIL_FIXED);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
   const command = `${process.execPath} check.mjs`;
   await useChecks(page, [command]);
   await send(page, `${CREW_REQUEST} #build #crew`);
@@ -102,8 +102,7 @@ test('Accept edits, review each step: the check approval shows in the thread, Re
   });
   await again.getByRole('button', { name: 'Allow', exact: true }).click({ timeout: 60_000 });
   const keep = page.getByRole('group', { name: 'Keep these changes?', exact: true });
-  await expect(keep).toBeVisible({ timeout: 60_000 });
+  await expect(keep).toContainText('Kept automatically.', { timeout: 60_000 });
   expect(repo.file('fixed.txt')).toBe('fixed\n');
-  await keep.getByRole('button', { name: 'Keep', exact: true }).click();
   await expect(page.locator('.crew-turn .crew-foot')).toContainText('Done', { timeout: 30_000 });
 });

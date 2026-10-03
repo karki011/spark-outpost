@@ -10,13 +10,13 @@ afterAll(() => stopLive());
 describe('live orchestration', () => {
   it('(a) fixes a trivial typo on Auto with one Builder and no planner', async () => {
     const repo = await repoWith('trivial', { 'README.md': '# Helo world\n\nA tiny probe repo.\n' });
-    const run = await runLive(repo, 'Fix the typo in the README heading.', 'balanced');
+    const run = await runLive(repo, 'Fix the typo in the README heading.', 'hands-off');
     expect(run.orchestration.status).toBe('succeeded');
     expect(run.orchestration.crew.some((member) => member.role === 'architect')).toBe(false);
     expect(await readFile(join(repo, 'README.md'), 'utf8')).toContain('# Hello world');
   }, 600_000);
 
-  it('(b) plans, builds and reviews a multi-file change under Balanced', async () => {
+  it('(b) plans, builds and reviews a multi-file change at Automatic', async () => {
     const repo = await repoWith('multi', {
       'a.js': 'export function formatA(d) {\n  return d.toISOString().slice(0, 10);\n}\n',
       'b.js': 'export function formatB(d) {\n  return d.toISOString().slice(0, 10);\n}\n',
@@ -26,7 +26,7 @@ describe('live orchestration', () => {
     const run = await runLive(
       repo,
       'Move the duplicated date formatting in a.js and b.js into one new module dates.js exporting formatDate, update a.js, b.js and main.js to use it, and delete the duplicates. This touches several files, so plan it first and have the change reviewed.',
-      'balanced',
+      'hands-off',
     );
     expect(run.orchestration.status).toBe('succeeded');
   }, 900_000);

@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { modeForLegacy } from '@spark-outpost/contracts';
 import { CODEX_INSTRUCTIONS_METHOD } from '../src/agents/acp/spark-instructions.ts';
 import { listProtocolLog } from '../src/persistence/audit-log.ts';
-import { getConversationDetail, sendUserMessage } from '../src/persistence/conversations.ts';
+import { sendUserMessage } from '../src/persistence/conversations.ts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
-import { getRun, requestCancel } from '../src/persistence/runs.ts';
+import { getRun } from '../src/persistence/runs.ts';
 import { updateProfile } from '../src/persistence/setup.ts';
 import {
   QUESTION,
@@ -74,7 +74,7 @@ async function childModels(runId: string) {
 describe('Spark on', () => {
   it('still asks Jev and sends Spark instructions to the agent', async () => {
     const scenario = withTag(QUESTION, '#session');
-    const { conversationId, runId } = await startScenario(t, root, scenario, 'balanced');
+    const { conversationId, runId } = await startScenario(t, root, scenario, null);
     await driveToEnd(t, conversationId, runId);
     expect(jev.calls.length).toBeGreaterThan(0);
     const [reply] = await assistantReplies(t, runId);
@@ -92,7 +92,7 @@ describe('Spark off', () => {
 
   it('answers with the chat’s own model in one turn, without Jev or a crew', async () => {
     const scenario = withTag(QUESTION, '#session');
-    const { runId } = await startScenario(t, root, scenario, 'balanced', 'auto', 'haiku');
+    const { runId } = await startScenario(t, root, scenario, null, 'auto', 'haiku');
     const run = await finished(runId);
     expect(run.status).toBe('succeeded');
     expect(run.model).toBe('haiku');
@@ -117,19 +117,6 @@ describe('Spark off', () => {
     expect(route?.summary).toContain('Spark off → your pick');
   }, 60_000);
 
-  it('still asks before risky work at Review each step', async () => {
-    const { conversationId, runId } = await startScenario(t, root, RISKY, 'balanced');
-    const card = await eventually(async () => {
-      const detail = await getConversationDetail(t.db, conversationId);
-      return detail?.approvals.find((approval) => approval.status === 'pending') ?? null;
-    }, 30_000);
-    expect(card.kind).toBe('plan');
-    expect(jev.calls).toEqual([]);
-    expect(await childModels(runId)).toEqual([]);
-    await requestCancel(t.db, runId);
-    await finished(runId);
-  }, 60_000);
-
   it('keeps team mode and the name for Codex in its developer instructions', async () => {
     const { conversationId } = await linkedConversation(t, root);
     const sent = await sendUserMessage(
@@ -141,8 +128,8 @@ describe('Spark off', () => {
         model: 'gpt-6-sol',
         effort: 'medium',
         permission: 'ask',
-        agentMode: modeForLegacy('codex', 'ask', 'balanced'),
-        level: 'balanced',
+        agentMode: modeForLegacy('codex', 'ask', null),
+        level: 'hands-off',
       },
     );
     const runId = sent.run.id;

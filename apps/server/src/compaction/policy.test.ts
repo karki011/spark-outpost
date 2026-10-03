@@ -12,7 +12,6 @@ const at = (percent: number) => ({ used: percent * 2_000, size: 200_000 });
 
 describe('compactStep', () => {
   const base = {
-    level: 'hands-off',
     snoozed: false,
     cardPending: false,
     thresholds: DEFAULT_COMPACTION_THRESHOLDS,
@@ -23,14 +22,14 @@ describe('compactStep', () => {
     expect(compactStep({ ...base, reading: null })).toBe('none');
   });
 
-  it('compacts by itself at Automatic and Full auto, and asks at Review each step', () => {
+  it('compacts by itself at the compaction point', () => {
     expect(compactStep({ ...base, reading: at(80) })).toBe('compact');
-    expect(compactStep({ ...base, level: 'full-auto', reading: at(90) })).toBe('compact');
-    expect(compactStep({ ...base, level: 'balanced', reading: at(80) })).toBe('ask');
+    expect(compactStep({ ...base, reading: at(90) })).toBe('compact');
   });
 
   it('waits for the compaction point plus 10 after Keep going', () => {
-    const snoozed = { ...base, level: 'balanced', snoozed: true } as const;
+    const off = { ...DEFAULT_COMPACTION_THRESHOLDS, autoCompact: false };
+    const snoozed = { ...base, thresholds: off, snoozed: true };
     expect(compactStep({ ...snoozed, reading: at(89) })).toBe('none');
     expect(compactStep({ ...snoozed, reading: at(90) })).toBe('ask');
   });
@@ -44,12 +43,10 @@ describe('compactStep', () => {
     expect(compactStep({ ...snoozed, reading: at(95) })).toBe('compact');
   });
 
-  it('only asks when automatic compaction is off, at every autonomy level', () => {
+  it('only asks when automatic compaction is off', () => {
     const off = { ...DEFAULT_COMPACTION_THRESHOLDS, autoCompact: false };
     expect(compactStep({ ...base, thresholds: off, reading: at(85) })).toBe('ask');
-    expect(compactStep({ ...base, thresholds: off, level: 'full-auto', reading: at(99) })).toBe(
-      'ask',
-    );
+    expect(compactStep({ ...base, thresholds: off, reading: at(99) })).toBe('ask');
     expect(compactStep({ ...base, thresholds: off, reading: at(79) })).toBe('none');
   });
 

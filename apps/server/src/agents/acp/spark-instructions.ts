@@ -66,7 +66,6 @@ const NO_CLAUDE_REPO: ClaudeRepoOptions = {
   appendPrompt: null,
   plugins: [],
   hooks: null,
-  mcpNames: [],
   skillTool: false,
   agentTool: false,
 };

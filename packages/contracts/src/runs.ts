@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { involvementLevelSchema, runModeSchema } from './approvals.ts';
+import { runModeSchema } from './approvals.ts';
+import { involvementLevelSchema } from './involvement-levels.ts';
 import { runUsageSchema } from './usage.ts';
 import { agentRoleSchema } from './roles.ts';
 import { categorySchema } from './categories.ts';

@@ -217,7 +217,7 @@ describe('auto-continue in a crew run', () => {
     await updateProfile(t.db, t.workspaceId, { autoContinueSeconds: 1 });
     const unsure = { ...TRIVIAL, text: 'Make the reports better', vague: 0.95 };
     harness = startOrchestrator(t, jevFetch({ calls: [], scenario: unsure }));
-    const { conversationId, runId } = await startScenario(t, repo, unsure, 'balanced');
+    const { conversationId, runId } = await startScenario(t, repo, unsure, null);
     const answers: Answerer = (approval) =>
       approval.kind === 'clarify' ? null : answerEverything(approval);
     const { asked, orchestration } = await driveToEnd(t, conversationId, runId, answers);

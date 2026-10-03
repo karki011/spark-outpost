@@ -56,13 +56,12 @@ export function demoRepo(): DemoRepo {
 
 interface DemoOptions {
   claudeMode?: string;
-  autonomy?: 'balanced' | 'hands-off' | 'full-auto';
 }
 
 export async function seedDemo(
   page: Page,
   repo: DemoRepo,
-  { claudeMode = 'auto', autonomy = 'hands-off' }: DemoOptions = {},
+  { claudeMode = 'auto' }: DemoOptions = {},
 ): Promise<void> {
   assertDemoDatabase();
   await resetTestDatabase({
@@ -82,8 +81,6 @@ export async function seedDemo(
   } finally {
     await db.end();
   }
-  const level = await page.request.patch('/api/profile', { data: { defaultLevel: autonomy } });
-  expect(level.ok()).toBe(true);
   const response = await page.request.post('/api/projects', { data: { rootPath: repo.root } });
   expect(response.ok()).toBe(true);
   const { id: projectId } = (await response.json()) as { id: string };

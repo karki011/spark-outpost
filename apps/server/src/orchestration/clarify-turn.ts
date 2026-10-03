@@ -9,7 +9,7 @@ import {
   rewriteRequest,
 } from './checkpoint-asks.ts';
 import { DESTRUCTIVE_CARD_REASON } from './checkpoint-policy.ts';
-import { askCard, CheckpointTimeout, type CheckpointCard } from './checkpoint.ts';
+import { askCard, CheckpointTimeout } from './checkpoint.ts';
 import {
   CLARIFY_NOTE,
   clarifyCard,
@@ -125,11 +125,6 @@ async function fallback(s: Session, then: ClarifiedStart): Promise<FlowEvent> {
   return { type: 'unclear', followUp: s.input.history.length > 0 };
 }
 
-function waitsAtLevel(s: Session, card: CheckpointCard): CheckpointCard {
-  if (s.input.level !== 'balanced') return card;
-  return { ...card, payload: { ...card.payload, autoOption: null } };
-}
-
 export async function clarifyTurn(s: Session, then: ClarifiedStart): Promise<FlowEvent> {
   for (let round = 1; round <= MAX_ROUNDS; round += 1) {
     const asked = await askAgent(s);
@@ -137,7 +132,7 @@ export async function clarifyTurn(s: Session, then: ClarifiedStart): Promise<Flo
       return round === 1 ? fallback(s, then) : { type: 'clarified', start: afterAnswers(s, then) };
     const held = destructiveWork(s) || destructiveByRule(defaultsText(asked.questions));
     const asking = clarifyCard(asked.questions, asked.agent);
-    const card = held ? heldCard(asking) : waitsAtLevel(s, asking);
+    const card = held ? heldCard(asking) : asking;
     const fallbackSeconds = s.input.level === 'full-auto' && !held ? FULL_AUTO_PLAN_SECONDS : null;
     const answer = await askCard(s, card, fallbackSeconds);
     if (answer.type === 'timeout') throw new CheckpointTimeout();

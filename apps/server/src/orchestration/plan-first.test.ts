@@ -5,9 +5,9 @@ import {
   planFirstCard,
   planFirstPrompt,
   planPrNote,
-  requestIsThePlan,
   specPlanLine,
 } from './plan-first.ts';
+import { specByRule } from './builder-complexity.ts';
 
 const SPEC = '- `src/a.ts` with `a()`\n- `src/b.ts` with `b()`\n- tests in `test/a.test.ts`';
 
@@ -32,14 +32,11 @@ describe('the plan-first card', () => {
     );
   });
 
-  it('counts down at Automatic like other cards, and waits at Review each step', () => {
+  it('counts down at Automatic like other cards', () => {
     const automatic = planFirstCard(1, 'hands-off', 10);
     expect(automatic.payload.autoOption).toBe(CHECKPOINT_OPTION.makeChange);
     expect(automatic.payload.reason).toContain('Automatic builds it in 10 s');
     expect(planFirstCard(1, 'hands-off', null).payload.reason).toContain('Auto-continue is off');
-    const review = planFirstCard(1, 'balanced', 10);
-    expect(review.payload.autoOption).toBeNull();
-    expect(review.payload.reason).toContain('Build it, edit it, or stop.');
   });
 
   it('asks for a plan without changes, with the requested revision', () => {
@@ -54,11 +51,9 @@ describe('the plan-first card', () => {
 });
 
 describe('a request that is already a spec', () => {
-  it('is the plan at Automatic and Full auto, not at Review each step', () => {
-    expect(requestIsThePlan('hands-off', SPEC)).toBe('3 of 3 listed parts name files or code');
-    expect(requestIsThePlan('full-auto', SPEC)).not.toBeNull();
-    expect(requestIsThePlan('balanced', SPEC)).toBeNull();
-    expect(requestIsThePlan('hands-off', '- add a\n- add b\n- add c')).toBeNull();
+  it('is the plan when every listed part names files or code', () => {
+    expect(specByRule(SPEC)).toBe('3 of 3 listed parts name files or code');
+    expect(specByRule('- add a\n- add b\n- add c')).toBeNull();
   });
 
   it('counts a short list when every part names files or code (live run D)', () => {
@@ -67,8 +62,7 @@ describe('a request that is already a spec', () => {
       '- Add a migration `migrations/002_upload_tags.sql` that creates an `upload_tags` table (`upload_key` TEXT referencing `uploads(key)` ON DELETE CASCADE, `tag` TEXT NOT NULL, primary key on both columns) and an index on `tag`.',
       '- Add `src/slug.ts` exporting `slugify(text: string): string` (lower case, ASCII letters and digits, runs of anything else become one dash, no leading or trailing dash). Add tests in `test/slug.test.ts`.',
     ].join('\n');
-    expect(requestIsThePlan('hands-off', d)).toBe('2 of 2 listed parts name files or code');
-    expect(requestIsThePlan('balanced', d)).toBeNull();
+    expect(specByRule(d)).toBe('2 of 2 listed parts name files or code');
   });
 
   it('says why there was no plan turn', () => {

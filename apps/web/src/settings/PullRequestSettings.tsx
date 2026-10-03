@@ -16,7 +16,7 @@ const FOLLOW_UP_INFO = {
     },
     {
       label: 'Pushes and replies',
-      text: 'One confirm card in Review each step and Automatic; by itself in Full auto.',
+      text: 'One confirm card in Automatic; by itself in Full auto.',
     },
     {
       label: 'Never',

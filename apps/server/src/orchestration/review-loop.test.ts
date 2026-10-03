@@ -162,8 +162,8 @@ describe('Critic → fix rounds', () => {
   });
 
   it('runs no fix turn for a looks-good review or style-only concerns', () => {
-    expect(actions(run('balanced', [reviewedAs()])).at(-1)).toBe('wrap_up');
-    const styleOnly = run('balanced', [
+    expect(actions(run('hands-off', [reviewedAs()])).at(-1)).toBe('wrap_up');
+    const styleOnly = run('hands-off', [
       { type: 'agent_done', role: 'critic', outcome: 'succeeded', verdict: 'concerns' },
     ]);
     expect(actions(styleOnly).at(-1)).toBe('wrap_up');
@@ -181,28 +181,6 @@ describe('Critic → fix rounds', () => {
     expect(actions(results).at(-2)).toBe('critic:retry');
     expect(results.at(-1)!.state.review.stop).toBe('unclear');
     expect(results.at(-1)!.state.criticSkipped).toBe('boom');
-  });
-
-  it('offers the fix on the keep card at Ask before edits, one round per answer', () => {
-    const results = run('balanced', [reviewedAs(A), { type: 'wrapped', filesChanged: 1 }]);
-    expect(actions(results).slice(2)).toEqual(['wrap_up', 'ask']);
-    const offered = results.at(-1)!.state;
-    expect(fixOptionLabel(offered.review)).toBe('Fix these findings');
-    expect(reviewLine(offered.review, 'checks pass')).toBe(
-      'The AI review found 1 correctness finding.',
-    );
-    const fix = nextStep(offered, {
-      type: 'answered',
-      kind: 'accept',
-      optionId: CHECKPOINT_OPTION.fixFindings,
-      note: null,
-    });
-    expect(fix.action).toMatchObject({ type: 'spawn', role: 'builder', reason: 'fix' });
-    const recheck = nextStep(fix.state, built());
-    expect(recheck.action).toMatchObject({ type: 'spawn', role: 'critic', reason: 'recheck' });
-    const second = nextStep(recheck.state, reviewedAs(B));
-    expect(second.action).toEqual({ type: 'wrap_up' });
-    expect(fixOptionLabel(second.state.review)).toBe('Fix again');
   });
 
   it('puts the fix option after Keep so Keep stays the default', () => {
@@ -271,7 +249,18 @@ describe('a limit that cuts a fix round short (N2)', () => {
   it("marks harness-started fix rounds as automatic, and the keep card's as the user's", () => {
     const auto = run('hands-off', [reviewedAs(A)]).at(-1)!;
     expect(auto.action).toMatchObject({ type: 'spawn', reason: 'fix', auto: true });
-    const offered = run('balanced', [reviewedAs(A), { type: 'wrapped', filesChanged: 1 }]).at(-1)!;
+    const offered = run('hands-off', [
+      reviewedAs(A),
+      { type: 'budget_exceeded', limit: 'tool_calls', round: true, passing: true },
+      { type: 'restored', restored: true },
+      {
+        type: 'wrapped',
+        filesChanged: 1,
+        riskyMigration: 'ALTER TABLE notes DROP COLUMN body',
+        outsideWorktree: true,
+      },
+    ]).at(-1)!;
+    expect(offered.action).toMatchObject({ type: 'ask', kind: 'accept' });
     const byUser = nextStep(offered.state, {
       type: 'answered',
       kind: 'accept',
@@ -364,10 +353,6 @@ describe('Full auto runs on to ship', () => {
       status: 'succeeded',
     });
     expect(nextStep(initialFlow('edits', 'hands-off'), wrapped).action).toEqual({ type: 'keep' });
-    expect(nextStep(initialFlow('edits', 'balanced'), wrapped).action).toMatchObject({
-      type: 'ask',
-      kind: 'accept',
-    });
     expect(nextStep(state, { type: 'wrapped', filesChanged: 0 }).action).toMatchObject({
       type: 'finish',
     });

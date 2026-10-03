@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CHECKPOINT_OPTION } from '@spark-outpost/contracts';
 import { loadOrchestration } from '../src/persistence/orchestrations.ts';
 import { currentPieceList } from '../src/persistence/pieces.ts';
 import { requestCancel } from '../src/persistence/runs.ts';
@@ -13,13 +12,11 @@ import {
   projectFlags,
 } from './coordinator-parallel-support.ts';
 import {
-  answerEverything,
   assistantReplies,
   connectProviders,
   driveToEnd,
   gitRepo,
   removeRepo,
-  type Answerer,
   type Harness,
 } from './orchestration-support.ts';
 import { createTestDb, eventually, type TestDb } from './support.ts';
@@ -101,36 +98,6 @@ describe('shared-tree parallel pieces', { timeout: 120_000 }, () => {
     const runs = await crewRuns(t, runId);
     const first = (key: string) => runs.find((run) => run.pieceKey === key)!;
     expect(overlap(first('P1'), first('P2'))).toBe(false);
-  });
-
-  it('asks at Review each step before building in parallel and builds in order when told to', async () => {
-    await projectFlags(t, root, { parallel: true });
-    const inOrder: Answerer = (approval) =>
-      approval.kind === 'pieces'
-        ? { optionId: CHECKPOINT_OPTION.buildInOrder }
-        : answerEverything(approval);
-    const { conversationId, runId } = await begin('', { level: 'balanced' });
-    const { asked, orchestration } = await driveToEnd(t, conversationId, runId, inOrder, 90_000);
-    expect(orchestration.status).toBe('succeeded');
-    const card = asked.find((approval) => approval.kind === 'pieces');
-    expect(card?.title).toBe('Build in 3 pieces, 2 at once in the shared tree?');
-    expect(card?.options.map((option) => option.name)).toEqual([
-      'Build it',
-      'Build in order instead',
-      'Revise',
-      'Stop',
-    ]);
-    const list = await pieceListOf(t, runId);
-    expect(list).toMatchObject({
-      placement: 'in_order',
-      placementReason: 'you chose to build in order',
-      status: 'approved',
-    });
-    expect(list.pieces.map((piece) => [piece.placement, piece.status])).toEqual([
-      ['in_order', 'landed'],
-      ['in_order', 'landed'],
-      ['in_order', 'landed'],
-    ]);
   });
 
   it('stops every running piece when you press Stop mid-group', async () => {

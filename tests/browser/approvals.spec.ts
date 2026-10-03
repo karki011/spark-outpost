@@ -10,7 +10,7 @@ import {
 import os from 'node:os';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { permissionChip, pickAutonomy, pickMode } from './crew-engine.ts';
+import { permissionChip, pickMode } from './crew-engine.ts';
 import { resetTestDatabase } from './database.ts';
 import { openChats } from './navigation.ts';
 
@@ -76,10 +76,7 @@ async function doChat(page: Page) {
   );
   await pickMode(page, 'Manual');
   await expect(panel.getByRole('tab', { name: /Permissions/ })).toHaveText(/Manual$/);
-  await pickAutonomy(page, 'Review each step');
   await expect(permissionChip(page)).toHaveAccessibleName('Permissions: Manual');
-  await page.getByRole('button', { name: /^Model and effort/ }).click();
-  await panel.getByRole('tab', { name: /Permissions/ }).click();
   await shot(page, 'level-picker');
   await page.keyboard.press('Escape');
   return page.getByRole('textbox', { name: 'Message' });
@@ -98,8 +95,8 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
   await send(page, 'Run the tests #approve');
   const approval = card(page, /Run a command\?/);
   await expect(approval).toBeVisible({ timeout: 15_000 });
-  await expect(approval.locator('pre')).toHaveText('$ pnpm test -- groupMessages');
-  await expect(approval).toContainText("Commands aren't sandboxed");
+  await expect(approval.locator('pre')).toHaveText('$ pnpm lint -- groupMessages');
+  await expect(approval).toContainText("It isn't on the project's allowlist yet");
   await expect(page.locator('.crew-turn .agent-head', { hasText: 'Bolt' })).toContainText(
     'Waiting for you',
   );
@@ -108,7 +105,7 @@ test('asks before a command and runs it after Allow, from the keyboard', async (
 
   await page.reload();
   const status = page.locator('.cstatus').getByRole('button', { name: /^Waiting for you/ });
-  await expect(status).toContainText('approve pnpm test -- groupMessages');
+  await expect(status).toContainText('approve pnpm lint -- groupMessages');
   const allow = card(page, /Run a command\?/).getByRole('button', { name: 'Allow', exact: true });
   await status.focus();
   await page.keyboard.press('Enter');
@@ -189,7 +186,7 @@ test('"Always allow in this project" adds the command to the allowlist', async (
   const menu = page.getByRole('dialog', { name: 'Project folders' });
   await menu.getByRole('button', { name: /Commands that run without asking/ }).click();
   const list = menu.getByRole('list', { name: 'Allowed commands in app' });
-  await expect(list).toContainText('pnpm test -- groupMessages');
+  await expect(list).toContainText('pnpm lint -- groupMessages');
   await shot(page, 'allowlist');
   await page.keyboard.press('Escape');
 
@@ -206,7 +203,7 @@ test('"Always allow in this project" adds the command to the allowlist', async (
   await expect(
     menu.getByRole('button', { name: /Commands that run without asking/ }),
   ).toHaveAttribute('aria-expanded', 'true');
-  await list.getByRole('button', { name: 'Remove pnpm test -- groupMessages' }).click();
+  await list.getByRole('button', { name: 'Remove pnpm lint -- groupMessages' }).click();
   await expect(list).toHaveCount(0);
 });
 
@@ -234,7 +231,7 @@ test('reverts an allowed edit after one confirmation', async ({ page }) => {
   });
   expect(readFileSync(notes(), 'utf8')).toContain('Edited by the fake agent');
   const keep = card(page, /Keep these changes\?/);
-  await expect(keep).toContainText('Kept: you approved every edit.');
+  await expect(keep).toContainText('Kept automatically.');
   const panel = page.getByRole('complementary', { name: 'Work panel' });
   await panel.getByRole('tab', { name: 'Changes' }).click();
   await expect(panel.getByRole('tab', { name: 'Changes' })).toHaveAttribute(
@@ -257,7 +254,7 @@ test('reverts an allowed edit after one confirmation', async ({ page }) => {
   expect(readFileSync(notes(), 'utf8')).toBe('Remember the milk\n');
 });
 
-test('Codex offers Do with its own copy and sandbox note', async ({ page }) => {
+test('Codex offers Do with its own copy', async ({ page }) => {
   await doChat(page);
   await page.getByRole('button', { name: /^Model and effort/ }).click();
   const panel = page.getByRole('dialog', { name: 'Model, effort, and permissions' });
@@ -286,13 +283,12 @@ test('Codex offers Do with its own copy and sandbox note', async ({ page }) => {
   );
   await expect(panel.getByRole('note')).toHaveCount(0);
   await expect(panel).toContainText('Agent asks before edits and commands');
-  await pickAutonomy(page, 'Review each step');
   await shot(page, 'codex-do');
   await page.keyboard.press('Escape');
   await send(page, 'Run the tests #approve');
   const approval = card(page, /Run a command\?/);
   await expect(approval).toBeVisible({ timeout: 15_000 });
-  await expect(approval).toContainText("Runs in Codex's sandbox without network");
+  await expect(approval).not.toContainText('sandbox');
   await approval.getByRole('button', { name: 'Deny', exact: true }).click();
   await expect(page.locator('.md', { hasText: 'fake-run=denied' })).toBeVisible({
     timeout: 15_000,
@@ -440,7 +436,7 @@ test('asks to hold before changing a git hook and allows it once only', async ({
   expect(readFileSync(hook, 'utf8')).toBe('Edited by the fake agent\n');
 });
 
-async function askChat(page: Page, autonomy: string) {
+async function askChat(page: Page) {
   const response = await page.request.post('/api/projects', { data: { rootPath: appRoot } });
   expect(response.ok()).toBe(true);
   await openChats(page);
@@ -450,24 +446,10 @@ async function askChat(page: Page, autonomy: string) {
   await menu.getByRole('button', { name: /^app/ }).click();
   await page.keyboard.press('Escape');
   await expect(permissionChip(page)).toHaveText('Plan');
-  await pickAutonomy(page, autonomy);
 }
 
-test('asks before a command in an Ask chat at Review each step', async ({ page }) => {
-  await askChat(page, 'Review each step');
-  await send(page, 'Check the site #curl');
-  const approval = card(page, /Run a command\?/);
-  await expect(approval).toBeVisible({ timeout: 15_000 });
-  await expect(approval.locator('pre')).toHaveText('$ curl -sI https://example.com');
-  await approval.getByRole('button', { name: 'Allow', exact: true }).click();
-  await expect(page.locator('.md', { hasText: 'Done. fake-curl=allowed' })).toBeVisible({
-    timeout: 15_000,
-  });
-  expect(readFileSync(notes(), 'utf8')).toBe('Remember the milk\n');
-});
-
 test('asks before curl at Automatic once the chat read .env', async ({ page }) => {
-  await askChat(page, 'Automatic');
+  await askChat(page);
   await send(page, 'Check the site #readenv #curl');
   const read = card(page, /Run a command\?/);
   await expect(read.locator('pre')).toHaveText('$ cat .env', { timeout: 15_000 });
@@ -488,7 +470,7 @@ test('asks before curl at Automatic once the chat read .env', async ({ page }) =
 });
 
 test('runs a command in an Ask chat at Automatic without asking', async ({ page }) => {
-  await askChat(page, 'Automatic');
+  await askChat(page);
   await send(page, 'Check the site #curl');
   await expect(page.locator('.md', { hasText: 'Done. fake-curl=allowed' })).toBeVisible({
     timeout: 15_000,

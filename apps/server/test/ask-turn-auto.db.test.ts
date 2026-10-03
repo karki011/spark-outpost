@@ -31,10 +31,6 @@ async function whyFor(agentMode: string, level: InvolvementLevel, provider = 'cl
 }
 
 describe('commands in an Ask turn', () => {
-  it('run without asking in Auto mode at Review each step', async () => {
-    expect(await whyFor('auto', 'balanced')).toBe('Auto mode');
-  });
-
   it('run without asking in Auto mode at Automatic', async () => {
     expect(await whyFor('auto', 'hands-off')).toBe('Auto mode');
   });
@@ -43,15 +39,11 @@ describe('commands in an Ask turn', () => {
     expect(await whyFor('default', 'hands-off')).toBe(ASK_AUTO_WHY);
   });
 
-  it('ask in Manual mode at Review each step', async () => {
-    expect(await whyFor('default', 'balanced')).toBeNull();
-  });
-
   it('run without asking in Bypass permissions mode', async () => {
-    expect(await whyFor('bypassPermissions', 'balanced')).toBe('bypassPermissions mode');
+    expect(await whyFor('bypassPermissions', 'hands-off')).toBe('bypassPermissions mode');
   });
 
   it("ignore another provider's mode", async () => {
-    expect(await whyFor('auto', 'balanced', 'codex')).toBeNull();
+    expect(await whyFor('auto', 'hands-off', 'codex')).toBe(ASK_AUTO_WHY);
   });
 });

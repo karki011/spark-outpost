@@ -16,8 +16,7 @@ const WARN_INFO = {
 const COMPACT_INFO = {
   lead: 'Before your next message, Spark shrinks the agent’s context to a summary.',
   items: [
-    { label: 'Review each step', text: 'A card asks first: compact, fresh chat or keep going.' },
-    { label: 'Automatic, Full auto', text: 'Spark compacts and notes it in the work log.' },
+    { label: 'On', text: 'Spark compacts and notes it in the work log.' },
     { label: 'Keep going', text: 'The card returns 10 points later, at most at 95%.' },
     { label: 'Off', text: 'Spark only warns and offers the card; it never compacts by itself.' },
   ],
@@ -109,7 +108,7 @@ function WarnSetting({ profile }: { profile: Profile }) {
 function compactHint(on: boolean, percent: number): string {
   if (!on)
     return `Spark only warns and offers the card at ${percent}%; it never compacts by itself.`;
-  return `Spark compacts at ${percent}% (asks first at Review each step) and asks again at ${reaskPercent(percent)}% after Keep going.`;
+  return `Spark compacts at ${percent}% and asks again at ${reaskPercent(percent)}% after Keep going.`;
 }
 
 function CompactAtSetting({ profile }: { profile: Profile }) {

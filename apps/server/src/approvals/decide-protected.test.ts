@@ -41,7 +41,6 @@ const edit = (relative: string) =>
   });
 const run = (command: string) => request({ command, title: command });
 const allowAll = (input: ApprovalRequest) => ({ allow: [ruleFor(input)!], reject: [] });
-const automatic = { worktreeAuto: true };
 
 describe('decide() for agent instruction files', () => {
   it.each([
@@ -54,7 +53,7 @@ describe('decide() for agent instruction files', () => {
   ])('asks before editing %s at every level, even with an edit rule for the run', (relative) => {
     const input = edit(relative);
     for (const mode of EVERY_MODE) {
-      expect(decide(mode, input, allowAll(input), [], automatic)).toEqual({
+      expect(decide(mode, input, allowAll(input), [])).toEqual({
         verdict: 'ask',
         reason: INSTRUCTION_REASON,
         instructionFiles: [relative],
@@ -68,7 +67,7 @@ describe('decide() for agent instruction files', () => {
     ['cp /tmp/rules.mdc .cursor/rules/rules.mdc', ['.cursor/rules/rules.mdc']],
   ])('asks before the shell write %s', (command, files) => {
     const input = run(command);
-    expect(decide('full_access', input, allowAll(input), [command], automatic)).toEqual({
+    expect(decide('full_access', input, allowAll(input), [command])).toEqual({
       verdict: 'ask',
       reason: INSTRUCTION_REASON,
       instructionFiles: files,
@@ -102,7 +101,7 @@ describe('decide() for git hooks and git config', () => {
     [run('git config set user.name Spark'), ['.git/config']],
   ])('asks to hold before %#, at every level', (input, files) => {
     for (const mode of EVERY_MODE) {
-      expect(decide(mode, input, allowAll(input), ['git', 'cp'], automatic)).toEqual({
+      expect(decide(mode, input, allowAll(input), ['git', 'cp'])).toEqual({
         verdict: 'ask',
         reason: GIT_CONTROL_REASON,
         gitControl: files,

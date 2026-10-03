@@ -10,7 +10,6 @@ import {
   incompleteLine,
   initialFlow,
   nextStep,
-  UNSTICK_NOTE,
   type FlowEvent,
   type FlowResult,
   type FlowState,
@@ -34,7 +33,7 @@ const built = (extra: Partial<Extract<FlowEvent, { type: 'agent_done' }>> = {}):
   ...extra,
 });
 
-const flow = (level: InvolvementLevel = 'balanced', review = false) =>
+const flow = (level: InvolvementLevel = 'hands-off', review = false) =>
   initialFlow('edits', level, review);
 
 describe('lean flow', () => {
@@ -46,17 +45,6 @@ describe('lean flow', () => {
     expect(start!.action).toMatchObject({ type: 'spawn', role: 'scout' });
     expect(start!.state.depth).toBe('direct');
     expect(done!.action).toMatchObject({ type: 'finish', status: 'succeeded' });
-  });
-
-  it('builds with one Builder, wraps up and asks to keep at Balanced', () => {
-    const [start, afterBuild, wrapped] = run(flow(), [
-      { type: 'start', start: 'build' },
-      built(),
-      { type: 'wrapped', filesChanged: 2 },
-    ]);
-    expect(start!.action).toMatchObject({ type: 'spawn', role: 'builder', reason: 'first' });
-    expect(afterBuild!.action).toEqual({ type: 'wrap_up' });
-    expect(wrapped!.action).toMatchObject({ type: 'ask', kind: 'accept' });
   });
 
   it('keeps by itself without a keep card at Auto-edit when the checks pass', () => {
@@ -138,23 +126,13 @@ describe('lean flow', () => {
     });
   });
 
-  it('still asks to keep at Ask before edits when everything passed', () => {
-    const [, , , wrapped] = run(flow('balanced', true), [
-      { type: 'start', start: 'build' },
-      built(),
-      { type: 'agent_done', role: 'critic', outcome: 'succeeded', verdict: 'looks_good' },
-      { type: 'wrapped', filesChanged: 1 },
-    ]);
-    expect(wrapped!.action).toEqual({ type: 'ask', kind: 'accept', reason: '1 file changed.' });
-  });
-
   it('runs one Critic only for destructive work, a review request or a large diff', () => {
-    const destructive = run(initialFlow('destructive', 'balanced'), [
+    const destructive = run(initialFlow('destructive', 'hands-off'), [
       { type: 'start', start: 'build' },
       built(),
     ]);
     expect(destructive[1]!.action).toMatchObject({ type: 'spawn', role: 'critic' });
-    const review = run(flow('balanced', true), [{ type: 'start', start: 'build' }, built()]);
+    const review = run(flow('hands-off', true), [{ type: 'start', start: 'build' }, built()]);
     expect(review[1]!.action).toMatchObject({ type: 'spawn', role: 'critic' });
     const large = run(flow(), [{ type: 'start', start: 'build' }, built({ large: true })]);
     expect(large[1]!.action).toMatchObject({ type: 'spawn', role: 'critic' });
@@ -163,12 +141,12 @@ describe('lean flow', () => {
   });
 
   it('skips the Critic when the Builder changed no files, even for destructive work (B7)', () => {
-    const refused = run(initialFlow('destructive', 'balanced'), [
+    const refused = run(initialFlow('destructive', 'hands-off'), [
       { type: 'start', start: 'build' },
       built({ unchanged: true }),
     ]);
     expect(refused[1]!.action).toEqual({ type: 'wrap_up' });
-    const review = run(flow('balanced', true), [
+    const review = run(flow('hands-off', true), [
       { type: 'start', start: 'build' },
       built({ unchanged: true }),
     ]);
@@ -176,7 +154,7 @@ describe('lean flow', () => {
   });
 
   it('reviews once, then wraps up with the verdict', () => {
-    const results = run(flow('balanced', true), [
+    const results = run(flow('hands-off', true), [
       { type: 'start', start: 'build' },
       built(),
       { type: 'agent_done', role: 'critic', outcome: 'succeeded', verdict: 'concerns' },
@@ -186,40 +164,9 @@ describe('lean flow', () => {
   });
 });
 
-describe('risky work asks before the Builder starts', () => {
-  const RISKY = 'This change looks destructive.';
-  const risky = (level: InvolvementLevel) => initialFlow('destructive', level, false, false, RISKY);
-
-  it.each(['balanced', 'hands-off'] as const)('shows the card first at %s', (level) => {
-    const [start, approved] = run(risky(level), [
-      { type: 'start', start: 'build' },
-      { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.makeChange, note: null },
-    ]);
-    expect(start!.action).toEqual({ type: 'ask', kind: 'plan', reason: RISKY });
-    expect(approved!.action).toMatchObject({ type: 'spawn', role: 'builder', reason: 'first' });
-    expect(approved!.state.confirmFirst).toBeNull();
-  });
-
-  it('stops without building when the card is answered Stop', () => {
-    const [, stopped] = run(risky('balanced'), [
-      { type: 'start', start: 'build' },
-      { type: 'answered', kind: 'plan', optionId: CHECKPOINT_OPTION.stop, note: null },
-    ]);
-    expect(stopped!.action).toMatchObject({ type: 'finish', status: 'cancelled' });
-  });
-
-  it('asks after the follow-up question too, but never for an answer', () => {
-    const [, built] = run(risky('balanced'), [
-      { type: 'unclear', followUp: true },
-      { type: 'clarified', start: 'build' },
-    ]);
-    expect(built!.action).toMatchObject({ type: 'ask', kind: 'plan' });
-    const [answer] = run(risky('balanced'), [{ type: 'start', start: 'answer' }]);
-    expect(answer!.action).toMatchObject({ type: 'spawn', role: 'scout' });
-  });
-
-  it('builds straight away without a reason (Full auto, or ordinary work)', () => {
-    const [start] = run(initialFlow('destructive', 'full-auto'), [
+describe('destructive work', () => {
+  it('builds straight away without a card', () => {
+    const [start] = run(initialFlow('destructive', 'hands-off'), [
       { type: 'start', start: 'build' },
     ]);
     expect(start!.action).toMatchObject({ type: 'spawn', role: 'builder' });
@@ -291,31 +238,19 @@ describe('failures and retries', () => {
     expect(result.action).toMatchObject({ type: 'finish', status: 'failed' });
   });
 
-  it('asks about a loop at Balanced and stops with a report at Full auto', () => {
+  it('stops with a report when the Builder loops', () => {
     const looped: FlowEvent = {
       type: 'looped',
       summary: 'Bolt repeated `Read a.ts` 5 times in a row',
     };
-    const balanced = run(flow(), [{ type: 'start', start: 'build' }, looped]);
-    expect(balanced[1]!.action).toMatchObject({ type: 'ask', kind: 'stuck' });
-    const continued = nextStep(balanced[1]!.state, {
-      type: 'answered',
-      kind: 'stuck',
-      optionId: CHECKPOINT_OPTION.continueStuck,
-      note: null,
-    });
-    expect(continued.action).toMatchObject({
-      type: 'spawn',
-      role: 'builder',
-      reason: 'unstick',
-      followUp: UNSTICK_NOTE,
-    });
-    const auto = run(flow('full-auto'), [{ type: 'start', start: 'build' }, looped]);
-    expect(auto[1]!.action).toMatchObject({
-      type: 'finish',
-      status: 'failed',
-      reason: 'Stopped: Bolt repeated `Read a.ts` 5 times in a row.',
-    });
+    for (const level of ['hands-off', 'full-auto'] as const) {
+      const results = run(flow(level), [{ type: 'start', start: 'build' }, looped]);
+      expect(results[1]!.action).toMatchObject({
+        type: 'finish',
+        status: 'failed',
+        reason: 'Stopped: Bolt repeated `Read a.ts` 5 times in a row.',
+      });
+    }
   });
 });
 

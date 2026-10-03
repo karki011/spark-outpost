@@ -97,7 +97,7 @@ describe('Jev intake, live', async () => {
       ...sample,
       candidates: context.candidates,
       current: { provider: 'claude', model: 'sonnet', modelLabel: 'Sonnet 5', effort: 'medium' },
-      level: 'balanced',
+      level: 'hands-off',
       routing: 'pinned',
       firstMessage: true,
       currentTask: null,

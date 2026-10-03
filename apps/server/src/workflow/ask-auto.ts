@@ -2,7 +2,6 @@ import { modeKind, modePosture, type AgentModeOption } from '@spark-outpost/cont
 import { ASK_AUTO_WHY } from '../approvals/decide.ts';
 import { resolveChatSettings } from '../persistence/chat-settings.ts';
 import type { Db } from '../persistence/db.ts';
-import { autoInAsk } from '../orchestration/checkpoint-policy.ts';
 
 export interface AskTurnPlace {
   db: Db;
@@ -21,5 +20,5 @@ export async function askTurnAutoWhy(place: AskTurnPlace): Promise<string | null
     const label = place.modes.find((option) => option.id === mode)?.label ?? mode;
     return `${label} mode`;
   }
-  return settings.level && autoInAsk(settings.level) ? ASK_AUTO_WHY : null;
+  return settings.level ? ASK_AUTO_WHY : null;
 }

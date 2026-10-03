@@ -6,7 +6,7 @@ export const FOUR_KINDS_OPTIONS: acp.PermissionOption[] = [
   { optionId: 'yes', name: 'Yes', kind: 'allow_once' },
   {
     optionId: 'yes-always',
-    name: "Yes, and don't ask again for npm test commands",
+    name: "Yes, and don't ask again for npm run lint commands",
     kind: 'allow_always',
   },
   { optionId: 'no', name: 'No', kind: 'reject_once' },
@@ -21,10 +21,10 @@ export async function fourKindsTurn(
 ): Promise<acp.StopReason> {
   const toolCall: acp.ToolCallUpdate = {
     toolCallId: 'four-1',
-    title: 'npm test',
+    title: 'npm run lint',
     kind: 'execute',
     status: 'pending',
-    rawInput: { command: 'npm test', cwd },
+    rawInput: { command: 'npm run lint', cwd },
   };
   await client.notify(acp.methods.client.session.update, {
     sessionId,

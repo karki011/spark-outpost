@@ -1,15 +1,26 @@
+import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { resetTestDatabase } from './database.ts';
 import {
+  backPastMacAccess,
   CLAUDE_KEY,
   claudeCard,
   continueButton,
+  continueFromTools,
   dialog,
   enterName,
   nameField,
   openApiKeyTab,
   tile,
 } from './onboarding-flow.ts';
+
+const SHOTS = path.resolve('test-results/auto-mode-prompts');
+
+async function shot(page: Page, name: string, colorScheme: 'light' | 'dark') {
+  await page.emulateMedia({ colorScheme });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(SHOTS, `${name}-${colorScheme}.png`) });
+}
 
 test.beforeEach(async () => {
   await resetTestDatabase({ onboarded: false });
@@ -86,7 +97,7 @@ test('first run goes through name, provider, defaults, and done, then opens the 
   await expect(tools.nth(3)).toContainText('Coming soon');
   await expect(dialog(page).locator('.cx-card button.pc-head')).toHaveCount(3);
 
-  await continueButton(page).click();
+  await continueFromTools(page, "You're all set, Hazel");
   await expect(dialog(page).getByRole('heading', { name: "You're all set, Hazel" })).toBeVisible();
   await expect(dialog(page)).toContainText('Claude via API key');
   await expect(dialog(page)).toContainText(
@@ -109,7 +120,9 @@ test('Meet Spark sets the personality and the Spark switch, and the blob reacts'
   page,
 }) => {
   await page.goto('/');
-  await expect(dialog(page).getByRole('button', { name: /Step 1 of 5: Meet Spark/ })).toBeVisible();
+  await expect(
+    dialog(page).getByRole('button', { name: /Step 1 of \d+: Meet Spark/ }),
+  ).toBeVisible();
   await nameField(page).fill('Sam Rivera');
   const preview = dialog(page).locator('.spark-preview');
   await expect(preview).toContainText('Hi Sam 👋');
@@ -196,15 +209,15 @@ test('without git, the tools step explains why and setup can still finish', asyn
   await git.getByRole('button', { name: 'Install Xcode Command Line Tools' }).click();
   await expect(git).toContainText('Follow Apple’s installer');
 
-  await continueButton(page).click();
+  await continueFromTools(page, /all set/);
   await expect(dialog(page).locator('.done-list')).toContainText('Git not installed');
   await expect(dialog(page).locator('.done-list')).toContainText('Needed for Do chats');
 
-  await dialog(page).getByRole('button', { name: 'Back' }).click();
+  await backPastMacAccess(page);
   installed = true;
   await git.getByRole('button', { name: 'Check again' }).click();
   await expect(git).toContainText('Git 2.47.1');
-  await continueButton(page).click();
+  await continueFromTools(page, /all set/);
   await expect(dialog(page).locator('.done-list')).toContainText('Git 2.47.1');
   await dialog(page).getByRole('button', { name: 'Open Spark Outpost' }).click();
   await expect(page.locator('.onb')).toHaveCount(0);
@@ -230,4 +243,32 @@ test('each step centres its column in the panel and the footer lines up with it'
   await expect(dialog(page).getByRole('heading', { name: 'Pick a theme' })).toBeVisible();
   await expect(dialog(page).locator('.pane')).toHaveCount(1);
   await expectCentred();
+});
+
+test('the Mac access step explains Full Disk Access and can be skipped', async ({ page }) => {
+  await enterName(page, 'Hazel Morgan');
+  const key = await openApiKeyTab(page);
+  await key.fill(CLAUDE_KEY);
+  await key.press('Enter');
+  await expect(claudeCard(page)).toContainText('Connected · API key');
+  await claudeCard(page).getByRole('button', { name: 'Done' }).click();
+  await continueButton(page).click();
+  await expect(dialog(page).getByRole('heading', { name: 'Bring in your tools' })).toBeVisible();
+
+  await continueButton(page).click();
+  const macAccess = dialog(page).getByRole('heading', { name: 'Mac access' });
+  const allSet = dialog(page).getByRole('heading', { name: "You're all set, Hazel" });
+  await expect(macAccess.or(allSet)).toBeVisible();
+  test.skip(!(await macAccess.isVisible()), 'Full Disk Access is reported unsupported here.');
+
+  const card = dialog(page).getByRole('region', { name: 'Full Disk Access' });
+  await expect(card).toContainText('Let Spark read everywhere on your Mac (Full Disk Access)');
+  await expect(card).toContainText('System Settings');
+  await expect(card).toContainText("Spark's own approvals");
+  await expect(dialog(page)).toContainText('Optional. You can do this later in Settings.');
+  await shot(page, 'onboarding-mac-access', 'light');
+  await shot(page, 'onboarding-mac-access', 'dark');
+
+  await continueButton(page).click();
+  await expect(dialog(page).getByRole('heading', { name: "You're all set, Hazel" })).toBeVisible();
 });

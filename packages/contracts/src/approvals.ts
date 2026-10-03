@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { checkCommandsSchema } from './checks.ts';
 import { checkpointKindSchema, checkpointPayloadSchema } from './checkpoints.ts';
-import { INVOLVEMENT_LEVEL_IDS, type InvolvementLevel } from './involvement-levels.ts';
+import type { InvolvementLevel } from './involvement-levels.ts';
 import { workPlaceSchema } from './chat-workspace.ts';
 import { pieceSlotsSchema, projectNameSchema } from './projects.ts';
 import {
@@ -17,13 +17,6 @@ export type RunMode = z.infer<typeof runModeSchema>;
 export const PERMISSION_ASK = 'ask' as const;
 export const PERMISSION_DO = 'do' as const;
 
-const LEGACY_HANDS_ON = 'hands-on';
-
-export const involvementLevelSchema = z.preprocess(
-  (value) => (value === LEGACY_HANDS_ON ? 'balanced' : value),
-  z.enum(INVOLVEMENT_LEVEL_IDS),
-);
-
 export const DEFAULT_INVOLVEMENT_LEVEL: InvolvementLevel = 'hands-off';
 
 export interface InvolvementLevelInfo {
@@ -34,34 +27,19 @@ export interface InvolvementLevelInfo {
 
 export const AUTONOMY_LEVELS: readonly InvolvementLevelInfo[] = [
   {
-    id: 'balanced',
-    label: 'Review each step',
-    hint: 'You decide what to keep and get a card before risky work starts.',
-  },
-  {
     id: 'hands-off',
     label: 'Automatic',
-    hint: 'Runs commands and keeps passing changes. Risky work uses a worktree copy. Revert is always there.',
+    hint: 'Keeps changes without stopping. Risky work uses a worktree copy. Revert is always there.',
   },
   {
     id: 'full-auto',
     label: 'Full auto → PR',
-    hint: 'Automatic in a worktree copy, then opens a PR. Nothing ever merges.',
+    hint: 'Same as Automatic in a worktree copy, then opens a PR. Nothing ever merges.',
   },
 ];
 
 export function autonomyLabel(level: InvolvementLevel): string {
   return AUTONOMY_LEVELS.find((info) => info.id === level)?.label ?? level;
-}
-
-export const DEFAULT_COMMAND_NOTE = "Commands aren't sandboxed";
-
-const COMMAND_NOTES: Readonly<Record<string, string>> = {
-  codex: "Runs in Codex's sandbox without network, unless Codex asked to leave it",
-};
-
-export function commandSandboxNote(provider: string | null): string {
-  return (provider ? COMMAND_NOTES[provider] : undefined) ?? DEFAULT_COMMAND_NOTE;
 }
 
 export const approvalKindSchema = z.enum([
@@ -137,6 +115,7 @@ export const approvalPayloadSchema = z.object({
   sparkAction: sparkActionSchema.optional(),
   sparkResult: sparkResultSchema.optional(),
   sparkRequested: z.boolean().optional(),
+  agentReason: z.string().optional(),
 });
 export type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
 

@@ -21,7 +21,7 @@ const CLAUDE_TARGET = {
   model: 'sonnet',
   effort: 'medium',
   permission: 'ask',
-  level: 'balanced',
+  level: 'hands-off',
 } as const;
 
 let t: TestDb;

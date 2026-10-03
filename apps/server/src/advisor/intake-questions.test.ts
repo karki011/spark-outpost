@@ -43,7 +43,7 @@ const request: IntakeRequest = {
   untrusted: [],
   candidates: [claude, { ...claude, provider: 'codex', name: 'Codex', models: [] }],
   current: { provider: 'claude', model: 'sonnet', modelLabel: 'Sonnet 5', effort: 'high' },
-  level: 'balanced',
+  level: 'hands-off',
   routing: 'pinned',
   firstMessage: false,
   currentTask: null,

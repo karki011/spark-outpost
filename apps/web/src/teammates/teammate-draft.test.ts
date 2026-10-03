@@ -40,8 +40,8 @@ describe('teammate draft', () => {
   });
 
   it('sends only what changed when editing', () => {
-    const draft = { ...draftOf(teammate), role: 'Reviewer ', level: 'balanced' as const };
-    expect(changesFrom(teammate, draft)).toEqual({ role: 'Reviewer', level: 'balanced' });
+    const draft = { ...draftOf(teammate), role: 'Reviewer ', level: 'full-auto' as const };
+    expect(changesFrom(teammate, draft)).toEqual({ role: 'Reviewer', level: 'full-auto' });
     expect(changesFrom(teammate, draftOf(teammate))).toEqual({});
   });
 });

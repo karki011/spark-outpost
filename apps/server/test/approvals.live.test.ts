@@ -64,7 +64,13 @@ describe('live Claude Do run with approvals', () => {
         content:
           'Do these steps in order, one tool call each: 1) Edit README.md so it ends with a new line `Edited by Spark`. 2) Run the shell command `ls`. 3) Run the shell command `git push origin HEAD`. If a step is denied, do not retry it or work around it. Then reply with one short line per step.',
       },
-      { provider: 'claude', effort: 'low', permission: 'do', level: 'balanced' },
+      {
+        provider: 'claude',
+        effort: 'low',
+        permission: 'do',
+        agentMode: 'default',
+        level: 'hands-off',
+      },
     );
     const worker = startWorker({
       db: t.db,

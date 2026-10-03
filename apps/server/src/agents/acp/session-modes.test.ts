@@ -54,11 +54,13 @@ describe('the modes a running session may switch to', () => {
     expect(allowed('agent')).toBe(false);
   });
 
-  it('lets Claude Do switch to any mode, since every action still reaches the gate', () => {
+  it('lets Claude Do switch to any mode, Bypass only in a worktree copy', () => {
     const allowed = modeAllowed(claude, turn(null), true, true);
-    for (const mode of ['plan', 'acceptEdits', 'auto', 'bypassPermissions']) {
+    for (const mode of ['plan', 'acceptEdits', 'auto']) {
       expect(allowed(mode)).toBe(true);
     }
+    expect(allowed('bypassPermissions')).toBe(false);
+    expect(modeAllowed(claude, turn(null, true), true, true)('bypassPermissions')).toBe(true);
   });
 
   it('lets Codex Do use worktree-only modes only in a worktree copy', () => {

@@ -26,6 +26,26 @@ const exitPlanOptions = [
 ];
 
 describe('approvalRequestFrom', () => {
+  it("keeps the agent's own reason for asking", () => {
+    const request = (description: unknown) =>
+      approvalRequestFrom(
+        {
+          sessionId: 's',
+          toolCall: { toolCallId: 'a', title: 'curl example.com', kind: 'execute' },
+          options,
+          _meta: { permission: { version: 1, title: 'curl example.com', description } },
+        },
+        context,
+      );
+    expect(request('Reason: The command needs the network').agentReason).toBe(
+      'The command needs the network',
+    );
+    expect(request('command failed in sandbox; retry without it?').agentReason).toBe(
+      'command failed in sandbox; retry without it?',
+    );
+    expect(request(undefined)).not.toHaveProperty('agentReason');
+  });
+
   it('names the MCP server behind a tool call', () => {
     const claude = approvalRequestFrom(
       {

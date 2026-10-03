@@ -227,7 +227,6 @@ export function checkpointResult(approval: Approval): string {
   }
   if (approval.decidedBy === 'level' && approval.decisionOptionId === CHECKPOINT_OPTION.keep) {
     const keptBy = approval.payload.checkpoint?.keptBy;
-    if (keptBy === 'balanced') return 'Kept: you approved every edit.';
     return keptBy === 'hands-off' ? 'Kept automatically.' : 'Kept by Full auto → PR.';
   }
   if (approval.status === 'cancelled' && approval.decidedBy === 'policy') {

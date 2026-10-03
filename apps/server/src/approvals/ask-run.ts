@@ -16,9 +16,10 @@ interface AskRunRequest {
 
 function commandChangesFiles(command: string, cwd: string, home: string): boolean {
   if (publishesCode(command) || writesRepo(command) || isPackageInstall(command)) return true;
-  const programs = commandTree(command).commands;
-  if (programs.some((program) => FILE_CHANGERS.has(programName(program)))) return true;
-  return (writeTargets(command, cwd, home)?.length ?? 0) > 0;
+  const tree = commandTree(command);
+  if (tree.commands.some((program) => FILE_CHANGERS.has(programName(program)))) return true;
+  const targets = writeTargets(command, cwd, home);
+  return targets === null ? !tree.opaque : targets.length > 0;
 }
 
 export function askRunRefusal(request: AskRunRequest, cwd: string, home: string): string | null {

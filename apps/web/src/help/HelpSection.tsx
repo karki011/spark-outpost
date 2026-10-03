@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import type { DesktopHelpInfo } from '@spark-outpost/contracts';
 import { BetaBadge } from '../desktop/BetaBadge.tsx';
 import { sparkDesktop } from '../desktop/desktop-bridge.ts';
+import { FullDiskAccess } from '../settings/FullDiskAccess.tsx';
 import { SettingRow } from '../settings/SettingRow.tsx';
 import { exportDiagnostics, outcomeText } from './export-diagnostics.ts';
 import { FeedbackForm } from './FeedbackForm.tsx';
@@ -118,6 +119,7 @@ export function HelpSection() {
           </div>
         ))}
       {desktop && <HeartbeatSetting />}
+      <FullDiskAccess />
       <DiagnosticsRow />
       <FeedbackForm version={info?.version ?? null} beta={info?.beta ?? false} />
     </>

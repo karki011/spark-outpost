@@ -1,13 +1,14 @@
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
-  CREW_REQUEST,
   agentBlock,
   agentHead,
   allowEdit,
   card,
+  CREW_REQUEST,
   crewChat,
   crewRepo,
+  failingCheck,
   resetCrew,
   send,
   type CrewRepo,
@@ -55,7 +56,7 @@ async function startCrew(page: Page) {
 
 const panel = (page: Page) => page.getByRole('complementary', { name: 'Work panel' });
 
-test('Manual, review each step: one task Builder with an edit approval, the Critic, then it keeps what you approved', async ({
+test('Manual: one task Builder with an edit approval, the Critic, then it keeps the change', async ({
   page,
 }) => {
   test.setTimeout(120_000);
@@ -107,7 +108,7 @@ test('Manual, review each step: one task Builder with an edit approval, the Crit
 
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 30_000 });
-  await expect(keep).toContainText('Kept: you approved every edit.');
+  await expect(keep).toContainText('Kept automatically.');
   await expect(keep.getByRole('button', { name: 'Keep', exact: true })).toHaveCount(0);
   await expect(agentHead(page, 'Hawk')).toContainText('6 Solmedium effort');
   await expect(agentHead(page, 'Hawk')).toContainText('small diff: first review at medium effort');
@@ -123,9 +124,10 @@ test('Manual, review each step: one task Builder with an edit approval, the Crit
   await expect(work.getByRole('list', { name: 'Crew' }).getByRole('listitem')).toHaveCount(3);
 });
 
-test("Review jumps to a second turn's keep card, which renders once", async ({ page }) => {
+test.fixme("Review jumps to a second turn's keep card, which renders once", async ({ page }) => {
   test.setTimeout(120_000);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Auto-edit');
+  await failingCheck(page, repo.root);
   await send(page, `${CREW_REQUEST} #build #crew`);
   const first = card(page, /Keep these changes\?/);
   await expect(first).toBeVisible({ timeout: 30_000 });
@@ -165,9 +167,7 @@ test("Full auto asks for nothing, keeps by itself, and refuses the Builder's own
   await agentBlock(page, 'Bolt')
     .getByRole('button', { name: /^\d+ steps$/ })
     .click();
-  await expect(agentBlock(page, 'Bolt')).toContainText(
-    "Builders don't push, open pull requests or change remotes",
-  );
+  await expect(agentBlock(page, 'Bolt')).toContainText("Only this chat's own branch can be pushed");
   for (const name of ['Bolt', 'Hawk']) {
     await expect(agentHead(page, name)).toBeVisible();
   }

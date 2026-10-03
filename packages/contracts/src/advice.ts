@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { involvementLevelSchema } from './approvals.ts';
+import { involvementLevelSchema } from './involvement-levels.ts';
 import {
   categorySchema,
   titleOriginSchema,

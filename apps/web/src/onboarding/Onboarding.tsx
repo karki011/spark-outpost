@@ -4,6 +4,8 @@ import { slide } from '../ui/transitions.tsx';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { setupApi, setupKey } from '../api/setup.ts';
 import { BlobScout, type ScoutMood } from '../brand/BlobScout.tsx';
+import { FullDiskAccess } from '../settings/FullDiskAccess.tsx';
+import { fullDiskAccessQuery } from '../settings/full-disk-access-status.ts';
 import { burst } from '../ui/sparks.ts';
 import { MeetSparkStep } from './MeetSparkStep.tsx';
 import { ProviderStep } from './ProviderStep.tsx';
@@ -14,8 +16,17 @@ import { Stepper } from './Stepper.tsx';
 import '../ui/controls.css';
 import './onboarding.css';
 
-const STEP_LABELS = ['Meet Spark', 'Theme', 'AI provider', 'Tools', 'Done'];
-const PROVIDER_STEP = 2;
+type StepId = 'meet' | 'theme' | 'provider' | 'tools' | 'mac-access' | 'done';
+
+const STEP_LABELS: Record<StepId, string> = {
+  meet: 'Meet Spark',
+  theme: 'Theme',
+  provider: 'AI provider',
+  tools: 'Tools',
+  'mac-access': 'Mac access',
+  done: 'Done',
+};
+
 const LEAVE_ANIMATION_MS = 250;
 
 interface OnboardingProps {
@@ -33,7 +44,13 @@ const paneVariants: Variants = {
 export function Onboarding({ onFinished }: OnboardingProps) {
   const queryClient = useQueryClient();
   const setup = useQuery({ queryKey: setupKey, queryFn: setupApi.get });
-  const resumeAt = setup.data?.profile.displayName.trim() ? PROVIDER_STEP : 0;
+  const fullDiskAccess = useQuery(fullDiskAccessQuery);
+  const steps: StepId[] =
+    fullDiskAccess.data && fullDiskAccess.data.status !== 'unsupported'
+      ? ['meet', 'theme', 'provider', 'tools', 'mac-access', 'done']
+      : ['meet', 'theme', 'provider', 'tools', 'done'];
+  const providerStepIndex = steps.indexOf('provider');
+  const resumeAt = setup.data?.profile.displayName.trim() ? providerStepIndex : 0;
   const [step, setStep] = useState(resumeAt);
   const [maxStep, setMaxStep] = useState(resumeAt);
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -42,9 +59,11 @@ export function Onboarding({ onFinished }: OnboardingProps) {
   const [leaving, setLeaving] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  if (!setup.data) return null;
+  if (!setup.data || fullDiskAccess.isPending) return null;
   const providers = setup.data.providers;
   const connected = providers.filter((provider) => provider.connection);
+  const current = steps[step] ?? 'meet';
+  const lastStep = steps.length - 1;
 
   function go(next: number) {
     setDirection(next >= step ? 1 : -1);
@@ -54,11 +73,15 @@ export function Onboarding({ onFinished }: OnboardingProps) {
 
   function isStepEnabled(index: number): boolean {
     if (index > maxStep) return false;
-    return index <= PROVIDER_STEP || connected.length > 0;
+    return index <= providerStepIndex || connected.length > 0;
   }
 
   const canGoNext =
-    step === 0 ? displayName.trim() !== '' : step === PROVIDER_STEP ? connected.length > 0 : true;
+    current === 'meet'
+      ? displayName.trim() !== ''
+      : current === 'provider'
+        ? connected.length > 0
+        : true;
 
   function handleVerifyStart() {
     setScoutMood('working');
@@ -93,20 +116,22 @@ export function Onboarding({ onFinished }: OnboardingProps) {
 
   function handleNext() {
     if (!canGoNext) return;
-    if (step === STEP_LABELS.length - 1) void handleFinish();
+    if (step === lastStep) void handleFinish();
     else go(step + 1);
   }
 
   const footerStatus =
-    step === 0
+    current === 'meet'
       ? displayName.trim()
         ? ''
         : 'Enter your name to continue.'
-      : step === PROVIDER_STEP && connected.length === 0
+      : current === 'provider' && connected.length === 0
         ? 'Connect at least one provider to continue.'
-        : step === 3
+        : current === 'tools'
           ? 'Everything here is optional.'
-          : '';
+          : current === 'mac-access'
+            ? 'Optional. You can do this later in Settings.'
+            : '';
 
   return (
     <div className={`onb${leaving ? ' leave' : ''}`}>
@@ -116,12 +141,20 @@ export function Onboarding({ onFinished }: OnboardingProps) {
             <BlobScout size={28} mood={scoutMood} className="onbs" />
             <b>spark outpost</b>
           </div>
-          <Stepper steps={STEP_LABELS} current={step} isEnabled={isStepEnabled} onSelect={go} />
+          <Stepper
+            steps={steps.map((id) => STEP_LABELS[id])}
+            current={step}
+            isEnabled={isStepEnabled}
+            onSelect={go}
+          />
           <p className="onb-rail-note">
             Setup takes about two minutes. You can change any of it later.
           </p>
         </aside>
-        <main className={step === 1 ? 'onb-main wide' : 'onb-main'} aria-labelledby="onbTitle">
+        <main
+          className={current === 'theme' ? 'onb-main wide' : 'onb-main'}
+          aria-labelledby="onbTitle"
+        >
           <div className="onb-body">
             <AnimatePresence mode="popLayout" initial={false} custom={direction}>
               <motion.div
@@ -134,7 +167,7 @@ export function Onboarding({ onFinished }: OnboardingProps) {
                 exit="exit"
                 transition={slide}
               >
-                {step === 0 && (
+                {current === 'meet' && (
                   <MeetSparkStep
                     profile={setup.data.profile}
                     displayName={displayName}
@@ -142,8 +175,8 @@ export function Onboarding({ onFinished }: OnboardingProps) {
                     onEnter={handleNext}
                   />
                 )}
-                {step === 1 && <ThemeStep />}
-                {step === PROVIDER_STEP && (
+                {current === 'theme' && <ThemeStep />}
+                {current === 'provider' && (
                   <ProviderStep
                     providers={providers}
                     advisors={setup.data.advisors}
@@ -152,8 +185,18 @@ export function Onboarding({ onFinished }: OnboardingProps) {
                     onVerifyOutcome={handleVerifyOutcome}
                   />
                 )}
-                {step === 3 && <ToolsStep />}
-                {step === 4 && (
+                {current === 'tools' && <ToolsStep />}
+                {current === 'mac-access' && (
+                  <>
+                    <h2 id="onbTitle">Mac access</h2>
+                    <p className="lede">
+                      Optional. Spark can read protected folders without macOS asking every time an
+                      agent reaches into one.
+                    </p>
+                    <FullDiskAccess />
+                  </>
+                )}
+                {current === 'done' && (
                   <DoneStep
                     displayName={displayName}
                     providers={providers}
@@ -183,7 +226,7 @@ export function Onboarding({ onFinished }: OnboardingProps) {
                 disabled={!canGoNext}
                 onClick={handleNext}
               >
-                {step === STEP_LABELS.length - 1 ? 'Open Spark Outpost' : 'Continue'}
+                {step === lastStep ? 'Open Spark Outpost' : 'Continue'}
               </button>
             </div>
           </div>

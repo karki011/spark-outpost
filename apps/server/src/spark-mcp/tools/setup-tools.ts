@@ -13,6 +13,7 @@ import { getAttentionSettings } from '../../persistence/attention-settings.ts';
 import { draftChatSettings } from '../../persistence/chat-settings.ts';
 import { providerIssues } from '../../persistence/provider-health.ts';
 import { getSetupState } from '../../persistence/setup.ts';
+import { fullDiskAccessStatus } from '../../setup/full-disk-access.ts';
 import { gitHubStatus } from '../../ship/github/access.ts';
 import { ticketConnections } from '../../tickets/connections.ts';
 import { gitHubDepsFor, ticketDepsFor } from '../deps.ts';
@@ -129,10 +130,11 @@ async function connectors(context: SparkToolContext) {
 }
 
 async function settings({ deps, scope }: SparkToolContext) {
-  const [setup, attention, chatDefaults] = await Promise.all([
+  const [setup, attention, chatDefaults, fullDiskAccess] = await Promise.all([
     getSetupState(deps.db, scope.workspaceId, deps.serverSpendCapUsd),
     getAttentionSettings(deps.db, scope.workspaceId),
     draftChatSettings(deps.db, scope.workspaceId),
+    fullDiskAccessStatus(),
   ]);
   const { profile } = setup;
   return {
@@ -162,6 +164,7 @@ async function settings({ deps, scope }: SparkToolContext) {
       replyOnGitHub: profile.prFollowUpReplies,
     },
     anonymousHeartbeat: profile.heartbeat,
+    fullDiskAccess: fullDiskAccess.status,
     newChatDefaults: {
       provider: chatDefaults.provider,
       ...reportedModel(chatDefaults.provider, chatDefaults.model),
@@ -194,7 +197,7 @@ export const setupTools = [
     name: 'spark_settings',
     title: 'Spark settings',
     description:
-      'Non-secret Settings → Spark values: whether Spark is on, default autonomy level (Review each step, Automatic, Full auto → PR) and what each means, personality, spend cap per task, auto-continue wait, context compaction thresholds (warn, compact, automatic on or off), what Full auto does when checks fail, morning brief time, whether the desktop app sends its anonymous daily heartbeat (Settings → Help), new-chat defaults and ticket attention rules. Per-project Builders at once and Where Spark works are in spark_projects.',
+      'Non-secret Settings → Spark values: whether Spark is on, default autonomy level (Automatic, Full auto → PR) and what each means, personality, spend cap per task, auto-continue wait, context compaction thresholds (warn, compact, automatic on or off), what Full auto does when checks fail, morning brief time, whether the desktop app sends its anonymous daily heartbeat and whether it has macOS Full Disk Access (Settings → Help), new-chat defaults and ticket attention rules. Per-project Builders at once and Where Spark works are in spark_projects.',
     input: {},
     run: (_args, context) => settings(context),
   }),

@@ -30,8 +30,8 @@ describe('critic fix wording', () => {
     expect(findingSummary(1, [reading(true, 'jev'), reading(false, 'rules')], 'fix', false)).toBe(
       'Review 1: correctness bugs 1 of 2 findings (jev and rules) → fix turn',
     );
-    expect(findingSummary(1, [reading(true, 'rules')], 'offer', true)).toBe(
-      'Review 1: correctness bugs 1 of 1 finding (rules, Jev skipped: diffs off) → offered on the keep card',
+    expect(findingSummary(1, [reading(true, 'rules')], 'fix', true)).toBe(
+      'Review 1: correctness bugs 1 of 1 finding (rules, Jev skipped: diffs off) → fix turn',
     );
     expect(findingSummary(3, [reading(true, 'jev')], 'repeated', false)).toBe(
       'Review 3: correctness bugs 1 of 1 finding (jev) → stop: the same findings came back',

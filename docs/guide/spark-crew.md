@@ -46,7 +46,7 @@ At **Automatic** and **Full auto → PR**, the button counts down, for example "
 
 A Critic reviews bigger or riskier changes: large diffs, 3 or more source files, migrations, destructive or high-stakes work, a build from an agreed plan, or when you ask for a review. A one-line fix never gets one.
 
-If the Critic finds problems, a Builder fixes them, up to 3 rounds. At **Review each step** you see the findings first and choose **Fix these findings**.
+If the Critic finds problems, a Builder fixes them, up to 3 rounds.
 
 If the Critic itself fails, for example with "Codex encountered an internal error", Spark retries it once, on your chat's provider when the Critic ran on another one. If the retry fails too, the review is skipped with a quiet note, "Review skipped (Critic unavailable: …)", and the change is kept as usual.
 
@@ -72,6 +72,6 @@ At **Automatic**, changes are kept by themselves, without a card. When the check
 
 Files changed counts only what the agent changed. If it updates the branch from main during the run, for example with a fetch and fast-forward or a rebase, the changes it brought in from main aren't counted, reviewed or reverted.
 
-> **Tip:** How much of this Spark does alone depends on the chat's [Spark autonomy](chats-and-modes.md#spark-autonomy): **Review each step**, **Automatic** or **Full auto → PR**.
+> **Tip:** How much of this Spark does alone depends on the chat's [Spark autonomy](chats-and-modes.md#spark-autonomy): **Automatic** or **Full auto → PR**.
 
 **Next:** [Big work in pieces](pieces.md)

@@ -149,7 +149,7 @@ describe('spark_connectors', () => {
 describe('spark_settings', () => {
   it('returns the autonomy level, personality, caps and brief time', async () => {
     await updateProfile(t.db, t.workspaceId, {
-      defaultLevel: 'balanced',
+      defaultLevel: 'full-auto',
       personality: 'facts',
       spendCapUsd: 5,
       morningBriefTime: '08:30',
@@ -158,13 +158,13 @@ describe('spark_settings', () => {
     const body = (await (await open()).call('spark_settings')).json<Record<string, unknown>>();
 
     expect(body).toMatchObject({
-      defaultAutonomy: 'Review each step',
+      defaultAutonomy: 'Full auto → PR',
       personality: 'facts',
       spendCapPerTaskUsd: 5,
       serverSpendCapUsd: 25,
       morningBrief: { on: true, time: '08:30' },
     });
-    expect(body.autonomyLevels).toHaveLength(3);
+    expect(body.autonomyLevels).toHaveLength(2);
   });
 
   it('returns the context compaction thresholds', async () => {

@@ -6,7 +6,7 @@ const DEFAULTS = {
   model: null,
   effort: null,
   permission: 'ask',
-  level: 'balanced',
+  level: 'hands-off',
 };
 
 function json(body: unknown, status = 200): Response {

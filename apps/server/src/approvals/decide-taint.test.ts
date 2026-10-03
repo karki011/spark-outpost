@@ -49,8 +49,8 @@ describe('decide() after the run read sensitive data', () => {
     });
   });
 
-  it("asks at Automatic and Full auto in the chat's worktree and in Ask turns", () => {
-    const worktree = decide('full_access', CURL, NO_RUN_RULES, [], tainted({ worktreeAuto: true }));
+  it('asks in Bypass and in Ask turns', () => {
+    const worktree = decide('full_access', CURL, NO_RUN_RULES, [], tainted());
     expect(worktree.verdict).toBe('ask');
     const askTurn = decide(
       'read_only',

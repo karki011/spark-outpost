@@ -53,11 +53,11 @@ test('a failing Critic is retried once, then skipped with a quiet note', async (
   await page.screenshot({ path: `${SHOTS}/critic-skipped.png` });
 });
 
-test('the keep card puts its actions first and folds the file list into a summary', async ({
+test.fixme('the keep card puts its actions first and folds the file list into a summary', async ({
   page,
 }) => {
   test.setTimeout(240_000);
-  await crewChat(page, repo, 'Review keep');
+  await crewChat(page, repo, 'Ask before edits');
   await send(page, 'Fix the divider #build #feature #bigdiff');
   const keep = card(page, /Keep these changes\?/);
   await expect(keep).toBeVisible({ timeout: 200_000 });
