@@ -30,6 +30,7 @@ import { useChatSettingsUpdate, type PickerRequest } from './use-picker-command.
 import { permissionState } from './mode-summary.ts';
 import { PermissionChip } from './PermissionChip.tsx';
 import './model-picker.css';
+import { FreezeWhileHidden } from '../../ui/FreezeWhileHidden.tsx';
 
 const SECTIONS: PickerSection[] = ['model', 'effort', 'permission', 'options'];
 
@@ -224,91 +225,93 @@ export function ModelPicker({
         role="dialog"
         aria-label="Model, effort, and permissions"
       >
-        <LayoutGroup id={panelId}>
-          <div className="picker-top">
-            <span className="picker-title">
-              {setup?.name}
-              <small>{update.isPending ? 'Switching…' : 'Used in this chat'}</small>
-            </span>
-            {providers.length > 1 && (
-              <ProviderSwitch
-                providers={providers}
-                active={provider}
-                onSelect={(id) => {
-                  if (id === provider) return;
-                  setDirection(
-                    providers.findIndex((entry) => entry.id === id) >
-                      providers.findIndex((entry) => entry.id === provider)
-                      ? 1
-                      : -1,
-                  );
-                  update.mutate({ provider: id });
-                }}
-              />
-            )}
-          </div>
-          <div className="picker-body">
-            <PickerNav
-              rows={rows}
-              active={activeSection}
-              panelId={listId}
-              onSelect={selectSection}
-            />
-            <div className="picker-pane" id={listId} role="tabpanel">
-              <AnimatePresence mode="popLayout" initial={false} custom={direction}>
-                <motion.div
-                  key={`${provider}:${activeSection}`}
-                  custom={direction}
-                  initial={{ opacity: 0, y: 14 * direction }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 * direction }}
-                  transition={reveal}
-                >
-                  <ExitingInert>
-                    {activeSection === 'model' && setup && (
-                      <ModelList
-                        provider={setup}
-                        capabilities={capabilities}
-                        loading={queryFor(provider)?.isFetching ?? false}
-                        selected={model?.id ?? null}
-                        onSelect={(next) => update.mutate({ model: next, routing: 'pinned' })}
-                        routing={settings.routing ?? 'pinned'}
-                        onAuto={() => update.mutate({ routing: 'auto' })}
-                        hint={hint}
-                      />
-                    )}
-                    {activeSection === 'effort' && (
-                      <EffortOptions
-                        efforts={efforts}
-                        selected={settings.effort}
-                        onSelect={(next) => update.mutate({ effort: next })}
-                      />
-                    )}
-                    {activeSection === 'permission' && setup && (
-                      <ModeOptions
-                        provider={provider}
-                        modes={capabilities?.modes ?? []}
-                        defaultMode={capabilities?.defaultMode ?? null}
-                        selected={settings.agentMode}
-                        level={level}
-                        hasRepos={hasRepos}
-                        loading={queryFor(provider)?.isFetching ?? false}
-                        onMode={(next) => update.mutate({ agentMode: next })}
-                      />
-                    )}
-                    {activeSection === 'options' && (
-                      <ConfigOptions
-                        options={configOptions}
-                        values={settings.options}
-                        onChange={(id, value) => update.mutate({ options: { [id]: value } })}
-                      />
-                    )}
-                  </ExitingInert>
-                </motion.div>
-              </AnimatePresence>
+        <FreezeWhileHidden hidden={!open}>
+          <LayoutGroup id={panelId}>
+            <div className="picker-top">
+              <span className="picker-title">
+                {setup?.name}
+                <small>{update.isPending ? 'Switching…' : 'Used in this chat'}</small>
+              </span>
+              {providers.length > 1 && (
+                <ProviderSwitch
+                  providers={providers}
+                  active={provider}
+                  onSelect={(id) => {
+                    if (id === provider) return;
+                    setDirection(
+                      providers.findIndex((entry) => entry.id === id) >
+                        providers.findIndex((entry) => entry.id === provider)
+                        ? 1
+                        : -1,
+                    );
+                    update.mutate({ provider: id });
+                  }}
+                />
+              )}
             </div>
-          </div>
-        </LayoutGroup>
+            <div className="picker-body">
+              <PickerNav
+                rows={rows}
+                active={activeSection}
+                panelId={listId}
+                onSelect={selectSection}
+              />
+              <div className="picker-pane" id={listId} role="tabpanel">
+                <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+                  <motion.div
+                    key={`${provider}:${activeSection}`}
+                    custom={direction}
+                    initial={{ opacity: 0, y: 14 * direction }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 * direction }}
+                    transition={reveal}
+                  >
+                    <ExitingInert>
+                      {activeSection === 'model' && setup && (
+                        <ModelList
+                          provider={setup}
+                          capabilities={capabilities}
+                          loading={queryFor(provider)?.isFetching ?? false}
+                          selected={model?.id ?? null}
+                          onSelect={(next) => update.mutate({ model: next, routing: 'pinned' })}
+                          routing={settings.routing ?? 'pinned'}
+                          onAuto={() => update.mutate({ routing: 'auto' })}
+                          hint={hint}
+                        />
+                      )}
+                      {activeSection === 'effort' && (
+                        <EffortOptions
+                          efforts={efforts}
+                          selected={settings.effort}
+                          onSelect={(next) => update.mutate({ effort: next })}
+                        />
+                      )}
+                      {activeSection === 'permission' && setup && (
+                        <ModeOptions
+                          provider={provider}
+                          modes={capabilities?.modes ?? []}
+                          defaultMode={capabilities?.defaultMode ?? null}
+                          selected={settings.agentMode}
+                          level={level}
+                          hasRepos={hasRepos}
+                          loading={queryFor(provider)?.isFetching ?? false}
+                          onMode={(next) => update.mutate({ agentMode: next })}
+                        />
+                      )}
+                      {activeSection === 'options' && (
+                        <ConfigOptions
+                          options={configOptions}
+                          values={settings.options}
+                          onChange={(id, value) => update.mutate({ options: { [id]: value } })}
+                        />
+                      )}
+                    </ExitingInert>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
+          </LayoutGroup>
+        </FreezeWhileHidden>
         {update.isError && <p className="mpop-error">{update.error.message}</p>}
         <div className="picker-foot">Applies to this chat. New chats start with your defaults.</div>
       </div>

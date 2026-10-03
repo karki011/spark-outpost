@@ -1,5 +1,5 @@
 import './task-list.css';
-import { useId, useState } from 'react';
+import { memo, useDeferredValue, useId, useState } from 'react';
 import {
   providerLabel,
   waitingApprovalId,
@@ -24,6 +24,7 @@ const CREW_STATES: Record<TaskItemState, CrewState> = {
 };
 
 const SHOW_DONE_KEY = 'spark-outpost.tasks.show-done';
+const FIRST_ROWS = 30;
 
 function readShowDone(): boolean {
   try {
@@ -120,6 +121,19 @@ function TaskRow({ item, roots }: { item: TaskListItem; roots: readonly string[]
   );
 }
 
+function sameRow(
+  before: { item: TaskListItem; roots: readonly string[] },
+  after: { item: TaskListItem; roots: readonly string[] },
+): boolean {
+  return (
+    before.item === after.item &&
+    before.roots.length === after.roots.length &&
+    before.roots.every((root, index) => root === after.roots[index])
+  );
+}
+
+const ListRow = memo(TaskRow, sameRow);
+
 interface TaskListProps {
   items: readonly TaskListItem[];
   roots: readonly string[];
@@ -129,6 +143,7 @@ export function TaskList({ items, roots }: TaskListProps) {
   const [showDone, setShowDone] = useState(readShowDone);
   const doneId = useId();
   const done = items.filter((item) => item.state === 'done');
+  const shownDone = useDeferredValue(done, done.slice(0, FIRST_ROWS));
   const rest = items.filter((item) => item.state !== 'done' && item.state !== 'waiting');
   return (
     <div className="wsec">
@@ -149,8 +164,8 @@ export function TaskList({ items, roots }: TaskListProps) {
           </button>
           {showDone && (
             <ul className="tlist" id={doneId} aria-label="Done">
-              {done.map((item) => (
-                <TaskRow key={item.id} item={item} roots={roots} />
+              {shownDone.map((item) => (
+                <ListRow key={item.id} item={item} roots={roots} />
               ))}
             </ul>
           )}
@@ -159,7 +174,7 @@ export function TaskList({ items, roots }: TaskListProps) {
       {rest.length > 0 ? (
         <ul className="tlist" aria-label="Remaining">
           {rest.map((item) => (
-            <TaskRow key={item.id} item={item} roots={roots} />
+            <ListRow key={item.id} item={item} roots={roots} />
           ))}
         </ul>
       ) : (

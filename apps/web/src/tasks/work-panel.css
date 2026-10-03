@@ -1,5 +1,6 @@
 .wp {
-  --wp-shown: min(var(--wp-w, 432px), 46vw);
+  --wp-cap: 46vw;
+  --wp-shown: min(var(--wp-w, 432px), var(--wp-cap));
   position: relative;
   width: 0;
   flex-shrink: 0;

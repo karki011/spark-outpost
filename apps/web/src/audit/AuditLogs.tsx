@@ -12,6 +12,8 @@ import { auditApi, auditKeys, type LogFilters } from './audit-api.ts';
 import { clockTime, entrySummary, jsonTokens } from './audit-model.ts';
 import { BadgeView, runBadge, type ChainChecks } from './ChainBadge.tsx';
 import { EmptyScene } from '../brand/EmptyScene.tsx';
+import { QueryWait } from '../ui/loading/QueryWait.tsx';
+import { Skeleton } from '../ui/loading/Skeleton.tsx';
 
 const DIRECTIONS: { id: ProtocolDirection | 'all'; label: string }[] = [
   { id: 'all', label: 'All entries' },
@@ -171,11 +173,13 @@ export function AuditLogs({
         <BadgeView badge={runBadge(run, check)} />
         <span className="lcount" role="status">
           {log.isPending
-            ? 'Loading…'
+            ? `${run.logEntries} messages`
             : `${entries.length}${log.hasNextPage ? '+' : ''} of ${run.logEntries} messages`}
         </span>
       </div>
-      {log.isError && <p className="aud-empty">{log.error.message}</p>}
+      <QueryWait query={log} what="the messages">
+        <Skeleton label="Reading the messages" shape="list" rows={6} />
+      </QueryWait>
       {log.isSuccess && entries.length === 0 && (
         <p className="aud-empty">
           {run.logEntries === 0
@@ -188,14 +192,16 @@ export function AuditLogs({
           <LogRow key={entry.seq} entry={entry} broken={entry.seq >= brokenFrom} />
         ))}
       </ul>
+      {log.isFetchingNextPage && <Skeleton label="Reading more messages" shape="list" rows={3} />}
       {log.hasNextPage && (
         <button
           type="button"
           className="btn line sm lmore"
           disabled={log.isFetchingNextPage}
+          aria-busy={log.isFetchingNextPage}
           onClick={() => void log.fetchNextPage()}
         >
-          {log.isFetchingNextPage ? 'Loading…' : 'Load more'}
+          Load more
         </button>
       )}
     </>
